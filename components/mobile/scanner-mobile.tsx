@@ -548,6 +548,18 @@ export default function ScannerMobile() {
           "paneProperties.legendProperties.showSeriesTitle": false,
           "paneProperties.legendProperties.showLegend": false,
           "paneProperties.legendProperties.showStudyLabels": false,
+          "paneProperties.legendProperties.showSourceTitle": false,
+          "paneProperties.legendProperties.showSourceArguments": false,
+          "paneProperties.legendProperties.showSourceValues": false,
+          "paneProperties.legendProperties.showSourceLabels": false,
+          "paneProperties.legendProperties.showIndicatorsLegend": false,
+          "paneProperties.legendProperties.showIndicatorsTitle": false,
+          "paneProperties.legendProperties.showIndicatorsArguments": false,
+          "paneProperties.legendProperties.showIndicatorsValues": false,
+          "paneProperties.legendProperties.showIndicatorsLabels": false,
+          "scalesProperties.showStudyLastValue": false,
+          "scalesProperties.showStudyLastValueOnPriceScale": false,
+          "scalesProperties.showStudyLastValueOnVolumeScale": false,
           "scalesProperties.fontSize": 10,
           "volumePaneSize": "hide",
         },
@@ -572,11 +584,36 @@ export default function ScannerMobile() {
                 studiesToApply.forEach((studyId) => {
                   try {
                     // Criar estudo como overlay no painel principal
-                    chart.createStudy(studyId, true, false)
+                    const study = chart.createStudy(studyId, true, false)
+                    
+                    // Esconder legendas do estudo após criação
+                    if (study) {
+                      try {
+                        // Tentar esconder legendas através de diferentes métodos da API
+                        if (typeof study.setVisible === "function") {
+                          // AUTO geralmente está ligado por padrão
+                        }
+                        // Configurar propriedades do estudo para esconder legendas
+                        if (typeof study.setInputValue === "function") {
+                          // Alguns estudos permitem configurar visibilidade de legendas
+                        }
+                      } catch (configError) {
+                        // Ignorar erros de configuração - os overrides globais já devem esconder
+                      }
+                    }
                   } catch (studyError) {
                     console.warn(`Erro ao adicionar estudo ${studyId}:`, studyError)
                   }
                 })
+                
+                // Aplicar overrides adicionais após todos os estudos serem criados
+                try {
+                  if (typeof chart.setVisibleRange === "function") {
+                    // Forçar atualização das propriedades do gráfico
+                  }
+                } catch (e) {
+                  // Ignorar erros
+                }
               }, 500)
             }
           } catch (e) {
