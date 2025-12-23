@@ -512,7 +512,8 @@ export default function ScannerMobile() {
         hide_side_toolbar: false,
         hide_top_toolbar: false,
         container_id: "tradingview_mobile_widget",
-        studies: studiesToApply,
+        // Não adicionar estudos aqui - serão adicionados programaticamente como overlays
+        studies: [],
         disabled_features: [
           "header_widget_dom_node",
           "header_widget",
@@ -551,19 +552,31 @@ export default function ScannerMobile() {
         },
       })
 
-      // Garantir uma vista inicial mais "resetada" para melhor visualização dos scanners
-      if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
-        widgetRef.current.onChartReady(() => {
-          try {
-            const chart = widgetRef.current.chart && widgetRef.current.chart()
-            if (chart && typeof chart.resetData === "function") {
+      // Adicionar estudos como overlays no painel principal (escala de preço)
+      widgetRef.current.onChartReady(() => {
+        try {
+          const chart = widgetRef.current.chart && widgetRef.current.chart()
+          if (chart) {
+            // Resetar vista inicial
+            if (typeof chart.resetData === "function") {
               chart.resetData()
             }
-          } catch (e) {
-            console.warn("Não foi possível aplicar resetData no carregamento inicial do gráfico mobile:", e)
+
+            // Adicionar estudos programaticamente como overlays no painel principal
+            studiesToApply.forEach((studyId) => {
+              try {
+                // Criar estudo como overlay no painel principal (escala de preço)
+                // O segundo parâmetro (true) força overlay no painel principal
+                chart.createStudy(studyId, true, false)
+              } catch (studyError) {
+                console.warn(`Erro ao adicionar estudo ${studyId}:`, studyError)
+              }
+            })
           }
-        })
-      }
+        } catch (e) {
+          console.warn("Erro ao configurar estudos no gráfico mobile:", e)
+        }
+      })
 
       setWidgetLoaded(true)
       setError(null)
