@@ -190,7 +190,6 @@ const assetCategories = {
 
 export default function ScannerMobile() {
   const containerRef = useRef<HTMLDivElement>(null)
-  const widgetContainerRef = useRef<HTMLDivElement>(null)
   const widgetRef = useRef<any>(null)
   const screenerRef = useRef<HTMLDivElement>(null)
   const [widgetLoaded, setWidgetLoaded] = useState(false)
@@ -552,7 +551,7 @@ export default function ScannerMobile() {
         },
       })
 
-      // Tentar abrir o gráfico com uma vista inicial "resetada" para melhor visualização dos scanners
+      // Garantir uma vista inicial mais "resetada" para melhor visualização dos scanners
       if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
         widgetRef.current.onChartReady(() => {
           try {
@@ -575,12 +574,12 @@ export default function ScannerMobile() {
   }
 
   const toggleFullscreen = async () => {
-    if (!widgetContainerRef.current) return
+    if (!containerRef.current?.parentElement) return
 
     try {
       if (!document.fullscreenElement) {
         // Tentar diferentes métodos de fullscreen
-        const element = widgetContainerRef.current
+        const element = containerRef.current.parentElement
         
         if (element.requestFullscreen) {
           await element.requestFullscreen()
@@ -874,7 +873,6 @@ export default function ScannerMobile() {
 
       {/* Widget Container */}
       <div 
-        ref={widgetContainerRef}
         className="relative bg-black"
         style={{ 
           height: isFullscreen ? '100vh' : 'calc(100vh - 300px)',
