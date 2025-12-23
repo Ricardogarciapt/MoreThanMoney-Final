@@ -449,7 +449,7 @@ export default function ScannerMobile() {
   }, [])
 
   useEffect(() => {
-    if (window.TradingView && widgetLoaded) {
+    if (window.TradingView) {
       loadWidget()
     }
   }, [selectedSymbol, selectedInterval, selectedStudies, theme])
@@ -603,15 +603,18 @@ export default function ScannerMobile() {
               // overlay: true = apenas escala de preços (painel principal)
               // autoScale: true = AUTO ligado (preço à razão da escala - adapta dados à tela)
               setTimeout(() => {
-                specialStudies.forEach((studyId) => {
-                  try {
-                    // Criar estudo como overlay no painel principal com AUTO ligado
-                    chart.createStudy(studyId, true, true)
-                  } catch (studyError) {
-                    console.warn(`Erro ao adicionar estudo especial ${studyId}:`, studyError)
-                  }
-                })
-              }, 500)
+                if (specialStudies.length > 0) {
+                  specialStudies.forEach((studyId) => {
+                    try {
+                      // Criar estudo como overlay no painel principal com AUTO ligado
+                      // true, true = overlay na escala de preços + AUTO ligado
+                      chart.createStudy(studyId, true, true)
+                    } catch (studyError) {
+                      console.warn(`Erro ao adicionar estudo especial ${studyId}:`, studyError)
+                    }
+                  })
+                }
+              }, 800)
             }
           } catch (e) {
             console.warn("Não foi possível configurar estudos especiais no gráfico mobile:", e)
