@@ -9,7 +9,6 @@ import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from 'sonner'
 import Analytics from "@/components/analytics"
 import GeolocationDetector from "@/components/geolocation-detector"
-import SocialFeedRSS from "@/components/social-feed-rss"
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
@@ -120,7 +119,6 @@ export default function RootLayout({
           <Suspense fallback={null}>
               <GeolocationDetector />
               <Navbar />
-              <SocialFeedRSS />
               <main>{children}</main>
               <Footer />
               <Toaster />

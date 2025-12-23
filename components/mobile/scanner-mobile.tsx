@@ -512,7 +512,6 @@ export default function ScannerMobile() {
         hide_side_toolbar: false,
         hide_top_toolbar: false,
         container_id: "tradingview_mobile_widget",
-        studies: studiesToApply,
         disabled_features: [
           "header_widget_dom_node",
           "header_widget",
@@ -570,61 +569,19 @@ export default function ScannerMobile() {
           "scalesProperties.fontSize": 10,
           "volumePaneSize": "hide",
         },
-        // Não adicionar estudos aqui - serão adicionados programaticamente como overlays
-        studies: [],
+        studies: studiesToApply,
       })
 
-      // Adicionar estudos como overlays no painel principal (escala de preços) após o widget estar pronto
+      // Tentar abrir o gráfico com uma vista inicial "resetada" para melhor visualização dos scanners
       if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
         widgetRef.current.onChartReady(() => {
           try {
             const chart = widgetRef.current.chart && widgetRef.current.chart()
-            if (chart) {
-              // Resetar vista inicial
-              if (typeof chart.resetData === "function") {
-                chart.resetData()
-              }
-
-              // Adicionar estudos programaticamente como overlays no painel principal (escala de preços)
-              // O segundo parâmetro (true) força overlay no painel principal
-              setTimeout(() => {
-                studiesToApply.forEach((studyId) => {
-                  try {
-                    // Criar estudo como overlay no painel principal
-                    const study = chart.createStudy(studyId, true, false)
-                    
-                    // Esconder legendas do estudo após criação
-                    if (study) {
-                      try {
-                        // Tentar esconder legendas através de diferentes métodos da API
-                        if (typeof study.setVisible === "function") {
-                          // AUTO geralmente está ligado por padrão
-                        }
-                        // Configurar propriedades do estudo para esconder legendas
-                        if (typeof study.setInputValue === "function") {
-                          // Alguns estudos permitem configurar visibilidade de legendas
-                        }
-                      } catch (configError) {
-                        // Ignorar erros de configuração - os overrides globais já devem esconder
-                      }
-                    }
-                  } catch (studyError) {
-                    console.warn(`Erro ao adicionar estudo ${studyId}:`, studyError)
-                  }
-                })
-                
-                // Aplicar overrides adicionais após todos os estudos serem criados
-                try {
-                  if (typeof chart.setVisibleRange === "function") {
-                    // Forçar atualização das propriedades do gráfico
-                  }
-                } catch (e) {
-                  // Ignorar erros
-                }
-              }, 500)
+            if (chart && typeof chart.resetData === "function") {
+              chart.resetData()
             }
           } catch (e) {
-            console.warn("Não foi possível configurar estudos no gráfico mobile:", e)
+            console.warn("Não foi possível aplicar resetData no carregamento inicial do gráfico mobile:", e)
           }
         })
       }
