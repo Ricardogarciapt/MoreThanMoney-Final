@@ -1,7 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
 import "./globals.css"
-import SpecialOfferPopup from "@/components/special-offer-popup"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Suspense } from "react"
 import Navbar from "@/components/navbar"
@@ -129,7 +128,6 @@ export default function RootLayout({
               <Analytics />
             </Suspense>
         </ThemeProvider>
-        <SpecialOfferPopup />
       </body>
     </html>
   )
