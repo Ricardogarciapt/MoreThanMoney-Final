@@ -588,6 +588,9 @@ export default function ScannerMobile() {
       })
 
       // Adicionar estudos especiais como overlays no painel principal (escala de preços) após o widget estar pronto
+      // Usar uma closure para capturar os estudos corretos do momento atual
+      const currentSpecialStudies = [...specialStudies] // Copiar array para evitar problemas de closure
+      
       if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
         widgetRef.current.onChartReady(() => {
           try {
@@ -598,13 +601,46 @@ export default function ScannerMobile() {
                 chart.resetData()
               }
 
+              // Remover estudos especiais antigos antes de adicionar os novos
+              try {
+                const allStudies = chart.getAllStudies?.() || []
+                const allSpecialStudyIds = (["Smartmonics", "KillShot", "Winzone", "Nexus", "Sinergy"] as ScannerKey[])
+                  .flatMap(key => scannerStudies[key] || [])
+                
+                allStudies.forEach((study: any) => {
+                  try {
+                    const studyId = study.name || study.id || study.inputs?.name
+                    if (studyId && typeof studyId === 'string' && studyId.startsWith("PUB;")) {
+                      if (allSpecialStudyIds.includes(studyId)) {
+                        // Tentar diferentes métodos para remover o estudo
+                        try {
+                          if (study.remove && typeof study.remove === 'function') {
+                            study.remove()
+                          } else if (chart.removeEntity && typeof chart.removeEntity === 'function') {
+                            chart.removeEntity(studyId)
+                          } else if (chart.removeStudy && typeof chart.removeStudy === 'function') {
+                            chart.removeStudy(studyId)
+                          }
+                        } catch (removeError) {
+                          // Ignorar erros ao remover estudos
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    // Ignorar erros ao processar estudos
+                  }
+                })
+              } catch (e) {
+                // Ignorar erros
+              }
+
               // Adicionar estudos especiais programaticamente com AUTO ligado e apenas na escala de preços
               // createStudy(studyId, overlay, autoScale)
               // overlay: true = apenas escala de preços (painel principal)
               // autoScale: true = AUTO ligado (preço à razão da escala - adapta dados à tela)
               setTimeout(() => {
-                if (specialStudies.length > 0) {
-                  specialStudies.forEach((studyId) => {
+                if (currentSpecialStudies.length > 0) {
+                  currentSpecialStudies.forEach((studyId) => {
                     try {
                       // Criar estudo como overlay no painel principal com AUTO ligado
                       // true, true = overlay na escala de preços + AUTO ligado
