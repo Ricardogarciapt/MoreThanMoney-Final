@@ -540,27 +540,47 @@ export default function ScannerMobile() {
         overrides: {
           "mainSeriesProperties.showCountdown": true,
           "scalesProperties.showSeriesLastValue": true,
-          // Esconder legendas/valores dos estudos em todos os painéis (superior e inferiores)
+          // Esconder completamente legendas/valores dos estudos em todos os painéis
           "scalesProperties.showStudyLastValue": false,
           "paneProperties.legendProperties.showStudyArguments": false,
           "paneProperties.legendProperties.showStudyTitles": false,
           "paneProperties.legendProperties.showStudyValues": false,
           "paneProperties.legendProperties.showSeriesTitle": false,
+          "paneProperties.legendProperties.showLegend": false,
+          "paneProperties.legendProperties.showStudyLabels": false,
           "scalesProperties.fontSize": 10,
           "volumePaneSize": "hide",
         },
+        // Não adicionar estudos aqui - serão adicionados programaticamente como overlays
+        studies: [],
       })
 
-      // Garantir uma vista inicial mais "resetada" para melhor visualização dos scanners
+      // Adicionar estudos como overlays no painel principal (escala de preços) após o widget estar pronto
       if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
         widgetRef.current.onChartReady(() => {
           try {
             const chart = widgetRef.current.chart && widgetRef.current.chart()
-            if (chart && typeof chart.resetData === "function") {
-              chart.resetData()
+            if (chart) {
+              // Resetar vista inicial
+              if (typeof chart.resetData === "function") {
+                chart.resetData()
+              }
+
+              // Adicionar estudos programaticamente como overlays no painel principal (escala de preços)
+              // O segundo parâmetro (true) força overlay no painel principal
+              setTimeout(() => {
+                studiesToApply.forEach((studyId) => {
+                  try {
+                    // Criar estudo como overlay no painel principal
+                    chart.createStudy(studyId, true, false)
+                  } catch (studyError) {
+                    console.warn(`Erro ao adicionar estudo ${studyId}:`, studyError)
+                  }
+                })
+              }, 500)
             }
           } catch (e) {
-            console.warn("Não foi possível aplicar resetData no carregamento inicial do gráfico mobile:", e)
+            console.warn("Não foi possível configurar estudos no gráfico mobile:", e)
           }
         })
       }
