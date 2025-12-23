@@ -214,9 +214,26 @@ interface SavedChart {
 export default function TradingViewWidget({
   scannerType = "KillShot",
   showScreener = false,
+  // Props opcionais para controlo externo (usado pelo sistema de layouts)
+  externalSymbol,
+  externalTimeframe,
+  externalTheme,
+  externalStudies,
+  onSymbolChange,
+  onTimeframeChange,
+  onThemeChange,
+  onStudiesChange,
 }: {
   scannerType?: ScannerKey
   showScreener?: boolean
+  externalSymbol?: string
+  externalTimeframe?: string
+  externalTheme?: "light" | "dark"
+  externalStudies?: ScannerKey[]
+  onSymbolChange?: (symbol: string) => void
+  onTimeframeChange?: (timeframe: string) => void
+  onThemeChange?: (theme: "light" | "dark") => void
+  onStudiesChange?: (studies: ScannerKey[]) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetRef = useRef<any>(null)
@@ -224,20 +241,40 @@ export default function TradingViewWidget({
   const [error, setError] = useState<string | null>(null)
   const isLoadingScanner = useRef(false)
 
-  // Estados
+  // Estados - usar props externas se fornecidas, senão usar localStorage
   const [selectedStudies, setSelectedStudies] = useState<ScannerKey[]>(() => {
+    if (externalStudies) return externalStudies
     const saved = localStorage.getItem("mtm_active_scanners")
     return saved ? JSON.parse(saved) : (["KillShot"] as ScannerKey[])
   })
-  const [selectedSymbol, setSelectedSymbol] = useState("OANDA:XAUUSD")
+  const [selectedSymbol, setSelectedSymbol] = useState(externalSymbol || "OANDA:XAUUSD")
   const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (externalTheme) return externalTheme
     const saved = localStorage.getItem("mtm_chart_theme")
     return (saved as "light" | "dark") || "dark"
   })
   const [favoriteTimeframe, setFavoriteTimeframe] = useState(() => {
+    if (externalTimeframe) return externalTimeframe
     const saved = localStorage.getItem("mtm_favorite_timeframe")
     return saved || "60"
   })
+
+  // Sincronizar com props externas quando mudarem
+  useEffect(() => {
+    if (externalSymbol) setSelectedSymbol(externalSymbol)
+  }, [externalSymbol])
+
+  useEffect(() => {
+    if (externalTimeframe) setFavoriteTimeframe(externalTimeframe)
+  }, [externalTimeframe])
+
+  useEffect(() => {
+    if (externalTheme) setTheme(externalTheme)
+  }, [externalTheme])
+
+  useEffect(() => {
+    if (externalStudies) setSelectedStudies(externalStudies)
+  }, [externalStudies])
 
   // Dropdown de ativos
   const [showAssetDropdown, setShowAssetDropdown] = useState(false)
@@ -277,13 +314,28 @@ export default function TradingViewWidget({
   }, [savedCharts])
 
   const toggleStudy = (study: ScannerKey) => {
-    setSelectedStudies((prev) => (prev.includes(study) ? prev.filter((s) => s !== study) : [...prev, study]))
+    setSelectedStudies((prev) => {
+      const newStudies = prev.includes(study) ? prev.filter((s) => s !== study) : [...prev, study]
+      if (onStudiesChange) onStudiesChange(newStudies)
+      return newStudies
+    })
   }
 
   const handleSymbolSelect = (symbol: string) => {
     setSelectedSymbol(symbol)
+    if (onSymbolChange) onSymbolChange(symbol)
     setShowAssetDropdown(false)
     setAssetSearchTerm("")
+  }
+
+  const handleThemeChange = (newTheme: "light" | "dark") => {
+    setTheme(newTheme)
+    if (onThemeChange) onThemeChange(newTheme)
+  }
+
+  const handleTimeframeChange = (newTimeframe: string) => {
+    setFavoriteTimeframe(newTimeframe)
+    if (onTimeframeChange) onTimeframeChange(newTimeframe)
   }
 
   const handleSaveChart = async () => {
@@ -334,8 +386,8 @@ export default function TradingViewWidget({
       if (chart.data) {
         setSelectedSymbol(chart.data.symbol || chart.symbol)
         setSelectedStudies(chart.data.studies || [])
-        setTheme(chart.data.theme || "dark")
-        setFavoriteTimeframe(chart.data.timeframe || "60")
+        handleThemeChange(chart.data.theme || "dark")
+        handleTimeframeChange(chart.data.timeframe || "60")
       }
 
       setShowLoadDialog(false)
@@ -709,7 +761,7 @@ export default function TradingViewWidget({
                   {/* Tema */}
                   <div className="space-y-3">
                     <Label className="text-gray-300">Tema</Label>
-                    <RadioGroup value={theme} onValueChange={(v) => setTheme(v as "light" | "dark")}>
+                    <RadioGroup value={theme} onValueChange={(v) => handleThemeChange(v as "light" | "dark")}>
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="dark" id="dark" />
                         <Label htmlFor="dark" className="flex items-center gap-2 cursor-pointer">
@@ -733,7 +785,7 @@ export default function TradingViewWidget({
                       <Clock className="w-4 h-4" />
                       Timeframe Padrão
                     </Label>
-                    <Select value={favoriteTimeframe} onValueChange={setFavoriteTimeframe}>
+                    <Select value={favoriteTimeframe} onValueChange={handleTimeframeChange}>
                       <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                         <SelectValue />
                       </SelectTrigger>
