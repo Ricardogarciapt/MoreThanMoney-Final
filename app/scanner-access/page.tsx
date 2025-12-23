@@ -26,6 +26,7 @@ import {
   Shield,
   TrendingUp,
   ChartColumn,
+  BarChart3,
   Zap,
   ExternalLink,
   Settings,
