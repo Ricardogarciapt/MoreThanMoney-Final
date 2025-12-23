@@ -190,6 +190,7 @@ const assetCategories = {
 
 export default function ScannerMobile() {
   const containerRef = useRef<HTMLDivElement>(null)
+  const widgetContainerRef = useRef<HTMLDivElement>(null)
   const widgetRef = useRef<any>(null)
   const screenerRef = useRef<HTMLDivElement>(null)
   const [widgetLoaded, setWidgetLoaded] = useState(false)
@@ -550,7 +551,11 @@ export default function ScannerMobile() {
           "scalesProperties.fontSize": 10,
           "volumePaneSize": "hide",
         },
-        onChartReady: () => {
+      })
+
+      // Adicionar estudos após o widget estar pronto
+      if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
+        widgetRef.current.onChartReady(() => {
           try {
             const chart = widgetRef.current?.chart?.()
             if (chart) {
@@ -576,8 +581,8 @@ export default function ScannerMobile() {
           } catch (e) {
             console.warn("Erro ao configurar estudos no gráfico mobile:", e)
           }
-        },
-      })
+        })
+      }
 
       setWidgetLoaded(true)
       setError(null)
@@ -588,12 +593,12 @@ export default function ScannerMobile() {
   }
 
   const toggleFullscreen = async () => {
-    if (!containerRef.current?.parentElement) return
+    if (!widgetContainerRef.current) return
 
     try {
       if (!document.fullscreenElement) {
         // Tentar diferentes métodos de fullscreen
-        const element = containerRef.current.parentElement
+        const element = widgetContainerRef.current
         
         if (element.requestFullscreen) {
           await element.requestFullscreen()
@@ -887,6 +892,7 @@ export default function ScannerMobile() {
 
       {/* Widget Container */}
       <div 
+        ref={widgetContainerRef}
         className="relative bg-black"
         style={{ 
           height: isFullscreen ? '100vh' : 'calc(100vh - 300px)',

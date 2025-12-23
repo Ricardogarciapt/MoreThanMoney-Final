@@ -378,7 +378,7 @@ export default function TradingViewWidget({
 
       const studiesToApply = selectedStudies.flatMap((key) => scannerStudies[key] || [])
 
-      const widgetOptions = {
+      const widgetOptions: any = {
         autosize: true,
         symbol: selectedSymbol,
         interval: favoriteTimeframe,
@@ -442,7 +442,13 @@ export default function TradingViewWidget({
           "paneProperties.legendProperties.showStudyValues": false,
           "volumePaneSize": "hide",
         },
-        onChartReady: () => {
+      }
+
+      widgetRef.current = new window.TradingView.widget(widgetOptions)
+
+      // Adicionar estudos após o widget estar pronto
+      if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
+        widgetRef.current.onChartReady(() => {
           try {
             const chart = widgetRef.current?.chart?.()
             if (chart) {
@@ -468,10 +474,8 @@ export default function TradingViewWidget({
           } catch (e) {
             console.warn("Erro ao configurar estudos no gráfico:", e)
           }
-        },
+        })
       }
-
-      widgetRef.current = new window.TradingView.widget(widgetOptions)
       setWidgetLoaded(true)
       setError(null)
     } catch (err: any) {
