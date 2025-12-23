@@ -441,37 +441,37 @@ export default function TradingViewWidget({
           "paneProperties.legendProperties.showStudyArguments": false,
           "paneProperties.legendProperties.showStudyValues": false,
           "volumePaneSize": "hide",
-          "mainSeriesProperties.volumePaneSize": "hide",
+        },
+        onChartReady: () => {
+          try {
+            const chart = widgetRef.current?.chart?.()
+            if (chart) {
+              // Resetar vista inicial
+              if (typeof chart.resetData === "function") {
+                chart.resetData()
+              }
+
+              // Adicionar estudos programaticamente como overlays no painel principal
+              // Aguardar um pouco para garantir que o chart está totalmente pronto
+              setTimeout(() => {
+                studiesToApply.forEach((studyId) => {
+                  try {
+                    // Criar estudo como overlay no painel principal (escala de preço)
+                    // O segundo parâmetro (true) força overlay no painel principal
+                    chart.createStudy(studyId, true, false)
+                  } catch (studyError) {
+                    console.warn(`Erro ao adicionar estudo ${studyId}:`, studyError)
+                  }
+                })
+              }, 500)
+            }
+          } catch (e) {
+            console.warn("Erro ao configurar estudos no gráfico:", e)
+          }
         },
       }
 
       widgetRef.current = new window.TradingView.widget(widgetOptions)
-
-      // Adicionar estudos como overlays no painel principal (escala de preço)
-      widgetRef.current.onChartReady(() => {
-        try {
-          const chart = widgetRef.current.chart && widgetRef.current.chart()
-          if (chart) {
-            // Resetar vista inicial
-            if (typeof chart.resetData === "function") {
-              chart.resetData()
-            }
-
-            // Adicionar estudos programaticamente como overlays no painel principal
-            studiesToApply.forEach((studyId) => {
-              try {
-                // Criar estudo como overlay no painel principal (escala de preço)
-                // O segundo parâmetro (true) força overlay no painel principal
-                chart.createStudy(studyId, true, false)
-              } catch (studyError) {
-                console.warn(`Erro ao adicionar estudo ${studyId}:`, studyError)
-              }
-            })
-          }
-        } catch (e) {
-          console.warn("Erro ao configurar estudos no gráfico:", e)
-        }
-      })
       setWidgetLoaded(true)
       setError(null)
     } catch (err: any) {
