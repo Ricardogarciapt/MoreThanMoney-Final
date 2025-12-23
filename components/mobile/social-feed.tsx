@@ -1,0 +1,1363 @@
+"use client"
+
+import { useState, useEffect, useRef } from "react"
+import Image from "next/image"
+import { supabase } from "@/lib/supabase"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Loader2, Heart, MessageCircle, Share2, Send, User, Plus, X } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import MentionInput from "./mention-input"
+import MentionText from "./mention-text"
+
+interface Post {
+  id: string
+  user_name: string
+  content: string
+  media_url?: string
+  category?: string
+  created_at: string
+  likes_count?: number
+  comments_count?: number
+  liked_by_user?: boolean
+}
+
+interface StoryPreview {
+  category: string
+  preview_url?: string
+  post_count: number
+}
+
+const CATEGORIES = [
+  { id: "updates", label: "Updates", icon: "🆕", color: "from-blue-500 to-cyan-500" },
+  { id: "forex", label: "Forex", icon: "💹", color: "from-green-500 to-emerald-500" },
+  { id: "crypto", label: "Criptomoedas", icon: "₿", color: "from-yellow-500 to-orange-500" },
+  { id: "mindset", label: "Mindset", icon: "🧠", color: "from-purple-500 to-pink-500" },
+  { id: "lideranca", label: "Liderança", icon: "👑", color: "from-amber-500 to-yellow-500" },
+  { id: "network", label: "Network", icon: "🌐", color: "from-indigo-500 to-blue-500" },
+  { id: "social", label: "Social", icon: "🤝", color: "from-rose-500 to-red-500" },
+]
+
+export default function SocialFeed() {
+  const [mounted, setMounted] = useState(false)
+  const [posts, setPosts] = useState<Post[]>([])
+  const [newPost, setNewPost] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("")
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [canPost, setCanPost] = useState(false)
+  const [storyPreviews, setStoryPreviews] = useState<Map<string, StoryPreview>>(new Map())
+  const [newPostMedia, setNewPostMedia] = useState<File | null>(null)
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showCreatePost, setShowCreatePost] = useState(false)
+  const storiesRef = useRef<HTMLDivElement>(null)
+  const touchStartX = useRef<number>(0)
+  const touchStartY = useRef<number>(0)
+  const [storyFlipStates, setStoryFlipStates] = useState<Map<string, { showPreview: boolean; currentIndex: number }>>(new Map())
+  const [viewedCategories, setViewedCategories] = useState<Set<string>>(new Set())
+  const [expandedComments, setExpandedComments] = useState<string | null>(null)
+  const [commentText, setCommentText] = useState<Map<string, string>>(new Map())
+  const [postComments, setPostComments] = useState<Map<string, any[]>>(new Map())
+  const [loadingComments, setLoadingComments] = useState<Set<string>>(new Set())
+  const feedRef = useRef<HTMLDivElement>(null)
+  const [postMentions, setPostMentions] = useState<any[]>([])
+  const [commentMentions, setCommentMentions] = useState<Map<string, any[]>>(new Map())
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted) {
+      loadUser()
+      loadPosts()
+      subscribeToPosts()
+      loadViewedCategories()
+    }
+  }, [mounted])
+
+  const loadViewedCategories = async () => {
+    try {
+      // 1. Carregar do sessionStorage primeiro (mais rápido)
+      const storedViewed = sessionStorage.getItem('mtm_viewed_categories')
+      if (storedViewed) {
+        try {
+          const categories = JSON.parse(storedViewed)
+          setViewedCategories(new Set(categories))
+          console.log('✅ [SOCIAL FEED] Categorias visualizadas carregadas do sessionStorage:', categories)
+        } catch (e) {
+          console.warn('⚠️ [SOCIAL FEED] Erro ao parsear sessionStorage')
+        }
+      }
+      
+      // 2. Sincronizar com o backend (opcional, em background)
+      const response = await fetch('/api/social/story-views')
+      if (response.ok) {
+        const data = await response.json()
+        const backendCategories = data.viewedCategories || []
+        if (backendCategories.length > 0) {
+          setViewedCategories(new Set(backendCategories))
+          // Atualizar sessionStorage com dados do backend
+          sessionStorage.setItem('mtm_viewed_categories', JSON.stringify(backendCategories))
+        }
+      }
+    } catch (error) {
+      console.error('❌ [SOCIAL FEED] Erro ao carregar categorias visualizadas:', error)
+    }
+  }
+
+  const markCategoryAsViewed = async (categoryId: string) => {
+    // Se já foi visualizada, não fazer nada
+    if (viewedCategories.has(categoryId)) {
+      return
+    }
+
+    // Atualizar imediatamente no sessionStorage (otimista)
+    const newViewedCategories = new Set([...viewedCategories, categoryId])
+    setViewedCategories(newViewedCategories)
+    try {
+      sessionStorage.setItem('mtm_viewed_categories', JSON.stringify([...newViewedCategories]))
+      console.log('✅ [SOCIAL FEED] Categoria salva no sessionStorage:', categoryId)
+    } catch (e) {
+      console.warn('⚠️ [SOCIAL FEED] Erro ao salvar no sessionStorage')
+    }
+
+    // Recalcular previews imediatamente
+    generateStoryPreviews(posts)
+
+    // Sincronizar com backend em background
+    try {
+      const response = await fetch('/api/social/story-views', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categoryId })
+      })
+
+      if (response.ok) {
+        console.log('✅ [SOCIAL FEED] Categoria sincronizada com backend:', categoryId)
+      } else {
+        console.warn('⚠️ [SOCIAL FEED] Falha ao sincronizar com backend, mas mantido localmente')
+      }
+    } catch (error) {
+      console.error('❌ [SOCIAL FEED] Erro ao marcar categoria como vista:', error)
+      // Mesmo com erro, mantém no sessionStorage
+    }
+  }
+
+  const loadUser = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+        
+        if (error) {
+          console.error('❌ [SOCIAL FEED] Erro ao carregar perfil:', error)
+          const basicProfile = {
+            id: session.user.id,
+            email: session.user.email,
+            full_name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || 'Utilizador',
+            user_type: 'member',
+            member_category: 'standard'
+          }
+          setCurrentUser(basicProfile)
+          setCanPost(false)
+        } else {
+          setCurrentUser(profile)
+          setCanPost(
+            profile?.user_type === 'admin' || 
+            profile?.member_category === 'vip'
+          )
+        }
+      }
+    } catch (error) {
+      console.error('❌ [SOCIAL FEED] Erro crítico ao carregar user:', error)
+    }
+  }
+
+  const loadPosts = async () => {
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*")
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("❌ [SOCIAL FEED] Erro ao carregar posts:", error)
+        setPosts([])
+      } else {
+        setPosts(data || [])
+        generateStoryPreviews(data || [])
+        
+        // Carregar likes do usuário atual
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          const { data: likesData } = await supabase
+            .from("post_likes")
+            .select("post_id")
+            .eq("user_id", session.user.id)
+          
+          const userLikes = new Set(likesData?.map(like => like.post_id) || [])
+          setPosts(prevPosts => 
+            (data || []).map((post: Post) => ({
+              ...post,
+              liked_by_user: userLikes.has(post.id)
+            }))
+          )
+        }
+      }
+    } catch (error) {
+      console.error("❌ [SOCIAL FEED] Erro ao carregar posts:", error)
+      setPosts([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const generateStoryPreviews = (postsData: Post[]) => {
+    const previews = new Map<string, StoryPreview>()
+    
+    CATEGORIES.forEach(cat => {
+      const categoryPosts = postsData.filter(p => p.category === cat.id && p.media_url)
+      
+      // Contar apenas posts de categorias NÃO visualizadas
+      const unviewedCount = viewedCategories.has(cat.id) ? 0 : categoryPosts.length
+      
+      const preview: StoryPreview = {
+        category: cat.id,
+        preview_url: categoryPosts[0]?.media_url,
+        post_count: unviewedCount // Mostrar apenas não visualizados
+      }
+      previews.set(cat.id, preview)
+      
+      // Inicializar estado de flip se não existir
+      if (!storyFlipStates.has(cat.id)) {
+        setStoryFlipStates(prev => {
+          const newMap = new Map(prev)
+          newMap.set(cat.id, { showPreview: false, currentIndex: 0 })
+          return newMap
+        })
+      }
+    })
+    
+    setStoryPreviews(previews)
+  }
+
+  // Efeito para animação flip nos stories (coin flip aleatório)
+  useEffect(() => {
+    if (!mounted || posts.length === 0) return
+
+    const timeouts = new Map<string, NodeJS.Timeout>()
+
+    CATEGORIES.forEach(cat => {
+      const categoryPosts = posts.filter(p => p.category === cat.id && p.media_url)
+      const preview = storyPreviews.get(cat.id)
+      const postCount = preview?.post_count || 0
+      
+      // IMPORTANTE: Só ativar coin flip se houver posts não visualizados (post_count > 0)
+      if (categoryPosts.length > 0 && postCount > 0) {
+        // Função recursiva para criar intervalos aleatórios
+        const scheduleNextFlip = (): NodeJS.Timeout => {
+          // Intervalo aleatório entre 3-7 segundos
+          const delay = 3000 + Math.random() * 4000
+          
+          return setTimeout(() => {
+            setStoryFlipStates(prev => {
+              const newMap = new Map(prev)
+              const current = prev.get(cat.id) || { showPreview: false, currentIndex: 0 }
+              
+              if (current.showPreview) {
+                // Voltar ao ícone após mostrar preview
+                newMap.set(cat.id, { showPreview: false, currentIndex: current.currentIndex })
+              } else {
+                // Mostrar próxima preview (rotação circular ou aleatória)
+                // Usar índice aleatório para mais variedade
+                const randomIndex = Math.floor(Math.random() * categoryPosts.length)
+                newMap.set(cat.id, { showPreview: true, currentIndex: randomIndex })
+              }
+              
+              return newMap
+            })
+
+            // Agendar próximo flip
+            const nextTimeout = scheduleNextFlip()
+            timeouts.set(cat.id, nextTimeout)
+          }, delay)
+        }
+
+        // Iniciar primeiro flip após delay inicial aleatório (2-5 segundos)
+        const initialDelay = 2000 + Math.random() * 3000
+        const firstTimeout = setTimeout(() => {
+          const timeout = scheduleNextFlip()
+          timeouts.set(cat.id, timeout)
+        }, initialDelay)
+        
+        timeouts.set(cat.id, firstTimeout)
+      } else if (categoryPosts.length > 0 && postCount === 0) {
+        // Se tem posts mas já foram todos visualizados (post_count = 0), desativar animação
+        setStoryFlipStates(prev => {
+          const newMap = new Map(prev)
+          newMap.set(cat.id, { showPreview: false, currentIndex: 0 })
+          return newMap
+        })
+      }
+    })
+
+    return () => {
+      timeouts.forEach(timeout => clearTimeout(timeout))
+    }
+  }, [mounted, posts, storyPreviews])
+
+  const subscribeToPosts = () => {
+    const channel = supabase
+      .channel("posts-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "posts" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const newPost = payload.new as Post
+            setPosts((prev) => [newPost, ...prev])
+            generateStoryPreviews([newPost, ...posts])
+          } else if (payload.eventType === "UPDATE") {
+            setPosts((prev) =>
+              prev.map((p) => (p.id === payload.new.id ? (payload.new as Post) : p))
+            )
+          } else if (payload.eventType === "DELETE") {
+            setPosts((prev) => prev.filter((p) => p.id !== payload.old.id))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }
+
+  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setNewPostMedia(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setMediaPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleCreatePost = async () => {
+    if (!newPost.trim()) {
+      alert('❌ Por favor, escreve algo antes de publicar!')
+      return
+    }
+
+    setUploading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) {
+        alert('❌ Deves estar autenticado para publicar!')
+        setUploading(false)
+        return
+      }
+
+      const userName =
+        currentUser?.full_name ||
+        session.user.user_metadata?.full_name ||
+        session.user.email?.split("@")[0] ||
+        "Utilizador"
+
+      let mediaUrl: string | null = null
+
+      // Upload de mídia se houver
+      if (newPostMedia) {
+        const fileExt = newPostMedia.name.split('.').pop()
+        const fileName = `${session.user.id}-${Date.now()}.${fileExt}`
+        const filePath = `posts/${fileName}`
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('uploads')
+          .upload(filePath, newPostMedia, {
+            cacheControl: '3600',
+            upsert: false
+          })
+
+        if (uploadError) {
+          console.error('❌ [SOCIAL FEED] Erro ao fazer upload:', uploadError)
+          console.error('❌ [SOCIAL FEED] Detalhes:', {
+            message: uploadError.message,
+            statusCode: (uploadError as any).statusCode,
+            error: uploadError
+          })
+          
+          // Mensagens de erro mais específicas
+          if (uploadError.message?.includes('bucket') || uploadError.message?.includes('not found')) {
+            alert('❌ Erro: Bucket "uploads" não existe no Supabase Storage.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Ou cria bucket manualmente no Dashboard')
+          } else if (uploadError.message?.includes('policy') || uploadError.message?.includes('permission')) {
+            alert('❌ Erro: Sem permissão para fazer upload.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Verifica políticas RLS do Storage')
+          } else if (uploadError.message?.includes('size') || uploadError.message?.includes('limit')) {
+            alert('❌ Erro: Ficheiro muito grande. Tamanho máximo: 50MB')
+          } else {
+            alert(`❌ Erro ao fazer upload: ${uploadError.message}\n\nVerifica o console para mais detalhes.`)
+          }
+          setUploading(false)
+          return
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('uploads')
+          .getPublicUrl(filePath)
+
+        mediaUrl = publicUrl
+      }
+
+      // Extrair IDs de menções
+      const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g
+      const mentionedUserIds: string[] = []
+      let match
+      while ((match = mentionRegex.exec(newPost)) !== null) {
+        mentionedUserIds.push(match[2])
+      }
+
+      const { error } = await supabase.from("posts").insert([
+        {
+          user_id: session.user.id,
+          user_name: userName,
+          content: newPost.trim(),
+          category: selectedCategory || null,
+          media_url: mediaUrl,
+          mentions: mentionedUserIds.length > 0 ? mentionedUserIds : null,
+        },
+      ])
+
+      // Enviar notificações para membros mencionados
+      if (mentionedUserIds.length > 0) {
+        try {
+          for (const mentionedUserId of mentionedUserIds) {
+            await fetch('/api/notifications/send-push', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: mentionedUserId,
+                title: `💬 ${userName} mencionou-te`,
+                body: newPost.trim().substring(0, 100),
+                data: {
+                  type: 'mention',
+                  url: '/app-mobile?tab=social',
+                  author: userName,
+                  post_id: 'new'
+                },
+                tag: 'mention'
+              })
+            })
+          }
+          console.log('✅ [SOCIAL FEED] Notificações de menção enviadas')
+        } catch (notifError) {
+          console.error('⚠️ [SOCIAL FEED] Erro ao enviar notificações de menção:', notifError)
+        }
+      }
+
+      if (error) {
+        console.error("❌ [SOCIAL FEED] Erro ao criar post:", error)
+        console.error("❌ [SOCIAL FEED] Detalhes:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        
+        // Mensagens de erro mais específicas
+        if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+          alert('❌ Erro: Tabela "posts" não existe no Supabase.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Ou: scripts/create-posts-table-with-categories.sql')
+        } else if (error.message?.includes('permission') || error.message?.includes('policy')) {
+          alert('❌ Erro: Sem permissão para criar posts.\n\n📋 SOLUÇÃO:\n1. Verifica se és VIP ou Admin\n2. Executa: scripts/fix-posts-storage-completo.sql para configurar RLS')
+        } else if (error.message?.includes('violates check constraint')) {
+          alert('❌ Erro: Categoria inválida. Categorias válidas: updates, forex, crypto, mindset, lideranca, network, social')
+        } else {
+          alert(`❌ Erro ao publicar: ${error.message}\n\nVerifica o console para mais detalhes.`)
+        }
+      } else {
+        // Enviar notificação push para todos os utilizadores sobre novo post
+        try {
+          const postTitle = newPost.trim().length > 50 
+            ? newPost.trim().substring(0, 50) + '...' 
+            : newPost.trim()
+          
+          await fetch('/api/notifications/send-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              all: true, // Enviar para todos
+              title: `💎 Novo Post de ${userName}`,
+              body: postTitle,
+              data: {
+                type: 'social_post',
+                url: '/app-mobile?tab=social',
+                author: userName,
+                post_id: 'new' // Será atualizado quando o real-time sync funcionar
+              },
+              tag: 'social-post'
+            })
+          })
+          console.log('✅ [SOCIAL FEED] Notificação push enviada para novo post')
+        } catch (notifError) {
+          console.error('⚠️ [SOCIAL FEED] Erro ao enviar notificação push:', notifError)
+          // Não bloquear o fluxo se a notificação falhar
+        }
+        
+        setNewPost("")
+        setSelectedCategory("")
+        setNewPostMedia(null)
+        setMediaPreview(null)
+        setShowCreatePost(false)
+        // Recarregar posts para garantir sincronização
+        setTimeout(() => loadPosts(), 500)
+      }
+    } catch (error) {
+      console.error("❌ [SOCIAL FEED] Erro ao criar post:", error)
+      alert('❌ Erro ao publicar. Tenta novamente.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  // Limpar formato de menções para partilha (remover IDs, manter apenas nomes)
+  const cleanMentionsForShare = (text: string): string => {
+    return text.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1')
+  }
+
+  const handleSharePost = async (post: Post) => {
+    try {
+      // Encurtar link - usar apenas primeiro segmento do ID do post (mais curto)
+      const postIdShort = post.id.split('-')[0] || post.id.substring(0, 8)
+      const shortLink = `${window.location.origin}/p/${postIdShort}`
+      // Limpar menções antes de partilhar (remover IDs)
+      const cleanContent = cleanMentionsForShare(post.content)
+      const shareText = `${cleanContent}\n\n- ${post.user_name} via MTM App`
+      const fullShareText = `${shareText}\n\n🔗 Ver: ${shortLink}`
+
+      // Se tem mídia, tentar partilhar com imagem/vídeo + texto + link
+      if (post.media_url) {
+        const isVideo = post.media_url.includes('.mp4') || post.media_url.includes('.webm')
+        
+        // Para imagens, converter URL para File e partilhar com texto + link
+        if (!isVideo && navigator.share && navigator.canShare) {
+          try {
+            // Fetch da imagem
+            const response = await fetch(post.media_url)
+            const blob = await response.blob()
+            
+            // Converter blob para File
+            const file = new File([blob], `post-${post.id}.${blob.type.split('/')[1] || 'jpg'}`, { 
+              type: blob.type || 'image/jpeg' 
+            })
+
+            // Verificar se pode partilhar ficheiros + texto (sem url para evitar duplicação)
+            const shareDataWithFile: any = {
+              title: `Post de ${post.user_name} - MTM`,
+              text: fullShareText, // Inclui texto + link encurtado
+              files: [file], // Anexo incluído
+            }
+            
+            if (navigator.canShare(shareDataWithFile)) {
+              await navigator.share(shareDataWithFile)
+              return
+            }
+          } catch (error) {
+            console.log('Não foi possível partilhar com ficheiro, tentando sem:', error)
+          }
+        }
+
+        // Fallback: partilhar texto + link encurtado + URL da mídia (sem url duplicado)
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: `Post de ${post.user_name} - MTM`,
+              text: `${fullShareText}\n\n📎 Mídia: ${post.media_url}`, // Texto + link encurtado + mídia (sem url duplicado)
+            })
+            return
+          } catch (error) {
+            // Usuário cancelou ou erro
+            if ((error as Error).name !== 'AbortError') {
+              console.error('Erro ao partilhar:', error)
+            }
+            return
+          }
+        }
+      }
+
+      // Se não tem mídia ou Web Share API não disponível
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: `Post de ${post.user_name} - MTM`,
+            text: fullShareText, // Sempre inclui texto + link encurtado (sem url duplicado)
+          })
+        } catch (error) {
+          if ((error as Error).name !== 'AbortError') {
+            // Fallback para clipboard - sempre inclui texto + link
+            await navigator.clipboard.writeText(fullShareText)
+            alert("✅ Conteúdo copiado para área de transferência!")
+          }
+        }
+      } else {
+        // Fallback: copiar para clipboard - sempre inclui texto + link + mídia se existir
+        const textToCopy = post.media_url 
+          ? `${fullShareText}\n\n📎 Anexo: ${post.media_url}`
+          : fullShareText
+        
+        await navigator.clipboard.writeText(textToCopy)
+        alert("✅ Conteúdo copiado para área de transferência!")
+      }
+    } catch (error) {
+      console.error('Erro ao partilhar post:', error)
+      alert('❌ Erro ao partilhar. Tenta novamente.')
+    }
+  }
+
+  const handleLike = async (postId: string) => {
+    if (!currentUser) return
+
+    const post = posts.find(p => p.id === postId)
+    if (!post) return
+
+    try {
+      if (post.liked_by_user) {
+        // Remover like
+        const { error } = await supabase
+          .from("post_likes")
+          .delete()
+          .eq("post_id", postId)
+          .eq("user_id", currentUser.id)
+
+        if (error) {
+          console.error('❌ [SOCIAL FEED] Erro ao remover like:', error)
+          return
+        }
+      } else {
+        // Adicionar like
+        const { error } = await supabase
+          .from("post_likes")
+          .insert({
+            post_id: postId,
+            user_id: currentUser.id
+          })
+
+        if (error) {
+          console.error('❌ [SOCIAL FEED] Erro ao dar like:', error)
+          return
+        }
+      }
+
+      // Atualizar UI
+      setPosts(posts.map(p =>
+        p.id === postId
+          ? {
+              ...p,
+              likes_count: (p.likes_count || 0) + (post.liked_by_user ? -1 : 1),
+              liked_by_user: !post.liked_by_user,
+            }
+          : p
+      ))
+    } catch (error) {
+      console.error('❌ [SOCIAL FEED] Erro ao processar like:', error)
+    }
+  }
+
+  const loadComments = async (postId: string) => {
+    if (loadingComments.has(postId) || postComments.has(postId)) return
+    
+    setLoadingComments(prev => new Set(prev).add(postId))
+    
+    try {
+      const { data, error } = await supabase
+        .from('post_comments')
+        .select('*')
+        .eq('post_id', postId)
+        .order('created_at', { ascending: false })
+      
+      if (error) {
+        console.error('❌ [SOCIAL FEED] Erro ao carregar comentários:', error)
+        return
+      }
+      
+      if (data) {
+        setPostComments(prev => new Map(prev).set(postId, data))
+      }
+    } catch (error) {
+      console.error('❌ [SOCIAL FEED] Erro ao carregar comentários:', error)
+    } finally {
+      setLoadingComments(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(postId)
+        return newSet
+      })
+    }
+  }
+
+  const handleAddComment = async (postId: string) => {
+    const comment = commentText.get(postId)
+    if (!currentUser || !comment?.trim()) return
+
+    try {
+      // Extrair IDs de menções
+      const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g
+      const mentionedUserIds: string[] = []
+      let match
+      while ((match = mentionRegex.exec(comment)) !== null) {
+        mentionedUserIds.push(match[2])
+      }
+
+      const { data, error } = await supabase
+        .from('post_comments')
+        .insert({
+          post_id: postId,
+          user_id: currentUser.id,
+          user_name: currentUser.full_name || currentUser.email || 'Utilizador',
+          content: comment.trim(),
+          mentions: mentionedUserIds.length > 0 ? mentionedUserIds : null
+        })
+        .select()
+        .single()
+
+      // Enviar notificações para membros mencionados
+      if (mentionedUserIds.length > 0) {
+        try {
+          for (const mentionedUserId of mentionedUserIds) {
+            await fetch('/api/notifications/send-push', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: mentionedUserId,
+                title: `💬 ${currentUser.full_name || currentUser.email} mencionou-te`,
+                body: comment.trim().substring(0, 100),
+                data: {
+                  type: 'mention',
+                  url: '/app-mobile?tab=social',
+                  author: currentUser.full_name || currentUser.email,
+                  post_id: postId
+                },
+                tag: 'mention'
+              })
+            })
+          }
+          console.log('✅ [SOCIAL FEED] Notificações de menção em comentário enviadas')
+        } catch (notifError) {
+          console.error('⚠️ [SOCIAL FEED] Erro ao enviar notificações de menção:', notifError)
+        }
+      }
+
+      if (error) {
+        console.error('❌ [SOCIAL FEED] Erro ao adicionar comentário:', error)
+        alert('Erro ao adicionar comentário')
+        return
+      }
+
+      // Adicionar comentário à lista
+      setPostComments(prev => {
+        const newMap = new Map(prev)
+        const currentComments = newMap.get(postId) || []
+        newMap.set(postId, [data, ...currentComments])
+        return newMap
+      })
+
+      // Limpar input
+      setCommentText(prev => {
+        const newMap = new Map(prev)
+        newMap.set(postId, '')
+        return newMap
+      })
+
+      // Atualizar contador de comentários (trigger já atualiza automaticamente)
+      setPosts(posts.map(p =>
+        p.id === postId
+          ? { ...p, comments_count: (p.comments_count || 0) + 1 }
+          : p
+      ))
+    } catch (error) {
+      console.error('❌ [SOCIAL FEED] Erro ao processar comentário:', error)
+      alert('Erro ao adicionar comentário')
+    }
+  }
+
+  const toggleComments = (postId: string) => {
+    if (expandedComments === postId) {
+      setExpandedComments(null)
+    } else {
+      setExpandedComments(postId)
+      loadComments(postId)
+    }
+  }
+
+  const filteredPosts = activeCategory
+    ? posts.filter((p) => p.category === activeCategory)
+    : posts
+
+  const formatTimeAgo = (date: string) => {
+    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000)
+    if (seconds < 60) return "agora"
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}min`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d`
+    return new Date(date).toLocaleDateString("pt-PT", { day: "numeric", month: "short" })
+  }
+
+  if (!mounted || loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black">
+        <Loader2 className="w-8 h-8 animate-spin text-[#D2A63C]" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white pb-32">
+      {/* Stories Section - Instagram Style */}
+      <div 
+        ref={storiesRef}
+        className="flex gap-4 overflow-x-auto px-4 py-4 border-b border-gray-800 scrollbar-hide"
+        onTouchStart={(e) => {
+          // Guardar posição inicial do touch
+          touchStartX.current = e.touches[0].clientX
+          touchStartY.current = e.touches[0].clientY
+          // Prevenir propagação para não ativar swipe de abas
+          e.stopPropagation()
+        }}
+        onTouchMove={(e) => {
+          // Se está scrollando horizontalmente nos stories, prevenir swipe de abas
+          const deltaX = Math.abs(e.touches[0].clientX - touchStartX.current)
+          const deltaY = Math.abs(e.touches[0].clientY - touchStartY.current)
+          
+          // Se movimento horizontal é maior que vertical, é scroll dos stories
+          if (deltaX > deltaY && deltaX > 10) {
+            e.stopPropagation() // Prevenir propagação para swipe de abas
+          }
+        }}
+        onTouchEnd={(e) => {
+          // Prevenir propagação no touch end também
+          e.stopPropagation()
+        }}
+        onScroll={(e) => {
+          // Prevenir que scroll horizontal nos stories propague
+          e.stopPropagation()
+        }}
+      >
+        {CATEGORIES.map((cat) => {
+          const preview = storyPreviews.get(cat.id)
+          const isActive = activeCategory === cat.id
+          const postCount = preview?.post_count || 0
+
+          return (
+            <div
+              key={cat.id}
+              onClick={() => {
+                // Definir categoria ativa e fazer scroll automático para os posts
+                const categoryPosts = posts.filter(p => p.category === cat.id)
+                if (categoryPosts.length > 0) {
+                  setActiveCategory(isActive ? null : cat.id)
+                  // Scroll automático após um pequeno delay para garantir que o estado foi atualizado
+                  setTimeout(() => {
+                    if (feedRef.current) {
+                      const firstPost = feedRef.current.querySelector('[data-post-category="' + cat.id + '"]')
+                      if (firstPost) {
+                        firstPost.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        // Marcar categoria como visualizada quando scroll
+                        markCategoryAsViewed(cat.id)
+                        // Limpeza otimista imediata do contador do destaque
+                        setViewedCategories(prev => new Set([...prev, cat.id]))
+                        setStoryPreviews(prev => {
+                          const updated = new Map(prev)
+                          const current = updated.get(cat.id)
+                          if (current) {
+                            updated.set(cat.id, { ...current, post_count: 0 })
+                          }
+                          return updated
+                        })
+                        // Reduzir contagem de notificações: marcar apenas notificações do tipo 'social_post' como lidas
+                        if (currentUser?.id) {
+                          supabase
+                            .from('notifications')
+                            .update({ read: true })
+                            .eq('user_id', currentUser.id)
+                            .eq('type', 'social_post')
+                            .eq('read', false)
+                            .then((result) => {
+                              if (result.error) {
+                                console.warn('⚠️ [SOCIAL FEED] Falha ao marcar notificações como lidas:', result.error)
+                              } else {
+                                console.log('✅ [SOCIAL FEED] Notificações sociais marcadas como lidas após ver destaque')
+                              }
+                            })
+                        }
+                      }
+                    }
+                  }, 100)
+                } else {
+                  setActiveCategory(isActive ? null : cat.id)
+                }
+              }}
+              className={`flex flex-col items-center cursor-pointer transition-all duration-300 flex-shrink-0 ${
+                isActive ? "opacity-100 scale-105" : "opacity-70 hover:opacity-90"
+              }`}
+            >
+              {/* Story Circle com animação flip */}
+              <div className="relative">
+                <div className="relative w-20 h-20 perspective-1000">
+                  <div
+                    className={`story-flip-container w-20 h-20 rounded-full border-4 transition-all duration-300 ${
+                      isActive
+                        ? "border-[#D2A63C] shadow-[0_0_20px_#D2A63C,0_0_40px_#D2A63C50] scale-110"
+                        : "border-gray-700 hover:border-[#D2A63C]/50"
+                    } ${storyFlipStates.get(cat.id)?.showPreview ? 'story-flipped' : ''}`}
+                  >
+                    {/* Face frontal - Ícone */}
+                    <div className={`story-face story-face-front absolute inset-0 rounded-full flex items-center justify-center bg-gradient-to-br ${cat.color} ${
+                      storyFlipStates.get(cat.id)?.showPreview ? 'opacity-0' : 'opacity-100'
+                    } transition-opacity duration-300`}>
+                      <span className="text-4xl drop-shadow-lg">{cat.icon}</span>
+                    </div>
+
+                    {/* Face traseira - Preview */}
+                    {(() => {
+                      const categoryPosts = posts.filter(p => p.category === cat.id && p.media_url)
+                      const flipState = storyFlipStates.get(cat.id)
+                      const currentPost = categoryPosts[flipState?.currentIndex || 0]
+                      
+                      return currentPost?.media_url ? (
+                        <div className={`story-face story-face-back absolute inset-0 rounded-full overflow-hidden border-2 border-black ${
+                          flipState?.showPreview ? 'opacity-100' : 'opacity-0'
+                        } transition-opacity duration-300`}>
+                          <Image
+                            src={currentPost.media_url}
+                            alt={`Preview ${cat.label}`}
+                            width={80}
+                            height={80}
+                            className="w-full h-full object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      ) : null
+                    })()}
+                  </div>
+                </div>
+                
+                {/* Post Count Badge */}
+                {postCount > 0 && (
+                  <div className={`absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    isActive 
+                      ? "bg-[#D2A63C] text-black" 
+                      : "bg-gray-700 text-white"
+                  } transition-colors`}>
+                    {postCount}
+                  </div>
+                )}
+
+                {/* Active Indicator */}
+                {isActive && (
+                  <div className="absolute inset-0 rounded-full border-4 border-[#D2A63C] animate-ping opacity-75"></div>
+                )}
+              </div>
+              
+              {/* Label */}
+              <p className={`text-gray-300 text-xs mt-2 font-medium transition-colors ${
+                isActive ? "text-[#D2A63C]" : ""
+              }`}>
+                {cat.label}
+              </p>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Create Post Section */}
+      {canPost && (
+        <div className="p-4 border-b border-gray-800 bg-gradient-to-r from-gray-900/50 to-black/50">
+          {!showCreatePost ? (
+            <Button
+              onClick={() => setShowCreatePost(true)}
+              className="w-full bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black hover:opacity-90 transition-all"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Criar Nova Publicação
+            </Button>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-[#D2A63C]">Nova Publicação</h3>
+                <button
+                  onClick={() => {
+                    setShowCreatePost(false)
+                    setNewPost("")
+                    setSelectedCategory("")
+                    setMediaPreview(null)
+                    setNewPostMedia(null)
+                  }}
+                  className="p-1 hover:bg-gray-800 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+
+              <MentionInput
+                value={newPost}
+                onChange={setNewPost}
+                placeholder="Partilha algo com a comunidade... (usa @ para mencionar membros)"
+                className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm text-white focus:border-[#D2A63C] outline-none resize-none transition-colors"
+                rows={4}
+                onMentionsChange={setPostMentions}
+              />
+
+              {mediaPreview && (
+                <div className="relative rounded-lg overflow-hidden border border-gray-700">
+                  <Image
+                    src={mediaPreview}
+                    alt="Preview"
+                    width={500}
+                    height={256}
+                    className="w-full max-h-64 object-cover"
+                    unoptimized
+                  />
+                  <button
+                    onClick={() => {
+                      setMediaPreview(null)
+                      setNewPostMedia(null)
+                      if (fileInputRef.current) fileInputRef.current.value = ""
+                    }}
+                    className="absolute top-2 right-2 p-2 bg-black/70 hover:bg-black rounded-full transition-colors"
+                  >
+                    <X className="w-4 h-4 text-white" />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  onChange={handleMediaSelect}
+                  className="hidden"
+                  id="media-upload"
+                />
+                <label
+                  htmlFor="media-upload"
+                  className="cursor-pointer px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4 text-[#D2A63C]" />
+                  <span className="text-sm">Adicionar Mídia</span>
+                </label>
+
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="flex-1 bg-gray-800 border border-[#D2A63C]/30 text-gray-300 rounded-lg p-2 text-sm focus:border-[#D2A63C] outline-none transition-colors"
+                >
+                  <option value="">Seleciona categoria</option>
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <Button
+                onClick={handleCreatePost}
+                disabled={!newPost.trim() || uploading}
+                className="w-full bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black hover:opacity-90 disabled:opacity-50 transition-all"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    A publicar...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Publicar
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Active Category Filter Badge */}
+      {activeCategory && (
+        <div className="px-4 py-2 bg-[#D2A63C]/20 border-b border-[#D2A63C]/30 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">
+              {CATEGORIES.find(c => c.id === activeCategory)?.icon}
+            </span>
+            <span className="text-[#D2A63C] font-semibold">
+              Filtrado: {CATEGORIES.find(c => c.id === activeCategory)?.label}
+            </span>
+            <span className="text-gray-400 text-sm">
+              ({filteredPosts.length} {filteredPosts.length === 1 ? 'publicação' : 'publicações'})
+            </span>
+          </div>
+          <button
+            onClick={() => setActiveCategory(null)}
+            className="text-gray-400 hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Feed */}
+      <div ref={feedRef} className="p-4 flex flex-col gap-4">
+        {filteredPosts.length > 0 ? (
+          filteredPosts.map((post) => (
+            <Card
+              key={post.id}
+              data-post-category={post.category}
+              className="post-card bg-gradient-to-br from-gray-900/90 to-black/90 border border-[#D2A63C]/20 rounded-2xl shadow-lg hover:shadow-[#D2A63C]/20 transition-all duration-300"
+            >
+              <CardContent className="p-4">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[#D2A63C] to-[#BB8525] rounded-full flex items-center justify-center">
+                      <User className="w-5 h-5 text-black" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-[#D2A63C] text-base">
+                        {post.user_name}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400">
+                          {formatTimeAgo(post.created_at)}
+                        </span>
+                        {post.category && (
+                          <>
+                            <span className="text-xs text-gray-600">•</span>
+                            <span className="text-xs text-gray-400 uppercase">
+                              {CATEGORIES.find(c => c.id === post.category)?.icon} {post.category}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="text-gray-200 whitespace-pre-wrap leading-relaxed mb-3">
+                  <MentionText text={post.content} />
+                </div>
+
+                {/* Media */}
+                {post.media_url && (
+                  <div className="mb-3 rounded-xl overflow-hidden border border-gray-700">
+                    {post.media_url.includes('.mp4') || post.media_url.includes('.webm') ? (
+                      <video src={post.media_url} controls className="w-full rounded-xl" />
+                    ) : (
+                      <Image
+                        src={post.media_url}
+                        alt="Post media"
+                        width={800}
+                        height={384}
+                        className="w-full rounded-xl object-cover max-h-96"
+                        unoptimized
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center gap-6 pt-3 border-t border-gray-700/50">
+                  <button
+                    onClick={() => handleLike(post.id)}
+                    className={`flex items-center gap-2 transition-all duration-200 ${
+                      post.liked_by_user
+                        ? "text-red-500 scale-110"
+                        : "text-gray-400 hover:text-red-400 hover:scale-105"
+                    }`}
+                  >
+                    <Heart
+                      className={`w-6 h-6 ${
+                        post.liked_by_user ? "fill-current animate-pulse" : ""
+                      }`}
+                    />
+                    <span className="text-sm font-semibold">
+                      {post.likes_count || 0}
+                    </span>
+                  </button>
+
+                  <button 
+                    onClick={() => toggleComments(post.id)}
+                    className="flex items-center gap-2 text-gray-400 hover:text-[#D2A63C] transition-all duration-200 hover:scale-105"
+                  >
+                    <MessageCircle className="w-6 h-6" />
+                    <span className="text-sm font-semibold">
+                      {post.comments_count || 0}
+                    </span>
+                  </button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-2 text-gray-400 hover:text-[#D2A63C] transition-colors ml-auto">
+                        <Share2 className="w-5 h-5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="bg-gray-800 border-gray-700">
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          const postIdShort = post.id.split('-')[0] || post.id.substring(0, 8)
+                          const shortLink = `${window.location.origin}/p/${postIdShort}`
+                          const cleanContent = cleanMentionsForShare(post.content)
+                          const shareText = `${cleanContent}\n\n- ${post.user_name} via MTM App\n\n🔗 Ver: ${shortLink}`
+                          const url = `https://wa.me/?text=${encodeURIComponent(shareText)}`
+                          window.open(url, '_blank')
+                        }}
+                        className="text-white hover:bg-green-500/20 cursor-pointer flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0123.995 12a11.872 11.872 0 01-3.547 8.506 11.821 11.821 0 01-8.448 3.494A11.815 11.815 0 01.005 12 11.867 11.867 0 015.285 2.471a11.805 11.805 0 018.927-3.221h.001z"/></svg>
+                        WhatsApp
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          const postIdShort = post.id.split('-')[0] || post.id.substring(0, 8)
+                          const shortLink = `${window.location.origin}/p/${postIdShort}`
+                          const cleanContent = cleanMentionsForShare(post.content)
+                          const shareText = `${cleanContent}\n\n- ${post.user_name} via MTM App`
+                          const url = `https://t.me/share/url?url=${encodeURIComponent(shortLink)}&text=${encodeURIComponent(shareText)}`
+                          window.open(url, '_blank')
+                        }}
+                        className="text-white hover:bg-blue-500/20 cursor-pointer flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                        Telegram
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          await handleSharePost(post)
+                        }}
+                        className="text-white hover:bg-gray-700 cursor-pointer"
+                      >
+                        Mais opções...
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                {/* Comentários Expandidos */}
+                {expandedComments === post.id && (
+                  <div className="px-4 pb-4 border-t border-gray-700/50 pt-4">
+                    {/* Lista de Comentários */}
+                    {loadingComments.has(post.id) ? (
+                      <div className="flex items-center justify-center py-6">
+                        <Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" />
+                      </div>
+                    ) : postComments.has(post.id) && (postComments.get(post.id)?.length ?? 0) > 0 ? (
+                      <div className="space-y-3 mb-4">
+                        {(postComments.get(post.id) || []).map((comment: any) => (
+                          <div key={comment.id} className="flex gap-2">
+                            <div className="w-8 h-8 bg-[#D2A63C]/20 rounded-full flex items-center justify-center flex-shrink-0">
+                              <User className="w-4 h-4 text-[#D2A63C]" />
+                            </div>
+                            <div className="flex-1 bg-gray-800/50 rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-semibold text-[#D2A63C]">
+                                  {comment.user_name}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {formatTimeAgo(comment.created_at)}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-300 leading-relaxed">
+                                <MentionText text={comment.content} />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center text-gray-500 py-4">
+                        <p className="text-sm">Ainda não há comentários.</p>
+                      </div>
+                    )}
+
+                    {/* Input para Adicionar Comentário */}
+                    {currentUser && (
+                      <div className="flex gap-2">
+                        <div className="flex-1 relative">
+                          <MentionInput
+                            value={commentText.get(post.id) || ''}
+                            onChange={(value) => {
+                              setCommentText(prev => {
+                                const newMap = new Map(prev)
+                                newMap.set(post.id, value)
+                                return newMap
+                              })
+                            }}
+                            placeholder="Escreve um comentário... (usa @ para mencionar)"
+                            className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#D2A63C]/50"
+                            rows={1}
+                            onMentionsChange={(mentions) => {
+                              setCommentMentions(prev => {
+                                const newMap = new Map(prev)
+                                newMap.set(post.id, mentions)
+                                return newMap
+                              })
+                            }}
+                          />
+                        </div>
+                        <button
+                          onClick={() => handleAddComment(post.id)}
+                          disabled={!commentText.get(post.id)?.trim()}
+                          className="bg-[#D2A63C] text-black px-4 py-2 rounded-lg font-semibold hover:bg-[#BB8525] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Publicar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <div className="text-center text-gray-500 py-20">
+            {activeCategory ? (
+              <div className="space-y-2">
+                <div className="text-6xl mb-4">
+                  {CATEGORIES.find(c => c.id === activeCategory)?.icon}
+                </div>
+                <p className="text-lg">Ainda não há publicações nesta categoria.</p>
+                <p className="text-sm text-gray-600">
+                  Sê o primeiro a partilhar algo sobre{" "}
+                  {CATEGORIES.find(c => c.id === activeCategory)?.label.toLowerCase()}!
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-6xl mb-4">📭</div>
+                <p className="text-lg">Ainda não há publicações.</p>
+                <p className="text-sm text-gray-600">
+                  Sê o primeiro a partilhar algo com a comunidade!
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+    </div>
+  )
+}

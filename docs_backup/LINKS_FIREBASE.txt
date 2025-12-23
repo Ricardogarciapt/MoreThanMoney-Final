@@ -1,0 +1,57 @@
+# 🔥 LINKS DIRETOS DO FIREBASE
+
+## 📱 Web App Configuration
+Abre este link para ver as configurações da tua Web App:
+https://console.firebase.google.com/project/mtm-push-notifications-fdbf1/settings/general/web
+
+**O que vais ver:**
+```javascript
+const firebaseConfig = {
+  apiKey: "AIza...",
+  authDomain: "mtm-push-notifications-fdbf1.firebaseapp.com",
+  projectId: "mtm-push-notifications-fdbf1",
+  storageBucket: "mtm-push-notifications-fdbf1.firebasestorage.app",
+  messagingSenderId: "767894513734",
+  appId: "1:767894513734:web:...",
+  measurementId: "G-..."
+};
+```
+
+**COPIA TODOS ESTES VALORES!**
+
+---
+
+## 🔑 VAPID Key (Web Push Certificate)
+Abre este link para obter/gerar a VAPID Key:
+https://console.firebase.google.com/project/mtm-push-notifications-fdbf1/settings/cloudmessaging/web
+
+**Passos:**
+1. Vai à secção "Web Push certificates"
+2. Se NÃO tiver chave, clica em "Generate key pair"
+3. Copia a chave (começa com `B...` e tem ~90 caracteres)
+
+**COPIA A VAPID KEY!**
+
+---
+
+## 📋 Cloud Messaging (verificar se está ativo)
+https://console.firebase.google.com/project/mtm-push-notifications-fdbf1/cloudmessaging
+
+Se aparecer "Get started", clica e ativa.
+
+---
+
+## 🎯 RESUMO DO QUE PRECISAS:
+
+Depois de abrir os links acima, terás:
+
+✅ Service Account Key (JÁ TENS! ✓)
+⏳ API Key (do link 1)
+⏳ Auth Domain (do link 1)
+⏳ Messaging Sender ID (do link 1)
+⏳ App ID (do link 1)
+⏳ Measurement ID (do link 1)
+⏳ VAPID Key (do link 2)
+
+Copia tudo para o env.local conforme FIREBASE_CONFIG_COMPLETO.txt
+

@@ -1,0 +1,24 @@
+{
+  "branding": {
+    "siteName": "MoreThanMoney",
+    "primaryColor": "#D2A63C",
+    "secondaryColor": "#BB8525",
+    "backgroundColor": "#0b0b0b"
+  },
+  "videos": {
+    "welcomeUrl": "https://www.youtube.com/embed/dgd0-mLIrMw",
+    "iqonicPresentationUrl": "https://www.youtube.com/embed/RQIimjljeMI",
+    "onboardingUrl": "https://www.youtube.com/embed/q-23MppHFDI"
+  },
+  "iqonicLinks": {
+    "backoffice": "https://user.iqonic.life",
+    "academy": "https://iqonic.vip",
+    "sync": "https://trading.iqonic.life",
+    "charts": "https://iqcharts.com/chart"
+  },
+  "mtm": {
+    "coursesUrl": "https://www.skool.com/morethanmoney"
+  }
+}
+
+

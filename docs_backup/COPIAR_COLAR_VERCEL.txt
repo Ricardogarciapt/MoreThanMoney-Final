@@ -1,0 +1,90 @@
+===============================================
+VARIÁVEIS PARA VERCEL - COPIAR E COLAR
+===============================================
+
+Abrir: https://vercel.com/ricardosubtilgarcia-8872s-projects/site-morethanmoney-final/settings/environment-variables
+
+Clicar "Add New" para cada variável abaixo:
+
+===============================================
+VARIÁVEL 1 de 5
+===============================================
+
+Name:
+NEXT_PUBLIC_SITE_URL
+
+Value:
+https://www.morethanmoney.pt
+
+Environment: ✓ Production ✓ Preview ✓ Development
+
+[Save]
+
+===============================================
+VARIÁVEL 2 de 5
+===============================================
+
+Name:
+NEXT_PUBLIC_NOTION_API_KEY
+
+Value:
+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
+
+Environment: ✓ Production ✓ Preview ✓ Development
+
+[Save]
+
+===============================================
+VARIÁVEL 3 de 5
+===============================================
+
+Name:
+NEXT_PUBLIC_NOTION_PORTFOLIO_DATABASE_ID
+
+Value:
+76557dddfbc348aba2f6e24ea1f5133e
+
+Environment: ✓ Production ✓ Preview ✓ Development
+
+[Save]
+
+===============================================
+VARIÁVEL 4 de 5
+===============================================
+
+Name:
+OPENAI_API_KEY
+
+Value:
+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
+
+Environment: ✓ Production ✓ Preview ✓ Development
+
+[Save]
+
+===============================================
+VARIÁVEL 5 de 5
+===============================================
+
+Name:
+NEWS_API_KEY
+
+Value:
+d4cf3e3c4e7c4a9b9e5f4d3c2b1a0e9d
+
+Environment: ✓ Production ✓ Preview ✓ Development
+
+[Save]
+
+===============================================
+✅ APÓS ADICIONAR TODAS AS 5 VARIÁVEIS
+===============================================
+
+Execute no terminal:
+
+vercel --prod --force --token 08zZPeikD3wsBLCCztG2j9yZ
+
+Aguardar deploy (~2-5 minutos)
+
+===============================================
+

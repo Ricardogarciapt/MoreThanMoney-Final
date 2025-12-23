@@ -1,0 +1,44 @@
+{
+  "name": "MoreThanMoney - Trading & Portfolio",
+  "short_name": "MTM App",
+  "description": "Gestão de portfolios, DCA inteligente e trading ideas",
+  "start_url": "/app-mobile",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#D2A63C",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo-new.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo-new.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Portfolio",
+      "short_name": "Portfolio",
+      "description": "Ver portfolio MTM",
+      "url": "/mobile?tab=portfolio",
+      "icons": [{ "src": "/logo-new.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "DCA Opportunities",
+      "short_name": "DCA",
+      "description": "Oportunidades DCA",
+      "url": "/portfolios",
+      "icons": [{ "src": "/logo-new.png", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
+

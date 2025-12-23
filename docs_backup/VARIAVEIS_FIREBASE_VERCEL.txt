@@ -1,0 +1,70 @@
+================================================
+🔥 VARIÁVEIS FIREBASE PARA VERCEL
+================================================
+
+Copie e cole estas variáveis no Vercel:
+👉 https://vercel.com/ricardogarciapt/site-morethanmoney-final/settings/environment-variables
+
+================================================
+FIREBASE CLIENT (8 variáveis)
+================================================
+
+NEXT_PUBLIC_FIREBASE_API_KEY
+AIzaSyAbBVqaEziU-OnSt0obMx_HsgBRJqSubNY
+
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+mtm-push-notifications-fdbf1.firebaseapp.com
+
+NEXT_PUBLIC_FIREBASE_PROJECT_ID
+mtm-push-notifications-fdbf1
+
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+mtm-push-notifications-fdbf1.firebasestorage.app
+
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+978304341617
+
+NEXT_PUBLIC_FIREBASE_APP_ID
+1:978304341617:web:1312656f10990a496bedd0
+
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+G-QLZDCMXLLF
+
+NEXT_PUBLIC_FIREBASE_VAPID_KEY
+BDLNFba6Dstb05ihDbG7mf5YE7Jx2EXFY-73Z1y-N_23__Elp0QFDbMnMpFgAmYzxwn7U0mhYxkURhpnDUGXpd8
+
+================================================
+FIREBASE SERVER (1 variável)
+================================================
+
+FIREBASE_SERVICE_ACCOUNT_KEY
+{"type":"service_account","project_id":"mtm-push-notifications-fdbf1","private_key_id":"6d82f3638b097e610958bb9d1478fa916ec9387e","private_key":"-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDDGu5pTGKJ7+xU\nzx9dAPHZPufZBVjDT7niRE+7KN/7bxP1kZwndVOfwvq8VXeFKDWOs3jlAypWj4XD\nID/DSNQmCx37+dTvTcMJKMaT0KUG6we05xfZOUtPJ7oHOR39KsgDK+4QTMMRhJXV\ndpOOaX+zrTDxg+vZ0JMqQhVD81lYr3vcign+wV8lNtUklKtF4/RHt+PtwkaJxZ29\nZ6o3EGPgd2Qa+QQaJhJbjJLURr5GdmiGV/rn9ZEK+ZG5FQZLDmFkSWoYbioifoO3\nI49yC/y2vctxtH1W7MJz1IZCvaa6n9ga5NrH0sskjzkbYg6tHgSWCtVAGRf2BO5u\nv7+4E6LvAgMBAAECggEAHQoUozqZzhMWV3cuoV6jIKUyyAP6NrPWpH1rap2GXPum\n+l2OYvcdF8HjJQYJkJmwAwnmfBuxAQpCrAzQQMZFwVXVRCxmy6mE1oepqtWawoFX\n986Pp6bV9TWiBDI1qvljpMk0mVt7i09zJ78K7l74gWtNRh1PDO/0/4yvcpo1WbQe\nSpb8CoWbhnboc/sjcC5xrZ3Qne8xPusB2Nbb1sF1ZwvVAaREiDPNhtcHxKR+2zGa\nx5vo/M3ahP7mHuvrX2PlcfXVy/REFg1iHi4PMA6ZKRzNxwIMMHvgnbaXpG74xPvC\n8HZw3aQPUXahzczZ4BJ6xs5ME/gSBfx6+O6jrUFcNQKBgQDl+y1MjUQL2W1Kb+G/\ntYDMBKA9f7s86hqT1y09aEEfLaKlc+e223iE5DJELfc7Z3Kn0u8VA1KtwvJZVEj6\nZsOgDWm29nxHMlBWKoejlABluSQF2eWNWGKy+GplXXfk6K5T0szPu8uA2cFdlSBi\nCTZOMwRm1fn3Zdn088JRjaWWwwKBgQDZLakKuDAS9M1jhqn8cZ51vyz0UPrlFrf/\nE9yVeGsx14cMD5QL2EbrE20VCfQJaFbG+xCYt1RlUAxIShRNamgMVhDmqzbKMdFz\nzbdtyWWJUy8rn2XFekrjSMiqDDCV9DRc7CMVWIGdrs8wX8CI4mjkDrn8Fl9Eue+B\ni9lXcOG4ZQKBgElXhOa41k6BFF18uJ2OoHhvsTprlaajcb5cDM1chggPYaMqB2dF\nLnYS4ATmM8X6A5KJrj0hRiir1uWt/2f7hb9xB5mVmaSK4xvXjFIaTNYj6N0E1DPz\nT+aLWkLhP+78VTveKfrFhOyehQ/3EtCw52Sg2HKDIqhHDu8THZEsfvZJAoGBAK1P\nVcW7JIoMF1dkIITW+rhGHo69jOqCTcTdybryBMEamKeUSvWE21s+/l66uadEP3O8\n6QqlylCrJ5IMo9T/pBasHAKoASorxVTfhpCzFjcXTd5G7oU/yUFFVPT2k1MnNR4u\nRvUC0zTNSoP09YWHAGN2KQ81n0MOCkZcHs47w7VNAoGAS5lt1sw80YdpWnNM7N1u\nK9TuHkGNYAH+Ape9bsrSr2TGYdhzrBNDPcly1x/X9RdmuklMVAu4b8lwerznmwWD\ntbED3jhCQwHj2+hk/Ugu1fexJ1/fpkJWB6ifY5f0y/EFjnxe6kq76FuK4O6d+5i+\n3h7Keo9YPTZyP10JXtVHPVc=\n-----END PRIVATE KEY-----\n","client_email":"firebase-adminsdk-fbsvc@mtm-push-notifications-fdbf1.iam.gserviceaccount.com","client_id":"102725003795186937427","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_x509_cert_url":"https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40mtm-push-notifications-fdbf1.iam.gserviceaccount.com","universe_domain":"googleapis.com"}
+
+================================================
+INSTRUÇÕES
+================================================
+
+1. Aceda: https://vercel.com/ricardogarciapt/site-morethanmoney-final/settings/environment-variables
+
+2. Para cada variável:
+   - Click "Add New"
+   - Name: copie o nome (ex: NEXT_PUBLIC_FIREBASE_API_KEY)
+   - Value: copie o valor (ex: AIzaSyAbBVqaEziU-OnSt0obMx_HsgBRJqSubNY)
+   - Environment: Marque "Production", "Preview", "Development"
+   - Click "Save"
+
+3. Após adicionar todas (9 variáveis):
+   - Click "Redeploy" no projeto
+   - Aguardar 3-4 minutos
+   - Push notifications estarão ativos! 🎉
+
+================================================
+IMPORTANTE
+================================================
+
+⚠️ NÃO COMITAR este arquivo para GitHub (tem credenciais sensíveis)
+✅ Apenas usar para copiar para Vercel
+✅ Depois pode apagar do computador
+
+================================================
+

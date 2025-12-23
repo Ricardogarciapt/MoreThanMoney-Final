@@ -1,0 +1,173 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║              🚀 GUIA RÁPIDO: CONFIGURAR GOOGLE OAUTH (5 MIN)             ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│ ETAPA 1/4: EXECUTAR SQL NO SUPABASE (1 min)                              │
+└───────────────────────────────────────────────────────────────────────────┘
+
+  1. Abrir → https://app.supabase.com/
+  2. Clicar → SQL Editor (menu lateral esquerdo)
+  3. Clicar → "+ New Query"
+  4. COPIAR E COLAR:
+
+     ┌─────────────────────────────────────────────────────────────────────┐
+     │ ALTER TABLE public.profiles                                         │
+     │ ADD COLUMN IF NOT EXISTS avatar_url TEXT;                           │
+     │                                                                      │
+     │ CREATE INDEX IF NOT EXISTS profiles_email_idx                       │
+     │ ON public.profiles(email);                                          │
+     │                                                                      │
+     │ CREATE INDEX IF NOT EXISTS profiles_username_idx                    │
+     │ ON public.profiles(username);                                       │
+     └─────────────────────────────────────────────────────────────────────┘
+
+  5. Clicar → "RUN" (ou pressionar F5)
+  6. Verificar → Mensagem "Success. No rows returned"
+
+  ✅ ETAPA 1 CONCLUÍDA!
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│ ETAPA 2/4: CONFIGURAR GOOGLE CLOUD CONSOLE (2 min)                       │
+└───────────────────────────────────────────────────────────────────────────┘
+
+  1. Abrir → https://console.cloud.google.com/
+
+  2. Menu (☰) → APIs & Services → Credentials
+
+  3. Procurar lista de OAuth 2.0 Client IDs
+
+  4. CLICAR no Client ID existente (ex: "Web client")
+
+  5. Na secção "Authorized redirect URIs":
+     
+     Clicar → "+ ADD URI" (2 vezes)
+     
+     URI 1: https://iwscxotvmtkphajmasof.supabase.co/auth/v1/callback
+     URI 2: http://localhost:3000/auth/callback
+
+  6. Na secção "Authorized JavaScript origins":
+     
+     Clicar → "+ ADD URI" (2 vezes)
+     
+     URI 1: https://iwscxotvmtkphajmasof.supabase.co
+     URI 2: http://localhost:3000
+
+  7. SCROLL DOWN → Clicar em "SAVE"
+
+  8. Aguardar mensagem de confirmação
+
+  ✅ ETAPA 2 CONCLUÍDA!
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│ ETAPA 3/4: ATIVAR GOOGLE NO SUPABASE (1 min)                             │
+└───────────────────────────────────────────────────────────────────────────┘
+
+  1. Voltar → https://app.supabase.com/
+
+  2. Menu lateral → Authentication → Providers
+
+  3. SCROLL → Encontrar "Google"
+
+  4. CLICAR → Expandir secção Google
+
+  5. TOGGLE → Ativar "Enable Sign in with Google"
+
+  6. Voltar ao Google Cloud Console
+
+  7. COPIAR → Client ID
+     COPIAR → Client Secret
+
+  8. COLAR → No Supabase (campos correspondentes)
+
+  9. SCROLL DOWN → Clicar em "Save"
+
+  ✅ ETAPA 3 CONCLUÍDA!
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│ ETAPA 4/4: TESTAR LOGIN (1 min)                                          │
+└───────────────────────────────────────────────────────────────────────────┘
+
+  1. Abrir → Janela anónima/incógnita
+     
+     Windows/Linux: Ctrl + Shift + N
+     Mac:           Cmd + Shift + N
+
+  2. Navegar → http://localhost:3000/login
+
+  3. Clicar → Botão "Continuar com Google"
+
+  4. Selecionar → ricardo.subtilgarcia@gmail.com
+
+  5. Permitir → Acesso aos dados
+
+  6. Verificar → Redirecionamento para /auth/callback
+
+  7. Verificar → Redirecionamento para página inicial
+
+  ✅ ETAPA 4 CONCLUÍDA!
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                         🎉 TUDO CONFIGURADO! 🎉                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+Agora você pode fazer login com Google em:
+→ http://localhost:3000/login
+→ http://localhost:3000/register
+
+O perfil será criado automaticamente com:
+• Email do Google
+• Nome do Google
+• Avatar do Google
+• Username gerado automaticamente
+
+═══════════════════════════════════════════════════════════════════════════
+
+🐛 TROUBLESHOOTING
+
+Problema: Erro "redirect_uri_mismatch"
+Solução: Verificar se URLs estão EXATAMENTE iguais no Google Cloud
+
+Problema: Erro "This app hasn't been verified"
+Solução 1: Adicionar email em "Test users" no OAuth Consent Screen
+Solução 2: Clicar em "Advanced" → "Go to app (unsafe)"
+
+Problema: Login funciona mas não cria perfil
+Solução: Verificar se SQL foi executado corretamente
+
+Problema: Não redireciona após login
+Solução: Verificar console do browser (F12) para erros
+
+═══════════════════════════════════════════════════════════════════════════
+
+📋 CHECKLIST FINAL
+
+□ SQL executado no Supabase SQL Editor
+□ 2 URLs em "Authorized redirect URIs" no Google
+□ 2 URLs em "Authorized JavaScript origins" no Google
+□ Botão "SAVE" clicado no Google Cloud
+□ Google Provider ativado no Supabase
+□ Client ID preenchido no Supabase
+□ Client Secret preenchido no Supabase
+□ Botão "Save" clicado no Supabase
+□ Testado em janela anónima
+□ Login bem-sucedido
+
+═══════════════════════════════════════════════════════════════════════════
+
+🔗 LINKS IMPORTANTES
+
+Google Cloud Console:
+https://console.cloud.google.com/
+
+Supabase Dashboard:
+https://app.supabase.com/
+
+Login Local:
+http://localhost:3000/login
+
+Documentação:
+Ver CONFIGURAR_GOOGLE_OAUTH.md para mais detalhes
+
+═══════════════════════════════════════════════════════════════════════════
+

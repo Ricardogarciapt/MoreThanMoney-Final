@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/daily-dca-check",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/daily-dca-post",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}
