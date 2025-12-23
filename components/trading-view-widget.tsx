@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useRef, useState } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertCircle,
@@ -524,6 +524,7 @@ export default function TradingViewWidget({
   const otherAssets = filteredAssets.filter((a) => !a.popular)
 
   return (
+    <>
     <div className="w-full relative bg-gray-900 border border-gold-500/30 rounded-lg overflow-hidden" style={{ aspectRatio: "16/9" }}>
       {error && (
         <Alert className="absolute top-2 left-2 right-2 z-20 bg-red-500/20 border-red-500">
@@ -835,6 +836,7 @@ export default function TradingViewWidget({
         <ScannerScreener mode="desktop" />
       </div>
     )}
+    </>
   )
 }
 
