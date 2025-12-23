@@ -540,8 +540,11 @@ export default function ScannerMobile() {
         overrides: {
           "mainSeriesProperties.showCountdown": true,
           "scalesProperties.showSeriesLastValue": true,
-          // Esconder completamente legendas/valores dos estudos em todos os painéis
+          // Esconder completamente legendas/valores dos estudos em TODOS os painéis (superior e inferiores)
           "scalesProperties.showStudyLastValue": false,
+          "scalesProperties.showStudyLastValueOnPriceScale": false,
+          "scalesProperties.showStudyLastValueOnVolumeScale": false,
+          // Propriedades globais de legendas (aplicam-se a todos os painéis)
           "paneProperties.legendProperties.showStudyArguments": false,
           "paneProperties.legendProperties.showStudyTitles": false,
           "paneProperties.legendProperties.showStudyValues": false,
@@ -557,9 +560,13 @@ export default function ScannerMobile() {
           "paneProperties.legendProperties.showIndicatorsArguments": false,
           "paneProperties.legendProperties.showIndicatorsValues": false,
           "paneProperties.legendProperties.showIndicatorsLabels": false,
-          "scalesProperties.showStudyLastValue": false,
-          "scalesProperties.showStudyLastValueOnPriceScale": false,
-          "scalesProperties.showStudyLastValueOnVolumeScale": false,
+          // Propriedades específicas para painéis inferiores (lower panes)
+          "paneProperties.legendProperties.showStudyLastValue": false,
+          "paneProperties.legendProperties.showStudyLastValueOnPriceScale": false,
+          "paneProperties.legendProperties.showStudyLastValueOnVolumeScale": false,
+          // Esconder legendas em todos os painéis de estudos
+          "paneProperties.legendProperties.showAllStudiesLegend": false,
+          "paneProperties.legendProperties.showAllIndicatorsLegend": false,
           "scalesProperties.fontSize": 10,
           "volumePaneSize": "hide",
         },
