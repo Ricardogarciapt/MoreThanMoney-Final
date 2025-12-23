@@ -496,7 +496,21 @@ export default function ScannerMobile() {
         containerRef.current.innerHTML = '<div id="tradingview_mobile_widget" style="height: 100%; width: 100%;"></div>'
       }
 
-      const studiesToApply = selectedStudies.flatMap((key) => scannerStudies[key] || [])
+      // Scanners que precisam de configuração especial (AUTO ligado, apenas escala de preços)
+      const specialScanners: ScannerKey[] = ["Smartmonics", "KillShot", "Winzone", "Nexus", "Sinergy"]
+      
+      // Separar estudos em normais e especiais
+      const normalStudies: string[] = []
+      const specialStudies: string[] = []
+      
+      selectedStudies.forEach((key) => {
+        const studies = scannerStudies[key] || []
+        if (specialScanners.includes(key)) {
+          specialStudies.push(...studies)
+        } else {
+          normalStudies.push(...studies)
+        }
+      })
 
       widgetRef.current = new window.TradingView.widget({
         autosize: true,
@@ -512,6 +526,8 @@ export default function ScannerMobile() {
         hide_side_toolbar: false,
         hide_top_toolbar: false,
         container_id: "tradingview_mobile_widget",
+        // Adicionar apenas estudos normais aqui - estudos especiais serão adicionados programaticamente
+        studies: normalStudies,
         disabled_features: [
           "header_widget_dom_node",
           "header_widget",
@@ -569,19 +585,36 @@ export default function ScannerMobile() {
           "scalesProperties.fontSize": 10,
           "volumePaneSize": "hide",
         },
-        studies: studiesToApply,
       })
 
-      // Tentar abrir o gráfico com uma vista inicial "resetada" para melhor visualização dos scanners
+      // Adicionar estudos especiais como overlays no painel principal (escala de preços) após o widget estar pronto
       if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
         widgetRef.current.onChartReady(() => {
           try {
             const chart = widgetRef.current.chart && widgetRef.current.chart()
-            if (chart && typeof chart.resetData === "function") {
-              chart.resetData()
+            if (chart) {
+              // Resetar vista inicial
+              if (typeof chart.resetData === "function") {
+                chart.resetData()
+              }
+
+              // Adicionar estudos especiais programaticamente com AUTO ligado e apenas na escala de preços
+              // createStudy(studyId, overlay, autoScale)
+              // overlay: true = apenas escala de preços (painel principal)
+              // autoScale: true = AUTO ligado (preço à razão da escala - adapta dados à tela)
+              setTimeout(() => {
+                specialStudies.forEach((studyId) => {
+                  try {
+                    // Criar estudo como overlay no painel principal com AUTO ligado
+                    chart.createStudy(studyId, true, true)
+                  } catch (studyError) {
+                    console.warn(`Erro ao adicionar estudo especial ${studyId}:`, studyError)
+                  }
+                })
+              }, 500)
             }
           } catch (e) {
-            console.warn("Não foi possível aplicar resetData no carregamento inicial do gráfico mobile:", e)
+            console.warn("Não foi possível configurar estudos especiais no gráfico mobile:", e)
           }
         })
       }

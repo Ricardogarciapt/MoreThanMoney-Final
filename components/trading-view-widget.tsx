@@ -428,7 +428,21 @@ export default function TradingViewWidget({
         containerRef.current.innerHTML = '<div id="tradingview_widget" style="height: 100%; width: 100%;"></div>'
       }
 
-      const studiesToApply = selectedStudies.flatMap((key) => scannerStudies[key] || [])
+      // Scanners que precisam de configuração especial (AUTO ligado, apenas escala de preços)
+      const specialScanners: ScannerKey[] = ["Smartmonics", "KillShot", "Winzone", "Nexus", "Sinergy"]
+      
+      // Separar estudos em normais e especiais
+      const normalStudies: string[] = []
+      const specialStudies: string[] = []
+      
+      selectedStudies.forEach((key) => {
+        const studies = scannerStudies[key] || []
+        if (specialScanners.includes(key)) {
+          specialStudies.push(...studies)
+        } else {
+          normalStudies.push(...studies)
+        }
+      })
 
       const widgetOptions = {
         autosize: true,
@@ -446,8 +460,8 @@ export default function TradingViewWidget({
         withdateranges: true,
         save_image: true,
         container_id: "tradingview_widget",
-        // Não adicionar estudos aqui - serão adicionados programaticamente como overlays
-        studies: [],
+        // Adicionar apenas estudos normais aqui - estudos especiais serão adicionados programaticamente
+        studies: normalStudies,
         disabled_features: [
           "header_widget_dom_node", 
           "header_widget", 
@@ -520,7 +534,7 @@ export default function TradingViewWidget({
 
       widgetRef.current = new window.TradingView.widget(widgetOptions)
 
-      // Adicionar estudos como overlays no painel principal (escala de preços) após o widget estar pronto
+      // Adicionar estudos especiais como overlays no painel principal (escala de preços) após o widget estar pronto
       if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
         widgetRef.current.onChartReady(() => {
           try {
@@ -531,47 +545,23 @@ export default function TradingViewWidget({
                 chart.resetData()
               }
 
-              // Adicionar estudos programaticamente como overlays no painel principal (escala de preços)
-              // O segundo parâmetro (true) força overlay no painel principal
-              // O terceiro parâmetro (false) desativa AUTO, mas vamos configurar depois
+              // Adicionar estudos especiais programaticamente com AUTO ligado e apenas na escala de preços
+              // createStudy(studyId, overlay, autoScale)
+              // overlay: true = apenas escala de preços (painel principal)
+              // autoScale: true = AUTO ligado (preço à razão da escala - adapta dados à tela)
               setTimeout(() => {
-                studiesToApply.forEach((studyId) => {
+                specialStudies.forEach((studyId) => {
                   try {
-                    // Criar estudo como overlay no painel principal
-                    const study = chart.createStudy(studyId, true, false)
-                    
-                    // Esconder legendas do estudo após criação
-                    if (study) {
-                      try {
-                        // Tentar esconder legendas através de diferentes métodos da API
-                        if (typeof study.setVisible === "function") {
-                          // AUTO geralmente está ligado por padrão
-                        }
-                        // Configurar propriedades do estudo para esconder legendas
-                        if (typeof study.setInputValue === "function") {
-                          // Alguns estudos permitem configurar visibilidade de legendas
-                        }
-                      } catch (configError) {
-                        // Ignorar erros de configuração - os overrides globais já devem esconder
-                      }
-                    }
+                    // Criar estudo como overlay no painel principal com AUTO ligado
+                    chart.createStudy(studyId, true, true)
                   } catch (studyError) {
-                    console.warn(`Erro ao adicionar estudo ${studyId}:`, studyError)
+                    console.warn(`Erro ao adicionar estudo especial ${studyId}:`, studyError)
                   }
                 })
-                
-                // Aplicar overrides adicionais após todos os estudos serem criados
-                try {
-                  if (typeof chart.setVisibleRange === "function") {
-                    // Forçar atualização das propriedades do gráfico
-                  }
-                } catch (e) {
-                  // Ignorar erros
-                }
               }, 500)
             }
           } catch (e) {
-            console.warn("Não foi possível configurar estudos no gráfico:", e)
+            console.warn("Não foi possível configurar estudos especiais no gráfico:", e)
           }
         })
       }
