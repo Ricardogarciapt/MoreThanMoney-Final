@@ -512,8 +512,7 @@ export default function ScannerMobile() {
         }
       })
 
-      // Copiar todos os estudos para variáveis locais para garantir closure correto
-      const normalStudiesToAdd = [...normalStudies]
+      // Copiar estudos especiais para uma variável local para garantir closure correto
       const specialStudiesToAdd = [...specialStudies]
 
       widgetRef.current = new window.TradingView.widget({
@@ -530,8 +529,8 @@ export default function ScannerMobile() {
         hide_side_toolbar: false,
         hide_top_toolbar: false,
         container_id: "tradingview_mobile_widget",
-        // Não adicionar estudos aqui - todos serão adicionados programaticamente no onChartReady
-        studies: [],
+        // Adicionar estudos normais diretamente aqui - estudos especiais serão adicionados programaticamente
+        studies: normalStudies,
         disabled_features: [
           "header_widget_dom_node",
           "header_widget",
@@ -599,29 +598,22 @@ export default function ScannerMobile() {
                 chart.resetData()
               }
 
-              // Adicionar todos os estudos após um pequeno delay para garantir que o chart está pronto
-              setTimeout(() => {
-                // Adicionar estudos normais primeiro (sem overlay, sem autoScale)
-                normalStudiesToAdd.forEach((studyId) => {
-                  try {
-                    chart.createStudy(studyId, false, false)
-                  } catch (studyError) {
-                    console.warn(`Erro ao adicionar estudo normal ${studyId}:`, studyError)
-                  }
-                })
-
-                // Adicionar estudos especiais (com overlay e autoScale)
-                specialStudiesToAdd.forEach((studyId) => {
-                  try {
-                    chart.createStudy(studyId, true, true)
-                  } catch (studyError) {
-                    console.warn(`Erro ao adicionar estudo especial ${studyId}:`, studyError)
-                  }
-                })
-              }, 500)
+              // Adicionar estudos especiais após um pequeno delay para garantir que o chart está pronto
+              if (specialStudiesToAdd.length > 0) {
+                setTimeout(() => {
+                  specialStudiesToAdd.forEach((studyId) => {
+                    try {
+                      // Criar estudo como overlay no painel principal com AUTO ligado
+                      chart.createStudy(studyId, true, true)
+                    } catch (studyError) {
+                      console.warn(`Erro ao adicionar estudo especial ${studyId}:`, studyError)
+                    }
+                  })
+                }, 500)
+              }
             }
           } catch (e) {
-            console.warn("Não foi possível configurar estudos no gráfico mobile:", e)
+            console.warn("Não foi possível configurar estudos especiais no gráfico mobile:", e)
           }
         },
       })
