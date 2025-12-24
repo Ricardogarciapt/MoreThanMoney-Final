@@ -512,6 +512,9 @@ export default function ScannerMobile() {
         }
       })
 
+      // Copiar estudos especiais para uma variável local para garantir closure correto
+      const studiesToAdd = [...specialStudies]
+
       widgetRef.current = new window.TradingView.widget({
         autosize: true,
         symbol: selectedSymbol,
@@ -585,78 +588,34 @@ export default function ScannerMobile() {
           "scalesProperties.fontSize": 10,
           "volumePaneSize": "hide",
         },
-      })
-
-      // Adicionar estudos especiais como overlays no painel principal (escala de preços) após o widget estar pronto
-      // Usar uma closure para capturar os estudos corretos do momento atual
-      const currentSpecialStudies = [...specialStudies] // Copiar array para evitar problemas de closure
-      
-      if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
-        widgetRef.current.onChartReady(() => {
+        // Adicionar onChartReady diretamente nas opções para garantir que seja sempre chamado
+        onChartReady: () => {
           try {
-            const chart = widgetRef.current.chart && widgetRef.current.chart()
+            const chart = widgetRef.current?.chart?.()
             if (chart) {
               // Resetar vista inicial
               if (typeof chart.resetData === "function") {
                 chart.resetData()
               }
 
-              // Remover estudos especiais antigos antes de adicionar os novos
-              try {
-                const allStudies = chart.getAllStudies?.() || []
-                const allSpecialStudyIds = (["Smartmonics", "KillShot", "Winzone", "Nexus", "Sinergy"] as ScannerKey[])
-                  .flatMap(key => scannerStudies[key] || [])
-                
-                allStudies.forEach((study: any) => {
-                  try {
-                    const studyId = study.name || study.id || study.inputs?.name
-                    if (studyId && typeof studyId === 'string' && studyId.startsWith("PUB;")) {
-                      if (allSpecialStudyIds.includes(studyId)) {
-                        // Tentar diferentes métodos para remover o estudo
-                        try {
-                          if (study.remove && typeof study.remove === 'function') {
-                            study.remove()
-                          } else if (chart.removeEntity && typeof chart.removeEntity === 'function') {
-                            chart.removeEntity(studyId)
-                          } else if (chart.removeStudy && typeof chart.removeStudy === 'function') {
-                            chart.removeStudy(studyId)
-                          }
-                        } catch (removeError) {
-                          // Ignorar erros ao remover estudos
-                        }
-                      }
-                    }
-                  } catch (e) {
-                    // Ignorar erros ao processar estudos
-                  }
-                })
-              } catch (e) {
-                // Ignorar erros
-              }
-
-              // Adicionar estudos especiais programaticamente com AUTO ligado e apenas na escala de preços
-              // createStudy(studyId, overlay, autoScale)
-              // overlay: true = apenas escala de preços (painel principal)
-              // autoScale: true = AUTO ligado (preço à razão da escala - adapta dados à tela)
-              setTimeout(() => {
-                if (currentSpecialStudies.length > 0) {
-                  currentSpecialStudies.forEach((studyId) => {
+              // Adicionar estudos especiais após um pequeno delay para garantir que o chart está pronto
+              if (studiesToAdd.length > 0) {
+                setTimeout(() => {
+                  studiesToAdd.forEach((studyId) => {
                     try {
-                      // Criar estudo como overlay no painel principal com AUTO ligado
-                      // true, true = overlay na escala de preços + AUTO ligado
                       chart.createStudy(studyId, true, true)
                     } catch (studyError) {
                       console.warn(`Erro ao adicionar estudo especial ${studyId}:`, studyError)
                     }
                   })
-                }
-              }, 800)
+                }, 500)
+              }
             }
           } catch (e) {
             console.warn("Não foi possível configurar estudos especiais no gráfico mobile:", e)
           }
-        })
-      }
+        },
+      })
 
       setWidgetLoaded(true)
       setError(null)
