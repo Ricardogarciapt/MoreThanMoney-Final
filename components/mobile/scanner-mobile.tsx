@@ -512,8 +512,9 @@ export default function ScannerMobile() {
         }
       })
 
-      // Copiar estudos especiais para uma variável local para garantir closure correto
-      const studiesToAdd = [...specialStudies]
+      // Copiar todos os estudos para variáveis locais para garantir closure correto
+      const normalStudiesToAdd = [...normalStudies]
+      const specialStudiesToAdd = [...specialStudies]
 
       widgetRef.current = new window.TradingView.widget({
         autosize: true,
@@ -529,8 +530,8 @@ export default function ScannerMobile() {
         hide_side_toolbar: false,
         hide_top_toolbar: false,
         container_id: "tradingview_mobile_widget",
-        // Adicionar apenas estudos normais aqui - estudos especiais serão adicionados programaticamente
-        studies: normalStudies,
+        // Não adicionar estudos aqui - todos serão adicionados programaticamente no onChartReady
+        studies: [],
         disabled_features: [
           "header_widget_dom_node",
           "header_widget",
@@ -538,9 +539,12 @@ export default function ScannerMobile() {
           "create_volume_indicator_by_default",
           "header_compare",
           "header_chart_type",
+          "header_screenshot",
+          "header_undo_redo",
           "left_toolbar",
           "drawing_toolbar",
           "control_bar",
+          "timeframes_toolbar",
           "border_around_the_chart",
         ],
         enabled_features: [
@@ -550,12 +554,6 @@ export default function ScannerMobile() {
           "header_indicators",
           "header_symbol_search",
           "header_interval_dialog_button",
-          "timeframes_toolbar",
-          "header_screenshot",
-          "header_saveload",
-          "header_save_image",
-          "header_copy_image",
-          "header_copy_link",
         ],
         loading_screen: { backgroundColor: "#1E1E1E", foregroundColor: "#f9b208" },
         overrides: {
@@ -601,21 +599,29 @@ export default function ScannerMobile() {
                 chart.resetData()
               }
 
-              // Adicionar estudos especiais após um pequeno delay para garantir que o chart está pronto
-              if (studiesToAdd.length > 0) {
-                setTimeout(() => {
-                  studiesToAdd.forEach((studyId) => {
-                    try {
-                      chart.createStudy(studyId, true, true)
-                    } catch (studyError) {
-                      console.warn(`Erro ao adicionar estudo especial ${studyId}:`, studyError)
-                    }
-                  })
-                }, 500)
-              }
+              // Adicionar todos os estudos após um pequeno delay para garantir que o chart está pronto
+              setTimeout(() => {
+                // Adicionar estudos normais primeiro (sem overlay, sem autoScale)
+                normalStudiesToAdd.forEach((studyId) => {
+                  try {
+                    chart.createStudy(studyId, false, false)
+                  } catch (studyError) {
+                    console.warn(`Erro ao adicionar estudo normal ${studyId}:`, studyError)
+                  }
+                })
+
+                // Adicionar estudos especiais (com overlay e autoScale)
+                specialStudiesToAdd.forEach((studyId) => {
+                  try {
+                    chart.createStudy(studyId, true, true)
+                  } catch (studyError) {
+                    console.warn(`Erro ao adicionar estudo especial ${studyId}:`, studyError)
+                  }
+                })
+              }, 500)
             }
           } catch (e) {
-            console.warn("Não foi possível configurar estudos especiais no gráfico mobile:", e)
+            console.warn("Não foi possível configurar estudos no gráfico mobile:", e)
           }
         },
       })
