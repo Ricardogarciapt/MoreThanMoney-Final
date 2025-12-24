@@ -20,6 +20,10 @@ import {
   Moon,
   Clock,
   X,
+  Download,
+  Copy,
+  Link as LinkIcon,
+  Camera,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -411,6 +415,91 @@ export default function TradingViewWidget({
       } else {
         containerRef.current.requestFullscreen()
       }
+    }
+  }
+
+  const handleScreenshot = async () => {
+    try {
+      const chart = widgetRef.current?.chart?.()
+      if (chart && typeof chart.takeScreenshot === "function") {
+        const imageUrl = chart.takeScreenshot()
+        if (imageUrl) {
+          // Abrir imagem em nova aba
+          window.open(imageUrl, "_blank")
+        }
+      } else {
+        // Fallback: usar a funcionalidade nativa do header_screenshot
+        alert("Use o botão de screenshot na barra do TradingView")
+      }
+    } catch (error) {
+      console.error("Erro ao capturar screenshot:", error)
+      alert("Erro ao capturar screenshot")
+    }
+  }
+
+  const handleDownloadImage = async () => {
+    try {
+      const chart = widgetRef.current?.chart?.()
+      if (chart && typeof chart.takeScreenshot === "function") {
+        const imageUrl = chart.takeScreenshot()
+        if (imageUrl) {
+          // Criar link de download
+          const link = document.createElement("a")
+          link.href = imageUrl
+          link.download = `chart-${selectedSymbol}-${Date.now()}.png`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+        }
+      } else {
+        alert("Funcionalidade de download não disponível. Use o botão de screenshot na barra do TradingView.")
+      }
+    } catch (error) {
+      console.error("Erro ao baixar imagem:", error)
+      alert("Erro ao baixar imagem")
+    }
+  }
+
+  const handleCopyImage = async () => {
+    try {
+      const chart = widgetRef.current?.chart?.()
+      if (chart && typeof chart.takeScreenshot === "function") {
+        const imageUrl = chart.takeScreenshot()
+        if (imageUrl) {
+          // Converter URL para blob e copiar para clipboard
+          const response = await fetch(imageUrl)
+          const blob = await response.blob()
+          await navigator.clipboard.write([
+            new ClipboardItem({ [blob.type]: blob })
+          ])
+          alert("✅ Imagem copiada para a área de transferência!")
+        }
+      } else {
+        alert("Funcionalidade de copiar imagem não disponível.")
+      }
+    } catch (error) {
+      console.error("Erro ao copiar imagem:", error)
+      alert("Erro ao copiar imagem. Tente usar o botão de screenshot na barra do TradingView.")
+    }
+  }
+
+  const handleCopyLink = () => {
+    try {
+      const chart = widgetRef.current?.chart?.()
+      if (chart && typeof chart.getPineEditor === "function") {
+        // Tentar obter link do chart
+        const chartUrl = `${window.location.origin}${window.location.pathname}?symbol=${selectedSymbol}&timeframe=${favoriteTimeframe}&studies=${selectedStudies.join(",")}`
+        navigator.clipboard.writeText(chartUrl)
+        alert("✅ Link do gráfico copiado para a área de transferência!")
+      } else {
+        // Fallback: criar link manualmente
+        const chartUrl = `${window.location.origin}${window.location.pathname}?symbol=${selectedSymbol}&timeframe=${favoriteTimeframe}&studies=${selectedStudies.join(",")}`
+        navigator.clipboard.writeText(chartUrl)
+        alert("✅ Link do gráfico copiado para a área de transferência!")
+      }
+    } catch (error) {
+      console.error("Erro ao copiar link:", error)
+      alert("Erro ao copiar link")
     }
   }
 
@@ -885,6 +974,42 @@ export default function TradingViewWidget({
                 </div>
               </DialogContent>
             </Dialog>
+
+            {/* Screenshot */}
+            <Button
+              onClick={handleScreenshot}
+              className="h-9 px-3 bg-gray-700/80 text-white hover:bg-gray-600/80"
+              title="Screenshot"
+            >
+              <Camera className="w-4 h-4" />
+            </Button>
+
+            {/* Download Image */}
+            <Button
+              onClick={handleDownloadImage}
+              className="h-9 px-3 bg-gray-700/80 text-white hover:bg-gray-600/80"
+              title="Baixar Imagem"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+
+            {/* Copy Image */}
+            <Button
+              onClick={handleCopyImage}
+              className="h-9 px-3 bg-gray-700/80 text-white hover:bg-gray-600/80"
+              title="Copiar Imagem"
+            >
+              <Copy className="w-4 h-4" />
+            </Button>
+
+            {/* Copy Link */}
+            <Button
+              onClick={handleCopyLink}
+              className="h-9 px-3 bg-gray-700/80 text-white hover:bg-gray-600/80"
+              title="Copiar Link"
+            >
+              <LinkIcon className="w-4 h-4" />
+            </Button>
 
             {/* Fullscreen */}
             <Button
