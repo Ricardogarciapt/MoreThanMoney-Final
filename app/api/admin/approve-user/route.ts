@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { sendWelcomeEmail, sendRejectionEmail } from "@/lib/email-service"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase configuration is missing")
+  }
+  
+  return createClient(supabaseUrl, supabaseKey)
+}
 
 export async function POST(request: NextRequest) {
+  const supabase = getSupabaseClient()
   try {
     const body = await request.json()
     const { userId, action } = body
@@ -47,7 +54,7 @@ export async function POST(request: NextRequest) {
 
       // Enviar email de confirmação para o utilizador
       try {
-        await sendWelcomeEmail(user.email, user.full_name || user.username)
+        await sendWelcomeEmail(user.email, user.full_name || user.username || 'Utilizador', user.username || user.email)
       } catch (emailError) {
         console.error('Erro ao enviar email de boas-vindas:', emailError)
         // Continuar mesmo se o email falhar

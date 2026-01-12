@@ -3,12 +3,9 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Suspense } from "react"
-import Navbar from "@/components/navbar"
-import Footer from "@/components/footer"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from 'sonner'
-import Analytics from "@/components/analytics"
-import GeolocationDetector from "@/components/geolocation-detector"
+import ConditionalLayoutContent from "@/components/conditional-layout-content"
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
@@ -117,13 +114,11 @@ export default function RootLayout({
         
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <Suspense fallback={null}>
-              <GeolocationDetector />
-              <Navbar />
-              <main>{children}</main>
-              <Footer />
+              <ConditionalLayoutContent>
+                {children}
+              </ConditionalLayoutContent>
               <Toaster />
               <Sonner richColors position="top-right" />
-              <Analytics />
             </Suspense>
         </ThemeProvider>
       </body>

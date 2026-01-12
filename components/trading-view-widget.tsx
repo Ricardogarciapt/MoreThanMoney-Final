@@ -76,9 +76,9 @@ const scannerLabels: Record<ScannerKey, string> = {
   Momentum: "Momentum",
   KillShot: "Kill Shot",
   Supernova: "Supernova",
-  Smartmonics: "Smartmonics",
+  Smartmonics: "React",
   Winzone: "Winzone",
-  Nexus: "Nexus",
+  Nexus: "Straight",
   Sinergy: "Sinergy",
 }
 
@@ -219,6 +219,7 @@ export default function TradingViewWidget({
   externalTimeframe,
   externalTheme,
   externalStudies,
+  excludedStudies,
   onSymbolChange,
   onTimeframeChange,
   onThemeChange,
@@ -230,6 +231,7 @@ export default function TradingViewWidget({
   externalTimeframe?: string
   externalTheme?: "light" | "dark"
   externalStudies?: ScannerKey[]
+  excludedStudies?: ScannerKey[]
   onSymbolChange?: (symbol: string) => void
   onTimeframeChange?: (timeframe: string) => void
   onThemeChange?: (theme: "light" | "dark") => void
@@ -273,7 +275,10 @@ export default function TradingViewWidget({
   }, [externalTheme])
 
   useEffect(() => {
-    if (externalStudies) setSelectedStudies(externalStudies)
+    if (externalStudies) {
+      console.log('📊 [TRADINGVIEW] Atualizando estudos via props externas:', externalStudies)
+      setSelectedStudies(externalStudies)
+    }
   }, [externalStudies])
 
   // Dropdown de ativos
@@ -428,24 +433,15 @@ export default function TradingViewWidget({
         containerRef.current.innerHTML = '<div id="tradingview_widget" style="height: 100%; width: 100%;"></div>'
       }
 
-      // Scanners que precisam de configuração especial (AUTO ligado, apenas escala de preços)
-      const specialScanners: ScannerKey[] = ["Smartmonics", "KillShot", "Winzone", "Nexus", "Sinergy"]
+      // Usar a abordagem simples que funcionava - todos os estudos no array studies
+      const studiesToApply = selectedStudies.flatMap((key) => scannerStudies[key] || [])
       
-      // Separar estudos em normais e especiais
-      const normalStudies: string[] = []
-      const specialStudies: string[] = []
-      
-      selectedStudies.forEach((key) => {
-        const studies = scannerStudies[key] || []
-        if (specialScanners.includes(key)) {
-          specialStudies.push(...studies)
-        } else {
-          normalStudies.push(...studies)
-        }
+      console.log('📊 [TRADINGVIEW] Carregando widget com estudos:', {
+        selectedStudies,
+        studiesToApply,
+        count: studiesToApply.length,
+        usingExternal: !!externalStudies
       })
-
-      // Copiar estudos especiais para uma variável local para garantir closure correto
-      const specialStudiesToAdd = [...specialStudies]
 
       const widgetOptions = {
         autosize: true,
@@ -463,8 +459,7 @@ export default function TradingViewWidget({
         withdateranges: true,
         save_image: true,
         container_id: "tradingview_widget",
-        // Adicionar estudos normais diretamente aqui - estudos especiais serão adicionados programaticamente
-        studies: normalStudies,
+        studies: studiesToApply,
         disabled_features: [
           "header_widget_dom_node", 
           "header_widget", 
@@ -479,7 +474,6 @@ export default function TradingViewWidget({
           "save_chart_properties_to_local_storage",
           "use_localstorage_for_settings",
           "header_screenshot",
-          "header_saveload",
           "show_chart_property_page",
           "property_pages",
           "context_menus",
@@ -492,6 +486,7 @@ export default function TradingViewWidget({
           "header_compare",
           "header_undo_redo",
           "header_fullscreen_button",
+          "header_saveload",
           "header_symbol_search",
           "header_interval_dialog_button",
           "header_resolutions",
@@ -504,66 +499,80 @@ export default function TradingViewWidget({
         overrides: {
           "mainSeriesProperties.showCountdown": true,
           "scalesProperties.showSeriesLastValue": true,
-          // Esconder completamente legendas/valores dos estudos em TODOS os painéis (superior e inferiores)
+          // Esconder completamente legendas/valores dos estudos em todos os painéis
           "scalesProperties.showStudyLastValue": false,
-          "scalesProperties.showStudyLastValueOnPriceScale": false,
-          "scalesProperties.showStudyLastValueOnVolumeScale": false,
-          // Propriedades globais de legendas (aplicam-se a todos os painéis)
           "paneProperties.legendProperties.showStudyTitles": false,
           "paneProperties.legendProperties.showStudyArguments": false,
           "paneProperties.legendProperties.showStudyValues": false,
-          "paneProperties.legendProperties.showSeriesTitle": false,
-          "paneProperties.legendProperties.showLegend": false,
-          "paneProperties.legendProperties.showStudyLabels": false,
-          "paneProperties.legendProperties.showSourceTitle": false,
-          "paneProperties.legendProperties.showSourceArguments": false,
-          "paneProperties.legendProperties.showSourceValues": false,
-          "paneProperties.legendProperties.showSourceLabels": false,
-          "paneProperties.legendProperties.showIndicatorsLegend": false,
-          "paneProperties.legendProperties.showIndicatorsTitle": false,
-          "paneProperties.legendProperties.showIndicatorsArguments": false,
-          "paneProperties.legendProperties.showIndicatorsValues": false,
-          "paneProperties.legendProperties.showIndicatorsLabels": false,
-          // Propriedades específicas para painéis inferiores (lower panes)
-          "paneProperties.legendProperties.showStudyLastValue": false,
-          "paneProperties.legendProperties.showStudyLastValueOnPriceScale": false,
-          "paneProperties.legendProperties.showStudyLastValueOnVolumeScale": false,
-          // Esconder legendas em todos os painéis de estudos
-          "paneProperties.legendProperties.showAllStudiesLegend": false,
-          "paneProperties.legendProperties.showAllIndicatorsLegend": false,
           "volumePaneSize": "hide",
-        },
-        // Adicionar onChartReady diretamente nas opções para garantir que seja sempre chamado
-        onChartReady: () => {
-          try {
-            const chart = widgetRef.current?.chart?.()
-            if (chart) {
-              // Resetar vista inicial
-              if (typeof chart.resetData === "function") {
-                chart.resetData()
-              }
-
-              // Adicionar estudos especiais após um pequeno delay para garantir que o chart está pronto
-              if (specialStudiesToAdd.length > 0) {
-                setTimeout(() => {
-                  specialStudiesToAdd.forEach((studyId) => {
-                    try {
-                      // Criar estudo como overlay no painel principal com AUTO ligado
-                      chart.createStudy(studyId, true, true)
-                    } catch (studyError) {
-                      console.warn(`Erro ao adicionar estudo especial ${studyId}:`, studyError)
-                    }
-                  })
-                }, 500)
-              }
-            }
-          } catch (e) {
-            console.warn("Não foi possível configurar estudos especiais no gráfico:", e)
-          }
+          // === PRICE SCALE ===
+          "scalesProperties.autoScale": true,               // Auto (fits data to screen)
+          "scalesProperties.lockPriceToBarRatio": false,    // Lock price to bar ratio
+          "scalesProperties.scaleSeriesOnly": true,         // Scale price chart only
+          "scalesProperties.invertScale": false,            // Invert scale
         },
       }
 
       widgetRef.current = new window.TradingView.widget(widgetOptions)
+
+      // Tentar abrir o gráfico com uma vista inicial "resetada" para melhor visualização dos scanners
+      // E configurar AUTO e apenas escala de preço após o chart estar pronto
+      if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
+        widgetRef.current.onChartReady(() => {
+          try {
+            const chart = widgetRef.current.chart && widgetRef.current.chart()
+            if (chart) {
+              // Reset inicial (opcional)
+              if (typeof chart.resetData === "function") {
+                chart.resetData()
+              }
+              
+              // Configurar todos os estudos para usar AUTO e apenas escala de preço
+              setTimeout(() => {
+                try {
+                  const allStudies = chart.getAllStudies?.() || []
+                  console.log(`📊 [TRADINGVIEW] Configurando ${allStudies.length} estudos com AUTO e escala de preço`)
+                  console.log(`📊 [TRADINGVIEW] Estudos encontrados:`, allStudies.map((s: any) => s.name || s.id))
+                  
+                  allStudies.forEach((study: any, index: number) => {
+                    try {
+                      const studyName = study.name || study.id || `study-${index}`
+                      console.log(`📊 [TRADINGVIEW] Configurando estudo ${index + 1}/${allStudies.length}: ${studyName}`)
+                      
+                      // Habilitar AUTO (autoScale) - adapta escala automaticamente
+                      if (typeof study.setAutoScale === 'function') {
+                        study.setAutoScale(true)
+                        console.log(`✅ [TRADINGVIEW] AUTO habilitado para ${studyName}`)
+                      }
+                      // Configurar para usar apenas escala de preços (não criar escala separada)
+                      if (typeof study.setPriceScale === 'function') {
+                        study.setPriceScale(true)
+                        console.log(`✅ [TRADINGVIEW] Escala de preço configurada para ${studyName}`)
+                      }
+                      // Alternativa via setEntityInfo se disponível
+                      if (typeof study.setEntityInfo === 'function') {
+                        study.setEntityInfo({ 
+                          priceScaleId: 'right',
+                          autoScale: true 
+                        })
+                        console.log(`✅ [TRADINGVIEW] EntityInfo configurado para ${studyName}`)
+                      }
+                    } catch (e) {
+                      console.warn(`⚠️ [TRADINGVIEW] Erro ao configurar estudo ${index}:`, e)
+                    }
+                  })
+                  
+                  console.log(`✅ [TRADINGVIEW] Configuração de estudos concluída`)
+                } catch (e) {
+                  console.warn("Não foi possível configurar AUTO e escala de preço:", e)
+                }
+              }, 1500) // Delay para garantir que estudos estão carregados
+            }
+          } catch (e) {
+            console.warn("Não foi possível aplicar resetData e configurar estudos:", e)
+          }
+        })
+      }
       setWidgetLoaded(true)
       setError(null)
     } catch (err: any) {
@@ -897,27 +906,29 @@ export default function TradingViewWidget({
 
         {/* Scanners */}
         <div className="flex flex-nowrap gap-2 overflow-x-auto mt-2 pb-2 scrollbar-thin scrollbar-thumb-gold-500/50">
-          {scannerOrder.map((key) => {
-            const logo = scannerLogos[key]
-            const Icon = logo.icon
-            const isChecked = selectedStudies.includes(key)
+          {scannerOrder
+            .filter((key) => !excludedStudies || !excludedStudies.includes(key))
+            .map((key) => {
+              const logo = scannerLogos[key]
+              const Icon = logo.icon
+              const isChecked = selectedStudies.includes(key)
 
-            return (
-              <button
-                key={key}
-                onClick={() => toggleStudy(key)}
-                className={`h-9 transition-all duration-300 transform hover:scale-105 ${
-                  isChecked
-                    ? `${logo.bgColor} text-white shadow-lg`
-                    : "bg-gray-700/80 text-gray-300 hover:bg-gray-600/80"
-                } border border-gray-600/50 px-3 py-1 rounded-md flex items-center gap-2 text-xs whitespace-nowrap`}
-              >
-                <div className={`w-2 h-2 rounded-full ${isChecked ? "bg-white" : "bg-gray-400"}`} />
-                <Icon className={`w-3 h-3 ${isChecked ? "text-white" : logo.color}`} />
-                <span>{scannerLabels[key]}</span>
-              </button>
-            )
-          })}
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleStudy(key)}
+                  className={`h-9 transition-all duration-300 transform hover:scale-105 ${
+                    isChecked
+                      ? `${logo.bgColor} text-white shadow-lg`
+                      : "bg-gray-700/80 text-gray-300 hover:bg-gray-600/80"
+                  } border border-gray-600/50 px-3 py-1 rounded-md flex items-center gap-2 text-xs whitespace-nowrap`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${isChecked ? "bg-white" : "bg-gray-400"}`} />
+                  <Icon className={`w-3 h-3 ${isChecked ? "text-white" : logo.color}`} />
+                  <span>{scannerLabels[key]}</span>
+                </button>
+              )
+            })}
         </div>
       </div>
 

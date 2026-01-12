@@ -80,7 +80,7 @@ export async function POST(
 
         if (existingXP) {
           const newTotalXP = existingXP.total_xp + xpAmount
-          const newLevel = Math.floor(newTotalXP / 100) + 1
+          const newLevel = Math.floor(newTotalXP / 1000) + 1
           await supabase
             .from('user_xp')
             .update({ total_xp: newTotalXP, current_level: newLevel })

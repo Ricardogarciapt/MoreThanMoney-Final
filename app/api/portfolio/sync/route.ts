@@ -74,7 +74,13 @@ async function getCryptoPrice(symbol: string): Promise<number | null> {
       'NEO': 'neo',
       'DASH': 'dash',
       'XMR': 'monero',
-      'ZEC': 'zcash'
+      'ZEC': 'zcash',
+      'SUI': 'sui',
+      'CELESTIA': 'celestia',
+      'TIA': 'celestia',
+      'ASTER': 'aster',
+      'JUPITER': 'jupiter-exchange-solana',
+      'JUP': 'jupiter-exchange-solana'
     }
     
     const coinId = symbolMap[symbol.toUpperCase()] || symbol.toLowerCase()

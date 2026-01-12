@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase configuration is missing")
+  }
+  
+  return createClient(supabaseUrl, supabaseKey)
+}
 
 // DEPRECATED: Esta API não é mais usada
 // Trial users agora se registram diretamente com senha no /register
 // Mantida apenas para compatibilidade com versões antigas
 export async function POST(request: NextRequest) {
+  const supabase = getSupabaseClient()
   try {
     const body = await request.json()
     const { email, username, full_name, user_type, phone, whatsapp } = body

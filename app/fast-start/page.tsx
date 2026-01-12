@@ -133,7 +133,7 @@ export default function FastStartPage() {
       if (existingXP) {
         // Se existe, somar o XP (mesmo que seja 0, somar normalmente)
         newTotalXP = (existingXP.total_xp || 0) + xpAmount
-        newLevel = Math.floor(newTotalXP / 100) + 1
+        newLevel = Math.floor(newTotalXP / 1000) + 1
 
         console.log(`📊 [FAST_START] XP atual: ${existingXP.total_xp || 0}, Novo total: ${newTotalXP}, Novo nível: ${newLevel}`)
 

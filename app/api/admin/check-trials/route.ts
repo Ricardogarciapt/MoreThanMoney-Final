@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase configuration is missing")
+  }
+  
+  return createClient(supabaseUrl, supabaseKey)
+}
 
 export async function POST(request: NextRequest) {
+  const supabase = getSupabaseClient()
   try {
     // Buscar todos os utilizadores trial
     const { data: trialUsers, error: fetchError } = await supabase
@@ -83,6 +90,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const supabase = getSupabaseClient()
   try {
     // Apenas retornar informações dos trials ativos
     const { data: trialUsers, error } = await supabase
@@ -97,7 +105,7 @@ export async function GET(request: NextRequest) {
     }
 
     const now = new Date()
-    const processedUsers = (trialUsers || []).map(user => {
+    const processedUsers = (trialUsers || []).map((user: any) => {
       const expiryDate = new Date(user.trial_expires_at || now)
       const timeRemaining = expiryDate.getTime() - now.getTime()
       
@@ -113,8 +121,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ 
       data: processedUsers,
       total: processedUsers.length,
-      active: processedUsers.filter(u => !u.is_expired).length,
-      expired: processedUsers.filter(u => u.is_expired).length
+      active: processedUsers.filter((u: any) => !u.is_expired).length,
+      expired: processedUsers.filter((u: any) => u.is_expired).length
     })
 
   } catch (error: any) {

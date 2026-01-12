@@ -2,19 +2,33 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // Mapeamento de símbolos Binance para CoinGecko IDs
 const SYMBOL_TO_COINGECKO: Record<string, string> = {
+  // Médias Capitalizações
   'ADAUSDT': 'cardano',
   'XRPUSDT': 'ripple',
   'DOTUSDT': 'polkadot',
+  
+  // Pequenas Capitalizações
   'MATICUSDT': 'matic-network',
   'LINKUSDT': 'chainlink',
   'AVAXUSDT': 'avalanche-2',
   'VETUSDT': 'vechain',
+  
+  // Projetos Emergentes
   'ARBUSDT': 'arbitrum',
   'OPUSDT': 'optimism',
   'GRTUSDT': 'the-graph',
   'HBARUSDT': 'hedera-hashgraph',
   'KASUSDT': 'kaspa',
   'JUPUSDT': 'jupiter-exchange-solana',
+  'JUP': 'jupiter-exchange-solana',
+  'SUIUSDT': 'sui',
+  'SUI': 'sui',
+  'TIAUSDT': 'celestia',
+  'TIA': 'celestia',
+  'CELESTIAUSDT': 'celestia',
+  'CELESTIA': 'celestia',
+  'ASTERUSDT': 'aster',
+  'ASTER': 'aster',
   'ALGOUSDT': 'algorand',
   'IMXUSDT': 'immutable-x',
   'ONDOUSDT': 'ondo-finance',
@@ -22,7 +36,11 @@ const SYMBOL_TO_COINGECKO: Record<string, string> = {
   'AEROUSDT': 'aerodrome-finance',
   'ILVUSDT': 'illuvium',
   'FLOWUSDT': 'flow',
+  
+  // Stablecoins
   'USDTUSDT': 'tether',
+  
+  // Principais (caso sejam usados)
   'BTCUSDT': 'bitcoin',
   'ETHUSDT': 'ethereum',
   'SOLUSDT': 'solana',

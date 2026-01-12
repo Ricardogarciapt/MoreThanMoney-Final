@@ -39,7 +39,7 @@ async function addXP(supabase: any, userId: string, stepNumber: number) {
     if (existingXP) {
       // Atualizar XP existente
       newTotalXP = existingXP.total_xp + xpAmount
-      newLevel = Math.floor(newTotalXP / 100) + 1
+      newLevel = Math.floor(newTotalXP / 1000) + 1
 
       await supabase
         .from('user_xp')

@@ -2,35 +2,47 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import TradingViewWidget from "@/components/trading-view-widget"
-import ProtectedPage from "@/components/protected-page"
 import { useToast } from "@/hooks/use-toast"
 import { 
-  House,
-  ChevronRight,
   BarChart3,
   Save,
   FolderOpen,
   Copy,
   Trash2,
-  Star,
-  Zap,
   Loader2,
-  X,
-  Plus,
-  Sparkles,
+  ArrowLeft,
+  LogOut,
 } from "lucide-react"
 import { MTMChartLayout, ScannerKey } from "@/types/layout"
 import { loadLayouts, createLayout, deleteLayout, duplicateLayout, updateLayout } from "@/lib/layoutStorage"
 import { useRouter } from "next/navigation"
+import { IQInsightsPanel } from "@/components/iq-insights-panel"
+import { IQIdeasPanel } from "@/components/iq-ideas-panel"
+import { createClient } from "@supabase/supabase-js"
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+const IQONIC_ACADEMY_URL = "https://iqonic.vip"
+const IQONIC_LOGIN_URL = "https://iqonic.vip/auth/login"
+
+// Admin credentials
+const ADMIN_USERNAME = "admin"
+const ADMIN_PASSWORD = "admin123"
+const ADMIN_SESSION_KEY = "iqcharts_admin_session"
 
 export default function IQCharts2Page() {
   const [mounted, setMounted] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isChecking, setIsChecking] = useState(true)
+  const [showAdminLogin, setShowAdminLogin] = useState(false)
+  const [adminUsername, setAdminUsername] = useState("")
+  const [adminPassword, setAdminPassword] = useState("")
   const { toast } = useToast()
   const router = useRouter()
   const [showScreener, setShowScreener] = useState(false)
@@ -38,7 +50,6 @@ export default function IQCharts2Page() {
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [showLoadDialog, setShowLoadDialog] = useState(false)
   const [layoutNameToSave, setLayoutNameToSave] = useState("")
-  const [selectedLayout, setSelectedLayout] = useState<MTMChartLayout | null>(null)
 
   // Estados do gráfico (serão passados para o TradingViewWidget)
   const [selectedSymbol, setSelectedSymbol] = useState("OANDA:XAUUSD")
@@ -46,34 +57,199 @@ export default function IQCharts2Page() {
   const [selectedTheme, setSelectedTheme] = useState<"light" | "dark">("dark")
   const [selectedStudies, setSelectedStudies] = useState<ScannerKey[]>(["KillShot"])
 
+  // Check admin session
+  const checkAdminSession = (): boolean => {
+    if (typeof window === "undefined") return false
+    const adminSession = localStorage.getItem(ADMIN_SESSION_KEY)
+    if (adminSession) {
+      try {
+        const sessionData = JSON.parse(adminSession)
+        // Check if session is still valid (24 hours)
+        if (Date.now() - sessionData.timestamp < 24 * 60 * 60 * 1000) {
+          return true
+        } else {
+          localStorage.removeItem(ADMIN_SESSION_KEY)
+        }
+      } catch {
+        localStorage.removeItem(ADMIN_SESSION_KEY)
+      }
+    }
+    return false
+  }
+
+  // Handle admin login
+  const handleAdminLogin = () => {
+    if (adminUsername === ADMIN_USERNAME && adminPassword === ADMIN_PASSWORD) {
+      localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({
+        username: ADMIN_USERNAME,
+        timestamp: Date.now()
+      }))
+      setIsAuthenticated(true)
+      setIsChecking(false)
+      setShowAdminLogin(false)
+      setAdminUsername("")
+      setAdminPassword("")
+      toast({
+        title: "✅ Admin Login Successful",
+        description: "Welcome, admin!",
+      })
+    } else {
+      toast({
+        title: "❌ Invalid Credentials",
+        description: "Username or password is incorrect",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Verificar autenticação do IQ Academy
   useEffect(() => {
+    let mounted = true
+    
+    const checkIQAcademyAuth = async () => {
+      try {
+        setIsChecking(true)
+        
+        // Check admin session first
+        if (checkAdminSession()) {
+          console.log("✅ [IQ CHARTS] Admin session found")
+          if (mounted) {
+            setIsAuthenticated(true)
+            setIsChecking(false)
+          }
+          return
+        }
+        
+        // Verificar se há parâmetros de retorno após login externo
+        const urlParams = new URLSearchParams(window.location.search)
+        const returnFromLogin = urlParams.get('return') === 'true'
+        const loginToken = urlParams.get('token')
+        
+        // Se retornou do login, aguardar um pouco para sessão sincronizar
+        if (returnFromLogin || loginToken) {
+          console.log("🔄 [IQ CHARTS] Retornou do login externo, aguardando sincronização...")
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          
+          // Limpar parâmetros da URL
+          if (returnFromLogin || loginToken) {
+            window.history.replaceState({}, document.title, window.location.pathname)
+          }
+        }
+        
+        // Verificar sessão múltiplas vezes (com retry)
+        let attempts = 0
+        const maxAttempts = 5
+        
+        while (attempts < maxAttempts && mounted) {
+          attempts++
+          console.log(`🔍 [IQ CHARTS] Tentativa ${attempts}/${maxAttempts} de verificar sessão...`)
+          
+          // Verificar se há sessão no Supabase
+          const { data: { session }, error } = await supabase.auth.getSession()
+          
+          if (error) {
+            console.error("❌ [IQ CHARTS] Erro ao verificar sessão:", error)
+            if (attempts === maxAttempts) {
+              redirectToLogin()
+              return
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            continue
+          }
+
+          if (session?.user) {
+            console.log("✅ [IQ CHARTS] Sessão encontrada:", session.user.email)
+            setIsAuthenticated(true)
+            setIsChecking(false)
+            return
+          }
+
+          // Se não encontrou sessão, aguardar antes de tentar novamente
+          if (attempts < maxAttempts) {
+            console.log(`⏳ [IQ CHARTS] Sessão não encontrada, aguardando ${attempts * 500}ms...`)
+            await new Promise(resolve => setTimeout(resolve, attempts * 500))
+          }
+        }
+        
+        // Se chegou aqui, não encontrou sessão após todas as tentativas
+        console.log("⚠️ [IQ CHARTS] Nenhuma sessão encontrada após todas as tentativas")
+        redirectToLogin()
+      } catch (error) {
+        console.error("❌ [IQ CHARTS] Erro ao verificar autenticação:", error)
+        redirectToLogin()
+      }
+    }
+
+    const redirectToLogin = () => {
+      if (!mounted) return
+      setIsChecking(false)
+    }
+
+    // Escutar mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("🔔 [IQ CHARTS] Evento de autenticação:", event)
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log("✅ [IQ CHARTS] Login detectado via onAuthStateChange:", session.user.email)
+        if (mounted) {
+          setIsAuthenticated(true)
+          setIsChecking(false)
+        }
+      } else if (event === 'SIGNED_OUT') {
+        console.log("🚪 [IQ CHARTS] Logout detectado")
+        if (mounted) {
+          setIsAuthenticated(false)
+          setIsChecking(false)
+        }
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        console.log("🔄 [IQ CHARTS] Token atualizado:", session.user.email)
+        if (mounted) {
+          setIsAuthenticated(true)
+          setIsChecking(false)
+        }
+      }
+    })
+
     setMounted(true)
-    setSavedLayouts(loadLayouts())
+    checkIQAcademyAuth()
+
+    // Adicionar listener para quando a página ganha foco (após retorno do login)
+    const handleFocus = () => {
+      console.log("🌐 [IQ CHARTS] Página focada, verificando autenticação novamente...")
+      checkIQAcademyAuth()
+    }
+    
+    // Adicionar listener para quando a página fica visível
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log("👁️ [IQ CHARTS] Página visível, verificando autenticação...")
+        checkIQAcademyAuth()
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [])
 
-  // Presets rápidos (estilo IQ Charts Ideas)
-  const quickPresets: Array<{ name: string; icon: any; scanners: ScannerKey[]; symbol: string; timeframe: string }> = [
-    { name: "Golden Zone Setup", icon: Star, scanners: ["GoldenZone"], symbol: "OANDA:XAUUSD", timeframe: "60" },
-    { name: "Momentum Breakout", icon: Zap, scanners: ["Momentum", "Winzone"], symbol: "OANDA:EURUSD", timeframe: "15" },
-    { name: "Kill Shot Entry", icon: Sparkles, scanners: ["KillShot", "Nexus"], symbol: "OANDA:XAUUSD", timeframe: "240" },
-    { name: "Smart Money Flow", icon: BarChart3, scanners: ["Smartmonics", "Sinergy"], symbol: "BINANCE:BTCUSDT", timeframe: "60" },
-  ]
+  useEffect(() => {
+    if (mounted && isAuthenticated) {
+      setSavedLayouts(loadLayouts())
+    }
+  }, [mounted, isAuthenticated])
 
-  const handleQuickPreset = (preset: typeof quickPresets[0]) => {
-    setSelectedSymbol(preset.symbol)
-    setSelectedTimeframe(preset.timeframe)
-    setSelectedStudies(preset.scanners)
-    toast({
-      title: "✅ Preset Aplicado",
-      description: `Layout "${preset.name}" carregado`,
-    })
-  }
 
   const handleSaveLayout = () => {
     if (!layoutNameToSave.trim()) {
       toast({
-        title: "❌ Erro",
-        description: "Insere um nome para o layout",
+        title: "❌ Error",
+        description: "Enter a name for the layout",
         variant: "destructive",
       })
       return
@@ -100,364 +276,567 @@ export default function IQCharts2Page() {
       }
 
       createLayout(layout)
-      setSavedLayouts(loadLayouts())
+      const updatedLayouts = loadLayouts()
+      setSavedLayouts(updatedLayouts)
       setLayoutNameToSave("")
       setShowSaveDialog(false)
-
+      
       toast({
-        title: "✅ Layout Salvo",
-        description: `Layout "${layout.name}" guardado com sucesso`,
+        title: "✅ Layout Saved",
+        description: `Layout "${layout.name}" saved successfully`,
       })
-    } catch (e: any) {
-      if (e.message === "LIMIT_REACHED") {
-        toast({
-          title: "❌ Limite Atingido",
-          description: "Limite de 20 layouts atingido. Elimina um layout antigo.",
-          variant: "destructive",
-        })
-      } else {
-        toast({
-          title: "❌ Erro",
-          description: "Erro ao guardar layout",
-          variant: "destructive",
-        })
-      }
+    } catch (error) {
+      console.error("Erro ao salvar layout:", error)
+      toast({
+        title: "❌ Error",
+        description: "Error saving layout",
+        variant: "destructive",
+      })
     }
   }
 
   const handleLoadLayout = (layout: MTMChartLayout) => {
-    try {
-      setSelectedSymbol(layout.chart.symbol)
-      setSelectedTimeframe(layout.chart.timeframe)
-      setSelectedTheme(layout.chart.theme)
-      setSelectedStudies(layout.scanners.active)
-      setShowLoadDialog(false)
-
-      toast({
-        title: "✅ Layout Carregado",
-        description: `Layout "${layout.name}" carregado com sucesso`,
-      })
-    } catch {
-      toast({
-        title: "❌ Erro",
-        description: "Erro ao carregar layout",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleDeleteLayout = (id: string) => {
-    if (!confirm("Tens certeza que queres eliminar este layout?")) return
-    
-    deleteLayout(id)
-    setSavedLayouts(loadLayouts())
+    setSelectedSymbol(layout.chart.symbol)
+    setSelectedTimeframe(layout.chart.timeframe)
+    setSelectedTheme(layout.chart.theme)
+    setSelectedStudies(layout.scanners.active)
+    setShowLoadDialog(false)
     
     toast({
-      title: "✅ Layout Eliminado",
-      description: "Layout eliminado com sucesso",
+      title: "✅ Layout Loaded",
+      description: `Layout "${layout.name}" applied`,
     })
   }
 
-  const handleDuplicateLayout = (id: string) => {
-    const duplicated = duplicateLayout(id)
-    if (duplicated) {
-      setSavedLayouts(loadLayouts())
+  const handleDeleteLayout = (layoutId: string) => {
+    if (confirm("Are you sure you want to delete this layout?")) {
+      deleteLayout(layoutId)
+      const updatedLayouts = loadLayouts()
+      setSavedLayouts(updatedLayouts)
       toast({
-        title: "✅ Layout Duplicado",
-        description: `Layout "${duplicated.name}" criado`,
+        title: "✅ Layout Deleted",
+        description: "Layout removed successfully",
       })
-    } else {
+    }
+  }
+
+  const handleDuplicateLayout = (layoutId: string) => {
+    duplicateLayout(layoutId)
+    const updatedLayouts = loadLayouts()
+    setSavedLayouts(updatedLayouts)
+    toast({
+      title: "✅ Layout Duplicated",
+      description: "Layout duplicated successfully",
+    })
+  }
+
+  const handleSaveInsight = (insight: any) => {
+    toast({
+      title: "✅ Insight Saved",
+      description: `Insight "${insight.name}" saved`,
+    })
+  }
+
+  const handleDeleteInsight = (insightId: string) => {
+    toast({
+      title: "✅ Insight Deleted",
+      description: "Insight removed",
+    })
+  }
+
+  const handleDuplicateInsight = (insightId: string) => {
+    toast({
+      title: "✅ Insight Duplicated",
+      description: "Insight duplicated",
+    })
+  }
+
+  const handleLoadInsight = (insight: any) => {
+    setSelectedSymbol(insight.chart?.symbol || selectedSymbol)
+    setSelectedTimeframe(insight.chart?.timeframe || selectedTimeframe)
+    setSelectedTheme(insight.chart?.theme || selectedTheme)
+    setSelectedStudies(insight.scanners?.active || selectedStudies)
+    
+    toast({
+      title: "✅ Insight Loaded",
+      description: `Insight "${insight.name}" applied`,
+    })
+  }
+
+  const captureChartPreview = async (): Promise<string | null> => {
+    try {
+      // Usar html2canvas ou similar para capturar
+      // Por enquanto, retornar null e usar screenshot nativo do TradingView
+      return null
+    } catch (error) {
+      console.error("Erro ao capturar preview:", error)
+      return null
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      // Clear admin session if exists
+      localStorage.removeItem(ADMIN_SESSION_KEY)
+      
+      // Try to sign out from Supabase
+      try {
+        await supabase.auth.signOut()
+      } catch (e) {
+        // Ignore Supabase errors if not logged in
+      }
+      
+      // Redirect to login
+      setIsAuthenticated(false)
+      setIsChecking(true)
+      window.location.href = IQONIC_LOGIN_URL
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error)
       toast({
-        title: "❌ Erro",
-        description: "Erro ao duplicar layout",
+        title: "❌ Error",
+        description: "Error logging out",
         variant: "destructive",
       })
     }
   }
 
-  if (!mounted) {
+  const handleReturnToAcademy = () => {
+    // Verificar se há sessão antes de redirecionar
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        // Se tem sessão, pode ir para Academy
+        window.location.href = IQONIC_ACADEMY_URL
+      } else {
+        // Se não tem sessão, ir para login com redirect de volta
+        const currentUrl = window.location.href
+        const loginUrl = `${IQONIC_LOGIN_URL}?redirect=${encodeURIComponent(currentUrl)}`
+        window.location.href = loginUrl
+      }
+    })
+  }
+
+  if (!mounted || isChecking) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-black">
+      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: '#05060D' }}>
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-[#D2A63C] mx-auto mb-4" />
-          <p className="text-gray-400">A carregar...</p>
+          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: '#2563EB' }} />
+          <p style={{ color: '#B0B8C1' }}>Checking access...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: '#05060D' }}>
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-4" style={{ color: '#E6EAF0' }}>Access Required</h2>
+            <p className="text-sm mb-4" style={{ color: '#B0B8C1' }}>
+              You need to log in to IQ Academy to access IQ Charts.
+            </p>
+            <p className="text-xs mb-6" style={{ color: '#6B7280' }}>
+              After logging in at iqonic.vip, return to this page to access.
+            </p>
+          </div>
+          
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={() => {
+                const currentUrl = window.location.href
+                const loginUrl = `${IQONIC_LOGIN_URL}?redirect=${encodeURIComponent(currentUrl)}`
+                window.location.href = loginUrl
+              }}
+              className="w-full rounded-lg font-medium"
+              style={{ backgroundColor: '#2563EB', borderColor: '#2563EB', color: '#E6EAF0' }}
+            >
+              Go to IQ Academy Login
+            </Button>
+            
+            <Button
+              onClick={() => setShowAdminLogin(true)}
+              variant="outline"
+              className="w-full rounded-lg font-medium"
+              style={{ backgroundColor: '#0E1428', borderColor: '#1F2937', color: '#B0B8C1' }}
+            >
+              Admin Login
+            </Button>
+            
+            <Button
+              onClick={async () => {
+                setIsChecking(true)
+                // Check admin session first
+                if (checkAdminSession()) {
+                  setIsAuthenticated(true)
+                  setIsChecking(false)
+                  return
+                }
+                // Aguardar um pouco e verificar novamente
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                const { data: { session } } = await supabase.auth.getSession()
+                if (session?.user) {
+                  setIsAuthenticated(true)
+                  setIsChecking(false)
+                } else {
+                  setIsChecking(false)
+                  toast({
+                    title: "⚠️ Still no session",
+                    description: "Please log in to IQ Academy first.",
+                    variant: "destructive",
+                  })
+                }
+              }}
+              variant="outline"
+              className="w-full rounded-lg font-medium"
+              style={{ backgroundColor: '#0E1428', borderColor: '#1F2937', color: '#B0B8C1' }}
+            >
+              Check Again
+            </Button>
+          </div>
+          
+          {/* Admin Login Dialog */}
+          {showAdminLogin && (
+            <Dialog open={showAdminLogin} onOpenChange={setShowAdminLogin}>
+              <DialogContent className="border rounded-lg" style={{ backgroundColor: '#0E1428', borderColor: '#1F2937' }}>
+                <DialogHeader>
+                  <DialogTitle style={{ color: '#E6EAF0', fontSize: '16px', fontWeight: 600 }}>Admin Login</DialogTitle>
+                  <DialogDescription style={{ color: '#B0B8C1', fontSize: '12px' }}>
+                    Enter admin credentials to access IQ Charts
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div>
+                    <Label style={{ color: '#B0B8C1', fontSize: '12px' }}>Username</Label>
+                    <Input
+                      value={adminUsername}
+                      onChange={(e) => setAdminUsername(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleAdminLogin()
+                        }
+                      }}
+                      placeholder="admin"
+                      className="mt-2 border rounded-lg"
+                      style={{ backgroundColor: '#05060D', borderColor: '#1F2937', color: '#E6EAF0' }}
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <Label style={{ color: '#B0B8C1', fontSize: '12px' }}>Password</Label>
+                    <Input
+                      type="password"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleAdminLogin()
+                        }
+                      }}
+                      placeholder="••••••••"
+                      className="mt-2 border rounded-lg"
+                      style={{ backgroundColor: '#05060D', borderColor: '#1F2937', color: '#E6EAF0' }}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleAdminLogin}
+                    className="w-full rounded-lg font-medium"
+                    style={{ backgroundColor: '#2563EB', borderColor: '#2563EB', color: '#E6EAF0' }}
+                  >
+                    Login
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
     )
   }
 
   return (
-    <ProtectedPage redirectPath="/login?redirect=/iqcharts2" loadingMessage="A verificar acesso...">
-      <main>
-        {/* Breadcrumb */}
-        <nav className="bg-black/50 border-b border-[#D2A63C]/10">
-          <div className="container mx-auto px-4 py-2">
-            <ol className="flex items-center space-x-2 text-sm">
-              <li className="flex items-center">
-                <a href="/" className="text-gray-400 hover:text-[#D2A63C] flex items-center">
-                  <House className="h-3 w-3 mr-1" />
-                  <span className="sr-only">Início</span>
-                </a>
-              </li>
-              <li className="flex items-center">
-                <ChevronRight className="h-4 w-4 text-gray-500 mx-1" />
-                <span className="text-[#D2A63C]">IQ Charts 2.0</span>
-              </li>
-            </ol>
+    <div className="min-h-screen" style={{ backgroundColor: '#05060D', color: '#E6EAF0' }}>
+      {/* Header Minimalista - Estilo IQ Charts */}
+      <div className="border-b sticky top-0 z-50" style={{ backgroundColor: '#05060D', borderColor: '#1F2937' }}>
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <h1 className="text-lg font-semibold tracking-wide" style={{ letterSpacing: '0.05em' }}>
+            IQ CHARTS
+          </h1>
+          
+          {/* Botões de navegação */}
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleReturnToAcademy}
+              size="sm"
+              variant="outline"
+              className="h-8 px-3 text-xs font-medium border rounded-lg transition-colors"
+              style={{ backgroundColor: '#0E1428', borderColor: '#1F2937', color: '#B0B8C1' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#1F2937'
+                e.currentTarget.style.color = '#E6EAF0'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#0E1428'
+                e.currentTarget.style.color = '#B0B8C1'
+              }}
+            >
+              <ArrowLeft className="h-3 w-3 mr-1.5" />
+              IQ Academy
+            </Button>
+            
+            <Button
+              onClick={handleLogout}
+              size="sm"
+              variant="outline"
+              className="h-8 px-3 text-xs font-medium border rounded-lg transition-colors"
+              style={{ backgroundColor: '#0E1428', borderColor: '#1F2937', color: '#B0B8C1' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#1F2937'
+                e.currentTarget.style.color = '#E6EAF0'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#0E1428'
+                e.currentTarget.style.color = '#B0B8C1'
+              }}
+            >
+              <LogOut className="h-3 w-3 mr-1.5" />
+              Logout
+            </Button>
           </div>
-        </nav>
+        </div>
+      </div>
 
-        <main className="min-h-screen bg-black text-white">
-          {/* Header */}
-          <div className="container mx-auto px-4 py-6 md:py-12">
-            <div className="text-center mb-8 md:mb-12">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-[#F3F3E6] via-[#D2A63C] to-[#BB8525] bg-clip-text text-transparent">
-                IQ Charts 2.0 - Layout Engine
-              </h1>
-              <p className="text-base md:text-lg lg:text-xl text-[#F3F3E6] max-w-3xl mx-auto mb-4 md:mb-8 px-2">
-                Sistema avançado de persistência de layouts estilo IQ Charts / TradingView
-              </p>
+      {/* TradingView Widget - Estilo IQ Charts */}
+      <div className="w-full px-2 md:px-4 mb-6">
+        <div className="max-w-[98%] mx-auto rounded-lg border p-2 md:p-4" style={{ backgroundColor: '#0E1428', borderColor: '#1F2937' }}>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium" style={{ color: '#B0B8C1' }}>Chart</span>
             </div>
-          </div>
-
-          {/* Presets Rápidos */}
-          <div className="container mx-auto px-4 mb-6">
-            <Card className="bg-gradient-to-br from-[#BB8525]/20 to-[#D2A63C]/10 border-[#D2A63C]/30">
-              <CardHeader>
-                <CardTitle className="text-lg md:text-xl font-semibold text-[#F3F3E6] flex items-center">
-                  <Sparkles className="h-5 w-5 mr-2 text-[#D2A63C]" />
-                  Presets Rápidos (1 Clique)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {quickPresets.map((preset, index) => {
-                    const Icon = preset.icon
-                    return (
-                      <Button
-                        key={index}
-                        onClick={() => handleQuickPreset(preset)}
-                        className="h-auto py-3 px-4 bg-gray-800/50 hover:bg-[#D2A63C]/20 border border-[#D2A63C]/30 text-white flex flex-col items-start gap-2"
-                      >
-                        <div className="flex items-center gap-2 w-full">
-                          <Icon className="h-4 w-4 text-[#D2A63C]" />
-                          <span className="text-sm font-semibold">{preset.name}</span>
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {preset.scanners.join(" + ")} • {preset.symbol}
-                        </div>
-                      </Button>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* TradingView Widget + Screener */}
-          <div className="w-full px-2 md:px-4 mb-8 md:mb-12">
-            <div className="max-w-[98%] mx-auto bg-gradient-to-br from-[#BB8525]/20 to-[#D2A63C]/10 rounded-lg border border-[#D2A63C]/30 p-3 md:p-6 backdrop-blur-sm hover:border-[#F3F3E6]/50 transition-all duration-300">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4 md:mb-6">
-                <h2 className="text-lg md:text-2xl font-semibold text-[#F3F3E6] flex items-center">
-                  <span className="mr-2">📊</span>
-                  Chart Layout Engine
-                </h2>
-                <div className="flex gap-2">
-                  <Button
-                    variant={showScreener ? "default" : "outline"}
-                    className={
-                      showScreener
-                        ? "bg-[#D2A63C] text-black hover:bg-[#BB8525]"
-                        : "border-[#D2A63C]/60 text-[#D2A63C] hover:bg-[#D2A63C]/10"
-                    }
-                    onClick={() => setShowScreener((prev) => !prev)}
-                  >
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    {showScreener ? "Esconder Screener" : "Mostrar Screener"}
-                  </Button>
-                  
-                  {/* Salvar Layout */}
-                  <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-                    <DialogTrigger asChild>
-                      <Button className="bg-[#D2A63C] text-black hover:bg-[#BB8525]">
-                        <Save className="h-4 w-4 mr-2" />
-                        Salvar Layout
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-gray-900 border-[#D2A63C]/30">
-                      <DialogHeader>
-                        <DialogTitle className="text-[#D2A63C]">Salvar Layout</DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                          Guarda o estado atual do gráfico como um layout reutilizável
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4 py-4">
-                        <div>
-                          <Label className="text-gray-300">Nome do Layout</Label>
-                          <Input
-                            value={layoutNameToSave}
-                            onChange={(e) => setLayoutNameToSave(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault()
-                                handleSaveLayout()
-                              }
-                            }}
-                            placeholder="Ex: XAU/USD - Golden Zone Setup"
-                            className="bg-gray-800 border-gray-700 text-white mt-2"
-                            autoFocus
-                          />
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          Layouts guardados: {savedLayouts.length}/20
-                        </div>
-                        <Button
-                          onClick={handleSaveLayout}
-                          className="w-full bg-[#D2A63C] text-black hover:bg-[#BB8525]"
-                        >
-                          <Save className="h-4 w-4 mr-2" />
-                          Guardar Layout
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-
-                  {/* Carregar Layout */}
-                  <Dialog open={showLoadDialog} onOpenChange={setShowLoadDialog}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="border-[#D2A63C]/60 text-[#D2A63C] hover:bg-[#D2A63C]/10">
-                        <FolderOpen className="h-4 w-4 mr-2" />
-                        Carregar Layout
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-[#D2A63C]/30">
-                      <DialogHeader>
-                        <DialogTitle className="text-[#D2A63C]">Carregar Layout</DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                          Seleciona um layout guardado para carregar
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="py-4">
-                        {savedLayouts.length === 0 ? (
-                          <div className="text-center py-8 text-gray-400">
-                            Nenhum layout guardado
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {savedLayouts.map((layout) => (
-                              <div
-                                key={layout.id}
-                                className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors"
-                              >
-                                <div className="flex-1">
-                                  <div className="font-medium text-white">{layout.name}</div>
-                                  <div className="text-xs text-gray-400 mt-1">
-                                    {layout.chart.symbol} • {layout.chart.timeframe} • {layout.scanners.active.length} scanners
-                                  </div>
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    {new Date(layout.createdAt).toLocaleDateString("pt-BR")}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    onClick={() => handleLoadLayout(layout)}
-                                    size="sm"
-                                    className="bg-[#D2A63C] text-black hover:bg-[#BB8525]"
-                                  >
-                                    Carregar
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleDuplicateLayout(layout.id)}
-                                    size="sm"
-                                    variant="outline"
-                                    className="border-gray-600 text-gray-300 hover:bg-gray-700"
-                                  >
-                                    <Copy className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleDeleteLayout(layout.id)}
-                                    size="sm"
-                                    variant="ghost"
-                                    className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-              <TradingViewWidget 
-                showScreener={showScreener}
-                externalSymbol={selectedSymbol}
-                externalTimeframe={selectedTimeframe}
-                externalTheme={selectedTheme}
-                externalStudies={selectedStudies}
-                onSymbolChange={setSelectedSymbol}
-                onTimeframeChange={setSelectedTimeframe}
-                onThemeChange={setSelectedTheme}
-                onStudiesChange={setSelectedStudies}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={showScreener ? "default" : "outline"}
+                size="sm"
+                className="h-8 px-3 text-xs font-medium border rounded-lg transition-colors"
+                style={
+                  showScreener
+                    ? { backgroundColor: '#2563EB', borderColor: '#2563EB', color: '#E6EAF0' }
+                    : { backgroundColor: '#0E1428', borderColor: '#1F2937', color: '#B0B8C1' }
+                }
+                onClick={() => setShowScreener((prev) => !prev)}
+              >
+                <BarChart3 className="h-3 w-3 mr-1.5" />
+                Screener
+              </Button>
+              
+              {/* IQ Insights Panel */}
+              <IQInsightsPanel
+                currentSymbol={selectedSymbol}
+                currentTimeframe={selectedTimeframe}
+                currentTheme={selectedTheme}
+                currentStudies={selectedStudies}
+                onLoadInsight={handleLoadInsight}
+                onCapturePreview={captureChartPreview}
               />
+              
+              {/* IQ Ideas Panel - Botão Post */}
+              <IQIdeasPanel
+                currentSymbol={selectedSymbol}
+                onCaptureImage={captureChartPreview}
+                showPostButton={true}
+                showFeed={false}
+              />
+              
+              {/* Salvar Layout */}
+              <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+                <DialogTrigger asChild>
+                  <Button 
+                    size="sm"
+                    className="h-8 px-3 text-xs font-medium border rounded-lg transition-colors"
+                    style={{ backgroundColor: '#0E1428', borderColor: '#1F2937', color: '#B0B8C1' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#1F2937'
+                      e.currentTarget.style.color = '#E6EAF0'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#0E1428'
+                      e.currentTarget.style.color = '#B0B8C1'
+                    }}
+                  >
+                    <Save className="h-3 w-3 mr-1.5" />
+                    Save Layout
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="border rounded-lg" style={{ backgroundColor: '#0E1428', borderColor: '#1F2937' }}>
+                  <DialogHeader>
+                    <DialogTitle style={{ color: '#E6EAF0', fontSize: '14px', fontWeight: 600 }}>Save Layout</DialogTitle>
+                    <DialogDescription style={{ color: '#B0B8C1', fontSize: '12px' }}>
+                      Save the current chart state as a reusable layout
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <Label style={{ color: '#B0B8C1', fontSize: '12px' }}>Layout Name</Label>
+                      <Input
+                        value={layoutNameToSave}
+                        onChange={(e) => setLayoutNameToSave(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleSaveLayout()
+                          }
+                        }}
+                        placeholder="Ex: XAU/USD - Golden Zone Setup"
+                        className="mt-2 border rounded-lg"
+                        style={{ backgroundColor: '#05060D', borderColor: '#1F2937', color: '#E6EAF0' }}
+                        autoFocus
+                      />
+                    </div>
+                      <div className="text-xs" style={{ color: '#6B7280' }}>
+                      Saved layouts: {savedLayouts.length}/20
+                    </div>
+                    <Button
+                      onClick={handleSaveLayout}
+                      className="w-full rounded-lg font-medium"
+                      style={{ backgroundColor: '#2563EB', borderColor: '#2563EB', color: '#E6EAF0' }}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Layout
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Carregar Layout */}
+              <Dialog open={showLoadDialog} onOpenChange={setShowLoadDialog}>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="h-8 px-3 text-xs font-medium border rounded-lg transition-colors"
+                    style={{ backgroundColor: '#0E1428', borderColor: '#1F2937', color: '#B0B8C1' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#1F2937'
+                      e.currentTarget.style.color = '#E6EAF0'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#0E1428'
+                      e.currentTarget.style.color = '#B0B8C1'
+                    }}
+                  >
+                    <FolderOpen className="h-3 w-3 mr-1.5" />
+                    Load Layout
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto border rounded-lg" style={{ backgroundColor: '#0E1428', borderColor: '#1F2937' }}>
+                  <DialogHeader>
+                    <DialogTitle style={{ color: '#E6EAF0', fontSize: '14px', fontWeight: 600 }}>Load Layout</DialogTitle>
+                    <DialogDescription style={{ color: '#B0B8C1', fontSize: '12px' }}>
+                      Select a saved layout to load
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4">
+                    {savedLayouts.length === 0 ? (
+                      <div className="text-center py-8" style={{ color: '#6B7280' }}>
+                        No saved layouts
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {savedLayouts.map((layout) => (
+                          <div
+                            key={layout.id}
+                            className="flex items-center justify-between p-3 rounded-lg border transition-colors"
+                            style={{ backgroundColor: '#05060D', borderColor: '#1F2937' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = '#2563EB'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = '#1F2937'
+                            }}
+                          >
+                            <div className="flex-1">
+                              <div className="font-semibold text-sm" style={{ color: '#E6EAF0' }}>{layout.name}</div>
+                              <div className="text-xs mt-1" style={{ color: '#6B7280' }}>
+                                {layout.chart.symbol} • {layout.chart.timeframe} • {layout.scanners.active.length} scanners
+                              </div>
+                              <div className="text-xs mt-1" style={{ color: '#6B7280' }}>
+                                {new Date(layout.createdAt).toLocaleDateString("pt-BR")}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                onClick={() => handleLoadLayout(layout)}
+                                size="sm"
+                                className="h-7 px-3 text-xs font-medium rounded-lg"
+                                style={{ backgroundColor: '#2563EB', borderColor: '#2563EB', color: '#E6EAF0' }}
+                              >
+                                LOAD
+                              </Button>
+                              <Button
+                                onClick={() => handleDuplicateLayout(layout.id)}
+                                size="sm"
+                                variant="outline"
+                                className="h-7 w-7 p-0 rounded-lg border"
+                                style={{ borderColor: '#1F2937', color: '#B0B8C1' }}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                onClick={() => handleDeleteLayout(layout.id)}
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 w-7 p-0 rounded-lg"
+                                style={{ color: '#FF4D4D' }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#FF4D4D20'
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'transparent'
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
+          <TradingViewWidget 
+            showScreener={showScreener}
+            externalSymbol={selectedSymbol}
+            externalTimeframe={selectedTimeframe}
+            externalTheme={selectedTheme}
+            externalStudies={selectedStudies}
+            onSymbolChange={setSelectedSymbol}
+            onTimeframeChange={setSelectedTimeframe}
+            onThemeChange={setSelectedTheme}
+            onStudiesChange={setSelectedStudies}
+          />
+        </div>
+      </div>
 
-          {/* Info Card */}
-          <div className="container mx-auto px-4 mb-12">
-            <Card className="bg-gradient-to-br from-[#BB8525]/20 to-[#D2A63C]/10 border-[#D2A63C]/30">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold text-[#F3F3E6] flex items-center">
-                  <Sparkles className="h-5 w-5 mr-2 text-[#D2A63C]" />
-                  Funcionalidades do Layout Engine
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-6 text-gray-300">
-                  <div>
-                    <h3 className="text-lg font-semibold text-[#D2A63C] mb-3">✨ Persistência Completa</h3>
-                    <ul className="space-y-2 text-sm">
-                      <li className="flex items-start">
-                        <span className="text-green-400 mr-2">✓</span>
-                        <span>Estado completo do gráfico (símbolo, timeframe, tema)</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-green-400 mr-2">✓</span>
-                        <span>Scanners ativos preservados</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-green-400 mr-2">✓</span>
-                        <span>Configurações de UI guardadas</span>
-                      </li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-[#D2A63C] mb-3">🚀 Próximos Passos</h3>
-                    <ul className="space-y-2 text-sm">
-                      <li className="flex items-start">
-                        <span className="text-blue-400 mr-2">→</span>
-                        <span>Cloud Save (Supabase / API)</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-blue-400 mr-2">→</span>
-                        <span>Compartilhar layouts via link</span>
-                      </li>
-                      <li className="flex items-start">
-                        <span className="text-blue-400 mr-2">→</span>
-                        <span>Scanner Sets pré-configurados</span>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
-      </main>
-    </ProtectedPage>
+      {/* IQ Ideas Feed - Estilo IQ Charts */}
+      <div className="container mx-auto px-4 mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-sm font-semibold tracking-wide" style={{ letterSpacing: '0.05em', color: '#E6EAF0' }}>
+            IQ IDEAS
+          </span>
+        </div>
+        <div className="rounded-lg border p-4" style={{ backgroundColor: '#0E1428', borderColor: '#1F2937' }}>
+          <IQIdeasPanel
+            currentSymbol={selectedSymbol}
+            onCaptureImage={captureChartPreview}
+            showPostButton={false}
+            showFeed={true}
+          />
+        </div>
+      </div>
+    </div>
   )
 }
-

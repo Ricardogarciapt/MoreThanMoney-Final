@@ -97,9 +97,9 @@ const scannerLabels: Record<ScannerKey, string> = {
   Momentum: "Momentum",
   KillShot: "Kill Shot",
   Supernova: "Supernova",
-  Smartmonics: "React",
+  Smartmonics: "Smartmonics",
   Winzone: "Winzone",
-  Nexus: "Straight",
+  Nexus: "Nexus",
   Sinergy: "Sinergy",
 }
 
@@ -496,8 +496,24 @@ export default function ScannerMobile() {
         containerRef.current.innerHTML = '<div id="tradingview_mobile_widget" style="height: 100%; width: 100%;"></div>'
       }
 
-      // Usar a abordagem simples que funcionava - todos os estudos no array studies
-      const studiesToApply = selectedStudies.flatMap((key) => scannerStudies[key] || [])
+      // Scanners que precisam de configuração especial (AUTO ligado, apenas escala de preços)
+      const specialScanners: ScannerKey[] = ["Smartmonics", "KillShot", "Winzone", "Nexus", "Sinergy"]
+      
+      // Separar estudos em normais e especiais
+      const normalStudies: string[] = []
+      const specialStudies: string[] = []
+      
+      selectedStudies.forEach((key) => {
+        const studies = scannerStudies[key] || []
+        if (specialScanners.includes(key)) {
+          specialStudies.push(...studies)
+        } else {
+          normalStudies.push(...studies)
+        }
+      })
+
+      // Copiar estudos especiais para uma variável local para garantir closure correto
+      const specialStudiesToAdd = [...specialStudies]
 
       widgetRef.current = new window.TradingView.widget({
         autosize: true,
@@ -513,7 +529,8 @@ export default function ScannerMobile() {
         hide_side_toolbar: false,
         hide_top_toolbar: false,
         container_id: "tradingview_mobile_widget",
-        studies: studiesToApply,
+        // Adicionar estudos normais diretamente aqui - estudos especiais serão adicionados programaticamente
+        studies: normalStudies,
         disabled_features: [
           "header_widget_dom_node",
           "header_widget",
@@ -545,63 +562,71 @@ export default function ScannerMobile() {
         overrides: {
           "mainSeriesProperties.showCountdown": true,
           "scalesProperties.showSeriesLastValue": true,
-          // Esconder completamente legendas/valores dos estudos em todos os painéis
+          // Esconder completamente legendas/valores dos estudos em TODOS os painéis (superior e inferiores)
           "scalesProperties.showStudyLastValue": false,
-          "paneProperties.legendProperties.showStudyTitles": false,
+          "scalesProperties.showStudyLastValueOnPriceScale": false,
+          "scalesProperties.showStudyLastValueOnVolumeScale": false,
+          // Propriedades globais de legendas (aplicam-se a todos os painéis)
           "paneProperties.legendProperties.showStudyArguments": false,
+          "paneProperties.legendProperties.showStudyTitles": false,
           "paneProperties.legendProperties.showStudyValues": false,
+          "paneProperties.legendProperties.showSeriesTitle": false,
+          "paneProperties.legendProperties.showLegend": false,
+          "paneProperties.legendProperties.showStudyLabels": false,
+          "paneProperties.legendProperties.showSourceTitle": false,
+          "paneProperties.legendProperties.showSourceArguments": false,
+          "paneProperties.legendProperties.showSourceValues": false,
+          "paneProperties.legendProperties.showSourceLabels": false,
+          "paneProperties.legendProperties.showIndicatorsLegend": false,
+          "paneProperties.legendProperties.showIndicatorsTitle": false,
+          "paneProperties.legendProperties.showIndicatorsArguments": false,
+          "paneProperties.legendProperties.showIndicatorsValues": false,
+          "paneProperties.legendProperties.showIndicatorsLabels": false,
+          // Propriedades específicas para painéis inferiores (lower panes)
+          "paneProperties.legendProperties.showStudyLastValue": false,
+          "paneProperties.legendProperties.showStudyLastValueOnPriceScale": false,
+          "paneProperties.legendProperties.showStudyLastValueOnVolumeScale": false,
+          // Esconder legendas em todos os painéis de estudos
+          "paneProperties.legendProperties.showAllStudiesLegend": false,
+          "paneProperties.legendProperties.showAllIndicatorsLegend": false,
+          "scalesProperties.fontSize": 10,
           "volumePaneSize": "hide",
-          // === PRICE SCALE ===
-          "scalesProperties.autoScale": true,               // Auto (fits data to screen)
-          "scalesProperties.lockPriceToBarRatio": false,    // Lock price to bar ratio
-          "scalesProperties.scaleSeriesOnly": true,         // Scale price chart only
-          "scalesProperties.invertScale": false,            // Invert scale
+          // Configurar para usar apenas um painel inferior para indicadores secundários
+          "paneProperties.background": theme === "dark" ? "#1E1E1E" : "#FFFFFF",
+          "paneProperties.backgroundType": "solid",
+          // Garantir que estudos secundários vão para o mesmo painel inferior
+          "paneProperties.vertLinesProperties.style": 0,
+          "paneProperties.horzLinesProperties.style": 0,
         },
-      })
-
-      // Configurar AUTO e apenas escala de preço após o chart estar pronto
-      if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
-        widgetRef.current.onChartReady(() => {
+        // Adicionar onChartReady diretamente nas opções para garantir que seja sempre chamado
+        onChartReady: () => {
           try {
-            const chart = widgetRef.current.chart && widgetRef.current.chart()
+            const chart = widgetRef.current?.chart?.()
             if (chart) {
-              // Configurar todos os estudos para usar AUTO e apenas escala de preço
-              setTimeout(() => {
-                try {
-                  const allStudies = chart.getAllStudies?.() || []
-                  console.log(`📊 [TRADINGVIEW MOBILE] Configurando ${allStudies.length} estudos com AUTO e escala de preço`)
-                  
-                  allStudies.forEach((study: any) => {
+              // Resetar vista inicial
+              if (typeof chart.resetData === "function") {
+                chart.resetData()
+              }
+
+              // Adicionar estudos especiais após um pequeno delay para garantir que o chart está pronto
+              if (specialStudiesToAdd.length > 0) {
+                setTimeout(() => {
+                  specialStudiesToAdd.forEach((studyId) => {
                     try {
-                      // Habilitar AUTO (autoScale) - adapta escala automaticamente
-                      if (typeof study.setAutoScale === 'function') {
-                        study.setAutoScale(true)
-                      }
-                      // Configurar para usar apenas escala de preços (não criar escala separada)
-                      if (typeof study.setPriceScale === 'function') {
-                        study.setPriceScale(true)
-                      }
-                      // Alternativa via setEntityInfo se disponível
-                      if (typeof study.setEntityInfo === 'function') {
-                        study.setEntityInfo({ 
-                          priceScaleId: 'right',
-                          autoScale: true 
-                        })
-                      }
-                    } catch (e) {
-                      // Ignorar erros individuais
+                      // Criar estudo como overlay no painel principal com AUTO ligado
+                      chart.createStudy(studyId, true, true)
+                    } catch (studyError) {
+                      console.warn(`Erro ao adicionar estudo especial ${studyId}:`, studyError)
                     }
                   })
-                } catch (e) {
-                  console.warn("Não foi possível configurar AUTO e escala de preço:", e)
-                }
-              }, 1500) // Delay para garantir que estudos estão carregados
+                }, 500)
+              }
             }
           } catch (e) {
-            console.warn("Não foi possível configurar estudos:", e)
+            console.warn("Não foi possível configurar estudos especiais no gráfico mobile:", e)
           }
-        })
-      }
+        },
+      })
 
       setWidgetLoaded(true)
       setError(null)
