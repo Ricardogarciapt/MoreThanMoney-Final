@@ -110,6 +110,16 @@ export const defaultContentConfig: ContentConfig = {
       page: '/fast-start',
       section: 'Apresentação do Negócio',
       autoplay: false
+    },
+    
+    // MTM PAGE
+    {
+      id: 'mtm-presentation',
+      title: 'Apresentação MoreThanMoney',
+      videoId: 'RQIimjljeMI',
+      page: '/mtm',
+      section: 'Video Modal',
+      autoplay: false
     }
   ],
   

@@ -261,6 +261,10 @@ function generateDCARecommendation(
 }
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now()
+  let success = true
+  let errorMessage = null
+  
   try {
     const { searchParams } = new URL(request.url)
     const symbol = searchParams.get('symbol') || 'BTC'
@@ -318,6 +322,26 @@ export async function GET(request: NextRequest) {
       }
     ]
     
+    const responseTime = Date.now() - startTime
+
+    // Track AI event for analytics
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/api/ai/track-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_type: 'dca_analysis',
+          event_data: { symbol, articles_count: articles.length, response_time: responseTime },
+          context: { symbol, timeframes: ['15m', '1h', '4h', '1d'] },
+          ai_feature: 'dca_analysis',
+          response_time: responseTime,
+          success
+        })
+      })
+    } catch (trackError) {
+      console.warn('⚠️ [DCA ANALYSIS] Erro ao trackear evento:', trackError)
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -338,10 +362,32 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
+    success = false
+    errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
     console.error('Erro na API de análise DCA:', error)
+    
+    // Track error event
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/api/ai/track-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_type: 'dca_analysis',
+          event_data: { error: errorMessage },
+          context: {},
+          ai_feature: 'dca_analysis',
+          response_time: Date.now() - startTime,
+          success: false,
+          error_message: errorMessage
+        })
+      })
+    } catch (trackError) {
+      console.warn('⚠️ [DCA ANALYSIS] Erro ao trackear evento de erro:', trackError)
+    }
+    
     return NextResponse.json({ 
       error: 'Erro ao processar análise DCA',
-      details: error instanceof Error ? error.message : 'Erro desconhecido'
+      details: errorMessage
     }, { status: 500 })
   }
 }

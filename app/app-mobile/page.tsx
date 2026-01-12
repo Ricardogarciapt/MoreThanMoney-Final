@@ -22,7 +22,9 @@ import {
   Dumbbell,
   LogOut,
   Loader2,
+  Menu,
 } from "lucide-react"
+import MobileSidebar from "@/components/mobile/mobile-sidebar"
 import { useAuthenticatedSession } from "@/hooks/use-authenticated-session"
 
 function AppMobileContent() {
@@ -35,6 +37,7 @@ function AppMobileContent() {
   const [touchEnd, setTouchEnd] = useState(0)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -200,40 +203,52 @@ function AppMobileContent() {
   return (
     <ProtectedPage redirectPath="/login?redirect=/app-mobile" loadingMessage="A carregar app mobile...">
       <main className="app-mobile-page bg-gray-900 min-h-screen flex flex-col">
-        {/* Header Mobile */}
+        {/* Mobile Sidebar */}
+        <MobileSidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          currentUser={currentUser}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
+
+        {/* Header Mobile - Simplified */}
         <div
           className={`app-mobile-navbar sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800 transition-all duration-300 ${
             isHeaderCollapsed ? "py-2" : "py-4"
           }`}
         >
           <div className="flex items-center justify-between gap-4 px-4">
-            <div className="flex items-center gap-3">
+            {/* Menu Button */}
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="w-10 h-10 bg-gray-800/80 backdrop-blur-sm rounded-lg flex items-center justify-center hover:bg-gray-700 transition-all active:scale-95"
+              title="Menu"
+            >
+              <Menu className="w-5 h-5 text-white" />
+            </button>
+
+            {/* Logo & Title */}
+            <div className="flex items-center gap-3 flex-1">
               <Image 
                 src="/logo-new.png" 
                 alt="MTM Logo" 
-                width={40} 
-                height={40}
-                className="rounded-lg"
+                width={isHeaderCollapsed ? 32 : 40} 
+                height={isHeaderCollapsed ? 32 : 40}
+                className="rounded-lg transition-all"
                 priority
               />
               <div>
-                <h1 className={`font-bold text-white transition-all ${isHeaderCollapsed ? "text-base" : "text-xl"}`}>
-                  MTM - System
+                <h1 className={`font-bold text-white transition-all ${isHeaderCollapsed ? "text-sm" : "text-lg"}`}>
+                  MTM System
                 </h1>
-                <p className={`text-gray-200 transition-all ${isHeaderCollapsed ? "text-[10px]" : "text-xs"}`}>
-                  {currentUser?.full_name || currentUser?.username || 'MoreThanMoney'}
-                </p>
+                {!isHeaderCollapsed && (
+                  <p className="text-xs text-gray-400 truncate max-w-[150px]">
+                    {currentUser?.full_name || currentUser?.username || 'MoreThanMoney'}
+                  </p>
+                )}
               </div>
             </div>
-            
-            {/* Logout */}
-            <button 
-              onClick={handleLogout}
-              className="w-10 h-10 bg-red-600/80 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-red-600 transition-all active:scale-95"
-              title="Sair"
-            >
-              <LogOut className="w-5 h-5 text-white" />
-            </button>
           </div>
         </div>
 

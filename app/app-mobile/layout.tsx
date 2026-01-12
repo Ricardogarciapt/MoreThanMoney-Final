@@ -1,7 +1,7 @@
 "use client"
 
-import { ReactNode, useEffect } from "react"
-import { usePathname } from "next/navigation"
+import { ReactNode, useEffect, useState } from "react"
+import { usePathname, useSearchParams } from "next/navigation"
 import AIAssistantFloating from "@/components/mobile/ai-assistant-floating"
 
 export default function AppMobileLayout({
@@ -10,6 +10,8 @@ export default function AppMobileLayout({
   children: ReactNode
 }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [showAI, setShowAI] = useState(true)
 
   useEffect(() => {
     // Adicionar classe ao body quando estiver em /app-mobile
@@ -24,10 +26,17 @@ export default function AppMobileLayout({
     }
   }, [pathname])
 
+  useEffect(() => {
+    // Ocultar IA quando estiver na aba scanner
+    const tab = searchParams?.get('tab')
+    const isScanner = tab === 'scanner' || (pathname?.includes('scanner') && !tab)
+    setShowAI(!isScanner)
+  }, [pathname, searchParams])
+
   return (
     <div className="app-mobile-container">
       {children}
-      <AIAssistantFloating />
+      {showAI && <AIAssistantFloating />}
     </div>
   )
 }

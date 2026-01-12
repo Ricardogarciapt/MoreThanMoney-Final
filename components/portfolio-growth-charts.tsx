@@ -53,68 +53,167 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
     }
   }
 
-  // Calcular valores reais atuais
-  const currentCryptoValue = cryptoAssets.reduce((sum, asset) => {
-    return sum + (asset.current_price || 0) * (asset.allocation_percent || 0)
+  // Calcular valores reais atuais baseados nos dados da API
+  const cryptoTotals = realTimeData?.crypto?.totals || {}
+  const etfTotals = realTimeData?.etf?.totals || {}
+  
+  // Valores reais de investimento
+  const cryptoInitialInvestment = cryptoTotals.investimento_total || 775
+  const cryptoMonthlyDCA = cryptoTotals.reforco_mensal || 280
+  const cryptoAnnualDCA = cryptoTotals.reforco_anual || 3360
+  const cryptoCurrentValue = cryptoAssets.reduce((sum, asset) => {
+    return sum + (asset.current_value || asset.total_invested || 0)
   }, 0)
+  const cryptoTotalInvested = cryptoAssets.reduce((sum, asset) => {
+    return sum + (asset.total_invested || 0)
+  }, 0) || cryptoInitialInvestment
 
-  const currentETFValue = etfAssets.reduce((sum, asset) => {
-    return sum + (asset.current_price || 0) * (asset.allocation_percent || 0)
+  const etfInitialInvestment = etfTotals.investimento_total || 100
+  const etfWeeklyDCA = etfTotals.reforco_semanal || 25
+  const etfAnnualDCA = (etfWeeklyDCA * 52) || 1300
+  const etfCurrentValue = etfAssets.reduce((sum, asset) => {
+    return sum + (asset.current_value || asset.total_invested || 0)
   }, 0)
-  // Dados de crescimento simulado para Crypto (5 anos)
-  // Base: Investimento inicial €775 + €280/mês × 12 meses × 5 anos = €17.575
-  // Crescimento potencial total: €22.810
-  const cryptoGrowthData = [
-    { year: 'Mar 2025', investido: 775, valor: 775, crescimento: 0 },
-    { year: 'Ano 1', investido: 4135, valor: 6500, crescimento: 2365 },
-    { year: 'Ano 2', investido: 7495, valor: 12000, crescimento: 4505 },
-    { year: 'Ano 3', investido: 10855, valor: 16500, crescimento: 5645 },
-    { year: 'Ano 4', investido: 14215, valor: 19800, crescimento: 5585 },
-    { year: 'Ano 5', investido: 17575, valor: 22810, crescimento: 5235 },
-  ]
+  const etfTotalInvested = etfAssets.reduce((sum, asset) => {
+    return sum + (asset.total_invested || 0)
+  }, 0) || etfInitialInvestment
 
-  // Dados de crescimento para ETF (5 anos)
-  const etfGrowthData = [
-    { year: 'Ano 0', investido: 100, valor: 100, crescimento: 0 },
-    { year: 'Ano 1', investido: 1400, valor: 1800, crescimento: 400 },
-    { year: 'Ano 2', investido: 2700, valor: 4500, crescimento: 1800 },
-    { year: 'Ano 3', investido: 4000, valor: 8200, crescimento: 4200 },
-    { year: 'Ano 4', investido: 5300, valor: 13500, crescimento: 8200 },
-    { year: 'Ano 5', investido: 6600, valor: 20150, crescimento: 13550 },
-  ]
+  // Calcular crescimento real atual baseado nos dados da API
+  const cryptoGrowthRate = cryptoTotalInvested > 0 
+    ? ((cryptoCurrentValue - cryptoTotalInvested) / cryptoTotalInvested) 
+    : 0
+  const etfGrowthRate = etfTotalInvested > 0 
+    ? ((etfCurrentValue - etfTotalInvested) / etfTotalInvested) 
+    : 0
 
-  // Dados de DCA mensal para Crypto
-  const cryptoDCAData = [
-    { mes: 'Jan', reforco: 280, acumulado: 280 },
-    { mes: 'Fev', reforco: 280, acumulado: 560 },
-    { mes: 'Mar', reforco: 280, acumulado: 840 },
-    { mes: 'Abr', reforco: 280, acumulado: 1120 },
-    { mes: 'Mai', reforco: 280, acumulado: 1400 },
-    { mes: 'Jun', reforco: 280, acumulado: 1680 },
-    { mes: 'Jul', reforco: 280, acumulado: 1960 },
-    { mes: 'Ago', reforco: 280, acumulado: 2240 },
-    { mes: 'Set', reforco: 280, acumulado: 2520 },
-    { mes: 'Out', reforco: 280, acumulado: 2800 },
-    { mes: 'Nov', reforco: 280, acumulado: 3080 },
-    { mes: 'Dez', reforco: 280, acumulado: 3360 },
-  ]
+  // Usar taxa de crescimento potencial se disponível, senão usar taxa real ou fallback conservador
+  const cryptoPotentialGrowth = cryptoTotals.crescimento_potencial || 0
+  const cryptoPotentialRate = cryptoTotalInvested > 0 && cryptoPotentialGrowth > 0
+    ? (cryptoPotentialGrowth / cryptoTotalInvested) / 5 // Taxa anual para 5 anos
+    : cryptoGrowthRate > 0 
+      ? cryptoGrowthRate * 0.8 // 80% da taxa atual (conservador)
+      : 0.3 // Fallback 30% ao ano
 
-  // Dados de DCA semanal para ETF (primeiro ano)
-  const etfDCAData = [
-    { semana: 'S1-4', reforco: 100, acumulado: 100 },
-    { semana: 'S5-8', reforco: 100, acumulado: 200 },
-    { semana: 'S9-12', reforco: 100, acumulado: 300 },
-    { semana: 'S13-16', reforco: 100, acumulado: 400 },
-    { semana: 'S17-20', reforco: 100, acumulado: 500 },
-    { semana: 'S21-24', reforco: 100, acumulado: 600 },
-    { semana: 'S25-28', reforco: 100, acumulado: 700 },
-    { semana: 'S29-32', reforco: 100, acumulado: 800 },
-    { semana: 'S33-36', reforco: 100, acumulado: 900 },
-    { semana: 'S37-40', reforco: 100, acumulado: 1000 },
-    { semana: 'S41-44', reforco: 100, acumulado: 1100 },
-    { semana: 'S45-48', reforco: 100, acumulado: 1200 },
-    { semana: 'S49-52', reforco: 100, acumulado: 1300 },
-  ]
+  const etfPotentialGrowth = etfTotals.crescimento_esperado || 0
+  const etfPotentialRate = etfTotalInvested > 0 && etfPotentialGrowth > 0
+    ? (etfPotentialGrowth / etfTotalInvested) / 5 // Taxa anual para 5 anos
+    : etfGrowthRate > 0
+      ? etfGrowthRate * 0.8 // 80% da taxa atual (conservador)
+      : 0.25 // Fallback 25% ao ano
+
+  // Dados de crescimento para Crypto (5 anos) - baseado em dados reais do DCA
+  const calculateCryptoGrowthData = () => {
+    const initial = cryptoInitialInvestment
+    const monthly = cryptoMonthlyDCA
+    const annualRate = cryptoPotentialRate
+    
+    let invested = initial
+    let value = cryptoCurrentValue > 0 ? cryptoCurrentValue : initial * (1 + annualRate)
+    
+    const data = [
+      { 
+        year: 'Mar 2025', 
+        investido: Math.round(invested), 
+        valor: Math.round(value), 
+        crescimento: Math.round(value - invested) 
+      }
+    ]
+    
+    // Projeção para 5 anos com DCA mensal
+    for (let year = 1; year <= 5; year++) {
+      // Adicionar reforço anual (12 meses)
+      const annualDCA = monthly * 12
+      invested += annualDCA
+      
+      // Aplicar crescimento composto: valor existente cresce + novo investimento cresce parcialmente
+      value = value * (1 + annualRate) + (annualDCA * (1 + annualRate * 0.5))
+      
+      const growth = value - invested
+      data.push({
+        year: `Ano ${year}`,
+        investido: Math.round(invested),
+        valor: Math.round(value),
+        crescimento: Math.round(growth)
+      })
+    }
+    
+    return data
+  }
+
+  const cryptoGrowthData = calculateCryptoGrowthData()
+
+  // Dados de crescimento para ETF (5 anos) - baseado em dados reais do DCA
+  const calculateETFGrowthData = () => {
+    const initial = etfInitialInvestment
+    const weekly = etfWeeklyDCA
+    const annualRate = etfPotentialRate
+    
+    let invested = initial
+    let value = etfCurrentValue > 0 ? etfCurrentValue : initial * (1 + annualRate)
+    
+    const data = [
+      { 
+        year: 'Ano 0', 
+        investido: Math.round(invested), 
+        valor: Math.round(value), 
+        crescimento: Math.round(value - invested) 
+      }
+    ]
+    
+    // Projeção para 5 anos com DCA semanal
+    for (let year = 1; year <= 5; year++) {
+      // Adicionar reforço anual (52 semanas)
+      const annualDCA = weekly * 52
+      invested += annualDCA
+      
+      // Aplicar crescimento composto: valor existente cresce + novo investimento cresce parcialmente
+      value = value * (1 + annualRate) + (annualDCA * (1 + annualRate * 0.5))
+      
+      const growth = value - invested
+      data.push({
+        year: `Ano ${year}`,
+        investido: Math.round(invested),
+        valor: Math.round(value),
+        crescimento: Math.round(growth)
+      })
+    }
+    
+    return data
+  }
+
+  const etfGrowthData = calculateETFGrowthData()
+
+  // Dados de DCA mensal para Crypto - baseado em dados reais
+  const cryptoDCAData = (() => {
+    const monthly = cryptoMonthlyDCA
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+    let acumulado = 0
+    
+    return months.map((mes, index) => {
+      acumulado += monthly
+      return {
+        mes,
+        reforco: monthly,
+        acumulado: Math.round(acumulado)
+      }
+    })
+  })()
+
+  // Dados de DCA semanal para ETF (primeiro ano) - baseado em dados reais
+  const etfDCAData = (() => {
+    const weekly = etfWeeklyDCA
+    const weeks = ['S1-4', 'S5-8', 'S9-12', 'S13-16', 'S17-20', 'S21-24', 'S25-28', 'S29-32', 'S33-36', 'S37-40', 'S41-44', 'S45-48', 'S49-52']
+    let acumulado = 0
+    
+    return weeks.map((semana) => {
+      acumulado += weekly * 4 // 4 semanas por período
+      return {
+        semana,
+        reforco: weekly * 4,
+        acumulado: Math.round(acumulado)
+      }
+    })
+  })()
 
   return (
     <div className="space-y-6">
@@ -166,15 +265,21 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
               <div className="mt-4 grid grid-cols-3 gap-4 text-center">
                 <div>
                   <div className="text-xs text-gray-400">Total Investido</div>
-                  <div className="text-lg font-bold text-[#D2A63C]">€18.975</div>
+                  <div className="text-lg font-bold text-[#D2A63C]">
+                    €{cryptoGrowthData[cryptoGrowthData.length - 1]?.investido?.toLocaleString('pt-PT') || '0'}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-400">Valor Estimado</div>
-                  <div className="text-lg font-bold text-green-400">€22.810</div>
+                  <div className="text-lg font-bold text-green-400">
+                    €{cryptoGrowthData[cryptoGrowthData.length - 1]?.valor?.toLocaleString('pt-PT') || '0'}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-400">Crescimento</div>
-                  <div className="text-lg font-bold text-white">€3.835</div>
+                  <div className="text-lg font-bold text-white">
+                    €{cryptoGrowthData[cryptoGrowthData.length - 1]?.crescimento?.toLocaleString('pt-PT') || '0'}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -205,7 +310,7 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
               </ResponsiveContainer>
               <div className="mt-4 text-center">
                 <div className="text-xs text-gray-400">Reforço Mensal Recomendado</div>
-                <div className="text-2xl font-bold text-[#D2A63C]">€280/mês</div>
+                <div className="text-2xl font-bold text-[#D2A63C]">€{cryptoMonthlyDCA}/mês</div>
               </div>
             </CardContent>
           </Card>
@@ -249,15 +354,21 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
               <div className="mt-4 grid grid-cols-3 gap-4 text-center">
                 <div>
                   <div className="text-xs text-gray-400">Total Investido</div>
-                  <div className="text-lg font-bold text-[#D2A63C]">€6.600</div>
+                  <div className="text-lg font-bold text-[#D2A63C]">
+                    €{etfGrowthData[etfGrowthData.length - 1]?.investido?.toLocaleString('pt-PT') || '0'}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-400">Valor Estimado</div>
-                  <div className="text-lg font-bold text-blue-400">€20.150</div>
+                  <div className="text-lg font-bold text-blue-400">
+                    €{etfGrowthData[etfGrowthData.length - 1]?.valor?.toLocaleString('pt-PT') || '0'}
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-400">Crescimento</div>
-                  <div className="text-lg font-bold text-white">€13.550</div>
+                  <div className="text-lg font-bold text-white">
+                    €{etfGrowthData[etfGrowthData.length - 1]?.crescimento?.toLocaleString('pt-PT') || '0'}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -287,7 +398,7 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
               </ResponsiveContainer>
               <div className="mt-4 text-center">
                 <div className="text-xs text-gray-400">Reforço Semanal Recomendado</div>
-                <div className="text-2xl font-bold text-[#D2A63C]">€25/semana</div>
+                <div className="text-2xl font-bold text-[#D2A63C]">€{etfWeeklyDCA}/semana</div>
               </div>
             </CardContent>
           </Card>
@@ -306,19 +417,26 @@ export default function PortfolioGrowthCharts({ cryptoAssets = [], etfAssets = [
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center p-4 bg-gray-800/50 rounded-lg border border-gray-700">
               <div className="text-sm text-gray-400 mb-2">Total Investido</div>
-              <div className="text-3xl font-bold text-[#D2A63C]">€10.275</div>
+              <div className="text-3xl font-bold text-[#D2A63C]">
+                €{((cryptoGrowthData[cryptoGrowthData.length - 1]?.investido || 0) + (etfGrowthData[etfGrowthData.length - 1]?.investido || 0)).toLocaleString('pt-PT')}
+              </div>
               <div className="text-xs text-gray-500 mt-1">Crypto + ETF</div>
             </div>
             
             <div className="text-center p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-              <div className="text-sm text-gray-400 mb-2">Crescimento Simulado</div>
-              <div className="text-3xl font-bold text-green-400">€40.025</div>
-              <div className="text-xs text-gray-500 mt-1">Projeção conservadora</div>
+              <div className="text-sm text-gray-400 mb-2">Crescimento Projetado</div>
+              <div className="text-3xl font-bold text-green-400">
+                €{((cryptoGrowthData[cryptoGrowthData.length - 1]?.valor || 0) + (etfGrowthData[etfGrowthData.length - 1]?.valor || 0)).toLocaleString('pt-PT')}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Projeção baseada em dados reais</div>
             </div>
             
             <div className="text-center p-4 bg-gray-800/50 rounded-lg border border-gray-700">
               <div className="text-sm text-gray-400 mb-2">Multiplicação</div>
-              <div className="text-3xl font-bold text-white">~4x</div>
+              <div className="text-3xl font-bold text-white">
+                ~{((((cryptoGrowthData[cryptoGrowthData.length - 1]?.valor || 0) + (etfGrowthData[etfGrowthData.length - 1]?.valor || 0)) / 
+                   ((cryptoGrowthData[cryptoGrowthData.length - 1]?.investido || 1) + (etfGrowthData[etfGrowthData.length - 1]?.investido || 1))).toFixed(1))}x
+              </div>
               <div className="text-xs text-gray-500 mt-1">Em 5 anos</div>
             </div>
           </div>

@@ -23,7 +23,9 @@ import {
   RefreshCw,
   Activity,
   DollarSign,
-  Clock
+  Clock,
+  Brain,
+  Lightbulb
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
@@ -57,6 +59,15 @@ interface AnalyticsData {
     totalRevenue: number
     monthlyRevenue: number
     conversionRate: number
+  }
+  aiStats?: {
+    totalEvents: number
+    successfulEvents: number
+    failedEvents: number
+    successRate: string
+    avgResponseTime: number
+    topFeatures: Array<{ feature: string; count: number }>
+    suggestions: string[]
   }
 }
 
@@ -122,11 +133,20 @@ export default function AnalyticsManager() {
   const loadAnalytics = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/admin/analytics?range=${timeRange}`)
-      const data = await response.json()
+      const [analyticsResponse, aiInsightsResponse] = await Promise.all([
+        fetch(`/api/admin/analytics?range=${timeRange}`),
+        fetch(`/api/admin/ai-insights?range=${timeRange}`)
+      ])
       
-      if (data.success) {
-        setAnalytics(data.data)
+      const analyticsData = await analyticsResponse.json()
+      const aiInsightsData = await aiInsightsResponse.json()
+      
+      if (analyticsData.success) {
+        const combinedData = {
+          ...analyticsData.data,
+          aiStats: aiInsightsData.success ? aiInsightsData.data : undefined
+        }
+        setAnalytics(combinedData)
       }
     } catch (error) {
       console.error('Erro ao carregar analytics:', error)
@@ -490,6 +510,88 @@ export default function AnalyticsManager() {
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Insights Section */}
+      {analytics?.aiStats && (
+        <div className="mt-8 space-y-4">
+          <h3 className="text-xl font-bold text-[#D2A63C] flex items-center gap-2">
+            <Brain className="w-5 h-5" />
+            Insights de IA
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* AI Stats */}
+            <Card className="bg-gray-900/50 border-cyan-500/30">
+              <CardHeader>
+                <CardTitle className="text-cyan-400 flex items-center gap-2 text-sm">
+                  <Activity className="w-4 h-4" />
+                  Estatísticas de IA
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 text-sm">Total de Eventos</span>
+                    <span className="text-white font-semibold">{analytics.aiStats.totalEvents}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 text-sm">Taxa de Sucesso</span>
+                    <Badge className="bg-green-500/20 text-green-400">
+                      {analytics.aiStats.successRate}%
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 text-sm">Tempo Médio</span>
+                    <span className="text-cyan-400 font-semibold">{analytics.aiStats.avgResponseTime}ms</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400 text-sm">Erros</span>
+                    <span className="text-red-400 font-semibold">{analytics.aiStats.failedEvents}</span>
+                  </div>
+                </div>
+                
+                {analytics.aiStats.topFeatures.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-700">
+                    <p className="text-gray-400 text-xs mb-2">Features Mais Usadas:</p>
+                    <div className="space-y-1">
+                      {analytics.aiStats.topFeatures.map((feature, idx) => (
+                        <div key={idx} className="flex justify-between text-xs">
+                          <span className="text-gray-300">{feature.feature}</span>
+                          <span className="text-[#D2A63C]">{feature.count}x</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* AI Suggestions */}
+            <Card className="bg-gray-900/50 border-yellow-500/30">
+              <CardHeader>
+                <CardTitle className="text-yellow-400 flex items-center gap-2 text-sm">
+                  <Lightbulb className="w-4 h-4" />
+                  Sugestões de Melhoria
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {analytics.aiStats.suggestions.length > 0 ? (
+                  <ul className="space-y-2">
+                    {analytics.aiStats.suggestions.map((suggestion, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-gray-300">
+                        <span className="text-[#D2A63C] mt-1">•</span>
+                        <span>{suggestion}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-400 text-sm">Nenhuma sugestão disponível no momento.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

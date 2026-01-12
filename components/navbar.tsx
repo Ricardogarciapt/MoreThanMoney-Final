@@ -35,7 +35,7 @@ export default function Navbar() {
         { name: "Apresentação IQONIC", href: "/iqonic" },
         { name: "IQonic Academy", href: "https://iqonic.vip" },
         { name: "Sistema Ascendia", href: "#ascendia", isAscendia: true },
-        { name: "Educação MTM", href: "https://www.skool.com/morethanmoney" },
+        { name: "Educação MTM", href: "/mtm" },
         { name: "AI Com Os Gemeos", href: "https://www.skool.com/ai-com-osgemeos/about?ref=bc17a1ec65954570926520a936f7355b" },
         { name: "BackOffice IQ", href: "https://user.iqonic.life" },
       ],

@@ -5,7 +5,7 @@ import Image from "next/image"
 import { supabase } from "@/lib/supabase"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Loader2, Heart, MessageCircle, Share2, Send, User, Plus, X } from "lucide-react"
+import { Loader2, Heart, MessageCircle, Share2, Send, User, Plus, X, MoreVertical, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,9 +17,11 @@ import MentionText from "./mention-text"
 
 interface Post {
   id: string
+  user_id?: string
   user_name: string
   content: string
   media_url?: string
+  media_urls?: string[] // Support for multiple media
   category?: string
   created_at: string
   likes_count?: number
@@ -55,7 +57,10 @@ export default function SocialFeed() {
   const [canPost, setCanPost] = useState(false)
   const [storyPreviews, setStoryPreviews] = useState<Map<string, StoryPreview>>(new Map())
   const [newPostMedia, setNewPostMedia] = useState<File | null>(null)
+  const [newPostMedias, setNewPostMedias] = useState<File[]>([]) // Multiple media support
   const [mediaPreview, setMediaPreview] = useState<string | null>(null)
+  const [mediaPreviews, setMediaPreviews] = useState<string[]>([]) // Multiple previews
+  const [currentMediaIndex, setCurrentMediaIndex] = useState<Map<string, number>>(new Map()) // Carousel index per post
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showCreatePost, setShowCreatePost] = useState(false)
   const storiesRef = useRef<HTMLDivElement>(null)
@@ -348,14 +353,29 @@ export default function SocialFeed() {
   }
 
   const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setNewPostMedia(file)
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setMediaPreview(reader.result as string)
+    const files = Array.from(e.target.files || [])
+    if (files.length > 0) {
+      setNewPostMedias(files)
+      const previews: string[] = []
+      let loadedCount = 0
+      
+      files.forEach((file) => {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          previews.push(reader.result as string)
+          loadedCount++
+          if (loadedCount === files.length) {
+            setMediaPreviews(previews)
+          }
+        }
+        reader.readAsDataURL(file)
+      })
+      
+      // Backward compatibility: set first file as single media
+      if (files.length === 1) {
+        setNewPostMedia(files[0])
+        setMediaPreview(previews[0] || null)
       }
-      reader.readAsDataURL(file)
     }
   }
 
@@ -381,47 +401,49 @@ export default function SocialFeed() {
         "Utilizador"
 
       let mediaUrl: string | null = null
+      let mediaUrls: string[] = []
 
-      // Upload de mídia se houver
-      if (newPostMedia) {
-        const fileExt = newPostMedia.name.split('.').pop()
-        const fileName = `${session.user.id}-${Date.now()}.${fileExt}`
-        const filePath = `posts/${fileName}`
+      // Upload de múltiplas mídias se houver
+      const filesToUpload = newPostMedias.length > 0 ? newPostMedias : (newPostMedia ? [newPostMedia] : [])
+      
+      if (filesToUpload.length > 0) {
+        for (const file of filesToUpload) {
+          const fileExt = file.name.split('.').pop()
+          const fileName = `${session.user.id}-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+          const filePath = `posts/${fileName}`
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('uploads')
-          .upload(filePath, newPostMedia, {
-            cacheControl: '3600',
-            upsert: false
-          })
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('uploads')
+            .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: false
+            })
 
-        if (uploadError) {
-          console.error('❌ [SOCIAL FEED] Erro ao fazer upload:', uploadError)
-          console.error('❌ [SOCIAL FEED] Detalhes:', {
-            message: uploadError.message,
-            statusCode: (uploadError as any).statusCode,
-            error: uploadError
-          })
-          
-          // Mensagens de erro mais específicas
-          if (uploadError.message?.includes('bucket') || uploadError.message?.includes('not found')) {
-            alert('❌ Erro: Bucket "uploads" não existe no Supabase Storage.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Ou cria bucket manualmente no Dashboard')
-          } else if (uploadError.message?.includes('policy') || uploadError.message?.includes('permission')) {
-            alert('❌ Erro: Sem permissão para fazer upload.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Verifica políticas RLS do Storage')
-          } else if (uploadError.message?.includes('size') || uploadError.message?.includes('limit')) {
-            alert('❌ Erro: Ficheiro muito grande. Tamanho máximo: 50MB')
-          } else {
-            alert(`❌ Erro ao fazer upload: ${uploadError.message}\n\nVerifica o console para mais detalhes.`)
+          if (uploadError) {
+            console.error('❌ [SOCIAL FEED] Erro ao fazer upload:', uploadError)
+            
+            if (uploadError.message?.includes('bucket') || uploadError.message?.includes('not found')) {
+              alert('❌ Erro: Bucket "uploads" não existe no Supabase Storage.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Ou cria bucket manualmente no Dashboard')
+            } else if (uploadError.message?.includes('policy') || uploadError.message?.includes('permission')) {
+              alert('❌ Erro: Sem permissão para fazer upload.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Verifica políticas RLS do Storage')
+            } else if (uploadError.message?.includes('size') || uploadError.message?.includes('limit')) {
+              alert('❌ Erro: Ficheiro muito grande. Tamanho máximo: 50MB')
+            } else {
+              alert(`❌ Erro ao fazer upload: ${uploadError.message}\n\nVerifica o console para mais detalhes.`)
+            }
+            setUploading(false)
+            return
           }
-          setUploading(false)
-          return
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('uploads')
+            .getPublicUrl(filePath)
+
+          mediaUrls.push(publicUrl)
         }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('uploads')
-          .getPublicUrl(filePath)
-
-        mediaUrl = publicUrl
+        
+        // Backward compatibility: first media as single media_url
+        mediaUrl = mediaUrls[0] || null
       }
 
       // Extrair IDs de menções
@@ -438,7 +460,8 @@ export default function SocialFeed() {
           user_name: userName,
           content: newPost.trim(),
           category: selectedCategory || null,
-          media_url: mediaUrl,
+          media_url: mediaUrl, // Backward compatibility
+          media_urls: mediaUrls.length > 0 ? mediaUrls : null, // Multiple media support
           mentions: mentionedUserIds.length > 0 ? mentionedUserIds : null,
         },
       ])
@@ -521,7 +544,9 @@ export default function SocialFeed() {
         setNewPost("")
         setSelectedCategory("")
         setNewPostMedia(null)
+        setNewPostMedias([])
         setMediaPreview(null)
+        setMediaPreviews([])
         setShowCreatePost(false)
         // Recarregar posts para garantir sincronização
         setTimeout(() => loadPosts(), 500)
@@ -549,48 +574,61 @@ export default function SocialFeed() {
       const shareText = `${cleanContent}\n\n- ${post.user_name} via MTM App`
       const fullShareText = `${shareText}\n\n🔗 Ver: ${shortLink}`
 
-      // Se tem mídia, tentar partilhar com imagem/vídeo + texto + link
-      if (post.media_url) {
-        const isVideo = post.media_url.includes('.mp4') || post.media_url.includes('.webm')
+      // Get all media (support multiple)
+      const mediaList = post.media_urls && post.media_urls.length > 0 
+        ? post.media_urls 
+        : (post.media_url ? [post.media_url] : [])
+      
+      // Se tem mídia, tentar partilhar com imagens/vídeos + texto + link
+      if (mediaList.length > 0) {
+        const imageFiles: File[] = []
         
-        // Para imagens, converter URL para File e partilhar com texto + link
-        if (!isVideo && navigator.share && navigator.canShare) {
+        // Fetch all images (videos will be shared as URLs)
+        for (const mediaUrl of mediaList) {
+          const isVideo = mediaUrl.includes('.mp4') || mediaUrl.includes('.webm')
+          
+          if (!isVideo) {
+            try {
+              const response = await fetch(mediaUrl)
+              const blob = await response.blob()
+              const file = new File([blob], `post-${post.id}-${mediaList.indexOf(mediaUrl)}.${blob.type.split('/')[1] || 'jpg'}`, { 
+                type: blob.type || 'image/jpeg' 
+              })
+              imageFiles.push(file)
+            } catch (error) {
+              console.warn('Erro ao buscar mídia:', error)
+            }
+          }
+        }
+        
+        // Share with files if available
+        if (imageFiles.length > 0 && navigator.share && navigator.canShare) {
           try {
-            // Fetch da imagem
-            const response = await fetch(post.media_url)
-            const blob = await response.blob()
-            
-            // Converter blob para File
-            const file = new File([blob], `post-${post.id}.${blob.type.split('/')[1] || 'jpg'}`, { 
-              type: blob.type || 'image/jpeg' 
-            })
-
-            // Verificar se pode partilhar ficheiros + texto (sem url para evitar duplicação)
-            const shareDataWithFile: any = {
+            const shareDataWithFiles: any = {
               title: `Post de ${post.user_name} - MTM`,
-              text: fullShareText, // Inclui texto + link encurtado
-              files: [file], // Anexo incluído
+              text: fullShareText,
+              files: imageFiles,
             }
             
-            if (navigator.canShare(shareDataWithFile)) {
-              await navigator.share(shareDataWithFile)
+            if (navigator.canShare(shareDataWithFiles)) {
+              await navigator.share(shareDataWithFiles)
               return
             }
           } catch (error) {
-            console.log('Não foi possível partilhar com ficheiro, tentando sem:', error)
+            console.log('Não foi possível partilhar com ficheiros, tentando sem:', error)
           }
         }
 
-        // Fallback: partilhar texto + link encurtado + URL da mídia (sem url duplicado)
+        // Fallback: partilhar texto + link + URLs das mídias
         if (navigator.share) {
           try {
+            const mediaUrlsText = mediaList.map((url, idx) => `📎 Mídia ${idx + 1}: ${url}`).join('\n')
             await navigator.share({
               title: `Post de ${post.user_name} - MTM`,
-              text: `${fullShareText}\n\n📎 Mídia: ${post.media_url}`, // Texto + link encurtado + mídia (sem url duplicado)
+              text: `${fullShareText}\n\n${mediaUrlsText}`,
             })
             return
           } catch (error) {
-            // Usuário cancelou ou erro
             if ((error as Error).name !== 'AbortError') {
               console.error('Erro ao partilhar:', error)
             }
@@ -614,10 +652,14 @@ export default function SocialFeed() {
           }
         }
       } else {
-        // Fallback: copiar para clipboard - sempre inclui texto + link + mídia se existir
-        const textToCopy = post.media_url 
-          ? `${fullShareText}\n\n📎 Anexo: ${post.media_url}`
-          : fullShareText
+        // Fallback: copiar para clipboard - sempre inclui texto + link + mídias se existirem
+        const mediaList = post.media_urls && post.media_urls.length > 0 
+          ? post.media_urls 
+          : (post.media_url ? [post.media_url] : [])
+        const mediaUrlsText = mediaList.length > 0 
+          ? `\n\n📎 Anexos:\n${mediaList.map((url, idx) => `${idx + 1}. ${url}`).join('\n')}`
+          : ''
+        const textToCopy = `${fullShareText}${mediaUrlsText}`
         
         await navigator.clipboard.writeText(textToCopy)
         alert("✅ Conteúdo copiado para área de transferência!")
@@ -1003,7 +1045,9 @@ export default function SocialFeed() {
                     setNewPost("")
                     setSelectedCategory("")
                     setMediaPreview(null)
+                    setMediaPreviews([])
                     setNewPostMedia(null)
+                    setNewPostMedias([])
                   }}
                   className="p-1 hover:bg-gray-800 rounded-full transition-colors"
                 >
@@ -1020,26 +1064,50 @@ export default function SocialFeed() {
                 onMentionsChange={setPostMentions}
               />
 
-              {mediaPreview && (
-                <div className="relative rounded-lg overflow-hidden border border-gray-700">
-                  <Image
-                    src={mediaPreview}
-                    alt="Preview"
-                    width={500}
-                    height={256}
-                    className="w-full max-h-64 object-cover"
-                    unoptimized
-                  />
-                  <button
-                    onClick={() => {
-                      setMediaPreview(null)
-                      setNewPostMedia(null)
-                      if (fileInputRef.current) fileInputRef.current.value = ""
-                    }}
-                    className="absolute top-2 right-2 p-2 bg-black/70 hover:bg-black rounded-full transition-colors"
-                  >
-                    <X className="w-4 h-4 text-white" />
-                  </button>
+              {/* Multiple Media Previews */}
+              {(mediaPreviews.length > 0 || mediaPreview) && (
+                <div className="space-y-2">
+                  {(mediaPreviews.length > 0 ? mediaPreviews : (mediaPreview ? [mediaPreview] : [])).map((preview, idx) => (
+                    <div key={idx} className="relative rounded-lg overflow-hidden border border-gray-700">
+                      {preview.startsWith('data:video') ? (
+                        <video src={preview} controls className="w-full max-h-64 object-cover" />
+                      ) : (
+                        <Image
+                          src={preview}
+                          alt={`Preview ${idx + 1}`}
+                          width={500}
+                          height={256}
+                          className="w-full max-h-64 object-cover"
+                          unoptimized
+                        />
+                      )}
+                      <button
+                        onClick={() => {
+                          if (mediaPreviews.length > 0) {
+                            const newPreviews = mediaPreviews.filter((_, i) => i !== idx)
+                            setMediaPreviews(newPreviews)
+                            setNewPostMedias(newPostMedias.filter((_, i) => i !== idx))
+                            if (newPreviews.length === 0) {
+                              setMediaPreview(null)
+                              setNewPostMedia(null)
+                            }
+                          } else {
+                            setMediaPreview(null)
+                            setNewPostMedia(null)
+                          }
+                          if (fileInputRef.current) fileInputRef.current.value = ""
+                        }}
+                        className="absolute top-2 right-2 p-2 bg-black/70 hover:bg-black rounded-full transition-colors"
+                      >
+                        <X className="w-4 h-4 text-white" />
+                      </button>
+                      {mediaPreviews.length > 1 && (
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 px-2 py-1 rounded text-xs text-white">
+                          {idx + 1} / {mediaPreviews.length}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -1048,6 +1116,7 @@ export default function SocialFeed() {
                   ref={fileInputRef}
                   type="file"
                   accept="image/*,video/*"
+                  multiple
                   onChange={handleMediaSelect}
                   className="hidden"
                   id="media-upload"
@@ -1153,6 +1222,67 @@ export default function SocialFeed() {
                         )}
                       </div>
                     </div>
+                    
+                    {/* Edit/Delete Button (Admin or Post Creator) */}
+                    {(currentUser?.user_type === 'admin' || currentUser?.id === post.user_id) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="ml-auto text-gray-400 hover:text-[#D2A63C] transition-colors">
+                            <MoreVertical className="w-5 h-5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-gray-800 border-gray-700">
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              if (confirm('Tens a certeza que queres editar esta publicação?')) {
+                                // TODO: Implement edit functionality
+                                const newContent = prompt('Edita o conteúdo:', post.content)
+                                if (newContent && newContent !== post.content) {
+                                  try {
+                                    const { error } = await supabase
+                                      .from('posts')
+                                      .update({ content: newContent })
+                                      .eq('id', post.id)
+                                    
+                                    if (error) throw error
+                                    loadPosts()
+                                  } catch (error) {
+                                    console.error('Erro ao editar:', error)
+                                    alert('Erro ao editar publicação')
+                                  }
+                                }
+                              }
+                            }}
+                            className="text-white hover:bg-blue-500/20 cursor-pointer flex items-center gap-2"
+                          >
+                            <Edit className="w-4 h-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={async () => {
+                              if (confirm('Tens a certeza que queres apagar esta publicação? Esta ação não pode ser desfeita.')) {
+                                try {
+                                  const { error } = await supabase
+                                    .from('posts')
+                                    .delete()
+                                    .eq('id', post.id)
+                                  
+                                  if (error) throw error
+                                  loadPosts()
+                                } catch (error) {
+                                  console.error('Erro ao apagar:', error)
+                                  alert('Erro ao apagar publicação')
+                                }
+                              }
+                            }}
+                            className="text-white hover:bg-red-500/20 cursor-pointer flex items-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Apagar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                 </div>
 
@@ -1161,23 +1291,81 @@ export default function SocialFeed() {
                   <MentionText text={post.content} />
                 </div>
 
-                {/* Media */}
-                {post.media_url && (
-                  <div className="mb-3 rounded-xl overflow-hidden border border-gray-700">
-                    {post.media_url.includes('.mp4') || post.media_url.includes('.webm') ? (
-                      <video src={post.media_url} controls className="w-full rounded-xl" />
-                    ) : (
-                      <Image
-                        src={post.media_url}
-                        alt="Post media"
-                        width={800}
-                        height={384}
-                        className="w-full rounded-xl object-cover max-h-96"
-                        unoptimized
-                      />
-                    )}
-                  </div>
-                )}
+                {/* Media Carousel */}
+                {(() => {
+                  const mediaList = post.media_urls && post.media_urls.length > 0 
+                    ? post.media_urls 
+                    : (post.media_url ? [post.media_url] : [])
+                  
+                  if (mediaList.length === 0) return null
+                  
+                  const currentIndex = currentMediaIndex.get(post.id) || 0
+                  const currentMedia = mediaList[currentIndex]
+                  
+                  return (
+                    <div className="mb-3 rounded-xl overflow-hidden border border-gray-700 relative">
+                      {/* Media Display */}
+                      <div className="relative">
+                        {currentMedia.includes('.mp4') || currentMedia.includes('.webm') ? (
+                          <video src={currentMedia} controls className="w-full rounded-xl" />
+                        ) : (
+                          <Image
+                            src={currentMedia}
+                            alt={`Post media ${currentIndex + 1}`}
+                            width={800}
+                            height={384}
+                            className="w-full rounded-xl object-cover max-h-96"
+                            unoptimized
+                          />
+                        )}
+                        
+                        {/* Carousel Navigation */}
+                        {mediaList.length > 1 && (
+                          <>
+                            {currentIndex > 0 && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setCurrentMediaIndex(prev => new Map(prev).set(post.id, currentIndex - 1))
+                                }}
+                                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-2 transition-all"
+                              >
+                                <ChevronLeft className="w-5 h-5 text-white" />
+                              </button>
+                            )}
+                            {currentIndex < mediaList.length - 1 && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setCurrentMediaIndex(prev => new Map(prev).set(post.id, currentIndex + 1))
+                                }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-2 transition-all"
+                              >
+                                <ChevronRight className="w-5 h-5 text-white" />
+                              </button>
+                            )}
+                            
+                            {/* Dots Indicator */}
+                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                              {mediaList.map((_, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCurrentMediaIndex(prev => new Map(prev).set(post.id, idx))
+                                  }}
+                                  className={`w-2 h-2 rounded-full transition-all ${
+                                    idx === currentIndex ? 'bg-[#D2A63C] w-6' : 'bg-white/50'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {/* Actions */}
                 <div className="flex items-center gap-6 pt-3 border-t border-gray-700/50">

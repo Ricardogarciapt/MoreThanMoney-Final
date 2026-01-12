@@ -109,8 +109,8 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning>
-        {/* Div necessário para Google Translate funcionar */}
-        <div id="google_translate_element" style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }} />
+        {/* Div necessário para Google Translate funcionar - Widget será posicionado via CSS */}
+        <div id="google_translate_element" />
         
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <Suspense fallback={null}>

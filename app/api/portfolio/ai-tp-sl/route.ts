@@ -224,6 +224,10 @@ Retorne APENAS um JSON neste formato:
 
 // Rota principal - VERSÃO SIMPLIFICADA E ROBUSTA
 export async function GET(request: NextRequest) {
+  const startTime = Date.now()
+  let success = true
+  let errorMessage = null
+  
   try {
     const { searchParams } = new URL(request.url)
     const symbol = searchParams.get('symbol')
@@ -317,10 +321,97 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
       calculation_method: 'Technical Analysis (Fibonacci + ATR)'
     })
+
+    const responseTime = Date.now() - startTime
+
+    // Track AI event for analytics
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/api/ai/track-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_type: 'ai_tp_sl_analysis',
+          event_data: { symbol, entry_price: entryPrice, current_price: currentPrice, performance },
+          context: { symbol, entry_price: entryPrice },
+          ai_feature: 'tp_sl_analysis',
+          response_time: responseTime,
+          success
+        })
+      })
+    } catch (trackError) {
+      console.warn('⚠️ [AI TP/SL] Erro ao trackear evento:', trackError)
+    }
+
+    return NextResponse.json({
+      success: true,
+      symbol,
+      current_price: currentPrice,
+      entry_price: entryPrice || currentPrice,
+      performance: performance,
+      ai_validated: false,
+      take_profit_levels: {
+        tp1: { 
+          price: tp1, 
+          probability: 75, 
+          timeframe: '1-3 meses', 
+          rationale: 'Alvo conservador (+30%) baseado em resistências técnicas' 
+        },
+        tp2: { 
+          price: tp2, 
+          probability: 55, 
+          timeframe: '3-6 meses', 
+          rationale: 'Alvo moderado (+75%) baseado em Fibonacci 1.618' 
+        },
+        tp3: { 
+          price: tp3, 
+          probability: 35, 
+          timeframe: '6-12 meses', 
+          rationale: 'Alvo agressivo (+150%) baseado em extensão Fibonacci 2.618' 
+        }
+      },
+      stop_loss: {
+        price: sl,
+        risk_percent: 15,
+        rationale: 'Proteção de capital (-15%) baseada em volatilidade histórica'
+      },
+      risk_reward_ratios: {
+        tp1: '1:2',
+        tp2: '1:5',
+        tp3: '1:10'
+      },
+      overall_recommendation: {
+        action: performance > 0 ? 'Hold' : 'Accumulate',
+        reasoning: `Performance atual: ${performance.toFixed(2)}%. ${performance > 20 ? 'Considere realizar parcial em TP1' : 'Mantenha posição e reforce em quedas'}`
+      },
+      timestamp: new Date().toISOString(),
+      calculation_method: 'Technical Analysis (Fibonacci + ATR)'
+    })
   } catch (error) {
+    success = false
+    errorMessage = error instanceof Error ? error.message : 'Unknown error'
     console.error('❌ [AI TP/SL] Erro:', error)
+    
+    // Track error event
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/api/ai/track-event`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_type: 'ai_tp_sl_analysis',
+          event_data: { error: errorMessage },
+          context: {},
+          ai_feature: 'tp_sl_analysis',
+          response_time: Date.now() - startTime,
+          success: false,
+          error_message: errorMessage
+        })
+      })
+    } catch (trackError) {
+      console.warn('⚠️ [AI TP/SL] Erro ao trackear evento de erro:', trackError)
+    }
+    
     return NextResponse.json(
-      { error: 'Erro ao processar análise', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Erro ao processar análise', details: errorMessage },
       { status: 500 }
     )
   }
