@@ -583,40 +583,84 @@ export default function SocialFeed() {
       if (mediaList.length > 0) {
         const imageFiles: File[] = []
         
-        // Fetch all images (videos will be shared as URLs)
-        for (const mediaUrl of mediaList) {
-          const isVideo = mediaUrl.includes('.mp4') || mediaUrl.includes('.webm')
+        // Fetch all images - URLs já são públicas do Supabase Storage
+        for (let i = 0; i < mediaList.length; i++) {
+          const mediaUrl = mediaList[i]
+          const isVideo = mediaUrl.includes('.mp4') || mediaUrl.includes('.webm') || mediaUrl.includes('.mov') || mediaUrl.includes('video')
           
           if (!isVideo) {
             try {
-              const response = await fetch(mediaUrl)
-              const blob = await response.blob()
-              const file = new File([blob], `post-${post.id}-${mediaList.indexOf(mediaUrl)}.${blob.type.split('/')[1] || 'jpg'}`, { 
-                type: blob.type || 'image/jpeg' 
+              // As URLs do Supabase Storage já são públicas, usar diretamente
+              const response = await fetch(mediaUrl, {
+                method: 'GET',
+                mode: 'cors',
+                cache: 'no-cache',
+                headers: {
+                  'Accept': 'image/*',
+                },
               })
-              imageFiles.push(file)
+              
+              if (response.ok) {
+                const blob = await response.blob()
+                
+                // Determinar extensão e tipo MIME corretos
+                const contentType = response.headers.get('content-type') || blob.type
+                const urlParts = mediaUrl.split('.')
+                const urlWithoutParams = urlParts[urlParts.length - 1].split('?')[0]
+                const extension = urlWithoutParams.toLowerCase() || 
+                  (contentType.includes('png') ? 'png' : 
+                   contentType.includes('gif') ? 'gif' : 
+                   contentType.includes('webp') ? 'webp' : 'jpg')
+                
+                // Garantir tipo MIME correto
+                let mimeType = contentType || blob.type
+                if (!mimeType || mimeType === 'application/octet-stream') {
+                  mimeType = extension === 'png' ? 'image/png' : 
+                            extension === 'gif' ? 'image/gif' : 
+                            extension === 'webp' ? 'image/webp' : 'image/jpeg'
+                }
+                
+                const fileName = `post-${post.id}-${i}.${extension}`
+                const file = new File([blob], fileName, { 
+                  type: mimeType,
+                  lastModified: Date.now()
+                })
+                
+                imageFiles.push(file)
+                console.log(`✅ [SHARE] Imagem ${i + 1}/${mediaList.length} carregada: ${fileName} (${(blob.size / 1024).toFixed(1)}KB, ${mimeType})`)
+              } else {
+                console.warn(`⚠️ [SHARE] Falha ao buscar imagem ${i + 1}: ${response.status} ${response.statusText}`)
+                // Tentar usar a URL diretamente no fallback
+              }
             } catch (error) {
-              console.warn('Erro ao buscar mídia:', error)
+              console.warn(`⚠️ [SHARE] Erro ao buscar mídia ${i + 1}:`, error)
+              // Continuar com outras imagens mesmo se uma falhar
             }
+          } else {
+            console.log(`ℹ️ [SHARE] Vídeo detectado (${i + 1}), será partilhado como URL`)
           }
         }
         
-        // Share with files if available
+        // Share with files if available - PRIORIDADE: partilhar com anexos
         if (imageFiles.length > 0 && navigator.share && navigator.canShare) {
           try {
             const shareDataWithFiles: any = {
-              title: `Post de ${post.user_name} - MTM`,
+              title: `📱 ${post.user_name} - MTM`,
               text: fullShareText,
               files: imageFiles,
             }
             
+            // Verificar se pode partilhar com ficheiros
             if (navigator.canShare(shareDataWithFiles)) {
               await navigator.share(shareDataWithFiles)
+              console.log(`✅ [SHARE] Partilhado com ${imageFiles.length} anexo(s)`)
               // Regressar a app-mobile após partilha
               if (window.location.pathname !== '/app-mobile') {
                 window.location.href = '/app-mobile?tab=social'
               }
               return
+            } else {
+              console.warn('⚠️ [SHARE] Navigator não suporta partilha com estes ficheiros, tentando sem ficheiros')
             }
           } catch (error) {
             if ((error as Error).name === 'AbortError') {
@@ -626,18 +670,22 @@ export default function SocialFeed() {
               }
               return
             }
-            console.log('Não foi possível partilhar com ficheiros, tentando sem:', error)
+            console.warn('⚠️ [SHARE] Erro ao partilhar com ficheiros, tentando sem:', error)
           }
         }
 
-        // Fallback: partilhar texto + link + URLs das mídias
+        // Fallback: partilhar texto + link + URLs das mídias (preview com links)
         if (navigator.share) {
           try {
-            const mediaUrlsText = mediaList.map((url, idx) => `📎 Mídia ${idx + 1}: ${url}`).join('\n')
+            const mediaPreviewText = mediaList.length > 0 
+              ? `\n\n📸 Preview da publicação:\n${mediaList.map((url, idx) => `🖼️ Imagem ${idx + 1}: ${url}`).join('\n')}`
+              : ''
             await navigator.share({
-              title: `Post de ${post.user_name} - MTM`,
-              text: `${fullShareText}\n\n${mediaUrlsText}`,
+              title: `📱 ${post.user_name} - MTM`,
+              text: `${fullShareText}${mediaPreviewText}`,
+              url: shortLink, // Incluir URL para preview
             })
+            console.log('✅ [SHARE] Partilhado com preview de mídia (URLs)')
             // Regressar a app-mobile após partilha
             if (window.location.pathname !== '/app-mobile') {
               window.location.href = '/app-mobile?tab=social'
@@ -651,7 +699,7 @@ export default function SocialFeed() {
               }
               return
             }
-            console.error('Erro ao partilhar:', error)
+            console.error('❌ [SHARE] Erro ao partilhar:', error)
           }
         }
       }
@@ -660,8 +708,9 @@ export default function SocialFeed() {
       if (navigator.share) {
         try {
           await navigator.share({
-            title: `Post de ${post.user_name} - MTM`,
-            text: fullShareText, // Sempre inclui texto + link encurtado (sem url duplicado)
+            title: `📱 ${post.user_name} - MTM`,
+            text: fullShareText,
+            url: shortLink,
           })
           // Regressar a app-mobile após partilha
           if (window.location.pathname !== '/app-mobile') {
@@ -675,33 +724,41 @@ export default function SocialFeed() {
             }
             return
           }
-          // Fallback para clipboard - sempre inclui texto + link
-          await navigator.clipboard.writeText(fullShareText)
-          alert("✅ Conteúdo copiado para área de transferência!")
+          // Fallback para clipboard - sempre inclui texto + link + mídias
+          const mediaList = post.media_urls && post.media_urls.length > 0 
+            ? post.media_urls 
+            : (post.media_url ? [post.media_url] : [])
+          const mediaUrlsText = mediaList.length > 0 
+            ? `\n\n📸 Preview da publicação:\n${mediaList.map((url, idx) => `🖼️ ${idx + 1}. ${url}`).join('\n')}`
+            : ''
+          const textToCopy = `${fullShareText}${mediaUrlsText}`
+          
+          await navigator.clipboard.writeText(textToCopy)
+          alert("✅ Conteúdo copiado para área de transferência!\n\nInclui preview da publicação com links para as imagens.")
           // Regressar a app-mobile após copiar
           if (window.location.pathname !== '/app-mobile') {
             window.location.href = '/app-mobile?tab=social'
           }
         }
       } else {
-        // Fallback: copiar para clipboard - sempre inclui texto + link + mídias se existirem
+        // Fallback: copiar para clipboard - sempre inclui texto + link + mídias
         const mediaList = post.media_urls && post.media_urls.length > 0 
           ? post.media_urls 
           : (post.media_url ? [post.media_url] : [])
         const mediaUrlsText = mediaList.length > 0 
-          ? `\n\n📎 Anexos:\n${mediaList.map((url, idx) => `${idx + 1}. ${url}`).join('\n')}`
+          ? `\n\n📸 Preview da publicação:\n${mediaList.map((url, idx) => `🖼️ ${idx + 1}. ${url}`).join('\n')}`
           : ''
         const textToCopy = `${fullShareText}${mediaUrlsText}`
         
         await navigator.clipboard.writeText(textToCopy)
-        alert("✅ Conteúdo copiado para área de transferência!")
+        alert("✅ Conteúdo copiado para área de transferência!\n\nInclui preview da publicação com links para as imagens.")
         // Regressar a app-mobile após copiar
         if (window.location.pathname !== '/app-mobile') {
           window.location.href = '/app-mobile?tab=social'
         }
       }
     } catch (error) {
-      console.error('Erro ao partilhar post:', error)
+      console.error('❌ [SHARE] Erro ao partilhar post:', error)
       alert('❌ Erro ao partilhar. Tenta novamente.')
       // Regressar a app-mobile mesmo em caso de erro
       if (window.location.pathname !== '/app-mobile') {
