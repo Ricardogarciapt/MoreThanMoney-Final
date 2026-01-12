@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { X, ExternalLink, GraduationCap } from "lucide-react"
+import { X, ExternalLink, GraduationCap, ArrowLeft, ArrowRight, RotateCw, Home } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import YouTubeEmbed from "@/components/youtube-embed"
 import ParticleBackground from "@/components/particle-background"
@@ -14,6 +14,11 @@ export default function MTMPage() {
   const [showEducationPopup, setShowEducationPopup] = useState(false)
   const [showSkoolBrowser, setShowSkoolBrowser] = useState(false)
   const [videoId, setVideoId] = useState("RQIimjljeMI") // Fallback padrão
+  const [currentUrl, setCurrentUrl] = useState("https://www.skool.com/morethanmoney")
+  const [urlInput, setUrlInput] = useState("https://www.skool.com/morethanmoney")
+  const [canGoBack, setCanGoBack] = useState(false)
+  const [canGoForward, setCanGoForward] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   useEffect(() => {
     checkAuth()
@@ -48,17 +53,39 @@ export default function MTMPage() {
 
   const checkAuth = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (error) {
+        console.error('❌ [MTM] Erro ao verificar sessão:', error)
+        setIsAuthenticated(false)
+        return
+      }
+      
+      if (session?.user) {
         setIsAuthenticated(true)
-        // Mostrar popup se estiver logado e ainda não foi fechado nesta sessão
+        console.log('✅ [MTM] Utilizador autenticado:', session.user.email)
+        
+        // Se estiver logado, abrir iframe Skool automaticamente
+        const skoolOpened = sessionStorage.getItem('mtm_skool_auto_opened')
+        if (!skoolOpened) {
+          // Pequeno delay para garantir que a página carregou
+          setTimeout(() => {
+            setShowSkoolBrowser(true)
+            sessionStorage.setItem('mtm_skool_auto_opened', 'true')
+          }, 1000)
+        }
+        
+        // Mostrar popup se ainda não foi fechado nesta sessão
         const popupShown = sessionStorage.getItem('mtm_education_popup_shown')
         if (!popupShown) {
           setShowEducationPopup(true)
         }
+      } else {
+        setIsAuthenticated(false)
+        console.log('ℹ️ [MTM] Utilizador não autenticado')
       }
     } catch (error) {
-      console.error('Erro ao verificar autenticação:', error)
+      console.error('❌ [MTM] Erro ao verificar autenticação:', error)
+      setIsAuthenticated(false)
     }
   }
 
@@ -70,7 +97,68 @@ export default function MTMPage() {
   const handleGoToAcademy = () => {
     setShowSkoolBrowser(true)
     setShowEducationPopup(false)
+    setCurrentUrl("https://www.skool.com/morethanmoney")
+    setUrlInput("https://www.skool.com/morethanmoney")
   }
+
+  // Navegação do iframe
+  const handleNavigate = (url: string) => {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url
+    }
+    setCurrentUrl(url)
+    setUrlInput(url)
+    if (iframeRef.current) {
+      iframeRef.current.src = url
+    }
+  }
+
+  const handleGoBack = () => {
+    if (iframeRef.current && iframeRef.current.contentWindow) {
+      iframeRef.current.contentWindow.history.back()
+    }
+  }
+
+  const handleGoForward = () => {
+    if (iframeRef.current && iframeRef.current.contentWindow) {
+      iframeRef.current.contentWindow.history.forward()
+    }
+  }
+
+  const handleReload = () => {
+    if (iframeRef.current) {
+      iframeRef.current.src = iframeRef.current.src
+    }
+  }
+
+  const handleGoHome = () => {
+    handleNavigate("https://www.skool.com/morethanmoney")
+  }
+
+  const handleUrlSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    handleNavigate(urlInput)
+  }
+
+  // Atualizar URL quando iframe navegar (via postMessage se possível)
+  useEffect(() => {
+    if (!showSkoolBrowser) return
+
+    const handleMessage = (event: MessageEvent) => {
+      // Verificar origem para segurança
+      if (event.origin !== 'https://www.skool.com') return
+      
+      if (event.data && typeof event.data === 'object') {
+        if (event.data.type === 'navigation' && event.data.url) {
+          setCurrentUrl(event.data.url)
+          setUrlInput(event.data.url)
+        }
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [showSkoolBrowser])
 
   return (
     <main className="min-h-screen bg-black text-white relative">
@@ -230,8 +318,8 @@ export default function MTMPage() {
       {/* Skool Browser Modal */}
       <Dialog open={showSkoolBrowser} onOpenChange={setShowSkoolBrowser}>
         <DialogContent className="bg-gray-900 border-[#D2A63C]/30 max-w-[95vw] w-full h-[95vh] p-0 flex flex-col [&>button]:hidden">
-          <DialogHeader className="p-4 border-b border-gray-700 flex-shrink-0">
-            <div className="flex items-center justify-between">
+          <DialogHeader className="p-3 border-b border-gray-700 flex-shrink-0">
+            <div className="flex items-center justify-between mb-3">
               <DialogTitle className="text-xl font-bold text-[#D2A63C] flex items-center gap-2">
                 <GraduationCap className="w-5 h-5" />
                 Academia MTM - Skool
@@ -255,10 +343,75 @@ export default function MTMPage() {
                 </button>
               </div>
             </div>
+            
+            {/* Barra de Navegação do Navegador */}
+            <div className="flex items-center gap-2">
+              {/* Botões de Navegação */}
+              <div className="flex items-center gap-1">
+                <Button
+                  onClick={handleGoBack}
+                  variant="outline"
+                  size="sm"
+                  disabled={!canGoBack}
+                  className="border-gray-600 text-gray-300 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Voltar"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  onClick={handleGoForward}
+                  variant="outline"
+                  size="sm"
+                  disabled={!canGoForward}
+                  className="border-gray-600 text-gray-300 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Avançar"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+                <Button
+                  onClick={handleReload}
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                  title="Recarregar"
+                >
+                  <RotateCw className="w-4 h-4" />
+                </Button>
+                <Button
+                  onClick={handleGoHome}
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                  title="Página inicial"
+                >
+                  <Home className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Campo de URL */}
+              <form onSubmit={handleUrlSubmit} className="flex-1 flex items-center gap-2">
+                <input
+                  type="text"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  onBlur={() => setUrlInput(currentUrl)}
+                  className="flex-1 bg-gray-800 border border-gray-700 text-white text-sm px-3 py-1.5 rounded focus:outline-none focus:ring-2 focus:ring-[#D2A63C] focus:border-transparent"
+                  placeholder="https://www.skool.com/morethanmoney"
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="bg-[#D2A63C] hover:bg-[#B8942F] text-black font-semibold px-4"
+                >
+                  Ir
+                </Button>
+              </form>
+            </div>
           </DialogHeader>
           <div className="flex-1 w-full overflow-hidden relative min-h-0">
             <iframe
-              src="https://www.skool.com/morethanmoney"
+              ref={iframeRef}
+              src={currentUrl}
               className="w-full h-full border-0"
               title="Academia MTM - Skool"
               allow="fullscreen; autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
@@ -267,6 +420,19 @@ export default function MTMPage() {
                 minHeight: '100%',
                 width: '100%',
                 border: 'none'
+              }}
+              onLoad={() => {
+                // Tentar obter URL atual do iframe (limitado por CORS, mas tentamos)
+                try {
+                  if (iframeRef.current?.contentWindow) {
+                    // Atualizar botões de navegação baseado no histórico
+                    setCanGoBack(true) // Simplificado - sempre habilitado
+                    setCanGoForward(false) // Simplificado
+                  }
+                } catch (e) {
+                  // CORS pode bloquear acesso ao history
+                  console.log('⚠️ [SKOOL BROWSER] Não é possível acessar histórico do iframe (CORS)')
+                }
               }}
             />
           </div>

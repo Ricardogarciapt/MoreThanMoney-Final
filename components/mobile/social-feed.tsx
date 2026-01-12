@@ -612,9 +612,20 @@ export default function SocialFeed() {
             
             if (navigator.canShare(shareDataWithFiles)) {
               await navigator.share(shareDataWithFiles)
+              // Regressar a app-mobile após partilha
+              if (window.location.pathname !== '/app-mobile') {
+                window.location.href = '/app-mobile?tab=social'
+              }
               return
             }
           } catch (error) {
+            if ((error as Error).name === 'AbortError') {
+              // Utilizador cancelou, regressar mesmo assim
+              if (window.location.pathname !== '/app-mobile') {
+                window.location.href = '/app-mobile?tab=social'
+              }
+              return
+            }
             console.log('Não foi possível partilhar com ficheiros, tentando sem:', error)
           }
         }
@@ -627,12 +638,20 @@ export default function SocialFeed() {
               title: `Post de ${post.user_name} - MTM`,
               text: `${fullShareText}\n\n${mediaUrlsText}`,
             })
-            return
-          } catch (error) {
-            if ((error as Error).name !== 'AbortError') {
-              console.error('Erro ao partilhar:', error)
+            // Regressar a app-mobile após partilha
+            if (window.location.pathname !== '/app-mobile') {
+              window.location.href = '/app-mobile?tab=social'
             }
             return
+          } catch (error) {
+            if ((error as Error).name === 'AbortError') {
+              // Utilizador cancelou, regressar mesmo assim
+              if (window.location.pathname !== '/app-mobile') {
+                window.location.href = '/app-mobile?tab=social'
+              }
+              return
+            }
+            console.error('Erro ao partilhar:', error)
           }
         }
       }
@@ -644,11 +663,24 @@ export default function SocialFeed() {
             title: `Post de ${post.user_name} - MTM`,
             text: fullShareText, // Sempre inclui texto + link encurtado (sem url duplicado)
           })
+          // Regressar a app-mobile após partilha
+          if (window.location.pathname !== '/app-mobile') {
+            window.location.href = '/app-mobile?tab=social'
+          }
         } catch (error) {
-          if ((error as Error).name !== 'AbortError') {
-            // Fallback para clipboard - sempre inclui texto + link
-            await navigator.clipboard.writeText(fullShareText)
-            alert("✅ Conteúdo copiado para área de transferência!")
+          if ((error as Error).name === 'AbortError') {
+            // Utilizador cancelou, regressar mesmo assim
+            if (window.location.pathname !== '/app-mobile') {
+              window.location.href = '/app-mobile?tab=social'
+            }
+            return
+          }
+          // Fallback para clipboard - sempre inclui texto + link
+          await navigator.clipboard.writeText(fullShareText)
+          alert("✅ Conteúdo copiado para área de transferência!")
+          // Regressar a app-mobile após copiar
+          if (window.location.pathname !== '/app-mobile') {
+            window.location.href = '/app-mobile?tab=social'
           }
         }
       } else {
@@ -663,10 +695,18 @@ export default function SocialFeed() {
         
         await navigator.clipboard.writeText(textToCopy)
         alert("✅ Conteúdo copiado para área de transferência!")
+        // Regressar a app-mobile após copiar
+        if (window.location.pathname !== '/app-mobile') {
+          window.location.href = '/app-mobile?tab=social'
+        }
       }
     } catch (error) {
       console.error('Erro ao partilhar post:', error)
       alert('❌ Erro ao partilhar. Tenta novamente.')
+      // Regressar a app-mobile mesmo em caso de erro
+      if (window.location.pathname !== '/app-mobile') {
+        window.location.href = '/app-mobile?tab=social'
+      }
     }
   }
 

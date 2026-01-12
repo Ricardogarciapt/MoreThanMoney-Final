@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { MessageCircle, X, Send, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { usePathname, useSearchParams } from "next/navigation"
+import { trackAIEvent } from "@/lib/ai-analytics"
 
 interface Message {
   role: 'user' | 'assistant'
@@ -41,6 +42,8 @@ export default function AIAssistantFloating() {
     setMessage("")
     setLoading(true)
 
+    const startTime = Date.now()
+
     // Add user message
     const newUserMessage: Message = {
       role: 'user',
@@ -48,6 +51,14 @@ export default function AIAssistantFloating() {
       timestamp: new Date()
     }
     setMessages(prev => [...prev, newUserMessage])
+
+    // Track message sent
+    await trackAIEvent(
+      'ai_chat_message_sent',
+      { message_length: userMessage.length },
+      { pathname: pathname || '', tab: searchParams?.get('tab') || '' },
+      'chat_assistant'
+    )
 
     try {
       // Check if we're in portfolio context for DCA
@@ -62,26 +73,56 @@ export default function AIAssistantFloating() {
         })
       })
 
+      const responseTime = Date.now() - startTime
+
       if (!response.ok) {
-        throw new Error('Erro ao processar mensagem')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Erro ao processar mensagem')
       }
 
       const data = await response.json()
       
       const assistantMessage: Message = {
         role: 'assistant',
-        content: data.message || 'Desculpe, não consegui processar sua mensagem.',
+        content: data.message || data.response || 'Desculpe, não consegui processar sua mensagem.',
         timestamp: new Date()
       }
       setMessages(prev => [...prev, assistantMessage])
+
+      // Track successful response
+      await trackAIEvent(
+        'ai_chat_response_received',
+        { 
+          message_length: userMessage.length,
+          response_length: assistantMessage.content.length,
+          has_dca_context: includeDCA
+        },
+        { pathname: pathname || '', tab: searchParams?.get('tab') || '' },
+        'chat_assistant',
+        responseTime,
+        true
+      )
     } catch (error) {
+      const responseTime = Date.now() - startTime
       console.error('❌ [AI ASSISTANT] Erro:', error)
+      
       const errorMessage: Message = {
         role: 'assistant',
         content: 'Desculpe, ocorreu um erro. Por favor, tente novamente.',
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])
+
+      // Track error
+      await trackAIEvent(
+        'ai_chat_error',
+        { message_length: userMessage.length },
+        { pathname: pathname || '', tab: searchParams?.get('tab') || '' },
+        'chat_assistant',
+        responseTime,
+        false,
+        error instanceof Error ? error.message : 'Unknown error'
+      )
     } finally {
       setLoading(false)
     }

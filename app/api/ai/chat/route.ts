@@ -91,6 +91,26 @@ Seja conciso, útil e focado em ajudar o utilizador a tomar decisões informadas
       errorMessage = `OpenAI API error: ${response.status}`
       const errorData = await response.text()
       console.error('❌ [AI CHAT] OpenAI error:', errorData)
+      
+      // Track error
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/ai/track-event`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_type: 'ai_chat_error',
+            event_data: { message_length: message.length },
+            context: { user_id: session.user.id },
+            ai_feature: 'chat_assistant',
+            response_time: Date.now() - startTime,
+            success: false,
+            error_message: errorMessage
+          })
+        })
+      } catch (trackError) {
+        console.warn('⚠️ [AI CHAT] Erro ao trackear evento de erro:', trackError)
+      }
+      
       return NextResponse.json({ error: 'Erro ao processar mensagem' }, { status: 500 })
     }
 
@@ -98,19 +118,24 @@ Seja conciso, útil e focado em ajudar o utilizador a tomar decisões informadas
     const aiMessage = data.choices[0]?.message?.content || 'Desculpe, não consegui processar sua mensagem.'
 
     const responseTime = Date.now() - startTime
+    success = true
 
     // Track event
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/api/ai/track-event`, {
+      await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/ai/track-event`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          event_type: 'ai_chat_message',
-          event_data: { message_length: message.length, has_dca_context: !!dcaContext },
+          event_type: 'ai_chat_response',
+          event_data: { 
+            message_length: message.length, 
+            response_length: aiMessage.length,
+            has_dca_context: !!dcaContext 
+          },
           context: { user_id: session.user.id },
           ai_feature: 'chat_assistant',
-          response_time,
-          success
+          response_time: responseTime,
+          success: true
         })
       })
     } catch (trackError) {
@@ -120,6 +145,7 @@ Seja conciso, útil e focado em ajudar o utilizador a tomar decisões informadas
     return NextResponse.json({
       success: true,
       message: aiMessage,
+      response: aiMessage, // Also include as 'response' for compatibility
       response_time: responseTime
     })
   } catch (error: any) {

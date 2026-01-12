@@ -9,12 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import {
   X,
   Menu,
-  Home,
-  UserCircle,
   LogOut,
-  ScanEye,
-  LayoutDashboard,
-  TrendingUp,
   Bell,
   MessageCircle,
   Settings,
@@ -88,10 +83,19 @@ export default function MobileSidebar({
 
   const loadMessages = async () => {
     try {
-      // Implementar quando houver sistema de mensagens
-      setUnreadMessagesCount(0)
+      if (!currentUser?.id) return
+      
+      // Usar API dedicada para contar mensagens não lidas
+      const response = await fetch('/api/messages/unread-count')
+      if (response.ok) {
+        const data = await response.json()
+        setUnreadMessagesCount(data.count || 0)
+      } else {
+        setUnreadMessagesCount(0)
+      }
     } catch (error) {
       console.error('Erro ao carregar mensagens:', error)
+      setUnreadMessagesCount(0)
     }
   }
 
@@ -129,13 +133,6 @@ export default function MobileSidebar({
     { id: 'fitness', label: 'Fitness', icon: Dumbbell, href: '/app-mobile?tab=fitness' },
   ]
 
-  const quickLinks = [
-    { label: 'Início', icon: Home, href: '/new-landing' },
-    { label: 'O Meu Perfil', icon: UserCircle, href: '/member-area' },
-    { label: 'Scanner ao Vivo', icon: ScanEye, href: '/scanner-access' },
-    { label: 'Portfólios', icon: LayoutDashboard, href: '/portfolios' },
-    { label: 'Ideias de Trading', icon: TrendingUp, href: '/trading-ideas' },
-  ]
 
   const getUserBadge = () => {
     if (!currentUser) return null
@@ -282,28 +279,6 @@ export default function MobileSidebar({
               </nav>
             </div>
 
-            {/* Quick Links */}
-            <div className="p-4 border-b border-gray-800">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase mb-3">Links Rápidos</h3>
-              <nav className="space-y-1">
-                {quickLinks.map((link) => {
-                  const Icon = link.icon
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={onClose}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
-                    >
-                      <Icon className="w-5 h-5" />
-                      <span className="flex-1 text-left font-medium">{link.label}</span>
-                      <ChevronRight className="w-4 h-4 text-gray-500" />
-                    </Link>
-                  )
-                })}
-              </nav>
-            </div>
-
             {/* Notifications & Messages */}
             <div className="p-4 border-b border-gray-800">
               <h3 className="text-xs font-semibold text-gray-400 uppercase mb-3">Comunicação</h3>
@@ -332,7 +307,7 @@ export default function MobileSidebar({
                 </button>
                 <button
                   onClick={() => {
-                    router.push('/member-area?tab=messages')
+                    router.push('/messages')
                     onClose()
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"

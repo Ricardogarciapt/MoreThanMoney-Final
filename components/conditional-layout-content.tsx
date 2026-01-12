@@ -3,7 +3,6 @@
 import { usePathname } from "next/navigation"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
-import SocialFeedRSS from "@/components/social-feed-rss"
 import Analytics from "@/components/analytics"
 import GeolocationDetector from "@/components/geolocation-detector"
 
@@ -33,7 +32,6 @@ export default function ConditionalLayoutContent({ children }: { children: React
     <>
       <GeolocationDetector />
       <Navbar />
-      <SocialFeedRSS />
       <main>{children}</main>
       <Footer />
       <Analytics />

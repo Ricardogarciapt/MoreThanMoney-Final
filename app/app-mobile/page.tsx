@@ -30,7 +30,7 @@ import { useAuthenticatedSession } from "@/hooks/use-authenticated-session"
 function AppMobileContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { isAuthenticated, userId } = useAuthenticatedSession()
+  const { isAuthenticated, userId, loading: authLoading } = useAuthenticatedSession()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState("social")
   const [touchStart, setTouchStart] = useState(0)
@@ -38,6 +38,7 @@ function AppMobileContent() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [userLoaded, setUserLoaded] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -56,10 +57,12 @@ function AppMobileContent() {
   }, [])
 
   useEffect(() => {
-    if (mounted && isAuthenticated && userId) {
+    // Só carregar user uma vez quando autenticado
+    if (mounted && !authLoading && isAuthenticated && userId && !userLoaded) {
       loadUser()
+      setUserLoaded(true)
     }
-  }, [mounted, isAuthenticated, userId])
+  }, [mounted, authLoading, isAuthenticated, userId, userLoaded])
 
   useEffect(() => {
     const tab = searchParams.get("tab")
@@ -192,7 +195,7 @@ function AppMobileContent() {
     }
   }, [contentRef])
 
-  if (!mounted) {
+  if (!mounted || authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900">
         <Loader2 className="w-8 h-8 animate-spin text-[#D2A63C]" />
