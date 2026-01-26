@@ -199,24 +199,32 @@ export default function SocialFeed() {
   const loadPosts = async () => {
     setLoading(true)
     try {
-      // Tentar selecionar todas as colunas, incluindo media_urls se existir
-      let selectQuery = "id, user_id, user_name, content, media_url, category, created_at, updated_at"
+      // Query base com colunas obrigatórias
+      const baseColumns = "id, user_id, user_name, content, media_url, category, created_at, updated_at"
       
-      // Tentar adicionar media_urls e mentions se existirem (não falha se não existirem)
-      try {
-        const { data: testData } = await supabase
-          .from("posts")
-          .select("media_urls, mentions")
-          .limit(1)
-        
-        if (testData !== null) {
-          selectQuery += ", media_urls, mentions"
+      // Tentar adicionar colunas opcionais se existirem
+      let selectQuery = baseColumns
+      
+      // Verificar e adicionar colunas opcionais uma a uma
+      const optionalColumns = ["media_urls", "mentions", "likes_count", "comments_count"]
+      
+      for (const col of optionalColumns) {
+        try {
+          const { error: testError } = await supabase
+            .from("posts")
+            .select(col)
+            .limit(0) // Query vazia apenas para testar schema
+          
+          if (!testError) {
+            selectQuery += `, ${col}`
+            console.log(`✅ [SOCIAL FEED] Coluna ${col} disponível`)
+          }
+        } catch (e) {
+          console.log(`ℹ️ [SOCIAL FEED] Coluna ${col} não disponível`)
         }
-      } catch (e) {
-        // Colunas não existem, usar apenas as básicas
-        console.log("ℹ️ [SOCIAL FEED] Colunas media_urls/mentions não disponíveis, usando apenas colunas básicas")
       }
 
+      // Carregar posts com query otimizada
       const { data, error } = await supabase
         .from("posts")
         .select(selectQuery)
@@ -965,7 +973,7 @@ export default function SocialFeed() {
     try {
       const { data, error } = await supabase
         .from('post_comments')
-        .select('*')
+        .select('id, post_id, user_id, user_name, content, mentions, created_at, updated_at')
         .eq('post_id', postId)
         .order('created_at', { ascending: false })
       
