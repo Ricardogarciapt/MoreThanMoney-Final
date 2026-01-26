@@ -91,94 +91,22 @@ export default function IQONICPage() {
                 </div>
                 <h3 className="text-2xl font-bold text-white">IQ Academy</h3>
               </div>
-              <p className="text-gray-300 mb-6 leading-relaxed">
-                A tua plataforma educacional tudo-em-um. Academias, aulas ao vivo e masterclasses exclusivas num só lugar.
-              </p>
               
-              {/* MacBook Mockup */}
+              {/* MacBook Mockup - Imagem Principal */}
               <div className="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700/50">
                 <div className="aspect-video bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg overflow-hidden relative">
-                  {/* Laptop Screen - Image or Fallback */}
-                  <div className="h-full bg-gray-900 p-2 relative">
-                    <div className="absolute inset-0">
-                      <Image
-                        src="/images/iqonic/Acedemia IQ.png"
-                        alt="IQ Academy Interface"
-                        fill
-                        className="object-contain rounded-lg"
-                        unoptimized
-                      />
-                    </div>
-                    {/* Fallback if image doesn't exist */}
-                    <div className="absolute inset-0 bg-gray-900 p-2 z-[-1]">
-                    {/* Top Bar */}
-                    <div className="flex items-center justify-between mb-2 px-2">
-                      <div className="w-4 h-4 bg-gray-700 rounded"></div>
-                      <div className="text-white text-xs font-semibold">IQ Academy</div>
-                      <div className="flex items-center gap-1">
-                        <div className="text-gray-400 text-[9px]">Forex</div>
-                        <div className="text-gray-400 text-[9px]">Portuguese</div>
-                        <div className="w-3 h-3 bg-gray-700 rounded grid grid-cols-2 gap-0.5 p-0.5">
-                          <div className="w-full h-full bg-gray-500 rounded"></div>
-                          <div className="w-full h-full bg-gray-500 rounded"></div>
-                          <div className="w-full h-full bg-gray-500 rounded"></div>
-                          <div className="w-full h-full bg-gray-500 rounded"></div>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Content */}
-                    <div className="px-2 space-y-2">
-                      <div className="bg-blue-600/30 rounded-lg p-3 border border-blue-500/30 relative overflow-hidden">
-                        <div className="absolute inset-0 opacity-10">
-                          <div className="absolute top-0 left-0 w-8 h-8 border border-blue-400/30 rounded"></div>
-                          <div className="absolute top-2 right-2 w-4 h-4 border border-blue-400/30 rounded"></div>
-                          <div className="absolute bottom-2 left-2 w-6 h-6 border border-blue-400/30 rounded"></div>
-                        </div>
-                        <div className="text-white font-bold text-sm mb-1 relative z-10">Forex</div>
-                        <div className="text-blue-300 text-xs relative z-10">Academy in Portuguese</div>
-                      </div>
-                      <div className="bg-blue-600/20 rounded-lg p-2 border border-blue-500/20 relative overflow-hidden">
-                        <div className="absolute inset-0 opacity-10">
-                          <div className="absolute top-0 right-0 w-6 h-6 border border-blue-400/30 rounded"></div>
-                          <div className="absolute bottom-0 left-0 w-4 h-4 border border-blue-400/30 rounded"></div>
-                        </div>
-                        <div className="text-white text-xs mb-1 relative z-10">MÓDULO 1 - VÍDEO 101:</div>
-                        <div className="text-blue-300 text-xs relative z-10">O que é Forex</div>
-                        <div className="flex justify-end mt-1 relative z-10">
-                          <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                            <span className="text-white text-xs">▶</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="px-2 pt-1">
-                        <div className="text-gray-400 text-[9px] mb-1">O que é Forex</div>
-                        <div className="text-gray-500 text-[8px]">Forex</div>
-                        <div className="text-gray-500 text-[8px]">O que é Forex...</div>
-                        <div className="mt-2 bg-blue-500/20 rounded px-2 py-1 text-center">
-                          <span className="text-blue-300 text-[9px]">Mark as Complete</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <div className="absolute inset-0">
+                    <Image
+                      src="/images/iqonic/Acedemia IQ.png"
+                      alt="IQ Academy Interface"
+                      fill
+                      className="object-contain rounded-lg"
+                      unoptimized
+                    />
                   </div>
                 </div>
-                <div className="text-center text-xs text-gray-500 mt-2">MacBook Pro</div>
               </div>
 
-              <ul className="space-y-2 text-sm text-gray-300 mb-6">
-                <li className="flex items-start">
-                  <span className="text-blue-400 mr-2">✓</span>
-                  <span>Forex e Criptomoedas: Domina as competências que realmente importam</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-blue-400 mr-2">✓</span>
-                  <span>Marketing Digital: Aprende a construir e escalar negócios</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-blue-400 mr-2">✓</span>
-                  <span>Formato Híbrido: Cursos on-demand e transmissões ao vivo</span>
-                </li>
-              </ul>
               <a
                 href="https://iqonic.vip"
                 target="_blank"
@@ -197,11 +125,8 @@ export default function IQONICPage() {
                 </div>
                 <h3 className="text-2xl font-bold text-white">IQ Social</h3>
               </div>
-              <p className="text-gray-300 mb-6 leading-relaxed">
-                Conecta-te com educadores experientes e empreendedores. Acede ao IQ Ideas para ideias de mercado com pontos de partida claros.
-              </p>
               
-              {/* Phone Mockup */}
+              {/* Phone Mockup - Imagem Principal */}
               <div className="bg-gray-900 rounded-xl p-3 mb-4 border border-gray-700/50">
                 <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg overflow-hidden relative">
                   <div className="absolute inset-0">
@@ -213,106 +138,9 @@ export default function IQONICPage() {
                       unoptimized
                     />
                   </div>
-                  {/* Fallback if image doesn't exist */}
-                  <div className="h-full bg-gray-900 p-2 z-[-1]">
-                    {/* Status Bar */}
-                    <div className="flex justify-between items-center text-[10px] text-gray-400 mb-2">
-                      <span>14:08</span>
-                      <div className="flex gap-1">
-                        <div className="w-3 h-1.5 bg-gray-600 rounded"></div>
-                        <span className="text-[9px]">83%</span>
-                      </div>
-                    </div>
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-2 px-2">
-                      <div className="w-4 h-4 bg-gray-700 rounded"></div>
-                      <div className="text-white text-xs font-semibold">IQ Insights</div>
-                      <div className="w-6 h-6 bg-gray-700 rounded-full"></div>
-                    </div>
-                    {/* Tabs */}
-                    <div className="flex items-center gap-1 mb-2 px-2">
-                      <div className="bg-purple-600/30 rounded px-2 py-0.5 text-[9px] text-purple-300">All</div>
-                      <div className="bg-gray-800 rounded px-2 py-0.5 text-[9px] text-gray-400">Forex</div>
-                      <div className="bg-gray-800 rounded px-2 py-0.5 text-[9px] text-gray-400">Crypto</div>
-                      <div className="bg-gray-800 rounded px-2 py-0.5 text-[9px] text-gray-400 flex items-center gap-1">
-                        <span>Select Educator</span>
-                        <span className="text-[8px]">▼</span>
-                      </div>
-                    </div>
-                    {/* Search */}
-                    <div className="bg-gray-800 rounded-lg px-2 py-1 mb-2 text-[10px] text-gray-400">
-                      Q Search insights...
-                    </div>
-                    {/* Content Cards */}
-                    <div className="space-y-2">
-                      <div className="bg-gray-800/60 rounded-lg p-2">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
-                            <span className="text-white text-[8px] font-bold">RG</span>
-                          </div>
-                          <div>
-                            <div className="text-white text-xs font-semibold">Ricardo Garcie</div>
-                            <div className="text-gray-400 text-[8px]">Nov 8, 2022</div>
-                          </div>
-                        </div>
-                        <div className="text-gray-300 text-[9px] mb-1">XAUUSD</div>
-                        <div className="text-gray-300 text-[9px] mb-1">This is My forward testing for gold. Market its prepping for NFP, all the Data... <span className="text-purple-400">Show more</span></div>
-                        <div className="h-10 bg-gray-700/30 rounded mt-1 relative overflow-hidden">
-                          <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1">
-                            <div className="w-1 h-2 bg-red-500/60 rounded-t"></div>
-                            <div className="w-1 h-4 bg-green-500/60 rounded-t"></div>
-                            <div className="w-1 h-3 bg-red-500/60 rounded-t"></div>
-                            <div className="w-1 h-5 bg-green-500/60 rounded-t"></div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-gray-800/60 rounded-lg p-2">
-                        <div className="text-white text-xs font-semibold mb-1">XAUUSD</div>
-                        {/* Candlestick Chart Representation */}
-                        <div className="h-12 bg-gray-700/50 rounded mb-1 relative overflow-hidden">
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            {/* Green and red bars representing candlesticks */}
-                            <div className="flex items-end gap-0.5 h-full px-1">
-                              <div className="w-1 h-3 bg-red-500 rounded"></div>
-                              <div className="w-1 h-5 bg-green-500 rounded"></div>
-                              <div className="w-1 h-4 bg-red-500 rounded"></div>
-                              <div className="w-1 h-6 bg-green-500 rounded"></div>
-                              <div className="w-1 h-3 bg-red-500 rounded"></div>
-                              <div className="w-1 h-5 bg-green-500 rounded"></div>
-                            </div>
-                          </div>
-                          <div className="absolute top-1 left-1 text-white text-[7px] opacity-60">Possibili zone di inversione o continuacione</div>
-                        </div>
-                        <div className="text-gray-400 text-[9px]">Samuele Cattaneo • Aug 26, 2025, 11:58 PM</div>
-                      </div>
-                      <div className="bg-gray-800/60 rounded-lg p-2">
-                        <div className="text-white text-xs font-semibold mb-1">TP IN LIVE</div>
-                        <div className="h-12 bg-purple-600/30 rounded mb-1 relative overflow-hidden flex items-center justify-center">
-                          <div className="text-white text-[10px] font-bold">TP CHARTS</div>
-                          <div className="absolute top-1 right-1 w-2 h-2 bg-purple-400 rounded-full"></div>
-                        </div>
-                        <div className="text-gray-400 text-[9px] mb-1">nice reaction of BTC on the called area and TP taken live.</div>
-                        <div className="text-gray-400 text-[9px]">Matteo Vitti • Aug 26, 2025, 2:46 PM</div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
 
-              <ul className="space-y-2 text-sm text-gray-300 mb-6">
-                <li className="flex items-start">
-                  <span className="text-purple-400 mr-2">✓</span>
-                  <span>Interage com educadores experientes e liga-te a empreendedores</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-purple-400 mr-2">✓</span>
-                  <span>IQ Ideas: Ideias de mercado com pontos de partida claros</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-purple-400 mr-2">✓</span>
-                  <span>IQ Insights: Análises e revisões especializadas</span>
-                </li>
-              </ul>
               <a
                 href="https://iqonic.vip"
                 target="_blank"
@@ -331,16 +159,13 @@ export default function IQONICPage() {
                 </div>
                 <h3 className="text-2xl font-bold text-white">IQ Insights</h3>
               </div>
-              <p className="text-gray-300 mb-6 leading-relaxed">
-                Análises e revisões especializadas para acelerar a tua aprendizagem. Vê o que os especialistas veem.
-              </p>
               
-              {/* Tablet/Desktop Mockup */}
+              {/* Tablet/Desktop Mockup - Imagem Principal */}
               <div className="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700/50">
                 <div className="aspect-video bg-gradient-to-br from-cyan-950 to-blue-950 rounded-lg overflow-hidden relative">
                   <div className="absolute inset-0">
                     <Image
-                      src="/images/iqonic/Ecosistema IQ Center.png"
+                      src="/images/iqonic/IQ Insights.png"
                       alt="IQ Insights Interface"
                       fill
                       className="object-contain rounded-lg"
@@ -386,20 +211,6 @@ export default function IQONICPage() {
                 </div>
               </div>
 
-              <ul className="space-y-2 text-sm text-gray-300 mb-6">
-                <li className="flex items-start">
-                  <span className="text-cyan-400 mr-2">✓</span>
-                  <span>Análises técnicas detalhadas com anotações</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-cyan-400 mr-2">✓</span>
-                  <span>Revisões de especialistas em tempo real</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-cyan-400 mr-2">✓</span>
-                  <span>Zonas de suporte/resistência identificadas</span>
-                </li>
-              </ul>
               <a
                 href="https://iqonic.vip"
                 target="_blank"
@@ -855,20 +666,20 @@ export default function IQONICPage() {
                     <p className="text-cyan-400 text-sm">A tua viagem. À tua maneira.</p>
                   </div>
                 </div>
-                <ul className="space-y-3 text-sm text-gray-300 mb-6">
-                  <li className="flex items-start">
-                    <span className="text-cyan-400 mr-2">✓</span>
-                    <span>Reserve um grupo de <strong>cruzeiro com 10 camarotes ou mais</strong>, incluindo opções de rio, oceano ou iate</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-cyan-400 mr-2">✓</span>
-                    <span>Planeie um <strong>Pacote terrestre exclusivo</strong> no mínimo 25 quartos de hotel, passeios ou outras experiências</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-cyan-400 mr-2">✓</span>
-                    <span>Organizadores podem viajar <strong>gratuitamente</strong>, dependendo do tamanho do grupo</span>
-                  </li>
-                </ul>
+                {/* Imagem Concierge */}
+                <div className="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700/50">
+                  <div className="aspect-video bg-gradient-to-br from-cyan-950 to-blue-950 rounded-lg overflow-hidden relative">
+                    <div className="absolute inset-0">
+                      <Image
+                        src="/images/iqonic/Atlas Concierge.png"
+                        alt="IQ Atlas Concierge"
+                        fill
+                        className="object-contain rounded-lg"
+                        unoptimized
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* ICONIC ESCAPES */}
@@ -882,24 +693,20 @@ export default function IQONICPage() {
                     <p className="text-emerald-400 text-sm">Acesso VIP a viagens inesquecíveis</p>
                   </div>
                 </div>
-                <ul className="space-y-3 text-sm text-gray-300">
-                  <li className="flex items-start">
-                    <span className="text-emerald-400 mr-2">✓</span>
-                    <span>Viagens em grupo a preços de venda por grosso (desconto)</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-emerald-400 mr-2">✓</span>
-                    <span>Destinos de sonho</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-emerald-400 mr-2">✓</span>
-                    <span>E experiências privadas</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-emerald-400 mr-2">✓</span>
-                    <span>Memórias que duram uma vida</span>
-                  </li>
-                </ul>
+                {/* Imagem Escapes */}
+                <div className="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700/50">
+                  <div className="aspect-video bg-gradient-to-br from-emerald-950 to-teal-950 rounded-lg overflow-hidden relative">
+                    <div className="absolute inset-0">
+                      <Image
+                        src="/images/iqonic/AtlasEscapes.png"
+                        alt="ICONIC ESCAPES"
+                        fill
+                        className="object-contain rounded-lg"
+                        unoptimized
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

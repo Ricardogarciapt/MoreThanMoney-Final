@@ -27,67 +27,8 @@ export default function AutomationPage() {
         {/* IQ Sync Section - Azul Escuro */}
         <div className="max-w-7xl mx-auto mb-20">
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Text Content */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="bg-gradient-to-br from-blue-600/30 via-mtm-primary/20 to-cyan-600/30 rounded-xl p-4 border-2 border-blue-500/50">
-                  <RefreshCw className="w-12 h-12 text-blue-400" />
-                </div>
-                <div>
-                  <h2 className="text-4xl md:text-5xl font-bold text-white mb-2">
-                    IQ Sync
-                  </h2>
-                  <p className="text-xl text-blue-400 font-semibold">
-                    Mantém-te ligado em Tempo Real
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4 text-gray-300 text-lg leading-relaxed">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-blue-400 flex-shrink-0 mt-1" />
-                  <div>
-                    <strong className="text-white">Ideias de Mercado:</strong> Entregues diretamente no teu dispositivo.
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-blue-400 flex-shrink-0 mt-1" />
-                  <div>
-                    <strong className="text-white">Execução Simples:</strong> Executa operações diretamente dentro da plataforma.
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-blue-400 flex-shrink-0 mt-1" />
-                  <div>
-                    <strong className="text-white">Orientação Contínua:</strong> Cada ideia é um ponto de partida para as tuas próprias decisões.
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-r from-blue-600/20 via-mtm-primary/10 to-cyan-600/20 border-2 border-blue-500/30 rounded-xl p-6 mt-8">
-                <h3 className="text-xl font-bold text-blue-400 mb-3">Sistema "Receive → Review → Confirm"</h3>
-                <p className="text-gray-300">
-                  Manténs sempre o controlo final de cada decisão. Execução manual de ideias de mercado em tempo real.
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                <Link href="/swipetotrade" className="flex-1">
-                  <Button className="w-full bg-gradient-to-r from-blue-600 via-mtm-primary to-cyan-600 hover:from-blue-500 hover:via-mtm-primary hover:to-cyan-500 text-white font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105">
-                    <Smartphone className="w-5 h-5 mr-2" />
-                    Configurar IQ Sync
-                  </Button>
-                </Link>
-                <Link href="https://iqonic.life/morethanmoney" target="_blank" rel="noopener noreferrer" className="flex-1">
-                  <Button variant="outline" className="w-full border-2 border-blue-500/50 text-blue-400 hover:bg-blue-500/10 font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300">
-                    Ver no IQONIC
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            {/* Visual - Phone Mockup */}
-            <div className="relative">
+            {/* Visual - Phone Mockup - Destaque Principal */}
+            <div className="relative order-2 md:order-1">
               <div className="bg-gradient-to-br from-blue-900/40 to-cyan-900/40 rounded-3xl p-8 border-2 border-blue-500/30 backdrop-blur-sm">
                 <div className="bg-black rounded-2xl p-4 shadow-2xl">
                   <div className="bg-gray-900 rounded-xl overflow-hidden">
@@ -137,6 +78,44 @@ export default function AutomationPage() {
                 </div>
               </div>
             </div>
+
+            {/* Text Content - Simplificado */}
+            <div className="space-y-6 order-1 md:order-2">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="bg-gradient-to-br from-blue-600/30 via-mtm-primary/20 to-cyan-600/30 rounded-xl p-4 border-2 border-blue-500/50">
+                  <RefreshCw className="w-12 h-12 text-blue-400" />
+                </div>
+                <div>
+                  <h2 className="text-4xl md:text-5xl font-bold text-white mb-2">
+                    IQ Sync
+                  </h2>
+                  <p className="text-xl text-blue-400 font-semibold">
+                    Mantém-te ligado em Tempo Real
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-blue-600/20 via-mtm-primary/10 to-cyan-600/20 border-2 border-blue-500/30 rounded-xl p-6">
+                <h3 className="text-xl font-bold text-blue-400 mb-3">Sistema "Receive → Review → Confirm"</h3>
+                <p className="text-gray-300">
+                  Manténs sempre o controlo final de cada decisão. Execução manual de ideias de mercado em tempo real.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4 mt-8">
+                <Link href="/swipetotrade" className="flex-1">
+                  <Button className="w-full bg-gradient-to-r from-blue-600 via-mtm-primary to-cyan-600 hover:from-blue-500 hover:via-mtm-primary hover:to-cyan-500 text-white font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105">
+                    <Smartphone className="w-5 h-5 mr-2" />
+                    Configurar IQ Sync
+                  </Button>
+                </Link>
+                <Link href="https://iqonic.life/morethanmoney" target="_blank" rel="noopener noreferrer" className="flex-1">
+                  <Button variant="outline" className="w-full border-2 border-blue-500/50 text-blue-400 hover:bg-blue-500/10 font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300">
+                    Ver no IQONIC
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -148,7 +127,7 @@ export default function AutomationPage() {
         {/* IQ Auto Section - Roxo/Púrpura */}
         <div className="max-w-7xl mx-auto mb-20">
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Visual - Phone Mockups */}
+            {/* Visual - Phone Mockups - Destaque Principal */}
             <div className="relative order-2 md:order-1">
               <div className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 rounded-3xl p-8 border-2 border-purple-500/30 backdrop-blur-sm">
                 <div className="grid grid-cols-3 gap-4">
@@ -245,7 +224,7 @@ export default function AutomationPage() {
               </div>
             </div>
 
-            {/* Text Content */}
+            {/* Text Content - Simplificado */}
             <div className="space-y-6 order-1 md:order-2">
               <div className="flex items-center gap-4 mb-6">
                 <div className="bg-gradient-to-br from-purple-600/30 via-mtm-primary/20 to-pink-600/30 rounded-xl p-4 border-2 border-purple-500/50">
@@ -261,32 +240,11 @@ export default function AutomationPage() {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-purple-600/20 via-mtm-primary/10 to-pink-600/20 border-2 border-purple-500/30 rounded-xl p-6 mb-6">
+              <div className="bg-gradient-to-r from-purple-600/20 via-mtm-primary/10 to-pink-600/20 border-2 border-purple-500/30 rounded-xl p-6">
                 <h3 className="text-2xl font-bold text-purple-400 mb-3">Set-it-once experience</h3>
                 <p className="text-gray-300 leading-relaxed">
                   Fique conectado a estratégias de trading com uma experiência de configuração única que mantém a sua conta alinhada em segundo plano.
                 </p>
-              </div>
-
-              <div className="space-y-4 text-gray-300 text-lg leading-relaxed">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-purple-400 flex-shrink-0 mt-1" />
-                  <div>
-                    <strong className="text-white">Totalmente Automatizado:</strong> Inicia, para, adiciona ou remove estratégias instantaneamente. Sem penalizações.
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-purple-400 flex-shrink-0 mt-1" />
-                  <div>
-                    <strong className="text-white">SafeGuard:</strong> Proteção automática com gestão de risco e limites de capital.
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-purple-400 flex-shrink-0 mt-1" />
-                  <div>
-                    <strong className="text-white">100% Automático:</strong> Mantém a conta alinhada com estratégias dos educadores em segundo plano.
-                  </div>
-                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 mt-8">
