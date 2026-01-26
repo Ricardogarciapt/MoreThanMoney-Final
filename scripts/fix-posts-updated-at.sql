@@ -41,7 +41,7 @@ CREATE TRIGGER trigger_update_posts_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_posts_updated_at();
 
-RAISE NOTICE '✅ Trigger para updated_at criado/atualizado';
+-- Nota: Trigger criado/atualizado
 
 -- 3. Verificar e garantir que todas as colunas necessárias existem
 DO $$
@@ -54,7 +54,7 @@ BEGIN
     AND column_name = 'media_urls'
   ) THEN
     ALTER TABLE public.posts ADD COLUMN media_urls TEXT[];
-    RAISE NOTICE '✅ Coluna media_urls adicionada';
+    -- Coluna media_urls adicionada
   END IF;
   
   -- mentions
@@ -65,7 +65,7 @@ BEGIN
     AND column_name = 'mentions'
   ) THEN
     ALTER TABLE public.posts ADD COLUMN mentions UUID[];
-    RAISE NOTICE '✅ Coluna mentions adicionada';
+    -- Coluna mentions adicionada
   END IF;
   
   -- likes_count
@@ -76,7 +76,7 @@ BEGIN
     AND column_name = 'likes_count'
   ) THEN
     ALTER TABLE public.posts ADD COLUMN likes_count INTEGER DEFAULT 0;
-    RAISE NOTICE '✅ Coluna likes_count adicionada';
+    -- Coluna likes_count adicionada
   END IF;
   
   -- comments_count
@@ -87,7 +87,7 @@ BEGIN
     AND column_name = 'comments_count'
   ) THEN
     ALTER TABLE public.posts ADD COLUMN comments_count INTEGER DEFAULT 0;
-    RAISE NOTICE '✅ Coluna comments_count adicionada';
+    -- Coluna comments_count adicionada
   END IF;
 END $$;
 
