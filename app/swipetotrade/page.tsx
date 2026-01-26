@@ -48,19 +48,20 @@ export default function SwipeToTradePage() {
                 </div>
                 
                 {/* Horizontal Image Frame */}
-                <div className="bg-gradient-to-br from-gray-900/90 to-black rounded-2xl p-6 shadow-inner border border-mtm-primary/30">
+                <div className="bg-gradient-to-br from-gray-900/90 to-black rounded-2xl p-4 shadow-inner border border-mtm-primary/30">
                   <div className="bg-gradient-to-br from-blue-950/50 to-cyan-950/50 rounded-xl overflow-hidden border-2 border-blue-500/40">
-                    <div className="aspect-[16/9] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg p-4 relative overflow-hidden">
+                    <div className="relative w-full" style={{ minHeight: '400px' }}>
                       {/* Glow effect */}
                       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-mtm-primary/10 to-cyan-500/20 blur-xl"></div>
                       
-                      {/* Imagem Horizontal */}
-                      <div className="absolute inset-0 z-10">
+                      {/* Imagem Horizontal - Mostrar completa */}
+                      <div className="relative w-full h-auto z-10">
                         <Image
                           src="/images/iqonic/Imagem Iq Sync.png"
                           alt="IQ Sync - Swipe to Trade Interface"
-                          fill
-                          className="object-cover rounded-lg"
+                          width={1200}
+                          height={800}
+                          className="w-full h-auto rounded-lg object-contain"
                           unoptimized
                         />
                       </div>
