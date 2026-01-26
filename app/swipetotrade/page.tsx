@@ -91,7 +91,7 @@ export default function SwipeToTradePage() {
                     <div className="aspect-[9/19] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg p-2 relative">
                       <div className="absolute inset-0">
                         <Image
-                          src="/images/iqonic/iq-sync-phone.png"
+                          src="/images/iqonic/Imagem Iq Sync.png"
                           alt="IQ Sync Interface"
                           fill
                           className="object-contain rounded-lg"

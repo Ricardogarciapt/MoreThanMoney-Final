@@ -102,7 +102,7 @@ export default function IQONICPage() {
                   <div className="h-full bg-gray-900 p-2 relative">
                     <div className="absolute inset-0">
                       <Image
-                        src="/images/iqonic/iq-academy-macbook.png"
+                        src="/images/iqonic/Acedemia IQ.png"
                         alt="IQ Academy Interface"
                         fill
                         className="object-contain rounded-lg"
@@ -206,7 +206,7 @@ export default function IQONICPage() {
                 <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg overflow-hidden relative">
                   <div className="absolute inset-0">
                     <Image
-                      src="/images/iqonic/iq-social-phone.png"
+                      src="/images/iqonic/Imagem IQ Social.png"
                       alt="IQ Social Interface"
                       fill
                       className="object-contain rounded-lg"
@@ -340,7 +340,7 @@ export default function IQONICPage() {
                 <div className="aspect-video bg-gradient-to-br from-cyan-950 to-blue-950 rounded-lg overflow-hidden relative">
                   <div className="absolute inset-0">
                     <Image
-                      src="/images/iqonic/iq-insights-tablet.png"
+                      src="/images/iqonic/Ecosistema IQ Center.png"
                       alt="IQ Insights Interface"
                       fill
                       className="object-contain rounded-lg"
@@ -733,7 +733,7 @@ export default function IQONICPage() {
                 <div className="bg-gradient-to-br from-teal-950 to-green-950 rounded-lg overflow-hidden relative aspect-video">
                   <div className="absolute inset-0">
                     <Image
-                      src="/images/iqonic/iq-atlas-platform.png"
+                      src="/images/iqonic/Atlas 1.png"
                       alt="IQ Atlas Platform Interface"
                       fill
                       className="object-contain rounded-lg"

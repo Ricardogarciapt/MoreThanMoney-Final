@@ -95,7 +95,7 @@ export default function AutomationPage() {
                     <div className="aspect-[9/19] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg p-2 relative">
                       <div className="absolute inset-0">
                         <Image
-                          src="/images/iqonic/iq-sync-phone.png"
+                          src="/images/iqonic/Imagem Iq Sync.png"
                           alt="IQ Sync Interface"
                           fill
                           className="object-contain rounded-lg"
@@ -155,8 +155,18 @@ export default function AutomationPage() {
                   {/* Phone 1 - Setup */}
                   <div className="bg-black rounded-2xl p-2 shadow-2xl">
                     <div className="bg-gray-900 rounded-xl overflow-hidden">
-                      <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg p-2">
-                        <div className="h-full bg-gray-900 rounded-lg p-3 space-y-2">
+                      <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg p-2 relative">
+                        <div className="absolute inset-0">
+                          <Image
+                            src="/images/iqonic/Imagem Iq Auto.png"
+                            alt="IQ Auto Setup"
+                            fill
+                            className="object-contain rounded-lg"
+                            unoptimized
+                          />
+                        </div>
+                        {/* Fallback if image doesn't exist */}
+                        <div className="h-full bg-gray-900 rounded-lg p-3 space-y-2 absolute inset-0 z-[-1]">
                           <div className="text-xs text-gray-400 text-center mb-2">9:41</div>
                           <div className="text-white font-bold text-xs mb-2">Setup your account</div>
                           <div className="space-y-2">
@@ -172,8 +182,18 @@ export default function AutomationPage() {
                   {/* Phone 2 - Strategies */}
                   <div className="bg-black rounded-2xl p-2 shadow-2xl">
                     <div className="bg-gray-900 rounded-xl overflow-hidden">
-                      <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg p-2">
-                        <div className="h-full bg-gray-900 rounded-lg p-3 space-y-2">
+                      <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg p-2 relative">
+                        <div className="absolute inset-0">
+                          <Image
+                            src="/images/iqonic/Imagem Iq Auto 2.png"
+                            alt="IQ Auto Strategies"
+                            fill
+                            className="object-contain rounded-lg"
+                            unoptimized
+                          />
+                        </div>
+                        {/* Fallback if image doesn't exist */}
+                        <div className="h-full bg-gray-900 rounded-lg p-3 space-y-2 absolute inset-0 z-[-1]">
                           <div className="text-xs text-gray-400 text-center mb-2">9:41</div>
                           <div className="text-white font-bold text-xs mb-2">Strategies</div>
                           <div className="space-y-1.5">
@@ -198,8 +218,18 @@ export default function AutomationPage() {
                   {/* Phone 3 - Chart */}
                   <div className="bg-black rounded-2xl p-2 shadow-2xl">
                     <div className="bg-gray-900 rounded-xl overflow-hidden">
-                      <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg p-2">
-                        <div className="h-full bg-gray-900 rounded-lg p-3 space-y-2">
+                      <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg p-2 relative">
+                        <div className="absolute inset-0">
+                          <Image
+                            src="/images/iqonic/Imagem Iq Auto.png"
+                            alt="IQ Auto Chart"
+                            fill
+                            className="object-contain rounded-lg"
+                            unoptimized
+                          />
+                        </div>
+                        {/* Fallback if image doesn't exist */}
+                        <div className="h-full bg-gray-900 rounded-lg p-3 space-y-2 absolute inset-0 z-[-1]">
                           <div className="text-xs text-gray-400 text-center mb-2">9:41</div>
                           <div className="bg-purple-600/20 rounded p-2 h-16 flex items-center justify-center">
                             <div className="text-white text-xs font-semibold">Chart View</div>
