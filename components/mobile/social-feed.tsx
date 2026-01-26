@@ -199,10 +199,20 @@ export default function SocialFeed() {
   const loadPosts = async () => {
     setLoading(true)
     try {
-      // Query base com colunas obrigatórias
+      console.log('🔄 [SOCIAL FEED] Iniciando carregamento de posts...')
+      
+      // Verificar autenticação
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      console.log('🔐 [SOCIAL FEED] Sessão:', {
+        autenticado: !!session?.user,
+        user_id: session?.user?.id || 'N/A',
+        email: session?.user?.email || 'N/A'
+      })
+
+      // Query base com colunas obrigatórias - SEMPRE usar estas
       const baseColumns = "id, user_id, user_name, content, media_url, category, created_at, updated_at"
       
-      // Tentar adicionar colunas opcionais se existirem
+      // Tentar adicionar colunas opcionais se existirem (mas não bloquear se falhar)
       let selectQuery = baseColumns
       
       // Verificar e adicionar colunas opcionais uma a uma
@@ -218,29 +228,42 @@ export default function SocialFeed() {
           if (!testError) {
             selectQuery += `, ${col}`
             console.log(`✅ [SOCIAL FEED] Coluna ${col} disponível`)
+          } else {
+            console.log(`ℹ️ [SOCIAL FEED] Coluna ${col} não disponível:`, testError.message)
           }
-        } catch (e) {
-          console.log(`ℹ️ [SOCIAL FEED] Coluna ${col} não disponível`)
+        } catch (e: any) {
+          console.log(`ℹ️ [SOCIAL FEED] Coluna ${col} não disponível (exceção):`, e.message)
         }
       }
 
       // Carregar posts com query otimizada
-      console.log('📊 [SOCIAL FEED] Query:', selectQuery)
+      console.log('📊 [SOCIAL FEED] Query final:', selectQuery)
       const { data, error } = await supabase
         .from("posts")
         .select(selectQuery)
         .order("created_at", { ascending: false })
       
-      console.log('📦 [SOCIAL FEED] Posts carregados:', {
+      console.log('📦 [SOCIAL FEED] Resposta do Supabase:', {
+        tem_dados: !!data,
         total: data?.length || 0,
-        com_media: data?.filter((p: any) => p.media_url || p.media_urls?.length > 0).length || 0,
-        categorias: [...new Set(data?.map((p: any) => p.category).filter(Boolean))] || []
+        erro: error ? {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        } : null
       })
 
       if (error) {
-        console.error("❌ [SOCIAL FEED] Erro ao carregar posts:", error)
-        // Se erro for de coluna não encontrada, tentar sem media_urls
-        if (error.message?.includes("media_urls") || error.message?.includes("column")) {
+        console.error("❌ [SOCIAL FEED] Erro ao carregar posts:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        
+        // Se erro for de coluna não encontrada, tentar sem colunas opcionais
+        if (error.message?.includes("media_urls") || error.message?.includes("column") || error.message?.includes("does not exist")) {
           console.log("⚠️ [SOCIAL FEED] Tentando carregar posts sem colunas opcionais...")
           const { data: fallbackData, error: fallbackError } = await supabase
             .from("posts")
@@ -248,13 +271,26 @@ export default function SocialFeed() {
             .order("created_at", { ascending: false })
           
           if (fallbackError) {
-            console.error("❌ [SOCIAL FEED] Erro ao carregar posts (fallback):", fallbackError)
+            console.error("❌ [SOCIAL FEED] Erro ao carregar posts (fallback):", {
+              message: fallbackError.message,
+              details: fallbackError.details,
+              hint: fallbackError.hint,
+              code: fallbackError.code
+            })
+            alert(`❌ Erro ao carregar posts: ${fallbackError.message}\n\nVerifica as políticas RLS no Supabase.`)
             setPosts([])
           } else {
+            console.log(`✅ [SOCIAL FEED] ${fallbackData?.length || 0} posts carregados (fallback)`)
             setPosts(fallbackData || [])
             generateStoryPreviews(fallbackData || [])
           }
+        } else if (error.message?.includes("permission") || error.message?.includes("policy") || error.message?.includes("RLS")) {
+          console.error("❌ [SOCIAL FEED] Erro de permissão/RLS:", error.message)
+          alert(`❌ Erro de permissão ao carregar posts.\n\nVerifica as políticas RLS no Supabase.\n\nErro: ${error.message}`)
+          setPosts([])
         } else {
+          console.error("❌ [SOCIAL FEED] Erro desconhecido:", error)
+          alert(`❌ Erro ao carregar posts: ${error.message}`)
           setPosts([])
         }
       } else {
@@ -273,6 +309,15 @@ export default function SocialFeed() {
           }
           return post
         })
+        
+        console.log(`✅ [SOCIAL FEED] ${processedPosts.length} posts processados e carregados`)
+        console.log('📋 [SOCIAL FEED] Primeiros 3 posts:', processedPosts.slice(0, 3).map((p: any) => ({
+          id: p.id,
+          user_name: p.user_name,
+          preview: p.content?.substring(0, 50),
+          category: p.category,
+          tem_media: !!(p.media_url || p.media_urls?.length > 0)
+        })))
         
         setPosts(processedPosts)
         generateStoryPreviews(processedPosts)
