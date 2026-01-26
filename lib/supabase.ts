@@ -11,6 +11,7 @@ let supabaseInstance: SupabaseClient | null = null
 
 // Cliente público do Supabase (para uso no frontend)
 // Usa createBrowserClient do @supabase/ssr para PKCE correto com Next.js
+// O createBrowserClient gerencia automaticamente os cookies para o code verifier
 export const supabase = (() => {
   if (typeof window === 'undefined') {
     // No servidor, retornar null (não deve ser usado)
@@ -20,23 +21,8 @@ export const supabase = (() => {
   if (!supabaseInstance) {
     console.log('🔧 Criando instância SINGLETON do Supabase Client (Browser)')
     // Usar createBrowserClient do @supabase/ssr para PKCE correto
-    // Isto armazena o code verifier em cookies, não localStorage
-    supabaseInstance = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      cookies: {
-        getAll() {
-          return document.cookie.split('; ').map(cookie => {
-            const [name, ...rest] = cookie.split('=')
-            return { name, value: rest.join('=') }
-          })
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            const cookieString = `${name}=${value}; path=${options?.path || '/'}; ${options?.maxAge ? `max-age=${options.maxAge};` : ''} ${options?.sameSite ? `sameSite=${options.sameSite};` : ''} ${options?.secure ? 'secure;' : ''}`
-            document.cookie = cookieString
-          })
-        },
-      },
-    })
+    // Isto armazena automaticamente o code verifier em cookies
+    supabaseInstance = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   }
   return supabaseInstance
 })()
