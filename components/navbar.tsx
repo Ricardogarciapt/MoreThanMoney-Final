@@ -54,7 +54,7 @@ export default function Navbar() {
       icon: TrendingUp,
       submenu: [
         { name: "IQ Sync - Configurar", href: "/swipetotrade" },
-        { name: "Ideias de Trading", href: "/trading-ideas" },
+        { name: "Ideias de Trading", href: "https://iqonic.vip/ideas", external: true },
         { name: "Os nossos Scanners", href: "/scanner" },
         { name: "Scanner ao Vivo", href: "/scanner-access" },
         { name: "Automatização", href: "/automation" },

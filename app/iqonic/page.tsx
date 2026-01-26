@@ -216,7 +216,7 @@ export default function IQONICPage() {
               </div>
 
               <a
-                href="https://iqonic.vip"
+                href="https://iqonic.vip/iq-social"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block w-full bg-gradient-to-r from-purple-600 via-mtm-primary to-pink-600 hover:from-purple-500 hover:via-mtm-primary hover:to-pink-500 text-white font-bold text-center px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 text-sm"
@@ -277,7 +277,7 @@ export default function IQONICPage() {
               </div>
 
               <a
-                href="https://iqonic.vip"
+                href="https://iqonic.vip/iq-insight"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block w-full bg-gradient-to-r from-cyan-600 via-mtm-primary to-blue-600 hover:from-cyan-500 hover:via-mtm-primary hover:to-blue-500 text-white font-bold text-center px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 text-sm"
@@ -323,7 +323,7 @@ export default function IQONICPage() {
 
               <div className="text-center">
                 <a
-                  href="https://iqonic.vip"
+                  href="https://iqonic.vip/iq-vault"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-block bg-gradient-to-r from-mtm-primary to-amber-600 hover:from-amber-500 hover:to-mtm-primary text-black font-bold text-lg px-8 py-4 rounded-xl transition-all duration-300 hover:scale-105"
