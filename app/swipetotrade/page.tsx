@@ -36,8 +36,8 @@ export default function SwipeToTradePage() {
             </p>
           </div>
 
-          {/* Visual - Phone Mockup with IQ Sync Interface */}
-          <div className="max-w-md mx-auto mb-12">
+          {/* Visual - Horizontal Card with IQ Sync Interface */}
+          <div className="max-w-4xl mx-auto mb-12">
             <Card className="card-clean hover-lift bg-gradient-to-br from-green-600/20 via-mtm-primary/10 to-emerald-600/20 border-2 border-mtm-primary/50 rounded-3xl p-8 shadow-2xl">
               <div className="relative">
                 {/* Badge de destaque */}
@@ -47,14 +47,14 @@ export default function SwipeToTradePage() {
                   </div>
                 </div>
                 
-                {/* Phone Frame com gradiente melhorado */}
-                <div className="bg-gradient-to-br from-gray-900/90 to-black rounded-2xl p-4 shadow-inner border border-mtm-primary/30">
+                {/* Horizontal Image Frame */}
+                <div className="bg-gradient-to-br from-gray-900/90 to-black rounded-2xl p-6 shadow-inner border border-mtm-primary/30">
                   <div className="bg-gradient-to-br from-blue-950/50 to-cyan-950/50 rounded-xl overflow-hidden border-2 border-blue-500/40">
-                    <div className="aspect-[9/19] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg p-2 relative overflow-hidden">
+                    <div className="aspect-[16/9] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg p-4 relative overflow-hidden">
                       {/* Glow effect */}
                       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-mtm-primary/10 to-cyan-500/20 blur-xl"></div>
                       
-                      {/* Imagem */}
+                      {/* Imagem Horizontal */}
                       <div className="absolute inset-0 z-10">
                         <Image
                           src="/images/iqonic/Imagem Iq Sync.png"

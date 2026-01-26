@@ -1,8 +1,28 @@
+"use client"
+
+import { useState } from "react"
 import ParticleBackground from "@/components/particle-background"
 import YouTubeEmbed from "@/components/youtube-embed"
 import Image from "next/image"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 export default function IQONICPage() {
+  // Slideshow states
+  const [academyIndex, setAcademyIndex] = useState(0)
+  const [socialIndex, setSocialIndex] = useState(0)
+  const [insightsIndex, setInsightsIndex] = useState(0)
+  
+  const academyImages = ["/images/iqonic/Acedemia IQ.png"]
+  const socialImages = ["/images/iqonic/Imagem IQ Social.png"]
+  const insightsImages = ["/images/iqonic/IQ Insights.png"]
+  
+  const nextSlide = (setIndex: (val: number) => void, length: number, current: number) => {
+    setIndex((current + 1) % length)
+  }
+  
+  const prevSlide = (setIndex: (val: number) => void, length: number, current: number) => {
+    setIndex((current - 1 + length) % length)
+  }
   return (
     <main className="min-h-screen bg-black text-white relative">
       <ParticleBackground />
@@ -92,18 +112,45 @@ export default function IQONICPage() {
                 <h3 className="text-2xl font-bold text-white">IQ Academy</h3>
               </div>
               
-              {/* MacBook Mockup - Imagem Principal */}
-              <div className="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700/50">
+              {/* Slideshow - MacBook Mockup */}
+              <div className="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700/50 relative group">
                 <div className="aspect-video bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg overflow-hidden relative">
                   <div className="absolute inset-0">
                     <Image
-                      src="/images/iqonic/Acedemia IQ.png"
+                      src={academyImages[academyIndex]}
                       alt="IQ Academy Interface"
                       fill
-                      className="object-contain rounded-lg"
+                      className="object-contain rounded-lg transition-opacity duration-500"
                       unoptimized
                     />
                   </div>
+                  {/* Navigation Arrows */}
+                  <button
+                    onClick={() => prevSlide(setAcademyIndex, academyImages.length, academyIndex)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-white" />
+                  </button>
+                  <button
+                    onClick={() => nextSlide(setAcademyIndex, academyImages.length, academyIndex)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  >
+                    <ChevronRight className="w-4 h-4 text-white" />
+                  </button>
+                  {/* Dots Indicator */}
+                  {academyImages.length > 1 && (
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+                      {academyImages.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setAcademyIndex(idx)}
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            idx === academyIndex ? 'bg-blue-400 w-4' : 'bg-gray-600'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -126,18 +173,45 @@ export default function IQONICPage() {
                 <h3 className="text-2xl font-bold text-white">IQ Social</h3>
               </div>
               
-              {/* Phone Mockup - Imagem Principal */}
-              <div className="bg-gray-900 rounded-xl p-3 mb-4 border border-gray-700/50">
+              {/* Slideshow - Phone Mockup */}
+              <div className="bg-gray-900 rounded-xl p-3 mb-4 border border-gray-700/50 relative group">
                 <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg overflow-hidden relative">
                   <div className="absolute inset-0">
                     <Image
-                      src="/images/iqonic/Imagem IQ Social.png"
+                      src={socialImages[socialIndex]}
                       alt="IQ Social Interface"
                       fill
-                      className="object-contain rounded-lg"
+                      className="object-contain rounded-lg transition-opacity duration-500"
                       unoptimized
                     />
                   </div>
+                  {/* Navigation Arrows */}
+                  <button
+                    onClick={() => prevSlide(setSocialIndex, socialImages.length, socialIndex)}
+                    className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  >
+                    <ChevronLeft className="w-3 h-3 text-white" />
+                  </button>
+                  <button
+                    onClick={() => nextSlide(setSocialIndex, socialImages.length, socialIndex)}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  >
+                    <ChevronRight className="w-3 h-3 text-white" />
+                  </button>
+                  {/* Dots Indicator */}
+                  {socialImages.length > 1 && (
+                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+                      {socialImages.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setSocialIndex(idx)}
+                          className={`w-1.5 h-1.5 rounded-full transition-all ${
+                            idx === socialIndex ? 'bg-purple-400 w-3' : 'bg-gray-600'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -160,54 +234,45 @@ export default function IQONICPage() {
                 <h3 className="text-2xl font-bold text-white">IQ Insights</h3>
               </div>
               
-              {/* Tablet/Desktop Mockup - Imagem Principal */}
-              <div className="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700/50">
+              {/* Slideshow - Tablet/Desktop Mockup */}
+              <div className="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700/50 relative group">
                 <div className="aspect-video bg-gradient-to-br from-cyan-950 to-blue-950 rounded-lg overflow-hidden relative">
                   <div className="absolute inset-0">
                     <Image
-                      src="/images/iqonic/IQ Insights.png"
+                      src={insightsImages[insightsIndex]}
                       alt="IQ Insights Interface"
                       fill
-                      className="object-contain rounded-lg"
+                      className="object-contain rounded-lg transition-opacity duration-500"
                       unoptimized
                     />
                   </div>
-                  {/* Fallback if image doesn't exist */}
-                  <div className="h-full bg-gray-900 p-2 z-[-1]">
-                    {/* Chart Area */}
-                    <div className="h-full bg-gray-800 rounded relative overflow-hidden">
-                      {/* Chart Title */}
-                      <div className="absolute top-2 left-2 text-white text-xs font-semibold z-10">
-                        Ricardo Gorels - XAUUSD
-                      </div>
-                      {/* Chart Background with Candlesticks */}
-                      <div className="h-full flex items-center justify-center relative">
-                        <div className="w-full h-3/4 relative">
-                          {/* Candlestick representation */}
-                          <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-2">
-                            <div className="w-2 h-8 bg-red-500/40 rounded-t"></div>
-                            <div className="w-2 h-12 bg-green-500/40 rounded-t"></div>
-                            <div className="w-2 h-6 bg-red-500/40 rounded-t"></div>
-                            <div className="w-2 h-10 bg-green-500/40 rounded-t"></div>
-                            <div className="w-2 h-14 bg-green-500/40 rounded-t"></div>
-                            <div className="w-2 h-8 bg-red-500/40 rounded-t"></div>
-                            <div className="w-2 h-11 bg-green-500/40 rounded-t"></div>
-                          </div>
-                          {/* Annotations - Horizontal lines and zones */}
-                          <div className="absolute top-1/4 left-1/4 w-16 h-8 bg-orange-500/40 border-2 border-orange-500/70 rounded flex items-center justify-center">
-                            <span className="text-orange-300 text-[8px]">Zone 1</span>
-                          </div>
-                          <div className="absolute top-1/3 right-1/4 w-12 h-6 bg-blue-500/40 border-2 border-blue-500/70 rounded"></div>
-                          <div className="absolute bottom-1/4 left-1/3 w-14 h-5 bg-blue-500/40 border-2 border-blue-500/70 rounded"></div>
-                          <div className="absolute top-1/2 right-1/3 w-10 h-4 bg-blue-500/40 border-2 border-blue-500/70 rounded"></div>
-                          {/* Support/Resistance lines */}
-                          <div className="absolute top-1/5 left-0 right-0 h-px bg-blue-400/50"></div>
-                          <div className="absolute top-2/5 left-0 right-0 h-px bg-blue-400/50"></div>
-                          <div className="absolute bottom-1/5 left-0 right-0 h-px bg-orange-400/50"></div>
-                        </div>
-                      </div>
+                  {/* Navigation Arrows */}
+                  <button
+                    onClick={() => prevSlide(setInsightsIndex, insightsImages.length, insightsIndex)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-white" />
+                  </button>
+                  <button
+                    onClick={() => nextSlide(setInsightsIndex, insightsImages.length, insightsIndex)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  >
+                    <ChevronRight className="w-4 h-4 text-white" />
+                  </button>
+                  {/* Dots Indicator */}
+                  {insightsImages.length > 1 && (
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+                      {insightsImages.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setInsightsIndex(idx)}
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            idx === insightsIndex ? 'bg-cyan-400 w-4' : 'bg-gray-600'
+                          }`}
+                        />
+                      ))}
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -234,26 +299,25 @@ export default function IQONICPage() {
                     IQ Center
                   </h3>
                 </div>
-                <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+                <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-6">
                   A tua plataforma educacional tudo-em-um. Academias, aulas ao vivo e masterclasses exclusivas num só lugar.
                 </p>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-6 mb-8">
-                <div className="text-center p-4 bg-blue-600/10 rounded-xl border border-blue-500/20">
-                  <div className="text-3xl mb-2">🎓</div>
-                  <div className="text-blue-400 font-semibold">IQ Academy</div>
-                  <div className="text-gray-400 text-sm mt-1">Cursos e Formação</div>
-                </div>
-                <div className="text-center p-4 bg-purple-600/10 rounded-xl border border-purple-500/20">
-                  <div className="text-3xl mb-2">👥</div>
-                  <div className="text-purple-400 font-semibold">IQ Social</div>
-                  <div className="text-gray-400 text-sm mt-1">Networking e Ideias</div>
-                </div>
-                <div className="text-center p-4 bg-cyan-600/10 rounded-xl border border-cyan-500/20">
-                  <div className="text-3xl mb-2">📊</div>
-                  <div className="text-cyan-400 font-semibold">IQ Insights</div>
-                  <div className="text-gray-400 text-sm mt-1">Análises Especializadas</div>
+              {/* Imagem IQ Center */}
+              <div className="mb-8">
+                <div className="bg-gray-900 rounded-xl p-4 border border-gray-700/50">
+                  <div className="aspect-video bg-gradient-to-br from-blue-950 via-purple-950 to-cyan-950 rounded-lg overflow-hidden relative">
+                    <div className="absolute inset-0">
+                      <Image
+                        src="/images/iqonic/Ecosistema IQ Center.png"
+                        alt="IQ Center - Ecossistema Integrado"
+                        fill
+                        className="object-contain rounded-lg"
+                        unoptimized
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -285,6 +349,20 @@ export default function IQONICPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {/* IQ PRO */}
             <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border-2 border-mtm-primary/30 rounded-2xl p-6 hover:border-mtm-primary/60 transition-all duration-300 hover:scale-105">
+              {/* Imagem do Pack */}
+              <div className="mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700/50">
+                <div className="aspect-video bg-gradient-to-br from-mtm-primary/20 to-amber-500/20 rounded-lg overflow-hidden relative">
+                  <div className="absolute inset-0">
+                    <Image
+                      src="/images/iqonic/Preços Pack Elite-Promo-Prime.png"
+                      alt="IQ PRO Pack"
+                      fill
+                      className="object-contain rounded-lg"
+                      unoptimized
+                    />
+                  </div>
+                </div>
+              </div>
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-white mb-2">IQ PRO</h3>
                 <div className="mb-4">
@@ -347,8 +425,22 @@ export default function IQONICPage() {
 
             {/* IQ PRIME */}
             <div className="bg-gradient-to-br from-mtm-primary/20 to-amber-500/20 border-2 border-mtm-primary rounded-2xl p-6 hover:border-mtm-primary/80 transition-all duration-300 hover:scale-105 relative">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-mtm-primary text-black px-3 py-1 rounded-full text-xs font-bold">
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-mtm-primary text-black px-3 py-1 rounded-full text-xs font-bold z-10">
                 RECOMENDADO
+              </div>
+              {/* Imagem do Pack */}
+              <div className="mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700/50">
+                <div className="aspect-video bg-gradient-to-br from-mtm-primary/20 to-amber-500/20 rounded-lg overflow-hidden relative">
+                  <div className="absolute inset-0">
+                    <Image
+                      src="/images/iqonic/Preços Pack Elite-Promo-Prime.png"
+                      alt="IQ PRIME Pack"
+                      fill
+                      className="object-contain rounded-lg"
+                      unoptimized
+                    />
+                  </div>
+                </div>
               </div>
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-white mb-2">IQ PRIME</h3>
@@ -389,8 +481,22 @@ export default function IQONICPage() {
 
             {/* IQ ELITE */}
             <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 border-2 border-purple-500/50 rounded-2xl p-6 hover:border-purple-500/80 transition-all duration-300 hover:scale-105 relative">
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-bold z-10">
                 O PACK DEFINITIVO
+              </div>
+              {/* Imagem do Pack */}
+              <div className="mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700/50">
+                <div className="aspect-video bg-gradient-to-br from-purple-950/20 to-pink-950/20 rounded-lg overflow-hidden relative">
+                  <div className="absolute inset-0">
+                    <Image
+                      src="/images/iqonic/Preços Pack Elite-Promo-Prime.png"
+                      alt="IQ ELITE Pack"
+                      fill
+                      className="object-contain rounded-lg"
+                      unoptimized
+                    />
+                  </div>
+                </div>
               </div>
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-white mb-2">IQ ELITE</h3>
@@ -431,6 +537,20 @@ export default function IQONICPage() {
 
             {/* IQ MAX LIFESTYLE */}
             <div className="bg-gradient-to-br from-amber-600/20 to-orange-600/20 border-2 border-amber-500/50 rounded-2xl p-6 hover:border-amber-500/80 transition-all duration-300 hover:scale-105">
+              {/* Imagem do Pack */}
+              <div className="mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700/50">
+                <div className="aspect-video bg-gradient-to-br from-amber-950/20 to-orange-950/20 rounded-lg overflow-hidden relative">
+                  <div className="absolute inset-0">
+                    <Image
+                      src="/images/iqonic/Preços Emerging MaxLife-Elite.png"
+                      alt="IQ MAX LIFESTYLE Pack"
+                      fill
+                      className="object-contain rounded-lg"
+                      unoptimized
+                    />
+                  </div>
+                </div>
+              </div>
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-white mb-2">IQ MAX LIFESTYLE</h3>
                 <div className="mb-4">
@@ -491,20 +611,54 @@ export default function IQONICPage() {
             Tecnologia que <span className="text-mtm-primary">Liberta</span>
           </h2>
           <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-gradient-to-br from-blue-600/20 to-cyan-600/20 border-2 border-blue-500/30 rounded-xl p-8">
-              <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
-                <span className="text-4xl">🔄</span>
-                IQ SYNC
-              </h3>
+            {/* IQ SYNC Card */}
+            <div className="bg-gradient-to-br from-blue-600/20 via-mtm-primary/10 to-cyan-600/20 border-2 border-blue-500/30 rounded-xl p-8 hover:border-blue-500/60 transition-all duration-300 hover:scale-105">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-gradient-to-br from-blue-500/30 via-mtm-primary/20 to-cyan-500/30 rounded-xl p-4 border-2 border-blue-500/50">
+                  <span className="text-4xl">🔄</span>
+                </div>
+                <h3 className="text-2xl font-bold text-white">IQ SYNC</h3>
+              </div>
+              {/* Imagem Horizontal */}
+              <div className="mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700/50">
+                <div className="aspect-[16/9] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg overflow-hidden relative">
+                  <div className="absolute inset-0">
+                    <Image
+                      src="/images/iqonic/Imagem Iq Sync.png"
+                      alt="IQ SYNC"
+                      fill
+                      className="object-contain rounded-lg"
+                      unoptimized
+                    />
+                  </div>
+                </div>
+              </div>
               <p className="text-gray-300 leading-relaxed">
                 Sistema <strong className="text-blue-400">"Receive → Review → Confirm"</strong>, garantindo que manténs sempre o controlo final de cada decisão. Execução manual de ideias de mercado em tempo real.
               </p>
             </div>
-            <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 border-2 border-purple-500/30 rounded-xl p-8">
-              <h3 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
-                <span className="text-4xl">🤖</span>
-                IQ AUTO (Full Auto)
-              </h3>
+            {/* IQ AUTO Card */}
+            <div className="bg-gradient-to-br from-purple-600/20 via-mtm-primary/10 to-pink-600/20 border-2 border-purple-500/30 rounded-xl p-8 hover:border-purple-500/60 transition-all duration-300 hover:scale-105">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-gradient-to-br from-purple-500/30 via-mtm-primary/20 to-pink-500/30 rounded-xl p-4 border-2 border-purple-500/50">
+                  <span className="text-4xl">🤖</span>
+                </div>
+                <h3 className="text-2xl font-bold text-white">IQ AUTO</h3>
+              </div>
+              {/* Imagem Horizontal */}
+              <div className="mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700/50">
+                <div className="aspect-[16/9] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg overflow-hidden relative">
+                  <div className="absolute inset-0">
+                    <Image
+                      src="/images/iqonic/Imagem Iq Auto.png"
+                      alt="IQ AUTO"
+                      fill
+                      className="object-contain rounded-lg"
+                      unoptimized
+                    />
+                  </div>
+                </div>
+              </div>
               <p className="text-gray-300 leading-relaxed">
                 Experiência <strong className="text-purple-400">"set-it-once"</strong> com proteção <strong className="text-purple-400">SafeGuard</strong> (gestão de risco e limites de capital). Mantém a conta alinhada com estratégias dos educadores de forma 100% automática em segundo plano.
               </p>
@@ -756,58 +910,58 @@ export default function IQONICPage() {
             </div>
           </div>
 
-          {/* Recomendação Pessoal - Destaque */}
-          <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 border-2 border-blue-500/50 rounded-2xl p-8 mb-8 text-center">
+          {/* Recomendação Pessoal - Destaque Melhorado */}
+          <div className="bg-gradient-to-br from-blue-600/20 via-mtm-primary/10 to-purple-600/20 border-2 border-blue-500/50 rounded-2xl p-8 mb-8 text-center hover:border-blue-500/80 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/20">
             <div className="flex items-center justify-center mb-4">
-              <div className="bg-blue-500/20 rounded-full p-4">
+              <div className="bg-gradient-to-br from-blue-500/30 via-mtm-primary/20 to-purple-500/30 rounded-full p-4 border-2 border-blue-500/50">
                 <span className="text-5xl">💬</span>
               </div>
             </div>
             <h3 className="text-2xl font-bold text-white mb-3">Recomendação Pessoal</h3>
             <p className="text-lg text-gray-200 max-w-2xl mx-auto">
-              Contacta-me diretamente para te explicar tudo e aproveitar as <strong className="text-blue-300">melhores condições!</strong>
+              Contacta-me diretamente para te explicar tudo e aproveitar as <strong className="text-mtm-primary">melhores condições!</strong>
             </p>
           </div>
           
-          {/* CTAs Principais - Grid Simétrico */}
+          {/* CTAs Principais - Grid Simétrico Melhorado */}
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             {/* CTA 1 - WhatsApp */}
-            <div className="bg-gradient-to-br from-green-600/10 to-emerald-600/10 border-2 border-green-500/30 rounded-2xl p-8 hover:border-green-500/60 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-green-500/20">
+            <div className="bg-gradient-to-br from-green-600/20 via-mtm-primary/10 to-emerald-600/20 border-2 border-green-500/50 rounded-2xl p-8 hover:border-green-500/80 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-green-500/30">
               <div className="flex justify-center mb-6">
-                <div className="bg-green-500/20 rounded-full p-6">
+                <div className="bg-gradient-to-br from-green-500/30 via-mtm-primary/20 to-emerald-500/30 rounded-full p-6 border-2 border-green-500/50">
                   <span className="text-6xl">🚀</span>
                 </div>
               </div>
               <h3 className="text-2xl font-bold text-white mb-4 text-center">Fala Comigo Agora</h3>
               <p className="text-gray-300 mb-8 text-center leading-relaxed">
-                Manda-me mensagem no WhatsApp! Vou-te explicar <strong className="text-green-300">tudo sobre como criar o teu negócio global</strong> e as melhores condições
+                Manda-me mensagem no WhatsApp! Vou-te explicar <strong className="text-mtm-primary">tudo sobre como criar o teu negócio global</strong> e as melhores condições
               </p>
               <a
                 href="https://wa.me/message/5NMUP53HEXVMB1"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold text-lg px-8 py-5 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-green-500/50 text-center"
+                className="block w-full bg-gradient-to-r from-green-600 via-mtm-primary to-emerald-600 hover:from-green-500 hover:via-mtm-primary hover:to-emerald-500 text-white font-bold text-lg px-8 py-5 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-green-500/50 text-center"
               >
                 💬 Falar no WhatsApp Agora
               </a>
             </div>
 
             {/* CTA 2 - Registo Direto */}
-            <div className="bg-gradient-to-br from-orange-600/10 to-red-600/10 border-2 border-orange-500/30 rounded-2xl p-8 hover:border-orange-500/60 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-orange-500/20">
+            <div className="bg-gradient-to-br from-orange-600/20 via-mtm-primary/10 to-red-600/20 border-2 border-orange-500/50 rounded-2xl p-8 hover:border-orange-500/80 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-orange-500/30">
               <div className="flex justify-center mb-6">
-                <div className="bg-orange-500/20 rounded-full p-6">
+                <div className="bg-gradient-to-br from-orange-500/30 via-mtm-primary/20 to-red-500/30 rounded-full p-6 border-2 border-orange-500/50">
                   <span className="text-6xl">⚡</span>
                 </div>
               </div>
               <h3 className="text-2xl font-bold text-white mb-4 text-center">Registo Direto</h3>
               <p className="text-gray-300 mb-8 text-center leading-relaxed">
-                Se já sabes o que queres, clica aqui e <strong className="text-orange-300">regista-te diretamente</strong> na plataforma IQONIC
+                Se já sabes o que queres, clica aqui e <strong className="text-mtm-primary">regista-te diretamente</strong> na plataforma IQONIC
               </p>
               <a
                 href="https://iqonic.life/morethanmoney"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold text-lg px-8 py-5 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-orange-500/50 text-center"
+                className="block w-full bg-gradient-to-r from-orange-600 via-mtm-primary to-red-600 hover:from-orange-500 hover:via-mtm-primary hover:to-red-500 text-white font-bold text-lg px-8 py-5 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-orange-500/50 text-center"
               >
                 🎯 Faz o Teu Registo Aqui
               </a>

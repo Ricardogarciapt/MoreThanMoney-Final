@@ -1,13 +1,28 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRight, RefreshCw, Bot, Zap, Shield, Clock, CheckCircle, Smartphone } from "lucide-react"
+import { ArrowRight, RefreshCw, Bot, Zap, Shield, Clock, CheckCircle, Smartphone, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import ParticleBackground from "@/components/particle-background"
 import Image from "next/image"
 
 export default function AutomationPage() {
+  // Slideshow state for IQ Auto
+  const [autoIndex, setAutoIndex] = useState(0)
+  const autoImages = [
+    "/images/iqonic/Imagem Iq Auto.png",
+    "/images/iqonic/Imagem Iq Auto 2.png"
+  ]
+  
+  const nextAutoSlide = () => {
+    setAutoIndex((autoIndex + 1) % autoImages.length)
+  }
+  
+  const prevAutoSlide = () => {
+    setAutoIndex((autoIndex - 1 + autoImages.length) % autoImages.length)
+  }
   return (
     <main className="min-h-screen bg-black text-white relative overflow-hidden">
       <ParticleBackground />
@@ -27,56 +42,24 @@ export default function AutomationPage() {
         {/* IQ Sync Section - Azul Escuro */}
         <div className="max-w-7xl mx-auto mb-20">
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Visual - Phone Mockup - Destaque Principal */}
+            {/* Visual - Horizontal Card - Destaque Principal */}
             <div className="relative order-2 md:order-1">
-              <div className="bg-gradient-to-br from-blue-900/40 to-cyan-900/40 rounded-3xl p-8 border-2 border-blue-500/30 backdrop-blur-sm">
-                <div className="bg-black rounded-2xl p-4 shadow-2xl">
-                  <div className="bg-gray-900 rounded-xl overflow-hidden">
-                    {/* Phone Screen Mockup */}
-                    <div className="aspect-[9/19] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg p-2 relative">
-                      <div className="absolute inset-0">
-                        <Image
-                          src="/images/iqonic/Imagem Iq Sync.png"
-                          alt="IQ Sync Interface"
-                          fill
-                          className="object-contain rounded-lg"
-                          unoptimized
-                        />
-                      </div>
-                      {/* Fallback if image doesn't exist */}
-                      <div className="h-full bg-gray-900 rounded-lg p-4 space-y-4 z-[-1]">
-                        {/* Status Bar */}
-                        <div className="flex justify-between items-center text-xs text-gray-400 mb-4">
-                          <span>9:41</span>
-                          <div className="flex gap-1">
-                            <div className="w-4 h-2 bg-gray-600 rounded"></div>
-                            <div className="w-4 h-2 bg-gray-600 rounded"></div>
-                            <div className="w-4 h-2 bg-gray-600 rounded"></div>
-                          </div>
-                        </div>
-                        
-                        {/* Content Cards */}
-                        <div className="space-y-3">
-                          <div className="bg-blue-600/20 border border-blue-500/30 rounded-lg p-4">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="w-8 h-8 bg-blue-500 rounded-full"></div>
-                              <div>
-                                <div className="text-white font-semibold text-sm">Tyler Collins</div>
-                                <div className="text-blue-400 text-xs">Buy Signal</div>
-                              </div>
-                            </div>
-                            <div className="text-green-400 font-bold text-lg">US100 ↑</div>
-                          </div>
-                          <div className="bg-cyan-600/20 border border-cyan-500/30 rounded-lg p-4">
-                            <div className="text-white font-semibold text-sm mb-1">Market Idea</div>
-                            <div className="text-cyan-400 text-xs">Review & Confirm</div>
-                          </div>
-                        </div>
-                      </div>
+              <Card className="card-clean hover-lift bg-gradient-to-br from-blue-900/40 via-mtm-primary/10 to-cyan-900/40 border-2 border-blue-500/30 rounded-3xl p-8 shadow-2xl">
+                <div className="bg-gray-900 rounded-2xl p-6 border border-gray-700/50">
+                  {/* Horizontal Image */}
+                  <div className="aspect-[16/9] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-xl overflow-hidden relative">
+                    <div className="absolute inset-0">
+                      <Image
+                        src="/images/iqonic/Imagem Iq Sync.png"
+                        alt="IQ Sync Interface"
+                        fill
+                        className="object-contain rounded-lg"
+                        unoptimized
+                      />
                     </div>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
 
             {/* Text Content - Simplificado */}
@@ -127,101 +110,53 @@ export default function AutomationPage() {
         {/* IQ Auto Section - Roxo/Púrpura */}
         <div className="max-w-7xl mx-auto mb-20">
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            {/* Visual - Phone Mockups - Destaque Principal */}
+            {/* Visual - Slideshow Horizontal - Destaque Principal */}
             <div className="relative order-2 md:order-1">
-              <div className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 rounded-3xl p-8 border-2 border-purple-500/30 backdrop-blur-sm">
-                <div className="grid grid-cols-3 gap-4">
-                  {/* Phone 1 - Setup */}
-                  <div className="bg-black rounded-2xl p-2 shadow-2xl">
-                    <div className="bg-gray-900 rounded-xl overflow-hidden">
-                      <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg p-2 relative">
-                        <div className="absolute inset-0">
-                          <Image
-                            src="/images/iqonic/Imagem Iq Auto.png"
-                            alt="IQ Auto Setup"
-                            fill
-                            className="object-contain rounded-lg"
-                            unoptimized
-                          />
-                        </div>
-                        {/* Fallback if image doesn't exist */}
-                        <div className="h-full bg-gray-900 rounded-lg p-3 space-y-2 absolute inset-0 z-[-1]">
-                          <div className="text-xs text-gray-400 text-center mb-2">9:41</div>
-                          <div className="text-white font-bold text-xs mb-2">Setup your account</div>
-                          <div className="space-y-2">
-                            <div className="bg-purple-600/20 border border-purple-500/30 rounded p-2 text-xs text-gray-300">Connect broker</div>
-                            <div className="bg-purple-600/20 border border-purple-500/30 rounded p-2 text-xs text-gray-300">Pick strategy</div>
-                            <div className="bg-purple-600/20 border border-purple-500/30 rounded p-2 text-xs text-gray-300">Set SafeGuard</div>
-                          </div>
-                        </div>
-                      </div>
+              <Card className="card-clean hover-lift bg-gradient-to-br from-purple-900/40 via-mtm-primary/10 to-pink-900/40 border-2 border-purple-500/30 rounded-3xl p-8 shadow-2xl">
+                <div className="bg-gray-900 rounded-2xl p-6 border border-gray-700/50 relative group">
+                  {/* Horizontal Slideshow */}
+                  <div className="aspect-[16/9] bg-gradient-to-br from-purple-950 to-pink-950 rounded-xl overflow-hidden relative">
+                    <div className="absolute inset-0">
+                      <Image
+                        src={autoImages[autoIndex]}
+                        alt={`IQ Auto ${autoIndex + 1}`}
+                        fill
+                        className="object-contain rounded-lg transition-opacity duration-500"
+                        unoptimized
+                      />
                     </div>
-                  </div>
-
-                  {/* Phone 2 - Strategies */}
-                  <div className="bg-black rounded-2xl p-2 shadow-2xl">
-                    <div className="bg-gray-900 rounded-xl overflow-hidden">
-                      <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg p-2 relative">
-                        <div className="absolute inset-0">
-                          <Image
-                            src="/images/iqonic/Imagem Iq Auto 2.png"
-                            alt="IQ Auto Strategies"
-                            fill
-                            className="object-contain rounded-lg"
-                            unoptimized
-                          />
+                    {/* Navigation Arrows */}
+                    {autoImages.length > 1 && (
+                      <>
+                        <button
+                          onClick={prevAutoSlide}
+                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        >
+                          <ChevronLeft className="w-5 h-5 text-white" />
+                        </button>
+                        <button
+                          onClick={nextAutoSlide}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        >
+                          <ChevronRight className="w-5 h-5 text-white" />
+                        </button>
+                        {/* Dots Indicator */}
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                          {autoImages.map((_, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setAutoIndex(idx)}
+                              className={`w-2 h-2 rounded-full transition-all ${
+                                idx === autoIndex ? 'bg-purple-400 w-6' : 'bg-gray-600'
+                              }`}
+                            />
+                          ))}
                         </div>
-                        {/* Fallback if image doesn't exist */}
-                        <div className="h-full bg-gray-900 rounded-lg p-3 space-y-2 absolute inset-0 z-[-1]">
-                          <div className="text-xs text-gray-400 text-center mb-2">9:41</div>
-                          <div className="text-white font-bold text-xs mb-2">Strategies</div>
-                          <div className="space-y-1.5">
-                            <div className="bg-purple-600/30 rounded p-1.5">
-                              <div className="text-white text-xs font-semibold">US30 Sniper</div>
-                              <div className="text-green-400 text-xs">+4 pips</div>
-                            </div>
-                            <div className="bg-cyan-600/30 rounded p-1.5">
-                              <div className="text-white text-xs font-semibold">Tyler Collins</div>
-                              <div className="text-green-400 text-xs">+102 pips</div>
-                            </div>
-                            <div className="bg-pink-600/30 rounded p-1.5">
-                              <div className="text-white text-xs font-semibold">Ralph Danquah</div>
-                              <div className="text-green-400 text-xs">+125 pips</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Phone 3 - Chart */}
-                  <div className="bg-black rounded-2xl p-2 shadow-2xl">
-                    <div className="bg-gray-900 rounded-xl overflow-hidden">
-                      <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg p-2 relative">
-                        <div className="absolute inset-0">
-                          <Image
-                            src="/images/iqonic/Imagem Iq Auto.png"
-                            alt="IQ Auto Chart"
-                            fill
-                            className="object-contain rounded-lg"
-                            unoptimized
-                          />
-                        </div>
-                        {/* Fallback if image doesn't exist */}
-                        <div className="h-full bg-gray-900 rounded-lg p-3 space-y-2 absolute inset-0 z-[-1]">
-                          <div className="text-xs text-gray-400 text-center mb-2">9:41</div>
-                          <div className="bg-purple-600/20 rounded p-2 h-16 flex items-center justify-center">
-                            <div className="text-white text-xs font-semibold">Chart View</div>
-                          </div>
-                          <div className="bg-purple-600/20 border border-purple-500/30 rounded p-2">
-                            <div className="text-white text-xs text-center">Remove Strategy</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                      </>
+                    )}
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
 
             {/* Text Content - Simplificado */}
