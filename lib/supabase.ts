@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js"
+import { createBrowserClient } from "@supabase/ssr"
 
 // URLs e chaves do Supabase
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://iwscxotvmtkphajmasof.supabase.co"
@@ -9,44 +10,31 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciO
 let supabaseInstance: SupabaseClient | null = null
 
 // Cliente público do Supabase (para uso no frontend)
+// Usa createBrowserClient do @supabase/ssr para PKCE correto com Next.js
 export const supabase = (() => {
+  if (typeof window === 'undefined') {
+    // No servidor, retornar null (não deve ser usado)
+    return null as any
+  }
+  
   if (!supabaseInstance) {
-    if (typeof window !== 'undefined') {
-      console.log('🔧 Criando instância SINGLETON do Supabase Client')
-    }
-    supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storage: typeof window !== 'undefined' 
-          ? {
-              getItem: (key: string) => {
-                // Tentar localStorage primeiro
-                try {
-                  return window.localStorage.getItem(key)
-                } catch {
-                  // Se localStorage falhar, retornar null
-                  return null
-                }
-              },
-              setItem: (key: string, value: string) => {
-                try {
-                  window.localStorage.setItem(key, value)
-                } catch {
-                  // Silenciosamente ignorar se localStorage não disponível
-                }
-              },
-              removeItem: (key: string) => {
-                try {
-                  window.localStorage.removeItem(key)
-                } catch {
-                  // Silenciosamente ignorar se localStorage não disponível
-                }
-              },
-            }
-          : undefined,
-        flowType: 'pkce',
+    console.log('🔧 Criando instância SINGLETON do Supabase Client (Browser)')
+    // Usar createBrowserClient do @supabase/ssr para PKCE correto
+    // Isto armazena o code verifier em cookies, não localStorage
+    supabaseInstance = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      cookies: {
+        getAll() {
+          return document.cookie.split('; ').map(cookie => {
+            const [name, ...rest] = cookie.split('=')
+            return { name, value: rest.join('=') }
+          })
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            const cookieString = `${name}=${value}; path=${options?.path || '/'}; ${options?.maxAge ? `max-age=${options.maxAge};` : ''} ${options?.sameSite ? `sameSite=${options.sameSite};` : ''} ${options?.secure ? 'secure;' : ''}`
+            document.cookie = cookieString
+          })
+        },
       },
     })
   }
