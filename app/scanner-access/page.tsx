@@ -210,6 +210,25 @@ export default function ScannerAccessPage() {
     }
   }
 
+  // Adicionar XP quando página é visualizada (apenas uma vez por sessão)
+  useEffect(() => {
+    if (mounted) {
+      const viewedKey = 'scanner_access_viewed'
+      if (!sessionStorage.getItem(viewedKey)) {
+        fetch('/api/xp/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            action_type: 'scanner_access_view',
+            action_description: 'Visualizou página Scanner Access'
+          })
+        }).catch(err => console.error('Erro ao adicionar XP:', err))
+        sessionStorage.setItem(viewedKey, 'true')
+      }
+    }
+  }, [mounted])
+
   // Load trading plan when modal opens
   useEffect(() => {
     if (showTradingPlanModal) {
