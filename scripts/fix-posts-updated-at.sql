@@ -121,7 +121,7 @@ CREATE POLICY "Admins e autores deletam posts" ON public.posts
     )
   );
 
-RAISE NOTICE '✅ Políticas RLS criadas/atualizadas';
+-- Nota: Políticas RLS criadas/atualizadas
 
 -- 6. Verificação final - mostrar estrutura da tabela
 SELECT 
