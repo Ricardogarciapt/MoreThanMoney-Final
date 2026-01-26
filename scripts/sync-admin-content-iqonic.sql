@@ -15,7 +15,14 @@ BEGIN
   END IF;
 END $$;
 
--- 2. Adicionar novas páginas IQONIC
+-- 2. Garantir que o trigger existe (sem erro se já existir)
+DROP TRIGGER IF EXISTS update_site_content_updated_at ON site_content;
+CREATE TRIGGER update_site_content_updated_at 
+  BEFORE UPDATE ON site_content
+  FOR EACH ROW 
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- 3. Adicionar novas páginas IQONIC
 INSERT INTO site_content (type, category, title, description, url, order_index, is_active) VALUES
 -- Páginas IQONIC
 ('link', 'education', 'IQONIC - Apresentação', 'Página principal IQONIC com packs e tecnologia', '/iqonic', 1, true),
@@ -33,7 +40,7 @@ INSERT INTO site_content (type, category, title, description, url, order_index, 
 ('link', 'trading', 'Ativar IQ Auto', 'Link para ativar IQ Auto', 'https://shield.iqonic.life/news.dhtml?usepage=iqauto.html', 2, true)
 ON CONFLICT DO NOTHING;
 
--- 3. Atualizar links existentes se necessário
+-- 4. Atualizar links existentes se necessário
 UPDATE site_content 
 SET 
   url = '/iqonic',
@@ -52,7 +59,7 @@ SET
   description = 'Página do IQ Auto (automação total)'
 WHERE title LIKE '%Automatização%' OR title LIKE '%IQ Auto%';
 
--- 4. Verificar conteúdo inserido
+-- 5. Verificar conteúdo inserido
 SELECT 
   '✅ Conteúdo sincronizado!' as status,
   category,
@@ -63,7 +70,7 @@ WHERE category IN ('education', 'trading')
 GROUP BY category
 ORDER BY category;
 
--- 5. Listar todas as entradas IQONIC
+-- 6. Listar todas as entradas IQONIC
 SELECT 
   id,
   type,
