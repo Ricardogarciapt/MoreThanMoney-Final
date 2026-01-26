@@ -210,13 +210,14 @@ export default function SocialFeed() {
       })
 
       // Query base com colunas obrigatórias - SEMPRE usar estas
-      const baseColumns = "id, user_id, user_name, content, media_url, category, created_at, updated_at"
+      // Nota: updated_at pode não existir em algumas instalações, vamos verificar
+      const baseColumns = "id, user_id, user_name, content, media_url, category, created_at"
       
       // Tentar adicionar colunas opcionais se existirem (mas não bloquear se falhar)
       let selectQuery = baseColumns
       
-      // Verificar e adicionar colunas opcionais uma a uma
-      const optionalColumns = ["media_urls", "mentions", "likes_count", "comments_count"]
+      // Verificar e adicionar colunas opcionais uma a uma (incluindo updated_at)
+      const optionalColumns = ["updated_at", "media_urls", "mentions", "likes_count", "comments_count"]
       
       for (const col of optionalColumns) {
         try {
@@ -267,7 +268,7 @@ export default function SocialFeed() {
           console.log("⚠️ [SOCIAL FEED] Tentando carregar posts sem colunas opcionais...")
           const { data: fallbackData, error: fallbackError } = await supabase
             .from("posts")
-            .select("id, user_id, user_name, content, media_url, category, created_at, updated_at")
+            .select("id, user_id, user_name, content, media_url, category, created_at")
             .order("created_at", { ascending: false })
           
           if (fallbackError) {
