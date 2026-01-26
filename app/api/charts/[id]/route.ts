@@ -26,14 +26,25 @@ export async function PUT(
       }
     )
 
-    // Verificar autenticação
-    const { data: { session } } = await supabase.auth.getSession()
+    // Verificar autenticação - tentar getUser primeiro (mais robusto)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      )
+    if (userError || !user) {
+      // Fallback: tentar getSession
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !session) {
+        console.error('Erro de autenticação:', userError || sessionError)
+        return NextResponse.json(
+          { success: false, error: 'Não autenticado' },
+          { status: 401 }
+        )
+      }
+      
+      // Usar user da sessão
+      var userId = session.user.id
+    } else {
+      var userId = user.id
     }
 
     const body = await request.json()
@@ -63,7 +74,7 @@ export async function PUT(
       .from('user_charts')
       .update(updateData)
       .eq('id', params.id)
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .select()
       .single()
 
@@ -119,14 +130,25 @@ export async function DELETE(
       }
     )
 
-    // Verificar autenticação
-    const { data: { session } } = await supabase.auth.getSession()
+    // Verificar autenticação - tentar getUser primeiro (mais robusto)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      )
+    if (userError || !user) {
+      // Fallback: tentar getSession
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !session) {
+        console.error('Erro de autenticação:', userError || sessionError)
+        return NextResponse.json(
+          { success: false, error: 'Não autenticado' },
+          { status: 401 }
+        )
+      }
+      
+      // Usar user da sessão
+      var userId = session.user.id
+    } else {
+      var userId = user.id
     }
 
     // Apagar chart
@@ -134,7 +156,7 @@ export async function DELETE(
       .from('user_charts')
       .delete()
       .eq('id', params.id)
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
 
     if (error) {
       console.error('Erro ao apagar chart:', error)

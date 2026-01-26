@@ -23,21 +23,32 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    // Verificar autenticação
-    const { data: { session } } = await supabase.auth.getSession()
+    // Verificar autenticação - tentar getUser primeiro (mais robusto)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      )
+    if (userError || !user) {
+      // Fallback: tentar getSession
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !session) {
+        console.error('Erro de autenticação:', userError || sessionError)
+        return NextResponse.json(
+          { success: false, error: 'Não autenticado' },
+          { status: 401 }
+        )
+      }
+      
+      // Usar user da sessão
+      var userId = session.user.id
+    } else {
+      var userId = user.id
     }
 
     // Buscar charts do utilizador
     const { data: charts, error } = await supabase
       .from('user_charts')
       .select('*')
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -82,14 +93,25 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    // Verificar autenticação
-    const { data: { session } } = await supabase.auth.getSession()
+    // Verificar autenticação - tentar getUser primeiro (mais robusto)
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
     
-    if (!session) {
-      return NextResponse.json(
-        { success: false, error: 'Não autenticado' },
-        { status: 401 }
-      )
+    if (userError || !user) {
+      // Fallback: tentar getSession
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !session) {
+        console.error('Erro de autenticação:', userError || sessionError)
+        return NextResponse.json(
+          { success: false, error: 'Não autenticado' },
+          { status: 401 }
+        )
+      }
+      
+      // Usar user da sessão
+      var userId = session.user.id
+    } else {
+      var userId = user.id
     }
 
     const body = await request.json()
@@ -116,7 +138,7 @@ export async function POST(request: NextRequest) {
     const { data: existingCharts, error: countError } = await supabase
       .from('user_charts')
       .select('id')
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
 
     if (countError) {
       console.error('Erro ao contar charts:', countError)
@@ -131,7 +153,7 @@ export async function POST(request: NextRequest) {
     const { data: newChart, error } = await supabase
       .from('user_charts')
       .insert({
-        user_id: session.user.id,
+        user_id: userId,
         chart_name,
         symbol,
         timeframe,
