@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import ScannerScreener from "@/components/scanner-screener"
+import { supabase } from "@/lib/supabase"
 
 // Ordem explícita dos scanners (mantém a ordem dos botões)
 const scannerOrder = [
@@ -290,10 +291,8 @@ export default function TradingViewWidget({
   const [showSettings, setShowSettings] = useState(false)
 
   // Gráficos salvos
-  const [savedCharts, setSavedCharts] = useState<SavedChart[]>(() => {
-    const saved = localStorage.getItem("mtm_saved_charts")
-    return saved ? JSON.parse(saved) : []
-  })
+  const [savedCharts, setSavedCharts] = useState<SavedChart[]>([])
+  const [loadingCharts, setLoadingCharts] = useState(false)
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [showLoadDialog, setShowLoadDialog] = useState(false)
   const [chartNameToSave, setChartNameToSave] = useState("")
@@ -313,10 +312,50 @@ export default function TradingViewWidget({
     localStorage.setItem("mtm_favorite_timeframe", favoriteTimeframe)
   }, [favoriteTimeframe])
 
-  // Persistir gráficos salvos
+  // Carregar gráficos salvos do Supabase
   useEffect(() => {
-    localStorage.setItem("mtm_saved_charts", JSON.stringify(savedCharts))
-  }, [savedCharts])
+    loadSavedCharts()
+  }, [])
+
+  const loadSavedCharts = async () => {
+    setLoadingCharts(true)
+    try {
+      const response = await fetch('/api/charts', {
+        credentials: 'include',
+        cache: 'no-store'
+      })
+      const data = await response.json()
+      
+      if (data.success && data.charts) {
+        // Converter formato do Supabase para SavedChart
+        const charts: SavedChart[] = data.charts.map((chart: any) => ({
+          id: chart.id,
+          name: chart.chart_name,
+          symbol: chart.symbol,
+          data: {
+            symbol: chart.symbol,
+            studies: chart.selected_studies || [],
+            theme: chart.theme,
+            timeframe: chart.timeframe,
+            timestamp: new Date(chart.created_at).getTime(),
+            chart_state: chart.chart_state,
+            drawings_data: chart.drawings_data
+          },
+          timestamp: new Date(chart.created_at).getTime()
+        }))
+        setSavedCharts(charts)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar charts:', error)
+      // Fallback para localStorage se API falhar
+      const saved = localStorage.getItem("mtm_saved_charts")
+      if (saved) {
+        setSavedCharts(JSON.parse(saved))
+      }
+    } finally {
+      setLoadingCharts(false)
+    }
+  }
 
   const toggleStudy = (study: ScannerKey) => {
     setSelectedStudies((prev) => {
@@ -349,12 +388,21 @@ export default function TradingViewWidget({
       return
     }
 
-    if (savedCharts.length >= 20) {
-      alert("Limite de 20 gráficos salvos atingido. Delete um gráfico antigo para salvar um novo.")
-      return
-    }
-
     try {
+      // Tentar obter desenhos do TradingView se disponível
+      let drawingsData: any[] = []
+      if (widgetRef.current?.chart) {
+        try {
+          const chart = widgetRef.current.chart()
+          if (chart && typeof chart.getAllShapes === 'function') {
+            const shapes = chart.getAllShapes()
+            drawingsData = shapes || []
+          }
+        } catch (e) {
+          console.warn('Não foi possível obter desenhos do TradingView:', e)
+        }
+      }
+
       // Salvar estado completo do gráfico
       const chartState = {
         symbol: selectedSymbol,
@@ -364,22 +412,37 @@ export default function TradingViewWidget({
         timestamp: Date.now(),
       }
 
-      const newChart: SavedChart = {
-        id: Date.now().toString(),
-        name: chartNameToSave,
-        symbol: selectedSymbol,
-        data: chartState,
-        timestamp: Date.now(),
-      }
+      // Salvar no Supabase
+      const response = await fetch('/api/charts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          chart_name: chartNameToSave,
+          symbol: selectedSymbol,
+          timeframe: favoriteTimeframe,
+          theme: theme,
+          chart_state: chartState,
+          drawings_data: drawingsData,
+          selected_studies: selectedStudies,
+          is_favorite: false
+        })
+      })
 
-      setSavedCharts((prev) => [...prev, newChart])
-      setChartNameToSave("")
-      setShowSaveDialog(false)
-      
-      alert(`✅ Gráfico "${newChart.name}" salvo com sucesso!`)
-    } catch (error) {
+      const data = await response.json()
+
+      if (data.success) {
+        // Recarregar lista de charts
+        await loadSavedCharts()
+        setChartNameToSave("")
+        setShowSaveDialog(false)
+        alert(`✅ Gráfico "${chartNameToSave}" salvo com sucesso!`)
+      } else {
+        throw new Error(data.error || 'Erro ao salvar gráfico')
+      }
+    } catch (error: any) {
       console.error("Erro ao salvar gráfico:", error)
-      alert("❌ Erro ao salvar gráfico. Tente novamente.")
+      alert(`❌ Erro ao salvar gráfico: ${error.message || 'Tente novamente.'}`)
     }
   }
 
@@ -393,6 +456,31 @@ export default function TradingViewWidget({
         setSelectedStudies(chart.data.studies || [])
         handleThemeChange(chart.data.theme || "dark")
         handleTimeframeChange(chart.data.timeframe || "60")
+        
+        // Tentar restaurar desenhos se disponível
+        if (chart.data.drawings_data && widgetRef.current?.chart) {
+          setTimeout(() => {
+            try {
+              const chartWidget = widgetRef.current.chart()
+              if (chartWidget && typeof chartWidget.createShape === 'function') {
+                // Restaurar desenhos (se TradingView suportar)
+                chart.data.drawings_data.forEach((drawing: any) => {
+                  try {
+                    // TradingView pode ter métodos específicos para restaurar desenhos
+                    // Esta é uma implementação básica - pode precisar de ajustes
+                    if (drawing.type && chartWidget[`create${drawing.type}`]) {
+                      chartWidget[`create${drawing.type}`](drawing)
+                    }
+                  } catch (e) {
+                    console.warn('Erro ao restaurar desenho:', e)
+                  }
+                })
+              }
+            } catch (e) {
+              console.warn('Não foi possível restaurar desenhos:', e)
+            }
+          }, 2000) // Aguardar widget carregar
+        }
       }
 
       setShowLoadDialog(false)
@@ -403,9 +491,29 @@ export default function TradingViewWidget({
     }
   }
 
-  const handleDeleteChart = (chartId: string) => {
-    if (confirm("Tem certeza que deseja deletar este gráfico?")) {
-      setSavedCharts((prev) => prev.filter((c) => c.id !== chartId))
+  const handleDeleteChart = async (chartId: string) => {
+    if (!confirm("Tem certeza que deseja deletar este gráfico?")) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/charts/${chartId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        // Recarregar lista de charts
+        await loadSavedCharts()
+        alert('✅ Gráfico apagado com sucesso!')
+      } else {
+        throw new Error(data.error || 'Erro ao apagar gráfico')
+      }
+    } catch (error: any) {
+      console.error('Erro ao apagar gráfico:', error)
+      alert(`❌ Erro ao apagar gráfico: ${error.message || 'Tente novamente.'}`)
     }
   }
 
@@ -853,7 +961,12 @@ export default function TradingViewWidget({
                   <DialogTitle className="text-[#D2A63C]">Carregar Gráfico Salvo</DialogTitle>
                 </DialogHeader>
                 <div className="py-4 max-h-[400px] overflow-y-auto">
-                  {savedCharts.length === 0 ? (
+                  {loadingCharts ? (
+                    <div className="text-center py-8 text-gray-400">
+                      <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                      <p>A carregar gráficos...</p>
+                    </div>
+                  ) : savedCharts.length === 0 ? (
                     <div className="text-center py-8 text-gray-400">Nenhum gráfico salvo</div>
                   ) : (
                     <div className="space-y-2">

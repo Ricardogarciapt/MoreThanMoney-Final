@@ -162,7 +162,53 @@ export default function ScannerAccessPage() {
 
   useEffect(() => {
     setMounted(true)
+    loadChecklistProgress()
   }, [])
+
+  // Carregar progresso da checklist do Supabase
+  const loadChecklistProgress = async () => {
+    try {
+      const response = await fetch('/api/checklist', {
+        credentials: 'include',
+        cache: 'no-store'
+      })
+      const data = await response.json()
+      
+      if (data.success && data.progress && data.progress.checklist_data?.sections) {
+        // Restaurar estado da checklist
+        setChecklistSections(data.progress.checklist_data.sections)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar checklist:', error)
+      // Continuar com estado padrão se falhar
+    }
+  }
+
+  // Salvar progresso da checklist no Supabase
+  const saveChecklistProgress = async (sections: ChecklistSection[]) => {
+    try {
+      const totalItems = sections.reduce((acc, section) => acc + section.items.length, 0)
+      const completedItems = sections.reduce(
+        (acc, section) => acc + section.items.filter(item => item.checked).length,
+        0
+      )
+
+      await fetch('/api/checklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          checklist_data: {
+            sections: sections
+          },
+          total_items: totalItems,
+          completed_items: completedItems
+        })
+      })
+    } catch (error) {
+      console.error('Erro ao salvar checklist:', error)
+    }
+  }
 
   // Load trading plan when modal opens
   useEffect(() => {
@@ -283,21 +329,63 @@ export default function ScannerAccessPage() {
     }
   }
 
-  const handleCheckboxChange = (sectionIndex: number, itemIndex: number) => {
+  const handleCheckboxChange = async (sectionIndex: number, itemIndex: number) => {
     setChecklistSections(prev => {
       const newSections = [...prev]
-      newSections[sectionIndex].items[itemIndex].checked = !newSections[sectionIndex].items[itemIndex].checked
+      const wasChecked = newSections[sectionIndex].items[itemIndex].checked
+      newSections[sectionIndex].items[itemIndex].checked = !wasChecked
+      
+      // Salvar no Supabase
+      saveChecklistProgress(newSections)
+      
+      // Adicionar XP quando item é marcado (não quando desmarcado)
+      if (!wasChecked) {
+        // Adicionar XP para item da checklist
+        fetch('/api/xp/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            action_type: 'scanner_checklist_item',
+            action_description: `Item marcado: ${newSections[sectionIndex].items[itemIndex].label}`
+          })
+        }).catch(err => console.error('Erro ao adicionar XP:', err))
+        
+        // Verificar se checklist completa e adicionar XP bônus
+        const totalItems = newSections.reduce((acc, section) => acc + section.items.length, 0)
+        const completedItems = newSections.reduce(
+          (acc, section) => acc + section.items.filter(item => item.checked).length,
+          0
+        )
+        
+        if (completedItems === totalItems && totalItems > 0) {
+          // Checklist completa - adicionar XP bônus
+          fetch('/api/xp/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              action_type: 'scanner_complete_checklist',
+              action_description: 'Checklist completa!'
+            })
+          }).catch(err => console.error('Erro ao adicionar XP bônus:', err))
+        }
+      }
+      
       return newSections
     })
   }
 
   const handleReset = () => {
-    setChecklistSections(prev =>
-      prev.map(section => ({
+    setChecklistSections(prev => {
+      const resetSections = prev.map(section => ({
         ...section,
         items: section.items.map(item => ({ ...item, checked: false }))
       }))
-    )
+      // Salvar estado resetado
+      saveChecklistProgress(resetSections)
+      return resetSections
+    })
   }
 
   const totalItems = checklistSections.reduce((acc, section) => acc + section.items.length, 0)
