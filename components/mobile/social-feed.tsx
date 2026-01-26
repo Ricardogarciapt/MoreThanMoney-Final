@@ -524,24 +524,51 @@ export default function SocialFeed() {
         
         if (fallbackError) {
           console.error("❌ [SOCIAL FEED] Erro ao criar post (fallback):", fallbackError)
-          alert(`❌ Erro ao publicar: ${fallbackError.message}\n\n💡 Execute o script: scripts/fix-posts-media-urls.sql no Supabase`)
+          
+          // Mensagens de erro mais específicas
+          if (fallbackError.message?.includes('relation') && fallbackError.message?.includes('does not exist')) {
+            alert('❌ Erro: Tabela "posts" não existe no Supabase.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Ou: scripts/create-posts-table-with-categories.sql')
+          } else if (fallbackError.message?.includes('permission') || fallbackError.message?.includes('policy')) {
+            alert('❌ Erro: Sem permissão para criar posts.\n\n📋 SOLUÇÃO:\n1. Verifica se és VIP ou Admin\n2. Executa: scripts/fix-posts-storage-completo.sql para configurar RLS')
+          } else if (fallbackError.message?.includes('violates check constraint')) {
+            alert('❌ Erro: Categoria inválida. Categorias válidas: updates, forex, crypto, mindset, lideranca, network, social')
+          } else {
+            alert(`❌ Erro ao publicar: ${fallbackError.message}\n\n💡 Execute o script: scripts/fix-posts-media-urls.sql no Supabase`)
+          }
+          
           setUploading(false)
           return
         }
+        // Se fallback funcionou, continuar com o fluxo de sucesso
       } else if (error) {
         console.error("❌ [SOCIAL FEED] Erro ao criar post:", error)
+        console.error("❌ [SOCIAL FEED] Detalhes:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
         
-        // Mensagem de erro mais útil
-        let errorMessage = `❌ Erro ao publicar: ${error.message}`
-        if (error.message?.includes("media_urls") || error.message?.includes("column")) {
-          errorMessage += "\n\n💡 SOLUÇÃO:\nExecute o script SQL no Supabase:\nscripts/fix-posts-media-urls.sql"
+        // Mensagens de erro mais específicas
+        if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+          alert('❌ Erro: Tabela "posts" não existe no Supabase.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Ou: scripts/create-posts-table-with-categories.sql')
+        } else if (error.message?.includes('permission') || error.message?.includes('policy')) {
+          alert('❌ Erro: Sem permissão para criar posts.\n\n📋 SOLUÇÃO:\n1. Verifica se és VIP ou Admin\n2. Executa: scripts/fix-posts-storage-completo.sql para configurar RLS')
+        } else if (error.message?.includes('violates check constraint')) {
+          alert('❌ Erro: Categoria inválida. Categorias válidas: updates, forex, crypto, mindset, lideranca, network, social')
+        } else {
+          let errorMessage = `❌ Erro ao publicar: ${error.message}`
+          if (error.message?.includes("media_urls") || error.message?.includes("column")) {
+            errorMessage += "\n\n💡 SOLUÇÃO:\nExecute o script SQL no Supabase:\nscripts/fix-posts-media-urls.sql"
+          }
+          alert(errorMessage)
         }
         
-        alert(errorMessage)
         setUploading(false)
         return
       }
 
+      // Se chegou aqui, a inserção foi bem-sucedida
       // Enviar notificações para membros mencionados
       if (mentionedUserIds.length > 0) {
         try {
@@ -569,63 +596,44 @@ export default function SocialFeed() {
         }
       }
 
-      if (error) {
-        console.error("❌ [SOCIAL FEED] Erro ao criar post:", error)
-        console.error("❌ [SOCIAL FEED] Detalhes:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        })
+      // Enviar notificação push para todos os utilizadores sobre novo post
+      try {
+        const postTitle = newPost.trim().length > 50 
+          ? newPost.trim().substring(0, 50) + '...' 
+          : newPost.trim()
         
-        // Mensagens de erro mais específicas
-        if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
-          alert('❌ Erro: Tabela "posts" não existe no Supabase.\n\n📋 SOLUÇÃO:\n1. Executa: scripts/fix-posts-storage-completo.sql\n2. Ou: scripts/create-posts-table-with-categories.sql')
-        } else if (error.message?.includes('permission') || error.message?.includes('policy')) {
-          alert('❌ Erro: Sem permissão para criar posts.\n\n📋 SOLUÇÃO:\n1. Verifica se és VIP ou Admin\n2. Executa: scripts/fix-posts-storage-completo.sql para configurar RLS')
-        } else if (error.message?.includes('violates check constraint')) {
-          alert('❌ Erro: Categoria inválida. Categorias válidas: updates, forex, crypto, mindset, lideranca, network, social')
-        } else {
-          alert(`❌ Erro ao publicar: ${error.message}\n\nVerifica o console para mais detalhes.`)
-        }
-      } else {
-        // Enviar notificação push para todos os utilizadores sobre novo post
-        try {
-          const postTitle = newPost.trim().length > 50 
-            ? newPost.trim().substring(0, 50) + '...' 
-            : newPost.trim()
-          
-          await fetch('/api/notifications/send-push', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              all: true, // Enviar para todos
-              title: `💎 Novo Post de ${userName}`,
-              body: postTitle,
-              data: {
-                type: 'social_post',
-                url: '/app-mobile?tab=social',
-                author: userName,
-                post_id: 'new' // Será atualizado quando o real-time sync funcionar
-              },
-              tag: 'social-post'
-            })
+        await fetch('/api/notifications/send-push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            all: true, // Enviar para todos
+            title: `💎 Novo Post de ${userName}`,
+            body: postTitle,
+            data: {
+              type: 'social_post',
+              url: '/app-mobile?tab=social',
+              author: userName,
+              post_id: 'new' // Será atualizado quando o real-time sync funcionar
+            },
+            tag: 'social-post'
           })
-          console.log('✅ [SOCIAL FEED] Notificação push enviada para novo post')
-        } catch (notifError) {
-          console.error('⚠️ [SOCIAL FEED] Erro ao enviar notificação push:', notifError)
-          // Não bloquear o fluxo se a notificação falhar
-        }
-        
-        setNewPost("")
-        setSelectedCategory("")
-        setNewPostMedia(null)
-        setNewPostMedias([])
-        setMediaPreview(null)
-        setMediaPreviews([])
-        setShowCreatePost(false)
-        // Recarregar posts para garantir sincronização
-        setTimeout(() => loadPosts(), 500)
+        })
+        console.log('✅ [SOCIAL FEED] Notificação push enviada para novo post')
+      } catch (notifError) {
+        console.error('⚠️ [SOCIAL FEED] Erro ao enviar notificação push:', notifError)
+        // Não bloquear o fluxo se a notificação falhar
+      }
+      
+      // Limpar formulário e recarregar posts
+      setNewPost("")
+      setSelectedCategory("")
+      setNewPostMedia(null)
+      setNewPostMedias([])
+      setMediaPreview(null)
+      setMediaPreviews([])
+      setShowCreatePost(false)
+      // Recarregar posts para garantir sincronização
+      setTimeout(() => loadPosts(), 500)
       }
     } catch (error) {
       console.error("❌ [SOCIAL FEED] Erro ao criar post:", error)
