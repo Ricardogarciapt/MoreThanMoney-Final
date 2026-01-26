@@ -9,6 +9,7 @@ export async function GET() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
+        cookies: {
           getAll() {
             return cookieStore.getAll()
           },
@@ -17,7 +18,8 @@ export async function GET() {
               cookieStore.set(name, value, options)
             )
           },
-        }
+        },
+      }
     )
 
     // Buscar posts do Supabase
@@ -55,6 +57,7 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
+        cookies: {
           getAll() {
             return cookieStore.getAll()
           },
@@ -63,7 +66,8 @@ export async function POST(request: NextRequest) {
               cookieStore.set(name, value, options)
             )
           },
-        }
+        },
+      }
     )
 
     // Verificar autenticação

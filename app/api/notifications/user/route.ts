@@ -9,6 +9,7 @@ export async function GET() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
+        cookies: {
           getAll() {
             return cookieStore.getAll()
           },
@@ -17,7 +18,8 @@ export async function GET() {
               cookieStore.set(name, value, options)
             )
           },
-        }
+        },
+      }
     )
 
     // Verificar autenticação
@@ -53,6 +55,7 @@ export async function PUT(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
+        cookies: {
           getAll() {
             return cookieStore.getAll()
           },
@@ -61,7 +64,8 @@ export async function PUT(request: NextRequest) {
               cookieStore.set(name, value, options)
             )
           },
-        }
+        },
+      }
     )
 
     // Verificar autenticação
@@ -103,6 +107,7 @@ export async function DELETE(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
+        cookies: {
           getAll() {
             return cookieStore.getAll()
           },
@@ -111,7 +116,8 @@ export async function DELETE(request: NextRequest) {
               cookieStore.set(name, value, options)
             )
           },
-        }
+        },
+      }
     )
 
     // Verificar autenticação
