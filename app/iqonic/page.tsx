@@ -1,28 +1,73 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import ParticleBackground from "@/components/particle-background"
 import YouTubeEmbed from "@/components/youtube-embed"
 import Image from "next/image"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 export default function IQONICPage() {
-  // Slideshow states
-  const [academyIndex, setAcademyIndex] = useState(0)
-  const [socialIndex, setSocialIndex] = useState(0)
-  const [insightsIndex, setInsightsIndex] = useState(0)
+  // Slideshow state para ecossistema (rotaciona entre os 3 cartões)
+  const [ecosystemIndex, setEcosystemIndex] = useState(0)
   
-  const academyImages = ["/images/iqonic/Acedemia IQ.png"]
-  const socialImages = ["/images/iqonic/Imagem IQ Social.png"]
-  const insightsImages = ["/images/iqonic/IQ Insights.png"]
+  const ecosystemCards = [
+    {
+      name: "IQ Academy",
+      icon: "🎓",
+      description: "Aceder à Academy",
+      href: "https://iqonic.vip",
+      image: "/images/iqonic/Acedemia IQ.png",
+      gradient: "from-blue-900/40 via-mtm-primary/5 to-cyan-900/40",
+      border: "border-blue-500/30",
+      hoverBorder: "border-blue-500/60",
+      buttonGradient: "from-blue-600 via-mtm-primary to-cyan-600 hover:from-blue-500 hover:via-mtm-primary hover:to-cyan-500",
+      iconBg: "from-blue-500/20 via-mtm-primary/10 to-cyan-500/20",
+      iconBorder: "border-blue-500/30"
+    },
+    {
+      name: "IQ Social",
+      icon: "👥",
+      description: "Aceder ao Social",
+      href: "https://iqonic.vip/iq-social",
+      image: "/images/iqonic/Imagem IQ Social.png",
+      gradient: "from-purple-900/40 to-pink-900/40",
+      border: "border-purple-500/30",
+      hoverBorder: "border-purple-500/60",
+      buttonGradient: "from-purple-600 via-mtm-primary to-pink-600 hover:from-purple-500 hover:via-mtm-primary hover:to-pink-500",
+      iconBg: "bg-purple-500/20",
+      iconBorder: "border-purple-500/30",
+      aspectRatio: "aspect-[9/19]"
+    },
+    {
+      name: "IQ Insights",
+      icon: "📊",
+      description: "Ver Insights",
+      href: "https://iqonic.vip/iq-insight",
+      image: "/images/iqonic/IQ Insights.png",
+      gradient: "from-cyan-900/40 via-mtm-primary/5 to-blue-900/40",
+      border: "border-cyan-500/30",
+      hoverBorder: "border-cyan-500/60",
+      buttonGradient: "from-cyan-600 via-mtm-primary to-blue-600 hover:from-cyan-500 hover:via-mtm-primary hover:to-blue-500",
+      iconBg: "from-cyan-500/20 via-mtm-primary/10 to-blue-500/20",
+      iconBorder: "border-cyan-500/30"
+    }
+  ]
   
-  const nextSlide = (setIndex: (val: number) => void, length: number, current: number) => {
-    setIndex((current + 1) % length)
+  const nextEcosystemSlide = () => {
+    setEcosystemIndex((ecosystemIndex + 1) % ecosystemCards.length)
   }
   
-  const prevSlide = (setIndex: (val: number) => void, length: number, current: number) => {
-    setIndex((current - 1 + length) % length)
+  const prevEcosystemSlide = () => {
+    setEcosystemIndex((ecosystemIndex - 1 + ecosystemCards.length) % ecosystemCards.length)
   }
+  
+  // Auto-rotate slideshow a cada 5 segundos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setEcosystemIndex((prev) => (prev + 1) % ecosystemCards.length)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
   return (
     <main className="min-h-screen bg-black text-white relative">
       <ParticleBackground />
@@ -102,188 +147,86 @@ export default function IQONICPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* IQ Academy */}
-            <div className="bg-gradient-to-br from-blue-900/40 via-mtm-primary/5 to-cyan-900/40 border-2 border-blue-500/30 rounded-2xl p-6 hover:border-blue-500/60 transition-all duration-300 hover:scale-105">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="bg-gradient-to-br from-blue-500/20 via-mtm-primary/10 to-cyan-500/20 rounded-lg p-3 border border-blue-500/30">
-                  <span className="text-2xl">🎓</span>
-                </div>
-                <h3 className="text-2xl font-bold text-white">IQ Academy</h3>
-              </div>
-              
-              {/* Slideshow - MacBook Mockup */}
-              <div className="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700/50 relative group">
-                <div className="aspect-video bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg overflow-hidden relative">
-                  <div className="absolute inset-0">
-                    <Image
-                      src={academyImages[academyIndex]}
-                      alt="IQ Academy Interface"
-                      fill
-                      className="object-cover rounded-lg transition-opacity duration-500"
-                      unoptimized
-                    />
-                  </div>
-                  {/* Navigation Arrows */}
-                  <button
-                    onClick={() => prevSlide(setAcademyIndex, academyImages.length, academyIndex)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  >
-                    <ChevronLeft className="w-4 h-4 text-white" />
-                  </button>
-                  <button
-                    onClick={() => nextSlide(setAcademyIndex, academyImages.length, academyIndex)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  >
-                    <ChevronRight className="w-4 h-4 text-white" />
-                  </button>
-                  {/* Dots Indicator */}
-                  {academyImages.length > 1 && (
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-                      {academyImages.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setAcademyIndex(idx)}
-                          className={`w-2 h-2 rounded-full transition-all ${
-                            idx === academyIndex ? 'bg-blue-400 w-4' : 'bg-gray-600'
-                          }`}
-                        />
-                      ))}
+          {/* Slideshow do Ecossistema - Um cartão de cada vez */}
+          <div className="max-w-2xl mx-auto relative">
+            <div className="relative">
+              {ecosystemCards.map((card, idx) => (
+                <div
+                  key={card.name}
+                  className={`transition-all duration-500 ${
+                    idx === ecosystemIndex
+                      ? 'opacity-100 scale-100 translate-x-0'
+                      : idx < ecosystemIndex
+                      ? 'opacity-0 scale-95 -translate-x-full absolute inset-0'
+                      : 'opacity-0 scale-95 translate-x-full absolute inset-0'
+                  }`}
+                >
+                  <div className={`bg-gradient-to-br ${card.gradient} border-2 ${card.border} rounded-2xl p-6 hover:${card.hoverBorder} transition-all duration-300`}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={`bg-gradient-to-br ${card.iconBg} rounded-lg p-3 border ${card.iconBorder}`}>
+                        <span className="text-2xl">{card.icon}</span>
+                      </div>
+                      <h3 className="text-2xl font-bold text-white">{card.name}</h3>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              <a
-                href="https://iqonic.vip"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full bg-gradient-to-r from-blue-600 via-mtm-primary to-cyan-600 hover:from-blue-500 hover:via-mtm-primary hover:to-cyan-500 text-white font-bold text-center px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 text-sm"
-              >
-                Aceder à Academy
-              </a>
-            </div>
-
-            {/* IQ Social */}
-            <div className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all duration-300 hover:scale-105">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="bg-purple-500/20 rounded-lg p-3 border border-purple-500/30">
-                  <span className="text-2xl">👥</span>
-                </div>
-                <h3 className="text-2xl font-bold text-white">IQ Social</h3>
-              </div>
-              
-              {/* Slideshow - Phone Mockup */}
-              <div className="bg-gray-900 rounded-xl p-3 mb-4 border border-gray-700/50 relative group">
-                <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg overflow-hidden relative">
-                  <div className="absolute inset-0">
-                    <Image
-                      src={socialImages[socialIndex]}
-                      alt="IQ Social Interface"
-                      fill
-                      className="object-cover rounded-lg transition-opacity duration-500"
-                      unoptimized
-                    />
-                  </div>
-                  {/* Navigation Arrows */}
-                  <button
-                    onClick={() => prevSlide(setSocialIndex, socialImages.length, socialIndex)}
-                    className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  >
-                    <ChevronLeft className="w-3 h-3 text-white" />
-                  </button>
-                  <button
-                    onClick={() => nextSlide(setSocialIndex, socialImages.length, socialIndex)}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  >
-                    <ChevronRight className="w-3 h-3 text-white" />
-                  </button>
-                  {/* Dots Indicator */}
-                  {socialImages.length > 1 && (
-                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-                      {socialImages.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setSocialIndex(idx)}
-                          className={`w-1.5 h-1.5 rounded-full transition-all ${
-                            idx === socialIndex ? 'bg-purple-400 w-3' : 'bg-gray-600'
-                          }`}
-                        />
-                      ))}
+                    
+                    {/* Imagem do Cartão */}
+                    <div className={`bg-gray-900 rounded-xl ${card.aspectRatio ? 'p-3' : 'p-4'} mb-4 border border-gray-700/50 relative group`}>
+                      <div className={`${card.aspectRatio || 'aspect-video'} bg-gradient-to-br from-gray-950 rounded-lg overflow-hidden relative`}>
+                        <div className="absolute inset-0">
+                          <Image
+                            src={card.image}
+                            alt={`${card.name} Interface`}
+                            fill
+                            className="object-cover rounded-lg transition-opacity duration-500"
+                            unoptimized
+                          />
+                        </div>
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
 
-              <a
-                href="https://iqonic.vip/iq-social"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full bg-gradient-to-r from-purple-600 via-mtm-primary to-pink-600 hover:from-purple-500 hover:via-mtm-primary hover:to-pink-500 text-white font-bold text-center px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 text-sm"
-              >
-                Aceder ao Social
-              </a>
-            </div>
-
-            {/* IQ Insights */}
-            <div className="bg-gradient-to-br from-cyan-900/40 via-mtm-primary/5 to-blue-900/40 border-2 border-cyan-500/30 rounded-2xl p-6 hover:border-cyan-500/60 transition-all duration-300 hover:scale-105">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="bg-gradient-to-br from-cyan-500/20 via-mtm-primary/10 to-blue-500/20 rounded-lg p-3 border border-cyan-500/30">
-                  <span className="text-2xl">📊</span>
-                </div>
-                <h3 className="text-2xl font-bold text-white">IQ Insights</h3>
-              </div>
-              
-              {/* Slideshow - Tablet/Desktop Mockup */}
-              <div className="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700/50 relative group">
-                <div className="aspect-video bg-gradient-to-br from-cyan-950 to-blue-950 rounded-lg overflow-hidden relative">
-                  <div className="absolute inset-0">
-                    <Image
-                      src={insightsImages[insightsIndex]}
-                      alt="IQ Insights Interface"
-                      fill
-                      className="object-cover rounded-lg transition-opacity duration-500"
-                      unoptimized
-                    />
+                    <a
+                      href={card.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`block w-full bg-gradient-to-r ${card.buttonGradient} text-white font-bold text-center px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 text-sm`}
+                    >
+                      {card.description}
+                    </a>
                   </div>
-                  {/* Navigation Arrows */}
-                  <button
-                    onClick={() => prevSlide(setInsightsIndex, insightsImages.length, insightsIndex)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  >
-                    <ChevronLeft className="w-4 h-4 text-white" />
-                  </button>
-                  <button
-                    onClick={() => nextSlide(setInsightsIndex, insightsImages.length, insightsIndex)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  >
-                    <ChevronRight className="w-4 h-4 text-white" />
-                  </button>
-                  {/* Dots Indicator */}
-                  {insightsImages.length > 1 && (
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-                      {insightsImages.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setInsightsIndex(idx)}
-                          className={`w-2 h-2 rounded-full transition-all ${
-                            idx === insightsIndex ? 'bg-cyan-400 w-4' : 'bg-gray-600'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  )}
                 </div>
-              </div>
-
-              <a
-                href="https://iqonic.vip/iq-insight"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full bg-gradient-to-r from-cyan-600 via-mtm-primary to-blue-600 hover:from-cyan-500 hover:via-mtm-primary hover:to-blue-500 text-white font-bold text-center px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 text-sm"
+              ))}
+              
+              {/* Navigation Arrows */}
+              <button
+                onClick={prevEcosystemSlide}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-12 bg-black/70 hover:bg-black/90 rounded-full p-3 transition-all z-10 shadow-lg"
+                aria-label="Cartão anterior"
               >
-                Ver Insights
-              </a>
+                <ChevronLeft className="w-6 h-6 text-white" />
+              </button>
+              <button
+                onClick={nextEcosystemSlide}
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-12 bg-black/70 hover:bg-black/90 rounded-full p-3 transition-all z-10 shadow-lg"
+                aria-label="Próximo cartão"
+              >
+                <ChevronRight className="w-6 h-6 text-white" />
+              </button>
+              
+              {/* Dots Indicator */}
+              <div className="flex justify-center gap-2 mt-6">
+                {ecosystemCards.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setEcosystemIndex(idx)}
+                    className={`h-2 rounded-full transition-all ${
+                      idx === ecosystemIndex 
+                        ? 'bg-mtm-primary w-8' 
+                        : 'bg-gray-600 w-2 hover:bg-gray-500'
+                    }`}
+                    aria-label={`Ir para ${ecosystemCards[idx].name}`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
