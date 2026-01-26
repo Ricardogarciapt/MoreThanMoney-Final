@@ -38,23 +38,50 @@ export default function SwipeToTradePage() {
 
           {/* Visual - Phone Mockup with IQ Sync Interface */}
           <div className="max-w-md mx-auto mb-12">
-            <div className="bg-gradient-to-br from-blue-900/40 to-cyan-900/40 rounded-3xl p-8 border-2 border-blue-500/30 backdrop-blur-sm">
-              <div className="bg-black rounded-2xl p-4 shadow-2xl">
-                <div className="bg-gray-900 rounded-xl overflow-hidden">
-                  <div className="aspect-[9/19] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg p-2 relative">
-                    <div className="absolute inset-0">
-                      <Image
-                        src="/images/iqonic/Imagem Iq Sync.png"
-                        alt="IQ Sync - Swipe to Trade Interface"
-                        fill
-                        className="object-contain rounded-lg"
-                        unoptimized
-                      />
+            <Card className="card-clean hover-lift bg-gradient-to-br from-green-600/20 via-mtm-primary/10 to-emerald-600/20 border-2 border-mtm-primary/50 rounded-3xl p-8 shadow-2xl">
+              <div className="relative">
+                {/* Badge de destaque */}
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
+                  <div className="bg-gradient-to-r from-mtm-primary to-emerald-500 text-black px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                    IQ Sync
+                  </div>
+                </div>
+                
+                {/* Phone Frame com gradiente melhorado */}
+                <div className="bg-gradient-to-br from-gray-900/90 to-black rounded-2xl p-4 shadow-inner border border-mtm-primary/30">
+                  <div className="bg-gradient-to-br from-blue-950/50 to-cyan-950/50 rounded-xl overflow-hidden border-2 border-blue-500/40">
+                    <div className="aspect-[9/19] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg p-2 relative overflow-hidden">
+                      {/* Glow effect */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-mtm-primary/10 to-cyan-500/20 blur-xl"></div>
+                      
+                      {/* Imagem */}
+                      <div className="absolute inset-0 z-10">
+                        <Image
+                          src="/images/iqonic/Imagem Iq Sync.png"
+                          alt="IQ Sync - Swipe to Trade Interface"
+                          fill
+                          className="object-contain rounded-lg"
+                          unoptimized
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
+                
+                {/* Indicadores visuais */}
+                <div className="mt-4 flex items-center justify-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-gray-400">Tempo Real</span>
+                  </div>
+                  <div className="w-px h-4 bg-gray-700"></div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-mtm-primary rounded-full"></div>
+                    <span className="text-xs text-gray-400">Swipe to Trade</span>
+                  </div>
+                </div>
               </div>
-            </div>
+            </Card>
           </div>
         </div>
 
