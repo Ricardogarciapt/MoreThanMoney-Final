@@ -634,7 +634,6 @@ export default function SocialFeed() {
       setShowCreatePost(false)
       // Recarregar posts para garantir sincronização
       setTimeout(() => loadPosts(), 500)
-      }
     } catch (error) {
       console.error("❌ [SOCIAL FEED] Erro ao criar post:", error)
       alert('❌ Erro ao publicar. Tenta novamente.')
