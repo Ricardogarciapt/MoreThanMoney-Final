@@ -35,8 +35,7 @@ export default function IQONICPage() {
       hoverBorder: "border-purple-500/60",
       buttonGradient: "from-purple-600 via-mtm-primary to-pink-600 hover:from-purple-500 hover:via-mtm-primary hover:to-pink-500",
       iconBg: "bg-purple-500/20",
-      iconBorder: "border-purple-500/30",
-      aspectRatio: "aspect-[9/19]"
+      iconBorder: "border-purple-500/30"
     },
     {
       name: "IQ Insights",
@@ -170,8 +169,8 @@ export default function IQONICPage() {
                     </div>
                     
                     {/* Imagem do Cartão */}
-                    <div className={`bg-gray-900 rounded-xl ${card.aspectRatio ? 'p-3' : 'p-4'} mb-4 border border-gray-700/50 relative group`}>
-                      <div className={`${card.aspectRatio || 'aspect-video'} bg-gradient-to-br ${
+                    <div className="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700/50 relative group">
+                      <div className={`aspect-video bg-gradient-to-br ${
                         card.name === 'IQ Academy' ? 'from-blue-950 to-cyan-950' :
                         card.name === 'IQ Social' ? 'from-purple-950 to-pink-950' :
                         'from-cyan-950 to-blue-950'
@@ -296,20 +295,6 @@ export default function IQONICPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {/* IQ PRO */}
             <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border-2 border-mtm-primary/30 rounded-2xl p-6 hover:border-mtm-primary/60 transition-all duration-300 hover:scale-105">
-              {/* Imagem do Pack */}
-              <div className="mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700/50">
-                <div className="aspect-video bg-gradient-to-br from-mtm-primary/20 to-amber-500/20 rounded-lg overflow-hidden relative">
-                  <div className="absolute inset-0">
-                    <Image
-                      src="/images/iqonic/Preços Pack Elite-Promo-Prime.png"
-                      alt="IQ PRO Pack"
-                      fill
-                      className="object-cover rounded-lg"
-                      unoptimized
-                    />
-                  </div>
-                </div>
-              </div>
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-white mb-2">IQ PRO</h3>
                 <div className="mb-4">
@@ -375,20 +360,6 @@ export default function IQONICPage() {
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-mtm-primary text-black px-3 py-1 rounded-full text-xs font-bold z-10">
                 RECOMENDADO
               </div>
-              {/* Imagem do Pack */}
-              <div className="mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700/50">
-                <div className="aspect-video bg-gradient-to-br from-mtm-primary/20 to-amber-500/20 rounded-lg overflow-hidden relative">
-                  <div className="absolute inset-0">
-                    <Image
-                      src="/images/iqonic/Preços Pack Elite-Promo-Prime.png"
-                      alt="IQ PRIME Pack"
-                      fill
-                      className="object-cover rounded-lg"
-                      unoptimized
-                    />
-                  </div>
-                </div>
-              </div>
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-white mb-2">IQ PRIME</h3>
                 <div className="mb-4">
@@ -431,20 +402,6 @@ export default function IQONICPage() {
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-bold z-10">
                 O PACK DEFINITIVO
               </div>
-              {/* Imagem do Pack */}
-              <div className="mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700/50">
-                <div className="aspect-video bg-gradient-to-br from-purple-950/20 to-pink-950/20 rounded-lg overflow-hidden relative">
-                  <div className="absolute inset-0">
-                    <Image
-                      src="/images/iqonic/Preços Pack Elite-Promo-Prime.png"
-                      alt="IQ ELITE Pack"
-                      fill
-                      className="object-cover rounded-lg"
-                      unoptimized
-                    />
-                  </div>
-                </div>
-              </div>
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-white mb-2">IQ ELITE</h3>
                 <div className="mb-4">
@@ -484,20 +441,6 @@ export default function IQONICPage() {
 
             {/* IQ MAX LIFESTYLE */}
             <div className="bg-gradient-to-br from-amber-600/20 to-orange-600/20 border-2 border-amber-500/50 rounded-2xl p-6 hover:border-amber-500/80 transition-all duration-300 hover:scale-105">
-              {/* Imagem do Pack */}
-              <div className="mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700/50">
-                <div className="aspect-video bg-gradient-to-br from-amber-950/20 to-orange-950/20 rounded-lg overflow-hidden relative">
-                  <div className="absolute inset-0">
-                    <Image
-                      src="/images/iqonic/Preços Emerging MaxLife-Elite.png"
-                      alt="IQ MAX LIFESTYLE Pack"
-                      fill
-                      className="object-cover rounded-lg"
-                      unoptimized
-                    />
-                  </div>
-                </div>
-              </div>
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-white mb-2">IQ MAX LIFESTYLE</h3>
                 <div className="mb-4">
