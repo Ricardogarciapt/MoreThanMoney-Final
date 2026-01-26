@@ -177,9 +177,16 @@ export default function AutomationPage() {
 
               <div className="bg-gradient-to-r from-purple-600/20 via-mtm-primary/10 to-pink-600/20 border-2 border-purple-500/30 rounded-xl p-6">
                 <h3 className="text-2xl font-bold text-purple-400 mb-3">Set-it-once experience</h3>
-                <p className="text-gray-300 leading-relaxed">
+                <p className="text-gray-300 leading-relaxed mb-4">
                   Fique conectado a estratégias de trading com uma experiência de configuração única que mantém a sua conta alinhada em segundo plano.
                 </p>
+                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3 mt-4">
+                  <p className="text-sm text-gray-300">
+                    <span className="text-purple-400 font-semibold">Add-on IQ Auto:</span>{" "}
+                    <span className="text-white font-bold text-lg">$59.99</span>
+                    <span className="text-gray-400 text-sm ml-2">/mensal</span>
+                  </p>
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 mt-8">

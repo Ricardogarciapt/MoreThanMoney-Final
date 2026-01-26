@@ -549,9 +549,16 @@ export default function IQONICPage() {
                   </div>
                 </div>
               </div>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-gray-300 leading-relaxed mb-4">
                 Experiência <strong className="text-purple-400">"set-it-once"</strong> com proteção <strong className="text-purple-400">SafeGuard</strong> (gestão de risco e limites de capital). Mantém a conta alinhada com estratégias dos educadores de forma 100% automática em segundo plano.
               </p>
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mt-4">
+                <p className="text-sm text-gray-300">
+                  <span className="text-purple-400 font-semibold">Add-on IQ Auto:</span>{" "}
+                  <span className="text-white font-bold text-lg">$59.99</span>
+                  <span className="text-gray-400 text-sm ml-2">/mensal</span>
+                </p>
+              </div>
             </div>
           </div>
         </div>
