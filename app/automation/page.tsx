@@ -44,19 +44,18 @@ export default function AutomationPage() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Visual - Horizontal Card - Destaque Principal */}
             <div className="relative order-2 md:order-1">
-              <Card className="card-clean hover-lift bg-gradient-to-br from-blue-900/40 via-mtm-primary/10 to-cyan-900/40 border-2 border-blue-500/30 rounded-3xl p-8 shadow-2xl">
-                <div className="bg-gray-900 rounded-2xl p-6 border border-gray-700/50">
-                  {/* Horizontal Image */}
-                  <div className="aspect-[16/9] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-xl overflow-hidden relative">
-                    <div className="absolute inset-0">
-                      <Image
-                        src="/images/iqonic/Imagem Iq Sync.png"
-                        alt="IQ Sync Interface"
-                        fill
-                        className="object-cover rounded-lg"
-                        unoptimized
-                      />
-                    </div>
+              <Card className="card-clean hover-lift bg-gradient-to-br from-blue-900/40 via-mtm-primary/10 to-cyan-900/40 border-2 border-blue-500/30 rounded-3xl p-6 shadow-2xl">
+                <div className="bg-gray-900 rounded-2xl p-3 border border-gray-700/50">
+                  {/* Horizontal Image - Mostrar completa */}
+                  <div className="relative w-full" style={{ minHeight: '300px' }}>
+                    <Image
+                      src="/images/iqonic/Imagem Iq Sync.png"
+                      alt="IQ Sync Interface"
+                      width={1000}
+                      height={600}
+                      className="w-full h-auto rounded-lg object-contain"
+                      unoptimized
+                    />
                   </div>
                 </div>
               </Card>
@@ -112,31 +111,30 @@ export default function AutomationPage() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Visual - Slideshow Horizontal - Destaque Principal */}
             <div className="relative order-2 md:order-1">
-              <Card className="card-clean hover-lift bg-gradient-to-br from-purple-900/40 via-mtm-primary/10 to-pink-900/40 border-2 border-purple-500/30 rounded-3xl p-8 shadow-2xl">
-                <div className="bg-gray-900 rounded-2xl p-6 border border-gray-700/50 relative group">
-                  {/* Horizontal Slideshow */}
-                  <div className="aspect-[16/9] bg-gradient-to-br from-purple-950 to-pink-950 rounded-xl overflow-hidden relative">
-                    <div className="absolute inset-0">
-                      <Image
-                        src={autoImages[autoIndex]}
-                        alt={`IQ Auto ${autoIndex + 1}`}
-                        fill
-                        className="object-cover rounded-lg transition-opacity duration-500"
-                        unoptimized
-                      />
-                    </div>
+              <Card className="card-clean hover-lift bg-gradient-to-br from-purple-900/40 via-mtm-primary/10 to-pink-900/40 border-2 border-purple-500/30 rounded-3xl p-6 shadow-2xl">
+                <div className="bg-gray-900 rounded-2xl p-3 border border-gray-700/50 relative group">
+                  {/* Horizontal Slideshow - Mostrar imagens completas */}
+                  <div className="relative w-full" style={{ minHeight: '300px' }}>
+                    <Image
+                      src={autoImages[autoIndex]}
+                      alt={`IQ Auto ${autoIndex + 1}`}
+                      width={1000}
+                      height={600}
+                      className="w-full h-auto rounded-lg object-contain transition-opacity duration-500"
+                      unoptimized
+                    />
                     {/* Navigation Arrows */}
                     {autoImages.length > 1 && (
                       <>
                         <button
                           onClick={prevAutoSlide}
-                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                         >
                           <ChevronLeft className="w-5 h-5 text-white" />
                         </button>
                         <button
                           onClick={nextAutoSlide}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                         >
                           <ChevronRight className="w-5 h-5 text-white" />
                         </button>
