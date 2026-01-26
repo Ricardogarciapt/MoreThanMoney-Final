@@ -171,7 +171,11 @@ export default function IQONICPage() {
                     
                     {/* Imagem do Cartão */}
                     <div className={`bg-gray-900 rounded-xl ${card.aspectRatio ? 'p-3' : 'p-4'} mb-4 border border-gray-700/50 relative group`}>
-                      <div className={`${card.aspectRatio || 'aspect-video'} bg-gradient-to-br from-gray-950 rounded-lg overflow-hidden relative`}>
+                      <div className={`${card.aspectRatio || 'aspect-video'} bg-gradient-to-br ${
+                        card.name === 'IQ Academy' ? 'from-blue-950 to-cyan-950' :
+                        card.name === 'IQ Social' ? 'from-purple-950 to-pink-950' :
+                        'from-cyan-950 to-blue-950'
+                      } rounded-lg overflow-hidden relative`}>
                         <div className="absolute inset-0">
                           <Image
                             src={card.image}
