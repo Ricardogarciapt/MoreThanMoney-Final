@@ -176,6 +176,14 @@ CREATE POLICY "Users can mark messages as read" ON public.messages
       AND (user1_id = auth.uid() OR user2_id = auth.uid())
       AND auth.uid() != messages.sender_id
     )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.conversations
+      WHERE id = messages.conversation_id
+      AND (user1_id = auth.uid() OR user2_id = auth.uid())
+      AND auth.uid() != messages.sender_id
+    )
   );
 
 -- 10. Função para contar mensagens não lidas
