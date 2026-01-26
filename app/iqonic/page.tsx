@@ -160,6 +160,7 @@ export default function IQONICPage() {
                       </div>
                     </div>
                   </div>
+                  </div>
                 </div>
                 <div className="text-center text-xs text-gray-500 mt-2">MacBook Pro</div>
               </div>
