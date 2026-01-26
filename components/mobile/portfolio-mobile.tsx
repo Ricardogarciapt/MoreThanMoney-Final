@@ -240,41 +240,57 @@ export default function PortfolioMobile() {
         })
         
         // Combinar crypto e ETF assets
-        const cryptoAssets = (result.data.crypto?.assets || []).map((asset: any) => ({
-          symbol: asset.symbol,
-          name: asset.criptomoeda,
-          category: 'crypto',
-          current_price: asset.current_price,
-          entry_price: asset.entry_price || asset.current_price,
-          // Usar TP/SL do Admin Panel se existirem, senão calcular dinamicamente
-          target_1: asset.tp1_price || (asset.current_price ? asset.current_price * 1.30 : 0),
-          target_2: asset.tp2_price || (asset.current_price ? asset.current_price * 1.75 : 0),
-          target_3: asset.tp3_price || (asset.current_price ? asset.current_price * 2.50 : 0),
-          stop_loss: asset.stop_loss_price || (asset.current_price ? asset.current_price * 0.85 : 0),
-          performance_7d: asset.pnl_percent || 0,
-          performance_30d: asset.potencial_crescimento_percent || 0,
-          performance_ytd: asset.potencial_crescimento_percent || 0,
-          status: 'active',
-          ai_validated: asset.ai_validated || false
-        }))
+        const cryptoAssets = (result.data.crypto?.assets || []).map((asset: any) => {
+          // Calcular performance real baseada em preços atuais
+          const entryPrice = asset.entry_price || asset.current_price || 0
+          const currentPrice = asset.current_price || entryPrice
+          const realPerformance = entryPrice > 0 ? ((currentPrice - entryPrice) / entryPrice) * 100 : 0
+          
+          return {
+            symbol: asset.symbol,
+            name: asset.criptomoeda,
+            category: 'crypto',
+            current_price: currentPrice,
+            entry_price: entryPrice,
+            // Usar TP/SL do Admin Panel se existirem, senão calcular dinamicamente
+            target_1: asset.tp1_price || (currentPrice ? currentPrice * 1.30 : 0),
+            target_2: asset.tp2_price || (currentPrice ? currentPrice * 1.75 : 0),
+            target_3: asset.tp3_price || (currentPrice ? currentPrice * 2.50 : 0),
+            stop_loss: asset.stop_loss_price || (currentPrice ? currentPrice * 0.85 : 0),
+            // Usar performance real calculada, com fallback para pnl_percent
+            performance_7d: realPerformance || asset.pnl_percent || 0,
+            performance_30d: realPerformance || asset.potencial_crescimento_percent || 0,
+            performance_ytd: realPerformance || asset.potencial_crescimento_percent || 0,
+            status: 'active',
+            ai_validated: asset.ai_validated || false
+          }
+        })
         
-        const etfAssets = (result.data.etf?.assets || []).map((asset: any) => ({
-          symbol: asset.symbol,
-          name: asset.etf,
-          category: 'stocks',
-          current_price: asset.current_price,
-          entry_price: asset.entry_price || asset.current_price,
-          // Usar TP/SL do Admin Panel se existirem, senão calcular dinamicamente
-          target_1: asset.tp1_price || (asset.current_price ? asset.current_price * 1.30 : 0),
-          target_2: asset.tp2_price || (asset.current_price ? asset.current_price * 1.50 : 0),
-          target_3: asset.tp3_price || (asset.current_price ? asset.current_price * 2.00 : 0),
-          stop_loss: asset.stop_loss_price || (asset.current_price ? asset.current_price * 0.90 : 0),
-          performance_7d: asset.pnl_percent || 0,
-          performance_30d: asset.crescimento_esperado_percent || 0,
-          performance_ytd: asset.crescimento_esperado_percent || 0,
-          status: 'active',
-          ai_validated: asset.ai_validated || false
-        }))
+        const etfAssets = (result.data.etf?.assets || []).map((asset: any) => {
+          // Calcular performance real baseada em preços atuais
+          const entryPrice = asset.entry_price || asset.current_price || 0
+          const currentPrice = asset.current_price || entryPrice
+          const realPerformance = entryPrice > 0 ? ((currentPrice - entryPrice) / entryPrice) * 100 : 0
+          
+          return {
+            symbol: asset.symbol,
+            name: asset.etf,
+            category: 'stocks',
+            current_price: currentPrice,
+            entry_price: entryPrice,
+            // Usar TP/SL do Admin Panel se existirem, senão calcular dinamicamente
+            target_1: asset.tp1_price || (currentPrice ? currentPrice * 1.30 : 0),
+            target_2: asset.tp2_price || (currentPrice ? currentPrice * 1.50 : 0),
+            target_3: asset.tp3_price || (currentPrice ? currentPrice * 2.00 : 0),
+            stop_loss: asset.stop_loss_price || (currentPrice ? currentPrice * 0.90 : 0),
+            // Usar performance real calculada, com fallback para pnl_percent
+            performance_7d: realPerformance || asset.pnl_percent || 0,
+            performance_30d: realPerformance || asset.crescimento_esperado_percent || 0,
+            performance_ytd: realPerformance || asset.crescimento_esperado_percent || 0,
+            status: 'active',
+            ai_validated: asset.ai_validated || false
+          }
+        })
         
         const allAssets = [...cryptoAssets, ...etfAssets]
         

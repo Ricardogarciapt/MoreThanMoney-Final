@@ -277,13 +277,56 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ [AI TP/SL] Cálculos completos para ${symbol}`)
 
+    // Tentar validar com IA se a chave estiver configurada
+    let aiValidated = false
+    let aiData = null
+    
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        console.log(`🧠 [AI TP/SL] Tentando validar com IA...`)
+        // Calcular indicadores básicos para IA
+        const indicators = {
+          rsi: 50, // Placeholder - seria calculado com histórico
+          atr: currentPrice * 0.05, // Estimativa 5% de volatilidade
+          high52w: currentPrice * 1.5,
+          low52w: currentPrice * 0.7,
+          fibonacci: {
+            level_236: currentPrice * 1.236,
+            level_382: currentPrice * 1.382,
+            level_618: currentPrice * 1.618,
+            level_1618: currentPrice * 2.618,
+            level_2618: currentPrice * 3.618
+          }
+        }
+        
+        aiData = await analyzeTPSLWithAI(symbol, currentPrice, entryPrice || currentPrice, indicators, null)
+        
+        if (aiData) {
+          aiValidated = true
+          console.log(`✅ [AI TP/SL] Validação IA concluída para ${symbol}`)
+          // Usar valores da IA se disponíveis
+          if (aiData.take_profit_levels?.tp1?.price) tp1 = aiData.take_profit_levels.tp1.price
+          if (aiData.take_profit_levels?.tp2?.price) tp2 = aiData.take_profit_levels.tp2.price
+          if (aiData.take_profit_levels?.tp3?.price) tp3 = aiData.take_profit_levels.tp3.price
+          if (aiData.stop_loss?.price) sl = aiData.stop_loss.price
+        } else {
+          console.log(`⚠️ [AI TP/SL] IA não disponível, usando cálculos técnicos`)
+        }
+      } catch (aiError) {
+        console.error(`❌ [AI TP/SL] Erro na IA:`, aiError)
+        // Continuar com cálculos técnicos
+      }
+    } else {
+      console.log(`⚠️ [AI TP/SL] OPENAI_API_KEY não configurada, usando cálculos técnicos`)
+    }
+
     return NextResponse.json({
       success: true,
       symbol,
       current_price: currentPrice,
       entry_price: entryPrice || currentPrice,
       performance: performance,
-      ai_validated: false, // Desativado temporariamente para estabilidade
+      ai_validated: aiValidated,
       take_profit_levels: {
         tp1: { 
           price: tp1, 
