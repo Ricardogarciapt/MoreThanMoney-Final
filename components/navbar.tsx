@@ -102,8 +102,8 @@ export default function Navbar() {
     <>
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled 
-          ? 'bg-black/95 backdrop-blur-lg border-b border-mtm-primary/30 shadow-lg' 
-          : 'bg-gradient-to-b from-black/95 via-black/90 to-transparent backdrop-blur-sm'
+          ? 'bg-gradient-to-r from-black via-gray-900 to-black backdrop-blur-md border-b border-mtm-primary/30 shadow-lg shadow-mtm-primary/20' 
+          : 'bg-gradient-to-r from-black/95 via-gray-900/95 to-black/95 backdrop-blur-md border-b border-mtm-primary/20'
       }`}>
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16 md:h-20">

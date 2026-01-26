@@ -84,8 +84,13 @@ export default function SocialFeed() {
     if (mounted) {
       loadUser()
       loadPosts()
-      subscribeToPosts()
+      const unsubscribe = subscribeToPosts()
       loadViewedCategories()
+      
+      // Cleanup ao desmontar
+      return () => {
+        if (unsubscribe) unsubscribe()
+      }
     }
   }, [mounted])
 
@@ -370,29 +375,82 @@ export default function SocialFeed() {
   }, [mounted, posts, storyPreviews])
 
   const subscribeToPosts = () => {
-    const channel = supabase
-      .channel("posts-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "posts" },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            const newPost = payload.new as Post
-            setPosts((prev) => [newPost, ...prev])
-            generateStoryPreviews([newPost, ...posts])
-          } else if (payload.eventType === "UPDATE") {
-            setPosts((prev) =>
-              prev.map((p) => (p.id === payload.new.id ? (payload.new as Post) : p))
-            )
-          } else if (payload.eventType === "DELETE") {
-            setPosts((prev) => prev.filter((p) => p.id !== payload.old.id))
+    try {
+      console.log('📡 [SOCIAL FEED] Iniciando subscrição Realtime...')
+      
+      const channel = supabase
+        .channel("posts-changes", {
+          config: {
+            broadcast: { self: false },
+            presence: { key: 'user_id' }
           }
-        }
-      )
-      .subscribe()
+        })
+        .on(
+          "postgres_changes",
+          { 
+            event: "*", 
+            schema: "public", 
+            table: "posts" 
+          },
+          (payload) => {
+            console.log('📨 [SOCIAL FEED] Evento Realtime recebido:', payload.eventType)
+            
+            if (payload.eventType === "INSERT") {
+              const newPost = payload.new as any
+              // Garantir que media_urls está presente
+              if (!newPost.media_urls && newPost.media_url) {
+                newPost.media_urls = [newPost.media_url]
+              }
+              setPosts((prev) => {
+                // Evitar duplicados
+                if (prev.some(p => p.id === newPost.id)) {
+                  return prev
+                }
+                return [newPost, ...prev]
+              })
+              // Recarregar posts completos para garantir sincronização
+              setTimeout(() => loadPosts(), 1000)
+            } else if (payload.eventType === "UPDATE") {
+              const updatedPost = payload.new as any
+              if (!updatedPost.media_urls && updatedPost.media_url) {
+                updatedPost.media_urls = [updatedPost.media_url]
+              }
+              setPosts((prev) =>
+                prev.map((p) => (p.id === updatedPost.id ? updatedPost : p))
+              )
+            } else if (payload.eventType === "DELETE") {
+              setPosts((prev) => prev.filter((p) => p.id !== payload.old.id))
+            }
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ [SOCIAL FEED] Subscrição Realtime ativa')
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ [SOCIAL FEED] Erro na subscrição Realtime')
+            // Tentar reconectar após 5 segundos
+            setTimeout(() => {
+              console.log('🔄 [SOCIAL FEED] Tentando reconectar...')
+              subscribeToPosts()
+            }, 5000)
+          } else if (status === 'TIMED_OUT') {
+            console.warn('⚠️ [SOCIAL FEED] Subscrição Realtime timeout, tentando reconectar...')
+            setTimeout(() => {
+              subscribeToPosts()
+            }, 3000)
+          } else {
+            console.log('📡 [SOCIAL FEED] Status subscrição:', status)
+          }
+        })
 
-    return () => {
-      supabase.removeChannel(channel)
+      // Retornar função de cleanup
+      return () => {
+        console.log('🧹 [SOCIAL FEED] Limpando subscrição Realtime...')
+        supabase.removeChannel(channel)
+      }
+    } catch (error) {
+      console.error('❌ [SOCIAL FEED] Erro ao criar subscrição:', error)
+      return () => {} // Retornar função vazia se houver erro
     }
   }
 
