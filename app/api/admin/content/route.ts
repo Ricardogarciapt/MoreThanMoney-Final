@@ -43,18 +43,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { type, category, title, description, url, content, file_url, file_name, file_size, is_active, order_index, metadata } = body
 
+    // Validar campos obrigatórios
+    if (!type || !category || !title) {
+      return NextResponse.json({ 
+        error: 'Campos obrigatórios: type, category, title' 
+      }, { status: 400 })
+    }
+
     const { data, error } = await supabase
       .from('site_content')
       .insert({
         type,
         category,
         title,
-        description,
-        url,
-        content,
-        file_url,
-        file_name,
-        file_size,
+        description: description || null,
+        url: url || null,
+        content: content || null,
+        file_url: file_url || null,
+        file_name: file_name || null,
+        file_size: file_size || null,
         is_active: is_active ?? true,
         order_index: order_index ?? 0,
         metadata: metadata ?? {},
@@ -64,11 +71,19 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('❌ [ADMIN CONTENT] Erro ao inserir:', error)
+      return NextResponse.json({ 
+        error: error.message,
+        details: error.details || null
+      }, { status: 500 })
     }
 
     return NextResponse.json({ data }, { status: 201 })
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (error: any) {
+    console.error('❌ [ADMIN CONTENT] Erro:', error)
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: error.message 
+    }, { status: 500 })
   }
 }

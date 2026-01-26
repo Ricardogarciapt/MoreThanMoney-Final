@@ -1,0 +1,12 @@
+#!/bin/bash
+echo "🚀 Script de Instalação Rápida"
+echo ""
+echo "Este script deve ser executado no Terminal.app (não no Cursor)"
+echo ""
+echo "Copie e cole no Terminal.app:"
+echo ""
+echo "cd '/Users/ricardogarcia/Documents/Repositório SITE/SITE-MORETHANMONEY-FINAL-39aae3022258dec0b1e9cce3dc39489035c05b36'"
+echo "/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+echo "brew install node"
+echo "npm install --legacy-peer-deps"
+echo ""
