@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select"
 import ScannerScreener from "@/components/scanner-screener"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/contexts/auth-context"
 
 // Ordem explícita dos scanners (mantém a ordem dos botões)
 const scannerOrder = [
@@ -243,6 +244,22 @@ export default function TradingViewWidget({
   const [widgetLoaded, setWidgetLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isLoadingScanner = useRef(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  
+  // Obter ID do utilizador autenticado
+  useEffect(() => {
+    const getUserId = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user?.id) {
+          setCurrentUserId(session.user.id)
+        }
+      } catch (error) {
+        console.error('Erro ao obter user ID:', error)
+      }
+    }
+    getUserId()
+  }, [])
 
   // Estados - usar props externas se fornecidas, senão usar localStorage
   const [selectedStudies, setSelectedStudies] = useState<ScannerKey[]>(() => {
@@ -382,6 +399,31 @@ export default function TradingViewWidget({
     if (onTimeframeChange) onTimeframeChange(newTimeframe)
   }
 
+  // Função auxiliar para guardar desenhos no Supabase
+  const saveDrawingsToSupabase = async (drawings: any[]) => {
+    if (!currentUserId || drawings.length === 0) return
+    
+    try {
+      // Guardar desenhos no último chart salvo ou criar um chart temporário
+      // Por agora, apenas logamos - podemos melhorar depois
+      console.log('📊 [TRADINGVIEW] Desenhos capturados:', drawings.length)
+    } catch (error) {
+      console.error('Erro ao guardar desenhos:', error)
+    }
+  }
+
+  // Função auxiliar para guardar um desenho individual
+  const saveDrawingToSupabase = async (drawing: any) => {
+    if (!currentUserId) return
+    
+    try {
+      console.log('📊 [TRADINGVIEW] Desenho capturado:', drawing)
+      // Pode ser implementado para guardar desenho individual se necessário
+    } catch (error) {
+      console.error('Erro ao guardar desenho:', error)
+    }
+  }
+
   const handleSaveChart = async () => {
     if (!chartNameToSave.trim()) {
       alert("Por favor, insira um nome para o gráfico")
@@ -391,12 +433,47 @@ export default function TradingViewWidget({
     try {
       // Tentar obter desenhos do TradingView se disponível
       let drawingsData: any[] = []
-      if (widgetRef.current?.chart) {
+      if (widgetRef.current) {
         try {
-          const chart = widgetRef.current.chart()
-          if (chart && typeof chart.getAllShapes === 'function') {
-            const shapes = chart.getAllShapes()
-            drawingsData = shapes || []
+          const chart = widgetRef.current.chart && widgetRef.current.chart()
+          if (chart) {
+            // Método principal: usar chart.save() que captura TUDO incluindo desenhos
+            if (typeof chart.save === 'function') {
+              try {
+                const chartState = chart.save()
+                console.log('📊 [TRADINGVIEW] Estado completo do chart:', chartState)
+                
+                // O TradingView guarda desenhos em chartState.shapes ou chartState.drawings
+                if (chartState) {
+                  if (chartState.shapes) {
+                    drawingsData = chartState.shapes
+                  } else if (chartState.drawings) {
+                    drawingsData = chartState.drawings
+                  } else if (chartState.objects) {
+                    // Desenhos podem estar em objects
+                    drawingsData = chartState.objects.filter((obj: any) => 
+                      obj.type && (obj.type.includes('line') || obj.type.includes('shape') || obj.type.includes('drawing'))
+                    ) || []
+                  }
+                  
+                  // Guardar estado completo do chart (inclui desenhos)
+                  console.log('📊 [TRADINGVIEW] Desenhos capturados:', drawingsData.length)
+                }
+              } catch (e) {
+                console.warn('Não foi possível salvar estado do chart:', e)
+              }
+            }
+            
+            // Métodos alternativos (fallback)
+            if (drawingsData.length === 0) {
+              if (typeof chart.getAllShapes === 'function') {
+                const shapes = chart.getAllShapes()
+                drawingsData = shapes || []
+              } else if (typeof chart.getAllStudies === 'function') {
+                const studies = chart.getAllStudies()
+                drawingsData = studies.filter((s: any) => s.isDrawing || s.type === 'drawing') || []
+              }
+            }
           }
         } catch (e) {
           console.warn('Não foi possível obter desenhos do TradingView:', e)
@@ -623,10 +700,25 @@ export default function TradingViewWidget({
 
       widgetRef.current = new window.TradingView.widget(widgetOptions)
 
-      // Tentar abrir o gráfico com uma vista inicial "resetada" para melhor visualização dos scanners
-      // E configurar AUTO e apenas escala de preço após o chart estar pronto
+      // Configurar callbacks para capturar desenhos quando chart estiver pronto
       if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
         widgetRef.current.onChartReady(() => {
+          // Guardar referência do chart para uso posterior
+          if (widgetRef.current) {
+            try {
+              const chart = widgetRef.current.chart && widgetRef.current.chart()
+              if (chart) {
+                // Tentar capturar desenhos periodicamente (quando chart mudar)
+                // O TradingView pode expor desenhos através de eventos ou métodos específicos
+                console.log('📊 [TRADINGVIEW] Chart pronto, configurando captura de desenhos')
+              }
+            } catch (e) {
+              console.warn('Não foi possível configurar captura de desenhos:', e)
+            }
+          }
+          
+          // Tentar abrir o gráfico com uma vista inicial "resetada" para melhor visualização dos scanners
+          // E configurar AUTO e apenas escala de preço após o chart estar pronto
           try {
             const chart = widgetRef.current.chart && widgetRef.current.chart()
             if (chart) {
