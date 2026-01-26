@@ -26,12 +26,15 @@ export async function GET(request: NextRequest) {
     // Verificar autenticação - tentar getUser primeiro (mais robusto)
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
+    let userId: string | null = null
+    
     if (userError || !user) {
+      console.warn('⚠️ [CHARTS] getUser falhou, tentando getSession:', userError?.message)
       // Fallback: tentar getSession
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
       if (sessionError || !session) {
-        console.error('Erro de autenticação:', userError || sessionError)
+        console.error('❌ [CHARTS] Erro de autenticação:', sessionError?.message || userError?.message)
         return NextResponse.json(
           { success: false, error: 'Não autenticado' },
           { status: 401 }
@@ -39,9 +42,17 @@ export async function GET(request: NextRequest) {
       }
       
       // Usar user da sessão
-      var userId = session.user.id
+      userId = session.user.id
     } else {
-      var userId = user.id
+      userId = user.id
+    }
+    
+    if (!userId) {
+      console.error('❌ [CHARTS] ID de utilizador não encontrado')
+      return NextResponse.json(
+        { success: false, error: 'ID de utilizador não encontrado' },
+        { status: 401 }
+      )
     }
 
     // Buscar charts do utilizador
@@ -96,12 +107,15 @@ export async function POST(request: NextRequest) {
     // Verificar autenticação - tentar getUser primeiro (mais robusto)
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
+    let userId: string | null = null
+    
     if (userError || !user) {
+      console.warn('⚠️ [CHARTS] getUser falhou, tentando getSession:', userError?.message)
       // Fallback: tentar getSession
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
       if (sessionError || !session) {
-        console.error('Erro de autenticação:', userError || sessionError)
+        console.error('❌ [CHARTS] Erro de autenticação:', sessionError?.message || userError?.message)
         return NextResponse.json(
           { success: false, error: 'Não autenticado' },
           { status: 401 }
@@ -109,9 +123,17 @@ export async function POST(request: NextRequest) {
       }
       
       // Usar user da sessão
-      var userId = session.user.id
+      userId = session.user.id
     } else {
-      var userId = user.id
+      userId = user.id
+    }
+    
+    if (!userId) {
+      console.error('❌ [CHARTS] ID de utilizador não encontrado')
+      return NextResponse.json(
+        { success: false, error: 'ID de utilizador não encontrado' },
+        { status: 401 }
+      )
     }
 
     const body = await request.json()
