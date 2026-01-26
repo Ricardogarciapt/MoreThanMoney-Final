@@ -642,19 +642,51 @@ export default function SocialFeed() {
       }
 
       // Tentar inserir com media_urls e mentions, mas tratar erro se colunas não existirem
-      const { error } = await supabase.from("posts").insert([
+      console.log('📝 [SOCIAL FEED] Tentando criar post:', {
+        user_id: session.user.id,
+        user_name: userName,
+        content_length: newPost.trim().length,
+        category: selectedCategory,
+        media_count: mediaUrls.length,
+        mentions_count: mentionedUserIds.length,
+        postData
+      })
+      
+      const { data: insertedPost, error } = await supabase.from("posts").insert([
         {
           ...postData,
           // Tentar adicionar colunas opcionais - se não existirem, o Supabase vai ignorar
           ...(mediaUrls.length > 0 && { media_urls: mediaUrls }),
           ...(mentionedUserIds.length > 0 && { mentions: mentionedUserIds }),
         },
-      ])
+      ]).select()
+      
+      console.log('📝 [SOCIAL FEED] Resposta da inserção:', {
+        sucesso: !error,
+        post_id: insertedPost?.[0]?.id || null,
+        erro: error ? {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        } : null
+      })
       
       // Se erro for de coluna não encontrada, tentar inserir sem colunas opcionais
       if (error && (error.message?.includes("media_urls") || error.message?.includes("mentions") || error.message?.includes("column"))) {
         console.warn("⚠️ [SOCIAL FEED] Colunas opcionais não encontradas, inserindo apenas colunas básicas")
-        const { error: fallbackError } = await supabase.from("posts").insert([postData])
+        const { data: fallbackPost, error: fallbackError } = await supabase.from("posts").insert([postData]).select()
+        
+        console.log('📝 [SOCIAL FEED] Resposta fallback:', {
+          sucesso: !fallbackError,
+          post_id: fallbackPost?.[0]?.id || null,
+          erro: fallbackError ? {
+            message: fallbackError.message,
+            details: fallbackError.details,
+            hint: fallbackError.hint,
+            code: fallbackError.code
+          } : null
+        })
         
         if (fallbackError) {
           console.error("❌ [SOCIAL FEED] Erro ao criar post (fallback):", fallbackError)
@@ -759,6 +791,7 @@ export default function SocialFeed() {
       }
       
       // Limpar formulário e recarregar posts
+      console.log('✅ [SOCIAL FEED] Post criado com sucesso! Limpando formulário...')
       setNewPost("")
       setSelectedCategory("")
       setNewPostMedia(null)
@@ -766,8 +799,13 @@ export default function SocialFeed() {
       setMediaPreview(null)
       setMediaPreviews([])
       setShowCreatePost(false)
-      // Recarregar posts para garantir sincronização
-      setTimeout(() => loadPosts(), 500)
+      
+      // Recarregar posts imediatamente e depois novamente após 1 segundo (para garantir)
+      loadPosts()
+      setTimeout(() => {
+        console.log('🔄 [SOCIAL FEED] Recarregando posts após criação...')
+        loadPosts()
+      }, 1000)
     } catch (error) {
       console.error("❌ [SOCIAL FEED] Erro ao criar post:", error)
       alert('❌ Erro ao publicar. Tenta novamente.')
