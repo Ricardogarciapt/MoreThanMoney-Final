@@ -225,10 +225,17 @@ export default function SocialFeed() {
       }
 
       // Carregar posts com query otimizada
+      console.log('📊 [SOCIAL FEED] Query:', selectQuery)
       const { data, error } = await supabase
         .from("posts")
         .select(selectQuery)
         .order("created_at", { ascending: false })
+      
+      console.log('📦 [SOCIAL FEED] Posts carregados:', {
+        total: data?.length || 0,
+        com_media: data?.filter((p: any) => p.media_url || p.media_urls?.length > 0).length || 0,
+        categorias: [...new Set(data?.map((p: any) => p.category).filter(Boolean))] || []
+      })
 
       if (error) {
         console.error("❌ [SOCIAL FEED] Erro ao carregar posts:", error)
