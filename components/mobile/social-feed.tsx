@@ -529,6 +529,18 @@ export default function SocialFeed() {
           return
         }
       } else if (error) {
+        console.error("❌ [SOCIAL FEED] Erro ao criar post:", error)
+        
+        // Mensagem de erro mais útil
+        let errorMessage = `❌ Erro ao publicar: ${error.message}`
+        if (error.message?.includes("media_urls") || error.message?.includes("column")) {
+          errorMessage += "\n\n💡 SOLUÇÃO:\nExecute o script SQL no Supabase:\nscripts/fix-posts-media-urls.sql"
+        }
+        
+        alert(errorMessage)
+        setUploading(false)
+        return
+      }
 
       // Enviar notificações para membros mencionados
       if (mentionedUserIds.length > 0) {
