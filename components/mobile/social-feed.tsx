@@ -257,6 +257,13 @@ export default function SocialFeed() {
           if (!post.media_urls && post.media_url) {
             post.media_urls = [post.media_url]
           }
+          // Garantir que likes_count e comments_count existem
+          if (post.likes_count === undefined || post.likes_count === null) {
+            post.likes_count = 0
+          }
+          if (post.comments_count === undefined || post.comments_count === null) {
+            post.comments_count = 0
+          }
           return post
         })
         
@@ -264,20 +271,29 @@ export default function SocialFeed() {
         generateStoryPreviews(processedPosts)
         
         // Carregar likes do usuário atual
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          const { data: likesData } = await supabase
-            .from("post_likes")
-            .select("post_id")
-            .eq("user_id", session.user.id)
-          
-          const userLikes = new Set(likesData?.map(like => like.post_id) || [])
-          setPosts(prevPosts => 
-            processedPosts.map((post: Post) => ({
-              ...post,
-              liked_by_user: userLikes.has(post.id)
-            }))
-          )
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.user) {
+            const { data: likesData, error: likesError } = await supabase
+              .from("post_likes")
+              .select("post_id")
+              .eq("user_id", session.user.id)
+            
+            if (likesError) {
+              console.error("❌ [SOCIAL FEED] Erro ao carregar likes:", likesError)
+            } else {
+              const userLikes = new Set(likesData?.map(like => like.post_id) || [])
+              setPosts(prevPosts => 
+                processedPosts.map((post: Post) => ({
+                  ...post,
+                  liked_by_user: userLikes.has(post.id)
+                }))
+              )
+            }
+          }
+        } catch (likesError) {
+          console.error("❌ [SOCIAL FEED] Erro ao processar likes:", likesError)
+          // Continuar sem likes se houver erro
         }
       }
     } catch (error) {
