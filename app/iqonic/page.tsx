@@ -1,5 +1,6 @@
 import ParticleBackground from "@/components/particle-background"
 import YouTubeEmbed from "@/components/youtube-embed"
+import Image from "next/image"
 
 export default function IQONICPage() {
   return (
@@ -97,30 +98,64 @@ export default function IQONICPage() {
               {/* MacBook Mockup */}
               <div className="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700/50">
                 <div className="aspect-video bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg overflow-hidden relative">
-                  {/* Laptop Screen */}
-                  <div className="h-full bg-gray-900 p-2">
+                  {/* Laptop Screen - Image or Fallback */}
+                  <div className="h-full bg-gray-900 p-2 relative">
+                    <div className="absolute inset-0">
+                      <Image
+                        src="/images/iqonic/iq-academy-macbook.png"
+                        alt="IQ Academy Interface"
+                        fill
+                        className="object-contain rounded-lg"
+                        unoptimized
+                      />
+                    </div>
+                    {/* Fallback if image doesn't exist */}
+                    <div className="absolute inset-0 bg-gray-900 p-2 z-[-1]">
                     {/* Top Bar */}
                     <div className="flex items-center justify-between mb-2 px-2">
                       <div className="w-4 h-4 bg-gray-700 rounded"></div>
                       <div className="text-white text-xs font-semibold">IQ Academy</div>
-                      <div className="flex gap-1">
-                        <div className="w-3 h-3 bg-gray-700 rounded"></div>
-                        <div className="w-3 h-3 bg-gray-700 rounded"></div>
+                      <div className="flex items-center gap-1">
+                        <div className="text-gray-400 text-[9px]">Forex</div>
+                        <div className="text-gray-400 text-[9px]">Portuguese</div>
+                        <div className="w-3 h-3 bg-gray-700 rounded grid grid-cols-2 gap-0.5 p-0.5">
+                          <div className="w-full h-full bg-gray-500 rounded"></div>
+                          <div className="w-full h-full bg-gray-500 rounded"></div>
+                          <div className="w-full h-full bg-gray-500 rounded"></div>
+                          <div className="w-full h-full bg-gray-500 rounded"></div>
+                        </div>
                       </div>
                     </div>
                     {/* Content */}
                     <div className="px-2 space-y-2">
-                      <div className="bg-blue-600/30 rounded-lg p-3 border border-blue-500/30">
-                        <div className="text-white font-bold text-sm mb-1">Forex</div>
-                        <div className="text-blue-300 text-xs">Academy in Portuguese</div>
+                      <div className="bg-blue-600/30 rounded-lg p-3 border border-blue-500/30 relative overflow-hidden">
+                        <div className="absolute inset-0 opacity-10">
+                          <div className="absolute top-0 left-0 w-8 h-8 border border-blue-400/30 rounded"></div>
+                          <div className="absolute top-2 right-2 w-4 h-4 border border-blue-400/30 rounded"></div>
+                          <div className="absolute bottom-2 left-2 w-6 h-6 border border-blue-400/30 rounded"></div>
+                        </div>
+                        <div className="text-white font-bold text-sm mb-1 relative z-10">Forex</div>
+                        <div className="text-blue-300 text-xs relative z-10">Academy in Portuguese</div>
                       </div>
-                      <div className="bg-blue-600/20 rounded-lg p-2 border border-blue-500/20">
-                        <div className="text-white text-xs mb-1">MÓDULO 1 - VÍDEO 101:</div>
-                        <div className="text-blue-300 text-xs">O que é Forex</div>
-                        <div className="flex justify-end mt-1">
+                      <div className="bg-blue-600/20 rounded-lg p-2 border border-blue-500/20 relative overflow-hidden">
+                        <div className="absolute inset-0 opacity-10">
+                          <div className="absolute top-0 right-0 w-6 h-6 border border-blue-400/30 rounded"></div>
+                          <div className="absolute bottom-0 left-0 w-4 h-4 border border-blue-400/30 rounded"></div>
+                        </div>
+                        <div className="text-white text-xs mb-1 relative z-10">MÓDULO 1 - VÍDEO 101:</div>
+                        <div className="text-blue-300 text-xs relative z-10">O que é Forex</div>
+                        <div className="flex justify-end mt-1 relative z-10">
                           <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
                             <span className="text-white text-xs">▶</span>
                           </div>
+                        </div>
+                      </div>
+                      <div className="px-2 pt-1">
+                        <div className="text-gray-400 text-[9px] mb-1">O que é Forex</div>
+                        <div className="text-gray-500 text-[8px]">Forex</div>
+                        <div className="text-gray-500 text-[8px]">O que é Forex...</div>
+                        <div className="mt-2 bg-blue-500/20 rounded px-2 py-1 text-center">
+                          <span className="text-blue-300 text-[9px]">Mark as Complete</span>
                         </div>
                       </div>
                     </div>
@@ -168,7 +203,17 @@ export default function IQONICPage() {
               {/* Phone Mockup */}
               <div className="bg-gray-900 rounded-xl p-3 mb-4 border border-gray-700/50">
                 <div className="aspect-[9/19] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg overflow-hidden relative">
-                  <div className="h-full bg-gray-900 p-2">
+                  <div className="absolute inset-0">
+                    <Image
+                      src="/images/iqonic/iq-social-phone.png"
+                      alt="IQ Social Interface"
+                      fill
+                      className="object-contain rounded-lg"
+                      unoptimized
+                    />
+                  </div>
+                  {/* Fallback if image doesn't exist */}
+                  <div className="h-full bg-gray-900 p-2 z-[-1]">
                     {/* Status Bar */}
                     <div className="flex justify-between items-center text-[10px] text-gray-400 mb-2">
                       <span>14:08</span>
@@ -183,6 +228,16 @@ export default function IQONICPage() {
                       <div className="text-white text-xs font-semibold">IQ Insights</div>
                       <div className="w-6 h-6 bg-gray-700 rounded-full"></div>
                     </div>
+                    {/* Tabs */}
+                    <div className="flex items-center gap-1 mb-2 px-2">
+                      <div className="bg-purple-600/30 rounded px-2 py-0.5 text-[9px] text-purple-300">All</div>
+                      <div className="bg-gray-800 rounded px-2 py-0.5 text-[9px] text-gray-400">Forex</div>
+                      <div className="bg-gray-800 rounded px-2 py-0.5 text-[9px] text-gray-400">Crypto</div>
+                      <div className="bg-gray-800 rounded px-2 py-0.5 text-[9px] text-gray-400 flex items-center gap-1">
+                        <span>Select Educator</span>
+                        <span className="text-[8px]">▼</span>
+                      </div>
+                    </div>
                     {/* Search */}
                     <div className="bg-gray-800 rounded-lg px-2 py-1 mb-2 text-[10px] text-gray-400">
                       Q Search insights...
@@ -190,14 +245,53 @@ export default function IQONICPage() {
                     {/* Content Cards */}
                     <div className="space-y-2">
                       <div className="bg-gray-800/60 rounded-lg p-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                            <span className="text-white text-[8px] font-bold">RG</span>
+                          </div>
+                          <div>
+                            <div className="text-white text-xs font-semibold">Ricardo Garcie</div>
+                            <div className="text-gray-400 text-[8px]">Nov 8, 2022</div>
+                          </div>
+                        </div>
+                        <div className="text-gray-300 text-[9px] mb-1">XAUUSD</div>
+                        <div className="text-gray-300 text-[9px] mb-1">This is My forward testing for gold. Market its prepping for NFP, all the Data... <span className="text-purple-400">Show more</span></div>
+                        <div className="h-10 bg-gray-700/30 rounded mt-1 relative overflow-hidden">
+                          <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-1">
+                            <div className="w-1 h-2 bg-red-500/60 rounded-t"></div>
+                            <div className="w-1 h-4 bg-green-500/60 rounded-t"></div>
+                            <div className="w-1 h-3 bg-red-500/60 rounded-t"></div>
+                            <div className="w-1 h-5 bg-green-500/60 rounded-t"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-gray-800/60 rounded-lg p-2">
                         <div className="text-white text-xs font-semibold mb-1">XAUUSD</div>
-                        <div className="h-12 bg-gray-700/50 rounded mb-1"></div>
-                        <div className="text-gray-400 text-[9px]">Samuele Cattaneo • Aug 26, 2025</div>
+                        {/* Candlestick Chart Representation */}
+                        <div className="h-12 bg-gray-700/50 rounded mb-1 relative overflow-hidden">
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            {/* Green and red bars representing candlesticks */}
+                            <div className="flex items-end gap-0.5 h-full px-1">
+                              <div className="w-1 h-3 bg-red-500 rounded"></div>
+                              <div className="w-1 h-5 bg-green-500 rounded"></div>
+                              <div className="w-1 h-4 bg-red-500 rounded"></div>
+                              <div className="w-1 h-6 bg-green-500 rounded"></div>
+                              <div className="w-1 h-3 bg-red-500 rounded"></div>
+                              <div className="w-1 h-5 bg-green-500 rounded"></div>
+                            </div>
+                          </div>
+                          <div className="absolute top-1 left-1 text-white text-[7px] opacity-60">Possibili zone di inversione o continuacione</div>
+                        </div>
+                        <div className="text-gray-400 text-[9px]">Samuele Cattaneo • Aug 26, 2025, 11:58 PM</div>
                       </div>
                       <div className="bg-gray-800/60 rounded-lg p-2">
                         <div className="text-white text-xs font-semibold mb-1">TP IN LIVE</div>
-                        <div className="h-12 bg-purple-600/30 rounded mb-1"></div>
-                        <div className="text-gray-400 text-[9px]">Matteo Vitti • Aug 26, 2025</div>
+                        <div className="h-12 bg-purple-600/30 rounded mb-1 relative overflow-hidden flex items-center justify-center">
+                          <div className="text-white text-[10px] font-bold">TP CHARTS</div>
+                          <div className="absolute top-1 right-1 w-2 h-2 bg-purple-400 rounded-full"></div>
+                        </div>
+                        <div className="text-gray-400 text-[9px] mb-1">nice reaction of BTC on the called area and TP taken live.</div>
+                        <div className="text-gray-400 text-[9px]">Matteo Vitti • Aug 26, 2025, 2:46 PM</div>
                       </div>
                     </div>
                   </div>
@@ -243,24 +337,47 @@ export default function IQONICPage() {
               {/* Tablet/Desktop Mockup */}
               <div className="bg-gray-900 rounded-xl p-4 mb-4 border border-gray-700/50">
                 <div className="aspect-video bg-gradient-to-br from-cyan-950 to-blue-950 rounded-lg overflow-hidden relative">
-                  <div className="h-full bg-gray-900 p-2">
+                  <div className="absolute inset-0">
+                    <Image
+                      src="/images/iqonic/iq-insights-tablet.png"
+                      alt="IQ Insights Interface"
+                      fill
+                      className="object-contain rounded-lg"
+                      unoptimized
+                    />
+                  </div>
+                  {/* Fallback if image doesn't exist */}
+                  <div className="h-full bg-gray-900 p-2 z-[-1]">
                     {/* Chart Area */}
-                    <div className="h-full bg-gray-800 rounded relative">
+                    <div className="h-full bg-gray-800 rounded relative overflow-hidden">
                       {/* Chart Title */}
-                      <div className="absolute top-2 left-2 text-white text-xs font-semibold">
+                      <div className="absolute top-2 left-2 text-white text-xs font-semibold z-10">
                         Ricardo Gorels - XAUUSD
                       </div>
-                      {/* Chart Lines */}
-                      <div className="h-full flex items-center justify-center">
+                      {/* Chart Background with Candlesticks */}
+                      <div className="h-full flex items-center justify-center relative">
                         <div className="w-full h-3/4 relative">
                           {/* Candlestick representation */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-full h-full bg-gray-700/30 rounded"></div>
+                          <div className="absolute inset-0 flex items-end justify-center gap-0.5 px-2">
+                            <div className="w-2 h-8 bg-red-500/40 rounded-t"></div>
+                            <div className="w-2 h-12 bg-green-500/40 rounded-t"></div>
+                            <div className="w-2 h-6 bg-red-500/40 rounded-t"></div>
+                            <div className="w-2 h-10 bg-green-500/40 rounded-t"></div>
+                            <div className="w-2 h-14 bg-green-500/40 rounded-t"></div>
+                            <div className="w-2 h-8 bg-red-500/40 rounded-t"></div>
+                            <div className="w-2 h-11 bg-green-500/40 rounded-t"></div>
                           </div>
-                          {/* Annotations */}
-                          <div className="absolute top-1/4 left-1/4 w-16 h-8 bg-orange-500/30 border border-orange-500/50 rounded"></div>
-                          <div className="absolute top-1/3 right-1/4 w-12 h-6 bg-blue-500/30 border border-blue-500/50 rounded"></div>
-                          <div className="absolute bottom-1/4 left-1/3 w-14 h-5 bg-blue-500/30 border border-blue-500/50 rounded"></div>
+                          {/* Annotations - Horizontal lines and zones */}
+                          <div className="absolute top-1/4 left-1/4 w-16 h-8 bg-orange-500/40 border-2 border-orange-500/70 rounded flex items-center justify-center">
+                            <span className="text-orange-300 text-[8px]">Zone 1</span>
+                          </div>
+                          <div className="absolute top-1/3 right-1/4 w-12 h-6 bg-blue-500/40 border-2 border-blue-500/70 rounded"></div>
+                          <div className="absolute bottom-1/4 left-1/3 w-14 h-5 bg-blue-500/40 border-2 border-blue-500/70 rounded"></div>
+                          <div className="absolute top-1/2 right-1/3 w-10 h-4 bg-blue-500/40 border-2 border-blue-500/70 rounded"></div>
+                          {/* Support/Resistance lines */}
+                          <div className="absolute top-1/5 left-0 right-0 h-px bg-blue-400/50"></div>
+                          <div className="absolute top-2/5 left-0 right-0 h-px bg-blue-400/50"></div>
+                          <div className="absolute bottom-1/5 left-0 right-0 h-px bg-orange-400/50"></div>
                         </div>
                       </div>
                     </div>
@@ -612,7 +729,18 @@ export default function IQONICPage() {
 
               {/* App Interface Mockup */}
               <div className="bg-gray-900 rounded-xl p-4 mb-6 border border-gray-700/50">
-                <div className="bg-gradient-to-br from-teal-950 to-green-950 rounded-lg overflow-hidden">
+                <div className="bg-gradient-to-br from-teal-950 to-green-950 rounded-lg overflow-hidden relative aspect-video">
+                  <div className="absolute inset-0">
+                    <Image
+                      src="/images/iqonic/iq-atlas-platform.png"
+                      alt="IQ Atlas Platform Interface"
+                      fill
+                      className="object-contain rounded-lg"
+                      unoptimized
+                    />
+                  </div>
+                  {/* Fallback if image doesn't exist */}
+                  <div className="absolute inset-0 z-[-1]">
                   {/* Header */}
                   <div className="bg-teal-600/30 px-4 py-3 border-b border-teal-500/30">
                     <div className="flex items-center gap-2">
@@ -631,12 +759,17 @@ export default function IQONICPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-gray-800 rounded-lg px-3 py-2 text-xs text-gray-400 flex items-center gap-2">
                         <span>📅</span>
-                        <span>Datas</span>
+                        <span>Zerx - 2023</span>
                       </div>
                       <div className="bg-gray-800 rounded-lg px-3 py-2 text-xs text-gray-400 flex items-center gap-2">
                         <span>👤</span>
                         <span>4 Viajantes</span>
                       </div>
+                    </div>
+                    {/* Labels */}
+                    <div className="flex justify-between px-1">
+                      <span className="text-gray-400 text-[10px]">Hotels</span>
+                      <span className="text-gray-400 text-[10px]">Pricing tiers</span>
                     </div>
                   </div>
 
@@ -659,6 +792,16 @@ export default function IQONICPage() {
                         <div className="bg-green-600/30 rounded px-2 py-1 border border-green-500/30">
                           <div className="text-green-400 text-xs font-bold">$450/noite</div>
                           <div className="text-green-300 text-[9px]">Poupança: $700</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-gray-800/60 rounded-lg p-3 border border-teal-500/20">
+                      <div className="text-white text-xs font-semibold mb-1">Luxury Retreat</div>
+                      <div className="flex items-center justify-between">
+                        <div className="text-gray-400 text-[10px]">Público: $950</div>
+                        <div className="bg-green-600/30 rounded px-2 py-1 border border-green-500/30">
+                          <div className="text-green-400 text-xs font-bold">$600/noite</div>
+                          <div className="text-green-300 text-[9px]">Poupança: $950</div>
                         </div>
                       </div>
                     </div>
@@ -789,7 +932,18 @@ export default function IQONICPage() {
 
               {/* App Interface Mockup */}
               <div className="bg-gray-900 rounded-xl p-4 mb-6 border border-gray-700/50">
-                <div className="bg-gradient-to-br from-teal-950 to-green-950 rounded-lg overflow-hidden">
+                <div className="bg-gradient-to-br from-teal-950 to-green-950 rounded-lg overflow-hidden relative aspect-video">
+                  <div className="absolute inset-0">
+                    <Image
+                      src="/images/iqonic/iq-atlas-platform.png"
+                      alt="IQ Atlas Platform Interface"
+                      fill
+                      className="object-contain rounded-lg"
+                      unoptimized
+                    />
+                  </div>
+                  {/* Fallback if image doesn't exist */}
+                  <div className="absolute inset-0 z-[-1]">
                   {/* Header */}
                   <div className="bg-teal-600/30 px-4 py-3 border-b border-teal-500/30">
                     <div className="flex items-center gap-2">
@@ -808,12 +962,17 @@ export default function IQONICPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-gray-800 rounded-lg px-3 py-2 text-xs text-gray-400 flex items-center gap-2">
                         <span>📅</span>
-                        <span>Datas</span>
+                        <span>Zerx - 2023</span>
                       </div>
                       <div className="bg-gray-800 rounded-lg px-3 py-2 text-xs text-gray-400 flex items-center gap-2">
                         <span>👤</span>
                         <span>4 Viajantes</span>
                       </div>
+                    </div>
+                    {/* Labels */}
+                    <div className="flex justify-between px-1">
+                      <span className="text-gray-400 text-[10px]">Hotels</span>
+                      <span className="text-gray-400 text-[10px]">Pricing tiers</span>
                     </div>
                   </div>
 

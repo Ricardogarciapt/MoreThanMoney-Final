@@ -8,6 +8,7 @@ import { ArrowRight, Smartphone, Zap, Clock, Shield, Target, Users, TrendingUp, 
 import Link from "next/link"
 import ParticleBackground from "@/components/particle-background"
 import YouTubeEmbed from "@/components/youtube-embed"
+import Image from "next/image"
 
 export default function SwipeToTradePage() {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
@@ -88,7 +89,17 @@ export default function SwipeToTradePage() {
                   <div className="bg-gray-900 rounded-xl overflow-hidden">
                     {/* Phone Screen Mockup - IQ Sync Interface */}
                     <div className="aspect-[9/19] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg p-2 relative">
-                      <div className="h-full bg-gray-900 rounded-lg p-3 space-y-2 relative overflow-hidden">
+                      <div className="absolute inset-0">
+                        <Image
+                          src="/images/iqonic/iq-sync-phone.png"
+                          alt="IQ Sync Interface"
+                          fill
+                          className="object-contain rounded-lg"
+                          unoptimized
+                        />
+                      </div>
+                      {/* Fallback if image doesn't exist */}
+                      <div className="h-full bg-gray-900 rounded-lg p-3 space-y-2 relative overflow-hidden z-[-1]">
                         {/* Status Bar */}
                         <div className="flex justify-between items-center text-[10px] text-gray-400 mb-2">
                           <span>9:41</span>

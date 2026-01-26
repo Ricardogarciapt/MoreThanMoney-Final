@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ArrowRight, RefreshCw, Bot, Zap, Shield, Clock, CheckCircle, Smartphone } from "lucide-react"
 import Link from "next/link"
 import ParticleBackground from "@/components/particle-background"
+import Image from "next/image"
 
 export default function AutomationPage() {
   return (
@@ -91,8 +92,18 @@ export default function AutomationPage() {
                 <div className="bg-black rounded-2xl p-4 shadow-2xl">
                   <div className="bg-gray-900 rounded-xl overflow-hidden">
                     {/* Phone Screen Mockup */}
-                    <div className="aspect-[9/19] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg p-2">
-                      <div className="h-full bg-gray-900 rounded-lg p-4 space-y-4">
+                    <div className="aspect-[9/19] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg p-2 relative">
+                      <div className="absolute inset-0">
+                        <Image
+                          src="/images/iqonic/iq-sync-phone.png"
+                          alt="IQ Sync Interface"
+                          fill
+                          className="object-contain rounded-lg"
+                          unoptimized
+                        />
+                      </div>
+                      {/* Fallback if image doesn't exist */}
+                      <div className="h-full bg-gray-900 rounded-lg p-4 space-y-4 z-[-1]">
                         {/* Status Bar */}
                         <div className="flex justify-between items-center text-xs text-gray-400 mb-4">
                           <span>9:41</span>
