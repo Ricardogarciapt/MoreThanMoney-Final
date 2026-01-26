@@ -502,7 +502,7 @@ export default function IQONICPage() {
           </h2>
           <div className="grid md:grid-cols-2 gap-8">
             {/* IQ SYNC Card */}
-            <div className="bg-gradient-to-br from-blue-600/20 via-mtm-primary/10 to-cyan-600/20 border-2 border-blue-500/30 rounded-xl p-8 hover:border-blue-500/60 transition-all duration-300 hover:scale-105">
+            <div className="bg-gradient-to-br from-blue-600/20 via-mtm-primary/10 to-cyan-600/20 border-2 border-blue-500/30 rounded-xl p-6 hover:border-blue-500/60 transition-all duration-300 hover:scale-105 flex flex-col h-full">
               <div className="flex items-center gap-3 mb-4">
                 <div className="bg-gradient-to-br from-blue-500/30 via-mtm-primary/20 to-cyan-500/30 rounded-xl p-4 border-2 border-blue-500/50">
                   <span className="text-4xl">🔄</span>
@@ -510,25 +510,28 @@ export default function IQONICPage() {
                 <h3 className="text-2xl font-bold text-white">IQ SYNC</h3>
               </div>
               {/* Imagem Horizontal */}
-              <div className="mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700/50">
-                <div className="aspect-[16/9] bg-gradient-to-br from-blue-950 to-cyan-950 rounded-lg overflow-hidden relative">
-                  <div className="absolute inset-0">
-                    <Image
-                      src="/images/iqonic/Imagem Iq Sync.png"
-                      alt="IQ SYNC"
-                      fill
-                      className="object-cover rounded-lg"
-                      unoptimized
-                    />
-                  </div>
+              <div className="mb-4 bg-gray-900 rounded-xl p-2 border border-gray-700/50 flex-shrink-0">
+                <div className="relative w-full" style={{ minHeight: '250px' }}>
+                  <Image
+                    src="/images/iqonic/Imagem Iq Sync.png"
+                    alt="IQ SYNC"
+                    width={800}
+                    height={450}
+                    className="w-full h-auto rounded-lg object-contain"
+                    unoptimized
+                  />
                 </div>
               </div>
-              <p className="text-gray-300 leading-relaxed">
-                Sistema <strong className="text-blue-400">"Receive → Review → Confirm"</strong>, garantindo que manténs sempre o controlo final de cada decisão. Execução manual de ideias de mercado em tempo real.
-              </p>
+              <div className="flex-grow flex flex-col">
+                <p className="text-gray-300 leading-relaxed mb-4">
+                  Sistema <strong className="text-blue-400">"Receive → Review → Confirm"</strong>, garantindo que manténs sempre o controlo final de cada decisão. Execução manual de ideias de mercado em tempo real.
+                </p>
+                {/* Espaçador para alinhar altura */}
+                <div className="flex-grow"></div>
+              </div>
             </div>
             {/* IQ AUTO Card */}
-            <div className="bg-gradient-to-br from-purple-600/20 via-mtm-primary/10 to-pink-600/20 border-2 border-purple-500/30 rounded-xl p-8 hover:border-purple-500/60 transition-all duration-300 hover:scale-105">
+            <div className="bg-gradient-to-br from-purple-600/20 via-mtm-primary/10 to-pink-600/20 border-2 border-purple-500/30 rounded-xl p-6 hover:border-purple-500/60 transition-all duration-300 hover:scale-105 flex flex-col h-full">
               <div className="flex items-center gap-3 mb-4">
                 <div className="bg-gradient-to-br from-purple-500/30 via-mtm-primary/20 to-pink-500/30 rounded-xl p-4 border-2 border-purple-500/50">
                   <span className="text-4xl">🤖</span>
@@ -536,28 +539,29 @@ export default function IQONICPage() {
                 <h3 className="text-2xl font-bold text-white">IQ AUTO</h3>
               </div>
               {/* Imagem Horizontal */}
-              <div className="mb-4 bg-gray-900 rounded-xl p-3 border border-gray-700/50">
-                <div className="aspect-[16/9] bg-gradient-to-br from-purple-950 to-pink-950 rounded-lg overflow-hidden relative">
-                  <div className="absolute inset-0">
-                    <Image
-                      src="/images/iqonic/Imagem Iq Auto.png"
-                      alt="IQ AUTO"
-                      fill
-                      className="object-cover rounded-lg"
-                      unoptimized
-                    />
-                  </div>
+              <div className="mb-4 bg-gray-900 rounded-xl p-2 border border-gray-700/50 flex-shrink-0">
+                <div className="relative w-full" style={{ minHeight: '250px' }}>
+                  <Image
+                    src="/images/iqonic/Imagem Iq Auto.png"
+                    alt="IQ AUTO"
+                    width={800}
+                    height={450}
+                    className="w-full h-auto rounded-lg object-contain"
+                    unoptimized
+                  />
                 </div>
               </div>
-              <p className="text-gray-300 leading-relaxed mb-4">
-                Experiência <strong className="text-purple-400">"set-it-once"</strong> com proteção <strong className="text-purple-400">SafeGuard</strong> (gestão de risco e limites de capital). Mantém a conta alinhada com estratégias dos educadores de forma 100% automática em segundo plano.
-              </p>
-              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mt-4">
-                <p className="text-sm text-gray-300">
-                  <span className="text-purple-400 font-semibold">Add-on IQ Auto:</span>{" "}
-                  <span className="text-white font-bold text-lg">$59.99</span>
-                  <span className="text-gray-400 text-sm ml-2">/mensal</span>
+              <div className="flex-grow flex flex-col">
+                <p className="text-gray-300 leading-relaxed mb-4">
+                  Experiência <strong className="text-purple-400">"set-it-once"</strong> com proteção <strong className="text-purple-400">SafeGuard</strong> (gestão de risco e limites de capital). Mantém a conta alinhada com estratégias dos educadores de forma 100% automática em segundo plano.
                 </p>
+                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                  <p className="text-sm text-gray-300">
+                    <span className="text-purple-400 font-semibold">Add-on IQ Auto:</span>{" "}
+                    <span className="text-white font-bold text-lg">$59.99</span>
+                    <span className="text-gray-400 text-sm ml-2">/mensal</span>
+                  </p>
+                </div>
               </div>
             </div>
           </div>
