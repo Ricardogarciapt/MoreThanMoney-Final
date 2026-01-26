@@ -806,6 +806,7 @@ export default function IQONICPage() {
                       </div>
                     </div>
                   </div>
+                  </div>
                 </div>
               </div>
 
@@ -1008,6 +1009,7 @@ export default function IQONICPage() {
                         </div>
                       </div>
                     </div>
+                  </div>
                   </div>
                 </div>
               </div>
