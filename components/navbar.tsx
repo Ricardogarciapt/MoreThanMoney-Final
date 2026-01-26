@@ -157,7 +157,11 @@ export default function Navbar() {
 
                     {((item.name === "Educação" && isEducacaoOpen) ||
                       (item.name === "Trading" && isTradingOpen)) && (
-                      <div className="absolute left-0 mt-2 w-56 rounded-xl shadow-2xl bg-black/95 backdrop-blur-lg border border-mtm-primary/30 ring-1 ring-mtm-primary/20 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className={`absolute left-0 mt-2 w-56 rounded-xl shadow-2xl backdrop-blur-lg border border-mtm-primary/30 ring-1 ring-mtm-primary/20 z-50 animate-in fade-in slide-in-from-top-2 duration-200 ${
+                        isScrolled 
+                          ? 'bg-gradient-to-r from-black via-gray-900 to-black' 
+                          : 'bg-gradient-to-r from-black/95 via-gray-900/95 to-black/95'
+                      }`}>
                         <div className="py-2">
                           {item.submenu.map((subitem) => (
                             <Link
