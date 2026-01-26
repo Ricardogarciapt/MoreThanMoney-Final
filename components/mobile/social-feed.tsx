@@ -194,17 +194,61 @@ export default function SocialFeed() {
   const loadPosts = async () => {
     setLoading(true)
     try {
+      // Tentar selecionar todas as colunas, incluindo media_urls se existir
+      let selectQuery = "id, user_id, user_name, content, media_url, category, created_at, updated_at"
+      
+      // Tentar adicionar media_urls e mentions se existirem (não falha se não existirem)
+      try {
+        const { data: testData } = await supabase
+          .from("posts")
+          .select("media_urls, mentions")
+          .limit(1)
+        
+        if (testData !== null) {
+          selectQuery += ", media_urls, mentions"
+        }
+      } catch (e) {
+        // Colunas não existem, usar apenas as básicas
+        console.log("ℹ️ [SOCIAL FEED] Colunas media_urls/mentions não disponíveis, usando apenas colunas básicas")
+      }
+
       const { data, error } = await supabase
         .from("posts")
-        .select("*")
+        .select(selectQuery)
         .order("created_at", { ascending: false })
 
       if (error) {
         console.error("❌ [SOCIAL FEED] Erro ao carregar posts:", error)
-        setPosts([])
+        // Se erro for de coluna não encontrada, tentar sem media_urls
+        if (error.message?.includes("media_urls") || error.message?.includes("column")) {
+          console.log("⚠️ [SOCIAL FEED] Tentando carregar posts sem colunas opcionais...")
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from("posts")
+            .select("id, user_id, user_name, content, media_url, category, created_at, updated_at")
+            .order("created_at", { ascending: false })
+          
+          if (fallbackError) {
+            console.error("❌ [SOCIAL FEED] Erro ao carregar posts (fallback):", fallbackError)
+            setPosts([])
+          } else {
+            setPosts(fallbackData || [])
+            generateStoryPreviews(fallbackData || [])
+          }
+        } else {
+          setPosts([])
+        }
       } else {
-        setPosts(data || [])
-        generateStoryPreviews(data || [])
+        // Processar posts: converter media_url para media_urls se necessário
+        const processedPosts = (data || []).map((post: any) => {
+          // Se não tem media_urls mas tem media_url, criar array
+          if (!post.media_urls && post.media_url) {
+            post.media_urls = [post.media_url]
+          }
+          return post
+        })
+        
+        setPosts(processedPosts)
+        generateStoryPreviews(processedPosts)
         
         // Carregar likes do usuário atual
         const { data: { session } } = await supabase.auth.getSession()
@@ -216,7 +260,7 @@ export default function SocialFeed() {
           
           const userLikes = new Set(likesData?.map(like => like.post_id) || [])
           setPosts(prevPosts => 
-            (data || []).map((post: Post) => ({
+            processedPosts.map((post: Post) => ({
               ...post,
               liked_by_user: userLikes.has(post.id)
             }))
@@ -454,17 +498,37 @@ export default function SocialFeed() {
         mentionedUserIds.push(match[2])
       }
 
+      // Preparar dados para inserção (apenas colunas que existem)
+      const postData: any = {
+        user_id: session.user.id,
+        user_name: userName,
+        content: newPost.trim(),
+        category: selectedCategory || null,
+        media_url: mediaUrl, // Backward compatibility - sempre presente
+      }
+
+      // Tentar inserir com media_urls e mentions, mas tratar erro se colunas não existirem
       const { error } = await supabase.from("posts").insert([
         {
-          user_id: session.user.id,
-          user_name: userName,
-          content: newPost.trim(),
-          category: selectedCategory || null,
-          media_url: mediaUrl, // Backward compatibility
-          media_urls: mediaUrls.length > 0 ? mediaUrls : null, // Multiple media support
-          mentions: mentionedUserIds.length > 0 ? mentionedUserIds : null,
+          ...postData,
+          // Tentar adicionar colunas opcionais - se não existirem, o Supabase vai ignorar
+          ...(mediaUrls.length > 0 && { media_urls: mediaUrls }),
+          ...(mentionedUserIds.length > 0 && { mentions: mentionedUserIds }),
         },
       ])
+      
+      // Se erro for de coluna não encontrada, tentar inserir sem colunas opcionais
+      if (error && (error.message?.includes("media_urls") || error.message?.includes("mentions") || error.message?.includes("column"))) {
+        console.warn("⚠️ [SOCIAL FEED] Colunas opcionais não encontradas, inserindo apenas colunas básicas")
+        const { error: fallbackError } = await supabase.from("posts").insert([postData])
+        
+        if (fallbackError) {
+          console.error("❌ [SOCIAL FEED] Erro ao criar post (fallback):", fallbackError)
+          alert(`❌ Erro ao publicar: ${fallbackError.message}\n\n💡 Execute o script: scripts/fix-posts-media-urls.sql no Supabase`)
+          setUploading(false)
+          return
+        }
+      } else if (error) {
 
       // Enviar notificações para membros mencionados
       if (mentionedUserIds.length > 0) {
