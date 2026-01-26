@@ -19,13 +19,13 @@ export default function SwipeToTradePage() {
     <main className="min-h-screen bg-black text-white relative">
       <ParticleBackground />
       <div className="container mx-auto px-4 py-12 relative z-10">
-        {/* Hero Section - Foco no Swipe to Trade */}
+        {/* Hero Section - Foco no IQ SYNC */}
         <div className="max-w-7xl mx-auto mb-16">
           <div className="text-center mb-12">
             <div className="flex items-center justify-center gap-3 mb-6">
               <span className="text-2xl font-bold text-blue-400">iQ</span>
               <h1 className="text-5xl md:text-7xl font-bold">
-                <span className="bg-gradient-to-r from-green-400 via-mtm-primary to-emerald-400 bg-clip-text text-transparent">Swipe to Trade</span>
+                <span className="bg-gradient-to-r from-green-400 via-mtm-primary to-emerald-400 bg-clip-text text-transparent">IQ SYNC</span>
               </h1>
             </div>
             <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-4">
@@ -77,8 +77,23 @@ export default function SwipeToTradePage() {
                   <div className="w-px h-4 bg-gray-700"></div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-mtm-primary rounded-full"></div>
-                    <span className="text-xs text-gray-400">Swipe to Trade</span>
+                    <span className="text-xs text-gray-400">IQ SYNC</span>
                   </div>
+                </div>
+                
+                {/* Botão Ativa o IQ SYNC */}
+                <div className="mt-6 flex justify-center">
+                  <a
+                    href="https://qrco.de/iqsync"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block"
+                  >
+                    <Button className="bg-gradient-to-r from-mtm-primary to-emerald-500 hover:from-emerald-500 hover:to-mtm-primary text-black font-bold text-lg px-8 py-4 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg">
+                      <Zap className="w-5 h-5 mr-2" />
+                      Ativa o IQ SYNC
+                    </Button>
+                  </a>
                 </div>
               </div>
             </Card>
@@ -93,15 +108,15 @@ export default function SwipeToTradePage() {
           <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-900 border border-mtm-primary/30 mb-8">
             <YouTubeEmbed 
               videoId="mpda6ySMUCQ"
-              title="IQ Sync - Swipe to Trade"
+              title="IQ Sync"
             />
           </div>
         </div>
 
-        {/* Como Funciona o Swipe to Trade */}
+        {/* Como Funciona o IQ SYNC */}
         <div className="mb-12">
           <h2 className="text-3xl font-bold text-center text-mtm-primary mb-8">
-            Como Funciona o Swipe to Trade
+            Como Funciona o IQ SYNC
           </h2>
           <p className="text-gray-300 text-center mb-8">
             Veja como é simples aceitar e executar sinais de trading em apenas alguns toques
@@ -225,7 +240,7 @@ export default function SwipeToTradePage() {
             Comece a Ganhar Enquanto Aprende
           </h2>
           <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
-            Junte-se aos milhares de traders que já estão a maximizar os seus retornos com o sistema Swipe to Trade da IQONIC
+            Junte-se aos milhares de traders que já estão a maximizar os seus retornos com o IQ SYNC da IQONIC
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="https://trading.iqonic.life">
@@ -234,7 +249,7 @@ export default function SwipeToTradePage() {
                 Saber Mais
               </Button>
             </Link>
-            <Link href="https://api.whatsapp.com/send/?phone=351912666699&text=Ola%20Gostaria%20de%20saber%20mais%20sobre%20o%20Swipe%20to%20Trade">
+            <Link href="https://api.whatsapp.com/send/?phone=351912666699&text=Ola%20Gostaria%20de%20saber%20mais%20sobre%20o%20IQ%20SYNC">
               <Button className="bg-gradient-to-r from-mtm-primary to-mtm-primary-dark hover:from-green-600 hover:to-emerald-700 text-white text-lg px-8 py-4">
                 <Users className="w-5 h-5 mr-2" />
                 Falar com Especialista
@@ -257,7 +272,7 @@ export default function SwipeToTradePage() {
             </button>
             <YouTubeEmbed 
               videoId="TxQS2GW5NkE"
-              title="Como Aceitar uma Trade - Swipe to Trade"
+              title="Como Aceitar uma Trade - IQ SYNC"
               autoplay={true}
             />
           </div>

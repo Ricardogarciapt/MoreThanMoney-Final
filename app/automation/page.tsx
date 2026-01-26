@@ -92,9 +92,9 @@ export default function AutomationPage() {
                     Configurar IQ Sync
                   </Button>
                 </Link>
-                <Link href="https://iqonic.life/morethanmoney" target="_blank" rel="noopener noreferrer" className="flex-1">
+                <Link href="https://qrco.de/iqsync" target="_blank" rel="noopener noreferrer" className="flex-1">
                   <Button variant="outline" className="w-full border-2 border-blue-500/50 text-blue-400 hover:bg-blue-500/10 font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300">
-                    Ver no IQONIC
+                    IQ Sync
                   </Button>
                 </Link>
               </div>
@@ -183,7 +183,7 @@ export default function AutomationPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                <Link href="https://iqonic.life/morethanmoney" target="_blank" rel="noopener noreferrer" className="flex-1">
+                <Link href="https://shield.iqonic.life/news.dhtml?usepage=iqauto.html" target="_blank" rel="noopener noreferrer" className="flex-1">
                   <Button className="w-full bg-gradient-to-r from-purple-600 via-mtm-primary to-pink-600 hover:from-purple-500 hover:via-mtm-primary hover:to-pink-500 text-white font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105">
                     <Bot className="w-5 h-5 mr-2" />
                     Ativar IQ Auto
@@ -289,7 +289,7 @@ export default function AutomationPage() {
                   Experimentar IQ Sync
                 </Button>
               </Link>
-              <Link href="https://iqonic.life/morethanmoney" target="_blank" rel="noopener noreferrer">
+              <Link href="https://shield.iqonic.life/news.dhtml?usepage=iqauto.html" target="_blank" rel="noopener noreferrer">
                 <Button className="bg-gradient-to-r from-purple-600 via-mtm-primary to-pink-600 hover:from-purple-500 hover:via-mtm-primary hover:to-pink-500 text-white font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105">
                   <Bot className="w-5 h-5 mr-2" />
                   Ativar IQ Auto
