@@ -53,7 +53,7 @@ export default function AutomationPage() {
                         src="/images/iqonic/Imagem Iq Sync.png"
                         alt="IQ Sync Interface"
                         fill
-                        className="object-contain rounded-lg"
+                        className="object-cover rounded-lg"
                         unoptimized
                       />
                     </div>
@@ -121,7 +121,7 @@ export default function AutomationPage() {
                         src={autoImages[autoIndex]}
                         alt={`IQ Auto ${autoIndex + 1}`}
                         fill
-                        className="object-contain rounded-lg transition-opacity duration-500"
+                        className="object-cover rounded-lg transition-opacity duration-500"
                         unoptimized
                       />
                     </div>

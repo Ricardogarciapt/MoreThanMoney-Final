@@ -60,7 +60,7 @@ export default function SwipeToTradePage() {
                           src="/images/iqonic/Imagem Iq Sync.png"
                           alt="IQ Sync - Swipe to Trade Interface"
                           fill
-                          className="object-contain rounded-lg"
+                          className="object-cover rounded-lg"
                           unoptimized
                         />
                       </div>

@@ -120,7 +120,7 @@ export default function IQONICPage() {
                       src={academyImages[academyIndex]}
                       alt="IQ Academy Interface"
                       fill
-                      className="object-contain rounded-lg transition-opacity duration-500"
+                      className="object-cover rounded-lg transition-opacity duration-500"
                       unoptimized
                     />
                   </div>
@@ -181,7 +181,7 @@ export default function IQONICPage() {
                       src={socialImages[socialIndex]}
                       alt="IQ Social Interface"
                       fill
-                      className="object-contain rounded-lg transition-opacity duration-500"
+                      className="object-cover rounded-lg transition-opacity duration-500"
                       unoptimized
                     />
                   </div>
@@ -242,7 +242,7 @@ export default function IQONICPage() {
                       src={insightsImages[insightsIndex]}
                       alt="IQ Insights Interface"
                       fill
-                      className="object-contain rounded-lg transition-opacity duration-500"
+                      className="object-cover rounded-lg transition-opacity duration-500"
                       unoptimized
                     />
                   </div>
@@ -313,7 +313,7 @@ export default function IQONICPage() {
                         src="/images/iqonic/Ecosistema IQ Center.png"
                         alt="IQ Center - Ecossistema Integrado"
                         fill
-                        className="object-contain rounded-lg"
+                        className="object-cover rounded-lg"
                         unoptimized
                       />
                     </div>
@@ -357,7 +357,7 @@ export default function IQONICPage() {
                       src="/images/iqonic/Preços Pack Elite-Promo-Prime.png"
                       alt="IQ PRO Pack"
                       fill
-                      className="object-contain rounded-lg"
+                      className="object-cover rounded-lg"
                       unoptimized
                     />
                   </div>
@@ -436,7 +436,7 @@ export default function IQONICPage() {
                       src="/images/iqonic/Preços Pack Elite-Promo-Prime.png"
                       alt="IQ PRIME Pack"
                       fill
-                      className="object-contain rounded-lg"
+                      className="object-cover rounded-lg"
                       unoptimized
                     />
                   </div>
@@ -492,7 +492,7 @@ export default function IQONICPage() {
                       src="/images/iqonic/Preços Pack Elite-Promo-Prime.png"
                       alt="IQ ELITE Pack"
                       fill
-                      className="object-contain rounded-lg"
+                      className="object-cover rounded-lg"
                       unoptimized
                     />
                   </div>
@@ -545,7 +545,7 @@ export default function IQONICPage() {
                       src="/images/iqonic/Preços Emerging MaxLife-Elite.png"
                       alt="IQ MAX LIFESTYLE Pack"
                       fill
-                      className="object-contain rounded-lg"
+                      className="object-cover rounded-lg"
                       unoptimized
                     />
                   </div>
@@ -627,7 +627,7 @@ export default function IQONICPage() {
                       src="/images/iqonic/Imagem Iq Sync.png"
                       alt="IQ SYNC"
                       fill
-                      className="object-contain rounded-lg"
+                      className="object-cover rounded-lg"
                       unoptimized
                     />
                   </div>
@@ -653,7 +653,7 @@ export default function IQONICPage() {
                       src="/images/iqonic/Imagem Iq Auto.png"
                       alt="IQ AUTO"
                       fill
-                      className="object-contain rounded-lg"
+                      className="object-cover rounded-lg"
                       unoptimized
                     />
                   </div>
@@ -701,7 +701,7 @@ export default function IQONICPage() {
                       src="/images/iqonic/Atlas 1.png"
                       alt="IQ Atlas Platform Interface"
                       fill
-                      className="object-contain rounded-lg"
+                      className="object-cover rounded-lg"
                       unoptimized
                     />
                   </div>
@@ -828,7 +828,7 @@ export default function IQONICPage() {
                         src="/images/iqonic/Atlas Concierge.png"
                         alt="IQ Atlas Concierge"
                         fill
-                        className="object-contain rounded-lg"
+                        className="object-cover rounded-lg"
                         unoptimized
                       />
                     </div>
@@ -855,7 +855,7 @@ export default function IQONICPage() {
                         src="/images/iqonic/AtlasEscapes.png"
                         alt="ICONIC ESCAPES"
                         fill
-                        className="object-contain rounded-lg"
+                        className="object-cover rounded-lg"
                         unoptimized
                       />
                     </div>
