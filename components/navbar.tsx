@@ -23,7 +23,6 @@ export default function Navbar() {
   const [isEducacaoMtmSubmenuOpen, setIsEducacaoMtmSubmenuOpen] = useState(false)
   const [mobileEducacaoOpen, setMobileEducacaoOpen] = useState(false)
   const [mobileTradingOpen, setMobileTradingOpen] = useState(false)
-  const [showAscendiaPopup, setShowAscendiaPopup] = useState(false)
   const { isAuthenticated, user } = useAuth()
 
   const navigation = [
@@ -34,7 +33,6 @@ export default function Navbar() {
       submenu: [
         { name: "Apresentação IQONIC", href: "/iqonic" },
         { name: "IQonic Academy", href: "https://iqonic.vip" },
-        { name: "Sistema Ascendia", href: "#ascendia", isAscendia: true },
         { name: "Educação MTM", href: "/mtm" },
         { name: "AI Com Os Gemeos", href: "https://www.skool.com/ai-com-osgemeos/about?ref=bc17a1ec65954570926520a936f7355b" },
         { name: "BackOffice IQ", href: "https://user.iqonic.life" },
@@ -147,14 +145,6 @@ export default function Navbar() {
                                 </div>
                               </div>
                             </div>
-                          ) : (subitem as any).isAscendia ? (
-                            <button
-                              key={subitem.name}
-                              onClick={() => setShowAscendiaPopup(true)}
-                              className="block w-full text-left px-4 py-2 text-sm transition-colors text-gray-300 hover:text-mtm-primary-400 hover:bg-gold-500/5"
-                            >
-                              {subitem.name}
-                            </button>
                           ) : (
                             <Link
                               key={subitem.name}
@@ -260,17 +250,6 @@ export default function Navbar() {
                             ))}
                           </div>
                         </div>
-                      ) : (subitem as any).isAscendia ? (
-                        <button
-                          key={subitem.name}
-                          onClick={() => {
-                            setIsMenuOpen(false)
-                            setShowAscendiaPopup(true)
-                          }}
-                          className="block w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-mtm-primary-400 hover:bg-gold-500/5"
-                        >
-                          {subitem.name}
-                        </button>
                       ) : (
                         <Link
                           key={subitem.name}
@@ -327,67 +306,6 @@ export default function Navbar() {
       {/* Login Modal */}
       <LoginModal isOpen={isLoginModalOpen} onClose={closeLoginModal} />
       
-      {/* Ascendia Popup */}
-      {showAscendiaPopup && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-gradient-to-br from-gray-900 to-black border-2 border-[#D2A63C] rounded-xl shadow-2xl max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-200">
-            {/* Close button */}
-            <button
-              onClick={() => {
-                setShowAscendiaPopup(false)
-                // Aguardar animação fechar e redirecionar
-                setTimeout(() => {
-                  window.open('https://academy.myascendia.com/login.php', '_blank')
-                }, 300)
-              }}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
-            >
-              <X className="h-6 w-6" />
-            </button>
-
-            {/* Content */}
-            <div className="text-center space-y-4">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-[#D2A63C] to-[#BB8525] rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-              </div>
-
-              <h3 className="text-2xl font-bold text-[#D2A63C]">
-                Sistema Ascendia
-              </h3>
-
-              <div className="space-y-3 text-sm text-gray-300">
-                <p className="leading-relaxed">
-                  Usem este link para poderem ter acesso ao <span className="font-semibold text-[#D2A63C]">Sistema Ascendia</span>.
-                </p>
-                <p className="bg-[#D2A63C]/10 border border-[#D2A63C]/30 rounded-lg p-3">
-                  <span className="font-semibold text-white">💡 Importante:</span><br/>
-                  Entrem com os vossos dados da <span className="font-semibold text-[#D2A63C]">Iqonic</span>
-                </p>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setShowAscendiaPopup(false)}
-                  className="flex-1 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors font-medium"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => {
-                    setShowAscendiaPopup(false)
-                    window.open('https://academy.myascendia.com/login.php', '_blank')
-                  }}
-                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#D2A63C] to-[#BB8525] hover:from-[#BB8525] hover:to-[#D2A63C] text-black rounded-lg transition-all font-bold shadow-lg hover:shadow-xl"
-                >
-                  Aceder →
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </nav>
   )
 }
