@@ -678,8 +678,8 @@ export default function TradingViewWidget({
         ],
         charts_storage_url: "https://saveload.tradingview.com",
         charts_storage_api_version: "1.1",
-        client_id: "tradingview.com",
-        user_id: "public_user_id",
+        client_id: "morethanmoney.pt",
+        user_id: currentUserId || "public_user_id", // Usar ID do utilizador autenticado para guardar desenhos por utilizador
         loading_screen: { backgroundColor: theme === "dark" ? "#1E1E1E" : "#FFFFFF", foregroundColor: "#f9b208" },
         overrides: {
           "mainSeriesProperties.showCountdown": true,
