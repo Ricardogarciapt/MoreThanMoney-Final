@@ -25,7 +25,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
@@ -256,6 +256,11 @@ const TradingViewWidget = ({
   const [error, setError] = useState<string | null>(null)
   const isLoadingScanner = useRef(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [showShareToGroup, setShowShareToGroup] = useState(false)
+  const [selectedGroup, setSelectedGroup] = useState<string>("")
+  const [sharingChart, setSharingChart] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [isVip, setIsVip] = useState(false)
   
   // Obter ID do utilizador autenticado
   useEffect(() => {
