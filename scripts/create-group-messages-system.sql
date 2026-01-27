@@ -130,7 +130,7 @@ CREATE POLICY "Members can view their groups" ON public.group_conversations
 DROP POLICY IF EXISTS "Authenticated users can create groups" ON public.group_conversations;
 CREATE POLICY "Authenticated users can create groups" ON public.group_conversations
   FOR INSERT
-  WITH CHECK (auth.uid() = created_by);
+  WITH CHECK (auth.uid() = created_by OR created_by IS NULL); -- Permite grupos sem created_by (pré-definidos)
 
 DROP POLICY IF EXISTS "Admins can update their groups" ON public.group_conversations;
 CREATE POLICY "Admins can update their groups" ON public.group_conversations
