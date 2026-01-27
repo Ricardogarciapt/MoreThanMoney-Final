@@ -489,53 +489,6 @@ export default function ScannerAccessPage() {
                 </Button>
               </div>
             </div>
-            <div className="flex items-center gap-2 mb-4">
-              <Button
-                onClick={async () => {
-                  try {
-                    const chartUrl = await tradingViewWidgetRef.current?.shareChart()
-                    if (chartUrl) {
-                      await navigator.clipboard.writeText(chartUrl)
-                      toast({
-                        title: "✅ Link copiado!",
-                        description: "Link do gráfico copiado para a área de transferência",
-                      })
-                    } else {
-                      toast({
-                        title: "⚠️ Erro",
-                        description: "Não foi possível obter o link do gráfico",
-                        variant: "destructive"
-                      })
-                    }
-                  } catch (error) {
-                    console.error('Erro ao partilhar gráfico:', error)
-                    toast({
-                      title: "❌ Erro",
-                      description: "Erro ao partilhar gráfico",
-                      variant: "destructive"
-                    })
-                  }
-                }}
-                variant="outline"
-                className="border-[#D2A63C]/60 text-[#D2A63C] hover:bg-[#D2A63C]/10"
-                title="Partilhar link do gráfico (Alt+S)"
-              >
-                <Share2 className="h-4 w-4 mr-2" />
-                Partilhar Link
-              </Button>
-              
-              {(isAdmin || user?.membership_type === 'vip') && (
-                <Button
-                  onClick={() => setShowShareToGroup(true)}
-                  variant="outline"
-                  className="border-[#D2A63C]/60 text-[#D2A63C] hover:bg-[#D2A63C]/10"
-                  title="Partilhar gráfico nos grupos de chat"
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Partilhar nos Grupos
-                </Button>
-              )}
-            </div>
             <TradingViewWidget showScreener={showScreener} widgetRef={tradingViewWidgetRef} />
           </div>
         </div>
