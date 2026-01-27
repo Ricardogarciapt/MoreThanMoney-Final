@@ -5,7 +5,6 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from 'sonner'
-import ConditionalLayoutContent from "@/components/conditional-layout-content"
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
