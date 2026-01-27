@@ -143,6 +143,13 @@ export async function POST(
       return NextResponse.json({ error: 'Erro ao enviar mensagem' }, { status: 500 })
     }
 
+    // Buscar nome do grupo para notificação
+    const { data: group } = await supabase
+      .from('group_conversations')
+      .select('name')
+      .eq('id', groupId)
+      .single()
+
     // Enviar notificações push para outros membros do grupo
     const { data: members } = await supabase
       .from('group_members')
@@ -159,7 +166,7 @@ export async function POST(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               userId: member.user_id,
-              title: `💬 ${session.user.user_metadata?.full_name || 'Alguém'} em ${message.group?.name || 'grupo'}`,
+              title: `💬 ${session.user.user_metadata?.full_name || 'Alguém'} em ${group?.name || 'grupo'}`,
               body: content.trim().substring(0, 100),
               data: {
                 type: 'group_message',
