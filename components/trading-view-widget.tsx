@@ -262,13 +262,25 @@ const TradingViewWidget = ({
   const [isAdmin, setIsAdmin] = useState(false)
   const [isVip, setIsVip] = useState(false)
   
-  // Obter ID do utilizador autenticado
+  // Obter ID do utilizador autenticado e verificar permissões
   useEffect(() => {
     const getUserId = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user?.id) {
           setCurrentUserId(session.user.id)
+          
+          // Verificar se é admin ou VIP
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_type, membership_type')
+            .eq('id', session.user.id)
+            .single()
+          
+          if (profile) {
+            setIsAdmin(profile.user_type === 'admin')
+            setIsVip(profile.membership_type === 'vip')
+          }
         }
       } catch (error) {
         console.error('Erro ao obter user ID:', error)
@@ -1106,6 +1118,119 @@ const TradingViewWidget = ({
                 </div>
               </DialogContent>
             </Dialog>
+
+            {/* Partilhar link (Alt+S) */}
+            <Button
+              onClick={async () => {
+                try {
+                  const chartUrl = await externalWidgetRef?.current?.shareChart()
+                  if (chartUrl) {
+                    await navigator.clipboard.writeText(chartUrl)
+                  }
+                } catch (error) {
+                  console.error('Erro ao partilhar gráfico:', error)
+                }
+              }}
+              className="h-9 px-3 bg-gray-700/80 text-white hover:bg-gray-600/80"
+              title="Partilhar link do gráfico (Alt+S)"
+            >
+              <Share2 className="w-4 h-4" />
+            </Button>
+
+            {/* Partilhar nos grupos (VIP/Admin) */}
+            {(isAdmin || isVip) && (
+              <>
+                <Button
+                  onClick={() => setShowShareToGroup(true)}
+                  className="h-9 px-3 bg-gray-700/80 text-white hover:bg-gray-600/80"
+                  title="Partilhar gráfico nos grupos de chat"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                </Button>
+                <Dialog open={showShareToGroup} onOpenChange={setShowShareToGroup}>
+                  <DialogContent className="bg-gray-900 border-[#D2A63C]/20 text-white max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="text-[#D2A63C]">Partilhar Gráfico nos Grupos</DialogTitle>
+                      <DialogDescription className="text-gray-400">
+                        Escolhe o grupo onde queres partilhar o gráfico e a sua imagem
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-4 space-y-3">
+                      <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                          <SelectValue placeholder="Seleciona um grupo" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-700">
+                          <SelectItem value="trade-chat">Trade Chat</SelectItem>
+                          <SelectItem value="crypto-chat">Crypto Chat</SelectItem>
+                          <SelectItem value="social-chat">Social Chat</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={async () => {
+                            if (!selectedGroup) return
+                            
+                            setSharingChart(true)
+                            try {
+                              const chartUrl = await externalWidgetRef?.current?.shareChart()
+                              const chartImage = await externalWidgetRef?.current?.captureChartImage()
+                              const chart = externalWidgetRef?.current?.getChart()
+                              const symbol = chart?.symbol?.() || 'Unknown'
+                              
+                              const response = await fetch('/api/messages/share-chart', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({
+                                  groupName: selectedGroup,
+                                  chartUrl: chartUrl || '',
+                                  chartImage: chartImage || '',
+                                  symbol: symbol
+                                })
+                              })
+                              
+                              if (response.ok) {
+                                setShowShareToGroup(false)
+                                setSelectedGroup("")
+                              }
+                            } catch (error) {
+                              console.error('Erro ao partilhar gráfico:', error)
+                            } finally {
+                              setSharingChart(false)
+                            }
+                          }}
+                          disabled={!selectedGroup || sharingChart}
+                          className="flex-1 bg-[#D2A63C] text-black hover:bg-[#BB8525]"
+                        >
+                          {sharingChart ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              A partilhar...
+                            </>
+                          ) : (
+                            <>
+                              <Share2 className="h-4 w-4 mr-2" />
+                              Partilhar
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowShareToGroup(false)
+                            setSelectedGroup("")
+                          }}
+                          variant="outline"
+                          className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </>
+            )}
 
             {/* Carregar gráfico */}
             <Dialog open={showLoadDialog} onOpenChange={setShowLoadDialog}>
