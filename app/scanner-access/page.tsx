@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -41,7 +41,9 @@ import {
   FileText,
   X,
   BookOpen,
-  Download
+  Download,
+  Share2,
+  MessageCircle
 } from "lucide-react"
 
 interface ChecklistItem {
@@ -62,12 +64,17 @@ interface ChecklistSection {
 export default function ScannerAccessPage() {
   const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
+  const { user, isAdmin } = useAuth()
+  const tradingViewWidgetRef = useRef<TradingViewWidgetRef>(null)
   const [showTradingPlanModal, setShowTradingPlanModal] = useState(false)
   const [showJournalCalendar, setShowJournalCalendar] = useState(false)
   const [showTradingJournal, setShowTradingJournal] = useState(false)
   const [loadingPlan, setLoadingPlan] = useState(false)
   const [exportingPlan, setExportingPlan] = useState(false)
   const [showScreener, setShowScreener] = useState(false)
+  const [showShareToGroup, setShowShareToGroup] = useState(false)
+  const [selectedGroup, setSelectedGroup] = useState<string>("")
+  const [sharingChart, setSharingChart] = useState(false)
   
   // Trading Plan Form State
   const [tradingPlan, setTradingPlan] = useState({
@@ -467,20 +474,69 @@ export default function ScannerAccessPage() {
                 <span className="mr-2">🔍</span>
                 Scanner MoreThanMoney ao Vivo
               </h2>
-              <Button
-                variant={showScreener ? "default" : "outline"}
-                className={
-                  showScreener
-                    ? "bg-[#D2A63C] text-black hover:bg-[#BB8525]"
-                    : "border-[#D2A63C]/60 text-[#D2A63C] hover:bg-[#D2A63C]/10"
-                }
-                onClick={() => setShowScreener((prev) => !prev)}
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                {showScreener ? "Esconder Screener" : "Mostrar Screener / Heatmap"}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={showScreener ? "default" : "outline"}
+                  className={
+                    showScreener
+                      ? "bg-[#D2A63C] text-black hover:bg-[#BB8525]"
+                      : "border-[#D2A63C]/60 text-[#D2A63C] hover:bg-[#D2A63C]/10"
+                  }
+                  onClick={() => setShowScreener((prev) => !prev)}
+                >
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  {showScreener ? "Esconder Screener" : "Mostrar Screener / Heatmap"}
+                </Button>
+              </div>
             </div>
-            <TradingViewWidget showScreener={showScreener} />
+            <div className="flex items-center gap-2 mb-4">
+              <Button
+                onClick={async () => {
+                  try {
+                    const chartUrl = await tradingViewWidgetRef.current?.shareChart()
+                    if (chartUrl) {
+                      await navigator.clipboard.writeText(chartUrl)
+                      toast({
+                        title: "✅ Link copiado!",
+                        description: "Link do gráfico copiado para a área de transferência",
+                      })
+                    } else {
+                      toast({
+                        title: "⚠️ Erro",
+                        description: "Não foi possível obter o link do gráfico",
+                        variant: "destructive"
+                      })
+                    }
+                  } catch (error) {
+                    console.error('Erro ao partilhar gráfico:', error)
+                    toast({
+                      title: "❌ Erro",
+                      description: "Erro ao partilhar gráfico",
+                      variant: "destructive"
+                    })
+                  }
+                }}
+                variant="outline"
+                className="border-[#D2A63C]/60 text-[#D2A63C] hover:bg-[#D2A63C]/10"
+                title="Partilhar link do gráfico (Alt+S)"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Partilhar Link
+              </Button>
+              
+              {(isAdmin || user?.membership_type === 'vip') && (
+                <Button
+                  onClick={() => setShowShareToGroup(true)}
+                  variant="outline"
+                  className="border-[#D2A63C]/60 text-[#D2A63C] hover:bg-[#D2A63C]/10"
+                  title="Partilhar gráfico nos grupos de chat"
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Partilhar nos Grupos
+                </Button>
+              )}
+            </div>
+            <TradingViewWidget showScreener={showScreener} widgetRef={tradingViewWidgetRef} />
           </div>
         </div>
 
@@ -1046,7 +1102,113 @@ export default function ScannerAccessPage() {
           </div>
         </div>
       </main>
-    </main>
+
+      {/* Dialog para partilhar chart nos grupos */}
+      <Dialog open={showShareToGroup} onOpenChange={setShowShareToGroup}>
+        <DialogContent className="bg-gray-900 border-[#D2A63C]/20 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#D2A63C]">Partilhar Gráfico nos Grupos</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Escolhe o grupo onde queres partilhar o gráfico e a sua imagem
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 space-y-3">
+            <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                <SelectValue placeholder="Seleciona um grupo" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700">
+                <SelectItem value="trade-chat">Trade Chat</SelectItem>
+                <SelectItem value="crypto-chat">Crypto Chat</SelectItem>
+                <SelectItem value="social-chat">Social Chat</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex gap-2">
+              <Button
+                onClick={async () => {
+                  if (!selectedGroup) {
+                    toast({
+                      title: "⚠️ Aviso",
+                      description: "Seleciona um grupo primeiro",
+                      variant: "destructive"
+                    })
+                    return
+                  }
+                  
+                  setSharingChart(true)
+                  try {
+                    const chartUrl = await tradingViewWidgetRef.current?.shareChart()
+                    const chartImage = await tradingViewWidgetRef.current?.captureChartImage()
+                    const chart = tradingViewWidgetRef.current?.getChart()
+                    const symbol = chart?.symbol?.() || 'Unknown'
+                    
+                    const response = await fetch('/api/messages/share-chart', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
+                      body: JSON.stringify({
+                        groupName: selectedGroup,
+                        chartUrl: chartUrl || '',
+                        chartImage: chartImage || '',
+                        symbol: symbol
+                      })
+                    })
+                    
+                    if (response.ok) {
+                      toast({
+                        title: "✅ Gráfico partilhado!",
+                        description: `Gráfico partilhado no ${selectedGroup}`,
+                      })
+                      setShowShareToGroup(false)
+                      setSelectedGroup("")
+                    } else {
+                      const data = await response.json()
+                      toast({
+                        title: "❌ Erro",
+                        description: data.error || "Erro ao partilhar gráfico",
+                        variant: "destructive"
+                      })
+                    }
+                  } catch (error) {
+                    console.error('Erro ao partilhar gráfico:', error)
+                    toast({
+                      title: "❌ Erro",
+                      description: "Erro ao partilhar gráfico",
+                      variant: "destructive"
+                    })
+                  } finally {
+                    setSharingChart(false)
+                  }
+                }}
+                disabled={!selectedGroup || sharingChart}
+                className="flex-1 bg-[#D2A63C] text-black hover:bg-[#BB8525]"
+              >
+                {sharingChart ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    A partilhar...
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Partilhar
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowShareToGroup(false)
+                  setSelectedGroup("")
+                }}
+                variant="outline"
+                className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </ProtectedPage>
   )
 }

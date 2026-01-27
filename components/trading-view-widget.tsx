@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useRef, useState, useImperativeHandle } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   AlertCircle,
@@ -213,7 +213,14 @@ interface SavedChart {
   timestamp: number
 }
 
-export default function TradingViewWidget({
+export interface TradingViewWidgetRef {
+  getWidget: () => any
+  getChart: () => any
+  shareChart: () => Promise<string | null>
+  captureChartImage: () => Promise<string | null>
+}
+
+const TradingViewWidget = ({
   scannerType = "KillShot",
   showScreener = false,
   // Props opcionais para controlo externo (usado pelo sistema de layouts)
@@ -226,6 +233,7 @@ export default function TradingViewWidget({
   onTimeframeChange,
   onThemeChange,
   onStudiesChange,
+  widgetRef: externalWidgetRef,
 }: {
   scannerType?: ScannerKey
   showScreener?: boolean
@@ -238,7 +246,8 @@ export default function TradingViewWidget({
   onTimeframeChange?: (timeframe: string) => void
   onThemeChange?: (theme: "light" | "dark") => void
   onStudiesChange?: (studies: ScannerKey[]) => void
-}) {
+  widgetRef?: React.RefObject<TradingViewWidgetRef>
+}) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetRef = useRef<any>(null)
   const [widgetLoaded, setWidgetLoaded] = useState(false)
@@ -828,6 +837,56 @@ export default function TradingViewWidget({
     }
     loadTradingViewWidget()
   }, [selectedStudies, selectedSymbol, theme, favoriteTimeframe])
+
+  // Expor métodos via ref
+  useImperativeHandle(externalWidgetRef, (): TradingViewWidgetRef => ({
+    getWidget: () => widgetRef.current,
+    getChart: () => widgetRef.current?.chart?.() || null,
+    shareChart: async () => {
+      try {
+        if (!widgetRef.current) return null
+        const chart = widgetRef.current.chart?.()
+        if (!chart) return null
+        
+        // TradingView nativo: tentar obter URL do gráfico
+        if (typeof chart.getChartUrl === 'function') {
+          return await chart.getChartUrl()
+        }
+        
+        // Fallback: construir URL manualmente
+        const studies = selectedStudies.flatMap((key) => scannerStudies[key] || [])
+        const baseUrl = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(selectedSymbol)}&interval=${favoriteTimeframe}`
+        const studiesParam = studies.length > 0 ? `&studies=${studies.join(',')}` : ''
+        return `${baseUrl}${studiesParam}`
+      } catch (error) {
+        console.error('Erro ao partilhar gráfico:', error)
+        return null
+      }
+    },
+    captureChartImage: async () => {
+      try {
+        if (!widgetRef.current) return null
+        const chart = widgetRef.current.chart?.()
+        if (!chart) return null
+        
+        // TradingView: capturar screenshot
+        if (typeof chart.takeScreenshot === 'function') {
+          const imageData = await chart.takeScreenshot()
+          return imageData
+        }
+        
+        // Fallback: usar método alternativo
+        if (typeof chart.getImage === 'function') {
+          return await chart.getImage()
+        }
+        
+        return null
+      } catch (error) {
+        console.error('Erro ao capturar imagem:', error)
+        return null
+      }
+    }
+  }), [selectedSymbol, favoriteTimeframe, selectedStudies])
 
   // Filtrar ativos por categoria e busca
   const filteredAssets = assetCategories[selectedCategory].filter((asset) =>

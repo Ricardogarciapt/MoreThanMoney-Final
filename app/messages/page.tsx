@@ -61,7 +61,9 @@ interface UserProfile {
 export default function MessagesPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user: currentUser } = useAuth()
+  const { user: currentUser, isAdmin } = useAuth()
+  const isVip = currentUser?.membership_type === 'vip'
+  const canManageGroups = isAdmin || isVip
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
