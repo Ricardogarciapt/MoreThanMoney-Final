@@ -329,7 +329,7 @@ export default function AdminPage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-7 bg-gray-900 border border-[#D2A63C]/30 mb-8">
+          <TabsList className="grid w-full grid-cols-8 bg-gray-900 border border-[#D2A63C]/30 mb-8">
             <TabsTrigger 
               value="dashboard" 
               className="data-[state=active]:bg-[#D2A63C] data-[state=active]:text-black"
@@ -399,6 +399,13 @@ export default function AdminPage() {
             >
               <TrendingUp className="w-4 h-4 mr-2" />
               Fast Start
+            </TabsTrigger>
+            <TabsTrigger 
+              value="groups" 
+              className="data-[state=active]:bg-[#D2A63C] data-[state=active]:text-black"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Grupos
             </TabsTrigger>
           </TabsList>
 
@@ -975,6 +982,11 @@ export default function AdminPage() {
           {/* Fast Start Tab */}
           <TabsContent value="fast-start" className="space-y-6">
             <FastStartManager />
+          </TabsContent>
+
+          {/* Groups Tab */}
+          <TabsContent value="groups" className="space-y-6">
+            <GroupsManager />
           </TabsContent>
         </Tabs>
       </div>
