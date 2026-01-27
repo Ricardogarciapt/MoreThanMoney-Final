@@ -115,13 +115,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se o utilizador existe
-    const { data: otherUser, error: userError } = await supabase
+    const { data: otherUserProfile, error: userError } = await supabase
       .from('profiles')
       .select('id')
       .eq('id', otherUserId)
       .single()
 
-    if (userError || !otherUser) {
+    if (userError || !otherUserProfile) {
       console.error('Erro: Utilizador não encontrado:', userError)
       return NextResponse.json({ error: 'Utilizador não encontrado' }, { status: 404 })
     }
