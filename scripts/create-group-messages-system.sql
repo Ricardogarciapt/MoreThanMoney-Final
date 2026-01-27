@@ -10,11 +10,24 @@ CREATE TABLE IF NOT EXISTS public.group_conversations (
   avatar_url TEXT,
   is_public BOOLEAN DEFAULT FALSE,
   is_mobile_visible BOOLEAN DEFAULT FALSE, -- Se aparece na tab Chats do app-mobile
-  created_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- Permite NULL para grupos pré-definidos
   last_message_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Adicionar constraint UNIQUE em name se não existir
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'group_conversations_name_key'
+    AND conrelid = 'public.group_conversations'::regclass
+  ) THEN
+    ALTER TABLE public.group_conversations 
+    ADD CONSTRAINT group_conversations_name_key UNIQUE (name);
+  END IF;
+END $$;
 
 -- 2. Tabela de membros do grupo
 CREATE TABLE IF NOT EXISTS public.group_members (
