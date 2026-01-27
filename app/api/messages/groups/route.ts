@@ -31,30 +31,30 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const mobileOnly = searchParams.get('mobile_only') === 'true'
 
-    // Buscar grupos onde o utilizador é membro
-          let query = supabase
-            .from('group_conversations')
-            .select(`
-              *,
-              members:group_members!inner(user_id)
-            `)
-            .eq('members.user_id', session.user.id)
-            
-          // Contar membros para cada grupo
-          const groupsWithCounts = await Promise.all(
-            (groups || []).map(async (group: any) => {
-              const { count } = await supabase
-                .from('group_members')
-                .select('*', { count: 'exact', head: true })
-                .eq('group_id', group.id)
-              
-              return {
-                ...group,
-                member_count: count || 0
-              }
-            })
-          )
-    
+    // Se for admin, mostrar todos os grupos, senão apenas os que o utilizador é membro
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_type')
+      .eq('id', session.user.id)
+      .single()
+
+    let query
+    if (profile?.user_type === 'admin') {
+      // Admin vê todos os grupos
+      query = supabase
+        .from('group_conversations')
+        .select('*')
+    } else {
+      // Utilizador normal vê apenas grupos onde é membro
+      query = supabase
+        .from('group_conversations')
+        .select(`
+          *,
+          members:group_members!inner(user_id)
+        `)
+        .eq('members.user_id', session.user.id)
+    }
+
     if (mobileOnly) {
       query = query.eq('is_mobile_visible', true)
     }
@@ -86,16 +86,22 @@ export async function GET(request: NextRequest) {
           .eq('read', false)
           .neq('sender_id', session.user.id)
 
-              return {
-                ...group,
-                lastMessage,
-                unreadCount: unreadCount || 0,
-                member_count: memberCount || 0
-              }
-            })
-          )
+        // Contar membros
+        const { count: memberCount } = await supabase
+          .from('group_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('group_id', group.id)
 
-          return NextResponse.json({ groups: groupsWithMessages })
+        return {
+          ...group,
+          lastMessage,
+          unreadCount: unreadCount || 0,
+          member_count: memberCount || 0
+        }
+      })
+    )
+
+    return NextResponse.json({ groups: groupsWithMessages })
   } catch (error) {
     console.error('Erro na API de grupos:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
