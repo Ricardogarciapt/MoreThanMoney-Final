@@ -11,6 +11,7 @@ import PortfolioMobile from "@/components/mobile/portfolio-mobile"
 import ScannerMobile from "@/components/mobile/scanner-mobile"
 import MindsetMobile from "@/components/mobile/mindset-mobile"
 import FitnessMobile from "@/components/mobile/fitness-mobile"
+import ChatsMobile from "@/components/mobile/chats-mobile"
 import { supabase } from "@/lib/supabase"
 import { clearCachedSession } from "@/lib/auth-cache"
 import Image from "next/image"
@@ -23,6 +24,7 @@ import {
   LogOut,
   Loader2,
   Menu,
+  MessageCircle,
 } from "lucide-react"
 import MobileSidebar from "@/components/mobile/mobile-sidebar"
 import { useAuthenticatedSession } from "@/hooks/use-authenticated-session"
@@ -66,7 +68,7 @@ function AppMobileContent() {
 
   useEffect(() => {
     const tab = searchParams.get("tab")
-    if (tab && ["social", "portfolio", "scanner", "fitness", "mindset"].includes(tab)) {
+    if (tab && ["social", "portfolio", "scanner", "fitness", "mindset", "chats"].includes(tab)) {
       setActiveTab(tab)
     }
   }, [searchParams])
@@ -283,13 +285,17 @@ function AppMobileContent() {
             <TabsContent value="fitness" className="mt-0 h-full">
               <FitnessMobile />
             </TabsContent>
+
+            <TabsContent value="chats" className="mt-0 h-full">
+              <ChatsMobile />
+            </TabsContent>
           </Tabs>
         </div>
 
         {/* Bottom Navigation - FIXA NO FUNDO */}
         <div 
           className="fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-gray-800 px-2 py-2" 
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem' }}
         >
           <button
             onClick={() => handleTabChange('social')}
@@ -349,6 +355,18 @@ function AppMobileContent() {
           >
             <Dumbbell className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'fitness' ? 'text-[#D2A63C]' : ''}`} />
             <div className={`text-[10px] font-medium ${activeTab === 'fitness' ? 'text-[#D2A63C]' : ''}`}>Fitness</div>
+          </button>
+          
+          <button
+            onClick={() => handleTabChange('chats')}
+            className={`py-3 rounded-lg transition-all relative ${
+              activeTab === 'chats'
+                ? 'bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]'
+                : 'text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent'
+            }`}
+          >
+            <MessageCircle className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'chats' ? 'text-[#D2A63C]' : ''}`} />
+            <div className={`text-[10px] font-medium ${activeTab === 'chats' ? 'text-[#D2A63C]' : ''}`}>Chats</div>
           </button>
         </div>
       </main>

@@ -6,7 +6,8 @@ import { supabase } from "@/lib/supabase"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { User, Send, ArrowLeft, Loader2, MessageCircle } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { User, Send, ArrowLeft, Loader2, MessageCircle, Search, Plus, Users, X } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
@@ -14,18 +15,25 @@ import ProtectedPage from "@/components/protected-page"
 
 interface Conversation {
   id: string
-  otherUser: {
+  otherUser?: {
     id: string
     full_name?: string
     username?: string
     avatar_url?: string
     email?: string
   }
+  group?: {
+    id: string
+    name: string
+    description?: string
+    avatar_url?: string
+  }
   lastMessage?: {
     content: string
     created_at: string
   }
   unreadCount: number
+  isGroup: boolean
 }
 
 interface Message {
@@ -42,49 +50,132 @@ interface Message {
   }
 }
 
+interface UserProfile {
+  id: string
+  full_name?: string
+  username?: string
+  avatar_url?: string
+  email?: string
+}
+
 export default function MessagesPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user: currentUser } = useAuth()
   const [conversations, setConversations] = useState<Conversation[]>([])
+  const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
+  const [selectedConversationType, setSelectedConversationType] = useState<'direct' | 'group'>('direct')
   const [messages, setMessages] = useState<Message[]>([])
+  const [filteredMessages, setFilteredMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [messageSearchQuery, setMessageSearchQuery] = useState("")
+  const [showNewConversation, setShowNewConversation] = useState(false)
+  const [userSearchQuery, setUserSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<UserProfile[]>([])
+  const [searchingUsers, setSearchingUsers] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const conversationId = searchParams.get('conversation')
+    const groupId = searchParams.get('group')
     if (conversationId) {
       setSelectedConversation(conversationId)
-      loadMessages(conversationId)
+      setSelectedConversationType('direct')
+      loadMessages(conversationId, 'direct')
+    } else if (groupId) {
+      setSelectedConversation(groupId)
+      setSelectedConversationType('group')
+      loadMessages(groupId, 'group')
     }
     loadConversations()
   }, [searchParams])
 
   useEffect(() => {
     if (selectedConversation) {
-      loadMessages(selectedConversation)
-      subscribeToMessages(selectedConversation)
+      loadMessages(selectedConversation, selectedConversationType)
+      subscribeToMessages(selectedConversation, selectedConversationType)
     }
     return () => {
       // Cleanup subscription
     }
-  }, [selectedConversation])
+  }, [selectedConversation, selectedConversationType])
 
   useEffect(() => {
     scrollToBottom()
   }, [messages])
 
+  useEffect(() => {
+    // Filtrar conversas
+    if (!searchQuery.trim()) {
+      setFilteredConversations(conversations)
+    } else {
+      const query = searchQuery.toLowerCase()
+      setFilteredConversations(
+        conversations.filter(conv => {
+          if (conv.isGroup) {
+            return conv.group?.name.toLowerCase().includes(query) ||
+                   conv.group?.description?.toLowerCase().includes(query) ||
+                   conv.lastMessage?.content.toLowerCase().includes(query)
+          } else {
+            return conv.otherUser?.full_name?.toLowerCase().includes(query) ||
+                   conv.otherUser?.username?.toLowerCase().includes(query) ||
+                   conv.lastMessage?.content.toLowerCase().includes(query)
+          }
+        })
+      )
+    }
+  }, [searchQuery, conversations])
+
+  useEffect(() => {
+    // Filtrar mensagens
+    if (!messageSearchQuery.trim()) {
+      setFilteredMessages(messages)
+    } else {
+      const query = messageSearchQuery.toLowerCase()
+      setFilteredMessages(
+        messages.filter(msg => 
+          msg.content.toLowerCase().includes(query) ||
+          msg.sender.full_name?.toLowerCase().includes(query) ||
+          msg.sender.username?.toLowerCase().includes(query)
+        )
+      )
+    }
+  }, [messageSearchQuery, messages])
+
   const loadConversations = async () => {
     try {
-      const response = await fetch('/api/messages/conversations')
-      if (response.ok) {
-        const data = await response.json()
-        setConversations(data.conversations || [])
-      }
+      const [conversationsRes, groupsRes] = await Promise.all([
+        fetch('/api/messages/conversations'),
+        fetch('/api/messages/groups')
+      ])
+      
+      const conversationsData = conversationsRes.ok ? await conversationsRes.json() : { conversations: [] }
+      const groupsData = groupsRes.ok ? await groupsRes.json() : { groups: [] }
+      
+      const directConvs: Conversation[] = (conversationsData.conversations || []).map((conv: any) => ({
+        ...conv,
+        isGroup: false
+      }))
+      
+      const groupConvs: Conversation[] = (groupsData.groups || []).map((group: any) => ({
+        id: group.id,
+        group: {
+          id: group.id,
+          name: group.name,
+          description: group.description,
+          avatar_url: group.avatar_url
+        },
+        lastMessage: group.lastMessage,
+        unreadCount: group.unreadCount || 0,
+        isGroup: true
+      }))
+      
+      setConversations([...directConvs, ...groupConvs])
     } catch (error) {
       console.error('Erro ao carregar conversas:', error)
     } finally {
@@ -92,9 +183,12 @@ export default function MessagesPage() {
     }
   }
 
-  const loadMessages = async (conversationId: string) => {
+  const loadMessages = async (id: string, type: 'direct' | 'group') => {
     try {
-      const response = await fetch(`/api/messages/conversations/${conversationId}`)
+      const endpoint = type === 'group' 
+        ? `/api/messages/groups/${id}`
+        : `/api/messages/conversations/${id}`
+      const response = await fetch(endpoint)
       if (response.ok) {
         const data = await response.json()
         setMessages(data.messages || [])
@@ -104,21 +198,20 @@ export default function MessagesPage() {
     }
   }
 
-  const subscribeToMessages = (conversationId: string) => {
+  const subscribeToMessages = (id: string, type: 'direct' | 'group') => {
     const channel = supabase
-      .channel(`messages-${conversationId}`)
+      .channel(`messages-${type}-${id}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`
+          filter: type === 'group' ? `group_id=eq.${id}` : `conversation_id=eq.${id}`
         },
-        (payload) => {
-          // Recarregar mensagens quando nova mensagem for inserida
-          loadMessages(conversationId)
-          loadConversations() // Atualizar lista de conversas
+        () => {
+          loadMessages(id, type)
+          loadConversations()
         }
       )
       .subscribe()
@@ -133,7 +226,11 @@ export default function MessagesPage() {
 
     setSending(true)
     try {
-      const response = await fetch(`/api/messages/conversations/${selectedConversation}`, {
+      const endpoint = selectedConversationType === 'group'
+        ? `/api/messages/groups/${selectedConversation}`
+        : `/api/messages/conversations/${selectedConversation}`
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: newMessage })
@@ -141,7 +238,7 @@ export default function MessagesPage() {
 
       if (response.ok) {
         setNewMessage("")
-        loadMessages(selectedConversation)
+        loadMessages(selectedConversation, selectedConversationType)
         loadConversations()
       } else {
         alert('Erro ao enviar mensagem')
@@ -151,6 +248,49 @@ export default function MessagesPage() {
       alert('Erro ao enviar mensagem')
     } finally {
       setSending(false)
+    }
+  }
+
+  const searchUsers = async (query: string) => {
+    if (!query.trim() || query.length < 2) {
+      setSearchResults([])
+      return
+    }
+
+    setSearchingUsers(true)
+    try {
+      const response = await fetch(`/api/messages/search-users?q=${encodeURIComponent(query)}`)
+      if (response.ok) {
+        const data = await response.json()
+        setSearchResults(data.users || [])
+      }
+    } catch (error) {
+      console.error('Erro ao pesquisar utilizadores:', error)
+    } finally {
+      setSearchingUsers(false)
+    }
+  }
+
+  const handleStartConversation = async (userId: string) => {
+    try {
+      const response = await fetch('/api/messages/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otherUserId: userId })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setShowNewConversation(false)
+        setUserSearchQuery("")
+        setSearchResults([])
+        router.push(`/messages?conversation=${data.conversation.id}`)
+      } else {
+        alert('Erro ao iniciar conversa')
+      }
+    } catch (error) {
+      console.error('Erro ao iniciar conversa:', error)
+      alert('Erro ao iniciar conversa')
     }
   }
 
@@ -190,39 +330,135 @@ export default function MessagesPage() {
               </Link>
               <h1 className="text-2xl font-bold text-[#D2A63C]">Mensagens</h1>
             </div>
+            <Dialog open={showNewConversation} onOpenChange={setShowNewConversation}>
+              <DialogTrigger asChild>
+                <Button className="bg-[#D2A63C] text-black hover:bg-[#BB8525]">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Conversa
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-gray-900 border-[#D2A63C]/20 text-white">
+                <DialogHeader>
+                  <DialogTitle className="text-[#D2A63C]">Nova Conversa</DialogTitle>
+                </DialogHeader>
+                <div className="mt-4">
+                  <Input
+                    placeholder="Pesquisar utilizadores..."
+                    value={userSearchQuery}
+                    onChange={(e) => {
+                      setUserSearchQuery(e.target.value)
+                      searchUsers(e.target.value)
+                    }}
+                    className="bg-gray-800 border-gray-700 text-white mb-4"
+                  />
+                  {searchingUsers && (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" />
+                    </div>
+                  )}
+                  <div className="max-h-64 overflow-y-auto space-y-2">
+                    {searchResults.map((user) => (
+                      <button
+                        key={user.id}
+                        onClick={() => handleStartConversation(user.id)}
+                        className="w-full p-3 hover:bg-gray-800 rounded-lg flex items-center gap-3 text-left"
+                      >
+                        {user.avatar_url ? (
+                          <Image
+                            src={user.avatar_url}
+                            alt={user.full_name || user.username || 'User'}
+                            width={40}
+                            height={40}
+                            className="w-10 h-10 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-[#D2A63C]/20 flex items-center justify-center">
+                            <User className="w-5 h-5 text-[#D2A63C]" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold">{user.full_name || user.username || 'Utilizador'}</p>
+                          {user.username && <p className="text-sm text-gray-400">@{user.username}</p>}
+                        </div>
+                      </button>
+                    ))}
+                    {!searchingUsers && userSearchQuery.length >= 2 && searchResults.length === 0 && (
+                      <p className="text-center text-gray-400 py-4">Nenhum utilizador encontrado</p>
+                    )}
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="flex gap-4 h-[calc(100vh-200px)]">
             {/* Lista de Conversas */}
-            <Card className="w-80 bg-gray-900 border-[#D2A63C]/20 flex-shrink-0">
+            <Card className="w-80 bg-gray-900 border-[#D2A63C]/20 flex-shrink-0 flex flex-col">
               <CardContent className="p-0 h-full flex flex-col">
+                {/* Pesquisa de Conversas */}
                 <div className="p-4 border-b border-[#D2A63C]/20">
-                  <h2 className="font-semibold text-[#D2A63C]">Conversas</h2>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      placeholder="Pesquisar conversas..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="bg-gray-800 border-gray-700 text-white pl-10"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                      >
+                        <X className="w-4 h-4 text-gray-400" />
+                      </button>
+                    )}
+                  </div>
                 </div>
+
                 <div className="flex-1 overflow-y-auto">
                   {loading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" />
                     </div>
-                  ) : conversations.length === 0 ? (
+                  ) : filteredConversations.length === 0 ? (
                     <div className="p-4 text-center text-gray-400">
                       <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
                       <p className="text-sm">Nenhuma conversa ainda</p>
                     </div>
                   ) : (
-                    conversations.map((conv) => (
+                    filteredConversations.map((conv) => (
                       <button
                         key={conv.id}
                         onClick={() => {
                           setSelectedConversation(conv.id)
-                          router.push(`/messages?conversation=${conv.id}`)
+                          setSelectedConversationType(conv.isGroup ? 'group' : 'direct')
+                          if (conv.isGroup) {
+                            router.push(`/messages?group=${conv.id}`)
+                          } else {
+                            router.push(`/messages?conversation=${conv.id}`)
+                          }
                         }}
                         className={`w-full p-4 border-b border-gray-800 hover:bg-gray-800/50 transition-colors text-left ${
                           selectedConversation === conv.id ? 'bg-[#D2A63C]/10' : ''
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          {conv.otherUser.avatar_url ? (
+                          {conv.isGroup ? (
+                            conv.group?.avatar_url ? (
+                              <Image
+                                src={conv.group.avatar_url}
+                                alt={conv.group.name}
+                                width={48}
+                                height={48}
+                                className="w-12 h-12 rounded-full border-2 border-[#D2A63C]/30"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-[#D2A63C]/20 flex items-center justify-center border-2 border-[#D2A63C]/30">
+                                <Users className="w-6 h-6 text-[#D2A63C]" />
+                              </div>
+                            )
+                          ) : conv.otherUser?.avatar_url ? (
                             <Image
                               src={conv.otherUser.avatar_url}
                               alt={conv.otherUser.full_name || conv.otherUser.username || 'User'}
@@ -238,7 +474,9 @@ export default function MessagesPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
                               <p className="font-semibold text-white truncate">
-                                {conv.otherUser.full_name || conv.otherUser.username || 'Utilizador'}
+                                {conv.isGroup 
+                                  ? conv.group?.name 
+                                  : conv.otherUser?.full_name || conv.otherUser?.username || 'Utilizador'}
                               </p>
                               {conv.unreadCount > 0 && (
                                 <span className="bg-[#D2A63C] text-black text-xs font-bold px-2 py-0.5 rounded-full">
@@ -265,27 +503,65 @@ export default function MessagesPage() {
               {selectedConversation && selectedConv ? (
                 <>
                   {/* Header da Conversa */}
-                  <div className="p-4 border-b border-[#D2A63C]/20 flex items-center gap-3">
-                    {selectedConv.otherUser.avatar_url ? (
-                      <Image
-                        src={selectedConv.otherUser.avatar_url}
-                        alt={selectedConv.otherUser.full_name || selectedConv.otherUser.username || 'User'}
-                        width={40}
-                        height={40}
-                        className="w-10 h-10 rounded-full border-2 border-[#D2A63C]/30"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-[#D2A63C]/20 flex items-center justify-center border-2 border-[#D2A63C]/30">
-                        <User className="w-5 h-5 text-[#D2A63C]" />
+                  <div className="p-4 border-b border-[#D2A63C]/20 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {selectedConv.isGroup ? (
+                        selectedConv.group?.avatar_url ? (
+                          <Image
+                            src={selectedConv.group.avatar_url}
+                            alt={selectedConv.group.name}
+                            width={40}
+                            height={40}
+                            className="w-10 h-10 rounded-full border-2 border-[#D2A63C]/30"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-[#D2A63C]/20 flex items-center justify-center border-2 border-[#D2A63C]/30">
+                            <Users className="w-5 h-5 text-[#D2A63C]" />
+                          </div>
+                        )
+                      ) : selectedConv.otherUser?.avatar_url ? (
+                        <Image
+                          src={selectedConv.otherUser.avatar_url}
+                          alt={selectedConv.otherUser.full_name || selectedConv.otherUser.username || 'User'}
+                          width={40}
+                          height={40}
+                          className="w-10 h-10 rounded-full border-2 border-[#D2A63C]/30"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-[#D2A63C]/20 flex items-center justify-center border-2 border-[#D2A63C]/30">
+                          <User className="w-5 h-5 text-[#D2A63C]" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-semibold text-white">
+                          {selectedConv.isGroup
+                            ? selectedConv.group?.name
+                            : selectedConv.otherUser?.full_name || selectedConv.otherUser?.username || 'Utilizador'}
+                        </p>
+                        {!selectedConv.isGroup && (
+                          <Link href={`/profile/${selectedConv.otherUser?.id}`} className="text-xs text-[#D2A63C] hover:underline">
+                            Ver perfil
+                          </Link>
+                        )}
                       </div>
-                    )}
-                    <div>
-                      <p className="font-semibold text-white">
-                        {selectedConv.otherUser.full_name || selectedConv.otherUser.username || 'Utilizador'}
-                      </p>
-                      <Link href={`/profile/${selectedConv.otherUser.id}`} className="text-xs text-[#D2A63C] hover:underline">
-                        Ver perfil
-                      </Link>
+                    </div>
+                    {/* Pesquisa dentro da conversa */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        placeholder="Pesquisar mensagens..."
+                        value={messageSearchQuery}
+                        onChange={(e) => setMessageSearchQuery(e.target.value)}
+                        className="bg-gray-800 border-gray-700 text-white pl-10 w-64"
+                      />
+                      {messageSearchQuery && (
+                        <button
+                          onClick={() => setMessageSearchQuery("")}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                        >
+                          <X className="w-4 h-4 text-gray-400" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -294,7 +570,7 @@ export default function MessagesPage() {
                     ref={messagesContainerRef}
                     className="flex-1 overflow-y-auto p-4 space-y-4"
                   >
-                    {messages.map((message) => {
+                    {filteredMessages.map((message) => {
                       const isOwn = message.sender_id === currentUser?.id
                       return (
                         <div
@@ -308,7 +584,7 @@ export default function MessagesPage() {
                                 : 'bg-gray-800 text-white'
                             }`}
                           >
-                            {!isOwn && (
+                            {!isOwn && (selectedConv.isGroup || !isOwn) && (
                               <p className="text-xs font-semibold mb-1 opacity-70">
                                 {message.sender.full_name || message.sender.username || 'Utilizador'}
                               </p>
@@ -366,4 +642,3 @@ export default function MessagesPage() {
     </ProtectedPage>
   )
 }
-
