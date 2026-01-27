@@ -228,20 +228,51 @@ CREATE POLICY "Users can send messages in their conversations" ON public.message
   );
 
 -- 9. Criar grupos pré-definidos para app-mobile
-INSERT INTO public.group_conversations (name, description, is_public, is_mobile_visible, created_by)
-VALUES
-  ('Trade Chat', 'Discussões sobre trading e estratégias', TRUE, TRUE, (SELECT id FROM auth.users WHERE email = 'admin@morethanmoney.pt' LIMIT 1))
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.group_conversations (name, description, is_public, is_mobile_visible, created_by)
-VALUES
-  ('Crypto Chat', 'Conversas sobre criptomoedas e mercado', TRUE, TRUE, (SELECT id FROM auth.users WHERE email = 'admin@morethanmoney.pt' LIMIT 1))
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.group_conversations (name, description, is_public, is_mobile_visible, created_by)
-VALUES
-  ('Social Chat', 'Networking e conversas gerais', TRUE, TRUE, (SELECT id FROM auth.users WHERE email = 'admin@morethanmoney.pt' LIMIT 1))
-ON CONFLICT DO NOTHING;
+DO $$
+DECLARE
+  v_admin_id UUID;
+BEGIN
+  -- Tentar encontrar um admin primeiro
+  SELECT u.id INTO v_admin_id
+  FROM auth.users u
+  INNER JOIN public.profiles p ON p.id = u.id
+  WHERE p.user_type = 'admin'
+  LIMIT 1;
+  
+  -- Se não encontrar admin, usar o primeiro utilizador disponível
+  IF v_admin_id IS NULL THEN
+    SELECT id INTO v_admin_id
+    FROM auth.users
+    ORDER BY created_at ASC
+    LIMIT 1;
+  END IF;
+  
+  -- Se ainda não encontrar, criar grupos sem created_by (será atualizado depois)
+  -- Mas primeiro vamos tornar a coluna nullable temporariamente
+  IF v_admin_id IS NULL THEN
+    -- Tornar created_by nullable temporariamente
+    ALTER TABLE public.group_conversations ALTER COLUMN created_by DROP NOT NULL;
+    
+    -- Criar grupos sem created_by
+    INSERT INTO public.group_conversations (name, description, is_public, is_mobile_visible, created_by)
+    VALUES
+      ('Trade Chat', 'Discussões sobre trading e estratégias', TRUE, TRUE, NULL),
+      ('Crypto Chat', 'Conversas sobre criptomoedas e mercado', TRUE, TRUE, NULL),
+      ('Social Chat', 'Networking e conversas gerais', TRUE, TRUE, NULL)
+    ON CONFLICT (name) DO NOTHING;
+    
+    -- Restaurar NOT NULL depois (quando houver utilizadores)
+    -- ALTER TABLE public.group_conversations ALTER COLUMN created_by SET NOT NULL;
+  ELSE
+    -- Criar grupos com created_by válido
+    INSERT INTO public.group_conversations (name, description, is_public, is_mobile_visible, created_by)
+    VALUES
+      ('Trade Chat', 'Discussões sobre trading e estratégias', TRUE, TRUE, v_admin_id),
+      ('Crypto Chat', 'Conversas sobre criptomoedas e mercado', TRUE, TRUE, v_admin_id),
+      ('Social Chat', 'Networking e conversas gerais', TRUE, TRUE, v_admin_id)
+    ON CONFLICT (name) DO NOTHING;
+  END IF;
+END $$;
 
 -- Verificação
 SELECT 
