@@ -275,24 +275,32 @@ export default function MessagesPage() {
 
   const handleStartConversation = async (userId: string) => {
     try {
+      setSending(true)
       const response = await fetch('/api/messages/conversations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ otherUserId: userId })
       })
 
-      if (response.ok) {
-        const data = await response.json()
+      const data = await response.json()
+
+      if (response.ok && data.conversation) {
         setShowNewConversation(false)
         setUserSearchQuery("")
         setSearchResults([])
+        // Recarregar conversas antes de navegar
+        await loadConversations()
         router.push(`/messages?conversation=${data.conversation.id}`)
       } else {
-        alert('Erro ao iniciar conversa')
+        console.error('Erro na resposta:', data)
+        alert(data.error || data.details || 'Erro ao iniciar conversa')
       }
     } catch (error) {
       console.error('Erro ao iniciar conversa:', error)
-      alert('Erro ao iniciar conversa')
+      alert('Erro ao iniciar conversa. Verifica a consola para mais detalhes.')
+    } finally {
+      setSending(false)
     }
   }
 

@@ -114,8 +114,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'otherUserId é obrigatório' }, { status: 400 })
     }
 
-    // Obter ou criar conversa
-    const { data: conversationId, error: functionError } = await supabase.rpc(
+    // Verificar se o utilizador existe
+    const { data: otherUser, error: userError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', otherUserId)
+      .single()
+
+    if (userError || !otherUser) {
+      console.error('Erro: Utilizador não encontrado:', userError)
+      return NextResponse.json({ error: 'Utilizador não encontrado' }, { status: 404 })
+    }
+
+    // Tentar obter ou criar conversa usando RPC
+    let conversationId: string | null = null
+    const { data: rpcResult, error: functionError } = await supabase.rpc(
       'get_or_create_conversation',
       {
         p_user1_id: session.user.id,
@@ -124,8 +137,49 @@ export async function POST(request: NextRequest) {
     )
 
     if (functionError) {
-      console.error('Erro ao criar/buscar conversa:', functionError)
-      return NextResponse.json({ error: 'Erro ao criar conversa' }, { status: 500 })
+      console.error('Erro ao chamar RPC get_or_create_conversation:', functionError)
+      
+      // Fallback: tentar criar manualmente
+      const user1Id = session.user.id < otherUserId ? session.user.id : otherUserId
+      const user2Id = session.user.id < otherUserId ? otherUserId : session.user.id
+      
+      // Verificar se já existe
+      const { data: existingConv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('user1_id', user1Id)
+        .eq('user2_id', user2Id)
+        .single()
+      
+      if (existingConv) {
+        conversationId = existingConv.id
+      } else {
+        // Criar nova conversa
+        const { data: newConv, error: createError } = await supabase
+          .from('conversations')
+          .insert({
+            user1_id: user1Id,
+            user2_id: user2Id
+          })
+          .select('id')
+          .single()
+        
+        if (createError || !newConv) {
+          console.error('Erro ao criar conversa manualmente:', createError)
+          return NextResponse.json({ 
+            error: 'Erro ao criar conversa',
+            details: createError?.message 
+          }, { status: 500 })
+        }
+        
+        conversationId = newConv.id
+      }
+    } else {
+      conversationId = rpcResult
+    }
+
+    if (!conversationId) {
+      return NextResponse.json({ error: 'Não foi possível criar ou encontrar a conversa' }, { status: 500 })
     }
 
     // Buscar conversa completa
@@ -141,7 +195,10 @@ export async function POST(request: NextRequest) {
 
     if (convError) {
       console.error('Erro ao buscar conversa:', convError)
-      return NextResponse.json({ error: 'Erro ao buscar conversa' }, { status: 500 })
+      return NextResponse.json({ 
+        error: 'Erro ao buscar conversa',
+        details: convError.message 
+      }, { status: 500 })
     }
 
     const otherUser = conversation.user1_id === session.user.id ? conversation.user2 : conversation.user1
