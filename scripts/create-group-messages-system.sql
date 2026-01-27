@@ -244,6 +244,9 @@ CREATE POLICY "Users can send messages in their conversations" ON public.message
 DO $$
 DECLARE
   v_admin_id UUID;
+  v_trade_chat_id UUID;
+  v_crypto_chat_id UUID;
+  v_social_chat_id UUID;
 BEGIN
   -- Tentar encontrar um admin primeiro
   SELECT u.id INTO v_admin_id
@@ -260,30 +263,73 @@ BEGIN
     LIMIT 1;
   END IF;
   
-  -- Se ainda não encontrar, criar grupos sem created_by (será atualizado depois)
-  -- Mas primeiro vamos tornar a coluna nullable temporariamente
-  IF v_admin_id IS NULL THEN
-    -- Tornar created_by nullable temporariamente
-    ALTER TABLE public.group_conversations ALTER COLUMN created_by DROP NOT NULL;
-    
-    -- Criar grupos sem created_by
-    INSERT INTO public.group_conversations (name, description, is_public, is_mobile_visible, created_by)
-    VALUES
-      ('Trade Chat', 'Discussões sobre trading e estratégias', TRUE, TRUE, NULL),
-      ('Crypto Chat', 'Conversas sobre criptomoedas e mercado', TRUE, TRUE, NULL),
-      ('Social Chat', 'Networking e conversas gerais', TRUE, TRUE, NULL)
-    ON CONFLICT (name) DO NOTHING;
-    
-    -- Restaurar NOT NULL depois (quando houver utilizadores)
-    -- ALTER TABLE public.group_conversations ALTER COLUMN created_by SET NOT NULL;
-  ELSE
+  -- Criar grupos (com ou sem created_by)
+  IF v_admin_id IS NOT NULL THEN
     -- Criar grupos com created_by válido
     INSERT INTO public.group_conversations (name, description, is_public, is_mobile_visible, created_by)
     VALUES
       ('Trade Chat', 'Discussões sobre trading e estratégias', TRUE, TRUE, v_admin_id),
       ('Crypto Chat', 'Conversas sobre criptomoedas e mercado', TRUE, TRUE, v_admin_id),
       ('Social Chat', 'Networking e conversas gerais', TRUE, TRUE, v_admin_id)
-    ON CONFLICT (name) DO NOTHING;
+    ON CONFLICT (name) DO UPDATE SET
+      description = EXCLUDED.description,
+      is_public = EXCLUDED.is_public,
+      is_mobile_visible = EXCLUDED.is_mobile_visible
+    RETURNING id INTO v_trade_chat_id;
+    
+    -- Obter IDs dos grupos criados/atualizados
+    SELECT id INTO v_trade_chat_id FROM public.group_conversations WHERE name = 'Trade Chat' LIMIT 1;
+    SELECT id INTO v_crypto_chat_id FROM public.group_conversations WHERE name = 'Crypto Chat' LIMIT 1;
+    SELECT id INTO v_social_chat_id FROM public.group_conversations WHERE name = 'Social Chat' LIMIT 1;
+    
+    -- Adicionar admin como membro admin de todos os grupos
+    IF v_trade_chat_id IS NOT NULL THEN
+      INSERT INTO public.group_members (group_id, user_id, role)
+      VALUES (v_trade_chat_id, v_admin_id, 'admin')
+      ON CONFLICT (group_id, user_id) DO UPDATE SET role = 'admin';
+    END IF;
+    
+    IF v_crypto_chat_id IS NOT NULL THEN
+      INSERT INTO public.group_members (group_id, user_id, role)
+      VALUES (v_crypto_chat_id, v_admin_id, 'admin')
+      ON CONFLICT (group_id, user_id) DO UPDATE SET role = 'admin';
+    END IF;
+    
+    IF v_social_chat_id IS NOT NULL THEN
+      INSERT INTO public.group_members (group_id, user_id, role)
+      VALUES (v_social_chat_id, v_admin_id, 'admin')
+      ON CONFLICT (group_id, user_id) DO UPDATE SET role = 'admin';
+    END IF;
+    
+    -- Adicionar todos os utilizadores existentes aos grupos públicos
+    INSERT INTO public.group_members (group_id, user_id, role)
+    SELECT v_trade_chat_id, u.id, 'member'
+    FROM auth.users u
+    WHERE u.id != v_admin_id
+    ON CONFLICT (group_id, user_id) DO NOTHING;
+    
+    INSERT INTO public.group_members (group_id, user_id, role)
+    SELECT v_crypto_chat_id, u.id, 'member'
+    FROM auth.users u
+    WHERE u.id != v_admin_id
+    ON CONFLICT (group_id, user_id) DO NOTHING;
+    
+    INSERT INTO public.group_members (group_id, user_id, role)
+    SELECT v_social_chat_id, u.id, 'member'
+    FROM auth.users u
+    WHERE u.id != v_admin_id
+    ON CONFLICT (group_id, user_id) DO NOTHING;
+  ELSE
+    -- Criar grupos sem created_by (será atualizado depois quando houver utilizadores)
+    INSERT INTO public.group_conversations (name, description, is_public, is_mobile_visible, created_by)
+    VALUES
+      ('Trade Chat', 'Discussões sobre trading e estratégias', TRUE, TRUE, NULL),
+      ('Crypto Chat', 'Conversas sobre criptomoedas e mercado', TRUE, TRUE, NULL),
+      ('Social Chat', 'Networking e conversas gerais', TRUE, TRUE, NULL)
+    ON CONFLICT (name) DO UPDATE SET
+      description = EXCLUDED.description,
+      is_public = EXCLUDED.is_public,
+      is_mobile_visible = EXCLUDED.is_mobile_visible;
   END IF;
 END $$;
 

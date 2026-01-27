@@ -270,6 +270,10 @@ function AppMobileContent() {
               <SocialFeed />
             </TabsContent>
 
+            <TabsContent value="chats" className="mt-0 h-full">
+              <ChatsMobile />
+            </TabsContent>
+
             <TabsContent value="portfolio" className="mt-0 h-full">
               <PortfolioMobile />
             </TabsContent>
@@ -284,10 +288,6 @@ function AppMobileContent() {
 
             <TabsContent value="fitness" className="mt-0 h-full">
               <FitnessMobile />
-            </TabsContent>
-
-            <TabsContent value="chats" className="mt-0 h-full">
-              <ChatsMobile />
             </TabsContent>
           </Tabs>
         </div>
@@ -307,6 +307,18 @@ function AppMobileContent() {
           >
             <Users className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'social' ? 'text-[#D2A63C]' : ''}`} />
             <div className={`text-[10px] font-medium ${activeTab === 'social' ? 'text-[#D2A63C]' : ''}`}>Social</div>
+          </button>
+          
+          <button
+            onClick={() => handleTabChange('chats')}
+            className={`py-3 rounded-lg transition-all relative ${
+              activeTab === 'chats'
+                ? 'bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]'
+                : 'text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent'
+            }`}
+          >
+            <MessageCircle className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'chats' ? 'text-[#D2A63C]' : ''}`} />
+            <div className={`text-[10px] font-medium ${activeTab === 'chats' ? 'text-[#D2A63C]' : ''}`}>Chats</div>
           </button>
           
           <button
@@ -355,18 +367,6 @@ function AppMobileContent() {
           >
             <Dumbbell className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'fitness' ? 'text-[#D2A63C]' : ''}`} />
             <div className={`text-[10px] font-medium ${activeTab === 'fitness' ? 'text-[#D2A63C]' : ''}`}>Fitness</div>
-          </button>
-          
-          <button
-            onClick={() => handleTabChange('chats')}
-            className={`py-3 rounded-lg transition-all relative ${
-              activeTab === 'chats'
-                ? 'bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]'
-                : 'text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent'
-            }`}
-          >
-            <MessageCircle className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'chats' ? 'text-[#D2A63C]' : ''}`} />
-            <div className={`text-[10px] font-medium ${activeTab === 'chats' ? 'text-[#D2A63C]' : ''}`}>Chats</div>
           </button>
         </div>
       </main>

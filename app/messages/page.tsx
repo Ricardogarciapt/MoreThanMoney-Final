@@ -259,10 +259,12 @@ export default function MessagesPage() {
 
     setSearchingUsers(true)
     try {
-      const response = await fetch(`/api/messages/search-users?q=${encodeURIComponent(query)}`)
+      const response = await fetch(`/api/messages/search-users?query=${encodeURIComponent(query)}`)
       if (response.ok) {
         const data = await response.json()
         setSearchResults(data.users || [])
+      } else {
+        console.error('Erro na resposta da API:', response.status)
       }
     } catch (error) {
       console.error('Erro ao pesquisar utilizadores:', error)
