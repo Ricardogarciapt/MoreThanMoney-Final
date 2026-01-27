@@ -274,8 +274,7 @@ BEGIN
     ON CONFLICT (name) DO UPDATE SET
       description = EXCLUDED.description,
       is_public = EXCLUDED.is_public,
-      is_mobile_visible = EXCLUDED.is_mobile_visible
-    RETURNING id INTO v_trade_chat_id;
+      is_mobile_visible = EXCLUDED.is_mobile_visible;
     
     -- Obter IDs dos grupos criados/atualizados
     SELECT id INTO v_trade_chat_id FROM public.group_conversations WHERE name = 'Trade Chat' LIMIT 1;
