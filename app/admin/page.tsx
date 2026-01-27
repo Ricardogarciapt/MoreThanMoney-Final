@@ -38,6 +38,7 @@ import EmailMarketingManager from "@/components/admin/email-marketing-manager"
 import AnalyticsManager from "@/components/admin/analytics-manager"
 import NotificationsManager from "@/components/admin/notifications-manager"
 import FastStartManager from "@/components/admin/fast-start-manager"
+import GroupsManager from "@/components/admin/groups-manager"
 import Link from "next/link"
 
 export default function AdminPage() {

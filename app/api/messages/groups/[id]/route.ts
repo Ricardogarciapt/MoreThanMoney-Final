@@ -189,3 +189,133 @@ export async function POST(
   }
 }
 
+// PUT: Atualizar grupo (apenas admin ou criador)
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
+
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    }
+
+    // Verificar se é admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_type')
+      .eq('id', session.user.id)
+      .single()
+
+    if (profile?.user_type !== 'admin') {
+      return NextResponse.json({ error: 'Acesso negado. Apenas admins podem atualizar grupos' }, { status: 403 })
+    }
+
+    const groupId = params.id
+    const body = await request.json()
+    const { name, description, avatar_url, is_public, is_mobile_visible } = body
+
+    const { data: group, error } = await supabase
+      .from('group_conversations')
+      .update({
+        name,
+        description,
+        avatar_url,
+        is_public,
+        is_mobile_visible,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', groupId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Erro ao atualizar grupo:', error)
+      return NextResponse.json({ error: 'Erro ao atualizar grupo' }, { status: 500 })
+    }
+
+    return NextResponse.json({ group })
+  } catch (error) {
+    console.error('Erro na API de atualização de grupo:', error)
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+  }
+}
+
+// DELETE: Eliminar grupo (apenas admin)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
+
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    }
+
+    // Verificar se é admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_type')
+      .eq('id', session.user.id)
+      .single()
+
+    if (profile?.user_type !== 'admin') {
+      return NextResponse.json({ error: 'Acesso negado. Apenas admins podem eliminar grupos' }, { status: 403 })
+    }
+
+    const groupId = params.id
+
+    // Eliminar grupo (cascade elimina mensagens e membros)
+    const { error } = await supabase
+      .from('group_conversations')
+      .delete()
+      .eq('id', groupId)
+
+    if (error) {
+      console.error('Erro ao eliminar grupo:', error)
+      return NextResponse.json({ error: 'Erro ao eliminar grupo' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Erro na API de eliminação de grupo:', error)
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+  }
+}
+
