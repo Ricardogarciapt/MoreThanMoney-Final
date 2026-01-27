@@ -434,26 +434,24 @@ export default function ScannerAccessPage() {
 
   return (
     <ProtectedPage redirectPath="/login?redirect=/scanner-access" loadingMessage="A verificar acesso ao scanner...">
-    <main>
-      {/* Breadcrumb */}
-      <nav className="bg-black/50 border-b border-gold-500/10">
-        <div className="container mx-auto px-4 py-2">
-          <ol className="flex items-center space-x-2 text-sm">
-            <li className="flex items-center">
-              <a href="/" className="text-gray-400 hover:text-gold-400 flex items-center">
-                <House className="h-3 w-3 mr-1" />
-                <span className="sr-only">Início</span>
-              </a>
-            </li>
-            <li className="flex items-center">
-              <ChevronRight className="h-4 w-4 text-gray-500 mx-1" />
-              <span className="text-gold-400">Scanner Access</span>
-            </li>
-          </ol>
-        </div>
-      </nav>
-
       <main className="min-h-screen bg-black text-white">
+        {/* Breadcrumb */}
+        <nav className="bg-black/50 border-b border-gold-500/10">
+          <div className="container mx-auto px-4 py-2">
+            <ol className="flex items-center space-x-2 text-sm">
+              <li className="flex items-center">
+                <a href="/" className="text-gray-400 hover:text-gold-400 flex items-center">
+                  <House className="h-3 w-3 mr-1" />
+                  <span className="sr-only">Início</span>
+                </a>
+              </li>
+              <li className="flex items-center">
+                <ChevronRight className="h-4 w-4 text-gray-500 mx-1" />
+                <span className="text-gold-400">Scanner Access</span>
+              </li>
+            </ol>
+          </div>
+        </nav>
         {/* Header */}
         <div className="container mx-auto px-4 py-6 md:py-12">
           <div className="text-center mb-8 md:mb-12">
