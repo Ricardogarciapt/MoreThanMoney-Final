@@ -31,21 +31,28 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const mobileOnly = searchParams.get('mobile_only') === 'true'
 
-    // Se for admin, mostrar todos os grupos, senão apenas os que o utilizador é membro
+    // Buscar perfil do utilizador para verificar se é admin/VIP
     const { data: profile } = await supabase
       .from('profiles')
-      .select('user_type')
+      .select('user_type, membership_type')
       .eq('id', session.user.id)
       .single()
 
     let query
-    if (profile?.user_type === 'admin') {
+    if (mobileOnly) {
+      // Se for mobile_only, TODOS os utilizadores veem grupos com is_mobile_visible = true
+      // Não precisa ser membro para ver, apenas para publicar
+      query = supabase
+        .from('group_conversations')
+        .select('*')
+        .eq('is_mobile_visible', true)
+    } else if (profile?.user_type === 'admin') {
       // Admin vê todos os grupos
       query = supabase
         .from('group_conversations')
         .select('*')
     } else {
-      // Utilizador normal vê apenas grupos onde é membro
+      // Utilizador normal vê apenas grupos onde é membro (para grupos não-mobile)
       query = supabase
         .from('group_conversations')
         .select(`
@@ -53,10 +60,6 @@ export async function GET(request: NextRequest) {
           members:group_members!inner(user_id)
         `)
         .eq('members.user_id', session.user.id)
-    }
-
-    if (mobileOnly) {
-      query = query.eq('is_mobile_visible', true)
     }
     
     const { data: groups, error } = await query.order('last_message_at', { ascending: false })
@@ -67,8 +70,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Buscar última mensagem e contagem de não lidas para cada grupo
+    // Verificar se o utilizador é membro de cada grupo
     const groupsWithMessages = await Promise.all(
       (groups || []).map(async (group) => {
+        // Verificar se o utilizador é membro
+        const { data: member } = await supabase
+          .from('group_members')
+          .select('role')
+          .eq('group_id', group.id)
+          .eq('user_id', session.user.id)
+          .single()
+
+        // Verificar se pode publicar (admin, VIP, ou Social Chat)
+        const isAdmin = profile?.user_type === 'admin'
+        const isVip = profile?.membership_type === 'vip'
+        const isSocialChat = group.name?.toLowerCase().includes('social')
+        const canPost = isAdmin || isVip || isSocialChat || !!member
+
         // Última mensagem
         const { data: lastMessage } = await supabase
           .from('messages')
@@ -96,7 +114,9 @@ export async function GET(request: NextRequest) {
           ...group,
           lastMessage,
           unreadCount: unreadCount || 0,
-          member_count: memberCount || 0
+          member_count: memberCount || 0,
+          can_post: canPost,
+          is_member: !!member
         }
       })
     )

@@ -20,6 +20,8 @@ interface Group {
     created_at: string
   }
   unreadCount: number
+  can_post?: boolean
+  is_member?: boolean
 }
 
 interface Message {

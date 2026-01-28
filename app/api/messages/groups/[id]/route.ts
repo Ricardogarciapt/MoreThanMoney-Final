@@ -33,16 +33,30 @@ export async function GET(
 
     const groupId = params.id
 
-    // Verificar se o utilizador é membro do grupo
-    const { data: member } = await supabase
-      .from('group_members')
-      .select('*')
-      .eq('group_id', groupId)
-      .eq('user_id', session.user.id)
+    // Buscar informações do grupo
+    const { data: group } = await supabase
+      .from('group_conversations')
+      .select('name, is_mobile_visible')
+      .eq('id', groupId)
       .single()
 
-    if (!member) {
-      return NextResponse.json({ error: 'Não és membro deste grupo' }, { status: 403 })
+    if (!group) {
+      return NextResponse.json({ error: 'Grupo não encontrado' }, { status: 404 })
+    }
+
+    // Se for grupo mobile visível, todos podem ver mensagens
+    // Caso contrário, apenas membros podem ver
+    if (!group.is_mobile_visible) {
+      const { data: member } = await supabase
+        .from('group_members')
+        .select('*')
+        .eq('group_id', groupId)
+        .eq('user_id', session.user.id)
+        .single()
+
+      if (!member) {
+        return NextResponse.json({ error: 'Não és membro deste grupo' }, { status: 403 })
+      }
     }
 
     // Buscar mensagens
@@ -112,6 +126,28 @@ export async function POST(
       return NextResponse.json({ error: 'Conteúdo da mensagem é obrigatório' }, { status: 400 })
     }
 
+    // Buscar informações do grupo e perfil do utilizador
+    const { data: group } = await supabase
+      .from('group_conversations')
+      .select('name, is_mobile_visible')
+      .eq('id', groupId)
+      .single()
+
+    if (!group) {
+      return NextResponse.json({ error: 'Grupo não encontrado' }, { status: 404 })
+    }
+
+    // Verificar perfil do utilizador
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_type, membership_type')
+      .eq('id', session.user.id)
+      .single()
+
+    const isAdmin = profile?.user_type === 'admin'
+    const isVip = profile?.membership_type === 'vip'
+    const isSocialChat = group.name?.toLowerCase().includes('social')
+
     // Verificar se o utilizador é membro do grupo
     const { data: member } = await supabase
       .from('group_members')
@@ -120,8 +156,16 @@ export async function POST(
       .eq('user_id', session.user.id)
       .single()
 
-    if (!member) {
-      return NextResponse.json({ error: 'Não és membro deste grupo' }, { status: 403 })
+    // Pode publicar se:
+    // 1. É admin ou VIP (pode publicar em qualquer grupo)
+    // 2. É Social Chat (todos podem publicar)
+    // 3. É membro do grupo
+    const canPost = isAdmin || isVip || isSocialChat || !!member
+
+    if (!canPost) {
+      return NextResponse.json({ 
+        error: 'Não tens permissão para publicar neste grupo. Apenas admins, VIPs e membros podem publicar.' 
+      }, { status: 403 })
     }
 
     // Criar mensagem
