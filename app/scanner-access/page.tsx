@@ -16,6 +16,7 @@ import PositionCalculator from "@/components/position-calculator"
 import TradingJournalCalendar from "@/components/trading-journal-calendar"
 import TradingJournal from "@/components/trading-journal"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 import { 
   House,
   ChevronRight,
