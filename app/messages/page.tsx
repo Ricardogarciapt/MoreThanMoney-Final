@@ -62,9 +62,27 @@ interface UserProfile {
 export default function MessagesPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user: currentUser, isAdmin, userProfile } = useAuth()
-  const isVip = userProfile?.membership_type === 'vip'
+  const { user: currentUser, isAdmin } = useAuth()
+  // Verificar se é VIP através de uma chamada à API ou buscar do perfil
+  const [isVip, setIsVip] = useState(false)
   const canManageGroups = isAdmin || isVip
+  
+  useEffect(() => {
+    const checkVipStatus = async () => {
+      if (currentUser?.id) {
+        try {
+          const response = await fetch(`/api/profile/get?id=${currentUser.id}`, { credentials: 'include' })
+          if (response.ok) {
+            const data = await response.json()
+            setIsVip(data.profile?.membership_type === 'vip')
+          }
+        } catch (error) {
+          console.error('Erro ao verificar status VIP:', error)
+        }
+      }
+    }
+    checkVipStatus()
+  }, [currentUser?.id])
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
