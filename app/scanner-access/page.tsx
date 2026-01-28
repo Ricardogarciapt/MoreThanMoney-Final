@@ -378,14 +378,19 @@ export default function ScannerAccessPage() {
     }
   }
 
-  const handleCheckboxChange = async (sectionIndex: number, itemIndex: number) => {
-    setChecklistSections(prev => {
-      const newSections = [...prev]
-      const wasChecked = newSections[sectionIndex].items[itemIndex].checked
+  const handleCheckboxChangeWithSave = async (sectionIndex: number, itemIndex: number) => {
+    const wasChecked = checklistSections[sectionIndex].items[itemIndex].checked
+    
+    // Atualizar estado
+    handleCheckboxChange(sectionIndex, itemIndex)
+    
+    // Aguardar atualização do estado e depois salvar
+    setTimeout(async () => {
+      const newSections = [...checklistSections]
       newSections[sectionIndex].items[itemIndex].checked = !wasChecked
       
       // Salvar no Supabase
-      saveChecklistProgress(newSections)
+      await saveChecklistProgress(newSections)
       
       // Adicionar XP quando item é marcado (não quando desmarcado)
       if (!wasChecked) {
@@ -420,9 +425,7 @@ export default function ScannerAccessPage() {
           }).catch(err => console.error('Erro ao adicionar XP bônus:', err))
         }
       }
-      
-      return newSections
-    })
+    }, 100)
   }
 
   const handleReset = () => {
