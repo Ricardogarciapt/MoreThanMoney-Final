@@ -39,7 +39,8 @@ interface Message {
 
 export default function ChatsMobile() {
   const router = useRouter()
-  const { user: currentUser } = useAuth()
+  const { user: currentUser, isAdmin, userProfile } = useAuth()
+  const isVip = userProfile?.membership_type === 'vip'
   const [groups, setGroups] = useState<Group[]>([])
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -163,6 +164,7 @@ export default function ChatsMobile() {
   }
 
   const selectedGroupData = groups.find(g => g.id === selectedGroup)
+  const canPostInGroup = selectedGroupData?.can_post ?? false
 
   if (showMessages && selectedGroup) {
     return (
@@ -239,16 +241,19 @@ export default function ChatsMobile() {
             onKeyPress={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
-                handleSendMessage()
+                if (canPostInGroup) {
+                  handleSendMessage()
+                }
               }
             }}
-            placeholder="Escreve uma mensagem..."
-            className="bg-gray-800 border-gray-700 text-white focus:border-[#D2A63C]"
+            placeholder={canPostInGroup ? "Escreve uma mensagem..." : "Apenas admins e VIPs podem publicar"}
+            disabled={sending || !canPostInGroup}
+            className="bg-gray-800 border-gray-700 text-white focus:border-[#D2A63C] disabled:opacity-50"
           />
           <Button
             onClick={handleSendMessage}
-            disabled={!newMessage.trim() || sending}
-            className="bg-[#D2A63C] text-black hover:bg-[#BB8525]"
+            disabled={!newMessage.trim() || sending || !canPostInGroup}
+            className="bg-[#D2A63C] text-black hover:bg-[#BB8525] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {sending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
