@@ -24,7 +24,8 @@ import {
   Database,
   Bell,
   Timer,
-  Video
+  Video,
+  MessageCircle
 } from "lucide-react"
 import type { SiteContent, UserManagement, AdminStats } from "@/lib/admin-types"
 import ThemeManager from "@/components/admin/theme-manager"
