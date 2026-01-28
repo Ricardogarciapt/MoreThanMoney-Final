@@ -39,31 +39,49 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { groupName, chartUrl, chartImage, symbol } = body
+    const { groupId, groupName, chartUrl, chartImage, symbol } = body
 
-    if (!groupName) {
-      return NextResponse.json({ error: 'Nome do grupo é obrigatório' }, { status: 400 })
+    if (!groupId && !groupName) {
+      return NextResponse.json({ error: 'ID ou nome do grupo é obrigatório' }, { status: 400 })
     }
 
-    // Mapear nome do grupo para ID
-    const groupNameMap: Record<string, string> = {
-      'trade-chat': 'Trade Chat',
-      'crypto-chat': 'Crypto Chat',
-      'social-chat': 'Social Chat'
-    }
+    let group
+    
+    // Se tiver groupId, usar diretamente
+    if (groupId) {
+      const { data: groupData, error: groupError } = await supabase
+        .from('group_conversations')
+        .select('id, name')
+        .eq('id', groupId)
+        .single()
 
-    const actualGroupName = groupNameMap[groupName] || groupName
+      if (groupError || !groupData) {
+        return NextResponse.json({ error: 'Grupo não encontrado' }, { status: 404 })
+      }
+      
+      group = groupData
+    } else {
+      // Fallback: buscar pelo nome (compatibilidade com código antigo)
+      const groupNameMap: Record<string, string> = {
+        'trade-chat': 'Trade Chat',
+        'crypto-chat': 'Crypto Chat',
+        'social-chat': 'Social Chat'
+      }
 
-    // Buscar grupo pelo nome
-    const { data: group, error: groupError } = await supabase
-      .from('group_conversations')
-      .select('id')
-      .eq('name', actualGroupName)
-      .eq('is_mobile_visible', true)
-      .single()
+      const actualGroupName = groupNameMap[groupName] || groupName
 
-    if (groupError || !group) {
-      return NextResponse.json({ error: 'Grupo não encontrado' }, { status: 404 })
+      const { data: groupData, error: groupError } = await supabase
+        .from('group_conversations')
+        .select('id, name')
+        .eq('name', actualGroupName)
+        .eq('is_mobile_visible', true)
+        .single()
+
+      if (groupError || !groupData) {
+        return NextResponse.json({ error: 'Grupo não encontrado' }, { status: 404 })
+      }
+      
+      group = groupData
     }
 
     // Verificar se o utilizador é membro do grupo

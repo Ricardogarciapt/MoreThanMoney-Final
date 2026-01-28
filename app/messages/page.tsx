@@ -179,7 +179,7 @@ export default function MessagesPage() {
       setLoading(true)
       const [conversationsRes, groupsRes] = await Promise.all([
         fetch('/api/messages/conversations', { credentials: 'include' }),
-        fetch('/api/messages/groups', { credentials: 'include' })
+        fetch('/api/messages/groups?mobile_only=true', { credentials: 'include' })
       ])
       
       const conversationsData = conversationsRes.ok ? await conversationsRes.json() : { conversations: [] }

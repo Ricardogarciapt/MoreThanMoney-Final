@@ -262,6 +262,8 @@ export default function TradingViewWidget({
   const [sharingChart, setSharingChart] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [isVip, setIsVip] = useState(false)
+  const [availableGroups, setAvailableGroups] = useState<Array<{ id: string; name: string }>>([])
+  const [loadingGroups, setLoadingGroups] = useState(false)
   
   // Obter ID do utilizador autenticado e verificar permissões
   useEffect(() => {
@@ -281,6 +283,11 @@ export default function TradingViewWidget({
           if (profile) {
             setIsAdmin(profile.user_type === 'admin')
             setIsVip(profile.membership_type === 'vip')
+            
+            // Se for admin ou VIP, carregar grupos disponíveis
+            if (profile.user_type === 'admin' || profile.membership_type === 'vip') {
+              loadAvailableGroups()
+            }
           }
         }
       } catch (error) {
@@ -289,6 +296,31 @@ export default function TradingViewWidget({
     }
     getUserId()
   }, [])
+  
+  // Carregar grupos disponíveis para partilha
+  const loadAvailableGroups = async () => {
+    try {
+      setLoadingGroups(true)
+      const response = await fetch('/api/messages/groups?mobile_only=true', {
+        credentials: 'include'
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        const groups = (data.groups || []).map((g: any) => ({
+          id: g.id,
+          name: g.name
+        }))
+        setAvailableGroups(groups)
+      } else {
+        console.error('Erro ao carregar grupos:', await response.json())
+      }
+    } catch (error) {
+      console.error('Erro ao carregar grupos:', error)
+    } finally {
+      setLoadingGroups(false)
+    }
+  }
 
   // Estados - usar props externas se fornecidas, senão usar localStorage
   const [selectedStudies, setSelectedStudies] = useState<ScannerKey[]>(() => {
