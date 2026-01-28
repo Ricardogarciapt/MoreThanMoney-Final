@@ -73,9 +73,8 @@ export default function ChatsMobile() {
       const response = await fetch('/api/messages/groups?mobile_only=true')
       if (response.ok) {
         const data = await response.json()
-        // Filtrar apenas grupos visíveis no mobile
-        const mobileGroups = (data.groups || []).filter((g: any) => g.is_mobile_visible)
-        setGroups(mobileGroups)
+        // A API já retorna apenas grupos mobile_visible quando mobile_only=true
+        setGroups(data.groups || [])
       }
     } catch (error) {
       console.error('Erro ao carregar grupos:', error)
