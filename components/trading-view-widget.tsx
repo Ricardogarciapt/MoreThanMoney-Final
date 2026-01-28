@@ -249,7 +249,7 @@ export default function TradingViewWidget({
   onThemeChange?: (theme: "light" | "dark") => void
   onStudiesChange?: (studies: ScannerKey[]) => void
   widgetRef?: React.RefObject<TradingViewWidgetRef>
-}) => {
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const widgetRef = useRef<any>(null)
   const [widgetLoaded, setWidgetLoaded] = useState(false)
