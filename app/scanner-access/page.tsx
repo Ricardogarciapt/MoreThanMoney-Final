@@ -168,6 +168,27 @@ export default function ScannerAccessPage() {
       ]
     }
   ])
+  
+  const handleCheckboxChange = (sectionIndex: number, itemIndex: number) => {
+    setChecklistSections(prev => {
+      const newSections = [...prev]
+      newSections[sectionIndex].items[itemIndex].checked = !newSections[sectionIndex].items[itemIndex].checked
+      return newSections
+    })
+  }
+  
+  const handleResetChecklist = () => {
+    setChecklistSections(prev => prev.map(section => ({
+      ...section,
+      items: section.items.map(item => ({ ...item, checked: false }))
+    })))
+  }
+  
+  const totalItems = checklistSections.reduce((sum, section) => sum + section.items.length, 0)
+  const completedItems = checklistSections.reduce((sum, section) => 
+    sum + section.items.filter(item => item.checked).length, 0
+  )
+  const progressPercentage = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0
 
   useEffect(() => {
     setMounted(true)
@@ -405,15 +426,13 @@ export default function ScannerAccessPage() {
   }
 
   const handleReset = () => {
-    setChecklistSections(prev => {
-      const resetSections = prev.map(section => ({
-        ...section,
-        items: section.items.map(item => ({ ...item, checked: false }))
-      }))
-      // Salvar estado resetado
-      saveChecklistProgress(resetSections)
-      return resetSections
-    })
+    handleResetChecklist()
+    const resetSections = checklistSections.map(section => ({
+      ...section,
+      items: section.items.map(item => ({ ...item, checked: false }))
+    }))
+    // Salvar estado resetado
+    saveChecklistProgress(resetSections)
   }
 
   const totalItems = checklistSections.reduce((acc, section) => acc + section.items.length, 0)
@@ -568,7 +587,7 @@ export default function ScannerAccessPage() {
                                 <Checkbox
                                   id={item.id}
                                   checked={item.checked}
-                                  onCheckedChange={() => handleCheckboxChange(sectionIndex, itemIndex)}
+                                  onCheckedChange={() => handleCheckboxChangeWithSave(sectionIndex, itemIndex)}
                                   className="mt-1"
                                 />
                                 <label
