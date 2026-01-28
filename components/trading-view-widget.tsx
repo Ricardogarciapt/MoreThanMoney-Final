@@ -664,7 +664,7 @@ export default function TradingViewWidget({
         timezone: "Etc/UTC",
         theme: theme,
         style: "1",
-        locale: "br",
+        locale: "pt",
         toolbar_bg: theme === "dark" ? "#1E1E1E" : "#FFFFFF",
         enable_publishing: true,
         allow_symbol_change: true,

@@ -104,6 +104,7 @@ export default function ScannerAccessPage() {
     additional_rules: ''
   })
 
+  // Checklist Trading
   const [checklistSections, setChecklistSections] = useState<ChecklistSection[]>([
     {
       title: "Rotina Pre-Trading",
