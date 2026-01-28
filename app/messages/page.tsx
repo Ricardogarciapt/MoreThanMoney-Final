@@ -62,8 +62,8 @@ interface UserProfile {
 export default function MessagesPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user: currentUser, isAdmin } = useAuth()
-  const isVip = currentUser?.membership_type === 'vip'
+  const { user: currentUser, isAdmin, userProfile } = useAuth()
+  const isVip = userProfile?.membership_type === 'vip'
   const canManageGroups = isAdmin || isVip
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [filteredConversations, setFilteredConversations] = useState<Conversation[]>([])
@@ -239,7 +239,7 @@ export default function MessagesPage() {
           table: 'messages',
           filter: type === 'group' ? `group_id=eq.${id}` : `conversation_id=eq.${id}`
         },
-        (payload) => {
+        (payload: any) => {
           console.log('Nova mensagem recebida:', payload)
           loadMessages(id, type)
           loadConversations()
@@ -257,7 +257,7 @@ export default function MessagesPage() {
           loadMessages(id, type)
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: string) => {
         console.log(`Subscription status para ${channelName}:`, status)
       })
 
