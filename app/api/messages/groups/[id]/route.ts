@@ -193,12 +193,7 @@ export async function POST(
       .update({ last_message_at: new Date().toISOString() })
       .eq('id', groupId)
 
-    // Buscar nome do grupo para notificação
-    const { data: group } = await supabase
-      .from('group_conversations')
-      .select('name')
-      .eq('id', groupId)
-      .single()
+    // Usar o grupo já buscado anteriormente para notificação
 
     // Enviar notificações push para outros membros do grupo
     const { data: members } = await supabase
