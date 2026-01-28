@@ -1459,7 +1459,24 @@ export default function TradingViewWidget({
 
       {/* Widget container */}
       <div className="w-full h-full pt-28" style={{ visibility: widgetLoaded ? "visible" : "hidden" }}>
-        <div ref={containerRef} className="w-full h-full" />
+        <div 
+          ref={containerRef} 
+          className="w-full h-full"
+          style={{ 
+            userSelect: 'auto', 
+            WebkitUserSelect: 'auto',
+            MozUserSelect: 'auto',
+            msUserSelect: 'auto'
+          }}
+          onContextMenu={(e) => {
+            // Permitir menu de contexto nativo do TradingView
+            // Não prevenir default - permite partilha e screenshot nativos
+            // O TradingView precisa do menu de contexto para funcionalidades como:
+            // - Partilhar gráfico (Alt+S)
+            // - Copiar imagem do gráfico
+            // - Exportar gráfico
+          }}
+        />
       </div>
 
       {!widgetLoaded && !error && (
