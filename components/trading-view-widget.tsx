@@ -677,7 +677,8 @@ export default function TradingViewWidget({
         disabled_features: [
           "header_widget_dom_node", 
           "header_widget", 
-          "volume_force_overlay", 
+          "volume_force_overlay",
+          // NÃO desabilitar context_menu - permite partilha nativa do TradingView 
           "scanner-access",
           "create_volume_indicator_by_default",
           "volumePaneSize",
