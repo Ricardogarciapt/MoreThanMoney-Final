@@ -671,7 +671,7 @@ export default function TradingViewWidget({
         hide_side_toolbar: false,
         hide_legend: false,
         withdateranges: true,
-        save_image: true,
+        save_image: true, // Permite guardar/copiar imagem do gráfico
         container_id: "tradingview_widget",
         studies: studiesToApply,
         disabled_features: [
