@@ -113,12 +113,10 @@ export default function RootLayout({
         
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <Suspense fallback={null}>
-              <ConditionalLayoutContent>
-                {children}
-              </ConditionalLayoutContent>
-              <Toaster />
-              <Sonner richColors position="top-right" />
-            </Suspense>
+            {children}
+            <Toaster />
+            <Sonner richColors position="top-right" />
+          </Suspense>
         </ThemeProvider>
       </body>
     </html>

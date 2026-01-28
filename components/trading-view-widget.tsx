@@ -222,7 +222,7 @@ export interface TradingViewWidgetRef {
   captureChartImage: () => Promise<string | null>
 }
 
-const TradingViewWidget = ({
+export default function TradingViewWidget({
   scannerType = "KillShot",
   showScreener = false,
   // Props opcionais para controlo externo (usado pelo sistema de layouts)
