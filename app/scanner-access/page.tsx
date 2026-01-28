@@ -438,13 +438,6 @@ export default function ScannerAccessPage() {
     saveChecklistProgress(resetSections)
   }
 
-  const totalItems = checklistSections.reduce((acc, section) => acc + section.items.length, 0)
-  const completedItems = checklistSections.reduce(
-    (acc, section) => acc + section.items.filter(item => item.checked).length,
-    0
-  )
-  const progressPercentage = (completedItems / totalItems) * 100
-
   if (!mounted) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-black">
