@@ -6,7 +6,6 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import UserDropdown from "@/components/user-dropdown"
-import NotificationsBell from "@/components/notifications-bell"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
 import LoginModal from "@/components/login-modal"
 import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap } from "lucide-react"
@@ -198,13 +197,11 @@ export default function Navbar() {
             {/* Desktop Right Side */}
             <div className="hidden lg:flex lg:items-center lg:space-x-3">
               <LanguageSelectorEnhanced />
-              {isAuthenticated && <NotificationsBell />}
               <UserDropdown />
             </div>
 
             {/* Mobile menu button */}
             <div className="lg:hidden flex items-center space-x-2">
-              {isAuthenticated && <NotificationsBell />}
               <button
                 onClick={toggleMenu}
                 className="inline-flex items-center justify-center p-2 rounded-lg text-mtm-primary hover:bg-mtm-primary/10 transition-colors"
