@@ -1345,12 +1345,17 @@ export default function TradingViewWidget({
                                 alert('Não foi possível capturar a imagem do gráfico. A partilhar apenas o link.')
                               }
                               
+                              // Usar ID do grupo se disponível, senão usar nome
+                              const groupToShare = availableGroups.find(g => g.id === selectedGroup)
+                              const groupName = groupToShare ? groupToShare.name : selectedGroup
+                              
                               const response = await fetch('/api/messages/share-chart', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 credentials: 'include',
                                 body: JSON.stringify({
-                                  groupName: selectedGroup,
+                                  groupId: selectedGroup, // Enviar ID do grupo
+                                  groupName: groupName, // Enviar nome também para compatibilidade
                                   chartUrl: chartUrl || '',
                                   chartImage: chartImage || '',
                                   symbol: symbol
