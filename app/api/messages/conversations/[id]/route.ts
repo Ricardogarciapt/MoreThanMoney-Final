@@ -147,6 +147,12 @@ export async function POST(
       return NextResponse.json({ error: 'Erro ao enviar mensagem' }, { status: 500 })
     }
 
+    // Atualizar last_message_at na conversa
+    await supabase
+      .from('conversations')
+      .update({ last_message_at: new Date().toISOString() })
+      .eq('id', conversationId)
+
     // Enviar notificação push para o outro usuário
     const otherUserId = conversation.user1_id === session.user.id 
       ? conversation.user2_id 

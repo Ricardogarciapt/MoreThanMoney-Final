@@ -7,11 +7,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { User, Send, ArrowLeft, Loader2, MessageCircle, Search, Plus, Users, X } from "lucide-react"
+import { User, Send, ArrowLeft, Loader2, MessageCircle, Search, Plus, Users, X, Settings } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
 import ProtectedPage from "@/components/protected-page"
+import GroupsManager from "@/components/admin/groups-manager"
 
 interface Conversation {
   id: string
@@ -79,6 +80,7 @@ export default function MessagesPage() {
   const [userSearchQuery, setUserSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<UserProfile[]>([])
   const [searchingUsers, setSearchingUsers] = useState(false)
+  const [showGroupsManager, setShowGroupsManager] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
@@ -98,12 +100,17 @@ export default function MessagesPage() {
   }, [searchParams])
 
   useEffect(() => {
+    let unsubscribe: (() => void) | undefined
+    
     if (selectedConversation) {
       loadMessages(selectedConversation, selectedConversationType)
-      subscribeToMessages(selectedConversation, selectedConversationType)
+      unsubscribe = subscribeToMessages(selectedConversation, selectedConversationType)
     }
+    
     return () => {
-      // Cleanup subscription
+      if (unsubscribe) {
+        unsubscribe()
+      }
     }
   }, [selectedConversation, selectedConversationType])
 
@@ -151,13 +158,21 @@ export default function MessagesPage() {
 
   const loadConversations = async () => {
     try {
+      setLoading(true)
       const [conversationsRes, groupsRes] = await Promise.all([
-        fetch('/api/messages/conversations'),
-        fetch('/api/messages/groups')
+        fetch('/api/messages/conversations', { credentials: 'include' }),
+        fetch('/api/messages/groups', { credentials: 'include' })
       ])
       
       const conversationsData = conversationsRes.ok ? await conversationsRes.json() : { conversations: [] }
       const groupsData = groupsRes.ok ? await groupsRes.json() : { groups: [] }
+      
+      if (!conversationsRes.ok) {
+        console.error('Erro ao carregar conversas:', conversationsData)
+      }
+      if (!groupsRes.ok) {
+        console.error('Erro ao carregar grupos:', groupsData)
+      }
       
       const directConvs: Conversation[] = (conversationsData.conversations || []).map((conv: any) => ({
         ...conv,
@@ -177,7 +192,14 @@ export default function MessagesPage() {
         isGroup: true
       }))
       
-      setConversations([...directConvs, ...groupConvs])
+      // Ordenar por última mensagem (mais recente primeiro)
+      const allConversations = [...directConvs, ...groupConvs].sort((a, b) => {
+        const aTime = a.lastMessage?.created_at ? new Date(a.lastMessage.created_at).getTime() : 0
+        const bTime = b.lastMessage?.created_at ? new Date(b.lastMessage.created_at).getTime() : 0
+        return bTime - aTime
+      })
+      
+      setConversations(allConversations)
     } catch (error) {
       console.error('Erro ao carregar conversas:', error)
     } finally {
@@ -190,10 +212,15 @@ export default function MessagesPage() {
       const endpoint = type === 'group' 
         ? `/api/messages/groups/${id}`
         : `/api/messages/conversations/${id}`
-      const response = await fetch(endpoint)
+      const response = await fetch(endpoint, { credentials: 'include' })
       if (response.ok) {
         const data = await response.json()
         setMessages(data.messages || [])
+        // Scroll para o final após carregar
+        setTimeout(() => scrollToBottom(), 100)
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
+        console.error('Erro ao carregar mensagens:', errorData)
       }
     } catch (error) {
       console.error('Erro ao carregar mensagens:', error)
@@ -201,8 +228,9 @@ export default function MessagesPage() {
   }
 
   const subscribeToMessages = (id: string, type: 'direct' | 'group') => {
+    const channelName = `messages-${type}-${id}`
     const channel = supabase
-      .channel(`messages-${type}-${id}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -211,12 +239,27 @@ export default function MessagesPage() {
           table: 'messages',
           filter: type === 'group' ? `group_id=eq.${id}` : `conversation_id=eq.${id}`
         },
-        () => {
+        (payload) => {
+          console.log('Nova mensagem recebida:', payload)
           loadMessages(id, type)
           loadConversations()
         }
       )
-      .subscribe()
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: type === 'group' ? `group_id=eq.${id}` : `conversation_id=eq.${id}`
+        },
+        () => {
+          loadMessages(id, type)
+        }
+      )
+      .subscribe((status) => {
+        console.log(`Subscription status para ${channelName}:`, status)
+      })
 
     return () => {
       supabase.removeChannel(channel)
@@ -235,19 +278,26 @@ export default function MessagesPage() {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newMessage })
+        credentials: 'include',
+        body: JSON.stringify({ content: newMessage.trim() })
       })
 
       if (response.ok) {
         setNewMessage("")
-        loadMessages(selectedConversation, selectedConversationType)
-        loadConversations()
+        // Recarregar mensagens e conversas
+        await Promise.all([
+          loadMessages(selectedConversation, selectedConversationType),
+          loadConversations()
+        ])
+        scrollToBottom()
       } else {
-        alert('Erro ao enviar mensagem')
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
+        console.error('Erro ao enviar mensagem:', errorData)
+        alert(errorData.error || 'Erro ao enviar mensagem')
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
-      alert('Erro ao enviar mensagem')
+      alert('Erro ao enviar mensagem. Verifica a consola para mais detalhes.')
     } finally {
       setSending(false)
     }

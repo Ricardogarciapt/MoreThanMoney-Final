@@ -143,6 +143,12 @@ export async function POST(
       return NextResponse.json({ error: 'Erro ao enviar mensagem' }, { status: 500 })
     }
 
+    // Atualizar last_message_at no grupo
+    await supabase
+      .from('group_conversations')
+      .update({ last_message_at: new Date().toISOString() })
+      .eq('id', groupId)
+
     // Buscar nome do grupo para notificação
     const { data: group } = await supabase
       .from('group_conversations')
