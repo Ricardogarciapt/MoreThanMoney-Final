@@ -329,7 +329,7 @@ export default function AdminPage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-8 bg-gray-900 border border-[#D2A63C]/30 mb-8">
+          <TabsList className="grid w-full grid-cols-11 bg-gray-900 border border-[#D2A63C]/30 mb-8 overflow-x-auto">
             <TabsTrigger 
               value="dashboard" 
               className="data-[state=active]:bg-[#D2A63C] data-[state=active]:text-black"
