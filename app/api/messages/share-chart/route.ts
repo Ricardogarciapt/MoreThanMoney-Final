@@ -84,16 +84,21 @@ export async function POST(request: NextRequest) {
       group = groupData
     }
 
-    // Verificar se o utilizador é membro do grupo
-    const { data: member } = await supabase
-      .from('group_members')
-      .select('*')
-      .eq('group_id', group.id)
-      .eq('user_id', session.user.id)
-      .single()
+    // Verificar se o utilizador é membro do grupo OU se é admin/VIP (podem partilhar em qualquer grupo)
+    const isAdminOrVip = profile?.user_type === 'admin' || profile?.membership_type === 'vip'
+    
+    if (!isAdminOrVip) {
+      // Se não for admin/VIP, verificar se é membro
+      const { data: member } = await supabase
+        .from('group_members')
+        .select('*')
+        .eq('group_id', group.id)
+        .eq('user_id', session.user.id)
+        .single()
 
-    if (!member) {
-      return NextResponse.json({ error: 'Não és membro deste grupo' }, { status: 403 })
+      if (!member) {
+        return NextResponse.json({ error: 'Não és membro deste grupo' }, { status: 403 })
+      }
     }
 
     // Criar mensagem com chart

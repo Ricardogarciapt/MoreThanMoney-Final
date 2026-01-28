@@ -1271,12 +1271,24 @@ export default function TradingViewWidget({
                     <div className="mt-4 space-y-3">
                       <Select value={selectedGroup} onValueChange={setSelectedGroup}>
                         <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                          <SelectValue placeholder="Seleciona um grupo" />
+                          <SelectValue placeholder={loadingGroups ? "A carregar grupos..." : "Seleciona um grupo"} />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700">
-                          <SelectItem value="trade-chat">Trade Chat</SelectItem>
-                          <SelectItem value="crypto-chat">Crypto Chat</SelectItem>
-                          <SelectItem value="social-chat">Social Chat</SelectItem>
+                          {loadingGroups ? (
+                            <SelectItem value="loading" disabled>A carregar...</SelectItem>
+                          ) : availableGroups.length > 0 ? (
+                            availableGroups.map((group) => (
+                              <SelectItem key={group.id} value={group.id}>
+                                {group.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <>
+                              <SelectItem value="trade-chat">Trade Chat</SelectItem>
+                              <SelectItem value="crypto-chat">Crypto Chat</SelectItem>
+                              <SelectItem value="social-chat">Social Chat</SelectItem>
+                            </>
+                          )}
                         </SelectContent>
                       </Select>
                       <div className="flex gap-2">
