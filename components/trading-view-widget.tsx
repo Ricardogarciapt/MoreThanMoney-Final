@@ -867,16 +867,35 @@ export default function TradingViewWidget({
         const chart = widgetRef.current.chart?.()
         if (!chart) return null
         
-        // TradingView nativo: tentar obter URL do gráfico
+        // TradingView nativo: usar método getChartUrl() que é o equivalente ao Alt+S
         if (typeof chart.getChartUrl === 'function') {
-          return await chart.getChartUrl()
+          try {
+            const url = await chart.getChartUrl()
+            if (url) return url
+          } catch (e) {
+            console.warn('getChartUrl falhou, tentando método alternativo:', e)
+          }
         }
         
-        // Fallback: construir URL manualmente
+        // Método alternativo: usar createStudy() e depois getChartUrl
+        if (typeof chart.createStudy === 'function') {
+          try {
+            // Tentar obter URL através do método nativo de partilha
+            const widget = widgetRef.current
+            if (widget && typeof widget.getChartUrl === 'function') {
+              return await widget.getChartUrl()
+            }
+          } catch (e) {
+            console.warn('Método alternativo falhou:', e)
+          }
+        }
+        
+        // Fallback: construir URL manualmente com todos os parâmetros
         const studies = selectedStudies.flatMap((key) => scannerStudies[key] || [])
         const baseUrl = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(selectedSymbol)}&interval=${favoriteTimeframe}`
         const studiesParam = studies.length > 0 ? `&studies=${studies.join(',')}` : ''
-        return `${baseUrl}${studiesParam}`
+        const themeParam = theme === 'dark' ? '&theme=dark' : '&theme=light'
+        return `${baseUrl}${studiesParam}${themeParam}`
       } catch (error) {
         console.error('Erro ao partilhar gráfico:', error)
         return null
@@ -888,15 +907,58 @@ export default function TradingViewWidget({
         const chart = widgetRef.current.chart?.()
         if (!chart) return null
         
-        // TradingView: capturar screenshot
+        // TradingView nativo: usar takeScreenshot() que captura a imagem do gráfico
         if (typeof chart.takeScreenshot === 'function') {
-          const imageData = await chart.takeScreenshot()
-          return imageData
+          try {
+            const imageData = await chart.takeScreenshot()
+            // takeScreenshot pode retornar base64 ou blob
+            if (typeof imageData === 'string') {
+              // Se já é base64, retornar
+              if (imageData.startsWith('data:')) {
+                return imageData
+              }
+              // Se não tem prefixo, adicionar
+              return `data:image/png;base64,${imageData}`
+            }
+            // Se é blob, converter para base64
+            if (imageData instanceof Blob) {
+              return new Promise((resolve) => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result as string)
+                reader.readAsDataURL(imageData)
+              })
+            }
+            return imageData
+          } catch (e) {
+            console.warn('takeScreenshot falhou, tentando método alternativo:', e)
+          }
         }
         
-        // Fallback: usar método alternativo
+        // Método alternativo: usar getImage()
         if (typeof chart.getImage === 'function') {
-          return await chart.getImage()
+          try {
+            const imageData = await chart.getImage()
+            if (imageData) {
+              if (typeof imageData === 'string') {
+                return imageData.startsWith('data:') ? imageData : `data:image/png;base64,${imageData}`
+              }
+              return imageData
+            }
+          } catch (e) {
+            console.warn('getImage falhou:', e)
+          }
+        }
+        
+        // Fallback: capturar canvas do widget se disponível
+        if (containerRef.current) {
+          const canvas = containerRef.current.querySelector('canvas')
+          if (canvas) {
+            try {
+              return canvas.toDataURL('image/png')
+            } catch (e) {
+              console.warn('Canvas toDataURL falhou:', e)
+            }
+          }
         }
         
         return null
@@ -1119,16 +1181,33 @@ export default function TradingViewWidget({
               </DialogContent>
             </Dialog>
 
-            {/* Partilhar link (Alt+S) */}
+            {/* Partilhar link (Alt+S) - Funcionalidade nativa do TradingView */}
             <Button
               onClick={async () => {
                 try {
+                  if (!externalWidgetRef?.current) {
+                    // Se não há ref externa, usar ref interna
+                    const chart = widgetRef.current?.chart?.()
+                    if (chart && typeof chart.getChartUrl === 'function') {
+                      const chartUrl = await chart.getChartUrl()
+                      if (chartUrl) {
+                        await navigator.clipboard.writeText(chartUrl)
+                        alert('Link do gráfico copiado para a área de transferência!')
+                        return
+                      }
+                    }
+                  }
+                  
                   const chartUrl = await externalWidgetRef?.current?.shareChart()
                   if (chartUrl) {
                     await navigator.clipboard.writeText(chartUrl)
+                    alert('Link do gráfico copiado para a área de transferência!')
+                  } else {
+                    alert('Não foi possível obter o link do gráfico. Tenta novamente.')
                   }
                 } catch (error) {
                   console.error('Erro ao partilhar gráfico:', error)
+                  alert('Erro ao partilhar gráfico. Tenta novamente.')
                 }
               }}
               className="h-9 px-3 bg-gray-700/80 text-white hover:bg-gray-600/80"
@@ -1173,10 +1252,52 @@ export default function TradingViewWidget({
                             
                             setSharingChart(true)
                             try {
-                              const chartUrl = await externalWidgetRef?.current?.shareChart()
-                              const chartImage = await externalWidgetRef?.current?.captureChartImage()
-                              const chart = externalWidgetRef?.current?.getChart()
-                              const symbol = chart?.symbol?.() || 'Unknown'
+                              // Obter chart URL e imagem usando métodos nativos do TradingView
+                              let chartUrl: string | null = null
+                              let chartImage: string | null = null
+                              let symbol = selectedSymbol
+                              
+                              // Tentar usar ref externa primeiro
+                              if (externalWidgetRef?.current) {
+                                chartUrl = await externalWidgetRef.current.shareChart()
+                                chartImage = await externalWidgetRef.current.captureChartImage()
+                                const chart = externalWidgetRef.current.getChart()
+                                if (chart && typeof chart.symbol === 'function') {
+                                  symbol = chart.symbol() || selectedSymbol
+                                }
+                              } else {
+                                // Fallback: usar ref interna
+                                const chart = widgetRef.current?.chart?.()
+                                if (chart) {
+                                  // Obter URL
+                                  if (typeof chart.getChartUrl === 'function') {
+                                    chartUrl = await chart.getChartUrl()
+                                  }
+                                  
+                                  // Obter screenshot
+                                  if (typeof chart.takeScreenshot === 'function') {
+                                    const screenshot = await chart.takeScreenshot()
+                                    if (typeof screenshot === 'string') {
+                                      chartImage = screenshot.startsWith('data:') ? screenshot : `data:image/png;base64,${screenshot}`
+                                    } else if (screenshot instanceof Blob) {
+                                      chartImage = await new Promise((resolve) => {
+                                        const reader = new FileReader()
+                                        reader.onloadend = () => resolve(reader.result as string)
+                                        reader.readAsDataURL(screenshot)
+                                      })
+                                    }
+                                  }
+                                  
+                                  // Obter símbolo
+                                  if (typeof chart.symbol === 'function') {
+                                    symbol = chart.symbol() || selectedSymbol
+                                  }
+                                }
+                              }
+                              
+                              if (!chartImage) {
+                                alert('Não foi possível capturar a imagem do gráfico. A partilhar apenas o link.')
+                              }
                               
                               const response = await fetch('/api/messages/share-chart', {
                                 method: 'POST',
@@ -1191,11 +1312,17 @@ export default function TradingViewWidget({
                               })
                               
                               if (response.ok) {
+                                const result = await response.json()
+                                alert('Gráfico partilhado com sucesso no grupo!')
                                 setShowShareToGroup(false)
                                 setSelectedGroup("")
+                              } else {
+                                const error = await response.json()
+                                alert(`Erro ao partilhar: ${error.error || 'Erro desconhecido'}`)
                               }
                             } catch (error) {
                               console.error('Erro ao partilhar gráfico:', error)
+                              alert('Erro ao partilhar gráfico. Tenta novamente.')
                             } finally {
                               setSharingChart(false)
                             }
