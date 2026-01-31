@@ -93,47 +93,22 @@ export default function AdminPage() {
       return
     }
 
-      // Verificar se é admin
-      if (!profile || profile.user_type !== 'admin') {
-        console.log('❌ [ADMIN] Utilizador não é admin')
-        console.log('   Email:', profile?.email || session.user.email)
-        console.log('   Tipo:', profile?.user_type || 'undefined')
-        setIsAdmin(false)
-        setIsChecking(false)
-        
-        // Aguardar um pouco antes de redirecionar (evitar loop)
-        setTimeout(() => {
-          window.location.href = '/member-area'
-        }, 1000)
-        return
-      }
-
-      if (!profile.is_active) {
-        console.log('❌ [ADMIN] Utilizador inativo')
-        setIsAdmin(false)
-        setIsChecking(false)
-        window.location.href = '/member-area'
-        return
-      }
-
-      console.log('✅ [ADMIN] Acesso autorizado para:', profile.email)
-      setIsAdmin(true)
-      setIsChecking(false)
-      
-      // Carregar dados
-      fetchStats()
-      fetchUsers()
-      fetchContent()
-      fetchTrialStats()
-    } catch (error) {
-      console.error('❌ [ADMIN] Erro crítico:', error)
+    if (!user.is_active) {
+      console.log('❌ [ADMIN] Utilizador inativo')
       setIsAdmin(false)
       setIsChecking(false)
-      
-      setTimeout(() => {
-        window.location.href = '/login?redirect=/admin'
-      }, 1000)
+      router.push('/member-area')
+      return
     }
+
+    console.log('✅ [ADMIN] Acesso autorizado para:', user.email)
+    setIsChecking(false)
+    
+    // Carregar dados
+    fetchStats()
+    fetchUsers()
+    fetchContent()
+    fetchTrialStats()
   }
 
   const fetchStats = async () => {
