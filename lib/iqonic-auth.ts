@@ -24,7 +24,10 @@ export interface IqonicSession {
 }
 
 const IQONIC_SESSION_KEY = "iqonic_vip_session"
-const IQONIC_API_URL = process.env.NEXT_PUBLIC_IQONIC_API_URL || "https://edu-backend-bafjgsfbapfxdecb.westus2-01.azurewebsites.net"
+// Suporta ambas as variáveis de ambiente para compatibilidade
+const IQONIC_API_URL = process.env.NEXT_PUBLIC_IQONIC_API_URL || 
+                       process.env.NEXT_PUBLIC_API_URL || 
+                       "https://edu-backend-bafjgsfbapfxdecb.westus2-01.azurewebsites.net"
 
 /**
  * Salva a sessão do usuário IQONIC no localStorage
@@ -144,31 +147,71 @@ export async function loginIqonic(
     }
 
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error(`❌ [IQONIC AUTH] HTTP error! status: ${response.status}`, errorText)
+      let errorMessage = `HTTP error! status: ${response.status}`
+      
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.message || errorData.error || errorMessage
+      } catch {
+        const errorText = await response.text()
+        if (errorText) {
+          errorMessage = errorText
+        }
+      }
+      
+      console.error(`❌ [IQONIC AUTH] HTTP error! status: ${response.status}`, errorMessage)
+      
+      // Mensagens de erro mais específicas
+      if (response.status === 401 || response.status === 403) {
+        return {
+          success: false,
+          error: "Credenciais inválidas. Verifique seu email e senha.",
+        }
+      }
+      
+      if (response.status === 404) {
+        return {
+          success: false,
+          error: "Usuário não encontrado. Verifique se o email está correto.",
+        }
+      }
+      
       return {
         success: false,
-        error: `Erro de autenticação: ${response.status === 401 ? "Credenciais inválidas" : `HTTP ${response.status}`}`,
+        error: `Erro de autenticação: ${errorMessage}`,
       }
     }
 
     const data = await response.json()
 
-    if (data && (data.user || data.email)) {
+    // Tratar diferentes formatos de resposta da API
+    if (data && (data.user || data.email || data._id || data.id || data.userid || data.distid)) {
+      // Formato 1: Com objeto user
+      // Formato 2: Dados diretos no objeto
       const user: IqonicUser = data.user || {
         id: data._id || data.id || data.userid || data.distid,
-        email: data.email,
-        name: data.name || data.firstName || email,
+        _id: data._id,
+        distid: data.distid || data.userid,
+        userid: data.userid || data.distid,
+        email: data.email || email,
+        name: data.name || data.firstName || email.split("@")[0],
+        firstName: data.firstName || data.name,
         role: isEducator ? "educator" : "student",
+        // Incluir todos os campos adicionais da resposta
         ...data,
       }
 
-      const token = data.token || data._id || data.id || data.userid || data.distid || email
+      // Token pode vir em diferentes campos
+      const token = data.token || data._id || data.id || data.userid || data.distid || user.id || email
+
+      if (!token) {
+        return { success: false, error: "Token não encontrado na resposta do servidor" }
+      }
 
       return { success: true, user, token }
     }
 
-    return { success: false, error: "Resposta inválida do servidor" }
+    return { success: false, error: "Resposta inválida do servidor: dados de usuário não encontrados" }
   } catch (error: any) {
     console.error("❌ [IQONIC AUTH] Erro no login:", error)
     return { success: false, error: error.message || "Falha no login" }
@@ -177,12 +220,13 @@ export async function loginIqonic(
 
 /**
  * Login como estudante
+ * Aceita email ou distid como identificador
  */
 export async function loginAsStudent(
-  distid: string,
+  emailOrDistid: string,
   password: string
 ): Promise<{ success: boolean; user?: IqonicUser; token?: string; error?: string }> {
-  return loginIqonic(distid, password, false)
+  return loginIqonic(emailOrDistid, password, false)
 }
 
 /**

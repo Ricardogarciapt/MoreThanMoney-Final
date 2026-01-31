@@ -52,11 +52,16 @@ export async function POST(request: NextRequest) {
       hash.substring(20, 32)
     ].join('-')
 
+    // Garantir que temos email válido (pode ser distid para estudantes)
+    const userEmail = iqonicUser.email || email
+    const userName = iqonicUser.name || iqonicUser.firstName || userEmail.split("@")[0]
+    const userUsername = iqonicUser.distid || iqonicUser.userid || userEmail.split("@")[0]
+
     const profileData = {
       id: existingProfile?.id || userId,
-      email: email,
-      full_name: iqonicUser.name || iqonicUser.firstName || email.split("@")[0],
-      username: iqonicUser.distid || iqonicUser.userid || email.split("@")[0],
+      email: userEmail,
+      full_name: userName,
+      username: userUsername,
       user_type: supabaseRole,
       is_active: true,
       updated_at: new Date().toISOString(),
@@ -95,9 +100,10 @@ export async function POST(request: NextRequest) {
         avatar_url: profile.avatar_url,
       },
       iqonicUser: {
-        id: iqonicUser.id,
-        email: iqonicUser.email,
-        name: iqonicUser.name,
+        id: iqonicUser.id || iqonicUser._id,
+        email: iqonicUser.email || email,
+        name: iqonicUser.name || iqonicUser.firstName,
+        distid: iqonicUser.distid,
         role: userType,
       },
       token: iqonicResult.token,
