@@ -297,27 +297,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setCachedSession(session)
         setIsIqonicUser(false)
         
-        // Recarregar perfil
-        const { data: profile } = await supabase
+        // Recarregar perfil em background (não bloqueia)
+        supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single()
-        
-        if (profile && mounted) {
-          setUser({
-            id: profile.id,
-            email: profile.email,
-            full_name: profile.full_name,
-            username: profile.username,
-            avatar_url: profile.avatar_url || session.user.user_metadata?.avatar_url,
-            user_type: profile.user_type,
-            is_active: profile.is_active,
-            created_at: profile.created_at,
-            phone: profile.phone,
-            whatsapp: profile.whatsapp
+          .then(({ data: profile }) => {
+            if (profile && mounted) {
+              setUser({
+                id: profile.id,
+                email: profile.email,
+                full_name: profile.full_name,
+                username: profile.username,
+                avatar_url: profile.avatar_url || session.user.user_metadata?.avatar_url,
+                user_type: profile.user_type,
+                is_active: profile.is_active,
+                created_at: profile.created_at,
+                phone: profile.phone,
+                whatsapp: profile.whatsapp
+              })
+            }
           })
-        }
+          .catch(() => {
+            // Erro silencioso - não bloqueia o fluxo
+          })
       } else if (event === 'SIGNED_OUT') {
         const { clearCachedSession } = await import('@/lib/auth-cache')
         clearCachedSession()

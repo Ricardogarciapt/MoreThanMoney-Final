@@ -141,22 +141,16 @@ export default function LoginPage() {
   }
 
   const handleGoogleLogin = async () => {
-    setIsLoading(true)
     setError('')
+    // Não definir isLoading aqui - vamos redirecionar imediatamente
 
     try {
       console.log('🔍 [GOOGLE LOGIN] Iniciando OAuth...')
-      console.log('🌐 [GOOGLE LOGIN] Origin:', window.location.origin)
-      console.log('🌐 [GOOGLE LOGIN] Hostname:', window.location.hostname)
       
       // Determinar o redirect correto baseado no ambiente
-      // IMPORTANTE: O redirectTo é para onde o Supabase nos envia APÓS processar o OAuth
-      // O Supabase sempre redireciona para: https://www.morethanmoney.pt/auth/callback
       const isProduction = window.location.hostname.includes('morethanmoney.pt') || 
                            window.location.hostname.includes('vercel.app')
       
-      // Em produção, sempre usar www.morethanmoney.pt
-      // O Supabase precisa redirecionar para um domínio autorizado
       const baseUrl = isProduction 
         ? `https://www.morethanmoney.pt`
         : 'http://localhost:3000'
@@ -164,11 +158,7 @@ export default function LoginPage() {
       const callbackUrl = `${baseUrl}/auth/callback`
       const fullRedirectUrl = redirectTo ? `${callbackUrl}?redirect=${encodeURIComponent(redirectTo)}` : callbackUrl
       
-      console.log('📍 [GOOGLE LOGIN] Ambiente:', isProduction ? 'PRODUÇÃO' : 'LOCAL')
-      console.log('📍 [GOOGLE LOGIN] Base URL:', baseUrl)
       console.log('📍 [GOOGLE LOGIN] Callback URL:', fullRedirectUrl)
-      console.log('📍 [GOOGLE LOGIN] Redirect destino:', redirectTo)
-      console.log('📍 [GOOGLE LOGIN] Supabase processará via:', 'https://iwscxotvmtkphajmasof.supabase.co/auth/v1/callback')
       
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -185,27 +175,20 @@ export default function LoginPage() {
       if (oauthError) {
         console.error('❌ [GOOGLE LOGIN] Erro OAuth:', oauthError)
         setError(`Erro ao iniciar Google Login: ${oauthError.message}`)
-        setIsLoading(false)
         return
       }
 
       if (data?.url) {
-        console.log('✅ [GOOGLE LOGIN] URL gerada com sucesso')
-        console.log('🔄 [GOOGLE LOGIN] Redirecionando para autenticação Google...')
-        
-        // Redirecionar para Google
+        console.log('✅ [GOOGLE LOGIN] Redirecionando para Google...')
+        // Redirecionar imediatamente - não precisa de isLoading
         window.location.href = data.url
       } else {
         console.error('❌ [GOOGLE LOGIN] Nenhuma URL OAuth retornada')
-        console.error('📊 [GOOGLE LOGIN] Data recebida:', data)
         setError('Erro ao gerar URL do Google. Verifique a configuração no Supabase.')
-        setIsLoading(false)
       }
     } catch (error: any) {
-      console.error('❌ [GOOGLE LOGIN] Exceção crítica:', error)
-      console.error('📊 [GOOGLE LOGIN] Stack:', error.stack)
+      console.error('❌ [GOOGLE LOGIN] Exceção:', error)
       setError('Erro ao iniciar login com Google. Tente novamente.')
-      setIsLoading(false)
     }
   }
 

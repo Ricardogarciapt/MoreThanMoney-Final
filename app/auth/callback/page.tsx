@@ -95,50 +95,44 @@ export default function AuthCallbackPage() {
         }
 
         if (code) {
-          console.log('✅ [CALLBACK] Código OAuth encontrado:', code.substring(0, 20) + '...')
-          console.log('🔄 [CALLBACK] Trocando código por sessão...')
+          console.log('✅ [CALLBACK] Código OAuth encontrado')
           
           const { data, error } = await supabase.auth.exchangeCodeForSession(code)
           
           if (error) {
             console.error('❌ [CALLBACK] Erro ao trocar código:', error)
-            console.error('❌ [CALLBACK] Detalhes erro:', JSON.stringify(error, null, 2))
             throw new Error(error.message || 'Erro ao processar código de autenticação')
           }
 
           if (data?.session) {
             console.log('✅ [CALLBACK] Sessão criada:', data.session.user.email)
             
-            // Sincronizar cache imediatamente (não bloqueia)
+            // Sincronizar cache imediatamente
             const { setCachedSession } = await import('@/lib/auth-cache')
             setCachedSession(data.session)
             
-            // Garantir perfil em paralelo (não bloquear redirecionamento)
-            ensureProfile(data.session).catch(err => console.warn('⚠️ [CALLBACK] Erro ao garantir perfil (não bloqueante):', err))
+            // Garantir perfil em background (não bloqueia)
+            ensureProfile(data.session).catch(() => {})
             
-            // Buscar perfil para redirecionamento (com timeout curto)
+            // Buscar perfil com timeout muito curto (500ms)
             const profilePromise = supabase
               .from('profiles')
               .select('*')
               .eq('id', data.session.user.id)
               .single()
             
-            // Timeout de 1s para buscar perfil
             const profileResult = await Promise.race([
               profilePromise,
-              new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 1000))
+              new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 500))
             ])
             
-            const profile = profileResult.data
+            const profile = profileResult.data || null
             
-            setStatus("success")
-            setMessage("Login realizado com sucesso!")
-
+            // Redirecionar imediatamente - não esperar por status
             const redirectTo = determinePostLoginRedirect(profile, redirectParam)
             const fullRedirectUrl = redirectTo.startsWith('http') ? redirectTo : `${window.location.origin}${redirectTo}`
             
             console.log('🔄 [CALLBACK] Redirecionando para:', fullRedirectUrl)
-            // Redirecionar imediatamente (sem delay)
             window.location.replace(fullRedirectUrl)
             return
           } else {
@@ -146,33 +140,31 @@ export default function AuthCallbackPage() {
           }
         }
 
-        // Verificar hash (Implicit Flow - menos comum, mas pode acontecer)
+        // Verificar hash (Implicit Flow - menos comum)
         const hash = window.location.hash
         if (hash && hash.includes('access_token')) {
-          console.log('✅ [CALLBACK] Implicit Flow detectado (hash)')
-          console.log('🔄 [CALLBACK] Processando hash...')
+          console.log('✅ [CALLBACK] Implicit Flow detectado')
           
-          // Reduzir delay para 100ms (mínimo necessário)
-          await new Promise(resolve => setTimeout(resolve, 100))
+          // Delay mínimo
+          await new Promise(resolve => setTimeout(resolve, 50))
           
           const { data: { session }, error: sessionError } = await supabase.auth.getSession()
           
           if (sessionError) {
-            console.error('❌ [CALLBACK] Erro ao obter sessão do hash:', sessionError)
             throw sessionError
           }
           
           if (session) {
             console.log('✅ [CALLBACK] Sessão do hash:', session.user.email)
             
-            // Sincronizar cache imediatamente
+            // Sincronizar cache
             const { setCachedSession } = await import('@/lib/auth-cache')
             setCachedSession(session)
             
-            // Garantir perfil em paralelo
-            ensureProfile(session).catch(err => console.warn('⚠️ [CALLBACK] Erro ao garantir perfil (não bloqueante):', err))
+            // Garantir perfil em background
+            ensureProfile(session).catch(() => {})
             
-            // Buscar perfil com timeout
+            // Buscar perfil com timeout curto
             const profilePromise = supabase
               .from('profiles')
               .select('*')
@@ -181,25 +173,21 @@ export default function AuthCallbackPage() {
             
             const profileResult = await Promise.race([
               profilePromise,
-              new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 1000))
+              new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 500))
             ])
             
-            const profile = profileResult.data
-            
-            setStatus("success")
-            setMessage("Login realizado com sucesso!")
+            const profile = profileResult.data || null
             
             const redirectTo = determinePostLoginRedirect(profile, redirectParam)
             const fullRedirectUrl = redirectTo.startsWith('http') ? redirectTo : `${window.location.origin}${redirectTo}`
             
-            // Redirecionar imediatamente
             window.location.replace(fullRedirectUrl)
             return
           }
         }
 
-        // Se não tem código nem hash, verificar sessão existente (pode ter sido processada automaticamente)
-        console.log('🔄 [CALLBACK] Sem código/hash, verificando sessão existente...')
+        // Se não tem código nem hash, verificar sessão existente
+        console.log('🔄 [CALLBACK] Verificando sessão existente...')
         
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
@@ -208,16 +196,16 @@ export default function AuthCallbackPage() {
         }
         
         if (session) {
-          console.log('✅ [CALLBACK] Sessão já existe:', session.user.email)
+          console.log('✅ [CALLBACK] Sessão encontrada:', session.user.email)
           
-          // Sincronizar cache imediatamente
+          // Sincronizar cache
           const { setCachedSession } = await import('@/lib/auth-cache')
           setCachedSession(session)
           
-          // Garantir perfil em paralelo
-          ensureProfile(session).catch(err => console.warn('⚠️ [CALLBACK] Erro ao garantir perfil (não bloqueante):', err))
+          // Garantir perfil em background
+          ensureProfile(session).catch(() => {})
           
-          // Buscar perfil com timeout
+          // Buscar perfil com timeout curto
           const profilePromise = supabase
             .from('profiles')
             .select('*')
@@ -226,18 +214,14 @@ export default function AuthCallbackPage() {
           
           const profileResult = await Promise.race([
             profilePromise,
-            new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 1000))
+            new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 500))
           ])
           
-          const profile = profileResult.data
+          const profile = profileResult.data || null
           
           const redirectTo = determinePostLoginRedirect(profile, redirectParam)
           const fullRedirectUrl = redirectTo.startsWith('http') ? redirectTo : `${window.location.origin}${redirectTo}`
           
-          setStatus("success")
-          setMessage("Login realizado com sucesso!")
-          
-          // Redirecionar imediatamente
           window.location.replace(fullRedirectUrl)
           return
         }
@@ -257,9 +241,10 @@ export default function AuthCallbackPage() {
         setStatus("error")
         setMessage(error.message || "Erro ao processar autenticação")
         
+        // Redirecionar mais rápido em caso de erro
         setTimeout(() => {
           window.location.href = '/login'
-        }, 3000)
+        }, 2000)
       }
     }
 

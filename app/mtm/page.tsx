@@ -30,7 +30,6 @@ import {
 import Link from "next/link"
 import ParticleBackground from "@/components/particle-background"
 import YouTubeEmbed from "@/components/youtube-embed"
-import Image from "next/image"
 
 export default function MTMLandingPage() {
   const [mounted, setMounted] = useState(false)
@@ -145,13 +144,11 @@ export default function MTMLandingPage() {
             <div className="mb-12 flex justify-center">
               <div className="relative max-w-4xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
-                  <Image
+                  <img
                     src="/mtm/Problema.png"
                     alt="O Problema"
-                    width={1200}
-                    height={600}
                     className="w-full h-auto rounded-lg"
-                    unoptimized
+                    loading="lazy"
                   />
                 </Card>
               </div>
@@ -217,13 +214,11 @@ export default function MTMLandingPage() {
             <div className="mb-12 flex justify-center">
               <div className="relative max-w-5xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
-                  <Image
+                  <img
                     src="/mtm/Ecossistema.png"
                     alt="O Ecossistema"
-                    width={1400}
-                    height={800}
                     className="w-full h-auto rounded-lg"
-                    unoptimized
+                    loading="lazy"
                   />
                 </Card>
               </div>
@@ -283,13 +278,11 @@ export default function MTMLandingPage() {
             <div className="mb-12 flex justify-center">
               <div className="relative max-w-5xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
-                  <Image
+                  <img
                     src="/mtm/Estratégia.png"
                     alt="A Escada do Sucesso"
-                    width={1400}
-                    height={800}
                     className="w-full h-auto rounded-lg"
-                    unoptimized
+                    loading="lazy"
                   />
                 </Card>
               </div>
@@ -363,13 +356,11 @@ export default function MTMLandingPage() {
             <div className="mb-12 flex justify-center">
               <div className="relative max-w-5xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
-                  <Image
+                  <img
                     src="/mtm/Escolha de Caminho.png"
                     alt="Escolhe o Teu Caminho"
-                    width={1400}
-                    height={800}
                     className="w-full h-auto rounded-lg"
-                    unoptimized
+                    loading="lazy"
                   />
                 </Card>
               </div>
@@ -452,13 +443,11 @@ export default function MTMLandingPage() {
             <div className="mb-12 flex justify-center">
               <div className="relative max-w-5xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
-                  <Image
+                  <img
                     src="/mtm/Diferença.png"
                     alt="A Diferença"
-                    width={1400}
-                    height={800}
                     className="w-full h-auto rounded-lg"
-                    unoptimized
+                    loading="lazy"
                   />
                 </Card>
               </div>

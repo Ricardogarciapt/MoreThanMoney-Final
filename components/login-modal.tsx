@@ -88,8 +88,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   }
 
   const handleGoogleLogin = async () => {
-    setIsLoading(true)
     setError("")
+    // Não definir isLoading - vamos redirecionar imediatamente
 
     try {
       const isProduction = window.location.hostname.includes('morethanmoney.pt') || 
@@ -112,7 +112,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
       if (oauthError) {
         setError(`Erro ao iniciar Google Login: ${oauthError.message}`)
-        setIsLoading(false)
         return
       }
 
@@ -120,11 +119,9 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         window.location.href = data.url
       } else {
         setError('Erro ao gerar URL do Google.')
-        setIsLoading(false)
       }
     } catch (error: any) {
       setError('Erro ao iniciar login com Google.')
-      setIsLoading(false)
     }
   }
 
