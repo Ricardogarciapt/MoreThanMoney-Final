@@ -710,11 +710,10 @@ export default function TradingViewWidget({
           "header_widget_dom_node", 
           "header_widget", 
           "volume_force_overlay",
-          // NÃO desabilitar context_menu - permite partilha nativa do TradingView 
-          "scanner-access",
           "create_volume_indicator_by_default",
           "volumePaneSize",
           "tick_volume",
+          // NÃO desabilitar context_menu, scanner-access ou outros botões nativos
         ],
         enabled_features: [
           "study_on_study",
@@ -723,20 +722,28 @@ export default function TradingViewWidget({
           "header_screenshot",
           "show_chart_property_page",
           "property_pages",
-          "context_menus",
-          "control_bar",
-          "timeframes_toolbar",
+          "context_menus", // Menu de contexto nativo (clique direito)
+          "control_bar", // Barra de controle
+          "timeframes_toolbar", // Toolbar de timeframes
           "border_around_the_chart",
-          "header_chart_type",
-          "header_settings",
-          "header_indicators",
-          "header_compare",
-          "header_undo_redo",
-          "header_fullscreen_button",
-          "header_saveload",
-          "header_symbol_search",
-          "header_interval_dialog_button",
-          "header_resolutions",
+          "header_chart_type", // Tipo de gráfico
+          "header_settings", // Configurações
+          "header_indicators", // Indicadores
+          "header_compare", // Comparar símbolos
+          "header_undo_redo", // Desfazer/Refazer
+          "header_fullscreen_button", // Botão fullscreen
+          "header_saveload", // Salvar/Carregar
+          "header_symbol_search", // Pesquisa de símbolos
+          "header_interval_dialog_button", // Botão de intervalo
+          "header_resolutions", // Resoluções
+          "left_toolbar", // Toolbar esquerda (desenhos)
+          "drawing_toolbar", // Toolbar de desenhos
+          "header_saveload_image", // Salvar imagem
+          "header_save_chart", // Salvar gráfico
+          "header_load_chart", // Carregar gráfico
+          "header_compare_symbols", // Comparar símbolos
+          "header_screenshot", // Screenshot
+          "header_widget", // Widget header (se necessário)
         ],
         charts_storage_url: "https://saveload.tradingview.com",
         charts_storage_api_version: "1.1",

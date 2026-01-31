@@ -12,3 +12,6 @@ Coloque aqui as seguintes imagens:
 
 As imagens serão carregadas automaticamente quando colocadas nesta pasta.
 
+
+
+

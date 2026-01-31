@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     // Get most used features
     const topFeatures = Object.entries(featureUsage)
-      .sort(([, a], [, b]) => b - a)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
       .slice(0, 5)
       .map(([feature, count]) => ({ feature, count }))
 
@@ -164,4 +164,7 @@ Sugira 3-5 melhorias práticas e acionáveis para otimizar o sistema de IA. Seja
     )
   }
 }
+
+
+
 

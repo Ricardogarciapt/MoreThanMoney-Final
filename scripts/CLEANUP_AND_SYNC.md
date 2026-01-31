@@ -88,3 +88,6 @@
 3. Testar fluxo completo de mensagens e grupos
 4. Remover scripts SQL obsoletos após confirmação
 
+
+
+

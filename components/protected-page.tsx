@@ -54,19 +54,8 @@ export default function ProtectedPage({
         
         console.log('🔍 [PROTECTED PAGE] Verificando sessão no Supabase...')
         
-        // 2. Aguardar um pouco para dar tempo aos cookies sincronizarem
-        // (especialmente importante após redirects da página de login)
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // 3. Verificar sessão no cliente primeiro
-        const { data: { session: clientSession } } = await supabase.auth.getSession()
-        if (clientSession) {
-          console.log('✅ [PROTECTED PAGE] Sessão encontrada no cliente, aguardando sincronização de cookies...')
-          // Aguardar mais um pouco para cookies sincronizarem no servidor
-          await new Promise(resolve => setTimeout(resolve, 1000))
-        }
-        
-        // 4. Criar Promise com timeout para getSession
+        // 2. Verificar sessão diretamente (sem delays desnecessários)
+        // Criar Promise com timeout para getSession
         const getSessionWithTimeout = async (timeoutMs: number) => {
           return Promise.race([
             supabase.auth.getSession(),
@@ -76,31 +65,25 @@ export default function ProtectedPage({
           ])
         }
         
-        // Tentar buscar sessão com timeout de 15 segundos (aumentado para dar mais tempo)
+        // Tentar buscar sessão com timeout de 3 segundos (reduzido para resposta mais rápida)
         let sessionResult
         try {
-          sessionResult = await getSessionWithTimeout(15000)
+          sessionResult = await getSessionWithTimeout(3000)
         } catch (timeoutError) {
-          console.error('❌ [PROTECTED PAGE] Timeout ao buscar sessão (10s)')
-          console.error('⚠️ Verificando variáveis de ambiente...')
-          console.error('⚠️ NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Configurado' : 'FALTANDO!')
-          console.error('⚠️ NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Configurado' : 'FALTANDO!')
+          console.error('❌ [PROTECTED PAGE] Timeout ao buscar sessão (3s)')
           
-          // Se já tentou com cache antes, não redirecionar (evitar loop)
-          const cacheAttempted = sessionStorage.getItem('cache_attempted')
-          if (cacheAttempted) {
-            console.warn('⚠️ [PROTECTED PAGE] Cache já foi tentado, mantendo na página')
+          // Se há cache válido, usar mesmo com timeout
+          const cachedSession = getCachedSession()
+          if (cachedSession && isSessionValid(cachedSession)) {
+            console.log('⚡ [PROTECTED PAGE] Usando cache após timeout')
             if (mounted) {
-              setAuthState('authenticated') // Assume autenticado para evitar loop
+              setAuthState('authenticated')
             }
             isChecking = false
             return
           }
           
-          // Marcar que tentou cache
-          sessionStorage.setItem('cache_attempted', 'true')
-          
-          // Redirecionar ao login se timeout
+          // Redirecionar ao login se timeout e sem cache
           if (mounted) {
             setAuthState('unauthenticated')
             router.push(redirectPath)
@@ -136,24 +119,6 @@ export default function ProtectedPage({
         }
 
         if (!session) {
-          // Se havia sessão no cliente mas não no servidor, aguardar mais
-          if (clientSession) {
-            console.warn('⚠️ [PROTECTED PAGE] Sessão no cliente mas não no servidor, aguardando sincronização...')
-            await new Promise(resolve => setTimeout(resolve, 2000))
-            
-            // Tentar novamente
-            const { data: { session: retrySession } } = await supabase.auth.getSession()
-            if (retrySession) {
-              console.log('✅ [PROTECTED PAGE] Sessão encontrada após retry!')
-              setCachedSession(retrySession)
-              if (mounted) {
-                setAuthState('authenticated')
-              }
-              isChecking = false
-              return
-            }
-          }
-          
           console.log('❌ [PROTECTED PAGE] Sem sessão válida')
           clearCachedSession()
           setAuthState('unauthenticated')
@@ -186,11 +151,12 @@ export default function ProtectedPage({
           }
         }
 
-        // 4. Armazenar sessão válida em cache
+        // 3. Armazenar sessão válida em cache imediatamente
         setCachedSession(session)
-        sessionStorage.removeItem('cache_attempted') // Limpar flag de cache
         console.log('✅ [PROTECTED PAGE] Autenticado:', session.user.email)
-        setAuthState('authenticated')
+        if (mounted) {
+          setAuthState('authenticated')
+        }
         isChecking = false
       } catch (error) {
         console.error('❌ [PROTECTED PAGE] Exceção:', error)

@@ -153,8 +153,9 @@ export async function POST(request: NextRequest) {
           message: payload.body,
           data: payload.data || {},
           read: false
-        }).catch(err => {
-          console.warn(`⚠️ [SEND PUSH] Falha ao criar notification para ${tokenData.user_id}:`, err.message)
+        }).then(() => {})
+        .catch((err: any) => {
+          console.warn(`⚠️ [SEND PUSH] Falha ao criar notification para ${tokenData.user_id}:`, err?.message || err)
         })
       })
       await Promise.all(notificationPromises)

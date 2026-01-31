@@ -279,32 +279,10 @@ export default function MobileSidebar({
               </nav>
             </div>
 
-            {/* Notifications & Messages */}
+            {/* Comunicação */}
             <div className="p-4 border-b border-gray-800">
               <h3 className="text-xs font-semibold text-gray-400 uppercase mb-3">Comunicação</h3>
               <div className="space-y-1">
-                <button
-                  onClick={() => {
-                    router.push('/member-area?tab=notifications')
-                    onClose()
-                  }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
-                >
-                  <div className="relative">
-                    <Bell className="w-5 h-5" />
-                    {unreadNotificationsCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center">
-                        {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
-                      </span>
-                    )}
-                  </div>
-                  <span className="flex-1 text-left font-medium">Notificações</span>
-                  {unreadNotificationsCount > 0 && (
-                    <Badge className="bg-red-500/20 text-red-400 border-0">
-                      {unreadNotificationsCount}
-                    </Badge>
-                  )}
-                </button>
                 <button
                   onClick={() => {
                     router.push('/messages')

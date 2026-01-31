@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       p_user_email: profile.full_name || uploaded_by,
       p_action: 'document_created',
       p_details: `Documento criado: ${title}`
-    }).catch(e => console.warn('Log falhou:', e))
+    }).then(() => {}).catch((e: any) => console.warn('Log falhou:', e))
 
     console.log(`✅ [DOCUMENTS API] Documento criado: ${title}`)
 

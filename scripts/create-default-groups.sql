@@ -125,3 +125,6 @@ FROM public.group_conversations
 WHERE name IN ('Trade Chat', 'Crypto Chat', 'Social Chat')
 ORDER BY name;
 
+
+
+

@@ -68,3 +68,6 @@ AND table_name = 'posts'
 AND column_name IN ('media_url', 'media_urls', 'mentions')
 ORDER BY column_name;
 
+
+
+

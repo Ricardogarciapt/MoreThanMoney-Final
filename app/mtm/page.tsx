@@ -1,444 +1,504 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { X, ExternalLink, GraduationCap, ArrowLeft, ArrowRight, RotateCw, Home } from "lucide-react"
-import { supabase } from "@/lib/supabase"
-import YouTubeEmbed from "@/components/youtube-embed"
-import ParticleBackground from "@/components/particle-background"
+import { Card, CardContent } from "@/components/ui/card"
+import { 
+  GraduationCap, 
+  TrendingUp, 
+  Shield, 
+  Zap, 
+  Target, 
+  ArrowRight, 
+  CheckCircle2,
+  Users,
+  Brain,
+  BarChart3,
+  Rocket,
+  Crown,
+  Sparkles,
+  ChevronRight,
+  PlayCircle,
+  X
+} from "lucide-react"
 import Link from "next/link"
+import ParticleBackground from "@/components/particle-background"
+import YouTubeEmbed from "@/components/youtube-embed"
 
-export default function MTMPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [showEducationPopup, setShowEducationPopup] = useState(false)
-  const [showSkoolBrowser, setShowSkoolBrowser] = useState(false)
+export default function MTMLandingPage() {
+  const [mounted, setMounted] = useState(false)
   const [videoId, setVideoId] = useState("RQIimjljeMI") // Fallback padrão
-  const [currentUrl, setCurrentUrl] = useState("https://www.skool.com/morethanmoney")
-  const [urlInput, setUrlInput] = useState("https://www.skool.com/morethanmoney")
-  const [canGoBack, setCanGoBack] = useState(false)
-  const [canGoForward, setCanGoForward] = useState(false)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   useEffect(() => {
-    checkAuth()
+    setMounted(true)
     loadVideoConfig()
   }, [])
 
   const loadVideoConfig = async () => {
     try {
       const response = await fetch('/api/admin/content-config')
-      if (!response.ok) {
-        throw new Error('Erro ao buscar configuração')
-      }
-      
-      const data = await response.json()
-      
-      // Buscar vídeo configurado para a página /mtm
-      const mtmVideo = data.videos?.find((video: any) => 
-        video.page === '/mtm' || video.page === 'mtm'
-      )
-      
-      if (mtmVideo?.videoId) {
-        setVideoId(mtmVideo.videoId)
-        console.log('✅ [MTM] Vídeo carregado do admin:', mtmVideo.videoId)
-      } else {
-        console.log('⚠️ [MTM] Nenhum vídeo configurado no admin, usando fallback')
+      if (response.ok) {
+        const data = await response.json()
+        const mtmVideo = data.videos?.find((video: any) => 
+          video.page === '/mtm' || video.page === 'mtm'
+        )
+        if (mtmVideo?.videoId) {
+          setVideoId(mtmVideo.videoId)
+        }
       }
     } catch (error) {
-      console.error('❌ [MTM] Erro ao carregar configuração de vídeo:', error)
-      // Manter o fallback padrão
+      console.error('Erro ao carregar configuração de vídeo:', error)
     }
   }
 
-  const checkAuth = async () => {
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession()
-      if (error) {
-        console.error('❌ [MTM] Erro ao verificar sessão:', error)
-        setIsAuthenticated(false)
-        return
-      }
-      
-      if (session?.user) {
-        setIsAuthenticated(true)
-        console.log('✅ [MTM] Utilizador autenticado:', session.user.email)
-        
-        // Se estiver logado, abrir iframe Skool automaticamente
-        const skoolOpened = sessionStorage.getItem('mtm_skool_auto_opened')
-        if (!skoolOpened) {
-          // Pequeno delay para garantir que a página carregou
-          setTimeout(() => {
-            setShowSkoolBrowser(true)
-            sessionStorage.setItem('mtm_skool_auto_opened', 'true')
-          }, 1000)
-        }
-        
-        // Mostrar popup se ainda não foi fechado nesta sessão
-        const popupShown = sessionStorage.getItem('mtm_education_popup_shown')
-        if (!popupShown) {
-          setShowEducationPopup(true)
-        }
-      } else {
-        setIsAuthenticated(false)
-        console.log('ℹ️ [MTM] Utilizador não autenticado')
-      }
-    } catch (error) {
-      console.error('❌ [MTM] Erro ao verificar autenticação:', error)
-      setIsAuthenticated(false)
-    }
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#D2A63C] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">A carregar...</p>
+        </div>
+      </div>
+    )
   }
-
-  const handleClosePopup = () => {
-    setShowEducationPopup(false)
-    sessionStorage.setItem('mtm_education_popup_shown', 'true')
-  }
-
-  const handleGoToAcademy = () => {
-    setShowSkoolBrowser(true)
-    setShowEducationPopup(false)
-    setCurrentUrl("https://www.skool.com/morethanmoney")
-    setUrlInput("https://www.skool.com/morethanmoney")
-  }
-
-  // Navegação do iframe
-  const handleNavigate = (url: string) => {
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url
-    }
-    setCurrentUrl(url)
-    setUrlInput(url)
-    if (iframeRef.current) {
-      iframeRef.current.src = url
-    }
-  }
-
-  const handleGoBack = () => {
-    if (iframeRef.current && iframeRef.current.contentWindow) {
-      iframeRef.current.contentWindow.history.back()
-    }
-  }
-
-  const handleGoForward = () => {
-    if (iframeRef.current && iframeRef.current.contentWindow) {
-      iframeRef.current.contentWindow.history.forward()
-    }
-  }
-
-  const handleReload = () => {
-    if (iframeRef.current) {
-      iframeRef.current.src = iframeRef.current.src
-    }
-  }
-
-  const handleGoHome = () => {
-    handleNavigate("https://www.skool.com/morethanmoney")
-  }
-
-  const handleUrlSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    handleNavigate(urlInput)
-  }
-
-  // Atualizar URL quando iframe navegar (via postMessage se possível)
-  useEffect(() => {
-    if (!showSkoolBrowser) return
-
-    const handleMessage = (event: MessageEvent) => {
-      // Verificar origem para segurança
-      if (event.origin !== 'https://www.skool.com') return
-      
-      if (event.data && typeof event.data === 'object') {
-        if (event.data.type === 'navigation' && event.data.url) {
-          setCurrentUrl(event.data.url)
-          setUrlInput(event.data.url)
-        }
-      }
-    }
-
-    window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
-  }, [showSkoolBrowser])
 
   return (
-    <main className="min-h-screen bg-black text-white relative">
+    <main className="min-h-screen bg-black text-white relative overflow-hidden">
       <ParticleBackground />
       
-      <section className="container mx-auto px-4 py-12 relative z-10">
-        {/* Header */}
-        <div className="max-w-4xl mx-auto text-center mb-12">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            <span className="text-[#D2A63C]">MoreThanMoney</span>
+      {/* Hero Section */}
+      <section className="relative z-10 container mx-auto px-4 py-20 md:py-32">
+        <div className="max-w-5xl mx-auto text-center">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+            <span className="bg-gradient-to-r from-[#F3F3E6] via-[#D2A63C] to-[#BB8525] bg-clip-text text-transparent">
+              Ganha enquanto aprendes
+            </span>
+            <br />
+            <span className="text-white">a investir nos mercados financeiros</span>
           </h1>
-          <p className="text-xl md:text-2xl text-gray-300 mb-8">
-            A Tua Plataforma de Educação Financeira
+          
+          <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
+            Um ecossistema de educação financeira aplicada que substitui o caos da inexperiência por processos validados e risco controlado.
           </p>
-        </div>
-
-        {/* Video Modal Section */}
-        <div className="max-w-5xl mx-auto mb-12">
-          <YouTubeEmbed 
-            videoId={videoId}
-            title="Apresentação MoreThanMoney"
-            className="border border-[#D2A63C]/30 rounded-lg"
-          />
-        </div>
-
-        {/* Mission Section */}
-        <div className="max-w-6xl mx-auto mb-12">
-          <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border border-[#D2A63C]/30 rounded-2xl p-8 md:p-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-[#D2A63C] mb-6 text-center">
-              A Nossa Missão
-            </h2>
-            <p className="text-lg text-gray-300 mb-8 text-center max-w-4xl mx-auto leading-relaxed">
-              Educar as pessoas e dar acesso à literacia financeira através de uma segmentação de educação de comunidade.
-            </p>
-
-            {/* Education Categories */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              <div className="bg-gray-800/50 border border-[#D2A63C]/20 rounded-xl p-6 hover:border-[#D2A63C]/50 transition-all">
-                <div className="text-4xl mb-4">💹</div>
-                <h3 className="text-xl font-bold text-[#D2A63C] mb-2">Forex & Crypto</h3>
-                <p className="text-gray-400 text-sm">
-                  Educação completa em trading de Forex e Criptomoedas
-                </p>
-              </div>
-
-              <div className="bg-gray-800/50 border border-[#D2A63C]/20 rounded-xl p-6 hover:border-[#D2A63C]/50 transition-all">
-                <div className="text-4xl mb-4">📊</div>
-                <h3 className="text-xl font-bold text-[#D2A63C] mb-2">Portfólios</h3>
-                <p className="text-gray-400 text-sm">
-                  Gestão de portfólios de cripto e ETFs
-                </p>
-              </div>
-
-              <div className="bg-gray-800/50 border border-[#D2A63C]/20 rounded-xl p-6 hover:border-[#D2A63C]/50 transition-all">
-                <div className="text-4xl mb-4">📱</div>
-                <h3 className="text-xl font-bold text-[#D2A63C] mb-2">Marketing Digital</h3>
-                <p className="text-gray-400 text-sm">
-                  Estratégias de marketing digital e crescimento
-                </p>
-              </div>
-
-              <div className="bg-gray-800/50 border border-[#D2A63C]/20 rounded-xl p-6 hover:border-[#D2A63C]/50 transition-all">
-                <div className="text-4xl mb-4">🧠</div>
-                <h3 className="text-xl font-bold text-[#D2A63C] mb-2">Mindset & Fitness</h3>
-                <p className="text-gray-400 text-sm">
-                  Desenvolvimento pessoal e bem-estar
-                </p>
-              </div>
-
-              <div className="bg-gray-800/50 border border-[#D2A63C]/20 rounded-xl p-6 hover:border-[#D2A63C]/50 transition-all">
-                <div className="text-4xl mb-4">🤖</div>
-                <h3 className="text-xl font-bold text-[#D2A63C] mb-2">Soluções IA</h3>
-                <p className="text-gray-400 text-sm">
-                  Criação de soluções de IA drag and drop para fontes de renda digital
-                </p>
-              </div>
-
-              <div className="bg-gray-800/50 border border-[#D2A63C]/20 rounded-xl p-6 hover:border-[#D2A63C]/50 transition-all">
-                <div className="text-4xl mb-4">🌐</div>
-                <h3 className="text-xl font-bold text-[#D2A63C] mb-2">Networking</h3>
-                <p className="text-gray-400 text-sm">
-                  Prospeção, validação e expansão de negócio
-                </p>
-              </div>
-            </div>
-
-            {/* Additional Info */}
-            <div className="bg-[#D2A63C]/10 border border-[#D2A63C]/30 rounded-xl p-6 mt-8">
-              <h3 className="text-2xl font-bold text-[#D2A63C] mb-4">O Que Oferecemos</h3>
-              <ul className="space-y-3 text-gray-300">
-                <li className="flex items-start gap-3">
-                  <span className="text-[#D2A63C] mt-1">✓</span>
-                  <span>Produtos estruturados para MLM, simplificando o onboarding</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-[#D2A63C] mt-1">✓</span>
-                  <span>Ajudamos investidores particulares a profissionalizarem-se com IA, scanners e sistemas de negociação</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-[#D2A63C] mt-1">✓</span>
-                  <span>Networking para tirar partido das formações e aumentar a base de dados</span>
-                </li>
-              </ul>
-            </div>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button
+              asChild
+              size="lg"
+              className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] hover:from-[#BB8525] hover:to-[#D2A63C] text-black font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-[#D2A63C]/50"
+            >
+              <Link href="https://www.skool.com/morethanmoney" target="_blank" rel="noopener noreferrer">
+                <GraduationCap className="w-5 h-5 mr-2" />
+                Entrar na Comunidade Skool Gratuitamente
+              </Link>
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="lg"
+              className="border-[#D2A63C]/50 text-[#D2A63C] hover:bg-[#D2A63C]/10 font-semibold text-lg px-8 py-6 rounded-xl"
+              onClick={() => {
+                const element = document.getElementById('realidade-mercado')
+                element?.scrollIntoView({ behavior: 'smooth' })
+              }}
+            >
+              <PlayCircle className="w-5 h-5 mr-2" />
+              Saber Mais
+            </Button>
           </div>
-        </div>
-
-        {/* CTA Button */}
-        <div className="max-w-2xl mx-auto text-center">
-          <Button
-            onClick={handleGoToAcademy}
-            className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] hover:from-[#BB8525] hover:to-[#D2A63C] text-black font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-[#D2A63C]/50"
-            size="lg"
-          >
-            <GraduationCap className="w-5 h-5 mr-2" />
-            Ir para a Academia MTM
-          </Button>
         </div>
       </section>
 
-      {/* Education Connection Popup (se logado) */}
-      <Dialog open={isAuthenticated && showEducationPopup} onOpenChange={(open) => {
-        if (!open) {
-          handleClosePopup()
-        }
-      }}>
-        <DialogContent className="bg-gray-900 border-[#D2A63C]/30 max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-[#D2A63C]">
-              Educação MTM
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-gray-300">
-              Queres aceder à nossa plataforma de educação completa? Liga-te à Educação MTM e acede a todo o conteúdo exclusivo!
-            </p>
-            <div className="flex gap-3">
-              <Button
-                onClick={handleGoToAcademy}
-                className="flex-1 bg-gradient-to-r from-[#D2A63C] to-[#BB8525] hover:from-[#BB8525] hover:to-[#D2A63C] text-black font-bold"
-              >
-                <GraduationCap className="w-4 h-4 mr-2" />
-                Ligar à Educação MTM
-              </Button>
-              <Button
-                onClick={handleClosePopup}
-                variant="outline"
-                className="border-gray-600 text-gray-300 hover:bg-gray-800"
-              >
-                Agora não
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Skool Browser Modal */}
-      <Dialog open={showSkoolBrowser} onOpenChange={setShowSkoolBrowser}>
-        <DialogContent className="bg-gray-900 border-[#D2A63C]/30 max-w-[95vw] w-full h-[95vh] p-0 flex flex-col [&>button]:hidden">
-          <DialogHeader className="p-3 border-b border-gray-700 flex-shrink-0">
-            <div className="flex items-center justify-between mb-3">
-              <DialogTitle className="text-xl font-bold text-[#D2A63C] flex items-center gap-2">
-                <GraduationCap className="w-5 h-5" />
-                Academia MTM - Skool
-              </DialogTitle>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => window.open('https://www.skool.com/morethanmoney', '_blank')}
-                  variant="outline"
-                  size="sm"
-                  className="border-gray-600 text-gray-300 hover:bg-gray-800"
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Abrir em nova aba
-                </Button>
-                <button
-                  onClick={() => setShowSkoolBrowser(false)}
-                  className="text-gray-400 hover:text-white transition-colors p-1"
-                  aria-label="Fechar"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+      {/* A Realidade do Mercado */}
+      <section id="realidade-mercado" className="relative z-10 py-20 bg-gradient-to-b from-black via-gray-900/50 to-black">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-[#D2A63C]">
+                A Realidade do Mercado
+              </h2>
+              <p className="text-xl text-gray-300">
+                A maioria dos investidores falha porque enfrenta:
+              </p>
             </div>
             
-            {/* Barra de Navegação do Navegador */}
-            <div className="flex items-center gap-2">
-              {/* Botões de Navegação */}
-              <div className="flex items-center gap-1">
-                <Button
-                  onClick={handleGoBack}
-                  variant="outline"
-                  size="sm"
-                  disabled={!canGoBack}
-                  className="border-gray-600 text-gray-300 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Voltar"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-                <Button
-                  onClick={handleGoForward}
-                  variant="outline"
-                  size="sm"
-                  disabled={!canGoForward}
-                  className="border-gray-600 text-gray-300 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Avançar"
-                >
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-                <Button
-                  onClick={handleReload}
-                  variant="outline"
-                  size="sm"
-                  className="border-gray-600 text-gray-300 hover:bg-gray-800"
-                  title="Recarregar"
-                >
-                  <RotateCw className="w-4 h-4" />
-                </Button>
-                <Button
-                  onClick={handleGoHome}
-                  variant="outline"
-                  size="sm"
-                  className="border-gray-600 text-gray-300 hover:bg-gray-800"
-                  title="Página inicial"
-                >
-                  <Home className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Campo de URL */}
-              <form onSubmit={handleUrlSubmit} className="flex-1 flex items-center gap-2">
-                <input
-                  type="text"
-                  value={urlInput}
-                  onChange={(e) => setUrlInput(e.target.value)}
-                  onBlur={() => setUrlInput(currentUrl)}
-                  className="flex-1 bg-gray-800 border border-gray-700 text-white text-sm px-3 py-1.5 rounded focus:outline-none focus:ring-2 focus:ring-[#D2A63C] focus:border-transparent"
-                  placeholder="https://www.skool.com/morethanmoney"
-                />
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="bg-[#D2A63C] hover:bg-[#B8942F] text-black font-semibold px-4"
-                >
-                  Ir
-                </Button>
-              </form>
+            <div className="grid md:grid-cols-3 gap-6 mb-8">
+              <Card className="bg-gray-900/80 border-[#D2A63C]/30 hover:border-[#D2A63C]/60 transition-all">
+                <CardContent className="p-6">
+                  <div className="text-4xl mb-4">📚</div>
+                  <h3 className="text-xl font-bold text-[#D2A63C] mb-2">Excesso de Informação</h3>
+                  <p className="text-gray-400">
+                    Sem estrutura, sem direção clara
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gray-900/80 border-[#D2A63C]/30 hover:border-[#D2A63C]/60 transition-all">
+                <CardContent className="p-6">
+                  <div className="text-4xl mb-4">😰</div>
+                  <h3 className="text-xl font-bold text-[#D2A63C] mb-2">Decisões Emocionais</h3>
+                  <p className="text-gray-400">
+                    Medo e ganância dominam as decisões
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gray-900/80 border-[#D2A63C]/30 hover:border-[#D2A63C]/60 transition-all">
+                <CardContent className="p-6">
+                  <div className="text-4xl mb-4">📖</div>
+                  <h3 className="text-xl font-bold text-[#D2A63C] mb-2">Teoria sem Prática</h3>
+                  <p className="text-gray-400">
+                    Conhecimento que não se traduz em lucro
+                  </p>
+                </CardContent>
+              </Card>
             </div>
-          </DialogHeader>
-          <div className="flex-1 w-full overflow-hidden relative min-h-0">
-            <iframe
-              ref={iframeRef}
-              src={currentUrl}
-              className="w-full h-full border-0"
-              title="Academia MTM - Skool"
-              allow="fullscreen; autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-              sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation-by-user-activation allow-modals"
-              style={{ 
-                minHeight: '100%',
-                width: '100%',
-                border: 'none'
-              }}
-              onLoad={() => {
-                // Tentar obter URL atual do iframe (limitado por CORS, mas tentamos)
-                try {
-                  if (iframeRef.current?.contentWindow) {
-                    // Atualizar botões de navegação baseado no histórico
-                    setCanGoBack(true) // Simplificado - sempre habilitado
-                    setCanGoForward(false) // Simplificado
-                  }
-                } catch (e) {
-                  // CORS pode bloquear acesso ao history
-                  console.log('⚠️ [SKOOL BROWSER] Não é possível acessar histórico do iframe (CORS)')
-                }
-              }}
+            
+            <div className="bg-gradient-to-r from-[#D2A63C]/10 to-[#BB8525]/10 border border-[#D2A63C]/30 rounded-xl p-8 text-center">
+              <p className="text-2xl font-semibold text-white mb-2">
+                O Diagnóstico
+              </p>
+              <p className="text-xl text-gray-300">
+                Não te falta vontade, falta-te o <span className="text-[#D2A63C] font-bold">ambiente certo</span> e um <span className="text-[#D2A63C] font-bold">processo replicável</span>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Porta de Entrada: Comunidade Skool */}
+      <section className="relative z-10 py-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <div className="inline-block bg-[#D2A63C]/20 border border-[#D2A63C]/50 rounded-full px-4 py-2 mb-4">
+                <span className="text-[#D2A63C] font-semibold">PONTO DE PARTIDA</span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
+                A Porta de Entrada: Comunidade Skool
+              </h2>
+              <p className="text-xl text-gray-300">
+                O teu ponto de partida <span className="text-[#D2A63C] font-bold">"Freemium"</span>
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-6">
+              <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-[#D2A63C]/30 hover:border-[#D2A63C]/60 transition-all hover:scale-105">
+                <CardContent className="p-6">
+                  <BarChart3 className="w-12 h-12 text-[#D2A63C] mb-4" />
+                  <h3 className="text-xl font-bold text-white mb-2">Básicos do Modelo de Negócio</h3>
+                  <p className="text-gray-400">
+                    Entende como os mercados funcionam na prática
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-[#D2A63C]/30 hover:border-[#D2A63C]/60 transition-all hover:scale-105">
+                <CardContent className="p-6">
+                  <Zap className="w-12 h-12 text-[#D2A63C] mb-4" />
+                  <h3 className="text-xl font-bold text-white mb-2">Ferramentas Profissionais</h3>
+                  <p className="text-gray-400">
+                    Tecnologia de ponta e condições otimizadas através dos nossos parceiros
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-[#D2A63C]/30 hover:border-[#D2A63C]/60 transition-all hover:scale-105">
+                <CardContent className="p-6">
+                  <GraduationCap className="w-12 h-12 text-[#D2A63C] mb-4" />
+                  <h3 className="text-xl font-bold text-white mb-2">Educação Prática</h3>
+                  <p className="text-gray-400">
+                    Conteúdos em Forex, Cripto e Gestão de Portefólio para aplicação imediata
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* A Escada de Sucesso MTM */}
+      <section className="relative z-10 py-20 bg-gradient-to-b from-black via-gray-900/50 to-black">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">
+                <span className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] bg-clip-text text-transparent">
+                  A Escada de Sucesso MTM
+                </span>
+              </h2>
+              <p className="text-xl text-gray-300">
+                O teu roadmap para a liberdade financeira
+              </p>
+            </div>
+            
+            {/* Escada Visual */}
+            <div className="space-y-8">
+              {/* Fase 1 */}
+              <div className="flex flex-col md:flex-row items-center gap-6 bg-gradient-to-r from-gray-900/80 to-gray-800/80 border border-[#D2A63C]/30 rounded-2xl p-8 hover:border-[#D2A63C]/60 transition-all">
+                <div className="flex-shrink-0 w-20 h-20 bg-gradient-to-br from-[#D2A63C] to-[#BB8525] rounded-full flex items-center justify-center text-3xl font-bold text-black">
+                  1
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-[#D2A63C] mb-2">Fase 1: Fundamentos</h3>
+                  <p className="text-gray-300 text-lg">
+                    Explora os conteúdos gratuitos no Skool e domina a psicologia de gestão de risco.
+                  </p>
+                </div>
+                <Brain className="w-16 h-16 text-[#D2A63C]/50 flex-shrink-0" />
+              </div>
+              
+              {/* Fase 2 */}
+              <div className="flex flex-col md:flex-row items-center gap-6 bg-gradient-to-r from-gray-900/80 to-gray-800/80 border border-[#D2A63C]/30 rounded-2xl p-8 hover:border-[#D2A63C]/60 transition-all">
+                <div className="flex-shrink-0 w-20 h-20 bg-gradient-to-br from-[#D2A63C] to-[#BB8525] rounded-full flex items-center justify-center text-3xl font-bold text-black">
+                  2
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-[#D2A63C] mb-2">Fase 2: Exposição Real</h3>
+                  <p className="text-gray-300 text-lg">
+                    Escolhe uma solução de arranque (passiva ou assistida) para começares a operar com capital real enquanto estudas.
+                  </p>
+                </div>
+                <Rocket className="w-16 h-16 text-[#D2A63C]/50 flex-shrink-0" />
+              </div>
+              
+              {/* Fase 3 */}
+              <div className="flex flex-col md:flex-row items-center gap-6 bg-gradient-to-r from-gray-900/80 to-gray-800/80 border border-[#D2A63C]/30 rounded-2xl p-8 hover:border-[#D2A63C]/60 transition-all">
+                <div className="flex-shrink-0 w-20 h-20 bg-gradient-to-br from-[#D2A63C] to-[#BB8525] rounded-full flex items-center justify-center text-3xl font-bold text-black">
+                  3
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-[#D2A63C] mb-2">Fase 3: Especialização</h3>
+                  <p className="text-gray-300 text-lg">
+                    Transita do "copiar" para o "executar", utilizando ferramentas de análise técnica aplicada.
+                  </p>
+                </div>
+                <Target className="w-16 h-16 text-[#D2A63C]/50 flex-shrink-0" />
+              </div>
+              
+              {/* Fase 4 */}
+              <div className="flex flex-col md:flex-row items-center gap-6 bg-gradient-to-r from-gray-900/80 to-gray-800/80 border border-[#D2A63C]/30 rounded-2xl p-8 hover:border-[#D2A63C]/60 transition-all">
+                <div className="flex-shrink-0 w-20 h-20 bg-gradient-to-br from-[#D2A63C] to-[#BB8525] rounded-full flex items-center justify-center text-3xl font-bold text-black">
+                  4
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-[#D2A63C] mb-2">Fase 4: Profissionalização</h3>
+                  <p className="text-gray-300 text-lg">
+                    Cria o teu próprio negócio de trading e gere portefólios de forma autónoma e consistente.
+                  </p>
+                </div>
+                <Crown className="w-16 h-16 text-[#D2A63C]/50 flex-shrink-0" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Escolhe o Teu Caminho */}
+      <section className="relative z-10 py-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-5xl font-bold mb-4 text-white">
+                Escolhe o Teu Caminho
+              </h2>
+              <p className="text-xl text-gray-300">
+                Soluções conceptuais adaptadas ao teu perfil
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Caminho Passivo */}
+              <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-[#D2A63C]/30 hover:border-[#D2A63C]/60 transition-all hover:scale-105 group">
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 bg-[#D2A63C]/20 rounded-full flex items-center justify-center">
+                      <Shield className="w-8 h-8 text-[#D2A63C]" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white">Caminho Passivo</h3>
+                  </div>
+                  <p className="text-gray-300 mb-4 text-lg">
+                    <span className="text-[#D2A63C] font-semibold">Baixo Risco:</span> Portefólios geridos por profissionais onde o teu capital trabalha por ti enquanto observas.
+                  </p>
+                  <div className="flex items-center text-[#D2A63C] group-hover:translate-x-2 transition-transform">
+                    <span className="font-semibold">Saber mais</span>
+                    <ChevronRight className="w-5 h-5 ml-1" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Caminho Automático */}
+              <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-[#D2A63C]/30 hover:border-[#D2A63C]/60 transition-all hover:scale-105 group">
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 bg-[#D2A63C]/20 rounded-full flex items-center justify-center">
+                      <Zap className="w-8 h-8 text-[#D2A63C]" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white">Caminho Automático</h3>
+                  </div>
+                  <p className="text-gray-300 mb-4 text-lg">
+                    <span className="text-[#D2A63C] font-semibold">Tech:</span> Utilização de sistemas de inteligência artificial validados para execução sem erros emocionais.
+                  </p>
+                  <div className="flex items-center text-[#D2A63C] group-hover:translate-x-2 transition-transform">
+                    <span className="font-semibold">Saber mais</span>
+                    <ChevronRight className="w-5 h-5 ml-1" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Caminho Híbrido */}
+              <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-[#D2A63C]/30 hover:border-[#D2A63C]/60 transition-all hover:scale-105 group">
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 bg-[#D2A63C]/20 rounded-full flex items-center justify-center">
+                      <Users className="w-8 h-8 text-[#D2A63C]" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white">Caminho Híbrido</h3>
+                  </div>
+                  <p className="text-gray-300 mb-4 text-lg">
+                    <span className="text-[#D2A63C] font-semibold">Copy Trading:</span> Replica em tempo real as decisões de educadores globais enquanto aprendes a lógica por trás de cada trade.
+                  </p>
+                  <div className="flex items-center text-[#D2A63C] group-hover:translate-x-2 transition-transform">
+                    <span className="font-semibold">Saber mais</span>
+                    <ChevronRight className="w-5 h-5 ml-1" />
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Caminho Ativo */}
+              <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-[#D2A63C]/30 hover:border-[#D2A63C]/60 transition-all hover:scale-105 group">
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 bg-[#D2A63C]/20 rounded-full flex items-center justify-center">
+                      <TrendingUp className="w-8 h-8 text-[#D2A63C]" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white">Caminho Ativo</h3>
+                  </div>
+                  <p className="text-gray-300 mb-4 text-lg">
+                    <span className="text-[#D2A63C] font-semibold">Execução:</span> Para quem está pronto para assumir o controlo total e testar as suas próprias estratégias num ambiente controlado.
+                  </p>
+                  <div className="flex items-center text-[#D2A63C] group-hover:translate-x-2 transition-transform">
+                    <span className="font-semibold">Saber mais</span>
+                    <ChevronRight className="w-5 h-5 ml-1" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* A Diferença MoreThanMoney */}
+      <section className="relative z-10 py-20 bg-gradient-to-b from-black via-gray-900/50 to-black">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-5xl font-bold mb-4 text-white">
+                A Diferença <span className="text-[#D2A63C]">MoreThanMoney</span>
+              </h2>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Nós Não */}
+              <Card className="bg-red-900/20 border-red-500/30">
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold text-red-400 mb-4 flex items-center gap-2">
+                    <X className="w-6 h-6" />
+                    Nós Não
+                  </h3>
+                  <ul className="space-y-3 text-gray-300">
+                    <li className="flex items-start gap-3">
+                      <span className="text-red-400 mt-1">✗</span>
+                      <span>Vendemos promessas de dinheiro fácil</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-red-400 mt-1">✗</span>
+                      <span>Incentivamos o "overtrading"</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-red-400 mt-1">✗</span>
+                      <span>Prometemos resultados sem esforço</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+              
+              {/* Nós Sim */}
+              <Card className="bg-[#D2A63C]/10 border-[#D2A63C]/30">
+                <CardContent className="p-8">
+                  <h3 className="text-2xl font-bold text-[#D2A63C] mb-4 flex items-center gap-2">
+                    <CheckCircle2 className="w-6 h-6" />
+                    Nós Sim
+                  </h3>
+                  <ul className="space-y-3 text-gray-300">
+                    <li className="flex items-start gap-3">
+                      <span className="text-[#D2A63C] mt-1">✓</span>
+                      <span>Exigimos processos e estrutura</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-[#D2A63C] mt-1">✓</span>
+                      <span>Focamo-nos em educação aplicada</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="text-[#D2A63C] mt-1">✓</span>
+                      <span>Treinamos com capital real para criar experiência</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Vídeo de Apresentação */}
+      <section className="relative z-10 py-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
+                Conhece a <span className="text-[#D2A63C]">MoreThanMoney</span>
+              </h2>
+            </div>
+            <YouTubeEmbed 
+              videoId={videoId}
+              title="Apresentação MoreThanMoney"
+              className="border border-[#D2A63C]/30 rounded-lg"
             />
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </section>
+
+      {/* CTA Final */}
+      <section className="relative z-10 py-20 bg-gradient-to-b from-black via-[#D2A63C]/10 to-black">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-[#D2A63C]/30 rounded-2xl p-12">
+              <Sparkles className="w-16 h-16 text-[#D2A63C] mx-auto mb-6" />
+              <h2 className="text-3xl md:text-5xl font-bold mb-4 text-white">
+                Não prometemos atalhos.
+              </h2>
+              <h2 className="text-3xl md:text-5xl font-bold mb-8 text-[#D2A63C]">
+                Prometemos estrutura.
+              </h2>
+              <p className="text-xl text-gray-300 mb-8">
+                Estás pronto para subir o primeiro degrau?
+              </p>
+              <Button
+                asChild
+                size="lg"
+                className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] hover:from-[#BB8525] hover:to-[#D2A63C] text-black font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-[#D2A63C]/50"
+              >
+                <Link href="https://www.skool.com/morethanmoney" target="_blank" rel="noopener noreferrer">
+                  <GraduationCap className="w-5 h-5 mr-2" />
+                  Quero Aceder ao Skool e Começar Agora
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   )
 }
-

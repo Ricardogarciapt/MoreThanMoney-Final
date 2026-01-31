@@ -142,3 +142,6 @@ SELECT
     'user_charts' as tabela_1,
     'user_checklist_progress' as tabela_2;
 
+
+
+

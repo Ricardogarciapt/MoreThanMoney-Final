@@ -142,8 +142,9 @@ export async function POST(
                 data: { notificationId, notificationConfigId: notification.id },
                 read: false
               })
-              .catch(err => {
-                console.warn(`[NOTIFICATION_SEND] ⚠️ Falha ao criar entrada em notifications para ${user.id}:`, err.message)
+              .then(() => {})
+              .catch((err: any) => {
+                console.warn(`[NOTIFICATION_SEND] ⚠️ Falha ao criar entrada em notifications para ${user.id}:`, err?.message || err)
               })
           } else {
             if (notification.type === 'push') {

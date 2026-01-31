@@ -89,6 +89,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     const loadUser = async () => {
       try {
+        // Verificar cache primeiro para resposta instantânea
+        const { getCachedSession, isSessionValid } = await import('@/lib/auth-cache')
+        const cachedSession = getCachedSession()
+        
+        if (cachedSession && isSessionValid(cachedSession)) {
+          console.log('⚡ [AUTH CONTEXT] Usando sessão em cache')
+          // Buscar perfil em paralelo (não bloqueia)
+          supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', cachedSession.user.id)
+            .single()
+            .then(({ data: profile }) => {
+              if (profile) {
+                setUser({
+                  id: profile.id,
+                  email: profile.email,
+                  full_name: profile.full_name,
+                  username: profile.username,
+                  avatar_url: profile.avatar_url || cachedSession.user.user_metadata?.avatar_url,
+                  user_type: profile.user_type,
+                  is_active: profile.is_active,
+                  created_at: profile.created_at,
+                  phone: profile.phone,
+                  whatsapp: profile.whatsapp
+                })
+              }
+              setIsLoading(false)
+            })
+            .catch(() => setIsLoading(false))
+          return
+        }
+        
+        // Se não há cache, verificar sessão normalmente
         const { data: { session } } = await supabase.auth.getSession()
         
         if (session?.user) {

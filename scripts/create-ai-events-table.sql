@@ -42,3 +42,6 @@ CREATE POLICY "Admins can view all AI events" ON ai_events
     )
   );
 
+
+
+

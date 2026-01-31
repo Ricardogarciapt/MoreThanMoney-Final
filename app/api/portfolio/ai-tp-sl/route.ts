@@ -270,10 +270,10 @@ export async function GET(request: NextRequest) {
     const performance = ((currentPrice - entryPrice) / entryPrice) * 100
     
     // TP/SL estratégicos baseados em percentagens profissionais
-    const tp1 = currentPrice * 1.30  // +30%
-    const tp2 = currentPrice * 1.75  // +75%
-    const tp3 = currentPrice * 2.50  // +150%
-    const sl = currentPrice * 0.85   // -15%
+    let tp1 = currentPrice * 1.30  // +30%
+    let tp2 = currentPrice * 1.75  // +75%
+    let tp3 = currentPrice * 2.50  // +150%
+    let sl = currentPrice * 0.85   // -15%
 
     console.log(`✅ [AI TP/SL] Cálculos completos para ${symbol}`)
 

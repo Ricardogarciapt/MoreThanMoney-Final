@@ -4,7 +4,7 @@ import { Client } from '@notionhq/client'
 // Inicializar cliente do Notion
 const notion = new Client({ 
   auth: process.env.NOTION_API_KEY 
-})
+}) as any
 
 const DATABASE_ID = process.env.NEXT_PUBLIC_NOTION_PORTFOLIO_DATABASE_ID || process.env.NOTION_PORTFOLIO_DATABASE_ID || ''
 
@@ -189,6 +189,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Buscar dados do Notion
+    // @ts-ignore - Notion client types may be outdated
     const response = await notion.databases.query({
       database_id: DATABASE_ID,
       sorts: [
