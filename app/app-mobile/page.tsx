@@ -13,7 +13,6 @@ import MindsetMobile from "@/components/mobile/mindset-mobile"
 import FitnessMobile from "@/components/mobile/fitness-mobile"
 import ChatsMobile from "@/components/mobile/chats-mobile"
 import { supabase } from "@/lib/supabase"
-import { clearCachedSession } from "@/lib/auth-cache"
 import Image from "next/image"
 import {
   Users,
@@ -27,12 +26,12 @@ import {
   MessageCircle,
 } from "lucide-react"
 import MobileSidebar from "@/components/mobile/mobile-sidebar"
-import { useAuthenticatedSession } from "@/hooks/use-authenticated-session"
+import { useAuth } from "@/contexts/auth-context"
 
 function AppMobileContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { isAuthenticated, userId, loading: authLoading } = useAuthenticatedSession()
+  const { user, isLoading: authLoading, logout } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState("social")
   const [touchStart, setTouchStart] = useState(0)
@@ -59,12 +58,12 @@ function AppMobileContent() {
   }, [])
 
   useEffect(() => {
-    // Só carregar user uma vez quando autenticado
-    if (mounted && !authLoading && isAuthenticated && userId && !userLoaded) {
-      loadUser()
+    // Usar user do auth-context (única fonte de verdade)
+    if (mounted && !authLoading && user && !userLoaded) {
+      setCurrentUser(user)
       setUserLoaded(true)
     }
-  }, [mounted, authLoading, isAuthenticated, userId, userLoaded])
+  }, [mounted, authLoading, user, userLoaded])
 
   useEffect(() => {
     const tab = searchParams.get("tab")
@@ -73,61 +72,8 @@ function AppMobileContent() {
     }
   }, [searchParams])
 
-  const loadUser = async () => {
-    try {
-      if (!userId) return
-
-      // Tentar buscar perfil via API primeiro (mais confiável)
-      try {
-        const apiResponse = await fetch(`/api/profile/get?userId=${userId}`, {
-          credentials: 'include'
-        })
-        
-        if (apiResponse.ok) {
-          const apiData = await apiResponse.json()
-          if (apiData.profile) {
-            console.log('✅ [APP-MOBILE] Perfil carregado via API')
-            setCurrentUser(apiData.profile)
-            return
-          }
-        }
-      } catch (apiError) {
-        console.warn('⚠️ [APP-MOBILE] Erro ao carregar perfil via API, tentando direto:', apiError)
-      }
-
-      // Fallback: tentar Supabase direto
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single()
-        
-        if (error) {
-          console.error('❌ [APP-MOBILE] Erro ao carregar perfil:', error)
-          // Usar dados básicos da sessão como último recurso
-          setCurrentUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Utilizador',
-            username: session.user.email?.split('@')[0] || 'user',
-            avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || '',
-            user_type: 'member',
-            is_active: true
-          })
-        } else {
-          setCurrentUser(profile)
-        }
-      }
-    } catch (error) {
-      console.error('❌ [APP-MOBILE] Erro crítico ao carregar user:', error)
-    }
-  }
-
   const handleLogout = async () => {
-    clearCachedSession()
-    await supabase.auth.signOut()
+    await logout()
     window.location.href = '/login'
   }
 
@@ -197,7 +143,7 @@ function AppMobileContent() {
     }
   }, [contentRef])
 
-  if (!mounted || authLoading) {
+  if (!mounted || authLoading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900">
         <Loader2 className="w-8 h-8 animate-spin text-[#D2A63C]" />

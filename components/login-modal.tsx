@@ -73,9 +73,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       }
 
       if (data.session) {
+        // Sincronizar cache imediatamente
+        const { setCachedSession } = await import('@/lib/auth-cache')
+        setCachedSession(data.session)
+        
         onClose()
-        // Recarregar página para atualizar AuthContext
-        window.location.href = "/member-area"
+        // Usar replace para ser mais rápido
+        window.location.replace("/member-area")
       }
     } catch (err: any) {
       setError(err.message || "Ocorreu um erro ao fazer login. Tente novamente.")

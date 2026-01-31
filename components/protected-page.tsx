@@ -2,9 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import { getCachedSession, setCachedSession, isSessionValid, clearCachedSession } from "@/lib/auth-cache"
-import { loadIqonicSession } from "@/lib/iqonic-auth"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 
@@ -24,194 +21,64 @@ export default function ProtectedPage({
   allowInactive = false
 }: ProtectedPageProps) {
   const router = useRouter()
-  const { user, isIqonicUser } = useAuth()
+  const { user, isIqonicUser, isLoading } = useAuth()
   const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'unauthenticated'>('checking')
   
   // Rotas permitidas para utilizadores IQONIC
   const iqonicAllowedRoutes = ['/app-mobile', '/scanner-access', '/portfolios']
 
   useEffect(() => {
-    let mounted = true
-    let isChecking = false
+    // Verificação imediata: se já temos user válido, autorizar instantaneamente
+    if (user && !isLoading) {
+      const currentPath = window.location.pathname
+      
+      // Verificar se é utilizador IQONIC e se a rota está permitida
+      if (isIqonicUser) {
+        const isRouteAllowed = iqonicAllowedRoutes.some(route => currentPath.startsWith(route))
+        
+        if (!isRouteAllowed) {
+          console.log(`⚠️ [PROTECTED PAGE] Rota ${currentPath} não permitida para utilizadores IQONIC`)
+          router.push(iqonicAllowedRoutes[0])
+          setAuthState('unauthenticated')
+          return
+        }
+      }
 
-    const checkAuth = async () => {
-      if (isChecking) {
-        console.log('⚠️ [PROTECTED PAGE] Verificação já em andamento, ignorando...')
+      // Verificar se requer admin
+      if (requireAdmin && user.user_type !== 'admin') {
+        console.warn('⚠️ [PROTECTED PAGE] Acesso negado - não é admin')
+        router.push('/member-area')
+        setAuthState('unauthenticated')
         return
       }
 
-      isChecking = true
-
-      try {
-        const startTime = performance.now()
-        const currentPath = window.location.pathname
-        
-        // 1. Verificar se é utilizador IQONIC
-        const iqonicSession = loadIqonicSession()
-        if (iqonicSession && iqonicSession.user) {
-          console.log('✅ [PROTECTED PAGE] Sessão IQONIC encontrada:', iqonicSession.user.email)
-          
-          // Verificar se a rota atual está permitida para IQONIC
-          const isRouteAllowed = iqonicAllowedRoutes.some(route => currentPath.startsWith(route))
-          
-          if (!isRouteAllowed) {
-            console.log(`⚠️ [PROTECTED PAGE] Rota ${currentPath} não permitida para utilizadores IQONIC`)
-            // Redirecionar para primeira rota permitida
-            if (mounted) {
-              setAuthState('unauthenticated')
-              router.push(iqonicAllowedRoutes[0])
-            }
-            isChecking = false
-            return
-          }
-          
-          // Se há sessão IQONIC válida, autorizar imediatamente (não esperar contexto)
-          const endTime = performance.now()
-          console.log(`⚡ [PROTECTED PAGE] IQONIC autenticado (cache): ${Math.round(endTime - startTime)}ms`)
-          if (mounted) {
-            setAuthState('authenticated')
-          }
-          isChecking = false
-          return
-        }
-        
-        // 2. Tentar usar cache Supabase primeiro (verificação instantânea)
-        const cachedSession = getCachedSession()
-        if (cachedSession && isSessionValid(cachedSession)) {
-          const endTime = performance.now()
-          console.log(`⚡ [PROTECTED PAGE] Cache hit: ${Math.round(endTime - startTime)}ms`)
-          
-          if (mounted) {
-            setAuthState('authenticated')
-          }
-          isChecking = false
-          return
-        }
-        
-        console.log('🔍 [PROTECTED PAGE] Verificando sessão no Supabase...')
-        
-        // 2. Verificar sessão diretamente (sem delays desnecessários)
-        // Criar Promise com timeout para getSession
-        const getSessionWithTimeout = async (timeoutMs: number) => {
-          return Promise.race([
-            supabase.auth.getSession(),
-            new Promise<any>((_, reject) => 
-              setTimeout(() => reject(new Error('Timeout')), timeoutMs)
-            )
-          ])
-        }
-        
-        // Tentar buscar sessão com timeout de 3 segundos (reduzido para resposta mais rápida)
-        let sessionResult
-        try {
-          sessionResult = await getSessionWithTimeout(3000)
-        } catch (timeoutError) {
-          console.error('❌ [PROTECTED PAGE] Timeout ao buscar sessão (3s)')
-          
-          // Se há cache válido, usar mesmo com timeout
-          const cachedSession = getCachedSession()
-          if (cachedSession && isSessionValid(cachedSession)) {
-            console.log('⚡ [PROTECTED PAGE] Usando cache após timeout')
-            if (mounted) {
-              setAuthState('authenticated')
-            }
-            isChecking = false
-            return
-          }
-          
-          // Redirecionar ao login se timeout e sem cache
-          if (mounted) {
-            setAuthState('unauthenticated')
-            router.push(redirectPath)
-          }
-          isChecking = false
-          return
-        }
-        
-        const { data: { session }, error } = sessionResult
-        
-        const endTime = performance.now()
-        const loadTime = Math.round(endTime - startTime)
-        
-        console.log(`⏱️ [PROTECTED PAGE] Tempo de verificação: ${loadTime}ms`)
-        
-        if (loadTime > 1000) {
-          console.warn(`⚠️ [PROTECTED PAGE] Verificação muito lenta: ${loadTime}ms`)
-          console.warn('⚠️ Verifique configuração do Supabase e variáveis de ambiente')
-        }
-
-        if (!mounted) {
-          isChecking = false
-          return
-        }
-
-        if (error) {
-          console.error('❌ [PROTECTED PAGE] Erro do Supabase:', error)
-          clearCachedSession()
-          setAuthState('unauthenticated')
-          router.push(redirectPath)
-          isChecking = false
-          return
-        }
-
-        if (!session) {
-          console.log('❌ [PROTECTED PAGE] Sem sessão válida')
-          clearCachedSession()
-          setAuthState('unauthenticated')
-          router.push(redirectPath)
-          isChecking = false
-          return
-        }
-
-        // 3. Verificar user_type se necessário (apenas admin)
-        if (requireAdmin) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('user_type, is_active')
-            .eq('id', session.user.id)
-            .single()
-
-          if (profile) {
-            console.log(`👤 [PROTECTED PAGE] User type: ${profile.user_type}`)
-
-            // Bloquear se requer admin e não é admin
-            if (requireAdmin && profile.user_type !== 'admin') {
-              console.warn('⚠️ [PROTECTED PAGE] Acesso negado - não é admin')
-              if (mounted) {
-                setAuthState('unauthenticated')
-                router.push('/member-area')
-              }
-              isChecking = false
-              return
-            }
-          }
-        }
-
-        // 3. Armazenar sessão válida em cache imediatamente
-        setCachedSession(session)
-        console.log('✅ [PROTECTED PAGE] Autenticado:', session.user.email)
-        if (mounted) {
-          setAuthState('authenticated')
-        }
-        isChecking = false
-      } catch (error) {
-        console.error('❌ [PROTECTED PAGE] Exceção:', error)
-        if (mounted) {
-          clearCachedSession()
-          setAuthState('unauthenticated')
-          router.push(redirectPath)
-        }
-        isChecking = false
+      // Verificar se utilizador está ativo (se não permitir inativos)
+      if (!allowInactive && !user.is_active) {
+        console.warn('⚠️ [PROTECTED PAGE] Utilizador inativo')
+        router.push(redirectPath)
+        setAuthState('unauthenticated')
+        return
       }
+
+      // Tudo OK - autorizar imediatamente
+      console.log('✅ [PROTECTED PAGE] Acesso autorizado imediatamente:', user.email)
+      setAuthState('authenticated')
+      return
     }
 
-    checkAuth()
-
-    return () => {
-      mounted = false
-      isChecking = false
+    // Se ainda está carregando, aguardar
+    if (isLoading) {
+      return
     }
-  }, [redirectPath, router]) // Removido authState das dependências para evitar loop
+
+    // Se não há user e não está carregando, não autenticado
+    if (!user) {
+      console.log('❌ [PROTECTED PAGE] Utilizador não autenticado')
+      setAuthState('unauthenticated')
+      router.push(redirectPath)
+      return
+    }
+  }, [user, isIqonicUser, isLoading, requireAdmin, allowInactive, redirectPath, router])
 
   // Mostrar loading apenas se estiver verificando
   if (authState === 'checking') {

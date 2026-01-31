@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/contexts/auth-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -44,6 +44,7 @@ import Link from "next/link"
 
 export default function AdminPage() {
   const router = useRouter()
+  const { user, isLoading: authLoading, isAdmin: authIsAdmin } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState("dashboard")
   const [stats, setStats] = useState<AdminStats | null>(null)
@@ -59,58 +60,38 @@ export default function AdminPage() {
   }, [])
 
   useEffect(() => {
-    if (mounted) {
+    if (mounted && !authLoading) {
       console.log('🔐 [ADMIN] Verificando permissões...')
       checkAdminAccess()
     }
-  }, [mounted])
+  }, [mounted, authLoading, user])
 
-  const checkAdminAccess = async () => {
-    try {
-      console.log('🔐 [ADMIN] Iniciando verificação de acesso...')
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+  const checkAdminAccess = () => {
+    // Usar auth-context como única fonte de verdade
+    if (!user) {
+      console.log('❌ [ADMIN] Sem utilizador, redirecionando para login...')
+      setIsAdmin(false)
+      setIsChecking(false)
+      window.location.href = '/login?redirect=/admin'
+      return
+    }
 
-      if (sessionError || !session) {
-        console.log('❌ [ADMIN] Sem sessão, redirecionando para login...')
-        setIsAdmin(false)
-        setIsChecking(false)
-        window.location.href = '/login?redirect=/admin'
-        return
-      }
-
-      console.log('✅ [ADMIN] Sessão encontrada:', session.user.email)
-
-      // Buscar perfil com fallback
-      let profile = null
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_type, is_active, email, member_category')
-        .eq('id', session.user.id)
-        .single()
-
-      if (profileError) {
-        console.warn('⚠️ [ADMIN] Erro ao buscar perfil, tentando API...', profileError)
-        
-        // Fallback: API bypass RLS
-        try {
-          const apiResponse = await fetch(`/api/profile/get?userId=${session.user.id}`)
-          if (apiResponse.ok) {
-            const apiData = await apiResponse.json()
-            profile = apiData.profile
-            console.log('✅ [ADMIN] Perfil via API:', profile?.email)
-          }
-        } catch (apiError) {
-          console.error('❌ [ADMIN] API fallback falhou:', apiError)
-        }
-      } else {
-        profile = profileData
-      }
-
-      console.log('👤 [ADMIN] Perfil carregado:', {
-        email: profile?.email,
-        user_type: profile?.user_type,
-        is_active: profile?.is_active
-      })
+    console.log('👤 [ADMIN] Utilizador do auth-context:', {
+      email: user.email,
+      user_type: user.user_type,
+      is_active: user.is_active
+    })
+    
+    // Usar isAdmin do auth-context
+    const userIsAdmin = authIsAdmin || user.user_type === 'admin'
+    setIsAdmin(userIsAdmin)
+    
+    if (!userIsAdmin) {
+      console.warn('⚠️ [ADMIN] Acesso negado - não é admin')
+      setIsChecking(false)
+      router.push('/member-area')
+      return
+    }
 
       // Verificar se é admin
       if (!profile || profile.user_type !== 'admin') {

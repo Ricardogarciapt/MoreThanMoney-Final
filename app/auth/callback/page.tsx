@@ -108,14 +108,28 @@ export default function AuthCallbackPage() {
 
           if (data?.session) {
             console.log('✅ [CALLBACK] Sessão criada:', data.session.user.email)
-            await ensureProfile(data.session)
             
-            // Buscar perfil completo para determinar redirecionamento
-            const { data: profile } = await supabase
+            // Sincronizar cache imediatamente (não bloqueia)
+            const { setCachedSession } = await import('@/lib/auth-cache')
+            setCachedSession(data.session)
+            
+            // Garantir perfil em paralelo (não bloquear redirecionamento)
+            ensureProfile(data.session).catch(err => console.warn('⚠️ [CALLBACK] Erro ao garantir perfil (não bloqueante):', err))
+            
+            // Buscar perfil para redirecionamento (com timeout curto)
+            const profilePromise = supabase
               .from('profiles')
               .select('*')
               .eq('id', data.session.user.id)
               .single()
+            
+            // Timeout de 1s para buscar perfil
+            const profileResult = await Promise.race([
+              profilePromise,
+              new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 1000))
+            ])
+            
+            const profile = profileResult.data
             
             setStatus("success")
             setMessage("Login realizado com sucesso!")
@@ -124,9 +138,8 @@ export default function AuthCallbackPage() {
             const fullRedirectUrl = redirectTo.startsWith('http') ? redirectTo : `${window.location.origin}${redirectTo}`
             
             console.log('🔄 [CALLBACK] Redirecionando para:', fullRedirectUrl)
-            setTimeout(() => {
-              window.location.href = fullRedirectUrl
-            }, 1000)
+            // Redirecionar imediatamente (sem delay)
+            window.location.replace(fullRedirectUrl)
             return
           } else {
             throw new Error("Sessão não foi criada após trocar código")
@@ -139,8 +152,8 @@ export default function AuthCallbackPage() {
           console.log('✅ [CALLBACK] Implicit Flow detectado (hash)')
           console.log('🔄 [CALLBACK] Processando hash...')
           
-          // Esperar um pouco para Supabase processar o hash
-          await new Promise(resolve => setTimeout(resolve, 500))
+          // Reduzir delay para 100ms (mínimo necessário)
+          await new Promise(resolve => setTimeout(resolve, 100))
           
           const { data: { session }, error: sessionError } = await supabase.auth.getSession()
           
@@ -151,14 +164,27 @@ export default function AuthCallbackPage() {
           
           if (session) {
             console.log('✅ [CALLBACK] Sessão do hash:', session.user.email)
-            await ensureProfile(session)
             
-            // Buscar perfil completo para determinar redirecionamento
-            const { data: profile } = await supabase
+            // Sincronizar cache imediatamente
+            const { setCachedSession } = await import('@/lib/auth-cache')
+            setCachedSession(session)
+            
+            // Garantir perfil em paralelo
+            ensureProfile(session).catch(err => console.warn('⚠️ [CALLBACK] Erro ao garantir perfil (não bloqueante):', err))
+            
+            // Buscar perfil com timeout
+            const profilePromise = supabase
               .from('profiles')
               .select('*')
               .eq('id', session.user.id)
               .single()
+            
+            const profileResult = await Promise.race([
+              profilePromise,
+              new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 1000))
+            ])
+            
+            const profile = profileResult.data
             
             setStatus("success")
             setMessage("Login realizado com sucesso!")
@@ -166,9 +192,8 @@ export default function AuthCallbackPage() {
             const redirectTo = determinePostLoginRedirect(profile, redirectParam)
             const fullRedirectUrl = redirectTo.startsWith('http') ? redirectTo : `${window.location.origin}${redirectTo}`
             
-            setTimeout(() => {
-              window.location.href = fullRedirectUrl
-            }, 1000)
+            // Redirecionar imediatamente
+            window.location.replace(fullRedirectUrl)
             return
           }
         }
@@ -184,14 +209,27 @@ export default function AuthCallbackPage() {
         
         if (session) {
           console.log('✅ [CALLBACK] Sessão já existe:', session.user.email)
-          await ensureProfile(session)
           
-          // Buscar perfil completo para determinar redirecionamento
-          const { data: profile } = await supabase
+          // Sincronizar cache imediatamente
+          const { setCachedSession } = await import('@/lib/auth-cache')
+          setCachedSession(session)
+          
+          // Garantir perfil em paralelo
+          ensureProfile(session).catch(err => console.warn('⚠️ [CALLBACK] Erro ao garantir perfil (não bloqueante):', err))
+          
+          // Buscar perfil com timeout
+          const profilePromise = supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single()
+          
+          const profileResult = await Promise.race([
+            profilePromise,
+            new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 1000))
+          ])
+          
+          const profile = profileResult.data
           
           const redirectTo = determinePostLoginRedirect(profile, redirectParam)
           const fullRedirectUrl = redirectTo.startsWith('http') ? redirectTo : `${window.location.origin}${redirectTo}`
@@ -199,9 +237,8 @@ export default function AuthCallbackPage() {
           setStatus("success")
           setMessage("Login realizado com sucesso!")
           
-          setTimeout(() => {
-            window.location.href = fullRedirectUrl
-          }, 500)
+          // Redirecionar imediatamente
+          window.location.replace(fullRedirectUrl)
           return
         }
 

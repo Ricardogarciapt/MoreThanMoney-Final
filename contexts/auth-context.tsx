@@ -23,7 +23,6 @@ interface AuthContextType {
   isAdmin: boolean
   isLoading: boolean
   isIqonicUser: boolean
-  signInWithGoogle: () => Promise<void>
   signInWithEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   signInWithIqonic: (email: string, password: string, isEducator?: boolean) => Promise<{ success: boolean; error?: string }>
   signUp: (email: string, password: string, userData: any) => Promise<{ success: boolean; error?: string }>
@@ -37,7 +36,6 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   isLoading: true,
   isIqonicUser: false,
-  signInWithGoogle: async () => {},
   signInWithEmail: async () => ({ success: false }),
   signInWithIqonic: async () => ({ success: false }),
   signUp: async () => ({ success: false }),
@@ -92,6 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     console.log('🔍 [AUTH CONTEXT] Inicializando...')
+    let mounted = true
     
     const loadUser = async () => {
       try {
@@ -101,58 +100,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log('✅ [AUTH CONTEXT] Sessão IQONIC encontrada:', iqonicSession.user.email)
           setIsIqonicUser(true)
           
-          // Buscar perfil no Supabase em paralelo (não bloqueia)
-          supabase
+          // Validar imediatamente o perfil no Supabase (com timeout curto)
+          const profilePromise = supabase
             .from('profiles')
             .select('*')
             .eq('email', iqonicSession.user.email || '')
             .single()
-            .then(({ data: profile }) => {
-              if (profile) {
-                setUser({
-                  id: profile.id,
-                  email: profile.email,
-                  full_name: profile.full_name,
-                  username: profile.username,
-                  avatar_url: profile.avatar_url,
-                  user_type: profile.user_type,
-                  is_active: profile.is_active,
-                  created_at: profile.created_at,
-                  phone: profile.phone,
-                  whatsapp: profile.whatsapp
-                })
-              } else {
-                // Se não há perfil, criar um básico da sessão IQONIC
-                const userType = iqonicSession.userType || 'student'
-                setUser({
-                  id: iqonicSession.iqonicUserId || iqonicSession.user.id || '',
-                  email: iqonicSession.user.email || '',
-                  full_name: iqonicSession.user.name || '',
-                  username: iqonicSession.user.distid || iqonicSession.user.userid || '',
-                  user_type: userType === 'educator' ? 'vip' : 'member',
-                  is_active: true,
-                })
-              }
+          
+          // Timeout de 1.5s para buscar perfil
+          const profileResult = await Promise.race([
+            profilePromise,
+            new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 1500))
+          ])
+          
+          if (!mounted) return
+          
+          if (profileResult.data) {
+            const profile = profileResult.data
+            // Validar que o perfil está ativo e autorizado
+            if (!profile.is_active) {
+              console.warn('⚠️ [AUTH CONTEXT] Perfil IQONIC inativo')
+              setUser(null)
+              setIsIqonicUser(false)
               setIsLoading(false)
+              return
+            }
+            
+            setUser({
+              id: profile.id,
+              email: profile.email,
+              full_name: profile.full_name,
+              username: profile.username,
+              avatar_url: profile.avatar_url,
+              user_type: profile.user_type,
+              is_active: profile.is_active,
+              created_at: profile.created_at,
+              phone: profile.phone,
+              whatsapp: profile.whatsapp
             })
-            .catch(() => {
-              // Em caso de erro, usar dados da sessão IQONIC
-              const userType = iqonicSession.userType || 'student'
-              setUser({
-                id: iqonicSession.iqonicUserId || iqonicSession.user.id || '',
-                email: iqonicSession.user.email || '',
-                full_name: iqonicSession.user.name || '',
-                username: iqonicSession.user.distid || iqonicSession.user.userid || '',
-                user_type: userType === 'educator' ? 'vip' : 'member',
-                is_active: true,
-              })
-              setIsLoading(false)
-            })
-          return
+            setIsLoading(false)
+            return
+          } else {
+            // Se não há perfil no Supabase, o login IQONIC não foi autorizado corretamente
+            console.warn('⚠️ [AUTH CONTEXT] Perfil IQONIC não encontrado no Supabase - login não autorizado')
+            // Limpar sessão IQONIC inválida
+            clearIqonicSession()
+            setUser(null)
+            setIsIqonicUser(false)
+            setIsLoading(false)
+            return
+          }
         }
         
-        // 2. Verificar cache Supabase
-        const { getCachedSession, isSessionValid } = await import('@/lib/auth-cache')
+        // 2. Verificar cache Supabase primeiro (instantâneo)
+        const { getCachedSession, isSessionValid, setCachedSession } = await import('@/lib/auth-cache')
         const cachedSession = getCachedSession()
         
         if (cachedSession && isSessionValid(cachedSession)) {
@@ -165,6 +166,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .eq('id', cachedSession.user.id)
             .single()
             .then(({ data: profile }) => {
+              if (!mounted) return
               if (profile) {
                 setUser({
                   id: profile.id,
@@ -181,16 +183,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               }
               setIsLoading(false)
             })
-            .catch(() => setIsLoading(false))
+            .catch(() => {
+              if (mounted) setIsLoading(false)
+            })
           return
         }
         
-        // 3. Verificar sessão Supabase normalmente
-        const { data: { session } } = await supabase.auth.getSession()
+        // 3. Verificar sessão Supabase (com timeout)
+        const sessionPromise = Promise.race([
+          supabase.auth.getSession(),
+          new Promise<any>((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 2000)
+          )
+        ])
         
-        if (session?.user) {
+        try {
+          const { data: { session }, error } = await sessionPromise
+          
+          if (!mounted) return
+          
+          if (error || !session?.user) {
+            console.log('ℹ️ [AUTH CONTEXT] Nenhuma sessão ativa')
+            setUser(null)
+            setIsIqonicUser(false)
+            setIsLoading(false)
+            return
+          }
+          
           console.log('✅ [AUTH CONTEXT] Sessão Supabase encontrada:', session.user.email)
           setIsIqonicUser(false)
+          
+          // Sincronizar cache imediatamente
+          setCachedSession(session)
           
           // Buscar perfil
           const { data: profile } = await supabase
@@ -198,6 +222,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .select('*')
             .eq('id', session.user.id)
             .single()
+          
+          if (!mounted) return
           
           if (profile) {
             console.log('✅ [AUTH CONTEXT] Perfil carregado:', profile.email)
@@ -216,7 +242,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           } else {
             console.log('📝 [AUTH CONTEXT] Criando perfil...')
             const newProfile = await createProfile(session.user)
-            if (newProfile) {
+            if (newProfile && mounted) {
               setUser({
                 id: newProfile.id,
                 email: newProfile.email,
@@ -231,44 +257,81 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               })
             }
           }
-        } else {
-          console.log('ℹ️ [AUTH CONTEXT] Nenhuma sessão ativa')
-          setUser(null)
-          setIsIqonicUser(false)
+        } catch (timeoutError) {
+          if (!mounted) return
+          console.warn('⚠️ [AUTH CONTEXT] Timeout ao buscar sessão, usando cache se disponível')
+          // Tentar cache novamente
+          const cachedSession = getCachedSession()
+          if (cachedSession && isSessionValid(cachedSession)) {
+            setIsIqonicUser(false)
+            setIsLoading(false)
+            // Perfil será carregado em background
+          } else {
+            setUser(null)
+            setIsIqonicUser(false)
+          }
         }
       } catch (error) {
         console.error('❌ [AUTH CONTEXT] Erro:', error)
-        setUser(null)
-        setIsIqonicUser(false)
+        if (mounted) {
+          setUser(null)
+          setIsIqonicUser(false)
+        }
       } finally {
-        setIsLoading(false)
+        if (mounted) {
+          setIsLoading(false)
+        }
       }
     }
 
     loadUser()
-
-    // Escutar mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: any) => {
-      console.log('🔔 [AUTH CONTEXT] Evento:', event)
+    
+    // Escutar mudanças de autenticação para sincronizar automaticamente
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return
       
-      if (event === 'SIGNED_IN' && session?.user) {
-        console.log('✅ [AUTH CONTEXT] Login detectado:', session.user.email)
-        await loadUser()
+      console.log('🔔 [AUTH CONTEXT] Auth evento:', event)
+      
+      if (event === 'SIGNED_IN' && session) {
+        const { setCachedSession } = await import('@/lib/auth-cache')
+        setCachedSession(session)
+        setIsIqonicUser(false)
+        
+        // Recarregar perfil
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+        
+        if (profile && mounted) {
+          setUser({
+            id: profile.id,
+            email: profile.email,
+            full_name: profile.full_name,
+            username: profile.username,
+            avatar_url: profile.avatar_url || session.user.user_metadata?.avatar_url,
+            user_type: profile.user_type,
+            is_active: profile.is_active,
+            created_at: profile.created_at,
+            phone: profile.phone,
+            whatsapp: profile.whatsapp
+          })
+        }
       } else if (event === 'SIGNED_OUT') {
-        console.log('🚪 [AUTH CONTEXT] Logout detectado')
+        const { clearCachedSession } = await import('@/lib/auth-cache')
+        clearCachedSession()
+        clearIqonicSession()
         setUser(null)
-        setIsLoading(false)
+        setIsIqonicUser(false)
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
-
-  // Login com Google - implementação simples e direta
-  const signInWithGoogle = async () => {
-    // Este método não é mais usado - login é feito diretamente nas páginas
-    throw new Error('Use login direto com supabase.auth.signInWithOAuth()')
-  }
 
   // Login com Email/Password
   const signInWithEmail = async (email: string, password: string) => {
@@ -486,9 +549,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const startTime = performance.now()
       console.log('🔐 [IQONIC] Tentando login:', email, isEducator ? '(Educator)' : '(Student)')
       
-      // Usar AbortController para timeout de 5 segundos
+      // Usar AbortController para timeout de 4 segundos (reduzido)
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
+      const timeoutId = setTimeout(() => controller.abort(), 4000)
       
       const response = await fetch('/api/auth/iqonic-login', {
         method: 'POST',
@@ -515,29 +578,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const endTime = performance.now()
       console.log(`✅ [IQONIC] Login bem-sucedido em ${Math.round(endTime - startTime)}ms:`, data.user.email)
       
+      // Validar imediatamente que o perfil foi criado/atualizado no Supabase
+      // Buscar perfil com timeout curto para confirmar autorização
+      const profilePromise = supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single()
+      
+      const profileResult = await Promise.race([
+        profilePromise,
+        new Promise<any>((resolve) => setTimeout(() => resolve({ data: data.user }), 1000))
+      ])
+      
+      const profile = profileResult.data || data.user
+      
+      // Verificar se o perfil está ativo e autorizado
+      if (!profile.is_active) {
+        console.warn('⚠️ [IQONIC] Perfil criado mas inativo')
+        return { success: false, error: 'A tua conta está inativa. Contacta o suporte.' }
+      }
+      
       // Salvar sessão IQONIC localmente (não bloqueia)
       saveIqonicSession(data.iqonicUser, data.token, data.userType)
       
-      // Atualizar estado do usuário imediatamente
+      // Atualizar estado do usuário imediatamente com dados validados
       setUser({
-        id: data.user.id,
-        email: data.user.email,
-        full_name: data.user.full_name,
-        username: data.user.username,
-        avatar_url: data.user.avatar_url,
-        user_type: data.user.user_type,
-        is_active: data.user.is_active,
-        created_at: data.user.created_at,
-        phone: data.user.phone,
-        whatsapp: data.user.whatsapp
+        id: profile.id,
+        email: profile.email || data.user.email,
+        full_name: profile.full_name || data.user.full_name,
+        username: profile.username || data.user.username,
+        avatar_url: profile.avatar_url || data.user.avatar_url,
+        user_type: profile.user_type || data.user.user_type,
+        is_active: profile.is_active !== undefined ? profile.is_active : data.user.is_active,
+        created_at: profile.created_at || data.user.created_at,
+        phone: profile.phone || data.user.phone,
+        whatsapp: profile.whatsapp || data.user.whatsapp
       })
       
       setIsIqonicUser(true)
+      setIsLoading(false) // Garantir que não fica em loading
+      
+      console.log('✅ [IQONIC] Perfil validado e autorizado:', profile.email)
       
       return { success: true }
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        console.error('❌ [IQONIC] Timeout no login (5s)')
+        console.error('❌ [IQONIC] Timeout no login (4s)')
         return { success: false, error: 'Timeout: O servidor demorou muito a responder. Tenta novamente.' }
       }
       console.error('❌ [IQONIC] Exceção no login:', error)
@@ -612,7 +699,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAdmin: user?.user_type === "admin",
         isLoading,
         isIqonicUser,
-        signInWithGoogle,
         signInWithEmail,
         signInWithIqonic,
         signUp,

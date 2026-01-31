@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import { clearCachedSession } from "@/lib/auth-cache"
+import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -43,71 +42,22 @@ interface UserProfile {
 
 export default function UserDropdown() {
   const pathname = usePathname()
-  const [user, setUser] = useState<UserProfile | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { user: authUser, isLoading: authLoading, logout } = useAuth()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const [xpData, setXpData] = useState<{ xp: number; level: number } | null>(null)
 
-  useEffect(() => {
-    console.log('🔍 [USER DROPDOWN] Inicializando...')
-    loadUser()
-
-    // Escutar mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔔 [USER DROPDOWN] Auth evento:', event)
-      
-      if (event === 'SIGNED_IN') {
-        // Para SIGNED_IN, usar a sessão que vem do callback
-        if (session?.user) {
-          console.log('✅ [USER DROPDOWN] Login detectado via callback')
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Utilizador',
-            username: session.user.email?.split('@')[0] || 'user',
-            avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
-            user_type: 'member',
-            is_active: true
-          })
-          setIsLoading(false)
-          // Carregar perfil em background
-          queueMicrotask(async () => {
-            try {
-              const { data: profile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single()
-
-              if (profile) {
-                console.log('✅ [USER DROPDOWN] Perfil carregado:', profile.email)
-                setUser({
-                  id: profile.id,
-                  email: profile.email,
-                  full_name: profile.full_name,
-                  username: profile.username,
-                  avatar_url: profile.avatar_url || session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
-                  user_type: profile.user_type,
-                  is_active: profile.is_active
-                })
-              }
-            } catch (profileError) {
-              console.warn('⚠️ [USER DROPDOWN] Erro ao carregar perfil')
-            }
-          })
-        }
-      } else if (event === 'SIGNED_OUT') {
-        clearCachedSession()
-        setUser(null)
-        setUnreadNotificationsCount(0)
-        setIsLoading(false)
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
+  // Usar user do auth-context (única fonte de verdade)
+  const user = authUser ? {
+    id: authUser.id,
+    email: authUser.email,
+    full_name: authUser.full_name,
+    username: authUser.username,
+    avatar_url: authUser.avatar_url,
+    user_type: authUser.user_type,
+    is_active: authUser.is_active
+  } : null
 
   // Carregar XP quando user estiver disponível
   useEffect(() => {
@@ -221,19 +171,13 @@ export default function UserDropdown() {
     let interval: NodeJS.Timeout | null = null
 
     const setupNotifications = async () => {
-      // Verificar sessão antes de criar subscription
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) {
-        console.warn('⚠️ [USER DROPDOWN] Sem sessão, não criando subscription Realtime')
-        // Ainda carregar notificações via fetch
-        loadUnreadNotificationsCount()
-        interval = setInterval(loadUnreadNotificationsCount, 30000)
-        return
-      }
-
       // Carregar inicialmente
       loadUnreadNotificationsCount()
+      
+      // Se não há user, não criar subscription
+      if (!user?.id) {
+        return
+      }
 
       // Real-time subscription para notificações (apenas se tiver sessão)
       channel = supabase
@@ -301,90 +245,15 @@ export default function UserDropdown() {
     }
   }
 
-  const loadUser = async () => {
-    try {
-      console.log('🔄 [USER DROPDOWN] Iniciando carregamento...')
-      
-      // Buscar sessão com timeout de 10s para evitar espera infinita
-      const sessionPromise = supabase.auth.getSession()
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Session timeout')), 10000)
-      )
-      
-      const { data: { session }, error: sessionError } = await Promise.race([
-        sessionPromise,
-        timeoutPromise
-      ]) as any
-      
-      if (sessionError || !session?.user) {
-        if (sessionError) {
-          console.error('❌ [USER DROPDOWN] Erro ao buscar sessão:', sessionError)
-        }
-        setUser(null)
-        setIsLoading(false)
-        return
-      }
-      
-      console.log('✅ [USER DROPDOWN] Sessão encontrada:', session.user.email)
-      
-      // Usar dados da sessão IMEDIATAMENTE (sem esperar pelo perfil)
-      setUser({
-        id: session.user.id,
-        email: session.user.email || '',
-        full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Utilizador',
-        username: session.user.email?.split('@')[0] || 'user',
-        avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
-        user_type: 'member', // Default
-        is_active: true
-      })
-      setIsLoading(false)
-      
-      // Buscar perfil em background (sem bloquear renderização)
-      queueMicrotask(async () => {
-        try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
-
-          if (profile) {
-            console.log('✅ [USER DROPDOWN] Perfil carregado em background:', profile.email)
-            setUser({
-              id: profile.id,
-              email: profile.email,
-              full_name: profile.full_name,
-              username: profile.username,
-              avatar_url: profile.avatar_url || session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
-              user_type: profile.user_type,
-              is_active: profile.is_active
-            })
-          }
-        } catch (profileError) {
-          console.warn('⚠️ [USER DROPDOWN] Não foi possível carregar perfil, usando dados da sessão')
-        }
-      })
-      
-    } catch (error: any) {
-      console.error('❌ [USER DROPDOWN] Erro:', error)
-      setUser(null)
-      setIsLoading(false)
-    }
-  }
-
   const handleLogout = async () => {
     try {
       console.log('🚪 [USER DROPDOWN] Fazendo logout...')
       setIsLoggingOut(true)
       
-      // Limpar cache antes de fazer logout
-      clearCachedSession()
-      
-      await supabase.auth.signOut()
+      // Usar logout do auth-context (já limpa tudo)
+      await logout()
       
       console.log('✅ [USER DROPDOWN] Logout concluído')
-      setUser(null)
-      
       window.location.href = '/new-landing'
     } catch (error) {
       console.error('❌ [USER DROPDOWN] Erro no logout:', error)
@@ -392,8 +261,8 @@ export default function UserDropdown() {
     }
   }
 
-  // Loading state
-  if (isLoading) {
+  // Loading state - usar authLoading do auth-context
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center w-10 h-10">
         <Loader2 className="h-4 w-4 animate-spin text-[#D2A63C]" />

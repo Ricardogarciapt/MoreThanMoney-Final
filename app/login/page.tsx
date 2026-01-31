@@ -29,21 +29,43 @@ export default function LoginPage() {
   // Verificar se já está logado
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        console.log('✅ Já está logado, aguardando sincronização de cookies...')
-        
-        // Aguardar um pouco para garantir que cookies foram sincronizados
-        // Especialmente importante para páginas protegidas como /fast-start
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Não redirecionar para a própria página de login (evitar loop)
+      // Verificar cache primeiro (instantâneo)
+      const { getCachedSession, isSessionValid } = await import('@/lib/auth-cache')
+      const cachedSession = getCachedSession()
+      
+      if (cachedSession && isSessionValid(cachedSession)) {
+        console.log('✅ [LOGIN] Sessão em cache encontrada')
         if (redirectTo !== '/login') {
-          console.log(`🔄 Redirecionando para: ${redirectTo}`)
-          window.location.href = redirectTo
+          window.location.replace(redirectTo)
         } else {
-          window.location.href = '/new-landing'
+          window.location.replace('/new-landing')
         }
+        return
+      }
+      
+      // Se não há cache, verificar Supabase (com timeout curto)
+      const sessionPromise = Promise.race([
+        supabase.auth.getSession(),
+        new Promise<any>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 1500))
+      ])
+      
+      try {
+        const { data: { session } } = await sessionPromise
+        if (session) {
+          console.log('✅ [LOGIN] Sessão encontrada')
+          // Sincronizar cache imediatamente
+          const { setCachedSession } = await import('@/lib/auth-cache')
+          setCachedSession(session)
+          
+          if (redirectTo !== '/login') {
+            window.location.replace(redirectTo)
+          } else {
+            window.location.replace('/new-landing')
+          }
+        }
+      } catch (error) {
+        // Timeout ou erro - continuar normalmente (mostrar login)
+        console.log('ℹ️ [LOGIN] Sem sessão ativa')
       }
     }
     checkSession()
@@ -66,11 +88,13 @@ export default function LoginPage() {
           return
         }
         
-        // Redirecionar imediatamente para rota permitida (sem delay)
+        // Validar imediatamente que o login foi autorizado
+        // O signInWithIqonic já validou o perfil, então podemos redirecionar imediatamente
         const allowedRoutes = ['/app-mobile', '/scanner-access', '/portfolios']
         const targetRoute = allowedRoutes.includes(redirectTo) ? redirectTo : allowedRoutes[0]
-        console.log('✅ [IQONIC LOGIN] Login bem-sucedido, redirecionando para:', targetRoute)
-        // Usar replace para ser mais rápido (não adiciona ao histórico)
+        console.log('✅ [IQONIC LOGIN] Login autorizado, redirecionando para:', targetRoute)
+        
+        // Redirecionar imediatamente (sem delay)
         window.location.replace(targetRoute)
         return
       }
@@ -100,10 +124,14 @@ export default function LoginPage() {
 
       if (data.session) {
         console.log('✅ Login bem-sucedido:', data.user.email)
-        console.log('🔄 Redirecionando para:', redirectTo)
         
-        // Redirecionar com reload completo para garantir AuthContext atualização
-        window.location.href = redirectTo
+        // Sincronizar cache imediatamente
+        const { setCachedSession } = await import('@/lib/auth-cache')
+        setCachedSession(data.session)
+        
+        console.log('🔄 Redirecionando para:', redirectTo)
+        // Usar replace para ser mais rápido (não adiciona ao histórico)
+        window.location.replace(redirectTo)
       }
     } catch (error: any) {
       console.error('❌ Exceção no login:', error)

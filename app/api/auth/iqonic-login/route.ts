@@ -42,22 +42,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 1. Autenticar com API IQONIC e preparar dados em paralelo
+    // 1. Autenticar com API IQONIC (LMS) - VALIDAÇÃO PRIMÁRIA
     const supabase = getSupabaseAdmin()
     const crypto = await import('crypto')
     
-    // Fazer autenticação IQONIC e verificação de perfil em paralelo
-    const [iqonicResult, existingProfileResult] = await Promise.all([
-      loginIqonic(email, password, isEducator || false),
-      supabase.from("profiles").select("*").eq("email", email).single()
-    ])
+    console.log('🔐 [IQONIC API] Validando login no LMS IQONIC...')
+    
+    // Primeiro validar login no LMS IQONIC
+    const iqonicResult = await loginIqonic(email, password, isEducator || false)
 
+    // VALIDAÇÃO CRÍTICA: Se o login no LMS falhou, NÃO autorizar
     if (!iqonicResult.success || !iqonicResult.user || !iqonicResult.token) {
+      console.error('❌ [IQONIC API] Login no LMS IQONIC falhou:', iqonicResult.error)
       return NextResponse.json(
-        { success: false, error: iqonicResult.error || "Falha na autenticação IQONIC" },
+        { success: false, error: iqonicResult.error || "Credenciais inválidas no LMS IQONIC" },
         { status: 401 }
       )
     }
+    
+    console.log('✅ [IQONIC API] Login no LMS IQONIC validado:', iqonicResult.user.email)
+    
+    // Agora buscar perfil existente (se houver)
+    const existingProfileResult = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("email", email)
+      .single()
 
     const iqonicUser = iqonicResult.user
     const userType = isEducator ? "educator" : "student"
@@ -95,7 +105,7 @@ export async function POST(request: NextRequest) {
       avatar_url: iqonicUser.avatar_url || null,
     }
 
-    // Inserir ou atualizar perfil
+    // Inserir ou atualizar perfil (apenas se login LMS foi bem-sucedido)
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .upsert(profileData, {
@@ -107,10 +117,21 @@ export async function POST(request: NextRequest) {
     if (profileError) {
       console.error("❌ [IQONIC LOGIN] Erro ao criar/atualizar perfil:", profileError)
       return NextResponse.json(
-        { success: false, error: "Erro ao criar perfil no sistema" },
+        { success: false, error: "Erro ao autorizar perfil no sistema" },
         { status: 500 }
       )
     }
+    
+    // VALIDAÇÃO FINAL: Verificar que o perfil foi criado/atualizado corretamente
+    if (!profile || !profile.is_active) {
+      console.error("❌ [IQONIC LOGIN] Perfil criado mas inativo ou inválido")
+      return NextResponse.json(
+        { success: false, error: "Perfil não autorizado. Contacta o suporte." },
+        { status: 403 }
+      )
+    }
+    
+    console.log('✅ [IQONIC API] Perfil autorizado no sistema:', profile.email)
 
     // 4. Retornar dados da sessão
     return NextResponse.json({
