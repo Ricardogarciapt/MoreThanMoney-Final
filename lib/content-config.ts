@@ -116,10 +116,11 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'mtm-presentation',
       title: 'Apresentação MoreThanMoney',
-      videoId: 'RQIimjljeMI',
+      videoId: 'hKAQ72MsAwU',
       page: '/mtm',
       section: 'Video Modal',
-      autoplay: false
+      autoplay: true,
+      description: 'Vídeo de apresentação do ecossistema MoreThanMoney'
     }
   ],
   
@@ -247,6 +248,24 @@ export const defaultContentConfig: ContentConfig = {
       page: '/new-landing',
       section: 'Community Section',
       description: 'Comunidade AI Com Os Gémeos'
+    },
+    {
+      id: 'skool-mtm-hero',
+      title: 'Comunidade Skool MoreThanMoney',
+      url: 'https://www.skool.com/morethanmoney',
+      type: 'skool',
+      page: '/mtm',
+      section: 'Hero CTA',
+      description: 'Acesso gratuito à comunidade Skool - CTA principal'
+    },
+    {
+      id: 'skool-mtm-cta',
+      title: 'Começar no Skool',
+      url: 'https://www.skool.com/morethanmoney',
+      type: 'skool',
+      page: '/mtm',
+      section: 'Final CTA',
+      description: 'CTA final para acesso ao Skool'
     },
     
     // GOOGLE DRIVE

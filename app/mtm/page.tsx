@@ -34,7 +34,8 @@ import Image from "next/image"
 
 export default function MTMLandingPage() {
   const [mounted, setMounted] = useState(false)
-  const [videoId, setVideoId] = useState("RQIimjljeMI") // Fallback padrão
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
+  const [presentationVideoId, setPresentationVideoId] = useState("hKAQ72MsAwU") // Fallback
 
   useEffect(() => {
     setMounted(true)
@@ -47,16 +48,19 @@ export default function MTMLandingPage() {
       if (response.ok) {
         const data = await response.json()
         const mtmVideo = data.videos?.find((video: any) => 
-          video.page === '/mtm' || video.page === 'mtm'
+          video.page === '/mtm' && video.section === 'Video Modal'
         )
         if (mtmVideo?.videoId) {
-          setVideoId(mtmVideo.videoId)
+          setPresentationVideoId(mtmVideo.videoId)
         }
       }
     } catch (error) {
       console.error('Erro ao carregar configuração de vídeo:', error)
     }
   }
+
+  const openVideoModal = () => setIsVideoModalOpen(true)
+  const closeVideoModal = () => setIsVideoModalOpen(false)
 
   if (!mounted) {
     return (
@@ -110,6 +114,16 @@ export default function MTMLandingPage() {
                 <Sparkles className="w-5 h-5 mr-2" />
                 Entrar Gratuitamente na Comunidade Skool
               </Link>
+            </Button>
+            
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={openVideoModal}
+              className="border-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10 font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105"
+            >
+              <PlayCircle className="w-5 h-5 mr-2" />
+              Ver Apresentação
             </Button>
           </div>
         </div>
@@ -567,6 +581,38 @@ export default function MTMLandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Modal de Vídeo de Apresentação */}
+      {isVideoModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
+          onClick={closeVideoModal}
+        >
+          <div 
+            className="relative w-full max-w-5xl bg-black rounded-lg overflow-hidden border-2 border-purple-500/30"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={closeVideoModal}
+              className="absolute top-4 right-4 z-50 w-10 h-10 bg-black/70 hover:bg-black/90 rounded-full flex items-center justify-center text-white transition-colors"
+              style={{ zIndex: 100 }}
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="p-4">
+              <h3 className="text-2xl font-bold text-white mb-4 text-center">
+                Apresentação MoreThanMoney
+              </h3>
+              <YouTubeEmbed 
+                videoId={presentationVideoId}
+                title="Apresentação MoreThanMoney"
+                autoplay={true}
+                className="border border-purple-500/30"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
