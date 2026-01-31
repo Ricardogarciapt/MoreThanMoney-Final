@@ -8,7 +8,32 @@ import { loginIqonic } from "@/lib/iqonic-auth"
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, isEducator } = await request.json()
+    // Ler body apenas uma vez - Next.js permite apenas uma leitura
+    let body: { email?: string; password?: string; isEducator?: boolean }
+    
+    try {
+      body = await request.json()
+    } catch (parseError: any) {
+      console.error("❌ [IQONIC LOGIN] Erro ao fazer parse do body:", parseError.message || parseError)
+      
+      // Se o erro for sobre body já lido, retornar erro específico
+      if (parseError.message?.includes("already been read") || 
+          parseError.message?.includes("Body has already been read") ||
+          parseError.message?.includes("unusable") ||
+          parseError.message?.includes("body stream")) {
+        return NextResponse.json(
+          { success: false, error: "Erro ao processar requisição. Por favor, recarregue a página e tente novamente." },
+          { status: 400 }
+        )
+      }
+      
+      return NextResponse.json(
+        { success: false, error: "Erro ao processar dados da requisição. Verifique se os dados foram enviados corretamente." },
+        { status: 400 }
+      )
+    }
+
+    const { email, password, isEducator } = body || {}
 
     if (!email || !password) {
       return NextResponse.json(

@@ -2,19 +2,14 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ZoomIn, ZoomOut, Minimize, BarChart3, Globe, Zap, Coins } from "lucide-react"
+import { ZoomIn, ZoomOut, Minimize, BarChart3, Coins } from "lucide-react"
 
-type AssetCategoryKey = "forex" | "crypto" | "indices" | "commodities"
+type AssetCategoryKey = "crypto" | "indices"
 
 const assetCategories: Record<
   AssetCategoryKey,
   { label: string; icon: any; defaultScreener: "stocks_heatmap" | "crypto_bubbles" }
 > = {
-  forex: {
-    label: "Forex Majors",
-    icon: Globe,
-    defaultScreener: "stocks_heatmap",
-  },
   crypto: {
     label: "Cripto",
     icon: Coins,
@@ -23,11 +18,6 @@ const assetCategories: Record<
   indices: {
     label: "Índices / ETFs",
     icon: BarChart3,
-    defaultScreener: "stocks_heatmap",
-  },
-  commodities: {
-    label: "Commodities",
-    icon: Zap,
     defaultScreener: "stocks_heatmap",
   },
 }
@@ -43,7 +33,7 @@ interface ScannerScreenerProps {
 }
 
 export default function ScannerScreener({ mode = "desktop" }: ScannerScreenerProps) {
-  const [selectedCategory, setSelectedCategory] = useState<AssetCategoryKey>("forex")
+  const [selectedCategory, setSelectedCategory] = useState<AssetCategoryKey>("crypto")
   const [screenerZoom, setScreenerZoom] = useState(1)
   const [screenerPosition, setScreenerPosition] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
