@@ -204,10 +204,54 @@ export default function ScannerAccessPage() {
       })
       const data = await response.json()
       
-      if (data.success && data.progress && data.progress.checklist_data?.sections) {
-        // Restaurar estado da checklist
-        setChecklistSections(data.progress.checklist_data.sections)
+      // Só atualizar se houver dados válidos e não vazios
+      if (data.success && 
+          data.progress && 
+          data.progress.checklist_data?.sections && 
+          Array.isArray(data.progress.checklist_data.sections) &&
+          data.progress.checklist_data.sections.length > 0) {
+        // Validar estrutura dos dados antes de aplicar
+        const sections = data.progress.checklist_data.sections
+        const isValid = sections.every((section: any) => 
+          section && 
+          section.title && 
+          Array.isArray(section.items) && 
+          section.items.length > 0
+        )
+        
+        if (isValid) {
+          // Mapear ícones de string para componentes (se necessário)
+          const iconMap: Record<string, any> = {
+            Clock, Target, Shield, TrendingUp, ChartColumn
+          }
+          
+          const restoredSections = sections.map((section: any) => {
+            // Se o ícone for uma string, mapear para o componente
+            let icon = section.icon
+            if (typeof icon === 'string' && iconMap[icon]) {
+              icon = iconMap[icon]
+            } else if (!icon) {
+              // Se não houver ícone, usar um padrão baseado no título
+              icon = Clock
+            }
+            
+            return {
+              ...section,
+              icon: icon,
+              // Garantir que cores existem
+              color: section.color || "text-blue-400",
+              bgColor: section.bgColor || "bg-blue-500/10",
+              borderColor: section.borderColor || "border-blue-500/30"
+            }
+          })
+          
+          // Restaurar estado da checklist apenas se os dados forem válidos
+          setChecklistSections(restoredSections)
+        } else {
+          console.warn('Dados da checklist inválidos, mantendo estado padrão')
+        }
       }
+      // Se não houver dados ou estiverem vazios, manter o estado inicial padrão
     } catch (error) {
       console.error('Erro ao carregar checklist:', error)
       // Continuar com estado padrão se falhar

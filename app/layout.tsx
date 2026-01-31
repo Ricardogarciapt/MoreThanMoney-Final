@@ -64,54 +64,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="MTM App" />
-        <script
-          type="text/javascript"
-          src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
-          async
-        ></script>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              function googleTranslateElementInit() {
-                if (window.google && window.google.translate) {
-                  console.log('🌐 [GOOGLE TRANSLATE HEAD] Inicializando...');
-                  try {
-                    new google.translate.TranslateElement({
-                      pageLanguage: 'pt',
-                      includedLanguages: 'en,es,fr,de,it,nl,zh-CN,ja,ar,ru,hi,sr,hr,bs,sq,bg,ro,pl,uk,tr',
-                      layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-                      autoDisplay: false
-                    }, 'google_translate_element');
-                    
-                    // Verificar se o elemento foi criado
-                    const checkElement = () => {
-                      const combo = document.querySelector('.goog-te-combo');
-                      if (combo) {
-                        console.log('✅ [GOOGLE TRANSLATE HEAD] Widget pronto!');
-                        // Disponibilizar globalmente para uso
-                        window.mtm_google_translate_ready = true;
-                      } else {
-                        setTimeout(checkElement, 200);
-                      }
-                    };
-                    setTimeout(checkElement, 500);
-                  } catch (error) {
-                    console.error('❌ [GOOGLE TRANSLATE HEAD] Erro ao inicializar:', error);
-                  }
-                } else {
-                  console.warn('⚠️ [GOOGLE TRANSLATE HEAD] Google Translate API não disponível');
-                }
-              }
-              
-              // Garantir que está disponível globalmente
-              window.googleTranslateElementInit = googleTranslateElementInit;
-            `
-          }}
-        />
       </head>
       <body suppressHydrationWarning>
-        {/* Div necessário para Google Translate funcionar - Widget será posicionado via CSS */}
-        <div id="google_translate_element" />
         
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <AuthProvider>
