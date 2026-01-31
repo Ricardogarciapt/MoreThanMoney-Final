@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Shield, Loader2, AlertCircle, Eye, EyeOff, Mail, Lock } from 'lucide-react'
+import { Shield, Loader2, AlertCircle, Eye, EyeOff, Mail, Lock, GraduationCap } from 'lucide-react'
 import Link from 'next/link'
 
 export default function LoginPage() {
@@ -16,8 +17,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [isIqonicLogin, setIsIqonicLogin] = useState(false)
+  const [isEducator, setIsEducator] = useState(false)
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { signInWithIqonic } = useAuth()
   
   const isAdminLogin = searchParams.get('admin') === 'true'
   const redirectTo = searchParams.get('redirect') || '/new-landing'
@@ -51,6 +55,27 @@ export default function LoginPage() {
     setError('')
 
     try {
+      // Se for login IQONIC
+      if (isIqonicLogin) {
+        console.log('🔐 [IQONIC LOGIN] Iniciando...')
+        const result = await signInWithIqonic(email, password, isEducator)
+        
+        if (!result.success) {
+          setError(result.error || 'Erro ao fazer login IQONIC')
+          setIsLoading(false)
+          return
+        }
+        
+        // Redirecionar imediatamente para rota permitida (sem delay)
+        const allowedRoutes = ['/app-mobile', '/scanner-access', '/portfolios']
+        const targetRoute = allowedRoutes.includes(redirectTo) ? redirectTo : allowedRoutes[0]
+        console.log('✅ [IQONIC LOGIN] Login bem-sucedido, redirecionando para:', targetRoute)
+        // Usar replace para ser mais rápido (não adiciona ao histórico)
+        window.location.replace(targetRoute)
+        return
+      }
+
+      // Login normal Supabase
       console.log('🔐 [EMAIL LOGIN] Iniciando...')
       console.log('📧 Email:', email)
       
@@ -314,6 +339,69 @@ export default function LoginPage() {
                 </>
               )}
             </Button>
+
+            {/* IQONIC Login Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-700"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-gray-900 text-gray-400">Ou login IQONIC.VIP</span>
+              </div>
+            </div>
+
+            {/* Toggle IQONIC Login */}
+            <div className="flex gap-2 mb-4">
+              <Button
+                type="button"
+                variant={!isIqonicLogin ? "outline" : "default"}
+                className={`flex-1 ${!isIqonicLogin ? 'border-gray-700 text-gray-300' : 'bg-[#D2A63C] text-black'}`}
+                onClick={() => {
+                  setIsIqonicLogin(false)
+                  setError('')
+                }}
+                disabled={isLoading}
+              >
+                Login Normal
+              </Button>
+              <Button
+                type="button"
+                variant={isIqonicLogin ? "outline" : "default"}
+                className={`flex-1 ${isIqonicLogin ? 'border-[#D2A63C] text-[#D2A63C]' : 'bg-gray-800 text-gray-300'}`}
+                onClick={() => {
+                  setIsIqonicLogin(true)
+                  setError('')
+                }}
+                disabled={isLoading}
+              >
+                <GraduationCap className="w-4 h-4 mr-2" />
+                IQONIC.VIP
+              </Button>
+            </div>
+
+            {/* IQONIC User Type Toggle */}
+            {isIqonicLogin && (
+              <div className="flex gap-2 mb-4">
+                <Button
+                  type="button"
+                  variant={!isEducator ? "default" : "outline"}
+                  className={`flex-1 ${!isEducator ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
+                  onClick={() => setIsEducator(false)}
+                  disabled={isLoading}
+                >
+                  Estudante
+                </Button>
+                <Button
+                  type="button"
+                  variant={isEducator ? "default" : "outline"}
+                  className={`flex-1 ${isEducator ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
+                  onClick={() => setIsEducator(true)}
+                  disabled={isLoading}
+                >
+                  Educador
+                </Button>
+              </div>
+            )}
 
             {/* Registro Link */}
             <div className="mt-6 text-center">

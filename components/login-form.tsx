@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/contexts/auth-context"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, GraduationCap } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 export default function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
@@ -16,8 +16,10 @@ export default function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isIqonicLogin, setIsIqonicLogin] = useState(false)
+  const [isEducator, setIsEducator] = useState(false)
 
-  const { login } = useAuth()
+  const { signInWithEmail, signInWithIqonic } = useAuth()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,18 +45,31 @@ export default function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
     setIsLoading(true)
 
     try {
-      const result = await login(username, password)
-      if (result.success && result.user) {
-        onSuccess?.()
-
-        // Redirecionamento baseado no tipo de usuário
-        if (result.user.user_type === "admin") {
-          router.push("/admin")
-        } else {
-          router.push("/member-area")
+      // Se for login IQONIC
+      if (isIqonicLogin) {
+        const result = await signInWithIqonic(username, password, isEducator)
+        
+        if (!result.success) {
+          setError(result.error || "Erro ao fazer login IQONIC")
+          setIsLoading(false)
+          return
         }
+        
+        // Redirecionar imediatamente para rota permitida
+        const allowedRoutes = ['/app-mobile', '/scanner-access', '/portfolios']
+        onSuccess?.()
+        // Usar replace para ser mais rápido
+        window.location.replace(allowedRoutes[0])
+        return
+      }
+
+      // Login normal
+      const result = await signInWithEmail(username, password)
+      if (result.success) {
+        onSuccess?.()
+        router.push("/member-area")
       } else {
-        setError("Credenciais inválidas. Verifica o teu nome de utilizador e palavra-passe.")
+        setError(result.error || "Credenciais inválidas. Verifica o teu email e palavra-passe.")
       }
     } catch (err) {
       setError("Ocorreu um erro ao iniciar sessão. Tenta novamente mais tarde.")
@@ -101,6 +116,63 @@ export default function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
               className="bg-gray-800/50 border-white/10 text-white"
             />
           </div>
+
+          {/* Toggle IQONIC Login */}
+          <div className="flex gap-2 mb-4">
+            <Button
+              type="button"
+              variant={!isIqonicLogin ? "default" : "outline"}
+              className={`flex-1 ${!isIqonicLogin ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
+              onClick={() => {
+                setIsIqonicLogin(false)
+                setError('')
+              }}
+              disabled={isLoading}
+              size="sm"
+            >
+              Login Normal
+            </Button>
+            <Button
+              type="button"
+              variant={isIqonicLogin ? "default" : "outline"}
+              className={`flex-1 ${isIqonicLogin ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
+              onClick={() => {
+                setIsIqonicLogin(true)
+                setError('')
+              }}
+              disabled={isLoading}
+              size="sm"
+            >
+              <GraduationCap className="w-4 h-4 mr-1" />
+              IQONIC.VIP
+            </Button>
+          </div>
+
+          {/* IQONIC User Type Toggle */}
+          {isIqonicLogin && (
+            <div className="flex gap-2 mb-4">
+              <Button
+                type="button"
+                variant={!isEducator ? "default" : "outline"}
+                className={`flex-1 ${!isEducator ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
+                onClick={() => setIsEducator(false)}
+                disabled={isLoading}
+                size="sm"
+              >
+                Estudante
+              </Button>
+              <Button
+                type="button"
+                variant={isEducator ? "default" : "outline"}
+                className={`flex-1 ${isEducator ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
+                onClick={() => setIsEducator(true)}
+                disabled={isLoading}
+                size="sm"
+              >
+                Educador
+              </Button>
+            </div>
+          )}
 
           <Button type="submit" className="w-full bg-gold-600 hover:bg-gold-700 text-black" disabled={isLoading}>
             {isLoading ? "A entrar..." : "Entrar"}

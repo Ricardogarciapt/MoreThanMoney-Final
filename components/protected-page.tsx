@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { getCachedSession, setCachedSession, isSessionValid, clearCachedSession } from "@/lib/auth-cache"
+import { loadIqonicSession } from "@/lib/iqonic-auth"
+import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 
 interface ProtectedPageProps {
@@ -22,7 +24,11 @@ export default function ProtectedPage({
   allowInactive = false
 }: ProtectedPageProps) {
   const router = useRouter()
+  const { user, isIqonicUser } = useAuth()
   const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'unauthenticated'>('checking')
+  
+  // Rotas permitidas para utilizadores IQONIC
+  const iqonicAllowedRoutes = ['/app-mobile', '/scanner-access', '/portfolios']
 
   useEffect(() => {
     let mounted = true
@@ -38,8 +44,38 @@ export default function ProtectedPage({
 
       try {
         const startTime = performance.now()
+        const currentPath = window.location.pathname
         
-        // 1. Tentar usar cache primeiro (verificação instantânea)
+        // 1. Verificar se é utilizador IQONIC
+        const iqonicSession = loadIqonicSession()
+        if (iqonicSession && iqonicSession.user) {
+          console.log('✅ [PROTECTED PAGE] Sessão IQONIC encontrada:', iqonicSession.user.email)
+          
+          // Verificar se a rota atual está permitida para IQONIC
+          const isRouteAllowed = iqonicAllowedRoutes.some(route => currentPath.startsWith(route))
+          
+          if (!isRouteAllowed) {
+            console.log(`⚠️ [PROTECTED PAGE] Rota ${currentPath} não permitida para utilizadores IQONIC`)
+            // Redirecionar para primeira rota permitida
+            if (mounted) {
+              setAuthState('unauthenticated')
+              router.push(iqonicAllowedRoutes[0])
+            }
+            isChecking = false
+            return
+          }
+          
+          // Se há sessão IQONIC válida, autorizar imediatamente (não esperar contexto)
+          const endTime = performance.now()
+          console.log(`⚡ [PROTECTED PAGE] IQONIC autenticado (cache): ${Math.round(endTime - startTime)}ms`)
+          if (mounted) {
+            setAuthState('authenticated')
+          }
+          isChecking = false
+          return
+        }
+        
+        // 2. Tentar usar cache Supabase primeiro (verificação instantânea)
         const cachedSession = getCachedSession()
         if (cachedSession && isSessionValid(cachedSession)) {
           const endTime = performance.now()
