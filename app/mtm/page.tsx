@@ -35,26 +35,61 @@ export default function MTMLandingPage() {
   const [mounted, setMounted] = useState(false)
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
   const [presentationVideoId, setPresentationVideoId] = useState("hKAQ72MsAwU") // Fallback
+  
+  // Função helper para garantir URLs corretas (compatível com Safari)
+  const getImageUrl = (path: string) => {
+    // Se já é uma URL completa, retornar como está
+    if (path.startsWith('http')) return path
+    // Codificar o caminho para lidar com espaços e caracteres especiais
+    return path.split('/').map(segment => encodeURIComponent(segment)).join('/')
+  }
+
+  const [images, setImages] = useState<Record<string, string>>({
+    problema: getImageUrl('/mtm/Problema.png'),
+    ecossistema: getImageUrl('/mtm/Ecossistema.png'),
+    estrategia: getImageUrl('/mtm/Estratégia.png'),
+    escolhaCaminho: getImageUrl('/mtm/Escolha de Caminho.png'),
+    diferenca: getImageUrl('/mtm/Diferença.png')
+  })
 
   useEffect(() => {
     setMounted(true)
-    loadVideoConfig()
+    loadContentConfig()
   }, [])
 
-  const loadVideoConfig = async () => {
+  const loadContentConfig = async () => {
     try {
       const response = await fetch('/api/admin/content-config')
       if (response.ok) {
         const data = await response.json()
+        
+        // Carregar vídeo
         const mtmVideo = data.videos?.find((video: any) => 
           video.page === '/mtm' && video.section === 'Video Modal'
         )
         if (mtmVideo?.videoId) {
           setPresentationVideoId(mtmVideo.videoId)
         }
+        
+        // Carregar imagens
+        const mtmImages = data.images?.filter((img: any) => img.page === '/mtm') || []
+        if (mtmImages.length > 0) {
+          const imageMap: Record<string, string> = {}
+          mtmImages.forEach((img: any) => {
+            const url = getImageUrl(img.url || '')
+            if (img.section === 'O Diagnóstico') imageMap.problema = url
+            if (img.section === 'EARN WHILE YOU LEARN') imageMap.ecossistema = url
+            if (img.section === 'A Escada do Sucesso') imageMap.estrategia = url
+            if (img.section === 'As Soluções Tecnológicas') imageMap.escolhaCaminho = url
+            if (img.section === 'O Modelo de Negócio') imageMap.diferenca = url
+          })
+          if (Object.keys(imageMap).length > 0) {
+            setImages(prev => ({ ...prev, ...imageMap }))
+          }
+        }
       }
     } catch (error) {
-      console.error('Erro ao carregar configuração de vídeo:', error)
+      console.error('Erro ao carregar configuração de conteúdo:', error)
     }
   }
 
@@ -145,10 +180,17 @@ export default function MTMLandingPage() {
               <div className="relative max-w-4xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
                   <img
-                    src="/mtm/Problema.png"
+                    src={images.problema}
                     alt="O Problema"
                     className="w-full h-auto rounded-lg"
                     loading="lazy"
+                    onError={(e) => {
+                      console.error('Erro ao carregar imagem:', images.problema)
+                      const fallback = getImageUrl('/mtm/Problema.png')
+                      if (e.currentTarget.src !== fallback) {
+                        e.currentTarget.src = fallback
+                      }
+                    }}
                   />
                 </Card>
               </div>
@@ -215,10 +257,17 @@ export default function MTMLandingPage() {
               <div className="relative max-w-5xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
                   <img
-                    src="/mtm/Ecossistema.png"
+                    src={images.ecossistema}
                     alt="O Ecossistema"
                     className="w-full h-auto rounded-lg"
                     loading="lazy"
+                    onError={(e) => {
+                      console.error('Erro ao carregar imagem:', images.ecossistema)
+                      const fallback = getImageUrl('/mtm/Ecossistema.png')
+                      if (e.currentTarget.src !== fallback) {
+                        e.currentTarget.src = fallback
+                      }
+                    }}
                   />
                 </Card>
               </div>
@@ -279,10 +328,17 @@ export default function MTMLandingPage() {
               <div className="relative max-w-5xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
                   <img
-                    src="/mtm/Estratégia.png"
+                    src={images.estrategia}
                     alt="A Escada do Sucesso"
                     className="w-full h-auto rounded-lg"
                     loading="lazy"
+                    onError={(e) => {
+                      console.error('Erro ao carregar imagem:', images.estrategia)
+                      const fallback = getImageUrl('/mtm/Estratégia.png')
+                      if (e.currentTarget.src !== fallback) {
+                        e.currentTarget.src = fallback
+                      }
+                    }}
                   />
                 </Card>
               </div>
@@ -357,10 +413,17 @@ export default function MTMLandingPage() {
               <div className="relative max-w-5xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
                   <img
-                    src="/mtm/Escolha de Caminho.png"
+                    src={images.escolhaCaminho}
                     alt="Escolhe o Teu Caminho"
                     className="w-full h-auto rounded-lg"
                     loading="lazy"
+                    onError={(e) => {
+                      console.error('Erro ao carregar imagem:', images.escolhaCaminho)
+                      const fallback = getImageUrl('/mtm/Escolha de Caminho.png')
+                      if (e.currentTarget.src !== fallback) {
+                        e.currentTarget.src = fallback
+                      }
+                    }}
                   />
                 </Card>
               </div>
@@ -444,10 +507,17 @@ export default function MTMLandingPage() {
               <div className="relative max-w-5xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
                   <img
-                    src="/mtm/Diferença.png"
+                    src={images.diferenca}
                     alt="A Diferença"
                     className="w-full h-auto rounded-lg"
                     loading="lazy"
+                    onError={(e) => {
+                      console.error('Erro ao carregar imagem:', images.diferenca)
+                      const fallback = getImageUrl('/mtm/Diferença.png')
+                      if (e.currentTarget.src !== fallback) {
+                        e.currentTarget.src = fallback
+                      }
+                    }}
                   />
                 </Card>
               </div>

@@ -25,14 +25,15 @@ import {
 import { Separator as UISeparator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/hooks/use-toast"
-import type { ContentConfig, VideoConfig, ExternalLinkConfig } from "@/lib/content-config"
+import type { ContentConfig, VideoConfig, ExternalLinkConfig, ImageConfig } from "@/lib/content-config"
 
 export default function ContentConfigManager() {
-  const [config, setConfig] = useState<ContentConfig>({ videos: [], links: [] })
+  const [config, setConfig] = useState<ContentConfig>({ videos: [], links: [], images: [] })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [editingVideo, setEditingVideo] = useState<VideoConfig | null>(null)
   const [editingLink, setEditingLink] = useState<ExternalLinkConfig | null>(null)
+  const [editingImage, setEditingImage] = useState<ImageConfig | null>(null)
 
   useEffect(() => {
     loadConfig()
@@ -259,14 +260,18 @@ export default function ContentConfigManager() {
 
       {/* Tabs */}
       <Tabs defaultValue="videos" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="videos">
             <Video className="w-4 h-4 mr-2" />
-            Vídeos ({config.videos.length})
+            Vídeos ({config.videos?.length || 0})
           </TabsTrigger>
           <TabsTrigger value="links">
             <LinkIcon className="w-4 h-4 mr-2" />
-            Links ({config.links.length})
+            Links ({config.links?.length || 0})
+          </TabsTrigger>
+          <TabsTrigger value="images">
+            <ImageIcon className="w-4 h-4 mr-2" />
+            Imagens ({config.images?.length || 0})
           </TabsTrigger>
         </TabsList>
 
@@ -681,6 +686,215 @@ export default function ContentConfigManager() {
                         variant="outline"
                         size="sm"
                         onClick={() => deleteLink(link.id)}
+                        className="text-red-500 hover:text-red-600"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* IMAGENS TAB */}
+        <TabsContent value="images" className="space-y-4">
+          <Button onClick={() => {
+            const newImage: ImageConfig = {
+              id: `image-${Date.now()}`,
+              title: 'Nova Imagem',
+              url: '',
+              alt: '',
+              page: '',
+              section: ''
+            }
+            setEditingImage(newImage)
+          }} className="w-full bg-mtm-primary hover:bg-mtm-primary-dark text-black">
+            <Plus className="w-4 h-4 mr-2" />
+            Adicionar Nova Imagem
+          </Button>
+
+          {/* Image Editor Modal */}
+          {editingImage && (
+            <Card className="bg-gray-900 border-mtm-primary">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Editar Imagem</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingImage(null)}
+                  >
+                    Cancelar
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-mtm-primary" />
+                    <h3 className="text-lg font-semibold text-mtm-primary">Informações da Imagem</h3>
+                  </div>
+                  
+                  <div>
+                    <Label>Título da Imagem *</Label>
+                    <Input
+                      value={editingImage.title}
+                      onChange={(e) => setEditingImage({ ...editingImage, title: e.target.value })}
+                      placeholder="Ex: O Problema"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label>URL da Imagem *</Label>
+                    <Input
+                      value={editingImage.url}
+                      onChange={(e) => setEditingImage({ ...editingImage, url: e.target.value })}
+                      placeholder="Ex: /mtm/Problema.png"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Caminho relativo ou URL completa</p>
+                  </div>
+                  
+                  <div>
+                    <Label>Texto Alternativo (Alt) *</Label>
+                    <Input
+                      value={editingImage.alt}
+                      onChange={(e) => setEditingImage({ ...editingImage, alt: e.target.value })}
+                      placeholder="Ex: O Problema"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Largura (opcional)</Label>
+                      <Input
+                        type="number"
+                        value={editingImage.width || ''}
+                        onChange={(e) => setEditingImage({ ...editingImage, width: e.target.value ? parseInt(e.target.value) : undefined })}
+                        placeholder="Ex: 1200"
+                      />
+                    </div>
+                    <div>
+                      <Label>Altura (opcional)</Label>
+                      <Input
+                        type="number"
+                        value={editingImage.height || ''}
+                        onChange={(e) => setEditingImage({ ...editingImage, height: e.target.value ? parseInt(e.target.value) : undefined })}
+                        placeholder="Ex: 600"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <UISeparator className="bg-mtm-primary/30" />
+
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-mtm-primary" />
+                    <h3 className="text-lg font-semibold text-mtm-primary">Informações da Secção</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Página *</Label>
+                      <Input
+                        value={editingImage.page}
+                        onChange={(e) => setEditingImage({ ...editingImage, page: e.target.value })}
+                        placeholder="Ex: /mtm"
+                      />
+                    </div>
+                    <div>
+                      <Label>Nome da Secção *</Label>
+                      <Input
+                        value={editingImage.section}
+                        onChange={(e) => setEditingImage({ ...editingImage, section: e.target.value })}
+                        placeholder="Ex: O Diagnóstico"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <UISeparator className="bg-mtm-primary/30" />
+
+                <Button 
+                  onClick={() => {
+                    if (!editingImage.title || !editingImage.url || !editingImage.alt || !editingImage.page || !editingImage.section) {
+                      toast({
+                        title: "Erro",
+                        description: "Preencha todos os campos obrigatórios",
+                        variant: "destructive"
+                      })
+                      return
+                    }
+                    
+                    const existingIndex = (config.images || []).findIndex((img: ImageConfig) => img.id === editingImage.id)
+                    
+                    if (existingIndex >= 0) {
+                      const updatedImages = [...(config.images || [])]
+                      updatedImages[existingIndex] = editingImage
+                      setConfig({ ...config, images: updatedImages })
+                    } else {
+                      setConfig({ ...config, images: [...(config.images || []), editingImage] })
+                    }
+                    
+                    setEditingImage(null)
+                    toast({
+                      title: "Imagem salva",
+                      description: "Clique em 'Salvar Tudo' para aplicar as mudanças",
+                    })
+                  }}
+                  className="w-full bg-mtm-primary hover:bg-mtm-primary-dark text-black"
+                >
+                  Salvar Imagem
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Images List */}
+          <div className="space-y-4">
+            {(config.images || []).map((image: ImageConfig) => (
+              <Card key={image.id} className="bg-gray-900 border-mtm-primary/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <ImageIcon className="w-5 h-5 text-mtm-primary" />
+                        <h3 className="font-semibold text-white">{image.title}</h3>
+                        <Badge variant="outline" className="text-xs">
+                          {image.page}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {image.section}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-400 mb-1">URL: {image.url}</p>
+                      <p className="text-sm text-gray-400">Alt: {image.alt}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingImage(image)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm('Tem certeza que deseja remover esta imagem?')) {
+                            setConfig({
+                              ...config,
+                              images: (config.images || []).filter((img: ImageConfig) => img.id !== image.id)
+                            })
+                            toast({
+                              title: "Imagem removida",
+                              description: "Clique em 'Salvar Tudo' para aplicar as mudanças",
+                            })
+                          }
+                        }}
                         className="text-red-500 hover:text-red-600"
                       >
                         <Trash2 className="w-4 h-4" />

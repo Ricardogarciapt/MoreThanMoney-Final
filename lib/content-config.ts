@@ -30,13 +30,82 @@ export interface ExternalLinkConfig {
   sectionDescription?: string
 }
 
+export interface ImageConfig {
+  id: string
+  title: string
+  url: string
+  alt: string
+  page: string
+  section: string
+  width?: number
+  height?: number
+  description?: string
+  sectionTitle?: string
+  sectionSubtitle?: string
+  sectionDescription?: string
+}
+
 export interface ContentConfig {
   videos: VideoConfig[]
   links: ExternalLinkConfig[]
+  images: ImageConfig[]
 }
 
 // Configuração padrão (fallback se não houver no admin_settings)
 export const defaultContentConfig: ContentConfig = {
+  images: [
+    // MTM PAGE IMAGES
+    {
+      id: 'mtm-problema',
+      title: 'O Problema',
+      url: '/mtm/Problema.png',
+      alt: 'O Problema',
+      page: '/mtm',
+      section: 'O Diagnóstico',
+      width: 1200,
+      height: 600
+    },
+    {
+      id: 'mtm-ecossistema',
+      title: 'O Ecossistema',
+      url: '/mtm/Ecossistema.png',
+      alt: 'O Ecossistema',
+      page: '/mtm',
+      section: 'EARN WHILE YOU LEARN',
+      width: 1400,
+      height: 800
+    },
+    {
+      id: 'mtm-estrategia',
+      title: 'A Escada do Sucesso',
+      url: '/mtm/Estratégia.png',
+      alt: 'A Escada do Sucesso',
+      page: '/mtm',
+      section: 'A Escada do Sucesso',
+      width: 1400,
+      height: 800
+    },
+    {
+      id: 'mtm-escolha-caminho',
+      title: 'Escolhe o Teu Caminho',
+      url: '/mtm/Escolha de Caminho.png',
+      alt: 'Escolhe o Teu Caminho',
+      page: '/mtm',
+      section: 'As Soluções Tecnológicas',
+      width: 1400,
+      height: 800
+    },
+    {
+      id: 'mtm-diferenca',
+      title: 'A Diferença',
+      url: '/mtm/Diferença.png',
+      alt: 'A Diferença',
+      page: '/mtm',
+      section: 'O Modelo de Negócio',
+      width: 1400,
+      height: 800
+    }
+  ],
   videos: [
     // IQONIC
     {

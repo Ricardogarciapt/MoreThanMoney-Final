@@ -37,16 +37,17 @@ export async function PUT(req: Request) {
     const body = await req.json()
     
     // Validar que é uma ContentConfig válida
-    if (!body.videos || !body.links) {
+    if (!body.videos || !body.links || !body.images) {
       return NextResponse.json(
-        { error: 'Configuração inválida. Deve conter videos e links.' },
+        { error: 'Configuração inválida. Deve conter videos, links e images.' },
         { status: 400 }
       )
     }
     
     console.log('[CONTENT_CONFIG_PUT] Salvando configuração:', {
       videos: body.videos.length,
-      links: body.links.length
+      links: body.links.length,
+      images: body.images.length
     })
     
     // Usar upsert com a estrutura correta (setting_key, setting_value)
