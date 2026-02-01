@@ -56,8 +56,15 @@ export async function middleware(request: NextRequest) {
   // Atualizar sessão do usuário
   await supabase.auth.getUser()
 
-  // Não aplicar middleware em rotas de autenticação e callbacks
+  // Não aplicar middleware em rotas de autenticação, callbacks e ficheiros estáticos
   const pathname = request.nextUrl.pathname
+  
+  // Excluir ficheiros estáticos (imagens, etc.)
+  const staticExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.pdf', '.mp4', '.mp3', '.woff', '.woff2', '.ttf', '.eot']
+  if (staticExtensions.some(ext => pathname.toLowerCase().endsWith(ext))) {
+    return response
+  }
+  
   if (
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/login") ||

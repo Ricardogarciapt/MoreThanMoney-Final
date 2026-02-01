@@ -40,16 +40,19 @@ export default function MTMLandingPage() {
   const getImageUrl = (path: string) => {
     // Se já é uma URL completa, retornar como está
     if (path.startsWith('http')) return path
-    // Codificar o caminho para lidar com espaços e caracteres especiais
-    return path.split('/').map(segment => encodeURIComponent(segment)).join('/')
+    // Para caminhos relativos, garantir que começam com /
+    if (!path.startsWith('/')) path = '/' + path
+    // Não codificar o caminho inteiro, apenas caracteres especiais se necessário
+    // Next.js serve ficheiros de public/ a partir da raiz
+    return path
   }
 
   const [images, setImages] = useState<Record<string, string>>({
-    problema: getImageUrl('/mtm/Problema.png'),
-    ecossistema: getImageUrl('/mtm/Ecossistema.png'),
-    estrategia: getImageUrl('/mtm/Estratégia.png'),
-    escolhaCaminho: getImageUrl('/mtm/Escolha de Caminho.png'),
-    diferenca: getImageUrl('/mtm/Diferença.png')
+    problema: '/mtm/Problema.png',
+    ecossistema: '/mtm/Ecossistema.png',
+    estrategia: '/mtm/Estratégia.png',
+    escolhaCaminho: '/mtm/Escolha de Caminho.png',
+    diferenca: '/mtm/Diferença.png'
   })
 
   useEffect(() => {
@@ -76,12 +79,15 @@ export default function MTMLandingPage() {
         if (mtmImages.length > 0) {
           const imageMap: Record<string, string> = {}
           mtmImages.forEach((img: any) => {
-            const url = getImageUrl(img.url || '')
-            if (img.section === 'O Diagnóstico') imageMap.problema = url
-            if (img.section === 'EARN WHILE YOU LEARN') imageMap.ecossistema = url
-            if (img.section === 'A Escada do Sucesso') imageMap.estrategia = url
-            if (img.section === 'As Soluções Tecnológicas') imageMap.escolhaCaminho = url
-            if (img.section === 'O Modelo de Negócio') imageMap.diferenca = url
+            // Se a URL for fornecida e válida, usar; caso contrário, usar o caminho padrão
+            const url = img.url && img.url.startsWith('http') 
+              ? img.url 
+              : (img.url || '')
+            if (img.section === 'O Diagnóstico') imageMap.problema = url || '/mtm/Problema.png'
+            if (img.section === 'EARN WHILE YOU LEARN') imageMap.ecossistema = url || '/mtm/Ecossistema.png'
+            if (img.section === 'A Escada do Sucesso') imageMap.estrategia = url || '/mtm/Estratégia.png'
+            if (img.section === 'As Soluções Tecnológicas') imageMap.escolhaCaminho = url || '/mtm/Escolha de Caminho.png'
+            if (img.section === 'O Modelo de Negócio') imageMap.diferenca = url || '/mtm/Diferença.png'
           })
           if (Object.keys(imageMap).length > 0) {
             setImages(prev => ({ ...prev, ...imageMap }))

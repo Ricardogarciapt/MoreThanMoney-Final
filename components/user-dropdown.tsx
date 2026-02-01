@@ -112,27 +112,41 @@ export default function UserDropdown() {
 
     window.addEventListener('xpUpdated', handleXPUpdate as EventListener)
 
-    // Subscribir a mudanças em tempo real
-    const channel = supabase
-      .channel(`user_xp_${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_xp',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('🔄 [USER DROPDOWN] Mudança detectada na tabela user_xp:', payload)
-          loadXP()
+    // Subscribir a mudanças em tempo real (apenas se houver sessão válida)
+    let channel: any = null
+    const setupRealtime = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+          channel = supabase
+            .channel(`user_xp_${user.id}`)
+            .on(
+              'postgres_changes',
+              {
+                event: '*',
+                schema: 'public',
+                table: 'user_xp',
+                filter: `user_id=eq.${user.id}`
+              },
+              (payload) => {
+                console.log('🔄 [USER DROPDOWN] Mudança detectada na tabela user_xp:', payload)
+                loadXP()
+              }
+            )
+            .subscribe()
         }
-      )
-      .subscribe()
+      } catch (error) {
+        console.warn('⚠️ [USER DROPDOWN] Erro ao configurar Realtime para XP:', error)
+      }
+    }
+    
+    setupRealtime()
 
     return () => {
       window.removeEventListener('xpUpdated', handleXPUpdate as EventListener)
-      supabase.removeChannel(channel)
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
     }
   }, [user?.id])
 
@@ -180,33 +194,52 @@ export default function UserDropdown() {
         return
       }
 
-      // Real-time subscription para notificações (apenas se tiver sessão)
-      channel = supabase
-        .channel(`user-dropdown-notifications-${user.id}-${Date.now()}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`
-          },
-          () => {
-            // Pequeno delay para garantir sincronização
-            setTimeout(() => {
-              loadUnreadNotificationsCount()
-            }, 500)
-          }
-        )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ [USER DROPDOWN] Subscription Realtime ativa')
-          } else if (status === 'CHANNEL_ERROR') {
-            console.warn('⚠️ [USER DROPDOWN] Erro na subscription Realtime, usando fallback')
-            // Fallback: polling a cada 30s
-            interval = setInterval(loadUnreadNotificationsCount, 30000)
-          }
-        })
+      try {
+        // Verificar se há sessão válida antes de subscrever
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError || !session?.access_token) {
+          console.warn('⚠️ [USER DROPDOWN] Sem sessão válida, usando fallback para notificações')
+          interval = setInterval(loadUnreadNotificationsCount, 30000)
+          return
+        }
+
+        // Real-time subscription para notificações (apenas se tiver sessão)
+        channel = supabase
+          .channel(`user-dropdown-notifications-${user.id}-${Date.now()}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'notifications',
+              filter: `user_id=eq.${user.id}`
+            },
+            () => {
+              // Pequeno delay para garantir sincronização
+              setTimeout(() => {
+                loadUnreadNotificationsCount()
+              }, 500)
+            }
+          )
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ [USER DROPDOWN] Subscription Realtime ativa')
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              console.warn('⚠️ [USER DROPDOWN] Erro na subscription Realtime, usando fallback')
+              // Fallback: polling a cada 30s
+              if (!interval) {
+                interval = setInterval(loadUnreadNotificationsCount, 30000)
+              }
+            }
+          })
+      } catch (error) {
+        console.warn('⚠️ [USER DROPDOWN] Erro ao configurar Realtime, usando fallback:', error)
+        // Fallback: polling a cada 30s
+        if (!interval) {
+          interval = setInterval(loadUnreadNotificationsCount, 30000)
+        }
+      }
 
       // Verificar a cada 30 segundos (fallback)
       interval = setInterval(loadUnreadNotificationsCount, 30000)
