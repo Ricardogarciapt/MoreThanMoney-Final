@@ -124,12 +124,8 @@ export default function NotificationsManager() {
     initializeSubscriptions()
 
     return () => {
-      if (channel) {
-        try {
-          supabase.removeChannel(channel)
-        } catch (e) {
-          console.warn('⚠️ [NOTIFICATIONS] Erro ao remover channel:', e)
-        }
+      if (channel && typeof channel === 'function') {
+        channel()
       }
       if (statsInterval) {
         clearInterval(statsInterval)
