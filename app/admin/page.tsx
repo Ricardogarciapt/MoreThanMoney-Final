@@ -215,77 +215,156 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/new-landing">
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-[#D2A63C] flex items-center">
-                <Shield className="w-8 h-8 mr-3" />
-                Dashboard Admin
-              </h1>
-              <p className="text-gray-300">Painel de controlo unificado</p>
+    <main className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black text-white">
+      {/* Background Pattern */}
+      <div className="fixed inset-0 opacity-5 pointer-events-none">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 2px 2px, #D2A63C 1px, transparent 0)`,
+          backgroundSize: '40px 40px'
+        }}></div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8 relative z-10">
+        {/* Header Melhorado */}
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <Link href="/new-landing">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-gray-400 hover:text-[#D2A63C] hover:bg-[#D2A63C]/10 transition-all duration-300"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Voltar
+                </Button>
+              </Link>
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-[#D2A63C]/20 to-[#BB8525]/10 border border-[#D2A63C]/30">
+                  <Shield className="w-8 h-8 text-[#D2A63C]" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-[#D2A63C] via-[#F3F3E6] to-[#D2A63C] bg-clip-text text-transparent">
+                    Dashboard Admin
+                  </h1>
+                  <p className="text-gray-400 mt-1">Painel de controlo unificado</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge className="bg-gradient-to-r from-[#D2A63C]/20 to-[#BB8525]/20 text-[#D2A63C] border-[#D2A63C]/40 text-sm px-4 py-2 font-semibold shadow-lg">
+                <Activity className="w-3 h-3 mr-2" />
+                Sistema Ativo
+              </Badge>
+              <Badge className="bg-red-500/20 text-red-400 border-red-500/40 text-sm px-4 py-2 font-semibold shadow-lg">
+                <Shield className="w-3 h-3 mr-2" />
+                Admin
+              </Badge>
             </div>
           </div>
-          <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-lg px-4 py-2">
-            Admin
-          </Badge>
+          
+          {/* Welcome Message */}
+          {user && (
+            <Card className="bg-gradient-to-r from-[#D2A63C]/10 via-[#BB8525]/5 to-[#D2A63C]/10 border-[#D2A63C]/30 mb-6">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-400">Bem-vindo,</p>
+                    <p className="text-lg font-semibold text-[#D2A63C]">{user.email}</p>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Database className="w-4 h-4" />
+                    <span>Supabase Conectado</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        {/* Stats Overview */}
+        {/* Stats Overview Melhorado */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card className="bg-gray-900/50 border-[#D2A63C]/30">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            <Card className="group bg-gradient-to-br from-[#D2A63C]/10 to-[#BB8525]/5 border-[#D2A63C]/40 hover:border-[#D2A63C]/60 transition-all duration-300 hover:shadow-xl hover:shadow-[#D2A63C]/20 hover:-translate-y-1">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Total Utilizadores</p>
-                    <p className="text-3xl font-bold text-[#D2A63C]">{stats.total_users || 0}</p>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 rounded-lg bg-[#D2A63C]/20 group-hover:bg-[#D2A63C]/30 transition-colors">
+                    <Users className="w-6 h-6 text-[#D2A63C]" />
                   </div>
-                  <Users className="w-12 h-12 text-[#D2A63C]/50" />
+                  <Badge className="bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/40">Total</Badge>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm mb-1">Total Utilizadores</p>
+                  <p className="text-4xl font-bold text-[#D2A63C] mb-2">{stats.total_users || 0}</p>
+                  <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[#D2A63C] to-[#BB8525] rounded-full transition-all duration-500"
+                      style={{ width: '100%' }}
+                    ></div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-gray-900/50 border-blue-500/30">
+            <Card className="group bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/40 hover:border-blue-500/60 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-1">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Utilizadores Ativos</p>
-                    <p className="text-3xl font-bold text-blue-400">{stats.active_users || 0}</p>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 rounded-lg bg-blue-500/20 group-hover:bg-blue-500/30 transition-colors">
+                    <Activity className="w-6 h-6 text-blue-400" />
                   </div>
-                  <Activity className="w-12 h-12 text-blue-400/50" />
+                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/40">Ativos</Badge>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm mb-1">Utilizadores Ativos</p>
+                  <p className="text-4xl font-bold text-blue-400 mb-2">{stats.active_users || 0}</p>
+                  <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full transition-all duration-500"
+                      style={{ width: `${stats.total_users ? (stats.active_users / stats.total_users) * 100 : 0}%` }}
+                    ></div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-gray-900/50 border-green-500/30">
+            <Card className="group bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/40 hover:border-green-500/60 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/20 hover:-translate-y-1">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Membros</p>
-                    <p className="text-3xl font-bold text-green-400">{stats.total_members || 0}</p>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 rounded-lg bg-green-500/20 group-hover:bg-green-500/30 transition-colors">
+                    <Shield className="w-6 h-6 text-green-400" />
                   </div>
-                  <Shield className="w-12 h-12 text-green-400/50" />
+                  <Badge className="bg-green-500/20 text-green-400 border-green-500/40">Premium</Badge>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm mb-1">Membros</p>
+                  <p className="text-4xl font-bold text-green-400 mb-2">{stats.total_members || 0}</p>
+                  <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all duration-500"
+                      style={{ width: `${stats.total_users ? (stats.total_members / stats.total_users) * 100 : 0}%` }}
+                    ></div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-gray-900/50 border-purple-500/30">
+            <Card className="group bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/40 hover:border-purple-500/60 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/20 hover:-translate-y-1">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm">Trials Ativos</p>
-                    <p className="text-3xl font-bold text-purple-400">{trialStats?.activeTrials || 0}</p>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 rounded-lg bg-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
+                    <BarChart3 className="w-6 h-6 text-purple-400" />
                   </div>
-                  <BarChart3 className="w-12 h-12 text-purple-400/50" />
+                  <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/40">Trials</Badge>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-sm mb-1">Trials Ativos</p>
+                  <p className="text-4xl font-bold text-purple-400 mb-2">{trialStats?.activeTrials || 0}</p>
+                  <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full transition-all duration-500"
+                      style={{ width: trialStats?.activeTrials ? '75%' : '0%' }}
+                    ></div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -295,50 +374,74 @@ export default function AdminPage() {
         {/* Dashboard Unificado - Seções Expansíveis */}
         <div className="space-y-6">
           {/* Analytics Section */}
-          <Card className="bg-gray-900/50 border-[#D2A63C]/30">
-            <CardHeader>
+          <Card className="group bg-gradient-to-br from-gray-900/80 to-gray-800/50 border-[#D2A63C]/40 hover:border-[#D2A63C]/60 transition-all duration-300 hover:shadow-lg hover:shadow-[#D2A63C]/10">
+            <CardHeader className="bg-gradient-to-r from-[#D2A63C]/10 to-transparent border-b border-[#D2A63C]/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-[#D2A63C] flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  Analytics
+                <CardTitle className="text-[#D2A63C] flex items-center gap-3 text-xl">
+                  <div className="p-2 rounded-lg bg-[#D2A63C]/20">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                  Analytics & Métricas
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleSection('analytics')}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-[#D2A63C] hover:bg-[#D2A63C]/10 transition-all"
                 >
-                  {expandedSection === 'analytics' ? 'Recolher' : 'Expandir'}
+                  {expandedSection === 'analytics' ? (
+                    <>
+                      <span className="mr-2">Recolher</span>
+                      <span className="text-xs">▲</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-2">Expandir</span>
+                      <span className="text-xs">▼</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </CardHeader>
             {expandedSection === 'analytics' && (
-              <CardContent>
+              <CardContent className="pt-6">
                 <AnalyticsManager />
               </CardContent>
             )}
           </Card>
 
           {/* Utilizadores Section */}
-          <Card className="bg-gray-900/50 border-blue-500/30">
-            <CardHeader>
+          <Card className="group bg-gradient-to-br from-gray-900/80 to-gray-800/50 border-blue-500/40 hover:border-blue-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10">
+            <CardHeader className="bg-gradient-to-r from-blue-500/10 to-transparent border-b border-blue-500/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-blue-400 flex items-center gap-2">
-                  <Users className="w-5 h-5" />
+                <CardTitle className="text-blue-400 flex items-center gap-3 text-xl">
+                  <div className="p-2 rounded-lg bg-blue-500/20">
+                    <Users className="w-5 h-5" />
+                  </div>
                   Gestão de Utilizadores
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleSection('users')}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
                 >
-                  {expandedSection === 'users' ? 'Recolher' : 'Expandir'}
+                  {expandedSection === 'users' ? (
+                    <>
+                      <span className="mr-2">Recolher</span>
+                      <span className="text-xs">▲</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-2">Expandir</span>
+                      <span className="text-xs">▼</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </CardHeader>
             {expandedSection === 'users' && (
-              <CardContent>
+              <CardContent className="pt-6">
                 <UserManagementComponent 
                   users={users} 
                   onRefresh={fetchUsers}
@@ -350,31 +453,49 @@ export default function AdminPage() {
           </Card>
 
           {/* Conteúdo Section */}
-          <Card className="bg-gray-900/50 border-purple-500/30">
-            <CardHeader>
+          <Card className="group bg-gradient-to-br from-gray-900/80 to-gray-800/50 border-purple-500/40 hover:border-purple-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
+            <CardHeader className="bg-gradient-to-r from-purple-500/10 to-transparent border-b border-purple-500/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-purple-400 flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
+                <CardTitle className="text-purple-400 flex items-center gap-3 text-xl">
+                  <div className="p-2 rounded-lg bg-purple-500/20">
+                    <FileText className="w-5 h-5" />
+                  </div>
                   Gestão de Conteúdo
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleSection('content')}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-purple-400 hover:bg-purple-500/10 transition-all"
                 >
-                  {expandedSection === 'content' ? 'Recolher' : 'Expandir'}
+                  {expandedSection === 'content' ? (
+                    <>
+                      <span className="mr-2">Recolher</span>
+                      <span className="text-xs">▲</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-2">Expandir</span>
+                      <span className="text-xs">▼</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </CardHeader>
             {expandedSection === 'content' && (
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Conteúdo do Site</h3>
+              <CardContent className="pt-6 space-y-6">
+                <div className="space-y-4 p-4 rounded-lg bg-gray-800/30 border border-purple-500/20">
+                  <h3 className="text-lg font-semibold text-purple-300 flex items-center gap-2">
+                    <Video className="w-5 h-5" />
+                    Conteúdo do Site
+                  </h3>
                   <SiteContentManager />
                 </div>
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Vídeos & Links</h3>
+                <div className="space-y-4 p-4 rounded-lg bg-gray-800/30 border border-purple-500/20">
+                  <h3 className="text-lg font-semibold text-purple-300 flex items-center gap-2">
+                    <LinkIcon className="w-5 h-5" />
+                    Vídeos & Links
+                  </h3>
                   <ContentConfigManager />
                 </div>
               </CardContent>
@@ -382,175 +503,259 @@ export default function AdminPage() {
           </Card>
 
           {/* Chats & Mensagens Section */}
-          <Card className="bg-gray-900/50 border-cyan-500/30">
-            <CardHeader>
+          <Card className="group bg-gradient-to-br from-gray-900/80 to-gray-800/50 border-cyan-500/40 hover:border-cyan-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/10">
+            <CardHeader className="bg-gradient-to-r from-cyan-500/10 to-transparent border-b border-cyan-500/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-cyan-400 flex items-center gap-2">
-                  <MessageCircle className="w-5 h-5" />
+                <CardTitle className="text-cyan-400 flex items-center gap-3 text-xl">
+                  <div className="p-2 rounded-lg bg-cyan-500/20">
+                    <MessageCircle className="w-5 h-5" />
+                  </div>
                   Chats & Mensagens
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleSection('chats')}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-all"
                 >
-                  {expandedSection === 'chats' ? 'Recolher' : 'Expandir'}
+                  {expandedSection === 'chats' ? (
+                    <>
+                      <span className="mr-2">Recolher</span>
+                      <span className="text-xs">▲</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-2">Expandir</span>
+                      <span className="text-xs">▼</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </CardHeader>
             {expandedSection === 'chats' && (
-              <CardContent>
+              <CardContent className="pt-6">
                 <ChatsMessagesManager />
               </CardContent>
             )}
           </Card>
 
           {/* Email Marketing Section */}
-          <Card className="bg-gray-900/50 border-amber-500/30">
-            <CardHeader>
+          <Card className="group bg-gradient-to-br from-gray-900/80 to-gray-800/50 border-amber-500/40 hover:border-amber-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/10">
+            <CardHeader className="bg-gradient-to-r from-amber-500/10 to-transparent border-b border-amber-500/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-amber-400 flex items-center gap-2">
-                  <Mail className="w-5 h-5" />
+                <CardTitle className="text-amber-400 flex items-center gap-3 text-xl">
+                  <div className="p-2 rounded-lg bg-amber-500/20">
+                    <Mail className="w-5 h-5" />
+                  </div>
                   Email Marketing
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleSection('email')}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 transition-all"
                 >
-                  {expandedSection === 'email' ? 'Recolher' : 'Expandir'}
+                  {expandedSection === 'email' ? (
+                    <>
+                      <span className="mr-2">Recolher</span>
+                      <span className="text-xs">▲</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-2">Expandir</span>
+                      <span className="text-xs">▼</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </CardHeader>
             {expandedSection === 'email' && (
-              <CardContent>
+              <CardContent className="pt-6">
                 <EmailMarketingManager />
               </CardContent>
             )}
           </Card>
 
           {/* Notificações Section */}
-          <Card className="bg-gray-900/50 border-orange-500/30">
-            <CardHeader>
+          <Card className="group bg-gradient-to-br from-gray-900/80 to-gray-800/50 border-orange-500/40 hover:border-orange-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10">
+            <CardHeader className="bg-gradient-to-r from-orange-500/10 to-transparent border-b border-orange-500/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-orange-400 flex items-center gap-2">
-                  <Bell className="w-5 h-5" />
+                <CardTitle className="text-orange-400 flex items-center gap-3 text-xl">
+                  <div className="p-2 rounded-lg bg-orange-500/20">
+                    <Bell className="w-5 h-5" />
+                  </div>
                   Notificações
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleSection('notifications')}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-orange-400 hover:bg-orange-500/10 transition-all"
                 >
-                  {expandedSection === 'notifications' ? 'Recolher' : 'Expandir'}
+                  {expandedSection === 'notifications' ? (
+                    <>
+                      <span className="mr-2">Recolher</span>
+                      <span className="text-xs">▲</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-2">Expandir</span>
+                      <span className="text-xs">▼</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </CardHeader>
             {expandedSection === 'notifications' && (
-              <CardContent>
+              <CardContent className="pt-6">
                 <NotificationsManager />
               </CardContent>
             )}
           </Card>
 
           {/* Documentos Section */}
-          <Card className="bg-gray-900/50 border-yellow-500/30">
-            <CardHeader>
+          <Card className="group bg-gradient-to-br from-gray-900/80 to-gray-800/50 border-yellow-500/40 hover:border-yellow-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/10">
+            <CardHeader className="bg-gradient-to-r from-yellow-500/10 to-transparent border-b border-yellow-500/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-yellow-400 flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
+                <CardTitle className="text-yellow-400 flex items-center gap-3 text-xl">
+                  <div className="p-2 rounded-lg bg-yellow-500/20">
+                    <FileText className="w-5 h-5" />
+                  </div>
                   Documentos
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleSection('documents')}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-yellow-400 hover:bg-yellow-500/10 transition-all"
                 >
-                  {expandedSection === 'documents' ? 'Recolher' : 'Expandir'}
+                  {expandedSection === 'documents' ? (
+                    <>
+                      <span className="mr-2">Recolher</span>
+                      <span className="text-xs">▲</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-2">Expandir</span>
+                      <span className="text-xs">▼</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </CardHeader>
             {expandedSection === 'documents' && (
-              <CardContent>
+              <CardContent className="pt-6">
                 <DocumentsManager />
               </CardContent>
             )}
           </Card>
 
           {/* Integrações Section */}
-          <Card className="bg-gray-900/50 border-indigo-500/30">
-            <CardHeader>
+          <Card className="group bg-gradient-to-br from-gray-900/80 to-gray-800/50 border-indigo-500/40 hover:border-indigo-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10">
+            <CardHeader className="bg-gradient-to-r from-indigo-500/10 to-transparent border-b border-indigo-500/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-indigo-400 flex items-center gap-2">
-                  <LinkIcon className="w-5 h-5" />
+                <CardTitle className="text-indigo-400 flex items-center gap-3 text-xl">
+                  <div className="p-2 rounded-lg bg-indigo-500/20">
+                    <LinkIcon className="w-5 h-5" />
+                  </div>
                   Integrações
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleSection('integrations')}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
                 >
-                  {expandedSection === 'integrations' ? 'Recolher' : 'Expandir'}
+                  {expandedSection === 'integrations' ? (
+                    <>
+                      <span className="mr-2">Recolher</span>
+                      <span className="text-xs">▲</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-2">Expandir</span>
+                      <span className="text-xs">▼</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </CardHeader>
             {expandedSection === 'integrations' && (
-              <CardContent>
+              <CardContent className="pt-6">
                 <IntegrationsManager setActiveTab={() => {}} />
               </CardContent>
             )}
           </Card>
 
           {/* Fast Start Section */}
-          <Card className="bg-gray-900/50 border-pink-500/30">
-            <CardHeader>
+          <Card className="group bg-gradient-to-br from-gray-900/80 to-gray-800/50 border-pink-500/40 hover:border-pink-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-pink-500/10">
+            <CardHeader className="bg-gradient-to-r from-pink-500/10 to-transparent border-b border-pink-500/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-pink-400 flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
+                <CardTitle className="text-pink-400 flex items-center gap-3 text-xl">
+                  <div className="p-2 rounded-lg bg-pink-500/20">
+                    <Activity className="w-5 h-5" />
+                  </div>
                   Fast Start
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleSection('fast-start')}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-pink-400 hover:bg-pink-500/10 transition-all"
                 >
-                  {expandedSection === 'fast-start' ? 'Recolher' : 'Expandir'}
+                  {expandedSection === 'fast-start' ? (
+                    <>
+                      <span className="mr-2">Recolher</span>
+                      <span className="text-xs">▲</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-2">Expandir</span>
+                      <span className="text-xs">▼</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </CardHeader>
             {expandedSection === 'fast-start' && (
-              <CardContent>
+              <CardContent className="pt-6">
                 <FastStartManager />
               </CardContent>
             )}
           </Card>
 
           {/* Configurações Section */}
-          <Card className="bg-gray-900/50 border-gray-500/30">
-            <CardHeader>
+          <Card className="group bg-gradient-to-br from-gray-900/80 to-gray-800/50 border-gray-500/40 hover:border-gray-400/60 transition-all duration-300 hover:shadow-lg hover:shadow-gray-500/10">
+            <CardHeader className="bg-gradient-to-r from-gray-500/10 to-transparent border-b border-gray-500/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-gray-400 flex items-center gap-2">
-                  <Settings className="w-5 h-5" />
+                <CardTitle className="text-gray-300 flex items-center gap-3 text-xl">
+                  <div className="p-2 rounded-lg bg-gray-500/20">
+                    <Settings className="w-5 h-5" />
+                  </div>
                   Configurações
                 </CardTitle>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleSection('settings')}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-400 hover:text-gray-300 hover:bg-gray-500/10 transition-all"
                 >
-                  {expandedSection === 'settings' ? 'Recolher' : 'Expandir'}
+                  {expandedSection === 'settings' ? (
+                    <>
+                      <span className="mr-2">Recolher</span>
+                      <span className="text-xs">▲</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-2">Expandir</span>
+                      <span className="text-xs">▼</span>
+                    </>
+                  )}
                 </Button>
               </div>
             </CardHeader>
             {expandedSection === 'settings' && (
-              <CardContent className="space-y-6">
+              <CardContent className="pt-6 space-y-6">
                 <ThemeManager />
                 <SettingsManager />
               </CardContent>
@@ -558,18 +763,20 @@ export default function AdminPage() {
           </Card>
 
           {/* Portfolios Link */}
-          <Card className="bg-gray-900/50 border-[#D2A63C]/30">
-            <CardHeader>
-              <CardTitle className="text-[#D2A63C] flex items-center gap-2">
-                <Wallet className="w-5 h-5" />
+          <Card className="group bg-gradient-to-br from-[#D2A63C]/10 to-[#BB8525]/5 border-[#D2A63C]/40 hover:border-[#D2A63C]/60 transition-all duration-300 hover:shadow-xl hover:shadow-[#D2A63C]/20">
+            <CardHeader className="bg-gradient-to-r from-[#D2A63C]/20 to-transparent border-b border-[#D2A63C]/30">
+              <CardTitle className="text-[#D2A63C] flex items-center gap-3 text-xl">
+                <div className="p-2 rounded-lg bg-[#D2A63C]/30">
+                  <Wallet className="w-5 h-5" />
+                </div>
                 Gestão de Portfolios
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-gray-400 mb-4">Gerir ativos crypto e ETF</p>
+            <CardContent className="pt-6">
+              <p className="text-gray-300 mb-6">Gerir ativos crypto e ETF de forma centralizada</p>
               <Button
                 onClick={() => router.push('/admin/portfolios')}
-                className="bg-[#D2A63C] hover:bg-[#BB8525] text-black"
+                className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] hover:from-[#BB8525] hover:to-[#D2A63C] text-black font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <Wallet className="w-4 h-4 mr-2" />
                 Abrir Gestão de Portfolios
