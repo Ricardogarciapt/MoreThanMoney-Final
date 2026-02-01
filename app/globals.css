@@ -178,6 +178,24 @@
   overflow: hidden !important;
 }
 
+/* Remover completamente em app-mobile */
+.app-mobile-page #google_translate_element,
+.app-mobile-page .skiptranslate,
+.app-mobile-page .goog-te-gadget,
+.app-mobile-page .goog-te-gadget-simple,
+.app-mobile-page [id*=":0.targetLanguage"],
+.app-mobile-page .VIpgJd-ZVi9od-xl07Ob-lTBxed {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
 /* Garantir que o body não é afetado pelo Google Translate */
 body {
   top: 0 !important;

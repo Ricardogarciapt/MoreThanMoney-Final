@@ -45,6 +45,61 @@ function AppMobileContent() {
   useEffect(() => {
     setMounted(true)
     
+    // Remover elemento do Google Translate completamente
+    const removeGoogleTranslate = () => {
+      // Remover elemento principal
+      const translateElement = document.getElementById('google_translate_element')
+      if (translateElement) {
+        translateElement.remove()
+      }
+      
+      // Remover todos os elementos relacionados ao Google Translate
+      const selectors = [
+        '.skiptranslate',
+        '.goog-te-gadget',
+        '.goog-te-gadget-simple',
+        '[id*=":0.targetLanguage"]',
+        '.VIpgJd-ZVi9od-xl07Ob-lTBxed',
+        '.goog-te-banner-frame',
+        '.goog-te-menu-value'
+      ]
+      
+      selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector)
+        elements.forEach(el => {
+          try {
+            el.remove()
+          } catch (e) {
+            // Ignorar erros ao remover
+          }
+        })
+      })
+    }
+    
+    // Remover imediatamente
+    removeGoogleTranslate()
+    
+    // Usar MutationObserver para remover quando elementos são adicionados
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) { // Element node
+            const element = node as Element
+            if (element.id === 'google_translate_element' || 
+                element.classList.contains('skiptranslate') ||
+                element.classList.contains('goog-te-gadget')) {
+              element.remove()
+            }
+          }
+        })
+      })
+    })
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    })
+    
     // Registrar service worker para notificações push (PWA)
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/firebase-messaging-sw.js')
@@ -54,6 +109,10 @@ function AppMobileContent() {
         .catch((error) => {
           console.warn('⚠️ [APP-MOBILE] Erro ao registrar service worker:', error)
         })
+    }
+    
+    return () => {
+      observer.disconnect()
     }
   }, [])
 
