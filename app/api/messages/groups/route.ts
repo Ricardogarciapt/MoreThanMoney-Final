@@ -32,37 +32,31 @@ export async function GET(request: NextRequest) {
     const mobileOnly = searchParams.get('mobile_only') === 'true'
 
     // Buscar perfil do utilizador para verificar se é admin/VIP
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('user_type, membership_type')
       .eq('id', session.user.id)
-      .single()
+      .maybeSingle()
 
-    let query
+    if (profileError) {
+      console.error('Erro ao buscar perfil:', profileError)
+    }
+
+    let query = supabase.from('group_conversations').select('*')
+    
     if (profile?.user_type === 'admin') {
       // Admin vê TODOS os grupos (sem filtros)
-      query = supabase
-        .from('group_conversations')
-        .select('*')
+      // query já está definido acima
     } else if (mobileOnly) {
       // Se for mobile_only, TODOS os utilizadores veem grupos com is_mobile_visible = true
       // Não precisa ser membro para ver, apenas para publicar
-      query = supabase
-        .from('group_conversations')
-        .select('*')
-        .eq('is_mobile_visible', true)
+      query = query.eq('is_mobile_visible', true)
     } else {
       // Utilizador normal vê grupos onde é membro OU grupos públicos OU grupos mobile_visible
-      // Usar uma abordagem diferente para evitar problemas com o join
-      query = supabase
-        .from('group_conversations')
-        .select('*')
-        .or(`is_public.eq.true,is_mobile_visible.eq.true`)
-      
-      // Depois verificar membros separadamente
+      query = query.or(`is_public.eq.true,is_mobile_visible.eq.true`)
     }
     
-    // Ordenar por created_at se last_message_at não existir
+    // Ordenar por created_at
     const { data: groups, error } = await query.order('created_at', { ascending: false })
 
     if (error) {

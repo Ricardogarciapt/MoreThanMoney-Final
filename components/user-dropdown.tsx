@@ -116,25 +116,40 @@ export default function UserDropdown() {
     let channel: any = null
     const setupRealtime = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.access_token) {
-          channel = supabase
-            .channel(`user_xp_${user.id}`)
-            .on(
-              'postgres_changes',
-              {
-                event: '*',
-                schema: 'public',
-                table: 'user_xp',
-                filter: `user_id=eq.${user.id}`
-              },
-              (payload) => {
-                console.log('🔄 [USER DROPDOWN] Mudança detectada na tabela user_xp:', payload)
-                loadXP()
-              }
-            )
-            .subscribe()
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError || !session?.access_token) {
+          console.warn('⚠️ [USER DROPDOWN] Sem sessão válida para Realtime XP, usando apenas polling')
+          return
         }
+
+        // Criar channel com configuração explícita
+        channel = supabase
+          .channel(`user_xp_${user.id}`, {
+            config: {
+              broadcast: { self: false }
+            }
+          })
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'user_xp',
+              filter: `user_id=eq.${user.id}`
+            },
+            (payload) => {
+              console.log('🔄 [USER DROPDOWN] Mudança detectada na tabela user_xp:', payload)
+              loadXP()
+            }
+          )
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ [USER DROPDOWN] Subscription Realtime XP ativa')
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              console.warn('⚠️ [USER DROPDOWN] Erro na subscription Realtime XP:', status)
+            }
+          })
       } catch (error) {
         console.warn('⚠️ [USER DROPDOWN] Erro ao configurar Realtime para XP:', error)
       }
@@ -199,14 +214,18 @@ export default function UserDropdown() {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
         if (sessionError || !session?.access_token) {
-          console.warn('⚠️ [USER DROPDOWN] Sem sessão válida, usando fallback para notificações')
+          console.warn('⚠️ [USER DROPDOWN] Sem sessão válida, usando apenas polling para notificações')
           interval = setInterval(loadUnreadNotificationsCount, 30000)
           return
         }
 
-        // Real-time subscription para notificações (apenas se tiver sessão)
+        // Real-time subscription para notificações (apenas se tiver sessão válida)
         channel = supabase
-          .channel(`user-dropdown-notifications-${user.id}-${Date.now()}`)
+          .channel(`user-dropdown-notifications-${user.id}`, {
+            config: {
+              broadcast: { self: false }
+            }
+          })
           .on(
             'postgres_changes',
             {
@@ -224,9 +243,9 @@ export default function UserDropdown() {
           )
           .subscribe((status) => {
             if (status === 'SUBSCRIBED') {
-              console.log('✅ [USER DROPDOWN] Subscription Realtime ativa')
+              console.log('✅ [USER DROPDOWN] Subscription Realtime notificações ativa')
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-              console.warn('⚠️ [USER DROPDOWN] Erro na subscription Realtime, usando fallback')
+              console.warn('⚠️ [USER DROPDOWN] Erro na subscription Realtime notificações, usando fallback')
               // Fallback: polling a cada 30s
               if (!interval) {
                 interval = setInterval(loadUnreadNotificationsCount, 30000)
@@ -241,8 +260,10 @@ export default function UserDropdown() {
         }
       }
 
-      // Verificar a cada 30 segundos (fallback)
-      interval = setInterval(loadUnreadNotificationsCount, 30000)
+      // Verificar a cada 30 segundos (fallback sempre ativo)
+      if (!interval) {
+        interval = setInterval(loadUnreadNotificationsCount, 30000)
+      }
     }
 
     setupNotifications()

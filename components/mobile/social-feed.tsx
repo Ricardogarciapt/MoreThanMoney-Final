@@ -451,9 +451,24 @@ export default function SocialFeed() {
     }
   }, [mounted, posts, storyPreviews])
 
-  const subscribeToPosts = () => {
+  const subscribeToPosts = async () => {
     try {
       console.log('📡 [SOCIAL FEED] Iniciando subscrição Realtime...')
+      
+      // Verificar sessão antes de criar subscription
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !session?.access_token) {
+        console.warn('⚠️ [SOCIAL FEED] Sem sessão válida, usando apenas polling')
+        // Retornar função vazia - o polling já está ativo via loadPosts
+        return () => {}
+      }
+
+      console.log('🔐 [SOCIAL FEED] Sessão:', {
+        autenticado: !!session,
+        user_id: session?.user?.id,
+        email: session?.user?.email
+      })
       
       const channel = supabase
         .channel("posts-changes", {
@@ -505,16 +520,10 @@ export default function SocialFeed() {
             console.log('✅ [SOCIAL FEED] Subscrição Realtime ativa')
           } else if (status === 'CHANNEL_ERROR') {
             console.error('❌ [SOCIAL FEED] Erro na subscrição Realtime')
-            // Tentar reconectar após 5 segundos
-            setTimeout(() => {
-              console.log('🔄 [SOCIAL FEED] Tentando reconectar...')
-              subscribeToPosts()
-            }, 5000)
+            // Não tentar reconectar automaticamente - usar apenas polling
           } else if (status === 'TIMED_OUT') {
-            console.warn('⚠️ [SOCIAL FEED] Subscrição Realtime timeout, tentando reconectar...')
-            setTimeout(() => {
-              subscribeToPosts()
-            }, 3000)
+            console.warn('⚠️ [SOCIAL FEED] Subscrição Realtime timeout, usando polling')
+            // Não tentar reconectar automaticamente - usar apenas polling
           } else {
             console.log('📡 [SOCIAL FEED] Status subscrição:', status)
           }
@@ -523,7 +532,7 @@ export default function SocialFeed() {
       // Retornar função de cleanup
       return () => {
         console.log('🧹 [SOCIAL FEED] Limpando subscrição Realtime...')
-        supabase.removeChannel(channel)
+        supabase.removeChannel(channel).catch(console.warn)
       }
     } catch (error) {
       console.error('❌ [SOCIAL FEED] Erro ao criar subscrição:', error)
