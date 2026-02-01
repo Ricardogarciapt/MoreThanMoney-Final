@@ -10,7 +10,8 @@ const supabaseAdmin = createClient(
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    // Aceitar tanto 'userId' quanto 'id' como parâmetro
+    const userId = searchParams.get('userId') || searchParams.get('id')
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })

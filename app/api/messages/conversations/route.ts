@@ -28,15 +28,46 @@ export async function GET(request: NextRequest) {
     }
 
     // Buscar conversas do usuário
-    const { data: conversations, error } = await supabase
-      .from('conversations')
-      .select(`
-        *,
-        user1:profiles!conversations_user1_id_fkey(id, full_name, username, avatar_url, email),
-        user2:profiles!conversations_user2_id_fkey(id, full_name, username, avatar_url, email)
-      `)
-      .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
-      .order('last_message_at', { ascending: false })
+    // Tentar buscar com foreign keys primeiro, se falhar, buscar sem
+    let conversations: any[] | null = null
+    let error: any = null
+    
+    try {
+      const result = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          user1:profiles!conversations_user1_id_fkey(id, full_name, username, avatar_url, email),
+          user2:profiles!conversations_user2_id_fkey(id, full_name, username, avatar_url, email)
+        `)
+        .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
+      
+      conversations = result.data
+      error = result.error
+    } catch (e: any) {
+      // Se falhar com foreign keys, tentar sem
+      console.warn('⚠️ [CONVERSATIONS API] Erro com foreign keys, tentando sem:', e.message)
+      const result = await supabase
+        .from('conversations')
+        .select('*')
+        .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
+      
+      conversations = result.data
+      error = result.error
+    }
+    
+    // Ordenar por last_message_at se existir, senão por created_at
+    if (conversations) {
+      try {
+        conversations.sort((a, b) => {
+          const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : (a.created_at ? new Date(a.created_at).getTime() : 0)
+          const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0)
+          return bTime - aTime
+        })
+      } catch (sortError) {
+        console.warn('⚠️ [CONVERSATIONS API] Erro ao ordenar conversas:', sortError)
+      }
+    }
 
     if (error) {
       console.error('Erro ao buscar conversas:', error)
@@ -47,29 +78,51 @@ export async function GET(request: NextRequest) {
     const conversationsWithMessages = await Promise.all(
       (conversations || []).map(async (conv) => {
         const otherUserId = conv.user1_id === session.user.id ? conv.user2_id : conv.user1_id
-        const otherUser = conv.user1_id === session.user.id ? conv.user2 : conv.user1
+        
+        // Buscar perfil do outro usuário se não veio com foreign key
+        let otherUser = conv.user1_id === session.user.id ? conv.user2 : conv.user1
+        if (!otherUser && otherUserId) {
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('id, full_name, username, avatar_url, email')
+              .eq('id', otherUserId)
+              .maybeSingle()
+            otherUser = profile || null
+          } catch (e) {
+            console.warn(`⚠️ [CONVERSATIONS API] Erro ao buscar perfil de ${otherUserId}:`, e)
+          }
+        }
 
         // Última mensagem
-        const { data: lastMessage } = await supabase
+        const { data: lastMessage, error: lastMessageError } = await supabase
           .from('messages')
           .select('*')
           .eq('conversation_id', conv.id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
+          .maybeSingle()
+
+        if (lastMessageError && lastMessageError.code !== 'PGRST116') {
+          console.warn(`⚠️ [CONVERSATIONS API] Erro ao buscar última mensagem da conversa ${conv.id}:`, lastMessageError)
+        }
 
         // Contagem de não lidas
-        const { count: unreadCount } = await supabase
+        const { count: unreadCount, error: unreadError } = await supabase
           .from('messages')
           .select('*', { count: 'exact', head: true })
           .eq('conversation_id', conv.id)
           .eq('read', false)
           .neq('sender_id', session.user.id)
 
+        if (unreadError && unreadError.code !== 'PGRST116') {
+          console.warn(`⚠️ [CONVERSATIONS API] Erro ao contar não lidas da conversa ${conv.id}:`, unreadError)
+        }
+
         return {
           ...conv,
-          otherUser,
-          lastMessage,
+          otherUser: otherUser || { id: otherUserId },
+          lastMessage: lastMessage || null,
           unreadCount: unreadCount || 0
         }
       })
