@@ -56,6 +56,8 @@ interface UserProfile {
   username?: string
   avatar_url?: string
   email?: string
+  user_type?: string
+  membership_type?: string
 }
 
 export default function MessagesPage() {
@@ -102,6 +104,9 @@ export default function MessagesPage() {
   const [selectedRole, setSelectedRole] = useState<string>("")
   const [roleUsers, setRoleUsers] = useState<UserProfile[]>([])
   const [loadingRoleUsers, setLoadingRoleUsers] = useState(false)
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([])
+  const [loadingAllUsers, setLoadingAllUsers] = useState(false)
+  const [showAllUsers, setShowAllUsers] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
@@ -324,9 +329,37 @@ export default function MessagesPage() {
     }
   }
 
-  const searchUsers = async (query: string) => {
+  const loadAllUsers = async () => {
+    if (allUsers.length > 0) {
+      setShowAllUsers(true)
+      return
+    }
+
+    setLoadingAllUsers(true)
+    try {
+      // Carregar todos os utilizadores ativos (sem query retorna lista inicial)
+      const response = await fetch('/api/messages/search-users?query=')
+      if (response.ok) {
+        const data = await response.json()
+        setAllUsers(data.users || [])
+        setShowAllUsers(true)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar todos os utilizadores:', error)
+    } finally {
+      setLoadingAllUsers(false)
+    }
+  }
+
+  const searchUsers = async (query: string, role?: string) => {
+    if (role) {
+      // Se for pesquisa por role, usar loadUsersByRole
+      return
+    }
+
     if (!query.trim() || query.length < 2) {
       setSearchResults([])
+      setShowAllUsers(false)
       return
     }
 
@@ -336,6 +369,7 @@ export default function MessagesPage() {
       if (response.ok) {
         const data = await response.json()
         setSearchResults(data.users || [])
+        setShowAllUsers(false)
       } else {
         console.error('Erro na resposta da API:', response.status)
       }
@@ -508,6 +542,7 @@ export default function MessagesPage() {
                 setSelectedRole("")
                 setRoleUsers([])
                 setSearchByRole(false)
+                setShowAllUsers(false)
               }
             }}>
               <DialogTrigger asChild>
@@ -593,22 +628,46 @@ export default function MessagesPage() {
                   {/* Pesquisa de Utilizadores */}
                   {!searchByRole && (
                     <div>
-                      <Input
-                        placeholder="Pesquisar utilizadores por nome, username ou email..."
-                        value={userSearchQuery}
-                        onChange={(e) => {
-                          setUserSearchQuery(e.target.value)
-                          searchUsers(e.target.value)
-                        }}
-                        className="bg-gray-800 border-gray-700 text-white"
-                      />
+                      <div className="flex gap-2 mb-3">
+                        <Input
+                          placeholder="Pesquisar utilizadores por nome, username ou email..."
+                          value={userSearchQuery}
+                          onChange={(e) => {
+                            setUserSearchQuery(e.target.value)
+                            if (e.target.value.length >= 2) {
+                              searchUsers(e.target.value)
+                              setShowAllUsers(false)
+                            } else if (e.target.value.length === 0) {
+                              setSearchResults([])
+                              setShowAllUsers(false)
+                            }
+                          }}
+                          className="bg-gray-800 border-gray-700 text-white flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={loadAllUsers}
+                          disabled={loadingAllUsers}
+                          className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+                        >
+                          {loadingAllUsers ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Users className="w-4 h-4 mr-2" />
+                              Lista
+                            </>
+                          )}
+                        </Button>
+                      </div>
                       {searchingUsers && (
                         <div className="flex justify-center py-4">
                           <Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" />
                         </div>
                       )}
                       <div className="max-h-64 overflow-y-auto space-y-2 mt-4">
-                        {searchResults.map((user) => {
+                        {/* Mostrar resultados da pesquisa ou lista completa */}
+                        {(userSearchQuery.length >= 2 ? searchResults : (showAllUsers ? allUsers : [])).map((user) => {
                           const isSelected = selectedRecipients.some(r => r.id === user.id)
                           return (
                             <button
@@ -642,6 +701,13 @@ export default function MessagesPage() {
                                 <p className="font-semibold">{user.full_name || user.username || 'Utilizador'}</p>
                                 {user.username && <p className="text-sm text-gray-400">@{user.username}</p>}
                                 {user.email && <p className="text-xs text-gray-500">{user.email}</p>}
+                                {(user.user_type || user.membership_type) && (
+                                  <p className="text-xs text-[#D2A63C] mt-1">
+                                    {user.user_type === 'admin' ? 'Admin' : 
+                                     user.membership_type === 'vip' ? 'VIP' : 
+                                     user.user_type || 'Member'}
+                                  </p>
+                                )}
                               </div>
                               {isSelected && (
                                 <div className="text-[#D2A63C]">
@@ -651,8 +717,21 @@ export default function MessagesPage() {
                             </button>
                           )
                         })}
-                        {!searchingUsers && userSearchQuery.length >= 2 && searchResults.length === 0 && (
+                        {!searchingUsers && !loadingAllUsers && userSearchQuery.length >= 2 && searchResults.length === 0 && (
                           <p className="text-center text-gray-400 py-4">Nenhum utilizador encontrado</p>
+                        )}
+                        {!searchingUsers && !loadingAllUsers && userSearchQuery.length === 0 && !showAllUsers && (
+                          <div className="text-center text-gray-400 py-4">
+                            <p className="mb-2">Pesquisa utilizadores ou</p>
+                            <Button
+                              variant="outline"
+                              onClick={loadAllUsers}
+                              className="bg-gray-800 border-[#D2A63C]/20 text-[#D2A63C] hover:bg-[#D2A63C]/10"
+                            >
+                              <Users className="w-4 h-4 mr-2" />
+                              Ver Lista Completa
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -743,6 +822,7 @@ export default function MessagesPage() {
                         setSelectedRole("")
                         setRoleUsers([])
                         setSearchByRole(false)
+                        setShowAllUsers(false)
                       }}
                       className="text-gray-400 hover:text-white"
                     >

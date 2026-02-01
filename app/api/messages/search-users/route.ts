@@ -57,8 +57,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Pesquisa normal por texto
+    // Se não há query, retornar lista de utilizadores recentes/ativos
     if (query.length < 2) {
-      return NextResponse.json({ users: [] })
+      // Retornar utilizadores ativos recentes (últimos 50)
+      const { data: users, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url, email, user_type, membership_type')
+        .neq('id', session.user.id) // Excluir o próprio utilizador
+        .eq('is_active', true) // Apenas utilizadores ativos
+        .order('updated_at', { ascending: false, nullsFirst: false })
+        .limit(50)
+      
+      if (error) {
+        console.error('Erro ao buscar utilizadores:', error)
+        return NextResponse.json({ users: [] })
+      }
+      
+      return NextResponse.json({ users: users || [] })
     }
 
     // Pesquisar utilizadores por nome, username ou email
@@ -68,7 +83,7 @@ export async function GET(request: NextRequest) {
       .or(`full_name.ilike.%${query}%,username.ilike.%${query}%,email.ilike.%${query}%`)
       .neq('id', session.user.id) // Excluir o próprio utilizador
       .eq('is_active', true) // Apenas utilizadores ativos
-      .limit(20)
+      .limit(50)
 
     if (error) {
       console.error('Erro ao pesquisar utilizadores:', error)
