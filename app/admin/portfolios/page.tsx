@@ -122,77 +122,48 @@ export default function AdminPortfoliosPage() {
     try {
       setLoading(true)
       
-      // Buscar crypto assets
+      // Buscar crypto assets do Supabase
       const { data: cryptoData, error: cryptoError } = await supabase
         .from('admin_crypto_portfolio')
         .select('*')
         .order('percentual', { ascending: false })
 
       if (cryptoError) {
-        console.error('Erro ao carregar crypto:', cryptoError)
-        // Usar dados iniciais se tabela não existe
-        loadInitialData()
+        console.error('❌ [ADMIN PORTFOLIOS] Erro ao carregar crypto:', cryptoError)
+        toast.error(`Erro ao carregar crypto: ${cryptoError.message}`)
+        setCryptoAssets([])
       } else {
         setCryptoAssets(cryptoData || [])
+        if ((cryptoData || []).length === 0) {
+          toast.info('ℹ️ Nenhum ativo crypto encontrado. Adicione ativos para começar.')
+        }
       }
 
-      // Buscar ETF assets
+      // Buscar ETF assets do Supabase
       const { data: etfData, error: etfError } = await supabase
         .from('admin_etf_portfolio')
         .select('*')
         .order('percentual', { ascending: false })
 
       if (etfError) {
-        console.error('Erro ao carregar ETF:', etfError)
-        loadInitialData()
+        console.error('❌ [ADMIN PORTFOLIOS] Erro ao carregar ETF:', etfError)
+        toast.error(`Erro ao carregar ETF: ${etfError.message}`)
+        setETFAssets([])
       } else {
         setETFAssets(etfData || [])
+        if ((etfData || []).length === 0) {
+          toast.info('ℹ️ Nenhum ativo ETF encontrado. Adicione ativos para começar.')
+        }
       }
 
     } catch (error) {
-      console.error('Erro ao carregar portfolios:', error)
-      loadInitialData()
+      console.error('❌ [ADMIN PORTFOLIOS] Erro ao carregar portfolios:', error)
+      toast.error('Erro ao carregar portfolios. Verifica a conexão com o Supabase.')
+      setCryptoAssets([])
+      setETFAssets([])
     } finally {
       setLoading(false)
     }
-  }
-
-  const loadInitialData = () => {
-    // Dados iniciais da tabela fornecida
-    setCryptoAssets([
-      { categoria: "Médias Capitalizações", criptomoeda: "Cardano", symbol: "ADAUSDT", percentual: 5, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 200, potencial_crescimento_valor: 315, entry_price: 0.52 },
-      { categoria: "Médias Capitalizações", criptomoeda: "XRP", symbol: "XRPUSDT", percentual: 15, investimento_inicial: 75, reforco_mensal: 30, reforco_anual: 390, potencial_crescimento_percent: 400, potencial_crescimento_valor: 1860, entry_price: 2.10 },
-      { categoria: "Médias Capitalizações", criptomoeda: "Polkadot", symbol: "DOTUSDT", percentual: 5, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 300, potencial_crescimento_valor: 405, entry_price: 3.80 },
-      { categoria: "Pequenas Capitalizações", criptomoeda: "Polygon", symbol: "MATICUSDT", percentual: 5, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 200, potencial_crescimento_valor: 315, entry_price: 0.42 },
-      { categoria: "Pequenas Capitalizações", criptomoeda: "Chainlink", symbol: "LINKUSDT", percentual: 10, investimento_inicial: 50, reforco_mensal: 20, reforco_anual: 260, potencial_crescimento_percent: 350, potencial_crescimento_valor: 1085, entry_price: 18.50 },
-      { categoria: "Pequenas Capitalizações", criptomoeda: "Avalanche", symbol: "AVAXUSDT", percentual: 10, investimento_inicial: 50, reforco_mensal: 20, reforco_anual: 260, potencial_crescimento_percent: 400, potencial_crescimento_valor: 1150, entry_price: 25.00 },
-      { categoria: "Pequenas Capitalizações", criptomoeda: "VeChain", symbol: "VETUSDT", percentual: 10, investimento_inicial: 50, reforco_mensal: 20, reforco_anual: 260, potencial_crescimento_percent: 500, potencial_crescimento_valor: 1550, entry_price: 0.018 },
-      { categoria: "Projetos Emergentes", criptomoeda: "Arbitrum", symbol: "ARBUSDT", percentual: 5, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 600, potencial_crescimento_valor: 805, entry_price: 0.48 },
-      { categoria: "Projetos Emergentes", criptomoeda: "Optimism", symbol: "OPUSDT", percentual: 5, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 700, potencial_crescimento_valor: 935, entry_price: 0.75 },
-      { categoria: "Projetos Emergentes", criptomoeda: "The Graph", symbol: "GRTUSDT", percentual: 5, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 800, potencial_crescimento_valor: 1065, entry_price: 0.09 },
-      { categoria: "Projetos Emergentes", criptomoeda: "Hedera", symbol: "HBARUSDT", percentual: 5, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 500, potencial_crescimento_valor: 775, entry_price: 0.18 },
-      { categoria: "Projetos Emergentes", criptomoeda: "Kaspa", symbol: "KASUSDT", percentual: 10, investimento_inicial: 50, reforco_mensal: 20, reforco_anual: 260, potencial_crescimento_percent: 1000, potencial_crescimento_valor: 3100, entry_price: 0.12 },
-      { categoria: "Projetos Emergentes", criptomoeda: "Jupiter", symbol: "JUPUSDT", percentual: 10, investimento_inicial: 50, reforco_mensal: 20, reforco_anual: 260, potencial_crescimento_percent: 1000, potencial_crescimento_valor: 3100, entry_price: 0.50 },
-      { categoria: "Projetos Emergentes", criptomoeda: "Algorand", symbol: "ALGOUSDT", percentual: 5, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 300, potencial_crescimento_valor: 405, entry_price: 0.19 },
-      { categoria: "Projetos Emergentes", criptomoeda: "Immutable", symbol: "IMXUSDT", percentual: 5, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 700, potencial_crescimento_valor: 935, entry_price: 0.72 },
-      { categoria: "Projetos Emergentes", criptomoeda: "ONDO", symbol: "ONDOUSDT", percentual: 5, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 700, potencial_crescimento_valor: 935, entry_price: 0.78 },
-      { categoria: "Projetos Emergentes", criptomoeda: "JTO", symbol: "JTOUSDT", percentual: 5, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 800, potencial_crescimento_valor: 1065, entry_price: 1.80 },
-      { categoria: "Projetos Emergentes", criptomoeda: "Aero", symbol: "AEROUSDT", percentual: 5, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 700, potencial_crescimento_valor: 935, entry_price: 0.85 },
-      { categoria: "Projetos Emergentes", criptomoeda: "ILV", symbol: "ILVUSDT", percentual: 10, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 800, potencial_crescimento_valor: 1065, entry_price: 18.00 },
-      { categoria: "Projetos Emergentes", criptomoeda: "Flow", symbol: "FLOWUSDT", percentual: 5, investimento_inicial: 25, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 600, potencial_crescimento_valor: 805, entry_price: 0.40 },
-      { categoria: "Stablecoins", criptomoeda: "Tether", symbol: "USDTUSDT", percentual: 15, investimento_inicial: 75, reforco_mensal: 10, reforco_anual: 130, potencial_crescimento_percent: 0, potencial_crescimento_valor: 185, entry_price: 1.00 },
-    ])
-
-    setETFAssets([
-      { categoria: "Tecnologia e Inovação", etf: "ARK Innovation ETF", symbol: "ARKK", percentual: 20, investimento_inicial: 20, reforco_semanal: 5, reforco_total_5anos: 1300, crescimento_esperado_percent: 300, crescimento_esperado_valor: 5200, entry_price: 75.00 },
-      { categoria: "Inteligência Artificial", etf: "Global X Robotics & AI", symbol: "BOTZ", percentual: 15, investimento_inicial: 15, reforco_semanal: 3.75, reforco_total_5anos: 975, crescimento_esperado_percent: 200, crescimento_esperado_valor: 2925, entry_price: 35.00 },
-      { categoria: "Blockchain e Cripto", etf: "Amplify Transformational Data", symbol: "BLOK", percentual: 15, investimento_inicial: 15, reforco_semanal: 3.75, reforco_total_5anos: 975, crescimento_esperado_percent: 300, crescimento_esperado_valor: 3900, entry_price: 28.00 },
-      { categoria: "Índice Geral (USA)", etf: "SPDR S&P 500 ETF Trust", symbol: "SPY", percentual: 15, investimento_inicial: 15, reforco_semanal: 3.75, reforco_total_5anos: 975, crescimento_esperado_percent: 100, crescimento_esperado_valor: 1950, entry_price: 620.00 },
-      { categoria: "Mercados Emergentes", etf: "iShares MSCI Emerging Markets", symbol: "EEM", percentual: 15, investimento_inicial: 15, reforco_semanal: 3.75, reforco_total_5anos: 975, crescimento_esperado_percent: 150, crescimento_esperado_valor: 2437.50, entry_price: 42.00 },
-      { categoria: "Energia Limpa", etf: "iShares Global Clean Energy", symbol: "ICLN", percentual: 10, investimento_inicial: 10, reforco_semanal: 2.50, reforco_total_5anos: 650, crescimento_esperado_percent: 250, crescimento_esperado_valor: 2275, entry_price: 18.00 },
-      { categoria: "Segurança Cibernética", etf: "First Trust Cybersecurity", symbol: "CIBR", percentual: 5, investimento_inicial: 5, reforco_semanal: 1.25, reforco_total_5anos: 325, crescimento_esperado_percent: 150, crescimento_esperado_valor: 812.50, entry_price: 52.00 },
-      { categoria: "Infraestrutura Global", etf: "iShares Global Infrastructure", symbol: "IGF", percentual: 5, investimento_inicial: 5, reforco_semanal: 1.25, reforco_total_5anos: 325, crescimento_esperado_percent: 100, crescimento_esperado_valor: 650, entry_price: 48.00 },
-    ])
   }
 
   const saveCryptoAsset = async (asset: CryptoAsset) => {
@@ -336,26 +307,40 @@ export default function AdminPortfoliosPage() {
 
     try {
       setSaving(true)
-      toast.info('🔄 Sincronizando...')
+      toast.info('🔄 Sincronizando portfolios...')
+
+      // Obter sessão para autenticação
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        toast.error('❌ Sessão expirada. Faz login novamente.')
+        return
+      }
 
       // Sincronizar para a API MTM (ela vai usar estes dados)
       const response = await fetch('/api/admin/sync-portfolios', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({
           crypto: cryptoAssets,
           etf: etfAssets
         })
       })
 
-      if (response.ok) {
-        toast.success('✅ Portfolios sincronizados! Recarrega /portfolios para ver.')
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        toast.success(`✅ Portfolios sincronizados! ${result.crypto_count || 0} crypto, ${result.etf_count || 0} ETF.`)
+        console.log('✅ [ADMIN PORTFOLIOS] Sincronização concluída:', result)
       } else {
-        throw new Error('Erro na sincronização')
+        throw new Error(result.error || 'Erro na sincronização')
       }
     } catch (error) {
-      toast.error('❌ Erro ao sincronizar')
-      console.error(error)
+      console.error('❌ [ADMIN PORTFOLIOS] Erro ao sincronizar:', error)
+      toast.error(`❌ Erro ao sincronizar: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
     } finally {
       setSaving(false)
     }
