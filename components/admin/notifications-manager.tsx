@@ -100,31 +100,14 @@ export default function NotificationsManager() {
         
         // Real-time subscription para notificações (com tratamento de erros)
         try {
-          channel = supabase
-            .channel(`notifications-changes-${Date.now()}`) // Nome único para evitar conflitos
-            .on(
-              'postgres_changes',
-              {
-                event: '*',
-                schema: 'public',
-                table: 'notification_configs'
-              },
-              (payload) => {
-                console.log('🔄 [NOTIFICATIONS] Real-time update recebida:', payload.eventType)
-                // Usar setTimeout para evitar múltiplas atualizações simultâneas
-                setTimeout(() => {
-                  loadNotifications()
-                  loadStats()
-                }, 100)
-              }
-            )
-            .subscribe((status) => {
-              if (status === 'SUBSCRIBED') {
-                console.log('✅ [NOTIFICATIONS] Real-time subscription ativa')
-              } else if (status === 'CHANNEL_ERROR') {
-                console.warn('⚠️ [NOTIFICATIONS] Erro na subscription real-time, usando polling')
-              }
-            })
+          channel = createAdminSubscription('notification_configs', (payload) => {
+            console.log('🔄 [NOTIFICATIONS] Real-time update recebida:', payload.eventType)
+            // Usar setTimeout para evitar múltiplas atualizações simultâneas
+            setTimeout(() => {
+              loadNotifications()
+              loadStats()
+            }, 100)
+          })
         } catch (subError) {
           console.warn('⚠️ [NOTIFICATIONS] Erro ao criar subscription, usando apenas polling:', subError)
         }
