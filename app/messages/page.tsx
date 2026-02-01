@@ -99,6 +99,11 @@ export default function MessagesPage() {
   const [searchResults, setSearchResults] = useState<UserProfile[]>([])
   const [searchingUsers, setSearchingUsers] = useState(false)
   const [showGroupsManager, setShowGroupsManager] = useState(false)
+  const [selectedRecipients, setSelectedRecipients] = useState<UserProfile[]>([])
+  const [searchByRole, setSearchByRole] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<string>("")
+  const [roleUsers, setRoleUsers] = useState<UserProfile[]>([])
+  const [loadingRoleUsers, setLoadingRoleUsers] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
@@ -343,28 +348,74 @@ export default function MessagesPage() {
     }
   }
 
-  const handleStartConversation = async (userId: string) => {
+  const handleStartConversation = async () => {
+    if (selectedRecipients.length === 0) {
+      alert('Seleciona pelo menos um destinatário')
+      return
+    }
+
     try {
       setSending(true)
-      const response = await fetch('/api/messages/conversations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ otherUserId: userId })
-      })
 
-      const data = await response.json()
+      // Se apenas 1 destinatário, criar conversa direta
+      if (selectedRecipients.length === 1) {
+        const response = await fetch('/api/messages/conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ otherUserId: selectedRecipients[0].id })
+        })
 
-      if (response.ok && data.conversation) {
-        setShowNewConversation(false)
-        setUserSearchQuery("")
-        setSearchResults([])
-        // Recarregar conversas antes de navegar
-        await loadConversations()
-        router.push(`/messages?conversation=${data.conversation.id}`)
+        const data = await response.json()
+
+        if (response.ok && data.conversation) {
+          setShowNewConversation(false)
+          setUserSearchQuery("")
+          setSearchResults([])
+          setSelectedRecipients([])
+          setSelectedRole("")
+          setRoleUsers([])
+          await loadConversations()
+          router.push(`/messages?conversation=${data.conversation.id}`)
+        } else {
+          console.error('Erro na resposta:', data)
+          alert(data.error || data.details || 'Erro ao iniciar conversa')
+        }
       } else {
-        console.error('Erro na resposta:', data)
-        alert(data.error || data.details || 'Erro ao iniciar conversa')
+        // Múltiplos destinatários - criar grupo
+        const memberIds = selectedRecipients.map(r => r.id)
+        const groupName = selectedRecipients.length <= 3
+          ? selectedRecipients.map(r => r.full_name || r.username || r.email).join(', ')
+          : `${selectedRecipients[0].full_name || selectedRecipients[0].username || selectedRecipients[0].email} e mais ${selectedRecipients.length - 1}`
+
+        const response = await fetch('/api/messages/groups', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            name: groupName,
+            description: `Grupo criado por ${currentUser?.email}`,
+            is_public: false,
+            is_mobile_visible: true,
+            member_ids: memberIds
+          })
+        })
+
+        const data = await response.json()
+
+        if (response.ok && data.group) {
+          setShowNewConversation(false)
+          setUserSearchQuery("")
+          setSearchResults([])
+          setSelectedRecipients([])
+          setSelectedRole("")
+          setRoleUsers([])
+          await loadConversations()
+          router.push(`/messages?group=${data.group.id}`)
+        } else {
+          console.error('Erro na resposta:', data)
+          alert(data.error || 'Erro ao criar grupo')
+        }
       }
     } catch (error) {
       console.error('Erro ao iniciar conversa:', error)
@@ -373,6 +424,46 @@ export default function MessagesPage() {
       setSending(false)
     }
   }
+
+  const handleAddRecipient = (user: UserProfile) => {
+    if (!selectedRecipients.find(r => r.id === user.id)) {
+      setSelectedRecipients([...selectedRecipients, user])
+    }
+  }
+
+  const handleRemoveRecipient = (userId: string) => {
+    setSelectedRecipients(selectedRecipients.filter(r => r.id !== userId))
+  }
+
+  const loadUsersByRole = async (role: string) => {
+    if (!role) {
+      setRoleUsers([])
+      return
+    }
+
+    setLoadingRoleUsers(true)
+    try {
+      const response = await fetch(`/api/messages/search-users?role=${encodeURIComponent(role)}`)
+      if (response.ok) {
+        const data = await response.json()
+        setRoleUsers(data.users || [])
+      } else {
+        console.error('Erro ao buscar utilizadores por role:', response.status)
+      }
+    } catch (error) {
+      console.error('Erro ao buscar utilizadores por role:', error)
+    } finally {
+      setLoadingRoleUsers(false)
+    }
+  }
+
+  useEffect(() => {
+    if (selectedRole) {
+      loadUsersByRole(selectedRole)
+    } else {
+      setRoleUsers([])
+    }
+  }, [selectedRole])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -410,61 +501,272 @@ export default function MessagesPage() {
               </Link>
               <h1 className="text-2xl font-bold text-[#D2A63C]">Mensagens</h1>
             </div>
-            <Dialog open={showNewConversation} onOpenChange={setShowNewConversation}>
+            <Dialog open={showNewConversation} onOpenChange={(open) => {
+              setShowNewConversation(open)
+              if (!open) {
+                setSelectedRecipients([])
+                setUserSearchQuery("")
+                setSearchResults([])
+                setSelectedRole("")
+                setRoleUsers([])
+                setSearchByRole(false)
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button className="bg-[#D2A63C] text-black hover:bg-[#BB8525]">
                   <Plus className="w-4 h-4 mr-2" />
                   Nova Conversa
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-gray-900 border-[#D2A63C]/20 text-white">
+              <DialogContent className="bg-gray-900 border-[#D2A63C]/20 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle className="text-[#D2A63C]">Nova Conversa</DialogTitle>
+                  <DialogTitle className="text-[#D2A63C] flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5" />
+                    Nova Conversa
+                  </DialogTitle>
                 </DialogHeader>
-                <div className="mt-4">
-                  <Input
-                    placeholder="Pesquisar utilizadores..."
-                    value={userSearchQuery}
-                    onChange={(e) => {
-                      setUserSearchQuery(e.target.value)
-                      searchUsers(e.target.value)
-                    }}
-                    className="bg-gray-800 border-gray-700 text-white mb-4"
-                  />
-                  {searchingUsers && (
-                    <div className="flex justify-center py-4">
-                      <Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" />
+                <div className="mt-4 space-y-4">
+                  {/* Destinatários Selecionados */}
+                  {selectedRecipients.length > 0 && (
+                    <div className="p-3 bg-gray-800/50 rounded-lg border border-[#D2A63C]/20">
+                      <p className="text-sm text-gray-400 mb-2">Destinatários ({selectedRecipients.length}):</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedRecipients.map((recipient) => (
+                          <div
+                            key={recipient.id}
+                            className="flex items-center gap-2 bg-[#D2A63C]/20 px-3 py-1 rounded-full border border-[#D2A63C]/40"
+                          >
+                            {recipient.avatar_url ? (
+                              <Image
+                                src={recipient.avatar_url}
+                                alt={recipient.full_name || recipient.username || 'User'}
+                                width={20}
+                                height={20}
+                                className="w-5 h-5 rounded-full"
+                              />
+                            ) : (
+                              <User className="w-4 h-4 text-[#D2A63C]" />
+                            )}
+                            <span className="text-sm text-white">
+                              {recipient.full_name || recipient.username || recipient.email}
+                            </span>
+                            <button
+                              onClick={() => handleRemoveRecipient(recipient.id)}
+                              className="ml-1 hover:text-red-400 transition-colors"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
-                  <div className="max-h-64 overflow-y-auto space-y-2">
-                    {searchResults.map((user) => (
-                      <button
-                        key={user.id}
-                        onClick={() => handleStartConversation(user.id)}
-                        className="w-full p-3 hover:bg-gray-800 rounded-lg flex items-center gap-3 text-left"
-                      >
-                        {user.avatar_url ? (
-                          <Image
-                            src={user.avatar_url}
-                            alt={user.full_name || user.username || 'User'}
-                            width={40}
-                            height={40}
-                            className="w-10 h-10 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-[#D2A63C]/20 flex items-center justify-center">
-                            <User className="w-5 h-5 text-[#D2A63C]" />
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-semibold">{user.full_name || user.username || 'Utilizador'}</p>
-                          {user.username && <p className="text-sm text-gray-400">@{user.username}</p>}
+
+                  {/* Tabs: Pesquisa vs Roles */}
+                  <div className="flex gap-2 border-b border-gray-700">
+                    <button
+                      onClick={() => {
+                        setSearchByRole(false)
+                        setSelectedRole("")
+                        setRoleUsers([])
+                      }}
+                      className={`px-4 py-2 text-sm font-medium transition-colors ${
+                        !searchByRole
+                          ? 'text-[#D2A63C] border-b-2 border-[#D2A63C]'
+                          : 'text-gray-400 hover:text-gray-300'
+                      }`}
+                    >
+                      <Search className="w-4 h-4 inline mr-2" />
+                      Pesquisar
+                    </button>
+                    <button
+                      onClick={() => setSearchByRole(true)}
+                      className={`px-4 py-2 text-sm font-medium transition-colors ${
+                        searchByRole
+                          ? 'text-[#D2A63C] border-b-2 border-[#D2A63C]'
+                          : 'text-gray-400 hover:text-gray-300'
+                      }`}
+                    >
+                      <Users className="w-4 h-4 inline mr-2" />
+                      Por Role
+                    </button>
+                  </div>
+
+                  {/* Pesquisa de Utilizadores */}
+                  {!searchByRole && (
+                    <div>
+                      <Input
+                        placeholder="Pesquisar utilizadores por nome, username ou email..."
+                        value={userSearchQuery}
+                        onChange={(e) => {
+                          setUserSearchQuery(e.target.value)
+                          searchUsers(e.target.value)
+                        }}
+                        className="bg-gray-800 border-gray-700 text-white"
+                      />
+                      {searchingUsers && (
+                        <div className="flex justify-center py-4">
+                          <Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" />
                         </div>
-                      </button>
-                    ))}
-                    {!searchingUsers && userSearchQuery.length >= 2 && searchResults.length === 0 && (
-                      <p className="text-center text-gray-400 py-4">Nenhum utilizador encontrado</p>
-                    )}
+                      )}
+                      <div className="max-h-64 overflow-y-auto space-y-2 mt-4">
+                        {searchResults.map((user) => {
+                          const isSelected = selectedRecipients.some(r => r.id === user.id)
+                          return (
+                            <button
+                              key={user.id}
+                              onClick={() => {
+                                if (!isSelected) {
+                                  handleAddRecipient(user)
+                                }
+                              }}
+                              disabled={isSelected}
+                              className={`w-full p-3 rounded-lg flex items-center gap-3 text-left transition-colors ${
+                                isSelected
+                                  ? 'bg-[#D2A63C]/30 cursor-not-allowed'
+                                  : 'hover:bg-gray-800'
+                              }`}
+                            >
+                              {user.avatar_url ? (
+                                <Image
+                                  src={user.avatar_url}
+                                  alt={user.full_name || user.username || 'User'}
+                                  width={40}
+                                  height={40}
+                                  className="w-10 h-10 rounded-full"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-[#D2A63C]/20 flex items-center justify-center">
+                                  <User className="w-5 h-5 text-[#D2A63C]" />
+                                </div>
+                              )}
+                              <div className="flex-1">
+                                <p className="font-semibold">{user.full_name || user.username || 'Utilizador'}</p>
+                                {user.username && <p className="text-sm text-gray-400">@{user.username}</p>}
+                                {user.email && <p className="text-xs text-gray-500">{user.email}</p>}
+                              </div>
+                              {isSelected && (
+                                <div className="text-[#D2A63C]">
+                                  <X className="w-5 h-5" />
+                                </div>
+                              )}
+                            </button>
+                          )
+                        })}
+                        {!searchingUsers && userSearchQuery.length >= 2 && searchResults.length === 0 && (
+                          <p className="text-center text-gray-400 py-4">Nenhum utilizador encontrado</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Seleção por Role */}
+                  {searchByRole && (
+                    <div>
+                      <div className="mb-4">
+                        <label className="text-sm text-gray-400 mb-2 block">Selecionar Role:</label>
+                        <select
+                          value={selectedRole}
+                          onChange={(e) => setSelectedRole(e.target.value)}
+                          className="w-full bg-gray-800 border-gray-700 text-white rounded-lg px-3 py-2"
+                        >
+                          <option value="">Seleciona uma role...</option>
+                          <option value="admin">Admin</option>
+                          <option value="vip">VIP</option>
+                          <option value="member">Member</option>
+                          <option value="affiliate">Affiliate</option>
+                        </select>
+                      </div>
+                      {loadingRoleUsers && (
+                        <div className="flex justify-center py-4">
+                          <Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" />
+                        </div>
+                      )}
+                      <div className="max-h-64 overflow-y-auto space-y-2">
+                        {roleUsers.map((user) => {
+                          const isSelected = selectedRecipients.some(r => r.id === user.id)
+                          return (
+                            <button
+                              key={user.id}
+                              onClick={() => {
+                                if (!isSelected) {
+                                  handleAddRecipient(user)
+                                }
+                              }}
+                              disabled={isSelected}
+                              className={`w-full p-3 rounded-lg flex items-center gap-3 text-left transition-colors ${
+                                isSelected
+                                  ? 'bg-[#D2A63C]/30 cursor-not-allowed'
+                                  : 'hover:bg-gray-800'
+                              }`}
+                            >
+                              {user.avatar_url ? (
+                                <Image
+                                  src={user.avatar_url}
+                                  alt={user.full_name || user.username || 'User'}
+                                  width={40}
+                                  height={40}
+                                  className="w-10 h-10 rounded-full"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-[#D2A63C]/20 flex items-center justify-center">
+                                  <User className="w-5 h-5 text-[#D2A63C]" />
+                                </div>
+                              )}
+                              <div className="flex-1">
+                                <p className="font-semibold">{user.full_name || user.username || 'Utilizador'}</p>
+                                {user.username && <p className="text-sm text-gray-400">@{user.username}</p>}
+                                {user.email && <p className="text-xs text-gray-500">{user.email}</p>}
+                              </div>
+                              {isSelected && (
+                                <div className="text-[#D2A63C]">
+                                  <X className="w-5 h-5" />
+                                </div>
+                              )}
+                            </button>
+                          )
+                        })}
+                        {!loadingRoleUsers && selectedRole && roleUsers.length === 0 && (
+                          <p className="text-center text-gray-400 py-4">Nenhum utilizador encontrado com esta role</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Botão de Iniciar Conversa */}
+                  <div className="flex justify-end gap-2 pt-4 border-t border-gray-700">
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setShowNewConversation(false)
+                        setSelectedRecipients([])
+                        setUserSearchQuery("")
+                        setSearchResults([])
+                        setSelectedRole("")
+                        setRoleUsers([])
+                        setSearchByRole(false)
+                      }}
+                      className="text-gray-400 hover:text-white"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleStartConversation}
+                      disabled={selectedRecipients.length === 0 || sending}
+                      className="bg-[#D2A63C] text-black hover:bg-[#BB8525]"
+                    >
+                      {sending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          A processar...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 mr-2" />
+                          {selectedRecipients.length === 1 ? 'Iniciar Conversa' : `Criar Grupo (${selectedRecipients.length})`}
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
               </DialogContent>
