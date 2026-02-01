@@ -62,7 +62,8 @@ export async function GET(request: NextRequest) {
         .eq('members.user_id', session.user.id)
     }
     
-    const { data: groups, error } = await query.order('last_message_at', { ascending: false })
+    // Ordenar por created_at se last_message_at não existir
+    const { data: groups, error } = await query.order('created_at', { ascending: false })
 
     if (error) {
       console.error('Erro ao buscar grupos:', error)
@@ -73,50 +74,63 @@ export async function GET(request: NextRequest) {
     // Verificar se o utilizador é membro de cada grupo
     const groupsWithMessages = await Promise.all(
       (groups || []).map(async (group) => {
-        // Verificar se o utilizador é membro
-        const { data: member } = await supabase
-          .from('group_members')
-          .select('role')
-          .eq('group_id', group.id)
-          .eq('user_id', session.user.id)
-          .single()
+        try {
+          // Verificar se o utilizador é membro
+          const { data: member } = await supabase
+            .from('group_members')
+            .select('role')
+            .eq('group_id', group.id)
+            .eq('user_id', session.user.id)
+            .single()
 
-        // Verificar se pode publicar (admin, VIP, ou Social Chat)
-        const isAdmin = profile?.user_type === 'admin'
-        const isVip = profile?.membership_type === 'vip'
-        const isSocialChat = group.name?.toLowerCase().includes('social')
-        const canPost = isAdmin || isVip || isSocialChat || !!member
+          // Verificar se pode publicar (admin, VIP, ou Social Chat)
+          const isAdmin = profile?.user_type === 'admin'
+          const isVip = profile?.membership_type === 'vip'
+          const isSocialChat = group.name?.toLowerCase().includes('social')
+          const canPost = isAdmin || isVip || isSocialChat || !!member
 
-        // Última mensagem
-        const { data: lastMessage } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('group_id', group.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single()
+          // Última mensagem
+          const { data: lastMessage } = await supabase
+            .from('messages')
+            .select('content, created_at')
+            .eq('group_id', group.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
 
-        // Contagem de não lidas (simplificado - pode melhorar)
-        const { count: unreadCount } = await supabase
-          .from('messages')
-          .select('*', { count: 'exact', head: true })
-          .eq('group_id', group.id)
-          .eq('read', false)
-          .neq('sender_id', session.user.id)
+          // Contagem de não lidas (simplificado - pode melhorar)
+          const { count: unreadCount } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('group_id', group.id)
+            .eq('read', false)
+            .neq('sender_id', session.user.id)
 
-        // Contar membros
-        const { count: memberCount } = await supabase
-          .from('group_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('group_id', group.id)
+          // Contar membros
+          const { count: memberCount } = await supabase
+            .from('group_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('group_id', group.id)
 
-        return {
-          ...group,
-          lastMessage,
-          unreadCount: unreadCount || 0,
-          member_count: memberCount || 0,
-          can_post: canPost,
-          is_member: !!member
+          return {
+            ...group,
+            lastMessage: lastMessage || null,
+            unreadCount: unreadCount || 0,
+            member_count: memberCount || 0,
+            can_post: canPost,
+            is_member: !!member
+          }
+        } catch (error) {
+          console.error(`Erro ao processar grupo ${group.id}:`, error)
+          // Retornar grupo básico em caso de erro
+          return {
+            ...group,
+            lastMessage: null,
+            unreadCount: 0,
+            member_count: 0,
+            can_post: false,
+            is_member: false
+          }
         }
       })
     )

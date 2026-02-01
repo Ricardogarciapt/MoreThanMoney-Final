@@ -51,16 +51,20 @@ export default function ChatsMobile() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    loadGroups()
-  }, [])
+    if (currentUser?.id) {
+      loadGroups()
+    }
+  }, [currentUser?.id])
 
   useEffect(() => {
     if (selectedGroup) {
       loadMessages(selectedGroup)
-      subscribeToMessages(selectedGroup)
-    }
-    return () => {
-      // Cleanup subscription
+      const unsubscribe = subscribeToMessages(selectedGroup)
+      return () => {
+        if (unsubscribe) {
+          unsubscribe()
+        }
+      }
     }
   }, [selectedGroup])
 
@@ -70,14 +74,24 @@ export default function ChatsMobile() {
 
   const loadGroups = async () => {
     try {
-      const response = await fetch('/api/messages/groups?mobile_only=true')
+      setLoading(true)
+      const response = await fetch('/api/messages/groups?mobile_only=true', {
+        credentials: 'include'
+      })
+      
       if (response.ok) {
         const data = await response.json()
         // A API já retorna apenas grupos mobile_visible quando mobile_only=true
+        console.log('✅ [CHATS MOBILE] Grupos carregados:', data.groups?.length || 0)
         setGroups(data.groups || [])
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
+        console.error('❌ [CHATS MOBILE] Erro ao carregar grupos:', errorData)
+        setGroups([])
       }
     } catch (error) {
-      console.error('Erro ao carregar grupos:', error)
+      console.error('❌ [CHATS MOBILE] Erro ao carregar grupos:', error)
+      setGroups([])
     } finally {
       setLoading(false)
     }
@@ -111,10 +125,16 @@ export default function ChatsMobile() {
           loadGroups()
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ [CHATS MOBILE] Subscrição ativa para grupo:', groupId)
+        } else if (status === 'CHANNEL_ERROR') {
+          console.warn('⚠️ [CHATS MOBILE] Erro na subscrição para grupo:', groupId)
+        }
+      })
 
     return () => {
-      supabase.removeChannel(channel)
+      supabase.removeChannel(channel).catch(console.warn)
     }
   }
 
