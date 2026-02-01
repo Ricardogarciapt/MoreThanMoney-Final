@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
+import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
