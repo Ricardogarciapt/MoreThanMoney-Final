@@ -76,8 +76,10 @@ export default function ChatsMessagesManager() {
   const [loading, setLoading] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
   const [showMembersDialog, setShowMembersDialog] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [activeTab, setActiveTab] = useState("groups")
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -421,7 +423,7 @@ export default function ChatsMessagesManager() {
             </div>
           </div>
           
-          <Tabs defaultValue="groups" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-gray-800">
               <TabsTrigger value="groups">Grupos ({filteredGroups.length})</TabsTrigger>
               <TabsTrigger value="messages" disabled={!selectedGroup}>
@@ -444,14 +446,7 @@ export default function ChatsMessagesManager() {
                     }`}
                     onClick={() => {
                       setSelectedGroup(group)
-                      // Mudar para tab de mensagens quando seleciona grupo
-                      const tabsContent = document.querySelector('[value="messages"]')
-                      if (tabsContent) {
-                        const tabsTrigger = document.querySelector('[value="messages"]')
-                        if (tabsTrigger) {
-                          (tabsTrigger as HTMLElement).click()
-                        }
-                      }
+                      setActiveTab("messages")
                     }}
                   >
                     <CardContent className="p-4">
@@ -506,6 +501,7 @@ export default function ChatsMessagesManager() {
                                 is_public: group.is_public,
                                 is_mobile_visible: group.is_mobile_visible
                               })
+                              setShowEditDialog(true)
                             }}
                             className="border-gray-700 text-gray-300 hover:bg-gray-700"
                           >
@@ -547,6 +543,7 @@ export default function ChatsMessagesManager() {
                           is_public: selectedGroup.is_public,
                           is_mobile_visible: selectedGroup.is_mobile_visible
                         })
+                        setShowEditDialog(true)
                       }}
                       variant="outline"
                       size="sm"
@@ -609,82 +606,85 @@ export default function ChatsMessagesManager() {
         </CardContent>
       </Card>
 
-      {/* Dialog de edição - só abre quando clica no botão de editar */}
-      {false && (
-        <Dialog open={false} onOpenChange={() => {}}>
-          <DialogContent className="bg-gray-900 border-[#D2A63C]/20 text-white max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-[#D2A63C]">Editar Grupo</DialogTitle>
-            </DialogHeader>
-            <div className="mt-4 space-y-4">
-              <div>
-                <Label htmlFor="edit_name">Nome do Grupo</Label>
-                <Input
-                  id="edit_name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="bg-gray-800 border-gray-700 text-white"
+      {/* Dialog de edição */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="bg-gray-900 border-[#D2A63C]/20 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#D2A63C]">Editar Grupo</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 space-y-4">
+            <div>
+              <Label htmlFor="edit_name">Nome do Grupo</Label>
+              <Input
+                id="edit_name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="bg-gray-800 border-gray-700 text-white"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_description">Descrição</Label>
+              <Textarea
+                id="edit_description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="bg-gray-800 border-gray-700 text-white"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit_avatar_url">URL do Avatar (opcional)</Label>
+              <Input
+                id="edit_avatar_url"
+                value={formData.avatar_url}
+                onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
+                className="bg-gray-800 border-gray-700 text-white"
+              />
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="edit_is_public"
+                  checked={formData.is_public}
+                  onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
+                  className="w-4 h-4"
                 />
+                <Label htmlFor="edit_is_public">Grupo Público</Label>
               </div>
-              <div>
-                <Label htmlFor="edit_description">Descrição</Label>
-                <Textarea
-                  id="edit_description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="bg-gray-800 border-gray-700 text-white"
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="edit_is_mobile_visible"
+                  checked={formData.is_mobile_visible}
+                  onChange={(e) => setFormData({ ...formData, is_mobile_visible: e.target.checked })}
+                  className="w-4 h-4"
                 />
-              </div>
-              <div>
-                <Label htmlFor="edit_avatar_url">URL do Avatar (opcional)</Label>
-                <Input
-                  id="edit_avatar_url"
-                  value={formData.avatar_url}
-                  onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
-                  className="bg-gray-800 border-gray-700 text-white"
-                />
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="edit_is_public"
-                    checked={formData.is_public}
-                    onChange={(e) => setFormData({ ...formData, is_public: e.target.checked })}
-                    className="w-4 h-4"
-                  />
-                  <Label htmlFor="edit_is_public">Grupo Público</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="edit_is_mobile_visible"
-                    checked={formData.is_mobile_visible}
-                    onChange={(e) => setFormData({ ...formData, is_mobile_visible: e.target.checked })}
-                    className="w-4 h-4"
-                  />
-                  <Label htmlFor="edit_is_mobile_visible">Visível no App Mobile</Label>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => handleUpdateGroup(selectedGroup.id)}
-                  className="flex-1 bg-[#D2A63C] text-black hover:bg-[#BB8525]"
-                >
-                  Guardar
-                </Button>
-                <Button
-                  onClick={() => setSelectedGroup(null)}
-                  variant="outline"
-                  className="border-gray-700 text-gray-300 hover:bg-gray-800"
-                >
-                  Cancelar
-                </Button>
+                <Label htmlFor="edit_is_mobile_visible">Visível no App Mobile</Label>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => {
+                  if (selectedGroup) {
+                    handleUpdateGroup(selectedGroup.id)
+                    setShowEditDialog(false)
+                  }
+                }}
+                className="flex-1 bg-[#D2A63C] text-black hover:bg-[#BB8525]"
+              >
+                Guardar
+              </Button>
+              <Button
+                onClick={() => setShowEditDialog(false)}
+                variant="outline"
+                className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
