@@ -50,64 +50,64 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
 
   const handleChangeMemberCategory = async (userId: string, category: 'iq' | 'skool' | 'vip' | 'standard') => {
     try {
-      const response = await fetch('/api/admin/users', {
+      const { adminApiCall } = await import('@/lib/admin-helpers')
+      const result = await adminApiCall('/api/admin/users', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, member_category: category })
       })
 
-      if (response.ok) {
+      if (result.success) {
         onRefresh()
         console.log(`✅ Categoria alterada para: ${category}`)
       } else {
-        const result = await response.json()
+        console.error('❌ Erro ao alterar categoria:', result.error, result.details)
         alert(`Erro ao alterar categoria: ${result.error}`)
       }
-    } catch (error) {
-      console.error('Erro ao alterar categoria:', error)
-      alert('Erro ao alterar categoria do membro.')
+    } catch (error: any) {
+      console.error('❌ Erro ao alterar categoria:', error)
+      alert(`Erro ao alterar categoria: ${error.message || 'Erro desconhecido'}`)
     }
   }
 
   const handleChangeUserType = async (userId: string, newType: string) => {
     try {
-      const response = await fetch('/api/admin/users', {
+      const { adminApiCall } = await import('@/lib/admin-helpers')
+      const result = await adminApiCall('/api/admin/users', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, user_type: newType })
       })
 
-      if (response.ok) {
+      if (result.success) {
         onRefresh()
         console.log(`✅ User type alterado para: ${newType}`)
       } else {
-        const result = await response.json()
+        console.error('❌ Erro ao alterar tipo:', result.error, result.details)
         alert(`Erro ao alterar tipo: ${result.error}`)
       }
-    } catch (error) {
-      console.error('Erro ao alterar user type:', error)
-      alert('Erro ao alterar tipo de utilizador.')
+    } catch (error: any) {
+      console.error('❌ Erro ao alterar user type:', error)
+      alert(`Erro ao alterar tipo: ${error.message || 'Erro desconhecido'}`)
     }
   }
 
   const handleChangeOnboardingPlatform = async (userId: string, platform: 'vxa' | 'rfg' | null) => {
     try {
-      const response = await fetch('/api/admin/users', {
+      const { adminApiCall } = await import('@/lib/admin-helpers')
+      const result = await adminApiCall('/api/admin/users', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, onboarding_platform: platform })
       })
 
-      if (response.ok) {
+      if (result.success) {
         onRefresh()
         console.log(`✅ Plataforma de onboarding alterada para: ${platform || 'padrão'}`)
       } else {
-        const result = await response.json()
+        console.error('❌ Erro ao alterar plataforma:', result.error, result.details)
         alert(`Erro ao alterar plataforma: ${result.error}`)
       }
-    } catch (error) {
-      console.error('Erro ao alterar plataforma:', error)
-      alert('Erro ao alterar plataforma de onboarding.')
+    } catch (error: any) {
+      console.error('❌ Erro ao alterar plataforma:', error)
+      alert(`Erro ao alterar plataforma: ${error.message || 'Erro desconhecido'}`)
     }
   }
   
@@ -149,17 +149,15 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
       } : newUser
 
       // Criar utilizador via API
-      const response = await fetch(apiEndpoint, {
+      const { adminApiCall } = await import('@/lib/admin-helpers')
+      const result = await adminApiCall(apiEndpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
 
-      const result = await response.json()
-
-      if (response.ok) {
+      if (result.success && result.data) {
         const message = isTrial 
-          ? `Utilizador ${newUser.user_type} criado!\n\nEmail: ${result.user.email}\nPalavra-passe: ${result.user.password}\nExpira: ${new Date(result.user.trial_expires_at).toLocaleString('pt-PT')}\n\n⚠️ Copia a palavra-passe temporária!`
+          ? `Utilizador ${newUser.user_type} criado!\n\nEmail: ${result.data.user?.email || newUser.email}\nPalavra-passe: ${result.data.user?.password || 'Verifique os logs'}\nExpira: ${result.data.user?.trial_expires_at ? new Date(result.data.user.trial_expires_at).toLocaleString('pt-PT') : 'N/A'}\n\n⚠️ Copia a palavra-passe temporária!`
           : `Utilizador ${newUser.email} criado com sucesso!`
         
         alert(message)

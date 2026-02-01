@@ -1,25 +1,63 @@
 /**
  * Helpers centralizados para operações admin
  * Garante consistência entre frontend e backend
+ * Versão melhorada com cache, retry logic e validação
  */
 
 import { supabase } from "@/lib/supabase"
 
+// Cache simples em memória (client-side apenas)
+const cache = new Map<string, { data: any; timestamp: number; ttl: number }>()
+
+// Configurações
+const CACHE_TTL = 30000 // 30 segundos
+const MAX_RETRIES = 3
+const RETRY_DELAY = 1000 // 1 segundo
+
 /**
- * Verifica se o utilizador atual é admin
+ * Limpa cache expirado
+ */
+function cleanExpiredCache() {
+  const now = Date.now()
+  for (const [key, value] of cache.entries()) {
+    if (now - value.timestamp > value.ttl) {
+      cache.delete(key)
+    }
+  }
+}
+
+/**
+ * Verifica se o utilizador atual é admin (com cache)
  */
 export async function checkIsAdmin(): Promise<boolean> {
+  const cacheKey = 'admin_check'
+  const cached = cache.get(cacheKey)
+  
+  if (cached && Date.now() - cached.timestamp < cached.ttl) {
+    return cached.data
+  }
+
   try {
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) return false
+    if (!session?.user) {
+      cache.set(cacheKey, { data: false, timestamp: Date.now(), ttl: 5000 })
+      return false
+    }
 
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('user_type, is_active')
       .eq('id', session.user.id)
-      .single()
+      .maybeSingle()
 
-    return profile?.user_type === 'admin' && profile?.is_active === true
+    if (error) {
+      console.error('❌ [ADMIN HELPERS] Erro ao verificar admin:', error)
+      return false
+    }
+
+    const isAdmin = profile?.user_type === 'admin' && profile?.is_active === true
+    cache.set(cacheKey, { data: isAdmin, timestamp: Date.now(), ttl: 10000 }) // Cache por 10s
+    return isAdmin
   } catch (error) {
     console.error('❌ [ADMIN HELPERS] Erro ao verificar admin:', error)
     return false
@@ -27,19 +65,36 @@ export async function checkIsAdmin(): Promise<boolean> {
 }
 
 /**
- * Busca dados do utilizador atual
+ * Busca dados do utilizador atual (com cache)
  */
 export async function getCurrentUserProfile() {
+  const cacheKey = 'current_user_profile'
+  const cached = cache.get(cacheKey)
+  
+  if (cached && Date.now() - cached.timestamp < cached.ttl) {
+    return cached.data
+  }
+
   try {
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) return null
+    if (!session?.user) {
+      return null
+    }
 
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', session.user.id)
-      .single()
+      .maybeSingle()
 
+    if (error) {
+      console.error('❌ [ADMIN HELPERS] Erro ao buscar perfil:', error)
+      return null
+    }
+
+    if (profile) {
+      cache.set(cacheKey, { data: profile, timestamp: Date.now(), ttl: 15000 }) // Cache por 15s
+    }
     return profile
   } catch (error) {
     console.error('❌ [ADMIN HELPERS] Erro ao buscar perfil:', error)
@@ -48,41 +103,148 @@ export async function getCurrentUserProfile() {
 }
 
 /**
- * Wrapper para chamadas API admin com tratamento de erro consistente
+ * Wrapper para chamadas API admin com retry logic, cache e tratamento de erro melhorado
  */
 export async function adminApiCall<T>(
   endpoint: string,
-  options?: RequestInit
-): Promise<{ success: boolean; data?: T; error?: string }> {
-  try {
-    const response = await fetch(endpoint, {
-      ...options,
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-    })
+  options?: RequestInit & { 
+    useCache?: boolean
+    cacheTTL?: number
+    retries?: number
+  }
+): Promise<{ success: boolean; data?: T; error?: string; details?: any }> {
+  const {
+    useCache = false,
+    cacheTTL = CACHE_TTL,
+    retries = MAX_RETRIES,
+    ...fetchOptions
+  } = options || {}
 
-    const data = await response.json()
+  // Limpar cache expirado
+  cleanExpiredCache()
 
-    if (!response.ok) {
+  // Verificar cache se habilitado
+  if (useCache && fetchOptions.method === 'GET') {
+    const cached = cache.get(endpoint)
+    if (cached && Date.now() - cached.timestamp < cached.ttl) {
       return {
-        success: false,
-        error: data.error || `HTTP ${response.status}`,
+        success: true,
+        data: cached.data,
       }
     }
+  }
 
-    return {
-      success: true,
-      data: data.data || data,
+  let lastError: any = null
+
+  // Retry logic
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+
+      const response = await fetch(endpoint, {
+        ...fetchOptions,
+        credentials: 'include',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...fetchOptions.headers,
+        },
+      })
+
+      clearTimeout(timeoutId)
+
+      let data: any
+      try {
+        data = await response.json()
+      } catch (e) {
+        // Se não conseguir parsear JSON, tentar texto
+        const text = await response.text()
+        data = { error: text || `HTTP ${response.status}` }
+      }
+
+      if (!response.ok) {
+        const errorMessage = data.error || data.message || `HTTP ${response.status}`
+        
+        // Se for erro 401/403, não tentar novamente
+        if (response.status === 401 || response.status === 403) {
+          return {
+            success: false,
+            error: errorMessage,
+            details: data.details || data,
+          }
+        }
+
+        // Se for último attempt, retornar erro
+        if (attempt === retries) {
+          return {
+            success: false,
+            error: errorMessage,
+            details: data.details || data,
+          }
+        }
+
+        // Aguardar antes de tentar novamente
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (attempt + 1)))
+        continue
+      }
+
+      const result = {
+        success: true,
+        data: data.data || data,
+      }
+
+      // Guardar em cache se habilitado
+      if (useCache && fetchOptions.method === 'GET') {
+        cache.set(endpoint, {
+          data: result.data,
+          timestamp: Date.now(),
+          ttl: cacheTTL,
+        })
+      }
+
+      return result
+    } catch (error: any) {
+      lastError = error
+
+      // Se for abort (timeout), não tentar novamente
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Timeout: A requisição demorou muito para responder',
+        }
+      }
+
+      // Se for último attempt, retornar erro
+      if (attempt === retries) {
+        console.error(`❌ [ADMIN API] Erro em ${endpoint} (tentativa ${attempt + 1}/${retries + 1}):`, error)
+        return {
+          success: false,
+          error: error.message || 'Erro desconhecido',
+          details: error,
+        }
+      }
+
+      // Aguardar antes de tentar novamente
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (attempt + 1)))
     }
-  } catch (error: any) {
-    console.error(`❌ [ADMIN API] Erro em ${endpoint}:`, error)
-    return {
-      success: false,
-      error: error.message || 'Erro desconhecido',
-    }
+  }
+
+  return {
+    success: false,
+    error: lastError?.message || 'Erro desconhecido após múltiplas tentativas',
+    details: lastError,
+  }
+}
+
+/**
+ * Limpa o cache
+ */
+export function clearAdminCache(key?: string) {
+  if (key) {
+    cache.delete(key)
+  } else {
+    cache.clear()
   }
 }
 

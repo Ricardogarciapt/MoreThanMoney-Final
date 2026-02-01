@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
 import type { SiteContent } from "@/lib/admin-types"
+import { getSupabaseAdmin, requireAdmin, validateRequiredFields } from "@/lib/admin-api-helpers"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getSupabaseAdmin()
 
 export async function GET(request: NextRequest) {
+  // Verificar acesso admin
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
   try {
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
@@ -52,21 +52,42 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Verificar acesso admin
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
+
   try {
     const body = await request.json()
     const { type, category, title, description, url, content, file_url, file_name, file_size, is_active, order_index, metadata } = body
 
-    // Validar campos obrigatórios
-    if (!type || !category || !title) {
+    // Validação de campos obrigatórios
+    const validation = validateRequiredFields(body, ['type', 'category', 'title'])
+    if (!validation.valid) {
       return NextResponse.json({ 
-        error: 'Campos obrigatórios: type, category, title' 
+        error: validation.error,
+        missing: validation.missing
       }, { status: 400 })
     }
 
-    // Validar campos obrigatórios
-    if (!type || !category || !title) {
+    // Validação de valores permitidos
+    const validTypes = ['link', 'video', 'file', 'text', 'image']
+    if (!validTypes.includes(type)) {
       return NextResponse.json({ 
-        error: 'Campos obrigatórios: type, category, title' 
+        error: `Tipo inválido: ${type}. Valores permitidos: ${validTypes.join(', ')}` 
+      }, { status: 400 })
+    }
+
+    const validCategories = ['navbar', 'footer', 'landing', 'education', 'trading', 'general']
+    if (!validCategories.includes(category)) {
+      return NextResponse.json({ 
+        error: `Categoria inválida: ${category}. Valores permitidos: ${validCategories.join(', ')}` 
+      }, { status: 400 })
+    }
+
+    // Validação de tamanho de título
+    if (title.length > 255) {
+      return NextResponse.json({ 
+        error: 'Título muito longo (máximo 255 caracteres)' 
       }, { status: 400 })
     }
 

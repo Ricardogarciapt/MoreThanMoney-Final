@@ -1,59 +1,113 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
 import type { AdminStats } from "@/lib/admin-types"
+import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getSupabaseAdmin()
 
 export async function GET(request: NextRequest) {
+  // Verificar acesso admin
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
+  const startTime = Date.now()
+  
   try {
-    // Get user statistics
-    const { data: users, error: usersError } = await supabase
-      .from('profiles')
-      .select('id, user_type, is_active, created_at')
+    console.log('📊 [ADMIN STATS] Iniciando busca de estatísticas...')
 
-    if (usersError) {
-      return NextResponse.json({ error: usersError.message }, { status: 500 })
+    // Executar queries em paralelo para melhor performance
+    const [
+      { count: totalUsers, error: totalUsersError },
+      { count: activeUsers, error: activeUsersError },
+      { count: pendingUsers, error: pendingUsersError },
+      { count: totalMembers, error: totalMembersError },
+      { data: content, error: contentError },
+      { data: activity, error: activityError }
+    ] = await Promise.all([
+      // Total de utilizadores
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true }),
+      
+      // Utilizadores ativos
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true),
+      
+      // Utilizadores pendentes
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_type', 'pending'),
+      
+      // Total de membros
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_type', 'member'),
+      
+      // Conteúdo (com fallback se tabela não existir)
+      supabase
+        .from('site_content')
+        .select('id, is_active, created_at')
+        .then(result => result)
+        .catch(() => ({ data: null, error: { message: 'Table does not exist' } })),
+      
+      // Atividade recente (últimos 7 dias)
+      (async () => {
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        
+        return supabase
+          .from('activity_logs')
+          .select('*')
+          .gte('timestamp', sevenDaysAgo.toISOString())
+          .order('timestamp', { ascending: false })
+          .limit(50)
+          .then(result => result)
+          .catch(() => ({ data: null, error: { message: 'Table does not exist' } }))
+      })()
+    ])
+
+    // Tratamento de erros
+    if (totalUsersError) {
+      console.error('❌ [ADMIN STATS] Erro ao buscar total de utilizadores:', totalUsersError)
+      return NextResponse.json({ 
+        error: 'Erro ao buscar estatísticas de utilizadores',
+        details: totalUsersError.message 
+      }, { status: 500 })
     }
 
-    // Get content statistics
-    const { data: content, error: contentError } = await supabase
-      .from('site_content')
-      .select('id, is_active, created_at')
-
-    if (contentError) {
-      console.warn('Site content table might not exist:', contentError.message)
+    // Logs de aviso para tabelas opcionais
+    if (contentError && contentError.message !== 'Table does not exist') {
+      console.warn('⚠️ [ADMIN STATS] Aviso ao buscar conteúdo:', contentError.message)
     }
 
-    // Get recent activity (last 7 days)
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-    const { data: activity, error: activityError } = await supabase
-      .from('activity_logs')
-      .select('*')
-      .gte('timestamp', sevenDaysAgo.toISOString())
-      .order('timestamp', { ascending: false })
-      .limit(50)
-
-    if (activityError) {
-      console.warn('Activity logs table might not exist:', activityError.message)
+    if (activityError && activityError.message !== 'Table does not exist') {
+      console.warn('⚠️ [ADMIN STATS] Aviso ao buscar atividade:', activityError.message)
     }
 
     const stats: AdminStats = {
-      total_users: users?.length || 0,
-      active_users: users?.filter(u => u.is_active).length || 0,
-      pending_users: users?.filter(u => u.user_type === 'pending').length || 0,
-      total_members: users?.filter(u => u.user_type === 'member').length || 0,
+      total_users: totalUsers || 0,
+      active_users: activeUsers || 0,
+      pending_users: pendingUsers || 0,
+      total_members: totalMembers || 0,
       total_content: content?.length || 0,
-      active_content: content?.filter(c => c.is_active).length || 0,
+      active_content: content?.filter((c: any) => c.is_active).length || 0,
       recent_activity: activity || []
     }
 
+    const duration = Date.now() - startTime
+    console.log(`✅ [ADMIN STATS] Estatísticas carregadas em ${duration}ms`)
+
     return NextResponse.json({ data: stats })
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (error: any) {
+    const duration = Date.now() - startTime
+    console.error(`❌ [ADMIN STATS] Erro após ${duration}ms:`, error)
+    
+    return NextResponse.json({ 
+      error: 'Erro interno do servidor',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 })
   }
 }

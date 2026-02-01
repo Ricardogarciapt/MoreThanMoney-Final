@@ -38,7 +38,7 @@ import NotificationsManager from "@/components/admin/notifications-manager"
 import FastStartManager from "@/components/admin/fast-start-manager"
 import ChatsMessagesManager from "@/components/admin/chats-messages-manager"
 import Link from "next/link"
-import { adminApiCall } from "@/lib/admin-helpers"
+import { adminApiCall, clearAdminCache } from "@/lib/admin-helpers"
 
 export default function AdminPage() {
   const router = useRouter()
@@ -109,11 +109,14 @@ export default function AdminPage() {
 
   const fetchStats = async () => {
     try {
-      const result = await adminApiCall<AdminStats>('/api/admin/stats')
+      const result = await adminApiCall<AdminStats>('/api/admin/stats', {
+        useCache: true,
+        cacheTTL: 30000 // Cache por 30s
+      })
       if (result.success && result.data) {
         setStats(result.data)
       } else {
-        console.error('❌ [ADMIN] Erro ao buscar stats:', result.error)
+        console.error('❌ [ADMIN] Erro ao buscar stats:', result.error, result.details)
       }
     } catch (error) {
       console.error('❌ [ADMIN] Erro ao buscar stats:', error)
@@ -122,11 +125,15 @@ export default function AdminPage() {
 
   const fetchUsers = async () => {
     try {
-      const result = await adminApiCall<UserManagement[]>('/api/admin/users')
+      setLoading(true)
+      const result = await adminApiCall<UserManagement[]>('/api/admin/users', {
+        useCache: true,
+        cacheTTL: 20000 // Cache por 20s
+      })
       if (result.success && result.data) {
         setUsers(result.data)
       } else {
-        console.error('❌ [ADMIN] Erro ao buscar users:', result.error)
+        console.error('❌ [ADMIN] Erro ao buscar users:', result.error, result.details)
       }
     } catch (error) {
       console.error('❌ [ADMIN] Erro ao buscar users:', error)
@@ -137,11 +144,14 @@ export default function AdminPage() {
 
   const fetchContent = async () => {
     try {
-      const result = await adminApiCall<SiteContent[]>('/api/admin/content')
+      const result = await adminApiCall<SiteContent[]>('/api/admin/content', {
+        useCache: true,
+        cacheTTL: 30000 // Cache por 30s
+      })
       if (result.success && result.data) {
         setContent(result.data)
       } else {
-        console.error('❌ [ADMIN] Erro ao buscar content:', result.error)
+        console.error('❌ [ADMIN] Erro ao buscar content:', result.error, result.details)
       }
     } catch (error) {
       console.error('❌ [ADMIN] Erro ao buscar content:', error)
@@ -150,11 +160,14 @@ export default function AdminPage() {
 
   const fetchTrialStats = async () => {
     try {
-      const result = await adminApiCall('/api/admin/trial-stats')
+      const result = await adminApiCall('/api/admin/trial-stats', {
+        useCache: true,
+        cacheTTL: 30000 // Cache por 30s
+      })
       if (result.success && result.data) {
         setTrialStats(result.data)
       } else {
-        console.error('❌ [ADMIN] Erro ao buscar trial stats:', result.error)
+        console.error('❌ [ADMIN] Erro ao buscar trial stats:', result.error, result.details)
       }
     } catch (error) {
       console.error('❌ [ADMIN] Erro ao buscar trial stats:', error)
@@ -169,11 +182,18 @@ export default function AdminPage() {
       })
 
       if (result.success) {
+        // Limpar cache e recarregar
+        clearAdminCache('/api/admin/users')
         await fetchUsers()
+        await fetchStats() // Atualizar stats também
         console.log('✅ Utilizador aprovado com sucesso')
+      } else {
+        console.error('❌ Erro ao aprovar utilizador:', result.error, result.details)
+        alert(`Erro ao aprovar utilizador: ${result.error}`)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao aprovar utilizador:', error)
+      alert(`Erro ao aprovar utilizador: ${error.message || 'Erro desconhecido'}`)
     }
   }
 
@@ -187,11 +207,19 @@ export default function AdminPage() {
       })
 
       if (result.success) {
+        // Limpar cache e recarregar
+        clearAdminCache('/api/admin/users')
+        clearAdminCache('/api/admin/stats')
         await fetchUsers()
+        await fetchStats()
         console.log('✅ Role alterada com sucesso')
+      } else {
+        console.error('❌ Erro ao alterar role:', result.error, result.details)
+        alert(`Erro ao alterar role: ${result.error}`)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erro ao alterar role:', error)
+      alert(`Erro ao alterar role: ${error.message || 'Erro desconhecido'}`)
     }
   }
 

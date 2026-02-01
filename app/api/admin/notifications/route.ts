@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { getSupabaseAdmin, requireAdmin, validateRequiredFields } from "@/lib/admin-api-helpers"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getSupabaseAdmin()
 
 export async function GET(request: NextRequest) {
+  // Verificar acesso admin
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
   try {
     // Buscar notificações configuradas
     const { data: notifications, error } = await supabase
@@ -47,6 +47,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Verificar acesso admin
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
+
   try {
     const body = await request.json()
     const {
@@ -60,17 +64,34 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Validações
-    if (!name || !title || !message) {
+    const validation = validateRequiredFields(body, ['name', 'title', 'message'])
+    if (!validation.valid) {
       return NextResponse.json({
         success: false,
-        error: 'Nome, título e mensagem são obrigatórios'
+        error: validation.error,
+        missing: validation.missing
       }, { status: 400 })
     }
 
-    if (!['email', 'push', 'both'].includes(type)) {
+    if (!['email', 'push', 'both'].includes(type || 'email')) {
       return NextResponse.json({
         success: false,
         error: 'Tipo deve ser: email, push ou both'
+      }, { status: 400 })
+    }
+
+    // Validação de tamanho
+    if (title.length > 255) {
+      return NextResponse.json({
+        success: false,
+        error: 'Título muito longo (máximo 255 caracteres)'
+      }, { status: 400 })
+    }
+
+    if (message.length > 5000) {
+      return NextResponse.json({
+        success: false,
+        error: 'Mensagem muito longa (máximo 5000 caracteres)'
       }, { status: 400 })
     }
 
@@ -132,6 +153,10 @@ export async function POST(request: NextRequest) {
 
 // PUT: Atualizar notificação
 export async function PUT(request: NextRequest) {
+  // Verificar acesso admin
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
+
   try {
     const body = await request.json()
     const {
@@ -145,10 +170,35 @@ export async function PUT(request: NextRequest) {
       scheduledAt
     } = body
 
-    if (!id) {
+    const validation = validateRequiredFields(body, ['id'])
+    if (!validation.valid) {
       return NextResponse.json({
         success: false,
-        error: 'ID da notificação é obrigatório'
+        error: validation.error,
+        missing: validation.missing
+      }, { status: 400 })
+    }
+
+    // Validação de tipo se fornecido
+    if (type && !['email', 'push', 'both'].includes(type)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Tipo deve ser: email, push ou both'
+      }, { status: 400 })
+    }
+
+    // Validação de tamanho se fornecido
+    if (title && title.length > 255) {
+      return NextResponse.json({
+        success: false,
+        error: 'Título muito longo (máximo 255 caracteres)'
+      }, { status: 400 })
+    }
+
+    if (message && message.length > 5000) {
+      return NextResponse.json({
+        success: false,
+        error: 'Mensagem muito longa (máximo 5000 caracteres)'
       }, { status: 400 })
     }
 

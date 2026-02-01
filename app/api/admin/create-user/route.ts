@@ -1,64 +1,99 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
-
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Supabase configuration is missing")
-  }
-  
-  return createClient(supabaseUrl, supabaseKey)
-}
+import { 
+  getSupabaseAdmin, 
+  requireAdmin, 
+  validateRequiredFields, 
+  isValidEmail,
+  sanitizeString
+} from "@/lib/admin-api-helpers"
 
 export async function POST(request: NextRequest) {
-  const supabase = getSupabaseClient()
+  // Verificar acesso admin
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
+
+  const supabase = getSupabaseAdmin()
+  
   try {
     const body = await request.json()
     const { email, username, full_name, password, phone, whatsapp, user_type, membership_level } = body
 
-    // Validações
-    if (!email || !username || !password || !full_name) {
+    // Validação de campos obrigatórios
+    const validation = validateRequiredFields(body, ['email', 'username', 'password', 'full_name'])
+    if (!validation.valid) {
       return NextResponse.json({ 
-        error: 'Email, username, password e nome completo são obrigatórios' 
+        error: validation.error,
+        missing: validation.missing
       }, { status: 400 })
     }
 
+    // Validação de email
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ 
+        error: 'Email inválido' 
+      }, { status: 400 })
+    }
+
+    // Validação de senha
     if (password.length < 6) {
       return NextResponse.json({ 
         error: 'A senha deve ter pelo menos 6 caracteres' 
       }, { status: 400 })
     }
 
-    // Verificar se email já existe
-    const { data: existingEmail } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .single()
-
-    if (existingEmail) {
-      return NextResponse.json({ error: 'Email já está em uso' }, { status: 400 })
+    if (password.length > 128) {
+      return NextResponse.json({ 
+        error: 'A senha deve ter no máximo 128 caracteres' 
+      }, { status: 400 })
     }
 
-    // Verificar se username já existe
-    const { data: existingUsername } = await supabase.rpc('check_username_exists', {
-      username_param: username
-    })
+    // Sanitizar inputs
+    const sanitizedEmail = sanitizeString(email).toLowerCase()
+    const sanitizedUsername = sanitizeString(username)
+    const sanitizedFullName = sanitizeString(full_name)
 
-    if (existingUsername) {
-      return NextResponse.json({ error: 'Username já está em uso' }, { status: 400 })
+    // Verificar se email já existe (em paralelo com username)
+    const [emailCheck, usernameCheck] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', sanitizedEmail)
+        .maybeSingle(),
+      supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', sanitizedUsername)
+        .maybeSingle()
+    ])
+
+    if (emailCheck.data) {
+      return NextResponse.json({ 
+        error: 'Email já está em uso' 
+      }, { status: 400 })
+    }
+
+    if (emailCheck.error && emailCheck.error.code !== 'PGRST116') {
+      console.error('❌ [CREATE USER] Erro ao verificar email:', emailCheck.error)
+    }
+
+    if (usernameCheck.data) {
+      return NextResponse.json({ 
+        error: 'Username já está em uso' 
+      }, { status: 400 })
+    }
+
+    if (usernameCheck.error && usernameCheck.error.code !== 'PGRST116') {
+      console.error('❌ [CREATE USER] Erro ao verificar username:', usernameCheck.error)
     }
 
     // Criar utilizador no Auth
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-      email,
+      email: sanitizedEmail,
       password,
       email_confirm: true, // Email já verificado por ser criação manual
       user_metadata: {
-        full_name,
-        username,
+        full_name: sanitizedFullName,
+        username: sanitizedUsername,
         user_type: user_type || 'member'
       }
     })
@@ -73,11 +108,11 @@ export async function POST(request: NextRequest) {
         .from('profiles')
         .insert({
           id: authUser.user.id,
-          email,
-          username,
-          full_name,
-          phone: phone || null,
-          whatsapp: whatsapp || null,
+          email: sanitizedEmail,
+          username: sanitizedUsername,
+          full_name: sanitizedFullName,
+          phone: phone ? sanitizeString(phone) : null,
+          whatsapp: whatsapp ? sanitizeString(whatsapp) : null,
           user_type: user_type || 'member',
           membership_level: membership_level || 'basic',
           is_active: true,
