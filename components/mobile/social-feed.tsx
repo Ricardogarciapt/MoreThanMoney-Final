@@ -539,12 +539,14 @@ export default function SocialFeed() {
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             console.log('✅ [SOCIAL FEED] Subscrição Realtime ativa')
-          } else if (status === 'CHANNEL_ERROR') {
-            console.error('❌ [SOCIAL FEED] Erro na subscrição Realtime')
-            // Não tentar reconectar automaticamente - usar apenas polling
-          } else if (status === 'TIMED_OUT') {
-            console.warn('⚠️ [SOCIAL FEED] Subscrição Realtime timeout, usando polling')
-            // Não tentar reconectar automaticamente - usar apenas polling
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            console.warn(`⚠️ [SOCIAL FEED] Subscrição Realtime ${status}, usando apenas polling`)
+            // Remover channel imediatamente para evitar tentativas infinitas
+            try {
+              supabase.removeChannel(channel)
+            } catch (e) {
+              // Ignorar erros ao remover
+            }
           } else {
             console.log('📡 [SOCIAL FEED] Status subscrição:', status)
           }
