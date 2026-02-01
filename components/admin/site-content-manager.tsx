@@ -47,16 +47,34 @@ export default function SiteContentManager() {
   const loadContents = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/content')
+      const response = await fetch('/api/admin/content', {
+        credentials: 'include'
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
       const result = await response.json()
-      setContents(result.data || [])
-    } catch (error) {
-      console.error('Erro ao carregar conteúdos:', error)
+      
+      // Validar estrutura dos dados
+      if (result && Array.isArray(result.data)) {
+        setContents(result.data)
+      } else if (Array.isArray(result)) {
+        // Se a resposta for diretamente um array
+        setContents(result)
+      } else {
+        console.warn('⚠️ [SITE_CONTENT] Formato de resposta inesperado:', result)
+        setContents([])
+      }
+    } catch (error: any) {
+      console.error('❌ [SITE_CONTENT] Erro ao carregar conteúdos:', error)
       toast({
         title: "Erro",
-        description: "Erro ao carregar conteúdos",
+        description: error.message || "Erro ao carregar conteúdos",
         variant: "destructive"
       })
+      setContents([])
     } finally {
       setLoading(false)
     }
@@ -76,6 +94,7 @@ export default function SiteContentManager() {
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(editingContent)
       })
 
@@ -108,7 +127,8 @@ export default function SiteContentManager() {
 
     try {
       const response = await fetch(`/api/admin/content/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        credentials: 'include'
       })
 
       if (response.ok) {

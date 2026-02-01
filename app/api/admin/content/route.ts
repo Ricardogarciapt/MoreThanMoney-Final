@@ -28,13 +28,26 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query
 
     if (error) {
-      console.warn('Site content table might not exist:', error.message)
-      return NextResponse.json({ data: [] })
+      console.error('❌ [ADMIN CONTENT] Erro ao buscar conteúdos:', error)
+      // Se a tabela não existir, retornar array vazio em vez de erro
+      if (error.code === 'PGRST116' || error.message?.includes('does not exist')) {
+        console.warn('⚠️ [ADMIN CONTENT] Tabela site_content não existe ainda')
+        return NextResponse.json({ data: [] })
+      }
+      return NextResponse.json({ 
+        error: error.message || 'Erro ao buscar conteúdos',
+        data: [] 
+      }, { status: 500 })
     }
 
     return NextResponse.json({ data: data || [] })
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (error: any) {
+    console.error('❌ [ADMIN CONTENT] Erro:', error)
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: error.message,
+      data: []
+    }, { status: 500 })
   }
 }
 
@@ -42,6 +55,13 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { type, category, title, description, url, content, file_url, file_name, file_size, is_active, order_index, metadata } = body
+
+    // Validar campos obrigatórios
+    if (!type || !category || !title) {
+      return NextResponse.json({ 
+        error: 'Campos obrigatórios: type, category, title' 
+      }, { status: 400 })
+    }
 
     // Validar campos obrigatórios
     if (!type || !category || !title) {
@@ -65,20 +85,32 @@ export async function POST(request: NextRequest) {
         is_active: is_active ?? true,
         order_index: order_index ?? 0,
         metadata: metadata ?? {},
-        created_by: 'admin' // TODO: Get from auth
+        created_by: 'admin',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .select()
       .single()
 
     if (error) {
       console.error('❌ [ADMIN CONTENT] Erro ao inserir:', error)
+      
+      // Se a tabela não existir, retornar erro mais claro
+      if (error.code === 'PGRST116' || error.message?.includes('does not exist')) {
+        return NextResponse.json({ 
+          error: 'Tabela site_content não existe. Cria a tabela no Supabase primeiro.',
+          code: 'TABLE_NOT_FOUND'
+        }, { status: 500 })
+      }
+      
       return NextResponse.json({ 
-        error: error.message,
-        details: error.details || null
+        error: error.message || 'Erro ao criar conteúdo',
+        details: error.details || null,
+        code: error.code || null
       }, { status: 500 })
     }
 
-    return NextResponse.json({ data }, { status: 201 })
+    return NextResponse.json({ data, success: true }, { status: 201 })
   } catch (error: any) {
     console.error('❌ [ADMIN CONTENT] Erro:', error)
     return NextResponse.json({ 

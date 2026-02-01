@@ -42,16 +42,35 @@ export default function ContentConfigManager() {
   const loadConfig = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/content-config')
+      const response = await fetch('/api/admin/content-config', {
+        credentials: 'include'
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
       const data = await response.json()
-      setConfig(data)
-    } catch (error) {
-      console.error('Erro ao carregar configuração:', error)
+      
+      // Validar estrutura dos dados
+      if (data && typeof data === 'object') {
+        setConfig({
+          videos: Array.isArray(data.videos) ? data.videos : [],
+          links: Array.isArray(data.links) ? data.links : [],
+          images: Array.isArray(data.images) ? data.images : []
+        })
+      } else {
+        throw new Error('Resposta inválida da API')
+      }
+    } catch (error: any) {
+      console.error('❌ [CONTENT_CONFIG] Erro ao carregar configuração:', error)
       toast({
         title: "Erro",
-        description: "Erro ao carregar configuração de conteúdo",
+        description: error.message || "Erro ao carregar configuração de conteúdo",
         variant: "destructive"
       })
+      // Usar configuração padrão em caso de erro
+      setConfig({ videos: [], links: [], images: [] })
     } finally {
       setLoading(false)
     }
@@ -60,27 +79,40 @@ export default function ContentConfigManager() {
   const saveConfig = async () => {
     try {
       setSaving(true)
+      
+      // Validar estrutura antes de enviar
+      if (!config || typeof config !== 'object') {
+        throw new Error('Configuração inválida')
+      }
+      
       const response = await fetch('/api/admin/content-config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
+        credentials: 'include',
+        body: JSON.stringify({
+          videos: Array.isArray(config.videos) ? config.videos : [],
+          links: Array.isArray(config.links) ? config.links : [],
+          images: Array.isArray(config.images) ? config.images : []
+        })
       })
 
       const result = await response.json()
 
-      if (response.ok) {
+      if (response.ok && result.success) {
         toast({
           title: "✅ Sucesso!",
-          description: "Configuração de conteúdo salva com sucesso!",
+          description: result.message || "Configuração de conteúdo salva com sucesso!",
         })
+        // Recarregar para garantir sincronização
+        await loadConfig()
       } else {
-        throw new Error(result.error)
+        throw new Error(result.error || 'Erro ao salvar configuração')
       }
-    } catch (error) {
-      console.error('Erro ao salvar:', error)
+    } catch (error: any) {
+      console.error('❌ [CONTENT_CONFIG] Erro ao salvar:', error)
       toast({
         title: "Erro",
-        description: "Erro ao salvar configuração",
+        description: error.message || "Erro ao salvar configuração",
         variant: "destructive"
       })
     } finally {
