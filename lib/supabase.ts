@@ -21,7 +21,8 @@ export const supabase = (() => {
   if (!supabaseInstance) {
     console.log('🔧 Criando instância SINGLETON do Supabase Client (Browser)')
     // Usar createBrowserClient do @supabase/ssr para PKCE correto
-    // Isto armazena automaticamente o code verifier em cookies
+    // O createBrowserClient gerencia automaticamente os cookies para o code verifier
+    // Não precisa de configuração explícita de cookies - já faz isso automaticamente
     supabaseInstance = createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   }
   return supabaseInstance

@@ -97,10 +97,65 @@ export default function AuthCallbackPage() {
         if (code) {
           console.log('✅ [CALLBACK] Código OAuth encontrado')
           
+          // Verificar se já processámos este código (evitar duplicação)
+          const processedCode = sessionStorage.getItem(`processed_code_${code}`)
+          if (processedCode) {
+            console.log('⚠️ [CALLBACK] Código já processado, aguardando redirecionamento...')
+            return
+          }
+          
+          // Marcar código como processado
+          sessionStorage.setItem(`processed_code_${code}`, 'true')
+          
           const { data, error } = await supabase.auth.exchangeCodeForSession(code)
           
           if (error) {
             console.error('❌ [CALLBACK] Erro ao trocar código:', error)
+            console.error('❌ [CALLBACK] Detalhes do erro:', {
+              message: error.message,
+              status: error.status,
+              name: error.name
+            })
+            
+            // Se for erro PKCE, limpar cookies e tentar novamente
+            if (error.message?.toLowerCase().includes('pkce') || 
+                error.message?.toLowerCase().includes('code_verifier') ||
+                error.message?.toLowerCase().includes('code verified')) {
+              console.log('🔄 [CALLBACK] Erro PKCE detectado, limpando estado e redirecionando...')
+              
+              // Limpar cookies relacionados com PKCE e Supabase
+              document.cookie.split(";").forEach((c) => {
+                const cookieName = c.trim().split("=")[0]
+                if (cookieName.includes('code') || 
+                    cookieName.includes('verifier') || 
+                    cookieName.includes('pkce') ||
+                    cookieName.includes('supabase') ||
+                    cookieName.includes('sb-')) {
+                  document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
+                  document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`
+                }
+              })
+              
+              // Limpar sessionStorage e localStorage relacionado
+              sessionStorage.removeItem(`processed_code_${code}`)
+              localStorage.removeItem('mtm_auth_session')
+              
+              // Limpar sessão do Supabase
+              try {
+                await supabase.auth.signOut()
+              } catch (signOutError) {
+                console.warn('⚠️ [CALLBACK] Erro ao fazer signOut:', signOutError)
+              }
+              
+              // Redirecionar para login com mensagem de erro
+              setStatus("error")
+              setMessage("Erro de autenticação. Por favor, tenta novamente.")
+              setTimeout(() => {
+                window.location.href = '/login?error=pkce_error&message=' + encodeURIComponent('Erro de autenticação. Por favor, tenta fazer login novamente.')
+              }, 2000)
+              return
+            }
+            
             throw new Error(error.message || 'Erro ao processar código de autenticação')
           }
 
