@@ -31,6 +31,12 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const mobileOnly = searchParams.get('mobile_only') === 'true'
 
+    console.log('📱 [GROUPS API] Request:', { 
+      userId: session.user.id, 
+      mobileOnly,
+      email: session.user.email 
+    })
+
     // Buscar perfil do utilizador para verificar se é admin/VIP
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -39,49 +45,89 @@ export async function GET(request: NextRequest) {
       .maybeSingle()
 
     if (profileError) {
-      console.error('Erro ao buscar perfil:', profileError)
+      console.error('❌ [GROUPS API] Erro ao buscar perfil:', profileError)
+      // Continuar mesmo com erro no perfil
     }
 
+    console.log('👤 [GROUPS API] Perfil:', { 
+      user_type: profile?.user_type, 
+      membership_type: profile?.membership_type 
+    })
+
+    // Construir query base
     let query = supabase.from('group_conversations').select('*')
     
-    if (profile?.user_type === 'admin') {
-      // Admin vê TODOS os grupos (sem filtros)
-      // query já está definido acima
-    } else if (mobileOnly) {
-      // Se for mobile_only, TODOS os utilizadores veem grupos com is_mobile_visible = true
-      // Não precisa ser membro para ver, apenas para publicar
-      query = query.eq('is_mobile_visible', true)
-    } else {
-      // Utilizador normal vê grupos onde é membro OU grupos públicos OU grupos mobile_visible
-      query = query.or(`is_public.eq.true,is_mobile_visible.eq.true`)
-    }
-    
-    // Ordenar por created_at
-    const { data: groups, error } = await query.order('created_at', { ascending: false })
+    try {
+      if (profile?.user_type === 'admin') {
+        // Admin vê TODOS os grupos (sem filtros)
+        console.log('🔑 [GROUPS API] Admin - buscando todos os grupos')
+      } else if (mobileOnly) {
+        // Se for mobile_only, TODOS os utilizadores veem grupos com is_mobile_visible = true
+        console.log('📱 [GROUPS API] Mobile only - buscando grupos mobile_visible')
+        query = query.eq('is_mobile_visible', true)
+      } else {
+        // Utilizador normal vê grupos onde é membro OU grupos públicos OU grupos mobile_visible
+        console.log('👤 [GROUPS API] Utilizador normal - buscando grupos públicos/mobile')
+        query = query.or(`is_public.eq.true,is_mobile_visible.eq.true`)
+      }
+      
+      // Ordenar por created_at
+      const { data: groups, error } = await query.order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('Erro ao buscar grupos:', error)
-      return NextResponse.json({ error: 'Erro ao buscar grupos' }, { status: 500 })
+      if (error) {
+        console.error('❌ [GROUPS API] Erro na query de grupos:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        })
+        return NextResponse.json({ 
+          error: 'Erro ao buscar grupos',
+          details: error.message,
+          code: error.code
+        }, { status: 500 })
+      }
+
+      console.log('✅ [GROUPS API] Grupos encontrados:', groups?.length || 0)
+
+    } catch (queryError: any) {
+      console.error('❌ [GROUPS API] Erro ao construir query:', queryError)
+      return NextResponse.json({ 
+        error: 'Erro ao construir query de grupos',
+        details: queryError.message
+      }, { status: 500 })
     }
 
     // Se não for admin e não for mobile_only, filtrar grupos onde o utilizador é membro
     let filteredGroups = groups || []
     if (!mobileOnly && profile?.user_type !== 'admin') {
-      // Buscar grupos onde o utilizador é membro
-      const { data: userMemberships } = await supabase
-        .from('group_members')
-        .select('group_id')
-        .eq('user_id', session.user.id)
-      
-      const memberGroupIds = (userMemberships || []).map(m => m.group_id)
-      
-      // Filtrar: manter grupos públicos, mobile_visible OU onde é membro
-      filteredGroups = (groups || []).filter(group => 
-        group.is_public || 
-        group.is_mobile_visible || 
-        memberGroupIds.includes(group.id)
-      )
+      try {
+        // Buscar grupos onde o utilizador é membro
+        const { data: userMemberships, error: membershipError } = await supabase
+          .from('group_members')
+          .select('group_id')
+          .eq('user_id', session.user.id)
+        
+        if (membershipError) {
+          console.warn('⚠️ [GROUPS API] Erro ao buscar membros (continuando):', membershipError)
+        }
+        
+        const memberGroupIds = (userMemberships || []).map((m: any) => m.group_id)
+        
+        // Filtrar: manter grupos públicos, mobile_visible OU onde é membro
+        filteredGroups = (groups || []).filter((group: any) => 
+          group.is_public || 
+          group.is_mobile_visible || 
+          memberGroupIds.includes(group.id)
+        )
+      } catch (filterError: any) {
+        console.warn('⚠️ [GROUPS API] Erro ao filtrar grupos (usando todos):', filterError)
+        // Em caso de erro, usar todos os grupos retornados
+        filteredGroups = groups || []
+      }
     }
+    
+    console.log('📋 [GROUPS API] Grupos após filtro:', filteredGroups.length)
     
     // Buscar última mensagem e contagem de não lidas para cada grupo
     // Verificar se o utilizador é membro de cada grupo
@@ -164,10 +210,18 @@ export async function GET(request: NextRequest) {
       })
     )
 
+    console.log('✅ [GROUPS API] Retornando grupos processados:', groupsWithMessages.length)
     return NextResponse.json({ groups: groupsWithMessages })
-  } catch (error) {
-    console.error('Erro na API de grupos:', error)
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+  } catch (error: any) {
+    console.error('❌ [GROUPS API] Erro geral na API:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    })
+    return NextResponse.json({ 
+      error: 'Erro interno do servidor',
+      details: error.message || 'Erro desconhecido'
+    }, { status: 500 })
   }
 }
 
