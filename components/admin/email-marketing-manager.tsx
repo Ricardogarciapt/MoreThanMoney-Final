@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { supabase } from "@/lib/supabase"
+import { createAdminSubscription } from "@/lib/admin-helpers"
 import {
   Mail,
   Send,
@@ -93,24 +94,13 @@ export default function EmailMarketingManager() {
       loadCampaigns()
       
       // Real-time subscription para campanhas
-      const channel = supabase
-        .channel('email-campaigns-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'email_campaigns'
-          },
-          (payload) => {
-            console.log('🔄 Real-time update:', payload)
-            loadCampaigns()
-          }
-        )
-        .subscribe()
+      const unsubscribe = createAdminSubscription('email_campaigns', (payload) => {
+        console.log('🔄 Real-time update:', payload)
+        loadCampaigns()
+      })
 
       return () => {
-        supabase.removeChannel(channel)
+        unsubscribe()
       }
     }
   }, [mounted])

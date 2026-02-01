@@ -113,9 +113,13 @@ export default function AdminPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/admin/stats')
-      const result = await response.json()
-      setStats(result.data)
+      const { adminApiCall } = await import('@/lib/admin-helpers')
+      const result = await adminApiCall<AdminStats>('/api/admin/stats')
+      if (result.success && result.data) {
+        setStats(result.data)
+      } else {
+        console.error('❌ [ADMIN] Erro ao buscar stats:', result.error)
+      }
     } catch (error) {
       console.error('❌ [ADMIN] Erro ao buscar stats:', error)
     }
@@ -123,9 +127,13 @@ export default function AdminPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/admin/users')
-      const result = await response.json()
-      setUsers(result.data || [])
+      const { adminApiCall } = await import('@/lib/admin-helpers')
+      const result = await adminApiCall<UserManagement[]>('/api/admin/users')
+      if (result.success && result.data) {
+        setUsers(result.data)
+      } else {
+        console.error('❌ [ADMIN] Erro ao buscar users:', result.error)
+      }
     } catch (error) {
       console.error('❌ [ADMIN] Erro ao buscar users:', error)
     } finally {
@@ -135,9 +143,13 @@ export default function AdminPage() {
 
   const fetchContent = async () => {
     try {
-      const response = await fetch('/api/admin/content')
-      const result = await response.json()
-      setContent(result.data || [])
+      const { adminApiCall } = await import('@/lib/admin-helpers')
+      const result = await adminApiCall<SiteContent[]>('/api/admin/content')
+      if (result.success && result.data) {
+        setContent(result.data)
+      } else {
+        console.error('❌ [ADMIN] Erro ao buscar content:', result.error)
+      }
     } catch (error) {
       console.error('❌ [ADMIN] Erro ao buscar content:', error)
     }
@@ -145,10 +157,12 @@ export default function AdminPage() {
 
   const fetchTrialStats = async () => {
     try {
-      const response = await fetch('/api/admin/trial-stats')
-      if (response.ok) {
-        const result = await response.json()
+      const { adminApiCall } = await import('@/lib/admin-helpers')
+      const result = await adminApiCall('/api/admin/trial-stats')
+      if (result.success && result.data) {
         setTrialStats(result.data)
+      } else {
+        console.error('❌ [ADMIN] Erro ao buscar trial stats:', result.error)
       }
     } catch (error) {
       console.error('❌ [ADMIN] Erro ao buscar trial stats:', error)

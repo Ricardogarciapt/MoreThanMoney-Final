@@ -28,6 +28,7 @@ import {
   Lightbulb
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { createAdminSubscription } from "@/lib/admin-helpers"
 
 interface AnalyticsData {
   userStats: {
@@ -92,40 +93,18 @@ export default function AnalyticsManager() {
       }, 60000)
       
       // Real-time subscriptions para métricas importantes
-      const postsChannel = supabase
-        .channel('analytics-posts')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'posts'
-          },
-          () => {
-            loadAnalytics()
-          }
-        )
-        .subscribe()
-
-      const campaignsChannel = supabase
-        .channel('analytics-campaigns')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'email_campaigns'
-          },
-          () => {
-            loadAnalytics()
-          }
-        )
-        .subscribe()
+      const unsubscribePosts = createAdminSubscription('posts', () => {
+        loadAnalytics()
+      })
+      
+      const unsubscribeCampaigns = createAdminSubscription('email_campaigns', () => {
+        loadAnalytics()
+      })
 
       return () => {
         clearInterval(refreshInterval)
-        supabase.removeChannel(postsChannel)
-        supabase.removeChannel(campaignsChannel)
+        unsubscribePosts()
+        unsubscribeCampaigns()
       }
     }
   }, [mounted, timeRange])

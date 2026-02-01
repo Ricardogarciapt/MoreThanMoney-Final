@@ -41,6 +41,7 @@ import {
   Clock
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { createAdminSubscription } from "@/lib/admin-helpers"
 
 interface NotificationConfig {
   id: string
