@@ -114,15 +114,27 @@ export default function UserDropdown() {
 
     // Subscribir a mudanças em tempo real (apenas se houver sessão válida)
     let channel: any = null
+    let subscriptionAttempts = 0
+    const MAX_SUBSCRIPTION_ATTEMPTS = 1 // Apenas uma tentativa
+    
     const setupRealtime = async () => {
+      // Evitar múltiplas tentativas
+      if (subscriptionAttempts >= MAX_SUBSCRIPTION_ATTEMPTS) {
+        console.warn('⚠️ [USER DROPDOWN] Limite de tentativas de subscription atingido, usando apenas polling')
+        return
+      }
+      
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
         if (sessionError || !session?.access_token) {
           console.warn('⚠️ [USER DROPDOWN] Sem sessão válida para Realtime XP, usando apenas polling')
+          subscriptionAttempts++
           return
         }
 
+        subscriptionAttempts++
+        
         // Criar channel com configuração explícita
         channel = supabase
           .channel(`user_xp_${user.id}`, {
@@ -146,12 +158,31 @@ export default function UserDropdown() {
           .subscribe((status) => {
             if (status === 'SUBSCRIBED') {
               console.log('✅ [USER DROPDOWN] Subscription Realtime XP ativa')
+              subscriptionAttempts = 0 // Reset contador se sucesso
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
               console.warn('⚠️ [USER DROPDOWN] Erro na subscription Realtime XP:', status)
+              // Não tentar reconectar - usar apenas polling
+              if (channel) {
+                try {
+                  supabase.removeChannel(channel)
+                } catch (e) {
+                  // Ignorar erros ao remover
+                }
+                channel = null
+              }
             }
           })
       } catch (error) {
         console.warn('⚠️ [USER DROPDOWN] Erro ao configurar Realtime para XP:', error)
+        subscriptionAttempts++
+        if (channel) {
+          try {
+            supabase.removeChannel(channel)
+          } catch (e) {
+            // Ignorar erros ao remover
+          }
+          channel = null
+        }
       }
     }
     
@@ -209,6 +240,9 @@ export default function UserDropdown() {
         return
       }
 
+      let notificationSubscriptionAttempts = 0
+      const MAX_NOTIFICATION_ATTEMPTS = 1
+      
       try {
         // Verificar se há sessão válida antes de subscrever
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
@@ -218,6 +252,15 @@ export default function UserDropdown() {
           interval = setInterval(loadUnreadNotificationsCount, 30000)
           return
         }
+
+        // Evitar múltiplas tentativas
+        if (notificationSubscriptionAttempts >= MAX_NOTIFICATION_ATTEMPTS) {
+          console.warn('⚠️ [USER DROPDOWN] Limite de tentativas de subscription notificações atingido')
+          interval = setInterval(loadUnreadNotificationsCount, 30000)
+          return
+        }
+
+        notificationSubscriptionAttempts++
 
         // Real-time subscription para notificações (apenas se tiver sessão válida)
         channel = supabase
@@ -244,8 +287,18 @@ export default function UserDropdown() {
           .subscribe((status) => {
             if (status === 'SUBSCRIBED') {
               console.log('✅ [USER DROPDOWN] Subscription Realtime notificações ativa')
+              notificationSubscriptionAttempts = 0 // Reset se sucesso
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
               console.warn('⚠️ [USER DROPDOWN] Erro na subscription Realtime notificações, usando fallback')
+              // Remover channel e usar apenas polling
+              if (channel) {
+                try {
+                  supabase.removeChannel(channel)
+                } catch (e) {
+                  // Ignorar erros
+                }
+                channel = null
+              }
               // Fallback: polling a cada 30s
               if (!interval) {
                 interval = setInterval(loadUnreadNotificationsCount, 30000)
@@ -254,6 +307,15 @@ export default function UserDropdown() {
           })
       } catch (error) {
         console.warn('⚠️ [USER DROPDOWN] Erro ao configurar Realtime, usando fallback:', error)
+        notificationSubscriptionAttempts++
+        if (channel) {
+          try {
+            supabase.removeChannel(channel)
+          } catch (e) {
+            // Ignorar erros
+          }
+          channel = null
+        }
         // Fallback: polling a cada 30s
         if (!interval) {
           interval = setInterval(loadUnreadNotificationsCount, 30000)

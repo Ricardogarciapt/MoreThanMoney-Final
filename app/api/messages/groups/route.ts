@@ -86,15 +86,19 @@ export async function GET(request: NextRequest) {
     // Buscar última mensagem e contagem de não lidas para cada grupo
     // Verificar se o utilizador é membro de cada grupo
     const groupsWithMessages = await Promise.all(
-      filteredGroups.map(async (group) => {
+      (filteredGroups || []).map(async (group: any) => {
         try {
           // Verificar se o utilizador é membro
-          const { data: member } = await supabase
+          const { data: member, error: memberError } = await supabase
             .from('group_members')
             .select('role')
             .eq('group_id', group.id)
             .eq('user_id', session.user.id)
             .maybeSingle()
+
+          if (memberError && memberError.code !== 'PGRST116') {
+            console.warn(`⚠️ [GROUPS] Erro ao verificar membro do grupo ${group.id}:`, memberError)
+          }
 
           // Verificar se pode publicar (admin, VIP, ou Social Chat)
           const isAdmin = profile?.user_type === 'admin'
@@ -103,7 +107,7 @@ export async function GET(request: NextRequest) {
           const canPost = isAdmin || isVip || isSocialChat || !!member
 
           // Última mensagem
-          const { data: lastMessage } = await supabase
+          const { data: lastMessage, error: lastMessageError } = await supabase
             .from('messages')
             .select('content, created_at')
             .eq('group_id', group.id)
@@ -111,19 +115,31 @@ export async function GET(request: NextRequest) {
             .limit(1)
             .maybeSingle()
 
+          if (lastMessageError && lastMessageError.code !== 'PGRST116') {
+            console.warn(`⚠️ [GROUPS] Erro ao buscar última mensagem do grupo ${group.id}:`, lastMessageError)
+          }
+
           // Contagem de não lidas (simplificado - pode melhorar)
-          const { count: unreadCount } = await supabase
+          const { count: unreadCount, error: unreadError } = await supabase
             .from('messages')
             .select('*', { count: 'exact', head: true })
             .eq('group_id', group.id)
             .eq('read', false)
             .neq('sender_id', session.user.id)
 
+          if (unreadError && unreadError.code !== 'PGRST116') {
+            console.warn(`⚠️ [GROUPS] Erro ao contar não lidas do grupo ${group.id}:`, unreadError)
+          }
+
           // Contar membros
-          const { count: memberCount } = await supabase
+          const { count: memberCount, error: memberCountError } = await supabase
             .from('group_members')
             .select('*', { count: 'exact', head: true })
             .eq('group_id', group.id)
+
+          if (memberCountError && memberCountError.code !== 'PGRST116') {
+            console.warn(`⚠️ [GROUPS] Erro ao contar membros do grupo ${group.id}:`, memberCountError)
+          }
 
           return {
             ...group,
@@ -133,8 +149,8 @@ export async function GET(request: NextRequest) {
             can_post: canPost,
             is_member: !!member
           }
-        } catch (error) {
-          console.error(`Erro ao processar grupo ${group.id}:`, error)
+        } catch (error: any) {
+          console.error(`❌ [GROUPS] Erro ao processar grupo ${group?.id || 'unknown'}:`, error)
           // Retornar grupo básico em caso de erro
           return {
             ...group,

@@ -84,12 +84,33 @@ export default function SocialFeed() {
     if (mounted) {
       loadUser()
       loadPosts()
-      const unsubscribe = subscribeToPosts()
       loadViewedCategories()
+      
+      // Subscribir a posts (retorna função de cleanup)
+      let unsubscribeFn: (() => void) | null = null
+      
+      const setupSubscription = async () => {
+        try {
+          const cleanup = await subscribeToPosts()
+          if (cleanup && typeof cleanup === 'function') {
+            unsubscribeFn = cleanup
+          }
+        } catch (error) {
+          console.error('❌ [SOCIAL FEED] Erro ao configurar subscription:', error)
+        }
+      }
+      
+      setupSubscription()
       
       // Cleanup ao desmontar
       return () => {
-        if (unsubscribe) unsubscribe()
+        if (unsubscribeFn && typeof unsubscribeFn === 'function') {
+          try {
+            unsubscribeFn()
+          } catch (error) {
+            console.warn('⚠️ [SOCIAL FEED] Erro ao limpar subscription:', error)
+          }
+        }
       }
     }
   }, [mounted])
