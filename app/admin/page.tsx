@@ -40,6 +40,7 @@ import AnalyticsManager from "@/components/admin/analytics-manager"
 import NotificationsManager from "@/components/admin/notifications-manager"
 import FastStartManager from "@/components/admin/fast-start-manager"
 import GroupsManager from "@/components/admin/groups-manager"
+import ChatsMessagesManager from "@/components/admin/chats-messages-manager"
 import Link from "next/link"
 
 export default function AdminPage() {
@@ -286,7 +287,7 @@ export default function AdminPage() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-11 bg-gray-900 border border-[#D2A63C]/30 mb-8 overflow-x-auto">
+          <TabsList className="grid w-full grid-cols-12 bg-gray-900 border border-[#D2A63C]/30 mb-8 overflow-x-auto">
             <TabsTrigger 
               value="dashboard" 
               className="data-[state=active]:bg-[#D2A63C] data-[state=active]:text-black"
@@ -363,6 +364,13 @@ export default function AdminPage() {
             >
               <MessageCircle className="w-4 h-4 mr-2" />
               Grupos
+            </TabsTrigger>
+            <TabsTrigger 
+              value="chats-messages" 
+              className="data-[state=active]:bg-[#D2A63C] data-[state=active]:text-black"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Chats & Mensagens
             </TabsTrigger>
           </TabsList>
 
@@ -944,6 +952,11 @@ export default function AdminPage() {
           {/* Groups Tab */}
           <TabsContent value="groups" className="space-y-6">
             <GroupsManager />
+          </TabsContent>
+          
+          {/* Chats & Messages Tab */}
+          <TabsContent value="chats-messages" className="space-y-6">
+            <ChatsMessagesManager />
           </TabsContent>
         </Tabs>
       </div>
