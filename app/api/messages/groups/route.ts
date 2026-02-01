@@ -39,27 +39,27 @@ export async function GET(request: NextRequest) {
       .single()
 
     let query
-    if (mobileOnly) {
+    if (profile?.user_type === 'admin') {
+      // Admin vê TODOS os grupos (sem filtros)
+      query = supabase
+        .from('group_conversations')
+        .select('*')
+    } else if (mobileOnly) {
       // Se for mobile_only, TODOS os utilizadores veem grupos com is_mobile_visible = true
       // Não precisa ser membro para ver, apenas para publicar
       query = supabase
         .from('group_conversations')
         .select('*')
         .eq('is_mobile_visible', true)
-    } else if (profile?.user_type === 'admin') {
-      // Admin vê todos os grupos
+    } else {
+      // Utilizador normal vê grupos onde é membro OU grupos públicos OU grupos mobile_visible
+      // Usar uma abordagem diferente para evitar problemas com o join
       query = supabase
         .from('group_conversations')
         .select('*')
-    } else {
-      // Utilizador normal vê apenas grupos onde é membro (para grupos não-mobile)
-      query = supabase
-        .from('group_conversations')
-        .select(`
-          *,
-          members:group_members!inner(user_id)
-        `)
-        .eq('members.user_id', session.user.id)
+        .or(`is_public.eq.true,is_mobile_visible.eq.true`)
+      
+      // Depois verificar membros separadamente
     }
     
     // Ordenar por created_at se last_message_at não existir
@@ -70,10 +70,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Erro ao buscar grupos' }, { status: 500 })
     }
 
+    // Se não for admin e não for mobile_only, filtrar grupos onde o utilizador é membro
+    let filteredGroups = groups || []
+    if (!mobileOnly && profile?.user_type !== 'admin') {
+      // Buscar grupos onde o utilizador é membro
+      const { data: userMemberships } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .eq('user_id', session.user.id)
+      
+      const memberGroupIds = (userMemberships || []).map(m => m.group_id)
+      
+      // Filtrar: manter grupos públicos, mobile_visible OU onde é membro
+      filteredGroups = (groups || []).filter(group => 
+        group.is_public || 
+        group.is_mobile_visible || 
+        memberGroupIds.includes(group.id)
+      )
+    }
+    
     // Buscar última mensagem e contagem de não lidas para cada grupo
     // Verificar se o utilizador é membro de cada grupo
     const groupsWithMessages = await Promise.all(
-      (groups || []).map(async (group) => {
+      filteredGroups.map(async (group) => {
         try {
           // Verificar se o utilizador é membro
           const { data: member } = await supabase
@@ -81,7 +100,7 @@ export async function GET(request: NextRequest) {
             .select('role')
             .eq('group_id', group.id)
             .eq('user_id', session.user.id)
-            .single()
+            .maybeSingle()
 
           // Verificar se pode publicar (admin, VIP, ou Social Chat)
           const isAdmin = profile?.user_type === 'admin'
