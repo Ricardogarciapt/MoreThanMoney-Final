@@ -12,7 +12,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
 import ProtectedPage from "@/components/protected-page"
-import GroupsManager from "@/components/admin/groups-manager"
 
 interface Conversation {
   id: string
