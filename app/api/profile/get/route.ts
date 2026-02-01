@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    console.log('🔍 [PROFILE API] Buscando perfil via service role:', userId)
 
     const { data: profile, error } = await supabaseAdmin
       .from('profiles')
@@ -35,7 +34,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    console.log('✅ [PROFILE API] Perfil encontrado:', profile.email)
     return NextResponse.json({ profile })
   } catch (error: any) {
     console.error('❌ [PROFILE API] Erro inesperado:', error)

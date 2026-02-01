@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now()
   
   try {
-    console.log('📊 [ADMIN STATS] Iniciando busca de estatísticas...')
 
     // Executar queries em paralelo para melhor performance
     const [
@@ -97,7 +96,6 @@ export async function GET(request: NextRequest) {
     }
 
     const duration = Date.now() - startTime
-    console.log(`✅ [ADMIN STATS] Estatísticas carregadas em ${duration}ms`)
 
     return NextResponse.json({ data: stats })
   } catch (error: any) {

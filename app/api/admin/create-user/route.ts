@@ -104,6 +104,19 @@ export async function POST(request: NextRequest) {
 
     // Criar perfil na tabela profiles
     if (authUser.user) {
+      // Calcular data de expiração para trial/guest users
+      const isTrial = user_type === 'guest' || user_type === 'presentation'
+      let trialExpiresAt = null
+      if (isTrial) {
+        const expiryDate = new Date()
+        if (user_type === 'presentation') {
+          expiryDate.setDate(expiryDate.getDate() + 7) // 7 dias para presentation
+        } else {
+          expiryDate.setHours(expiryDate.getHours() + 48) // 48 horas para guest
+        }
+        trialExpiresAt = expiryDate.toISOString()
+      }
+
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -117,6 +130,8 @@ export async function POST(request: NextRequest) {
           membership_level: membership_level || 'basic',
           is_active: true,
           is_verified: true, // Verificado por ser criação manual
+          trial_expires_at: trialExpiresAt,
+          trial_expired: false,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -140,6 +155,17 @@ export async function POST(request: NextRequest) {
       console.warn('Erro ao registrar log:', logError)
     }
 
+    const isTrial = user_type === 'guest' || user_type === 'presentation'
+    const expiryDate = isTrial ? (() => {
+      const date = new Date()
+      if (user_type === 'presentation') {
+        date.setDate(date.getDate() + 7)
+      } else {
+        date.setHours(date.getHours() + 48)
+      }
+      return date.toISOString()
+    })() : null
+
     return NextResponse.json({ 
       success: true,
       message: 'Utilizador criado com sucesso',
@@ -147,7 +173,9 @@ export async function POST(request: NextRequest) {
         id: authUser.user?.id,
         email,
         username,
-        full_name
+        full_name,
+        user_type,
+        trial_expires_at: expiryDate
       }
     })
 

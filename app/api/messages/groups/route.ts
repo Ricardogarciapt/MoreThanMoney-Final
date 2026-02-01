@@ -31,11 +31,6 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const mobileOnly = searchParams.get('mobile_only') === 'true'
 
-    console.log('📱 [GROUPS API] Request:', { 
-      userId: session.user.id, 
-      mobileOnly,
-      email: session.user.email 
-    })
 
     // Buscar perfil do utilizador para verificar se é admin/VIP
     const { data: profile, error: profileError } = await supabase
@@ -49,10 +44,6 @@ export async function GET(request: NextRequest) {
       // Continuar mesmo com erro no perfil
     }
 
-    console.log('👤 [GROUPS API] Perfil:', { 
-      user_type: profile?.user_type, 
-      membership_type: profile?.membership_type 
-    })
 
     // Construir query base
     let query = supabase.from('group_conversations').select('*')
@@ -61,14 +52,11 @@ export async function GET(request: NextRequest) {
     try {
       if (profile?.user_type === 'admin') {
         // Admin vê TODOS os grupos (sem filtros)
-        console.log('🔑 [GROUPS API] Admin - buscando todos os grupos')
       } else if (mobileOnly) {
         // Se for mobile_only, TODOS os utilizadores veem grupos com is_mobile_visible = true
-        console.log('📱 [GROUPS API] Mobile only - buscando grupos mobile_visible')
         query = query.eq('is_mobile_visible', true)
       } else {
         // Utilizador normal vê grupos onde é membro OU grupos públicos OU grupos mobile_visible
-        console.log('👤 [GROUPS API] Utilizador normal - buscando grupos públicos/mobile')
         query = query.or(`is_public.eq.true,is_mobile_visible.eq.true`)
       }
       
@@ -90,7 +78,6 @@ export async function GET(request: NextRequest) {
         }, { status: 500 })
       }
 
-      console.log('✅ [GROUPS API] Grupos encontrados:', groups?.length || 0)
 
     } catch (queryError: any) {
       console.error('❌ [GROUPS API] Erro ao construir query:', queryError)
@@ -212,7 +199,6 @@ export async function GET(request: NextRequest) {
       })
     )
 
-    console.log('✅ [GROUPS API] Retornando grupos processados:', groupsWithMessages.length)
     return NextResponse.json({ groups: groupsWithMessages })
   } catch (error: any) {
     console.error('❌ [GROUPS API] Erro geral na API:', {

@@ -137,27 +137,17 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
         return
       }
 
-      // Verificar se é trial
-      const isTrial = newUser.user_type === 'guest' || newUser.user_type === 'presentation'
-      const apiEndpoint = isTrial ? '/api/admin/create-trial-user' : '/api/admin/create-user'
-      
-      const payload = isTrial ? {
-        email: newUser.email,
-        username: newUser.username,
-        full_name: newUser.full_name,
-        trialType: newUser.user_type
-      } : newUser
-
-      // Criar utilizador via API
+      // Usar sempre create-user (suporta trial/guest agora)
       const { adminApiCall } = await import('@/lib/admin-helpers')
-      const result = await adminApiCall(apiEndpoint, {
+      const result = await adminApiCall('/api/admin/create-user', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: JSON.stringify(newUser)
       })
 
       if (result.success && result.data) {
+        const isTrial = newUser.user_type === 'guest' || newUser.user_type === 'presentation'
         const message = isTrial 
-          ? `Utilizador ${newUser.user_type} criado!\n\nEmail: ${result.data.user?.email || newUser.email}\nPalavra-passe: ${result.data.user?.password || 'Verifique os logs'}\nExpira: ${result.data.user?.trial_expires_at ? new Date(result.data.user.trial_expires_at).toLocaleString('pt-PT') : 'N/A'}\n\n⚠️ Copia a palavra-passe temporária!`
+          ? `Utilizador ${newUser.user_type} criado!\n\nEmail: ${result.data.user?.email || newUser.email}\nPalavra-passe: ${newUser.password}\nExpira: ${result.data.user?.trial_expires_at ? new Date(result.data.user.trial_expires_at).toLocaleString('pt-PT') : 'N/A'}\n\n⚠️ Copia a palavra-passe!`
           : `Utilizador ${newUser.email} criado com sucesso!`
         
         alert(message)

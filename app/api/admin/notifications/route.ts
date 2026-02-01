@@ -120,7 +120,6 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log(`[NOTIFICATIONS_POST] ✅ Notificação criada: ${notification.id}`)
 
     return NextResponse.json({
       success: true,
@@ -241,7 +240,6 @@ export async function PUT(request: NextRequest) {
       }, { status: 404 })
     }
 
-    console.log(`[NOTIFICATIONS_PUT] ✅ Notificação atualizada: ${id}`)
 
     return NextResponse.json({
       success: true,

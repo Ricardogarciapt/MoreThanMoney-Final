@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '100')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    console.log('👥 [ADMIN USERS] Buscando utilizadores:', { userType, status, limit, offset })
 
     // Construir query base
     let query = supabase
@@ -49,7 +48,6 @@ export async function GET(request: NextRequest) {
     }
 
     if (!data || data.length === 0) {
-      console.log('ℹ️ [ADMIN USERS] Nenhum utilizador encontrado')
       return NextResponse.json({ 
         data: [],
         count: 0,
@@ -105,7 +103,6 @@ export async function GET(request: NextRequest) {
     }))
 
     const duration = Date.now() - startTime
-    console.log(`✅ [ADMIN USERS] ${dataWithXPAndProgress.length} utilizadores carregados em ${duration}ms`)
 
     return NextResponse.json({ 
       data: dataWithXPAndProgress,
@@ -174,7 +171,6 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    console.log('🔄 [ADMIN USERS PUT] Atualizando utilizador:', { userId, fields: Object.keys(filteredUpdates) })
 
     const { data, error } = await supabase
       .from('profiles')
@@ -197,7 +193,6 @@ export async function PUT(request: NextRequest) {
       }, { status: 404 })
     }
 
-    console.log('✅ [ADMIN USERS PUT] Utilizador atualizado com sucesso')
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     console.error('❌ [ADMIN USERS PUT] Erro:', error)
@@ -251,7 +246,6 @@ export async function PATCH(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('🔄 [ADMIN USERS PATCH] Atualizando:', { userId, user_type, member_category, onboarding_platform, is_active })
 
     const updates: any = {
       updated_at: new Date().toISOString()
@@ -294,7 +288,6 @@ export async function PATCH(request: NextRequest) {
       }, { status: 404 })
     }
 
-    console.log('✅ [ADMIN USERS PATCH] Atualizado com sucesso')
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     console.error('❌ [ADMIN USERS PATCH] Erro:', error)
