@@ -97,7 +97,6 @@ export default function MessagesPage() {
   const [userSearchQuery, setUserSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<UserProfile[]>([])
   const [searchingUsers, setSearchingUsers] = useState(false)
-  const [showGroupsManager, setShowGroupsManager] = useState(false)
   const [selectedRecipients, setSelectedRecipients] = useState<UserProfile[]>([])
   const [searchByRole, setSearchByRole] = useState(false)
   const [selectedRole, setSelectedRole] = useState<string>("")

@@ -201,9 +201,16 @@ export default function GeolocationDetector() {
       console.log('⏭️ [GEOLOCATION] Utilizador escolheu manualmente - pulando tradução automática')
       return
     }
+
+    // Método 1: Usar cookie (mais confiável e funciona mesmo se o script ainda não carregou)
+    const cookieValue = `/pt/${langCode}`
+    document.cookie = `googtrans=${cookieValue}; path=/; max-age=31536000`
+    document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname}; max-age=31536000`
+    console.log(`🍪 [GEOLOCATION] Cookie definido: googtrans=${cookieValue}`)
     
+    // Método 2: Tentar usar o select do Google Translate (fallback)
     let attempts = 0
-    const maxAttempts = 10 // Reduzido para menos tentativas
+    const maxAttempts = 15 // Aumentado para dar mais tempo ao script carregar
 
     const tryApply = () => {
       const translateSelect = document.querySelector('.goog-te-combo') as HTMLSelectElement
@@ -216,18 +223,26 @@ export default function GeolocationDetector() {
         translateSelect.dispatchEvent(event)
         
         sessionStorage.setItem('mtm_auto_translated', 'true')
+        sessionStorage.setItem('mtm_auto_lang', langCode)
       } else {
         attempts++
         if (attempts < maxAttempts) {
-          setTimeout(tryApply, 300) // Reduzido intervalo entre tentativas
+          setTimeout(tryApply, 500) // Intervalo maior para dar tempo ao script
         } else {
-          console.warn(`⚠️ [GEOLOCATION] Google Translate não carregou após ${maxAttempts} tentativas`)
+          // Se o select não aparecer, o cookie já foi definido, então recarregar página
+          console.log(`⚠️ [GEOLOCATION] Google Translate select não encontrado, mas cookie definido. Recarregando página...`)
+          if (!sessionStorage.getItem('mtm_auto_translation_reload')) {
+            sessionStorage.setItem('mtm_auto_translation_reload', 'true')
+            setTimeout(() => {
+              window.location.reload()
+            }, 1000)
+          }
         }
       }
     }
 
-    // Aguardar 1s antes de tentar (reduzido para velocidade)
-    setTimeout(tryApply, 1000)
+    // Aguardar 2s antes de tentar (dar tempo ao script carregar)
+    setTimeout(tryApply, 2000)
   }
 
   // Componente invisível (apenas lógica)
