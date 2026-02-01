@@ -75,41 +75,41 @@ export default function SocialFeed() {
   const feedRef = useRef<HTMLDivElement>(null)
   const [postMentions, setPostMentions] = useState<any[]>([])
   const [commentMentions, setCommentMentions] = useState<Map<string, any[]>>(new Map())
+  const unsubscribeRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
-    if (mounted) {
-      loadUser()
-      loadPosts()
-      loadViewedCategories()
-      
-      // Subscribir a posts (retorna função de cleanup)
-      let unsubscribeFn: (() => void) | null = null
-      
-      const setupSubscription = async () => {
-        try {
-          const cleanup = await subscribeToPosts()
-          if (cleanup && typeof cleanup === 'function') {
-            unsubscribeFn = cleanup
-          }
-        } catch (error) {
-          console.error('❌ [SOCIAL FEED] Erro ao configurar subscription:', error)
+    if (!mounted) return
+    
+    loadUser()
+    loadPosts()
+    loadViewedCategories()
+    
+    // Subscribir a posts (retorna função de cleanup)
+    const setupSubscription = async () => {
+      try {
+        const cleanup = await subscribeToPosts()
+        if (cleanup && typeof cleanup === 'function') {
+          unsubscribeRef.current = cleanup
         }
+      } catch (error) {
+        console.error('❌ [SOCIAL FEED] Erro ao configurar subscription:', error)
       }
-      
-      setupSubscription()
-      
-      // Cleanup ao desmontar
-      return () => {
-        if (unsubscribeFn && typeof unsubscribeFn === 'function') {
-          try {
-            unsubscribeFn()
-          } catch (error) {
-            console.warn('⚠️ [SOCIAL FEED] Erro ao limpar subscription:', error)
-          }
+    }
+    
+    setupSubscription()
+    
+    // Cleanup ao desmontar
+    return () => {
+      if (unsubscribeRef.current && typeof unsubscribeRef.current === 'function') {
+        try {
+          unsubscribeRef.current()
+          unsubscribeRef.current = null
+        } catch (error) {
+          console.warn('⚠️ [SOCIAL FEED] Erro ao limpar subscription:', error)
         }
       }
     }
@@ -477,7 +477,17 @@ export default function SocialFeed() {
       console.log('📡 [SOCIAL FEED] Iniciando subscrição Realtime...')
       
       // Verificar sessão antes de criar subscription
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      let { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      // Se não há sessão ou token, tentar renovar
+      if (!session?.access_token) {
+        console.log('🔄 [SOCIAL FEED] Tentando renovar sessão...')
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+        if (refreshedSession?.access_token) {
+          session = refreshedSession
+          sessionError = null
+        }
+      }
       
       if (sessionError || !session?.access_token) {
         console.warn('⚠️ [SOCIAL FEED] Sem sessão válida, usando apenas polling')
@@ -488,7 +498,8 @@ export default function SocialFeed() {
       console.log('🔐 [SOCIAL FEED] Sessão:', {
         autenticado: !!session,
         user_id: session?.user?.id,
-        email: session?.user?.email
+        email: session?.user?.email,
+        token_presente: !!session?.access_token
       })
       
       const channel = supabase

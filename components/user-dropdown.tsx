@@ -125,7 +125,17 @@ export default function UserDropdown() {
       }
       
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        let { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        // Se não há sessão ou token, tentar renovar
+        if (!session?.access_token) {
+          console.log('🔄 [USER DROPDOWN] Tentando renovar sessão para XP...')
+          const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+          if (refreshedSession?.access_token) {
+            session = refreshedSession
+            sessionError = null
+          }
+        }
         
         if (sessionError || !session?.access_token) {
           console.warn('⚠️ [USER DROPDOWN] Sem sessão válida para Realtime XP, usando apenas polling')
@@ -245,7 +255,17 @@ export default function UserDropdown() {
       
       try {
         // Verificar se há sessão válida antes de subscrever
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        let { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        // Se não há sessão ou token, tentar renovar
+        if (!session?.access_token) {
+          console.log('🔄 [USER DROPDOWN] Tentando renovar sessão para notificações...')
+          const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+          if (refreshedSession?.access_token) {
+            session = refreshedSession
+            sessionError = null
+          }
+        }
         
         if (sessionError || !session?.access_token) {
           console.warn('⚠️ [USER DROPDOWN] Sem sessão válida, usando apenas polling para notificações')

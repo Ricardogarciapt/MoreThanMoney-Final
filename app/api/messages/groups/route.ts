@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
 
     // Construir query base
     let query = supabase.from('group_conversations').select('*')
+    let groups: any[] | null = null
     
     try {
       if (profile?.user_type === 'admin') {
@@ -72,7 +73,8 @@ export async function GET(request: NextRequest) {
       }
       
       // Ordenar por created_at
-      const { data: groups, error } = await query.order('created_at', { ascending: false })
+      const { data, error } = await query.order('created_at', { ascending: false })
+      groups = data
 
       if (error) {
         console.error('❌ [GROUPS API] Erro na query de grupos:', {
