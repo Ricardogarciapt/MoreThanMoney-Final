@@ -46,38 +46,65 @@ export async function GET(request: NextRequest) {
 
 
     // Construir query base
-    let query = supabase.from('group_conversations').select('*')
     let groups: any[] | null = null
     
     try {
       if (profile?.user_type === 'admin') {
         // Admin vê TODOS os grupos (sem filtros)
+        const { data, error } = await supabase
+          .from('group_conversations')
+          .select('*')
+          .order('created_at', { ascending: false })
+        
+        if (error) throw error
+        groups = data
       } else if (mobileOnly) {
         // Se for mobile_only, TODOS os utilizadores veem grupos com is_mobile_visible = true
-        query = query.eq('is_mobile_visible', true)
+        const { data, error } = await supabase
+          .from('group_conversations')
+          .select('*')
+          .eq('is_mobile_visible', true)
+          .order('created_at', { ascending: false })
+        
+        if (error) throw error
+        groups = data
       } else {
-        // Utilizador normal vê grupos onde é membro OU grupos públicos OU grupos mobile_visible
-        query = query.or(`is_public.eq.true,is_mobile_visible.eq.true`)
+        // Utilizador normal vê grupos públicos OU grupos mobile_visible
+        // Fazer duas queries separadas e combinar resultados
+        const [publicGroupsResult, mobileGroupsResult] = await Promise.all([
+          supabase
+            .from('group_conversations')
+            .select('*')
+            .eq('is_public', true),
+          supabase
+            .from('group_conversations')
+            .select('*')
+            .eq('is_mobile_visible', true)
+        ])
+        
+        if (publicGroupsResult.error) {
+          console.warn('⚠️ [GROUPS API] Erro ao buscar grupos públicos:', publicGroupsResult.error)
+        }
+        if (mobileGroupsResult.error) {
+          console.warn('⚠️ [GROUPS API] Erro ao buscar grupos mobile:', mobileGroupsResult.error)
+        }
+        
+        // Combinar e remover duplicados
+        const allGroups = [
+          ...(publicGroupsResult.data || []),
+          ...(mobileGroupsResult.data || [])
+        ]
+        
+        // Remover duplicados por ID
+        const uniqueGroups = Array.from(
+          new Map(allGroups.map((g: any) => [g.id, g])).values()
+        )
+        
+        // Ordenar por created_at
+        groups = uniqueGroups.sort((a: any, b: any) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
       }
-      
-      // Ordenar por created_at
-      const { data, error } = await query.order('created_at', { ascending: false })
-      groups = data
-
-      if (error) {
-        console.error('❌ [GROUPS API] Erro na query de grupos:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        })
-        return NextResponse.json({ 
-          error: 'Erro ao buscar grupos',
-          details: error.message,
-          code: error.code
-        }, { status: 500 })
-      }
-
 
     } catch (queryError: any) {
       console.error('❌ [GROUPS API] Erro ao construir query:', queryError)

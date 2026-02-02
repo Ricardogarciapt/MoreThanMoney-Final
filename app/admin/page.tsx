@@ -22,7 +22,9 @@ import {
   MessageCircle,
   Database,
   Video,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Brain,
+  Dumbbell
 } from "lucide-react"
 import type { SiteContent, UserManagement, AdminStats } from "@/lib/admin-types"
 import ThemeManager from "@/components/admin/theme-manager"
@@ -37,6 +39,7 @@ import AnalyticsManager from "@/components/admin/analytics-manager"
 import NotificationsManager from "@/components/admin/notifications-manager"
 import FastStartManager from "@/components/admin/fast-start-manager"
 import ChatsMessagesManager from "@/components/admin/chats-messages-manager"
+import MindsetFitnessManager from "@/components/admin/mindset-fitness-manager"
 import Link from "next/link"
 import { adminApiCall, clearAdminCache } from "@/lib/admin-helpers"
 
@@ -748,6 +751,43 @@ export default function AdminPage() {
             {expandedSection === 'fast-start' && (
               <CardContent className="pt-6">
                 <FastStartManager />
+              </CardContent>
+            )}
+          </Card>
+
+          {/* Mindset & Fitness Section */}
+          <Card className="group bg-gradient-to-br from-purple-500/10 to-pink-500/5 border-purple-500/40 hover:border-purple-500/60 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/20">
+            <CardHeader className="bg-gradient-to-r from-purple-500/20 to-transparent border-b border-purple-500/30">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-purple-400 flex items-center gap-3 text-xl">
+                  <div className="p-2 rounded-lg bg-purple-500/30">
+                    <Brain className="w-5 h-5" />
+                  </div>
+                  Mindset & Fitness
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleSection('mindset-fitness')}
+                  className="text-gray-400 hover:text-gray-300 hover:bg-gray-500/10 transition-all"
+                >
+                  {expandedSection === 'mindset-fitness' ? (
+                    <>
+                      <span className="mr-2">Recolher</span>
+                      <span className="text-xs">▲</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mr-2">Expandir</span>
+                      <span className="text-xs">▼</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            {expandedSection === 'mindset-fitness' && (
+              <CardContent className="pt-6 space-y-6">
+                <MindsetFitnessManager />
               </CardContent>
             )}
           </Card>

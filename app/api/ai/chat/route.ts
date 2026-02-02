@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Mensagem é obrigatória' }, { status: 400 })
     }
 
+    // Obter pathname do contexto
+    const pathname = context?.pathname || ''
+
     const openaiKey = process.env.OPENAI_API_KEY
     if (!openaiKey) {
       return NextResponse.json({ error: 'OpenAI API não configurada' }, { status: 500 })
@@ -63,11 +66,87 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const systemPrompt = `Você é um assistente de trading especializado em ajudar utilizadores com estratégias DCA (Dollar Cost Averaging), análise de portfólio e gestão de risco.
+    // Buscar contexto adicional baseado na página
+    let additionalContext = ''
+    const isMindsetFitness = pathname?.includes('mindset-fitness') || pathname?.includes('app-mobile')
+    
+    if (isMindsetFitness) {
+      try {
+        // Buscar objetivos de mindset e fitness
+        const [mindsetGoals, fitnessGoals, recentWorkouts] = await Promise.all([
+          supabase
+            .from('mindset_goals')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .eq('is_active', true)
+            .limit(3),
+          supabase
+            .from('fitness_goals')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .eq('is_active', true)
+            .limit(3),
+          supabase
+            .from('workout_sessions')
+            .select('*, workouts(*)')
+            .eq('user_id', session.user.id)
+            .order('started_at', { ascending: false })
+            .limit(5)
+        ])
 
-${dcaContext}
+        if (mindsetGoals.data && mindsetGoals.data.length > 0) {
+          additionalContext += `\n\nObjetivos de Mindset:\n${JSON.stringify(mindsetGoals.data.map(g => ({
+            type: g.goal_type,
+            target: g.target_value,
+            current: g.current_value,
+            description: g.description
+          })), null, 2)}`
+        }
 
-Seja conciso, útil e focado em ajudar o utilizador a tomar decisões informadas. Use dados reais quando disponíveis.`
+        if (fitnessGoals.data && fitnessGoals.data.length > 0) {
+          additionalContext += `\n\nObjetivos de Fitness:\n${JSON.stringify(fitnessGoals.data.map(g => ({
+            type: g.goal_type,
+            target: g.target_value,
+            current: g.current_value,
+            description: g.description
+          })), null, 2)}`
+        }
+
+        if (recentWorkouts.data && recentWorkouts.data.length > 0) {
+          additionalContext += `\n\nTreinos Recentes:\n${JSON.stringify(recentWorkouts.data.map(s => ({
+            workout: s.workouts?.name,
+            completed: s.completed_at ? 'Sim' : 'Não',
+            duration: s.duration_minutes,
+            rating: s.rating
+          })), null, 2)}`
+        }
+      } catch (contextError) {
+        console.warn('⚠️ [AI CHAT] Erro ao buscar contexto Mindset/Fitness:', contextError)
+      }
+    }
+
+    const systemPrompt = `Você é um assistente especializado em trading, mindset e fitness, capaz de ajudar utilizadores com:
+
+1. **Trading & Investimentos:**
+   - Estratégias DCA (Dollar Cost Averaging)
+   - Análise de portfólio
+   - Gestão de risco
+   - Análise técnica e fundamental
+
+2. **Mindset & Desenvolvimento Pessoal:**
+   - Mentalidade de sucesso
+   - Network Marketing
+   - Definição e alcance de objetivos
+   - Desenvolvimento pessoal
+
+3. **Fitness & Saúde:**
+   - Treinos e exercícios
+   - Nutrição e alimentação
+   - Progresso e objetivos fitness
+
+${dcaContext}${additionalContext}
+
+Seja conciso, útil e focado em ajudar o utilizador a tomar decisões informadas. Adapte a tua resposta ao contexto da pergunta. Use dados reais quando disponíveis.`
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -75,15 +154,15 @@ Seja conciso, útil e focado em ajudar o utilizador a tomar decisões informadas
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${openaiKey}`
       },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message }
-        ],
-        temperature: 0.7,
-        max_tokens: 500
-      })
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
+          ],
+          temperature: 0.7,
+          max_tokens: 800
+        })
     })
 
     if (!response.ok) {

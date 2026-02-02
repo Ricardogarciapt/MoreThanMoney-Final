@@ -42,17 +42,18 @@ export default function MTMLandingPage() {
     if (path.startsWith('http')) return path
     // Para caminhos relativos, garantir que começam com /
     if (!path.startsWith('/')) path = '/' + path
-    // Não codificar o caminho inteiro, apenas caracteres especiais se necessário
+    // Codificar apenas os espaços e caracteres especiais, mas manter a estrutura do caminho
     // Next.js serve ficheiros de public/ a partir da raiz
-    return path
+    return encodeURI(path)
   }
 
   const [images, setImages] = useState<Record<string, string>>({
-    problema: '/mtm/Problema.png',
-    ecossistema: '/mtm/Ecossistema.png',
-    estrategia: '/mtm/Estratégia.png',
-    escolhaCaminho: '/mtm/Escolha de Caminho.png',
-    diferenca: '/mtm/Diferença.png'
+    problema: '/MTM/Problema.png',
+    ecossistema: '/MTM/Ecossistema.png',
+    estrategia1: '/MTM/Estratégia. image 1png.png',
+    estrategia2: '/MTM/A Estratégia image 2.png',
+    escolhaCaminho: '/MTM/Escolha de Caminho.png',
+    diferenca: '/MTM/Diferença.png'
   })
 
   useEffect(() => {
@@ -76,22 +77,73 @@ export default function MTMLandingPage() {
         
         // Carregar imagens
         const mtmImages = data.images?.filter((img: any) => img.page === '/mtm') || []
-        if (mtmImages.length > 0) {
-          const imageMap: Record<string, string> = {}
-          mtmImages.forEach((img: any) => {
-            // Se a URL for fornecida e válida, usar; caso contrário, usar o caminho padrão
-            const url = img.url && img.url.startsWith('http') 
-              ? img.url 
-              : (img.url || '')
-            if (img.section === 'O Diagnóstico') imageMap.problema = url || '/mtm/Problema.png'
-            if (img.section === 'EARN WHILE YOU LEARN') imageMap.ecossistema = url || '/mtm/Ecossistema.png'
-            if (img.section === 'A Escada do Sucesso') imageMap.estrategia = url || '/mtm/Estratégia.png'
-            if (img.section === 'As Soluções Tecnológicas') imageMap.escolhaCaminho = url || '/mtm/Escolha de Caminho.png'
-            if (img.section === 'O Modelo de Negócio') imageMap.diferenca = url || '/mtm/Diferença.png'
-          })
-          if (Object.keys(imageMap).length > 0) {
-            setImages(prev => ({ ...prev, ...imageMap }))
+        const imageMap: Record<string, string> = {}
+        let estrategiaCount = 0
+        
+        mtmImages.forEach((img: any) => {
+          // Se a URL for fornecida e válida, usar; caso contrário, usar o caminho padrão
+          let url = img.url && img.url.startsWith('http') 
+            ? img.url 
+            : (img.url || '')
+          
+          // Se a URL não começar com http, garantir que é um caminho válido
+          if (url && !url.startsWith('http') && !url.startsWith('/')) {
+            url = '/' + url
           }
+          
+          if (img.section === 'O Diagnóstico') {
+            imageMap.problema = url || '/MTM/Problema.png'
+          } else if (img.section === 'EARN WHILE YOU LEARN') {
+            imageMap.ecossistema = url || '/MTM/Ecossistema.png'
+          } else if (img.section === 'A Escada do Sucesso') {
+            estrategiaCount++
+            // Detectar qual imagem da estratégia baseado no título, ID ou URL
+            const titleLower = (img.title || '').toLowerCase()
+            const idLower = (img.id || '').toLowerCase()
+            const urlLower = (url || '').toLowerCase()
+            
+            // Verificar se é a primeira imagem (parte 1)
+            if (titleLower.includes('parte 1') || 
+                titleLower.includes('1') || 
+                idLower.includes('estrategia-1') ||
+                idLower.includes('1png') ||
+                urlLower.includes('1png') ||
+                urlLower.includes('estrategia. image 1png')) {
+              imageMap.estrategia1 = url || '/MTM/Estratégia. image 1png.png'
+            } 
+            // Verificar se é a segunda imagem (parte 2)
+            else if (titleLower.includes('parte 2') || 
+                     titleLower.includes('2') || 
+                     idLower.includes('estrategia-2') ||
+                     idLower.includes('image 2') ||
+                     urlLower.includes('image 2') ||
+                     urlLower.includes('a estratégia image 2')) {
+              imageMap.estrategia2 = url || '/MTM/A Estratégia image 2.png'
+            }
+            // Se não conseguir determinar, atribuir pela ordem
+            else if (estrategiaCount === 1) {
+              imageMap.estrategia1 = url || '/MTM/Estratégia. image 1png.png'
+            } else if (estrategiaCount === 2) {
+              imageMap.estrategia2 = url || '/MTM/A Estratégia image 2.png'
+            }
+          } else if (img.section === 'As Soluções Tecnológicas') {
+            imageMap.escolhaCaminho = url || '/MTM/Escolha de Caminho.png'
+          } else if (img.section === 'O Modelo de Negócio') {
+            imageMap.diferenca = url || '/MTM/Diferença.png'
+          }
+        })
+        
+        // Garantir que ambas as imagens da estratégia estão definidas
+        if (!imageMap.estrategia1) {
+          imageMap.estrategia1 = '/MTM/Estratégia. image 1png.png'
+        }
+        if (!imageMap.estrategia2) {
+          imageMap.estrategia2 = '/MTM/A Estratégia image 2.png'
+        }
+        
+        // Atualizar apenas as imagens que foram encontradas, mantendo as padrão para as outras
+        if (Object.keys(imageMap).length > 0) {
+          setImages(prev => ({ ...prev, ...imageMap }))
         }
       }
     } catch (error) {
@@ -186,13 +238,13 @@ export default function MTMLandingPage() {
               <div className="relative max-w-4xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
                   <img
-                    src={images.problema}
+                    src={getImageUrl(images.problema)}
                     alt="O Problema"
                     className="w-full h-auto rounded-lg"
                     loading="lazy"
                     onError={(e) => {
                       console.error('Erro ao carregar imagem:', images.problema)
-                      const fallback = getImageUrl('/mtm/Problema.png')
+                      const fallback = getImageUrl('/MTM/Problema.png')
                       if (e.currentTarget.src !== fallback) {
                         e.currentTarget.src = fallback
                       }
@@ -263,13 +315,13 @@ export default function MTMLandingPage() {
               <div className="relative max-w-5xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
                   <img
-                    src={images.ecossistema}
+                    src={getImageUrl(images.ecossistema)}
                     alt="O Ecossistema"
                     className="w-full h-auto rounded-lg"
                     loading="lazy"
                     onError={(e) => {
                       console.error('Erro ao carregar imagem:', images.ecossistema)
-                      const fallback = getImageUrl('/mtm/Ecossistema.png')
+                      const fallback = getImageUrl('/MTM/Ecossistema.png')
                       if (e.currentTarget.src !== fallback) {
                         e.currentTarget.src = fallback
                       }
@@ -329,24 +381,45 @@ export default function MTMLandingPage() {
               </p>
             </div>
 
-            {/* Imagem da Estratégia */}
-            <div className="mb-12 flex justify-center">
-              <div className="relative max-w-5xl w-full">
-                <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
-                  <img
-                    src={images.estrategia}
-                    alt="A Escada do Sucesso"
-                    className="w-full h-auto rounded-lg"
-                    loading="lazy"
-                    onError={(e) => {
-                      console.error('Erro ao carregar imagem:', images.estrategia)
-                      const fallback = getImageUrl('/mtm/Estratégia.png')
-                      if (e.currentTarget.src !== fallback) {
-                        e.currentTarget.src = fallback
-                      }
-                    }}
-                  />
-                </Card>
+            {/* Imagens da Estratégia - 2 imagens */}
+            <div className="mb-12 space-y-6">
+              <div className="flex justify-center">
+                <div className="relative max-w-5xl w-full">
+                  <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
+                    <img
+                      src={getImageUrl(images.estrategia1)}
+                      alt="A Escada do Sucesso - Parte 1"
+                      className="w-full h-auto rounded-lg"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.error('Erro ao carregar imagem:', images.estrategia1)
+                        const fallback = getImageUrl('/MTM/Estratégia. image 1png.png')
+                        if (e.currentTarget.src !== fallback) {
+                          e.currentTarget.src = fallback
+                        }
+                      }}
+                    />
+                  </Card>
+                </div>
+              </div>
+              <div className="flex justify-center">
+                <div className="relative max-w-5xl w-full">
+                  <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
+                    <img
+                      src={getImageUrl(images.estrategia2)}
+                      alt="A Escada do Sucesso - Parte 2"
+                      className="w-full h-auto rounded-lg"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.error('Erro ao carregar imagem:', images.estrategia2)
+                        const fallback = getImageUrl('/MTM/A Estratégia image 2.png')
+                        if (e.currentTarget.src !== fallback) {
+                          e.currentTarget.src = fallback
+                        }
+                      }}
+                    />
+                  </Card>
+                </div>
               </div>
             </div>
             
@@ -419,13 +492,13 @@ export default function MTMLandingPage() {
               <div className="relative max-w-5xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
                   <img
-                    src={images.escolhaCaminho}
+                    src={getImageUrl(images.escolhaCaminho)}
                     alt="Escolhe o Teu Caminho"
                     className="w-full h-auto rounded-lg"
                     loading="lazy"
                     onError={(e) => {
                       console.error('Erro ao carregar imagem:', images.escolhaCaminho)
-                      const fallback = getImageUrl('/mtm/Escolha de Caminho.png')
+                      const fallback = getImageUrl('/MTM/Escolha de Caminho.png')
                       if (e.currentTarget.src !== fallback) {
                         e.currentTarget.src = fallback
                       }
@@ -513,13 +586,13 @@ export default function MTMLandingPage() {
               <div className="relative max-w-5xl w-full">
                 <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border-2 border-purple-500/30 rounded-2xl p-6 hover:border-purple-500/60 transition-all">
                   <img
-                    src={images.diferenca}
+                    src={getImageUrl(images.diferenca)}
                     alt="A Diferença"
                     className="w-full h-auto rounded-lg"
                     loading="lazy"
                     onError={(e) => {
                       console.error('Erro ao carregar imagem:', images.diferenca)
-                      const fallback = getImageUrl('/mtm/Diferença.png')
+                      const fallback = getImageUrl('/MTM/Diferença.png')
                       if (e.currentTarget.src !== fallback) {
                         e.currentTarget.src = fallback
                       }

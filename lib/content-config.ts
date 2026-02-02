@@ -58,7 +58,7 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'mtm-problema',
       title: 'O Problema',
-      url: '/mtm/Problema.png',
+      url: '/MTM/Problema.png',
       alt: 'O Problema',
       page: '/mtm',
       section: 'O Diagnóstico',
@@ -68,7 +68,7 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'mtm-ecossistema',
       title: 'O Ecossistema',
-      url: '/mtm/Ecossistema.png',
+      url: '/MTM/Ecossistema.png',
       alt: 'O Ecossistema',
       page: '/mtm',
       section: 'EARN WHILE YOU LEARN',
@@ -76,10 +76,20 @@ export const defaultContentConfig: ContentConfig = {
       height: 800
     },
     {
-      id: 'mtm-estrategia',
-      title: 'A Escada do Sucesso',
-      url: '/mtm/Estratégia.png',
-      alt: 'A Escada do Sucesso',
+      id: 'mtm-estrategia-1',
+      title: 'A Escada do Sucesso - Parte 1',
+      url: '/MTM/Estratégia. image 1png.png',
+      alt: 'A Escada do Sucesso - Parte 1',
+      page: '/mtm',
+      section: 'A Escada do Sucesso',
+      width: 1400,
+      height: 800
+    },
+    {
+      id: 'mtm-estrategia-2',
+      title: 'A Escada do Sucesso - Parte 2',
+      url: '/MTM/A Estratégia image 2.png',
+      alt: 'A Escada do Sucesso - Parte 2',
       page: '/mtm',
       section: 'A Escada do Sucesso',
       width: 1400,
@@ -88,7 +98,7 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'mtm-escolha-caminho',
       title: 'Escolhe o Teu Caminho',
-      url: '/mtm/Escolha de Caminho.png',
+      url: '/MTM/Escolha de Caminho.png',
       alt: 'Escolhe o Teu Caminho',
       page: '/mtm',
       section: 'As Soluções Tecnológicas',
@@ -98,7 +108,7 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'mtm-diferenca',
       title: 'A Diferença',
-      url: '/mtm/Diferença.png',
+      url: '/MTM/Diferença.png',
       alt: 'A Diferença',
       page: '/mtm',
       section: 'O Modelo de Negócio',

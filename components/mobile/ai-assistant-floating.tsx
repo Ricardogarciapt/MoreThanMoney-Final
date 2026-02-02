@@ -61,15 +61,23 @@ export default function AIAssistantFloating() {
     )
 
     try {
-      // Check if we're in portfolio context for DCA
+      // Check context for better AI responses
       const includeDCA = pathname?.includes('portfolio') || searchParams?.get('tab') === 'portfolio'
+      const isMindsetFitness = pathname?.includes('mindset-fitness') || pathname?.includes('app-mobile')
 
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-pathname': pathname || ''
+        },
         body: JSON.stringify({
           message: userMessage,
-          context: { include_dca: includeDCA }
+          context: { 
+            include_dca: includeDCA,
+            pathname: pathname || '',
+            tab: searchParams?.get('tab') || ''
+          }
         })
       })
 
