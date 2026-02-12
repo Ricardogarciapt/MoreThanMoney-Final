@@ -26,6 +26,7 @@ import {
   Brain,
   Dumbbell
 } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 import type { SiteContent, UserManagement, AdminStats } from "@/lib/admin-types"
 import ThemeManager from "@/components/admin/theme-manager"
 import SettingsManager from "@/components/admin/settings-manager"
@@ -45,6 +46,7 @@ import { adminApiCall, clearAdminCache } from "@/lib/admin-helpers"
 
 export default function AdminPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const { user, isLoading: authLoading, isAdmin: authIsAdmin } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [stats, setStats] = useState<AdminStats | null>(null)
@@ -120,9 +122,19 @@ export default function AdminPage() {
         setStats(result.data)
       } else {
         console.error('❌ [ADMIN] Erro ao buscar stats:', result.error, result.details)
+        toast({
+          title: "Erro ao carregar estatísticas",
+          description: result.error || "Tenta novamente dentro de alguns segundos.",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error('❌ [ADMIN] Erro ao buscar stats:', error)
+      toast({
+        title: "Erro ao carregar estatísticas",
+        description: "Ocorreu um erro inesperado. Tenta novamente.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -137,9 +149,19 @@ export default function AdminPage() {
         setUsers(result.data)
       } else {
         console.error('❌ [ADMIN] Erro ao buscar users:', result.error, result.details)
+        toast({
+          title: "Erro ao carregar utilizadores",
+          description: result.error || "Tenta novamente dentro de alguns segundos.",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error('❌ [ADMIN] Erro ao buscar users:', error)
+      toast({
+        title: "Erro ao carregar utilizadores",
+        description: "Ocorreu um erro inesperado. Tenta novamente.",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
@@ -155,9 +177,19 @@ export default function AdminPage() {
         setContent(result.data)
       } else {
         console.error('❌ [ADMIN] Erro ao buscar content:', result.error, result.details)
+        toast({
+          title: "Erro ao carregar conteúdo",
+          description: result.error || "Tenta novamente dentro de alguns segundos.",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error('❌ [ADMIN] Erro ao buscar content:', error)
+      toast({
+        title: "Erro ao carregar conteúdo",
+        description: "Ocorreu um erro inesperado. Tenta novamente.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -171,9 +203,19 @@ export default function AdminPage() {
         setTrialStats(result.data)
       } else {
         console.error('❌ [ADMIN] Erro ao buscar trial stats:', result.error, result.details)
+        toast({
+          title: "Erro ao carregar dados de trial",
+          description: result.error || "Tenta novamente dentro de alguns segundos.",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error('❌ [ADMIN] Erro ao buscar trial stats:', error)
+      toast({
+        title: "Erro ao carregar dados de trial",
+        description: "Ocorreu um erro inesperado. Tenta novamente.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -192,11 +234,19 @@ export default function AdminPage() {
         console.log('✅ Utilizador aprovado com sucesso')
       } else {
         console.error('❌ Erro ao aprovar utilizador:', result.error, result.details)
-        alert(`Erro ao aprovar utilizador: ${result.error}`)
+        toast({
+          title: "Erro ao aprovar utilizador",
+          description: result.error || "Tenta novamente dentro de alguns segundos.",
+          variant: "destructive",
+        })
       }
     } catch (error: any) {
       console.error('❌ Erro ao aprovar utilizador:', error)
-      alert(`Erro ao aprovar utilizador: ${error.message || 'Erro desconhecido'}`)
+      toast({
+        title: "Erro ao aprovar utilizador",
+        description: error.message || "Erro desconhecido. Tenta novamente.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -218,11 +268,19 @@ export default function AdminPage() {
         console.log('✅ Role alterada com sucesso')
       } else {
         console.error('❌ Erro ao alterar role:', result.error, result.details)
-        alert(`Erro ao alterar role: ${result.error}`)
+        toast({
+          title: "Erro ao alterar permissões",
+          description: result.error || "Tenta novamente dentro de alguns segundos.",
+          variant: "destructive",
+        })
       }
     } catch (error: any) {
       console.error('❌ Erro ao alterar role:', error)
-      alert(`Erro ao alterar role: ${error.message || 'Erro desconhecido'}`)
+      toast({
+        title: "Erro ao alterar permissões",
+        description: error.message || "Erro desconhecido. Tenta novamente.",
+        variant: "destructive",
+      })
     }
   }
 

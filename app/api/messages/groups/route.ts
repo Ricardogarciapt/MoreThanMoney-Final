@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     // Buscar perfil do utilizador para verificar se é admin/VIP
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('user_type, membership_type')
+      .select('user_type, membership_level')
       .eq('id', session.user.id)
       .maybeSingle()
 
@@ -49,26 +49,17 @@ export async function GET(request: NextRequest) {
     let groups: any[] | null = null
     
     try {
-      if (profile?.user_type === 'admin') {
-        // Admin vê TODOS os grupos (sem filtros)
+      if (profile?.user_type === 'admin' && !mobileOnly) {
+        // Admin (vista normal) vê TODOS os grupos (sem filtros)
         const { data, error } = await supabase
           .from('group_conversations')
           .select('*')
-          .order('created_at', { ascending: false })
-        
-        if (error) throw error
-        groups = data
-      } else if (mobileOnly) {
-        // Se for mobile_only, TODOS os utilizadores veem grupos com is_mobile_visible = true
-        const { data, error } = await supabase
-          .from('group_conversations')
-          .select('*')
-          .eq('is_mobile_visible', true)
           .order('created_at', { ascending: false })
         
         if (error) throw error
         groups = data
       } else {
+        // Vista mobile_only ou utilizador normal:
         // Utilizador normal vê grupos públicos OU grupos mobile_visible
         // Fazer duas queries separadas e combinar resultados
         const [publicGroupsResult, mobileGroupsResult] = await Promise.all([
@@ -96,9 +87,19 @@ export async function GET(request: NextRequest) {
         ]
         
         // Remover duplicados por ID
-        const uniqueGroups = Array.from(
+        let uniqueGroups: any[] = Array.from(
           new Map(allGroups.map((g: any) => [g.id, g])).values()
         )
+
+        // Se for mobile_only, limitar explicitamente aos 3 grupos principais:
+        // Trade Chat, Crypto Chat, Social Chat
+        if (mobileOnly) {
+          const allowedNames = ['trade', 'crypto', 'social']
+          uniqueGroups = uniqueGroups.filter((g: any) => {
+            const name = (g.name || '').toLowerCase()
+            return allowedNames.some(keyword => name.includes(keyword))
+          })
+        }
         
         // Ordenar por created_at
         groups = uniqueGroups.sort((a: any, b: any) => 
@@ -162,11 +163,25 @@ export async function GET(request: NextRequest) {
             console.warn(`⚠️ [GROUPS] Erro ao verificar membro do grupo ${group.id}:`, memberError)
           }
 
-          // Verificar se pode publicar (admin, VIP, ou Social Chat)
+          // Verificar se pode publicar (regras específicas por grupo)
           const isAdmin = profile?.user_type === 'admin'
-          const isVip = profile?.membership_type === 'vip'
-          const isSocialChat = group.name?.toLowerCase().includes('social')
-          const canPost = isAdmin || isVip || isSocialChat || !!member
+          const isVip = profile?.membership_level === 'vip'
+          const name = (group.name || '').toLowerCase()
+          const isSocialChat = name.includes('social')
+          const isTradeChat = name.includes('trade')
+          const isCryptoChat = name.includes('crypto')
+
+          let canPost = false
+          if (isSocialChat) {
+            // Social Chat: todos podem publicar
+            canPost = true
+          } else if (isTradeChat || isCryptoChat) {
+            // Trade / Crypto Chat: apenas admins e VIPs podem publicar
+            canPost = isAdmin || isVip
+          } else {
+            // Outros grupos: admin, VIP ou membro podem publicar
+            canPost = isAdmin || isVip || !!member
+          }
 
           // Última mensagem
           const { data: lastMessage, error: lastMessageError } = await supabase

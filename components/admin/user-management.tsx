@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,6 +44,7 @@ interface UserManagementProps {
 }
 
 export default function UserManagementComponent({ users, onApprove, onToggleRole, onRefresh }: UserManagementProps) {
+  const { toast } = useToast()
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
@@ -58,14 +60,12 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
 
       if (result.success) {
         onRefresh()
-        console.log(`✅ Categoria alterada para: ${category}`)
+        toast({ title: "Categoria alterada", description: `Alterada para: ${category}` })
       } else {
-        console.error('❌ Erro ao alterar categoria:', result.error, result.details)
-        alert(`Erro ao alterar categoria: ${result.error}`)
+        toast({ title: "Erro ao alterar categoria", description: result.error || "Tenta novamente.", variant: "destructive" })
       }
     } catch (error: any) {
-      console.error('❌ Erro ao alterar categoria:', error)
-      alert(`Erro ao alterar categoria: ${error.message || 'Erro desconhecido'}`)
+      toast({ title: "Erro ao alterar categoria", description: error.message || "Erro desconhecido.", variant: "destructive" })
     }
   }
 
@@ -79,14 +79,12 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
 
       if (result.success) {
         onRefresh()
-        console.log(`✅ User type alterado para: ${newType}`)
+        toast({ title: "Tipo alterado", description: `Alterado para: ${newType}` })
       } else {
-        console.error('❌ Erro ao alterar tipo:', result.error, result.details)
-        alert(`Erro ao alterar tipo: ${result.error}`)
+        toast({ title: "Erro ao alterar tipo", description: result.error || "Tenta novamente.", variant: "destructive" })
       }
     } catch (error: any) {
-      console.error('❌ Erro ao alterar user type:', error)
-      alert(`Erro ao alterar tipo: ${error.message || 'Erro desconhecido'}`)
+      toast({ title: "Erro ao alterar tipo", description: error.message || "Erro desconhecido.", variant: "destructive" })
     }
   }
 
@@ -100,14 +98,12 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
 
       if (result.success) {
         onRefresh()
-        console.log(`✅ Plataforma de onboarding alterada para: ${platform || 'padrão'}`)
+        toast({ title: "Plataforma alterada", description: platform ? `Alterada para: ${platform}` : "Alterada para padrão." })
       } else {
-        console.error('❌ Erro ao alterar plataforma:', result.error, result.details)
-        alert(`Erro ao alterar plataforma: ${result.error}`)
+        toast({ title: "Erro ao alterar plataforma", description: result.error || "Tenta novamente.", variant: "destructive" })
       }
     } catch (error: any) {
-      console.error('❌ Erro ao alterar plataforma:', error)
-      alert(`Erro ao alterar plataforma: ${error.message || 'Erro desconhecido'}`)
+      toast({ title: "Erro ao alterar plataforma", description: error.message || "Erro desconhecido.", variant: "destructive" })
     }
   }
   
@@ -128,12 +124,12 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
 
       // Validações
       if (!newUser.email || !newUser.username || !newUser.password || !newUser.full_name) {
-        alert('Email, nome de utilizador, palavra-passe e nome completo são obrigatórios.')
+        toast({ title: "Campos obrigatórios", description: "Email, nome de utilizador, palavra-passe e nome completo são obrigatórios.", variant: "destructive" })
         return
       }
 
       if (newUser.password.length < 6) {
-        alert('A palavra-passe deve ter pelo menos 6 carateres.')
+        toast({ title: "Palavra-passe inválida", description: "A palavra-passe deve ter pelo menos 6 carateres.", variant: "destructive" })
         return
       }
 
@@ -146,11 +142,10 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
 
       if (result.success && result.data) {
         const isTrial = newUser.user_type === 'guest' || newUser.user_type === 'presentation'
-        const message = isTrial 
-          ? `Utilizador ${newUser.user_type} criado!\n\nEmail: ${result.data.user?.email || newUser.email}\nPalavra-passe: ${newUser.password}\nExpira: ${result.data.user?.trial_expires_at ? new Date(result.data.user.trial_expires_at).toLocaleString('pt-PT') : 'N/A'}\n\n⚠️ Copia a palavra-passe!`
-          : `Utilizador ${newUser.email} criado com sucesso!`
-        
-        alert(message)
+        const desc = isTrial
+          ? `Email: ${result.data.user?.email || newUser.email}. Expira: ${result.data.user?.trial_expires_at ? new Date(result.data.user.trial_expires_at).toLocaleString('pt-PT') : 'N/A'}. Copia a palavra-passe!`
+          : `Utilizador ${newUser.email} criado com sucesso.`
+        toast({ title: isTrial ? `Utilizador ${newUser.user_type} criado` : "Utilizador criado", description: desc })
         setIsAddDialogOpen(false)
         setNewUser({
           email: '',
@@ -164,11 +159,11 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
         })
         onRefresh()
       } else {
-        alert(`Erro ao criar utilizador: ${result.error}`)
+        toast({ title: "Erro ao criar utilizador", description: result.error || "Tenta novamente.", variant: "destructive" })
       }
     } catch (error) {
       console.error('Erro ao criar utilizador:', error)
-      alert('Erro ao criar utilizador')
+      toast({ title: "Erro ao criar utilizador", description: "Erro inesperado. Tenta novamente.", variant: "destructive" })
     } finally {
       setIsSubmitting(false)
     }
@@ -189,16 +184,16 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
       const result = await response.json()
 
       if (response.ok) {
-        alert('Utilizador apagado com sucesso!')
+        toast({ title: "Utilizador apagado", description: "Utilizador apagado com sucesso." })
         setIsDeleteDialogOpen(false)
         setSelectedUser(null)
         onRefresh()
       } else {
-        alert(`Erro ao apagar utilizador: ${result.error}`)
+        toast({ title: "Erro ao apagar utilizador", description: result.error || "Tenta novamente.", variant: "destructive" })
       }
     } catch (error) {
       console.error('Erro ao apagar utilizador:', error)
-      alert('Erro ao apagar utilizador')
+      toast({ title: "Erro ao apagar utilizador", description: "Erro inesperado. Tenta novamente.", variant: "destructive" })
     } finally {
       setIsSubmitting(false)
     }

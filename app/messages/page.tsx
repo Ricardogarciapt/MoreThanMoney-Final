@@ -34,6 +34,8 @@ interface Conversation {
   }
   unreadCount: number
   isGroup: boolean
+  // Para grupos, vem da API de grupos e respeita as regras Trade/Crypto/Social
+  can_post?: boolean
 }
 
 interface Message {
@@ -57,7 +59,7 @@ interface UserProfile {
   avatar_url?: string
   email?: string
   user_type?: string
-  membership_type?: string
+  membership_level?: string
 }
 
 export default function MessagesPage() {
@@ -75,7 +77,7 @@ export default function MessagesPage() {
           const response = await fetch(`/api/profile/get?id=${currentUser.id}`, { credentials: 'include' })
           if (response.ok) {
             const data = await response.json()
-            setIsVip(data.profile?.membership_type === 'vip')
+            setIsVip(data.profile?.membership_level === 'vip')
           }
         } catch (error) {
           console.error('Erro ao verificar status VIP:', error)
@@ -215,7 +217,8 @@ export default function MessagesPage() {
         },
         lastMessage: group.lastMessage,
         unreadCount: group.unreadCount || 0,
-        isGroup: true
+        isGroup: true,
+        can_post: group.can_post
       }))
       
       // Ordenar por última mensagem (mais recente primeiro)
@@ -294,6 +297,14 @@ export default function MessagesPage() {
 
   const handleSendMessage = async () => {
     if (!selectedConversation || !newMessage.trim() || sending) return
+
+    // Reforçar no cliente as mesmas regras de publicação da API
+    const conv = conversations.find(c => c.id === selectedConversation)
+    const canPost = conv ? (!conv.isGroup || conv.can_post !== false) : true
+    if (!canPost) {
+      alert('Não tens permissão para publicar neste grupo.')
+      return
+    }
 
     setSending(true)
     try {
@@ -518,6 +529,14 @@ export default function MessagesPage() {
 
   const selectedConv = conversations.find(c => c.id === selectedConversation)
 
+  // Política de publicação em grupos (Trade/Crypto/Social) alinhada com a API:
+  // - Social Chat: todos podem publicar
+  // - Trade/Crypto: apenas admin/VIP
+  // - Outros grupos: admin/VIP ou membro (já calculado na API via can_post)
+  const canPostInSelectedConv = selectedConv
+    ? (!selectedConv.isGroup || selectedConv.can_post !== false)
+    : true
+
   return (
     <ProtectedPage redirectPath="/login?redirect=/messages">
       <div className="min-h-screen bg-black text-white">
@@ -701,10 +720,10 @@ export default function MessagesPage() {
                                 <p className="font-semibold">{user.full_name || user.username || 'Utilizador'}</p>
                                 {user.username && <p className="text-sm text-gray-400">@{user.username}</p>}
                                 {user.email && <p className="text-xs text-gray-500">{user.email}</p>}
-                                {(user.user_type || user.membership_type) && (
+                                {(user.user_type || user.membership_level) && (
                                   <p className="text-xs text-[#D2A63C] mt-1">
                                     {user.user_type === 'admin' ? 'Admin' : 
-                                     user.membership_type === 'vip' ? 'VIP' : 
+                                     user.membership_level === 'vip' ? 'VIP' : 
                                      user.user_type || 'Member'}
                                   </p>
                                 )}
@@ -1061,30 +1080,46 @@ export default function MessagesPage() {
                   </div>
 
                   {/* Input de Mensagem */}
-                  <div className="p-4 border-t border-[#D2A63C]/20 flex gap-2">
-                    <Input
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault()
-                          handleSendMessage()
+                  <div className="p-4 border-t border-[#D2A63C]/20 flex flex-col gap-2">
+                    {selectedConv?.isGroup && !canPostInSelectedConv && (
+                      <p className="text-xs text-red-400 mb-1">
+                        Neste grupo apenas admins e VIPs podem publicar (exceto no Social Chat, onde todos podem publicar).
+                      </p>
+                    )}
+                    <div className="flex gap-2">
+                      <Input
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault()
+                            handleSendMessage()
+                          }
+                        }}
+                        placeholder={
+                          !selectedConv?.isGroup || canPostInSelectedConv
+                            ? "Escreve uma mensagem..."
+                            : "Não tens permissão para publicar neste grupo"
                         }
-                      }}
-                      placeholder="Escreve uma mensagem..."
-                      className="bg-gray-800 border-gray-700 text-white focus:border-[#D2A63C]"
-                    />
-                    <Button
-                      onClick={handleSendMessage}
-                      disabled={!newMessage.trim() || sending}
-                      className="bg-[#D2A63C] text-black hover:bg-[#BB8525]"
-                    >
-                      {sending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Send className="w-4 h-4" />
-                      )}
-                    </Button>
+                        disabled={sending || (selectedConv?.isGroup && !canPostInSelectedConv)}
+                        className="bg-gray-800 border-gray-700 text-white focus:border-[#D2A63C] disabled:opacity-50"
+                      />
+                      <Button
+                        onClick={handleSendMessage}
+                        disabled={
+                          !newMessage.trim() ||
+                          sending ||
+                          (selectedConv?.isGroup && !canPostInSelectedConv)
+                        }
+                        className="bg-[#D2A63C] text-black hover:bg-[#BB8525] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {sending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </>
               ) : (

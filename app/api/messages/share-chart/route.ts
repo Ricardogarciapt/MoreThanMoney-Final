@@ -30,11 +30,11 @@ export async function POST(request: NextRequest) {
     // Verificar se é admin ou VIP
     const { data: profile } = await supabase
       .from('profiles')
-      .select('user_type, membership_type')
+      .select('user_type, membership_level')
       .eq('id', session.user.id)
       .single()
 
-    if (!profile || (profile.user_type !== 'admin' && profile.membership_type !== 'vip')) {
+    if (!profile || (profile.user_type !== 'admin' && profile.membership_level !== 'vip')) {
       return NextResponse.json({ error: 'Acesso negado. Apenas admins e VIP podem partilhar charts' }, { status: 403 })
     }
 
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se o utilizador é membro do grupo OU se é admin/VIP (podem partilhar em qualquer grupo)
-    const isAdminOrVip = profile?.user_type === 'admin' || profile?.membership_type === 'vip'
+    const isAdminOrVip = profile?.user_type === 'admin' || profile?.membership_level === 'vip'
     
     if (!isAdminOrVip) {
       // Se não for admin/VIP, verificar se é membro

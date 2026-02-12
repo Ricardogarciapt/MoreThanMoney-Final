@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from 'sonner'
-import Navbar from "@/components/navbar"
+import ConditionalNavbarFooter from "@/components/conditional-navbar-footer"
 import { AuthProvider } from "@/contexts/auth-context"
 
 export const metadata: Metadata = {
@@ -96,8 +96,9 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <AuthProvider>
             <Suspense fallback={null}>
-              <Navbar />
-              {children}
+              <ConditionalNavbarFooter>
+                {children}
+              </ConditionalNavbarFooter>
               <Toaster />
               <Sonner richColors position="top-right" />
             </Suspense>

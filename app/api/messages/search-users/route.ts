@@ -35,13 +35,13 @@ export async function GET(request: NextRequest) {
     if (role) {
       let queryBuilder = supabase
         .from('profiles')
-        .select('id, full_name, username, avatar_url, email, user_type, membership_type')
+        .select('id, full_name, username, avatar_url, email, user_type, membership_level')
         .neq('id', session.user.id) // Excluir o próprio utilizador
         .eq('is_active', true) // Apenas utilizadores ativos
 
       // Mapear roles para campos corretos
       if (role === 'vip') {
-        queryBuilder = queryBuilder.eq('membership_type', 'vip')
+        queryBuilder = queryBuilder.eq('membership_level', 'vip')
       } else {
         queryBuilder = queryBuilder.eq('user_type', role)
       }
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       // Retornar utilizadores ativos recentes (últimos 50)
       const { data: users, error } = await supabase
         .from('profiles')
-        .select('id, full_name, username, avatar_url, email, user_type, membership_type')
+        .select('id, full_name, username, avatar_url, email, user_type, membership_level')
         .neq('id', session.user.id) // Excluir o próprio utilizador
         .eq('is_active', true) // Apenas utilizadores ativos
         .order('updated_at', { ascending: false, nullsFirst: false })
@@ -78,8 +78,8 @@ export async function GET(request: NextRequest) {
 
     // Pesquisar utilizadores por nome, username ou email
     const { data: users, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, username, avatar_url, email, user_type, membership_type')
+        .from('profiles')
+        .select('id, full_name, username, avatar_url, email, user_type, membership_level')
       .or(`full_name.ilike.%${query}%,username.ilike.%${query}%,email.ilike.%${query}%`)
       .neq('id', session.user.id) // Excluir o próprio utilizador
       .eq('is_active', true) // Apenas utilizadores ativos

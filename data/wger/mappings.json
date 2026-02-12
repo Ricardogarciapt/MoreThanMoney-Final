@@ -1,0 +1,26 @@
+{
+  "categoryToEnum": {
+    "Arms": "strength",
+    "Legs": "strength",
+    "Abs": "strength",
+    "Chest": "strength",
+    "Back": "strength",
+    "Shoulders": "strength",
+    "Calves": "strength",
+    "Cardio": "cardio"
+  },
+  "equipmentToEnum": {
+    "Barbell": "barbell",
+    "SZ-Bar": "barbell",
+    "Dumbbell": "dumbbells",
+    "Dumbbells": "dumbbells",
+    "Gym mat": "other",
+    "Swiss Ball": "other",
+    "Pull-up bar": "bodyweight",
+    "none (bodyweight exercise)": "bodyweight",
+    "Bench": "machine",
+    "Incline bench": "machine",
+    "Kettlebell": "kettlebell",
+    "Resistance band": "resistance_band"
+  }
+}

@@ -40,7 +40,6 @@ interface Message {
 export default function ChatsMobile() {
   const router = useRouter()
   const { user: currentUser, isAdmin, userProfile } = useAuth()
-  const isVip = userProfile?.membership_type === 'vip'
   const [groups, setGroups] = useState<Group[]>([])
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -82,8 +81,27 @@ export default function ChatsMobile() {
       if (response.ok) {
         const data = await response.json()
         // A API já retorna apenas grupos mobile_visible quando mobile_only=true
-        console.log('✅ [CHATS MOBILE] Grupos carregados:', data.groups?.length || 0)
-        setGroups(data.groups || [])
+        let apiGroups: Group[] = data.groups || []
+
+        // Filtrar explicitamente para apenas 3 grupos principais:
+        // Trade Chat, Crypto Chat, Social Chat
+        const order = ['trade', 'crypto', 'social']
+        apiGroups = apiGroups.filter((g) => {
+          const name = (g.name || '').toLowerCase()
+          return order.some((keyword) => name.includes(keyword))
+        })
+
+        // Ordenar por ordem desejada
+        apiGroups.sort((a, b) => {
+          const aName = (a.name || '').toLowerCase()
+          const bName = (b.name || '').toLowerCase()
+          const aIndex = order.findIndex((k) => aName.includes(k))
+          const bIndex = order.findIndex((k) => bName.includes(k))
+          return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex)
+        })
+
+        console.log('✅ [CHATS MOBILE] Grupos filtrados (Trade/Crypto/Social):', apiGroups.length)
+        setGroups(apiGroups)
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
         console.error('❌ [CHATS MOBILE] Erro ao carregar grupos:', errorData)

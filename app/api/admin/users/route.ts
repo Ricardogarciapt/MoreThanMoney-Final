@@ -57,43 +57,58 @@ export async function GET(request: NextRequest) {
     }
 
     const userIds = data.map(u => u.id)
-    
-    // Buscar XP e Fast Start Progress em paralelo
-    const [xpResult, fastStartResult] = await Promise.all([
-      supabase
-        .from('user_xp')
-        .select('user_id, total_xp, current_level')
-        .in('user_id', userIds),
-      supabase
-        .from('fast_start_progress')
-        .select('user_id, progress_percent, step_1_completed, step_2_completed, step_3_completed, step_4_completed, step_5_completed, step_6_completed')
-        .in('user_id', userIds)
-    ])
 
-    // Criar maps para lookup rápido
-    const xpMap = new Map(
-      (xpResult.data || []).map(x => [
-        x.user_id, 
-        { total_xp: x.total_xp || 0, level: x.current_level || 1 }
+    // Buscar XP e Fast Start Progress em paralelo (tabelas opcionais - não falhar se não existirem)
+    let xpMap = new Map<string, { total_xp: number; level: number }>()
+    let fastStartMap = new Map<string, { progress_percent: number; steps_completed: number }>()
+
+    try {
+      const [xpResult, fastStartResult] = await Promise.all([
+        supabase
+          .from('user_xp')
+          .select('user_id, total_xp, current_level')
+          .in('user_id', userIds),
+        supabase
+          .from('fast_start_progress')
+          .select('user_id, progress_percent, step_1_completed, step_2_completed, step_3_completed, step_4_completed, step_5_completed, step_6_completed')
+          .in('user_id', userIds)
       ])
-    )
-    
-    const fastStartMap = new Map(
-      (fastStartResult.data || []).map(f => [
-        f.user_id, 
-        {
-          progress_percent: f.progress_percent || 0,
-          steps_completed: [
-            f.step_1_completed,
-            f.step_2_completed,
-            f.step_3_completed,
-            f.step_4_completed,
-            f.step_5_completed,
-            f.step_6_completed
-          ].filter(Boolean).length
-        }
-      ])
-    )
+
+      xpMap = new Map(
+        (xpResult.data || []).map((x: { user_id: string; total_xp?: number; current_level?: number }) => [
+          x.user_id,
+          { total_xp: x.total_xp || 0, level: x.current_level || 1 }
+        ])
+      )
+
+      fastStartMap = new Map(
+        (fastStartResult.data || []).map((f: {
+          user_id: string
+          progress_percent?: number
+          step_1_completed?: boolean
+          step_2_completed?: boolean
+          step_3_completed?: boolean
+          step_4_completed?: boolean
+          step_5_completed?: boolean
+          step_6_completed?: boolean
+        }) => [
+          f.user_id,
+          {
+            progress_percent: f.progress_percent || 0,
+            steps_completed: [
+              f.step_1_completed,
+              f.step_2_completed,
+              f.step_3_completed,
+              f.step_4_completed,
+              f.step_5_completed,
+              f.step_6_completed
+            ].filter(Boolean).length
+          }
+        ])
+      )
+    } catch (optionalError) {
+      console.warn('⚠️ [ADMIN USERS] Tabelas user_xp ou fast_start_progress não disponíveis:', optionalError)
+    }
     
     // Combinar dados
     const dataWithXPAndProgress = data.map(user => ({

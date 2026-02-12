@@ -140,13 +140,16 @@ export async function POST(
     // Verificar perfil do utilizador
     const { data: profile } = await supabase
       .from('profiles')
-      .select('user_type, membership_type')
+      .select('user_type, membership_level')
       .eq('id', session.user.id)
       .single()
 
     const isAdmin = profile?.user_type === 'admin'
-    const isVip = profile?.membership_type === 'vip'
-    const isSocialChat = group.name?.toLowerCase().includes('social')
+    const isVip = profile?.membership_level === 'vip'
+    const name = (group.name || '').toLowerCase()
+    const isSocialChat = name.includes('social')
+    const isTradeChat = name.includes('trade')
+    const isCryptoChat = name.includes('crypto')
 
     // Verificar se o utilizador é membro do grupo
     const { data: member } = await supabase
@@ -157,10 +160,17 @@ export async function POST(
       .single()
 
     // Pode publicar se:
-    // 1. É admin ou VIP (pode publicar em qualquer grupo)
-    // 2. É Social Chat (todos podem publicar)
-    // 3. É membro do grupo
-    const canPost = isAdmin || isVip || isSocialChat || !!member
+    // 1. Social Chat: todos podem publicar
+    // 2. Trade/Crypto Chat: apenas admins e VIPs
+    // 3. Outros grupos: admin, VIP ou membro do grupo
+    let canPost = false
+    if (isSocialChat) {
+      canPost = true
+    } else if (isTradeChat || isCryptoChat) {
+      canPost = isAdmin || isVip
+    } else {
+      canPost = isAdmin || isVip || !!member
+    }
 
     if (!canPost) {
       return NextResponse.json({ 

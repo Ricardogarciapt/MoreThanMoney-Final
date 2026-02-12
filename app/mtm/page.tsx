@@ -36,24 +36,34 @@ export default function MTMLandingPage() {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
   const [presentationVideoId, setPresentationVideoId] = useState("hKAQ72MsAwU") // Fallback
   
-  // Função helper para garantir URLs corretas (compatível com Safari)
-  const getImageUrl = (path: string) => {
-    // Se já é uma URL completa, retornar como está
-    if (path.startsWith('http')) return path
-    // Para caminhos relativos, garantir que começam com /
-    if (!path.startsWith('/')) path = '/' + path
-    // Codificar apenas os espaços e caracteres especiais, mas manter a estrutura do caminho
-    // Next.js serve ficheiros de public/ a partir da raiz
-    return encodeURI(path)
+  // URLs estáveis para imagens MTM (evitam problemas com acentos/espaços nos ficheiros)
+  const getMtmImageUrl = (name: keyof typeof DEFAULT_MTM_IMAGES) =>
+    `/api/mtm-image?name=${name}`
+
+  const getImageUrl = (pathOrUrl: string) => {
+    if (!pathOrUrl) return getMtmImageUrl('problema')
+    if (pathOrUrl.startsWith('http')) return pathOrUrl
+    if (pathOrUrl.startsWith('/api/mtm-image')) return pathOrUrl
+    if (!pathOrUrl.startsWith('/')) pathOrUrl = '/' + pathOrUrl
+    return encodeURI(pathOrUrl)
   }
 
+  const DEFAULT_MTM_IMAGES = {
+    problema: 'problema',
+    ecossistema: 'ecossistema',
+    estrategia1: 'estrategia1',
+    estrategia2: 'estrategia2',
+    escolhaCaminho: 'escolhaCaminho',
+    diferenca: 'diferenca'
+  } as const
+
   const [images, setImages] = useState<Record<string, string>>({
-    problema: '/MTM/Problema.png',
-    ecossistema: '/MTM/Ecossistema.png',
-    estrategia1: '/MTM/Estratégia. image 1png.png',
-    estrategia2: '/MTM/A Estratégia image 2.png',
-    escolhaCaminho: '/MTM/Escolha de Caminho.png',
-    diferenca: '/MTM/Diferença.png'
+    problema: getMtmImageUrl('problema'),
+    ecossistema: getMtmImageUrl('ecossistema'),
+    estrategia1: getMtmImageUrl('estrategia1'),
+    estrategia2: getMtmImageUrl('estrategia2'),
+    escolhaCaminho: getMtmImageUrl('escolhaCaminho'),
+    diferenca: getMtmImageUrl('diferenca')
   })
 
   useEffect(() => {
@@ -92,54 +102,33 @@ export default function MTMLandingPage() {
           }
           
           if (img.section === 'O Diagnóstico') {
-            imageMap.problema = url || '/MTM/Problema.png'
+            imageMap.problema = url || getMtmImageUrl('problema')
           } else if (img.section === 'EARN WHILE YOU LEARN') {
-            imageMap.ecossistema = url || '/MTM/Ecossistema.png'
+            imageMap.ecossistema = url || getMtmImageUrl('ecossistema')
           } else if (img.section === 'A Escada do Sucesso') {
             estrategiaCount++
-            // Detectar qual imagem da estratégia baseado no título, ID ou URL
             const titleLower = (img.title || '').toLowerCase()
             const idLower = (img.id || '').toLowerCase()
             const urlLower = (url || '').toLowerCase()
-            
-            // Verificar se é a primeira imagem (parte 1)
-            if (titleLower.includes('parte 1') || 
-                titleLower.includes('1') || 
-                idLower.includes('estrategia-1') ||
-                idLower.includes('1png') ||
-                urlLower.includes('1png') ||
-                urlLower.includes('estrategia. image 1png')) {
-              imageMap.estrategia1 = url || '/MTM/Estratégia. image 1png.png'
-            } 
-            // Verificar se é a segunda imagem (parte 2)
-            else if (titleLower.includes('parte 2') || 
-                     titleLower.includes('2') || 
-                     idLower.includes('estrategia-2') ||
-                     idLower.includes('image 2') ||
-                     urlLower.includes('image 2') ||
-                     urlLower.includes('a estratégia image 2')) {
-              imageMap.estrategia2 = url || '/MTM/A Estratégia image 2.png'
-            }
-            // Se não conseguir determinar, atribuir pela ordem
-            else if (estrategiaCount === 1) {
-              imageMap.estrategia1 = url || '/MTM/Estratégia. image 1png.png'
+            if (titleLower.includes('parte 1') || titleLower.includes('1') || idLower.includes('estrategia-1') ||
+                idLower.includes('1png') || urlLower.includes('1png') || urlLower.includes('estrategia. image 1png')) {
+              imageMap.estrategia1 = url || getMtmImageUrl('estrategia1')
+            } else if (titleLower.includes('parte 2') || titleLower.includes('2') || idLower.includes('estrategia-2') ||
+                       idLower.includes('image 2') || urlLower.includes('image 2') || urlLower.includes('a estratégia image 2')) {
+              imageMap.estrategia2 = url || getMtmImageUrl('estrategia2')
+            } else if (estrategiaCount === 1) {
+              imageMap.estrategia1 = url || getMtmImageUrl('estrategia1')
             } else if (estrategiaCount === 2) {
-              imageMap.estrategia2 = url || '/MTM/A Estratégia image 2.png'
+              imageMap.estrategia2 = url || getMtmImageUrl('estrategia2')
             }
           } else if (img.section === 'As Soluções Tecnológicas') {
-            imageMap.escolhaCaminho = url || '/MTM/Escolha de Caminho.png'
+            imageMap.escolhaCaminho = url || getMtmImageUrl('escolhaCaminho')
           } else if (img.section === 'O Modelo de Negócio') {
-            imageMap.diferenca = url || '/MTM/Diferença.png'
+            imageMap.diferenca = url || getMtmImageUrl('diferenca')
           }
         })
-        
-        // Garantir que ambas as imagens da estratégia estão definidas
-        if (!imageMap.estrategia1) {
-          imageMap.estrategia1 = '/MTM/Estratégia. image 1png.png'
-        }
-        if (!imageMap.estrategia2) {
-          imageMap.estrategia2 = '/MTM/A Estratégia image 2.png'
-        }
+        if (!imageMap.estrategia1) imageMap.estrategia1 = getMtmImageUrl('estrategia1')
+        if (!imageMap.estrategia2) imageMap.estrategia2 = getMtmImageUrl('estrategia2')
         
         // Atualizar apenas as imagens que foram encontradas, mantendo as padrão para as outras
         if (Object.keys(imageMap).length > 0) {
@@ -243,11 +232,8 @@ export default function MTMLandingPage() {
                     className="w-full h-auto rounded-lg"
                     loading="lazy"
                     onError={(e) => {
-                      console.error('Erro ao carregar imagem:', images.problema)
-                      const fallback = getImageUrl('/MTM/Problema.png')
-                      if (e.currentTarget.src !== fallback) {
-                        e.currentTarget.src = fallback
-                      }
+                      const fallback = getMtmImageUrl('problema')
+                      if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback
                     }}
                   />
                 </Card>
@@ -320,11 +306,8 @@ export default function MTMLandingPage() {
                     className="w-full h-auto rounded-lg"
                     loading="lazy"
                     onError={(e) => {
-                      console.error('Erro ao carregar imagem:', images.ecossistema)
-                      const fallback = getImageUrl('/MTM/Ecossistema.png')
-                      if (e.currentTarget.src !== fallback) {
-                        e.currentTarget.src = fallback
-                      }
+                      const fallback = getMtmImageUrl('ecossistema')
+                      if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback
                     }}
                   />
                 </Card>
@@ -392,11 +375,8 @@ export default function MTMLandingPage() {
                       className="w-full h-auto rounded-lg"
                       loading="lazy"
                       onError={(e) => {
-                        console.error('Erro ao carregar imagem:', images.estrategia1)
-                        const fallback = getImageUrl('/MTM/Estratégia. image 1png.png')
-                        if (e.currentTarget.src !== fallback) {
-                          e.currentTarget.src = fallback
-                        }
+                        const fallback = getMtmImageUrl('estrategia1')
+                        if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback
                       }}
                     />
                   </Card>
@@ -411,11 +391,8 @@ export default function MTMLandingPage() {
                       className="w-full h-auto rounded-lg"
                       loading="lazy"
                       onError={(e) => {
-                        console.error('Erro ao carregar imagem:', images.estrategia2)
-                        const fallback = getImageUrl('/MTM/A Estratégia image 2.png')
-                        if (e.currentTarget.src !== fallback) {
-                          e.currentTarget.src = fallback
-                        }
+                        const fallback = getMtmImageUrl('estrategia2')
+                        if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback
                       }}
                     />
                   </Card>
@@ -497,11 +474,8 @@ export default function MTMLandingPage() {
                     className="w-full h-auto rounded-lg"
                     loading="lazy"
                     onError={(e) => {
-                      console.error('Erro ao carregar imagem:', images.escolhaCaminho)
-                      const fallback = getImageUrl('/MTM/Escolha de Caminho.png')
-                      if (e.currentTarget.src !== fallback) {
-                        e.currentTarget.src = fallback
-                      }
+                      const fallback = getMtmImageUrl('escolhaCaminho')
+                      if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback
                     }}
                   />
                 </Card>
@@ -591,11 +565,8 @@ export default function MTMLandingPage() {
                     className="w-full h-auto rounded-lg"
                     loading="lazy"
                     onError={(e) => {
-                      console.error('Erro ao carregar imagem:', images.diferenca)
-                      const fallback = getImageUrl('/MTM/Diferença.png')
-                      if (e.currentTarget.src !== fallback) {
-                        e.currentTarget.src = fallback
-                      }
+                      const fallback = getMtmImageUrl('diferenca')
+                      if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback
                     }}
                   />
                 </Card>

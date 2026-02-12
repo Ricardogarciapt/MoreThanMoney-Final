@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import UserDropdown from "@/components/user-dropdown"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
 import LoginModal from "@/components/login-modal"
-import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap } from "lucide-react"
+import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap, Brain } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 
 export default function Navbar() {
@@ -69,6 +69,11 @@ export default function Navbar() {
       name: "Início Rápido", 
       href: "/fast-start",
       icon: Zap
+    },
+    { 
+      name: "Mindset & Fitness", 
+      href: "/mindset-fitness",
+      icon: Brain
     },
   ]
 

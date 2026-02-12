@@ -9,8 +9,6 @@ import ProtectedPage from "@/components/protected-page"
 import SocialFeed from "@/components/mobile/social-feed"
 import PortfolioMobile from "@/components/mobile/portfolio-mobile"
 import ScannerMobile from "@/components/mobile/scanner-mobile"
-import MindsetMobile from "@/components/mobile/mindset-mobile"
-import FitnessMobile from "@/components/mobile/fitness-mobile"
 import ChatsMobile from "@/components/mobile/chats-mobile"
 import { supabase } from "@/lib/supabase"
 import Image from "next/image"
@@ -18,8 +16,6 @@ import {
   Users,
   Wallet,
   BarChart3,
-  Brain,
-  Dumbbell,
   LogOut,
   Loader2,
   Menu,
@@ -126,7 +122,7 @@ function AppMobileContent() {
 
   useEffect(() => {
     const tab = searchParams.get("tab")
-    if (tab && ["social", "portfolio", "scanner", "fitness", "mindset", "chats"].includes(tab)) {
+    if (tab && ["social", "portfolio", "scanner", "chats"].includes(tab)) {
       setActiveTab(tab)
     }
   }, [searchParams])
@@ -170,7 +166,7 @@ function AppMobileContent() {
     const isLeftSwipe = distance > 50
     const isRightSwipe = distance < -50
 
-    const tabs = ['social', 'portfolio', 'scanner', 'mindset', 'fitness']
+    const tabs = ['social', 'portfolio', 'scanner']
     const currentIndex = tabs.indexOf(activeTab)
 
     if (isLeftSwipe && currentIndex < tabs.length - 1) {
@@ -286,21 +282,13 @@ function AppMobileContent() {
             <TabsContent value="scanner" className="mt-0 h-full">
               <ScannerMobile />
             </TabsContent>
-
-            <TabsContent value="mindset" className="mt-0 h-full">
-              <MindsetMobile />
-            </TabsContent>
-
-            <TabsContent value="fitness" className="mt-0 h-full">
-              <FitnessMobile />
-            </TabsContent>
           </Tabs>
         </div>
 
         {/* Bottom Navigation - FIXA NO FUNDO */}
         <div 
           className="fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-gray-800 px-2 py-2" 
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem' }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}
         >
           <button
             onClick={() => handleTabChange('social')}
@@ -348,30 +336,6 @@ function AppMobileContent() {
           >
             <BarChart3 className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'scanner' ? 'text-[#D2A63C]' : ''}`} />
             <div className={`text-[10px] font-medium ${activeTab === 'scanner' ? 'text-[#D2A63C]' : ''}`}>Scanner</div>
-          </button>
-          
-          <button
-            onClick={() => handleTabChange('mindset')}
-            className={`py-3 rounded-lg transition-all relative ${
-              activeTab === 'mindset'
-                ? 'bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]'
-                : 'text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent'
-            }`}
-          >
-            <Brain className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'mindset' ? 'text-[#D2A63C]' : ''}`} />
-            <div className={`text-[10px] font-medium ${activeTab === 'mindset' ? 'text-[#D2A63C]' : ''}`}>Mindset</div>
-          </button>
-          
-          <button
-            onClick={() => handleTabChange('fitness')}
-            className={`py-3 rounded-lg transition-all relative ${
-              activeTab === 'fitness'
-                ? 'bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]'
-                : 'text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent'
-            }`}
-          >
-            <Dumbbell className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'fitness' ? 'text-[#D2A63C]' : ''}`} />
-            <div className={`text-[10px] font-medium ${activeTab === 'fitness' ? 'text-[#D2A63C]' : ''}`}>Fitness</div>
           </button>
         </div>
       </main>
