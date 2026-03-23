@@ -39,7 +39,7 @@ interface Message {
 
 export default function ChatsMobile() {
   const router = useRouter()
-  const { user: currentUser, isAdmin, userProfile } = useAuth()
+  const { user: currentUser } = useAuth()
   const [groups, setGroups] = useState<Group[]>([])
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -47,12 +47,12 @@ export default function ChatsMobile() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [showMessages, setShowMessages] = useState(false)
+  const [authError, setAuthError] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // Carregar grupos ao montar (sessão via cookies) e quando o user ficar disponível
   useEffect(() => {
-    if (currentUser?.id) {
-      loadGroups()
-    }
+    loadGroups()
   }, [currentUser?.id])
 
   useEffect(() => {
@@ -74,24 +74,19 @@ export default function ChatsMobile() {
   const loadGroups = async () => {
     try {
       setLoading(true)
+      setAuthError(false)
       const response = await fetch('/api/messages/groups?mobile_only=true', {
         credentials: 'include'
       })
       
       if (response.ok) {
         const data = await response.json()
-        // A API já retorna apenas grupos mobile_visible quando mobile_only=true
+        // Mesma API que /messages usa: grupos mobile (is_mobile_visible / públicos)
         let apiGroups: Group[] = data.groups || []
 
-        // Filtrar explicitamente para apenas 3 grupos principais:
-        // Trade Chat, Crypto Chat, Social Chat
-        const order = ['trade', 'crypto', 'social']
-        apiGroups = apiGroups.filter((g) => {
-          const name = (g.name || '').toLowerCase()
-          return order.some((keyword) => name.includes(keyword))
-        })
-
-        // Ordenar por ordem desejada
+        // Tentar manter a mesma ordem preferencial (Social, Crypto, Forex, Trade),
+        // mas sem esconder outros grupos que venham da API.
+        const order = ['social', 'crypto', 'forex', 'trade']
         apiGroups.sort((a, b) => {
           const aName = (a.name || '').toLowerCase()
           const bName = (b.name || '').toLowerCase()
@@ -100,9 +95,9 @@ export default function ChatsMobile() {
           return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex)
         })
 
-        console.log('✅ [CHATS MOBILE] Grupos filtrados (Trade/Crypto/Social):', apiGroups.length)
         setGroups(apiGroups)
       } else {
+        if (response.status === 401) setAuthError(true)
         const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }))
         console.error('❌ [CHATS MOBILE] Erro ao carregar grupos:', errorData)
         setGroups([])
@@ -143,7 +138,7 @@ export default function ChatsMobile() {
           loadGroups()
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: string) => {
         if (status === 'SUBSCRIBED') {
           console.log('✅ [CHATS MOBILE] Subscrição ativa para grupo:', groupId)
         } else if (status === 'CHANNEL_ERROR') {
@@ -304,17 +299,29 @@ export default function ChatsMobile() {
   }
 
   return (
-    <div className="h-full bg-black text-white p-4">
+    <div className="min-h-[60vh] h-full bg-black text-white p-4">
       <h2 className="text-xl font-bold text-[#D2A63C] mb-4">Chats</h2>
       
       {loading ? (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" />
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-[#D2A63C]" />
+        </div>
+      ) : authError ? (
+        <div className="text-center text-gray-400 py-12 px-4">
+          <MessageCircle className="w-14 h-14 mx-auto mb-3 opacity-50" />
+          <p className="text-sm font-medium text-white/80 mb-2">Sessão inválida</p>
+          <p className="text-xs max-w-[280px] mx-auto mb-4">
+            Inicia sessão novamente para veres os chats.
+          </p>
+          <a href="/login?redirect=/app-mobile" className="text-[#D2A63C] text-sm underline">Ir para o login</a>
         </div>
       ) : groups.length === 0 ? (
-        <div className="text-center text-gray-400 py-8">
-          <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Nenhum grupo disponível</p>
+        <div className="text-center text-gray-400 py-12 px-4">
+          <MessageCircle className="w-14 h-14 mx-auto mb-3 opacity-50" />
+          <p className="text-sm font-medium text-white/80 mb-2">Nenhum chat disponível</p>
+          <p className="text-xs max-w-[280px] mx-auto mb-4">
+            Os grupos Social Chat, Crypto Chat, Forex Chat e Trade Chat aparecem aqui.
+          </p>
         </div>
       ) : (
         <div className="space-y-2">

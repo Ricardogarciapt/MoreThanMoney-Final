@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Save, RefreshCw, Check } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 interface AdminSettings {
   site_name: string
@@ -19,6 +20,7 @@ interface AdminSettings {
 }
 
 export default function SettingsManager() {
+  const { toast } = useToast()
   const [settings, setSettings] = useState<AdminSettings>({
     site_name: 'MoreThanMoney',
     site_description: 'Plataforma de Trading e Educação Financeira',
@@ -39,7 +41,7 @@ export default function SettingsManager() {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch('/api/admin/settings')
+      const response = await fetch('/api/admin/settings', { credentials: 'include' })
       const result = await response.json()
       
       if (result.data) {
@@ -60,6 +62,7 @@ export default function SettingsManager() {
       const response = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(settings)
       })
 
@@ -68,12 +71,13 @@ export default function SettingsManager() {
       if (response.ok) {
         setSaveSuccess(true)
         setTimeout(() => setSaveSuccess(false), 3000)
+        toast({ title: "Configurações guardadas" })
       } else {
-        alert(`Erro ao salvar configurações: ${result.error}`)
+        toast({ title: "Erro ao guardar", description: result.error, variant: "destructive" })
       }
     } catch (error) {
       console.error('Erro ao salvar configurações:', error)
-      alert('Erro ao salvar configurações')
+      toast({ title: "Erro ao guardar configurações", variant: "destructive" })
     } finally {
       setIsSaving(false)
     }

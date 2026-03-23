@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Plus, Utensils, Loader2, Calendar } from "lucide-react"
+import { Plus, Utensils, Loader2, Calendar, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Meal {
@@ -35,7 +35,29 @@ interface Meal {
   }>
 }
 
-export default function NutritionManager() {
+interface IngredientOption {
+  id: string
+  name: string
+  energy_kcal?: number
+  protein?: number
+  carbs?: number
+  fat?: number
+}
+
+interface MealItemDraft {
+  ingredient_id: string
+  name: string
+  amount: number
+  unit: string
+}
+
+interface Props {
+  onRefresh?: () => void
+}
+
+const UNITS = ["g", "ml", "unidade", "colher", "fatia", "chávena"]
+
+export default function NutritionManager({ onRefresh }: Props) {
   const { toast } = useToast()
   const [meals, setMeals] = useState<Meal[]>([])
   const [loading, setLoading] = useState(true)
@@ -46,13 +68,15 @@ export default function NutritionManager() {
     meal_time: new Date().toTimeString().slice(0, 5),
     notes: ""
   })
+  const [items, setItems] = useState<MealItemDraft[]>([])
+  const [ingredientSearch, setIngredientSearch] = useState("")
+  const [ingredients, setIngredients] = useState<IngredientOption[]>([])
+  const [searching, setSearching] = useState(false)
+  const [addAmount, setAddAmount] = useState("100")
+  const [addUnit, setAddUnit] = useState("g")
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    loadMeals()
-  }, [])
-
-  const loadMeals = async () => {
+  const loadMeals = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch('/api/fitness/nutrition/meals?limit=20', {
@@ -72,6 +96,48 @@ export default function NutritionManager() {
     } finally {
       setLoading(false)
     }
+  }, [toast])
+
+  useEffect(() => {
+    loadMeals()
+  }, [loadMeals])
+
+  useEffect(() => {
+    if (!ingredientSearch.trim()) {
+      setIngredients([])
+      return
+    }
+    const t = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await fetch(
+          `/api/fitness/nutrition/ingredients?search=${encodeURIComponent(ingredientSearch)}`,
+          { credentials: 'include' }
+        )
+        if (res.ok) {
+          const data = await res.json()
+          setIngredients(data.ingredients || [])
+        }
+      } finally {
+        setSearching(false)
+      }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [ingredientSearch])
+
+  const addItem = (ing: IngredientOption) => {
+    const amount = parseFloat(addAmount) || 100
+    if (items.some((i) => i.ingredient_id === ing.id)) {
+      toast({ title: "Ingrediente já adicionado", variant: "destructive" })
+      return
+    }
+    setItems((prev) => [...prev, { ingredient_id: ing.id, name: ing.name, amount, unit: addUnit }])
+    setIngredientSearch("")
+    setIngredients([])
+  }
+
+  const removeItem = (ingredientId: string) => {
+    setItems((prev) => prev.filter((i) => i.ingredient_id !== ingredientId))
   }
 
   const handleCreate = async () => {
@@ -86,11 +152,15 @@ export default function NutritionManager() {
 
     setSaving(true)
     try {
+      const payload = {
+        ...formData,
+        items: items.map((i) => ({ ingredient_id: i.ingredient_id, amount: i.amount, unit: i.unit }))
+      }
       const response = await fetch('/api/fitness/nutrition/meals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       })
 
       if (response.ok) {
@@ -105,7 +175,9 @@ export default function NutritionManager() {
           meal_time: new Date().toTimeString().slice(0, 5),
           notes: ""
         })
+        setItems([])
         loadMeals()
+        onRefresh?.()
       } else {
         const data = await response.json()
         toast({
@@ -202,9 +274,81 @@ export default function NutritionManager() {
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     className="bg-gray-800 border-gray-700 text-white"
                     placeholder="Notas sobre a refeição..."
-                    rows={3}
+                    rows={2}
                   />
                 </div>
+
+                <div className="border-t border-gray-800 pt-4">
+                  <label className="text-sm text-gray-400 mb-2 block">Ingredientes (opcional)</label>
+                  <div className="flex gap-2 mb-2 flex-wrap">
+                    <Input
+                      placeholder="Pesquisar ingrediente..."
+                      value={ingredientSearch}
+                      onChange={(e) => setIngredientSearch(e.target.value)}
+                      className="bg-gray-800 border-gray-700 text-white flex-1 min-w-[160px]"
+                    />
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={addAmount}
+                        onChange={(e) => setAddAmount(e.target.value)}
+                        className="bg-gray-800 border-gray-700 text-white w-20"
+                      />
+                      <Select value={addUnit} onValueChange={setAddUnit}>
+                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {UNITS.map((u) => (
+                            <SelectItem key={u} value={u}>{u}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  {searching && <p className="text-xs text-gray-500 mb-1">A pesquisar...</p>}
+                  {ingredientSearch && ingredients.length > 0 && (
+                    <ul className="max-h-32 overflow-y-auto rounded border border-gray-700 mb-3">
+                      {ingredients.map((ing) => (
+                        <li
+                          key={ing.id}
+                          className="px-3 py-2 hover:bg-gray-800 cursor-pointer flex justify-between items-center text-sm border-b border-gray-800 last:border-0"
+                          onClick={() => addItem(ing)}
+                        >
+                          <span className="text-white">{ing.name}</span>
+                          {ing.energy_kcal != null && (
+                            <span className="text-gray-400">{ing.energy_kcal} kcal/100g</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {items.length > 0 && (
+                    <ul className="space-y-2 mb-2">
+                      {items.map((i) => (
+                        <li
+                          key={i.ingredient_id}
+                          className="flex justify-between items-center text-sm py-1.5 px-2 rounded bg-gray-800"
+                        >
+                          <span className="text-white">{i.name}</span>
+                          <span className="text-gray-400 mr-2">{i.amount} {i.unit}</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-400 hover:text-red-300 h-8 w-8 p-0"
+                            onClick={() => removeItem(i.ingredient_id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
                 <div className="flex gap-2">
                   <Button
                     onClick={handleCreate}

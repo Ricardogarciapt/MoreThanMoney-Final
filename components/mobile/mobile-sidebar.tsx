@@ -1,26 +1,23 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { clearCachedSession } from "@/lib/auth-cache"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
   X,
-  Menu,
   LogOut,
-  Bell,
   MessageCircle,
   Settings,
   Users,
   Wallet,
   BarChart3,
-  Brain,
-  Dumbbell,
   Award,
   Zap,
   ChevronRight,
+  UserCircle,
+  Rocket,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -52,40 +49,19 @@ export default function MobileSidebar({
   onTabChange,
 }: MobileSidebarProps) {
   const router = useRouter()
-  const pathname = usePathname()
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const [xpData, setXpData] = useState<{ xp: number; level: number } | null>(null)
 
   useEffect(() => {
     if (isOpen && currentUser?.id) {
-      loadNotifications()
       loadMessages()
       loadXP()
     }
   }, [isOpen, currentUser?.id])
 
-  const loadNotifications = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('id')
-        .eq('user_id', currentUser?.id)
-        .eq('read', false)
-
-      if (!error && data) {
-        setUnreadNotificationsCount(data.length)
-      }
-    } catch (error) {
-      console.error('Erro ao carregar notificações:', error)
-    }
-  }
-
   const loadMessages = async () => {
     try {
       if (!currentUser?.id) return
-      
-      // Usar API dedicada para contar mensagens não lidas
       const response = await fetch('/api/messages/unread-count')
       if (response.ok) {
         const data = await response.json()
@@ -129,8 +105,7 @@ export default function MobileSidebar({
     { id: 'social', label: 'Social', icon: Users, href: '/app-mobile?tab=social' },
     { id: 'portfolio', label: 'Portfólio', icon: Wallet, href: '/app-mobile?tab=portfolio' },
     { id: 'scanner', label: 'Scanner', icon: BarChart3, href: '/app-mobile?tab=scanner' },
-    { id: 'mindset', label: 'Mindset', icon: Brain, href: '/app-mobile?tab=mindset' },
-    { id: 'fitness', label: 'Fitness', icon: Dumbbell, href: '/app-mobile?tab=fitness' },
+    { id: 'studio', label: 'MTM Studio', icon: Rocket, href: '/app-mobile?tab=studio' },
   ]
 
 

@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    const auth = await (await import('@/lib/admin-api-helpers')).verifyAdminAccess()
     const { data, error } = await supabase
       .from('site_content')
       .insert({
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
         is_active: is_active ?? true,
         order_index: order_index ?? 0,
         metadata: metadata ?? {},
-        created_by: 'admin',
+        created_by: auth.userId || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })

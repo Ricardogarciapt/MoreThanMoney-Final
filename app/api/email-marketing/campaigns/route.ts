@@ -288,7 +288,7 @@ async function sendCampaign(campaignId: string) {
           userEmail: recipient.email,
           username: recipient.username || recipient.email,
           siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://morethanmoney.pt',
-          skoolUrl: 'https://skool.com/mtm',
+          skoolUrl: 'https://www.skool.com/morethanmoney-1132/about',
           opportunities: [], // Para templates DCA
         }
         

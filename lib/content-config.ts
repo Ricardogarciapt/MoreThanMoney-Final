@@ -78,7 +78,7 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'mtm-estrategia-1',
       title: 'A Escada do Sucesso - Parte 1',
-      url: '/MTM/Estratégia. image 1png.png',
+      url: '/MTM/A Escada Do Sucesso - Parte 1 .png',
       alt: 'A Escada do Sucesso - Parte 1',
       page: '/mtm',
       section: 'A Escada do Sucesso',
@@ -88,7 +88,7 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'mtm-estrategia-2',
       title: 'A Escada do Sucesso - Parte 2',
-      url: '/MTM/A Estratégia image 2.png',
+      url: '/MTM/Escada do Sucesso  - Parte 2.png',
       alt: 'A Escada do Sucesso - Parte 2',
       page: '/mtm',
       section: 'A Escada do Sucesso',
@@ -108,7 +108,7 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'mtm-diferenca',
       title: 'A Diferença',
-      url: '/MTM/Diferença.png',
+      url: '/MTM/A Diferença.png',
       alt: 'A Diferença',
       page: '/mtm',
       section: 'O Modelo de Negócio',
@@ -313,7 +313,7 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'skool-morethanmoney',
       title: 'Cursos MoreThanMoney (Skool)',
-      url: 'https://www.skool.com/morethanmoney/about?ref=8e3afe86cbc7407ca7b411cece0512bd',
+      url: 'https://www.skool.com/morethanmoney-1132/about',
       type: 'skool',
       page: '/new-landing',
       section: 'Community Section',
@@ -331,19 +331,13 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'skool-mtm-hero',
       title: 'Comunidade Skool MoreThanMoney',
-      url: 'https://www.skool.com/morethanmoney',
-      type: 'skool',
-      page: '/mtm',
-      section: 'Hero CTA',
+      url: 'https://www.skool.com/morethanmoney-1132/about',
       description: 'Acesso gratuito à comunidade Skool - CTA principal'
     },
     {
       id: 'skool-mtm-cta',
       title: 'Começar no Skool',
-      url: 'https://www.skool.com/morethanmoney',
-      type: 'skool',
-      page: '/mtm',
-      section: 'Final CTA',
+      url: 'https://www.skool.com/morethanmoney-1132/about',
       description: 'CTA final para acesso ao Skool'
     },
     

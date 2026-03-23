@@ -27,33 +27,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    // Buscar conversas do usuário
-    // Tentar buscar com foreign keys primeiro, se falhar, buscar sem
-    let conversations: any[] | null = null
-    let error: any = null
-    
-    try {
-      const result = await supabase
-        .from('conversations')
-        .select(`
-          *,
-          user1:profiles!conversations_user1_id_fkey(id, full_name, username, avatar_url, email),
-          user2:profiles!conversations_user2_id_fkey(id, full_name, username, avatar_url, email)
-        `)
-        .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
-      
-      conversations = result.data
-      error = result.error
-    } catch (e: any) {
-      // Se falhar com foreign keys, tentar sem
-      console.warn('⚠️ [CONVERSATIONS API] Erro com foreign keys, tentando sem:', e.message)
-      const result = await supabase
-        .from('conversations')
-        .select('*')
-        .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
-      
-      conversations = result.data
-      error = result.error
+    // Buscar conversas do usuário (sem join a profiles - os perfis são buscados depois por conversa)
+    const result = await supabase
+      .from('conversations')
+      .select('*')
+      .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
+
+    let conversations: any[] | null = result.data
+    const error = result.error
+
+    if (error) {
+      console.error('❌ [CONVERSATIONS API] Erro ao buscar conversas:', error)
+      return NextResponse.json({ error: 'Erro ao buscar conversas', details: error.message }, { status: 500 })
     }
     
     // Ordenar por last_message_at se existir, senão por created_at
@@ -69,29 +54,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (error) {
-      console.error('Erro ao buscar conversas:', error)
-      return NextResponse.json({ error: 'Erro ao buscar conversas' }, { status: 500 })
-    }
-
     // Buscar última mensagem e contagem de não lidas para cada conversa
     const conversationsWithMessages = await Promise.all(
       (conversations || []).map(async (conv) => {
         const otherUserId = conv.user1_id === session.user.id ? conv.user2_id : conv.user1_id
         
-        // Buscar perfil do outro usuário se não veio com foreign key
-        let otherUser = conv.user1_id === session.user.id ? conv.user2 : conv.user1
-        if (!otherUser && otherUserId) {
-          try {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('id, full_name, username, avatar_url, email')
-              .eq('id', otherUserId)
-              .maybeSingle()
-            otherUser = profile || null
-          } catch (e) {
-            console.warn(`⚠️ [CONVERSATIONS API] Erro ao buscar perfil de ${otherUserId}:`, e)
-          }
+        let otherUser: { id: string; full_name?: string; username?: string; avatar_url?: string; email?: string } | null = null
+        if (otherUserId) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, full_name, username, avatar_url, email')
+            .eq('id', otherUserId)
+            .maybeSingle()
+          otherUser = profile || null
         }
 
         // Última mensagem
@@ -235,26 +210,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não foi possível criar ou encontrar a conversa' }, { status: 500 })
     }
 
-    // Buscar conversa completa
+    // Buscar conversa (sem join a profiles)
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
-      .select(`
-        *,
-        user1:profiles!conversations_user1_id_fkey(id, full_name, username, avatar_url, email),
-        user2:profiles!conversations_user2_id_fkey(id, full_name, username, avatar_url, email)
-      `)
+      .select('*')
       .eq('id', conversationId)
       .single()
 
-    if (convError) {
+    if (convError || !conversation) {
       console.error('Erro ao buscar conversa:', convError)
       return NextResponse.json({ 
         error: 'Erro ao buscar conversa',
-        details: convError.message 
+        details: convError?.message 
       }, { status: 500 })
     }
 
-    const otherUser = conversation.user1_id === session.user.id ? conversation.user2 : conversation.user1
+    const otherUserIdForProfile = conversation.user1_id === session.user.id ? conversation.user2_id : conversation.user1_id
+    let otherUser: { id: string; full_name?: string; username?: string; avatar_url?: string; email?: string } = { id: otherUserIdForProfile }
+    const { data: otherProfile } = await supabase
+      .from('profiles')
+      .select('id, full_name, username, avatar_url, email')
+      .eq('id', otherUserIdForProfile)
+      .maybeSingle()
+    if (otherProfile) otherUser = otherProfile
 
     return NextResponse.json({
       conversation: {

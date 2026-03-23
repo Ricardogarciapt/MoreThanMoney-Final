@@ -91,10 +91,9 @@ export async function GET(request: NextRequest) {
           new Map(allGroups.map((g: any) => [g.id, g])).values()
         )
 
-        // Se for mobile_only, limitar explicitamente aos 3 grupos principais:
-        // Trade Chat, Crypto Chat, Social Chat
+        // Se for mobile_only, limitar aos grupos principais: Social, Crypto, Forex, Trade
         if (mobileOnly) {
-          const allowedNames = ['trade', 'crypto', 'social']
+          const allowedNames = ['social', 'crypto', 'forex', 'trade']
           uniqueGroups = uniqueGroups.filter((g: any) => {
             const name = (g.name || '').toLowerCase()
             return allowedNames.some(keyword => name.includes(keyword))
@@ -170,13 +169,14 @@ export async function GET(request: NextRequest) {
           const isSocialChat = name.includes('social')
           const isTradeChat = name.includes('trade')
           const isCryptoChat = name.includes('crypto')
+          const isForexChat = name.includes('forex')
 
           let canPost = false
           if (isSocialChat) {
             // Social Chat: todos podem publicar
             canPost = true
-          } else if (isTradeChat || isCryptoChat) {
-            // Trade / Crypto Chat: apenas admins e VIPs podem publicar
+          } else if (isTradeChat || isCryptoChat || isForexChat) {
+            // Trade / Crypto / Forex Chat: apenas admins e VIPs podem publicar
             canPost = isAdmin || isVip
           } else {
             // Outros grupos: admin, VIP ou membro podem publicar

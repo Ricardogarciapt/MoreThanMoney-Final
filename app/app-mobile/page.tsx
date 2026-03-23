@@ -2,32 +2,29 @@
 
 import { useState, useEffect, useRef, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import ProtectedPage from "@/components/protected-page"
 import SocialFeed from "@/components/mobile/social-feed"
 import PortfolioMobile from "@/components/mobile/portfolio-mobile"
 import ScannerMobile from "@/components/mobile/scanner-mobile"
-import ChatsMobile from "@/components/mobile/chats-mobile"
-import { supabase } from "@/lib/supabase"
 import Image from "next/image"
 import {
   Users,
   Wallet,
   BarChart3,
-  LogOut,
   Loader2,
   Menu,
-  MessageCircle,
+  Rocket,
+  ExternalLink,
 } from "lucide-react"
 import MobileSidebar from "@/components/mobile/mobile-sidebar"
 import { useAuth } from "@/contexts/auth-context"
 
 function AppMobileContent() {
+  const STUDIO_URL = "https://mtmbrandbuilder.lovable.app"
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { user, isLoading: authLoading, logout } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState("social")
   const [touchStart, setTouchStart] = useState(0)
@@ -122,15 +119,10 @@ function AppMobileContent() {
 
   useEffect(() => {
     const tab = searchParams.get("tab")
-    if (tab && ["social", "portfolio", "scanner", "chats"].includes(tab)) {
+    if (tab && ["social", "portfolio", "scanner", "studio"].includes(tab)) {
       setActiveTab(tab)
     }
   }, [searchParams])
-
-  const handleLogout = async () => {
-    await logout()
-    window.location.href = '/login'
-  }
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
@@ -166,7 +158,7 @@ function AppMobileContent() {
     const isLeftSwipe = distance > 50
     const isRightSwipe = distance < -50
 
-    const tabs = ['social', 'portfolio', 'scanner']
+    const tabs = ['social', 'portfolio', 'scanner', 'studio']
     const currentIndex = tabs.indexOf(activeTab)
 
     if (isLeftSwipe && currentIndex < tabs.length - 1) {
@@ -261,27 +253,45 @@ function AppMobileContent() {
         {/* Área de conteúdo com scroll controlado */}
         <div
           ref={contentRef}
-          className="app-mobile-scroll-area flex-1 overflow-y-auto pb-24"
+          className="app-mobile-scroll-area flex-1 overflow-y-auto pb-24 min-h-0"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsContent value="social" className="mt-0 h-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full min-h-[60vh]">
+            <TabsContent value="social" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
               <SocialFeed />
             </TabsContent>
 
-            <TabsContent value="chats" className="mt-0 h-full">
-              <ChatsMobile />
-            </TabsContent>
-
-            <TabsContent value="portfolio" className="mt-0 h-full">
+            <TabsContent value="portfolio" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
               <PortfolioMobile />
             </TabsContent>
 
-            <TabsContent value="scanner" className="mt-0 h-full">
+            <TabsContent value="scanner" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
               <ScannerMobile />
             </TabsContent>
+
+            <TabsContent value="studio" className="mt-0 data-[state=inactive]:hidden">
+              <div className="relative w-full bg-black">
+                <a
+                  href={STUDIO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute right-3 top-3 z-10 rounded-md border border-[#D2A63C]/40 bg-black/70 px-2 py-1 text-[11px] text-[#D2A63C] inline-flex items-center gap-1 backdrop-blur-sm hover:opacity-80"
+                >
+                  Abrir fora
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+                <iframe
+                  src={STUDIO_URL}
+                  title="MTM Studio"
+                  className="w-full bg-black"
+                  style={{ height: "calc(100dvh - 9.5rem)" }}
+                  loading="lazy"
+                />
+              </div>
+            </TabsContent>
+
           </Tabs>
         </div>
 
@@ -303,15 +313,15 @@ function AppMobileContent() {
           </button>
           
           <button
-            onClick={() => handleTabChange('chats')}
+            onClick={() => handleTabChange('studio')}
             className={`py-3 rounded-lg transition-all relative ${
-              activeTab === 'chats'
+              activeTab === 'studio'
                 ? 'bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]'
                 : 'text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent'
             }`}
           >
-            <MessageCircle className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'chats' ? 'text-[#D2A63C]' : ''}`} />
-            <div className={`text-[10px] font-medium ${activeTab === 'chats' ? 'text-[#D2A63C]' : ''}`}>Chats</div>
+            <Rocket className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'studio' ? 'text-[#D2A63C]' : ''}`} />
+            <div className={`text-[10px] font-medium ${activeTab === 'studio' ? 'text-[#D2A63C]' : ''}`}>Studio</div>
           </button>
           
           <button

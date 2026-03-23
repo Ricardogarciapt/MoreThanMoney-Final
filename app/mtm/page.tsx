@@ -191,7 +191,7 @@ export default function MTMLandingPage() {
               size="lg"
               className="bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 hover:from-blue-500 hover:via-purple-500 hover:to-cyan-500 text-white font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50 border-2 border-purple-400/30"
             >
-              <Link href="https://www.skool.com/morethanmoney" target="_blank" rel="noopener noreferrer">
+              <Link href="https://www.skool.com/morethanmoney-1132/about" target="_blank" rel="noopener noreferrer">
                 <Sparkles className="w-5 h-5 mr-2" />
                 Entrar Gratuitamente na Comunidade Skool
               </Link>
@@ -665,7 +665,7 @@ export default function MTMLandingPage() {
                   size="lg"
                   className="bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 hover:from-blue-500 hover:via-purple-500 hover:to-cyan-500 text-white font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50 border-2 border-purple-400/30"
                 >
-                  <Link href="https://www.skool.com/morethanmoney" target="_blank" rel="noopener noreferrer">
+                  <Link href="https://www.skool.com/morethanmoney-1132/about" target="_blank" rel="noopener noreferrer">
                     <GraduationCap className="w-5 h-5 mr-2" />
                     Quero Aceder ao Skool e Começar a Minha Jornada
                     <ArrowRight className="w-5 h-5 ml-2" />

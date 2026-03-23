@@ -15,10 +15,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { useAuth } from "@/contexts/auth-context"
-import { Loader2, GraduationCap, ChevronRight } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -30,10 +28,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const [isIqonicLogin, setIsIqonicLogin] = useState(false)
-  const [isEducator, setIsEducator] = useState(false)
-  const router = useRouter()
-  const { signInWithIqonic } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,25 +35,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setIsLoading(true)
 
     try {
-      // Se for login IQONIC
-      if (isIqonicLogin) {
-        // Mostrar feedback imediato
-        const result = await signInWithIqonic(email, password, isEducator)
-        
-        if (!result.success) {
-          setError(result.error || "Erro ao fazer login IQONIC")
-          setIsLoading(false)
-          return
-        }
-        
-        // Redirecionar imediatamente (sem delay)
-        const allowedRoutes = ['/app-mobile', '/scanner-access', '/portfolios']
-        onClose()
-        // Usar replace para evitar histórico desnecessário
-        window.location.replace(allowedRoutes[0])
-        return
-      }
-
       // Login normal Supabase
       const { data, error: loginError } = await supabase.auth.signInWithPassword({
         email,
@@ -92,12 +67,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     // Não definir isLoading - vamos redirecionar imediatamente
 
     try {
-      const isProduction = window.location.hostname.includes('morethanmoney.pt') || 
-                           window.location.hostname.includes('vercel.app')
-      const baseUrl = isProduction 
-        ? `https://www.morethanmoney.pt`
-        : 'http://localhost:3000'
-      const callbackUrl = `${baseUrl}/auth/callback`
+      const callbackUrl = `${window.location.origin}/auth/callback`
 
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -178,67 +148,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             </Button>
           </DialogFooter>
         </form>
-        
-        {/* Toggle IQONIC Login */}
-        <div className="mt-4 flex gap-2">
-          <Button
-            type="button"
-            variant={!isIqonicLogin ? "default" : "outline"}
-            className={`flex-1 ${!isIqonicLogin ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
-            onClick={() => {
-              setIsIqonicLogin(false)
-              setError('')
-            }}
-            disabled={isLoading}
-            size="sm"
-          >
-            Login Normal
-          </Button>
-          <Button
-            type="button"
-            variant={isIqonicLogin ? "default" : "outline"}
-            className={`flex-1 ${isIqonicLogin ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
-            onClick={() => {
-              setIsIqonicLogin(true)
-              setError('')
-            }}
-            disabled={isLoading}
-            size="sm"
-          >
-            <GraduationCap className="w-4 h-4 mr-1" />
-            IQONIC.VIP
-          </Button>
-        </div>
-
-        {/* IQONIC User Type Toggle */}
-        {isIqonicLogin && (
-          <div className="mt-2 flex gap-2">
-            <Button
-              type="button"
-              variant={!isEducator ? "default" : "outline"}
-              className={`flex-1 ${!isEducator ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
-              onClick={() => setIsEducator(false)}
-              disabled={isLoading}
-              size="sm"
-            >
-              Estudante
-            </Button>
-            <Button
-              type="button"
-              variant={isEducator ? "default" : "outline"}
-              className={`flex-1 ${isEducator ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
-              onClick={() => setIsEducator(true)}
-              disabled={isLoading}
-              size="sm"
-            >
-              Educador
-            </Button>
-          </div>
-        )}
-
         {/* Google Login */}
-        {!isIqonicLogin && (
-          <div className="mt-4">
+        <div className="mt-4">
             <div className="relative mb-4">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-700"></div>
@@ -272,7 +183,6 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               )}
             </Button>
           </div>
-        )}
         
         <div className="mt-4 text-center text-sm">
           <span className="text-muted-foreground">Não tem uma conta?</span>{" "}

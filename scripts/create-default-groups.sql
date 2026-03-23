@@ -1,16 +1,15 @@
 -- =====================================================
 -- SCRIPT: Criar Grupos Pré-definidos para App-Mobile
 -- =====================================================
--- Este script cria os 3 grupos de chat pré-definidos:
--- - Trade Chat
--- - Crypto Chat  
--- - Social Chat
+-- Este script cria os 4 grupos de chat pré-definidos:
+-- - Social Chat, Crypto Chat, Forex Chat, Trade Chat
 
 DO $$
 DECLARE
   v_admin_id UUID;
   v_trade_chat_id UUID;
   v_crypto_chat_id UUID;
+  v_forex_chat_id UUID;
   v_social_chat_id UUID;
 BEGIN
   -- Tentar encontrar um admin primeiro
@@ -50,6 +49,17 @@ BEGIN
   
   SELECT id INTO v_crypto_chat_id FROM public.group_conversations WHERE name = 'Crypto Chat' LIMIT 1;
   
+  -- Criar Forex Chat
+  INSERT INTO public.group_conversations (name, description, is_public, is_mobile_visible, created_by)
+  VALUES ('Forex Chat', 'Conversas sobre Forex e mercados de divisas', TRUE, TRUE, v_admin_id)
+  ON CONFLICT (name) DO UPDATE SET
+    description = EXCLUDED.description,
+    is_public = EXCLUDED.is_public,
+    is_mobile_visible = EXCLUDED.is_mobile_visible,
+    created_by = COALESCE(group_conversations.created_by, EXCLUDED.created_by);
+  
+  SELECT id INTO v_forex_chat_id FROM public.group_conversations WHERE name = 'Forex Chat' LIMIT 1;
+  
   -- Criar Social Chat
   INSERT INTO public.group_conversations (name, description, is_public, is_mobile_visible, created_by)
   VALUES ('Social Chat', 'Networking e conversas gerais', TRUE, TRUE, v_admin_id)
@@ -72,6 +82,12 @@ BEGIN
     IF v_crypto_chat_id IS NOT NULL THEN
       INSERT INTO public.group_members (group_id, user_id, role)
       VALUES (v_crypto_chat_id, v_admin_id, 'admin')
+      ON CONFLICT (group_id, user_id) DO UPDATE SET role = 'admin';
+    END IF;
+    
+    IF v_forex_chat_id IS NOT NULL THEN
+      INSERT INTO public.group_members (group_id, user_id, role)
+      VALUES (v_forex_chat_id, v_admin_id, 'admin')
       ON CONFLICT (group_id, user_id) DO UPDATE SET role = 'admin';
     END IF;
     
@@ -98,6 +114,14 @@ BEGIN
       ON CONFLICT (group_id, user_id) DO NOTHING;
     END IF;
     
+    IF v_forex_chat_id IS NOT NULL THEN
+      INSERT INTO public.group_members (group_id, user_id, role)
+      SELECT v_forex_chat_id, u.id, 'member'
+      FROM auth.users u
+      WHERE u.id != v_admin_id
+      ON CONFLICT (group_id, user_id) DO NOTHING;
+    END IF;
+    
     IF v_social_chat_id IS NOT NULL THEN
       INSERT INTO public.group_members (group_id, user_id, role)
       SELECT v_social_chat_id, u.id, 'member'
@@ -110,6 +134,7 @@ BEGIN
   RAISE NOTICE '✅ Grupos criados/atualizados:';
   RAISE NOTICE '   - Trade Chat: %', v_trade_chat_id;
   RAISE NOTICE '   - Crypto Chat: %', v_crypto_chat_id;
+  RAISE NOTICE '   - Forex Chat: %', v_forex_chat_id;
   RAISE NOTICE '   - Social Chat: %', v_social_chat_id;
 END $$;
 
@@ -122,7 +147,7 @@ SELECT
   is_mobile_visible,
   (SELECT COUNT(*) FROM public.group_members WHERE group_id = group_conversations.id) as total_members
 FROM public.group_conversations
-WHERE name IN ('Trade Chat', 'Crypto Chat', 'Social Chat')
+WHERE name IN ('Trade Chat', 'Crypto Chat', 'Forex Chat', 'Social Chat')
 ORDER BY name;
 
 

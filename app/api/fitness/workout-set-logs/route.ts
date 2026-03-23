@@ -25,6 +25,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'workout_session_id, exercise_id e set_number obrigatórios' }, { status: 400 })
     }
 
+    const { data: ws } = await supabase
+      .from('workout_sessions')
+      .select('id, user_id')
+      .eq('id', workout_session_id)
+      .single()
+    if (!ws || ws.user_id !== session.user.id) {
+      return NextResponse.json({ error: 'Sessão não encontrada ou não te pertence' }, { status: 403 })
+    }
+
     const { data: log, error } = await supabase
       .from('workout_set_logs')
       .insert({
@@ -70,6 +79,15 @@ export async function GET(request: NextRequest) {
 
     const sessionId = request.nextUrl.searchParams.get('workout_session_id')
     if (!sessionId) return NextResponse.json({ error: 'workout_session_id obrigatório' }, { status: 400 })
+
+    const { data: ws } = await supabase
+      .from('workout_sessions')
+      .select('id, user_id')
+      .eq('id', sessionId)
+      .single()
+    if (!ws || ws.user_id !== session.user.id) {
+      return NextResponse.json({ error: 'Sessão não encontrada ou não te pertence' }, { status: 403 })
+    }
 
     const { data: logs, error } = await supabase
       .from('workout_set_logs')

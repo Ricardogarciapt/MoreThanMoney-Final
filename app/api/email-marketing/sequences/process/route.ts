@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
           userEmail: user.email,
           username: user.username || user.email,
           siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://morethanmoney.pt',
-          skoolUrl: 'https://skool.com/mtm'
+          skoolUrl: 'https://www.skool.com/morethanmoney-1132/about'
         }
         
         let htmlContent = ''

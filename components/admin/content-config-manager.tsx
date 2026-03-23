@@ -20,7 +20,8 @@ import {
   MessageCircle,
   Calendar,
   FileText,
-  BookOpen
+  BookOpen,
+  Image as ImageIcon
 } from "lucide-react"
 import { Separator as UISeparator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"

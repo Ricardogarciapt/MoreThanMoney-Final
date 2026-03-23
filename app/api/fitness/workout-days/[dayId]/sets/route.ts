@@ -23,6 +23,21 @@ export async function GET(
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
+    const { data: day } = await supabase
+      .from('workout_days')
+      .select('id, workout_id')
+      .eq('id', dayId)
+      .single()
+    if (!day) return NextResponse.json({ error: 'Dia não encontrado' }, { status: 404 })
+    const { data: workout } = await supabase
+      .from('workouts')
+      .select('id, user_id')
+      .eq('id', day.workout_id)
+      .single()
+    if (!workout || workout.user_id !== session.user.id) {
+      return NextResponse.json({ error: 'Não autorizado a este plano' }, { status: 403 })
+    }
+
     const { data: sets, error } = await supabase
       .from('workout_sets')
       .select('*, exercises(id, name, category, equipment)')
@@ -60,6 +75,21 @@ export async function POST(
     )
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+    const { data: day } = await supabase
+      .from('workout_days')
+      .select('id, workout_id')
+      .eq('id', dayId)
+      .single()
+    if (!day) return NextResponse.json({ error: 'Dia não encontrado' }, { status: 404 })
+    const { data: workout } = await supabase
+      .from('workouts')
+      .select('id, user_id')
+      .eq('id', day.workout_id)
+      .single()
+    if (!workout || workout.user_id !== session.user.id) {
+      return NextResponse.json({ error: 'Não autorizado a este plano' }, { status: 403 })
+    }
 
     const body = await request.json()
     const { exercise_id, sets, reps_min, reps_max, weight, duration_seconds, rest_seconds, order_index, notes } = body

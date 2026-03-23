@@ -273,18 +273,26 @@ export default function TradingViewWidget({
         if (session?.user?.id) {
           setCurrentUserId(session.user.id)
           
-          // Verificar se é admin ou VIP
-          const { data: profile } = await supabase
+          // Verificar se é admin ou VIP (query resiliente: membership_type pode não existir em todos os ambientes)
+          let profile: { user_type?: string; membership_type?: string } | null = null
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('user_type, membership_type')
             .eq('id', session.user.id)
-            .single()
-          
+            .maybeSingle()
+          if (profileError) {
+            const { data: fallback } = await supabase
+              .from('profiles')
+              .select('user_type')
+              .eq('id', session.user.id)
+              .maybeSingle()
+            profile = fallback ? { ...fallback, membership_type: undefined } : null
+          } else {
+            profile = profileData
+          }
           if (profile) {
             setIsAdmin(profile.user_type === 'admin')
             setIsVip(profile.membership_type === 'vip')
-            
-            // Se for admin ou VIP, carregar grupos disponíveis
             if (profile.user_type === 'admin' || profile.membership_type === 'vip') {
               loadAvailableGroups()
             }
@@ -882,8 +890,8 @@ export default function TradingViewWidget({
       if (widgetRef.current?.remove) {
         try {
           widgetRef.current.remove()
-        } catch (e) {
-          console.error("Erro ao remover widget:", e)
+        } catch {
+          // DOM já pode ter sido desmontado pelo React; ignorar
         }
       }
     }
@@ -893,7 +901,9 @@ export default function TradingViewWidget({
     if (widgetRef.current?.remove) {
       try {
         widgetRef.current.remove()
-      } catch (e) {}
+      } catch {
+        // Ignorar se o DOM já foi desmontado
+      }
     }
     loadTradingViewWidget()
   }, [selectedStudies, selectedSymbol, theme, favoriteTimeframe])

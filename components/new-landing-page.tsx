@@ -488,7 +488,7 @@ export default function NewLandingPage() {
                   </div>
                   <Button
                     className="w-full bg-mtm-primary-dark hover:bg-amber-700 text-black"
-                    onClick={() => window.open("https://www.skool.com/morethanmoney/about?ref=8e3afe86cbc7407ca7b411cece0512bd", "_blank")}
+                    onClick={() => window.open("https://www.skool.com/morethanmoney-1132/about", "_blank")}
                   >
                     Aceder ao Bootcamp
                     <ArrowRight className="ml-2 h-4 w-4" />

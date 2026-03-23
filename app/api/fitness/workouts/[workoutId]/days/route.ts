@@ -23,6 +23,15 @@ export async function GET(
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
+    const { data: workout } = await supabase
+      .from('workouts')
+      .select('id, user_id')
+      .eq('id', workoutId)
+      .single()
+    if (!workout || workout.user_id !== session.user.id) {
+      return NextResponse.json({ error: 'Plano não encontrado ou não te pertence' }, { status: 403 })
+    }
+
     const { data: days, error } = await supabase
       .from('workout_days')
       .select('*')
@@ -60,6 +69,15 @@ export async function POST(
     )
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+    const { data: workout } = await supabase
+      .from('workouts')
+      .select('id, user_id')
+      .eq('id', workoutId)
+      .single()
+    if (!workout || workout.user_id !== session.user.id) {
+      return NextResponse.json({ error: 'Plano não encontrado ou não te pertence' }, { status: 403 })
+    }
 
     const body = await request.json()
     const { day_number, description } = body

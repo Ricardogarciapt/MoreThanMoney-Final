@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { supabase } from "@/lib/supabase"
@@ -48,6 +48,10 @@ export default function UserDropdown() {
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const [xpData, setXpData] = useState<{ xp: number; level: number } | null>(null)
+  const loggedRealtimeError = useRef(false)
+  const loggedNotificationsError = useRef(false)
+  const xpChannelRef = useRef<any>(null)
+  const notificationsChannelRef = useRef<any>(null)
 
   // Usar user do auth-context (única fonte de verdade)
   const user = authUser ? {
@@ -160,28 +164,26 @@ export default function UserDropdown() {
               table: 'user_xp',
               filter: `user_id=eq.${user.id}`
             },
-            (payload) => {
+            (payload: unknown) => {
               console.log('🔄 [USER DROPDOWN] Mudança detectada na tabela user_xp:', payload)
               loadXP()
             }
           )
-          .subscribe((status) => {
+          .subscribe((status: string) => {
             if (status === 'SUBSCRIBED') {
               console.log('✅ [USER DROPDOWN] Subscription Realtime XP ativa')
               subscriptionAttempts = 0 // Reset contador se sucesso
+              loggedRealtimeError.current = false
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-              console.warn('⚠️ [USER DROPDOWN] Erro na subscription Realtime XP:', status)
-              // Não tentar reconectar - usar apenas polling
-              if (channel) {
-                try {
-                  supabase.removeChannel(channel)
-                } catch (e) {
-                  // Ignorar erros ao remover
-                }
-                channel = null
+              if (!loggedRealtimeError.current) {
+                loggedRealtimeError.current = true
+                console.warn('⚠️ [USER DROPDOWN] Erro na subscription Realtime XP:', status)
               }
+              xpChannelRef.current = null
+              channel = null
             }
           })
+        xpChannelRef.current = channel
       } catch (error) {
         console.warn('⚠️ [USER DROPDOWN] Erro ao configurar Realtime para XP:', error)
         subscriptionAttempts++
@@ -200,8 +202,12 @@ export default function UserDropdown() {
 
     return () => {
       window.removeEventListener('xpUpdated', handleXPUpdate as EventListener)
-      if (channel) {
-        supabase.removeChannel(channel)
+      const ch = xpChannelRef.current
+      xpChannelRef.current = null
+      if (ch) {
+        try {
+          supabase.removeChannel(ch)
+        } catch (_) { /* ignorar */ }
       }
     }
   }, [user?.id])
@@ -304,27 +310,24 @@ export default function UserDropdown() {
               }, 500)
             }
           )
-          .subscribe((status) => {
+          .subscribe((status: string) => {
             if (status === 'SUBSCRIBED') {
               console.log('✅ [USER DROPDOWN] Subscription Realtime notificações ativa')
               notificationSubscriptionAttempts = 0 // Reset se sucesso
+              loggedNotificationsError.current = false
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-              console.warn('⚠️ [USER DROPDOWN] Erro na subscription Realtime notificações, usando fallback')
-              // Remover channel e usar apenas polling
-              if (channel) {
-                try {
-                  supabase.removeChannel(channel)
-                } catch (e) {
-                  // Ignorar erros
-                }
-                channel = null
+              if (!loggedNotificationsError.current) {
+                loggedNotificationsError.current = true
+                console.warn('⚠️ [USER DROPDOWN] Erro na subscription Realtime notificações, usando fallback')
               }
-              // Fallback: polling a cada 30s
+              notificationsChannelRef.current = null
+              channel = null
               if (!interval) {
                 interval = setInterval(loadUnreadNotificationsCount, 30000)
               }
             }
           })
+        notificationsChannelRef.current = channel
       } catch (error) {
         console.warn('⚠️ [USER DROPDOWN] Erro ao configurar Realtime, usando fallback:', error)
         notificationSubscriptionAttempts++
@@ -351,8 +354,12 @@ export default function UserDropdown() {
     setupNotifications()
 
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel).catch(console.warn)
+      const ch = notificationsChannelRef.current
+      notificationsChannelRef.current = null
+      if (ch) {
+        try {
+          supabase.removeChannel(ch)
+        } catch (_) { /* ignorar */ }
       }
       if (interval) {
         clearInterval(interval)
@@ -432,13 +439,6 @@ export default function UserDropdown() {
   const displayEmail = user.email || ""
   const avatarUrl = user.avatar_url || null
   const isAdmin = user.user_type === 'admin'
-
-  // Debug: verificar tipo de usuário
-  console.log('🔍 [USER DROPDOWN] Renderizando:', {
-    email: user.email,
-    user_type: user.user_type,
-    isAdmin: isAdmin
-  })
 
   const userTypeBadge: Record<string, { label: string; color: string }> = {
     admin: { label: "Admin", color: "bg-red-500/20 text-red-400 border-red-500/30" },

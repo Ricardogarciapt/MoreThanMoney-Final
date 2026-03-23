@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getSupabaseAdmin } from '@/lib/supabase'
 import { cryptoPortfolio, etfPortfolio } from '@/lib/portfolio-data'
 
 interface DCAOpportunity {
@@ -12,6 +13,8 @@ interface DCAOpportunity {
   discount_percent: number
   recommendation: 'Forte Compra' | 'Compra' | 'Aguardar' | 'Não Reforçar'
   suggested_amount: number
+  /** Percentagem do reforço mensal sugerida para este ativo (0-25). */
+  suggested_percent: number
   rationale: string
   confidence: number
   entry_zones: {
@@ -23,11 +26,47 @@ interface DCAOpportunity {
   stop_loss: number
 }
 
+// Normalizar símbolo para formato Binance (ex: BTC -> BTCUSDT)
+function normalizeBinanceSymbol(symbol: string): string {
+  if (!symbol || typeof symbol !== 'string') return symbol
+  const aliases: Record<string, string> = {
+    CARDANO: 'ADA',
+    RIPPLE: 'XRP',
+    POLKADOT: 'DOT',
+    POLYGON: 'MATIC',
+    CHAINLINK: 'LINK',
+    AVALANCHE: 'AVAX',
+    VECHAIN: 'VET',
+    ARBITRUM: 'ARB',
+    OPTIMISM: 'OP',
+    THEGRAPH: 'GRT',
+    HEDERA: 'HBAR',
+    KASPA: 'KAS',
+    JUPITER: 'JUP',
+    ALGORAND: 'ALGO',
+    IMMUTABLE: 'IMX',
+    TETHER: 'USDT',
+  }
+
+  const cleaned = symbol
+    .toUpperCase()
+    .replace(/^BINANCE:/, '')
+    .replace(/[^A-Z0-9]/g, '')
+    .trim()
+
+  if (!cleaned) return symbol
+  if (cleaned.endsWith('USDT')) return cleaned
+
+  const mapped = aliases[cleaned] || cleaned
+  return mapped.endsWith('USDT') ? mapped : `${mapped}USDT`
+}
+
 // Função para buscar dados históricos da Binance
 async function getBinanceHistoricalPrices(symbol: string, interval: string, limit: number) {
+  const binanceSymbol = normalizeBinanceSymbol(symbol)
   try {
     const response = await fetch(
-      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`,
+      `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=${limit}`,
       { next: { revalidate: 300 } }
     )
 
@@ -58,19 +97,21 @@ async function analyzeDCAOpportunity(
   symbol: string, 
   name: string, 
   plannedInvestment: number,
-  entryPrice?: number
+  entryPrice?: number,
+  baseUrl?: string
 ): Promise<DCAOpportunity | null> {
+  const binanceSymbol = normalizeBinanceSymbol(symbol)
   try {
-    console.log(`🔍 [DCA] Analisando ${symbol}...`)
+    console.log(`🔍 [DCA] Analisando ${symbol} (${binanceSymbol})...`)
     
     // Buscar dados semanais (1w candles para análise semanal)
-    const candlesWeekly = await getBinanceHistoricalPrices(symbol, '1w', 12) // 12 semanas
+    const candlesWeekly = await getBinanceHistoricalPrices(binanceSymbol, '1w', 12) // 12 semanas
     
     // Buscar dados de 7 dias (1d candles)
-    const candles7d = await getBinanceHistoricalPrices(symbol, '1d', 7) // 7 dias
+    const candles7d = await getBinanceHistoricalPrices(binanceSymbol, '1d', 7) // 7 dias
     
     // Buscar dados de 30 dias (1d candles)
-    const candles30d = await getBinanceHistoricalPrices(symbol, '1d', 30) // 30 dias
+    const candles30d = await getBinanceHistoricalPrices(binanceSymbol, '1d', 30) // 30 dias
 
     // FALLBACK: Se dados históricos falharem MAS temos entry_price, usar método simplificado
     if (!candlesWeekly || !candles7d || !candles30d) {
@@ -81,19 +122,17 @@ async function analyzeDCAOpportunity(
         return null
       }
       
-      // Buscar preço atual via CoinGecko (mais confiável)
-      const priceResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/portfolio/prices-coingecko?symbols=${symbol}`,
-        { next: { revalidate: 60 } }
-      )
+      // Buscar preço atual via CoinGecko (símbolo normalizado para o mapa ADAUSDT, etc.)
+      const priceApiUrl = `${baseUrl || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/portfolio/prices-coingecko?symbols=${binanceSymbol}`
+      const priceResponse = await fetch(priceApiUrl, { next: { revalidate: 60 } })
       
       if (!priceResponse.ok) {
-        console.log(`❌ [DCA] Falha ao buscar preço para ${symbol}`)
+        console.log(`❌ [DCA] Falha ao buscar preço para ${symbol} (${priceResponse.status})`)
         return null
       }
       
       const priceData = await priceResponse.json()
-      const currentPrice = priceData.prices?.[symbol]
+      const currentPrice = priceData.prices?.[binanceSymbol] ?? priceData.prices?.[symbol]
       
       if (!currentPrice || currentPrice === 0) {
         console.log(`❌ [DCA] Preço inválido para ${symbol}`)
@@ -113,27 +152,32 @@ async function analyzeDCAOpportunity(
       let recommendation: DCAOpportunity['recommendation']
       let confidence: number
       let suggestedAmount: number
+      let suggestedPercent: number
       let rationale: string
       
       if (avgDiscount >= 15) {
         recommendation = 'Forte Compra'
-        confidence = 85 // Ligeiramente menor sem dados históricos
+        confidence = 85
         suggestedAmount = plannedInvestment * 2
+        suggestedPercent = 20
         rationale = `Excelente oportunidade! Preço ${avgDiscount.toFixed(1)}% abaixo do entry price. Momento ideal para reforço agressivo.`
       } else if (avgDiscount >= 10) {
         recommendation = 'Compra'
         confidence = 70
         suggestedAmount = plannedInvestment * 1.5
+        suggestedPercent = 15
         rationale = `Boa oportunidade! Preço ${avgDiscount.toFixed(1)}% abaixo do entry price. Considerar reforço.`
       } else if (avgDiscount >= 5) {
         recommendation = 'Aguardar'
         confidence = 55
         suggestedAmount = plannedInvestment * 0.5
+        suggestedPercent = 5
         rationale = `Leve desconto de ${avgDiscount.toFixed(1)}%. Manter reforço planeado.`
       } else {
         recommendation = 'Não Reforçar'
         confidence = 30
         suggestedAmount = 0
+        suggestedPercent = 0
         rationale = `Preço ${Math.abs(avgDiscount).toFixed(1)}% ${avgDiscount < 0 ? 'ACIMA' : 'próximo'} do entry price. Aguardar correção antes de reforçar.`
       }
       
@@ -160,6 +204,7 @@ async function analyzeDCAOpportunity(
         discount_percent: avgDiscount,
         recommendation,
         suggested_amount: suggestedAmount,
+        suggested_percent: suggestedPercent,
         rationale,
         confidence,
         entry_zones: entryZones,
@@ -186,36 +231,41 @@ async function analyzeDCAOpportunity(
     // Desconto médio ponderado (mais peso para média semanal)
     const avgDiscount = (discountWeekly * 0.5) + (discount7d * 0.3) + (discount30d * 0.2)
     
-    // Determinar recomendação
     let recommendation: DCAOpportunity['recommendation']
     let confidence: number
     let suggestedAmount: number
+    let suggestedPercent: number
     let rationale: string
     
     if (avgDiscount >= 15) {
       recommendation = 'Forte Compra'
       confidence = 90
-      suggestedAmount = plannedInvestment * 2 // Dobrar o reforço
+      suggestedAmount = plannedInvestment * 2
+      suggestedPercent = 20
       rationale = `Excelente oportunidade! Preço ${avgDiscount.toFixed(1)}% abaixo da média. Momento ideal para reforço agressivo.`
     } else if (avgDiscount >= 10) {
       recommendation = 'Compra'
       confidence = 75
-      suggestedAmount = plannedInvestment * 1.5 // Aumentar 50%
+      suggestedAmount = plannedInvestment * 1.5
+      suggestedPercent = 15
       rationale = `Boa oportunidade de compra com ${avgDiscount.toFixed(1)}% de desconto. Reforço recomendado acima do planeado.`
     } else if (avgDiscount >= 5) {
       recommendation = 'Compra'
       confidence = 60
       suggestedAmount = plannedInvestment
+      suggestedPercent = 10
       rationale = `Leve desconto de ${avgDiscount.toFixed(1)}%. Manter reforço planeado.`
     } else if (avgDiscount >= -5) {
       recommendation = 'Aguardar'
       confidence = 40
-      suggestedAmount = plannedInvestment * 0.5 // Reduzir 50%
+      suggestedAmount = plannedInvestment * 0.5
+      suggestedPercent = 5
       rationale = `Preço próximo da média (${avgDiscount.toFixed(1)}%). Considerar aguardar por melhor ponto de entrada.`
     } else {
       recommendation = 'Não Reforçar'
       confidence = 30
       suggestedAmount = 0
+      suggestedPercent = 0
       rationale = `Preço ${Math.abs(avgDiscount).toFixed(1)}% ACIMA da média. Aguardar correção antes de reforçar.`
     }
     
@@ -245,6 +295,7 @@ async function analyzeDCAOpportunity(
       discount_percent: avgDiscount,
       recommendation,
       suggested_amount: suggestedAmount,
+      suggested_percent: suggestedPercent,
       rationale,
       confidence,
       entry_zones: entryZones,
@@ -289,7 +340,7 @@ async function createStrongBuyNotification(opportunity: DCAOpportunity) {
       user_id: user.id,
       type: 'dca_opportunity',
       title: `🚀 Forte Compra: ${opportunity.name}`,
-      message: `Oportunidade DCA! ${opportunity.name} com ${opportunity.discount_percent.toFixed(1)}% de desconto! Preço: $${opportunity.current_price.toFixed(4)}. Reforço sugerido: €${opportunity.suggested_amount.toFixed(2)}`,
+      message: `Oportunidade DCA! ${opportunity.name} com ${opportunity.discount_percent.toFixed(1)}% de desconto! Preço: $${opportunity.current_price.toFixed(4)}. Sugestão: ${opportunity.suggested_percent}% do reforço.`,
       read: false
     }))
 
@@ -310,22 +361,19 @@ export async function GET(request: NextRequest) {
 
     let opportunities: DCAOpportunity[] = []
 
-    // Analisar Cryptos - BUSCAR DO ADMIN PANEL (Supabase)
+    // Base URL para chamadas internas (fallback CoinGecko)
+    const baseUrl = request?.url ? new URL(request.url).origin : (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000')
+
+    // Analisar Cryptos - BUSCAR DO ADMIN PANEL (Supabase) com service role para evitar RLS
     if (type === 'crypto' || type === 'all') {
       console.log('📊 [DCA SMART] Buscando crypto assets do Admin Panel...')
       
-      // Criar cliente Supabase
-      const { createClient } = await import('@supabase/supabase-js')
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-      )
+      const supabaseAdmin = getSupabaseAdmin()
       
-      // Buscar do Admin Panel (incluindo entry_price para fallback)
-      const { data: adminCrypto, error } = await supabase
+      const { data: adminCrypto, error } = await supabaseAdmin
         .from('admin_crypto_portfolio')
         .select('symbol, criptomoeda, reforco_mensal, entry_price')
-        .neq('symbol', 'USDTUSDT') // Excluir stablecoin
+        .neq('symbol', 'USDTUSDT')
         .order('percentual', { ascending: false })
       
       if (error) {
@@ -336,7 +384,7 @@ export async function GET(request: NextRequest) {
         const cryptoOpportunities = await Promise.all(
           cryptoPortfolio
             .filter(asset => asset.symbol !== 'USDTUSDT')
-            .map(asset => analyzeDCAOpportunity(asset.symbol, asset.criptomoeda, asset.reforco_mensal, asset.entry_price))
+            .map(asset => analyzeDCAOpportunity(asset.symbol, asset.criptomoeda, asset.reforco_mensal, asset.entry_price, baseUrl))
         )
         opportunities.push(...cryptoOpportunities.filter(o => o !== null) as DCAOpportunity[])
       } else if (adminCrypto && adminCrypto.length > 0) {
@@ -344,7 +392,7 @@ export async function GET(request: NextRequest) {
         
         const cryptoOpportunities = await Promise.all(
           adminCrypto.map(asset => 
-            analyzeDCAOpportunity(asset.symbol, asset.criptomoeda, asset.reforco_mensal, asset.entry_price)
+            analyzeDCAOpportunity(asset.symbol, asset.criptomoeda, asset.reforco_mensal, asset.entry_price, baseUrl)
           )
         )
         opportunities.push(...cryptoOpportunities.filter(o => o !== null) as DCAOpportunity[])
@@ -354,7 +402,7 @@ export async function GET(request: NextRequest) {
         const cryptoOpportunities = await Promise.all(
           cryptoPortfolio
             .filter(asset => asset.symbol !== 'USDTUSDT')
-            .map(asset => analyzeDCAOpportunity(asset.symbol, asset.criptomoeda, asset.reforco_mensal, asset.entry_price))
+            .map(asset => analyzeDCAOpportunity(asset.symbol, asset.criptomoeda, asset.reforco_mensal, asset.entry_price, baseUrl))
         )
         opportunities.push(...cryptoOpportunities.filter(o => o !== null) as DCAOpportunity[])
       }

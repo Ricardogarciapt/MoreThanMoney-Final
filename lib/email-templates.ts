@@ -515,7 +515,7 @@ export const onboarding4EmailTemplate = (userName: string, skoolUrl: string) => 
       }
     ])}
     
-    ${buttonComponent('🚀 Entrar no Skool MTM', skoolUrl || 'https://skool.com/mtm')}
+    ${buttonComponent('🚀 Entrar no Skool MTM', skoolUrl || 'https://www.skool.com/morethanmoney-1132/about')}
     
     ${dividerComponent()}
     
@@ -759,7 +759,7 @@ export const visionAnnouncementEmailTemplate = (userName: string, siteUrl: strin
     ])}
     
     ${buttonComponent('🚀 Explorar a Plataforma', `${siteUrl}/new-landing`)}
-    ${buttonComponent('💬 Entrar na Comunidade', 'https://skool.com/mtm', 'secondary')}
+    ${buttonComponent('💬 Entrar na Comunidade', 'https://www.skool.com/morethanmoney-1132/about', 'secondary')}
     
     ${dividerComponent()}
     

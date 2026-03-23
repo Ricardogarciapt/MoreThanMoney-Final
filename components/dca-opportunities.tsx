@@ -28,6 +28,8 @@ interface DCAOpportunity {
   discount_percent: number
   recommendation: 'Forte Compra' | 'Compra' | 'Aguardar' | 'Não Reforçar'
   suggested_amount: number
+  /** Percentagem do reforço sugerida (0–25). */
+  suggested_percent?: number
   rationale: string
   confidence: number
   entry_zones: {
@@ -47,10 +49,11 @@ export default function DCAOpportunities() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [touchStart, setTouchStart] = useState(0)
   const [touchEnd, setTouchEnd] = useState(0)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const carouselRef = useRef<HTMLDivElement>(null)
 
   const CARDS_PER_SLIDE = 3
-  const totalSlides = Math.ceil(opportunities.length / CARDS_PER_SLIDE)
+  const totalSlides = Math.max(1, Math.ceil(opportunities.length / CARDS_PER_SLIDE))
 
   useEffect(() => {
     loadOpportunities()
@@ -64,16 +67,26 @@ export default function DCAOpportunities() {
     try {
       console.log('📊 [DCA OPPORTUNITIES] Carregando...')
       setLoading(true)
+      setLoadError(null)
       
       const response = await fetch('/api/portfolio/dca-smart?type=crypto')
       const result = await response.json()
       
       console.log('📦 [DCA OPPORTUNITIES] Resposta:', {
+        ok: response.ok,
         success: result.success,
         opportunities_count: result.data?.opportunities?.length || 0,
         strong_buy: result.data?.summary?.strong_buy_count || 0,
         buy: result.data?.summary?.buy_count || 0
       })
+      
+      if (!response.ok) {
+        setLoadError(result?.error || result?.details || `Erro ${response.status}. Tenta novamente.`)
+        setOpportunities([])
+        setCategorized({ strong_buys: [], buys: [], waits: [], no_reinforce: [] })
+        setSummary({ total_assets_analyzed: 0, strong_buy_count: 0, buy_count: 0, total_suggested_investment: 0 })
+        return
+      }
       
       if (result.success) {
         const opps = result.data.opportunities || []
@@ -94,7 +107,7 @@ export default function DCAOpportunities() {
         })
       } else {
         console.error('❌ [DCA OPPORTUNITIES] API retornou erro:', result.error)
-        // Definir valores vazios para evitar undefined
+        setLoadError(result?.error || 'Erro ao analisar oportunidades.')
         setOpportunities([])
         setCategorized({ strong_buys: [], buys: [], waits: [], no_reinforce: [] })
         setSummary({
@@ -106,7 +119,7 @@ export default function DCAOpportunities() {
       }
     } catch (error) {
       console.error('❌ [DCA OPPORTUNITIES] Erro ao carregar:', error)
-      // Garantir que não fica undefined
+      setLoadError('Não foi possível carregar a análise. Verifica a ligação e tenta novamente.')
       setOpportunities([])
       setCategorized({ strong_buys: [], buys: [], waits: [], no_reinforce: [] })
       setSummary({
@@ -307,20 +320,20 @@ export default function DCAOpportunities() {
               </div>
             </div>
             
-            {/* Right Side - Investment & Actions */}
+            {/* Right Side - Sugestão por percentagem (sem valores numéricos) */}
             <div className="flex flex-col items-stretch xl:items-end gap-5">
-              {summary?.total_suggested_investment > 0 && (
-                <div className="relative overflow-hidden bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-md rounded-3xl p-8 shadow-2xl border-2 border-white/20 min-w-[280px]">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-                  <div className="relative z-10">
-                    <div className="text-xs text-white/80 uppercase tracking-widest mb-3 font-black">💎 Capital Recomendado</div>
-                    <div className="text-4xl font-black text-white mb-2 tracking-tight">
-                      {formatCurrency(summary.total_suggested_investment)}
-                    </div>
-                    <div className="text-xs text-white/70 font-medium">Baseado em análise técnica avançada</div>
+              <div className="relative overflow-hidden bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-md rounded-3xl p-8 shadow-2xl border-2 border-white/20 min-w-[280px]">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+                <div className="relative z-10">
+                  <div className="text-xs text-white/80 uppercase tracking-widest mb-3 font-black">💎 Sugestão de alocação</div>
+                  <div className="text-sm text-white/90 space-y-1.5 mb-2">
+                    <p><strong className="text-green-400">Forte Compra:</strong> até 20% do reforço</p>
+                    <p><strong className="text-blue-400">Compra:</strong> até 15% do reforço</p>
+                    <p><strong className="text-yellow-400">Aguardar:</strong> até 5% do reforço</p>
                   </div>
+                  <div className="text-xs text-white/70 font-medium">Percentagens indicativas por ativo</div>
                 </div>
-              )}
+              </div>
               
               <Button
                 onClick={loadOpportunities}
@@ -336,8 +349,34 @@ export default function DCAOpportunities() {
         </CardContent>
       </Card>
 
-      {/* Mensagem se não há oportunidades */}
-      {opportunities.length === 0 && !loading && (
+      {/* Mensagem de erro da API */}
+      {loadError && !loading && (
+        <Card className="bg-gradient-to-br from-red-900/20 to-gray-900 border-red-500/30">
+          <CardContent className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="h-6 w-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-white">Erro ao carregar DCA Inteligente</h3>
+                <p className="text-sm text-gray-400 mt-1">{loadError}</p>
+              </div>
+            </div>
+            <Button
+              onClick={loadOpportunities}
+              disabled={loading}
+              variant="outline"
+              className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Tentar novamente
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Mensagem se não há oportunidades (sem erro) */}
+      {opportunities.length === 0 && !loading && !loadError && (
         <Card className="bg-gradient-to-br from-blue-900/20 to-gray-900 border-blue-500/30">
           <CardContent className="p-8 text-center">
             <div className="flex flex-col items-center gap-4">
@@ -505,11 +544,13 @@ export default function DCAOpportunities() {
                 </div>
               </div>
 
-              {/* Reforço e Confiança */}
+              {/* Sugestão (percentagem) e Confiança */}
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="bg-gradient-to-br from-[#D2A63C]/20 to-[#BB8525]/20 p-4 rounded-lg border border-[#D2A63C]/40">
-                  <div className="text-xs text-gray-400 uppercase mb-1.5">Reforço</div>
-                  <div className="text-xl font-black text-[#D2A63C]">{formatCurrency(opp.suggested_amount)}</div>
+                  <div className="text-xs text-gray-400 uppercase mb-1.5">Sugestão de investimento</div>
+                  <div className="text-xl font-black text-[#D2A63C]">
+                    {opp.suggested_percent != null ? `${opp.suggested_percent}% do reforço` : '—'}
+                  </div>
                 </div>
                 <div className="bg-white/5 p-4 rounded-lg border border-gray-700">
                   <div className="text-xs text-gray-400 uppercase mb-1.5">Confiança</div>

@@ -94,6 +94,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { workout_id, workout_day_id, date, start_time, notes } = body
 
+    if (workout_id) {
+      const { data: workout } = await supabase
+        .from('workouts')
+        .select('id, user_id')
+        .eq('id', workout_id)
+        .single()
+      if (!workout || workout.user_id !== session.user.id) {
+        return NextResponse.json({ error: 'Plano não encontrado ou não te pertence' }, { status: 403 })
+      }
+    }
+
     const { data: workoutSession, error } = await supabase
       .from('workout_sessions')
       .insert({

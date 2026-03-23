@@ -26,6 +26,46 @@ interface NotionAsset {
   tipo: 'crypto' | 'etf'
 }
 
+const CRYPTO_NAME_TO_TICKER: Record<string, string> = {
+  CARDANO: 'ADA',
+  RIPPLE: 'XRP',
+  POLKADOT: 'DOT',
+  POLYGON: 'MATIC',
+  CHAINLINK: 'LINK',
+  AVALANCHE: 'AVAX',
+  VECHAIN: 'VET',
+  ARBITRUM: 'ARB',
+  OPTIMISM: 'OP',
+  THEGRAPH: 'GRT',
+  HEDERA: 'HBAR',
+  KASPA: 'KAS',
+  JUPITER: 'JUP',
+  ALGORAND: 'ALGO',
+  IMMUTABLE: 'IMX',
+  TETHER: 'USDT',
+  ONDO: 'ONDO',
+  FLOW: 'FLOW',
+}
+
+function normalizeBinanceSymbol(rawSymbol: string, fallbackName?: string): string {
+  const cleaned = (rawSymbol || '')
+    .toUpperCase()
+    .replace(/^BINANCE:/, '')
+    .replace(/[^A-Z0-9]/g, '')
+    .trim()
+
+  const fallback = (fallbackName || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .trim()
+
+  const candidate = cleaned || CRYPTO_NAME_TO_TICKER[fallback] || fallback
+  if (!candidate) return ''
+  if (candidate.endsWith('USDT')) return candidate
+  const mapped = CRYPTO_NAME_TO_TICKER[candidate] || candidate
+  return mapped.endsWith('USDT') ? mapped : `${mapped}USDT`
+}
+
 // Função para extrair texto de propriedade rich_text
 function getRichText(property: any): string {
   return property?.rich_text?.[0]?.plain_text || ''
@@ -112,7 +152,7 @@ export async function GET(request: NextRequest) {
         if (props['Criptomoeda']) {
           tipo = 'crypto'
           const cryptoName = getTitle(props['Criptomoeda'])
-          symbol = getRichText(props['Símbolo']) || cryptoName.toUpperCase() + 'USDT'
+          symbol = normalizeBinanceSymbol(getRichText(props['Símbolo']), cryptoName)
           reforco_periodico = props['Reforço Mensal']?.number || props['Reforço Mensal (€)']?.number || 0
           reforco_total = props['Reforço Anual']?.number || props['Reforço Anual (€)']?.number || 0
         } else if (props['ETF']) {

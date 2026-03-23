@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
             .from('workout_sessions')
             .select('*, workouts(*)')
             .eq('user_id', session.user.id)
-            .order('started_at', { ascending: false })
+            .order('start_time', { ascending: false })
             .limit(5)
         ])
 
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         if (recentWorkouts.data && recentWorkouts.data.length > 0) {
           additionalContext += `\n\nTreinos Recentes:\n${JSON.stringify(recentWorkouts.data.map(s => ({
             workout: s.workouts?.name,
-            completed: s.completed_at ? 'Sim' : 'Não',
+            completed: s.end_time ? 'Sim' : 'Não',
             duration: s.duration_minutes,
             rating: s.rating
           })), null, 2)}`

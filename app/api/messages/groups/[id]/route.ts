@@ -59,13 +59,10 @@ export async function GET(
       }
     }
 
-    // Buscar mensagens
+    // Buscar mensagens (sem join a profiles)
     const { data: messages, error } = await supabase
       .from('messages')
-      .select(`
-        *,
-        sender:profiles!messages_sender_id_fkey(id, full_name, username, avatar_url, email)
-      `)
+      .select('*')
       .eq('group_id', groupId)
       .order('created_at', { ascending: true })
 
@@ -73,6 +70,21 @@ export async function GET(
       console.error('Erro ao buscar mensagens:', error)
       return NextResponse.json({ error: 'Erro ao buscar mensagens' }, { status: 500 })
     }
+
+    const list = messages || []
+    const senderIds = [...new Set(list.map((m: { sender_id: string }) => m.sender_id).filter(Boolean))]
+    const senderMap: Record<string, { id: string; full_name?: string; username?: string; avatar_url?: string; email?: string }> = {}
+    if (senderIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, avatar_url, email')
+        .in('id', senderIds)
+      for (const p of profiles || []) senderMap[p.id] = p
+    }
+    const messagesWithSenders = list.map((m: { sender_id: string; [k: string]: unknown }) => ({
+      ...m,
+      sender: senderMap[m.sender_id] || { id: m.sender_id }
+    }))
 
     // Marcar mensagens como lidas (opcional - pode melhorar)
     await supabase
@@ -82,7 +94,7 @@ export async function GET(
       .neq('sender_id', session.user.id)
       .eq('read', false)
 
-    return NextResponse.json({ messages: messages || [] })
+    return NextResponse.json({ messages: messagesWithSenders })
   } catch (error) {
     console.error('Erro na API de mensagens do grupo:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
@@ -178,7 +190,7 @@ export async function POST(
       }, { status: 403 })
     }
 
-    // Criar mensagem
+    // Criar mensagem (sem join a profiles)
     const { data: message, error } = await supabase
       .from('messages')
       .insert({
@@ -186,16 +198,22 @@ export async function POST(
         sender_id: session.user.id,
         content: content.trim()
       })
-      .select(`
-        *,
-        sender:profiles!messages_sender_id_fkey(id, full_name, username, avatar_url, email)
-      `)
+      .select('*')
       .single()
 
     if (error) {
       console.error('Erro ao criar mensagem:', error)
       return NextResponse.json({ error: 'Erro ao enviar mensagem' }, { status: 500 })
     }
+
+    const { data: senderProfile } = await supabase
+      .from('profiles')
+      .select('id, full_name, username, avatar_url, email')
+      .eq('id', session.user.id)
+      .maybeSingle()
+    const messageWithSender = message
+      ? { ...message, sender: senderProfile || { id: session.user.id } }
+      : message
 
     // Atualizar last_message_at no grupo
     await supabase
@@ -237,7 +255,7 @@ export async function POST(
       }
     }
 
-    return NextResponse.json({ message })
+    return NextResponse.json({ message: messageWithSender })
   } catch (error) {
     console.error('Erro na API de mensagens do grupo:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })

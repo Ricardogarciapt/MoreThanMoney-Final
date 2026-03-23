@@ -10,6 +10,7 @@ import Link from "next/link"
 import ParticleBackground from "@/components/particle-background"
 import YouTubeEmbed from "@/components/youtube-embed"
 import ProtectedPage from "@/components/protected-page"
+import OnboardingBusinessAIAgent from "@/components/onboarding-business-ai-agent"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -25,6 +26,7 @@ interface Progress {
 
 export default function FastStartPage() {
   const [mounted, setMounted] = useState(false)
+  const [userId, setUserId] = useState<string>("")
   const [progress, setProgress] = useState<Progress>({
     step_1_completed: false,
     step_2_completed: false,
@@ -52,6 +54,7 @@ export default function FastStartPage() {
         const { data: { session } } = await supabase.auth.getSession()
         if (session) {
           console.log('✅ [FAST_START] Sessão encontrada após', attempts + 1, 'tentativa(s)')
+          setUserId(session.user.id)
           setMounted(true)
           loadProgress()
           return
@@ -568,6 +571,11 @@ export default function FastStartPage() {
               </div>
               <Progress value={progress.progress_percent} className="h-3 bg-gray-800" />
             </div>
+          </div>
+
+          {/* AI Onboarding & Business Coach */}
+          <div className="max-w-4xl mx-auto mb-10">
+            <OnboardingBusinessAIAgent context="fast-start" userKey={userId} />
           </div>
 
           {/* Steps */}

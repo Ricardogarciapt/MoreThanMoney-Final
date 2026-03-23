@@ -74,7 +74,7 @@ INSERT INTO site_content (type, category, title, description, url, order_index) 
 ('link', 'navbar', 'Início Rápido', 'Fast start para novos membros', '/fast-start', 5),
 ('link', 'education', 'Apresentação IQONIC', 'Link para apresentação IQONIC', '/iqonic', 1),
 ('link', 'education', 'IQonic Academy', 'Link para IQonic Academy', 'https://iqonic.vip', 2),
-('link', 'education', 'Educação MTM', 'Link para cursos MoreThanMoney', 'https://www.skool.com/morethanmoney', 3),
+('link', 'education', 'Educação MTM', 'Link para cursos MoreThanMoney', 'https://www.skool.com/morethanmoney-1132/about', 3),
 ('link', 'education', 'AI Com Os Gemeos', 'Link para comunidade AI', 'https://www.skool.com/ai-com-osgemeos/about?ref=bc17a1ec65954570926520a936f7355b', 4),
 ('link', 'education', 'BackOffice IQ', 'Link para backoffice IQONIC', 'https://user.iqonic.life', 5),
 ('link', 'trading', 'IQ Sync - Configurar', 'Configuração do IQ Sync', '/swipetotrade', 1),

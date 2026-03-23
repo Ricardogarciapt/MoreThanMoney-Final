@@ -269,7 +269,7 @@ export const siteContent: ContentItem[] = [
     type: 'link',
     location: 'navbar',
     title: 'Educação MTM (Skool)',
-    url: 'https://www.skool.com/morethanmoney',
+    url: 'https://www.skool.com/morethanmoney-1132/about',
     description: 'Link para cursos MoreThanMoney no Skool'
   },
   {

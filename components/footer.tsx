@@ -100,7 +100,8 @@ export default function Footer() {
                 { name: "Scanner ao Vivo", href: "/scanner-access" },
                 { name: "Registo", href: "/register" },
                 { name: "Entrar", href: "/login" },
-                { name: "Cursos MoreThanMoney", href: "https://www.skool.com/morethanmoney", external: true },
+                { name: "MTM Studio", href: "https://mtmbrandbuilder.lovable.app", external: true },
+                { name: "Cursos MoreThanMoney", href: "https://www.skool.com/morethanmoney-1132/about", external: true },
                 { name: "IQONIC Platform", href: "https://iqonic.life/morethanmoney", external: true },
               ].map((link) => (
                 <li key={link.name}>

@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server"
-import { getSupabaseAdmin } from "@/lib/supabase"
+import { NextRequest, NextResponse } from "next/server"
+import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
   try {
     const supabase = getSupabaseAdmin()
 

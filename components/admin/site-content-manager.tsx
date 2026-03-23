@@ -154,6 +154,7 @@ export default function SiteContentManager() {
       const response = await fetch(`/api/admin/content/${content.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ ...content, is_active: !content.is_active })
       })
 
@@ -534,7 +535,23 @@ export default function SiteContentManager() {
                               <p className="text-sm text-gray-400 mb-2">{content.description}</p>
                             )}
                             {content.url && (
-                              <p className="text-xs text-blue-400 break-all">{content.url}</p>
+                              <a
+                                href={content.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-400 break-all underline underline-offset-2"
+                              >
+                                {content.url}
+                              </a>
+                            )}
+                            {content.type === 'image' && content.url && (
+                              <div className="mt-2">
+                                <img
+                                  src={content.url}
+                                  alt={content.title}
+                                  className="max-h-24 rounded border border-gray-700 object-contain"
+                                />
+                              </div>
                             )}
                             {content.file_name && (
                               <p className="text-xs text-gray-400">

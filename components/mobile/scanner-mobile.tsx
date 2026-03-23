@@ -323,6 +323,19 @@ export default function ScannerMobile() {
     }
   })
   const [showSettings, setShowSettings] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)")
+    const applyViewport = () => setIsDesktop(mediaQuery.matches)
+
+    applyViewport()
+    mediaQuery.addEventListener("change", applyViewport)
+
+    return () => {
+      mediaQuery.removeEventListener("change", applyViewport)
+    }
+  }, [])
 
   // Screeners simplificados - Crypto Bubbles para crypto, Stock Heatmap para o resto
   const getScreenersForCategory = (category: keyof typeof assetCategories) => {
@@ -447,6 +460,8 @@ export default function ScannerMobile() {
       }
     }
   }, [])
+
+  const widgetHeight = isFullscreen ? "100vh" : isDesktop ? "calc(100vh - 360px)" : "calc(100vh - 300px)"
 
   useEffect(() => {
     if (window.TradingView) {
@@ -752,11 +767,11 @@ export default function ScannerMobile() {
   }, [])
 
   return (
-    <div className="bg-black min-h-screen">
+    <div className={`bg-black ${isDesktop ? "min-h-[calc(100vh-8rem)]" : "min-h-screen"}`}>
       {/* Controls */}
-      <div className="bg-gray-900 p-3 border-b border-[#D2A63C]/30 space-y-3">
+      <div className={`bg-gray-900 border-b border-[#D2A63C]/30 space-y-3 ${isDesktop ? "p-4" : "p-3"}`}>
         {/* Top Row - Category Selection */}
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className={`flex gap-2 pb-1 ${isDesktop ? "flex-wrap overflow-visible" : "overflow-x-auto"}`}>
           {Object.entries(assetCategories).map(([key, category]) => {
             const Icon = category.icon
             const isSelected = selectedCategory === key
@@ -765,13 +780,13 @@ export default function ScannerMobile() {
               <button
                 key={key}
                 onClick={() => selectCategory(key as keyof typeof assetCategories)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs whitespace-nowrap transition-all ${
+                className={`flex items-center gap-2 rounded-lg whitespace-nowrap transition-all ${
                   isSelected 
                     ? "bg-[#D2A63C] text-black font-semibold" 
                     : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-                }`}
+                } ${isDesktop ? "px-4 py-2.5 text-sm" : "px-3 py-2 text-xs"}`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className={isDesktop ? "w-4 h-4" : "w-4 h-4"} />
                 <span>{category.label}</span>
               </button>
             )
@@ -779,14 +794,14 @@ export default function ScannerMobile() {
         </div>
 
         {/* Second Row - Symbol and Timeframe */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className={`grid gap-2 ${isDesktop ? "grid-cols-3" : "grid-cols-2"}`}>
           <Select value={selectedSymbol} onValueChange={setSelectedSymbol}>
-            <SelectTrigger className="bg-gray-800 border-gray-700 text-white text-xs">
+            <SelectTrigger className={`bg-gray-800 border-gray-700 text-white ${isDesktop ? "text-sm h-10" : "text-xs"}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-700 text-white">
               {assetCategories[selectedCategory].symbols.map((s) => (
-                <SelectItem key={s.value} value={s.value} className="text-xs">
+                <SelectItem key={s.value} value={s.value} className={isDesktop ? "text-sm" : "text-xs"}>
                   {s.label}
                 </SelectItem>
               ))}
@@ -794,17 +809,22 @@ export default function ScannerMobile() {
           </Select>
 
           <Select value={selectedInterval} onValueChange={setSelectedInterval}>
-            <SelectTrigger className="bg-gray-800 border-gray-700 text-white text-xs">
+            <SelectTrigger className={`bg-gray-800 border-gray-700 text-white ${isDesktop ? "text-sm h-10" : "text-xs"}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-700 text-white">
               {intervals.map((i) => (
-                <SelectItem key={i.value} value={i.value} className="text-xs">
+                <SelectItem key={i.value} value={i.value} className={isDesktop ? "text-sm" : "text-xs"}>
                   {i.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {isDesktop && (
+            <div className="rounded-md border border-gray-700 bg-gray-800 text-gray-300 text-xs px-3 flex items-center">
+              Layout: Desktop
+            </div>
+          )}
         </div>
 
         {/* Third Row - MTM Scanners/Studies */}
@@ -822,7 +842,9 @@ export default function ScannerMobile() {
                   isChecked
                     ? `${logo.bgColor} text-white shadow-lg scale-105`
                     : "bg-gray-700/80 text-gray-300"
-                } border border-gray-600/50 px-2.5 py-1 rounded-md flex items-center gap-1.5 text-[10px] whitespace-nowrap`}
+                } border border-gray-600/50 rounded-md flex items-center gap-1.5 whitespace-nowrap ${
+                  isDesktop ? "px-3 py-1.5 text-xs h-9" : "px-2.5 py-1 text-[10px] h-8"
+                }`}
               >
                 <div className={`w-1.5 h-1.5 rounded-full ${isChecked ? "bg-white" : "bg-gray-400"}`} />
                 <Icon className={`w-3 h-3 ${isChecked ? "text-white" : logo.color}`} />
@@ -837,7 +859,7 @@ export default function ScannerMobile() {
           <Button
             onClick={toggleFullscreen}
             size="sm"
-            className="flex-1 bg-[#D2A63C] text-black hover:bg-[#BB8525] h-8 text-xs"
+            className={`flex-1 bg-[#D2A63C] text-black hover:bg-[#BB8525] ${isDesktop ? "h-9 text-sm" : "h-8 text-xs"}`}
           >
             {isFullscreen ? (
               <>
@@ -856,7 +878,7 @@ export default function ScannerMobile() {
             onClick={() => setShowSettings(!showSettings)}
             size="sm"
             variant="outline"
-            className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700 h-8 px-2"
+            className={`bg-gray-800 text-white border-gray-700 hover:bg-gray-700 ${isDesktop ? "h-9 px-3" : "h-8 px-2"}`}
           >
             <Settings className="w-3 h-3" />
           </Button>
@@ -865,7 +887,7 @@ export default function ScannerMobile() {
             onClick={toggleTheme}
             size="sm"
             variant="outline"
-            className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700 h-8 px-2"
+            className={`bg-gray-800 text-white border-gray-700 hover:bg-gray-700 ${isDesktop ? "h-9 px-3" : "h-8 px-2"}`}
           >
             {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
           </Button>
@@ -874,7 +896,7 @@ export default function ScannerMobile() {
             onClick={loadWidget}
             size="sm"
             variant="outline"
-            className="bg-gray-800 text-white border-gray-700 hover:bg-gray-700 h-8 px-2"
+            className={`bg-gray-800 text-white border-gray-700 hover:bg-gray-700 ${isDesktop ? "h-9 px-3" : "h-8 px-2"}`}
           >
             <RotateCw className="w-3 h-3" />
           </Button>
@@ -882,7 +904,7 @@ export default function ScannerMobile() {
 
         {/* Settings Panel */}
         {showSettings && (
-          <div className="bg-gray-800 rounded-lg p-3 space-y-3">
+          <div className={`bg-gray-800 rounded-lg space-y-3 ${isDesktop ? "p-4" : "p-3"}`}>
             <h3 className="text-white text-sm font-semibold">Configurações</h3>
             
             {/* Favorite Timeframes */}
@@ -913,7 +935,7 @@ export default function ScannerMobile() {
       <div 
         className="relative bg-black"
         style={{ 
-          height: isFullscreen ? '100vh' : 'calc(100vh - 300px)',
+          height: widgetHeight,
           width: '100%'
         }}
         onTouchStart={handleTouchStart}
@@ -946,7 +968,7 @@ export default function ScannerMobile() {
       {/* Screener / Heatmap Section (reutilizável) */}
       {!isFullscreen && (
         <div className="p-4 bg-gray-900 border-t border-[#D2A63C]/30">
-          <ScannerScreener mode="mobile" />
+          <ScannerScreener mode={isDesktop ? "desktop" : "mobile"} />
         </div>
       )}
 

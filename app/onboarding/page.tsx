@@ -9,6 +9,7 @@ import Link from "next/link"
 import ParticleBackground from "@/components/particle-background"
 import YouTubeEmbed from "@/components/youtube-embed"
 import ProtectedPage from "@/components/protected-page"
+import OnboardingBusinessAIAgent from "@/components/onboarding-business-ai-agent"
 import { supabase } from "@/lib/supabase"
 
 const testimonials = [
@@ -46,6 +47,7 @@ const testimonials = [
 
 export default function OnboardingPage() {
   const [currentTestimonial, setCurrentTestimonial] = useState(0)
+  const [userId, setUserId] = useState<string>("")
   const [memberCategory, setMemberCategory] = useState<string | null>(null)
   const [userType, setUserType] = useState<string | null>(null)
   const [onboardingPlatform, setOnboardingPlatform] = useState<string | null>(null)
@@ -66,6 +68,7 @@ export default function OnboardingPage() {
       // Usar cache para velocidade
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
+        setUserId(session.user.id)
         const { data: profile } = await supabase
           .from('profiles')
           .select('member_category, user_type, onboarding_platform')
@@ -141,6 +144,11 @@ export default function OnboardingPage() {
               autoplay={false}
             />
           </div>
+        </div>
+
+        {/* AI Onboarding & Business Coach */}
+        <div className="max-w-4xl mx-auto mb-16">
+          <OnboardingBusinessAIAgent context="onboarding" userKey={userId} />
         </div>
 
         {/* O Nosso Processo */}

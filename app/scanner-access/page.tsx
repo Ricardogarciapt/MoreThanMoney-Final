@@ -226,12 +226,11 @@ export default function ScannerAccessPage() {
           }
           
           const restoredSections = sections.map((section: any) => {
-            // Se o ícone for uma string, mapear para o componente
+            // Ícone deve ser um componente React (função) ou string mapeável; nunca renderizar objeto
             let icon = section.icon
             if (typeof icon === 'string' && iconMap[icon]) {
               icon = iconMap[icon]
-            } else if (!icon) {
-              // Se não houver ícone, usar um padrão baseado no título
+            } else if (typeof icon !== 'function') {
               icon = Clock
             }
             
@@ -593,7 +592,7 @@ export default function ScannerAccessPage() {
               <CardContent className="space-y-4 md:space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {checklistSections.map((section, sectionIndex) => {
-                    const SectionIcon = section.icon
+                    const SectionIcon = typeof section.icon === 'function' ? section.icon : Clock
                     const sectionProgress = (section.items.filter(item => item.checked).length / section.items.length) * 100
                     
                     return (

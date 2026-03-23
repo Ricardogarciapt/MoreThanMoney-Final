@@ -44,7 +44,73 @@ const SYMBOL_TO_COINGECKO: Record<string, string> = {
   'BTCUSDT': 'bitcoin',
   'ETHUSDT': 'ethereum',
   'SOLUSDT': 'solana',
-  'BNBUSDT': 'binancecoin'
+  'BNBUSDT': 'binancecoin',
+
+  // aliases diretos sem USDT
+  'ADA': 'cardano',
+  'XRP': 'ripple',
+  'DOT': 'polkadot',
+  'MATIC': 'matic-network',
+  'LINK': 'chainlink',
+  'AVAX': 'avalanche-2',
+  'VET': 'vechain',
+  'ARB': 'arbitrum',
+  'OP': 'optimism',
+  'GRT': 'the-graph',
+  'HBAR': 'hedera-hashgraph',
+  'KAS': 'kaspa',
+  'ALGO': 'algorand',
+  'IMX': 'immutable-x',
+  'ONDO': 'ondo-finance',
+  'AERO': 'aerodrome-finance',
+  'ILV': 'illuvium',
+  'FLOW': 'flow',
+  'BTC': 'bitcoin',
+  'ETH': 'ethereum',
+  'SOL': 'solana',
+  'BNB': 'binancecoin',
+  'USDT': 'tether',
+
+  // aliases por nome (quando vier do Notion/Admin)
+  'CARDANO': 'cardano',
+  'RIPPLE': 'ripple',
+  'POLKADOT': 'polkadot',
+  'POLYGON': 'matic-network',
+  'CHAINLINK': 'chainlink',
+  'AVALANCHE': 'avalanche-2',
+  'VECHAIN': 'vechain',
+  'ARBITRUM': 'arbitrum',
+  'OPTIMISM': 'optimism',
+  'THEGRAPH': 'the-graph',
+  'HEDERA': 'hedera-hashgraph',
+  'KASPA': 'kaspa',
+  'JUPITER': 'jupiter-exchange-solana',
+  'ALGORAND': 'algorand',
+  'IMMUTABLE': 'immutable-x',
+  'TETHER': 'tether',
+}
+
+function normalizeSymbolKey(raw: string): string {
+  return raw
+    .toUpperCase()
+    .replace(/^BINANCE:/, '')
+    .replace(/[^A-Z0-9]/g, '')
+    .trim()
+}
+
+function resolveCoinGeckoId(rawSymbol: string): string | null {
+  const normalized = normalizeSymbolKey(rawSymbol)
+  if (!normalized) return null
+
+  if (SYMBOL_TO_COINGECKO[normalized]) return SYMBOL_TO_COINGECKO[normalized]
+
+  // tenta base ticker sem USDT
+  if (normalized.endsWith('USDT')) {
+    const base = normalized.slice(0, -4)
+    if (SYMBOL_TO_COINGECKO[base]) return SYMBOL_TO_COINGECKO[base]
+  }
+
+  return null
 }
 
 // Cache de preços (5 minutos)
@@ -84,7 +150,7 @@ export async function GET(request: NextRequest) {
     if (uncachedSymbols.length > 0) {
       // Converter símbolos para IDs CoinGecko
       const coingeckoIds = uncachedSymbols
-        .map(s => SYMBOL_TO_COINGECKO[s])
+        .map(resolveCoinGeckoId)
         .filter(Boolean)
 
       if (coingeckoIds.length > 0) {
@@ -105,7 +171,7 @@ export async function GET(request: NextRequest) {
 
             // Mapear de volta para símbolos
             for (const symbol of uncachedSymbols) {
-              const coingeckoId = SYMBOL_TO_COINGECKO[symbol]
+              const coingeckoId = resolveCoinGeckoId(symbol)
               if (coingeckoId && data[coingeckoId]) {
                 const price = data[coingeckoId].usd
                 prices[symbol] = price

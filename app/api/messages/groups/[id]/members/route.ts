@@ -44,21 +44,10 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
     }
 
-    // Buscar membros do grupo
+    // Buscar membros do grupo (sem join a profiles)
     const { data: members, error } = await supabase
       .from('group_members')
-      .select(`
-        id,
-        user_id,
-        role,
-        user:profiles!group_members_user_id_fkey (
-          id,
-          full_name,
-          username,
-          email,
-          avatar_url
-        )
-      `)
+      .select('id, user_id, role')
       .eq('group_id', groupId)
 
     if (error) {
@@ -66,7 +55,22 @@ export async function GET(
       return NextResponse.json({ error: 'Erro ao buscar membros' }, { status: 500 })
     }
 
-    return NextResponse.json({ members: members || [] })
+    const list = members || []
+    const userIds = list.map((m: { user_id: string }) => m.user_id).filter(Boolean)
+    const userMap: Record<string, { id: string; full_name?: string; username?: string; email?: string; avatar_url?: string }> = {}
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, email, avatar_url')
+        .in('id', userIds)
+      for (const p of profiles || []) userMap[p.id] = p
+    }
+    const membersWithUsers = list.map((m: { user_id: string; [k: string]: unknown }) => ({
+      ...m,
+      user: userMap[m.user_id] || { id: m.user_id }
+    }))
+
+    return NextResponse.json({ members: membersWithUsers })
   } catch (error) {
     console.error('Erro na API de membros:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })

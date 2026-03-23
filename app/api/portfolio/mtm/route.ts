@@ -6,37 +6,75 @@ import { createClient } from '@supabase/supabase-js'
 const priceCache = new Map<string, { price: number; timestamp: number }>()
 const CACHE_DURATION = 120000 // 2 minutos
 
+const BINANCE_SYMBOL_ALIASES: Record<string, string> = {
+  CARDANO: 'ADA',
+  RIPPLE: 'XRP',
+  POLKADOT: 'DOT',
+  POLYGON: 'MATIC',
+  CHAINLINK: 'LINK',
+  AVALANCHE: 'AVAX',
+  VECHAIN: 'VET',
+  ARBITRUM: 'ARB',
+  OPTIMISM: 'OP',
+  THEGRAPH: 'GRT',
+  HEDERA: 'HBAR',
+  KASPA: 'KAS',
+  JUPITER: 'JUP',
+  ALGORAND: 'ALGO',
+  IMMUTABLE: 'IMX',
+  TETHER: 'USDT',
+}
+
+function normalizeBinanceSymbol(rawSymbol: string): string {
+  if (!rawSymbol) return rawSymbol
+
+  const symbol = rawSymbol
+    .toUpperCase()
+    .replace(/^BINANCE:/, '')
+    .replace(/[^A-Z0-9]/g, '')
+    .trim()
+
+  if (!symbol) return rawSymbol
+
+  if (symbol.endsWith('USDT')) return symbol
+
+  const mapped = BINANCE_SYMBOL_ALIASES[symbol] || symbol
+  return mapped.endsWith('USDT') ? mapped : `${mapped}USDT`
+}
+
 // Função para buscar preço da Binance
 async function getBinancePrice(symbol: string): Promise<number | null> {
   try {
+    const normalizedSymbol = normalizeBinanceSymbol(symbol)
+
     // Verificar cache
-    const cached = priceCache.get(symbol)
+    const cached = priceCache.get(normalizedSymbol)
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      console.log(`💰 [BINANCE] Cache hit: ${symbol} = $${cached.price}`)
+      console.log(`💰 [BINANCE] Cache hit: ${normalizedSymbol} = $${cached.price}`)
       return cached.price
     }
 
-    console.log(`🔍 [BINANCE] Buscando preço: ${symbol}`)
+    console.log(`🔍 [BINANCE] Buscando preço: ${symbol} -> ${normalizedSymbol}`)
     
     const response = await fetch(
-      `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`,
+      `https://api.binance.com/api/v3/ticker/price?symbol=${normalizedSymbol}`,
       { 
         next: { revalidate: 120 }
       }
     )
 
     if (!response.ok) {
-      console.error(`❌ [BINANCE] Erro HTTP ${response.status} para ${symbol}`)
+      console.error(`❌ [BINANCE] Erro HTTP ${response.status} para ${normalizedSymbol}`)
       return null
     }
 
     const data = await response.json()
     const price = parseFloat(data.price)
     
-    console.log(`✅ [BINANCE] ${symbol} = $${price}`)
+    console.log(`✅ [BINANCE] ${normalizedSymbol} = $${price}`)
     
     // Atualizar cache
-    priceCache.set(symbol, { price, timestamp: Date.now() })
+    priceCache.set(normalizedSymbol, { price, timestamp: Date.now() })
     
     return price
   } catch (error) {

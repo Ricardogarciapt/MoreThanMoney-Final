@@ -28,20 +28,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const searchParams = request.nextUrl.searchParams
-    const includeTemplates = searchParams.get('include_templates') === 'true'
-
-    let query = supabase
+    // Planos de treino são sempre individuais: apenas do utilizador logado
+    const { data: workouts, error } = await supabase
       .from('workouts')
       .select('*')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
-
-    if (includeTemplates) {
-      query = query.or(`user_id.eq.${session.user.id},is_template.eq.true`)
-    }
-
-    const { data: workouts, error } = await query
 
     if (error) {
       console.error('❌ [WORKOUTS API] Erro:', error)
