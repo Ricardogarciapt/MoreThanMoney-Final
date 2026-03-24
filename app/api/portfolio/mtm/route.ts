@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cryptoPortfolio, etfPortfolio, portfolioTotals } from '@/lib/portfolio-data'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAnonServerClient } from '@/lib/supabase-admin-client'
 
 // Cache para evitar múltiplas chamadas
 const priceCache = new Map<string, { price: number; timestamp: number }>()
@@ -168,10 +168,7 @@ export async function GET(request: NextRequest) {
       try {
         console.log('📊 [API MTM] Tentando buscar dados ADMIN do Supabase...')
         
-        const supabaseClient = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-        )
+        const supabaseClient = getSupabaseAnonServerClient()
 
         if (type === 'crypto' || type === 'all' || !type) {
           const { data: adminCrypto, error: cryptoErr } = await supabaseClient

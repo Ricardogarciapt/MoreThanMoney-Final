@@ -10,6 +10,7 @@ import ParticleBackground from "@/components/particle-background"
 import YouTubeEmbed from "@/components/youtube-embed"
 import ProtectedPage from "@/components/protected-page"
 import OnboardingBusinessAIAgent from "@/components/onboarding-business-ai-agent"
+import MentorImmersivePanel from "@/components/mentor/mentor-immersive-panel"
 import { supabase } from "@/lib/supabase"
 
 const testimonials = [
@@ -144,11 +145,6 @@ export default function OnboardingPage() {
               autoplay={false}
             />
           </div>
-        </div>
-
-        {/* AI Onboarding & Business Coach */}
-        <div className="max-w-4xl mx-auto mb-16">
-          <OnboardingBusinessAIAgent context="onboarding" userKey={userId} />
         </div>
 
         {/* O Nosso Processo */}
@@ -325,6 +321,18 @@ export default function OnboardingPage() {
           </div>
         </div>
 
+        {/* Bloco imersivo de execução (antes dos testemunhos) */}
+        <div className="max-w-4xl mx-auto mb-16 space-y-6">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-mtm-primary mb-3">Diagnóstico e Mentor Automático</h2>
+            <p className="text-gray-300">
+              Responde ao diagnóstico, recebe plano personalizado e executa o roadmap de 72h.
+            </p>
+          </div>
+          <OnboardingBusinessAIAgent context="onboarding" userKey={userId} />
+          <MentorImmersivePanel />
+        </div>
+
         {/* Testimonials */}
         <div className="mb-16">
           <h2 className="text-3xl font-bold text-center text-mtm-primary mb-4">
@@ -434,6 +442,25 @@ export default function OnboardingPage() {
               </CardContent>
             </Card>
           )}
+        </div>
+
+        {/* Ponte para execução gamificada */}
+        <div className="max-w-4xl mx-auto mt-12">
+          <Card className="card-clean border-[#D2A63C]/30">
+            <CardContent className="p-6 md:p-8 text-center">
+              <h3 className="text-2xl font-bold text-mtm-primary mb-3">
+                Próximo passo: entrar no Fast Start
+              </h3>
+              <p className="text-gray-300 mb-6">
+                Desbloqueia missões, marca progresso por etapas e acelera a tua execução com acompanhamento.
+              </p>
+              <Link href="/fast-start">
+                <Button className="btn-primary">
+                  Continuar para Fast Start
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         </div>
       </section>
     </main>

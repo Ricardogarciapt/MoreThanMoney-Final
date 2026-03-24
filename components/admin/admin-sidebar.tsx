@@ -35,8 +35,8 @@ export default function AdminSidebar({
   const pathname = usePathname()
 
   return (
-    <aside className="w-64 flex-shrink-0 border-r border-[#D2A63C]/20 bg-gray-900/80 flex flex-col">
-      <div className="p-4 border-b border-[#D2A63C]/20">
+    <aside className="flex w-64 flex-shrink-0 flex-col border-r border-[#D2A63C]/15 bg-gray-950/90 backdrop-blur-sm">
+      <div className="border-b border-[#D2A63C]/15 p-4">
         <Link href="/new-landing">
           <Button
             variant="ghost"
@@ -49,24 +49,25 @@ export default function AdminSidebar({
         </Link>
       </div>
       <div className="flex items-center gap-2 px-4 py-3">
-        <div className="p-2 rounded-lg bg-[#D2A63C]/20">
-          <Shield className="w-5 h-5 text-[#D2A63C]" />
+        <div className="rounded-lg bg-[#D2A63C]/15 p-2 ring-1 ring-[#D2A63C]/25">
+          <Shield className="h-5 w-5 text-[#D2A63C]" />
         </div>
-        <span className="font-semibold text-white">Admin</span>
+        <span className="font-semibold tracking-tight text-white">Admin</span>
       </div>
-      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = activeSection === item.id
           return (
             <button
               key={item.id}
+              type="button"
               onClick={() => onSectionChange(item.id)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-[#D2A63C]/20 text-[#D2A63C]"
-                  : "text-gray-400 hover:text-white hover:bg-gray-800/60"
+                  ? "border-l-2 border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
+                  : "border-l-2 border-transparent text-gray-400 hover:bg-gray-800/50 hover:text-white"
               )}
             >
               <Icon className="w-5 h-5 shrink-0" />
@@ -77,10 +78,10 @@ export default function AdminSidebar({
         <Link
           href="/admin/portfolios"
           className={cn(
-            "mt-2 w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+            "mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
             pathname === "/admin/portfolios"
-              ? "bg-[#D2A63C]/20 text-[#D2A63C]"
-              : "text-gray-400 hover:text-white hover:bg-gray-800/60"
+              ? "border-l-2 border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
+              : "border-l-2 border-transparent text-gray-400 hover:bg-gray-800/50 hover:text-white"
           )}
         >
           <Wallet className="w-5 h-5 shrink-0" />

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 /**
  * API CRON JOB: Criar post automático diário com oportunidades DCA
@@ -117,10 +117,7 @@ export async function GET(request: NextRequest) {
     postContent += `📱 Vê os detalhes completos em /portfolios`
 
     // Criar post no Supabase
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    )
+    const supabase = getSupabaseAdmin()
 
     // Buscar user_id do sistema (admin ou bot)
     const { data: adminUser } = await supabase

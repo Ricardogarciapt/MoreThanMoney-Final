@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
-// Criar cliente Supabase com service role (permissões admin)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-)
+const supabase = getSupabaseAdmin()
 
 // Função para enviar push notification
 async function sendPushNotification(userId: string, title: string, body: string, data: any) {

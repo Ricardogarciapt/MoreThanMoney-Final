@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { canAccessRoute, getAccessDeniedMessage, UserProfile } from "@/lib/role-redirect"
+import { ensureMemberProfile } from "@/lib/member-profile"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -36,16 +37,23 @@ export function ProtectedRoute({
           return
         }
 
-        // Buscar perfil
-        const { data: profileData, error: profileError } = await supabase
+        let { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
-          .single()
+          .maybeSingle()
 
-        if (profileError) {
-          console.error('❌ [ROUTE PROTECTION] Erro ao buscar perfil:', profileError)
-          router.push('/login')
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.warn('⚠️ [ROUTE PROTECTION] Perfil:', profileError.message)
+        }
+
+        if (!profileData) {
+          profileData = await ensureMemberProfile(supabase, session)
+        }
+
+        if (!profileData) {
+          console.error('❌ [ROUTE PROTECTION] Sem perfil após sincronizar')
+          router.push('/member-area')
           return
         }
 

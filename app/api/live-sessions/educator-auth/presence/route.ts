@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { randomBytes } from "crypto"
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
 import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-auth"
+import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
 
 const supabase = getSupabaseAdmin()
-const RTMPS_BASE_URL = process.env.LMS_RTMPS_BASE_URL || "rtmps://live.morethanmoney.local/live"
-
-function generateStreamKey(streamId: string, educatorId: string) {
-  const token = randomBytes(16).toString("hex")
-  const shortStream = streamId.replace(/-/g, "").slice(0, 8)
-  const shortEducator = educatorId.replace(/-/g, "").slice(0, 8)
-  return `mtm_${shortEducator}_${shortStream}_${token}`
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +20,7 @@ export async function POST(request: NextRequest) {
     const streamId = String(body.streamId || "")
     const action = String(body.action || "").trim()
     const isLive = Boolean(body.isLive)
-    const regenerate = Boolean(body.regenerate)
+    const forceRegenerateKey = Boolean(body.regenerate)
 
     if (!streamId) {
       return NextResponse.json({ error: "streamId é obrigatório" }, { status: 400 })
@@ -50,13 +42,27 @@ export async function POST(request: NextRequest) {
     const wantsGenerate = action === "generate"
 
     const updates: Record<string, any> = {}
+    const ingestUrl = getLmsIngestServerUrl()
+    const { data: educatorRow } = await supabase
+      .from("lms_educators")
+      .select("stream_key_fixed")
+      .eq("id", educator.educatorId)
+      .single()
+    const fixedKey = educatorRow?.stream_key_fixed || stream.stream_key
 
-    // Geração por canal: ao iniciar, gera automaticamente se não existir.
-    // Também permite regeneração manual.
-    if (wantsGenerate || regenerate || (wantsStart && (!stream.stream_key || !stream.rtmps_url))) {
-      updates.stream_key = generateStreamKey(streamId, educator.educatorId)
-      updates.rtmps_url = RTMPS_BASE_URL
+    if (!fixedKey) {
+      return NextResponse.json(
+        { error: "A tua chave fixa ainda não foi definida. Contacta o admin para gerar chave." },
+        { status: 400 }
+      )
     }
+
+    const needsKey = !stream.stream_key || !stream.rtmps_url
+    const shouldRefreshIngest = wantsGenerate || wantsStart || needsKey
+
+    // Chave de transmissão é fixa por educador.
+    updates.stream_key = fixedKey
+    if (shouldRefreshIngest) updates.rtmps_url = ingestUrl
 
     if (wantsStart) {
       updates.is_live = true
@@ -67,6 +73,11 @@ export async function POST(request: NextRequest) {
     if (wantsPause) {
       updates.is_live = false
       updates.live_ended_at = new Date().toISOString()
+    }
+
+    // Ignora tentativa de regenerar chave quando a política é chave fixa.
+    if (forceRegenerateKey && wantsGenerate) {
+      updates.live_ended_at = stream.live_ended_at || null
     }
 
     const { data, error } = await supabase

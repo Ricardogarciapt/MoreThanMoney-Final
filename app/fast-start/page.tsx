@@ -11,6 +11,7 @@ import ParticleBackground from "@/components/particle-background"
 import YouTubeEmbed from "@/components/youtube-embed"
 import ProtectedPage from "@/components/protected-page"
 import OnboardingBusinessAIAgent from "@/components/onboarding-business-ai-agent"
+import MentorImmersivePanel from "@/components/mentor/mentor-immersive-panel"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -573,9 +574,15 @@ export default function FastStartPage() {
             </div>
           </div>
 
-          {/* AI Onboarding & Business Coach */}
-          <div className="max-w-4xl mx-auto mb-10">
+          <div className="max-w-4xl mx-auto mb-10 space-y-6">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-mtm-primary mb-3">Diagnóstico e Mentor Automático</h2>
+              <p className="text-gray-300">
+                Mantém a continuidade do onboarding, executa o plano de 72h e acelera os primeiros resultados.
+              </p>
+            </div>
             <OnboardingBusinessAIAgent context="fast-start" userKey={userId} />
+            <MentorImmersivePanel />
           </div>
 
           {/* Steps */}
@@ -792,7 +799,7 @@ export default function FastStartPage() {
                     )}
                     <div>
                       <Badge className={`${isStepLocked(4) ? 'bg-gray-700' : progress.step_4_completed ? 'bg-green-600' : 'bg-amber-600'} text-black mb-2`}>Passo 4 de 6</Badge>
-                      <CardTitle className={isStepLocked(4) ? 'text-gray-500' : 'text-mtm-primary'}>Onboarding Rápido</CardTitle>
+                      <CardTitle className={isStepLocked(4) ? 'text-gray-500' : 'text-mtm-primary'}>Modo Mentor / 3-Way Calls</CardTitle>
                     </div>
                   </div>
                 </div>
@@ -814,13 +821,12 @@ export default function FastStartPage() {
                   </div>
                 ) : null}
                 <p className="text-gray-300 mb-6">
-                  Participa na nossa chamada semanal e descobre como quem te acompanha atingiu resultados. 
-                  Faz também o Fast Start educativo.
+                  Participa na chamada semanal, pratica com um mentor e usa o formato 3-Way para acelerar confiança e resultados.
                 </p>
                 {!isStepLocked(4) && (
                   <div className="grid md:grid-cols-2 gap-6 mb-6">
                     <div>
-                      <h4 className="text-white font-semibold mb-3">Chamada Semanal</h4>
+                      <h4 className="text-white font-semibold mb-3">Chamada Semanal (Execução)</h4>
                       <YouTubeEmbed 
                         videoId="q-23MppHFDI"
                         title="Chamada Semanal MTM"
@@ -832,7 +838,7 @@ export default function FastStartPage() {
                       </Button>
                     </div>
                     <div>
-                      <h4 className="text-white font-semibold mb-3">Fast Start Educativo</h4>
+                      <h4 className="text-white font-semibold mb-3">Fast Start Educativo (Base)</h4>
                       
                       <div className="mb-6 p-4 bg-amber-500/10 border border-mtm-primary/30 rounded-lg">
                         <h5 className="text-mtm-primary font-semibold mb-2">Introdução aos mercados financeiros</h5>
@@ -887,7 +893,7 @@ export default function FastStartPage() {
                     )}
                     <div>
                       <Badge className={`${isStepLocked(5) ? 'bg-gray-700' : progress.step_5_completed ? 'bg-green-600' : 'bg-amber-600'} text-black mb-2`}>Passo 5 de 6</Badge>
-                      <CardTitle className={isStepLocked(5) ? 'text-gray-500' : 'text-mtm-primary'}>Recomendar e Crescer</CardTitle>
+                      <CardTitle className={isStepLocked(5) ? 'text-gray-500' : 'text-mtm-primary'}>Tracking Leads & Conversões</CardTitle>
                     </div>
                   </div>
                 </div>
@@ -909,10 +915,18 @@ export default function FastStartPage() {
                   </div>
                 ) : null}
                 <p className="text-gray-300 mb-6">
-                  Partilha o sistema com um amigo e começa a ser recompensado. Pede ao teu upline um plano de crescimento como pessoa, trader e networker.
+                  Organiza os teus leads, define follow-up e mede conversões. Crescimento previsível vem de processo, não de sorte.
                 </p>
                 {!isStepLocked(5) && (
                   <div className="mb-6">
+                    <div className="mb-4 rounded-lg border border-mtm-primary/20 bg-mtm-primary/5 p-4 text-sm text-gray-300">
+                      <p>Checklist rápido:</p>
+                      <ul className="mt-2 space-y-1 list-disc list-inside">
+                        <li>10 novos leads registados</li>
+                        <li>3 follow-ups concluídos</li>
+                        <li>1 conversa de qualificação finalizada</li>
+                      </ul>
+                    </div>
                     <Link href="https://docs.google.com/presentation/d/1dgfNVp4J4ok6ZrkLk3q54rux_0rSCVfanRYITXC1_pI/edit?slide=id.g3401419a59b_0_233#slide=id.g3401419a59b_0_233" target="_blank">
                       <Button className="btn-primary mb-4">
                         <ExternalLink className="w-4 h-4 mr-2" />

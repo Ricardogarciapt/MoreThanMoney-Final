@@ -18,6 +18,9 @@ import {
   ChevronRight,
   UserCircle,
   Rocket,
+  Video,
+  Brain,
+  Bell,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -51,11 +54,13 @@ export default function MobileSidebar({
   const router = useRouter()
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const [xpData, setXpData] = useState<{ xp: number; level: number } | null>(null)
+  const [unreadMentorNotifications, setUnreadMentorNotifications] = useState(0)
 
   useEffect(() => {
     if (isOpen && currentUser?.id) {
       loadMessages()
       loadXP()
+      loadMentorNotifications()
     }
   }, [isOpen, currentUser?.id])
 
@@ -90,6 +95,19 @@ export default function MobileSidebar({
     }
   }
 
+  const loadMentorNotifications = async () => {
+    try {
+      const response = await fetch('/api/notifications/user')
+      if (!response.ok) return setUnreadMentorNotifications(0)
+      const data = await response.json()
+      const unread = (data.notifications || []).filter((n: any) => !n.read && (n.type === "mentor" || n.type === "onboarding" || n.type === "fast-start")).length
+      setUnreadMentorNotifications(unread)
+    } catch (error) {
+      console.error('Erro ao carregar notificações de mentor:', error)
+      setUnreadMentorNotifications(0)
+    }
+  }
+
   const handleLogout = async () => {
     clearCachedSession()
     await supabase.auth.signOut()
@@ -103,6 +121,8 @@ export default function MobileSidebar({
 
   const navigationItems = [
     { id: 'social', label: 'Social', icon: Users, href: '/app-mobile?tab=social' },
+    { id: 'live', label: 'Ao vivo', icon: Video, href: '/app-mobile?tab=live' },
+    { id: 'mentor', label: 'Mentor', icon: Brain, href: '/app-mobile?tab=mentor' },
     { id: 'portfolio', label: 'Portfólio', icon: Wallet, href: '/app-mobile?tab=portfolio' },
     { id: 'scanner', label: 'Scanner', icon: BarChart3, href: '/app-mobile?tab=scanner' },
     { id: 'studio', label: 'MTM Studio', icon: Rocket, href: '/app-mobile?tab=studio' },
@@ -247,6 +267,11 @@ export default function MobileSidebar({
                     >
                       <Icon className={`w-5 h-5 ${isActive ? 'text-[#D2A63C]' : ''}`} />
                       <span className="flex-1 text-left font-medium">{item.label}</span>
+                      {item.id === "mentor" && unreadMentorNotifications > 0 && (
+                        <Badge className="bg-[#D2A63C]/20 text-[#D2A63C] border-0">
+                          {unreadMentorNotifications}
+                        </Badge>
+                      )}
                       {isActive && <ChevronRight className="w-4 h-4 text-[#D2A63C]" />}
                     </button>
                   )
@@ -258,6 +283,20 @@ export default function MobileSidebar({
             <div className="p-4 border-b border-gray-800">
               <h3 className="text-xs font-semibold text-gray-400 uppercase mb-3">Comunicação</h3>
               <div className="space-y-1">
+                <button
+                  onClick={() => {
+                    handleTabClick("mentor")
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
+                >
+                  <Bell className="w-5 h-5" />
+                  <span className="flex-1 text-left font-medium">Mentor & Progresso</span>
+                  {unreadMentorNotifications > 0 && (
+                    <Badge className="bg-[#D2A63C]/20 text-[#D2A63C] border-0">
+                      {unreadMentorNotifications}
+                    </Badge>
+                  )}
+                </button>
                 <button
                   onClick={() => {
                     router.push('/messages')

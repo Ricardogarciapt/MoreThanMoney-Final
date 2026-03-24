@@ -78,7 +78,8 @@ const faqItems = [
 ]
 
 export default function OnboardingBusinessAIAgent({ context, userKey }: OnboardingBusinessAIAgentProps) {
-  const STORAGE_KEY = `mtm_ai_agent_${context}_${userKey || "anonymous"}`
+  // Chave única por utilizador para manter onboarding e fast-start interligados.
+  const STORAGE_KEY = `mtm_execution_hub_global_${userKey || "anonymous"}`
   const [isFirstUseComplete, setIsFirstUseComplete] = useState(false)
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0)
   const [profileAnswers, setProfileAnswers] = useState<Record<string, string>>({})
@@ -87,6 +88,8 @@ export default function OnboardingBusinessAIAgent({ context, userKey }: Onboardi
   const [dailyReach, setDailyReach] = useState(0)
   const [dailyShares, setDailyShares] = useState(0)
   const [dailyFollowUps, setDailyFollowUps] = useState(0)
+  const [fastStartPercent, setFastStartPercent] = useState(0)
+  const [syncingFastStart, setSyncingFastStart] = useState(false)
 
   const firstUseQuestions = [
     {
@@ -160,6 +163,33 @@ export default function OnboardingBusinessAIAgent({ context, userKey }: Onboardi
     dailyFollowUps,
   ])
 
+  const refreshFastStart = async () => {
+    try {
+      const res = await fetch("/api/fast-start/progress", { cache: "no-store" })
+      const json = await res.json()
+      if (json?.success && json?.progress) {
+        setFastStartPercent(Number(json.progress.progress_percent || 0))
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const syncMentorSeed = async () => {
+    try {
+      await fetch("/api/mentor/overview", { cache: "no-store" })
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    refreshFastStart()
+    syncMentorSeed()
+    const id = setInterval(refreshFastStart, 15000)
+    return () => clearInterval(id)
+  }, [])
+
   const dayProgress = useMemo(() => {
     const completed = dayChecklist.filter((item) => completedDay[item.id]).length
     return Math.round((completed / dayChecklist.length) * 100)
@@ -182,7 +212,7 @@ export default function OnboardingBusinessAIAgent({ context, userKey }: Onboardi
     const exp = profileAnswers.experience || ""
 
     const plan: string[] = []
-    plan.push("Completar Day 1–7 Checklist por ordem e confirmar cada etapa no agente.")
+    plan.push("Completar Day 1–7 Checklist por ordem e confirmar cada etapa no painel.")
     if (focus.includes("Trading") || focus.includes("Copytrading")) {
       plan.push("Prioridade Trading: setup broker + primeira trade com mentor em ambiente controlado.")
     }
@@ -215,7 +245,21 @@ export default function OnboardingBusinessAIAgent({ context, userKey }: Onboardi
   }, [dailyReach, dailyShares, dailyFollowUps])
 
   const contextLabel =
-    context === "fast-start" ? "Agente IA • Fast Start" : "Agente IA • Onboarding"
+    context === "fast-start" ? "Painel de Execução • Fast Start" : "Painel de Execução • Onboarding"
+
+  const markFastStartStep = async (stepNumber: number) => {
+    setSyncingFastStart(true)
+    try {
+      await fetch("/api/fast-start/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ step_number: stepNumber }),
+      })
+      await refreshFastStart()
+    } finally {
+      setSyncingFastStart(false)
+    }
+  }
 
   if (!isFirstUseComplete) {
     const question = firstUseQuestions[currentQuestionIdx]
@@ -226,7 +270,7 @@ export default function OnboardingBusinessAIAgent({ context, userKey }: Onboardi
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <CardTitle className="text-[#D2A63C] flex items-center gap-2">
               <Bot className="w-5 h-5" />
-              Agente IA • Checklist Questions
+              Checklist de Diagnóstico
             </CardTitle>
             <Badge className="bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/40">
               Primeira Utilização
@@ -235,7 +279,7 @@ export default function OnboardingBusinessAIAgent({ context, userKey }: Onboardi
         </CardHeader>
         <CardContent className="p-6">
           <p className="text-sm text-gray-300 mb-4">
-            Antes de avançar, responde ao diagnóstico rápido para o agente mapear os teus próximos passos com precisão.
+            Antes de avançar, responde ao diagnóstico rápido para mapear os teus próximos passos com precisão.
           </p>
           <div className="mb-4">
             <div className="flex justify-between text-xs text-gray-400 mb-2">
@@ -290,7 +334,7 @@ export default function OnboardingBusinessAIAgent({ context, userKey }: Onboardi
                 disabled={!profileAnswers[question.id]}
                 onClick={() => setIsFirstUseComplete(true)}
               >
-                Gerar Plano IA
+                Gerar Plano
               </Button>
             )}
           </div>
@@ -314,6 +358,13 @@ export default function OnboardingBusinessAIAgent({ context, userKey }: Onboardi
       </CardHeader>
 
       <CardContent className="p-6 space-y-6">
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4">
+          <p className="text-sm font-semibold text-emerald-300">Sincronização onboarding + fast-start ativa</p>
+          <p className="mt-1 text-xs text-gray-200">
+            Progresso oficial Fast Start: <strong>{fastStartPercent}%</strong>. O mesmo estado é usado em ambas as páginas.
+          </p>
+        </div>
+
         <div className="rounded-lg border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-4">
           <p className="text-sm text-gray-200">
             Objetivo: transformar cada novo registo em <strong>estudante ativo</strong>,{" "}
@@ -324,7 +375,7 @@ export default function OnboardingBusinessAIAgent({ context, userKey }: Onboardi
 
         <Card className="bg-black/30 border-gray-700">
           <CardHeader>
-            <CardTitle className="text-sm text-white">Plano IA Personalizado</CardTitle>
+            <CardTitle className="text-sm text-white">Plano Personalizado</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-xs text-gray-200">
             {personalizedPlan.map((item) => (
@@ -356,12 +407,19 @@ export default function OnboardingBusinessAIAgent({ context, userKey }: Onboardi
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() =>
+                  onClick={async () => {
+                    const wasCompleted = Boolean(completedDay[item.id])
                     setCompletedDay((prev) => ({
                       ...prev,
                       [item.id]: !prev[item.id],
                     }))
-                  }
+                    // Ligação gamify -> Fast Start real (1:1 com os primeiros passos-chave).
+                    if (!wasCompleted) {
+                      if (item.id === "onboarding") await markFastStartStep(1)
+                      if (item.id === "first_trade") await markFastStartStep(3)
+                      if (item.id === "launch_business") await markFastStartStep(4)
+                    }
+                  }}
                   className={`w-full text-left text-xs rounded-md border p-2 transition ${
                     completedDay[item.id]
                       ? "bg-green-600/15 border-green-500/40 text-green-300"
@@ -536,6 +594,15 @@ export default function OnboardingBusinessAIAgent({ context, userKey }: Onboardi
           <Button size="sm" variant="outline" className="border-gray-700 text-gray-200">
             <TrendingUp className="w-4 h-4 mr-1" />
             Tracking Leads & Conversões
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={syncingFastStart}
+            className="border-emerald-500/40 text-emerald-300"
+            onClick={refreshFastStart}
+          >
+            {syncingFastStart ? "A sincronizar..." : "Sincronizar progresso"}
           </Button>
         </div>
       </CardContent>

@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { randomBytes } from "crypto"
 import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
+import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
 
 const supabase = getSupabaseAdmin()
-const RTMPS_BASE_URL = process.env.LMS_RTMPS_BASE_URL || "rtmps://stream.morethanmoney.pt/live"
 
 function slugify(input: string) {
   return input
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         academy_id: academyId,
         educator_id: educator.id,
         title,
-        rtmps_url: RTMPS_BASE_URL,
+        rtmps_url: getLmsIngestServerUrl(),
         stream_key: streamKey,
         chat_enabled: true,
         is_live: false,
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       educator,
       stream,
       stream_key: streamKey,
-      rtmps_url: RTMPS_BASE_URL,
+      rtmps_url: getLmsIngestServerUrl(),
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })

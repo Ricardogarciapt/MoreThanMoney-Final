@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { randomBytes } from "crypto"
 import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
+import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
 
 const supabase = getSupabaseAdmin()
 
-function generateStreamKey(streamId: string, educatorId: string) {
+function generateStreamKey(educatorId: string) {
   const token = randomBytes(16).toString("hex")
-  const shortStream = streamId.replace(/-/g, "").slice(0, 8)
   const shortEducator = educatorId.replace(/-/g, "").slice(0, 8)
-  return `mtm_${shortEducator}_${shortStream}_${token}`
+  return `mtm_${shortEducator}_${token}`
 }
 
 export async function POST(request: NextRequest) {
@@ -32,10 +32,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Stream não encontrada" }, { status: 404 })
     }
 
-    const streamKey = generateStreamKey(stream.id, stream.educator_id)
+    const streamKey = generateStreamKey(stream.educator_id)
+    await supabase
+      .from("lms_educators")
+      .update({ stream_key_fixed: streamKey })
+      .eq("id", stream.educator_id)
+
     const { data, error } = await supabase
       .from("lms_streams")
-      .update({ stream_key: streamKey, is_live: false, live_ended_at: new Date().toISOString() })
+      .update({
+        stream_key: streamKey,
+        rtmps_url: getLmsIngestServerUrl(),
+        is_live: false,
+        live_ended_at: new Date().toISOString(),
+      })
       .eq("id", streamId)
       .select("*")
       .single()

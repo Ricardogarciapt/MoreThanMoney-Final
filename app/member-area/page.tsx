@@ -82,19 +82,26 @@ export default function MemberAreaPage() {
     loadUser()
   }, [])
 
-  // Ler tab da query (?tab=notifications) e ativar ao entrar
+  // Ler tab da query (?tab=...) e ativar ao entrar
+  // settings/definicoes → Segurança (palavra-passe, email) — alinhado com /member-area?tab=settings na app mobile
   useEffect(() => {
     const tab = searchParams?.get('tab')
-    if (tab) {
-      if (tab === 'notifications' || tab === 'notificacoes') {
-        setActiveTab('notifications')
-      }
-      if (tab === 'security' || tab === 'seguranca') {
-        setActiveTab('security')
-      }
-      if (tab === 'profile' || tab === 'perfil') {
-        setActiveTab('profile')
-      }
+    if (!tab) return
+    const t = tab.toLowerCase()
+    if (t === 'notifications' || t === 'notificacoes') {
+      setActiveTab('notifications')
+    } else if (t === 'security' || t === 'seguranca') {
+      setActiveTab('security')
+    } else if (
+      t === 'settings' ||
+      t === 'definicoes' ||
+      t === 'definições' ||
+      t === 'configuracoes' ||
+      t === 'configurações'
+    ) {
+      setActiveTab('security')
+    } else if (t === 'profile' || t === 'perfil') {
+      setActiveTab('profile')
     }
   }, [searchParams])
 

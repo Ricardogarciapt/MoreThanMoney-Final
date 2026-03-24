@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { supabase } from "@/lib/supabase"
+import { ensureMemberProfile } from "@/lib/member-profile"
 
 export interface User {
   id: string
@@ -49,44 +50,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [isIqonicUser, setIsIqonicUser] = useState(false)
 
-  // Criar perfil quando não existe
-  const createProfile = async (authUser: any) => {
-    try {
-      const username = authUser.user_metadata?.name?.replace(/\s+/g, '').toLowerCase() 
-        || authUser.email?.split('@')[0] 
-        || `user${Date.now()}`
-
-      const profileData = {
-        id: authUser.id,
-        email: authUser.email,
-        full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || 'Utilizador',
-        username: username,
-        avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture,
-        user_type: 'member',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert([profileData])
-        .select()
-        .single()
-
-      if (error) {
-        console.error('❌ Erro ao criar perfil:', error)
-        return null
-      }
-
-      console.log('✅ Perfil criado:', data.email)
-      return data
-    } catch (error) {
-      console.error('❌ Exceção ao criar perfil:', error)
-      return null
-    }
-  }
-
   useEffect(() => {
     console.log('🔍 [AUTH CONTEXT] Inicializando...')
     let mounted = true
@@ -100,26 +63,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (cachedSession && isSessionValid(cachedSession)) {
           console.log('⚡ [AUTH CONTEXT] Usando sessão em cache')
           setIsIqonicUser(false)
-          // Buscar perfil em paralelo (não bloqueia)
           supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', cachedSession.user.id)
-            .single()
-            .then(({ data: profile }: { data: any }) => {
+            .from("profiles")
+            .select("*")
+            .eq("id", cachedSession.user.id)
+            .maybeSingle()
+            .then(async ({ data: profile }: { data: any }) => {
               if (!mounted) return
-              if (profile) {
+              const p =
+                profile ??
+                (await ensureMemberProfile(supabase, cachedSession, { respectAutoApprove: false }))
+              if (p) {
                 setUser({
-                  id: profile.id,
-                  email: profile.email,
-                  full_name: profile.full_name,
-                  username: profile.username,
-                  avatar_url: profile.avatar_url || cachedSession.user.user_metadata?.avatar_url,
-                  user_type: profile.user_type,
-                  is_active: profile.is_active,
-                  created_at: profile.created_at,
-                  phone: profile.phone,
-                  whatsapp: profile.whatsapp
+                  id: p.id ?? cachedSession.user.id,
+                  email: p.email ?? cachedSession.user.email ?? "",
+                  full_name: p.full_name,
+                  username: p.username,
+                  avatar_url: p.avatar_url || cachedSession.user.user_metadata?.avatar_url,
+                  user_type: p.user_type,
+                  is_active: p.is_active,
+                  created_at: p.created_at,
+                  phone: p.phone,
+                  whatsapp: p.whatsapp,
                 })
               }
               setIsLoading(false)
@@ -162,7 +127,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
-            .single()
+            .maybeSingle()
           
           if (!mounted) return
           
@@ -181,12 +146,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               whatsapp: profile.whatsapp
             })
           } else {
-            console.log('📝 [AUTH CONTEXT] Criando perfil...')
-            const newProfile = await createProfile(session.user)
+            console.log('📝 [AUTH CONTEXT] Sincronizar perfil (Supabase)...')
+            const newProfile = await ensureMemberProfile(supabase, session, {
+              respectAutoApprove: false,
+            })
             if (newProfile && mounted) {
               setUser({
-                id: newProfile.id,
-                email: newProfile.email,
+                id: newProfile.id ?? session.user.id,
+                email: newProfile.email ?? session.user.email ?? "",
                 full_name: newProfile.full_name,
                 username: newProfile.username,
                 avatar_url: newProfile.avatar_url || session.user.user_metadata?.avatar_url,
@@ -238,31 +205,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setCachedSession(session)
         setIsIqonicUser(false)
         
-        // Recarregar perfil em background (não bloqueia)
         supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }: { data: any }) => {
-            if (profile && mounted) {
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .maybeSingle()
+          .then(async ({ data: profile }: { data: any }) => {
+            const p =
+              profile ?? (await ensureMemberProfile(supabase, session, { respectAutoApprove: false }))
+            if (p && mounted) {
               setUser({
-                id: profile.id,
-                email: profile.email,
-                full_name: profile.full_name,
-                username: profile.username,
-                avatar_url: profile.avatar_url || session.user.user_metadata?.avatar_url,
-                user_type: profile.user_type,
-                is_active: profile.is_active,
-                created_at: profile.created_at,
-                phone: profile.phone,
-                whatsapp: profile.whatsapp
+                id: p.id ?? session.user.id,
+                email: p.email ?? session.user.email ?? "",
+                full_name: p.full_name,
+                username: p.username,
+                avatar_url: p.avatar_url || session.user.user_metadata?.avatar_url,
+                user_type: p.user_type,
+                is_active: p.is_active,
+                created_at: p.created_at,
+                phone: p.phone,
+                whatsapp: p.whatsapp,
               })
             }
           })
-          .catch(() => {
-            // Erro silencioso - não bloqueia o fluxo
-          })
+          .catch(() => {})
       } else if (event === 'SIGNED_OUT') {
         const { clearCachedSession } = await import('@/lib/auth-cache')
         clearCachedSession()
@@ -306,89 +272,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (data.session && data.user) {
-        console.log('✅ Sessão criada com sucesso!')
-        console.log('✅ Usuário:', data.user.email)
-        console.log('✅ ID:', data.user.id)
-        
-        // Buscar perfil
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single()
+        const profile = await ensureMemberProfile(supabase, data.session, {
+          respectAutoApprove: false,
+        })
 
-        if (profileError) {
-          console.error('❌ Erro ao buscar perfil:', profileError)
-          
-          // Se perfil não existe, criar automaticamente
-          if (profileError.code === 'PGRST116') {
-            console.log('📝 Perfil não encontrado, criando...')
-            
-            const username = data.user.user_metadata?.name?.replace(/\s+/g, '').toLowerCase() 
-              || data.user.email?.split('@')[0] 
-              || `user${Date.now()}`
-
-            const { data: newProfile, error: createError } = await supabase
-              .from('profiles')
-              .insert([{
-                id: data.user.id,
-                email: data.user.email,
-                full_name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || 'Utilizador',
-                username: username,
-                avatar_url: data.user.user_metadata?.avatar_url,
-                user_type: 'member',
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }])
-              .select()
-              .single()
-
-            if (createError) {
-              console.error('❌ Erro ao criar perfil:', createError)
-              return { success: false, error: 'Erro ao criar perfil. Contacte o suporte.' }
-            }
-
-            if (newProfile) {
-              setUser({
-                id: newProfile.id,
-                email: newProfile.email,
-                full_name: newProfile.full_name,
-                username: newProfile.username,
-                avatar_url: newProfile.avatar_url,
-                user_type: newProfile.user_type,
-                is_active: newProfile.is_active,
-                created_at: newProfile.created_at,
-                phone: newProfile.phone,
-                whatsapp: newProfile.whatsapp
-              })
-
-              console.log('✅ Perfil criado e usuário definido')
-              return { success: true }
-            }
-          }
-          
-          return { success: false, error: 'Perfil não encontrado' }
+        if (!profile) {
+          return { success: false, error: 'Não foi possível sincronizar o perfil. Tenta de novo ou contacta o suporte.' }
         }
 
-        if (profile) {
-          console.log('✅ Perfil carregado:', profile.email)
-          
-          setUser({
-            id: profile.id,
-            email: profile.email,
-            full_name: profile.full_name,
-            username: profile.username,
-            avatar_url: profile.avatar_url,
-            user_type: profile.user_type,
-            is_active: profile.is_active,
-            created_at: profile.created_at,
-            phone: profile.phone,
-            whatsapp: profile.whatsapp
-          })
+        setUser({
+          id: profile.id ?? data.user.id,
+          email: profile.email ?? data.user.email ?? "",
+          full_name: profile.full_name,
+          username: profile.username,
+          avatar_url: profile.avatar_url || data.user.user_metadata?.avatar_url,
+          user_type: profile.user_type,
+          is_active: profile.is_active,
+          created_at: profile.created_at,
+          phone: profile.phone,
+          whatsapp: profile.whatsapp,
+        })
 
-          return { success: true }
-        }
+        return { success: true }
       }
 
       return { success: false, error: 'Erro ao processar login' }
@@ -437,38 +342,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log('✅ Email:', data.user.email)
         console.log('✅ Confirmação necessária:', !data.user.confirmed_at)
         
-        // Criar perfil
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
-          .insert([{
-            id: data.user.id,
-            email: email,
-            full_name: userData.fullName,
-            username: userData.username,
-            phone: userData.phone || null,
-            whatsapp: userData.whatsapp || null,
-            user_type: 'member',
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }])
+          .upsert(
+            {
+              id: data.user.id,
+              email,
+              full_name: userData.fullName,
+              username: userData.username,
+              phone: userData.phone || null,
+              whatsapp: userData.whatsapp || null,
+              user_type: 'member',
+              is_active: true,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'id' }
+          )
           .select()
           .single()
 
         if (profileError) {
-          console.error('❌ Erro ao criar perfil:', profileError)
-          console.error('❌ Código:', profileError.code)
-          console.error('❌ Detalhes:', profileError.details)
-          
-          // Se for erro de duplicação, pode ser que já exista
-          if (profileError.code === '23505') {
-            return { success: false, error: 'Perfil já existe para este email ou username.' }
-          }
-          
+          console.error('❌ Erro ao guardar perfil:', profileError)
           return { success: false, error: profileError.message }
         }
 
-        console.log('✅ Perfil criado com sucesso:', profile)
+        console.log('✅ Perfil sincronizado:', profile)
         
         // Verificar se precisa confirmar email
         if (data.session) {
@@ -518,17 +416,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (session?.user) {
         console.log('✅ Sessão encontrada, buscando perfil...')
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-        
+        let { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .maybeSingle()
+
+        if (!profile) {
+          profile = await ensureMemberProfile(supabase, session, { respectAutoApprove: false })
+        }
+
         if (profile) {
-          console.log('✅ Perfil carregado:', profile.email)
+          console.log("✅ Perfil carregado:", profile.email)
           setUser({
-            id: profile.id,
-            email: profile.email,
+            id: profile.id ?? session.user.id,
+            email: profile.email ?? session.user.email ?? "",
             full_name: profile.full_name,
             username: profile.username,
             avatar_url: profile.avatar_url || session.user.user_metadata?.avatar_url,
@@ -536,7 +438,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             is_active: profile.is_active,
             created_at: profile.created_at,
             phone: profile.phone,
-            whatsapp: profile.whatsapp
+            whatsapp: profile.whatsapp,
           })
         }
       } else {

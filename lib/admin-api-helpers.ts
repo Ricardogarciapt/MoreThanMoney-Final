@@ -6,17 +6,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
-import { createClient } from "@supabase/supabase-js"
 
-/**
- * Cria cliente Supabase Admin (service role)
- */
-export function getSupabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+/** Cliente service role (singleton + fallbacks em lib/supabase-admin-client.ts) */
+export { getSupabaseAdmin } from "./supabase-admin-client"
 
 /**
  * Verifica se o utilizador é admin (server-side)

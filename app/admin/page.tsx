@@ -236,11 +236,11 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex">
+    <div className="flex min-h-screen bg-gradient-to-b from-black via-zinc-950 to-black text-white">
       <AdminSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
 
       <main className="flex-1 overflow-auto">
-        <div className="border-b border-[#D2A63C]/20 bg-gray-900/50 px-6 py-4">
+        <div className="border-b border-[#D2A63C]/15 bg-black/40 px-6 py-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold text-white">
               {activeSection === "overview" && "Visão geral"}
@@ -256,7 +256,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {activeSection === "overview" && (
             <AdminOverview
               stats={stats}
@@ -267,9 +267,9 @@ export default function AdminPage() {
 
           {activeSection === "users" && (
             <div className="space-y-6">
-              <section className="rounded-xl border border-[#D2A63C]/20 bg-gray-900/80 overflow-hidden">
-                <div className="px-6 py-4 border-b border-[#D2A63C]/20">
-                  <h2 className="text-lg font-semibold text-[#D2A63C]">Gestão de utilizadores</h2>
+              <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+                <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Gestão de utilizadores</h2>
                   <p className="text-sm text-gray-400 mt-1">
                     Aprovar, alterar funções e categorias. Dados reais da base de dados.
                   </p>
@@ -288,9 +288,9 @@ export default function AdminPage() {
 
           {activeSection === "content" && (
             <div className="space-y-8">
-              <section className="rounded-xl border border-[#D2A63C]/20 bg-gray-900/80 overflow-hidden">
-                <div className="px-6 py-4 border-b border-[#D2A63C]/20">
-                  <h2 className="text-lg font-semibold text-[#D2A63C]">Conteúdo do site</h2>
+              <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+                <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Conteúdo do site</h2>
                   <p className="text-sm text-gray-400 mt-1">
                     Links, vídeos, ficheiros e texto por categoria (navbar, footer, landing, etc.).
                   </p>
@@ -299,9 +299,9 @@ export default function AdminPage() {
                   <SiteContentManager />
                 </div>
               </section>
-              <section className="rounded-xl border border-[#D2A63C]/20 bg-gray-900/80 overflow-hidden">
-                <div className="px-6 py-4 border-b border-[#D2A63C]/20">
-                  <h2 className="text-lg font-semibold text-[#D2A63C]">Vídeos e links (config)</h2>
+              <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+                <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Vídeos e links (config)</h2>
                   <p className="text-sm text-gray-400 mt-1">
                     Configuração de vídeos e links para landing e páginas.
                   </p>
@@ -314,9 +314,9 @@ export default function AdminPage() {
           )}
 
           {activeSection === "notifications" && (
-            <div className="rounded-xl border border-[#D2A63C]/20 bg-gray-900/80 overflow-hidden">
-              <div className="px-6 py-4 border-b border-[#D2A63C]/20">
-                <h2 className="text-lg font-semibold text-[#D2A63C]">Notificações</h2>
+            <div className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+              <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Notificações</h2>
                 <p className="text-sm text-gray-400 mt-1">
                   Enviar notificações por email e push aos utilizadores.
                 </p>
@@ -328,11 +328,11 @@ export default function AdminPage() {
           )}
 
           {activeSection === "education" && (
-            <div className="rounded-xl border border-[#D2A63C]/20 bg-gray-900/80 overflow-hidden">
-              <div className="px-6 py-4 border-b border-[#D2A63C]/20">
-                <h2 className="text-lg font-semibold text-[#D2A63C]">Gestão de Educação / LMS</h2>
+            <div className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+              <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Gestão de Educação / LMS</h2>
                 <p className="text-sm text-gray-400 mt-1">
-                  Gerir academias, educadores (login separado) e canais de live sessions.
+                  Gerir academias, educadores (login separado) e canais — podes apagar canais aqui. O educador pode criar ou apagar o próprio canal e limpar o chat.
                 </p>
               </div>
               <div className="p-6">
@@ -343,9 +343,9 @@ export default function AdminPage() {
 
           {activeSection === "settings" && (
             <div className="space-y-8">
-              <section className="rounded-xl border border-[#D2A63C]/20 bg-gray-900/80 overflow-hidden">
-                <div className="px-6 py-4 border-b border-[#D2A63C]/20">
-                  <h2 className="text-lg font-semibold text-[#D2A63C]">Tema</h2>
+              <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+                <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Tema</h2>
                   <p className="text-sm text-gray-400 mt-1">
                     Cores e tema do site.
                   </p>
@@ -354,9 +354,9 @@ export default function AdminPage() {
                   <ThemeManager />
                 </div>
               </section>
-              <section className="rounded-xl border border-[#D2A63C]/20 bg-gray-900/80 overflow-hidden">
-                <div className="px-6 py-4 border-b border-[#D2A63C]/20">
-                  <h2 className="text-lg font-semibold text-[#D2A63C]">Configurações gerais</h2>
+              <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+                <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Configurações gerais</h2>
                   <p className="text-sm text-gray-400 mt-1">
                     Nome do site, modo manutenção, registo e aprovações.
                   </p>
@@ -365,9 +365,9 @@ export default function AdminPage() {
                   <SettingsManager />
                 </div>
               </section>
-              <section className="rounded-xl border border-[#D2A63C]/20 bg-gray-900/80 overflow-hidden">
-                <div className="px-6 py-4 border-b border-[#D2A63C]/20">
-                  <h2 className="text-lg font-semibold text-[#D2A63C]">Grupos de chat padrão</h2>
+              <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+                <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Grupos de chat padrão</h2>
                   <p className="text-sm text-gray-400 mt-1">
                     Cria os grupos Social Chat, Crypto Chat, Forex Chat e Trade Chat e associa-te como administrador.
                   </p>

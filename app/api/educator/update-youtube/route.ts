@@ -15,28 +15,31 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const streamId = String(body.streamId || "")
     const youtubeKey = String(body.youtube_key || "").trim() || null
     const youtubeEnabled = Boolean(body.youtube_enabled)
 
-    if (!streamId) {
-      return NextResponse.json({ error: "streamId é obrigatório" }, { status: 400 })
-    }
-
     const { data, error } = await supabase
-      .from("lms_streams")
+      .from("lms_educators")
       .update({
-        youtube_key: youtubeKey,
+        youtube_stream_key: youtubeKey,
         youtube_enabled: youtubeEnabled,
       })
-      .eq("id", streamId)
-      .eq("educator_id", educator.educatorId)
+      .eq("id", educator.educatorId)
       .select("*")
       .single()
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    // Mantém compatibilidade para render de players por stream.
+    await supabase
+      .from("lms_streams")
+      .update({
+        youtube_key: youtubeKey,
+        youtube_enabled: youtubeEnabled,
+      })
+      .eq("educator_id", educator.educatorId)
 
     return NextResponse.json({ success: true, data })
   } catch (error: any) {

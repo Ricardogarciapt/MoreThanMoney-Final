@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { determinePostLoginRedirect, safeInternalRedirectPath } from '@/lib/role-redirect'
+import { ensureMemberProfile } from '@/lib/member-profile'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,10 +19,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const searchParams = useSearchParams()
-  const router = useRouter()
-  
   const isAdminLogin = searchParams.get('admin') === 'true'
-  const redirectTo = searchParams.get('redirect') || '/new-landing'
+  const redirectParam = safeInternalRedirectPath(searchParams.get('redirect'))
 
   // Verificar se já está logado
   useEffect(() => {
@@ -31,11 +31,10 @@ export default function LoginPage() {
       
       if (cachedSession && isSessionValid(cachedSession)) {
         console.log('✅ [LOGIN] Sessão em cache encontrada')
-        if (redirectTo !== '/login') {
-          window.location.replace(redirectTo)
-        } else {
-          window.location.replace('/new-landing')
-        }
+        const profile = await ensureMemberProfile(supabase, cachedSession)
+        const next = determinePostLoginRedirect(profile, redirectParam)
+        const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
+        window.location.replace(url)
         return
       }
       
@@ -49,15 +48,12 @@ export default function LoginPage() {
         const { data: { session } } = await sessionPromise
         if (session) {
           console.log('✅ [LOGIN] Sessão encontrada')
-          // Sincronizar cache imediatamente
           const { setCachedSession } = await import('@/lib/auth-cache')
           setCachedSession(session)
-          
-          if (redirectTo !== '/login') {
-            window.location.replace(redirectTo)
-          } else {
-            window.location.replace('/new-landing')
-          }
+          const profile = await ensureMemberProfile(supabase, session)
+          const next = determinePostLoginRedirect(profile, redirectParam)
+          const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
+          window.location.replace(url)
         }
       } catch (error) {
         // Timeout ou erro - continuar normalmente (mostrar login)
@@ -65,7 +61,7 @@ export default function LoginPage() {
       }
     }
     checkSession()
-  }, [redirectTo])
+  }, [redirectParam])
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -98,14 +94,12 @@ export default function LoginPage() {
 
       if (data.session) {
         console.log('✅ Login bem-sucedido:', data.user.email)
-        
-        // Sincronizar cache imediatamente
         const { setCachedSession } = await import('@/lib/auth-cache')
         setCachedSession(data.session)
-        
-        console.log('🔄 Redirecionando para:', redirectTo)
-        // Usar replace para ser mais rápido (não adiciona ao histórico)
-        window.location.replace(redirectTo)
+        const profile = await ensureMemberProfile(supabase, data.session)
+        const next = determinePostLoginRedirect(profile, redirectParam)
+        const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
+        window.location.replace(url)
       }
     } catch (error: any) {
       console.error('❌ Exceção no login:', error)
@@ -120,18 +114,12 @@ export default function LoginPage() {
 
     try {
       console.log('🔍 [GOOGLE LOGIN] Iniciando OAuth...')
-      
-      // Determinar o redirect correto baseado no ambiente
-      const isProduction = window.location.hostname.includes('morethanmoney.pt') || 
-                           window.location.hostname.includes('vercel.app')
-      
-      const baseUrl = isProduction 
-        ? `https://www.morethanmoney.pt`
-        : 'http://localhost:3000'
-      
-      const callbackUrl = `${baseUrl}/auth/callback`
-      const fullRedirectUrl = redirectTo ? `${callbackUrl}?redirect=${encodeURIComponent(redirectTo)}` : callbackUrl
-      
+      // Mesmo domínio que iniciou o fluxo — obrigatório para cookies PKCE do Supabase SSR
+      const callbackUrl = `${window.location.origin}/auth/callback`
+      const fullRedirectUrl = redirectParam
+        ? `${callbackUrl}?redirect=${encodeURIComponent(redirectParam)}`
+        : callbackUrl
+
       console.log('📍 [GOOGLE LOGIN] Callback URL:', fullRedirectUrl)
       
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({

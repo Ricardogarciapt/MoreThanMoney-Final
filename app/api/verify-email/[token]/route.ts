@@ -1,23 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import jwt from 'jsonwebtoken'
-
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Supabase configuration is missing")
-  }
-  
-  return createClient(supabaseUrl, supabaseKey)
-}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { token: string } }
 ) {
-  const supabase = getSupabaseClient()
+  const supabase = getSupabaseAdmin()
   try {
     // Decodificar o token JWT
     const decoded = jwt.verify(params.token, process.env.JWT_SECRET!) as any

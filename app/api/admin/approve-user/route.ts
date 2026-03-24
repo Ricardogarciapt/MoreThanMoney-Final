@@ -1,20 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { sendWelcomeEmail, sendRejectionEmail } from "@/lib/email-service"
 
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Supabase configuration is missing")
-  }
-  
-  return createClient(supabaseUrl, supabaseKey)
-}
-
 export async function POST(request: NextRequest) {
-  const supabase = getSupabaseClient()
+  const supabase = getSupabaseAdmin()
   try {
     const body = await request.json()
     const { userId, action } = body

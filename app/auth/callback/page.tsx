@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import { determinePostLoginRedirect } from "@/lib/role-redirect"
+import { determinePostLoginRedirect, safeInternalRedirectPath } from "@/lib/role-redirect"
+import { ensureMemberProfile } from "@/lib/member-profile"
 import { Loader2, CheckCircle, XCircle } from "lucide-react"
 
 export default function AuthCallbackPage() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
   const [message, setMessage] = useState("A processar autenticação...")
@@ -18,293 +18,132 @@ export default function AuthCallbackPage() {
         setStatus("loading")
         setMessage("A processar autenticação...")
 
-        console.log('🔍 [CALLBACK] Iniciado')
-        console.log('🔍 [CALLBACK] URL completa:', window.location.href)
-        console.log('🔍 [CALLBACK] Hash:', window.location.hash)
-        console.log('🔍 [CALLBACK] Search:', window.location.search)
+        const redirectParam = safeInternalRedirectPath(searchParams.get("redirect"))
 
-        const redirectParam = searchParams.get('redirect')
-        
-        // Função para garantir perfil
-        const ensureProfile = async (session: any) => {
-          try {
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single()
+        const errorParam = searchParams.get("error")
+        const errorDescription = searchParams.get("error_description")
 
-            if (profileError && profileError.code !== 'PGRST116') {
-              console.error('❌ [CALLBACK] Erro ao buscar perfil:', profileError)
-            }
-
-            if (!profile) {
-              console.log('📝 [CALLBACK] Criando perfil...')
-              
-              let autoApprove = true // Default
-              try {
-                const settingsResponse = await fetch('/api/admin/settings')
-                if (settingsResponse.ok) {
-                  const settingsData = await settingsResponse.json()
-                  autoApprove = settingsData?.data?.auto_approve_users ?? true
-                }
-              } catch (settingsError) {
-                console.warn('⚠️ [CALLBACK] Erro ao buscar settings, usando padrão:', settingsError)
-                // autoApprove já é true por padrão
-              }
-              const username = session.user.user_metadata?.name?.replace(/\s+/g, '').toLowerCase() 
-                || session.user.email?.split('@')[0] 
-                || `user${Date.now()}`
-
-              const { error: insertError } = await supabase.from('profiles').insert([{
-                id: session.user.id,
-                email: session.user.email,
-                full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Utilizador',
-                username: username,
-                avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
-                user_type: autoApprove ? 'member' : 'pending',
-                member_category: 'standard',
-                is_active: autoApprove,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }])
-              
-              if (insertError) {
-                console.error('❌ [CALLBACK] Erro ao criar perfil:', insertError)
-              } else {
-                console.log('✅ [CALLBACK] Perfil criado')
-              }
-            } else {
-              console.log('✅ [CALLBACK] Perfil já existe')
-            }
-          } catch (profileError) {
-            console.error('❌ [CALLBACK] Erro crítico ao garantir perfil:', profileError)
-            // Não bloquear o fluxo se criar perfil falhar
-          }
-        }
-
-        // Verificar código OAuth primeiro (PKCE Flow - padrão do Supabase)
-        const code = searchParams.get('code')
-        const errorParam = searchParams.get('error')
-        const errorDescription = searchParams.get('error_description')
-
-        // Se há erro na URL, mostrar mensagem
         if (errorParam) {
-          console.error('❌ [CALLBACK] Erro OAuth:', errorParam, errorDescription)
-          throw new Error(errorDescription || errorParam || 'Erro na autenticação OAuth')
+          console.error("❌ [CALLBACK] Erro OAuth:", errorParam, errorDescription)
+          throw new Error(errorDescription || errorParam || "Erro na autenticação OAuth")
         }
+
+        const code = searchParams.get("code")
 
         if (code) {
-          console.log('✅ [CALLBACK] Código OAuth encontrado')
-          
-          // Verificar se já processámos este código (evitar duplicação)
           const processedCode = sessionStorage.getItem(`processed_code_${code}`)
           if (processedCode) {
-            console.log('⚠️ [CALLBACK] Código já processado, aguardando redirecionamento...')
+            console.log("⚠️ [CALLBACK] Código já processado")
             return
           }
-          
-          // Marcar código como processado
-          sessionStorage.setItem(`processed_code_${code}`, 'true')
-          
+          sessionStorage.setItem(`processed_code_${code}`, "true")
+
           const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-          
+
           if (error) {
-            console.error('❌ [CALLBACK] Erro ao trocar código:', error)
-            console.error('❌ [CALLBACK] Detalhes do erro:', {
-              message: error.message,
-              status: error.status,
-              name: error.name
-            })
-            
-            // Se for erro PKCE, limpar cookies e tentar novamente
-            if (error.message?.toLowerCase().includes('pkce') || 
-                error.message?.toLowerCase().includes('code_verifier') ||
-                error.message?.toLowerCase().includes('code verified')) {
-              console.log('🔄 [CALLBACK] Erro PKCE detectado, limpando estado e redirecionando...')
-              
-              // Limpar cookies relacionados com PKCE e Supabase
-              document.cookie.split(";").forEach((c) => {
-                const cookieName = c.trim().split("=")[0]
-                if (cookieName.includes('code') || 
-                    cookieName.includes('verifier') || 
-                    cookieName.includes('pkce') ||
-                    cookieName.includes('supabase') ||
-                    cookieName.includes('sb-')) {
-                  document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`
-                  document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`
-                }
-              })
-              
-              // Limpar sessionStorage e localStorage relacionado
+            console.error("❌ [CALLBACK] exchangeCodeForSession:", error)
+            const msg = (error.message || "").toLowerCase()
+            if (
+              msg.includes("pkce") ||
+              msg.includes("code_verifier") ||
+              msg.includes("code verified")
+            ) {
               sessionStorage.removeItem(`processed_code_${code}`)
-              localStorage.removeItem('mtm_auth_session')
-              
-              // Limpar sessão do Supabase
+              localStorage.removeItem("mtm_auth_session")
               try {
                 await supabase.auth.signOut()
-              } catch (signOutError) {
-                console.warn('⚠️ [CALLBACK] Erro ao fazer signOut:', signOutError)
+              } catch {
+                /* ignore */
               }
-              
-              // Redirecionar para login com mensagem de erro
               setStatus("error")
               setMessage("Erro de autenticação. Por favor, tenta novamente.")
               setTimeout(() => {
-                window.location.href = '/login?error=pkce_error&message=' + encodeURIComponent('Erro de autenticação. Por favor, tenta fazer login novamente.')
+                window.location.href =
+                  "/login?error=pkce_error&message=" +
+                  encodeURIComponent("Erro de sessão. Tenta iniciar sessão novamente.")
               }, 2000)
               return
             }
-            
-            throw new Error(error.message || 'Erro ao processar código de autenticação')
+            throw new Error(error.message || "Erro ao processar código de autenticação")
           }
 
-          if (data?.session) {
-            console.log('✅ [CALLBACK] Sessão criada:', data.session.user.email)
-            
-            // Sincronizar cache imediatamente
-            const { setCachedSession } = await import('@/lib/auth-cache')
-            setCachedSession(data.session)
-            
-            // Garantir perfil em background (não bloqueia)
-            ensureProfile(data.session).catch(() => {})
-            
-            // Buscar perfil com timeout muito curto (500ms)
-            const profilePromise = supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', data.session.user.id)
-              .single()
-            
-            const profileResult = await Promise.race([
-              profilePromise,
-              new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 500))
-            ])
-            
-            const profile = profileResult.data || null
-            
-            // Redirecionar imediatamente - não esperar por status
-            const redirectTo = determinePostLoginRedirect(profile, redirectParam)
-            const fullRedirectUrl = redirectTo.startsWith('http') ? redirectTo : `${window.location.origin}${redirectTo}`
-            
-            console.log('🔄 [CALLBACK] Redirecionando para:', fullRedirectUrl)
-            window.location.replace(fullRedirectUrl)
-            return
-          } else {
+          if (!data?.session) {
             throw new Error("Sessão não foi criada após trocar código")
           }
-        }
 
-        // Verificar hash (Implicit Flow - menos comum)
-        const hash = window.location.hash
-        if (hash && hash.includes('access_token')) {
-          console.log('✅ [CALLBACK] Implicit Flow detectado')
-          
-          // Delay mínimo
-          await new Promise(resolve => setTimeout(resolve, 50))
-          
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-          
-          if (sessionError) {
-            throw sessionError
-          }
-          
-          if (session) {
-            console.log('✅ [CALLBACK] Sessão do hash:', session.user.email)
-            
-            // Sincronizar cache
-            const { setCachedSession } = await import('@/lib/auth-cache')
-            setCachedSession(session)
-            
-            // Garantir perfil em background
-            ensureProfile(session).catch(() => {})
-            
-            // Buscar perfil com timeout curto
-            const profilePromise = supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single()
-            
-            const profileResult = await Promise.race([
-              profilePromise,
-              new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 500))
-            ])
-            
-            const profile = profileResult.data || null
-            
-            const redirectTo = determinePostLoginRedirect(profile, redirectParam)
-            const fullRedirectUrl = redirectTo.startsWith('http') ? redirectTo : `${window.location.origin}${redirectTo}`
-            
-            window.location.replace(fullRedirectUrl)
-            return
-          }
-        }
+          const { setCachedSession } = await import("@/lib/auth-cache")
+          setCachedSession(data.session)
 
-        // Se não tem código nem hash, verificar sessão existente
-        console.log('🔄 [CALLBACK] Verificando sessão existente...')
-        
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        
-        if (sessionError) {
-          console.error('❌ [CALLBACK] Erro ao verificar sessão:', sessionError)
-        }
-        
-        if (session) {
-          console.log('✅ [CALLBACK] Sessão encontrada:', session.user.email)
-          
-          // Sincronizar cache
-          const { setCachedSession } = await import('@/lib/auth-cache')
-          setCachedSession(session)
-          
-          // Garantir perfil em background
-          ensureProfile(session).catch(() => {})
-          
-          // Buscar perfil com timeout curto
-          const profilePromise = supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
-          
-          const profileResult = await Promise.race([
-            profilePromise,
-            new Promise<any>((resolve) => setTimeout(() => resolve({ data: null }), 500))
-          ])
-          
-          const profile = profileResult.data || null
-          
+          const profile = await ensureMemberProfile(supabase, data.session)
           const redirectTo = determinePostLoginRedirect(profile, redirectParam)
-          const fullRedirectUrl = redirectTo.startsWith('http') ? redirectTo : `${window.location.origin}${redirectTo}`
-          
+          const fullRedirectUrl = redirectTo.startsWith("http")
+            ? redirectTo
+            : `${window.location.origin}${redirectTo}`
+
           window.location.replace(fullRedirectUrl)
           return
         }
 
-        // Se chegou aqui, não há sessão nem código
-        console.error('❌ [CALLBACK] Nenhuma sessão encontrada após processar')
-        console.error('❌ [CALLBACK] Estado da URL:', {
-          hash: window.location.hash,
-          search: window.location.search,
-          pathname: window.location.pathname
-        })
-        
-        throw new Error("Nenhuma sessão encontrada. Verifique se o login foi bem-sucedido.")
+        const hash = window.location.hash
+        if (hash && hash.includes("access_token")) {
+          await new Promise((r) => setTimeout(r, 100))
+          const {
+            data: { session },
+            error: sessionError,
+          } = await supabase.auth.getSession()
 
-      } catch (error: any) {
-        console.error('❌ [CALLBACK] Erro:', error)
+          if (sessionError) throw sessionError
+          if (!session) throw new Error("Sessão não encontrada (implicit flow)")
+
+          const { setCachedSession } = await import("@/lib/auth-cache")
+          setCachedSession(session)
+
+          const profile = await ensureMemberProfile(supabase, session)
+          const redirectTo = determinePostLoginRedirect(profile, redirectParam)
+          const fullRedirectUrl = redirectTo.startsWith("http")
+            ? redirectTo
+            : `${window.location.origin}${redirectTo}`
+
+          window.location.replace(fullRedirectUrl)
+          return
+        }
+
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession()
+
+        if (sessionError) {
+          console.error("❌ [CALLBACK] getSession:", sessionError)
+        }
+
+        if (session) {
+          const { setCachedSession } = await import("@/lib/auth-cache")
+          setCachedSession(session)
+
+          const profile = await ensureMemberProfile(supabase, session)
+          const redirectTo = determinePostLoginRedirect(profile, redirectParam)
+          const fullRedirectUrl = redirectTo.startsWith("http")
+            ? redirectTo
+            : `${window.location.origin}${redirectTo}`
+
+          window.location.replace(fullRedirectUrl)
+          return
+        }
+
+        throw new Error("Nenhuma sessão encontrada. Inicia sessão novamente.")
+      } catch (error: unknown) {
+        console.error("❌ [CALLBACK] Erro:", error)
         setStatus("error")
-        setMessage(error.message || "Erro ao processar autenticação")
-        
-        // Redirecionar mais rápido em caso de erro
+        setMessage(error instanceof Error ? error.message : "Erro ao processar autenticação")
         setTimeout(() => {
-          window.location.href = '/login'
-        }, 2000)
+          window.location.href = "/login"
+        }, 2500)
       }
     }
 
     handleCallback()
-  }, [searchParams, router])
+  }, [searchParams])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black">

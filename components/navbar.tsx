@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
@@ -28,28 +29,14 @@ export default function Navbar() {
   const [openDesktopSubmenu, setOpenDesktopSubmenu] = useState<string | null>(null)
   const [openMobileSubmenu, setOpenMobileSubmenu] = useState<string | null>(null)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+  const desktopCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const desktopAnchorsRef = useRef<Record<string, HTMLButtonElement | null>>({})
+  const [desktopMenuPos, setDesktopMenuPos] = useState<{ left: number; top: number; width: number } | null>(null)
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20)
-    }
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
-
-  useEffect(() => {
-    setIsMenuOpen(false)
-    setOpenDesktopSubmenu(null)
-    setOpenMobileSubmenu(null)
-  }, [pathname])
-
-  useEffect(() => {
-    document.body.style.overflow = isMenuOpen ? "hidden" : ""
-
-    return () => {
-      document.body.style.overflow = ""
-    }
-  }, [isMenuOpen])
+  const DESKTOP_NAV_Z = 2147483640
+  const DESKTOP_MENU_Z = 2147483646
+  const MOBILE_OVERLAY_Z = 2147483647
 
   const navigation: NavItem[] = [
     {
@@ -84,15 +71,15 @@ export default function Navbar() {
         { name: "Portefólios", href: "/portfolios" },
       ],
     },
-    { 
-      name: "Onboarding", 
+    {
+      name: "Onboarding",
       href: "/onboarding",
-      icon: Rocket
+      icon: Rocket,
     },
-    { 
-      name: "Início Rápido", 
+    {
+      name: "Início Rápido",
       href: "/fast-start",
-      icon: Zap
+      icon: Zap,
     },
     {
       name: "MTM Studio",
@@ -102,30 +89,158 @@ export default function Navbar() {
     },
   ]
 
-  const closeMenu = () => {
+  const closeMenu = useCallback(() => {
     setIsMenuOpen(false)
     setOpenMobileSubmenu(null)
-  }
+  }, [])
 
-  const isActive = (href: string) => {
+  const clearDesktopCloseTimer = useCallback(() => {
+    if (desktopCloseTimerRef.current) {
+      clearTimeout(desktopCloseTimerRef.current)
+      desktopCloseTimerRef.current = null
+    }
+  }, [])
+
+  const scheduleCloseDesktopSubmenu = useCallback(() => {
+    clearDesktopCloseTimer()
+    desktopCloseTimerRef.current = setTimeout(() => {
+      setOpenDesktopSubmenu(null)
+      desktopCloseTimerRef.current = null
+    }, 220)
+  }, [clearDesktopCloseTimer])
+
+  const openDesktopItem = useMemo(
+    () => navigation.find((item) => item.name === openDesktopSubmenu) || null,
+    [navigation, openDesktopSubmenu]
+  )
+
+  const updateDesktopMenuPosition = useCallback((itemName: string | null) => {
+    if (!itemName) {
+      setDesktopMenuPos(null)
+      return
+    }
+    const btn = desktopAnchorsRef.current[itemName]
+    if (!btn) return
+    const rect = btn.getBoundingClientRect()
+    setDesktopMenuPos({
+      left: Math.max(12, rect.left),
+      top: rect.bottom + 8,
+      width: 224,
+    })
+  }, [])
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20)
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
+
+  useEffect(() => {
+    closeMenu()
+    setOpenDesktopSubmenu(null)
+    setDesktopMenuPos(null)
+  }, [pathname])
+
+  /* No mobile, abrir submenu Educação em rotas de live */
+  useEffect(() => {
+    const onLive =
+      pathname?.startsWith("/live-sessions") ||
+      pathname === "/live" ||
+      Boolean(pathname?.startsWith("/live/"))
+    if (isMenuOpen && onLive) {
+      setOpenMobileSubmenu("Educação")
+    }
+  }, [isMenuOpen, pathname])
+
+  useEffect(() => () => clearDesktopCloseTimer(), [clearDesktopCloseTimer])
+
+  useEffect(() => {
+    document.body.style.overflow = isMenuOpen ? "hidden" : ""
+
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [isMenuOpen])
+
+  /** Rota interna ativa (ignora links externos). */
+  const isRouteActive = (href: string, external?: boolean) => {
+    if (external || href.startsWith("http")) return false
+    if (!pathname) return false
     if (href === "/new-landing") {
       return pathname === "/" || pathname === "/new-landing"
     }
-    return pathname === href || pathname.startsWith(href + "/")
+    if (href === "/live-sessions") {
+      return (
+        pathname === "/live-sessions" ||
+        pathname.startsWith("/live-sessions/") ||
+        pathname === "/live" ||
+        pathname.startsWith("/live/")
+      )
+    }
+    return pathname === href || pathname.startsWith(`${href}/`)
+  }
+
+  const isParentActive = (item: NavItem) => {
+    if (!item.submenu) return isRouteActive(item.href, item.external)
+    if (isRouteActive(item.href, item.external)) return true
+    return item.submenu.some((s) => isRouteActive(s.href, s.external))
   }
 
   const toggleMobileSubmenu = (name: string) => {
     setOpenMobileSubmenu((prev) => (prev === name ? null : name))
   }
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return
+      closeMenu()
+      setOpenDesktopSubmenu(null)
+      setDesktopMenuPos(null)
+    }
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (!openDesktopSubmenu) return
+      const anchor = desktopAnchorsRef.current[openDesktopSubmenu]
+      const target = e.target as Node
+      const menu = document.getElementById("navbar-desktop-submenu")
+      if (anchor?.contains(target)) return
+      if (menu?.contains(target)) return
+      setOpenDesktopSubmenu(null)
+      setDesktopMenuPos(null)
+    }
+
+    const onLayoutChange = () => updateDesktopMenuPosition(openDesktopSubmenu)
+
+    window.addEventListener("keydown", onKey)
+    window.addEventListener("resize", onLayoutChange)
+    window.addEventListener("scroll", onLayoutChange, true)
+    document.addEventListener("pointerdown", onPointerDown)
+
+    return () => {
+      window.removeEventListener("keydown", onKey)
+      window.removeEventListener("resize", onLayoutChange)
+      window.removeEventListener("scroll", onLayoutChange, true)
+      document.removeEventListener("pointerdown", onPointerDown)
+    }
+  }, [openDesktopSubmenu, closeMenu, updateDesktopMenuPosition])
+
+  useEffect(() => {
+    updateDesktopMenuPosition(openDesktopSubmenu)
+  }, [openDesktopSubmenu, updateDesktopMenuPosition])
+
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-[30000] transition-all duration-300 ${
+        className={`fixed left-0 right-0 top-0 isolate transition-all duration-300 ${
           isScrolled
             ? "bg-gradient-to-r from-black via-gray-900 to-black backdrop-blur-md border-b border-mtm-primary/30 shadow-lg shadow-mtm-primary/20"
             : "bg-gradient-to-r from-black/95 via-gray-900/95 to-black/95 backdrop-blur-md border-b border-mtm-primary/20"
         }`}
+        style={{ zIndex: DESKTOP_NAV_Z }}
       >
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-16 md:h-20">
@@ -148,16 +263,28 @@ export default function Navbar() {
                 return item.submenu ? (
                   <div
                     key={item.name}
-                    className="relative group"
-                    onMouseEnter={() => setOpenDesktopSubmenu(item.name)}
-                    onMouseLeave={() => setOpenDesktopSubmenu(null)}
+                    className="group relative"
+                    onMouseEnter={() => {
+                      clearDesktopCloseTimer()
+                      setOpenDesktopSubmenu(item.name)
+                    }}
+                    onMouseLeave={scheduleCloseDesktopSubmenu}
                   >
                     <button
+                      ref={(el) => {
+                        desktopAnchorsRef.current[item.name] = el
+                      }}
                       type="button"
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
-                        isActive(item.href)
-                          ? "text-mtm-primary bg-mtm-primary/10 shadow-lg shadow-mtm-primary/20"
-                          : "text-gray-300 hover:text-mtm-primary hover:bg-mtm-primary/5"
+                      aria-expanded={openDesktopSubmenu === item.name}
+                      aria-haspopup="menu"
+                      onClick={() => {
+                        clearDesktopCloseTimer()
+                        setOpenDesktopSubmenu((prev) => (prev === item.name ? null : item.name))
+                      }}
+                      className={`flex items-center space-x-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                        isParentActive(item)
+                          ? "bg-mtm-primary/10 text-mtm-primary shadow-lg shadow-mtm-primary/20"
+                          : "text-gray-300 hover:bg-mtm-primary/5 hover:text-mtm-primary"
                       }`}
                     >
                       <Icon className="h-4 w-4" />
@@ -165,27 +292,6 @@ export default function Navbar() {
                       <ChevronDown className={`h-4 w-4 transition-transform ${openDesktopSubmenu === item.name ? "rotate-180" : ""}`} />
                     </button>
 
-                    {openDesktopSubmenu === item.name && (
-                      <div className="absolute left-0 mt-2 w-56 rounded-xl shadow-2xl backdrop-blur-lg border border-mtm-primary/30 ring-1 ring-mtm-primary/20 z-50 animate-in fade-in slide-in-from-top-2 duration-200 bg-gradient-to-r from-black via-gray-900 to-black">
-                        <div className="py-2">
-                          {item.submenu.map((subitem) => (
-                            <Link
-                              key={subitem.name}
-                              href={subitem.href}
-                              target={subitem.external ? "_blank" : undefined}
-                              rel={subitem.external ? "noopener noreferrer" : undefined}
-                              className={`block px-4 py-2.5 text-sm transition-all duration-200 ${
-                                isActive(subitem.href)
-                                  ? "text-mtm-primary bg-mtm-primary/10 border-l-2 border-mtm-primary"
-                                  : "text-gray-300 hover:text-mtm-primary hover:bg-mtm-primary/5 hover:border-l-2 hover:border-mtm-primary/50"
-                              }`}
-                            >
-                              {subitem.name}
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <Link
@@ -194,7 +300,7 @@ export default function Navbar() {
                     target={item.external ? "_blank" : undefined}
                     rel={item.external ? "noopener noreferrer" : undefined}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
-                      isActive(item.href)
+                      isRouteActive(item.href, item.external)
                         ? 'text-mtm-primary bg-mtm-primary/10 shadow-lg shadow-mtm-primary/20'
                         : 'text-gray-300 hover:text-mtm-primary hover:bg-mtm-primary/5'
                     }`}
@@ -224,8 +330,8 @@ export default function Navbar() {
           </div>
         </div>
 
-        {isMenuOpen && (
-          <div className="lg:hidden fixed inset-0 z-[32000]">
+        {isClient && isMenuOpen && createPortal(
+          <div className="fixed inset-0 lg:hidden" style={{ zIndex: MOBILE_OVERLAY_Z }}>
             <button
               className="absolute inset-0 bg-black/70 backdrop-blur-sm"
               aria-label="Fechar menu"
@@ -263,7 +369,7 @@ export default function Navbar() {
                         type="button"
                         onClick={() => toggleMobileSubmenu(item.name)}
                         className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-base font-medium transition-all ${
-                          isActive(item.href)
+                          isParentActive(item)
                             ? "text-mtm-primary bg-mtm-primary/10 border border-mtm-primary/30"
                             : "text-gray-300 hover:text-mtm-primary hover:bg-mtm-primary/5 border border-transparent"
                         }`}
@@ -284,7 +390,7 @@ export default function Navbar() {
                               rel={subitem.external ? "noopener noreferrer" : undefined}
                               onClick={closeMenu}
                               className={`block px-4 py-2.5 rounded-lg text-sm transition-all ${
-                                isActive(subitem.href)
+                                isRouteActive(subitem.href, subitem.external)
                                   ? "text-mtm-primary bg-mtm-primary/10"
                                   : "text-gray-400 hover:text-mtm-primary hover:bg-mtm-primary/5"
                               }`}
@@ -303,7 +409,7 @@ export default function Navbar() {
                       rel={item.external ? "noopener noreferrer" : undefined}
                       onClick={closeMenu}
                       className={`flex items-center space-x-3 px-4 py-3 rounded-xl text-base font-medium transition-all ${
-                        isActive(item.href)
+                        isRouteActive(item.href, item.external)
                           ? "text-mtm-primary bg-mtm-primary/10 border border-mtm-primary/30"
                           : "text-gray-300 hover:text-mtm-primary hover:bg-mtm-primary/5 border border-transparent"
                       }`}
@@ -322,9 +428,48 @@ export default function Navbar() {
                 <UserDropdown />
               </div>
             </aside>
-          </div>
+          </div>,
+          document.body
         )}
       </nav>
+
+      {isClient && openDesktopSubmenu && openDesktopItem?.submenu && desktopMenuPos
+        ? createPortal(
+            <div
+              id="navbar-desktop-submenu"
+              className="fixed"
+              style={{
+                zIndex: DESKTOP_MENU_Z,
+                top: desktopMenuPos.top,
+                left: desktopMenuPos.left,
+                width: desktopMenuPos.width,
+              }}
+              onMouseEnter={clearDesktopCloseTimer}
+              onMouseLeave={scheduleCloseDesktopSubmenu}
+            >
+              <div className="rounded-xl border border-mtm-primary/30 bg-gradient-to-b from-black via-gray-950 to-black shadow-2xl shadow-black/50 ring-1 ring-mtm-primary/10 backdrop-blur-lg">
+                <div className="py-1.5">
+                  {openDesktopItem.submenu.map((subitem) => (
+                    <Link
+                      key={subitem.name}
+                      href={subitem.href}
+                      target={subitem.external ? "_blank" : undefined}
+                      rel={subitem.external ? "noopener noreferrer" : undefined}
+                      className={`block px-4 py-2.5 text-sm transition-all duration-200 ${
+                        isRouteActive(subitem.href, subitem.external)
+                          ? "text-mtm-primary bg-mtm-primary/10 border-l-2 border-mtm-primary"
+                          : "text-gray-300 hover:text-mtm-primary hover:bg-mtm-primary/5 hover:border-l-2 hover:border-mtm-primary/50"
+                      }`}
+                    >
+                      {subitem.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
 
       <div className="h-16 md:h-20" />
     </>

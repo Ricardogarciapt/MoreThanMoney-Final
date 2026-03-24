@@ -123,10 +123,9 @@ export default function RegisterPage() {
             expiryDate.setHours(expiryDate.getHours() + 48) // 48 horas para guest
           }
           
-          // Criar perfil com trial config
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert([{
+          // Upsert: substitui o perfil mínimo criado pelo trigger em auth.users
+          const { error: profileError } = await supabase.from('profiles').upsert(
+            {
               id: data.user.id,
               email: formData.email,
               full_name: formData.full_name,
@@ -138,18 +137,16 @@ export default function RegisterPage() {
               is_active: true,
               trial_expires_at: expiryDate.toISOString(),
               trial_expired: false,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }])
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'id' }
+          )
 
           if (profileError) {
-            console.error('❌ Erro ao criar perfil:', profileError)
-            
-            if (profileError.code !== '23505') { // Ignore erro de duplicação
-              setError('Erro ao criar perfil: ' + profileError.message)
-              setIsLoading(false)
-              return
-            }
+            console.error('❌ Erro ao guardar perfil:', profileError)
+            setError('Erro ao criar perfil: ' + profileError.message)
+            setIsLoading(false)
+            return
           }
 
           const validityMessage = accountType === 'trial' ? '7 dias' : '48 horas'
@@ -240,16 +237,16 @@ export default function RegisterPage() {
           
           const { error: profileError } = await supabase
             .from('profiles')
-            .insert([profileData])
+            .upsert(
+              { ...profileData, updated_at: new Date().toISOString() },
+              { onConflict: 'id' }
+            )
 
           if (profileError) {
-            console.error('❌ Erro ao criar perfil:', profileError)
-            
-            if (profileError.code !== '23505') { // Ignore erro de duplicação
-              setError('Erro ao criar perfil: ' + profileError.message)
-              setIsLoading(false)
-              return
-            }
+            console.error('❌ Erro ao guardar perfil:', profileError)
+            setError('Erro ao criar perfil: ' + profileError.message)
+            setIsLoading(false)
+            return
           }
 
           console.log('✅ Conta criada com sucesso!')

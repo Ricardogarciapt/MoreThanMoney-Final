@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { MessageCircle, X, Send, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { usePathname, useSearchParams } from "next/navigation"
@@ -13,19 +13,26 @@ interface Message {
 }
 
 export default function AIAssistantFloating() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [message, setMessage] = useState("")
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: 'Olá! Sou o seu assistente de trading. Posso ajudar com estratégias DCA, análise de portfólio e gestão de risco. Como posso ajudar?',
-      timestamp: new Date()
-    }
-  ])
-  const [loading, setLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const currentTab = searchParams?.get("tab") || ""
+
+  const [isOpen, setIsOpen] = useState(false)
+  const [message, setMessage] = useState("")
+  const welcomeText = useMemo(() => {
+    if (pathname?.includes("/app-mobile")) {
+      return `Olá! Sou o assistente MoreThanMoney nesta app.
+
+Ajudo com Mentor 72h, Rising Star / Bronze Star (700 CV por perna), leads, 3-way, onboarding / Fast Start e, na tab Portfólio, DCA e visão geral de risco.
+
+Usa uma sugestão abaixo ou escreve a tua pergunta.`
+    }
+    return `Olá! Sou o assistente MoreThanMoney: execução (onboarding, Fast Start, mentor), negócio, trading/DCA, mindset e fitness. Como posso ajudar?`
+  }, [pathname])
+
+  const [messages, setMessages] = useState<Message[]>([])
+  const [loading, setLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -35,10 +42,34 @@ export default function AIAssistantFloating() {
     scrollToBottom()
   }, [messages])
 
-  const handleSend = async () => {
-    if (!message.trim() || loading) return
+  useEffect(() => {
+    setMessages([{ role: "assistant", content: welcomeText, timestamp: new Date() }])
+  }, [welcomeText])
 
-    const userMessage = message.trim()
+  const starterPrompts = useMemo(() => {
+    if (pathname?.includes("/app-mobile") && currentTab === "mentor") {
+      return [
+        "Mostra-me as 3 próximas ações para concluir as primeiras 72h.",
+        "Como chego a Rising Star com um plano diário simples?",
+        "Dá-me um script para 10 leads hoje + 3 follow-ups.",
+      ]
+    }
+    if (pathname?.includes("/app-mobile") && currentTab === "live") {
+      return [
+        "Que live devo ver hoje para acelerar o meu onboarding?",
+        "Resume os pontos mais importantes da live para executar hoje.",
+      ]
+    }
+    return [
+      "Quero um plano simples para as próximas 24 horas.",
+      "Ajuda-me a organizar onboarding + fast-start sem bloquear.",
+      "Que pergunta devo fazer ao mentor na próxima call?",
+    ]
+  }, [pathname, currentTab])
+
+  const sendMessage = async (inputMessage: string) => {
+    const userMessage = inputMessage.trim()
+    if (!userMessage || loading) return
     setMessage("")
     setLoading(true)
 
@@ -62,8 +93,7 @@ export default function AIAssistantFloating() {
 
     try {
       // Check context for better AI responses
-      const includeDCA = pathname?.includes('portfolio') || searchParams?.get('tab') === 'portfolio'
-      const isMindsetFitness = pathname?.includes('mindset-fitness') || pathname?.includes('app-mobile')
+      const includeDCA = pathname?.includes('portfolio') || currentTab === 'portfolio'
 
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -76,7 +106,12 @@ export default function AIAssistantFloating() {
           context: { 
             include_dca: includeDCA,
             pathname: pathname || '',
-            tab: searchParams?.get('tab') || ''
+            tab: currentTab,
+            mentor_mode: currentTab === "mentor",
+            onboarding_focus:
+              pathname?.includes("/app-mobile") ||
+              pathname?.includes("/onboarding") ||
+              pathname?.includes("/fast-start"),
           }
         })
       })
@@ -113,10 +148,14 @@ export default function AIAssistantFloating() {
     } catch (error) {
       const responseTime = Date.now() - startTime
       console.error('❌ [AI ASSISTANT] Erro:', error)
-      
+      const errMsg = error instanceof Error ? error.message : ""
+      const fallback =
+        errMsg.includes("401") || errMsg.includes("autenticado")
+          ? "Precisas de ter sessão iniciada para usar o assistente."
+          : "Não consegui ligar ao servidor neste momento. Verifica a ligação e tenta outra vez, ou reformula a pergunta."
       const errorMessage: Message = {
         role: 'assistant',
-        content: 'Desculpe, ocorreu um erro. Por favor, tente novamente.',
+        content: fallback,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])
@@ -134,6 +173,10 @@ export default function AIAssistantFloating() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleSend = async () => {
+    await sendMessage(message)
   }
 
   if (!isOpen) {
@@ -192,6 +235,19 @@ export default function AIAssistantFloating() {
 
       {/* Input Area */}
       <div className="p-4 border-t border-gray-800">
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {starterPrompts.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              disabled={loading}
+              onClick={() => sendMessage(prompt)}
+              className="rounded-full border border-[#D2A63C]/40 bg-[#D2A63C]/10 px-2.5 py-1 text-[11px] text-[#D2A63C] hover:bg-[#D2A63C]/20 disabled:opacity-60"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
         <div className="flex gap-2">
           <input
             type="text"

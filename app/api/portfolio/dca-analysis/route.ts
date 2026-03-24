@@ -67,7 +67,7 @@ async function fetchNewsData(symbol: string) {
 // Função para analisar sentiment com OpenAI
 async function analyzeSentiment(articles: any[]) {
   try {
-    const openaiKey = process.env.OPENAI_API_KEY
+    const openaiKey = process.env.OPENAI_API_KEY?.trim()
     if (!openaiKey || articles.length === 0) {
       return {
         shortTermSentiment: { category: 'Neutral', score: 0, rationale: 'Sem dados' },

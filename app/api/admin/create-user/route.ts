@@ -119,26 +119,27 @@ export async function POST(request: NextRequest) {
 
       const { error: profileError } = await supabase
         .from('profiles')
-        .insert({
-          id: authUser.user.id,
-          email: sanitizedEmail,
-          username: sanitizedUsername,
-          full_name: sanitizedFullName,
-          phone: phone ? sanitizeString(phone) : null,
-          whatsapp: whatsapp ? sanitizeString(whatsapp) : null,
-          user_type: user_type || 'member',
-          membership_level: membership_level || 'basic',
-          is_active: true,
-          is_verified: true, // Verificado por ser criação manual
-          trial_expires_at: trialExpiresAt,
-          trial_expired: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .upsert(
+          {
+            id: authUser.user.id,
+            email: sanitizedEmail,
+            username: sanitizedUsername,
+            full_name: sanitizedFullName,
+            phone: phone ? sanitizeString(phone) : null,
+            whatsapp: whatsapp ? sanitizeString(whatsapp) : null,
+            user_type: user_type || 'member',
+            membership_level: membership_level || 'basic',
+            is_active: true,
+            is_verified: true,
+            trial_expires_at: trialExpiresAt,
+            trial_expired: false,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        )
 
       if (profileError) {
-        console.error('Erro ao criar perfil:', profileError)
-        // Tentar deletar o auth user se o perfil falhar
+        console.error('Erro ao guardar perfil:', profileError)
         await supabase.auth.admin.deleteUser(authUser.user.id)
         return NextResponse.json({ error: 'Erro ao criar perfil do utilizador' }, { status: 500 })
       }

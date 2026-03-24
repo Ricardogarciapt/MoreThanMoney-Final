@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
-import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
+import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
 import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-auth"
+import { getLmsChatRetentionCutoffIso } from "@/lib/lms-chat-retention"
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -13,11 +14,15 @@ export async function GET(
   try {
     const { id } = await params
     const limit = Math.min(200, Number(new URL(request.url).searchParams.get("limit") || 80))
+    const cutoff = getLmsChatRetentionCutoffIso()
+
+    await supabaseAdmin.from("lms_stream_messages").delete().eq("stream_id", id).lt("created_at", cutoff)
 
     const { data, error } = await supabaseAdmin
       .from("lms_stream_messages")
       .select("*")
       .eq("stream_id", id)
+      .gte("created_at", cutoff)
       .order("created_at", { ascending: false })
       .limit(limit)
 
@@ -100,6 +105,47 @@ export async function POST(
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ success: true, data })
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })
+  }
+}
+
+/** Apaga todo o histórico do chat deste canal (educador dono ou admin). */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: streamId } = await params
+    if (!streamId) {
+      return NextResponse.json({ error: "streamId inválido" }, { status: 400 })
+    }
+
+    const cookieStore = await cookies()
+    const educatorToken = cookieStore.get(getEducatorCookieName())?.value
+    const educator = educatorToken ? verifyEducatorToken(educatorToken) : null
+
+    let allowed = false
+
+    if (educator) {
+      const { data: stream } = await supabaseAdmin
+        .from("lms_streams")
+        .select("id")
+        .eq("id", streamId)
+        .eq("educator_id", educator.educatorId)
+        .maybeSingle()
+      allowed = Boolean(stream)
+    }
+
+    if (!allowed) {
+      const adminGate = await requireAdmin(request)
+      if (adminGate !== null) return adminGate
+      allowed = true
+    }
+
+    const { error } = await supabaseAdmin.from("lms_stream_messages").delete().eq("stream_id", streamId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })
   }

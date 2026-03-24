@@ -26,7 +26,8 @@ import {
   ChevronRight,
   Smartphone,
   Bell,
-  MessageCircle
+  MessageCircle,
+  Video,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -611,6 +612,20 @@ export default function UserDropdown() {
             <DropdownMenuItem className="cursor-pointer text-gray-300 hover:text-white hover:bg-[#D2A63C]/10 focus:bg-[#D2A63C]/10 focus:text-white">
               <TrendingUp className="mr-3 h-4 w-4" />
               <span>Ideias de Trading</span>
+            </DropdownMenuItem>
+          </Link>
+
+          <Link href="/app-mobile?tab=live">
+            <DropdownMenuItem className="cursor-pointer text-gray-300 hover:text-white hover:bg-[#D2A63C]/10 focus:bg-[#D2A63C]/10 focus:text-white">
+              <Video className="mr-3 h-4 w-4 text-red-400" />
+              <span>Live Sessions (app)</span>
+            </DropdownMenuItem>
+          </Link>
+
+          <Link href="/live-sessions">
+            <DropdownMenuItem className="cursor-pointer text-gray-300 hover:text-white hover:bg-[#D2A63C]/10 focus:bg-[#D2A63C]/10 focus:text-white">
+              <Video className="mr-3 h-4 w-4" />
+              <span>Live Sessions (site)</span>
             </DropdownMenuItem>
           </Link>
 

@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Supabase configuration is missing")
-  }
-  
-  return createClient(supabaseUrl, supabaseKey)
-}
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 // Get AI insights and suggestions for admin dashboard
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseAdmin()
     const { searchParams } = new URL(request.url)
     const range = searchParams.get('range') || '7days'
     
@@ -81,7 +70,7 @@ export async function GET(request: NextRequest) {
       }, {} as Record<string, number>)
 
     // Generate suggestions using OpenAI
-    const openaiKey = process.env.OPENAI_API_KEY
+    const openaiKey = process.env.OPENAI_API_KEY?.trim()
     let suggestions: string[] = []
 
     if (openaiKey && totalEvents > 0) {

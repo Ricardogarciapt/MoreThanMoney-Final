@@ -16,8 +16,11 @@ import {
   Menu,
   Rocket,
   ExternalLink,
+  Video,
 } from "lucide-react"
 import MobileSidebar from "@/components/mobile/mobile-sidebar"
+import LiveSessionsMobile from "@/components/mobile/live-sessions-mobile"
+import MentorMobile from "@/components/mobile/mentor-mobile"
 import { useAuth } from "@/contexts/auth-context"
 
 function AppMobileContent() {
@@ -119,7 +122,7 @@ function AppMobileContent() {
 
   useEffect(() => {
     const tab = searchParams.get("tab")
-    if (tab && ["social", "portfolio", "scanner", "studio"].includes(tab)) {
+    if (tab && ["social", "portfolio", "scanner", "studio", "live", "mentor"].includes(tab)) {
       setActiveTab(tab)
     }
   }, [searchParams])
@@ -158,7 +161,7 @@ function AppMobileContent() {
     const isLeftSwipe = distance > 50
     const isRightSwipe = distance < -50
 
-    const tabs = ['social', 'portfolio', 'scanner', 'studio']
+    const tabs = ['social', 'live', 'mentor', 'studio', 'portfolio', 'scanner']
     const currentIndex = tabs.indexOf(activeTab)
 
     if (isLeftSwipe && currentIndex < tabs.length - 1) {
@@ -263,8 +266,16 @@ function AppMobileContent() {
               <SocialFeed />
             </TabsContent>
 
+            <TabsContent value="live" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
+              <LiveSessionsMobile />
+            </TabsContent>
+
             <TabsContent value="portfolio" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
               <PortfolioMobile />
+            </TabsContent>
+
+            <TabsContent value="mentor" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
+              <MentorMobile />
             </TabsContent>
 
             <TabsContent value="scanner" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
@@ -296,56 +307,68 @@ function AppMobileContent() {
         </div>
 
         {/* Bottom Navigation - FIXA NO FUNDO */}
-        <div 
-          className="fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-gray-800 px-2 py-2" 
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}
+        <div
+          className="fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-gray-800 px-1 py-1.5"
+          style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.25rem" }}
         >
           <button
-            onClick={() => handleTabChange('social')}
-            className={`py-3 rounded-lg transition-all relative ${
-              activeTab === 'social'
-                ? 'bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]'
-                : 'text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent'
+            onClick={() => handleTabChange("social")}
+            className={`py-2 rounded-lg transition-all relative ${
+              activeTab === "social"
+                ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
+                : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
             }`}
           >
-            <Users className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'social' ? 'text-[#D2A63C]' : ''}`} />
-            <div className={`text-[10px] font-medium ${activeTab === 'social' ? 'text-[#D2A63C]' : ''}`}>Social</div>
+            <Users className={`w-4 h-4 mx-auto mb-0.5 ${activeTab === "social" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[9px] font-medium leading-tight ${activeTab === "social" ? "text-[#D2A63C]" : ""}`}>Social</div>
           </button>
-          
+
           <button
-            onClick={() => handleTabChange('studio')}
-            className={`py-3 rounded-lg transition-all relative ${
-              activeTab === 'studio'
-                ? 'bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]'
-                : 'text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent'
+            onClick={() => handleTabChange("live")}
+            className={`py-2 rounded-lg transition-all relative ${
+              activeTab === "live"
+                ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
+                : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
             }`}
           >
-            <Rocket className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'studio' ? 'text-[#D2A63C]' : ''}`} />
-            <div className={`text-[10px] font-medium ${activeTab === 'studio' ? 'text-[#D2A63C]' : ''}`}>Studio</div>
+            <Video className={`w-4 h-4 mx-auto mb-0.5 ${activeTab === "live" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[9px] font-medium leading-tight ${activeTab === "live" ? "text-[#D2A63C]" : ""}`}>Ao vivo</div>
           </button>
-          
+
           <button
-            onClick={() => handleTabChange('portfolio')}
-            className={`py-3 rounded-lg transition-all relative ${
-              activeTab === 'portfolio'
-                ? 'bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]'
-                : 'text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent'
+            onClick={() => handleTabChange("studio")}
+            className={`py-2 rounded-lg transition-all relative ${
+              activeTab === "studio"
+                ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
+                : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
             }`}
           >
-            <Wallet className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'portfolio' ? 'text-[#D2A63C]' : ''}`} />
-            <div className={`text-[10px] font-medium ${activeTab === 'portfolio' ? 'text-[#D2A63C]' : ''}`}>Portfólio</div>
+            <Rocket className={`w-4 h-4 mx-auto mb-0.5 ${activeTab === "studio" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[9px] font-medium leading-tight ${activeTab === "studio" ? "text-[#D2A63C]" : ""}`}>Studio</div>
           </button>
-          
+
           <button
-            onClick={() => handleTabChange('scanner')}
-            className={`py-3 rounded-lg transition-all relative ${
-              activeTab === 'scanner'
-                ? 'bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]'
-                : 'text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent'
+            onClick={() => handleTabChange("portfolio")}
+            className={`py-2 rounded-lg transition-all relative ${
+              activeTab === "portfolio"
+                ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
+                : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
             }`}
           >
-            <BarChart3 className={`w-5 h-5 mx-auto mb-1 ${activeTab === 'scanner' ? 'text-[#D2A63C]' : ''}`} />
-            <div className={`text-[10px] font-medium ${activeTab === 'scanner' ? 'text-[#D2A63C]' : ''}`}>Scanner</div>
+            <Wallet className={`w-4 h-4 mx-auto mb-0.5 ${activeTab === "portfolio" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[9px] font-medium leading-tight ${activeTab === "portfolio" ? "text-[#D2A63C]" : ""}`}>Portfólio</div>
+          </button>
+
+          <button
+            onClick={() => handleTabChange("scanner")}
+            className={`py-2 rounded-lg transition-all relative ${
+              activeTab === "scanner"
+                ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
+                : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
+            }`}
+          >
+            <BarChart3 className={`w-4 h-4 mx-auto mb-0.5 ${activeTab === "scanner" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[9px] font-medium leading-tight ${activeTab === "scanner" ? "text-[#D2A63C]" : ""}`}>Scanner</div>
           </button>
         </div>
       </main>

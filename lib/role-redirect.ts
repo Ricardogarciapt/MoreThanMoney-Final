@@ -2,25 +2,50 @@
  * Função para determinar o redirecionamento após login baseado em user_type e member_category
  */
 
+/** Alinhado com public.profiles + checks de rota */
 export interface UserProfile {
+  id?: string
+  email?: string
+  full_name?: string
+  username?: string
+  avatar_url?: string
+  phone?: string
+  whatsapp?: string
+  created_at?: string
   user_type?: string
   member_category?: string
   is_active?: boolean
   trial_expired?: boolean
 }
 
+/** Evita open redirect: só caminhos relativos internos. */
+export function safeInternalRedirectPath(path: string | null | undefined): string | null {
+  if (!path || typeof path !== "string") return null
+  const p = path.trim()
+  if (!p.startsWith("/") || p.startsWith("//")) return null
+  return p
+}
+
 export function determinePostLoginRedirect(
   profile: UserProfile | null,
   requestedRedirect?: string | null
 ): string {
+  const safeRequested = safeInternalRedirectPath(requestedRedirect)
+
+  // Sem perfil ainda (OAuth lento, rede, ou perfil em criação): NÃO tratar como "pending".
+  // Antes: !profile?.is_active era true com profile null → mensagem falsa de aprovação.
+  if (!profile) {
+    return safeRequested ?? "/member-area"
+  }
+
   // Se tem redirect específico e é admin, respeitar
-  if (requestedRedirect && profile?.user_type === 'admin') {
-    return requestedRedirect
+  if (safeRequested && profile.user_type === "admin") {
+    return safeRequested
   }
 
   // ADMIN - Redirecionar para admin ou redirect solicitado
-  if (profile?.user_type === 'admin') {
-    return requestedRedirect || '/admin'
+  if (profile.user_type === "admin") {
+    return safeRequested || "/admin"
   }
 
   // VIP - Redirecionar para app-mobile (acesso total)
@@ -53,9 +78,9 @@ export function determinePostLoginRedirect(
     return '/new-landing'
   }
 
-  // PENDING - Aguardando aprovação
-  if (profile?.user_type === 'pending' || !profile?.is_active) {
-    return '/success?message=Aguardando+aprovação+administrativa'
+  // PENDING / conta desativada — só com perfil carregado
+  if (profile.user_type === "pending" || profile.is_active === false) {
+    return "/success?message=Aguardando+aprovação+administrativa"
   }
 
   // INACTIVE

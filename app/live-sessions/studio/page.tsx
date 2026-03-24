@@ -1,16 +1,16 @@
 import EducatorStudio from "@/components/live/educator-studio"
+import { LiveSessionsShell } from "@/components/live/live-sessions-shell"
 
 export default function LiveSessionsStudioPage() {
   return (
-    <main className="min-h-screen bg-black text-white px-4 py-6 md:px-8">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-2xl md:text-3xl font-bold text-[#D2A63C] mb-2">Live Sessions Studio</h1>
-        <p className="text-sm text-gray-300 mb-6">
-          Login independente para educadores com gestão de RTMPS/OBS key e estado online/offline.
-        </p>
+    <LiveSessionsShell
+      title="Studio do educador"
+      showEducatorLink={false}
+      subtitle="Só vês os teus canais e chaves RTMP/OBS. Gestão global (academias oficiais, educadores) em Admin → Educação / LMS."
+    >
+      <div className="mx-auto max-w-5xl">
         <EducatorStudio />
       </div>
-    </main>
+    </LiveSessionsShell>
   )
 }
-

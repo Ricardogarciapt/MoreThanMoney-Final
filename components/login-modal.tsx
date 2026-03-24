@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
+import { determinePostLoginRedirect } from "@/lib/role-redirect"
+import { ensureMemberProfile } from "@/lib/member-profile"
 import { Loader2 } from "lucide-react"
 
 interface LoginModalProps {
@@ -48,13 +50,13 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
       }
 
       if (data.session) {
-        // Sincronizar cache imediatamente
         const { setCachedSession } = await import('@/lib/auth-cache')
         setCachedSession(data.session)
-        
+        const profile = await ensureMemberProfile(supabase, data.session)
+        const next = determinePostLoginRedirect(profile, null)
+        const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
         onClose()
-        // Usar replace para ser mais rápido
-        window.location.replace("/member-area")
+        window.location.replace(url)
       }
     } catch (err: any) {
       setError(err.message || "Ocorreu um erro ao fazer login. Tente novamente.")

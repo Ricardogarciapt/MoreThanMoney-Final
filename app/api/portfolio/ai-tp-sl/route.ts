@@ -94,7 +94,7 @@ async function analyzeTPSLWithAI(
   historicalData: any
 ): Promise<any> {
   try {
-    const openaiKey = process.env.OPENAI_API_KEY
+    const openaiKey = process.env.OPENAI_API_KEY?.trim()
     if (!openaiKey) {
       console.warn('⚠️ OpenAI API Key não configurada')
       return null
@@ -281,7 +281,7 @@ export async function GET(request: NextRequest) {
     let aiValidated = false
     let aiData = null
     
-    if (process.env.OPENAI_API_KEY) {
+    if (process.env.OPENAI_API_KEY?.trim()) {
       try {
         console.log(`🧠 [AI TP/SL] Tentando validar com IA...`)
         // Calcular indicadores básicos para IA

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
+import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
 
 const supabase = getSupabaseAdmin()
 
@@ -32,9 +33,13 @@ export async function POST(request: NextRequest) {
       title: String(body.title || "").trim(),
       description: String(body.description || "").trim() || null,
       thumbnail_url: String(body.thumbnail_url || "").trim() || null,
+      category: String(body.category || "").trim() || null,
+      scheduled_start_at: body.scheduled_start_at ? String(body.scheduled_start_at) : null,
+      viewer_count: typeof body.viewer_count === "number" ? body.viewer_count : 0,
       stream_key: String(body.stream_key || "").trim() || null,
-      rtmps_url: String(body.rtmps_url || "").trim() || null,
+      rtmps_url: String(body.rtmps_url || "").trim() || getLmsIngestServerUrl(),
       playback_url: String(body.playback_url || "").trim() || null,
+      restream_embed_url: String(body.restream_embed_url || "").trim() || null,
       chat_enabled: body.chat_enabled !== false,
       is_live: Boolean(body.is_live),
     }
@@ -72,9 +77,13 @@ export async function PATCH(request: NextRequest) {
       "title",
       "description",
       "thumbnail_url",
+      "category",
+      "scheduled_start_at",
+      "viewer_count",
       "stream_key",
       "rtmps_url",
       "playback_url",
+      "restream_embed_url",
       "chat_enabled",
       "is_live",
     ]
@@ -107,3 +116,19 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
+
+  try {
+    const body = await request.json()
+    const id = String(body.id || "")
+    if (!id) return NextResponse.json({ error: "id é obrigatório" }, { status: 400 })
+
+    const { error } = await supabase.from("lms_streams").delete().eq("id", id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })
+  }
+}

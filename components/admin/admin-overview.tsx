@@ -85,14 +85,14 @@ export default function AdminOverview({
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-lg font-semibold text-white mb-4">Resumo</h2>
+        <h2 className="mb-4 text-lg font-semibold tracking-tight text-white">Resumo</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {cards.map((c) => {
             const Icon = c.icon
             return (
               <Card
                 key={c.title}
-                className={`bg-gray-900/80 border ${c.border} hover:shadow-lg transition-shadow`}
+                className={`border ${c.border} bg-gray-950/80 backdrop-blur-sm transition-shadow hover:shadow-lg`}
               >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
@@ -109,9 +109,9 @@ export default function AdminOverview({
         </div>
       </div>
 
-      <Card className="bg-gray-900/80 border-[#D2A63C]/20">
+      <Card className="border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-[#D2A63C] flex items-center gap-2 text-lg">
+          <CardTitle className="flex items-center gap-2 text-lg tracking-tight text-[#D2A63C]">
             <Activity className="w-5 h-5" />
             Atividade recente
           </CardTitle>

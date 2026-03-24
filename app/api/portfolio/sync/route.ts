@@ -126,7 +126,7 @@ async function getStockPrice(symbol: string): Promise<number | null> {
 // Função para buscar preço via OpenAI (fallback)
 async function getPriceViaOpenAI(symbol: string, category: string): Promise<number | null> {
   try {
-    const openaiKey = process.env.OPENAI_API_KEY
+    const openaiKey = process.env.OPENAI_API_KEY?.trim()
     if (!openaiKey) return null
 
     const prompt = `What is the current market price of ${symbol} (${category})? Respond ONLY with the numeric price in USD, no other text.`

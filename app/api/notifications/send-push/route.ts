@@ -1,27 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import * as admin from 'firebase-admin'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const supabase = getSupabaseAdmin()
 
-// Inicializar Firebase Admin SDK (server-side)
-if (!admin.apps.length) {
-  try {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
-    if (serviceAccount) {
-      admin.initializeApp({
-        credential: admin.credential.cert(JSON.parse(serviceAccount))
-      })
-      console.log('✅ Firebase Admin SDK inicializado')
-    } else {
-      console.warn('⚠️ FIREBASE_SERVICE_ACCOUNT_KEY não configurada')
+/** Evita executar firebase-admin no import do módulo (build / collect page data). */
+async function getFirebaseAdmin() {
+  const mod = (await import("firebase-admin")) as unknown as { default?: any } & Record<string, any>
+  const admin = mod.default ?? mod
+  if (!admin.apps?.length) {
+    try {
+      const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+      if (serviceAccount) {
+        admin.initializeApp({
+          credential: admin.credential.cert(JSON.parse(serviceAccount)),
+        })
+        console.log('✅ Firebase Admin SDK inicializado')
+      } else {
+        console.warn('⚠️ FIREBASE_SERVICE_ACCOUNT_KEY não configurada')
+      }
+    } catch (error) {
+      console.error('❌ Erro ao inicializar Firebase Admin:', error)
     }
-  } catch (error) {
-    console.error('❌ Erro ao inicializar Firebase Admin:', error)
   }
+  return admin
 }
 
 interface PushNotificationPayload {
@@ -39,6 +40,7 @@ interface PushNotificationPayload {
 // POST: Enviar notificação push
 export async function POST(request: NextRequest) {
   try {
+    const admin = await getFirebaseAdmin()
     const payload: PushNotificationPayload = await request.json()
 
     if (!payload.title || !payload.body) {
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     // Preparar mensagem FCM
     const tokens = fcmTokens.map(t => t.token)
-    const message: admin.messaging.MulticastMessage = {
+    const message = {
       notification: {
         title: payload.title,
         body: payload.body,
@@ -108,7 +110,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Enviar via Firebase Cloud Messaging
-    if (!admin.apps.length) {
+    if (!admin.apps?.length) {
       console.error('❌ [SEND PUSH] Firebase Admin não inicializado')
       return NextResponse.json(
         { error: 'Firebase Admin não configurado' },
@@ -125,7 +127,8 @@ export async function POST(request: NextRequest) {
 
     // Salvar histórico de notificações
     const historyPromises = fcmTokens.map(async (tokenData) => {
-      const status = response.responses.find((r, i) => tokens[i] === tokenData.token)?.success
+      const status = response.responses.find((r: { success: boolean }, i: number) => tokens[i] === tokenData.token)
+        ?.success
         ? 'sent'
         : 'failed'
 
@@ -146,17 +149,21 @@ export async function POST(request: NextRequest) {
     const notificationType = payload.data?.type || 'system'
     if (notificationType !== 'system' || payload.data?.type) { // Só criar se não for genérico 'system'
       const notificationPromises = fcmTokens.map(async (tokenData) => {
-        return supabase.from('notifications').insert({
-          user_id: tokenData.user_id,
-          type: notificationType,
-          title: payload.title,
-          message: payload.body,
-          data: payload.data || {},
-          read: false
-        }).then(() => {})
-        .catch((err: any) => {
-          console.warn(`⚠️ [SEND PUSH] Falha ao criar notification para ${tokenData.user_id}:`, err?.message || err)
-        })
+        try {
+          await supabase.from("notifications").insert({
+            user_id: tokenData.user_id,
+            type: notificationType,
+            title: payload.title,
+            message: payload.body,
+            data: payload.data || {},
+            read: false,
+          })
+        } catch (err: unknown) {
+          console.warn(
+            `⚠️ [SEND PUSH] Falha ao criar notification para ${tokenData.user_id}:`,
+            err instanceof Error ? err.message : err
+          )
+        }
       })
       await Promise.all(notificationPromises)
       console.log(`💾 [SEND PUSH] ${fcmTokens.length} notificações criadas na tabela notifications (type: ${notificationType})`)
@@ -165,7 +172,7 @@ export async function POST(request: NextRequest) {
     // Remover tokens inválidos
     if (response.failureCount > 0) {
       const invalidTokens: string[] = []
-      response.responses.forEach((resp, idx) => {
+      response.responses.forEach((resp: { success: boolean; error?: { code?: string } }, idx: number) => {
         if (!resp.success && resp.error) {
           const errorCode = resp.error.code
           if (

@@ -592,12 +592,12 @@ export class AuthService {
 
       const { data, error } = await supabase
         .from('profiles')
-        .insert(insertData)
+        .upsert(insertData, { onConflict: 'id' })
         .select()
         .single()
 
       if (error) {
-        console.error("Erro ao inserir perfil:", error)
+        console.error("Erro ao sincronizar perfil:", error)
         throw error
       }
       
