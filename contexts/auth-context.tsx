@@ -455,7 +455,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         isAuthenticated: !!user,
-        isAdmin: user?.user_type === "admin",
+        isAdmin: user?.user_type === "admin" && user?.is_active === true,
         isLoading,
         isIqonicUser,
         signInWithEmail,

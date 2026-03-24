@@ -12,10 +12,9 @@ export default function Home() {
     
     // Detectar callback OAuth (Google Login) - preservar hash
     if (hash && (hash.includes('access_token') || hash.includes('error'))) {
-      console.log('🔍 [ROOT] OAuth callback detectado, redirecionando para /auth/callback')
-      console.log('🔍 [ROOT] Hash:', hash)
-      // Redirecionar PRESERVANDO o hash
-      window.location.href = `/auth/callback${hash}`
+      // Hash não é enviado ao servidor: /auth/finish (client) processa o fragmento
+      console.log('🔍 [ROOT] OAuth (hash) detectado, redirecionando para /auth/finish')
+      window.location.href = `/auth/finish${hash}`
       return
     }
     

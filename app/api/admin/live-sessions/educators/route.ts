@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
-import { randomBytes } from "crypto"
 import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
 import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
+import { generateMtmIngestStreamKey } from "@/lib/lms-stream-keys"
 
 const supabase = getSupabaseAdmin()
-
-function generateFixedEducatorKey(educatorId: string) {
-  const shortEducator = educatorId.replace(/-/g, "").slice(0, 12)
-  const token = randomBytes(6).toString("hex")
-  return `mtm_${shortEducator}_${token}`
-}
 
 export async function GET(request: NextRequest) {
   const authCheck = await requireAdmin(request)
@@ -81,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    const fixedKey = generateFixedEducatorKey(data.id)
+    const fixedKey = generateMtmIngestStreamKey(data.id)
     const { data: updatedEducator, error: keyError } = await supabase
       .from("lms_educators")
       .update({ stream_key_fixed: fixedKey })

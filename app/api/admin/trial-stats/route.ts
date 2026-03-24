@@ -8,10 +8,11 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin()
 
     // Buscar estatísticas de trials
+    // Schema: guest / presentation (trials); não existe user_type 'trial' no CHECK habitual
     const { data: trials, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .in('user_type', ['trial', 'guest'])
+      .from("profiles")
+      .select("*")
+      .in("user_type", ["guest", "presentation"])
 
     if (error) {
       throw error

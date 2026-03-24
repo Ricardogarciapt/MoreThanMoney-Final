@@ -29,7 +29,11 @@ export async function POST(request: NextRequest) {
       updates.restream_ingest_url = u || null
     }
     if (body.restream_stream_key !== undefined) {
-      updates.restream_stream_key = String(body.restream_stream_key || "").trim() || null
+      const k = String(body.restream_stream_key || "").trim()
+      if (k.length > 512) {
+        return NextResponse.json({ error: "Chave Restream demasiado longa (máx. 512 caracteres)" }, { status: 400 })
+      }
+      updates.restream_stream_key = k || null
     }
     if (body.restream_embed_url !== undefined) {
       updates.restream_embed_url = String(body.restream_embed_url || "").trim() || null

@@ -15,7 +15,6 @@ module.exports = {
     await config.transform(config, "/bootcamp"),
     await config.transform(config, "/member-area"),
     await config.transform(config, "/affiliate-dashboard"),
-    await config.transform(config, "/trading-ideas"),
     await config.transform(config, "/portfolios"),
     await config.transform(config, "/privacy-policy"),
     await config.transform(config, "/terms"),

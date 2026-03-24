@@ -64,7 +64,6 @@ export default function Navbar() {
       submenu: [
         { name: "Automatização", href: "/automation" },
         { name: "IQ SYNC", href: "/swipetotrade" },
-        { name: "Ideias de Trading", href: "/trading-ideas" },
         { name: "Os nossos Scanners", href: "/scanner" },
         { name: "Scanner ao Vivo", href: "/scanner-access" },
         { name: "Trading Desk", href: "/trading" },

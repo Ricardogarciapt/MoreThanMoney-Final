@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { Volume2, MessageCircle, MessageCircleOff, ArrowLeft } from "lucide-react"
+import { Volume2, MessageCircle, MessageCircleOff, ArrowLeft, Maximize2, PictureInPicture2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import LiveFinancialDisclaimer from "@/components/live/live-financial-disclaimer"
@@ -30,6 +30,7 @@ export default function LiveStreamRoom({ streamId }: Props) {
   const [showChat, setShowChat] = useState(true)
   const [volume, setVolume] = useState(1)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const playerWrapRef = useRef<HTMLDivElement | null>(null)
 
   const load = async () => {
     const [streamRes, msgRes, meRes] = await Promise.all([
@@ -106,6 +107,27 @@ export default function LiveStreamRoom({ streamId }: Props) {
     setText((prev) => `${prev}${emoji}`)
   }
 
+  const openFullscreen = async () => {
+    const target = playerWrapRef.current
+    if (!target) return
+    try {
+      await target.requestFullscreen()
+    } catch (error) {
+      console.warn("[live-stream-room] fullscreen indisponível:", error)
+    }
+  }
+
+  const openPiP = async () => {
+    const video = videoRef.current
+    if (!video) return
+    try {
+      // PiP é suportado apenas com elemento <video> (não iframe)
+      await video.requestPictureInPicture()
+    } catch (error) {
+      console.warn("[live-stream-room] PiP indisponível:", error)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Link
@@ -149,26 +171,43 @@ export default function LiveStreamRoom({ streamId }: Props) {
         </CardHeader>
         <CardContent className="space-y-3">
           {stream?.is_live && <LiveFinancialDisclaimer />}
-          {stream?.playback_url ? (
-            <iframe
-              src={stream.playback_url}
-              title={stream.title || "Live stream"}
-              className="w-full h-[420px] rounded-lg border border-gray-700 bg-black"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-              allowFullScreen
-            />
-          ) : hlsUrl ? (
-            <video
-              ref={videoRef}
-              className="w-full h-[420px] rounded-lg border border-gray-700 bg-black"
-              controls
-              autoPlay
-              playsInline
-              src={hlsUrl}
-            />
-          ) : (
-            <div className="h-[420px] rounded-lg border border-gray-700 bg-black flex items-center justify-center text-gray-400">
-              Nenhum playback definido. Configura playback no admin ou HLS no servidor de stream.
+          <div ref={playerWrapRef}>
+            {stream?.playback_url ? (
+              <iframe
+                src={stream.playback_url}
+                title={stream.title || "Live stream"}
+                className="w-full h-[420px] rounded-lg border border-gray-700 bg-black"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowFullScreen
+              />
+            ) : hlsUrl ? (
+              <video
+                ref={videoRef}
+                className="w-full h-[420px] rounded-lg border border-gray-700 bg-black"
+                controls
+                autoPlay
+                playsInline
+                src={hlsUrl}
+              />
+            ) : (
+              <div className="h-[420px] rounded-lg border border-gray-700 bg-black flex items-center justify-center text-gray-400">
+                Nenhum playback definido. Configura playback no admin ou HLS no servidor de stream.
+              </div>
+            )}
+          </div>
+
+          {(stream?.playback_url || hlsUrl) && (
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" size="sm" className="border-gray-700 text-gray-200" onClick={openFullscreen}>
+                <Maximize2 className="mr-2 h-4 w-4" />
+                Ecrã inteiro
+              </Button>
+              {useHls && (
+                <Button type="button" variant="outline" size="sm" className="border-gray-700 text-gray-200" onClick={openPiP}>
+                  <PictureInPicture2 className="mr-2 h-4 w-4" />
+                  PiP
+                </Button>
+              )}
             </div>
           )}
 

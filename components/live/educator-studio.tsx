@@ -10,6 +10,8 @@ import {
   ArrowLeft,
   BarChart3,
   Coins,
+  Eye,
+  EyeOff,
   Radio,
   Settings2,
   Users,
@@ -49,6 +51,7 @@ export default function EducatorStudio() {
   const [creating, setCreating] = useState(false)
   const [keyOpStreamId, setKeyOpStreamId] = useState<string | null>(null)
   const [restreamSaving, setRestreamSaving] = useState(false)
+  const [restreamKeyVisible, setRestreamKeyVisible] = useState(false)
   const [restreamForm, setRestreamForm] = useState({
     enabled: false,
     ingest: DEFAULT_RESTREAM_INGEST_URL,
@@ -250,15 +253,42 @@ export default function EducatorStudio() {
     }
   }
 
-  const generateRtmps = async (streamId: string, regenerate = false) => {
+  /** Sincroniza URL RTMP MTM e aplica a chave fixa ao canal (não gera chave nova). */
+  const syncMtmIngest = async (streamId: string) => {
     setKeyOpStreamId(streamId)
     try {
       await fetch("/api/live-sessions/educator-auth/presence", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ streamId, action: "generate", regenerate }),
+        body: JSON.stringify({ streamId, action: "generate", regenerate: false }),
       })
+      if (me?.educatorId) await loadStreams(me.educatorId)
+    } finally {
+      setKeyOpStreamId(null)
+    }
+  }
+
+  /** Nova chave no formato mtm_… no servidor HLS MTM (não altera a chave Restream). */
+  const regenerateMtmIngestKey = async (streamId: string) => {
+    const ok = window.confirm(
+      "Será gerada uma nova chave para o servidor More Than Money (formato mtm_…). Atualiza o OBS se enviares para esse servidor. A chave do Restream (cartão acima) não muda."
+    )
+    if (!ok) return
+    setKeyOpStreamId(streamId)
+    setError("")
+    try {
+      const res = await fetch("/api/live-sessions/educator-auth/regenerate-ingest-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ streamId }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(j.error || "Erro ao regenerar chave MTM")
+        return
+      }
       if (me?.educatorId) await loadStreams(me.educatorId)
     } finally {
       setKeyOpStreamId(null)
@@ -344,8 +374,9 @@ export default function EducatorStudio() {
             Restream.io (OBS → Restream → site)
           </CardTitle>
           <p className="text-xs font-normal text-gray-500">
-            No Restream, copia a <strong className="text-gray-400">Stream URL</strong> e a <strong className="text-gray-400">Stream key</strong> para o OBS.
-            Em &quot;Embed / Player&quot;, cola a URL do iframe aqui para os alunos verem no MTM. Cada educador tem o seu canal.
+            A chave aqui é a que o <strong className="text-gray-400">Restream</strong> mostra (texto livre, não o formato{" "}
+            <code className="text-gray-500">mtm_…</code>). Podes <strong className="text-gray-400">editar e guardar</strong> sempre
+            que o Restream rote a chave. No OBS: servidor + chave do Restream. Cola o embed do player para o site MTM.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -367,15 +398,30 @@ export default function EducatorStudio() {
             />
           </div>
           <div>
-            <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Chave de stream (Restream)</p>
-            <Input
-              type="password"
-              value={restreamForm.key}
-              onChange={(e) => setRestreamForm((p) => ({ ...p, key: e.target.value }))}
-              className="border-gray-700 bg-black/50 font-mono text-xs"
-              placeholder="Cola a Stream key do painel Restream"
-              autoComplete="off"
-            />
+            <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">
+              Chave de stream Restream (editável — não é a chave mtm_… do servidor MTM)
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+              <Input
+                type={restreamKeyVisible ? "text" : "password"}
+                value={restreamForm.key}
+                onChange={(e) => setRestreamForm((p) => ({ ...p, key: e.target.value }))}
+                className="border-gray-700 bg-black/50 font-mono text-xs sm:flex-1"
+                placeholder="Cola ou edita a Stream key do painel Restream"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 border-gray-600 text-gray-200"
+                onClick={() => setRestreamKeyVisible((v) => !v)}
+              >
+                {restreamKeyVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="ml-2">{restreamKeyVisible ? "Ocultar" : "Mostrar"}</span>
+              </Button>
+            </div>
           </div>
           <div>
             <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">URL do player / embed (público)</p>
@@ -406,7 +452,8 @@ export default function EducatorStudio() {
                 Criar novo canal
               </CardTitle>
               <p className="text-xs font-normal text-gray-500">
-                A tua chave OBS é fixa por educador. Só vês os teus dados de transmissão e não tens acesso a chaves de outros.
+                Se usas <strong className="text-gray-400">Restream</strong>, o OBS deve apontar para o Restream (cartão acima), não para o servidor MTM.
+                A chave <code className="text-gray-500">mtm_…</code> abaixo é só para ingestão HLS no servidor More Than Money.
               </p>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -492,11 +539,22 @@ export default function EducatorStudio() {
                 </div>
 
                 <StreamKeyCard
+                  title="Servidor More Than Money (HLS / RTMP)"
+                  intro={
+                    <>
+                      Chave no formato <code className="text-amber-200/90">mtm_…</code> — só para enviares para o RTMP do MTM. Se o teu OBS vai para o{" "}
+                      <strong className="text-gray-400">Restream</strong>, ignora este bloco e usa o cartão Restream no topo. No OBS (MTM):{" "}
+                      <strong className="text-gray-400">Serviço personalizado</strong> — servidor e chave em campos separados.
+                    </>
+                  }
+                  syncButtonLabel="Sincronizar URL e chave MTM no canal"
+                  syncButtonLabelWhenHasKey="Atualizar URL RTMP / reaplicar chave fixa"
+                  hideDeployHint
                   rtmpUrl={stream.rtmps_url}
                   streamKey={stream.stream_key}
                   loading={keyOpStreamId === stream.id}
-                  onGenerateOrRefresh={() => generateRtmps(stream.id, false)}
-                  onRegenerate={undefined}
+                  onGenerateOrRefresh={() => syncMtmIngest(stream.id)}
+                  onRegenerate={() => regenerateMtmIngestKey(stream.id)}
                 />
 
                 <div className="space-y-1">

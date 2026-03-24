@@ -1,6 +1,6 @@
 // Serviço de banco de dados para gerenciar conexões e operações básicas
 
-// Tipos para membros e ideias
+// Tipos para membros
 export interface Member {
   id: string
   username: string
@@ -13,35 +13,6 @@ export interface Member {
   role?: string
   createdAt: Date
   lastLogin?: Date
-}
-
-export interface TradingIdea {
-  id: string
-  title: string
-  description: string
-  symbol: string
-  timeframe: string
-  direction: "long" | "short"
-  entryPrice?: number
-  stopLoss?: number
-  takeProfit?: number
-  riskReward?: number
-  authorId: string
-  createdAt: Date
-  updatedAt?: Date
-  likes: number
-  comments: TradingIdeaComment[]
-  status: "active" | "closed" | "cancelled"
-  result?: "win" | "loss" | "breakeven"
-  pnl?: number
-}
-
-export interface TradingIdeaComment {
-  id: string
-  ideaId: string
-  authorId: string
-  content: string
-  createdAt: Date
 }
 
 // Classe para gerenciar o banco de dados
@@ -70,13 +41,6 @@ class DatabaseService {
           localStorage.setItem("members", JSON.stringify([]))
         }
 
-        if (!localStorage.getItem("tradingIdeas")) {
-          localStorage.setItem("tradingIdeas", JSON.stringify([]))
-        }
-
-        if (!localStorage.getItem("tradingIdeaComments")) {
-          localStorage.setItem("tradingIdeaComments", JSON.stringify([]))
-        }
       }
 
       this.isInitialized = true

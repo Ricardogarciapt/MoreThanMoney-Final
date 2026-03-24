@@ -154,13 +154,20 @@ export async function adminApiCall<T>(
 
       clearTimeout(timeoutId)
 
-      let data: any
+      const raw = await response.text()
+      let data: any = {}
       try {
-        data = await response.json()
-      } catch (e) {
-        // Se não conseguir parsear JSON, tentar texto
-        const text = await response.text()
-        data = { error: text || `HTTP ${response.status}` }
+        data = raw ? JSON.parse(raw) : {}
+      } catch {
+        data = { error: raw?.slice(0, 200) || `HTTP ${response.status}` }
+      }
+
+      if (response.ok && data && typeof data.success === "boolean" && data.success === false) {
+        return {
+          success: false,
+          error: data.error || data.message || "Pedido falhou",
+          details: data.details || data,
+        }
       }
 
       if (!response.ok) {
@@ -189,9 +196,12 @@ export async function adminApiCall<T>(
         continue
       }
 
+      const payload =
+        data && typeof data === "object" && "data" in data ? data.data : data
+
       const result = {
         success: true,
-        data: data.data || data,
+        data: payload !== undefined ? payload : data,
       }
 
       // Guardar em cache se habilitado

@@ -1,7 +1,7 @@
 {
   "name": "MoreThanMoney - Trading & Portfolio",
   "short_name": "MTM App",
-  "description": "Gestão de portfolios, DCA inteligente e trading ideas",
+  "description": "Gestão de portfolios e DCA inteligente",
   "start_url": "/app-mobile",
   "display": "standalone",
   "background_color": "#000000",

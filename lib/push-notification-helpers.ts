@@ -121,26 +121,7 @@ export const notifyStopLossHit = async (
   })
 }
 
-// 6. Notificação de novo conteúdo/trading idea
-export const notifyNewTradingIdea = async (
-  symbol: string,
-  direction: 'BUY' | 'SELL',
-  reason: string
-) => {
-  return sendPushNotification({
-    all: true,
-    title: `📈 Nova Ideia: ${symbol}`,
-    body: `${direction === 'BUY' ? '🟢 Compra' : '🔴 Venda'} - ${reason}`,
-    url: '/trading-ideas',
-    tag: 'trading-idea',
-    data: {
-      symbol,
-      direction
-    }
-  })
-}
-
-// 7. Notificação de novo post de VIP/Admin
+// 6. Notificação de novo post de VIP/Admin
 export const notifyNewVIPPost = async (
   authorName: string,
   postPreview: string
@@ -154,7 +135,7 @@ export const notifyNewVIPPost = async (
   })
 }
 
-// 8. Notificação de sistema (Admin)
+// 7. Notificação de sistema (Admin)
 export const notifySystemMessage = async (
   userId: string,
   title: string,
@@ -170,7 +151,7 @@ export const notifySystemMessage = async (
   })
 }
 
-// 9. Notificação de boas-vindas (novo usuário)
+// 8. Notificação de boas-vindas (novo usuário)
 export const notifyWelcome = async (userId: string, userName: string) => {
   return sendPushNotification({
     userId,
@@ -181,7 +162,7 @@ export const notifyWelcome = async (userId: string, userName: string) => {
   })
 }
 
-// 10. Notificação de sincronização de portfolio
+// 9. Notificação de sincronização de portfolio
 export const notifyPortfolioSync = async (
   userId: string,
   totalAssets: number,

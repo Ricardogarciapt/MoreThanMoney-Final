@@ -38,19 +38,19 @@ export async function verifyAdminAccess(): Promise<{
       }
     )
 
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
-    if (sessionError || !session?.user) {
+    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !authUser) {
       return {
         isAdmin: false,
-        error: 'Não autenticado'
+        error: "Não autenticado",
       }
     }
 
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('user_type, is_active')
-      .eq('id', session.user.id)
+      .from("profiles")
+      .select("user_type, is_active")
+      .eq("id", authUser.id)
       .maybeSingle()
 
     if (profileError) {
@@ -65,8 +65,8 @@ export async function verifyAdminAccess(): Promise<{
 
     return {
       isAdmin,
-      userId: session.user.id,
-      email: session.user.email
+      userId: authUser.id,
+      email: authUser.email ?? undefined,
     }
   } catch (error: any) {
     console.error('❌ [ADMIN API] Erro ao verificar acesso:', error)

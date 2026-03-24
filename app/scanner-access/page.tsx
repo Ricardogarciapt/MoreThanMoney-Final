@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -500,10 +501,10 @@ export default function ScannerAccessPage() {
           <div className="container mx-auto px-4 py-2">
             <ol className="flex items-center space-x-2 text-sm">
               <li className="flex items-center">
-                <a href="/" className="text-gray-400 hover:text-gold-400 flex items-center">
+                <Link href="/" className="text-gray-400 hover:text-gold-400 flex items-center">
                   <House className="h-3 w-3 mr-1" />
                   <span className="sr-only">Início</span>
-                </a>
+                </Link>
               </li>
               <li className="flex items-center">
                 <ChevronRight className="h-4 w-4 text-gray-500 mx-1" />

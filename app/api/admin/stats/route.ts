@@ -85,14 +85,17 @@ export async function GET(request: NextRequest) {
       console.warn('⚠️ [ADMIN STATS] Aviso ao buscar atividade:', activityError.message)
     }
 
+    const contentRows = Array.isArray(content) ? content : []
+    const activityRows = Array.isArray(activity) ? activity : []
+
     const stats: AdminStats = {
       total_users: totalUsers || 0,
       active_users: activeUsers || 0,
       pending_users: pendingUsers || 0,
       total_members: totalMembers || 0,
-      total_content: content?.length || 0,
-      active_content: content?.filter((c: any) => c.is_active).length || 0,
-      recent_activity: activity || []
+      total_content: contentRows.length,
+      active_content: contentRows.filter((c: { is_active?: boolean }) => c.is_active).length,
+      recent_activity: activityRows,
     }
 
     const duration = Date.now() - startTime

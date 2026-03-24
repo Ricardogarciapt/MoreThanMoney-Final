@@ -142,8 +142,9 @@ export default function AdminPage() {
       cacheTTL: 20000,
     })
     if (result.success && result.data) {
-      const list = Array.isArray(result.data) ? result.data : (result.data as { data?: UserManagement[] }).data
-      setUsers(list || [])
+      const raw = result.data as UserManagement[] | { data?: UserManagement[] }
+      const list = Array.isArray(raw) ? raw : raw?.data
+      setUsers(Array.isArray(list) ? list : [])
     }
     if (!result.success) {
       toast({

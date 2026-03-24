@@ -15,10 +15,6 @@
 - ✅ `/api/notifications/check-alerts` - Funcional
 
 ### 3. Trading Ideas
-- ✅ `/api/trading-ideas` - Funcional
-- ✅ `/api/trading-ideas/[id]` - Funcional
-- ✅ `/api/trading-ideas/[id]/like` - Funcional
-- ✅ `/api/trading-ideas/[id]/comments` - Funcional
 
 ### 4. Mindset & Fitness (NOVO)
 - ✅ `/api/mindset-fitness/mindset` - Criado e funcional

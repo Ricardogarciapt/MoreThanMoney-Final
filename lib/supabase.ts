@@ -51,21 +51,6 @@ export interface User {
   updated_at: string
 }
 
-export interface TradingIdea {
-  id: string
-  title: string
-  description: string
-  symbol: string
-  direction: "buy" | "sell"
-  entry_price: number
-  stop_loss?: number
-  take_profit?: number
-  status: "active" | "closed" | "cancelled"
-  created_by: string
-  created_at: string
-  updated_at: string
-}
-
 export interface Portfolio {
   id: string
   name: string
@@ -120,19 +105,6 @@ export const userService = {
 
   updateUserRole: async (userId: string, role: string) => {
     const { data, error } = await supabaseAdmin.from("users").update({ role }).eq("id", userId)
-    return { data, error }
-  },
-}
-
-// Funções para trading ideas
-export const tradingIdeasService = {
-  getIdeas: async () => {
-    const { data, error } = await supabase.from("trading_ideas").select("*").order("created_at", { ascending: false })
-    return { data, error }
-  },
-
-  createIdea: async (idea: Omit<TradingIdea, "id" | "created_at" | "updated_at">) => {
-    const { data, error } = await supabase.from("trading_ideas").insert(idea).select()
     return { data, error }
   },
 }

@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
-import { randomBytes } from "crypto"
 import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
 import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
+import { generateMtmIngestStreamKey } from "@/lib/lms-stream-keys"
 
 const supabase = getSupabaseAdmin()
-
-function generateStreamKey(educatorId: string) {
-  const token = randomBytes(16).toString("hex")
-  const shortEducator = educatorId.replace(/-/g, "").slice(0, 8)
-  return `mtm_${shortEducator}_${token}`
-}
 
 export async function POST(request: NextRequest) {
   const authCheck = await requireAdmin(request)
@@ -32,7 +26,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Stream não encontrada" }, { status: 404 })
     }
 
-    const streamKey = generateStreamKey(stream.educator_id)
+    const streamKey = generateMtmIngestStreamKey(stream.educator_id)
     await supabase
       .from("lms_educators")
       .update({ stream_key_fixed: streamKey })

@@ -1,24 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
-import { randomBytes } from "crypto"
 import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
 import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
+import { generateMtmIngestStreamKey } from "@/lib/lms-stream-keys"
 
 const supabase = getSupabaseAdmin()
-
-function slugify(input: string) {
-  return input
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-}
-
-function generateEducatorStreamKey(name: string) {
-  const rnd = randomBytes(3).toString("hex")
-  return `mtm_${slugify(name) || "educador"}_${rnd}`
-}
 
 export async function POST(request: NextRequest) {
   const authCheck = await requireAdmin(request)
@@ -37,7 +23,6 @@ export async function POST(request: NextRequest) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10)
-    const streamKey = generateEducatorStreamKey(displayName)
 
     const { data: educator, error: educatorError } = await supabase
       .from("lms_educators")
@@ -54,6 +39,12 @@ export async function POST(request: NextRequest) {
     if (educatorError || !educator) {
       return NextResponse.json({ error: educatorError?.message || "Erro ao criar educador" }, { status: 500 })
     }
+
+    const streamKey = generateMtmIngestStreamKey(educator.id)
+    await supabase
+      .from("lms_educators")
+      .update({ stream_key_fixed: streamKey })
+      .eq("id", educator.id)
 
     if (!academyId) {
       const { data: firstAcademy } = await supabase

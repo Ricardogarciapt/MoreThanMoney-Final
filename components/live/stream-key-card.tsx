@@ -16,6 +16,15 @@ export type StreamKeyCardProps = {
   onRegenerate?: () => void | Promise<void>
   loading?: boolean
   className?: string
+  /** Título do bloco (por defeito: configuração genérica OBS) */
+  title?: string
+  /** Texto introdutório (ex.: aviso Restream vs MTM) */
+  intro?: string
+  /** Rótulo do botão de sincronizar */
+  syncButtonLabel?: string
+  syncButtonLabelWhenHasKey?: string
+  /** Esconder nota de variáveis LMS_INGEST_URL no rodapé */
+  hideDeployHint?: boolean
 }
 
 /**
@@ -29,6 +38,11 @@ export default function StreamKeyCard({
   onRegenerate,
   loading = false,
   className = "",
+  title = "Configuração de stream (OBS / Streamlabs)",
+  intro,
+  syncButtonLabel = "Gerar chave de stream",
+  syncButtonLabelWhenHasKey = "Atualizar URL / gerar chave se faltar",
+  hideDeployHint = false,
 }: StreamKeyCardProps) {
   const [keyVisible, setKeyVisible] = useState(false)
   const [copied, setCopied] = useState<"" | "url" | "key">("")
@@ -44,7 +58,6 @@ export default function StreamKeyCard({
       setCopied(field)
       setTimeout(() => setCopied(""), 2000)
     } catch {
-      // eslint-disable-next-line no-alert
       alert("Não foi possível copiar. Seleciona o texto manualmente.")
     }
   }
@@ -151,7 +164,7 @@ export default function StreamKeyCard({
             onClick={() => onGenerateOrRefresh()}
           >
             <RefreshCw className={`mr-2 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-            {hasKey ? "Atualizar URL / gerar chave se faltar" : "Gerar chave de stream"}
+            {hasKey ? syncButtonLabelWhenHasKey : syncButtonLabel}
           </Button>
         )}
         {onRegenerate && hasKey && (
@@ -174,10 +187,12 @@ export default function StreamKeyCard({
         </p>
       )}
 
-      <p className="text-[11px] text-gray-600">
-        Variáveis no deploy: <code className="text-gray-500">LMS_INGEST_URL</code> (URL completa) ou{" "}
-        <code className="text-gray-500">RTMP_SERVER_HOST</code> (hostname → <code className="text-gray-500">rtmp://HOST/live</code>).
-      </p>
+      {!hideDeployHint && (
+        <p className="text-[11px] text-gray-600">
+          Variáveis no deploy: <code className="text-gray-500">LMS_INGEST_URL</code> (URL completa) ou{" "}
+          <code className="text-gray-500">RTMP_SERVER_HOST</code> (hostname → <code className="text-gray-500">rtmp://HOST/live</code>).
+        </p>
+      )}
     </div>
   )
 }

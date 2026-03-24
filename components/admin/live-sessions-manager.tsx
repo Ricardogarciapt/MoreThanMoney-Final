@@ -494,7 +494,7 @@ export default function LiveSessionsManager() {
                     </>
                   )}
                   <Button size="sm" variant="outline" className="border-gray-700 text-gray-200" onClick={() => generateObsKeyForEducator(e)}>
-                    Regenerar chave fixa
+                    Regenerar chave MTM (mtm_…)
                   </Button>
                   <Button size="sm" variant="destructive" onClick={() => removeEducator(e)}>
                     Apagar educador
@@ -643,7 +643,7 @@ export default function LiveSessionsManager() {
                   {s.is_live ? "Passar Offline" : "Passar Online"}
                 </Button>
                 <Button size="sm" className="bg-[#D2A63C] hover:bg-[#BB8525] text-black" onClick={() => resetKey(s.id)}>
-                  Gerar chave OBS
+                  Nova chave MTM (HLS)
                 </Button>
                 <Button size="sm" variant="destructive" onClick={() => deleteStream(s.id, s.title)}>
                   Apagar canal

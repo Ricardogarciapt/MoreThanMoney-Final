@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Loader2, Volume2, MessageCircle, MessageCircleOff, X, Radio } from "lucide-react"
+import { Loader2, Volume2, MessageCircle, MessageCircleOff, X, Radio, Maximize2, PictureInPicture2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import LiveFinancialDisclaimer from "@/components/live/live-financial-disclaimer"
@@ -44,6 +44,7 @@ export default function LiveSessionsMobile() {
   const [showChat, setShowChat] = useState(true)
   const [volume, setVolume] = useState(1)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const playerWrapRef = useRef<HTMLDivElement | null>(null)
 
   const loadLive = useCallback(async () => {
     setLoading(true)
@@ -117,6 +118,26 @@ export default function LiveSessionsMobile() {
 
   const appendEmoji = (emoji: string) => {
     setText((prev) => `${prev}${emoji}`)
+  }
+
+  const openFullscreen = async () => {
+    const target = playerWrapRef.current
+    if (!target) return
+    try {
+      await target.requestFullscreen()
+    } catch (error) {
+      console.warn("[live-sessions-mobile] fullscreen indisponível:", error)
+    }
+  }
+
+  const openPiP = async () => {
+    const video = videoRef.current
+    if (!video) return
+    try {
+      await video.requestPictureInPicture()
+    } catch (error) {
+      console.warn("[live-sessions-mobile] PiP indisponível:", error)
+    }
   }
 
   return (
@@ -223,7 +244,7 @@ export default function LiveSessionsMobile() {
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <div className="shrink-0 space-y-2 overflow-y-auto border-b border-gray-800/80 px-3 py-2">
               {stream?.is_live && <LiveFinancialDisclaimer />}
-              <div className="relative w-full overflow-hidden rounded-xl border border-[#D2A63C]/15 bg-black">
+              <div ref={playerWrapRef} className="relative w-full overflow-hidden rounded-xl border border-[#D2A63C]/15 bg-black">
                 {stream?.playback_url ? (
                   <iframe
                     src={stream.playback_url}
@@ -246,6 +267,33 @@ export default function LiveSessionsMobile() {
                   </div>
                 )}
               </div>
+
+              {(stream?.playback_url || hlsUrl) && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-gray-700 text-gray-200"
+                    onClick={openFullscreen}
+                  >
+                    <Maximize2 className="mr-2 h-4 w-4" />
+                    Ecrã inteiro
+                  </Button>
+                  {hlsUrl && stream?.playback_url == null && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="border-gray-700 text-gray-200"
+                      onClick={openPiP}
+                    >
+                      <PictureInPicture2 className="mr-2 h-4 w-4" />
+                      PiP
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {hlsUrl && stream?.playback_url == null && (
                 <div className="flex items-center gap-2 rounded-xl border border-[#D2A63C]/15 bg-black/50 px-2 py-2">

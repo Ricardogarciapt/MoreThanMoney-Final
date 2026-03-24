@@ -368,7 +368,7 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
                     {/* XP e Nível */}
                     {user.xp && (
                       <Badge className="bg-gradient-to-r from-[#D2A63C]/20 to-yellow-400/20 text-[#D2A63C] border border-[#D2A63C]/30 text-xs">
-                        ⭐ Nível {user.xp.level} · {user.xp.total_xp.toLocaleString()} XP
+                        ⭐ Nível {user.xp.level ?? 1} · {(user.xp.total_xp ?? 0).toLocaleString()} XP
                       </Badge>
                     )}
                     {/* Fast Start Progress */}
