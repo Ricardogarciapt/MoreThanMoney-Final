@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Client } from '@notionhq/client'
+import { fetchCryptoUsdBest } from '@/lib/crypto-usd'
 
-// Inicializar cliente do Notion
-const notion = new Client({ 
-  auth: process.env.NEXT_PUBLIC_NOTION_API_KEY 
-})
+const NOTION_KEY =
+  process.env.NOTION_API_KEY?.trim() ||
+  process.env.NEXT_PUBLIC_NOTION_API_KEY?.trim() ||
+  ''
+const DATABASE_ID =
+  process.env.NOTION_PORTFOLIO_DATABASE_ID?.trim() ||
+  process.env.NEXT_PUBLIC_NOTION_PORTFOLIO_DATABASE_ID?.trim() ||
+  ''
 
-const DATABASE_ID = process.env.NEXT_PUBLIC_NOTION_PORTFOLIO_DATABASE_ID || ''
+// Inicializar cliente do Notion (preferir NOTION_API_KEY no servidor)
+const notion = new Client({ auth: NOTION_KEY })
 
 console.log('🔑 [NOTION SCRAPE] Inicializando...')
-console.log('🔑 [NOTION SCRAPE] API Key:', process.env.NEXT_PUBLIC_NOTION_API_KEY ? 'Configurado ✅' : 'FALTANDO ❌')
-console.log('🔑 [NOTION SCRAPE] Database ID:', DATABASE_ID || 'FALTANDO ❌')
+console.log('🔑 [NOTION SCRAPE] API Key:', NOTION_KEY ? 'Configurado ✅' : 'FALTANDO ❌')
+console.log('🔑 [NOTION SCRAPE] Database ID:', DATABASE_ID ? 'Configurado ✅' : 'FALTANDO ❌')
 
 interface NotionAsset {
   id: string
@@ -24,6 +30,8 @@ interface NotionAsset {
   potencial_crescimento_percent: number
   potencial_crescimento_valor: number
   tipo: 'crypto' | 'etf'
+  /** Preço de entrada no Notion, se existir coluna */
+  entry_price_notion?: number | null
 }
 
 const CRYPTO_NAME_TO_TICKER: Record<string, string> = {
@@ -76,21 +84,6 @@ function getTitle(property: any): string {
   return property?.title?.[0]?.plain_text || ''
 }
 
-// Função para buscar preço da Binance
-async function getBinancePrice(symbol: string): Promise<number | null> {
-  try {
-    const response = await fetch(
-      `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`,
-      { next: { revalidate: 60 } }
-    )
-    if (!response.ok) return null
-    const data = await response.json()
-    return parseFloat(data.price)
-  } catch (error) {
-    console.error(`Erro ao buscar preço ${symbol}:`, error)
-    return null
-  }
-}
 
 // Função para buscar preço de ETF
 async function getETFPrice(symbol: string): Promise<number | null> {
@@ -111,10 +104,20 @@ async function getETFPrice(symbol: string): Promise<number | null> {
 export async function GET(request: NextRequest) {
   try {
     if (!DATABASE_ID) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Notion Database ID não configurado',
-        note: 'Usando dados locais em vez de scraping'
+        note: 'Usando dados locais em vez de scraping',
       }, { status: 500 })
+    }
+
+    if (!NOTION_KEY) {
+      return NextResponse.json(
+        {
+          error: 'Notion API key não configurada',
+          note: 'Defina NOTION_API_KEY ou NEXT_PUBLIC_NOTION_API_KEY na Vercel',
+        },
+        { status: 500 }
+      )
     }
 
     console.log('🔍 Iniciando scraping do Notion...')
@@ -166,6 +169,13 @@ export async function GET(request: NextRequest) {
         const potencial_crescimento_percent = props['Potencial de Crescimento (%)']?.number || props['Crescimento Esperado (%)']?.number || 0
         const potencial_crescimento_valor = props['Potencial de Crescimento (€)']?.number || props['Crescimento Esperado (€)']?.number || 0
 
+        const entryFromNotion =
+          props['Preço de Entrada']?.number ??
+          props['Preço de entrada']?.number ??
+          props['Entry Price']?.number ??
+          props['Preço Entrada']?.number ??
+          null
+
         if (!nome || !symbol) continue
 
         const asset: NotionAsset = {
@@ -179,7 +189,8 @@ export async function GET(request: NextRequest) {
           reforco_total,
           potencial_crescimento_percent,
           potencial_crescimento_valor,
-          tipo
+          tipo,
+          entry_price_notion: entryFromNotion,
         }
 
         if (tipo === 'crypto') {
@@ -200,16 +211,32 @@ export async function GET(request: NextRequest) {
     
     const cryptoWithPrices = await Promise.all(
       cryptoAssets.map(async (asset) => {
-        const currentPrice = await getBinancePrice(asset.symbol)
+        const currentPrice = await fetchCryptoUsdBest(asset.symbol)
         const totalInvested = asset.investimento_inicial + asset.reforco_total
-        
+        const entryPrice =
+          typeof asset.entry_price_notion === 'number' && asset.entry_price_notion > 0
+            ? asset.entry_price_notion
+            : currentPrice && currentPrice > 0
+              ? currentPrice * 0.92
+              : 1
+        const quantity = totalInvested / entryPrice
+        const currentValue =
+          currentPrice != null && currentPrice > 0 ? quantity * currentPrice : totalInvested
+        const pnl = currentValue - totalInvested
+        const pnlPercent = totalInvested > 0 ? (pnl / totalInvested) * 100 : 0
+
         return {
           ...asset,
           current_price: currentPrice,
+          entry_price: entryPrice,
+          quantity,
           total_invested: totalInvested,
+          current_value: currentValue,
+          pnl,
+          pnl_percent: pnlPercent,
           criptomoeda: asset.nome,
           reforco_mensal: asset.reforco_periodico,
-          reforco_anual: asset.reforco_total
+          reforco_anual: asset.reforco_total,
         }
       })
     )

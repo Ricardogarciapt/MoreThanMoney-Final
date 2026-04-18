@@ -12,6 +12,9 @@ import {
   ArrowLeft,
   Shield,
   GraduationCap,
+  Cpu,
+  TerminalSquare,
+  Monitor,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -19,6 +22,7 @@ import { cn } from "@/lib/utils"
 const navItems = [
   { id: "overview", label: "Visão geral", icon: LayoutDashboard },
   { id: "users", label: "Utilizadores", icon: Users },
+  { id: "mtmauto", label: "MTM Auto", icon: Cpu },
   { id: "content", label: "Conteúdo", icon: FileText },
   { id: "education", label: "Educação (LMS)", icon: GraduationCap },
   { id: "notifications", label: "Notificações", icon: Bell },
@@ -86,6 +90,30 @@ export default function AdminSidebar({
         >
           <Wallet className="w-5 h-5 shrink-0" />
           Portfolios
+        </Link>
+        <Link
+          href="/admin/terminalremoto"
+          className={cn(
+            "mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            pathname === "/admin/terminalremoto"
+              ? "border-l-2 border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
+              : "border-l-2 border-transparent text-gray-400 hover:bg-gray-800/50 hover:text-white"
+          )}
+        >
+          <TerminalSquare className="w-5 h-5 shrink-0" />
+          Terminal remoto
+        </Link>
+        <Link
+          href="/admin/desktop-remoto"
+          className={cn(
+            "mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            pathname === "/admin/desktop-remoto"
+              ? "border-l-2 border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
+              : "border-l-2 border-transparent text-gray-400 hover:bg-gray-800/50 hover:text-white"
+          )}
+        >
+          <Monitor className="w-5 h-5 shrink-0" />
+          Desktop remoto
         </Link>
       </nav>
     </aside>

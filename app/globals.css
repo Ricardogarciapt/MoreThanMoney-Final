@@ -49,6 +49,11 @@
   }
 }
 
+/* Altura reservada à tab bar fixa da app-mobile (Dialog em portal usa variável no body) */
+body.app-mobile-route {
+  --app-mobile-footer-tabs-height: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
 /* Custom animations */
 @keyframes fadeIn {
   from {
@@ -194,6 +199,23 @@
   height: 0 !important;
   overflow: hidden !important;
   pointer-events: none !important;
+}
+
+/*
+ * iOS Safari: inputs com fonte abaixo de 16px fazem zoom ao focar.
+ * Campos editáveis na app-mobile com 16px mínimo (exclui range, checkbox, etc.).
+ */
+.app-mobile-container textarea,
+.app-mobile-container select,
+.app-mobile-container input[type="text"],
+.app-mobile-container input[type="email"],
+.app-mobile-container input[type="password"],
+.app-mobile-container input[type="search"],
+.app-mobile-container input[type="tel"],
+.app-mobile-container input[type="number"],
+.app-mobile-container input[type="url"],
+.app-mobile-container input:not([type]) {
+  font-size: 16px !important; /* sobrepõe text-sm do Tailwind; evita zoom iOS */
 }
 
 /* Garantir que o body não é afetado pelo Google Translate */

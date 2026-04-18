@@ -74,7 +74,24 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { symbol, name, buy_price, quantity, current_price } = body
+    const {
+      symbol,
+      name,
+      quantity,
+      purchase_price,
+      buy_price,
+      current_price,
+      asset_type,
+      notes,
+    } = body
+
+    const pp = purchase_price ?? buy_price
+    if (!symbol || !name || pp == null || quantity == null) {
+      return NextResponse.json(
+        { error: 'symbol, name, quantity e purchase_price são obrigatórios' },
+        { status: 400 }
+      )
+    }
 
     // Adicionar ativo ao portfólio pessoal
     const { data: newAsset, error } = await supabase
@@ -83,9 +100,11 @@ export async function POST(request: NextRequest) {
         user_id: session.user.id,
         symbol,
         name,
-        buy_price,
+        purchase_price: pp,
         quantity,
-        current_price
+        current_price: current_price ?? pp,
+        asset_type: asset_type || 'crypto',
+        notes: notes ?? null,
       })
       .select()
       .single()
@@ -129,7 +148,23 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, symbol, name, buy_price, quantity, current_price } = body
+    const {
+      id,
+      symbol,
+      name,
+      quantity,
+      purchase_price,
+      buy_price,
+      current_price,
+      asset_type,
+      notes,
+    } = body
+
+    if (!id) {
+      return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
+    }
+
+    const pp = purchase_price ?? buy_price
 
     // Atualizar ativo do portfólio pessoal
     const { data: updatedAsset, error } = await supabase
@@ -137,9 +172,11 @@ export async function PUT(request: NextRequest) {
       .update({
         symbol,
         name,
-        buy_price,
+        ...(pp != null ? { purchase_price: pp } : {}),
         quantity,
-        current_price
+        current_price,
+        ...(asset_type != null ? { asset_type } : {}),
+        ...(notes !== undefined ? { notes } : {}),
       })
       .eq('id', id)
       .eq('user_id', session.user.id)

@@ -3,6 +3,8 @@ import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
 import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-auth"
 import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
+import { DEFAULT_RESTREAM_INGEST_URL, normalizeRestreamIngestUrl } from "@/lib/lms-restream"
+import { normalizeIngestProvider } from "@/lib/lms-stream-options"
 
 const supabase = getSupabaseAdmin()
 
@@ -42,27 +44,43 @@ export async function POST(request: NextRequest) {
     const wantsGenerate = action === "generate"
 
     const updates: Record<string, any> = {}
-    const ingestUrl = getLmsIngestServerUrl()
     const { data: educatorRow } = await supabase
       .from("lms_educators")
-      .select("stream_key_fixed")
+      .select("stream_key_fixed, restream_enabled, restream_ingest_url, restream_stream_key")
       .eq("id", educator.educatorId)
       .single()
-    const fixedKey = educatorRow?.stream_key_fixed || stream.stream_key
+    const restreamBase =
+      normalizeRestreamIngestUrl(educatorRow?.restream_ingest_url || null) || DEFAULT_RESTREAM_INGEST_URL
+    const restreamKey = educatorRow?.restream_stream_key || null
+    const restreamEnabled = Boolean(educatorRow?.restream_enabled)
+    const ingestProvider = normalizeIngestProvider(stream.ingest_provider)
+    const shouldUseRestream = Boolean(ingestProvider === "restream" && restreamEnabled && restreamKey)
 
-    if (!fixedKey) {
+    if (ingestProvider === "restream" && !shouldUseRestream) {
       return NextResponse.json(
-        { error: "A tua chave fixa ainda não foi definida. Contacta o admin para gerar chave." },
+        {
+          error:
+            "Este canal está em Ingest Restream, mas a conta do educador não tem Restream configurado corretamente (ativar Restream e definir stream key).",
+        },
         { status: 400 }
       )
     }
 
-    const needsKey = !stream.stream_key || !stream.rtmps_url
-    const shouldRefreshIngest = wantsGenerate || wantsStart || needsKey
+    const fixedKey = educatorRow?.stream_key_fixed || stream.stream_key
+    if (!fixedKey && !shouldUseRestream) {
+      return NextResponse.json({ error: "Falta definir chave de ingestão para iniciar o canal." }, { status: 400 })
+    }
 
-    // Chave de transmissão é fixa por educador.
-    updates.stream_key = fixedKey
-    if (shouldRefreshIngest) updates.rtmps_url = ingestUrl
+    // Só devemos sobrescrever ingest/keys quando:
+    // - a gente pediu geração de chave (`generate`), ou
+    // - o canal está com chave/ingest em falta.
+    // Isso evita divergência entre a chave que o OBS está a usar e a que o site passa a procurar (HLS).
+    const needsKey = !stream.stream_key || !stream.rtmps_url
+    const shouldRefreshIngest = wantsGenerate || needsKey
+
+    // Ingestão: Restream (RTMPS + key) quando configurado; caso contrário MTM direto.
+    updates.stream_key = shouldUseRestream ? restreamKey : fixedKey
+    if (shouldRefreshIngest) updates.rtmps_url = shouldUseRestream ? restreamBase : getLmsIngestServerUrl()
 
     if (wantsStart) {
       updates.is_live = true

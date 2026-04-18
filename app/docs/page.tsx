@@ -121,8 +121,9 @@ export default function DocsPage() {
       const data = await response.json()
 
       if (data.success) {
-        console.log(`✅ [DOCS] ${data.documents.length} documentos carregados`)
-        setDocuments(data.documents)
+        const docs = Array.isArray(data.documents) ? data.documents : []
+        console.log(`✅ [DOCS] ${docs.length} documentos carregados`)
+        setDocuments(docs)
       } else {
         console.error('❌ [DOCS] Erro na resposta:', data)
       }

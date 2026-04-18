@@ -7,17 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AlertCircle, Eye, EyeOff, Users, Clock, Presentation, Loader2 } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, Users, Clock, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
-type AccountType = 'member' | 'trial' | 'guest'
-type MTMOrganization = 'mtm' | 'vxa' | 'rfg'
+type AccountType = 'member' | 'trial'
 
 export default function RegisterPage() {
   const [accountType, setAccountType] = useState<AccountType>('member')
-  const [mtmOrganization, setMTMOrganization] = useState<MTMOrganization>('mtm')
-  const [iqonicId, setIqonicId] = useState('')
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -73,21 +69,13 @@ export default function RegisterPage() {
       return
     }
 
-    // Validação IQONIC ID para VXA e RFG
-    if (accountType === 'member' && (mtmOrganization === 'vxa' || mtmOrganization === 'rfg')) {
-      if (!iqonicId.trim()) {
-        setError('ID IQONIC é obrigatório para VXA e RFG')
-        return
-      }
-    }
-
     setIsLoading(true)
 
     try {
       console.log('📝 [REGISTER] Iniciando registro:', accountType)
 
-      // Trial, Guest ou Member - criar utilizador normalmente com senha definida
-      if (accountType === 'trial' || accountType === 'guest') {
+      // Free Trial (7 dias) — user_type guest + trial_expires_at
+      if (accountType === 'trial') {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
@@ -117,11 +105,7 @@ export default function RegisterPage() {
           
           // Calcular data de expiração baseado no tipo
           const expiryDate = new Date()
-          if (accountType === 'trial') {
-            expiryDate.setDate(expiryDate.getDate() + 7) // 7 dias para trial
-          } else if (accountType === 'guest') {
-            expiryDate.setHours(expiryDate.getHours() + 48) // 48 horas para guest
-          }
+          expiryDate.setDate(expiryDate.getDate() + 7)
           
           // Upsert: substitui o perfil mínimo criado pelo trigger em auth.users
           const { error: profileError } = await supabase.from('profiles').upsert(
@@ -149,9 +133,8 @@ export default function RegisterPage() {
             return
           }
 
-          const validityMessage = accountType === 'trial' ? '7 dias' : '48 horas'
-          console.log(`✅ Conta ${accountType} criada com sucesso!`)
-          alert(`✅ Conta ${accountType} criada!\n\nA tua palavra-passe é a que definiste.\n\nValidade: ${validityMessage}\n\nAgora podes fazer login.`)
+          console.log(`✅ Conta trial criada com sucesso!`)
+          alert(`✅ Conta Free Trial criada!\n\nA tua palavra-passe é a que definiste.\n\nValidade: 7 dias\n\nAgora podes fazer login.`)
           router.push('/login')
         }
       } else {
@@ -191,27 +174,8 @@ export default function RegisterPage() {
           const autoApprove = settingsData?.data?.auto_approve_users ?? true
           
           console.log('🔧 [REGISTER] Auto-aprovação:', autoApprove)
-          console.log('🔧 [REGISTER] Organização MTM:', mtmOrganization)
-          
-          // Determinar member_category e onboarding_platform baseado na organização
-          let memberCategory: string = 'standard'
-          let onboardingPlatform: string | null = null
-          
-          if (mtmOrganization === 'mtm') {
-            memberCategory = 'skool'
-            onboardingPlatform = null
-          } else if (mtmOrganization === 'vxa') {
-            memberCategory = 'iq'
-            onboardingPlatform = 'vxa'
-          } else if (mtmOrganization === 'rfg') {
-            memberCategory = 'iq'
-            onboardingPlatform = 'rfg'
-          }
-          
-          console.log('🔧 [REGISTER] Config:', { memberCategory, onboardingPlatform, iqonicId })
-          
-          // Criar perfil
-          const profileData: any = {
+
+          const profileData: Record<string, unknown> = {
             id: data.user.id,
             email: formData.email,
             full_name: formData.full_name,
@@ -219,20 +183,10 @@ export default function RegisterPage() {
             phone: formData.phone || null,
             whatsapp: formData.whatsapp || null,
             user_type: autoApprove ? 'member' : 'pending',
-            member_category: memberCategory,
+            member_category: 'standard',
             is_active: autoApprove,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-          
-          // Adicionar onboarding_platform se aplicável
-          if (onboardingPlatform) {
-            profileData.onboarding_platform = onboardingPlatform
-          }
-          
-          // Adicionar IQONIC ID se aplicável
-          if (iqonicId) {
-            profileData.iqonic_id = iqonicId
+            updated_at: new Date().toISOString(),
           }
           
           const { error: profileError } = await supabase
@@ -314,13 +268,11 @@ export default function RegisterPage() {
           <CardTitle className="text-2xl font-bold text-[#D2A63C]">
             Criar Conta MoreThanMoney
           </CardTitle>
-          <p className="text-gray-400 mt-2">
-            Escolha o tipo de conta
-          </p>
+          <p className="text-gray-400 mt-2">Membro ou Free Trial (7 dias). VIP é atribuído pela equipa.</p>
         </CardHeader>
         <CardContent>
           {/* Seleção de Tipo de Conta */}
-          <div className="grid grid-cols-3 gap-2 mb-6">
+          <div className="grid grid-cols-2 gap-2 mb-6">
             <button
               type="button"
               onClick={() => setAccountType('member')}
@@ -333,7 +285,7 @@ export default function RegisterPage() {
             >
               <Users className="w-6 h-6 mx-auto mb-2" />
               <p className="text-sm font-semibold">Membro</p>
-              <p className="text-xs mt-1 opacity-70">Acesso completo</p>
+              <p className="text-xs mt-1 opacity-70">Conta principal</p>
             </button>
 
             <button
@@ -350,21 +302,6 @@ export default function RegisterPage() {
               <p className="text-sm font-semibold">Free Trial</p>
               <p className="text-xs mt-1 opacity-70">7 dias grátis</p>
             </button>
-
-            <button
-              type="button"
-              onClick={() => setAccountType('guest')}
-              disabled={isLoading}
-              className={`p-4 rounded-lg border-2 transition-all ${
-                accountType === 'guest'
-                  ? 'border-purple-500 bg-purple-500/10 text-purple-400'
-                  : 'border-gray-700 bg-gray-800/50 text-gray-400 hover:border-purple-500/50'
-              }`}
-            >
-              <Presentation className="w-6 h-6 mx-auto mb-2" />
-              <p className="text-sm font-semibold">Guest</p>
-              <p className="text-xs mt-1 opacity-70">Apresentação</p>
-            </button>
           </div>
 
           {/* Info sobre tipo selecionado */}
@@ -379,12 +316,6 @@ export default function RegisterPage() {
               <div className="text-sm text-gray-300">
                 <p className="font-semibold text-blue-400 mb-1">✓ Free Trial - 7 Dias</p>
                 <p className="text-xs">Acesso completo por 7 dias.</p>
-              </div>
-            )}
-            {accountType === 'guest' && (
-              <div className="text-sm text-gray-300">
-                <p className="font-semibold text-purple-400 mb-1">✓ Conta Guest - 48 Horas</p>
-                <p className="text-xs">Acesso temporário para apresentação.</p>
               </div>
             )}
           </div>
@@ -479,56 +410,6 @@ export default function RegisterPage() {
                 disabled={isLoading}
               />
             </div>
-
-            {/* Organização MTM (apenas para membros) */}
-            {accountType === 'member' && (
-              <>
-                <div>
-                  <Label htmlFor="mtm_org" className="text-gray-300">
-                    Organização MTM *
-                  </Label>
-                  <Select 
-                    value={mtmOrganization} 
-                    onValueChange={(value: MTMOrganization) => setMTMOrganization(value)}
-                    disabled={isLoading}
-                  >
-                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-700">
-                      <SelectItem value="mtm">
-                        <span>🏢 MTM (MoreThanMoney Skool)</span>
-                      </SelectItem>
-                      <SelectItem value="vxa">
-                        <span>⚡ Vision X Ambition (IQ)</span>
-                      </SelectItem>
-                      <SelectItem value="rfg">
-                        <span>🎯 RFG Life (IQ)</span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* IQONIC ID obrigatório para VXA e RFG */}
-                {(mtmOrganization === 'vxa' || mtmOrganization === 'rfg') && (
-                  <div>
-                    <Label htmlFor="iqonic_id" className="text-gray-300">
-                      ID IQONIC *
-                    </Label>
-                    <Input
-                      id="iqonic_id"
-                      type="text"
-                      value={iqonicId}
-                      onChange={(e) => setIqonicId(e.target.value)}
-                      className="bg-gray-800 border-gray-700 text-white"
-                      placeholder="O teu ID IQONIC"
-                      required
-                      disabled={isLoading}
-                    />
-                  </div>
-                )}
-              </>
-            )}
 
             {/* Senha para todos */}
             <>

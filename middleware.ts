@@ -36,10 +36,12 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  const supabase = createServerClient(
-    (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim(),
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim(),
-    {
+  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim()
+  const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim()
+  const hasSupabaseEnv = Boolean(supabaseUrl && supabaseAnonKey)
+
+  if (hasSupabaseEnv) {
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -50,11 +52,11 @@ export async function middleware(request: NextRequest) {
           )
         },
       },
-    }
-  )
+    })
 
-  // Atualizar sessão do usuário
-  await supabase.auth.getUser()
+    // Atualizar sessão do usuário
+    await supabase.auth.getUser()
+  }
 
   // Não aplicar middleware em rotas de autenticação, callbacks e ficheiros estáticos
   const pathname = request.nextUrl.pathname

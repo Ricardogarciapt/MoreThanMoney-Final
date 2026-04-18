@@ -49,7 +49,6 @@ cp "components/ui/label.tsx" "$DEST_DIR/components/ui/"
 cp "lib/supabase.ts" "$DEST_DIR/lib/"
 cp "lib/auth-cache.ts" "$DEST_DIR/lib/"
 cp "lib/role-redirect.ts" "$DEST_DIR/lib/"
-cp "lib/route-protection.tsx" "$DEST_DIR/lib/"
 
 # Copiar contexts
 cp "contexts/auth-context.tsx" "$DEST_DIR/contexts/" 2>/dev/null || echo "auth-context.tsx não existe"

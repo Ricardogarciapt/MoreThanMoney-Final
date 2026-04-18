@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,6 +30,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { PortfolioRebalanceAssistant } from "@/components/mobile/portfolio-rebalance-assistant"
 
 interface MTMAsset {
   symbol: string
@@ -66,6 +67,46 @@ interface Alert {
   active: boolean
 }
 
+const PERSONAL_PORTFOLIO_STORAGE = "mtm_personal_portfolio"
+
+function isUuid(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+}
+
+function serializeAlertsNotes(alerts: Alert[] | undefined): string | null {
+  try {
+    return JSON.stringify({ mtm_alerts: alerts?.length ? alerts : [] })
+  } catch {
+    return '{"mtm_alerts":[]}'
+  }
+}
+
+function parseAlertsFromNotes(notes: string | null | undefined): Alert[] {
+  if (!notes?.trim()) return []
+  try {
+    const j = JSON.parse(notes)
+    if (Array.isArray(j.mtm_alerts)) return j.mtm_alerts
+  } catch {
+    /* ignore */
+  }
+  return []
+}
+
+function dbRowToPersonal(row: Record<string, unknown>): PersonalAsset {
+  const purchase = Number(row.purchase_price ?? row.buy_price ?? 0)
+  const current = Number(row.current_price ?? purchase)
+  return {
+    id: String(row.id),
+    symbol: String(row.symbol ?? ""),
+    name: String(row.name ?? ""),
+    quantity: Number(row.quantity ?? 0),
+    purchase_price: purchase,
+    current_price: current,
+    performance: purchase > 0 ? ((current - purchase) / purchase) * 100 : 0,
+    alerts: parseAlertsFromNotes(typeof row.notes === "string" ? row.notes : null),
+  }
+}
+
 export default function PortfolioMobile() {
   const [mounted, setMounted] = useState(false)
   const [mtmAssets, setMtmAssets] = useState<MTMAsset[]>([])
@@ -74,6 +115,7 @@ export default function PortfolioMobile() {
   const [showAddAsset, setShowAddAsset] = useState(false)
   const [showSharePNL, setShowSharePNL] = useState(false)
   const pnlCardRef = useRef<HTMLDivElement>(null)
+  const personalPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [newAsset, setNewAsset] = useState({
     symbol: "",
     name: "",
@@ -347,52 +389,199 @@ export default function PortfolioMobile() {
     }
   }
 
-  const loadPersonalPortfolio = async () => {
-    setLoading(true)
+  const flushPersonalToServer = async (assets: PersonalAsset[]) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    await Promise.all(
+      assets
+        .filter((a) => isUuid(a.id))
+        .map((a) =>
+          fetch("/api/portfolio/personal", {
+            method: "PUT",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id: a.id,
+              symbol: a.symbol,
+              name: a.name,
+              purchase_price: a.purchase_price,
+              quantity: a.quantity,
+              current_price: a.current_price,
+              notes: serializeAlertsNotes(a.alerts),
+            }),
+          }).then((r) => {
+            if (!r.ok) console.error("[portfolio] PUT falhou", a.symbol, r.status)
+          })
+        )
+    )
+  }
+
+  const loadPersonalPortfolio = useCallback(async () => {
     try {
-      const saved = localStorage.getItem("mtm_personal_portfolio")
-      if (saved) {
-        setPersonalAssets(JSON.parse(saved))
-      } else {
-        setPersonalAssets([])
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        const saved = localStorage.getItem(PERSONAL_PORTFOLIO_STORAGE)
+        setPersonalAssets(saved ? JSON.parse(saved) : [])
+        return
       }
-    } finally {
-      setLoading(false)
+
+      const res = await fetch("/api/portfolio/personal", { credentials: "include" })
+      if (res.status === 401) {
+        const saved = localStorage.getItem(PERSONAL_PORTFOLIO_STORAGE)
+        setPersonalAssets(saved ? JSON.parse(saved) : [])
+        return
+      }
+      if (!res.ok) {
+        console.error("[portfolio] GET remoto falhou", res.status)
+        const saved = localStorage.getItem(PERSONAL_PORTFOLIO_STORAGE)
+        setPersonalAssets(saved ? JSON.parse(saved) : [])
+        return
+      }
+
+      const { assets } = await res.json()
+      let mapped: PersonalAsset[] = (assets ?? []).map((r: Record<string, unknown>) =>
+        dbRowToPersonal(r)
+      )
+
+      if (mapped.length === 0) {
+        const saved = localStorage.getItem(PERSONAL_PORTFOLIO_STORAGE)
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved) as PersonalAsset[]
+            for (const a of parsed) {
+              const pr = await fetch("/api/portfolio/personal", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  symbol: a.symbol,
+                  name: a.name,
+                  quantity: a.quantity,
+                  purchase_price: a.purchase_price,
+                  current_price: a.current_price || a.purchase_price,
+                  notes: serializeAlertsNotes(a.alerts),
+                }),
+              })
+              if (!pr.ok) console.error("[portfolio] migração POST", a.symbol, pr.status)
+            }
+            localStorage.removeItem(PERSONAL_PORTFOLIO_STORAGE)
+            const res2 = await fetch("/api/portfolio/personal", { credentials: "include" })
+            if (res2.ok) {
+              const j2 = await res2.json()
+              mapped = (j2.assets ?? []).map((r: Record<string, unknown>) => dbRowToPersonal(r))
+            }
+          } catch (e) {
+            console.error("[portfolio] migração localStorage → Supabase", e)
+          }
+        }
+      }
+
+      setPersonalAssets(mapped)
+    } catch (e) {
+      console.error("[portfolio] loadPersonalPortfolio", e)
+      const saved = localStorage.getItem(PERSONAL_PORTFOLIO_STORAGE)
+      setPersonalAssets(saved ? JSON.parse(saved) : [])
     }
+  }, [])
+
+  const savePersonalPortfolio = (next: PersonalAsset[]) => {
+    setPersonalAssets(next)
+    if (personalPersistTimerRef.current) clearTimeout(personalPersistTimerRef.current)
+    personalPersistTimerRef.current = setTimeout(() => {
+      personalPersistTimerRef.current = null
+      void (async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          localStorage.setItem(PERSONAL_PORTFOLIO_STORAGE, JSON.stringify(next))
+          return
+        }
+        await flushPersonalToServer(next)
+      })()
+    }, 450)
   }
 
-  const savePersonalPortfolio = (assets: PersonalAsset[]) => {
-    localStorage.setItem("mtm_personal_portfolio", JSON.stringify(assets))
-    setPersonalAssets(assets)
-  }
-
-  const handleAddAsset = () => {
+  const handleAddAsset = async () => {
     if (!newAsset.symbol || !newAsset.name || newAsset.quantity <= 0 || newAsset.purchase_price <= 0) {
       alert("Por favor, preenche todos os campos corretamente")
       return
     }
 
-    const asset: PersonalAsset = {
-      id: Date.now().toString(),
-      symbol: newAsset.symbol.toUpperCase(),
-      name: newAsset.name,
-      quantity: newAsset.quantity,
-      purchase_price: newAsset.purchase_price,
-      current_price: newAsset.purchase_price,
-      performance: 0,
-      alerts: []
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (session) {
+      const res = await fetch("/api/portfolio/personal", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbol: newAsset.symbol.toUpperCase(),
+          name: newAsset.name,
+          quantity: newAsset.quantity,
+          purchase_price: newAsset.purchase_price,
+          current_price: newAsset.purchase_price,
+          notes: serializeAlertsNotes([]),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || "Erro ao guardar no servidor")
+        return
+      }
+      setPersonalAssets((prev) => [...prev, dbRowToPersonal(data.asset as Record<string, unknown>)])
+    } else {
+      const asset: PersonalAsset = {
+        id: Date.now().toString(),
+        symbol: newAsset.symbol.toUpperCase(),
+        name: newAsset.name,
+        quantity: newAsset.quantity,
+        purchase_price: newAsset.purchase_price,
+        current_price: newAsset.purchase_price,
+        performance: 0,
+        alerts: [],
+      }
+      setPersonalAssets((prev) => {
+        const next = [...prev, asset]
+        localStorage.setItem(PERSONAL_PORTFOLIO_STORAGE, JSON.stringify(next))
+        return next
+      })
     }
 
-    savePersonalPortfolio([...personalAssets, asset])
     setNewAsset({ symbol: "", name: "", quantity: 0, purchase_price: 0 })
     setShowAddAsset(false)
   }
 
-  const handleRemoveAsset = (id: string) => {
-    if (confirm("Remover este ativo do portfólio?")) {
-      savePersonalPortfolio(personalAssets.filter(a => a.id !== id))
+  const handleRemoveAsset = async (id: string) => {
+    if (!confirm("Remover este ativo do portfólio?")) return
+
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session && isUuid(id)) {
+      const res = await fetch(`/api/portfolio/personal?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        credentials: "include",
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert((data as { error?: string }).error || "Erro ao remover no servidor")
+        return
+      }
     }
+
+    setPersonalAssets((prev) => {
+      const next = prev.filter((a) => a.id !== id)
+      if (!session) {
+        localStorage.setItem(PERSONAL_PORTFOLIO_STORAGE, JSON.stringify(next))
+      }
+      return next
+    })
   }
+
+  useEffect(() => {
+    if (!mounted) return
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      void loadPersonalPortfolio()
+    })
+    return () => subscription.unsubscribe()
+  }, [mounted, loadPersonalPortfolio])
 
   const handleAddAlert = (assetId: string, type: "price_above" | "price_below", value: number) => {
     const updated = personalAssets.map(asset => {
@@ -1053,6 +1242,68 @@ www.morethanmoney.com`
               )}
             </CardContent>
           </Card>
+
+          <PortfolioRebalanceAssistant
+            personalPositions={personalAssets.map((a) => ({
+              symbol: a.symbol,
+              name: a.name,
+              quantity: a.quantity,
+              avg_price: a.purchase_price,
+            }))}
+            mtmSnapshot={mtmAssets.map((a) => ({
+              symbol: a.symbol,
+              name: a.name,
+              entry_price: a.entry_price,
+              current_price: a.current_price,
+              category: a.category,
+            }))}
+            onImportToPortfolio={async (rows) => {
+              const { data: { session } } = await supabase.auth.getSession()
+              if (session) {
+                const created: PersonalAsset[] = []
+                for (const r of rows) {
+                  const res = await fetch("/api/portfolio/personal", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      symbol: r.symbol.toUpperCase(),
+                      name: r.name || r.symbol,
+                      quantity: r.quantity,
+                      purchase_price: r.avg_price,
+                      current_price: r.avg_price,
+                      notes: serializeAlertsNotes([]),
+                    }),
+                  })
+                  const data = await res.json()
+                  if (res.ok && data.asset) {
+                    created.push(dbRowToPersonal(data.asset as Record<string, unknown>))
+                  } else {
+                    console.error("[portfolio] import IA POST", r.symbol, data)
+                  }
+                }
+                if (created.length) {
+                  setPersonalAssets((prev) => [...prev, ...created])
+                }
+                return
+              }
+              const additions: PersonalAsset[] = rows.map((r, i) => ({
+                id: `ai_import_${Date.now()}_${i}`,
+                symbol: r.symbol.toUpperCase(),
+                name: r.name || r.symbol,
+                quantity: r.quantity,
+                purchase_price: r.avg_price,
+                current_price: r.avg_price,
+                performance: 0,
+                alerts: [],
+              }))
+              setPersonalAssets((prev) => {
+                const next = [...prev, ...additions]
+                localStorage.setItem(PERSONAL_PORTFOLIO_STORAGE, JSON.stringify(next))
+                return next
+              })
+            }}
+          />
 
           {personalAssets.length === 0 ? (
             <Card className="bg-gray-900 border-[#D2A63C]/30">

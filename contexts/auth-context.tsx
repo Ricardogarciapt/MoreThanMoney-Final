@@ -11,10 +11,45 @@ export interface User {
   username?: string
   avatar_url?: string
   user_type?: string
+  /** iq | skool | vip | standard — rotas IQONIC usam member_category === 'iq' */
+  member_category?: string
   is_active?: boolean
   created_at?: string
   phone?: string
   whatsapp?: string
+  mtm_auto_requested?: boolean
+  mtm_auto_enabled?: boolean
+  mtm_auto_admin?: boolean
+}
+
+function profileToUser(
+  profile: unknown,
+  sessionUser: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }
+): { user: User; isIqonicUser: boolean } | null {
+  if (!profile || typeof profile !== "object") return null
+  const p = profile as Record<string, unknown>
+  const member_category =
+    typeof p.member_category === "string" ? p.member_category : undefined
+  return {
+    isIqonicUser: member_category === "iq",
+    user: {
+      id: (p.id as string) ?? sessionUser.id,
+      email: (p.email as string) ?? sessionUser.email ?? "",
+      full_name: p.full_name as string | undefined,
+      username: p.username as string | undefined,
+      avatar_url:
+        (p.avatar_url as string) || (sessionUser.user_metadata?.avatar_url as string | undefined),
+      user_type: p.user_type as string | undefined,
+      member_category,
+      is_active: p.is_active as boolean | undefined,
+      created_at: p.created_at as string | undefined,
+      phone: p.phone as string | undefined,
+      whatsapp: p.whatsapp as string | undefined,
+      mtm_auto_requested: p.mtm_auto_requested as boolean | undefined,
+      mtm_auto_enabled: p.mtm_auto_enabled as boolean | undefined,
+      mtm_auto_admin: p.mtm_auto_admin as boolean | undefined,
+    },
+  }
 }
 
 interface AuthContextType {
@@ -73,19 +108,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               const p =
                 profile ??
                 (await ensureMemberProfile(supabase, cachedSession, { respectAutoApprove: false }))
-              if (p) {
-                setUser({
-                  id: p.id ?? cachedSession.user.id,
-                  email: p.email ?? cachedSession.user.email ?? "",
-                  full_name: p.full_name,
-                  username: p.username,
-                  avatar_url: p.avatar_url || cachedSession.user.user_metadata?.avatar_url,
-                  user_type: p.user_type,
-                  is_active: p.is_active,
-                  created_at: p.created_at,
-                  phone: p.phone,
-                  whatsapp: p.whatsapp,
-                })
+              const mapped = profileToUser(p, cachedSession.user)
+              if (mapped) {
+                setUser(mapped.user)
+                setIsIqonicUser(mapped.isIqonicUser)
               }
               setIsLoading(false)
             })
@@ -133,36 +159,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           if (profile) {
             console.log('✅ [AUTH CONTEXT] Perfil carregado:', profile.email)
-            setUser({
-              id: profile.id,
-              email: profile.email,
-              full_name: profile.full_name,
-              username: profile.username,
-              avatar_url: profile.avatar_url || session.user.user_metadata?.avatar_url,
-              user_type: profile.user_type,
-              is_active: profile.is_active,
-              created_at: profile.created_at,
-              phone: profile.phone,
-              whatsapp: profile.whatsapp
-            })
+            const mapped = profileToUser(profile, session.user)
+            if (mapped) {
+              setUser(mapped.user)
+              setIsIqonicUser(mapped.isIqonicUser)
+            }
           } else {
             console.log('📝 [AUTH CONTEXT] Sincronizar perfil (Supabase)...')
             const newProfile = await ensureMemberProfile(supabase, session, {
               respectAutoApprove: false,
             })
             if (newProfile && mounted) {
-              setUser({
-                id: newProfile.id ?? session.user.id,
-                email: newProfile.email ?? session.user.email ?? "",
-                full_name: newProfile.full_name,
-                username: newProfile.username,
-                avatar_url: newProfile.avatar_url || session.user.user_metadata?.avatar_url,
-                user_type: newProfile.user_type,
-                is_active: newProfile.is_active,
-                created_at: newProfile.created_at,
-                phone: newProfile.phone,
-                whatsapp: newProfile.whatsapp
-              })
+              const mapped = profileToUser(newProfile, session.user)
+              if (mapped) {
+                setUser(mapped.user)
+                setIsIqonicUser(mapped.isIqonicUser)
+              }
             }
           }
         } catch (timeoutError) {
@@ -214,18 +226,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const p =
               profile ?? (await ensureMemberProfile(supabase, session, { respectAutoApprove: false }))
             if (p && mounted) {
-              setUser({
-                id: p.id ?? session.user.id,
-                email: p.email ?? session.user.email ?? "",
-                full_name: p.full_name,
-                username: p.username,
-                avatar_url: p.avatar_url || session.user.user_metadata?.avatar_url,
-                user_type: p.user_type,
-                is_active: p.is_active,
-                created_at: p.created_at,
-                phone: p.phone,
-                whatsapp: p.whatsapp,
-              })
+              const mapped = profileToUser(p, session.user)
+              if (mapped) {
+                setUser(mapped.user)
+                setIsIqonicUser(mapped.isIqonicUser)
+              }
             }
           })
           .catch(() => {})
@@ -280,18 +285,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           return { success: false, error: 'Não foi possível sincronizar o perfil. Tenta de novo ou contacta o suporte.' }
         }
 
-        setUser({
-          id: profile.id ?? data.user.id,
-          email: profile.email ?? data.user.email ?? "",
-          full_name: profile.full_name,
-          username: profile.username,
-          avatar_url: profile.avatar_url || data.user.user_metadata?.avatar_url,
-          user_type: profile.user_type,
-          is_active: profile.is_active,
-          created_at: profile.created_at,
-          phone: profile.phone,
-          whatsapp: profile.whatsapp,
-        })
+        const mapped = profileToUser(profile, data.user)
+        if (mapped) {
+          setUser(mapped.user)
+          setIsIqonicUser(mapped.isIqonicUser)
+        }
 
         return { success: true }
       }
@@ -428,18 +426,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (profile) {
           console.log("✅ Perfil carregado:", profile.email)
-          setUser({
-            id: profile.id ?? session.user.id,
-            email: profile.email ?? session.user.email ?? "",
-            full_name: profile.full_name,
-            username: profile.username,
-            avatar_url: profile.avatar_url || session.user.user_metadata?.avatar_url,
-            user_type: profile.user_type,
-            is_active: profile.is_active,
-            created_at: profile.created_at,
-            phone: profile.phone,
-            whatsapp: profile.whatsapp,
-          })
+          const mapped = profileToUser(profile, session.user)
+          if (mapped) {
+            setUser(mapped.user)
+            setIsIqonicUser(mapped.isIqonicUser)
+          }
         }
       } else {
         console.log('❌ Nenhuma sessão encontrada')

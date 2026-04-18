@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
 import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-auth"
-import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
 import { normalizeLmsCategory } from "@/lib/lms-categories"
+import { DEFAULT_RESTREAM_INGEST_URL, normalizeRestreamIngestUrl } from "@/lib/lms-restream"
+import { normalizeIngestProvider, normalizePlaybackMode } from "@/lib/lms-stream-options"
 
 const supabase = getSupabaseAdmin()
 
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     const { data: row, error: eduErr } = await supabase
       .from("lms_educators")
-      .select("academy_id, stream_key_fixed")
+      .select("academy_id, stream_key_fixed, restream_enabled, restream_ingest_url, restream_stream_key")
       .eq("id", educator.educatorId)
       .single()
 
@@ -48,18 +49,26 @@ export async function POST(request: NextRequest) {
     const description = String(body.description || "").trim() || null
     const thumbnail_url = String(body.thumbnail_url || "").trim() || null
     const category = normalizeLmsCategory(String(body.category || "").trim()) || null
+    const scheduled_start_at = body.scheduled_start_at ? String(body.scheduled_start_at) : null
 
-    const { data: existing } = await supabase
-      .from("lms_streams")
-      .select("id")
-      .eq("educator_id", educator.educatorId)
-      .limit(1)
-      .maybeSingle()
+    const restreamBase =
+      normalizeRestreamIngestUrl((row as any).restream_ingest_url || null) || DEFAULT_RESTREAM_INGEST_URL
+    const restreamKey = (row as any).restream_stream_key || null
+    const restreamEnabled = Boolean((row as any).restream_enabled)
+    const shouldUseRestream = Boolean(restreamEnabled && restreamKey)
+    const ingestProvider = normalizeIngestProvider(
+      body.ingest_provider ?? (shouldUseRestream ? "restream" : "mtm_direct")
+    )
+    const playbackMode = normalizePlaybackMode(body.playback_mode)
+    const effectiveUseRestream = ingestProvider === "restream" && shouldUseRestream
 
-    if (existing?.id) {
+    if (ingestProvider === "restream" && !effectiveUseRestream) {
       return NextResponse.json(
-        { error: "Já tens uma sala criada. Podes editar os dados da tua sala atual no studio." },
-        { status: 409 }
+        {
+          error:
+            "Ingest Restream selecionado, mas faltam configurações do Restream (ativar Restream + stream key). Atualiza no cartão Restream do Studio ou muda ingest para MTM direto.",
+        },
+        { status: 400 }
       )
     }
 
@@ -72,10 +81,13 @@ export async function POST(request: NextRequest) {
         description,
         thumbnail_url,
         category,
-        rtmps_url: getLmsIngestServerUrl(),
-        stream_key: row.stream_key_fixed || null,
+        rtmps_url: effectiveUseRestream ? restreamBase : DEFAULT_RESTREAM_INGEST_URL,
+        stream_key: effectiveUseRestream ? restreamKey : restreamEnabled ? null : row.stream_key_fixed || null,
+        ingest_provider: ingestProvider,
+        playback_mode: playbackMode,
         chat_enabled: body.chat_enabled !== false,
         is_live: false,
+        scheduled_start_at,
       })
       .select("*")
       .single()
@@ -123,6 +135,12 @@ export async function PATCH(request: NextRequest) {
     }
     if (body.playback_url !== undefined) {
       updates.playback_url = String(body.playback_url || "").trim() || null
+    }
+    if (body.playback_mode !== undefined) {
+      updates.playback_mode = normalizePlaybackMode(body.playback_mode)
+    }
+    if (body.ingest_provider !== undefined) {
+      updates.ingest_provider = normalizeIngestProvider(body.ingest_provider)
     }
 
     if (Object.keys(updates).length === 0) {

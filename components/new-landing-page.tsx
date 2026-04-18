@@ -10,13 +10,11 @@ import Image from "next/image"
 import ParticleBackground from "@/components/particle-background"
 import { getRandomTestimonials } from "@/lib/testimonials-service"
 import type { Testimonial } from "@/lib/testimonials-service"
-import { useVideoManager } from "@/lib/videos-manager"
 import RicardoStoryCard from "@/components/ricardo-story-card"
 
 export default function NewLandingPage() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const videoManager = useVideoManager()
 
   useEffect(() => {
     const randomTestimonials = getRandomTestimonials(6)
@@ -51,25 +49,6 @@ export default function NewLandingPage() {
     }
   }
 
-
-  // Map of testimonial images by name
-  const testimonialImages: Record<string, string> = {
-    "Liliana Faria":
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/liliana-faria.jpg-CkCF7RiHAIUfQ1Qh6ZhVMkmmtCzJVz.jpeg",
-    "Gonçalo e Vânia":
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/goncalo-vania.jpg-vK3Ks3NOpCqiQgZtOj6JOfZxmiuZpm.jpeg",
-    "André Dias":
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/andre-dias.jpg-3Mu1TvWGku101AAsuXB00MiN9fZCgU.jpeg",
-    "Rafael Bastos":
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/rafael-bastos.jpg-LuZAC0FpHaJEYhWiShSMwi7SfNZX0u.jpeg",
-    "Rui Rodrigues e Carla":
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/rui-carla.jpg-NEMhntb1rbxuwauj5mVUNmz7pGfx6t.png",
-    "Sandra Oliveira":
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/sandra-oliveira.jpg-zcGxxAPaWxTvR1E194zvqZD1jKdInf.png",
-    "Sandra Oliveira 2":
-      "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/sandra-oliveira-2.jpg-qCd7jS1rZMwpBuLF6LaRJ8eJm3Eb5z.jpeg",
-  }
-
   return (
     <div className="min-h-screen bg-gray-950 text-white relative overflow-hidden">
       <ParticleBackground />
@@ -84,7 +63,7 @@ export default function NewLandingPage() {
               MoreThanMoney
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-              <strong className="text-white">É hora de agir!</strong> Uma plataforma que te inspira a crescer através de <span className="text-mtm-primary">educação, ferramentas e comunidade</span>
+              <strong className="text-white">É hora de agir.</strong> Aprende, automatiza e cresce com uma plataforma focada em <span className="text-mtm-primary">educação, ferramentas e comunidade</span>
             </p>
 
 
@@ -135,6 +114,54 @@ export default function NewLandingPage() {
                 📚 Ver Educação Premium
               </Button>
             </div>
+
+            {/* Navegação rápida para reduzir fricção de decisão */}
+            <div className="mt-8 flex flex-wrap justify-center gap-2">
+              <Link href="/iqonic">
+                <Badge className="cursor-pointer bg-mtm-primary-dark/20 text-mtm-primary border-mtm-primary/30 hover:bg-mtm-primary-dark/30">
+                  Educação IQONIC
+                </Badge>
+              </Link>
+              <Link href="/automation">
+                <Badge className="cursor-pointer bg-mtm-primary-dark/20 text-mtm-primary border-mtm-primary/30 hover:bg-mtm-primary-dark/30">
+                  Automação
+                </Badge>
+              </Link>
+              <Link href="/scanner">
+                <Badge className="cursor-pointer bg-mtm-primary-dark/20 text-mtm-primary border-mtm-primary/30 hover:bg-mtm-primary-dark/30">
+                  Scanner
+                </Badge>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Prova social acima do restante conteúdo */}
+      <section className="pb-16 px-4 relative z-10">
+        <div className="container mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-5xl mx-auto">
+            <Card className="bg-gray-900/70 border-mtm-primary/30">
+              <CardContent className="p-5 text-center">
+                <Users className="h-6 w-6 mx-auto mb-2 text-mtm-primary" />
+                <p className="text-2xl font-bold text-white">Comunidade ativa</p>
+                <p className="text-sm text-gray-400">Membros a aprender e aplicar diariamente</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gray-900/70 border-mtm-primary/30">
+              <CardContent className="p-5 text-center">
+                <TrendingUp className="h-6 w-6 mx-auto mb-2 text-mtm-primary" />
+                <p className="text-2xl font-bold text-white">Foco em evolução</p>
+                <p className="text-sm text-gray-400">Mentalidade, método e consistência</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gray-900/70 border-mtm-primary/30">
+              <CardContent className="p-5 text-center">
+                <UserCheck className="h-6 w-6 mx-auto mb-2 text-mtm-primary" />
+                <p className="text-2xl font-bold text-white">Testemunhos reais</p>
+                <p className="text-sm text-gray-400">Resultados partilhados por membros verificados</p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
@@ -398,48 +425,45 @@ export default function NewLandingPage() {
           </div>
 
           <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            {/* AI com os GÉMEOS */}
+            {/* Educação MTM (ligada à oferta principal /mtm) */}
             <Card className="bg-gray-950/50 border-mtm-primary/30 backdrop-blur-sm hover:border-mtm-primary/70 transition-all duration-300 overflow-hidden">
               <CardContent className="p-0">
                 <div className="relative h-48 overflow-hidden">
-                  <Image src="/ai-com-osgemeos.png" alt="AI com os GÉMEOS" fill className="object-cover" />
+                  <Image src="/api/mtm-image?name=ecossistema" alt="Educação MTM" fill className="object-cover" />
                   <div className="absolute top-4 right-4 bg-mtm-primary-dark text-black px-3 py-1 rounded-full text-sm font-bold">
-                    $39/mês
+                    MTM
                   </div>
                 </div>
                 <div className="p-6">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-gray-400">🌟 Parceria Exclusiva MTM</span>
+                    <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm text-gray-400">Programa Oficial MoreThanMoney</span>
                   </div>
-                  <h3 className="text-2xl font-bold mb-3">AI com os GÉMEOS</h3>
+                  <h3 className="text-2xl font-bold mb-3">Educação MTM</h3>
                   <p className="text-gray-300 mb-4 text-sm leading-relaxed">
-                    <strong>Parceria estratégica</strong> entre a MoreThanMoney e os Gémeos! Cada vez mais se ouve falar de IA, 
-                    mas são poucos os que verdadeiramente entendem e aplicam. Esta comunidade combina o <strong className="text-mtm-primary">conhecimento técnico dos Gémeos</strong> 
-                    com a <strong className="text-mtm-primary">metodologia MTM</strong> 🤖
+                    O ecossistema da <strong className="text-mtm-primary">MoreThanMoney</strong>: formação estruturada,
+                    método, gestão de risco e ferramentas práticas para aprender e aplicar no mercado com consistência.
                   </p>
                   <div className="space-y-2 mb-6">
                     <div className="flex items-center gap-2 text-sm text-gray-300">
                       <div className="h-1 w-1 bg-amber-500 rounded-full"></div>
-                      <span>Fundamentos explicados de forma simples</span>
+                      <span>Roadmap “Earn while you learn” com orientação passo a passo</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-300">
                       <div className="h-1 w-1 bg-amber-500 rounded-full"></div>
-                      <span>Tutoriais step-by-step com aplicação prática</span>
+                      <span>Scanners e ferramentas para execução com disciplina</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-300">
                       <div className="h-1 w-1 bg-amber-500 rounded-full"></div>
-                      <span>Desafios semanais com prémios em dinheiro 🏆</span>
+                      <span>Conteúdo de mentalidade, estratégia e prática contínua</span>
                     </div>
                   </div>
-                  <div className="text-xs text-mtm-primary mb-4 italic">🤝 Parceria Oficial MoreThanMoney × Os Gémeos</div>
-                  <Button
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-                    onClick={() => window.open("https://www.skool.com/ai-com-osgemeos/about?ref=bc17a1ec65954570926520a936f7355b", "_blank")}
-                  >
-                    🤝 Aceder à Parceria MTM × Gémeos
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+                  <Link href="/mtm">
+                    <Button className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white">
+                      📘 Ver Educação MTM
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>

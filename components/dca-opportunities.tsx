@@ -57,11 +57,14 @@ export default function DCAOpportunities() {
 
   useEffect(() => {
     loadOpportunities()
-    
-    // Atualizar a cada 2 minutos
+
     const interval = setInterval(loadOpportunities, 120000)
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    setCurrentSlide(0)
+  }, [opportunities.length])
 
   const loadOpportunities = async () => {
     try {
@@ -69,7 +72,9 @@ export default function DCAOpportunities() {
       setLoading(true)
       setLoadError(null)
       
-      const response = await fetch('/api/portfolio/dca-smart?type=crypto')
+      const response = await fetch(`/api/portfolio/dca-smart?type=crypto&t=${Date.now()}`, {
+        cache: "no-store",
+      })
       const result = await response.json()
       
       console.log('📦 [DCA OPPORTUNITIES] Resposta:', {
@@ -84,7 +89,15 @@ export default function DCAOpportunities() {
         setLoadError(result?.error || result?.details || `Erro ${response.status}. Tenta novamente.`)
         setOpportunities([])
         setCategorized({ strong_buys: [], buys: [], waits: [], no_reinforce: [] })
-        setSummary({ total_assets_analyzed: 0, strong_buy_count: 0, buy_count: 0, total_suggested_investment: 0 })
+        setSummary({
+          total_assets_analyzed: 0,
+          expected_assets: 0,
+          strong_buy_count: 0,
+          buy_count: 0,
+          wait_count: 0,
+          no_reinforce_count: 0,
+          total_suggested_investment: 0,
+        })
         return
       }
       
@@ -99,12 +112,17 @@ export default function DCAOpportunities() {
           waits: [],
           no_reinforce: []
         })
-        setSummary(result.data.summary || {
-          total_assets_analyzed: 0,
-          strong_buy_count: 0,
-          buy_count: 0,
-          total_suggested_investment: 0
-        })
+        setSummary(
+          result.data.summary || {
+            total_assets_analyzed: 0,
+            expected_assets: 0,
+            strong_buy_count: 0,
+            buy_count: 0,
+            wait_count: 0,
+            no_reinforce_count: 0,
+            total_suggested_investment: 0,
+          }
+        )
       } else {
         console.error('❌ [DCA OPPORTUNITIES] API retornou erro:', result.error)
         setLoadError(result?.error || 'Erro ao analisar oportunidades.')
@@ -112,9 +130,12 @@ export default function DCAOpportunities() {
         setCategorized({ strong_buys: [], buys: [], waits: [], no_reinforce: [] })
         setSummary({
           total_assets_analyzed: 0,
+          expected_assets: 0,
           strong_buy_count: 0,
           buy_count: 0,
-          total_suggested_investment: 0
+          wait_count: 0,
+          no_reinforce_count: 0,
+          total_suggested_investment: 0,
         })
       }
     } catch (error) {
@@ -124,9 +145,12 @@ export default function DCAOpportunities() {
       setCategorized({ strong_buys: [], buys: [], waits: [], no_reinforce: [] })
       setSummary({
         total_assets_analyzed: 0,
+        expected_assets: 0,
         strong_buy_count: 0,
         buy_count: 0,
-        total_suggested_investment: 0
+        wait_count: 0,
+        no_reinforce_count: 0,
+        total_suggested_investment: 0,
       })
     } finally {
       setLoading(false)
@@ -244,6 +268,12 @@ export default function DCAOpportunities() {
 
   return (
     <div className="space-y-6">
+      {loading && opportunities.length > 0 && (
+        <div className="flex items-center justify-center gap-2 rounded-lg border border-[#D2A63C]/30 bg-[#D2A63C]/5 py-2 text-sm text-[#D2A63C]">
+          <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+          <span>A atualizar preços e recomendações…</span>
+        </div>
+      )}
       {/* Header Premium Ultra-Moderno */}
       <Card className="relative overflow-hidden border-none shadow-2xl">
         {/* Background Gradient Animado */}
@@ -312,9 +342,7 @@ export default function DCAOpportunities() {
                   <div className="absolute -top-4 -right-4 text-6xl opacity-10">⏸️</div>
                   <div className="relative z-10">
                     <div className="text-[11px] text-yellow-200 uppercase tracking-wider mb-2 font-bold">Aguardar</div>
-                    <div className="text-3xl font-black text-white">
-                      {(summary?.total_assets_analyzed || 0) - (summary?.strong_buy_count || 0) - (summary?.buy_count || 0)}
-                    </div>
+                    <div className="text-3xl font-black text-white">{summary?.wait_count ?? 0}</div>
                   </div>
                 </div>
               </div>
@@ -386,11 +414,10 @@ export default function DCAOpportunities() {
               <div>
                 <h3 className="text-xl font-bold text-white mb-2">A analisar mercado...</h3>
                 <p className="text-gray-400 max-w-md mx-auto">
-                  O sistema está a analisar os {summary?.total_assets_analyzed || 21} ativos configurados no Admin Panel.
-                  As oportunidades DCA aparecerão aqui quando houver descontos significativos (≥10%).
+                  Não foi possível obter a lista de ativos do portefólio. Verifica a ligação e carrega de novo.
                 </p>
                 <p className="text-sm text-blue-400 mt-3">
-                  💡 Dica: Quando não há oportunidades, significa que os preços estão próximos ou acima das médias.
+                  💡 Dica: Quando não há oportunidades, significa que a variação diária está estável/positiva.
                   Continue com o plano DCA regular!
                 </p>
               </div>
@@ -528,7 +555,7 @@ export default function DCAOpportunities() {
                           opp.discount_percent >= 15 ? 'text-green-200' :
                           opp.discount_percent >= 10 ? 'text-blue-200' :
                           opp.discount_percent >= 5 ? 'text-yellow-200' : 'text-gray-200'
-                        }`}>Desconto</div>
+                        }`}>Desconto médio para DCA</div>
                         <div className={`text-4xl font-black ${
                           opp.discount_percent >= 15 ? 'text-green-300' :
                           opp.discount_percent >= 10 ? 'text-blue-300' :
@@ -622,13 +649,13 @@ export default function DCAOpportunities() {
             <div className="text-sm text-gray-300">
               <p className="font-medium text-amber-500 mb-2">Como Funciona o DCA Inteligente:</p>
               <ul className="space-y-1 text-xs">
-                <li>• <strong>Forte Compra</strong>: Desconto ≥15% → Reforçar 2x o planeado</li>
-                <li>• <strong>Compra</strong>: Desconto 10-15% → Reforçar 1.5x o planeado</li>
-                <li>• <strong>Aguardar</strong>: Desconto 5-10% → Reforçar 50% do planeado</li>
-                <li>• <strong>Não Reforçar</strong>: Preço acima da média → Aguardar correção</li>
+                <li>• <strong>Forte Compra</strong>: Variação diária ≤ -8% → Reforçar 2x o planeado</li>
+                <li>• <strong>Compra</strong>: Variação diária entre -8% e -4% → Reforçar 1.5x o planeado</li>
+                <li>• <strong>Aguardar</strong>: Variação diária entre -4% e +1.5% → Reforçar 50% do planeado</li>
+                <li>• <strong>Não Reforçar</strong>: Variação diária &gt; +1.5% → Aguardar melhor entrada</li>
               </ul>
               <p className="mt-2 text-xs text-gray-400">
-                Os preços são atualizados via CoinGecko. Análise baseada em médias móveis semanais e análise de volume.
+                Os preços são atualizados via CoinGecko. A análise DCA usa a variação diária (24h) como sinal principal.
               </p>
             </div>
           </div>

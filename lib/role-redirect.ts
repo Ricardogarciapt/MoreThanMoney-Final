@@ -1,8 +1,10 @@
 /**
- * Função para determinar o redirecionamento após login baseado em user_type e member_category
+ * Tipos de conta (apenas: Admin, VIP, Membro, Free Trial).
+ * Na BD: trial = user_type "guest" + trial_expires_at; VIP = member_category "vip";
+ * Membro = user_type "member" (e categorias legadas iq/skool/standard tratadas como membro).
  */
 
-/** Alinhado com public.profiles + checks de rota */
+/** Perfil alinhado com public.profiles */
 export interface UserProfile {
   id?: string
   email?: string
@@ -16,6 +18,45 @@ export interface UserProfile {
   member_category?: string
   is_active?: boolean
   trial_expired?: boolean
+  trial_expires_at?: string | null
+}
+
+export type AccountKind = "admin" | "vip" | "member" | "trial" | "pending" | "blocked"
+
+function trialIsExpired(p: UserProfile): boolean {
+  if (p.trial_expired === true) return true
+  if (!p.trial_expires_at) return false
+  return new Date(p.trial_expires_at).getTime() <= Date.now()
+}
+
+/**
+ * Resolve o tipo de conta para regras de rota e redirecionamento.
+ */
+export function getAccountKind(profile: UserProfile | null): AccountKind {
+  if (!profile) return "blocked"
+
+  if (profile.user_type === "admin" && profile.is_active === true) {
+    return "admin"
+  }
+
+  if (profile.user_type === "pending" || profile.is_active === false) {
+    return "pending"
+  }
+
+  if (profile.member_category === "vip") {
+    return "vip"
+  }
+
+  if (profile.user_type === "guest") {
+    return trialIsExpired(profile) ? "blocked" : "trial"
+  }
+
+  if (profile.user_type === "inactive") {
+    return "blocked"
+  }
+
+  // member, presentation, affiliate, etc. → membro standard
+  return "member"
 }
 
 /** Evita open redirect: só caminhos relativos internos. */
@@ -30,168 +71,108 @@ export function determinePostLoginRedirect(
   profile: UserProfile | null,
   requestedRedirect?: string | null
 ): string {
-  const safeRequested = safeInternalRedirectPath(requestedRedirect)
+  let safeRequested = safeInternalRedirectPath(requestedRedirect)
 
-  // Sem perfil ainda (OAuth lento, rede, ou perfil em criação): NÃO tratar como "pending".
-  // Antes: !profile?.is_active era true com profile null → mensagem falsa de aprovação.
+  if (safeRequested === "/admin" && profile?.user_type !== "admin") {
+    safeRequested = null
+  }
+
+  const kind = getAccountKind(profile)
+
+  if (kind === "blocked") {
+    return "/login?error=trial_expired"
+  }
+
+  if (kind === "pending") {
+    return "/success?message=Aguardando+aprovação+administrativa"
+  }
+
   if (!profile) {
     return safeRequested ?? "/member-area"
   }
 
-  // Se tem redirect específico e é admin, respeitar
-  if (safeRequested && profile.user_type === "admin") {
-    return safeRequested
-  }
-
-  // ADMIN - Redirecionar para admin ou redirect solicitado
-  if (profile.user_type === "admin") {
+  if (kind === "admin") {
     return safeRequested || "/admin"
   }
 
-  // VIP - Redirecionar para app-mobile (acesso total)
-  if (profile?.member_category === 'vip') {
-    return '/app-mobile'
+  if (safeRequested && kind !== "trial") {
+    return safeRequested
   }
 
-  // MEMBER IQ (member_category='iq')
-  if (profile?.member_category === 'iq') {
-    // Após login vai para app-mobile, mas pode navegar pelo site (exceto VIP e Admin)
-    return '/app-mobile'
+  if (kind === "trial" && safeRequested && !safeRequested.startsWith("/admin")) {
+    return safeRequested
   }
 
-  // MEMBER SKOOL (member_category='skool')
-  if (profile?.member_category === 'skool') {
-    // Após login vai para app-mobile, acesso limitado
-    return '/app-mobile'
-  }
-
-  // GUEST (Trial 7 dias)
-  if (profile?.user_type === 'guest') {
-    // 7 dias de acesso igual ao Membro Skool (exceto /portfolios)
-    // Redireciona para app-mobile
-    return '/app-mobile'
-  }
-
-  // PRESENTATION (Demo 48h)
-  if (profile?.user_type === 'presentation') {
-    // Apenas acesso a new-landing e apresentação IQONIC
-    return '/new-landing'
-  }
-
-  // PENDING / conta desativada — só com perfil carregado
-  if (profile.user_type === "pending" || profile.is_active === false) {
-    return "/success?message=Aguardando+aprovação+administrativa"
-  }
-
-  // INACTIVE
-  if (profile?.user_type === 'inactive') {
-    return '/new-landing'
-  }
-
-  // MEMBER STANDARD - Sem categoria específica
-  if (profile?.user_type === 'member' && (!profile?.member_category || profile?.member_category === 'standard')) {
-    // Acesso padrão como Membro Skool
-    return '/app-mobile'
-  }
-
-  // Fallback
-  return '/new-landing'
+  return "/app-mobile"
 }
 
-/**
- * Verifica se um utilizador pode aceder a uma rota específica
- */
-export function canAccessRoute(
-  profile: UserProfile | null,
-  route: string
-): boolean {
-  if (!profile || !profile.is_active) {
+export function canAccessRoute(profile: UserProfile | null, route: string): boolean {
+  const kind = getAccountKind(profile)
+
+  if (kind === "blocked" || kind === "pending") {
     return false
   }
 
-  // Admin tem acesso a tudo
-  if (profile.user_type === 'admin') {
+  if (!profile || profile.is_active === false) {
+    return false
+  }
+
+  if (kind === "admin") {
     return true
   }
 
-  // VIP tem acesso a tudo exceto /admin
-  if (profile.member_category === 'vip') {
-    return !route.startsWith('/admin')
+  if (route.startsWith("/admin")) {
+    return false
   }
 
-  // Apresentação - apenas new-landing
-  if (profile.user_type === 'presentation') {
-    return route === '/new-landing' || route === '/'
+  if (kind === "vip") {
+    return true
   }
 
-  // Inactive - apenas páginas públicas
-  if (profile.user_type === 'inactive') {
-    return ['/new-landing', '/'].includes(route)
+  if (kind === "member") {
+    if (route.startsWith("/aimtm")) return false
+    return true
   }
 
-  // Member IQ - acesso exceto VIP e Admin
-  if (profile.member_category === 'iq') {
-    const restrictedRoutes = ['/admin', '/aimtm'] // Rotas VIP
-    return !restrictedRoutes.some(restricted => route.startsWith(restricted))
+  if (kind === "trial") {
+    if (route.startsWith("/aimtm") || route.startsWith("/portfolios")) {
+      return false
+    }
+    return true
   }
 
-  // Member Skool - acesso limitado (SEM /portfolios)
-  if (profile.member_category === 'skool') {
-    const restrictedRoutes = ['/admin', '/portfolios', '/aimtm']
-    return !restrictedRoutes.some(restricted => route.startsWith(restricted))
-  }
-
-  // Guest - mesmo acesso que Skool (7 dias de trial)
-  if (profile.user_type === 'guest' && !profile.trial_expired) {
-    const restrictedRoutes = ['/admin', '/portfolios', '/aimtm']
-    return !restrictedRoutes.some(restricted => route.startsWith(restricted))
-  }
-
-  // Member Standard - igual a Skool
-  if (profile.user_type === 'member') {
-    const restrictedRoutes = ['/admin', '/portfolios', '/aimtm']
-    return !restrictedRoutes.some(restricted => route.startsWith(restricted))
-  }
-
-  // Default: negar acesso
   return false
 }
 
-/**
- * Obtém uma mensagem de erro personalizada para acesso negado
- */
-export function getAccessDeniedMessage(
-  profile: UserProfile | null,
-  route: string
-): string {
+export function getAccessDeniedMessage(profile: UserProfile | null, route: string): string {
+  const kind = getAccountKind(profile)
+
   if (!profile) {
-    return 'Necessita de fazer login para aceder a esta página.'
+    return "Inicia sessão para aceder a esta página."
   }
 
-  if (profile.user_type === 'pending') {
-    return 'A sua conta está a aguardar aprovação.'
+  if (kind === "pending") {
+    return "A tua conta está a aguardar aprovação."
   }
 
-  if (profile.user_type === 'presentation') {
-    return 'Acesso apenas disponível para a apresentação.'
+  if (kind === "blocked") {
+    if (profile.user_type === "guest" || profile.trial_expires_at) {
+      return "O teu período de trial terminou. Contacta a equipa para continuar."
+    }
+    return "Conta inativa. Contacta o suporte."
   }
 
-  if (profile.user_type === 'inactive') {
-    return 'A sua subscrição está inativa. Por favor, ative a sua subscrição.'
+  if (route.startsWith("/admin")) {
+    return "Apenas administradores podem aceder ao painel."
   }
 
-  if (route === '/portfolios' && (profile.member_category === 'skool' || profile.user_type === 'guest')) {
-    return 'Os Portfólios estão disponíveis apenas para Membros IQ e VIP.'
+  if (route.startsWith("/aimtm")) {
+    return "O AI MTM Trader está disponível para membros VIP."
   }
 
-  if (route.startsWith('/admin')) {
-    return 'Apenas administradores podem aceder ao painel admin.'
+  if (route.startsWith("/portfolios") && kind === "trial") {
+    return "Os portfólios não estão incluídos no Free Trial."
   }
 
-  if (route.startsWith('/aimtm') && profile.member_category !== 'vip') {
-    return 'O AI MTM Trader está disponível apenas para membros VIP.'
-  }
-
-  return 'Não tem permissão para aceder a esta página.'
+  return "Não tens permissão para aceder a esta página."
 }
-

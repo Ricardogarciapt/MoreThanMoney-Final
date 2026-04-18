@@ -132,12 +132,17 @@ function AppMobileContent() {
     router.push(`/app-mobile?tab=${tab}`, { scroll: false })
   }
 
-  // Detectar swipe para mudar tabs
+  // Swipe para mudar tab — desativado no separador "Ao vivo" e em cima de &lt;video&gt;
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (activeTab === "live") return
+
     const target = e.target as HTMLElement
-    const isHorizontalScrollable = target.closest('[class*="overflow-x-auto"]') || 
-                                    target.closest('[class*="overflow-x-scroll"]')
-    
+    if (target.closest("video")) return
+    if (target.closest("[data-live-player-guard]")) return
+
+    const isHorizontalScrollable =
+      target.closest('[class*="overflow-x-auto"]') || target.closest('[class*="overflow-x-scroll"]')
+
     if (!isHorizontalScrollable) {
       setTouchStart(e.targetTouches[0].clientX)
       setTouchEnd(0)
@@ -145,16 +150,27 @@ function AppMobileContent() {
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    if (activeTab === "live") return
+
     const target = e.target as HTMLElement
-    const isHorizontalScrollable = target.closest('[class*="overflow-x-auto"]') || 
-                                    target.closest('[class*="overflow-x-scroll"]')
-    
+    if (target.closest("video")) return
+    if (target.closest("[data-live-player-guard]")) return
+
+    const isHorizontalScrollable =
+      target.closest('[class*="overflow-x-auto"]') || target.closest('[class*="overflow-x-scroll"]')
+
     if (!isHorizontalScrollable && touchStart !== 0) {
       setTouchEnd(e.targetTouches[0].clientX)
     }
   }
 
   const handleTouchEnd = () => {
+    if (activeTab === "live") {
+      setTouchStart(0)
+      setTouchEnd(0)
+      return
+    }
+
     if (!touchStart || !touchEnd || touchStart === 0) return
     
     const distance = touchStart - touchEnd
@@ -308,67 +324,68 @@ function AppMobileContent() {
 
         {/* Bottom Navigation - FIXA NO FUNDO */}
         <div
-          className="fixed bottom-0 left-0 right-0 z-50 bg-black border-t border-gray-800 px-1 py-1.5"
+          id="app-mobile-bottom-tabs"
+          className="app-mobile-bottom-tabs fixed bottom-0 left-0 right-0 z-[110] bg-black border-t border-gray-800 px-2 py-2"
           style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.25rem" }}
         >
           <button
             onClick={() => handleTabChange("social")}
-            className={`py-2 rounded-lg transition-all relative ${
+            className={`py-3 rounded-lg transition-all relative ${
               activeTab === "social"
                 ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
                 : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
             }`}
           >
-            <Users className={`w-4 h-4 mx-auto mb-0.5 ${activeTab === "social" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[9px] font-medium leading-tight ${activeTab === "social" ? "text-[#D2A63C]" : ""}`}>Social</div>
+            <Users className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "social" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "social" ? "text-[#D2A63C]" : ""}`}>Social</div>
           </button>
 
           <button
             onClick={() => handleTabChange("live")}
-            className={`py-2 rounded-lg transition-all relative ${
+            className={`py-3 rounded-lg transition-all relative ${
               activeTab === "live"
                 ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
                 : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
             }`}
           >
-            <Video className={`w-4 h-4 mx-auto mb-0.5 ${activeTab === "live" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[9px] font-medium leading-tight ${activeTab === "live" ? "text-[#D2A63C]" : ""}`}>Ao vivo</div>
+            <Video className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "live" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "live" ? "text-[#D2A63C]" : ""}`}>Ao vivo</div>
           </button>
 
           <button
             onClick={() => handleTabChange("studio")}
-            className={`py-2 rounded-lg transition-all relative ${
+            className={`py-3 rounded-lg transition-all relative ${
               activeTab === "studio"
                 ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
                 : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
             }`}
           >
-            <Rocket className={`w-4 h-4 mx-auto mb-0.5 ${activeTab === "studio" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[9px] font-medium leading-tight ${activeTab === "studio" ? "text-[#D2A63C]" : ""}`}>Studio</div>
+            <Rocket className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "studio" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "studio" ? "text-[#D2A63C]" : ""}`}>Studio</div>
           </button>
 
           <button
             onClick={() => handleTabChange("portfolio")}
-            className={`py-2 rounded-lg transition-all relative ${
+            className={`py-3 rounded-lg transition-all relative ${
               activeTab === "portfolio"
                 ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
                 : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
             }`}
           >
-            <Wallet className={`w-4 h-4 mx-auto mb-0.5 ${activeTab === "portfolio" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[9px] font-medium leading-tight ${activeTab === "portfolio" ? "text-[#D2A63C]" : ""}`}>Portfólio</div>
+            <Wallet className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "portfolio" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "portfolio" ? "text-[#D2A63C]" : ""}`}>Portfólio</div>
           </button>
 
           <button
             onClick={() => handleTabChange("scanner")}
-            className={`py-2 rounded-lg transition-all relative ${
+            className={`py-3 rounded-lg transition-all relative ${
               activeTab === "scanner"
                 ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
                 : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
             }`}
           >
-            <BarChart3 className={`w-4 h-4 mx-auto mb-0.5 ${activeTab === "scanner" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[9px] font-medium leading-tight ${activeTab === "scanner" ? "text-[#D2A63C]" : ""}`}>Scanner</div>
+            <BarChart3 className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "scanner" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "scanner" ? "text-[#D2A63C]" : ""}`}>Scanner</div>
           </button>
         </div>
       </main>

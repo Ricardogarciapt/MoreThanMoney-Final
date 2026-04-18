@@ -1,256 +1,304 @@
 import { NextRequest, NextResponse } from "next/server"
+import type { User } from "@supabase/supabase-js"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { requireAdmin } from "@/lib/admin-api-helpers"
 
 const supabase = getSupabaseAdmin()
 
-interface AuthUser {
-  id: string
-  email?: string
-  user_metadata?: {
-    full_name?: string
-    username?: string
-    user_type?: string
+const ADMIN_EMAILS = new Set(
+  ["ricardogarciapt@proton.me", "morethanmoneypt@gmail.com"].map((e) => e.toLowerCase())
+)
+
+const MTM_AUTO_ADMIN_EMAILS = new Set(["morethanmoneypt@gmail.com"].map((e) => e.toLowerCase()))
+
+const ALLOWED_USER_TYPES = new Set([
+  "member",
+  "admin",
+  "pending",
+  "guest",
+  "presentation",
+  "affiliate",
+])
+
+const ALLOWED_MEMBER_CATEGORY = new Set(["iq", "skool", "vip", "standard"])
+
+function syncSecretAuthorized(request: NextRequest): boolean {
+  const secret = process.env.SYNC_USERS_SECRET?.trim()
+  if (!secret) return false
+  const header = request.headers.get("x-sync-users-secret")
+  return header === secret
+}
+
+async function authorizeSync(request: NextRequest): Promise<NextResponse | null> {
+  if (syncSecretAuthorized(request)) return null
+  return requireAdmin(request)
+}
+
+/** Lista todos os utilizadores em auth.users (paginado). */
+async function listAllAuthUsers(): Promise<{ users: User[]; error?: string }> {
+  const perPage = 1000
+  const users: User[] = []
+  let page = 1
+
+  for (;;) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage })
+    if (error) return { users: [], error: error.message }
+    users.push(...data.users)
+    if (data.users.length < perPage) break
+    page += 1
   }
-  created_at: string
-  email_confirmed_at?: string
+
+  return { users }
+}
+
+function displayNameFromAuth(user: User): string {
+  const m = user.user_metadata || {}
+  const full =
+    (typeof m.full_name === "string" && m.full_name.trim()) ||
+    (typeof m.name === "string" && m.name.trim()) ||
+    ""
+  if (full) return full
+  const local = user.email?.split("@")[0]
+  return local?.trim() || "Utilizador"
+}
+
+function usernameFromAuth(user: User): string {
+  const m = user.user_metadata || {}
+  const fromMeta = typeof m.username === "string" ? m.username.trim() : ""
+  if (fromMeta) return fromMeta
+  const name = typeof m.name === "string" ? m.name.replace(/\s+/g, "").toLowerCase() : ""
+  const prefix =
+    name.length > 0
+      ? name
+      : (user.email?.split("@")[0] || "user").replace(/[^a-z0-9_]/gi, "")
+  return `${prefix}_${user.id.replace(/-/g, "").slice(0, 10)}`
+}
+
+function avatarFromAuth(user: User): string | null {
+  const m = user.user_metadata || {}
+  const a =
+    (typeof m.avatar_url === "string" && m.avatar_url) ||
+    (typeof m.picture === "string" && m.picture) ||
+    ""
+  return a.trim() || null
+}
+
+function resolveUserType(user: User, existing: { user_type?: string | null } | null): string {
+  const email = user.email?.toLowerCase()
+  if (email && ADMIN_EMAILS.has(email)) return "admin"
+
+  const fromMeta = user.user_metadata?.user_type
+  if (typeof fromMeta === "string" && ALLOWED_USER_TYPES.has(fromMeta)) return fromMeta
+
+  const existingType = existing?.user_type
+  if (typeof existingType === "string" && ALLOWED_USER_TYPES.has(existingType)) return existingType
+
+  return "member"
+}
+
+function resolveMemberCategory(
+  user: User,
+  existing: { member_category?: string | null } | null
+): string | undefined {
+  const fromMeta = user.user_metadata?.member_category
+  if (typeof fromMeta === "string" && ALLOWED_MEMBER_CATEGORY.has(fromMeta)) return fromMeta
+  return undefined
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await authorizeSync(request)
+  if (denied) return denied
+
   try {
-    // Verificar se é admin (opcional - pode remover para facilitar)
-    // const authHeader = request.headers.get('authorization')
-    // if (!authHeader || !authHeader.includes(process.env.ADMIN_TOKEN || '')) {
-    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    // }
-
-    console.log("🔄 Iniciando sincronização de utilizadores...")
-
-    // 1. Buscar todos os utilizadores do Auth
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
-    
-    if (authError) {
-      return NextResponse.json({ error: authError.message }, { status: 500 })
+    const { users: authUsers, error: listErr } = await listAllAuthUsers()
+    if (listErr) {
+      return NextResponse.json({ error: listErr }, { status: 500 })
     }
 
-    // 2. Buscar todos os perfis existentes
     const { data: existingProfiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('*')
+      .from("profiles")
+      .select("*")
 
     if (profilesError) {
       return NextResponse.json({ error: profilesError.message }, { status: 500 })
     }
 
-    const existingProfileIds = new Set(existingProfiles?.map(p => p.id) || [])
+    const profileById = new Map((existingProfiles || []).map((p) => [p.id, p]))
 
-    // 3. Identificar admins existentes
-    const adminEmails = [
-      'ricardogarciapt@proton.me',
-      'morethanmoneypt@gmail.com'
-    ]
+    let created = 0
+    let updated = 0
+    let unchanged = 0
+    const errors: { id: string; email?: string; message: string }[] = []
 
-    const adminUsers = authUsers.users.filter(user => 
-      user.user_metadata?.user_type === 'admin' || 
-      adminEmails.includes(user.email || '')
-    )
+    for (const user of authUsers) {
+      const existing = profileById.get(user.id) || null
+      const userType = resolveUserType(user, existing)
+      const email = (user.email || "").trim()
+      const fullName = displayNameFromAuth(user)
+      const username = usernameFromAuth(user)
+      const avatarUrl = avatarFromAuth(user)
+      const memberCat = resolveMemberCategory(user, existing)
 
-    // 4. Sincronizar utilizadores
-    let syncedCount = 0
-    let adminCount = 0
-    const results = []
-
-    for (const authUser of authUsers.users) {
-      if (!existingProfileIds.has(authUser.id)) {
-        // Determinar tipo de utilizador
-        let userType = 'member'
-        let isActive = true
-        let isVerified = !!authUser.email_confirmed_at
-
-        // Verificar se é admin
-        if (adminUsers.some(admin => admin.id === authUser.id)) {
-          userType = 'admin'
-          adminCount++
-        }
-
-        // Criar perfil do utilizador (sem is_verified se a coluna não existir)
-        const profileData: any = {
-          id: authUser.id,
-          email: authUser.email || '',
-          full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'Utilizador',
-          username: authUser.user_metadata?.username || authUser.email?.split('@')[0] || `user_${Math.random().toString(36).substr(2, 9)}`,
+      if (!existing) {
+        const isMtmAutoAdmin = !!(email && MTM_AUTO_ADMIN_EMAILS.has(email.toLowerCase()))
+        const row: Record<string, unknown> = {
+          id: user.id,
+          email: email || `pending-${user.id}@users.invalid`,
+          full_name: fullName,
+          username,
           user_type: userType,
-          membership_level: 'basic',
-          is_active: isActive,
-          created_at: authUser.created_at,
-          updated_at: new Date().toISOString()
+          member_category: memberCat ?? "standard",
+          is_active: true,
+          mtm_auto_enabled: isMtmAutoAdmin,
+          mtm_auto_enabled_at: isMtmAutoAdmin ? new Date().toISOString() : null,
+          mtm_auto_admin: isMtmAutoAdmin,
+          mtm_auto_requested: false,
+          mtm_auto_requested_at: null,
+          created_at: user.created_at,
+          updated_at: new Date().toISOString(),
         }
-        
-        // Adicionar is_verified apenas se a coluna existir
-        // A API tentará inserir, se falhar por causa da coluna, tentaremos sem ela
+        if (avatarUrl) row.avatar_url = avatarUrl
 
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert(profileData)
-
+        const { error: insertError } = await supabase.from("profiles").insert(row)
         if (insertError) {
-          results.push({
-            email: authUser.email,
-            status: 'error',
-            error: insertError.message
-          })
+          errors.push({ id: user.id, email: user.email, message: insertError.message })
         } else {
-          results.push({
-            email: authUser.email,
-            status: 'success',
-            userType
-          })
-          syncedCount++
+          created += 1
+          profileById.set(user.id, row as (typeof existingProfiles)[0])
         }
+        continue
+      }
+
+      const nextEmail = email || existing.email
+      const patch: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      }
+      const isMtmAutoAdmin = !!(nextEmail && MTM_AUTO_ADMIN_EMAILS.has(nextEmail.toLowerCase()))
+
+      if (nextEmail && nextEmail !== existing.email) patch.email = nextEmail
+      if (userType !== existing.user_type) patch.user_type = userType
+      if (fullName && fullName !== (existing.full_name || "")) patch.full_name = fullName
+      if (memberCat !== undefined && memberCat !== (existing.member_category || "standard")) {
+        patch.member_category = memberCat
+      }
+      if (avatarUrl && avatarUrl !== (existing.avatar_url || "")) patch.avatar_url = avatarUrl
+      if (isMtmAutoAdmin) {
+        if (!existing.mtm_auto_enabled) {
+          patch.mtm_auto_enabled = true
+          patch.mtm_auto_enabled_at = new Date().toISOString()
+        }
+        if (!existing.mtm_auto_admin) {
+          patch.mtm_auto_admin = true
+        }
+        if (existing.mtm_auto_requested) {
+          patch.mtm_auto_requested = false
+          patch.mtm_auto_requested_at = null
+        }
+      }
+
+      const dataKeys = Object.keys(patch).filter((k) => k !== "updated_at")
+      if (dataKeys.length === 0) {
+        unchanged += 1
+        continue
+      }
+
+      const { error: upErr } = await supabase.from("profiles").update(patch).eq("id", user.id)
+      if (upErr) {
+        errors.push({ id: user.id, email: user.email, message: upErr.message })
       } else {
-        results.push({
-          email: authUser.email,
-          status: 'already_exists'
-        })
+        updated += 1
       }
     }
 
-    // 5. Atualizar admins existentes
-    for (const admin of adminUsers) {
-      if (existingProfileIds.has(admin.id)) {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ 
-            user_type: 'admin',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', admin.id)
+    const authIds = new Set(authUsers.map((u) => u.id))
+    const orphanProfiles = (existingProfiles || []).filter((p) => !authIds.has(p.id)).length
 
-        if (updateError) {
-          results.push({
-            email: admin.email,
-            status: 'admin_update_error',
-            error: updateError.message
-          })
-        } else {
-          results.push({
-            email: admin.email,
-            status: 'admin_updated'
-          })
-        }
-      }
-    }
-
-    // 6. Criar configurações padrão se não existirem
-    const { data: settings } = await supabase
-      .from('admin_settings')
-      .select('*')
-
-    if (!settings || settings.length === 0) {
-      const defaultSettings = [
-        { setting_key: 'site_name', setting_value: 'MoreThanMoney', description: 'Nome do site' },
-        { setting_key: 'site_description', setting_value: 'Plataforma de Trading e Educação Financeira', description: 'Descrição do site' },
-        { setting_key: 'maintenance_mode', setting_value: false, description: 'Modo de manutenção' },
-        { setting_key: 'registration_enabled', setting_value: true, description: 'Registo de novos utilizadores' },
-        { setting_key: 'auto_approve_users', setting_value: false, description: 'Aprovação automática' },
-        { setting_key: 'email_notifications', setting_value: true, description: 'Notificações por email' },
-        { setting_key: 'default_user_role', setting_value: 'member', description: 'Role padrão para novos utilizadores' }
-      ]
-
-      for (const setting of defaultSettings) {
-        await supabase
-          .from('admin_settings')
-          .insert(setting)
-      }
-    }
-
-    // 7. Buscar lista final de admins
-    const { data: allAdmins } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_type', 'admin')
+    const { data: allAdmins } = await supabase.from("profiles").select("id,email").eq("user_type", "admin")
 
     return NextResponse.json({
       success: true,
       summary: {
-        totalAuthUsers: authUsers.users.length,
-        existingProfiles: existingProfiles?.length || 0,
-        newProfilesCreated: syncedCount,
-        adminsIdentified: adminCount,
-        totalAdmins: allAdmins?.length || 0
+        totalAuthUsers: authUsers.length,
+        profilesBefore: existingProfiles?.length || 0,
+        profilesCreated: created,
+        profilesUpdated: updated,
+        profilesUnchanged: unchanged,
+        orphanProfiles,
+        totalAdmins: allAdmins?.length || 0,
       },
-      admins: allAdmins?.map(admin => ({
-        id: admin.id,
-        email: admin.email,
-        full_name: admin.full_name,
-        username: admin.username,
-        is_active: admin.is_active,
-        created_at: admin.created_at
-      })) || [],
-      results: results
+      admins: allAdmins || [],
+      errors: errors.length ? errors : undefined,
     })
-
-  } catch (error: any) {
-    console.error("❌ Erro na sincronização:", error)
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error.message 
-    }, { status: 500 })
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "Erro desconhecido"
+    console.error("❌ [sync-users]", e)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
 export async function GET(request: NextRequest) {
+  const denied = await authorizeSync(request)
+  if (denied) return denied
+
   try {
-    // Buscar estatísticas atuais
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers()
-    
-    if (authError) {
-      return NextResponse.json({ error: authError.message }, { status: 500 })
+    const { users: authUsers, error: listErr } = await listAllAuthUsers()
+    if (listErr) {
+      return NextResponse.json({ error: listErr }, { status: 500 })
     }
 
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('*')
+    const { data: profiles, error: profilesError } = await supabase.from("profiles").select("*")
 
     if (profilesError) {
       return NextResponse.json({ error: profilesError.message }, { status: 500 })
     }
 
-    const admins = profiles?.filter(p => p.user_type === 'admin') || []
-    const pendingUsers = profiles?.filter(p => p.user_type === 'pending') || []
-    const activeUsers = profiles?.filter(p => p.is_active) || []
+    const authIds = new Set(authUsers.map((u) => u.id))
+    const orphanProfiles = (profiles || []).filter((p) => !authIds.has(p.id))
+
+    const admins = profiles?.filter((p) => p.user_type === "admin") || []
+    const pendingUsers = profiles?.filter((p) => p.user_type === "pending") || []
+    const activeUsers = profiles?.filter((p) => p.is_active) || []
 
     return NextResponse.json({
       summary: {
-        totalAuthUsers: authUsers.users.length,
+        totalAuthUsers: authUsers.length,
         totalProfiles: profiles?.length || 0,
+        missingProfiles: authUsers.filter((u) => !profiles?.some((p) => p.id === u.id)).length,
+        orphanProfiles: orphanProfiles.length,
         admins: admins.length,
         pendingUsers: pendingUsers.length,
-        activeUsers: activeUsers.length
+        activeUsers: activeUsers.length,
       },
-      admins: admins.map(admin => ({
+      admins: admins.map((admin) => ({
         id: admin.id,
         email: admin.email,
         full_name: admin.full_name,
         username: admin.username,
         is_active: admin.is_active,
-        created_at: admin.created_at
+        created_at: admin.created_at,
       })),
-      recentUsers: profiles?.slice(-10).map(user => ({
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        username: user.username,
-        user_type: user.user_type,
-        is_active: user.is_active,
-        created_at: user.created_at
-      })) || []
+      recentUsers:
+        profiles
+          ?.slice()
+          .sort(
+            (a, b) =>
+              new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+          )
+          .slice(0, 10)
+          .map((user) => ({
+            id: user.id,
+            email: user.email,
+            full_name: user.full_name,
+            username: user.username,
+            user_type: user.user_type,
+            member_category: user.member_category,
+            is_active: user.is_active,
+            created_at: user.created_at,
+          })) || [],
     })
-
-  } catch (error: any) {
-    console.error("❌ Erro ao buscar estatísticas:", error)
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error.message 
-    }, { status: 500 })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erro desconhecido"
+    console.error("❌ [sync-users GET]", error)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

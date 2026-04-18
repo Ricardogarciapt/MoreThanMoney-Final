@@ -153,16 +153,19 @@ export default function MessagesPage() {
     } else {
       const query = searchQuery.toLowerCase()
       setFilteredConversations(
-        conversations.filter(conv => {
+        conversations.filter((conv) => {
           if (conv.isGroup) {
-            return conv.group?.name.toLowerCase().includes(query) ||
-                   conv.group?.description?.toLowerCase().includes(query) ||
-                   conv.lastMessage?.content.toLowerCase().includes(query)
-          } else {
-            return conv.otherUser?.full_name?.toLowerCase().includes(query) ||
-                   conv.otherUser?.username?.toLowerCase().includes(query) ||
-                   conv.lastMessage?.content.toLowerCase().includes(query)
+            return (
+              conv.group?.name?.toLowerCase().includes(query) ||
+              conv.group?.description?.toLowerCase().includes(query) ||
+              conv.lastMessage?.content?.toLowerCase().includes(query)
+            )
           }
+          return (
+            conv.otherUser?.full_name?.toLowerCase().includes(query) ||
+            conv.otherUser?.username?.toLowerCase().includes(query) ||
+            conv.lastMessage?.content?.toLowerCase().includes(query)
+          )
         })
       )
     }
@@ -175,11 +178,12 @@ export default function MessagesPage() {
     } else {
       const query = messageSearchQuery.toLowerCase()
       setFilteredMessages(
-        messages.filter(msg => 
-          msg.content.toLowerCase().includes(query) ||
-          msg.sender.full_name?.toLowerCase().includes(query) ||
-          msg.sender.username?.toLowerCase().includes(query)
-        )
+        messages.filter((msg) => {
+          const body = (msg.content ?? "").toLowerCase()
+          const senderName = (msg.sender?.full_name ?? "").toLowerCase()
+          const senderUser = (msg.sender?.username ?? "").toLowerCase()
+          return body.includes(query) || senderName.includes(query) || senderUser.includes(query)
+        })
       )
     }
   }, [messageSearchQuery, messages])

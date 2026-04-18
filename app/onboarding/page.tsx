@@ -140,7 +140,7 @@ export default function OnboardingPage() {
         <div className="max-w-4xl mx-auto mb-16">
           <div className="rounded-2xl overflow-hidden border border-mtm-primary/30">
             <YouTubeEmbed 
-              videoId="q-23MppHFDI"
+              videoId="w8y_wzJGTcA"
               title="Vídeo de Onboarding"
               autoplay={false}
             />

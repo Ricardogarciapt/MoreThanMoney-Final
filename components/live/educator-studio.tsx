@@ -9,15 +9,21 @@ import { Badge } from "@/components/ui/badge"
 import {
   ArrowLeft,
   BarChart3,
+  ChevronDown,
   Coins,
   Eye,
   EyeOff,
+  LayoutGrid,
+  PlusCircle,
   Radio,
   Settings2,
   Users,
   Youtube,
 } from "lucide-react"
 import StreamKeyCard from "@/components/live/stream-key-card"
+import EducatorStudioLivePanel from "@/components/live/educator-studio-live-panel"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { LMS_CATEGORY_OPTIONS } from "@/lib/lms-categories"
 import { DEFAULT_RESTREAM_INGEST_URL } from "@/lib/lms-restream"
 
@@ -33,6 +39,8 @@ type StreamRow = {
   youtube_key?: string | null
   youtube_enabled?: boolean
   category?: string | null
+  playback_mode?: "youtube_first" | "hls_first" | "auto" | null
+  ingest_provider?: "restream" | "mtm_direct" | null
   scheduled_start_at?: string | null
   viewer_count?: number | null
 }
@@ -48,6 +56,11 @@ export default function EducatorStudio() {
   const [error, setError] = useState("")
   const [newTitle, setNewTitle] = useState("")
   const [newCategory, setNewCategory] = useState("")
+  const [newScheduledAt, setNewScheduledAt] = useState("")
+  const [recurrenceType, setRecurrenceType] = useState<"none" | "weekly" | "fortnightly" | "monthly">("none")
+  const [recurrenceUntilAt, setRecurrenceUntilAt] = useState("")
+  const [recurrenceWeekdays, setRecurrenceWeekdays] = useState<number[]>([])
+  const [recurrenceMonthlyDays, setRecurrenceMonthlyDays] = useState("")
   const [creating, setCreating] = useState(false)
   const [keyOpStreamId, setKeyOpStreamId] = useState<string | null>(null)
   const [restreamSaving, setRestreamSaving] = useState(false)
@@ -102,7 +115,106 @@ export default function EducatorStudio() {
   }, [me, academies])
 
   const liveCount = useMemo(() => streams.filter((s) => s.is_live).length, [streams])
-  const hasPrimaryRoom = streams.length > 0
+  const liveStreams = useMemo(() => streams.filter((s) => s.is_live), [streams])
+  const [studioPreviewStreamId, setStudioPreviewStreamId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (liveStreams.length === 0) {
+      setStudioPreviewStreamId(null)
+      return
+    }
+    setStudioPreviewStreamId((prev) => {
+      if (prev && liveStreams.some((s) => s.id === prev)) return prev
+      return liveStreams[0].id
+    })
+  }, [liveStreams])
+  const recurrenceWeekdayLabels: { value: number; label: string }[] = [
+    { value: 1, label: "Seg" },
+    { value: 2, label: "Ter" },
+    { value: 3, label: "Qua" },
+    { value: 4, label: "Qui" },
+    { value: 5, label: "Sex" },
+    { value: 6, label: "Sáb" },
+    { value: 0, label: "Dom" },
+  ]
+
+  const parseMonthlyDays = (raw: string, fallbackDay: number) => {
+    const parts = raw
+      .split(",")
+      .map((p) => parseInt(p.trim(), 10))
+      .filter((n) => Number.isFinite(n))
+
+    const unique = Array.from(new Set(parts))
+    const valid = unique.filter((n) => n >= 1 && n <= 31)
+    return valid.length ? valid : [fallbackDay]
+  }
+
+  const generateRecurrenceStarts = (): string[] => {
+    const start = new Date(newScheduledAt)
+    const until = recurrenceUntilAt ? new Date(recurrenceUntilAt) : null
+
+    if (!newScheduledAt || Number.isNaN(start.getTime())) return []
+    if (!until || Number.isNaN(until.getTime()) || until.getTime() < start.getTime()) return []
+
+    const MAX = 30
+    const starts: string[] = []
+
+    const startHours = start.getHours()
+    const startMinutes = start.getMinutes()
+
+    const pushIfValid = (d: Date) => {
+      if (d.getTime() < start.getTime()) return
+      if (d.getTime() > until.getTime()) return
+      starts.push(d.toISOString())
+    }
+
+    if (recurrenceType === "monthly") {
+      const days = parseMonthlyDays(recurrenceMonthlyDays, start.getDate())
+      let cursor = new Date(start.getFullYear(), start.getMonth(), 1, startHours, startMinutes, 0, 0)
+
+      while (cursor.getTime() <= until.getTime() && starts.length < MAX) {
+        const y = cursor.getFullYear()
+        const m = cursor.getMonth()
+        const dim = new Date(y, m + 1, 0).getDate()
+
+        for (const dn of days) {
+          const day = Math.min(dn, dim)
+          const candidate = new Date(y, m, day, startHours, startMinutes, 0, 0)
+          pushIfValid(candidate)
+          if (starts.length >= MAX) break
+        }
+
+        cursor = new Date(y, m + 1, 1, startHours, startMinutes, 0, 0)
+      }
+    } else {
+      const weekdays =
+        recurrenceWeekdays.length > 0 ? recurrenceWeekdays : [start.getDay()] // 0=Dom, 1=Seg...
+
+      let current = new Date(start)
+      current.setSeconds(0, 0)
+
+      const startMidnightUtc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())
+
+      while (current.getTime() <= until.getTime() && starts.length < MAX) {
+        const wd = current.getDay()
+        if (weekdays.includes(wd)) {
+          if (recurrenceType === "fortnightly") {
+            const curMidnightUtc = Date.UTC(current.getFullYear(), current.getMonth(), current.getDate())
+            const weekIndex = Math.floor((curMidnightUtc - startMidnightUtc) / (7 * 86400000))
+            if (weekIndex % 2 === 0) pushIfValid(new Date(current))
+          } else {
+            pushIfValid(new Date(current))
+          }
+        }
+
+        current = new Date(current)
+        current.setDate(current.getDate() + 1)
+      }
+    }
+
+    // Ordena e remove duplicados (p.ex. se alguém escolher dias repetidos)
+    return Array.from(new Set(starts)).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+  }
 
   const login = async () => {
     setError("")
@@ -125,33 +237,60 @@ export default function EducatorStudio() {
     setMe(null)
     setStreams([])
     setNewTitle("")
+    setNewCategory("")
+    setNewScheduledAt("")
+    setRecurrenceType("none")
+    setRecurrenceUntilAt("")
+    setRecurrenceWeekdays([])
+    setRecurrenceMonthlyDays("")
   }
 
   const createChannel = async () => {
     const title = newTitle.trim()
-    if (!title) {
-      setError("Indica o título do canal.")
-      return
-    }
+    const firstStart = newScheduledAt ? new Date(newScheduledAt) : null
+
+    if (!title) return setError("Indica o título do canal.")
+    if (!firstStart || Number.isNaN(firstStart.getTime())) return setError("Indica a data e hora da primeira sessão.")
+
     setCreating(true)
     setError("")
     try {
-      const res = await fetch("/api/live-sessions/educator-auth/streams", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          title,
-          category: newCategory || undefined,
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok) {
-        setError(json.error || "Erro ao criar canal")
+      const starts =
+        recurrenceType === "none" ? [new Date(newScheduledAt).toISOString()] : generateRecurrenceStarts()
+
+      if (recurrenceType !== "none" && starts.length === 0) {
+        setError("Verifica a recorrência e o campo “até quando”.")
         return
       }
+
+      // Cria as ocorrências (pode ser 1 ou várias)
+      for (const scheduledStartAtIso of starts) {
+        const res = await fetch("/api/live-sessions/educator-auth/streams", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            title,
+            category: newCategory || undefined,
+            scheduled_start_at: scheduledStartAtIso || null,
+          }),
+        })
+
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          setError(json.error || "Erro ao criar sessão")
+          return
+        }
+      }
+
       setNewTitle("")
       setNewCategory("")
+      setNewScheduledAt("")
+      setRecurrenceType("none")
+      setRecurrenceUntilAt("")
+      setRecurrenceWeekdays([])
+      setRecurrenceMonthlyDays("")
+
       if (me?.educatorId) loadStreams(me.educatorId)
     } finally {
       setCreating(false)
@@ -204,13 +343,26 @@ export default function EducatorStudio() {
   }
 
   const setPresence = async (streamId: string, isLive: boolean) => {
-    await fetch("/api/live-sessions/educator-auth/presence", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ streamId, action: isLive ? "start" : "pause" }),
-    })
-    if (me?.educatorId) loadStreams(me.educatorId)
+    setError("")
+    try {
+      const res = await fetch("/api/live-sessions/educator-auth/presence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ streamId, action: isLive ? "start" : "pause" }),
+      })
+
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        setError(j.error || "Erro ao iniciar/desligar transmissão")
+        return
+      }
+    } catch (e: any) {
+      setError(e?.message || "Erro interno ao iniciar/desligar transmissão")
+      return
+    }
+
+    if (me?.educatorId) await loadStreams(me.educatorId)
   }
 
   const saveYoutube = async (streamId: string, youtubeKey: string, youtubeEnabled: boolean) => {
@@ -239,7 +391,6 @@ export default function EducatorStudio() {
           restream_enabled: restreamForm.enabled,
           restream_ingest_url: restreamForm.ingest.trim() || null,
           restream_stream_key: restreamForm.key.trim() || null,
-          restream_embed_url: restreamForm.embed.trim() || null,
         }),
       })
       const j = await res.json()
@@ -338,173 +489,180 @@ export default function EducatorStudio() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 border-b border-gray-800 pb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <Link href="/live-sessions" className="mb-2 inline-flex items-center text-sm text-gray-400 hover:text-[#D2A63C]">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Lobby Live Sessions
-          </Link>
-          <h2 className="text-xl font-bold text-white md:text-2xl">Olá, {me.displayName}</h2>
-          <p className="text-xs text-gray-500">{me.email}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Badge variant="outline" className="border-gray-600 text-gray-300">
-              Academia: {academyName || "— define no admin —"}
-            </Badge>
-            <Badge className={liveCount > 0 ? "bg-red-600 text-white" : "bg-gray-700 text-gray-200"}>
-              {liveCount} sala(s) em direto
-            </Badge>
+      {error && <p className="text-red-400 text-sm">{error}</p>}
+
+      {liveStreams.length > 0 && studioPreviewStreamId && (
+        <Card className="overflow-hidden border-red-900/40 bg-gradient-to-br from-gray-950 via-black to-gray-950 shadow-[0_0_40px_rgba(220,38,38,0.12)]">
+          <CardHeader className="border-b border-red-900/20 bg-red-950/20 pb-3">
+            <CardTitle className="flex flex-wrap items-center gap-2 text-base text-white">
+              <Radio className="h-5 w-5 shrink-0 animate-pulse text-red-500" />
+              Pré-visualização ao vivo + chat
+            </CardTitle>
+            <p className="text-xs font-normal text-gray-400">
+              O mesmo sinal e chat que os alunos veem no lobby — gere a sessão sem mudar de página.
+            </p>
+            {liveStreams.length > 1 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {liveStreams.map((s) => (
+                  <Button
+                    key={s.id}
+                    type="button"
+                    size="sm"
+                    variant={studioPreviewStreamId === s.id ? "default" : "outline"}
+                    className={
+                      studioPreviewStreamId === s.id
+                        ? "bg-red-600 text-white hover:bg-red-500"
+                        : "border-gray-600 text-gray-300"
+                    }
+                    onClick={() => setStudioPreviewStreamId(s.id)}
+                  >
+                    {s.title}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </CardHeader>
+          <CardContent className="p-3 sm:p-4">
+            <EducatorStudioLivePanel
+              streamId={studioPreviewStreamId}
+              title={liveStreams.find((s) => s.id === studioPreviewStreamId)?.title}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {streams.length > 0 && liveStreams.length === 0 && (
+        <Card className="border border-dashed border-gray-700 bg-black/40">
+          <CardContent className="flex items-start gap-3 py-4 text-sm text-gray-400">
+            <Radio className="mt-0.5 h-4 w-4 shrink-0 text-gray-600" />
+            <p>
+              Quando <strong className="text-gray-300">iniciares a transmissão</strong> num canal abaixo, aparece aqui a
+              pré-visualização do vídeo e o chat — para moderares e falares com a sala sem sair do studio.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="sticky top-0 z-10 -mx-1 mb-1 rounded-xl border border-gray-800/80 bg-zinc-950/90 px-3 py-3 shadow-lg shadow-black/25 backdrop-blur-md supports-[backdrop-filter]:bg-zinc-950/75 sm:-mx-0 sm:mb-2 sm:px-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
+            <Link
+              href="/live-sessions"
+              className="inline-flex shrink-0 items-center text-sm text-gray-400 hover:text-[#D2A63C]"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Lobby
+            </Link>
+            <div className="hidden h-8 w-px shrink-0 bg-gray-800 sm:block" aria-hidden />
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-bold text-white sm:text-xl">Olá, {me.displayName}</h2>
+              <p className="truncate text-xs text-gray-500">{me.email}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Badge variant="outline" className="max-w-full truncate border-gray-600 text-gray-300">
+                  {academyName || "Academia — admin LMS"}
+                </Badge>
+                <Badge className={liveCount > 0 ? "bg-red-600 text-white" : "bg-gray-700 text-gray-200"}>
+                  {liveCount} ao vivo · {streams.length} canal(is)
+                </Badge>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-[11px] text-gray-600 max-w-[200px] hidden sm:block">
-            Bio, foto e academia: administrador MTM em Admin → Educação (LMS).
-          </p>
-          <Button variant="outline" size="sm" className="border-red-900/50 text-red-300" onClick={logout}>
-            Sair
-          </Button>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <p className="hidden max-w-[200px] text-right text-[10px] leading-snug text-gray-500 lg:block">
+              Bio, foto e academia: Admin → Educação (LMS).
+            </p>
+            <Button variant="outline" size="sm" className="border-red-900/50 text-red-300" onClick={logout}>
+              Sair
+            </Button>
+          </div>
         </div>
       </div>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
-
-      <Card className="border border-cyan-900/40 bg-gradient-to-br from-gray-950 to-black">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base text-cyan-300">
-            <Radio className="h-4 w-4" />
-            Restream.io (OBS → Restream → site)
-          </CardTitle>
-          <p className="text-xs font-normal text-gray-500">
-            A chave aqui é a que o <strong className="text-gray-400">Restream</strong> mostra (texto livre, não o formato{" "}
-            <code className="text-gray-500">mtm_…</code>). Podes <strong className="text-gray-400">editar e guardar</strong> sempre
-            que o Restream rote a chave. No OBS: servidor + chave do Restream. Cola o embed do player para o site MTM.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <label className="flex items-center gap-2 text-xs text-gray-300">
-            <input
-              type="checkbox"
-              checked={restreamForm.enabled}
-              onChange={(e) => setRestreamForm((p) => ({ ...p, enabled: e.target.checked }))}
-            />
-            Usar player Restream no site (quando ativo, tem prioridade sobre HLS do servidor MTM, salvo URL manual no canal)
-          </label>
-          <div>
-            <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Servidor RTMP Restream</p>
-            <Input
-              value={restreamForm.ingest}
-              onChange={(e) => setRestreamForm((p) => ({ ...p, ingest: e.target.value }))}
-              className="border-gray-700 bg-black/50 font-mono text-xs"
-              placeholder={DEFAULT_RESTREAM_INGEST_URL}
-            />
-          </div>
-          <div>
-            <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">
-              Chave de stream Restream (editável — não é a chave mtm_… do servidor MTM)
-            </p>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-              <Input
-                type={restreamKeyVisible ? "text" : "password"}
-                value={restreamForm.key}
-                onChange={(e) => setRestreamForm((p) => ({ ...p, key: e.target.value }))}
-                className="border-gray-700 bg-black/50 font-mono text-xs sm:flex-1"
-                placeholder="Cola ou edita a Stream key do painel Restream"
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 border-gray-600 text-gray-200"
-                onClick={() => setRestreamKeyVisible((v) => !v)}
-              >
-                {restreamKeyVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="ml-2">{restreamKeyVisible ? "Ocultar" : "Mostrar"}</span>
-              </Button>
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+        <section className="min-w-0 space-y-4" aria-labelledby="studio-sessions-heading">
+          <div className="flex flex-wrap items-end justify-between gap-2 border-b border-gray-800/60 pb-2">
+            <div>
+              <h3 id="studio-sessions-heading" className="text-sm font-semibold uppercase tracking-wider text-gray-400">
+                Sessões e canais
+              </h3>
+              <p className="text-xs text-gray-500">Agenda, ingestão e arranque da live por sala.</p>
             </div>
           </div>
-          <div>
-            <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">URL do player / embed (público)</p>
-            <Input
-              value={restreamForm.embed}
-              onChange={(e) => setRestreamForm((p) => ({ ...p, embed: e.target.value }))}
-              className="border-gray-700 bg-black/50 font-mono text-xs"
-              placeholder="https://embed.restream.io/..."
-            />
-          </div>
-          <Button
-            type="button"
-            disabled={restreamSaving}
-            className="bg-cyan-700 text-white hover:bg-cyan-600"
-            onClick={saveRestreamProfile}
-          >
-            {restreamSaving ? "A guardar…" : "Guardar definições Restream"}
-          </Button>
-        </CardContent>
-      </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-        <div className="space-y-6">
-          <Card className="border-[#D2A63C]/20 bg-gray-950/80">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base text-[#D2A63C]">
-                <Settings2 className="h-4 w-4" />
-                Criar novo canal
-              </CardTitle>
-              <p className="text-xs font-normal text-gray-500">
-                Se usas <strong className="text-gray-400">Restream</strong>, o OBS deve apontar para o Restream (cartão acima), não para o servidor MTM.
-                A chave <code className="text-gray-500">mtm_…</code> abaixo é só para ingestão HLS no servidor More Than Money.
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Input
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="Título da sessão / sala"
-                className="border-gray-700 bg-black/50"
-              />
-              <select
-                className="w-full rounded-md border border-gray-700 bg-black/50 px-3 py-2 text-sm text-white"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
+          <Tabs defaultValue="channels" className="w-full space-y-4">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl border border-gray-800 bg-black/40 p-1 sm:inline-flex sm:w-auto sm:justify-start">
+              <TabsTrigger
+                value="channels"
+                className="gap-2 rounded-lg px-4 py-2.5 text-sm data-[state=active]:border data-[state=active]:border-[#D2A63C]/35 data-[state=active]:bg-[#D2A63C]/12 data-[state=active]:text-[#D2A63C] data-[state=active]:shadow-none"
               >
-                {CATEGORIES.map((c) => (
-                  <option key={c.value || "none"} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-              <Button
-                onClick={createChannel}
-                disabled={creating || hasPrimaryRoom}
-                className="bg-[#D2A63C] text-black hover:bg-[#BB8525]"
+                <LayoutGrid className="h-4 w-4 shrink-0" />
+                Os meus canais
+                {streams.length > 0 ? (
+                  <span className="ml-1 rounded-full bg-gray-800/90 px-2 py-0.5 text-[10px] font-medium tabular-nums text-gray-300">
+                    {streams.length}
+                  </span>
+                ) : null}
+              </TabsTrigger>
+              <TabsTrigger
+                value="create"
+                className="gap-2 rounded-lg px-4 py-2.5 text-sm data-[state=active]:border data-[state=active]:border-[#D2A63C]/35 data-[state=active]:bg-[#D2A63C]/12 data-[state=active]:text-[#D2A63C] data-[state=active]:shadow-none"
               >
-                {hasPrimaryRoom ? "Sala principal já criada" : creating ? "A criar…" : "Criar sala principal"}
-              </Button>
-            </CardContent>
-          </Card>
+                <PlusCircle className="h-4 w-4 shrink-0" />
+                Nova sala
+              </TabsTrigger>
+            </TabsList>
 
-          {streams.length === 0 && (
-            <p className="rounded-xl border border-dashed border-gray-800 p-6 text-center text-sm text-gray-500">
-              Ainda não tens canais. Cria um acima ou pede ao admin para te associar uma academia.
-            </p>
-          )}
+            <TabsContent value="channels" className="mt-0 space-y-4 outline-none">
+              {streams.length === 0 && (
+                <p className="rounded-xl border border-dashed border-gray-800 p-6 text-center text-sm text-gray-500">
+                  Ainda não tens canais. Usa o separador <strong className="text-gray-400">Nova sala</strong> ou pede ao
+                  admin para te associar uma academia.
+                </p>
+              )}
 
-          {streams.map((stream) => (
+              {streams.map((stream) => (
             <Card key={stream.id} className="overflow-hidden border-gray-800 bg-gradient-to-br from-gray-950 to-black">
-              <CardHeader className="border-b border-gray-800/80 bg-black/30 py-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <CardTitle className="text-lg text-white">{stream.title}</CardTitle>
+              <CardHeader className="space-y-3 border-b border-gray-800/80 bg-black/30 py-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <CardTitle className="text-lg text-white">{stream.title}</CardTitle>
+                      <Badge className={stream.is_live ? "bg-red-600" : "bg-gray-700"}>
+                        {stream.is_live ? "LIVE" : "OFFLINE"}
+                      </Badge>
+                    </div>
                     <p className="mt-1 text-xs text-gray-500">ID: {stream.id.slice(0, 8)}…</p>
                   </div>
-                  <Badge className={stream.is_live ? "bg-red-600" : "bg-gray-700"}>
-                    {stream.is_live ? "LIVE" : "OFFLINE"}
-                  </Badge>
+                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                    <Button
+                      size="sm"
+                      style={{ backgroundColor: stream.is_live ? "#b91c1c" : "#16a34a" }}
+                      className={
+                        stream.is_live
+                          ? "text-white hover:brightness-110 animate-pulse shadow-[0_0_0_1px_rgba(248,113,113,0.25),0_0_24px_rgba(248,113,113,0.35)] transition-all"
+                          : "text-white hover:brightness-110 hover:scale-[1.02] transition-all"
+                      }
+                      onClick={() => setPresence(stream.id, !stream.is_live)}
+                    >
+                      <Radio className="mr-1 h-3 w-3 text-white" />
+                      {stream.is_live ? "Parar" : "Iniciar"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-orange-800 text-orange-200"
+                      onClick={() => clearChat(stream.id)}
+                    >
+                      Limpar chat
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => deleteChannel(stream.id, stream.title)}>
+                      Apagar
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 p-4">
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   <div>
                     <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Agenda (próxima live)</p>
                     <Input
@@ -536,96 +694,278 @@ export default function EducatorStudio() {
                       ))}
                     </select>
                   </div>
+                  <div>
+                    <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Modo do player</p>
+                    <select
+                      className="w-full rounded-md border border-gray-700 bg-black/50 px-2 py-2 text-sm text-white"
+                      defaultValue={stream.playback_mode || "youtube_first"}
+                      onChange={(e) => patchStream(stream.id, { playback_mode: e.target.value })}
+                    >
+                      <option value="youtube_first">YouTube primeiro (seguro)</option>
+                      <option value="hls_first">HLS primeiro (baixa latência)</option>
+                      <option value="auto">Auto (prefere HLS em live)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Ingest OBS</p>
+                    <select
+                      className="w-full rounded-md border border-gray-700 bg-black/50 px-2 py-2 text-sm text-white"
+                      defaultValue={stream.ingest_provider || "restream"}
+                      onChange={(e) => patchStream(stream.id, { ingest_provider: e.target.value })}
+                    >
+                      <option value="restream">Restream</option>
+                      <option value="mtm_direct">MTM direto (OBS - menor latência)</option>
+                    </select>
+                  </div>
                 </div>
 
-                <StreamKeyCard
-                  title="Servidor More Than Money (HLS / RTMP)"
-                  intro={
-                    <>
-                      Chave no formato <code className="text-amber-200/90">mtm_…</code> — só para enviares para o RTMP do MTM. Se o teu OBS vai para o{" "}
-                      <strong className="text-gray-400">Restream</strong>, ignora este bloco e usa o cartão Restream no topo. No OBS (MTM):{" "}
-                      <strong className="text-gray-400">Serviço personalizado</strong> — servidor e chave em campos separados.
-                    </>
-                  }
-                  syncButtonLabel="Sincronizar URL e chave MTM no canal"
-                  syncButtonLabelWhenHasKey="Atualizar URL RTMP / reaplicar chave fixa"
-                  hideDeployHint
-                  rtmpUrl={stream.rtmps_url}
-                  streamKey={stream.stream_key}
-                  loading={keyOpStreamId === stream.id}
-                  onGenerateOrRefresh={() => syncMtmIngest(stream.id)}
-                  onRegenerate={() => regenerateMtmIngestKey(stream.id)}
-                />
-
-                <div className="space-y-1">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500">Playback URL manual (YouTube, etc.)</p>
-                  <Input
-                    defaultValue={stream.playback_url || ""}
-                    className="border-gray-700 bg-black/50 text-xs"
-                    placeholder="https://… (opcional; sobrepõe Restream/HLS)"
-                    onBlur={(e) =>
-                      patchStream(stream.id, { playback_url: e.target.value.trim() || null })
-                    }
-                  />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500">
-                    Embed Restream só deste canal (opcional)
-                  </p>
-                  <Input
-                    key={`re-${stream.id}-${stream.restream_embed_url || ""}`}
-                    defaultValue={stream.restream_embed_url || ""}
-                    className="border-gray-700 bg-black/50 font-mono text-xs"
-                    placeholder="Vazio = usa o embed do teu perfil"
-                    onBlur={(e) =>
-                      patchStream(stream.id, { restream_embed_url: e.target.value.trim() || null })
-                    }
-                  />
-                </div>
-
-                <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 space-y-2">
-                  <p className="flex items-center gap-2 text-sm font-medium text-white">
-                    <Youtube className="h-4 w-4 text-red-500" />
-                    YouTube Multistream
-                  </p>
-                  <Input
-                    key={stream.id + "-yt"}
-                    defaultValue={stream.youtube_key || ""}
-                    placeholder="YouTube Stream Key"
-                    className="border-gray-700 bg-black/50"
-                    onBlur={(e) => saveYoutube(stream.id, e.target.value, Boolean(stream.youtube_enabled))}
-                  />
-                  <label className="flex items-center gap-2 text-xs text-gray-300">
-                    <input
-                      type="checkbox"
-                      defaultChecked={Boolean(stream.youtube_enabled)}
-                      onChange={(e) => saveYoutube(stream.id, String(stream.youtube_key || ""), e.target.checked)}
+                <Collapsible defaultOpen={false} className="rounded-lg border border-gray-800/90 bg-black/25">
+                  <CollapsibleTrigger className="group flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm text-gray-300 transition hover:bg-white/[0.04]">
+                    <span className="font-medium text-gray-200">Chaves RTMP, playback e YouTube</span>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 border-t border-gray-800/60 px-3 pb-3 pt-3">
+                    <StreamKeyCard
+                      title="Servidor Restream (RTMPS / OBS)"
+                      intro={
+                        <>
+                          No OBS: define <strong className="text-gray-400">Serviço personalizado</strong> e cola o
+                          servidor + chave do Restream (campos separados).
+                        </>
+                      }
+                      hideDeployHint
+                      rtmpUrl={stream.rtmps_url}
+                      streamKey={stream.stream_key}
                     />
-                    Ativar YouTube
-                  </label>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => setPresence(stream.id, true)}>
-                    <Radio className="mr-1 h-3 w-3" />
-                    Iniciar transmissão
-                  </Button>
-                  <Button size="sm" variant="secondary" className="bg-gray-700" onClick={() => setPresence(stream.id, false)}>
-                    Pausar live
-                  </Button>
-                  <Button size="sm" variant="outline" className="border-orange-800 text-orange-200" onClick={() => clearChat(stream.id)}>
-                    Limpar chat
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => deleteChannel(stream.id, stream.title)}>
-                    Apagar canal
-                  </Button>
-                </div>
+                    <div className="space-y-1">
+                      <p className="text-[11px] uppercase tracking-wide text-gray-500">Playback URL manual (YouTube, etc.)</p>
+                      <Input
+                        defaultValue={stream.playback_url || ""}
+                        className="border-gray-700 bg-black/50 text-xs"
+                        placeholder="https://… (opcional; sobrepõe Restream/HLS)"
+                        onBlur={(e) =>
+                          patchStream(stream.id, { playback_url: e.target.value.trim() || null })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2 rounded-lg border border-red-900/30 bg-red-950/20 p-3">
+                      <p className="flex items-center gap-2 text-sm font-medium text-white">
+                        <Youtube className="h-4 w-4 text-red-500" />
+                        YouTube Multistream
+                      </p>
+                      <Input
+                        key={stream.id + "-yt"}
+                        defaultValue={stream.youtube_key || ""}
+                        placeholder="YouTube Stream Key"
+                        className="border-gray-700 bg-black/50"
+                        onBlur={(e) => saveYoutube(stream.id, e.target.value, Boolean(stream.youtube_enabled))}
+                      />
+                      <label className="flex items-center gap-2 text-xs text-gray-300">
+                        <input
+                          type="checkbox"
+                          defaultChecked={Boolean(stream.youtube_enabled)}
+                          onChange={(e) => saveYoutube(stream.id, String(stream.youtube_key || ""), e.target.checked)}
+                        />
+                        Ativar YouTube
+                      </label>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </CardContent>
             </Card>
           ))}
-        </div>
+            </TabsContent>
 
-        <div className="space-y-4 lg:sticky lg:top-24">
+            <TabsContent value="create" className="mt-0 outline-none">
+              <Card className="border-[#D2A63C]/20 bg-gray-950/80">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-base text-[#D2A63C]">
+                    <Settings2 className="h-4 w-4" />
+                    Criar novo canal
+                  </CardTitle>
+                  <p className="text-xs font-normal text-gray-500">
+                    Com <strong className="text-gray-400">Restream</strong>, o OBS usa o cartão Restream desta página
+                    (coluna à direita em ecrã grande, ou abaixo no telemóvel). A chave <code className="text-gray-500">mtm_…</code>{" "}
+                    por canal é para ingestão HLS no servidor More Than Money.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Input
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="Título da sessão / sala"
+                    className="border-gray-700 bg-black/50"
+                  />
+                  <select
+                    className="w-full rounded-md border border-gray-700 bg-black/50 px-3 py-2 text-sm text-white"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c.value || "none"} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    type="datetime-local"
+                    value={newScheduledAt}
+                    onChange={(e) => setNewScheduledAt(e.target.value)}
+                    className="border-gray-700 bg-black/50 text-sm"
+                  />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Repetir</p>
+                      <select
+                        className="w-full rounded-md border border-gray-700 bg-black/50 px-3 py-2 text-sm text-white"
+                        value={recurrenceType}
+                        onChange={(e) => setRecurrenceType(e.target.value as any)}
+                      >
+                        <option value="none">Sem repetição</option>
+                        <option value="weekly">Semanal</option>
+                        <option value="fortnightly">Quinzenal</option>
+                        <option value="monthly">Mensal</option>
+                      </select>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Até quando</p>
+                      <Input
+                        type="datetime-local"
+                        value={recurrenceUntilAt}
+                        onChange={(e) => setRecurrenceUntilAt(e.target.value)}
+                        className="border-gray-700 bg-black/50 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {recurrenceType === "weekly" || recurrenceType === "fortnightly" ? (
+                    <div>
+                      <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Dias da semana</p>
+                      <div className="flex flex-wrap gap-2">
+                        {recurrenceWeekdayLabels.map((d) => (
+                          <label
+                            key={d.value}
+                            className="inline-flex items-center gap-2 rounded-full border border-gray-800 bg-black/30 px-3 py-2 text-xs text-gray-300"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={recurrenceWeekdays.includes(d.value)}
+                              onChange={(e) => {
+                                const checked = e.target.checked
+                                setRecurrenceWeekdays((prev) => {
+                                  if (checked) return Array.from(new Set([...prev, d.value])).sort()
+                                  return prev.filter((x) => x !== d.value)
+                                })
+                              }}
+                            />
+                            {d.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {recurrenceType === "monthly" ? (
+                    <div>
+                      <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Dias do mês</p>
+                      <Input
+                        value={recurrenceMonthlyDays}
+                        onChange={(e) => setRecurrenceMonthlyDays(e.target.value)}
+                        placeholder={`Ex: ${newScheduledAt ? new Date(newScheduledAt).getDate() : 1}`}
+                        className="border-gray-700 bg-black/50 text-sm"
+                      />
+                      <p className="mt-1 text-[11px] text-gray-500">
+                        Formato: números separados por vírgula (ex.: <code className="text-gray-400">1,15,30</code>)
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <Button
+                    onClick={createChannel}
+                    disabled={creating || !newTitle.trim() || !newScheduledAt}
+                    className="bg-[#D2A63C] text-black hover:bg-[#BB8525]"
+                  >
+                    {creating ? "A criar…" : recurrenceType === "none" ? "Criar sala" : "Criar recorrência"}
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </section>
+
+        <aside className="min-w-0 space-y-4 xl:sticky xl:top-4 xl:self-start">
+          <div className="hidden rounded-lg border border-gray-800/60 bg-black/25 px-3 py-2 xl:block">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Integração e métricas</p>
+            <p className="mt-0.5 text-xs text-gray-600">Restream ao nível do teu perfil; contadores por canal.</p>
+          </div>
+
+          <Card className="border border-cyan-900/40 bg-gradient-to-br from-gray-950 to-black">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base text-cyan-300">
+                <Radio className="h-4 w-4" />
+                Restream.io (OBS → Restream → site)
+              </CardTitle>
+              <p className="text-xs font-normal text-gray-500">
+                A chave aqui é a que o <strong className="text-gray-400">Restream</strong> mostra (texto livre, não o formato{" "}
+                <code className="text-gray-500">mtm_…</code>). Podes <strong className="text-gray-400">editar e guardar</strong>{" "}
+                sempre que o Restream rote a chave. No OBS: servidor (RTMPS) + chave do Restream.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <label className="flex items-center gap-2 text-xs text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={restreamForm.enabled}
+                  onChange={(e) => setRestreamForm((p) => ({ ...p, enabled: e.target.checked }))}
+                />
+                Usar Restream (para OBS → Restream → YouTube)
+              </label>
+              <div>
+                <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Servidor RTMPS Restream</p>
+                <Input
+                  value={restreamForm.ingest}
+                  onChange={(e) => setRestreamForm((p) => ({ ...p, ingest: e.target.value }))}
+                  className="border-gray-700 bg-black/50 font-mono text-xs"
+                  placeholder={DEFAULT_RESTREAM_INGEST_URL}
+                />
+              </div>
+              <div>
+                <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">
+                  Chave de stream Restream (editável — não é a chave mtm_… do servidor MTM)
+                </p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                  <Input
+                    type={restreamKeyVisible ? "text" : "password"}
+                    value={restreamForm.key}
+                    onChange={(e) => setRestreamForm((p) => ({ ...p, key: e.target.value }))}
+                    className="border-gray-700 bg-black/50 font-mono text-xs sm:flex-1"
+                    placeholder="Cola ou edita a Stream key do painel Restream"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 border-gray-600 text-gray-200"
+                    onClick={() => setRestreamKeyVisible((v) => !v)}
+                  >
+                    {restreamKeyVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    <span className="ml-2">{restreamKeyVisible ? "Ocultar" : "Mostrar"}</span>
+                  </Button>
+                </div>
+              </div>
+              <Button
+                type="button"
+                disabled={restreamSaving}
+                className="bg-cyan-700 text-white hover:bg-cyan-600"
+                onClick={saveRestreamProfile}
+              >
+                {restreamSaving ? "A guardar…" : "Guardar definições Restream"}
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card className="border-gray-800 bg-gray-950/90">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-sm text-white">
@@ -665,7 +1005,7 @@ export default function EducatorStudio() {
               Gorjetas e pagamentos por sessão podem ser ligados aqui numa fase seguinte (Stripe / Skool).
             </CardContent>
           </Card>
-        </div>
+        </aside>
       </div>
     </div>
   )

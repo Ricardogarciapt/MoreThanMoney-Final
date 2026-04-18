@@ -3,7 +3,10 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
 import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-auth"
-import { getLmsChatRetentionCutoffIso } from "@/lib/lms-chat-retention"
+import {
+  getLmsChatRollingCutoffIso,
+  shouldPurgeEntireStreamChat,
+} from "@/lib/lms-chat-retention"
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -14,15 +17,30 @@ export async function GET(
   try {
     const { id } = await params
     const limit = Math.min(200, Number(new URL(request.url).searchParams.get("limit") || 80))
-    const cutoff = getLmsChatRetentionCutoffIso()
 
-    await supabaseAdmin.from("lms_stream_messages").delete().eq("stream_id", id).lt("created_at", cutoff)
+    const { data: streamMeta } = await supabaseAdmin
+      .from("lms_streams")
+      .select("live_ended_at")
+      .eq("id", id)
+      .maybeSingle()
+
+    const rollingCutoff = getLmsChatRollingCutoffIso()
+
+    if (shouldPurgeEntireStreamChat(streamMeta?.live_ended_at)) {
+      await supabaseAdmin.from("lms_stream_messages").delete().eq("stream_id", id)
+    } else {
+      await supabaseAdmin
+        .from("lms_stream_messages")
+        .delete()
+        .eq("stream_id", id)
+        .lt("created_at", rollingCutoff)
+    }
 
     const { data, error } = await supabaseAdmin
       .from("lms_stream_messages")
       .select("*")
       .eq("stream_id", id)
-      .gte("created_at", cutoff)
+      .gte("created_at", rollingCutoff)
       .order("created_at", { ascending: false })
       .limit(limit)
 
@@ -110,7 +128,7 @@ export async function POST(
   }
 }
 
-/** Apaga todo o histórico do chat deste canal (educador dono ou admin). */
+/** Apaga todo o histórico do chat: apenas educador dono do canal ou admin do site. */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -125,8 +143,7 @@ export async function DELETE(
     const educatorToken = cookieStore.get(getEducatorCookieName())?.value
     const educator = educatorToken ? verifyEducatorToken(educatorToken) : null
 
-    let allowed = false
-
+    let educatorOwnsStream = false
     if (educator) {
       const { data: stream } = await supabaseAdmin
         .from("lms_streams")
@@ -134,13 +151,12 @@ export async function DELETE(
         .eq("id", streamId)
         .eq("educator_id", educator.educatorId)
         .maybeSingle()
-      allowed = Boolean(stream)
+      educatorOwnsStream = Boolean(stream)
     }
 
-    if (!allowed) {
+    if (!educatorOwnsStream) {
       const adminGate = await requireAdmin(request)
       if (adminGate !== null) return adminGate
-      allowed = true
     }
 
     const { error } = await supabaseAdmin.from("lms_stream_messages").delete().eq("stream_id", streamId)

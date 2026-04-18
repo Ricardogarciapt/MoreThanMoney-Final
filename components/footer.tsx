@@ -74,6 +74,8 @@ export default function Footer() {
                 { name: "IQ Sync", href: "/swipetotrade" },
                 { name: "Automatização", href: "/automation" },
                 { name: "Scanner MTM", href: "/scanner" },
+                { name: "Trading Floor", href: "/tradingfloor" },
+                { name: "Work", href: "/work" },
                 { name: "Onboarding", href: "/onboarding" },
               ].map((link) => (
                 <li key={link.name}>

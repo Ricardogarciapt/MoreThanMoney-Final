@@ -135,14 +135,22 @@ export default function WorkLandingPage() {
               priority
             />
           </Link>
-          <a
-            href={WHATSAPP_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="work-btn-cta rounded-full bg-white px-5 py-2.5 text-sm font-medium text-black hover:bg-white/95 hover:shadow-[0_0_24px_-4px_rgba(255,255,255,0.4)]"
-          >
-            Falar com a equipa
-          </a>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/tradingfloor"
+              className="work-btn-cta rounded-full border border-white/25 px-4 py-2.5 text-sm font-medium text-white hover:bg-white/10"
+            >
+              Trading Floor
+            </Link>
+            <a
+              href={WHATSAPP_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="work-btn-cta rounded-full bg-white px-5 py-2.5 text-sm font-medium text-black hover:bg-white/95 hover:shadow-[0_0_24px_-4px_rgba(255,255,255,0.4)]"
+            >
+              Falar com a equipa
+            </a>
+          </div>
         </div>
       </header>
 

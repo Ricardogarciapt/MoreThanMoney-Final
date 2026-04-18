@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -16,6 +17,7 @@ import {
   Bell,
   ArrowRight,
   Circle,
+  Calendar,
 } from "lucide-react"
 import { LMS_CATEGORY_OPTIONS } from "@/lib/lms-categories"
 
@@ -67,6 +69,11 @@ export default function LiveSessionsLobby() {
   const [categoryFilter, setCategoryFilter] = useState<string>("")
   const [academyFilter, setAcademyFilter] = useState("")
 
+  const [educatorDialogOpen, setEducatorDialogOpen] = useState(false)
+  const [selectedEducator, setSelectedEducator] = useState<EducatorPublic | null>(null)
+  const [selectedEducatorStreams, setSelectedEducatorStreams] = useState<Stream[]>([])
+  const [selectedEducatorStreamsLoading, setSelectedEducatorStreamsLoading] = useState(false)
+
   const loadAll = useCallback(async () => {
     setLoading(true)
     try {
@@ -75,9 +82,9 @@ export default function LiveSessionsLobby() {
         fetch("/api/live-sessions/streams").then((r) => r.json()),
         fetch("/api/live-sessions/educators-public").then((r) => r.json()),
       ])
-      setAcademies(aRes.data || [])
-      setStreams(sRes.data || [])
-      setEducators(eRes.data || [])
+      setAcademies(Array.isArray(aRes?.data) ? aRes.data : [])
+      setStreams(Array.isArray(sRes?.data) ? sRes.data : [])
+      setEducators(Array.isArray(eRes?.data) ? eRes.data : [])
     } finally {
       setLoading(false)
     }
@@ -128,6 +135,25 @@ export default function LiveSessionsLobby() {
     })
   }
 
+  const openEducatorDialog = async (ed: EducatorPublic) => {
+    setSelectedEducator(ed)
+    setSelectedEducatorStreams([])
+    setEducatorDialogOpen(true)
+
+    setSelectedEducatorStreamsLoading(true)
+    try {
+      const res = await fetch(`/api/live-sessions/streams?educatorId=${encodeURIComponent(ed.id)}`, {
+        credentials: "same-origin",
+      }).then((r) => r.json())
+
+      setSelectedEducatorStreams((res.data || []) as Stream[])
+    } catch {
+      setSelectedEducatorStreams([])
+    } finally {
+      setSelectedEducatorStreamsLoading(false)
+    }
+  }
+
   if (loading && streams.length === 0) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-gray-400">
@@ -171,6 +197,15 @@ export default function LiveSessionsLobby() {
                 </span>
               </div>
             </div>
+          </div>
+
+          <div className="hidden self-start lg:block">
+            <Link href="/live-sessions/studio" className="shrink-0">
+              <Button className="bg-[#D2A63C] text-black hover:bg-[#BB8525]">
+                Abrir studio
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -217,21 +252,106 @@ export default function LiveSessionsLobby() {
         </div>
       </section>
 
-      {/* CTA educador — reforço mobile (header já tem atalho) */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-[#D2A63C]/20 bg-black/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-white">OBS → Restream ou servidor MTM</p>
-          <p className="text-xs text-gray-500">
-            Configura o teu canal Restream (URL + chave + embed) ou as chaves RTMP do servidor — o site reproduz o player no lobby.
-          </p>
-        </div>
+      {/* CTA educador (aparece no mobile; no desktop o botão está no hero) */}
+      <div className="flex flex-col gap-3 rounded-2xl border border-[#D2A63C]/20 bg-black/40 px-4 py-4 lg:hidden">
         <Link href="/live-sessions/studio" className="shrink-0">
-          <Button className="w-full bg-[#D2A63C] text-black hover:bg-[#BB8525] sm:w-auto">
+          <Button className="w-full bg-[#D2A63C] text-black hover:bg-[#BB8525]">
             Abrir studio
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </Link>
       </div>
+
+      <Dialog open={educatorDialogOpen} onOpenChange={setEducatorDialogOpen}>
+        <DialogContent className="max-w-lg border border-[#D2A63C]/20 bg-black/90 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-[#D2A63C] text-lg">
+              {selectedEducator?.display_name || "Educador"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {selectedEducator && (
+              <>
+                {selectedEducator.specialty && (
+                  <div className="inline-flex items-center rounded-full border border-[#D2A63C]/30 bg-[#D2A63C]/10 px-3 py-1 text-xs text-[#D2A63C]">
+                    {selectedEducator.specialty}
+                  </div>
+                )}
+
+                {selectedEducator.bio && (
+                  <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{selectedEducator.bio}</div>
+                )}
+
+                <div className="rounded-xl border border-gray-800 bg-gray-950/50 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="h-4 w-4 text-[#D2A63C]" />
+                    <p className="font-semibold text-sm">Schedule</p>
+                  </div>
+
+                  {selectedEducatorStreamsLoading ? (
+                    <p className="text-xs text-gray-500">A carregar horários…</p>
+                  ) : (
+                    <>
+                      {(() => {
+                        const now = Date.now()
+                        const onlineNow = selectedEducatorStreams
+                          .filter((s) => s.is_live)
+                          .slice(0, 3)
+
+                        const upcoming = selectedEducatorStreams
+                          .filter((s) => !s.is_live && s.scheduled_start_at && new Date(s.scheduled_start_at).getTime() > now)
+                          .sort((a, b) => new Date(a.scheduled_start_at as string).getTime() - new Date(b.scheduled_start_at as string).getTime())
+                          .slice(0, 5)
+
+                        return (
+                          <div className="space-y-3">
+                            {onlineNow.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-xs font-medium text-gray-400 uppercase">Online agora</p>
+                                <div className="space-y-2">
+                                  {onlineNow.map((s) => (
+                                    <div key={s.id} className="rounded-lg border border-gray-800 bg-black/30 px-3 py-2">
+                                      <p className="text-sm font-semibold">{s.title}</p>
+                                      <p className="text-[11px] text-gray-500">
+                                        {s.academy?.name ? `${s.academy.name} · ` : ""}
+                                        Agora
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {upcoming.length > 0 ? (
+                              <div className="space-y-2">
+                                <p className="text-xs font-medium text-gray-400 uppercase">Próximas lives</p>
+                                <div className="space-y-2">
+                                  {upcoming.map((s) => (
+                                    <div key={s.id} className="rounded-lg border border-gray-800 bg-black/30 px-3 py-2">
+                                      <p className="text-sm font-semibold">{s.title}</p>
+                                      <p className="text-[11px] text-gray-500">
+                                        {s.academy?.name ? `${s.academy.name} · ` : ""}
+                                        {s.scheduled_start_at ? new Date(s.scheduled_start_at).toLocaleString("pt-PT") : ""}
+                                      </p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-500">Sem lives agendadas agora.</p>
+                            )}
+                          </div>
+                        )
+                      })()}
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="space-y-12">
           {/* Slideshow educadores */}
@@ -243,37 +363,46 @@ export default function LiveSessionsLobby() {
             <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-[#D2A63C]/30">
               {educators.length === 0 && <p className="text-sm text-gray-500">Ainda não há educadores públicos ativos.</p>}
               {educators.map((ed) => (
-                <Card
+                <button
                   key={ed.id}
-                  className="w-[280px] shrink-0 snap-start overflow-hidden border-[#D2A63C]/20 bg-gradient-to-b from-gray-900/90 to-black/90 backdrop-blur"
+                  type="button"
+                  onClick={() => openEducatorDialog(ed)}
+                  className="w-[280px] shrink-0 snap-start text-left"
+                  aria-label={`Ver perfil do educador ${ed.display_name}`}
                 >
-                  <div className="relative h-40 w-full bg-gradient-to-br from-gray-800 to-black">
-                    {ed.avatar_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={ed.avatar_url} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-gray-600">
-                        <GraduationCap className="h-16 w-16 opacity-40" />
+                  <Card className="w-full overflow-hidden border-[#D2A63C]/20 bg-gradient-to-b from-gray-900/90 to-black/90 backdrop-blur">
+                    <div className="relative h-40 w-full bg-gradient-to-br from-gray-800 to-black">
+                      {ed.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={ed.avatar_url} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-gray-600">
+                          <GraduationCap className="h-16 w-16 opacity-40" />
+                        </div>
+                      )}
+                      <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-medium backdrop-blur">
+                        <Circle
+                          className={`h-2 w-2 ${ed.is_live ? "fill-emerald-400 text-emerald-400" : "fill-gray-500 text-gray-500"}`}
+                        />
+                        {ed.is_live ? "Online" : "Offline"}
                       </div>
-                    )}
-                    <div className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-medium backdrop-blur">
-                      <Circle
-                        className={`h-2 w-2 ${ed.is_live ? "fill-emerald-400 text-emerald-400" : "fill-gray-500 text-gray-500"}`}
-                      />
-                      {ed.is_live ? "Online" : "Offline"}
                     </div>
-                  </div>
-                  <CardContent className="p-4 space-y-2">
-                    <p className="font-bold text-white leading-tight">{ed.display_name}</p>
-                    {ed.specialty && (
-                      <Badge variant="outline" className="border-[#D2A63C]/40 text-[#D2A63C] text-[10px]">
-                        {ed.specialty}
-                      </Badge>
-                    )}
-                    <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed">{ed.bio || "Bio disponível no perfil — contacta o admin para completar."}</p>
-                    {ed.academy?.name && <p className="text-[10px] uppercase tracking-wider text-gray-600">{ed.academy.name}</p>}
-                  </CardContent>
-                </Card>
+                    <CardContent className="p-4 space-y-2">
+                      <p className="font-bold text-white leading-tight">{ed.display_name}</p>
+                      {ed.specialty && (
+                        <Badge variant="outline" className="border-[#D2A63C]/40 text-[#D2A63C] text-[10px]">
+                          {ed.specialty}
+                        </Badge>
+                      )}
+                      <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed">
+                        {ed.bio || "Bio disponível no perfil — contacta o admin para completar."}
+                      </p>
+                      {ed.academy?.name && (
+                        <p className="text-[10px] uppercase tracking-wider text-gray-600">{ed.academy.name}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </button>
               ))}
             </div>
           </section>
@@ -294,19 +423,6 @@ export default function LiveSessionsLobby() {
                   <StreamMarketCard key={stream.id} stream={stream} featured />
                 ))}
               </div>
-            )}
-          </section>
-
-          {/* Todas as salas */}
-          <section>
-            <h3 className="mb-4 text-lg font-semibold tracking-tight text-white md:text-xl">Todas as salas</h3>
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredGrid.map((stream) => (
-                <StreamMarketCard key={stream.id} stream={stream} />
-              ))}
-            </div>
-            {filteredGrid.length === 0 && (
-              <p className="text-center text-sm text-gray-500 py-8">Nenhuma sala corresponde aos filtros.</p>
             )}
           </section>
 

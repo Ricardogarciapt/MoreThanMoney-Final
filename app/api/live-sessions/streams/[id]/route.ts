@@ -35,9 +35,13 @@ function applyPlaybackForClient(
 ) {
   const resolved = resolveViewerPlayback({
     playback_url: row.playback_url as string | null,
-    restream_embed_url: row.restream_embed_url as string | null,
+    playback_mode: row.playback_mode as string | null,
+    ingest_provider: row.ingest_provider as string | null,
     stream_key: row.stream_key as string | null,
-    educator: row.educator as { restream_enabled?: boolean; restream_embed_url?: string | null } | null,
+    is_live: row.is_live as boolean | null,
+    youtube_enabled: row.youtube_enabled as boolean | null,
+    youtube_key: row.youtube_key as string | null,
+    educator: row.educator as any,
   })
 
   if (options.publicViewer) {
@@ -87,11 +91,13 @@ export async function GET(
     const isOwner = Boolean(educator && educator.educatorId === row.educator_id)
     const adminAuth = await verifyAdminAccess()
     const isAdmin = Boolean(adminAuth.isAdmin)
+    const viewerCanClearChat = isOwner || isAdmin
 
     if (isOwner || isAdmin) {
+      const data = applyPlaybackForClient(row as Record<string, unknown>, { publicViewer: false })
       return NextResponse.json({
         success: true,
-        data: applyPlaybackForClient(row as Record<string, unknown>, { publicViewer: false }),
+        data: { ...data, viewer_can_clear_chat: viewerCanClearChat },
       })
     }
 
@@ -102,9 +108,10 @@ export async function GET(
         : null,
     }
 
+    const dataPublic = applyPlaybackForClient(rowPublic, { publicViewer: true })
     return NextResponse.json({
       success: true,
-      data: applyPlaybackForClient(rowPublic, { publicViewer: true }),
+      data: { ...dataPublic, viewer_can_clear_chat: viewerCanClearChat },
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })

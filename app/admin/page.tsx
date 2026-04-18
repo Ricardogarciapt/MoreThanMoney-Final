@@ -1,17 +1,17 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useCallback, useRef, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
-import type { SiteContent, UserManagement, AdminStats } from "@/lib/admin-types"
+import type { UserManagement, AdminStats } from "@/lib/admin-types"
 import { adminApiCall, clearAdminCache } from "@/lib/admin-helpers"
 import AdminSidebar from "@/components/admin/admin-sidebar"
 import AdminOverview from "@/components/admin/admin-overview"
 import UserManagementComponent from "@/components/admin/user-management"
+import MtmAutoManagement from "@/components/admin/mtm-auto-management"
 import SiteContentManager from "@/components/admin/site-content-manager"
 import ContentConfigManager from "@/components/admin/content-config-manager"
 import NotificationsManager from "@/components/admin/notifications-manager"
@@ -19,6 +19,7 @@ import ThemeManager from "@/components/admin/theme-manager"
 import SettingsManager from "@/components/admin/settings-manager"
 import LiveSessionsManager from "@/components/admin/live-sessions-manager"
 import { MessageCircle } from "lucide-react"
+import { supabase } from "@/lib/supabase"
 
 function CreateDefaultGroupsButton({
   onSuccess,
@@ -61,8 +62,9 @@ function CreateDefaultGroupsButton({
   )
 }
 
-export default function AdminPage() {
+function AdminPageClient() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const { user, isLoading: authLoading, isAdmin: authIsAdmin } = useAuth()
   const [mounted, setMounted] = useState(false)
@@ -76,9 +78,19 @@ export default function AdminPage() {
     totalTrials?: number
   } | null>(null)
   const [loadingOverview, setLoadingOverview] = useState(true)
-  const [loadingUsers, setLoadingUsers] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
+  const lastAdminToastIds = useRef<Set<string>>(new Set())
+
+  const validSections = new Set([
+    "overview",
+    "users",
+    "mtmauto",
+    "content",
+    "education",
+    "notifications",
+    "settings",
+  ])
 
   useEffect(() => {
     setMounted(true)
@@ -119,6 +131,23 @@ export default function AdminPage() {
     checkAdminAccess()
   }, [mounted, authLoading, user, checkAdminAccess, router])
 
+  // Permite abrir secções por URL: /admin?tab=users | /admin?tab=mtmauto | etc.
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    if (!tab) return
+    if (validSections.has(tab)) {
+      setActiveSection(tab)
+    }
+  }, [searchParams])
+
+  const handleSectionChange = useCallback(
+    (sectionId: string) => {
+      setActiveSection(sectionId)
+      router.replace(`/admin?tab=${sectionId}`)
+    },
+    [router]
+  )
+
   const fetchStats = useCallback(async () => {
     const result = await adminApiCall<AdminStats>("/api/admin/stats", {
       useCache: true,
@@ -136,7 +165,6 @@ export default function AdminPage() {
   }, [])
 
   const fetchUsers = useCallback(async () => {
-    setLoadingUsers(true)
     const result = await adminApiCall<{ data?: UserManagement[] } | UserManagement[]>("/api/admin/users", {
       useCache: true,
       cacheTTL: 20000,
@@ -153,7 +181,6 @@ export default function AdminPage() {
         variant: "destructive",
       })
     }
-    setLoadingUsers(false)
   }, [toast])
 
   useEffect(() => {
@@ -167,10 +194,58 @@ export default function AdminPage() {
   }, [isAdmin, isChecking, fetchStats, fetchTrialStats])
 
   useEffect(() => {
-    if (isAdmin && !isChecking && activeSection === "users") {
+    if (isAdmin && !isChecking && (activeSection === "users" || activeSection === "mtmauto")) {
       fetchUsers()
     }
   }, [isAdmin, isChecking, activeSection, fetchUsers])
+
+  // Toast para admins: novo pedido MTM Auto (registrado em notifications).
+  useEffect(() => {
+    if (!isAdmin || isChecking) return
+    if (!user?.id) return
+
+    const adminId = user.id
+    let cancelled = false
+
+    const channel = supabase?.channel(`admin-mtm-auto-toast-${adminId}-${Date.now()}`)
+    if (!channel) return
+
+    channel
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${adminId}`,
+        },
+        (payload) => {
+          if (cancelled) return
+          const n = payload.new as any
+          if (!n) return
+
+          if (n.type !== "admin_notification") return
+
+          const event = n.data?.event
+          if (event !== "mtm_auto_request") return
+
+          const notifId = String(n.id || "")
+          if (notifId && lastAdminToastIds.current.has(notifId)) return
+          if (notifId) lastAdminToastIds.current.add(notifId)
+
+          toast({
+            title: "Pedido MTM Auto",
+            description: n.message || "Novo pedido para aprovação.",
+          })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      cancelled = true
+      supabase?.removeChannel(channel)
+    }
+  }, [isAdmin, isChecking, user?.id, toast])
 
   const handleApproveUser = async (userId: string) => {
     const result = await adminApiCall("/api/admin/approve-user", {
@@ -186,27 +261,6 @@ export default function AdminPage() {
     } else {
       toast({
         title: "Erro ao aprovar",
-        description: result.error,
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleToggleRole = async (userId: string, currentRole: string) => {
-    const newRole = currentRole === "admin" ? "member" : "admin"
-    const result = await adminApiCall("/api/admin/users", {
-      method: "PATCH",
-      body: JSON.stringify({ userId, user_type: newRole }),
-    })
-    if (result.success) {
-      clearAdminCache("/api/admin/users")
-      clearAdminCache("/api/admin/stats")
-      await fetchUsers()
-      await fetchStats()
-      toast({ title: "Permissões alteradas" })
-    } else {
-      toast({
-        title: "Erro ao alterar permissões",
         description: result.error,
         variant: "destructive",
       })
@@ -238,7 +292,7 @@ export default function AdminPage() {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-b from-black via-zinc-950 to-black text-white">
-      <AdminSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+      <AdminSidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
 
       <main className="flex-1 overflow-auto">
         <div className="border-b border-[#D2A63C]/15 bg-black/40 px-6 py-4 backdrop-blur-sm">
@@ -246,6 +300,7 @@ export default function AdminPage() {
             <h1 className="text-xl font-semibold text-white">
               {activeSection === "overview" && "Visão geral"}
               {activeSection === "users" && "Utilizadores"}
+              {activeSection === "mtmauto" && "MTM Auto"}
               {activeSection === "content" && "Conteúdo"}
               {activeSection === "education" && "Educação / LMS"}
               {activeSection === "notifications" && "Notificações"}
@@ -280,8 +335,23 @@ export default function AdminPage() {
                     users={users}
                     onRefresh={fetchUsers}
                     onApprove={handleApproveUser}
-                    onToggleRole={handleToggleRole}
                   />
+                </div>
+              </section>
+            </div>
+          )}
+
+          {activeSection === "mtmauto" && (
+            <div className="space-y-6">
+              <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+                <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Gestão MTM Auto</h2>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Aprovação de acessos ao MTM Auto e promoção de admins específicos do produto.
+                  </p>
+                </div>
+                <div className="p-6">
+                  <MtmAutoManagement users={users} onRefresh={fetchUsers} />
                 </div>
               </section>
             </div>
@@ -382,5 +452,19 @@ export default function AdminPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-black flex items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-[#D2A63C]" />
+        </div>
+      }
+    >
+      <AdminPageClient />
+    </Suspense>
   )
 }

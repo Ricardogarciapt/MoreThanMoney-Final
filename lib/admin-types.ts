@@ -22,10 +22,15 @@ export interface UserManagement {
   email: string
   username: string
   full_name?: string
-  user_type: 'member' | 'admin' | 'pending' | 'guest' | 'presentation'
+  user_type: 'member' | 'admin' | 'vip' | 'pending' | 'guest' | 'presentation' | 'inactive' | 'affiliate'
   membership_level: 'basic' | 'premium' | 'vip' | 'iq' | 'skool'
   member_category?: 'iq' | 'skool' | 'vip' | 'standard'
   onboarding_platform?: 'vxa' | 'rfg' | null
+  mtm_auto_requested?: boolean
+  mtm_auto_requested_at?: string | null
+  mtm_auto_enabled?: boolean
+  mtm_auto_enabled_at?: string | null
+  mtm_auto_admin?: boolean
   is_active: boolean
   is_verified: boolean
   created_at: string

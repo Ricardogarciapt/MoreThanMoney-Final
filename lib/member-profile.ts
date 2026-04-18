@@ -93,6 +93,18 @@ export async function ensureMemberProfile(
     if (again) return again as UserProfile
   }
 
+  // Fallback: alguns fluxos OAuth podem falhar no insert/upsert via RLS.
+  // Neste caso, chamamos um endpoint server-side que faz o upsert com service-role.
+  try {
+    const res = await fetch("/api/profile/harmonize", { method: "POST" })
+    if (res.ok) {
+      const data = await res.json()
+      if (data?.profile) return data.profile as UserProfile
+    }
+  } catch (e) {
+    // Ignorar, vamos devolver null abaixo.
+  }
+
   console.error("[ensureMemberProfile] falha ao sincronizar perfil:", upsertError)
   return null
 }

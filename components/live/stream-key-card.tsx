@@ -129,6 +129,19 @@ export default function StreamKeyCard({
               className="border-gray-700 bg-black/50 font-mono text-xs"
             />
             <div className="flex gap-2">
+              {onGenerateOrRefresh && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-[#D2A63C]/60 text-[#D2A63C]"
+                  disabled={loading}
+                  onClick={() => onGenerateOrRefresh()}
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                  <span className="ml-2">Gerar chave</span>
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"

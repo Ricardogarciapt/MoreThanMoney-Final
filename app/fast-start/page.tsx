@@ -828,7 +828,7 @@ export default function FastStartPage() {
                     <div>
                       <h4 className="text-white font-semibold mb-3">Chamada Semanal (Execução)</h4>
                       <YouTubeEmbed 
-                        videoId="q-23MppHFDI"
+                        videoId="w8y_wzJGTcA"
                         title="Chamada Semanal MTM"
                         className="border border-mtm-primary/30 mb-4"
                       />

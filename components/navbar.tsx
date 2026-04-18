@@ -53,7 +53,6 @@ export default function Navbar() {
         { name: "IQonic Academy", href: "https://iqonic.vip", external: true },
         { name: "Educação MTM", href: "/mtm" },
         { name: "Live Sessions", href: "/live-sessions" },
-        { name: "AI Com Os Gemeos", href: "https://www.skool.com/ai-com-osgemeos/about?ref=bc17a1ec65954570926520a936f7355b", external: true },
         { name: "BackOffice IQ", href: "https://user.iqonic.life", external: true },
       ],
     },
@@ -68,6 +67,7 @@ export default function Navbar() {
         { name: "Scanner ao Vivo", href: "/scanner-access" },
         { name: "Trading Desk", href: "/trading" },
         { name: "Portefólios", href: "/portfolios" },
+        { name: "MTM Auto", href: "/mtmauto" },
       ],
     },
     {
@@ -81,10 +81,13 @@ export default function Navbar() {
       icon: Zap,
     },
     {
-      name: "MTM Studio",
+      name: "Social Media",
       href: "https://mtmbrandbuilder.lovable.app",
       icon: Rocket,
-      external: true,
+      submenu: [
+        { name: "MTM Studio", href: "https://mtmbrandbuilder.lovable.app", external: true },
+        { name: "MTM Partnership Engine", href: "https://mtmugcapp.lovable.app", external: true },
+      ],
     },
   ]
 

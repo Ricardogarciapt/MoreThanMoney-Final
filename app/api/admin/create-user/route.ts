@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
             whatsapp: whatsapp ? sanitizeString(whatsapp) : null,
             user_type: user_type || 'member',
             membership_level: membership_level || 'basic',
-            is_active: true,
+            is_active: user_type !== 'inactive',
             is_verified: true,
             trial_expires_at: trialExpiresAt,
             trial_expired: false,

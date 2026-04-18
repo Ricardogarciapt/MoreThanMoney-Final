@@ -73,7 +73,7 @@ export const siteContent: ContentItem[] = [
     type: 'video',
     location: '/onboarding',
     title: 'Vídeo de Onboarding',
-    url: 'https://youtu.be/q-23MppHFDI',
+    url: 'https://youtu.be/w8y_wzJGTcA',
     description: 'Vídeo explicativo do processo de onboarding',
     autoplay: false,
     controls: true
@@ -121,7 +121,7 @@ export const siteContent: ContentItem[] = [
     type: 'video',
     location: '/fast-start',
     title: 'Onboarding Rápido',
-    url: 'https://youtu.be/q-23MppHFDI',
+    url: 'https://youtu.be/w8y_wzJGTcA',
     description: 'Vídeo de onboarding - Passo 4',
     autoplay: false,
     controls: true

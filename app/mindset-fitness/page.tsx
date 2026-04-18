@@ -11,7 +11,6 @@ import ProtectedPage from "@/components/protected-page"
 import { Dumbbell, Activity, Calendar, Utensils, Scale, Loader2, Plus } from "lucide-react"
 import WorkoutManager from "@/components/fitness/workout-manager"
 import NutritionManager from "@/components/fitness/nutrition-manager"
-import AIAssistantFloating from "@/components/mobile/ai-assistant-floating"
 
 interface Workout {
   id: string
@@ -324,8 +323,6 @@ export default function MindsetFitnessPage() {
             </Tabs>
           </section>
         </div>
-        {/* Assistente AI flutuante (mesmo componente de app-mobile) */}
-        <AIAssistantFloating />
       </main>
     </ProtectedPage>
   )

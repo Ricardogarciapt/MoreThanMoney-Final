@@ -6,6 +6,7 @@ import { Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from 'sonner'
 import ConditionalNavbarFooter from "@/components/conditional-navbar-footer"
+import { GoogleTranslateLoader } from "@/components/google-translate-loader"
 import { AuthProvider } from "@/contexts/auth-context"
 
 export const metadata: Metadata = {
@@ -61,41 +62,18 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#D2A63C" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="MTM App" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-        {/* Google Translate */}
-        <script
-          type="text/javascript"
-          dangerouslySetInnerHTML={{
-            __html: `
-              function googleTranslateElementInit() {
-                new google.translate.TranslateElement({
-                  pageLanguage: 'pt',
-                  includedLanguages: 'pt,en,es,fr,de,it,nl,zh-CN,ja,ar,ru,hi,sr,hr,bs,sq,bg,ro,pl,uk,tr',
-                  layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-                  autoDisplay: false,
-                  multilanguagePage: true
-                }, 'google_translate_element');
-              }
-            `
-          }}
-        />
-        <script
-          type="text/javascript"
-          src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
-          async
-        />
       </head>
       <body suppressHydrationWarning>
-        {/* Google Translate Element - Oculto via CSS */}
-        <div id="google_translate_element" style={{ display: 'none' }}></div>
-        
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <AuthProvider>
             <Suspense fallback={null}>
+              <GoogleTranslateLoader />
               <ConditionalNavbarFooter>
                 {children}
               </ConditionalNavbarFooter>

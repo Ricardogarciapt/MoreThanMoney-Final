@@ -3,6 +3,12 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { 
   GraduationCap, 
   TrendingUp, 
@@ -25,16 +31,30 @@ import {
   RefreshCw,
   Star,
   Award,
-  Building2
+  LayoutList,
 } from "lucide-react"
 import Link from "next/link"
 import ParticleBackground from "@/components/particle-background"
 import YouTubeEmbed from "@/components/youtube-embed"
 
+const MTM_SECTION_NAV = [
+  { id: "mtm-top", label: "Início" },
+  { id: "mtm-diagnostico", label: "Diagnóstico" },
+  { id: "mtm-ecossistema", label: "Ecossistema" },
+  { id: "mtm-escada", label: "Escada" },
+  { id: "mtm-solucoes", label: "Soluções" },
+  { id: "mtm-modelo", label: "Modelo" },
+  { id: "mtm-porque", label: "Porquê MTM" },
+  { id: "mtm-faq", label: "FAQ" },
+] as const
+
+type MtmExtraLink = { id: string; title: string; url: string }
+
 export default function MTMLandingPage() {
   const [mounted, setMounted] = useState(false)
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
   const [presentationVideoId, setPresentationVideoId] = useState("hKAQ72MsAwU") // Fallback
+  const [mtmPageLinks, setMtmPageLinks] = useState<MtmExtraLink[]>([])
   
   // URLs estáveis para imagens MTM (evitam problemas com acentos/espaços nos ficheiros)
   const getMtmImageUrl = (name: keyof typeof DEFAULT_MTM_IMAGES) =>
@@ -71,69 +91,115 @@ export default function MTMLandingPage() {
     loadContentConfig()
   }, [])
 
+  useEffect(() => {
+    if (!isVideoModalOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsVideoModalOpen(false)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [isVideoModalOpen])
+
   const loadContentConfig = async () => {
     try {
-      const response = await fetch('/api/admin/content-config')
-      if (response.ok) {
-        const data = await response.json()
-        
-        // Carregar vídeo
-        const mtmVideo = data.videos?.find((video: any) => 
-          video.page === '/mtm' && video.section === 'Video Modal'
+      const response = await fetch("/api/admin/content-config")
+      if (!response.ok) return
+
+      let data: Record<string, unknown>
+      try {
+        data = await response.json()
+      } catch {
+        return
+      }
+      if (!data || typeof data !== "object") return
+
+      // Links configuráveis para /mtm (admin content-config)
+      const rawLinks = Array.isArray(data.links) ? data.links : []
+      const forPage: MtmExtraLink[] = rawLinks
+        .filter(
+          (l: any) =>
+            l &&
+            typeof l === "object" &&
+            l.page === "/mtm" &&
+            typeof l.url === "string" &&
+            l.url.trim() &&
+            typeof l.title === "string" &&
+            l.title.trim()
         )
-        if (mtmVideo?.videoId) {
-          setPresentationVideoId(mtmVideo.videoId)
+        .map((l: any) => ({
+          id: String(l.id || l.url),
+          title: String(l.title).trim(),
+          url: String(l.url).trim(),
+        }))
+      setMtmPageLinks(forPage)
+
+      // Carregar vídeo
+      const videos = Array.isArray(data.videos) ? data.videos : []
+      const mtmVideo = videos.find(
+        (video: any) => video?.page === "/mtm" && video?.section === "Video Modal"
+      )
+      if (mtmVideo?.videoId) {
+        setPresentationVideoId(String(mtmVideo.videoId))
+      }
+
+      // Carregar imagens
+      const mtmImages = (Array.isArray(data.images) ? data.images : []).filter(
+        (img: any) => img?.page === "/mtm"
+      )
+      const imageMap: Record<string, string> = {}
+      let estrategiaCount = 0
+
+      mtmImages.forEach((img: any) => {
+        let url =
+          img.url && img.url.startsWith("http") ? img.url : img.url || ""
+
+        if (url && !url.startsWith("http") && !url.startsWith("/")) {
+          url = "/" + url
         }
-        
-        // Carregar imagens
-        const mtmImages = data.images?.filter((img: any) => img.page === '/mtm') || []
-        const imageMap: Record<string, string> = {}
-        let estrategiaCount = 0
-        
-        mtmImages.forEach((img: any) => {
-          // Se a URL for fornecida e válida, usar; caso contrário, usar o caminho padrão
-          let url = img.url && img.url.startsWith('http') 
-            ? img.url 
-            : (img.url || '')
-          
-          // Se a URL não começar com http, garantir que é um caminho válido
-          if (url && !url.startsWith('http') && !url.startsWith('/')) {
-            url = '/' + url
+
+        if (img.section === "O Diagnóstico") {
+          imageMap.problema = url || getMtmImageUrl("problema")
+        } else if (img.section === "EARN WHILE YOU LEARN") {
+          imageMap.ecossistema = url || getMtmImageUrl("ecossistema")
+        } else if (img.section === "A Escada do Sucesso") {
+          estrategiaCount++
+          const titleLower = (img.title || "").toLowerCase()
+          const idLower = (img.id || "").toLowerCase()
+          const urlLower = (url || "").toLowerCase()
+          if (
+            titleLower.includes("parte 1") ||
+            titleLower.includes("1") ||
+            idLower.includes("estrategia-1") ||
+            idLower.includes("1png") ||
+            urlLower.includes("1png") ||
+            urlLower.includes("estrategia. image 1png")
+          ) {
+            imageMap.estrategia1 = url || getMtmImageUrl("estrategia1")
+          } else if (
+            titleLower.includes("parte 2") ||
+            titleLower.includes("2") ||
+            idLower.includes("estrategia-2") ||
+            idLower.includes("image 2") ||
+            urlLower.includes("image 2") ||
+            urlLower.includes("a estratégia image 2")
+          ) {
+            imageMap.estrategia2 = url || getMtmImageUrl("estrategia2")
+          } else if (estrategiaCount === 1) {
+            imageMap.estrategia1 = url || getMtmImageUrl("estrategia1")
+          } else if (estrategiaCount === 2) {
+            imageMap.estrategia2 = url || getMtmImageUrl("estrategia2")
           }
-          
-          if (img.section === 'O Diagnóstico') {
-            imageMap.problema = url || getMtmImageUrl('problema')
-          } else if (img.section === 'EARN WHILE YOU LEARN') {
-            imageMap.ecossistema = url || getMtmImageUrl('ecossistema')
-          } else if (img.section === 'A Escada do Sucesso') {
-            estrategiaCount++
-            const titleLower = (img.title || '').toLowerCase()
-            const idLower = (img.id || '').toLowerCase()
-            const urlLower = (url || '').toLowerCase()
-            if (titleLower.includes('parte 1') || titleLower.includes('1') || idLower.includes('estrategia-1') ||
-                idLower.includes('1png') || urlLower.includes('1png') || urlLower.includes('estrategia. image 1png')) {
-              imageMap.estrategia1 = url || getMtmImageUrl('estrategia1')
-            } else if (titleLower.includes('parte 2') || titleLower.includes('2') || idLower.includes('estrategia-2') ||
-                       idLower.includes('image 2') || urlLower.includes('image 2') || urlLower.includes('a estratégia image 2')) {
-              imageMap.estrategia2 = url || getMtmImageUrl('estrategia2')
-            } else if (estrategiaCount === 1) {
-              imageMap.estrategia1 = url || getMtmImageUrl('estrategia1')
-            } else if (estrategiaCount === 2) {
-              imageMap.estrategia2 = url || getMtmImageUrl('estrategia2')
-            }
-          } else if (img.section === 'As Soluções Tecnológicas') {
-            imageMap.escolhaCaminho = url || getMtmImageUrl('escolhaCaminho')
-          } else if (img.section === 'O Modelo de Negócio') {
-            imageMap.diferenca = url || getMtmImageUrl('diferenca')
-          }
-        })
-        if (!imageMap.estrategia1) imageMap.estrategia1 = getMtmImageUrl('estrategia1')
-        if (!imageMap.estrategia2) imageMap.estrategia2 = getMtmImageUrl('estrategia2')
-        
-        // Atualizar apenas as imagens que foram encontradas, mantendo as padrão para as outras
-        if (Object.keys(imageMap).length > 0) {
-          setImages(prev => ({ ...prev, ...imageMap }))
+        } else if (img.section === "As Soluções Tecnológicas") {
+          imageMap.escolhaCaminho = url || getMtmImageUrl("escolhaCaminho")
+        } else if (img.section === "O Modelo de Negócio") {
+          imageMap.diferenca = url || getMtmImageUrl("diferenca")
         }
+      })
+      if (!imageMap.estrategia1) imageMap.estrategia1 = getMtmImageUrl("estrategia1")
+      if (!imageMap.estrategia2) imageMap.estrategia2 = getMtmImageUrl("estrategia2")
+
+      if (Object.keys(imageMap).length > 0) {
+        setImages((prev) => ({ ...prev, ...imageMap }))
       }
     } catch (error) {
       console.error('Erro ao carregar configuração de conteúdo:', error)
@@ -155,9 +221,27 @@ export default function MTMLandingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white relative overflow-hidden">
+    <main id="mtm-top" className="min-h-screen bg-black text-white relative overflow-hidden scroll-pt-20">
       <ParticleBackground />
-      
+
+      <nav
+        aria-label="Navegação por secções"
+        className="relative z-20 sticky top-0 border-b border-purple-500/25 bg-black/85 backdrop-blur-md"
+      >
+        <div className="container mx-auto px-3 py-2 flex items-center gap-2 overflow-x-auto">
+          <LayoutList className="w-4 h-4 text-purple-400 shrink-0 hidden sm:block" aria-hidden />
+          {MTM_SECTION_NAV.map((item) => (
+            <a
+              key={item.id}
+              href={`#${item.id}`}
+              className="shrink-0 rounded-full border border-purple-500/35 bg-gray-900/90 px-3 py-1.5 text-xs font-medium text-gray-200 hover:border-purple-400/60 hover:text-white transition-colors"
+            >
+              {item.label}
+            </a>
+          ))}
+        </div>
+      </nav>
+
       {/* Hero Section - Estética IQONIC */}
       <section className="relative z-10 container mx-auto px-4 py-20 md:py-32">
         <div className="max-w-6xl mx-auto text-center">
@@ -193,7 +277,7 @@ export default function MTMLandingPage() {
             >
               <Link href="https://www.skool.com/morethanmoney-1132/about" target="_blank" rel="noopener noreferrer">
                 <Sparkles className="w-5 h-5 mr-2" />
-                Entrar Gratuitamente na Comunidade Skool
+                Entrar na nossa Plataforma de Ensino
               </Link>
             </Button>
             
@@ -207,11 +291,68 @@ export default function MTMLandingPage() {
               Ver Apresentação
             </Button>
           </div>
+
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-gray-400">
+            <Link href="/new-landing" className="text-purple-300 hover:text-white transition-colors">
+              Site principal
+            </Link>
+            <span className="text-gray-600 hidden sm:inline" aria-hidden>
+              ·
+            </span>
+            <Link href="/register" className="text-purple-300 hover:text-white transition-colors">
+              Criar conta
+            </Link>
+            <span className="text-gray-600 hidden sm:inline" aria-hidden>
+              ·
+            </span>
+            <Link href="/live-sessions" className="text-purple-300 hover:text-white transition-colors">
+              Lives e academia
+            </Link>
+            <span className="text-gray-600 hidden sm:inline" aria-hidden>
+              ·
+            </span>
+            <Link href="/docs" className="text-purple-300 hover:text-white transition-colors">
+              Documentos
+            </Link>
+          </div>
+
+          {mtmPageLinks.length > 0 && (
+            <div className="mt-8 flex flex-wrap justify-center gap-2 max-w-3xl mx-auto">
+              {mtmPageLinks.map((link) =>
+                link.url.startsWith("/") ? (
+                  <Button
+                    key={link.id}
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="border-purple-500/40 text-purple-200 hover:bg-purple-500/10"
+                  >
+                    <Link href={link.url}>{link.title}</Link>
+                  </Button>
+                ) : (
+                  <Button
+                    key={link.id}
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="border-purple-500/40 text-purple-200 hover:bg-purple-500/10"
+                  >
+                    <a href={link.url} target="_blank" rel="noopener noreferrer">
+                      {link.title}
+                    </a>
+                  </Button>
+                )
+              )}
+            </div>
+          )}
         </div>
       </section>
 
       {/* O Diagnóstico - Usando imagem Problema.png */}
-      <section className="relative z-10 py-20 bg-gradient-to-b from-black via-gray-900/50 to-black">
+      <section
+        id="mtm-diagnostico"
+        className="relative z-10 py-20 bg-gradient-to-b from-black via-gray-900/50 to-black scroll-mt-20"
+      >
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
@@ -285,7 +426,7 @@ export default function MTMLandingPage() {
       </section>
 
       {/* O Conceito: EARN WHILE YOU LEARN - Usando imagem Ecossistema.png */}
-      <section className="relative z-10 py-20">
+      <section id="mtm-ecossistema" className="relative z-10 py-20 scroll-mt-20">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
@@ -350,7 +491,10 @@ export default function MTMLandingPage() {
       </section>
 
       {/* A Escada do Sucesso - Usando imagem Estratégia.png */}
-      <section className="relative z-10 py-20 bg-gradient-to-b from-black via-gray-900/50 to-black">
+      <section
+        id="mtm-escada"
+        className="relative z-10 py-20 bg-gradient-to-b from-black via-gray-900/50 to-black scroll-mt-20"
+      >
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
@@ -544,7 +688,10 @@ export default function MTMLandingPage() {
       </section>
 
       {/* O Modelo de Negócio - Usando imagem Diferença.png */}
-      <section className="relative z-10 py-20 bg-gradient-to-b from-black via-gray-900/50 to-black">
+      <section
+        id="mtm-modelo"
+        className="relative z-10 py-20 bg-gradient-to-b from-black via-gray-900/50 to-black scroll-mt-20"
+      >
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
@@ -589,7 +736,7 @@ export default function MTMLandingPage() {
       </section>
 
       {/* Porquê a MTM? */}
-      <section className="relative z-10 py-20">
+      <section id="mtm-porque" className="relative z-10 py-20 scroll-mt-20">
         <div className="container mx-auto px-4">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
@@ -647,6 +794,67 @@ export default function MTMLandingPage() {
         </div>
       </section>
 
+      {/* FAQ */}
+      <section
+        id="mtm-faq"
+        className="relative z-10 py-20 bg-gradient-to-b from-black via-gray-900/40 to-black scroll-mt-20"
+      >
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
+                Perguntas frequentes
+              </h2>
+              <p className="text-gray-400 text-sm md:text-base">
+                Esclarecimentos sobre a jornada MTM e o ecossistema.
+              </p>
+            </div>
+            <Accordion type="single" collapsible className="rounded-2xl border border-purple-500/25 bg-gray-900/50 px-4">
+              <AccordionItem value="q1" className="border-purple-500/20">
+                <AccordionTrigger className="text-left text-white hover:no-underline">
+                  Qual a diferença entre MTM e IQONIC?
+                </AccordionTrigger>
+                <AccordionContent className="text-gray-300 text-sm leading-relaxed">
+                  A MTM é o braço educacional e de comunidade (Skool, estrutura, processo). A IQONIC é a infraestrutura de
+                  execução e tecnologia onde aplicás o que aprendes. Juntas fecham o ciclo: estudar com método e operar com
+                  ferramentas profissionais.
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="q2" className="border-purple-500/20">
+                <AccordionTrigger className="text-left text-white hover:no-underline">
+                  Preciso de experiência prévia em trading?
+                </AccordionTrigger>
+                <AccordionContent className="text-gray-300 text-sm leading-relaxed">
+                  Não é obrigatório. O percurso começa por fundamentos e disciplina; a complexidade aumenta à medida que
+                  consolidas prática. O foco é processo e gestão de risco, não promessas de retorno.
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="q3" className="border-purple-500/20">
+                <AccordionTrigger className="text-left text-white hover:no-underline">
+                  Como acedo à comunidade Skool?
+                </AccordionTrigger>
+                <AccordionContent className="text-gray-300 text-sm leading-relaxed">
+                  Usa o botão &quot;Entrar na nossa Plataforma de Ensino&quot; nesta página — leva-te ao Skool oficial da
+                  MoreThanMoney. Lá tens o conteúdo estruturado e acompanhamento da comunidade.
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="q4" className="border-purple-500/20">
+                <AccordionTrigger className="text-left text-white hover:no-underline">
+                  Há formação ao vivo?
+                </AccordionTrigger>
+                <AccordionContent className="text-gray-300 text-sm leading-relaxed">
+                  Sim. No site podes aceder a{" "}
+                  <Link href="/live-sessions" className="text-purple-400 hover:underline">
+                    Lives e academia
+                  </Link>{" "}
+                  para sessões e canais quando estiverem disponíveis.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Final */}
       <section className="relative z-10 py-20 bg-gradient-to-b from-black via-purple-900/20 to-black">
         <div className="container mx-auto px-4">
@@ -693,7 +901,10 @@ export default function MTMLandingPage() {
 
       {/* Modal de Vídeo de Apresentação */}
       {isVideoModalOpen && (
-        <div 
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mtm-video-modal-title"
           className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4"
           onClick={closeVideoModal}
         >
@@ -709,7 +920,7 @@ export default function MTMLandingPage() {
               <X className="w-6 h-6" />
             </button>
             <div className="p-4">
-              <h3 className="text-2xl font-bold text-white mb-4 text-center">
+              <h3 id="mtm-video-modal-title" className="text-2xl font-bold text-white mb-4 text-center">
                 Apresentação MoreThanMoney
               </h3>
               <YouTubeEmbed 

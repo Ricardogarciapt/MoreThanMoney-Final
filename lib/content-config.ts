@@ -160,7 +160,7 @@ export const defaultContentConfig: ContentConfig = {
     {
       id: 'faststart-chamada',
       title: 'Chamada Semanal MTM',
-      videoId: 'q-23MppHFDI',
+      videoId: 'w8y_wzJGTcA',
       page: '/fast-start',
       section: 'Step 4 - Chamada',
       autoplay: false

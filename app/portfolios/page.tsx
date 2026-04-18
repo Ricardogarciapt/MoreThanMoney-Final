@@ -22,7 +22,8 @@ import {
   Zap,
   Shield,
   Activity,
-  Eye
+  Eye,
+  Thermometer,
 } from "lucide-react"
 import { cryptoPortfolio, etfPortfolio } from "@/lib/portfolio-data"
 
@@ -45,6 +46,19 @@ interface AssetWithPrice {
   tp3?: number
   stop_loss?: number
   ai_validated?: boolean
+  /** Só preenchido quando a CoinGecko devolve `usd_24h_change` válido — não usar fallback inventado. */
+  change_24h_percent?: number | null
+}
+
+function mapFearGreedToPt(classification: string): string {
+  const m: Record<string, string> = {
+    "Extreme Fear": "Pânico",
+    Fear: "Medo",
+    Neutral: "Neutro",
+    Greed: "Otimismo",
+    "Extreme Greed": "Euforia",
+  }
+  return m[classification] || classification
 }
 
 export default function PortfoliosPage() {
@@ -53,9 +67,16 @@ export default function PortfoliosPage() {
   const [cryptoAssets, setCryptoAssets] = useState<AssetWithPrice[]>([])
   const [etfAssets, setETFAssets] = useState<AssetWithPrice[]>([])
   const [lastSync, setLastSync] = useState<Date>(new Date())
-  const [totalCryptoPercent, setTotalCryptoPercent] = useState(0)
+  /** Média 24h só entre ativos com dado CoinGecko válido; null = ainda sem dados fiáveis */
+  const [crypto24hAvgPercent, setCrypto24hAvgPercent] = useState<number | null>(null)
+  const [crypto24hCoverage, setCrypto24hCoverage] = useState<{ ok: number; total: number } | null>(null)
   const [totalETFPercent, setTotalETFPercent] = useState(0)
   const [dataSource, setDataSource] = useState('Carregando...')
+  const [fearGreed, setFearGreed] = useState<{
+    value: number
+    classification: string
+    labelPt: string
+  } | null>(null)
   
   // useRef para manter referência estável dos assets
   const cryptoAssetsRef = useRef<AssetWithPrice[]>([])
@@ -81,8 +102,22 @@ export default function PortfoliosPage() {
   const loadPortfolioData = async () => {
     try {
       setLoading(true)
+      setCrypto24hAvgPercent(null)
+      setCrypto24hCoverage(null)
       console.log('📊 [PORTFOLIO] Carregando dados...')
-      
+
+      void fetch("/api/portfolio/fear-greed")
+        .then((r) => r.json())
+        .then((j: { success?: boolean; value?: number; classification?: string }) => {
+          if (j.success && typeof j.value === "number" && Number.isFinite(j.value)) {
+            const c = j.classification || "Neutral"
+            setFearGreed({ value: j.value, classification: c, labelPt: mapFearGreedToPt(c) })
+          } else {
+            setFearGreed(null)
+          }
+        })
+        .catch(() => setFearGreed(null))
+
       const response = await fetch('/api/portfolio/mtm?type=all')
       
       if (!response.ok) {
@@ -105,12 +140,13 @@ export default function PortfoliosPage() {
         
         // Processar crypto PRIMEIRO (sem TP/SL) para exibir dados rapidamente
         if (result.data.crypto) {
+          const cryptoAssetsFromApi = Array.isArray(result.data.crypto.assets) ? result.data.crypto.assets : []
           console.log('💰 [PORTFOLIO] Processando crypto assets...')
-          console.log('📊 [PORTFOLIO] Assets recebidos da API:', result.data.crypto.assets.length)
-          console.log('📊 [PORTFOLIO] Primeiro asset COMPLETO:', JSON.stringify(result.data.crypto.assets[0], null, 2))
-          console.log('📊 [PORTFOLIO] current_price do primeiro:', result.data.crypto.assets[0].current_price)
+          console.log('📊 [PORTFOLIO] Assets recebidos da API:', cryptoAssetsFromApi.length)
+          console.log('📊 [PORTFOLIO] Primeiro asset COMPLETO:', JSON.stringify(cryptoAssetsFromApi[0], null, 2))
+          console.log('📊 [PORTFOLIO] current_price do primeiro:', cryptoAssetsFromApi[0]?.current_price)
           
-          const assetsBase = result.data.crypto.assets.map((asset: any) => {
+          const assetsBase = cryptoAssetsFromApi.map((asset: any) => {
             const originalAsset = cryptoPortfolio.find(c => c.symbol === asset.symbol)
             
             // Calcular performance real
@@ -138,6 +174,7 @@ export default function PortfoliosPage() {
               current_value: asset.current_value,
               pnl: asset.pnl,
               pnl_percent: realPerformance,
+              change_24h_percent: null,
               category: asset.categoria,
               recommended_monthly: asset.reforco_mensal,
               potential_growth: originalAsset?.potencial_crescimento_percent || 0,
@@ -164,42 +201,59 @@ export default function PortfoliosPage() {
                 console.log('🔍 [PORTFOLIO] Símbolos dos assets:', assetsBase.map(a => a.symbol))
                 
                 if (pricesData.success && pricesData.prices) {
-                  const assetsWithPrices = assetsBase.map(asset => {
+                  const assetsWithPrices = assetsBase.map((asset) => {
                     const newPrice = pricesData.prices[asset.symbol]
+                    const dailyChange = pricesData.changes_24h?.[asset.symbol]
                     console.log(`🔍 [PORTFOLIO] Buscando preço para ${asset.symbol}: ${newPrice}`)
                     if (newPrice) {
-                      // Recalcular performance com novo preço
-                      const entryPrice = asset.entry_price || newPrice * 0.70
-                      const realPerformance = ((newPrice - entryPrice) / entryPrice) * 100
-                      
-                      console.log(`💰 [PORTFOLIO] ${asset.symbol}: $${newPrice} (performance: ${realPerformance.toFixed(1)}%)`)
-                      
+                      const entryPrice = asset.entry_price || newPrice * 0.7
+                      const vsEntryPercent = ((newPrice - entryPrice) / entryPrice) * 100
+                      const has24h =
+                        typeof dailyChange === "number" &&
+                        Number.isFinite(dailyChange) &&
+                        !Number.isNaN(dailyChange)
+
+                      console.log(
+                        `💰 [PORTFOLIO] ${asset.symbol}: $${newPrice} (24h CG: ${has24h ? dailyChange.toFixed(2) : "N/D"}%)`
+                      )
+
                       return {
                         ...asset,
                         current_price: newPrice,
-                        pnl_percent: realPerformance,
+                        change_24h_percent: has24h ? dailyChange : null,
+                        pnl_percent: vsEntryPercent,
                         current_value: (asset.total_invested / entryPrice) * newPrice,
-                        pnl: ((asset.total_invested / entryPrice) * newPrice) - asset.total_invested,
+                        pnl: (asset.total_invested / entryPrice) * newPrice - asset.total_invested,
                         tp1: newPrice * 1.5,
                         tp2: newPrice * 2.0,
                         tp3: newPrice * 3.0,
-                        stop_loss: newPrice * 0.85
+                        stop_loss: newPrice * 0.85,
                       }
                     }
-                    return asset
+                    return { ...asset, change_24h_percent: null }
                   })
-                  
-                  console.log(`📊 [PORTFOLIO] Assets com preços atualizados:`, assetsWithPrices.filter(a => a.current_price).length)
-                  setCryptoAssets([...assetsWithPrices]) // Force new array reference
-                  
-                  // Recalcular performance média
-                  const withPrice = assetsWithPrices.filter(a => a.current_price)
-                  const avgPerf = withPrice.length > 0 
-                    ? withPrice.reduce((sum, a) => sum + a.pnl_percent, 0) / withPrice.length 
-                    : 0
-                  setTotalCryptoPercent(avgPerf)
-                  
-                  console.log(`✅ [PORTFOLIO] Preços atualizados: ${withPrice.length}/${assetsWithPrices.length}`)
+
+                  console.log(
+                    `📊 [PORTFOLIO] Assets com preços atualizados:`,
+                    assetsWithPrices.filter((a) => a.current_price).length
+                  )
+                  setCryptoAssets([...assetsWithPrices])
+
+                  const with24h = assetsWithPrices.filter(
+                    (a) => a.change_24h_percent !== null && a.change_24h_percent !== undefined
+                  )
+                  const total = assetsWithPrices.filter((a) => a.current_price).length
+                  if (with24h.length > 0) {
+                    const avg24h =
+                      with24h.reduce((sum, a) => sum + (a.change_24h_percent as number), 0) / with24h.length
+                    setCrypto24hAvgPercent(avg24h)
+                    setCrypto24hCoverage({ ok: with24h.length, total })
+                  } else {
+                    setCrypto24hAvgPercent(null)
+                    setCrypto24hCoverage(total > 0 ? { ok: 0, total } : null)
+                  }
+
+                  console.log(`✅ [PORTFOLIO] Preços atualizados; 24h válidos: ${with24h.length}/${total}`)
                 }
               }
             } catch (error) {
@@ -254,23 +308,17 @@ export default function PortfoliosPage() {
             console.log(`🤖 [PORTFOLIO AI] Completado: ${assetsWithAI.filter(a => a.ai_validated).length}/${assetsWithAI.length} validados`)
             setCryptoAssets(assetsWithAI)
           }, 2000) // 2 segundos após CoinGecko
-          
-          // Calcular rentabilidade média total crypto (apenas ativos com preço)
-          const assetsWithPrice = assetsBase.filter((a: AssetWithPrice) => a.current_price !== null)
-          const totalPNL = assetsWithPrice.reduce((sum: number, a: AssetWithPrice) => sum + (a.pnl_percent || 0), 0)
-          const avgPerformance = assetsWithPrice.length > 0 ? totalPNL / assetsWithPrice.length : 0
-          setTotalCryptoPercent(avgPerformance)
-          
-          console.log('💰 [PORTFOLIO] Crypto processado:', {
+
+          console.log("💰 [PORTFOLIO] Crypto processado:", {
             total_assets: assetsBase.length,
-            with_price: assetsWithPrice.length,
-            avg_performance: avgPerformance.toFixed(2) + '%'
+            aguardando_coin_gecko_24h: true,
           })
         }
 
         // Processar ETF
         if (result.data.etf) {
-          const assets = result.data.etf.assets.map((asset: any) => {
+          const etfAssetsFromApi = Array.isArray(result.data.etf.assets) ? result.data.etf.assets : []
+          const assets = etfAssetsFromApi.map((asset: any) => {
             const originalAsset = etfPortfolio.find(e => e.symbol === asset.symbol)
             
             // Calcular performance real baseada no preço atual vs preço de entrada
@@ -323,7 +371,12 @@ export default function PortfoliosPage() {
   }
 
   const formatPercent = (value: number) => {
-    return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+    return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`
+  }
+
+  const formatOptional24h = (value: number | null) => {
+    if (value === null || value === undefined || Number.isNaN(value)) return "—"
+    return formatPercent(value)
   }
 
   if (!mounted) {
@@ -400,7 +453,7 @@ export default function PortfoliosPage() {
           </div>
 
           {/* Dashboard Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
             {/* Total Assets */}
             <Card className="bg-gray-900/50 border-[#D2A63C]/30 backdrop-blur-sm overflow-hidden relative group hover:border-[#D2A63C]/60 transition-all">
               <div className="absolute top-0 right-0 w-24 h-24 bg-[#D2A63C]/5 rounded-full blur-2xl group-hover:bg-[#D2A63C]/10 transition-all"></div>
@@ -420,7 +473,7 @@ export default function PortfoliosPage() {
               </CardContent>
             </Card>
 
-            {/* Crypto Performance */}
+            {/* Crypto média 24h — só com dados CoinGecko válidos */}
             <Card className="bg-gray-900/50 border-green-500/30 backdrop-blur-sm overflow-hidden relative group hover:border-green-500/60 transition-all">
               <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full blur-2xl group-hover:bg-green-500/10 transition-all"></div>
               <CardContent className="p-6 relative">
@@ -428,12 +481,59 @@ export default function PortfoliosPage() {
                   <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
                     <TrendingUp className="h-5 w-5 text-green-400" />
                   </div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wider">Crypto Performance</div>
+                  <div>
+                    <div className="text-xs text-gray-400 uppercase tracking-wider">Crypto Δ médio (24h)</div>
+                    <div className="text-[10px] text-gray-500 normal-case">Só com variação 24h CoinGecko</div>
+                  </div>
                 </div>
-                <div className={`text-4xl font-black mb-1 ${totalCryptoPercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {formatPercent(totalCryptoPercent)}
+                <div
+                  className={`text-4xl font-black mb-1 ${
+                    crypto24hAvgPercent === null
+                      ? "text-gray-500"
+                      : crypto24hAvgPercent >= 0
+                        ? "text-green-400"
+                        : "text-red-400"
+                  }`}
+                >
+                  {formatOptional24h(crypto24hAvgPercent)}
                 </div>
-                <Progress value={Math.min(100, Math.abs(totalCryptoPercent))} className="h-2 bg-gray-800" />
+                {crypto24hAvgPercent !== null ? (
+                  <Progress
+                    value={Math.min(100, Math.abs(crypto24hAvgPercent))}
+                    className="h-2 bg-gray-800"
+                  />
+                ) : (
+                  <p className="text-xs text-gray-500 leading-snug">
+                    {crypto24hCoverage
+                      ? `Sem dado 24h fiável (${crypto24hCoverage.ok}/${crypto24hCoverage.total} ativos).`
+                      : "A sincronizar preços…"}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Fear & Greed — mercado global (não é o teu portefólio) */}
+            <Card className="bg-gray-900/50 border-amber-500/30 backdrop-blur-sm overflow-hidden relative group hover:border-amber-500/60 transition-all">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition-all"></div>
+              <CardContent className="p-6 relative">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                    <Thermometer className="h-5 w-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400 uppercase tracking-wider">Mercado (Fear &amp; Greed)</div>
+                    <div className="text-[10px] text-gray-500 normal-case">Índice global · Alternative.me</div>
+                  </div>
+                </div>
+                {fearGreed ? (
+                  <>
+                    <div className="text-4xl font-black text-amber-300 mb-1">{fearGreed.value}</div>
+                    <div className="text-sm font-semibold text-gray-200 mb-2">{fearGreed.labelPt}</div>
+                    <Progress value={fearGreed.value} className="h-2 bg-gray-800" />
+                  </>
+                ) : (
+                  <div className="text-gray-500 text-sm">—</div>
+                )}
               </CardContent>
             </Card>
 
@@ -571,7 +671,12 @@ export default function PortfoliosPage() {
                               <th className="text-center py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">TP1</th>
                               <th className="text-center py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">TP2</th>
                               <th className="text-center py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">TP3</th>
-                              <th className="text-center py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">Performance</th>
+                              <th className="text-center py-4 px-4 text-xs text-gray-400 font-semibold uppercase tracking-wider">
+                                <span className="block">Variação 24h</span>
+                                <span className="block font-normal normal-case text-[10px] text-gray-500 mt-0.5">
+                                  CoinGecko
+                                </span>
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
@@ -622,13 +727,23 @@ export default function PortfoliosPage() {
                                   </div>
                                 </td>
                                 <td className="text-center py-4 px-4">
-                                  <Badge className={`font-bold ${
-                                    asset.pnl_percent >= 0 
-                                      ? 'bg-green-500/20 text-green-400 border-green-500/50' 
-                                      : 'bg-red-500/20 text-red-400 border-red-500/50'
-                                  }`}>
-                                    {asset.pnl_percent >= 0 ? '+' : ''}{asset.pnl_percent.toFixed(1)}%
-                                  </Badge>
+                                  {asset.change_24h_percent !== null &&
+                                  asset.change_24h_percent !== undefined ? (
+                                    <Badge
+                                      className={`font-bold ${
+                                        asset.change_24h_percent >= 0
+                                          ? "bg-green-500/20 text-green-400 border-green-500/50"
+                                          : "bg-red-500/20 text-red-400 border-red-500/50"
+                                      }`}
+                                    >
+                                      {asset.change_24h_percent >= 0 ? "+" : ""}
+                                      {asset.change_24h_percent.toFixed(1)}%
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-gray-500 text-sm" title="CoinGecko não devolveu variação 24h para este par">
+                                      —
+                                    </span>
+                                  )}
                                 </td>
                               </tr>
                             ))}

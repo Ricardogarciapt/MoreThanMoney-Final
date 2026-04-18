@@ -24,6 +24,7 @@ import {
   MessageCircle,
   Loader2,
 } from "lucide-react"
+import { exitDocumentFullscreen, getFullscreenElement, requestElementFullscreen } from "@/lib/browser-compat"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"
@@ -663,13 +664,12 @@ export default function TradingViewWidget({
     }
   }
 
-  const handleFullscreen = () => {
-    if (containerRef.current) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen()
-      } else {
-        containerRef.current.requestFullscreen()
-      }
+  const handleFullscreen = async () => {
+    if (!containerRef.current) return
+    if (getFullscreenElement()) {
+      await exitDocumentFullscreen()
+    } else {
+      await requestElementFullscreen(containerRef.current)
     }
   }
 
@@ -1020,8 +1020,11 @@ export default function TradingViewWidget({
     }
   }), [selectedSymbol, favoriteTimeframe, selectedStudies])
 
+  // Blindagem: evita crash se selectedCategory vier inválido em runtime.
+  const selectedCategoryAssets = assetCategories[selectedCategory] ?? assetCategories.forex
+
   // Filtrar ativos por categoria e busca
-  const filteredAssets = assetCategories[selectedCategory].filter((asset) =>
+  const filteredAssets = selectedCategoryAssets.filter((asset) =>
     asset.label.toLowerCase().includes(assetSearchTerm.toLowerCase()) ||
     asset.value.toLowerCase().includes(assetSearchTerm.toLowerCase())
   )

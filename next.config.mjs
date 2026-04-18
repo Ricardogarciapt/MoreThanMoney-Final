@@ -20,6 +20,7 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   reactStrictMode: true,
+  serverExternalPackages: ["ssh2"],
 }
 
 export default nextConfig

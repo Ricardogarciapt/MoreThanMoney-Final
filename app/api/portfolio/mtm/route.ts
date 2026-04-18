@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cryptoPortfolio, etfPortfolio, portfolioTotals } from '@/lib/portfolio-data'
 import { getSupabaseAnonServerClient } from '@/lib/supabase-admin-client'
+import { fetchCryptoUsdBest } from '@/lib/crypto-usd'
 
 // Cache para evitar múltiplas chamadas
 const priceCache = new Map<string, { price: number; timestamp: number }>()
@@ -42,45 +43,18 @@ function normalizeBinanceSymbol(rawSymbol: string): string {
   return mapped.endsWith('USDT') ? mapped : `${mapped}USDT`
 }
 
-// Função para buscar preço da Binance
-async function getBinancePrice(symbol: string): Promise<number | null> {
-  try {
-    const normalizedSymbol = normalizeBinanceSymbol(symbol)
-
-    // Verificar cache
-    const cached = priceCache.get(normalizedSymbol)
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      console.log(`💰 [BINANCE] Cache hit: ${normalizedSymbol} = $${cached.price}`)
-      return cached.price
-    }
-
-    console.log(`🔍 [BINANCE] Buscando preço: ${symbol} -> ${normalizedSymbol}`)
-    
-    const response = await fetch(
-      `https://api.binance.com/api/v3/ticker/price?symbol=${normalizedSymbol}`,
-      { 
-        next: { revalidate: 120 }
-      }
-    )
-
-    if (!response.ok) {
-      console.error(`❌ [BINANCE] Erro HTTP ${response.status} para ${normalizedSymbol}`)
-      return null
-    }
-
-    const data = await response.json()
-    const price = parseFloat(data.price)
-    
-    console.log(`✅ [BINANCE] ${normalizedSymbol} = $${price}`)
-    
-    // Atualizar cache
-    priceCache.set(normalizedSymbol, { price, timestamp: Date.now() })
-    
-    return price
-  } catch (error) {
-    console.error(`❌ [BINANCE] Erro ao buscar preço ${symbol}:`, error)
-    return null
+/** Binance + fallback CoinGecko (Vercel EUA muitas vezes bloqueia Binance). */
+async function getCryptoSpotUsdCached(symbol: string): Promise<number | null> {
+  const normalizedSymbol = normalizeBinanceSymbol(symbol)
+  const cached = priceCache.get(normalizedSymbol)
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.price
   }
+  const price = await fetchCryptoUsdBest(normalizedSymbol)
+  if (price != null) {
+    priceCache.set(normalizedSymbol, { price, timestamp: Date.now() })
+  }
+  return price
 }
 
 // Função para buscar preço de ETF via Yahoo Finance
@@ -128,8 +102,10 @@ export async function GET(request: NextRequest) {
     // Tentar buscar dados do Notion primeiro
     try {
       console.log('🔍 [API MTM] Tentando buscar dados do Notion...')
-      console.log('🔑 [API MTM] NEXT_PUBLIC_NOTION_API_KEY:', process.env.NEXT_PUBLIC_NOTION_API_KEY ? 'Configurado' : 'FALTANDO!')
-      console.log('🔑 [API MTM] NEXT_PUBLIC_NOTION_PORTFOLIO_DATABASE_ID:', process.env.NEXT_PUBLIC_NOTION_PORTFOLIO_DATABASE_ID ? 'Configurado' : 'FALTANDO!')
+      const hasNotion =
+        !!(process.env.NOTION_API_KEY || process.env.NEXT_PUBLIC_NOTION_API_KEY) &&
+        !!(process.env.NOTION_PORTFOLIO_DATABASE_ID || process.env.NEXT_PUBLIC_NOTION_PORTFOLIO_DATABASE_ID)
+      console.log('🔑 [API MTM] Notion (key+DB):', hasNotion ? 'Configurado' : 'FALTANDO!')
       
       const notionResponse = await fetch(`${request.nextUrl.origin}/api/portfolio/notion-scrape`)
       
@@ -181,7 +157,7 @@ export async function GET(request: NextRequest) {
             
             const cryptoWithPrices = await Promise.all(
               adminCrypto.map(async (asset: any) => {
-                const currentPrice = await getBinancePrice(asset.symbol)
+                const currentPrice = await getCryptoSpotUsdCached(asset.symbol)
                 const entryPrice = asset.entry_price || currentPrice || 1
                 const totalInvested = asset.investimento_inicial + asset.reforco_anual
                 const quantity = totalInvested / entryPrice
@@ -276,7 +252,7 @@ export async function GET(request: NextRequest) {
       if (type === 'crypto' || type === 'all' || !type) {
         const cryptoWithPrices = await Promise.all(
           cryptoPortfolio.map(async (asset) => {
-            const currentPrice = await getBinancePrice(asset.symbol)
+            const currentPrice = await getCryptoSpotUsdCached(asset.symbol)
             
             // Calcular métricas com entry_price correto
             const entryPrice = asset.entry_price || currentPrice || 1

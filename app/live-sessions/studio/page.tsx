@@ -8,7 +8,7 @@ export default function LiveSessionsStudioPage() {
       showEducatorLink={false}
       subtitle="Só vês os teus canais e chaves RTMP/OBS. Gestão global (academias oficiais, educadores) em Admin → Educação / LMS."
     >
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-7xl">
         <EducatorStudio />
       </div>
     </LiveSessionsShell>

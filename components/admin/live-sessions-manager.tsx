@@ -7,6 +7,8 @@ import { DEFAULT_RESTREAM_INGEST_URL } from "@/lib/lms-restream"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { LmsImageUploadField } from "@/components/admin/lms-image-upload-field"
+import { toast } from "sonner"
 
 type Academy = { id: string; name: string; slug: string }
 type Educator = {
@@ -31,9 +33,12 @@ type Stream = {
   rtmps_url?: string | null
   playback_url?: string | null
   restream_embed_url?: string | null
+  thumbnail_url?: string | null
   is_live: boolean
   educator_id: string
   category?: string | null
+  playback_mode?: "youtube_first" | "hls_first" | "auto" | null
+  ingest_provider?: "restream" | "mtm_direct" | null
   scheduled_start_at?: string | null
   viewer_count?: number | null
   academy?: { name: string }
@@ -69,8 +74,14 @@ export default function LiveSessionsManager() {
     rtmps_url: "",
     stream_key: "",
     category: "",
+    playback_mode: "youtube_first",
+    ingest_provider: "restream",
     scheduled_start_at: "",
     viewer_count: "",
+    recurrence_type: "none", // none | weekly | fortnightly | monthly
+    recurrence_until_at: "",
+    recurrence_weekdays: [] as number[], // 0=Dom ... 6=Sáb
+    recurrence_monthly_days: "", // ex: "1,15,30"
   })
   const [editingEducatorId, setEditingEducatorId] = useState<string | null>(null)
   const [editingEducatorForm, setEditingEducatorForm] = useState<any>({
@@ -88,14 +99,28 @@ export default function LiveSessionsManager() {
   })
 
   const load = async () => {
-    const [a, e, s] = await Promise.all([
-      fetch("/api/admin/live-sessions/academies").then((r) => r.json()),
-      fetch("/api/admin/live-sessions/educators").then((r) => r.json()),
-      fetch("/api/admin/live-sessions/streams").then((r) => r.json()),
-    ])
-    setAcademies(a.data || [])
-    setEducators(e.data || [])
-    setStreams(s.data || [])
+    const parseJson = async (res: Response) => {
+      const text = await res.text()
+      if (!text.trim()) return {}
+      try {
+        return JSON.parse(text) as { data?: unknown }
+      } catch {
+        return {}
+      }
+    }
+    try {
+      const [aRes, eRes, sRes] = await Promise.all([
+        fetch("/api/admin/live-sessions/academies", { credentials: "same-origin" }),
+        fetch("/api/admin/live-sessions/educators", { credentials: "same-origin" }),
+        fetch("/api/admin/live-sessions/streams", { credentials: "same-origin" }),
+      ])
+      const [a, e, s] = await Promise.all([parseJson(aRes), parseJson(eRes), parseJson(sRes)])
+      setAcademies(Array.isArray(a.data) ? (a.data as Academy[]) : [])
+      setEducators(Array.isArray(e.data) ? (e.data as Educator[]) : [])
+      setStreams(Array.isArray(s.data) ? (s.data as Stream[]) : [])
+    } catch {
+      toast.error("Não foi possível carregar o LMS. Recarrega a página ou tenta noutro navegador.")
+    }
   }
 
   useEffect(() => {
@@ -131,21 +156,142 @@ export default function LiveSessionsManager() {
     load()
   }
 
+  const parseMonthlyDays = (raw: string, fallbackDay: number) => {
+    const parts = raw
+      .split(",")
+      .map((p) => parseInt(p.trim(), 10))
+      .filter((n) => Number.isFinite(n))
+
+    const unique = Array.from(new Set(parts))
+    const valid = unique.filter((n) => n >= 1 && n <= 31)
+    return valid.length ? valid : [fallbackDay]
+  }
+
+  const generateRecurrenceStarts = (): string[] => {
+    const startStr = streamForm.scheduled_start_at
+    const untilStr = streamForm.recurrence_until_at
+    const type = streamForm.recurrence_type as string
+
+    if (!startStr || !untilStr) return []
+
+    const start = new Date(startStr)
+    const until = new Date(untilStr)
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(until.getTime()) || until.getTime() < start.getTime()) return []
+
+    const MAX = 30
+    const starts: string[] = []
+
+    const startHours = start.getHours()
+    const startMinutes = start.getMinutes()
+
+    const pushIfValid = (d: Date) => {
+      if (d.getTime() < start.getTime()) return
+      if (d.getTime() > until.getTime()) return
+      starts.push(d.toISOString())
+    }
+
+    if (type === "monthly") {
+      const days = parseMonthlyDays(String(streamForm.recurrence_monthly_days || ""), start.getDate())
+      let cursor = new Date(start.getFullYear(), start.getMonth(), 1, startHours, startMinutes, 0, 0)
+
+      while (cursor.getTime() <= until.getTime() && starts.length < MAX) {
+        const y = cursor.getFullYear()
+        const m = cursor.getMonth()
+        const dim = new Date(y, m + 1, 0).getDate()
+
+        for (const dn of days) {
+          const day = Math.min(dn, dim)
+          const candidate = new Date(y, m, day, startHours, startMinutes, 0, 0)
+          pushIfValid(candidate)
+          if (starts.length >= MAX) break
+        }
+
+        cursor = new Date(y, m + 1, 1, startHours, startMinutes, 0, 0)
+      }
+    } else {
+      const weekdays: number[] =
+        Array.isArray(streamForm.recurrence_weekdays) && streamForm.recurrence_weekdays.length > 0
+          ? streamForm.recurrence_weekdays
+          : [start.getDay()]
+
+      const startMidnightUtc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())
+      let current = new Date(start)
+      current.setSeconds(0, 0)
+
+      while (current.getTime() <= until.getTime() && starts.length < MAX) {
+        const wd = current.getDay()
+        if (weekdays.includes(wd)) {
+          if (type === "fortnightly") {
+            const curMidnightUtc = Date.UTC(current.getFullYear(), current.getMonth(), current.getDate())
+            const weekIndex = Math.floor((curMidnightUtc - startMidnightUtc) / (7 * 86400000))
+            if (weekIndex % 2 === 0) pushIfValid(new Date(current))
+          } else {
+            pushIfValid(new Date(current))
+          }
+        }
+
+        current = new Date(current)
+        current.setDate(current.getDate() + 1)
+      }
+    }
+
+    return Array.from(new Set(starts)).sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+  }
+
   const createStream = async () => {
-    const payload = {
+    const type = streamForm.recurrence_type as string
+
+    const commonPayload = {
       ...streamForm,
       category: streamForm.category || null,
-      scheduled_start_at: streamForm.scheduled_start_at || null,
+      playback_mode: streamForm.playback_mode || "youtube_first",
+      ingest_provider: streamForm.ingest_provider || "restream",
       viewer_count:
-        streamForm.viewer_count === "" || streamForm.viewer_count === undefined
-          ? 0
-          : Number(streamForm.viewer_count),
+        streamForm.viewer_count === "" || streamForm.viewer_count === undefined ? 0 : Number(streamForm.viewer_count),
     }
-    await fetch("/api/admin/live-sessions/streams", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
+
+    if (!streamForm.scheduled_start_at) {
+      toast.error("Indica a data/hora da sessão.")
+      return
+    }
+
+    if (type === "none") {
+      const payload = {
+        ...commonPayload,
+        scheduled_start_at: streamForm.scheduled_start_at || null,
+      }
+      await fetch("/api/admin/live-sessions/streams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+    } else {
+      const starts = generateRecurrenceStarts()
+      if (starts.length === 0) {
+        toast.error("Verifica a recorrência e o campo “até quando”.")
+        return
+      }
+
+      for (const scheduledStartAtIso of starts) {
+        const payload = {
+          ...commonPayload,
+          scheduled_start_at: scheduledStartAtIso,
+        }
+        // eslint-disable-next-line no-await-in-loop
+        const res = await fetch("/api/admin/live-sessions/streams", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          toast.error(json.error || "Erro ao criar sessão recorrente")
+          return
+        }
+      }
+    }
+
     setStreamForm({
       title: "",
       academy_id: "",
@@ -157,8 +303,14 @@ export default function LiveSessionsManager() {
       rtmps_url: "",
       stream_key: "",
       category: "",
+      playback_mode: "youtube_first",
+      ingest_provider: "restream",
       scheduled_start_at: "",
       viewer_count: "",
+      recurrence_type: "none",
+      recurrence_until_at: "",
+      recurrence_weekdays: [],
+      recurrence_monthly_days: "",
     })
     load()
   }
@@ -355,10 +507,12 @@ export default function LiveSessionsManager() {
           onChange={(e) => setEducatorForm((p: any) => ({ ...p, specialty: e.target.value }))}
           placeholder="Especialidade (ex: Fiscalidade, Cripto) — aparece no lobby"
         />
-        <Input
-          value={educatorForm.avatar_url}
-          onChange={(e) => setEducatorForm((p: any) => ({ ...p, avatar_url: e.target.value }))}
-          placeholder="URL foto / flyer (Educadores ao vivo + cartões)"
+        <LmsImageUploadField
+          label="Foto / avatar do educador"
+          description="Aparece no lobby, cartões «Educadores ao vivo» e na app mobile."
+          scope="educator_avatar"
+          value={educatorForm.avatar_url || ""}
+          onUrlChange={(url) => setEducatorForm((p: any) => ({ ...p, avatar_url: url }))}
         />
         <Button className="bg-[#D2A63C] hover:bg-[#BB8525] text-black" onClick={createEducator}>
           Criar educador
@@ -371,7 +525,20 @@ export default function LiveSessionsManager() {
 
             return (
               <div key={e.id} className="space-y-2 rounded-lg border border-[#D2A63C]/15 bg-black/30 p-3 text-xs text-gray-200">
-                <div>
+                <div className="flex gap-3">
+                  {e.avatar_url?.trim() ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={e.avatar_url.trim()}
+                      alt=""
+                      className="h-14 w-14 shrink-0 rounded-lg border border-gray-600 object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-dashed border-gray-600 text-[10px] text-gray-500">
+                      sem foto
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
                   <p className="font-semibold text-white">{e.display_name}</p>
                   <p>{e.email} {e.is_active ? "(ativo)" : "(inativo)"}</p>
                   <p className="text-gray-400">Streams: {educatorStreams.length}</p>
@@ -384,6 +551,7 @@ export default function LiveSessionsManager() {
                       <p className="text-gray-300">Chave OBS fixa: {e.stream_key_fixed || firstStream.stream_key || "não definida"}</p>
                     </>
                   )}
+                  </div>
                 </div>
 
                 {isEditing && (
@@ -405,11 +573,16 @@ export default function LiveSessionsManager() {
                         </option>
                       ))}
                     </select>
-                    <Input
-                      value={editingEducatorForm.avatar_url}
-                      onChange={(event) => setEditingEducatorForm((prev: any) => ({ ...prev, avatar_url: event.target.value }))}
-                      placeholder="URL foto / flyer"
-                    />
+                    <div className="md:col-span-2">
+                      <LmsImageUploadField
+                        label="Foto / avatar do educador"
+                        description="Lobby e listagens públicas."
+                        scope="educator_avatar"
+                        refId={e.id}
+                        value={editingEducatorForm.avatar_url || ""}
+                        onUrlChange={(url) => setEditingEducatorForm((prev: any) => ({ ...prev, avatar_url: url }))}
+                      />
+                    </div>
                     <Input
                       type="password"
                       value={editingEducatorForm.password}
@@ -538,11 +711,15 @@ export default function LiveSessionsManager() {
               </option>
             ))}
           </select>
-          <Input
-            value={streamForm.thumbnail_url}
-            onChange={(e) => setStreamForm((p: any) => ({ ...p, thumbnail_url: e.target.value }))}
-            placeholder="Thumbnail URL"
-          />
+          <div className="md:col-span-2">
+            <LmsImageUploadField
+              label="Thumbnail da sala (canal)"
+              description="Imagem do cartão da live no lobby; se vazio, usa o avatar do educador."
+              scope="stream_thumbnail"
+              value={streamForm.thumbnail_url || ""}
+              onUrlChange={(url) => setStreamForm((p: any) => ({ ...p, thumbnail_url: url }))}
+            />
+          </div>
         </div>
         <Textarea
           value={streamForm.description}
@@ -574,6 +751,97 @@ export default function LiveSessionsManager() {
             placeholder="Viewer count (opcional)"
           />
         </div>
+
+        <div className="grid md:grid-cols-2 gap-2">
+          <select
+            className="w-full rounded border border-gray-700 bg-gray-950 px-2 py-2 text-white text-sm"
+            value={streamForm.playback_mode}
+            onChange={(e) => setStreamForm((p: any) => ({ ...p, playback_mode: e.target.value }))}
+          >
+            <option value="youtube_first">Player: YouTube primeiro (seguro)</option>
+            <option value="hls_first">Player: HLS primeiro (baixa latência)</option>
+            <option value="auto">Player: Auto (prefere HLS em live)</option>
+          </select>
+          <select
+            className="w-full rounded border border-gray-700 bg-gray-950 px-2 py-2 text-white text-sm"
+            value={streamForm.ingest_provider}
+            onChange={(e) => setStreamForm((p: any) => ({ ...p, ingest_provider: e.target.value }))}
+          >
+            <option value="restream">Ingest: Restream</option>
+            <option value="mtm_direct">Ingest: MTM direto (OBS - menor latência)</option>
+          </select>
+        </div>
+
+        <div className="mt-4 space-y-3 rounded-lg border border-gray-800 bg-gray-950/40 p-3">
+          <p className="text-[11px] uppercase tracking-wide text-gray-500">Recorrência</p>
+          <div className="grid md:grid-cols-2 gap-2">
+            <select
+              className="w-full rounded border border-gray-700 bg-gray-950 px-2 py-2 text-white text-sm"
+              value={streamForm.recurrence_type}
+              onChange={(e) => setStreamForm((p: any) => ({ ...p, recurrence_type: e.target.value }))}
+            >
+              <option value="none">Sem repetição</option>
+              <option value="weekly">Semanal</option>
+              <option value="fortnightly">Quinzenal</option>
+              <option value="monthly">Mensal</option>
+            </select>
+            <Input
+              type="datetime-local"
+              value={streamForm.recurrence_until_at}
+              onChange={(e) => setStreamForm((p: any) => ({ ...p, recurrence_until_at: e.target.value }))}
+              placeholder="Até quando"
+              className="border-gray-700 bg-gray-950/60 text-white"
+            />
+          </div>
+
+          {(streamForm.recurrence_type === "weekly" || streamForm.recurrence_type === "fortnightly") && (
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: 1, label: "Seg" },
+                { value: 2, label: "Ter" },
+                { value: 3, label: "Qua" },
+                { value: 4, label: "Qui" },
+                { value: 5, label: "Sex" },
+                { value: 6, label: "Sáb" },
+                { value: 0, label: "Dom" },
+              ].map((d) => (
+                <label
+                  key={d.value}
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-800 bg-black/30 px-3 py-2 text-xs text-gray-300"
+                >
+                  <input
+                    type="checkbox"
+                    checked={Array.isArray(streamForm.recurrence_weekdays) && streamForm.recurrence_weekdays.includes(d.value)}
+                    onChange={(e) => {
+                      const checked = e.target.checked
+                      setStreamForm((p: any) => {
+                        const prev = Array.isArray(p.recurrence_weekdays) ? p.recurrence_weekdays : []
+                        if (checked) return { ...p, recurrence_weekdays: Array.from(new Set([...prev, d.value])).sort() }
+                        return { ...p, recurrence_weekdays: prev.filter((x: number) => x !== d.value) }
+                      })
+                    }}
+                  />
+                  {d.label}
+                </label>
+              ))}
+            </div>
+          )}
+
+          {streamForm.recurrence_type === "monthly" && (
+            <div>
+              <Input
+                value={streamForm.recurrence_monthly_days}
+                onChange={(e) => setStreamForm((p: any) => ({ ...p, recurrence_monthly_days: e.target.value }))}
+                placeholder="Ex: 1,15,30"
+                className="border-gray-700 bg-gray-950/60 text-white"
+              />
+              <p className="mt-1 text-[11px] text-gray-500">
+                Dias do mês (números separados por vírgula).
+              </p>
+            </div>
+          )}
+        </div>
+
         <div className="grid md:grid-cols-2 gap-2">
           <Input
             value={streamForm.rtmps_url}
@@ -603,44 +871,106 @@ export default function LiveSessionsManager() {
         <div className="space-y-2">
           {streams.map((s) => (
             <div key={s.id} className="space-y-2 rounded-lg border border-[#D2A63C]/15 bg-black/30 p-3 text-xs text-gray-200">
-              <div>
-                <p className="font-semibold text-white">{s.title}</p>
-                <p>{s.educator?.display_name} • {s.academy?.name}</p>
-                {(s.category || s.scheduled_start_at) && (
-                  <p className="text-gray-400">
-                    {s.category && <>Categoria: {s.category} · </>}
-                    {s.scheduled_start_at && <>Agendada: {new Date(s.scheduled_start_at).toLocaleString("pt-PT")}</>}
-                  </p>
+              {(() => {
+                const edu = educators.find((e) => e.id === s.educator_id)
+                const restreamMisconfigured =
+                  s.ingest_provider === "restream" && (!edu?.restream_enabled || !edu?.restream_stream_key)
+                if (!restreamMisconfigured) return null
+                return (
+                  <div className="rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1.5 text-red-300">
+                    Ingest Restream sem configuração válida no educador (ativar Restream + stream key).
+                  </div>
+                )
+              })()}
+              <div className="flex flex-wrap gap-3">
+                {s.thumbnail_url?.trim() ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={s.thumbnail_url.trim()}
+                    alt=""
+                    className="h-16 w-28 shrink-0 rounded-md border border-gray-600 object-cover"
+                  />
+                ) : (
+                  <div className="flex h-16 w-28 shrink-0 items-center justify-center rounded-md border border-dashed border-gray-600 text-[10px] text-gray-500">
+                    sem thumb
+                  </div>
                 )}
-                <p className="text-gray-300">Stream key MTM: {s.stream_key || "não definida"}</p>
-                <div className="mt-2 space-y-1">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500">Playback manual</p>
-                  <Input
-                    key={`pb-${s.id}-${s.playback_url || ""}`}
-                    defaultValue={s.playback_url || ""}
-                    className="border-gray-700 bg-black/50 font-mono text-[11px]"
-                    placeholder="https://…"
-                    onBlur={(ev) =>
-                      patchStreamAdmin(s.id, { playback_url: ev.target.value.trim() || null })
-                    }
-                  />
-                </div>
-                <div className="mt-1 space-y-1">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500">Embed Restream (canal)</p>
-                  <Input
-                    key={`re-${s.id}-${s.restream_embed_url || ""}`}
-                    defaultValue={s.restream_embed_url || ""}
-                    className="border-gray-700 bg-black/50 font-mono text-[11px]"
-                    placeholder="Vazio = embed do perfil do educador"
-                    onBlur={(ev) =>
-                      patchStreamAdmin(s.id, { restream_embed_url: ev.target.value.trim() || null })
-                    }
-                  />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-white">{s.title}</p>
+                  <p>{s.educator?.display_name} • {s.academy?.name}</p>
                 </div>
               </div>
+              <div className="max-w-md">
+                <LmsImageUploadField
+                  label="Thumbnail desta sala"
+                  scope="stream_thumbnail"
+                  refId={s.id}
+                  value={s.thumbnail_url || ""}
+                  commit="blur"
+                  onUrlChange={(url) => patchStreamAdmin(s.id, { thumbnail_url: url.trim() || null })}
+                />
+              </div>
+              {(s.category || s.scheduled_start_at) && (
+                <p className="text-gray-400">
+                  {s.category && <>Categoria: {s.category} · </>}
+                  {s.scheduled_start_at && <>Agendada: {new Date(s.scheduled_start_at).toLocaleString("pt-PT")}</>}
+                </p>
+              )}
+              <p className="text-gray-400">
+                Player: {s.playback_mode || "youtube_first"} · Ingest: {s.ingest_provider || "restream"}
+              </p>
+              <p className="text-gray-300">Stream key MTM: {s.stream_key || "não definida"}</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <select
+                  className="w-full rounded border border-gray-700 bg-black/50 px-2 py-2 text-white text-xs"
+                  value={s.playback_mode || "youtube_first"}
+                  onChange={(ev) => patchStreamAdmin(s.id, { playback_mode: ev.target.value })}
+                >
+                  <option value="youtube_first">Player: YouTube primeiro</option>
+                  <option value="hls_first">Player: HLS primeiro</option>
+                  <option value="auto">Player: Auto</option>
+                </select>
+                <select
+                  className="w-full rounded border border-gray-700 bg-black/50 px-2 py-2 text-white text-xs"
+                  value={s.ingest_provider || "restream"}
+                  onChange={(ev) => patchStreamAdmin(s.id, { ingest_provider: ev.target.value })}
+                >
+                  <option value="restream">Ingest: Restream</option>
+                  <option value="mtm_direct">Ingest: MTM direto</option>
+                </select>
+              </div>
+              <div className="mt-2 space-y-1">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500">Playback manual</p>
+                <Input
+                  key={`pb-${s.id}-${s.playback_url || ""}`}
+                  defaultValue={s.playback_url || ""}
+                  className="border-gray-700 bg-black/50 font-mono text-[11px]"
+                  placeholder="https://…"
+                  onBlur={(ev) =>
+                    patchStreamAdmin(s.id, { playback_url: ev.target.value.trim() || null })
+                  }
+                />
+              </div>
+              <div className="mt-1 space-y-1">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500">Embed Restream (canal)</p>
+                <Input
+                  key={`re-${s.id}-${s.restream_embed_url || ""}`}
+                  defaultValue={s.restream_embed_url || ""}
+                  className="border-gray-700 bg-black/50 font-mono text-[11px]"
+                  placeholder="Vazio = embed do perfil do educador"
+                  onBlur={(ev) =>
+                    patchStreamAdmin(s.id, { restream_embed_url: ev.target.value.trim() || null })
+                  }
+                />
+              </div>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" className="border-gray-700 text-gray-200" onClick={() => toggleLive(s)}>
-                  {s.is_live ? "Passar Offline" : "Passar Online"}
+                <Button
+                  size="sm"
+                  style={{ backgroundColor: s.is_live ? "#b91c1c" : "#16a34a" }}
+                  className="text-white hover:brightness-110"
+                  onClick={() => toggleLive(s)}
+                >
+                  {s.is_live ? "Parar transmissão" : "Iniciar transmissão"}
                 </Button>
                 <Button size="sm" className="bg-[#D2A63C] hover:bg-[#BB8525] text-black" onClick={() => resetKey(s.id)}>
                   Nova chave MTM (HLS)

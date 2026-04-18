@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { subscribeMediaQueryChange } from "@/lib/browser-compat"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -330,11 +331,7 @@ export default function ScannerMobile() {
     const applyViewport = () => setIsDesktop(mediaQuery.matches)
 
     applyViewport()
-    mediaQuery.addEventListener("change", applyViewport)
-
-    return () => {
-      mediaQuery.removeEventListener("change", applyViewport)
-    }
+    return subscribeMediaQueryChange(mediaQuery, applyViewport)
   }, [])
 
   // Screeners simplificados - Crypto Bubbles para crypto, Stock Heatmap para o resto

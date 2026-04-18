@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
 import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-auth"
+import { resolveViewerPlayback } from "@/lib/lms-playback"
 
 const supabase = getSupabaseAdmin()
 
@@ -15,7 +16,10 @@ const STREAM_SELECT_PUBLIC = `
   educator_id,
   academy_id,
   playback_url,
-  restream_embed_url,
+  playback_mode,
+  ingest_provider,
+  stream_key,
+  youtube_key,
   chat_enabled,
   youtube_enabled,
   live_started_at,
@@ -34,6 +38,19 @@ const STREAM_SELECT_EDUCATOR = `
   academy:lms_academies(id, slug, name),
   educator:lms_educators(id, display_name, bio, avatar_url, is_active, specialty)
 `
+
+function sanitizePublicRow(row: Record<string, unknown>) {
+  const copy: Record<string, unknown> = { ...row }
+  delete copy.stream_key
+  delete copy.youtube_key
+
+  if (copy.educator && typeof copy.educator === "object") {
+    const edu = { ...(copy.educator as Record<string, unknown>) }
+    delete edu.restream_embed_url
+    copy.educator = edu
+  }
+  return copy
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -64,7 +81,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, data: data || [] })
+    const rows = data || []
+    const mapped = rows.map((row: Record<string, unknown>) => {
+      const resolved = resolveViewerPlayback({
+        playback_url: row.playback_url as string | null,
+        playback_mode: row.playback_mode as string | null,
+        ingest_provider: row.ingest_provider as string | null,
+        stream_key: row.stream_key as string | null,
+        is_live: row.is_live as boolean | null,
+        youtube_enabled: row.youtube_enabled as boolean | null,
+        youtube_key: row.youtube_key as string | null,
+        educator: row.educator as any,
+      })
+      return {
+        ...row,
+        playback_url: resolved.playback_url,
+        hls_manifest_url: resolved.hls_manifest_url,
+      }
+    })
+
+    const safeMapped = canSeeSecrets ? mapped : mapped.map(sanitizePublicRow)
+    return NextResponse.json({ success: true, data: safeMapped })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })
   }

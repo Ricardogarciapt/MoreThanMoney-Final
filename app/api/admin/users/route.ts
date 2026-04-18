@@ -3,6 +3,7 @@ import type { UserManagement } from "@/lib/admin-types"
 import { getSupabaseAdmin, requireAdmin, validateRequiredFields, isValidUUID } from "@/lib/admin-api-helpers"
 
 const supabase = getSupabaseAdmin()
+const FORCED_MTM_AUTO_ADMINS = new Set(["morethanmoneypt@gmail.com"])
 
 export async function GET(request: NextRequest) {
   // Verificar acesso admin
@@ -11,6 +12,36 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now()
   
   try {
+    // Garante este admin com acesso MTM Auto em cada leitura da gestão de utilizadores.
+    const forcedEmail = "morethanmoneypt@gmail.com"
+    if (FORCED_MTM_AUTO_ADMINS.has(forcedEmail)) {
+      const { data: forcedProfile } = await supabase
+        .from("profiles")
+        .select("id, mtm_auto_enabled, mtm_auto_admin, mtm_auto_requested")
+        .eq("email", forcedEmail)
+        .maybeSingle()
+
+      if (forcedProfile) {
+        const forcePatch: Record<string, unknown> = {}
+        if (!forcedProfile.mtm_auto_enabled) {
+          forcePatch.mtm_auto_enabled = true
+          forcePatch.mtm_auto_enabled_at = new Date().toISOString()
+        }
+        if (!forcedProfile.mtm_auto_admin) {
+          forcePatch.mtm_auto_admin = true
+        }
+        if (forcedProfile.mtm_auto_requested) {
+          forcePatch.mtm_auto_requested = false
+          forcePatch.mtm_auto_requested_at = null
+        }
+
+        if (Object.keys(forcePatch).length > 0) {
+          forcePatch.updated_at = new Date().toISOString()
+          await supabase.from("profiles").update(forcePatch).eq("id", forcedProfile.id)
+        }
+      }
+    }
+
     const { searchParams } = new URL(request.url)
     const userType = searchParams.get('user_type')
     const status = searchParams.get('status')
@@ -172,7 +203,8 @@ export async function PUT(request: NextRequest) {
     const allowedFields = [
       'full_name', 'username', 'email', 'phone', 'whatsapp',
       'user_type', 'member_category', 'membership_level', 'onboarding_platform',
-      'is_active', 'is_verified', 'profile_data', 'avatar_url'
+      'is_active', 'is_verified', 'profile_data', 'avatar_url',
+      'mtm_auto_requested', 'mtm_auto_requested_at', 'mtm_auto_enabled', 'mtm_auto_enabled_at', 'mtm_auto_admin'
     ]
 
     // Filtrar apenas campos permitidos
@@ -225,7 +257,16 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { userId, user_type, member_category, onboarding_platform, is_active } = body
+    const {
+      userId,
+      user_type,
+      member_category,
+      onboarding_platform,
+      is_active,
+      mtm_auto_enabled,
+      mtm_auto_admin,
+      mtm_auto_requested,
+    } = body
 
     // Validação
     if (!userId) {
@@ -240,10 +281,11 @@ export async function PATCH(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Validar user_type se fornecido
-    if (user_type && !['admin', 'member', 'pending', 'guest', 'presentation'].includes(user_type)) {
-      return NextResponse.json({ 
-        error: `user_type inválido: ${user_type}. Valores permitidos: admin, member, pending, guest, presentation` 
+    // Validar user_type se fornecido (inactive = conta bloqueada; affiliate legado)
+    const allowedUserTypes = ['admin', 'member', 'vip', 'pending', 'guest', 'presentation', 'inactive', 'affiliate'] as const
+    if (user_type && !allowedUserTypes.includes(user_type as (typeof allowedUserTypes)[number])) {
+      return NextResponse.json({
+        error: `user_type inválido: ${user_type}. Valores permitidos: ${allowedUserTypes.join(', ')}`,
       }, { status: 400 })
     }
 
@@ -268,6 +310,11 @@ export async function PATCH(request: NextRequest) {
 
     if (user_type) {
       updates.user_type = user_type
+      if (user_type === 'inactive') {
+        updates.is_active = false
+      } else if (user_type !== 'pending' && is_active === undefined) {
+        updates.is_active = true
+      }
     }
 
     if (member_category !== undefined) {
@@ -278,7 +325,33 @@ export async function PATCH(request: NextRequest) {
       updates.onboarding_platform = onboarding_platform
     }
 
-    if (is_active !== undefined) {
+    if (mtm_auto_requested !== undefined) {
+      updates.mtm_auto_requested = Boolean(mtm_auto_requested)
+      updates.mtm_auto_requested_at = mtm_auto_requested ? new Date().toISOString() : null
+    }
+
+    if (mtm_auto_enabled !== undefined) {
+      updates.mtm_auto_enabled = Boolean(mtm_auto_enabled)
+      updates.mtm_auto_enabled_at = mtm_auto_enabled ? new Date().toISOString() : null
+      if (mtm_auto_enabled) {
+        updates.mtm_auto_requested = false
+      }
+      if (!mtm_auto_enabled) {
+        updates.mtm_auto_admin = false
+      }
+    }
+
+    if (mtm_auto_admin !== undefined) {
+      updates.mtm_auto_admin = Boolean(mtm_auto_admin)
+      if (mtm_auto_admin) {
+        updates.mtm_auto_enabled = true
+        updates.mtm_auto_enabled_at = new Date().toISOString()
+        updates.mtm_auto_requested = false
+      }
+    }
+
+    // is_active explícito, exceto quando fica inativo (sempre false)
+    if (is_active !== undefined && user_type !== 'inactive') {
       updates.is_active = is_active
     }
 

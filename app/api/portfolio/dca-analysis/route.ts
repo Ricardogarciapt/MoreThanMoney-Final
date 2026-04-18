@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from "next/server"
+import { normalizeBinancePair, fetchCoinGeckoOhlcAsKlines } from "@/lib/crypto-usd"
 
 interface CandleData {
   timeframe: string
@@ -20,66 +21,73 @@ interface DCARecommendation {
   confidence: number
 }
 
-// Função para buscar dados de candlesticks da Binance
 async function fetchCandlestickData(symbol: string, interval: string, limit: number = 200) {
   try {
+    const pair = normalizeBinancePair(symbol)
     const response = await fetch(
-      `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${interval}&limit=${limit}`,
-      { next: { revalidate: 300 } } // Cache por 5 minutos
+      `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=${interval}&limit=${limit}`,
+      { next: { revalidate: 300 } }
     )
-    
     if (!response.ok) return null
-    
-    const data = await response.json()
-    return data
+    return await response.json()
   } catch (error) {
     console.error(`Erro ao buscar candlesticks ${interval}:`, error)
     return null
   }
 }
 
-// Função para buscar notícias relacionadas
 async function fetchNewsData(symbol: string) {
   try {
-    const apiKey = '06b9c2a3e5074e0eb03ca7ea13f18014'
+    const apiKey = process.env.NEWS_API_KEY?.trim()
+    if (!apiKey) {
+      console.warn("[DCA ANALYSIS] NEWS_API_KEY não definida — notícias omitidas")
+      return []
+    }
     const today = new Date()
     const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000)
-    const fromDate = threeDaysAgo.toISOString().split('T')[0]
-    
+    const fromDate = threeDaysAgo.toISOString().split("T")[0]
+
     const response = await fetch(
-      `https://newsapi.org/v2/everything?q=${symbol} OR crypto&from=${fromDate}&sortBy=popularity&apiKey=${apiKey}`,
-      { next: { revalidate: 3600 } } // Cache por 1 hora
+      `https://newsapi.org/v2/everything?q=${encodeURIComponent(symbol)} OR crypto&from=${fromDate}&sortBy=popularity&apiKey=${apiKey}`,
+      { next: { revalidate: 3600 } }
     )
-    
-    if (!response.ok) return null
-    
+
+    if (!response.ok) return []
+
     const data = await response.json()
-    return data.articles?.slice(0, 10).map((article: any) => ({
-      title: article.title,
-      description: article.description
-    })) || []
+    return (
+      data.articles?.slice(0, 10).map((article: { title?: string; description?: string }) => ({
+        title: article.title,
+        description: article.description,
+      })) || []
+    )
   } catch (error) {
-    console.error('Erro ao buscar notícias:', error)
+    console.error("Erro ao buscar notícias:", error)
     return []
   }
 }
 
-// Função para analisar sentiment com OpenAI
-async function analyzeSentiment(articles: any[]) {
+async function analyzeSentiment(articles: { title?: string; description?: string }[], assetLabel: string) {
   try {
     const openaiKey = process.env.OPENAI_API_KEY?.trim()
-    if (!openaiKey || articles.length === 0) {
+    if (!openaiKey) {
       return {
-        shortTermSentiment: { category: 'Neutral', score: 0, rationale: 'Sem dados' },
-        longTermSentiment: { category: 'Neutral', score: 0, rationale: 'Sem dados' }
+        shortTermSentiment: { category: "Neutral", score: 0, rationale: "OPENAI_API_KEY não configurada" },
+        longTermSentiment: { category: "Neutral", score: 0, rationale: "OPENAI_API_KEY não configurada" },
       }
     }
 
+    const newsBlock =
+      articles.length > 0
+        ? `Analise as seguintes notícias recentes (ativo / mercado: ${assetLabel}):\n\n${JSON.stringify(
+            articles.map((a) => ({ title: a.title, description: a.description }))
+          )}`
+        : `Não há notícias recentes disponíveis (NewsAPI vazia ou sem NEWS_API_KEY). Ativo: ${assetLabel}.
+Com base no teu conhecimento geral do mercado cripto e macro, fornece uma avaliação prudente em JSON (sem inventar notícias específicas de hoje).`
+
     const prompt = `Você é um analista especializado em criptomoedas com expertise em análise fundamental, técnica, econômica e geopolítica.
 
-Analise as seguintes notícias recentes sobre ${articles[0]?.title?.includes('crypto') ? 'criptomoedas' : 'o ativo'}:
-
-${JSON.stringify(articles.map(a => ({ title: a.title, description: a.description })))}
+${newsBlock}
 
 Forneça uma análise completa considerando:
 
@@ -160,26 +168,29 @@ Retorne APENAS um JSON com esta estrutura:
 
 // Função para calcular indicadores técnicos
 function calculateIndicators(candles: number[][]) {
-  const closes = candles.map(c => parseFloat(c[4] as any))
-  const volumes = candles.map(c => parseFloat(c[5] as any))
-  
-  // RSI
-  let gains = 0, losses = 0
+  const closes = candles.map((c) => Number(c[4]))
+  const volumes = candles.map((c) => Number(c[5]))
+
+  let gains = 0,
+    losses = 0
   for (let i = 1; i < 14 && i < closes.length; i++) {
     const change = closes[i] - closes[i - 1]
     if (change > 0) gains += change
     else losses -= change
   }
-  const rsi = 100 - (100 / (1 + gains / losses))
+  const lossDenom = losses === 0 ? 1e-9 : losses
+  const rsi = 100 - 100 / (1 + gains / lossDenom)
   
-  // Média móvel simples
-  const sma20 = closes.slice(-20).reduce((a, b) => a + b, 0) / 20
-  const sma50 = closes.slice(-50).reduce((a, b) => a + b, 0) / 50
-  const sma200 = closes.slice(-200).reduce((a, b) => a + b, 0) / 200
-  
-  // Volume médio
-  const avgVolume = volumes.slice(-20).reduce((a, b) => a + b, 0) / 20
-  const currentVolume = volumes[volumes.length - 1]
+  const n = closes.length
+  const sma20 = n >= 1 ? closes.slice(-Math.min(20, n)).reduce((a, b) => a + b, 0) / Math.min(20, n) : closes[0] || 0
+  const sma50 = n >= 1 ? closes.slice(-Math.min(50, n)).reduce((a, b) => a + b, 0) / Math.min(50, n) : sma20
+  const sma200 = n >= 1 ? closes.slice(-Math.min(200, n)).reduce((a, b) => a + b, 0) / Math.min(200, n) : sma50
+
+  const avgVolume =
+    volumes.length >= 1
+      ? volumes.slice(-Math.min(20, volumes.length)).reduce((a, b) => a + b, 0) / Math.min(20, volumes.length)
+      : 1
+  const currentVolume = volumes[volumes.length - 1] || 0
   
   return {
     rsi,
@@ -187,7 +198,7 @@ function calculateIndicators(candles: number[][]) {
     sma50,
     sma200,
     currentPrice: closes[closes.length - 1],
-    volumeRatio: currentVolume / avgVolume
+    volumeRatio: avgVolume > 0 ? currentVolume / avgVolume : 1
   }
 }
 
@@ -267,32 +278,44 @@ export async function GET(request: NextRequest) {
   
   try {
     const { searchParams } = new URL(request.url)
-    const symbol = searchParams.get('symbol') || 'BTC'
-    
-    // 1. Buscar dados de candlesticks para múltiplos timeframes
-    const [candles15m, candles1h, candles4h, candles1d] = await Promise.all([
-      fetchCandlestickData(symbol, '15m', 200),
-      fetchCandlestickData(symbol, '1h', 200),
-      fetchCandlestickData(symbol, '4h', 200),
-      fetchCandlestickData(symbol, '1d', 200)
+    const symbol = searchParams.get("symbol") || "BTC"
+
+    let [candles15m, candles1h, candles4h, candles1d] = await Promise.all([
+      fetchCandlestickData(symbol, "15m", 200),
+      fetchCandlestickData(symbol, "1h", 200),
+      fetchCandlestickData(symbol, "4h", 200),
+      fetchCandlestickData(symbol, "1d", 200),
     ])
-    
-    if (!candles1d) {
-      return NextResponse.json({ 
-        error: 'Erro ao buscar dados de mercado' 
-      }, { status: 500 })
+
+    if (!candles1d || !Array.isArray(candles1d) || candles1d.length < 14) {
+      console.warn("[DCA ANALYSIS] Binance indisponível ou poucos dados — fallback CoinGecko OHLC")
+      const ohlc = await fetchCoinGeckoOhlcAsKlines(symbol, 200)
+      if (ohlc && ohlc.length >= 14) {
+        candles1d = ohlc
+        if (!candles4h || !Array.isArray(candles4h) || candles4h.length < 14) candles4h = ohlc.slice(-120)
+        if (!candles1h || !Array.isArray(candles1h) || candles1h.length < 14) candles1h = ohlc.slice(-168)
+        if (!candles15m || !Array.isArray(candles15m) || candles15m.length < 14) candles15m = ohlc.slice(-96)
+      }
     }
-    
-    // 2. Buscar e analisar notícias
+
+    if (!candles1d || !Array.isArray(candles1d) || candles1d.length < 14) {
+      return NextResponse.json(
+        { error: "Erro ao buscar dados de mercado (Binance e CoinGecko)" },
+        { status: 500 }
+      )
+    }
+
     const articles = await fetchNewsData(symbol)
-    const sentiment = await analyzeSentiment(articles)
+    const sentiment = await analyzeSentiment(articles, normalizeBinancePair(symbol))
     
-    // 3. Calcular indicadores técnicos
+    const safe = (c: number[][] | null | undefined) =>
+      Array.isArray(c) && c.length >= 14 ? c : candles1d
+
     const indicators = {
-      '15m': calculateIndicators(candles15m || []),
-      '1h': calculateIndicators(candles1h || []),
-      '4h': calculateIndicators(candles4h || []),
-      '1d': calculateIndicators(candles1d || [])
+      "15m": calculateIndicators(safe(candles15m)),
+      "1h": calculateIndicators(safe(candles1h)),
+      "4h": calculateIndicators(safe(candles4h)),
+      "1d": calculateIndicators(candles1d),
     }
     
     // 4. Gerar recomendação DCA
@@ -345,7 +368,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        symbol: symbol + 'USDT',
+        symbol: normalizeBinancePair(symbol),
         timestamp: new Date().toISOString(),
         currentPrice: currentPrice.toFixed(2),
         technical_indicators: {

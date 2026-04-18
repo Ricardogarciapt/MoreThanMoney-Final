@@ -23,32 +23,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { 
-  CheckCircle, 
-  XCircle, 
-  Shield, 
-  UserPlus, 
-  Trash2,
-  Mail,
-  User,
-  Phone,
-  Hash
-} from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { CheckCircle, UserPlus, Trash2 } from "lucide-react"
 import type { UserManagement } from "@/lib/admin-types"
 
 interface UserManagementProps {
   users: UserManagement[]
   onApprove: (userId: string) => void
-  onToggleRole: (userId: string, currentRole: string) => void
   onRefresh: () => void
 }
 
-export default function UserManagementComponent({ users, onApprove, onToggleRole, onRefresh }: UserManagementProps) {
+export default function UserManagementComponent({ users, onApprove, onRefresh }: UserManagementProps) {
   const { toast } = useToast()
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [togglingInactiveId, setTogglingInactiveId] = useState<string | null>(null)
+  const [togglingMtmAutoId, setTogglingMtmAutoId] = useState<string | null>(null)
+
 
   const handleChangeMemberCategory = async (userId: string, category: 'iq' | 'skool' | 'vip' | 'standard') => {
     try {
@@ -88,6 +81,71 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
     }
   }
 
+  /** Interruptor dedicado: inativo bloqueia sessão; desligar repõe como Membro (ajusta VIP/Admin no menu se preciso). */
+  const handleToggleInactive = async (userId: string, makeInactive: boolean) => {
+    setTogglingInactiveId(userId)
+    try {
+      const { adminApiCall } = await import('@/lib/admin-helpers')
+      const body = makeInactive
+        ? { userId, user_type: 'inactive' as const }
+        : { userId, user_type: 'member' as const, is_active: true }
+      const result = await adminApiCall('/api/admin/users', {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      })
+      if (result.success) {
+        onRefresh()
+        toast({
+          title: makeInactive ? 'Conta inativa' : 'Conta reativada',
+          description: makeInactive
+            ? 'O utilizador fica sem acesso às áreas de membro.'
+            : 'Tipo base reposto a Membro. Usa o menu de estado para Admin ou VIP se for o caso.',
+        })
+      } else {
+        toast({
+          title: 'Erro ao atualizar inativo',
+          description: result.error || 'Tenta novamente.',
+          variant: 'destructive',
+        })
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Erro desconhecido.'
+      toast({ title: 'Erro ao atualizar inativo', description: message, variant: 'destructive' })
+    } finally {
+      setTogglingInactiveId(null)
+    }
+  }
+
+  const handleEnableMtmAuto = async (userId: string) => {
+    setTogglingMtmAutoId(userId)
+    try {
+      const { adminApiCall } = await import('@/lib/admin-helpers')
+      const result = await adminApiCall('/api/admin/users', {
+        method: 'PATCH',
+        body: JSON.stringify({ userId, mtm_auto_enabled: true }),
+      })
+
+      if (result.success) {
+        onRefresh()
+        toast({
+          title: 'MTM Auto ativado',
+          description: 'Acesso ao MTM Auto concedido com sucesso.',
+        })
+      } else {
+        toast({
+          title: 'Erro ao ativar MTM Auto',
+          description: result.error || 'Tenta novamente.',
+          variant: 'destructive',
+        })
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Erro desconhecido.'
+      toast({ title: 'Erro ao ativar MTM Auto', description: message, variant: 'destructive' })
+    } finally {
+      setTogglingMtmAutoId(null)
+    }
+  }
+
   const handleChangeOnboardingPlatform = async (userId: string, platform: 'vxa' | 'rfg' | null) => {
     try {
       const { adminApiCall } = await import('@/lib/admin-helpers')
@@ -106,7 +164,7 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
       toast({ title: "Erro ao alterar plataforma", description: error.message || "Erro desconhecido.", variant: "destructive" })
     }
   }
-  
+
   const [newUser, setNewUser] = useState({
     email: '',
     username: '',
@@ -383,6 +441,11 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
                         ✓ Verificado
                       </Badge>
                     )}
+                    {user.user_type === 'inactive' && (
+                      <Badge className="bg-gray-600/30 text-gray-300 border border-gray-500/40 text-xs">
+                        Inativo
+                      </Badge>
+                    )}
                     {(user.user_type === 'guest' || user.user_type === 'presentation') && (user as any).trial_expires_at && (
                       <Badge className="bg-orange-500/20 text-orange-400 border border-orange-500/30 text-xs">
                         ⏱️ Expira: {new Date((user as any).trial_expires_at).toLocaleDateString('pt-PT')}
@@ -391,7 +454,7 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
                   </div>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {user.user_type === 'pending' && (
                   <Button
                     onClick={() => onApprove(user.id)}
@@ -402,6 +465,33 @@ export default function UserManagementComponent({ users, onApprove, onToggleRole
                     Aprovar
                   </Button>
                 )}
+
+                <div className="flex items-center gap-2 rounded-md border border-gray-600 bg-gray-800/80 px-2 py-1.5">
+                  <Switch
+                    id={`inactive-${user.id}`}
+                    checked={user.user_type === 'inactive'}
+                    disabled={togglingInactiveId === user.id}
+                    onCheckedChange={(checked) => handleToggleInactive(user.id, checked)}
+                    aria-label="Conta inativa"
+                  />
+                  <Label htmlFor={`inactive-${user.id}`} className="cursor-pointer text-xs text-gray-300 whitespace-nowrap">
+                    Inativo
+                  </Label>
+                </div>
+
+                <Button
+                  size="sm"
+                  variant={user.mtm_auto_enabled ? "outline" : "default"}
+                  className={
+                    user.mtm_auto_enabled
+                      ? "border-emerald-600/40 text-emerald-300 bg-emerald-900/20 hover:bg-emerald-900/30"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  }
+                  disabled={Boolean(user.mtm_auto_enabled) || togglingMtmAutoId === user.id}
+                  onClick={() => handleEnableMtmAuto(user.id)}
+                >
+                  {user.mtm_auto_enabled ? "MTM Auto ativo" : (togglingMtmAutoId === user.id ? "A ativar..." : "Ativar MTM Auto")}
+                </Button>
                 
                 {/* Dropdown ÚNICO - Status Unificado */}
                 <Select 

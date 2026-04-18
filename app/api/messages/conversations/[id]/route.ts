@@ -30,7 +30,11 @@ export async function GET(
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const conversationId = params.id
+    const resolvedParams = await Promise.resolve(params)
+    const conversationId = resolvedParams?.id
+    if (!conversationId) {
+      return NextResponse.json({ error: 'Conversa inválida' }, { status: 400 })
+    }
 
     // Verificar se o usuário tem acesso à conversa
     const { data: conversation, error: convError } = await supabase
@@ -117,7 +121,11 @@ export async function POST(
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const conversationId = params.id
+    const resolvedParams = await Promise.resolve(params)
+    const conversationId = resolvedParams?.id
+    if (!conversationId) {
+      return NextResponse.json({ error: 'Conversa inválida' }, { status: 400 })
+    }
     const body = await request.json()
     const { content } = body
 

@@ -46,36 +46,68 @@ async function callAnthropic(system: string, userMessage: string): Promise<strin
   return text || null
 }
 
+function normalizeOpenAIContent(raw: unknown): string | null {
+  if (raw == null) return null
+  if (typeof raw === "string") {
+    const t = raw.trim()
+    return t.length ? t : null
+  }
+  if (Array.isArray(raw)) {
+    const parts = raw
+      .map((b: { type?: string; text?: string }) => {
+        if (b?.type === "text" && typeof b.text === "string") return b.text
+        return ""
+      })
+      .filter(Boolean)
+    const joined = parts.join("").trim()
+    return joined.length ? joined : null
+  }
+  return null
+}
+
 async function callOpenAI(system: string, userMessage: string): Promise<string | null> {
   const openaiKey = process.env.OPENAI_API_KEY?.trim()
   if (!openaiKey) return null
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini"
+  const baseUrl = (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/$/, "")
+
+  const response = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${openaiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         { role: "system", content: system },
         { role: "user", content: userMessage },
       ],
       temperature: 0.7,
-      max_tokens: 800,
+      max_tokens: 1200,
     }),
   })
 
   if (!response.ok) {
     const errorData = await response.text()
-    console.error("❌ [AI CHAT] OpenAI error:", errorData)
+    console.error("❌ [AI CHAT] OpenAI error:", response.status, errorData)
     return null
   }
 
-  const data = await response.json()
-  const aiMessage = data.choices?.[0]?.message?.content
-  return typeof aiMessage === "string" ? aiMessage.trim() : null
+  const data = (await response.json()) as {
+    choices?: { message?: { content?: unknown; refusal?: string } }[]
+    error?: { message?: string }
+  }
+  if (data.error?.message) {
+    console.error("❌ [AI CHAT] OpenAI API body error:", data.error.message)
+    return null
+  }
+  const msg = data.choices?.[0]?.message
+  if (msg?.refusal && typeof msg.refusal === "string") {
+    return msg.refusal.trim() || null
+  }
+  return normalizeOpenAIContent(msg?.content)
 }
 
 function buildSystemPrompt(
@@ -110,7 +142,7 @@ ${dcaContext}${additionalContext}
 Responde em **português de Portugal**, de forma concisa e acionável. Se faltar informação, pergunta 1 coisa específica em vez de generalizar.`
 }
 
-// AI Chat: Claude (Anthropic) → OpenAI → resposta local (sempre funcional)
+// AI Chat: OpenAI (prioridade em auto) → Anthropic → resposta local
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
 
@@ -134,9 +166,10 @@ export async function POST(request: NextRequest) {
     )
 
     const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    if (!session) {
+      data: { user: authUser },
+      error: authErr,
+    } = await supabase.auth.getUser()
+    if (authErr || !authUser) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
     }
 
@@ -155,7 +188,7 @@ export async function POST(request: NextRequest) {
         const { data: dcaData } = await supabase
           .from("dca_plans")
           .select("*")
-          .eq("user_id", session.user.id)
+          .eq("user_id", authUser.id)
           .order("created_at", { ascending: false })
           .limit(5)
 
@@ -177,19 +210,19 @@ export async function POST(request: NextRequest) {
           supabase
             .from("mindset_goals")
             .select("*")
-            .eq("user_id", session.user.id)
+            .eq("user_id", authUser.id)
             .eq("is_active", true)
             .limit(3),
           supabase
             .from("fitness_goals")
             .select("*")
-            .eq("user_id", session.user.id)
+            .eq("user_id", authUser.id)
             .eq("is_active", true)
             .limit(3),
           supabase
             .from("workout_sessions")
             .select("*, workouts(*)")
-            .eq("user_id", session.user.id)
+            .eq("user_id", authUser.id)
             .order("start_time", { ascending: false })
             .limit(5),
         ])
@@ -253,13 +286,13 @@ export async function POST(request: NextRequest) {
       aiMessage = await callOpenAI(systemPrompt, message)
       if (aiMessage) source = "openai"
     } else if (prefer === "auto") {
-      if (hasAnthropic) {
-        aiMessage = await callAnthropic(systemPrompt, message)
-        if (aiMessage) source = "anthropic"
-      }
-      if (!aiMessage && hasOpenAI) {
+      if (hasOpenAI) {
         aiMessage = await callOpenAI(systemPrompt, message)
         if (aiMessage) source = "openai"
+      }
+      if (!aiMessage && hasAnthropic) {
+        aiMessage = await callAnthropic(systemPrompt, message)
+        if (aiMessage) source = "anthropic"
       }
     }
 
@@ -284,7 +317,7 @@ export async function POST(request: NextRequest) {
             has_dca_context: !!dcaContext,
             source,
           },
-          context: { user_id: session.user.id },
+          context: { user_id: authUser.id },
           ai_feature: "chat_assistant",
           response_time: responseTime,
           success: true,

@@ -1,11 +1,24 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Loader2, Volume2, MessageCircle, MessageCircleOff, X, Radio, Maximize2, PictureInPicture2 } from "lucide-react"
+import {
+  Loader2,
+  Volume2,
+  MessageCircle,
+  MessageCircleOff,
+  X,
+  Radio,
+  Maximize2,
+  PictureInPicture2,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import LiveFinancialDisclaimer from "@/components/live/live-financial-disclaimer"
 import EmojiChatPicker from "@/components/live/emoji-chat-picker"
+import { enterLiveFullscreen, useIsSmartphone } from "@/lib/live-player-viewport"
+import { useLmsHlsVideo } from "@/hooks/use-lms-hls-video"
+import { usePictureInPictureSupported } from "@/hooks/use-picture-in-picture-supported"
+import { cn } from "@/lib/utils"
 
 type StreamListItem = {
   id: string
@@ -42,9 +55,25 @@ export default function LiveSessionsMobile() {
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
   const [showChat, setShowChat] = useState(true)
+  const [inAppFullscreen, setInAppFullscreen] = useState(false)
+  const [isNativeFullscreen, setIsNativeFullscreen] = useState(false)
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false)
+  const prevIsLiveRef = useRef(false)
+  const disclaimerTimerRef = useRef<number | null>(null)
   const [volume, setVolume] = useState(1)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const playerWrapRef = useRef<HTMLDivElement | null>(null)
+  const isSmartphone = useIsSmartphone()
+  const pipSupported = usePictureInPictureSupported()
+
+  const closeDisclaimer = () => {
+    setDisclaimerOpen(false)
+    if (disclaimerTimerRef.current) {
+      window.clearTimeout(disclaimerTimerRef.current)
+      disclaimerTimerRef.current = null
+    }
+  }
 
   const loadLive = useCallback(async () => {
     setLoading(true)
@@ -65,6 +94,8 @@ export default function LiveSessionsMobile() {
   }, [loadLive])
 
   const openModal = async (id: string) => {
+    prevIsLiveRef.current = false
+    closeDisclaimer()
     setSelectedId(id)
     setOpen(true)
     setShowChat(true)
@@ -90,6 +121,13 @@ export default function LiveSessionsMobile() {
     const id = setInterval(refreshModal, 5000)
     return () => clearInterval(id)
   }, [open, selectedId, refreshModal])
+
+  useEffect(() => {
+    const onFs = () => setIsNativeFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener("fullscreenchange", onFs)
+    onFs()
+    return () => document.removeEventListener("fullscreenchange", onFs)
+  }, [])
 
   const hlsUrl = useMemo(() => {
     if (stream?.hls_manifest_url) return String(stream.hls_manifest_url)
@@ -120,14 +158,67 @@ export default function LiveSessionsMobile() {
     setText((prev) => `${prev}${emoji}`)
   }
 
-  const openFullscreen = async () => {
-    const target = playerWrapRef.current
-    if (!target) return
+  // Para live, mostramos sempre HLS (atualização contínua + menor latência) — alinhado com live-stream-room.
+  const isLive = Boolean(stream?.is_live)
+  const useHls = Boolean(hlsUrl && (stream?.is_live || !stream?.playback_url))
+  useLmsHlsVideo(videoRef, useHls ? hlsUrl : null)
+
+  const iframePlaybackUrl = useMemo(() => {
+    const raw = String(stream?.playback_url || "").trim()
+    if (!raw) return ""
     try {
-      await target.requestFullscreen()
-    } catch (error) {
-      console.warn("[live-sessions-mobile] fullscreen indisponível:", error)
+      const u = new URL(raw)
+      u.searchParams.set("autoplay", "1")
+      u.searchParams.set("mute", "1")
+      return u.toString()
+    } catch {
+      return raw
     }
+  }, [stream?.playback_url])
+
+  useEffect(() => {
+    if (!open) {
+      prevIsLiveRef.current = false
+      closeDisclaimer()
+      return
+    }
+
+    const isLiveNow = Boolean(stream?.is_live)
+    if (!isLiveNow) {
+      prevIsLiveRef.current = false
+      closeDisclaimer()
+      return
+    }
+
+    // Mostra apenas na transição para "live" para não reaparecer a cada refresh.
+    if (isLiveNow && !prevIsLiveRef.current) {
+      prevIsLiveRef.current = true
+      setDisclaimerOpen(true)
+
+      if (disclaimerTimerRef.current) window.clearTimeout(disclaimerTimerRef.current)
+      disclaimerTimerRef.current = window.setTimeout(() => {
+        setDisclaimerOpen(false)
+        disclaimerTimerRef.current = null
+      }, 3000)
+    }
+  }, [open, stream?.is_live])
+
+  const openFullscreen = async () => {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen().catch(() => undefined)
+      return
+    }
+    if (inAppFullscreen) {
+      setInAppFullscreen(false)
+      return
+    }
+    const entered = await enterLiveFullscreen({
+      video: useHls ? videoRef.current : null,
+      iframe: stream?.playback_url ? iframeRef.current : null,
+      fallbackContainer: playerWrapRef.current,
+    })
+    // Fallback de UX se o browser bloquear fullscreen nativo.
+    if (!entered) setInAppFullscreen((v) => !v)
   }
 
   const openPiP = async () => {
@@ -140,8 +231,20 @@ export default function LiveSessionsMobile() {
     }
   }
 
+  const videoClassBase =
+    "w-full bg-black object-contain " +
+    (inAppFullscreen
+      ? "h-full min-h-0 flex-1"
+      : "h-full min-h-0 flex-1 max-sm:min-h-[32vh] sm:h-auto sm:min-h-[min(62dvh,520px)] sm:max-h-[min(80dvh,600px)] sm:flex-none sm:aspect-video sm:max-h-none")
+
+  const iframeClassBase =
+    "w-full border-0 bg-black object-contain " +
+    (inAppFullscreen
+      ? "h-full min-h-0 flex-1"
+      : "h-full min-h-0 flex-1 max-sm:min-h-[32vh] sm:h-auto sm:min-h-[min(62dvh,520px)] sm:max-h-[min(80dvh,600px)] sm:flex-none sm:aspect-video sm:max-h-none")
+
   return (
-    <div className="min-h-[50vh] px-3 pb-28 pt-2">
+    <div className="min-h-[50vh] px-2 pb-28 pt-2 sm:px-3" data-live-player-guard>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-bold tracking-tight text-[#D2A63C]">Live Sessions</h2>
@@ -184,10 +287,14 @@ export default function LiveSessionsMobile() {
                 onClick={() => openModal(s.id)}
                 className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/90 text-left shadow-md transition active:scale-[0.98] hover:border-[#D2A63C]/40"
               >
-                <div className="relative aspect-[4/5] w-full bg-gray-900">
+                <div className="relative aspect-video w-full bg-gray-900">
                   {img ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={img} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                    <img
+                      src={img}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-contain object-center"
+                    />
                   ) : (
                     <div className="flex h-full items-center justify-center text-xs text-gray-500">Sem imagem</div>
                   )}
@@ -212,14 +319,30 @@ export default function LiveSessionsMobile() {
         onOpenChange={(v) => {
           setOpen(v)
           if (!v) {
+            if (document.fullscreenElement) {
+              void document.exitFullscreen().catch(() => undefined)
+            }
             setSelectedId(null)
             setStream(null)
             setMessages([])
+            setInAppFullscreen(false)
+            prevIsLiveRef.current = false
+            closeDisclaimer()
           }
         }}
       >
-        <DialogContent className="flex h-[min(92dvh,820px)] w-[calc(100vw-1rem)] max-w-lg flex-col gap-0 overflow-hidden border border-[#D2A63C]/25 bg-[#08080a] p-0 sm:max-w-lg [&>button]:hidden">
-          <DialogHeader className="flex shrink-0 flex-row items-start justify-between gap-2 border-b border-[#D2A63C]/15 bg-black/40 px-3 py-2 pr-2">
+        <DialogContent
+          data-live-player-guard
+          className={cn(
+            "flex flex-col gap-0 overflow-hidden border-0 bg-[#08080a] p-0 shadow-none [&>button]:hidden",
+            /* Mobile: toda a área útil — do topo do ecrã até à linha superior da tab bar (variável no body) */
+            "fixed left-0 right-0 top-0 z-[100] w-screen max-w-[100vw] translate-x-0 translate-y-0 rounded-none",
+            "h-auto min-h-0 bottom-[var(--app-mobile-footer-tabs-height,calc(5.5rem+env(safe-area-inset-bottom,0px)))]",
+            "sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:h-[min(92dvh,820px)] sm:max-h-[min(92dvh,820px)] sm:w-[calc(100vw-1rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg sm:border sm:border-[#D2A63C]/25 sm:shadow-lg",
+            showChat ? "sm:h-[min(92dvh,820px)]" : "sm:h-auto sm:max-h-[85dvh]"
+          )}
+        >
+          <DialogHeader className="flex shrink-0 flex-row items-start justify-between gap-2 border-b border-[#D2A63C]/15 bg-black/40 px-2 py-2 pr-2 sm:px-3">
             <div className="min-w-0 flex-1 text-left">
               <DialogTitle className="line-clamp-2 text-left text-sm font-semibold text-white">
                 {stream?.title || "Live"}
@@ -227,7 +350,7 @@ export default function LiveSessionsMobile() {
               <p className="text-[10px] text-gray-500">
                 {stream?.educator?.display_name}
                 {stream?.academy?.name ? ` · ${stream.academy.name}` : ""}
-                {stream?.is_live ? " · ONLINE" : ""}
+                {isLive ? " · ONLINE" : ""}
               </p>
             </div>
             <Button
@@ -241,33 +364,72 @@ export default function LiveSessionsMobile() {
             </Button>
           </DialogHeader>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="shrink-0 space-y-2 overflow-y-auto border-b border-gray-800/80 px-3 py-2">
-              {stream?.is_live && <LiveFinancialDisclaimer />}
-              <div ref={playerWrapRef} className="relative w-full overflow-hidden rounded-xl border border-[#D2A63C]/15 bg-black">
-                {stream?.playback_url ? (
+          <div
+            className={cn(
+              "flex min-h-0 flex-1 flex-col overflow-hidden",
+              !showChat && "max-sm:min-h-0"
+            )}
+          >
+            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain border-b border-gray-800/80 px-0 py-1 sm:gap-2 sm:py-2 sm:px-3">
+              <div
+                ref={playerWrapRef}
+                className={cn(
+                  "relative flex min-h-0 w-full flex-1 flex-col overflow-hidden border-y border-[#D2A63C]/20 bg-black sm:rounded-xl sm:border sm:border-[#D2A63C]/15",
+                  inAppFullscreen
+                    ? "min-h-0 flex-1 rounded-none border-x-0 sm:rounded-xl sm:border-x"
+                    : "border-x-0 sm:min-h-0 sm:flex-none sm:rounded-xl sm:border-x"
+                )}
+              >
+                {disclaimerOpen && (
+                  <div className="absolute left-2 top-2 z-50 w-full max-w-[360px]">
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={closeDisclaimer}
+                        className="absolute -top-2 -right-2 z-10 rounded-full border border-gray-700 bg-black/70 p-1 text-gray-200 hover:bg-black/90"
+                        aria-label="Fechar aviso"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                      <LiveFinancialDisclaimer />
+                    </div>
+                  </div>
+                )}
+                {isLive && hlsUrl ? (
+                  <video
+                    key={hlsUrl}
+                    ref={videoRef}
+                    className={videoClassBase}
+                    controls
+                    autoPlay
+                    playsInline
+                  />
+                ) : iframePlaybackUrl ? (
                   <iframe
-                    src={stream.playback_url}
+                    ref={iframeRef}
+                    src={iframePlaybackUrl}
                     title={stream.title || "Live"}
-                    className="aspect-video w-full border-0"
+                    className={iframeClassBase}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                     allowFullScreen
                   />
                 ) : hlsUrl ? (
                   <video
+                    key={hlsUrl}
                     ref={videoRef}
-                    className="aspect-video w-full bg-black"
+                    className={videoClassBase}
                     controls
+                    autoPlay
                     playsInline
-                    src={hlsUrl}
                   />
                 ) : (
-                  <div className="flex aspect-video w-full items-center justify-center px-4 text-center text-xs text-gray-500">
+                  <div className="flex min-h-[min(48dvh,320px)] w-full flex-1 items-center justify-center px-4 text-center text-xs text-gray-500 sm:aspect-video">
                     Stream sem playback configurado.
                   </div>
                 )}
               </div>
 
+              <div className="space-y-2 px-2 sm:px-0">
               {(stream?.playback_url || hlsUrl) && (
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -278,9 +440,9 @@ export default function LiveSessionsMobile() {
                     onClick={openFullscreen}
                   >
                     <Maximize2 className="mr-2 h-4 w-4" />
-                    Ecrã inteiro
+                    {inAppFullscreen || isNativeFullscreen ? "Reduzir" : "Ecrã inteiro"}
                   </Button>
-                  {hlsUrl && stream?.playback_url == null && (
+                  {useHls && isSmartphone && pipSupported && (
                     <Button
                       type="button"
                       variant="outline"
@@ -295,7 +457,7 @@ export default function LiveSessionsMobile() {
                 </div>
               )}
 
-              {hlsUrl && stream?.playback_url == null && (
+              {useHls && (
                 <div className="flex items-center gap-2 rounded-xl border border-[#D2A63C]/15 bg-black/50 px-2 py-2">
                   <Volume2 className="h-4 w-4 shrink-0 text-[#D2A63C]/70" />
                   <input
@@ -310,6 +472,12 @@ export default function LiveSessionsMobile() {
                   />
                   <span className="w-8 text-right text-[10px] text-gray-500">{Math.round(volume * 100)}%</span>
                 </div>
+              )}
+
+              {isLive && stream?.playback_url && (
+                <p className="text-[10px] text-gray-500">
+                  Volume: usa os controlos do player embebido (YouTube, etc.).
+                </p>
               )}
 
               <Button
@@ -331,6 +499,7 @@ export default function LiveSessionsMobile() {
                   </>
                 )}
               </Button>
+              </div>
             </div>
 
             {showChat && (

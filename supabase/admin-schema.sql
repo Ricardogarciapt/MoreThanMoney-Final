@@ -83,7 +83,7 @@ INSERT INTO site_content (type, category, title, description, url, order_index) 
 ('link', 'trading', 'Automatização', 'Página de automatização', '/automation', 4),
 ('link', 'trading', 'Portefólios', 'Portefólios inteligentes', '/portfolios', 5),
 ('video', 'landing', 'Vídeo de Apresentação', 'Vídeo principal da landing page', 'https://youtu.be/dgd0-mLIrMw', 1),
-('video', 'onboarding', 'Vídeo de Onboarding', 'Vídeo do processo de onboarding', 'https://youtu.be/q-23MppHFDI', 1),
+('video', 'onboarding', 'Vídeo de Onboarding', 'Vídeo do processo de onboarding', 'https://youtu.be/w8y_wzJGTcA', 1),
 ('video', 'fast-start', 'Sistema MoreThanMoney', 'Vídeo explicativo do sistema', 'https://youtu.be/TJ_1rvK-DgY', 1),
 ('video', 'swipetotrade', 'Como Aceitar Trade', 'Vídeo explicativo de como aceitar trades', 'https://youtu.be/TxQS2GW5NkE', 1)
 ON CONFLICT DO NOTHING;

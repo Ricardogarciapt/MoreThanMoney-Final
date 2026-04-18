@@ -2,11 +2,25 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { Volume2, MessageCircle, MessageCircleOff, ArrowLeft, Maximize2, PictureInPicture2 } from "lucide-react"
+import {
+  Volume2,
+  MessageCircle,
+  MessageCircleOff,
+  ArrowLeft,
+  Maximize2,
+  PictureInPicture2,
+  X,
+  Rewind,
+  FastForward,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import LiveFinancialDisclaimer from "@/components/live/live-financial-disclaimer"
 import EmojiChatPicker from "@/components/live/emoji-chat-picker"
+import { enterLiveFullscreen, useIsSmartphone } from "@/lib/live-player-viewport"
+import { useLmsHlsVideo } from "@/hooks/use-lms-hls-video"
+import { usePictureInPictureSupported } from "@/hooks/use-picture-in-picture-supported"
+import { seekHlsByDelta } from "@/lib/live-hls-seek"
 
 interface Props {
   streamId: string
@@ -25,29 +39,40 @@ export default function LiveStreamRoom({ streamId }: Props) {
   const [messages, setMessages] = useState<Msg[]>([])
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
-  const [educatorId, setEducatorId] = useState<string | null>(null)
   const [clearing, setClearing] = useState(false)
   const [showChat, setShowChat] = useState(true)
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false)
+  const prevIsLiveRef = useRef(false)
+  const disclaimerTimerRef = useRef<number | null>(null)
   const [volume, setVolume] = useState(1)
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const playerWrapRef = useRef<HTMLDivElement | null>(null)
+  const isSmartphone = useIsSmartphone()
+  const pipSupported = usePictureInPictureSupported()
 
-  const load = async () => {
-    const [streamRes, msgRes, meRes] = await Promise.all([
-      fetch(`/api/live-sessions/streams/${streamId}`).then((r) => r.json()),
-      fetch(`/api/live-sessions/streams/${streamId}/messages`).then((r) => r.json()),
-      fetch("/api/live-sessions/educator-auth/me", { credentials: "same-origin" }).then((r) => r.json()),
-    ])
-    setStream(streamRes.data || null)
-    setMessages(msgRes.data || [])
-    if (meRes.authenticated && meRes.educator?.educatorId) {
-      setEducatorId(meRes.educator.educatorId)
-    } else {
-      setEducatorId(null)
+  const closeDisclaimer = () => {
+    setDisclaimerOpen(false)
+    if (disclaimerTimerRef.current) {
+      window.clearTimeout(disclaimerTimerRef.current)
+      disclaimerTimerRef.current = null
     }
   }
 
+  const load = async () => {
+    const [streamRes, msgRes] = await Promise.all([
+      fetch(`/api/live-sessions/streams/${streamId}`, { credentials: "same-origin" }).then((r) => r.json()),
+      fetch(`/api/live-sessions/streams/${streamId}/messages`, { credentials: "same-origin" }).then((r) =>
+        r.json()
+      ),
+    ])
+    setStream(streamRes.data || null)
+    setMessages(msgRes.data || [])
+  }
+
   useEffect(() => {
+    prevIsLiveRef.current = false
+    closeDisclaimer()
     load()
     const id = setInterval(load, 5000)
     return () => clearInterval(id)
@@ -60,14 +85,51 @@ export default function LiveStreamRoom({ streamId }: Props) {
   }, [volume, stream?.hls_manifest_url, stream?.playback_url])
 
   const canSend = useMemo(() => text.trim().length > 0, [text])
-  const canClearChat = Boolean(educatorId && stream?.educator_id && educatorId === stream.educator_id)
+  const canClearChat = Boolean(stream?.viewer_can_clear_chat)
   const hlsUrl = useMemo(() => {
     if (stream?.hls_manifest_url) return String(stream.hls_manifest_url)
     return ""
   }, [stream?.hls_manifest_url])
 
-  const useHls = Boolean(hlsUrl && !stream?.playback_url)
+  // Para live, mostramos sempre HLS (minimizando latência e mantendo a reprodução atualizada).
+  const useHls = Boolean(hlsUrl && (stream?.is_live || !stream?.playback_url))
   const isLive = Boolean(stream?.is_live)
+  const iframePlaybackUrl = useMemo(() => {
+    const raw = String(stream?.playback_url || "").trim()
+    if (!raw) return ""
+    try {
+      const u = new URL(raw)
+      u.searchParams.set("autoplay", "1")
+      u.searchParams.set("mute", "1")
+      return u.toString()
+    } catch {
+      return raw
+    }
+  }, [stream?.playback_url])
+
+  useLmsHlsVideo(videoRef, useHls ? hlsUrl : null)
+
+  useEffect(() => {
+    const isLiveNow = Boolean(stream?.is_live)
+
+    if (!isLiveNow) {
+      prevIsLiveRef.current = false
+      closeDisclaimer()
+      return
+    }
+
+    // Mostra apenas quando transita para "live" (evita reset a cada refresh a cada 5s).
+    if (isLiveNow && !prevIsLiveRef.current) {
+      prevIsLiveRef.current = true
+      setDisclaimerOpen(true)
+
+      if (disclaimerTimerRef.current) window.clearTimeout(disclaimerTimerRef.current)
+      disclaimerTimerRef.current = window.setTimeout(() => {
+        setDisclaimerOpen(false)
+        disclaimerTimerRef.current = null
+      }, 3000)
+    }
+  }, [stream?.is_live])
 
   const send = async () => {
     if (!canSend) return
@@ -108,13 +170,11 @@ export default function LiveStreamRoom({ streamId }: Props) {
   }
 
   const openFullscreen = async () => {
-    const target = playerWrapRef.current
-    if (!target) return
-    try {
-      await target.requestFullscreen()
-    } catch (error) {
-      console.warn("[live-stream-room] fullscreen indisponível:", error)
-    }
+    await enterLiveFullscreen({
+      video: useHls ? videoRef.current : null,
+      iframe: stream?.playback_url ? iframeRef.current : null,
+      fallbackContainer: playerWrapRef.current,
+    })
   }
 
   const openPiP = async () => {
@@ -126,6 +186,12 @@ export default function LiveStreamRoom({ streamId }: Props) {
     } catch (error) {
       console.warn("[live-stream-room] PiP indisponível:", error)
     }
+  }
+
+  const seekHlsSeconds = (delta: number) => {
+    const video = videoRef.current
+    if (!video) return
+    seekHlsByDelta(video, delta)
   }
 
   return (
@@ -170,24 +236,51 @@ export default function LiveStreamRoom({ streamId }: Props) {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {stream?.is_live && <LiveFinancialDisclaimer />}
-          <div ref={playerWrapRef}>
-            {stream?.playback_url ? (
+          <div
+            ref={playerWrapRef}
+            className="relative [&:fullscreen]:fixed [&:fullscreen]:inset-0 [&:fullscreen]:z-[2147483646] [&:fullscreen]:flex [&:fullscreen]:h-[100dvh] [&:fullscreen]:w-screen [&:fullscreen]:items-stretch [&:fullscreen]:justify-stretch [&:fullscreen]:bg-black [&:fullscreen]:rounded-none [&:fullscreen>iframe]:!h-full [&:fullscreen>iframe]:!w-full [&:fullscreen>iframe]:min-h-0 [&:fullscreen>iframe]:flex-1 [&:fullscreen>iframe]:rounded-none [&:fullscreen>iframe]:border-0 [&:fullscreen>video]:!h-full [&:fullscreen>video]:!w-full [&:fullscreen>video]:!max-h-none [&:fullscreen>video]:flex-1 [&:fullscreen>video]:rounded-none [&:fullscreen>video]:border-0"
+          >
+            {disclaimerOpen && (
+              <div className="absolute left-3 top-3 z-50 w-full max-w-[360px]">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={closeDisclaimer}
+                    className="absolute -top-2 -right-2 z-10 rounded-full border border-gray-700 bg-black/70 p-1 text-gray-200 hover:bg-black/90"
+                    aria-label="Fechar aviso"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <LiveFinancialDisclaimer />
+                </div>
+              </div>
+            )}
+            {isLive && hlsUrl ? (
+              <video
+                key={hlsUrl}
+                ref={videoRef}
+                className="h-[420px] w-full rounded-lg border border-gray-700 bg-black object-contain [&:fullscreen]:h-full [&:fullscreen]:w-full [&:fullscreen]:object-contain"
+                controls
+                autoPlay
+                playsInline
+              />
+            ) : iframePlaybackUrl ? (
               <iframe
-                src={stream.playback_url}
+                ref={iframeRef}
+                src={iframePlaybackUrl}
                 title={stream.title || "Live stream"}
-                className="w-full h-[420px] rounded-lg border border-gray-700 bg-black"
+                className="h-[420px] w-full rounded-lg border border-gray-700 bg-black [&:fullscreen]:aspect-auto [&:fullscreen]:h-full [&:fullscreen]:min-h-0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 allowFullScreen
               />
             ) : hlsUrl ? (
               <video
+                key={hlsUrl}
                 ref={videoRef}
-                className="w-full h-[420px] rounded-lg border border-gray-700 bg-black"
+                className="h-[420px] w-full rounded-lg border border-gray-700 bg-black object-contain [&:fullscreen]:h-full [&:fullscreen]:w-full [&:fullscreen]:object-contain"
                 controls
                 autoPlay
                 playsInline
-                src={hlsUrl}
               />
             ) : (
               <div className="h-[420px] rounded-lg border border-gray-700 bg-black flex items-center justify-center text-gray-400">
@@ -202,7 +295,7 @@ export default function LiveStreamRoom({ streamId }: Props) {
                 <Maximize2 className="mr-2 h-4 w-4" />
                 Ecrã inteiro
               </Button>
-              {useHls && (
+              {useHls && isSmartphone && pipSupported && (
                 <Button type="button" variant="outline" size="sm" className="border-gray-700 text-gray-200" onClick={openPiP}>
                   <PictureInPicture2 className="mr-2 h-4 w-4" />
                   PiP
@@ -211,25 +304,51 @@ export default function LiveStreamRoom({ streamId }: Props) {
             </div>
           )}
 
-          {/* Volume no player HLS (live-sessions) — liga ao elemento video */}
+          {/* Controlo de tempo HLS + volume */}
           {useHls && (
-            <div
-              className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${
-                isLive ? "border-[#D2A63C]/25 bg-black/40" : "border-gray-800 bg-black/30"
-              }`}
-            >
-              <Volume2 className={`h-4 w-4 shrink-0 ${isLive ? "text-[#D2A63C]" : "text-gray-400"}`} />
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.05}
-                value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
-                className="h-2 flex-1 accent-[#D2A63C]"
-                aria-label="Volume do streaming"
-              />
-              <span className="w-10 text-right text-xs text-gray-400">{Math.round(volume * 100)}%</span>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-600 text-gray-200"
+                  onClick={() => seekHlsSeconds(-10)}
+                  title="Recuar 10 segundos"
+                >
+                  <Rewind className="mr-1.5 h-4 w-4" />
+                  −10s
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-600 text-gray-200"
+                  onClick={() => seekHlsSeconds(10)}
+                  title="Avançar 10 segundos (até à ponta do buffer)"
+                >
+                  <FastForward className="mr-1.5 h-4 w-4" />
+                  +10s
+                </Button>
+              </div>
+              <div
+                className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${
+                  isLive ? "border-[#D2A63C]/25 bg-black/40" : "border-gray-800 bg-black/30"
+                }`}
+              >
+                <Volume2 className={`h-4 w-4 shrink-0 ${isLive ? "text-[#D2A63C]" : "text-gray-400"}`} />
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={volume}
+                  onChange={(e) => setVolume(Number(e.target.value))}
+                  className="h-2 flex-1 accent-[#D2A63C]"
+                  aria-label="Volume do streaming"
+                />
+                <span className="w-10 text-right text-xs text-gray-400">{Math.round(volume * 100)}%</span>
+              </div>
             </div>
           )}
 
