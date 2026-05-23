@@ -121,6 +121,19 @@ async function fetchPriceSnapshotMap(baseUrl: string, binanceSymbols: string[]):
   return out
 }
 
+/** Uma linha por símbolo normalizado — evita cartões duplicados na análise DCA. */
+function dedupeRowsBySymbol(rows: DcaCryptoRow[]): DcaCryptoRow[] {
+  const seen = new Set<string>()
+  const out: DcaCryptoRow[] = []
+  for (const r of rows) {
+    const k = normalizeBinanceSymbol(r.symbol)
+    if (!k || seen.has(k)) continue
+    seen.add(k)
+    out.push(r)
+  }
+  return out
+}
+
 function mergeSnap(row: DcaCryptoRow, map: Record<string, PriceSnap>): PriceSnap {
   const key = normalizeBinanceSymbol(row.symbol)
   const m = map[key] || { price: null, change24h: null }
@@ -381,8 +394,16 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      rows = dedupeRowsBySymbol(rows)
       expectedCount = rows.length
-      opportunities = await analyzeRows(rows, baseUrl)
+      const raw = await analyzeRows(rows, baseUrl)
+      const seenSym = new Set<string>()
+      opportunities = raw.filter((o) => {
+        const k = normalizeBinanceSymbol(o.symbol)
+        if (seenSym.has(k)) return false
+        seenSym.add(k)
+        return true
+      })
 
       console.log(`📊 [DCA SMART] Cartões gerados: ${opportunities.length} / esperados: ${expectedCount}`)
     }

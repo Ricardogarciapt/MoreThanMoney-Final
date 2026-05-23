@@ -26,17 +26,14 @@ export interface UserManagement {
   membership_level: 'basic' | 'premium' | 'vip' | 'iq' | 'skool'
   member_category?: 'iq' | 'skool' | 'vip' | 'standard'
   onboarding_platform?: 'vxa' | 'rfg' | null
-  mtm_auto_requested?: boolean
-  mtm_auto_requested_at?: string | null
-  mtm_auto_enabled?: boolean
-  mtm_auto_enabled_at?: string | null
-  mtm_auto_admin?: boolean
   is_active: boolean
   is_verified: boolean
   created_at: string
   last_login?: string
   trial_expires_at?: string
   trial_expired?: boolean
+  subscription_expires_at?: string | null
+  subscription_auto_renew?: boolean | null
   profile_data?: Record<string, any>
   xp?: {
     total_xp: number

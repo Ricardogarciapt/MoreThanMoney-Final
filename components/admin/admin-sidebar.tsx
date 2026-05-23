@@ -12,9 +12,9 @@ import {
   ArrowLeft,
   Shield,
   GraduationCap,
-  Cpu,
   TerminalSquare,
   Monitor,
+  Brain,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -22,7 +22,6 @@ import { cn } from "@/lib/utils"
 const navItems = [
   { id: "overview", label: "Visão geral", icon: LayoutDashboard },
   { id: "users", label: "Utilizadores", icon: Users },
-  { id: "mtmauto", label: "MTM Auto", icon: Cpu },
   { id: "content", label: "Conteúdo", icon: FileText },
   { id: "education", label: "Educação (LMS)", icon: GraduationCap },
   { id: "notifications", label: "Notificações", icon: Bell },
@@ -114,6 +113,19 @@ export default function AdminSidebar({
         >
           <Monitor className="w-5 h-5 shrink-0" />
           Desktop remoto
+        </Link>
+        <div className="my-2 border-t border-[#D2A63C]/10" />
+        <Link
+          href="/dashboard-gestao"
+          className={cn(
+            "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+            pathname.startsWith("/dashboard-gestao")
+              ? "border-l-2 border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
+              : "border-l-2 border-[#D2A63C]/30 text-[#D2A63C]/70 hover:bg-[#D2A63C]/10 hover:text-[#D2A63C]"
+          )}
+        >
+          <Brain className="w-5 h-5 shrink-0" />
+          Dashboard Gestão
         </Link>
       </nav>
     </aside>

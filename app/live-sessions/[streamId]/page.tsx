@@ -1,5 +1,5 @@
 import ProtectedPage from "@/components/protected-page"
-import LiveStreamRoom from "@/components/live/live-stream-room"
+import LiveSessionChannelContent from "@/components/live/live-session-channel-content"
 import { LiveSessionsShell } from "@/components/live/live-sessions-shell"
 
 export default async function LiveSessionChannelPage({
@@ -11,11 +11,8 @@ export default async function LiveSessionChannelPage({
 
   return (
     <ProtectedPage redirectPath="/login?redirect=/live-sessions" loadingMessage="A validar acesso ao canal...">
-      <LiveSessionsShell
-        title="Sala ao vivo"
-        subtitle="Vídeo, chat e aviso legal quando a sessão está em direto."
-      >
-        <LiveStreamRoom streamId={streamId} />
+      <LiveSessionsShell title="Sala ao vivo">
+        <LiveSessionChannelContent streamId={streamId} />
       </LiveSessionsShell>
     </ProtectedPage>
   )

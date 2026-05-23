@@ -5,8 +5,8 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import EducatorProfileDialog, { type EducatorProfilePublic } from "@/components/live/educator-profile-dialog"
 import { useToast } from "@/hooks/use-toast"
 import {
   Radio,
@@ -17,7 +17,6 @@ import {
   Bell,
   ArrowRight,
   Circle,
-  Calendar,
 } from "lucide-react"
 import { LMS_CATEGORY_OPTIONS } from "@/lib/lms-categories"
 
@@ -135,8 +134,8 @@ export default function LiveSessionsLobby() {
     })
   }
 
-  const openEducatorDialog = async (ed: EducatorPublic) => {
-    setSelectedEducator(ed)
+  const openEducatorDialog = async (ed: EducatorProfilePublic) => {
+    setSelectedEducator(ed as EducatorPublic)
     setSelectedEducatorStreams([])
     setEducatorDialogOpen(true)
 
@@ -152,6 +151,22 @@ export default function LiveSessionsLobby() {
     } finally {
       setSelectedEducatorStreamsLoading(false)
     }
+  }
+
+  const openEducatorFromStream = (stream: Stream) => {
+    if (!stream.educator?.id) return
+    const fromList = educators.find((e) => e.id === stream.educator!.id)
+    void openEducatorDialog(
+      fromList ?? {
+        id: stream.educator.id,
+        display_name: stream.educator.display_name,
+        bio: stream.educator.bio,
+        avatar_url: stream.educator.avatar_url,
+        specialty: stream.educator.specialty,
+        academy: stream.academy ? { name: stream.academy.name } : null,
+        is_live: stream.is_live,
+      }
+    )
   }
 
   if (loading && streams.length === 0) {
@@ -262,96 +277,13 @@ export default function LiveSessionsLobby() {
         </Link>
       </div>
 
-      <Dialog open={educatorDialogOpen} onOpenChange={setEducatorDialogOpen}>
-        <DialogContent className="max-w-lg border border-[#D2A63C]/20 bg-black/90 text-white">
-          <DialogHeader>
-            <DialogTitle className="text-[#D2A63C] text-lg">
-              {selectedEducator?.display_name || "Educador"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {selectedEducator && (
-              <>
-                {selectedEducator.specialty && (
-                  <div className="inline-flex items-center rounded-full border border-[#D2A63C]/30 bg-[#D2A63C]/10 px-3 py-1 text-xs text-[#D2A63C]">
-                    {selectedEducator.specialty}
-                  </div>
-                )}
-
-                {selectedEducator.bio && (
-                  <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">{selectedEducator.bio}</div>
-                )}
-
-                <div className="rounded-xl border border-gray-800 bg-gray-950/50 p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="h-4 w-4 text-[#D2A63C]" />
-                    <p className="font-semibold text-sm">Schedule</p>
-                  </div>
-
-                  {selectedEducatorStreamsLoading ? (
-                    <p className="text-xs text-gray-500">A carregar horários…</p>
-                  ) : (
-                    <>
-                      {(() => {
-                        const now = Date.now()
-                        const onlineNow = selectedEducatorStreams
-                          .filter((s) => s.is_live)
-                          .slice(0, 3)
-
-                        const upcoming = selectedEducatorStreams
-                          .filter((s) => !s.is_live && s.scheduled_start_at && new Date(s.scheduled_start_at).getTime() > now)
-                          .sort((a, b) => new Date(a.scheduled_start_at as string).getTime() - new Date(b.scheduled_start_at as string).getTime())
-                          .slice(0, 5)
-
-                        return (
-                          <div className="space-y-3">
-                            {onlineNow.length > 0 && (
-                              <div className="space-y-2">
-                                <p className="text-xs font-medium text-gray-400 uppercase">Online agora</p>
-                                <div className="space-y-2">
-                                  {onlineNow.map((s) => (
-                                    <div key={s.id} className="rounded-lg border border-gray-800 bg-black/30 px-3 py-2">
-                                      <p className="text-sm font-semibold">{s.title}</p>
-                                      <p className="text-[11px] text-gray-500">
-                                        {s.academy?.name ? `${s.academy.name} · ` : ""}
-                                        Agora
-                                      </p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {upcoming.length > 0 ? (
-                              <div className="space-y-2">
-                                <p className="text-xs font-medium text-gray-400 uppercase">Próximas lives</p>
-                                <div className="space-y-2">
-                                  {upcoming.map((s) => (
-                                    <div key={s.id} className="rounded-lg border border-gray-800 bg-black/30 px-3 py-2">
-                                      <p className="text-sm font-semibold">{s.title}</p>
-                                      <p className="text-[11px] text-gray-500">
-                                        {s.academy?.name ? `${s.academy.name} · ` : ""}
-                                        {s.scheduled_start_at ? new Date(s.scheduled_start_at).toLocaleString("pt-PT") : ""}
-                                      </p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : (
-                              <p className="text-xs text-gray-500">Sem lives agendadas agora.</p>
-                            )}
-                          </div>
-                        )
-                      })()}
-                    </>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <EducatorProfileDialog
+        open={educatorDialogOpen}
+        onOpenChange={setEducatorDialogOpen}
+        educator={selectedEducator}
+        streams={selectedEducatorStreams}
+        streamsLoading={selectedEducatorStreamsLoading}
+      />
 
       <div className="space-y-12">
           {/* Slideshow educadores */}
@@ -366,11 +298,11 @@ export default function LiveSessionsLobby() {
                 <button
                   key={ed.id}
                   type="button"
-                  onClick={() => openEducatorDialog(ed)}
                   className="w-[280px] shrink-0 snap-start text-left"
-                  aria-label={`Ver perfil do educador ${ed.display_name}`}
+                  aria-label={`Ver perfil de ${ed.display_name}`}
+                  onClick={() => void openEducatorDialog(ed)}
                 >
-                  <Card className="w-full overflow-hidden border-[#D2A63C]/20 bg-gradient-to-b from-gray-900/90 to-black/90 backdrop-blur">
+                  <Card className="w-full overflow-hidden border-[#D2A63C]/20 bg-gradient-to-b from-gray-900/90 to-black/90 backdrop-blur transition hover:border-[#D2A63C]/45">
                     <div className="relative h-40 w-full bg-gradient-to-br from-gray-800 to-black">
                       {ed.avatar_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -420,7 +352,12 @@ export default function LiveSessionsLobby() {
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 {liveStreams.map((stream) => (
-                  <StreamMarketCard key={stream.id} stream={stream} featured />
+                  <StreamMarketCard
+                    key={stream.id}
+                    stream={stream}
+                    featured
+                    onEducatorProfile={() => openEducatorFromStream(stream)}
+                  />
                 ))}
               </div>
             )}
@@ -460,9 +397,19 @@ export default function LiveSessionsLobby() {
   )
 }
 
-function StreamMarketCard({ stream, featured }: { stream: Stream; featured?: boolean }) {
+function StreamMarketCard({
+  stream,
+  featured,
+  onEducatorProfile,
+}: {
+  stream: Stream
+  featured?: boolean
+  onEducatorProfile?: () => void
+}) {
   const img = streamVisual(stream)
   const viewers = typeof stream.viewer_count === "number" ? stream.viewer_count : null
+  const enterHref = stream.educator?.id ? `/live/${stream.educator.id}` : `/live-sessions/${stream.id}`
+  const showEducatorProfile = Boolean(stream.educator?.id && onEducatorProfile)
 
   return (
     <Card
@@ -501,7 +448,21 @@ function StreamMarketCard({ stream, featured }: { stream: Stream; featured?: boo
         </div>
         <div className="flex items-start gap-3">
           <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border-2 border-[#D2A63C]/30 bg-gray-800">
-            {stream.educator?.avatar_url ? (
+            {showEducatorProfile ? (
+              <button
+                type="button"
+                className="h-full w-full"
+                aria-label={`Ver perfil de ${stream.educator?.display_name || "Educador"}`}
+                onClick={onEducatorProfile}
+              >
+                {stream.educator?.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={stream.educator.avatar_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-500">MTM</div>
+                )}
+              </button>
+            ) : stream.educator?.avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={stream.educator.avatar_url} alt="" className="h-full w-full object-cover" />
             ) : (
@@ -509,7 +470,18 @@ function StreamMarketCard({ stream, featured }: { stream: Stream; featured?: boo
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-white truncate">{stream.educator?.display_name || "Educador"}</p>
+            {showEducatorProfile ? (
+              <button
+                type="button"
+                className="block w-full truncate text-left text-sm font-semibold text-white hover:text-[#D2A63C]"
+                aria-label={`Ver perfil de ${stream.educator?.display_name || "Educador"}`}
+                onClick={onEducatorProfile}
+              >
+                {stream.educator?.display_name || "Educador"}
+              </button>
+            ) : (
+              <p className="text-sm font-semibold text-white truncate">{stream.educator?.display_name || "Educador"}</p>
+            )}
             {stream.educator?.specialty && (
               <p className="text-[11px] text-[#D2A63C]/90 truncate">{stream.educator.specialty}</p>
             )}
@@ -527,7 +499,7 @@ function StreamMarketCard({ stream, featured }: { stream: Stream; featured?: boo
             </Badge>
           )}
         </div>
-        <Link href={`/live-sessions/${stream.id}`} className="block">
+        <Link href={enterHref} className="block">
           <Button className="w-full bg-[#D2A63C] font-semibold text-black hover:bg-[#BB8525]">Entrar na sala</Button>
         </Link>
       </CardContent>

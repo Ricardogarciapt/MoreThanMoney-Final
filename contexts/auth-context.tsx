@@ -17,9 +17,19 @@ export interface User {
   created_at?: string
   phone?: string
   whatsapp?: string
-  mtm_auto_requested?: boolean
-  mtm_auto_enabled?: boolean
-  mtm_auto_admin?: boolean
+}
+
+function isTrialUser(profile: Record<string, unknown>): boolean {
+  return profile.user_type === "guest" || profile.user_type === "presentation"
+}
+
+function isTrialExpired(profile: Record<string, unknown>): boolean {
+  if (profile.trial_expired === true) return true
+  const expiresAt = profile.trial_expires_at
+  if (typeof expiresAt !== "string" || !expiresAt) return false
+  const ts = new Date(expiresAt).getTime()
+  if (!Number.isFinite(ts)) return false
+  return ts <= Date.now()
 }
 
 function profileToUser(
@@ -45,9 +55,6 @@ function profileToUser(
       created_at: p.created_at as string | undefined,
       phone: p.phone as string | undefined,
       whatsapp: p.whatsapp as string | undefined,
-      mtm_auto_requested: p.mtm_auto_requested as boolean | undefined,
-      mtm_auto_enabled: p.mtm_auto_enabled as boolean | undefined,
-      mtm_auto_admin: p.mtm_auto_admin as boolean | undefined,
     },
   }
 }
@@ -85,6 +92,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [isIqonicUser, setIsIqonicUser] = useState(false)
 
+  const enforceTrialExpiry = async (profile: unknown) => {
+    if (!profile || typeof profile !== "object") return profile
+    const p = profile as Record<string, unknown>
+    if (!isTrialUser(p) || !isTrialExpired(p)) return profile
+
+    const patch = {
+      is_active: false,
+      trial_expired: true,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (p.is_active === false && p.trial_expired === true) {
+      return { ...p, ...patch }
+    }
+
+    try {
+      const { error } = await supabase.from("profiles").update(patch).eq("id", String(p.id || ""))
+      if (error) {
+        console.warn("⚠️ [AUTH CONTEXT] Não foi possível inativar trial expirado:", error.message)
+      }
+    } catch (e) {
+      console.warn("⚠️ [AUTH CONTEXT] Falha ao inativar trial expirado:", e)
+    }
+
+    return { ...p, ...patch }
+  }
+
   useEffect(() => {
     console.log('🔍 [AUTH CONTEXT] Inicializando...')
     let mounted = true
@@ -108,7 +142,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               const p =
                 profile ??
                 (await ensureMemberProfile(supabase, cachedSession, { respectAutoApprove: false }))
-              const mapped = profileToUser(p, cachedSession.user)
+              const normalized = await enforceTrialExpiry(p)
+              const mapped = profileToUser(normalized, cachedSession.user)
               if (mapped) {
                 setUser(mapped.user)
                 setIsIqonicUser(mapped.isIqonicUser)
@@ -159,7 +194,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           if (profile) {
             console.log('✅ [AUTH CONTEXT] Perfil carregado:', profile.email)
-            const mapped = profileToUser(profile, session.user)
+            const normalized = await enforceTrialExpiry(profile)
+            const mapped = profileToUser(normalized, session.user)
             if (mapped) {
               setUser(mapped.user)
               setIsIqonicUser(mapped.isIqonicUser)
@@ -170,7 +206,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               respectAutoApprove: false,
             })
             if (newProfile && mounted) {
-              const mapped = profileToUser(newProfile, session.user)
+              const normalized = await enforceTrialExpiry(newProfile)
+              const mapped = profileToUser(normalized, session.user)
               if (mapped) {
                 setUser(mapped.user)
                 setIsIqonicUser(mapped.isIqonicUser)
@@ -226,7 +263,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const p =
               profile ?? (await ensureMemberProfile(supabase, session, { respectAutoApprove: false }))
             if (p && mounted) {
-              const mapped = profileToUser(p, session.user)
+              const normalized = await enforceTrialExpiry(p)
+              const mapped = profileToUser(normalized, session.user)
               if (mapped) {
                 setUser(mapped.user)
                 setIsIqonicUser(mapped.isIqonicUser)
@@ -285,7 +323,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           return { success: false, error: 'Não foi possível sincronizar o perfil. Tenta de novo ou contacta o suporte.' }
         }
 
-        const mapped = profileToUser(profile, data.user)
+        const normalized = await enforceTrialExpiry(profile)
+        const normalizedObj =
+          normalized && typeof normalized === "object"
+            ? (normalized as Record<string, unknown>)
+            : null
+
+        if (normalizedObj && isTrialUser(normalizedObj) && isTrialExpired(normalizedObj)) {
+          await supabase.auth.signOut()
+          setUser(null)
+          setIsIqonicUser(false)
+          return { success: false, error: 'O teu Free Trial expirou ao fim de 7 dias.' }
+        }
+
+        const mapped = profileToUser(normalized, data.user)
         if (mapped) {
           setUser(mapped.user)
           setIsIqonicUser(mapped.isIqonicUser)
@@ -426,7 +477,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (profile) {
           console.log("✅ Perfil carregado:", profile.email)
-          const mapped = profileToUser(profile, session.user)
+          const normalized = await enforceTrialExpiry(profile)
+          const mapped = profileToUser(normalized, session.user)
           if (mapped) {
             setUser(mapped.user)
             setIsIqonicUser(mapped.isIqonicUser)

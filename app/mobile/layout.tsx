@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next"
+import MobileAppShell from "@/components/mobile/mobile-app-shell"
 
 export const metadata: Metadata = {
   title: "MTM Mobile App",
@@ -16,6 +17,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
   themeColor: "#D2A63C",
 }
 
@@ -24,10 +26,5 @@ export default function MobileLayout({
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <div className="mobile-app-container">
-      {children}
-    </div>
-  )
+  return <MobileAppShell>{children}</MobileAppShell>
 }
-

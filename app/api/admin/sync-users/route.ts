@@ -9,8 +9,6 @@ const ADMIN_EMAILS = new Set(
   ["ricardogarciapt@proton.me", "morethanmoneypt@gmail.com"].map((e) => e.toLowerCase())
 )
 
-const MTM_AUTO_ADMIN_EMAILS = new Set(["morethanmoneypt@gmail.com"].map((e) => e.toLowerCase()))
-
 const ALLOWED_USER_TYPES = new Set([
   "member",
   "admin",
@@ -140,7 +138,6 @@ export async function POST(request: NextRequest) {
       const memberCat = resolveMemberCategory(user, existing)
 
       if (!existing) {
-        const isMtmAutoAdmin = !!(email && MTM_AUTO_ADMIN_EMAILS.has(email.toLowerCase()))
         const row: Record<string, unknown> = {
           id: user.id,
           email: email || `pending-${user.id}@users.invalid`,
@@ -149,11 +146,6 @@ export async function POST(request: NextRequest) {
           user_type: userType,
           member_category: memberCat ?? "standard",
           is_active: true,
-          mtm_auto_enabled: isMtmAutoAdmin,
-          mtm_auto_enabled_at: isMtmAutoAdmin ? new Date().toISOString() : null,
-          mtm_auto_admin: isMtmAutoAdmin,
-          mtm_auto_requested: false,
-          mtm_auto_requested_at: null,
           created_at: user.created_at,
           updated_at: new Date().toISOString(),
         }
@@ -173,8 +165,6 @@ export async function POST(request: NextRequest) {
       const patch: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
       }
-      const isMtmAutoAdmin = !!(nextEmail && MTM_AUTO_ADMIN_EMAILS.has(nextEmail.toLowerCase()))
-
       if (nextEmail && nextEmail !== existing.email) patch.email = nextEmail
       if (userType !== existing.user_type) patch.user_type = userType
       if (fullName && fullName !== (existing.full_name || "")) patch.full_name = fullName
@@ -182,19 +172,6 @@ export async function POST(request: NextRequest) {
         patch.member_category = memberCat
       }
       if (avatarUrl && avatarUrl !== (existing.avatar_url || "")) patch.avatar_url = avatarUrl
-      if (isMtmAutoAdmin) {
-        if (!existing.mtm_auto_enabled) {
-          patch.mtm_auto_enabled = true
-          patch.mtm_auto_enabled_at = new Date().toISOString()
-        }
-        if (!existing.mtm_auto_admin) {
-          patch.mtm_auto_admin = true
-        }
-        if (existing.mtm_auto_requested) {
-          patch.mtm_auto_requested = false
-          patch.mtm_auto_requested_at = null
-        }
-      }
 
       const dataKeys = Object.keys(patch).filter((k) => k !== "updated_at")
       if (dataKeys.length === 0) {

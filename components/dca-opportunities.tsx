@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -41,8 +41,16 @@ interface DCAOpportunity {
   stop_loss: number
 }
 
-export default function DCAOpportunities() {
-  const [loading, setLoading] = useState(true)
+type DCAOpportunitiesProps = {
+  /**
+   * Incrementado em /portfolios após cada sync completo (MTM + CoinGecko + IA TP/SL).
+   * A análise DCA só corre quando >= 1, para um único lote alinhado com os preços da página.
+   */
+  analysisSeq?: number
+}
+
+export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesProps) {
+  const [loading, setLoading] = useState(false)
   const [opportunities, setOpportunities] = useState<DCAOpportunity[]>([])
   const [categorized, setCategorized] = useState<any>(null)
   const [summary, setSummary] = useState<any>(null)
@@ -56,17 +64,10 @@ export default function DCAOpportunities() {
   const totalSlides = Math.max(1, Math.ceil(opportunities.length / CARDS_PER_SLIDE))
 
   useEffect(() => {
-    loadOpportunities()
-
-    const interval = setInterval(loadOpportunities, 120000)
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
     setCurrentSlide(0)
   }, [opportunities.length])
 
-  const loadOpportunities = async () => {
+  const loadOpportunities = useCallback(async () => {
     try {
       console.log('📊 [DCA OPPORTUNITIES] Carregando...')
       setLoading(true)
@@ -155,7 +156,14 @@ export default function DCAOpportunities() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (analysisSeq < 1) return
+    void loadOpportunities()
+    const interval = setInterval(() => void loadOpportunities(), 120000)
+    return () => clearInterval(interval)
+  }, [analysisSeq, loadOpportunities])
 
   const createAlert = async (symbol: string, type: string, value: number, opportunityName?: string) => {
     try {
@@ -256,6 +264,18 @@ export default function DCAOpportunities() {
       style: 'currency',
       currency: 'EUR'
     }).format(value)
+  }
+
+  if (analysisSeq < 1) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-16 px-4 text-center">
+        <Loader2 className="h-10 w-10 animate-spin text-[#D2A63C]" />
+        <p className="max-w-md text-sm text-gray-400">
+          A sincronizar o portefólio MTM, preços CoinGecko e níveis de IA (TP/SL). A análise DCA arranca
+          automaticamente com esse lote — um resultado único por ativo.
+        </p>
+      </div>
+    )
   }
 
   if (loading && opportunities.length === 0) {

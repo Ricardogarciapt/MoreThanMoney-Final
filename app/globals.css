@@ -50,8 +50,30 @@
 }
 
 /* Altura reservada à tab bar fixa da app-mobile (Dialog em portal usa variável no body) */
-body.app-mobile-route {
+body.app-mobile-route,
+body.mobile-route {
   --app-mobile-footer-tabs-height: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+.app-mobile-container,
+.mobile-app-container {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+}
+
+.app-mobile-page,
+.app-mobile-scroll-area {
+  touch-action: manipulation;
+  overscroll-behavior-x: none;
 }
 
 /* Custom animations */
@@ -533,6 +555,67 @@ html {
   left: 0;
   width: 100%;
   height: 100%;
+  border: none;
+}
+
+/* TradingView Advanced Chart (tv.js) — iframe deve receber clique direito e atalhos */
+.tv-widget-mount,
+.tv-widget-mount #tradingview_widget,
+.tv-widget-mount #tradingview_widget iframe,
+.tv-widget-mount [id^="tradingview_"] iframe,
+.tv-chart-stage .tv-chart-mount,
+.tv-chart-stage .tv-chart-mount > div,
+.tv-chart-stage iframe {
+  pointer-events: auto !important;
+}
+
+/* Scanner-access: não cortar a toolbar nativa (layout__area--top ~38px) */
+/* Scanner-access: copiar/colar e seleção de texto na página */
+body.scanner-access-route {
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: auto;
+}
+
+body.scanner-access-route input,
+body.scanner-access-route textarea,
+body.scanner-access-route [contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.tv-scanner-access.tv-widget-mount {
+  overflow: visible;
+}
+
+.tv-chart-stage {
+  position: relative;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.tv-scanner-access .tv-chart-stage .tv-chart-mount,
+.tv-scanner-access .tv-chart-stage .tv-chart-mount > div,
+.tv-scanner-access .tv-chart-stage .tv-chart-mount > div > div {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+}
+
+.tv-scanner-access .tv-chart-stage iframe {
+  min-height: 800px !important;
+}
+
+.scanner-access-page .tv-chart-stage,
+.scanner-access-page .tv-scanner-access {
+  overflow: visible !important;
+}
+
+.tv-chart-stage iframe {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
   border: none;
 }
 

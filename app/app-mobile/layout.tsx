@@ -1,26 +1,29 @@
-"use client"
+import type { Metadata, Viewport } from "next"
+import AppMobileShell from "@/components/mobile/app-mobile-shell"
 
-import { ReactNode, useEffect } from "react"
-import { usePathname } from "next/navigation"
+export const metadata: Metadata = {
+  title: "MTM App",
+  description: "MoreThanMoney — app smartphone",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "MTM App",
+  },
+}
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#111827",
+}
 
 export default function AppMobileLayout({
   children,
 }: {
-  children: ReactNode
+  children: React.ReactNode
 }) {
-  const pathname = usePathname()
-
-  useEffect(() => {
-    if (pathname?.startsWith("/app-mobile")) {
-      document.body.classList.add("app-mobile-route")
-    } else {
-      document.body.classList.remove("app-mobile-route")
-    }
-
-    return () => {
-      document.body.classList.remove("app-mobile-route")
-    }
-  }, [pathname])
-
-  return <div className="app-mobile-container">{children}</div>
+  return <AppMobileShell>{children}</AppMobileShell>
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -77,14 +77,9 @@ export default function PortfoliosPage() {
     classification: string
     labelPt: string
   } | null>(null)
-  
-  // useRef para manter referência estável dos assets
-  const cryptoAssetsRef = useRef<AssetWithPrice[]>([])
-  
-  // Atualizar ref sempre que cryptoAssets mudar
-  useEffect(() => {
-    cryptoAssetsRef.current = cryptoAssets
-  }, [cryptoAssets])
+
+  /** Incrementa após cada `loadPortfolioData` (preços + IA TP/SL) para a análise DCA correr uma vez com dados alinhados. */
+  const [analysisSeq, setAnalysisSeq] = useState(0)
 
   useEffect(() => {
     setMounted(true)
@@ -138,33 +133,29 @@ export default function PortfoliosPage() {
         setDataSource(result.source || 'Dados Locais')
         console.log('✅ [PORTFOLIO] Fonte de dados:', result.source)
         
-        // Processar crypto PRIMEIRO (sem TP/SL) para exibir dados rapidamente
+        // Crypto: CoinGecko + IA TP/SL num único ciclo (uma atualização de estado, sem fases)
         if (result.data.crypto) {
           const cryptoAssetsFromApi = Array.isArray(result.data.crypto.assets) ? result.data.crypto.assets : []
           console.log('💰 [PORTFOLIO] Processando crypto assets...')
           console.log('📊 [PORTFOLIO] Assets recebidos da API:', cryptoAssetsFromApi.length)
-          console.log('📊 [PORTFOLIO] Primeiro asset COMPLETO:', JSON.stringify(cryptoAssetsFromApi[0], null, 2))
-          console.log('📊 [PORTFOLIO] current_price do primeiro:', cryptoAssetsFromApi[0]?.current_price)
-          
-          const assetsBase = cryptoAssetsFromApi.map((asset: any) => {
-            const originalAsset = cryptoPortfolio.find(c => c.symbol === asset.symbol)
-            
-            // Calcular performance real
+
+          const assetsBase: AssetWithPrice[] = cryptoAssetsFromApi.map((asset: any) => {
+            const originalAsset = cryptoPortfolio.find((c) => c.symbol === asset.symbol)
+
             let realPerformance = 0
             if (asset.current_price) {
-              const entryPrice = asset.entry_price || asset.current_price * 0.70
+              const entryPrice = asset.entry_price || asset.current_price * 0.7
               realPerformance = ((asset.current_price - entryPrice) / entryPrice) * 100
             }
-            
-            // TP/SL fallback (serão atualizados depois pela IA)
+
             const tpslData = {
               tp1: asset.current_price ? asset.current_price * 1.5 : undefined,
               tp2: asset.current_price ? asset.current_price * 2.0 : undefined,
               tp3: asset.current_price ? asset.current_price * 3.0 : undefined,
               stop_loss: asset.current_price ? asset.current_price * 0.85 : undefined,
-              ai_validated: false
+              ai_validated: false,
             }
-            
+
             return {
               symbol: asset.symbol,
               name: asset.criptomoeda,
@@ -179,44 +170,30 @@ export default function PortfoliosPage() {
               recommended_monthly: asset.reforco_mensal,
               potential_growth: originalAsset?.potencial_crescimento_percent || 0,
               allocation_percent: originalAsset?.percentual || 0,
-              ...tpslData
+              ...tpslData,
             }
           })
-          
-          console.log(`📊 [PORTFOLIO] Definindo ${assetsBase.length} assets crypto no estado`)
-          setCryptoAssets(assetsBase)
-          console.log(`✅ [PORTFOLIO] setCryptoAssets chamado com ${assetsBase.length} assets`)
-          
-          // Buscar preços atualizados via CoinGecko IMEDIATAMENTE (sem setTimeout)
-          console.log('💰 [PORTFOLIO] Buscando preços atualizados via CoinGecko...')
-          ;(async () => {
-            try {
-              const symbols = assetsBase.map(a => a.symbol).join(',')
-              const pricesResponse = await fetch(`/api/portfolio/prices-coingecko?symbols=${symbols}`)
-              
+
+          let merged: AssetWithPrice[] = assetsBase
+
+          console.log('💰 [PORTFOLIO] CoinGecko (lote) + IA TP/SL em sequência…')
+          try {
+            const symList = [...new Set(assetsBase.map((a) => a.symbol).filter(Boolean))].join(',')
+            if (symList) {
+              const pricesResponse = await fetch(`/api/portfolio/prices-coingecko?symbols=${symList}`)
               if (pricesResponse.ok) {
                 const pricesData = await pricesResponse.json()
-                console.log('✅ [PORTFOLIO] Preços CoinGecko:', pricesData)
-                console.log('🔍 [PORTFOLIO] Keys no pricesData.prices:', Object.keys(pricesData.prices || {}))
-                console.log('🔍 [PORTFOLIO] Símbolos dos assets:', assetsBase.map(a => a.symbol))
-                
                 if (pricesData.success && pricesData.prices) {
-                  const assetsWithPrices = assetsBase.map((asset) => {
-                    const newPrice = pricesData.prices[asset.symbol]
+                  merged = assetsBase.map((asset) => {
+                    const newPrice = pricesData.prices[asset.symbol] as number | undefined
                     const dailyChange = pricesData.changes_24h?.[asset.symbol]
-                    console.log(`🔍 [PORTFOLIO] Buscando preço para ${asset.symbol}: ${newPrice}`)
                     if (newPrice) {
                       const entryPrice = asset.entry_price || newPrice * 0.7
                       const vsEntryPercent = ((newPrice - entryPrice) / entryPrice) * 100
                       const has24h =
-                        typeof dailyChange === "number" &&
+                        typeof dailyChange === 'number' &&
                         Number.isFinite(dailyChange) &&
                         !Number.isNaN(dailyChange)
-
-                      console.log(
-                        `💰 [PORTFOLIO] ${asset.symbol}: $${newPrice} (24h CG: ${has24h ? dailyChange.toFixed(2) : "N/D"}%)`
-                      )
-
                       return {
                         ...asset,
                         current_price: newPrice,
@@ -228,91 +205,64 @@ export default function PortfoliosPage() {
                         tp2: newPrice * 2.0,
                         tp3: newPrice * 3.0,
                         stop_loss: newPrice * 0.85,
+                        ai_validated: false,
                       }
                     }
                     return { ...asset, change_24h_percent: null }
                   })
-
-                  console.log(
-                    `📊 [PORTFOLIO] Assets com preços atualizados:`,
-                    assetsWithPrices.filter((a) => a.current_price).length
-                  )
-                  setCryptoAssets([...assetsWithPrices])
-
-                  const with24h = assetsWithPrices.filter(
-                    (a) => a.change_24h_percent !== null && a.change_24h_percent !== undefined
-                  )
-                  const total = assetsWithPrices.filter((a) => a.current_price).length
-                  if (with24h.length > 0) {
-                    const avg24h =
-                      with24h.reduce((sum, a) => sum + (a.change_24h_percent as number), 0) / with24h.length
-                    setCrypto24hAvgPercent(avg24h)
-                    setCrypto24hCoverage({ ok: with24h.length, total })
-                  } else {
-                    setCrypto24hAvgPercent(null)
-                    setCrypto24hCoverage(total > 0 ? { ok: 0, total } : null)
-                  }
-
-                  console.log(`✅ [PORTFOLIO] Preços atualizados; 24h válidos: ${with24h.length}/${total}`)
                 }
               }
-            } catch (error) {
-              console.error('❌ [PORTFOLIO] Erro ao buscar preços CoinGecko:', error)
             }
-          })()
-          
-          // Buscar TP/SL por IA em BACKGROUND (usando useRef para evitar closure bugs)
-          setTimeout(async () => {
-            console.log('🤖 [PORTFOLIO] Buscando TP/SL validados por IA...')
-            
-            // Usar REF para pegar o estado MAIS RECENTE (evita closure bug)
-            const currentAssets = cryptoAssetsRef.current
-            console.log(`🔍 [PORTFOLIO AI] Assets da ref: ${currentAssets.length}`)
-            
-            if (currentAssets.length === 0) {
-              console.log('⚠️ [PORTFOLIO AI] Ref vazia, abortando fetch TP/SL')
-              return
-            }
-            
-            const assetsWithAI = await Promise.all(
-              currentAssets.map(async (asset) => {
-                if (!asset.current_price) return asset
-                
-                try {
-                  const aiResponse = await fetch(
-                    `/api/portfolio/ai-tp-sl?symbol=${asset.symbol}&entryPrice=${asset.entry_price || asset.current_price}`
-                  )
-                  
-                  if (aiResponse.ok) {
-                    const aiData = await aiResponse.json()
-                    if (aiData.success && aiData.ai_validated) {
-                      console.log(`✅ [PORTFOLIO AI] ${asset.symbol}`)
-                      return {
-                        ...asset,
-                        tp1: aiData.take_profit_levels?.tp1?.price,
-                        tp2: aiData.take_profit_levels?.tp2?.price,
-                        tp3: aiData.take_profit_levels?.tp3?.price,
-                        stop_loss: aiData.stop_loss?.price,
-                        ai_validated: true
-                      }
+          } catch (error) {
+            console.error('❌ [PORTFOLIO] Erro ao buscar preços CoinGecko:', error)
+          }
+
+          const with24h = merged.filter(
+            (a) => a.change_24h_percent !== null && a.change_24h_percent !== undefined
+          )
+          const totalWithPrice = merged.filter((a) => a.current_price).length
+          if (with24h.length > 0) {
+            const avg24h =
+              with24h.reduce((sum, a) => sum + (a.change_24h_percent as number), 0) / with24h.length
+            setCrypto24hAvgPercent(avg24h)
+            setCrypto24hCoverage({ ok: with24h.length, total: totalWithPrice })
+          } else {
+            setCrypto24hAvgPercent(null)
+            setCrypto24hCoverage(totalWithPrice > 0 ? { ok: 0, total: totalWithPrice } : null)
+          }
+
+          console.log('🤖 [PORTFOLIO] IA TP/SL (paralelo por ativo)…')
+          const withAI = await Promise.all(
+            merged.map(async (asset) => {
+              if (!asset.current_price) return asset
+              try {
+                const aiResponse = await fetch(
+                  `/api/portfolio/ai-tp-sl?symbol=${encodeURIComponent(asset.symbol)}&entryPrice=${asset.entry_price || asset.current_price}`
+                )
+                if (aiResponse.ok) {
+                  const aiData = await aiResponse.json()
+                  if (aiData.success && aiData.ai_validated) {
+                    return {
+                      ...asset,
+                      tp1: aiData.take_profit_levels?.tp1?.price,
+                      tp2: aiData.take_profit_levels?.tp2?.price,
+                      tp3: aiData.take_profit_levels?.tp3?.price,
+                      stop_loss: aiData.stop_loss?.price,
+                      ai_validated: true,
                     }
                   }
-                } catch (error) {
-                  console.log(`⚠️ [PORTFOLIO AI] Fallback: ${asset.symbol}`)
                 }
-                
-                return asset
-              })
-            )
-            
-            console.log(`🤖 [PORTFOLIO AI] Completado: ${assetsWithAI.filter(a => a.ai_validated).length}/${assetsWithAI.length} validados`)
-            setCryptoAssets(assetsWithAI)
-          }, 2000) // 2 segundos após CoinGecko
+              } catch {
+                console.log(`⚠️ [PORTFOLIO AI] Fallback: ${asset.symbol}`)
+              }
+              return asset
+            })
+          )
 
-          console.log("💰 [PORTFOLIO] Crypto processado:", {
-            total_assets: assetsBase.length,
-            aguardando_coin_gecko_24h: true,
-          })
+          console.log(
+            `🤖 [PORTFOLIO AI] Concluído: ${withAI.filter((a) => a.ai_validated).length}/${withAI.length} validados; estado único.`
+          )
+          setCryptoAssets(withAI)
         }
 
         // Processar ETF
@@ -367,6 +317,7 @@ export default function PortfoliosPage() {
       console.error('❌ [PORTFOLIO] Erro ao carregar portfolio:', error)
     } finally {
       setLoading(false)
+      setAnalysisSeq((n) => n + 1)
     }
   }
 
@@ -607,7 +558,7 @@ export default function PortfoliosPage() {
 
             {/* Tab: Análise DCA */}
             <TabsContent value="dca" className="mt-6">
-              <DCAOpportunities />
+              <DCAOpportunities analysisSeq={analysisSeq} />
             </TabsContent>
 
             {/* Tab: Crypto Assets */}

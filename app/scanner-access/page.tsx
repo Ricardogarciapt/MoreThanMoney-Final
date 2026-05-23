@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, type RefObject } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,11 +11,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import TradingViewWidget, { TradingViewWidgetRef } from "@/components/trading-view-widget"
+import type { TradingViewWidgetRef } from "@/components/trading-view-widget"
 import ProtectedPage from "@/components/protected-page"
 import PositionCalculator from "@/components/position-calculator"
 import TradingJournalCalendar from "@/components/trading-journal-calendar"
 import TradingJournal from "@/components/trading-journal"
+import ScannerMobile from "@/components/mobile/scanner-mobile"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { 
@@ -44,8 +46,6 @@ import {
   X,
   BookOpen,
   Download,
-  Share2,
-  MessageCircle
 } from "lucide-react"
 
 interface ChecklistItem {
@@ -65,6 +65,7 @@ interface ChecklistSection {
 
 export default function ScannerAccessPage() {
   const [mounted, setMounted] = useState(false)
+  const isMobile = useIsMobile()
   const { toast } = useToast()
   const { user, isAdmin } = useAuth()
   const tradingViewWidgetRef = useRef<TradingViewWidgetRef>(null)
@@ -74,10 +75,7 @@ export default function ScannerAccessPage() {
   const [loadingPlan, setLoadingPlan] = useState(false)
   const [exportingPlan, setExportingPlan] = useState(false)
   const [showScreener, setShowScreener] = useState(false)
-  const [showShareToGroup, setShowShareToGroup] = useState(false)
-  const [selectedGroup, setSelectedGroup] = useState<string>("")
-  const [sharingChart, setSharingChart] = useState(false)
-  
+
   // Trading Plan Form State
   const [tradingPlan, setTradingPlan] = useState({
     plan_name: 'Meu Plano de Trading',
@@ -493,9 +491,17 @@ export default function ScannerAccessPage() {
     )
   }
 
+  if (isMobile) {
+    return (
+      <ProtectedPage redirectPath="/login?redirect=/scanner-access" loadingMessage="A verificar acesso ao scanner...">
+        <ScannerMobile integration="scanner-access" showScreener={showScreener} />
+      </ProtectedPage>
+    )
+  }
+
   return (
     <ProtectedPage redirectPath="/login?redirect=/scanner-access" loadingMessage="A verificar acesso ao scanner...">
-      <main className="min-h-screen bg-black text-white">
+      <main className="scanner-access-page min-h-screen bg-black text-white">
         {/* Breadcrumb */}
         <nav className="bg-black/50 border-b border-gold-500/10">
           <div className="container mx-auto px-4 py-2">
@@ -527,7 +533,7 @@ export default function ScannerAccessPage() {
 
         {/* TradingView Widget + Screener - Full Width */}
         <div className="w-full px-2 md:px-4 mb-8 md:mb-12">
-          <div className="max-w-[98%] mx-auto bg-gradient-to-br from-[#BB8525]/20 to-[#D2A63C]/10 rounded-lg border border-[#D2A63C]/30 p-3 md:p-6 backdrop-blur-sm hover:border-[#F3F3E6]/50 transition-all duration-300">
+          <div className="max-w-[98%] mx-auto overflow-visible bg-gradient-to-br from-[#BB8525]/20 to-[#D2A63C]/10 rounded-lg border border-[#D2A63C]/30 p-3 md:p-6 backdrop-blur-sm hover:border-[#F3F3E6]/50 transition-all duration-300">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4 md:mb-6">
               <h2 className="text-lg md:text-2xl font-semibold text-[#F3F3E6] flex items-center">
                 <span className="mr-2">🔍</span>
@@ -548,7 +554,11 @@ export default function ScannerAccessPage() {
                 </Button>
               </div>
             </div>
-            <TradingViewWidget showScreener={showScreener} widgetRef={tradingViewWidgetRef} />
+            <ScannerMobile
+              integration="scanner-access"
+              showScreener={showScreener}
+              widgetRef={tradingViewWidgetRef as RefObject<TradingViewWidgetRef>}
+            />
           </div>
         </div>
 

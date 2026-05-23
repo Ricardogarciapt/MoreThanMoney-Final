@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/daily-dca-post",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/member-subscriptions",
+      "schedule": "0 3 * * *"
     }
   ]
 }

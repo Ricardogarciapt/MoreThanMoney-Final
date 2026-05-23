@@ -467,6 +467,24 @@ export default function IntegrationsManager({ setActiveTab }: IntegrationsManage
         </div>
       )}
 
+      <Card className="bg-[#D2A63C]/10 border-[#D2A63C]/30">
+        <CardContent className="p-6">
+          <h4 className="text-[#D2A63C] font-semibold mb-2">API de gestão — Agentes IA (Claude)</h4>
+          <p className="text-gray-300 text-sm mb-3">
+            Liga o Claude ou outras automações ao site via{" "}
+            <code className="text-xs bg-gray-800 px-1 rounded">/api/agent/v1</code>. Define{" "}
+            <code className="text-xs bg-gray-800 px-1 rounded">AGENT_SITE_API_KEY</code> na Vercel e
+            envia <code className="text-xs bg-gray-800 px-1 rounded">Authorization: Bearer …</code>.
+          </p>
+          <ul className="text-gray-400 text-xs space-y-1 list-disc list-inside">
+            <li>GET /api/agent/v1/health — estado (público)</li>
+            <li>GET /api/agent/v1 — manifesto de endpoints</li>
+            <li>GET /api/agent/v1/context — contexto do site para o agente</li>
+            <li>POST /api/agent/v1/ai/chat — chat com contexto de gestão</li>
+          </ul>
+        </CardContent>
+      </Card>
+
       {/* Info Box */}
       <Card className="bg-blue-500/10 border-blue-500/30">
         <CardContent className="p-6">

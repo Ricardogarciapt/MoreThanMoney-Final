@@ -1,7 +1,9 @@
+import { isSubscriptionActive, isSubscriptionCategory } from "@/lib/member-subscription"
+
 /**
  * Tipos de conta (apenas: Admin, VIP, Membro, Free Trial).
- * Na BD: trial = user_type "guest" + trial_expires_at; VIP = member_category "vip";
- * Membro = user_type "member" (e categorias legadas iq/skool/standard tratadas como membro).
+ * Na BD: trial = user_type "guest" + trial_expires_at; VIP = user_type ou member_category "vip";
+ * Membro IQ/Skool = subscrição 30 dias (subscription_expires_at + auto_renew).
  */
 
 /** Perfil alinhado com public.profiles */
@@ -19,6 +21,8 @@ export interface UserProfile {
   is_active?: boolean
   trial_expired?: boolean
   trial_expires_at?: string | null
+  subscription_expires_at?: string | null
+  subscription_auto_renew?: boolean | null
 }
 
 export type AccountKind = "admin" | "vip" | "member" | "trial" | "pending" | "blocked"
@@ -43,7 +47,7 @@ export function getAccountKind(profile: UserProfile | null): AccountKind {
     return "pending"
   }
 
-  if (profile.member_category === "vip") {
+  if (profile.user_type === "vip" || profile.member_category === "vip") {
     return "vip"
   }
 
@@ -55,7 +59,15 @@ export function getAccountKind(profile: UserProfile | null): AccountKind {
     return "blocked"
   }
 
-  // member, presentation, affiliate, etc. → membro standard
+  if (
+    profile.user_type === "member" &&
+    isSubscriptionCategory(profile.member_category) &&
+    !isSubscriptionActive(profile)
+  ) {
+    return "blocked"
+  }
+
+  // member, presentation, affiliate, etc. → membro
   return "member"
 }
 
@@ -158,6 +170,9 @@ export function getAccessDeniedMessage(profile: UserProfile | null, route: strin
   if (kind === "blocked") {
     if (profile.user_type === "guest" || profile.trial_expires_at) {
       return "O teu período de trial terminou. Contacta a equipa para continuar."
+    }
+    if (isSubscriptionCategory(profile.member_category)) {
+      return "A tua subscrição IQ/Skool expirou. Contacta a equipa para renovar."
     }
     return "Conta inativa. Contacta o suporte."
   }

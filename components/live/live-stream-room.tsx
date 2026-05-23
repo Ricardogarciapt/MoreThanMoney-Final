@@ -21,6 +21,8 @@ import { enterLiveFullscreen, useIsSmartphone } from "@/lib/live-player-viewport
 import { useLmsHlsVideo } from "@/hooks/use-lms-hls-video"
 import { usePictureInPictureSupported } from "@/hooks/use-picture-in-picture-supported"
 import { seekHlsByDelta } from "@/lib/live-hls-seek"
+import { useLmsViewerHeartbeat } from "@/hooks/use-lms-viewer-heartbeat"
+import { handleLiveChatEnterKey } from "@/lib/live-chat"
 
 interface Props {
   streamId: string
@@ -94,6 +96,8 @@ export default function LiveStreamRoom({ streamId }: Props) {
   // Para live, mostramos sempre HLS (minimizando latência e mantendo a reprodução atualizada).
   const useHls = Boolean(hlsUrl && (stream?.is_live || !stream?.playback_url))
   const isLive = Boolean(stream?.is_live)
+  useLmsViewerHeartbeat(streamId, Boolean(streamId && isLive))
+
   const iframePlaybackUrl = useMemo(() => {
     const raw = String(stream?.playback_url || "").trim()
     if (!raw) return ""
@@ -400,7 +404,8 @@ export default function LiveStreamRoom({ streamId }: Props) {
                 rows={3}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Mensagem no chat da live…"
+                onKeyDown={(e) => handleLiveChatEnterKey(e, send, { disabled: !canSend || sending })}
+                placeholder="Mensagem no chat da live… (Enter para enviar)"
               />
               <div className="flex flex-row gap-2 sm:flex-col sm:justify-end sm:w-[100px] shrink-0">
                 <EmojiChatPicker

@@ -1,5 +1,6 @@
 "use client"
 
+import { TV_STUDY_LEGEND_OVERRIDES } from "@/lib/trading-view-scanner-config"
 import { Fragment, useEffect, useRef, useState, useImperativeHandle } from "react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
@@ -23,6 +24,8 @@ import {
   Share2,
   MessageCircle,
   Loader2,
+  Copy,
+  Image,
 } from "lucide-react"
 import { exitDocumentFullscreen, getFullscreenElement, requestElementFullscreen } from "@/lib/browser-compat"
 import { Button } from "@/components/ui/button"
@@ -40,6 +43,13 @@ import {
 import ScannerScreener from "@/components/scanner-screener"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
+import ChartSocialShareDialog from "@/components/chart-social-share-dialog"
+import {
+  buildChartShareSnapshot,
+  captureChartScreenshot,
+  resolveChartShareUrl,
+} from "@/lib/chart-share-capture"
+import { extractChartShareTradeDraft, type ChartShareTradeDraft } from "@/lib/chart-share-trade"
 
 // Ordem explícita dos scanners (mantém a ordem dos botões)
 const scannerOrder = [
@@ -222,6 +232,7 @@ export interface TradingViewWidgetRef {
   getChart: () => any
   shareChart: () => Promise<string | null>
   captureChartImage: () => Promise<string | null>
+  extractTradeDraft: () => Promise<ChartShareTradeDraft>
 }
 
 export default function TradingViewWidget({
@@ -238,9 +249,13 @@ export default function TradingViewWidget({
   onThemeChange,
   onStudiesChange,
   widgetRef: externalWidgetRef,
+  scannerAccessMode = false,
+  shareDestination,
 }: {
   scannerType?: ScannerKey
   showScreener?: boolean
+  scannerAccessMode?: boolean
+  shareDestination?: "social" | "groups" | "both"
   externalSymbol?: string
   externalTimeframe?: string
   externalTheme?: "light" | "dark"
@@ -261,6 +276,11 @@ export default function TradingViewWidget({
   const [showShareToGroup, setShowShareToGroup] = useState(false)
   const [selectedGroup, setSelectedGroup] = useState<string>("")
   const [sharingChart, setSharingChart] = useState(false)
+  const [copyingImage, setCopyingImage] = useState(false)
+
+  const shareDest = shareDestination ?? (scannerAccessMode ? "social" : "both")
+  const canShareToSocial = shareDest === "social" || shareDest === "both"
+  const canShareToGroups = shareDest === "groups" || shareDest === "both"
   const [isAdmin, setIsAdmin] = useState(false)
   const [isVip, setIsVip] = useState(false)
   const [availableGroups, setAvailableGroups] = useState<Array<{ id: string; name: string }>>([])
@@ -278,13 +298,13 @@ export default function TradingViewWidget({
           let profile: { user_type?: string; membership_type?: string } | null = null
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('user_type, membership_type')
+            .select('user_type, membership_type, member_category')
             .eq('id', session.user.id)
             .maybeSingle()
           if (profileError) {
             const { data: fallback } = await supabase
               .from('profiles')
-              .select('user_type')
+              .select('user_type, member_category')
               .eq('id', session.user.id)
               .maybeSingle()
             profile = fallback ? { ...fallback, membership_type: undefined } : null
@@ -293,8 +313,10 @@ export default function TradingViewWidget({
           }
           if (profile) {
             setIsAdmin(profile.user_type === 'admin')
-            setIsVip(profile.membership_type === 'vip')
-            if (profile.user_type === 'admin' || profile.membership_type === 'vip') {
+            setIsVip(
+              profile.membership_type === 'vip' || (profile as { member_category?: string }).member_category === 'vip'
+            )
+            if ((profile.user_type === 'admin' || profile.membership_type === 'vip') && canShareToGroups) {
               loadAvailableGroups()
             }
           }
@@ -684,7 +706,8 @@ export default function TradingViewWidget({
 
     try {
       if (containerRef.current) {
-        containerRef.current.innerHTML = '<div id="tradingview_widget" style="height: 100%; width: 100%;"></div>'
+        containerRef.current.innerHTML =
+          '<div id="tradingview_widget" style="height:100%;width:100%;min-height:360px;position:absolute;inset:0;"></div>'
       }
 
       // Usar a abordagem simples que funcionava - todos os estudos no array studies
@@ -709,69 +732,21 @@ export default function TradingViewWidget({
         enable_publishing: true,
         allow_symbol_change: true,
         hide_side_toolbar: false,
+        hide_top_toolbar: false,
         hide_legend: false,
         withdateranges: true,
-        save_image: true, // Permite guardar/copiar imagem do gráfico
+        save_image: true,
         container_id: "tradingview_widget",
         studies: studiesToApply,
-        disabled_features: [
-          "header_widget_dom_node", 
-          "header_widget", 
-          "volume_force_overlay",
-          "create_volume_indicator_by_default",
-          "volumePaneSize",
-          "tick_volume",
-          // NÃO desabilitar context_menu, scanner-access ou outros botões nativos
-        ],
-        enabled_features: [
-          "study_on_study",
-          "save_chart_properties_to_local_storage",
-          "use_localstorage_for_settings",
-          "header_screenshot",
-          "show_chart_property_page",
-          "property_pages",
-          "context_menus", // Menu de contexto nativo (clique direito)
-          "control_bar", // Barra de controle
-          "timeframes_toolbar", // Toolbar de timeframes
-          "border_around_the_chart",
-          "header_chart_type", // Tipo de gráfico
-          "header_settings", // Configurações
-          "header_indicators", // Indicadores
-          "header_compare", // Comparar símbolos
-          "header_undo_redo", // Desfazer/Refazer
-          "header_fullscreen_button", // Botão fullscreen
-          "header_saveload", // Salvar/Carregar
-          "header_symbol_search", // Pesquisa de símbolos
-          "header_interval_dialog_button", // Botão de intervalo
-          "header_resolutions", // Resoluções
-          "left_toolbar", // Toolbar esquerda (desenhos)
-          "drawing_toolbar", // Toolbar de desenhos
-          "header_saveload_image", // Salvar imagem
-          "header_save_chart", // Salvar gráfico
-          "header_load_chart", // Carregar gráfico
-          "header_compare_symbols", // Comparar símbolos
-          "header_screenshot", // Screenshot
-          "header_widget", // Widget header (se necessário)
-        ],
+        /* scanner-access: sem enabled_features (whitelist) — toolbar nativa por defeito */
+        disabled_features: ["volume_force_overlay", "create_volume_indicator_by_default"],
         charts_storage_url: "https://saveload.tradingview.com",
         charts_storage_api_version: "1.1",
         client_id: "morethanmoney.pt",
         user_id: currentUserId || "public_user_id", // Usar ID do utilizador autenticado para guardar desenhos por utilizador
         loading_screen: { backgroundColor: theme === "dark" ? "#1E1E1E" : "#FFFFFF", foregroundColor: "#f9b208" },
         overrides: {
-          "mainSeriesProperties.showCountdown": true,
-          "scalesProperties.showSeriesLastValue": true,
-          // Esconder completamente legendas/valores dos estudos em todos os painéis
-          "scalesProperties.showStudyLastValue": false,
-          "paneProperties.legendProperties.showStudyTitles": false,
-          "paneProperties.legendProperties.showStudyArguments": false,
-          "paneProperties.legendProperties.showStudyValues": false,
-          "volumePaneSize": "hide",
-          // === PRICE SCALE ===
-          "scalesProperties.autoScale": true,               // Auto (fits data to screen)
-          "scalesProperties.lockPriceToBarRatio": false,    // Lock price to bar ratio
-          "scalesProperties.scaleSeriesOnly": true,         // Scale price chart only
-          "scalesProperties.invertScale": false,            // Invert scale
+          ...TV_STUDY_LEGEND_OVERRIDES,
         },
       }
 
@@ -799,6 +774,10 @@ export default function TradingViewWidget({
           try {
             const chart = widgetRef.current.chart && widgetRef.current.chart()
             if (chart) {
+              if (typeof chart.applyOverrides === "function") {
+                chart.applyOverrides(TV_STUDY_LEGEND_OVERRIDES)
+              }
+
               // Reset inicial (opcional)
               if (typeof chart.resetData === "function") {
                 chart.resetData()
@@ -908,116 +887,44 @@ export default function TradingViewWidget({
     loadTradingViewWidget()
   }, [selectedStudies, selectedSymbol, theme, favoriteTimeframe])
 
+  const resolveChartInstance = () => widgetRef.current?.chart?.() ?? null
+
+  const chartUrlFallback = {
+    symbol: selectedSymbol,
+    interval: favoriteTimeframe,
+    studies: selectedStudies.flatMap((key) => scannerStudies[key] || []),
+    theme,
+  }
+
   // Expor métodos via ref
   useImperativeHandle(externalWidgetRef, (): TradingViewWidgetRef => ({
     getWidget: () => widgetRef.current,
     getChart: () => widgetRef.current?.chart?.() || null,
     shareChart: async () => {
       try {
-        if (!widgetRef.current) return null
-        const chart = widgetRef.current.chart?.()
-        if (!chart) return null
-        
-        // TradingView nativo: usar método getChartUrl() que é o equivalente ao Alt+S
-        if (typeof chart.getChartUrl === 'function') {
-          try {
-            const url = await chart.getChartUrl()
-            if (url) return url
-          } catch (e) {
-            console.warn('getChartUrl falhou, tentando método alternativo:', e)
-          }
-        }
-        
-        // Método alternativo: usar createStudy() e depois getChartUrl
-        if (typeof chart.createStudy === 'function') {
-          try {
-            // Tentar obter URL através do método nativo de partilha
-            const widget = widgetRef.current
-            if (widget && typeof widget.getChartUrl === 'function') {
-              return await widget.getChartUrl()
-            }
-          } catch (e) {
-            console.warn('Método alternativo falhou:', e)
-          }
-        }
-        
-        // Fallback: construir URL manualmente com todos os parâmetros
-        const studies = selectedStudies.flatMap((key) => scannerStudies[key] || [])
-        const baseUrl = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(selectedSymbol)}&interval=${favoriteTimeframe}`
-        const studiesParam = studies.length > 0 ? `&studies=${studies.join(',')}` : ''
-        const themeParam = theme === 'dark' ? '&theme=dark' : '&theme=light'
-        return `${baseUrl}${studiesParam}${themeParam}`
+        return await resolveChartShareUrl(
+          widgetRef.current?.chart?.() ?? null,
+          widgetRef.current ?? null,
+          chartUrlFallback
+        )
       } catch (error) {
-        console.error('Erro ao partilhar gráfico:', error)
+        console.error("Erro ao obter URL do gráfico:", error)
         return null
       }
     },
     captureChartImage: async () => {
       try {
-        if (!widgetRef.current) return null
-        const chart = widgetRef.current.chart?.()
-        if (!chart) return null
-        
-        // TradingView nativo: usar takeScreenshot() que captura a imagem do gráfico
-        if (typeof chart.takeScreenshot === 'function') {
-          try {
-            const imageData = await chart.takeScreenshot()
-            // takeScreenshot pode retornar base64 ou blob
-            if (typeof imageData === 'string') {
-              // Se já é base64, retornar
-              if (imageData.startsWith('data:')) {
-                return imageData
-              }
-              // Se não tem prefixo, adicionar
-              return `data:image/png;base64,${imageData}`
-            }
-            // Se é blob, converter para base64
-            if (imageData instanceof Blob) {
-              return new Promise((resolve) => {
-                const reader = new FileReader()
-                reader.onloadend = () => resolve(reader.result as string)
-                reader.readAsDataURL(imageData)
-              })
-            }
-            return imageData
-          } catch (e) {
-            console.warn('takeScreenshot falhou, tentando método alternativo:', e)
-          }
-        }
-        
-        // Método alternativo: usar getImage()
-        if (typeof chart.getImage === 'function') {
-          try {
-            const imageData = await chart.getImage()
-            if (imageData) {
-              if (typeof imageData === 'string') {
-                return imageData.startsWith('data:') ? imageData : `data:image/png;base64,${imageData}`
-              }
-              return imageData
-            }
-          } catch (e) {
-            console.warn('getImage falhou:', e)
-          }
-        }
-        
-        // Fallback: capturar canvas do widget se disponível
-        if (containerRef.current) {
-          const canvas = containerRef.current.querySelector('canvas')
-          if (canvas) {
-            try {
-              return canvas.toDataURL('image/png')
-            } catch (e) {
-              console.warn('Canvas toDataURL falhou:', e)
-            }
-          }
-        }
-        
-        return null
+        return await captureChartScreenshot(
+          widgetRef.current?.chart?.() ?? null,
+          containerRef.current,
+          widgetRef.current
+        )
       } catch (error) {
-        console.error('Erro ao capturar imagem:', error)
+        console.error("Erro ao capturar imagem:", error)
         return null
       }
-    }
+    },
+    extractTradeDraft: async () => extractChartShareTradeDraft(resolveChartInstance(), selectedSymbol),
   }), [selectedSymbol, favoriteTimeframe, selectedStudies])
 
   // Blindagem: evita crash se selectedCategory vier inválido em runtime.
@@ -1034,7 +941,10 @@ export default function TradingViewWidget({
 
   return (
     <>
-    <div className="w-full relative bg-gray-900 border border-gold-500/30 rounded-lg overflow-hidden" style={{ aspectRatio: "16/9" }}>
+    <div
+      className="w-full relative bg-gray-900 border border-gold-500/30 rounded-lg overflow-hidden flex flex-col"
+      style={{ aspectRatio: "16/9", minHeight: scannerAccessMode ? "520px" : "480px" }}
+    >
       {error && (
         <Alert className="absolute top-2 left-2 right-2 z-20 bg-red-500/20 border-red-500">
           <AlertCircle className="h-4 w-4 text-red-500" />
@@ -1042,8 +952,8 @@ export default function TradingViewWidget({
         </Alert>
       )}
 
-      {/* Barra de controle superior */}
-      <div className="absolute top-0 left-0 right-0 z-30 bg-gray-800/95 backdrop-blur-sm py-2 px-3 border-b border-gold-500/30">
+      {/* Barra MTM (fluxo normal — não sobrepõe o iframe do TradingView) */}
+      <div className="shrink-0 z-30 bg-gray-800/95 backdrop-blur-sm py-2 px-3 border-b border-gold-500/30">
         <div className="flex items-center justify-between gap-2">
           {/* Dropdown de Ativos */}
           <div className="relative">
@@ -1136,8 +1046,7 @@ export default function TradingViewWidget({
             )}
           </div>
 
-          {/* Botões de ação */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             {/* Configurações */}
             <Dialog open={showSettings} onOpenChange={setShowSettings}>
               <DialogTrigger asChild>
@@ -1235,6 +1144,52 @@ export default function TradingViewWidget({
               </DialogContent>
             </Dialog>
 
+            {/* Copiar imagem do gráfico (complementa menu nativo TV) */}
+            <Button
+              onClick={async () => {
+                setCopyingImage(true)
+                try {
+                  let chartImage: string | null = null
+                  if (externalWidgetRef?.current) {
+                    chartImage = await externalWidgetRef.current.captureChartImage()
+                  } else if (widgetRef.current) {
+                    const chart = widgetRef.current.chart?.()
+                    if (chart && typeof chart.takeScreenshot === "function") {
+                      const screenshot = await chart.takeScreenshot()
+                      if (typeof screenshot === "string") {
+                        chartImage = screenshot.startsWith("data:")
+                          ? screenshot
+                          : `data:image/png;base64,${screenshot}`
+                      }
+                    }
+                  }
+                  if (!chartImage) {
+                    alert("Não foi possível copiar a imagem. Usa o menu do gráfico (clique direito) → Copiar imagem.")
+                    return
+                  }
+                  if (navigator.clipboard?.write) {
+                    const res = await fetch(chartImage)
+                    const blob = await res.blob()
+                    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+                    alert("Imagem do gráfico copiada para a área de transferência.")
+                  } else {
+                    await navigator.clipboard.writeText(chartImage)
+                    alert("Imagem copiada (formato base64).")
+                  }
+                } catch (e) {
+                  console.error("Erro ao copiar imagem:", e)
+                  alert("Erro ao copiar imagem. Tenta pelo menu nativo do TradingView (clique direito no gráfico).")
+                } finally {
+                  setCopyingImage(false)
+                }
+              }}
+              disabled={copyingImage}
+              className="h-9 px-3 bg-gray-700/80 text-white hover:bg-gray-600/80"
+              title="Copiar imagem do gráfico"
+            >
+              {copyingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Image className="w-4 h-4" />}
+            </Button>
+
             {/* Partilhar link (Alt+S) - Funcionalidade nativa do TradingView */}
             <Button
               onClick={async () => {
@@ -1269,166 +1224,6 @@ export default function TradingViewWidget({
             >
               <Share2 className="w-4 h-4" />
             </Button>
-
-            {/* Partilhar nos grupos (VIP/Admin) */}
-            {(isAdmin || isVip) && (
-              <>
-                <Button
-                  onClick={() => setShowShareToGroup(true)}
-                  className="h-9 px-3 bg-gray-700/80 text-white hover:bg-gray-600/80"
-                  title="Partilhar gráfico nos grupos de chat"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                </Button>
-                <Dialog open={showShareToGroup} onOpenChange={setShowShareToGroup}>
-                  <DialogContent className="bg-gray-900 border-[#D2A63C]/20 text-white max-w-md">
-                    <DialogHeader>
-                      <DialogTitle className="text-[#D2A63C]">Partilhar Gráfico nos Grupos</DialogTitle>
-                      <DialogDescription className="text-gray-400">
-                        Escolhe o grupo onde queres partilhar o gráfico e a sua imagem
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="mt-4 space-y-3">
-                      <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-                        <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                          <SelectValue placeholder={loadingGroups ? "A carregar grupos..." : "Seleciona um grupo"} />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-800 border-gray-700">
-                          {loadingGroups ? (
-                            <SelectItem value="loading" disabled>A carregar...</SelectItem>
-                          ) : availableGroups.length > 0 ? (
-                            availableGroups.map((group) => (
-                              <SelectItem key={group.id} value={group.id}>
-                                {group.name}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <>
-                              <SelectItem value="trade-chat">Trade Chat</SelectItem>
-                              <SelectItem value="crypto-chat">Crypto Chat</SelectItem>
-                              <SelectItem value="social-chat">Social Chat</SelectItem>
-                            </>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={async () => {
-                            if (!selectedGroup) return
-                            
-                            setSharingChart(true)
-                            try {
-                              // Obter chart URL e imagem usando métodos nativos do TradingView
-                              let chartUrl: string | null = null
-                              let chartImage: string | null = null
-                              let symbol = selectedSymbol
-                              
-                              // Tentar usar ref externa primeiro
-                              if (externalWidgetRef?.current) {
-                                chartUrl = await externalWidgetRef.current.shareChart()
-                                chartImage = await externalWidgetRef.current.captureChartImage()
-                                const chart = externalWidgetRef.current.getChart()
-                                if (chart && typeof chart.symbol === 'function') {
-                                  symbol = chart.symbol() || selectedSymbol
-                                }
-                              } else {
-                                // Fallback: usar ref interna
-                                const chart = widgetRef.current?.chart?.()
-                                if (chart) {
-                                  // Obter URL
-                                  if (typeof chart.getChartUrl === 'function') {
-                                    chartUrl = await chart.getChartUrl()
-                                  }
-                                  
-                                  // Obter screenshot
-                                  if (typeof chart.takeScreenshot === 'function') {
-                                    const screenshot = await chart.takeScreenshot()
-                                    if (typeof screenshot === 'string') {
-                                      chartImage = screenshot.startsWith('data:') ? screenshot : `data:image/png;base64,${screenshot}`
-                                    } else if (screenshot instanceof Blob) {
-                                      chartImage = await new Promise((resolve) => {
-                                        const reader = new FileReader()
-                                        reader.onloadend = () => resolve(reader.result as string)
-                                        reader.readAsDataURL(screenshot)
-                                      })
-                                    }
-                                  }
-                                  
-                                  // Obter símbolo
-                                  if (typeof chart.symbol === 'function') {
-                                    symbol = chart.symbol() || selectedSymbol
-                                  }
-                                }
-                              }
-                              
-                              if (!chartImage) {
-                                alert('Não foi possível capturar a imagem do gráfico. A partilhar apenas o link.')
-                              }
-                              
-                              // Usar ID do grupo se disponível, senão usar nome
-                              const groupToShare = availableGroups.find(g => g.id === selectedGroup)
-                              const groupName = groupToShare ? groupToShare.name : selectedGroup
-                              
-                              const response = await fetch('/api/messages/share-chart', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                credentials: 'include',
-                                body: JSON.stringify({
-                                  groupId: selectedGroup, // Enviar ID do grupo
-                                  groupName: groupName, // Enviar nome também para compatibilidade
-                                  chartUrl: chartUrl || '',
-                                  chartImage: chartImage || '',
-                                  symbol: symbol
-                                })
-                              })
-                              
-                              if (response.ok) {
-                                const result = await response.json()
-                                alert('Gráfico partilhado com sucesso no grupo!')
-                                setShowShareToGroup(false)
-                                setSelectedGroup("")
-                              } else {
-                                const error = await response.json()
-                                alert(`Erro ao partilhar: ${error.error || 'Erro desconhecido'}`)
-                              }
-                            } catch (error) {
-                              console.error('Erro ao partilhar gráfico:', error)
-                              alert('Erro ao partilhar gráfico. Tenta novamente.')
-                            } finally {
-                              setSharingChart(false)
-                            }
-                          }}
-                          disabled={!selectedGroup || sharingChart}
-                          className="flex-1 bg-[#D2A63C] text-black hover:bg-[#BB8525]"
-                        >
-                          {sharingChart ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              A partilhar...
-                            </>
-                          ) : (
-                            <>
-                              <Share2 className="h-4 w-4 mr-2" />
-                              Partilhar
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            setShowShareToGroup(false)
-                            setSelectedGroup("")
-                          }}
-                          variant="outline"
-                          className="border-gray-700 text-gray-300 hover:bg-gray-800"
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </>
-            )}
 
             {/* Carregar gráfico */}
             <Dialog open={showLoadDialog} onOpenChange={setShowLoadDialog}>
@@ -1495,6 +1290,123 @@ export default function TradingViewWidget({
             >
               <Maximize2 className="w-4 h-4" />
             </Button>
+
+            {/* Partilhar no Social MTM ou grupos (VIP/Admin) */}
+            {(isAdmin || isVip) && (canShareToSocial || canShareToGroups) && (
+              <>
+                <Button
+                  onClick={() => setShowShareToGroup(true)}
+                  className="h-9 px-3 bg-gray-700/80 text-white hover:bg-gray-600/80"
+                  title={
+                    canShareToSocial
+                      ? "Partilhar gráfico no Social (app-mobile)"
+                      : "Partilhar gráfico num grupo"
+                  }
+                >
+                  <MessageCircle className="w-4 h-4" />
+                </Button>
+                {canShareToSocial && (
+                  <ChartSocialShareDialog
+                    open={showShareToGroup}
+                    onOpenChange={setShowShareToGroup}
+                    symbol={selectedSymbol}
+                    widgetLoaded={widgetLoaded}
+                    getChart={resolveChartInstance}
+                    getWidget={() => widgetRef.current}
+                    chartContainer={containerRef.current}
+                    urlFallback={chartUrlFallback}
+                    captureChartImage={async () =>
+                      captureChartScreenshot(
+                        widgetRef.current?.chart?.() ?? null,
+                        containerRef.current,
+                        widgetRef.current
+                      )
+                    }
+                  />
+                )}
+                {canShareToGroups && !canShareToSocial && (
+                  <Dialog
+                    open={showShareToGroup}
+                    onOpenChange={(open) => {
+                      setShowShareToGroup(open)
+                      if (!open) setSelectedGroup("")
+                    }}
+                  >
+                    <DialogContent className="bg-gray-900 border-[#D2A63C]/20 text-white max-w-md">
+                      <DialogHeader>
+                        <DialogTitle className="text-[#D2A63C]">Partilhar em grupo</DialogTitle>
+                        <DialogDescription className="text-gray-400">
+                          Seleciona o grupo de mensagens.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="mt-4 space-y-3">
+                        <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                          <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                            <SelectValue placeholder={loadingGroups ? "A carregar…" : "Grupo"} />
+                          </SelectTrigger>
+                          <SelectContent className="bg-gray-800 border-gray-700">
+                            {availableGroups.map((group) => (
+                              <SelectItem key={group.id} value={group.id}>
+                                {group.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          disabled={sharingChart || !selectedGroup}
+                          className="w-full bg-[#D2A63C] text-black"
+                          onClick={async () => {
+                            if (!selectedGroup) return
+                            setSharingChart(true)
+                            try {
+                              const snapshot = await buildChartShareSnapshot({
+                                chart: resolveChartInstance(),
+                                widget: widgetRef.current,
+                                container: containerRef.current,
+                                fallbackSymbol: selectedSymbol,
+                                urlFallback: chartUrlFallback,
+                              })
+                              const groupToShare = availableGroups.find((g) => g.id === selectedGroup)
+                              const response = await fetch("/api/messages/share-chart", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                credentials: "include",
+                                body: JSON.stringify({
+                                  groupId: selectedGroup,
+                                  groupName: groupToShare?.name ?? selectedGroup,
+                                  chartUrl: snapshot.chartUrl || "",
+                                  chartImage: snapshot.image || "",
+                                  symbol: snapshot.symbol,
+                                }),
+                              })
+                              const result = await response.json().catch(() => ({}))
+                              if (!response.ok) {
+                                alert(result.error || "Erro ao partilhar no grupo.")
+                                return
+                              }
+                              setShowShareToGroup(false)
+                              setSelectedGroup("")
+                              alert("Gráfico partilhado com sucesso!")
+                            } catch (e) {
+                              console.error(e)
+                              alert("Erro ao partilhar. Tenta novamente.")
+                            } finally {
+                              setSharingChart(false)
+                            }
+                          }}
+                        >
+                          {sharingChart ? (
+                            <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                          ) : (
+                            "Partilhar"
+                          )}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -1526,36 +1438,30 @@ export default function TradingViewWidget({
         </div>
       </div>
 
-      {/* Widget container */}
-      <div className="w-full h-full pt-28" style={{ visibility: widgetLoaded ? "visible" : "hidden" }}>
-        <div 
-          ref={containerRef} 
-          className="w-full h-full"
-          style={{ 
-            userSelect: 'auto', 
-            WebkitUserSelect: 'auto',
-            MozUserSelect: 'auto',
-            msUserSelect: 'auto'
-          }}
-          onContextMenu={(e) => {
-            // Permitir menu de contexto nativo do TradingView
-            // Não prevenir default - permite partilha e screenshot nativos
-            // O TradingView precisa do menu de contexto para funcionalidades como:
-            // - Partilhar gráfico (Alt+S)
-            // - Copiar imagem do gráfico
-            // - Exportar gráfico
+      {/* Área do widget TradingView (tv.js injeta iframe — eventos no iframe, não no wrapper) */}
+      <div className="relative flex-1 min-h-0 w-full tv-widget-mount">
+        <div
+          ref={containerRef}
+          className={`absolute inset-0 w-full h-full transition-opacity duration-200 ${
+            widgetLoaded ? "opacity-100" : "opacity-0"
+          }`}
+          style={{
+            userSelect: "auto",
+            WebkitUserSelect: "auto",
+            MozUserSelect: "auto",
+            msUserSelect: "auto",
+            pointerEvents: widgetLoaded ? "auto" : "none",
           }}
         />
-      </div>
-
-      {!widgetLoaded && !error && (
-        <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/70 z-10">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-amber-400 font-medium">A carregar TradingView...</p>
+        {!widgetLoaded && !error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-10">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-amber-400 font-medium">A carregar TradingView...</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
 
     {/* Screener / Heatmap opcional (desktop) */}

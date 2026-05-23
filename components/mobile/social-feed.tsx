@@ -14,6 +14,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import MentionInput from "./mention-input"
 import MentionText from "./mention-text"
+import RichPostText from "./rich-post-text"
+import PostLinkPreview from "./post-link-preview"
+import { getPrimaryUrlFromText } from "@/lib/url-utils"
+import type { LinkPreviewData } from "@/lib/link-preview-types"
 
 interface Post {
   id: string
@@ -27,6 +31,17 @@ interface Post {
   likes_count?: number
   comments_count?: number
   liked_by_user?: boolean
+  link_preview?: LinkPreviewData | null
+}
+
+function postHasMedia(post: Post): boolean {
+  const list =
+    post.media_urls && post.media_urls.length > 0
+      ? post.media_urls
+      : post.media_url
+        ? [post.media_url]
+        : []
+  return list.length > 0
 }
 
 interface StoryPreview {
@@ -45,7 +60,7 @@ const CATEGORIES = [
   { id: "social", label: "Social", icon: "🤝", color: "from-rose-500 to-red-500" },
 ]
 
-export default function SocialFeed() {
+export default function SocialFeed({ initialCategory }: { initialCategory?: string | null }) {
   const [mounted, setMounted] = useState(false)
   const [posts, setPosts] = useState<Post[]>([])
   const [newPost, setNewPost] = useState("")
@@ -80,6 +95,14 @@ export default function SocialFeed() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    if (!initialCategory) return
+    const valid = CATEGORIES.some((c) => c.id === initialCategory)
+    if (valid) {
+      setActiveCategory(initialCategory)
+    }
+  }, [initialCategory])
 
   useEffect(() => {
     if (!mounted) return
@@ -238,7 +261,14 @@ export default function SocialFeed() {
       let selectQuery = baseColumns
       
       // Verificar e adicionar colunas opcionais uma a uma (incluindo updated_at)
-      const optionalColumns = ["updated_at", "media_urls", "mentions", "likes_count", "comments_count"]
+      const optionalColumns = [
+        "updated_at",
+        "media_urls",
+        "mentions",
+        "likes_count",
+        "comments_count",
+        "link_preview",
+      ]
       
       for (const col of optionalColumns) {
         try {
@@ -676,6 +706,24 @@ export default function SocialFeed() {
         mentionedUserIds.push(match[2])
       }
 
+      let linkPreview: LinkPreviewData | null = null
+      if (mediaUrls.length === 0) {
+        const primaryUrl = getPrimaryUrlFromText(newPost)
+        if (primaryUrl) {
+          try {
+            const previewRes = await fetch(
+              `/api/link-preview?url=${encodeURIComponent(primaryUrl)}`
+            )
+            if (previewRes.ok) {
+              const previewData = await previewRes.json()
+              linkPreview = previewData.preview ?? null
+            }
+          } catch (e) {
+            console.warn("⚠️ [SOCIAL FEED] link preview ao publicar:", e)
+          }
+        }
+      }
+
       // Preparar dados para inserção (apenas colunas que existem)
       const postData: any = {
         user_id: session.user.id,
@@ -683,6 +731,7 @@ export default function SocialFeed() {
         content: newPost.trim(),
         category: selectedCategory || null,
         media_url: mediaUrl, // Backward compatibility - sempre presente
+        ...(linkPreview && { link_preview: linkPreview }),
       }
 
       // Tentar inserir com media_urls e mentions, mas tratar erro se colunas não existirem
@@ -1684,8 +1733,19 @@ export default function SocialFeed() {
 
                 {/* Content */}
                 <div className="text-gray-200 whitespace-pre-wrap leading-relaxed mb-3">
-                  <MentionText text={post.content} />
+                  <RichPostText text={post.content} />
                 </div>
+
+                {/* Pré-visualização de link (sem média — estilo WhatsApp) */}
+                {!postHasMedia(post) &&
+                  (getPrimaryUrlFromText(post.content) || post.link_preview) && (
+                    <div className="mb-3">
+                      <PostLinkPreview
+                        content={post.content}
+                        storedPreview={post.link_preview}
+                      />
+                    </div>
+                  )}
 
                 {/* Media Carousel */}
                 {(() => {

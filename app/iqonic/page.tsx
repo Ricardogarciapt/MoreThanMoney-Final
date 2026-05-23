@@ -14,7 +14,7 @@ export default function IQONICPage() {
     {
       name: "IQ Academy",
       icon: "🎓",
-      description: "Aceder à Academy",
+      description: "Forex, Crypto e Digital Marketing Academy",
       href: "https://iqonic.vip",
       image: "/images/iqonic/Acedemia IQ.png",
       gradient: "from-blue-900/40 via-mtm-primary/5 to-cyan-900/40",
@@ -290,9 +290,13 @@ export default function IQONICPage() {
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
               <em>O pack Basic foi descontinuado para focar em soluções de alta performance.</em>
             </p>
+            <p className="text-sm text-mtm-primary mt-3 max-w-3xl mx-auto">
+              Preços <strong className="text-white">Emerging</strong> (mercado Portugal).
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <h3 className="text-2xl font-bold text-white mb-6 text-center">Education Packs</h3>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
             {/* IQ PRO */}
             <div className="bg-gradient-to-br from-gray-900/80 to-gray-800/80 border-2 border-mtm-primary/30 rounded-2xl p-6 hover:border-mtm-primary/60 transition-all duration-300 hover:scale-105">
               <div className="text-center mb-6">
@@ -314,7 +318,7 @@ export default function IQONICPage() {
                 <ul className="space-y-2 text-sm text-gray-300">
                   <li className="flex items-start">
                     <span className="text-mtm-primary mr-2">✓</span>
-                    <span><strong className="text-blue-400">IQ Academy (IQA)</strong> - Todas as academias</span>
+                    <span><strong className="text-blue-400">IQ Academy</strong> — Forex, Crypto e Digital Marketing Academy</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-mtm-primary mr-2">✓</span>
@@ -364,11 +368,11 @@ export default function IQONICPage() {
                 <h3 className="text-2xl font-bold text-white mb-2">IQ PRIME</h3>
                 <div className="mb-4">
                   <div className="text-sm text-gray-400 mb-1">Ativação</div>
-                  <span className="text-3xl font-bold text-mtm-primary">$249.99</span>
+                  <span className="text-3xl font-bold text-mtm-primary">$199.99</span>
                 </div>
                 <div className="mb-2">
                   <div className="text-sm text-gray-400 mb-1">Mensal</div>
-                  <span className="text-2xl font-bold text-white">$174.99</span>
+                  <span className="text-2xl font-bold text-white">$164.99</span>
                 </div>
                 <div className="bg-mtm-primary/20 rounded-lg px-3 py-1 mt-3">
                   <span className="text-sm font-semibold text-mtm-primary">CV 100</span>
@@ -406,14 +410,14 @@ export default function IQONICPage() {
                 <h3 className="text-2xl font-bold text-white mb-2">IQ ELITE</h3>
                 <div className="mb-4">
                   <div className="text-sm text-gray-400 mb-1">Ativação</div>
-                  <span className="text-3xl font-bold text-purple-400">$299.99</span>
+                  <span className="text-3xl font-bold text-purple-400">$249.99</span>
                 </div>
                 <div className="mb-2">
                   <div className="text-sm text-gray-400 mb-1">Mensal</div>
-                  <span className="text-2xl font-bold text-white">$214.99</span>
+                  <span className="text-2xl font-bold text-white">$199.99</span>
                 </div>
                 <div className="bg-purple-500/20 rounded-lg px-3 py-1 mt-3">
-                  <span className="text-sm font-semibold text-purple-400">CV 115</span>
+                  <span className="text-sm font-semibold text-purple-400">CV 100</span>
                 </div>
               </div>
               <div className="mb-6">
@@ -421,11 +425,11 @@ export default function IQONICPage() {
                 <ul className="space-y-2 text-sm text-gray-300">
                   <li className="flex items-start">
                     <span className="text-purple-400 mr-2">✓</span>
-                    <span>Todo o ecossistema digital e educacional</span>
+                    <span>Tudo do IQ Prime</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-purple-400 mr-2">✓</span>
-                    <span><strong className="text-purple-400">IQ AUTO (Full Auto)</strong> - Mantém a conta alinhada com estratégias dos educadores de forma 100% automática em segundo plano</span>
+                    <span><strong className="text-purple-400">IQ AUTO</strong> — automação algorítmica (incluído, sem add-on)</span>
                   </li>
                 </ul>
               </div>
@@ -439,10 +443,64 @@ export default function IQONICPage() {
               </a>
             </div>
 
-            {/* IQ MAX LIFESTYLE */}
+          </div>
+
+          <h3 className="text-2xl font-bold text-white mb-6 text-center">Travel Packs</h3>
+          <div className="grid md:grid-cols-2 gap-6 mb-10">
+            <div className="bg-gradient-to-br from-teal-600/20 to-emerald-600/20 border-2 border-teal-500/50 rounded-2xl p-6 hover:border-teal-500/80 transition-all duration-300 hover:scale-105">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-white mb-2">IQ Escapes</h3>
+                <div className="mb-4">
+                  <div className="text-sm text-gray-400 mb-1">Ativação</div>
+                  <span className="text-3xl font-bold text-teal-400">$199.99</span>
+                </div>
+                <div className="mb-2">
+                  <div className="text-sm text-gray-400 mb-1">Mensal</div>
+                  <span className="text-2xl font-bold text-white">$99.99</span>
+                </div>
+                <div className="bg-teal-500/20 rounded-lg px-3 py-1 mt-3">
+                  <span className="text-sm font-semibold text-teal-400">CV 75/50</span>
+                </div>
+              </div>
+              <ul className="space-y-2 text-sm text-gray-300 mb-6">
+                <li className="flex items-start"><span className="text-teal-400 mr-2">✓</span><span>Portal de viagens online</span></li>
+                <li className="flex items-start"><span className="text-teal-400 mr-2">✓</span><span>Descontos shopping, Travel Dollars, Concierge</span></li>
+                <li className="flex items-start"><span className="text-teal-400 mr-2">✓</span><span>Group Trips</span></li>
+              </ul>
+              <a href="https://iqonic.life/morethanmoney" target="_blank" rel="noopener noreferrer" className="block w-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white font-bold text-center px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 text-sm">
+                Escolher IQ Escapes
+              </a>
+            </div>
+            <div className="bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border-2 border-cyan-500/50 rounded-2xl p-6 hover:border-cyan-500/80 transition-all duration-300 hover:scale-105">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-white mb-2">IQ Agent+</h3>
+                <div className="mb-4">
+                  <div className="text-sm text-gray-400 mb-1">Ativação</div>
+                  <span className="text-3xl font-bold text-cyan-400">$299.99</span>
+                </div>
+                <div className="mb-2">
+                  <div className="text-sm text-gray-400 mb-1">Mensal</div>
+                  <span className="text-2xl font-bold text-white">$139.99</span>
+                </div>
+                <div className="bg-cyan-500/20 rounded-lg px-3 py-1 mt-3">
+                  <span className="text-sm font-semibold text-cyan-400">CV 100/70</span>
+                </div>
+              </div>
+              <ul className="space-y-2 text-sm text-gray-300 mb-6">
+                <li className="flex items-start"><span className="text-cyan-400 mr-2">✓</span><span>IQ Agent + IQ Escapes</span></li>
+                <li className="flex items-start"><span className="text-cyan-400 mr-2">✓</span><span>Programa agente de viagens (US/CAN)</span></li>
+              </ul>
+              <a href="https://iqonic.life/morethanmoney" target="_blank" rel="noopener noreferrer" className="block w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-center px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 text-sm">
+                Escolher IQ Agent+
+              </a>
+            </div>
+          </div>
+
+          <h3 className="text-2xl font-bold text-white mb-6 text-center">Combo Pack</h3>
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
             <div className="bg-gradient-to-br from-amber-600/20 to-orange-600/20 border-2 border-amber-500/50 rounded-2xl p-6 hover:border-amber-500/80 transition-all duration-300 hover:scale-105">
               <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-white mb-2">IQ MAX LIFESTYLE</h3>
+                <h3 className="text-2xl font-bold text-white mb-2">IQ Max</h3>
                 <div className="mb-4">
                   <div className="text-sm text-gray-400 mb-1">Ativação</div>
                   <span className="text-3xl font-bold text-amber-400">$299.99</span>
@@ -452,44 +510,35 @@ export default function IQONICPage() {
                   <span className="text-2xl font-bold text-white">$199.99</span>
                 </div>
                 <div className="bg-amber-500/20 rounded-lg px-3 py-1 mt-3">
-                  <span className="text-sm font-semibold text-amber-400">CV 115</span>
+                  <span className="text-sm font-semibold text-amber-400">CV 100/100</span>
                 </div>
               </div>
-              <div className="mb-6">
-                <h4 className="text-sm font-semibold text-amber-400 mb-3 uppercase">Combo Lifestyle</h4>
-                <ul className="space-y-2 text-sm text-gray-300 mb-4">
-                  <li className="flex items-start">
-                    <span className="text-amber-400 mr-2">✓</span>
-                    <span>Todas as ferramentas do IQ Prime</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-amber-400 mr-2">✓</span>
-                    <span><strong className="text-amber-400">Add-on Atlas</strong> (MTM integrada)</span>
-                  </li>
-                </ul>
-                <h4 className="text-sm font-semibold text-amber-400 mb-2 uppercase">Benefícios Lifestyle</h4>
-                <ul className="space-y-2 text-sm text-gray-300">
-                  <li className="flex items-start">
-                    <span className="text-amber-400 mr-2">✓</span>
-                    <span>Portal de viagens VIP com preços de venda por grosso</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-amber-400 mr-2">✓</span>
-                    <span>Resorts, cruzeiros e hotéis</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-amber-400 mr-2">✓</span>
-                    <span>Viagens em grupo (IQONIC Escapes)</span>
-                  </li>
-                </ul>
+              <ul className="space-y-2 text-sm text-gray-300 mb-6">
+                <li className="flex items-start"><span className="text-amber-400 mr-2">✓</span><span>IQ Elite + IQ Escapes (solução completa)</span></li>
+                <li className="flex items-start"><span className="text-amber-400 mr-2">✓</span><span>IQ AUTO incluído (via IQ Elite)</span></li>
+              </ul>
+              <a href="https://iqonic.life/morethanmoney" target="_blank" rel="noopener noreferrer" className="block w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-center px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 text-sm">
+                Escolher IQ Max
+              </a>
+            </div>
+            <div className="bg-gradient-to-br from-orange-600/20 to-amber-600/20 border-2 border-orange-500/50 rounded-2xl p-6 hover:border-orange-500/80 transition-all duration-300 hover:scale-105">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-white mb-2">IQ Max Annual</h3>
+                <div className="mb-4">
+                  <div className="text-sm text-gray-400 mb-1">Ativação anual</div>
+                  <span className="text-3xl font-bold text-orange-400">$3.000</span>
+                </div>
+                <div className="bg-orange-500/20 rounded-lg px-3 py-1 mt-3">
+                  <span className="text-sm font-semibold text-orange-400">CV 125/mês</span>
+                </div>
               </div>
-              <a
-                href="https://iqonic.life/morethanmoney"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-center px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 text-sm"
-              >
-                Escolher LIFESTYLE
+              <ul className="space-y-2 text-sm text-gray-300 mb-6">
+                <li className="flex items-start"><span className="text-orange-400 mr-2">✓</span><span>IQ Max anual + 1 mês grátis</span></li>
+                <li className="flex items-start"><span className="text-orange-400 mr-2">✓</span><span>Global Vacation Voucher (~$1.600)</span></li>
+                <li className="flex items-start"><span className="text-orange-400 mr-2">✓</span><span>Até 2 cruzeiros/ano</span></li>
+              </ul>
+              <a href="https://iqonic.life/morethanmoney" target="_blank" rel="noopener noreferrer" className="block w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white font-bold text-center px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105 text-sm">
+                Escolher IQ Max Annual
               </a>
             </div>
           </div>
@@ -557,9 +606,8 @@ export default function IQONICPage() {
                 </p>
                 <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
                   <p className="text-sm text-gray-300">
-                    <span className="text-purple-400 font-semibold">Add-on IQ Auto:</span>{" "}
-                    <span className="text-white font-bold text-lg">$59.99</span>
-                    <span className="text-gray-400 text-sm ml-2">/mensal</span>
+                    <span className="text-purple-400 font-semibold">Incluído no IQ Elite e IQ Max</span>
+                    <span className="text-gray-400 text-sm block mt-1">Sem add-on — automação algorítmica no pack.</span>
                   </p>
                 </div>
               </div>
@@ -684,7 +732,7 @@ export default function IQONICPage() {
                 </div>
                 <div className="text-center p-3 bg-teal-600/10 rounded-lg border border-teal-500/20">
                   <div className="text-2xl mb-1">🌐</div>
-                  <div className="text-teal-400 text-xs font-semibold">1.9M+ Hotéis</div>
+                  <div className="text-teal-400 text-xs font-semibold">2M+ Hotéis</div>
                 </div>
                 <div className="text-center p-3 bg-teal-600/10 rounded-lg border border-teal-500/20">
                   <div className="text-2xl mb-1">🛡️</div>
@@ -699,7 +747,7 @@ export default function IQONICPage() {
                 </li>
                 <li className="flex items-start">
                   <span className="text-teal-400 mr-2">✓</span>
-                  <span>Acesso a mais de 1.9 milhões de hotéis e resorts globais</span>
+                  <span>Mais de 2 milhões de hotéis e resorts globais</span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-teal-400 mr-2">✓</span>
@@ -764,33 +812,6 @@ export default function IQONICPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* IQ Access Pass */}
-        <div className="max-w-4xl mx-auto mb-16">
-          <div className="bg-gradient-to-br from-green-600/20 to-emerald-600/20 border-2 border-green-500/50 rounded-2xl p-8 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Porta de Entrada: <span className="text-green-400">IQ Access Pass</span>
-            </h2>
-            <p className="text-xl text-gray-300 mb-6">
-              Experimenta a potência da Elite Pack com o nosso trial educativo de 7 dias.
-            </p>
-            <div className="mb-8">
-              <div className="text-5xl font-bold text-green-400 mb-2">$19.99</div>
-              <div className="text-gray-400">USD/EUR</div>
-              <div className="mt-4 bg-green-500/20 rounded-lg px-4 py-2 inline-block">
-                <span className="text-green-400 font-mono font-bold">Código: IQACCESSPASS</span>
-              </div>
-            </div>
-            <a
-              href="https://iqonic.life/morethanmoney"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold text-lg px-8 py-4 rounded-xl transition-all duration-300 hover:scale-105"
-            >
-              Experimentar Agora
-            </a>
           </div>
         </div>
 
@@ -883,7 +904,7 @@ export default function IQONICPage() {
               >
                 <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">📚</div>
                 <h4 className="text-xl font-semibold text-white mb-2">IQonic Academy</h4>
-                <p className="text-gray-400 text-center text-sm">Dá uma olhadela na plataforma de educação</p>
+                <p className="text-gray-400 text-center text-sm">Forex, Crypto e Digital Marketing Academy</p>
               </a>
               
               <a

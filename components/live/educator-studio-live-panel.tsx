@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { MessageCircle, MessageCircleOff, Volume2, Maximize2 } from "lucide-react"
+import EducatorLiveViewerBadge from "@/components/live/educator-live-viewer-badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import EmojiChatPicker from "@/components/live/emoji-chat-picker"
+import { handleLiveChatEnterKey } from "@/lib/live-chat"
 import { enterLiveFullscreen } from "@/lib/live-player-viewport"
 import { useLmsHlsVideo } from "@/hooks/use-lms-hls-video"
 
@@ -52,10 +54,17 @@ export default function EducatorStudioLivePanel({ streamId, title }: EducatorStu
 
   useEffect(() => {
     load()
-    const id = setInterval(load, 5000)
-    return () => clearInterval(id)
+    return () => undefined
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streamId])
+
+  useEffect(() => {
+    if (!streamId) return
+    const ms = stream?.is_live ? 3000 : 5000
+    const id = setInterval(load, ms)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streamId, stream?.is_live])
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -150,9 +159,15 @@ export default function EducatorStudioLivePanel({ streamId, title }: EducatorStu
               <CardTitle className="text-base text-[#D2A63C]">
                 {String(stream?.title || title || "Canal")}
               </CardTitle>
-              <p className="text-[11px] text-gray-500">
-                Pré-visualização (igual ao player público) • {isLive ? "ONLINE" : "OFFLINE"}
-              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="text-[11px] text-gray-500">
+                  Pré-visualização (igual ao player público) • {isLive ? "ONLINE" : "OFFLINE"}
+                </p>
+                <EducatorLiveViewerBadge
+                  isLive={isLive}
+                  count={typeof stream?.viewer_count === "number" ? stream.viewer_count : 0}
+                />
+              </div>
             </div>
             <Button
               type="button"
@@ -270,7 +285,8 @@ export default function EducatorStudioLivePanel({ streamId, title }: EducatorStu
                 rows={2}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Escreve no chat como educador…"
+                onKeyDown={(e) => handleLiveChatEnterKey(e, send, { disabled: !canSend || sending })}
+                placeholder="Escreve no chat como educador… (Enter para enviar)"
               />
               <div className="flex gap-2">
                 <EmojiChatPicker onPick={appendEmoji} className="h-9 flex-1 border-gray-600 text-gray-200" />

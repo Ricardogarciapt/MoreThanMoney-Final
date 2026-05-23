@@ -91,8 +91,29 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Headers específicos para admin (sem cache)
-  if (request.nextUrl.pathname.startsWith("/admin")) {
+  const ua = request.headers.get("user-agent") || ""
+  const isMobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)
+
+  if (isMobileUa) {
+    const educatorMatch = pathname.match(/^\/live\/([^/]+)$/)
+    if (educatorMatch?.[1]) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/app-mobile"
+      url.search = `tab=live&educator=${encodeURIComponent(educatorMatch[1])}`
+      return NextResponse.redirect(url)
+    }
+
+    const streamMatch = pathname.match(/^\/live-sessions\/([^/]+)$/)
+    if (streamMatch?.[1] && streamMatch[1] !== "studio") {
+      const url = request.nextUrl.clone()
+      url.pathname = "/app-mobile"
+      url.search = `tab=live&stream=${encodeURIComponent(streamMatch[1])}`
+      return NextResponse.redirect(url)
+    }
+  }
+
+  // Headers específicos para admin e dashboard-gestao (sem cache)
+  if (request.nextUrl.pathname.startsWith("/admin") || request.nextUrl.pathname.startsWith("/dashboard-gestao")) {
     response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
     response.headers.set("Pragma", "no-cache")
     response.headers.set("Expires", "0")

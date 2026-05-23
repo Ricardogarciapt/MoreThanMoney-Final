@@ -15,7 +15,7 @@ export default function ConditionalNavbarFooter({ children }: { children: React.
   // Rotas standalone: não renderizar navbar/footer global.
   // Importante: usar match exato ou subrota para evitar esconder páginas
   // que apenas começam com o mesmo prefixo (ex: /workshop).
-  const standalonePaths = ["/iqcharts2", "/charts-primeverse", "/app-mobile", "/work", "/tradingfloor", "/mtmauto"]
+  const standalonePaths = ["/iqcharts2", "/charts-primeverse", "/app-mobile", "/work", "/tradingfloor"]
   const isStandalonePage = standalonePaths.some(isExactOrChildPath)
 
   if (isStandalonePage) {

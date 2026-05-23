@@ -14,13 +14,13 @@ import {
   BarChart3,
   Loader2,
   Menu,
-  Rocket,
-  ExternalLink,
+  LayoutGrid,
   Video,
 } from "lucide-react"
 import MobileSidebar from "@/components/mobile/mobile-sidebar"
 import LiveSessionsMobile from "@/components/mobile/live-sessions-mobile"
 import MentorMobile from "@/components/mobile/mentor-mobile"
+import AppsMobile from "@/components/mobile/apps-mobile"
 import { useAuth } from "@/contexts/auth-context"
 
 function AppMobileContent() {
@@ -122,19 +122,39 @@ function AppMobileContent() {
 
   useEffect(() => {
     const tab = searchParams.get("tab")
-    if (tab && ["social", "portfolio", "scanner", "studio", "live", "mentor"].includes(tab)) {
+    if (tab === "studio") {
+      const app = searchParams.get("app")
+      const path = app
+        ? `/app-mobile?tab=apps&app=${app}`
+        : "/app-mobile?tab=apps"
+      router.replace(path, { scroll: false })
+      return
+    }
+    if (
+      tab &&
+      ["social", "portfolio", "scanner", "apps", "live", "mentor"].includes(tab)
+    ) {
       setActiveTab(tab)
     }
-  }, [searchParams])
+  }, [searchParams, router])
+
+  const socialCategory = searchParams.get("category")
 
   const handleTabChange = (tab: string) => {
-    setActiveTab(tab)
-    router.push(`/app-mobile?tab=${tab}`, { scroll: false })
+    const nextTab = tab === "studio" ? "apps" : tab
+    setActiveTab(nextTab)
+    const path =
+      nextTab === "apps"
+        ? "/app-mobile?tab=apps"
+        : `/app-mobile?tab=${nextTab}`
+    router.push(path, { scroll: false })
   }
+
+  const embeddedApp = searchParams.get("app")
 
   // Swipe para mudar tab — desativado no separador "Ao vivo" e em cima de &lt;video&gt;
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (activeTab === "live") return
+    if (activeTab === "live" || (activeTab === "apps" && embeddedApp)) return
 
     const target = e.target as HTMLElement
     if (target.closest("video")) return
@@ -150,7 +170,7 @@ function AppMobileContent() {
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (activeTab === "live") return
+    if (activeTab === "live" || (activeTab === "apps" && embeddedApp)) return
 
     const target = e.target as HTMLElement
     if (target.closest("video")) return
@@ -165,7 +185,7 @@ function AppMobileContent() {
   }
 
   const handleTouchEnd = () => {
-    if (activeTab === "live") {
+    if (activeTab === "live" || (activeTab === "apps" && embeddedApp)) {
       setTouchStart(0)
       setTouchEnd(0)
       return
@@ -177,7 +197,7 @@ function AppMobileContent() {
     const isLeftSwipe = distance > 50
     const isRightSwipe = distance < -50
 
-    const tabs = ['social', 'live', 'mentor', 'studio', 'portfolio', 'scanner']
+    const tabs = ['social', 'live', 'apps', 'portfolio', 'scanner']
     const currentIndex = tabs.indexOf(activeTab)
 
     if (isLeftSwipe && currentIndex < tabs.length - 1) {
@@ -279,11 +299,15 @@ function AppMobileContent() {
         >
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full min-h-[60vh]">
             <TabsContent value="social" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
-              <SocialFeed />
+              <SocialFeed initialCategory={socialCategory} />
             </TabsContent>
 
             <TabsContent value="live" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
-              <LiveSessionsMobile />
+              <LiveSessionsMobile
+                isActive={activeTab === "live"}
+                initialStreamId={searchParams.get("stream")}
+                initialEducatorId={searchParams.get("educator")}
+              />
             </TabsContent>
 
             <TabsContent value="portfolio" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
@@ -298,25 +322,8 @@ function AppMobileContent() {
               <ScannerMobile />
             </TabsContent>
 
-            <TabsContent value="studio" className="mt-0 data-[state=inactive]:hidden">
-              <div className="relative w-full bg-black">
-                <a
-                  href={STUDIO_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="absolute right-3 top-3 z-10 rounded-md border border-[#D2A63C]/40 bg-black/70 px-2 py-1 text-[11px] text-[#D2A63C] inline-flex items-center gap-1 backdrop-blur-sm hover:opacity-80"
-                >
-                  Abrir fora
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-                <iframe
-                  src={STUDIO_URL}
-                  title="MTM Studio"
-                  className="w-full bg-black"
-                  style={{ height: "calc(100dvh - 9.5rem)" }}
-                  loading="lazy"
-                />
-              </div>
+            <TabsContent value="apps" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
+              <AppsMobile />
             </TabsContent>
 
           </Tabs>
@@ -353,15 +360,15 @@ function AppMobileContent() {
           </button>
 
           <button
-            onClick={() => handleTabChange("studio")}
+            onClick={() => handleTabChange("apps")}
             className={`py-3 rounded-lg transition-all relative ${
-              activeTab === "studio"
+              activeTab === "apps"
                 ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
                 : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
             }`}
           >
-            <Rocket className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "studio" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[10px] font-medium leading-tight ${activeTab === "studio" ? "text-[#D2A63C]" : ""}`}>Studio</div>
+            <LayoutGrid className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "apps" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "apps" ? "text-[#D2A63C]" : ""}`}>Apps</div>
           </button>
 
           <button

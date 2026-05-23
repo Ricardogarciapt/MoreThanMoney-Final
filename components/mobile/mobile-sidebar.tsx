@@ -17,11 +17,10 @@ import {
   Zap,
   ChevronRight,
   UserCircle,
-  Rocket,
+  LayoutGrid,
   Video,
   Brain,
   Bell,
-  Copy,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -126,7 +125,7 @@ export default function MobileSidebar({
     { id: 'mentor', label: 'Mentor', icon: Brain, href: '/app-mobile?tab=mentor' },
     { id: 'portfolio', label: 'Portfólio', icon: Wallet, href: '/app-mobile?tab=portfolio' },
     { id: 'scanner', label: 'Scanner', icon: BarChart3, href: '/app-mobile?tab=scanner' },
-    { id: 'studio', label: 'MTM Studio', icon: Rocket, href: '/app-mobile?tab=studio' },
+    { id: 'apps', label: 'Apps', icon: LayoutGrid, href: '/app-mobile?tab=apps' },
   ]
 
 
@@ -278,19 +277,6 @@ export default function MobileSidebar({
                   )
                 })}
               </nav>
-              <button
-                type="button"
-                onClick={() => {
-                  router.push("/mtmauto")
-                  onClose()
-                }}
-                className="mt-3 w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all border border-gray-800 hover:border-[#D2A63C]/40"
-              >
-                <Copy className="w-5 h-5 text-[#D2A63C]" />
-                <span className="flex-1 text-left font-medium">MTM Auto</span>
-                <span className="text-[10px] text-gray-500 uppercase tracking-wide">Copy trading</span>
-                <ChevronRight className="w-4 h-4 text-gray-500" />
-              </button>
             </div>
 
             {/* Comunicação */}

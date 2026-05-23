@@ -25,7 +25,7 @@ export default function ProtectedPage({
   const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'unauthenticated'>('checking')
   
   // Rotas permitidas para utilizadores IQONIC
-  const iqonicAllowedRoutes = ['/app-mobile', '/scanner-access', '/portfolios', '/mtmauto']
+  const iqonicAllowedRoutes = ['/app-mobile', '/scanner-access', '/portfolios']
 
   useEffect(() => {
     // Verificação imediata: se já temos user válido, autorizar instantaneamente

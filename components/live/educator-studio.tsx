@@ -19,9 +19,12 @@ import {
   Settings2,
   Users,
   Youtube,
+  MessageSquare,
 } from "lucide-react"
+import EducatorFeedbacksList from "@/components/live/educator-feedbacks-list"
 import StreamKeyCard from "@/components/live/stream-key-card"
 import EducatorStudioLivePanel from "@/components/live/educator-studio-live-panel"
+import EducatorLiveViewerBadge from "@/components/live/educator-live-viewer-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { LMS_CATEGORY_OPTIONS } from "@/lib/lms-categories"
@@ -117,6 +120,13 @@ export default function EducatorStudio() {
   const liveCount = useMemo(() => streams.filter((s) => s.is_live).length, [streams])
   const liveStreams = useMemo(() => streams.filter((s) => s.is_live), [streams])
   const [studioPreviewStreamId, setStudioPreviewStreamId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!me?.educatorId) return
+    const ms = liveCount > 0 ? 3000 : 20000
+    const t = setInterval(() => loadStreams(me.educatorId), ms)
+    return () => clearInterval(t)
+  }, [me?.educatorId, liveCount])
 
   useEffect(() => {
     if (liveStreams.length === 0) {
@@ -590,7 +600,7 @@ export default function EducatorStudio() {
           </div>
 
           <Tabs defaultValue="channels" className="w-full space-y-4">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl border border-gray-800 bg-black/40 p-1 sm:inline-flex sm:w-auto sm:justify-start">
+            <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-xl border border-gray-800 bg-black/40 p-1 sm:inline-flex sm:w-auto sm:justify-start">
               <TabsTrigger
                 value="channels"
                 className="gap-2 rounded-lg px-4 py-2.5 text-sm data-[state=active]:border data-[state=active]:border-[#D2A63C]/35 data-[state=active]:bg-[#D2A63C]/12 data-[state=active]:text-[#D2A63C] data-[state=active]:shadow-none"
@@ -609,6 +619,13 @@ export default function EducatorStudio() {
               >
                 <PlusCircle className="h-4 w-4 shrink-0" />
                 Nova sala
+              </TabsTrigger>
+              <TabsTrigger
+                value="feedbacks"
+                className="gap-2 rounded-lg px-4 py-2.5 text-sm data-[state=active]:border data-[state=active]:border-[#D2A63C]/35 data-[state=active]:bg-[#D2A63C]/12 data-[state=active]:text-[#D2A63C] data-[state=active]:shadow-none"
+              >
+                <MessageSquare className="h-4 w-4 shrink-0" />
+                Feedbacks
               </TabsTrigger>
             </TabsList>
 
@@ -774,6 +791,14 @@ export default function EducatorStudio() {
               </CardContent>
             </Card>
           ))}
+            </TabsContent>
+
+            <TabsContent value="feedbacks" className="mt-0 outline-none">
+              {me?.educatorId ? (
+                <EducatorFeedbacksList educatorId={me.educatorId} variant="studio" />
+              ) : (
+                <p className="text-sm text-gray-500">Inicia sessão no studio para ver os teus feedbacks.</p>
+              )}
             </TabsContent>
 
             <TabsContent value="create" className="mt-0 outline-none">
@@ -985,10 +1010,9 @@ export default function EducatorStudio() {
                 <div key={s.id} className="rounded border border-gray-800/80 p-2">
                   <p className="truncate font-medium text-gray-300">{s.title}</p>
                   <p className="mt-1 flex justify-between">
-                    <span>Espectadores (registo)</span>
-                    <span className="text-[#D2A63C]">{s.viewer_count ?? 0}</span>
+                    <span>{s.is_live ? "A assistir agora" : "Última audiência"}</span>
+                    <span className="font-mono text-[#D2A63C]">{s.viewer_count ?? 0}</span>
                   </p>
-                  <p className="mt-1 text-gray-600">Retenção: integração futura</p>
                 </div>
               ))}
             </CardContent>

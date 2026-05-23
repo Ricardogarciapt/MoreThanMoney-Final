@@ -1,6 +1,28 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback, useImperativeHandle, type RefObject } from "react"
+import { supabase } from "@/lib/supabase"
+import ChartSocialShareDialog from "@/components/chart-social-share-dialog"
+import type { TradingViewWidgetRef } from "@/components/trading-view-widget"
+import {
+  buildTradingViewScannerOptions,
+  computeScannerAccessChartHeight,
+} from "@/lib/trading-view-scanner-config"
+import {
+  captureChartScreenshot,
+  copyChartImageToClipboard,
+  resolveChartShareUrl,
+  resolveNativeChartShareUrl,
+} from "@/lib/chart-share-capture"
+import type { ChartSocialSharePrefetch } from "@/components/chart-social-share-dialog"
+import {
+  copyChartShareLink,
+  focusChartStageWrapper,
+  focusTradingViewIframe,
+  handleTradingViewKeyboardShortcut,
+} from "@/lib/trading-view-shortcuts"
+import { useToast } from "@/hooks/use-toast"
+import { TV_STUDY_LEGEND_OVERRIDES } from "@/lib/trading-view-scanner-config"
 import { subscribeMediaQueryChange } from "@/lib/browser-compat"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -39,6 +61,9 @@ import {
   Brain,
   RefreshCw as RefreshIcon,
   AlertCircle,
+  MessageCircle,
+  Loader2,
+  Share2,
 } from "lucide-react"
 
 // Checklist Types
@@ -189,8 +214,25 @@ const assetCategories = {
   }
 }
 
-export default function ScannerMobile() {
+export type ScannerMobileIntegration = "standalone" | "scanner-access"
+
+export type ScannerMobileProps = {
+  /** standalone = app-mobile; scanner-access = página desktop scanner-access */
+  integration?: ScannerMobileIntegration
+  showScreener?: boolean
+  widgetRef?: RefObject<TradingViewWidgetRef | null>
+}
+
+export default function ScannerMobile({
+  integration = "standalone",
+  showScreener = true,
+  widgetRef: externalWidgetRef,
+}: ScannerMobileProps = {}) {
+  const isScannerAccess = integration === "scanner-access"
+  const tvContainerId = isScannerAccess ? "tradingview_scanner_access_widget" : "tradingview_mobile_widget"
   const containerRef = useRef<HTMLDivElement>(null)
+  const controlsRef = useRef<HTMLDivElement>(null)
+  const scannerAccessWrapRef = useRef<HTMLDivElement>(null)
   const widgetRef = useRef<any>(null)
   const screenerRef = useRef<HTMLDivElement>(null)
   const [widgetLoaded, setWidgetLoaded] = useState(false)
@@ -325,14 +367,94 @@ export default function ScannerMobile() {
   })
   const [showSettings, setShowSettings] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [isVip, setIsVip] = useState(false)
+  const [showShareSocial, setShowShareSocial] = useState(false)
+  const [sharePrefetch, setSharePrefetch] = useState<ChartSocialSharePrefetch | null>(null)
+  const [openingShareSocial, setOpeningShareSocial] = useState(false)
+  const [copyingChartLink, setCopyingChartLink] = useState(false)
+  const chartStageRef = useRef<HTMLDivElement>(null)
+  const [scannerAccessChartHeight, setScannerAccessChartHeight] = useState(800)
+  const { toast } = useToast()
+
+  const updateScannerAccessChartHeight = useCallback(() => {
+    if (!isScannerAccess || isFullscreen) return
+    const wrap = scannerAccessWrapRef.current
+    if (!wrap) return
+
+    const width = wrap.getBoundingClientRect().width
+    const controlsBottom =
+      controlsRef.current?.getBoundingClientRect().bottom ??
+      wrap.getBoundingClientRect().top
+    const bottomPadding = 4
+    const screenerReserve = showScreener ? 88 : 0
+    const maxFromViewport =
+      window.innerHeight - controlsBottom - bottomPadding - screenerReserve
+
+    setScannerAccessChartHeight(computeScannerAccessChartHeight(width, maxFromViewport))
+  }, [isScannerAccess, isFullscreen, showScreener])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(min-width: 1024px)")
-    const applyViewport = () => setIsDesktop(mediaQuery.matches)
+    const applyViewport = () =>
+      setIsDesktop(isScannerAccess ? true : mediaQuery.matches)
 
     applyViewport()
     return subscribeMediaQueryChange(mediaQuery, applyViewport)
-  }, [])
+  }, [isScannerAccess])
+
+  useEffect(() => {
+    if (!isScannerAccess) return
+    updateScannerAccessChartHeight()
+    const ro = new ResizeObserver(() => updateScannerAccessChartHeight())
+    const wrap = scannerAccessWrapRef.current
+    const controls = controlsRef.current
+    if (wrap) ro.observe(wrap)
+    if (controls) ro.observe(controls)
+    window.addEventListener("resize", updateScannerAccessChartHeight)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener("resize", updateScannerAccessChartHeight)
+    }
+  }, [isScannerAccess, updateScannerAccessChartHeight, showSettings, showScreener])
+
+  useEffect(() => {
+    if (!isScannerAccess || !widgetLoaded || !widgetRef.current) return
+    const id = window.setTimeout(() => {
+      try {
+        if (typeof widgetRef.current.resize === "function") {
+          widgetRef.current.resize()
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 150)
+    return () => window.clearTimeout(id)
+  }, [isScannerAccess, widgetLoaded, scannerAccessChartHeight])
+
+  useEffect(() => {
+    if (!isScannerAccess) return
+    const loadProfile = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user?.id) return
+        setCurrentUserId(session.user.id)
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("user_type, member_category")
+          .eq("id", session.user.id)
+          .maybeSingle()
+        if (profile) {
+          setIsAdmin(profile.user_type === "admin")
+          setIsVip(profile.user_type === "admin" || profile.member_category === "vip")
+        }
+      } catch (e) {
+        console.warn("[scanner-mobile] perfil:", e)
+      }
+    }
+    void loadProfile()
+  }, [isScannerAccess])
 
   // Screeners simplificados - Crypto Bubbles para crypto, Stock Heatmap para o resto
   const getScreenersForCategory = (category: keyof typeof assetCategories) => {
@@ -458,13 +580,27 @@ export default function ScannerMobile() {
     }
   }, [])
 
-  const widgetHeight = isFullscreen ? "100vh" : isDesktop ? "calc(100vh - 360px)" : "calc(100vh - 300px)"
+  const widgetHeight = isFullscreen
+    ? "100vh"
+    : isScannerAccess
+      ? `${scannerAccessChartHeight}px`
+      : isDesktop
+        ? "calc(100vh - 400px)"
+        : "calc(100vh - 340px)"
 
   useEffect(() => {
     if (window.TradingView) {
       loadWidget()
     }
-  }, [selectedSymbol, selectedInterval, selectedStudies, theme])
+  }, [
+    selectedSymbol,
+    selectedInterval,
+    selectedStudies,
+    theme,
+    isScannerAccess,
+    currentUserId,
+    scannerAccessChartHeight,
+  ])
 
   const loadTradingViewScript = () => {
     if (document.getElementById("tradingview-mobile-script")) {
@@ -505,79 +641,45 @@ export default function ScannerMobile() {
 
       // Limpar container e criar novo elemento
       if (containerRef.current) {
-        containerRef.current.innerHTML = '<div id="tradingview_mobile_widget" style="height: 100%; width: 100%;"></div>'
+        const mountStyle = isScannerAccess
+          ? `height:100%;width:100%;min-height:${scannerAccessChartHeight}px;`
+          : "height:100%;width:100%;"
+        containerRef.current.innerHTML = `<div id="${tvContainerId}" style="${mountStyle}"></div>`
       }
 
-      // Usar a abordagem simples que funcionava - todos os estudos no array studies
       const studiesToApply = selectedStudies.flatMap((key) => scannerStudies[key] || [])
 
-      widgetRef.current = new window.TradingView.widget({
-        autosize: true,
-        symbol: selectedSymbol,
-        interval: selectedInterval,
-        timezone: "Etc/UTC",
-        theme: theme,
-        style: theme === "dark" ? "1" : "9",
-        locale: "br",
-        toolbar_bg: "#1E1E1E",
-        enable_publishing: false,
-        allow_symbol_change: true,
-        hide_side_toolbar: false,
-        hide_top_toolbar: false,
-        container_id: "tradingview_mobile_widget",
-        studies: studiesToApply,
-        disabled_features: [
-          "header_widget_dom_node",
-          "header_widget",
-          "volume_force_overlay",
-          "create_volume_indicator_by_default",
-          "header_compare",
-          "header_chart_type",
-          "header_undo_redo",
-          "border_around_the_chart",
-        ],
-        enabled_features: [
-          "study_on_study",
-          "use_localstorage_for_settings",
-          "header_settings",
-          "header_indicators",
-          "header_symbol_search",
-          "header_interval_dialog_button",
-          "header_screenshot",
-          "header_saveload_image",
-          "header_save_chart",
-          "header_fullscreen_button",
-          "header_chart_type",
-          "timeframes_toolbar",
-          "left_toolbar",
-          "drawing_toolbar",
-          "control_bar",
-        ],
-        loading_screen: { backgroundColor: "#1E1E1E", foregroundColor: "#f9b208" },
-        overrides: {
-          "mainSeriesProperties.showCountdown": true,
-          "scalesProperties.showSeriesLastValue": true,
-          // Esconder completamente legendas/valores dos estudos em todos os painéis
-          "scalesProperties.showStudyLastValue": false,
-          "paneProperties.legendProperties.showStudyTitles": false,
-          "paneProperties.legendProperties.showStudyArguments": false,
-          "paneProperties.legendProperties.showStudyValues": false,
-          "volumePaneSize": "hide",
-          // === PRICE SCALE ===
-          "scalesProperties.autoScale": true,               // Auto (fits data to screen)
-          "scalesProperties.lockPriceToBarRatio": false,    // Lock price to bar ratio
-          "scalesProperties.scaleSeriesOnly": true,         // Scale price chart only
-          "scalesProperties.invertScale": false,            // Invert scale
-        },
-      })
+      widgetRef.current = new window.TradingView.widget(
+        buildTradingViewScannerOptions({
+          mode: isScannerAccess ? "scanner-access" : "mobile",
+          symbol: selectedSymbol,
+          interval: selectedInterval,
+          theme,
+          studies: studiesToApply,
+          containerId: tvContainerId,
+          userId: currentUserId,
+        })
+      )
 
       // Configurar AUTO e apenas escala de preço após o chart estar pronto
       if (widgetRef.current && typeof widgetRef.current.onChartReady === "function") {
         widgetRef.current.onChartReady(() => {
+          if (isScannerAccess) {
+            requestAnimationFrame(() => {
+              updateScannerAccessChartHeight()
+              try {
+                widgetRef.current?.resize?.()
+              } catch {
+                /* ignore */
+              }
+            })
+          }
           try {
             const chart = widgetRef.current.chart && widgetRef.current.chart()
             if (chart) {
-              // Configurar todos os estudos para usar AUTO e apenas escala de preço
+              if (isScannerAccess && typeof chart.applyOverrides === "function") {
+                chart.applyOverrides(TV_STUDY_LEGEND_OVERRIDES)
+              }
               setTimeout(() => {
                 try {
                   const allStudies = chart.getAllStudies?.() || []
@@ -763,10 +865,147 @@ export default function ScannerMobile() {
     }
   }, [])
 
+  const chartUrlFallback = {
+    symbol: selectedSymbol,
+    interval: selectedInterval,
+    studies: selectedStudies.flatMap((key) => scannerStudies[key] || []),
+    theme,
+  }
+
+  const resolveChartInstance = () => widgetRef.current?.chart?.() ?? null
+
+  const copyChartLink = useCallback(async () => {
+    if (!widgetLoaded || copyingChartLink) return
+    setCopyingChartLink(true)
+    try {
+      const { url, native } = await copyChartShareLink(
+        resolveChartInstance(),
+        widgetRef.current,
+        chartUrlFallback
+      )
+      toast({
+        title: "Link do gráfico copiado",
+        description: native
+          ? "Link nativo TradingView (getChartUrl)."
+          : "Link construído (getChartUrl indisponível no widget).",
+      })
+      return url
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao copiar link."
+      toast({ title: "Link indisponível", description: msg, variant: "destructive" })
+      return null
+    } finally {
+      setCopyingChartLink(false)
+    }
+  }, [widgetLoaded, copyingChartLink, chartUrlFallback, toast])
+
+  const openShareSocial = useCallback(async () => {
+    if (!widgetLoaded || openingShareSocial) return
+    setOpeningShareSocial(true)
+    focusTradingViewIframe(containerRef.current)
+    try {
+      const chart = resolveChartInstance()
+      const widget = widgetRef.current
+      const image = await captureChartScreenshot(chart, containerRef.current, widget)
+      if (image) {
+        await copyChartImageToClipboard(image)
+      }
+      const chartUrl = await resolveNativeChartShareUrl(chart, widget)
+      setSharePrefetch({ image, chartUrl })
+      setShowShareSocial(true)
+      toast({
+        title: image ? "Snapshot copiado" : "A abrir partilha",
+        description: image
+          ? "Imagem na área de transferência. Cola o link do gráfico no modal se quiseres."
+          : "Cola o link TradingView (Share chart / ⌥S) no campo do modal.",
+      })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao preparar partilha."
+      toast({ title: "Erro", description: msg, variant: "destructive" })
+    } finally {
+      setOpeningShareSocial(false)
+    }
+  }, [widgetLoaded, openingShareSocial, chartUrlFallback, toast])
+
+  const runTvKeyboardShortcut = useCallback(
+    async (e: KeyboardEvent) => {
+      const result = await handleTradingViewKeyboardShortcut(
+        e,
+        resolveChartInstance(),
+        widgetRef.current,
+        { urlFallback: chartUrlFallback, chartContainer: containerRef.current }
+      )
+      if (result === "share-link") {
+        toast({
+          title: "Link do gráfico copiado",
+          description: "Link nativo TradingView (⌥S).",
+        })
+      } else if (result === "share-link-fallback") {
+        toast({
+          title: "Link copiado",
+          description:
+            "getChartUrl não disponível no iframe — link construído a partir do símbolo/timeframe.",
+        })
+      } else if (result === "share-link-failed") {
+        toast({
+          title: "⌥S: link indisponível",
+          description:
+            "Clica no botão «Copiar link» ou foca a borda do gráfico (Tab) e tenta de novo.",
+          variant: "destructive",
+        })
+      }
+    },
+    [chartUrlFallback, toast]
+  )
+
+  useEffect(() => {
+    if (!isScannerAccess || !widgetLoaded) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      void runTvKeyboardShortcut(e)
+    }
+    window.addEventListener("keydown", onKeyDown, true)
+    return () => window.removeEventListener("keydown", onKeyDown, true)
+  }, [isScannerAccess, widgetLoaded, runTvKeyboardShortcut])
+
+  useEffect(() => {
+    if (!isScannerAccess || typeof document === "undefined") return
+    document.body.classList.add("scanner-access-route")
+    return () => document.body.classList.remove("scanner-access-route")
+  }, [isScannerAccess])
+
+  useImperativeHandle(externalWidgetRef, (): TradingViewWidgetRef => ({
+    getWidget: () => widgetRef.current,
+    getChart: () => widgetRef.current?.chart?.() || null,
+    shareChart: async () =>
+      resolveChartShareUrl(widgetRef.current?.chart?.() ?? null, widgetRef.current ?? null, chartUrlFallback),
+    captureChartImage: async () =>
+      captureChartScreenshot(
+        widgetRef.current?.chart?.() ?? null,
+        containerRef.current,
+        widgetRef.current
+      ),
+    extractTradeDraft: async () => {
+      const { extractChartShareTradeDraft } = await import("@/lib/chart-share-trade")
+      return extractChartShareTradeDraft(resolveChartInstance(), selectedSymbol)
+    },
+  }))
+
   return (
-    <div className={`bg-black ${isDesktop ? "min-h-[calc(100vh-8rem)]" : "min-h-screen"}`}>
+    <div
+      ref={isScannerAccess ? scannerAccessWrapRef : undefined}
+      className={
+        isScannerAccess
+          ? "bg-black tv-widget-mount flex flex-col w-full tv-scanner-access overflow-visible"
+          : `bg-black ${isDesktop ? "min-h-[calc(100vh-8rem)]" : "min-h-screen"}`
+      }
+    >
       {/* Controls */}
-      <div className={`bg-gray-900 border-b border-[#D2A63C]/30 space-y-3 ${isDesktop ? "p-4" : "p-3"}`}>
+      <div
+        ref={isScannerAccess ? controlsRef : undefined}
+        className={`bg-gray-900 border-b border-[#D2A63C]/30 space-y-3 ${
+          isScannerAccess ? "shrink-0 relative z-10" : ""
+        } ${isDesktop ? "p-4" : "p-3"}`}
+      >
         {/* Top Row - Category Selection */}
         <div className={`flex gap-2 pb-1 ${isDesktop ? "flex-wrap overflow-visible" : "overflow-x-auto"}`}>
           {Object.entries(assetCategories).map(([key, category]) => {
@@ -817,7 +1056,7 @@ export default function ScannerMobile() {
               ))}
             </SelectContent>
           </Select>
-          {isDesktop && (
+          {isDesktop && !isScannerAccess && (
             <div className="rounded-md border border-gray-700 bg-gray-800 text-gray-300 text-xs px-3 flex items-center">
               Layout: Desktop
             </div>
@@ -897,6 +1136,40 @@ export default function ScannerMobile() {
           >
             <RotateCw className="w-3 h-3" />
           </Button>
+
+          {isScannerAccess && (
+            <Button
+              onClick={() => void copyChartLink()}
+              disabled={!widgetLoaded || copyingChartLink}
+              size="sm"
+              variant="outline"
+              className={`bg-gray-800 text-white border-gray-700 hover:bg-gray-700 ${isDesktop ? "h-9 px-3" : "h-8 px-2"}`}
+              title="Copiar link do gráfico (⌥S quando a área do gráfico tem foco)"
+            >
+              {copyingChartLink ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Share2 className="w-3 h-3" />
+              )}
+            </Button>
+          )}
+
+          {isScannerAccess && (isAdmin || isVip) && (
+            <Button
+              onClick={() => void openShareSocial()}
+              disabled={!widgetLoaded || openingShareSocial}
+              size="sm"
+              variant="outline"
+              className={`bg-gray-800 text-[#D2A63C] border-[#D2A63C]/40 hover:bg-[#D2A63C]/10 ${isDesktop ? "h-9 px-3" : "h-8 px-2"}`}
+              title="Partilhar no Social (copia snapshot antes de abrir)"
+            >
+              {openingShareSocial ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <MessageCircle className="w-3 h-3" />
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Settings Panel */}
@@ -929,17 +1202,48 @@ export default function ScannerMobile() {
       </div>
 
       {/* Widget Container */}
-      <div 
-        className="relative bg-black"
-        style={{ 
+      <div
+        ref={isScannerAccess ? chartStageRef : undefined}
+        className={
+          isScannerAccess
+            ? "tv-chart-stage relative z-0 bg-black w-full mx-auto outline-none focus-visible:ring-2 focus-visible:ring-[#D2A63C]/50"
+            : "relative bg-black"
+        }
+        style={{
           height: widgetHeight,
-          width: '100%'
+          minHeight: isScannerAccess && !isFullscreen ? widgetHeight : undefined,
+          width: "100%",
         }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onDoubleClick={handleDoubleClick}
+        tabIndex={isScannerAccess ? 0 : undefined}
+        role={isScannerAccess ? "region" : undefined}
+        aria-label={isScannerAccess ? "Área do gráfico TradingView" : undefined}
+        onKeyDown={
+          isScannerAccess
+            ? (e) => {
+                void runTvKeyboardShortcut(e.nativeEvent)
+              }
+            : undefined
+        }
+        onMouseDown={
+          isScannerAccess
+            ? (e) => {
+                if (e.target === e.currentTarget) {
+                  focusChartStageWrapper(chartStageRef.current)
+                } else {
+                  focusTradingViewIframe(containerRef.current)
+                }
+              }
+            : undefined
+        }
+        onTouchStart={isScannerAccess ? undefined : handleTouchStart}
+        onTouchMove={isScannerAccess ? undefined : handleTouchMove}
+        onDoubleClick={isScannerAccess ? undefined : handleDoubleClick}
       >
-        <div ref={containerRef} className="w-full h-full" />
+        <div
+          ref={containerRef}
+          className={isScannerAccess ? "w-full h-full min-h-full tv-chart-mount" : "w-full h-full"}
+          style={isScannerAccess ? { minHeight: widgetHeight } : undefined}
+        />
 
         {!widgetLoaded && !error && (
           <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/90">
@@ -962,15 +1266,39 @@ export default function ScannerMobile() {
         )}
       </div>
 
-      {/* Screener / Heatmap Section (reutilizável) */}
-      {!isFullscreen && (
+      {/* Screener / Heatmap */}
+      {!isFullscreen && showScreener && (
         <div className="p-4 bg-gray-900 border-t border-[#D2A63C]/30">
           <ScannerScreener mode={isDesktop ? "desktop" : "mobile"} />
         </div>
       )}
 
-      {/* Checklist de Trading */}
-      {!isFullscreen && (
+      {isScannerAccess && (isAdmin || isVip) && (
+        <ChartSocialShareDialog
+          open={showShareSocial}
+          onOpenChange={(open) => {
+            setShowShareSocial(open)
+            if (!open) setSharePrefetch(null)
+          }}
+          symbol={selectedSymbol}
+          widgetLoaded={widgetLoaded}
+          getChart={resolveChartInstance}
+          getWidget={() => widgetRef.current}
+          chartContainer={containerRef.current}
+          urlFallback={chartUrlFallback}
+          prefetch={sharePrefetch}
+          captureChartImage={async () =>
+            captureChartScreenshot(
+              widgetRef.current?.chart?.() ?? null,
+              containerRef.current,
+              widgetRef.current
+            )
+          }
+        />
+      )}
+
+      {/* Checklist de Trading (só app-mobile; scanner-access tem checklist na página) */}
+      {!isScannerAccess && !isFullscreen && (
         <div className="p-4 bg-gray-900">
           <Card className="bg-black/50 border-amber-500/30">
             <CardContent className="p-4">

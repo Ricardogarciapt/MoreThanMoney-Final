@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef, Suspense } from "react"
+import { useState, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
@@ -11,7 +11,6 @@ import { adminApiCall, clearAdminCache } from "@/lib/admin-helpers"
 import AdminSidebar from "@/components/admin/admin-sidebar"
 import AdminOverview from "@/components/admin/admin-overview"
 import UserManagementComponent from "@/components/admin/user-management"
-import MtmAutoManagement from "@/components/admin/mtm-auto-management"
 import SiteContentManager from "@/components/admin/site-content-manager"
 import ContentConfigManager from "@/components/admin/content-config-manager"
 import NotificationsManager from "@/components/admin/notifications-manager"
@@ -19,7 +18,6 @@ import ThemeManager from "@/components/admin/theme-manager"
 import SettingsManager from "@/components/admin/settings-manager"
 import LiveSessionsManager from "@/components/admin/live-sessions-manager"
 import { MessageCircle } from "lucide-react"
-import { supabase } from "@/lib/supabase"
 
 function CreateDefaultGroupsButton({
   onSuccess,
@@ -80,12 +78,9 @@ function AdminPageClient() {
   const [loadingOverview, setLoadingOverview] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
-  const lastAdminToastIds = useRef<Set<string>>(new Set())
-
   const validSections = new Set([
     "overview",
     "users",
-    "mtmauto",
     "content",
     "education",
     "notifications",
@@ -131,7 +126,7 @@ function AdminPageClient() {
     checkAdminAccess()
   }, [mounted, authLoading, user, checkAdminAccess, router])
 
-  // Permite abrir secções por URL: /admin?tab=users | /admin?tab=mtmauto | etc.
+  // Permite abrir secções por URL: /admin?tab=users | etc.
   useEffect(() => {
     const tab = searchParams.get("tab")
     if (!tab) return
@@ -194,58 +189,10 @@ function AdminPageClient() {
   }, [isAdmin, isChecking, fetchStats, fetchTrialStats])
 
   useEffect(() => {
-    if (isAdmin && !isChecking && (activeSection === "users" || activeSection === "mtmauto")) {
+    if (isAdmin && !isChecking && activeSection === "users") {
       fetchUsers()
     }
   }, [isAdmin, isChecking, activeSection, fetchUsers])
-
-  // Toast para admins: novo pedido MTM Auto (registrado em notifications).
-  useEffect(() => {
-    if (!isAdmin || isChecking) return
-    if (!user?.id) return
-
-    const adminId = user.id
-    let cancelled = false
-
-    const channel = supabase?.channel(`admin-mtm-auto-toast-${adminId}-${Date.now()}`)
-    if (!channel) return
-
-    channel
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${adminId}`,
-        },
-        (payload) => {
-          if (cancelled) return
-          const n = payload.new as any
-          if (!n) return
-
-          if (n.type !== "admin_notification") return
-
-          const event = n.data?.event
-          if (event !== "mtm_auto_request") return
-
-          const notifId = String(n.id || "")
-          if (notifId && lastAdminToastIds.current.has(notifId)) return
-          if (notifId) lastAdminToastIds.current.add(notifId)
-
-          toast({
-            title: "Pedido MTM Auto",
-            description: n.message || "Novo pedido para aprovação.",
-          })
-        }
-      )
-      .subscribe()
-
-    return () => {
-      cancelled = true
-      supabase?.removeChannel(channel)
-    }
-  }, [isAdmin, isChecking, user?.id, toast])
 
   const handleApproveUser = async (userId: string) => {
     const result = await adminApiCall("/api/admin/approve-user", {
@@ -300,7 +247,6 @@ function AdminPageClient() {
             <h1 className="text-xl font-semibold text-white">
               {activeSection === "overview" && "Visão geral"}
               {activeSection === "users" && "Utilizadores"}
-              {activeSection === "mtmauto" && "MTM Auto"}
               {activeSection === "content" && "Conteúdo"}
               {activeSection === "education" && "Educação / LMS"}
               {activeSection === "notifications" && "Notificações"}
@@ -336,22 +282,6 @@ function AdminPageClient() {
                     onRefresh={fetchUsers}
                     onApprove={handleApproveUser}
                   />
-                </div>
-              </section>
-            </div>
-          )}
-
-          {activeSection === "mtmauto" && (
-            <div className="space-y-6">
-              <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
-                <div className="border-b border-[#D2A63C]/15 px-6 py-4">
-                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Gestão MTM Auto</h2>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Aprovação de acessos ao MTM Auto e promoção de admins específicos do produto.
-                  </p>
-                </div>
-                <div className="p-6">
-                  <MtmAutoManagement users={users} onRefresh={fetchUsers} />
                 </div>
               </section>
             </div>

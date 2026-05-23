@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { 
-  getSupabaseAdmin, 
-  requireAdmin, 
-  validateRequiredFields, 
+import {
+  getSupabaseAdmin,
+  requireAdmin,
+  validateRequiredFields,
   isValidEmail,
-  sanitizeString
+  sanitizeString,
 } from "@/lib/admin-api-helpers"
+import { buildSubscriptionExpiry, isSubscriptionCategory } from "@/lib/member-subscription"
 
 export async function POST(request: NextRequest) {
   // Verificar acesso admin
@@ -16,7 +17,17 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json()
-    const { email, username, full_name, password, phone, whatsapp, user_type, membership_level } = body
+    const {
+      email,
+      username,
+      full_name,
+      password,
+      phone,
+      whatsapp,
+      user_type,
+      membership_level,
+      member_category,
+    } = body
 
     // Validação de campos obrigatórios
     const validation = validateRequiredFields(body, ['email', 'username', 'password', 'full_name'])
@@ -117,26 +128,38 @@ export async function POST(request: NextRequest) {
         trialExpiresAt = expiryDate.toISOString()
       }
 
+      const category =
+        member_category && ["iq", "skool", "vip", "standard"].includes(member_category)
+          ? member_category
+          : "standard"
+
+      const profileRow: Record<string, unknown> = {
+        id: authUser.user.id,
+        email: sanitizedEmail,
+        username: sanitizedUsername,
+        full_name: sanitizedFullName,
+        phone: phone ? sanitizeString(phone) : null,
+        whatsapp: whatsapp ? sanitizeString(whatsapp) : null,
+        user_type: user_type || "member",
+        member_category: category,
+        membership_level: membership_level || "basic",
+        is_active: user_type !== "inactive",
+        is_verified: true,
+        trial_expires_at: trialExpiresAt,
+        trial_expired: false,
+        updated_at: new Date().toISOString(),
+      }
+
+      if (isSubscriptionCategory(category)) {
+        profileRow.subscription_expires_at = buildSubscriptionExpiry()
+        profileRow.subscription_auto_renew = true
+        profileRow.user_type = "member"
+        profileRow.is_active = true
+      }
+
       const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert(
-          {
-            id: authUser.user.id,
-            email: sanitizedEmail,
-            username: sanitizedUsername,
-            full_name: sanitizedFullName,
-            phone: phone ? sanitizeString(phone) : null,
-            whatsapp: whatsapp ? sanitizeString(whatsapp) : null,
-            user_type: user_type || 'member',
-            membership_level: membership_level || 'basic',
-            is_active: user_type !== 'inactive',
-            is_verified: true,
-            trial_expires_at: trialExpiresAt,
-            trial_expired: false,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'id' }
-        )
+        .from("profiles")
+        .upsert(profileRow, { onConflict: "id" })
 
       if (profileError) {
         console.error('Erro ao guardar perfil:', profileError)

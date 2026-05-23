@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import type { UserManagement } from "@/lib/admin-types"
 import { getSupabaseAdmin, requireAdmin, validateRequiredFields, isValidUUID } from "@/lib/admin-api-helpers"
+import {
+  buildSubscriptionExpiry,
+  isSubscriptionCategory,
+  subscriptionDaysRemaining,
+} from "@/lib/member-subscription"
 
 const supabase = getSupabaseAdmin()
-const FORCED_MTM_AUTO_ADMINS = new Set(["morethanmoneypt@gmail.com"])
 
 export async function GET(request: NextRequest) {
   // Verificar acesso admin
@@ -12,60 +16,57 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now()
   
   try {
-    // Garante este admin com acesso MTM Auto em cada leitura da gestão de utilizadores.
-    const forcedEmail = "morethanmoneypt@gmail.com"
-    if (FORCED_MTM_AUTO_ADMINS.has(forcedEmail)) {
-      const { data: forcedProfile } = await supabase
-        .from("profiles")
-        .select("id, mtm_auto_enabled, mtm_auto_admin, mtm_auto_requested")
-        .eq("email", forcedEmail)
-        .maybeSingle()
-
-      if (forcedProfile) {
-        const forcePatch: Record<string, unknown> = {}
-        if (!forcedProfile.mtm_auto_enabled) {
-          forcePatch.mtm_auto_enabled = true
-          forcePatch.mtm_auto_enabled_at = new Date().toISOString()
-        }
-        if (!forcedProfile.mtm_auto_admin) {
-          forcePatch.mtm_auto_admin = true
-        }
-        if (forcedProfile.mtm_auto_requested) {
-          forcePatch.mtm_auto_requested = false
-          forcePatch.mtm_auto_requested_at = null
-        }
-
-        if (Object.keys(forcePatch).length > 0) {
-          forcePatch.updated_at = new Date().toISOString()
-          await supabase.from("profiles").update(forcePatch).eq("id", forcedProfile.id)
-        }
-      }
-    }
-
     const { searchParams } = new URL(request.url)
-    const userType = searchParams.get('user_type')
-    const status = searchParams.get('status')
-    const limit = parseInt(searchParams.get('limit') || '100')
-    const offset = parseInt(searchParams.get('offset') || '0')
+    const userType = searchParams.get("user_type")
+    const memberCategory = searchParams.get("member_category")
+    const status = searchParams.get("status")
+    const subscription = searchParams.get("subscription")
+    const q = searchParams.get("q")?.trim().replace(/[%_]/g, "") || ""
+    const limit = Math.min(parseInt(searchParams.get("limit") || "200", 10), 500)
+    const offset = parseInt(searchParams.get("offset") || "0", 10)
 
-
-    // Construir query base
     let query = supabase
-      .from('profiles')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
+      .from("profiles")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1)
 
-    // Aplicar filtros
     if (userType) {
-      query = query.eq('user_type', userType)
+      query = query.eq("user_type", userType)
     }
-    if (status === 'pending') {
-      query = query.eq('user_type', 'pending')
-    } else if (status === 'active') {
-      query = query.eq('is_active', true)
-    } else if (status === 'inactive') {
-      query = query.eq('is_active', false)
+    if (memberCategory) {
+      query = query.eq("member_category", memberCategory)
+    }
+    if (status === "pending") {
+      query = query.eq("user_type", "pending")
+    } else if (status === "active") {
+      query = query.eq("is_active", true)
+    } else if (status === "inactive") {
+      query = query.or("is_active.eq.false,user_type.eq.inactive")
+    } else if (status === "subscription_iq_skool") {
+      query = query.in("member_category", ["iq", "skool"])
+    }
+
+    if (subscription === "expiring_soon") {
+      const in7 = new Date()
+      in7.setDate(in7.getDate() + 7)
+      query = query
+        .in("member_category", ["iq", "skool"])
+        .not("subscription_expires_at", "is", null)
+        .lte("subscription_expires_at", in7.toISOString())
+        .gte("subscription_expires_at", new Date().toISOString())
+    } else if (subscription === "expired") {
+      query = query
+        .in("member_category", ["iq", "skool"])
+        .not("subscription_expires_at", "is", null)
+        .lt("subscription_expires_at", new Date().toISOString())
+    }
+
+    if (q.length >= 2) {
+      const pattern = `%${q}%`
+      query = query.or(
+        `email.ilike.${pattern},username.ilike.${pattern},full_name.ilike.${pattern}`
+      )
     }
 
     const { data, error, count } = await query
@@ -142,10 +143,13 @@ export async function GET(request: NextRequest) {
     }
     
     // Combinar dados
-    const dataWithXPAndProgress = data.map(user => ({
+    const dataWithXPAndProgress = data.map((user) => ({
       ...user,
       xp: xpMap.get(user.id) || { total_xp: 0, level: 1 },
-      fast_start: fastStartMap.get(user.id) || { progress_percent: 0, steps_completed: 0 }
+      fast_start: fastStartMap.get(user.id) || { progress_percent: 0, steps_completed: 0 },
+      subscription_days_remaining: isSubscriptionCategory(user.member_category)
+        ? subscriptionDaysRemaining(user.subscription_expires_at)
+        : null,
     }))
 
     const duration = Date.now() - startTime
@@ -204,7 +208,7 @@ export async function PUT(request: NextRequest) {
       'full_name', 'username', 'email', 'phone', 'whatsapp',
       'user_type', 'member_category', 'membership_level', 'onboarding_platform',
       'is_active', 'is_verified', 'profile_data', 'avatar_url',
-      'mtm_auto_requested', 'mtm_auto_requested_at', 'mtm_auto_enabled', 'mtm_auto_enabled_at', 'mtm_auto_admin'
+      'subscription_expires_at', 'subscription_auto_renew', 'trial_expires_at', 'trial_expired',
     ]
 
     // Filtrar apenas campos permitidos
@@ -263,9 +267,8 @@ export async function PATCH(request: NextRequest) {
       member_category,
       onboarding_platform,
       is_active,
-      mtm_auto_enabled,
-      mtm_auto_admin,
-      mtm_auto_requested,
+      subscription_auto_renew,
+      renew_subscription,
     } = body
 
     // Validação
@@ -319,39 +322,43 @@ export async function PATCH(request: NextRequest) {
 
     if (member_category !== undefined) {
       updates.member_category = member_category
+      if (isSubscriptionCategory(member_category)) {
+        updates.subscription_expires_at = buildSubscriptionExpiry()
+        updates.subscription_auto_renew =
+          subscription_auto_renew !== undefined ? subscription_auto_renew : true
+        if (!user_type || user_type === "inactive") {
+          updates.user_type = "member"
+        }
+        updates.is_active = true
+      }
     }
 
     if (onboarding_platform !== undefined) {
       updates.onboarding_platform = onboarding_platform
     }
 
-    if (mtm_auto_requested !== undefined) {
-      updates.mtm_auto_requested = Boolean(mtm_auto_requested)
-      updates.mtm_auto_requested_at = mtm_auto_requested ? new Date().toISOString() : null
+    if (subscription_auto_renew !== undefined) {
+      updates.subscription_auto_renew = Boolean(subscription_auto_renew)
     }
 
-    if (mtm_auto_enabled !== undefined) {
-      updates.mtm_auto_enabled = Boolean(mtm_auto_enabled)
-      updates.mtm_auto_enabled_at = mtm_auto_enabled ? new Date().toISOString() : null
-      if (mtm_auto_enabled) {
-        updates.mtm_auto_requested = false
-      }
-      if (!mtm_auto_enabled) {
-        updates.mtm_auto_admin = false
-      }
-    }
+    if (renew_subscription === true) {
+      const { data: current } = await supabase
+        .from("profiles")
+        .select("member_category, user_type")
+        .eq("id", userId)
+        .single()
 
-    if (mtm_auto_admin !== undefined) {
-      updates.mtm_auto_admin = Boolean(mtm_auto_admin)
-      if (mtm_auto_admin) {
-        updates.mtm_auto_enabled = true
-        updates.mtm_auto_enabled_at = new Date().toISOString()
-        updates.mtm_auto_requested = false
+      if (isSubscriptionCategory(current?.member_category)) {
+        updates.subscription_expires_at = buildSubscriptionExpiry()
+        updates.subscription_auto_renew = true
+        updates.is_active = true
+        if (current?.user_type === "inactive") {
+          updates.user_type = "member"
+        }
       }
     }
 
-    // is_active explícito, exceto quando fica inativo (sempre false)
-    if (is_active !== undefined && user_type !== 'inactive') {
+    if (is_active !== undefined && user_type !== "inactive") {
       updates.is_active = is_active
     }
 

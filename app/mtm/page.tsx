@@ -44,6 +44,7 @@ const MTM_SECTION_NAV = [
   { id: "mtm-escada", label: "Escada" },
   { id: "mtm-solucoes", label: "Soluções" },
   { id: "mtm-modelo", label: "Modelo" },
+  { id: "mtm-precos", label: "Preços" },
   { id: "mtm-porque", label: "Porquê MTM" },
   { id: "mtm-faq", label: "FAQ" },
 ] as const
@@ -730,6 +731,81 @@ export default function MTMLandingPage() {
               <p className="text-2xl font-semibold text-white text-center">
                 "O dinheiro é uma ferramenta; o verdadeiro ativo é quem te tornas no processo."
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Planos Skool MTM */}
+      <section id="mtm-precos" className="relative z-10 py-20 bg-gradient-to-b from-black via-gray-900/40 to-black scroll-mt-20">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-5xl font-bold mb-4 text-white">
+                Preços do <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">Skool MTM</span>
+              </h2>
+              <p className="text-gray-300 text-lg">Escolhe o plano ideal para a tua fase.</p>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-3">
+              <Card className="bg-gradient-to-br from-gray-900/90 to-gray-800/80 border border-gray-700/70">
+                <CardContent className="p-7">
+                  <p className="text-3xl font-extrabold text-white">$5<span className="text-base font-medium text-gray-400">/month</span></p>
+                  <p className="mt-1 text-xl font-semibold text-blue-300">Standard</p>
+                  <ul className="mt-5 space-y-2 text-sm text-gray-200">
+                    <li>Acesso a Curso Iniciante de Fast Start</li>
+                    <li>Acesso a um Scanner de Mercado - Vitalicio</li>
+                    <li>Acesso a Telegram de Ideias Manuais</li>
+                    <li>Acesso a Chamadas de Sistema, executando Chamadas Educativas</li>
+                    <li>Acesso as nossas parceiras de Mercado</li>
+                  </ul>
+                  <Button asChild className="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold">
+                    <Link href="https://www.skool.com/morethanmoney-1132/about" target="_blank" rel="noopener noreferrer">
+                      JOIN STANDARD
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-purple-900/60 to-gray-900/80 border-2 border-purple-500/50 shadow-[0_0_40px_rgba(139,92,246,0.2)]">
+                <CardContent className="p-7">
+                  <p className="text-3xl font-extrabold text-white">$65<span className="text-base font-medium text-gray-300">/month</span></p>
+                  <p className="mt-1 text-xl font-semibold text-purple-300">Premium</p>
+                  <ul className="mt-5 space-y-2 text-sm text-gray-100">
+                    <li>Acesso ao Curso de Forex e CriptoMoedas da MoreThanMoney</li>
+                    <li>Acesso a MTM Auto (1 Estrategia Apenas)</li>
+                    <li>Acesso a App da MTM</li>
+                    <li>Acesso ao Site da MoreThanMoney e suas aplicacoes</li>
+                    <li>Acesso ao Copytrading da MTM - PAMM ou Conta Individual</li>
+                    <li>Acesso aos Anteriores</li>
+                  </ul>
+                  <Button asChild className="mt-6 w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold">
+                    <Link href="https://www.skool.com/morethanmoney-1132/about" target="_blank" rel="noopener noreferrer">
+                      JOIN PREMIUM
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-cyan-900/60 to-gray-900/80 border border-cyan-500/50">
+                <CardContent className="p-7">
+                  <p className="text-3xl font-extrabold text-white">$2,400<span className="text-base font-medium text-gray-300">/year</span></p>
+                  <p className="mt-1 text-xl font-semibold text-cyan-300">VIP</p>
+                  <ul className="mt-5 space-y-2 text-sm text-gray-100">
+                    <li>Acesso aos anteriores</li>
+                    <li>Acesso a todos os Cursos da MoreThanMoney</li>
+                    <li>Acesso aos Scanners da MoreThanMoney</li>
+                    <li>Acesso a um Ano de Iqonic</li>
+                    <li>Acesso a todas as estrategias da MTM</li>
+                    <li>Acesso ao Provedor do nosso Hedge FUND</li>
+                  </ul>
+                  <Button asChild className="mt-6 w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold">
+                    <Link href="https://www.skool.com/morethanmoney-1132/about" target="_blank" rel="noopener noreferrer">
+                      JOIN VIP
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
