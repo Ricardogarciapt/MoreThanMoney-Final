@@ -11,6 +11,7 @@
     "seed:wger": "node scripts/seed-wger-to-supabase.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.98.0",
     "@auth/core": "^0.34.2",
     "@hookform/resolvers": "^3.9.1",
     "@notionhq/client": "^5.1.0",

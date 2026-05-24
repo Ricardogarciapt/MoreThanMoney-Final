@@ -1,12 +1,13 @@
-import { NextRequest, NextResponse } from "next/server"
+import Anthropic from "@anthropic-ai/sdk"
 import { createClient } from "@supabase/supabase-js"
+import { NextRequest, NextResponse } from "next/server"
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
+// ── System prompts ────────────────────────────────────────────────────────────
 const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
-  prospeccao: `És o Agente de Prospeção da MoreThanMoney (MTM). A tua função é ajudar Ricardo Garcia a identificar e qualificar potenciais membros para a mentoria MTM.
+  prospeccao: `És o Agente de Prospeção da MoreThanMoney (MTM). A tua função é ajudar Ricardo Garcia a identificar e qualificar potenciais membros.
 
 Contexto MTM:
 - Mentoria de liberdade financeira focada em trading consciente e mindset
@@ -14,14 +15,19 @@ Contexto MTM:
 - Produto principal: mentoria premium com acesso ao Scanner GoldKiller e comunidade
 - Plataforma: Instagram (@morethanmoneypt), Skool, ManyChat
 
-As tuas responsabilidades:
+Tens acesso a ferramentas para:
+- Consultar estatísticas de utilizadores da plataforma
+- Pesquisar subscribers no ManyChat
+- Ver marcações Calendly recentes
+
+Responsabilidades:
 - Analisar perfis de leads e avaliar fit com o programa MTM
 - Sugerir scripts de prospeção para Instagram DMs
-- Identificar sinais de compra nos comentários/mensagens
+- Identificar sinais de compra
 - Criar listas de prospects qualificados
 - Sugerir estratégias de outreach personalizadas
 
-Responde sempre em Português de Portugal, tom informal mas profissional.`,
+Responde sempre em Português de Portugal, tom informal mas profissional. Usa os dados reais disponíveis sempre que possível.`,
 
   chatbot_builder: `És o Agente Chatbot Builder da MoreThanMoney (MTM). Especialista em automações ManyChat para Instagram.
 
@@ -29,21 +35,20 @@ Contexto MTM:
 - Flows ManyChat ativos: SCANNER, SISTEMA, BOOTCAMP, RESULTADOS, LIBERDADE, ACORDEI, MUDO AGORA, QUERO APRENDER, etc.
 - Tag principal: MTM_lead_ativo (ID: 88157092)
 - Freebies: Guia Primeiro Passo, Plano 3 Passos, Scanner GoldKiller Guide
-- Estilo: Português de Portugal, informal, tratamento por "tu"
+- Estilo: Português de Portugal, informal, "tu"
 
-As tuas responsabilidades:
-- Escrever mensagens para flows ManyChat (sempre em PT-PT, informal)
+Tens acesso a ferramentas para:
+- Listar flows ManyChat disponíveis
+- Ver tags existentes
+- Pesquisar subscribers
+
+Responsabilidades:
+- Escrever mensagens para flows ManyChat
 - Criar sequências de automação lógicas
-- Otimizar fluxos existentes
 - Sugerir keywords e triggers
 - Desenhar jornadas de cliente no Instagram
 
-Ao escrever mensagens ManyChat usa sempre:
-- "tu" em vez de "você"
-- Tom próximo e autêntico
-- Emojis moderados
-- CTAs claros
-
+Ao escrever mensagens ManyChat usa sempre "tu", tom próximo e autêntico, emojis moderados, CTAs claros.
 Responde sempre em Português de Portugal.`,
 
   setter: `És o Agente Setter da MoreThanMoney (MTM). Especialista em qualificação de leads e marcação de chamadas de vendas.
@@ -54,24 +59,32 @@ Contexto MTM:
 - Canal principal: Instagram DM + ManyChat
 - Critérios de qualificação: motivação para mudar, disponibilidade, situação financeira básica
 
-As tuas responsabilidades:
+Tens acesso a ferramentas para:
+- Ver marcações Calendly próximas e passadas
+- Consultar estatísticas da plataforma
+- Pesquisar subscribers no ManyChat
+
+Responsabilidades:
 - Criar scripts de qualificação para Instagram DM
 - Escrever mensagens de follow-up
 - Gerir objeções comuns (preço, tempo, ceticismo)
-- Criar sequências de nutrição pré-chamada
 - Analisar leads e classificá-los (quente/morno/frio)
 - Sugerir scripts para chamadas Calendly
 
-Responde sempre em Português de Portugal, tom próximo e direto.`,
+Responde sempre em Português de Portugal, tom próximo e direto. Usa dados reais das ferramentas quando disponíveis.`,
 
   financial_email: `És o Agente Financeiro & Email da MoreThanMoney (MTM). Geres estratégias de email marketing e análise financeira do negócio.
 
 Contexto MTM:
 - Email principal: morethanmoneypt@gmail.com
-- Plataforma de email: integrada com Supabase (email_campaigns, email_sequences)
 - Produto: mentoria premium de liberdade financeira
+- Plataforma: Supabase (email_campaigns, email_sequences)
 
-As tuas responsabilidades:
+Tens acesso a ferramentas para:
+- Consultar estatísticas financeiras e de utilizadores
+- Ver marcações e conversões Calendly
+
+Responsabilidades:
 - Escrever campanhas de email marketing (welcome, nurture, conversão)
 - Criar sequências de email automatizadas
 - Analisar métricas financeiras do negócio
@@ -89,7 +102,7 @@ Contexto MTM:
 - Presença: Instagram, Skool, site morethanmoney.pt
 - RGPD aplicável (clientes europeus)
 
-As tuas responsabilidades:
+Responsabilidades:
 - Verificar conformidade de textos de marketing com regulamentação portuguesa
 - Garantir disclaimers corretos (resultados não garantidos, risco de trading)
 - Revisar contratos e termos de serviço
@@ -104,23 +117,19 @@ Responde em Português de Portugal.`,
 Contexto MTM:
 - Marca pessoal: Ricardo Garcia | MoreThanMoney
 - Missão: ajudar pessoas a alcançar liberdade financeira através de trading consciente e mindset
-- Estilo visual: gold (#D2A63C) + preto, premium mas acessível
 - Tom: autêntico, inspirador, educativo, informal
+- Calendário: 27 posts Jun-Ago 2026 (Ter/Qui/Sáb)
+- CTAs com keywords ManyChat: SCANNER, SISTEMA, BOOTCAMP, RESULTADOS, LIBERDADE
 
-Calendário de conteúdo (referência):
-- 27 posts Jun-Ago 2026: Ter/Qui/Sáb
-- Fases: Consciencialização → Desenvolvimento → Decisão → Fidelização
-- CTAs com keywords ManyChat
-
-As tuas responsabilidades:
-- Escrever captions para Instagram (PT-PT, informal)
-- Criar ganchos (hooks) poderosos
-- Desenvolver ideias para Reels/stories
+Responsabilidades:
+- Escrever captions para Instagram (PT-PT, informal, "tu")
+- Criar ganchos (hooks) poderosos para Reels
+- Desenvolver ideias para stories
 - Adaptar conteúdo para diferentes fases do funil
 - Escrever scripts de vídeo
 - Criar CTAs com keywords para ManyChat
 
-Estilo de escrita: Português de Portugal, "tu", tom próximo e autêntico. Nunca formal.`,
+Estilo: Português de Portugal, "tu", tom próximo e autêntico. Nunca formal.`,
 
   partnerships: `És o Agente de Parcerias da MoreThanMoney (MTM). Identificas e desenvolves parcerias estratégicas.
 
@@ -129,7 +138,7 @@ Contexto MTM:
 - Público: adultos que querem independência financeira em Portugal/Brasil
 - Modelo: mentoria premium + comunidade Skool + produtos digitais
 
-As tuas responsabilidades:
+Responsabilidades:
 - Identificar parceiros complementares (coaches, influencers, empresas)
 - Escrever propostas de parceria
 - Criar pitch decks e apresentações
@@ -147,7 +156,7 @@ Contexto MTM:
 - Estilo: trading consciente, gestão de risco, 15min/dia
 - Plataforma: TradingView
 
-As tuas responsabilidades:
+Responsabilidades:
 - Analisar condições de mercado (XAU/USD e outros)
 - Sugerir setups de trading baseados no Scanner GoldKiller
 - Criar análises educativas para a comunidade
@@ -166,7 +175,11 @@ Contexto MTM atual:
 - Equipa: Ricardo + automatizações IA
 - Fase: crescimento e sistematização
 
-As tuas responsabilidades:
+Tens acesso a ferramentas para:
+- Consultar estatísticas da plataforma (utilizadores, marcações)
+- Ver dados de conversão Calendly
+
+Responsabilidades:
 - Estratégia de crescimento e escalamento
 - Desenvolvimento de novos produtos/serviços
 - Análise de oportunidades de mercado
@@ -180,14 +193,20 @@ Responde em Português de Portugal, perspetiva de empreendedor português.`,
   ai_control: `És o Agente de Controlo de IA da MoreThanMoney (MTM). Orchestras e monitorizas todos os outros agentes e sistemas IA do ecossistema MTM.
 
 Sistemas IA MTM:
-- 10 agentes especializados neste dashboard
+- 11 agentes especializados neste dashboard
 - ManyChat: automações Instagram (flows, keywords)
 - n8n: workflows de automação (cloud: mtmpt.app.n8n.cloud)
 - Calendly: marcações automáticas + webhooks Supabase
 - Supabase: base de dados + Edge Functions
 - Scanner GoldKiller: indicador TradingView
 
-As tuas responsabilidades:
+Tens acesso a ferramentas para:
+- Verificar estatísticas de todos os sistemas
+- Ver flows e tags ManyChat
+- Consultar marcações Calendly
+- Ver utilizadores da plataforma
+
+Responsabilidades:
 - Monitorizar estado de todos os sistemas
 - Identificar falhas e inconsistências
 - Sugerir melhorias e otimizações nos workflows
@@ -202,11 +221,11 @@ Responde em Português de Portugal, perspetiva técnica mas clara.`,
 
 Contexto MTM:
 - Plataforma de cursos: Skool (morethanmoney-1132)
-- Comunidade: MoreThanMoney|IQONIC (TimeTree ID: 100222342)
+- Comunidade: MoreThanMoney|IQONIC
 - Scanner GoldKiller: curso gratuito no Skool
 - Mentoria: programa premium estruturado
 
-As tuas responsabilidades:
+Responsabilidades:
 - Estruturar módulos e aulas para cursos
 - Criar materiais educativos (guias, checklists, worksheets)
 - Desenvolver quiz e exercícios práticos
@@ -218,17 +237,207 @@ As tuas responsabilidades:
 Responde sempre em Português de Portugal, estilo pedagógico mas acessível.`,
 }
 
-async function getSupabaseUser(req: NextRequest) {
-  const authHeader = req.headers.get("authorization")
-  if (!authHeader) return null
-  const token = authHeader.replace("Bearer ", "")
+// ── Tools ─────────────────────────────────────────────────────────────────────
+const TOOLS: Anthropic.Tool[] = [
+  {
+    name: "get_platform_stats",
+    description: "Obtém estatísticas da plataforma MTM: total de utilizadores, membros ativos, marcações Calendly recentes",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        include: {
+          type: "array",
+          items: { type: "string", enum: ["users", "bookings"] },
+          description: "Quais estatísticas incluir (omitir para incluir tudo)",
+        },
+      },
+    },
+  },
+  {
+    name: "get_calendly_bookings",
+    description: "Obtém marcações Calendly da base de dados. Pode filtrar por estado e datas.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        status: {
+          type: "string",
+          enum: ["active", "cancelled", "all"],
+          description: "Estado das marcações. Default: active",
+        },
+        limit: { type: "number", description: "Número máximo de resultados. Default: 10" },
+        upcoming: { type: "boolean", description: "Se true, retorna apenas marcações futuras" },
+      },
+    },
+  },
+  {
+    name: "get_recent_users",
+    description: "Obtém utilizadores recentes da plataforma MTM com nome, email e tipo de conta",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        limit: { type: "number", description: "Número máximo de resultados. Default: 10" },
+        filter: {
+          type: "string",
+          enum: ["all", "active", "premium", "trial"],
+          description: "Filtro por tipo/estado. Default: all",
+        },
+      },
+    },
+  },
+  {
+    name: "search_manychat_subscriber",
+    description: "Pesquisa um subscriber no ManyChat pelo nome",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        name: { type: "string", description: "Nome do subscriber a pesquisar" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "get_manychat_tags",
+    description: "Lista todas as tags disponíveis no ManyChat MTM",
+    input_schema: {
+      type: "object" as const,
+      properties: {},
+    },
+  },
+  {
+    name: "get_manychat_flows",
+    description: "Lista os flows/automações disponíveis no ManyChat MTM",
+    input_schema: {
+      type: "object" as const,
+      properties: {},
+    },
+  },
+]
+
+// ── Tool execution ─────────────────────────────────────────────────────────────
+async function executeTool(
+  name: string,
+  input: Record<string, unknown>
+): Promise<string> {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-  const { data: { user } } = await supabase.auth.getUser(token)
-  return user
+  const manychatKey = process.env.MANYCHAT_API_KEY || process.env.MANYCHAT_API_TOKEN
+
+  try {
+    switch (name) {
+      case "get_platform_stats": {
+        const include = (input.include as string[]) || ["users", "bookings"]
+        const results: Record<string, unknown> = {}
+
+        if (include.includes("users")) {
+          const { count: total } = await supabase
+            .from("profiles")
+            .select("*", { count: "exact", head: true })
+          const { count: active } = await supabase
+            .from("profiles")
+            .select("*", { count: "exact", head: true })
+            .eq("is_active", true)
+          const { count: admins } = await supabase
+            .from("profiles")
+            .select("*", { count: "exact", head: true })
+            .eq("user_type", "admin")
+          results.users = { total, active, admins }
+        }
+
+        if (include.includes("bookings")) {
+          const { count: activeBookings } = await supabase
+            .from("calendly_bookings")
+            .select("*", { count: "exact", head: true })
+            .eq("status", "active")
+          const { count: totalBookings } = await supabase
+            .from("calendly_bookings")
+            .select("*", { count: "exact", head: true })
+          results.bookings = { active: activeBookings, total: totalBookings }
+        }
+
+        return JSON.stringify(results, null, 2)
+      }
+
+      case "get_calendly_bookings": {
+        const { status = "active", limit = 10, upcoming = false } = input
+        let query = supabase
+          .from("calendly_bookings")
+          .select("invitee_name, invitee_email, event_type_name, start_time, end_time, status, join_url, location_type")
+          .order("start_time", { ascending: !!(upcoming) })
+          .limit(Number(limit))
+
+        if (status !== "all") query = query.eq("status", status)
+        if (upcoming) query = query.gte("start_time", new Date().toISOString())
+
+        const { data, error } = await query
+        if (error) return `Erro Supabase: ${error.message}`
+        if (!data?.length) return "Nenhuma marcação encontrada com esses filtros."
+        return JSON.stringify(data, null, 2)
+      }
+
+      case "get_recent_users": {
+        const { limit = 10, filter = "all" } = input
+        let query = supabase
+          .from("profiles")
+          .select("full_name, email, user_type, is_active, created_at, membership_level")
+          .order("created_at", { ascending: false })
+          .limit(Number(limit))
+
+        if (filter === "active") query = query.eq("is_active", true)
+        else if (filter === "premium") query = query.eq("user_type", "premium")
+        else if (filter === "trial") query = query.eq("user_type", "trial")
+
+        const { data, error } = await query
+        if (error) return `Erro Supabase: ${error.message}`
+        if (!data?.length) return "Nenhum utilizador encontrado."
+        return JSON.stringify(data, null, 2)
+      }
+
+      case "search_manychat_subscriber": {
+        if (!manychatKey) return "MANYCHAT_API_KEY não configurada no Vercel."
+        const { name } = input
+        const res = await fetch(
+          `https://api.manychat.com/fb/subscriber/findByName?name=${encodeURIComponent(String(name))}`,
+          { headers: { Authorization: `Bearer ${manychatKey}` } }
+        )
+        if (!res.ok) return `Erro ManyChat API: ${res.status} ${res.statusText}`
+        const data = await res.json()
+        if (!data?.data?.length) return `Nenhum subscriber encontrado com o nome "${name}".`
+        return JSON.stringify(data.data.slice(0, 5), null, 2)
+      }
+
+      case "get_manychat_tags": {
+        if (!manychatKey) return "MANYCHAT_API_KEY não configurada no Vercel."
+        const res = await fetch("https://api.manychat.com/fb/page/getTags", {
+          headers: { Authorization: `Bearer ${manychatKey}` },
+        })
+        if (!res.ok) return `Erro ManyChat API: ${res.status} ${res.statusText}`
+        const data = await res.json()
+        const tags = data?.data?.slice(0, 30) || []
+        return JSON.stringify(tags, null, 2)
+      }
+
+      case "get_manychat_flows": {
+        if (!manychatKey) return "MANYCHAT_API_KEY não configurada no Vercel."
+        const res = await fetch("https://api.manychat.com/fb/sending/getFlows", {
+          headers: { Authorization: `Bearer ${manychatKey}` },
+        })
+        if (!res.ok) return `Erro ManyChat API: ${res.status} ${res.statusText}`
+        const data = await res.json()
+        const flows = data?.data?.slice(0, 20) || []
+        return JSON.stringify(flows, null, 2)
+      }
+
+      default:
+        return `Ferramenta "${name}" não encontrada.`
+    }
+  } catch (err) {
+    return `Erro ao executar "${name}": ${String(err)}`
+  }
 }
 
+// ── Main handler ──────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
-  if (!ANTHROPIC_API_KEY) {
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim()
+  if (!apiKey) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY não configurado" }, { status: 500 })
   }
 
@@ -241,7 +450,7 @@ export async function POST(req: NextRequest) {
 
   const { agent, messages } = body
   if (!agent || !messages?.length) {
-    return NextResponse.json({ error: "agent e messages obrigatórios" }, { status: 400 })
+    return NextResponse.json({ error: "agent e messages são obrigatórios" }, { status: 400 })
   }
 
   const systemPrompt = AGENT_SYSTEM_PROMPTS[agent]
@@ -249,65 +458,101 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Agente "${agent}" não encontrado` }, { status: 404 })
   }
 
-  // Call Anthropic API with streaming
-  const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: process.env.ANTHROPIC_MODEL?.trim() || "claude-opus-4-5",
-      max_tokens: 2048,
-      stream: true,
-      system: systemPrompt,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
-    }),
-  })
+  const anthropic = new Anthropic({ apiKey })
+  const model = process.env.ANTHROPIC_MODEL?.trim() || "claude-3-5-sonnet-20241022"
 
-  if (!anthropicRes.ok) {
-    const err = await anthropicRes.text()
-    return NextResponse.json({ error: `Anthropic error: ${err}` }, { status: 500 })
-  }
-
-  // Stream the response back
   const encoder = new TextEncoder()
+
   const stream = new ReadableStream({
     async start(controller) {
-      const reader = anthropicRes.body!.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ""
+      const send = (data: object | string) => {
+        const str = typeof data === "string" ? data : JSON.stringify(data)
+        controller.enqueue(encoder.encode(`data: ${str}\n\n`))
+      }
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split("\n")
-        buffer = lines.pop() ?? ""
+      try {
+        let currentMessages: Anthropic.MessageParam[] = messages.map(
+          (m: { role: string; content: string }) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          })
+        )
 
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6).trim()
-            if (data === "[DONE]") {
-              controller.enqueue(encoder.encode("data: [DONE]\n\n"))
-              continue
-            }
-            try {
-              const parsed = JSON.parse(data)
-              if (parsed.type === "content_block_delta" && parsed.delta?.text) {
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ text: parsed.delta.text })}\n\n`)
-                )
-              } else if (parsed.type === "message_stop") {
-                controller.enqueue(encoder.encode("data: [DONE]\n\n"))
+        // Agentic loop (max 5 tool-use iterations)
+        for (let i = 0; i < 5; i++) {
+          const response = await anthropic.messages.create({
+            model,
+            max_tokens: 4096,
+            system: systemPrompt,
+            messages: currentMessages,
+            tools: TOOLS,
+            stream: true,
+          })
+
+          type ContentBlock = { type: string; id?: string; name?: string; input?: string; text?: string }
+          const blocks: ContentBlock[] = []
+          let curIdx = -1
+          let stopReason = "end_turn"
+
+          for await (const event of response) {
+            if (event.type === "content_block_start") {
+              curIdx++
+              if (event.content_block.type === "text") {
+                blocks.push({ type: "text", text: "" })
+              } else if (event.content_block.type === "tool_use") {
+                blocks.push({
+                  type: "tool_use",
+                  id: event.content_block.id,
+                  name: event.content_block.name,
+                  input: "",
+                })
+                send({ type: "tool_start", name: event.content_block.name, id: event.content_block.id })
               }
-            } catch {
-              // skip malformed
+            } else if (event.type === "content_block_delta") {
+              const blk = blocks[curIdx]
+              if (!blk) continue
+              if (event.delta.type === "text_delta" && blk.type === "text") {
+                blk.text = (blk.text || "") + event.delta.text
+                send({ type: "text", text: event.delta.text })
+              } else if (event.delta.type === "input_json_delta" && blk.type === "tool_use") {
+                blk.input = (blk.input || "") + event.delta.partial_json
+              }
+            } else if (event.type === "message_delta") {
+              stopReason = event.delta.stop_reason || "end_turn"
             }
           }
+
+          // Build assistant message for history
+          const assistantContent: Anthropic.ContentBlock[] = blocks.map((b) => {
+            if (b.type === "text") return { type: "text" as const, text: b.text || "" }
+            let parsedInput: Record<string, unknown> = {}
+            try { parsedInput = JSON.parse(b.input || "{}") } catch { /* empty */ }
+            return { type: "tool_use" as const, id: b.id!, name: b.name!, input: parsedInput }
+          })
+          currentMessages.push({ role: "assistant", content: assistantContent })
+
+          if (stopReason !== "tool_use") break
+
+          // Execute tools and collect results
+          const toolResults: Anthropic.ToolResultBlockParam[] = []
+          for (const blk of blocks) {
+            if (blk.type !== "tool_use" || !blk.id) continue
+            let parsedInput: Record<string, unknown> = {}
+            try { parsedInput = JSON.parse(blk.input || "{}") } catch { /* empty */ }
+
+            const result = await executeTool(blk.name!, parsedInput)
+            const preview = result.length > 300 ? result.slice(0, 300) + "…" : result
+            send({ type: "tool_result", name: blk.name!, id: blk.id, preview })
+
+            toolResults.push({ type: "tool_result", tool_use_id: blk.id, content: result })
+          }
+          currentMessages.push({ role: "user", content: toolResults })
         }
+      } catch (err) {
+        send({ type: "error", message: `Erro: ${String(err)}` })
       }
+
+      send("[DONE]")
       controller.close()
     },
   })
