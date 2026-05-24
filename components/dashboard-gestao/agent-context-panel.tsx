@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   Users, Calendar, TrendingUp, Zap, MessageSquare, Search,
   Bot, PhoneCall, Mail, Shield, PenTool, Handshake, Rocket,
@@ -230,9 +230,10 @@ function StatsWidget({ agentId }: { agentId: string }) {
   const [loading, setLoading] = useState(false)
 
   const showStats = ["setter", "business_incubation", "ai_control", "financial_email", "prospeccao"].includes(agentId)
-  if (!showStats) return null
 
-  const loadStats = async () => {
+  // loadStats declared before useEffect so the hook is always called in the same order
+  const loadStats = useCallback(async () => {
+    if (!showStats) return
     setLoading(true)
     try {
       const res = await fetch("/api/dashboard-gestao/bookings?status=active&limit=5")
@@ -245,10 +246,12 @@ function StatsWidget({ agentId }: { agentId: string }) {
     } catch { /* ignore */ } finally {
       setLoading(false)
     }
-  }
+  }, [agentId, showStats])
 
-  useEffect(() => { loadStats() }, [agentId])
+  useEffect(() => { loadStats() }, [loadStats])
 
+  // All hooks above — safe to return early now
+  if (!showStats) return null
   if (!stats && !loading) return null
 
   return (
