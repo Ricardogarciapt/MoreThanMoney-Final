@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import {
   Users, Calendar, TrendingUp, Zap, MessageSquare, Search,
   Bot, PhoneCall, Mail, Shield, PenTool, Handshake, Rocket,
-  Brain, GraduationCap, ExternalLink, RefreshCw,
+  Brain, GraduationCap, ExternalLink, RefreshCw, Smartphone,
+  AppWindow, Store, Code2, Bell,
 } from "lucide-react"
 import type { NavItem } from "./dg-sidebar"
 import { cn } from "@/lib/utils"
@@ -77,6 +78,14 @@ const QUICK_PROMPTS: Record<string, string[]> = {
     "Cria 10 perguntas de quiz sobre gestão de risco",
     "Desenvolve um checklist de onboarding para novos membros MTM",
   ],
+  app_creator: [
+    "Como converter a app-mobile MTM para iOS e Android com Capacitor? Dá os comandos exatos",
+    "Quais os requisitos completos da App Store para uma app de educação financeira?",
+    "Cria a metadata completa para submeter a app MTM nas stores (nome, descrição, keywords)",
+    "Que passos preciso para obter Apple Developer Account e publicar pela primeira vez?",
+    "Como configurar push notifications Firebase para iOS e Android via Capacitor?",
+    "Qual a estratégia de monetização correta para evitar a comissão de 30% das stores?",
+  ],
 }
 
 // ── Capabilities per agent ─────────────────────────────────────────────────────
@@ -147,6 +156,14 @@ const CAPABILITIES: Record<string, { label: string; icon: React.ElementType }[]>
     { label: "Quiz & exercícios", icon: Zap },
     { label: "Jornadas de aprendizagem", icon: TrendingUp },
   ],
+  app_creator: [
+    { label: "Conversão web→nativo (Capacitor)", icon: Smartphone },
+    { label: "App Store compliance (Apple)", icon: Store },
+    { label: "Google Play compliance", icon: Store },
+    { label: "ASO & metadata", icon: AppWindow },
+    { label: "Push notifications", icon: Bell },
+    { label: "In-App Purchases / Monetização", icon: Code2 },
+  ],
 }
 
 // ── Quick links per agent ─────────────────────────────────────────────────────
@@ -196,6 +213,14 @@ const QUICK_LINKS: Record<string, { label: string; url: string }[]> = {
   education: [
     { label: "Skool Cursos", url: "https://www.skool.com/morethanmoney-1132" },
     { label: "Canva", url: "https://www.canva.com" },
+  ],
+  app_creator: [
+    { label: "Apple Developer", url: "https://developer.apple.com" },
+    { label: "App Store Connect", url: "https://appstoreconnect.apple.com" },
+    { label: "Google Play Console", url: "https://play.google.com/console" },
+    { label: "Capacitor Docs", url: "https://capacitorjs.com/docs" },
+    { label: "Firebase Console", url: "https://console.firebase.google.com" },
+    { label: "App Store Guidelines", url: "https://developer.apple.com/app-store/review/guidelines/" },
   ],
 }
 

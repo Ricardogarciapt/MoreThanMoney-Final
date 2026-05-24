@@ -16,7 +16,7 @@ export default function DGOverview({ onNavigate }: { onNavigate: (id: DGSection)
           <h1 className="text-2xl font-bold text-white">Dashboard Gestão MTM</h1>
         </div>
         <p className="text-gray-400 max-w-2xl leading-relaxed">
-          Centro de controlo com 11 agentes IA especializados para gerir e escalar o negócio MoreThanMoney.
+          Centro de controlo com 12 agentes IA especializados para gerir e escalar o negócio MoreThanMoney.
           Cada agente tem contexto completo sobre o teu negócio e responde em Português de Portugal.
         </p>
         <div className="flex flex-wrap gap-3 mt-6">

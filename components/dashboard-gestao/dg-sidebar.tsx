@@ -18,6 +18,7 @@ import {
   Calendar,
   ArrowLeft,
   ChevronRight,
+  Smartphone,
 } from "lucide-react"
 
 export type DGSection =
@@ -33,6 +34,7 @@ export type DGSection =
   | "business_incubation"
   | "ai_control"
   | "education"
+  | "app_creator"
   | "calendly"
 
 export interface NavItem {
@@ -129,6 +131,13 @@ export const navItems: NavItem[] = [
     color: "#38bdf8",
   },
   {
+    id: "app_creator",
+    label: "App Creator",
+    icon: Smartphone,
+    description: "Apps iOS & Android para as stores",
+    color: "#06b6d4",
+  },
+  {
     id: "calendly",
     label: "Calendly",
     icon: Calendar,
@@ -163,7 +172,7 @@ export default function DGSidebar({
         </div>
         <div>
           <p className="text-sm font-semibold text-white leading-none">Dashboard Gestão</p>
-          <p className="text-xs text-gray-500 mt-0.5">11 Agentes IA MTM</p>
+          <p className="text-xs text-gray-500 mt-0.5">12 Agentes IA MTM</p>
         </div>
       </div>
 
@@ -212,7 +221,7 @@ export default function DGSidebar({
 
       {/* Footer */}
       <div className="border-t border-[#D2A63C]/15 p-3">
-        <p className="text-center text-xs text-gray-600">Dashboard Gestão</p>
+        <p className="text-center text-xs text-gray-600">12 Agentes IA MTM</p>
         <p className="text-center text-xs text-gray-700">MoreThanMoney © 2026</p>
       </div>
     </aside>
