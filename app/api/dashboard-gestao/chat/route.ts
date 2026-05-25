@@ -550,7 +550,10 @@ export async function POST(req: NextRequest) {
   }
 
   const anthropic = new Anthropic({ apiKey })
-  const model = process.env.ANTHROPIC_MODEL?.trim() || "claude-3-5-sonnet-20241022"
+
+  // Model priority: env var → claude-3-5-haiku (cheaper, widely available) → haiku 3 (fallback)
+  // Se continuas a obter 404, define ANTHROPIC_MODEL=claude-3-haiku-20240307 no Vercel
+  const model = process.env.ANTHROPIC_MODEL?.trim() || "claude-3-5-haiku-20241103"
 
   const encoder = new TextEncoder()
 
@@ -640,7 +643,24 @@ export async function POST(req: NextRequest) {
           currentMessages.push({ role: "user", content: toolResults })
         }
       } catch (err) {
-        send({ type: "error", message: `Erro: ${String(err)}` })
+        const errStr = String(err)
+        // Se o modelo não existe na conta, sugerir solução clara
+        if (errStr.includes("not_found_error") || errStr.includes("404")) {
+          send({
+            type: "error",
+            message: `Modelo "${model}" não disponível na tua conta Anthropic.\n\n` +
+              `Solução: No Vercel → Settings → Environment Variables → adiciona:\n` +
+              `ANTHROPIC_MODEL = claude-3-haiku-20240307\n\n` +
+              `Ou usa um dos modelos disponíveis: claude-3-haiku-20240307, claude-3-opus-20240229`,
+          })
+        } else if (errStr.includes("credit balance") || errStr.includes("insufficient")) {
+          send({
+            type: "error",
+            message: `Saldo insuficiente. Adiciona créditos em: console.anthropic.com/billing`,
+          })
+        } else {
+          send({ type: "error", message: `Erro: ${errStr}` })
+        }
       }
 
       send("[DONE]")
