@@ -1,10 +1,10 @@
 "use client"
 
-import { Search, Bot, PhoneCall, Mail, Shield, PenTool, Handshake, TrendingUp, Rocket, Brain, GraduationCap, Calendar, ArrowRight } from "lucide-react"
+import { Search, Bot, PhoneCall, Mail, Shield, PenTool, Handshake, TrendingUp, Rocket, Brain, GraduationCap, Calendar, ArrowRight, BarChart3 } from "lucide-react"
 import type { DGSection, NavItem } from "./dg-sidebar"
 import { navItems } from "./dg-sidebar"
 
-const agents = navItems.filter((n) => n.id !== "overview" && n.id !== "calendly")
+const agents = navItems.filter((n) => n.id !== "overview" && n.id !== "metrics" && n.id !== "calendly")
 
 export default function DGOverview({ onNavigate }: { onNavigate: (id: DGSection) => void }) {
   return (
@@ -28,11 +28,18 @@ export default function DGOverview({ onNavigate }: { onNavigate: (id: DGSection)
             Controlo IA
           </button>
           <button
+            onClick={() => onNavigate("metrics")}
+            className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-sm font-medium transition-colors"
+          >
+            <BarChart3 className="h-4 w-4 text-[#818cf8]" />
+            Métricas
+          </button>
+          <button
             onClick={() => onNavigate("calendly")}
             className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-sm font-medium transition-colors"
           >
             <Calendar className="h-4 w-4" />
-            Ver marcações
+            Marcações
           </button>
         </div>
       </div>

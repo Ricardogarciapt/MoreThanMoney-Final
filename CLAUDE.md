@@ -422,10 +422,107 @@ curl -X POST -H "Authorization: Bearer $KEY" \
 | Secção | URL |
 |--------|-----|
 | Dashboard principal | https://www.morethanmoney.pt/dashboard-gestao |
+| **Métricas (Pie charts)** | https://www.morethanmoney.pt/dashboard-gestao?tab=metrics |
 | Admin | https://www.morethanmoney.pt/admin |
 | App Mobile | https://www.morethanmoney.pt/app-mobile |
 | API Chat | POST /api/dashboard-gestao/chat |
 | API Bookings | GET /api/dashboard-gestao/bookings |
+| **API Métricas** | GET /api/dashboard-gestao/metrics |
+
+---
+
+## Métricas — Dashboard Local (Claude Code)
+
+Para ver métricas completas do ecossistema localmente, usa estes SQL + APIs:
+
+### Supabase — Queries de métricas
+
+```sql
+-- KPIs principais
+SELECT
+  COUNT(*) AS total_users,
+  COUNT(*) FILTER (WHERE is_active = true) AS active_users,
+  COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '30 days') AS new_30d,
+  COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days') AS new_7d
+FROM profiles;
+
+-- Utilizadores por tipo
+SELECT user_type, COUNT(*) AS total
+FROM profiles
+GROUP BY user_type
+ORDER BY total DESC;
+
+-- Marcações Calendly por estado
+SELECT status, COUNT(*) AS total
+FROM calendly_bookings
+GROUP BY status;
+
+-- Marcações por tipo de evento
+SELECT event_type_slug, COUNT(*) AS total
+FROM calendly_bookings
+GROUP BY event_type_slug
+ORDER BY total DESC;
+
+-- Taxa de cancelamento
+SELECT
+  ROUND(
+    COUNT(*) FILTER (WHERE status = 'cancelled')::numeric /
+    NULLIF(COUNT(*)::numeric, 0) * 100, 1
+  ) AS cancel_rate_pct
+FROM calendly_bookings;
+
+-- Crescimento semanal
+SELECT
+  DATE_TRUNC('week', created_at) AS week,
+  COUNT(*) AS signups
+FROM profiles
+WHERE created_at > NOW() - INTERVAL '8 weeks'
+GROUP BY week
+ORDER BY week;
+```
+
+### ManyChat — via curl
+
+```bash
+# Seguidores totais
+curl -s -H "Authorization: Bearer $MANYCHAT_API_KEY" \
+  "https://api.manychat.com/fb/page/getInfo" | python3 -c \
+  "import sys,json; d=json.load(sys.stdin); print('Seguidores:', d['data'].get('total_active_subscriber_count', 'N/A'))"
+
+# Contar flows
+curl -s -H "Authorization: Bearer $MANYCHAT_API_KEY" \
+  "https://api.manychat.com/fb/page/getFlows" | python3 -c \
+  "import sys,json; d=json.load(sys.stdin); flows=d.get('data',[]); print(f'{len(flows)} flows total')"
+
+# Contar tags
+curl -s -H "Authorization: Bearer $MANYCHAT_API_KEY" \
+  "https://api.manychat.com/fb/tagging/getTags" | python3 -c \
+  "import sys,json; d=json.load(sys.stdin); tags=d.get('data',[]); print(f'{len(tags)} tags total')"
+```
+
+### API Métricas completa (JSON)
+
+```bash
+# Com servidor local
+curl http://localhost:3000/api/dashboard-gestao/metrics | python3 -m json.tool
+
+# Em produção
+curl https://www.morethanmoney.pt/api/dashboard-gestao/metrics | python3 -m json.tool
+```
+
+### Pie Charts disponíveis no dashboard online
+
+Vai a: **dashboard-gestao → Métricas** (ícone BarChart3 na sidebar)
+
+| Gráfico | O que mostra |
+|---------|-------------|
+| Membros por Tipo | Admin / Membro / Trial / Premium |
+| Atividade de Membros | Ativos vs Inativos (%) |
+| Marcações por Estado | Ativas vs Canceladas |
+| Tipo de Marcação | Onboarding vs Reunião Pontual |
+| Flows ManyChat | Ativos vs Rascunhos |
+| Novos Membros | Esta semana vs semana anterior (bar) |
+| Funil MTM | Seguidores → Leads → Agendamentos → Membros |
 
 ---
 

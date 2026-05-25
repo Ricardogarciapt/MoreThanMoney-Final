@@ -19,10 +19,12 @@ import {
   ArrowLeft,
   ChevronRight,
   Smartphone,
+  BarChart3,
 } from "lucide-react"
 
 export type DGSection =
   | "overview"
+  | "metrics"
   | "prospeccao"
   | "chatbot_builder"
   | "setter"
@@ -52,6 +54,13 @@ export const navItems: NavItem[] = [
     icon: LayoutDashboard,
     description: "Dashboard principal",
     color: "#D2A63C",
+  },
+  {
+    id: "metrics",
+    label: "Métricas",
+    icon: BarChart3,
+    description: "Análise do ecossistema MTM",
+    color: "#818cf8",
   },
   {
     id: "prospeccao",
@@ -182,6 +191,7 @@ export default function DGSidebar({
           const Icon = item.icon
           const isActive = activeSection === item.id
           const isOverview = item.id === "overview"
+          const isMetrics = item.id === "metrics"
           const isCalendly = item.id === "calendly"
 
           return (
@@ -193,7 +203,7 @@ export default function DGSidebar({
                 isActive
                   ? "bg-[#D2A63C]/15 text-white"
                   : "text-gray-400 hover:text-white hover:bg-white/5",
-                (isOverview || isCalendly) && !isActive && "mt-1"
+                (isOverview || isMetrics || isCalendly) && !isActive && "mt-1"
               )}
             >
               <div

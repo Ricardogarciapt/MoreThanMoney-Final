@@ -8,6 +8,7 @@ import DGSidebar, { type DGSection, navItems } from "@/components/dashboard-gest
 import AgentChat from "@/components/dashboard-gestao/agent-chat"
 import CalendlySection from "@/components/dashboard-gestao/calendly-section"
 import DGOverview from "@/components/dashboard-gestao/dg-overview"
+import DGMetrics from "@/components/dashboard-gestao/dg-metrics"
 
 const VALID_SECTIONS = new Set<DGSection>(navItems.map((n) => n.id))
 
@@ -88,7 +89,7 @@ function DashboardGestaoClient() {
 
   const activeNavItem = navItems.find((n) => n.id === activeSection)
   const isAgentSection =
-    activeSection !== "overview" && activeSection !== "calendly"
+    activeSection !== "overview" && activeSection !== "calendly" && activeSection !== "metrics"
 
   return (
     <div className="flex h-screen bg-gradient-to-b from-black via-zinc-950 to-black text-white overflow-hidden">
@@ -122,6 +123,10 @@ function DashboardGestaoClient() {
         <div className={`flex-1 overflow-auto ${isAgentSection ? "flex flex-col" : "p-6"}`}>
           {activeSection === "overview" && (
             <DGOverview onNavigate={handleSectionChange} />
+          )}
+
+          {activeSection === "metrics" && (
+            <DGMetrics />
           )}
 
           {activeSection === "calendly" && (
