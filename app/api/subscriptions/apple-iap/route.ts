@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
         const skoolWebhookUrl = process.env.SKOOL_INVITE_WEBHOOK_URL
         if (skoolWebhookUrl) {
           const inviteUrl = `${skoolWebhookUrl}?email=${encodeURIComponent(profile.email)}`
-          fetch(inviteUrl).catch(() => {/* non-blocking */})
+          fetch(inviteUrl, { method: "POST" }).catch(() => {/* non-blocking */})
         }
       }
     }
