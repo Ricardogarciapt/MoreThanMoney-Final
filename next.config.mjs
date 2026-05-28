@@ -21,18 +21,6 @@ const nextConfig = {
   compress: true,
   reactStrictMode: true,
   serverExternalPackages: ["ssh2"],
-  webpack: (config, { webpack: wp }) => {
-    // The dynamic `import(`@capacitor/${plugin}`)` in use-capacitor.ts causes webpack
-    // to create a context module that pulls in ALL @capacitor files, including
-    // non-JS binary/config files from @capacitor/android. IgnorePlugin prevents this.
-    config.plugins.push(
-      new wp.IgnorePlugin({
-        resourceRegExp: /\.(pro|xml|gradle|java|kt|plist|md)$/,
-        contextRegExp: /@capacitor/,
-      })
-    )
-    return config
-  },
 }
 
 export default nextConfig
