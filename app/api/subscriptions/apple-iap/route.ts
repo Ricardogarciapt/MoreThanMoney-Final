@@ -126,6 +126,22 @@ export async function POST(request: NextRequest) {
       metadata: { apple_product_id },
     })
 
+    // Auto-invite Premium subscribers to Skool
+    if (subscription_plan === "premium") {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("id", userId)
+        .single()
+      if (profile?.email) {
+        const skoolWebhookUrl = process.env.SKOOL_INVITE_WEBHOOK_URL
+        if (skoolWebhookUrl) {
+          const inviteUrl = `${skoolWebhookUrl}?email=${encodeURIComponent(profile.email)}`
+          fetch(inviteUrl).catch(() => {/* non-blocking */})
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       plan: subscription_plan,
