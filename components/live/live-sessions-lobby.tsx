@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import EducatorProfileDialog, { type EducatorProfilePublic } from "@/components/live/educator-profile-dialog"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 import {
   Radio,
   Search,
@@ -17,6 +18,7 @@ import {
   Bell,
   ArrowRight,
   Circle,
+  Lock,
 } from "lucide-react"
 import { LMS_CATEGORY_OPTIONS } from "@/lib/lms-categories"
 
@@ -59,8 +61,22 @@ function streamVisual(stream: Stream): string | null {
   return avatar || null
 }
 
+function canAccessStream(
+  userPlan: "app_member" | "premium" | null | undefined,
+  userType: string | undefined,
+  streamTier: "all" | "app_member" | "premium" | null | undefined
+): boolean {
+  if (userType === "admin") return true
+  const tier = streamTier ?? "all"
+  if (tier === "all") return true
+  if (tier === "app_member") return userPlan === "app_member" || userPlan === "premium"
+  if (tier === "premium") return userPlan === "premium"
+  return false
+}
+
 export default function LiveSessionsLobby() {
   const { toast } = useToast()
+  const { user } = useAuth()
   const [academies, setAcademies] = useState<Academy[]>([])
   const [streams, setStreams] = useState<Stream[]>([])
   const [educators, setEducators] = useState<EducatorPublic[]>([])
@@ -357,6 +373,8 @@ export default function LiveSessionsLobby() {
                     key={stream.id}
                     stream={stream}
                     featured
+                    userPlan={user?.subscription_plan}
+                    userType={user?.user_type}
                     onEducatorProfile={() => openEducatorFromStream(stream)}
                   />
                 ))}
@@ -401,16 +419,21 @@ export default function LiveSessionsLobby() {
 function StreamMarketCard({
   stream,
   featured,
+  userPlan,
+  userType,
   onEducatorProfile,
 }: {
   stream: Stream
   featured?: boolean
+  userPlan?: "app_member" | "premium" | null
+  userType?: string
   onEducatorProfile?: () => void
 }) {
   const img = streamVisual(stream)
   const viewers = typeof stream.viewer_count === "number" ? stream.viewer_count : null
   const enterHref = stream.educator?.id ? `/live/${stream.educator.id}` : `/live-sessions/${stream.id}`
   const showEducatorProfile = Boolean(stream.educator?.id && onEducatorProfile)
+  const hasAccess = canAccessStream(userPlan, userType, stream.access_tier)
 
   return (
     <Card
@@ -453,6 +476,21 @@ function StreamMarketCard({
             <span className="inline-flex items-center gap-1 rounded-md bg-amber-600/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-black shadow">
               Membro
             </span>
+          </div>
+        )}
+        {!hasAccess && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/75 backdrop-blur-sm">
+            <Lock className="h-8 w-8 text-white/70" />
+            <p className="text-xs font-semibold text-white/90 text-center px-4">
+              {stream.access_tier === "premium" ? "Pack Premium ($65/mês)" : "Pack Membro ($35/mês)"}
+            </p>
+            <Link
+              href="/register"
+              className="mt-1 rounded-full bg-[#D2A63C] px-4 py-1.5 text-xs font-bold text-black hover:bg-[#BB8525]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Ver planos
+            </Link>
           </div>
         )}
       </div>
@@ -514,9 +552,18 @@ function StreamMarketCard({
             </Badge>
           )}
         </div>
-        <Link href={enterHref} className="block">
-          <Button className="w-full bg-[#D2A63C] font-semibold text-black hover:bg-[#BB8525]">Entrar na sala</Button>
-        </Link>
+        {hasAccess ? (
+          <Link href={enterHref} className="block">
+            <Button className="w-full bg-[#D2A63C] font-semibold text-black hover:bg-[#BB8525]">Entrar na sala</Button>
+          </Link>
+        ) : (
+          <Link href="/register" className="block">
+            <Button variant="outline" className="w-full border-[#D2A63C]/40 text-[#D2A63C]">
+              <Lock className="mr-2 h-3.5 w-3.5" />
+              Ver planos de acesso
+            </Button>
+          </Link>
+        )}
       </CardContent>
     </Card>
   )
