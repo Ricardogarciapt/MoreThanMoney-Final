@@ -524,6 +524,57 @@ async function executeTool(
   }
 }
 
+const ANTHROPIC_FALLBACK_MODELS = [
+  "claude-3-5-haiku-20241022",
+  "claude-3-haiku-20240307",
+]
+
+function getAnthropicModelCandidates() {
+  const configured = process.env.ANTHROPIC_MODEL?.trim()
+  return [...new Set([configured, ...ANTHROPIC_FALLBACK_MODELS].filter(Boolean) as string[])]
+}
+
+function isAnthropicModelUnavailableError(err: unknown) {
+  const errStr = String(err).toLowerCase()
+  return (
+    errStr.includes("not_found_error") ||
+    errStr.includes("404") ||
+    (errStr.includes("model") && errStr.includes("not available"))
+  )
+}
+
+async function createAnthropicStreamWithFallback(args: {
+  anthropic: Anthropic
+  systemPrompt: string
+  currentMessages: Anthropic.MessageParam[]
+  tools: Anthropic.Tool[]
+  modelCandidates: string[]
+}) {
+  let lastError: unknown = null
+
+  for (const model of args.modelCandidates) {
+    try {
+      const response = await args.anthropic.messages.create({
+        model,
+        max_tokens: 4096,
+        system: args.systemPrompt,
+        messages: args.currentMessages,
+        tools: args.tools,
+        stream: true,
+      })
+      return { response, model }
+    } catch (err) {
+      if (!isAnthropicModelUnavailableError(err)) throw err
+      lastError = err
+      console.warn(`[dashboard-gestao/chat] modelo Anthropic indisponível: ${model}`)
+    }
+  }
+
+  throw new Error(
+    `anthropic_models_unavailable::${args.modelCandidates.join(",")}::${String(lastError)}`
+  )
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim()
@@ -549,9 +600,7 @@ export async function POST(req: NextRequest) {
   }
 
   const anthropic = new Anthropic({ apiKey })
-
-  // Model priority: env var → claude-3-5-haiku-20241022 (widely available, cheaper)
-  const model = process.env.ANTHROPIC_MODEL?.trim() || "claude-3-5-haiku-20241022"
+  const modelCandidates = getAnthropicModelCandidates()
 
   const encoder = new TextEncoder()
 
@@ -563,6 +612,7 @@ export async function POST(req: NextRequest) {
       }
 
       try {
+        let selectedModel: string | null = null
         let currentMessages: Anthropic.MessageParam[] = messages.map(
           (m: { role: string; content: string }) => ({
             role: m.role as "user" | "assistant",
@@ -572,14 +622,26 @@ export async function POST(req: NextRequest) {
 
         // Agentic loop (max 5 tool-use iterations)
         for (let i = 0; i < 5; i++) {
-          const response = await anthropic.messages.create({
-            model,
-            max_tokens: 4096,
-            system: systemPrompt,
-            messages: currentMessages,
-            tools: TOOLS,
-            stream: true,
-          })
+          const response = selectedModel
+            ? await anthropic.messages.create({
+                model: selectedModel,
+                max_tokens: 4096,
+                system: systemPrompt,
+                messages: currentMessages,
+                tools: TOOLS,
+                stream: true,
+              })
+            : await (async () => {
+                const created = await createAnthropicStreamWithFallback({
+                  anthropic,
+                  systemPrompt,
+                  currentMessages,
+                  tools: TOOLS,
+                  modelCandidates,
+                })
+                selectedModel = created.model
+                return created.response
+              })()
 
           type ContentBlock = { type: string; id?: string; name?: string; input?: string; text?: string }
           const blocks: ContentBlock[] = []
@@ -642,14 +704,25 @@ export async function POST(req: NextRequest) {
         }
       } catch (err) {
         const errStr = String(err)
-        // Se o modelo não existe na conta, sugerir solução clara
-        if (errStr.includes("not_found_error") || errStr.includes("404")) {
+        if (errStr.includes("anthropic_models_unavailable::")) {
           send({
             type: "error",
-            message: `Modelo "${model}" não disponível na tua conta Anthropic.\n\n` +
-              `Solução: No Vercel → Settings → Environment Variables → adiciona:\n` +
-              `ANTHROPIC_MODEL = claude-3-5-haiku-20241022\n\n` +
-              `Modelos válidos: claude-3-5-haiku-20241022, claude-3-5-sonnet-20241022`,
+            message:
+              `Nenhum modelo Anthropic compatível ficou disponível para o dashboard.\n\n` +
+              `Modelos tentados automaticamente: ${modelCandidates.join(", ")}\n\n` +
+              `No Vercel → Settings → Environment Variables, define por exemplo:\n` +
+              `ANTHROPIC_MODEL = claude-3-haiku-20240307\n\n` +
+              `Se a tua conta não tiver Haiku, tenta:\n` +
+              `ANTHROPIC_MODEL = claude-3-opus-20240229`,
+          })
+        } else if (isAnthropicModelUnavailableError(err)) {
+          send({
+            type: "error",
+            message:
+              `O modelo Anthropic configurado não está disponível.\n\n` +
+              `Modelos tentados automaticamente: ${modelCandidates.join(", ")}\n\n` +
+              `No Vercel → Settings → Environment Variables, define:\n` +
+              `ANTHROPIC_MODEL = claude-3-haiku-20240307`,
           })
         } else if (errStr.includes("credit balance") || errStr.includes("insufficient")) {
           send({

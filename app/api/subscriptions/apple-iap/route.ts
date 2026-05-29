@@ -12,6 +12,10 @@ export async function POST(request: NextRequest) {
       subscription_plan,
       subscription_billing_cycle,
       subscription_platform,
+      subscription_expires_at,
+      subscription_auto_renews,
+      subscription_status,
+      event_type,
       coupon_code,
     } = body
 
@@ -34,7 +38,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // If no token, try to match by transaction ID (re-entrant call)
+    // If no token, try to match by transaction ID (re-entrant call / server notification)
     if (!userId) {
       const { data: existing } = await supabase
         .from("profiles")
@@ -57,8 +61,26 @@ export async function POST(request: NextRequest) {
     if (!validPlans.includes(subscription_plan)) {
       return NextResponse.json({ error: "subscription_plan inválido" }, { status: 400 })
     }
-    if (!validCycles.includes(subscription_billing_cycle)) {
+    if (subscription_billing_cycle && !validCycles.includes(subscription_billing_cycle)) {
       return NextResponse.json({ error: "subscription_billing_cycle inválido" }, { status: 400 })
+    }
+
+    // Validate event type
+    const eventType = event_type || "purchased"
+    const isEntitlementCheck = eventType === "entitlement_check"
+
+    // For entitlement checks, only update subscription dates — don't re-apply plan upgrade logic
+    if (isEntitlementCheck) {
+      const checkUpdate: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+      }
+      if (subscription_expires_at) checkUpdate.subscription_expires_at = subscription_expires_at
+      if (typeof subscription_auto_renews === "boolean") checkUpdate.subscription_auto_renews = subscription_auto_renews
+      if (subscription_status) checkUpdate.subscription_status = subscription_status
+
+      await supabase.from("profiles").update(checkUpdate).eq("id", userId)
+
+      return NextResponse.json({ success: true, event_type: "entitlement_check" })
     }
 
     // Validate coupon if provided
@@ -75,11 +97,10 @@ export async function POST(request: NextRequest) {
         const now = new Date()
         const notExpired = !coupon.expires_at || new Date(coupon.expires_at) > now
         const hasUses = !coupon.max_uses || (coupon.current_uses || 0) < coupon.max_uses
-        const planMatch = !coupon.plan || coupon.plan === subscription_plan || coupon.plan === 'any'
+        const planMatch = !coupon.plan || coupon.plan === subscription_plan || coupon.plan === "any"
 
         if (notExpired && hasUses && planMatch) {
           couponValid = true
-          // Increment uses
           await supabase
             .from("subscription_coupons")
             .update({ current_uses: (coupon.current_uses || 0) + 1 })
@@ -88,20 +109,40 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update profile with subscription info
+    // Determine if this is a renewal or new purchase — increment renewal count for renewals
+    const isRenewal = eventType === "renewed"
+
+    // Build profile update
     const profileUpdate: Record<string, any> = {
       subscription_plan,
-      subscription_billing_cycle,
+      subscription_billing_cycle: subscription_billing_cycle || "monthly",
       subscription_platform: subscription_platform || "app_store",
       apple_original_transaction_id,
       apple_product_id,
       user_type: "member",
       is_active: true,
       member_category: subscription_plan === "premium" ? "iq" : "standard",
+      subscription_status: subscription_status || "active",
+      subscription_auto_renews: subscription_auto_renews !== false, // default true
       updated_at: new Date().toISOString(),
     }
+
+    if (subscription_expires_at) {
+      profileUpdate.subscription_expires_at = subscription_expires_at
+    }
+
     if (coupon_code && couponValid) {
       profileUpdate.coupon_code = coupon_code.toUpperCase()
+    }
+
+    if (isRenewal) {
+      // Increment renewal count
+      const { data: current } = await supabase
+        .from("profiles")
+        .select("subscription_renewal_count")
+        .eq("id", userId)
+        .single()
+      profileUpdate.subscription_renewal_count = (current?.subscription_renewal_count || 0) + 1
     }
 
     const { error: updateError } = await supabase
@@ -117,17 +158,20 @@ export async function POST(request: NextRequest) {
     // Log subscription event
     await supabase.from("subscription_events").insert({
       user_id: userId,
-      event_type: "purchased",
+      event_type: eventType,
       plan: subscription_plan,
-      billing_cycle: subscription_billing_cycle,
+      billing_cycle: subscription_billing_cycle || "monthly",
       platform: subscription_platform || "app_store",
       apple_transaction_id: apple_original_transaction_id,
       coupon_code: couponValid ? coupon_code?.toUpperCase() : null,
+      subscription_expires_at: subscription_expires_at || null,
+      subscription_auto_renews: subscription_auto_renews !== false,
+      subscription_status: subscription_status || "active",
       metadata: { apple_product_id },
     })
 
     // Auto-invite Premium subscribers to Skool
-    if (subscription_plan === "premium") {
+    if (subscription_plan === "premium" && !isRenewal) {
       const { data: profile } = await supabase
         .from("profiles")
         .select("email")
@@ -147,6 +191,8 @@ export async function POST(request: NextRequest) {
       plan: subscription_plan,
       billing_cycle: subscription_billing_cycle,
       coupon_applied: couponValid,
+      expires_at: subscription_expires_at || null,
+      status: subscription_status || "active",
     })
   } catch (err: any) {
     console.error("[apple-iap] exception:", err)

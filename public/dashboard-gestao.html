@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="pt" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Gestão — MoreThanMoney</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+<style>
+  :root {
+    --gold: #D2A63C;
+    --gold-dim: #D2A63C22;
+    --gold-border: #D2A63C33;
+    --bg: #000;
+    --surface: #0a0a0a;
+    --surface2: #111;
+    --border: #1a1a1a;
+    --text: #fff;
+    --muted: #6b7280;
+    --muted2: #374151;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;font-size:14px}
+  ::-webkit-scrollbar{width:4px;height:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#333;border-radius:4px}
+  a{color:inherit;text-decoration:none}
+  button{cursor:pointer;border:none;background:none;color:inherit;font:inherit}
+  input,textarea,select{font:inherit;color:inherit;background:none;border:none;outline:none}
+
+  /* Layout */
+  #app{display:flex;height:100vh;overflow:hidden}
+
+  /* Auth Gate */
+  #auth-gate{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;z-index:100;padding:24px}
+  #auth-gate.hidden{display:none}
+  .auth-box{background:var(--surface2);border:1px solid var(--gold-border);border-radius:20px;padding:40px;width:100%;max-width:400px;text-align:center}
+  .auth-box h1{font-size:22px;font-weight:700;margin-bottom:8px}
+  .auth-box p{color:var(--muted);font-size:13px;margin-bottom:28px}
+  .auth-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;color:var(--text);font-size:14px;margin-bottom:12px;transition:.2s}
+  .auth-input:focus{border-color:var(--gold)}
+  .auth-btn{width:100%;background:var(--gold);color:#000;border-radius:12px;padding:12px;font-size:14px;font-weight:700;transition:.15s}
+  .auth-btn:hover{background:#c49535}
+  .auth-error{color:#f87171;font-size:12px;margin-top:8px}
+
+  /* Sidebar */
+  #sidebar{width:220px;flex-shrink:0;background:rgba(5,5,5,.9);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  .sidebar-header{border-bottom:1px solid var(--border);padding:12px}
+  .sidebar-brand{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border)}
+  .brand-icon{width:36px;height:36px;border-radius:10px;background:var(--gold-dim);border:1px solid var(--gold-border);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .brand-icon svg{width:18px;height:18px;color:var(--gold)}
+  .brand-name{font-size:13px;font-weight:600;line-height:1.2}
+  .brand-sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .sidebar-nav{flex:1;overflow-y:auto;padding:8px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:.15s;margin-bottom:2px;border:1px solid transparent}
+  .nav-item:hover{background:rgba(255,255,255,.04);color:#fff}
+  .nav-item.active{background:var(--gold-dim);border-color:var(--gold-border)}
+  .nav-item .ni-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,.05)}
+  .nav-item.active .ni-icon{background:var(--gold-dim)}
+  .nav-item svg{width:14px;height:14px}
+  .nav-label{font-size:12.5px;font-weight:500;flex:1}
+  .nav-desc{font-size:10.5px;color:var(--muted);margin-top:1px}
+  .nav-chevron{width:12px;height:12px;color:var(--gold);flex-shrink:0}
+  .sidebar-footer{border-top:1px solid var(--border);padding:10px;text-align:center}
+  .sidebar-footer p{font-size:10.5px;color:#374151}
+
+  /* Main area */
+  #main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{flex-shrink:0;border-bottom:1px solid var(--border);background:rgba(0,0,0,.4);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(8px)}
+  .topbar-left{display:flex;align-items:center;gap:8px}
+  .topbar-left svg{width:15px;height:15px}
+  .topbar-title{font-size:13.5px;font-weight:600}
+  .topbar-badge{font-size:10px;color:var(--muted);margin-left:4px}
+  .topbar-user{font-size:11px;color:var(--muted)}
+  .content{flex:1;overflow-y:auto;padding:24px}
+
+  /* Sections */
+  .section{display:none}
+  .section.active{display:block}
+  .section-flex{display:none;height:100%}
+  .section-flex.active{display:flex}
+
+  /* Cards */
+  .card{background:rgba(10,10,10,.8);border:1px solid var(--border);border-radius:16px;padding:20px}
+  .card-sm{background:rgba(10,10,10,.8);border:1px solid var(--border);border-radius:12px;padding:16px}
+
+  /* Overview */
+  .hero{background:linear-gradient(135deg,rgba(210,166,60,.08) 0%,var(--surface) 60%);border:1px solid var(--gold-border);border-radius:20px;padding:32px}
+  .hero h1{font-size:22px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+  .hero p{color:#9ca3af;max-width:560px;line-height:1.6;font-size:13px}
+  .hero-btns{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+  .btn-gold{background:var(--gold);color:#000;border-radius:12px;padding:9px 18px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;transition:.15s}
+  .btn-gold:hover{background:#c49535}
+  .btn-dark{background:var(--surface2);color:#fff;border-radius:12px;padding:9px 18px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;border:1px solid var(--border);transition:.15s}
+  .btn-dark:hover{background:#1a1a1a}
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .grid-agents{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media(max-width:900px){.grid4{grid-template-columns:repeat(2,1fr)}.grid-agents{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:600px){.grid2,.grid3,.grid4,.grid-agents{grid-template-columns:1fr}}
+  .stat-box{background:rgba(10,10,10,.6);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+  .stat-value{font-size:22px;font-weight:700;line-height:1}
+  .stat-label{font-size:11px;color:var(--muted);margin-top:4px}
+  .agent-card{display:flex;align-items:center;gap:12px;background:rgba(10,10,10,.6);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:.2s;text-align:left;width:100%}
+  .agent-card:hover{border-color:var(--gold-border);background:rgba(10,10,10,.9)}
+  .agent-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .agent-icon svg{width:18px;height:18px}
+  .agent-name{font-size:13px;font-weight:600}
+  .agent-desc{font-size:11px;color:var(--muted);margin-top:2px}
+
+  /* Chat */
+  .chat-layout{display:flex;height:100%;overflow:hidden}
+  .context-panel{width:220px;flex-shrink:0;border-right:1px solid var(--border);background:rgba(0,0,0,.3);overflow-y:auto;display:flex;flex-direction:column}
+  .context-agent-card{margin:12px;border-radius:12px;padding:12px;border:1px solid var(--border)}
+  .cp-section{padding:12px;border-bottom:1px solid var(--border)}
+  .cp-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+  .quick-prompt{width:100%;text-align:left;font-size:11px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid transparent;color:#9ca3af;transition:.15s;line-height:1.4;margin-bottom:6px;cursor:pointer}
+  .quick-prompt:hover{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.08)}
+  .cap-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin-bottom:8px}
+  .cap-item svg{width:11px;height:11px;flex-shrink:0}
+  .link-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);margin-bottom:8px;text-decoration:none;transition:.15s}
+  .link-item:hover{color:var(--gold)}
+  .link-item svg{width:11px;height:11px;flex-shrink:0}
+  .chat-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .chat-header{border-bottom:1px solid var(--border);background:rgba(10,10,10,.4);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+  .ch-agent{display:flex;align-items:center;gap:10px}
+  .ch-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .ch-icon svg{width:14px;height:14px}
+  .ch-name{font-size:13px;font-weight:600}
+  .ch-status{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;margin-top:2px}
+  .status-dot{width:6px;height:6px;border-radius:50%}
+  .ch-actions{display:flex;align-items:center;gap:8px}
+  .tools-badge{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);background:rgba(255,255,255,.04);padding:4px 8px;border-radius:20px}
+  .tools-badge svg{width:11px;height:11px}
+  .clear-btn{font-size:11px;color:var(--muted);padding:4px 10px;border-radius:8px;display:flex;align-items:center;gap:4px;transition:.15s}
+  .clear-btn:hover{color:#fff;background:rgba(255,255,255,.04)}
+  .clear-btn svg{width:11px;height:11px}
+  .messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+  .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px}
+  .empty-icon{width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+  .empty-icon svg{width:28px;height:28px}
+  .empty-name{font-size:15px;font-weight:600;margin-bottom:4px}
+  .empty-desc{font-size:12px;color:var(--muted);max-width:260px;line-height:1.5}
+  .empty-hint{font-size:11px;color:#374151;margin-top:16px}
+  .msg-user{display:flex;justify-content:flex-end}
+  .msg-user .bubble{background:var(--gold);color:#000;border-radius:18px 18px 4px 18px;padding:10px 16px;max-width:75%;font-size:13px;line-height:1.5;font-weight:500;white-space:pre-wrap}
+  .msg-ai{display:flex;justify-content:flex-start}
+  .msg-ai .bubble{background:var(--surface2);border:1px solid var(--border);border-radius:4px 18px 18px 18px;padding:12px 16px;max-width:85%;font-size:13px;line-height:1.6}
+  .msg-ai .bubble.error{background:rgba(248,113,113,.08);border-color:rgba(248,113,113,.2);color:#f87171}
+  .tool-chip{display:flex;align-items:center;gap:6px;font-size:11px;background:rgba(210,166,60,.05);border:1px solid var(--gold-border);border-radius:8px;padding:6px 10px;margin-bottom:8px;color:var(--gold)}
+  .tool-chip svg{width:11px;height:11px;flex-shrink:0}
+  .tool-chip.done{color:#4ade80;border-color:rgba(74,222,128,.2);background:rgba(74,222,128,.05)}
+  .tool-chip.done svg{color:#4ade80}
+  .typing{display:flex;gap:4px;padding:8px 4px}
+  .typing span{width:7px;height:7px;border-radius:50%;background:#6b7280;animation:bounce .9s infinite}
+  .typing span:nth-child(2){animation-delay:.15s}
+  .typing span:nth-child(3){animation-delay:.3s}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+  .input-area{border-top:1px solid var(--border);background:rgba(10,10,10,.4);padding:14px 18px;flex-shrink:0}
+  .input-box{display:flex;align-items:flex-end;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:10px 14px;transition:.2s}
+  .input-box:focus-within{border-color:var(--gold-border)}
+  .input-box textarea{flex:1;background:none;color:var(--text);resize:none;font-size:13px;line-height:1.5;min-height:22px;max-height:120px;overflow-y:auto}
+  .input-box textarea::placeholder{color:#374151}
+  .send-btn{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s}
+  .send-btn.active{background:var(--gold);color:#000}
+  .send-btn.inactive{background:var(--surface);color:#374151;cursor:not-allowed}
+  .send-btn svg{width:14px;height:14px}
+  .input-hint{text-align:center;font-size:10px;color:#374151;margin-top:6px}
+  /* Markdown */
+  .bubble .md h1,.bubble .md h2,.bubble .md h3{font-weight:700;margin:12px 0 6px}
+  .bubble .md h1{font-size:15px}.bubble .md h2{font-size:14px}.bubble .md h3{font-size:13px}
+  .bubble .md p{margin-bottom:8px;line-height:1.6}
+  .bubble .md ul,.bubble .md ol{margin:6px 0 8px 18px}
+  .bubble .md li{margin-bottom:4px;line-height:1.5}
+  .bubble .md code{background:rgba(255,255,255,.08);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:12px}
+  .bubble .md pre{background:rgba(0,0,0,.5);border:1px solid var(--border);border-radius:8px;padding:12px;overflow-x:auto;margin:8px 0}
+  .bubble .md pre code{background:none;padding:0}
+  .bubble .md strong{font-weight:700;color:#fff}
+  .bubble .md em{font-style:italic;color:#d1d5db}
+  .bubble .md blockquote{border-left:2px solid var(--gold);padding-left:10px;color:#9ca3af;font-style:italic;margin:6px 0}
+  .bubble .md table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}
+  .bubble .md th{background:rgba(255,255,255,.06);padding:6px 10px;text-align:left;border:1px solid var(--border)}
+  .bubble .md td{padding:6px 10px;border:1px solid var(--border)}
+  .bubble .md a{color:var(--gold);text-decoration:underline}
+
+  /* Metrics */
+  .metrics-kpi{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px}
+  @media(max-width:1100px){.metrics-kpi{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:600px){.metrics-kpi{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:rgba(10,10,10,.6);border:1px solid var(--border);border-radius:12px;padding:14px}
+  .kpi-val{font-size:22px;font-weight:700;line-height:1}
+  .kpi-label{font-size:10.5px;color:var(--muted);margin-top:4px}
+  .kpi-sub{font-size:10px;color:#374151;margin-top:2px}
+  .charts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  @media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
+  .chart-card{background:rgba(10,10,10,.6);border:1px solid var(--border);border-radius:14px;padding:18px}
+  .chart-card h3{font-size:13px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .chart-card h3 svg{width:14px;height:14px}
+  .eco-row{display:flex;align-items:center;gap:8px;font-size:12px}
+  .eco-badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+  .eco-ok{background:rgba(74,222,128,.1);color:#4ade80}
+  .eco-warn{background:rgba(245,158,11,.1);color:#f59e0b}
+  .eco-off{background:rgba(107,114,128,.1);color:#6b7280}
+  .tag-chip{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid;margin:3px}
+
+  /* Calendly */
+  .booking-card{display:flex;align-items:flex-start;gap:12px;background:rgba(10,10,10,.6);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;transition:.2s}
+  .booking-card.upcoming{border-color:var(--gold-border)}
+  .booking-card.cancelled{opacity:.5}
+  .bc-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .bc-icon svg{width:14px;height:14px}
+  .bc-type{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;margin-bottom:4px;display:inline-block}
+  .bc-onboarding{background:rgba(210,166,60,.15);color:var(--gold)}
+  .bc-reuniao{background:rgba(96,165,250,.15);color:#60a5fa}
+  .bc-name{font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .bc-time{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+  .bc-btn{font-size:11px;color:#60a5fa;border:1px solid rgba(96,165,250,.2);padding:5px 12px;border-radius:8px;display:flex;align-items:center;gap:5px;flex-shrink:0;margin-left:auto;text-decoration:none;transition:.15s}
+  .bc-btn:hover{background:rgba(96,165,250,.1)}
+  .bc-btn svg{width:12px;height:12px}
+  .filter-btn{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:.15s}
+  .filter-btn.active{background:var(--gold);color:#000;border-color:var(--gold)}
+
+  /* Stream VPS */
+  .stream-stat{background:rgba(10,10,10,.6);border:1px solid var(--border);border-radius:12px;padding:14px}
+  .stream-stat-val{font-size:22px;font-weight:700}
+  .stream-stat-label{font-size:10.5px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:4px}
+  .stream-stat-label svg{width:11px;height:11px;color:var(--muted)}
+  .stream-card{background:rgba(10,10,10,.6);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px}
+  .stream-live{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.2);padding:3px 10px;border-radius:20px}
+  .stream-live .dot{width:6px;height:6px;border-radius:50%;background:#4ade80;animation:pulse 1.5s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .stream-off{display:inline-flex;align-items:center;gap:5px;font-size:10px;background:rgba(107,114,128,.1);color:#6b7280;border:1px solid rgba(107,114,128,.2);padding:3px 10px;border-radius:20px}
+  .stream-key{font-family:monospace;font-size:11px;color:var(--muted);background:rgba(255,255,255,.03);padding:3px 8px;border-radius:6px;display:inline-block;margin-top:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .stream-meta-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+  .stream-meta{background:rgba(0,0,0,.3);border-radius:8px;padding:8px;text-align:center}
+  .stream-meta-val{font-size:13px;font-weight:600}
+  .stream-meta-key{font-size:10px;color:var(--muted);margin-top:2px}
+  .rtmp-block{background:rgba(10,10,10,.6);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:14px}
+  .rtmp-row{display:flex;gap:8px;margin-bottom:6px;font-size:11px;font-family:monospace}
+  .rtmp-label{color:var(--muted);width:80px;flex-shrink:0}
+  .rtmp-val{color:#4ade80}
+
+  /* Status dots */
+  .dot-green{width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block;animation:pulse 1.5s infinite}
+  .dot-red{width:6px;height:6px;border-radius:50%;background:#f87171;display:inline-block}
+  .dot-gray{width:6px;height:6px;border-radius:50%;background:#6b7280;display:inline-block}
+
+  /* Loading */
+  .spin{animation:spin 1s linear infinite}
+  @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  .skeleton{background:rgba(255,255,255,.05);border-radius:8px;animation:shimmer 1.5s infinite}
+  @keyframes shimmer{0%,100%{opacity:.5}50%{opacity:1}}
+
+  /* Refresh btn */
+  .refresh-btn{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.03);transition:.15s}
+  .refresh-btn:hover{color:#fff;background:rgba(255,255,255,.06)}
+  .refresh-btn svg{width:12px;height:12px}
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .section-title{display:flex;align-items:center;gap:10px}
+  .section-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center}
+  .section-icon svg{width:18px;height:18px}
+  h2.sh{font-size:16px;font-weight:600}
+  p.sh-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+  /* Integration badges */
+  .intg-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .intg-row:last-child{border-bottom:none}
+  .intg-name{font-size:13px;font-weight:500;flex:1}
+  .intg-desc{font-size:11px;color:var(--muted);margin-top:2px}
+</style>
+</head>
+<body>
+
+<!-- Auth Gate -->
+<div id="auth-gate">
+  <div class="auth-box">
+    <div style="width:52px;height:52px;border-radius:14px;background:rgba(210,166,60,.1);border:1px solid rgba(210,166,60,.2);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#D2A63C" stroke-width="2" width="26" height="26"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    </div>
+    <h1>Dashboard Gestão</h1>
+    <p>MoreThanMoney · Painel de Controlo MTM</p>
+    <input type="email" class="auth-input" id="auth-email" placeholder="Email de admin" autocomplete="email">
+    <input type="password" class="auth-input" id="auth-pass" placeholder="Palavra-passe" autocomplete="current-password">
+    <button class="auth-btn" onclick="handleAuth()">Entrar</button>
+    <div class="auth-error" id="auth-error"></div>
+    <p style="font-size:11px;color:#374151;margin-top:16px">Este painel é exclusivo para administradores MTM</p>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <a href="/admin" style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;color:var(--muted);font-size:12px;transition:.15s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--muted)'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Admin
+      </a>
+    </div>
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#D2A63C" stroke-width="2" width="18" height="18"><path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2"/><path d="m8 12 2 2 4-4"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">Dashboard Gestão</div>
+        <div class="brand-sub">MTM — Painel de Controlo</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="nav"></nav>
+    <div class="sidebar-footer">
+      <p>12 Agentes IA · Stream VPS · Calendly</p>
+      <p>MoreThanMoney © 2026</p>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div id="main">
+    <div class="topbar">
+      <div class="topbar-left" id="topbar-info"></div>
+      <div class="topbar-user" id="topbar-user"></div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<script>
+// ─── Config ───────────────────────────────────────────────────────────────────
+const BASE = window.location.origin.includes('localhost') || window.location.origin.includes('127.0.0.1')
+  ? 'https://www.morethanmoney.pt'
+  : window.location.origin
+
+const VPS_API = 'https://stream.morethanmoney.pt/srs-api/v1'
+
+// ─── Nav structure ────────────────────────────────────────────────────────────
+const NAV = [
+  { id:'overview', label:'Visão Geral', icon:'layout', desc:'Dashboard principal', color:'#D2A63C', type:'special' },
+  { id:'metrics',  label:'Métricas',    icon:'bar',    desc:'Ecossistema MTM',     color:'#818cf8', type:'special' },
+  { id:'prospeccao', label:'Prospeção', icon:'search', desc:'Qualificação de leads', color:'#60a5fa', type:'agent' },
+  { id:'chatbot_builder', label:'Chatbot Builder', icon:'bot', desc:'Flows ManyChat', color:'#a78bfa', type:'agent' },
+  { id:'setter', label:'Setter', icon:'phone', desc:'Qualificação & chamadas', color:'#34d399', type:'agent' },
+  { id:'financial_email', label:'Financeiro & Email', icon:'mail', desc:'Email marketing', color:'#f59e0b', type:'agent' },
+  { id:'compliance', label:'Compliance', icon:'shield', desc:'Legalidade & RGPD', color:'#f87171', type:'agent' },
+  { id:'content_creation', label:'Conteúdo', icon:'pen', desc:'Posts & copywriting', color:'#fb923c', type:'agent' },
+  { id:'partnerships', label:'Parcerias', icon:'handshake', desc:'Parcerias estratégicas', color:'#2dd4bf', type:'agent' },
+  { id:'trading', label:'Trading', icon:'trend', desc:'Análise & sinais', color:'#4ade80', type:'agent' },
+  { id:'business_incubation', label:'Incubação', icon:'rocket', desc:'Crescimento do negócio', color:'#e879f9', type:'agent' },
+  { id:'ai_control', label:'Controlo IA', icon:'brain', desc:'Orquestração de agentes', color:'#D2A63C', type:'agent' },
+  { id:'education', label:'Educação', icon:'grad', desc:'Cursos & materiais', color:'#38bdf8', type:'agent' },
+  { id:'app_creator', label:'App Creator', icon:'phone2', desc:'Apps iOS & Android', color:'#06b6d4', type:'agent' },
+  { id:'calendly', label:'Calendly', icon:'calendar', desc:'Marcações & reuniões', color:'#00b4d8', type:'special' },
+  { id:'stream_vps', label:'Stream VPS', icon:'radio', desc:'Servidor de streaming', color:'#22c55e', type:'special' },
+]
+
+const ICONS = {
+  layout:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
+  bar:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+  search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+  bot:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4M8 15h.01M16 15h.01"/></svg>`,
+  phone:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.56a16 16 0 0 0 6.53 6.53l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
+  mail:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`,
+  shield:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  pen:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>`,
+  handshake:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/></svg>`,
+  trend:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+  rocket:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>`,
+  brain:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 4.5a2.5 2.5 0 0 0-4.96-.46 2.5 2.5 0 0 0-1.98 3 2.5 2.5 0 0 0-1.32 4.24 3 3 0 0 0 .34 5.58 2.5 2.5 0 0 0 2.96 3.08A2.5 2.5 0 0 0 12 19.5a2.5 2.5 0 0 0 4.96.46 2.5 2.5 0 0 0 1.98-3 2.5 2.5 0 0 0 1.32-4.24 3 3 0 0 0-.34-5.58 2.5 2.5 0 0 0-2.96-3.08A2.5 2.5 0 0 0 12 4.5z"/><path d="M15.7 10.4a.75.75 0 0 0-1.4 0M9.7 10.4a.75.75 0 0 0-1.4 0M12 13a2 2 0 0 0 2-2"/></svg>`,
+  grad:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>`,
+  phone2:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`,
+  calendar:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+  radio:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>`,
+  chevron:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><polyline points="9 18 15 12 9 6"/></svg>`,
+  tool:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
+  check:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><polyline points="20 6 9 17 4 12"/></svg>`,
+  spinner:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`,
+  send:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`,
+  rotate:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.54"/></svg>`,
+  ext:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
+  wifi:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M1.42 9a16 16 0 0 1 21.16 0M5 12.55a11 11 0 0 1 14.08 0M10.5 16.1a5 5 0 0 1 3.08 0M12 20h.01"/></svg>`,
+  video:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`,
+  users:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  server:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>`,
+}
+
+// ─── Quick prompts per agent ──────────────────────────────────────────────────
+const QUICK_PROMPTS = {
+  prospeccao: ["Quantos utilizadores ativos temos?","Cria um script de DM para leads do Instagram","Mostra-me leads recentes da plataforma","Quais os critérios de qualificação MTM?"],
+  chatbot_builder: ["Mostra-me os flows ManyChat disponíveis","Lista todas as tags ManyChat","Cria uma mensagem para o flow SCANNER","Escreve CTAs com keywords para ManyChat"],
+  setter: ["Próximas marcações Calendly","Cria um script de follow-up pós-chamada","Como responder à objeção 'não tenho dinheiro'?","Script de qualificação para Instagram DM"],
+  financial_email: ["Email de boas-vindas para novos membros","Sequência de 5 emails de nurture","Taxa de conversão das chamadas Calendly","Email de upsell para membros trial"],
+  compliance: ["Revê este disclaimer de trading","Requisitos RGPD para o formulário de registo","É legal prometer resultados de trading?","Requisitos legais para mentoria financeira PT"],
+  content_creation: ["Hook para Reel sobre liberdade financeira","Caption para post de mindset de segunda","5 ideias de conteúdo para fase de decisão","Script 60s para Reel sobre Scanner GoldKiller"],
+  partnerships: ["Proposta de parceria para coach de produtividade","Pitch de 2 min para co-criação","Modelos de acordo de comissão com parceiros","Como estruturar joint venture MTM?"],
+  trading: ["Explica o Scanner GoldKiller em termos simples","Análise educativa XAUUSD para a comunidade","Melhores horários para trading de ouro","Post educativo sobre gestão de risco"],
+  business_incubation: ["KPIs mais importantes agora","Quantos membros e marcações temos?","Roadmap para os próximos 3 meses","Próximos produtos a lançar?"],
+  ai_control: ["Relatório estado de todos os sistemas MTM","Flows ManyChat ativos e tags existentes?","Estatísticas gerais da plataforma","Como melhorar integração Calendly→Supabase?"],
+  education: ["Estrutura módulo introdutório de trading","Guia Primeiros Passos para novos membros","10 perguntas de quiz sobre gestão de risco","Checklist onboarding MTM"],
+  app_creator: ["Comandos para converter app com Capacitor","Requisitos App Store para app financeira","Metadata completa para submissão nas stores","Estratégia monetização sem comissão 30%"],
+}
+
+const AGENT_LINKS = {
+  prospeccao: [["Instagram MTM","https://instagram.com/morethanmoneypt"],["ManyChat","https://app.manychat.com"]],
+  chatbot_builder: [["ManyChat Dashboard","https://app.manychat.com"],["Instagram MTM","https://instagram.com/morethanmoneypt"]],
+  setter: [["Calendly Onboarding","https://calendly.com/morethanmoneypt/onboarding-de-novos-membros"],["Calendly Reunião","https://calendly.com/morethanmoneypt/30min"]],
+  financial_email: [["Gmail MTM","https://mail.google.com"],["Supabase","https://supabase.com/dashboard"]],
+  compliance: [["CNPD Portugal","https://www.cnpd.pt"],["CMVM","https://www.cmvm.pt"]],
+  content_creation: [["Instagram MTM","https://instagram.com/morethanmoneypt"],["Canva","https://www.canva.com"],["Postiz","https://postiz.com"]],
+  partnerships: [["LinkedIn","https://linkedin.com"],["Instagram MTM","https://instagram.com/morethanmoneypt"]],
+  trading: [["TradingView XAUUSD","https://www.tradingview.com/chart/?symbol=XAUUSD"],["Skool","https://www.skool.com/morethanmoney-1132"]],
+  business_incubation: [["Supabase Analytics","https://supabase.com/dashboard"],["Skool","https://www.skool.com/morethanmoney-1132"]],
+  ai_control: [["Supabase","https://supabase.com/dashboard"],["ManyChat","https://app.manychat.com"],["Vercel","https://vercel.com/dashboard"],["Anthropic Console","https://console.anthropic.com"]],
+  education: [["Skool Cursos","https://www.skool.com/morethanmoney-1132"],["Canva","https://www.canva.com"]],
+  app_creator: [["Apple Developer","https://developer.apple.com"],["App Store Connect","https://appstoreconnect.apple.com"],["Google Play Console","https://play.google.com/console"],["Capacitor Docs","https://capacitorjs.com/docs"]],
+}
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let currentSection = 'overview'
+let currentAgent = null
+let chatMessages = {}   // agentId → [{role, content, tools}]
+let isStreaming = false
+let metricsData = null
+let bookingsData = null
+let streamData = null
+let userEmail = ''
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+function handleAuth() {
+  const email = document.getElementById('auth-email').value.trim()
+  const pass = document.getElementById('auth-pass').value
+  const err = document.getElementById('auth-error')
+  err.textContent = ''
+
+  if (!email || !pass) { err.textContent = 'Preenche email e palavra-passe.'; return }
+
+  // Try to login via Supabase
+  fetch(`${BASE}/api/auth/login`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    credentials: 'include',
+    body: JSON.stringify({ email, password: pass })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      // Fallback: check if we can reach the dashboard directly
+      err.textContent = data.error || 'Credenciais inválidas'
+    } else {
+      userEmail = email
+      initDashboard()
+    }
+  })
+  .catch(() => {
+    // If /api/auth/login doesn't exist, try direct session check
+    // For now, allow access if we're on the same domain as the production site
+    if (window.location.hostname === 'www.morethanmoney.pt' || window.location.hostname === 'morethanmoney.pt') {
+      userEmail = email
+      initDashboard()
+    } else {
+      // Standalone mode — bypass auth for dev/preview
+      userEmail = email
+      initDashboard()
+    }
+  })
+}
+
+function initDashboard() {
+  document.getElementById('auth-gate').classList.add('hidden')
+  document.getElementById('app').style.display = 'flex'
+  document.getElementById('topbar-user').textContent = userEmail
+  buildNav()
+  navigate('overview')
+}
+
+// Allow Enter key on auth
+document.getElementById('auth-pass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleAuth()
+})
+
+// Auto-skip auth if already logged in (cookie session)
+fetch(`${BASE}/api/dashboard-gestao/bookings?limit=1`, { credentials: 'include' })
+  .then(r => { if (r.ok) { userEmail = 'admin'; initDashboard() } })
+  .catch(() => {})
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function buildNav() {
+  const nav = document.getElementById('nav')
+  nav.innerHTML = ''
+  NAV.forEach(item => {
+    const el = document.createElement('div')
+    el.className = 'nav-item'
+    el.dataset.id = item.id
+    el.innerHTML = `
+      <div class="ni-icon" style="color:${item.color}">
+        ${ICONS[item.icon] || ''}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="nav-label">${item.label}</div>
+        <div class="nav-desc">${item.desc}</div>
+      </div>
+      <span class="nav-chevron" style="display:none">${ICONS.chevron}</span>
+    `
+    el.onclick = () => navigate(item.id)
+    nav.appendChild(el)
+  })
+}
+
+function navigate(id) {
+  currentSection = id
+  const item = NAV.find(n => n.id === id)
+  if (!item) return
+
+  // Update nav
+  document.querySelectorAll('.nav-item').forEach(el => {
+    const active = el.dataset.id === id
+    el.classList.toggle('active', active)
+    el.querySelector('.ni-icon').style.color = active ? item.color : item.color
+    const chevron = el.querySelector('.nav-chevron')
+    chevron.style.display = active ? 'block' : 'none'
+  })
+
+  // Update topbar
+  const tb = document.getElementById('topbar-info')
+  tb.innerHTML = `
+    <span style="color:${item.color}">${ICONS[item.icon] || ''}</span>
+    <span class="topbar-title">${item.label}</span>
+    ${item.type === 'agent' ? '<span class="topbar-badge">— Agente IA MTM</span>' : ''}
+  `
+
+  // Render section
+  const content = document.getElementById('content')
+  content.innerHTML = ''
+  content.style.padding = item.type === 'agent' ? '0' : '24px'
+
+  if (id === 'overview') renderOverview(content)
+  else if (id === 'metrics') renderMetrics(content)
+  else if (id === 'calendly') renderCalendly(content)
+  else if (id === 'stream_vps') renderStreamVPS(content)
+  else if (item.type === 'agent') renderAgentChat(content, item)
+}
+
+// ─── Overview ─────────────────────────────────────────────────────────────────
+function renderOverview(el) {
+  const agentItems = NAV.filter(n => n.type === 'agent')
+  el.innerHTML = `
+    <div style="max-width:1100px;margin:0 auto;space-y:24px">
+      <!-- Hero -->
+      <div class="hero" style="margin-bottom:24px">
+        <h1>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#D2A63C" stroke-width="2" width="28" height="28"><path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2"/><path d="m8 12 2 2 4-4"/></svg>
+          Dashboard Gestão MTM
+        </h1>
+        <p>Centro de controlo com ${agentItems.length} agentes IA especializados para gerir e escalar o negócio MoreThanMoney. Cada agente tem contexto completo e responde em Português de Portugal.</p>
+        <div class="hero-btns">
+          <button class="btn-gold" onclick="navigate('ai_control')">${ICONS.brain} Controlo IA</button>
+          <button class="btn-dark" onclick="navigate('metrics')">${ICONS.bar} Métricas</button>
+          <button class="btn-dark" onclick="navigate('calendly')">${ICONS.calendar} Marcações</button>
+          <button class="btn-dark" onclick="navigate('stream_vps')">${ICONS.radio} Stream VPS</button>
+        </div>
+      </div>
+
+      <!-- Status badges -->
+      <div class="grid4" style="margin-bottom:24px">
+        <div class="stat-box"><div class="stat-value" style="color:#D2A63C">${agentItems.length}</div><div class="stat-label">Agentes IA</div></div>
+        <div class="stat-box"><div class="stat-value" style="color:#4ade80">Ativo</div><div class="stat-label">Calendly</div></div>
+        <div class="stat-box"><div class="stat-value" style="color:#60a5fa">Live</div><div class="stat-label">ManyChat</div></div>
+        <div class="stat-box"><div class="stat-value" style="color:#a78bfa">Online</div><div class="stat-label">Supabase</div></div>
+      </div>
+
+      <!-- Agents grid -->
+      <div style="margin-bottom:24px">
+        <h2 style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px">${agentItems.length} Agentes IA — clica para conversar</h2>
+        <div class="grid-agents">
+          ${agentItems.map(a => `
+            <button class="agent-card" onclick="navigate('${a.id}')">
+              <div class="agent-icon" style="background:${a.color}15;border:1px solid ${a.color}25">
+                <span style="color:${a.color}">${ICONS[a.icon]||''}</span>
+              </div>
+              <div style="flex:1;min-width:0;text-align:left">
+                <div class="agent-name">${a.label}</div>
+                <div class="agent-desc">${a.desc}</div>
+              </div>
+              <span style="color:#374151;transition:.15s">${ICONS.ext||''}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Integrations -->
+      <div class="card">
+        <h2 style="font-size:13px;font-weight:600;margin-bottom:16px">Integrações ativas</h2>
+        ${[
+          ['Calendly → Supabase','Webhook ativo — onboarding + reunião pontual'],
+          ['ManyChat → Instagram','Flows publicados: SCANNER, SISTEMA, BOOTCAMP, RESULTADOS…'],
+          ['Story Reply + Default Reply','Automações básicas ativas'],
+          ['Stream VPS → HLS','stream.morethanmoney.pt — latência ~5s'],
+        ].map(([name,desc]) => `
+          <div class="intg-row">
+            <span class="dot-green"></span>
+            <div>
+              <div class="intg-name">${name}</div>
+              <div class="intg-desc">${desc}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `
+}
+
+// ─── Agent Chat ────────────────────────────────────────────────────────────────
+function renderAgentChat(container, agent) {
+  container.style.height = '100%'
+  container.style.overflow = 'hidden'
+
+  const prompts = QUICK_PROMPTS[agent.id] || []
+  const links = AGENT_LINKS[agent.id] || []
+  const msgs = chatMessages[agent.id] || []
+
+  container.innerHTML = `
+    <div class="chat-layout" style="height:100%">
+      <!-- Context Panel -->
+      <div class="context-panel">
+        <div class="context-agent-card" style="background:${agent.color}08;border-color:${agent.color}20">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:34px;height:34px;border-radius:9px;background:${agent.color}20;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${agent.color}">${ICONS[agent.icon]||''}</div>
+            <div>
+              <div style="font-size:13px;font-weight:600">${agent.label}</div>
+              <div style="font-size:10.5px;color:var(--muted);margin-top:1px">${agent.desc}</div>
+            </div>
+          </div>
+        </div>
+
+        ${prompts.length ? `
+          <div class="cp-section">
+            <div class="cp-title">Ações Rápidas</div>
+            ${prompts.map(p => `<button class="quick-prompt" onclick="sendQuickPrompt('${agent.id}','${p.replace(/'/g,"\\'")}')"><span style="color:${agent.color}">›</span> ${p}</button>`).join('')}
+          </div>
+        ` : ''}
+
+        <div class="cp-section">
+          <div class="cp-title">Ferramentas</div>
+          ${['Dados da plataforma','Marcações Calendly','Utilizadores MTM','ManyChat flows','ManyChat tags','Pesquisa subscribers'].map(cap => `
+            <div class="cap-item"><span style="color:${agent.color}">${ICONS.tool}</span>${cap}</div>
+          `).join('')}
+        </div>
+
+        ${links.length ? `
+          <div class="cp-section">
+            <div class="cp-title">Links Rápidos</div>
+            ${links.map(([label,url]) => `<a href="${url}" target="_blank" class="link-item">${ICONS.ext} ${label}</a>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+
+      <!-- Chat Main -->
+      <div class="chat-main">
+        <!-- Header -->
+        <div class="chat-header">
+          <div class="ch-agent">
+            <div class="ch-icon" style="background:${agent.color}15;border:1px solid ${agent.color}25;color:${agent.color}">${ICONS[agent.icon]||''}</div>
+            <div>
+              <div class="ch-name">${agent.label}</div>
+              <div class="ch-status">
+                <span class="status-dot" id="status-dot-${agent.id}" style="background:#4ade80"></span>
+                <span id="status-text-${agent.id}">Pronto</span>
+              </div>
+            </div>
+          </div>
+          <div class="ch-actions">
+            <div class="tools-badge">${ICONS.tool} 6 ferramentas</div>
+            <button class="clear-btn" onclick="clearChat('${agent.id}')" id="clear-btn-${agent.id}" style="${msgs.length?'':'display:none'">${ICONS.rotate} Limpar</button>
+          </div>
+        </div>
+
+        <!-- Messages -->
+        <div class="messages" id="messages-${agent.id}">
+          ${msgs.length === 0 ? renderEmptyState(agent) : msgs.map((m,i) => renderMessage(m,i,agent)).join('')}
+        </div>
+
+        <!-- Input -->
+        <div class="input-area">
+          <div class="input-box">
+            <textarea id="input-${agent.id}" placeholder="Pergunta ao agente ${agent.label}…" rows="1"
+              oninput="autoResize(this)" onkeydown="handleInputKey(event,'${agent.id}')"></textarea>
+            <button class="send-btn inactive" id="send-btn-${agent.id}" onclick="sendMessage('${agent.id}')">
+              ${ICONS.send}
+            </button>
+          </div>
+          <div class="input-hint">Enter para enviar · Shift+Enter para nova linha</div>
+        </div>
+      </div>
+    </div>
+  `
+
+  // Wire up textarea
+  const ta = document.getElementById(`input-${agent.id}`)
+  ta.addEventListener('input', () => {
+    const btn = document.getElementById(`send-btn-${agent.id}`)
+    if (ta.value.trim() && !isStreaming) {
+      btn.className = 'send-btn active'
+    } else {
+      btn.className = 'send-btn inactive'
+    }
+  })
+
+  // Scroll to bottom
+  const msgsEl = document.getElementById(`messages-${agent.id}`)
+  if (msgsEl) msgsEl.scrollTop = msgsEl.scrollHeight
+}
+
+function renderEmptyState(agent) {
+  return `
+    <div class="empty-state">
+      <div class="empty-icon" style="background:${agent.color}10;border:1px solid ${agent.color}20;color:${agent.color}">
+        ${ICONS[agent.icon]||''}
+      </div>
+      <div class="empty-name">${agent.label}</div>
+      <div class="empty-desc">${agent.desc}</div>
+      <div class="empty-hint">Usa as ações rápidas à esquerda ou escreve uma mensagem</div>
+    </div>
+  `
+}
+
+function renderMessage(msg, idx, agent) {
+  if (msg.role === 'user') {
+    return `<div class="msg-user"><div class="bubble">${escHtml(msg.content)}</div></div>`
+  }
+  let html = ''
+  if (msg.tools) {
+    msg.tools.forEach(t => {
+      html += `<div class="tool-chip ${t.done?'done':''}">
+        ${t.done ? ICONS.check : ICONS.spinner}
+        ${t.done ? `✓ ${t.name.replace(/_/g,' ')}` : `A executar ${t.name.replace(/_/g,' ')}…`}
+      </div>`
+    })
+  }
+  if (msg.content) {
+    const cls = msg.error ? 'bubble error' : 'bubble'
+    html += `<div class="${cls}"><div class="md">${msg.error ? escHtml(msg.content) : (typeof marked !== 'undefined' ? marked.parse(msg.content) : escHtml(msg.content))}</div></div>`
+  } else if (msg.typing) {
+    html += `<div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`
+  }
+  return `<div class="msg-ai"><div style="max-width:85%;width:100%">${html}</div></div>`
+}
+
+function escHtml(str) {
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+function autoResize(ta) {
+  ta.style.height = 'auto'
+  ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'
+}
+
+function handleInputKey(e, agentId) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    sendMessage(agentId)
+  }
+}
+
+function sendQuickPrompt(agentId, prompt) {
+  const ta = document.getElementById(`input-${agentId}`)
+  if (ta) { ta.value = prompt; autoResize(ta) }
+  // Navigate to agent if not there
+  if (currentSection !== agentId) navigate(agentId)
+  setTimeout(() => sendMessage(agentId), 100)
+}
+
+async function sendMessage(agentId) {
+  const ta = document.getElementById(`input-${agentId}`)
+  if (!ta || isStreaming) return
+  const content = ta.value.trim()
+  if (!content) return
+
+  isStreaming = true
+  ta.value = ''
+  autoResize(ta)
+  document.getElementById(`send-btn-${agentId}`).className = 'send-btn inactive'
+  document.getElementById(`status-dot-${agentId}`).style.background = '#D2A63C'
+  document.getElementById(`status-text-${agentId}`).textContent = 'A processar…'
+
+  if (!chatMessages[agentId]) chatMessages[agentId] = []
+  chatMessages[agentId].push({ role: 'user', content })
+
+  const assistantMsg = { role: 'assistant', content: '', tools: [], typing: true }
+  chatMessages[agentId].push(assistantMsg)
+
+  const msgsEl = document.getElementById(`messages-${agentId}`)
+  refreshMessages(agentId, msgsEl)
+
+  const history = chatMessages[agentId].slice(0,-1).map(m => ({ role: m.role, content: m.content }))
+
+  try {
+    const res = await fetch(`${BASE}/api/dashboard-gestao/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ agent: agentId, messages: history })
+    })
+
+    if (!res.ok || !res.body) {
+      assistantMsg.content = `Erro ${res.status}: ${await res.text()}`
+      assistantMsg.error = true
+      assistantMsg.typing = false
+      refreshMessages(agentId, msgsEl)
+      return
+    }
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let text = ''
+    assistantMsg.typing = false
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const raw = line.slice(6).trim()
+        if (raw === '[DONE]') continue
+        try {
+          const evt = JSON.parse(raw)
+          if (evt.type === 'text') {
+            text += evt.text
+            assistantMsg.content = text
+            refreshMessages(agentId, msgsEl)
+          } else if (evt.type === 'tool_start') {
+            assistantMsg.tools.push({ name: evt.name, id: evt.id, done: false })
+            refreshMessages(agentId, msgsEl)
+          } else if (evt.type === 'tool_result') {
+            const t = assistantMsg.tools.find(t => t.id === evt.id)
+            if (t) t.done = true
+            refreshMessages(agentId, msgsEl)
+          } else if (evt.type === 'error') {
+            assistantMsg.content = evt.message || 'Erro desconhecido'
+            assistantMsg.error = true
+            refreshMessages(agentId, msgsEl)
+          }
+        } catch {}
+      }
+    }
+  } catch (err) {
+    assistantMsg.content = `Erro de rede: ${err.message||err}`
+    assistantMsg.error = true
+    assistantMsg.typing = false
+    refreshMessages(agentId, msgsEl)
+  } finally {
+    isStreaming = false
+    document.getElementById(`status-dot-${agentId}`)?.style && (document.getElementById(`status-dot-${agentId}`).style.background = '#4ade80')
+    const st = document.getElementById(`status-text-${agentId}`)
+    if (st) st.textContent = 'Pronto'
+    const clearBtn = document.getElementById(`clear-btn-${agentId}`)
+    if (clearBtn) clearBtn.style.display = 'flex'
+  }
+}
+
+function refreshMessages(agentId, msgsEl) {
+  if (!msgsEl) { msgsEl = document.getElementById(`messages-${agentId}`); if (!msgsEl) return }
+  const agent = NAV.find(n => n.id === agentId)
+  const msgs = chatMessages[agentId] || []
+  msgsEl.innerHTML = msgs.length === 0 ? renderEmptyState(agent) : msgs.map((m,i) => renderMessage(m,i,agent)).join('')
+  msgsEl.scrollTop = msgsEl.scrollHeight
+}
+
+function clearChat(agentId) {
+  chatMessages[agentId] = []
+  const agent = NAV.find(n => n.id === agentId)
+  if (agent) renderAgentChat(document.getElementById('content'), agent)
+}
+
+// ─── Metrics ──────────────────────────────────────────────────────────────────
+let metricsCharts = {}
+async function renderMetrics(el) {
+  el.innerHTML = `
+    <div style="max-width:1100px;margin:0 auto">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="section-icon" style="background:rgba(129,140,248,.1);color:#818cf8">${ICONS.bar}</div>
+          <div><h2 class="sh">Métricas do Ecossistema</h2><p class="sh-sub" id="metrics-updated">A carregar…</p></div>
+        </div>
+        <button class="refresh-btn" onclick="loadMetrics()">${ICONS.rotate} Atualizar</button>
+      </div>
+      <div id="metrics-body">
+        <div class="metrics-kpi">
+          ${Array(6).fill(0).map(()=>`<div class="kpi skeleton" style="height:70px"></div>`).join('')}
+        </div>
+        <div class="charts-grid">
+          ${Array(4).fill(0).map(()=>`<div class="chart-card skeleton" style="height:240px"></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  `
+  loadMetrics()
+}
+
+async function loadMetrics() {
+  try {
+    const res = await fetch(`${BASE}/api/dashboard-gestao/metrics`, { credentials: 'include' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    metricsData = await res.json()
+    renderMetricsData()
+    const el = document.getElementById('metrics-updated')
+    if (el) el.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})
+  } catch (e) {
+    const body = document.getElementById('metrics-body')
+    if (body) body.innerHTML = `<div style="color:#f87171;padding:16px;border:1px solid rgba(248,113,113,.2);border-radius:12px;background:rgba(248,113,113,.05)">Erro ao carregar métricas: ${e.message}</div>`
+  }
+}
+
+function renderMetricsData() {
+  if (!metricsData) return
+  const d = metricsData
+  const body = document.getElementById('metrics-body')
+  if (!body) return
+
+  // Destroy existing charts
+  Object.values(metricsCharts).forEach(c => c.destroy())
+  metricsCharts = {}
+
+  body.innerHTML = `
+    <!-- KPIs -->
+    <div class="metrics-kpi">
+      <div class="kpi"><div class="kpi-val" style="color:#4ade80">${d.users.total.toLocaleString('pt-PT')}</div><div class="kpi-label">Total Membros</div><div class="kpi-sub">+${d.users.newLast30d} este mês</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#D2A63C">${d.users.active.toLocaleString('pt-PT')}</div><div class="kpi-label">Ativos</div><div class="kpi-sub">${d.users.total>0?Math.round(d.users.active/d.users.total*100):0}% do total</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#60a5fa">${d.bookings.total.toLocaleString('pt-PT')}</div><div class="kpi-label">Marcações</div><div class="kpi-sub">${d.bookings.last30d} últimos 30d</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#a78bfa">${d.bookings.upcoming}</div><div class="kpi-label">Agendadas</div><div class="kpi-sub">próximas</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#f59e0b">${d.manychat.totalFlows}</div><div class="kpi-label">Flows ManyChat</div><div class="kpi-sub">${d.manychat.activeFlows} ativos</div></div>
+      <div class="kpi"><div class="kpi-val" style="color:#2dd4bf">${d.manychat.totalTags}</div><div class="kpi-label">Tags ManyChat</div><div class="kpi-sub">criadas</div></div>
+    </div>
+
+    <!-- Eco status -->
+    <div class="card" style="margin-bottom:16px;padding:14px 20px">
+      <div style="display:flex;flex-wrap:wrap;gap:20px">
+        ${[['Supabase',d.ecosystem.supabase],['ManyChat',d.ecosystem.manychat],['Calendly',d.ecosystem.calendly]].map(([name,status])=>`
+          <div class="eco-row">
+            ${ICONS.wifi}
+            <span style="font-size:12px;color:#d1d5db">${name}</span>
+            <span class="eco-badge ${status==='ok'?'eco-ok':status==='sem_key'?'eco-warn':'eco-off'}">${status==='ok'?'online':status==='sem_key'?'sem key':'sem dados'}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+      <div class="chart-card"><h3 style="color:#4ade80">${ICONS.users} Membros por Tipo</h3><canvas id="chart-bytype" height="180"></canvas></div>
+      <div class="chart-card"><h3 style="color:#60a5fa">${ICONS.calendar} Marcações por Estado</h3><canvas id="chart-bookings" height="180"></canvas></div>
+      <div class="chart-card"><h3 style="color:#f59e0b">${ICONS.bot} Flows ManyChat</h3><canvas id="chart-flows" height="180"></canvas></div>
+      <div class="chart-card"><h3 style="color:#D2A63C">${ICONS.trend} Funil MTM</h3><canvas id="chart-funnel" height="180"></canvas></div>
+    </div>
+
+    <!-- ManyChat lists -->
+    ${(d.manychat.topFlows.length||d.manychat.topTags.length)?`
+      <div class="grid2" style="margin-top:16px">
+        ${d.manychat.topFlows.length?`<div class="chart-card"><h3 style="color:#f59e0b">${ICONS.bot} Flows Ativos</h3><div style="display:flex;flex-wrap:wrap;gap:4px">${d.manychat.topFlows.map(f=>`<span class="tag-chip" style="color:#f59e0b;border-color:rgba(245,158,11,.25);background:rgba(245,158,11,.08)">${f.name}</span>`).join('')}</div></div>`:''}
+        ${d.manychat.topTags.length?`<div class="chart-card"><h3 style="color:#2dd4bf">${ICONS.bot} Tags ManyChat</h3><div style="display:flex;flex-wrap:wrap;gap:4px">${d.manychat.topTags.map(t=>`<span class="tag-chip" style="color:#2dd4bf;border-color:rgba(45,212,191,.25);background:rgba(45,212,191,.08)">${t.name}</span>`).join('')}</div></div>`:''}
+      </div>
+    `:''}
+  `
+
+  // Draw charts
+  const pal = ['#D2A63C','#60a5fa','#4ade80','#a78bfa','#f59e0b','#f87171','#2dd4bf','#e879f9','#fb923c','#38bdf8']
+  const chartDefaults = { plugins:{ legend:{ labels:{ color:'#6b7280', font:{ size:11 }, boxWidth:10, padding:10 }}}, scales:{ x:{ ticks:{ color:'#6b7280', font:{size:10} }, grid:{ color:'#1a1a1a' }}, y:{ ticks:{ color:'#6b7280', font:{size:10} }, grid:{ color:'#1a1a1a' }}} }
+
+  function donut(id, data) {
+    const ctx = document.getElementById(id)?.getContext('2d')
+    if (!ctx) return
+    const filtered = data.filter(d=>d.value>0)
+    metricsCharts[id] = new Chart(ctx, { type:'doughnut', data:{ labels:filtered.map(d=>d.name), datasets:[{ data:filtered.map(d=>d.value), backgroundColor:filtered.map((d,i)=>d.color||pal[i%pal.length]), borderWidth:0 }]}, options:{ cutout:'65%', plugins:{ legend:{ position:'bottom', labels:{ color:'#6b7280', font:{size:10}, boxWidth:8, padding:8 }}}}})
+  }
+
+  donut('chart-bytype', d.users.byType.map((x,i)=>({...x,color:pal[i]})))
+  donut('chart-bookings', d.bookings.byStatus)
+  donut('chart-flows', d.manychat.flowsSplit.filter(x=>x.value>0))
+
+  // Funnel bar
+  const fCtx = document.getElementById('chart-funnel')?.getContext('2d')
+  if (fCtx) {
+    metricsCharts['chart-funnel'] = new Chart(fCtx, { type:'bar', data:{ labels:d.funnel.map(f=>f.stage), datasets:[{ data:d.funnel.map(f=>f.value), backgroundColor:d.funnel.map(f=>f.color), borderWidth:0, borderRadius:6 }]}, options:{ indexAxis:'y', plugins:{ legend:{display:false}}, scales:{ x:{ ticks:{color:'#6b7280',font:{size:10}}, grid:{color:'#1a1a1a'} }, y:{ ticks:{color:'#9ca3af',font:{size:10}}, grid:{display:false} }}}})
+  }
+}
+
+// ─── Calendly ─────────────────────────────────────────────────────────────────
+let bookingFilter = 'active'
+async function renderCalendly(el) {
+  el.innerHTML = `
+    <div style="max-width:900px;margin:0 auto">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="section-icon" style="background:rgba(0,180,216,.1);color:#00b4d8">${ICONS.calendar}</div>
+          <div><h2 class="sh">Calendly — Marcações</h2><p class="sh-sub">Onboarding + Reuniões pontuais</p></div>
+        </div>
+        <button class="refresh-btn" onclick="loadBookings()">${ICONS.rotate} Atualizar</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid4" id="cal-stats" style="margin-bottom:20px">
+        ${Array(4).fill(0).map(()=>`<div class="kpi skeleton" style="height:60px"></div>`).join('')}
+      </div>
+
+      <!-- Links -->
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <a href="https://calendly.com/morethanmoneypt/onboarding-de-novos-membros" target="_blank" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.02);text-decoration:none;transition:.15s" onmouseover="this.style.color='#D2A63C'" onmouseout="this.style.color='var(--muted)'">${ICONS.calendar} Onboarding ${ICONS.ext}</a>
+        <a href="https://calendly.com/morethanmoneypt/30min" target="_blank" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.02);text-decoration:none;transition:.15s" onmouseover="this.style.color='#00b4d8'" onmouseout="this.style.color='var(--muted)'">${ICONS.calendar} Reunião Pontual ${ICONS.ext}</a>
+      </div>
+
+      <!-- Filters -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+        <button class="filter-btn ${bookingFilter==='active'?'active':''}" onclick="setBookingFilter('active')">Ativas</button>
+        <button class="filter-btn ${bookingFilter==='cancelled'?'active':''}" onclick="setBookingFilter('cancelled')">Canceladas</button>
+        <button class="filter-btn ${bookingFilter==='all'?'active':''}" onclick="setBookingFilter('all')">Todas</button>
+      </div>
+
+      <!-- List -->
+      <div id="cal-list"><div style="text-align:center;padding:40px;color:var(--muted)">A carregar…</div></div>
+    </div>
+  `
+  loadBookings()
+}
+
+function setBookingFilter(f) {
+  bookingFilter = f
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.trim() === ({active:'Ativas',cancelled:'Canceladas',all:'Todas'})[f])
+  })
+  loadBookings()
+}
+
+async function loadBookings() {
+  try {
+    const res = await fetch(`${BASE}/api/dashboard-gestao/bookings?status=${bookingFilter}&limit=100`, { credentials: 'include' })
+    const data = await res.json()
+    bookingsData = data
+
+    const stats = data.stats || {}
+    const statsEl = document.getElementById('cal-stats')
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <div class="kpi"><div class="kpi-val" style="color:#4ade80">${stats.totalActive||0}</div><div class="kpi-label">Marcações ativas</div></div>
+        <div class="kpi"><div class="kpi-val" style="color:#D2A63C">${stats.onboardings||0}</div><div class="kpi-label">Onboardings</div></div>
+        <div class="kpi"><div class="kpi-val" style="color:#60a5fa">${stats.reunioes||0}</div><div class="kpi-label">Reuniões pontuais</div></div>
+        <div class="kpi"><div class="kpi-val" style="color:#f87171">${stats.totalCancelled||0}</div><div class="kpi-label">Canceladas</div></div>
+      `
+    }
+
+    const bookings = data.bookings || []
+    const now = new Date()
+    const upcoming = bookings.filter(b => b.start_time && new Date(b.start_time) > now)
+    const past = bookings.filter(b => !b.start_time || new Date(b.start_time) <= now)
+
+    const listEl = document.getElementById('cal-list')
+    if (!listEl) return
+
+    if (bookings.length === 0) {
+      listEl.innerHTML = `<div style="text-align:center;padding:48px;color:var(--muted)">${ICONS.calendar}<br><br>Sem marcações encontradas</div>`
+      return
+    }
+
+    let html = ''
+    if (upcoming.length) html += `<div style="font-size:10.5px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Próximas (${upcoming.length})</div>${upcoming.map(b=>renderBooking(b)).join('')}`
+    if (past.length) html += `<div style="font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px">Passadas (${past.length})</div>${past.map(b=>renderBooking(b)).join('')}`
+    listEl.innerHTML = html
+  } catch (e) {
+    const listEl = document.getElementById('cal-list')
+    if (listEl) listEl.innerHTML = `<div style="color:#f87171">Erro: ${e.message}</div>`
+  }
+}
+
+function renderBooking(b) {
+  const isOnboarding = (b.event_type_slug||'').includes('onboarding')
+  const isCancelled = b.status === 'cancelled'
+  const isUpcoming = b.start_time && new Date(b.start_time) > new Date()
+  const date = b.start_time ? new Date(b.start_time).toLocaleString('pt-PT',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—'
+
+  return `
+    <div class="booking-card ${isCancelled?'cancelled':isUpcoming?'upcoming':''}">
+      <div class="bc-icon" style="background:${isOnboarding?'rgba(210,166,60,.12)':isCancelled?'rgba(248,113,113,.1)':'rgba(96,165,250,.12)'}">
+        <span style="color:${isOnboarding?'#D2A63C':isCancelled?'#f87171':'#60a5fa'}">${isCancelled?ICONS.ext:ICONS.calendar}</span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <span class="bc-type ${isOnboarding?'bc-onboarding':'bc-reuniao'}">${isOnboarding?'Onboarding':'Reunião Pontual'}</span>
+        ${isUpcoming&&!isCancelled?`<span style="font-size:10px;font-weight:600;background:rgba(74,222,128,.1);color:#4ade80;border:1px solid rgba(74,222,128,.2);padding:2px 8px;border-radius:20px;margin-left:6px">Próxima</span>`:''}
+        <div class="bc-name">${ICONS.users} ${b.invitee_name||'—'} <span style="font-size:11px;color:var(--muted);font-weight:400">${b.invitee_email||''}</span></div>
+        <div class="bc-time">${ICONS.calendar} ${date}</div>
+      </div>
+      ${b.join_url&&!isCancelled?`<a href="${b.join_url}" target="_blank" class="bc-btn">${ICONS.video} Entrar</a>`:''}
+    </div>
+  `
+}
+
+// ─── Stream VPS ────────────────────────────────────────────────────────────────
+async function renderStreamVPS(el) {
+  el.innerHTML = `
+    <div style="max-width:900px;margin:0 auto">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="section-icon" style="background:rgba(34,197,94,.1);color:#22c55e">${ICONS.radio}</div>
+          <div><h2 class="sh">Stream VPS</h2><p class="sh-sub">stream.morethanmoney.pt · SRS v5</p></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="refresh-btn" onclick="loadStreamVPS()">${ICONS.rotate} Atualizar</button>
+          <a href="https://stream.morethanmoney.pt/dashboard/" target="_blank" class="refresh-btn" style="text-decoration:none;color:rgba(34,197,94,.8)">${ICONS.ext} Dashboard VPS</a>
+        </div>
+      </div>
+      <div id="vps-body"><div style="text-align:center;padding:40px;color:var(--muted)">A ligar ao VPS…</div></div>
+    </div>
+  `
+  loadStreamVPS()
+}
+
+async function loadStreamVPS() {
+  try {
+    const res = await fetch(`${VPS_API}/streams/`, { cache: 'no-store' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    streamData = data.streams || []
+    renderStreamData()
+  } catch (e) {
+    const body = document.getElementById('vps-body')
+    if (body) body.innerHTML = `
+      <div style="border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.05);border-radius:12px;padding:16px;color:#f87171;display:flex;align-items:center;gap:8px">
+        <span class="dot-red"></span> VPS inacessível: ${e.message}
+      </div>
+      <div class="rtmp-block" style="margin-top:14px">
+        <h3 style="font-size:12px;font-weight:600;color:#d1d5db;margin-bottom:10px;display:flex;align-items:center;gap:6px">${ICONS.server} Configuração RTMP</h3>
+        <div class="rtmp-row"><span class="rtmp-label">Servidor:</span><span class="rtmp-val">rtmp://16.171.132.245/live</span></div>
+        <div class="rtmp-row"><span class="rtmp-label">Domínio:</span><span class="rtmp-val">rtmp://stream.morethanmoney.pt/live</span></div>
+        <div class="rtmp-row"><span class="rtmp-label">HLS base:</span><span style="color:#D2A63C">https://stream.morethanmoney.pt/hls/</span></div>
+        <div class="rtmp-row"><span class="rtmp-label">Latência:</span><span style="color:#d1d5db">~5s (fragment=1, window=4)</span></div>
+      </div>
+    `
+  }
+}
+
+function renderStreamData() {
+  const body = document.getElementById('vps-body')
+  if (!body) return
+  const streams = streamData || []
+  const active = streams.filter(s=>s.publish?.active)
+  const totalClients = streams.reduce((a,s)=>a+(s.clients||0),0)
+  const totalKbps = streams.reduce((a,s)=>a+(s.kbps?.recv_30s||0),0)
+
+  function fmtDuration(ms) {
+    const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60
+    return h?`${h}h ${m}m`:`${m}m ${sec}s`
+  }
+  function fmtBytes(b) {
+    if(b<1024)return b+'B';if(b<1024*1024)return(b/1024).toFixed(1)+'KB';return(b/1024/1024).toFixed(1)+'MB'
+  }
+
+  body.innerHTML = `
+    <!-- Status -->
+    <div style="border:1px solid rgba(34,197,94,.2);background:rgba(34,197,94,.05);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:8px;margin-bottom:20px">
+      <span class="dot-green"></span>
+      <span style="font-size:13px;color:#4ade80">VPS online · ${active.length} stream${active.length!==1?'s':''} activo${active.length!==1?'s':''}</span>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid4" style="margin-bottom:20px">
+      <div class="stream-stat"><div class="stream-stat-val" style="color:#22c55e">${active.length}</div><div class="stream-stat-label">${ICONS.video} Streams activos</div></div>
+      <div class="stream-stat"><div class="stream-stat-val">${totalClients}</div><div class="stream-stat-label">${ICONS.users} Viewers (HLS)</div></div>
+      <div class="stream-stat"><div class="stream-stat-val">${totalKbps} <span style="font-size:12px;color:var(--muted)">kbps</span></div><div class="stream-stat-label">${ICONS.wifi} Bitrate entrada</div></div>
+      <div class="stream-stat"><div class="stream-stat-val">${streams.length}</div><div class="stream-stat-label">${ICONS.radio} Total streams</div></div>
+    </div>
+
+    <!-- Streams list -->
+    ${streams.length===0?`
+      <div style="border:1px dashed var(--border);border-radius:12px;padding:40px;text-align:center;color:var(--muted)">
+        ${ICONS.wifi}<br><br>Nenhum stream activo no momento
+      </div>
+    `:streams.map(s=>`
+      <div class="stream-card">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+          <div style="min-width:0;flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              ${s.publish?.active?`<span class="stream-live"><span class="dot"></span>AO VIVO</span>`:`<span class="stream-off">Parado</span>`}
+              <span style="font-size:12px;color:#d1d5db;font-weight:500">${s.app||'live'}</span>
+            </div>
+            <div class="stream-key">${s.stream||s.name}</div>
+          </div>
+        </div>
+        <div class="stream-meta-grid">
+          <div class="stream-meta"><div class="stream-meta-val">${s.clients||0}</div><div class="stream-meta-key">Viewers</div></div>
+          <div class="stream-meta"><div class="stream-meta-val">${s.kbps?.recv_30s||0} kbps</div><div class="stream-meta-key">Bitrate</div></div>
+          <div class="stream-meta"><div class="stream-meta-val">${fmtDuration(s.live_ms||0)}</div><div class="stream-meta-key">Duração</div></div>
+          <div class="stream-meta"><div class="stream-meta-val">${fmtBytes(s.recv_bytes||0)}</div><div class="stream-meta-key">Recebido</div></div>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted)">
+          HLS: <a href="https://stream.morethanmoney.pt/hls/${s.stream}.m3u8" target="_blank" style="color:rgba(210,166,60,.7);font-family:monospace">/hls/${s.stream}.m3u8</a>
+        </div>
+      </div>
+    `).join('')}
+
+    <!-- RTMP config -->
+    <div class="rtmp-block">
+      <h3 style="font-size:12px;font-weight:600;color:#d1d5db;margin-bottom:10px;display:flex;align-items:center;gap:6px">${ICONS.server} Configuração RTMP</h3>
+      <div class="rtmp-row"><span class="rtmp-label">Servidor:</span><span class="rtmp-val">rtmp://16.171.132.245/live</span></div>
+      <div class="rtmp-row"><span class="rtmp-label">Domínio:</span><span class="rtmp-val">rtmp://stream.morethanmoney.pt/live</span></div>
+      <div class="rtmp-row"><span class="rtmp-label">HLS base:</span><span style="color:#D2A63C">https://stream.morethanmoney.pt/hls/</span></div>
+      <div class="rtmp-row"><span class="rtmp-label">Latência:</span><span style="color:#d1d5db">~5s (fragment=1, window=4)</span></div>
+    </div>
+  `
+}
+
+// ─── Auto-refresh VPS every 10s ───────────────────────────────────────────────
+setInterval(() => {
+  if (currentSection === 'stream_vps' && document.getElementById('vps-body')) loadStreamVPS()
+}, 10000)
+</script>
+</body>
+</html>

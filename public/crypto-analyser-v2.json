@@ -1,0 +1,244 @@
+{
+  "name": "Crypto analyser v2",
+  "description": "Sistema de análise DCA inteligente para criptomoedas e ETFs",
+  "workflow": {
+    "steps": [
+      {
+        "name": "Buscar dados de candlesticks",
+        "timeframes": ["15m", "1h", "4h", "1d"],
+        "source": "Binance API",
+        "endpoint": "https://api.binance.com/api/v3/klines"
+      },
+      {
+        "name": "Análise de Sentimento",
+        "source": "News API",
+        "api_key": "06b9c2a3e5074e0eb03ca7ea13f18014",
+        "lookback": "3 dias",
+        "output": {
+          "shortTermSentiment": {
+            "category": "Positive|Neutral|Negative",
+            "score": "entre -1 e 1",
+            "rationale": "explicação detalhada"
+          },
+          "longTermSentiment": {
+            "category": "Positive|Neutral|Negative",
+            "score": "entre -1 e 1",
+            "rationale": "explicação detalhada"
+          }
+        }
+      },
+      {
+        "name": "Análise Técnica com IA",
+        "model": "GPT-4/GPT-5-mini",
+        "indicators": [
+          "MACD",
+          "RSI",
+          "OBV",
+          "Support/Resistance",
+          "Trendlines",
+          "Divergence patterns"
+        ],
+        "output": {
+          "spot_recommendations": {
+            "short_term": {
+              "action": "buy|sell|hold",
+              "entry_price": "number",
+              "stop_loss": "number",
+              "take_profit": "number",
+              "rationale": {
+                "primary_signals": "price action insights",
+                "lagging_indicators": "confirmation",
+                "sentiment_analysis": "volume + macro"
+              }
+            },
+            "long_term": {
+              "action": "buy|sell|hold|accumulate",
+              "entry_price": "number",
+              "stop_loss": "number",
+              "take_profit": "number",
+              "rationale": {
+                "primary_signals": "price action insights",
+                "lagging_indicators": "confirmation",
+                "sentiment_analysis": "volume + macro"
+              }
+            }
+          },
+          "leveraged_recommendations": {
+            "short_term": {
+              "position": "long|short",
+              "leverage": "3x|5x|10x",
+              "entry_price": "number",
+              "stop_loss": "number",
+              "take_profit": "number",
+              "rationale": "detailed explanation"
+            },
+            "long_term": {
+              "position": "long|short",
+              "leverage": "3x|5x|10x",
+              "entry_price": "number",
+              "stop_loss": "number",
+              "take_profit": "number",
+              "rationale": "detailed explanation"
+            }
+          }
+        }
+      },
+      {
+        "name": "Resumo em Português",
+        "model": "GPT-5-mini",
+        "output_format": {
+          "curto_prazo": {
+            "acao": "Comprar|Vender|Hold",
+            "entradas": "zona de preço",
+            "stop_loss": "preço",
+            "take_profit": "preços",
+            "justificacao": "explicação simples"
+          },
+          "longo_prazo": {
+            "acao": "Compra/Acumulação|Vender|Hold",
+            "entradas": "zona de preço",
+            "stop_loss": "preço",
+            "take_profit": "preços",
+            "justificacao": "explicação simples"
+          }
+        }
+      }
+    ]
+  },
+  "integration": {
+    "notion_source": "https://harmonious-comma-e85.notion.site/Portefolio-Cripto-e-Stocks-76557dddfbc348aba2f6e24ea1f5133e",
+    "assets_supported": {
+      "crypto": ["BTC", "ETH", "SOL", "ADA", "DOT", "XRP", "MATIC", "AVAX"],
+      "etfs": ["SPY", "QQQ", "VTI", "IWM", "EEM"]
+    }
+  },
+  "dca_strategy": {
+    "name": "DCA Inteligente MTM",
+    "description": "Estratégia de Dollar Cost Averaging baseada em análise técnica e sentiment",
+    "rules": {
+      "buy_conditions": [
+        "Sentiment de longo prazo positivo (score > 0.3)",
+        "RSI < 40 (oversold)",
+        "Preço próximo de suporte identificado",
+        "MACD em divergência bullish"
+      ],
+      "sell_conditions": [
+        "Take profit atingido",
+        "RSI > 70 (overbought)",
+        "Sentiment de curto prazo negativo (score < -0.3)",
+        "Stop loss atingido"
+      ],
+      "accumulation_zones": [
+        "Preço 5-10% abaixo da média móvel de 200 dias",
+        "Volume acima da média + sentiment positivo",
+        "Rejeição clara de suporte histórico"
+      ]
+    }
+  },
+  "example_analysis": {
+    "asset": "BTCUSDT",
+    "timestamp": "2025-10-10T14:30:00Z",
+    "technical_data": {
+      "timeframes": {
+        "15m": {
+          "trend": "bullish",
+          "support": 62800,
+          "resistance": 64200,
+          "rsi": 58,
+          "macd": "positive crossover"
+        },
+        "1h": {
+          "trend": "bullish",
+          "support": 62500,
+          "resistance": 65000,
+          "rsi": 62,
+          "macd": "bullish momentum"
+        },
+        "4h": {
+          "trend": "consolidation",
+          "support": 61000,
+          "resistance": 66000,
+          "rsi": 55,
+          "macd": "neutral"
+        },
+        "1d": {
+          "trend": "bullish",
+          "support": 58000,
+          "resistance": 70000,
+          "rsi": 60,
+          "macd": "strong bullish"
+        }
+      }
+    },
+    "sentiment": {
+      "shortTerm": {
+        "category": "Positive",
+        "score": 0.65,
+        "rationale": "Aprovação de ETFs spot aumenta confiança institucional. Volume crescente nas últimas 24h."
+      },
+      "longTerm": {
+        "category": "Positive",
+        "score": 0.75,
+        "rationale": "Halving se aproximando. Adoção institucional em crescimento. Regulamentação mais clara."
+      }
+    },
+    "recommendations": {
+      "spot": {
+        "curto_prazo": {
+          "acao": "Comprar seletivamente",
+          "entradas": "62.800 - 63.200",
+          "stop_loss": "61.500",
+          "take_profit": ["64.500", "65.800"],
+          "justificacao": "Suporte firme em 62.8k. RSI saudável. Sentiment positivo."
+        },
+        "longo_prazo": {
+          "acao": "Acumulação",
+          "entradas": "58.000 - 63.000",
+          "stop_loss": "55.000",
+          "take_profit": ["70.000", "75.000", "80.000"],
+          "justificacao": "Estrutura macro bullish. Halving se aproximando. Adoção institucional."
+        }
+      },
+      "leveraged": {
+        "curto_prazo": {
+          "position": "Long",
+          "leverage": "3x",
+          "entradas": "63.000",
+          "stop_loss": "62.000",
+          "take_profit": "65.000",
+          "justificacao": "Risco/recompensa favorável. Momentum positivo."
+        },
+        "longo_prazo": {
+          "position": "Long",
+          "leverage": "2x",
+          "entradas": "60.000 - 62.000",
+          "stop_loss": "56.000",
+          "take_profit": "75.000",
+          "justificacao": "Tendência macro bullish clara. Baixo risco com leverage moderado."
+        }
+      }
+    },
+    "dca_suggestion": {
+      "frequency": "Semanal",
+      "amount": "100-500 EUR",
+      "buy_zones": [
+        {
+          "price_range": "58.000 - 60.000",
+          "allocation": "40%",
+          "reason": "Zona de acumulação forte"
+        },
+        {
+          "price_range": "60.000 - 63.000",
+          "allocation": "35%",
+          "reason": "Zona de valor atual"
+        },
+        {
+          "price_range": "63.000 - 65.000",
+          "allocation": "25%",
+          "reason": "Breakout confirmation"
+        }
+      ]
+    }
+  }
+}
+
