@@ -19,6 +19,8 @@ import {
   Trash2,
 } from "lucide-react"
 import Image from "next/image"
+import MentionInput from "./mention-input"
+import MentionText from "./mention-text"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -512,7 +514,9 @@ function MessageBubble({
               return (
                 <div className="mb-1 w-full rounded-lg border-l-[3px] border-[#D2A63C] bg-black/25 px-2 py-1">
                   <p className="text-[11px] font-semibold text-[#D2A63C] leading-tight">{rmName}</p>
-                  <p className="text-[11px] text-gray-300 truncate leading-tight mt-0.5">{rmContent}</p>
+                  <p className="text-[11px] text-gray-300 truncate leading-tight mt-0.5">
+                    <MentionText text={rmContent} />
+                  </p>
                 </div>
               )
             })()}
@@ -533,7 +537,9 @@ function MessageBubble({
                 </a>
               )}
               {msg.content && (
-                <p className="whitespace-pre-wrap break-words leading-relaxed text-[13.5px]">{msg.content}</p>
+                <p className="whitespace-pre-wrap break-words leading-relaxed text-[13.5px]">
+                  <MentionText text={msg.content} />
+                </p>
               )}
               {msg.link_preview && msg.link_url && (
                 <LinkPreviewCard preview={msg.link_preview} url={msg.link_url} />
@@ -572,7 +578,6 @@ function ChannelView({
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const previewTimer = useRef<NodeJS.Timeout | null>(null)
 
   // Lock parent scroll container so only the message list scrolls
@@ -642,7 +647,7 @@ function ChannelView({
           table: "chat_messages",
           filter: `channel_slug=eq.${channel.slug}`,
         },
-        async (payload) => {
+        async (payload: { new: Record<string, unknown> }) => {
           const { data } = await supabase
             .from("chat_messages")
             .select(
@@ -938,25 +943,12 @@ function ChannelView({
             />
 
             <div className="flex-1 bg-gray-800 rounded-2xl px-3 py-2.5">
-              <textarea
-                ref={textareaRef}
+              <MentionInput
                 value={text}
-                onChange={(e) => {
-                  setText(e.target.value)
-                  // Auto-grow
-                  e.target.style.height = "auto"
-                  e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px"
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSend()
-                  }
-                }}
-                placeholder="Escreve uma mensagem..."
+                onChange={setText}
+                placeholder="Escreve uma mensagem... (@nome para mencionar)"
                 className="w-full bg-transparent text-white text-[14px] placeholder-gray-500 resize-none outline-none leading-relaxed"
                 rows={1}
-                style={{ maxHeight: 100 }}
               />
             </div>
 

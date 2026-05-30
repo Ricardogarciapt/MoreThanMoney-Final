@@ -118,11 +118,11 @@ export default function MentionInput({
   // Detectar @ e mostrar sugestões
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const displayValue = e.target.value
-    const cursorPosition = e.target.selectionStart
+    const cursorPosition = e.target.selectionStart ?? 0
 
     // Converter para valor interno
     const internalValue = getInternalValue(displayValue, value)
-    
+
     // Verificar se há @ antes do cursor no valor de exibição
     const textBeforeCursor = displayValue.substring(0, cursorPosition)
     const mentionMatch = textBeforeCursor.match(/@(\w*)$/)
@@ -132,7 +132,7 @@ export default function MentionInput({
       // Calcular posição no valor interno
       const beforeCursorInternal = getDisplayValue(internalValue.substring(0, cursorPosition))
       const start = cursorPosition - query.length - 1 // -1 para incluir o @
-      const end = cursorPosition
+      const end: number = cursorPosition
 
       setMentionQuery(query)
       setMentionPosition({ start, end })

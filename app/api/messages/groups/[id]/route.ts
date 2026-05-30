@@ -31,7 +31,8 @@ export async function GET(
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const groupId = params.id
+    const resolvedParams = await Promise.resolve(params)
+    const groupId = resolvedParams.id
 
     // Buscar informações do grupo
     const { data: group } = await supabase
@@ -130,7 +131,8 @@ export async function POST(
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const groupId = params.id
+    const resolvedParams = await Promise.resolve(params)
+    const groupId = resolvedParams.id
     const body = await request.json()
     const { content } = body
 

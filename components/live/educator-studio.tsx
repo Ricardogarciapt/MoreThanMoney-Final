@@ -46,6 +46,7 @@ type StreamRow = {
   ingest_provider?: "restream" | "mtm_direct" | null
   scheduled_start_at?: string | null
   viewer_count?: number | null
+  access_tier?: "all" | "app_member" | "premium" | null
 }
 
 const CATEGORIES = [{ value: "", label: "— Categoria —" }, ...LMS_CATEGORY_OPTIONS]
@@ -732,6 +733,18 @@ export default function EducatorStudio() {
                     >
                       <option value="restream">Restream</option>
                       <option value="mtm_direct">MTM direto (OBS - menor latência)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Plano de acesso</p>
+                    <select
+                      className="w-full rounded-md border border-gray-700 bg-black/50 px-2 py-2 text-sm text-white"
+                      defaultValue={stream.access_tier || "all"}
+                      onChange={(e) => patchStream(stream.id, { access_tier: e.target.value || null })}
+                    >
+                      <option value="all">Todos os membros</option>
+                      <option value="app_member">Pack Membro ($35/mês)</option>
+                      <option value="premium">Pack Premium ($65/mês)</option>
                     </select>
                   </div>
                 </div>

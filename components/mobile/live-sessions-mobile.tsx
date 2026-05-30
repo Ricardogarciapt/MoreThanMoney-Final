@@ -13,7 +13,9 @@ import {
   Radio,
   Maximize2,
   PictureInPicture2,
+  Lock,
 } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import LiveFinancialDisclaimer from "@/components/live/live-financial-disclaimer"
@@ -25,6 +27,7 @@ import { useLmsHlsVideo } from "@/hooks/use-lms-hls-video"
 import { usePictureInPictureSupported } from "@/hooks/use-picture-in-picture-supported"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/lib/supabase"
 
 type StreamListItem = {
   id: string
@@ -34,6 +37,8 @@ type StreamListItem = {
   playback_url?: string | null
   educator?: { id: string; display_name: string; avatar_url?: string | null } | null
   academy?: { name: string } | null
+  access_tier?: "all" | "app_member" | "premium" | null
+  scheduled_start_at?: string | null
 }
 
 type StreamDetail = StreamListItem & {
@@ -56,6 +61,18 @@ type LiveSessionsMobileProps = {
   isActive?: boolean
 }
 
+function canAccessStream(
+  userPlan: string | null | undefined,
+  userType: string | null | undefined,
+  tier: "all" | "app_member" | "premium" | null | undefined
+): boolean {
+  if (!tier || tier === "all") return true
+  if (userType === "admin") return true
+  if (tier === "app_member") return userPlan === "app_member" || userPlan === "premium"
+  if (tier === "premium") return userPlan === "premium"
+  return false
+}
+
 export default function LiveSessionsMobile({
   initialStreamId = null,
   initialEducatorId = null,
@@ -63,7 +80,9 @@ export default function LiveSessionsMobile({
 }: LiveSessionsMobileProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const { user } = useAuth()
   const [liveStreams, setLiveStreams] = useState<StreamListItem[]>([])
+  const [scheduledStreams, setScheduledStreams] = useState<StreamListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -98,10 +117,21 @@ export default function LiveSessionsMobile({
   const loadLive = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch("/api/live-sessions/streams?live=true").then((r) => r.json())
-      setLiveStreams(res.data || [])
+      const [liveRes, allRes] = await Promise.all([
+        fetch("/api/live-sessions/streams?live=true").then((r) => r.json()),
+        fetch("/api/live-sessions/streams").then((r) => r.json()),
+      ])
+      setLiveStreams(liveRes.data || [])
+      // Próximas lives: não live, com scheduled_start_at no futuro
+      const now = Date.now()
+      const upcoming = (allRes.data || [] as StreamListItem[])
+        .filter((s: StreamListItem) => !s.is_live && s.scheduled_start_at && new Date(s.scheduled_start_at).getTime() > now)
+        .sort((a: StreamListItem, b: StreamListItem) => new Date(a.scheduled_start_at!).getTime() - new Date(b.scheduled_start_at!).getTime())
+        .slice(0, 10)
+      setScheduledStreams(upcoming)
     } catch {
       setLiveStreams([])
+      setScheduledStreams([])
     } finally {
       setLoading(false)
     }
@@ -112,6 +142,33 @@ export default function LiveSessionsMobile({
     const t = setInterval(loadLive, 15000)
     return () => clearInterval(t)
   }, [loadLive])
+
+  // ── Realtime: toast when educator starts a stream ────────────────────────
+  useEffect(() => {
+    if (!isActive) return
+    const channel = supabase
+      .channel("lms_streams_live_status")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "lms_streams" },
+        (payload) => {
+          const newRow = payload.new as { is_live?: boolean; title?: string; educator_id?: string }
+          const oldRow = payload.old as { is_live?: boolean }
+          // Only when going from offline → live
+          if (newRow.is_live && !oldRow.is_live) {
+            toast({
+              title: "🔴 Live a começar!",
+              description: `${newRow.title || "Sessão"} iniciou. Vai já! `,
+              duration: 6000,
+            })
+            loadLive()
+          }
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [isActive, loadLive, toast])
 
   const openModal = useCallback(
     async (id: string): Promise<boolean> => {
@@ -438,11 +495,16 @@ export default function LiveSessionsMobile({
           liveStreams.map((s) => {
             const img = streamVisualUrl(s)
             const educatorName = s.educator?.display_name || "Educador"
+            const hasAccess = canAccessStream(
+              (user as any)?.subscription_plan,
+              (user as any)?.user_type,
+              s.access_tier
+            )
             return (
               <button
                 key={s.id}
                 type="button"
-                onClick={() => openModal(s.id)}
+                onClick={() => hasAccess ? openModal(s.id) : undefined}
                 className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/90 text-left shadow-md transition active:scale-[0.98] hover:border-[#D2A63C]/40"
               >
                 <div className="relative aspect-video w-full bg-gray-900">
@@ -459,6 +521,24 @@ export default function LiveSessionsMobile({
                   <span className="absolute left-2 top-2 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white shadow">
                     Live
                   </span>
+                  {s.access_tier === "premium" && (
+                    <span className="absolute right-2 top-2 rounded-md bg-purple-700 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white shadow">
+                      Premium
+                    </span>
+                  )}
+                  {s.access_tier === "app_member" && (
+                    <span className="absolute right-2 top-2 rounded-md bg-amber-600/90 px-1.5 py-0.5 text-[9px] font-bold uppercase text-black shadow">
+                      Membro
+                    </span>
+                  )}
+                  {!hasAccess && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/75 backdrop-blur-sm">
+                      <Lock className="h-6 w-6 text-white/70" />
+                      <p className="text-[10px] font-semibold text-white/90 text-center px-2">
+                        {s.access_tier === "premium" ? "Pack Premium ($65/mês)" : "Pack Membro ($35/mês)"}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="p-2.5">
                   <p className="line-clamp-2 text-xs font-semibold text-white">{s.title}</p>
@@ -478,6 +558,51 @@ export default function LiveSessionsMobile({
             )
           })}
       </div>
+
+      {/* ── Próximas sessões (calendário) ───────────────────────────────────── */}
+      {scheduledStreams.length > 0 && (
+        <div className="mt-6 mb-4">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#D2A63C]" />
+            Próximas Sessões
+          </h3>
+          <ul className="space-y-2">
+            {scheduledStreams.map((s) => {
+              const dt = s.scheduled_start_at ? new Date(s.scheduled_start_at) : null
+              return (
+                <li
+                  key={s.id}
+                  className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-950/80 px-3 py-2.5"
+                >
+                  {dt && (
+                    <div className="flex-shrink-0 w-10 text-center">
+                      <p className="text-[10px] uppercase text-gray-500 leading-tight">
+                        {dt.toLocaleDateString("pt-PT", { weekday: "short" })}
+                      </p>
+                      <p className="text-base font-bold text-[#D2A63C] leading-tight">{dt.getDate()}</p>
+                      <p className="text-[9px] text-gray-600">{dt.toLocaleDateString("pt-PT", { month: "short" })}</p>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-white truncate">{s.title}</p>
+                    <p className="text-[10px] text-gray-400 truncate">
+                      {s.educator?.display_name}
+                      {dt && ` · ${dt.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}`}
+                    </p>
+                  </div>
+                  {s.access_tier && s.access_tier !== "all" && (
+                    <span className={`flex-shrink-0 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                      s.access_tier === "premium" ? "bg-purple-700 text-white" : "bg-amber-600/90 text-black"
+                    }`}>
+                      {s.access_tier === "premium" ? "Premium" : "Membro"}
+                    </span>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       <Dialog
         open={open}

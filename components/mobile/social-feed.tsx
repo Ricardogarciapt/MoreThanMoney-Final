@@ -91,6 +91,11 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
   const [postMentions, setPostMentions] = useState<any[]>([])
   const [commentMentions, setCommentMentions] = useState<Map<string, any[]>>(new Map())
   const unsubscribeRef = useRef<(() => void) | null>(null)
+  const [draftLinkPreview, setDraftLinkPreview] = useState<LinkPreviewData | null>(null)
+  const [draftLinkUrl, setDraftLinkUrl] = useState<string | null>(null)
+  const [linkPreviewDismissed, setLinkPreviewDismissed] = useState(false)
+  const [fetchingDraftPreview, setFetchingDraftPreview] = useState(false)
+  const draftPreviewTimer = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -104,9 +109,47 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
     }
   }, [initialCategory])
 
+  // ── Draft link preview: auto-fetch when URL detected in new post ─────────────
+  useEffect(() => {
+    if (draftPreviewTimer.current) clearTimeout(draftPreviewTimer.current)
+    if (linkPreviewDismissed) return
+
+    const url = getPrimaryUrlFromText(newPost)
+    if (!url) {
+      setDraftLinkPreview(null)
+      setDraftLinkUrl(null)
+      setLinkPreviewDismissed(false) // reset dismiss when URL is removed
+      return
+    }
+    if (url === draftLinkUrl) return // already fetched
+
+    draftPreviewTimer.current = setTimeout(async () => {
+      setFetchingDraftPreview(true)
+      try {
+        const res = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
+        if (res.ok) {
+          const data = await res.json()
+          const p = data.preview
+          if (p) {
+            setDraftLinkPreview({
+              url,
+              title: p.title || null,
+              description: p.description || null,
+              image: p.image || null,
+              siteName: p.siteName || (() => { try { return new URL(url).hostname } catch { return url } })(),
+            })
+            setDraftLinkUrl(url)
+          }
+        }
+      } catch { /* silent */ } finally {
+        setFetchingDraftPreview(false)
+      }
+    }, 700)
+  }, [newPost, linkPreviewDismissed]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!mounted) return
-    
+
     loadUser()
     loadPosts()
     loadViewedCategories()
@@ -386,7 +429,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
             if (likesError) {
               console.error("❌ [SOCIAL FEED] Erro ao carregar likes:", likesError)
             } else {
-              const userLikes = new Set(likesData?.map(like => like.post_id) || [])
+              const userLikes = new Set(likesData?.map((like: { post_id: string }) => like.post_id) || [])
               setPosts(prevPosts => 
                 processedPosts.map((post: Post) => ({
                   ...post,
@@ -546,7 +589,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
             schema: "public", 
             table: "posts" 
           },
-          (payload) => {
+          (payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) => {
             console.log('📨 [SOCIAL FEED] Evento Realtime recebido:', payload.eventType)
             
             if (payload.eventType === "INSERT") {
@@ -577,7 +620,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
             }
           }
         )
-        .subscribe((status) => {
+        .subscribe((status: string) => {
           if (status === 'SUBSCRIBED') {
             console.log('✅ [SOCIAL FEED] Subscrição Realtime ativa')
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
@@ -706,23 +749,9 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
         mentionedUserIds.push(match[2])
       }
 
-      let linkPreview: LinkPreviewData | null = null
-      if (mediaUrls.length === 0) {
-        const primaryUrl = getPrimaryUrlFromText(newPost)
-        if (primaryUrl) {
-          try {
-            const previewRes = await fetch(
-              `/api/link-preview?url=${encodeURIComponent(primaryUrl)}`
-            )
-            if (previewRes.ok) {
-              const previewData = await previewRes.json()
-              linkPreview = previewData.preview ?? null
-            }
-          } catch (e) {
-            console.warn("⚠️ [SOCIAL FEED] link preview ao publicar:", e)
-          }
-        }
-      }
+      // Use the already-fetched draft preview (avoids double-fetch at submit time)
+      const linkPreview: LinkPreviewData | null =
+        mediaUrls.length === 0 && !linkPreviewDismissed ? (draftLinkPreview ?? null) : null
 
       // Preparar dados para inserção (apenas colunas que existem)
       const postData: any = {
@@ -891,6 +920,9 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
       setNewPostMedias([])
       setMediaPreview(null)
       setMediaPreviews([])
+      setDraftLinkPreview(null)
+      setDraftLinkUrl(null)
+      setLinkPreviewDismissed(false)
       setShowCreatePost(false)
       
       // Recarregar posts imediatamente e depois novamente após 1 segundo (para garantir)
@@ -1381,7 +1413,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                             .eq('user_id', currentUser.id)
                             .eq('type', 'social_post')
                             .eq('read', false)
-                            .then((result) => {
+                            .then((result: { error: unknown }) => {
                               if (result.error) {
                                 console.warn('⚠️ [SOCIAL FEED] Falha ao marcar notificações como lidas:', result.error)
                               } else {
@@ -1493,6 +1525,9 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                     setMediaPreviews([])
                     setNewPostMedia(null)
                     setNewPostMedias([])
+                    setDraftLinkPreview(null)
+                    setDraftLinkUrl(null)
+                    setLinkPreviewDismissed(false)
                   }}
                   className="p-1 hover:bg-gray-800 rounded-full transition-colors"
                 >
@@ -1508,6 +1543,50 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
                 rows={4}
                 onMentionsChange={setPostMentions}
               />
+
+              {/* Draft Link Preview */}
+              {(fetchingDraftPreview || draftLinkPreview) && !linkPreviewDismissed && (
+                <div className="rounded-lg border border-gray-700 bg-gray-900/80 p-2.5">
+                  {fetchingDraftPreview && !draftLinkPreview ? (
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>A carregar pré-visualização do link...</span>
+                    </div>
+                  ) : draftLinkPreview ? (
+                    <div className="flex items-start gap-2">
+                      {draftLinkPreview.image && (
+                        <img
+                          src={draftLinkPreview.image}
+                          alt=""
+                          className="w-16 h-12 object-cover rounded-md flex-shrink-0"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        {draftLinkPreview.siteName && (
+                          <p className="text-[10px] text-gray-500 truncate">{draftLinkPreview.siteName}</p>
+                        )}
+                        {draftLinkPreview.title && (
+                          <p className="text-xs text-white font-semibold truncate">{draftLinkPreview.title}</p>
+                        )}
+                        {draftLinkPreview.description && (
+                          <p className="text-[10px] text-gray-400 line-clamp-2 mt-0.5">{draftLinkPreview.description}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setLinkPreviewDismissed(true)
+                          setDraftLinkPreview(null)
+                        }}
+                        className="p-1 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
+                        title="Remover pré-visualização (usar média em alternativa)"
+                      >
+                        <X className="w-3.5 h-3.5 text-gray-400" />
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              )}
 
               {/* Multiple Media Previews */}
               {(mediaPreviews.length > 0 || mediaPreview) && (

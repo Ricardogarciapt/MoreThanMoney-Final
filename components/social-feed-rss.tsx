@@ -64,7 +64,7 @@ export default function SocialFeedRSS() {
     checkAuth()
 
     // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: { user: { id: string } } | null) => {
       setIsAuthenticated(!!session)
       if (session) {
         loadPosts()
