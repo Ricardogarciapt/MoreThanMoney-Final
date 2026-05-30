@@ -525,8 +525,9 @@ async function executeTool(
 }
 
 const ANTHROPIC_FALLBACK_MODELS = [
-  "claude-3-5-haiku-20241022",
-  "claude-3-haiku-20240307",
+  "claude-sonnet-4-5",
+  "claude-3-5-sonnet-20241022",
+  "claude-opus-4-5",
 ]
 
 function getAnthropicModelCandidates() {
@@ -711,9 +712,10 @@ export async function POST(req: NextRequest) {
               `Nenhum modelo Anthropic compatível ficou disponível para o dashboard.\n\n` +
               `Modelos tentados automaticamente: ${modelCandidates.join(", ")}\n\n` +
               `No Vercel → Settings → Environment Variables, define por exemplo:\n` +
-              `ANTHROPIC_MODEL = claude-3-haiku-20240307\n\n` +
-              `Se a tua conta não tiver Haiku, tenta:\n` +
-              `ANTHROPIC_MODEL = claude-3-opus-20240229`,
+              `ANTHROPIC_MODEL = claude-sonnet-4-5\n\n` +
+              `Alternativas disponíveis:\n` +
+              `ANTHROPIC_MODEL = claude-3-5-sonnet-20241022\n` +
+              `ANTHROPIC_MODEL = claude-opus-4-5`,
           })
         } else if (isAnthropicModelUnavailableError(err)) {
           send({
@@ -722,7 +724,7 @@ export async function POST(req: NextRequest) {
               `O modelo Anthropic configurado não está disponível.\n\n` +
               `Modelos tentados automaticamente: ${modelCandidates.join(", ")}\n\n` +
               `No Vercel → Settings → Environment Variables, define:\n` +
-              `ANTHROPIC_MODEL = claude-3-haiku-20240307`,
+              `ANTHROPIC_MODEL = claude-sonnet-4-5`,
           })
         } else if (errStr.includes("credit balance") || errStr.includes("insufficient")) {
           send({
