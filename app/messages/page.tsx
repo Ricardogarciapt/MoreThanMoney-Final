@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { User, Send, ArrowLeft, Loader2, MessageCircle, Search, Plus, Users, X, Settings } from "lucide-react"
+import { User, Send, ArrowLeft, Loader2, MessageCircle, Search, Plus, Users, X, Settings, GraduationCap } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/contexts/auth-context"
@@ -109,6 +109,9 @@ export default function MessagesPage() {
   const [allUsers, setAllUsers] = useState<UserProfile[]>([])
   const [loadingAllUsers, setLoadingAllUsers] = useState(false)
   const [showAllUsers, setShowAllUsers] = useState(false)
+  const [mainTab, setMainTab] = useState<"messages" | "educadores">("messages")
+  const [educators, setEducators] = useState<UserProfile[]>([])
+  const [loadingEducators, setLoadingEducators] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
@@ -344,6 +347,32 @@ export default function MessagesPage() {
     }
   }
 
+  const loadEducators = async () => {
+    if (educators.length > 0) return
+    setLoadingEducators(true)
+    try {
+      const [eduRes, adminRes] = await Promise.all([
+        fetch('/api/messages/search-users?query=&role=educator'),
+        fetch('/api/messages/search-users?query=&role=admin'),
+      ])
+      const eduData = eduRes.ok ? await eduRes.json() : { users: [] }
+      const adminData = adminRes.ok ? await adminRes.json() : { users: [] }
+      const allEducators: UserProfile[] = [...(eduData.users || []), ...(adminData.users || [])]
+      // Deduplicate by id
+      const seen = new Set<string>()
+      const unique = allEducators.filter((u) => {
+        if (seen.has(u.id)) return false
+        seen.add(u.id)
+        return true
+      })
+      setEducators(unique)
+    } catch (error) {
+      console.error('Erro ao carregar educadores:', error)
+    } finally {
+      setLoadingEducators(false)
+    }
+  }
+
   const loadAllUsers = async () => {
     if (allUsers.length > 0) {
       setShowAllUsers(true)
@@ -392,6 +421,31 @@ export default function MessagesPage() {
       console.error('Erro ao pesquisar utilizadores:', error)
     } finally {
       setSearchingUsers(false)
+    }
+  }
+
+  // Direct conversation with a single user (used by educator tab)
+  const handleStartConversationWith = async (user: UserProfile) => {
+    try {
+      setSending(true)
+      const response = await fetch('/api/messages/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ otherUserId: user.id })
+      })
+      const data = await response.json()
+      if (response.ok && data.conversation) {
+        await loadConversations()
+        setSelectedConversation(data.conversation.id)
+        setSelectedConversationType('direct')
+        router.push(`/messages?conversation=${data.conversation.id}`)
+      }
+    } catch (error) {
+      console.error('Erro ao iniciar conversa com educador:', error)
+    } finally {
+      setSending(false)
+      setSelectedRecipients([])
     }
   }
 
@@ -878,29 +932,118 @@ export default function MessagesPage() {
             {/* Lista de Conversas */}
             <Card className="w-80 bg-gray-900 border-[#D2A63C]/20 flex-shrink-0 flex flex-col">
               <CardContent className="p-0 h-full flex flex-col">
-                {/* Pesquisa de Conversas */}
-                <div className="p-4 border-b border-[#D2A63C]/20">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      placeholder="Pesquisar conversas..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="bg-gray-800 border-gray-700 text-white pl-10"
-                    />
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery("")}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2"
-                      >
-                        <X className="w-4 h-4 text-gray-400" />
-                      </button>
-                    )}
-                  </div>
+                {/* Tabs: Mensagens | Educadores */}
+                <div className="flex border-b border-[#D2A63C]/20">
+                  <button
+                    onClick={() => setMainTab("messages")}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors ${
+                      mainTab === "messages"
+                        ? "text-[#D2A63C] border-b-2 border-[#D2A63C]"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Conversas
+                  </button>
+                  <button
+                    onClick={() => { setMainTab("educadores"); loadEducators() }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors ${
+                      mainTab === "educadores"
+                        ? "text-[#D2A63C] border-b-2 border-[#D2A63C]"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    <GraduationCap className="w-4 h-4" />
+                    Educadores
+                  </button>
                 </div>
 
+                {/* Pesquisa de Conversas — only when in messages tab */}
+                {mainTab === "messages" && (
+                  <div className="p-4 border-b border-[#D2A63C]/20">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        placeholder="Pesquisar conversas..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="bg-gray-800 border-gray-700 text-white pl-10"
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => setSearchQuery("")}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                        >
+                          <X className="w-4 h-4 text-gray-400" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex-1 overflow-y-auto">
-                  {loading ? (
+                  {/* Educators tab content */}
+                  {mainTab === "educadores" && (
+                    <div className="p-3">
+                      {loadingEducators ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" />
+                        </div>
+                      ) : educators.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400">
+                          <GraduationCap className="w-10 h-10 mx-auto mb-2 opacity-40" />
+                          <p className="text-sm">Nenhum educador disponível</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="text-[11px] uppercase tracking-wide text-gray-500 px-1 mb-3">
+                            Fala directamente com um educador
+                          </p>
+                          {educators.map((edu) => (
+                            <button
+                              key={edu.id}
+                              onClick={async () => {
+                                setMainTab("messages")
+                                setSelectedRecipients([edu])
+                                await handleStartConversationWith(edu)
+                              }}
+                              className="w-full p-3 rounded-xl bg-gray-800/50 border border-gray-700/50 hover:border-[#D2A63C]/40 hover:bg-gray-800 transition-all text-left flex items-center gap-3"
+                            >
+                              {edu.avatar_url ? (
+                                <Image
+                                  src={edu.avatar_url}
+                                  alt={edu.full_name || edu.username || "Educador"}
+                                  width={44}
+                                  height={44}
+                                  className="w-11 h-11 rounded-full border border-[#D2A63C]/30"
+                                />
+                              ) : (
+                                <div className="w-11 h-11 rounded-full bg-[#D2A63C]/20 flex items-center justify-center border border-[#D2A63C]/30">
+                                  <GraduationCap className="w-5 h-5 text-[#D2A63C]" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-sm text-white truncate">
+                                  {edu.full_name || edu.username || "Educador"}
+                                </p>
+                                {edu.username && (
+                                  <p className="text-xs text-gray-400">@{edu.username}</p>
+                                )}
+                                <p className="text-[11px] text-[#D2A63C] mt-0.5">
+                                  {edu.user_type === "admin" ? "Admin · Educador" : "Educador"}
+                                </p>
+                              </div>
+                              <Send className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Regular conversations list */}
+                  {mainTab === "messages" && (
+                  <>{loading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" />
                     </div>
@@ -976,6 +1119,7 @@ export default function MessagesPage() {
                         </div>
                       </button>
                     ))
+                  )}</>
                   )}
                 </div>
               </CardContent>

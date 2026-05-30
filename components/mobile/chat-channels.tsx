@@ -17,6 +17,8 @@ import {
   CornerUpLeft,
   Copy,
   Trash2,
+  GraduationCap,
+  MessageCircle,
 } from "lucide-react"
 import Image from "next/image"
 import MentionInput from "./mention-input"
@@ -1059,12 +1061,62 @@ function ChannelRow({
 
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
+interface EducatorProfile {
+  id: string
+  full_name?: string | null
+  username?: string | null
+  avatar_url?: string | null
+  user_type?: string | null
+}
+
 export default function ChatChannels() {
   const { user } = useAuth()
   const [channels, setChannels] = useState<Channel[]>([])
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [chatTab, setChatTab] = useState<"channels" | "dm">("channels")
+  const [educators, setEducators] = useState<EducatorProfile[]>([])
+  const [loadingEducators, setLoadingEducators] = useState(false)
+  const [sendingDm, setSendingDm] = useState<string | null>(null)
+
+  const loadEducators = async () => {
+    if (educators.length > 0) return
+    setLoadingEducators(true)
+    try {
+      const [eduRes, adminRes] = await Promise.all([
+        fetch("/api/messages/search-users?query=&role=educator"),
+        fetch("/api/messages/search-users?query=&role=admin"),
+      ])
+      const eduData = eduRes.ok ? await eduRes.json() : { users: [] }
+      const adminData = adminRes.ok ? await adminRes.json() : { users: [] }
+      const all: EducatorProfile[] = [...(eduData.users || []), ...(adminData.users || [])]
+      const seen = new Set<string>()
+      setEducators(all.filter((u) => { if (seen.has(u.id)) return false; seen.add(u.id); return true }))
+    } catch { /* silent */ } finally {
+      setLoadingEducators(false)
+    }
+  }
+
+  const startDmWithEducator = async (educatorId: string) => {
+    setSendingDm(educatorId)
+    try {
+      const res = await fetch("/api/messages/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ otherUserId: educatorId }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.conversation?.id) {
+          window.location.href = `/messages?conversation=${data.conversation.id}`
+        }
+      }
+    } catch { /* silent */ } finally {
+      setSendingDm(null)
+    }
+  }
 
   useEffect(() => {
     const fetchChannels = async () => {
@@ -1130,40 +1182,128 @@ export default function ChatChannels() {
         <p className="text-xs text-gray-500 mt-0.5">Canais da comunidade MTM</p>
       </div>
 
-      {/* List */}
-      <div className="divide-y divide-gray-800/40">
-        {channels.map((channel) =>
-          channel.children && channel.children.length > 0 ? (
-            <div key={channel.id}>
-              {/* Category header */}
-              <div className="px-4 pt-4 pb-1">
-                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  {channel.name}
-                </span>
-                {channel.description && (
-                  <p className="text-[11px] text-gray-600 mt-0.5">{channel.description}</p>
-                )}
-              </div>
-              {channel.children.map((sub) => (
-                <ChannelRow
-                  key={sub.id}
-                  channel={sub}
-                  onSelect={setActiveChannel}
-                  user={user}
-                  isSubChannel
-                />
-              ))}
+      {/* Tabs */}
+      <div className="flex border-b border-gray-800">
+        <button
+          onClick={() => setChatTab("channels")}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors ${
+            chatTab === "channels"
+              ? "text-[#D2A63C] border-b-2 border-[#D2A63C]"
+              : "text-gray-400"
+          }`}
+        >
+          <MessageCircle className="w-4 h-4" />
+          Canais
+        </button>
+        <button
+          onClick={() => { setChatTab("dm"); loadEducators() }}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-colors ${
+            chatTab === "dm"
+              ? "text-[#D2A63C] border-b-2 border-[#D2A63C]"
+              : "text-gray-400"
+          }`}
+        >
+          <GraduationCap className="w-4 h-4" />
+          Educadores
+        </button>
+      </div>
+
+      {/* Educators DM tab */}
+      {chatTab === "dm" && (
+        <div className="px-4 pt-4">
+          {loadingEducators ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" />
+            </div>
+          ) : educators.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <GraduationCap className="w-10 h-10 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">Nenhum educador disponível</p>
             </div>
           ) : (
-            <ChannelRow
-              key={channel.id}
-              channel={channel}
-              onSelect={setActiveChannel}
-              user={user}
-            />
-          )
-        )}
-      </div>
+            <div className="space-y-3">
+              <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-3">
+                Fala directamente com um educador
+              </p>
+              {educators.map((edu) => (
+                <button
+                  key={edu.id}
+                  disabled={sendingDm === edu.id}
+                  onClick={() => startDmWithEducator(edu.id)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-900 border border-gray-800 hover:border-[#D2A63C]/40 transition-all active:scale-[0.98]"
+                >
+                  {edu.avatar_url ? (
+                    <Image
+                      src={edu.avatar_url}
+                      alt={edu.full_name || edu.username || "Educador"}
+                      width={44}
+                      height={44}
+                      className="w-11 h-11 rounded-full border border-[#D2A63C]/30"
+                    />
+                  ) : (
+                    <div className="w-11 h-11 rounded-full bg-[#D2A63C]/20 flex items-center justify-center border border-[#D2A63C]/30">
+                      <GraduationCap className="w-5 h-5 text-[#D2A63C]" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="font-semibold text-sm text-white truncate">
+                      {edu.full_name || edu.username || "Educador"}
+                    </p>
+                    {edu.username && (
+                      <p className="text-xs text-gray-400">@{edu.username}</p>
+                    )}
+                    <p className="text-[11px] text-[#D2A63C] mt-0.5">
+                      {edu.user_type === "admin" ? "Admin · Educador" : "Educador"}
+                    </p>
+                  </div>
+                  {sendingDm === edu.id ? (
+                    <Loader2 className="w-4 h-4 text-[#D2A63C] animate-spin flex-shrink-0" />
+                  ) : (
+                    <Send className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Channels tab */}
+      {chatTab === "channels" && (
+        <div className="divide-y divide-gray-800/40">
+          {channels.map((channel) =>
+            channel.children && channel.children.length > 0 ? (
+              <div key={channel.id}>
+                {/* Category header */}
+                <div className="px-4 pt-4 pb-1">
+                  <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                    {channel.name}
+                  </span>
+                  {channel.description && (
+                    <p className="text-[11px] text-gray-600 mt-0.5">{channel.description}</p>
+                  )}
+                </div>
+                {channel.children.map((sub) => (
+                  <ChannelRow
+                    key={sub.id}
+                    channel={sub}
+                    onSelect={setActiveChannel}
+                    user={user}
+                    isSubChannel
+                  />
+                ))}
+              </div>
+            ) : (
+              <ChannelRow
+                key={channel.id}
+                channel={channel}
+                onSelect={setActiveChannel}
+                user={user}
+              />
+            )
+          )}
+        </div>
+      )}
     </div>
   )
 }
