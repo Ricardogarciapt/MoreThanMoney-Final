@@ -286,11 +286,10 @@ function AppMobileContent() {
 
         {/* Header Mobile - Simplified */}
         <div
-          className={`app-mobile-navbar sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800 transition-all duration-300 ${
-            isHeaderCollapsed ? "py-2" : "py-4"
-          }`}
+          className="app-mobile-navbar sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800 transition-all duration-300"
+          style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
         >
-          <div className="flex items-center justify-between gap-4 px-4">
+          <div className={`flex items-center justify-between gap-4 px-4 transition-all duration-300 ${isHeaderCollapsed ? "py-2" : "py-3"}`}>
             {/* Menu Button */}
             <button
               onClick={() => setIsSidebarOpen(true)}
@@ -371,8 +370,8 @@ function AppMobileContent() {
         {/* Bottom Navigation - FIXA NO FUNDO */}
         <div
           id="app-mobile-bottom-tabs"
-          className="app-mobile-bottom-tabs fixed bottom-0 left-0 right-0 z-[110] bg-black border-t border-gray-800 px-2 py-2"
-          style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "0.25rem" }}
+          className="app-mobile-bottom-tabs fixed bottom-0 left-0 right-0 z-[110] bg-black border-t border-gray-800 px-2 pt-2"
+          style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "0.25rem", paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
         >
           <button
             onClick={() => handleTabChange("social")}

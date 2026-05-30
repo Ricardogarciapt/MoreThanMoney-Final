@@ -165,8 +165,11 @@ export default function MobileSidebar({
         }`}
       >
         <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-800">
+          {/* Header — safe area top padding so it clears the iPhone status bar */}
+          <div
+            className="flex items-center justify-between p-4 border-b border-gray-800"
+            style={{ paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))' }}
+          >
             <div className="flex items-center gap-3">
               <Image
                 src="/logo-new.png"
