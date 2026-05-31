@@ -86,6 +86,7 @@ export default function Navbar() {
       submenu: [
         { name: "MTM Studio", href: "https://mtmbrandbuilder.lovable.app", external: true },
         { name: "MTM Partnership Engine", href: "https://mtmugcapp.lovable.app", external: true },
+        { name: "MTM AiOS", href: "https://mtmaios.lovable.app", external: true },
       ],
     },
   ]

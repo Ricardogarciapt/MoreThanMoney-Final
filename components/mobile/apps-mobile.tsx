@@ -11,6 +11,7 @@ import {
 
 export const MTM_STUDIO_URL = "https://mtmbrandbuilder.lovable.app"
 export const MTM_PARTNERSHIP_URL = "https://mtmugcapp.lovable.app"
+export const MTM_AIOS_URL = "https://mtmaios.lovable.app"
 
 const APPS = [
   {
@@ -27,12 +28,19 @@ const APPS = [
     icon: Handshake,
     url: MTM_PARTNERSHIP_URL,
   },
+  {
+    id: "aios" as const,
+    title: "MTM AiOS",
+    description: "Sistema operativo de inteligência artificial MTM",
+    icon: LayoutGrid,
+    url: MTM_AIOS_URL,
+  },
 ]
 
 type AppId = (typeof APPS)[number]["id"]
 
 function isAppId(value: string | null): value is AppId {
-  return value === "studio" || value === "partnership"
+  return value === "studio" || value === "partnership" || value === "aios"
 }
 
 export default function AppsMobile() {

@@ -105,6 +105,7 @@ export default function Footer() {
                 { name: "Apps IA MTM", href: "/app-mobile?tab=apps" },
                 { name: "MTM Studio", href: "https://mtmbrandbuilder.lovable.app", external: true },
                 { name: "MTM Partnership Engine", href: "https://mtmugcapp.lovable.app", external: true },
+                { name: "MTM AiOS", href: "https://mtmaios.lovable.app", external: true },
                 { name: "Cursos MoreThanMoney", href: "https://www.skool.com/morethanmoney-1132/about", external: true },
                 { name: "IQONIC Platform", href: "https://iqonic.life/morethanmoney", external: true },
               ].map((link) => (
