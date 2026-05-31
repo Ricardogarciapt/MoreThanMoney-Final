@@ -7,7 +7,7 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import UserDropdown from "@/components/user-dropdown"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
-import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap } from "lucide-react"
+import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap, Brain } from "lucide-react"
 
 type NavSubItem = {
   name: string
@@ -80,9 +80,9 @@ export default function Navbar() {
       icon: Zap,
     },
     {
-      name: "Social Media",
-      href: "https://mtmbrandbuilder.lovable.app",
-      icon: Rocket,
+      name: "Apps IA",
+      href: "/app-mobile?tab=apps",
+      icon: Brain,
       submenu: [
         { name: "MTM Studio", href: "https://mtmbrandbuilder.lovable.app", external: true },
         { name: "MTM Partnership Engine", href: "https://mtmugcapp.lovable.app", external: true },

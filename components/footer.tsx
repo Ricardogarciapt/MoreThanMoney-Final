@@ -102,7 +102,9 @@ export default function Footer() {
                 { name: "Scanner ao Vivo", href: "/scanner-access" },
                 { name: "Registo", href: "/register" },
                 { name: "Entrar", href: "/login" },
+                { name: "Apps IA MTM", href: "/app-mobile?tab=apps" },
                 { name: "MTM Studio", href: "https://mtmbrandbuilder.lovable.app", external: true },
+                { name: "MTM Partnership Engine", href: "https://mtmugcapp.lovable.app", external: true },
                 { name: "Cursos MoreThanMoney", href: "https://www.skool.com/morethanmoney-1132/about", external: true },
                 { name: "IQONIC Platform", href: "https://iqonic.life/morethanmoney", external: true },
               ].map((link) => (
