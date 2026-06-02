@@ -44,22 +44,27 @@ export async function GET(request: NextRequest) {
     } else if (status === "inactive") {
       query = query.or("is_active.eq.false,user_type.eq.inactive")
     } else if (status === "subscription_iq_skool") {
-      query = query.in("member_category", ["iq", "skool"])
+      query = query.in("member_category", ["iq", "skool", "premium"])
     }
 
     if (subscription === "expiring_soon") {
       const in7 = new Date()
       in7.setDate(in7.getDate() + 7)
       query = query
-        .in("member_category", ["iq", "skool"])
+        .in("member_category", ["iq", "skool", "premium"])
         .not("subscription_expires_at", "is", null)
         .lte("subscription_expires_at", in7.toISOString())
         .gte("subscription_expires_at", new Date().toISOString())
     } else if (subscription === "expired") {
       query = query
-        .in("member_category", ["iq", "skool"])
+        .in("member_category", ["iq", "skool", "premium"])
         .not("subscription_expires_at", "is", null)
         .lt("subscription_expires_at", new Date().toISOString())
+    }
+
+    const subscriptionPlatform = searchParams.get("subscription_platform")
+    if (subscriptionPlatform) {
+      query = query.eq("subscription_platform", subscriptionPlatform)
     }
 
     if (q.length >= 2) {
@@ -269,6 +274,12 @@ export async function PATCH(request: NextRequest) {
       is_active,
       subscription_auto_renew,
       renew_subscription,
+      // Gestão avançada de subscrições
+      subscription_plan,
+      subscription_billing_cycle,
+      subscription_expires_at_custom,
+      add_days,
+      cancel_subscription,
     } = body
 
     // Validação
@@ -293,9 +304,9 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Validar member_category se fornecido
-    if (member_category !== undefined && !['iq', 'skool', 'vip', 'standard'].includes(member_category)) {
-      return NextResponse.json({ 
-        error: `member_category inválido: ${member_category}. Valores permitidos: iq, skool, vip, standard` 
+    if (member_category !== undefined && !['iq', 'skool', 'vip', 'standard', 'premium'].includes(member_category)) {
+      return NextResponse.json({
+        error: `member_category inválido: ${member_category}. Valores permitidos: iq, skool, vip, standard, premium`
       }, { status: 400 })
     }
 
@@ -360,6 +371,49 @@ export async function PATCH(request: NextRequest) {
 
     if (is_active !== undefined && user_type !== "inactive") {
       updates.is_active = is_active
+    }
+
+    // Plano e ciclo de faturação (override manual)
+    if (subscription_plan !== undefined && ['app_member', 'premium'].includes(subscription_plan)) {
+      updates.subscription_plan = subscription_plan
+    }
+    if (subscription_billing_cycle !== undefined && ['monthly', 'annual'].includes(subscription_billing_cycle)) {
+      updates.subscription_billing_cycle = subscription_billing_cycle
+    }
+
+    // Data de validade exacta (override admin)
+    if (subscription_expires_at_custom) {
+      const d = new Date(subscription_expires_at_custom)
+      if (!isNaN(d.getTime())) {
+        updates.subscription_expires_at = d.toISOString()
+        updates.is_active = true
+      }
+    }
+
+    // Adicionar N dias à validade actual
+    if (add_days && typeof add_days === 'number' && add_days > 0 && add_days <= 3650) {
+      const { data: cur } = await supabase
+        .from("profiles")
+        .select("subscription_expires_at")
+        .eq("id", userId)
+        .single()
+      const base =
+        cur?.subscription_expires_at && new Date(cur.subscription_expires_at) > new Date()
+          ? new Date(cur.subscription_expires_at)
+          : new Date()
+      const newExpiry = new Date(base)
+      newExpiry.setDate(newExpiry.getDate() + add_days)
+      updates.subscription_expires_at = newExpiry.toISOString()
+      updates.is_active = true
+    }
+
+    // Cancelar subscrição e desativar conta
+    if (cancel_subscription === true) {
+      updates.subscription_status = 'cancelled'
+      updates.subscription_auto_renew = false
+      updates.subscription_plan = null
+      updates.is_active = false
+      updates.user_type = 'inactive'
     }
 
     const { data, error } = await supabase

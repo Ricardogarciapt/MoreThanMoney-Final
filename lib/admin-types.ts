@@ -32,8 +32,16 @@ export interface UserManagement {
   last_login?: string
   trial_expires_at?: string
   trial_expired?: boolean
+  // Subscription
+  subscription_plan?: 'app_member' | 'premium' | null
+  subscription_platform?: 'app_store' | 'skool' | 'web' | 'manual' | null
+  subscription_billing_cycle?: 'monthly' | 'annual' | null
   subscription_expires_at?: string | null
   subscription_auto_renew?: boolean | null
+  subscription_renewal_count?: number | null
+  subscription_status?: 'active' | 'grace_period' | 'billing_retry' | 'expired' | 'cancelled' | 'refunded' | null
+  subscription_days_remaining?: number | null
+  coupon_code?: string | null
   profile_data?: Record<string, any>
   xp?: {
     total_xp: number
