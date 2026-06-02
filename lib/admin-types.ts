@@ -24,7 +24,7 @@ export interface UserManagement {
   full_name?: string
   user_type: 'member' | 'admin' | 'vip' | 'pending' | 'guest' | 'presentation' | 'inactive' | 'affiliate'
   membership_level: 'basic' | 'premium' | 'vip' | 'iq' | 'skool'
-  member_category?: 'iq' | 'skool' | 'vip' | 'standard'
+  member_category?: 'iq' | 'skool' | 'vip' | 'standard' | 'premium'
   onboarding_platform?: 'vxa' | 'rfg' | null
   is_active: boolean
   is_verified: boolean

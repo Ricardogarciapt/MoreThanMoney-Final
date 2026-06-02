@@ -53,6 +53,7 @@ function roleValueFromUserFixed(user: UserManagement): string {
   const cat = user.member_category || "standard"
   if (cat === "iq") return "member-iq"
   if (cat === "skool") return "member-skool"
+  if (cat === "premium") return "member-premium"
   return "member-standard"
 }
 
@@ -93,7 +94,7 @@ export default function UserManagementComponent({
     phone: "",
     whatsapp: "",
     user_type: "member" as "admin" | "vip" | "guest" | "inactive" | "member",
-    member_category: "standard" as "standard" | "iq" | "skool",
+    member_category: "standard" as "standard" | "iq" | "skool" | "premium",
   })
 
   useEffect(() => {
@@ -366,8 +367,10 @@ export default function UserManagementComponent({
                     <SelectContent className="bg-gray-900 border-mtm-primary">
                       <SelectItem value="admin-standard">👑 Admin</SelectItem>
                       <SelectItem value="vip-standard">⭐ VIP</SelectItem>
+                      <SelectItem value="member-premium">💎 Membro Premium 65€ (30d auto)</SelectItem>
                       <SelectItem value="member-iq">🎓 Membro IQ (30d auto)</SelectItem>
                       <SelectItem value="member-skool">📚 Membro Skool (30d auto)</SelectItem>
+                      <SelectItem value="member-standard">👤 Membro App 35€</SelectItem>
                       <SelectItem value="guest-standard">🆓 Free Trial (7d)</SelectItem>
                       <SelectItem value="inactive-standard">🚫 Inativo</SelectItem>
                     </SelectContent>
@@ -466,10 +469,11 @@ export default function UserManagementComponent({
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-700">
               <SelectItem value="all">Todas categorias</SelectItem>
+              <SelectItem value="premium">Premium 65€</SelectItem>
               <SelectItem value="iq">IQ</SelectItem>
               <SelectItem value="skool">Skool</SelectItem>
               <SelectItem value="vip">VIP (cat.)</SelectItem>
-              <SelectItem value="standard">Standard</SelectItem>
+              <SelectItem value="standard">App 35€</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -559,9 +563,10 @@ export default function UserManagementComponent({
                           <SelectItem value="inactive-standard">🚫 Inativo</SelectItem>
                           <SelectItem value="admin-standard">👑 Admin</SelectItem>
                           <SelectItem value="vip-standard">⭐ VIP</SelectItem>
-                          <SelectItem value="member-iq">🎓 Membro IQ</SelectItem>
-                          <SelectItem value="member-skool">📚 Membro Skool</SelectItem>
-                          <SelectItem value="member-standard">👤 Membro</SelectItem>
+                          <SelectItem value="member-premium">💎 Premium 65€</SelectItem>
+                          <SelectItem value="member-iq">🎓 IQ</SelectItem>
+                          <SelectItem value="member-skool">📚 Skool</SelectItem>
+                          <SelectItem value="member-standard">👤 App 35€</SelectItem>
                           <SelectItem value="guest-standard">🆓 Free Trial</SelectItem>
                         </SelectContent>
                       </Select>

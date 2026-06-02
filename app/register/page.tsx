@@ -105,7 +105,7 @@ export default function RegisterPage() {
             phone: formData.phone || null,
             whatsapp: formData.whatsapp || null,
             user_type: autoApprove ? 'member' : 'pending',
-            member_category: selectedPlan === 'premium' ? 'iq' : 'standard',
+            member_category: selectedPlan === 'premium' ? 'premium' : 'standard',
             is_active: autoApprove,
             subscription_plan: selectedPlan,
             subscription_billing_cycle: billingCycle,

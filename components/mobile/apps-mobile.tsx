@@ -6,8 +6,31 @@ import {
   ExternalLink,
   Handshake,
   LayoutGrid,
+  Lock,
   Rocket,
+  Sparkles,
 } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import type { User } from "@/contexts/auth-context"
+
+/**
+ * Roles com acesso às Apps MTM:
+ * - admin
+ * - vip (user_type="vip" ou member_category="vip")
+ * - member-iq (cobre member_category="iq" + registo premium 65€)
+ */
+function canAccessApps(user: User | null): boolean {
+  if (!user || user.is_active === false) return false
+  if (user.user_type === "admin") return true
+  if (user.user_type === "vip" || user.member_category === "vip") return true
+  if (user.user_type === "member") {
+    return (
+      user.member_category === "iq" ||      // Membros IQ (IQONIC)
+      user.member_category === "premium"    // Pack Premium 65€
+    )
+  }
+  return false
+}
 
 export const MTM_STUDIO_URL = "https://mtmbrandbuilder.lovable.app"
 export const MTM_PARTNERSHIP_URL = "https://mtmugcapp.lovable.app"
@@ -46,9 +69,11 @@ function isAppId(value: string | null): value is AppId {
 export default function AppsMobile() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { user } = useAuth()
   const appParam = searchParams.get("app")
   const selected = isAppId(appParam) ? appParam : null
   const activeApp = APPS.find((a) => a.id === selected)
+  const hasAccess = canAccessApps(user)
 
   const openApp = (id: AppId) => {
     router.push(`/app-mobile?tab=apps&app=${id}`, { scroll: false })
@@ -56,6 +81,32 @@ export default function AppsMobile() {
 
   const backToLauncher = () => {
     router.push("/app-mobile?tab=apps", { scroll: false })
+  }
+
+  // Ecrã de acesso bloqueado — não redireciona para o site
+  if (!hasAccess) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 py-10 text-center">
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#D2A63C]/30 bg-[#D2A63C]/10">
+          <Lock className="h-8 w-8 text-[#D2A63C]" />
+        </div>
+        <h2 className="mb-2 text-xl font-bold text-white">Apps MTM</h2>
+        <p className="mb-1 text-sm font-medium text-[#D2A63C]">Acesso exclusivo</p>
+        <p className="mb-6 max-w-xs text-sm text-gray-400">
+          Esta secção está disponível para membros Premium (65€), IQ, VIP e Admin.
+          Faz upgrade do teu plano para aceder às apps MTM.
+        </p>
+        <div className="flex w-full max-w-xs flex-col gap-3">
+          <a
+            href="https://morethanmoney.pt/member-area"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#D2A63C] px-5 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 active:scale-95"
+          >
+            <Sparkles className="h-4 w-4" />
+            Ver planos de upgrade
+          </a>
+        </div>
+      </div>
+    )
   }
 
   if (activeApp) {

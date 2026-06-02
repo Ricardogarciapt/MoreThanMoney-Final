@@ -1,13 +1,13 @@
-/** Subscrição recorrente de 30 dias para membros IQ e Skool */
+/** Subscrição recorrente de 30 dias para membros IQ, Skool e Premium (65€) */
 
 export const MEMBER_SUBSCRIPTION_DAYS = 30
 
-export type SubscriptionCategory = "iq" | "skool"
+export type SubscriptionCategory = "iq" | "skool" | "premium"
 
 export function isSubscriptionCategory(
   category?: string | null
 ): category is SubscriptionCategory {
-  return category === "iq" || category === "skool"
+  return category === "iq" || category === "skool" || category === "premium"
 }
 
 export function addDays(base: Date, days: number): Date {

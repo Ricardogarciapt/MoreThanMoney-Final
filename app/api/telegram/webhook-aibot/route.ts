@@ -4,8 +4,8 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 const CHANNEL_MAP: Record<string, string> = {}
 
 function buildChannelMap() {
-  const tradeId = process.env.TELEGRAM_TRADE_IDEAS_CHAT_ID
-  const premiumId = process.env.TELEGRAM_PREMIUM_IDEAS_CHAT_ID
+  const tradeId = process.env.TELEGRAM_TRADE_IDEAS_CHAT_ID?.trim()
+  const premiumId = process.env.TELEGRAM_PREMIUM_IDEAS_CHAT_ID?.trim()
   const addBoth = (id: string, slug: string) => {
     CHANNEL_MAP[id] = slug
     const norm = id.startsWith("-100") ? id : `-100${id.replace(/^-/, "")}`
