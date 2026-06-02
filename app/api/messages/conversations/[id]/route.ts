@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 export async function GET(
   request: NextRequest,
@@ -98,15 +99,14 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Verificar sessão via SSR cookie
     const cookieStore = await cookies()
-    const supabase = createServerClient(
+    const supabaseSSR = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
+          getAll() { return cookieStore.getAll() },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
@@ -116,7 +116,7 @@ export async function POST(
       }
     )
 
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { session } } = await supabaseSSR.auth.getSession()
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
@@ -126,15 +126,18 @@ export async function POST(
     if (!conversationId) {
       return NextResponse.json({ error: 'Conversa inválida' }, { status: 400 })
     }
+
     const body = await request.json()
     const { content } = body
-
     if (!content || !content.trim()) {
       return NextResponse.json({ error: 'Conteúdo da mensagem é obrigatório' }, { status: 400 })
     }
 
-    // Verificar se o usuário tem acesso à conversa
-    const { data: conversation, error: convError } = await supabase
+    // Usar admin client para todas as operações DB (bypass RLS — auth já validada acima)
+    const adminDb = getSupabaseAdmin()
+
+    // Verificar se o utilizador tem acesso à conversa
+    const { data: conversation, error: convError } = await adminDb
       .from('conversations')
       .select('*')
       .eq('id', conversationId)
@@ -148,62 +151,54 @@ export async function POST(
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
 
-    // Criar mensagem (sem join a profiles)
-    const { data: message, error } = await supabase
+    // Inserir mensagem
+    const { data: message, error: insertError } = await adminDb
       .from('messages')
       .insert({
         conversation_id: conversationId,
         sender_id: session.user.id,
-        content: content.trim()
+        content: content.trim(),
       })
       .select('*')
       .single()
 
-    if (error) {
-      console.error('Erro ao criar mensagem:', error)
-      return NextResponse.json({ error: 'Erro ao enviar mensagem' }, { status: 500 })
+    if (insertError) {
+      console.error('Erro ao criar mensagem:', insertError)
+      return NextResponse.json({ error: 'Erro ao enviar mensagem', details: insertError.message }, { status: 500 })
     }
 
-    const { data: senderProfile } = await supabase
+    const { data: senderProfile } = await adminDb
       .from('profiles')
       .select('id, full_name, username, avatar_url, email')
       .eq('id', session.user.id)
       .maybeSingle()
+
     const messageWithSender = message
       ? { ...message, sender: senderProfile || { id: session.user.id } }
       : message
 
-    // Atualizar last_message_at na conversa
-    await supabase
+    // Atualizar last_message_at (trigger também faz isto, mas mantemos por redundância)
+    await adminDb
       .from('conversations')
       .update({ last_message_at: new Date().toISOString() })
       .eq('id', conversationId)
 
-    // Enviar notificação push para o outro usuário
-    const otherUserId = conversation.user1_id === session.user.id 
-      ? conversation.user2_id 
+    // Notificação push para o outro utilizador (não-bloqueante)
+    const otherUserId = conversation.user1_id === session.user.id
+      ? conversation.user2_id
       : conversation.user1_id
 
-    try {
-      await fetch(`${request.nextUrl.origin}/api/notifications/send-push`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: otherUserId,
-          title: `💬 Nova mensagem de ${session.user.user_metadata?.full_name || 'Alguém'}`,
-          body: content.trim().substring(0, 100),
-          data: {
-            type: 'message',
-            conversation_id: conversationId,
-            sender_id: session.user.id
-          },
-          tag: 'message'
-        })
-      })
-    } catch (notifError) {
-      console.error('Erro ao enviar notificação:', notifError)
-      // Não bloquear o envio da mensagem se a notificação falhar
-    }
+    fetch(`${request.nextUrl.origin}/api/notifications/send-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: otherUserId,
+        title: `💬 Nova mensagem de ${session.user.user_metadata?.full_name || 'Alguém'}`,
+        body: content.trim().substring(0, 100),
+        data: { type: 'message', conversation_id: conversationId, sender_id: session.user.id },
+        tag: 'message',
+      }),
+    }).catch((e) => console.error('Erro ao enviar notificação:', e))
 
     return NextResponse.json({ message: messageWithSender })
   } catch (error) {
