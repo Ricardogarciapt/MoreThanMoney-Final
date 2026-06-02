@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
       profileUpdate.subscription_plan = plan
       profileUpdate.subscription_billing_cycle = cycle
       profileUpdate.user_type = "member"
-      profileUpdate.member_category = plan === "premium" ? "iq" : "standard"
+      profileUpdate.member_category = plan === "premium" ? "premium" : "standard"
     }
 
     if (isRenewal) {

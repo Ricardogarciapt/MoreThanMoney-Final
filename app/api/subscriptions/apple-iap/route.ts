@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
       apple_product_id,
       user_type: "member",
       is_active: true,
-      member_category: subscription_plan === "premium" ? "iq" : "standard",
+      member_category: subscription_plan === "premium" ? "premium" : "standard",
       subscription_status: subscription_status || "active",
       subscription_auto_renews: subscription_auto_renews !== false, // default true
       updated_at: new Date().toISOString(),

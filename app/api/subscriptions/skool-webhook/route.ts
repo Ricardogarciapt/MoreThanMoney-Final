@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
           subscription_billing_cycle: "monthly",
           subscription_platform: "skool",
           skool_member_id: skoolId,
-          member_category: plan === "premium" ? "iq" : "standard",
+          member_category: "skool",
           user_type: profile.user_type === "admin" ? "admin" : "member",
           is_active: true,
           updated_at: new Date().toISOString(),
