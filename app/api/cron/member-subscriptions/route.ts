@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
-import { buildSubscriptionExpiry, isSubscriptionCategory } from "@/lib/member-subscription"
+import { addDays, isSubscriptionCategory } from "@/lib/member-subscription"
 
 export const dynamic = "force-dynamic"
 
@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
 
   const { data: due, error: fetchError } = await supabase
     .from("profiles")
-    .select("id, email, member_category, subscription_expires_at, subscription_auto_renew, user_type")
-    .in("member_category", ["iq", "skool"])
+    .select("id, email, member_category, subscription_expires_at, subscription_auto_renew, subscription_billing_cycle, user_type")
+    .in("member_category", ["iq", "skool", "premium"])
     .not("subscription_expires_at", "is", null)
     .lt("subscription_expires_at", nowIso)
 
@@ -38,10 +38,14 @@ export async function GET(request: NextRequest) {
     if (!isSubscriptionCategory(row.member_category)) continue
 
     if (row.subscription_auto_renew !== false) {
+      // Respeitar ciclo de faturação: anual = 365 dias, mensal = 30 dias
+      const renewDays = row.subscription_billing_cycle === "annual" ? 365 : 30
+      const newExpiry = addDays(new Date(), renewDays).toISOString()
+
       const { error } = await supabase
         .from("profiles")
         .update({
-          subscription_expires_at: buildSubscriptionExpiry(),
+          subscription_expires_at: newExpiry,
           is_active: true,
           user_type: row.user_type === "inactive" ? "member" : row.user_type,
           updated_at: nowIso,

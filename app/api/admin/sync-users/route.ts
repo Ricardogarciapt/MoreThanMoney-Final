@@ -18,7 +18,7 @@ const ALLOWED_USER_TYPES = new Set([
   "affiliate",
 ])
 
-const ALLOWED_MEMBER_CATEGORY = new Set(["iq", "skool", "vip", "standard"])
+const ALLOWED_MEMBER_CATEGORY = new Set(["iq", "skool", "vip", "standard", "premium"])
 
 function syncSecretAuthorized(request: NextRequest): boolean {
   const secret = process.env.SYNC_USERS_SECRET?.trim()

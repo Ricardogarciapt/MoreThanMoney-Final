@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       user_type,
       membership_level,
       member_category,
+      subscription_billing_cycle,
     } = body
 
     // Validação de campos obrigatórios
@@ -129,9 +130,12 @@ export async function POST(request: NextRequest) {
       }
 
       const category =
-        member_category && ["iq", "skool", "vip", "standard"].includes(member_category)
+        member_category && ["iq", "skool", "vip", "standard", "premium"].includes(member_category)
           ? member_category
           : "standard"
+
+      const billingCycle: "monthly" | "annual" =
+        subscription_billing_cycle === "annual" ? "annual" : "monthly"
 
       const profileRow: Record<string, unknown> = {
         id: authUser.user.id,
@@ -151,8 +155,15 @@ export async function POST(request: NextRequest) {
       }
 
       if (isSubscriptionCategory(category)) {
-        profileRow.subscription_expires_at = buildSubscriptionExpiry()
+        // Anual = 365 dias; mensal = 30 dias (padrão)
+        const expiryDate = new Date()
+        expiryDate.setDate(expiryDate.getDate() + (billingCycle === "annual" ? 365 : 30))
+
+        profileRow.subscription_expires_at = expiryDate.toISOString()
         profileRow.subscription_auto_renew = true
+        profileRow.subscription_billing_cycle = billingCycle
+        profileRow.subscription_plan = category === "premium" ? "premium" : "app_member"
+        profileRow.subscription_platform = "manual"
         profileRow.user_type = "member"
         profileRow.is_active = true
       }
