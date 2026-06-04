@@ -18,6 +18,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [iqonicEmail, setIqonicEmail] = useState('')
+  const [iqonicPassword, setIqonicPassword] = useState('')
+  const [iqonicLoading, setIqonicLoading] = useState(false)
+  const [iqonicError, setIqonicError] = useState('')
   const searchParams = useSearchParams()
   const isAdminLogin = searchParams.get('admin') === 'true'
   const redirectParam = safeInternalRedirectPath(searchParams.get('redirect'))
@@ -153,6 +157,34 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error('❌ [GOOGLE LOGIN] Exceção:', error)
       setError('Erro ao iniciar login com Google. Tente novamente.')
+    }
+  }
+
+
+  const handleIqonicLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIqonicLoading(true)
+    setIqonicError('')
+    try {
+      const res = await fetch('/api/auth/iqonic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: iqonicEmail, password: iqonicPassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao autenticar com IQONIC')
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      })
+      const profile = await ensureMemberProfile(supabase, data.session)
+      const next = determinePostLoginRedirect(profile, redirectParam)
+      const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
+      window.location.replace(url)
+    } catch (err: unknown) {
+      setIqonicError(err instanceof Error ? err.message : 'Erro desconhecido')
+    } finally {
+      setIqonicLoading(false)
     }
   }
 
@@ -315,7 +347,45 @@ export default function LoginPage() {
               )}
             </Button>
 
-            {/* Registro Link */}
+            {/* IQONIC Login */}
+            <div className="mt-3">
+              <div className="relative flex justify-center text-sm">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-700"></div>
+                </div>
+                <span className="px-2 bg-gray-900 text-gray-400">Ou entrar com IQONIC</span>
+              </div>
+              <form onSubmit={handleIqonicLogin} className="space-y-2 mt-3">
+                {iqonicError && (
+                  <Alert variant="destructive" className="mb-2 bg-red-500/20 border-red-500/50">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-red-200">{iqonicError}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input id="iqonic-email" type="email" placeholder="Email IQONIC"
+                    value={iqonicEmail} onChange={(e) => setIqonicEmail(e.target.value)}
+                    className="pl-10 bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-500" required />
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input id="iqonic-password" type="password" placeholder="Password IQONIC"
+                    value={iqonicPassword} onChange={(e) => setIqonicPassword(e.target.value)}
+                    className="pl-10 bg-gray-800/50 border-gray-600 text-white placeholder:text-gray-500" required />
+                </div>
+                <Button type="submit" className="w-full bg-[#D2A63C] hover:bg-[#B8922F] text-black font-semibold"
+                  disabled={iqonicLoading} size="lg">
+                  {iqonicLoading ? (
+                    <><Loader2 className="mr-2 h-5 w-5 animate-spin" />A autenticar...</>
+                  ) : (
+                    <><Shield className="mr-2 h-5 w-5" />Login com IQONIC</>
+                  )}
+                </Button>
+              </form>
+            </div>
+
+                        {/* Registro Link */}
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-400">
                 Não tens uma conta?{' '}
