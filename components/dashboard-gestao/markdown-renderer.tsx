@@ -3,8 +3,11 @@
 import React from "react"
 
 function renderInline(text: string): React.ReactNode[] {
-  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[([^\]]+)\]\(([^)]+)\))/)
+  // Nota: grupos não-capturantes (?:...) para os sub-grupos do link,
+  // para que o split não injete undefined no array quando bold/italic fazem match.
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[(?:[^\]]+)\]\((?:[^)]+)\))/)
   return parts.map((part, i) => {
+    if (part == null) return null
     if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
       return <strong key={i} className="font-semibold text-white">{part.slice(2, -2)}</strong>
     }
