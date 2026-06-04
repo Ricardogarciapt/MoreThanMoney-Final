@@ -1,16 +1,27 @@
 // /api/auth/iqonic/route.ts
-// Login IQONIC — valida via shield.iqonic.life, sincroniza com Supabase MTM
+// Login IQONIC — valida via shield.iqonic.life, auto-cria user no Supabase MTM
+// Utilizadores só precisam das credenciais IQONIC — sem conta MTM separada
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createHmac } from 'crypto'
 
-const supabase = createClient(
+// Admin client com service role — pode criar/atualizar utilizadores
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
 const SHIELD_URL = 'https://shield.iqonic.life/outerinfo.dhtml'
-const SHIELD_WEBHOOK = 'ite5r9Qtin82q'
+const SHIELD_WEBHOOK = 'iteSr9Qtin82q'
+
+// Gera password MTM determinística a partir do UUID IQONIC
+// Utilizador nunca precisa saber esta password — só usa credenciais IQONIC
+function generateMtmPassword(iqonicUuid: string): string {
+  const secret = process.env.IQONIC_HMAC_SECRET || 'mtm-iqonic-default-secret'
+  return createHmac('sha256', secret).update(iqonicUuid).digest('hex')
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,99 +48,99 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Credenciais IQONIC inválidas' }, { status: 401 })
     }
 
-    if (!iqonicUsers || iqonicUsers.length === 0) {
-      return NextResponse.json({ error: 'Utilizador IQONIC não encontrado' }, { status: 401 })
+    if (!Array.isArray(iqonicUsers) || iqonicUsers.length === 0) {
+      return NextResponse.json({ error: 'Credenciais IQONIC inválidas' }, { status: 401 })
     }
 
-    const iqUser = iqonicUsers[0]
+    const iqonicUser = iqonicUsers[0]
+    const iqonicUuid = iqonicUser.uuid || iqonicUser.id || email
+    const mtmPassword = generateMtmPassword(iqonicUuid)
 
-    // 2. Verificar se está ativo e não expirou
-    if (iqUser.active !== 'Active') {
-      return NextResponse.json({
-        error: 'Conta IQONIC inativa. Contacta o suporte.',
-        iqonic_status: iqUser.active,
-      }, { status: 403 })
-    }
+    // 2. Verificar se user já existe no Supabase
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+    const existingUser = existingUsers?.users?.find(
+      (u: any) => u.email?.toLowerCase() === email.toLowerCase()
+    )
 
-    if (iqUser.expiration && new Date(iqUser.expiration) < new Date()) {
-      return NextResponse.json({
-        error: `Subscrição IQONIC expirou em ${iqUser.expiration}. Renova em iqonic.vip`,
-        iqonic_status: 'expired',
-        expiration: iqUser.expiration,
-      }, { status: 403 })
-    }
+    let supabaseUserId: string
 
-    // 3. Verificar se existe utilizador no Supabase MTM
-    let { data: profile } = await supabase
-      .from('profiles')
-      .select('id, email, is_active, user_type, subscription_status')
-      .eq('email', email.toLowerCase())
-      .single()
-
-    if (!profile) {
-      return NextResponse.json({
-        error: 'Conta MTM não encontrada. Aguarda validação do administrador.',
-        iqonic_valid: true,
-        iqonic_user: {
-          username: iqUser.username,
-          name: `${iqUser.first} ${iqUser.last}`,
-          plan: iqUser.plan,
-          expiration: iqUser.expiration,
-          uuid: iqUser.uuid,
+    if (!existingUser) {
+      // 3a. Criar novo user no Supabase automaticamente
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: email.toLowerCase(),
+        password: mtmPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: iqonicUser.name || iqonicUser.fullname || email.split('@')[0],
+          iqonic_id: iqonicUuid,
+          iqonic_username: iqonicUser.username || iqonicUser.uname || '',
+          auth_provider: 'iqonic',
         },
-        requires_admin_approval: true,
-      }, { status: 404 })
+      })
+
+      if (createError || !newUser?.user) {
+        console.error('Erro ao criar user Supabase:', createError)
+        return NextResponse.json({ error: 'Erro ao criar conta MTM' }, { status: 500 })
+      }
+
+      supabaseUserId = newUser.user.id
+
+      // Atualizar perfil com dados IQONIC
+      await supabaseAdmin.from('profiles').update({
+        iqonic_id: iqonicUuid,
+        iqonic_username: iqonicUser.username || iqonicUser.uname || '',
+        full_name: iqonicUser.name || iqonicUser.fullname || email.split('@')[0],
+        auth_provider: 'iqonic',
+      }).eq('id', supabaseUserId)
+
+    } else {
+      supabaseUserId = existingUser.id
+
+      // 3b. Atualizar password HMAC se necessário (garantir sincronia)
+      await supabaseAdmin.auth.admin.updateUserById(supabaseUserId, {
+        password: mtmPassword,
+        user_metadata: {
+          iqonic_id: iqonicUuid,
+          auth_provider: 'iqonic',
+        },
+      })
     }
 
-    // 4. Sync dados IQONIC → perfil Supabase MTM
-    const expiresAt = new Date(iqUser.expiration).toISOString()
-    await supabase.from('profiles').update({
-      iqonic_id: iqUser.uuid,
-      subscription_status: 'active',
-      subscription_plan: iqUser.plan,
-      subscription_platform: 'iqonic',
-      subscription_expires_at: expiresAt,
-      is_active: true,
-      last_login: new Date().toISOString(),
-      checkout_source: 'iqonic',
-    }).eq('id', profile.id)
+    // 4. Fazer sign-in com password HMAC gerada
+    const regularClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
 
-    // 5. Login no Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    const { data: signInData, error: signInError } = await regularClient.auth.signInWithPassword({
       email: email.toLowerCase(),
-      password,
+      password: mtmPassword,
     })
 
-    if (authError || !authData.session) {
-      return NextResponse.json({
-        error: 'Password incorreta para o site MTM. Usa a password do morethanmoney.pt',
-        iqonic_valid: true,
-        hint: 'As credenciais do site MTM são independentes das do IQONIC.',
-      }, { status: 401 })
+    if (signInError || !signInData?.session) {
+      console.error('Erro ao fazer sign-in:', signInError)
+      return NextResponse.json({ error: 'Erro ao iniciar sessão' }, { status: 500 })
     }
 
     return NextResponse.json({
       success: true,
-      session: authData.session,
+      session: signInData.session,
       user: {
-        id: profile.id,
-        email,
-        iqonic_username: iqUser.username,
-        iqonic_plan: iqUser.plan,
-        iqonic_expires: iqUser.expiration,
-        name: `${iqUser.first} ${iqUser.last}`,
+        id: supabaseUserId,
+        email: email.toLowerCase(),
+        iqonic_id: iqonicUuid,
       },
     })
 
   } catch (err: any) {
-    console.error('IQONIC login error:', err)
-    return NextResponse.json({ error: 'Erro interno. Tenta novamente.' }, { status: 500 })
+    console.error('IQONIC auth error:', err)
+    return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
 
 // GET — verificar status IQONIC de um utilizador (para admins)
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
+  const searchParams = new URL(req.url).searchParams
   const email = searchParams.get('email')
   const adminKey = req.headers.get('x-admin-key')
 
@@ -156,3 +167,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'IQONIC check failed' }, { status: 500 })
   }
 }
+
+export const runtime = 'nodejs'
