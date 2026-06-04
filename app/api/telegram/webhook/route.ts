@@ -4,13 +4,17 @@ import { db } from "@/lib/database-service"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 
 // Map Telegram chat IDs → chat channel slugs
-// Set TELEGRAM_TRADE_IDEAS_CHAT_ID and TELEGRAM_PREMIUM_IDEAS_CHAT_ID in Vercel env
+// Env vars aceites (qualquer um serve):
+//   TELEGRAM_TRADE_IDEAS_CHAT_ID  ou  TELEGRAM_CHANNEL_ID  → trade-ideas-setup
+//   TELEGRAM_PREMIUM_IDEAS_CHAT_ID                          → premium-ideas
 const CHANNEL_MAP: Record<string, string> = {}
 
 function buildChannelMap() {
-  const tradeIdeasId = process.env.TELEGRAM_TRADE_IDEAS_CHAT_ID
+  const tradeIdeasId =
+    process.env.TELEGRAM_TRADE_IDEAS_CHAT_ID ||
+    process.env.TELEGRAM_CHANNEL_ID   // fallback para env legacy
   const premiumIdeasId = process.env.TELEGRAM_PREMIUM_IDEAS_CHAT_ID
-  if (tradeIdeasId) CHANNEL_MAP[tradeIdeasId] = "trade-ideas-setup"
+  if (tradeIdeasId)  CHANNEL_MAP[tradeIdeasId]  = "trade-ideas-setup"
   if (premiumIdeasId) CHANNEL_MAP[premiumIdeasId] = "premium-ideas"
 }
 
@@ -19,7 +23,14 @@ buildChannelMap()
 async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmin>, message: any) {
   const chatId = String(message.chat?.id ?? "")
   const slug = CHANNEL_MAP[chatId]
-  if (!slug) return // not a mirrored channel
+
+  if (!slug) {
+    // Logar canais desconhecidos para facilitar configuração
+    console.log(
+      `[Telegram] Canal não mapeado: id=${chatId} title="${message.chat?.title ?? ""}" username="${message.chat?.username ?? ""}"`
+    )
+    return
+  }
 
   const telegramMessageId = message.message_id
   const senderName = message.chat?.title || message.sender_chat?.title || "Telegram"
@@ -58,7 +69,7 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
     }
   }
 
-  await supabase.from("chat_messages").insert({
+  const { error } = await supabase.from("chat_messages").insert({
     channel_slug: slug,
     user_id: null,
     content,
@@ -67,6 +78,12 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
     telegram_sender: senderName,
     telegram_message_id: telegramMessageId,
   })
+
+  if (error) {
+    console.error(`[Telegram] Erro ao inserir mensagem em ${slug}:`, error.message)
+  } else {
+    console.log(`[Telegram] ✅ Mensagem ${telegramMessageId} inserida em ${slug}`)
+  }
 }
 
 export async function POST(request: NextRequest) {

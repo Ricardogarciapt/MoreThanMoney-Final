@@ -1,71 +1,76 @@
 import { NextResponse } from "next/server"
-import { telegramService, telegramConfig } from "@/lib/telegram-service"
 
 export async function GET() {
-  try {
-    // Verificar status do bot
-    let botStatus = { status: "offline" }
-    let channelStatus = { status: "disconnected" }
-    let webhookStatus = { status: "inactive" }
+  const botToken = process.env.TELEGRAM_BOT_TOKEN
 
+  // 1. Bot info
+  let botInfo: any = null
+  if (botToken) {
     try {
-      const botResponse = await telegramService.getMe()
-      if (botResponse.ok) {
-        botStatus = {
-          id: botResponse.result.id,
-          username: botResponse.result.username,
-          first_name: botResponse.result.first_name,
-          status: "online",
-        }
-      }
-    } catch (error) {
-      console.error("Erro ao verificar status do bot:", error)
-    }
-
-    try {
-      const channelResponse = await telegramService.getChannelInfo()
-      if (channelResponse.ok) {
-        channelStatus = {
-          id: channelResponse.result.id,
-          title: channelResponse.result.title || telegramConfig.channelName,
-          member_count: channelResponse.result.member_count,
-          status: "connected",
-        }
-      }
-    } catch (error) {
-      console.error("Erro ao verificar status do canal:", error)
-    }
-
-    // Simular status do webhook (em produção, você pode verificar isso com getWebhookInfo)
-    webhookStatus = {
-      url: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api/telegram/webhook` : "",
-      status: botStatus.status === "online" ? "active" : "inactive",
-    }
-
-    // Simular último sinal (em produção, você buscaria do banco de dados)
-    const lastSignal = {
-      content: "🚀 EURUSD BUY @ 1.0950 | TP: 1.1000 | SL: 1.0920",
-      timestamp: new Date().toISOString(),
-      type: "BUY",
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        bot: botStatus,
-        channel: channelStatus,
-        webhook: webhookStatus,
-        lastSignal,
-      },
-    })
-  } catch (error) {
-    console.error("Erro ao verificar status:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Erro ao verificar status do Telegram",
-      },
-      { status: 500 },
-    )
+      const r = await fetch(`https://api.telegram.org/bot${botToken}/getMe`)
+      const j = await r.json()
+      if (j.ok) botInfo = j.result
+    } catch {}
   }
+
+  // 2. Webhook info
+  let webhookInfo: any = null
+  if (botToken) {
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`)
+      const j = await r.json()
+      if (j.ok) webhookInfo = j.result
+    } catch {}
+  }
+
+  // 3. Channel map from env
+  const tradeIdeasId =
+    process.env.TELEGRAM_TRADE_IDEAS_CHAT_ID || process.env.TELEGRAM_CHANNEL_ID || null
+  const premiumIdeasId = process.env.TELEGRAM_PREMIUM_IDEAS_CHAT_ID || null
+
+  // 4. Chat info for each configured channel
+  async function getChatTitle(id: string | null) {
+    if (!id || !botToken) return null
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${botToken}/getChat?chat_id=${id}`)
+      const j = await r.json()
+      return j.ok ? j.result?.title ?? id : `NOT FOUND (id: ${id})`
+    } catch {
+      return `ERROR (id: ${id})`
+    }
+  }
+
+  const [tradeTitle, premiumTitle] = await Promise.all([
+    getChatTitle(tradeIdeasId),
+    getChatTitle(premiumIdeasId),
+  ])
+
+  return NextResponse.json({
+    bot: botInfo
+      ? { username: botInfo.username, name: botInfo.first_name, id: botInfo.id }
+      : "NOT CONFIGURED",
+    webhook: webhookInfo
+      ? {
+          url: webhookInfo.url || "(empty — not registered)",
+          pending_updates: webhookInfo.pending_update_count,
+          last_error: webhookInfo.last_error_message ?? null,
+        }
+      : "ERROR",
+    channels: {
+      "trade-ideas-setup": {
+        env_var: process.env.TELEGRAM_TRADE_IDEAS_CHAT_ID
+          ? "TELEGRAM_TRADE_IDEAS_CHAT_ID"
+          : process.env.TELEGRAM_CHANNEL_ID
+          ? "TELEGRAM_CHANNEL_ID (legacy)"
+          : "NOT SET",
+        id: tradeIdeasId,
+        title: tradeTitle,
+      },
+      "premium-ideas": {
+        env_var: process.env.TELEGRAM_PREMIUM_IDEAS_CHAT_ID ? "TELEGRAM_PREMIUM_IDEAS_CHAT_ID" : "NOT SET",
+        id: premiumIdeasId,
+        title: premiumTitle,
+      },
+    },
+  })
 }
