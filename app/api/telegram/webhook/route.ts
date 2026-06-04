@@ -25,10 +25,32 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
   const slug = CHANNEL_MAP[chatId]
 
   if (!slug) {
-    // Logar canais desconhecidos para facilitar configuração
-    console.log(
-      `[Telegram] Canal não mapeado: id=${chatId} title="${message.chat?.title ?? ""}" username="${message.chat?.username ?? ""}"`
-    )
+    // Guardar canal desconhecido para facilitar configuração
+    const channelTitle = message.chat?.title ?? ""
+    const channelUsername = message.chat?.username ?? ""
+    console.log(`[Telegram] Canal não mapeado: id=${chatId} title="${channelTitle}" username="${channelUsername}"`)
+
+    // Auto-detectar pelo título: se parece ser um dos canais esperados, inserir como descoberta
+    const titleLower = channelTitle.toLowerCase()
+    let autoSlug: string | null = null
+    if (titleLower.includes("premium")) autoSlug = "premium-ideas"
+    else if (titleLower.includes("trade") || titleLower.includes("setup") || titleLower.includes("sinais")) autoSlug = "trade-ideas-setup"
+
+    if (autoSlug) {
+      console.log(`[Telegram] Auto-mapeando "${channelTitle}" (${chatId}) → ${autoSlug}`)
+      await supabase.from("chat_messages").insert({
+        channel_slug: autoSlug,
+        user_id: null,
+        content: message.text || message.caption || null,
+        image_url: null,
+        message_type: "telegram_forward",
+        telegram_sender: channelTitle || "Telegram",
+        telegram_message_id: message.message_id,
+      }).then(({ error }) => {
+        if (error) console.error(`[Telegram] Erro auto-mapeamento:`, error.message)
+        else console.log(`[Telegram] ✅ Auto-mapeado ${chatId} → ${autoSlug}`)
+      })
+    }
     return
   }
 
