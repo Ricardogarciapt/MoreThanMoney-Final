@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
           return await createOrSignInSupabaseUser(email, shieldUser)
         }
       } catch (shieldErr) {
-        console.error("❌ [IQONIC] Shield fallback falhou:", shieldErr)
+        console.error("IQONIC Shield fallback falhou:", shieldErr)
       }
 
       return NextResponse.json(
@@ -40,30 +40,28 @@ export async function POST(request: NextRequest) {
     }
 
     return await createOrSignInSupabaseUser(email, iqonicResult.user)
-  } catch (error: any) {
-    console.error("❌ [IQONIC AUTH] Erro:", error)
+  } catch (error) {
+    console.error("IQONIC AUTH Erro:", error)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }
 
-async function createOrSignInSupabaseUser(email: string, iqonicUser: any) {
+async function createOrSignInSupabaseUser(email, iqonicUser) {
   const supabaseAdmin = getSupabaseAdmin()
   const deterministicPassword = `iqonic_${email}_${IQONIC_WEBHOOK}`
 
-  // Tentar sign in (utilizador já existe)
   const { data: signInData } = await supabaseAdmin.auth.signInWithPassword({
     email,
     password: deterministicPassword,
   })
 
   if (signInData?.session) {
-    console.log("✅ [IQONIC AUTH] Login Supabase OK:", email)
+    console.log("IQONIC AUTH Login Supabase OK:", email)
     return NextResponse.json({ session: signInData.session, iqonic: iqonicUser })
   }
 
-  // Utilizador não existe — criar
-  console.log("🆕 [IQONIC AUTH] Criar utilizador Supabase:", email)
-  const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+  console.log("IQONIC AUTH Criar utilizador Supabase:", email)
+  const { error: createError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password: deterministicPassword,
     email_confirm: true,
@@ -75,27 +73,25 @@ async function createOrSignInSupabaseUser(email: string, iqonicUser: any) {
   })
 
   if (createError) {
-    console.error("❌ [IQONIC AUTH] Erro ao criar utilizador:", createError)
+    console.error("IQONIC AUTH Erro ao criar utilizador:", createError)
     return NextResponse.json(
       { error: "Erro ao criar conta. Tenta novamente." },
       { status: 500 }
     )
   }
 
-  // Sign in após criação
   const { data: newSignIn, error: newSignInError } = await supabaseAdmin.auth.signInWithPassword({
     email,
     password: deterministicPassword,
   })
 
   if (newSignInError || !newSignIn?.session) {
-    console.error("❌ [IQONIC AUTH] Erro sign in após criação:", newSignInError)
     return NextResponse.json(
       { error: "Erro de autenticação após criação. Tenta novamente." },
       { status: 500 }
     )
   }
 
-  console.log("✅ [IQONIC AUTH] Utilizador criado e autenticado:", email)
+  console.log("IQONIC AUTH Utilizador criado e autenticado:", email)
   return NextResponse.json({ session: newSignIn.session, iqonic: iqonicUser })
 }
