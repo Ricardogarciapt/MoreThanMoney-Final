@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 
 const BOT_TOKEN = process.env.TELEGRAM_AIBOT_TOKEN || ""
 const BASE_URL = `https://api.telegram.org/bot${BOT_TOKEN}`
-const WEBHOOK_URL = "https://morethanmoney.pt/api/telegram/webhook-aibot"
+const WEBHOOK_URL = "https://www.morethanmoney.pt/api/telegram/webhook-aibot"
 
 const CHANNEL_MAP: Record<string, string> = {}
 

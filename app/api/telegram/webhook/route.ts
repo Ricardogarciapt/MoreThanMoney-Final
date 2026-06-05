@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
       }
 
       // /sinais — últimos sinais
-      else if (text === "/sinais" || text === "/sinais@MoreThanMoney_Copierbot") {
+      else if (text === "/sinais" || text === "/sinais@MoreThanMoney_aibot") {
         const { data: signals } = await supabase
           .from("telegram_signals")
           .select("*")
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
       }
 
       // /status
-      else if (text === "/status" || text === "/status@MoreThanMoney_Copierbot") {
+      else if (text === "/status" || text === "/status@MoreThanMoney_aibot") {
         const { data: mentor } = await supabase
           .from("mentor_profiles")
           .select("user_id, telegram_chat_id")
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
       }
 
       // /ajuda
-      else if (text === "/ajuda" || text === "/ajuda@MoreThanMoney_Copierbot" || text === "/help") {
+      else if (text === "/ajuda" || text === "/ajuda@MoreThanMoney_aibot" || text === "/help") {
         await sendMessage(
           "ℹ️ <b>Comandos disponíveis:</b>\n\n" +
           "/start — Ligar ao mentor MTM\n" +
@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     status: "Webhook ativo",
-    bot: "@MoreThanMoney_Copierbot",
+    bot: "@MoreThanMoney_aibot",
     channel: "https://t.me/+2XMn1YEjfjYwYTE0",
   })
 }
