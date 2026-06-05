@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     if (existing) return NextResponse.json({ ok: true })
 
-    await supabase.from("chat_messages").insert({
+    const { error: insertError } = await supabase.from("chat_messages").insert({
       channel_slug: slug,
       user_id: null,
       content,
@@ -53,6 +53,27 @@ export async function POST(request: NextRequest) {
       telegram_message_id: telegramMessageId,
       created_at: new Date(message.date * 1000).toISOString(),
     })
+
+    if (!insertError) {
+      // Fire push notification to all users
+      const PUSH_TITLES: Record<string, string> = {
+        "trade-ideas-setup": "📊 Novo Setup de Trading!",
+        "premium-ideas":     "💎 Nova Ideia Premium!",
+      }
+      const title = PUSH_TITLES[slug] ?? "📩 Nova mensagem MTM"
+      const body  = content.length > 120 ? content.substring(0, 117) + "…" : content
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.morethanmoney.pt"
+      fetch(`${siteUrl}/api/notifications/send-push`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          all: true,
+          title,
+          body,
+          data: { type: "chat_message", url: "/app-mobile", channel: slug },
+        }),
+      }).catch((e) => console.error("[webhook-aibot] push failed:", e))
+    }
 
     return NextResponse.json({ ok: true })
   } catch (error) {

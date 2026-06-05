@@ -186,12 +186,13 @@ export async function GET(request: NextRequest) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            all: true,
             title: notificationTitle,
             body: notificationBody,
             data: {
               type: 'dca_daily',
               url: '/portfolios',
-              opportunities: goodOpportunities.length
+              opportunities: String(goodOpportunities.length),
             }
           })
         })

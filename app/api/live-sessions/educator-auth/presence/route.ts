@@ -110,6 +110,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // Push notification when going live
+    if (wantsStart && data) {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.morethanmoney.pt"
+      fetch(`${siteUrl}/api/notifications/send-push`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          all: true,
+          title: "🔴 Estamos em Direto!",
+          body: `"${stream.title}" está agora ao vivo. Entra já!`,
+          data: { type: "live_session", url: "/live", streamId },
+        }),
+      }).catch((e) => console.error("[presence] push failed:", e))
+    }
+
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })

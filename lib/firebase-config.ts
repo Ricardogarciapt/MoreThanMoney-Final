@@ -15,9 +15,12 @@ const firebaseConfig = {
 
 // Validar se Firebase está configurado
 const isFirebaseConfigured = () => {
-  return firebaseConfig.projectId && 
-         firebaseConfig.apiKey && 
-         firebaseConfig.apiKey !== 'AIzaSyCUcYfGrV3QV-3MkEjxqwF0qqXdTK3OFjE' // Não é o placeholder
+  return Boolean(
+    firebaseConfig.projectId &&
+    firebaseConfig.apiKey &&
+    firebaseConfig.messagingSenderId &&
+    !firebaseConfig.apiKey.startsWith('AIzaSyCUcY') // Não é o placeholder antigo
+  )
 }
 
 // Logar status de configuração

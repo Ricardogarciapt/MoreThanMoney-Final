@@ -742,6 +742,22 @@ function ChannelView({
       setReplyTo(null)
       setLinkPreview(null)
       setDetectedUrl(null)
+
+      // Push notification for trading / cripto channels
+      if (channel.slug === "trading" || channel.slug === "cripto") {
+        const notifTitle = channel.slug === "trading" ? "📈 Nova mensagem em #Trading" : "₿ Nova mensagem em #Cripto"
+        const notifBody  = (text.trim() || "Nova mensagem!").substring(0, 120)
+        fetch("/api/notifications/send-push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            all: true,
+            title: notifTitle,
+            body: notifBody,
+            data: { type: "chat_message", url: "/app-mobile", channel: channel.slug },
+          }),
+        }).catch(() => {})
+      }
     }
     setSending(false)
   }
@@ -760,7 +776,7 @@ function ChannelView({
       const res = await fetch("/api/chat/upload-image", { method: "POST", body: formData })
       if (res.ok) {
         const { publicUrl } = await res.json()
-        await supabase.from("chat_messages").insert({
+        const { error: imgErr } = await supabase.from("chat_messages").insert({
           channel_slug: channel.slug,
           user_id: currentUser.id,
           image_url: publicUrl,
@@ -770,6 +786,21 @@ function ChannelView({
         })
         setText("")
         setReplyTo(null)
+
+        // Push notification for trading / cripto channels
+        if (!imgErr && (channel.slug === "trading" || channel.slug === "cripto")) {
+          const notifTitle = channel.slug === "trading" ? "📈 Nova imagem em #Trading" : "₿ Nova imagem em #Cripto"
+          fetch("/api/notifications/send-push", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              all: true,
+              title: notifTitle,
+              body: text.trim() || "Imagem partilhada!",
+              data: { type: "chat_message", url: "/app-mobile", channel: channel.slug },
+            }),
+          }).catch(() => {})
+        }
       }
     } catch {
       // silent
