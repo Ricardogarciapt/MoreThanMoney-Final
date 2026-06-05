@@ -57,10 +57,10 @@ export async function POST(request: NextRequest) {
       all: payload.all
     })
 
-    // Buscar tokens FCM
+    // Buscar tokens FCM (inclui device_info para distinguir web FCM de APNs nativo)
     let tokensQuery = supabase
       .from('fcm_tokens')
-      .select('token, user_id')
+      .select('token, user_id, device_info')
 
     if (payload.userId) {
       tokensQuery = tokensQuery.eq('user_id', payload.userId)
@@ -93,8 +93,41 @@ export async function POST(request: NextRequest) {
 
     console.log(`📱 [SEND PUSH] Encontrados ${fcmTokens.length} dispositivos`)
 
-    // Preparar mensagem FCM
-    const tokens = fcmTokens.map(t => t.token)
+    // Separar tokens FCM (web/PWA) de tokens APNs nativos (iOS)
+    // Tokens APNs são hex-strings de 64 chars ou têm device_info.nativeApp=true
+    // Firebase Admin não suporta tokens APNs directamente — são enviados via APNs provider API
+    const apnsPattern = /^[0-9a-f]{64}$/i
+    const webTokens = fcmTokens.filter(t => {
+      const info = t.device_info as Record<string, unknown> | null
+      const isNativeApns = info?.nativeApp === true || info?.platform === 'ios-apns'
+      const looksLikeApns = apnsPattern.test(t.token)
+      return !isNativeApns && !looksLikeApns
+    })
+    const apnsTokens = fcmTokens.filter(t => {
+      const info = t.device_info as Record<string, unknown> | null
+      const isNativeApns = info?.nativeApp === true || info?.platform === 'ios-apns'
+      const looksLikeApns = apnsPattern.test(t.token)
+      return isNativeApns || looksLikeApns
+    })
+
+    if (apnsTokens.length > 0) {
+      console.log(`📲 [SEND PUSH] ${apnsTokens.length} tokens APNs nativos (iOS) — a aguardar suporte APNs directo`)
+    }
+
+    if (webTokens.length === 0) {
+      console.warn('⚠️ [SEND PUSH] Nenhum token FCM (web/PWA) para enviar')
+      return NextResponse.json({
+        success: true,
+        successCount: 0,
+        failureCount: 0,
+        totalDevices: fcmTokens.length,
+        apnsSkipped: apnsTokens.length,
+        message: 'Apenas tokens APNs nativos encontrados — push web não enviado'
+      })
+    }
+
+    // Preparar mensagem FCM (apenas tokens web/PWA)
+    const tokens = webTokens.map(t => t.token)
     const message = {
       notification: {
         title: payload.title,
@@ -125,8 +158,8 @@ export async function POST(request: NextRequest) {
     console.log(`✅ [SEND PUSH] Enviadas: ${response.successCount}/${tokens.length}`)
     console.log(`❌ [SEND PUSH] Falharam: ${response.failureCount}`)
 
-    // Salvar histórico de notificações
-    const historyPromises = fcmTokens.map(async (tokenData) => {
+    // Salvar histórico de notificações (apenas tokens web enviados)
+    const historyPromises = webTokens.map(async (tokenData) => {
       const status = response.responses.find((r: { success: boolean }, i: number) => tokens[i] === tokenData.token)
         ?.success
         ? 'sent'
@@ -148,7 +181,7 @@ export async function POST(request: NextRequest) {
     // Criar entradas na tabela notifications (se data.type existir, usar esse tipo)
     const notificationType = payload.data?.type || 'system'
     if (notificationType !== 'system' || payload.data?.type) { // Só criar se não for genérico 'system'
-      const notificationPromises = fcmTokens.map(async (tokenData) => {
+      const notificationPromises = webTokens.map(async (tokenData) => {
         try {
           await supabase.from("notifications").insert({
             user_id: tokenData.user_id,
@@ -197,7 +230,9 @@ export async function POST(request: NextRequest) {
       success: true,
       successCount: response.successCount,
       failureCount: response.failureCount,
-      totalDevices: tokens.length
+      totalDevices: fcmTokens.length,
+      webSent: tokens.length,
+      apnsSkipped: apnsTokens.length
     })
   } catch (error) {
     console.error('❌ [SEND PUSH] Erro:', error)
