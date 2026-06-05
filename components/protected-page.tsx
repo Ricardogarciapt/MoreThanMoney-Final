@@ -21,21 +21,34 @@ export default function ProtectedPage({
   allowInactive = false
 }: ProtectedPageProps) {
   const router = useRouter()
-  const { user, isIqonicUser, isLoading } = useAuth()
+  const { user, isIqonicUser, isAppOnlyUser, isLoading } = useAuth()
   const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'unauthenticated'>('checking')
-  
-  // Rotas permitidas para utilizadores IQONIC
+
+  // Rotas permitidas para utilizadores IQONIC (iq)
   const iqonicAllowedRoutes = ['/app-mobile', '/scanner-access', '/portfolios']
+  // Rotas permitidas para membros App Only (standard €35)
+  const appOnlyAllowedRoutes = ['/app-mobile']
 
   useEffect(() => {
     // Verificação imediata: se já temos user válido, autorizar instantaneamente
     if (user && !isLoading) {
       const currentPath = window.location.pathname
-      
+
+      // Membros App Only (€35 standard) — apenas /app-mobile
+      if (isAppOnlyUser) {
+        const isRouteAllowed = appOnlyAllowedRoutes.some(route => currentPath.startsWith(route))
+        if (!isRouteAllowed) {
+          console.log(`⚠️ [PROTECTED PAGE] Rota ${currentPath} não permitida para membros App Only`)
+          router.replace('/app-mobile')
+          setAuthState('unauthenticated')
+          return
+        }
+      }
+
       // Verificar se é utilizador IQONIC e se a rota está permitida
       if (isIqonicUser) {
         const isRouteAllowed = iqonicAllowedRoutes.some(route => currentPath.startsWith(route))
-        
+
         if (!isRouteAllowed) {
           console.log(`⚠️ [PROTECTED PAGE] Rota ${currentPath} não permitida para utilizadores IQONIC`)
           router.push(iqonicAllowedRoutes[0])
@@ -78,7 +91,7 @@ export default function ProtectedPage({
       router.push(redirectPath)
       return
     }
-  }, [user, isIqonicUser, isLoading, requireAdmin, allowInactive, redirectPath, router])
+  }, [user, isIqonicUser, isAppOnlyUser, isLoading, requireAdmin, allowInactive, redirectPath, router])
 
   // Mostrar loading apenas se estiver verificando
   if (authState === 'checking') {

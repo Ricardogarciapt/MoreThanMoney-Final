@@ -22,7 +22,7 @@ async function sendPushNotification(userId: string, title: string, body: string,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        user_id: userId,
+        userId,
         title,
         body,
         data

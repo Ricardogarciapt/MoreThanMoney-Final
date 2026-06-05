@@ -166,18 +166,26 @@ export default function LoginPage() {
     setIqonicLoading(true)
     setIqonicError('')
     try {
-      const res = await fetch('/api/auth/iqonic', {
+      const res = await fetch('/api/auth/iqonic-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: iqonicEmail, password: iqonicPassword }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro ao autenticar com IQONIC')
-      await supabase.auth.setSession({
+      if (!data.session?.access_token) throw new Error('Sessão inválida. Tenta novamente.')
+
+      // Set Supabase session from the tokens returned by the route
+      const { data: authData, error: setError } = await supabase.auth.setSession({
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
       })
-      const profile = await ensureMemberProfile(supabase, data.session)
+      if (setError) throw new Error(setError.message)
+
+      const { setCachedSession } = await import('@/lib/auth-cache')
+      if (authData.session) setCachedSession(authData.session)
+
+      const profile = await ensureMemberProfile(supabase, authData.session)
       const next = determinePostLoginRedirect(profile, redirectParam)
       const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
       window.location.replace(url)

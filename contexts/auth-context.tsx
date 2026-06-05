@@ -19,6 +19,7 @@ export interface User {
   created_at?: string
   phone?: string
   whatsapp?: string
+  subscription_expires_at?: string | null
 }
 
 function isTrialUser(profile: Record<string, unknown>): boolean {
@@ -58,6 +59,7 @@ function profileToUser(
       created_at: p.created_at as string | undefined,
       phone: p.phone as string | undefined,
       whatsapp: p.whatsapp as string | undefined,
+      subscription_expires_at: (p.subscription_expires_at as string | null) ?? null,
     },
   }
 }
@@ -68,6 +70,8 @@ interface AuthContextType {
   isAdmin: boolean
   isLoading: boolean
   isIqonicUser: boolean
+  /** Membro €35 (member_category="standard") — acesso exclusivo à app mobile */
+  isAppOnlyUser: boolean
   signInWithEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   signInWithIqonic: (email: string, password: string, isEducator?: boolean) => Promise<{ success: boolean; error?: string }>
   signUp: (email: string, password: string, userData: any) => Promise<{ success: boolean; error?: string }>
@@ -81,6 +85,7 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   isLoading: true,
   isIqonicUser: false,
+  isAppOnlyUser: false,
   signInWithEmail: async () => ({ success: false }),
   signInWithIqonic: async () => ({ success: false }),
   signUp: async () => ({ success: false }),
@@ -504,6 +509,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAdmin: user?.user_type === "admin" && user?.is_active === true,
         isLoading,
         isIqonicUser,
+        isAppOnlyUser:
+          user?.member_category === "standard" && user?.user_type !== "admin",
         signInWithEmail,
         signInWithIqonic,
         signUp,

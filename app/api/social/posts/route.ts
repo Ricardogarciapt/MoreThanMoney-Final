@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 export async function GET() {
   try {
@@ -118,6 +119,63 @@ export async function POST(request: NextRequest) {
       console.error('Erro ao criar post:', error)
       return NextResponse.json({ error: 'Erro ao criar post' }, { status: 500 })
     }
+
+    // Notificar todos os membros ativos sobre o novo post VIP/Admin (não-bloqueante)
+    const postAuthorName = newPost?.profiles?.full_name || newPost?.profiles?.username || 'MTM'
+    const notifTitle = `📢 Novo post de ${postAuthorName}`
+    const notifBody = content?.substring(0, 120) || 'Publicação nova disponível.'
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt'
+
+    ;(async () => {
+      try {
+        const adminDb = getSupabaseAdmin()
+
+        // 1. Buscar todos os membros activos (excepto o autor)
+        const { data: activeUsers } = await adminDb
+          .from('profiles')
+          .select('id')
+          .eq('is_active', true)
+          .neq('id', session.user.id)
+
+        if (activeUsers && activeUsers.length > 0) {
+          // 2. Guardar notificação in-app para todos
+          await adminDb.from('notifications').insert(
+            activeUsers.map((u) => ({
+              user_id: u.id,
+              type: 'social_post',
+              title: notifTitle,
+              message: notifBody,
+              read: false,
+              data: {
+                post_id: newPost?.id,
+                author_id: session.user.id,
+                url: '/app-mobile?tab=social',
+              },
+            }))
+          )
+
+          // 3. Enviar push para todos os dispositivos registados
+          // Nota: omitir data.type para evitar duplicar na tabela notifications
+          // (a inserção direta acima já cobre todos os utilizadores activos)
+          await fetch(`${siteUrl}/api/notifications/send-push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              all: true,
+              title: notifTitle,
+              body: notifBody,
+              data: {
+                post_id: newPost?.id ?? '',
+                url: '/app-mobile?tab=social',
+              },
+              tag: 'social_post',
+            }),
+          })
+        }
+      } catch (notifErr) {
+        console.error('❌ [POSTS] Erro ao enviar notificações:', notifErr)
+      }
+    })()
 
     // Adicionar XP para criar post
     try {

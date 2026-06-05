@@ -24,10 +24,8 @@ export interface IqonicSession {
 }
 
 const IQONIC_SESSION_KEY = "iqonic_vip_session"
-// Suporta ambas as variáveis de ambiente para compatibilidade
-const IQONIC_API_URL = process.env.NEXT_PUBLIC_IQONIC_API_URL || 
-                       process.env.NEXT_PUBLIC_API_URL || 
-                       "https://edu-backend-bafjgsfbapfxdecb.westus2-01.azurewebsites.net"
+const IQONIC_WEBHOOK = "ite5r9Qtin82q"
+const IQONIC_SHIELD_URL = "https://shield.iqonic.life/outerinfo.dhtml"
 
 /**
  * Salva a sessão do usuário IQONIC no localStorage
@@ -101,7 +99,8 @@ export function isIqonicAuthenticated(): boolean {
 }
 
 /**
- * Função de login IQONIC
+ * Função de login IQONIC via shield.iqonic.life
+ * Endpoint: GET https://shield.iqonic.life/outerinfo.dhtml?webhook=...&action=verifylogin&distid=EMAIL&password=PASSWORD
  */
 export async function loginIqonic(
   email: string,
@@ -109,112 +108,97 @@ export async function loginIqonic(
   isEducator: boolean = false
 ): Promise<{ success: boolean; user?: IqonicUser; token?: string; error?: string }> {
   try {
-    const endpoint = isEducator
-      ? `${IQONIC_API_URL}/api/v1/educator/login`
-      : `${IQONIC_API_URL}/api/v1/user/details`
+    const params = new URLSearchParams({
+      webhook: IQONIC_WEBHOOK,
+      action: "verifylogin",
+      distid: email,
+      password: password,
+    })
 
-    // Timeout de 4 segundos para evitar esperas longas
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 4000)
+    const timeoutId = setTimeout(() => controller.abort(), 10000)
 
     let response: Response
-
     try {
-      if (isEducator) {
-        response = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-          signal: controller.signal,
-        })
-      } else {
-        response = await fetch(
-          `${endpoint}?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
-          {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            signal: controller.signal,
-          }
-        )
-      }
+      response = await fetch(`${IQONIC_SHIELD_URL}?${params.toString()}`, {
+        method: "GET",
+        signal: controller.signal,
+      })
       clearTimeout(timeoutId)
     } catch (fetchError: any) {
       clearTimeout(timeoutId)
-      if (fetchError.name === 'AbortError') {
+      if (fetchError.name === "AbortError") {
         return { success: false, error: "Timeout: A API IQONIC demorou muito a responder" }
       }
       throw fetchError
     }
 
-    if (!response.ok) {
-      let errorMessage = `HTTP error! status: ${response.status}`
-      
-      try {
-        const errorData = await response.json()
-        errorMessage = errorData.message || errorData.error || errorMessage
-      } catch {
-        const errorText = await response.text()
-        if (errorText) {
-          errorMessage = errorText
-        }
-      }
-      
-      console.error(`❌ [IQONIC AUTH] HTTP error! status: ${response.status}`, errorMessage)
-      
-      // Mensagens de erro mais específicas
-      if (response.status === 401 || response.status === 403) {
+    const rawText = await response.text()
+    console.log(`[IQONIC AUTH] status=${response.status} body=${rawText.substring(0, 200)}`)
+
+    // Try parsing as JSON first
+    let data: any
+    try {
+      data = JSON.parse(rawText)
+    } catch {
+      // Plain text response
+      const lower = rawText.trim().toLowerCase()
+      if (lower === "true" || lower === "1" || lower === "yes" || lower === "success" || lower === "ok") {
         return {
-          success: false,
-          error: "Credenciais inválidas. Verifique seu email e senha.",
+          success: true,
+          user: { email, distid: email, name: email.split("@")[0], role: isEducator ? "educator" : "student" },
+          token: email,
         }
       }
-      
-      if (response.status === 404) {
-        return {
-          success: false,
-          error: "Usuário não encontrado. Verifique se o email está correto.",
-        }
-      }
-      
-      return {
-        success: false,
-        error: `Erro de autenticação: ${errorMessage}`,
-      }
+      return { success: false, error: "Credenciais inválidas. Verifica o teu email e password IQONIC." }
     }
 
-    const data = await response.json()
+    // HTTP error
+    if (!response.ok) {
+      const msg = data?.message || data?.error || data?.msg || `Erro ${response.status}`
+      if (response.status === 401 || response.status === 403) {
+        return { success: false, error: "Credenciais inválidas. Verifica o teu email e password IQONIC." }
+      }
+      return { success: false, error: msg }
+    }
 
-    // Tratar diferentes formatos de resposta da API
-    if (data && (data.user || data.email || data._id || data.id || data.userid || data.distid)) {
-      // Formato 1: Com objeto user
-      // Formato 2: Dados diretos no objeto
-      const user: IqonicUser = data.user || {
-        id: data._id || data.id || data.userid || data.distid,
-        _id: data._id,
-        distid: data.distid || data.userid,
-        userid: data.userid || data.distid,
-        email: data.email || email,
-        name: data.name || data.firstName || email.split("@")[0],
-        firstName: data.firstName || data.name,
+    // Detect success from various JSON patterns
+    const isSuccess =
+      data?.success === true ||
+      data?.success === 1 ||
+      data?.success === "1" ||
+      data?.status === "success" ||
+      data?.status === "ok" ||
+      data?.verified === true ||
+      data?.login === true ||
+      data?.login === "true" ||
+      data?.login === "yes" ||
+      data?.valid === true ||
+      data?.code === 200 ||
+      // If response has user-identifying fields, treat as success
+      !!(data?.distid || data?.userid || (data?.email && data?.email !== "") || data?.id || data?._id)
+
+    if (isSuccess) {
+      const userObj = data?.user || data
+      const user: IqonicUser = {
+        id: userObj?.id || userObj?._id || userObj?.userid || userObj?.distid || email,
+        _id: userObj?._id,
+        distid: userObj?.distid || userObj?.userid || email,
+        userid: userObj?.userid || userObj?.distid || email,
+        email: userObj?.email || email,
+        name: userObj?.name || userObj?.firstName || userObj?.fullname || userObj?.full_name || email.split("@")[0],
+        firstName: userObj?.firstName || userObj?.name,
         role: isEducator ? "educator" : "student",
-        // Incluir todos os campos adicionais da resposta
-        ...data,
       }
-
-      // Token pode vir em diferentes campos
-      const token = data.token || data._id || data.id || data.userid || data.distid || user.id || email
-
-      if (!token) {
-        return { success: false, error: "Token não encontrado na resposta do servidor" }
-      }
-
+      const token = userObj?.token || userObj?.access_token || user.id || email
       return { success: true, user, token }
     }
 
-    return { success: false, error: "Resposta inválida do servidor: dados de usuário não encontrados" }
+    const failMsg = data?.message || data?.error || data?.msg || data?.reason || "Credenciais inválidas"
+    return { success: false, error: failMsg }
   } catch (error: any) {
     console.error("❌ [IQONIC AUTH] Erro no login:", error)
-    return { success: false, error: error.message || "Falha no login" }
+    return { success: false, error: error.message || "Falha no login com IQONIC" }
   }
 }
 

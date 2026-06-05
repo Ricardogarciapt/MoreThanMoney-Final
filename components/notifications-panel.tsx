@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Bell, Check, X, TrendingUp, TrendingDown, Target, Shield, Zap } from "lucide-react"
+import { Bell, Check, X, TrendingUp, TrendingDown, Target, Shield, Zap, AlertCircle, CheckCheck, MessageSquare } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 interface Notification {
@@ -18,7 +18,14 @@ interface Notification {
   data?: any // JSONB data field
 }
 
-export default function NotificationsPanel() {
+interface NotificationsPanelProps {
+  /** Chamado após navegar ao clicar numa notificação (para fechar o drawer) */
+  onClose?: () => void
+  /** Classe adicional para o container externo */
+  className?: string
+}
+
+export default function NotificationsPanel({ onClose, className }: NotificationsPanelProps = {}) {
   const [mounted, setMounted] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -27,7 +34,7 @@ export default function NotificationsPanel() {
   useEffect(() => {
     setMounted(true)
     // Buscar user_id para filtrar no realtime
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user } }: { data: { user: { id: string } | null } }) => {
       if (user) {
         setCurrentUserId(user.id)
         loadNotifications()
@@ -84,7 +91,7 @@ export default function NotificationsPanel() {
 
       // Parse data field se for string
       if (data) {
-        data.forEach(n => {
+        data.forEach((n: Notification) => {
           if (typeof n.data === 'string') {
             try {
               n.data = JSON.parse(n.data)
@@ -106,6 +113,26 @@ export default function NotificationsPanel() {
       setNotifications([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const markAllAsRead = async () => {
+    try {
+      if (!currentUserId) return
+      const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id)
+      if (unreadIds.length === 0) return
+
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .in('id', unreadIds)
+        .eq('user_id', currentUserId)
+
+      if (!error) {
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+      }
+    } catch (error) {
+      console.error('❌ [NOTIFICATIONS PANEL] Erro ao marcar todas como lidas:', error)
     }
   }
 
@@ -166,6 +193,10 @@ export default function NotificationsPanel() {
         return <Bell className="h-4 w-4 text-blue-400" />
       case 'social_post':
         return <TrendingUp className="h-4 w-4 text-blue-400" />
+      case 'subscription_expiry':
+        return <AlertCircle className="h-4 w-4 text-orange-400" />
+      case 'message':
+        return <MessageSquare className="h-4 w-4 text-blue-400" />
       case 'admin_notification':
         return <Bell className="h-4 w-4 text-purple-400" />
       default:
@@ -192,6 +223,12 @@ export default function NotificationsPanel() {
       case 'stop_loss':
       case 'portfolio':
         return '/portfolios'
+      case 'subscription_expiry':
+        return '/member-area?tab=subscription'
+      case 'message':
+        return notification.data?.conversation_id
+          ? `/app-mobile?tab=chat`
+          : '/app-mobile?tab=chat'
       case 'admin_notification':
         return '/member-area?tab=notifications'
       default:
@@ -201,34 +238,46 @@ export default function NotificationsPanel() {
 
   // Função para lidar com clique na notificação
   const handleNotificationClick = async (notification: Notification) => {
-    // Marcar como lida
     if (!notification.read) {
       await markAsRead(notification.id)
     }
-
-    // Navegar para destino
     const destination = getNotificationDestination(notification)
+    onClose?.()
     router.push(destination)
   }
 
   const unreadCount = notifications.filter(n => !n.read).length
 
   return (
-    <Card className="bg-gray-900/50 border-[#D2A63C]/30">
+    <Card className={`bg-gray-900/50 border-[#D2A63C]/30 ${className ?? ''}`}>
       <CardHeader>
         <div className="flex justify-between items-center">
           <CardTitle className="text-lg text-[#D2A63C] flex items-center gap-2">
             <Bell className="h-5 w-5" />
             Notificações
           </CardTitle>
-          {unreadCount > 0 && (
-            <Badge className="bg-red-500 text-white">
-              {unreadCount} novas
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <>
+                <Button
+                  onClick={markAllAsRead}
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs text-gray-400 hover:text-white hover:bg-gray-700"
+                  title="Marcar todas como lidas"
+                >
+                  <CheckCheck className="h-3.5 w-3.5 mr-1" />
+                  Todas lidas
+                </Button>
+                <Badge className="bg-red-500 text-white">
+                  {unreadCount} novas
+                </Badge>
+              </>
+            )}
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-2 max-h-[400px] overflow-y-auto">
+      <CardContent className={`space-y-2 ${onClose ? '' : 'max-h-[400px] overflow-y-auto'}`}>
         {loading ? (
           <div className="text-center py-4 text-gray-400">A carregar...</div>
         ) : notifications.length === 0 ? (

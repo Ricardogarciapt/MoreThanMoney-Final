@@ -1,9 +1,9 @@
 import { isSubscriptionActive, isSubscriptionCategory } from "@/lib/member-subscription"
 
 /**
- * Tipos de conta (apenas: Admin, VIP, Membro, Free Trial).
+ * Tipos de conta.
  * Na BD: trial = user_type "guest" + trial_expires_at; VIP = user_type ou member_category "vip";
- * Membro IQ/Skool = subscrição 30 dias (subscription_expires_at + auto_renew).
+ * Membro IQ/Skool = subscrição 30 dias; app_only = member_category "standard" (€35, só app mobile).
  */
 
 /** Perfil alinhado com public.profiles */
@@ -25,7 +25,7 @@ export interface UserProfile {
   subscription_auto_renew?: boolean | null
 }
 
-export type AccountKind = "admin" | "vip" | "member" | "trial" | "pending" | "blocked"
+export type AccountKind = "admin" | "vip" | "member" | "app_only" | "trial" | "pending" | "blocked"
 
 function trialIsExpired(p: UserProfile): boolean {
   if (p.trial_expired === true) return true
@@ -67,7 +67,12 @@ export function getAccountKind(profile: UserProfile | null): AccountKind {
     return "blocked"
   }
 
-  // member, presentation, affiliate, etc. → membro
+  // Membro App Only: member_category "standard" → acesso exclusivo à app mobile
+  if (profile.member_category === "standard") {
+    return "app_only"
+  }
+
+  // member, presentation, affiliate, etc. → membro completo
   return "member"
 }
 
@@ -107,6 +112,11 @@ export function determinePostLoginRedirect(
     return safeRequested || "/admin"
   }
 
+  // Membros App Only (€35) — sempre para /app-mobile, independente do redirect pedido
+  if (kind === "app_only") {
+    return "/app-mobile"
+  }
+
   if (safeRequested && kind !== "trial") {
     return safeRequested
   }
@@ -139,6 +149,11 @@ export function canAccessRoute(profile: UserProfile | null, route: string): bool
 
   if (kind === "vip") {
     return true
+  }
+
+  // Membros App Only (€35 standard) — apenas /app-mobile
+  if (kind === "app_only") {
+    return route.startsWith("/app-mobile")
   }
 
   if (kind === "member") {
@@ -175,6 +190,10 @@ export function getAccessDeniedMessage(profile: UserProfile | null, route: strin
       return "A tua subscrição IQ/Skool expirou. Contacta a equipa para renovar."
     }
     return "Conta inativa. Contacta o suporte."
+  }
+
+  if (kind === "app_only") {
+    return "O teu plano App Member inclui exclusivamente a app mobile MTM."
   }
 
   if (route.startsWith("/admin")) {

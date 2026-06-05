@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect, useRef, Suspense } from "react"
+import { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import ProtectedPage from "@/components/protected-page"
 import SocialFeed from "@/components/mobile/social-feed"
 import PortfolioMobile from "@/components/mobile/portfolio-mobile"
 import ScannerMobile from "@/components/mobile/scanner-mobile"
+import NotificationsPanel from "@/components/notifications-panel"
 import Image from "next/image"
 import {
   Users,
@@ -17,20 +18,25 @@ import {
   LayoutGrid,
   Video,
   MessageSquare,
+  Bell,
+  X,
 } from "lucide-react"
 import MobileSidebar from "@/components/mobile/mobile-sidebar"
 import LiveSessionsMobile from "@/components/mobile/live-sessions-mobile"
 import MentorMobile from "@/components/mobile/mentor-mobile"
 import AppsMobile from "@/components/mobile/apps-mobile"
 import ChatChannels from "@/components/mobile/chat-channels"
+import SettingsMobile from "@/components/mobile/settings-mobile"
 import { useAuth } from "@/contexts/auth-context"
 import { useCapacitor } from "@/hooks/use-capacitor"
+import { usePushNotifications, type ForegroundMessage } from "@/hooks/use-push-notifications"
+import { supabase } from "@/lib/supabase"
 
 function AppMobileContent() {
   const STUDIO_URL = "https://mtmbrandbuilder.lovable.app"
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, isAppOnlyUser, isLoading: authLoading } = useAuth()
 
   // ── Capacitor native bridge (iOS/Android) ──────────────────────────
   const { isNative, isIOS: isIOSDevice } = useCapacitor({
@@ -43,8 +49,23 @@ function AppMobileContent() {
       } catch {}
     },
   })
+
+  // ── Web/PWA push notifications (FCM) ──────────────────────────────
+  const handleForegroundMessage = useCallback((msg: ForegroundMessage) => {
+    setForegroundNotif(msg)
+    if (foregroundTimerRef.current) clearTimeout(foregroundTimerRef.current)
+    foregroundTimerRef.current = setTimeout(() => setForegroundNotif(null), 5000)
+    // Incrementar contador de não lidas
+    setUnreadCount((c) => c + 1)
+  }, [])
+
+  const { requestPermission } = usePushNotifications({
+    userId: user?.id ?? null,
+    isNative,
+    onForegroundMessage: handleForegroundMessage,
+  })
   const [mounted, setMounted] = useState(false)
-  const validTabs = ["social", "chat", "portfolio", "scanner", "apps", "live", "mentor"] as const
+  const validTabs = ["social", "chat", "portfolio", "scanner", "apps", "live", "mentor", "settings"] as const
   const tabFromUrl = searchParams.get("tab")
   const [activeTab, setActiveTab] = useState(() =>
     tabFromUrl && validTabs.includes(tabFromUrl as (typeof validTabs)[number]) ? tabFromUrl : "social"
@@ -55,6 +76,11 @@ function AppMobileContent() {
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [userLoaded, setUserLoaded] = useState(false)
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [foregroundNotif, setForegroundNotif] = useState<ForegroundMessage | null>(null)
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false)
+  const foregroundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -149,6 +175,42 @@ function AppMobileContent() {
     }
   }, [mounted, authLoading, user, userLoaded])
 
+  // ── Reportar estado de auth ao bridge nativo iOS ──────────────────
+  useEffect(() => {
+    if (!mounted || authLoading) return
+    if (typeof window === 'undefined') return
+
+    // Só activa quando dentro do WebView nativo MTM
+    let isNative = false
+    try { isNative = sessionStorage.getItem('mtm_native') === '1' } catch {}
+    if (!isNative) return
+
+    if (!user) {
+      // Utilizador não autenticado — notificar nativo
+      window.dispatchEvent(new Event('mtm-auth-logout'))
+      return
+    }
+
+    // Determinar plano web do utilizador
+    const category = (user as any).member_category as string | null
+    const appOnly = isAppOnlyUser
+    let plan = 'none'
+    if (category === 'premium' || category === 'vip') {
+      plan = 'premium'
+    } else if (category === 'standard' || category === 'iq' || category === 'skool' || appOnly) {
+      plan = 'app_member'
+    }
+
+    window.dispatchEvent(new CustomEvent('mtm-auth-state', {
+      detail: {
+        userId: user.id,
+        email:  user.email ?? '',
+        name:   (user as any).full_name ?? (user as any).username ?? '',
+        plan,
+      }
+    }))
+  }, [mounted, authLoading, user, isAppOnlyUser])
+
   useEffect(() => {
     const tab = searchParams.get("tab")
     if (tab === "studio") {
@@ -238,6 +300,50 @@ function AppMobileContent() {
     setTouchEnd(0)
   }
 
+  // ── Contador de notificações não lidas ────────────────────────────
+  useEffect(() => {
+    if (!user?.id) return
+
+    const loadUnread = async () => {
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("read", false)
+      setUnreadCount(count ?? 0)
+    }
+
+    loadUnread()
+
+    // Real-time: actualizar badge quando chegam novas notificações
+    const channel = supabase
+      .channel(`app-mobile-notif-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => {
+        loadUnread()
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [user?.id])
+
+  // ── Pedido de permissão web/PWA (delay de 3s, apenas uma vez) ─────
+  useEffect(() => {
+    if (!userLoaded || isNative) return
+    if (typeof window === "undefined" || !("Notification" in window)) return
+    if (Notification.permission === "default") {
+      const t = setTimeout(() => setShowPermissionPrompt(true), 3000)
+      return () => clearTimeout(t)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLoaded, isNative])
+
+  // ── Cleanup foreground timer ───────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (foregroundTimerRef.current) clearTimeout(foregroundTimerRef.current)
+    }
+  }, [])
+
   useEffect(() => {
     const scrollContainer = contentRef.current
     if (!scrollContainer) return
@@ -282,6 +388,7 @@ function AppMobileContent() {
           currentUser={currentUser}
           activeTab={activeTab}
           onTabChange={handleTabChange}
+          isAppOnlyUser={isAppOnlyUser}
         />
 
         {/* Header Mobile - Simplified */}
@@ -301,10 +408,10 @@ function AppMobileContent() {
 
             {/* Logo & Title */}
             <div className="flex items-center gap-3 flex-1">
-              <Image 
-                src="/logo-new.png" 
-                alt="MTM Logo" 
-                width={isHeaderCollapsed ? 32 : 40} 
+              <Image
+                src="/logo-new.png"
+                alt="MTM Logo"
+                width={isHeaderCollapsed ? 32 : 40}
                 height={isHeaderCollapsed ? 32 : 40}
                 className="rounded-lg transition-all"
                 priority
@@ -320,6 +427,23 @@ function AppMobileContent() {
                 )}
               </div>
             </div>
+
+            {/* Notification Bell */}
+            <button
+              onClick={() => {
+                setIsNotificationsOpen(true)
+                setUnreadCount(0)
+              }}
+              className="relative w-10 h-10 bg-gray-800/80 backdrop-blur-sm rounded-lg flex items-center justify-center hover:bg-gray-700 transition-all active:scale-95"
+              title="Notificações"
+            >
+              <Bell className="w-5 h-5 text-white" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
@@ -362,6 +486,10 @@ function AppMobileContent() {
 
             <TabsContent value="apps" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
               <AppsMobile />
+            </TabsContent>
+
+            <TabsContent value="settings" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
+              <SettingsMobile />
             </TabsContent>
 
           </Tabs>
@@ -445,6 +573,102 @@ function AppMobileContent() {
             <div className={`text-[10px] font-medium leading-tight ${activeTab === "scanner" ? "text-[#D2A63C]" : ""}`}>Scanner</div>
           </button>
         </div>
+
+        {/* ── Notifications Drawer ─────────────────────────────────── */}
+        {isNotificationsOpen && (
+          <div className="fixed inset-0 z-[200] flex">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setIsNotificationsOpen(false)}
+            />
+            {/* Panel */}
+            <div
+              className="relative ml-auto w-full max-w-sm h-full bg-gray-900 flex flex-col shadow-2xl"
+              style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+            >
+              {/* Header do drawer */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-[#D2A63C]" />
+                  <span className="text-white font-semibold text-base">Notificações</span>
+                </div>
+                <button
+                  onClick={() => setIsNotificationsOpen(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-400" />
+                </button>
+              </div>
+              {/* Content com scroll */}
+              <div className="flex-1 overflow-y-auto p-4">
+                <NotificationsPanel
+                  onClose={() => setIsNotificationsOpen(false)}
+                  className="border-0 bg-transparent"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Foreground notification banner ───────────────────────── */}
+        {foregroundNotif && (
+          <div
+            className="fixed left-4 right-4 z-[190] bg-gray-800 border border-[#D2A63C]/30 rounded-xl p-3 shadow-xl flex items-start gap-3 transition-all"
+            style={{ top: 'calc(env(safe-area-inset-top, 0px) + 72px)' }}
+          >
+            <Bell className="w-5 h-5 text-[#D2A63C] flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              {foregroundNotif.title && (
+                <p className="text-sm font-semibold text-white leading-tight">{foregroundNotif.title}</p>
+              )}
+              {foregroundNotif.body && (
+                <p className="text-xs text-gray-300 mt-0.5 line-clamp-2">{foregroundNotif.body}</p>
+              )}
+            </div>
+            <button
+              onClick={() => setForegroundNotif(null)}
+              className="flex-shrink-0 w-6 h-6 flex items-center justify-center"
+            >
+              <X className="w-3.5 h-3.5 text-gray-400" />
+            </button>
+          </div>
+        )}
+
+        {/* ── Pedido de permissão de notificações (web/PWA) ────────── */}
+        {showPermissionPrompt && !isNative && (
+          <div
+            className="fixed left-4 right-4 z-[180] bg-gray-800 border border-[#D2A63C]/20 rounded-xl p-4 shadow-xl"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 84px)' }}
+          >
+            <div className="flex items-start gap-3">
+              <Bell className="w-5 h-5 text-[#D2A63C] flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white mb-1">Activar notificações</p>
+                <p className="text-xs text-gray-400 mb-3 leading-relaxed">
+                  Recebe alertas de mercado, oportunidades DCA e avisos de subscrição em tempo real.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      setShowPermissionPrompt(false)
+                      await requestPermission()
+                    }}
+                    className="flex-1 py-2 bg-[#D2A63C] hover:bg-[#c49a2e] text-black text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    Activar
+                  </button>
+                  <button
+                    onClick={() => setShowPermissionPrompt(false)}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
+                  >
+                    Agora não
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </ProtectedPage>
   )

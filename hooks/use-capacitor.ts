@@ -8,12 +8,35 @@
 
 import { useEffect, useCallback, useRef } from "react"
 
-// Detecção se estamos dentro da shell Capacitor
+// Detecção se estamos dentro da shell Capacitor (Capacitor nativo)
 export const isCapacitor = () =>
   typeof window !== "undefined" && !!(window as any).Capacitor?.isNativePlatform?.()
 
-export const isIOS = () =>
-  isCapacitor() && (window as any).Capacitor?.getPlatform?.() === "ios"
+/**
+ * Detecção da shell nativa MTM System (WKWebView Swift puro).
+ * O app iOS injeta sessionStorage.mtm_native = '1' antes de qualquer script.
+ * window.MTMNative é o bridge JS exposto via WKUserContentController.
+ */
+export const isMTMNativeShell = () => {
+  if (typeof window === "undefined") return false
+  // Verificar bridge injectado (mais fiável)
+  if ((window as any).MTMNative) return true
+  // Fallback: sessionStorage (injetado via WKUserScript)
+  try {
+    return sessionStorage.getItem("mtm_native") === "1"
+  } catch {
+    return false
+  }
+}
+
+/** True em qualquer shell nativa (Capacitor ou MTM WKWebView) */
+export const isNativeApp = () => isCapacitor() || isMTMNativeShell()
+
+export const isIOS = () => {
+  if (isCapacitor()) return (window as any).Capacitor?.getPlatform?.() === "ios"
+  if (isMTMNativeShell()) return /iPhone|iPad|iPod/i.test(navigator.userAgent)
+  return false
+}
 
 export const isAndroid = () =>
   isCapacitor() && (window as any).Capacitor?.getPlatform?.() === "android"
@@ -44,7 +67,7 @@ export function useCapacitor(options: UseCapacitorOptions = {}) {
 
   // Inicializar StatusBar e SplashScreen
   const initUI = useCallback(async () => {
-    if (!isCapacitor()) return
+    if (!isCapacitor()) return  // Só Capacitor tem StatusBar/SplashScreen plugins
 
     try {
       const { StatusBar, Style } = await import(/* webpackIgnore: true */ "@capacitor/status-bar" as any)
@@ -206,11 +229,14 @@ export function useCapacitor(options: UseCapacitorOptions = {}) {
   }, [options.onDeepLink])
 
   useEffect(() => {
-    if (!isCapacitor()) return
+    if (!isNativeApp()) return
 
-    initUI()
-    initBackButton()
-    initDeepLinks()
+    if (isCapacitor()) {
+      // Só Capacitor tem estes plugins
+      initUI()
+      initBackButton()
+      initDeepLinks()
+    }
 
     return () => {
       cleanupRef.current.forEach((fn) => fn())
@@ -218,14 +244,14 @@ export function useCapacitor(options: UseCapacitorOptions = {}) {
     }
   }, [initUI, initBackButton, initDeepLinks])
 
-  // Registar push só quando userId estiver disponível
+  // Registar push só quando userId estiver disponível (apenas Capacitor — MTM Shell usa web push)
   useEffect(() => {
     if (!isCapacitor() || !options.userId) return
     initPush()
   }, [options.userId, initPush])
 
   return {
-    isNative: isCapacitor(),
+    isNative: isNativeApp(),
     isIOS: isIOS(),
     isAndroid: isAndroid(),
   }

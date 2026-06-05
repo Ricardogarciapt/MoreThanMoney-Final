@@ -62,14 +62,23 @@ type LiveSessionsMobileProps = {
 }
 
 function canAccessStream(
-  userPlan: string | null | undefined,
+  memberCategory: string | null | undefined,
   userType: string | null | undefined,
   tier: "all" | "app_member" | "premium" | null | undefined
 ): boolean {
   if (!tier || tier === "all") return true
-  if (userType === "admin") return true
-  if (tier === "app_member") return userPlan === "app_member" || userPlan === "premium"
-  if (tier === "premium") return userPlan === "premium"
+  if (userType === "admin" || userType === "vip" || memberCategory === "vip") return true
+  // "standard" (€35 app member) e "app_member" têm acesso ao tier app_member
+  if (tier === "app_member") return (
+    memberCategory === "standard" ||
+    memberCategory === "app_member" ||
+    memberCategory === "iq" ||
+    memberCategory === "premium"
+  )
+  if (tier === "premium") return (
+    memberCategory === "iq" ||
+    memberCategory === "premium"
+  )
   return false
 }
 
@@ -496,7 +505,7 @@ export default function LiveSessionsMobile({
             const img = streamVisualUrl(s)
             const educatorName = s.educator?.display_name || "Educador"
             const hasAccess = canAccessStream(
-              (user as any)?.subscription_plan,
+              (user as any)?.member_category,
               (user as any)?.user_type,
               s.access_tier
             )

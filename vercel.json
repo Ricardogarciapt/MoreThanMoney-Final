@@ -12,6 +12,14 @@
     {
       "path": "/api/cron/member-subscriptions",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/subscription-expiry",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/notifications/check-alerts",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
