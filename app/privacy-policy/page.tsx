@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
@@ -6,99 +5,156 @@ import { ArrowLeft } from "lucide-react"
 export default function PrivacyPolicyPage() {
   return (
     <main className="min-h-screen bg-black py-20">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 max-w-3xl">
         <Link href="/" className="inline-block mb-8">
-          <Button
-            variant="outline"
-            className="border-gold-500 text-gold-400 hover:bg-gold-500/10 flex items-center gap-2"
-          >
+          <Button variant="outline" className="border-gray-700 text-gray-300 hover:bg-gray-800 flex items-center gap-2">
             <ArrowLeft size={16} />
             Voltar
           </Button>
         </Link>
 
-        <Card className="bg-black/50 border-gold-500/30 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-3xl font-bold text-center text-gold-gradient">
-              Política de Proteção de Dados
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="prose prose-invert max-w-none">
-            <h2>1. Introdução</h2>
-            <p>
-              A MoreThanMoney está comprometida em proteger a privacidade e os dados pessoais de nossos usuários. Esta
-              Política de Proteção de Dados descreve como coletamos, usamos, armazenamos e protegemos suas informações
-              pessoais.
-            </p>
+        <div className="bg-gray-950 border border-gray-800 rounded-2xl p-8 md:p-12">
+          <h1 className="text-3xl font-bold text-center text-white mb-2">
+            Política de Privacidade
+          </h1>
+          <p className="text-center text-gray-400 mb-10 text-sm">
+            Última actualização: Junho de 2025
+          </p>
 
-            <h2>2. Dados Coletados</h2>
-            <p>Coletamos os seguintes tipos de informações:</p>
-            <ul>
-              <li>Informações de identificação pessoal (nome, e-mail, telefone)</li>
-              <li>Informações de login (nome de usuário e senha)</li>
-              <li>Informações de contato e redes sociais</li>
-              <li>Informações sobre preferências e interesses relacionados aos nossos serviços</li>
-            </ul>
+          <div className="prose prose-invert max-w-none text-gray-300 text-sm leading-relaxed space-y-6">
 
-            <h2>3. Finalidade do Processamento</h2>
-            <p>Utilizamos seus dados pessoais para:</p>
-            <ul>
-              <li>Criar e gerenciar sua conta de membro</li>
-              <li>Fornecer acesso aos serviços contratados</li>
-              <li>Enviar comunicações relevantes sobre nossos produtos e serviços</li>
-              <li>Melhorar nossos serviços e experiência do usuário</li>
-              <li>Cumprir obrigações legais e regulatórias</li>
-            </ul>
+            <section>
+              <h2 className="text-lg font-semibold text-white mb-2">1. Responsável pelo Tratamento</h2>
+              <p>
+                A MoreThanMoney (doravante "nós", "MTM") é responsável pelo tratamento dos dados pessoais
+                recolhidos através desta plataforma. Para questões relacionadas com privacidade, contacta-nos
+                em <a href="mailto:suporte@morethanmoney.pt" className="text-[#D2A63C] hover:underline">suporte@morethanmoney.pt</a>.
+              </p>
+            </section>
 
-            <h2>4. Base Legal</h2>
-            <p>
-              O processamento de seus dados pessoais é baseado no seu consentimento, na execução de um contrato do qual
-              você é parte, e/ou nos interesses legítimos da MoreThanMoney.
-            </p>
+            <section>
+              <h2 className="text-lg font-semibold text-white mb-2">2. Dados Recolhidos</h2>
+              <p>Recolhemos os seguintes dados:</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li>Dados de identificação: nome completo, username, endereço de email</li>
+                <li>Dados de contacto: número de telefone e WhatsApp (opcionais)</li>
+                <li>Dados de login: email e palavra-passe (armazenada de forma encriptada)</li>
+                <li>Dados de pagamento: processados directamente pelo Stripe e Apple — nunca armazenamos dados bancários ou de cartão</li>
+                <li>Dados de utilização: preferências, histórico de sessões e interacções na plataforma</li>
+                <li>Dados de dispositivo: tokens de notificações push para envio de alertas (FCM/APNs)</li>
+                <li>Username do TradingView: fornecido voluntariamente para activação dos scanners</li>
+              </ul>
+            </section>
 
-            <h2>5. Compartilhamento de Dados</h2>
-            <p>
-              Não compartilhamos suas informações pessoais com terceiros sem seu consentimento explícito, exceto quando
-              necessário para a prestação dos serviços contratados ou quando exigido por lei.
-            </p>
+            <section>
+              <h2 className="text-lg font-semibold text-white mb-2">3. Finalidade do Tratamento</h2>
+              <p>Os teus dados são usados para:</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li>Criar e gerir a tua conta de membro</li>
+                <li>Processar pagamentos e gerir subscrições</li>
+                <li>Enviar notificações push (alertas de trading, live sessions, etc.)</li>
+                <li>Activar o acesso aos scanners TradingView</li>
+                <li>Fornecer suporte e assistência técnica</li>
+                <li>Melhorar a plataforma e a experiência do utilizador</li>
+                <li>Cumprir obrigações legais e fiscais</li>
+              </ul>
+            </section>
 
-            <h2>6. Segurança dos Dados</h2>
-            <p>
-              Implementamos medidas técnicas e organizacionais apropriadas para proteger seus dados pessoais contra
-              acesso não autorizado, perda, alteração ou divulgação.
-            </p>
+            <section>
+              <h2 className="text-lg font-semibold text-white mb-2">4. Base Legal (RGPD)</h2>
+              <p>O tratamento dos teus dados baseia-se em:</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li><strong className="text-white">Execução de contrato:</strong> para prestação dos serviços contratados</li>
+                <li><strong className="text-white">Consentimento:</strong> para envio de notificações push e comunicações de marketing</li>
+                <li><strong className="text-white">Obrigação legal:</strong> para cumprimento de requisitos fiscais e legais</li>
+                <li><strong className="text-white">Interesses legítimos:</strong> para melhorar a segurança e funcionalidade da plataforma</li>
+              </ul>
+            </section>
 
-            <h2>7. Seus Direitos</h2>
-            <p>Você tem o direito de:</p>
-            <ul>
-              <li>Acessar seus dados pessoais</li>
-              <li>Retificar dados incorretos ou incompletos</li>
-              <li>Solicitar a exclusão de seus dados</li>
-              <li>Restringir ou opor-se ao processamento de seus dados</li>
-              <li>Retirar seu consentimento a qualquer momento</li>
-            </ul>
+            <section>
+              <h2 className="text-lg font-semibold text-white mb-2">5. Partilha de Dados</h2>
+              <p>
+                Não partilhamos os teus dados pessoais com terceiros para fins de marketing.
+                Os teus dados podem ser partilhados apenas com:
+              </p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li><strong className="text-white">Stripe:</strong> processamento seguro de pagamentos</li>
+                <li><strong className="text-white">Apple App Store:</strong> gestão de subscrições iOS</li>
+                <li><strong className="text-white">Supabase:</strong> armazenamento seguro da base de dados</li>
+                <li><strong className="text-white">Firebase (Google):</strong> envio de notificações push</li>
+                <li><strong className="text-white">TradingView:</strong> activação do acesso aos scanners (apenas username)</li>
+              </ul>
+            </section>
 
-            <h2>8. Período de Retenção</h2>
-            <p>
-              Mantemos seus dados pessoais apenas pelo tempo necessário para cumprir as finalidades para as quais foram
-              coletados, a menos que um período de retenção mais longo seja exigido ou permitido por lei.
-            </p>
+            <section>
+              <h2 className="text-lg font-semibold text-white mb-2">6. Segurança dos Dados</h2>
+              <p>
+                Implementamos medidas técnicas e organizacionais adequadas para proteger os teus dados:
+                encriptação SSL/TLS em todas as comunicações, palavras-passe armazenadas com hash bcrypt,
+                row-level security na base de dados, e controlo de acesso por funções (RBAC).
+              </p>
+            </section>
 
-            <h2>9. Contato</h2>
-            <p>
-              Para exercer seus direitos ou para qualquer dúvida relacionada à proteção de dados, entre em contato
-              conosco através do e-mail: privacy@morethanmoney.com
-            </p>
+            <section>
+              <h2 className="text-lg font-semibold text-white mb-2">7. Os Teus Direitos (RGPD)</h2>
+              <p>Tens direito a:</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li><strong className="text-white">Acesso:</strong> saber que dados temos sobre ti</li>
+                <li><strong className="text-white">Rectificação:</strong> corrigir dados incorrectos ou incompletos</li>
+                <li><strong className="text-white">Eliminação:</strong> solicitar a eliminação da tua conta e dados ("direito ao esquecimento")</li>
+                <li><strong className="text-white">Portabilidade:</strong> exportar os teus dados num formato legível por máquina</li>
+                <li><strong className="text-white">Limitação:</strong> restringir o tratamento em determinadas circunstâncias</li>
+                <li><strong className="text-white">Oposição:</strong> opor-te ao tratamento para fins de marketing directo</li>
+                <li><strong className="text-white">Retirada do consentimento:</strong> a qualquer momento, sem prejudicar a licitude do tratamento anterior</li>
+              </ul>
+              <p className="mt-3">
+                Para exercer estes direitos, envia um email para{" "}
+                <a href="mailto:suporte@morethanmoney.pt" className="text-[#D2A63C] hover:underline">
+                  suporte@morethanmoney.pt
+                </a>.
+              </p>
+            </section>
 
-            <h2>10. Atualizações</h2>
-            <p>
-              Esta Política de Proteção de Dados pode ser atualizada periodicamente. Recomendamos que você revise
-              regularmente para estar ciente de quaisquer alterações.
-            </p>
+            <section>
+              <h2 className="text-lg font-semibold text-white mb-2">8. Retenção dos Dados</h2>
+              <p>
+                Mantemos os teus dados enquanto a tua conta estiver activa. Após o cancelamento da conta,
+                os dados são eliminados ou anonimizados num prazo de 90 dias, excepto quando a retenção
+                for exigida por obrigações legais (ex: registos contabilísticos por 10 anos, conforme a lei portuguesa).
+              </p>
+            </section>
 
-            <p className="text-sm text-gray-400 mt-8">Última atualização: 15 de Maio de 2025</p>
-          </CardContent>
-        </Card>
+            <section>
+              <h2 className="text-lg font-semibold text-white mb-2">9. Cookies e Tecnologias de Rastreio</h2>
+              <p>
+                Utilizamos cookies essenciais para o funcionamento da plataforma (autenticação, preferências).
+                Não utilizamos cookies de rastreio de terceiros para publicidade. Podes gerir as preferências
+                de cookies através das definições do teu browser.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold text-white mb-2">10. Reclamações</h2>
+              <p>
+                Se considerares que o tratamento dos teus dados viola o RGPD, tens o direito de apresentar
+                uma reclamação à autoridade de controlo competente — em Portugal, a{" "}
+                <a href="https://www.cnpd.pt" target="_blank" rel="noopener noreferrer" className="text-[#D2A63C] hover:underline">
+                  CNPD (Comissão Nacional de Protecção de Dados)
+                </a>.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold text-white mb-2">11. Alterações a esta Política</h2>
+              <p>
+                Podemos actualizar esta política periodicamente. Sempre que o fizermos, actualizaremos a
+                data de "última actualização" no topo desta página e, em caso de alterações significativas,
+                notificar-te-emos por email.
+              </p>
+            </section>
+
+          </div>
+        </div>
       </div>
     </main>
   )

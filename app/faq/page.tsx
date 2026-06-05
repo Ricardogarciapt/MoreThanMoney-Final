@@ -1,6 +1,7 @@
 import { AuthProvider } from "@/contexts/auth-context"
 import Breadcrumbs from "@/components/breadcrumbs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import Link from "next/link"
 
 export default function FAQPage() {
   return (
@@ -9,132 +10,205 @@ export default function FAQPage() {
       <main className="min-h-screen bg-black py-20">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h1 className="text-3xl md:text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-gold-400 to-gold-600">
+            <h1 className="text-3xl md:text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-[#D2A63C] to-[#BB8525]">
               Perguntas Frequentes
             </h1>
             <p className="text-xl text-gray-300">
-              Encontra respostas para as perguntas mais comuns sobre os nossos serviços e produtos.
+              Tens alguma dúvida? Encontra as respostas aqui.
             </p>
           </div>
 
-          <div className="max-w-3xl mx-auto">
-            <Accordion type="single" collapsible className="space-y-4">
-              <AccordionItem
-                value="item-1"
-                className="bg-black/50 border border-gold-500/30 rounded-lg overflow-hidden"
-              >
-                <AccordionTrigger className="px-6 py-4 hover:bg-gold-500/5 text-left">
-                  O que é o Scanner MoreThanMoney?
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-4 pt-2 text-gray-300">
-                  O Scanner MoreThanMoney é uma ferramenta avançada de análise de mercado que utiliza inteligência
-                  artificial para identificar estruturas de mercado e pontos de entrada com alta probabilidade de
-                  sucesso. Ele é especialmente útil para traders de todos os níveis, pois elimina a complexidade da
-                  análise técnica tradicional.
-                </AccordionContent>
-              </AccordionItem>
+          <div className="max-w-3xl mx-auto space-y-8">
 
-              <AccordionItem
-                value="item-2"
-                className="bg-black/50 border border-gold-500/30 rounded-lg overflow-hidden"
-              >
-                <AccordionTrigger className="px-6 py-4 hover:bg-gold-500/5 text-left">
-                  Como funciona o serviço de Copytrading?
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-4 pt-2 text-gray-300">
-                  O nosso serviço de Copytrading permite copiar automaticamente as operações dos nossos traders
-                  profissionais. Após configurares a tua conta, o sistema replicará as operações diretamente na tua conta de
-                  trading, respeitando os parâmetros de gestão de risco que definires. Oferecemos diferentes planos
-                  com requisitos de depósito variados para atender às tuas necessidades.
-                </AccordionContent>
-              </AccordionItem>
+            {/* Planos e Subscrições */}
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
+                Planos e Subscrições
+              </h2>
+              <Accordion type="single" collapsible className="space-y-3">
+                <AccordionItem value="plano-1" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Quais são os planos disponíveis?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    <p className="mb-3">Tens dois planos principais:</p>
+                    <ul className="space-y-3">
+                      <li>
+                        <strong className="text-[#D2A63C]">Pack Membro — 35€/mês (ou 28€/mês no plano anual)</strong>
+                        <br />Inclui a app MTM System (iOS e Android), ferramentas de trading exclusivas,
+                        Live Sessions MTM e suporte por email.
+                      </li>
+                      <li>
+                        <strong className="text-[#D2A63C]">Pack Premium — 65€/mês (ou 52€/mês no plano anual)</strong>
+                        <br />Inclui tudo do Pack Membro, mais acesso completo ao site MTM, comunidade Skool,
+                        ferramentas avançadas, Live Sessions Premium, cursos de Forex, Criptomoedas,
+                        Marketing Digital e AI, e suporte prioritário.
+                      </li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
 
-              <AccordionItem
-                value="item-3"
-                className="bg-black/50 border border-gold-500/30 rounded-lg overflow-hidden"
-              >
-                <AccordionTrigger className="px-6 py-4 hover:bg-gold-500/5 text-left">
-                  Quais são os requisitos para começar a usar o Copytrading?
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-4 pt-2 text-gray-300">
-                  Para começares a usar o Copytrading, precisas de ter uma conta numa corretora compatível com MT4 ou
-                  MT5, fazer um depósito mínimo de acordo com o plano escolhido (a partir de 350€ para o plano Premium),
-                  e fornecer as credenciais necessárias para configuração. O nosso sistema é compatível com a maioria das
-                  corretoras que oferecem MetaTrader.
-                </AccordionContent>
-              </AccordionItem>
+                <AccordionItem value="plano-2" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Como funciona a faturação?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    A subscrição é cobrada mensalmente ou anualmente, consoante o plano escolhido.
+                    No plano anual poupa 20% em relação ao mensal. O pagamento é processado via Stripe
+                    com renovação automática. Podes cancelar a qualquer momento no teu perfil — o acesso
+                    mantém-se até ao fim do período pago.
+                  </AccordionContent>
+                </AccordionItem>
 
-              <AccordionItem
-                value="item-4"
-                className="bg-black/50 border border-gold-500/30 rounded-lg overflow-hidden"
-              >
-                <AccordionTrigger className="px-6 py-4 hover:bg-gold-500/5 text-left">
-                  O que é a Educação JIFU?
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-4 pt-2 text-gray-300">
-                  A Educação JIFU é uma plataforma de formação especializada em trading, investimentos, e-commerce,
-                  inteligência artificial e muito mais. Ao registares-te na plataforma JIFU, terás acesso a cursos,
-                  webinars, comunidade de traders e diversos recursos educacionais para desenvolveres as tuas competências
-                  financeiras.
-                </AccordionContent>
-              </AccordionItem>
+                <AccordionItem value="plano-3" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Como cancelo a minha subscrição?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Podes cancelar a qualquer momento através do teu perfil na plataforma ou enviando um
+                    email para <a href="mailto:suporte@morethanmoney.pt" className="text-[#D2A63C] hover:underline">suporte@morethanmoney.pt</a>.
+                    Não há períodos de fidelização. Após o cancelamento, o teu acesso mantém-se ativo até
+                    ao fim do período já pago.
+                  </AccordionContent>
+                </AccordionItem>
 
-              <AccordionItem
-                value="item-5"
-                className="bg-black/50 border border-gold-500/30 rounded-lg overflow-hidden"
-              >
-                <AccordionTrigger className="px-6 py-4 hover:bg-gold-500/5 text-left">
-                  Como posso me tornar um membro MoreThanMoney?
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-4 pt-2 text-gray-300">
-                  Para te tornares um membro MoreThanMoney, basta clicares no botão &quot;Área de Membro&quot; no menu
-                  principal e selecionares a opção de registo. Oferecemos diferentes pacotes de associação, desde o
-                  Pacote Básico até ao Pacote Premium, cada um com benefícios específicos. Após o registo, terás
-                  acesso imediato aos recursos incluídos no teu pacote.
-                </AccordionContent>
-              </AccordionItem>
+                <AccordionItem value="plano-4" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Posso mudar de plano?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Sim. Podes fazer upgrade para o Pack Premium ou downgrade para o Pack Membro a qualquer momento.
+                    Entra em contacto com o suporte para te ajudarmos com a transição.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </section>
 
-              <AccordionItem
-                value="item-6"
-                className="bg-black/50 border border-gold-500/30 rounded-lg overflow-hidden"
-              >
-                <AccordionTrigger className="px-6 py-4 hover:bg-gold-500/5 text-left">
-                  Qual é a diferença entre os pacotes de associação?
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-4 pt-2 text-gray-300">
-                  <p>Oferecemos três pacotes principais:</p>
-                  <ul className="list-disc pl-5 mt-2 space-y-1">
-                    <li>
-                      <strong>Pacote Básico (€50):</strong> Inclui acesso ao Bootcamp MoreThanMoney, ebook
-                      &quot;Investir sem Emoções&quot; e acesso ao portfólio MTM.
-                    </li>
-                    <li>
-                      <strong>Pacote Scanner:</strong> Inclui todos os benefícios do Pacote Básico, mais acesso a
-                      condições especiais de copytrading, eventos regionais e mentorias de livetrading. Requer a compra
-                      de uma licença do Scanner (anual ou vitalícia).
-                    </li>
-                    <li>
-                      <strong>Pacote Premium:</strong> Inclui todos os benefícios dos pacotes anteriores, mais acesso a
-                      eventos de educação presenciais e todos os produtos MoreThanMoney. Requer verificação do ID JIFU.
-                    </li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
+            {/* App Mobile */}
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
+                App MTM System
+              </h2>
+              <Accordion type="single" collapsible className="space-y-3">
+                <AccordionItem value="app-1" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    O que é a App MTM System?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    A App MTM System é a aplicação móvel disponível para iOS e Android. Tens acesso ao portfólio
+                    cripto e de ações da MTM, Live Sessions, chat da comunidade, mentor AI, scanners,
+                    checklist de trading e muito mais — tudo no teu telemóvel.
+                  </AccordionContent>
+                </AccordionItem>
 
-              <AccordionItem
-                value="item-7"
-                className="bg-black/50 border border-gold-500/30 rounded-lg overflow-hidden"
-              >
-                <AccordionTrigger className="px-6 py-4 hover:bg-gold-500/5 text-left">
-                  Como posso obter suporte técnico?
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-4 pt-2 text-gray-300">
-                  Para obteres suporte técnico, podes entrar em contacto connosco através do email
-                  suporte@morethanmoney.com ou pelo WhatsApp disponível na secção de contacto. Os membros Premium têm
-                  acesso a suporte prioritário com tempos de resposta mais rápidos.
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+                <AccordionItem value="app-2" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Como instalo a app?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    <p className="mb-2"><strong className="text-white">iOS (iPhone):</strong> Disponível na App Store. Pesquisa "MTM System".</p>
+                    <p><strong className="text-white">Android / PWA:</strong> Acede a <a href="https://www.morethanmoney.pt/app-mobile" className="text-[#D2A63C] hover:underline">morethanmoney.pt/app-mobile</a> no Chrome e instala como Progressive Web App (PWA) através da opção "Adicionar ao ecrã inicial".</p>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="app-3" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Como recebo notificações push?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Após fazer login na app, activa as notificações quando solicitado. Receberás alertas para
+                    novas ideias de trading, live sessions ao vivo, alertas DCA e mensagens dos canais da comunidade.
+                    Nas definições da app podes gerir os tipos de notificações que recebes.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </section>
+
+            {/* Scanners */}
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
+                Scanners TradingView
+              </h2>
+              <Accordion type="single" collapsible className="space-y-3">
+                <AccordionItem value="scan-1" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    O que são os Scanners MTM?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Os Scanners MTM são scripts exclusivos para TradingView, desenvolvidos pela equipa MTM.
+                    Utilizam algoritmos proprietários para análise técnica — identificando estruturas de mercado,
+                    zonas de suporte/resistência e sinais de entrada de alta probabilidade. Temos três scanners:
+                    <ul className="mt-2 space-y-1">
+                      <li><strong className="text-white">MTM Gold Killer V2.1</strong> — especializado em ouro e pares voláteis</li>
+                      <li><strong className="text-white">Scanner MTM V3.4</strong> — estruturas de mercado e ATR</li>
+                      <li><strong className="text-white">MTM Sensei X</strong> — IA multi-confluência (Smart Money + Goldenzone)</li>
+                    </ul>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="scan-2" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Como acedo ao scanner após a compra?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Após o pagamento recebes um email com instruções. O teu username do TradingView será adicionado
+                    como utilizador autorizado no script (invite-only). Depois é só acederes ao TradingView, ir
+                    à secção "Indicadores &gt; Convidados" e adicionar o scanner à tua biblioteca.
+                    O processo demora normalmente entre 15 minutos a 2 horas úteis.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="scan-3" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Preciso de conta paga no TradingView?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    A conta gratuita do TradingView funciona. Para tirar o máximo partido dos scanners
+                    (múltiplos indicadores simultâneos, alertas ilimitados) recomendamos o plano Basic ou superior.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </section>
+
+            {/* Suporte */}
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
+                Suporte
+              </h2>
+              <Accordion type="single" collapsible className="space-y-3">
+                <AccordionItem value="sup-1" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Como posso obter ajuda?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Podes contactar-nos por email em <a href="mailto:suporte@morethanmoney.pt" className="text-[#D2A63C] hover:underline">suporte@morethanmoney.pt</a>.
+                    Os membros Premium têm suporte prioritário com resposta mais rápida.
+                    Para questões técnicas da app, usa o Mentor AI disponível dentro da própria app.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="sup-2" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Têm garantia de devolução de dinheiro?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Para subscrições mensais, oferecemos reembolso total nos primeiros 7 dias se não ficares satisfeito.
+                    Para scanners com pagamento único, não há reembolso após o acesso ser activado, dado que o
+                    produto é imediatamente entregue. Contacta-nos para qualquer dúvida.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </section>
+
+          </div>
+
+          <div className="text-center mt-12">
+            <p className="text-gray-500 text-sm">
+              Não encontraste o que procuravas?{" "}
+              <a href="mailto:suporte@morethanmoney.pt" className="text-[#D2A63C] hover:underline">
+                Envia-nos um email
+              </a>
+            </p>
           </div>
         </div>
       </main>

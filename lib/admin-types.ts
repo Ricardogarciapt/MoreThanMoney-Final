@@ -42,6 +42,7 @@ export interface UserManagement {
   subscription_status?: 'active' | 'grace_period' | 'billing_retry' | 'expired' | 'cancelled' | 'refunded' | null
   subscription_days_remaining?: number | null
   coupon_code?: string | null
+  broker_uid?: string | null
   profile_data?: Record<string, any>
   xp?: {
     total_xp: number

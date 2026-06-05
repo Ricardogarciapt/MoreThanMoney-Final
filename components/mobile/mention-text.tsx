@@ -7,56 +7,78 @@ interface MentionTextProps {
   className?: string
 }
 
+/**
+ * Renders chat message text with:
+ * - @[Nome](id) → coloured mention links
+ * - https?://... → tappable URL links (like Telegram)
+ * - Everything else → plain text
+ */
 export default function MentionText({ text, className = "" }: MentionTextProps) {
-  // Regex para encontrar menções no formato @[Nome](id)
-  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g
+  // Combined regex: mention OR url
+  const tokenRegex = /@\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s<>"]+)/g
 
-  const parts: (string | { type: 'mention'; name: string; id: string })[] = []
+  type Part =
+    | { type: "text"; value: string }
+    | { type: "mention"; name: string; id: string }
+    | { type: "url"; href: string }
+
+  const parts: Part[] = []
   let lastIndex = 0
-  let match
+  let match: RegExpExecArray | null
 
-  while ((match = mentionRegex.exec(text)) !== null) {
-    // Adicionar texto antes da menção
+  while ((match = tokenRegex.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      parts.push(text.substring(lastIndex, match.index))
+      parts.push({ type: "text", value: text.substring(lastIndex, match.index) })
     }
 
-    // Adicionar menção
-    parts.push({
-      type: 'mention',
-      name: match[1],
-      id: match[2]
-    })
+    if (match[1] !== undefined) {
+      // @[Name](id) mention
+      parts.push({ type: "mention", name: match[1], id: match[2] })
+    } else {
+      // plain URL
+      parts.push({ type: "url", href: match[3] })
+    }
 
-    lastIndex = mentionRegex.lastIndex
+    lastIndex = tokenRegex.lastIndex
   }
 
-  // Adicionar texto restante
   if (lastIndex < text.length) {
-    parts.push(text.substring(lastIndex))
+    parts.push({ type: "text", value: text.substring(lastIndex) })
   }
 
   return (
     <span className={className}>
-      {parts.map((part, index) => {
-        if (typeof part === 'string') {
-          return <span key={index}>{part}</span>
-        } else {
+      {parts.map((part, i) => {
+        if (part.type === "text") {
+          return <span key={i}>{part.value}</span>
+        }
+        if (part.type === "mention") {
           return (
             <Link
-              key={index}
+              key={i}
               href={`/profile/${part.id}`}
               className="text-[#D2A63C] font-semibold hover:underline"
-              onClick={(e) => {
-                e.stopPropagation()
-              }}
+              onClick={(e) => e.stopPropagation()}
             >
               @{part.name}
             </Link>
           )
         }
+        // URL
+        const displayUrl = part.href.replace(/^https?:\/\//, "").replace(/\/$/, "")
+        return (
+          <a
+            key={i}
+            href={part.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 underline break-all"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {displayUrl.length > 40 ? displayUrl.slice(0, 40) + "…" : displayUrl}
+          </a>
+        )
       })}
     </span>
   )
 }
-

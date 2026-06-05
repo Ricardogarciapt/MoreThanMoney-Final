@@ -2,528 +2,686 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowRight, Play, Users, TrendingUp, BookOpen, Bot, UserCheck, Star, Quote } from "lucide-react"
+import {
+  ArrowRight,
+  BookOpen,
+  BarChart3,
+  Smartphone,
+  Brain,
+  TrendingUp,
+  MessageSquare,
+  Video,
+  Users,
+  Zap,
+  Check,
+  Star,
+  UserCheck,
+  Quote,
+  ChevronDown,
+} from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import ParticleBackground from "@/components/particle-background"
 import { getRandomTestimonials } from "@/lib/testimonials-service"
 import type { Testimonial } from "@/lib/testimonials-service"
-import RicardoStoryCard from "@/components/ricardo-story-card"
+
+// ─── Path Selector ─────────────────────────────────────────────────────────────
+
+const PATHS = [
+  {
+    id: "learn",
+    icon: BookOpen,
+    emoji: "🎓",
+    label: "Quero aprender de verdade",
+    color: "#D2A63C",
+    bg: "from-[#D2A63C]/10 to-[#BB8525]/5",
+    border: "border-[#D2A63C]/30",
+    description: "Aprofunda os teus conhecimentos em Trading, Forex, Cripto, Marketing Digital e IA.",
+    features: [
+      "Cursos estruturados de Forex e Cripto",
+      "Marketing Digital e Inteligência Artificial",
+      "Comunidade ativa de traders",
+      "Aulas ao vivo com o Ricardo",
+      "Mentor AI disponível 24/7",
+    ],
+    cta: "Ver Pack Premium",
+    href: "/register?plan=premium",
+    badge: "Pack Premium — €65/mês",
+  },
+  {
+    id: "tech",
+    emoji: "🛠️",
+    icon: BarChart3,
+    label: "Quero as ferramentas de análise",
+    color: "#8B5CF6",
+    bg: "from-purple-500/10 to-purple-900/5",
+    border: "border-purple-500/30",
+    description: "Acede aos scanners TradingView exclusivos da MTM para identificar oportunidades no mercado.",
+    features: [
+      "Gold Killer Scanner — Ouro e XAU/USD",
+      "MTM Scanner V3.4 — Multi-ativo",
+      "Sensei X — Estratégia avançada",
+      "Pack Total com todos os scanners",
+      "Tutorial de configuração incluído",
+    ],
+    cta: "Ver Scanners",
+    href: "/scanners",
+    badge: "Pack Total — €35/mês",
+  },
+  {
+    id: "app",
+    emoji: "📱",
+    icon: Smartphone,
+    label: "Quero a app e a comunidade",
+    color: "#10B981",
+    bg: "from-emerald-500/10 to-emerald-900/5",
+    border: "border-emerald-500/30",
+    description: "Junta-te à comunidade MTM com acesso ao feed, chat, portfólio ao vivo e mentor AI.",
+    features: [
+      "Feed social da comunidade MTM",
+      "Chat em tempo real (iOS e Android)",
+      "Portfólio MTM ao vivo",
+      "Mentor AI de trading 24/7",
+      "Live sessions com Ricardo",
+    ],
+    cta: "Entrar na App",
+    href: "/register?plan=app_member",
+    badge: "Pack Membro — €35/mês",
+  },
+]
+
+// ─── Technology Card ───────────────────────────────────────────────────────────
+
+const TECHNOLOGIES = [
+  {
+    id: "app",
+    emoji: "📱",
+    title: "MTM System App",
+    subtitle: "A tua central de comando",
+    color: "#D2A63C",
+    gradient: "from-[#D2A63C]/20 to-[#BB8525]/5",
+    border: "border-[#D2A63C]/30",
+    description:
+      "Uma app construída de raiz para traders — com feed social, chat da comunidade, portfólio real da MTM, live sessions e um mentor AI que responde às tuas dúvidas a qualquer hora.",
+    features: [
+      { icon: MessageSquare, label: "Chat da comunidade em tempo real" },
+      { icon: TrendingUp, label: "Portfólio MTM ao vivo" },
+      { icon: Video, label: "Live sessions de trading" },
+      { icon: Brain, label: "Mentor AI disponível 24/7" },
+      { icon: Users, label: "Feed social de traders" },
+    ],
+    cta: "Explorar App",
+    href: "/register",
+    platforms: ["iOS App Store", "Android (PWA)"],
+  },
+  {
+    id: "scanners",
+    emoji: "🔍",
+    title: "Scanners TradingView",
+    subtitle: "Análise automática do mercado",
+    color: "#8B5CF6",
+    gradient: "from-purple-500/20 to-purple-900/5",
+    border: "border-purple-500/30",
+    description:
+      "Algoritmos exclusivos que correm directamente no TradingView e identificam setups de alta probabilidade em Ouro, Forex e outros activos — sem precisares de estar colado aos gráficos.",
+    features: [
+      { icon: BarChart3, label: "Gold Killer — XAU/USD e derivados" },
+      { icon: Zap, label: "MTM Scanner V3.4 — Multi-ativo" },
+      { icon: Brain, label: "Sensei X — Estratégia premium" },
+      { icon: TrendingUp, label: "Alertas automáticos por email" },
+      { icon: BookOpen, label: "Tutorial de configuração em vídeo" },
+    ],
+    cta: "Ver Scanners",
+    href: "/scanners",
+    platforms: ["TradingView — invite-only"],
+  },
+]
+
+// ─── Pack Pricing ──────────────────────────────────────────────────────────────
+
+const PACKS = [
+  {
+    id: "app_member",
+    name: "Pack Membro App",
+    emoji: "📱",
+    price: "€35",
+    period: "/mês",
+    color: "#10B981",
+    border: "border-emerald-500/30",
+    bg: "from-emerald-500/10 to-emerald-900/5",
+    popular: false,
+    features: [
+      "App MTM (iOS + Android)",
+      "Feed social da comunidade",
+      "Chat da comunidade",
+      "Live sessions de trading",
+      "Mentor AI básico",
+      "Portfólio MTM ao vivo",
+    ],
+    cta: "Começar com €35/mês",
+    href: "/register?plan=app_member",
+  },
+  {
+    id: "premium",
+    name: "Pack Premium",
+    emoji: "💎",
+    price: "€65",
+    period: "/mês",
+    color: "#D2A63C",
+    border: "border-[#D2A63C]/50",
+    bg: "from-[#D2A63C]/15 to-[#BB8525]/5",
+    popular: true,
+    features: [
+      "Tudo do Pack Membro",
+      "Acesso Premium ao chat",
+      "Cursos de Forex e Cripto",
+      "Cursos de Marketing Digital",
+      "Cursos de Inteligência Artificial",
+      "Mentor AI premium (ilimitado)",
+      "Scanner Gold Killer incluído",
+      "Trade Ideas — canal premium",
+    ],
+    cta: "Começar com €65/mês",
+    href: "/register?plan=premium",
+  },
+  {
+    id: "scanners",
+    name: "Pack Scanners",
+    emoji: "🔍",
+    price: "€35",
+    period: "/mês",
+    color: "#8B5CF6",
+    border: "border-purple-500/30",
+    bg: "from-purple-500/10 to-purple-900/5",
+    popular: false,
+    features: [
+      "Gold Killer Scanner",
+      "MTM Scanner V3.4",
+      "Sensei X Scanner",
+      "Acesso TradingView invite-only",
+      "Alertas automáticos",
+      "Tutorial em vídeo",
+      "Actualizações incluídas",
+    ],
+    cta: "Ver Scanners",
+    href: "/scanners",
+  },
+]
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function NewLandingPage() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [activePath, setActivePath] = useState<string | null>(null)
 
   useEffect(() => {
-    const randomTestimonials = getRandomTestimonials(6)
-    setTestimonials(randomTestimonials)
+    setTestimonials(getRandomTestimonials(6))
   }, [])
 
-  // Rotação automática dos testemunhos
   useEffect(() => {
     if (testimonials.length === 0) return
-
     const interval = setInterval(() => {
       setCurrentIndex((prev) => {
         const next = prev + 3
         return next >= testimonials.length ? 0 : next
       })
-    }, 6000) // Trocar a cada 6 segundos
-
+    }, 6000)
     return () => clearInterval(interval)
   }, [testimonials.length])
 
-  const scrollToOffers = () => {
-    const offersSection = document.getElementById("path-selection")
-    if (offersSection) {
-      offersSection.scrollIntoView({ behavior: "smooth" })
-    }
-  }
-
-  const scrollToEducation = () => {
-    const educationSection = document.getElementById("education-premium")
-    if (educationSection) {
-      educationSection.scrollIntoView({ behavior: "smooth" })
-    }
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white relative overflow-hidden">
+    <div className="min-h-screen bg-gray-950 text-white overflow-hidden">
       <ParticleBackground />
 
-      {/* Hero Section com Vídeo */}
-      <section className="relative min-h-screen flex items-center justify-center px-4">
-        <div className="container mx-auto text-center z-10">
-          <div className="max-w-4xl mx-auto">
-            <Badge className="mb-6 bg-mtm-primary-dark/20 text-mtm-primary border-mtm-primary/30 px-4 py-2">🔥 ACESSO EXCLUSIVO</Badge>
+      {/* ── HERO ──────────────────────────────────────────────────────────────── */}
+      <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-16 pb-8">
+        <div className="text-center max-w-4xl mx-auto z-10 relative">
+          <Badge className="mb-6 bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/30 px-4 py-2 text-sm">
+            🔥 Plataforma de Trading & Educação — Portugal
+          </Badge>
 
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-gold-400 via-gold-500 to-gold-600 bg-clip-text text-transparent">
-              MoreThanMoney
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-              <strong className="text-white">É hora de agir.</strong> Aprende, automatiza e cresce com uma plataforma focada em <span className="text-mtm-primary">educação, ferramentas e comunidade</span>
-            </p>
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight">
+            <span className="bg-gradient-to-r from-[#F3F3E6] via-[#D2A63C] to-[#BB8525] bg-clip-text text-transparent">
+              Aprende.
+            </span>{" "}
+            <span className="text-white">Analisa.</span>{" "}
+            <span className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] bg-clip-text text-transparent">
+              Cresce.
+            </span>
+          </h1>
 
+          <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
+            A MTM combina <strong className="text-white">educação real</strong>,{" "}
+            <strong className="text-white">tecnologia de análise</strong> e uma{" "}
+            <strong className="text-white">comunidade ativa</strong> para trader que quer evoluir de verdade.
+          </p>
 
-            {/* Vídeo de Apresentação */}
-            <div className="mb-12 max-w-4xl mx-auto">
-              <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-900 border border-mtm-primary/30">
-                <iframe
-                  src="https://www.youtube.com/embed/dgd0-mLIrMw?autoplay=1&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3"
-                  title="Apresentação MoreThanMoney"
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+            <Button
+              size="lg"
+              className="bg-[#D2A63C] hover:bg-[#BB8525] text-black font-bold px-8 py-4 text-base"
+              onClick={() => scrollTo("choose-path")}
+            >
+              Escolhe o teu caminho
+              <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-[#D2A63C]/40 text-[#D2A63C] hover:bg-[#D2A63C]/10 px-8 py-4 text-base"
+              onClick={() => scrollTo("technologies")}
+            >
+              Ver as tecnologias
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Quick stats */}
+          <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-400">
+            {[
+              { label: "Comunidade activa", value: "🏆" },
+              { label: "Scanners exclusivos", value: "3" },
+              { label: "Cursos disponíveis", value: "📚" },
+              { label: "Live sessions/mês", value: "🎥" },
+            ].map((stat) => (
+              <div key={stat.label} className="flex items-center gap-1.5">
+                <span>{stat.value}</span>
+                <span>{stat.label}</span>
               </div>
-            </div>
-
-            {/* História Pessoal */}
-            <div className="bg-gradient-to-r from-mtm-primary/10 to-amber-500/10 border border-mtm-primary/30 rounded-xl p-6 mb-8 max-w-4xl mx-auto">
-              <p className="text-xl md:text-2xl text-gray-300 mb-4 max-w-3xl mx-auto">
-                Aos 41 anos, depois de 3 anos a usar a aprendizagem no modelo da <strong className="text-mtm-primary">IQONIC</strong> e seguir os ensinamentos de <strong>Warren Buffett</strong> e <strong>Eric Worre</strong>, 
-                criei algo que transformou vidas.
-              </p>
-              <p className="text-lg text-gray-400 mb-4">
-                <em>"Não é sobre ter mais dinheiro, é sobre ter mais <strong>liberdade</strong> para viver a vida que verdadeiramente queres."</em>
-              </p>
-              <p className="text-base text-gray-300 max-w-3xl mx-auto">
-                A MoreThanMoney nasceu da necessidade real de combinar <strong className="text-white">educação sólida</strong> com tecnologia avançada, 
-                criando um sistema que <strong>duplica resultados</strong> através de <strong>ação disciplinada</strong>.
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button
-                size="lg"
-                className="bg-mtm-primary-dark hover:bg-amber-700 text-black font-semibold px-8 py-4 text-lg animate-pulse"
-                onClick={scrollToOffers}
-              >
-                <Play className="mr-2 h-5 w-5" />
-                🚀 QUERO COMEÇAR AGORA!
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-mtm-primary text-mtm-primary hover:bg-amber-500/10 px-8 py-4 text-lg"
-                onClick={scrollToEducation}
-              >
-                📚 Ver Educação Premium
-              </Button>
-            </div>
-
-            {/* Navegação rápida para reduzir fricção de decisão */}
-            <div className="mt-8 flex flex-wrap justify-center gap-2">
-              <Link href="/iqonic">
-                <Badge className="cursor-pointer bg-mtm-primary-dark/20 text-mtm-primary border-mtm-primary/30 hover:bg-mtm-primary-dark/30">
-                  Educação IQONIC
-                </Badge>
-              </Link>
-              <Link href="/automation">
-                <Badge className="cursor-pointer bg-mtm-primary-dark/20 text-mtm-primary border-mtm-primary/30 hover:bg-mtm-primary-dark/30">
-                  Automação
-                </Badge>
-              </Link>
-              <Link href="/scanner">
-                <Badge className="cursor-pointer bg-mtm-primary-dark/20 text-mtm-primary border-mtm-primary/30 hover:bg-mtm-primary-dark/30">
-                  Scanner
-                </Badge>
-              </Link>
-            </div>
+            ))}
           </div>
         </div>
-      </section>
 
-      {/* Prova social acima do restante conteúdo */}
-      <section className="pb-16 px-4 relative z-10">
-        <div className="container mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-5xl mx-auto">
-            <Card className="bg-gray-900/70 border-mtm-primary/30">
-              <CardContent className="p-5 text-center">
-                <Users className="h-6 w-6 mx-auto mb-2 text-mtm-primary" />
-                <p className="text-2xl font-bold text-white">Comunidade ativa</p>
-                <p className="text-sm text-gray-400">Membros a aprender e aplicar diariamente</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-gray-900/70 border-mtm-primary/30">
-              <CardContent className="p-5 text-center">
-                <TrendingUp className="h-6 w-6 mx-auto mb-2 text-mtm-primary" />
-                <p className="text-2xl font-bold text-white">Foco em evolução</p>
-                <p className="text-sm text-gray-400">Mentalidade, método e consistência</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-gray-900/70 border-mtm-primary/30">
-              <CardContent className="p-5 text-center">
-                <UserCheck className="h-6 w-6 mx-auto mb-2 text-mtm-primary" />
-                <p className="text-2xl font-bold text-white">Testemunhos reais</p>
-                <p className="text-sm text-gray-400">Resultados partilhados por membros verificados</p>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Scroll indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce z-10">
+          <ChevronDown className="w-6 h-6 text-[#D2A63C]/60" />
         </div>
       </section>
 
-      {/* Seção da História Pessoal */}
-      <section className="py-20 px-4 relative z-10">
-        <div className="container mx-auto">
-          <RicardoStoryCard />
-        </div>
-      </section>
-
-      {/* Seção de Testemunhos */}
-      <section className="py-20 px-4 relative z-10">
-        <div className="container mx-auto">
+      {/* ── CHOOSE YOUR PATH ─────────────────────────────────────────────────── */}
+      <section id="choose-path" className="py-24 px-4 relative z-10">
+        <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
-            <Badge className="mb-4 bg-mtm-primary-dark/20 text-mtm-primary border-mtm-primary/30 animate-pulse">
-              ⭐ Testemunhos Reais
-            </Badge>
-            <h2 className="text-3xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-[#F3F3E6] via-[#D2A63C] to-[#BB8525] bg-clip-text text-transparent">
-              O Que Dizem os Nossos Membros
+            <Badge className="mb-4 bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/30">🎯 O teu caminho</Badge>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">
+              Por onde queres <span className="text-[#D2A63C]">começar?</span>
             </h2>
-            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-              Resultados reais de pessoas que transformaram as suas vidas financeiras com a nossa plataforma
+            <p className="text-gray-400 max-w-xl mx-auto text-lg">
+              Cada pessoa tem o seu ritmo. Escolhe o que faz mais sentido para ti agora.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {testimonials.slice(currentIndex, currentIndex + 3).map((testimonial, index) => (
-              <Card 
-                key={testimonial.id} 
-                className="group bg-gradient-to-br from-[#BB8525]/10 to-[#D2A63C]/5 border-[#D2A63C]/30 backdrop-blur-sm hover:border-[#F3F3E6]/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-[#D2A63C]/20 animate-fade-in-up"
-                style={{ animationDelay: `${index * 150}ms` }}
-              >
-                <CardContent className="p-6 relative overflow-hidden">
-                  {/* Decorative corner */}
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[#D2A63C]/20 to-transparent rounded-bl-full opacity-50 group-hover:opacity-100 transition-opacity" />
-                  
-                  {/* Avatar e Info (sem imagem) */}
-                  <div className="flex items-center mb-6 relative z-10">
-                    <div className="relative">
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#D2A63C] to-[#BB8525] flex items-center justify-center border-4 border-[#D2A63C]/30 group-hover:border-[#D2A63C]/60 transition-all duration-300">
-                        <span className="text-2xl font-bold text-black">
-                          {testimonial.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+          <div className="grid md:grid-cols-3 gap-6">
+            {PATHS.map((path) => {
+              const Icon = path.icon
+              const isActive = activePath === path.id
+              return (
+                <button
+                  key={path.id}
+                  onClick={() => setActivePath(isActive ? null : path.id)}
+                  className={`text-left rounded-2xl border p-6 transition-all duration-300 bg-gradient-to-br ${path.bg} ${path.border} ${
+                    isActive ? "scale-[1.02] shadow-2xl" : "hover:scale-[1.01]"
+                  }`}
+                  style={{ borderColor: isActive ? path.color : undefined, boxShadow: isActive ? `0 0 40px ${path.color}20` : undefined }}
+                >
+                  {/* Header */}
+                  <div className="flex items-start gap-3 mb-4">
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `${path.color}20`, border: `1px solid ${path.color}40` }}
+                    >
+                      <span className="text-2xl">{path.emoji}</span>
+                    </div>
+                    <div>
+                      <span
+                        className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: `${path.color}15`, color: path.color, border: `1px solid ${path.color}30` }}
+                      >
+                        {path.badge}
+                      </span>
+                      <h3 className="font-bold text-white text-lg mt-1 leading-tight">{path.label}</h3>
+                    </div>
+                  </div>
+
+                  <p className="text-gray-400 text-sm leading-relaxed mb-4">{path.description}</p>
+
+                  {/* Features (shown when active) */}
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ${
+                      isActive ? "max-h-48 opacity-100" : "max-h-0 opacity-0"
+                    }`}
+                  >
+                    <ul className="space-y-1.5 mb-4">
+                      {path.features.map((f) => (
+                        <li key={f} className="flex items-center gap-2 text-sm text-gray-300">
+                          <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: path.color }} />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* CTA */}
+                  <Link
+                    href={path.href}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm mt-2 transition-all"
+                    style={{
+                      backgroundColor: path.color,
+                      color: "#000",
+                    }}
+                  >
+                    {path.cta}
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── TWO TECHNOLOGIES ─────────────────────────────────────────────────── */}
+      <section id="technologies" className="py-24 px-4 relative z-10 bg-gray-900/30">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/30">⚡ Tecnologia</Badge>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">
+              Duas tecnologias que{" "}
+              <span className="text-[#D2A63C]">libertam</span>
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+              Construídas especificamente para traders que querem resultados — sem complicação, sem perder tempo.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {TECHNOLOGIES.map((tech) => {
+              return (
+                <div
+                  key={tech.id}
+                  className={`rounded-2xl border bg-gradient-to-br ${tech.gradient} ${tech.border} overflow-hidden`}
+                >
+                  {/* Color band */}
+                  <div className="h-1.5" style={{ background: `linear-gradient(to right, ${tech.color}, ${tech.color}88)` }} />
+
+                  <div className="p-7">
+                    {/* Header */}
+                    <div className="flex items-center gap-4 mb-5">
+                      <div
+                        className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl"
+                        style={{ backgroundColor: `${tech.color}15`, border: `1.5px solid ${tech.color}30` }}
+                      >
+                        {tech.emoji}
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: tech.color }}>
+                          {tech.subtitle}
+                        </p>
+                        <h3 className="text-xl font-black text-white">{tech.title}</h3>
+                      </div>
+                    </div>
+
+                    <p className="text-gray-300 text-sm leading-relaxed mb-6">{tech.description}</p>
+
+                    {/* Feature list */}
+                    <ul className="space-y-2.5 mb-6">
+                      {tech.features.map(({ icon: Icon, label }) => (
+                        <li key={label} className="flex items-center gap-3 text-sm text-gray-300">
+                          <div
+                            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: `${tech.color}15` }}
+                          >
+                            <Icon className="w-4 h-4" style={{ color: tech.color }} />
+                          </div>
+                          {label}
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* Platform badges */}
+                    <div className="flex flex-wrap gap-2 mb-5">
+                      {tech.platforms.map((p) => (
+                        <span
+                          key={p}
+                          className="text-[11px] px-2.5 py-1 rounded-full"
+                          style={{ backgroundColor: `${tech.color}10`, color: tech.color, border: `1px solid ${tech.color}25` }}
+                        >
+                          {p}
                         </span>
-                      </div>
-                      {testimonial.verified && (
-                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-gray-900">
-                          <UserCheck className="w-3 h-3 text-white" />
-                        </div>
-                      )}
+                      ))}
                     </div>
-                    <div className="ml-4 flex-1">
-                      <h4 className="font-bold text-white text-lg">{testimonial.name}</h4>
-                      <p className="text-sm text-gray-400">{testimonial.location}</p>
-                      <p className="text-xs text-[#D2A63C]">{testimonial.role}</p>
-                    </div>
+
+                    {/* CTA */}
+                    <Link href={tech.href}>
+                      <Button
+                        className="w-full font-bold text-sm"
+                        style={{ backgroundColor: tech.color, color: "#000" }}
+                      >
+                        {tech.cta}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
                   </div>
+                </div>
+              )
+            })}
+          </div>
 
-                  {/* Rating Stars */}
-                  <div className="flex items-center gap-1 mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star 
-                        key={i} 
-                        className="w-5 h-5 fill-[#D2A63C] text-[#D2A63C] drop-shadow-lg animate-pulse" 
-                        style={{ animationDelay: `${i * 100}ms` }}
-                      />
-                    ))}
+          {/* App mobile mockup visual */}
+          <div className="mt-16 rounded-2xl border border-[#D2A63C]/20 bg-gray-900/50 p-8 text-center">
+            <p className="text-sm text-gray-500 mb-4 uppercase tracking-widest">MTM System App</p>
+            <div className="flex justify-center gap-4 flex-wrap">
+              {["Feed", "Chat", "Portfólio", "Scanner", "Mentor AI", "Live"].map((tab) => (
+                <span
+                  key={tab}
+                  className="px-4 py-2 rounded-full bg-gray-800 text-sm text-gray-300 border border-gray-700"
+                >
+                  {tab}
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-gray-600 mt-4">Disponível para iOS e Android</p>
+            <div className="flex justify-center gap-4 mt-4">
+              <a
+                href="https://apps.apple.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-white/10 transition-colors"
+              >
+                <span>🍎</span> App Store
+              </a>
+              <a
+                href="/app-mobile"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-white/10 transition-colors"
+              >
+                <span>🤖</span> Android (PWA)
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── PRICING ──────────────────────────────────────────────────────────── */}
+      <section id="pricing" className="py-24 px-4 relative z-10">
+        <div className="container mx-auto max-w-5xl">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/30">💳 Planos</Badge>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">
+              Simples. <span className="text-[#D2A63C]">Transparente.</span> Sem surpresas.
+            </h2>
+            <p className="text-gray-400 max-w-xl mx-auto text-lg">
+              Escolhe o plano que se adequa ao teu momento. Podes cancelar a qualquer hora.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {PACKS.map((pack) => (
+              <div
+                key={pack.id}
+                className={`relative rounded-2xl border bg-gradient-to-br ${pack.bg} ${pack.border} p-6 flex flex-col`}
+                style={{ boxShadow: pack.popular ? `0 0 60px ${pack.color}20` : undefined }}
+              >
+                {pack.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="bg-[#D2A63C] text-black text-xs font-black px-4 py-1.5 rounded-full">
+                      🔥 Mais escolhido
+                    </span>
                   </div>
+                )}
 
-                  {/* Quote Icon */}
-                  <Quote className="w-8 h-8 text-[#D2A63C]/40 mb-3" />
-                  
-                  {/* Testimonial Content */}
-                  <p className="text-gray-300 mb-6 italic leading-relaxed text-base">
-                    "{testimonial.content}"
-                  </p>
+                {/* Header */}
+                <div className="text-center mb-6">
+                  <span className="text-4xl">{pack.emoji}</span>
+                  <h3 className="font-black text-white text-lg mt-2">{pack.name}</h3>
+                  <div className="flex items-baseline justify-center gap-1 mt-3">
+                    <span className="text-4xl font-black text-white">{pack.price}</span>
+                    <span className="text-gray-400 text-sm">{pack.period}</span>
+                  </div>
+                </div>
 
-                  {/* Results */}
-                  {testimonial.profit && (
-                    <div className="bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/40 rounded-lg p-4 backdrop-blur-sm">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-gray-400 font-medium">💰 Resultado:</span>
-                        <span className="font-bold text-green-400 text-lg">{testimonial.profit}</span>
-                      </div>
-                      {testimonial.timeframe && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-400 font-medium">📅 Período:</span>
-                          <span className="text-sm text-white font-semibold">{testimonial.timeframe}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                {/* Features */}
+                <ul className="space-y-2.5 mb-8 flex-1">
+                  {pack.features.map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-gray-300">
+                      <Check className="w-4 h-4 flex-shrink-0" style={{ color: pack.color }} />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
 
-                  {/* Verified Badge */}
-                  {testimonial.verified && (
-                    <div className="mt-4 flex items-center justify-center">
-                      <Badge className="bg-green-600/20 text-green-400 border-green-500/30 px-3 py-1">
-                        <UserCheck className="w-3 h-3 mr-1" />
-                        Membro Verificado
-                      </Badge>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                {/* CTA */}
+                <Link href={pack.href}>
+                  <Button
+                    className="w-full font-bold py-5 text-sm"
+                    style={{ backgroundColor: pack.color, color: "#000" }}
+                  >
+                    {pack.cta}
+                  </Button>
+                </Link>
+              </div>
             ))}
           </div>
 
-          {/* Indicadores de navegação */}
-          <div className="flex justify-center gap-2 mt-12">
+          <p className="text-center text-xs text-gray-600 mt-8">
+            7 dias de garantia nos planos mensais. Sem compromisso de continuidade.
+          </p>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ─────────────────────────────────────────────────────── */}
+      <section className="py-24 px-4 relative z-10 bg-gray-900/30">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/30">⭐ Testemunhos</Badge>
+            <h2 className="text-3xl md:text-5xl font-black mb-4">
+              O que dizem os{" "}
+              <span className="text-[#D2A63C]">nossos membros</span>
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.slice(currentIndex, currentIndex + 3).map((t: Testimonial) => (
+              <div
+                key={t.id}
+                className="rounded-2xl border border-[#D2A63C]/20 bg-gradient-to-br from-[#D2A63C]/5 to-transparent p-6"
+              >
+                {/* Stars */}
+                <div className="flex gap-0.5 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-[#D2A63C] text-[#D2A63C]" />
+                  ))}
+                </div>
+
+                <Quote className="w-6 h-6 text-[#D2A63C]/30 mb-2" />
+                <p className="text-gray-300 text-sm leading-relaxed mb-6 italic">"{t.content}"</p>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#D2A63C]/20 flex items-center justify-center font-bold text-[#D2A63C] text-sm">
+                    {t.name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white text-sm">{t.name}</p>
+                    <div className="flex items-center gap-1">
+                      <p className="text-xs text-gray-500">{t.location}</p>
+                      {t.verified && (
+                        <UserCheck className="w-3 h-3 text-green-400" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {t.profit && (
+                  <div className="mt-4 pt-4 border-t border-gray-800 flex items-center justify-between text-sm">
+                    <span className="text-gray-500">Resultado</span>
+                    <span className="font-bold text-green-400">{t.profit}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Navigation dots */}
+          <div className="flex justify-center gap-2 mt-10">
             {Array.from({ length: Math.ceil(testimonials.length / 3) }).map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentIndex(idx * 3)}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                className={`rounded-full transition-all duration-300 ${
                   idx === Math.floor(currentIndex / 3)
-                    ? 'bg-[#D2A63C] w-8'
-                    : 'bg-gray-600 hover:bg-gray-500'
+                    ? "bg-[#D2A63C] w-8 h-2"
+                    : "bg-gray-700 w-2 h-2 hover:bg-gray-500"
                 }`}
-                aria-label={`Ver testemunhos ${idx + 1}`}
               />
             ))}
           </div>
+        </div>
+      </section>
 
-          {/* Contador de testemunhos */}
-          <div className="text-center mt-6">
-            <p className="text-gray-400 text-sm">
-              Mostrando {currentIndex + 1}-{Math.min(currentIndex + 3, testimonials.length)} de {testimonials.length} testemunhos
+      {/* ── FINAL CTA ────────────────────────────────────────────────────────── */}
+      <section className="py-24 px-4 relative z-10">
+        <div className="container mx-auto max-w-3xl text-center">
+          <div className="rounded-3xl border border-[#D2A63C]/30 bg-gradient-to-br from-[#D2A63C]/10 to-[#BB8525]/5 p-10">
+            <div className="text-5xl mb-4">🚀</div>
+            <h2 className="text-3xl md:text-4xl font-black mb-4">
+              Pronto para{" "}
+              <span className="text-[#D2A63C]">evoluir de verdade?</span>
+            </h2>
+            <p className="text-gray-300 text-lg mb-8 max-w-xl mx-auto">
+              Junta-te a uma comunidade de traders que aprende, analisa e cresce — com as ferramentas certas ao teu lado.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/register">
+                <Button
+                  size="lg"
+                  className="bg-[#D2A63C] hover:bg-[#BB8525] text-black font-black px-10 py-5 text-base"
+                >
+                  Começar agora
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              <Link href="/scanners">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-[#D2A63C]/40 text-[#D2A63C] hover:bg-[#D2A63C]/10 px-10 py-5 text-base"
+                >
+                  Ver scanners
+                </Button>
+              </Link>
+            </div>
+            <p className="text-xs text-gray-600 mt-5">
+              Sem permanência mínima · Cancelamento a qualquer momento · Suporte em português
             </p>
           </div>
         </div>
       </section>
-
-      {/* Seção de Escolha de Caminho */}
-      <section id="path-selection" className="py-20 px-4 relative z-10">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-mtm-primary-dark/20 text-mtm-primary border-mtm-primary/30">🎯 ESCOLHE O TEU LADO</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Vamos <span className="text-mtm-primary">Ao Que Interessa</span> 🎯
-            </h2>
-            <div className="bg-gradient-to-r from-mtm-primary/10 to-amber-500/10 border border-mtm-primary/30 rounded-xl p-6 mb-8 max-w-3xl mx-auto">
-              <p className="text-gray-300 text-lg mb-4">
-                <strong className="text-white">Vamos ser diretos.</strong> Escolhe o caminho que mais se adequa ao teu momento e objetivos.
-              </p>
-              <p className="text-gray-400 text-base max-w-2xl mx-auto">
-                Depois de <strong>3 anos</strong> de experiência, estes são os <span className="text-mtm-primary font-bold">3 caminhos que podes explorar</span>. 
-                Cada um tem o seu foco e propósito.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* Caminho 1: Aprender com a IQONIC */}
-            <Card className="card-modern group">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 bg-mtm-primary/20 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-mtm-primary/40 transition-colors">
-                  <BookOpen className="w-8 h-8 text-mtm-primary" />
-                </div>
-                <h3 className="text-2xl font-bold mb-4 text-mtm-primary">🎓 QUERO APRENDER DE VERDADE</h3>
-                <p className="text-gray-300 mb-6">
-                  <strong>Sabes o que me inspirou?</strong> A educação que verdadeiramente transforma mentalidades. Esta plataforma mudou a minha forma de pensar há 3 anos. 
-                  <span className="text-mtm-primary">100+ cursos</span> que se focam no crescimento pessoal e desenvolvimento de competências.
-                </p>
-                <ul className="text-left space-y-2 mb-8 text-gray-400">
-                  <li>✓ Educação em Trading e mercados</li>
-                  <li>✓ Criptomoedas e tecnologia blockchain</li>
-                  <li>✓ Marketing Digital e comunicação</li>
-                  <li>✓ Empreendedorismo e negócios online</li>
-                  <li>✓ Inteligência Artificial aplicada</li>
-                  <li>✓ Comunidade de crescimento contínuo</li>
-                </ul>
-                <Link href="/iqonic">
-                  <Button className="w-full bg-mtm-primary hover:bg-mtm-primary-dark text-black font-semibold">
-                    🚀 QUERO COMEÇAR A APRENDER!
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            {/* Caminho 2: Automatizar */}
-            <Card className="card-modern group">
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 bg-mtm-primary/20 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-mtm-primary/40 transition-colors">
-                  <Bot className="w-8 h-8 text-mtm-primary" />
-                </div>
-                <h3 className="text-2xl font-bold mb-4 text-mtm-primary">🤖 QUERO SIMPLICIDADE</h3>
-                <p className="text-gray-300 mb-6">
-                  <strong>Às vezes queremos focar no essencial.</strong> Esta opção oferece-te ferramentas automatizadas que podem ajudar-te a poupar tempo. 
-                  <span className="text-mtm-primary">Tecnologia ao teu serviço.</span>
-                </p>
-                <ul className="text-left space-y-2 mb-8 text-gray-400">
-                  <li>✓ Sistemas de análise assistida por IA</li>
-                  <li>✓ Automação de processos repetitivos</li>
-                  <li>✓ Acesso a estratégias de traders profissionais</li>
-                  <li>✓ Notificações e alertas personalizados</li>
-                  <li>✓ Interface simplificada e intuitiva</li>
-                </ul>
-                <Link href="/automation">
-                  <Button className="w-full bg-mtm-primary hover:bg-mtm-primary-dark text-black font-semibold">
-                    🔧 QUERO EXPLORAR AS FERRAMENTAS!
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            {/* Caminho 3: Usa IA para Trading */}
-            <Card className="card-modern group">
-              <div className="absolute top-4 right-4">
-                <Badge className="bg-red-500 text-white font-bold animate-pulse">🔥 MAIS POPULAR</Badge>
-              </div>
-              <CardContent className="p-8 text-center">
-                <div className="w-16 h-16 bg-mtm-primary-dark/20 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-mtm-primary-dark/30 transition-colors">
-                  <Bot className="w-8 h-8 text-mtm-primary" />
-                </div>
-                <h3 className="text-2xl font-bold mb-4 text-mtm-primary">🎯 QUERO EQUILÍBRIO</h3>
-                <p className="text-gray-300 mb-6">
-                  <strong>O melhor dos dois mundos:</strong> Tens acesso a análises avançadas e manténs o controlo das tuas decisões. 
-                  <span className="text-mtm-primary">Informação + autonomia = crescimento.</span>
-                </p>
-                <ul className="text-left space-y-2 mb-8 text-gray-400">
-                  <li>✓ Análises avançadas com IA</li>
-                  <li>✓ Tu manténs o controlo das decisões</li>
-                  <li>✓ Acesso a insights de traders experientes</li>
-                  <li>✓ Alertas personalizados no telemóvel</li>
-                  <li>✓ Gestão de tempo eficiente</li>
-                  <li>✓ Configuração rápida e simples</li>
-                </ul>
-                <Link href="/scanner">
-                  <Button className="w-full bg-mtm-primary-dark hover:bg-amber-700 text-black font-bold">
-                    📊 QUERO VER AS ANÁLISES!
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Seção Educação Premium */}
-      <section id="education-premium" className="py-20 px-4 relative z-10">
-        <div className="container mx-auto">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-mtm-primary-dark/20 text-mtm-primary border-mtm-primary/30">🎓 Educação Premium</Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Educação <span className="text-mtm-primary">MoreThanMoney</span>
-            </h2>
-            <div className="bg-gradient-to-r from-mtm-primary/10 to-amber-500/10 border border-mtm-primary/30 rounded-xl p-6 mb-8 max-w-4xl mx-auto">
-              <p className="text-gray-300 text-lg mb-4">
-                <em>"Não há nada melhor para investir do que em educação"</em> - <strong className="text-mtm-primary">Warren Buffett</strong> estava certo. 
-                Educação é o único investimento que nunca perde valor.
-              </p>
-              <p className="text-gray-400 text-base max-w-2xl mx-auto">
-                Trabalho com <strong className="text-mtm-primary">parcerias estratégicas</strong> para garantir a melhor educação. Baseado em 3 anos de experiência 
-                com a IQONIC e estudo dos grandes mestres. Não é só sobre dinheiro, 
-                é sobre construir a <strong className="text-white">mentalidade</strong> que te leva ao próximo nível.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            {/* Educação MTM (ligada à oferta principal /mtm) */}
-            <Card className="bg-gray-950/50 border-mtm-primary/30 backdrop-blur-sm hover:border-mtm-primary/70 transition-all duration-300 overflow-hidden">
-              <CardContent className="p-0">
-                <div className="relative h-48 overflow-hidden">
-                  <Image src="/api/mtm-image?name=ecossistema" alt="Educação MTM" fill className="object-cover" />
-                  <div className="absolute top-4 right-4 bg-mtm-primary-dark text-black px-3 py-1 rounded-full text-sm font-bold">
-                    MTM
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm text-gray-400">Programa Oficial MoreThanMoney</span>
-                  </div>
-                  <h3 className="text-2xl font-bold mb-3">Educação MTM</h3>
-                  <p className="text-gray-300 mb-4 text-sm leading-relaxed">
-                    O ecossistema da <strong className="text-mtm-primary">MoreThanMoney</strong>: formação estruturada,
-                    método, gestão de risco e ferramentas práticas para aprender e aplicar no mercado com consistência.
-                  </p>
-                  <div className="space-y-2 mb-6">
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <div className="h-1 w-1 bg-amber-500 rounded-full"></div>
-                      <span>Roadmap “Earn while you learn” com orientação passo a passo</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <div className="h-1 w-1 bg-amber-500 rounded-full"></div>
-                      <span>Scanners e ferramentas para execução com disciplina</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <div className="h-1 w-1 bg-amber-500 rounded-full"></div>
-                      <span>Conteúdo de mentalidade, estratégia e prática contínua</span>
-                    </div>
-                  </div>
-                  <Link href="/mtm">
-                    <Button className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white">
-                      📘 Ver Educação MTM
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Educação MoreThanMoney */}
-            <Card className="bg-gray-950/50 border-mtm-primary/30 backdrop-blur-sm hover:border-mtm-primary/70 transition-all duration-300 overflow-hidden">
-              <CardContent className="p-0">
-                <div className="relative h-48 overflow-hidden">
-                  <Image
-                    src="/educacao-morethanmoney.png"
-                    alt="BootCamp MoreThanMoney - Educação Forex e Scanners AI"
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute top-4 right-4 bg-mtm-primary-dark text-black px-3 py-1 rounded-full text-sm font-bold">
-                    Premium
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="h-2 w-2 bg-amber-500 rounded-full"></div>
-                    <span className="text-sm text-gray-400">Metodologia Comprovada</span>
-                  </div>
-                  <h3 className="text-2xl font-bold mb-3">Bootcamp MTM - Educação Forex e Scanners AI</h3>
-                  <p className="text-gray-300 mb-4 text-sm leading-relaxed">
-                    A metodologia que desenvolvi após anos a estudar <strong>Grant Cardone</strong> e aplicar os princípios de <strong>Warren Buffett</strong>. 
-                    Combina análise técnica tradicional com IA de ponta para <strong>maximizar resultados</strong>.
-                  </p>
-                  <div className="space-y-2 mb-6">
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <div className="h-1 w-1 bg-amber-500 rounded-full"></div>
-                      <span>Metodologia MoreThanMoney completa</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <div className="h-1 w-1 bg-amber-500 rounded-full"></div>
-                      <span>Scanners AI exclusivos</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <div className="h-1 w-1 bg-amber-500 rounded-full"></div>
-                      <span>Análise de mercado em tempo real</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <div className="h-1 w-1 bg-amber-500 rounded-full"></div>
-                      <span>Estratégias de alto desempenho</span>
-                    </div>
-                  </div>
-                  <Button
-                    className="w-full bg-mtm-primary-dark hover:bg-amber-700 text-black"
-                    onClick={() => window.open("https://www.skool.com/morethanmoney-1132/about", "_blank")}
-                  >
-                    Aceder ao Bootcamp
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
     </div>
   )
 }

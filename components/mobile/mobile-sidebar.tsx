@@ -22,6 +22,7 @@ import {
   Brain,
   Bell,
   MessageSquare,
+  TrendingUp,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -336,8 +337,19 @@ export default function MobileSidebar({
               </div>
             </div>
 
-            {/* Settings */}
-            <div className="p-4">
+            {/* Abrir Conta + Settings */}
+            <div className="p-4 space-y-1">
+              {/* Abrir Conta na Corretora */}
+              <Link
+                href="/app-mobile/accountopen"
+                onClick={onClose}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#D2A63C]/10 border border-[#D2A63C]/30 text-[#D2A63C] hover:bg-[#D2A63C]/20 transition-all"
+              >
+                <TrendingUp className="w-5 h-5" />
+                <span className="flex-1 text-left font-medium">Abrir Conta</span>
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+
               {isAppOnlyUser ? (
                 <button
                   onClick={() => { handleTabClick("settings") }}
@@ -348,15 +360,14 @@ export default function MobileSidebar({
                   <ChevronRight className="w-4 h-4 text-gray-500" />
                 </button>
               ) : (
-                <Link
-                  href="/member-area?tab=settings"
-                  onClick={onClose}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
+                <button
+                  onClick={() => { handleTabClick("settings"); onClose() }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
                 >
                   <Settings className="w-5 h-5" />
                   <span className="flex-1 text-left font-medium">Definições</span>
                   <ChevronRight className="w-4 h-4 text-gray-500" />
-                </Link>
+                </button>
               )}
             </div>
           </div>

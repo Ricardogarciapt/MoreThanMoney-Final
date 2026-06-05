@@ -24,8 +24,8 @@ const PLANS = {
   },
   premium: {
     name: 'Pack Premium',
-    description: 'App + Site MTM · Skool · Ferramentas avançadas · Live Premium',
-    features: ['Tudo do Pack Membro', 'Acesso completo ao site MTM', 'Comunidade Skool MTM', 'Ferramentas avançadas', 'Live Sessions Premium', 'Suporte prioritário'],
+    description: 'App + Site MTM · Skool · Ferramentas avançadas · Live Premium · Cursos',
+    features: ['Tudo do Pack Membro', 'Acesso completo ao site MTM', 'Comunidade Skool MTM', 'Ferramentas avançadas', 'Live Sessions Premium', 'Cursos de Forex, Criptomoedas, Marketing Digital e AI', 'Suporte prioritário'],
     color: '#7C3AED',
     monthly: { price: 65, label: '65€/mês', id: 'premium_monthly' as PlanId },
     annual:  { price: 52, label: '52€/mês · 624€/ano', id: 'premium_annual' as PlanId },
@@ -92,51 +92,71 @@ export default function RegisterPage() {
       }
 
       if (data.user) {
-        const settingsResponse = await fetch('/api/admin/settings')
-        const settingsData = await settingsResponse.json()
+        const session = data.session
+
+        // Usar accessToken para criar perfil server-side (bypassa RLS)
+        const accessToken = session?.access_token
+        if (!accessToken) {
+          // Supabase pode requerer confirmação de email antes de dar sessão
+          setIsLoading(false)
+          alert('✅ Conta criada! Verifica o teu email para confirmar a conta e depois faz login.')
+          router.push('/login')
+          return
+        }
+
+        // Obter configurações de auto-approve
+        const settingsResponse = await fetch('/api/admin/settings').catch(() => null)
+        const settingsData = settingsResponse ? await settingsResponse.json().catch(() => null) : null
         const autoApprove = settingsData?.data?.auto_approve_users ?? true
 
-        const { error: profileError } = await supabase.from('profiles').upsert(
-          {
-            id: data.user.id,
-            email: formData.email,
+        // Criar perfil via API server-side (usa admin client, sem problemas de RLS)
+        const profileResponse = await fetch('/api/auth/create-profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
             full_name: formData.full_name,
             username: formData.username,
             phone: formData.phone || null,
             whatsapp: formData.whatsapp || null,
-            user_type: autoApprove ? 'member' : 'pending',
-            member_category: selectedPlan === 'premium' ? 'premium' : 'standard',
-            is_active: autoApprove,
             subscription_plan: selectedPlan,
             subscription_billing_cycle: billingCycle,
-            subscription_platform: 'manual',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'id' }
-        )
+            member_category: selectedPlan === 'premium' ? 'premium' : 'standard',
+            auto_approve: autoApprove,
+          }),
+        })
 
-        if (profileError) {
-          setError('Erro ao criar perfil: ' + profileError.message)
+        const profileData = await profileResponse.json()
+        if (!profileResponse.ok) {
+          setError(profileData.error || 'Erro ao criar perfil')
           setIsLoading(false)
           return
         }
 
-        // Log subscription event
-        await fetch('/api/subscriptions/apple-iap', {
+        // Criar sessão de checkout Stripe e redirecionar para pagamento
+        const checkoutPlanId = `${selectedPlan}_${billingCycle}` // ex: app_member_monthly
+        const checkoutResponse = await fetch('/api/stripe/create-checkout-session', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token || ''}` },
-          body: JSON.stringify({
-            apple_original_transaction_id: `web_register_${data.user.id}`,
-            apple_product_id: activePricing.id,
-            subscription_plan: selectedPlan,
-            subscription_billing_cycle: billingCycle,
-            subscription_platform: 'manual',
-          })
-        }).catch(() => {/* non-blocking */})
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ planId: checkoutPlanId, email: formData.email }),
+        })
 
+        if (checkoutResponse.ok) {
+          const { url } = await checkoutResponse.json()
+          if (url) {
+            window.location.href = url
+            return
+          }
+        }
+
+        // Fallback se checkout Stripe falhar (plan não configurado no Stripe)
         const planLabel = selectedPlan === 'premium' ? 'Pack Premium' : 'Pack Membro'
-        alert(`✅ Conta criada${autoApprove ? ' e ativada' : ''}!\n\nPlano: ${planLabel} (${billingCycle === 'annual' ? 'Anual' : 'Mensal'})\n\n${autoApprove ? 'Podes fazer login agora.' : 'A tua conta está pendente de aprovação por um administrador.'}`)
+        alert(`✅ Conta criada${autoApprove ? ' e ativada' : ''}!\n\nPlano: ${planLabel} (${billingCycle === 'annual' ? 'Anual' : 'Mensal'})\n\n${autoApprove ? 'Podes fazer login agora.' : 'A tua conta está pendente de aprovação.'}`)
         router.push('/login')
       }
     } catch (err: any) {

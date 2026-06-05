@@ -682,6 +682,7 @@ export default function UserManagementComponent({
                   <th className="px-3 py-3">Utilizador</th>
                   <th className="px-3 py-3">Estado / Role</th>
                   <th className="px-3 py-3">Subscrição</th>
+                  <th className="px-3 py-3">UID Corretora</th>
                   <th className="px-3 py-3 text-right">Ações</th>
                 </tr>
               </thead>
@@ -857,6 +858,20 @@ export default function UserManagementComponent({
                           </div>
                         ) : (
                           <span className="text-xs text-gray-600">—</span>
+                        )}
+                      </td>
+
+                      {/* ── UID Corretora ── */}
+                      <td className="px-3 py-3 align-top">
+                        {user.broker_uid ? (
+                          <div className="space-y-1">
+                            <span className="font-mono text-xs bg-gray-800 text-green-300 px-2 py-1 rounded border border-green-500/20">
+                              {user.broker_uid}
+                            </span>
+                            <p className="text-[10px] text-gray-500">TMGM</p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-600 italic">Não registado</span>
                         )}
                       </td>
 

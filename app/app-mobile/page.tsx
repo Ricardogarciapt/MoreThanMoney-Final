@@ -27,6 +27,7 @@ import MentorMobile from "@/components/mobile/mentor-mobile"
 import AppsMobile from "@/components/mobile/apps-mobile"
 import ChatChannels from "@/components/mobile/chat-channels"
 import SettingsMobile from "@/components/mobile/settings-mobile"
+import OnboardingTutorial, { useOnboarding } from "@/components/mobile/onboarding-tutorial"
 import { useAuth } from "@/contexts/auth-context"
 import { useCapacitor } from "@/hooks/use-capacitor"
 import { usePushNotifications, type ForegroundMessage } from "@/hooks/use-push-notifications"
@@ -82,6 +83,7 @@ function AppMobileContent() {
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false)
   const foregroundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const { shouldShow: showOnboarding, markDone: markOnboardingDone } = useOnboarding()
 
   useEffect(() => {
     setMounted(true)
@@ -381,6 +383,14 @@ function AppMobileContent() {
   return (
     <ProtectedPage redirectPath="/login?redirect=/app-mobile" loadingMessage="A carregar app mobile...">
       <main className="app-mobile-page bg-gray-900 min-h-screen flex flex-col">
+        {/* Onboarding Tutorial (first use) */}
+        {userLoaded && showOnboarding && (
+          <OnboardingTutorial
+            onComplete={markOnboardingDone}
+            onTabChange={handleTabChange}
+          />
+        )}
+
         {/* Mobile Sidebar */}
         <MobileSidebar
           isOpen={isSidebarOpen}

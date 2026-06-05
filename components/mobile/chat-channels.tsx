@@ -19,6 +19,8 @@ import {
   Trash2,
   GraduationCap,
   MessageCircle,
+  TrendingUp,
+  Check,
 } from "lucide-react"
 import Image from "next/image"
 import MentionInput from "./mention-input"
@@ -86,6 +88,10 @@ function canReadChannel(slug: string, user: any): boolean {
     )
   }
   return true
+}
+
+function requiresBrokerUID(slug: string) {
+  return slug === "trade-ideas" || slug === "trade-ideas-setup" || slug === "premium-ideas"
 }
 
 function canWriteChannel(slug: string, user: any): boolean {
@@ -1003,9 +1009,7 @@ function ChannelView({
           {isReadOnly(channel.slug) ? (
             <>
               <TelegramIcon className="w-4 h-4 text-[#26A5E4]" />
-              <p className="text-xs text-gray-500">
-                Canal espelho do Telegram — só leitura.
-              </p>
+              <p className="text-xs text-gray-500">Só leitura</p>
             </>
           ) : (
             <>
@@ -1032,6 +1036,124 @@ function ChannelView({
           onDelete={() => { handleDelete(contextMsg.id); setContextMsg(null) }}
         />
       )}
+    </div>
+  )
+}
+
+// ─── Broker UID Modal ─────────────────────────────────────────────────────────
+
+function BrokerUidModal({
+  onSave,
+  onClose,
+}: {
+  onSave: (uid: string) => void
+  onClose: () => void
+}) {
+  const [uid, setUid] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
+
+  const handleSave = async () => {
+    const trimmed = uid.trim()
+    if (!trimmed) { setError("Insere o teu número de conta TMGM."); return }
+    setSaving(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) throw new Error("Sem sessão")
+      const { error: dbErr } = await supabase
+        .from("profiles")
+        .update({ broker_uid: trimmed })
+        .eq("id", session.user.id)
+      if (dbErr) throw dbErr
+      onSave(trimmed)
+    } catch {
+      setError("Erro ao guardar. Tenta novamente.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end"
+      style={{ backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+    >
+      <div
+        className="w-full bg-gray-900 rounded-t-3xl overflow-hidden shadow-2xl"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)" }}
+      >
+        {/* Top handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-gray-700" />
+        </div>
+
+        <div className="px-5 pt-4 pb-5 space-y-4">
+          {/* Header */}
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#D2A63C]/10 border border-[#D2A63C]/30 flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="w-6 h-6 text-[#D2A63C]" />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-lg leading-tight">Conta de Corretora Necessária</h3>
+              <p className="text-sm text-gray-400 mt-1 leading-relaxed">
+                Para acederes aos canais de Trade Ideas, precisas de ter uma conta activa na <strong className="text-white">TMGM</strong>, parceira oficial MTM.
+              </p>
+            </div>
+          </div>
+
+          <div className="h-px bg-gray-800" />
+
+          {/* UID input */}
+          <div>
+            <label className="text-xs text-gray-400 uppercase tracking-wide mb-2 block">
+              O teu número de conta TMGM (UID)
+            </label>
+            <input
+              type="text"
+              value={uid}
+              onChange={e => { setUid(e.target.value); setError("") }}
+              placeholder="Ex: 12345678"
+              autoFocus
+              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#D2A63C]/60 font-mono"
+            />
+            {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+            <p className="text-xs text-gray-500 mt-1.5">
+              Encontras o teu UID no painel da TMGM após o login.
+            </p>
+          </div>
+
+          {/* CTA */}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] transition-transform"
+          >
+            {saving ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> A guardar...</>
+            ) : (
+              <><Check className="w-4 h-4" /> Confirmar e entrar</>
+            )}
+          </button>
+
+          {/* Open account link */}
+          <div className="text-center space-y-1">
+            <p className="text-xs text-gray-500">Ainda não tens conta?</p>
+            <a
+              href="/app-mobile/accountopen"
+              className="text-sm text-[#D2A63C] font-medium underline"
+            >
+              Abre a tua conta TMGM aqui →
+            </a>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-full py-2 text-gray-500 text-sm hover:text-gray-300 transition-colors"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -1110,6 +1232,9 @@ export default function ChatChannels() {
   const [educators, setEducators] = useState<EducatorProfile[]>([])
   const [loadingEducators, setLoadingEducators] = useState(false)
   const [sendingDm, setSendingDm] = useState<string | null>(null)
+  const [brokerUid, setBrokerUid] = useState<string | null>(null)
+  const [brokerUidModal, setBrokerUidModal] = useState(false)
+  const [pendingChannel, setPendingChannel] = useState<Channel | null>(null)
 
   const loadEducators = async () => {
     if (educators.length > 0) return
@@ -1173,8 +1298,40 @@ export default function ChatChannels() {
       setLoading(false)
     }
 
+    const fetchBrokerUid = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user) return
+        const { data } = await supabase
+          .from("profiles")
+          .select("broker_uid")
+          .eq("id", session.user.id)
+          .single()
+        if (data?.broker_uid) setBrokerUid(data.broker_uid)
+      } catch {}
+    }
+
     fetchChannels()
+    fetchBrokerUid()
   }, [])
+
+  const handleChannelSelect = (channel: Channel) => {
+    if (requiresBrokerUID(channel.slug) && !brokerUid) {
+      setPendingChannel(channel)
+      setBrokerUidModal(true)
+      return
+    }
+    setActiveChannel(channel)
+  }
+
+  const handleBrokerUidSaved = (uid: string) => {
+    setBrokerUid(uid)
+    setBrokerUidModal(false)
+    if (pendingChannel) {
+      setActiveChannel(pendingChannel)
+      setPendingChannel(null)
+    }
+  }
 
   if (loading) {
     return (
@@ -1207,6 +1364,13 @@ export default function ChatChannels() {
   // Channel list
   return (
     <div className="pb-4">
+      {/* Broker UID Modal */}
+      {brokerUidModal && (
+        <BrokerUidModal
+          onSave={handleBrokerUidSaved}
+          onClose={() => { setBrokerUidModal(false); setPendingChannel(null) }}
+        />
+      )}
       {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-gray-800">
         <h2 className="text-lg font-bold text-white">Chat</h2>
@@ -1318,7 +1482,7 @@ export default function ChatChannels() {
                   <ChannelRow
                     key={sub.id}
                     channel={sub}
-                    onSelect={setActiveChannel}
+                    onSelect={handleChannelSelect}
                     user={user}
                     isSubChannel
                   />
@@ -1328,7 +1492,7 @@ export default function ChatChannels() {
               <ChannelRow
                 key={channel.id}
                 channel={channel}
-                onSelect={setActiveChannel}
+                onSelect={handleChannelSelect}
                 user={user}
               />
             )
