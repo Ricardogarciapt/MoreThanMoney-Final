@@ -119,7 +119,7 @@ export default function DGN8nPanel() {
   const termRef = useRef<HTMLDivElement>(null)
 
   const VPS_HOST = status?.vpsHost || "173.249.23.54"
-  const N8N_URL = `http://${VPS_HOST}:5678`
+  const N8N_URL = status?.n8nUrl || `https://${VPS_HOST}`
 
   const fetchStatus = useCallback(async () => {
     try {

@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { Client } from "ssh2"
 
-const VPS_HOST = process.env.VPS_HOST || "13.140.146.158"
-const VPS_USER = process.env.VPS_USER || "root"
+// Parse VPS_HOST — strip http(s):// prefix if present
+const rawHost = process.env.VPS_HOST || "vmi3355213.contaboserver.net"
+const VPS_HOST = rawHost.replace(/^https?:\/\//, "")
+// Parse VPS_USER — strip @hostname suffix if present (e.g. admin@host → admin)
+const rawUser = process.env.VPS_USER || "admin"
+const VPS_USER = rawUser.includes("@") ? rawUser.split("@")[0] : rawUser
 const VPS_PASSWORD = process.env.VPS_PASSWORD || ""
 const VPS_PORT = parseInt(process.env.VPS_PORT || "22")
 const N8N_DIR = process.env.N8N_DIR || "/opt/mtm-n8n"
+const N8N_PUBLIC_URL = `https://${VPS_HOST}`
 
 function ssh(command: string, timeoutMs = 30000): Promise<{ stdout: string; code: number }> {
   return new Promise((resolve, reject) => {
@@ -58,6 +63,7 @@ export async function GET(req: NextRequest) {
         diskUsage: diskResult.stdout,
         allContainers: containers.stdout,
         vpsHost: VPS_HOST,
+        n8nUrl: N8N_PUBLIC_URL,
       })
     }
 
