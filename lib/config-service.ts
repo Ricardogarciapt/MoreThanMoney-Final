@@ -161,7 +161,7 @@ const defaultConfig: SiteConfig = {
   contactEmail: "suporte@morethanmoney.pt",
   ownerInfo: {
     name: "Ricardo Garcia",
-    email: "info@morethanmoney.pt",
+    email: "geral@morethanmoney.pt",
     phone: "+351 912 666 699",
     address: "Santarém, Portugal",
     taxId: "PT241991439",

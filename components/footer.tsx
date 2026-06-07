@@ -134,8 +134,8 @@ export default function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center gap-3 text-gray-400 hover:text-mtm-primary transition-colors">
                 <Mail className="h-4 w-4 text-mtm-primary flex-shrink-0" />
-                <a href="mailto:info@morethanmoney.pt" className="text-sm">
-                  info@morethanmoney.pt
+                <a href="mailto:geral@morethanmoney.pt" className="text-sm">
+                  geral@morethanmoney.pt
                 </a>
               </li>
               <li className="flex items-center gap-3 text-gray-400">

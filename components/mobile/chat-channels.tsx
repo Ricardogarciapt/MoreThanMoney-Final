@@ -513,18 +513,34 @@ function MessageBubble({
               </div>
             )}
 
-            {/* Quoted reply */}
+            {/* Quoted reply — pré-visualização da interação original (estilo WhatsApp/Telegram) */}
             {msg.reply_to_message && (() => {
               const rm = msg.reply_to_message!
               const rmProfile = Array.isArray(rm.profile) ? rm.profile[0] : rm.profile
               const rmName = rmProfile?.full_name || rm.telegram_sender || "Membro"
-              const rmContent = rm.image_url && !rm.content ? "📷 Imagem" : rm.content || "📷 Imagem"
+              const rmText = rm.content?.trim()
+              const rmHasImage = !!rm.image_url
               return (
-                <div className="mb-1 w-full rounded-lg border-l-[3px] border-[#D2A63C] bg-black/25 px-2 py-1">
-                  <p className="text-[11px] font-semibold text-[#D2A63C] leading-tight">{rmName}</p>
-                  <p className="text-[11px] text-gray-300 truncate leading-tight mt-0.5">
-                    <MentionText text={rmContent} />
-                  </p>
+                <div className="mb-1 w-full max-w-full flex items-center gap-2 rounded-lg border-l-[3px] border-[#D2A63C] bg-black/25 pl-2 pr-1.5 py-1">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-semibold text-[#D2A63C] leading-tight truncate">{rmName}</p>
+                    {rmText ? (
+                      <p className="text-[11px] text-gray-300 truncate leading-tight mt-0.5">
+                        <MentionText text={rmText} />
+                      </p>
+                    ) : rmHasImage ? (
+                      <p className="text-[11px] text-gray-400 leading-tight mt-0.5 flex items-center gap-1">
+                        <ImageIcon className="w-3 h-3 flex-shrink-0" /> Foto
+                      </p>
+                    ) : null}
+                  </div>
+                  {rmHasImage && (
+                    <img
+                      src={rm.image_url!}
+                      alt=""
+                      className="w-9 h-9 rounded-md object-cover flex-shrink-0"
+                    />
+                  )}
                 </div>
               )
             })()}
@@ -906,24 +922,39 @@ function ChannelView({
       {canWrite ? (
         <div className="flex-shrink-0 border-t border-gray-800 bg-gray-900 px-3 py-2">
           {/* Reply banner */}
-          {replyTo && (
-            <div className="flex items-center gap-2 mb-2 pl-2 pr-1 py-1.5 bg-gray-800 rounded-xl border-l-[3px] border-[#D2A63C]">
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-semibold text-[#D2A63C] leading-tight">
-                  {replyTo.profile?.full_name || replyTo.telegram_sender || "Membro"}
-                </p>
-                <p className="text-[11px] text-gray-400 truncate leading-tight mt-0.5">
-                  {replyTo.image_url && !replyTo.content ? "📷 Imagem" : replyTo.content || "📷 Imagem"}
-                </p>
+          {replyTo && (() => {
+            const rtText = replyTo.content?.trim()
+            const rtHasImage = !!replyTo.image_url
+            return (
+              <div className="flex items-center gap-2 mb-2 pl-2 pr-1 py-1.5 bg-gray-800 rounded-xl border-l-[3px] border-[#D2A63C]">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-semibold text-[#D2A63C] leading-tight truncate">
+                    {replyTo.profile?.full_name || replyTo.telegram_sender || "Membro"}
+                  </p>
+                  {rtText ? (
+                    <p className="text-[11px] text-gray-400 truncate leading-tight mt-0.5">{rtText}</p>
+                  ) : rtHasImage ? (
+                    <p className="text-[11px] text-gray-500 leading-tight mt-0.5 flex items-center gap-1">
+                      <ImageIcon className="w-3 h-3 flex-shrink-0" /> Foto
+                    </p>
+                  ) : null}
+                </div>
+                {rtHasImage && (
+                  <img
+                    src={replyTo.image_url!}
+                    alt=""
+                    className="w-9 h-9 rounded-md object-cover flex-shrink-0"
+                  />
+                )}
+                <button
+                  onClick={() => setReplyTo(null)}
+                  className="p-1 rounded-full hover:bg-gray-700 flex-shrink-0"
+                >
+                  <X className="w-3.5 h-3.5 text-gray-400" />
+                </button>
               </div>
-              <button
-                onClick={() => setReplyTo(null)}
-                className="p-1 rounded-full hover:bg-gray-700 flex-shrink-0"
-              >
-                <X className="w-3.5 h-3.5 text-gray-400" />
-              </button>
-            </div>
-          )}
+            )
+          })()}
 
           {/* Link preview banner */}
           {(linkPreview || fetchingPreview) && (
@@ -1266,7 +1297,7 @@ export default function ChatChannels() {
       if (res.ok) {
         const data = await res.json()
         if (data.conversation?.id) {
-          window.location.href = `/messages?conversation=${data.conversation.id}`
+          window.location.href = `/messages-mobile?conversation=${data.conversation.id}`
         }
       }
     } catch { /* silent */ } finally {

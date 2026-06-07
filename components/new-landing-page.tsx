@@ -23,6 +23,7 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 import ParticleBackground from "@/components/particle-background"
+import LiveActivityTicker from "@/components/live-activity-ticker"
 import { getRandomTestimonials } from "@/lib/testimonials-service"
 import type { Testimonial } from "@/lib/testimonials-service"
 
@@ -238,6 +239,7 @@ export default function NewLandingPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white overflow-hidden">
       <ParticleBackground />
+      <LiveActivityTicker />
 
       {/* ── HERO ──────────────────────────────────────────────────────────────── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-16 pb-8">
