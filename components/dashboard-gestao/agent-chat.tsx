@@ -504,7 +504,7 @@ export default function AgentChat({ agent }: { agent: NavItem }) {
             {hasVoiceSupport && (
               <button
                 onClick={() => voiceMode === "wake" ? stopVoice() : startWakeMode()}
-                title={voiceMode === "wake" ? "Desativar wake word" : "Ativar wake word "Ei, AIOS""}
+                title={voiceMode === "wake" ? "Desativar wake word" : "Ativar wake word 'Ei, AIOS'"}
                 className={cn(
                   "flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-all",
                   voiceMode === "wake"
