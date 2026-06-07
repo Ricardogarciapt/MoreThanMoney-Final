@@ -1,11 +1,14 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Send, Loader2, RotateCcw, Copy, Check, Wrench, ChevronDown, ChevronUp } from "lucide-react"
+import { Send, Loader2, RotateCcw, Copy, Check, Wrench, ChevronDown, ChevronUp, Mic, MicOff, Radio } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { NavItem } from "./dg-sidebar"
 import MarkdownRenderer from "./markdown-renderer"
 import AgentContextPanel from "./agent-context-panel"
+
+// ── Voice types ───────────────────────────────────────────────────────────────
+type VoiceMode = "off" | "wake" | "command"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface ToolEvent {
@@ -154,6 +157,20 @@ function MessageBubble({
   )
 }
 
+// ── Voice helpers ─────────────────────────────────────────────────────────────
+function getSpeechRecognition(): any {
+  if (typeof window === "undefined") return null
+  const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+  return SR ? new SR() : null
+}
+
+const WAKE_WORDS = ["ei aios", "hey aios", "aios", "ei ios", "ei a i o s"]
+
+function matchesWakeWord(text: string): boolean {
+  const t = text.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim()
+  return WAKE_WORDS.some(w => t.includes(w))
+}
+
 // ── Main AgentChat ─────────────────────────────────────────────────────────────
 export default function AgentChat({ agent }: { agent: NavItem }) {
   const [messages, setMessages] = useState<Message[]>([])
@@ -162,6 +179,132 @@ export default function AgentChat({ agent }: { agent: NavItem }) {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // ── Voice state ──────────────────────────────────────────────────────────────
+  const [voiceMode, setVoiceMode] = useState<VoiceMode>("off")
+  const [liveTranscript, setLiveTranscript] = useState("")
+  const [hasVoiceSupport, setHasVoiceSupport] = useState(false)
+  const voiceModeRef = useRef<VoiceMode>("off")
+  const recognitionRef = useRef<any>(null)
+  const pendingVoiceSendRef = useRef<string | null>(null)
+
+  // Keep ref in sync with state
+  useEffect(() => { voiceModeRef.current = voiceMode }, [voiceMode])
+
+  // Detect voice API support
+  useEffect(() => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    setHasVoiceSupport(!!SR)
+  }, [])
+
+  const stopRecognition = useCallback(() => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort() } catch {}
+      recognitionRef.current = null
+    }
+  }, [])
+
+  const startCommandMode = useCallback(() => {
+    stopRecognition()
+    setVoiceMode("command")
+    setLiveTranscript("")
+
+    const recognition = getSpeechRecognition()
+    if (!recognition) return
+    recognition.lang = "pt-PT"
+    recognition.continuous = false
+    recognition.interimResults = true
+
+    let finalText = ""
+
+    recognition.onresult = (e: any) => {
+      let interim = ""
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript
+        else interim += e.results[i][0].transcript
+      }
+      setLiveTranscript(finalText + interim)
+      setInput(finalText + interim)
+    }
+
+    recognition.onend = () => {
+      recognitionRef.current = null
+      const trimmed = finalText.trim()
+      if (trimmed) {
+        // Store for auto-send — picked up by useEffect
+        pendingVoiceSendRef.current = trimmed
+        setInput(trimmed)
+      }
+      setVoiceMode("off")
+      setLiveTranscript("")
+    }
+
+    recognition.onerror = () => {
+      recognitionRef.current = null
+      setVoiceMode("off")
+      setLiveTranscript("")
+    }
+
+    recognitionRef.current = recognition
+    recognition.start()
+  }, [stopRecognition])
+
+  const startWakeMode = useCallback(() => {
+    stopRecognition()
+    setVoiceMode("wake")
+
+    const launchWake = () => {
+      if (voiceModeRef.current !== "wake") return
+      const recognition = getSpeechRecognition()
+      if (!recognition) return
+      recognition.lang = "pt-PT"
+      recognition.continuous = true
+      recognition.interimResults = true
+
+      recognition.onresult = (e: any) => {
+        let interim = ""
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          interim += e.results[i][0].transcript
+        }
+        if (matchesWakeWord(interim)) {
+          recognition.abort()
+          recognitionRef.current = null
+          startCommandMode()
+        }
+      }
+
+      recognition.onend = () => {
+        recognitionRef.current = null
+        // Restart if still in wake mode
+        if (voiceModeRef.current === "wake") {
+          setTimeout(launchWake, 300)
+        }
+      }
+
+      recognition.onerror = (e: any) => {
+        recognitionRef.current = null
+        if (e.error !== "aborted" && voiceModeRef.current === "wake") {
+          setTimeout(launchWake, 1000)
+        }
+      }
+
+      recognitionRef.current = recognition
+      recognition.start()
+    }
+
+    launchWake()
+  }, [stopRecognition, startCommandMode])
+
+  const stopVoice = useCallback(() => {
+    stopRecognition()
+    setVoiceMode("off")
+    setLiveTranscript("")
+  }, [stopRecognition])
+
+  // Cleanup on unmount / agent change
+  useEffect(() => {
+    return () => { stopRecognition() }
+  }, [stopRecognition])
 
   const Icon = agent.icon
 
@@ -178,14 +321,27 @@ export default function AgentChat({ agent }: { agent: NavItem }) {
 
   // Reset on agent change
   useEffect(() => {
+    stopVoice()
     setMessages([])
     setInput("")
     setIsStreaming(false)
   }, [agent.id])
 
+  // Auto-send voice command when recognition ends with a transcript
+  useEffect(() => {
+    const pending = pendingVoiceSendRef.current
+    if (pending && voiceMode === "off" && !isStreaming) {
+      pendingVoiceSendRef.current = null
+      sendMessage(pending)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceMode])
+
   const sendMessage = useCallback(async (text?: string) => {
     const content = (text ?? input).trim()
     if (!content || isStreaming) return
+    // Stop any active voice session when sending
+    stopVoice()
 
     const userMsg: Message = { role: "user", content }
     const history = [...messages, userMsg]
@@ -289,7 +445,7 @@ export default function AgentChat({ agent }: { agent: NavItem }) {
     } finally {
       setIsStreaming(false)
     }
-  }, [input, messages, isStreaming, agent.id])
+  }, [input, messages, isStreaming, agent.id, stopVoice])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -343,6 +499,26 @@ export default function AgentChat({ agent }: { agent: NavItem }) {
               <Wrench className="h-3 w-3" />
               6 ferramentas
             </div>
+
+            {/* Wake word toggle */}
+            {hasVoiceSupport && (
+              <button
+                onClick={() => voiceMode === "wake" ? stopVoice() : startWakeMode()}
+                title={voiceMode === "wake" ? "Desativar wake word" : "Ativar wake word "Ei, AIOS""}
+                className={cn(
+                  "flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-all",
+                  voiceMode === "wake"
+                    ? "bg-[#D2A63C]/20 text-[#D2A63C] border border-[#D2A63C]/30"
+                    : "text-gray-500 hover:text-gray-300 hover:bg-white/5"
+                )}
+              >
+                <Radio className={cn("h-3 w-3", voiceMode === "wake" && "animate-pulse")} />
+                <span className="hidden sm:inline">
+                  {voiceMode === "wake" ? "A ouvir…" : "Ei, AIOS"}
+                </span>
+              </button>
+            )}
+
             {messages.length > 0 && (
               <button
                 onClick={clearChat}
@@ -393,6 +569,38 @@ export default function AgentChat({ agent }: { agent: NavItem }) {
 
         {/* Input */}
         <div className="border-t border-[#D2A63C]/10 bg-zinc-950/40 p-4 flex-shrink-0">
+
+          {/* Voice status bar */}
+          {voiceMode !== "off" && (
+            <div className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl mb-3 text-sm font-medium transition-all",
+              voiceMode === "wake"
+                ? "bg-[#D2A63C]/10 border border-[#D2A63C]/20 text-[#D2A63C]"
+                : "bg-red-950/40 border border-red-500/30 text-red-300"
+            )}>
+              {voiceMode === "wake" ? (
+                <>
+                  <Radio className="h-4 w-4 animate-pulse flex-shrink-0" />
+                  <span>A ouvir wake word — diz <strong>&quot;Ei, AIOS&quot;</strong> para ativar</span>
+                  <button onClick={stopVoice} className="ml-auto text-xs opacity-60 hover:opacity-100">✕</button>
+                </>
+              ) : (
+                <>
+                  <span className="relative flex h-3 w-3 flex-shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                    <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500" />
+                  </span>
+                  <span className="flex-1">
+                    {liveTranscript
+                      ? <span className="italic">&quot;{liveTranscript}&quot;</span>
+                      : "Fala agora…"}
+                  </span>
+                  <button onClick={stopVoice} className="ml-auto text-xs opacity-60 hover:opacity-100">✕</button>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="flex items-end gap-3 bg-zinc-900 rounded-2xl border border-white/10 px-4 py-3 focus-within:border-[#D2A63C]/30 transition-colors">
             <textarea
               ref={textareaRef}
@@ -404,7 +612,32 @@ export default function AgentChat({ agent }: { agent: NavItem }) {
               disabled={isStreaming}
               className="flex-1 bg-transparent text-white placeholder-gray-600 resize-none outline-none text-sm leading-relaxed min-h-[24px] max-h-[160px]"
             />
+
+            {/* Mic button */}
+            {hasVoiceSupport && (
+              <button
+                onClick={() => voiceMode === "command" ? stopVoice() : startCommandMode()}
+                disabled={isStreaming}
+                title={voiceMode === "command" ? "Parar gravação" : "Falar agora (clique)"}
+                className={cn(
+                  "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-all",
+                  voiceMode === "command"
+                    ? "bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse"
+                    : isStreaming
+                      ? "bg-zinc-800 text-gray-700 cursor-not-allowed"
+                      : "bg-zinc-800 text-gray-500 hover:bg-zinc-700 hover:text-gray-300"
+                )}
+              >
+                {voiceMode === "command" ? (
+                  <MicOff className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </button>
+            )}
+
             <button
+              id="aios-send-btn"
               onClick={() => sendMessage()}
               disabled={!input.trim() || isStreaming}
               className={cn(
@@ -422,7 +655,8 @@ export default function AgentChat({ agent }: { agent: NavItem }) {
             </button>
           </div>
           <p className="text-center text-[10px] text-gray-700 mt-2">
-            Enter para enviar · Shift+Enter para nova linha · Os agentes têm acesso a dados reais MTM
+            Enter para enviar · Shift+Enter para nova linha
+            {hasVoiceSupport && " · 🎙 Clica no mic ou diz «Ei, AIOS»"}
           </p>
         </div>
       </div>
