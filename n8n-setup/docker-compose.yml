@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: mtm-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Host & URL
+      - N8N_HOST=n8n.morethanmoney.pt
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://n8n.morethanmoney.pt/
+      - N8N_EDITOR_BASE_URL=https://n8n.morethanmoney.pt/
+
+      # Auth (muda a password antes de fazer deploy!)
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=MTM_n8n_2026!
+
+      # Timezone Portugal
+      - GENERIC_TIMEZONE=Europe/Lisbon
+      - TZ=Europe/Lisbon
+
+      # Segurança
+      - N8N_SECURE_COOKIE=true
+      - N8N_ENCRYPTION_KEY=mtm-n8n-encryption-key-muda-isto-32chars
+
+      # MTM Ecosystem
+      - MTM_SITE_URL=https://morethanmoney.pt
+      - MTM_API_URL=https://morethanmoney.pt/api
+      - CRON_SECRET=mtm-cron-secret-2025
+      - SUPABASE_URL=https://iwscxotvmtkphajmasof.supabase.co
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - MANYCHAT_API_KEY=${MANYCHAT_API_KEY}
+      - GMAIL_USER=morethanmoneypt@gmail.com
+      - GMAIL_APP_PASSWORD=${GMAIL_APP_PASSWORD}
+
+      # Limpeza automática de execuções (7 dias)
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+    networks:
+      - mtm-network
+
+volumes:
+  n8n_data:
+    driver: local
+
+networks:
+  mtm-network:
+    driver: bridge

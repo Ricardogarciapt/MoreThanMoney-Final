@@ -21,6 +21,7 @@ import {
   Smartphone,
   BarChart3,
   Radio,
+  Zap,
 } from "lucide-react"
 
 export type DGSection =
@@ -40,6 +41,7 @@ export type DGSection =
   | "app_creator"
   | "calendly"
   | "stream_vps"
+  | "n8n_vps"
 
 export interface NavItem {
   id: DGSection
@@ -162,6 +164,13 @@ export const navItems: NavItem[] = [
     description: "Controlo do servidor de streaming",
     color: "#22c55e",
   },
+  {
+    id: "n8n_vps",
+    label: "n8n · Automações",
+    icon: Zap,
+    description: "Workflows n8n no VPS Contabo",
+    color: "#D2A63C",
+  },
 ]
 
 export default function DGSidebar({
@@ -203,6 +212,7 @@ export default function DGSidebar({
           const isMetrics = item.id === "metrics"
           const isCalendly = item.id === "calendly"
           const isStreamVps = item.id === "stream_vps"
+          const isN8nVps = item.id === "n8n_vps"
 
           return (
             <button
@@ -213,7 +223,7 @@ export default function DGSidebar({
                 isActive
                   ? "bg-[#D2A63C]/15 text-white"
                   : "text-gray-400 hover:text-white hover:bg-white/5",
-                (isOverview || isMetrics || isCalendly || isStreamVps) && !isActive && "mt-1"
+                (isOverview || isMetrics || isCalendly || isStreamVps || isN8nVps) && !isActive && "mt-1"
               )}
             >
               <div
@@ -241,7 +251,7 @@ export default function DGSidebar({
 
       {/* Footer */}
       <div className="border-t border-[#D2A63C]/15 p-3">
-        <p className="text-center text-xs text-gray-600">12 Agentes IA · Stream VPS · Calendly</p>
+        <p className="text-center text-xs text-gray-600">12 Agentes IA · n8n · Stream VPS · Calendly</p>
         <p className="text-center text-xs text-gray-700">MoreThanMoney © 2026</p>
       </div>
     </aside>

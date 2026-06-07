@@ -1,0 +1,169 @@
+{
+  "name": "MTM — Telegram Bot",
+  "nodes": [
+    {
+      "id": "tg-webhook",
+      "name": "Telegram Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "telegram-mtm",
+      "parameters": {
+        "path": "telegram-mtm",
+        "responseMode": "onReceived",
+        "responseData": "allEntries"
+      }
+    },
+    {
+      "id": "tg-parse",
+      "name": "Parse Comando",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst msg = body.message || body.callback_query?.message;\nif (!msg) return [];\n\nconst chatId = msg.chat.id;\nconst text = (msg.text || '').trim();\nconst command = text.split(' ')[0].replace('@MTMbot', '');\nconst args = text.split(' ').slice(1).join(' ');\nconst username = msg.from?.username || msg.from?.first_name || 'Membro';\n\nreturn [{ json: { chatId, text, command, args, username, msg } }];"
+      }
+    },
+    {
+      "id": "tg-router",
+      "name": "Router de Comandos",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [680, 300],
+      "parameters": {
+        "mode": "expression",
+        "output": "={{ $json.command }}",
+        "rules": {
+          "values": [
+            { "outputKey": "/sinais",    "value": "/sinais" },
+            { "outputKey": "/portfolio", "value": "/portfolio" },
+            { "outputKey": "/scanner",   "value": "/scanner" },
+            { "outputKey": "/alertas",   "value": "/alertas" },
+            { "outputKey": "/ajuda",     "value": "/ajuda" },
+            { "outputKey": "/start",     "value": "/start" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tg-sinais",
+      "name": "Handler /sinais",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [920, 100],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.MTM_API_URL }}/trading/signals",
+        "headers": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.CRON_SECRET }}" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "tg-portfolio",
+      "name": "Handler /portfolio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [920, 200],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.MTM_API_URL }}/portfolio/summary",
+        "headers": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.CRON_SECRET }}" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "tg-scanner",
+      "name": "Handler /scanner",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 300],
+      "parameters": {
+        "jsCode": "return [{ json: { text: '📊 *Scanner GoldKiller MTM*\\n\\n🔗 Acede ao scanner em tempo real:\\nhttps://morethanmoney.pt/trading\\n\\nDigita /sinais para ver os sinais ativos.' } }];"
+      }
+    },
+    {
+      "id": "tg-ajuda",
+      "name": "Handler /ajuda + /start",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 420],
+      "parameters": {
+        "jsCode": "const username = $('Parse Comando').first().json.username;\nreturn [{ json: { text: `👋 Olá ${username}! Bem-vindo ao bot MTM.\\n\\n📋 *Comandos disponíveis:*\\n/sinais — Sinais de trading ativos\\n/portfolio — Resumo do portfólio DCA\\n/scanner — Link para o Scanner ao vivo\\n/alertas — Configurar alertas de preço\\n/ajuda — Esta mensagem\\n\\n🌐 morethanmoney.pt` } }];"
+      }
+    },
+    {
+      "id": "tg-formatar-sinais",
+      "name": "Formatar Sinais",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 100],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst signals = data.signals || [];\nlet text = '📊 *Sinais MTM Ativos*\\n\\n';\nif (signals.length === 0) {\n  text += 'Sem sinais ativos neste momento.\\nAcompanha o scanner: https://morethanmoney.pt/trading';\n} else {\n  signals.forEach(s => {\n    text += `🎯 *${s.pair}* | ${s.direction}\\nEntry: ${s.entry} | TP: ${s.tp} | SL: ${s.sl}\\n\\n`;\n  });\n}\nreturn [{ json: { text } }];"
+      }
+    },
+    {
+      "id": "tg-formatar-portfolio",
+      "name": "Formatar Portfolio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 200],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst text = `💼 *Portfólio MTM*\\n\\n📈 Crypto: ${data.cryptoCount || 20} ativos\\n📊 ETF: ${data.etfCount || 8} ativos\\n\\n🔗 Ver completo: https://morethanmoney.pt/portfolios`;\nreturn [{ json: { text } }];"
+      }
+    },
+    {
+      "id": "tg-send",
+      "name": "Enviar para Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1360, 300],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Parse Comando').first().json.chatId }}",
+        "text": "={{ $json.text || 'Erro ao processar o comando. Tenta mais tarde.' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_web_page_preview": true
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "MTM Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Webhook":       { "main": [[{ "node": "Parse Comando", "type": "main", "index": 0 }]] },
+    "Parse Comando":          { "main": [[{ "node": "Router de Comandos", "type": "main", "index": 0 }]] },
+    "Router de Comandos": {
+      "main": [
+        [{ "node": "Handler /sinais",          "type": "main", "index": 0 }],
+        [{ "node": "Handler /portfolio",       "type": "main", "index": 0 }],
+        [{ "node": "Handler /scanner",         "type": "main", "index": 0 }],
+        [{ "node": "Handler /alertas",         "type": "main", "index": 0 }],
+        [{ "node": "Handler /ajuda + /start",  "type": "main", "index": 0 }],
+        [{ "node": "Handler /ajuda + /start",  "type": "main", "index": 0 }]
+      ]
+    },
+    "Handler /sinais":        { "main": [[{ "node": "Formatar Sinais",    "type": "main", "index": 0 }]] },
+    "Handler /portfolio":     { "main": [[{ "node": "Formatar Portfolio", "type": "main", "index": 0 }]] },
+    "Handler /scanner":       { "main": [[{ "node": "Enviar para Telegram", "type": "main", "index": 0 }]] },
+    "Handler /ajuda + /start":{ "main": [[{ "node": "Enviar para Telegram", "type": "main", "index": 0 }]] },
+    "Formatar Sinais":        { "main": [[{ "node": "Enviar para Telegram", "type": "main", "index": 0 }]] },
+    "Formatar Portfolio":     { "main": [[{ "node": "Enviar para Telegram", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "MTM" }, { "name": "Telegram" }]
+}

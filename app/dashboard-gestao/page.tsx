@@ -10,6 +10,7 @@ import CalendlySection from "@/components/dashboard-gestao/calendly-section"
 import DGOverview from "@/components/dashboard-gestao/dg-overview"
 import DGMetrics from "@/components/dashboard-gestao/dg-metrics"
 import StreamVpsPanel from "@/components/dashboard-gestao/stream-vps-panel"
+import DGN8nPanel from "@/components/dashboard-gestao/dg-n8n-panel"
 
 const VALID_SECTIONS = new Set<DGSection>(navItems.map((n) => n.id))
 
@@ -93,7 +94,8 @@ function DashboardGestaoClient() {
     activeSection !== "overview" &&
     activeSection !== "calendly" &&
     activeSection !== "metrics" &&
-    activeSection !== "stream_vps"
+    activeSection !== "stream_vps" &&
+    activeSection !== "n8n_vps"
 
   return (
     <div className="flex h-screen bg-gradient-to-b from-black via-zinc-950 to-black text-white overflow-hidden">
@@ -139,6 +141,10 @@ function DashboardGestaoClient() {
 
           {activeSection === "stream_vps" && (
             <StreamVpsPanel />
+          )}
+
+          {activeSection === "n8n_vps" && (
+            <DGN8nPanel />
           )}
 
           {isAgentSection && activeNavItem && (

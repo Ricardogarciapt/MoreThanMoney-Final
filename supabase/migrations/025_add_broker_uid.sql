@@ -1,12 +1,10 @@
--- Add broker_uid column to profiles table
--- Stores the user's TMGM account number (UID)
--- Required to access Trade Ideas and Premium Ideas channels
+# 1. Commit e push
+cd ~/Documents/Repositório\ SITE/SITE-MORETHANMONEY-FINAL-39aae3022258dec0b1e9cce3dc39489035c05b36
+git add -A && git commit -m "feat: n8n VPS panel no Dashboard Gestão (SSH + deploy + terminal)" && git push origin main
 
-ALTER TABLE profiles
-  ADD COLUMN IF NOT EXISTS broker_uid TEXT;
-
--- Index for admin queries filtering by broker presence
-CREATE INDEX IF NOT EXISTS idx_profiles_broker_uid ON profiles (broker_uid)
-  WHERE broker_uid IS NOT NULL;
-
-COMMENT ON COLUMN profiles.broker_uid IS 'TMGM broker account number (UID). Required for Trade Ideas channel access.';
+# 2. Adicionar variáveis no Vercel
+# VPS_HOST = 13.140.146.158
+# VPS_USER = root
+# VPS_PASSWORD = Superacao2022#
+# VPS_PORT = 22
+# N8N_DIR = /opt/mtm-n8n

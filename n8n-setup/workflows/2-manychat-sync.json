@@ -1,0 +1,132 @@
+{
+  "name": "MTM — ManyChat → Supabase Sync",
+  "nodes": [
+    {
+      "id": "mc-webhook",
+      "name": "ManyChat Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "manychat-mtm",
+      "parameters": {
+        "path": "manychat-mtm",
+        "responseMode": "onReceived",
+        "responseData": "firstEntryJson"
+      }
+    },
+    {
+      "id": "mc-parse",
+      "name": "Parse Subscriber",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst subscriber = {\n  manychat_id: body.id || body.subscriber_id,\n  first_name: body.first_name || '',\n  last_name: body.last_name || '',\n  full_name: `${body.first_name || ''} ${body.last_name || ''}`.trim(),\n  instagram_handle: body.ig_username || body.username || '',\n  email: body.email || '',\n  phone: body.phone || '',\n  tags: body.tags || [],\n  last_interaction: new Date().toISOString(),\n  source: 'manychat_instagram',\n  status: 'lead'\n};\n\n// Determinar score e stage baseado nas tags\nconst tags = subscriber.tags.map(t => (t.name || t).toLowerCase());\nlet score = 1;\nlet stage = 'cold';\n\nif (tags.some(t => t.includes('bootcamp') || t.includes('sistema'))) { score = 4; stage = 'hot'; }\nelse if (tags.some(t => t.includes('liberdade') || t.includes('scanner'))) { score = 3; stage = 'warm'; }\nelse if (tags.some(t => t.includes('lead_ativo') || t.includes('resultados'))) { score = 2; stage = 'warm'; }\n\nsubscriber.score = score;\nsubscriber.stage = stage;\n\nreturn [{ json: subscriber }];"
+      }
+    },
+    {
+      "id": "mc-upsert-supabase",
+      "name": "Upsert em Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/mtm_leads",
+        "headers": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" },
+            { "name": "Prefer",        "value": "resolution=merge-duplicates" }
+          ]
+        },
+        "body": {
+          "mode": "json",
+          "jsonParameters": false,
+          "bodyParameters": {
+            "parameters": [
+              { "name": "manychat_id",      "value": "={{ $json.manychat_id }}" },
+              { "name": "first_name",       "value": "={{ $json.first_name }}" },
+              { "name": "last_name",        "value": "={{ $json.last_name }}" },
+              { "name": "full_name",        "value": "={{ $json.full_name }}" },
+              { "name": "instagram_handle", "value": "={{ $json.instagram_handle }}" },
+              { "name": "email",            "value": "={{ $json.email }}" },
+              { "name": "score",            "value": "={{ $json.score }}" },
+              { "name": "stage",            "value": "={{ $json.stage }}" },
+              { "name": "source",           "value": "manychat_instagram" },
+              { "name": "last_interaction", "value": "={{ $json.last_interaction }}" }
+            ]
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "mc-check-hot",
+      "name": "É lead quente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "hot-check",
+              "leftValue": "={{ $('Parse Subscriber').first().json.score }}",
+              "rightValue": 3,
+              "operator": { "type": "number", "operation": "gte" }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "mc-notify-telegram",
+      "name": "Notificar Telegram — Lead Quente",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 200],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $env.TELEGRAM_ADMIN_CHAT_ID }}",
+        "text": "={{ '🔥 *Lead Quente ManyChat!*\\n\\n👤 ' + $('Parse Subscriber').first().json.full_name + '\\n📸 @' + $('Parse Subscriber').first().json.instagram_handle + '\\n⭐ Score: ' + $('Parse Subscriber').first().json.score + '/5\\n🏷️ Stage: ' + $('Parse Subscriber').first().json.stage + '\\n\\n👉 Ação: Enviar DM de qualificação nas próximas 2h' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "credentials": {
+        "telegramApi": { "id": "1", "name": "MTM Telegram Bot" }
+      }
+    },
+    {
+      "id": "mc-success",
+      "name": "Resposta OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 420],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"stage\": \"{{ $('Parse Subscriber').first().json.stage }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "ManyChat Webhook":  { "main": [[{ "node": "Parse Subscriber",         "type": "main", "index": 0 }]] },
+    "Parse Subscriber":  { "main": [[{ "node": "Upsert em Supabase",       "type": "main", "index": 0 }]] },
+    "Upsert em Supabase":{ "main": [[{ "node": "É lead quente?",           "type": "main", "index": 0 }]] },
+    "É lead quente?": {
+      "main": [
+        [{ "node": "Notificar Telegram — Lead Quente", "type": "main", "index": 0 }],
+        [{ "node": "Resposta OK",                      "type": "main", "index": 0 }]
+      ]
+    },
+    "Notificar Telegram — Lead Quente": { "main": [[{ "node": "Resposta OK", "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "MTM" }, { "name": "ManyChat" }, { "name": "Leads" }]
+}
