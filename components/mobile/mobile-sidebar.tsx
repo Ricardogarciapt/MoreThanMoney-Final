@@ -23,6 +23,7 @@ import {
   Bell,
   MessageSquare,
   TrendingUp,
+  Send,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -348,6 +349,18 @@ export default function MobileSidebar({
                 <TrendingUp className="w-5 h-5" />
                 <span className="flex-1 text-left font-medium">Abrir Conta</span>
                 <ChevronRight className="w-4 h-4" />
+              </Link>
+
+              {/* Copygram — addon Telegram → MT5 */}
+              <Link
+                href="/mtmcopy"
+                onClick={onClose}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
+              >
+                <Send className="w-5 h-5 text-[#D2A63C]" />
+                <span className="flex-1 text-left font-medium">Copygram</span>
+                <Badge className="bg-[#D2A63C]/15 text-[#D2A63C] border-[#D2A63C]/30 text-[10px] px-1.5 py-0">+20€/mês</Badge>
+                <ChevronRight className="w-4 h-4 text-gray-500" />
               </Link>
 
               {isAppOnlyUser ? (

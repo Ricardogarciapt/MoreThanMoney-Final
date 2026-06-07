@@ -4,6 +4,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
+import { sendScannerAccessEmail, sendCopygramSetupNotification } from '@/lib/email-service'
+
+// Nomes amigáveis dos scanners por planId (para o email de instruções TradingView)
+const SCANNER_PLAN_NAMES: Record<string, string> = {
+  goldkiller_lifetime: 'Scanner Gold Killer (Vitalício)',
+  mtm_scanner_monthly: 'Scanner MTM V3.4 (Mensal)',
+  mtm_scanner_lifetime: 'Scanner MTM V3.4 (Vitalício)',
+  scanners_monthly: 'Pack Total de Scanners MTM (Mensal)',
+  scanners_semestral: 'Pack Total de Scanners MTM (Semestral)',
+  scanners_lifetime: 'Pack Total de Scanners MTM (Vitalício — inclui Sensei X)',
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
 const supabase = createClient(
@@ -72,6 +83,70 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     .from('checkout_sessions')
     .update({ status: 'completed', completed_at: new Date().toISOString() })
     .eq('stripe_session_id', session.id)
+
+  // Compra de scanner com username TradingView → enviar email com instruções de acesso
+  const tvUsername = session.metadata?.tradingview_username
+  const planId = session.metadata?.plan
+  if (tvUsername && planId && SCANNER_PLAN_NAMES[planId]) {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', userId)
+        .single()
+
+      if (profile?.email) {
+        await sendScannerAccessEmail(
+          profile.email,
+          profile.full_name || 'Trader',
+          SCANNER_PLAN_NAMES[planId],
+          tvUsername
+        )
+      }
+
+      // Guardar o username TradingView no perfil para referência/gestão de acessos
+      await supabase
+        .from('profiles')
+        .update({ tradingview_username: tvUsername })
+        .eq('id', userId)
+        .then(undefined, () => {/* coluna pode não existir ainda — não bloquear o fluxo */})
+    } catch (err) {
+      console.error('Erro ao enviar email de acesso ao scanner:', err)
+    }
+  }
+
+  // Addon Copygram (Telegram → MT5) — notificar a equipa para finalizar o onboarding manual
+  if (planId === 'mtmcopy_addon_monthly') {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('id', userId)
+        .single()
+
+      const { data: existingConn } = await supabase
+        .from('mtmcopy_connections')
+        .select('telegram_channel, mt5_server, mt5_login_last4')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      await supabase
+        .from('mtmcopy_connections')
+        .upsert({ user_id: userId, is_active: true, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+
+      if (profile?.email) {
+        await sendCopygramSetupNotification(
+          profile.email,
+          profile.full_name || 'Trader',
+          existingConn?.telegram_channel,
+          existingConn?.mt5_server,
+          existingConn?.mt5_login_last4
+        )
+      }
+    } catch (err) {
+      console.error('Erro ao processar activação do Copygram:', err)
+    }
+  }
 
   if (session.mode === 'payment') {
     const pack = session.metadata?.pack

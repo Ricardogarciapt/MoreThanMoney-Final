@@ -19,6 +19,9 @@ import {
   UserCheck,
   Quote,
   ChevronDown,
+  RefreshCw,
+  Bot,
+  ShieldCheck,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -38,57 +41,57 @@ const PATHS = [
     color: "#D2A63C",
     bg: "from-[#D2A63C]/10 to-[#BB8525]/5",
     border: "border-[#D2A63C]/30",
-    description: "Aprofunda os teus conhecimentos em Trading, Forex, Cripto, Marketing Digital e IA.",
+    description: "Sobe de nível com o Pack Premium: cursos completos de Forex, Criptomoedas, Marketing Digital e IA, mais a comunidade e a app MTM incluídas.",
     features: [
-      "Cursos estruturados de Forex e Cripto",
-      "Marketing Digital e Inteligência Artificial",
-      "Comunidade ativa de traders",
-      "Aulas ao vivo com o Ricardo",
-      "Mentor AI disponível 24/7",
+      "Cursos de Forex, Criptomoedas, Marketing Digital e AI",
+      "Comunidade Skool MTM + grupo ativo de traders",
+      "Aulas e Live Sessions Premium com o Ricardo",
+      "Mentor AI avançado disponível 24/7",
+      "Tudo o que está incluído no Pack Membro",
     ],
     cta: "Ver Pack Premium",
     href: "/register?plan=premium",
     badge: "Pack Premium — €65/mês",
   },
   {
-    id: "tech",
+    id: "balance",
+    emoji: "⚖️",
+    icon: Smartphone,
+    label: "Quero equilíbrio",
+    color: "#10B981",
+    bg: "from-emerald-500/10 to-emerald-900/5",
+    border: "border-emerald-500/30",
+    description: "O melhor dos dois mundos: a app MoreThanMoney completa + o pack certo para o teu momento — sem teres de escolher entre comunidade, ferramentas e ritmo próprio.",
+    features: [
+      "App MTM System completa (iOS + Android)",
+      "Pack Membro €35/mês ou Pack Premium €65/mês",
+      "Feed social, chat da comunidade e portfólio ao vivo",
+      "Mentor AI + Live Sessions de trading",
+      "Escolhe e muda de pack quando quiseres",
+    ],
+    cta: "Ver os Packs",
+    href: "/register",
+    badge: "Pack Membro €35 · Premium €65/mês",
+  },
+  {
+    id: "tools",
     emoji: "🛠️",
     icon: BarChart3,
     label: "Quero as ferramentas de análise",
     color: "#8B5CF6",
     bg: "from-purple-500/10 to-purple-900/5",
     border: "border-purple-500/30",
-    description: "Acede aos scanners TradingView exclusivos da MTM para identificar oportunidades no mercado.",
+    description: "Acede aos scanners TradingView exclusivos da MTM para identificar oportunidades no mercado — sem teres de estar colado aos gráficos o dia todo.",
     features: [
       "Gold Killer Scanner — Ouro e XAU/USD",
       "MTM Scanner V3.4 — Multi-ativo",
-      "Sensei X — Estratégia avançada",
-      "Pack Total com todos os scanners",
+      "Sensei X — estratégia de IA multi-confluência",
+      "Pack Total com todos os scanners incluídos",
       "Tutorial de configuração incluído",
     ],
     cta: "Ver Scanners",
     href: "/scanners",
     badge: "Pack Total — €35/mês",
-  },
-  {
-    id: "app",
-    emoji: "📱",
-    icon: Smartphone,
-    label: "Quero a app e a comunidade",
-    color: "#10B981",
-    bg: "from-emerald-500/10 to-emerald-900/5",
-    border: "border-emerald-500/30",
-    description: "Junta-te à comunidade MTM com acesso ao feed, chat, portfólio ao vivo e mentor AI.",
-    features: [
-      "Feed social da comunidade MTM",
-      "Chat em tempo real (iOS e Android)",
-      "Portfólio MTM ao vivo",
-      "Mentor AI de trading 24/7",
-      "Live sessions com Ricardo",
-    ],
-    cta: "Entrar na App",
-    href: "/register?plan=app_member",
-    badge: "Pack Membro — €35/mês",
   },
 ]
 
@@ -96,46 +99,46 @@ const PATHS = [
 
 const TECHNOLOGIES = [
   {
-    id: "app",
-    emoji: "📱",
-    title: "MTM System App",
-    subtitle: "A tua central de comando",
-    color: "#D2A63C",
-    gradient: "from-[#D2A63C]/20 to-[#BB8525]/5",
-    border: "border-[#D2A63C]/30",
+    id: "iq-sync",
+    emoji: "🔄",
+    title: "IQ Sync",
+    subtitle: "Mantém-te ligado em tempo real",
+    color: "#3B82F6",
+    gradient: "from-blue-900/30 to-cyan-900/10",
+    border: "border-blue-500/30",
     description:
-      "Uma app construída de raiz para traders — com feed social, chat da comunidade, portfólio real da MTM, live sessions e um mentor AI que responde às tuas dúvidas a qualquer hora.",
+      "Sistema \"Receive → Review → Confirm\": recebes as ideias de mercado em tempo real, revês cada uma e confirmas tu mesmo a execução. Mantens sempre o controlo final de cada decisão — sem automação cega.",
     features: [
-      { icon: MessageSquare, label: "Chat da comunidade em tempo real" },
-      { icon: TrendingUp, label: "Portfólio MTM ao vivo" },
-      { icon: Video, label: "Live sessions de trading" },
-      { icon: Brain, label: "Mentor AI disponível 24/7" },
-      { icon: Users, label: "Feed social de traders" },
+      { icon: RefreshCw, label: "Sincronização de ideias em tempo real" },
+      { icon: ShieldCheck, label: "Confirmação manual — controlo total" },
+      { icon: Smartphone, label: "Funciona direto da app MTM System" },
+      { icon: Zap, label: "Execução rápida sem saltar entre apps" },
+      { icon: TrendingUp, label: "Ideal para quem quer aprender a decidir" },
     ],
-    cta: "Explorar App",
-    href: "/register",
-    platforms: ["iOS App Store", "Android (PWA)"],
+    cta: "Explorar Tecnologia",
+    href: "/automation",
+    platforms: ["App MTM System", "iOS · Android"],
   },
   {
-    id: "scanners",
-    emoji: "🔍",
-    title: "Scanners TradingView",
-    subtitle: "Análise automática do mercado",
-    color: "#8B5CF6",
-    gradient: "from-purple-500/20 to-purple-900/5",
+    id: "iq-auto",
+    emoji: "🤖",
+    title: "IQ Auto",
+    subtitle: "A revolução da automação",
+    color: "#A855F7",
+    gradient: "from-purple-900/30 to-pink-900/10",
     border: "border-purple-500/30",
     description:
-      "Algoritmos exclusivos que correm directamente no TradingView e identificam setups de alta probabilidade em Ouro, Forex e outros activos — sem precisares de estar colado aos gráficos.",
+      "Experiência \"set-it-once\": configuras uma vez e ficas ligado às estratégias de trading da MTM, com a tua conta a manter-se alinhada em segundo plano — automação completa para quem quer libertar tempo.",
     features: [
-      { icon: BarChart3, label: "Gold Killer — XAU/USD e derivados" },
-      { icon: Zap, label: "MTM Scanner V3.4 — Multi-ativo" },
-      { icon: Brain, label: "Sensei X — Estratégia premium" },
-      { icon: TrendingUp, label: "Alertas automáticos por email" },
-      { icon: BookOpen, label: "Tutorial de configuração em vídeo" },
+      { icon: Bot, label: "Configuração única — depois corre sozinho" },
+      { icon: Zap, label: "Estratégias MTM sempre atualizadas" },
+      { icon: ShieldCheck, label: "Conta sempre alinhada em segundo plano" },
+      { icon: Brain, label: "Pensado para quem quer total liberdade" },
+      { icon: TrendingUp, label: "Add-on premium a partir de $59,99/mês" },
     ],
-    cta: "Ver Scanners",
-    href: "/scanners",
-    platforms: ["TradingView — invite-only"],
+    cta: "Explorar Tecnologia",
+    href: "/automation",
+    platforms: ["Add-on IQONIC", "Integração via IQ Sync"],
   },
 ]
 
@@ -263,6 +266,35 @@ export default function NewLandingPage() {
             <strong className="text-white">tecnologia de análise</strong> e uma{" "}
             <strong className="text-white">comunidade ativa</strong> para trader que quer evoluir de verdade.
           </p>
+
+          {/* Vídeo de Apresentação */}
+          <div className="mb-12 max-w-4xl mx-auto">
+            <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-900 border border-mtm-primary/30">
+              <iframe
+                src="https://www.youtube.com/embed/dgd0-mLIrMw?autoplay=1&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3"
+                title="Apresentação MoreThanMoney"
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+            </div>
+          </div>
+
+          {/* História Pessoal */}
+          <div className="bg-gradient-to-r from-mtm-primary/10 to-amber-500/10 border border-mtm-primary/30 rounded-xl p-6 mb-8 max-w-4xl mx-auto">
+            <p className="text-xl md:text-2xl text-gray-300 mb-4 max-w-3xl mx-auto">
+              Aos 41 anos, depois de 3 anos a usar a aprendizagem no modelo da <strong className="text-mtm-primary">IQONIC</strong> e seguir os ensinamentos de <strong>Warren Buffett</strong> e <strong>Eric Worre</strong>,
+              criei algo que transformou vidas.
+            </p>
+            <p className="text-lg text-gray-400 mb-4">
+              <em>"Não é sobre ter mais dinheiro, é sobre ter mais <strong>liberdade</strong> para viver a vida que verdadeiramente queres."</em>
+            </p>
+            <p className="text-base text-gray-300 max-w-3xl mx-auto">
+              A MoreThanMoney nasceu da necessidade real de combinar <strong className="text-white">educação sólida</strong> com tecnologia avançada,
+              criando um sistema que <strong>duplica resultados</strong> através de <strong>ação disciplinada</strong>.
+            </p>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Button
@@ -476,20 +508,119 @@ export default function NewLandingPage() {
             })}
           </div>
 
-          {/* App mobile mockup visual */}
-          <div className="mt-16 rounded-2xl border border-[#D2A63C]/20 bg-gray-900/50 p-8 text-center">
-            <p className="text-sm text-gray-500 mb-4 uppercase tracking-widest">MTM System App</p>
-            <div className="flex justify-center gap-4 flex-wrap">
-              {["Feed", "Chat", "Portfólio", "Scanner", "Mentor AI", "Live"].map((tab) => (
-                <span
-                  key={tab}
-                  className="px-4 py-2 rounded-full bg-gray-800 text-sm text-gray-300 border border-gray-700"
-                >
-                  {tab}
-                </span>
-              ))}
+          {/* App mobile — pré-visualização em formato telemóvel */}
+          <div className="mt-16 rounded-2xl border border-[#D2A63C]/20 bg-gray-900/50 p-6 md:p-10">
+            <div className="text-center mb-10">
+              <p className="text-sm text-[#D2A63C] mb-2 uppercase tracking-widest font-bold">MTM System App</p>
+              <h3 className="text-2xl md:text-3xl font-black mb-2">Tudo isto, no bolso</h3>
+              <p className="text-gray-400 text-sm max-w-lg mx-auto">
+                Uma pré-visualização real do que encontras dentro da app — feed, chat, portfólio, scanners e mentor AI, em formato telemóvel.
+              </p>
             </div>
-            <p className="text-xs text-gray-600 mt-4">Disponível para iOS e Android</p>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
+              {/* Frame 1 — Feed social */}
+              <div className="w-[230px] rounded-[2rem] border-4 border-gray-800 bg-black shadow-2xl overflow-hidden">
+                <div className="h-5 bg-gray-900 flex items-center justify-center">
+                  <div className="w-16 h-2.5 rounded-full bg-gray-800" />
+                </div>
+                <div className="bg-gradient-to-b from-gray-900 to-black p-3 space-y-2.5 min-h-[280px]">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold px-1">Feed</p>
+                  <div className="rounded-xl bg-gray-900/80 border border-gray-800 p-2.5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-full bg-[#D2A63C]/30" />
+                      <div className="flex-1">
+                        <p className="text-[10px] font-bold text-white">Ricardo MTM</p>
+                        <p className="text-[8px] text-gray-500">há 12 min</p>
+                      </div>
+                    </div>
+                    <p className="text-[9px] text-gray-300 leading-relaxed">XAU/USD a testar resistência-chave 📈 Vamos acompanhar de perto…</p>
+                    <div className="flex items-center gap-3 mt-2 text-[8px] text-gray-500">
+                      <span>❤️ 128</span><span>💬 24</span><span>↗ partilhar</span>
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-gray-900/80 border border-gray-800 p-2.5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500/30" />
+                      <div className="flex-1">
+                        <p className="text-[10px] font-bold text-white">Comunidade MTM</p>
+                        <p className="text-[8px] text-gray-500">há 1h</p>
+                      </div>
+                    </div>
+                    <p className="text-[9px] text-gray-300 leading-relaxed">Live Session esta noite às 21h — não percas! 🔴</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Frame 2 — Chat em tempo real */}
+              <div className="w-[230px] rounded-[2rem] border-4 border-gray-800 bg-black shadow-2xl overflow-hidden">
+                <div className="h-5 bg-gray-900 flex items-center justify-center">
+                  <div className="w-16 h-2.5 rounded-full bg-gray-800" />
+                </div>
+                <div className="bg-gradient-to-b from-gray-900 to-black p-3 space-y-2 min-h-[280px] flex flex-col">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold px-1">Chat · Comunidade</p>
+                  <div className="self-start max-w-[75%] rounded-xl rounded-tl-sm bg-gray-800 px-2.5 py-1.5">
+                    <p className="text-[9px] text-gray-200">Alguém mais a seguir o setup do EUR/USD? 👀</p>
+                  </div>
+                  <div className="self-end max-w-[75%] rounded-xl rounded-tr-sm bg-[#D2A63C]/90 px-2.5 py-1.5">
+                    <p className="text-[9px] text-black font-medium">Sim! Já entrei na zona dos 1.0850 ✅</p>
+                  </div>
+                  <div className="self-start max-w-[75%] rounded-xl rounded-tl-sm bg-gray-800 px-2.5 py-1.5">
+                    <p className="text-[9px] text-gray-200">Boa gestão 🔥 manda print depois</p>
+                  </div>
+                  <div className="mt-auto flex items-center gap-2 rounded-full bg-gray-900 border border-gray-800 px-3 py-1.5">
+                    <p className="text-[8px] text-gray-500 flex-1">Escreve uma mensagem…</p>
+                    <span className="text-[10px]">➤</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Frame 3 — Portfólio + Scanner */}
+              <div className="w-[230px] rounded-[2rem] border-4 border-gray-800 bg-black shadow-2xl overflow-hidden">
+                <div className="h-5 bg-gray-900 flex items-center justify-center">
+                  <div className="w-16 h-2.5 rounded-full bg-gray-800" />
+                </div>
+                <div className="bg-gradient-to-b from-gray-900 to-black p-3 space-y-2.5 min-h-[280px]">
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold px-1">Portfólio ao vivo</p>
+                  <div className="rounded-xl bg-gray-900/80 border border-gray-800 p-2.5">
+                    <p className="text-[8px] text-gray-500">Saldo total</p>
+                    <p className="text-base font-black text-emerald-400">+18,4%</p>
+                    <div className="flex items-end gap-1 h-8 mt-1.5">
+                      {[40, 55, 35, 70, 60, 80, 65].map((h, i) => (
+                        <div key={i} className="flex-1 rounded-sm bg-emerald-500/40" style={{ height: `${h}%` }} />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold px-1 pt-1">Scanner · Sinal</p>
+                  <div className="rounded-xl bg-gray-900/80 border border-[#D2A63C]/30 p-2.5 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-bold text-white">XAU/USD</p>
+                      <p className="text-[8px] text-emerald-400">Compra detetada</p>
+                    </div>
+                    <span className="text-[8px] px-2 py-1 rounded-full bg-[#D2A63C]/20 text-[#D2A63C] font-bold">BUY</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bullet points — porquê a app */}
+            <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3 max-w-2xl mx-auto mt-10 text-sm text-gray-300">
+              {[
+                "Feed social com as ideias e análises da equipa MTM",
+                "Chat em tempo real com a comunidade (iOS e Android)",
+                "Portfólio MTM ao vivo, sempre atualizado",
+                "Scanners com sinais diretos no teu telemóvel",
+                "Mentor AI disponível 24/7 para tirar dúvidas",
+                "Live Sessions e notificações em tempo real",
+              ].map((point) => (
+                <li key={point} className="flex items-start gap-2.5">
+                  <Check className="w-4 h-4 text-[#D2A63C] mt-0.5 flex-shrink-0" />
+                  {point}
+                </li>
+              ))}
+            </ul>
+
+            <p className="text-xs text-gray-600 mt-8 text-center">Disponível para iOS e Android</p>
             <div className="flex justify-center gap-4 mt-4">
               <a
                 href="https://apps.apple.com"

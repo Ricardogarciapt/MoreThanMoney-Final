@@ -96,6 +96,68 @@ body.mobile-route {
   overscroll-behavior-x: none;
 }
 
+/* ============================================================
+   Tema Claro — App Mobile (Definições → Aparência)
+   A app é construída com classes Tailwind "dark-first"
+   (bg-black, bg-gray-900, text-white, etc.). Em vez de
+   reescrever cada componente, aplicamos uma camada de
+   substituição visual quando o <html> tem a classe "light"
+   (definida via next-themes), restrita ao contentor da
+   app-mobile — o resto do site mantém-se inalterado.
+   ============================================================ */
+.light .mobile-app-container,
+.light .app-mobile-container {
+  background-color: #f7f7f8 !important;
+  color: #0a0a0a !important;
+}
+.light .mobile-app-container [class*="bg-black"],
+.light .mobile-app-container [class*="bg-gray-950"],
+.light .mobile-app-container [class*="bg-gray-900"],
+.light .app-mobile-container [class*="bg-black"],
+.light .app-mobile-container [class*="bg-gray-950"],
+.light .app-mobile-container [class*="bg-gray-900"] {
+  background-color: #ffffff !important;
+}
+.light .mobile-app-container [class*="bg-gray-800"],
+.light .mobile-app-container [class*="bg-gray-700"],
+.light .app-mobile-container [class*="bg-gray-800"],
+.light .app-mobile-container [class*="bg-gray-700"] {
+  background-color: #eef0f2 !important;
+}
+.light .mobile-app-container [class*="text-white"],
+.light .app-mobile-container [class*="text-white"] {
+  color: #0a0a0a !important;
+}
+.light .mobile-app-container [class*="text-gray-200"],
+.light .mobile-app-container [class*="text-gray-300"],
+.light .app-mobile-container [class*="text-gray-200"],
+.light .app-mobile-container [class*="text-gray-300"] {
+  color: #3f3f46 !important;
+}
+.light .mobile-app-container [class*="text-gray-400"],
+.light .mobile-app-container [class*="text-gray-500"],
+.light .app-mobile-container [class*="text-gray-400"],
+.light .app-mobile-container [class*="text-gray-500"] {
+  color: #6b7280 !important;
+}
+.light .mobile-app-container [class*="text-gray-600"],
+.light .app-mobile-container [class*="text-gray-600"] {
+  color: #9ca3af !important;
+}
+.light .mobile-app-container [class*="border-gray-800"],
+.light .mobile-app-container [class*="border-gray-700"],
+.light .app-mobile-container [class*="border-gray-800"],
+.light .app-mobile-container [class*="border-gray-700"] {
+  border-color: #e4e4e7 !important;
+}
+.light .mobile-app-container [class*="divide-gray-700"],
+.light .mobile-app-container [class*="divide-gray-800"],
+.light .app-mobile-container [class*="divide-gray-700"],
+.light .app-mobile-container [class*="divide-gray-800"] {
+  --tw-divide-opacity: 1;
+  border-color: #e4e4e7 !important;
+}
+
 /* Custom animations */
 @keyframes fadeIn {
   from {

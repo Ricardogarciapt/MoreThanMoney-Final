@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useTheme } from "next-themes"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import { clearCachedSession } from "@/lib/auth-cache"
@@ -23,6 +24,8 @@ import {
   PlayCircle,
   Volume2,
   VolumeX,
+  Sun,
+  Moon,
 } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -63,13 +66,26 @@ export default function SettingsMobile() {
 
   // App preferences
   const [soundEnabled, setSoundEnabled]   = useState(true)
+  const { theme, setTheme } = useTheme()
+  const [mountedTheme, setMountedTheme]   = useState(false)
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem("mtm_notif_sound")
       if (stored !== null) setSoundEnabled(stored !== "0")
     } catch {}
+    setMountedTheme(true)
   }, [])
+
+  const THEME_OPTIONS: { id: "dark" | "light"; label: string; icon: typeof Moon }[] = [
+    { id: "dark",  label: "Escuro", icon: Moon },
+    { id: "light", label: "Claro",  icon: Sun },
+  ]
+
+  const handleThemeChange = (next: "dark" | "light") => {
+    setTheme(next)
+    toast({ title: "Tema actualizado", description: `Tema ${next === "dark" ? "escuro" : "claro"} activado.` })
+  }
 
   const toggleSound = () => {
     const next = !soundEnabled
@@ -435,6 +451,33 @@ export default function SettingsMobile() {
                 Abrir conta TMGM →
               </a>
             )}
+          </div>
+        </section>
+
+        {/* Aparência — Tema */}
+        <section>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">Aparência</h2>
+          <div className="bg-gray-800/50 rounded-xl p-2">
+            <div className="flex gap-2">
+              {THEME_OPTIONS.map(({ id, label, icon: Icon }) => {
+                const active = mountedTheme && theme === id
+                return (
+                  <button
+                    key={id}
+                    onClick={() => handleThemeChange(id)}
+                    className={`flex-1 flex flex-col items-center gap-1.5 py-3 rounded-lg border transition-colors ${
+                      active
+                        ? "border-[#D2A63C]/50 bg-[#D2A63C]/10 text-[#D2A63C]"
+                        : "border-gray-700/50 text-gray-400 hover:bg-gray-700/30"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span className="text-xs font-medium">{label}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-xs text-gray-500 mt-2 px-1">Escolhe o tema da app — a preferência fica guardada neste dispositivo.</p>
           </div>
         </section>
 

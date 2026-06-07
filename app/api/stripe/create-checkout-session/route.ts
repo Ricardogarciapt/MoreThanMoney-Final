@@ -23,6 +23,8 @@ const PRICE_IDS: Record<string, string> = {
   scanners_monthly:    process.env.STRIPE_PRICE_SCANNERS_MONTHLY    || '',
   scanners_semestral:  process.env.STRIPE_PRICE_SCANNERS_SEMESTRAL  || '',
   scanners_lifetime:   process.env.STRIPE_PRICE_SCANNERS_LIFETIME   || '',
+  // Copygram — addon de copy trading Telegram → MT5 (subscrição mensal)
+  mtmcopy_addon_monthly: process.env.STRIPE_PRICE_MTMCOPY_ADDON_MONTHLY || '',
 }
 
 const SCANNER_LIFETIME_PLANS = new Set([
@@ -85,12 +87,14 @@ export async function POST(request: NextRequest) {
         .eq('id', user.id)
     }
 
+    const cancelPath = planId === 'mtmcopy_addon_monthly' ? '/mtmcopy' : '/scanner'
+
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       mode,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`,
-      cancel_url: `${origin}/scanner`,
+      cancel_url: `${origin}${cancelPath}`,
       metadata: {
         user_id: user.id,
         plan: planId,
