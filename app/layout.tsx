@@ -59,7 +59,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt" suppressHydrationWarning>
+    <html lang="pt" translate="no" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#D2A63C" />
@@ -69,8 +69,22 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="MTM App" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+        {/* CORREÇÃO CRASH (2026-06-08): impede que o Chrome/Google Translate
+            traduza automaticamente a página. A tradução automática do
+            navegador reescreve o DOM diretamente (tal como o widget do
+            Google Translate que já tínhamos desativado), entrando em
+            conflito com a reconciliação do React e causando o crash total
+            "Minified React error #130" ~50-110s após o carregamento.
+            Confirmado ao vivo: o browser injeta um script
+            translate.googleapis.com/_/translate_http/.../tr.pt_PT... mesmo
+            com o GoogleTranslateLoader desativado — é o motor de tradução
+            NATIVO do Chrome a atuar, não o nosso código. As tags abaixo
+            (notranslate / translate=no / meta google) são o método oficial
+            para pedir ao navegador e ao Google para NUNCA traduzirem esta
+            página automaticamente. */}
+        <meta name="google" content="notranslate" />
       </head>
-      <body suppressHydrationWarning>
+      <body className="notranslate" translate="no" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <AuthProvider>
             <Suspense fallback={null}>
