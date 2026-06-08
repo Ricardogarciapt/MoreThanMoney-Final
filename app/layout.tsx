@@ -6,7 +6,8 @@ import { Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from 'sonner'
 import ConditionalNavbarFooter from "@/components/conditional-navbar-footer"
-import { GoogleTranslateLoader } from "@/components/google-translate-loader"
+// DESATIVADO (2026-06-08): ver comentário junto ao uso, mais abaixo, para detalhes do crash que este componente causava
+// import { GoogleTranslateLoader } from "@/components/google-translate-loader"
 import { AuthProvider } from "@/contexts/auth-context"
 
 export const metadata: Metadata = {
@@ -73,7 +74,15 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <AuthProvider>
             <Suspense fallback={null}>
-              <GoogleTranslateLoader />
+              {/* DESATIVADO (2026-06-08): o widget do Google Translate reescreve o DOM
+                  diretamente e entra em conflito com a reconciliação do React, causando
+                  um crash total da app ~50-110s após o carregamento em QUALQUER página
+                  (Minified React error #130 — "Element type is invalid... got: undefined").
+                  Confirmado experimentalmente: sem este componente a página sobrevive
+                  >4 minutos sem crash; com ele, crasha sempre dentro de ~2 minutos.
+                  O componente foi mantido (não apagado) caso se queira reativar com
+                  outra abordagem de tradução no futuro. Ver components/google-translate-loader.tsx */}
+              {/* <GoogleTranslateLoader /> */}
               <ConditionalNavbarFooter>
                 {children}
               </ConditionalNavbarFooter>
