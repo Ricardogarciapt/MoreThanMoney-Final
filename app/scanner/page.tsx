@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Breadcrumbs from "@/components/breadcrumbs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -129,12 +129,29 @@ interface CheckoutModalProps {
 
 function CheckoutModal({ product, scannerName, onClose }: CheckoutModalProps) {
   const [tvUsername, setTvUsername] = useState("")
+  const [guestEmail, setGuestEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [isGuest, setIsGuest] = useState<boolean | null>(null) // null = a verificar
+
+  // Verificar se está logado ao abrir o modal
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsGuest(!session?.access_token)
+    })
+  }, [])
 
   const handleCheckout = async () => {
     if (!tvUsername.trim()) {
       setError("O teu nome de utilizador do TradingView é necessário para activar o acesso.")
+      return
+    }
+    if (isGuest && !guestEmail.trim()) {
+      setError("O teu email é necessário para receberes a confirmação de pagamento.")
+      return
+    }
+    if (isGuest && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim())) {
+      setError("Email inválido. Verifica e tenta novamente.")
       return
     }
     setError("")
@@ -142,32 +159,46 @@ function CheckoutModal({ product, scannerName, onClose }: CheckoutModalProps) {
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) {
-        // Redirecionar para login com retorno
-        window.location.href = `/login?redirect=/scanner`
-        return
+
+      if (session?.access_token) {
+        // Utilizador autenticado — usa endpoint com auth
+        const res = await fetch("/api/stripe/create-checkout-session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            planId: product.planId,
+            tradingview_username: tvUsername.trim(),
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok || !data.url) {
+          setError(data.error || "Erro ao iniciar pagamento. Tenta novamente.")
+          setIsLoading(false)
+          return
+        }
+        window.location.href = data.url
+      } else {
+        // Visitante sem conta — usa endpoint guest
+        const res = await fetch("/api/stripe/scanner-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            planId: product.planId,
+            email: guestEmail.trim(),
+            tvUsername: tvUsername.trim(),
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok || !data.url) {
+          setError(data.error || "Erro ao iniciar pagamento. Tenta novamente.")
+          setIsLoading(false)
+          return
+        }
+        window.location.href = data.url
       }
-
-      const res = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          planId: product.planId,
-          tradingview_username: tvUsername.trim(),
-        }),
-      })
-
-      const data = await res.json()
-      if (!res.ok || !data.url) {
-        setError(data.error || "Erro ao iniciar pagamento. Tenta novamente.")
-        setIsLoading(false)
-        return
-      }
-
-      window.location.href = data.url
     } catch {
       setError("Erro de rede. Verifica a tua ligação e tenta novamente.")
       setIsLoading(false)
@@ -186,6 +217,26 @@ function CheckoutModal({ product, scannerName, onClose }: CheckoutModalProps) {
           <div className="text-2xl font-black text-[#D2A63C]">{product.price}</div>
           {product.priceNote && <div className="text-xs text-gray-400 mt-0.5">{product.priceNote}</div>}
         </div>
+
+        {/* Campo email — apenas para visitantes sem conta */}
+        {isGuest && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              O teu email *
+            </label>
+            <Input
+              type="email"
+              value={guestEmail}
+              onChange={e => setGuestEmail(e.target.value)}
+              placeholder="exemplo@email.com"
+              className="bg-gray-800 border-gray-700 text-white"
+              disabled={isLoading}
+            />
+            <p className="text-xs text-gray-500 mt-1.5">
+              Recebes a confirmação de compra e as instruções de acesso neste email.
+            </p>
+          </div>
+        )}
 
         <div className="mb-5">
           <label className="block text-sm font-medium text-gray-300 mb-2">
