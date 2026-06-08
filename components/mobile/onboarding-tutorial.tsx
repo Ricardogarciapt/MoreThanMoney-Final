@@ -147,36 +147,13 @@ export default function OnboardingTutorial({ onComplete, onTabChange }: Onboardi
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}
     >
-      {/* Skip button */}
-      <button
-        onClick={handleSkip}
-        className="absolute top-12 right-4 flex items-center gap-1 text-gray-400 text-sm hover:text-white"
-      >
-        Saltar <X className="w-4 h-4" />
-      </button>
-
-      {/* Step indicators */}
-      <div className="absolute top-12 left-0 right-0 flex justify-center gap-1.5 px-8">
-        {STEPS.map((_, i) => (
-          <div
-            key={i}
-            className="h-1 rounded-full flex-1 transition-all duration-300"
-            style={{
-              backgroundColor: i <= step ? current.color : "#374151",
-              maxWidth: 40,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Card */}
+      {/* Card — centrado no ecrã */}
       <div
-        className="w-full max-w-sm mx-4 mb-6 rounded-3xl overflow-hidden shadow-2xl"
+        className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl"
         style={{
-          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 16px)",
           transform: animating ? "scale(0.97)" : "scale(1)",
           transition: "transform 0.18s ease",
         }}
@@ -187,7 +164,30 @@ export default function OnboardingTutorial({ onComplete, onTabChange }: Onboardi
           style={{ background: `linear-gradient(to right, ${current.color}, ${current.color}88)` }}
         />
 
-        <div className="bg-gray-900 px-6 pt-8 pb-6">
+        <div className="bg-gray-900 px-6 pt-4 pb-6">
+          {/* Header: step indicators + skip */}
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex gap-1.5 flex-1">
+              {STEPS.map((_, i) => (
+                <div
+                  key={i}
+                  className="h-1 rounded-full flex-1 transition-all duration-300"
+                  style={{
+                    backgroundColor: i <= step ? current.color : "#374151",
+                    maxWidth: 40,
+                  }}
+                />
+              ))}
+            </div>
+            <button
+              onClick={handleSkip}
+              className="ml-3 flex items-center gap-1 text-gray-400 text-sm hover:text-white transition-colors shrink-0"
+              aria-label="Saltar tutorial"
+            >
+              Saltar <X className="w-4 h-4" />
+            </button>
+          </div>
+
           {/* Icon + Emoji */}
           <div className="flex flex-col items-center mb-6">
             {Icon ? (

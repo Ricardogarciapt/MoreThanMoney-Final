@@ -72,96 +72,65 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      // ── FLUXO: Pagamento Stripe PRIMEIRO, conta criada DEPOIS ──────────────
+      // 1. Gerar token único para esta sessão de registo
+      const regToken = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+
+      // 2. Guardar dados do formulário no localStorage (mesmo browser)
+      //    A página /success irá recuperar estes dados para criar a conta.
+      localStorage.setItem(`mtm_pending_reg_${regToken}`, JSON.stringify({
         email: formData.email,
         password: formData.password,
-        options: {
-          data: { full_name: formData.full_name, username: formData.username },
-          emailRedirectTo: `${window.location.origin}/auth/callback`
-        }
+        full_name: formData.full_name,
+        username: formData.username,
+        phone: formData.phone || '',
+        whatsapp: formData.whatsapp || '',
+        plan: selectedPlan,
+        billing: billingCycle,
+        created_at: Date.now(),
+      }))
+
+      // 3. Criar sessão Stripe (não requer conta Supabase)
+      const planId = `${selectedPlan}_${billingCycle}` // ex: app_member_monthly
+      const checkoutRes = await fetch('/api/stripe/register-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planId,
+          email: formData.email,
+          fullName: formData.full_name,
+          username: formData.username,
+          phone: formData.phone || '',
+          regToken,
+        }),
       })
 
-      if (signUpError) {
-        if (signUpError.message.includes('already registered')) {
-          setError('Este email já está registado. Tenta fazer login.')
+      if (!checkoutRes.ok) {
+        const err = await checkoutRes.json().catch(() => ({}))
+        // Plano ainda não configurado no Stripe — informar utilizador
+        if (err.error?.includes('não encontrado') || err.error?.includes('não configurado')) {
+          setError('Este plano ainda não está disponível para pagamento online. Por favor contacta-nos em suporte@morethanmoney.pt')
         } else {
-          setError(signUpError.message)
+          setError(err.error || 'Erro ao iniciar checkout. Tenta novamente.')
         }
+        localStorage.removeItem(`mtm_pending_reg_${regToken}`)
         setIsLoading(false)
         return
       }
 
-      if (data.user) {
-        const session = data.session
-
-        // Usar accessToken para criar perfil server-side (bypassa RLS)
-        const accessToken = session?.access_token
-        if (!accessToken) {
-          // Supabase pode requerer confirmação de email antes de dar sessão
-          setIsLoading(false)
-          alert('✅ Conta criada! Verifica o teu email para confirmar a conta e depois faz login.')
-          router.push('/login')
-          return
-        }
-
-        // Obter configurações de auto-approve
-        const settingsResponse = await fetch('/api/admin/settings').catch(() => null)
-        const settingsData = settingsResponse ? await settingsResponse.json().catch(() => null) : null
-        const autoApprove = settingsData?.data?.auto_approve_users ?? true
-
-        // Criar perfil via API server-side (usa admin client, sem problemas de RLS)
-        const profileResponse = await fetch('/api/auth/create-profile', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            full_name: formData.full_name,
-            username: formData.username,
-            phone: formData.phone || null,
-            whatsapp: formData.whatsapp || null,
-            subscription_plan: selectedPlan,
-            subscription_billing_cycle: billingCycle,
-            member_category: selectedPlan === 'premium' ? 'premium' : 'standard',
-            auto_approve: autoApprove,
-          }),
-        })
-
-        const profileData = await profileResponse.json()
-        if (!profileResponse.ok) {
-          setError(profileData.error || 'Erro ao criar perfil')
-          setIsLoading(false)
-          return
-        }
-
-        // Criar sessão de checkout Stripe e redirecionar para pagamento
-        const checkoutPlanId = `${selectedPlan}_${billingCycle}` // ex: app_member_monthly
-        const checkoutResponse = await fetch('/api/stripe/create-checkout-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ planId: checkoutPlanId, email: formData.email }),
-        })
-
-        if (checkoutResponse.ok) {
-          const { url } = await checkoutResponse.json()
-          if (url) {
-            window.location.href = url
-            return
-          }
-        }
-
-        // Fallback se checkout Stripe falhar (plan não configurado no Stripe)
-        const planLabel = selectedPlan === 'premium' ? 'Pack Premium' : 'Pack Membro'
-        alert(`✅ Conta criada${autoApprove ? ' e ativada' : ''}!\n\nPlano: ${planLabel} (${billingCycle === 'annual' ? 'Anual' : 'Mensal'})\n\n${autoApprove ? 'Podes fazer login agora.' : 'A tua conta está pendente de aprovação.'}`)
-        router.push('/login')
+      const { url } = await checkoutRes.json()
+      if (!url) {
+        setError('Não foi possível redirecionar para pagamento. Tenta novamente.')
+        localStorage.removeItem(`mtm_pending_reg_${regToken}`)
+        setIsLoading(false)
+        return
       }
+
+      // 4. Redirecionar para Stripe → após pagamento o cliente é enviado para /success
+      window.location.href = url
+
     } catch (err: any) {
-      setError(err.message || 'Erro ao criar conta')
-    } finally {
+      setError(err.message || 'Erro inesperado. Tenta novamente.')
       setIsLoading(false)
     }
   }
@@ -363,11 +332,15 @@ export default function RegisterPage() {
                 className="w-full font-semibold text-black"
                 style={{ background: `linear-gradient(135deg, ${activePlan.color}, ${selectedPlan === 'premium' ? '#5B21B6' : '#BB8525'})` }}>
                 {isLoading ? (
-                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" />A criar conta...</>
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" />A preparar pagamento...</>
                 ) : (
-                  `Criar conta — ${activePlan.name}`
+                  <>💳 Pagar e criar conta — {activePlan.name}</>
                 )}
               </Button>
+
+              <p className="text-xs text-center text-gray-500 -mt-1">
+                🔒 Serás redirecionado para o Stripe para pagamento seguro. Após confirmação, a tua conta é criada automaticamente.
+              </p>
 
               <div className="relative my-2">
                 <div className="absolute inset-0 flex items-center">
