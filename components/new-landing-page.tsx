@@ -90,7 +90,7 @@ const PATHS = [
       "Tutorial de configuração incluído",
     ],
     cta: "Ver Scanners",
-    href: "/scanners",
+    href: "/scanner",
     badge: "Pack Total — €35/mês",
   },
 ]
@@ -209,7 +209,7 @@ const PACKS = [
       "Actualizações incluídas",
     ],
     cta: "Ver Scanners",
-    href: "/scanners",
+    href: "/scanner",
   },
 ]
 
@@ -799,7 +799,7 @@ export default function NewLandingPage() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/scanners">
+              <Link href="/scanner">
                 <Button
                   size="lg"
                   variant="outline"
