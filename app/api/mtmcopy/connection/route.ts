@@ -94,6 +94,32 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ success: true, connection: data })
 }
 
+// PATCH: ativa ou pausa a cópia (toggle is_active)
+export async function PATCH(request: NextRequest) {
+  const user = await authenticate(request)
+  if (!user) return NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 })
+
+  const body = await request.json().catch(() => ({}))
+  const { is_active } = body
+  if (typeof is_active !== 'boolean') {
+    return NextResponse.json({ error: 'Campo is_active (boolean) obrigatório' }, { status: 400 })
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('mtmcopy_connections')
+    .update({ is_active, updated_at: new Date().toISOString() })
+    .eq('user_id', user.id)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('[mtmcopy] erro ao atualizar estado:', error)
+    return NextResponse.json({ error: 'Erro ao atualizar estado' }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true, connection: data })
+}
+
 export async function DELETE(request: NextRequest) {
   const user = await authenticate(request)
   if (!user) return NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 })

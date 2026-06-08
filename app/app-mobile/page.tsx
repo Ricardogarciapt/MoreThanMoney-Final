@@ -382,7 +382,7 @@ function AppMobileContent() {
 
   return (
     <ProtectedPage redirectPath="/login?redirect=/app-mobile" loadingMessage="A carregar app mobile...">
-      <main className="app-mobile-page bg-gray-900 min-h-screen flex flex-col">
+      <main className="app-mobile-page app-mobile-container bg-gray-900 min-h-screen flex flex-col">
         {/* Onboarding Tutorial (first use) */}
         {userLoaded && showOnboarding && (
           <OnboardingTutorial
