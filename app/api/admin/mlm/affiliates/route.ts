@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     .from('mlm_nodes')
     .select(`
       *,
-      p:profiles!mlm_nodes_user_id_fkey(username, email, full_name, subscription_plan, is_active, subscription_status),
+      p:profiles!mlm_nodes_user_id_fkey(username, email, full_name, subscription_plan, is_active, subscription_status, stripe_connect_account_id, stripe_connect_status),
       sp:profiles!mlm_nodes_sponsor_id_fkey(username),
       r:mlm_ranks(name, color, icon)
     `, { count: 'exact' })
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     for (const node of (nodes || [])) {
       const { data: prof } = await supabase
         .from('profiles')
-        .select('username, email, full_name, subscription_plan, is_active, subscription_status')
+        .select('username, email, full_name, subscription_plan, is_active, subscription_status, stripe_connect_account_id, stripe_connect_status')
         .eq('id', node.user_id)
         .single()
 
@@ -69,6 +69,8 @@ export async function GET(request: NextRequest) {
         subscription_plan: prof?.subscription_plan,
         is_active: prof?.is_active,
         subscription_status: prof?.subscription_status,
+        stripe_connect_account_id: prof?.stripe_connect_account_id ?? null,
+        stripe_connect_status: prof?.stripe_connect_status ?? null,
         sponsor_username,
         rank_name,
         rank_color,
@@ -88,6 +90,8 @@ export async function GET(request: NextRequest) {
     subscription_plan: row.p?.subscription_plan,
     is_active: row.p?.is_active,
     subscription_status: row.p?.subscription_status,
+    stripe_connect_account_id: row.p?.stripe_connect_account_id ?? null,
+    stripe_connect_status: row.p?.stripe_connect_status ?? null,
     sponsor_username: row.sp?.username ?? null,
     rank_name: row.r?.name ?? null,
     rank_color: row.r?.color ?? null,

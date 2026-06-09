@@ -551,7 +551,7 @@ async function handleSubscriptionCanceled(sub: Stripe.Subscription) {
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id')
+    .select('id, mlm_sponsor_username, subscription_renewal_count')
     .eq('stripe_customer_id', invoice.customer as string)
     .single()
 
@@ -562,6 +562,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     is_active: true,
     last_payment_at: new Date().toISOString(),
     payment_failed_count: 0,
+    subscription_renewal_count: (profile.subscription_renewal_count || 0) + 1,
   }).eq('id', profile.id)
 
   await supabase.from('payment_history').insert({
@@ -573,6 +574,85 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     billing_cycle: 'renewal',
     source: 'stripe',
   })
+
+  // ── MLM: comissão residual mensal ao patrocinador ───────────────────────
+  // Só em renovações (billing_reason === 'subscription_cycle')
+  // e apenas se o pagamento tem valor real (> 0)
+  if (
+    invoice.billing_reason === 'subscription_cycle' &&
+    invoice.amount_paid > 0 &&
+    profile.mlm_sponsor_username
+  ) {
+    try {
+      const { data: mlmSettings } = await supabase
+        .from('mlm_settings')
+        .select('is_active, direct_commission_pct')
+        .eq('id', 1)
+        .single()
+
+      if (mlmSettings?.is_active) {
+        const { data: sponsor } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .eq('username', profile.mlm_sponsor_username.trim())
+          .single()
+
+        if (sponsor) {
+          const commissionPct = (mlmSettings.direct_commission_pct || 20) / 100
+          const commissionAmount = parseFloat(((invoice.amount_paid / 100) * commissionPct).toFixed(2))
+          const planLabel = (invoice.lines?.data?.[0]?.price?.metadata?.plan)
+            || (invoice.subscription as string)
+            || 'renewal'
+
+          // Verificar idempotência — não duplicar por invoice
+          const { data: existing } = await supabase
+            .from('mlm_commissions')
+            .select('id')
+            .eq('stripe_invoice_id', invoice.id)
+            .maybeSingle()
+
+          if (!existing) {
+            await supabase.from('mlm_commissions').insert({
+              beneficiary_id: sponsor.id,
+              from_user_id: profile.id,
+              type: 'monthly_residual',
+              amount: commissionAmount,
+              currency: invoice.currency?.toUpperCase() || 'EUR',
+              source_plan: planLabel,
+              stripe_invoice_id: invoice.id,
+              source_amount_cents: invoice.amount_paid,
+              status: 'pending',
+              payout_status: 'pending',
+            })
+
+            // Actualizar pending_commissions do patrocinador
+            const { data: sponsorNode } = await supabase
+              .from('mlm_nodes')
+              .select('id, pending_commissions')
+              .eq('user_id', sponsor.id)
+              .maybeSingle()
+
+            if (sponsorNode) {
+              await supabase
+                .from('mlm_nodes')
+                .update({
+                  pending_commissions: (Number(sponsorNode.pending_commissions) || 0) + commissionAmount,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('user_id', sponsor.id)
+            } else {
+              await supabase.from('mlm_nodes').insert({
+                user_id: sponsor.id,
+                pending_commissions: commissionAmount,
+              }).then(undefined, () => {})
+            }
+          }
+        }
+      }
+    } catch (mlmErr) {
+      console.error('[MLM] Erro ao criar comissão residual:', mlmErr)
+    }
+  }
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {

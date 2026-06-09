@@ -54,19 +54,29 @@ interface MlmAffiliate {
   pending_commissions: number
   created_at: string
   member_category?: string | null
-  mtmcopier_active?: boolean
+  stripe_connect_account_id?: string | null
+  stripe_connect_status?: string | null
 }
 
 interface MlmCommission {
   id: string
   beneficiary_id: string
   beneficiary_username: string | null
+  beneficiary_name: string | null
   from_username: string | null
   type: string
   amount: number
   currency: string
   source_plan: string | null
+  source_amount_cents: number | null
+  stripe_invoice_id: string | null
+  stripe_transfer_id: string | null
+  payout_status: string | null
+  beneficiary_connect_id: string | null
+  beneficiary_connect_status: string | null
   status: string
+  approved_at: string | null
+  paid_at: string | null
   created_at: string
 }
 
@@ -338,12 +348,27 @@ export default function MlmManager({
 
   const handleBulkAction = async (action: 'approve' | 'pay') => {
     if (selectedIds.size === 0) return
-    await adminApiCall('/api/admin/mlm/commissions', {
+    const res = await adminApiCall<{
+      success: boolean
+      count: number
+      transferred?: number
+      manual?: number
+      failed?: number
+    }>('/api/admin/mlm/commissions', {
       method: 'POST',
       body: JSON.stringify({ action, ids: Array.from(selectedIds) }),
     })
     setSelectedIds(new Set())
     await fetchCommissions(commissionFilter)
+
+    if (res.success && action === 'pay' && res.data) {
+      const { transferred = 0, manual = 0, failed = 0 } = res.data
+      const parts = []
+      if (transferred > 0) parts.push(`${transferred} via Stripe Connect`)
+      if (manual > 0) parts.push(`${manual} marcadas manual`)
+      if (failed > 0) parts.push(`${failed} falharam`)
+      setError(failed > 0 ? `Atenção: ${parts.join(' · ')}` : '')
+    }
   }
 
   // ── Stats for dashboard ───────────────────────────────────────────────────
@@ -601,7 +626,7 @@ export default function MlmManager({
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-800">
-                        {['Username', 'Email', 'Patrocinador', 'Rank', 'Plano Stripe', 'Estado Sub.', 'P.Esq', 'P.Dir', 'Ganho Total', 'Data Entrada'].map((h, i) => (
+                        {['Username', 'Email', 'Patrocinador', 'Rank', 'Plano Stripe', 'Estado Sub.', 'Connect', 'P.Esq', 'P.Dir', 'Ganho Total', 'Data Entrada'].map((h, i) => (
                           <th key={i} className="px-4 py-3 text-left text-gray-400 text-xs font-medium whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
@@ -638,6 +663,16 @@ export default function MlmManager({
                               return <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>{s}</span>
                             })()}
                           </td>
+                          {/* Stripe Connect */}
+                          <td className="px-4 py-3">
+                            {(() => {
+                              const cs = aff.stripe_connect_status
+                              if (!cs || cs === 'not_started') return <span className="text-gray-600 text-xs">—</span>
+                              if (cs === 'complete') return <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">✓ Ativo</span>
+                              if (cs === 'pending') return <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">Pendente</span>
+                              return <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">{cs}</span>
+                            })()}
+                          </td>
                           <td className="px-4 py-3 text-gray-400">{aff.left_count ?? 0}</td>
                           <td className="px-4 py-3 text-gray-400">{aff.right_count ?? 0}</td>
                           <td className="px-4 py-3 text-[#D2A63C] font-medium">{formatEur(aff.total_earned ?? 0)}</td>
@@ -648,7 +683,7 @@ export default function MlmManager({
                       ))}
                       {filteredAffiliates.length === 0 && (
                         <tr>
-                          <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
+                          <td colSpan={11} className="px-4 py-12 text-center text-gray-500">
                             {affiliateSearch ? 'Nenhum afiliado encontrado para a pesquisa.' : 'Nenhum afiliado registado.'}
                           </td>
                         </tr>
@@ -727,7 +762,7 @@ export default function MlmManager({
                             }}
                           />
                         </th>
-                        {['Beneficiário', 'De', 'Tipo', 'Valor', 'Plano', 'Estado', 'Data'].map((h, i) => (
+                        {['Afiliado', 'Connect', 'De', 'Tipo', 'Venda', 'Comissão', 'Estado', 'Pagamento', 'Data'].map((h, i) => (
                           <th key={i} className="px-4 py-3 text-left text-gray-400 text-xs font-medium whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
@@ -748,16 +783,62 @@ export default function MlmManager({
                               }}
                             />
                           </td>
-                          <td className="px-4 py-3 text-white font-medium">{c.beneficiary_username ?? '—'}</td>
-                          <td className="px-4 py-3 text-gray-400">{c.from_username ?? '—'}</td>
-                          <td className="px-4 py-3 text-gray-300">{TYPE_LABELS[c.type] ?? c.type}</td>
-                          <td className="px-4 py-3 text-[#D2A63C] font-semibold">{formatEur(c.amount)}</td>
-                          <td className="px-4 py-3 text-gray-500">{c.source_plan ?? '—'}</td>
+                          {/* Afiliado */}
+                          <td className="px-4 py-3">
+                            <p className="text-white text-sm font-medium">{c.beneficiary_username ?? '—'}</p>
+                            <p className="text-gray-500 text-xs">{c.beneficiary_name ?? ''}</p>
+                          </td>
+                          {/* Stripe Connect */}
+                          <td className="px-4 py-3">
+                            {(() => {
+                              const s = c.beneficiary_connect_status
+                              if (!s || s === 'not_started') return (
+                                <span className="text-xs text-gray-600">Sem conta</span>
+                              )
+                              if (s === 'complete') return (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">✓ Connect</span>
+                              )
+                              if (s === 'pending') return (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">Pendente</span>
+                              )
+                              return (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">{s}</span>
+                              )
+                            })()}
+                          </td>
+                          {/* De */}
+                          <td className="px-4 py-3 text-gray-400 text-xs">{c.from_username ?? '—'}</td>
+                          {/* Tipo */}
+                          <td className="px-4 py-3 text-gray-300 text-xs">{TYPE_LABELS[c.type] ?? c.type}</td>
+                          {/* Venda (valor original Stripe) */}
+                          <td className="px-4 py-3 text-gray-400 text-xs">
+                            {c.source_amount_cents
+                              ? formatEur(c.source_amount_cents / 100)
+                              : <span className="text-gray-600">—</span>}
+                          </td>
+                          {/* Comissão calculada */}
+                          <td className="px-4 py-3 text-[#D2A63C] font-semibold text-sm">{formatEur(c.amount)}</td>
+                          {/* Estado */}
                           <td className="px-4 py-3">
                             <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_COLORS[c.status] ?? ''}`}>
                               {c.status}
                             </span>
                           </td>
+                          {/* Pagamento Stripe */}
+                          <td className="px-4 py-3">
+                            {c.stripe_transfer_id ? (
+                              <span className="text-xs font-mono text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">
+                                tr_{c.stripe_transfer_id.slice(-8)}
+                              </span>
+                            ) : c.payout_status === 'manual' ? (
+                              <span className="text-xs text-gray-500">Manual</span>
+                            ) : c.payout_status === 'failed' ? (
+                              <span className="text-xs text-red-400">Falhou</span>
+                            ) : (
+                              <span className="text-xs text-gray-600">—</span>
+                            )}
+                          </td>
+                          {/* Data */}
                           <td className="px-4 py-3 text-gray-500 text-xs">
                             {c.created_at ? new Date(c.created_at).toLocaleDateString('pt-PT') : '—'}
                           </td>
@@ -765,7 +846,7 @@ export default function MlmManager({
                       ))}
                       {commissions.length === 0 && (
                         <tr>
-                          <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                          <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
                             Nenhuma comissão encontrada.
                           </td>
                         </tr>

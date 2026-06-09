@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
-import { Copy, Check, Loader2, Network, TrendingUp, Users, Coins, AlertCircle } from 'lucide-react'
+import { Copy, Check, Loader2, Network, TrendingUp, Users, Coins, AlertCircle, CreditCard, ExternalLink, CheckCircle2, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -49,6 +49,115 @@ interface DownlineItem {
   rank_name: string
   joined_at: string
 }
+
+// ─── Stripe Connect Widget ────────────────────────────────────────────────────
+
+function StripeConnectWidget() {
+  const [status, setStatus] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [actioning, setActioning] = useState(false)
+
+  const fetchStatus = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/affiliate/stripe-connect')
+      if (res.ok) {
+        const data = await res.json()
+        setStatus(data.status || 'not_started')
+      }
+    } catch { /* ignore */ } finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { fetchStatus() }, [fetchStatus])
+
+  const handleConnect = async () => {
+    setActioning(true)
+    try {
+      const res = await fetch('/api/affiliate/stripe-connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: status === 'not_started' ? 'create' : 'refresh' }),
+      })
+      const data = await res.json()
+      if (data.onboarding_url) {
+        window.location.href = data.onboarding_url
+      }
+    } catch { /* ignore */ } finally { setActioning(false) }
+  }
+
+  if (loading) return null
+
+  if (status === 'complete') {
+    return (
+      <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex items-center gap-3">
+        <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
+        <div>
+          <p className="text-green-400 text-sm font-medium">Pagamentos automáticos ativos</p>
+          <p className="text-gray-500 text-xs mt-0.5">As comissões são transferidas diretamente para a tua conta bancária após aprovação.</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'pending') {
+    return (
+      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <Clock className="w-5 h-5 text-yellow-400 shrink-0" />
+          <div>
+            <p className="text-yellow-400 text-sm font-medium">Verificação em curso</p>
+            <p className="text-gray-500 text-xs mt-0.5">O Stripe está a verificar os teus dados. Normalmente demora 1-2 dias.</p>
+          </div>
+        </div>
+        <Button onClick={handleConnect} disabled={actioning} variant="outline" size="sm"
+          className="w-full border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 text-xs">
+          {actioning ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <ExternalLink className="w-3.5 h-3.5 mr-1" />}
+          Continuar verificação
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-gray-900 border border-[#D2A63C]/20 rounded-2xl p-4">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-[#D2A63C]/15 flex items-center justify-center shrink-0">
+          <CreditCard className="w-5 h-5 text-[#D2A63C]" />
+        </div>
+        <div>
+          <p className="text-white text-sm font-semibold">Receber comissões automaticamente</p>
+          <p className="text-gray-400 text-xs mt-1">
+            Liga a tua conta bancária via Stripe. Quando o admin aprovar as tuas comissões,
+            o dinheiro é transferido direto para o teu banco, em segundos.
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-col gap-2 mb-4">
+        {[
+          'Transferência SEPA automática',
+          'Seguro e verificado pelo Stripe',
+          'Sem taxas escondidas',
+        ].map(f => (
+          <div key={f} className="flex items-center gap-2 text-xs text-gray-400">
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#D2A63C] shrink-0" />
+            {f}
+          </div>
+        ))}
+      </div>
+      <Button
+        onClick={handleConnect}
+        disabled={actioning}
+        className="w-full bg-[#D2A63C] hover:bg-[#BB8525] text-black font-semibold text-sm"
+      >
+        {actioning
+          ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> A abrir Stripe...</>
+          : <><ExternalLink className="w-4 h-4 mr-2" /> Ligar conta bancária</>}
+      </Button>
+    </div>
+  )
+}
+
+// ─── Dashboard Data ────────────────────────────────────────────────────────────
 
 interface DashboardData {
   mlm_enabled: boolean
@@ -368,6 +477,9 @@ export default function MlmDashboardTab() {
           </div>
         </div>
       )}
+
+      {/* ── Stripe Connect — receber pagamentos automáticos ─────────────────── */}
+      <StripeConnectWidget />
 
       {/* Downline */}
       {downline.length > 0 && (
