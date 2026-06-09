@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       // reg_token passado na success_url para recuperar dados do localStorage
-      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}&reg_token=${regToken || ''}&new_user=1`,
+      success_url: `${origin}/success?session_id=%7BCHECKOUT_SESSION_ID%7D&plan=${planId}&reg_token=${regToken || ''}&new_user=1`,
       cancel_url: `${origin}/register`,
       metadata: {
         pending_registration: 'true',

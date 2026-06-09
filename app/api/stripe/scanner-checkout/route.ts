@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       customer: customer.id,
       mode,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}&message=Scanner+ativado+com+sucesso!`,
+      success_url: `${origin}/success?session_id=%7BCHECKOUT_SESSION_ID%7D&plan=${planId}&message=Scanner+ativado+com+sucesso!`,
       cancel_url: `${origin}/scanner`,
       metadata: {
         source: 'scanner_guest_checkout',
