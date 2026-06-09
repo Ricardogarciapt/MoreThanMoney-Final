@@ -359,7 +359,7 @@ function MessageContextMenu({
         {/* Message preview */}
         <div className="mx-4 mt-4 mb-3 px-3 py-2.5 bg-gray-800 rounded-xl border-l-[3px] border-[#D2A63C]">
           <p className="text-[11px] font-semibold text-[#D2A63C] leading-tight mb-1">
-            {isOwn ? "Tu" : (msg.profile?.full_name || msg.telegram_sender || "Membro")}
+            {isOwn ? "Tu" : (msg.profile?.full_name || msg.telegram_sender || "")}
           </p>
           <p className="text-sm text-gray-300 line-clamp-2 leading-snug">
             {msg.message_type === "video"
@@ -774,7 +774,7 @@ function MessageBubble({
             {!isOwn && (
               <div className="flex items-center gap-1.5 mb-0.5 ml-1">
                 <span className="text-xs font-semibold text-white">
-                  {isTelegram ? msg.telegram_sender || "Telegram" : msg.profile?.full_name || "Membro"}
+                  {isTelegram ? msg.telegram_sender || "Telegram" : msg.profile?.full_name || ""}
                 </span>
                 {isTelegram && <TelegramIcon className="w-3 h-3 text-[#26A5E4]" />}
                 <MemberBadge profile={msg.profile} size="xs" />
@@ -785,13 +785,13 @@ function MessageBubble({
             {msg.reply_to_message && (() => {
               const rm = msg.reply_to_message!
               const rmProfile = Array.isArray(rm.profile) ? rm.profile[0] : rm.profile
-              const rmName = rmProfile?.full_name || rm.telegram_sender || "Membro"
+              const rmName = rmProfile?.full_name || rm.telegram_sender || ""
               const rmText = rm.content?.trim()
               const rmHasImage = !!rm.image_url
               return (
                 <div className="mb-1 w-full max-w-full flex items-center gap-2 rounded-lg border-l-[3px] border-[#D2A63C] bg-black/25 pl-2 pr-1.5 py-1">
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-semibold text-[#D2A63C] leading-tight truncate">{rmName}</p>
+                    {rmName && <p className="text-[11px] font-semibold text-[#D2A63C] leading-tight truncate">{rmName}</p>}
                     {rmText ? (
                       <p className="text-[11px] text-gray-300 truncate leading-tight mt-0.5">
                         <MentionText text={rmText} />
@@ -1400,7 +1400,7 @@ function ChannelView({
               <div className="flex items-center gap-2 mb-2 pl-2 pr-1 py-1.5 bg-gray-800 rounded-xl border-l-[3px] border-[#D2A63C]">
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-semibold text-[#D2A63C] leading-tight truncate">
-                    {replyTo.profile?.full_name || replyTo.telegram_sender || "Membro"}
+                    {replyTo.profile?.full_name || replyTo.telegram_sender || ""}
                   </p>
                   {rtText ? (
                     <p className="text-[11px] text-gray-400 truncate leading-tight mt-0.5">{rtText}</p>

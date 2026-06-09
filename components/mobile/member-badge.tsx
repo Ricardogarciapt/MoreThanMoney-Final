@@ -57,13 +57,6 @@ const BADGE_STYLES: Record<string, BadgeStyle> = {
     text: "text-green-400",
     border: "border-green-500/35",
   },
-  member: {
-    label: "Membro",
-    emoji: "👤",
-    bg: "bg-gray-500/15",
-    text: "text-gray-400",
-    border: "border-gray-500/35",
-  },
   guest: {
     label: "Trial",
     emoji: "⏳",
@@ -82,7 +75,7 @@ export function resolveMemberBadge(profile?: MemberBadgeProfile | null): BadgeSt
   const cat = profile.member_category || profile.user_type
   if (!cat) return null
 
-  return BADGE_STYLES[cat] ?? BADGE_STYLES.member
+  return BADGE_STYLES[cat] ?? null
 }
 
 export default function MemberBadge({
