@@ -185,6 +185,82 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       payment_failed_count: 0,
     }).eq('id', userId)
   }
+
+  // ── MLM: atribuir comissão ao patrocinador ───────────────────────────────
+  const sponsorUsername = session.metadata?.sponsor_username
+  if (sponsorUsername && sponsorUsername.trim()) {
+    try {
+      // Verificar se MLM está ativo
+      const { data: mlmSettings } = await supabase
+        .from('mlm_settings')
+        .select('is_active, direct_commission_pct')
+        .eq('id', 1)
+        .single()
+
+      if (mlmSettings?.is_active) {
+        // Encontrar patrocinador
+        const { data: sponsor } = await supabase
+          .from('profiles')
+          .select('id, username')
+          .eq('username', sponsorUsername.trim())
+          .single()
+
+        if (sponsor) {
+          // Valor da compra (em cêntimos → euros)
+          const amountTotal = session.amount_total || 0
+          const commissionAmount = (amountTotal / 100) * ((mlmSettings.direct_commission_pct || 20) / 100)
+
+          // ID do comprador (pode ser null para guests)
+          const buyerId = userId || null
+
+          // Inserir comissão
+          await supabase.from('mlm_commissions').insert({
+            beneficiary_id: sponsor.id,
+            from_user_id: buyerId,
+            type: 'direct_referral',
+            amount: commissionAmount,
+            source_plan: session.metadata?.plan || '',
+            stripe_session_id: session.id,
+            status: 'pending',
+          })
+
+          // Atualizar pending_commissions no nó do patrocinador
+          const { data: existingNode } = await supabase
+            .from('mlm_nodes')
+            .select('id, pending_commissions')
+            .eq('user_id', sponsor.id)
+            .maybeSingle()
+
+          if (existingNode) {
+            await supabase
+              .from('mlm_nodes')
+              .update({
+                pending_commissions: (existingNode.pending_commissions || 0) + commissionAmount,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('user_id', sponsor.id)
+          } else {
+            await supabase.from('mlm_nodes').insert({
+              user_id: sponsor.id,
+              pending_commissions: commissionAmount,
+            }).then(undefined, () => {})
+          }
+
+          // Atualizar mlm_sponsor_username no perfil do comprador
+          if (buyerId) {
+            await supabase
+              .from('profiles')
+              .update({ mlm_sponsor_username: sponsorUsername.trim() })
+              .eq('id', buyerId)
+              .then(undefined, () => {})
+          }
+        }
+      }
+    } catch (mlmErr) {
+      console.error('[MLM] Erro ao atribuir comissão:', mlmErr)
+      // Nunca falhar o webhook por erros MLM
+    }
+  }
 }
 
 async function handleSubscriptionUpdate(sub: Stripe.Subscription) {

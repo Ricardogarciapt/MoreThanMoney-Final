@@ -26,7 +26,7 @@ const SUBSCRIPTION_PLANS = new Set(['mtm_scanner_monthly', 'scanners_monthly'])
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}))
-    const { planId, email, tvUsername } = body
+    const { planId, email, tvUsername, sponsorCode } = body
 
     if (!planId || !email) {
       return NextResponse.json(
@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
         plan: planId,
         tradingview_username: tvUsername.trim(),
         email: email.trim(),
+        sponsor_username: sponsorCode || '',
       },
       // Pré-preencher email no formulário Stripe
       customer_email: undefined, // customer já tem o email

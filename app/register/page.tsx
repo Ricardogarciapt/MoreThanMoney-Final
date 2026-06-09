@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertCircle, Eye, EyeOff, Smartphone, Globe, Check, Loader2 } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, Smartphone, Globe, Check, Loader2, CheckCircle2, XCircle } from 'lucide-react'
 import Link from 'next/link'
 
 type PlanId = 'app_member_monthly' | 'app_member_annual' | 'premium_monthly' | 'premium_annual'
@@ -42,8 +42,11 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     phone: '',
-    whatsapp: ''
+    whatsapp: '',
+    sponsorUsername: '',
   })
+  const [sponsorStatus, setSponsorStatus] = useState<{ valid: boolean; name?: string } | null>(null)
+  const [validatingSponsor, setValidatingSponsor] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState('')
@@ -57,6 +60,20 @@ export default function RegisterPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const validateSponsor = async (username: string) => {
+    if (!username.trim()) { setSponsorStatus(null); return }
+    setValidatingSponsor(true)
+    try {
+      const res = await fetch(`/api/mlm/validate-sponsor?username=${encodeURIComponent(username.trim())}`)
+      const data = await res.json()
+      setSponsorStatus(data)
+    } catch {
+      setSponsorStatus({ valid: false })
+    } finally {
+      setValidatingSponsor(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,6 +102,7 @@ export default function RegisterPage() {
         username: formData.username,
         phone: formData.phone || '',
         whatsapp: formData.whatsapp || '',
+        sponsor_username: formData.sponsorUsername || '',
         plan: selectedPlan,
         billing: billingCycle,
         created_at: Date.now(),
@@ -102,6 +120,7 @@ export default function RegisterPage() {
           username: formData.username,
           phone: formData.phone || '',
           regToken,
+          sponsorUsername: formData.sponsorUsername || '',
         }),
       })
 
@@ -298,6 +317,37 @@ export default function RegisterPage() {
                     onChange={handleInputChange} className="bg-gray-800 border-gray-700 text-white"
                     placeholder="+351 912 345 678" disabled={isLoading} />
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="sponsorUsername" className="text-gray-300">
+                  Código do patrocinador <span className="text-gray-500 font-normal">(opcional)</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="sponsorUsername"
+                    name="sponsorUsername"
+                    type="text"
+                    value={formData.sponsorUsername}
+                    onChange={handleInputChange}
+                    onBlur={() => validateSponsor(formData.sponsorUsername)}
+                    className="bg-gray-800 border-gray-700 text-white pr-8"
+                    placeholder="Username de quem te convidou"
+                    disabled={isLoading}
+                  />
+                  {validatingSponsor && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-gray-400" />
+                  )}
+                </div>
+                {sponsorStatus !== null && !validatingSponsor && (
+                  <div className={`flex items-center gap-1.5 mt-1 text-xs ${sponsorStatus.valid ? 'text-green-400' : 'text-red-400'}`}>
+                    {sponsorStatus.valid ? (
+                      <><CheckCircle2 className="w-3.5 h-3.5" /> Patrocinador: {sponsorStatus.name}</>
+                    ) : (
+                      <><XCircle className="w-3.5 h-3.5" /> Utilizador não encontrado</>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>

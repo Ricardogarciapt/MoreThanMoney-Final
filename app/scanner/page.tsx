@@ -130,6 +130,7 @@ interface CheckoutModalProps {
 function CheckoutModal({ product, scannerName, onClose }: CheckoutModalProps) {
   const [tvUsername, setTvUsername] = useState("")
   const [guestEmail, setGuestEmail] = useState("")
+  const [sponsorCode, setSponsorCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [isGuest, setIsGuest] = useState<boolean | null>(null) // null = a verificar
@@ -171,6 +172,7 @@ function CheckoutModal({ product, scannerName, onClose }: CheckoutModalProps) {
           body: JSON.stringify({
             planId: product.planId,
             tradingview_username: tvUsername.trim(),
+            sponsorCode: sponsorCode.trim() || '',
           }),
         })
         const data = await res.json()
@@ -189,6 +191,7 @@ function CheckoutModal({ product, scannerName, onClose }: CheckoutModalProps) {
             planId: product.planId,
             email: guestEmail.trim(),
             tvUsername: tvUsername.trim(),
+            sponsorCode: sponsorCode.trim() || '',
           }),
         })
         const data = await res.json()
@@ -252,6 +255,19 @@ function CheckoutModal({ product, scannerName, onClose }: CheckoutModalProps) {
           <p className="text-xs text-gray-500 mt-1.5">
             Após o pagamento recebes um email com as instruções de acesso ao script no TradingView.
           </p>
+        </div>
+
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-gray-400 mb-2">
+            Código do patrocinador <span className="text-gray-600 font-normal">(opcional)</span>
+          </label>
+          <Input
+            value={sponsorCode}
+            onChange={e => setSponsorCode(e.target.value)}
+            placeholder="Username de quem te indicou"
+            className="bg-gray-800 border-gray-700 text-white"
+            disabled={isLoading}
+          />
         </div>
 
         {error && (

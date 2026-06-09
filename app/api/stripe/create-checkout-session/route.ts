@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
     }
 
-    const { planId, email, tradingview_username } = await request.json()
+    const { planId, email, tradingview_username, sponsorCode } = await request.json()
 
     if (!planId) {
       return NextResponse.json({ error: 'planId é obrigatório' }, { status: 400 })
@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         plan: planId,
         ...(tradingview_username ? { tradingview_username } : {}),
+        sponsor_username: sponsorCode || '',
       },
     }
 

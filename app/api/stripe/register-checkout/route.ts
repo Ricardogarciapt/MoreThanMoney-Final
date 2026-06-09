@@ -25,7 +25,7 @@ const PRICE_IDS: Record<string, string> = {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { planId, email, fullName, username, phone, regToken } = body
+    const { planId, email, fullName, username, phone, regToken, sponsorUsername } = body
 
     if (!planId || !email || !fullName || !username) {
       return NextResponse.json({ error: 'planId, email, fullName e username são obrigatórios' }, { status: 400 })
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
         full_name: fullName,
         username,
         phone: phone || '',
+        sponsor_username: sponsorUsername || '',
       },
       // Pré-preencher email no checkout Stripe
       customer_email: undefined, // customer já tem o email
