@@ -1,0 +1,82 @@
+name: External Cron Runner (MoreThanMoney)
+
+# O plano Vercel Hobby só permite crons com frequência diária (vercel.json já está
+# ajustado para "0 H * * *"). Estes endpoints, no entanto, beneficiam de execuções
+# mais frequentes (alertas de preço e fecho de TP/SL em tempo quase real).
+#
+# Este workflow corre fora da Vercel (gratuito no GitHub Actions) e chama os
+# endpoints diretamente via HTTPS, autenticando com o mesmo CRON_SECRET que a
+# Vercel já usa para autorizar os crons internos (ver função isAuthorized() nas
+# rotas /api/cron/* e /api/notifications/check-alerts).
+#
+# Configuração necessária (uma única vez):
+#   1. Gerar um valor aleatório forte para CRON_SECRET (ex: openssl rand -hex 32)
+#   2. Vercel → Project Settings → Environment Variables → adicionar CRON_SECRET = <valor>
+#   3. GitHub → Repo → Settings → Secrets and variables → Actions → New repository secret
+#        Nome: CRON_SECRET   Valor: o mesmo <valor> do passo 1
+#   4. (Opcional) Ajustar SITE_URL abaixo se o domínio mudar
+
+on:
+  schedule:
+    # Alertas de preço e TP/SL — corre a cada 15 minutos (mercados ativos 24/7 em cripto)
+    - cron: '*/15 * * * *'
+    # DCA / subscrições / e-mail marketing — corre a cada hora (suficiente para estes fluxos)
+    - cron: '0 * * * *'
+  workflow_dispatch: {}
+
+env:
+  SITE_URL: https://www.morethanmoney.pt
+
+jobs:
+  high-frequency:
+    # Endpoints que precisam de verificação frequente (alertas de preço, TP/SL)
+    if: github.event.schedule == '*/15 * * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar alertas de preço (check-alerts)
+        run: |
+          curl -sf -X GET "${{ env.SITE_URL }}/api/notifications/check-alerts" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -o /dev/null -w "check-alerts → HTTP %{http_code}\n"
+
+      - name: Verificar fecho de TP/SL (nightly-tp-sl)
+        run: |
+          curl -sf -X GET "${{ env.SITE_URL }}/api/cron/nightly-tp-sl" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -o /dev/null -w "nightly-tp-sl → HTTP %{http_code}\n"
+
+  hourly:
+    # Endpoints cuja cadência diária da Vercel é suficiente, mas que podem correr
+    # a cada hora sem custo extra via GitHub Actions (mantém tudo mais "fresco")
+    if: github.event.schedule == '0 * * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificação diária de DCA (daily-dca-check)
+        run: |
+          curl -sf -X GET "${{ env.SITE_URL }}/api/cron/daily-dca-check" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -o /dev/null -w "daily-dca-check → HTTP %{http_code}\n"
+
+      - name: Publicação diária de DCA (daily-dca-post)
+        run: |
+          curl -sf -X GET "${{ env.SITE_URL }}/api/cron/daily-dca-post" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -o /dev/null -w "daily-dca-post → HTTP %{http_code}\n"
+
+      - name: Subscrições de membros (member-subscriptions)
+        run: |
+          curl -sf -X GET "${{ env.SITE_URL }}/api/cron/member-subscriptions" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -o /dev/null -w "member-subscriptions → HTTP %{http_code}\n"
+
+      - name: Expiração de subscrições (subscription-expiry)
+        run: |
+          curl -sf -X GET "${{ env.SITE_URL }}/api/cron/subscription-expiry" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -o /dev/null -w "subscription-expiry → HTTP %{http_code}\n"
+
+      - name: Sequências de email marketing (sequences/process)
+        run: |
+          curl -sf -X GET "${{ env.SITE_URL }}/api/email-marketing/sequences/process" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -o /dev/null -w "email-sequences → HTTP %{http_code}\n"

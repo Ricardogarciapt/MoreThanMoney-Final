@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.vercel
+*.log
+.env
+.DS_Store
+coverage
+.turbo
+dist
+build
+*.backup
+lib.backup
+contexts.backup

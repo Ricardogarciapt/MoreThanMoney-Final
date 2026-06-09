@@ -1,0 +1,1306 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* MoreThanMoney Theme Variables - Nova Paleta */
+    --color-primary: #efb810;
+    --color-primary-light: #f9db5c;
+    --color-primary-dark: #b28405;
+    --color-primary-darker: #795300;
+    --color-background: #000000;
+    --color-background-light: #1a1a1a;
+    --color-text: #ffffff;
+    --color-text-muted: #a0a0a0;
+    --color-border: rgba(239, 184, 16, 0.3);
+    --color-accent: #efb810;
+
+    /* Shadcn UI Variables */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 45 95% 51%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 63%;
+    --accent: 45 95% 51%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 45 95% 51% / 0.3;
+    --input: 0 0% 15%;
+    --ring: 45 95% 51%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Safe area custom properties — funciona em PWA standalone e Capacitor */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+}
+
+/* Altura reservada à tab bar fixa da app-mobile (Dialog em portal usa variável no body) */
+body.app-mobile-route,
+body.mobile-route {
+  /* 4rem botões + 0.5rem padding-top + safe area bottom */
+  --app-mobile-footer-tabs-height: calc(4.5rem + max(0.5rem, env(safe-area-inset-bottom, 0px)));
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
+/* Navbar segura — o padding-top via JS/inline style garante safe area */
+.app-mobile-navbar {
+  /* Fallback declarativo para navegadores que suportem mas sem JS */
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Bottom tabs — safe area declarativa como fallback */
+.app-mobile-bottom-tabs {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+.app-mobile-container,
+.mobile-app-container {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+}
+
+.app-mobile-page,
+.app-mobile-scroll-area {
+  touch-action: manipulation;
+  overscroll-behavior-x: none;
+}
+
+/* ============================================================
+   Tema Claro — App Mobile (Definições → Aparência)
+   A app é construída com classes Tailwind "dark-first"
+   (bg-black, bg-gray-900, text-white, etc.). Em vez de
+   reescrever cada componente, aplicamos uma camada de
+   substituição visual quando o <html> tem a classe "light"
+   (definida via next-themes), restrita ao contentor da
+   app-mobile — o resto do site mantém-se inalterado.
+
+   SELETORES: .light .app-mobile-container (+ aliases)
+   O <main> da page.tsx tem AMBAS as classes app-mobile-page
+   e app-mobile-container para que estes estilos se apliquem.
+   ============================================================ */
+
+/* — Contentor raiz — */
+.light .mobile-app-container,
+.light .app-mobile-container,
+.light .app-mobile-page {
+  background-color: #f7f7f8 !important;
+  color: #0a0a0a !important;
+}
+
+/* — Fundos escuros → fundos claros — */
+.light .mobile-app-container [class*="bg-black"],
+.light .mobile-app-container [class*="bg-gray-950"],
+.light .mobile-app-container [class*="bg-gray-900"],
+.light .app-mobile-container [class*="bg-black"],
+.light .app-mobile-container [class*="bg-gray-950"],
+.light .app-mobile-container [class*="bg-gray-900"],
+.light .app-mobile-page    [class*="bg-black"],
+.light .app-mobile-page    [class*="bg-gray-950"],
+.light .app-mobile-page    [class*="bg-gray-900"] {
+  background-color: #ffffff !important;
+}
+
+.light .mobile-app-container [class*="bg-gray-800"],
+.light .mobile-app-container [class*="bg-gray-700"],
+.light .mobile-app-container [class*="bg-gray-600"],
+.light .app-mobile-container [class*="bg-gray-800"],
+.light .app-mobile-container [class*="bg-gray-700"],
+.light .app-mobile-container [class*="bg-gray-600"],
+.light .app-mobile-page    [class*="bg-gray-800"],
+.light .app-mobile-page    [class*="bg-gray-700"],
+.light .app-mobile-page    [class*="bg-gray-600"] {
+  background-color: #eef0f2 !important;
+}
+
+/* — Cores de texto — */
+.light .mobile-app-container [class*="text-white"],
+.light .app-mobile-container [class*="text-white"],
+.light .app-mobile-page    [class*="text-white"] {
+  color: #0a0a0a !important;
+}
+
+.light .mobile-app-container [class*="text-gray-100"],
+.light .mobile-app-container [class*="text-gray-200"],
+.light .mobile-app-container [class*="text-gray-300"],
+.light .app-mobile-container [class*="text-gray-100"],
+.light .app-mobile-container [class*="text-gray-200"],
+.light .app-mobile-container [class*="text-gray-300"],
+.light .app-mobile-page    [class*="text-gray-100"],
+.light .app-mobile-page    [class*="text-gray-200"],
+.light .app-mobile-page    [class*="text-gray-300"] {
+  color: #3f3f46 !important;
+}
+
+.light .mobile-app-container [class*="text-gray-400"],
+.light .mobile-app-container [class*="text-gray-500"],
+.light .app-mobile-container [class*="text-gray-400"],
+.light .app-mobile-container [class*="text-gray-500"],
+.light .app-mobile-page    [class*="text-gray-400"],
+.light .app-mobile-page    [class*="text-gray-500"] {
+  color: #6b7280 !important;
+}
+
+.light .mobile-app-container [class*="text-gray-600"],
+.light .app-mobile-container [class*="text-gray-600"],
+.light .app-mobile-page    [class*="text-gray-600"] {
+  color: #9ca3af !important;
+}
+
+/* — Bordas — */
+.light .mobile-app-container [class*="border-gray-800"],
+.light .mobile-app-container [class*="border-gray-700"],
+.light .mobile-app-container [class*="border-gray-600"],
+.light .app-mobile-container [class*="border-gray-800"],
+.light .app-mobile-container [class*="border-gray-700"],
+.light .app-mobile-container [class*="border-gray-600"],
+.light .app-mobile-page    [class*="border-gray-800"],
+.light .app-mobile-page    [class*="border-gray-700"],
+.light .app-mobile-page    [class*="border-gray-600"] {
+  border-color: #e4e4e7 !important;
+}
+
+/* — Divisórias — */
+.light .mobile-app-container [class*="divide-gray-700"],
+.light .mobile-app-container [class*="divide-gray-800"],
+.light .app-mobile-container [class*="divide-gray-700"],
+.light .app-mobile-container [class*="divide-gray-800"],
+.light .app-mobile-page    [class*="divide-gray-700"],
+.light .app-mobile-page    [class*="divide-gray-800"] {
+  --tw-divide-opacity: 1;
+  border-color: #e4e4e7 !important;
+}
+
+/* — Inputs e textareas dentro da app mobile — */
+.light .app-mobile-container input,
+.light .app-mobile-container textarea,
+.light .app-mobile-container select,
+.light .app-mobile-page    input,
+.light .app-mobile-page    textarea,
+.light .app-mobile-page    select {
+  background-color: #ffffff !important;
+  color: #0a0a0a !important;
+  border-color: #d1d5db !important;
+}
+.light .app-mobile-container input::placeholder,
+.light .app-mobile-container textarea::placeholder,
+.light .app-mobile-page    input::placeholder,
+.light .app-mobile-page    textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 1s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+  opacity: 0;
+}
+
+.delay-300 {
+  animation-delay: 0.3s;
+}
+
+.delay-600 {
+  animation-delay: 0.6s;
+}
+
+.delay-900 {
+  animation-delay: 0.9s;
+}
+
+/* Gold gradient text */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #d4af37 0%, #ffd700 50%, #d4af37 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* CTA button animation */
+.cta-button {
+  transition: all 0.3s ease;
+}
+
+.cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.3);
+}
+
+/* Gold color utilities */
+.text-gold-400 {
+  color: #fbbf24;
+}
+
+.text-gold-500 {
+  color: #d4af37;
+}
+
+.text-gold-600 {
+  color: #b8860b;
+}
+
+.bg-gold-500 {
+  background-color: #d4af37;
+}
+
+.bg-gold-600 {
+  background-color: #b8860b;
+}
+
+.bg-gold-700 {
+  background-color: #9a7209;
+}
+
+.border-gold-500 {
+  border-color: #d4af37;
+}
+
+.hover\:bg-gold-500\/10:hover {
+  background-color: rgba(212, 175, 55, 0.1);
+}
+
+.hover\:bg-gold-700:hover {
+  background-color: #9a7209;
+}
+
+.hover\:text-gold-400:hover {
+  color: #fbbf24;
+}
+
+.hover\:text-gold-500:hover {
+  color: #d4af37;
+}
+
+/* Google Translate - Completamente Oculto */
+#google_translate_element,
+.google-translate-wrapper,
+.goog-te-banner-frame,
+.goog-te-gadget,
+.goog-te-gadget-simple,
+.goog-te-menu-value,
+.goog-te-combo,
+.skiptranslate,
+.goog-logo-link,
+.goog-te-balloon-frame,
+.goog-te-ftab,
+.goog-te-ftab-float {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Remover completamente em app-mobile */
+.app-mobile-page #google_translate_element,
+.app-mobile-page .skiptranslate,
+.app-mobile-page .goog-te-gadget,
+.app-mobile-page .goog-te-gadget-simple,
+.app-mobile-page [id*=":0.targetLanguage"],
+.app-mobile-page .VIpgJd-ZVi9od-xl07Ob-lTBxed {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+/*
+ * iOS Safari: inputs com fonte abaixo de 16px fazem zoom ao focar.
+ * Campos editáveis na app-mobile com 16px mínimo (exclui range, checkbox, etc.).
+ */
+.app-mobile-container textarea,
+.app-mobile-container select,
+.app-mobile-container input[type="text"],
+.app-mobile-container input[type="email"],
+.app-mobile-container input[type="password"],
+.app-mobile-container input[type="search"],
+.app-mobile-container input[type="tel"],
+.app-mobile-container input[type="number"],
+.app-mobile-container input[type="url"],
+.app-mobile-container input:not([type]) {
+  font-size: 16px !important; /* sobrepõe text-sm do Tailwind; evita zoom iOS */
+}
+
+/* Garantir que o body não é afetado pelo Google Translate */
+body {
+  top: 0 !important;
+  position: relative !important;
+}
+
+/* ============================================ */
+/* NOVA PALETA DE CORES - MoreThanMoney 2024 */
+/* ============================================ */
+
+/* Utility Classes com Nova Paleta */
+.bg-mtm-primary {
+  background-color: var(--color-primary, #efb810) !important;
+}
+
+.bg-mtm-primary-light {
+  background-color: var(--color-primary-light, #f9db5c) !important;
+}
+
+.bg-mtm-primary-dark {
+  background-color: var(--color-primary-dark, #b28405) !important;
+}
+
+.bg-mtm-primary-darker {
+  background-color: var(--color-primary-darker, #795300) !important;
+}
+
+/* Hover states */
+.hover\:bg-mtm-primary:hover {
+  background-color: var(--color-primary, #efb810) !important;
+}
+
+.hover\:bg-mtm-primary-dark:hover {
+  background-color: var(--color-primary-dark, #b28405) !important;
+}
+
+.hover\:bg-mtm-primary-darker:hover {
+  background-color: var(--color-primary-darker, #795300) !important;
+}
+
+.text-mtm-primary {
+  color: var(--color-primary, #efb810);
+}
+
+.text-mtm-primary-light {
+  color: var(--color-primary-light, #f9db5c);
+}
+
+.text-mtm-primary-dark {
+  color: var(--color-primary-dark, #b28405);
+}
+
+.border-mtm-primary {
+  border-color: var(--color-border, rgba(239, 184, 16, 0.3));
+}
+
+/* Gradientes com Nova Paleta */
+.bg-gradient-mtm {
+  background: linear-gradient(135deg, #efb810 0%, #f9db5c 50%, #b28405 100%);
+}
+
+.bg-gradient-mtm-dark {
+  background: linear-gradient(135deg, #b28405 0%, #795300 100%);
+}
+
+.text-gradient-mtm {
+  background: linear-gradient(135deg, #efb810 0%, #f9db5c 50%, #b28405 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================ */
+/* ANIMAÇÕES DE SCROLL */
+/* ============================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(239, 184, 16, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(239, 184, 16, 0.6);
+  }
+}
+
+/* Classes de Animação */
+.scroll-fade-in {
+  opacity: 0;
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+.scroll-slide-up {
+  opacity: 0;
+  animation: slideInUp 0.8s ease-out forwards;
+}
+
+.scroll-slide-left {
+  opacity: 0;
+  animation: slideInLeft 0.8s ease-out forwards;
+}
+
+.scroll-slide-right {
+  opacity: 0;
+  animation: slideInRight 0.8s ease-out forwards;
+}
+
+.scroll-scale-in {
+  opacity: 0;
+  animation: scaleIn 0.6s ease-out forwards;
+}
+
+/* Delays para animações em cascata */
+.animation-delay-100 { animation-delay: 100ms; }
+.animation-delay-200 { animation-delay: 200ms; }
+.animation-delay-300 { animation-delay: 300ms; }
+.animation-delay-400 { animation-delay: 400ms; }
+.animation-delay-500 { animation-delay: 500ms; }
+.animation-delay-600 { animation-delay: 600ms; }
+
+/* ============================================ */
+/* CARTÕES MODERNOS */
+/* ============================================ */
+
+.card-modern {
+  background: linear-gradient(135deg, rgba(26, 26, 26, 0.8) 0%, rgba(10, 10, 10, 0.9) 100%);
+  border: 1px solid var(--color-border, rgba(239, 184, 16, 0.3));
+  border-radius: 1rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-modern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-primary, #efb810), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card-modern:hover::before {
+  opacity: 1;
+}
+
+.card-modern:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(239, 184, 16, 0.2);
+  border-color: var(--color-primary, #efb810);
+}
+
+.card-glass {
+  background: rgba(26, 26, 26, 0.6);
+  border: 1px solid rgba(239, 184, 16, 0.2);
+  backdrop-filter: blur(20px);
+  border-radius: 1rem;
+}
+
+/* ============================================ */
+/* BOTÕES MODERNOS */
+/* ============================================ */
+
+.btn-mtm-primary {
+  background: linear-gradient(135deg, #efb810 0%, #f9db5c 100%);
+  color: #000000;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  border: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(239, 184, 16, 0.3);
+}
+
+.btn-mtm-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(239, 184, 16, 0.5);
+  background: linear-gradient(135deg, #f9db5c 0%, #efb810 100%);
+}
+
+.btn-mtm-secondary {
+  background: transparent;
+  color: var(--color-primary, #efb810);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  border: 2px solid var(--color-primary, #efb810);
+  transition: all 0.3s ease;
+}
+
+.btn-mtm-secondary:hover {
+  background: var(--color-primary, #efb810);
+  color: #000000;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(239, 184, 16, 0.4);
+}
+
+.btn-mtm-ghost {
+  background: rgba(239, 184, 16, 0.1);
+  color: var(--color-primary, #efb810);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(239, 184, 16, 0.3);
+  transition: all 0.3s ease;
+}
+
+.btn-mtm-ghost:hover {
+  background: rgba(239, 184, 16, 0.2);
+  border-color: var(--color-primary, #efb810);
+}
+
+/* ============================================ */
+/* SMOOTH SCROLL */
+/* ============================================ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar com Nova Paleta */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #efb810 0%, #b28405 100%);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #f9db5c 0%, #efb810 100%);
+}
+
+/* ============================================ */
+/* VIDEO PLAYERS - Hide YouTube Branding */
+/* ============================================ */
+
+.video-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+  height: 0;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--color-border, rgba(239, 184, 16, 0.3));
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* TradingView Advanced Chart (tv.js) — iframe deve receber clique direito e atalhos */
+.tv-widget-mount,
+.tv-widget-mount #tradingview_widget,
+.tv-widget-mount #tradingview_widget iframe,
+.tv-widget-mount [id^="tradingview_"] iframe,
+.tv-chart-stage .tv-chart-mount,
+.tv-chart-stage .tv-chart-mount > div,
+.tv-chart-stage iframe {
+  pointer-events: auto !important;
+}
+
+/* Scanner-access: não cortar a toolbar nativa (layout__area--top ~38px) */
+/* Scanner-access: copiar/colar e seleção de texto na página */
+body.scanner-access-route {
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: auto;
+}
+
+body.scanner-access-route input,
+body.scanner-access-route textarea,
+body.scanner-access-route [contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.tv-scanner-access.tv-widget-mount {
+  overflow: visible;
+}
+
+.tv-chart-stage {
+  position: relative;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.tv-scanner-access .tv-chart-stage .tv-chart-mount,
+.tv-scanner-access .tv-chart-stage .tv-chart-mount > div,
+.tv-scanner-access .tv-chart-stage .tv-chart-mount > div > div {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+}
+
+.tv-scanner-access .tv-chart-stage iframe {
+  min-height: 800px !important;
+}
+
+.scanner-access-page .tv-chart-stage,
+.scanner-access-page .tv-scanner-access {
+  overflow: visible !important;
+}
+
+.tv-chart-stage iframe {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  border: none;
+}
+
+/* Hide YouTube Logo and Controls */
+.video-minimal iframe {
+  pointer-events: none;
+}
+
+.video-minimal {
+  position: relative;
+}
+
+.video-minimal::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  pointer-events: none;
+}
+
+/* ============================================ */
+/* CYBERPUNK CARDS & SCROLL ANIMATIONS */
+/* ============================================ */
+
+@keyframes slideInFromBottom {
+  0% {
+    opacity: 0;
+    transform: translateY(50px) rotateX(-10deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotateX(0deg);
+  }
+}
+
+@keyframes slideInFromLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-50px) rotateY(-10deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) rotateY(0deg);
+  }
+}
+
+@keyframes slideInFromRight {
+  0% {
+    opacity: 0;
+    transform: translateX(50px) rotateY(10deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) rotateY(0deg);
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px rgba(239, 184, 16, 0.3),
+      inset 0 0 20px rgba(239, 184, 16, 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 0 40px rgba(239, 184, 16, 0.6),
+      inset 0 0 30px rgba(239, 184, 16, 0.2);
+  }
+}
+
+@keyframes scanLine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Cyberpunk Card Base */
+.card-cyberpunk {
+  background: linear-gradient(135deg, 
+    rgba(0, 0, 0, 0.9) 0%, 
+    rgba(15, 15, 15, 0.95) 25%,
+    rgba(10, 10, 10, 0.98) 50%,
+    rgba(15, 15, 15, 0.95) 75%,
+    rgba(0, 0, 0, 0.9) 100%);
+  border: 2px solid transparent;
+  border-image: linear-gradient(45deg, 
+    rgba(239, 184, 16, 0.3) 0%,
+    rgba(239, 184, 16, 0.8) 25%,
+    rgba(0, 255, 255, 0.4) 50%,
+    rgba(239, 184, 16, 0.8) 75%,
+    rgba(239, 184, 16, 0.3) 100%) 1;
+  border-radius: 1rem;
+  backdrop-filter: blur(15px);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  opacity: 0;
+  transform: translateY(30px) scale(0.95);
+}
+
+.card-cyberpunk::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(239, 184, 16, 0.8), 
+    rgba(0, 255, 255, 0.6), 
+    rgba(239, 184, 16, 0.8), 
+    transparent);
+  animation: scanLine 3s infinite;
+}
+
+.card-cyberpunk::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, 
+    transparent 48%, 
+    rgba(239, 184, 16, 0.05) 49%, 
+    rgba(239, 184, 16, 0.05) 51%, 
+    transparent 52%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card-cyberpunk:hover::after {
+  opacity: 1;
+}
+
+/* Scroll Animation Classes */
+.card-cyberpunk.slide-in-bottom {
+  animation: slideInFromBottom 0.8s ease-out forwards;
+}
+
+.card-cyberpunk.slide-in-left {
+  animation: slideInFromLeft 0.8s ease-out forwards;
+}
+
+.card-cyberpunk.slide-in-right {
+  animation: slideInFromRight 0.8s ease-out forwards;
+}
+
+.card-cyberpunk.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.card-cyberpunk.always-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.card-cyberpunk:hover {
+  transform: translateY(-8px) scale(1.02) rotateX(5deg);
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.6),
+    0 0 50px rgba(239, 184, 16, 0.4),
+    inset 0 0 30px rgba(239, 184, 16, 0.1);
+  animation: glowPulse 2s infinite;
+}
+
+/* Cyberpunk Icon Container */
+.cyberpunk-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  background: linear-gradient(135deg, 
+    rgba(239, 184, 16, 0.2) 0%,
+    rgba(239, 184, 16, 0.1) 50%,
+    rgba(0, 255, 255, 0.1) 100%);
+  border: 2px solid rgba(239, 184, 16, 0.5);
+  border-radius: 1rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.cyberpunk-icon::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(45deg, 
+    rgba(239, 184, 16, 0.5), 
+    rgba(0, 255, 255, 0.3), 
+    rgba(239, 184, 16, 0.5));
+  border-radius: 1rem;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card-cyberpunk:hover .cyberpunk-icon::before {
+  opacity: 1;
+}
+
+.card-cyberpunk:hover .cyberpunk-icon {
+  transform: rotateY(180deg) scale(1.1);
+  border-color: rgba(239, 184, 16, 0.8);
+  box-shadow: 0 0 20px rgba(239, 184, 16, 0.5);
+}
+
+/* Cyberpunk Button */
+.btn-cyberpunk {
+  background: linear-gradient(135deg, 
+    rgba(239, 184, 16, 0.9) 0%,
+    rgba(239, 184, 16, 0.7) 100%);
+  border: 2px solid rgba(239, 184, 16, 0.8);
+  border-radius: 0.75rem;
+  color: #000000;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-cyberpunk::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.3), 
+    transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-cyberpunk:hover::before {
+  left: 100%;
+}
+
+.btn-cyberpunk:hover {
+  background: linear-gradient(135deg, 
+    rgba(239, 184, 16, 1) 0%,
+    rgba(249, 219, 92, 0.9) 100%);
+  box-shadow: 
+    0 0 30px rgba(239, 184, 16, 0.6),
+    inset 0 0 20px rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px) scale(1.05);
+}
+
+/* Cyberpunk Text Effects */
+.text-cyberpunk {
+  background: linear-gradient(45deg, 
+    rgba(239, 184, 16, 1) 0%,
+    rgba(0, 255, 255, 0.8) 50%,
+    rgba(239, 184, 16, 1) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 20px rgba(239, 184, 16, 0.5);
+}
+
+/* Intersection Observer Animation Delays */
+.animation-delay-100 { animation-delay: 0.1s; }
+.animation-delay-200 { animation-delay: 0.2s; }
+.animation-delay-300 { animation-delay: 0.3s; }
+.animation-delay-400 { animation-delay: 0.4s; }
+.animation-delay-500 { animation-delay: 0.5s; }
+.animation-delay-600 { animation-delay: 0.6s; }
+
+/* Social Feed Improvements */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Custom Scrollbar for Comments */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #D2A63C, #BB8525);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #efb810, #D2A63C);
+}
+
+/* App-Mobile Dialog Fix */
+[data-radix-dialog-overlay] {
+  z-index: 9998 !important;
+}
+
+[data-radix-dialog-content] {
+  z-index: 9999 !important;
+}
+
+/* Admin Dialogs - Z-index ainda maior para garantir que aparecem */
+.admin-dialog [data-radix-dialog-overlay],
+[data-radix-dialog-overlay].admin-dialog-overlay {
+  z-index: 99998 !important;
+}
+
+.admin-dialog [data-radix-dialog-content],
+[data-radix-dialog-content].admin-dialog-content {
+  z-index: 99999 !important;
+  position: fixed !important;
+}
+
+/* Garantir que dialog funciona em mobile */
+@media (max-width: 768px) {
+  [data-radix-dialog-content] {
+    width: 90% !important;
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* Fix Popover z-index para notificações */
+[data-radix-popover-content] {
+  z-index: 10000 !important;
+}
+
+[data-radix-popover-trigger] {
+  z-index: 50 !important;
+}
+
+/* Fix CyberpunkCard sempre visível */
+.card-cyberpunk.always-visible {
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) !important;
+  animation: none !important;
+}
+
+/* Animação fade-in para story card */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+/* =====================================================
+   SOCIAL FEED - STORIES INSTAGRAM STYLE
+   ===================================================== */
+
+/* Hide scrollbar for stories */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Story Animation */
+@keyframes storyPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(210, 166, 60, 0.7);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(210, 166, 60, 0);
+  }
+}
+
+@keyframes storyGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(210, 166, 60, 0.5),
+                0 0 40px rgba(210, 166, 60, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(210, 166, 60, 0.8),
+                0 0 60px rgba(210, 166, 60, 0.5);
+  }
+}
+
+/* Story Circle Hover Effect */
+.story-circle {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.story-circle:hover {
+  transform: scale(1.1);
+}
+
+.story-circle.active {
+  animation: storyGlow 2s ease-in-out infinite;
+}
+
+/* Story Badge Animation */
+@keyframes badgeBounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.story-badge {
+  animation: badgeBounce 1.5s ease-in-out infinite;
+}
+
+/* Post Card Animation */
+@keyframes postSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.post-card {
+  animation: postSlideIn 0.4s ease-out;
+}
+
+/* Gradient Text for Active Category */
+.category-active {
+  background: linear-gradient(135deg, #D2A63C 0%, #E4B84A 50%, #D2A63C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* =====================================================
+   STORY FLIP ANIMATION - COIN FLIP 3D
+   ===================================================== */
+
+/* Perspectiva 3D */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+/* Container do flip */
+.story-flip-container {
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+}
+
+/* Estado flipped - rotação 180 graus (coin flip) */
+.story-flip-container.story-flipped {
+  transform: rotateY(180deg);
+}
+
+/* Faces do flip (front e back) */
+.story-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+}
+
+/* Face frontal (ícone) */
+.story-face-front {
+  transform: rotateY(0deg);
+  z-index: 2;
+}
+
+/* Face traseira (preview) */
+.story-face-back {
+  transform: rotateY(180deg);
+  z-index: 1;
+}
+
+/* Animação de pulse durante flip */
+@keyframes storyFlipPulse {
+  0%, 100% {
+    transform: scale(1) rotateY(0deg);
+  }
+  50% {
+    transform: scale(1.1) rotateY(90deg);
+  }
+}
+
+.story-flip-container.story-flipped .story-face-front,
+.story-flip-container.story-flipped .story-face-back {
+  animation: storyFlipPulse 0.6s ease-in-out;
+}
+
+/* =====================================================
+   RSS FEED TICKER - HORIZONTAL SCROLL
+   ===================================================== */
+
+@keyframes tickerScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-33.333%);
+  }
+}
+
+.ticker-scroll {
+  animation: tickerScroll linear infinite;
+  will-change: transform;
+}
+
+.ticker-scroll:hover {
+  animation-play-state: paused;
+}

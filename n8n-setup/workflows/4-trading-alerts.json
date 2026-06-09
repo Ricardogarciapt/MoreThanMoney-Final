@@ -1,0 +1,232 @@
+{
+  "name": "MTM — Trading Signals & Alertas",
+  "nodes": [
+    {
+      "id": "ta-cron",
+      "name": "Cron a Cada Hora",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 200],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 1 }]
+        }
+      }
+    },
+    {
+      "id": "ta-webhook-tv",
+      "name": "TradingView Alert Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "webhookId": "tradingview-alert",
+      "parameters": {
+        "path": "tradingview-alert",
+        "responseMode": "onReceived",
+        "responseData": "firstEntryJson"
+      }
+    },
+    {
+      "id": "ta-gold-price",
+      "name": "Buscar Preço XAUUSD",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 200],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd",
+        "options": { "timeout": 10000 }
+      }
+    },
+    {
+      "id": "ta-fear-greed",
+      "name": "Buscar Fear & Greed Index",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 320],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.alternative.me/fng/?limit=1",
+        "options": { "timeout": 10000 }
+      }
+    },
+    {
+      "id": "ta-check-user-alerts",
+      "name": "Verificar Alertas de Utilizadores",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 200],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/price_alerts?status=eq.active&select=*,profiles(username,telegram_chat_id,email)",
+        "headers": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ta-process-alerts",
+      "name": "Processar Alertas Disparados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 200],
+      "parameters": {
+        "jsCode": "const alerts = $('Verificar Alertas de Utilizadores').all().map(i => i.json);\nconst fearGreedData = $('Buscar Fear & Greed Index').first().json;\nconst fg = fearGreedData.data?.[0];\nconst fgValue = parseInt(fg?.value || '0');\nconst fgLabel = fg?.value_classification || 'Unknown';\n\nconst triggered = [];\n\nfor (const alert of alerts) {\n  // Lógica de verificação de alerta (simplificada)\n  // Na prática, aqui compararias com preços reais do par do alerta\n  const alertObj = {\n    ...alert,\n    fgValue,\n    fgLabel,\n    message: `🎯 *Alerta MTM Disparado!*\\n\\n📊 Par: ${alert.pair || 'XAUUSD'}\\n💰 Preço: ${alert.price_target}\\n📈 Condição: ${alert.condition}\\n\\n😱 Fear & Greed: ${fgValue} (${fgLabel})\\n\\n🔗 Ver scanner: https://morethanmoney.pt/trading`\n  };\n  if (alert.profiles?.telegram_chat_id) {\n    triggered.push(alertObj);\n  }\n}\n\nreturn triggered.length > 0 ? triggered.map(a => ({ json: a })) : [{ json: { skip: true, fgValue, fgLabel } }];"
+      }
+    },
+    {
+      "id": "ta-check-skip",
+      "name": "Há alertas para enviar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1100, 200],
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "notEqual" }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "ta-send-alert-telegram",
+      "name": "Enviar Alerta por Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1320, 150],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.profiles?.telegram_chat_id || $env.TELEGRAM_ADMIN_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_web_page_preview": true
+        }
+      },
+      "credentials": {
+        "telegramApi": { "id": "1", "name": "MTM Telegram Bot" }
+      }
+    },
+    {
+      "id": "ta-mark-sent",
+      "name": "Marcar Alerta como Enviado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1540, 150],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/price_alerts?id=eq.{{ $json.id }}",
+        "headers": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "body": {
+          "mode": "json",
+          "jsonParameters": true,
+          "jsonBody": "{ \"status\": \"triggered\", \"triggered_at\": \"{{ new Date().toISOString() }}\" }"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ta-parse-tv",
+      "name": "Parse Alerta TradingView",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 420],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json;\n\nconst alert = {\n  pair: body.ticker || body.pair || 'XAUUSD',\n  price: body.close || body.price,\n  action: body.action || body.signal || 'ALERT',\n  timeframe: body.interval || body.timeframe || '1h',\n  message: `⚡ *Scanner MTM — ${body.ticker || 'XAUUSD'}*\\n\\n${body.action || 'Sinal'} @ $${body.close || body.price}\\nTimeframe: ${body.interval || '1h'}\\n\\n${body.message || ''}\\n\\n🔗 https://morethanmoney.pt/trading`\n};\n\nreturn [{ json: alert }];"
+      }
+    },
+    {
+      "id": "ta-broadcast-tv",
+      "name": "Broadcast Sinal para Admin",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [680, 420],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $env.TELEGRAM_ADMIN_CHAT_ID }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_web_page_preview": true
+        }
+      },
+      "credentials": {
+        "telegramApi": { "id": "1", "name": "MTM Telegram Bot" }
+      }
+    },
+    {
+      "id": "ta-save-signal",
+      "name": "Guardar Sinal em Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 420],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/trading_signals",
+        "headers": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "body": {
+          "mode": "json",
+          "jsonParameters": true,
+          "jsonBody": "={{ JSON.stringify({ pair: $json.pair, price: $json.price, action: $json.action, timeframe: $json.timeframe, source: 'tradingview', created_at: new Date().toISOString() }) }}"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ta-tv-respond",
+      "name": "Resposta TradingView",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 420],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"success\": true }"
+      }
+    }
+  ],
+  "connections": {
+    "Cron a Cada Hora":             { "main": [[{ "node": "Buscar Preço XAUUSD",              "type": "main", "index": 0 }]] },
+    "Buscar Preço XAUUSD":          { "main": [[{ "node": "Buscar Fear & Greed Index",         "type": "main", "index": 0 }]] },
+    "Buscar Fear & Greed Index":    { "main": [[{ "node": "Verificar Alertas de Utilizadores", "type": "main", "index": 0 }]] },
+    "Verificar Alertas de Utilizadores": { "main": [[{ "node": "Processar Alertas Disparados", "type": "main", "index": 0 }]] },
+    "Processar Alertas Disparados": { "main": [[{ "node": "Há alertas para enviar?",           "type": "main", "index": 0 }]] },
+    "Há alertas para enviar?": {
+      "main": [
+        [{ "node": "Enviar Alerta por Telegram", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Enviar Alerta por Telegram":   { "main": [[{ "node": "Marcar Alerta como Enviado",        "type": "main", "index": 0 }]] },
+    "TradingView Alert Webhook":    { "main": [[{ "node": "Parse Alerta TradingView",           "type": "main", "index": 0 }]] },
+    "Parse Alerta TradingView":     { "main": [[{ "node": "Broadcast Sinal para Admin",         "type": "main", "index": 0 }]] },
+    "Broadcast Sinal para Admin":   { "main": [[{ "node": "Guardar Sinal em Supabase",          "type": "main", "index": 0 }]] },
+    "Guardar Sinal em Supabase":    { "main": [[{ "node": "Resposta TradingView",               "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "MTM" }, { "name": "Trading" }, { "name": "Alertas" }]
+}

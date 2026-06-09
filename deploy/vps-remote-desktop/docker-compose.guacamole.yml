@@ -1,0 +1,17 @@
+services:
+  guacd:
+    image: guacamole/guacd:1.5.5
+    container_name: mtm-guacd
+    restart: unless-stopped
+
+  guacamole:
+    image: guacamole/guacamole:1.5.5
+    container_name: mtm-guacamole
+    restart: unless-stopped
+    depends_on:
+      - guacd
+    environment:
+      GUACD_HOSTNAME: guacd
+      TOTP_ENABLED: "true"
+    ports:
+      - "8088:8080"

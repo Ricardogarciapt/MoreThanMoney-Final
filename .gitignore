@@ -1,0 +1,59 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+node_modules
+.pnp
+.pnp.js
+
+# testing
+coverage
+
+# next.js
+.next/
+out/
+build
+dist
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+.env
+.env.vercel
+.env.vercel.bak
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# IDE
+.idea
+.vscode
+.cursor/
+
+# Claude Code sessions
+.claude/
+
+# Build / CI cache
+.turbo/
+
+# Scripts de dev/debug pontuais — todos já aplicados, não são código do produto
+scripts/
+
+# SQL e ficheiros avulsos na raiz (one-time fixes já aplicados)
+SQL_1_IQONIC_ID.sql
+DEPLOY-SUMMARY.md
+
+# Added from the code block
+/public/Identidade Mafalda/Mafalda Ferreira - Apresentação.pdf
+/Arquivo.zip

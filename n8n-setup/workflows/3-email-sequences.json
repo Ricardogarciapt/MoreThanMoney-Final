@@ -1,0 +1,166 @@
+{
+  "name": "MTM — Email Sequences Orchestrator",
+  "nodes": [
+    {
+      "id": "email-cron",
+      "name": "Cron Horário",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 1 }]
+        }
+      }
+    },
+    {
+      "id": "email-process",
+      "name": "Processar Sequências Pendentes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.MTM_API_URL }}/email-marketing/sequences/process",
+        "headers": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.CRON_SECRET }}" }
+          ]
+        },
+        "options": { "timeout": 60000 }
+      }
+    },
+    {
+      "id": "email-check-result",
+      "name": "Verificar Resultado",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "sent-check",
+              "leftValue": "={{ $json.sent }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "email-log-supabase",
+      "name": "Registar Log em Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/mtm_automation_logs",
+        "headers": {
+          "parameters": [
+            { "name": "apikey",        "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "body": {
+          "mode": "json",
+          "jsonParameters": false,
+          "bodyParameters": {
+            "parameters": [
+              { "name": "type",       "value": "email_sequences" },
+              { "name": "processed",  "value": "={{ $('Processar Sequências Pendentes').first().json.processed }}" },
+              { "name": "sent",       "value": "={{ $('Processar Sequências Pendentes').first().json.sent }}" },
+              { "name": "ran_at",     "value": "={{ new Date().toISOString() }}" },
+              { "name": "success",    "value": "={{ $('Processar Sequências Pendentes').first().json.success }}" }
+            ]
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "email-notify-telegram",
+      "name": "Notificar Telegram (se enviou emails)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 350],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $env.TELEGRAM_ADMIN_CHAT_ID }}",
+        "text": "={{ '📧 *Email Sequences* — ' + new Date().toLocaleString('pt-PT', {timeZone:'Europe/Lisbon'}) + '\\n\\n✅ Processadas: ' + $('Processar Sequências Pendentes').first().json.processed + '\\n📤 Enviadas: ' + $('Processar Sequências Pendentes').first().json.sent }}",
+        "additionalFields": { "parse_mode": "Markdown" }
+      },
+      "credentials": {
+        "telegramApi": { "id": "1", "name": "MTM Telegram Bot" }
+      }
+    },
+    {
+      "id": "email-enroll-trigger",
+      "name": "Webhook — Inscrever em Sequência",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 500],
+      "webhookId": "email-enroll",
+      "parameters": {
+        "path": "email-enroll",
+        "responseMode": "onReceived",
+        "responseData": "firstEntryJson"
+      }
+    },
+    {
+      "id": "email-enroll-call",
+      "name": "Inscrever via API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 500],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MTM_API_URL }}/email-marketing/sequences/process",
+        "headers": {
+          "parameters": [
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.CRON_SECRET }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "body": {
+          "mode": "json",
+          "jsonParameters": true,
+          "jsonBody": "={{ JSON.stringify({ userId: $json.body.userId, triggerEvent: $json.body.triggerEvent }) }}"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "email-enroll-respond",
+      "name": "Resposta Inscrição",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 500],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"message\": \"Inscrito em sequência\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Cron Horário":                    { "main": [[{ "node": "Processar Sequências Pendentes", "type": "main", "index": 0 }]] },
+    "Processar Sequências Pendentes":  { "main": [[{ "node": "Verificar Resultado",            "type": "main", "index": 0 }]] },
+    "Verificar Resultado": {
+      "main": [
+        [{ "node": "Notificar Telegram (se enviou emails)", "type": "main", "index": 0 }],
+        [{ "node": "Registar Log em Supabase",              "type": "main", "index": 0 }]
+      ]
+    },
+    "Notificar Telegram (se enviou emails)": { "main": [[{ "node": "Registar Log em Supabase", "type": "main", "index": 0 }]] },
+    "Webhook — Inscrever em Sequência":      { "main": [[{ "node": "Inscrever via API",          "type": "main", "index": 0 }]] },
+    "Inscrever via API":                     { "main": [[{ "node": "Resposta Inscrição",          "type": "main", "index": 0 }]] }
+  },
+  "active": true,
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "MTM" }, { "name": "Email" }, { "name": "Sequences" }]
+}

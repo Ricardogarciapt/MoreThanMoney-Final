@@ -1,0 +1,171 @@
+{
+    "common": {
+        "back": "Back",
+        "loading": "Loading...",
+        "error": "Error",
+        "success": "Success",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saving": "Saving...",
+        "continue": "Continue",
+        "create": "Create",
+        "logout": "Log out",
+        "settings": "Settings",
+        "dashboard": "Dashboard",
+        "close": "Close"
+    },
+    "signIn": {
+        "title": "Sign in",
+        "description": "Please enter your Telegram API ID and API HASH",
+        "apiId": {
+            "label": "API ID",
+            "placeholder": "Enter your API ID",
+            "error": "API ID is required"
+        },
+        "apiHash": {
+            "label": "API HASH",
+            "placeholder": "Enter your API HASH",
+            "error": "API HASH is required"
+        },
+        "phone": {
+            "label": "Phone Number (with country code)",
+            "placeholder": "e.g., +1234567890",
+            "error": "Phone number is required for first-time authentication"
+        },
+        "verificationTitle": "Verification",
+        "verificationCode": {
+            "label": "Verification Code",
+            "placeholder": "Enter the code sent to your phone",
+            "error": "Verification code is required"
+        },
+        "password": {
+            "label": "Two-step Verification Password",
+            "placeholder": "Enter your password",
+            "error": "Password is required"
+        },
+        "rememberMe": "Remember me",
+        "next": "Next",
+        "verify": "Verify",
+        "tooltip": {
+            "steps": [
+                "Go to https://my.telegram.org/auth",
+                "Log in with your phone number",
+                "Click on 'API development tools'",
+                "Fill in the required information",
+                "Your API ID and API Hash will be displayed"
+            ]
+        },
+        "connectSuccess": "Successfully connected to Telegram",
+        "connectError": "Failed to connect to Telegram",
+        "codePrompt": "Enter the verification code sent to your phone",
+        "passwordPrompt": "Enter your two-step verification password",
+        "passwordRequired": "Two-step verification password is required",
+        "verificationError": "Verification failed",
+        "authComplete": "Authentication complete",
+        "redirecting": "Redirecting to dashboard..."
+    },
+    "dashboard": {
+        "title": "Dashboard",
+        "welcome": "Welcome to T2M Dashboard",
+        "telegram": {
+            "loading": "Loading your Telegram data...",
+            "dialogsCount": "You have access to {{count}} Telegram dialogs",
+            "connected": "Connected with API ID: {{apiId}}"
+        },
+        "noChats": "No chats available",
+        "loadingChats": "Loading chats...",
+        "search": "Search chats"
+    },
+    "metatrader": {
+        "title": "Metatrader 5 Sync",
+        "description": "Configure your Metatrader 5 integration settings here."
+    },
+    "settings": {
+        "title": "Settings",
+        "description": "Manage your application settings here.",
+        "language": "Language",
+        "theme": "Theme",
+        "notification": "Notifications",
+        "account": "Account",
+        "logout": "Log out"
+    },
+    "language": {
+        "english": "English",
+        "french": "Français"
+    },
+    "app": {
+        "name": "T2M"
+    },
+    "sync": {
+        "create": {
+            "title": "Create New Sync",
+            "selectDialog": "Select a Telegram dialog to sync",
+            "syncName": "Sync Name",
+            "syncState": "Initial State",
+            "noDialogsFound": "No dialogs found. Make sure you're connected to Telegram.",
+            "syncNameReadOnly": "The sync name must match the dialog name and cannot be changed"
+        },
+        "state": {
+            "ACTIVE": "Active",
+            "PAUSED": "Paused",
+            "ERROR": "Error",
+            "STOPPED": "Stopped"
+        },
+        "actions": {
+            "start": "Start Sync",
+            "stop": "Stop Sync",
+            "delete": "Delete Sync"
+        },
+        "tooltip": {
+            "pause": "Pause",
+            "resume": "Resume",
+            "stop": "Stop",
+            "play": "Play",
+            "delete": "Delete",
+            "settings": "Settings",
+            "viewDetails": "View Details"
+        },
+        "confirmation": {
+            "pause": {
+                "title": "Pause Sync",
+                "message": "Are you sure you want to pause the \"{{name}}\" sync?",
+                "button": "Pause"
+            },
+            "stop": {
+                "title": "Stop Sync",
+                "message": "Are you sure you want to stop the \"{{name}}\" sync?",
+                "button": "Stop"
+            },
+            "delete": {
+                "title": "Delete Sync",
+                "message": "Are you sure you want to delete the \"{{name}}\" sync? This action cannot be undone.",
+                "button": "Delete"
+            }
+        },
+        "status": {
+            "setActive": "Set to Active",
+            "setPaused": "Set to Paused",
+            "setStopped": "Set to Stopped",
+            "setError": "Set to Error"
+        },
+        "details": {
+            "summary": "Sync Summary",
+            "id": "ID",
+            "state": "State",
+            "createdAt": "Created At",
+            "updatedAt": "Updated At"
+        },
+        "settings": {
+            "title": "Sync Settings",
+            "name": "Sync Name",
+            "state": "Sync State",
+            "saveSuccess": "Settings saved successfully",
+            "saveError": "Failed to save settings"
+        }
+    },
+    "errors": {
+        "failedToFetchDialogs": "Failed to fetch dialogs from Telegram",
+        "failedToCreateSync": "Failed to create sync",
+        "unknownError": "An unknown error occurred"
+    }
+}
