@@ -1,31 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import type Stripe from 'stripe'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { getStripeClient } from '@/lib/stripe-client'
+import { requireStripePriceId } from '@/lib/stripe-prices'
+import { buildStripeReturnUrl } from '@/lib/site-url'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
 const supabaseAdmin = getSupabaseAdmin()
-
-/**
- * Price IDs do Stripe — configurar em variáveis de ambiente Vercel ou definir aqui.
- * Para criar os produtos: https://dashboard.stripe.com/products
- */
-const PRICE_IDS: Record<string, string> = {
-  // Subscriptions mensais/anuais para Pack Membro e Pack Premium
-  app_member_monthly:  process.env.STRIPE_PRICE_APP_MEMBER_MONTHLY  || '',
-  app_member_annual:   process.env.STRIPE_PRICE_APP_MEMBER_ANNUAL   || '',
-  premium_monthly:     process.env.STRIPE_PRICE_PREMIUM_MONTHLY     || '',
-  premium_annual:      process.env.STRIPE_PRICE_PREMIUM_ANNUAL      || '',
-  // Scanners (pagamento único)
-  goldkiller_lifetime: process.env.STRIPE_PRICE_GOLDKILLER_LIFETIME || '',
-  mtm_scanner_monthly: process.env.STRIPE_PRICE_MTM_SCANNER_MONTHLY || '',
-  mtm_scanner_lifetime:process.env.STRIPE_PRICE_MTM_SCANNER_LIFETIME|| '',
-  // Pack Total de Scanners
-  scanners_monthly:    process.env.STRIPE_PRICE_SCANNERS_MONTHLY    || '',
-  scanners_semestral:  process.env.STRIPE_PRICE_SCANNERS_SEMESTRAL  || '',
-  scanners_lifetime:   process.env.STRIPE_PRICE_SCANNERS_LIFETIME   || '',
-  // MTMcopier — addon de copy trading Telegram → MT5 (subscrição mensal)
-  mtmcopy_addon_monthly: process.env.STRIPE_PRICE_MTMCOPY_ADDON_MONTHLY || '',
-}
 
 const SCANNER_LIFETIME_PLANS = new Set([
   'goldkiller_lifetime',
@@ -52,26 +32,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'planId é obrigatório' }, { status: 400 })
     }
 
-    const priceId = PRICE_IDS[planId]
-    if (!priceId) {
-      return NextResponse.json(
-        { error: `Plano "${planId}" não encontrado ou preço não configurado` },
-        { status: 400 }
-      )
-    }
+    const priceId = requireStripePriceId(planId)
+    const stripe = getStripeClient()
 
-    // Determinar se é subscrição recorrente ou pagamento único
     const isLifetime = SCANNER_LIFETIME_PLANS.has(planId) || planId.includes('lifetime') || planId.includes('semestral')
     const mode: 'subscription' | 'payment' = isLifetime ? 'payment' : 'subscription'
-
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt'
 
     // Obter ou criar customer Stripe
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('stripe_customer_id, email, full_name')
+      .select('stripe_customer_id, email, full_name, mlm_sponsor_username')
       .eq('id', user.id)
       .single()
+
+    const sponsorUsername = (sponsorCode || profile?.mlm_sponsor_username || '').trim()
 
     let customerId = profile?.stripe_customer_id as string | undefined
     if (!customerId) {
@@ -93,26 +67,29 @@ export async function POST(request: NextRequest) {
       customer: customerId,
       mode,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/success?session_id=%7BCHECKOUT_SESSION_ID%7D&plan=${planId}`,
-      cancel_url: `${origin}${cancelPath}`,
+      success_url: buildStripeReturnUrl('/success', { plan: planId }),
+      cancel_url: buildStripeReturnUrl(cancelPath, {}, { includeSessionPlaceholder: false }),
       metadata: {
         user_id: user.id,
         plan: planId,
         ...(tradingview_username ? { tradingview_username } : {}),
-        sponsor_username: sponsorCode || '',
+        sponsor_username: sponsorUsername,
       },
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams)
 
-    // Registar sessão de checkout
-    await supabaseAdmin.from('checkout_sessions').insert({
+    // Registar sessão de checkout (não bloquear se a tabela ainda não existir)
+    const { error: insertError } = await supabaseAdmin.from('checkout_sessions').insert({
       stripe_session_id: session.id,
       user_id: user.id,
       plan: planId,
       status: 'pending',
       created_at: new Date().toISOString(),
-    }).catch(() => {/* tabela pode não existir ainda */})
+    })
+    if (insertError) {
+      console.warn('⚠️ [CHECKOUT] checkout_sessions insert:', insertError.message)
+    }
 
     return NextResponse.json({ url: session.url, sessionId: session.id })
 

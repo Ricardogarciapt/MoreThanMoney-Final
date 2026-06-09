@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 const supabase = getSupabaseAdmin()
 
@@ -41,14 +42,8 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔄 [DCA CRON] Iniciando análise DCA diária...')
 
-    // Verificar auth (opcional: adicionar token secreto para segurança)
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET || 'mtm-cron-secret-2025'
-    
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      console.warn('⚠️ [DCA CRON] Auth inválida')
-      // Em produção, descomentar esta linha para segurança:
-      // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!isCronAuthorized(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // 1. Buscar oportunidades DCA

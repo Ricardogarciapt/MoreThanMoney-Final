@@ -1,13 +1,8 @@
 name: External Cron Runner (MoreThanMoney)
 
-# O plano Vercel Hobby só permite crons com frequência diária (vercel.json já está
-# ajustado para "0 H * * *"). Estes endpoints, no entanto, beneficiam de execuções
-# mais frequentes (alertas de preço e fecho de TP/SL em tempo quase real).
-#
-# Este workflow corre fora da Vercel (gratuito no GitHub Actions) e chama os
-# endpoints diretamente via HTTPS, autenticando com o mesmo CRON_SECRET que a
-# Vercel já usa para autorizar os crons internos (ver função isAuthorized() nas
-# rotas /api/cron/* e /api/notifications/check-alerts).
+# Backup opcional: o plano Vercel Pro já corre estes crons via vercel.json.
+# Mantém este workflow como redundância se a Vercel falhar ou para testes manuais
+# (workflow_dispatch). Usa o mesmo CRON_SECRET das rotas /api/cron/*.
 #
 # Configuração necessária (uma única vez):
 #   1. Gerar um valor aleatório forte para CRON_SECRET (ex: openssl rand -hex 32)
@@ -80,3 +75,9 @@ jobs:
           curl -sf -X GET "${{ env.SITE_URL }}/api/email-marketing/sequences/process" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -o /dev/null -w "email-sequences → HTTP %{http_code}\n"
+
+      - name: Verificar trials expirados (check-trials)
+        run: |
+          curl -sf -X GET "${{ env.SITE_URL }}/api/cron/check-trials" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -o /dev/null -w "check-trials → HTTP %{http_code}\n"

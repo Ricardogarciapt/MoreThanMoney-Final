@@ -55,6 +55,7 @@ export default function SuccessPage() {
             whatsapp:  regData.whatsapp || '',
             plan:      regData.plan || plan || 'app_member',
             billing:   regData.billing || 'monthly',
+            sponsor_username: regData.sponsor_username || '',
           }),
         })
 

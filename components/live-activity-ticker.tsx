@@ -129,6 +129,7 @@ export default function LiveActivityTicker() {
 
   const Icon = ICONS[event.type]
   const color = COLORS[event.type]
+  if (!Icon) return null
 
   return (
     <div

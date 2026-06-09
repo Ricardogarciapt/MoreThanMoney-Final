@@ -3,10 +3,50 @@
 import { usePathname } from "next/navigation"
 import { useEffect, useRef } from "react"
 
+/** Lê o idioma destino do cookie googtrans (ex: /pt/en → en). */
+function getTranslateTarget(): string | null {
+  if (typeof document === "undefined") return null
+
+  const cookieRow = document.cookie.split("; ").find((r) => r.startsWith("googtrans="))
+  if (!cookieRow) return null
+
+  const raw = decodeURIComponent(cookieRow.slice("googtrans=".length))
+  if (!raw || raw === "/pt/pt" || raw === "/auto/pt") return null
+
+  const segments = raw.split("/").filter(Boolean)
+  const target = segments[segments.length - 1]
+  return target && target !== "pt" ? target : null
+}
+
+const TRANSLATE_BLOCKED_PREFIXES = ["/admin", "/register", "/login", "/success", "/app-mobile"]
+
+function isTranslateBlocked(path: string): boolean {
+  return TRANSLATE_BLOCKED_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`)
+  )
+}
+
+function setPageTranslatable(enabled: boolean) {
+  const html = document.documentElement
+  const body = document.body
+  if (!html || !body) return
+
+  if (enabled) {
+    html.removeAttribute("translate")
+    html.classList.remove("notranslate")
+    body.removeAttribute("translate")
+    body.classList.remove("notranslate")
+  } else {
+    html.setAttribute("translate", "no")
+    html.classList.add("notranslate")
+    body.setAttribute("translate", "no")
+    body.classList.add("notranslate")
+  }
+}
+
 /**
- * Carrega o widget do Google Translate só fora de /admin.
- * O script global no <head> quebrava formulários pesados no Safari (DOM reescrito / hidratação).
- * Ao entrar em /admin, remove restos do widget e marca a página como não traduzível.
+ * Carrega o Google Translate apenas quando o utilizador escolheu idioma manualmente
+ * (cookie googtrans). Evita o crash do React por mutação do DOM em visitas normais.
  */
 export function GoogleTranslateLoader() {
   const pathname = usePathname()
@@ -15,23 +55,32 @@ export function GoogleTranslateLoader() {
   useEffect(() => {
     if (typeof document === "undefined") return
     const path = pathname || ""
-    if (path.startsWith("/admin")) {
-      document.documentElement.setAttribute("translate", "no")
-      document.documentElement.classList.add("notranslate")
+
+    if (isTranslateBlocked(path)) {
+      setPageTranslatable(false)
       const holder = document.getElementById("google_translate_element")
       if (holder) holder.replaceChildren()
       document.querySelectorAll(".goog-te-banner-frame, .goog-te-menu-frame").forEach((n) => n.remove())
       return
     }
 
-    document.documentElement.removeAttribute("translate")
-    document.documentElement.classList.remove("notranslate")
+    const target = getTranslateTarget()
+    if (!target) {
+      setPageTranslatable(false)
+      return
+    }
+
+    setPageTranslatable(true)
   }, [pathname])
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return
     const path = pathname || ""
-    if (path.startsWith("/admin")) return
+    if (isTranslateBlocked(path)) return
+
+    const target = getTranslateTarget()
+    if (!target) return
+
     if (document.getElementById("google-translate-cbh")) {
       scriptAppendedRef.current = true
       return
@@ -63,7 +112,7 @@ export function GoogleTranslateLoader() {
           "google_translate_element"
         )
       } catch {
-        /* Safari / extensões / bloqueio de scripts */
+        /* Safari / bloqueio de scripts */
       }
     }
 

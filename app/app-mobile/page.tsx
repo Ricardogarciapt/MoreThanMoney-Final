@@ -389,6 +389,7 @@ function AppMobileContent() {
           <OnboardingTutorial
             onComplete={markOnboardingDone}
             onTabChange={handleTabChange}
+            onOpenSidebar={() => setIsSidebarOpen(true)}
           />
         )}
 
@@ -410,6 +411,7 @@ function AppMobileContent() {
           <div className={`flex items-center justify-between gap-4 px-4 transition-all duration-300 ${isHeaderCollapsed ? "py-2" : "py-3"}`}>
             {/* Menu Button */}
             <button
+              data-tutorial="menu"
               onClick={() => setIsSidebarOpen(true)}
               className="w-10 h-10 bg-gray-800/80 backdrop-blur-sm rounded-lg flex items-center justify-center hover:bg-gray-700 transition-all active:scale-95"
               title="Menu"
@@ -441,6 +443,7 @@ function AppMobileContent() {
 
             {/* Notification Bell */}
             <button
+              data-tutorial="notifications"
               onClick={() => {
                 setIsNotificationsOpen(true)
                 setUnreadCount(0)
@@ -513,10 +516,12 @@ function AppMobileContent() {
         {/* Bottom Navigation - FIXA NO FUNDO */}
         <div
           id="app-mobile-bottom-tabs"
+          data-tutorial="bottom-nav"
           className="app-mobile-bottom-tabs fixed bottom-0 left-0 right-0 z-[110] bg-black border-t border-gray-800 px-2 pt-2"
           style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "0.25rem", paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
         >
           <button
+            data-tutorial-tab="social"
             onClick={() => handleTabChange("social")}
             className={`py-3 rounded-lg transition-all relative ${
               activeTab === "social"
@@ -529,6 +534,7 @@ function AppMobileContent() {
           </button>
 
           <button
+            data-tutorial-tab="chat"
             onClick={() => handleTabChange("chat")}
             className={`py-3 rounded-lg transition-all relative ${
               activeTab === "chat"
@@ -541,6 +547,7 @@ function AppMobileContent() {
           </button>
 
           <button
+            data-tutorial-tab="live"
             onClick={() => handleTabChange("live")}
             className={`py-3 rounded-lg transition-all relative ${
               activeTab === "live"
@@ -553,6 +560,7 @@ function AppMobileContent() {
           </button>
 
           <button
+            data-tutorial-tab="apps"
             onClick={() => handleTabChange("apps")}
             className={`py-3 rounded-lg transition-all relative ${
               activeTab === "apps"
@@ -565,6 +573,7 @@ function AppMobileContent() {
           </button>
 
           <button
+            data-tutorial-tab="portfolio"
             onClick={() => handleTabChange("portfolio")}
             className={`py-3 rounded-lg transition-all relative ${
               activeTab === "portfolio"
@@ -577,6 +586,7 @@ function AppMobileContent() {
           </button>
 
           <button
+            data-tutorial-tab="scanner"
             onClick={() => handleTabChange("scanner")}
             className={`py-3 rounded-lg transition-all relative ${
               activeTab === "scanner"

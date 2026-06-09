@@ -1,0 +1,23 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "84TRST3649.pt.morethanmoney.app",
+        "paths": [
+          "/app-mobile",
+          "/app-mobile/*",
+          "/auth/*",
+          "/success",
+          "/scanner",
+          "/portfolio"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "84TRST3649.pt.morethanmoney.app"
+    ]
+  }
+}

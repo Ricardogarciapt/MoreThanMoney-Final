@@ -51,15 +51,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Ficheiro em falta" }, { status: 400 })
     }
 
-    // Validate type
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/heic"]
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: "Tipo de ficheiro não suportado" }, { status: 400 })
+    const isImage = file.type.startsWith("image/")
+    const isVideo = file.type.startsWith("video/")
+    const allowedTypes = [
+      "image/jpeg", "image/png", "image/gif", "image/webp", "image/heic",
+      "video/mp4", "video/webm", "video/quicktime", "video/mpeg",
+    ]
+    if (!isImage && !isVideo && !allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: "Tipo de ficheiro não suportado (imagem ou vídeo)" }, { status: 400 })
     }
 
-    // Validate size (10 MB)
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: "Ficheiro demasiado grande (máx 10 MB)" }, { status: 400 })
+    const maxSize = isVideo ? 25 * 1024 * 1024 : 10 * 1024 * 1024
+    if (file.size > maxSize) {
+      return NextResponse.json(
+        { error: isVideo ? "Vídeo demasiado grande (máx 25 MB)" : "Ficheiro demasiado grande (máx 10 MB)" },
+        { status: 400 }
+      )
     }
 
     const ext = file.name.split(".").pop() || "jpg"
@@ -82,7 +89,10 @@ export async function POST(request: NextRequest) {
 
     const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName)
 
-    return NextResponse.json({ publicUrl: urlData.publicUrl })
+    return NextResponse.json({
+      publicUrl: urlData.publicUrl,
+      mediaType: isVideo ? "video" : "image",
+    })
   } catch (err: any) {
     console.error("[chat/upload-image] exception:", err)
     return NextResponse.json({ error: err.message || "Erro interno" }, { status: 500 })

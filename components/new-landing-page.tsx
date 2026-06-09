@@ -26,7 +26,6 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 import ParticleBackground from "@/components/particle-background"
-import LiveActivityTicker from "@/components/live-activity-ticker"
 import { getRandomTestimonials } from "@/lib/testimonials-service"
 import type { Testimonial } from "@/lib/testimonials-service"
 
@@ -245,14 +244,6 @@ export default function NewLandingPage() {
 
   const testimonialPages = Math.max(1, Math.ceil(testimonials.length / 3))
 
-  useEffect(() => {
-    if (testimonials.length <= 3) return
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 3) % testimonials.length)
-    }, 6000)
-    return () => clearInterval(interval)
-  }, [testimonials.length])
-
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
   }
@@ -260,7 +251,6 @@ export default function NewLandingPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-white overflow-hidden">
       <ParticleBackground />
-      <LiveActivityTicker />
 
       {/* ── HERO ──────────────────────────────────────────────────────────────── */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-16 pb-8">
@@ -273,7 +263,7 @@ export default function NewLandingPage() {
             <span className="bg-gradient-to-r from-[#F3F3E6] via-[#D2A63C] to-[#BB8525] bg-clip-text text-transparent">
               Aprende.
             </span>{" "}
-            <span className="text-white">Aprende,Analisa.</span>{" "}
+            <span className="text-white">Analisa.</span>{" "}
             <span className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] bg-clip-text text-transparent">
               Cresce.
             </span>
@@ -738,9 +728,9 @@ export default function NewLandingPage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {visibleTestimonials.map((t: Testimonial, idx: number) => (
+            {visibleTestimonials.filter(Boolean).map((t: Testimonial, idx: number) => (
               <div
-                key={`${t.id}-${currentIndex}-${idx}`}
+                key={`${t.id}-${idx}`}
                 className="rounded-2xl border border-[#D2A63C]/20 bg-gradient-to-br from-[#D2A63C]/5 to-transparent p-6"
               >
                 {/* Stars */}

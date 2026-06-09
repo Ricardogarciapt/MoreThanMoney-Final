@@ -1,100 +1,340 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { ArrowRight, X, Check, Wallet, MessageSquare, Video, BarChart3, LayoutGrid, BrainCircuit, User, BookOpen } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect, useCallback, useId } from "react"
+import {
+  ArrowRight,
+  ArrowLeft,
+  X,
+  Check,
+  Wallet,
+  MessageSquare,
+  Video,
+  BarChart3,
+  LayoutGrid,
+  BrainCircuit,
+  User,
+  BookOpen,
+  Bell,
+  Network,
+  Compass,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react"
 
 // ─── Tutorial Steps ────────────────────────────────────────────────────────────
 
-const STEPS = [
+type TutorialStep = {
+  id: string
+  phase: string
+  emoji: string
+  title: string
+  body: string
+  tips?: string[]
+  hint?: string
+  color: string
+  icon: LucideIcon | null
+  tab?: string
+  action?: "open-sidebar"
+  /** Selectores data-tutorial / data-tutorial-tab a realçar (sem desfoque total) */
+  highlight?: string[]
+}
+
+type HighlightRect = {
+  top: number
+  left: number
+  width: number
+  height: number
+}
+
+function resolveHighlightSelectors(step: TutorialStep): string[] {
+  if (step.highlight?.length) return step.highlight
+  if (step.tab) return [`[data-tutorial-tab="${step.tab}"]`]
+  if (step.action === "open-sidebar") return ['[data-tutorial="menu"]']
+  if (step.id === "notifications") return ['[data-tutorial="notifications"]']
+  if (step.id === "navigation") return ['[data-tutorial="menu"]', '[data-tutorial="bottom-nav"]']
+  if (step.id === "welcome" || step.id === "done") return ['[data-tutorial="bottom-nav"]']
+  return []
+}
+
+function TutorialSpotlight({
+  rects,
+  color,
+  maskId,
+}: {
+  rects: HighlightRect[]
+  color: string
+  maskId: string
+}) {
+  if (rects.length === 0) {
+    return (
+      <div
+        className="fixed inset-0 z-[299] bg-black/45 pointer-events-auto"
+        aria-hidden
+      />
+    )
+  }
+
+  const pad = 8
+  const radius = 14
+
+  return (
+    <>
+      <svg className="fixed inset-0 z-[299] w-full h-full pointer-events-auto" aria-hidden>
+        <defs>
+          <mask id={maskId}>
+            <rect width="100%" height="100%" fill="white" />
+            {rects.map((r, i) => (
+              <rect
+                key={i}
+                x={r.left - pad}
+                y={r.top - pad}
+                width={r.width + pad * 2}
+                height={r.height + pad * 2}
+                rx={radius}
+                fill="black"
+              />
+            ))}
+          </mask>
+        </defs>
+        <rect width="100%" height="100%" fill="rgba(0,0,0,0.52)" mask={`url(#${maskId})`} />
+      </svg>
+
+      {rects.map((r, i) => (
+        <div
+          key={i}
+          className="fixed z-[300] pointer-events-none rounded-2xl transition-all duration-300"
+          style={{
+            top: r.top - pad,
+            left: r.left - pad,
+            width: r.width + pad * 2,
+            height: r.height + pad * 2,
+            boxShadow: `0 0 0 2px ${color}, 0 0 24px ${color}99, inset 0 0 12px ${color}22`,
+          }}
+        />
+      ))}
+    </>
+  )
+}
+
+const STEPS: TutorialStep[] = [
   {
     id: "welcome",
+    phase: "Introdução",
     emoji: "👋",
-    title: "Bem-vindo à MTM App!",
-    body: "Em 30 segundos conheces tudo o que precisas de saber. Vamos começar?",
+    title: "Bem-vindo ao MTM System",
+    body: "Esta é a tua central de trading, comunidade e formação. Em ~2 minutos vais perceber onde está cada coisa e como tirar proveito desde o primeiro dia.",
+    tips: [
+      "Podes saltar e rever nas Definições",
+      "Cada passo leva-te ao separador certo",
+    ],
     color: "#D2A63C",
-    icon: null,
+    icon: Sparkles,
+  },
+  {
+    id: "navigation",
+    phase: "Navegação",
+    emoji: "🧭",
+    title: "Como navegar na app",
+    body: "A app foi pensada para telemóvel: rápida, com gestos e acesso directo ao que importa.",
+    tips: [
+      "Barra inferior — Feed, Chat, Ao vivo, Apps, Portfólio e Scanner",
+      "Desliza para a esquerda/direita para mudar de separador",
+      "Menu ☰ no topo — Mentor, Afiliados e atalhos extra",
+      "Sino 🔔 — notificações de trade, chat e alertas",
+    ],
+    hint: "Experimenta tocar no menu ☰ no canto superior esquerdo",
+    color: "#38BDF8",
+    icon: Compass,
+    action: "open-sidebar",
+    highlight: ["menu", "bottom-nav"],
   },
   {
     id: "social",
+    phase: "Comunidade",
     emoji: "📰",
     title: "Feed Social",
-    body: "Fica a par de todas as novidades MTM — ideas de trade, análises e publicações da comunidade.",
+    body: "O ponto de encontro da comunidade MTM — novidades, ideias e contexto de mercado num só sítio.",
+    tips: [
+      "Publicações da equipa e membros activos",
+      "Partilha gráficos e ideias de trade",
+      "Filtra por categorias quando disponível",
+    ],
+    hint: "Separador «Feed» na barra inferior",
     color: "#D2A63C",
     icon: LayoutGrid,
     tab: "social",
   },
   {
     id: "chat",
+    phase: "Comunidade",
     emoji: "💬",
-    title: "Chat da Comunidade",
-    body: "Canais em tempo real: #Trade Ideas, #Premium Ideas, #Trading e #Cripto. Partilha, aprende, discute.",
+    title: "Chat em tempo real",
+    body: "Canais dedicados para discutir setups, cripto e ideias premium com outros traders MTM.",
+    tips: [
+      "#Trade Ideas — setups e análises do dia",
+      "#Premium Ideas — conteúdo exclusivo premium",
+      "#Trading e #Cripto — discussão ao vivo",
+      "Responde a mensagens com swipe ou long-press",
+    ],
+    hint: "Recebes push quando há mensagem nos canais #Trading e #Cripto",
     color: "#26A5E4",
     icon: MessageSquare,
     tab: "chat",
   },
   {
+    id: "notifications",
+    phase: "Comunidade",
+    emoji: "🔔",
+    title: "Notificações",
+    body: "Mantém-te informado sem estar sempre na app — alertas de preço, chat, DCA e subscrição.",
+    tips: [
+      "Toca no sino no topo para ver o histórico",
+      "Activa push nas Definições para não perder setups",
+      "Alertas de portfólio quando o preço atinge o teu alvo",
+    ],
+    hint: "Ícone do sino no canto superior direito",
+    color: "#F59E0B",
+    icon: Bell,
+    highlight: ["notifications"],
+  },
+  {
     id: "live",
+    phase: "Formação",
     emoji: "🎥",
     title: "Live Sessions",
-    body: "Sessões de trading ao vivo com o Ricardo e a equipa MTM. Aprende em directo, com contexto real de mercado.",
+    body: "Trading ao vivo com o Ricardo e a equipa — mercado real, decisões explicadas e Q&A.",
+    tips: [
+      "Consulta o calendário de próximas sessões",
+      "Entra nas lives premium se tiveres Pack Premium",
+      "Replays disponíveis quando a sessão termina",
+    ],
+    hint: "Separador «Ao vivo» na barra inferior",
     color: "#EF4444",
     icon: Video,
     tab: "live",
   },
   {
+    id: "mentor",
+    phase: "Formação",
+    emoji: "🤖",
+    title: "Mentor AI",
+    body: "O teu tutor pessoal 24/7 — perguntas sobre estratégia, gestão de risco, mindset e ferramentas MTM.",
+    tips: [
+      "Faz perguntas concretas com o par e timeframe",
+      "Pede checklists antes de abrir uma posição",
+      "Usa para rever o teu plano de trading semanal",
+    ],
+    hint: "Menu ☰ → Mentor (ou separador dedicado)",
+    color: "#F59E0B",
+    icon: BrainCircuit,
+    tab: "mentor",
+    highlight: ["menu"],
+  },
+  {
     id: "portfolio",
+    phase: "Trading",
     emoji: "📊",
     title: "Portfólio MTM",
-    body: "Acompanha o portfólio real de cripto e ações da MTM. Vê alocações, performance e oportunidades DCA.",
+    body: "Acompanha o portfólio real da MTM em cripto e ETFs — alocações, performance e oportunidades DCA.",
+    tips: [
+      "Vê pesos, entradas e níveis de TP/SL",
+      "Secção DCA — oportunidades de reforço inteligente",
+      "Cria alertas de preço personalizados por ativo",
+    ],
+    hint: "Separador «Portfólio» na barra inferior",
     color: "#10B981",
     icon: Wallet,
     tab: "portfolio",
   },
   {
     id: "scanner",
+    phase: "Trading",
     emoji: "🔍",
-    title: "Scanners",
-    body: "Acede aos scanners TradingView exclusivos da MTM — Gold Killer, MTM Scanner e Sensei X.",
+    title: "Scanners TradingView",
+    body: "Ferramentas exclusivas MTM para encontrar setups com critérios objectivos — menos ruído, mais foco.",
+    tips: [
+      "Gold Killer — foco em XAU/USD",
+      "MTM Scanner e Sensei X — setups multi-mercado",
+      "Abre no TradingView com a tua conta ligada",
+    ],
+    hint: "Separador «Scanner» na barra inferior",
     color: "#8B5CF6",
     icon: BarChart3,
     tab: "scanner",
   },
   {
-    id: "mentor",
-    emoji: "🤖",
-    title: "Mentor AI",
-    body: "O teu tutor de trading pessoal disponível 24/7. Faz perguntas, analisa setups e aprende ao teu ritmo.",
-    color: "#F59E0B",
-    icon: BrainCircuit,
-    tab: "mentor",
-  },
-  {
     id: "apps",
+    phase: "Ferramentas",
     emoji: "🛠️",
-    title: "Ferramentas",
-    body: "Checklist de trading, gestão de risco, calculadoras e mais — tudo numa só área.",
+    title: "Apps MTM",
+    body: "Ecossistema extra para conteúdo, parcerias e automação — disponível para membros IQ e Premium.",
+    tips: [
+      "MTM Studio — brand builder e conteúdo visual",
+      "Partnership Engine — UGC e colaborações",
+      "MTM AiOS — sistema operativo de IA da MTM",
+    ],
+    hint: "Separador «Apps» na barra inferior",
     color: "#D2A63C",
     icon: BookOpen,
     tab: "apps",
   },
   {
+    id: "mlm",
+    phase: "Ferramentas",
+    emoji: "🤝",
+    title: "Programa de Afiliados",
+    body: "Partilha a MTM e ganha comissões — árvore binária, links de referência e dashboard de resultados.",
+    tips: [
+      "Copia o teu link de patrocinador",
+      "Acompanha membros e volume na árvore",
+      "Liga conta Stripe para receber pagamentos",
+    ],
+    hint: "Menu ☰ → Afiliados",
+    color: "#2DD4BF",
+    icon: Network,
+    tab: "mlm",
+    highlight: ["menu"],
+  },
+  {
     id: "settings",
+    phase: "Conta",
     emoji: "⚙️",
-    title: "O teu Perfil",
-    body: "Gere a tua conta, notificações, password e plano. Usa o menu hamburguer (☰) no topo para aceder.",
+    title: "Perfil e Definições",
+    body: "Gere a tua conta, segurança, notificações push e plano de subscrição.",
+    tips: [
+      "Activa notificações push para alertas em tempo real",
+      "Actualiza password e dados de contacto",
+      "Rever este tutorial quando quiseres",
+    ],
+    hint: "Menu ☰ → Definições (ícone de utilizador)",
     color: "#D2A63C",
     icon: User,
     tab: "settings",
+    highlight: ["menu"],
   },
   {
     id: "done",
+    phase: "Pronto!",
     emoji: "🚀",
-    title: "Tudo pronto!",
-    body: "Já sabes como tirar o máximo da MTM App. Bom trading! Podes rever este tutorial a qualquer momento nas Definições.",
+    title: "Estás pronto para começar",
+    body: "Segue este plano de arranque nos próximos dias para tirar o máximo da MTM App.",
+    tips: [
+      "✓ Activa notificações push nas Definições",
+      "✓ Entra no #Trade Ideas e apresenta-te",
+      "✓ Explora o portfólio e uma oportunidade DCA",
+      "✓ Faz uma pergunta ao Mentor AI",
+      "✓ Marca a próxima Live Session no calendário",
+    ],
     color: "#10B981",
     icon: null,
   },
+]
+
+const QUICK_START = [
+  "Activa push nas Definições",
+  "Segue o Feed e o Chat diariamente",
+  "Consulta o Portfólio 1× por semana",
+  "Usa o Scanner antes de cada sessão",
 ]
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -102,152 +342,281 @@ const STEPS = [
 interface OnboardingTutorialProps {
   onComplete?: () => void
   onTabChange?: (tab: string) => void
+  onOpenSidebar?: () => void
 }
 
-export default function OnboardingTutorial({ onComplete, onTabChange }: OnboardingTutorialProps) {
+export default function OnboardingTutorial({
+  onComplete,
+  onTabChange,
+  onOpenSidebar,
+}: OnboardingTutorialProps) {
   const [step, setStep] = useState(0)
   const [isVisible, setIsVisible] = useState(true)
   const [animating, setAnimating] = useState(false)
+  const [direction, setDirection] = useState<"next" | "prev">("next")
+  const [highlightRects, setHighlightRects] = useState<HighlightRect[]>([])
+  const maskId = useId().replace(/:/g, "")
 
   const current = STEPS[step]
+  const isFirst = step === 0
   const isLast = step === STEPS.length - 1
   const progress = ((step + 1) / STEPS.length) * 100
+  const Icon = current.icon
+
+  const measureHighlights = useCallback(() => {
+    const selectors = resolveHighlightSelectors(current)
+    const rects: HighlightRect[] = []
+
+    for (const sel of selectors) {
+      const query = sel.startsWith("[") ? sel : `[data-tutorial="${sel}"]`
+      const el = document.querySelector(query)
+      if (!el) continue
+      const r = el.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0) {
+        rects.push({ top: r.top, left: r.left, width: r.width, height: r.height })
+      }
+    }
+
+    setHighlightRects(rects)
+  }, [current])
+
+  useEffect(() => {
+    measureHighlights()
+    const t1 = setTimeout(measureHighlights, 180)
+    const t2 = setTimeout(measureHighlights, 400)
+    window.addEventListener("resize", measureHighlights)
+    window.addEventListener("scroll", measureHighlights, true)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      window.removeEventListener("resize", measureHighlights)
+      window.removeEventListener("scroll", measureHighlights, true)
+    }
+  }, [step, measureHighlights])
+
+  const applyStepSideEffects = (target: TutorialStep) => {
+    if (target.tab && onTabChange) onTabChange(target.tab)
+    if (target.action === "open-sidebar") onOpenSidebar?.()
+  }
+
+  const highlightsBottom =
+    typeof window !== "undefined" &&
+    highlightRects.length > 0 &&
+    highlightRects.every((r) => r.top > window.innerHeight * 0.55)
+
+  const transitionTo = (nextIndex: number, dir: "next" | "prev") => {
+    if (animating || nextIndex < 0 || nextIndex >= STEPS.length) return
+    setAnimating(true)
+    setDirection(dir)
+    setTimeout(() => {
+      const target = STEPS[nextIndex]
+      setStep(nextIndex)
+      applyStepSideEffects(target)
+      setAnimating(false)
+    }, 160)
+  }
 
   const goNext = () => {
-    if (animating) return
     if (isLast) {
       handleComplete()
       return
     }
-    setAnimating(true)
-    setTimeout(() => {
-      const nextStep = STEPS[step + 1]
-      setStep(step + 1)
-      // Navigate to the relevant tab
-      if (nextStep?.tab && onTabChange) {
-        onTabChange(nextStep.tab)
-      }
-      setAnimating(false)
-    }, 180)
+    transitionTo(step + 1, "next")
+  }
+
+  const goPrev = () => {
+    if (!isFirst) transitionTo(step - 1, "prev")
   }
 
   const handleComplete = () => {
-    try { localStorage.setItem("mtm_onboarding_done", "1") } catch {}
+    try {
+      localStorage.setItem("mtm_onboarding_done", "1")
+    } catch {}
     setIsVisible(false)
     onComplete?.()
   }
 
-  const handleSkip = () => {
-    handleComplete()
-  }
-
   if (!isVisible) return null
 
-  const Icon = current.icon
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}
-    >
-      {/* Card — centrado no ecrã */}
+    <div className="fixed inset-0 z-[301] pointer-events-none">
+      <TutorialSpotlight rects={highlightRects} color={current.color} maskId={maskId} />
+
       <div
-        className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl"
+        className={`absolute left-0 right-0 flex justify-center px-0 sm:px-4 pointer-events-auto ${
+          highlightsBottom ? "top-4 sm:top-8" : "bottom-0 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2"
+        }`}
+        style={
+          highlightsBottom
+            ? { paddingTop: "max(0.5rem, env(safe-area-inset-top, 0px))" }
+            : { paddingBottom: "max(5.5rem, calc(env(safe-area-inset-bottom, 0px) + 4.5rem))" }
+        }
+      >
+      <div
+        className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[58vh] sm:max-h-[72vh] flex flex-col"
         style={{
-          transform: animating ? "scale(0.97)" : "scale(1)",
-          transition: "transform 0.18s ease",
+          transform: animating
+            ? direction === "next"
+              ? "translateY(8px) scale(0.98)"
+              : "translateY(-8px) scale(0.98)"
+            : "translateY(0) scale(1)",
+          opacity: animating ? 0.92 : 1,
+          transition: "transform 0.16s ease, opacity 0.16s ease",
         }}
       >
-        {/* Top colour band */}
         <div
-          className="h-2"
-          style={{ background: `linear-gradient(to right, ${current.color}, ${current.color}88)` }}
+          className="h-1.5 shrink-0"
+          style={{ background: `linear-gradient(to right, ${current.color}, ${current.color}55)` }}
         />
 
-        <div className="bg-gray-900 px-6 pt-4 pb-6">
-          {/* Header: step indicators + skip */}
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex gap-1.5 flex-1">
-              {STEPS.map((_, i) => (
-                <div
-                  key={i}
-                  className="h-1 rounded-full flex-1 transition-all duration-300"
-                  style={{
-                    backgroundColor: i <= step ? current.color : "#374151",
-                    maxWidth: 40,
-                  }}
-                />
-              ))}
-            </div>
-            <button
-              onClick={handleSkip}
-              className="ml-3 flex items-center gap-1 text-gray-400 text-sm hover:text-white transition-colors shrink-0"
-              aria-label="Saltar tutorial"
-            >
-              Saltar <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Icon + Emoji */}
-          <div className="flex flex-col items-center mb-6">
-            {Icon ? (
-              <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center mb-3 shadow-lg"
-                style={{ backgroundColor: `${current.color}18`, border: `1.5px solid ${current.color}40` }}
-              >
-                <Icon style={{ width: 32, height: 32, color: current.color }} />
-              </div>
-            ) : (
-              <div className="text-5xl mb-3">{current.emoji}</div>
-            )}
-
-            {/* Step badge */}
-            <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+        <div className="bg-gray-900 flex flex-col min-h-0 flex-1">
+          {/* Header */}
+          <div
+            className="px-5 pt-4 pb-3 border-b border-gray-800/80 shrink-0"
+            style={{ paddingTop: "max(1rem, env(safe-area-inset-top, 0px))" }}
+          >
+            <div className="flex items-center justify-between gap-3 mb-3">
               <span
-                className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
                 style={{ backgroundColor: `${current.color}20`, color: current.color }}
               >
-                {step + 1}
+                {current.phase}
               </span>
-              <span>de {STEPS.length}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-gray-500">
+                  {step + 1}/{STEPS.length}
+                </span>
+                <button
+                  onClick={handleComplete}
+                  className="flex items-center gap-1 text-gray-400 text-xs hover:text-white transition-colors"
+                  aria-label="Saltar tutorial"
+                >
+                  Saltar <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="h-1.5 rounded-full bg-gray-800 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-300"
+                style={{ width: `${progress}%`, backgroundColor: current.color }}
+              />
             </div>
           </div>
 
-          {/* Text */}
-          <div className="text-center mb-8">
-            <h2 className="text-xl font-bold text-white mb-2">{current.title}</h2>
-            <p className="text-gray-300 text-sm leading-relaxed">{current.body}</p>
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto px-5 py-5 min-h-0">
+            <div className="flex flex-col items-center text-center mb-4">
+              {Icon ? (
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3 shadow-lg"
+                  style={{
+                    backgroundColor: `${current.color}18`,
+                    border: `1.5px solid ${current.color}40`,
+                  }}
+                >
+                  <Icon style={{ width: 28, height: 28, color: current.color }} />
+                </div>
+              ) : (
+                <div className="text-5xl mb-3">{current.emoji}</div>
+              )}
+              <h2 className="text-xl font-bold text-white mb-2">{current.title}</h2>
+              <p className="text-gray-300 text-sm leading-relaxed">{current.body}</p>
+            </div>
+
+            {current.hint && (
+              <div
+                className="mb-4 px-3 py-2.5 rounded-xl text-left text-xs leading-relaxed"
+                style={{
+                  backgroundColor: `${current.color}12`,
+                  border: `1px solid ${current.color}30`,
+                  color: "#D1D5DB",
+                }}
+              >
+                <span style={{ color: current.color }} className="font-semibold">
+                  Onde encontrar:{" "}
+                </span>
+                {current.hint}
+              </div>
+            )}
+
+            {current.tips && current.tips.length > 0 && (
+              <ul className="space-y-2 text-left">
+                {current.tips.map((tip) => (
+                  <li
+                    key={tip}
+                    className="flex items-start gap-2 text-sm text-gray-300 leading-snug"
+                  >
+                    <span
+                      className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ backgroundColor: current.color }}
+                    />
+                    <span>{tip}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {isLast && (
+              <div className="mt-5 p-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-left">
+                <p className="text-xs font-semibold text-[#D2A63C] mb-2 uppercase tracking-wide">
+                  Plano rápido — 1.ª semana
+                </p>
+                <ul className="space-y-1.5">
+                  {QUICK_START.map((item) => (
+                    <li key={item} className="text-xs text-gray-400 flex items-center gap-2">
+                      <Check className="w-3 h-3 text-green-500 shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
-          {/* CTA */}
-          <button
-            onClick={goNext}
-            disabled={animating}
-            className="w-full py-4 rounded-2xl font-bold text-base text-black flex items-center justify-center gap-2 transition-all active:scale-[0.97]"
-            style={{ background: `linear-gradient(135deg, ${current.color}, ${current.color}CC)` }}
+          {/* Footer actions */}
+          <div
+            className="px-5 pb-5 pt-2 border-t border-gray-800/80 shrink-0"
+            style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom, 0px))" }}
           >
-            {isLast ? (
-              <>
-                <Check className="w-5 h-5" />
-                Começar a explorar
-              </>
-            ) : (
-              <>
-                {step === 0 ? "Vamos lá!" : "Próximo"}
-                <ArrowRight className="w-5 h-5" />
-              </>
-            )}
-          </button>
-
-          {!isLast && (
-            <button
-              onClick={handleSkip}
-              className="w-full mt-3 py-2 text-gray-500 text-sm hover:text-gray-300 transition-colors"
-            >
-              Saltar tutorial
-            </button>
-          )}
+            <div className="flex gap-2">
+              {!isFirst && (
+                <button
+                  onClick={goPrev}
+                  disabled={animating}
+                  className="px-4 py-3.5 rounded-2xl border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors disabled:opacity-50"
+                  aria-label="Passo anterior"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+              )}
+              <button
+                onClick={goNext}
+                disabled={animating}
+                className="flex-1 py-3.5 rounded-2xl font-bold text-base text-black flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-70"
+                style={{ background: `linear-gradient(135deg, ${current.color}, ${current.color}CC)` }}
+              >
+                {isLast ? (
+                  <>
+                    <Check className="w-5 h-5" />
+                    Começar a explorar
+                  </>
+                ) : isFirst ? (
+                  <>
+                    Vamos lá!
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                ) : (
+                  <>
+                    Próximo
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
+      </div>
       </div>
     </div>
   )
@@ -270,14 +639,17 @@ export function useOnboarding() {
 
     check()
 
-    // Listen for replay event from settings
-    const handleReplay = () => setShouldShow(true)
+    const handleReplay = () => {
+      setShouldShow(true)
+    }
     window.addEventListener("mtm-replay-tutorial", handleReplay)
     return () => window.removeEventListener("mtm-replay-tutorial", handleReplay)
   }, [])
 
   const markDone = () => {
-    try { localStorage.setItem("mtm_onboarding_done", "1") } catch {}
+    try {
+      localStorage.setItem("mtm_onboarding_done", "1")
+    } catch {}
     setShouldShow(false)
   }
 

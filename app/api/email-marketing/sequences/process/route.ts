@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { isCronAuthorized } from "@/lib/cron-auth"
 import nodemailer from 'nodemailer'
 import * as emailTemplates from '@/lib/email-templates'
 
@@ -18,14 +19,8 @@ const createTransporter = () => {
 // GET: Processar sequências pendentes (chamado por CRON)
 export async function GET(request: NextRequest) {
   try {
-    // Verificar autenticação CRON
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET || 'mtm-cron-secret-2025'
-    
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      console.warn('⚠️ [SEQUENCES] Auth inválida')
-      // Em produção, descomentar esta linha:
-      // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!isCronAuthorized(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
     console.log('🔄 [SEQUENCES] Processando sequências pendentes...')

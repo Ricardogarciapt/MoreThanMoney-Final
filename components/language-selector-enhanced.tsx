@@ -101,8 +101,6 @@ export default function LanguageSelectorEnhanced() {
     if (!manualSelection || manualSelection !== 'true') {
       applySavedTranslation()
     } else {
-      // Apenas sincronizar o estado visual — o widget Google Translate está
-      // desativado no layout para evitar crash do React por mutação do DOM.
       const savedLang = localStorage.getItem('mtm_preferred_language') || sessionStorage.getItem('mtm_active_language')
       if (savedLang) {
         setCurrentLanguage(savedLang)

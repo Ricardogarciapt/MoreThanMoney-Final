@@ -1,26 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
-
-/**
- * Price IDs — mesmos que o endpoint create-checkout-session
- */
-const PRICE_IDS: Record<string, string> = {
-  app_member_monthly:  process.env.STRIPE_PRICE_APP_MEMBER_MONTHLY  || '',
-  app_member_annual:   process.env.STRIPE_PRICE_APP_MEMBER_ANNUAL   || '',
-  premium_monthly:     process.env.STRIPE_PRICE_PREMIUM_MONTHLY     || '',
-  premium_annual:      process.env.STRIPE_PRICE_PREMIUM_ANNUAL      || '',
-}
+import { getStripeClient } from '@/lib/stripe-client'
+import { requireStripePriceId } from '@/lib/stripe-prices'
+import { buildStripeReturnUrl, getSiteOrigin } from '@/lib/site-url'
 
 /**
  * POST /api/stripe/register-checkout
  *
- * Cria uma sessão de checkout Stripe para um NOVO utilizador (sem conta Supabase).
- * Não requer autenticação — o utilizador só cria conta APÓS o pagamento ser confirmado.
- *
- * Body: { planId, email, fullName, username, phone, regToken }
- * Returns: { url, sessionId }
+ * Checkout Stripe para NOVO utilizador (conta Supabase criada após pagamento em /success).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -31,17 +17,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'planId, email, fullName e username são obrigatórios' }, { status: 400 })
     }
 
-    const priceId = PRICE_IDS[planId]
-    if (!priceId) {
-      return NextResponse.json(
-        { error: `Plano "${planId}" não encontrado ou preço não configurado` },
-        { status: 400 }
-      )
-    }
+    const priceId = requireStripePriceId(planId)
+    const stripe = getStripeClient()
+    const origin = getSiteOrigin()
 
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt'
-
-    // Criar customer Stripe anónimo (sem Supabase user_id)
     const customer = await stripe.customers.create({
       email,
       name: fullName,
@@ -52,9 +31,12 @@ export async function POST(request: NextRequest) {
       customer: customer.id,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      // reg_token passado na success_url para recuperar dados do localStorage
-      success_url: `${origin}/success?session_id=%7BCHECKOUT_SESSION_ID%7D&plan=${planId}&reg_token=${regToken || ''}&new_user=1`,
-      cancel_url: `${origin}/register`,
+      success_url: buildStripeReturnUrl('/success', {
+        plan: planId,
+        reg_token: regToken || '',
+        new_user: '1',
+      }),
+      cancel_url: buildStripeReturnUrl('/register', {}, { includeSessionPlaceholder: false }),
       metadata: {
         pending_registration: 'true',
         reg_token: regToken || '',
@@ -65,17 +47,12 @@ export async function POST(request: NextRequest) {
         phone: phone || '',
         sponsor_username: sponsorUsername || '',
       },
-      // Pré-preencher email no checkout Stripe
-      customer_email: undefined, // customer já tem o email
     })
 
     return NextResponse.json({ url: session.url, sessionId: session.id })
-
-  } catch (error: any) {
-    console.error('❌ [REGISTER-CHECKOUT] Erro:', error)
-    return NextResponse.json(
-      { error: error.message || 'Erro ao criar sessão de pagamento' },
-      { status: 500 }
-    )
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erro ao criar sessão de pagamento'
+    console.error('❌ [REGISTER-CHECKOUT] Erro:', message, { origin: getSiteOrigin() })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
