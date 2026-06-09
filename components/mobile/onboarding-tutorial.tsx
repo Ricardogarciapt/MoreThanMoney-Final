@@ -52,7 +52,7 @@ function resolveHighlightSelectors(step: TutorialStep): string[] {
   if (step.action === "open-sidebar") return ['[data-tutorial="menu"]']
   if (step.id === "notifications") return ['[data-tutorial="notifications"]']
   if (step.id === "navigation") return ['[data-tutorial="menu"]', '[data-tutorial="bottom-nav"]']
-  if (step.id === "welcome" || step.id === "done") return ['[data-tutorial="bottom-nav"]']
+  if (step.id === "welcome" || step.id === "done") return []
   return []
 }
 
@@ -68,7 +68,7 @@ function TutorialSpotlight({
   if (rects.length === 0) {
     return (
       <div
-        className="fixed inset-0 z-[299] bg-black/45 pointer-events-auto"
+        className="fixed inset-0 z-[299] bg-black/88 pointer-events-auto"
         aria-hidden
       />
     )
@@ -96,7 +96,7 @@ function TutorialSpotlight({
             ))}
           </mask>
         </defs>
-        <rect width="100%" height="100%" fill="rgba(0,0,0,0.52)" mask={`url(#${maskId})`} />
+        <rect width="100%" height="100%" fill="rgba(0,0,0,0.84)" mask={`url(#${maskId})`} />
       </svg>
 
       {rects.map((r, i) => (
@@ -453,7 +453,13 @@ export default function OnboardingTutorial({
         }
       >
       <div
-        className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[58vh] sm:max-h-[72vh] flex flex-col"
+        className={`w-full sm:max-w-md overflow-hidden shadow-2xl flex flex-col sm:rounded-3xl ${
+          highlightsBottom ? "rounded-b-3xl" : "rounded-t-3xl"
+        } ${
+          highlightRects.length === 0
+            ? "max-h-[82vh] sm:max-h-[80vh]"
+            : "max-h-[60vh] sm:max-h-[72vh]"
+        }`}
         style={{
           transform: animating
             ? direction === "next"
