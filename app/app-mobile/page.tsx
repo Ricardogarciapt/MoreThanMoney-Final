@@ -28,6 +28,7 @@ import AppsMobile from "@/components/mobile/apps-mobile"
 import ChatChannels from "@/components/mobile/chat-channels"
 import SettingsMobile from "@/components/mobile/settings-mobile"
 import OnboardingTutorial, { useOnboarding } from "@/components/mobile/onboarding-tutorial"
+import MlmDashboardTab from "@/components/mobile/mlm-dashboard-tab"
 import { useAuth } from "@/contexts/auth-context"
 import { useCapacitor } from "@/hooks/use-capacitor"
 import { usePushNotifications, type ForegroundMessage } from "@/hooks/use-push-notifications"
@@ -66,7 +67,7 @@ function AppMobileContent() {
     onForegroundMessage: handleForegroundMessage,
   })
   const [mounted, setMounted] = useState(false)
-  const validTabs = ["social", "chat", "portfolio", "scanner", "apps", "live", "mentor", "settings"] as const
+  const validTabs = ["social", "chat", "portfolio", "scanner", "apps", "live", "mentor", "settings", "mlm"] as const
   const tabFromUrl = searchParams.get("tab")
   const [activeTab, setActiveTab] = useState(() =>
     tabFromUrl && validTabs.includes(tabFromUrl as (typeof validTabs)[number]) ? tabFromUrl : "social"
@@ -500,6 +501,10 @@ function AppMobileContent() {
 
             <TabsContent value="settings" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
               <SettingsMobile />
+            </TabsContent>
+
+            <TabsContent value="mlm" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
+              <MlmDashboardTab />
             </TabsContent>
 
           </Tabs>

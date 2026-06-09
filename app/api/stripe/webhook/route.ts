@@ -186,11 +186,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }).eq('id', userId)
   }
 
-  // ── MLM: atribuir comissão ao patrocinador ───────────────────────────────
+  // ── MLM: binary tree placement + comissão ao patrocinador ───────────────
   const sponsorUsername = session.metadata?.sponsor_username
   if (sponsorUsername && sponsorUsername.trim()) {
     try {
-      // Verificar se MLM está ativo
       const { data: mlmSettings } = await supabase
         .from('mlm_settings')
         .select('is_active, direct_commission_pct')
@@ -198,7 +197,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         .single()
 
       if (mlmSettings?.is_active) {
-        // Encontrar patrocinador
         const { data: sponsor } = await supabase
           .from('profiles')
           .select('id, username')
@@ -206,14 +204,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           .single()
 
         if (sponsor) {
-          // Valor da compra (em cêntimos → euros)
           const amountTotal = session.amount_total || 0
-          const commissionAmount = (amountTotal / 100) * ((mlmSettings.direct_commission_pct || 20) / 100)
-
-          // ID do comprador (pode ser null para guests)
+          const commissionPct = (mlmSettings.direct_commission_pct || 20) / 100
+          const commissionAmount = parseFloat(((amountTotal / 100) * commissionPct).toFixed(2))
           const buyerId = userId || null
 
-          // Inserir comissão
+          // 1. Inserir comissão de referência direta
           await supabase.from('mlm_commissions').insert({
             beneficiary_id: sponsor.id,
             from_user_id: buyerId,
@@ -224,43 +220,284 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             status: 'pending',
           })
 
-          // Atualizar pending_commissions no nó do patrocinador
-          const { data: existingNode } = await supabase
-            .from('mlm_nodes')
-            .select('id, pending_commissions')
-            .eq('user_id', sponsor.id)
-            .maybeSingle()
-
-          if (existingNode) {
-            await supabase
-              .from('mlm_nodes')
-              .update({
-                pending_commissions: (existingNode.pending_commissions || 0) + commissionAmount,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('user_id', sponsor.id)
-          } else {
-            await supabase.from('mlm_nodes').insert({
-              user_id: sponsor.id,
-              pending_commissions: commissionAmount,
-            }).then(undefined, () => {})
-          }
-
-          // Atualizar mlm_sponsor_username no perfil do comprador
+          // 2. Atualizar mlm_sponsor_username no comprador
           if (buyerId) {
             await supabase
               .from('profiles')
               .update({ mlm_sponsor_username: sponsorUsername.trim() })
               .eq('id', buyerId)
               .then(undefined, () => {})
+
+            // 3. Colocar comprador na árvore binária e actualizar contadores
+            await placeBuyerInMlmTree(supabase, buyerId, sponsor.id, commissionAmount)
+          } else {
+            // Guest checkout — só actualiza pending_commissions do sponsor
+            await upsertSponsorNode(supabase, sponsor.id, commissionAmount)
           }
         }
       }
     } catch (mlmErr) {
-      console.error('[MLM] Erro ao atribuir comissão:', mlmErr)
-      // Nunca falhar o webhook por erros MLM
+      console.error('[MLM] Erro ao processar MLM:', mlmErr)
     }
   }
+}
+
+// ─── MLM Helpers ─────────────────────────────────────────────────────────────
+
+/**
+ * Garante que o patrocinador tem um nó e incrementa pending_commissions.
+ */
+async function upsertSponsorNode(
+  supabase: ReturnType<typeof import('@supabase/supabase-js').createClient>,
+  sponsorId: string,
+  commissionAmount: number
+) {
+  const { data: sNode } = await supabase
+    .from('mlm_nodes')
+    .select('id, pending_commissions')
+    .eq('user_id', sponsorId)
+    .maybeSingle()
+
+  if (sNode) {
+    await supabase
+      .from('mlm_nodes')
+      .update({
+        pending_commissions: (sNode.pending_commissions || 0) + commissionAmount,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', sponsorId)
+  } else {
+    await supabase.from('mlm_nodes').insert({
+      user_id: sponsorId,
+      pending_commissions: commissionAmount,
+    }).then(undefined, () => {})
+  }
+}
+
+/**
+ * Coloca um novo comprador na árvore binária:
+ * 1. Cria/obtém nó do patrocinador
+ * 2. Encontra o melhor slot (BFS, perna com menos membros)
+ * 3. Cria nó do comprador como filho
+ * 4. Propaga left_count/right_count para cima
+ * 5. Recalcula ranks de todos os ancestrais
+ */
+async function placeBuyerInMlmTree(
+  supabase: ReturnType<typeof import('@supabase/supabase-js').createClient>,
+  buyerId: string,
+  sponsorId: string,
+  commissionAmount: number
+) {
+  // Verificar se comprador já tem nó
+  const { data: existingBuyerNode } = await supabase
+    .from('mlm_nodes')
+    .select('id')
+    .eq('user_id', buyerId)
+    .maybeSingle()
+  if (existingBuyerNode) return
+
+  // Garantir que patrocinador tem nó
+  let { data: sponsorNode } = await supabase
+    .from('mlm_nodes')
+    .select('id, left_child_id, right_child_id, left_count, right_count, pending_commissions')
+    .eq('user_id', sponsorId)
+    .maybeSingle()
+
+  if (!sponsorNode) {
+    const { data: newNode } = await supabase
+      .from('mlm_nodes')
+      .insert({ user_id: sponsorId })
+      .select('id, left_child_id, right_child_id, left_count, right_count, pending_commissions')
+      .single()
+    sponsorNode = newNode
+  }
+  if (!sponsorNode) return
+
+  // Actualizar pending_commissions do patrocinador
+  await supabase
+    .from('mlm_nodes')
+    .update({
+      pending_commissions: (sponsorNode.pending_commissions || 0) + commissionAmount,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', sponsorId)
+
+  // Encontrar slot via BFS a partir do patrocinador
+  const slot = await findNextSlot(supabase, sponsorNode.id)
+  if (!slot) return
+
+  // Criar nó do comprador
+  const { data: buyerNode } = await supabase
+    .from('mlm_nodes')
+    .insert({
+      user_id: buyerId,
+      sponsor_id: sponsorId,
+      parent_node_id: slot.parentId,
+      position: slot.position,
+    })
+    .select('id')
+    .single()
+
+  if (!buyerNode) return
+
+  // Actualizar filho do parent
+  const childField = slot.position === 'left' ? 'left_child_id' : 'right_child_id'
+  await supabase
+    .from('mlm_nodes')
+    .update({ [childField]: buyerNode.id, updated_at: new Date().toISOString() })
+    .eq('id', slot.parentId)
+
+  // Propagar contadores de baixo para cima
+  await propagateCounts(supabase, slot.parentId, slot.position)
+
+  // Recalcular ranks dos ancestrais
+  await recalculateRanksUpwards(supabase, slot.parentId)
+}
+
+/**
+ * BFS para encontrar o primeiro slot disponível, priorizando a perna mais curta.
+ */
+async function findNextSlot(
+  supabase: ReturnType<typeof import('@supabase/supabase-js').createClient>,
+  rootNodeId: string
+): Promise<{ parentId: string; position: 'left' | 'right' } | null> {
+  const queue: string[] = [rootNodeId]
+  const visited = new Set<string>()
+
+  while (queue.length > 0) {
+    const nodeId = queue.shift()!
+    if (visited.has(nodeId)) continue
+    visited.add(nodeId)
+
+    const { data: node } = await supabase
+      .from('mlm_nodes')
+      .select('id, left_child_id, right_child_id, left_count, right_count')
+      .eq('id', nodeId)
+      .single()
+
+    if (!node) continue
+
+    if (!node.left_child_id) return { parentId: nodeId, position: 'left' }
+    if (!node.right_child_id) return { parentId: nodeId, position: 'right' }
+
+    // Ambas as pernas preenchidas — adicionar à que tem menos membros
+    if ((node.left_count || 0) <= (node.right_count || 0)) {
+      queue.push(node.left_child_id)
+    } else {
+      queue.push(node.right_child_id)
+    }
+
+    // Safety: BFS max 127 nós (7 níveis)
+    if (visited.size > 127) break
+  }
+  return null
+}
+
+/**
+ * Propaga left_count/right_count para todos os ancestrais do nó.
+ */
+async function propagateCounts(
+  supabase: ReturnType<typeof import('@supabase/supabase-js').createClient>,
+  nodeId: string,
+  childPosition: 'left' | 'right'
+) {
+  let currentId: string | null = nodeId
+  let position = childPosition
+
+  let depth = 0
+  while (currentId && depth < 20) {
+    depth++
+    const { data: node } = await supabase
+      .from('mlm_nodes')
+      .select('id, parent_node_id, position, left_count, right_count')
+      .eq('id', currentId)
+      .single()
+
+    if (!node) break
+
+    const field = position === 'left' ? 'left_count' : 'right_count'
+    const newCount = ((node[field] as number) || 0) + 1
+    await supabase
+      .from('mlm_nodes')
+      .update({ [field]: newCount, updated_at: new Date().toISOString() })
+      .eq('id', currentId)
+
+    if (!node.parent_node_id) break
+    position = node.position as 'left' | 'right'
+    currentId = node.parent_node_id
+  }
+}
+
+/**
+ * Recalcula o rank de um nó e todos os seus ancestrais.
+ */
+async function recalculateRanksUpwards(
+  supabase: ReturnType<typeof import('@supabase/supabase-js').createClient>,
+  nodeId: string
+) {
+  const { data: allRanks } = await supabase
+    .from('mlm_ranks')
+    .select('id, left_requirement, right_requirement, direct_requirement, sort_order, name')
+    .order('sort_order', { ascending: false }) // Maior rank primeiro
+
+  if (!allRanks || allRanks.length === 0) return
+
+  let currentId: string | null = nodeId
+  let depth = 0
+
+  while (currentId && depth < 20) {
+    depth++
+    const { data: node } = await supabase
+      .from('mlm_nodes')
+      .select('id, user_id, parent_node_id, left_count, right_count, total_direct, rank_id')
+      .eq('id', currentId)
+      .single()
+
+    if (!node) break
+
+    // Calcular rank mais alto que este nó qualifica
+    const newRankId = calculateRank(
+      node.left_count || 0,
+      node.right_count || 0,
+      node.total_direct || 0,
+      allRanks
+    )
+
+    if (newRankId !== node.rank_id) {
+      await supabase
+        .from('mlm_nodes')
+        .update({ rank_id: newRankId, updated_at: new Date().toISOString() })
+        .eq('id', currentId)
+
+      await supabase
+        .from('profiles')
+        .update({ mlm_rank_id: newRankId })
+        .eq('id', node.user_id)
+        .then(undefined, () => {})
+    }
+
+    if (!node.parent_node_id) break
+    currentId = node.parent_node_id
+  }
+}
+
+/**
+ * Devolve o ID do rank mais alto que um nó qualifica.
+ * ranks deve estar ordenado do maior para o menor (sort_order DESC).
+ */
+function calculateRank(
+  leftCount: number,
+  rightCount: number,
+  totalDirect: number,
+  ranks: Array<{ id: number; left_requirement: number; right_requirement: number; direct_requirement: number; sort_order: number }>
+): number {
+  for (const rank of ranks) {
+    const okLeft = leftCount >= (rank.left_requirement || 0)
+    const okRight = rightCount >= (rank.right_requirement || 0)
+    const okDirect = totalDirect >= (rank.direct_requirement || 0)
+    if (okLeft && okRight && okDirect) return rank.id
+  }
+  return ranks[ranks.length - 1]?.id ?? 0
 }
 
 async function handleSubscriptionUpdate(sub: Stripe.Subscription) {

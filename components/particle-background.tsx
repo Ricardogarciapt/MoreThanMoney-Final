@@ -21,6 +21,9 @@ export default function ParticleBackground() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
+    let rafId = 0
+    let alive = true
+
     // Configurar o canvas para ocupar toda a tela
     const resizeCanvas = () => {
       canvas.width = window.innerWidth
@@ -32,7 +35,7 @@ export default function ParticleBackground() {
 
     // Criar partículas
     const particles: Particle[] = []
-    const particleCount = 75 // Aumentado em 50% (de 50 para 75)
+    const particleCount = 60
 
     for (let i = 0; i < particleCount; i++) {
       particles.push({
@@ -41,45 +44,37 @@ export default function ParticleBackground() {
         size: Math.random() * 2 + 0.5,
         speedX: (Math.random() - 0.5) * 0.5,
         speedY: (Math.random() - 0.5) * 0.5,
-        color: `rgba(239, 184, 16, ${Math.random() * 0.5 + 0.1})`, // Nova paleta dourada #efb810
+        color: `rgba(239, 184, 16, ${Math.random() * 0.5 + 0.1})`,
       })
     }
 
     // Função para animar as partículas
     const animate = () => {
+      if (!alive) return
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
       particles.forEach((particle) => {
-        // Mover partícula
         particle.x += particle.speedX
         particle.y += particle.speedY
 
-        // Verificar limites da tela
-        if (particle.x < 0 || particle.x > canvas.width) {
-          particle.speedX = -particle.speedX
-        }
+        if (particle.x < 0 || particle.x > canvas.width) particle.speedX = -particle.speedX
+        if (particle.y < 0 || particle.y > canvas.height) particle.speedY = -particle.speedY
 
-        if (particle.y < 0 || particle.y > canvas.height) {
-          particle.speedY = -particle.speedY
-        }
-
-        // Desenhar partícula
         ctx.beginPath()
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
         ctx.fillStyle = particle.color
         ctx.fill()
       })
 
-      // Conectar partículas próximas
+      // Conectar partículas próximas (reduzido para performance)
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x
           const dy = particles[i].y - particles[j].y
-          const distance = Math.sqrt(dx * dx + dy * dy)
-
-          if (distance < 100) {
+          const dist = dx * dx + dy * dy
+          if (dist < 8100) { // 90px²
             ctx.beginPath()
-            ctx.strokeStyle = `rgba(239, 184, 16, ${0.1 * (1 - distance / 100)})`
+            ctx.strokeStyle = `rgba(239,184,16,${0.08 * (1 - Math.sqrt(dist) / 90)})`
             ctx.lineWidth = 0.5
             ctx.moveTo(particles[i].x, particles[i].y)
             ctx.lineTo(particles[j].x, particles[j].y)
@@ -88,12 +83,14 @@ export default function ParticleBackground() {
         }
       }
 
-      requestAnimationFrame(animate)
+      rafId = requestAnimationFrame(animate)
     }
 
-    animate()
+    rafId = requestAnimationFrame(animate)
 
     return () => {
+      alive = false
+      cancelAnimationFrame(rafId)
       window.removeEventListener("resize", resizeCanvas)
     }
   }, [])

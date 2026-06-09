@@ -119,6 +119,38 @@ export async function middleware(request: NextRequest) {
     response.headers.set("Expires", "0")
   }
 
+  // ── Protecção /aios — apenas admins ───────────────────────────────────────
+  if (pathname.startsWith("/aios") && hasSupabaseEnv) {
+    // Supabase já está inicializado acima neste middleware
+    const supabase2 = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    })
+
+    const { data: { user: aiosUser } } = await supabase2.auth.getUser()
+    if (!aiosUser) {
+      return NextResponse.redirect(new URL('/login?redirect=/aios', request.url))
+    }
+
+    const { data: aiosProfile } = await supabase2
+      .from('profiles')
+      .select('user_type')
+      .eq('id', aiosUser.id)
+      .single()
+
+    if (aiosProfile?.user_type !== 'admin') {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+  }
+
   return response
 }
 

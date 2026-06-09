@@ -24,6 +24,7 @@ import {
   MessageSquare,
   TrendingUp,
   Send,
+  Network,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -133,6 +134,7 @@ export default function MobileSidebar({
     { id: 'portfolio', label: 'Portfólio', icon: Wallet, href: '/app-mobile?tab=portfolio' },
     { id: 'scanner', label: 'Scanner', icon: BarChart3, href: '/app-mobile?tab=scanner' },
     { id: 'apps', label: 'Apps', icon: LayoutGrid, href: '/app-mobile?tab=apps' },
+    { id: 'mlm', label: 'Afiliados', icon: Network, href: '/app-mobile?tab=mlm' },
   ]
 
 
