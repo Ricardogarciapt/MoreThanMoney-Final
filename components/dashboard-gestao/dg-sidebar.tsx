@@ -250,7 +250,13 @@ export default function DGSidebar({
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-[#D2A63C]/15 p-3">
+      <div className="border-t border-[#D2A63C]/15 p-3 space-y-1.5">
+        <Link href="/jarvis">
+          <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-[#D2A63C] hover:bg-[#D2A63C]/15 transition-colors text-sm font-semibold border border-[#D2A63C]/30 hover:border-[#D2A63C]/60">
+            <span className="text-base">🤖</span>
+            JARVIS · AI OS
+          </button>
+        </Link>
         <p className="text-center text-xs text-gray-600">12 Agentes IA · n8n · Stream VPS · Calendly</p>
         <p className="text-center text-xs text-gray-700">MoreThanMoney © 2026</p>
       </div>
