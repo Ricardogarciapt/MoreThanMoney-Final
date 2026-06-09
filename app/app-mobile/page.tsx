@@ -373,7 +373,7 @@ function AppMobileContent() {
   }
 
   if (!user) {
-    router.replace("/login?redirect=/app-mobile")
+    router.replace("/app-mobile/login")
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900">
         <Loader2 className="w-8 h-8 animate-spin text-[#D2A63C]" />
@@ -382,7 +382,7 @@ function AppMobileContent() {
   }
 
   return (
-    <ProtectedPage redirectPath="/login?redirect=/app-mobile" loadingMessage="A carregar app mobile...">
+    <ProtectedPage redirectPath="/app-mobile/login" loadingMessage="A carregar app mobile...">
       <main className="app-mobile-page app-mobile-container bg-gray-900 min-h-screen flex flex-col">
         {/* Onboarding Tutorial (first use) */}
         {userLoaded && showOnboarding && (
