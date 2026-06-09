@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertCircle, Eye, EyeOff, Smartphone, Globe, Check, Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, Smartphone, Globe, Check, Loader2, CheckCircle2, XCircle, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 
 type PlanId = 'app_member_monthly' | 'app_member_annual' | 'premium_monthly' | 'premium_annual'
@@ -177,6 +177,17 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-2xl space-y-6">
+
+        {/* Back button */}
+        <div className="flex items-center">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1 text-[#D2A63C] text-sm font-medium active:opacity-60 transition-opacity"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            Voltar
+          </button>
+        </div>
 
         {/* Header */}
         <div className="text-center">
