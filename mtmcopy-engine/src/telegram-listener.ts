@@ -23,7 +23,7 @@ import {
   getActiveConnections,
   markStatus,
   logSignal,
-  type CopygramConnection,
+  type MTMcopierConnection,
 } from './supabase-client'
 
 const token = process.env.TELEGRAM_BOT_TOKEN
@@ -35,7 +35,7 @@ const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS || 30000)
 
 // Cache em memória: canal (chat id ou @username normalizado) → ligações activas
 // que querem copiar esse canal. Recarregado periodicamente da BD.
-let channelMap = new Map<string, CopygramConnection[]>()
+let channelMap = new Map<string, MTMcopierConnection[]>()
 
 function normalizeChannel(raw: string | null | undefined): string | null {
   if (!raw) return null
@@ -44,7 +44,7 @@ function normalizeChannel(raw: string | null | undefined): string | null {
 
 async function refreshConnections() {
   const connections = await getActiveConnections()
-  const map = new Map<string, CopygramConnection[]>()
+  const map = new Map<string, MTMcopierConnection[]>()
 
   for (const conn of connections) {
     const key = normalizeChannel(conn.telegram_channel)
@@ -97,7 +97,7 @@ async function handleIncomingMessage(bot: TelegramBot, msg: TelegramBot.Message)
 }
 
 async function processSignalForConnection(
-  conn: CopygramConnection,
+  conn: MTMcopierConnection,
   signal: ReturnType<typeof parseSignal> & {},
   raw: string
 ) {
@@ -137,7 +137,7 @@ async function processSignalForConnection(
     volume: lot,
     stopLoss: conn.copy_sl ? signal.sl : null,
     takeProfit: conn.copy_tp ? (signal.tp[0] ?? null) : null,
-    comment: 'Copygram MTM',
+    comment: 'MTMcopier',
   })
 
   await logSignal({
@@ -171,5 +171,5 @@ export async function startListener() {
   await refreshConnections()
   setInterval(() => refreshConnections().catch((e) => console.error('[telegram-listener] erro ao atualizar ligações:', e)), POLL_INTERVAL_MS)
 
-  console.log('[telegram-listener] bot @MoreThanMoney_aibot a escutar canais de sinais Copygram...')
+  console.log('[telegram-listener] bot @MoreThanMoney_aibot a escutar canais de sinais MTMcopier...')
 }

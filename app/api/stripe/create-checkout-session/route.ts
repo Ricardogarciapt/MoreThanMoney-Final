@@ -23,7 +23,7 @@ const PRICE_IDS: Record<string, string> = {
   scanners_monthly:    process.env.STRIPE_PRICE_SCANNERS_MONTHLY    || '',
   scanners_semestral:  process.env.STRIPE_PRICE_SCANNERS_SEMESTRAL  || '',
   scanners_lifetime:   process.env.STRIPE_PRICE_SCANNERS_LIFETIME   || '',
-  // Copygram — addon de copy trading Telegram → MT5 (subscrição mensal)
+  // MTMcopier — addon de copy trading Telegram → MT5 (subscrição mensal)
   mtmcopy_addon_monthly: process.env.STRIPE_PRICE_MTMCOPY_ADDON_MONTHLY || '',
 }
 

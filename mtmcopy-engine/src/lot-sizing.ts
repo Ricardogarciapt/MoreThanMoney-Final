@@ -1,4 +1,4 @@
-import type { CopygramConnection } from './supabase-client'
+import type { MTMcopierConnection } from './supabase-client'
 import type { ParsedSignal } from './signal-parser'
 
 /**
@@ -12,7 +12,7 @@ import type { ParsedSignal } from './signal-parser'
  *                  (requer accountBalance e que o sinal tenha SL definido)
  */
 export function computeLotSize(
-  conn: Pick<CopygramConnection, 'lot_mode' | 'lot_value'>,
+  conn: Pick<MTMcopierConnection, 'lot_mode' | 'lot_value'>,
   signal: ParsedSignal,
   accountBalance?: number | null
 ): number {

@@ -183,10 +183,10 @@ export async function sendScannerAccessEmail(
   }
 }
 
-// Notificar a equipa quando alguém ativa o addon Copygram (Telegram → MT5)
+// Notificar a equipa quando alguém ativa o addon MTMcopier (Telegram → MT5)
 // — a ligação Telegram/MT5 é finalizada manualmente pela equipa por segurança,
 // por isso este email é o gatilho para o follow-up de onboarding.
-export async function sendCopygramSetupNotification(
+export async function sendMTMcopierSetupNotification(
   userEmail: string,
   userName: string,
   telegramChannel?: string | null,
@@ -198,11 +198,11 @@ export async function sendCopygramSetupNotification(
   const mailOptions = {
     from: `"MoreThanMoney" <${process.env.GMAIL_USER}>`,
     to: 'morethanmoneypt@gmail.com',
-    subject: `🔗 Novo addon Copygram activado — ${userName}`,
+    subject: `🔗 Novo addon MTMcopier activado — ${userName}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa; padding: 20px;">
         <div style="background: linear-gradient(135deg, #efb810 0%, #f9db5c 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: #000; margin: 0;">🔗 Novo Copygram Activado!</h1>
+          <h1 style="color: #000; margin: 0;">🔗 Novo MTMcopier Activado!</h1>
         </div>
         <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px;">
           <h2 style="color: #efb810;">Dados para o onboarding manual</h2>
@@ -227,10 +227,11 @@ export async function sendCopygramSetupNotification(
     await transporter.sendMail(mailOptions)
     return { success: true }
   } catch (error) {
-    console.error('Erro ao enviar notificação Copygram:', error)
+    console.error('Erro ao enviar notificação MTMcopier:', error)
     return { success: false, error }
   }
 }
+
 
 // Enviar email de rejeição
 export async function sendRejectionEmail(userEmail: string, userName: string) {

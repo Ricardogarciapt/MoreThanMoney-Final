@@ -14,7 +14,7 @@ export const supabase = createClient(url, key, {
   auth: { persistSession: false, autoRefreshToken: false },
 })
 
-export interface CopygramConnection {
+export interface MTMcopierConnection {
   id: string
   user_id: string
   telegram_channel: string | null
@@ -38,7 +38,7 @@ export interface CopygramConnection {
   metaapi_account_id?: string | null
 }
 
-export async function getActiveConnections(): Promise<CopygramConnection[]> {
+export async function getActiveConnections(): Promise<MTMcopierConnection[]> {
   const { data, error } = await supabase
     .from('mtmcopy_connections')
     .select('*')
@@ -48,12 +48,12 @@ export async function getActiveConnections(): Promise<CopygramConnection[]> {
     console.error('[supabase] erro ao obter ligações activas:', error.message)
     return []
   }
-  return (data ?? []) as CopygramConnection[]
+  return (data ?? []) as MTMcopierConnection[]
 }
 
 export async function markStatus(
   connectionId: string,
-  patch: Partial<Pick<CopygramConnection, 'telegram_status' | 'mt5_status' | 'last_error' | 'last_signal_at'>>
+  patch: Partial<Pick<MTMcopierConnection, 'telegram_status' | 'mt5_status' | 'last_error' | 'last_signal_at'>>
 ) {
   await supabase
     .from('mtmcopy_connections')

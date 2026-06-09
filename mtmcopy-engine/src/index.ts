@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────────────────────────────────
-// Copygram Engine — ponto de entrada
+// MTMcopier Engine — ponto de entrada
 //
 // Serviço autónomo (fora da Vercel) que liga o Telegram (canais de sinais)
 // ao MT5 dos utilizadores via MetaApi.cloud. Corre em long-running process
@@ -19,7 +19,7 @@ import { startListener } from './telegram-listener'
 
 async function main() {
   console.log('──────────────────────────────────────────')
-  console.log(' Copygram Engine — MoreThanMoney')
+  console.log(' MTMcopier Engine — MoreThanMoney')
   console.log(` ambiente: ${process.env.NODE_ENV || 'development'}`)
   console.log('──────────────────────────────────────────')
 

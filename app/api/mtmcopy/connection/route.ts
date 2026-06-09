@@ -1,10 +1,10 @@
-// /api/mtmcopy/connection — gestão da configuração do utilizador para o Copygram
+// /api/mtmcopy/connection — gestão da configuração do utilizador para o MTMcopier
 // (addon Telegram → MT5 copy trading, +20€/mês)
 //
 // IMPORTANTE: este endpoint NUNCA recebe nem guarda a password/token completos da
 // conta MT5. Apenas referência (últimos 4 dígitos) para o utilizador identificar a
 // ligação no painel. As credenciais reais de execução vivem exclusivamente no
-// microserviço externo do Copygram, num cofre dedicado (ver nota de arquitetura
+// microserviço externo do MTMcopier, num cofre dedicado (ver nota de arquitetura
 // no README de /mtmcopy).
 
 import { NextRequest, NextResponse } from 'next/server'

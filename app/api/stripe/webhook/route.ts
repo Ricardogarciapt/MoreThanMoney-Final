@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
-import { sendScannerAccessEmail, sendCopygramSetupNotification } from '@/lib/email-service'
+import { sendScannerAccessEmail, sendMTMcopierSetupNotification } from '@/lib/email-service'
 
 // Nomes amigáveis dos scanners por planId (para o email de instruções TradingView)
 const SCANNER_PLAN_NAMES: Record<string, string> = {
@@ -115,7 +115,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   }
 
-  // Addon Copygram (Telegram → MT5) — notificar a equipa para finalizar o onboarding manual
+  // Addon MTMcopier (Telegram → MT5) — notificar a equipa para finalizar o onboarding manual
   if (planId === 'mtmcopy_addon_monthly') {
     try {
       const { data: profile } = await supabase
@@ -135,7 +135,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         .upsert({ user_id: userId, is_active: true, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
 
       if (profile?.email) {
-        await sendCopygramSetupNotification(
+        await sendMTMcopierSetupNotification(
           profile.email,
           profile.full_name || 'Trader',
           existingConn?.telegram_channel,
@@ -144,7 +144,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         )
       }
     } catch (err) {
-      console.error('Erro ao processar activação do Copygram:', err)
+      console.error('Erro ao processar activação do MTMcopier:', err)
     }
   }
 

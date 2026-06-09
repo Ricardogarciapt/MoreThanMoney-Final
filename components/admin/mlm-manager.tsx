@@ -53,6 +53,8 @@ interface MlmAffiliate {
   total_earned: number
   pending_commissions: number
   created_at: string
+  member_category?: string | null
+  mtmcopier_active?: boolean
 }
 
 interface MlmCommission {
@@ -246,9 +248,9 @@ export default function MlmManager({
     setLoadingSettings(true)
     try {
       const res = await adminApiCall<{ settings: MlmSettings }>('/api/admin/mlm/settings')
-      if (res.settings) {
-        setSettings(res.settings)
-        setSettingsCommission(String(res.settings.direct_commission_pct))
+      if (res.data?.settings) {
+        setSettings(res.data.settings)
+        setSettingsCommission(String(res.data.settings.direct_commission_pct))
       }
     } catch { /* ignore */ } finally { setLoadingSettings(false) }
   }, [])
@@ -257,7 +259,7 @@ export default function MlmManager({
     setLoadingRanks(true)
     try {
       const res = await adminApiCall<{ ranks: MlmRank[] }>('/api/admin/mlm/ranks')
-      if (res.ranks) setRanks(res.ranks)
+      if (res.data?.ranks) setRanks(res.data.ranks)
     } catch { /* ignore */ } finally { setLoadingRanks(false) }
   }, [])
 
@@ -265,7 +267,7 @@ export default function MlmManager({
     setLoadingAffiliates(true)
     try {
       const res = await adminApiCall<{ affiliates: MlmAffiliate[] }>('/api/admin/mlm/affiliates')
-      if (res.affiliates) setAffiliates(res.affiliates)
+      if (res.data?.affiliates) setAffiliates(res.data.affiliates)
     } catch { /* ignore */ } finally { setLoadingAffiliates(false) }
   }, [])
 
@@ -273,7 +275,7 @@ export default function MlmManager({
     setLoadingCommissions(true)
     try {
       const res = await adminApiCall<{ commissions: MlmCommission[] }>(`/api/admin/mlm/commissions?status=${status}`)
-      if (res.commissions) setCommissions(res.commissions)
+      if (res.data?.commissions) setCommissions(res.data.commissions)
     } catch { /* ignore */ } finally { setLoadingCommissions(false) }
   }, [])
 
@@ -301,7 +303,7 @@ export default function MlmManager({
         method: 'POST',
         body: JSON.stringify({ is_active: !settings.is_active }),
       })
-      if (res.settings) setSettings(res.settings)
+      if (res.data?.settings) setSettings(res.data.settings)
     } finally { setSavingSettings(false) }
   }
 
@@ -315,7 +317,7 @@ export default function MlmManager({
         method: 'POST',
         body: JSON.stringify({ direct_commission_pct: pct }),
       })
-      if (res.settings) setSettings(res.settings)
+      if (res.data?.settings) setSettings(res.data.settings)
     } finally { setSavingSettings(false) }
   }
 
@@ -347,6 +349,7 @@ export default function MlmManager({
   // ── Stats for dashboard ───────────────────────────────────────────────────
   const totalAffiliates = affiliates.length
   const activeAffiliates = affiliates.filter(a => a.is_active).length
+  const stripeActive = affiliates.filter(a => a.subscription_status === 'active' || a.subscription_status === 'trialing').length
   const pendingCommissionsTotal = commissions
     .filter(c => c.status === 'pending')
     .reduce((s, c) => s + c.amount, 0)
@@ -419,9 +422,9 @@ export default function MlmManager({
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { label: 'Total Afiliados', value: totalAffiliates, icon: Users, color: '#3B82F6' },
-                { label: 'Afiliados Ativos', value: activeAffiliates, icon: CheckCircle2, color: '#10B981' },
+                { label: 'Subs. Stripe Ativas', value: stripeActive, icon: CheckCircle2, color: '#10B981' },
                 { label: 'Comissões Pendentes', value: formatEur(pendingCommissionsTotal), icon: Coins, color: '#F59E0B' },
-                { label: 'Total Pago', value: formatEur(paidTotal), icon: TrendingUp, color: '#D2A63C' },
+                { label: 'Total Comissões Pagas', value: formatEur(paidTotal), icon: TrendingUp, color: '#D2A63C' },
               ].map((stat, i) => (
                 <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -598,7 +601,7 @@ export default function MlmManager({
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-800">
-                        {['Username', 'Email', 'Patrocinador', 'Rank', 'P.Esq', 'P.Dir', 'Ganho Total', 'Ativo', 'Data Entrada'].map((h, i) => (
+                        {['Username', 'Email', 'Patrocinador', 'Rank', 'Plano Stripe', 'Estado Sub.', 'P.Esq', 'P.Dir', 'Ganho Total', 'Data Entrada'].map((h, i) => (
                           <th key={i} className="px-4 py-3 text-left text-gray-400 text-xs font-medium whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
@@ -607,23 +610,37 @@ export default function MlmManager({
                       {filteredAffiliates.map(aff => (
                         <tr key={aff.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
                           <td className="px-4 py-3 text-white font-medium">{aff.username ?? '—'}</td>
-                          <td className="px-4 py-3 text-gray-400">{aff.email ?? '—'}</td>
-                          <td className="px-4 py-3 text-gray-400">{aff.sponsor_username ?? '—'}</td>
+                          <td className="px-4 py-3 text-gray-400 text-xs">{aff.email ?? '—'}</td>
+                          <td className="px-4 py-3 text-gray-400 text-xs">{aff.sponsor_username ?? '—'}</td>
                           <td className="px-4 py-3">
                             {aff.rank_name ? (
                               <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${aff.rank_color}25`, color: aff.rank_color ?? '#D2A63C' }}>
                                 {aff.rank_icon} {aff.rank_name}
                               </span>
-                            ) : '—'}
+                            ) : <span className="text-gray-600 text-xs">—</span>}
+                          </td>
+                          <td className="px-4 py-3">
+                            {aff.subscription_plan ? (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-[#D2A63C]/15 text-[#D2A63C] border border-[#D2A63C]/30 font-mono">
+                                {aff.subscription_plan}
+                              </span>
+                            ) : <span className="text-gray-600 text-xs">—</span>}
+                          </td>
+                          <td className="px-4 py-3">
+                            {(() => {
+                              const s = aff.subscription_status
+                              if (!s) return <span className="text-gray-600 text-xs">—</span>
+                              const cls = s === 'active' ? 'bg-green-500/20 text-green-400' :
+                                          s === 'trialing' ? 'bg-blue-500/20 text-blue-400' :
+                                          s === 'past_due' ? 'bg-orange-500/20 text-orange-400' :
+                                          s === 'canceled' || s === 'cancelled' ? 'bg-red-500/20 text-red-400' :
+                                          'bg-gray-500/20 text-gray-400'
+                              return <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>{s}</span>
+                            })()}
                           </td>
                           <td className="px-4 py-3 text-gray-400">{aff.left_count ?? 0}</td>
                           <td className="px-4 py-3 text-gray-400">{aff.right_count ?? 0}</td>
                           <td className="px-4 py-3 text-[#D2A63C] font-medium">{formatEur(aff.total_earned ?? 0)}</td>
-                          <td className="px-4 py-3">
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${aff.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                              {aff.is_active ? 'Sim' : 'Não'}
-                            </span>
-                          </td>
                           <td className="px-4 py-3 text-gray-500 text-xs">
                             {aff.created_at ? new Date(aff.created_at).toLocaleDateString('pt-PT') : '—'}
                           </td>
@@ -631,7 +648,7 @@ export default function MlmManager({
                       ))}
                       {filteredAffiliates.length === 0 && (
                         <tr>
-                          <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
+                          <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
                             {affiliateSearch ? 'Nenhum afiliado encontrado para a pesquisa.' : 'Nenhum afiliado registado.'}
                           </td>
                         </tr>

@@ -55,8 +55,8 @@ export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> 
 
     const trade =
       req.direction === 'buy'
-        ? await connection.createMarketBuyOrder(req.symbol, req.volume, req.stopLoss ?? undefined, req.takeProfit ?? undefined, { comment: req.comment ?? 'Copygram MTM' })
-        : await connection.createMarketSellOrder(req.symbol, req.volume, req.stopLoss ?? undefined, req.takeProfit ?? undefined, { comment: req.comment ?? 'Copygram MTM' })
+        ? await connection.createMarketBuyOrder(req.symbol, req.volume, req.stopLoss ?? undefined, req.takeProfit ?? undefined, { comment: req.comment ?? 'MTMcopier' })
+        : await connection.createMarketSellOrder(req.symbol, req.volume, req.stopLoss ?? undefined, req.takeProfit ?? undefined, { comment: req.comment ?? 'MTMcopier' })
 
     return { success: true, orderId: String(trade?.orderId ?? trade?.positionId ?? '') }
   } catch (err: any) {

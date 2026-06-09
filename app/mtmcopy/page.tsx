@@ -19,7 +19,7 @@ import { useAuth } from "@/contexts/auth-context"
 // Tipos
 // ---------------------------------------------------------------------------
 
-interface CopygramConnection {
+interface MTMcopierConnection {
   id: string
   telegram_channel: string | null
   telegram_status: "pending" | "connected" | "error" | "disconnected"
@@ -87,14 +87,14 @@ function formatDate(iso: string) {
 function SetupModal({
   initial, onClose, onSaved,
 }: {
-  initial: CopygramConnection | null
+  initial: MTMcopierConnection | null
   onClose: () => void
-  onSaved: (c: CopygramConnection) => void
+  onSaved: (c: MTMcopierConnection) => void
 }) {
   const [telegramChannel, setTelegramChannel] = useState(initial?.telegram_channel ?? "")
   const [mt5Server, setMt5Server] = useState(initial?.mt5_server ?? "")
   const [mt5Last4, setMt5Last4] = useState(initial?.mt5_login_last4 ?? "")
-  const [lotMode, setLotMode] = useState<CopygramConnection["lot_mode"]>(initial?.lot_mode ?? "fixed")
+  const [lotMode, setLotMode] = useState<MTMcopierConnection["lot_mode"]>(initial?.lot_mode ?? "fixed")
   const [lotValue, setLotValue] = useState(String(initial?.lot_value ?? "0.01"))
   const [maxRisk, setMaxRisk] = useState(String(initial?.max_risk_percent ?? "1"))
   const [symbolsInput, setSymbolsInput] = useState((initial?.symbols_whitelist ?? []).join(", "))
@@ -164,7 +164,7 @@ function SetupModal({
           <X className="w-5 h-5" />
         </button>
 
-        <h3 className="text-xl font-bold text-white mb-1">Configurar o Copygram</h3>
+        <h3 className="text-xl font-bold text-white mb-1">Configurar o MTMcopier</h3>
         <p className="text-sm text-gray-400 mb-5">
           Estes dados ficam associados à tua ligação. As credenciais completas da tua conta MT5
           <strong className="text-white"> nunca</strong> são pedidas aqui — a equipa contacta-te
@@ -320,7 +320,7 @@ function SignalHistory({ accessToken }: { accessToken: string }) {
         <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-8 text-center">
           <Activity className="w-10 h-10 text-gray-600 mx-auto mb-3" />
           <p className="text-gray-400 text-sm">Ainda não há sinais registados.</p>
-          <p className="text-gray-500 text-xs mt-1">Assim que o Copygram começar a copiar operações, aparecerão aqui.</p>
+          <p className="text-gray-500 text-xs mt-1">Assim que o MTMcopier começar a copiar operações, aparecerão aqui.</p>
         </div>
       ) : (
         <>
@@ -406,7 +406,7 @@ function SignalHistory({ accessToken }: { accessToken: string }) {
 // ---------------------------------------------------------------------------
 
 const HOW_IT_WORKS = [
-  { icon: Send, title: "1. Lemos o teu canal de sinais", text: "O Copygram liga-se ao canal/grupo do Telegram que escolheres e identifica os sinais de entrada (símbolo, direção, SL e TP)." },
+  { icon: Send, title: "1. Lemos o teu canal de sinais", text: "O MTMcopier liga-se ao canal/grupo do Telegram que escolheres e identifica os sinais de entrada (símbolo, direção, SL e TP)." },
   { icon: Settings2, title: "2. Aplicamos as tuas regras", text: "Lote fixo, percentagem de risco ou multiplicador — tu decides como cada sinal é dimensionado antes de chegar à tua conta." },
   { icon: LineChart, title: "3. Executamos no teu MT5", text: "As ordens são enviadas diretamente para a tua conta MetaTrader 5, com Stop Loss e Take Profit replicados automaticamente." },
   { icon: ShieldCheck, title: "4. Tu manténs o controlo", text: "Ativa, pausa ou desliga a cópia a qualquer momento. Define limites de risco diário para proteger a tua conta." },
@@ -418,7 +418,7 @@ const HOW_IT_WORKS = [
 
 export default function MtmCopyPage() {
   const { user } = useAuth()
-  const [connection, setConnection] = useState<CopygramConnection | null | undefined>(undefined)
+  const [connection, setConnection] = useState<MTMcopierConnection | null | undefined>(undefined)
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [showSetup, setShowSetup] = useState(false)
   const [checkingOut, setCheckingOut] = useState(false)
@@ -497,7 +497,7 @@ export default function MtmCopyPage() {
 
   const handleDisconnect = async () => {
     if (!accessToken) return
-    if (!confirm("Tens a certeza que queres desligar o Copygram? A cópia será pausada.")) return
+    if (!confirm("Tens a certeza que queres desligar o MTMcopier? A cópia será pausada.")) return
     try {
       const res = await fetch("/api/mtmcopy/connection", {
         method: "DELETE",
@@ -534,7 +534,7 @@ export default function MtmCopyPage() {
           <div className="text-center max-w-2xl mx-auto mb-14">
             <Badge className="mb-4 bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/30">🔗 Addon · Copy Trading</Badge>
             <h1 className="text-3xl md:text-5xl font-black mb-4 text-white">
-              <span className="text-[#D2A63C]">Copygram</span> — do Telegram direto para o teu MT5
+              <span className="text-[#D2A63C]">MTMcopier</span> — do Telegram direto para o teu MT5
             </h1>
             <p className="text-gray-400 text-lg">
               Liga o canal de sinais que segues à tua conta MetaTrader 5. Sem copiar e colar,
@@ -556,7 +556,7 @@ export default function MtmCopyPage() {
                 ) : connection ? (
                   <><Settings2 className="mr-2 h-5 w-5" />Editar configuração</>
                 ) : (
-                  <>Ativar o Copygram <ArrowRight className="ml-2 h-5 w-5" /></>
+                  <>Ativar o MTMcopier <ArrowRight className="ml-2 h-5 w-5" /></>
                 )}
               </Button>
               {!connection && (
@@ -576,7 +576,7 @@ export default function MtmCopyPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-white flex items-center gap-2">
-                    <Power className="w-5 h-5 text-[#D2A63C]" /> A tua ligação Copygram
+                    <Power className="w-5 h-5 text-[#D2A63C]" /> A tua ligação MTMcopier
                   </CardTitle>
 
                   {/* Toggle ativo / pausado */}
@@ -686,7 +686,7 @@ export default function MtmCopyPage() {
                     className="text-red-500/70 hover:text-red-400 hover:bg-red-500/10 ml-auto"
                     onClick={handleDisconnect}
                   >
-                    Desligar Copygram
+                    Desligar MTMcopier
                   </Button>
                 </div>
               </CardContent>
@@ -722,7 +722,7 @@ export default function MtmCopyPage() {
             <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm text-gray-300">
               {[
                 "Nunca pedimos a password da tua conta MT5 por formulário — a ligação é feita pela equipa, em canal seguro",
-                "Define limites de risco diário — o Copygram pára de copiar se o limite for atingido",
+                "Define limites de risco diário — o MTMcopier pára de copiar se o limite for atingido",
                 "Ativa, pausa ou desliga a cópia a qualquer momento, sem perder a configuração",
                 "Histórico completo de sinais recebidos e ordens executadas, sempre disponível para consulta",
                 "Funciona como addon — precisas de ter um Pack MTM (Membro ou Premium) ativo",
@@ -749,7 +749,7 @@ export default function MtmCopyPage() {
               ) : connection ? (
                 <>Editar configuração <Settings2 className="ml-2 h-5 w-5" /></>
               ) : (
-                <>Ativar o Copygram por +20€/mês <Zap className="ml-2 h-5 w-5" /></>
+                <>Ativar o MTMcopier por +20€/mês <Zap className="ml-2 h-5 w-5" /></>
               )}
             </Button>
             <p className="text-xs text-gray-500 mt-3">Pagamento seguro via Stripe · cancela quando quiseres</p>

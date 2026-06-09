@@ -24,7 +24,7 @@ const navItems = [
   { id: "users", label: "Utilizadores", icon: Users },
   { id: "content", label: "Conteúdo", icon: FileText },
   { id: "education", label: "Educação (LMS)", icon: GraduationCap },
-  { id: "copygram", label: "Copygram", icon: Send },
+  { id: "copygram", label: "MTMcopier", icon: Send },
   { id: "notifications", label: "Notificações", icon: Bell },
   { id: "settings", label: "Configurações", icon: Settings },
 ]

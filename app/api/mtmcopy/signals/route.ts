@@ -1,4 +1,4 @@
-// /api/mtmcopy/signals — histórico de sinais Copygram do utilizador autenticado
+// /api/mtmcopy/signals — histórico de sinais MTMcopier do utilizador autenticado
 // Alimentado pelo microserviço externo via service_role.
 // Este endpoint apenas lê (GET) — escrita é da responsabilidade do microserviço.
 

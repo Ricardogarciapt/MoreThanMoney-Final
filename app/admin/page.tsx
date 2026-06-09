@@ -17,7 +17,7 @@ import NotificationsManager from "@/components/admin/notifications-manager"
 import ThemeManager from "@/components/admin/theme-manager"
 import SettingsManager from "@/components/admin/settings-manager"
 import LiveSessionsManager from "@/components/admin/live-sessions-manager"
-import CopygramManager from "@/components/admin/copygram-manager"
+import MTMcopierManager from "@/components/admin/mtmcopier-manager"
 import { MessageCircle } from "lucide-react"
 
 function CreateDefaultGroupsButton({
@@ -251,7 +251,7 @@ function AdminPageClient() {
               {activeSection === "users" && "Utilizadores"}
               {activeSection === "content" && "Conteúdo"}
               {activeSection === "education" && "Educação / LMS"}
-              {activeSection === "copygram" && "Copygram · Telegram → MT5"}
+              {activeSection === "copygram" && "MTMcopier · Telegram → MT5"}
               {activeSection === "notifications" && "Notificações"}
               {activeSection === "settings" && "Configurações"}
             </h1>
@@ -321,13 +321,13 @@ function AdminPageClient() {
             <div className="space-y-6">
               <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
                 <div className="border-b border-[#D2A63C]/15 px-6 py-4">
-                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Ligações Copygram</h2>
+                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Ligações MTMcopier</h2>
                   <p className="text-sm text-gray-400 mt-1">
                     Gere todas as ligações Telegram → MT5 dos utilizadores. Atualiza estados, associa conta MetaAPI e regista erros.
                   </p>
                 </div>
                 <div className="p-6">
-                  <CopygramManager />
+                  <MTMcopierManager />
                 </div>
               </section>
             </div>
