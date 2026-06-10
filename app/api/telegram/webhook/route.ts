@@ -1,58 +1,23 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse, after } from "next/server"
 import { telegramService } from "@/lib/telegram-service"
 import { db } from "@/lib/database-service"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { processMtmcopyTelegramMessage } from "@/lib/mtmcopy/processor"
 
-// Map Telegram chat IDs → chat channel slugs
-// Env vars aceites (qualquer um serve):
-//   TELEGRAM_TRADE_IDEAS_CHAT_ID  ou  TELEGRAM_CHANNEL_ID  → trade-ideas-setup
-//   TELEGRAM_PREMIUM_IDEAS_CHAT_ID                          → premium-ideas
-const CHANNEL_MAP: Record<string, string> = {}
-
-function buildChannelMap() {
-  const tradeIdeasId =
-    process.env.TELEGRAM_TRADE_IDEAS_CHAT_ID ||
-    process.env.TELEGRAM_CHANNEL_ID   // fallback para env legacy
-  const premiumIdeasId = process.env.TELEGRAM_PREMIUM_IDEAS_CHAT_ID
-  if (tradeIdeasId)  CHANNEL_MAP[tradeIdeasId]  = "trade-ideas-setup"
-  if (premiumIdeasId) CHANNEL_MAP[premiumIdeasId] = "premium-ideas"
-}
-
-buildChannelMap()
+import { resolveAppChannelSlug } from "@/lib/telegram-app-channels"
 
 async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmin>, message: any) {
   const chatId = String(message.chat?.id ?? "")
-  const slug = CHANNEL_MAP[chatId]
+  const slug = resolveAppChannelSlug(message.chat ?? {})
 
   if (!slug) {
-    // Guardar canal desconhecido para facilitar configuração
     const channelTitle = message.chat?.title ?? ""
     const channelUsername = message.chat?.username ?? ""
     console.log(`[Telegram] Canal não mapeado: id=${chatId} title="${channelTitle}" username="${channelUsername}"`)
-
-    // Auto-detectar pelo título: se parece ser um dos canais esperados, inserir como descoberta
-    const titleLower = channelTitle.toLowerCase()
-    let autoSlug: string | null = null
-    if (titleLower.includes("premium")) autoSlug = "premium-ideas"
-    else if (titleLower.includes("trade") || titleLower.includes("setup") || titleLower.includes("sinais")) autoSlug = "trade-ideas-setup"
-
-    if (autoSlug) {
-      console.log(`[Telegram] Auto-mapeando "${channelTitle}" (${chatId}) → ${autoSlug}`)
-      await supabase.from("chat_messages").insert({
-        channel_slug: autoSlug,
-        user_id: null,
-        content: message.text || message.caption || null,
-        image_url: null,
-        message_type: "telegram_forward",
-        telegram_sender: channelTitle || "Telegram",
-        telegram_message_id: message.message_id,
-      }).then(({ error }) => {
-        if (error) console.error(`[Telegram] Erro auto-mapeamento:`, error.message)
-        else console.log(`[Telegram] ✅ Auto-mapeado ${chatId} → ${autoSlug}`)
-      })
-    }
     return
   }
+
+  console.log(`[Telegram] Espelhar ${chatId} → ${slug}`)
 
   const telegramMessageId = message.message_id
   const senderName = message.chat?.title || message.sender_chat?.title || "Telegram"
@@ -110,6 +75,11 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
 
 export async function POST(request: NextRequest) {
   try {
+    const secret = process.env.TELEGRAM_WEBHOOK_SECRET
+    if (secret && request.nextUrl.searchParams.get("secret") !== secret) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const body = await request.json()
     const supabase = getSupabaseAdmin()
 
@@ -117,8 +87,18 @@ export async function POST(request: NextRequest) {
     if (body.channel_post) {
       const message = body.channel_post
 
+      const { registerDiscoveredTelegramChat } = await import('@/lib/mtmcopy/signal-sources-config')
+      await registerDiscoveredTelegramChat(message.chat ?? {})
+
       // Mirror to chat channels if configured
       await mirrorTelegramMessage(supabase, message)
+
+      // MTMcopier — copy trading Telegram → MT5 (Bot API, serverless)
+      after(() =>
+        processMtmcopyTelegramMessage(message).catch((err) =>
+          console.error("[mtmcopy] erro no processamento:", err),
+        ),
+      )
 
       // Processar mensagem como sinal de trading
       const signal = telegramService.processSignalMessage(message)
@@ -129,6 +109,17 @@ export async function POST(request: NextRequest) {
 
         console.log("Novo sinal processado:", signal)
       }
+    }
+
+    // Grupos com sinais (bot como membro/admin)
+    if (body.message?.chat?.type === "supergroup" || body.message?.chat?.type === "group") {
+      const { registerDiscoveredTelegramChat } = await import('@/lib/mtmcopy/signal-sources-config')
+      await registerDiscoveredTelegramChat(body.message.chat ?? {})
+      after(() =>
+        processMtmcopyTelegramMessage(body.message).catch((err) =>
+          console.error("[mtmcopy] erro no processamento (grupo):", err),
+        ),
+      )
     }
 
     // Handle private messages & commands
@@ -244,10 +235,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export const maxDuration = 60
+
 export async function GET() {
+  const { isMetaApiConfigured } = await import("@/lib/mtmcopy/metaapi")
   return NextResponse.json({
     status: "Webhook ativo",
-    bot: "@MoreThanMoney_aibot",
-    channel: "https://t.me/+2XMn1YEjfjYwYTE0",
+    bot: process.env.TELEGRAM_BOT_USERNAME || "@MoreThanMoney_aibot",
+    mtmcopy: "Bot API · Telegram → MetaAPI → MT5",
+    metaapi: isMetaApiConfigured() ? "configurado" : "METAAPI_TOKEN em falta",
   })
 }

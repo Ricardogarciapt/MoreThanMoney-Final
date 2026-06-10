@@ -119,7 +119,11 @@ export async function middleware(request: NextRequest) {
     response.headers.set("Expires", "0")
   }
 
-  // ── /mtmcopy = página de venda (pública). Métricas exigem login. ─────────
+  // ── /mtmcopy = página de venda (sempre pública) ───────────────────────────
+  if (pathname === "/mtmcopy" || pathname === "/mtmcopy/") {
+    return response
+  }
+
   const mtmcopyNeedsAuth =
     pathname.startsWith("/mtmcopy/metrics") || pathname.startsWith("/mtmcopy/app")
 

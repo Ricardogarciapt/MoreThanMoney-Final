@@ -1,25 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { buildAppChannelMap, resolveAppChannelSlug } from "@/lib/telegram-app-channels"
 
 const BOT_TOKEN = process.env.TELEGRAM_AIBOT_TOKEN || ""
 const BASE_URL = `https://api.telegram.org/bot${BOT_TOKEN}`
 const WEBHOOK_URL = "https://www.morethanmoney.pt/api/telegram/webhook-aibot"
-
-const CHANNEL_MAP: Record<string, string> = {}
-
-function buildChannelMap() {
-  const tradeId = process.env.TELEGRAM_TRADE_IDEAS_CHAT_ID?.trim()
-  const premiumId = process.env.TELEGRAM_PREMIUM_IDEAS_CHAT_ID?.trim()
-  const addBoth = (id: string, slug: string) => {
-    CHANNEL_MAP[id] = slug
-    const norm = id.startsWith("-100") ? id : `-100${id.replace(/^-/, "")}`
-    CHANNEL_MAP[norm] = slug
-  }
-  if (tradeId) addBoth(tradeId, "trade-ideas-setup")
-  if (premiumId) addBoth(premiumId, "premium-ideas")
-}
-
-buildChannelMap()
 
 function todayStart(): number {
   const d = new Date()
@@ -77,8 +62,7 @@ export async function POST(_request: NextRequest) {
 
       if (post.date < todayTs) { stats.skipped++; continue }
 
-      const chatId = String(post.chat?.id ?? "")
-      const slug = CHANNEL_MAP[chatId]
+      const slug = resolveAppChannelSlug(post.chat ?? {})
       if (!slug) { stats.skipped++; continue }
 
       const { data: existing } = await supabase
@@ -110,7 +94,7 @@ export async function POST(_request: NextRequest) {
     }
 
     await setWebhook()
-    return NextResponse.json({ success: true, stats, channels: CHANNEL_MAP })
+    return NextResponse.json({ success: true, stats, channels: Object.fromEntries(buildAppChannelMap()) })
   } catch (error) {
     await setWebhook()
     return NextResponse.json({ success: false, error: String(error) }, { status: 500 })
@@ -126,6 +110,6 @@ export async function GET() {
   return NextResponse.json({
     webhook: data.result?.url,
     pending: data.result?.pending_update_count,
-    channels: CHANNEL_MAP,
+    channels: Object.fromEntries(buildAppChannelMap()),
   })
 }

@@ -177,29 +177,44 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Addon MTMcopier (Telegram → MT5) — notificar a equipa para finalizar o onboarding manual
   if (planId === 'mtmcopy_addon_monthly') {
     try {
+      const { activateMtmcopySubscription } = await import('@/lib/mtmcopy/subscription')
+      const periodEnd = session.subscription
+        ? undefined
+        : new Date(Date.now() + 32 * 24 * 60 * 60 * 1000).toISOString()
+      await activateMtmcopySubscription(userId, periodEnd ?? null)
+
       const { data: profile } = await supabase
         .from('profiles')
         .select('email, full_name')
         .eq('id', userId)
         .single()
 
-      const { data: existingConn } = await supabase
+      const { data: existingConns } = await supabase
         .from('mtmcopy_connections')
         .select('telegram_channel, mt5_server, mt5_login_last4')
         .eq('user_id', userId)
-        .maybeSingle()
+        .neq('mt5_status', 'disconnected')
 
-      await supabase
-        .from('mtmcopy_connections')
-        .upsert({ user_id: userId, is_active: true, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+      const primaryConn = existingConns?.[0]
+
+      if (existingConns?.length) {
+        await supabase
+          .from('mtmcopy_connections')
+          .update({
+            is_active: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', userId)
+          .neq('mt5_status', 'disconnected')
+      }
 
       if (profile?.email) {
         await sendMTMcopierSetupNotification(
           profile.email,
           profile.full_name || 'Trader',
-          existingConn?.telegram_channel,
-          existingConn?.mt5_server,
-          existingConn?.mt5_login_last4
+          primaryConn?.telegram_channel,
+          primaryConn?.mt5_server,
+          primaryConn?.mt5_login_last4
         )
       }
     } catch (err) {

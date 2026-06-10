@@ -24,7 +24,6 @@ const navItems = [
   { id: "users", label: "Utilizadores", icon: Users },
   { id: "content", label: "Conteúdo", icon: FileText },
   { id: "education", label: "Educação (LMS)", icon: GraduationCap },
-  { id: "copygram", label: "MTMcopier", icon: Send },
   { id: "notifications", label: "Notificações", icon: Bell },
   { id: "settings", label: "Configurações", icon: Settings },
 ]
@@ -32,9 +31,11 @@ const navItems = [
 export default function AdminSidebar({
   activeSection,
   onSectionChange,
+  skoolPendingCount = 0,
 }: {
   activeSection: string
   onSectionChange: (id: string) => void
+  skoolPendingCount?: number
 }) {
   const pathname = usePathname()
 
@@ -75,10 +76,27 @@ export default function AdminSidebar({
               )}
             >
               <Icon className="w-5 h-5 shrink-0" />
-              {item.label}
+              <span className="flex-1 text-left">{item.label}</span>
+              {item.id === "users" && skoolPendingCount > 0 && (
+                <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-black">
+                  {skoolPendingCount}
+                </span>
+              )}
             </button>
           )
         })}
+        <Link
+          href="/admin/mtmcopy"
+          className={cn(
+            "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            pathname === "/admin/mtmcopy" || pathname.startsWith("/admin/mtmcopy/")
+              ? "border-l-2 border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
+              : "border-l-2 border-transparent text-gray-400 hover:bg-gray-800/50 hover:text-white"
+          )}
+        >
+          <Send className="w-5 h-5 shrink-0" />
+          MTMcopier
+        </Link>
         <Link
           href="/admin/portfolios"
           className={cn(
