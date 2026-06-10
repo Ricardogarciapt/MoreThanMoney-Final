@@ -21,6 +21,15 @@ const nextConfig = {
   compress: true,
   reactStrictMode: true,
   serverExternalPackages: ["ssh2", "metaapi.cloud-sdk"],
+  async redirects() {
+    return [
+      {
+        source: '/logo-new.png',
+        destination: '/icon-512x512.png',
+        permanent: false,
+      },
+    ]
+  },
   async headers() {
     return [
       {

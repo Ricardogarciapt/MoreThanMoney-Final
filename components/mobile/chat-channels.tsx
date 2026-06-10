@@ -3,7 +3,13 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
-import { canReadChannel, canWriteChannel, isReadOnlyChannel } from "@/lib/chat-channel-permissions"
+import {
+  canReadChannel,
+  canWriteChannel,
+  isPremiumChannel,
+  isReadOnlyChannel,
+  requiresBrokerUidChannel,
+} from "@/lib/chat-channel-permissions"
 import {
   ArrowLeft,
   Send,
@@ -98,14 +104,6 @@ interface ChatMessage {
 }
 
 // ─── Derived permissions (lib/chat-channel-permissions.ts) ───────────────────
-
-function requiresBrokerUID(slug: string) {
-  return slug === "trade-ideas" || slug === "trade-ideas-setup" || slug === "premium-ideas"
-}
-
-function requiresPremium(slug: string) {
-  return slug === "premium-ideas"
-}
 
 /** iOS/WKWebView: a sessão pode demorar — RLS dos chats exige auth.uid(). */
 async function waitForSupabaseSession(timeoutMs = 5000): Promise<boolean> {
@@ -1077,9 +1075,10 @@ function ChannelView({
   // ── Realtime ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    const sub = supabase
-      .channel(`chat:${channel.slug}`)
-      .on(
+    let tornDown = false
+    const realtimeChannel = supabase.channel(`chat:${channel.slug}`)
+
+    realtimeChannel.on(
         "postgres_changes",
         {
           event: "INSERT",
@@ -1088,6 +1087,7 @@ function ChannelView({
           filter: `channel_slug=eq.${channel.slug}`,
         },
         async (payload: { new: Record<string, unknown> }) => {
+          if (tornDown) return
           const { data } = await supabase
             .from("chat_messages")
             .select(
@@ -1119,10 +1119,15 @@ function ChannelView({
           }
         }
       )
-      .subscribe()
+    realtimeChannel.subscribe()
 
     return () => {
-      supabase.removeChannel(sub)
+      tornDown = true
+      try {
+        void realtimeChannel.unsubscribe()
+      } catch {
+        /* ignore */
+      }
     }
   }, [channel.slug])
 
@@ -1356,7 +1361,7 @@ function ChannelView({
             <p className="text-[11px] text-gray-500 truncate mt-0.5">{channel.description}</p>
           )}
         </div>
-        {requiresPremium(channel.slug) && (
+        {isPremiumChannel(channel.slug) && (
           <div className="flex items-center gap-1 text-[#D2A63C] text-[11px]">
             <Lock className="w-3.5 h-3.5" />
             <span>Premium</span>
@@ -2103,7 +2108,7 @@ export default function ChatChannels() {
   }, [authLoading, user?.id, reloadTick])
 
   const handleChannelSelect = (channel: Channel) => {
-    if (requiresBrokerUID(channel.slug) && !brokerUid) {
+    if (requiresBrokerUidChannel(channel.slug) && !brokerUid) {
       setPendingChannel(channel)
       setBrokerUidModal(true)
       return

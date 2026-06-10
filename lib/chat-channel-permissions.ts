@@ -11,6 +11,14 @@ export function isReadOnlyChannel(slug: string) {
   return slug === "trade-ideas-setup" || slug === "premium-ideas"
 }
 
+export function isPremiumChannel(slug: string) {
+  return slug === "premium-ideas"
+}
+
+export function requiresBrokerUidChannel(slug: string) {
+  return slug === "trade-ideas" || slug === "trade-ideas-setup" || slug === "premium-ideas"
+}
+
 export function canReadChannel(slug: string, user: ChatChannelUser | null | undefined): boolean {
   if (!user?.is_active) return false
   if (slug === "premium-ideas") {
