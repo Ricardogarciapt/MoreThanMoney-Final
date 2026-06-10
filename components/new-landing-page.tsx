@@ -26,6 +26,7 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 import ParticleBackground from "@/components/particle-background"
+import { shouldReduceSafariEffects } from "@/lib/supabase-session"
 import { getRandomTestimonials } from "@/lib/testimonials-service"
 import type { Testimonial } from "@/lib/testimonials-service"
 
@@ -229,6 +230,10 @@ export default function NewLandingPage() {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [activePath, setActivePath] = useState<string | null>(null)
+  const reduceEffects = shouldReduceSafariEffects()
+  const heroVideoSrc = reduceEffects
+    ? "https://www.youtube.com/embed/dgd0-mLIrMw?controls=1&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3"
+    : "https://www.youtube.com/embed/dgd0-mLIrMw?autoplay=1&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3"
 
   useEffect(() => {
     setTestimonials(getRandomTestimonials(6))
@@ -249,7 +254,7 @@ export default function NewLandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white overflow-hidden">
+    <div className="min-h-screen bg-gray-950 text-white overflow-x-hidden">
       <ParticleBackground />
 
       {/* ── HERO ──────────────────────────────────────────────────────────────── */}
@@ -279,7 +284,7 @@ export default function NewLandingPage() {
           <div className="mb-12 max-w-4xl mx-auto">
             <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-900 border border-mtm-primary/30">
               <iframe
-                src="https://www.youtube.com/embed/dgd0-mLIrMw?autoplay=1&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3"
+                src={heroVideoSrc}
                 title="Apresentação MoreThanMoney"
                 className="w-full h-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

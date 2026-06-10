@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation"
 import UserDropdown from "@/components/user-dropdown"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
 import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap, Brain } from "lucide-react"
+import { shouldReduceSafariEffects } from "@/lib/supabase-session"
 
 type NavSubItem = {
   name: string
@@ -37,6 +38,9 @@ export default function Navbar() {
   const DESKTOP_NAV_Z = 2147483640
   const DESKTOP_MENU_Z = 2147483646
   const MOBILE_OVERLAY_Z = 2147483647
+  const reduceEffects = shouldReduceSafariEffects()
+  const navBlur = reduceEffects ? "" : "backdrop-blur-md"
+  const overlayBlur = reduceEffects ? "bg-black/85" : "bg-black/70 backdrop-blur-sm"
 
   const navigation: NavItem[] = [
     {
@@ -240,8 +244,8 @@ export default function Navbar() {
       <nav
         className={`fixed left-0 right-0 top-0 isolate transition-all duration-300 ${
           isScrolled
-            ? "bg-gradient-to-r from-black via-gray-900 to-black backdrop-blur-md border-b border-mtm-primary/30 shadow-lg shadow-mtm-primary/20"
-            : "bg-gradient-to-r from-black/95 via-gray-900/95 to-black/95 backdrop-blur-md border-b border-mtm-primary/20"
+            ? `bg-gradient-to-r from-black via-gray-900 to-black ${navBlur} border-b border-mtm-primary/30 shadow-lg shadow-mtm-primary/20`
+            : `bg-gradient-to-r from-black via-gray-900 to-black ${navBlur} border-b border-mtm-primary/20`
         }`}
         style={{ zIndex: DESKTOP_NAV_Z }}
       >
@@ -336,7 +340,7 @@ export default function Navbar() {
         {isClient && isMenuOpen && createPortal(
           <div className="fixed inset-0 lg:hidden" style={{ zIndex: MOBILE_OVERLAY_Z }}>
             <button
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              className={`absolute inset-0 ${overlayBlur}`}
               aria-label="Fechar menu"
               onClick={closeMenu}
               type="button"

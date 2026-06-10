@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import { useEffect, useRef } from "react"
+import { isSafariBrowser } from "@/lib/supabase-session"
 
 /** Lê o idioma destino do cookie googtrans (ex: /pt/en → en). */
 function getTranslateTarget(): string | null {
@@ -18,7 +19,17 @@ function getTranslateTarget(): string | null {
   return target && target !== "pt" ? target : null
 }
 
-const TRANSLATE_BLOCKED_PREFIXES = ["/admin", "/register", "/login", "/success", "/app-mobile"]
+const TRANSLATE_BLOCKED_PREFIXES = [
+  "/admin",
+  "/register",
+  "/login",
+  "/success",
+  "/app-mobile",
+  "/mtmcopy",
+  "/member-area",
+  "/scanner",
+  "/new-landing",
+]
 
 function isTranslateBlocked(path: string): boolean {
   return TRANSLATE_BLOCKED_PREFIXES.some(
@@ -76,7 +87,8 @@ export function GoogleTranslateLoader() {
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return
     const path = pathname || ""
-    if (isTranslateBlocked(path)) return
+    // Safari: o script muta o DOM e bloqueia React/hidratação
+    if (isSafariBrowser() || isTranslateBlocked(path)) return
 
     const target = getTranslateTarget()
     if (!target) return

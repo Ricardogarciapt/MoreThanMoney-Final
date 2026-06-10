@@ -44,6 +44,7 @@ import {
   markChannelRead,
   isChannelUnread,
 } from "./chat-channel-meta"
+import { shouldReduceSafariEffects } from "@/lib/supabase-session"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -147,6 +148,28 @@ function extractFirstUrl(text: string): string | null {
   return match ? match[1] : null
 }
 
+function normalizeMessageProfile(
+  profile?: MessageProfile | MessageProfile[] | null,
+): MessageProfile | null {
+  if (!profile) return null
+  return Array.isArray(profile) ? profile[0] ?? null : profile
+}
+
+function normalizeChatMessage(raw: ChatMessage): ChatMessage {
+  return {
+    ...raw,
+    profile: normalizeMessageProfile(raw.profile as MessageProfile | MessageProfile[] | null),
+    reply_to_message: raw.reply_to_message
+      ? {
+          ...raw.reply_to_message,
+          profile: normalizeMessageProfile(
+            raw.reply_to_message.profile as MessageProfile | MessageProfile[] | null,
+          ),
+        }
+      : null,
+  }
+}
+
 async function shareMessage(msg: ChatMessage) {
   const url = msg.link_url || msg.image_url || extractFirstUrl(msg.content || "")
   const text =
@@ -217,8 +240,10 @@ function Avatar({ profile, size = 32 }: { profile?: MessageProfile | null; size?
 /** Pré-visualização lazy para URLs no texto sem card guardado na DB */
 function InlineUrlPreview({ url }: { url: string }) {
   const [preview, setPreview] = useState<NonNullable<ChatMessage["link_preview"]> | null>(null)
+  const liteMode = shouldReduceSafariEffects()
 
   useEffect(() => {
+    if (liteMode) return
     let cancelled = false
     fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
       .then((r) => (r.ok ? r.json() : null))
@@ -234,7 +259,7 @@ function InlineUrlPreview({ url }: { url: string }) {
       })
       .catch(() => {})
     return () => { cancelled = true }
-  }, [url])
+  }, [url, liteMode])
 
   if (preview) return <LinkPreviewCard preview={preview} url={url} />
 
@@ -981,7 +1006,7 @@ function ChannelView({
     }
 
     if (data) {
-      const rows = data as unknown as ChatMessage[]
+      const rows = (data as unknown as ChatMessage[]).map(normalizeChatMessage)
       setHasMore(rows.length > PAGE_SIZE)
       setMessages(rows.slice(0, PAGE_SIZE).reverse())
     }
@@ -1005,7 +1030,7 @@ function ChannelView({
     if (!error && data) {
       const rows = data as unknown as ChatMessage[]
       setHasMore(rows.length > PAGE_SIZE)
-      const older = rows.slice(0, PAGE_SIZE).reverse()
+      const older = rows.slice(0, PAGE_SIZE).reverse().map(normalizeChatMessage)
       setMessages((prev) => [...older, ...prev])
     }
     setLoadingMore(false)
@@ -1020,8 +1045,11 @@ function ChannelView({
     fetchMessages()
   }, [fetchMessages])
 
+  const liteScroll = shouldReduceSafariEffects()
+
   const scrollToBottom = (smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" })
+    const behavior = smooth && !liteScroll ? "smooth" : "auto"
+    messagesEndRef.current?.scrollIntoView({ behavior })
     setPendingNew(0)
     setShowScrollBtn(false)
     isNearBottomRef.current = true
@@ -1041,10 +1069,10 @@ function ChannelView({
 
   useEffect(() => {
     if (isNearBottomRef.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+      messagesEndRef.current?.scrollIntoView({ behavior: liteScroll ? "auto" : "smooth" })
       setPendingNew(0)
     }
-  }, [messages.length])
+  }, [messages.length, liteScroll])
 
   // ── Realtime ──────────────────────────────────────────────────────────────
 
@@ -1076,9 +1104,10 @@ function ChannelView({
             .single()
 
           if (data) {
+            const normalized = normalizeChatMessage(data as unknown as ChatMessage)
             setMessages((prev) => {
-              if (prev.find((m) => m.id === (data as ChatMessage).id)) return prev
-              const next = [...prev, data as unknown as ChatMessage]
+              if (prev.find((m) => m.id === normalized.id)) return prev
+              const next = [...prev, normalized]
               if (!isNearBottomRef.current) {
                 setPendingNew((n) => n + 1)
               }

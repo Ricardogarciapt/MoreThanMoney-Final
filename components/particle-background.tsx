@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import { shouldReduceSafariEffects } from "@/lib/supabase-session"
 
 interface Particle {
   x: number
@@ -13,8 +14,10 @@ interface Particle {
 
 export default function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const disabled = shouldReduceSafariEffects()
 
   useEffect(() => {
+    if (disabled) return
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -66,13 +69,12 @@ export default function ParticleBackground() {
         ctx.fill()
       })
 
-      // Conectar partículas próximas (reduzido para performance)
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x
           const dy = particles[i].y - particles[j].y
           const dist = dx * dx + dy * dy
-          if (dist < 8100) { // 90px²
+          if (dist < 8100) {
             ctx.beginPath()
             ctx.strokeStyle = `rgba(239,184,16,${0.08 * (1 - Math.sqrt(dist) / 90)})`
             ctx.lineWidth = 0.5
@@ -93,7 +95,9 @@ export default function ParticleBackground() {
       cancelAnimationFrame(rafId)
       window.removeEventListener("resize", resizeCanvas)
     }
-  }, [])
+  }, [disabled])
+
+  if (disabled) return null
 
   return <canvas ref={canvasRef} className="fixed inset-0 z-0 bg-transparent pointer-events-none" />
 }
