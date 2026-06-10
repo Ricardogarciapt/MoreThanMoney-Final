@@ -13,10 +13,11 @@ import {
   ToggleLeft, ToggleRight, History, ChevronDown, ChevronUp, BarChart3,
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { waitForSupabaseSession } from "@/lib/supabase-session"
 import { useAuth } from "@/contexts/auth-context"
 import {
   StatusPill, SignalCard, EmptySignals, ModeBanner, CopyTraderBanner,
-  formatRelative,
+  formatRelative, formatMt5Money,
 } from "@/components/mtmcopy/mtmcopy-shared"
 import {
   COPY_METHODS,
@@ -36,6 +37,8 @@ import {
 type MTMcopierConnectionRow = MTMcopierConnection & {
   last_signal_at: string | null
   last_error: string | null
+  account_balance?: number | null
+  account_equity?: number | null
 }
 
 interface SignalLog {
@@ -195,24 +198,15 @@ export default function MtmCopyPage() {
 
     const load = async () => {
       try {
-        const sessionResult = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
-        ])
-
-        const session =
-          sessionResult && typeof sessionResult === "object" && "data" in sessionResult
-            ? sessionResult.data.session
-            : null
-
-        if (!session?.access_token) {
+        const token = await waitForSupabaseSession()
+        if (!token) {
           if (!cancelled) setConnections([])
           return
         }
 
-        setAccessToken(session.access_token)
+        setAccessToken(token)
         const res = await fetch("/api/mtmcopy/connection", {
-          headers: { Authorization: `Bearer ${session.access_token}` },
+          headers: { Authorization: `Bearer ${token}` },
         })
         const data = await res.json()
         if (!cancelled && res.ok) {
@@ -238,34 +232,23 @@ export default function MtmCopyPage() {
 
   const openSetup = async (selectionId: string | "new" | null = null) => {
     try {
-      const sessionResult = await Promise.race([
-        supabase.auth.getSession(),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
-      ])
-      const session =
-        sessionResult && typeof sessionResult === "object" && "data" in sessionResult
-          ? sessionResult.data.session
-          : null
-
-      if (!session?.access_token) {
-        window.location.href = "/login?redirect=/mtmcopy"
+      const token = await waitForSupabaseSession()
+      if (!token) {
+        setError("Sessão indisponível no browser. Recarrega a página ou faz login novamente.")
         return
       }
 
-      setAccessToken(session.access_token)
+      setAccessToken(token)
 
-      let list = connections
-      if (!connectionsLoaded || !list.length) {
-        const res = await fetch("/api/mtmcopy/connection", {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        })
-        const data = await res.json()
-        list = (res.ok ? data.connections ?? [] : []) as MTMcopierConnectionRow[]
-        setConnections(list)
-        if (data.sender_mode) setSenderMode(data.sender_mode)
-        if (data.subscribed != null) setSubscribed(Boolean(data.subscribed))
-        setConnectionsLoaded(true)
-      }
+      const res = await fetch("/api/mtmcopy/connection", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      const list = (res.ok ? data.connections ?? [] : connections) as MTMcopierConnectionRow[]
+      setConnections(list)
+      if (data.sender_mode) setSenderMode(data.sender_mode)
+      if (data.subscribed != null) setSubscribed(Boolean(data.subscribed))
+      setConnectionsLoaded(true)
 
       const conn =
         selectionId && selectionId !== "new"
@@ -292,14 +275,14 @@ export default function MtmCopyPage() {
     setError("")
     setCheckingOut(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) {
+      const token = await waitForSupabaseSession()
+      if (!token) {
         window.location.href = "/login?redirect=/mtmcopy"
         return
       }
       const res = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ planId: "mtmcopy_addon_monthly" }),
       })
       const data = await res.json()
@@ -374,7 +357,7 @@ export default function MtmCopyPage() {
         />
       )}
 
-      <div className="relative min-h-screen bg-black overflow-hidden">
+      <div className="relative min-h-screen bg-black overflow-x-hidden">
         <ParticleBackground />
         <Breadcrumbs />
 
@@ -386,7 +369,7 @@ export default function MtmCopyPage() {
               🔗 Addon · Copy Trading Automático
             </Badge>
             <h1 className="text-4xl md:text-6xl font-black mb-5 text-white leading-[1.1] tracking-tight">
-              <span className="bg-gradient-to-r from-[#D2A63C] via-[#E8C56A] to-[#D2A63C] bg-clip-text text-transparent">MTMcopier</span>
+              <span className="bg-gradient-to-r from-[#D2A63C] via-[#E8C56A] to-[#D2A63C] bg-clip-text text-transparent [-webkit-background-clip:text]">MTMcopier</span>
               <br className="hidden sm:block" />
               <span className="text-2xl md:text-4xl font-bold text-zinc-300"> Cópia automática profissional</span>
             </h1>
@@ -553,7 +536,20 @@ export default function MtmCopyPage() {
                     </div>
 
                     {connection.account_role !== "master" && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    <>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
+                      <div className="rounded-lg bg-[#D2A63C]/10 border border-[#D2A63C]/25 px-3 py-2.5 text-center sm:col-span-1">
+                        <p className="text-xs text-[#D2A63C]/80 mb-0.5">Saldo MT5</p>
+                        <p className="text-white text-sm font-semibold tabular-nums">
+                          {formatMt5Money(connection.account_balance)}
+                        </p>
+                        {connection.account_equity != null &&
+                          connection.account_equity !== connection.account_balance && (
+                          <p className="text-[10px] text-zinc-500 mt-0.5">
+                            Equity {formatMt5Money(connection.account_equity)}
+                          </p>
+                        )}
+                      </div>
                       <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 px-3 py-2.5 text-center">
                         <p className="text-xs text-gray-500 mb-0.5">Modo lote</p>
                         <p className="text-white text-sm font-medium">
@@ -575,6 +571,25 @@ export default function MtmCopyPage() {
                         </p>
                       </div>
                     </div>
+                    {connection.lot_mode === "risk_percent" && connection.account_balance == null && connection.mt5_status === "connected" && (
+                      <div className="flex items-start gap-2.5 text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
+                        <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <p>
+                          Saldo indisponível — o modo <strong>% risco</strong> usa 0.01 lotes até o saldo ser lido.
+                          Clica em <strong>Atualizar</strong> ou verifica a ligação MetaAPI.
+                        </p>
+                      </div>
+                    )}
+                    {connection.lot_mode === "risk_percent" && connection.account_balance != null && (
+                      <p className="text-xs text-zinc-500 mb-4 -mt-1">
+                        Com {connection.lot_value}% de risco, cada trade arrisca ~{" "}
+                        <strong className="text-zinc-300">
+                          {formatMt5Money((connection.account_balance * Number(connection.lot_value)) / 100)}
+                        </strong>{" "}
+                        do saldo (conforme distância ao SL no sinal).
+                      </p>
+                    )}
+                    </>
                     )}
 
                     {connection.account_role !== "master" && connection.symbols_whitelist && connection.symbols_whitelist.length > 0 && (

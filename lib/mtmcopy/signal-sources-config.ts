@@ -8,10 +8,38 @@ import {
 
 export type MtmcopyTelegramChannelKey = 'trade-ideas' | 'premium-signals'
 
+export interface ProviderExecutionProfile {
+  lot_mode: 'fixed' | 'risk_percent' | 'multiplier'
+  lot_value: number
+  max_risk_percent: number | null
+  copy_sl: boolean
+  copy_tp: boolean
+  auto_trailing_stop: boolean
+  trailing_stop_points: number
+  reverse_signals: boolean
+  symbols_whitelist: string[] | null
+}
+
 export interface MtmcopyChannelProviderConfig {
   account_id: string
   strategy_id?: string | null
   tag?: string
+  /** Risco e regras de execução na conta provider (antes dos subscribers CopyFactory). */
+  execution?: ProviderExecutionProfile
+}
+
+/** Rota CopyFactory: sender Telegram → conta mestre (provider) → estratégia → subscribers. */
+export interface ProviderRoute {
+  id: string
+  label?: string
+  sender_channel?: MtmcopyTelegramChannelKey | null
+  /** Chat Telegram concreto (ex. grupo descoberto pelo bot). */
+  sender_chat_id?: string | null
+  account_id: string
+  strategy_id?: string | null
+  tag?: string
+  execution?: ProviderExecutionProfile
+  enabled?: boolean
 }
 
 export interface MtmcopySignalSourcesConfig {
@@ -19,8 +47,14 @@ export interface MtmcopySignalSourcesConfig {
   enabled_channels: MtmcopyTelegramChannelKey[]
   provider_strategy_id: string | null
   provider_account_id: string | null
-  /** Contas MetaAPI por canal (premium / trade ideas) */
+  /** Rotas sender → mestre (várias contas / estratégias CopyFactory). */
+  provider_routes?: ProviderRoute[]
+  /** Contas MetaAPI por canal (premium / trade ideas) — espelho da 1ª rota por canal */
   channel_providers?: Partial<Record<MtmcopyTelegramChannelKey, MtmcopyChannelProviderConfig>>
+  /** Perfil global de execução provider (fallback se canal não tiver execution) */
+  provider_execution?: ProviderExecutionProfile
+  /** @deprecated usar channel_providers[].execution */
+  provider_execution_profiles?: Partial<Record<MtmcopyTelegramChannelKey, ProviderExecutionProfile>>
   /** @deprecated migrado para enabled_channels */
   enabled_app_slugs?: string[]
 }
@@ -143,6 +177,10 @@ export async function saveSignalSourcesConfig(config: MtmcopySignalSourcesConfig
     enabled_channels: config.enabled_channels,
     provider_strategy_id: config.provider_strategy_id,
     provider_account_id: config.provider_account_id,
+    provider_routes: config.provider_routes,
+    channel_providers: config.channel_providers,
+    provider_execution: config.provider_execution,
+    provider_execution_profiles: config.provider_execution_profiles,
   }
 
   const { error } = await supabase.from('site_settings').upsert(

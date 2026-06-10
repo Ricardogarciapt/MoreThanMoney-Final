@@ -75,7 +75,12 @@ type RpcConnection = {
 }
 
 type TrailingStopLossOptions = {
-  distance: { distance: number; units: 'RELATIVE_POINTS' | 'RELATIVE_PIPS' }
+  distance?: { distance: number; units: 'RELATIVE_POINTS' | 'RELATIVE_PIPS' }
+  threshold?: {
+    thresholds: Array<{ threshold: number; stopLoss: number }>
+    units: 'RELATIVE_POINTS' | 'RELATIVE_PIPS'
+    stopPriceBase: 'CURRENT_PRICE' | 'OPEN_PRICE'
+  }
 }
 
 export interface MetaApiSymbolSpecification {
@@ -119,6 +124,26 @@ export function buildTrailingOptions(
 
   if (input.mode === 'points' && input.points > 0) {
     return { distance: { distance: Math.round(input.points), units: 'RELATIVE_POINTS' } }
+  }
+
+  if (input.mode === 'threshold_pips' && input.activationPips > 0 && input.trailPips > 0) {
+    return {
+      threshold: {
+        thresholds: [{ threshold: input.activationPips, stopLoss: input.trailPips }],
+        units: 'RELATIVE_PIPS',
+        stopPriceBase: 'CURRENT_PRICE',
+      },
+    }
+  }
+
+  if (input.mode === 'threshold_points' && input.activationPoints > 0 && input.trailPoints > 0) {
+    return {
+      threshold: {
+        thresholds: [{ threshold: input.activationPoints, stopLoss: input.trailPoints }],
+        units: 'RELATIVE_POINTS',
+        stopPriceBase: 'CURRENT_PRICE',
+      },
+    }
   }
 
   return undefined
@@ -181,18 +206,31 @@ async function getRpcConnection(accountId: string): Promise<{
   }
 }
 
-export async function getAccountBalance(accountId: string): Promise<number | null> {
+export interface AccountSnapshot {
+  balance: number | null
+  equity: number | null
+}
+
+export async function getAccountSnapshot(accountId: string): Promise<AccountSnapshot | null> {
   let close: (() => Promise<void>) | undefined
   try {
     const rpc = await getRpcConnection(accountId)
     close = rpc.close
     const info = await rpc.connection.getAccountInformation()
-    return info.balance ?? info.equity ?? null
+    const balance = info.balance ?? null
+    const equity = info.equity ?? null
+    if (balance == null && equity == null) return null
+    return { balance, equity }
   } catch {
     return null
   } finally {
     if (close) await close()
   }
+}
+
+export async function getAccountBalance(accountId: string): Promise<number | null> {
+  const snap = await getAccountSnapshot(accountId)
+  return snap?.balance ?? snap?.equity ?? null
 }
 
 export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> {

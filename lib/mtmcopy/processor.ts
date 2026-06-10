@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isPremiumTp1HitConfirmed } from './channel-context'
 import { buildPremiumExitLegs } from './premium-exits'
-import { TRADE_IDEAS_TRAILING_PIPS } from './pip-points'
+import { formatTrailingDistance, TRADE_IDEAS_TRAILING_PIPS } from './pip-points'
 import { getMtmcopySubscription } from './subscription'
 import { chatMatchesAllowlist, connectionMatchesChannel, connectionMatchesSignalSource } from './sources'
 import {
@@ -18,12 +18,13 @@ import { getAccountBalance, isMetaApiConfigured, placeOrder } from './metaapi'
 import { isCopyFactoryEnabled } from './copyfactory'
 import type { MtmcopyChannelKey } from './channel-context'
 import { resolveChannelFromChat, shouldIgnoreChannelMessage } from './channel-context'
+import { hasMtmProviderConfigured, type MtmChannelProvider } from './provider-accounts'
 import {
-  getMtmProviderForChannel,
-  hasMtmProviderConfigured,
-  MTM_PROVIDER_EXECUTION_PROFILE,
-  type MtmChannelProvider,
-} from './provider-accounts'
+  executionProfileToConnectionFields,
+  formatExecutionSummary,
+  getProviderExecutionProfile,
+} from './provider-execution'
+import { resolveMtmProvidersForSignal } from './provider-resolution'
 import {
   applyManagementToAccount,
   applyTrailingToLatestPosition,
@@ -61,17 +62,23 @@ export interface TelegramMessage {
   chat?: { id?: number; username?: string; title?: string; type?: string }
 }
 
-const PROVIDER_PROFILE: MTMcopierConnection = {
-  id: 'mtm-provider',
-  user_id: 'mtm-provider',
-  telegram_channel: null,
-  telegram_status: 'connected',
-  mt5_login_last4: null,
-  mt5_status: 'connected',
-  ...MTM_PROVIDER_EXECUTION_PROFILE,
-  is_active: true,
-  last_signal_at: null,
-  last_error: null,
+async function buildProviderConnection(
+  channel: MtmcopyChannelKey,
+  routeExecution?: import('./signal-sources-config').ProviderExecutionProfile | null,
+): Promise<MTMcopierConnection> {
+  const execution = await getProviderExecutionProfile(channel, routeExecution)
+  return {
+    id: 'mtm-provider',
+    user_id: 'mtm-provider',
+    telegram_channel: null,
+    telegram_status: 'connected',
+    mt5_login_last4: null,
+    mt5_status: 'connected',
+    ...executionProfileToConnectionFields(execution),
+    is_active: true,
+    last_signal_at: null,
+    last_error: null,
+  }
 }
 
 function buildOrderRequest(
@@ -184,7 +191,8 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
     return
   }
 
-  const mtmProvider = getMtmProviderForChannel(channel)
+  const mtmProvidersPreview = await resolveMtmProvidersForSignal(channel, message.chat?.id)
+  const mtmProvider = mtmProvidersPreview[0] ?? null
 
   if (looksLikeManagementOrReplyInstruction(text, channel, ctx)) {
     const management = parseManagementUpdate(text, channel, ctx.parentText)
@@ -243,16 +251,18 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
     return
   }
 
-  if (mtmProvider) {
-    await executeViaMtmProvider(
-      subscribers.length ? subscribers : matchedConnections,
-      enriched,
-      text,
-      message.message_id,
-      mtmProvider,
-      channel,
-      validation,
-    )
+  if (mtmProvidersPreview.length) {
+    for (const mtmProvider of mtmProvidersPreview) {
+      await executeViaMtmProvider(
+        subscribers.length ? subscribers : matchedConnections,
+        enriched,
+        text,
+        message.message_id,
+        mtmProvider,
+        channel,
+        validation,
+      )
+    }
     return
   }
 
@@ -289,11 +299,11 @@ async function processManagementUpdate(
 ) {
   const tgRef = telegramMessageId != null ? `tg:${telegramMessageId}` : ''
   const replyRef = ctx?.isReply && ctx.parentMessageId != null ? ` · reply tg:${ctx.parentMessageId}` : ''
-  const mtmProvider = getMtmProviderForChannel(channel)
-
-  const trailingFromChannel = management.trailingPips
-    ? ({ mode: 'pips' as const, pips: management.trailingPips })
-    : null
+  const trailingFromChannel = management.trailing
+    ? management.trailing
+    : management.trailingPips
+      ? ({ mode: 'pips' as const, pips: management.trailingPips })
+      : null
 
   if (
     channel === 'premium-signals' &&
@@ -311,9 +321,10 @@ async function processManagementUpdate(
     }
     const validation = await validateSignalWithAi(raw, pseudoSignal)
     if (!shouldExecuteSignal(validation)) {
+      const previewProviders = await resolveMtmProvidersForSignal(channel)
       await logProviderSignalEvent({
         channel,
-        provider: mtmProvider,
+        provider: previewProviders[0] ?? null,
         raw,
         telegramMessageId,
         status: 'skipped',
@@ -328,9 +339,10 @@ async function processManagementUpdate(
     `[mtmcopy] gestão ${management.type}${management.symbol ? ' ' + management.symbol : ''}${management.tpLevel ? ` TP${management.tpLevel}` : ''}${ctx?.isReply ? ' (reply)' : ''} · ${channel} → ${subscribers.length} subscritor(es)`,
   )
 
+  const mtmProviders = await resolveMtmProvidersForSignal(channel)
   const accountIds = new Set<string>()
-  if (mtmProvider) {
-    accountIds.add(mtmProvider.accountId)
+  for (const p of mtmProviders) {
+    accountIds.add(p.accountId)
   }
   if (management.type === 'enable_trailing') {
     for (const conn of subscribers) {
@@ -343,14 +355,18 @@ async function processManagementUpdate(
   }
 
   for (const accountId of accountIds) {
+    const providerMatch = mtmProviders.find((p) => p.accountId === accountId)
     const related = subscribers.filter(
       (c) =>
         c.metaapi_account_id === accountId ||
-        (mtmProvider && accountId === mtmProvider.accountId),
+        (providerMatch && accountId === providerMatch.accountId),
     )
-    const isProviderAccount = mtmProvider && accountId === mtmProvider.accountId
-    const connTrailing = isProviderAccount
-      ? trailingDistanceForConnection(PROVIDER_PROFILE)
+    const isProviderAccount = Boolean(providerMatch)
+    const providerConn = isProviderAccount
+      ? await buildProviderConnection(channel, providerMatch?.execution)
+      : null
+    const connTrailing = isProviderAccount && providerConn
+      ? trailingDistanceForConnection(providerConn)
       : related.find((c) => c.auto_trailing_stop)
         ? trailingDistanceForConnection(related.find((c) => c.auto_trailing_stop)!)
         : null
@@ -366,13 +382,12 @@ async function processManagementUpdate(
     if (!mgmt) continue
 
     const outcome = await applyManagementToAccount(accountId, mgmt, trailing)
-    const trailingLabel =
-      trailing?.mode === 'pips' ? `${trailing.pips} pips` : `${trailing?.mode === 'points' ? trailing.points : 0} pts`
+    const trailingLabel = trailing ? formatTrailingDistance(trailing) : '0'
     console.log(
       `[mtmcopy] gestão ${accountId}: ${outcome.updated} SL/trailing (${trailingLabel}), ${outcome.closed} fechadas, ${outcome.cancelled} ordens canceladas`,
     )
 
-    if (mtmProvider && accountId === mtmProvider.accountId) {
+    if (providerMatch && accountId === providerMatch.accountId) {
       const slNote =
         management.sl != null
           ? ` · SL ${management.sl}`
@@ -381,7 +396,7 @@ async function processManagementUpdate(
             : ''
       await logProviderSignalEvent({
         channel,
-        provider: mtmProvider,
+        provider: providerMatch,
         raw,
         telegramMessageId,
         status: outcome.errors.length && !outcome.updated && !outcome.closed && !outcome.cancelled ? 'error' : 'executed',
@@ -392,7 +407,11 @@ async function processManagementUpdate(
   }
 
   for (const conn of subscribers) {
-    const trailingNote = management.trailingPips ? ` · trailing ${management.trailingPips} pips` : ''
+    const trailingNote = management.trailing
+      ? ` · trailing ${formatTrailingDistance(management.trailing)}`
+      : management.trailingPips
+        ? ` · trailing ${management.trailingPips} pips`
+        : ''
     await logMtmcopySignal({
       user_id: conn.user_id,
       connection_id: conn.id,
@@ -433,8 +452,17 @@ async function executeViaMtmProvider(
     return
   }
 
+  const providerConn = await buildProviderConnection(channel, provider.execution)
+  const executionProfile = await getProviderExecutionProfile(channel, provider.execution)
+  const executionSummary = formatExecutionSummary(executionProfile)
   const balance = await getAccountBalance(provider.accountId)
-  const totalLot = computeLotSize(PROVIDER_PROFILE, signal, balance)
+  const totalLot = computeLotSize(providerConn, signal, balance)
+  const lotFallbackNote =
+    providerConn.lot_mode === 'risk_percent' &&
+    totalLot <= 0.01 &&
+    (!balance || !signal.sl)
+      ? ` · fallback 0.01${!signal.sl ? ' (sem SL no sinal)' : ''}${!balance ? ' (saldo indisponível)' : ''}`
+      : ''
   const logTargets = await resolveLogTargets(subscribers)
 
   const isPremium = channel === 'premium-signals'
@@ -445,7 +473,7 @@ async function executeViaMtmProvider(
 
   if (legs?.length) {
     for (const leg of legs) {
-      const req = buildOrderRequest(PROVIDER_PROFILE, provider.accountId, signal, leg.lot, `${provider.tag}-${leg.label}`)
+      const req = buildOrderRequest(providerConn, provider.accountId, signal, leg.lot, `${provider.tag}-${leg.label}`)
       req.takeProfit = leg.tpPrice
       if (leg.trailing) req.trailingStop = leg.trailing
       const r = await placeOrder(req)
@@ -456,7 +484,7 @@ async function executeViaMtmProvider(
       })
     }
   } else {
-    const req = buildOrderRequest(PROVIDER_PROFILE, provider.accountId, signal, totalLot, provider.tag)
+    const req = buildOrderRequest(providerConn, provider.accountId, signal, totalLot, provider.tag)
     if (channel === 'trade-ideas') {
       req.trailingStop = { mode: 'pips', pips: TRADE_IDEAS_TRAILING_PIPS }
     }
@@ -485,7 +513,7 @@ async function executeViaMtmProvider(
     lot: totalLot,
     result: { ...result, success: anySuccess },
     status: anySuccess ? 'executed' : 'error',
-    detail: `${aiDetail} · ${results.map((r) => `${r.label}: ${r.success ? `#${r.orderId}` : r.error}`).join(' · ')}`,
+    detail: `${aiDetail} · ${results.map((r) => `${r.label}: ${r.success ? `#${r.orderId}` : r.error}`).join(' · ')}${lotFallbackNote}`,
   })
 
   for (const conn of logTargets) {
@@ -522,10 +550,10 @@ async function executeViaMtmProvider(
       entry: signal.entry,
       sl: signal.sl,
       tp: signal.tp[0] ?? null,
-      lot,
+      lot: totalLot,
       status: anySuccess ? 'executed' : 'error',
       detail: anySuccess
-        ? `${aiDetail} · ${provider.tag} · ${orderLabel} · 0.75% risco${trailingNote} ${tgRef}`.trim()
+        ? `${aiDetail} · ${provider.tag} · ${orderLabel} · ${executionSummary}${trailingNote} ${tgRef}`.trim()
         : `${aiDetail} · ${provider.tag}: ${result.error} ${tgRef}`.trim(),
       raw_message: raw,
     })
@@ -545,7 +573,7 @@ async function executeViaMtmProvider(
 
   console.log(
     anySuccess
-      ? `[mtmcopy] ✅ ${provider.tag} ${result.brokerSymbol} ${signal.direction} ${totalLot} ${orderLabel} (0.75%) → ${logTargets.length} slave(s)`
+      ? `[mtmcopy] ✅ ${provider.tag} ${result.brokerSymbol} ${signal.direction} ${totalLot} ${orderLabel} (${executionSummary}) → ${logTargets.length} slave(s)`
       : `[mtmcopy] ❌ ${provider.tag}: ${result.error}`,
   )
 }

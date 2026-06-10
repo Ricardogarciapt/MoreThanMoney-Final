@@ -252,8 +252,8 @@ export default function Navbar() {
                 <Image
                   src="/logo-new.png"
                   alt="More Than Money"
-                  width={180}
-                  height={60}
+                  width={512}
+                  height={512}
                   className="h-10 md:h-14 w-auto transition-transform group-hover:scale-105"
                   priority
                 />
@@ -348,8 +348,8 @@ export default function Navbar() {
                   <Image
                     src="/logo-new.png"
                     alt="More Than Money"
-                    width={150}
-                    height={50}
+                    width={512}
+                    height={512}
                     className="h-10 w-auto"
                   />
                 </Link>

@@ -262,8 +262,8 @@ export default function TradingPage() {
         <Image
           src="/logo-new.png"
           alt="MoreThanMoney"
-          width={220}
-          height={72}
+          width={512}
+          height={512}
           className="relative h-16 w-auto drop-shadow-[0_0_35px_rgba(212,175,55,0.6)]"
           priority
         />

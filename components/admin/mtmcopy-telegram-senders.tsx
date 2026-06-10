@@ -30,26 +30,16 @@ interface Payload {
   sources: SourceRow[]
 }
 
-interface Overview {
-  strategies: Array<{ id: string; name: string; accountId: string }>
-  accounts: Array<{ id: string; name: string; login: string }>
-}
-
 export default function MtmcopyTelegramSenders() {
   const [payload, setPayload] = useState<Payload | null>(null)
-  const [meta, setMeta] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const [src, api] = await Promise.all([
-      adminApiCall<Payload>("/api/admin/mtmcopy/telegram-sources"),
-      adminApiCall<Overview>("/api/admin/mtmcopy/metaapi"),
-    ])
+    const src = await adminApiCall<Payload>("/api/admin/mtmcopy/telegram-sources")
     if (src.success && src.data) setPayload(src.data)
-    if (api.success && api.data) setMeta(api.data)
     setLoading(false)
   }, [])
 
@@ -113,44 +103,10 @@ export default function MtmcopyTelegramSenders() {
         Bot: <strong className="text-[#D2A63C]">@{payload.bot_username}</strong>
       </p>
 
-      <div className="grid sm:grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs text-zinc-500 block mb-1">Estratégia CopyFactory (sender → mestre)</label>
-          <select
-            value={payload.config.provider_strategy_id ?? ""}
-            onChange={(e) =>
-              setPayload({
-                ...payload,
-                config: { ...payload.config, provider_strategy_id: e.target.value || null },
-              })
-            }
-            className="w-full h-9 rounded-md bg-zinc-900 border border-zinc-700 text-sm text-white px-2"
-          >
-            <option value="">— Seleccionar —</option>
-            {(meta?.strategies ?? []).map((s) => (
-              <option key={s.id} value={s.id}>{s.name} ({s.id})</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs text-zinc-500 block mb-1">Conta mestre MetaAPI (provider)</label>
-          <select
-            value={payload.config.provider_account_id ?? ""}
-            onChange={(e) =>
-              setPayload({
-                ...payload,
-                config: { ...payload.config, provider_account_id: e.target.value || null },
-              })
-            }
-            className="w-full h-9 rounded-md bg-zinc-900 border border-zinc-700 text-sm text-white px-2"
-          >
-            <option value="">— Seleccionar —</option>
-            {(meta?.accounts ?? []).map((a) => (
-              <option key={a.id} value={a.id}>{a.name} #{a.login}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+      <p className="text-xs text-zinc-600 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2">
+        Contas provider, estratégias CopyFactory e risco por canal — configura na secção{" "}
+        <strong className="text-emerald-400">Pipeline Provider → MetaAPI</strong> abaixo.
+      </p>
 
       <div className="space-y-2">
         <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Canais oficiais</p>

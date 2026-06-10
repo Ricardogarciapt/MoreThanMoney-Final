@@ -1,5 +1,5 @@
 import { getCopyStrategyId, subscribeToStrategies, unsubscribeFromStrategy } from './copyfactory'
-import { getMasterConnection, resolveStrategyIdsForConnection } from './user-copy-context'
+import { getMasterConnection, resolveStrategyIdsForConnectionAsync } from './user-copy-context'
 import type { MTMcopierConnection } from './types'
 
 export function lotMultiplierFromConnection(conn: Pick<MTMcopierConnection, 'lot_mode' | 'lot_value'>): number {
@@ -35,7 +35,7 @@ export async function syncConnectionCopyFactory(
   }
 
   const master = allConnections ? getMasterConnection(allConnections) : null
-  let strategyIds = resolveStrategyIdsForConnection(conn, master)
+  let strategyIds = await resolveStrategyIdsForConnectionAsync(conn, master)
 
   if (!strategyIds.length) {
     const fallback = (await getCopyStrategyId()) ?? process.env.METAAPI_COPY_STRATEGY_ID ?? ''

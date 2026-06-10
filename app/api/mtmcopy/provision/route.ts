@@ -9,7 +9,7 @@ import { normalizeTelegramGroups, type MtmcopyCopyMethod } from '@/lib/mtmcopy/c
 import {
   canAddConnection,
   getMasterConnection,
-  resolveStrategyIdsForConnection,
+  resolveStrategyIdsForConnectionAsync,
 } from '@/lib/mtmcopy/user-copy-context'
 
 const supabaseAdmin = getSupabaseAdmin()
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
 
     const strategyIdsForSlave =
       accountRole === 'slave'
-        ? resolveStrategyIdsForConnection(
+        ? await resolveStrategyIdsForConnectionAsync(
             {
               account_role: accountRole,
               sender_mode: senderMode,

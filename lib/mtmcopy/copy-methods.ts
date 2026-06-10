@@ -132,6 +132,36 @@ export function strategyIdsForTelegramGroups(groups: MtmcopyTelegramGroup[]): st
   return [...new Set(ids)]
 }
 
+/** Estratégias configuradas no admin (várias rotas sender → mestre). */
+export async function getMtmStrategyOptionsAsync(): Promise<MtmCopyStrategyOption[]> {
+  const { getSignalSourcesConfig } = await import('./signal-sources-config')
+  const { normalizeProviderRoutes, strategyOptionsFromRoutes } = await import('./provider-routes')
+  const config = await getSignalSourcesConfig()
+  const routes = normalizeProviderRoutes(config)
+  const fromRoutes = strategyOptionsFromRoutes(routes)
+  if (fromRoutes.length) {
+    return fromRoutes.map((r) => ({
+      id: r.id,
+      channelKey: r.channelKey ?? 'premium-signals',
+      title: r.title,
+      description: r.description,
+    }))
+  }
+  return getMtmStrategyOptions()
+}
+
+export async function strategyIdsForTelegramGroupsAsync(
+  groups: MtmcopyTelegramGroup[],
+): Promise<string[]> {
+  const { getSignalSourcesConfig } = await import('./signal-sources-config')
+  const { normalizeProviderRoutes, strategyIdsFromRoutes } = await import('./provider-routes')
+  const config = await getSignalSourcesConfig()
+  const routes = normalizeProviderRoutes(config)
+  const fromRoutes = strategyIdsFromRoutes(routes, groups)
+  if (fromRoutes.length) return fromRoutes
+  return strategyIdsForTelegramGroups(groups)
+}
+
 export function copyMethodLabel(method?: MtmcopyCopyMethod | null): string {
   if (method === 'strategy') return 'Estratégia MTM'
   if (method === 'master_slave') return 'Copy Trader pessoal'

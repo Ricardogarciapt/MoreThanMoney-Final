@@ -4,6 +4,7 @@ import { removeConnectionCopyFactory, syncConnectionCopyFactory } from '@/lib/mt
 import { verifyTelegramChannel } from '@/lib/mtmcopy/telegram-bot'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
 import { normalizeTelegramGroups } from '@/lib/mtmcopy/copy-methods'
+import { attachConnectionBalances } from '@/lib/mtmcopy/connection-balances'
 import { deriveSenderMode } from '@/lib/mtmcopy/user-copy-context'
 import type { MtmcopySenderMode } from '@/lib/mtmcopy/types'
 
@@ -38,7 +39,8 @@ export async function GET(request: NextRequest) {
   if (connectionId) {
     const conn = await getOwnedConnection(user.id, connectionId)
     if (!conn) return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
-    return NextResponse.json({ connection: conn })
+    const [enriched] = await attachConnectionBalances([conn])
+    return NextResponse.json({ connection: enriched })
   }
 
   const { data, error } = await supabaseAdmin
@@ -53,7 +55,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Erro ao obter configuração' }, { status: 500 })
   }
 
-  const connections = data ?? []
+  const connections = await attachConnectionBalances(data ?? [])
   const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('user_type')

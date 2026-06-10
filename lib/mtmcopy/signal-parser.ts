@@ -1,10 +1,9 @@
 import type { MtmcopyChannelKey } from './channel-context'
 import { isPremiumTpHitMessage, shouldIgnoreChannelMessage } from './channel-context'
 import {
-  PREMIUM_TP1_TRAILING_PIPS,
-  PREMIUM_TP3_TRAILING_PIPS,
-  PREMIUM_TP_HIT_TRAILING_PIPS,
+  premiumTrailingWithActivation,
   TRADE_IDEAS_TRAILING_PIPS,
+  type TrailingDistance,
 } from './pip-points'
 
 export interface ParsedSignal {
@@ -387,8 +386,10 @@ export interface ParsedManagement {
   type: 'breakeven' | 'move_sl' | 'close' | 'close_all' | 'enable_trailing' | 'cancel_orders'
   symbol: string | null
   sl: number | null
-  /** Trailing em pips (canal Premium HIT TP) — MetaAPI RELATIVE_PIPS */
+  /** Trailing em pips (Trade Ideas / legado) — MetaAPI RELATIVE_PIPS */
   trailingPips?: number | null
+  /** Trailing completo (Premium — activação + distância) */
+  trailing?: TrailingDistance | null
   tpLevel?: number | null
   /** SL em points do broker (ex: «SL 1000 points») */
   slPoints?: number | null
@@ -462,15 +463,22 @@ function parsePremiumManagement(text: string, parentText: string | null): Parsed
           type: 'close',
           symbol,
           sl: null,
-          trailingPips: PREMIUM_TP3_TRAILING_PIPS,
           tpLevel: 3,
         }
       }
+      if (level === 1) {
+        return {
+          type: 'enable_trailing',
+          symbol,
+          sl: null,
+          trailing: premiumTrailingWithActivation(),
+          tpLevel: 1,
+        }
+      }
       return {
-        type: level === 1 ? 'enable_trailing' : 'close',
+        type: 'close',
         symbol,
         sl: null,
-        trailingPips: level === 1 ? PREMIUM_TP1_TRAILING_PIPS : PREMIUM_TP_HIT_TRAILING_PIPS,
         tpLevel: level,
       }
     }

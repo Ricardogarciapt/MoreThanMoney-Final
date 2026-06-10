@@ -1,6 +1,7 @@
 import {
   parseTelegramGroups,
   strategyIdsForTelegramGroups,
+  strategyIdsForTelegramGroupsAsync,
   type MtmcopyCopyMethod,
 } from './copy-methods'
 import type { MTMcopierConnection, MtmcopyAccountRole, MtmcopySenderMode } from './types'
@@ -104,6 +105,40 @@ export function resolveStrategyIdsForConnection(
 
   if (method === 'telegram_group') {
     return strategyIdsForTelegramGroups(parseTelegramGroups(conn))
+  }
+
+  return []
+}
+
+export async function resolveStrategyIdsForConnectionAsync(
+  conn: Pick<
+    MTMcopierConnection,
+    | 'account_role'
+    | 'sender_mode'
+    | 'copy_method'
+    | 'copyfactory_strategy_id'
+    | 'copyfactory_strategy_pick'
+    | 'telegram_group'
+    | 'telegram_groups'
+  >,
+  master: Pick<MTMcopierConnection, 'copyfactory_strategy_id'> | null,
+): Promise<string[]> {
+  if (conn.account_role === 'master') return []
+
+  const mode = conn.sender_mode ?? 'telegram'
+  const method = conn.copy_method ?? (mode === 'master_account' ? 'master_slave' : 'telegram_group')
+
+  if (method === 'master_slave' || mode === 'master_account') {
+    const id = master?.copyfactory_strategy_id ?? conn.copyfactory_strategy_id
+    return id ? [id] : []
+  }
+
+  if (method === 'strategy' && conn.copyfactory_strategy_pick) {
+    return [conn.copyfactory_strategy_pick]
+  }
+
+  if (method === 'telegram_group') {
+    return strategyIdsForTelegramGroupsAsync(parseTelegramGroups(conn))
   }
 
   return []

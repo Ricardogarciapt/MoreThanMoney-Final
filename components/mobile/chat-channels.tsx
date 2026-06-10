@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
+import { canReadChannel, canWriteChannel, isReadOnlyChannel } from "@/lib/chat-channel-permissions"
 import {
   ArrowLeft,
   Send,
@@ -95,54 +96,32 @@ interface ChatMessage {
   } | null
 }
 
-// ─── Derived permissions (no DB columns — all derived from slug) ───────────────
+// ─── Derived permissions (lib/chat-channel-permissions.ts) ───────────────────
 
-function isReadOnly(slug: string) {
-  return slug === "trade-ideas-setup" || slug === "premium-ideas"
+function requiresBrokerUID(slug: string) {
+  return slug === "trade-ideas" || slug === "trade-ideas-setup" || slug === "premium-ideas"
 }
 
 function requiresPremium(slug: string) {
   return slug === "premium-ideas"
 }
 
-function canReadChannel(slug: string, user: any): boolean {
-  if (!user?.is_active) return false
-  if (requiresPremium(slug)) {
-    return (
-      user.subscription_plan === "premium" ||
-      user.member_category === "iq" ||
-      user.member_category === "vip" ||
-      user.user_type === "admin"
-    )
-  }
-  return true
-}
-
-function requiresBrokerUID(slug: string) {
-  return slug === "trade-ideas" || slug === "trade-ideas-setup" || slug === "premium-ideas"
-}
-
-function canWriteChannel(slug: string, user: any): boolean {
-  if (!user?.is_active) return false
-  if (isReadOnly(slug) || slug === "trade-ideas") return false
-  if (slug === "geral") return true
-  if (slug === "trading") {
-    if (user.subscription_plan === "premium" || user.member_category === "iq") return true
-    if (user.user_type === "admin") return true
-    if (user.created_at) {
-      const joinedAt = new Date(user.created_at)
-      const threeMonthsAgo = new Date()
-      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
-      return joinedAt <= threeMonthsAgo
+/** iOS/WKWebView: a sessão pode demorar — RLS dos chats exige auth.uid(). */
+async function waitForSupabaseSession(timeoutMs = 5000): Promise<boolean> {
+  const started = Date.now()
+  while (Date.now() - started < timeoutMs) {
+    try {
+      const { data: { session } } = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise<{ data: { session: null } }>((resolve) =>
+          setTimeout(() => resolve({ data: { session: null } }), 1200),
+        ),
+      ])
+      if (session?.access_token) return true
+    } catch {
+      /* retry */
     }
-    return false
-  }
-  if (slug === "cripto") {
-    return (
-      user.user_type === "admin" ||
-      user.member_category === "iq" ||
-      user.member_category === "vip"
-    )
+    await new Promise((r) => setTimeout(r, 250))
   }
   return false
 }
@@ -909,6 +888,8 @@ function ChannelView({
   const [showAttachSheet, setShowAttachSheet] = useState(false)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const [pendingNew, setPendingNew] = useState(0)
+  const [sendError, setSendError] = useState<string | null>(null)
+  const [messagesError, setMessagesError] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -976,6 +957,14 @@ function ChannelView({
   // ── Fetch messages ────────────────────────────────────────────────────────
 
   const fetchMessages = useCallback(async () => {
+    setMessagesError(null)
+    const sessionOk = await waitForSupabaseSession()
+    if (!sessionOk) {
+      setMessagesError("Sessão indisponível. Fecha e abre o chat ou faz login novamente.")
+      setLoading(false)
+      return
+    }
+
     const { data, error } = await supabase
       .from("chat_messages")
       .select(CHAT_MESSAGE_SELECT)
@@ -984,7 +973,14 @@ function ChannelView({
       .order("created_at", { ascending: false })
       .limit(PAGE_SIZE + 1)
 
-    if (!error && data) {
+    if (error) {
+      console.error("[chat] fetchMessages:", error.message)
+      setMessagesError("Não foi possível carregar as mensagens.")
+      setLoading(false)
+      return
+    }
+
+    if (data) {
       const rows = data as unknown as ChatMessage[]
       setHasMore(rows.length > PAGE_SIZE)
       setMessages(rows.slice(0, PAGE_SIZE).reverse())
@@ -1162,8 +1158,13 @@ function ChannelView({
     const hasLink = !!detectedUrl
     const hasMedia = !!pendingMedia
     if ((!hasText && !hasLink && !hasMedia) || sending || uploading) return
+    if (!currentUser?.id) {
+      setSendError("Sessão inválida. Faz login novamente.")
+      return
+    }
 
     setSending(true)
+    setSendError(null)
 
     const caption = text.trim() || null
     const replyId = replyTo?.id ?? null
@@ -1171,72 +1172,98 @@ function ChannelView({
     let imageUrl: string | null = null
 
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+      if (!accessToken) {
+        setSendError("Sessão expirada. Faz login novamente.")
+        return
+      }
+
       if (hasMedia && pendingMedia) {
         setUploading(true)
         const formData = new FormData()
         formData.append("file", pendingMedia.file)
         formData.append("channel_slug", channel.slug)
 
-        const res = await fetch("/api/chat/upload-image", { method: "POST", body: formData })
-        if (!res.ok) {
-          setSending(false)
-          setUploading(false)
+        const uploadRes = await fetch("/api/chat/upload-image", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${accessToken}` },
+          body: formData,
+        })
+        if (!uploadRes.ok) {
+          const uploadErr = await uploadRes.json().catch(() => ({}))
+          setSendError(uploadErr.error || "Falha ao enviar ficheiro. Tenta outra vez.")
           return
         }
 
-        const { publicUrl, mediaType } = await res.json()
+        const { publicUrl, mediaType } = await uploadRes.json()
         const asVideo = mediaType === "video" || pendingMedia.mediaType === "video"
         imageUrl = publicUrl
         messageType = asVideo ? "video" : "image"
       }
 
-      const payload: Record<string, unknown> = {
-        channel_slug: channel.slug,
-        user_id: currentUser.id,
-        content: caption,
-        message_type: messageType,
-        reply_to_id: replyId,
+      const postRes = await fetch("/api/chat/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          channel_slug: channel.slug,
+          content: caption,
+          message_type: messageType,
+          image_url: imageUrl,
+          reply_to_id: replyId,
+          link_url: hasLink ? detectedUrl : null,
+          link_preview: hasLink && linkPreview ? linkPreview : null,
+        }),
+      })
+
+      const postData = await postRes.json().catch(() => ({}))
+      if (!postRes.ok) {
+        setSendError(postData.error || "Não foi possível publicar a mensagem.")
+        return
       }
 
-      if (imageUrl) payload.image_url = imageUrl
-
-      if (hasLink && detectedUrl) {
-        payload.link_url = detectedUrl
-        if (linkPreview) payload.link_preview = linkPreview
+      const newMsg = postData.message as ChatMessage | undefined
+      if (newMsg) {
+        setMessages((prev) => {
+          if (prev.find((m) => m.id === newMsg.id)) return prev
+          return [...prev, newMsg]
+        })
+        isNearBottomRef.current = true
       }
 
-      const { error } = await supabase.from("chat_messages").insert(payload)
-      if (!error) {
-        if (imageUrl) {
-          const asVideo = messageType === "video"
-          const notifTitles: Record<string, string> = {
-            trading: asVideo ? "📈 Novo vídeo em #Trading" : "📈 Nova imagem em #Trading",
-            cripto: asVideo ? "₿ Novo vídeo em #Cripto" : "₿ Nova imagem em #Cripto",
-            geral: asVideo ? "💬 Novo vídeo em #Geral" : "💬 Nova imagem em #Geral",
-          }
-          sendPushForChannel(
-            notifTitles[channel.slug] ?? (asVideo ? `🎬 Novo vídeo em #${channel.name}` : `📷 Nova imagem em #${channel.name}`),
-            caption || (asVideo ? "Vídeo partilhado!" : "Imagem partilhada!")
-          )
-        } else {
-          const notifTitles: Record<string, string> = {
-            trading: "📈 Nova mensagem em #Trading",
-            cripto: "₿ Nova mensagem em #Cripto",
-            geral: "💬 Nova mensagem em #Geral",
-          }
-          sendPushForChannel(
-            notifTitles[channel.slug] ?? `💬 Nova mensagem em #${channel.name}`,
-            (caption || detectedUrl || "Nova mensagem!").substring(0, 120)
-          )
+      if (imageUrl) {
+        const asVideo = messageType === "video"
+        const notifTitles: Record<string, string> = {
+          trading: asVideo ? "📈 Novo vídeo em #Trading" : "📈 Nova imagem em #Trading",
+          cripto: asVideo ? "₿ Novo vídeo em #Cripto" : "₿ Nova imagem em #Cripto",
+          geral: asVideo ? "💬 Novo vídeo em #Geral" : "💬 Nova imagem em #Geral",
         }
-
-        setText("")
-        setReplyTo(null)
-        clearLinkPreview()
-        clearPendingMedia()
+        sendPushForChannel(
+          notifTitles[channel.slug] ?? (asVideo ? `🎬 Novo vídeo em #${channel.name}` : `📷 Nova imagem em #${channel.name}`),
+          caption || (asVideo ? "Vídeo partilhado!" : "Imagem partilhada!")
+        )
+      } else {
+        const notifTitles: Record<string, string> = {
+          trading: "📈 Nova mensagem em #Trading",
+          cripto: "₿ Nova mensagem em #Cripto",
+          geral: "💬 Nova mensagem em #Geral",
+        }
+        sendPushForChannel(
+          notifTitles[channel.slug] ?? `💬 Nova mensagem em #${channel.name}`,
+          (caption || detectedUrl || "Nova mensagem!").substring(0, 120)
+        )
       }
-    } catch {
-      // silent
+
+      setText("")
+      setReplyTo(null)
+      clearLinkPreview()
+      clearPendingMedia()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro inesperado ao publicar."
+      setSendError(message)
     } finally {
       setSending(false)
       setUploading(false)
@@ -1306,7 +1333,7 @@ function ChannelView({
             <span>Premium</span>
           </div>
         )}
-        {isReadOnly(channel.slug) && (
+        {isReadOnlyChannel(channel.slug) && (
           <TelegramIcon className="w-4 h-4 text-[#26A5E4]" />
         )}
         <button
@@ -1328,6 +1355,21 @@ function ChannelView({
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" />
+            </div>
+          ) : messagesError ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
+              <AlertCircle className="w-8 h-8 text-red-400" />
+              <p className="text-gray-400 text-sm">{messagesError}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoading(true)
+                  fetchMessages()
+                }}
+                className="text-xs text-[#D2A63C] underline"
+              >
+                Tentar novamente
+              </button>
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
@@ -1436,6 +1478,21 @@ function ChannelView({
             onClearLink={clearLinkPreview}
           />
 
+          {sendError && (
+            <div className="mb-2 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">
+              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-red-300 flex-1">{sendError}</p>
+              <button
+                type="button"
+                onClick={() => setSendError(null)}
+                className="p-0.5 text-red-400 hover:text-red-300"
+                aria-label="Fechar erro"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           <div className="flex items-end gap-2">
             <button
               type="button"
@@ -1498,7 +1555,7 @@ function ChannelView({
         </div>
       ) : (
         <div className="flex-shrink-0 border-t border-gray-800 bg-gray-900 px-4 py-3 flex items-center gap-2">
-          {isReadOnly(channel.slug) ? (
+          {isReadOnlyChannel(channel.slug) ? (
             <>
               <TelegramIcon className="w-4 h-4 text-[#26A5E4]" />
               <p className="text-xs text-gray-500">Só leitura</p>
@@ -1708,7 +1765,7 @@ function ChannelInfoSheet({
                     {meta.tag}
                   </span>
                 )}
-                {isReadOnly(channel.slug) && (
+                {isReadOnlyChannel(channel.slug) && (
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#26A5E4]/15 text-[#26A5E4]">
                     Telegram
                   </span>
@@ -1853,7 +1910,7 @@ interface EducatorProfile {
 }
 
 export default function ChatChannels() {
-  const { user } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
   const [channels, setChannels] = useState<Channel[]>([])
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null)
   const [loading, setLoading] = useState(true)
@@ -1870,6 +1927,7 @@ export default function ChatChannels() {
   const [brokerUid, setBrokerUid] = useState<string | null>(null)
   const [brokerUidModal, setBrokerUidModal] = useState(false)
   const [pendingChannel, setPendingChannel] = useState<Channel | null>(null)
+  const [reloadTick, setReloadTick] = useState(0)
 
   const loadEducators = async () => {
     if (educators.length > 0) return
@@ -1946,13 +2004,26 @@ export default function ChatChannels() {
   ).length
 
   useEffect(() => {
+    if (authLoading) return
+
     const fetchChannels = async () => {
+      setLoading(true)
+      setError(null)
+
+      const sessionOk = await waitForSupabaseSession()
+      if (!sessionOk) {
+        setError("Sessão indisponível. Fecha a app e abre novamente.")
+        setLoading(false)
+        return
+      }
+
       const { data, error } = await supabase
         .from("chat_channels")
         .select("id, slug, name, description, parent_slug, position")
         .order("position", { ascending: true })
 
       if (error) {
+        console.error("[chat] fetchChannels:", error.message)
         setError("Erro ao carregar canais.")
         setLoading(false)
         return
@@ -2000,7 +2071,7 @@ export default function ChatChannels() {
 
     fetchChannels()
     fetchBrokerUid()
-  }, [])
+  }, [authLoading, user?.id, reloadTick])
 
   const handleChannelSelect = (channel: Channel) => {
     if (requiresBrokerUID(channel.slug) && !brokerUid) {
@@ -2033,6 +2104,13 @@ export default function ChatChannels() {
       <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-6">
         <AlertCircle className="w-8 h-8 text-red-400" />
         <p className="text-gray-400 text-sm">{error}</p>
+        <button
+          type="button"
+          onClick={() => setReloadTick((t) => t + 1)}
+          className="text-xs text-[#D2A63C] underline mt-1"
+        >
+          Tentar novamente
+        </button>
       </div>
     )
   }

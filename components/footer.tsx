@@ -13,8 +13,8 @@ export default function Footer() {
               <Image 
                 src="/logo-new.png" 
                 alt="MoreThanMoney Logo" 
-                width={180} 
-                height={60} 
+                width={512} 
+                height={512} 
                 className="h-12 w-auto transition-transform group-hover:scale-105" 
               />
             </Link>

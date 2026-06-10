@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -10,6 +11,10 @@ import { supabase } from "@/lib/supabase"
 import BrokerServerSelect from "@/components/mtmcopy/broker-server-select"
 import { COPY_METHODS, TELEGRAM_GROUPS, type MtmcopyCopyMethod } from "@/lib/mtmcopy/copy-methods"
 import { getClientConnectionTitle, MTM_MASTER_LABEL } from "@/lib/mtmcopy/display-utils"
+import { isSafariBrowser } from "@/lib/supabase-session"
+import { formatMt5Money } from "@/components/mtmcopy/mtmcopy-shared"
+
+const MODAL_Z = 2147483647
 
 export type MtmcopySenderMode = "telegram" | "master_account"
 export type MtmcopyAccountRole = "slave" | "master"
@@ -42,6 +47,9 @@ export interface MTMcopierConnection {
   reverse_signals: boolean
   is_active: boolean
   account_label?: string | null
+  account_balance?: number | null
+  account_equity?: number | null
+  metaapi_account_id?: string | null
 }
 
 type Selection = "new" | string
@@ -172,6 +180,21 @@ export default function SetupModal({
   const [deleting, setDeleting] = useState(false)
   const [switchingMode, setSwitchingMode] = useState(false)
   const [error, setError] = useState("")
+  const [mounted, setMounted] = useState(false)
+  const safari = isSafariBrowser()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [mounted])
 
   useEffect(() => {
     setCopyMethod(initialCopyMethod ?? deriveCopyMethod(connections))
@@ -445,9 +468,17 @@ export default function SetupModal({
         : "Conta slave"
       : "Nova conta"
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/80 backdrop-blur-sm px-4 overflow-y-auto py-6 sm:py-8">
-      <div className="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-xl p-6 relative my-auto shadow-2xl shadow-black/50 max-h-[92vh] overflow-y-auto">
+  const modal = (
+    <div
+      className={`fixed inset-0 flex items-start sm:items-center justify-center px-4 overflow-y-auto py-6 sm:py-8 ${
+        safari ? "bg-black/95" : "bg-black/80 backdrop-blur-sm"
+      }`}
+      style={{ zIndex: MODAL_Z }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mtmcopy-setup-title"
+    >
+      <div className="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-xl p-6 relative my-auto shadow-2xl shadow-black/50 max-h-[min(92vh,92dvh)] overflow-y-auto overscroll-contain">
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#D2A63C]/50 to-transparent rounded-t-2xl" />
         <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors">
           <X className="w-5 h-5" />
@@ -458,7 +489,7 @@ export default function SetupModal({
             <Settings2 className="w-5 h-5 text-[#D2A63C]" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-white">Configurar MTMcopier</h3>
+            <h3 id="mtmcopy-setup-title" className="text-xl font-bold text-white">Configurar MTMcopier</h3>
             <p className="text-xs text-gray-500">Liga a tua conta e escolhe como queres copiar</p>
           </div>
         </div>
@@ -760,6 +791,40 @@ export default function SetupModal({
                 </div>
               </div>
 
+              {(selectedConn?.account_balance != null || selectedConn?.mt5_status === "connected") && (
+                <div className="rounded-lg border border-[#D2A63C]/25 bg-[#D2A63C]/5 px-3 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs text-[#D2A63C]/80">Saldo da conta MT5</p>
+                    <p className="text-lg font-semibold text-white tabular-nums">
+                      {formatMt5Money(selectedConn?.account_balance)}
+                    </p>
+                  </div>
+                  {selectedConn?.account_equity != null &&
+                    selectedConn.account_equity !== selectedConn.account_balance && (
+                    <p className="text-xs text-zinc-500">
+                      Equity {formatMt5Money(selectedConn.account_equity)}
+                    </p>
+                  )}
+                  {lotMode === "risk_percent" && selectedConn?.account_balance != null && (
+                    <p className="text-xs text-zinc-400 w-full">
+                      {lotValue}% ≈{" "}
+                      <strong className="text-zinc-200">
+                        {formatMt5Money(
+                          (selectedConn.account_balance * (parseFloat(lotValue) || 0)) / 100,
+                        )}
+                      </strong>{" "}
+                      por trade (antes do SL)
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {lotMode === "risk_percent" && selectedConn?.mt5_status === "connected" && selectedConn?.account_balance == null && (
+                <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                  Saldo ainda não disponível. Guarda a conta e actualiza — sem saldo, o % risco usa 0.01 lotes.
+                </p>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1.5">
@@ -897,4 +962,7 @@ export default function SetupModal({
       </div>
     </div>
   )
+
+  if (!mounted) return null
+  return createPortal(modal, document.body)
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { getMtmStrategyOptions } from '@/lib/mtmcopy/copy-methods'
+import { getMtmStrategyOptionsAsync } from '@/lib/mtmcopy/copy-methods'
 
 async function authenticate(request: NextRequest) {
   const authHeader = request.headers.get('Authorization')
@@ -15,6 +15,6 @@ export async function GET(request: NextRequest) {
   const user = await authenticate(request)
   if (!user) return NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 })
 
-  const strategies = getMtmStrategyOptions()
+  const strategies = await getMtmStrategyOptionsAsync()
   return NextResponse.json({ strategies })
 }

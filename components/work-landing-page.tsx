@@ -129,8 +129,8 @@ export default function WorkLandingPage() {
             <Image
               src="/logo-new.png"
               alt="MoreThanMoney"
-              width={160}
-              height={52}
+              width={512}
+              height={512}
               className="h-9 w-auto transition-opacity hover:opacity-90"
               priority
             />
@@ -162,8 +162,8 @@ export default function WorkLandingPage() {
             <Image
               src="/logo-new.png"
               alt="MoreThanMoney"
-              width={220}
-              height={72}
+              width={512}
+              height={512}
               className="h-14 w-auto sm:h-16 md:h-20 drop-shadow-[0_0_40px_rgba(212,175,55,0.15)]"
               priority
             />
@@ -530,8 +530,8 @@ export default function WorkLandingPage() {
             <Image
               src="/logo-new.png"
               alt="MoreThanMoney"
-              width={160}
-              height={52}
+              width={512}
+              height={512}
               className="h-10 w-auto opacity-90"
             />
           </div>
@@ -567,8 +567,8 @@ export default function WorkLandingPage() {
             <Image
               src="/logo-new.png"
               alt="MoreThanMoney"
-              width={120}
-              height={40}
+              width={512}
+              height={512}
               className="h-8 w-auto opacity-80 transition-opacity hover:opacity-100"
             />
           </Link>

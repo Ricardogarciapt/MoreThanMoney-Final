@@ -24,6 +24,14 @@ export const SIGNAL_STYLES: Record<string, { label: string; className: string }>
   error: { label: "Erro", className: "bg-red-500/15 text-red-400 border-red-500/35" },
 }
 
+export function formatMt5Money(amount: number | null | undefined): string {
+  if (amount == null || !Number.isFinite(amount)) return "—"
+  return new Intl.NumberFormat("pt-PT", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
+
 export function formatRelative(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
   if (diff < 60) return `há ${diff}s`

@@ -1,6 +1,6 @@
 import { normalizeExitPcts } from './copy-methods'
 import type { ParsedSignal } from './signal-parser'
-import { PREMIUM_TP1_TRAILING_PIPS, PREMIUM_TP3_TRAILING_PIPS } from './pip-points'
+import { premiumTrailingWithActivation } from './pip-points'
 import type { TrailingDistance } from './pip-points'
 
 export interface PremiumExitLeg {
@@ -49,11 +49,7 @@ export function buildPremiumExitLegs(
       tpPrice: tps[i],
       lot,
       lotFraction: fraction,
-      trailing: isFirst
-        ? { mode: 'pips', pips: PREMIUM_TP1_TRAILING_PIPS }
-        : isLast
-          ? { mode: 'pips', pips: PREMIUM_TP3_TRAILING_PIPS }
-          : null,
+      trailing: isLast ? premiumTrailingWithActivation() : null,
       label: `TP${i + 1} · ${pct}%`,
     })
   }

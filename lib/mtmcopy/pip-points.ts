@@ -1,9 +1,15 @@
-/** Trailing na Exit 1 (Premium) — activo desde a abertura. */
-export const PREMIUM_TP1_TRAILING_PIPS = 10
-/** Trailing após HIT TP1/TP2 (Premium). */
-export const PREMIUM_TP_HIT_TRAILING_PIPS = 10
-/** Trailing na Exit 3 (Premium) — fecha tudo com 50 pips reais. */
-export const PREMIUM_TP3_TRAILING_PIPS = 50
+/** Premium — activação do trailing após 50 pips (500 points no ouro XAUUSD). */
+export const PREMIUM_TRAILING_ACTIVATION_PIPS = 50
+export const PREMIUM_TRAILING_ACTIVATION_POINTS = 500
+/** Distância do trailing após activação (Premium). */
+export const PREMIUM_TRAILING_DISTANCE_PIPS = 50
+
+/** @deprecated usar PREMIUM_TRAILING_DISTANCE_PIPS — já não activa na abertura */
+export const PREMIUM_TP1_TRAILING_PIPS = PREMIUM_TRAILING_DISTANCE_PIPS
+/** @deprecated usar premiumTrailingWithActivation() */
+export const PREMIUM_TP_HIT_TRAILING_PIPS = PREMIUM_TRAILING_DISTANCE_PIPS
+/** Trailing na Exit 3 (Premium). */
+export const PREMIUM_TP3_TRAILING_PIPS = PREMIUM_TRAILING_DISTANCE_PIPS
 /** Trade Ideas — trailing para acompanhar SL ~20 / TP ~50 pips. */
 export const TRADE_IDEAS_TRAILING_PIPS = 20
 
@@ -43,10 +49,30 @@ function inferPipSize(spec: SymbolPointSpec): number {
 export type TrailingDistance =
   | { mode: 'pips'; pips: number }
   | { mode: 'points'; points: number }
+  | { mode: 'threshold_pips'; activationPips: number; trailPips: number }
+  | { mode: 'threshold_points'; activationPoints: number; trailPoints: number }
+
+/** Trailing Premium com activação aos 50 pips / 500 points. */
+export function premiumTrailingWithActivation(): TrailingDistance {
+  return {
+    mode: 'threshold_pips',
+    activationPips: PREMIUM_TRAILING_ACTIVATION_PIPS,
+    trailPips: PREMIUM_TRAILING_DISTANCE_PIPS,
+  }
+}
+
+export function formatTrailingDistance(d: TrailingDistance): string {
+  if (d.mode === 'pips') return `${d.pips} pips`
+  if (d.mode === 'points') return `${d.points} pts`
+  if (d.mode === 'threshold_pips') {
+    return `activação ${d.activationPips} pips · trail ${d.trailPips} pips`
+  }
+  return `activação ${d.activationPoints} pts · trail ${d.trailPoints} pts`
+}
 
 export function normalizeTrailingDistance(
   input: number | TrailingDistance | null | undefined,
-  defaultPips = PREMIUM_TP_HIT_TRAILING_PIPS,
+  defaultPips = PREMIUM_TRAILING_DISTANCE_PIPS,
 ): TrailingDistance | null {
   if (input == null) return null
   if (typeof input === 'number') {
@@ -55,5 +81,9 @@ export function normalizeTrailingDistance(
   }
   if (input.mode === 'pips' && input.pips > 0) return input
   if (input.mode === 'points' && input.points > 0) return input
+  if (input.mode === 'threshold_pips' && input.activationPips > 0 && input.trailPips > 0) return input
+  if (input.mode === 'threshold_points' && input.activationPoints > 0 && input.trailPoints > 0) {
+    return input
+  }
   return { mode: 'pips', pips: defaultPips }
 }

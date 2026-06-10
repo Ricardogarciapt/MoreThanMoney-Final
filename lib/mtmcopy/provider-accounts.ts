@@ -1,4 +1,5 @@
 import type { MtmcopyChannelKey } from './channel-context'
+import type { ProviderExecutionProfile } from './signal-sources-config'
 import type { MTMcopierConnection } from './types'
 
 export interface MtmChannelProvider {
@@ -6,6 +7,8 @@ export interface MtmChannelProvider {
   accountId: string
   tag: string
   strategyId: string | null
+  routeId?: string
+  execution?: ProviderExecutionProfile
 }
 
 /** Perfil de execução das contas MTM (provider) — 0,75% risco + gestão por canal */

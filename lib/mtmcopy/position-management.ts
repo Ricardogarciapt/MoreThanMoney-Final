@@ -53,9 +53,12 @@ export function trailingPointsForConnection(
 }
 
 export function trailingDistanceForManagement(
-  management: ParsedManagement,
+  management: Pick<ParsedManagement, 'trailing' | 'trailingPips'>,
   connTrailing?: TrailingDistance | null,
 ): TrailingDistance | null {
+  if (management.trailing) {
+    return normalizeTrailingDistance(management.trailing)
+  }
   if (management.trailingPips != null && management.trailingPips > 0) {
     return { mode: 'pips', pips: management.trailingPips }
   }
