@@ -33,9 +33,9 @@ type TutorialStep = {
   hint?: string
   color: string
   icon: LucideIcon | null
+  /** Native iOS tab to activate via MTMNative bridge (social|chat|live|portfolio|scanner|apps) */
   tab?: string
-  action?: "open-sidebar"
-  /** Selectores data-tutorial / data-tutorial-tab a realçar (sem desfoque total) */
+  /** Selectores data-tutorial a realçar (sem desfoque total) */
   highlight?: string[]
 }
 
@@ -47,29 +47,26 @@ type HighlightRect = {
 }
 
 function resolveHighlightSelectors(step: TutorialStep): string[] {
-  if (step.highlight?.length) return step.highlight
-  if (step.tab) return [`[data-tutorial-tab="${step.tab}"]`]
-  if (step.action === "open-sidebar") return ['[data-tutorial="menu"]']
-  if (step.id === "notifications") return ['[data-tutorial="notifications"]']
-  if (step.id === "navigation") return ['[data-tutorial="menu"]', '[data-tutorial="bottom-nav"]']
-  if (step.id === "welcome" || step.id === "done") return []
-  return []
+  return step.highlight?.map(h => h.startsWith("[") ? h : `[data-tutorial="${h}"]`) ?? []
 }
 
 function TutorialSpotlight({
   rects,
   color,
   maskId,
+  onClose,
 }: {
   rects: HighlightRect[]
   color: string
   maskId: string
+  onClose?: () => void
 }) {
   if (rects.length === 0) {
     return (
       <div
         className="fixed inset-0 z-[299] bg-black/88 pointer-events-auto"
         aria-hidden
+        onClick={onClose}
       />
     )
   }
@@ -79,7 +76,7 @@ function TutorialSpotlight({
 
   return (
     <>
-      <svg className="fixed inset-0 z-[299] w-full h-full pointer-events-auto" aria-hidden>
+      <svg className="fixed inset-0 z-[299] w-full h-full pointer-events-auto" aria-hidden onClick={onClose}>
         <defs>
           <mask id={maskId}>
             <rect width="100%" height="100%" fill="white" />
@@ -135,18 +132,17 @@ const STEPS: TutorialStep[] = [
     phase: "Navegação",
     emoji: "🧭",
     title: "Como navegar na app",
-    body: "A app foi pensada para telemóvel: rápida, com gestos e acesso directo ao que importa.",
+    body: "A app tem 2 formas de navegar: a **barra de tabs nativa** no fundo do ecrã (Feed, Chat, Ao vivo, Portfólio, Scanner, Apps) e o **menu ☰** no topo para funcionalidades extra.",
     tips: [
-      "Barra inferior — Feed, Chat, Ao vivo, Apps, Portfólio e Scanner",
-      "Desliza para a esquerda/direita para mudar de separador",
-      "Menu ☰ no topo — Mentor, Afiliados e atalhos extra",
-      "Sino 🔔 — notificações de trade, chat e alertas",
+      "Toca nas tabs no fundo para mudar de secção — Feed, Chat, Ao vivo, Portfolio, Scanner, Apps",
+      "Menu ☰ no topo — Mentor AI, Afiliados, Definições e atalhos",
+      "Desliza para a esquerda/direita para mudar de tab",
+      "Sino 🔔 no topo — notificações e alertas",
     ],
-    hint: "Experimenta tocar no menu ☰ no canto superior esquerdo",
+    hint: "Experimenta tocar no menu ☰ no canto superior esquerdo ou nas tabs no fundo",
     color: "#38BDF8",
     icon: Compass,
-    action: "open-sidebar",
-    highlight: ["menu", "bottom-nav"],
+    highlight: ["menu"],
   },
   {
     id: "social",
@@ -159,10 +155,10 @@ const STEPS: TutorialStep[] = [
       "Partilha gráficos e ideias de trade",
       "Filtra por categorias quando disponível",
     ],
-    hint: "Separador «Feed» na barra inferior",
+    hint: "Tab «Feed» na barra nativa no fundo da app",
     color: "#D2A63C",
     icon: LayoutGrid,
-    tab: "social",
+    highlight: [],
   },
   {
     id: "chat",
@@ -176,10 +172,10 @@ const STEPS: TutorialStep[] = [
       "#Trading e #Cripto — discussão ao vivo",
       "Responde a mensagens com swipe ou long-press",
     ],
-    hint: "Recebes push quando há mensagem nos canais #Trading e #Cripto",
+    hint: "Tab «Chat» na barra nativa no fundo da app",
     color: "#26A5E4",
     icon: MessageSquare,
-    tab: "chat",
+    highlight: [],
   },
   {
     id: "notifications",
@@ -208,10 +204,10 @@ const STEPS: TutorialStep[] = [
       "Entra nas lives premium se tiveres Pack Premium",
       "Replays disponíveis quando a sessão termina",
     ],
-    hint: "Separador «Ao vivo» na barra inferior",
+    hint: "Tab «Ao vivo» na barra nativa no fundo da app",
     color: "#EF4444",
     icon: Video,
-    tab: "live",
+    highlight: [],
   },
   {
     id: "mentor",
@@ -224,10 +220,9 @@ const STEPS: TutorialStep[] = [
       "Pede checklists antes de abrir uma posição",
       "Usa para rever o teu plano de trading semanal",
     ],
-    hint: "Menu ☰ → Mentor (ou separador dedicado)",
+    hint: "Menu ☰ → Mentor AI",
     color: "#F59E0B",
     icon: BrainCircuit,
-    tab: "mentor",
     highlight: ["menu"],
   },
   {
@@ -241,10 +236,10 @@ const STEPS: TutorialStep[] = [
       "Secção DCA — oportunidades de reforço inteligente",
       "Cria alertas de preço personalizados por ativo",
     ],
-    hint: "Separador «Portfólio» na barra inferior",
+    hint: "Tab «Portfólio» na barra nativa no fundo da app",
     color: "#10B981",
     icon: Wallet,
-    tab: "portfolio",
+    highlight: [],
   },
   {
     id: "scanner",
@@ -257,10 +252,10 @@ const STEPS: TutorialStep[] = [
       "MTM Scanner e Sensei X — setups multi-mercado",
       "Abre no TradingView com a tua conta ligada",
     ],
-    hint: "Separador «Scanner» na barra inferior",
+    hint: "Tab «Scanner» na barra nativa no fundo da app",
     color: "#8B5CF6",
     icon: BarChart3,
-    tab: "scanner",
+    highlight: [],
   },
   {
     id: "apps",
@@ -273,10 +268,10 @@ const STEPS: TutorialStep[] = [
       "Partnership Engine — UGC e colaborações",
       "MTM AiOS — sistema operativo de IA da MTM",
     ],
-    hint: "Separador «Apps» na barra inferior",
+    hint: "Tab «Apps» na barra nativa no fundo da app",
     color: "#D2A63C",
     icon: BookOpen,
-    tab: "apps",
+    highlight: [],
   },
   {
     id: "mlm",
@@ -292,7 +287,6 @@ const STEPS: TutorialStep[] = [
     hint: "Menu ☰ → Afiliados",
     color: "#2DD4BF",
     icon: Network,
-    tab: "mlm",
     highlight: ["menu"],
   },
   {
@@ -306,10 +300,9 @@ const STEPS: TutorialStep[] = [
       "Actualiza password e dados de contacto",
       "Rever este tutorial quando quiseres",
     ],
-    hint: "Menu ☰ → Definições (ícone de utilizador)",
+    hint: "Menu ☰ → Definições",
     color: "#D2A63C",
     icon: User,
-    tab: "settings",
     highlight: ["menu"],
   },
   {
@@ -395,8 +388,17 @@ export default function OnboardingTutorial({
   }, [step, measureHighlights])
 
   const applyStepSideEffects = (target: TutorialStep) => {
-    if (target.tab && onTabChange) onTabChange(target.tab)
-    if (target.action === "open-sidebar") onOpenSidebar?.()
+    if (target.tab) {
+      // Web callback for compatibility
+      onTabChange?.(target.tab)
+      // Native iOS bridge — ask SwiftUI TabView to switch tab
+      // NOTE: postMessage espera um objecto JS, NÃO uma string JSON
+      try {
+        ;(window as any).MTMNative?.postMessage(
+          { action: "tabChange", tab: target.tab }
+        )
+      } catch {}
+    }
   }
 
   const highlightsBottom =
@@ -440,12 +442,13 @@ export default function OnboardingTutorial({
 
   return (
     <div className="fixed inset-0 z-[301] pointer-events-none">
-      <TutorialSpotlight rects={highlightRects} color={current.color} maskId={maskId} />
+      <TutorialSpotlight rects={highlightRects} color={current.color} maskId={maskId} onClose={handleComplete} />
 
       <div
-        className={`absolute left-0 right-0 flex justify-center px-0 sm:px-4 pointer-events-auto ${
+        className={`absolute left-0 right-0 flex justify-center px-0 sm:px-4 pointer-events-auto z-[302] ${
           highlightsBottom ? "top-4 sm:top-8" : "bottom-0 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2"
         }`}
+        onClick={e => e.stopPropagation()}
         style={
           highlightsBottom
             ? { paddingTop: "max(0.5rem, env(safe-area-inset-top, 0px))" }
