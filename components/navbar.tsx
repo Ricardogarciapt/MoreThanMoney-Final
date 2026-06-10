@@ -9,6 +9,7 @@ import UserDropdown from "@/components/user-dropdown"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
 import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap, Brain } from "lucide-react"
 import { shouldReduceSafariEffects } from "@/lib/supabase-session"
+import { SITE_LOGO_PATH } from "@/lib/site-logo"
 
 type NavSubItem = {
   name: string
@@ -254,7 +255,7 @@ export default function Navbar() {
             <div className="flex-shrink-0">
               <Link href="/new-landing" className="flex items-center group" onClick={closeMenu}>
                 <Image
-                  src="/logo-new.png"
+                  src={SITE_LOGO_PATH}
                   alt="More Than Money"
                   width={512}
                   height={512}
@@ -350,7 +351,7 @@ export default function Navbar() {
               <div className="flex items-center justify-between p-4 border-b border-mtm-primary/30">
                 <Link href="/new-landing" onClick={closeMenu}>
                   <Image
-                    src="/logo-new.png"
+                    src={SITE_LOGO_PATH}
                     alt="More Than Money"
                     width={512}
                     height={512}

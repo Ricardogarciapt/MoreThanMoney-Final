@@ -260,7 +260,7 @@ export default function TradingPage() {
       <div className="relative flex flex-col items-center gap-6">
         <div className="absolute h-56 w-56 rounded-full bg-amber-500/20 blur-3xl" />
         <Image
-          src="/logo-new.png"
+          src="/icon-512x512.png"
           alt="MoreThanMoney"
           width={512}
           height={512}

@@ -127,7 +127,7 @@ export default function WorkLandingPage() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link href="/new-landing" className="flex items-center flex-shrink-0">
             <Image
-              src="/logo-new.png"
+              src="/icon-512x512.png"
               alt="MoreThanMoney"
               width={512}
               height={512}
@@ -160,7 +160,7 @@ export default function WorkLandingPage() {
         <div className="relative z-10 mx-auto max-w-4xl text-center">
           <div data-reveal className="mb-8 flex justify-center">
             <Image
-              src="/logo-new.png"
+              src="/icon-512x512.png"
               alt="MoreThanMoney"
               width={512}
               height={512}
@@ -528,7 +528,7 @@ export default function WorkLandingPage() {
         <div className="relative mx-auto max-w-2xl text-center">
           <div data-reveal className="mb-8 flex justify-center">
             <Image
-              src="/logo-new.png"
+              src="/icon-512x512.png"
               alt="MoreThanMoney"
               width={512}
               height={512}
@@ -565,7 +565,7 @@ export default function WorkLandingPage() {
         <div className="mx-auto flex max-w-4xl flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
           <Link href="/new-landing" className="flex-shrink-0">
             <Image
-              src="/logo-new.png"
+              src="/icon-512x512.png"
               alt="MoreThanMoney"
               width={512}
               height={512}

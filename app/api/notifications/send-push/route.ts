@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       notification: {
         title: payload.title,
         body: payload.body,
-        imageUrl: payload.icon || '/logo-new.png'
+        imageUrl: payload.icon || '/icon-512x512.png'
       },
       data: {
         url: payload.url || '/app-mobile',

@@ -28,7 +28,7 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification?.title || 'MTM Notification'
   const notificationOptions = {
     body: payload.notification?.body || '',
-    icon: payload.notification?.icon || '/logo-new.png',
+    icon: payload.notification?.icon || '/icon-512x512.png',
     badge: '/icon-32x32.png',
     tag: payload.data?.tag || 'mtm-notification',
     data: payload.data,

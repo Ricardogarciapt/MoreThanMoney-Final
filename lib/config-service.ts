@@ -156,7 +156,7 @@ export interface EnvironmentConfig {
 // Configuração padrão
 const defaultConfig: SiteConfig = {
   name: "MoreThanMoney",
-  logoUrl: "/logo-new.png",
+  logoUrl: "/icon-512x512.png",
   footerText: "© 2025 MoreThanMoney. Todos os direitos reservados.",
   contactEmail: "suporte@morethanmoney.pt",
   ownerInfo: {
@@ -285,7 +285,7 @@ const defaultConfig: SiteConfig = {
     textColor: "#ffffff",
   },
   images: {
-    logo: "/logo-new.png",
+    logo: "/icon-512x512.png",
     heroBackground: "/bitcoin-chart-analysis.png",
     copytrading: "/trading-animation.png",
     education: "/bootcamp-mtm-screenshot.png",

@@ -181,7 +181,7 @@ export default function MobileSidebar({
           >
             <div className="flex items-center gap-3">
               <Image
-                src="/logo-new.png"
+                src="/icon-512x512.png"
                 alt="MTM Logo"
                 width={40}
                 height={40}

@@ -808,7 +808,7 @@ www.morethanmoney.com`
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-black/30 rounded-2xl flex items-center justify-center backdrop-blur-md">
-              <Image src="/logo-new.png" alt="MTM" width={32} height={32} className="rounded-lg" />
+              <Image src="/icon-512x512.png" alt="MTM" width={32} height={32} className="rounded-lg" />
             </div>
             <div>
               <h1 className="text-black text-xl font-black tracking-tight">Portfolio Dashboard</h1>

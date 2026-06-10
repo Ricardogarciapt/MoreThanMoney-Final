@@ -422,7 +422,7 @@ function AppMobileContent() {
             {/* Logo & Title */}
             <div className="flex items-center gap-3 flex-1">
               <Image
-                src="/logo-new.png"
+                src="/icon-512x512.png"
                 alt="MTM Logo"
                 width={isHeaderCollapsed ? 32 : 40}
                 height={isHeaderCollapsed ? 32 : 40}

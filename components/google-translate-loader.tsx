@@ -37,6 +37,14 @@ function isTranslateBlocked(path: string): boolean {
   )
 }
 
+function safeRemoveNode(node: Element) {
+  try {
+    if (node.parentNode) node.parentNode.removeChild(node)
+  } catch {
+    /* Safari: nó já removido pelo Translate — evita NotFoundError */
+  }
+}
+
 function setPageTranslatable(enabled: boolean) {
   const html = document.documentElement
   const body = document.body
@@ -67,11 +75,24 @@ export function GoogleTranslateLoader() {
     if (typeof document === "undefined") return
     const path = pathname || ""
 
-    if (isTranslateBlocked(path)) {
+    if (isSafariBrowser()) {
+      document.cookie = "googtrans=; path=/; max-age=0"
+      document.cookie = `googtrans=; path=/; domain=${window.location.hostname}; max-age=0`
+    }
+
+    if (isSafariBrowser() || isTranslateBlocked(path)) {
       setPageTranslatable(false)
       const holder = document.getElementById("google_translate_element")
-      if (holder) holder.replaceChildren()
-      document.querySelectorAll(".goog-te-banner-frame, .goog-te-menu-frame").forEach((n) => n.remove())
+      if (holder) {
+        try {
+          holder.replaceChildren()
+        } catch {
+          /* ignore */
+        }
+      }
+      document
+        .querySelectorAll(".goog-te-banner-frame, .goog-te-menu-frame, .skiptranslate")
+        .forEach(safeRemoveNode)
       return
     }
 

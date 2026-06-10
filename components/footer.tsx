@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { SITE_LOGO_PATH } from "@/lib/site-logo"
 import Image from "next/image"
 import { Facebook, Instagram, Twitter, Youtube, Mail, MapPin, FileText, Lock, ExternalLink } from "lucide-react"
 
@@ -11,7 +12,7 @@ export default function Footer() {
           <div className="space-y-4">
             <Link href="/new-landing" className="inline-block group">
               <Image 
-                src="/logo-new.png" 
+                src={SITE_LOGO_PATH} 
                 alt="MoreThanMoney Logo" 
                 width={512} 
                 height={512} 

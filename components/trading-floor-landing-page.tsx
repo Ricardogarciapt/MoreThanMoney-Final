@@ -15,7 +15,7 @@ export default function TradingFloorLandingPage() {
       <header className="sticky top-0 z-40 border-b border-white/10 bg-black/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Link href="/new-landing" className="flex items-center gap-3">
-            <Image src="/logo-new.png" alt="MoreThanMoney" width={512} height={512} className="h-9 w-auto" />
+            <Image src="/icon-512x512.png" alt="MoreThanMoney" width={512} height={512} className="h-9 w-auto" />
           </Link>
           <div className="flex items-center gap-2">
             <Link href="/work">
