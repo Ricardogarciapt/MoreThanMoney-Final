@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
   const oauthError = url.searchParams.get("error")
   const errorDescription = url.searchParams.get("error_description")
   const redirectParam = safeInternalRedirectPath(url.searchParams.get("redirect"))
+  const flowParam = url.searchParams.get("flow")
   const origin = url.origin
 
   if (oauthError) {
@@ -40,6 +41,9 @@ export async function GET(request: NextRequest) {
   const postOauth = new URL("/auth/post-oauth", origin)
   if (redirectParam) {
     postOauth.searchParams.set("redirect", redirectParam)
+  }
+  if (flowParam === "login" || flowParam === "register") {
+    postOauth.searchParams.set("flow", flowParam)
   }
 
   let response = NextResponse.redirect(postOauth)

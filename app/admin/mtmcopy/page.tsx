@@ -19,6 +19,7 @@ export default function AdminMtmcopyPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const highlightUserId = searchParams.get("userId")
+  const highlightRouteId = searchParams.get("routeId")
   const [mounted, setMounted] = useState(false)
   const [webhookInfo, setWebhookInfo] = useState<Record<string, unknown> | null>(null)
   const [botUsername, setBotUsername] = useState("MoreThanMoney_aibot")
@@ -169,7 +170,7 @@ export default function AdminMtmcopyPage() {
             </div>
           </section>
 
-          <MtmcopyOpsHub />
+          <MtmcopyOpsHub initialRouteId={highlightRouteId} />
 
           <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-zinc-950/80 backdrop-blur-sm">
             <div className="border-b border-[#D2A63C]/15 px-6 py-4">

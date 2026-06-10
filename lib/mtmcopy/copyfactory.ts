@@ -4,11 +4,17 @@ const COPYFACTORY_BASE =
   process.env.METAAPI_COPYFACTORY_URL ??
   'https://copyfactory-api-v1.new-york.agiliumtrade.ai'
 
+export type CopyFactoryTradeSizeScaling =
+  | { mode: 'fixedRisk'; riskFraction: number }
+  | { mode: 'fixedVolume'; fixedVolume: number }
+  | { mode: 'none' }
+
 export interface SubscriberOptions {
   accountId: string
   name: string
   strategyId: string
   multiplier?: number
+  tradeSizeScaling?: CopyFactoryTradeSizeScaling
   reverse?: boolean
   copySl?: boolean
   copyTp?: boolean
@@ -31,9 +37,13 @@ export async function subscribeToStrategies(
   const subscriptions = ids.map((strategyId) => {
     const subscription: Record<string, unknown> = {
       strategyId,
-      multiplier: opts.multiplier ?? 1,
       skipPendingOrders: false,
       reverse: opts.reverse ?? false,
+    }
+    if (opts.tradeSizeScaling && opts.tradeSizeScaling.mode !== 'none') {
+      subscription.tradeSizeScaling = opts.tradeSizeScaling
+    } else {
+      subscription.multiplier = opts.multiplier ?? 1
     }
     if (opts.symbolWhitelist?.length) {
       subscription.symbolFilter = { included: opts.symbolWhitelist }

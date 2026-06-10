@@ -399,7 +399,9 @@ function UserRow({
   }
 
   return (
-    <div className={`rounded-xl border transition-colors ${
+    <div
+      id={`mtmcopy-user-${profile.id}`}
+      className={`rounded-xl border transition-colors ${
       !connection ? "border-gray-800/80 bg-gray-900/20" :
       hasError ? "border-red-500/30 bg-red-500/5" :
       hasPending ? "border-yellow-500/20 bg-yellow-500/5" :
@@ -560,6 +562,17 @@ export default function MTMcopierManager({ highlightUserId }: MTMcopierManagerPr
     })
   }, [highlightUserId])
 
+  useEffect(() => {
+    if (!highlightUserId || loading) return
+    const timer = window.setTimeout(() => {
+      document.getElementById(`mtmcopy-user-${highlightUserId}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      })
+    }, 350)
+    return () => window.clearTimeout(timer)
+  }, [highlightUserId, loading, rows.length])
+
   const handleUpdate = useCallback(async (id: string, changes: Record<string, unknown>) => {
     const res = await adminApiCall<{ connection: MTMcopierConnection }>("/api/admin/copygram", {
       method: "PATCH",
@@ -665,7 +678,7 @@ export default function MTMcopierManager({ highlightUserId }: MTMcopierManagerPr
           <p className="text-sm">Nenhum utilizador encontrado.</p>
         </div>
       ) : (
-        <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-[calc(4rem*10)] overflow-y-auto pr-1 scroll-smooth">
           {rows.map((row) => (
             <UserRow
               key={row.profile.id}

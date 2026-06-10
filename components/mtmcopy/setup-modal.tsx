@@ -618,7 +618,10 @@ export default function SetupModal({
                   </button>
                 ))}
                 {!strategies.length && (
-                  <p className="text-xs text-gray-500">A carregar estratégias disponíveis...</p>
+                  <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+                    Nenhuma estratégia MTM disponível. O admin precisa de configurar rotas em{" "}
+                    <strong>/admin/mtmcopy</strong> (Senders → Provider → CopyFactory).
+                  </p>
                 )}
               </div>
             </div>
@@ -668,6 +671,10 @@ export default function SetupModal({
                 </div>
               </div>
               {telegramGroups.includes("premium") && (
+                <>
+                <p className="text-xs text-zinc-500 mb-2">
+                  Percentagens de referência para o grupo Premium — a execução no provider segue a configuração admin.
+                </p>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">Exit 1 %</label>
@@ -682,6 +689,7 @@ export default function SetupModal({
                     <Input value={exitTp3} onChange={(e) => setExitTp3(e.target.value)} className="bg-gray-800 border-gray-700 text-white" />
                   </div>
                 </div>
+                </>
               )}
             </>
           )}
@@ -821,7 +829,12 @@ export default function SetupModal({
 
               {lotMode === "risk_percent" && selectedConn?.mt5_status === "connected" && selectedConn?.account_balance == null && (
                 <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-                  Saldo ainda não disponível. Guarda a conta e actualiza — sem saldo, o % risco usa 0.01 lotes.
+                  Saldo ainda não disponível. O CopyFactory aplica o teu % risco quando o saldo estiver sincronizado.
+                </p>
+              )}
+              {lotMode === "risk_percent" && (
+                <p className="text-xs text-zinc-500">
+                  Com CopyFactory activo, o % risco é aplicado ao volume copiado (modo fixedRisk).
                 </p>
               )}
 

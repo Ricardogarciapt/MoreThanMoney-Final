@@ -20,7 +20,7 @@ export async function loadAutoApproveSetting(): Promise<boolean> {
   }
 }
 
-function buildUsername(session: SessionLike): string {
+export function buildUsername(session: SessionLike): string {
   const u = session.user
   const meta = (u.user_metadata || {}) as Record<string, unknown>
   const name = typeof meta.name === "string" ? meta.name.replace(/\s+/g, "").toLowerCase() : ""
@@ -33,10 +33,28 @@ function buildUsername(session: SessionLike): string {
  * Garante que existe uma linha em public.profiles para o utilizador autenticado.
  * Alinha com auth.users (OAuth, email/password) e evita colisões de username.
  */
+/** Apenas lê o perfil — nunca cria. */
+export async function loadMemberProfile(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<UserProfile | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle()
+
+  if (error) {
+    console.warn("[loadMemberProfile] leitura:", error.message)
+  }
+
+  return (data as UserProfile) ?? null
+}
+
 export async function ensureMemberProfile(
   supabase: SupabaseClient,
   session: SessionLike,
-  options?: { respectAutoApprove?: boolean }
+  options?: { respectAutoApprove?: boolean; createIfMissing?: boolean }
 ): Promise<UserProfile | null> {
   const userId = session.user.id
 
@@ -47,6 +65,10 @@ export async function ensureMemberProfile(
     .maybeSingle()
 
   if (existing) return existing as UserProfile
+
+  if (options?.createIfMissing === false) {
+    return null
+  }
 
   if (fetchErr) {
     console.warn("[ensureMemberProfile] leitura:", fetchErr.message)

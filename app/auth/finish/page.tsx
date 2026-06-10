@@ -4,7 +4,8 @@ import { useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { determinePostLoginRedirect, safeInternalRedirectPath } from "@/lib/role-redirect"
-import { ensureMemberProfile } from "@/lib/member-profile"
+import { loadMemberProfile } from "@/lib/member-profile"
+import { isOAuthFlow, OAUTH_FLOW_REGISTER, REGISTER_NOT_FOUND_MESSAGE } from "@/lib/oauth-flow"
 import { Loader2 } from "lucide-react"
 
 /**
@@ -19,6 +20,8 @@ export default function AuthFinishPage() {
 
     const run = async () => {
       const redirectParam = safeInternalRedirectPath(searchParams.get("redirect"))
+      const flowParam = searchParams.get("flow")
+      const flow = isOAuthFlow(flowParam) ? flowParam : "login"
 
       const hash = window.location.hash
       if (hash && hash.includes("access_token")) {
@@ -40,7 +43,18 @@ export default function AuthFinishPage() {
       const { setCachedSession } = await import("@/lib/auth-cache")
       setCachedSession(session)
 
-      const profile = await ensureMemberProfile(supabase, session)
+      const profile = await loadMemberProfile(supabase, session.user.id)
+
+      if (!profile) {
+        await supabase.auth.signOut()
+        const { clearCachedSession } = await import("@/lib/auth-cache")
+        clearCachedSession()
+        const regPath = flow === OAUTH_FLOW_REGISTER ? "/register" : "/register"
+        const q = new URLSearchParams({ message: REGISTER_NOT_FOUND_MESSAGE })
+        window.location.replace(`${regPath}?${q}`)
+        return
+      }
+
       const redirectTo = determinePostLoginRedirect(profile, redirectParam)
       const full =
         redirectTo.startsWith("http") ? redirectTo : `${window.location.origin}${redirectTo}`

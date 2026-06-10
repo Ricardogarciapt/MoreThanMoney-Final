@@ -5,7 +5,11 @@ import MtmcopyTelegramSenders from "@/components/admin/mtmcopy-telegram-senders"
 import MtmcopyProviderPipeline from "@/components/admin/mtmcopy-provider-pipeline"
 import MtmcopyMetaApiPanel from "@/components/admin/mtmcopy-metaapi-panel"
 
-export default function MtmcopyOpsHub() {
+export default function MtmcopyOpsHub({
+  initialRouteId,
+}: {
+  initialRouteId?: string | null
+}) {
   return (
     <div className="grid lg:grid-cols-2 gap-6">
       <section className="overflow-hidden rounded-2xl border border-emerald-500/25 bg-zinc-950/80">
@@ -28,7 +32,7 @@ export default function MtmcopyOpsHub() {
             <MtmcopyTelegramSenders />
           </div>
           <div className="border-t border-zinc-800 pt-6">
-            <MtmcopyProviderPipeline />
+            <MtmcopyProviderPipeline initialRouteId={initialRouteId} />
           </div>
         </div>
       </section>

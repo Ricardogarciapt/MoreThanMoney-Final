@@ -55,6 +55,10 @@ export interface ProviderExecutionProfile {
   symbols_execute_only?: string[] | null
   symbols_avoid?: string[] | null
   symbol_lot_exceptions?: SymbolLotException[]
+  /** Percentagens de saída Premium (TP1/TP2/TP3) — só canal premium-signals */
+  exit_pct_tp1?: number | null
+  exit_pct_tp2?: number | null
+  exit_pct_tp3?: number | null
 }
 
 export interface MtmcopyChannelProviderConfig {

@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { supabase } from "@/lib/supabase"
-import { ensureMemberProfile } from "@/lib/member-profile"
+import { loadMemberProfile } from "@/lib/member-profile"
+import { REGISTER_NOT_FOUND_MESSAGE } from "@/lib/oauth-flow"
 
 export interface User {
   id: string
@@ -147,14 +148,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .maybeSingle()
             .then(async ({ data: profile }: { data: any }) => {
               if (!mounted) return
-              const p =
-                profile ??
-                (await ensureMemberProfile(supabase, cachedSession, { respectAutoApprove: false }))
-              const normalized = await enforceTrialExpiry(p)
-              const mapped = profileToUser(normalized, cachedSession.user)
-              if (mapped) {
-                setUser(mapped.user)
-                setIsIqonicUser(mapped.isIqonicUser)
+              const p = profile ?? (await loadMemberProfile(supabase, cachedSession.user.id))
+              if (p) {
+                const normalized = await enforceTrialExpiry(p)
+                const mapped = profileToUser(normalized, cachedSession.user)
+                if (mapped) {
+                  setUser(mapped.user)
+                  setIsIqonicUser(mapped.isIqonicUser)
+                }
               }
               setIsLoading(false)
             })
@@ -209,18 +210,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setIsIqonicUser(mapped.isIqonicUser)
             }
           } else {
-            console.log('📝 [AUTH CONTEXT] Sincronizar perfil (Supabase)...')
-            const newProfile = await ensureMemberProfile(supabase, session, {
-              respectAutoApprove: false,
-            })
-            if (newProfile && mounted) {
-              const normalized = await enforceTrialExpiry(newProfile)
-              const mapped = profileToUser(normalized, session.user)
-              if (mapped) {
-                setUser(mapped.user)
-                setIsIqonicUser(mapped.isIqonicUser)
-              }
-            }
+            console.log('ℹ️ [AUTH CONTEXT] Sessão sem perfil — aguarda registo/pagamento')
+            setUser(null)
+            setIsIqonicUser(false)
           }
         } catch (timeoutError) {
           if (!mounted) return
@@ -268,8 +260,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .eq("id", session.user.id)
           .maybeSingle()
           .then(async ({ data: profile }: { data: any }) => {
-            const p =
-              profile ?? (await ensureMemberProfile(supabase, session, { respectAutoApprove: false }))
+            const p = profile ?? (await loadMemberProfile(supabase, session.user.id))
             if (p && mounted) {
               const normalized = await enforceTrialExpiry(p)
               const mapped = profileToUser(normalized, session.user)
@@ -323,12 +314,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (data.session && data.user) {
-        const profile = await ensureMemberProfile(supabase, data.session, {
-          respectAutoApprove: false,
-        })
+        const profile = await loadMemberProfile(supabase, data.user.id)
 
         if (!profile) {
-          return { success: false, error: 'Não foi possível sincronizar o perfil. Tenta de novo ou contacta o suporte.' }
+          await supabase.auth.signOut()
+          setUser(null)
+          setIsIqonicUser(false)
+          return { success: false, error: REGISTER_NOT_FOUND_MESSAGE }
         }
 
         const normalized = await enforceTrialExpiry(profile)
@@ -480,7 +472,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .maybeSingle()
 
         if (!profile) {
-          profile = await ensureMemberProfile(supabase, session, { respectAutoApprove: false })
+          profile = await loadMemberProfile(supabase, session.user.id)
         }
 
         if (profile) {

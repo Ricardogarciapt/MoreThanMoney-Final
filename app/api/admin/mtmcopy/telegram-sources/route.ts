@@ -9,7 +9,10 @@ import {
   type MtmcopyTelegramChannelKey,
   type ProviderExecutionProfile,
 } from '@/lib/mtmcopy/signal-sources-config'
-import { DEFAULT_PROVIDER_EXECUTION } from '@/lib/mtmcopy/provider-execution'
+import {
+  DEFAULT_PROVIDER_EXECUTION,
+  normalizeProviderExecutionProfile,
+} from '@/lib/mtmcopy/provider-execution'
 import { normalizeProviderRoutes, syncChannelProvidersFromRoutes } from '@/lib/mtmcopy/provider-routes'
 import type { ProviderRoute } from '@/lib/mtmcopy/signal-sources-config'
 import { MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
@@ -76,27 +79,11 @@ export async function GET(request: NextRequest) {
 
 function parseExecutionProfile(raw: unknown): ProviderExecutionProfile | undefined {
   if (!raw || typeof raw !== 'object') return undefined
-  const o = raw as Record<string, unknown>
-  const lot_mode = o.lot_mode
-  if (lot_mode !== 'fixed' && lot_mode !== 'risk_percent' && lot_mode !== 'multiplier') {
+  const o = raw as Partial<ProviderExecutionProfile>
+  if (o.lot_mode !== 'fixed' && o.lot_mode !== 'risk_percent' && o.lot_mode !== 'multiplier') {
     return undefined
   }
-  return {
-    lot_mode,
-    lot_value: Number(o.lot_value) || DEFAULT_PROVIDER_EXECUTION.lot_value,
-    max_risk_percent:
-      o.max_risk_percent != null && o.max_risk_percent !== ''
-        ? Number(o.max_risk_percent)
-        : null,
-    copy_sl: o.copy_sl !== false,
-    copy_tp: o.copy_tp !== false,
-    auto_trailing_stop: Boolean(o.auto_trailing_stop),
-    trailing_stop_points: Number(o.trailing_stop_points) || 200,
-    reverse_signals: Boolean(o.reverse_signals),
-    symbols_whitelist: Array.isArray(o.symbols_whitelist)
-      ? o.symbols_whitelist.map(String).filter(Boolean)
-      : null,
-  }
+  return normalizeProviderExecutionProfile(o)
 }
 
 function parseChannelProviders(

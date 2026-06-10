@@ -1,8 +1,39 @@
 import type { MTMcopierConnection } from './types'
 import type { ParsedSignal } from './signal-parser'
 
+export type LotSizingConn = Pick<MTMcopierConnection, 'lot_mode' | 'lot_value' | 'max_risk_percent'>
+
+/** Devolve mensagem de skip se o lote não puder ser calculado com segurança. */
+export function getLotSizingSkipReason(
+  conn: LotSizingConn,
+  signal: ParsedSignal,
+  accountBalance?: number | null,
+  computedLot?: number,
+): string | null {
+  const lot = computedLot ?? computeLotSize(conn, signal, accountBalance)
+
+  if (conn.lot_mode !== 'risk_percent') {
+    return lot < 0.01 ? 'Lote calculado inválido (< 0.01)' : null
+  }
+
+  if (!accountBalance || accountBalance <= 0) {
+    return 'Saldo da conta provider indisponível — impossível calcular % risco'
+  }
+  if (!signal.sl || signal.sl <= 0) {
+    return 'Sinal sem Stop Loss — impossível calcular % risco'
+  }
+  const entry = signal.entry ?? signal.sl
+  if (Math.abs(entry - signal.sl) <= 0) {
+    return 'Distância SL inválida — impossível calcular % risco'
+  }
+  if (lot < 0.01) {
+    return 'Lote calculado inválido (< 0.01) com % risco configurado'
+  }
+  return null
+}
+
 export function computeLotSize(
-  conn: Pick<MTMcopierConnection, 'lot_mode' | 'lot_value' | 'max_risk_percent'>,
+  conn: LotSizingConn,
   signal: ParsedSignal,
   accountBalance?: number | null,
 ): number {
@@ -12,11 +43,11 @@ export function computeLotSize(
     case 'multiplier':
       return round(1.0 * value)
     case 'risk_percent': {
-      if (!accountBalance || !signal.sl) return 0.01
+      if (!accountBalance || accountBalance <= 0 || !signal.sl || signal.sl <= 0) return 0
       const entry = signal.entry ?? signal.sl
       const riskAmount = accountBalance * (value / 100)
       const slDistance = Math.abs(entry - signal.sl)
-      if (slDistance <= 0) return 0.01
+      if (slDistance <= 0) return 0
       const sym = (signal.symbol ?? '').toUpperCase()
       const contractSize =
         sym.includes('XAU') || sym === 'GOLD'
@@ -27,8 +58,11 @@ export function computeLotSize(
               ? 1
               : 100_000
       const lot = riskAmount / (slDistance * contractSize)
-      const cap = conn.max_risk_percent != null ? Math.min(50, value * 2) : 50
-      return clamp(round(lot), 0.01, cap)
+      const maxLotCap =
+        conn.max_risk_percent != null && conn.max_risk_percent > 0
+          ? Math.min(50, conn.max_risk_percent)
+          : 50
+      return clamp(round(lot), 0.01, maxLotCap)
     }
     case 'fixed':
     default:

@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { determinePostLoginRedirect, safeInternalRedirectPath } from '@/lib/role-redirect'
-import { ensureMemberProfile } from '@/lib/member-profile'
+import { loadMemberProfile } from '@/lib/member-profile'
+import { buildOAuthCallbackUrl, REGISTER_NOT_FOUND_MESSAGE } from '@/lib/oauth-flow'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,6 +29,13 @@ export default function LoginPage() {
   // Hide the "Back to site" link when running inside the native iOS app
   const isNativeApp = typeof window !== "undefined" && sessionStorage.getItem("mtm_native") === "1"
 
+  const rejectUnknownUser = async () => {
+    await supabase.auth.signOut()
+    const { clearCachedSession } = await import('@/lib/auth-cache')
+    clearCachedSession()
+    window.location.replace(`/register?message=${encodeURIComponent(REGISTER_NOT_FOUND_MESSAGE)}`)
+  }
+
   // Verificar se já está logado
   useEffect(() => {
     const checkSession = async () => {
@@ -37,7 +45,11 @@ export default function LoginPage() {
       
       if (cachedSession && isSessionValid(cachedSession)) {
         console.log('✅ [LOGIN] Sessão em cache encontrada')
-        const profile = await ensureMemberProfile(supabase, cachedSession)
+        const profile = await loadMemberProfile(supabase, cachedSession.user.id)
+        if (!profile) {
+          await rejectUnknownUser()
+          return
+        }
         const next = determinePostLoginRedirect(profile, redirectParam)
         const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
         window.location.replace(url)
@@ -56,7 +68,11 @@ export default function LoginPage() {
           console.log('✅ [LOGIN] Sessão encontrada')
           const { setCachedSession } = await import('@/lib/auth-cache')
           setCachedSession(session)
-          const profile = await ensureMemberProfile(supabase, session)
+          const profile = await loadMemberProfile(supabase, session.user.id)
+          if (!profile) {
+            await rejectUnknownUser()
+            return
+          }
           const next = determinePostLoginRedirect(profile, redirectParam)
           const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
           window.location.replace(url)
@@ -102,7 +118,11 @@ export default function LoginPage() {
         console.log('✅ Login bem-sucedido:', data.user.email)
         const { setCachedSession } = await import('@/lib/auth-cache')
         setCachedSession(data.session)
-        const profile = await ensureMemberProfile(supabase, data.session)
+        const profile = await loadMemberProfile(supabase, data.session.user.id)
+        if (!profile) {
+          await rejectUnknownUser()
+          return
+        }
         const next = determinePostLoginRedirect(profile, redirectParam)
         const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
         window.location.replace(url)
@@ -121,10 +141,10 @@ export default function LoginPage() {
     try {
       console.log('🔍 [GOOGLE LOGIN] Iniciando OAuth...')
       // Mesmo domínio que iniciou o fluxo — obrigatório para cookies PKCE do Supabase SSR
-      const callbackUrl = `${window.location.origin}/auth/callback`
-      const fullRedirectUrl = redirectParam
-        ? `${callbackUrl}?redirect=${encodeURIComponent(redirectParam)}`
-        : callbackUrl
+      const fullRedirectUrl = buildOAuthCallbackUrl(window.location.origin, {
+        flow: 'login',
+        redirect: redirectParam,
+      })
 
       console.log('📍 [GOOGLE LOGIN] Callback URL:', fullRedirectUrl)
       
@@ -185,7 +205,11 @@ export default function LoginPage() {
       const { setCachedSession } = await import('@/lib/auth-cache')
       if (authData.session) setCachedSession(authData.session)
 
-      const profile = await ensureMemberProfile(supabase, authData.session)
+      const profile = await loadMemberProfile(supabase, authData.session!.user.id)
+      if (!profile) {
+        await rejectUnknownUser()
+        return
+      }
       const next = determinePostLoginRedirect(profile, redirectParam)
       const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
       window.location.replace(url)

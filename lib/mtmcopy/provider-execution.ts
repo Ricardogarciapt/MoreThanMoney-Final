@@ -29,6 +29,9 @@ export const DEFAULT_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   symbols_execute_only: null,
   symbols_avoid: null,
   symbol_lot_exceptions: [],
+  exit_pct_tp1: 33,
+  exit_pct_tp2: 33,
+  exit_pct_tp3: 34,
 }
 
 export function executionProfileToConnectionFields(
@@ -70,7 +73,9 @@ export function formatExecutionSummary(profile: ProviderExecutionProfile): strin
   }
 }
 
-function normalizeProfile(raw: Partial<ProviderExecutionProfile> | undefined): ProviderExecutionProfile {
+export function normalizeProviderExecutionProfile(
+  raw: Partial<ProviderExecutionProfile> | undefined,
+): ProviderExecutionProfile {
   const base = DEFAULT_PROVIDER_EXECUTION
   if (!raw) return { ...base }
   return {
@@ -80,7 +85,7 @@ function normalizeProfile(raw: Partial<ProviderExecutionProfile> | undefined): P
         : base.lot_mode,
     lot_value: Number(raw.lot_value) > 0 ? Number(raw.lot_value) : base.lot_value,
     max_risk_percent:
-      raw.max_risk_percent != null && raw.max_risk_percent !== ''
+      raw.max_risk_percent != null && String(raw.max_risk_percent) !== ''
         ? Number(raw.max_risk_percent)
         : base.max_risk_percent,
     copy_sl: raw.copy_sl !== false,
@@ -135,6 +140,18 @@ function normalizeProfile(raw: Partial<ProviderExecutionProfile> | undefined): P
           .filter((e) => e?.symbol && Number(e.lot) > 0)
           .map((e) => ({ symbol: String(e.symbol).trim(), lot: Number(e.lot) }))
       : base.symbol_lot_exceptions,
+    exit_pct_tp1:
+      raw.exit_pct_tp1 != null && Number(raw.exit_pct_tp1) > 0
+        ? Number(raw.exit_pct_tp1)
+        : base.exit_pct_tp1,
+    exit_pct_tp2:
+      raw.exit_pct_tp2 != null && Number(raw.exit_pct_tp2) > 0
+        ? Number(raw.exit_pct_tp2)
+        : base.exit_pct_tp2,
+    exit_pct_tp3:
+      raw.exit_pct_tp3 != null && Number(raw.exit_pct_tp3) > 0
+        ? Number(raw.exit_pct_tp3)
+        : base.exit_pct_tp3,
   }
 }
 
@@ -143,18 +160,18 @@ export async function getProviderExecutionProfile(
   channel: MtmcopyChannelKey,
   routeExecution?: ProviderExecutionProfile | null,
 ): Promise<ProviderExecutionProfile> {
-  if (routeExecution) return normalizeProfile(routeExecution)
+  if (routeExecution) return normalizeProviderExecutionProfile(routeExecution)
   if (channel === 'unknown') return { ...DEFAULT_PROVIDER_EXECUTION }
 
   const config = await getSignalSourcesConfig()
   const key = channel as MtmcopyTelegramChannelKey
   const fromChannel = config.channel_providers?.[key]?.execution
-  if (fromChannel) return normalizeProfile(fromChannel)
+  if (fromChannel) return normalizeProviderExecutionProfile(fromChannel)
 
   const fromProfiles = config.provider_execution_profiles?.[key]
-  if (fromProfiles) return normalizeProfile(fromProfiles)
+  if (fromProfiles) return normalizeProviderExecutionProfile(fromProfiles)
 
-  if (config.provider_execution) return normalizeProfile(config.provider_execution)
+  if (config.provider_execution) return normalizeProviderExecutionProfile(config.provider_execution)
 
   return { ...DEFAULT_PROVIDER_EXECUTION }
 }

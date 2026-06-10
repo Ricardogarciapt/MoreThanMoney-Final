@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { determinePostLoginRedirect } from '@/lib/role-redirect'
-import { ensureMemberProfile } from '@/lib/member-profile'
+import { loadMemberProfile } from '@/lib/member-profile'
+import { buildOAuthCallbackUrl, REGISTER_NOT_FOUND_MESSAGE } from '@/lib/oauth-flow'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,6 +28,13 @@ export default function AppMobileLoginPage() {
   // Native app always redirects to /app-mobile after login
   const redirectParam = '/app-mobile'
 
+  const rejectUnknownUser = async () => {
+    await supabase.auth.signOut()
+    const { clearCachedSession } = await import('@/lib/auth-cache')
+    clearCachedSession()
+    window.location.replace(`/app-mobile/register?message=${encodeURIComponent(REGISTER_NOT_FOUND_MESSAGE)}`)
+  }
+
   // Verificar se já está logado
   useEffect(() => {
     const checkSession = async () => {
@@ -34,6 +42,11 @@ export default function AppMobileLoginPage() {
       const cachedSession = getCachedSession()
 
       if (cachedSession && isSessionValid(cachedSession)) {
+        const profile = await loadMemberProfile(supabase, cachedSession.user.id)
+        if (!profile) {
+          await rejectUnknownUser()
+          return
+        }
         window.location.replace(`${window.location.origin}/app-mobile`)
         return
       }
@@ -45,6 +58,11 @@ export default function AppMobileLoginPage() {
         ])
         const { data: { session } } = await sessionPromise
         if (session) {
+          const profile = await loadMemberProfile(supabase, session.user.id)
+          if (!profile) {
+            await rejectUnknownUser()
+            return
+          }
           const { setCachedSession } = await import('@/lib/auth-cache')
           setCachedSession(session)
           window.location.replace(`${window.location.origin}/app-mobile`)
@@ -87,7 +105,11 @@ export default function AppMobileLoginPage() {
       if (data.session) {
         const { setCachedSession } = await import('@/lib/auth-cache')
         setCachedSession(data.session)
-        await ensureMemberProfile(supabase, data.session)
+        const profile = await loadMemberProfile(supabase, data.session.user.id)
+        if (!profile) {
+          await rejectUnknownUser()
+          return
+        }
         window.location.replace(`${window.location.origin}/app-mobile`)
       }
     } catch {
@@ -106,7 +128,10 @@ export default function AppMobileLoginPage() {
       }
     }
     try {
-      const callbackUrl = `${window.location.origin}/auth/callback?redirect=${encodeURIComponent('/app-mobile')}`
+      const callbackUrl = buildOAuthCallbackUrl(window.location.origin, {
+        flow: 'login',
+        redirect: '/app-mobile',
+      })
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -146,7 +171,11 @@ export default function AppMobileLoginPage() {
       const { setCachedSession } = await import('@/lib/auth-cache')
       if (authData.session) setCachedSession(authData.session)
 
-      await ensureMemberProfile(supabase, authData.session)
+      const profile = await loadMemberProfile(supabase, authData.session!.user.id)
+      if (!profile) {
+        await rejectUnknownUser()
+        return
+      }
       window.location.replace(`${window.location.origin}/app-mobile`)
     } catch (err: unknown) {
       setIqonicError(err instanceof Error ? err.message : 'Erro desconhecido')

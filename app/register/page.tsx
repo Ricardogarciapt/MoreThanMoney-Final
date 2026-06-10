@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertCircle, Eye, EyeOff, Smartphone, Globe, Check, Loader2, CheckCircle2, XCircle, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
+import { buildOAuthCallbackUrl, OAUTH_PENDING_REG_KEY } from '@/lib/oauth-flow'
 
 type PlanId = 'app_member_monthly' | 'app_member_annual' | 'premium_monthly' | 'premium_annual'
 type BillingCycle = 'monthly' | 'annual'
@@ -53,6 +54,8 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
 
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const infoMessage = searchParams.get('message')
 
   const activePlan = PLANS[selectedPlan]
   const activePricing = billingCycle === 'annual' ? activePlan.annual : activePlan.monthly
@@ -158,10 +161,25 @@ export default function RegisterPage() {
     setIsLoading(true)
     setError('')
     try {
+      sessionStorage.setItem(
+        OAUTH_PENDING_REG_KEY,
+        JSON.stringify({
+          plan: selectedPlan,
+          billing: billingCycle,
+          sponsor_username: formData.sponsorUsername || '',
+          created_at: Date.now(),
+        })
+      )
+
+      const redirectTo = buildOAuthCallbackUrl(window.location.origin, {
+        flow: 'register',
+        redirect: '/app-mobile',
+      })
+
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirect=/new-landing`,
+          redirectTo,
           queryParams: { access_type: 'offline', prompt: 'select_account' },
         },
       })
@@ -286,6 +304,12 @@ export default function RegisterPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {infoMessage && (
+                <div className="bg-amber-500/15 border border-amber-500/40 rounded-lg p-3 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-400 shrink-0" />
+                  <span className="text-amber-200 text-sm">{infoMessage}</span>
+                </div>
+              )}
               {error && (
                 <div className="bg-red-500/20 border border-red-500 rounded-lg p-3 flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />

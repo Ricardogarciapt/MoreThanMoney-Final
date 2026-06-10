@@ -26,6 +26,128 @@ function resolvePlanFromSession(planId: string | undefined, plan: string, billin
  * POST /api/auth/complete-registration
  * Cria conta Supabase + perfil após pagamento Stripe confirmado (/success).
  */
+async function createProfileAfterPayment(params: {
+  userId: string
+  email: string
+  full_name: string
+  username: string
+  phone?: string
+  whatsapp?: string
+  plan?: string
+  billing?: string
+  sponsor_username?: string
+  session: Awaited<ReturnType<ReturnType<typeof getStripeClient>['checkout']['sessions']['retrieve']>>
+}) {
+  const { userId, email, full_name, username, phone, whatsapp, plan, billing, sponsor_username, session } =
+    params
+  const stripe = getStripeClient()
+  const planIdFromSession = session.metadata?.plan || `${plan || 'app_member'}_${billing || 'monthly'}`
+  const planMeta = resolvePlanFromSession(
+    session.metadata?.plan,
+    plan || 'app_member',
+    billing || 'monthly'
+  )
+  const sponsor =
+    sponsor_username ||
+    session.metadata?.sponsor_username ||
+    ''
+
+  const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id || null
+  let subscriptionId: string | null = null
+  let periodEnd: string | null = null
+
+  if (session.subscription) {
+    const sub =
+      typeof session.subscription === 'string'
+        ? await stripe.subscriptions.retrieve(session.subscription)
+        : session.subscription
+    subscriptionId = sub.id
+    periodEnd = new Date(sub.current_period_end * 1000).toISOString()
+  }
+
+  const profilePayload: Record<string, unknown> = {
+    id: userId,
+    email,
+    full_name,
+    username,
+    phone: phone || session.metadata?.phone || null,
+    whatsapp: whatsapp || null,
+    user_type: 'member',
+    member_category: planMeta.memberCategory,
+    is_active: true,
+    subscription_plan: planMeta.subscriptionPlan,
+    subscription_billing_cycle: planMeta.billingCycle,
+    subscription_status: 'active',
+    subscription_platform: 'stripe',
+    checkout_source: 'stripe',
+    stripe_customer_id: customerId,
+    stripe_subscription_id: subscriptionId,
+    subscription_expires_at: periodEnd,
+    next_billing_at: periodEnd,
+    last_payment_at: new Date().toISOString(),
+    payment_failed_count: 0,
+    updated_at: new Date().toISOString(),
+  }
+
+  if (sponsor.trim()) {
+    profilePayload.mlm_sponsor_username = sponsor.trim()
+  }
+
+  const { error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .upsert(profilePayload, { onConflict: 'id' })
+
+  if (profileError) {
+    console.error('❌ [COMPLETE-REG] Erro ao criar perfil:', profileError)
+  }
+
+  await supabaseAdmin
+    .from('checkout_sessions')
+    .upsert(
+      {
+        stripe_session_id: session.id,
+        user_id: userId,
+        plan: session.metadata?.plan || planMeta.subscriptionPlan,
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+      },
+      { onConflict: 'stripe_session_id' }
+    )
+    .then(undefined, () => {})
+
+  if (isPremiumStripePlan(planIdFromSession)) {
+    try {
+      await handlePremiumStripeSkoolGrant(supabaseAdmin, userId, planIdFromSession)
+    } catch (err) {
+      console.error('[SKOOL-ADMIN] Erro ao alertar admins pós-registo:', err)
+    }
+  }
+
+  if (sponsor.trim()) {
+    try {
+      const { data: existingCommission } = await supabaseAdmin
+        .from('mlm_commissions')
+        .select('id')
+        .eq('stripe_session_id', session.id)
+        .maybeSingle()
+
+      if (existingCommission) {
+        await linkMlmBuyerAfterRegistration(supabaseAdmin, {
+          stripeSessionId: session.id,
+          userId,
+          sponsorUsername: sponsor.trim(),
+        })
+      } else {
+        await processMlmCheckoutCommission(supabaseAdmin, session, userId)
+      }
+    } catch (mlmErr) {
+      console.error('[MLM] Erro ao ligar comprador após registo:', mlmErr)
+    }
+  }
+
+  return { userId, planIdFromSession }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -40,9 +162,16 @@ export async function POST(request: NextRequest) {
       plan,
       billing,
       sponsor_username,
+      oauth,
     } = body
 
-    if (!sessionId || !email || !password || !full_name || !username) {
+    if (!sessionId) {
+      return NextResponse.json({ error: 'sessionId é obrigatório.' }, { status: 400 })
+    }
+
+    const isOAuthRegistration = oauth === true
+
+    if (!isOAuthRegistration && (!email || !password || !full_name || !username)) {
       return NextResponse.json(
         { error: 'Dados incompletos. sessionId, email, password, full_name e username são obrigatórios.' },
         { status: 400 }
@@ -63,6 +192,63 @@ export async function POST(request: NextRequest) {
         { error: `Pagamento não confirmado. Estado: ${session.payment_status}` },
         { status: 402 }
       )
+    }
+
+    if (isOAuthRegistration) {
+      const oauthUserId = session.metadata?.oauth_user_id
+      if (!oauthUserId || session.metadata?.registration_method !== 'oauth') {
+        return NextResponse.json({ error: 'Sessão OAuth inválida.' }, { status: 400 })
+      }
+
+      const { data: existingOAuthProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .eq('id', oauthUserId)
+        .maybeSingle()
+
+      if (existingOAuthProfile) {
+        return NextResponse.json({ success: true, userId: oauthUserId, alreadyExists: true })
+      }
+
+      const { data: authUser, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(oauthUserId)
+      if (getUserError || !authUser?.user?.email) {
+        return NextResponse.json({ error: 'Utilizador OAuth não encontrado.' }, { status: 404 })
+      }
+
+      const oauthEmail = authUser.user.email
+      const sessionEmail = session.metadata?.email || session.customer_details?.email
+      if (sessionEmail && sessionEmail.toLowerCase() !== oauthEmail.toLowerCase()) {
+        return NextResponse.json({ error: 'Email não corresponde à sessão de pagamento' }, { status: 400 })
+      }
+
+      const oauthFullName =
+        session.metadata?.full_name ||
+        (typeof authUser.user.user_metadata?.full_name === 'string'
+          ? authUser.user.user_metadata.full_name
+          : oauthEmail.split('@')[0])
+      const oauthUsername = session.metadata?.username || oauthEmail.split('@')[0]
+
+      await createProfileAfterPayment({
+        userId: oauthUserId,
+        email: oauthEmail,
+        full_name: oauthFullName,
+        username: oauthUsername,
+        phone: session.metadata?.phone || '',
+        whatsapp: '',
+        plan: plan || 'app_member',
+        billing: billing || 'monthly',
+        sponsor_username: sponsor_username || session.metadata?.sponsor_username || '',
+        session,
+      })
+
+      console.log(`✅ [COMPLETE-REG] Perfil OAuth criado para ${oauthEmail} (user: ${oauthUserId})`)
+
+      return NextResponse.json({
+        success: true,
+        userId: oauthUserId,
+        alreadyExists: false,
+        oauth: true,
+      })
     }
 
     const sessionEmail = session.metadata?.email || session.customer_details?.email
@@ -101,109 +287,18 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = authData.user.id
-    const planIdFromSession = session.metadata?.plan || `${plan || 'app_member'}_${billing || 'monthly'}`
-    const planMeta = resolvePlanFromSession(
-      session.metadata?.plan,
-      plan || 'app_member',
-      billing || 'monthly'
-    )
-    const sponsor =
-      sponsor_username ||
-      session.metadata?.sponsor_username ||
-      ''
-
-    const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id || null
-    let subscriptionId: string | null = null
-    let periodEnd: string | null = null
-
-    if (session.subscription) {
-      const sub =
-        typeof session.subscription === 'string'
-          ? await stripe.subscriptions.retrieve(session.subscription)
-          : session.subscription
-      subscriptionId = sub.id
-      periodEnd = new Date(sub.current_period_end * 1000).toISOString()
-    }
-
-    const profilePayload: Record<string, unknown> = {
-      id: userId,
+    await createProfileAfterPayment({
+      userId,
       email,
       full_name,
       username,
-      phone: phone || session.metadata?.phone || null,
-      whatsapp: whatsapp || null,
-      user_type: 'member',
-      member_category: planMeta.memberCategory,
-      is_active: true,
-      subscription_plan: planMeta.subscriptionPlan,
-      subscription_billing_cycle: planMeta.billingCycle,
-      subscription_status: 'active',
-      subscription_platform: 'stripe',
-      checkout_source: 'stripe',
-      stripe_customer_id: customerId,
-      stripe_subscription_id: subscriptionId,
-      subscription_expires_at: periodEnd,
-      next_billing_at: periodEnd,
-      last_payment_at: new Date().toISOString(),
-      payment_failed_count: 0,
-      updated_at: new Date().toISOString(),
-    }
-
-    if (sponsor.trim()) {
-      profilePayload.mlm_sponsor_username = sponsor.trim()
-    }
-
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .upsert(profilePayload, { onConflict: 'id' })
-
-    if (profileError) {
-      console.error('❌ [COMPLETE-REG] Erro ao criar perfil:', profileError)
-    }
-
-    await supabaseAdmin
-      .from('checkout_sessions')
-      .upsert(
-        {
-          stripe_session_id: session.id,
-          user_id: userId,
-          plan: session.metadata?.plan || planMeta.subscriptionPlan,
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-        },
-        { onConflict: 'stripe_session_id' }
-      )
-      .then(undefined, () => {})
-
-    if (isPremiumStripePlan(planIdFromSession)) {
-      try {
-        await handlePremiumStripeSkoolGrant(supabaseAdmin, userId, planIdFromSession)
-      } catch (err) {
-        console.error('[SKOOL-ADMIN] Erro ao alertar admins pós-registo:', err)
-      }
-    }
-
-    if (sponsor.trim()) {
-      try {
-        const { data: existingCommission } = await supabaseAdmin
-          .from('mlm_commissions')
-          .select('id')
-          .eq('stripe_session_id', session.id)
-          .maybeSingle()
-
-        if (existingCommission) {
-          await linkMlmBuyerAfterRegistration(supabaseAdmin, {
-            stripeSessionId: session.id,
-            userId,
-            sponsorUsername: sponsor.trim(),
-          })
-        } else {
-          await processMlmCheckoutCommission(supabaseAdmin, session, userId)
-        }
-      } catch (mlmErr) {
-        console.error('[MLM] Erro ao ligar comprador após registo:', mlmErr)
-      }
-    }
+      phone,
+      whatsapp,
+      plan,
+      billing,
+      sponsor_username,
+      session,
+    })
 
     console.log(`✅ [COMPLETE-REG] Conta criada para ${email} (user: ${userId})`)
 

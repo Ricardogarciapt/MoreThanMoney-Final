@@ -138,7 +138,7 @@ export default function MtmcopyProviderConfigModal({
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="text-xs text-zinc-500 block mb-1">Risco máx. diário (%)</label>
+                <label className="text-xs text-zinc-500 block mb-1">Teto máximo de lote (modo % risco)</label>
                 <Input
                   type="number"
                   step="0.1"
@@ -155,6 +155,29 @@ export default function MtmcopyProviderConfigModal({
             </div>
             <p className="text-xs text-emerald-400/80">{formatExecutionSummary(profile)}</p>
           </Section>
+
+          {(route.sender_channel === "premium-signals" || route.sender_chat_id) && (
+            <Section title="Saídas Premium (TP1 / TP2 / TP3)">
+              <p className="text-xs text-zinc-500">
+                Percentagem do lote total fechada em cada take profit (máx. 3 exits).
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {(["exit_pct_tp1", "exit_pct_tp2", "exit_pct_tp3"] as const).map((key, i) => (
+                  <div key={key}>
+                    <label className="text-xs text-zinc-500 block mb-1">Exit {i + 1} %</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={profile[key] ?? (i === 2 ? 34 : 33)}
+                      onChange={(e) => set({ [key]: Number(e.target.value) })}
+                      className="bg-zinc-900 border-zinc-700 h-9"
+                    />
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
 
           <Section title="Stop Loss & Take Profit">
             <div className="grid sm:grid-cols-2 gap-3">

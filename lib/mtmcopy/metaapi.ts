@@ -228,9 +228,19 @@ export async function getAccountSnapshot(accountId: string): Promise<AccountSnap
   }
 }
 
-export async function getAccountBalance(accountId: string): Promise<number | null> {
-  const snap = await getAccountSnapshot(accountId)
-  return snap?.balance ?? snap?.equity ?? null
+export async function getAccountBalance(
+  accountId: string,
+  retries = 2,
+): Promise<number | null> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const snap = await getAccountSnapshot(accountId)
+    const balance = snap?.balance ?? snap?.equity ?? null
+    if (balance != null && balance > 0) return balance
+    if (attempt < retries) {
+      await new Promise((r) => setTimeout(r, 600 * (attempt + 1)))
+    }
+  }
+  return null
 }
 
 export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> {

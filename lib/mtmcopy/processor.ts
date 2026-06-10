@@ -13,7 +13,7 @@ import {
   hasRecentDuplicateGlobal,
   countExecutedToday,
 } from './db'
-import { computeLotSize } from './lot-sizing'
+import { computeLotSize, getLotSizingSkipReason } from './lot-sizing'
 import { getAccountBalance, isMetaApiConfigured, placeOrder } from './metaapi'
 import { isCopyFactoryEnabled } from './copyfactory'
 import type { MtmcopyChannelKey } from './channel-context'
@@ -527,17 +527,32 @@ async function executeViaMtmProvider(
   const balance = await getAccountBalance(provider.accountId)
   let totalLot = computeLotSize(providerConn, signalForExec, balance)
   totalLot = resolveLotForSymbol(mappedSymbol, totalLot, executionProfile)
+
+  const lotSkip = getLotSizingSkipReason(providerConn, signalForExec, balance, totalLot)
+  if (lotSkip) {
+    await logProviderSignalEvent({
+      channel,
+      provider,
+      signal: signalForExec,
+      raw,
+      telegramMessageId,
+      status: 'skipped',
+      detail: `${aiDetail} · ${lotSkip} · ${executionSummary}`,
+    })
+    return
+  }
+
   const mtComment = mtCommentForProfile(executionProfile, provider.tag)
-  const lotFallbackNote =
-    providerConn.lot_mode === 'risk_percent' &&
-    totalLot <= 0.01 &&
-    (!balance || !signalForExec.sl)
-      ? ` · fallback 0.01${!signalForExec.sl ? ' (sem SL no sinal)' : ''}${!balance ? ' (saldo indisponível)' : ''}`
-      : ''
   const logTargets = await resolveLogTargets(subscribers)
 
   const isPremium = channel === 'premium-signals'
-  const legs = isPremium ? buildPremiumExitLegs(signalForExec, totalLot) : null
+  const legs = isPremium
+    ? buildPremiumExitLegs(signalForExec, totalLot, {
+        tp1: executionProfile.exit_pct_tp1,
+        tp2: executionProfile.exit_pct_tp2,
+        tp3: executionProfile.exit_pct_tp3,
+      })
+    : null
 
   type LegResult = { success: boolean; orderId?: string; brokerSymbol?: string; error?: string; label: string; lot: number }
   const results: LegResult[] = []
@@ -584,7 +599,7 @@ async function executeViaMtmProvider(
     lot: totalLot,
     result: { ...result, success: anySuccess },
     status: anySuccess ? 'executed' : 'error',
-    detail: `${aiDetail} · ${results.map((r) => `${r.label}: ${r.success ? `#${r.orderId}` : r.error}`).join(' · ')}${lotFallbackNote}`,
+    detail: `${aiDetail} · ${results.map((r) => `${r.label}: ${r.success ? `#${r.orderId}` : r.error}`).join(' · ')} · ${executionSummary}`,
   })
 
   for (const conn of logTargets) {
@@ -748,6 +763,20 @@ async function processSignalDirect(
   }
 
   const lot = computeLotSize(conn, signal, balance)
+  const lotSkip = getLotSizingSkipReason(conn, signal, balance, lot)
+  if (lotSkip) {
+    await logMtmcopySignal({
+      user_id: conn.user_id,
+      connection_id: conn.id,
+      symbol: signal.symbol,
+      direction: signal.direction,
+      status: 'skipped',
+      detail: lotSkip,
+      raw_message: raw,
+    })
+    return
+  }
+
   const direction = conn.reverse_signals
     ? signal.direction === 'buy'
       ? 'sell'

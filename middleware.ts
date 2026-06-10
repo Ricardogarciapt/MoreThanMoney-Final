@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
+import { isMemberProtectedPath, registerRedirectUrl } from "@/lib/member-route-guard"
 
 // Cache para rate limiting
 const rateLimit = new Map<string, { count: number; timestamp: number }>()
@@ -156,6 +157,49 @@ export async function middleware(request: NextRequest) {
     }
 
     response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+  }
+
+  // ── Membros sem perfil (OAuth backdoor) → /register ───────────────────────
+  if (isMemberProtectedPath(pathname) && hasSupabaseEnv) {
+    const supabaseMember = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    })
+
+    const {
+      data: { user: memberUser },
+    } = await supabaseMember.auth.getUser()
+
+    if (memberUser) {
+      const { data: memberProfile } = await supabaseMember
+        .from("profiles")
+        .select("id")
+        .eq("id", memberUser.id)
+        .maybeSingle()
+
+      if (!memberProfile) {
+        return NextResponse.redirect(
+          new URL(
+            registerRedirectUrl(request.nextUrl.origin, {
+              mobile: pathname.startsWith("/app-mobile"),
+            }),
+            request.url
+          )
+        )
+      }
+    } else if (pathname.startsWith("/member-area") || pathname.startsWith("/app-mobile")) {
+      const loginPath = pathname.startsWith("/app-mobile") ? "/app-mobile/login" : "/login"
+      const redirect = encodeURIComponent(pathname + request.nextUrl.search)
+      return NextResponse.redirect(new URL(`${loginPath}?redirect=${redirect}`, request.url))
+    }
   }
 
   // ── Protecção /aios — apenas admins ───────────────────────────────────────

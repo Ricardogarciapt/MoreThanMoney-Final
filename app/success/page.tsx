@@ -18,6 +18,7 @@ export default function SuccessPage() {
   const plan       = searchParams.get('plan')
   const regToken   = searchParams.get('reg_token')
   const isNewUser  = searchParams.get('new_user') === '1'
+  const isOAuthReg = searchParams.get('oauth') === '1'
 
   const [regState, setRegState] = useState<RegState>('idle')
   const [regEmail, setRegEmail] = useState<string>('')
@@ -25,16 +26,37 @@ export default function SuccessPage() {
 
   // ── Criar conta após pagamento (fluxo register → Stripe → /success) ────────
   useEffect(() => {
-    if (!isNewUser || !sessionId || !regToken) return
+    if (!isNewUser || !sessionId) return
 
     const run = async () => {
       setRegState('creating')
 
       try {
-        // Recuperar dados do formulário do localStorage (mesmo browser)
+        if (isOAuthReg) {
+          const res = await fetch('/api/auth/complete-registration', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId, oauth: true, plan: plan || 'app_member' }),
+          })
+          const result = await res.json()
+
+          if (!res.ok) {
+            setRegError(result.error || 'Erro ao criar conta')
+            setRegState('error')
+            return
+          }
+
+          setRegState(result.alreadyExists ? 'already_exists' : 'done')
+          return
+        }
+
+        if (!regToken) {
+          setRegState('missing_data')
+          return
+        }
+
         const raw = localStorage.getItem(`mtm_pending_reg_${regToken}`)
         if (!raw) {
-          // Dados não encontrados — pode ter sido outro browser/dispositivo
           setRegState('missing_data')
           return
         }
@@ -67,11 +89,8 @@ export default function SuccessPage() {
           return
         }
 
-        // Conta criada (ou já existia) — limpar localStorage
         localStorage.removeItem(`mtm_pending_reg_${regToken}`)
-
         setRegState(result.alreadyExists ? 'already_exists' : 'done')
-
       } catch (err: any) {
         setRegError(err.message || 'Erro inesperado')
         setRegState('error')
@@ -79,7 +98,7 @@ export default function SuccessPage() {
     }
 
     run()
-  }, [isNewUser, sessionId, regToken, plan])
+  }, [isNewUser, sessionId, regToken, plan, isOAuthReg])
 
   // ─── Fluxo: registo novo ──────────────────────────────────────────────────
   if (isNewUser) {
@@ -125,13 +144,15 @@ export default function SuccessPage() {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-3 bg-gray-800/60 rounded-lg p-3">
-                    <Lock className="w-5 h-5 text-amber-400 shrink-0" />
-                    <div>
-                      <p className="text-xs text-gray-400">Palavra-passe</p>
-                      <p className="text-white text-sm">A palavra-passe que escolheste no registo</p>
+                  {!isOAuthReg && (
+                    <div className="flex items-center gap-3 bg-gray-800/60 rounded-lg p-3">
+                      <Lock className="w-5 h-5 text-amber-400 shrink-0" />
+                      <div>
+                        <p className="text-xs text-gray-400">Palavra-passe</p>
+                        <p className="text-white text-sm">A palavra-passe que escolheste no registo</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <p className="text-xs text-gray-400 text-center pt-1">
                     📧 Vais receber um email de confirmação em breve.
@@ -139,11 +160,11 @@ export default function SuccessPage() {
                 </div>
 
                 <Button
-                  onClick={() => router.push('/login')}
+                  onClick={() => router.push(isOAuthReg ? '/app-mobile' : '/login')}
                   className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold text-lg py-6"
                 >
                   <ArrowRight className="w-5 h-5 mr-2" />
-                  Fazer Login Agora
+                  {isOAuthReg ? 'Entrar na App MTM' : 'Fazer Login Agora'}
                 </Button>
 
                 <Button

@@ -230,7 +230,18 @@ export default function MtmCopyPage() {
     return () => { cancelled = true }
   }, [user?.id])
 
-  const openSetup = async (selectionId: string | "new" | null = null) => {
+  const openSetupWithMethod = async (
+    method: MtmcopyCopyMethod,
+    selectionId: string | "new" | null = null,
+  ) => {
+    setCopyMethod(method)
+    await openSetup(selectionId, method)
+  }
+
+  const openSetup = async (
+    selectionId: string | "new" | null = null,
+    methodOverride?: MtmcopyCopyMethod,
+  ) => {
     try {
       const token = await waitForSupabaseSession()
       if (!token) {
@@ -255,9 +266,15 @@ export default function MtmCopyPage() {
           ? list.find((c) => c.id === selectionId)
           : list[0]
 
-      if (conn?.copy_method) setCopyMethod(conn.copy_method)
-      else if (conn?.account_role === "master") setCopyMethod("master_slave")
-      else if (conn) setCopyMethod(conn.sender_mode === "master_account" ? "master_slave" : "telegram_group")
+      if (methodOverride) {
+        setCopyMethod(methodOverride)
+      } else if (conn?.copy_method) {
+        setCopyMethod(conn.copy_method)
+      } else if (conn?.account_role === "master") {
+        setCopyMethod("master_slave")
+      } else if (conn) {
+        setCopyMethod(conn.sender_mode === "master_account" ? "master_slave" : "telegram_group")
+      }
 
       setSetupSelectionId(selectionId)
       setShowSetup(true)
@@ -379,10 +396,21 @@ export default function MtmCopyPage() {
 
             <div className="mt-10 grid sm:grid-cols-3 gap-4 text-left max-w-4xl mx-auto">
               {COPY_METHODS.map((m) => (
-                <div key={m.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5">
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() =>
+                    openSetupWithMethod(
+                      m.id,
+                      hasConnections ? connections[0]?.id ?? "new" : "new",
+                    )
+                  }
+                  className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 text-left transition-colors hover:border-[#D2A63C]/40 hover:bg-zinc-900/80"
+                >
                   <p className="text-white font-bold mb-2">{m.title}</p>
                   <p className="text-sm text-zinc-400 leading-relaxed">{m.description}</p>
-                </div>
+                  <p className="text-xs text-[#D2A63C] mt-3 font-medium">Configurar →</p>
+                </button>
               ))}
             </div>
 
@@ -575,7 +603,7 @@ export default function MtmCopyPage() {
                       <div className="flex items-start gap-2.5 text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
                         <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         <p>
-                          Saldo indisponível — o modo <strong>% risco</strong> usa 0.01 lotes até o saldo ser lido.
+                          Saldo indisponível — o modo <strong>% risco</strong> via CopyFactory precisa do saldo da conta.
                           Clica em <strong>Atualizar</strong> ou verifica a ligação MetaAPI.
                         </p>
                       </div>

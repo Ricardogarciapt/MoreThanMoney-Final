@@ -4,7 +4,8 @@ import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { canAccessRoute, getAccessDeniedMessage, UserProfile } from "@/lib/role-redirect"
-import { ensureMemberProfile } from "@/lib/member-profile"
+import { loadMemberProfile } from "@/lib/member-profile"
+import { REGISTER_NOT_FOUND_MESSAGE } from "@/lib/oauth-flow"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -37,23 +38,12 @@ export function ProtectedRoute({
           return
         }
 
-        let { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle()
-
-        if (profileError && profileError.code !== 'PGRST116') {
-          console.warn('⚠️ [ROUTE PROTECTION] Perfil:', profileError.message)
-        }
+        const profileData = await loadMemberProfile(supabase, session.user.id)
 
         if (!profileData) {
-          profileData = await ensureMemberProfile(supabase, session)
-        }
-
-        if (!profileData) {
-          console.error('❌ [ROUTE PROTECTION] Sem perfil após sincronizar')
-          router.push('/member-area')
+          await supabase.auth.signOut()
+          const regPath = pathname.startsWith("/app-mobile") ? "/app-mobile/register" : "/register"
+          router.push(`${regPath}?message=${encodeURIComponent(REGISTER_NOT_FOUND_MESSAGE)}`)
           return
         }
 

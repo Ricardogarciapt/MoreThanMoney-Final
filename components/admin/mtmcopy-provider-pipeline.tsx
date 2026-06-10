@@ -58,7 +58,11 @@ function emptyRoute(defaults: ProviderExecutionProfile): ProviderRoute {
   }
 }
 
-export default function MtmcopyProviderPipeline() {
+export default function MtmcopyProviderPipeline({
+  initialRouteId,
+}: {
+  initialRouteId?: string | null
+}) {
   const [routes, setRoutes] = useState<ProviderRoute[]>([])
   const [enabledChannels, setEnabledChannels] = useState<string[]>([])
   const [discoveredSources, setDiscoveredSources] = useState<SourceRow[]>([])
@@ -89,6 +93,26 @@ export default function MtmcopyProviderPipeline() {
 
   useEffect(() => { load() }, [load])
 
+  useEffect(() => {
+    if (!initialRouteId || loading || !routes.length) return
+    const match = routes.find((r) => r.id === initialRouteId)
+    if (match) setConfigRoute(match)
+  }, [initialRouteId, loading, routes])
+
+  const persistRoutes = async (nextRoutes: ProviderRoute[]) => {
+    setSaving(true)
+    const res = await adminApiCall("/api/admin/mtmcopy/telegram-sources", {
+      method: "PUT",
+      body: JSON.stringify({ provider_routes: nextRoutes }),
+    })
+    setSaving(false)
+    if (res.success) {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    }
+    return res.success
+  }
+
   const updateRoute = (id: string, patch: Partial<ProviderRoute>) => {
     setRoutes((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   }
@@ -110,17 +134,8 @@ export default function MtmcopyProviderPipeline() {
   }
 
   const handleSave = async () => {
-    setSaving(true)
-    const res = await adminApiCall("/api/admin/mtmcopy/telegram-sources", {
-      method: "PUT",
-      body: JSON.stringify({ provider_routes: routes }),
-    })
-    setSaving(false)
-    if (res.success) {
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2000)
-      load()
-    }
+    const ok = await persistRoutes(routes)
+    if (ok) load()
   }
 
   if (loading || !defaults) {
@@ -189,11 +204,24 @@ export default function MtmcopyProviderPipeline() {
           return (
             <div
               key={route.id}
-              className={`rounded-xl border p-4 ${
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                const t = e.target as HTMLElement
+                if (t.closest("button, input, select, textarea, [role=switch], label")) return
+                setConfigRoute(route)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  setConfigRoute(route)
+                }
+              }}
+              className={`rounded-xl border p-4 cursor-pointer transition-colors hover:border-emerald-500/40 ${
                 route.enabled !== false
                   ? "border-emerald-500/25 bg-emerald-500/5"
                   : "border-zinc-800 bg-zinc-900/40 opacity-75"
-              }`}
+              } ${configRoute?.id === route.id ? "ring-1 ring-emerald-500/50" : ""}`}
             >
               <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -353,8 +381,14 @@ export default function MtmcopyProviderPipeline() {
             : undefined
         }
         onClose={() => setConfigRoute(null)}
-        onSave={(execution) => {
-          if (configRoute) updateRoute(configRoute.id, { execution })
+        onSave={async (execution) => {
+          if (!configRoute) return
+          const nextRoutes = routes.map((r) =>
+            r.id === configRoute.id ? { ...r, execution } : r,
+          )
+          setRoutes(nextRoutes)
+          updateRoute(configRoute.id, { execution })
+          await persistRoutes(nextRoutes)
         }}
       />
 
