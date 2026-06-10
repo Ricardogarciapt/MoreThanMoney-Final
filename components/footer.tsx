@@ -1,6 +1,5 @@
 import Link from "next/link"
-import { SITE_LOGO_PATH } from "@/lib/site-logo"
-import Image from "next/image"
+import { SiteLogo } from "@/components/site-logo"
 import { Facebook, Instagram, Twitter, Youtube, Mail, MapPin, FileText, Lock, ExternalLink } from "lucide-react"
 
 export default function Footer() {
@@ -11,12 +10,11 @@ export default function Footer() {
           {/* Logo e Descrição */}
           <div className="space-y-4">
             <Link href="/new-landing" className="inline-block group">
-              <Image 
-                src={SITE_LOGO_PATH} 
-                alt="MoreThanMoney Logo" 
-                width={512} 
-                height={512} 
-                className="h-12 w-auto transition-transform group-hover:scale-105" 
+              <SiteLogo
+                width={48}
+                height={48}
+                className="h-12 w-auto transition-transform group-hover:scale-105"
+                alt="MoreThanMoney Logo"
               />
             </Link>
             <p className="text-gray-400 text-sm leading-relaxed">

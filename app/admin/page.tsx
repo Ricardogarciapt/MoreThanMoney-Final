@@ -17,7 +17,6 @@ import NotificationsManager from "@/components/admin/notifications-manager"
 import ThemeManager from "@/components/admin/theme-manager"
 import SettingsManager from "@/components/admin/settings-manager"
 import LiveSessionsManager from "@/components/admin/live-sessions-manager"
-import MTMcopierManager from "@/components/admin/mtmcopier-manager"
 import { MessageCircle } from "lucide-react"
 
 function CreateDefaultGroupsButton({
@@ -84,7 +83,6 @@ function AdminPageClient() {
     "users",
     "content",
     "education",
-    "copygram",
     "notifications",
     "settings",
   ])
@@ -128,14 +126,21 @@ function AdminPageClient() {
     checkAdminAccess()
   }, [mounted, authLoading, user, checkAdminAccess, router])
 
+  const highlightUserId = searchParams.get("userId")
+  const skoolPendingFilter = searchParams.get("filter") === "skool_pending"
+
   // Permite abrir secções por URL: /admin?tab=users | etc.
   useEffect(() => {
     const tab = searchParams.get("tab")
     if (!tab) return
+    if (tab === "copygram") {
+      router.replace("/admin/mtmcopy")
+      return
+    }
     if (validSections.has(tab)) {
       setActiveSection(tab)
     }
-  }, [searchParams])
+  }, [searchParams, router])
 
   const handleSectionChange = useCallback(
     (sectionId: string) => {
@@ -241,7 +246,11 @@ function AdminPageClient() {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-b from-black via-zinc-950 to-black text-white">
-      <AdminSidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
+      <AdminSidebar
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
+        skoolPendingCount={stats?.skool_pending_stripe ?? 0}
+      />
 
       <main className="flex-1 overflow-auto">
         <div className="border-b border-[#D2A63C]/15 bg-black/40 px-6 py-4 backdrop-blur-sm">
@@ -251,7 +260,6 @@ function AdminPageClient() {
               {activeSection === "users" && "Utilizadores"}
               {activeSection === "content" && "Conteúdo"}
               {activeSection === "education" && "Educação / LMS"}
-              {activeSection === "copygram" && "MTMcopier · Telegram → MT5"}
               {activeSection === "notifications" && "Notificações"}
               {activeSection === "settings" && "Configurações"}
             </h1>
@@ -284,6 +292,8 @@ function AdminPageClient() {
                     users={users}
                     onRefresh={fetchUsers}
                     onApprove={handleApproveUser}
+                    highlightUserId={highlightUserId}
+                    initialSkoolPendingFilter={skoolPendingFilter}
                   />
                 </div>
               </section>
@@ -312,22 +322,6 @@ function AdminPageClient() {
                 </div>
                 <div className="p-6">
                   <ContentConfigManager />
-                </div>
-              </section>
-            </div>
-          )}
-
-          {activeSection === "copygram" && (
-            <div className="space-y-6">
-              <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
-                <div className="border-b border-[#D2A63C]/15 px-6 py-4">
-                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Ligações MTMcopier</h2>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Gere todas as ligações Telegram → MT5 dos utilizadores. Atualiza estados, associa conta MetaAPI e regista erros.
-                  </p>
-                </div>
-                <div className="p-6">
-                  <MTMcopierManager />
                 </div>
               </section>
             </div>

@@ -6,6 +6,7 @@ import {
   isSubscriptionCategory,
   subscriptionDaysRemaining,
 } from "@/lib/member-subscription"
+import { clearSkoolAccessPending } from "@/lib/stripe-skool-admin"
 
 const supabase = getSupabaseAdmin()
 
@@ -65,6 +66,11 @@ export async function GET(request: NextRequest) {
     const subscriptionPlatform = searchParams.get("subscription_platform")
     if (subscriptionPlatform) {
       query = query.eq("subscription_platform", subscriptionPlatform)
+    }
+
+    const skoolPending = searchParams.get("skool_pending")
+    if (skoolPending === "true") {
+      query = query.eq("profile_data->>skool_access_pending", "true")
     }
 
     if (q.length >= 2) {
@@ -148,14 +154,21 @@ export async function GET(request: NextRequest) {
     }
     
     // Combinar dados
-    const dataWithXPAndProgress = data.map((user) => ({
-      ...user,
-      xp: xpMap.get(user.id) || { total_xp: 0, level: 1 },
-      fast_start: fastStartMap.get(user.id) || { progress_percent: 0, steps_completed: 0 },
-      subscription_days_remaining: isSubscriptionCategory(user.member_category)
-        ? subscriptionDaysRemaining(user.subscription_expires_at)
-        : null,
-    }))
+    const dataWithXPAndProgress = data.map((user) => {
+      const profileData =
+        user.profile_data && typeof user.profile_data === "object"
+          ? (user.profile_data as Record<string, unknown>)
+          : {}
+      return {
+        ...user,
+        skool_access_pending: profileData.skool_access_pending === true,
+        xp: xpMap.get(user.id) || { total_xp: 0, level: 1 },
+        fast_start: fastStartMap.get(user.id) || { progress_percent: 0, steps_completed: 0 },
+        subscription_days_remaining: isSubscriptionCategory(user.member_category)
+          ? subscriptionDaysRemaining(user.subscription_expires_at)
+          : null,
+      }
+    })
 
     const duration = Date.now() - startTime
 
@@ -280,6 +293,7 @@ export async function PATCH(request: NextRequest) {
       subscription_expires_at_custom,
       add_days,
       cancel_subscription,
+      mark_skool_granted,
     } = body
 
     // Validação
@@ -293,6 +307,21 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ 
         error: 'userId deve ser um UUID válido' 
       }, { status: 400 })
+    }
+
+    if (mark_skool_granted === true) {
+      await clearSkoolAccessPending(supabase, userId)
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single()
+
+      if (error || !data) {
+        return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 })
+      }
+
+      return NextResponse.json({ success: true, data })
     }
 
     // Validar user_type se fornecido (inactive = conta bloqueada; affiliate legado)

@@ -50,7 +50,7 @@ import {
   markChannelRead,
   isChannelUnread,
 } from "./chat-channel-meta"
-import { shouldReduceSafariEffects } from "@/lib/supabase-session"
+import { shouldReduceSafariEffects, waitForSupabaseSession } from "@/lib/supabase-session"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -104,26 +104,6 @@ interface ChatMessage {
 }
 
 // ─── Derived permissions (lib/chat-channel-permissions.ts) ───────────────────
-
-/** iOS/WKWebView: a sessão pode demorar — RLS dos chats exige auth.uid(). */
-async function waitForSupabaseSession(timeoutMs = 5000): Promise<boolean> {
-  const started = Date.now()
-  while (Date.now() - started < timeoutMs) {
-    try {
-      const { data: { session } } = await Promise.race([
-        supabase.auth.getSession(),
-        new Promise<{ data: { session: null } }>((resolve) =>
-          setTimeout(() => resolve({ data: { session: null } }), 1200),
-        ),
-      ])
-      if (session?.access_token) return true
-    } catch {
-      /* retry */
-    }
-    await new Promise((r) => setTimeout(r, 250))
-  }
-  return false
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -558,7 +538,10 @@ function AttachSheet({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end"
-      style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)" }}
+      style={{
+        backgroundColor: shouldReduceSafariEffects() ? "rgba(0,0,0,0.85)" : "rgba(0,0,0,0.55)",
+        backdropFilter: shouldReduceSafariEffects() ? undefined : "blur(3px)",
+      }}
     >
       <button type="button" className="absolute inset-0" onClick={onClose} aria-label="Fechar" />
       <div
@@ -622,8 +605,9 @@ function MessageBubble({
 }) {
   const isTelegram = msg.message_type === "telegram_forward"
   const isVideo = msg.message_type === "video"
+  const liteMode = shouldReduceSafariEffects()
   const inlineUrl =
-    !msg.link_preview && !msg.link_url ? extractFirstUrl(msg.content || "") : null
+    !liteMode && !msg.link_preview && !msg.link_url ? extractFirstUrl(msg.content || "") : null
 
   // ── Swipe gesture state ───────────────────────────────────────────────────
   const touchStartX = useRef(0)
@@ -643,9 +627,10 @@ function MessageBubble({
     ...((isOwn || isAdmin) ? [{ key: "delete", Icon: Trash2, color: "#F87171" }] : []),
   ]
   // Width: 8px padding + n×40px buttons + (n-1)×6px gaps + 6px right buffer
-  const TRAY_W = trayItems.length > 0
-    ? 14 + trayItems.length * 40 + (trayItems.length - 1) * 6
-    : 0
+  const TRAY_W =
+    liteMode || trayItems.length === 0
+      ? 0
+      : 14 + trayItems.length * 40 + (trayItems.length - 1) * 6
   const SNAP_THRESHOLD = TRAY_W * 0.5
 
   // ── Touch handlers ────────────────────────────────────────────────────────
@@ -847,12 +832,20 @@ function MessageBubble({
                   src={msg.image_url}
                   controls
                   playsInline
+                  preload="metadata"
                   className="rounded-xl max-w-full mb-1 bg-black"
-                  style={{ maxHeight: 240 }}
+                  style={{ maxHeight: liteMode ? 180 : 240 }}
                 />
               ) : msg.image_url ? (
                 <a href={msg.image_url} target="_blank" rel="noopener noreferrer">
-                  <img src={msg.image_url} alt="Imagem" className="rounded-xl max-w-full mb-1" style={{ maxHeight: 200 }} />
+                  <img
+                    src={msg.image_url}
+                    alt="Imagem"
+                    loading="lazy"
+                    decoding="async"
+                    className="rounded-xl max-w-full mb-1"
+                    style={{ maxHeight: liteMode ? 160 : 200 }}
+                  />
                 </a>
               ) : null}
               {msg.content && (
@@ -875,7 +868,7 @@ function MessageBubble({
   )
 }
 
-const CHAT_MESSAGE_SELECT = `
+const CHAT_MESSAGE_SELECT_FULL = `
   *,
   profile:profiles!chat_messages_user_id_profiles_fkey(full_name, avatar_url, user_type, member_category),
   reply_to_message:chat_messages!reply_to_id(
@@ -883,6 +876,21 @@ const CHAT_MESSAGE_SELECT = `
     profile:profiles!chat_messages_user_id_profiles_fkey(full_name, avatar_url, user_type, member_category)
   )
 `
+
+/** Safari: select mais leve — evita stack overflow em canais de trades com muitas mensagens. */
+const CHAT_MESSAGE_SELECT_LITE = `
+  *,
+  profile:profiles!chat_messages_user_id_profiles_fkey(full_name, avatar_url, user_type, member_category),
+  reply_to_message:chat_messages!reply_to_id(content, image_url, message_type, telegram_sender)
+`
+
+function chatMessageSelect() {
+  return shouldReduceSafariEffects() ? CHAT_MESSAGE_SELECT_LITE : CHAT_MESSAGE_SELECT_FULL
+}
+
+function chatPageSize() {
+  return shouldReduceSafariEffects() ? 25 : 60
+}
 
 // ─── Channel View ─────────────────────────────────────────────────────────────
 
@@ -920,7 +928,9 @@ function ChannelView({
   const videoInputRef = useRef<HTMLInputElement>(null)
   const previewTimer = useRef<NodeJS.Timeout | null>(null)
   const isNearBottomRef = useRef(true)
-  const PAGE_SIZE = 60
+  const messagesRef = useRef<ChatMessage[]>([])
+  const PAGE_SIZE = chatPageSize()
+  const liteMode = shouldReduceSafariEffects()
 
   // Lock parent scroll container so only the message list scrolls
   useEffect(() => {
@@ -981,8 +991,8 @@ function ChannelView({
 
   const fetchMessages = useCallback(async () => {
     setMessagesError(null)
-    const sessionOk = await waitForSupabaseSession()
-    if (!sessionOk) {
+    const token = await waitForSupabaseSession()
+    if (!token) {
       setMessagesError("Sessão indisponível. Fecha e abre o chat ou faz login novamente.")
       setLoading(false)
       return
@@ -990,7 +1000,7 @@ function ChannelView({
 
     const { data, error } = await supabase
       .from("chat_messages")
-      .select(CHAT_MESSAGE_SELECT)
+      .select(chatMessageSelect())
       .eq("channel_slug", channel.slug)
       .eq("is_deleted", false)
       .order("created_at", { ascending: false })
@@ -1018,7 +1028,7 @@ function ChannelView({
     const oldest = messages[0]?.created_at
     const { data, error } = await supabase
       .from("chat_messages")
-      .select(CHAT_MESSAGE_SELECT)
+      .select(chatMessageSelect())
       .eq("channel_slug", channel.slug)
       .eq("is_deleted", false)
       .lt("created_at", oldest)
@@ -1035,6 +1045,10 @@ function ChannelView({
   }
 
   useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
+
+  useEffect(() => {
     setLoading(true)
     setMessages([])
     setHasMore(false)
@@ -1043,7 +1057,7 @@ function ChannelView({
     fetchMessages()
   }, [fetchMessages])
 
-  const liteScroll = shouldReduceSafariEffects()
+  const liteScroll = liteMode
 
   const scrollToBottom = (smooth = true) => {
     const behavior = smooth && !liteScroll ? "smooth" : "auto"
@@ -1072,64 +1086,92 @@ function ChannelView({
     }
   }, [messages.length, liteScroll])
 
-  // ── Realtime ──────────────────────────────────────────────────────────────
+  // ── Realtime (Chrome) / polling (Safari — evita CLOSED e bloqueios) ───────
 
   useEffect(() => {
     let tornDown = false
+    let pollTimer: ReturnType<typeof setInterval> | null = null
+
+    const appendMessage = (normalized: ChatMessage) => {
+      setMessages((prev) => {
+        if (prev.find((m) => m.id === normalized.id)) return prev
+        if (!isNearBottomRef.current) setPendingNew((n) => n + 1)
+        return [...prev, normalized]
+      })
+      if (isNearBottomRef.current) markChannelRead(channel.slug)
+    }
+
+    const pollNewMessages = async () => {
+      if (tornDown) return
+      const current = messagesRef.current
+      const lastAt = current[current.length - 1]?.created_at
+      if (!lastAt) return
+
+      const { data } = await supabase
+        .from("chat_messages")
+        .select(chatMessageSelect())
+        .eq("channel_slug", channel.slug)
+        .eq("is_deleted", false)
+        .gt("created_at", lastAt)
+        .order("created_at", { ascending: true })
+        .limit(20)
+
+      if (!data?.length || tornDown) return
+      for (const row of data as unknown as ChatMessage[]) {
+        appendMessage(normalizeChatMessage(row))
+      }
+    }
+
+    if (liteMode) {
+      pollTimer = setInterval(() => {
+        void pollNewMessages()
+      }, 20000)
+      return () => {
+        tornDown = true
+        if (pollTimer) clearInterval(pollTimer)
+      }
+    }
+
     const realtimeChannel = supabase.channel(`chat:${channel.slug}`)
 
     realtimeChannel.on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "chat_messages",
-          filter: `channel_slug=eq.${channel.slug}`,
-        },
-        async (payload: { new: Record<string, unknown> }) => {
-          if (tornDown) return
-          const { data } = await supabase
-            .from("chat_messages")
-            .select(
-              `
-              *,
-              profile:profiles!chat_messages_user_id_profiles_fkey(full_name, avatar_url, user_type, member_category),
-              reply_to_message:chat_messages!reply_to_id(
-                content, image_url,
-                profile:profiles!chat_messages_user_id_profiles_fkey(full_name, avatar_url, user_type, member_category)
-              )
-            `
-            )
-            .eq("id", payload.new.id)
-            .single()
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "chat_messages",
+        filter: `channel_slug=eq.${channel.slug}`,
+      },
+      async (payload: { new: Record<string, unknown> }) => {
+        if (tornDown) return
+        const { data } = await supabase
+          .from("chat_messages")
+          .select(chatMessageSelect())
+          .eq("id", payload.new.id as string)
+          .single()
 
-          if (data) {
-            const normalized = normalizeChatMessage(data as unknown as ChatMessage)
-            setMessages((prev) => {
-              if (prev.find((m) => m.id === normalized.id)) return prev
-              const next = [...prev, normalized]
-              if (!isNearBottomRef.current) {
-                setPendingNew((n) => n + 1)
-              }
-              return next
-            })
-            if (isNearBottomRef.current) {
-              markChannelRead(channel.slug)
-            }
-          }
+        if (data) appendMessage(normalizeChatMessage(data as unknown as ChatMessage))
+      }
+    )
+
+    realtimeChannel.subscribe((status: string) => {
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        if (!pollTimer && !tornDown) {
+          pollTimer = setInterval(() => void pollNewMessages(), 20000)
         }
-      )
-    realtimeChannel.subscribe()
+      }
+    })
 
     return () => {
       tornDown = true
+      if (pollTimer) clearInterval(pollTimer)
       try {
         void realtimeChannel.unsubscribe()
       } catch {
         /* ignore */
       }
     }
-  }, [channel.slug])
+  }, [channel.slug, liteMode])
 
   // ── Link preview detection ────────────────────────────────────────────────
 
@@ -1668,7 +1710,10 @@ function BrokerUidModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end"
-      style={{ backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+      style={{
+        backgroundColor: shouldReduceSafariEffects() ? "rgba(0,0,0,0.92)" : "rgba(0,0,0,0.7)",
+        backdropFilter: shouldReduceSafariEffects() ? undefined : "blur(4px)",
+      }}
     >
       <div
         className="w-full bg-gray-900 rounded-t-3xl overflow-hidden shadow-2xl"
@@ -2044,8 +2089,8 @@ export default function ChatChannels() {
       setLoading(true)
       setError(null)
 
-      const sessionOk = await waitForSupabaseSession()
-      if (!sessionOk) {
+      const token = await waitForSupabaseSession()
+      if (!token) {
         setError("Sessão indisponível. Fecha a app e abre novamente.")
         setLoading(false)
         return

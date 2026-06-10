@@ -10,7 +10,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
  * Funcionalidades:
  * 1. Analisa oportunidades DCA via /api/portfolio/dca-smart
  * 2. Filtra apenas "Forte Compra" e "Compra" (desconto ≥10%)
- * 3. Cria post automático no feed social
+ * 3. Publica análise no canal #Cripto (chat_messages)
  * 4. Envia notificação push para todos os membros
  */
 
@@ -135,29 +135,34 @@ export async function GET(request: NextRequest) {
     postContent += `⚡ **Estratégia DCA MoreThanMoney**\n`
     postContent += `🌟 Together We Go Further\n`
     postContent += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`
-    postContent += `📱 Vê os detalhes completos em /portfolios`
+    postContent += `📱 Vê o portfólio completo em /portfolios`
 
-    // Criar post no Supabase
+    const DCA_CHANNEL_SLUG = 'cripto'
+
     const supabase = getSupabaseAdmin()
     const systemUserId = await resolveSystemUserId(supabase)
 
-    const { data: newPost, error: postError } = await supabase
-      .from('social_posts')
+    const { data: newMessage, error: messageError } = await supabase
+      .from('chat_messages')
       .insert({
+        channel_slug: DCA_CHANNEL_SLUG,
         user_id: systemUserId,
         content: postContent,
         image_url: null,
-        video_url: null
+        link_url: null,
+        link_preview: null,
+        message_type: 'text',
+        reply_to_id: null,
       })
-      .select()
+      .select('id, channel_slug, created_at')
       .single()
 
-    if (postError) {
-      console.error('❌ [CRON DCA POST] Erro ao criar post:', postError)
-      throw new Error(postError.message || 'Erro ao criar post social')
+    if (messageError) {
+      console.error('❌ [CRON DCA POST] Erro ao publicar no canal Cripto:', messageError)
+      throw new Error(messageError.message || 'Erro ao publicar no canal Cripto')
     }
 
-    console.log('✅ [CRON DCA POST] Post criado com sucesso!')
+    console.log(`✅ [CRON DCA POST] Mensagem publicada em #${DCA_CHANNEL_SLUG}!`)
 
     // Enviar notificação push para todos os membros
     const { data: allUsers } = await supabase
@@ -165,10 +170,10 @@ export async function GET(request: NextRequest) {
       .select('id')
 
     if (allUsers && allUsers.length > 0) {
-      const notificationTitle = `🚀 ${goodOpportunities.length} Oportunidades DCA Hoje!`
+      const notificationTitle = `₿ ${goodOpportunities.length} Oportunidades DCA em #Cripto`
       const notificationBody = strongBuys.length > 0
-        ? `💎 ${strongBuys.length} FORTE COMPRA disponível! Toca para ver detalhes.`
-        : `🔵 ${buys.length} ativos em boa posição de compra.`
+        ? `💎 ${strongBuys.length} FORTE COMPRA — abre o canal Cripto para ver a análise.`
+        : `🔵 ${buys.length} ativos em boa posição de compra no canal Cripto.`
 
       // Criar notificações para cada usuário
       const notifications = allUsers.map(user => ({
@@ -179,6 +184,8 @@ export async function GET(request: NextRequest) {
         data: {
           opportunities: goodOpportunities.length,
           strong_buys: strongBuys.length,
+          channel: DCA_CHANNEL_SLUG,
+          url: '/app-mobile?tab=chat',
           total_investment: goodOpportunities.reduce((sum: number, o: any) => sum + o.suggested_amount, 0)
         }
       }))
@@ -204,7 +211,8 @@ export async function GET(request: NextRequest) {
             body: notificationBody,
             data: {
               type: 'dca_daily',
-              url: '/portfolios',
+              url: '/app-mobile?tab=chat',
+              channel: DCA_CHANNEL_SLUG,
               opportunities: String(goodOpportunities.length),
             }
           })
@@ -217,8 +225,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Post DCA criado e notificações enviadas',
-      post_id: newPost.id,
+      message: 'Análise DCA publicada no canal Cripto e notificações enviadas',
+      message_id: newMessage.id,
+      channel: DCA_CHANNEL_SLUG,
       opportunities: goodOpportunities.length,
       strong_buys: strongBuys.length,
       total_users_notified: allUsers?.length || 0

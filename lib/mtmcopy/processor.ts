@@ -42,13 +42,22 @@ import { formatExecutionDetail, logProviderSignalEvent } from './signal-log'
 import {
   applyValidationToSignal,
   formatAiValidationDetail,
-  MTMCOPY_AI_MIN_CONFIDENCE,
   shouldExecuteSignal,
   validateSignalWithAi,
   type AiSignalValidation,
 } from './signal-ai-validator'
 import type { MTMcopierConnection } from './types'
 import type { OrderRequest } from './metaapi'
+import {
+  applySymbolFromProfile,
+  getAiMinConfidence,
+  isWithinTradingSchedule,
+  mtCommentForProfile,
+  resolveLotForSymbol,
+  resolveSlTpForSignal,
+  shouldExecuteForProfile,
+  shouldSkipSymbolForProfile,
+} from './provider-profile-apply'
 
 export interface TelegramMessage {
   message_id?: number
@@ -238,27 +247,28 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
     `[mtmcopy] ${enriched.symbol} ${enriched.direction} · ${channel} · ${aiDetail} · ${validation.latencyMs.toFixed(0)}ms`,
   )
 
-  if (!shouldExecuteSignal(validation)) {
-    await logProviderSignalEvent({
-      channel,
-      provider: mtmProvider,
-      signal: enriched,
-      raw: text,
-      telegramMessageId: message.message_id,
-      status: 'skipped',
-      detail: `${aiDetail} · confiança < ${Math.round(MTMCOPY_AI_MIN_CONFIDENCE * 100)}%`,
-    })
-    return
-  }
-
   if (mtmProvidersPreview.length) {
-    for (const mtmProvider of mtmProvidersPreview) {
+    for (const prov of mtmProvidersPreview) {
+      const routeProfile = await getProviderExecutionProfile(channel, prov.execution)
+      if (!shouldExecuteForProfile(validation, routeProfile)) {
+        const minPct = Math.round(getAiMinConfidence(routeProfile) * 100)
+        await logProviderSignalEvent({
+          channel,
+          provider: prov,
+          signal: enriched,
+          raw: text,
+          telegramMessageId: message.message_id,
+          status: 'skipped',
+          detail: `${aiDetail} · confiança < ${minPct}%`,
+        })
+        continue
+      }
       await executeViaMtmProvider(
         subscribers.length ? subscribers : matchedConnections,
         enriched,
         text,
         message.message_id,
-        mtmProvider,
+        prov,
         channel,
         validation,
       )
@@ -267,6 +277,10 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
   }
 
   if (!subscribers.length) return
+
+  if (!shouldExecuteSignal(validation)) {
+    return
+  }
 
   for (const conn of subscribers) {
     await processSignalDirect(conn, enriched, text, message.message_id, validation)
@@ -452,28 +466,85 @@ async function executeViaMtmProvider(
     return
   }
 
-  const providerConn = await buildProviderConnection(channel, provider.execution)
   const executionProfile = await getProviderExecutionProfile(channel, provider.execution)
+
+  if (!isWithinTradingSchedule(executionProfile)) {
+    await logProviderSignalEvent({
+      channel,
+      provider,
+      signal,
+      raw,
+      telegramMessageId,
+      status: 'skipped',
+      detail: 'Fora do horário de trading configurado',
+    })
+    return
+  }
+
+  const mappedSymbol = applySymbolFromProfile(signal.symbol!, executionProfile)
+  const skipSymbol = shouldSkipSymbolForProfile(mappedSymbol, executionProfile)
+  if (skipSymbol) {
+    await logProviderSignalEvent({
+      channel,
+      provider,
+      signal: { ...signal, symbol: mappedSymbol },
+      raw,
+      telegramMessageId,
+      status: 'skipped',
+      detail: skipSymbol,
+    })
+    return
+  }
+
+  const slTp = resolveSlTpForSignal(signal, executionProfile)
+  if (slTp.skipReason) {
+    await logProviderSignalEvent({
+      channel,
+      provider,
+      signal: { ...signal, symbol: mappedSymbol },
+      raw,
+      telegramMessageId,
+      status: 'skipped',
+      detail: slTp.skipReason,
+    })
+    return
+  }
+
+  const signalForExec = {
+    ...signal,
+    symbol: mappedSymbol,
+    sl: slTp.sl,
+    tp: slTp.tp != null ? [slTp.tp, ...signal.tp.slice(1)] : signal.tp,
+    direction: executionProfile.reverse_signals
+      ? signal.direction === 'buy'
+        ? ('sell' as const)
+        : ('buy' as const)
+      : signal.direction,
+  }
+
+  const providerConn = await buildProviderConnection(channel, provider.execution)
   const executionSummary = formatExecutionSummary(executionProfile)
   const balance = await getAccountBalance(provider.accountId)
-  const totalLot = computeLotSize(providerConn, signal, balance)
+  let totalLot = computeLotSize(providerConn, signalForExec, balance)
+  totalLot = resolveLotForSymbol(mappedSymbol, totalLot, executionProfile)
+  const mtComment = mtCommentForProfile(executionProfile, provider.tag)
   const lotFallbackNote =
     providerConn.lot_mode === 'risk_percent' &&
     totalLot <= 0.01 &&
-    (!balance || !signal.sl)
-      ? ` · fallback 0.01${!signal.sl ? ' (sem SL no sinal)' : ''}${!balance ? ' (saldo indisponível)' : ''}`
+    (!balance || !signalForExec.sl)
+      ? ` · fallback 0.01${!signalForExec.sl ? ' (sem SL no sinal)' : ''}${!balance ? ' (saldo indisponível)' : ''}`
       : ''
   const logTargets = await resolveLogTargets(subscribers)
 
   const isPremium = channel === 'premium-signals'
-  const legs = isPremium ? buildPremiumExitLegs(signal, totalLot) : null
+  const legs = isPremium ? buildPremiumExitLegs(signalForExec, totalLot) : null
 
   type LegResult = { success: boolean; orderId?: string; brokerSymbol?: string; error?: string; label: string; lot: number }
   const results: LegResult[] = []
 
   if (legs?.length) {
     for (const leg of legs) {
-      const req = buildOrderRequest(providerConn, provider.accountId, signal, leg.lot, `${provider.tag}-${leg.label}`)
+      const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, leg.lot, `${mtComment}-${leg.label}`)
       req.takeProfit = leg.tpPrice
       if (leg.trailing) req.trailingStop = leg.trailing
       const r = await placeOrder(req)
@@ -484,14 +555,14 @@ async function executeViaMtmProvider(
       })
     }
   } else {
-    const req = buildOrderRequest(providerConn, provider.accountId, signal, totalLot, provider.tag)
+    const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
     if (channel === 'trade-ideas') {
       req.trailingStop = { mode: 'pips', pips: TRADE_IDEAS_TRAILING_PIPS }
     }
     const r = await placeOrder(req)
     results.push({
       ...r,
-      label: signal.orderType === 'limit' ? 'LIMIT' : 'MARKET',
+      label: signalForExec.orderType === 'limit' ? 'LIMIT' : 'MARKET',
       lot: totalLot,
     })
   }
@@ -500,14 +571,14 @@ async function executeViaMtmProvider(
   const anySuccess = results.some((r) => r.success)
   const orderLabel = legs?.length
     ? `${legs.length} exits · ${results.filter((r) => r.success).length} OK`
-    : signal.orderType === 'limit' && signal.entry != null
-      ? `LIMIT @ ${signal.entry}`
+    : signalForExec.orderType === 'limit' && signalForExec.entry != null
+      ? `LIMIT @ ${signalForExec.entry}`
       : 'MARKET'
 
   await logProviderSignalEvent({
     channel,
     provider,
-    signal,
+    signal: signalForExec,
     raw,
     telegramMessageId,
     lot: totalLot,
@@ -517,12 +588,12 @@ async function executeViaMtmProvider(
   })
 
   for (const conn of logTargets) {
-    if (conn.symbols_whitelist?.length && !conn.symbols_whitelist.includes(signal.symbol!)) {
+    if (conn.symbols_whitelist?.length && !conn.symbols_whitelist.includes(signalForExec.symbol!)) {
       await logMtmcopySignal({
         user_id: conn.user_id,
         connection_id: conn.id,
-        symbol: signal.symbol,
-        direction: signal.direction,
+        symbol: signalForExec.symbol,
+        direction: signalForExec.direction,
         status: 'skipped',
         detail: 'Símbolo fora da whitelist',
         raw_message: raw,
@@ -531,10 +602,10 @@ async function executeViaMtmProvider(
     }
 
     const direction = conn.reverse_signals
-      ? signal.direction === 'buy'
+      ? signalForExec.direction === 'buy'
         ? 'sell'
         : 'buy'
-      : signal.direction!
+      : signalForExec.direction!
 
     const trailingNote = conn.auto_trailing_stop
       ? ` · trailing ${trailingPointsForConnection(conn)}pts`
@@ -545,11 +616,11 @@ async function executeViaMtmProvider(
       connection_id: conn.id,
       channel_key: channel,
       telegram_message_id: telegramMessageId ?? null,
-      symbol: signal.symbol,
+      symbol: signalForExec.symbol,
       direction,
-      entry: signal.entry,
-      sl: signal.sl,
-      tp: signal.tp[0] ?? null,
+      entry: signalForExec.entry,
+      sl: signalForExec.sl,
+      tp: signalForExec.tp[0] ?? null,
       lot: totalLot,
       status: anySuccess ? 'executed' : 'error',
       detail: anySuccess
@@ -567,13 +638,13 @@ async function executeViaMtmProvider(
     })
   }
 
-  if (anySuccess && signal.orderType !== 'limit' && channel === 'trade-ideas') {
-    void applyTrailingToCopyFactorySlaves(logTargets, signal.symbol!)
+  if (anySuccess && signalForExec.orderType !== 'limit' && channel === 'trade-ideas') {
+    void applyTrailingToCopyFactorySlaves(logTargets, signalForExec.symbol!)
   }
 
   console.log(
     anySuccess
-      ? `[mtmcopy] ✅ ${provider.tag} ${result.brokerSymbol} ${signal.direction} ${totalLot} ${orderLabel} (${executionSummary}) → ${logTargets.length} slave(s)`
+      ? `[mtmcopy] ✅ ${provider.tag} ${result.brokerSymbol} ${signalForExec.direction} ${totalLot} ${orderLabel} (${executionSummary}) → ${logTargets.length} slave(s)`
       : `[mtmcopy] ❌ ${provider.tag}: ${result.error}`,
   )
 }

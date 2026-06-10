@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
       { count: pendingUsers, error: pendingUsersError },
       { count: totalMembers, error: totalMembersError },
       { data: content, error: contentError },
-      { data: activity, error: activityError }
+      { data: activity, error: activityError },
+      { count: skoolPendingStripe, error: skoolPendingError }
     ] = await Promise.all([
       // Total de utilizadores
       supabase
@@ -64,7 +65,12 @@ export async function GET(request: NextRequest) {
           .limit(50)
           .then(result => result)
           .catch(() => ({ data: null, error: { message: 'Table does not exist' } }))
-      })()
+      })(),
+
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('profile_data->>skool_access_pending', 'true')
     ])
 
     // Tratamento de erros
@@ -85,6 +91,10 @@ export async function GET(request: NextRequest) {
       console.warn('⚠️ [ADMIN STATS] Aviso ao buscar atividade:', activityError.message)
     }
 
+    if (skoolPendingError) {
+      console.warn('⚠️ [ADMIN STATS] Aviso ao contar Skool pendente:', skoolPendingError.message)
+    }
+
     const contentRows = Array.isArray(content) ? content : []
     const activityRows = Array.isArray(activity) ? activity : []
 
@@ -96,6 +106,7 @@ export async function GET(request: NextRequest) {
       total_content: contentRows.length,
       active_content: contentRows.filter((c: { is_active?: boolean }) => c.is_active).length,
       recent_activity: activityRows,
+      skool_pending_stripe: skoolPendingStripe || 0,
     }
 
     const duration = Date.now() - startTime

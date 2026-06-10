@@ -3,13 +3,12 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { createPortal } from "react-dom"
 import Link from "next/link"
-import Image from "next/image"
+import { SiteLogo } from "@/components/site-logo"
 import { usePathname } from "next/navigation"
 import UserDropdown from "@/components/user-dropdown"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
 import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap, Brain } from "lucide-react"
 import { shouldReduceSafariEffects } from "@/lib/supabase-session"
-import { SITE_LOGO_PATH } from "@/lib/site-logo"
 
 type NavSubItem = {
   name: string
@@ -254,13 +253,12 @@ export default function Navbar() {
           <div className="flex justify-between items-center h-16 md:h-20">
             <div className="flex-shrink-0">
               <Link href="/new-landing" className="flex items-center group" onClick={closeMenu}>
-                <Image
-                  src={SITE_LOGO_PATH}
-                  alt="More Than Money"
-                  width={512}
-                  height={512}
+                <SiteLogo
+                  width={56}
+                  height={56}
                   className="h-10 md:h-14 w-auto transition-transform group-hover:scale-105"
                   priority
+                  alt="More Than Money"
                 />
               </Link>
             </div>
@@ -350,12 +348,11 @@ export default function Navbar() {
             <aside className="absolute right-0 top-0 h-full w-[88%] max-w-sm bg-gradient-to-b from-black via-gray-900 to-black border-l border-mtm-primary/30 shadow-2xl shadow-black/60 flex flex-col animate-in slide-in-from-right duration-200">
               <div className="flex items-center justify-between p-4 border-b border-mtm-primary/30">
                 <Link href="/new-landing" onClick={closeMenu}>
-                  <Image
-                    src={SITE_LOGO_PATH}
-                    alt="More Than Money"
-                    width={512}
-                    height={512}
+                  <SiteLogo
+                    width={40}
+                    height={40}
                     className="h-10 w-auto"
+                    alt="More Than Money"
                   />
                 </Link>
                 <button

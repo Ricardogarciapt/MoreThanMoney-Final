@@ -4,9 +4,14 @@ import {
   TELEGRAM_SIGNAL_CHANNELS,
   getSignalSourcesConfig,
   saveSignalSourcesConfig,
+  type MtmcopyChannelProviderConfig,
   type MtmcopySignalSourcesConfig,
   type MtmcopyTelegramChannelKey,
+  type ProviderExecutionProfile,
 } from '@/lib/mtmcopy/signal-sources-config'
+import { DEFAULT_PROVIDER_EXECUTION } from '@/lib/mtmcopy/provider-execution'
+import { normalizeProviderRoutes, syncChannelProvidersFromRoutes } from '@/lib/mtmcopy/provider-routes'
+import type { ProviderRoute } from '@/lib/mtmcopy/signal-sources-config'
 import { MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
 import { CANONICAL_TELEGRAM_CHANNELS } from '@/lib/telegram-channel-ids'
 
@@ -59,11 +64,97 @@ export async function GET(request: NextRequest) {
     enabled: config.enabled_chat_ids.includes(row.chat_id),
   }))
 
+  const provider_routes = normalizeProviderRoutes(config)
+
   return NextResponse.json({
     bot_username: MTMCOPY_BOT_USERNAME(),
-    config,
+    config: { ...config, provider_routes },
+    default_execution: DEFAULT_PROVIDER_EXECUTION,
     sources: [...channelSources, ...discoveredChannels],
   })
+}
+
+function parseExecutionProfile(raw: unknown): ProviderExecutionProfile | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const o = raw as Record<string, unknown>
+  const lot_mode = o.lot_mode
+  if (lot_mode !== 'fixed' && lot_mode !== 'risk_percent' && lot_mode !== 'multiplier') {
+    return undefined
+  }
+  return {
+    lot_mode,
+    lot_value: Number(o.lot_value) || DEFAULT_PROVIDER_EXECUTION.lot_value,
+    max_risk_percent:
+      o.max_risk_percent != null && o.max_risk_percent !== ''
+        ? Number(o.max_risk_percent)
+        : null,
+    copy_sl: o.copy_sl !== false,
+    copy_tp: o.copy_tp !== false,
+    auto_trailing_stop: Boolean(o.auto_trailing_stop),
+    trailing_stop_points: Number(o.trailing_stop_points) || 200,
+    reverse_signals: Boolean(o.reverse_signals),
+    symbols_whitelist: Array.isArray(o.symbols_whitelist)
+      ? o.symbols_whitelist.map(String).filter(Boolean)
+      : null,
+  }
+}
+
+function parseChannelProviders(
+  raw: unknown,
+  current?: MtmcopySignalSourcesConfig['channel_providers'],
+): MtmcopySignalSourcesConfig['channel_providers'] {
+  if (!raw || typeof raw !== 'object') return current
+  const out: NonNullable<MtmcopySignalSourcesConfig['channel_providers']> = { ...current }
+  for (const key of VALID_CHANNELS) {
+    const row = (raw as Record<string, unknown>)[key]
+    if (!row || typeof row !== 'object') continue
+    const r = row as Record<string, unknown>
+    const account_id = typeof r.account_id === 'string' ? r.account_id.trim() : ''
+    if (!account_id) {
+      delete out[key]
+      continue
+    }
+    const cfg: MtmcopyChannelProviderConfig = {
+      account_id,
+      strategy_id: typeof r.strategy_id === 'string' ? r.strategy_id.trim() || null : null,
+      tag: typeof r.tag === 'string' ? r.tag.trim() : undefined,
+    }
+    const execution = parseExecutionProfile(r.execution)
+    if (execution) cfg.execution = execution
+    out[key] = cfg
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
+function parseProviderRoutes(raw: unknown): ProviderRoute[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const routes: ProviderRoute[] = []
+  for (const row of raw) {
+    if (!row || typeof row !== 'object') continue
+    const r = row as Record<string, unknown>
+    const account_id = typeof r.account_id === 'string' ? r.account_id.trim() : ''
+    if (!account_id) continue
+    const id = typeof r.id === 'string' && r.id.trim() ? r.id.trim() : `route-${routes.length + 1}`
+    const sender_channel = r.sender_channel
+    routes.push({
+      id,
+      label: typeof r.label === 'string' ? r.label.trim() : undefined,
+      sender_channel:
+        sender_channel === 'premium-signals' || sender_channel === 'trade-ideas'
+          ? sender_channel
+          : null,
+      sender_chat_id:
+        typeof r.sender_chat_id === 'string' && r.sender_chat_id.trim()
+          ? r.sender_chat_id.trim()
+          : null,
+      account_id,
+      strategy_id: typeof r.strategy_id === 'string' ? r.strategy_id.trim() || null : null,
+      tag: typeof r.tag === 'string' ? r.tag.trim() : undefined,
+      execution: parseExecutionProfile(r.execution),
+      enabled: r.enabled !== false,
+    })
+  }
+  return routes
 }
 
 export async function PUT(request: NextRequest) {
@@ -90,6 +181,21 @@ export async function PUT(request: NextRequest) {
     chatIdSet.add(CANONICAL_TELEGRAM_CHANNELS.premiumSignals.chatId)
   }
 
+  const parsedRoutes =
+    body.provider_routes !== undefined
+      ? parseProviderRoutes(body.provider_routes)
+      : undefined
+
+  const provider_routes =
+    parsedRoutes ??
+    (body.channel_providers !== undefined
+      ? undefined
+      : current.provider_routes)
+
+  const channelFromRoutes = provider_routes
+    ? syncChannelProvidersFromRoutes(provider_routes)
+    : undefined
+
   const next: MtmcopySignalSourcesConfig = {
     enabled_chat_ids: [...chatIdSet],
     enabled_channels: channels,
@@ -101,8 +207,33 @@ export async function PUT(request: NextRequest) {
       body.provider_account_id !== undefined
         ? body.provider_account_id || null
         : current.provider_account_id,
+    provider_routes: provider_routes ?? current.provider_routes,
+    channel_providers:
+      channelFromRoutes ??
+      (body.channel_providers !== undefined
+        ? parseChannelProviders(body.channel_providers, current.channel_providers)
+        : current.channel_providers),
+    provider_execution:
+      body.provider_execution !== undefined
+        ? parseExecutionProfile(body.provider_execution) ?? current.provider_execution
+        : current.provider_execution,
+    provider_execution_profiles: current.provider_execution_profiles,
+  }
+
+  if (next.provider_routes?.length) {
+    next.channel_providers = syncChannelProvidersFromRoutes(next.provider_routes)
+    const first = next.provider_routes.find((r) => r.enabled !== false && r.strategy_id)
+    if (first && !next.provider_strategy_id) {
+      next.provider_strategy_id = first.strategy_id ?? null
+    }
+    if (first && !next.provider_account_id) {
+      next.provider_account_id = first.account_id
+    }
   }
 
   await saveSignalSourcesConfig(next)
-  return NextResponse.json({ success: true, config: next })
+  return NextResponse.json({
+    success: true,
+    config: { ...next, provider_routes: normalizeProviderRoutes(next) },
+  })
 }

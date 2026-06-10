@@ -11,6 +11,24 @@ export type { ProviderExecutionProfile }
 
 export const DEFAULT_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   ...MTM_PROVIDER_EXECUTION_PROFILE,
+  ai_validation_enabled: true,
+  ai_min_confidence: 0.35,
+  sl_option: 'from_room',
+  execute_if_no_sl: true,
+  tp_option: 'from_room',
+  execute_if_no_tp: true,
+  symbol_prefix_suffix_mode: 'auto',
+  symbol_prefix: '',
+  symbol_suffix: '',
+  symbol_mappings: [],
+  mt_comment: null,
+  trading_schedule: { mode: 'always' },
+  copy_close_orders: true,
+  copy_modify_orders: true,
+  close_opposite_positions: false,
+  symbols_execute_only: null,
+  symbols_avoid: null,
+  symbol_lot_exceptions: [],
 }
 
 export function executionProfileToConnectionFields(
@@ -73,6 +91,50 @@ function normalizeProfile(raw: Partial<ProviderExecutionProfile> | undefined): P
     symbols_whitelist: Array.isArray(raw.symbols_whitelist)
       ? raw.symbols_whitelist.map(String).filter(Boolean)
       : null,
+    ai_validation_enabled: raw.ai_validation_enabled ?? base.ai_validation_enabled,
+    ai_min_confidence:
+      raw.ai_min_confidence != null && Number(raw.ai_min_confidence) > 0
+        ? Number(raw.ai_min_confidence)
+        : base.ai_min_confidence,
+    sl_option: raw.sl_option === 'none' ? 'none' : 'from_room',
+    execute_if_no_sl: raw.execute_if_no_sl ?? base.execute_if_no_sl,
+    tp_option: raw.tp_option === 'none' ? 'none' : 'from_room',
+    execute_if_no_tp: raw.execute_if_no_tp ?? base.execute_if_no_tp,
+    symbol_prefix_suffix_mode:
+      raw.symbol_prefix_suffix_mode === 'manual' ? 'manual' : 'auto',
+    symbol_prefix: raw.symbol_prefix ?? base.symbol_prefix,
+    symbol_suffix: raw.symbol_suffix ?? base.symbol_suffix,
+    symbol_mappings: Array.isArray(raw.symbol_mappings)
+      ? raw.symbol_mappings
+          .filter((m) => m?.signal_symbol && m?.platform_symbol)
+          .map((m) => ({
+            signal_symbol: String(m.signal_symbol).trim(),
+            platform_symbol: String(m.platform_symbol).trim(),
+          }))
+      : base.symbol_mappings,
+    mt_comment: raw.mt_comment?.trim() || null,
+    trading_schedule: raw.trading_schedule?.mode === 'custom'
+      ? {
+          mode: 'custom' as const,
+          days: raw.trading_schedule.days,
+          start_hour: raw.trading_schedule.start_hour ?? 0,
+          end_hour: raw.trading_schedule.end_hour ?? 24,
+        }
+      : { mode: 'always' as const },
+    copy_close_orders: raw.copy_close_orders ?? base.copy_close_orders,
+    copy_modify_orders: raw.copy_modify_orders ?? base.copy_modify_orders,
+    close_opposite_positions: Boolean(raw.close_opposite_positions),
+    symbols_execute_only: Array.isArray(raw.symbols_execute_only)
+      ? raw.symbols_execute_only.map(String).filter(Boolean)
+      : null,
+    symbols_avoid: Array.isArray(raw.symbols_avoid)
+      ? raw.symbols_avoid.map(String).filter(Boolean)
+      : null,
+    symbol_lot_exceptions: Array.isArray(raw.symbol_lot_exceptions)
+      ? raw.symbol_lot_exceptions
+          .filter((e) => e?.symbol && Number(e.lot) > 0)
+          .map((e) => ({ symbol: String(e.symbol).trim(), lot: Number(e.lot) }))
+      : base.symbol_lot_exceptions,
   }
 }
 

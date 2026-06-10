@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Shield, Loader2, AlertCircle, Eye, EyeOff, Mail, Lock } from 'lucide-react'
+import { Shield, Loader2, AlertCircle, Eye, EyeOff, Mail, Lock, Tag } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AppMobileLoginPage() {
@@ -17,6 +17,8 @@ export default function AppMobileLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [couponCode, setCouponCode] = useState('')
+  const [showCoupon, setShowCoupon] = useState(false)
   const [iqonicEmail, setIqonicEmail] = useState('')
   const [iqonicPassword, setIqonicPassword] = useState('')
   const [iqonicLoading, setIqonicLoading] = useState(false)
@@ -59,6 +61,14 @@ export default function AppMobileLoginPage() {
     setIsLoading(true)
     setError('')
 
+    if (couponCode.trim()) {
+      const code = couponCode.trim().toUpperCase()
+      sessionStorage.setItem('mtm_coupon', code)
+      if (typeof window !== 'undefined' && (window as any).MTMNative?.postMessage) {
+        ;(window as any).MTMNative.postMessage({ action: 'setCoupon', code })
+      }
+    }
+
     try {
       const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
 
@@ -88,6 +98,13 @@ export default function AppMobileLoginPage() {
 
   const handleGoogleLogin = async () => {
     setError('')
+    if (couponCode.trim()) {
+      const code = couponCode.trim().toUpperCase()
+      sessionStorage.setItem('mtm_coupon', code)
+      if (typeof window !== 'undefined' && (window as any).MTMNative?.postMessage) {
+        ;(window as any).MTMNative.postMessage({ action: 'setCoupon', code })
+      }
+    }
     try {
       const callbackUrl = `${window.location.origin}/auth/callback?redirect=${encodeURIComponent('/app-mobile')}`
       const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -301,6 +318,34 @@ export default function AppMobileLoginPage() {
                   Regista-te aqui
                 </Link>
               </p>
+            </div>
+
+            {/* Coupon Section */}
+            <div className="mt-3 text-center">
+              {!showCoupon ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCoupon(true)}
+                  className="text-xs text-gray-500 hover:text-[#D2A63C] transition-colors"
+                >
+                  Tens um cupão de desconto?
+                </button>
+              ) : (
+                <div className="mt-2">
+                  <div className="relative">
+                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#D2A63C]" />
+                    <Input
+                      type="text"
+                      placeholder="Código de cupão"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value)}
+                      className="pl-9 bg-gray-800 border-gray-700 text-white text-sm uppercase tracking-wider"
+                      autoFocus
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">O desconto será aplicado no registo</p>
+                </div>
+              )}
             </div>
 
             <div className="mt-4 text-center">

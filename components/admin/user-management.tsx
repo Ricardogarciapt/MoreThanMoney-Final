@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -39,6 +40,7 @@ import {
   Calendar,
   Plus,
   TrendingUp,
+  Bot,
 } from "lucide-react"
 import type { UserManagement } from "@/lib/admin-types"
 import {
@@ -71,6 +73,7 @@ function platformInfo(platform?: string | null): { emoji: string; label: string 
   switch (platform) {
     case "app_store": return { emoji: "🍎", label: "App Store" }
     case "skool":     return { emoji: "🏫", label: "Skool" }
+    case "stripe":    return { emoji: "💳", label: "Stripe" }
     case "web":       return { emoji: "🌐", label: "Web" }
     default:          return { emoji: "🔧", label: "Manual" }
   }
@@ -97,6 +100,8 @@ interface UserManagementProps {
   users?: UserManagement[]
   onApprove: (userId: string) => void
   onRefresh?: () => void
+  highlightUserId?: string | null
+  initialSkoolPendingFilter?: boolean
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -105,6 +110,8 @@ export default function UserManagementComponent({
   users: usersProp,
   onApprove,
   onRefresh,
+  highlightUserId,
+  initialSkoolPendingFilter,
 }: UserManagementProps) {
   const { toast } = useToast()
   const [users, setUsers] = useState<UserManagement[]>(usersProp || [])
@@ -136,6 +143,7 @@ export default function UserManagementComponent({
   const [savingExpiry, setSavingExpiry] = useState(false)
   const [savingPlan, setSavingPlan] = useState(false)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [markingSkoolId, setMarkingSkoolId] = useState<string | null>(null)
 
   const [newUser, setNewUser] = useState({
     email: "",
@@ -164,7 +172,11 @@ export default function UserManagementComponent({
       if (filterUserType !== "all") params.set("user_type", filterUserType)
       if (filterCategory !== "all") params.set("member_category", filterCategory)
       if (filterStatus !== "all") params.set("status", filterStatus)
-      if (filterSubscription !== "all") params.set("subscription", filterSubscription)
+      if (filterSubscription === "skool_pending") {
+        params.set("skool_pending", "true")
+      } else if (filterSubscription !== "all") {
+        params.set("subscription", filterSubscription)
+      }
       if (filterPlatform !== "all") params.set("subscription_platform", filterPlatform)
 
       const result = await adminApiCall<{ data?: UserManagement[]; count?: number }>(
@@ -193,8 +205,23 @@ export default function UserManagementComponent({
     }
   }, [debouncedSearch, filterUserType, filterCategory, filterStatus, filterSubscription, filterPlatform, toast])
 
+  useEffect(() => {
+    if (initialSkoolPendingFilter) setFilterSubscription("skool_pending")
+  }, [initialSkoolPendingFilter])
+
   useEffect(() => { loadUsers() }, [loadUsers])
   useEffect(() => { if (usersProp?.length) setUsers(usersProp) }, [usersProp])
+
+  useEffect(() => {
+    if (!highlightUserId) return
+    const timer = setTimeout(() => {
+      document.getElementById(`admin-user-${highlightUserId}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      })
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [highlightUserId, users])
 
   // ─── Stats ───────────────────────────────────────────────────────────────────
 
@@ -212,6 +239,7 @@ export default function UserManagementComponent({
       const d = subscriptionDaysRemaining(u.subscription_expires_at)
       return d !== null && d <= 7
     }).length,
+    skoolPending: users.filter((u) => u.skool_access_pending).length,
   }), [users])
 
   // ─── Shared patch helper ──────────────────────────────────────────────────────
@@ -286,6 +314,18 @@ export default function UserManagementComponent({
   const handleChangeOnboardingPlatform = async (userId: string, platform: "vxa" | "rfg" | null) => {
     const ok = await patchUser(userId, { onboarding_platform: platform })
     if (ok) toast({ title: "Plataforma IQ atualizada" })
+  }
+
+  const handleMarkSkoolGranted = async (userId: string) => {
+    setMarkingSkoolId(userId)
+    const ok = await patchUser(userId, { mark_skool_granted: true })
+    if (ok) {
+      toast({
+        title: "Skool confirmado",
+        description: "Acesso manual registado. Notificações marcadas como lidas.",
+      })
+    }
+    setMarkingSkoolId(null)
   }
 
   // Subscription dialog handlers
@@ -541,6 +581,27 @@ export default function UserManagementComponent({
 
       <CardContent className="space-y-4">
 
+        {stats.skoolPending > 0 && (
+          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100">
+            <p className="font-semibold text-amber-300">
+              🏫 {stats.skoolPending} membro(s) Premium Stripe aguardam acesso manual no Skool
+            </p>
+            <p className="mt-1 text-amber-100/80">
+              Adiciona cada membro no Skool e clica em &quot;Skool OK&quot; na linha correspondente.
+              Também recebes alerta nas notificações do site.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mt-3 border-amber-500/50 text-amber-200 hover:bg-amber-500/20"
+              onClick={() => setFilterSubscription("skool_pending")}
+            >
+              Ver pendentes Skool
+            </Button>
+          </div>
+        )}
+
         {/* ── Stats ── */}
         <div className="flex flex-wrap gap-2 text-xs">
           <Badge variant="outline" className="border-gray-600">
@@ -584,6 +645,11 @@ export default function UserManagementComponent({
           {stats.expiringSoon > 0 && (
             <Badge variant="outline" className="border-orange-500/60 text-orange-300">
               ⚠️ A expirar ≤7d: {stats.expiringSoon}
+            </Badge>
+          )}
+          {stats.skoolPending > 0 && (
+            <Badge variant="outline" className="border-amber-500/60 text-amber-300">
+              🏫 Skool pendente: {stats.skoolPending}
             </Badge>
           )}
         </div>
@@ -647,6 +713,7 @@ export default function UserManagementComponent({
             </SelectTrigger>
             <SelectContent className="bg-gray-900 border-gray-700">
               <SelectItem value="all">Subscrição: todas</SelectItem>
+              <SelectItem value="skool_pending">🏫 Skool pendente (Stripe)</SelectItem>
               <SelectItem value="expiring_soon">⚠️ Expira em 7 dias</SelectItem>
               <SelectItem value="expired">❌ Expirada</SelectItem>
             </SelectContent>
@@ -659,6 +726,7 @@ export default function UserManagementComponent({
               <SelectItem value="all">Plataforma: todas</SelectItem>
               <SelectItem value="app_store">🍎 App Store</SelectItem>
               <SelectItem value="skool">🏫 Skool</SelectItem>
+              <SelectItem value="stripe">💳 Stripe</SelectItem>
               <SelectItem value="web">🌐 Web</SelectItem>
             </SelectContent>
           </Select>
@@ -695,8 +763,19 @@ export default function UserManagementComponent({
                     !!user.subscription_expires_at
                   const pInfo = platformInfo(user.subscription_platform)
 
+                  const isHighlighted = highlightUserId === user.id
+                  const skoolPending = user.skool_access_pending === true
+
                   return (
-                    <tr key={user.id} className="hover:bg-gray-800/40">
+                    <tr
+                      key={user.id}
+                      id={`admin-user-${user.id}`}
+                      className={`hover:bg-gray-800/40 ${
+                        isHighlighted || skoolPending
+                          ? "bg-amber-500/10 ring-1 ring-inset ring-amber-500/40"
+                          : ""
+                      }`}
+                    >
 
                       {/* ── Utilizador ── */}
                       <td className="px-3 py-3 align-top">
@@ -725,6 +804,11 @@ export default function UserManagementComponent({
                           {user.coupon_code && (
                             <Badge className="text-[10px] bg-green-900/30 text-green-300">
                               🎟 {user.coupon_code}
+                            </Badge>
+                          )}
+                          {skoolPending && (
+                            <Badge className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                              🏫 Skool pendente
                             </Badge>
                           )}
                         </div>
@@ -878,6 +962,23 @@ export default function UserManagementComponent({
                       {/* ── Ações ── */}
                       <td className="px-3 py-3 align-top text-right">
                         <div className="flex flex-col items-end gap-2">
+                          {skoolPending && (
+                            <Button
+                              size="sm"
+                              className="bg-amber-600 hover:bg-amber-700 text-white"
+                              disabled={markingSkoolId === user.id}
+                              onClick={() => handleMarkSkoolGranted(user.id)}
+                            >
+                              {markingSkoolId === user.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Skool OK
+                                </>
+                              )}
+                            </Button>
+                          )}
                           {user.user_type === "pending" && (
                             <Button
                               size="sm"
@@ -888,6 +989,17 @@ export default function UserManagementComponent({
                               Aprovar
                             </Button>
                           )}
+                          <Button
+                            asChild
+                            size="sm"
+                            variant="outline"
+                            className="border-[#D2A63C]/40 text-[#D2A63C] hover:bg-[#D2A63C]/10"
+                          >
+                            <Link href={`/admin/mtmcopy?userId=${user.id}`} title="Gestão MTMcopier">
+                              <Bot className="h-4 w-4 mr-1" />
+                              MTMcopier
+                            </Link>
+                          </Button>
                           <Dialog
                             open={isDeleteDialogOpen && selectedUser === user.id}
                             onOpenChange={(open) => {

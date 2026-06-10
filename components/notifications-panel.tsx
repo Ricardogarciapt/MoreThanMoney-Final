@@ -199,6 +199,10 @@ export default function NotificationsPanel({ onClose, className }: Notifications
         return <MessageSquare className="h-4 w-4 text-blue-400" />
       case 'admin_notification':
         return <Bell className="h-4 w-4 text-purple-400" />
+      case 'stripe_skool_pending':
+        return <AlertCircle className="h-4 w-4 text-amber-400" />
+      case 'stripe_skool_revoke':
+        return <AlertCircle className="h-4 w-4 text-red-400" />
       default:
         return <Bell className="h-4 w-4 text-gray-400" />
     }
@@ -231,6 +235,9 @@ export default function NotificationsPanel({ onClose, className }: Notifications
           : '/app-mobile?tab=chat'
       case 'admin_notification':
         return '/member-area?tab=notifications'
+      case 'stripe_skool_pending':
+      case 'stripe_skool_revoke':
+        return notification.data?.url || '/admin?tab=users'
       default:
         return '/member-area?tab=notifications'
     }

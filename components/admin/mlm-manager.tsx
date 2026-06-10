@@ -361,13 +361,21 @@ export default function MlmManager({
     setSelectedIds(new Set())
     await fetchCommissions(commissionFilter)
 
-    if (res.success && action === 'pay' && res.data) {
-      const { transferred = 0, manual = 0, failed = 0 } = res.data
-      const parts = []
-      if (transferred > 0) parts.push(`${transferred} via Stripe Connect`)
-      if (manual > 0) parts.push(`${manual} marcadas manual`)
-      if (failed > 0) parts.push(`${failed} falharam`)
-      setError(failed > 0 ? `Atenção: ${parts.join(' · ')}` : '')
+    if (res.success && res.data) {
+      const data = res.data as {
+        transferred?: number
+        manual?: number
+        failed?: number
+        auto_payout?: boolean
+      }
+      const { transferred = 0, manual = 0, failed = 0, auto_payout } = data
+      if (action === 'pay' || auto_payout) {
+        const parts = []
+        if (transferred > 0) parts.push(`${transferred} via Stripe Connect`)
+        if (manual > 0) parts.push(`${manual} marcadas manual`)
+        if (failed > 0) parts.push(`${failed} falharam`)
+        setError(failed > 0 ? `Atenção: ${parts.join(' · ')}` : '')
+      }
     }
   }
 

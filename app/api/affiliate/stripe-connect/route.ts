@@ -5,19 +5,21 @@
 // POST { action: 'status' }  → verifica estado actual junto ao Stripe e sincroniza
 
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { sanitizeEnv } from '@/lib/env-sanitize'
+import { getStripeClient } from '@/lib/stripe-client'
+import { getSiteOrigin } from '@/lib/site-url'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
+const stripe = getStripeClient()
 const supabaseAdmin = getSupabaseAdmin()
 
 async function getAuthUser() {
   const cookieStore = await cookies()
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    sanitizeEnv(process.env.NEXT_PUBLIC_SUPABASE_URL),
+    sanitizeEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
     {
       cookies: {
         getAll: () => cookieStore.getAll(),
@@ -29,7 +31,7 @@ async function getAuthUser() {
   return user
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt'
+const siteOrigin = () => getSiteOrigin()
 
 export async function GET(request: NextRequest) {
   const user = await getAuthUser()
@@ -129,8 +131,8 @@ export async function POST(request: NextRequest) {
 
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
-      refresh_url: `${BASE_URL}/app-mobile?tab=settings&connect=refresh`,
-      return_url: `${BASE_URL}/app-mobile?tab=settings&connect=success`,
+      refresh_url: `${siteOrigin()}/app-mobile?tab=settings&connect=refresh`,
+      return_url: `${siteOrigin()}/app-mobile?tab=settings&connect=success`,
       type: 'account_onboarding',
     })
 
@@ -148,8 +150,8 @@ export async function POST(request: NextRequest) {
 
     const accountLink = await stripe.accountLinks.create({
       account: profile.stripe_connect_account_id,
-      refresh_url: `${BASE_URL}/app-mobile?tab=settings&connect=refresh`,
-      return_url: `${BASE_URL}/app-mobile?tab=settings&connect=success`,
+      refresh_url: `${siteOrigin()}/app-mobile?tab=settings&connect=refresh`,
+      return_url: `${siteOrigin()}/app-mobile?tab=settings&connect=success`,
       type: 'account_onboarding',
     })
 

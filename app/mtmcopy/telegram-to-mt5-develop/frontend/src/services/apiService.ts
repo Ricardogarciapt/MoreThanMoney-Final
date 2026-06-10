@@ -1,7 +1,7 @@
-// API configuration
-const API_BASE_URL = typeof import.meta !== 'undefined' 
-  ? import.meta.env.VITE_API_URL || 'http://localhost:8000/v1'
-  : process.env.VITE_API_URL || 'http://localhost:8000/v1';
+// API configuration — em produção usa proxy Next.js (/api/mtmcopy/engine/v1)
+const API_BASE_URL = typeof import.meta !== 'undefined'
+  ? import.meta.env.VITE_API_URL || '/api/mtmcopy/engine/v1'
+  : process.env.VITE_API_URL || '/api/mtmcopy/engine/v1';
 
 /**
  * Generic API error class.
@@ -18,6 +18,14 @@ export class ApiError extends Error {
   }
 }
 
+function resolveApiUrl(endpoint: string): string {
+  const path = `${API_BASE_URL}${endpoint}`;
+  if (API_BASE_URL.startsWith('/') && typeof window !== 'undefined') {
+    return new URL(path, window.location.origin).toString();
+  }
+  return path;
+}
+
 /**
  * Base API service with common HTTP methods.
  */
@@ -29,7 +37,7 @@ const apiService = {
    * @returns Promise resolving to the response data
    */
   async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
-    const url = new URL(`${API_BASE_URL}${endpoint}`);
+    const url = new URL(resolveApiUrl(endpoint));
     
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -62,7 +70,7 @@ const apiService = {
   async post<T>(endpoint: string, data: any): Promise<T> {
     console.log(`POST ${API_BASE_URL}${endpoint}`, data);
     
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(resolveApiUrl(endpoint), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -85,7 +93,7 @@ const apiService = {
   async put<T>(endpoint: string, data: any): Promise<T> {
     console.log(`PUT ${API_BASE_URL}${endpoint}`, data);
     
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(resolveApiUrl(endpoint), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -107,7 +115,7 @@ const apiService = {
   async delete<T>(endpoint: string): Promise<T> {
     console.log(`DELETE ${API_BASE_URL}${endpoint}`);
     
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(resolveApiUrl(endpoint), {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',

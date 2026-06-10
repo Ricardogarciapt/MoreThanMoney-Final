@@ -11,7 +11,7 @@ import { buildStripeReturnUrl, getSiteOrigin } from '@/lib/site-url'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { planId, email, fullName, username, phone, regToken, sponsorUsername } = body
+    const { planId, email, fullName, username, phone, regToken, sponsorUsername, couponCode } = body
 
     if (!planId || !email || !fullName || !username) {
       return NextResponse.json({ error: 'planId, email, fullName e username são obrigatórios' }, { status: 400 })
@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
         username,
         phone: phone || '',
         sponsor_username: sponsorUsername || '',
+        coupon_code: couponCode || '',
       },
     })
 

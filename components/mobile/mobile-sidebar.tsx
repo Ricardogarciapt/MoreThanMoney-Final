@@ -27,6 +27,7 @@ import {
   Network,
 } from "lucide-react"
 import Image from "next/image"
+import { SiteLogo } from "@/components/site-logo"
 import Link from "next/link"
 
 interface UserProfile {
@@ -180,13 +181,7 @@ export default function MobileSidebar({
             style={{ paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))' }}
           >
             <div className="flex items-center gap-3">
-              <Image
-                src="/icon-512x512.png"
-                alt="MTM Logo"
-                width={40}
-                height={40}
-                className="rounded-lg"
-              />
+              <SiteLogo width={40} height={40} className="rounded-lg" alt="MTM Logo" priority />
               <div>
                 <h2 className="font-bold text-white text-lg">MTM System</h2>
                 <p className="text-xs text-gray-400">Menu</p>

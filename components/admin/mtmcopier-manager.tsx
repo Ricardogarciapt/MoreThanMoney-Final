@@ -665,7 +665,7 @@ export default function MTMcopierManager({ highlightUserId }: MTMcopierManagerPr
           <p className="text-sm">Nenhum utilizador encontrado.</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
           {rows.map((row) => (
             <UserRow
               key={row.profile.id}

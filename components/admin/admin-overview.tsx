@@ -2,7 +2,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, UserCheck, UserPlus, FileText, Activity, Loader2 } from "lucide-react"
+import Link from "next/link"
+import { Users, UserCheck, UserPlus, FileText, Activity, Loader2, AlertTriangle } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import type { AdminStats } from "@/lib/admin-types"
 
 interface TrialStats {
@@ -82,8 +84,33 @@ export default function AdminOverview({
 
   const recentActivity = stats?.recent_activity ?? []
 
+  const skoolPending = stats?.skool_pending_stripe ?? 0
+
   return (
     <div className="space-y-8">
+      {skoolPending > 0 && (
+        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-6 w-6 shrink-0 text-amber-400 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-amber-200">
+                  {skoolPending} subscrição(ões) Premium Stripe — Skool manual
+                </h3>
+                <p className="text-sm text-amber-100/80 mt-1">
+                  Novos membros pagaram 65€ via Stripe. Adiciona o acesso no Skool e confirma em Utilizadores.
+                </p>
+              </div>
+            </div>
+            <Link href="/admin?tab=users&filter=skool_pending">
+              <Button className="bg-amber-600 hover:bg-amber-700 text-white shrink-0">
+                Abrir Utilizadores
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div>
         <h2 className="mb-4 text-lg font-semibold tracking-tight text-white">Resumo</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">

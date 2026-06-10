@@ -8,6 +8,25 @@ import {
 
 export type MtmcopyTelegramChannelKey = 'trade-ideas' | 'premium-signals'
 
+export type SlTpSourceOption = 'from_room' | 'none'
+
+export interface SymbolMapping {
+  signal_symbol: string
+  platform_symbol: string
+}
+
+export interface SymbolLotException {
+  symbol: string
+  lot: number
+}
+
+export interface TradingSchedule {
+  mode: 'always' | 'custom'
+  days?: number[]
+  start_hour?: number
+  end_hour?: number
+}
+
 export interface ProviderExecutionProfile {
   lot_mode: 'fixed' | 'risk_percent' | 'multiplier'
   lot_value: number
@@ -18,22 +37,37 @@ export interface ProviderExecutionProfile {
   trailing_stop_points: number
   reverse_signals: boolean
   symbols_whitelist: string[] | null
+  ai_validation_enabled?: boolean
+  ai_min_confidence?: number
+  sl_option?: SlTpSourceOption
+  execute_if_no_sl?: boolean
+  tp_option?: SlTpSourceOption
+  execute_if_no_tp?: boolean
+  symbol_prefix_suffix_mode?: 'auto' | 'manual'
+  symbol_prefix?: string
+  symbol_suffix?: string
+  symbol_mappings?: SymbolMapping[]
+  mt_comment?: string | null
+  trading_schedule?: TradingSchedule
+  copy_close_orders?: boolean
+  copy_modify_orders?: boolean
+  close_opposite_positions?: boolean
+  symbols_execute_only?: string[] | null
+  symbols_avoid?: string[] | null
+  symbol_lot_exceptions?: SymbolLotException[]
 }
 
 export interface MtmcopyChannelProviderConfig {
   account_id: string
   strategy_id?: string | null
   tag?: string
-  /** Risco e regras de execução na conta provider (antes dos subscribers CopyFactory). */
   execution?: ProviderExecutionProfile
 }
 
-/** Rota CopyFactory: sender Telegram → conta mestre (provider) → estratégia → subscribers. */
 export interface ProviderRoute {
   id: string
   label?: string
   sender_channel?: MtmcopyTelegramChannelKey | null
-  /** Chat Telegram concreto (ex. grupo descoberto pelo bot). */
   sender_chat_id?: string | null
   account_id: string
   strategy_id?: string | null
@@ -47,15 +81,10 @@ export interface MtmcopySignalSourcesConfig {
   enabled_channels: MtmcopyTelegramChannelKey[]
   provider_strategy_id: string | null
   provider_account_id: string | null
-  /** Rotas sender → mestre (várias contas / estratégias CopyFactory). */
   provider_routes?: ProviderRoute[]
-  /** Contas MetaAPI por canal (premium / trade ideas) — espelho da 1ª rota por canal */
   channel_providers?: Partial<Record<MtmcopyTelegramChannelKey, MtmcopyChannelProviderConfig>>
-  /** Perfil global de execução provider (fallback se canal não tiver execution) */
   provider_execution?: ProviderExecutionProfile
-  /** @deprecated usar channel_providers[].execution */
   provider_execution_profiles?: Partial<Record<MtmcopyTelegramChannelKey, ProviderExecutionProfile>>
-  /** @deprecated migrado para enabled_channels */
   enabled_app_slugs?: string[]
 }
 
@@ -73,7 +102,6 @@ const DEFAULT_CONFIG: MtmcopySignalSourcesConfig = {
 let cache: { config: MtmcopySignalSourcesConfig; at: number } | null = null
 const CACHE_MS = 30_000
 
-/** Canais oficiais MTMcopier — mapeados às env vars Vercel */
 export const TELEGRAM_SIGNAL_CHANNELS: Record<
   MtmcopyTelegramChannelKey,
   { label: string; description: string; envVar: string; envChatId: () => string | undefined }

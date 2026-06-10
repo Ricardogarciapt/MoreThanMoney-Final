@@ -5,9 +5,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import MTMcopierManager from "@/components/admin/mtmcopier-manager"
-import MtmcopyMetaApiPanel from "@/components/admin/mtmcopy-metaapi-panel"
-import MtmcopyTelegramSenders from "@/components/admin/mtmcopy-telegram-senders"
-import MtmcopyProviderPipeline from "@/components/admin/mtmcopy-provider-pipeline"
+import MtmcopyOpsHub from "@/components/admin/mtmcopy-ops-hub"
 import MtmcopySenderLog from "@/components/admin/mtmcopy-sender-log"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -171,43 +169,7 @@ export default function AdminMtmcopyPage() {
             </div>
           </section>
 
-          <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/80">
-            <div className="border-b border-zinc-800 px-6 py-4">
-              <h2 className="text-lg font-semibold text-white">Senders Telegram</h2>
-              <p className="text-sm text-zinc-400 mt-1">
-                Activa os grupos/canais que alimentam o bot (@MoreThanMoney_aibot).
-              </p>
-            </div>
-            <div className="p-6">
-              <MtmcopyTelegramSenders />
-            </div>
-          </section>
-
-          <section className="overflow-hidden rounded-2xl border border-emerald-500/25 bg-zinc-950/80">
-            <div className="border-b border-emerald-500/20 px-6 py-4">
-              <h2 className="text-lg font-semibold text-emerald-400">
-                Pipeline Provider → MetaAPI → Subscribers
-              </h2>
-              <p className="text-sm text-zinc-400 mt-1">
-                Várias rotas sender → conta mestre → estratégia CopyFactory, cada uma com risco e parametrização próprios.
-              </p>
-            </div>
-            <div className="p-6">
-              <MtmcopyProviderPipeline />
-            </div>
-          </section>
-
-          <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/80">
-            <div className="border-b border-zinc-800 px-6 py-4">
-              <h2 className="text-lg font-semibold text-white">MetaAPI · Contas, Copiers & Profiles</h2>
-              <p className="text-sm text-zinc-400 mt-1">
-                Vista em tempo real da tua conta MetaAPI (MT accounts, estratégias, subscribers, provisioning).
-              </p>
-            </div>
-            <div className="p-6">
-              <MtmcopyMetaApiPanel />
-            </div>
-          </section>
+          <MtmcopyOpsHub />
 
           <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-zinc-950/80 backdrop-blur-sm">
             <div className="border-b border-[#D2A63C]/15 px-6 py-4">

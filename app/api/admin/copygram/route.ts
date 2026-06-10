@@ -3,27 +3,13 @@
 // PATCH → atualiza campos de status de uma ligação (telegram_status, mt5_status, last_error, is_active)
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { getSupabaseAdmin, requireAdmin } from '@/lib/admin-api-helpers'
 
 const supabaseAdmin = getSupabaseAdmin()
 
-async function checkAdmin(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization')
-  if (!authHeader?.startsWith('Bearer ')) return null
-  const token = authHeader.replace('Bearer ', '')
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token)
-  if (error || !user) return null
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('user_type')
-    .eq('id', user.id)
-    .single()
-  return profile?.user_type === 'admin' ? user : null
-}
-
 export async function GET(request: NextRequest) {
-  const admin = await checkAdmin(request)
-  if (!admin) return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
 
   const { searchParams } = new URL(request.url)
   const search = searchParams.get('search') ?? ''
@@ -34,10 +20,11 @@ export async function GET(request: NextRequest) {
   let query = supabaseAdmin
     .from('mtmcopy_connections')
     .select(`
-      id, user_id, telegram_channel, telegram_status, mt5_login_last4, mt5_server,
-      mt5_status, lot_mode, lot_value, max_risk_percent, symbols_whitelist,
-      copy_sl, copy_tp, reverse_signals, is_active, last_signal_at, last_error,
-      created_at, updated_at, metaapi_account_id,
+      id, user_id, telegram_channel, telegram_status, mt5_login, mt5_login_last4,
+      mt5_platform, mt5_server, mt5_status, lot_mode, lot_value, max_risk_percent,
+      symbols_whitelist, copy_sl, copy_tp, auto_trailing_stop, trailing_stop_points,
+      reverse_signals, is_active, last_signal_at,
+      last_error, created_at, updated_at, metaapi_account_id, copyfactory_subscribed,
       profiles:user_id ( email, full_name, username )
     `, { count: 'exact' })
     .order('created_at', { ascending: false })
@@ -74,11 +61,30 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const admin = await checkAdmin(request)
-  if (!admin) return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
 
   const body = await request.json().catch(() => ({}))
-  const { id, telegram_status, mt5_status, is_active, last_error, metaapi_account_id } = body
+  const {
+    id,
+    telegram_status,
+    mt5_status,
+    is_active,
+    last_error,
+    metaapi_account_id,
+    telegram_channel,
+    mt5_login_last4,
+    mt5_server,
+    lot_mode,
+    lot_value,
+    max_risk_percent,
+    symbols_whitelist,
+    copy_sl,
+    copy_tp,
+    auto_trailing_stop,
+    trailing_stop_points,
+    reverse_signals,
+  } = body
 
   if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
 
@@ -95,13 +101,55 @@ export async function PATCH(request: NextRequest) {
   }
   if (typeof is_active === 'boolean') update.is_active = is_active
   if (last_error !== undefined) update.last_error = last_error || null
-  if (metaapi_account_id !== undefined) update.metaapi_account_id = metaapi_account_id || null
+  if (metaapi_account_id !== undefined) {
+    update.metaapi_account_id = metaapi_account_id || null
+    if (metaapi_account_id) {
+      try {
+        const { checkAccountHealth } = await import('@/lib/mtmcopy/metaapi')
+        const health = await checkAccountHealth(metaapi_account_id)
+        update.mt5_status = health.ok ? 'connected' : 'error'
+        update.last_error = health.ok ? null : health.error ?? 'MetaAPI inacessível'
+      } catch {
+        update.mt5_status = 'error'
+        update.last_error = 'Falha ao verificar MetaAPI'
+      }
+    }
+  }
+  if (telegram_channel !== undefined) update.telegram_channel = telegram_channel || null
+  if (mt5_login_last4 !== undefined) update.mt5_login_last4 = mt5_login_last4 || null
+  if (mt5_server !== undefined) update.mt5_server = mt5_server || null
+  if (lot_mode !== undefined) {
+    if (!['fixed', 'risk_percent', 'multiplier'].includes(lot_mode)) {
+      return NextResponse.json({ error: 'lot_mode inválido' }, { status: 400 })
+    }
+    update.lot_mode = lot_mode
+  }
+  if (lot_value !== undefined) update.lot_value = Number(lot_value) || 0.01
+  if (max_risk_percent !== undefined) update.max_risk_percent = max_risk_percent ?? null
+  if (symbols_whitelist !== undefined) {
+    update.symbols_whitelist = Array.isArray(symbols_whitelist) ? symbols_whitelist : null
+  }
+  if (typeof copy_sl === 'boolean') update.copy_sl = copy_sl
+  if (typeof copy_tp === 'boolean') update.copy_tp = copy_tp
+  if (typeof auto_trailing_stop === 'boolean') update.auto_trailing_stop = auto_trailing_stop
+  if (trailing_stop_points !== undefined) {
+    const pts = parseInt(String(trailing_stop_points), 10)
+    if (Number.isFinite(pts) && pts > 0) update.trailing_stop_points = pts
+  }
+  if (typeof reverse_signals === 'boolean') update.reverse_signals = reverse_signals
 
   const { data, error } = await supabaseAdmin
     .from('mtmcopy_connections')
     .update(update)
     .eq('id', id)
-    .select()
+    .select(`
+      id, user_id, telegram_channel, telegram_status, mt5_login, mt5_login_last4,
+      mt5_platform, mt5_server, mt5_status, lot_mode, lot_value, max_risk_percent,
+      symbols_whitelist, copy_sl, copy_tp, auto_trailing_stop, trailing_stop_points,
+      reverse_signals, is_active, last_signal_at,
+      last_error, created_at, updated_at, metaapi_account_id, copyfactory_subscribed,
+      profiles:user_id ( email, full_name, username )
+    `)
     .single()
 
   if (error) {

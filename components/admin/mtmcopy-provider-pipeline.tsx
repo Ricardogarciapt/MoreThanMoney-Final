@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import {
-  Loader2, Save, RefreshCw, ArrowRight, Bot, Cpu, TrendingUp, Users, Plus, Trash2,
+  Loader2, Save, RefreshCw, ArrowRight, Bot, Cpu, TrendingUp, Users, Plus, Trash2, Settings2,
 } from "lucide-react"
 import { adminApiCall } from "@/lib/admin-helpers"
+import MtmcopyProviderConfigModal from "@/components/admin/mtmcopy-provider-config-modal"
+import { formatExecutionSummary } from "@/lib/mtmcopy/provider-execution"
 import type { ProviderExecutionProfile, ProviderRoute } from "@/lib/mtmcopy/signal-sources-config"
 
 type ChannelKey = "premium-signals" | "trade-ideas"
@@ -56,86 +58,6 @@ function emptyRoute(defaults: ProviderExecutionProfile): ProviderRoute {
   }
 }
 
-function ExecutionFields({
-  profile,
-  onChange,
-}: {
-  profile: ProviderExecutionProfile
-  onChange: (p: ProviderExecutionProfile) => void
-}) {
-  return (
-    <div className="grid sm:grid-cols-2 gap-3 mt-3 pt-3 border-t border-zinc-800">
-      <div className="sm:col-span-2">
-        <label className="text-xs text-zinc-500 block mb-1">Modo de lote (conta mestre)</label>
-        <select
-          value={profile.lot_mode}
-          onChange={(e) =>
-            onChange({
-              ...profile,
-              lot_mode: e.target.value as ProviderExecutionProfile["lot_mode"],
-            })
-          }
-          className="w-full h-9 rounded-md bg-zinc-950 border border-zinc-700 text-sm text-white px-2"
-        >
-          <option value="risk_percent">Percentagem de risco (%)</option>
-          <option value="fixed">Lote fixo</option>
-          <option value="multiplier">Multiplicador</option>
-        </select>
-      </div>
-      <div>
-        <label className="text-xs text-zinc-500 block mb-1">
-          {profile.lot_mode === "risk_percent"
-            ? "Risco por trade (%)"
-            : profile.lot_mode === "multiplier"
-              ? "Multiplicador"
-              : "Lotes fixos"}
-        </label>
-        <Input
-          type="number"
-          step="0.01"
-          min="0.01"
-          value={profile.lot_value}
-          onChange={(e) => onChange({ ...profile, lot_value: Number(e.target.value) })}
-          className="bg-zinc-950 border-zinc-700 text-white h-9"
-        />
-      </div>
-      <div>
-        <label className="text-xs text-zinc-500 block mb-1">Risco máx. diário (%)</label>
-        <Input
-          type="number"
-          step="0.1"
-          value={profile.max_risk_percent ?? ""}
-          onChange={(e) =>
-            onChange({
-              ...profile,
-              max_risk_percent: e.target.value === "" ? null : Number(e.target.value),
-            })
-          }
-          placeholder="opcional"
-          className="bg-zinc-950 border-zinc-700 text-white h-9"
-        />
-      </div>
-      <div className="sm:col-span-2 flex flex-wrap gap-4">
-        <label className="flex items-center gap-2 text-sm text-zinc-300">
-          <Switch checked={profile.copy_sl} onCheckedChange={(v) => onChange({ ...profile, copy_sl: v })} />
-          Copiar SL
-        </label>
-        <label className="flex items-center gap-2 text-sm text-zinc-300">
-          <Switch checked={profile.copy_tp} onCheckedChange={(v) => onChange({ ...profile, copy_tp: v })} />
-          Copiar TP
-        </label>
-        <label className="flex items-center gap-2 text-sm text-zinc-300">
-          <Switch
-            checked={profile.auto_trailing_stop}
-            onCheckedChange={(v) => onChange({ ...profile, auto_trailing_stop: v })}
-          />
-          Trailing
-        </label>
-      </div>
-    </div>
-  )
-}
-
 export default function MtmcopyProviderPipeline() {
   const [routes, setRoutes] = useState<ProviderRoute[]>([])
   const [enabledChannels, setEnabledChannels] = useState<string[]>([])
@@ -145,6 +67,7 @@ export default function MtmcopyProviderPipeline() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [configRoute, setConfigRoute] = useState<ProviderRoute | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -342,25 +265,38 @@ export default function MtmcopyProviderPipeline() {
 
                 <div>
                   <label className="text-xs text-zinc-500 block mb-1">Conta mestre MetaAPI (provider)</label>
-                  <select
-                    value={route.account_id}
-                    onChange={(e) => {
-                      const account_id = e.target.value
-                      const match = accountStrategies.find((s) => s.accountId === account_id)
-                      updateRoute(route.id, {
-                        account_id,
-                        strategy_id: match?.id ?? route.strategy_id ?? null,
-                      })
-                    }}
-                    className="w-full h-9 rounded-md bg-zinc-950 border border-zinc-700 text-sm text-white px-2"
-                  >
-                    <option value="">— Seleccionar —</option>
-                    {(meta?.accounts ?? []).map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name} #{a.login}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex gap-2">
+                    <select
+                      value={route.account_id}
+                      onChange={(e) => {
+                        const account_id = e.target.value
+                        const match = accountStrategies.find((s) => s.accountId === account_id)
+                        updateRoute(route.id, {
+                          account_id,
+                          strategy_id: match?.id ?? route.strategy_id ?? null,
+                        })
+                      }}
+                      className="flex-1 h-9 rounded-md bg-zinc-950 border border-zinc-700 text-sm text-white px-2"
+                    >
+                      <option value="">— Seleccionar —</option>
+                      {(meta?.accounts ?? []).map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name} #{a.login}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={!route.account_id}
+                      onClick={() => setConfigRoute(route)}
+                      className="border-emerald-500/40 text-emerald-400 shrink-0 h-9"
+                      title="Configurar risco, IA, SL/TP e símbolos"
+                    >
+                      <Settings2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="sm:col-span-2">
@@ -385,14 +321,42 @@ export default function MtmcopyProviderPipeline() {
                 </div>
               </div>
 
-              <ExecutionFields
-                profile={exec}
-                onChange={(execution) => updateRoute(route.id, { execution })}
-              />
+              <div className="mt-3 pt-3 border-t border-zinc-800 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-zinc-500">
+                  Execução: <span className="text-emerald-400">{formatExecutionSummary(exec)}</span>
+                  {exec.ai_validation_enabled !== false && (
+                    <> · IA ≥ {Math.round((exec.ai_min_confidence ?? 0.35) * 100)}%</>
+                  )}
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-zinc-400 hover:text-emerald-400 h-8 text-xs"
+                  onClick={() => setConfigRoute(route)}
+                >
+                  <Settings2 className="w-3.5 h-3.5 mr-1" />
+                  Configurar conta provider
+                </Button>
+              </div>
             </div>
           )
         })}
       </div>
+
+      <MtmcopyProviderConfigModal
+        open={Boolean(configRoute)}
+        route={configRoute}
+        accountLabel={
+          configRoute
+            ? (meta?.accounts ?? []).find((a) => a.id === configRoute.account_id)?.name
+            : undefined
+        }
+        onClose={() => setConfigRoute(null)}
+        onSave={(execution) => {
+          if (configRoute) updateRoute(configRoute.id, { execution })
+        }}
+      />
 
       <div className="flex gap-2 justify-end">
         <Button variant="outline" size="sm" onClick={load} className="border-zinc-700">

@@ -22,11 +22,16 @@ class Settings(BaseModel):
     
     # CORS Settings
     CORS_ORIGINS: list[str] = [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173", 
-        "http://localhost:5174",
-        os.getenv("FRONTEND_URL", "")
+        origin for origin in [
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5174",
+            "https://www.morethanmoney.pt",
+            "https://morethanmoney.pt",
+            os.getenv("FRONTEND_URL", ""),
+        ] if origin
     ]
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: list[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"]

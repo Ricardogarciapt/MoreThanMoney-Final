@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertCircle, Eye, EyeOff, Smartphone, Globe, Check, Loader2, CheckCircle2, XCircle, ChevronLeft } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, Smartphone, Globe, Check, Loader2, CheckCircle2, XCircle, ChevronLeft, Tag } from 'lucide-react'
 import Link from 'next/link'
 
 type PlanId = 'app_member_monthly' | 'app_member_annual' | 'premium_monthly' | 'premium_annual'
@@ -49,6 +49,8 @@ export default function AppMobileRegisterPage() {
   const [validatingSponsor, setValidatingSponsor] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [couponCode, setCouponCode] = useState('')
+  const [showCoupon, setShowCoupon] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -91,6 +93,11 @@ export default function AppMobileRegisterPage() {
     try {
       const regToken = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
+      const pendingCoupon = couponCode.trim().toUpperCase()
+      if (pendingCoupon) {
+        localStorage.setItem('mtm_pending_coupon', pendingCoupon)
+      }
+
       localStorage.setItem(`mtm_pending_reg_${regToken}`, JSON.stringify({
         email: formData.email,
         password: formData.password,
@@ -116,6 +123,7 @@ export default function AppMobileRegisterPage() {
           phone: formData.phone || '',
           regToken,
           sponsorUsername: formData.sponsorUsername || '',
+          couponCode: couponCode.trim().toUpperCase() || undefined,
         }),
       })
 
@@ -379,6 +387,37 @@ export default function AppMobileRegisterPage() {
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+              </div>
+
+              {/* Coupon Section */}
+              <div>
+                {!showCoupon ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowCoupon(true)}
+                    className="text-xs text-gray-500 hover:text-[#D2A63C] transition-colors"
+                  >
+                    Tens um cupão de desconto?
+                  </button>
+                ) : (
+                  <div className="space-y-1">
+                    <Label className="text-gray-300 text-sm">
+                      Cupão de desconto <span className="text-gray-500 font-normal">(opcional)</span>
+                    </Label>
+                    <div className="relative">
+                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#D2A63C]" />
+                      <Input
+                        type="text"
+                        placeholder="Código de cupão"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value)}
+                        disabled={isLoading}
+                        className="pl-9 bg-gray-800 border-gray-700 text-white uppercase tracking-wider"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <Button type="submit" disabled={isLoading} size="lg"

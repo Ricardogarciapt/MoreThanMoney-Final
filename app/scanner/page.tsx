@@ -93,7 +93,7 @@ const SCANNERS: ScannerData[] = [
     key: "sensei",
     name: "MTM Sensei X",
     subtitle: "Inteligência Artificial Avançada",
-    image: "/scanner-sensei-preview.png",
+    image: "/MTM%20Sensei%20Preview.png",
     badge: "Novo",
     description:
       "O scanner mais sofisticado da MTM. O Sensei X usa inteligência artificial para identificar confluências entre múltiplas metodologias — Smart Money, Goldenzone, SR MTM e KillShot — gerando sinais de alta precisão para traders profissionais.",
@@ -143,16 +143,12 @@ function CheckoutModal({ product, scannerName, onClose }: CheckoutModalProps) {
   }, [])
 
   const handleCheckout = async () => {
+    if (isGuest === null) {
+      setError("A verificar sessão… tenta novamente dentro de um segundo.")
+      return
+    }
     if (!tvUsername.trim()) {
       setError("O teu nome de utilizador do TradingView é necessário para activar o acesso.")
-      return
-    }
-    if (isGuest && !guestEmail.trim()) {
-      setError("O teu email é necessário para receberes a confirmação de pagamento.")
-      return
-    }
-    if (isGuest && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim())) {
-      setError("Email inválido. Verifica e tenta novamente.")
       return
     }
     setError("")
@@ -183,13 +179,24 @@ function CheckoutModal({ product, scannerName, onClose }: CheckoutModalProps) {
         }
         window.location.href = data.url
       } else {
+        const email = guestEmail.trim()
+        if (!email) {
+          setError("O teu email é necessário para receberes a confirmação de pagamento.")
+          setIsLoading(false)
+          return
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          setError("Email inválido. Verifica e tenta novamente.")
+          setIsLoading(false)
+          return
+        }
         // Visitante sem conta — usa endpoint guest
         const res = await fetch("/api/stripe/scanner-checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             planId: product.planId,
-            email: guestEmail.trim(),
+            email,
             tvUsername: tvUsername.trim(),
             sponsorCode: sponsorCode.trim() || '',
           }),
@@ -278,11 +285,13 @@ function CheckoutModal({ product, scannerName, onClose }: CheckoutModalProps) {
 
         <Button
           onClick={handleCheckout}
-          disabled={isLoading}
+          disabled={isLoading || isGuest === null}
           className="w-full bg-[#D2A63C] hover:bg-[#BB8525] text-black font-bold text-base"
           size="lg"
         >
-          {isLoading ? (
+          {isGuest === null ? (
+            <><Loader2 className="mr-2 h-5 w-5 animate-spin" />A verificar sessão...</>
+          ) : isLoading ? (
             <><Loader2 className="mr-2 h-5 w-5 animate-spin" />A processar...</>
           ) : (
             <>Avançar para Pagamento <ArrowRight className="ml-2 h-5 w-5" /></>

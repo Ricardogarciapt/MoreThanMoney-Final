@@ -8,7 +8,8 @@ import SocialFeed from "@/components/mobile/social-feed"
 import PortfolioMobile from "@/components/mobile/portfolio-mobile"
 import ScannerMobile from "@/components/mobile/scanner-mobile"
 import NotificationsPanel from "@/components/notifications-panel"
-import Image from "next/image"
+import { SiteLogo } from "@/components/site-logo"
+import { shouldReduceSafariEffects } from "@/lib/supabase-session"
 import {
   Users,
   Wallet,
@@ -405,7 +406,9 @@ function AppMobileContent() {
 
         {/* Header Mobile - Simplified */}
         <div
-          className="app-mobile-navbar sticky top-0 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800 transition-all duration-300"
+          className={`app-mobile-navbar sticky top-0 z-40 border-b border-gray-800 transition-all duration-300 ${
+            shouldReduceSafariEffects() ? "bg-gray-900" : "bg-gray-900/95 backdrop-blur-sm"
+          }`}
           style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
         >
           <div className={`flex items-center justify-between gap-4 px-4 transition-all duration-300 ${isHeaderCollapsed ? "py-2" : "py-3"}`}>
@@ -421,13 +424,12 @@ function AppMobileContent() {
 
             {/* Logo & Title */}
             <div className="flex items-center gap-3 flex-1">
-              <Image
-                src="/icon-512x512.png"
-                alt="MTM Logo"
+              <SiteLogo
                 width={isHeaderCollapsed ? 32 : 40}
                 height={isHeaderCollapsed ? 32 : 40}
                 className="rounded-lg transition-all"
                 priority
+                alt="MTM Logo"
               />
               <div>
                 <h1 className={`font-bold text-white transition-all ${isHeaderCollapsed ? "text-sm" : "text-lg"}`}>
@@ -475,7 +477,7 @@ function AppMobileContent() {
             </TabsContent>
 
             <TabsContent value="chat" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
-              <ChatChannels />
+              {activeTab === "chat" && <ChatChannels />}
             </TabsContent>
 
             <TabsContent value="live" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">

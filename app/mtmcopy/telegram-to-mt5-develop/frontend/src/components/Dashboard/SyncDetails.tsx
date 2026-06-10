@@ -123,20 +123,21 @@ export const SyncDetails: React.FC<SyncDetailsProps> = ({
   const connectWebSocket = () => {
     if (!currentSync) return;
 
-    // Use the backend API URL from environment variables
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/v1';
+    const wsBaseFromEnv = import.meta.env.VITE_WS_BASE_URL as string | undefined;
+    const apiUrl = import.meta.env.VITE_API_URL || '/api/mtmcopy/engine/v1';
 
-    // Remove protocol if present
-    let baseUrl = apiUrl.replace(/^https?:\/\//, '');
-
-    // Remove trailing /v1 if present
-    baseUrl = baseUrl.replace(/\/v1$/, '');
-
-    const wsProtocol =
-      window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-
-    // Build the WebSocket URL with authentication parameters
-    let wsUrl = `${wsProtocol}${baseUrl}/v1/ws/messages`;
+    let wsUrl: string;
+    if (wsBaseFromEnv) {
+      const normalized = wsBaseFromEnv.replace(/\/$/, '');
+      wsUrl = `${normalized}/v1/ws/messages`;
+    } else if (apiUrl.startsWith('/')) {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+      wsUrl = `${wsProtocol}${window.location.host}/api/mtmcopy/engine/v1/ws/messages`;
+    } else {
+      let baseUrl = apiUrl.replace(/^https?:\/\//, '').replace(/\/v1$/, '');
+      const wsProtocol = apiUrl.startsWith('https') ? 'wss://' : 'ws://';
+      wsUrl = `${wsProtocol}${baseUrl}/v1/ws/messages`;
+    }
 
     // Create URL parameters with all the necessary data
     const params = new URLSearchParams();
