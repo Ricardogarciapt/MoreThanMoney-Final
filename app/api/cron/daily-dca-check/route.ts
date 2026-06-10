@@ -19,7 +19,7 @@ async function sendPushNotification(userId: string, title: string, body: string,
     }
 
     // Enviar notificação via API interna
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send-push`, {
+    const response = await fetch(`${(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt').trim()}/api/notifications/send-push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -49,7 +49,8 @@ export async function GET(request: NextRequest) {
     // 1. Buscar oportunidades DCA
     console.log('📊 [DCA CRON] Buscando oportunidades DCA...')
     
-    const dcaResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/portfolio/dca-smart?type=crypto`, {
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt').trim()
+    const dcaResponse = await fetch(`${siteUrl}/api/portfolio/dca-smart?type=crypto`, {
       next: { revalidate: 0 } // Sem cache
     })
 

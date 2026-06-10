@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 /**
  * API CRON JOB: Criar post automático diário com oportunidades DCA
@@ -16,19 +17,39 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+async function resolveSystemUserId(supabase: ReturnType<typeof getSupabaseAdmin>): Promise<string> {
+  const { data: bot } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', 'sistema@morethanmoney.pt')
+    .maybeSingle()
+  if (bot?.id) return bot.id
+
+  const { data: admin } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_type', 'admin')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  if (admin?.id) return admin.id
+
+  throw new Error('Nenhum utilizador sistema/admin encontrado para criar post DCA')
+}
+
 export async function GET(request: NextRequest) {
   try {
-    // Verificar autorização do cron
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!isCronAuthorized(request)) {
       console.log('❌ [CRON DCA POST] Não autorizado')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     console.log('🤖 [CRON DCA POST] Iniciando análise diária...')
 
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt').trim()
+
     // Buscar oportunidades DCA
-    const dcaResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/portfolio/dca-smart?type=crypto`, {
+    const dcaResponse = await fetch(`${siteUrl}/api/portfolio/dca-smart?type=crypto`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -118,15 +139,7 @@ export async function GET(request: NextRequest) {
 
     // Criar post no Supabase
     const supabase = getSupabaseAdmin()
-
-    // Buscar user_id do sistema (admin ou bot)
-    const { data: adminUser } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', 'sistema@morethanmoney.pt')
-      .single()
-
-    const systemUserId = adminUser?.id || '00000000-0000-0000-0000-000000000000'
+    const systemUserId = await resolveSystemUserId(supabase)
 
     const { data: newPost, error: postError } = await supabase
       .from('social_posts')
@@ -141,7 +154,7 @@ export async function GET(request: NextRequest) {
 
     if (postError) {
       console.error('❌ [CRON DCA POST] Erro ao criar post:', postError)
-      throw postError
+      throw new Error(postError.message || 'Erro ao criar post social')
     }
 
     console.log('✅ [CRON DCA POST] Post criado com sucesso!')
@@ -182,7 +195,7 @@ export async function GET(request: NextRequest) {
 
       // Enviar push notification
       try {
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/notifications/send-push`, {
+        await fetch(`${siteUrl}/api/notifications/send-push`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -213,9 +226,15 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ [CRON DCA POST] Erro:', error)
+    const details =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message: unknown }).message)
+          : String(error)
     return NextResponse.json({
       error: 'Erro ao processar DCA diário',
-      details: error instanceof Error ? error.message : 'Erro desconhecido'
+      details: details || 'Erro desconhecido'
     }, { status: 500 })
   }
 }

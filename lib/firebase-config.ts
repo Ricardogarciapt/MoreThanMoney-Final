@@ -1,16 +1,18 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
 import { getMessaging, getToken, onMessage, Messaging, isSupported } from 'firebase/messaging'
 
+const trimEnv = (value: string | undefined) => (value || '').trim()
+
 // Configuração do Firebase
-// IMPORTANTE: Adicionar estas variáveis no .env.local e Vercel
+// IMPORTANTE: Adicionar estas variáveis no .env.local e Vercel (sem newline no final)
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || ''
+  apiKey: trimEnv(process.env.NEXT_PUBLIC_FIREBASE_API_KEY),
+  authDomain: trimEnv(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN),
+  projectId: trimEnv(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID),
+  storageBucket: trimEnv(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET),
+  messagingSenderId: trimEnv(process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID),
+  appId: trimEnv(process.env.NEXT_PUBLIC_FIREBASE_APP_ID),
+  measurementId: trimEnv(process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID),
 }
 
 // Validar se Firebase está configurado
@@ -103,6 +105,18 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
   }
 }
 
+async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null
+  try {
+    const existing = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js')
+    if (existing?.active) return existing
+    return await navigator.serviceWorker.register('/firebase-messaging-sw.js')
+  } catch (error) {
+    console.error('❌ [FCM] Erro ao registar service worker:', error)
+    return null
+  }
+}
+
 // Obter token FCM
 export const getFCMToken = async (): Promise<string | null> => {
   try {
@@ -112,15 +126,21 @@ export const getFCMToken = async (): Promise<string | null> => {
       return null
     }
     
-    const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
+    const vapidKey = trimEnv(process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY)
     if (!vapidKey) {
       console.error('❌ [FCM] VAPID Key não configurada')
+      return null
+    }
+
+    const swRegistration = await getServiceWorkerRegistration()
+    if (!swRegistration) {
+      console.error('❌ [FCM] Service worker não disponível para push')
       return null
     }
     
     console.log('🔑 [FCM] Obtendo token FCM...')
     
-    const token = await getToken(messagingInstance, { vapidKey })
+    const token = await getToken(messagingInstance, { vapidKey, serviceWorkerRegistration: swRegistration })
     
     if (token) {
       console.log('✅ [FCM] Token obtido:', token.substring(0, 20) + '...')
@@ -129,8 +149,10 @@ export const getFCMToken = async (): Promise<string | null> => {
       console.warn('⚠️ [FCM] Nenhum token disponível')
       return null
     }
-  } catch (error) {
-    console.error('❌ [FCM] Erro ao obter token:', error)
+  } catch (error: unknown) {
+    const code = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : ''
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('❌ [FCM] Erro ao obter token:', code || message, error)
     return null
   }
 }
@@ -158,7 +180,11 @@ export const saveFCMToken = async (userId: string, token: string) => {
     const response = await fetch('/api/notifications/fcm-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, token })
+      body: JSON.stringify({
+        userId,
+        token,
+        deviceInfo: { platform: 'web-fcm', nativeApp: false },
+      }),
     })
     
     if (response.ok) {

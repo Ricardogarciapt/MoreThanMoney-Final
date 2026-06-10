@@ -61,7 +61,7 @@ async function sendNotification(userId: string, alert: any, currentPrice: number
 
     // 2. Enviar push
     try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt'
+      const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt').trim()
       const pushResponse = await fetch(`${siteUrl}/api/notifications/send-push`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -82,8 +82,18 @@ export async function middleware(request: NextRequest) {
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 
-  // Rate limiting para APIs (exceto auth)
-  if (request.nextUrl.pathname.startsWith("/api/") && !pathname.startsWith("/api/auth")) {
+  // Rate limiting para APIs (exceto auth e crons Vercel)
+  const isVercelCron = request.headers.get("x-vercel-cron") === "1"
+  const isCronApiPath =
+    pathname.startsWith("/api/cron/") ||
+    pathname === "/api/notifications/check-alerts" ||
+    pathname === "/api/email-marketing/sequences/process"
+
+  if (
+    request.nextUrl.pathname.startsWith("/api/") &&
+    !pathname.startsWith("/api/auth") &&
+    !(isVercelCron && isCronApiPath)
+  ) {
     const ip = (request as any).ip || request.headers.get("x-forwarded-for") || "unknown"
 
     if (isRateLimited(ip)) {

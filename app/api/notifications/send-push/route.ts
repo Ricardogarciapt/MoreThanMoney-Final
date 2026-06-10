@@ -9,7 +9,7 @@ async function getFirebaseAdmin() {
   const admin = mod.default ?? mod
   if (!admin.apps?.length) {
     try {
-      const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+      const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim()
       if (serviceAccount) {
         admin.initializeApp({
           credential: admin.credential.cert(JSON.parse(serviceAccount)),
