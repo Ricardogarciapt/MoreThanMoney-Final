@@ -1,14 +1,11 @@
-// /api/mtmcopy/connection — gestão da configuração do utilizador para o MTMcopier
-// (addon Telegram → MT5 copy trading, +20€/mês)
-//
-// IMPORTANTE: este endpoint NUNCA recebe nem guarda a password/token completos da
-// conta MT5. Apenas referência (últimos 4 dígitos) para o utilizador identificar a
-// ligação no painel. As credenciais reais de execução vivem exclusivamente no
-// microserviço externo do MTMcopier, num cofre dedicado (ver nota de arquitetura
-// no README de /mtmcopy).
-
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { removeConnectionCopyFactory, syncConnectionCopyFactory } from '@/lib/mtmcopy/connection-sync'
+import { verifyTelegramChannel } from '@/lib/mtmcopy/telegram-bot'
+import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
+import { normalizeTelegramGroups } from '@/lib/mtmcopy/copy-methods'
+import { deriveSenderMode } from '@/lib/mtmcopy/user-copy-context'
+import type { MtmcopySenderMode } from '@/lib/mtmcopy/types'
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -21,22 +18,57 @@ async function authenticate(request: NextRequest) {
   return user
 }
 
+async function getOwnedConnection(userId: string, connectionId: string) {
+  const { data } = await supabaseAdmin
+    .from('mtmcopy_connections')
+    .select('*')
+    .eq('id', connectionId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  return data
+}
+
 export async function GET(request: NextRequest) {
   const user = await authenticate(request)
   if (!user) return NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 })
+
+  const { searchParams } = new URL(request.url)
+  const connectionId = searchParams.get('id')
+
+  if (connectionId) {
+    const conn = await getOwnedConnection(user.id, connectionId)
+    if (!conn) return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
+    return NextResponse.json({ connection: conn })
+  }
 
   const { data, error } = await supabaseAdmin
     .from('mtmcopy_connections')
     .select('*')
     .eq('user_id', user.id)
-    .maybeSingle()
+    .neq('mt5_status', 'disconnected')
+    .order('created_at', { ascending: true })
 
   if (error) {
-    console.error('[mtmcopy] erro ao obter ligação:', error)
+    console.error('[mtmcopy] erro ao obter ligações:', error)
     return NextResponse.json({ error: 'Erro ao obter configuração' }, { status: 500 })
   }
 
-  return NextResponse.json({ connection: data })
+  const connections = data ?? []
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('user_type')
+    .eq('id', user.id)
+    .maybeSingle()
+  const subscription = await getMtmcopySubscription(user.id, profile?.user_type)
+
+  return NextResponse.json({
+    connections,
+    connection: connections[0] ?? null,
+    sender_mode: deriveSenderMode(connections),
+    master: connections.find((c) => c.account_role === 'master') ?? null,
+    subscribed: subscription.active,
+    can_activate: subscription.active,
+  })
 }
 
 export async function POST(request: NextRequest) {
@@ -44,45 +76,79 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 })
 
   const body = await request.json().catch(() => ({}))
+  const connectionId = body.connection_id as string | undefined
+  if (!connectionId) {
+    return NextResponse.json({ error: 'connection_id obrigatório para actualizar' }, { status: 400 })
+  }
+
+  const existing = await getOwnedConnection(user.id, connectionId)
+  if (!existing) return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
+
   const {
     telegram_channel,
-    mt5_login_last4,
-    mt5_server,
+    account_label,
     lot_mode,
     lot_value,
     max_risk_percent,
     symbols_whitelist,
     copy_sl,
     copy_tp,
+    auto_trailing_stop,
+    trailing_stop_points,
     reverse_signals,
+    copy_method,
+    telegram_group,
+    telegram_groups,
+    exit_pct_tp1,
+    exit_pct_tp2,
+    exit_pct_tp3,
+    copyfactory_strategy_pick,
   } = body
 
-  // Validações simples
-  if (mt5_login_last4 && !/^\d{1,4}$/.test(String(mt5_login_last4))) {
-    return NextResponse.json({ error: 'mt5_login_last4 deve conter apenas os últimos dígitos da conta (máx. 4)' }, { status: 400 })
-  }
   if (lot_mode && !['fixed', 'risk_percent', 'multiplier'].includes(lot_mode)) {
     return NextResponse.json({ error: 'lot_mode inválido' }, { status: 400 })
   }
 
-  const payload: Record<string, any> = {
-    user_id: user.id,
+  const payload: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   }
-  if (telegram_channel !== undefined) payload.telegram_channel = telegram_channel
-  if (mt5_login_last4 !== undefined) payload.mt5_login_last4 = mt5_login_last4
-  if (mt5_server !== undefined) payload.mt5_server = mt5_server
+
+  if (telegram_channel !== undefined) {
+    payload.telegram_channel = String(telegram_channel).trim() || null
+  }
+  if (account_label !== undefined) payload.account_label = String(account_label).trim() || null
   if (lot_mode !== undefined) payload.lot_mode = lot_mode
   if (lot_value !== undefined) payload.lot_value = lot_value
   if (max_risk_percent !== undefined) payload.max_risk_percent = max_risk_percent
   if (symbols_whitelist !== undefined) payload.symbols_whitelist = symbols_whitelist
   if (copy_sl !== undefined) payload.copy_sl = copy_sl
   if (copy_tp !== undefined) payload.copy_tp = copy_tp
+  if (typeof auto_trailing_stop === 'boolean') payload.auto_trailing_stop = auto_trailing_stop
+  if (trailing_stop_points !== undefined) {
+    const pts = parseInt(String(trailing_stop_points), 10)
+    if (Number.isFinite(pts) && pts > 0) payload.trailing_stop_points = pts
+  }
   if (reverse_signals !== undefined) payload.reverse_signals = reverse_signals
+  if (copy_method === 'telegram_group' || copy_method === 'strategy' || copy_method === 'master_slave') {
+    payload.copy_method = copy_method
+  }
+  if (telegram_groups !== undefined || telegram_group !== undefined) {
+    const groups = normalizeTelegramGroups(telegram_groups, telegram_group)
+    payload.telegram_groups = groups
+    payload.telegram_group = groups[0] ?? null
+  }
+  if (exit_pct_tp1 != null) payload.exit_pct_tp1 = exit_pct_tp1
+  if (exit_pct_tp2 != null) payload.exit_pct_tp2 = exit_pct_tp2
+  if (exit_pct_tp3 != null) payload.exit_pct_tp3 = exit_pct_tp3
+  if (copyfactory_strategy_pick !== undefined) {
+    payload.copyfactory_strategy_pick = copyfactory_strategy_pick?.trim() || null
+  }
 
   const { data, error } = await supabaseAdmin
     .from('mtmcopy_connections')
-    .upsert(payload, { onConflict: 'user_id' })
+    .update(payload)
+    .eq('id', connectionId)
+    .eq('user_id', user.id)
     .select()
     .single()
 
@@ -91,23 +157,181 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Erro ao guardar configuração' }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true, connection: data })
+  let connection = data
+  let telegram_verify
+
+  const channelTrimmed =
+    telegram_channel !== undefined
+      ? String(telegram_channel).trim()
+      : connection?.telegram_channel?.trim()
+
+  const isMaster = existing.account_role === 'master'
+  const isMasterMode = (existing.sender_mode ?? 'telegram') === 'master_account'
+
+  if (telegram_channel !== undefined && !isMaster && !isMasterMode) {
+    if (channelTrimmed) {
+      telegram_verify = await verifyTelegramChannel(channelTrimmed)
+      const telegram_status = telegram_verify.ok
+        ? 'connected'
+        : telegram_verify.botIsAdmin === false
+          ? 'pending'
+          : 'error'
+      const { data: updated } = await supabaseAdmin
+        .from('mtmcopy_connections')
+        .update({
+          telegram_status,
+          last_error: telegram_verify.ok ? null : telegram_verify.error,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', connectionId)
+        .select()
+        .single()
+      if (updated) connection = updated
+    } else {
+      const { data: updated } = await supabaseAdmin
+        .from('mtmcopy_connections')
+        .update({
+          telegram_channel: null,
+          telegram_status: 'connected',
+          last_error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', connectionId)
+        .select()
+        .single()
+      if (updated) connection = updated
+      telegram_verify = { ok: true, title: 'Grupos MTM (predefinição)' }
+    }
+  }
+
+  if (
+    connection?.metaapi_account_id &&
+    connection.account_role !== 'master' &&
+    connection.copyfactory_subscribed
+  ) {
+    const { data: allConns } = await supabaseAdmin
+      .from('mtmcopy_connections')
+      .select('*')
+      .eq('user_id', user.id)
+      .neq('mt5_status', 'disconnected')
+
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('full_name, username, email')
+      .eq('id', user.id)
+      .maybeSingle()
+    const label =
+      connection.account_label ||
+      profile?.full_name ||
+      profile?.username ||
+      profile?.email ||
+      `MTM-${user.id.slice(0, 8)}`
+    const sync = await syncConnectionCopyFactory(connection, label, allConns ?? [])
+    if (!sync.ok) {
+      await supabaseAdmin
+        .from('mtmcopy_connections')
+        .update({ last_error: sync.error ?? 'Falha ao sincronizar CopyFactory' })
+        .eq('id', connectionId)
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    connection,
+    telegram_verify,
+    signal_source: channelTrimmed ? 'custom' : 'default',
+  })
 }
 
-// PATCH: ativa ou pausa a cópia (toggle is_active)
 export async function PATCH(request: NextRequest) {
   const user = await authenticate(request)
   if (!user) return NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 })
 
   const body = await request.json().catch(() => ({}))
-  const { is_active } = body
+  const { connection_id, is_active, sender_mode, copy_method } = body
+
+  if (
+    copy_method === 'telegram_group' ||
+    copy_method === 'strategy' ||
+    copy_method === 'master_slave'
+  ) {
+    const mode = copy_method === 'master_slave' ? 'master_account' : 'telegram'
+    const { data: existing } = await supabaseAdmin
+      .from('mtmcopy_connections')
+      .select('id, account_role')
+      .eq('user_id', user.id)
+      .neq('mt5_status', 'disconnected')
+
+    if (copy_method !== 'master_slave' && existing?.some((c) => c.account_role === 'master')) {
+      return NextResponse.json(
+        { error: 'Remove a conta mestre antes de mudar o método de cópia' },
+        { status: 400 },
+      )
+    }
+
+    await supabaseAdmin
+      .from('mtmcopy_connections')
+      .update({
+        copy_method,
+        sender_mode: mode,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', user.id)
+      .neq('mt5_status', 'disconnected')
+
+    return NextResponse.json({ success: true, copy_method, sender_mode: mode })
+  }
+
+  if (sender_mode === 'telegram' || sender_mode === 'master_account') {
+    const mode = sender_mode as MtmcopySenderMode
+    const { data: existing } = await supabaseAdmin
+      .from('mtmcopy_connections')
+      .select('id, account_role')
+      .eq('user_id', user.id)
+      .neq('mt5_status', 'disconnected')
+
+    if (mode === 'telegram' && existing?.some((c) => c.account_role === 'master')) {
+      return NextResponse.json(
+        { error: 'Remove a conta mestre antes de mudar para o modo Telegram' },
+        { status: 400 },
+      )
+    }
+
+    await supabaseAdmin
+      .from('mtmcopy_connections')
+      .update({ sender_mode: mode, updated_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .neq('mt5_status', 'disconnected')
+
+    return NextResponse.json({ success: true, sender_mode: mode })
+  }
+
+  if (!connection_id) {
+    return NextResponse.json({ error: 'connection_id obrigatório' }, { status: 400 })
+  }
   if (typeof is_active !== 'boolean') {
     return NextResponse.json({ error: 'Campo is_active (boolean) obrigatório' }, { status: 400 })
+  }
+
+  if (is_active) {
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('user_type')
+      .eq('id', user.id)
+      .maybeSingle()
+    const sub = await getMtmcopySubscription(user.id, profile?.user_type)
+    if (!sub.active) {
+      return NextResponse.json(
+        { error: 'Activa a subscrição MTMcopier (+20€/mês) antes de ligar a cópia.' },
+        { status: 402 },
+      )
+    }
   }
 
   const { data, error } = await supabaseAdmin
     .from('mtmcopy_connections')
     .update({ is_active, updated_at: new Date().toISOString() })
+    .eq('id', connection_id)
     .eq('user_id', user.id)
     .select()
     .single()
@@ -124,14 +348,52 @@ export async function DELETE(request: NextRequest) {
   const user = await authenticate(request)
   if (!user) return NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 })
 
+  const { searchParams } = new URL(request.url)
+  const connectionId = searchParams.get('id') || (await request.json().catch(() => ({}))).connection_id
+
+  if (!connectionId) {
+    return NextResponse.json({ error: 'id da conta obrigatório' }, { status: 400 })
+  }
+
+  const existing = await getOwnedConnection(user.id, String(connectionId))
+  if (!existing) return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
+
+  if (existing.metaapi_account_id && existing.copyfactory_subscribed) {
+    await removeConnectionCopyFactory(existing.metaapi_account_id)
+  }
+
+  if (existing.account_role === 'master') {
+    const { data: slaves } = await supabaseAdmin
+      .from('mtmcopy_connections')
+      .select('id, metaapi_account_id, copyfactory_subscribed')
+      .eq('user_id', user.id)
+      .eq('account_role', 'slave')
+      .neq('mt5_status', 'disconnected')
+
+    for (const slave of slaves ?? []) {
+      if (slave.metaapi_account_id && slave.copyfactory_subscribed) {
+        await removeConnectionCopyFactory(slave.metaapi_account_id)
+      }
+      await supabaseAdmin
+        .from('mtmcopy_connections')
+        .update({
+          copyfactory_subscribed: false,
+          last_error: 'Conta mestre removida — volta a ligar as slaves após nova mestre',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', slave.id)
+    }
+  }
+
   const { error } = await supabaseAdmin
     .from('mtmcopy_connections')
-    .update({ is_active: false, telegram_status: 'disconnected', mt5_status: 'disconnected', updated_at: new Date().toISOString() })
+    .delete()
+    .eq('id', connectionId)
     .eq('user_id', user.id)
 
   if (error) {
-    console.error('[mtmcopy] erro ao desligar ligação:', error)
-    return NextResponse.json({ error: 'Erro ao desligar' }, { status: 500 })
+    console.error('[mtmcopy] erro ao apagar ligação:', error)
+    return NextResponse.json({ error: 'Erro ao remover conta' }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })

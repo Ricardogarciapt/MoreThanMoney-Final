@@ -119,6 +119,31 @@ export async function middleware(request: NextRequest) {
     response.headers.set("Expires", "0")
   }
 
+  // ── /mtmcopy = página de venda (pública). Métricas exigem login. ─────────
+  const mtmcopyNeedsAuth =
+    pathname.startsWith("/mtmcopy/metrics") || pathname.startsWith("/mtmcopy/app")
+
+  if (mtmcopyNeedsAuth && hasSupabaseEnv) {
+    const supabaseMtmcopy = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    })
+
+    const { data: { user: mtmcopyUser } } = await supabaseMtmcopy.auth.getUser()
+    if (!mtmcopyUser) {
+      const redirect = encodeURIComponent(pathname + request.nextUrl.search)
+      return NextResponse.redirect(new URL(`/login?redirect=${redirect}`, request.url))
+    }
+
+    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate")
+  }
+
   // ── Protecção /aios — apenas admins ───────────────────────────────────────
   if (pathname.startsWith("/aios") && hasSupabaseEnv) {
     // Supabase já está inicializado acima neste middleware

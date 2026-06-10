@@ -1,0 +1,900 @@
+"use client"
+
+import { useEffect, useMemo, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  ArrowRight, Loader2, X, Check, Settings2, Plus, Trash2, Send, LineChart,
+} from "lucide-react"
+import { supabase } from "@/lib/supabase"
+import BrokerServerSelect from "@/components/mtmcopy/broker-server-select"
+import { COPY_METHODS, TELEGRAM_GROUPS, type MtmcopyCopyMethod } from "@/lib/mtmcopy/copy-methods"
+import { getClientConnectionTitle, MTM_MASTER_LABEL } from "@/lib/mtmcopy/display-utils"
+
+export type MtmcopySenderMode = "telegram" | "master_account"
+export type MtmcopyAccountRole = "slave" | "master"
+
+export interface MTMcopierConnection {
+  id: string
+  account_role?: MtmcopyAccountRole
+  sender_mode?: MtmcopySenderMode
+  copyfactory_strategy_id?: string | null
+  telegram_channel: string | null
+  copy_method?: MtmcopyCopyMethod | null
+  telegram_group?: "premium" | "trade_ideas" | null
+  telegram_groups?: ("premium" | "trade_ideas")[] | null
+  copyfactory_strategy_pick?: string | null
+  exit_pct_tp1?: number | null
+  exit_pct_tp2?: number | null
+  exit_pct_tp3?: number | null
+  telegram_status: "pending" | "connected" | "error" | "disconnected"
+  mt5_login_last4: string | null
+  mt5_server: string | null
+  mt5_status: "pending" | "connected" | "error" | "disconnected"
+  lot_mode: "fixed" | "risk_percent" | "multiplier"
+  lot_value: number
+  max_risk_percent: number | null
+  symbols_whitelist: string[] | null
+  copy_sl: boolean
+  copy_tp: boolean
+  auto_trailing_stop: boolean
+  trailing_stop_points: number
+  reverse_signals: boolean
+  is_active: boolean
+  account_label?: string | null
+}
+
+type Selection = "new" | string
+
+function deriveSenderMode(connections: MTMcopierConnection[]): MtmcopySenderMode {
+  if (connections.some((c) => c.account_role === "master")) return "master_account"
+  return connections[0]?.sender_mode ?? "telegram"
+}
+
+function deriveCopyMethod(connections: MTMcopierConnection[]): MtmcopyCopyMethod {
+  if (connections.some((c) => c.account_role === "master")) return "master_slave"
+  const m = connections[0]?.copy_method
+  if (m === "strategy" || m === "telegram_group" || m === "master_slave") return m
+  return deriveSenderMode(connections) === "master_account" ? "master_slave" : "telegram_group"
+}
+
+function parseGroupsFromConn(conn: MTMcopierConnection | null): ("premium" | "trade_ideas")[] {
+  const fromArray = (conn?.telegram_groups ?? []).filter(
+    (g): g is "premium" | "trade_ideas" => g === "premium" || g === "trade_ideas",
+  )
+  if (fromArray.length) return fromArray
+  if (conn?.telegram_group === "premium" || conn?.telegram_group === "trade_ideas") {
+    return [conn.telegram_group]
+  }
+  return ["premium"]
+}
+
+interface StrategyOption {
+  id: string
+  title: string
+  description: string
+}
+
+function accountTabLabel(conn: MTMcopierConnection, index: number) {
+  return getClientConnectionTitle(conn, index)
+}
+
+function loadFormFromConnection(conn: MTMcopierConnection | null) {
+  return {
+    accountLabel: conn?.account_label ?? "",
+    telegramChannel: conn?.telegram_channel ?? "",
+    mt5Server: conn?.mt5_server ?? "",
+    lotMode: (conn?.lot_mode ?? "fixed") as MTMcopierConnection["lot_mode"],
+    lotValue: String(conn?.lot_value ?? "0.01"),
+    maxRisk: String(conn?.max_risk_percent ?? "1"),
+    symbolsInput: (conn?.symbols_whitelist ?? []).join(", "),
+    copySl: conn?.copy_sl ?? true,
+    copyTp: conn?.copy_tp ?? true,
+    autoTrailing: conn?.auto_trailing_stop ?? false,
+    trailingPoints: String(conn?.trailing_stop_points ?? 200),
+    reverse: conn?.reverse_signals ?? false,
+  }
+}
+
+export default function SetupModal({
+  connections,
+  initialSelectionId,
+  initialSenderMode,
+  initialCopyMethod,
+  onClose,
+  onSaved,
+}: {
+  connections: MTMcopierConnection[]
+  initialSelectionId: Selection | null
+  initialSenderMode?: MtmcopySenderMode | null
+  initialCopyMethod?: MtmcopyCopyMethod | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const masterConn = useMemo(
+    () => connections.find((c) => c.account_role === "master") ?? null,
+    [connections],
+  )
+  const slaveConns = useMemo(
+    () => connections.filter((c) => (c.account_role ?? "slave") === "slave"),
+    [connections],
+  )
+
+  const [copyMethod, setCopyMethod] = useState<MtmcopyCopyMethod>(
+    initialCopyMethod ?? deriveCopyMethod(connections),
+  )
+  const senderMode: MtmcopySenderMode =
+    copyMethod === "master_slave" ? "master_account" : "telegram"
+
+  const canAddMaster = copyMethod === "master_slave" && !masterConn
+  const canAddSlave =
+    copyMethod === "master_slave"
+      ? Boolean(masterConn?.copyfactory_strategy_id) && slaveConns.length < 2
+      : slaveConns.length < 2
+  const canAddAccount = canAddMaster || canAddSlave
+
+  const defaultSelection: Selection =
+    initialSelectionId ??
+    (canAddAccount ? "new" : masterConn?.id ?? connections[0]?.id ?? "new")
+
+  const [selectedId, setSelectedId] = useState<Selection>(defaultSelection)
+  const selectedConn =
+    selectedId === "new" ? null : connections.find((c) => c.id === selectedId) ?? null
+  const isMasterSelected = selectedConn?.account_role === "master"
+  const isNewMaster = selectedId === "new" && senderMode === "master_account" && !masterConn
+  const isEditMode = Boolean(selectedConn?.id && selectedConn.mt5_status !== "disconnected")
+  const showSlaveSettings = !isMasterSelected && !isNewMaster
+
+  const [accountLabel, setAccountLabel] = useState("")
+  const [telegramChannel, setTelegramChannel] = useState("")
+  const [mt5Platform, setMt5Platform] = useState<"mt4" | "mt5">("mt5")
+  const [mt5Login, setMt5Login] = useState("")
+  const [mt5Password, setMt5Password] = useState("")
+  const [mt5Server, setMt5Server] = useState("")
+  const [lotMode, setLotMode] = useState<MTMcopierConnection["lot_mode"]>("fixed")
+  const [lotValue, setLotValue] = useState("0.01")
+  const [maxRisk, setMaxRisk] = useState("1")
+  const [symbolsInput, setSymbolsInput] = useState("")
+  const [copySl, setCopySl] = useState(true)
+  const [copyTp, setCopyTp] = useState(true)
+  const [autoTrailing, setAutoTrailing] = useState(false)
+  const [trailingPoints, setTrailingPoints] = useState("200")
+  const [reverse, setReverse] = useState(false)
+  const [telegramGroups, setTelegramGroups] = useState<("premium" | "trade_ideas")[]>(["premium"])
+  const [strategyPick, setStrategyPick] = useState("")
+  const [strategies, setStrategies] = useState<StrategyOption[]>([])
+  const [exitTp1, setExitTp1] = useState("33")
+  const [exitTp2, setExitTp2] = useState("33")
+  const [exitTp3, setExitTp3] = useState("34")
+
+  const [provisioning, setProvisioning] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [switchingMode, setSwitchingMode] = useState(false)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    setCopyMethod(initialCopyMethod ?? deriveCopyMethod(connections))
+  }, [connections, initialCopyMethod])
+
+  useEffect(() => {
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      const res = await fetch("/api/mtmcopy/strategies", {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const data = await res.json()
+      if (res.ok && data.strategies?.length) {
+        setStrategies(data.strategies)
+        if (!strategyPick) setStrategyPick(data.strategies[0].id)
+      }
+    })()
+  }, [])
+
+  useEffect(() => {
+    const f = loadFormFromConnection(selectedConn)
+    setAccountLabel(f.accountLabel)
+    setTelegramChannel(f.telegramChannel)
+    setMt5Server(f.mt5Server)
+    setLotMode(f.lotMode)
+    setLotValue(f.lotValue)
+    setMaxRisk(f.maxRisk)
+    setSymbolsInput(f.symbolsInput)
+    setCopySl(f.copySl)
+    setCopyTp(f.copyTp)
+    setAutoTrailing(f.autoTrailing)
+    setTrailingPoints(f.trailingPoints)
+    setReverse(f.reverse)
+    setTelegramGroups(parseGroupsFromConn(selectedConn))
+    setStrategyPick(selectedConn?.copyfactory_strategy_pick ?? strategies[0]?.id ?? "")
+    setExitTp1(String(selectedConn?.exit_pct_tp1 ?? 33))
+    setExitTp2(String(selectedConn?.exit_pct_tp2 ?? 33))
+    setExitTp3(String(selectedConn?.exit_pct_tp3 ?? 34))
+    if (selectedConn?.copy_method) {
+      setCopyMethod(selectedConn.copy_method)
+    } else if (selectedConn?.account_role === "master") {
+      setCopyMethod("master_slave")
+    } else if (selectedConn) {
+      setCopyMethod(
+        selectedConn.sender_mode === "master_account" ? "master_slave" : "telegram_group",
+      )
+    }
+    setMt5Login("")
+    setMt5Password("")
+    setError("")
+  }, [selectedId, selectedConn, strategies])
+
+  const toggleTelegramGroup = (id: "premium" | "trade_ideas") => {
+    setTelegramGroups((prev) => {
+      if (prev.includes(id)) {
+        const next = prev.filter((g) => g !== id)
+        return next.length ? next : [id]
+      }
+      return [...prev, id]
+    })
+  }
+
+  const handleCopyMethodChange = async (method: MtmcopyCopyMethod) => {
+    if (method === copyMethod) return
+    if (method !== "master_slave" && masterConn) {
+      setError("Remove a conta mestre antes de mudar o método de cópia.")
+      return
+    }
+    if (connections.length > 0) {
+      setSwitchingMode(true)
+      setError("")
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) return
+        const res = await fetch("/api/mtmcopy/connection", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ copy_method: method }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          setError(data.error || "Não foi possível mudar o método.")
+          return
+        }
+      } catch {
+        setError("Erro de rede ao mudar método.")
+        return
+      } finally {
+        setSwitchingMode(false)
+      }
+    }
+    setCopyMethod(method)
+    setSelectedId("new")
+  }
+
+  const pollProvisionStatus = async (token: string, connectionId: string, attempts = 40) => {
+    for (let i = 0; i < attempts; i++) {
+      await new Promise((r) => setTimeout(r, 3000))
+      const st = await fetch(`/api/mtmcopy/provision?connection_id=${connectionId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await st.json()
+      const conn = data.connection
+      if (conn?.mt5_status === "connected") return conn
+      if (conn?.mt5_status === "error") {
+        throw new Error(conn.last_error || "Falha ao ligar conta MT5")
+      }
+    }
+    throw new Error("Timeout — a ligação está a demorar. Verifica o estado no painel dentro de alguns minutos.")
+  }
+
+  const buildSettingsPayload = () => {
+    const symbols_whitelist = symbolsInput
+      .split(/[,\s]+/)
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean)
+
+    const base = {
+      account_label: accountLabel.trim() || null,
+    }
+
+    if (!showSlaveSettings) return base
+
+    return {
+      ...base,
+      telegram_channel: senderMode === "telegram" ? (telegramChannel.trim() || null) : null,
+      lot_mode: lotMode,
+      lot_value: parseFloat(lotValue) || 0.01,
+      max_risk_percent: parseFloat(maxRisk) || 1,
+      symbols_whitelist: symbols_whitelist.length ? symbols_whitelist : null,
+      copy_sl: copySl,
+      copy_tp: copyTp,
+      auto_trailing_stop: autoTrailing,
+      trailing_stop_points: parseInt(trailingPoints, 10) || 200,
+      reverse_signals: reverse,
+      telegram_groups: telegramGroups,
+      telegram_group: telegramGroups[0] ?? null,
+      exit_pct_tp1: parseFloat(exitTp1) || 33,
+      exit_pct_tp2: parseFloat(exitTp2) || 33,
+      exit_pct_tp3: parseFloat(exitTp3) || 34,
+      copy_method: copyMethod,
+      copyfactory_strategy_pick: copyMethod === "strategy" ? strategyPick || null : null,
+    }
+  }
+
+  const handleSave = async () => {
+    setError("")
+
+    if (!isEditMode && (!mt5Login.trim() || !mt5Password || !mt5Server.trim())) {
+      setError("Preenche login, password e servidor da tua conta de trading.")
+      return
+    }
+
+    if (showSlaveSettings && copyMethod === "telegram_group" && !telegramGroups.length) {
+      setError("Escolhe pelo menos um grupo de sinais.")
+      return
+    }
+
+    if (showSlaveSettings && copyMethod === "strategy" && !strategyPick) {
+      setError("Escolhe uma estratégia MTM.")
+      return
+    }
+
+    setSaving(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        window.location.href = "/login?redirect=/mtmcopy"
+        return
+      }
+
+      if (isEditMode && selectedConn) {
+        const res = await fetch("/api/mtmcopy/connection", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            connection_id: selectedConn.id,
+            ...buildSettingsPayload(),
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          setError(data.error || "Não foi possível guardar a configuração.")
+          return
+        }
+        onSaved()
+        return
+      }
+
+      const accountRole: MtmcopyAccountRole = isNewMaster ? "master" : "slave"
+
+      setProvisioning(true)
+      const res = await fetch("/api/mtmcopy/provision", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          ...buildSettingsPayload(),
+          sender_mode: senderMode,
+          account_role: accountRole,
+          mt5_login: mt5Login.trim(),
+          mt5_password: mt5Password,
+          mt5_server: mt5Server.trim(),
+          mt5_platform: mt5Platform,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Não foi possível ligar a conta.")
+        return
+      }
+
+      setMt5Password("")
+      const connId = data.connection?.id
+      if (connId) await pollProvisionStatus(session.access_token, connId)
+      onSaved()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro de rede. Tenta novamente.")
+    } finally {
+      setSaving(false)
+      setProvisioning(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!selectedConn || !isEditMode) return
+    const label = accountTabLabel(selectedConn, connections.indexOf(selectedConn))
+    const extra =
+      selectedConn.account_role === "master"
+        ? " As slaves deixarão de receber cópia até ligares nova mestre."
+        : ""
+    if (!confirm(`Apagar a conta "${label}"?${extra}`)) return
+
+    setDeleting(true)
+    setError("")
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+
+      const res = await fetch(`/api/mtmcopy/connection?id=${selectedConn.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Não foi possível apagar a conta.")
+        return
+      }
+      onSaved()
+      if (connections.length <= 1) onClose()
+    } catch {
+      setError("Erro de rede ao apagar conta.")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const newButtonLabel =
+    copyMethod === "master_slave"
+      ? canAddMaster
+        ? "Conta mestre"
+        : "Conta slave"
+      : "Nova conta"
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/80 backdrop-blur-sm px-4 overflow-y-auto py-6 sm:py-8">
+      <div className="bg-zinc-900 border border-zinc-700/80 rounded-2xl w-full max-w-xl p-6 relative my-auto shadow-2xl shadow-black/50 max-h-[92vh] overflow-y-auto">
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#D2A63C]/50 to-transparent rounded-t-2xl" />
+        <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors">
+          <X className="w-5 h-5" />
+        </button>
+
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-xl bg-[#D2A63C]/15 border border-[#D2A63C]/30 flex items-center justify-center">
+            <Settings2 className="w-5 h-5 text-[#D2A63C]" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-white">Configurar MTMcopier</h3>
+            <p className="text-xs text-gray-500">Liga a tua conta e escolhe como queres copiar</p>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-xs font-medium text-gray-400 mb-2">Método de cópia</label>
+          <div className="grid gap-2">
+            {COPY_METHODS.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                disabled={saving || deleting || switchingMode || (m.id !== "master_slave" && Boolean(masterConn))}
+                onClick={() => handleCopyMethodChange(m.id)}
+                className={`text-left p-3 rounded-lg border text-sm transition-colors ${
+                  copyMethod === m.id
+                    ? "border-[#D2A63C]/50 bg-[#D2A63C]/10 text-[#D2A63C]"
+                    : "border-gray-700 text-gray-400 hover:bg-gray-800"
+                }`}
+              >
+                {m.id === "strategy" && <LineChart className="w-4 h-4 mb-1" />}
+                {m.id === "telegram_group" && <Send className="w-4 h-4 mb-1" />}
+                {m.id === "master_slave" && <LineChart className="w-4 h-4 mb-1" />}
+                <strong className="block">{m.title}</strong>
+                <span className="text-xs opacity-80">{m.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-4">
+          {masterConn && (
+            <button
+              type="button"
+              onClick={() => setSelectedId(masterConn.id)}
+              className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+                selectedId === masterConn.id
+                  ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
+                  : "border-gray-700 text-gray-400 hover:bg-gray-800"
+              }`}
+            >
+              {accountTabLabel(masterConn, 0)}
+            </button>
+          )}
+          {slaveConns.map((conn, i) => (
+            <button
+              key={conn.id}
+              type="button"
+              onClick={() => setSelectedId(conn.id)}
+              className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+                selectedId === conn.id
+                  ? "border-[#D2A63C]/50 bg-[#D2A63C]/10 text-[#D2A63C]"
+                  : "border-gray-700 text-gray-400 hover:bg-gray-800"
+              }`}
+            >
+              {accountTabLabel(conn, i)}
+            </button>
+          ))}
+          {canAddAccount && (
+            <button
+              type="button"
+              onClick={() => setSelectedId("new")}
+              className={`text-xs font-medium px-3 py-1.5 rounded-lg border flex items-center gap-1 transition-colors ${
+                selectedId === "new"
+                  ? "border-[#D2A63C]/50 bg-[#D2A63C]/10 text-[#D2A63C]"
+                  : "border-gray-700 text-gray-400 hover:bg-gray-800"
+              }`}
+            >
+              <Plus className="w-3 h-3" /> {newButtonLabel}
+            </button>
+          )}
+        </div>
+
+        <p className="text-sm text-gray-400 mb-5">
+          {isNewMaster ? (
+            <>Liga a tua <strong className="text-white">conta mestre</strong>. As trades que abrires aqui serão copiadas para as contas slave.</>
+          ) : isMasterSelected ? (
+            <>Conta mestre activa. Edita o nome ou apaga — as slaves copiam automaticamente as operações desta conta.</>
+          ) : isEditMode ? (
+            <>Ajusta lote, risco e opções desta conta. Não precisas de voltar a introduzir a password.</>
+          ) : copyMethod === "master_slave" ? (
+            <>Liga uma conta <strong className="text-white">slave</strong> que replica a tua conta mestre.</>
+          ) : copyMethod === "strategy" ? (
+            <>Liga a tua conta à estratégia MTM escolhida, com o teu risco e definições.</>
+          ) : (
+            <>Liga a tua conta aos grupos de sinais que escolheres abaixo.</>
+          )}
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1.5">Nome da conta (opcional)</label>
+            <Input
+              value={accountLabel}
+              onChange={(e) => setAccountLabel(e.target.value)}
+              placeholder={isNewMaster || isMasterSelected ? "ex: Conta mestre prop" : "ex: Slave IC Markets"}
+              className="bg-gray-800 border-gray-700 text-white"
+              disabled={saving || deleting}
+            />
+          </div>
+
+          {showSlaveSettings && (copyMethod === "strategy" || copyMethod === "telegram_group") && (
+            <div className="rounded-lg border border-zinc-700/80 bg-zinc-800/30 px-3 py-2 text-xs text-zinc-400">
+              {copyMethod === "strategy"
+                ? "Escolhe a estratégia MTM que esta conta vai copiar."
+                : "Escolhe um ou ambos os grupos de sinais para esta conta."}
+            </div>
+          )}
+
+          {copyMethod === "strategy" && showSlaveSettings && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1.5">Estratégia MTM *</label>
+              <div className="grid gap-2">
+                {strategies.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setStrategyPick(s.id)}
+                    className={`text-left rounded-lg border p-3 transition-colors ${
+                      strategyPick === s.id
+                        ? "border-[#D2A63C]/50 bg-[#D2A63C]/10"
+                        : "border-gray-700 hover:border-gray-600"
+                    }`}
+                  >
+                    <p className="text-white text-sm font-semibold">{s.title}</p>
+                    <p className="text-xs text-gray-400 mt-1">{s.description}</p>
+                  </button>
+                ))}
+                {!strategies.length && (
+                  <p className="text-xs text-gray-500">A carregar estratégias disponíveis...</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {copyMethod === "telegram_group" && showSlaveSettings && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">Grupos de sinais *</label>
+                <p className="text-xs text-gray-500 mb-2">Podes escolher um ou ambos os grupos.</p>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setTelegramGroups(["premium", "trade_ideas"])}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-gray-600 text-gray-300 hover:border-[#D2A63C]/40"
+                  >
+                    Ambos os grupos
+                  </button>
+                </div>
+                <div className="grid gap-2">
+                  {TELEGRAM_GROUPS.map((g) => {
+                    const active = telegramGroups.includes(g.id)
+                    return (
+                      <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => toggleTelegramGroup(g.id)}
+                        className={`text-left rounded-lg border p-3 transition-colors ${
+                          active
+                            ? "border-[#D2A63C]/50 bg-[#D2A63C]/10"
+                            : "border-gray-700 hover:border-gray-600"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            readOnly
+                            checked={active}
+                            className="w-4 h-4 rounded border-gray-600"
+                          />
+                          <p className="text-white text-sm font-semibold">{g.title}</p>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1 ml-6">{g.description}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              {telegramGroups.includes("premium") && (
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Exit 1 %</label>
+                    <Input value={exitTp1} onChange={(e) => setExitTp1(e.target.value)} className="bg-gray-800 border-gray-700 text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Exit 2 %</label>
+                    <Input value={exitTp2} onChange={(e) => setExitTp2(e.target.value)} className="bg-gray-800 border-gray-700 text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Exit 3 % (fecha resto)</label>
+                    <Input value={exitTp3} onChange={(e) => setExitTp3(e.target.value)} className="bg-gray-800 border-gray-700 text-white" />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {copyMethod === "master_slave" && (isNewMaster || isMasterSelected) && (
+            <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-3 text-xs text-gray-300">
+              <strong className="text-amber-400">Copy trader pessoal:</strong> opera nesta conta mestre e as slaves
+              replicam as tuas trades em tempo real.
+            </div>
+          )}
+
+          {isEditMode ? (
+            <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3 text-xs text-gray-300">
+              <strong className="text-emerald-400">Conta ligada:</strong>{" "}
+              {isMasterSelected || isNewMaster
+                ? MTM_MASTER_LABEL
+                : selectedConn?.mt5_login_last4
+                  ? `····${selectedConn.mt5_login_last4}`
+                  : "activa"}
+              {!isMasterSelected && !isNewMaster && selectedConn?.mt5_server && (
+                <span className="block mt-1 text-gray-500">{selectedConn.mt5_server}</span>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3 text-xs text-gray-300">
+                <strong className="text-emerald-400">Segurança:</strong> a password da conta é usada só para a ligação e não fica guardada no site.
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">Plataforma *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["mt5", "mt4"] as const).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setMt5Platform(p)}
+                      disabled={saving}
+                      className={`text-sm py-2 rounded-lg border font-medium ${
+                        mt5Platform === p
+                          ? "border-[#D2A63C]/50 bg-[#D2A63C]/10 text-[#D2A63C]"
+                          : "border-gray-700 text-gray-400"
+                      }`}
+                    >
+                      {p.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Login *</label>
+                  <Input
+                    value={mt5Login}
+                    onChange={(e) => setMt5Login(e.target.value.replace(/\D/g, ""))}
+                    placeholder="12345678"
+                    className="bg-gray-800 border-gray-700 text-white"
+                    disabled={saving}
+                    autoComplete="off"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Password *</label>
+                  <Input
+                    type="password"
+                    value={mt5Password}
+                    onChange={(e) => setMt5Password(e.target.value)}
+                    placeholder="Password MT4/MT5"
+                    className="bg-gray-800 border-gray-700 text-white"
+                    disabled={saving}
+                    autoComplete="new-password"
+                  />
+                </div>
+              </div>
+              <BrokerServerSelect
+                platform={mt5Platform}
+                server={mt5Server}
+                onServerChange={setMt5Server}
+                disabled={saving}
+              />
+            </>
+          )}
+
+          {showSlaveSettings && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">Modo de cálculo do lote</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { id: "fixed", label: "Lote fixo" },
+                    { id: "risk_percent", label: "% de risco" },
+                    { id: "multiplier", label: "Multiplicador" },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setLotMode(opt.id)}
+                      disabled={saving || deleting}
+                      className={`text-xs font-medium py-2 rounded-lg border transition-colors ${
+                        lotMode === opt.id
+                          ? "border-[#D2A63C]/50 bg-[#D2A63C]/10 text-[#D2A63C]"
+                          : "border-gray-700 text-gray-400 hover:bg-gray-800"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">
+                    {lotMode === "fixed" ? "Lote" : lotMode === "risk_percent" ? "% por operação" : "Multiplicador"}
+                  </label>
+                  <Input
+                    value={lotValue}
+                    onChange={(e) => setLotValue(e.target.value)}
+                    inputMode="decimal"
+                    className="bg-gray-800 border-gray-700 text-white"
+                    disabled={saving || deleting}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Risco máx. diário (%)</label>
+                  <Input
+                    value={maxRisk}
+                    onChange={(e) => setMaxRisk(e.target.value)}
+                    inputMode="decimal"
+                    className="bg-gray-800 border-gray-700 text-white"
+                    disabled={saving || deleting}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">Filtro de símbolos (opcional)</label>
+                <Input
+                  value={symbolsInput}
+                  onChange={(e) => setSymbolsInput(e.target.value)}
+                  placeholder="XAUUSD, EURUSD — vazio = todos"
+                  className="bg-gray-800 border-gray-700 text-white"
+                  disabled={saving || deleting}
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-4 pt-1">
+                {[
+                  { label: "Copiar Stop Loss", value: copySl, set: setCopySl },
+                  { label: "Copiar Take Profit", value: copyTp, set: setCopyTp },
+                  { label: "Inverter sinais", value: reverse, set: setReverse },
+                ].map(({ label, value, set }) => (
+                  <label key={label} className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={value}
+                      onChange={(e) => set(e.target.checked)}
+                      disabled={saving || deleting}
+                      className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-[#D2A63C]"
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+
+              <div className="rounded-lg border border-zinc-700/80 bg-zinc-800/40 p-3 space-y-3">
+                <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoTrailing}
+                    onChange={(e) => setAutoTrailing(e.target.checked)}
+                    disabled={saving || deleting}
+                    className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-[#D2A63C]"
+                  />
+                  <span>
+                    <strong className="text-white">Auto trailing stop</strong>
+                    <span className="block text-xs text-gray-500 mt-0.5">O stop loss acompanha o preço automaticamente.</span>
+                  </span>
+                </label>
+                {autoTrailing && (
+                  <Input
+                    value={trailingPoints}
+                    onChange={(e) => setTrailingPoints(e.target.value.replace(/\D/g, ""))}
+                    placeholder="200"
+                    className="bg-gray-800 border-gray-700 text-white h-9"
+                    disabled={saving || deleting}
+                  />
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {error && (
+          <div className="mt-4 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg p-3">{error}</div>
+        )}
+
+        <div className="flex flex-col gap-2 mt-5">
+          <Button
+            onClick={handleSave}
+            disabled={saving || deleting || switchingMode}
+            className="w-full bg-[#D2A63C] hover:bg-[#BB8525] text-black font-bold"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                {provisioning ? "A ligar conta..." : "A guardar..."}
+              </>
+            ) : isEditMode ? (
+              <>Guardar alterações <Check className="ml-2 h-5 w-5" /></>
+            ) : isNewMaster ? (
+              <>Ligar conta mestre <ArrowRight className="ml-2 h-5 w-5" /></>
+            ) : (
+              <>Ligar conta e activar cópia <ArrowRight className="ml-2 h-5 w-5" /></>
+            )}
+          </Button>
+
+          {isEditMode && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDelete}
+              disabled={saving || deleting}
+              className="w-full border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            >
+              {deleting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Apagar esta conta
+            </Button>
+          )}
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={saving || deleting}
+            className="w-full border-zinc-600 text-zinc-300 hover:bg-zinc-800 hover:text-white"
+          >
+            Cancelar
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}

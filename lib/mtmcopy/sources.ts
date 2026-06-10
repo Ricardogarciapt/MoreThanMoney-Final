@@ -1,0 +1,105 @@
+import type { MtmcopyChannelKey } from './channel-context'
+import { channelKeyForTelegramGroup, parseTelegramGroups } from './copy-methods'
+import { channelKeysFromTelegramChat, chatIdsMatch, normalizeChannel } from './channels'
+import { getEffectiveSignalChatIds } from './signal-sources-config'
+import type { MTMcopierConnection } from './types'
+
+export type MtmcopyChatType = 'private' | 'group' | 'supergroup' | 'channel' | string
+
+export interface MtmcopyTelegramChat {
+  id?: number
+  username?: string
+  title?: string
+  type?: MtmcopyChatType
+}
+
+/** IDs dos grupos/canais MTM oficiais (opcional). Vazio = todos os grupos onde o bot recebe mensagens. */
+export function getDefaultSourceChatIds(): Set<string> {
+  const raw = process.env.TELEGRAM_MTMCOPY_DEFAULT_CHAT_IDS || ''
+  const ids = raw
+    .split(/[,\s]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  return new Set(ids)
+}
+
+/** Grupo/canal onde o bot pode emitir sinais (nunca chat privado). */
+export function isGroupOrChannelChat(chat: MtmcopyTelegramChat): boolean {
+  const type = chat.type
+  if (type === 'private') return false
+  if (type === 'group' || type === 'supergroup' || type === 'channel') return true
+  // channel_post / updates sem type explícito — assumir válido se tiver id de grupo
+  if (chat.id != null && chat.id < 0) return true
+  return Boolean(chat.username)
+}
+
+function matchesEffectiveIds(chat: MtmcopyTelegramChat, effective: Set<string>): boolean {
+  const keys = channelKeysFromTelegramChat(chat)
+  for (const key of keys) {
+    for (const allowed of effective) {
+      if (key === allowed || chatIdsMatch(key, allowed)) return true
+    }
+  }
+  return false
+}
+
+export async function chatMatchesAllowlist(chat: MtmcopyTelegramChat): Promise<boolean> {
+  const effective = await getEffectiveSignalChatIds()
+  if (effective.size && matchesEffectiveIds(chat, effective)) return true
+
+  const envAllowlist = getDefaultSourceChatIds()
+  if (!envAllowlist.size) return true
+  const keys = channelKeysFromTelegramChat(chat)
+  return keys.some((k) => envAllowlist.has(k))
+}
+
+export function usesCustomChannel(conn: Pick<MTMcopierConnection, 'telegram_channel'>): boolean {
+  return Boolean(conn.telegram_channel?.trim())
+}
+
+/**
+ * Sem canal configurado → sinais dos grupos/canais MTM (onde o bot está).
+ * Com canal configurado → apenas esse sender externo (bot tem de ser admin).
+ */
+export async function connectionMatchesSignalSource(
+  conn: Pick<MTMcopierConnection, 'telegram_channel'>,
+  chat: MtmcopyTelegramChat,
+): Promise<boolean> {
+  if (!isGroupOrChannelChat(chat)) return false
+
+  if (usesCustomChannel(conn)) {
+    const configured = normalizeChannel(conn.telegram_channel)
+    if (!configured) return false
+    const keys = channelKeysFromTelegramChat(chat)
+    return keys.some((k) => k === configured)
+  }
+
+  return chatMatchesAllowlist(chat)
+}
+
+export function describeSignalSourceMode(conn: Pick<MTMcopierConnection, 'telegram_channel'>): 'default' | 'custom' {
+  return usesCustomChannel(conn) ? 'custom' : 'default'
+}
+
+/** Filtra ligações pelo grupo Telegram escolhido (Premium, Trade Ideas ou ambos). */
+export function connectionMatchesChannel(
+  conn: Pick<
+    MTMcopierConnection,
+    'telegram_group' | 'telegram_groups' | 'copy_method' | 'sender_mode'
+  >,
+  channel: MtmcopyChannelKey,
+): boolean {
+  if (channel === 'unknown') return false
+  if ((conn.sender_mode ?? 'telegram') === 'master_account') return false
+  if (conn.copy_method === 'master_slave') return false
+  if (conn.copy_method === 'strategy') return false
+
+  const groups = parseTelegramGroups(conn)
+  if (!groups.length) return true
+
+  const keys = groups
+    .map((g) => channelKeyForTelegramGroup(g))
+    .filter((k): k is MtmcopyChannelKey => k != null)
+  if (!keys.length) return true
+  return keys.includes(channel)
+}

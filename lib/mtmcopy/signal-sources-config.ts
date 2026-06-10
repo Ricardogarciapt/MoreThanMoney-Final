@@ -1,0 +1,237 @@
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import {
+  allChatIdVariants,
+  CANONICAL_TELEGRAM_CHANNELS,
+  resolvedPremiumSignalsChatId,
+  resolvedTradeIdeasChatId,
+} from '@/lib/telegram-channel-ids'
+
+export type MtmcopyTelegramChannelKey = 'trade-ideas' | 'premium-signals'
+
+export interface MtmcopyChannelProviderConfig {
+  account_id: string
+  strategy_id?: string | null
+  tag?: string
+}
+
+export interface MtmcopySignalSourcesConfig {
+  enabled_chat_ids: string[]
+  enabled_channels: MtmcopyTelegramChannelKey[]
+  provider_strategy_id: string | null
+  provider_account_id: string | null
+  /** Contas MetaAPI por canal (premium / trade ideas) */
+  channel_providers?: Partial<Record<MtmcopyTelegramChannelKey, MtmcopyChannelProviderConfig>>
+  /** @deprecated migrado para enabled_channels */
+  enabled_app_slugs?: string[]
+}
+
+const SETTING_KEY = 'mtmcopy_signal_sources'
+
+const DEFAULT_CHANNELS: MtmcopyTelegramChannelKey[] = ['trade-ideas', 'premium-signals']
+
+const DEFAULT_CONFIG: MtmcopySignalSourcesConfig = {
+  enabled_chat_ids: [],
+  enabled_channels: [...DEFAULT_CHANNELS],
+  provider_strategy_id: null,
+  provider_account_id: null,
+}
+
+let cache: { config: MtmcopySignalSourcesConfig; at: number } | null = null
+const CACHE_MS = 30_000
+
+/** Canais oficiais MTMcopier — mapeados às env vars Vercel */
+export const TELEGRAM_SIGNAL_CHANNELS: Record<
+  MtmcopyTelegramChannelKey,
+  { label: string; description: string; envVar: string; envChatId: () => string | undefined }
+> = {
+  'trade-ideas': {
+    label: 'Trade Ideas (Ideias de Forex)',
+    description: CANONICAL_TELEGRAM_CHANNELS.tradeIdeas.title,
+    envVar: 'TELEGRAM_CHANNEL_TRADE_IDEAS',
+    envChatId: resolvedTradeIdeasChatId,
+  },
+  'premium-signals': {
+    label: 'Premium Signals (@MTMgold)',
+    description: CANONICAL_TELEGRAM_CHANNELS.premiumSignals.title,
+    envVar: 'TELEGRAM_CHANNEL_PREMIUM_SIGNALS',
+    envChatId: resolvedPremiumSignalsChatId,
+  },
+}
+
+function migrateLegacySlugs(parsed: Record<string, unknown>): MtmcopyTelegramChannelKey[] {
+  const fromNew = parsed.enabled_channels
+  if (Array.isArray(fromNew) && fromNew.length) {
+    return fromNew.filter((k): k is MtmcopyTelegramChannelKey =>
+      k === 'trade-ideas' || k === 'premium-signals',
+    )
+  }
+
+  const legacy = parsed.enabled_app_slugs
+  if (!Array.isArray(legacy) || !legacy.length) return [...DEFAULT_CHANNELS]
+
+  const channels: MtmcopyTelegramChannelKey[] = []
+  if (legacy.includes('trade-ideas-setup') || legacy.includes('trade-ideas')) {
+    channels.push('trade-ideas')
+  }
+  if (legacy.includes('premium-ideas') || legacy.includes('premium-signals')) {
+    channels.push('premium-signals')
+  }
+  return channels.length ? channels : [...DEFAULT_CHANNELS]
+}
+
+export function envChatIds(): string[] {
+  const ids = new Set<string>()
+  ids.add(resolvedTradeIdeasChatId())
+  ids.add(resolvedPremiumSignalsChatId())
+  for (const meta of Object.values(TELEGRAM_SIGNAL_CHANNELS)) {
+    const id = meta.envChatId()?.trim()
+    if (id) ids.add(id)
+  }
+  const extra = process.env.TELEGRAM_MTMCOPY_DEFAULT_CHAT_IDS
+  if (extra) {
+    extra
+      .split(/[,\s]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .forEach((id) => ids.add(id))
+  }
+  return [...ids]
+}
+
+export async function getSignalSourcesConfig(): Promise<MtmcopySignalSourcesConfig> {
+  if (cache && Date.now() - cache.at < CACHE_MS) return cache.config
+
+  const supabase = getSupabaseAdmin()
+  const { data } = await supabase
+    .from('site_settings')
+    .select('value')
+    .eq('key', SETTING_KEY)
+    .maybeSingle()
+
+  let config = DEFAULT_CONFIG
+  if (data?.value) {
+    try {
+      const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value
+      config = {
+        ...DEFAULT_CONFIG,
+        ...parsed,
+        enabled_channels: migrateLegacySlugs(parsed),
+        enabled_chat_ids: Array.isArray(parsed.enabled_chat_ids)
+          ? parsed.enabled_chat_ids.map(String)
+          : [],
+      }
+    } catch {
+      config = DEFAULT_CONFIG
+    }
+  }
+
+  if (!config.provider_strategy_id && process.env.METAAPI_COPY_STRATEGY_ID) {
+    config.provider_strategy_id = process.env.METAAPI_COPY_STRATEGY_ID
+  }
+  if (!config.provider_account_id && process.env.METAAPI_PROVIDER_ACCOUNT_ID) {
+    config.provider_account_id = process.env.METAAPI_PROVIDER_ACCOUNT_ID
+  }
+
+  cache = { config, at: Date.now() }
+  return config
+}
+
+export async function saveSignalSourcesConfig(config: MtmcopySignalSourcesConfig) {
+  const supabase = getSupabaseAdmin()
+  const payload: MtmcopySignalSourcesConfig = {
+    enabled_chat_ids: config.enabled_chat_ids,
+    enabled_channels: config.enabled_channels,
+    provider_strategy_id: config.provider_strategy_id,
+    provider_account_id: config.provider_account_id,
+  }
+
+  const { error } = await supabase.from('site_settings').upsert(
+    {
+      key: SETTING_KEY,
+      value: JSON.stringify(payload),
+      description: 'Canais Telegram activos para MTMcopier + estratégia MetaAPI',
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'key' },
+  )
+  if (error) throw error
+  cache = null
+}
+
+function legacyEnvChatId(key: MtmcopyTelegramChannelKey): string {
+  return key === 'trade-ideas' ? resolvedTradeIdeasChatId() : resolvedPremiumSignalsChatId()
+}
+
+function discoveredChannelKey(title: string | null | undefined): MtmcopyTelegramChannelKey | null {
+  if (!title) return null
+  const t = title.toLowerCase()
+  if (t.includes('premium')) return 'premium-signals'
+  if (
+    t.includes('trade') ||
+    t.includes('forex') ||
+    t.includes('ideias') ||
+    t.includes('setup') ||
+    t.includes('sinais')
+  ) {
+    return 'trade-ideas'
+  }
+  return null
+}
+
+export async function getEffectiveSignalChatIds(): Promise<Set<string>> {
+  const config = await getSignalSourcesConfig()
+  const rawIds: string[] = []
+
+  for (const key of config.enabled_channels) {
+    rawIds.push(legacyEnvChatId(key))
+  }
+  config.enabled_chat_ids.forEach((id) => rawIds.push(id))
+
+  if (config.enabled_channels.length) {
+    const supabase = getSupabaseAdmin()
+    const { data: discovered } = await supabase
+      .from('mtmcopy_telegram_discovered')
+      .select('chat_id, title, username')
+      .limit(200)
+
+    for (const row of discovered ?? []) {
+      const mapped = discoveredChannelKey(row.title)
+      if (mapped && config.enabled_channels.includes(mapped)) {
+        rawIds.push(String(row.chat_id))
+      }
+      if (
+        row.username?.toLowerCase() === CANONICAL_TELEGRAM_CHANNELS.premiumSignals.username?.toLowerCase() &&
+        config.enabled_channels.includes('premium-signals')
+      ) {
+        rawIds.push(String(row.chat_id))
+      }
+    }
+  }
+
+  if (!rawIds.length) {
+    envChatIds().forEach((id) => rawIds.push(id))
+  }
+
+  return allChatIdVariants(rawIds)
+}
+
+export async function registerDiscoveredTelegramChat(chat: {
+  id?: number
+  username?: string
+  title?: string
+  type?: string
+}) {
+  if (chat.id == null) return
+  const supabase = getSupabaseAdmin()
+  await supabase.from('mtmcopy_telegram_discovered').upsert(
+    {
+      chat_id: String(chat.id),
+      username: chat.username ?? null,
+      title: chat.title ?? null,
+      chat_type: chat.type ?? null,
+      last_message_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'chat_id' },
+  )
+}
