@@ -62,6 +62,7 @@ export default function Navbar() {
       icon: TrendingUp,
       submenu: [
         { name: "Automatização", href: "/automation" },
+        { name: "MTMcopier", href: "/mtmcopy" },
         { name: "IQ SYNC", href: "/swipetotrade" },
         { name: "Os nossos Scanners", href: "/scanner" },
         { name: "Scanner ao Vivo", href: "/scanner-access" },
