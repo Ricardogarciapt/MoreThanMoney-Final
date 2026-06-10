@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { buildAppChannelMap, resolveAppChannelSlug } from "@/lib/telegram-app-channels"
+import { processMtmcopyTelegramMessage } from "@/lib/mtmcopy/processor"
 
 const BOT_TOKEN = process.env.TELEGRAM_AIBOT_TOKEN || ""
 const BASE_URL = `https://api.telegram.org/bot${BOT_TOKEN}`
@@ -90,6 +91,11 @@ export async function POST(_request: NextRequest) {
         stats.errors++
       } else {
         stats.saved++
+        try {
+          await processMtmcopyTelegramMessage(post)
+        } catch (procErr) {
+          console.error("[catchup-aibot] mtmcopy:", procErr)
+        }
       }
     }
 
