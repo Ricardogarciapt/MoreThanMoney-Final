@@ -69,6 +69,8 @@ const SYMBOL_STOPWORDS = new Set([
   'MANAGEMENT',
   'SUITABLE',
   'CAPITAL',
+  'BASED',
+  'SIZES',
   'RISK',
   'BREAKEVEN',
   'CLOSE',
@@ -235,8 +237,18 @@ function extractEntryFromZone(text: string, direction: 'buy' | 'sell'): number |
 
 function detectOrderType(text: string): 'market' | 'limit' {
   if (/\b(?:now|market|mercado|já)\b/i.test(text)) return 'market'
+  if (/\b(?:buy|sell)\s+zone\b/i.test(text)) return 'market'
   if (/\blimit\b/i.test(text)) return 'limit'
   return 'market'
+}
+
+/** Formato Premium: «Gold Sell Zone 4062-4100» + SL/TP (com ou sem «XAUUSD SELL NOW»). */
+function isGoldZoneEntrySignal(text: string, sl: number | null, tp: number[]): boolean {
+  return (
+    /gold\s+(?:buy|sell)\s+zone/i.test(text) &&
+    sl != null &&
+    tp.length > 0
+  )
 }
 
 function extractEntry(text: string, lines: string[]): number | null {
@@ -367,8 +379,14 @@ export function parseSignal(text: string): ParsedSignal | null {
   const sl = extractSlFromText(text, lines)
   const tp = extractTpFromText(text, lines)
 
-  // Entrada nova deve ter SL (todos os formatos MTM oficiais têm)
-  if (sl == null && !/\b(?:now|market|mercado|já)\b/i.test(text)) return null
+  // Entrada nova deve ter SL (ou bloco Gold Zone com SL+TP)
+  if (
+    sl == null &&
+    !/\b(?:now|market|mercado|já)\b/i.test(text) &&
+    !isGoldZoneEntrySignal(text, sl, tp)
+  ) {
+    return null
+  }
   if (orderType === 'limit' && (entry == null || entry <= 0)) return null
 
   return {

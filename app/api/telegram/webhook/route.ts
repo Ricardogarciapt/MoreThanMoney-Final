@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse, after } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { telegramService } from "@/lib/telegram-service"
 import { db } from "@/lib/database-service"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
@@ -83,6 +83,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const supabase = getSupabaseAdmin()
 
+    const runMtmcopy = async (message: Parameters<typeof processMtmcopyTelegramMessage>[0]) => {
+      try {
+        await processMtmcopyTelegramMessage(message)
+      } catch (err) {
+        console.error("[mtmcopy] erro no processamento:", err)
+      }
+    }
+
     // Verificar se é uma mensagem do canal
     if (body.channel_post) {
       const message = body.channel_post
@@ -93,12 +101,8 @@ export async function POST(request: NextRequest) {
       // Mirror to chat channels if configured
       await mirrorTelegramMessage(supabase, message)
 
-      // MTMcopier — copy trading Telegram → MT5 (Bot API, serverless)
-      after(() =>
-        processMtmcopyTelegramMessage(message).catch((err) =>
-          console.error("[mtmcopy] erro no processamento:", err),
-        ),
-      )
+      // MTMcopier — executar de forma síncrona (after() perdia sinais em serverless)
+      await runMtmcopy(message)
 
       // Processar mensagem como sinal de trading
       const signal = telegramService.processSignalMessage(message)
@@ -111,15 +115,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Edição de mensagem no canal (updates de zona sem novo post)
+    if (body.edited_channel_post) {
+      const message = body.edited_channel_post
+      const { registerDiscoveredTelegramChat } = await import('@/lib/mtmcopy/signal-sources-config')
+      await registerDiscoveredTelegramChat(message.chat ?? {})
+      await mirrorTelegramMessage(supabase, message)
+      await runMtmcopy(message)
+    }
+
     // Grupos com sinais (bot como membro/admin)
     if (body.message?.chat?.type === "supergroup" || body.message?.chat?.type === "group") {
       const { registerDiscoveredTelegramChat } = await import('@/lib/mtmcopy/signal-sources-config')
       await registerDiscoveredTelegramChat(body.message.chat ?? {})
-      after(() =>
-        processMtmcopyTelegramMessage(body.message).catch((err) =>
-          console.error("[mtmcopy] erro no processamento (grupo):", err),
-        ),
-      )
+      await runMtmcopy(body.message)
     }
 
     // Handle private messages & commands
