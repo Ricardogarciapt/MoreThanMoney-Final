@@ -160,7 +160,7 @@ export default function Footer() {
                 <span>FAQ</span>
               </Link>
               <Link 
-                href="/privacy-policy" 
+                href="/privacidade" 
                 className="text-gray-400 hover:text-mtm-primary transition-colors flex items-center gap-2 group"
               >
                 <Lock className="h-4 w-4 group-hover:scale-110 transition-transform" />

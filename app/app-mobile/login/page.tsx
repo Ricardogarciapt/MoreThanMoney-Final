@@ -382,7 +382,7 @@ export default function AppMobileLoginPage() {
                 Ao iniciar sessão, aceitas os nossos{' '}
                 <Link href="/terms" className="text-[#D2A63C] hover:underline">Termos de Serviço</Link>
                 {' '}e{' '}
-                <Link href="/privacy-policy" className="text-[#D2A63C] hover:underline">Política de Privacidade</Link>
+                <Link href="/privacidade" className="text-[#D2A63C] hover:underline">Política de Privacidade</Link>
               </p>
             </div>
           </CardContent>

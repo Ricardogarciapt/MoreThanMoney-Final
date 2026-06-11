@@ -16,7 +16,7 @@ module.exports = {
     await config.transform(config, "/member-area"),
     await config.transform(config, "/affiliate-dashboard"),
     await config.transform(config, "/portfolios"),
-    await config.transform(config, "/privacy-policy"),
+    await config.transform(config, "/privacidade"),
     await config.transform(config, "/terms"),
     await config.transform(config, "/faq"),
   ],

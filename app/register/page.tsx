@@ -461,7 +461,16 @@ export default function RegisterPage() {
               </p>
               <p className="text-gray-600 text-xs">
                 Subscrição auto-renovável. Cancela a qualquer momento.{' '}
-                <br />Ao criar conta aceitas os nossos Termos de Serviço e Política de Privacidade.
+                <br />
+                Ao criar conta aceitas os nossos{" "}
+                <Link href="/terms" className="text-[#D2A63C] hover:underline">
+                  Termos de Serviço
+                </Link>{" "}
+                e{" "}
+                <Link href="/privacidade" className="text-[#D2A63C] hover:underline">
+                  Política de Privacidade
+                </Link>
+                .
               </p>
             </div>
           </CardContent>
