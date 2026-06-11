@@ -94,6 +94,7 @@
     "sonner": "^2.0.7",
     "ssh2": "^1.17.0",
     "stripe": "^18.2.1",
+    "styled-jsx": "^5.1.7",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "use-sync-external-store": "latest",
