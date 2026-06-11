@@ -10,6 +10,7 @@ import {
   linkMlmBuyerAfterRegistration,
   processMlmCheckoutCommission,
 } from '@/lib/mlm-checkout-commission'
+import { isRegisteredMember } from '@/lib/member-access'
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -202,11 +203,13 @@ export async function POST(request: NextRequest) {
 
       const { data: existingOAuthProfile } = await supabaseAdmin
         .from('profiles')
-        .select('id')
+        .select(
+          'id, user_type, member_category, is_active, subscription_plan, stripe_subscription_id, subscription_expires_at, trial_expires_at, trial_expired'
+        )
         .eq('id', oauthUserId)
         .maybeSingle()
 
-      if (existingOAuthProfile) {
+      if (isRegisteredMember(existingOAuthProfile)) {
         return NextResponse.json({ success: true, userId: oauthUserId, alreadyExists: true })
       }
 

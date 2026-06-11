@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { supabase } from "@/lib/supabase"
+import { isRegisteredMember } from "@/lib/member-access"
 import { loadMemberProfile } from "@/lib/member-profile"
 import { REGISTER_NOT_FOUND_MESSAGE } from "@/lib/oauth-flow"
 
@@ -149,7 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .then(async ({ data: profile }: { data: any }) => {
               if (!mounted) return
               const p = profile ?? (await loadMemberProfile(supabase, cachedSession.user.id))
-              if (p) {
+              if (p && isRegisteredMember(p)) {
                 const normalized = await enforceTrialExpiry(p)
                 const mapped = profileToUser(normalized, cachedSession.user)
                 if (mapped) {
@@ -201,7 +202,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           if (!mounted) return
           
-          if (profile) {
+          if (profile && isRegisteredMember(profile)) {
             console.log('✅ [AUTH CONTEXT] Perfil carregado:', profile.email)
             const normalized = await enforceTrialExpiry(profile)
             const mapped = profileToUser(normalized, session.user)
@@ -261,7 +262,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .maybeSingle()
           .then(async ({ data: profile }: { data: any }) => {
             const p = profile ?? (await loadMemberProfile(supabase, session.user.id))
-            if (p && mounted) {
+            if (p && isRegisteredMember(p) && mounted) {
               const normalized = await enforceTrialExpiry(p)
               const mapped = profileToUser(normalized, session.user)
               if (mapped) {
@@ -316,7 +317,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (data.session && data.user) {
         const profile = await loadMemberProfile(supabase, data.user.id)
 
-        if (!profile) {
+        if (!isRegisteredMember(profile)) {
           await supabase.auth.signOut()
           setUser(null)
           setIsIqonicUser(false)

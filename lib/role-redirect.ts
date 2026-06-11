@@ -1,3 +1,4 @@
+import { isRegisteredMember } from "@/lib/member-access"
 import { isSubscriptionActive, isSubscriptionCategory } from "@/lib/member-subscription"
 
 /**
@@ -23,6 +24,8 @@ export interface UserProfile {
   trial_expires_at?: string | null
   subscription_expires_at?: string | null
   subscription_auto_renew?: boolean | null
+  subscription_plan?: "app_member" | "premium" | null
+  stripe_subscription_id?: string | null
 }
 
 export type AccountKind = "admin" | "vip" | "member" | "app_only" | "trial" | "pending" | "blocked"
@@ -67,9 +70,9 @@ export function getAccountKind(profile: UserProfile | null): AccountKind {
     return "blocked"
   }
 
-  // Membro App Only: member_category "standard" → acesso exclusivo à app mobile
+  // Membro App Only: member_category "standard" com plano pago
   if (profile.member_category === "standard") {
-    return "app_only"
+    return isRegisteredMember(profile) ? "app_only" : "blocked"
   }
 
   // member, presentation, affiliate, etc. → membro completo

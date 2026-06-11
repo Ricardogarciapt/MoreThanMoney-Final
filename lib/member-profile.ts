@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { isRegisteredMember } from "@/lib/member-access"
 import type { UserProfile } from "@/lib/role-redirect"
 
 type SessionLike = {
@@ -49,6 +50,16 @@ export async function loadMemberProfile(
   }
 
   return (data as UserProfile) ?? null
+}
+
+/** Perfil só se registo/pagamento válido (bloqueia stubs OAuth). */
+export async function loadRegisteredMemberProfile(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<UserProfile | null> {
+  const profile = await loadMemberProfile(supabase, userId)
+  if (!profile || !isRegisteredMember(profile)) return null
+  return profile
 }
 
 export async function ensureMemberProfile(

@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { determinePostLoginRedirect, safeInternalRedirectPath } from "@/lib/role-redirect"
+import { isRegisteredMember } from "@/lib/member-access"
 import { ensureMemberProfile, loadMemberProfile } from "@/lib/member-profile"
 import {
   isOAuthFlow,
@@ -61,7 +62,7 @@ async function startOAuthRegisterCheckout(session: {
     const err = await checkoutRes.json().catch(() => ({}))
     if (checkoutRes.status === 409) {
       const profile = await loadMemberProfile(supabase, session.user.id)
-      if (profile) {
+      if (isRegisteredMember(profile)) {
         const redirectTo = determinePostLoginRedirect(profile, "/app-mobile")
         const full =
           redirectTo.startsWith("http") ? redirectTo : `${window.location.origin}${redirectTo}`
@@ -116,9 +117,10 @@ export default function PostOAuthPage() {
       setCachedSession(session)
 
       const existingProfile = await loadMemberProfile(supabase, session.user.id)
+      const isRegistered = isRegisteredMember(existingProfile)
 
       if (flow === OAUTH_FLOW_LOGIN) {
-        if (!existingProfile) {
+        if (!isRegistered) {
           await redirectToRegister(REGISTER_NOT_FOUND_MESSAGE)
           return
         }
@@ -131,7 +133,7 @@ export default function PostOAuthPage() {
       }
 
       if (flow === OAUTH_FLOW_REGISTER) {
-        if (existingProfile) {
+        if (isRegistered) {
           const redirectTo = determinePostLoginRedirect(existingProfile, redirectParam || "/app-mobile")
           const full =
             redirectTo.startsWith("http") ? redirectTo : `${window.location.origin}${redirectTo}`
@@ -144,7 +146,7 @@ export default function PostOAuthPage() {
       }
 
       // Fallback legado (sem flow explícito): não criar perfil automaticamente
-      if (!existingProfile) {
+      if (!isRegistered) {
         await redirectToRegister(REGISTER_NOT_FOUND_MESSAGE)
         return
       }

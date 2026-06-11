@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr"
 import { getStripeClient } from "@/lib/stripe-client"
 import { requireStripePriceId } from "@/lib/stripe-prices"
 import { buildStripeReturnUrl, getSiteOrigin } from "@/lib/site-url"
+import { isRegisteredMember } from "@/lib/member-access"
 import { buildUsername } from "@/lib/member-profile"
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim()
@@ -46,11 +47,13 @@ export async function POST(request: NextRequest) {
 
     const { data: existingProfile } = await supabase
       .from("profiles")
-      .select("id")
+      .select(
+        "id, user_type, member_category, is_active, subscription_plan, stripe_subscription_id, subscription_expires_at, trial_expires_at, trial_expired"
+      )
       .eq("id", user.id)
       .maybeSingle()
 
-    if (existingProfile) {
+    if (isRegisteredMember(existingProfile)) {
       return NextResponse.json(
         { error: "Já tens uma conta MTM. Inicia sessão em /login." },
         { status: 409 }

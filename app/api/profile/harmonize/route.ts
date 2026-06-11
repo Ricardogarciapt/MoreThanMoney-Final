@@ -44,9 +44,25 @@ export async function POST(_request: NextRequest) {
     const supabaseAdmin = getSupabaseAdmin()
 
     // Se já existir e for admin, não alteramos o user_type/is_active.
-    const { data: existing } = await supabaseAdmin.from("profiles").select("id,user_type,is_active").eq("id", user.id).maybeSingle()
+    const { data: existing } = await supabaseAdmin
+      .from("profiles")
+      .select("id,user_type,is_active,subscription_plan,stripe_subscription_id,member_category")
+      .eq("id", user.id)
+      .maybeSingle()
     if (existing?.user_type === "admin") {
       return NextResponse.json({ success: true, profile: existing })
+    }
+
+    // Não criar membro activo via harmonize — registo só após pagamento Stripe.
+    const hasPaidPlan =
+      existing?.subscription_plan === "app_member" ||
+      existing?.subscription_plan === "premium" ||
+      Boolean(existing?.stripe_subscription_id)
+    if (!hasPaidPlan) {
+      return NextResponse.json(
+        { error: "Perfil não registado. Conclui o registo e pagamento primeiro." },
+        { status: 403 }
+      )
     }
 
     const meta = (user.user_metadata || {}) as Record<string, unknown>

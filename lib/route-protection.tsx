@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { canAccessRoute, getAccessDeniedMessage, UserProfile } from "@/lib/role-redirect"
-import { loadMemberProfile } from "@/lib/member-profile"
+import { loadRegisteredMemberProfile } from "@/lib/member-profile"
 import { REGISTER_NOT_FOUND_MESSAGE } from "@/lib/oauth-flow"
 
 interface ProtectedRouteProps {
@@ -38,7 +38,7 @@ export function ProtectedRoute({
           return
         }
 
-        const profileData = await loadMemberProfile(supabase, session.user.id)
+        const profileData = await loadRegisteredMemberProfile(supabase, session.user.id)
 
         if (!profileData) {
           await supabase.auth.signOut()

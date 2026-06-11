@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { determinePostLoginRedirect, safeInternalRedirectPath } from "@/lib/role-redirect"
+import { isRegisteredMember } from "@/lib/member-access"
 import { loadMemberProfile } from "@/lib/member-profile"
 import { isOAuthFlow, OAUTH_FLOW_REGISTER, REGISTER_NOT_FOUND_MESSAGE } from "@/lib/oauth-flow"
 import { Loader2 } from "lucide-react"
@@ -45,7 +46,7 @@ export default function AuthFinishPage() {
 
       const profile = await loadMemberProfile(supabase, session.user.id)
 
-      if (!profile) {
+      if (!isRegisteredMember(profile)) {
         await supabase.auth.signOut()
         const { clearCachedSession } = await import("@/lib/auth-cache")
         clearCachedSession()

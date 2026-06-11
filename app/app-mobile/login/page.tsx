@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { determinePostLoginRedirect } from '@/lib/role-redirect'
-import { loadMemberProfile } from '@/lib/member-profile'
+import { loadRegisteredMemberProfile } from '@/lib/member-profile'
 import { buildOAuthCallbackUrl, REGISTER_NOT_FOUND_MESSAGE } from '@/lib/oauth-flow'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,7 +42,7 @@ export default function AppMobileLoginPage() {
       const cachedSession = getCachedSession()
 
       if (cachedSession && isSessionValid(cachedSession)) {
-        const profile = await loadMemberProfile(supabase, cachedSession.user.id)
+        const profile = await loadRegisteredMemberProfile(supabase, cachedSession.user.id)
         if (!profile) {
           await rejectUnknownUser()
           return
@@ -58,7 +58,7 @@ export default function AppMobileLoginPage() {
         ])
         const { data: { session } } = await sessionPromise
         if (session) {
-          const profile = await loadMemberProfile(supabase, session.user.id)
+          const profile = await loadRegisteredMemberProfile(supabase, session.user.id)
           if (!profile) {
             await rejectUnknownUser()
             return
@@ -105,7 +105,7 @@ export default function AppMobileLoginPage() {
       if (data.session) {
         const { setCachedSession } = await import('@/lib/auth-cache')
         setCachedSession(data.session)
-        const profile = await loadMemberProfile(supabase, data.session.user.id)
+        const profile = await loadRegisteredMemberProfile(supabase, data.session.user.id)
         if (!profile) {
           await rejectUnknownUser()
           return
@@ -171,7 +171,7 @@ export default function AppMobileLoginPage() {
       const { setCachedSession } = await import('@/lib/auth-cache')
       if (authData.session) setCachedSession(authData.session)
 
-      const profile = await loadMemberProfile(supabase, authData.session!.user.id)
+      const profile = await loadRegisteredMemberProfile(supabase, authData.session!.user.id)
       if (!profile) {
         await rejectUnknownUser()
         return

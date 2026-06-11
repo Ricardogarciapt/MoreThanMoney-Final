@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
+import { isRegisteredMember } from "@/lib/member-access"
 import { isMemberProtectedPath, registerRedirectUrl } from "@/lib/member-route-guard"
 
 // Cache para rate limiting
@@ -181,11 +182,13 @@ export async function middleware(request: NextRequest) {
     if (memberUser) {
       const { data: memberProfile } = await supabaseMember
         .from("profiles")
-        .select("id")
+        .select(
+          "id, user_type, member_category, is_active, subscription_plan, stripe_subscription_id, subscription_expires_at, trial_expires_at, trial_expired"
+        )
         .eq("id", memberUser.id)
         .maybeSingle()
 
-      if (!memberProfile) {
+      if (!isRegisteredMember(memberProfile)) {
         return NextResponse.redirect(
           new URL(
             registerRedirectUrl(request.nextUrl.origin, {
