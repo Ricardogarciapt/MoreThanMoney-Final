@@ -228,19 +228,30 @@ export async function getAccountSnapshot(accountId: string): Promise<AccountSnap
   }
 }
 
+const balanceCache = new Map<string, { balance: number; at: number }>()
+const BALANCE_CACHE_MS = 45_000
+
 export async function getAccountBalance(
   accountId: string,
-  retries = 2,
+  retries = 1,
 ): Promise<number | null> {
+  const cached = balanceCache.get(accountId)
+  if (cached && Date.now() - cached.at < BALANCE_CACHE_MS) {
+    return cached.balance
+  }
+
   for (let attempt = 0; attempt <= retries; attempt++) {
     const snap = await getAccountSnapshot(accountId)
     const balance = snap?.balance ?? snap?.equity ?? null
-    if (balance != null && balance > 0) return balance
+    if (balance != null && balance > 0) {
+      balanceCache.set(accountId, { balance, at: Date.now() })
+      return balance
+    }
     if (attempt < retries) {
-      await new Promise((r) => setTimeout(r, 600 * (attempt + 1)))
+      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)))
     }
   }
-  return null
+  return cached?.balance ?? null
 }
 
 export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> {

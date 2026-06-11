@@ -4,8 +4,38 @@ export const MTMCOPY_AI_MIN_CONFIDENCE = Number(
   process.env.MTMCOPY_AI_MIN_CONFIDENCE ?? '0.35',
 )
 
-const AI_TIMEOUT_MS = Number(process.env.MTMCOPY_AI_TIMEOUT_MS ?? '2500')
+const AI_TIMEOUT_MS = Number(process.env.MTMCOPY_AI_TIMEOUT_MS ?? '1200')
 const AI_ENABLED = process.env.MTMCOPY_AI_VALIDATION !== 'false'
+const AI_FAST_PATH = process.env.MTMCOPY_AI_FAST_PATH !== 'false'
+
+export interface ValidateSignalOptions {
+  /** Quando true, só heurística local (perfil admin desactivou IA). */
+  skipAi?: boolean
+  minConfidence?: number
+}
+
+/** Formatos oficiais MTM — parser fiável, não bloquear em IA (~1–2s). */
+export function isOfficialMtmTelegramFormat(raw: string): boolean {
+  if (/\bmoeda\s*:/i.test(raw) && /\ba[cç][aã]o\s*:/i.test(raw)) return true
+  if (/\b(?:xauusd|gold)\s+(?:buy|sell)\b/i.test(raw)) return true
+  if (/\bgold\s+(?:buy|sell)\s+zone\b/i.test(raw) && /\bsl\s*:/i.test(raw)) return true
+  return false
+}
+
+function shouldSkipAiCall(
+  raw: string,
+  local: AiSignalValidation,
+  minConfidence: number,
+  skipAi?: boolean,
+): boolean {
+  if (skipAi || !AI_ENABLED) return true
+  if (!AI_FAST_PATH) return false
+  if (local.localConfidence >= 0.92 && local.valid) return true
+  if (isOfficialMtmTelegramFormat(raw) && local.localConfidence >= minConfidence && local.valid) {
+    return true
+  }
+  return false
+}
 
 export interface AiSignalValidation {
   valid: boolean
@@ -297,12 +327,14 @@ function mergeAiIntoValidation(
   }
 }
 
-/** Validação completa: heurística instantânea + IA (Haiku/mini, ~1-2s máx). */
+/** Validação: heurística instantânea; IA só se necessário (formatos oficiais = fast path). */
 export async function validateSignalWithAi(
   raw: string,
   parsed: ParsedSignal,
+  options?: ValidateSignalOptions,
 ): Promise<AiSignalValidation> {
-  const cacheKey = raw.trim().slice(0, 500)
+  const minConfidence = options?.minConfidence ?? MTMCOPY_AI_MIN_CONFIDENCE
+  const cacheKey = `${options?.skipAi ? 's' : 'a'}:${raw.trim().slice(0, 500)}`
   const cached = aiCache.get(cacheKey)
   if (cached && Date.now() - cached.at < AI_CACHE_MS) {
     return cached.result
@@ -311,8 +343,15 @@ export async function validateSignalWithAi(
   const start = performance.now()
   const local = quickLocalValidate(parsed, raw)
 
-  if (!AI_ENABLED) {
-    const result = { ...local, latencyMs: performance.now() - start }
+  if (shouldSkipAiCall(raw, local, minConfidence, options?.skipAi)) {
+    const result = {
+      ...local,
+      reasoning:
+        options?.skipAi || !AI_ENABLED
+          ? local.reasoning
+          : `${local.reasoning} (fast path — formato MTM)`,
+      latencyMs: performance.now() - start,
+    }
     aiCache.set(cacheKey, { at: Date.now(), result })
     return result
   }

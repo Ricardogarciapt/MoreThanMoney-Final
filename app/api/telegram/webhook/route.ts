@@ -95,33 +95,37 @@ export async function POST(request: NextRequest) {
     if (body.channel_post) {
       const message = body.channel_post
 
-      const { registerDiscoveredTelegramChat } = await import('@/lib/mtmcopy/signal-sources-config')
-      await registerDiscoveredTelegramChat(message.chat ?? {})
-
-      // Mirror to chat channels if configured
-      await mirrorTelegramMessage(supabase, message)
-
-      // MTMcopier — executar de forma síncrona (after() perdia sinais em serverless)
+      // MTMcopier primeiro — caminho crítico (MetaAPI / MT5)
       await runMtmcopy(message)
 
-      // Processar mensagem como sinal de trading
-      const signal = telegramService.processSignalMessage(message)
-
-      if (signal) {
-        // Salvar sinal na base de dados
-        await db.create("telegram_signals", signal)
-
-        console.log("Novo sinal processado:", signal)
-      }
+      // Espelho, registo e legado em paralelo (após MTMcopy — não atrasam MetaAPI)
+      await Promise.all([
+        (async () => {
+          const { registerDiscoveredTelegramChat } = await import('@/lib/mtmcopy/signal-sources-config')
+          await registerDiscoveredTelegramChat(message.chat ?? {})
+        })(),
+        mirrorTelegramMessage(supabase, message),
+        (async () => {
+          const signal = telegramService.processSignalMessage(message)
+          if (signal) {
+            await db.create("telegram_signals", signal)
+            console.log("Novo sinal processado:", signal)
+          }
+        })(),
+      ])
     }
 
     // Edição de mensagem no canal (updates de zona sem novo post)
     if (body.edited_channel_post) {
       const message = body.edited_channel_post
-      const { registerDiscoveredTelegramChat } = await import('@/lib/mtmcopy/signal-sources-config')
-      await registerDiscoveredTelegramChat(message.chat ?? {})
-      await mirrorTelegramMessage(supabase, message)
       await runMtmcopy(message)
+      await Promise.all([
+        (async () => {
+          const { registerDiscoveredTelegramChat } = await import('@/lib/mtmcopy/signal-sources-config')
+          await registerDiscoveredTelegramChat(message.chat ?? {})
+        })(),
+        mirrorTelegramMessage(supabase, message),
+      ])
     }
 
     // Grupos com sinais (bot como membro/admin)

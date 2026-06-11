@@ -15,8 +15,15 @@ export async function getActiveConnections(): Promise<MTMcopierConnection[]> {
   return (data ?? []) as MTMcopierConnection[]
 }
 
+let copyConnectionsCache: { data: MTMcopierConnection[]; at: number } | null = null
+const COPY_CONNECTIONS_CACHE_MS = 8_000
+
 /** Ligações ligadas ao MT5 (activas ou pausadas) — para matching de fonte de sinais */
 export async function getCopyConnections(): Promise<MTMcopierConnection[]> {
+  if (copyConnectionsCache && Date.now() - copyConnectionsCache.at < COPY_CONNECTIONS_CACHE_MS) {
+    return copyConnectionsCache.data
+  }
+
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from('mtmcopy_connections')
@@ -25,9 +32,15 @@ export async function getCopyConnections(): Promise<MTMcopierConnection[]> {
 
   if (error) {
     console.error('[mtmcopy] erro ao obter ligações:', error.message)
-    return []
+    return copyConnectionsCache?.data ?? []
   }
-  return (data ?? []) as MTMcopierConnection[]
+  const rows = (data ?? []) as MTMcopierConnection[]
+  copyConnectionsCache = { data: rows, at: Date.now() }
+  return rows
+}
+
+export function invalidateCopyConnectionsCache() {
+  copyConnectionsCache = null
 }
 
 export async function hasRecentDuplicate(

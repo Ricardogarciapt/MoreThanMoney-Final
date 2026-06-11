@@ -131,25 +131,52 @@ async function filterEligibleSubscribers(
   connections: MTMcopierConnection[],
   channel: MtmcopyChannelKey,
 ): Promise<MTMcopierConnection[]> {
+  const candidates = connections.filter(
+    (conn) => conn.is_active && connectionMatchesChannel(conn, channel),
+  )
+  if (!candidates.length) return []
+
   const supabase = getSupabaseAdmin()
+  const userIds = [...new Set(candidates.map((c) => c.user_id))]
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, user_type')
+    .in('id', userIds)
+
+  const userTypeById = new Map(
+    (profiles ?? []).map((p) => [p.id as string, p.user_type as string | undefined]),
+  )
+
   const eligible: MTMcopierConnection[] = []
-
-  for (const conn of connections) {
-    if (!conn.is_active) continue
-    if (!connectionMatchesChannel(conn, channel)) continue
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('user_type')
-      .eq('id', conn.user_id)
-      .maybeSingle()
-
-    const sub = await getMtmcopySubscription(conn.user_id, profile?.user_type)
-    if (!sub.active) continue
-    eligible.push(conn)
-  }
+  await Promise.all(
+    candidates.map(async (conn) => {
+      const sub = await getMtmcopySubscription(conn.user_id, userTypeById.get(conn.user_id))
+      if (sub.active) eligible.push(conn)
+    }),
+  )
 
   return eligible
+}
+
+async function resolveMatchedSubscribers(
+  message: TelegramMessage,
+  channel: MtmcopyChannelKey,
+): Promise<{ matchedConnections: MTMcopierConnection[]; subscribers: MTMcopierConnection[] }> {
+  const allConnections = await getCopyConnections()
+  const isTelegramCopyTarget = (c: MTMcopierConnection) =>
+    (c.account_role ?? 'slave') !== 'master' && (c.sender_mode ?? 'telegram') !== 'master_account'
+
+  const matched = await Promise.all(
+    allConnections.map(async (c) => ({
+      c,
+      ok: await connectionMatchesSignalSource(c, message.chat!),
+    })),
+  )
+  const matchedConnections = matched
+    .filter((m) => m.ok && isTelegramCopyTarget(m.c) && connectionMatchesChannel(m.c, channel))
+    .map((m) => m.c)
+  const subscribers = await filterEligibleSubscribers(matchedConnections, channel)
+  return { matchedConnections, subscribers }
 }
 
 export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
@@ -172,29 +199,6 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
     return
   }
 
-  const allConnections = await getCopyConnections()
-  const matched = await Promise.all(
-    allConnections.map(async (c) => ({
-      c,
-      ok: await connectionMatchesSignalSource(c, message.chat!),
-    })),
-  )
-  const isTelegramCopyTarget = (c: MTMcopierConnection) =>
-    (c.account_role ?? 'slave') !== 'master' && (c.sender_mode ?? 'telegram') !== 'master_account'
-
-  const matchedConnections = matched
-    .filter((m) => m.ok && isTelegramCopyTarget(m.c) && connectionMatchesChannel(m.c, channel))
-    .map((m) => m.c)
-  const subscribers = await filterEligibleSubscribers(matchedConnections, channel)
-
-  if (!subscribers.length && !matchedConnections.length) {
-    console.log('[mtmcopy] canal permitido mas sem ligações MTMcopier configuradas')
-  } else if (!subscribers.length) {
-    console.log(
-      `[mtmcopy] ${matchedConnections.length} ligação(ões) encontrada(s) mas nenhuma activa (is_active=false)`,
-    )
-  }
-
   if (shouldIgnoreChannelMessage(text)) {
     console.log(`[mtmcopy] mensagem ignorada (${channel}): ${text.slice(0, 80)}`)
     return
@@ -204,6 +208,7 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
   const mtmProvider = mtmProvidersPreview[0] ?? null
 
   if (looksLikeManagementOrReplyInstruction(text, channel, ctx)) {
+    const { matchedConnections, subscribers } = await resolveMatchedSubscribers(message, channel)
     const management = parseManagementUpdate(text, channel, ctx.parentText)
     if (management) {
       const targets = subscribers.length ? subscribers : matchedConnections
@@ -239,7 +244,15 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
     return
   }
 
-  const validation = await validateSignalWithAi(text, signal)
+  const subscribersPromise = resolveMatchedSubscribers(message, channel)
+  const primaryProfile = await getProviderExecutionProfile(
+    channel,
+    mtmProvidersPreview[0]?.execution,
+  )
+  const validation = await validateSignalWithAi(text, signal, {
+    skipAi: primaryProfile.ai_validation_enabled === false,
+    minConfidence: getAiMinConfidence(primaryProfile),
+  })
   const enriched = applyValidationToSignal(signal, validation)
   const aiDetail = formatAiValidationDetail(validation)
 
@@ -247,32 +260,36 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
     `[mtmcopy] ${enriched.symbol} ${enriched.direction} · ${channel} · ${aiDetail} · ${validation.latencyMs.toFixed(0)}ms`,
   )
 
+  const { matchedConnections, subscribers } = await subscribersPromise
+
   if (mtmProvidersPreview.length) {
-    for (const prov of mtmProvidersPreview) {
-      const routeProfile = await getProviderExecutionProfile(channel, prov.execution)
-      if (!shouldExecuteForProfile(validation, routeProfile)) {
-        const minPct = Math.round(getAiMinConfidence(routeProfile) * 100)
-        await logProviderSignalEvent({
+    await Promise.all(
+      mtmProvidersPreview.map(async (prov) => {
+        const routeProfile = await getProviderExecutionProfile(channel, prov.execution)
+        if (!shouldExecuteForProfile(validation, routeProfile)) {
+          const minPct = Math.round(getAiMinConfidence(routeProfile) * 100)
+          await logProviderSignalEvent({
+            channel,
+            provider: prov,
+            signal: enriched,
+            raw: text,
+            telegramMessageId: message.message_id,
+            status: 'skipped',
+            detail: `${aiDetail} · confiança < ${minPct}%`,
+          })
+          return
+        }
+        await executeViaMtmProvider(
+          subscribers.length ? subscribers : matchedConnections,
+          enriched,
+          text,
+          message.message_id,
+          prov,
           channel,
-          provider: prov,
-          signal: enriched,
-          raw: text,
-          telegramMessageId: message.message_id,
-          status: 'skipped',
-          detail: `${aiDetail} · confiança < ${minPct}%`,
-        })
-        continue
-      }
-      await executeViaMtmProvider(
-        subscribers.length ? subscribers : matchedConnections,
-        enriched,
-        text,
-        message.message_id,
-        prov,
-        channel,
-        validation,
-      )
-    }
+          validation,
+        )
+      }),
+    )
     return
   }
 
@@ -452,7 +469,13 @@ async function executeViaMtmProvider(
   const aiDetail = formatAiValidationDetail(validation)
   const tgRef = telegramMessageId != null ? `tg:${telegramMessageId}` : ''
 
-  if (await hasRecentDuplicateGlobal(raw, telegramMessageId)) {
+  const [isDuplicate, executionProfile, providerConn] = await Promise.all([
+    hasRecentDuplicateGlobal(raw, telegramMessageId),
+    getProviderExecutionProfile(channel, provider.execution),
+    buildProviderConnection(channel, provider.execution),
+  ])
+
+  if (isDuplicate) {
     console.log(`[mtmcopy] duplicado ignorado (${provider.tag})`)
     await logProviderSignalEvent({
       channel,
@@ -465,8 +488,6 @@ async function executeViaMtmProvider(
     })
     return
   }
-
-  const executionProfile = await getProviderExecutionProfile(channel, provider.execution)
 
   if (!isWithinTradingSchedule(executionProfile)) {
     await logProviderSignalEvent({
@@ -522,9 +543,11 @@ async function executeViaMtmProvider(
       : signal.direction,
   }
 
-  const providerConn = await buildProviderConnection(channel, provider.execution)
   const executionSummary = formatExecutionSummary(executionProfile)
-  const balance = await getAccountBalance(provider.accountId)
+  const balance =
+    executionProfile.lot_mode === 'risk_percent'
+      ? await getAccountBalance(provider.accountId)
+      : null
   let totalLot = computeLotSize(providerConn, signalForExec, balance)
   totalLot = resolveLotForSymbol(mappedSymbol, totalLot, executionProfile)
 
@@ -558,17 +581,22 @@ async function executeViaMtmProvider(
   const results: LegResult[] = []
 
   if (legs?.length) {
-    for (const leg of legs) {
-      const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, leg.lot, `${mtComment}-${leg.label}`)
-      req.takeProfit = leg.tpPrice
-      if (leg.trailing) req.trailingStop = leg.trailing
-      const r = await placeOrder(req)
-      results.push({
-        ...r,
-        label: leg.label,
-        lot: req.volume,
-      })
-    }
+    const legResults = await Promise.all(
+      legs.map(async (leg) => {
+        const req = buildOrderRequest(
+          providerConn,
+          provider.accountId,
+          signalForExec,
+          leg.lot,
+          `${mtComment}-${leg.label}`,
+        )
+        req.takeProfit = leg.tpPrice
+        if (leg.trailing) req.trailingStop = leg.trailing
+        const r = await placeOrder(req)
+        return { ...r, label: leg.label, lot: req.volume }
+      }),
+    )
+    results.push(...legResults)
   } else {
     const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
     if (channel === 'trade-ideas') {
@@ -602,56 +630,58 @@ async function executeViaMtmProvider(
     detail: `${aiDetail} · ${results.map((r) => `${r.label}: ${r.success ? `#${r.orderId}` : r.error}`).join(' · ')} · ${executionSummary}`,
   })
 
-  for (const conn of logTargets) {
-    if (conn.symbols_whitelist?.length && !conn.symbols_whitelist.includes(signalForExec.symbol!)) {
+  void Promise.all(
+    logTargets.map(async (conn) => {
+      if (conn.symbols_whitelist?.length && !conn.symbols_whitelist.includes(signalForExec.symbol!)) {
+        await logMtmcopySignal({
+          user_id: conn.user_id,
+          connection_id: conn.id,
+          symbol: signalForExec.symbol,
+          direction: signalForExec.direction,
+          status: 'skipped',
+          detail: 'Símbolo fora da whitelist',
+          raw_message: raw,
+        })
+        return
+      }
+
+      const direction = conn.reverse_signals
+        ? signalForExec.direction === 'buy'
+          ? 'sell'
+          : 'buy'
+        : signalForExec.direction!
+
+      const trailingNote = conn.auto_trailing_stop
+        ? ` · trailing ${trailingPointsForConnection(conn)}pts`
+        : ''
+
       await logMtmcopySignal({
         user_id: conn.user_id,
         connection_id: conn.id,
+        channel_key: channel,
+        telegram_message_id: telegramMessageId ?? null,
         symbol: signalForExec.symbol,
-        direction: signalForExec.direction,
-        status: 'skipped',
-        detail: 'Símbolo fora da whitelist',
+        direction,
+        entry: signalForExec.entry,
+        sl: signalForExec.sl,
+        tp: signalForExec.tp[0] ?? null,
+        lot: totalLot,
+        status: anySuccess ? 'executed' : 'error',
+        detail: anySuccess
+          ? `${aiDetail} · ${provider.tag} · ${orderLabel} · ${executionSummary}${trailingNote} ${tgRef}`.trim()
+          : `${aiDetail} · ${provider.tag}: ${result.error} ${tgRef}`.trim(),
         raw_message: raw,
       })
-      continue
-    }
 
-    const direction = conn.reverse_signals
-      ? signalForExec.direction === 'buy'
-        ? 'sell'
-        : 'buy'
-      : signalForExec.direction!
-
-    const trailingNote = conn.auto_trailing_stop
-      ? ` · trailing ${trailingPointsForConnection(conn)}pts`
-      : ''
-
-    await logMtmcopySignal({
-      user_id: conn.user_id,
-      connection_id: conn.id,
-      channel_key: channel,
-      telegram_message_id: telegramMessageId ?? null,
-      symbol: signalForExec.symbol,
-      direction,
-      entry: signalForExec.entry,
-      sl: signalForExec.sl,
-      tp: signalForExec.tp[0] ?? null,
-      lot: totalLot,
-      status: anySuccess ? 'executed' : 'error',
-      detail: anySuccess
-        ? `${aiDetail} · ${provider.tag} · ${orderLabel} · ${executionSummary}${trailingNote} ${tgRef}`.trim()
-        : `${aiDetail} · ${provider.tag}: ${result.error} ${tgRef}`.trim(),
-      raw_message: raw,
-    })
-
-    await markConnectionStatus(conn.id, {
-      telegram_status: 'connected',
-      last_signal_at: new Date().toISOString(),
-      ...(anySuccess
-        ? { mt5_status: 'connected', last_error: null }
-        : { last_error: result.error ?? 'Erro na conta mestre', mt5_status: 'error' }),
-    })
-  }
+      await markConnectionStatus(conn.id, {
+        telegram_status: 'connected',
+        last_signal_at: new Date().toISOString(),
+        ...(anySuccess
+          ? { mt5_status: 'connected', last_error: null }
+          : { last_error: result.error ?? 'Erro na conta mestre', mt5_status: 'error' }),
+      })
+    }),
+  )
 
   if (anySuccess && signalForExec.orderType !== 'limit' && channel === 'trade-ideas') {
     void applyTrailingToCopyFactorySlaves(logTargets, signalForExec.symbol!)
