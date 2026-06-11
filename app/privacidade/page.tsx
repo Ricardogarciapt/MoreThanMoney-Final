@@ -265,9 +265,57 @@ export default function PrivacidadePage() {
 
             <div className="border-b border-gray-800 my-8" />
 
+            {/* Data Deletion Section — Required by Google Play Console */}
+            <section id="excluir-dados" className="rounded-xl border border-[#D2A63C]/40 bg-[#D2A63C]/5 p-6">
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
+                11. Eliminação de Conta e Dados
+              </h2>
+              <p className="mb-4">
+                Pode solicitar a eliminação da sua conta e de todos os dados associados a qualquer
+                momento, sem necessidade de justificação.
+              </p>
+              <p className="font-medium text-white mb-2">Como solicitar a eliminação:</p>
+              <ol className="list-decimal pl-5 space-y-2 mb-4">
+                <li>
+                  <strong className="text-white">Por e-mail:</strong> Envie um e-mail para{" "}
+                  <a
+                    href="mailto:support@morethanmoney.pt?subject=Pedido%20de%20Elimin%C3%A7%C3%A3o%20de%20Conta"
+                    className="text-[#D2A63C] hover:underline"
+                  >
+                    support@morethanmoney.pt
+                  </a>{" "}
+                  com o assunto <em>&quot;Pedido de Eliminação de Conta&quot;</em> e o endereço de
+                  email associado à sua conta.
+                </li>
+                <li>
+                  <strong className="text-white">Na aplicação:</strong> Aceda a{" "}
+                  <em>Perfil → Definições → Eliminar Conta</em>.
+                </li>
+              </ol>
+              <p className="font-medium text-white mb-2">O que é eliminado:</p>
+              <ul className="list-disc pl-5 space-y-1 mb-4">
+                <li>Dados de perfil (nome, email, fotografia de perfil)</li>
+                <li>Histórico de utilização da plataforma</li>
+                <li>Configurações e preferências pessoais</li>
+                <li>Tokens de notificação push (FCM)</li>
+              </ul>
+              <p className="font-medium text-white mb-2">O que pode ser conservado:</p>
+              <ul className="list-disc pl-5 space-y-1 mb-4">
+                <li>Registos de transações financeiras (obrigação legal — até 10 anos)</li>
+                <li>Dados completamente anonimizados para análise estatística</li>
+              </ul>
+              <p className="text-gray-400 text-sm">
+                O pedido será processado no prazo de{" "}
+                <strong className="text-white">30 dias</strong>. Receberá uma confirmação por
+                e-mail quando a eliminação for concluída.
+              </p>
+            </section>
+
+            <div className="border-b border-gray-800 my-8" />
+
             <section>
               <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
-                11. Contacto
+                12. Contacto
               </h2>
               <p className="mb-4">
                 Para questões relacionadas com privacidade ou proteção de dados:
