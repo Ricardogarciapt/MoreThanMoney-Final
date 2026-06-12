@@ -31,6 +31,8 @@ import {
   VolumeX,
   Sun,
   Moon,
+  Trash2,
+  TriangleAlert,
 } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -285,6 +287,45 @@ export default function SettingsMobile() {
     clearCachedSession()
     await supabase.auth.signOut()
     window.location.href = "/login"
+  }
+
+  // ── Eliminar conta ─────────────────────────────────────────────────────────
+  const [showDeleteSection, setShowDeleteSection] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState("")
+  const [deletingAccount, setDeletingAccount] = useState(false)
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "ELIMINAR") return
+    setDeletingAccount(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) throw new Error("Sessão inválida")
+
+      const res = await fetch("/api/user/delete-account", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error ?? "Erro ao eliminar conta")
+      }
+
+      // Limpar sessão local e redirecionar
+      clearCachedSession()
+      await supabase.auth.signOut()
+      toast({ title: "Conta eliminada", description: "Os teus dados foram removidos permanentemente." })
+      window.location.href = "/"
+    } catch (err: any) {
+      toast({
+        title: "Erro",
+        description: err?.message ?? "Não foi possível eliminar a conta. Tenta novamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setDeletingAccount(false)
+    }
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -547,6 +588,57 @@ export default function SettingsMobile() {
           <div className="bg-gray-800/50 rounded-xl divide-y divide-gray-700/50">
             <button
               onClick={async () => {
+                // ── Capacitor nativo (iOS/Android) ────────────────────────────
+                const isCapacitorNative = typeof window !== "undefined" && !!(window as any).Capacitor?.isNative
+                if (isCapacitorNative) {
+                  try {
+                    const { PushNotifications } = await import(/* webpackIgnore: true */ "@capacitor/push-notifications" as any)
+                    let perm = await PushNotifications.checkPermissions()
+                    if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") {
+                      perm = await PushNotifications.requestPermissions()
+                    }
+                    if (perm.receive === "granted") {
+                      // Adicionar listener temporário para capturar o token FCM
+                      // (necessário quando use-capacitor.ts não teve oportunidade de o registar,
+                      //  ex: permissão foi negada no primeiro arranque e o utilizador activou depois)
+                      const { data: { session } } = await supabase.auth.getSession()
+                      const uid = session?.user?.id
+                      if (uid) {
+                        let tokenListener: { remove: () => void } | null = null
+                        tokenListener = await PushNotifications.addListener(
+                          "registration",
+                          async (token: { value: string }) => {
+                            tokenListener?.remove()
+                            try {
+                              const platform = (window as any).Capacitor?.getPlatform?.() ?? "ios"
+                              await fetch("/api/notifications/fcm-token", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  userId: uid,
+                                  token: token.value,
+                                  deviceInfo: { platform, nativeApp: true },
+                                }),
+                              })
+                              console.log("[PUSH] Token FCM guardado a partir de settings:", token.value.substring(0, 20) + "...")
+                            } catch (e) {
+                              console.warn("[PUSH] Erro ao guardar token FCM:", e)
+                            }
+                          }
+                        )
+                      }
+                      await PushNotifications.register()
+                      toast({ title: "Notificações activadas", description: "Vais receber alertas na app." })
+                    } else {
+                      toast({ title: "Notificações bloqueadas", description: "Activa nas definições do dispositivo.", variant: "destructive" })
+                    }
+                  } catch (e) {
+                    console.warn("[PUSH] Erro Capacitor:", e)
+                  }
+                  return
+                }
+
+                // ── Web / browser (FCM) ───────────────────────────────────────
                 if (typeof window === "undefined" || !("Notification" in window)) return
                 if (Notification.permission === "denied") {
                   toast({
@@ -556,9 +648,24 @@ export default function SettingsMobile() {
                   })
                   return
                 }
-                const permission = await Notification.requestPermission()
-                if (permission === "granted") {
-                  toast({ title: "Notificações activadas", description: "Vais receber alertas em tempo real." })
+                try {
+                  const { requestNotificationPermission, saveFCMToken } = await import("@/lib/firebase-config")
+                  const fcmToken = await requestNotificationPermission()
+                  if (fcmToken) {
+                    // Obter userId para guardar o token
+                    const { data: { session } } = await supabase.auth.getSession()
+                    const uid = session?.user?.id
+                    if (uid) await saveFCMToken(uid, fcmToken)
+                    toast({ title: "Notificações activadas", description: "Vais receber alertas em tempo real." })
+                  } else if (Notification.permission === "denied") {
+                    toast({ title: "Notificações bloqueadas", description: "Activa nas definições do browser.", variant: "destructive" })
+                  }
+                } catch {
+                  // Fallback: só pedir permissão sem registar token
+                  const permission = await Notification.requestPermission()
+                  if (permission === "granted") {
+                    toast({ title: "Notificações activadas", description: "Vais receber alertas em tempo real." })
+                  }
                 }
               }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-t-xl hover:bg-gray-700/40 transition-colors"
@@ -653,6 +760,72 @@ export default function SettingsMobile() {
             <LogOut className="w-4 h-4" />
             Terminar sessão
           </button>
+        </section>
+
+        {/* Eliminar conta */}
+        <section className="pt-1 pb-4">
+          <div className="bg-gray-800/30 rounded-xl border border-gray-700/30">
+            <button
+              onClick={() => { setShowDeleteSection(!showDeleteSection); setDeleteConfirmText("") }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-700/20 transition-colors"
+            >
+              <Trash2 className="w-4 h-4 text-gray-500" />
+              <span className="flex-1 text-left text-sm text-gray-500">Eliminar conta</span>
+              <ChevronRight className={`w-4 h-4 text-gray-600 transition-transform ${showDeleteSection ? "rotate-90" : ""}`} />
+            </button>
+
+            {showDeleteSection && (
+              <div className="px-4 pb-4 space-y-3 border-t border-gray-700/30 pt-3">
+                {/* Aviso */}
+                <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                  <TriangleAlert className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-red-300 leading-relaxed">
+                    <p className="font-semibold mb-1">Esta acção é irreversível.</p>
+                    <p>A tua conta, histórico, portfólio e todos os dados associados serão eliminados permanentemente. Não é possível recuperar informação após a eliminação.</p>
+                  </div>
+                </div>
+
+                {/* Campo de confirmação */}
+                <div>
+                  <p className="text-xs text-gray-400 mb-2">
+                    Para confirmar, escreve <span className="font-mono font-bold text-red-400">ELIMINAR</span> no campo abaixo:
+                  </p>
+                  <Input
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="ELIMINAR"
+                    className="h-9 bg-gray-900 border-gray-700 text-white text-sm font-mono"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                  />
+                </div>
+
+                {/* Botão de eliminação */}
+                <Button
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmText !== "ELIMINAR" || deletingAccount}
+                  className="w-full h-10 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:text-gray-500 text-white font-semibold text-sm transition-colors"
+                >
+                  {deletingAccount ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> A eliminar...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Trash2 className="w-4 h-4" /> Eliminar conta permanentemente
+                    </span>
+                  )}
+                </Button>
+
+                <p className="text-xs text-gray-500 text-center">
+                  Se precisares de ajuda, contacta{" "}
+                  <a href="mailto:suporte@morethanmoney.pt" className="text-[#D2A63C] underline">
+                    suporte@morethanmoney.pt
+                  </a>
+                </p>
+              </div>
+            )}
+          </div>
         </section>
       </div>
     </div>
