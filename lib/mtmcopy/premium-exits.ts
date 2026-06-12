@@ -54,11 +54,21 @@ export function buildPremiumExitLegs(
   return legs.filter((l) => l.lot > 0)
 }
 
-/** TP1 sem trailing; TP2 e última perna (TP3) com activação 50 pips. */
+/** TP1/TP2 sem trailing à abertura; TP2 trailing activa no HIT TP1; runner (TP3) com trailing. */
 function trailingForPremiumLeg(legIndex: number, totalLegs: number): TrailingDistance | null {
   if (legIndex === 0) return null
-  if (legIndex === 1 || legIndex === totalLegs - 1) return premiumTrailingWithActivation()
+  if (legIndex === 1) return null
+  if (legIndex === totalLegs - 1 && totalLegs >= 3) return premiumTrailingWithActivation()
   return null
+}
+
+/** Identifica perna Premium pelo comment MT5 (ex. «mtmcopier-TP2 · 33%»). */
+export function matchesPremiumLegComment(comment: string | undefined, legIndex: number): boolean {
+  const c = (comment ?? '').toLowerCase()
+  return (
+    c.includes(`tp${legIndex} ·`) ||
+    new RegExp(`[-_]tp${legIndex}(?:\\s|·|%|$)`).test(c)
+  )
 }
 
 function roundLot(n: number): number {

@@ -1,6 +1,10 @@
 import type { MtmcopyChannelKey } from './channel-context'
 import { isPremiumTpHitMessage, shouldIgnoreChannelMessage } from './channel-context'
-import { TRADE_IDEAS_TRAILING_PIPS, type TrailingDistance } from './pip-points'
+import {
+  premiumTrailingWithActivation,
+  TRADE_IDEAS_TRAILING_PIPS,
+  type TrailingDistance,
+} from './pip-points'
 
 export interface ParsedSignal {
   symbol: string | null
@@ -405,6 +409,8 @@ export interface ParsedManagement {
   /** Trailing completo (Premium — activação + distância) */
   trailing?: TrailingDistance | null
   tpLevel?: number | null
+  /** Premium: activar trailing só nesta perna após BE (ex. 2 = TP2 no HIT TP1) */
+  trailingLeg?: number | null
   /** SL em points do broker (ex: «SL 1000 points») */
   slPoints?: number | null
 }
@@ -486,6 +492,8 @@ function parsePremiumManagement(text: string, parentText: string | null): Parsed
           symbol,
           sl: null,
           tpLevel: 1,
+          trailingLeg: 2,
+          trailing: premiumTrailingWithActivation(),
         }
       }
       return {

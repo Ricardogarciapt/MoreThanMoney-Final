@@ -9,6 +9,7 @@ import {
   modifyPositionSlTp,
   type MetaApiPosition,
 } from './metaapi'
+import { matchesPremiumLegComment } from './premium-exits'
 import type { ParsedManagement } from './signal-parser'
 import type { MTMcopierConnection } from './types'
 
@@ -145,6 +146,30 @@ export async function applyManagementToAccount(
     const mod = await modifyPositionSlTp(accountId, pos.id, newSl, pos.takeProfit)
     if (mod.success) result.updated++
     else if (mod.error) result.errors.push(mod.error)
+  }
+
+  if (
+    management.type === 'breakeven' &&
+    management.trailingLeg != null &&
+    management.trailingLeg > 0 &&
+    trailing
+  ) {
+    const legPositions = positions.filter((p) =>
+      matchesPremiumLegComment(p.comment, management.trailingLeg!),
+    )
+    const targets = legPositions.length ? legPositions : positions
+    for (const pos of targets) {
+      const mod = await modifyPositionSlTp(
+        accountId,
+        pos.id,
+        pos.openPrice,
+        pos.takeProfit,
+        trailing,
+        pos.symbol,
+      )
+      if (mod.success) result.updated++
+      else if (mod.error) result.errors.push(mod.error)
+    }
   }
 
   return result
