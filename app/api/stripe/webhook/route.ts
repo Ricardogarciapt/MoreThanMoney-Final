@@ -19,6 +19,11 @@ import {
 } from '@/lib/stripe-skool-admin'
 import { processMlmCheckoutCommission } from '@/lib/mlm-checkout-commission'
 import { upsertSponsorNode } from '@/lib/mlm-tree'
+import {
+  notifyAdminsVipsNewSale,
+  notifySponsorNewClient,
+  notifySponsorTeamRenewal,
+} from '@/lib/notifications-sales'
 
 // Nomes amigáveis dos scanners por planId (para o email de instruções TradingView)
 const SCANNER_PLAN_NAMES: Record<string, string> = {
@@ -280,6 +285,28 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   } catch (mlmErr) {
     console.error('[MLM] Erro ao processar MLM:', mlmErr)
   }
+
+  // Notificar admins + VIPs de nova venda, e sponsor se houver referência (fire-and-forget)
+  try {
+    const planId = session.metadata?.plan || 'app_member_monthly'
+    const { data: saleMemberProfile } = await supabase
+      .from('profiles')
+      .select('full_name, mlm_sponsor_username')
+      .eq('id', userId)
+      .single()
+    const memberName = saleMemberProfile?.full_name || 'Novo Membro'
+    const amountEur = (session.amount_total || 0) / 100
+    void notifyAdminsVipsNewSale({ name: memberName, planId, amountEur })
+    if (saleMemberProfile?.mlm_sponsor_username) {
+      void notifySponsorNewClient({
+        sponsorUsername: saleMemberProfile.mlm_sponsor_username,
+        clientName: memberName,
+        planId,
+      })
+    }
+  } catch (notifErr) {
+    console.error('[NOTIF] Erro ao notificar nova venda:', notifErr)
+  }
 }
 
 async function handleSubscriptionUpdate(sub: Stripe.Subscription) {
@@ -366,7 +393,7 @@ async function handleSubscriptionCanceled(sub: Stripe.Subscription) {
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, mlm_sponsor_username, subscription_renewal_count')
+    .select('id, full_name, mlm_sponsor_username, subscription_renewal_count')
     .eq('stripe_customer_id', invoice.customer as string)
     .single()
 
@@ -461,6 +488,13 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
                 pending_commissions: commissionAmount,
               }).then(undefined, () => {})
             }
+
+            // Notificar sponsor da renovação da equipa (fire-and-forget)
+            void notifySponsorTeamRenewal({
+              sponsorId: sponsor.id,
+              memberName: (profile as any).full_name || 'Um membro da tua equipa',
+              commission: commissionAmount,
+            })
           }
         }
       }

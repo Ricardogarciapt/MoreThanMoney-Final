@@ -11,6 +11,10 @@ import {
   processMlmCheckoutCommission,
 } from '@/lib/mlm-checkout-commission'
 import { isRegisteredMember } from '@/lib/member-access'
+import {
+  notifyAdminsNewMember,
+  notifySponsorNewAffiliate,
+} from '@/lib/notifications-sales'
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -246,6 +250,16 @@ export async function POST(request: NextRequest) {
 
       console.log(`✅ [COMPLETE-REG] Perfil OAuth criado para ${oauthEmail} (user: ${oauthUserId})`)
 
+      // Notificações de novo membro (fire-and-forget)
+      {
+        const planId = session.metadata?.plan || `${plan || 'app_member'}_${billing || 'monthly'}`
+        const effectiveSponsor = (sponsor_username || session.metadata?.sponsor_username || '').trim()
+        void notifyAdminsNewMember({ name: oauthFullName, planId, sponsorUsername: effectiveSponsor || undefined })
+        if (effectiveSponsor) {
+          void notifySponsorNewAffiliate({ sponsorUsername: effectiveSponsor, affiliateName: oauthFullName, planId })
+        }
+      }
+
       return NextResponse.json({
         success: true,
         userId: oauthUserId,
@@ -304,6 +318,16 @@ export async function POST(request: NextRequest) {
     })
 
     console.log(`✅ [COMPLETE-REG] Conta criada para ${email} (user: ${userId})`)
+
+    // Notificações de novo membro (fire-and-forget)
+    {
+      const planId = session.metadata?.plan || `${plan || 'app_member'}_${billing || 'monthly'}`
+      const effectiveSponsor = (sponsor_username || '').trim()
+      void notifyAdminsNewMember({ name: full_name, planId, sponsorUsername: effectiveSponsor || undefined })
+      if (effectiveSponsor) {
+        void notifySponsorNewAffiliate({ sponsorUsername: effectiveSponsor, affiliateName: full_name, planId })
+      }
+    }
 
     return NextResponse.json({
       success: true,
