@@ -118,7 +118,7 @@ function buildOrderRequest(
     stopLoss: conn.copy_sl ? signal.sl : null,
     takeProfit: conn.copy_tp ? (signal.tp[0] ?? null) : null,
     comment,
-    // Trailing é definido por canal/perna (Premium só na última exit; Trade Ideas no processor)
+    // Trailing por canal/perna (Premium: TP2+TP3; Trade Ideas no processor)
     trailingStop: null,
   }
 }

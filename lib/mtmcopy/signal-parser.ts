@@ -1,10 +1,6 @@
 import type { MtmcopyChannelKey } from './channel-context'
 import { isPremiumTpHitMessage, shouldIgnoreChannelMessage } from './channel-context'
-import {
-  premiumTrailingWithActivation,
-  TRADE_IDEAS_TRAILING_PIPS,
-  type TrailingDistance,
-} from './pip-points'
+import { TRADE_IDEAS_TRAILING_PIPS, type TrailingDistance } from './pip-points'
 
 export interface ParsedSignal {
   symbol: string | null
@@ -486,10 +482,9 @@ function parsePremiumManagement(text: string, parentText: string | null): Parsed
       }
       if (level === 1) {
         return {
-          type: 'enable_trailing',
+          type: 'breakeven',
           symbol,
           sl: null,
-          trailing: premiumTrailingWithActivation(),
           tpLevel: 1,
         }
       }

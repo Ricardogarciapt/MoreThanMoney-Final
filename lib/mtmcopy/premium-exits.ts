@@ -41,20 +41,24 @@ export function buildPremiumExitLegs(
     }
     allocated += lot
 
-    const isFirst = i === 0
-    const isLast = i === tps.length - 1
-
     legs.push({
       legIndex: i + 1,
       tpPrice: tps[i],
       lot,
       lotFraction: fraction,
-      trailing: isLast ? premiumTrailingWithActivation() : null,
+      trailing: trailingForPremiumLeg(i, tps.length),
       label: `TP${i + 1} · ${pct}%`,
     })
   }
 
   return legs.filter((l) => l.lot > 0)
+}
+
+/** TP1 sem trailing; TP2 e última perna (TP3) com activação 50 pips. */
+function trailingForPremiumLeg(legIndex: number, totalLegs: number): TrailingDistance | null {
+  if (legIndex === 0) return null
+  if (legIndex === 1 || legIndex === totalLegs - 1) return premiumTrailingWithActivation()
+  return null
 }
 
 function roundLot(n: number): number {
