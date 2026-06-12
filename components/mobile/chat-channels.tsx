@@ -51,6 +51,7 @@ import {
   isChannelUnread,
 } from "./chat-channel-meta"
 import { shouldReduceSafariEffects, waitForSupabaseSession } from "@/lib/supabase-session"
+import { getChatMessageShareUrl } from "@/lib/chat-short-link"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -149,10 +150,17 @@ function normalizeChatMessage(raw: ChatMessage): ChatMessage {
 }
 
 async function shareMessage(msg: ChatMessage) {
-  const url = msg.link_url || msg.image_url || extractFirstUrl(msg.content || "")
+  const origin = typeof window !== "undefined" ? window.location.origin : undefined
+  const url = getChatMessageShareUrl(msg, origin)
   const text =
     msg.content?.trim() ||
-    (msg.message_type === "video" ? "Vídeo partilhado" : msg.image_url ? "Imagem partilhada" : url || "Mensagem MTM")
+    (msg.message_type === "video"
+      ? "Vídeo partilhado no chat MTM"
+      : msg.image_url
+        ? "Imagem partilhada no chat MTM"
+        : url
+          ? "Link partilhado no chat MTM"
+          : "Mensagem MTM")
 
   if (typeof navigator !== "undefined" && navigator.share) {
     try {
@@ -163,12 +171,21 @@ async function shareMessage(msg: ChatMessage) {
     }
   }
 
-  const copy = [text, url].filter(Boolean).join("\n")
+  const copy = url ? `${text}\n${url}` : text
   try {
     await navigator.clipboard.writeText(copy)
   } catch {
     // silent
   }
+}
+
+function getChatCopyText(msg: ChatMessage): string {
+  const origin = typeof window !== "undefined" ? window.location.origin : undefined
+  const shareUrl = getChatMessageShareUrl(msg, origin)
+  const caption = msg.content?.trim()
+  if (caption && shareUrl) return `${caption}\n${shareUrl}`
+  if (caption) return caption
+  return shareUrl || msg.link_url || msg.image_url || ""
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -319,10 +336,11 @@ function MessageContextMenu({
 }) {
   const hasText = !!msg.content
   const canDel = isOwn || isAdmin
-  const shareUrl = msg.link_url || msg.image_url || extractFirstUrl(msg.content || "")
+  const shareUrl = getChatMessageShareUrl(msg)
+  const openUrl = msg.link_url || msg.image_url || extractFirstUrl(msg.content || "")
 
   const handleCopy = () => {
-    const toCopy = msg.content || msg.link_url || msg.image_url || ""
+    const toCopy = getChatCopyText(msg)
     if (toCopy) { try { navigator.clipboard.writeText(toCopy) } catch {} }
     onClose()
   }
@@ -384,9 +402,9 @@ function MessageContextMenu({
               <span className="text-[15px] text-white">Copiar</span>
             </button>
           )}
-          {shareUrl && (
+          {openUrl && (
             <a
-              href={shareUrl}
+              href={openUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={onClose}
@@ -709,7 +727,7 @@ function MessageBubble({
     if (key === "reply") onReply(msg)
     else if (key === "share") shareMessage(msg)
     else if (key === "copy") {
-      const toCopy = msg.content || msg.link_url || msg.image_url || ""
+      const toCopy = getChatCopyText(msg)
       if (toCopy) { try { navigator.clipboard.writeText(toCopy) } catch {} }
     }
     else if (key === "delete") onDelete(msg.id)
@@ -1215,18 +1233,28 @@ function ChannelView({
 
   // ── Send message ──────────────────────────────────────────────────────────
 
-  const sendPushForChannel = (title: string, body: string) => {
+  const sendPushForChannel = async (title: string, body: string, messageId?: string) => {
     if (!["trading", "cripto", "geral"].includes(channel.slug)) return
-    fetch("/api/notifications/send-push", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        all: true,
-        title,
-        body,
-        data: { type: "chat_message", url: "/app-mobile", channel: channel.slug },
-      }),
-    }).catch(() => {})
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+      if (!accessToken) return
+      await fetch("/api/chat/notify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          channel_slug: channel.slug,
+          title,
+          body,
+          message_id: messageId,
+        }),
+      })
+    } catch {
+      // não bloquear envio da mensagem
+    }
   }
 
   const handleSend = async () => {
@@ -1319,7 +1347,8 @@ function ChannelView({
         }
         sendPushForChannel(
           notifTitles[channel.slug] ?? (asVideo ? `🎬 Novo vídeo em #${channel.name}` : `📷 Nova imagem em #${channel.name}`),
-          caption || (asVideo ? "Vídeo partilhado!" : "Imagem partilhada!")
+          caption || (asVideo ? "Vídeo partilhado!" : "Imagem partilhada!"),
+          newMsg?.id,
         )
       } else {
         const notifTitles: Record<string, string> = {
@@ -1329,7 +1358,8 @@ function ChannelView({
         }
         sendPushForChannel(
           notifTitles[channel.slug] ?? `💬 Nova mensagem em #${channel.name}`,
-          (caption || detectedUrl || "Nova mensagem!").substring(0, 120)
+          (caption || detectedUrl || "Nova mensagem!").substring(0, 120),
+          newMsg?.id,
         )
       }
 

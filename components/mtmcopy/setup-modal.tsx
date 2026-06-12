@@ -10,6 +10,18 @@ import {
 import { supabase } from "@/lib/supabase"
 import BrokerServerSelect from "@/components/mtmcopy/broker-server-select"
 import { COPY_METHODS, TELEGRAM_GROUPS, type MtmcopyCopyMethod } from "@/lib/mtmcopy/copy-methods"
+import {
+  connectionCopyMethod,
+  countCopyTraderSlaves,
+  countMtmSignalSlaves,
+  countTotalActive,
+  maxCopyTraderSlaves,
+} from "@/lib/mtmcopy/copy-limits"
+import type { MtmcopyUserLimits } from "@/lib/mtmcopy/account-limits"
+import {
+  MAX_MTMCOPY_ACCOUNTS_MEMBER,
+  MAX_MTMCOPY_SIGNAL_SLAVES,
+} from "@/lib/mtmcopy/account-limits"
 import { getClientConnectionTitle, MTM_MASTER_LABEL } from "@/lib/mtmcopy/display-utils"
 import { isSafariBrowser } from "@/lib/supabase-session"
 import { formatMt5Money } from "@/components/mtmcopy/mtmcopy-shared"
@@ -109,6 +121,7 @@ export default function SetupModal({
   initialSelectionId,
   initialSenderMode,
   initialCopyMethod,
+  accountLimits,
   onClose,
   onSaved,
 }: {
@@ -116,6 +129,7 @@ export default function SetupModal({
   initialSelectionId: Selection | null
   initialSenderMode?: MtmcopySenderMode | null
   initialCopyMethod?: MtmcopyCopyMethod | null
+  accountLimits?: MtmcopyUserLimits | null
   onClose: () => void
   onSaved: () => void
 }) {
@@ -134,12 +148,33 @@ export default function SetupModal({
   const senderMode: MtmcopySenderMode =
     copyMethod === "master_slave" ? "master_account" : "telegram"
 
-  const canAddMaster = copyMethod === "master_slave" && !masterConn
+  const limits = accountLimits
+  const unlimited = limits?.unlimited ?? false
+  const maxAccounts = limits?.maxAccounts ?? MAX_MTMCOPY_ACCOUNTS_MEMBER
+  const maxSignalSlaves = limits?.maxSignalSlaves ?? MAX_MTMCOPY_SIGNAL_SLAVES
+  const maxCopySlaves = limits?.maxCopyTraderSlaves ?? maxCopyTraderSlaves(connections)
+  const copyTraderSlaves = countCopyTraderSlaves(connections)
+  const signalSlaves = countMtmSignalSlaves(connections)
+  const totalActive = countTotalActive(connections)
+  const underAccountCap = unlimited || totalActive < maxAccounts
+  const canAddMaster = copyMethod === "master_slave" && !masterConn && underAccountCap
   const canAddSlave =
-    copyMethod === "master_slave"
-      ? Boolean(masterConn?.copyfactory_strategy_id) && slaveConns.length < 2
-      : slaveConns.length < 2
-  const canAddAccount = canAddMaster || canAddSlave
+    underAccountCap &&
+    (copyMethod === "master_slave"
+      ? Boolean(masterConn?.copyfactory_strategy_id) && copyTraderSlaves < maxCopySlaves
+      : signalSlaves < maxSignalSlaves)
+  const canAddAccount = unlimited || canAddMaster || canAddSlave
+
+  const connectionsForMethod = useMemo(() => {
+    if (copyMethod === "master_slave") {
+      return connections.filter(
+        (c) => c.account_role === "master" || connectionCopyMethod(c) === "master_slave",
+      )
+    }
+    return connections.filter(
+      (c) => c.account_role !== "master" && connectionCopyMethod(c) === copyMethod,
+    )
+  }, [connections, copyMethod])
 
   const defaultSelection: Selection =
     initialSelectionId ??
@@ -151,6 +186,9 @@ export default function SetupModal({
   const isMasterSelected = selectedConn?.account_role === "master"
   const isNewMaster = selectedId === "new" && senderMode === "master_account" && !masterConn
   const isEditMode = Boolean(selectedConn?.id && selectedConn.mt5_status !== "disconnected")
+  const needsRelink =
+    isEditMode &&
+    (selectedConn?.mt5_status === "pending" || selectedConn?.mt5_status === "error")
   const showSlaveSettings = !isMasterSelected && !isNewMaster
 
   const [accountLabel, setAccountLabel] = useState("")
@@ -178,7 +216,6 @@ export default function SetupModal({
   const [provisioning, setProvisioning] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [switchingMode, setSwitchingMode] = useState(false)
   const [error, setError] = useState("")
   const [mounted, setMounted] = useState(false)
   const safari = isSafariBrowser()
@@ -197,8 +234,8 @@ export default function SetupModal({
   }, [mounted])
 
   useEffect(() => {
-    setCopyMethod(initialCopyMethod ?? deriveCopyMethod(connections))
-  }, [connections, initialCopyMethod])
+    if (initialCopyMethod) setCopyMethod(initialCopyMethod)
+  }, [initialCopyMethod])
 
   useEffect(() => {
     ;(async () => {
@@ -258,40 +295,21 @@ export default function SetupModal({
     })
   }
 
-  const handleCopyMethodChange = async (method: MtmcopyCopyMethod) => {
+  const handleCopyMethodChange = (method: MtmcopyCopyMethod) => {
     if (method === copyMethod) return
-    if (method !== "master_slave" && masterConn) {
-      setError("Remove a conta mestre antes de mudar o método de cópia.")
+    setError("")
+    setCopyMethod(method)
+
+    if (method === "master_slave") {
+      if (masterConn) setSelectedId(masterConn.id)
+      else setSelectedId("new")
       return
     }
-    if (connections.length > 0) {
-      setSwitchingMode(true)
-      setError("")
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.access_token) return
-        const res = await fetch("/api/mtmcopy/connection", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ copy_method: method }),
-        })
-        const data = await res.json()
-        if (!res.ok) {
-          setError(data.error || "Não foi possível mudar o método.")
-          return
-        }
-      } catch {
-        setError("Erro de rede ao mudar método.")
-        return
-      } finally {
-        setSwitchingMode(false)
-      }
-    }
-    setCopyMethod(method)
-    setSelectedId("new")
+
+    const matching = connections.filter(
+      (c) => c.account_role !== "master" && connectionCopyMethod(c) === method,
+    )
+    setSelectedId(matching[0]?.id ?? "new")
   }
 
   const pollProvisionStatus = async (token: string, connectionId: string, attempts = 40) => {
@@ -371,6 +389,31 @@ export default function SetupModal({
       }
 
       if (isEditMode && selectedConn) {
+        if (needsRelink) {
+          if (!mt5Password) {
+            setError("Introduz a password MT5 para religar a conta.")
+            return
+          }
+          setProvisioning(true)
+          const relink = await fetch("/api/mtmcopy/provision", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({
+              connection_id: selectedConn.id,
+              mt5_password: mt5Password,
+            }),
+          })
+          const relinkData = await relink.json()
+          if (!relink.ok || relinkData.connection?.mt5_status === "error") {
+            setError(relinkData.error || relinkData.message || relinkData.connection?.last_error || "Falha ao religar.")
+            return
+          }
+          setMt5Password("")
+        }
+
         const res = await fetch("/api/mtmcopy/connection", {
           method: "POST",
           headers: {
@@ -501,7 +544,7 @@ export default function SetupModal({
               <button
                 key={m.id}
                 type="button"
-                disabled={saving || deleting || switchingMode || (m.id !== "master_slave" && Boolean(masterConn))}
+                disabled={saving || deleting}
                 onClick={() => handleCopyMethodChange(m.id)}
                 className={`text-left p-3 rounded-lg border text-sm transition-colors ${
                   copyMethod === m.id
@@ -520,27 +563,16 @@ export default function SetupModal({
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4">
-          {masterConn && (
-            <button
-              type="button"
-              onClick={() => setSelectedId(masterConn.id)}
-              className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
-                selectedId === masterConn.id
-                  ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
-                  : "border-gray-700 text-gray-400 hover:bg-gray-800"
-              }`}
-            >
-              {accountTabLabel(masterConn, 0)}
-            </button>
-          )}
-          {slaveConns.map((conn, i) => (
+          {connectionsForMethod.map((conn, i) => (
             <button
               key={conn.id}
               type="button"
               onClick={() => setSelectedId(conn.id)}
               className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
                 selectedId === conn.id
-                  ? "border-[#D2A63C]/50 bg-[#D2A63C]/10 text-[#D2A63C]"
+                  ? conn.account_role === "master"
+                    ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
+                    : "border-[#D2A63C]/50 bg-[#D2A63C]/10 text-[#D2A63C]"
                   : "border-gray-700 text-gray-400 hover:bg-gray-800"
               }`}
             >
@@ -702,17 +734,50 @@ export default function SetupModal({
           )}
 
           {isEditMode ? (
-            <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3 text-xs text-gray-300">
-              <strong className="text-emerald-400">Conta ligada:</strong>{" "}
-              {isMasterSelected || isNewMaster
-                ? MTM_MASTER_LABEL
-                : selectedConn?.mt5_login_last4
-                  ? `····${selectedConn.mt5_login_last4}`
-                  : "activa"}
-              {!isMasterSelected && !isNewMaster && selectedConn?.mt5_server && (
-                <span className="block mt-1 text-gray-500">{selectedConn.mt5_server}</span>
+            <>
+              <div
+                className={`rounded-lg border p-3 text-xs text-gray-300 ${
+                  needsRelink
+                    ? "border-amber-500/25 bg-amber-500/5"
+                    : "border-emerald-500/25 bg-emerald-500/5"
+                }`}
+              >
+                {needsRelink ? (
+                  <>
+                    <strong className="text-amber-400">Religar conta:</strong>{" "}
+                    {selectedConn?.mt5_status === "pending"
+                      ? "A ligação MetaAPI não completou. Introduz a password abaixo e guarda."
+                      : selectedConn?.last_error || "Erro na ligação MetaAPI. Introduz a password para tentar de novo."}
+                  </>
+                ) : (
+                  <>
+                    <strong className="text-emerald-400">Conta ligada:</strong>{" "}
+                    {isMasterSelected || isNewMaster
+                      ? MTM_MASTER_LABEL
+                      : selectedConn?.mt5_login_last4
+                        ? `····${selectedConn.mt5_login_last4}`
+                        : "activa"}
+                  </>
+                )}
+                {!isMasterSelected && !isNewMaster && selectedConn?.mt5_server && (
+                  <span className="block mt-1 text-gray-500">{selectedConn.mt5_server}</span>
+                )}
+              </div>
+              {needsRelink && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Password MT5 *</label>
+                  <Input
+                    type="password"
+                    value={mt5Password}
+                    onChange={(e) => setMt5Password(e.target.value)}
+                    placeholder="Password para religar via MetaAPI"
+                    className="bg-gray-800 border-gray-700 text-white"
+                    disabled={saving}
+                    autoComplete="new-password"
+                  />
+                </div>
               )}
-            </div>
+            </>
           ) : (
             <>
               <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3 text-xs text-gray-300">
@@ -928,7 +993,7 @@ export default function SetupModal({
         <div className="flex flex-col gap-2 mt-5">
           <Button
             onClick={handleSave}
-            disabled={saving || deleting || switchingMode}
+            disabled={saving || deleting}
             className="w-full bg-[#D2A63C] hover:bg-[#BB8525] text-black font-bold"
           >
             {saving ? (
@@ -937,7 +1002,10 @@ export default function SetupModal({
                 {provisioning ? "A ligar conta..." : "A guardar..."}
               </>
             ) : isEditMode ? (
-              <>Guardar alterações <Check className="ml-2 h-5 w-5" /></>
+              <>
+                {needsRelink ? "Religar conta" : "Guardar alterações"}
+                <Check className="ml-2 h-5 w-5" />
+              </>
             ) : isNewMaster ? (
               <>Ligar conta mestre <ArrowRight className="ml-2 h-5 w-5" /></>
             ) : (

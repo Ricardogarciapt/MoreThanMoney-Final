@@ -17,6 +17,9 @@ export function resolveChannelFromChat(chat: { id?: number; username?: string })
 
 export function shouldIgnoreChannelMessage(text: string): boolean {
   if (!text?.trim()) return true
+  const t = text.trim()
+  if (/^\s*new\s+position\s*[!.\s]*$/i.test(t)) return true
+  if (/^\s*nova\s+posi[cç][aã]o\s*[!.\s]*$/i.test(t)) return true
   if (/\bclose\s+half\b/i.test(text)) return true
   if (/\btrade\s+active\s+and\s+running\b/i.test(text)) return true
   return false

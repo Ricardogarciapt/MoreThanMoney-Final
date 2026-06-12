@@ -18,7 +18,19 @@ export interface SubscriberOptions {
   reverse?: boolean
   copySl?: boolean
   copyTp?: boolean
+  /** false = copiar limit, stop e ordens pendentes (default copy trader) */
+  skipPendingOrders?: boolean
   symbolWhitelist?: string[] | null
+}
+
+export interface ProviderStrategyOptions {
+  strategyId: string
+  accountId: string
+  name: string
+  description?: string
+  skipPendingOrders?: boolean
+  copyStopLoss?: boolean
+  copyTakeProfit?: boolean
 }
 
 export async function subscribeToStrategies(
@@ -37,7 +49,9 @@ export async function subscribeToStrategies(
   const subscriptions = ids.map((strategyId) => {
     const subscription: Record<string, unknown> = {
       strategyId,
-      skipPendingOrders: false,
+      skipPendingOrders: opts.skipPendingOrders ?? false,
+      copyStopLoss: opts.copySl !== false,
+      copyTakeProfit: opts.copyTp !== false,
       reverse: opts.reverse ?? false,
     }
     if (opts.tradeSizeScaling && opts.tradeSizeScaling.mode !== 'none') {
@@ -148,12 +162,10 @@ export async function generateStrategyId(): Promise<{ ok: boolean; id?: string; 
   return { ok: true, id: data.id }
 }
 
-export async function upsertProviderStrategy(opts: {
-  strategyId: string
-  accountId: string
-  name: string
-  description?: string
-}): Promise<{ ok: boolean; error?: string }> {
+/** Garante limit/stop/pending na estratégia provider (conta mestre copy trader). */
+export async function upsertProviderStrategy(
+  opts: ProviderStrategyOptions,
+): Promise<{ ok: boolean; error?: string }> {
   const token = process.env.METAAPI_TOKEN
   if (!token) return { ok: false, error: 'METAAPI_TOKEN em falta' }
 
@@ -170,6 +182,9 @@ export async function upsertProviderStrategy(opts: {
         name: opts.name,
         description: opts.description ?? 'Estratégia copy trader MTMcopier',
         accountId: opts.accountId,
+        skipPendingOrders: opts.skipPendingOrders ?? false,
+        copyStopLoss: opts.copyStopLoss !== false,
+        copyTakeProfit: opts.copyTakeProfit !== false,
       }),
     },
   )
@@ -203,6 +218,17 @@ export async function getProviderAccountId(
     process.env.METAAPI_PROVIDER_ACCOUNT_ID?.trim() ||
     null
   )
+}
+
+export async function ensureCopyTraderStrategy(
+  opts: ProviderStrategyOptions,
+): Promise<{ ok: boolean; error?: string }> {
+  return upsertProviderStrategy({
+    ...opts,
+    skipPendingOrders: false,
+    copyStopLoss: true,
+    copyTakeProfit: true,
+  })
 }
 
 export async function getCopyStrategyId(): Promise<string | null> {

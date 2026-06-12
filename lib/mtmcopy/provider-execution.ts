@@ -9,10 +9,66 @@ import type { MTMcopierConnection } from './types'
 
 export type { ProviderExecutionProfile }
 
-export const DEFAULT_PROVIDER_EXECUTION: ProviderExecutionProfile = {
+/** Perfil MTM Auto — Premium (XAUUSD, 0.75% risco, 3 exits). */
+export const PREMIUM_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   ...MTM_PROVIDER_EXECUTION_PROFILE,
+  lot_mode: 'risk_percent',
+  lot_value: 0.75,
   ai_validation_enabled: true,
   ai_min_confidence: 0.35,
+  sl_option: 'from_room',
+  execute_if_no_sl: true,
+  tp_option: 'from_room',
+  execute_if_no_tp: true,
+  symbol_prefix_suffix_mode: 'auto',
+  symbol_prefix: '',
+  symbol_suffix: '',
+  symbol_mappings: [],
+  mt_comment: 'MTM-PREMIUM',
+  trading_schedule: { mode: 'always' },
+  copy_close_orders: true,
+  copy_modify_orders: true,
+  close_opposite_positions: false,
+  symbols_execute_only: ['XAUUSD', 'GOLD'],
+  symbols_avoid: null,
+  symbol_lot_exceptions: [],
+  exit_pct_tp1: 33,
+  exit_pct_tp2: 33,
+  exit_pct_tp3: 34,
+}
+
+/** Perfil MTM Auto — Trade Ideas (forex + trailing). */
+export const TRADE_IDEAS_PROVIDER_EXECUTION: ProviderExecutionProfile = {
+  ...MTM_PROVIDER_EXECUTION_PROFILE,
+  lot_mode: 'risk_percent',
+  lot_value: 0.75,
+  ai_validation_enabled: true,
+  ai_min_confidence: 0.35,
+  auto_trailing_stop: true,
+  trailing_stop_points: 200,
+  sl_option: 'from_room',
+  execute_if_no_sl: true,
+  tp_option: 'from_room',
+  execute_if_no_tp: true,
+  symbol_prefix_suffix_mode: 'auto',
+  symbol_prefix: '',
+  symbol_suffix: '',
+  symbol_mappings: [],
+  mt_comment: 'MTM-TI',
+  trading_schedule: { mode: 'always' },
+  copy_close_orders: true,
+  copy_modify_orders: true,
+  close_opposite_positions: false,
+  symbols_execute_only: null,
+  symbols_avoid: null,
+  symbol_lot_exceptions: [],
+  exit_pct_tp1: 33,
+  exit_pct_tp2: 33,
+  exit_pct_tp3: 34,
+}
+
+export const DEFAULT_PROVIDER_EXECUTION: ProviderExecutionProfile = {
+  ...PREMIUM_PROVIDER_EXECUTION,
   sl_option: 'from_room',
   execute_if_no_sl: true,
   tp_option: 'from_room',
@@ -173,5 +229,7 @@ export async function getProviderExecutionProfile(
 
   if (config.provider_execution) return normalizeProviderExecutionProfile(config.provider_execution)
 
+  if (channel === 'premium-signals') return { ...PREMIUM_PROVIDER_EXECUTION }
+  if (channel === 'trade-ideas') return { ...TRADE_IDEAS_PROVIDER_EXECUTION }
   return { ...DEFAULT_PROVIDER_EXECUTION }
 }

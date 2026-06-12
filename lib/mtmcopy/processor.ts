@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isPremiumTp1HitConfirmed } from './channel-context'
 import { buildPremiumExitLegs } from './premium-exits'
 import { formatTrailingDistance, TRADE_IDEAS_TRAILING_PIPS } from './pip-points'
+import { prefersDirectExecution } from './copy-limits'
 import { getMtmcopySubscription } from './subscription'
 import { chatMatchesAllowlist, connectionMatchesChannel, connectionMatchesSignalSource } from './sources'
 import {
@@ -13,8 +14,8 @@ import {
   hasRecentDuplicateGlobal,
   countExecutedToday,
 } from './db'
-import { computeLotSize, getLotSizingSkipReason } from './lot-sizing'
-import { getAccountBalance, isMetaApiConfigured, placeOrder } from './metaapi'
+import { computeLotSize, getLotSizingSkipReason, signalForRiskSizing } from './lot-sizing'
+import { fetchLotSizingContext, isMetaApiConfigured, placeOrder } from './metaapi'
 import { isCopyFactoryEnabled } from './copyfactory'
 import type { MtmcopyChannelKey } from './channel-context'
 import { resolveChannelFromChat, shouldIgnoreChannelMessage } from './channel-context'
@@ -42,6 +43,7 @@ import { formatExecutionDetail, logProviderSignalEvent } from './signal-log'
 import {
   applyValidationToSignal,
   formatAiValidationDetail,
+  isOfficialMtmTelegramFormat,
   shouldExecuteSignal,
   validateSignalWithAi,
   type AiSignalValidation,
@@ -158,6 +160,11 @@ async function filterEligibleSubscribers(
   return eligible
 }
 
+/** Métodos 1 e 2 — execução directa MetaAPI na conta do utilizador (parser → MT5). */
+function isDirectExecutionSubscriber(conn: MTMcopierConnection): boolean {
+  return prefersDirectExecution(conn)
+}
+
 async function resolveMatchedSubscribers(
   message: TelegramMessage,
   channel: MtmcopyChannelKey,
@@ -249,9 +256,11 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
     channel,
     mtmProvidersPreview[0]?.execution,
   )
+  const officialFormat = isOfficialMtmTelegramFormat(text)
   const validation = await validateSignalWithAi(text, signal, {
     skipAi: primaryProfile.ai_validation_enabled === false,
     minConfidence: getAiMinConfidence(primaryProfile),
+    forceFastPath: officialFormat,
   })
   const enriched = applyValidationToSignal(signal, validation)
   const aiDetail = formatAiValidationDetail(validation)
@@ -261,46 +270,66 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
   )
 
   const { matchedConnections, subscribers } = await subscribersPromise
+  const logTargets = subscribers.length ? subscribers : matchedConnections
+  const directTargets = subscribers.filter(isDirectExecutionSubscriber)
+  const canExecute = shouldExecuteSignal(validation)
 
-  if (mtmProvidersPreview.length) {
-    await Promise.all(
-      mtmProvidersPreview.map(async (prov) => {
-        const routeProfile = await getProviderExecutionProfile(channel, prov.execution)
-        if (!shouldExecuteForProfile(validation, routeProfile)) {
-          const minPct = Math.round(getAiMinConfidence(routeProfile) * 100)
-          await logProviderSignalEvent({
-            channel,
-            provider: prov,
-            signal: enriched,
-            raw: text,
-            telegramMessageId: message.message_id,
-            status: 'skipped',
-            detail: `${aiDetail} · confiança < ${minPct}%`,
-          })
-          return
-        }
-        await executeViaMtmProvider(
-          subscribers.length ? subscribers : matchedConnections,
-          enriched,
-          text,
-          message.message_id,
-          prov,
-          channel,
-          validation,
+  const method2Task =
+    mtmProvidersPreview.length > 0
+      ? Promise.all(
+          mtmProvidersPreview.map(async (prov) => {
+            const routeProfile = await getProviderExecutionProfile(channel, prov.execution)
+            if (!canExecute || !shouldExecuteForProfile(validation, routeProfile)) {
+              const minPct = Math.round(getAiMinConfidence(routeProfile) * 100)
+              await logProviderSignalEvent({
+                channel,
+                provider: prov,
+                signal: enriched,
+                raw: text,
+                telegramMessageId: message.message_id,
+                status: 'skipped',
+                detail: canExecute
+                  ? `${aiDetail} · confiança < ${minPct}%`
+                  : `${aiDetail} · validação abaixo do mínimo`,
+              })
+              return
+            }
+            await executeViaMtmProvider(
+              logTargets,
+              enriched,
+              text,
+              message.message_id,
+              prov,
+              channel,
+              validation,
+            )
+          }),
         )
-      }),
-    )
-    return
-  }
+      : Promise.resolve()
 
-  if (!subscribers.length) return
+  const directTask =
+    canExecute && directTargets.length > 0
+      ? Promise.all(
+          directTargets.map((conn) =>
+            processSignalDirect(conn, enriched, text, message.message_id, validation, channel),
+          ),
+        )
+      : Promise.resolve()
 
-  if (!shouldExecuteSignal(validation)) {
-    return
-  }
+  await Promise.all([method2Task, directTask])
 
-  for (const conn of subscribers) {
-    await processSignalDirect(conn, enriched, text, message.message_id, validation)
+  if (!mtmProvidersPreview.length && !directTargets.length) {
+    await logProviderSignalEvent({
+      channel,
+      provider: mtmProvider,
+      signal: enriched,
+      raw: text,
+      telegramMessageId: message.message_id,
+      status: 'skipped',
+      detail: subscribers.length
+        ? 'Subscribers activos usam CopyFactory/estratégia — aguardam conta provider'
+        : 'Sem subscribers nem rota provider para este canal',
+    })
   }
 }
 
@@ -544,14 +573,28 @@ async function executeViaMtmProvider(
   }
 
   const executionSummary = formatExecutionSummary(executionProfile)
-  const balance =
-    executionProfile.lot_mode === 'risk_percent'
-      ? await getAccountBalance(provider.accountId)
-      : null
-  let totalLot = computeLotSize(providerConn, signalForExec, balance)
+  let balance: number | null = null
+  let marketPrice: number | null = null
+  if (executionProfile.lot_mode === 'risk_percent') {
+    const ctx = await fetchLotSizingContext(
+      provider.accountId,
+      mappedSymbol,
+      signalForExec.direction!,
+    )
+    balance = ctx.balance
+    marketPrice = ctx.marketPrice
+  }
+  const signalForLot = signalForRiskSizing(signalForExec, marketPrice)
+  let totalLot = computeLotSize(providerConn, signalForLot, balance)
   totalLot = resolveLotForSymbol(mappedSymbol, totalLot, executionProfile)
 
-  const lotSkip = getLotSizingSkipReason(providerConn, signalForExec, balance, totalLot)
+  const lotSkip = getLotSizingSkipReason(
+    providerConn,
+    signalForExec,
+    balance,
+    totalLot,
+    marketPrice,
+  )
   if (lotSkip) {
     await logProviderSignalEvent({
       channel,
@@ -700,12 +743,14 @@ async function processSignalDirect(
   raw: string,
   telegramMessageId?: number,
   validation?: AiSignalValidation,
+  channel: MtmcopyChannelKey = 'unknown',
 ) {
   const tgRef = telegramMessageId != null ? `tg:${telegramMessageId}` : ''
   const aiDetail = validation ? formatAiValidationDetail(validation) : ''
   const aiPrefix = aiDetail ? `${aiDetail} · ` : ''
 
-  if (conn.copyfactory_subscribed && isCopyFactoryEnabled()) {
+  // Copy trader (método 3): replica via CopyFactory da conta mestre — não executar aqui
+  if (conn.copyfactory_subscribed && isCopyFactoryEnabled() && !prefersDirectExecution(conn)) {
     await logMtmcopySignal({
       user_id: conn.user_id,
       connection_id: conn.id,
@@ -788,12 +833,25 @@ async function processSignalDirect(
   }
 
   let balance: number | null = null
+  let marketPrice: number | null = null
+  const execDirection = conn.reverse_signals
+    ? signal.direction === 'buy'
+      ? 'sell'
+      : 'buy'
+    : signal.direction!
   if (conn.lot_mode === 'risk_percent') {
-    balance = await getAccountBalance(conn.metaapi_account_id)
+    const ctx = await fetchLotSizingContext(
+      conn.metaapi_account_id,
+      signal.symbol!,
+      execDirection,
+    )
+    balance = ctx.balance
+    marketPrice = ctx.marketPrice
   }
 
-  const lot = computeLotSize(conn, signal, balance)
-  const lotSkip = getLotSizingSkipReason(conn, signal, balance, lot)
+  const signalForLot = signalForRiskSizing(signal, marketPrice)
+  const lot = computeLotSize(conn, signalForLot, balance)
+  const lotSkip = getLotSizingSkipReason(conn, signal, balance, lot, marketPrice)
   if (lotSkip) {
     await logMtmcopySignal({
       user_id: conn.user_id,
@@ -807,15 +865,46 @@ async function processSignalDirect(
     return
   }
 
-  const direction = conn.reverse_signals
-    ? signal.direction === 'buy'
-      ? 'sell'
-      : 'buy'
-    : signal.direction!
+  const direction = execDirection
 
-  const result = await placeOrder(
-    buildOrderRequest(conn, conn.metaapi_account_id, signal, lot, 'MTMcopier'),
-  )
+  const isPremium = channel === 'premium-signals'
+  const legs = isPremium
+      ? buildPremiumExitLegs(signal, lot, {
+          tp1: conn.exit_pct_tp1 ?? 33,
+          tp2: conn.exit_pct_tp2 ?? 33,
+          tp3: conn.exit_pct_tp3 ?? 34,
+        })
+      : null
+
+  let result: Awaited<ReturnType<typeof placeOrder>>
+  if (legs?.length) {
+    const legResults = await Promise.all(
+      legs.map(async (leg) => {
+        const req = buildOrderRequest(
+          conn,
+          conn.metaapi_account_id!,
+          signal,
+          leg.lot,
+          `MTMcopier-${leg.label}`,
+        )
+        req.takeProfit = leg.tpPrice
+        if (leg.trailing) req.trailingStop = leg.trailing
+        return placeOrder(req)
+      }),
+    )
+    result = legResults[legResults.length - 1] ?? { success: false, error: 'Sem ordens' }
+    if (!legResults.some((r) => r.success)) {
+      result = legResults.find((r) => !r.success) ?? result
+    } else {
+      result = { ...legResults[legResults.length - 1]!, success: true }
+    }
+  } else {
+    const req = buildOrderRequest(conn, conn.metaapi_account_id, signal, lot, 'MTMcopier')
+    if (channel === 'trade-ideas' && conn.auto_trailing_stop) {
+      req.trailingStop = { mode: 'pips', pips: TRADE_IDEAS_TRAILING_PIPS }
+    }
+    result = await placeOrder(req)
+  }
 
   const trailingNote = conn.auto_trailing_stop
     ? ` · trailing ${trailingPointsForConnection(conn)}pts`

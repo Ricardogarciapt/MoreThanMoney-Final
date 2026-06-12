@@ -6,10 +6,15 @@ import {
 } from './copy-methods'
 import type { MTMcopierConnection, MtmcopyAccountRole, MtmcopySenderMode } from './types'
 import {
-  MAX_MTMCOPY_COPY_SLAVES,
-  MAX_MTMCOPY_MASTERS,
-  MAX_MTMCOPY_TELEGRAM_SLAVES,
-} from './types'
+  connectionCopyMethod,
+  countCopyTraderSlaves,
+  countMtmSignalSlaves,
+  countTotalActive,
+  copyTraderSlaveLimitMessage,
+  maxCopyTraderSlaves,
+} from './copy-limits'
+import type { MtmcopyUserLimits } from './account-limits'
+import { MAX_MTMCOPY_ACCOUNTS_MEMBER } from './account-limits'
 
 export function deriveSenderMode(connections: MTMcopierConnection[]): MtmcopySenderMode {
   const master = connections.find((c) => c.account_role === 'master')
@@ -32,20 +37,39 @@ export function canAddConnection(
   connections: MTMcopierConnection[],
   senderMode: MtmcopySenderMode,
   accountRole: MtmcopyAccountRole,
-  options?: { isAdmin?: boolean; copyMethod?: MtmcopyCopyMethod },
+  options?: {
+    isAdmin?: boolean
+    limits?: MtmcopyUserLimits
+    copyMethod?: MtmcopyCopyMethod
+    copyfactoryStrategyPick?: string | null
+  },
 ): { ok: boolean; error?: string } {
-  if (options?.isAdmin) return { ok: true }
+  const limits = options?.limits
+  if (options?.isAdmin || limits?.unlimited) return { ok: true }
 
   const active = connections.filter((c) => c.mt5_status !== 'disconnected')
   const copyMethod =
     options?.copyMethod ??
     (senderMode === 'master_account' ? 'master_slave' : ('telegram_group' as MtmcopyCopyMethod))
 
+  const maxAccounts = limits?.maxAccounts ?? MAX_MTMCOPY_ACCOUNTS_MEMBER
+  const maxMasters = limits?.maxMasters ?? 1
+  const maxSignalSlaves = limits?.maxSignalSlaves ?? 2
+  const maxCopySlaves = limits?.maxCopyTraderSlaves ?? maxCopyTraderSlaves(active)
+
+  if (countTotalActive(active) >= maxAccounts) {
+    const tierHint = limits?.tier === 'vip' ? ' (VIP)' : ''
+    return {
+      ok: false,
+      error: `Limite de ${maxAccounts} contas MTMcopier ligadas${tierHint}`,
+    }
+  }
+
   if (accountRole === 'master') {
     if (copyMethod !== 'master_slave' && senderMode !== 'master_account') {
       return { ok: false, error: 'Conta mestre só está disponível no copy trader pessoal' }
     }
-    if (countByRole(active, 'master') >= MAX_MTMCOPY_MASTERS) {
+    if (countByRole(active, 'master') >= maxMasters) {
       return { ok: false, error: 'Já tens uma conta mestre ligada' }
     }
     return { ok: true }
@@ -53,18 +77,36 @@ export function canAddConnection(
 
   if (copyMethod === 'master_slave' || senderMode === 'master_account') {
     const master = getMasterConnection(active)
-    if (!master?.copyfactory_strategy_id) {
+    if (!master?.copyfactory_strategy_id && master?.mt5_status !== 'connected') {
       return { ok: false, error: 'Liga primeiro a conta mestre antes de adicionar slaves' }
     }
-    if (countByRole(active, 'slave') >= MAX_MTMCOPY_COPY_SLAVES) {
-      return { ok: false, error: `Limite de ${MAX_MTMCOPY_COPY_SLAVES} contas slave no copy trader` }
+    if (countCopyTraderSlaves(active) >= maxCopySlaves) {
+      return { ok: false, error: copyTraderSlaveLimitMessage(maxCopySlaves) }
     }
     return { ok: true }
   }
 
-  if (countByRole(active, 'slave') >= MAX_MTMCOPY_TELEGRAM_SLAVES) {
-    return { ok: false, error: `Limite de ${MAX_MTMCOPY_TELEGRAM_SLAVES} contas no modo Telegram` }
+  if (copyMethod === 'telegram_group' || copyMethod === 'strategy') {
+    if (countMtmSignalSlaves(active) >= maxSignalSlaves) {
+      return {
+        ok: false,
+        error: `Limite de ${maxSignalSlaves} contas em grupos MTM / estratégia (no total)`,
+      }
+    }
+    const pick = options?.copyfactoryStrategyPick?.trim()
+    if (copyMethod === 'strategy' && pick) {
+      const dup = active.find(
+        (c) =>
+          connectionCopyMethod(c) === 'strategy' &&
+          c.copyfactory_strategy_pick === pick,
+      )
+      if (dup) {
+        return { ok: false, error: 'Já tens uma conta com esta estratégia MTM — uma estratégia por conta' }
+      }
+    }
+    return { ok: true }
   }
+
   return { ok: true }
 }
 

@@ -1,16 +1,18 @@
-import { after, NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isCopyFactoryEnabled, isMtmTelegramStrategyConfigured } from '@/lib/mtmcopy/copyfactory'
 import { isMetaApiConfigured } from '@/lib/mtmcopy/metaapi'
-import { last4, provisionMasterAccount, provisionSlaveAccount } from '@/lib/mtmcopy/metaapi-provision'
+import { last4 } from '@/lib/mtmcopy/metaapi-provision'
+import { runProvisionJob } from '@/lib/mtmcopy/run-provision-job'
 import type { MtmcopyAccountRole, MtmcopySenderMode } from '@/lib/mtmcopy/types'
+import { resolveMtmcopyUserLimits } from '@/lib/mtmcopy/account-limits'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
 import { normalizeTelegramGroups, type MtmcopyCopyMethod } from '@/lib/mtmcopy/copy-methods'
 import {
   canAddConnection,
   getMasterConnection,
-  resolveStrategyIdsForConnectionAsync,
 } from '@/lib/mtmcopy/user-copy-context'
+import type { MTMcopierConnection } from '@/lib/mtmcopy/types'
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -29,28 +31,36 @@ async function listActiveConnections(userId: string) {
     .select('*')
     .eq('user_id', userId)
     .neq('mt5_status', 'disconnected')
-  return data ?? []
+  return (data ?? []) as MTMcopierConnection[]
 }
 
 export const maxDuration = 120
+
+function parseCopyMethod(body: Record<string, unknown>): MtmcopyCopyMethod {
+  if (body.copy_method === 'strategy' || body.copy_method === 'master_slave') {
+    return body.copy_method
+  }
+  if (body.copy_method === 'telegram_group') return 'telegram_group'
+  if (body.sender_mode === 'master_account') return 'master_slave'
+  return 'telegram_group'
+}
+
+function ensureMetaApiReady() {
+  if (!isMetaApiConfigured() || !isCopyFactoryEnabled()) {
+    return NextResponse.json({ error: 'MetaAPI / CopyFactory não configurado no servidor' }, { status: 503 })
+  }
+  return null
+}
 
 export async function POST(request: NextRequest) {
   const user = await authenticate(request)
   if (!user) return NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 })
 
-  if (!isMetaApiConfigured() || !isCopyFactoryEnabled()) {
-    return NextResponse.json({ error: 'MetaAPI / CopyFactory não configurado no servidor' }, { status: 503 })
-  }
+  const notReady = ensureMetaApiReady()
+  if (notReady) return notReady
 
   const body = await request.json().catch(() => ({}))
-  const copyMethod: MtmcopyCopyMethod =
-    body.copy_method === 'strategy' || body.copy_method === 'master_slave'
-      ? body.copy_method
-      : body.copy_method === 'telegram_group'
-        ? 'telegram_group'
-        : body.sender_mode === 'master_account'
-          ? 'master_slave'
-          : 'telegram_group'
+  const copyMethod = parseCopyMethod(body)
 
   const senderMode: MtmcopySenderMode =
     copyMethod === 'master_slave' ? 'master_account' : 'telegram'
@@ -87,7 +97,6 @@ export async function POST(request: NextRequest) {
     auto_trailing_stop,
     trailing_stop_points,
     reverse_signals,
-    copy_method: _copyMethodBody,
     telegram_group,
     telegram_groups,
     exit_pct_tp1,
@@ -111,7 +120,7 @@ export async function POST(request: NextRequest) {
 
   const { data: profileRow } = await supabaseAdmin
     .from('profiles')
-    .select('user_type, full_name, username, email')
+    .select('user_type, member_category, full_name, username, email')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -128,9 +137,12 @@ export async function POST(request: NextRequest) {
   }
 
   const activeConnections = await listActiveConnections(user.id)
+  const limits = resolveMtmcopyUserLimits(profileRow?.user_type, profileRow?.member_category)
   const limitCheck = canAddConnection(activeConnections, senderMode, accountRole, {
     isAdmin: subscription.reason === 'admin',
+    limits,
     copyMethod,
+    copyfactoryStrategyPick: copyfactory_strategy_pick?.trim() || null,
   })
   if (!limitCheck.ok) {
     return NextResponse.json({ error: limitCheck.error }, { status: 400 })
@@ -155,8 +167,6 @@ export async function POST(request: NextRequest) {
     profileRow?.username ||
     profileRow?.email ||
     `MTM-${user.id.slice(0, 8)}`
-
-  const masterConn = getMasterConnection(activeConnections)
 
   const connectionPayload: Record<string, unknown> = {
     user_id: user.id,
@@ -213,111 +223,158 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Erro ao criar ligação' }, { status: 500 })
   }
 
-  const connectionId = connection.id
   const lotMultiplier =
     lot_mode === 'multiplier' ? Number(lot_value) || 1 : lot_mode === 'fixed' ? Number(lot_value) || 0.01 : 1
 
-  after(async () => {
-    const userLabel = `MTMcopier · ${label}`
-
-    const strategyIdsForSlave =
-      accountRole === 'slave'
-        ? await resolveStrategyIdsForConnectionAsync(
-            {
-              account_role: accountRole,
-              sender_mode: senderMode,
-              copy_method: copyMethod,
-              copyfactory_strategy_pick: copyfactory_strategy_pick?.trim() || null,
-              telegram_group: normalizedGroups[0] ?? null,
-              telegram_groups: normalizedGroups,
-              copyfactory_strategy_id: null,
-            },
-            masterConn,
-          )
-        : []
-
-    const result =
-      accountRole === 'master'
-        ? await provisionMasterAccount({
-            login,
-            password,
-            server,
-            platform,
-            userId: user.id,
-            userLabel,
-          })
-        : await provisionSlaveAccount({
-            login,
-            password,
-            server,
-            platform,
-            userId: user.id,
-            userLabel,
-            lotMultiplier,
-            reverse: reverse_signals ?? connection.reverse_signals,
-            symbolWhitelist: symbols_whitelist ?? connection.symbols_whitelist,
-            senderMode,
-            strategyId: masterConn?.copyfactory_strategy_id ?? null,
-            strategyIds: strategyIdsForSlave.length ? strategyIdsForSlave : undefined,
-          })
-
-    const patch: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-    }
-
-    if (result.success && result.accountId) {
-      patch.metaapi_account_id = result.accountId
-      patch.mt5_status = 'connected'
-      const subNow = await getMtmcopySubscription(user.id, profileRow?.user_type)
-      patch.is_active = subNow.active
-      patch.last_error = null
-
-      if (accountRole === 'master' && result.strategyId) {
-        patch.copyfactory_strategy_id = result.strategyId
-        patch.copyfactory_subscribed = false
-        patch.telegram_status = 'connected'
-      } else {
-        patch.copyfactory_subscribed = result.copyfactorySubscribed ?? false
-        patch.telegram_status = connection.telegram_channel ? connection.telegram_status : 'connected'
-      }
-
-      if (senderMode === 'master_account' && accountRole === 'slave') {
-        await supabaseAdmin
-          .from('mtmcopy_connections')
-          .update({ sender_mode: 'master_account' })
-          .eq('user_id', user.id)
-          .eq('account_role', 'master')
-      }
-    } else {
-      patch.mt5_status = 'error'
-      patch.last_error = result.error ?? 'Falha ao ligar conta via MetaAPI'
-      if (result.accountId) patch.metaapi_account_id = result.accountId
-      if (result.strategyId) patch.copyfactory_strategy_id = result.strategyId
-    }
-
-    await supabaseAdmin.from('mtmcopy_connections').update(patch).eq('id', connectionId)
-
-    if (senderMode === 'master_account' && accountRole === 'master' && result.strategyId) {
-      await supabaseAdmin
-        .from('mtmcopy_connections')
-        .update({ sender_mode: 'master_account' })
-        .eq('user_id', user.id)
-        .neq('mt5_status', 'disconnected')
-    }
+  const finalConnection = await runProvisionJob({
+    userId: user.id,
+    connectionId: connection.id,
+    connection: connection as MTMcopierConnection,
+    accountRole,
+    senderMode,
+    copyMethod,
+    login,
+    password,
+    server,
+    platform,
+    label,
+    userType: profileRow?.user_type,
+    lotMultiplier,
+    reverseSignals: reverse_signals,
+    symbolsWhitelist: symbols_whitelist,
+    copySl: copy_sl,
+    copyTp: copy_tp,
+    copyfactoryStrategyPick: copyfactory_strategy_pick?.trim() || null,
+    normalizedGroups,
   })
 
   const message =
     accountRole === 'master'
-      ? 'A ligar a tua conta mestre via MetaAPI CopyFactory. As trades desta conta serão o sender para as slaves.'
+      ? 'Conta mestre ligada via MetaAPI CopyFactory.'
       : senderMode === 'master_account'
-        ? 'A ligar conta slave à estratégia da tua conta mestre. Isto pode demorar 1–3 minutos.'
-        : 'A ligar a tua conta à cópia MTM via MetaAPI. Isto pode demorar 1–3 minutos.'
+        ? 'Conta slave ligada à estratégia da tua conta mestre.'
+        : 'Conta ligada à cópia MTM via MetaAPI.'
 
   return NextResponse.json({
-    success: true,
-    status: 'provisioning',
-    message,
-    connection: { ...connection, mt5_status: 'pending' },
+    success: finalConnection.mt5_status === 'connected',
+    status: finalConnection.mt5_status,
+    message:
+      finalConnection.mt5_status === 'connected'
+        ? message
+        : finalConnection.last_error ?? 'Falha ao ligar conta',
+    connection: finalConnection,
+  })
+}
+
+/** Religar conta em pending/erro (password obrigatória). */
+export async function PUT(request: NextRequest) {
+  const user = await authenticate(request)
+  if (!user) return NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 })
+
+  const notReady = ensureMetaApiReady()
+  if (notReady) return notReady
+
+  const body = await request.json().catch(() => ({}))
+  const connectionId = String(body.connection_id ?? '').trim()
+  const password = String(body.mt5_password ?? '')
+
+  if (!connectionId || !password) {
+    return NextResponse.json(
+      { error: 'connection_id e mt5_password são obrigatórios para religar' },
+      { status: 400 },
+    )
+  }
+
+  const { data: existing } = await supabaseAdmin
+    .from('mtmcopy_connections')
+    .select('*')
+    .eq('id', connectionId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!existing) {
+    return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
+  }
+
+  if (existing.mt5_status === 'disconnected') {
+    return NextResponse.json({ error: 'Conta desligada — cria uma nova ligação' }, { status: 400 })
+  }
+
+  const conn = existing as MTMcopierConnection
+  const accountRole: MtmcopyAccountRole = conn.account_role === 'master' ? 'master' : 'slave'
+  const copyMethod =
+    conn.copy_method ??
+    (conn.sender_mode === 'master_account' ? 'master_slave' : 'telegram_group')
+  const senderMode: MtmcopySenderMode =
+    copyMethod === 'master_slave' ? 'master_account' : 'telegram'
+
+  if (accountRole === 'slave' && copyMethod === 'master_slave') {
+    const active = await listActiveConnections(user.id)
+    const master = getMasterConnection(active)
+    if (!master?.copyfactory_strategy_id || master.mt5_status !== 'connected') {
+      return NextResponse.json(
+        { error: 'Religa primeiro a conta mestre (tem de estar ligada com estratégia activa)' },
+        { status: 400 },
+      )
+    }
+  }
+
+  const { data: profileRow } = await supabaseAdmin
+    .from('profiles')
+    .select('user_type, full_name, username, email')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const label =
+    conn.account_label ||
+    profileRow?.full_name ||
+    profileRow?.username ||
+    profileRow?.email ||
+    `MTM-${user.id.slice(0, 8)}`
+
+  await supabaseAdmin
+    .from('mtmcopy_connections')
+    .update({ mt5_status: 'pending', last_error: null, updated_at: new Date().toISOString() })
+    .eq('id', connectionId)
+
+  const normalizedGroups = normalizeTelegramGroups(conn.telegram_groups, conn.telegram_group)
+  const lotMultiplier =
+    conn.lot_mode === 'multiplier'
+      ? Number(conn.lot_value) || 1
+      : conn.lot_mode === 'fixed'
+        ? Number(conn.lot_value) || 0.01
+        : 1
+
+  const finalConnection = await runProvisionJob({
+    userId: user.id,
+    connectionId,
+    connection: conn,
+    accountRole,
+    senderMode,
+    copyMethod,
+    login: conn.mt5_login ?? '',
+    password,
+    server: conn.mt5_server ?? '',
+    platform: conn.mt5_platform === 'mt4' ? 'mt4' : 'mt5',
+    label,
+    userType: profileRow?.user_type,
+    lotMultiplier,
+    reverseSignals: conn.reverse_signals,
+    symbolsWhitelist: conn.symbols_whitelist,
+    copySl: conn.copy_sl,
+    copyTp: conn.copy_tp,
+    copyfactoryStrategyPick: conn.copyfactory_strategy_pick,
+    normalizedGroups,
+  })
+
+  return NextResponse.json({
+    success: finalConnection.mt5_status === 'connected',
+    status: finalConnection.mt5_status,
+    message:
+      finalConnection.mt5_status === 'connected'
+        ? 'Conta religada com sucesso'
+        : finalConnection.last_error ?? 'Falha ao religar conta',
+    connection: finalConnection,
   })
 }
 

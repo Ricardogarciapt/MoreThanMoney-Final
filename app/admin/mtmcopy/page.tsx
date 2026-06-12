@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import MTMcopierManager from "@/components/admin/mtmcopier-manager"
 import MtmcopyOpsHub from "@/components/admin/mtmcopy-ops-hub"
+import MtmcopyTestPanel from "@/components/admin/mtmcopy-test-panel"
 import MtmcopySenderLog from "@/components/admin/mtmcopy-sender-log"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -169,6 +170,8 @@ export default function AdminMtmcopyPage() {
               <MtmcopySenderLog />
             </div>
           </section>
+
+          <MtmcopyTestPanel />
 
           <MtmcopyOpsHub initialRouteId={highlightRouteId} />
 

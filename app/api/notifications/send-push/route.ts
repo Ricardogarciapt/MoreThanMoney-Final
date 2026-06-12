@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import {
+  isCategoryEnabled,
+  normalizeNotificationPreferences,
+  resolveNotificationCategory,
+} from '@/lib/notification-preferences'
 
 const supabase = getSupabaseAdmin()
 
 /** Evita executar firebase-admin no import do módulo (build / collect page data). */
 async function getFirebaseAdmin() {
-  const mod = (await import("firebase-admin")) as unknown as { default?: any } & Record<string, any>
+  const mod = (await import('firebase-admin')) as unknown as { default?: any } & Record<string, any>
   const admin = mod.default ?? mod
   if (!admin.apps?.length) {
     try {
@@ -26,183 +31,217 @@ async function getFirebaseAdmin() {
 }
 
 interface PushNotificationPayload {
-  userId?: string // Se fornecido, envia só para este usuário
-  userIds?: string[] // Se fornecido, envia para múltiplos usuários
-  all?: boolean // Se true, envia para todos os usuários
+  userId?: string
+  userIds?: string[]
+  all?: boolean
+  excludeUserId?: string
+  /** Quando true, não duplica entrada in-app (o caller já inseriu em notifications) */
+  skipInApp?: boolean
   title: string
   body: string
   data?: Record<string, string>
-  url?: string // URL para redirecionar ao clicar
+  url?: string
   icon?: string
   tag?: string
 }
 
-// POST: Enviar notificação push
+async function resolveTargetUserIds(payload: PushNotificationPayload): Promise<string[]> {
+  if (payload.userId) return [payload.userId]
+  if (payload.userIds?.length) return [...new Set(payload.userIds)]
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, notification_preferences, is_active')
+    .eq('is_active', true)
+
+  if (error) throw new Error(error.message)
+  return (data ?? []).map((row) => row.id as string)
+}
+
+async function filterUsersByPreferences(
+  userIds: string[],
+  category: ReturnType<typeof resolveNotificationCategory>,
+): Promise<string[]> {
+  if (!category || userIds.length === 0) return userIds
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, notification_preferences')
+    .in('id', userIds)
+
+  if (error) {
+    console.warn('⚠️ [SEND PUSH] Erro ao ler preferências:', error.message)
+    return userIds
+  }
+
+  return (data ?? [])
+    .filter((row) =>
+      isCategoryEnabled(normalizeNotificationPreferences(row.notification_preferences), category),
+    )
+    .map((row) => row.id as string)
+}
+
+// POST: Enviar notificação push + in-app
 export async function POST(request: NextRequest) {
   try {
     const admin = await getFirebaseAdmin()
     const payload: PushNotificationPayload = await request.json()
 
     if (!payload.title || !payload.body) {
-      return NextResponse.json(
-        { error: 'title e body são obrigatórios' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'title e body são obrigatórios' }, { status: 400 })
     }
 
-    console.log('📤 [SEND PUSH] Preparando para enviar:', {
-      title: payload.title,
-      userId: payload.userId,
-      userIds: payload.userIds?.length,
-      all: payload.all
-    })
-
-    // Buscar tokens FCM (inclui device_info para distinguir web FCM de APNs nativo)
-    let tokensQuery = supabase
-      .from('fcm_tokens')
-      .select('token, user_id, device_info')
-
-    if (payload.userId) {
-      tokensQuery = tokensQuery.eq('user_id', payload.userId)
-    } else if (payload.userIds && payload.userIds.length > 0) {
-      tokensQuery = tokensQuery.in('user_id', payload.userIds)
-    } else if (!payload.all) {
+    if (!payload.userId && !payload.userIds?.length && !payload.all) {
       return NextResponse.json(
         { error: 'Especifique userId, userIds ou all=true' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
-    const { data: fcmTokens, error: tokensError } = await tokensQuery
+    const category = resolveNotificationCategory(payload.data?.type, payload.data)
+    let targetUserIds = await resolveTargetUserIds(payload)
+
+    if (payload.excludeUserId) {
+      targetUserIds = targetUserIds.filter((id) => id !== payload.excludeUserId)
+    }
+
+    targetUserIds = await filterUsersByPreferences(targetUserIds, category)
+
+    console.log('📤 [SEND PUSH]', {
+      title: payload.title,
+      category,
+      recipients: targetUserIds.length,
+    })
+
+    const notificationType = payload.data?.type || 'system'
+    const inAppData = {
+      ...(payload.data || {}),
+      url: payload.url || payload.data?.url || '/app-mobile',
+    }
+
+    if (!payload.skipInApp && targetUserIds.length > 0 && notificationType !== 'system') {
+      const rows = targetUserIds.map((userId) => ({
+        user_id: userId,
+        type: notificationType,
+        title: payload.title,
+        message: payload.body,
+        data: inAppData,
+        read: false,
+      }))
+      const { error: notifError } = await supabase.from('notifications').insert(rows)
+      if (notifError) {
+        console.warn('⚠️ [SEND PUSH] Falha ao criar notificações in-app:', notifError.message)
+      } else {
+        console.log(`💾 [SEND PUSH] ${rows.length} notificações in-app criadas`)
+      }
+    }
+
+    if (targetUserIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        successCount: 0,
+        failureCount: 0,
+        totalDevices: 0,
+        recipients: 0,
+        message: 'Nenhum destinatário com esta categoria activa',
+      })
+    }
+
+    const { data: fcmTokens, error: tokensError } = await supabase
+      .from('fcm_tokens')
+      .select('token, user_id, device_info')
+      .in('user_id', targetUserIds)
 
     if (tokensError) {
       console.error('❌ [SEND PUSH] Erro ao buscar tokens:', tokensError)
       return NextResponse.json(
         { error: 'Erro ao buscar tokens', details: tokensError.message },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
-    if (!fcmTokens || fcmTokens.length === 0) {
-      console.warn('⚠️ [SEND PUSH] Nenhum token encontrado')
+    if (!fcmTokens?.length) {
       return NextResponse.json({
-        success: false,
-        message: 'Nenhum dispositivo encontrado para enviar'
+        success: true,
+        successCount: 0,
+        failureCount: 0,
+        totalDevices: 0,
+        recipients: targetUserIds.length,
+        inAppCreated: targetUserIds.length,
+        message: 'Notificações in-app criadas; nenhum dispositivo push registado',
       })
     }
 
-    console.log(`📱 [SEND PUSH] Encontrados ${fcmTokens.length} dispositivos`)
-
-    // Separar tokens FCM (web/PWA) de tokens APNs nativos (iOS)
-    // Tokens APNs são hex-strings de 64 chars ou têm device_info.nativeApp=true
-    // Firebase Admin não suporta tokens APNs directamente — são enviados via APNs provider API
     const apnsPattern = /^[0-9a-f]{64}$/i
-    const webTokens = fcmTokens.filter(t => {
+    const webTokens = fcmTokens.filter((t) => {
       const info = t.device_info as Record<string, unknown> | null
       const isNativeApns = info?.nativeApp === true || info?.platform === 'ios-apns'
       const looksLikeApns = apnsPattern.test(t.token)
       return !isNativeApns && !looksLikeApns
     })
-    const apnsTokens = fcmTokens.filter(t => {
-      const info = t.device_info as Record<string, unknown> | null
-      const isNativeApns = info?.nativeApp === true || info?.platform === 'ios-apns'
-      const looksLikeApns = apnsPattern.test(t.token)
-      return isNativeApns || looksLikeApns
-    })
+    const apnsTokens = fcmTokens.filter((t) => !webTokens.includes(t))
 
     if (apnsTokens.length > 0) {
-      console.log(`📲 [SEND PUSH] ${apnsTokens.length} tokens APNs nativos (iOS) — a aguardar suporte APNs directo`)
+      console.log(`📲 [SEND PUSH] ${apnsTokens.length} tokens APNs nativos (iOS) — push nativo pendente`)
     }
 
     if (webTokens.length === 0) {
-      console.warn('⚠️ [SEND PUSH] Nenhum token FCM (web/PWA) para enviar')
       return NextResponse.json({
         success: true,
         successCount: 0,
         failureCount: 0,
         totalDevices: fcmTokens.length,
+        recipients: targetUserIds.length,
         apnsSkipped: apnsTokens.length,
-        message: 'Apenas tokens APNs nativos encontrados — push web não enviado'
+        inAppCreated: targetUserIds.length,
+        message: 'Notificações in-app criadas; apenas tokens APNs nativos encontrados',
       })
     }
 
-    // Preparar mensagem FCM (apenas tokens web/PWA)
-    const tokens = webTokens.map(t => t.token)
+    const tokens = webTokens.map((t) => t.token)
     const message = {
       notification: {
         title: payload.title,
         body: payload.body,
-        imageUrl: payload.icon || '/icon-512x512.png'
+        imageUrl: payload.icon || '/icon-512x512.png',
       },
       data: {
-        url: payload.url || '/app-mobile',
+        url: payload.url || payload.data?.url || '/app-mobile',
         tag: payload.tag || 'mtm-notification',
-        ...payload.data
+        ...(payload.data || {}),
       },
-      tokens
+      tokens,
     }
 
-    // Enviar via Firebase Cloud Messaging
     if (!admin.apps?.length) {
       console.error('❌ [SEND PUSH] Firebase Admin não inicializado')
       return NextResponse.json(
-        { error: 'Firebase Admin não configurado' },
-        { status: 500 }
+        {
+          success: true,
+          recipients: targetUserIds.length,
+          inAppCreated: targetUserIds.length,
+          pushSkipped: true,
+          message: 'In-app criadas; Firebase Admin não configurado para push',
+        },
+        { status: 200 },
       )
     }
 
-    console.log('🚀 [SEND PUSH] Enviando notificações...')
-    
     const response = await admin.messaging().sendEachForMulticast(message)
 
-    console.log(`✅ [SEND PUSH] Enviadas: ${response.successCount}/${tokens.length}`)
-    console.log(`❌ [SEND PUSH] Falharam: ${response.failureCount}`)
-
-    // Salvar histórico de notificações (apenas tokens web enviados)
-    const historyPromises = webTokens.map(async (tokenData) => {
-      const status = response.responses.find((r: { success: boolean }, i: number) => tokens[i] === tokenData.token)
-        ?.success
-        ? 'sent'
-        : 'failed'
-
+    const historyPromises = webTokens.map(async (tokenData, idx) => {
+      const status = response.responses[idx]?.success ? 'sent' : 'failed'
       return supabase.from('notification_history').insert({
         user_id: tokenData.user_id,
         title: payload.title,
         body: payload.body,
         data: payload.data || {},
         status,
-        sent_at: new Date().toISOString()
+        sent_at: new Date().toISOString(),
       })
     })
-
     await Promise.all(historyPromises)
-    console.log('💾 [SEND PUSH] Histórico salvo')
 
-    // Criar entradas na tabela notifications (se data.type existir, usar esse tipo)
-    const notificationType = payload.data?.type || 'system'
-    if (notificationType !== 'system' || payload.data?.type) { // Só criar se não for genérico 'system'
-      const notificationPromises = webTokens.map(async (tokenData) => {
-        try {
-          await supabase.from("notifications").insert({
-            user_id: tokenData.user_id,
-            type: notificationType,
-            title: payload.title,
-            message: payload.body,
-            data: payload.data || {},
-            read: false,
-          })
-        } catch (err: unknown) {
-          console.warn(
-            `⚠️ [SEND PUSH] Falha ao criar notification para ${tokenData.user_id}:`,
-            err instanceof Error ? err.message : err
-          )
-        }
-      })
-      await Promise.all(notificationPromises)
-      console.log(`💾 [SEND PUSH] ${fcmTokens.length} notificações criadas na tabela notifications (type: ${notificationType})`)
-    }
-
-    // Remover tokens inválidos
     if (response.failureCount > 0) {
       const invalidTokens: string[] = []
       response.responses.forEach((resp: { success: boolean; error?: { code?: string } }, idx: number) => {
@@ -216,13 +255,8 @@ export async function POST(request: NextRequest) {
           }
         }
       })
-
       if (invalidTokens.length > 0) {
-        console.log(`🗑️ [SEND PUSH] Removendo ${invalidTokens.length} tokens inválidos`)
-        await supabase
-          .from('fcm_tokens')
-          .delete()
-          .in('token', invalidTokens)
+        await supabase.from('fcm_tokens').delete().in('token', invalidTokens)
       }
     }
 
@@ -231,15 +265,16 @@ export async function POST(request: NextRequest) {
       successCount: response.successCount,
       failureCount: response.failureCount,
       totalDevices: fcmTokens.length,
+      recipients: targetUserIds.length,
       webSent: tokens.length,
-      apnsSkipped: apnsTokens.length
+      apnsSkipped: apnsTokens.length,
+      inAppCreated: targetUserIds.length,
     })
   } catch (error) {
     console.error('❌ [SEND PUSH] Erro:', error)
     return NextResponse.json(
       { error: 'Erro ao enviar notificações', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
-

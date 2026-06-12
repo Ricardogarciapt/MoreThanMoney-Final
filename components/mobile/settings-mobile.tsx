@@ -7,11 +7,16 @@ import { useAuth } from "@/contexts/auth-context"
 import { clearCachedSession } from "@/lib/auth-cache"
 import { useToast } from "@/hooks/use-toast"
 import {
+  NOTIFICATION_CATEGORY_LABELS,
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  type NotificationCategory,
+  type NotificationPreferences,
+} from "@/lib/notification-preferences"
+import {
   User,
   Mail,
   Lock,
   Bell,
-  BellOff,
   LogOut,
   ChevronRight,
   Camera,
@@ -66,6 +71,10 @@ export default function SettingsMobile() {
 
   // App preferences
   const [soundEnabled, setSoundEnabled]   = useState(true)
+  const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>({
+    ...DEFAULT_NOTIFICATION_PREFERENCES,
+  })
+  const [savingNotifPref, setSavingNotifPref] = useState<NotificationCategory | null>(null)
   const { theme, setTheme } = useTheme()
   const [mountedTheme, setMountedTheme]   = useState(false)
 
@@ -76,6 +85,57 @@ export default function SettingsMobile() {
     } catch {}
     setMountedTheme(true)
   }, [])
+
+  useEffect(() => {
+    const loadPrefs = async () => {
+      if (!user?.id) return
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token
+        if (!token) return
+        const res = await fetch("/api/notifications/preferences", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.preferences) setNotifPrefs(data.preferences)
+      } catch {}
+    }
+    loadPrefs()
+  }, [user?.id])
+
+  const toggleNotifPref = async (key: NotificationCategory) => {
+    const next = { ...notifPrefs, [key]: !notifPrefs[key] }
+    setNotifPrefs(next)
+    setSavingNotifPref(key)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) throw new Error("Sessão inválida")
+      const res = await fetch("/api/notifications/preferences", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ preferences: { [key]: next[key] } }),
+      })
+      if (!res.ok) throw new Error("Falha ao guardar")
+      toast({
+        title: next[key] ? "Notificações activadas" : "Notificações desactivadas",
+        description: NOTIFICATION_CATEGORY_LABELS[key].title,
+      })
+    } catch {
+      setNotifPrefs(notifPrefs)
+      toast({
+        title: "Erro",
+        description: "Não foi possível guardar a preferência.",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingNotifPref(null)
+    }
+  }
 
   const THEME_OPTIONS: { id: "dark" | "light"; label: string; icon: typeof Moon }[] = [
     { id: "dark",  label: "Escuro", icon: Moon },
@@ -520,7 +580,7 @@ export default function SettingsMobile() {
             {/* Som das notificações */}
             <button
               onClick={toggleSound}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-b-xl hover:bg-gray-700/40 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-700/40 transition-colors"
             >
               {soundEnabled ? (
                 <Volume2 className="w-4 h-4 text-gray-400" />
@@ -534,6 +594,35 @@ export default function SettingsMobile() {
                 {soundEnabled ? "Ligado" : "Desligado"}
               </span>
             </button>
+          </div>
+
+          <p className="text-xs text-gray-500 px-1 mt-3 mb-2">
+            Escolhe que alertas queres receber no site e na app (push + sino).
+          </p>
+          <div className="bg-gray-800/50 rounded-xl divide-y divide-gray-700/50">
+            {(Object.keys(NOTIFICATION_CATEGORY_LABELS) as NotificationCategory[]).map((key) => {
+              const meta = NOTIFICATION_CATEGORY_LABELS[key]
+              const enabled = notifPrefs[key]
+              const saving = savingNotifPref === key
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggleNotifPref(key)}
+                  disabled={saving}
+                  className="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-700/40 transition-colors text-left disabled:opacity-60"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white font-medium">{meta.title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{meta.description}</p>
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5 ${
+                    enabled ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"
+                  }`}>
+                    {saving ? "…" : enabled ? "On" : "Off"}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </section>
 

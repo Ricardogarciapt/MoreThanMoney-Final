@@ -1,9 +1,11 @@
 import {
+  ensureCopyTraderStrategy,
   getCopyStrategyId,
   subscribeToStrategies,
   unsubscribeFromStrategy,
   type CopyFactoryTradeSizeScaling,
 } from './copyfactory'
+import { connectionCopyMethod } from './copy-limits'
 import { getMasterConnection, resolveStrategyIdsForConnectionAsync } from './user-copy-context'
 import type { MTMcopierConnection } from './types'
 
@@ -47,6 +49,8 @@ export async function syncConnectionCopyFactory(
     | 'lot_value'
     | 'reverse_signals'
     | 'symbols_whitelist'
+    | 'copy_sl'
+    | 'copy_tp'
     | 'mt5_login_last4'
     | 'mt5_server'
   >,
@@ -59,6 +63,28 @@ export async function syncConnectionCopyFactory(
   }
 
   const master = allConnections ? getMasterConnection(allConnections) : null
+  const method = connectionCopyMethod(conn as MTMcopierConnection)
+
+  if (method === 'telegram_group' || method === 'strategy') {
+    return { ok: true }
+  }
+
+  if (
+    method === 'master_slave' &&
+    master?.copyfactory_strategy_id &&
+    master.metaapi_account_id
+  ) {
+    const strat = await ensureCopyTraderStrategy({
+      strategyId: master.copyfactory_strategy_id,
+      accountId: master.metaapi_account_id,
+      name: `MTMcopier · mestre ****${master.mt5_login_last4 ?? '?'}`,
+      description: 'Copy trader pessoal · limit, stop e market',
+    })
+    if (!strat.ok) {
+      console.warn('[mtmcopy] estratégia mestre:', strat.error)
+    }
+  }
+
   let strategyIds = await resolveStrategyIdsForConnectionAsync(conn, master)
 
   if (!strategyIds.length) {
@@ -81,6 +107,9 @@ export async function syncConnectionCopyFactory(
     tradeSizeScaling,
     reverse: conn.reverse_signals ?? false,
     symbolWhitelist: conn.symbols_whitelist,
+    copySl: conn.copy_sl !== false,
+    copyTp: conn.copy_tp !== false,
+    skipPendingOrders: method === 'master_slave' ? false : undefined,
   })
 }
 

@@ -22,6 +22,10 @@ export function resolveChannelFromChat(chat: { id?: number; username?: string })
 /** Mensagens de estado que não devem abrir trades nem alterar posições. */
 export function shouldIgnoreChannelMessage(text: string): boolean {
   if (!text?.trim()) return true
+  const t = text.trim()
+  // Aviso Premium ~1–2 min antes do sinal completo (só «NEW POSITION», sem SL/TP)
+  if (/^\s*new\s+position\s*[!.\s]*$/i.test(t)) return true
+  if (/^\s*nova\s+posi[cç][aã]o\s*[!.\s]*$/i.test(t)) return true
   if (/\bclose\s+half\b/i.test(text)) return true
   if (/\btrade\s+active\s+and\s+running\b/i.test(text)) return true
   if (/\b(?:enjoy|consistency|discipline)\b/i.test(text) && /\bpips?\s*✅/i.test(text)) return true

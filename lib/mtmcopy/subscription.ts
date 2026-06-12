@@ -6,10 +6,12 @@ export interface MtmcopySubscriptionStatus {
   expiresAt?: string | null
 }
 
-/** Admins têm acesso gratuito e slaves ilimitados. */
+/** Admins: acesso MTMcopier sem Stripe e contas ilimitadas. */
 export function isMtmcopyAdmin(userType?: string | null): boolean {
   return userType === 'admin'
 }
+
+/** VIP e membros pagam o addon MTMcopier via Stripe; VIP pode ligar até 5 contas. */
 
 /** Verifica subscrição paga do addon MTMcopier (+20€/mês). */
 export async function getMtmcopySubscription(

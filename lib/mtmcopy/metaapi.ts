@@ -30,6 +30,7 @@ type RpcConnection = {
   getSymbols: () => Promise<string[]>
   getSymbolSpecification?: (symbol: string) => Promise<MetaApiSymbolSpecification>
   getAccountInformation: () => Promise<{ balance?: number; equity?: number }>
+  getSymbolPrice?: (symbol: string) => Promise<{ bid?: number; ask?: number }>
   createMarketBuyOrder: (
     symbol: string,
     volume: number,
@@ -230,13 +231,29 @@ export async function getAccountSnapshot(accountId: string): Promise<AccountSnap
 
 const balanceCache = new Map<string, { balance: number; at: number }>()
 const BALANCE_CACHE_MS = 45_000
+const BALANCE_FETCH_RETRIES = 4
+
+export interface LotSizingMarketContext {
+  balance: number | null
+  marketPrice: number | null
+}
+
+function pickBalance(info: { balance?: number; equity?: number }): number | null {
+  const balance = info.balance ?? info.equity ?? null
+  return balance != null && balance > 0 ? balance : null
+}
+
+function cacheBalance(accountId: string, balance: number) {
+  balanceCache.set(accountId, { balance, at: Date.now() })
+}
 
 export async function getAccountBalance(
   accountId: string,
-  retries = 1,
+  retries = BALANCE_FETCH_RETRIES,
+  options?: { forceRefresh?: boolean },
 ): Promise<number | null> {
   const cached = balanceCache.get(accountId)
-  if (cached && Date.now() - cached.at < BALANCE_CACHE_MS) {
+  if (!options?.forceRefresh && cached && Date.now() - cached.at < BALANCE_CACHE_MS) {
     return cached.balance
   }
 
@@ -244,14 +261,67 @@ export async function getAccountBalance(
     const snap = await getAccountSnapshot(accountId)
     const balance = snap?.balance ?? snap?.equity ?? null
     if (balance != null && balance > 0) {
-      balanceCache.set(accountId, { balance, at: Date.now() })
+      cacheBalance(accountId, balance)
       return balance
     }
     if (attempt < retries) {
-      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)))
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)))
     }
   }
   return cached?.balance ?? null
+}
+
+/**
+ * Uma ligação MetaAPI para saldo + preço de mercado (gestão de risco %).
+ * Evita falhas por timeout em chamadas separadas antes de calcular o lote.
+ */
+export async function fetchLotSizingContext(
+  accountId: string,
+  symbol: string,
+  direction: 'buy' | 'sell',
+): Promise<LotSizingMarketContext> {
+  let close: (() => Promise<void>) | undefined
+  try {
+    const rpc = await getRpcConnection(accountId)
+    close = rpc.close
+
+    let balance: number | null = null
+    for (let attempt = 0; attempt <= BALANCE_FETCH_RETRIES; attempt++) {
+      const info = await rpc.connection.getAccountInformation()
+      balance = pickBalance(info)
+      if (balance != null) {
+        cacheBalance(accountId, balance)
+        break
+      }
+      if (attempt < BALANCE_FETCH_RETRIES) {
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)))
+      }
+    }
+
+    let marketPrice: number | null = null
+    if (symbol.trim() && rpc.connection.getSymbolPrice) {
+      try {
+        const symbols = await rpc.connection.getSymbols()
+        const brokerSymbol = resolveBrokerSymbol(symbol, symbols)
+        const tick = await rpc.connection.getSymbolPrice(brokerSymbol)
+        const bid = tick?.bid
+        const ask = tick?.ask
+        if (direction === 'buy' && ask != null && ask > 0) marketPrice = ask
+        else if (direction === 'sell' && bid != null && bid > 0) marketPrice = bid
+        else marketPrice = bid ?? ask ?? null
+      } catch {
+        /* preço opcional — SL/TP do sinal podem bastar */
+      }
+    }
+
+    return { balance, marketPrice }
+  } catch (err) {
+    console.warn('[mtmcopy] fetchLotSizingContext falhou:', err)
+    const cached = balanceCache.get(accountId)
+    return { balance: cached?.balance ?? null, marketPrice: null }
+  } finally {
+    if (close) await close()
+  }
 }
 
 export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> {

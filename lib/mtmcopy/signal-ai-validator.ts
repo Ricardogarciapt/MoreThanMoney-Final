@@ -12,6 +12,8 @@ export interface ValidateSignalOptions {
   /** Quando true, só heurística local (perfil admin desactivou IA). */
   skipAi?: boolean
   minConfidence?: number
+  /** Formato oficial MTM — nunca chamar IA (execução imediata). */
+  forceFastPath?: boolean
 }
 
 /** Formatos oficiais MTM — parser fiável, não bloquear em IA (~1–2s). */
@@ -27,7 +29,9 @@ function shouldSkipAiCall(
   local: AiSignalValidation,
   minConfidence: number,
   skipAi?: boolean,
+  forceFastPath?: boolean,
 ): boolean {
+  if (forceFastPath && local.valid && local.localConfidence >= minConfidence) return true
   if (skipAi || !AI_ENABLED) return true
   if (!AI_FAST_PATH) return false
   if (local.localConfidence >= 0.92 && local.valid) return true
@@ -343,7 +347,7 @@ export async function validateSignalWithAi(
   const start = performance.now()
   const local = quickLocalValidate(parsed, raw)
 
-  if (shouldSkipAiCall(raw, local, minConfidence, options?.skipAi)) {
+  if (shouldSkipAiCall(raw, local, minConfidence, options?.skipAi, options?.forceFastPath)) {
     const result = {
       ...local,
       reasoning:

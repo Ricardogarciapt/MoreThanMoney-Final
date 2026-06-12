@@ -1,5 +1,5 @@
 import type { MtmcopyChannelKey } from './channel-context'
-import { channelKeyForTelegramGroup, parseTelegramGroups } from './copy-methods'
+import { channelKeyForTelegramGroup, getMtmStrategyOptions, parseTelegramGroups } from './copy-methods'
 import { channelKeysFromTelegramChat, chatIdsMatch, normalizeChannel } from './channels'
 import { getEffectiveSignalChatIds } from './signal-sources-config'
 import type { MTMcopierConnection } from './types'
@@ -81,18 +81,40 @@ export function describeSignalSourceMode(conn: Pick<MTMcopierConnection, 'telegr
   return usesCustomChannel(conn) ? 'custom' : 'default'
 }
 
-/** Filtra ligações pelo grupo Telegram escolhido (Premium, Trade Ideas ou ambos). */
+/** Estratégia MTM escolhida corresponde ao canal do sinal (Premium / Trade Ideas). */
+export function strategyPickMatchesChannel(
+  pick: string | null | undefined,
+  channel: MtmcopyChannelKey,
+): boolean {
+  if (channel === 'unknown') return false
+  if (!pick?.trim()) return true
+  for (const opt of getMtmStrategyOptions()) {
+    if (opt.id === pick.trim() && opt.channelKey) {
+      return opt.channelKey === channel
+    }
+  }
+  return false
+}
+
+/** Filtra ligações pelo grupo Telegram ou estratégia MTM escolhida. */
 export function connectionMatchesChannel(
   conn: Pick<
     MTMcopierConnection,
-    'telegram_group' | 'telegram_groups' | 'copy_method' | 'sender_mode'
+    | 'telegram_group'
+    | 'telegram_groups'
+    | 'copy_method'
+    | 'sender_mode'
+    | 'copyfactory_strategy_pick'
   >,
   channel: MtmcopyChannelKey,
 ): boolean {
   if (channel === 'unknown') return false
   if ((conn.sender_mode ?? 'telegram') === 'master_account') return false
   if (conn.copy_method === 'master_slave') return false
-  if (conn.copy_method === 'strategy') return false
+
+  if (conn.copy_method === 'strategy') {
+    return strategyPickMatchesChannel(conn.copyfactory_strategy_pick, channel)
+  }
 
   const groups = parseTelegramGroups(conn)
   if (!groups.length) return true

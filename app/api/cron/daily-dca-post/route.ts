@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { isCategoryEnabled, normalizeNotificationPreferences } from '@/lib/notification-preferences'
 
 /**
  * API CRON JOB: Criar post automático diário com oportunidades DCA
@@ -167,16 +168,21 @@ export async function GET(request: NextRequest) {
     // Enviar notificação push para todos os membros
     const { data: allUsers } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, notification_preferences, is_active')
+      .eq('is_active', true)
 
-    if (allUsers && allUsers.length > 0) {
+    const dcaRecipients = (allUsers ?? []).filter((user) =>
+      isCategoryEnabled(normalizeNotificationPreferences(user.notification_preferences), 'dca'),
+    )
+
+    if (dcaRecipients.length > 0) {
       const notificationTitle = `₿ ${goodOpportunities.length} Oportunidades DCA em #Cripto`
       const notificationBody = strongBuys.length > 0
         ? `💎 ${strongBuys.length} FORTE COMPRA — abre o canal Cripto para ver a análise.`
         : `🔵 ${buys.length} ativos em boa posição de compra no canal Cripto.`
 
       // Criar notificações para cada usuário
-      const notifications = allUsers.map(user => ({
+      const notifications = dcaRecipients.map(user => ({
         user_id: user.id,
         type: 'dca_daily',
         title: notificationTitle,
@@ -197,7 +203,7 @@ export async function GET(request: NextRequest) {
       if (notifError) {
         console.error('❌ [CRON DCA POST] Erro ao criar notificações:', notifError)
       } else {
-        console.log(`✅ [CRON DCA POST] ${allUsers.length} notificações criadas`)
+        console.log(`✅ [CRON DCA POST] ${dcaRecipients.length} notificações criadas`)
       }
 
       // Enviar push notification
@@ -207,6 +213,7 @@ export async function GET(request: NextRequest) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             all: true,
+            skipInApp: true,
             title: notificationTitle,
             body: notificationBody,
             data: {

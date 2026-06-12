@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
           all: true,
           title: "🔴 Estamos em Direto!",
           body: `"${stream.title}" está agora ao vivo. Entra já!`,
-          data: { type: "live_session", url: "/live", streamId },
+          data: { type: "live_session", url: "/app-mobile?tab=live", streamId },
         }),
       }).catch((e) => console.error("[presence] push failed:", e))
     }

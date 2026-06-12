@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { connectionCopyMethod } from '@/lib/mtmcopy/copy-limits'
 import { removeConnectionCopyFactory, syncConnectionCopyFactory } from '@/lib/mtmcopy/connection-sync'
 import { verifyTelegramChannel } from '@/lib/mtmcopy/telegram-bot'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
 import { normalizeTelegramGroups } from '@/lib/mtmcopy/copy-methods'
 import { attachConnectionBalances } from '@/lib/mtmcopy/connection-balances'
+import { mtmcopyLimitsLabel, resolveMtmcopyUserLimits } from '@/lib/mtmcopy/account-limits'
 import { deriveSenderMode } from '@/lib/mtmcopy/user-copy-context'
 import type { MtmcopySenderMode } from '@/lib/mtmcopy/types'
 
@@ -58,10 +60,11 @@ export async function GET(request: NextRequest) {
   const connections = await attachConnectionBalances(data ?? [])
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('user_type')
+    .select('user_type, member_category')
     .eq('id', user.id)
     .maybeSingle()
   const subscription = await getMtmcopySubscription(user.id, profile?.user_type)
+  const limits = resolveMtmcopyUserLimits(profile?.user_type, profile?.member_category)
 
   return NextResponse.json({
     connections,
@@ -70,6 +73,9 @@ export async function GET(request: NextRequest) {
     master: connections.find((c) => c.account_role === 'master') ?? null,
     subscribed: subscription.active,
     can_activate: subscription.active,
+    limits,
+    limits_label: mtmcopyLimitsLabel(limits),
+    subscription_reason: subscription.reason,
   })
 }
 
@@ -146,6 +152,18 @@ export async function POST(request: NextRequest) {
     payload.copyfactory_strategy_pick = copyfactory_strategy_pick?.trim() || null
   }
 
+  const effectiveMethod =
+    copy_method === 'telegram_group' || copy_method === 'strategy' || copy_method === 'master_slave'
+      ? copy_method
+      : connectionCopyMethod(existing)
+
+  if (effectiveMethod === 'telegram_group' || effectiveMethod === 'strategy') {
+    payload.copyfactory_subscribed = false
+    if (existing.metaapi_account_id && existing.copyfactory_subscribed) {
+      await removeConnectionCopyFactory(existing.metaapi_account_id)
+    }
+  }
+
   const { data, error } = await supabaseAdmin
     .from('mtmcopy_connections')
     .update(payload)
@@ -206,10 +224,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const connMethod = connection ? connectionCopyMethod(connection) : effectiveMethod
   if (
     connection?.metaapi_account_id &&
     connection.account_role !== 'master' &&
-    connection.copyfactory_subscribed
+    connection.copyfactory_subscribed &&
+    connMethod === 'master_slave'
   ) {
     const { data: allConns } = await supabaseAdmin
       .from('mtmcopy_connections')
@@ -264,11 +284,16 @@ export async function PATCH(request: NextRequest) {
       .eq('user_id', user.id)
       .neq('mt5_status', 'disconnected')
 
-    if (copy_method !== 'master_slave' && existing?.some((c) => c.account_role === 'master')) {
-      return NextResponse.json(
-        { error: 'Remove a conta mestre antes de mudar o método de cópia' },
-        { status: 400 },
-      )
+    // Só actualiza ligações do mesmo «tipo» (não mistura mestre/copy-trader com grupos MTM)
+    const roleFilter =
+      copy_method === 'master_slave'
+        ? (c: { account_role?: string | null }) =>
+            c.account_role === 'master' || c.account_role === 'slave'
+        : (c: { account_role?: string | null }) => (c.account_role ?? 'slave') !== 'master'
+
+    const targets = (existing ?? []).filter(roleFilter)
+    if (!targets.length) {
+      return NextResponse.json({ success: true, copy_method, sender_mode: mode })
     }
 
     await supabaseAdmin
@@ -278,8 +303,10 @@ export async function PATCH(request: NextRequest) {
         sender_mode: mode,
         updated_at: new Date().toISOString(),
       })
-      .eq('user_id', user.id)
-      .neq('mt5_status', 'disconnected')
+      .in(
+        'id',
+        targets.map((c) => c.id),
+      )
 
     return NextResponse.json({ success: true, copy_method, sender_mode: mode })
   }
@@ -291,13 +318,6 @@ export async function PATCH(request: NextRequest) {
       .select('id, account_role')
       .eq('user_id', user.id)
       .neq('mt5_status', 'disconnected')
-
-    if (mode === 'telegram' && existing?.some((c) => c.account_role === 'master')) {
-      return NextResponse.json(
-        { error: 'Remove a conta mestre antes de mudar para o modo Telegram' },
-        { status: 400 },
-      )
-    }
 
     await supabaseAdmin
       .from('mtmcopy_connections')

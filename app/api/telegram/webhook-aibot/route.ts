@@ -1,7 +1,17 @@
-import { type NextRequest, NextResponse, after } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { processMtmcopyTelegramMessage } from "@/lib/mtmcopy/processor"
 import { resolveAppChannelSlug } from "@/lib/telegram-app-channels"
+
+type TelegramChannelMessage = Parameters<typeof processMtmcopyTelegramMessage>[0]
+
+async function runMtmcopy(message: TelegramChannelMessage) {
+  try {
+    await processMtmcopyTelegramMessage(message)
+  } catch (err) {
+    console.error("[mtmcopy] erro no webhook-aibot:", err)
+  }
+}
 
 async function resolveTelegramImageUrl(message: {
   photo?: Array<{ file_id: string }>
@@ -27,22 +37,18 @@ async function resolveTelegramImageUrl(message: {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const message = body.channel_post || body.message
+    const message = (body.channel_post || body.edited_channel_post || body.message) as
+      | TelegramChannelMessage
+      | undefined
     if (!message) return NextResponse.json({ ok: true })
 
     const chat = message.chat ?? {}
     const isGroupMessage =
       chat.type === "supergroup" || chat.type === "group" || chat.type === "channel" || chat.id < 0
 
+    // MTMcopier primeiro — entradas Premium (3 legs MetaAPI) não podem ir em after()
     if (isGroupMessage) {
-      const { registerDiscoveredTelegramChat } = await import("@/lib/mtmcopy/signal-sources-config")
-      await registerDiscoveredTelegramChat(chat)
-
-      after(() =>
-        processMtmcopyTelegramMessage(message).catch((err) =>
-          console.error("[mtmcopy] erro no webhook-aibot:", err),
-        ),
-      )
+      await runMtmcopy(message)
     }
 
     const slug = resolveAppChannelSlug(chat)
@@ -90,16 +96,26 @@ export async function POST(request: NextRequest) {
       ? (content || "Nova imagem").substring(0, 117) + "…"
       : (content || (imageUrl ? "Nova imagem" : "Nova mensagem"))
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.morethanmoney.pt"
-    fetch(`${siteUrl}/api/notifications/send-push`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        all: true,
-        title,
-        body: bodyText,
-        data: { type: "chat_message", url: "/app-mobile", channel: slug },
-      }),
-    }).catch((e) => console.error("[webhook-aibot] push failed:", e))
+    void Promise.all([
+      (async () => {
+        const { registerDiscoveredTelegramChat } = await import("@/lib/mtmcopy/signal-sources-config")
+        await registerDiscoveredTelegramChat(chat)
+      })(),
+      fetch(`${siteUrl}/api/notifications/send-push`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          all: true,
+          title,
+          body: bodyText,
+          data: {
+            type: slug.includes("trade") ? "trade_ideas" : "chat_message",
+            url: `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}`,
+            channel: slug,
+          },
+        }),
+      }).catch((e) => console.error("[webhook-aibot] push failed:", e)),
+    ])
 
     return NextResponse.json({ ok: true })
   } catch (error) {

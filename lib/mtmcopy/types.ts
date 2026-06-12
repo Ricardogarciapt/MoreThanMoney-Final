@@ -40,14 +40,20 @@ export interface MTMcopierConnection {
   copyfactory_strategy_pick?: string | null
 }
 
-/** Contas slave no modo Telegram (sinais MTM) */
-export const MAX_MTMCOPY_TELEGRAM_SLAVES = 2
-/** Conta mestre (sender) no modo copy trader */
-export const MAX_MTMCOPY_MASTERS = 1
-/** Contas slave no modo copy trader (mestre → slaves) */
-export const MAX_MTMCOPY_COPY_SLAVES = 2
+/** @deprecated usar resolveMtmcopyUserLimits() — VIP: 5, member: 4, admin: ilimitado */
+export { MAX_MTMCOPY_ACCOUNTS_MEMBER as MAX_MTMCOPY_ACCOUNTS_TOTAL } from './account-limits'
+export {
+  MAX_MTMCOPY_ACCOUNTS_VIP,
+  MAX_MTMCOPY_ACCOUNTS_MEMBER,
+  MAX_MTMCOPY_SIGNAL_SLAVES,
+  MAX_MTMCOPY_MASTERS,
+  MAX_MTMCOPY_COPY_SLAVES,
+} from './account-limits'
 
-/** @deprecated usar limites por modo */
-export const MAX_MTMCOPY_ACCOUNTS_PER_USER = 2
+/** @deprecated usar MAX_MTMCOPY_SIGNAL_SLAVES */
+export { MAX_MTMCOPY_SIGNAL_SLAVES as MAX_MTMCOPY_TELEGRAM_SLAVES } from './account-limits'
+
+/** @deprecated usar MAX_MTMCOPY_ACCOUNTS_MEMBER */
+export { MAX_MTMCOPY_ACCOUNTS_MEMBER as MAX_MTMCOPY_ACCOUNTS_PER_USER } from './account-limits'
 
 export type SignalLogStatus = 'received' | 'executed' | 'skipped' | 'error'

@@ -2,9 +2,10 @@ import {
   generateStrategyId,
   isMtmTelegramStrategyConfigured,
   subscribeToStrategies,
-  subscribeToStrategy,
+  unsubscribeFromStrategy,
   upsertProviderStrategy,
 } from './copyfactory'
+import type { MtmcopyCopyMethod } from './copy-methods'
 import type { MtmcopySenderMode } from './types'
 
 export interface ProvisionRequest {
@@ -22,6 +23,11 @@ export interface ProvisionRequest {
   /** Uma ou mais estratégias MTM (grupos / estratégia directa) */
   strategyIds?: string[]
   senderMode?: MtmcopySenderMode
+  copySl?: boolean
+  copyTp?: boolean
+  skipPendingOrders?: boolean
+  /** Grupos / estratégia MTM: só MetaAPI directo, sem subscrição CopyFactory */
+  copyMethod?: MtmcopyCopyMethod
 }
 
 export interface ProvisionResult {
@@ -188,6 +194,9 @@ export async function provisionMasterAccount(req: ProvisionRequest): Promise<Pro
       accountId,
       name: req.userLabel,
       description: `Copy trader MTMcopier · utilizador ${req.userId.slice(0, 8)}`,
+      skipPendingOrders: false,
+      copyStopLoss: true,
+      copyTakeProfit: true,
     })
 
     if (!strategy.ok) {
@@ -216,13 +225,15 @@ export async function provisionSlaveAccount(req: ProvisionRequest): Promise<Prov
   }
 
   const senderMode = req.senderMode ?? 'telegram'
+  const directOnly =
+    req.copyMethod === 'telegram_group' || req.copyMethod === 'strategy'
 
   let resolvedStrategyIds: string[] = []
   if (req.strategyIds?.length) {
     resolvedStrategyIds = [...new Set(req.strategyIds.filter(Boolean))]
   } else if (senderMode === 'master_account' && req.strategyId) {
     resolvedStrategyIds = [req.strategyId]
-  } else if (senderMode === 'telegram') {
+  } else if (senderMode === 'telegram' && !directOnly) {
     const fallback =
       (await (await import('./copyfactory')).getCopyStrategyId()) ??
       process.env.METAAPI_COPY_STRATEGY_ID ??
@@ -234,7 +245,12 @@ export async function provisionSlaveAccount(req: ProvisionRequest): Promise<Prov
     return { success: false, error: 'Liga primeiro a conta mestre (estratégia em falta)' }
   }
 
-  if (senderMode === 'telegram' && !isMtmTelegramStrategyConfigured() && !resolvedStrategyIds.length) {
+  if (
+    !directOnly &&
+    senderMode === 'telegram' &&
+    !isMtmTelegramStrategyConfigured() &&
+    !resolvedStrategyIds.length
+  ) {
     return { success: false, error: 'Estratégia MTM não configurada no servidor' }
   }
 
@@ -257,9 +273,11 @@ export async function provisionSlaveAccount(req: ProvisionRequest): Promise<Prov
         server: req.server.trim(),
         name: req.userLabel,
       })
-      const roles = account.copyFactoryRoles ?? []
-      if (!roles.includes('SUBSCRIBER')) {
-        await enableCopyFactoryRole(account.id, ['SUBSCRIBER'], 1)
+      if (!directOnly) {
+        const roles = account.copyFactoryRoles ?? []
+        if (!roles.includes('SUBSCRIBER')) {
+          await enableCopyFactoryRole(account.id, ['SUBSCRIBER'], 1)
+        }
       }
     } else {
       account = await api.metatraderAccountApi.createAccount({
@@ -272,8 +290,8 @@ export async function provisionSlaveAccount(req: ProvisionRequest): Promise<Prov
         magic: 0,
         region,
         baseCurrency: 'USD',
-        copyFactoryRoles: ['SUBSCRIBER'],
-        copyFactoryResourceSlots: 1,
+        copyFactoryRoles: directOnly ? [] : ['SUBSCRIBER'],
+        copyFactoryResourceSlots: directOnly ? 0 : 1,
         reliability: 'high',
         metadata: { mtmUserId: req.userId, mtmRole: 'slave' },
       })
@@ -284,6 +302,11 @@ export async function provisionSlaveAccount(req: ProvisionRequest): Promise<Prov
 
     await deployAccount(account)
 
+    if (directOnly) {
+      await unsubscribeFromStrategy(accountId).catch(() => undefined)
+      return { success: true, accountId, copyfactorySubscribed: false }
+    }
+
     const sub = await subscribeToStrategies({
       accountId,
       name: req.userLabel,
@@ -291,6 +314,9 @@ export async function provisionSlaveAccount(req: ProvisionRequest): Promise<Prov
       multiplier: req.lotMultiplier ?? 1,
       reverse: req.reverse ?? false,
       symbolWhitelist: req.symbolWhitelist,
+      copySl: req.copySl,
+      copyTp: req.copyTp,
+      skipPendingOrders: req.skipPendingOrders ?? false,
     })
 
     if (!sub.ok) {

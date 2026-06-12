@@ -165,6 +165,8 @@ export default function MtmCopyPage() {
   const [senderMode, setSenderMode] = useState<MtmcopySenderMode>("telegram")
   const [copyMethod, setCopyMethod] = useState<MtmcopyCopyMethod>("telegram_group")
   const [subscribed, setSubscribed] = useState(false)
+  const [accountLimits, setAccountLimits] = useState<import("@/lib/mtmcopy/account-limits").MtmcopyUserLimits | null>(null)
+  const [limitsLabel, setLimitsLabel] = useState<string | null>(null)
 
   const hasConnections = (connections?.length ?? 0) > 0
   const masterConn = connections?.find((c) => c.account_role === "master") ?? null
@@ -182,6 +184,8 @@ export default function MtmCopyPage() {
       if (first?.copy_method) setCopyMethod(first.copy_method)
       else if (data.sender_mode === "master_account") setCopyMethod("master_slave")
       setSubscribed(Boolean(data.subscribed))
+      if (data.limits) setAccountLimits(data.limits)
+      if (data.limits_label) setLimitsLabel(data.limits_label)
       setConnectionsLoaded(true)
     } else {
       setConnections([])
@@ -216,6 +220,8 @@ export default function MtmCopyPage() {
           if (firstConn?.copy_method) setCopyMethod(firstConn.copy_method)
           else if (data.sender_mode === "master_account") setCopyMethod("master_slave")
           setSubscribed(Boolean(data.subscribed))
+          if (data.limits) setAccountLimits(data.limits)
+          if (data.limits_label) setLimitsLabel(data.limits_label)
         } else if (!cancelled) {
           setConnections([])
         }
@@ -369,6 +375,7 @@ export default function MtmCopyPage() {
           initialSelectionId={setupSelectionId}
           initialSenderMode={senderMode}
           initialCopyMethod={copyMethod}
+          accountLimits={accountLimits}
           onClose={() => setShowSetup(false)}
           onSaved={handleSetupSaved}
         />
@@ -471,11 +478,17 @@ export default function MtmCopyPage() {
           {/* Contas ligadas */}
           {hasConnections && (
             <div className="mb-14 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <Power className="w-5 h-5 text-[#D2A63C]" />
-                  As tuas contas ({connections.length}{isCopyTrader ? "/3" : "/2"})
+                  As tuas contas (
+                  {connections.length}
+                  {accountLimits?.unlimited ? "" : `/${accountLimits?.maxAccounts ?? 4}`}
+                  )
                 </h2>
+                {limitsLabel && (
+                  <p className="text-xs text-zinc-500 w-full sm:w-auto">{limitsLabel}</p>
+                )}
                 <Button size="sm" variant="outline" className="border-gray-700 text-gray-300" onClick={() => openSetup("new")}>
                   + Adicionar conta
                 </Button>
@@ -640,7 +653,16 @@ export default function MtmCopyPage() {
                     {connection.mt5_status === "pending" && (
                       <div className="flex items-start gap-2.5 text-sm text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mb-4">
                         <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                        <p>A ligar a conta — normalmente 1–3 minutos.</p>
+                        <p>
+                          A ligar a conta — normalmente 1–3 minutos.
+                          {isCopyTrader && (
+                            <>
+                              {" "}
+                              Se ficar pendente, abre <strong>Editar esta conta</strong>, introduz a password MT5 e
+                              clica em <strong>Religar conta</strong> (primeiro a mestre, depois a slave).
+                            </>
+                          )}
+                        </p>
                       </div>
                     )}
                     {connection.last_error && (

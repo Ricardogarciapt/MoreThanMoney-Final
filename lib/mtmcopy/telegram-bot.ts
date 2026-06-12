@@ -1,4 +1,5 @@
-const BOT_TOKEN = () => process.env.TELEGRAM_BOT_TOKEN
+const BOT_TOKEN = () =>
+  process.env.TELEGRAM_AIBOT_TOKEN?.trim() || process.env.TELEGRAM_BOT_TOKEN?.trim() || ''
 export const MTMCOPY_BOT_USERNAME = () =>
   (process.env.TELEGRAM_BOT_USERNAME || '@MoreThanMoney_aibot').replace(/^@/, '')
 
@@ -32,7 +33,7 @@ export interface ChannelVerifyResult {
 export async function verifyTelegramChannel(channelInput: string): Promise<ChannelVerifyResult> {
   const token = BOT_TOKEN()
   if (!token) {
-    return { ok: false, error: 'TELEGRAM_BOT_TOKEN não configurado' }
+    return { ok: false, error: 'TELEGRAM_AIBOT_TOKEN não configurado' }
   }
 
   const chatId = channelInput.trim().startsWith('-')
@@ -69,6 +70,36 @@ export async function verifyTelegramChannel(channelInput: string): Promise<Chann
       ? undefined
       : `Adiciona @${MTMCOPY_BOT_USERNAME()} como administrador do canal "${chat.title || chatId}".`,
   }
+}
+
+/** Publica mensagem num canal/grupo Telegram (admin teste). */
+export async function sendTelegramChannelMessage(
+  chatId: string,
+  text: string,
+  options?: { parseMode?: 'HTML' | 'Markdown' },
+): Promise<{ ok: boolean; messageId?: number; error?: string }> {
+  const token = BOT_TOKEN()
+  if (!token) return { ok: false, error: 'TELEGRAM_BOT_TOKEN não configurado' }
+
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: options?.parseMode,
+      disable_web_page_preview: true,
+    }),
+  })
+  const data = (await res.json()) as {
+    ok?: boolean
+    description?: string
+    result?: { message_id?: number }
+  }
+  if (!data.ok) {
+    return { ok: false, error: data.description ?? 'Falha ao enviar mensagem' }
+  }
+  return { ok: true, messageId: data.result?.message_id }
 }
 
 export async function registerTelegramWebhook(siteUrl: string): Promise<{ ok: boolean; description?: string }> {

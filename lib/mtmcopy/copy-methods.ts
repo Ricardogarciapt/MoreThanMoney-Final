@@ -21,17 +21,20 @@ export const COPY_METHODS: {
   {
     id: 'strategy',
     title: 'Estratégia MTM',
-    description: 'Copia directamente uma estratégia MTM na tua conta, com o teu risco e definições.',
+    description:
+      'Sinais do canal → parser → a tua conta MT5 (risco/lotes teus). VIP: até 5 contas com subscrição Stripe.',
   },
   {
     id: 'telegram_group',
     title: 'Grupos de sinais',
-    description: 'Escolhe o grupo Premium (Ouro) ou Ideias de Forex e replica os sinais automaticamente.',
+    description:
+      'Premium ou Trade Ideas → execução directa na tua conta. VIP: até 5 contas (subscrição MTMcopier).',
   },
   {
     id: 'master_slave',
     title: 'Copy Trader pessoal',
-    description: 'Usa a tua conta mestre para replicar trades em até duas contas slave.',
+    description:
+      'Copia da tua conta mestre para slaves via CopyFactory. Conta no limite do teu plano (VIP: 5 contas).',
   },
 ]
 

@@ -19,12 +19,15 @@ export async function GET(request: NextRequest) {
 
   try {
     // Chamar API de recálculo em massa
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://morethanmoney.pt'
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt').trim()
+    const cronSecret = process.env.CRON_SECRET?.trim()
     const response = await fetch(`${siteUrl}/api/admin/recalculate-tp-sl`, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+        ...(cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {}),
+      },
+      signal: AbortSignal.timeout(110_000),
     })
 
     if (!response.ok) {

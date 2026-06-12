@@ -67,6 +67,7 @@ async function sendNotification(userId: string, alert: any, currentPrice: number
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
+          skipInApp: true,
           title,
           body: message,
           data: {

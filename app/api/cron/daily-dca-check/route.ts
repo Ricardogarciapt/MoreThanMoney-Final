@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { isCategoryEnabled, normalizeNotificationPreferences } from '@/lib/notification-preferences'
 
 const supabase = getSupabaseAdmin()
 
@@ -24,9 +25,10 @@ async function sendPushNotification(userId: string, title: string, body: string,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId,
+        skipInApp: true,
         title,
         body,
-        data
+        data,
       })
     })
 
@@ -73,7 +75,7 @@ export async function GET(request: NextRequest) {
     // 2. Buscar todos os usuários ativos (VIP + Admin + Membros)
     const { data: users, error: usersError } = await supabase
       .from('profiles')
-      .select('id, full_name, email, user_type, member_category')
+      .select('id, full_name, email, user_type, member_category, notification_preferences')
       .eq('is_active', true) // Apenas usuários ativos
 
     if (usersError || !users) {
@@ -88,6 +90,10 @@ export async function GET(request: NextRequest) {
 
     for (const user of users) {
       try {
+        if (!isCategoryEnabled(normalizeNotificationPreferences(user.notification_preferences), 'dca')) {
+          continue
+        }
+
         // Título e corpo da notificação
         let title = '🚀 Oportunidades DCA Disponíveis!'
         let body = ''

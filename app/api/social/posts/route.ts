@@ -162,9 +162,11 @@ export async function POST(request: NextRequest) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               all: true,
+              skipInApp: true,
               title: notifTitle,
               body: notifBody,
               data: {
+                type: 'social_post',
                 post_id: newPost?.id ?? '',
                 url: '/app-mobile?tab=social',
               },
