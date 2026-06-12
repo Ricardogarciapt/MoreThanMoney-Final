@@ -4,6 +4,7 @@ import {
   strategyIdsForTelegramGroupsAsync,
   type MtmcopyCopyMethod,
 } from './copy-methods'
+import { ensureCopyTraderStrategy, generateStrategyId } from './copyfactory'
 import type { MTMcopierConnection, MtmcopyAccountRole, MtmcopySenderMode } from './types'
 import {
   connectionCopyMethod,
@@ -34,6 +35,38 @@ export function isMasterReadyForCopySlaves(master: MTMcopierConnection | null | 
   if (!master || master.mt5_status === 'disconnected') return false
   if (master.copyfactory_strategy_id) return true
   return master.mt5_status === 'connected' && Boolean(master.metaapi_account_id)
+}
+
+/** Cria ou reactiva estratégia CopyFactory da mestre (necessário antes de ligar slaves). */
+export async function resolveOrCreateMasterStrategyId(
+  master: MTMcopierConnection,
+): Promise<{ ok: boolean; strategyId?: string; error?: string }> {
+  if (!master.metaapi_account_id) {
+    return { ok: false, error: 'Conta mestre sem ligação MetaAPI' }
+  }
+
+  let strategyId = master.copyfactory_strategy_id?.trim() || null
+  if (!strategyId) {
+    const gen = await generateStrategyId()
+    if (!gen.ok || !gen.id) {
+      return { ok: false, error: gen.error ?? 'Falha ao gerar estratégia CopyFactory' }
+    }
+    strategyId = gen.id
+  }
+
+  const label =
+    master.account_label?.trim() ||
+    `MTMcopier · mestre ****${master.mt5_login_last4 ?? '?'}`
+
+  const strat = await ensureCopyTraderStrategy({
+    strategyId,
+    accountId: master.metaapi_account_id,
+    name: label,
+    description: `Copy trader pessoal · utilizador ${master.user_id.slice(0, 8)}`,
+  })
+
+  if (!strat.ok) return { ok: false, error: strat.error }
+  return { ok: true, strategyId }
 }
 
 export function countByRole(connections: MTMcopierConnection[], role: MtmcopyAccountRole): number {

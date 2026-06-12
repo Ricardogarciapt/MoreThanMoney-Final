@@ -38,11 +38,11 @@ export function pipsToRelativePoints(pips: number, spec: SymbolPointSpec): numbe
 }
 
 export function inferPipSize(spec: SymbolPointSpec, symbol?: string): number {
-  if (spec.pipSize && spec.pipSize > 0) return spec.pipSize
   const sym = (symbol ?? '').toUpperCase()
   const point = spec.point > 0 ? spec.point : 0.00001
-  // Ouro/prata: 1 pip ≈ $0.10 (50 pips = $5 no XAUUSD)
+  // Ouro/prata: forçar 1 pip = $0.10 — brokers MT5 reportam pipSize errado (ex. 0.01 → trailing 10× cedo)
   if (/XAU|GOLD|XAG|SILVER/.test(sym)) return 0.1
+  if (spec.pipSize && spec.pipSize > 0) return spec.pipSize
   const digits = spec.digits ?? 5
   // Forex 5 dígitos: pip = 10× point; JPY 3 dígitos: pip = 100× point
   if (digits === 3) return point * 100

@@ -63,6 +63,7 @@ export interface MTMcopierConnection {
   account_balance?: number | null
   account_equity?: number | null
   metaapi_account_id?: string | null
+  copyfactory_subscribed?: boolean
 }
 
 type Selection = "new" | string
@@ -345,7 +346,18 @@ export default function SetupModal({
       account_label: accountLabel.trim() || null,
     }
 
-    if (!showSlaveSettings) return base
+    if (!showSlaveSettings) {
+      return { ...base, copy_method: copyMethod }
+    }
+
+    if (isCopyTraderSlave) {
+      return {
+        ...base,
+        copy_method: "master_slave" as const,
+        lot_mode: "multiplier" as const,
+        lot_value: parseFloat(lotValue) || 1,
+      }
+    }
 
     return {
       ...base,
@@ -805,8 +817,15 @@ export default function SetupModal({
             </>
           ) : (
             <>
-              <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3 text-xs text-gray-300">
-                <strong className="text-emerald-400">Segurança:</strong> a password da conta é usada só para a ligação e não fica guardada no site.
+              <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3 text-xs text-gray-300 space-y-1.5">
+                <p>
+                  <strong className="text-emerald-400">Segurança:</strong> a password é usada só para a ligação e não fica guardada no site.
+                </p>
+                <p>
+                  <strong className="text-emerald-400">Demo ou real:</strong> pesquisa o servidor exacto do teu broker
+                  (ex. <span className="font-mono text-zinc-400">ICMarketsSC-Demo</span> ou{" "}
+                  <span className="font-mono text-zinc-400">TheTradingMaster-Live</span>).
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">Plataforma *</label>

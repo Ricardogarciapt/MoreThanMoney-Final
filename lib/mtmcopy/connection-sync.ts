@@ -1,12 +1,15 @@
 import {
-  ensureCopyTraderStrategy,
   getCopyStrategyId,
   subscribeToStrategies,
   unsubscribeFromStrategy,
   type CopyFactoryTradeSizeScaling,
 } from './copyfactory'
 import { connectionCopyMethod } from './copy-limits'
-import { getMasterConnection, resolveStrategyIdsForConnectionAsync } from './user-copy-context'
+import {
+  getMasterConnection,
+  resolveOrCreateMasterStrategyId,
+  resolveStrategyIdsForConnectionAsync,
+} from './user-copy-context'
 import type { MTMcopierConnection } from './types'
 
 export function lotMultiplierFromConnection(conn: Pick<MTMcopierConnection, 'lot_mode' | 'lot_value'>): number {
@@ -62,26 +65,20 @@ export async function syncConnectionCopyFactory(
     return { ok: true }
   }
 
-  const master = allConnections ? getMasterConnection(allConnections) : null
+  let master = allConnections ? getMasterConnection(allConnections) : null
   const method = connectionCopyMethod(conn as MTMcopierConnection)
 
   if (method === 'telegram_group' || method === 'strategy') {
     return { ok: true }
   }
 
-  if (
-    method === 'master_slave' &&
-    master?.copyfactory_strategy_id &&
-    master.metaapi_account_id
-  ) {
-    const strat = await ensureCopyTraderStrategy({
-      strategyId: master.copyfactory_strategy_id,
-      accountId: master.metaapi_account_id,
-      name: `MTMcopier · mestre ****${master.mt5_login_last4 ?? '?'}`,
-      description: 'Copy trader pessoal · limit, stop e market',
-    })
-    if (!strat.ok) {
-      console.warn('[mtmcopy] estratégia mestre:', strat.error)
+  if (method === 'master_slave' && master?.metaapi_account_id) {
+    const resolved = await resolveOrCreateMasterStrategyId(master as MTMcopierConnection)
+    if (!resolved.ok) {
+      return { ok: false, error: resolved.error ?? 'Estratégia da conta mestre em falta' }
+    }
+    if (resolved.strategyId && resolved.strategyId !== master.copyfactory_strategy_id) {
+      master = { ...master, copyfactory_strategy_id: resolved.strategyId }
     }
   }
 

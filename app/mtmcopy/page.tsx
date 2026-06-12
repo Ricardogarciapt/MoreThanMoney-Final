@@ -33,12 +33,18 @@ import {
   isMasterConnection,
   MTM_MASTER_LABEL,
 } from "@/lib/mtmcopy/display-utils"
+import {
+  countCopyTraderSlaves,
+  maxCopyTraderSlaves,
+} from "@/lib/mtmcopy/copy-limits"
+import { isMasterReadyForCopySlaves } from "@/lib/mtmcopy/user-copy-context"
 
 type MTMcopierConnectionRow = MTMcopierConnection & {
   last_signal_at: string | null
   last_error: string | null
   account_balance?: number | null
   account_equity?: number | null
+  copyfactory_subscribed?: boolean
 }
 
 interface SignalLog {
@@ -244,6 +250,17 @@ export default function MtmCopyPage() {
     await openSetup(selectionId, method)
   }
 
+  const openGerirContas = () => {
+    if (masterConn) {
+      const slaves = countCopyTraderSlaves(connections)
+      const maxS = accountLimits?.maxCopyTraderSlaves ?? maxCopyTraderSlaves(connections)
+      const addSlave = isMasterReadyForCopySlaves(masterConn) && slaves < maxS
+      void openSetupWithMethod("master_slave", addSlave ? "new" : masterConn.id)
+      return
+    }
+    void openSetup(connections[0]?.id ?? null)
+  }
+
   const openSetup = async (
     selectionId: string | "new" | null = null,
     methodOverride?: MtmcopyCopyMethod,
@@ -436,7 +453,7 @@ export default function MtmCopyPage() {
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
               <Button
-                onClick={() => hasConnections ? openSetup(connections[0]?.id ?? null) : handleAddonCheckout()}
+                onClick={() => (hasConnections ? openGerirContas() : handleAddonCheckout())}
                 disabled={checkingOut}
                 size="lg"
                 className="bg-[#D2A63C] hover:bg-[#BB8525] text-black font-bold"
@@ -489,8 +506,19 @@ export default function MtmCopyPage() {
                 {limitsLabel && (
                   <p className="text-xs text-zinc-500 w-full sm:w-auto">{limitsLabel}</p>
                 )}
-                <Button size="sm" variant="outline" className="border-gray-700 text-gray-300" onClick={() => openSetup("new")}>
-                  + Adicionar conta
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-gray-700 text-gray-300"
+                  onClick={() => {
+                    if (masterConn && isMasterReadyForCopySlaves(masterConn)) {
+                      void openSetupWithMethod("master_slave", "new")
+                    } else {
+                      void openSetup("new")
+                    }
+                  }}
+                >
+                  {masterConn && isMasterReadyForCopySlaves(masterConn) ? "+ Conta slave" : "+ Adicionar conta"}
                 </Button>
               </div>
 
@@ -578,8 +606,8 @@ export default function MtmCopyPage() {
 
                     {connection.account_role !== "master" && (
                     <>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
-                      <div className="rounded-lg bg-[#D2A63C]/10 border border-[#D2A63C]/25 px-3 py-2.5 text-center sm:col-span-1">
+                    <div className={`grid gap-3 mb-3 ${isCopyTrader ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2 sm:grid-cols-5"}`}>
+                      <div className="rounded-lg bg-[#D2A63C]/10 border border-[#D2A63C]/25 px-3 py-2.5 text-center">
                         <p className="text-xs text-[#D2A63C]/80 mb-0.5">Saldo MT5</p>
                         <p className="text-white text-sm font-semibold tabular-nums">
                           {formatMt5Money(connection.account_balance)}
@@ -591,24 +619,39 @@ export default function MtmCopyPage() {
                           </p>
                         )}
                       </div>
+                      {isCopyTrader ? (
+                        <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 px-3 py-2.5 text-center">
+                          <p className="text-xs text-gray-500 mb-0.5">Multiplicador</p>
+                          <p className="text-white text-sm font-medium">
+                            {connection.lot_mode === "multiplier" ? connection.lot_value : "1"}×
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 px-3 py-2.5 text-center">
+                            <p className="text-xs text-gray-500 mb-0.5">Modo lote</p>
+                            <p className="text-white text-sm font-medium">
+                              {connection.lot_mode === "fixed" ? "Fixo" : connection.lot_mode === "risk_percent" ? "% Risco" : "Multiplicador"}
+                            </p>
+                          </div>
+                          <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 px-3 py-2.5 text-center">
+                            <p className="text-xs text-gray-500 mb-0.5">Valor</p>
+                            <p className="text-white text-sm font-medium">{connection.lot_value}</p>
+                          </div>
+                          <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 px-3 py-2.5 text-center">
+                            <p className="text-xs text-gray-500 mb-0.5">Risco máx./dia</p>
+                            <p className="text-white text-sm font-medium">{connection.max_risk_percent ?? "—"}%</p>
+                          </div>
+                        </>
+                      )}
                       <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 px-3 py-2.5 text-center">
-                        <p className="text-xs text-gray-500 mb-0.5">Modo lote</p>
+                        <p className="text-xs text-gray-500 mb-0.5">{isCopyTrader ? "Estado cópia" : "Último sinal"}</p>
                         <p className="text-white text-sm font-medium">
-                          {connection.lot_mode === "fixed" ? "Fixo" : connection.lot_mode === "risk_percent" ? "% Risco" : "Multiplicador"}
-                        </p>
-                      </div>
-                      <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 px-3 py-2.5 text-center">
-                        <p className="text-xs text-gray-500 mb-0.5">Valor</p>
-                        <p className="text-white text-sm font-medium">{connection.lot_value}</p>
-                      </div>
-                      <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 px-3 py-2.5 text-center">
-                        <p className="text-xs text-gray-500 mb-0.5">Risco máx./dia</p>
-                        <p className="text-white text-sm font-medium">{connection.max_risk_percent ?? "—"}%</p>
-                      </div>
-                      <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 px-3 py-2.5 text-center">
-                        <p className="text-xs text-gray-500 mb-0.5">Último sinal</p>
-                        <p className="text-white text-sm font-medium">
-                          {connection.last_signal_at ? formatRelative(connection.last_signal_at) : "Nenhum"}
+                          {isCopyTrader
+                            ? connection.copyfactory_subscribed ? "Activa" : "Pendente"
+                            : connection.last_signal_at
+                              ? formatRelative(connection.last_signal_at)
+                              : "Nenhum"}
                         </p>
                       </div>
                     </div>
@@ -764,7 +807,7 @@ export default function MtmCopyPage() {
           {/* CTA final */}
           <div className="text-center">
             <Button
-              onClick={() => hasConnections ? openSetup(null) : handleAddonCheckout()}
+              onClick={() => (hasConnections ? openGerirContas() : handleAddonCheckout())}
               disabled={checkingOut}
               size="lg"
               className="bg-[#D2A63C] hover:bg-[#BB8525] text-black font-bold"

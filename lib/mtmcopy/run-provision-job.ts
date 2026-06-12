@@ -3,7 +3,11 @@ import type { MtmcopyCopyMethod } from '@/lib/mtmcopy/copy-methods'
 import { provisionMasterAccount, provisionSlaveAccount } from '@/lib/mtmcopy/metaapi-provision'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
 import type { MTMcopierConnection, MtmcopyAccountRole, MtmcopySenderMode } from '@/lib/mtmcopy/types'
-import { getMasterConnection, resolveStrategyIdsForConnectionAsync } from '@/lib/mtmcopy/user-copy-context'
+import {
+  getMasterConnection,
+  resolveOrCreateMasterStrategyId,
+  resolveStrategyIdsForConnectionAsync,
+} from '@/lib/mtmcopy/user-copy-context'
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -61,7 +65,35 @@ export async function runProvisionJob(input: RunProvisionJobInput): Promise<MTMc
     .eq('user_id', userId)
     .neq('mt5_status', 'disconnected')
 
-  const masterConn = getMasterConnection((freshConnections ?? []) as MTMcopierConnection[])
+  let masterConn = getMasterConnection((freshConnections ?? []) as MTMcopierConnection[])
+
+  if (copyMethod === 'master_slave' && accountRole === 'slave' && masterConn) {
+    const masterStrategy = await resolveOrCreateMasterStrategyId(masterConn)
+    if (!masterStrategy.ok || !masterStrategy.strategyId) {
+      const patch: Record<string, unknown> = {
+        mt5_status: 'error',
+        last_error: masterStrategy.error ?? 'Falha na estratégia da conta mestre',
+        updated_at: new Date().toISOString(),
+      }
+      const { data: failed } = await supabaseAdmin
+        .from('mtmcopy_connections')
+        .update(patch)
+        .eq('id', connectionId)
+        .select()
+        .single()
+      return (failed ?? { ...connection, ...patch }) as MTMcopierConnection
+    }
+    if (masterStrategy.strategyId !== masterConn.copyfactory_strategy_id) {
+      await supabaseAdmin
+        .from('mtmcopy_connections')
+        .update({
+          copyfactory_strategy_id: masterStrategy.strategyId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', masterConn.id)
+      masterConn = { ...masterConn, copyfactory_strategy_id: masterStrategy.strategyId }
+    }
+  }
 
   const strategyIdsForSlave =
     accountRole === 'slave'
