@@ -32,18 +32,52 @@ export interface SymbolPointSpec {
  */
 export function pipsToRelativePoints(pips: number, spec: SymbolPointSpec): number {
   const point = spec.point > 0 ? spec.point : 0.00001
-  const pipSize = spec.pipSize && spec.pipSize > 0 ? spec.pipSize : inferPipSize(spec)
+  const pipSize = inferPipSize(spec)
   const ratio = pipSize / point
   return Math.max(1, Math.round(pips * ratio))
 }
 
-function inferPipSize(spec: SymbolPointSpec): number {
-  const digits = spec.digits ?? 5
+export function inferPipSize(spec: SymbolPointSpec, symbol?: string): number {
+  if (spec.pipSize && spec.pipSize > 0) return spec.pipSize
+  const sym = (symbol ?? '').toUpperCase()
   const point = spec.point > 0 ? spec.point : 0.00001
-  // Forex 5 dígitos: pip = 10× point; 3 dígitos (JPY): pip = 100× point; 2 dígitos (ouro): pip = 10× point
-  if (digits === 3 || digits === 2) return point * 10
-  if (digits === 5 || digits === 4) return point * 10
+  // Ouro/prata: 1 pip ≈ $0.10 (50 pips = $5 no XAUUSD)
+  if (/XAU|GOLD|XAG|SILVER/.test(sym)) return 0.1
+  const digits = spec.digits ?? 5
+  // Forex 5 dígitos: pip = 10× point; JPY 3 dígitos: pip = 100× point
+  if (digits === 3) return point * 100
+  if (digits === 2 || digits === 4 || digits === 5) return point * 10
   return point * 10
+}
+
+/** Converte pips → RELATIVE_POINTS conforme spec do broker (XAU: 50 pips = 5000 pts se point=0.001). */
+export function convertTrailingToRelativePoints(
+  trailing: TrailingDistance | number,
+  spec: SymbolPointSpec,
+  symbol?: string,
+): TrailingDistance {
+  const pipSpec: SymbolPointSpec = {
+    ...spec,
+    pipSize: inferPipSize(spec, symbol),
+  }
+
+  if (typeof trailing === 'number') {
+    return { mode: 'points', points: Math.max(1, Math.round(trailing)) }
+  }
+
+  if (trailing.mode === 'pips') {
+    return { mode: 'points', points: pipsToRelativePoints(trailing.pips, pipSpec) }
+  }
+
+  if (trailing.mode === 'threshold_pips') {
+    return {
+      mode: 'threshold_points',
+      activationPoints: pipsToRelativePoints(trailing.activationPips, pipSpec),
+      trailPoints: pipsToRelativePoints(trailing.trailPips, pipSpec),
+    }
+  }
+
+  return trailing
 }
 
 export type TrailingDistance =

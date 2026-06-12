@@ -39,12 +39,19 @@ export async function POST(request: NextRequest) {
 
   let telegramMessageId: number | undefined
 
+  let telegramWarning: string | undefined
+
   if (send_to_telegram !== false) {
     const sent = await sendTelegramChannelMessage(chatId, text.trim())
     if (!sent.ok) {
-      return NextResponse.json({ ok: false, error: sent.error }, { status: 422 })
+      if (run_pipeline) {
+        telegramWarning = sent.error ?? 'Falha ao publicar no Telegram — pipeline corre na mesma'
+      } else {
+        return NextResponse.json({ ok: false, error: sent.error }, { status: 422 })
+      }
+    } else {
+      telegramMessageId = sent.messageId
     }
-    telegramMessageId = sent.messageId
   }
 
   if (run_pipeline) {
@@ -65,9 +72,12 @@ export async function POST(request: NextRequest) {
     chat_id: chatId,
     telegram_message_id: telegramMessageId,
     pipeline: Boolean(run_pipeline),
-    sent_to_telegram: send_to_telegram !== false,
+    sent_to_telegram: send_to_telegram !== false && !telegramWarning,
+    warning: telegramWarning,
     message: run_pipeline
-      ? 'Mensagem processada pelo pipeline MTMcopy (provider + subscribers)'
-      : 'Mensagem publicada no canal Telegram',
+      ? telegramWarning
+        ? `Pipeline executado (provider). ${telegramWarning}`
+        : 'Mensagem processada pelo pipeline MTMcopy (provider + subscribers)'
+      : telegramWarning ?? 'Mensagem publicada no canal Telegram',
   })
 }

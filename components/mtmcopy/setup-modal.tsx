@@ -17,6 +17,7 @@ import {
   countTotalActive,
   maxCopyTraderSlaves,
 } from "@/lib/mtmcopy/copy-limits"
+import { isMasterReadyForCopySlaves } from "@/lib/mtmcopy/user-copy-context"
 import type { MtmcopyUserLimits } from "@/lib/mtmcopy/account-limits"
 import {
   MAX_MTMCOPY_ACCOUNTS_MEMBER,
@@ -158,10 +159,11 @@ export default function SetupModal({
   const totalActive = countTotalActive(connections)
   const underAccountCap = unlimited || totalActive < maxAccounts
   const canAddMaster = copyMethod === "master_slave" && !masterConn && underAccountCap
+  const masterReady = isMasterReadyForCopySlaves(masterConn)
   const canAddSlave =
     underAccountCap &&
     (copyMethod === "master_slave"
-      ? Boolean(masterConn?.copyfactory_strategy_id) && copyTraderSlaves < maxCopySlaves
+      ? masterReady && copyTraderSlaves < maxCopySlaves
       : signalSlaves < maxSignalSlaves)
   const canAddAccount = unlimited || canAddMaster || canAddSlave
 
@@ -190,6 +192,7 @@ export default function SetupModal({
     isEditMode &&
     (selectedConn?.mt5_status === "pending" || selectedConn?.mt5_status === "error")
   const showSlaveSettings = !isMasterSelected && !isNewMaster
+  const isCopyTraderSlave = copyMethod === "master_slave" && showSlaveSettings
 
   const [accountLabel, setAccountLabel] = useState("")
   const [telegramChannel, setTelegramChannel] = useState("")
@@ -280,10 +283,14 @@ export default function SetupModal({
         selectedConn.sender_mode === "master_account" ? "master_slave" : "telegram_group",
       )
     }
+    if (copyMethod === "master_slave" && selectedId === "new" && !isMasterSelected) {
+      setLotMode("multiplier")
+      setLotValue("1")
+    }
     setMt5Login("")
     setMt5Password("")
     setError("")
-  }, [selectedId, selectedConn, strategies])
+  }, [selectedId, selectedConn, strategies, copyMethod, isMasterSelected])
 
   const toggleTelegramGroup = (id: "premium" | "trade_ideas") => {
     setTelegramGroups((prev) => {
@@ -312,9 +319,9 @@ export default function SetupModal({
     setSelectedId(matching[0]?.id ?? "new")
   }
 
-  const pollProvisionStatus = async (token: string, connectionId: string, attempts = 40) => {
+  const pollProvisionStatus = async (token: string, connectionId: string, attempts = 45) => {
     for (let i = 0; i < attempts; i++) {
-      await new Promise((r) => setTimeout(r, 3000))
+      await new Promise((r) => setTimeout(r, 2000))
       const st = await fetch(`/api/mtmcopy/provision?connection_id=${connectionId}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -536,6 +543,24 @@ export default function SetupModal({
             <p className="text-xs text-gray-500">Liga a tua conta e escolhe como queres copiar</p>
           </div>
         </div>
+
+        {copyMethod === "master_slave" && (
+          <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs text-amber-100/90 space-y-1.5">
+            <p className="font-semibold text-amber-300">Copy trader — 2 passos</p>
+            <p>
+              <span className="text-amber-400">1.</span> Liga a <strong>conta mestre</strong> (onde abres trades)
+            </p>
+            <p>
+              <span className="text-amber-400">2.</span> Adiciona até {maxCopySlaves}{" "}
+              <strong>contas slave</strong> que copiam automaticamente
+            </p>
+            {masterConn && (
+              <p className={masterReady ? "text-green-400" : "text-amber-400"}>
+                Mestre: {masterReady ? "✓ ligada — podes adicionar slaves" : "⏳ a ligar… aguarda estado ligada"}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="mb-4">
           <label className="block text-xs font-medium text-gray-400 mb-2">Método de cópia</label>
@@ -837,7 +862,27 @@ export default function SetupModal({
             </>
           )}
 
-          {showSlaveSettings && (
+          {showSlaveSettings && isCopyTraderSlave && (
+            <div className="rounded-lg border border-zinc-700/80 bg-zinc-800/40 p-4 space-y-3">
+              <p className="text-sm text-gray-300">
+                Esta conta <strong className="text-white">copia tudo</strong> o que abrires na mestre. Ajusta só o multiplicador de volume.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1.5">Multiplicador de volume</label>
+                <Input
+                  value={lotValue}
+                  onChange={(e) => setLotValue(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="1 = mesmo tamanho que a mestre"
+                  className="bg-gray-800 border-gray-700 text-white"
+                  disabled={saving || deleting}
+                />
+                <p className="text-xs text-gray-500 mt-1">Ex: 0.5 = metade do lote · 2 = o dobro</p>
+              </div>
+            </div>
+          )}
+
+          {showSlaveSettings && !isCopyTraderSlave && (
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">Modo de cálculo do lote</label>

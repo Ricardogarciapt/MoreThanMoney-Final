@@ -29,6 +29,13 @@ export function getMasterConnection(
   return connections.find((c) => c.account_role === 'master') ?? null
 }
 
+/** Mestre pronta para adicionar slaves (ligada na MetaAPI ou com estratégia CF criada). */
+export function isMasterReadyForCopySlaves(master: MTMcopierConnection | null | undefined): boolean {
+  if (!master || master.mt5_status === 'disconnected') return false
+  if (master.copyfactory_strategy_id) return true
+  return master.mt5_status === 'connected' && Boolean(master.metaapi_account_id)
+}
+
 export function countByRole(connections: MTMcopierConnection[], role: MtmcopyAccountRole): number {
   return connections.filter((c) => (c.account_role ?? 'slave') === role).length
 }
@@ -77,8 +84,13 @@ export function canAddConnection(
 
   if (copyMethod === 'master_slave' || senderMode === 'master_account') {
     const master = getMasterConnection(active)
-    if (!master?.copyfactory_strategy_id && master?.mt5_status !== 'connected') {
-      return { ok: false, error: 'Liga primeiro a conta mestre antes de adicionar slaves' }
+    if (!isMasterReadyForCopySlaves(master)) {
+      return {
+        ok: false,
+        error: master
+          ? 'Aguarda a conta mestre ficar ligada (estado: ligada) antes de adicionar slaves'
+          : 'Liga primeiro a conta mestre antes de adicionar slaves',
+      }
     }
     if (countCopyTraderSlaves(active) >= maxCopySlaves) {
       return { ok: false, error: copyTraderSlaveLimitMessage(maxCopySlaves) }

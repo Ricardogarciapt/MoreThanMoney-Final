@@ -35,6 +35,8 @@ export const PREMIUM_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   exit_pct_tp1: 33,
   exit_pct_tp2: 33,
   exit_pct_tp3: 34,
+  auto_trailing_stop: false,
+  trailing_stop_points: 0,
 }
 
 /** Perfil MTM Auto — Trade Ideas (forex + trailing). */

@@ -1,4 +1,5 @@
 import type { TrailingDistance } from './pip-points'
+import { convertTrailingToRelativePoints } from './pip-points'
 import { resolveBrokerSymbol } from './symbol-resolver'
 
 export interface OrderRequest {
@@ -150,17 +151,36 @@ export function buildTrailingOptions(
   return undefined
 }
 
-function resolveOrderTrailing(req: OrderRequest): TrailingStopLossOptions | undefined {
-  if (req.trailingStop) return buildTrailingOptions(req.trailingStop)
-  return buildTrailingOptions(req.trailingStopPoints)
+async function resolveOrderTrailingForSymbol(
+  req: OrderRequest,
+  brokerSymbol: string,
+): Promise<TrailingStopLossOptions | undefined> {
+  const raw =
+    req.trailingStop ??
+    (req.trailingStopPoints != null && req.trailingStopPoints > 0
+      ? { mode: 'points' as const, points: req.trailingStopPoints }
+      : null)
+  if (raw == null) return undefined
+
+  const spec = await getSymbolSpecification(req.accountId, brokerSymbol)
+  const normalized =
+    spec && typeof raw !== 'number' && (raw.mode === 'pips' || raw.mode === 'threshold_pips')
+      ? convertTrailingToRelativePoints(raw, spec, req.symbol)
+      : spec && typeof raw === 'number'
+        ? convertTrailingToRelativePoints(raw, spec, req.symbol)
+        : raw
+
+  return buildTrailingOptions(normalized)
 }
 
-function buildOrderOptions(req: OrderRequest): { comment?: string; trailingStopLoss?: TrailingStopLossOptions } {
+function buildOrderOptions(
+  req: OrderRequest,
+  trailingOpts?: TrailingStopLossOptions,
+): { comment?: string; trailingStopLoss?: TrailingStopLossOptions } {
   const options: { comment?: string; trailingStopLoss?: TrailingStopLossOptions } = {
     comment: req.comment ?? 'MTMcopier',
   }
-  const trailing = resolveOrderTrailing(req)
-  if (trailing) options.trailingStopLoss = trailing
+  if (trailingOpts) options.trailingStopLoss = trailingOpts
   return options
 }
 
@@ -336,7 +356,8 @@ export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> 
     const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
     const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
 
-    const orderOptions = buildOrderOptions(req)
+    const trailingOpts = await resolveOrderTrailingForSymbol(req, brokerSymbol)
+    const orderOptions = buildOrderOptions(req, trailingOpts)
 
     const trade =
       req.direction === 'buy'
@@ -457,6 +478,7 @@ export async function modifyPositionSlTp(
   stopLoss?: number | null,
   takeProfit?: number | null,
   trailing?: TrailingDistance | number | null,
+  symbol?: string,
 ): Promise<{ success: boolean; error?: string }> {
   let close: (() => Promise<void>) | undefined
   try {
@@ -464,7 +486,14 @@ export async function modifyPositionSlTp(
     close = closeFn
     const sl = stopLoss != null && stopLoss > 0 ? stopLoss : undefined
     const tp = takeProfit != null && takeProfit > 0 ? takeProfit : undefined
-    const trailingOpts = buildTrailingOptions(trailing)
+    let trailingResolved: TrailingDistance | number | null | undefined = trailing
+    if (trailing && symbol) {
+      const spec = await getSymbolSpecification(accountId, symbol)
+      if (spec && typeof trailing !== 'number' && (trailing.mode === 'pips' || trailing.mode === 'threshold_pips')) {
+        trailingResolved = convertTrailingToRelativePoints(trailing, spec, symbol)
+      }
+    }
+    const trailingOpts = buildTrailingOptions(trailingResolved)
     await connection.modifyPosition(positionId, sl, tp, trailingOpts ? { trailingStopLoss: trailingOpts } : undefined)
     return { success: true }
   } catch (err: unknown) {

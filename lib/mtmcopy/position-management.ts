@@ -134,7 +134,7 @@ export async function applyManagementToAccount(
     } else if (management.type === 'move_sl' && management.sl != null) {
       newSl = management.sl
     } else if (management.type === 'enable_trailing' && trailing) {
-      const mod = await modifyPositionSlTp(accountId, pos.id, pos.stopLoss, pos.takeProfit, trailing)
+      const mod = await modifyPositionSlTp(accountId, pos.id, pos.stopLoss, pos.takeProfit, trailing, pos.symbol)
       if (mod.success) result.updated++
       else if (mod.error) result.errors.push(mod.error)
       continue
@@ -164,5 +164,5 @@ export async function applyTrailingToLatestPosition(
     /* usar posição encontrada */
   }
 
-  return modifyPositionSlTp(accountId, latest.id, latest.stopLoss, latest.takeProfit, trailing)
+  return modifyPositionSlTp(accountId, latest.id, latest.stopLoss, latest.takeProfit, trailing, latest.symbol)
 }

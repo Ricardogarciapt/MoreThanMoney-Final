@@ -118,8 +118,8 @@ function buildOrderRequest(
     stopLoss: conn.copy_sl ? signal.sl : null,
     takeProfit: conn.copy_tp ? (signal.tp[0] ?? null) : null,
     comment,
-    trailingStop: trailingDistanceForConnection(conn),
-    trailingStopPoints: trailingPointsForConnection(conn),
+    // Trailing é definido por canal/perna (Premium só na última exit; Trade Ideas no processor)
+    trailingStop: null,
   }
 }
 
@@ -634,7 +634,7 @@ async function executeViaMtmProvider(
           `${mtComment}-${leg.label}`,
         )
         req.takeProfit = leg.tpPrice
-        if (leg.trailing) req.trailingStop = leg.trailing
+        req.trailingStop = leg.trailing ?? null
         const r = await placeOrder(req)
         return { ...r, label: leg.label, lot: req.volume }
       }),
@@ -888,7 +888,7 @@ async function processSignalDirect(
           `MTMcopier-${leg.label}`,
         )
         req.takeProfit = leg.tpPrice
-        if (leg.trailing) req.trailingStop = leg.trailing
+        req.trailingStop = leg.trailing ?? null
         return placeOrder(req)
       }),
     )
