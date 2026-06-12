@@ -602,24 +602,57 @@ export default function ScannerMobile({
     scannerAccessChartHeight,
   ])
 
-  const loadTradingViewScript = () => {
-    if (document.getElementById("tradingview-mobile-script")) {
-      if (window.TradingView) {
-        loadWidget()
-      }
+  const loadTradingViewScript = (retryCount = 0) => {
+    const existingScript = document.getElementById("tradingview-mobile-script")
+
+    // Script já existe e TradingView já está carregado — ir directo ao widget
+    if (existingScript && window.TradingView) {
+      loadWidget()
       return
+    }
+
+    // Script em curso mas TradingView ainda não disponível — aguardar mais 500ms (max 10s)
+    if (existingScript && !window.TradingView && retryCount < 20) {
+      setTimeout(() => loadTradingViewScript(retryCount + 1), 500)
+      return
+    }
+
+    // Remover script antigo que possa ter falhado antes de criar novo
+    if (existingScript) {
+      existingScript.remove()
     }
 
     const script = document.createElement("script")
     script.id = "tradingview-mobile-script"
+    // CDN principal do TradingView Advanced Charts
     script.src = "https://s3.tradingview.com/tv.js"
     script.async = true
+    script.crossOrigin = "anonymous"
+
     script.onload = () => {
-      if (window.TradingView) {
-        loadWidget()
+      // Pequeno delay para garantir que TradingView inicializou o namespace
+      const waitForTV = (attempt: number) => {
+        if (window.TradingView) {
+          loadWidget()
+        } else if (attempt < 10) {
+          setTimeout(() => waitForTV(attempt + 1), 200)
+        } else {
+          setError("TradingView não inicializou após carregamento do script")
+        }
+      }
+      waitForTV(0)
+    }
+
+    script.onerror = () => {
+      // Tentar novamente 1× antes de mostrar erro (falhas de rede transitórias no iOS)
+      if (retryCount === 0) {
+        console.warn("[TV] Falha ao carregar tv.js — a tentar novamente em 2s")
+        setTimeout(() => loadTradingViewScript(1), 2000)
+      } else {
+        setError("Falha ao carregar TradingView. Verifica a ligação à internet.")
       }
     }
-    script.onerror = () => setError("Falha ao carregar TradingView")
+
     document.head.appendChild(script)
   }
 
