@@ -15,6 +15,7 @@ import {
   Brain,
   Network,
   Send,
+  Ticket,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -120,6 +121,18 @@ export default function AdminSidebar({
         >
           <Network className="w-5 h-5 shrink-0" />
           MLM / Afiliados
+        </Link>
+        <Link
+          href="/admin/coupons"
+          className={cn(
+            "mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            pathname === "/admin/coupons"
+              ? "border-l-2 border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
+              : "border-l-2 border-transparent text-gray-400 hover:bg-gray-800/50 hover:text-white"
+          )}
+        >
+          <Ticket className="w-5 h-5 shrink-0" />
+          Cupões de Oferta
         </Link>
         <div className="my-2 border-t border-[#D2A63C]/10" />
         <Link

@@ -45,9 +45,12 @@ export default function RegisterPage() {
     phone: '',
     whatsapp: '',
     sponsorUsername: '',
+    couponCode: '',
   })
   const [sponsorStatus, setSponsorStatus] = useState<{ valid: boolean; name?: string } | null>(null)
   const [validatingSponsor, setValidatingSponsor] = useState(false)
+  const [couponStatus, setCouponStatus] = useState<{ valid: boolean; message: string; type?: string; discount_pct?: number; free_months?: number } | null>(null)
+  const [validatingCoupon, setValidatingCoupon] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState('')
@@ -79,6 +82,24 @@ export default function RegisterPage() {
     }
   }
 
+  const validateCoupon = async (code: string) => {
+    if (!code.trim()) { setCouponStatus(null); return }
+    setValidatingCoupon(true)
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.trim() }),
+      })
+      const data = await res.json()
+      setCouponStatus(data)
+    } catch {
+      setCouponStatus({ valid: false, message: 'Erro ao validar cupão' })
+    } finally {
+      setValidatingCoupon(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -106,6 +127,7 @@ export default function RegisterPage() {
         phone: formData.phone || '',
         whatsapp: formData.whatsapp || '',
         sponsor_username: formData.sponsorUsername || '',
+        coupon_code: formData.couponCode || '',
         plan: selectedPlan,
         billing: billingCycle,
         created_at: Date.now(),
@@ -124,6 +146,7 @@ export default function RegisterPage() {
           phone: formData.phone || '',
           regToken,
           sponsorUsername: formData.sponsorUsername || '',
+          couponCode: formData.couponCode || '',
         }),
       })
 
@@ -380,6 +403,38 @@ export default function RegisterPage() {
                       <><CheckCircle2 className="w-3.5 h-3.5" /> Patrocinador: {sponsorStatus.name}</>
                     ) : (
                       <><XCircle className="w-3.5 h-3.5" /> Utilizador não encontrado</>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="couponCode" className="text-gray-300">
+                  Cupão de oferta <span className="text-gray-500 font-normal">(opcional)</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="couponCode"
+                    name="couponCode"
+                    type="text"
+                    value={formData.couponCode}
+                    onChange={handleInputChange}
+                    onBlur={() => validateCoupon(formData.couponCode)}
+                    className="bg-gray-800 border-gray-700 text-white pr-8 uppercase placeholder:normal-case"
+                    placeholder="Código de cupão (ex: MTM2024)"
+                    disabled={isLoading}
+                    style={{ textTransform: formData.couponCode ? 'uppercase' : 'none' }}
+                  />
+                  {validatingCoupon && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-gray-400" />
+                  )}
+                </div>
+                {couponStatus !== null && !validatingCoupon && (
+                  <div className={`flex items-center gap-1.5 mt-1 text-xs ${couponStatus.valid ? 'text-green-400' : 'text-red-400'}`}>
+                    {couponStatus.valid ? (
+                      <><CheckCircle2 className="w-3.5 h-3.5" /> {couponStatus.message}</>
+                    ) : (
+                      <><XCircle className="w-3.5 h-3.5" /> {couponStatus.message}</>
                     )}
                   </div>
                 )}
