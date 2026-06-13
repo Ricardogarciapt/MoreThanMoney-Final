@@ -258,7 +258,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   } else if (session.mode === 'subscription') {
     const planId = session.metadata?.plan || 'app_member_monthly'
-    await supabase.from('profiles').update({
+    const couponCodeWebhook = (session.metadata?.coupon_code || '').trim().toUpperCase()
+    const subscriptionUpdate: Record<string, unknown> = {
       stripe_customer_id: session.customer as string,
       stripe_subscription_id: session.subscription as string,
       subscription_plan: normalizeSubscriptionPlan(planId),
@@ -269,7 +270,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       is_active: true,
       payment_failed_count: 0,
       last_payment_at: new Date().toISOString(),
-    }).eq('id', userId)
+    }
+    if (couponCodeWebhook) subscriptionUpdate.coupon_code = couponCodeWebhook
+    await supabase.from('profiles').update(subscriptionUpdate).eq('id', userId)
 
     if (isPremiumStripePlan(planId)) {
       try {

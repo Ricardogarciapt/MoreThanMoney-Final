@@ -98,6 +98,11 @@ async function createProfileAfterPayment(params: {
     profilePayload.mlm_sponsor_username = sponsor.trim()
   }
 
+  const couponCode = (session.metadata?.coupon_code || '').trim().toUpperCase()
+  if (couponCode) {
+    profilePayload.coupon_code = couponCode
+  }
+
   const { error: profileError } = await supabaseAdmin
     .from('profiles')
     .upsert(profilePayload, { onConflict: 'id' })

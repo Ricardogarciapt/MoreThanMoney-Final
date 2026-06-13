@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Bell, Check, X, TrendingUp, TrendingDown, Target, Shield, Zap, AlertCircle, CheckCheck, MessageSquare } from "lucide-react"
+import { Bell, Check, X, TrendingUp, TrendingDown, Target, Shield, Zap, AlertCircle, CheckCheck, MessageSquare, ExternalLink, Lock } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 interface Notification {
@@ -18,18 +18,26 @@ interface Notification {
   data?: any // JSONB data field
 }
 
+// Tipos de notificação que requerem acesso ao site completo (não disponível no Pack Membro 35€)
+const SITE_ONLY_NOTIFICATION_TYPES = new Set([
+  'dca_opportunity', 'dca_daily', 'portfolio', 'price_alert', 'take_profit', 'stop_loss',
+])
+
 interface NotificationsPanelProps {
   /** Chamado após navegar ao clicar numa notificação (para fechar o drawer) */
   onClose?: () => void
   /** Classe adicional para o container externo */
   className?: string
+  /** Utilizador com Pack Membro (35€) — sem acesso ao site completo */
+  isAppOnlyUser?: boolean
 }
 
-export default function NotificationsPanel({ onClose, className }: NotificationsPanelProps = {}) {
+export default function NotificationsPanel({ onClose, className, isAppOnlyUser = false }: NotificationsPanelProps = {}) {
   const [mounted, setMounted] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -248,6 +256,11 @@ export default function NotificationsPanel({ onClose, className }: Notifications
     if (!notification.read) {
       await markAsRead(notification.id)
     }
+    // Pack Membro (35€) não tem acesso ao site — mostrar sugestão de upgrade
+    if (isAppOnlyUser && SITE_ONLY_NOTIFICATION_TYPES.has(notification.type)) {
+      setShowUpgradeModal(true)
+      return
+    }
     const destination = getNotificationDestination(notification)
     onClose?.()
     router.push(destination)
@@ -256,6 +269,7 @@ export default function NotificationsPanel({ onClose, className }: Notifications
   const unreadCount = notifications.filter(n => !n.read).length
 
   return (
+    <>
     <Card className={`bg-gray-900/50 border-[#D2A63C]/30 ${className ?? ''}`}>
       <CardHeader>
         <div className="flex justify-between items-center">
@@ -344,6 +358,53 @@ export default function NotificationsPanel({ onClose, className }: Notifications
         )}
       </CardContent>
     </Card>
+
+    {/* Modal de upgrade — Pack Membro sem acesso ao site */}
+    {showUpgradeModal && (
+      <div className="fixed inset-0 z-[999] flex items-end justify-center p-4 pb-8" onClick={() => setShowUpgradeModal(false)}>
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+        <div
+          className="relative w-full max-w-sm bg-gray-900 border border-[#D2A63C]/30 rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-10 h-10 rounded-xl bg-[#D2A63C]/15 border border-[#D2A63C]/25 flex items-center justify-center">
+              <Lock className="w-5 h-5 text-[#D2A63C]" />
+            </div>
+            <button onClick={() => setShowUpgradeModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
+              <X className="w-4 h-4 text-gray-400" />
+            </button>
+          </div>
+          <h3 className="text-lg font-bold text-white mb-1">Funcionalidade Premium</h3>
+          <p className="text-gray-400 text-sm leading-relaxed mb-4">
+            Os portfólios, alertas DCA e análises de preço fazem parte do <span className="text-white font-medium">Pack Premium</span> com acesso completo ao site morethanmoney.pt.
+          </p>
+          <div className="space-y-2">
+            <a
+              href="https://www.morethanmoney.pt/register"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#D2A63C] text-black font-bold text-sm"
+              onClick={() => { setShowUpgradeModal(false); onClose?.() }}
+            >
+              <Zap className="w-4 h-4" />
+              Fazer upgrade para Premium
+            </a>
+            <a
+              href="https://www.morethanmoney.pt"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gray-800 border border-gray-700 text-gray-300 text-sm"
+              onClick={() => { setShowUpgradeModal(false); onClose?.() }}
+            >
+              <ExternalLink className="w-4 h-4" />
+              Saber mais
+            </a>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 

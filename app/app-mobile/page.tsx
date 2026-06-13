@@ -404,10 +404,12 @@ function AppMobileContent() {
           isAppOnlyUser={isAppOnlyUser}
         />
 
-        {/* Header Mobile - Simplified */}
+        {/* Header Mobile — Glass */}
         <div
-          className={`app-mobile-navbar sticky top-0 z-40 border-b border-gray-800 transition-all duration-300 ${
-            shouldReduceSafariEffects() ? "bg-gray-900" : "bg-gray-900/95 backdrop-blur-sm"
+          className={`app-mobile-navbar sticky top-0 z-40 transition-all duration-300 ${
+            shouldReduceSafariEffects()
+              ? "bg-gray-900 border-b border-gray-800"
+              : "bg-black/50 backdrop-blur-xl border-b border-white/10 shadow-[0_1px_0_rgba(255,255,255,0.05)]"
           }`}
           style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
         >
@@ -416,7 +418,7 @@ function AppMobileContent() {
             <button
               data-tutorial="menu"
               onClick={() => setIsSidebarOpen(true)}
-              className="w-10 h-10 bg-gray-800/80 backdrop-blur-sm rounded-lg flex items-center justify-center hover:bg-gray-700 transition-all active:scale-95"
+              className="w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center hover:bg-white/20 transition-all active:scale-95 border border-white/10"
               title="Menu"
             >
               <Menu className="w-5 h-5 text-white" />
@@ -450,12 +452,12 @@ function AppMobileContent() {
                 setIsNotificationsOpen(true)
                 setUnreadCount(0)
               }}
-              className="relative w-10 h-10 bg-gray-800/80 backdrop-blur-sm rounded-lg flex items-center justify-center hover:bg-gray-700 transition-all active:scale-95"
+              className="relative w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center hover:bg-white/20 transition-all active:scale-95 border border-white/10"
               title="Notificações"
             >
               <Bell className="w-5 h-5 text-white" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none shadow-lg">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
@@ -632,19 +634,22 @@ function AppMobileContent() {
                 <NotificationsPanel
                   onClose={() => setIsNotificationsOpen(false)}
                   className="border-0 bg-transparent"
+                  isAppOnlyUser={isAppOnlyUser}
                 />
               </div>
             </div>
           </div>
         )}
 
-        {/* ── Foreground notification banner ───────────────────────── */}
+        {/* ── Foreground notification banner — glass ───────────────── */}
         {foregroundNotif && (
           <div
-            className="fixed left-4 right-4 z-[190] bg-gray-800 border border-[#D2A63C]/30 rounded-xl p-3 shadow-xl flex items-start gap-3 transition-all"
-            style={{ top: 'calc(env(safe-area-inset-top, 0px) + 72px)' }}
+            className="fixed left-3 right-3 z-[190] bg-black/60 backdrop-blur-xl border border-white/15 rounded-2xl p-3.5 shadow-2xl flex items-start gap-3 animate-in slide-in-from-top-2 duration-300"
+            style={{ top: 'calc(env(safe-area-inset-top, 0px) + 68px)' }}
           >
-            <Bell className="w-5 h-5 text-[#D2A63C] flex-shrink-0 mt-0.5" />
+            <div className="w-8 h-8 rounded-lg bg-[#D2A63C]/20 border border-[#D2A63C]/30 flex items-center justify-center flex-shrink-0">
+              <Bell className="w-4 h-4 text-[#D2A63C]" />
+            </div>
             <div className="flex-1 min-w-0">
               {foregroundNotif.title && (
                 <p className="text-sm font-semibold text-white leading-tight">{foregroundNotif.title}</p>
@@ -655,25 +660,27 @@ function AppMobileContent() {
             </div>
             <button
               onClick={() => setForegroundNotif(null)}
-              className="flex-shrink-0 w-6 h-6 flex items-center justify-center"
+              className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md bg-white/10 hover:bg-white/20 transition-colors"
             >
-              <X className="w-3.5 h-3.5 text-gray-400" />
+              <X className="w-3.5 h-3.5 text-gray-300" />
             </button>
           </div>
         )}
 
-        {/* ── Pedido de permissão de notificações (web/PWA) ────────── */}
+        {/* ── Pedido de permissão de notificações — glass ──────────── */}
         {showPermissionPrompt && !isNative && (
           <div
-            className="fixed left-4 right-4 z-[180] bg-gray-800 border border-[#D2A63C]/20 rounded-xl p-4 shadow-xl"
+            className="fixed left-3 right-3 z-[180] bg-black/70 backdrop-blur-xl border border-white/12 rounded-2xl p-4 shadow-2xl animate-in slide-in-from-bottom-2 duration-300"
             style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 84px)' }}
           >
             <div className="flex items-start gap-3">
-              <Bell className="w-5 h-5 text-[#D2A63C] flex-shrink-0 mt-0.5" />
+              <div className="w-9 h-9 rounded-xl bg-[#D2A63C]/15 border border-[#D2A63C]/25 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Bell className="w-5 h-5 text-[#D2A63C]" />
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white mb-1">Activar notificações</p>
+                <p className="text-sm font-semibold text-white mb-0.5">Activar notificações</p>
                 <p className="text-xs text-gray-400 mb-3 leading-relaxed">
-                  Recebe alertas de mercado, oportunidades DCA e avisos de subscrição em tempo real.
+                  Alertas de mercado, oportunidades DCA e avisos de subscrição em tempo real.
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -681,13 +688,13 @@ function AppMobileContent() {
                       setShowPermissionPrompt(false)
                       await requestPermission()
                     }}
-                    className="flex-1 py-2 bg-[#D2A63C] hover:bg-[#c49a2e] text-black text-sm font-semibold rounded-lg transition-colors"
+                    className="flex-1 py-2 bg-[#D2A63C] hover:bg-[#c49a2e] text-black text-sm font-bold rounded-xl transition-colors"
                   >
                     Activar
                   </button>
                   <button
                     onClick={() => setShowPermissionPrompt(false)}
-                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
+                    className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors border border-white/10"
                   >
                     Agora não
                   </button>
