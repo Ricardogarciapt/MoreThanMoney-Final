@@ -522,7 +522,7 @@ function AppMobileContent() {
           id="app-mobile-bottom-tabs"
           data-tutorial="bottom-nav"
           className="app-mobile-bottom-tabs fixed bottom-0 left-0 right-0 z-[110] bg-black border-t border-gray-800 px-2 pt-2"
-          style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "0.25rem", paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
+          style={{ display: (mounted && typeof navigator !== 'undefined' && navigator.userAgent.includes('MTMNativeApp')) ? 'none' : "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "0.25rem", paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
         >
           <button
             data-tutorial-tab="social"
