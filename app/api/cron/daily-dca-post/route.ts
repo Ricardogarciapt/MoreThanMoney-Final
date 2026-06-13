@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { hasDcaCronRunToday, markDcaCronRun } from '@/lib/cron-dca-guard'
 import { isCategoryEnabled, normalizeNotificationPreferences } from '@/lib/notification-preferences'
 
 /**
@@ -46,6 +47,10 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('🤖 [CRON DCA POST] Iniciando análise diária...')
+
+    if (await hasDcaCronRunToday('daily-dca-post')) {
+      return NextResponse.json({ success: true, skipped: true, reason: 'already_ran_today' })
+    }
 
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt').trim()
 
@@ -229,6 +234,8 @@ export async function GET(request: NextRequest) {
         console.error('❌ [CRON DCA POST] Erro ao enviar push:', pushError)
       }
     }
+
+    await markDcaCronRun('daily-dca-post', systemUserId)
 
     return NextResponse.json({
       success: true,

@@ -5,8 +5,9 @@ import { adminApiCall } from '@/lib/admin-helpers'
 import {
   Users, TrendingUp, Coins, CheckCircle2, Edit2, Trash2, Plus,
   RefreshCw, ChevronDown, Copy, Check, X, Loader2, Network,
-  ToggleLeft, ToggleRight, Search, AlertCircle
+  ToggleLeft, ToggleRight, Search, AlertCircle, ExternalLink, UserCog
 } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -42,8 +43,11 @@ interface MlmAffiliate {
   email: string
   full_name: string
   subscription_plan: string | null
+  subscription_platform?: string | null
   is_active: boolean
   subscription_status: string | null
+  subscription_expires_at?: string | null
+  mlm_sponsor_username?: string | null
   sponsor_username: string | null
   rank_name: string | null
   rank_color: string | null
@@ -54,8 +58,22 @@ interface MlmAffiliate {
   pending_commissions: number
   created_at: string
   member_category?: string | null
+  stripe_customer_id?: string | null
+  stripe_subscription_id?: string | null
   stripe_connect_account_id?: string | null
   stripe_connect_status?: string | null
+  skool_access_pending?: boolean
+  coupon_code?: string | null
+  in_mlm_tree?: boolean
+}
+
+interface NetworkStats {
+  total_in_tree: number
+  referred_pending_tree: number
+  stripe_active: number
+  stripe_platform: number
+  skool_pending: number
+  pending_commissions_total: number
 }
 
 interface MlmCommission {
@@ -238,7 +256,10 @@ export default function MlmManager({
 
   // Affiliates
   const [affiliates, setAffiliates] = useState<MlmAffiliate[]>([])
+  const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null)
   const [affiliateSearch, setAffiliateSearch] = useState('')
+  const [affiliateView, setAffiliateView] = useState<'all' | 'tree' | 'referred'>('all')
+  const [markingSkoolId, setMarkingSkoolId] = useState<string | null>(null)
 
   // Commissions
   const [commissions, setCommissions] = useState<MlmCommission[]>([])
@@ -276,10 +297,16 @@ export default function MlmManager({
   const fetchAffiliates = useCallback(async () => {
     setLoadingAffiliates(true)
     try {
-      const res = await adminApiCall<{ affiliates: MlmAffiliate[] }>('/api/admin/mlm/affiliates')
+      const viewParam =
+        affiliateView === 'tree' ? 'affiliates' : affiliateView === 'referred' ? 'referred' : ''
+      const url = viewParam
+        ? `/api/admin/mlm/affiliates?view=${viewParam}`
+        : '/api/admin/mlm/affiliates'
+      const res = await adminApiCall<{ affiliates: MlmAffiliate[]; stats?: NetworkStats }>(url)
       if (res.data?.affiliates) setAffiliates(res.data.affiliates)
+      if (res.data?.stats) setNetworkStats(res.data.stats)
     } catch { /* ignore */ } finally { setLoadingAffiliates(false) }
-  }, [])
+  }, [affiliateView])
 
   const fetchCommissions = useCallback(async (status: string) => {
     setLoadingCommissions(true)
@@ -303,7 +330,32 @@ export default function MlmManager({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [commissionFilter])
 
-  // ── Actions ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (activeSection === 'affiliates' || activeSection === 'dashboard') fetchAffiliates()
+  }, [affiliateView, activeSection, fetchAffiliates])
+
+  const handleMarkSkoolGranted = async (userId: string) => {
+    setMarkingSkoolId(userId)
+    try {
+      const res = await adminApiCall('/api/admin/users', {
+        method: 'PATCH',
+        body: JSON.stringify({ userId, mark_skool_granted: true }),
+      })
+      if (res.success) await fetchAffiliates()
+    } finally {
+      setMarkingSkoolId(null)
+    }
+  }
+
+  const platformLabel = (p?: string | null) => {
+    switch (p) {
+      case 'stripe': return { emoji: '💳', label: 'Stripe' }
+      case 'skool': return { emoji: '🏫', label: 'Skool' }
+      case 'app_store': return { emoji: '🍎', label: 'App Store' }
+      case 'manual': return { emoji: '🔧', label: 'Manual' }
+      default: return { emoji: '—', label: p || '—' }
+    }
+  }
 
   const toggleMlm = async () => {
     if (!settings) return
@@ -380,9 +432,10 @@ export default function MlmManager({
   }
 
   // ── Stats for dashboard ───────────────────────────────────────────────────
-  const totalAffiliates = affiliates.length
-  const activeAffiliates = affiliates.filter(a => a.is_active).length
-  const stripeActive = affiliates.filter(a => a.subscription_status === 'active' || a.subscription_status === 'trialing').length
+  const totalAffiliates = networkStats?.total_in_tree ?? affiliates.filter((a) => a.in_mlm_tree !== false).length
+  const stripeActive = networkStats?.stripe_active ?? affiliates.filter(a => a.subscription_status === 'active' || a.subscription_status === 'trialing').length
+  const skoolPendingCount = networkStats?.skool_pending ?? affiliates.filter((a) => a.skool_access_pending).length
+  const referredPending = networkStats?.referred_pending_tree ?? affiliates.filter((a) => a.in_mlm_tree === false).length
   const pendingCommissionsTotal = commissions
     .filter(c => c.status === 'pending')
     .reduce((s, c) => s + c.amount, 0)
@@ -454,10 +507,10 @@ export default function MlmManager({
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: 'Total Afiliados', value: totalAffiliates, icon: Users, color: '#3B82F6' },
+                { label: 'Na Árvore MLM', value: totalAffiliates, icon: Users, color: '#3B82F6' },
                 { label: 'Subs. Stripe Ativas', value: stripeActive, icon: CheckCircle2, color: '#10B981' },
-                { label: 'Comissões Pendentes', value: formatEur(pendingCommissionsTotal), icon: Coins, color: '#F59E0B' },
-                { label: 'Total Comissões Pagas', value: formatEur(paidTotal), icon: TrendingUp, color: '#D2A63C' },
+                { label: 'Referidos (sem nó)', value: referredPending, icon: Network, color: '#8B5CF6' },
+                { label: 'Comissões Pendentes', value: formatEur(networkStats?.pending_commissions_total ?? pendingCommissionsTotal), icon: Coins, color: '#F59E0B' },
               ].map((stat, i) => (
                 <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -468,6 +521,21 @@ export default function MlmManager({
                 </div>
               ))}
             </div>
+
+            {skoolPendingCount > 0 && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-amber-200 text-sm">
+                  🏫 <strong>{skoolPendingCount}</strong> membro(s) Premium Stripe aguardam acesso manual no Skool
+                </p>
+                <Link
+                  href="/admin?tab=users&filter=skool_pending"
+                  className="text-sm text-[#D2A63C] hover:underline flex items-center gap-1"
+                >
+                  Abrir gestão de utilizadores
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            )}
 
             {/* Rank Distribution */}
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
@@ -612,6 +680,22 @@ export default function MlmManager({
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <h3 className="text-white font-semibold text-lg">Rede de Afiliados</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                {(['all', 'tree', 'referred'] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setAffiliateView(v)}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                      affiliateView === v
+                        ? 'border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]'
+                        : 'border-gray-700 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {v === 'all' ? 'Todos' : v === 'tree' ? 'Árvore MLM' : 'Referidos Stripe'}
+                  </button>
+                ))}
+              </div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <Input
@@ -634,24 +718,25 @@ export default function MlmManager({
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-800">
-                        {['Username', 'Email', 'Patrocinador', 'Rank', 'Plano Stripe', 'Estado Sub.', 'Connect', 'P.Esq', 'P.Dir', 'Ganho Total', 'Data Entrada'].map((h, i) => (
+                        {['Utilizador', 'Patrocinador', 'Plataforma', 'Plano', 'Estado Sub.', 'Skool', 'Connect', 'Rank', 'Rede', 'Ganhos', 'Ações'].map((h, i) => (
                           <th key={i} className="px-4 py-3 text-left text-gray-400 text-xs font-medium whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredAffiliates.map(aff => (
+                      {filteredAffiliates.map(aff => {
+                        const plat = platformLabel(aff.subscription_platform)
+                        return (
                         <tr key={aff.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
-                          <td className="px-4 py-3 text-white font-medium">{aff.username ?? '—'}</td>
-                          <td className="px-4 py-3 text-gray-400 text-xs">{aff.email ?? '—'}</td>
-                          <td className="px-4 py-3 text-gray-400 text-xs">{aff.sponsor_username ?? '—'}</td>
                           <td className="px-4 py-3">
-                            {aff.rank_name ? (
-                              <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${aff.rank_color}25`, color: aff.rank_color ?? '#D2A63C' }}>
-                                {aff.rank_icon} {aff.rank_name}
-                              </span>
-                            ) : <span className="text-gray-600 text-xs">—</span>}
+                            <p className="text-white font-medium text-sm">{aff.username ?? '—'}</p>
+                            <p className="text-gray-500 text-xs">{aff.email ?? '—'}</p>
+                            {aff.in_mlm_tree === false && (
+                              <span className="text-[10px] text-purple-400">Referido — sem nó MLM</span>
+                            )}
                           </td>
+                          <td className="px-4 py-3 text-gray-400 text-xs">{aff.sponsor_username ?? aff.mlm_sponsor_username ?? '—'}</td>
+                          <td className="px-4 py-3 text-xs text-gray-300">{plat.emoji} {plat.label}</td>
                           <td className="px-4 py-3">
                             {aff.subscription_plan ? (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-[#D2A63C]/15 text-[#D2A63C] border border-[#D2A63C]/30 font-mono">
@@ -671,7 +756,25 @@ export default function MlmManager({
                               return <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>{s}</span>
                             })()}
                           </td>
-                          {/* Stripe Connect */}
+                          <td className="px-4 py-3">
+                            {aff.skool_access_pending ? (
+                              <div className="flex flex-col gap-1">
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">Pendente</span>
+                                <button
+                                  type="button"
+                                  disabled={markingSkoolId === aff.user_id}
+                                  onClick={() => handleMarkSkoolGranted(aff.user_id)}
+                                  className="text-[10px] text-green-400 hover:underline text-left"
+                                >
+                                  {markingSkoolId === aff.user_id ? '…' : 'Marcar Skool OK'}
+                                </button>
+                              </div>
+                            ) : aff.member_category === 'premium' || aff.subscription_plan === 'premium' ? (
+                              <span className="text-xs text-green-400">Premium</span>
+                            ) : (
+                              <span className="text-gray-600 text-xs">—</span>
+                            )}
+                          </td>
                           <td className="px-4 py-3">
                             {(() => {
                               const cs = aff.stripe_connect_status
@@ -681,14 +784,28 @@ export default function MlmManager({
                               return <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">{cs}</span>
                             })()}
                           </td>
-                          <td className="px-4 py-3 text-gray-400">{aff.left_count ?? 0}</td>
-                          <td className="px-4 py-3 text-gray-400">{aff.right_count ?? 0}</td>
-                          <td className="px-4 py-3 text-[#D2A63C] font-medium">{formatEur(aff.total_earned ?? 0)}</td>
-                          <td className="px-4 py-3 text-gray-500 text-xs">
-                            {aff.created_at ? new Date(aff.created_at).toLocaleDateString('pt-PT') : '—'}
+                          <td className="px-4 py-3">
+                            {aff.rank_name ? (
+                              <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${aff.rank_color}25`, color: aff.rank_color ?? '#D2A63C' }}>
+                                {aff.rank_icon} {aff.rank_name}
+                              </span>
+                            ) : <span className="text-gray-600 text-xs">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-gray-400 text-xs">
+                            {aff.left_count ?? 0} / {aff.right_count ?? 0}
+                          </td>
+                          <td className="px-4 py-3 text-[#D2A63C] font-medium text-sm">{formatEur(aff.total_earned ?? 0)}</td>
+                          <td className="px-4 py-3">
+                            <Link
+                              href={`/admin?tab=users&highlight=${aff.user_id}`}
+                              className="inline-flex items-center gap-1 text-xs text-[#D2A63C] hover:underline"
+                            >
+                              <UserCog className="w-3.5 h-3.5" />
+                              Gerir
+                            </Link>
                           </td>
                         </tr>
-                      ))}
+                      )})}
                       {filteredAffiliates.length === 0 && (
                         <tr>
                           <td colSpan={11} className="px-4 py-12 text-center text-gray-500">

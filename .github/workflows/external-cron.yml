@@ -1,21 +1,15 @@
 name: External Cron Runner (MoreThanMoney)
 
-# Backup opcional: o plano Vercel Pro já corre estes crons via vercel.json.
-# Mantém este workflow como redundância se a Vercel falhar ou para testes manuais
-# (workflow_dispatch).
-#
-# Configuração necessária (uma única vez):
-#   1. Gerar um valor aleatório forte para CRON_SECRET (ex: openssl rand -hex 32)
-#   2. Vercel → Project Settings → Environment Variables → CRON_SECRET = <valor>
-#   3. GitHub → Repo → Settings → Secrets and variables → Actions → CRON_SECRET = <mesmo valor>
-#   4. (Opcional) Ajustar SITE_URL abaixo se o domínio mudar
+# Backup opcional — o plano Vercel Pro corre estes crons via vercel.json.
+# CRON_SECRET deve ser idêntico em Vercel + GitHub Secrets.
 
 on:
   schedule:
-  # Alertas de preço — a cada 15 minutos
-  - cron: '*/15 * * * *'
-  # DCA / subscrições / e-mail marketing — a cada hora
-  - cron: '0 * * * *'
+    - cron: '*/15 * * * *'
+    - cron: '0 * * * *'
+    - cron: '0 3 * * *'
+    - cron: '0 8 * * *'
+    - cron: '0 9 * * *'
   workflow_dispatch: {}
 
 env:
@@ -49,18 +43,67 @@ jobs:
             --max-time 120)
           echo "nightly-tp-sl → HTTP $HTTP"
           cat /tmp/nightly-tp-sl.json || true
-          test "$HTTP" = "200" || echo "::warning::nightly-tp-sl falhou (pode ser timeout ou API admin)"
 
-  hourly:
+  hourly-email:
     if: github.event.schedule == '0 * * * *' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Verificar CRON_SECRET configurado
         run: |
           if [ -z "${{ secrets.CRON_SECRET }}" ]; then
-            echo "::error::CRON_SECRET não está definido em GitHub → Settings → Secrets → Actions"
+            echo "::error::CRON_SECRET não configurado"
             exit 1
           fi
+
+      - name: Sequências de email marketing (sequences/process)
+        run: |
+          HTTP=$(curl -s -o /tmp/email-seq.json -w "%{http_code}" -X GET "${{ env.SITE_URL }}/api/email-marketing/sequences/process" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "email-sequences → HTTP $HTTP"
+          cat /tmp/email-seq.json || true
+          test "$HTTP" = "200" || test "$HTTP" = "503" || exit 1
+
+  daily-maintenance:
+    if: github.event.schedule == '0 3 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar CRON_SECRET configurado
+        run: test -n "${{ secrets.CRON_SECRET }}" || (echo "::error::CRON_SECRET missing" && exit 1)
+
+      - name: Subscrições de membros (member-subscriptions)
+        run: |
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${{ env.SITE_URL }}/api/cron/member-subscriptions" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "member-subscriptions → HTTP $HTTP"
+          test "$HTTP" = "200" || exit 1
+
+      - name: Verificar trials expirados (check-trials)
+        continue-on-error: true
+        run: |
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${{ env.SITE_URL }}/api/cron/check-trials" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "check-trials → HTTP $HTTP"
+
+  daily-expiry:
+    if: github.event.schedule == '0 8 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar CRON_SECRET configurado
+        run: test -n "${{ secrets.CRON_SECRET }}" || (echo "::error::CRON_SECRET missing" && exit 1)
+
+      - name: Expiração de subscrições (subscription-expiry)
+        run: |
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${{ env.SITE_URL }}/api/cron/subscription-expiry" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          echo "subscription-expiry → HTTP $HTTP"
+          test "$HTTP" = "200" || exit 1
+
+  daily-dca:
+    if: github.event.schedule == '0 9 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar CRON_SECRET configurado
+        run: test -n "${{ secrets.CRON_SECRET }}" || (echo "::error::CRON_SECRET missing" && exit 1)
 
       - name: Verificação diária de DCA (daily-dca-check)
         run: |
@@ -76,31 +119,3 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             --max-time 120)
           echo "daily-dca-post → HTTP $HTTP"
-
-      - name: Subscrições de membros (member-subscriptions)
-        continue-on-error: true
-        run: |
-          HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${{ env.SITE_URL }}/api/cron/member-subscriptions" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
-          echo "member-subscriptions → HTTP $HTTP"
-
-      - name: Expiração de subscrições (subscription-expiry)
-        continue-on-error: true
-        run: |
-          HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${{ env.SITE_URL }}/api/cron/subscription-expiry" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
-          echo "subscription-expiry → HTTP $HTTP"
-
-      - name: Sequências de email marketing (sequences/process)
-        continue-on-error: true
-        run: |
-          HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${{ env.SITE_URL }}/api/email-marketing/sequences/process" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
-          echo "email-sequences → HTTP $HTTP"
-
-      - name: Verificar trials expirados (check-trials)
-        continue-on-error: true
-        run: |
-          HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X GET "${{ env.SITE_URL }}/api/cron/check-trials" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
-          echo "check-trials → HTTP $HTTP"

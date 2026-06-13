@@ -14,6 +14,8 @@ import {
   ArrowLeft,
   Shield,
   Loader2,
+  Users,
+  ExternalLink,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -106,6 +108,26 @@ export default function BackofficePage() {
               </button>
             )
           })}
+
+          <div className="pt-3 mt-3 border-t border-[#D2A63C]/15 space-y-0.5">
+            <p className="px-3 text-[10px] uppercase tracking-wider text-gray-600 mb-1">Integrações</p>
+            <Link
+              href="/admin?tab=users"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-400 hover:bg-gray-800/50 hover:text-white transition-colors"
+            >
+              <Users className="w-4 h-4 shrink-0" />
+              Gestão Utilizadores
+              <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+            </Link>
+            <Link
+              href="/admin?tab=users&filter=skool_pending"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-400 hover:bg-gray-800/50 hover:text-amber-300 transition-colors"
+            >
+              <span className="text-base leading-none">🏫</span>
+              Skool pendente (Stripe)
+              <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+            </Link>
+          </div>
         </nav>
 
         {/* Footer */}

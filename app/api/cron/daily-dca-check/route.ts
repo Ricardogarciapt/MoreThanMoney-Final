@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { hasDcaCronRunToday, markDcaCronRun } from '@/lib/cron-dca-guard'
 import { isCategoryEnabled, normalizeNotificationPreferences } from '@/lib/notification-preferences'
 
 const supabase = getSupabaseAdmin()
@@ -46,6 +47,10 @@ export async function GET(request: NextRequest) {
 
     if (!isCronAuthorized(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (await hasDcaCronRunToday('daily-dca-check')) {
+      return NextResponse.json({ success: true, skipped: true, reason: 'already_ran_today' })
     }
 
     // 1. Buscar oportunidades DCA
@@ -170,6 +175,16 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('✅ [DCA CRON] Análise DCA diária concluída:', result)
+
+    const { data: adminMarker } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_type', 'admin')
+      .limit(1)
+      .maybeSingle()
+    if (adminMarker?.id) {
+      await markDcaCronRun('daily-dca-check', adminMarker.id)
+    }
 
     return NextResponse.json(result)
   } catch (error) {

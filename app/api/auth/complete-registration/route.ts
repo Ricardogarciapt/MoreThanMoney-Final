@@ -13,6 +13,7 @@ import {
 import { isRegisteredMember } from '@/lib/member-access'
 import {
   notifyAdminsNewMember,
+  notifyAdminsVipsNewSale,
   notifySponsorNewAffiliate,
 } from '@/lib/notifications-sales'
 
@@ -255,13 +256,31 @@ export async function POST(request: NextRequest) {
 
       console.log(`✅ [COMPLETE-REG] Perfil OAuth criado para ${oauthEmail} (user: ${oauthUserId})`)
 
-      // Notificações de novo membro (fire-and-forget)
+      // Notificações de novo membro (fire-and-forget) — Admin, VIP e Sponsor
       {
         const planId = session.metadata?.plan || `${plan || 'app_member'}_${billing || 'monthly'}`
         const effectiveSponsor = (sponsor_username || session.metadata?.sponsor_username || '').trim()
-        void notifyAdminsNewMember({ name: oauthFullName, planId, sponsorUsername: effectiveSponsor || undefined })
+        const eventId = `reg_${session.id}`
+        const amountEur = (session.amount_total || 0) / 100
+        void notifyAdminsNewMember({
+          name: oauthFullName,
+          planId,
+          sponsorUsername: effectiveSponsor || undefined,
+          eventId,
+        })
+        void notifyAdminsVipsNewSale({
+          name: oauthFullName,
+          planId,
+          amountEur: amountEur > 0 ? amountEur : undefined,
+          eventId: `${eventId}_sale`,
+        })
         if (effectiveSponsor) {
-          void notifySponsorNewAffiliate({ sponsorUsername: effectiveSponsor, affiliateName: oauthFullName, planId })
+          void notifySponsorNewAffiliate({
+            sponsorUsername: effectiveSponsor,
+            affiliateName: oauthFullName,
+            planId,
+            eventId: `${eventId}_aff`,
+          })
         }
       }
 
@@ -324,13 +343,31 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ [COMPLETE-REG] Conta criada para ${email} (user: ${userId})`)
 
-    // Notificações de novo membro (fire-and-forget)
+    // Notificações de novo membro (fire-and-forget) — Admin, VIP e Sponsor
     {
       const planId = session.metadata?.plan || `${plan || 'app_member'}_${billing || 'monthly'}`
-      const effectiveSponsor = (sponsor_username || '').trim()
-      void notifyAdminsNewMember({ name: full_name, planId, sponsorUsername: effectiveSponsor || undefined })
+      const effectiveSponsor = (sponsor_username || session.metadata?.sponsor_username || '').trim()
+      const eventId = `reg_${session.id}`
+      const amountEur = (session.amount_total || 0) / 100
+      void notifyAdminsNewMember({
+        name: full_name,
+        planId,
+        sponsorUsername: effectiveSponsor || undefined,
+        eventId,
+      })
+      void notifyAdminsVipsNewSale({
+        name: full_name,
+        planId,
+        amountEur: amountEur > 0 ? amountEur : undefined,
+        eventId: `${eventId}_sale`,
+      })
       if (effectiveSponsor) {
-        void notifySponsorNewAffiliate({ sponsorUsername: effectiveSponsor, affiliateName: full_name, planId })
+        void notifySponsorNewAffiliate({
+          sponsorUsername: effectiveSponsor,
+          affiliateName: full_name,
+          planId,
+          eventId: `${eventId}_aff`,
+        })
       }
     }
 

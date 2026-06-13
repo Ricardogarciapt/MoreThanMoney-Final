@@ -22,6 +22,18 @@ export async function GET(request: NextRequest) {
     if (!isCronAuthorized(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    if (!process.env.GMAIL_APP_PASSWORD?.trim()) {
+      console.error('❌ [SEQUENCES] GMAIL_APP_PASSWORD não configurado na Vercel')
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'GMAIL_APP_PASSWORD não configurado',
+          hint: 'Define GMAIL_APP_PASSWORD e GMAIL_USER nas env vars da Vercel',
+        },
+        { status: 503 },
+      )
+    }
     
     console.log('🔄 [SEQUENCES] Processando sequências pendentes...')
     
@@ -34,7 +46,13 @@ export async function GET(request: NextRequest) {
       `)
       .eq('status', 'active')
     
-    if (enrollmentsError) throw enrollmentsError
+    if (enrollmentsError) {
+      const msg = enrollmentsError.message || ''
+      if (msg.includes('does not exist') || enrollmentsError.code === '42P01') {
+        return NextResponse.json({ success: true, processed: 0, skipped: true, reason: 'tables_missing' })
+      }
+      throw enrollmentsError
+    }
     
     if (!enrollments || enrollments.length === 0) {
       console.log('✅ [SEQUENCES] Nenhuma sequência pendente')

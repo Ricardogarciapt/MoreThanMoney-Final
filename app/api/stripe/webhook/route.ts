@@ -23,6 +23,7 @@ import {
   notifyAdminsVipsNewSale,
   notifySponsorNewClient,
   notifySponsorTeamRenewal,
+  resolveSponsorUsername,
 } from '@/lib/notifications-sales'
 
 // Nomes amigáveis dos scanners por planId (para o email de instruções TradingView)
@@ -289,7 +290,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     console.error('[MLM] Erro ao processar MLM:', mlmErr)
   }
 
-  // Notificar admins + VIPs de nova venda, e sponsor se houver referência (fire-and-forget)
+  // Notificar liderança + sponsor (fire-and-forget)
   try {
     const planId = session.metadata?.plan || 'app_member_monthly'
     const { data: saleMemberProfile } = await supabase
@@ -297,14 +298,20 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       .select('full_name, mlm_sponsor_username')
       .eq('id', userId)
       .single()
-    const memberName = saleMemberProfile?.full_name || 'Novo Membro'
+    const memberName = saleMemberProfile?.full_name || session.metadata?.full_name || 'Novo Membro'
     const amountEur = (session.amount_total || 0) / 100
-    void notifyAdminsVipsNewSale({ name: memberName, planId, amountEur })
-    if (saleMemberProfile?.mlm_sponsor_username) {
+    const eventId = `checkout_${session.id}`
+    void notifyAdminsVipsNewSale({ name: memberName, planId, amountEur, eventId })
+    const sponsorUsername = resolveSponsorUsername(
+      saleMemberProfile?.mlm_sponsor_username,
+      session.metadata?.sponsor_username,
+    )
+    if (sponsorUsername) {
       void notifySponsorNewClient({
-        sponsorUsername: saleMemberProfile.mlm_sponsor_username,
+        sponsorUsername,
         clientName: memberName,
         planId,
+        eventId: `${eventId}_client`,
       })
     }
   } catch (notifErr) {
@@ -497,6 +504,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
               sponsorId: sponsor.id,
               memberName: (profile as any).full_name || 'Um membro da tua equipa',
               commission: commissionAmount,
+              eventId: `renewal_${invoice.id}`,
             })
           }
         }

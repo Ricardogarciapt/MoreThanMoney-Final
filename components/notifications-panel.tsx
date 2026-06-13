@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Bell, Check, X, TrendingUp, TrendingDown, Target, Shield, Zap, AlertCircle, CheckCheck, MessageSquare, ExternalLink, Lock } from "lucide-react"
+import { Bell, Check, X, TrendingUp, TrendingDown, Target, Shield, Zap, AlertCircle, CheckCheck, MessageSquare, ExternalLink, Lock, RefreshCw } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 
 interface Notification {
@@ -211,6 +211,14 @@ export default function NotificationsPanel({ onClose, className, isAppOnlyUser =
         return <AlertCircle className="h-4 w-4 text-amber-400" />
       case 'stripe_skool_revoke':
         return <AlertCircle className="h-4 w-4 text-red-400" />
+      case 'new_member':
+      case 'new_sale':
+        return <TrendingUp className="h-4 w-4 text-green-400" />
+      case 'new_client':
+      case 'new_affiliate':
+        return <TrendingUp className="h-4 w-4 text-[#D2A63C]" />
+      case 'team_renewal':
+        return <RefreshCw className="h-4 w-4 text-blue-400" />
       default:
         return <Bell className="h-4 w-4 text-gray-400" />
     }
@@ -246,6 +254,12 @@ export default function NotificationsPanel({ onClose, className, isAppOnlyUser =
       case 'stripe_skool_pending':
       case 'stripe_skool_revoke':
         return notification.data?.url || '/admin?tab=users'
+      case 'new_member':
+      case 'new_sale':
+      case 'new_client':
+      case 'new_affiliate':
+      case 'team_renewal':
+        return '/app-mobile?tab=fast-start'
       default:
         return '/member-area?tab=notifications'
     }
