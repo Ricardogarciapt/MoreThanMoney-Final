@@ -36,6 +36,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const month = searchParams.get('month') // YYYY-MM
     const status = searchParams.get('status')
+    const executionMode = searchParams.get('execution_mode')
+    const tradeSource = searchParams.get('trade_source')
 
     let query = supabase
       .from('trading_plan_trades')
@@ -52,6 +54,14 @@ export async function GET(request: NextRequest) {
 
     if (status) {
       query = query.eq('status', status)
+    }
+
+    if (executionMode === 'executed' || executionMode === 'analysis') {
+      query = query.eq('execution_mode', executionMode)
+    }
+
+    if (tradeSource === 'manual' || tradeSource === 'copy' || tradeSource === 'audited') {
+      query = query.eq('trade_source', tradeSource)
     }
 
     const { data: trades, error } = await query
@@ -109,28 +119,62 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    
-    // Buscar plano ativo do utilizador
-    const { data: plan } = await supabase
+    const { execution_mode, trade_source, mtmcopy_connection_id, ...tradeFields } = body
+
+    let { data: plan } = await supabase
       .from('trading_plans')
       .select('id')
       .eq('user_id', session.user.id)
       .eq('is_active', true)
-      .single()
+      .maybeSingle()
 
     if (!plan) {
-      return NextResponse.json(
-        { success: false, error: 'Nenhum plano de trading ativo encontrado' },
-        { status: 400 }
-      )
+      const { data: newPlan, error: planError } = await supabase
+        .from('trading_plans')
+        .insert({
+          user_id: session.user.id,
+          plan_name: 'Meu Plano de Trading',
+          trading_style: 'swing',
+          favorite_pairs: [],
+          trading_sessions: {},
+          max_risk_per_trade: 1,
+          max_daily_loss: 500,
+          max_concurrent_positions: 3,
+          is_active: true,
+        })
+        .select('id')
+        .single()
+
+      if (planError || !newPlan) {
+        return NextResponse.json(
+          { success: false, error: planError?.message || 'Erro ao criar plano de trading' },
+          { status: 500 },
+        )
+      }
+      plan = newPlan
     }
+
+    const resolvedExecutionMode =
+      execution_mode === 'executed' || execution_mode === 'analysis'
+        ? execution_mode
+        : tradeFields.exit_price
+          ? 'executed'
+          : 'analysis'
+
+    const resolvedTradeSource =
+      trade_source === 'copy' || trade_source === 'audited' || trade_source === 'manual'
+        ? trade_source
+        : 'manual'
 
     const { data: trade, error } = await supabase
       .from('trading_plan_trades')
       .insert({
         plan_id: plan.id,
         user_id: session.user.id,
-        ...body
+        ...tradeFields,
+        execution_mode: resolvedExecutionMode,
+        trade_source: resolvedTradeSource,
+        mtmcopy_connection_id: mtmcopy_connection_id || null,
       })
       .select()
       .single()

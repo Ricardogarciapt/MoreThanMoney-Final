@@ -24,10 +24,14 @@ import {
 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
+type ExecutionModeFilter = 'all' | 'executed' | 'analysis'
+
 interface Trade {
   id: string
   symbol: string
   direction: 'long' | 'short'
+  execution_mode?: 'executed' | 'analysis'
+  trade_source?: 'manual' | 'copy' | 'audited'
   entry_price: number
   exit_price?: number
   lot_size: number
@@ -54,6 +58,7 @@ export default function TradingJournal() {
   const [loading, setLoading] = useState(true)
   const [showAddTradeModal, setShowAddTradeModal] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [executionFilter, setExecutionFilter] = useState<ExecutionModeFilter>('all')
   const { toast } = useToast()
 
   // Form state
@@ -72,17 +77,19 @@ export default function TradingJournal() {
     entry_reason: '',
     emotions: '',
     lessons_learned: '',
-    timeframe: ''
+    timeframe: '',
+    execution_mode: 'analysis' as 'executed' | 'analysis',
   })
 
   useEffect(() => {
     loadTrades()
-  }, [])
+  }, [executionFilter])
 
   const loadTrades = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/trading-plans/trades', {
+      const params = executionFilter !== 'all' ? `?execution_mode=${executionFilter}` : ''
+      const response = await fetch(`/api/trading-plans/trades${params}`, {
         credentials: 'include',
         cache: 'no-store'
       })
@@ -117,7 +124,9 @@ export default function TradingJournal() {
           stop_loss: tradeForm.stop_loss ? parseFloat(tradeForm.stop_loss) : null,
           take_profit: tradeForm.take_profit ? parseFloat(tradeForm.take_profit) : null,
           risk_amount: parseFloat(tradeForm.risk_amount),
-          status: tradeForm.exit_price ? 'closed' : 'open'
+          status: tradeForm.exit_price ? 'closed' : 'open',
+          execution_mode: tradeForm.execution_mode,
+          trade_source: 'manual',
         }),
         credentials: 'include',
         cache: 'no-store'
@@ -168,7 +177,8 @@ export default function TradingJournal() {
       entry_reason: '',
       emotions: '',
       lessons_learned: '',
-      timeframe: ''
+      timeframe: '',
+      execution_mode: 'analysis',
     })
   }
 
@@ -202,11 +212,22 @@ export default function TradingJournal() {
   return (
     <div className="space-y-6">
       {/* Header com botão adicionar */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h3 className="text-2xl font-bold text-white">Trading Journal</h3>
-          <p className="text-gray-400 mt-1">Regista e analisa os teus trades</p>
+          <p className="text-gray-400 mt-1">Executadas = trades reais · Análise = forward testing</p>
         </div>
+        <div className="flex items-center gap-2">
+          <Select value={executionFilter} onValueChange={(v) => setExecutionFilter(v as ExecutionModeFilter)}>
+            <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="executed">Executada</SelectItem>
+              <SelectItem value="analysis">Análise / forward</SelectItem>
+            </SelectContent>
+          </Select>
         <Dialog open={showAddTradeModal} onOpenChange={setShowAddTradeModal}>
           <DialogTrigger asChild>
             <Button className="bg-purple-600 hover:bg-purple-700 text-white">
@@ -328,6 +349,21 @@ export default function TradingJournal() {
                       className="bg-gray-800 border-gray-700 text-white"
                       placeholder="1.09500"
                     />
+                  </div>
+                  <div>
+                    <Label htmlFor="execution_mode" className="text-gray-300">Tipo de registo *</Label>
+                    <Select
+                      value={tradeForm.execution_mode}
+                      onValueChange={(value) => setTradeForm({...tradeForm, execution_mode: value as 'executed' | 'analysis'})}
+                    >
+                      <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700">
+                        <SelectItem value="executed">Executada (trade real)</SelectItem>
+                        <SelectItem value="analysis">Análise / forward testing</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label htmlFor="risk_amount" className="text-gray-300">Valor Arriscado ($) *</Label>
@@ -474,6 +510,7 @@ export default function TradingJournal() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Lista de Trades */}
@@ -486,6 +523,9 @@ export default function TradingJournal() {
                   <div className="flex items-center gap-4">
                     <Badge className={trade.direction === 'long' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}>
                       {trade.direction.toUpperCase()}
+                    </Badge>
+                    <Badge className={trade.execution_mode === 'executed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'}>
+                      {trade.execution_mode === 'executed' ? 'Executada' : 'Análise'}
                     </Badge>
                     <div>
                       <div className="font-semibold text-white text-lg">{trade.symbol}</div>

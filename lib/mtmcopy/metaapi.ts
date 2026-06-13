@@ -71,7 +71,7 @@ type RpcConnection = {
     takeProfit?: number,
     options?: { trailingStopLoss?: TrailingStopLossOptions },
   ) => Promise<unknown>
-  closePosition: (positionId: string) => Promise<unknown>
+  closePosition: (positionId: string, options?: { volume?: number }) => Promise<unknown>
   closePositionsBySymbol: (symbol: string) => Promise<unknown>
   close: () => Promise<void>
 }
@@ -96,6 +96,7 @@ export interface MetaApiPosition {
   symbol: string
   type: string
   openPrice: number
+  volume?: number
   currentPrice?: number
   stopLoss?: number
   takeProfit?: number
@@ -498,6 +499,29 @@ export async function modifyPositionSlTp(
     return { success: true }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao modificar posição'
+    return { success: false, error: message }
+  } finally {
+    if (close) await close()
+  }
+}
+
+export async function closePositionById(
+  accountId: string,
+  positionId: string,
+  volume?: number,
+): Promise<{ success: boolean; error?: string }> {
+  let close: (() => Promise<void>) | undefined
+  try {
+    const { connection, close: closeFn } = await getRpcConnection(accountId)
+    close = closeFn
+    if (volume != null && volume > 0) {
+      await connection.closePosition(positionId, { volume })
+    } else {
+      await connection.closePosition(positionId)
+    }
+    return { success: true }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao fechar posição'
     return { success: false, error: message }
   } finally {
     if (close) await close()

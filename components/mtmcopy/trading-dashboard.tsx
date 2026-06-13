@@ -1,12 +1,15 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import Link from "next/link"
 import {
-  Activity, BarChart3, CheckCircle2, Loader2, RefreshCw,
-  TrendingDown, TrendingUp, Wallet, Zap, XCircle,
+  Activity, BarChart3, BookOpen, CheckCircle2, ClipboardList, Loader2, RefreshCw,
+  Target, TrendingDown, TrendingUp, Wallet, Zap, XCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MTM_GOLD } from "@/components/mtmcopy/mtmcopy-shared"
+
+type MetricsTab = "copy" | "journal" | "plan"
 
 interface MetricsResponse {
   summary: {
@@ -27,8 +30,31 @@ interface MetricsResponse {
   }
   topSymbols: { symbol: string; count: number }[]
   dailyActivity: { date: string; executed: number; total: number }[]
-  accountBalances: { connectionId: string; label: string; balance: number | null }[]
+  accountBalances: { connectionId: string; label: string; balance: number | null; isAudited?: boolean }[]
   connectionCount: number
+  journal?: {
+    metrics: {
+      total_trades?: number
+      win_rate?: number
+      net_pnl?: number
+      profit_factor?: number
+      avg_rr?: number
+    } | null
+    executedCount: number
+    analysisCount: number
+    bySource: { manual: number; copy: number; audited: number }
+  }
+  tradingPlan?: {
+    id: string
+    plan_name: string
+    trader_name?: string | null
+    max_risk_per_trade?: number | null
+    max_daily_loss?: number | null
+    daily_profit_target?: number | null
+    monthly_profit_target?: number | null
+    is_trading?: boolean | null
+  } | null
+  auditedAccounts?: { id: string; label: string; mt5_status: string }[]
 }
 
 function KpiCard({
@@ -110,6 +136,7 @@ export default function TradingDashboard({
 }) {
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<MetricsTab>("copy")
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -136,35 +163,179 @@ export default function TradingDashboard({
 
   if (!metrics) return null
 
-  const { summary, topSymbols, dailyActivity, accountBalances } = metrics
+  const { summary, topSymbols, dailyActivity, accountBalances, journal, tradingPlan, auditedAccounts } = metrics
   const buyPct = summary.buys + summary.sells > 0
     ? Math.round((summary.buys / (summary.buys + summary.sells)) * 100)
     : 50
 
+  const tabs: { id: MetricsTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: "copy", label: "Cópia MTMcopier", icon: Zap },
+    { id: "journal", label: "Trading Journal", icon: BookOpen },
+    { id: "plan", label: "Plano de trading", icon: ClipboardList },
+  ]
+
   return (
     <div className={variant === "broker" ? "" : "mb-14"}>
-      <div className={`flex items-center justify-between ${variant === "broker" ? "mb-4" : "mb-5"}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-3 ${variant === "broker" ? "mb-4" : "mb-5"}`}>
         {variant !== "broker" ? (
           <div>
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <BarChart3 className="w-5 h-5" style={{ color: MTM_GOLD }} />
               Dashboard de trading
             </h2>
-            <p className="text-sm text-zinc-500 mt-0.5">Desempenho da cópia automática MTMcopier</p>
+            <p className="text-sm text-zinc-500 mt-0.5">Cópia automática · journal · plano (scanner-access)</p>
           </div>
         ) : (
-          <p className="text-xs text-zinc-500 uppercase tracking-widest">Resumo da conta</p>
+          <p className="text-xs text-zinc-500 uppercase tracking-widest">Terminal de performance</p>
         )}
-        <button
-          onClick={load}
-          className="text-zinc-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-zinc-800"
-          title="Atualizar métricas"
-        >
-          <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/scanner-access"
+            className="text-xs text-zinc-500 hover:text-[#D2A63C] transition-colors hidden sm:inline"
+          >
+            Abrir scanner-access →
+          </Link>
+          <button
+            onClick={load}
+            className="text-zinc-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-zinc-800"
+            title="Atualizar métricas"
+          >
+            <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+          </button>
+        </div>
       </div>
 
-      {/* KPIs */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {tabs.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={cn(
+              "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-colors",
+              tab === id
+                ? "border-[#D2A63C]/40 bg-[#D2A63C]/10 text-[#D2A63C]"
+                : "border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:text-white",
+            )}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "journal" && (
+        <div className="space-y-4 mb-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <KpiCard
+              label="Executadas"
+              value={journal?.executedCount ?? 0}
+              sub="Trades reais no journal"
+              icon={CheckCircle2}
+              accent="green"
+            />
+            <KpiCard
+              label="Análise"
+              value={journal?.analysisCount ?? 0}
+              sub="Forward testing"
+              icon={BookOpen}
+              accent="blue"
+            />
+            <KpiCard
+              label="Win rate"
+              value={journal?.metrics?.win_rate != null ? `${journal.metrics.win_rate}%` : "—"}
+              sub={`${journal?.metrics?.total_trades ?? 0} trades fechadas (mês)`}
+              icon={Target}
+              accent="gold"
+            />
+            <KpiCard
+              label="P&L líquido"
+              value={
+                journal?.metrics?.net_pnl != null
+                  ? `${Number(journal.metrics.net_pnl).toLocaleString("pt-PT", { minimumFractionDigits: 2 })}`
+                  : "—"
+              }
+              sub={`PF ${journal?.metrics?.profit_factor ?? "—"} · RR ${journal?.metrics?.avg_rr ?? "—"}`}
+              icon={TrendingUp}
+              accent={Number(journal?.metrics?.net_pnl) >= 0 ? "green" : "red"}
+            />
+          </div>
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+            <p className="text-sm font-semibold text-white mb-3">Origem das trades</p>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-xl border border-zinc-800 p-3">
+                <p className="text-[10px] uppercase text-zinc-600">Manual</p>
+                <p className="text-xl font-bold text-white">{journal?.bySource.manual ?? 0}</p>
+              </div>
+              <div className="rounded-xl border border-zinc-800 p-3">
+                <p className="text-[10px] uppercase text-zinc-600">Cópia</p>
+                <p className="text-xl font-bold text-[#D2A63C]">{journal?.bySource.copy ?? 0}</p>
+              </div>
+              <div className="rounded-xl border border-zinc-800 p-3">
+                <p className="text-[10px] uppercase text-zinc-600">Auditada</p>
+                <p className="text-xl font-bold text-emerald-400">{journal?.bySource.audited ?? 0}</p>
+              </div>
+            </div>
+            {(auditedAccounts?.length ?? 0) > 0 && (
+              <p className="text-xs text-zinc-500 mt-4">
+                Contas auditadas: {auditedAccounts!.map((a) => a.label).join(", ")}
+              </p>
+            )}
+            <p className="text-xs text-zinc-600 mt-3">
+              Regista trades em{" "}
+              <Link href="/scanner-access" className="text-[#D2A63C] hover:underline">
+                scanner-access
+              </Link>
+              . Executadas = reais; Análise = forward testing.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {tab === "plan" && (
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 mb-4">
+          {tradingPlan ? (
+            <div className="space-y-4">
+              <div>
+                <p className="text-lg font-bold text-white">{tradingPlan.plan_name}</p>
+                {tradingPlan.trader_name && (
+                  <p className="text-sm text-zinc-500">{tradingPlan.trader_name}</p>
+                )}
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="rounded-xl border border-zinc-800 p-3">
+                  <p className="text-[10px] uppercase text-zinc-600">Risco / trade</p>
+                  <p className="text-lg font-bold text-white">{tradingPlan.max_risk_per_trade ?? "—"}%</p>
+                </div>
+                <div className="rounded-xl border border-zinc-800 p-3">
+                  <p className="text-[10px] uppercase text-zinc-600">Perda máx. dia</p>
+                  <p className="text-lg font-bold text-white">{tradingPlan.max_daily_loss ?? "—"}</p>
+                </div>
+                <div className="rounded-xl border border-zinc-800 p-3">
+                  <p className="text-[10px] uppercase text-zinc-600">Alvo dia</p>
+                  <p className="text-lg font-bold text-emerald-400">{tradingPlan.daily_profit_target ?? "—"}</p>
+                </div>
+                <div className="rounded-xl border border-zinc-800 p-3">
+                  <p className="text-[10px] uppercase text-zinc-600">Alvo mês</p>
+                  <p className="text-lg font-bold text-[#D2A63C]">{tradingPlan.monthly_profit_target ?? "—"}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <ClipboardList className="w-10 h-10 text-zinc-700 mx-auto mb-3" />
+              <p className="text-zinc-400">Ainda não tens plano de trading activo.</p>
+              <Link href="/scanner-access" className="text-sm text-[#D2A63C] hover:underline mt-2 inline-block">
+                Criar plano em scanner-access →
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "copy" && (
+      <>
+      {/* KPIs copy */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <KpiCard
           label="Executados"
@@ -281,7 +452,12 @@ export default function TradingDashboard({
             <ul className="space-y-3">
               {accountBalances.map((a) => (
                 <li key={a.connectionId} className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-zinc-400 truncate">{a.label}</span>
+                  <span className="text-sm text-zinc-400 truncate">
+                    {a.label}
+                    {a.isAudited && (
+                      <span className="ml-1.5 text-[10px] uppercase text-emerald-500/80">auditada</span>
+                    )}
+                  </span>
                   <span className="text-sm font-mono font-semibold text-white">
                     {a.balance != null
                       ? `${a.balance.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}`
@@ -299,6 +475,8 @@ export default function TradingDashboard({
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   )
 }

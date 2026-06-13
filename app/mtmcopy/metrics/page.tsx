@@ -63,7 +63,8 @@ export default function MtmcopyMetricsPage() {
               Terminal de performance
             </h1>
             <p className="text-zinc-400 mt-2 max-w-xl">
-              Monitoriza execuções, taxa de sucesso, saldos e actividade — como numa área de cliente de corretora.
+              Cópia automática, trading journal e plano de trading — interligado com{" "}
+              <a href="/scanner-access" className="text-[#D2A63C] hover:underline">scanner-access</a>.
             </p>
           </div>
           <div className="flex gap-3">

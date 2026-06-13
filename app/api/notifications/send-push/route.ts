@@ -175,9 +175,13 @@ export async function POST(request: NextRequest) {
     const apnsPattern = /^[0-9a-f]{64}$/i
     const webTokens = fcmTokens.filter((t) => {
       const info = t.device_info as Record<string, unknown> | null
-      const isNativeApns = info?.nativeApp === true || info?.platform === 'ios-apns'
-      const looksLikeApns = apnsPattern.test(t.token)
-      return !isNativeApns && !looksLikeApns
+      const platform = info?.platform as string | undefined
+      // Só excluir tokens APNs raw (MTM Native Shell iOS) — que têm platform 'ios-apns'
+      // ou que são literalmente 64 hex chars (token APNs bruto).
+      // Tokens Capacitor iOS/Android têm platform 'ios'/'android' com nativeApp:true
+      // e são tokens FCM — devem ser enviados via Firebase Messaging normalmente.
+      const isRawApns = platform === 'ios-apns' || apnsPattern.test(t.token)
+      return !isRawApns
     })
     const apnsTokens = fcmTokens.filter((t) => !webTokens.includes(t))
 
@@ -229,35 +233,40 @@ export async function POST(request: NextRequest) {
 
     const response = await admin.messaging().sendEachForMulticast(message)
 
+    const invalidTokens: string[] = []
     const historyPromises = webTokens.map(async (tokenData, idx) => {
-      const status = response.responses[idx]?.success ? 'sent' : 'failed'
+      const resp = response.responses[idx]
+      const status = resp?.success ? 'sent' : 'failed'
+      const errorCode = resp?.error?.code as string | undefined
+      const errorMessage = errorCode ?? (resp?.success ? undefined : 'unknown_error')
+
+      // Tokens inválidos/expirados — remover da DB
+      if (
+        errorCode === 'messaging/invalid-registration-token' ||
+        errorCode === 'messaging/registration-token-not-registered'
+      ) {
+        invalidTokens.push(tokens[idx])
+      }
+
+      if (!resp?.success && errorCode) {
+        console.warn(`⚠️ [SEND PUSH] Token falhou (${errorCode}): ${tokens[idx].substring(0, 20)}...`)
+      }
+
       return supabase.from('notification_history').insert({
         user_id: tokenData.user_id,
         title: payload.title,
         body: payload.body,
         data: payload.data || {},
         status,
+        error_message: errorMessage ?? null,
         sent_at: new Date().toISOString(),
       })
     })
     await Promise.all(historyPromises)
 
-    if (response.failureCount > 0) {
-      const invalidTokens: string[] = []
-      response.responses.forEach((resp: { success: boolean; error?: { code?: string } }, idx: number) => {
-        if (!resp.success && resp.error) {
-          const errorCode = resp.error.code
-          if (
-            errorCode === 'messaging/invalid-registration-token' ||
-            errorCode === 'messaging/registration-token-not-registered'
-          ) {
-            invalidTokens.push(tokens[idx])
-          }
-        }
-      })
-      if (invalidTokens.length > 0) {
-        await supabase.from('fcm_tokens').delete().in('token', invalidTokens)
-      }
+    if (invalidTokens.length > 0) {
+      console.log(`🗑️ [SEND PUSH] Removing ${invalidTokens.length} invalid tokens`)
+      await supabase.from('fcm_tokens').delete().in('token', invalidTokens)
     }
 
     return NextResponse.json({

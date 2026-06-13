@@ -38,7 +38,12 @@ export interface MTMcopierConnection {
   exit_pct_tp2?: number | null
   exit_pct_tp3?: number | null
   copyfactory_strategy_pick?: string | null
+  is_audited?: boolean
+  audit_label?: string | null
 }
+
+export type TradingTradeSource = 'manual' | 'copy' | 'audited'
+export type TradingExecutionMode = 'executed' | 'analysis'
 
 /** @deprecated usar resolveMtmcopyUserLimits() — VIP: 5, member: 4, admin: ilimitado */
 export { MAX_MTMCOPY_ACCOUNTS_MEMBER as MAX_MTMCOPY_ACCOUNTS_TOTAL } from './account-limits'

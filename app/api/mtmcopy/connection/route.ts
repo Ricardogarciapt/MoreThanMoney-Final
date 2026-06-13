@@ -111,6 +111,8 @@ export async function POST(request: NextRequest) {
     exit_pct_tp2,
     exit_pct_tp3,
     copyfactory_strategy_pick,
+    is_audited,
+    audit_label,
   } = body
 
   if (lot_mode && !['fixed', 'risk_percent', 'multiplier'].includes(lot_mode)) {
@@ -151,6 +153,8 @@ export async function POST(request: NextRequest) {
   if (copyfactory_strategy_pick !== undefined) {
     payload.copyfactory_strategy_pick = copyfactory_strategy_pick?.trim() || null
   }
+  if (typeof is_audited === 'boolean') payload.is_audited = is_audited
+  if (audit_label !== undefined) payload.audit_label = String(audit_label).trim() || null
 
   const effectiveMethod =
     copy_method === 'telegram_group' || copy_method === 'strategy' || copy_method === 'master_slave'

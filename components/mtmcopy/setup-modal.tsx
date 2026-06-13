@@ -60,6 +60,8 @@ export interface MTMcopierConnection {
   reverse_signals: boolean
   is_active: boolean
   account_label?: string | null
+  is_audited?: boolean
+  audit_label?: string | null
   account_balance?: number | null
   account_equity?: number | null
   metaapi_account_id?: string | null
@@ -102,8 +104,11 @@ function accountTabLabel(conn: MTMcopierConnection, index: number) {
 }
 
 function loadFormFromConnection(conn: MTMcopierConnection | null) {
+  const rawLabel = conn?.account_label?.trim()
   return {
-    accountLabel: conn?.account_label ?? "",
+    accountLabel: rawLabel && rawLabel.toLowerCase() !== "null" ? rawLabel : "",
+    isAudited: conn?.is_audited ?? false,
+    auditLabel: conn?.audit_label ?? "",
     telegramChannel: conn?.telegram_channel ?? "",
     mt5Server: conn?.mt5_server ?? "",
     lotMode: (conn?.lot_mode ?? "fixed") as MTMcopierConnection["lot_mode"],
@@ -196,6 +201,8 @@ export default function SetupModal({
   const isCopyTraderSlave = copyMethod === "master_slave" && showSlaveSettings
 
   const [accountLabel, setAccountLabel] = useState("")
+  const [isAudited, setIsAudited] = useState(false)
+  const [auditLabel, setAuditLabel] = useState("")
   const [telegramChannel, setTelegramChannel] = useState("")
   const [mt5Platform, setMt5Platform] = useState<"mt4" | "mt5">("mt5")
   const [mt5Login, setMt5Login] = useState("")
@@ -259,6 +266,8 @@ export default function SetupModal({
   useEffect(() => {
     const f = loadFormFromConnection(selectedConn)
     setAccountLabel(f.accountLabel)
+    setIsAudited(f.isAudited)
+    setAuditLabel(f.auditLabel)
     setTelegramChannel(f.telegramChannel)
     setMt5Server(f.mt5Server)
     setLotMode(f.lotMode)
@@ -344,6 +353,8 @@ export default function SetupModal({
 
     const base = {
       account_label: accountLabel.trim() || null,
+      is_audited: isAudited,
+      audit_label: isAudited ? auditLabel.trim() || null : null,
     }
 
     if (!showSlaveSettings) {
@@ -657,7 +668,41 @@ export default function SetupModal({
               className="bg-gray-800 border-gray-700 text-white"
               disabled={saving || deleting}
             />
+            {!isMasterSelected && !isNewMaster && (
+              <p className="text-xs text-zinc-500 mt-1.5">
+                Se deixares o nome vazio, mostramos o número da conta MT5.
+              </p>
+            )}
           </div>
+
+          {showSlaveSettings && !isCopyTraderSlave && (
+            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isAudited}
+                  onChange={(e) => setIsAudited(e.target.checked)}
+                  className="mt-1 rounded border-gray-600"
+                  disabled={saving || deleting}
+                />
+                <span>
+                  <span className="text-sm font-medium text-white block">Conta auditada (métricas transparentes)</span>
+                  <span className="text-xs text-zinc-400">
+                    Liga como MyFXBook — alimenta o journal e métricas pessoais sem misturar com a cópia automática.
+                  </span>
+                </span>
+              </label>
+              {isAudited && (
+                <Input
+                  value={auditLabel}
+                  onChange={(e) => setAuditLabel(e.target.value)}
+                  placeholder="ex: Conta prop FTMO · auditada"
+                  className="bg-gray-800 border-gray-700 text-white"
+                  disabled={saving || deleting}
+                />
+              )}
+            </div>
+          )}
 
           {showSlaveSettings && (copyMethod === "strategy" || copyMethod === "telegram_group") && (
             <div className="rounded-lg border border-zinc-700/80 bg-zinc-800/30 px-3 py-2 text-xs text-zinc-400">

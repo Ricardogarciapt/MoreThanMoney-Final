@@ -1,5 +1,6 @@
 import type { MtmcopyChannelKey } from './channel-context'
 import { isPremiumTpHitMessage, shouldIgnoreChannelMessage } from './channel-context'
+import { resolvePremiumTradeActiveVariant, type PremiumTradeActiveVariant } from './premium-trade-active'
 import {
   premiumTrailingWithActivation,
   TRADE_IDEAS_TRAILING_PIPS,
@@ -401,9 +402,18 @@ export function parseSignal(text: string): ParsedSignal | null {
 }
 
 export interface ParsedManagement {
-  type: 'breakeven' | 'move_sl' | 'close' | 'close_all' | 'enable_trailing' | 'cancel_orders'
+  type:
+    | 'breakeven'
+    | 'move_sl'
+    | 'close'
+    | 'close_all'
+    | 'enable_trailing'
+    | 'cancel_orders'
+    | 'premium_trade_active'
   symbol: string | null
   sl: number | null
+  /** Premium — «Trade active and running» */
+  premiumVariant?: PremiumTradeActiveVariant | null
   /** Trailing em pips (Trade Ideas / legado) — MetaAPI RELATIVE_PIPS */
   trailingPips?: number | null
   /** Trailing completo (Premium — activação + distância) */
@@ -449,7 +459,11 @@ export function looksLikeManagementUpdate(text: string, channel?: MtmcopyChannel
   if (!text || shouldIgnoreChannelMessage(text)) return false
 
   if (channel === 'premium-signals') {
-    return isPremiumTpHitMessage(text) || isCancelInstruction(text)
+    return (
+      isPremiumTpHitMessage(text) ||
+      isCancelInstruction(text) ||
+      resolvePremiumTradeActiveVariant(text) != null
+    )
   }
 
   return (
@@ -502,6 +516,17 @@ function parsePremiumManagement(text: string, parentText: string | null): Parsed
         sl: null,
         tpLevel: level,
       }
+    }
+  }
+
+  const tradeActiveVariant = resolvePremiumTradeActiveVariant(text)
+  if (tradeActiveVariant) {
+    const symbol = extractSymbolFromContext(text, parentText) ?? 'XAUUSD'
+    return {
+      type: 'premium_trade_active',
+      symbol,
+      sl: null,
+      premiumVariant: tradeActiveVariant,
     }
   }
 
