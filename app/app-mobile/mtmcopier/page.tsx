@@ -1,44 +1,54 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { waitForSupabaseSession } from "@/lib/supabase-session"
 import {
-  ArrowLeft,
-  Send,
-  Wifi,
-  WifiOff,
-  AlertCircle,
-  Clock,
-  RefreshCw,
-  ExternalLink,
-  Lock,
-  TrendingUp,
-  Activity,
-  CheckCircle2,
-  XCircle,
-  ToggleLeft,
-  ToggleRight,
+  ArrowLeft, Send, RefreshCw, Lock, ExternalLink,
+  CheckCircle2, Settings2, Plus, Zap, Loader2,
+  AlertTriangle, BarChart3, History, ChevronDown, ChevronUp, Power,
 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import Link from "next/link"
+import SetupModal, { type MTMcopierConnection, type MtmcopySenderMode } from "@/components/mtmcopy/setup-modal"
+import {
+  StatusPill, SignalCard, EmptySignals, ModeBanner, CopyTraderBanner,
+  formatRelative, formatMt5Money,
+} from "@/components/mtmcopy/mtmcopy-shared"
+import {
+  copyMethodLabel, parseTelegramGroups, telegramGroupsLabel,
+  type MtmcopyCopyMethod,
+} from "@/lib/mtmcopy/copy-methods"
+import {
+  countCopyTraderSlaves, maxCopyTraderSlaves,
+} from "@/lib/mtmcopy/copy-limits"
+import { isMasterReadyForCopySlaves } from "@/lib/mtmcopy/user-copy-context"
+import {
+  getClientConnectionTitle, isMasterConnection, MTM_MASTER_LABEL,
+} from "@/lib/mtmcopy/display-utils"
+import type { MtmcopyUserLimits } from "@/lib/mtmcopy/account-limits"
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Connection {
-  id: string
-  account_label?: string | null
-  mt5_login_last4?: string | null
-  mt5_server?: string | null
-  mt5_status: "pending" | "connected" | "error" | "disconnected"
-  telegram_status: "pending" | "connected" | "error" | "disconnected"
-  copy_method?: string | null
-  is_active: boolean
-  last_signal_at?: string | null
-  last_error?: string | null
+type ConnRow = MTMcopierConnection & {
+  last_signal_at: string | null
+  last_error: string | null
   account_balance?: number | null
   account_equity?: number | null
+  copyfactory_subscribed?: boolean
+}
+
+interface SignalLog {
+  id: string
+  symbol: string | null
+  direction: string | null
+  entry: number | null
+  sl: number | null
+  tp: number | null
+  lot: number | null
+  status: "received" | "executed" | "skipped" | "error"
+  detail: string | null
+  created_at: string
 }
 
 interface AccessStatus {
@@ -48,39 +58,72 @@ interface AccessStatus {
   reason: string
 }
 
-// ─── Status helpers ───────────────────────────────────────────────────────────
+// ─── Signal History (mobile) ──────────────────────────────────────────────────
 
-function StatusIcon({ status }: { status: string }) {
-  switch (status) {
-    case "connected":
-      return <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-    case "pending":
-      return <Clock className="w-4 h-4 text-yellow-400" />
-    case "error":
-      return <XCircle className="w-4 h-4 text-red-400" />
-    default:
-      return <WifiOff className="w-4 h-4 text-gray-500" />
-  }
-}
+function SignalHistoryMobile({ accessToken }: { accessToken: string }) {
+  const [signals, setSignals] = useState<SignalLog[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [expanded, setExpanded] = useState(false)
 
-function StatusLabel({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    connected: { label: "Ligado", cls: "text-emerald-400" },
-    pending: { label: "A ligar…", cls: "text-yellow-400" },
-    error: { label: "Erro", cls: "text-red-400" },
-    disconnected: { label: "Desligado", cls: "text-gray-500" },
-  }
-  const s = map[status] ?? { label: status, cls: "text-gray-400" }
-  return <span className={`text-xs font-medium ${s.cls}`}>{s.label}</span>
-}
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/mtmcopy/signals?limit=30", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSignals(data.signals ?? [])
+        setTotal(data.total ?? 0)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [accessToken])
 
-function methodLabel(method?: string | null): string {
-  switch (method) {
-    case "telegram_group": return "Grupos de sinais"
-    case "strategy": return "Estratégia MTM"
-    case "master_slave": return "Copy Trader pessoal"
-    default: return "Automático"
-  }
+  useEffect(() => { load() }, [load])
+
+  const visible = expanded ? signals : signals.slice(0, 5)
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+          <History className="w-3.5 h-3.5" />
+          Histórico de sinais
+          {total > 0 && <span className="normal-case font-normal">({total})</span>}
+        </h2>
+        <button onClick={load} className="p-1.5 hover:bg-gray-800 rounded-lg transition-colors">
+          <RefreshCw className={`w-3.5 h-3.5 text-gray-400 ${loading ? "animate-spin" : ""}`} />
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="w-6 h-6 text-[#D2A63C] animate-spin" />
+        </div>
+      ) : signals.length === 0 ? (
+        <EmptySignals />
+      ) : (
+        <>
+          <div className="space-y-2">
+            {visible.map(sig => <SignalCard key={sig.id} signal={sig} />)}
+          </div>
+          {signals.length > 5 && (
+            <button
+              onClick={() => setExpanded(e => !e)}
+              className="w-full flex items-center justify-center gap-1.5 text-sm text-gray-400 hover:text-white py-2 transition-colors"
+            >
+              {expanded
+                ? <><ChevronUp className="w-4 h-4" /> Ver menos</>
+                : <><ChevronDown className="w-4 h-4" /> Ver todos ({signals.length})</>}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  )
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -88,19 +131,34 @@ function methodLabel(method?: string | null): string {
 export default function MtmcopierMobilePage() {
   const router = useRouter()
   const [access, setAccess] = useState<AccessStatus | null>(null)
-  const [connections, setConnections] = useState<Connection[]>([])
+  const [connections, setConnections] = useState<ConnRow[]>([])
+  const [accessToken, setAccessToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [toggling, setToggling] = useState<string | null>(null)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [showSetup, setShowSetup] = useState(false)
+  const [setupSelectionId, setSetupSelectionId] = useState<string | "new" | null>(null)
+  const [senderMode, setSenderMode] = useState<MtmcopySenderMode>("telegram")
+  const [copyMethod, setCopyMethod] = useState<MtmcopyCopyMethod>("telegram_group")
+  const [subscribed, setSubscribed] = useState(false)
+  const [accountLimits, setAccountLimits] = useState<MtmcopyUserLimits | null>(null)
+  const [checkingOut, setCheckingOut] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [verifyMsg, setVerifyMsg] = useState("")
+  const [error, setError] = useState("")
 
-  // ── Load access + connections ──
-  const loadData = useCallback(async () => {
-    setLoading(true)
+  const hasConnections = connections.length > 0
+  const masterConn = connections.find(c => c.account_role === "master") ?? null
+  const isCopyTrader = senderMode === "master_account" || Boolean(masterConn)
+
+  // ── Load all data ────────────────────────────────────────────────────────────
+  const loadData = useCallback(async (token?: string) => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push("/app-mobile/login"); return }
 
-      const token = session.access_token
-      const headers = { Authorization: `Bearer ${token}` }
+      const tok = token ?? session.access_token
+      setAccessToken(tok)
+      const headers = { Authorization: `Bearer ${tok}` }
 
       const [accessRes, connRes] = await Promise.all([
         fetch("/api/mtmcopy/access", { headers }),
@@ -115,9 +173,15 @@ export default function MtmcopierMobilePage() {
       if (connRes.ok) {
         const data = await connRes.json()
         setConnections(data.connections ?? [])
+        if (data.sender_mode) setSenderMode(data.sender_mode)
+        const first = (data.connections ?? [])[0]
+        if (first?.copy_method) setCopyMethod(first.copy_method)
+        else if (data.sender_mode === "master_account") setCopyMethod("master_slave")
+        setSubscribed(Boolean(data.subscribed))
+        if (data.limits) setAccountLimits(data.limits)
       }
     } catch (err) {
-      console.error("[MTMcopier mobile] Erro:", err)
+      console.error("[MTMcopier mobile]", err)
     } finally {
       setLoading(false)
     }
@@ -125,31 +189,128 @@ export default function MtmcopierMobilePage() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  // ── Toggle connection active/paused ──
-  const toggleConnection = async (conn: Connection) => {
-    setToggling(conn.id)
+  // ── Open setup modal ─────────────────────────────────────────────────────────
+  const openSetup = async (
+    selectionId: string | "new" | null = null,
+    methodOverride?: MtmcopyCopyMethod,
+  ) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-      await fetch("/api/mtmcopy/connection", {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ id: conn.id, is_active: !conn.is_active }),
+      const tok = await waitForSupabaseSession()
+      if (!tok) { setError("Sessão expirada. Faz login novamente."); return }
+      setAccessToken(tok)
+
+      const res = await fetch("/api/mtmcopy/connection", {
+        headers: { Authorization: `Bearer ${tok}` },
       })
-      setConnections((prev) =>
-        prev.map((c) => c.id === conn.id ? { ...c, is_active: !c.is_active } : c)
-      )
-    } catch (err) {
-      console.error("[MTMcopier] Erro ao alterar estado:", err)
-    } finally {
-      setToggling(null)
+      const data = await res.json()
+      const list = (res.ok ? data.connections ?? [] : connections) as ConnRow[]
+      setConnections(list)
+      if (data.sender_mode) setSenderMode(data.sender_mode)
+      if (data.subscribed != null) setSubscribed(Boolean(data.subscribed))
+
+      const conn = selectionId && selectionId !== "new"
+        ? list.find(c => c.id === selectionId)
+        : list[0]
+
+      if (methodOverride) {
+        setCopyMethod(methodOverride)
+      } else if (conn?.copy_method) {
+        setCopyMethod(conn.copy_method)
+      } else if (conn?.account_role === "master") {
+        setCopyMethod("master_slave")
+      } else if (conn) {
+        setCopyMethod(conn.sender_mode === "master_account" ? "master_slave" : "telegram_group")
+      }
+
+      setSetupSelectionId(selectionId)
+      setShowSetup(true)
+    } catch {
+      setError("Não foi possível abrir a configuração.")
     }
   }
 
-  // ─── Loading ───────────────────────────────────────────────────────────────
+  const openGerirContas = () => {
+    if (masterConn) {
+      const slaves = countCopyTraderSlaves(connections)
+      const maxS = accountLimits?.maxCopyTraderSlaves ?? maxCopyTraderSlaves(connections)
+      const addSlave = isMasterReadyForCopySlaves(masterConn) && slaves < maxS
+      void openSetup(addSlave ? "new" : masterConn.id, "master_slave")
+      return
+    }
+    void openSetup(connections[0]?.id ?? null)
+  }
+
+  const handleSetupSaved = async () => {
+    setShowSetup(false)
+    await loadData(accessToken ?? undefined)
+  }
+
+  // ── Toggle ────────────────────────────────────────────────────────────────────
+  const handleToggle = async (conn: ConnRow) => {
+    if (!accessToken) return
+    setTogglingId(conn.id)
+    setError("")
+    try {
+      const res = await fetch("/api/mtmcopy/connection", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ connection_id: conn.id, is_active: !conn.is_active }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Erro ao atualizar estado.")
+      } else {
+        setConnections(prev => prev.map(c => c.id === conn.id ? { ...c, is_active: !c.is_active } : c))
+      }
+    } catch {
+      setError("Erro de rede.")
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
+  // ── Checkout ──────────────────────────────────────────────────────────────────
+  const handleCheckout = async () => {
+    setCheckingOut(true)
+    setError("")
+    try {
+      const tok = await waitForSupabaseSession()
+      if (!tok) { router.push("/app-mobile/login"); return }
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ planId: "mtmcopy_addon_monthly" }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.url) { setError(data.error || "Erro ao iniciar pagamento."); return }
+      window.location.href = data.url
+    } catch {
+      setError("Erro de rede.")
+    } finally {
+      setCheckingOut(false)
+    }
+  }
+
+  // ── Verify Telegram ───────────────────────────────────────────────────────────
+  const handleVerifyTelegram = async () => {
+    if (!accessToken) return
+    setVerifying(true)
+    setVerifyMsg("")
+    try {
+      const res = await fetch("/api/mtmcopy/telegram/verify", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      const data = await res.json()
+      setVerifyMsg(data.ok ? (data.message || "Ligação Telegram confirmada.") : (data.error || "Não foi possível verificar."))
+      if (data.ok) await loadData(accessToken)
+    } catch {
+      setVerifyMsg("Erro de rede.")
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  // ─── Loading ──────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -158,11 +319,10 @@ export default function MtmcopierMobilePage() {
     )
   }
 
-  // ─── No Access ────────────────────────────────────────────────────────────
+  // ─── No Access ────────────────────────────────────────────────────────────────
   if (!access?.hasAccess) {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-        {/* Header */}
         <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-800">
           <button onClick={() => router.back()} className="p-2 -ml-2 hover:bg-gray-800 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5 text-gray-400" />
@@ -170,35 +330,27 @@ export default function MtmcopierMobilePage() {
           <Send className="w-5 h-5 text-[#D2A63C]" />
           <h1 className="font-bold text-lg">MTMcopier</h1>
         </div>
-
-        {/* No access state */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-6">
           <div className="w-20 h-20 rounded-full bg-gray-800 flex items-center justify-center border border-gray-700">
             <Lock className="w-9 h-9 text-gray-500" />
           </div>
-
           <div className="space-y-2">
-            <h2 className="text-xl font-bold text-white">Sem acesso a esta função</h2>
+            <h2 className="text-xl font-bold">Sem acesso a esta função</h2>
             <p className="text-gray-400 text-sm leading-relaxed">
               O MTMcopier ainda não está disponível no teu plano.
-              Verifica com o teu sponsor ou visita o nosso site para mais informações.
+              Fala com o teu sponsor ou visita o site para mais informações.
             </p>
           </div>
-
           <div className="w-full space-y-3">
             <a
-              href="https://www.morethanmoney.pt"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#D2A63C]/10 border border-[#D2A63C]/30 text-[#D2A63C] font-semibold transition-all hover:bg-[#D2A63C]/20"
+              href="https://www.morethanmoney.pt/mtmcopy"
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#D2A63C]/10 border border-[#D2A63C]/30 text-[#D2A63C] font-semibold"
             >
               <ExternalLink className="w-4 h-4" />
-              morethanmoney.pt
+              Saber mais sobre o MTMcopier
             </a>
-            <button
-              onClick={() => router.back()}
-              className="w-full py-3 rounded-xl bg-gray-800 text-gray-300 font-medium hover:bg-gray-700 transition-colors"
-            >
+            <button onClick={() => router.back()} className="w-full py-3 rounded-xl bg-gray-800 text-gray-300 font-medium">
               Voltar
             </button>
           </div>
@@ -207,201 +359,299 @@ export default function MtmcopierMobilePage() {
     )
   }
 
-  // ─── Has Access ──────────────────────────────────────────────────────────
+  // ─── Main View ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-800 sticky top-0 bg-black z-10">
-        <button onClick={() => router.back()} className="p-2 -ml-2 hover:bg-gray-800 rounded-lg transition-colors">
-          <ArrowLeft className="w-5 h-5 text-gray-400" />
-        </button>
-        <Send className="w-5 h-5 text-[#D2A63C]" />
-        <div className="flex-1">
-          <h1 className="font-bold text-lg leading-none">MTMcopier</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Gestão de contas MT5</p>
+    <>
+      {showSetup && (
+        <SetupModal
+          connections={connections}
+          initialSelectionId={setupSelectionId}
+          initialSenderMode={senderMode}
+          initialCopyMethod={copyMethod}
+          accountLimits={accountLimits}
+          onClose={() => setShowSetup(false)}
+          onSaved={handleSetupSaved}
+        />
+      )}
+
+      <div className="min-h-screen bg-black text-white flex flex-col" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-800 sticky top-0 bg-black z-10">
+          <button onClick={() => router.back()} className="p-2 -ml-2 hover:bg-gray-800 rounded-lg transition-colors">
+            <ArrowLeft className="w-5 h-5 text-gray-400" />
+          </button>
+          <Send className="w-5 h-5 text-[#D2A63C]" />
+          <div className="flex-1">
+            <h1 className="font-bold text-lg leading-none">MTMcopier</h1>
+            <p className="text-xs text-gray-400 mt-0.5">Gestão de contas MT5</p>
+          </div>
+          <button onClick={() => loadData(accessToken ?? undefined)} className="p-2 hover:bg-gray-800 rounded-lg transition-colors">
+            <RefreshCw className="w-4 h-4 text-gray-400" />
+          </button>
         </div>
-        <button
-          onClick={loadData}
-          className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-        >
-          <RefreshCw className="w-4 h-4 text-gray-400" />
-        </button>
-      </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
 
-        {/* Subscribed badge */}
-        {access.subscribed && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <span className="text-sm text-emerald-400 font-medium">Subscrição activa</span>
-          </div>
-        )}
-
-        {/* Connections */}
-        {connections.length === 0 ? (
-          <div className="py-12 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mx-auto border border-gray-700">
-              <Wifi className="w-7 h-7 text-gray-500" />
+          {/* Subscription status */}
+          {subscribed ? (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <span className="text-sm text-emerald-400 font-medium">Subscrição activa</span>
             </div>
-            <div>
-              <p className="text-white font-semibold">Nenhuma conta configurada</p>
-              <p className="text-gray-400 text-sm mt-1">
-                Configura as tuas contas MT5 no site completo
+          ) : hasConnections && (
+            <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 space-y-3">
+              <p className="text-amber-100/90 text-sm">
+                Contas pré-configuradas. A cópia automática só arranca após activares a subscrição (+20€/mês).
               </p>
+              <button
+                onClick={handleCheckout}
+                disabled={checkingOut}
+                className="w-full py-2.5 rounded-xl bg-[#D2A63C] text-black font-bold text-sm flex items-center justify-center gap-2"
+              >
+                {checkingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                Activar subscrição
+              </button>
             </div>
-            <a
-              href="https://www.morethanmoney.pt/mtmcopy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D2A63C]/10 border border-[#D2A63C]/30 text-[#D2A63C] font-semibold text-sm"
-            >
-              <ExternalLink className="w-4 h-4" />
-              Configurar no site
-            </a>
-          </div>
-        ) : (
-          <>
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              As tuas contas ({connections.length})
-            </h2>
+          )}
 
-            <div className="space-y-3">
-              {connections.map((conn) => (
-                <div
-                  key={conn.id}
-                  className={`rounded-xl border p-4 space-y-3 transition-all ${
-                    conn.is_active
-                      ? "bg-gray-900 border-gray-700"
-                      : "bg-gray-900/50 border-gray-800 opacity-70"
-                  }`}
+          {/* Connections */}
+          {!hasConnections ? (
+            <div className="py-10 text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center mx-auto border border-gray-700">
+                <Send className="w-7 h-7 text-gray-500" />
+              </div>
+              <div>
+                <p className="text-white font-semibold">Nenhuma conta configurada</p>
+                <p className="text-gray-400 text-sm mt-1">Configura a tua primeira conta MT5 para começar a copiar sinais.</p>
+              </div>
+              <button
+                onClick={() => openSetup("new")}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#D2A63C] text-black font-bold text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Configurar conta MT5
+              </button>
+              {!subscribed && (
+                <button
+                  onClick={handleCheckout}
+                  disabled={checkingOut}
+                  className="w-full py-3 rounded-xl bg-gray-800 text-gray-300 font-medium text-sm flex items-center justify-center gap-2"
                 >
-                  {/* Top row: label + toggle */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-white truncate">
-                        {conn.account_label || `Conta ···${conn.mt5_login_last4 || "----"}`}
+                  {checkingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Ativar MTMcopier (+20€/mês)
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Section header */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Power className="w-3.5 h-3.5" />
+                  As tuas contas ({connections.length}{accountLimits?.unlimited ? "" : `/${accountLimits?.maxAccounts ?? 4}`})
+                </h2>
+                <button
+                  onClick={() => {
+                    if (masterConn && isMasterReadyForCopySlaves(masterConn)) {
+                      void openSetup("new", "master_slave")
+                    } else {
+                      void openSetup("new")
+                    }
+                  }}
+                  className="flex items-center gap-1 text-xs text-[#D2A63C] font-semibold py-1.5 px-3 rounded-lg bg-[#D2A63C]/10 border border-[#D2A63C]/20"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Nova conta
+                </button>
+              </div>
+
+              {isCopyTrader && masterConn && (
+                <CopyTraderBanner strategyId={masterConn.copyfactory_strategy_id} />
+              )}
+
+              {/* Connection cards */}
+              <div className="space-y-3">
+                {connections.map((conn, index) => (
+                  <div
+                    key={conn.id}
+                    className={`rounded-xl border p-4 space-y-3 ${conn.is_active ? "bg-gray-900 border-gray-700" : "bg-gray-900/50 border-gray-800 opacity-75"}`}
+                  >
+                    {/* Title + toggle */}
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-semibold text-white truncate flex-1">
+                        {getClientConnectionTitle(conn, index)}
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5">{conn.mt5_server || "—"}</p>
+                      <button
+                        onClick={() => handleToggle(conn)}
+                        disabled={togglingId === conn.id}
+                        className={`flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                          conn.is_active
+                            ? "border-green-500/30 bg-green-500/10 text-green-400"
+                            : "border-gray-600 bg-gray-800 text-gray-400"
+                        }`}
+                      >
+                        {togglingId === conn.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : null}
+                        {conn.is_active ? "Ativo" : "Pausado"}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => toggleConnection(conn)}
-                      disabled={toggling === conn.id}
-                      className="flex-shrink-0 p-1 transition-colors"
-                      aria-label={conn.is_active ? "Pausar" : "Activar"}
-                    >
-                      {toggling === conn.id ? (
-                        <RefreshCw className="w-5 h-5 text-gray-400 animate-spin" />
-                      ) : conn.is_active ? (
-                        <ToggleRight className="w-6 h-6 text-[#D2A63C]" />
-                      ) : (
-                        <ToggleLeft className="w-6 h-6 text-gray-500" />
-                      )}
-                    </button>
-                  </div>
 
-                  {/* Method badge */}
-                  <Badge className="bg-[#D2A63C]/10 text-[#D2A63C] border-[#D2A63C]/20 text-[11px]">
-                    {methodLabel(conn.copy_method)}
-                  </Badge>
+                    {/* Mode/method info */}
+                    {isMasterConnection(conn.account_role) ? (
+                      <div className="rounded-lg bg-[#D2A63C]/5 border border-[#D2A63C]/20 p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-[#D2A63C]/70 mb-1">Copy trader pessoal</p>
+                        <p className="text-sm font-semibold text-white">{MTM_MASTER_LABEL}</p>
+                        <div className="mt-2">
+                          <StatusPill status={conn.mt5_status} />
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {!isCopyTrader && <ModeBanner customChannel={conn.telegram_channel} />}
 
-                  {/* Status row */}
-                  <div className="flex items-center gap-4 pt-1">
-                    <div className="flex items-center gap-1.5">
-                      <StatusIcon status={conn.mt5_status} />
-                      <StatusLabel status={conn.mt5_status} />
-                      <span className="text-xs text-gray-600">MT5</span>
-                    </div>
-                    {conn.copy_method !== "master_slave" && (
-                      <div className="flex items-center gap-1.5">
-                        <StatusIcon status={conn.telegram_status} />
-                        <StatusLabel status={conn.telegram_status} />
-                        <span className="text-xs text-gray-600">Telegram</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="rounded-lg bg-gray-800/50 border border-gray-700/50 p-2.5">
+                            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Método</p>
+                            <p className="text-xs text-white font-medium truncate">
+                              {isCopyTrader ? MTM_MASTER_LABEL : conn.copy_method === "strategy" ? "Estratégia MTM" : copyMethodLabel(conn.copy_method)}
+                            </p>
+                            {!isCopyTrader && conn.copy_method === "telegram_group" && (
+                              <p className="text-[10px] text-gray-500 mt-0.5 truncate">
+                                {telegramGroupsLabel(parseTelegramGroups(conn))}
+                              </p>
+                            )}
+                            <div className="mt-1.5">
+                              <StatusPill status={isCopyTrader ? "connected" : conn.telegram_status} />
+                            </div>
+                          </div>
+                          <div className="rounded-lg bg-gray-800/50 border border-gray-700/50 p-2.5">
+                            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">MetaTrader</p>
+                            <p className="text-xs text-white font-medium truncate">
+                              {conn.mt5_server || "—"}
+                              {conn.mt5_login_last4 && <span className="text-gray-500"> ····{conn.mt5_login_last4}</span>}
+                            </p>
+                            <div className="mt-1.5">
+                              <StatusPill status={conn.mt5_status} />
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Balance + stats */}
+                    {conn.account_role !== "master" && (
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="rounded-lg bg-[#D2A63C]/10 border border-[#D2A63C]/25 p-2 text-center">
+                          <p className="text-[10px] text-[#D2A63C]/80 mb-0.5">Saldo</p>
+                          <p className="text-xs font-semibold text-white tabular-nums">{formatMt5Money(conn.account_balance)}</p>
+                          {conn.account_equity != null && conn.account_equity !== conn.account_balance && (
+                            <p className="text-[9px] text-gray-500 mt-0.5">eq {formatMt5Money(conn.account_equity)}</p>
+                          )}
+                        </div>
+                        {isCopyTrader ? (
+                          <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 p-2 text-center">
+                            <p className="text-[10px] text-gray-500 mb-0.5">Multiplicador</p>
+                            <p className="text-xs text-white font-medium">
+                              {conn.lot_mode === "multiplier" ? conn.lot_value : "1"}×
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 p-2 text-center">
+                            <p className="text-[10px] text-gray-500 mb-0.5">Modo lote</p>
+                            <p className="text-xs text-white font-medium">
+                              {conn.lot_mode === "fixed" ? "Fixo" : conn.lot_mode === "risk_percent" ? `${conn.lot_value}%` : `${conn.lot_value}×`}
+                            </p>
+                          </div>
+                        )}
+                        <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 p-2 text-center">
+                          <p className="text-[10px] text-gray-500 mb-0.5">
+                            {isCopyTrader ? "Estado cópia" : "Último sinal"}
+                          </p>
+                          <p className="text-xs text-white font-medium">
+                            {isCopyTrader
+                              ? (conn.copyfactory_subscribed ? "Activa" : "Pendente")
+                              : (conn.last_signal_at ? formatRelative(conn.last_signal_at) : "Nenhum")}
+                          </p>
+                        </div>
                       </div>
                     )}
+
+                    {/* Warnings */}
+                    {conn.telegram_status === "pending" && conn.telegram_channel && (
+                      <div className="flex items-start gap-2 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2.5">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        <p>Adiciona <strong>@MoreThanMoney_aibot</strong> como admin de <strong>{conn.telegram_channel}</strong>.</p>
+                      </div>
+                    )}
+                    {conn.mt5_status === "pending" && (
+                      <div className="flex items-start gap-2 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2.5">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        <p>A ligar a conta — normalmente 1–3 minutos.</p>
+                      </div>
+                    )}
+                    {conn.last_error && (
+                      <div className="flex items-start gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2.5">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        <p className="line-clamp-2">{conn.last_error}</p>
+                      </div>
+                    )}
+
+                    {/* Edit button */}
+                    <button
+                      onClick={() => openSetup(conn.id)}
+                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-600 rounded-lg px-3 py-2 transition-all"
+                    >
+                      <Settings2 className="w-3.5 h-3.5" />
+                      Editar esta conta
+                    </button>
                   </div>
+                ))}
+              </div>
 
-                  {/* Balance */}
-                  {(conn.account_balance != null || conn.account_equity != null) && (
-                    <div className="flex gap-4 pt-1 border-t border-gray-800">
-                      {conn.account_balance != null && (
-                        <div>
-                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Saldo</p>
-                          <p className="text-sm font-semibold text-white">
-                            {conn.account_balance.toLocaleString("pt-PT", { minimumFractionDigits: 2 })} $
-                          </p>
-                        </div>
-                      )}
-                      {conn.account_equity != null && (
-                        <div>
-                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Equity</p>
-                          <p className="text-sm font-semibold text-white">
-                            {conn.account_equity.toLocaleString("pt-PT", { minimumFractionDigits: 2 })} $
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+              {/* Actions */}
+              <div className="space-y-2 pt-1">
+                {!isCopyTrader && (
+                  <button
+                    onClick={handleVerifyTelegram}
+                    disabled={verifying}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#D2A63C] text-black font-bold text-sm"
+                  >
+                    {verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                    Verificar Telegram
+                  </button>
+                )}
+                {verifyMsg && (
+                  <p className={`text-xs text-center ${verifyMsg.includes("confirmad") || verifyMsg.includes("activo") ? "text-emerald-400" : "text-amber-400"}`}>
+                    {verifyMsg}
+                  </p>
+                )}
+                {subscribed && (
+                  <a
+                    href="/mtmcopy/metrics"
+                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gray-800 border border-gray-700 text-gray-200 text-sm font-medium"
+                  >
+                    <BarChart3 className="w-4 h-4 text-[#D2A63C]" />
+                    Terminal de métricas
+                  </a>
+                )}
+              </div>
 
-                  {/* Last signal */}
-                  {conn.last_signal_at && (
-                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                      <Activity className="w-3 h-3" />
-                      <span>
-                        Último sinal:{" "}
-                        {new Date(conn.last_signal_at).toLocaleString("pt-PT", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                  )}
+              {error && (
+                <p className="text-xs text-red-400 text-center">{error}</p>
+              )}
 
-                  {/* Error */}
-                  {conn.last_error && conn.mt5_status === "error" && (
-                    <div className="flex items-start gap-1.5 text-xs text-red-400 bg-red-500/10 rounded-lg p-2">
-                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                      <span className="line-clamp-2">{conn.last_error}</span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+              {/* Signal history */}
+              {accessToken && subscribed && (
+                <SignalHistoryMobile accessToken={accessToken} />
+              )}
+            </>
+          )}
 
-        {/* Quick links */}
-        <div className="pt-2 space-y-2">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Acesso rápido</h2>
-
-          <a
-            href="https://www.morethanmoney.pt/mtmcopy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-800 text-gray-200 hover:border-[#D2A63C]/30 transition-all"
-          >
-            <TrendingUp className="w-5 h-5 text-[#D2A63C] flex-shrink-0" />
-            <span className="flex-1 text-sm font-medium">Configurar contas</span>
-            <ExternalLink className="w-4 h-4 text-gray-500" />
-          </a>
-
-          <a
-            href="https://www.morethanmoney.pt/mtmcopy/metrics"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-800 text-gray-200 hover:border-[#D2A63C]/30 transition-all"
-          >
-            <Activity className="w-5 h-5 text-[#D2A63C] flex-shrink-0" />
-            <span className="flex-1 text-sm font-medium">Ver métricas e performance</span>
-            <ExternalLink className="w-4 h-4 text-gray-500" />
-          </a>
+          {/* Bottom safe area */}
+          <div style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }} />
         </div>
-
-        {/* Safe area bottom padding */}
-        <div style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }} />
       </div>
-    </div>
+    </>
   )
 }
