@@ -164,6 +164,8 @@ export async function POST(request: NextRequest) {
         profileRow.subscription_billing_cycle = billingCycle
         profileRow.subscription_plan = category === "premium" ? "premium" : "app_member"
         profileRow.subscription_platform = "manual"
+        profileRow.subscription_status = "active"
+        profileRow.checkout_source = "admin"
         profileRow.user_type = "member"
         profileRow.is_active = true
       }

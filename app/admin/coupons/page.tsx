@@ -56,6 +56,8 @@ interface Coupon {
   description: string | null
   is_active: boolean
   created_at: string
+  stripe_coupon_id?: string | null
+  stripe_promotion_code_id?: string | null
 }
 
 interface CouponFormData {
@@ -469,6 +471,15 @@ export default function CouponsPage() {
                           <div className="text-xs text-gray-600 mt-0.5 max-w-[200px] truncate">
                             {coupon.description}
                           </div>
+                        )}
+                        {coupon.stripe_promotion_code_id ? (
+                          <Badge className="mt-1 text-[10px] bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                            Stripe sync
+                          </Badge>
+                        ) : (
+                          <Badge className="mt-1 text-[10px] bg-gray-700 text-gray-400">
+                            Sem Stripe
+                          </Badge>
                         )}
                       </td>
 

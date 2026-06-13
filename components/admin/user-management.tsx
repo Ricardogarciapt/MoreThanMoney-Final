@@ -49,6 +49,11 @@ import {
   subscriptionDaysRemaining,
   MEMBER_SUBSCRIPTION_DAYS,
 } from "@/lib/member-subscription"
+import {
+  readUserAddons,
+  SCANNER_ADDON_PLANS,
+  scannerPlanLabel,
+} from "@/lib/user-addons"
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -144,6 +149,14 @@ export default function UserManagementComponent({
   const [savingPlan, setSavingPlan] = useState(false)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [markingSkoolId, setMarkingSkoolId] = useState<string | null>(null)
+
+  // Addons (scanners + MTMcopier)
+  const [addonScannerPlan, setAddonScannerPlan] = useState<string>("none")
+  const [addonScannerTv, setAddonScannerTv] = useState("")
+  const [addonScannerExpiry, setAddonScannerExpiry] = useState("")
+  const [addonMtmcopyActive, setAddonMtmcopyActive] = useState(false)
+  const [addonMtmcopyExpiry, setAddonMtmcopyExpiry] = useState("")
+  const [savingAddons, setSavingAddons] = useState(false)
 
   const [newUser, setNewUser] = useState({
     email: "",
@@ -271,6 +284,28 @@ export default function UserManagementComponent({
     setPlanOverride(user.subscription_plan || "app_member")
     setCycleOverride(user.subscription_billing_cycle || "monthly")
     setCustomAddDays("30")
+
+    const addons = readUserAddons(user.profile_data)
+    setAddonScannerPlan(addons.scanner?.active ? addons.scanner.plan_id : "none")
+    setAddonScannerTv(
+      addons.scanner?.tradingview_username || user.tradingview_username || ""
+    )
+    setAddonScannerExpiry(
+      addons.scanner?.expires_at
+        ? new Date(addons.scanner.expires_at).toISOString().slice(0, 16)
+        : ""
+    )
+    setAddonMtmcopyActive(
+      user.mtmcopy_subscription_active === true || addons.mtmcopy?.active === true
+    )
+    setAddonMtmcopyExpiry(
+      user.mtmcopy_subscription_expires_at || addons.mtmcopy?.expires_at
+        ? new Date(
+            user.mtmcopy_subscription_expires_at || addons.mtmcopy?.expires_at || ""
+          ).toISOString().slice(0, 16)
+        : ""
+    )
+
     setIsSubDialogOpen(true)
   }
 
@@ -361,6 +396,32 @@ export default function UserManagementComponent({
     })
     if (ok) toast({ title: "Plano atualizado" })
     setSavingPlan(false)
+  }
+
+  const handleSaveAddons = async () => {
+    if (!subDialogUser) return
+    setSavingAddons(true)
+    const payload: Record<string, unknown> = {
+      update_addons: {
+        scanner_plan_id: addonScannerPlan === "none" ? null : addonScannerPlan,
+        scanner_active: addonScannerPlan !== "none",
+        scanner_tradingview_username: addonScannerTv.trim() || undefined,
+        scanner_expires_at:
+          addonScannerPlan !== "none" && addonScannerExpiry
+            ? new Date(addonScannerExpiry).toISOString()
+            : addonScannerPlan !== "none"
+              ? null
+              : undefined,
+        mtmcopy_active: addonMtmcopyActive,
+        mtmcopy_expires_at:
+          addonMtmcopyActive && addonMtmcopyExpiry
+            ? new Date(addonMtmcopyExpiry).toISOString()
+            : undefined,
+      },
+    }
+    const ok = await patchUser(subDialogUser.id, payload)
+    if (ok) toast({ title: "Addons actualizados", description: "Scanners e MTMcopier sincronizados." })
+    setSavingAddons(false)
   }
 
   const handleCancelSubscription = async (userId: string) => {
@@ -1223,6 +1284,94 @@ export default function UserManagementComponent({
                   <p className="text-[10px] text-gray-500">
                     Actualiza subscription_plan e subscription_billing_cycle. Não processa pagamento.
                   </p>
+                </div>
+
+                <Separator className="border-gray-700" />
+
+                {/* Addons: Scanners + MTMcopier */}
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-1.5 text-sm">
+                    <Bot className="h-4 w-4 text-[#D2A63C]" />
+                    Addons — Scanners & MTMcopier
+                  </Label>
+
+                  <div className="rounded-lg bg-gray-800/60 border border-gray-700/50 p-3 space-y-3">
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-400">Pack Scanner</p>
+                      <Select value={addonScannerPlan} onValueChange={setAddonScannerPlan}>
+                        <SelectTrigger className="input-focus">
+                          <SelectValue placeholder="Sem scanner" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-900 border-gray-700">
+                          <SelectItem value="none">— Sem scanner</SelectItem>
+                          {SCANNER_ADDON_PLANS.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {addonScannerPlan !== "none" && (
+                        <>
+                          <Input
+                            placeholder="Username TradingView"
+                            value={addonScannerTv}
+                            onChange={(e) => setAddonScannerTv(e.target.value)}
+                            className="input-focus"
+                          />
+                          {!addonScannerPlan.includes("lifetime") && (
+                            <Input
+                              type="datetime-local"
+                              value={addonScannerExpiry}
+                              onChange={(e) => setAddonScannerExpiry(e.target.value)}
+                              className="input-focus"
+                            />
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    <Separator className="border-gray-700" />
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-gray-400">MTMcopier (+20€/mês)</p>
+                        <Switch
+                          checked={addonMtmcopyActive}
+                          onCheckedChange={setAddonMtmcopyActive}
+                        />
+                      </div>
+                      {addonMtmcopyActive && (
+                        <Input
+                          type="datetime-local"
+                          value={addonMtmcopyExpiry}
+                          onChange={(e) => setAddonMtmcopyExpiry(e.target.value)}
+                          className="input-focus"
+                        />
+                      )}
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full border-[#D2A63C]/50 text-[#D2A63C]"
+                      disabled={savingAddons}
+                      onClick={handleSaveAddons}
+                    >
+                      {savingAddons ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        "Guardar addons"
+                      )}
+                    </Button>
+                  </div>
+
+                  {subDialogUser.profile_data && (
+                    <p className="text-[10px] text-gray-500">
+                      Scanner actual:{" "}
+                      {scannerPlanLabel(readUserAddons(subDialogUser.profile_data).scanner?.plan_id)}
+                    </p>
+                  )}
                 </div>
 
                 <Separator className="border-gray-700" />

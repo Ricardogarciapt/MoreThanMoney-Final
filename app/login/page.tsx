@@ -10,14 +10,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Shield, Loader2, AlertCircle, Eye, EyeOff, Mail, Lock } from 'lucide-react'
+import { Shield, Loader2, AlertCircle, Eye, EyeOff, Mail, Lock, Apple } from 'lucide-react'
 import Link from 'next/link'
+import ApplePaywall from '@/components/apple-paywall'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [showApplePaywall, setShowApplePaywall] = useState(false)
+  const [appleLoading, setAppleLoading] = useState(false)
   const [error, setError] = useState('')
   const [iqonicEmail, setIqonicEmail] = useState('')
   const [iqonicPassword, setIqonicPassword] = useState('')
@@ -131,6 +134,60 @@ export default function LoginPage() {
       console.error('❌ Exceção no login:', error)
       setError('Erro ao fazer login. Tente novamente.')
       setIsLoading(false)
+    }
+  }
+
+  const handleAppleSignIn = async () => {
+    const plugin = (window as any).Capacitor?.Plugins?.MTMPayments
+    if (!plugin) {
+      // Fallback: mostrar paywall para subscrever via Apple IAP
+      setShowApplePaywall(true)
+      return
+    }
+    setAppleLoading(true)
+    setError('')
+    try {
+      const result: any = await plugin.signInWithApple()
+      const res = await fetch('/api/auth/apple-signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identityToken: result.identityToken,
+          nonce:         result.nonce,
+          appleUserId:   result.appleUserId,
+          email:         result.email,
+          fullName:      result.fullName,
+          givenName:     result.givenName,
+          familyName:    result.familyName,
+        }),
+      })
+      const data = await res.json()
+
+      if (!data.success) {
+        setError(data.error ?? 'Erro ao autenticar com Apple')
+        return
+      }
+
+      if (data.action === 'register') {
+        // Novo utilizador — mostrar paywall para subscrever
+        setShowApplePaywall(true)
+        return
+      }
+
+      // Utilizador existente — usar magic link para criar sessão Supabase
+      if (data.magicLink) {
+        window.location.href = data.magicLink
+        return
+      }
+
+      // Fallback: redirecionar para app-mobile
+      window.location.replace(redirectParam || '/app-mobile')
+    } catch (err: any) {
+      if (err?.message !== 'USER_CANCELLED') {
+        setError(err?.message ?? 'Erro ao iniciar sessão com Apple')
+      }
+    } finally {
+      setAppleLoading(false)
     }
   }
 
@@ -288,9 +345,17 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-gray-300">
-                  Senha
-                </label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="password" className="text-sm font-medium text-gray-300">
+                    Senha
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-[#D2A63C] hover:underline"
+                  >
+                    Esqueci-me da password
+                  </Link>
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
@@ -379,6 +444,24 @@ export default function LoginPage() {
               )}
             </Button>
 
+            {/* Sign in with Apple — mostrado sempre mas especialmente relevante no iOS nativo */}
+            <Button
+              type="button"
+              className="w-full mt-3 bg-black hover:bg-gray-900 text-white border border-white/20 font-semibold"
+              onClick={handleAppleSignIn}
+              disabled={appleLoading || isLoading}
+              size="lg"
+            >
+              {appleLoading ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  <Apple className="mr-2 h-5 w-5" />
+                  Continuar com Apple
+                </>
+              )}
+            </Button>
+
             {/* IQONIC Login */}
             <div className="mt-3">
               <div className="relative flex justify-center text-sm">
@@ -451,6 +534,17 @@ export default function LoginPage() {
           </div>
         )}
       </div>
+
+      {/* Apple IAP Paywall — aparece quando utilizador quer subscrever via Apple */}
+      {showApplePaywall && (
+        <ApplePaywall
+          onClose={() => setShowApplePaywall(false)}
+          onSuccess={({ userId, plan }) => {
+            setShowApplePaywall(false)
+            window.location.replace(redirectParam || '/app-mobile')
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -7,6 +7,12 @@ import {
   subscriptionDaysRemaining,
 } from "@/lib/member-subscription"
 import { clearSkoolAccessPending } from "@/lib/stripe-skool-admin"
+import {
+  defaultMtmcopyExpiry,
+  defaultScannerExpiry,
+  mergeUserAddons,
+  SCANNER_ADDON_PLANS,
+} from "@/lib/user-addons"
 
 const supabase = getSupabaseAdmin()
 
@@ -294,6 +300,7 @@ export async function PATCH(request: NextRequest) {
       add_days,
       cancel_subscription,
       mark_skool_granted,
+      update_addons,
     } = body
 
     // Validação
@@ -443,6 +450,85 @@ export async function PATCH(request: NextRequest) {
       updates.subscription_plan = null
       updates.is_active = false
       updates.user_type = 'inactive'
+    }
+
+    // Addons: scanners + MTMcopier (sincronizado com profile_data e checkout_sessions)
+    if (update_addons && typeof update_addons === "object") {
+      const ua = update_addons as Record<string, unknown>
+      const { data: curProfile } = await supabase
+        .from("profiles")
+        .select("profile_data, tradingview_username")
+        .eq("id", userId)
+        .single()
+
+      const addonPatch: Record<string, unknown> = {}
+
+      if ("scanner_plan_id" in ua) {
+        const planId = ua.scanner_plan_id as string | null
+        if (!planId) {
+          addonPatch.scanner = null
+        } else {
+          const scannerState = {
+            plan_id: planId,
+            active: ua.scanner_active !== false,
+            expires_at:
+              ua.scanner_expires_at !== undefined
+                ? (ua.scanner_expires_at as string | null)
+                : defaultScannerExpiry(planId),
+            tradingview_username:
+              (typeof ua.scanner_tradingview_username === "string"
+                ? ua.scanner_tradingview_username.trim()
+                : "") ||
+              curProfile?.tradingview_username ||
+              null,
+            granted_by: "admin" as const,
+          }
+          addonPatch.scanner = scannerState
+          if (scannerState.tradingview_username) {
+            updates.tradingview_username = scannerState.tradingview_username
+          }
+          await supabase
+            .from("checkout_sessions")
+            .insert({
+              stripe_session_id: `admin_addon_scanner_${userId}_${Date.now()}`,
+              user_id: userId,
+              plan: planId,
+              status: "completed",
+              completed_at: new Date().toISOString(),
+            })
+            .then(undefined, () => {})
+        }
+      }
+
+      if ("mtmcopy_active" in ua) {
+        const active = Boolean(ua.mtmcopy_active)
+        const expires = active
+          ? (typeof ua.mtmcopy_expires_at === "string"
+              ? ua.mtmcopy_expires_at
+              : defaultMtmcopyExpiry())
+          : null
+        addonPatch.mtmcopy = active
+          ? { active: true, expires_at: expires, granted_by: "admin" }
+          : null
+        updates.mtmcopy_subscription_active = active
+        updates.mtmcopy_subscription_expires_at = expires
+        if (active) {
+          await supabase
+            .from("checkout_sessions")
+            .insert({
+              stripe_session_id: `admin_addon_mtmcopy_${userId}_${Date.now()}`,
+              user_id: userId,
+              plan: "mtmcopy_addon_monthly",
+              status: "completed",
+              completed_at: new Date().toISOString(),
+            })
+            .then(undefined, () => {})
+        }
+      }
+
+      if (Object.keys(addonPatch).length > 0) {
+        updates.profile_data = mergeUserAddons(curProfile?.profile_data, addonPatch)
+      }
     }
 
     const { data, error } = await supabase

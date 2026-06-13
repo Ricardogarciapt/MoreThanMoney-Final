@@ -232,7 +232,12 @@ export default function AppMobileLoginPage() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-gray-300">Palavra-passe</label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="password" className="text-sm font-medium text-gray-300">Palavra-passe</label>
+                  <Link href="/forgot-password" className="text-xs text-[#D2A63C] hover:underline">
+                    Esqueci-me da password
+                  </Link>
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input

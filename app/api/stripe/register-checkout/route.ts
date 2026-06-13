@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStripeClient } from '@/lib/stripe-client'
 import { requireStripePriceId } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl, getSiteOrigin } from '@/lib/site-url'
+import { resolveStripePromotionCode } from '@/lib/coupon-stripe-discount'
 
 /**
  * POST /api/stripe/register-checkout
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
       metadata: { pending_registration: 'true', reg_token: regToken || '' },
     })
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       customer: customer.id,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
@@ -48,7 +49,16 @@ export async function POST(request: NextRequest) {
         sponsor_username: sponsorUsername || '',
         coupon_code: couponCode || '',
       },
-    })
+    }
+
+    if (couponCode) {
+      const promoId = await resolveStripePromotionCode(couponCode)
+      if (promoId) {
+        sessionParams.discounts = [{ promotion_code: promoId }]
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams)
 
     return NextResponse.json({ url: session.url, sessionId: session.id })
   } catch (error: unknown) {

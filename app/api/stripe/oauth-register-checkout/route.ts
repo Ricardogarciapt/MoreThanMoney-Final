@@ -5,6 +5,7 @@ import { requireStripePriceId } from "@/lib/stripe-prices"
 import { buildStripeReturnUrl, getSiteOrigin } from "@/lib/site-url"
 import { isRegisteredMember } from "@/lib/member-access"
 import { buildUsername } from "@/lib/member-profile"
+import { resolveStripePromotionCode } from "@/lib/coupon-stripe-discount"
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim()
 const SUPABASE_ANON_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim()
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
       customer: customer.id,
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
@@ -105,7 +106,16 @@ export async function POST(request: NextRequest) {
         sponsor_username: sponsorUsername || "",
         coupon_code: couponCode || "",
       },
-    })
+    }
+
+    if (couponCode) {
+      const promoId = await resolveStripePromotionCode(couponCode)
+      if (promoId) {
+        sessionParams.discounts = [{ promotion_code: promoId }]
+      }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams)
 
     const json = NextResponse.json({ url: session.url, sessionId: session.id })
     response.cookies.getAll().forEach((cookie) => {

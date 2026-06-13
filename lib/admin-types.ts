@@ -44,6 +44,9 @@ export interface UserManagement {
   subscription_days_remaining?: number | null
   coupon_code?: string | null
   broker_uid?: string | null
+  tradingview_username?: string | null
+  mtmcopy_subscription_active?: boolean | null
+  mtmcopy_subscription_expires_at?: string | null
   profile_data?: Record<string, any>
   xp?: {
     total_xp: number

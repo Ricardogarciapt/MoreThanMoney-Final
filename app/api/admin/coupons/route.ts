@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
+import {
+  activateStripePromotionCode,
+  createStripeCouponSync,
+  deactivateStripePromotionCode,
+} from "@/lib/stripe-coupons"
 
 const supabase = getSupabaseAdmin()
 
@@ -91,6 +96,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    let stripeSync: { stripe_coupon_id: string; stripe_promotion_code_id: string } | null = null
+    try {
+      stripeSync = await createStripeCouponSync({
+        code: normalizedCode,
+        type,
+        discount_value: discount_value ?? 0,
+        max_uses: max_uses ?? null,
+        valid_until: valid_until || null,
+        description: description || null,
+      })
+    } catch (stripeErr: unknown) {
+      const msg = stripeErr instanceof Error ? stripeErr.message : "Erro ao criar cupão no Stripe"
+      console.error("❌ [ADMIN COUPONS POST] Stripe:", msg)
+      return NextResponse.json(
+        { error: "Erro ao sincronizar cupão com Stripe", details: msg },
+        { status: 502 }
+      )
+    }
+
     const { data, error } = await supabase
       .from("coupons")
       .insert({
@@ -104,19 +128,24 @@ export async function POST(request: NextRequest) {
         valid_until: valid_until || null,
         description: description || null,
         is_active: true,
+        stripe_coupon_id: stripeSync.stripe_coupon_id,
+        stripe_promotion_code_id: stripeSync.stripe_promotion_code_id,
       })
       .select()
       .single()
 
     if (error) {
       console.error("❌ [ADMIN COUPONS POST] Erro:", error)
+      if (stripeSync) {
+        await deactivateStripePromotionCode(stripeSync.stripe_promotion_code_id).catch(() => {})
+      }
       return NextResponse.json(
         { error: "Erro ao criar cupão", details: error.message },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ data }, { status: 201 })
+    return NextResponse.json({ data, stripe_synced: true }, { status: 201 })
   } catch (error: any) {
     console.error("❌ [ADMIN COUPONS POST] Erro:", error)
     return NextResponse.json(
@@ -157,6 +186,29 @@ export async function PATCH(request: NextRequest) {
     ]
     for (const key of allowedUpdates) {
       if (key in rest) updates[key] = rest[key]
+    }
+
+    const { data: existing } = await supabase
+      .from("coupons")
+      .select("stripe_promotion_code_id")
+      .eq("id", id)
+      .maybeSingle()
+
+    if (is_active !== undefined && existing?.stripe_promotion_code_id) {
+      try {
+        if (Boolean(is_active)) {
+          await activateStripePromotionCode(existing.stripe_promotion_code_id)
+        } else {
+          await deactivateStripePromotionCode(existing.stripe_promotion_code_id)
+        }
+      } catch (stripeErr: unknown) {
+        const msg = stripeErr instanceof Error ? stripeErr.message : "Erro Stripe"
+        console.error("❌ [ADMIN COUPONS PATCH] Stripe:", msg)
+        return NextResponse.json(
+          { error: "Erro ao sincronizar estado no Stripe", details: msg },
+          { status: 502 }
+        )
+      }
     }
 
     const { data, error } = await supabase
@@ -200,6 +252,18 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: "id é obrigatório" }, { status: 400 })
+    }
+
+    const { data: existing } = await supabase
+      .from("coupons")
+      .select("stripe_promotion_code_id")
+      .eq("id", id)
+      .maybeSingle()
+
+    if (existing?.stripe_promotion_code_id) {
+      await deactivateStripePromotionCode(existing.stripe_promotion_code_id).catch((err) => {
+        console.warn("⚠️ [ADMIN COUPONS DELETE] Stripe deactivate:", err)
+      })
     }
 
     const { error } = await supabase.from("coupons").delete().eq("id", id)
