@@ -1,20 +1,45 @@
 /**
- * lib/notifications-sales.ts
- * Notificações de vendas, registos e afiliados MLM.
- * Destinatários: Admin, VIP (user_type) e Sponsor do cliente — nunca membros normais.
+ * Notificações MLM — registos, vendas, renovações e rank up.
+ * Sincronizado com mlm_nodes, sponsor chain e Stripe.
  */
 
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { getOrganizationUplineUserIds } from '@/lib/mlm-uplines'
 
 const supabase = getSupabaseAdmin()
 
-const SALES_TYPES = new Set([
+const MLM_TYPES = new Set([
   'new_member',
   'new_sale',
   'new_client',
   'new_affiliate',
   'team_renewal',
+  'rank_up',
 ])
+
+function formatUsername(username: string): string {
+  const u = username.trim()
+  return u.startsWith('@') ? u : `@${u}`
+}
+
+export function planLabel(planId: string): string {
+  const map: Record<string, string> = {
+    app_member_monthly: 'Pack Membro MTM (Mensal)',
+    app_member_annual: 'Pack Membro MTM (Anual)',
+    premium_monthly: 'Pack Premium MTM (Mensal)',
+    premium_annual: 'Pack Premium MTM (Anual)',
+    goldkiller_lifetime: 'Scanner Gold Killer (Vitalício)',
+    mtm_scanner_monthly: 'Scanner MTM V3.4 (Mensal)',
+    mtm_scanner_lifetime: 'Scanner MTM V3.4 (Vitalício)',
+    scanners_monthly: 'Pack Total de Scanners (Mensal)',
+    scanners_semestral: 'Pack Total de Scanners (Semestral)',
+    scanners_lifetime: 'Pack Total de Scanners (Vitalício)',
+    mtmcopy_addon_monthly: 'MTMCopy Addon (Mensal)',
+    app_member: 'Pack Membro MTM',
+    premium: 'Pack Premium MTM',
+  }
+  return map[planId] ?? planId
+}
 
 async function getMessaging(): Promise<any | null> {
   try {
@@ -36,26 +61,6 @@ async function getMessaging(): Promise<any | null> {
   }
 }
 
-function planLabel(planId: string): string {
-  const map: Record<string, string> = {
-    app_member_monthly: 'Pack Membro MTM (Mensal)',
-    app_member_annual: 'Pack Membro MTM (Anual)',
-    premium_monthly: 'Pack Premium MTM (Mensal)',
-    premium_annual: 'Pack Premium MTM (Anual)',
-    goldkiller_lifetime: 'Scanner Gold Killer (Vitalício)',
-    mtm_scanner_monthly: 'Scanner MTM V3.4 (Mensal)',
-    mtm_scanner_lifetime: 'Scanner MTM V3.4 (Vitalício)',
-    scanners_monthly: 'Pack Total de Scanners (Mensal)',
-    scanners_semestral: 'Pack Total de Scanners (Semestral)',
-    scanners_lifetime: 'Pack Total de Scanners (Vitalício)',
-    mtmcopy_addon_monthly: 'MTMCopy Addon (Mensal)',
-    app_member: 'Pack Membro MTM',
-    premium: 'Pack Premium MTM',
-  }
-  return map[planId] ?? planId
-}
-
-/** Admin + VIP (user_type) — liderança da rede */
 async function getLeadershipIds(): Promise<string[]> {
   const { data } = await supabase
     .from('profiles')
@@ -75,7 +80,6 @@ async function getSponsorId(sponsorUsername: string): Promise<string | null> {
   return data?.id ?? null
 }
 
-/** Evita duplicar a mesma notificação (ex: webhook + complete-registration) */
 async function filterAlreadyNotified(
   userIds: string[],
   type: string,
@@ -114,7 +118,7 @@ async function dispatch(
   const targets = await filterAlreadyNotified(userIds, type, eventId)
   if (!targets.length) return
 
-  const url = SALES_TYPES.has(type) ? '/app-mobile?tab=fast-start' : '/app-mobile'
+  const url = MLM_TYPES.has(type) ? '/app-mobile?tab=fast-start' : '/app-mobile'
   const dataPayload = { url, ...(eventId ? { event_id: eventId } : {}), ...(extraData ?? {}) }
 
   const rows = targets.map((user_id) => ({
@@ -128,7 +132,7 @@ async function dispatch(
 
   const { error: insertErr } = await supabase.from('notifications').insert(rows)
   if (insertErr) {
-    console.warn('[SALES NOTIF] Falha in-app:', insertErr.message)
+    console.warn('[MLM NOTIF] Falha in-app:', insertErr.message)
   }
 
   const apnsPattern = /^[0-9a-f]{64}$/i
@@ -151,7 +155,7 @@ async function dispatch(
   try {
     const resp = await messaging.sendEachForMulticast({
       notification: { title, body, imageUrl: '/icon-512x512.png' },
-      data: { url, tag: 'mtm-sales', ...dataPayload },
+      data: { url, tag: 'mtm-mlm', ...dataPayload },
       tokens: tokenList,
     })
 
@@ -169,134 +173,131 @@ async function dispatch(
       await supabase.from('fcm_tokens').delete().in('token', invalid)
     }
   } catch (e) {
-    console.warn('[SALES NOTIF] Erro FCM:', e)
+    console.warn('[MLM NOTIF] Erro FCM:', e)
   }
 }
 
-/** Admin + VIP — novo membro registado */
-export async function notifyAdminsNewMember(params: {
-  name: string
-  planId: string
+/** Registo novo — VIP/Admin + Sponsor */
+export async function notifyNewMemberRegistration(params: {
+  username: string
   sponsorUsername?: string
   eventId?: string
 }): Promise<void> {
   try {
+    const memberTag = formatUsername(params.username)
     const leadershipIds = await getLeadershipIds()
-    if (!leadershipIds.length) return
 
-    const pack = planLabel(params.planId)
-    const via = params.sponsorUsername ? ` via @${params.sponsorUsername}` : ''
-    await dispatch(
-      leadershipIds,
-      '🆕 Novo Membro MTM!',
-      `${params.name} entrou com o ${pack}${via}`,
-      'new_member',
-      { plan: params.planId },
-      params.eventId,
-    )
+    if (leadershipIds.length) {
+      await dispatch(
+        leadershipIds,
+        '👋 Boas-Vindas ao Membro Novo',
+        `${memberTag} entrou na MoreThanMoney!`,
+        'new_member',
+        { username: params.username },
+        params.eventId,
+      )
+    }
+
+    const sponsorUsername = params.sponsorUsername?.trim()
+    if (sponsorUsername) {
+      const sponsorId = await getSponsorId(sponsorUsername)
+      if (sponsorId) {
+        const sponsorTag = formatUsername(sponsorUsername)
+        await dispatch(
+          [sponsorId],
+          '🎉 Conseguiste!',
+          `${sponsorTag}, ${memberTag} acabou de aumentar a tua equipa MoreThanMoney!`,
+          'new_affiliate',
+          { username: params.username, sponsor: sponsorUsername },
+          params.eventId ? `${params.eventId}_sponsor` : undefined,
+        )
+      }
+    }
   } catch (e) {
-    console.error('[SALES NOTIF] notifyAdminsNewMember:', e)
+    console.error('[MLM NOTIF] notifyNewMemberRegistration:', e)
   }
 }
 
-/** Admin + VIP — nova venda/checkout */
-export async function notifyAdminsVipsNewSale(params: {
-  name: string
+/** Venda na rede descendente — VIP/Admin + organização ascendente */
+export async function notifyTeamSale(params: {
+  buyerUserId: string
+  username: string
   planId: string
-  amountEur?: number
+  excludeUserIds?: string[]
   eventId?: string
 }): Promise<void> {
   try {
-    const leadershipIds = await getLeadershipIds()
-    if (!leadershipIds.length) return
-
     const pack = planLabel(params.planId)
-    const amount = params.amountEur && params.amountEur > 0 ? ` — €${params.amountEur.toFixed(2)}` : ''
+    const leadershipIds = await getLeadershipIds()
+    const uplineIds = await getOrganizationUplineUserIds(params.buyerUserId, params.excludeUserIds ?? [])
+    const recipientIds = [...new Set([...leadershipIds, ...uplineIds])]
+
+    if (!recipientIds.length) return
+
     await dispatch(
-      leadershipIds,
-      '💰 Nova Venda MTM!',
-      `${params.name} adquiriu o ${pack}${amount}`,
+      recipientIds,
+      '💰 Venda na Tua Equipa!',
+      `Parabéns, a tua equipa acabou de vender: ${pack}`,
       'new_sale',
-      { plan: params.planId },
+      { username: params.username, plan: params.planId },
       params.eventId,
     )
   } catch (e) {
-    console.error('[SALES NOTIF] notifyAdminsVipsNewSale:', e)
+    console.error('[MLM NOTIF] notifyTeamSale:', e)
   }
 }
 
-/** Sponsor — cliente novo na rede */
-export async function notifySponsorNewClient(params: {
-  sponsorUsername: string
-  clientName: string
+/** Renovação — VIP/Admin + sponsor + uplines */
+export async function notifyTeamRenewal(params: {
+  memberUserId: string
+  username: string
   planId: string
   eventId?: string
 }): Promise<void> {
   try {
-    const sponsorId = await getSponsorId(params.sponsorUsername)
-    if (!sponsorId) return
-
     const pack = planLabel(params.planId)
-    await dispatch(
-      [sponsorId],
-      '🎉 Tens um Cliente NOVO!',
-      `${params.clientName} acabou de entrar com o ${pack}. A tua rede está a crescer! 🚀`,
-      'new_client',
-      { plan: params.planId },
-      params.eventId,
-    )
-  } catch (e) {
-    console.error('[SALES NOTIF] notifySponsorNewClient:', e)
-  }
-}
-
-/** Sponsor — afiliado novo (registo) */
-export async function notifySponsorNewAffiliate(params: {
-  sponsorUsername: string
-  affiliateName: string
-  planId: string
-  eventId?: string
-}): Promise<void> {
-  try {
-    const sponsorId = await getSponsorId(params.sponsorUsername)
-    if (!sponsorId) return
-
-    const pack = planLabel(params.planId)
-    await dispatch(
-      [sponsorId],
-      '🌟 Tens um Afiliado Novo!',
-      `${params.affiliateName} entrou na tua rede com o ${pack}. Juntos chegamos mais longe! 💪`,
-      'new_affiliate',
-      { plan: params.planId },
-      params.eventId,
-    )
-  } catch (e) {
-    console.error('[SALES NOTIF] notifySponsorNewAffiliate:', e)
-  }
-}
-
-/** Sponsor + Admin + VIP — renovação na equipa */
-export async function notifySponsorTeamRenewal(params: {
-  sponsorId: string
-  memberName: string
-  commission: number
-  eventId?: string
-}): Promise<void> {
-  try {
+    const memberTag = formatUsername(params.username)
     const leadershipIds = await getLeadershipIds()
-    const recipientIds = [...new Set([params.sponsorId, ...leadershipIds])]
+    const uplineIds = await getOrganizationUplineUserIds(params.memberUserId)
+    const recipientIds = [...new Set([...leadershipIds, ...uplineIds])]
 
-    const commStr = params.commission > 0 ? ` +€${params.commission.toFixed(2)} para o sponsor! 💶` : ''
+    if (!recipientIds.length) return
+
     await dispatch(
       recipientIds,
       '♻️ Renovação na Equipa!',
-      `${params.memberName} renovou a subscrição.${commStr}`,
+      `Parabéns, acabaste de renovar um membro da MoreThanMoney (${memberTag} — ${pack}). Continua assim!`,
       'team_renewal',
-      undefined,
+      { username: params.username, plan: params.planId },
       params.eventId,
     )
   } catch (e) {
-    console.error('[SALES NOTIF] notifySponsorTeamRenewal:', e)
+    console.error('[MLM NOTIF] notifyTeamRenewal:', e)
+  }
+}
+
+/** Rank up de membro descendente — organização ascendente */
+export async function notifyTeamRankUp(params: {
+  memberUserId: string
+  username: string
+  rankName: string
+  eventId?: string
+}): Promise<void> {
+  try {
+    const memberTag = formatUsername(params.username)
+    const uplineIds = await getOrganizationUplineUserIds(params.memberUserId)
+    if (!uplineIds.length) return
+
+    await dispatch(
+      uplineIds,
+      '🏆 Rank Up na Equipa!',
+      `Parabéns! ${memberTag} da tua equipa subiu de Rank: ${params.rankName}`,
+      'rank_up',
+      { username: params.username, rank: params.rankName },
+      params.eventId,
+    )
+  } catch (e) {
+    console.error('[MLM NOTIF] notifyTeamRankUp:', e)
   }
 }
 
@@ -306,4 +307,101 @@ export function resolveSponsorUsername(
   metadataSponsor?: string | null,
 ): string {
   return (profileSponsor || metadataSponsor || '').trim()
+}
+
+// ── Compatibilidade com chamadas antigas ───────────────────────────────────
+
+export async function notifyAdminsNewMember(params: {
+  name: string
+  planId: string
+  sponsorUsername?: string
+  username?: string
+  eventId?: string
+}): Promise<void> {
+  const username = params.username || params.name.replace(/\s+/g, '').toLowerCase()
+  await notifyNewMemberRegistration({
+    username,
+    sponsorUsername: params.sponsorUsername,
+    eventId: params.eventId,
+  })
+}
+
+export async function notifyAdminsVipsNewSale(params: {
+  name: string
+  planId: string
+  amountEur?: number
+  buyerUserId?: string
+  username?: string
+  eventId?: string
+}): Promise<void> {
+  if (!params.buyerUserId) return
+  const username = params.username || params.name
+  await notifyTeamSale({
+    buyerUserId: params.buyerUserId,
+    username,
+    planId: params.planId,
+    eventId: params.eventId,
+  })
+}
+
+export async function notifySponsorNewClient(params: {
+  sponsorUsername: string
+  clientName: string
+  planId: string
+  username?: string
+  eventId?: string
+}): Promise<void> {
+  const username = params.username || params.clientName
+  await notifyNewMemberRegistration({
+    username,
+    sponsorUsername: params.sponsorUsername,
+    eventId: params.eventId,
+  })
+}
+
+export async function notifySponsorNewAffiliate(params: {
+  sponsorUsername: string
+  affiliateName: string
+  planId: string
+  username?: string
+  eventId?: string
+}): Promise<void> {
+  const username = params.username || params.affiliateName
+  await notifyNewMemberRegistration({
+    username,
+    sponsorUsername: params.sponsorUsername,
+    eventId: params.eventId,
+  })
+}
+
+export async function notifySponsorTeamRenewal(params: {
+  sponsorId: string
+  memberName: string
+  memberUserId?: string
+  username?: string
+  planId?: string
+  commission?: number
+  eventId?: string
+}): Promise<void> {
+  if (!params.memberUserId) {
+    const leadershipIds = await getLeadershipIds()
+    const recipientIds = [...new Set([params.sponsorId, ...leadershipIds])]
+    const memberTag = params.username ? formatUsername(params.username) : params.memberName
+    const pack = params.planId ? planLabel(params.planId) : 'subscrição'
+    await dispatch(
+      recipientIds,
+      '♻️ Renovação na Equipa!',
+      `Parabéns, acabaste de renovar um membro da MoreThanMoney (${memberTag} — ${pack}). Continua assim!`,
+      'team_renewal',
+      undefined,
+      params.eventId,
+    )
+    return
+  }
+  await notifyTeamRenewal({
+    memberUserId: params.memberUserId,
+    username: params.username || params.memberName,
+    planId: params.planId || 'app_member_monthly',
+    eventId: params.eventId,
+  })
 }

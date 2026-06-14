@@ -219,6 +219,8 @@ export default function NotificationsPanel({ onClose, className, isAppOnlyUser =
         return <TrendingUp className="h-4 w-4 text-[#D2A63C]" />
       case 'team_renewal':
         return <RefreshCw className="h-4 w-4 text-blue-400" />
+      case 'rank_up':
+        return <TrendingUp className="h-4 w-4 text-[#D2A63C]" />
       default:
         return <Bell className="h-4 w-4 text-gray-400" />
     }
@@ -259,6 +261,7 @@ export default function NotificationsPanel({ onClose, className, isAppOnlyUser =
       case 'new_client':
       case 'new_affiliate':
       case 'team_renewal':
+      case 'rank_up':
         return '/app-mobile?tab=fast-start'
       default:
         return '/member-area?tab=notifications'

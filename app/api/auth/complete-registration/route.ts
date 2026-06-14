@@ -12,9 +12,8 @@ import {
 } from '@/lib/mlm-checkout-commission'
 import { isRegisteredMember } from '@/lib/member-access'
 import {
-  notifyAdminsNewMember,
-  notifyAdminsVipsNewSale,
-  notifySponsorNewAffiliate,
+  notifyNewMemberRegistration,
+  notifyTeamSale,
 } from '@/lib/notifications-sales'
 
 const supabaseAdmin = getSupabaseAdmin()
@@ -261,27 +260,17 @@ export async function POST(request: NextRequest) {
         const planId = session.metadata?.plan || `${plan || 'app_member'}_${billing || 'monthly'}`
         const effectiveSponsor = (sponsor_username || session.metadata?.sponsor_username || '').trim()
         const eventId = `reg_${session.id}`
-        const amountEur = (session.amount_total || 0) / 100
-        void notifyAdminsNewMember({
-          name: oauthFullName,
-          planId,
+        void notifyNewMemberRegistration({
+          username: oauthUsername,
           sponsorUsername: effectiveSponsor || undefined,
           eventId,
         })
-        void notifyAdminsVipsNewSale({
-          name: oauthFullName,
+        void notifyTeamSale({
+          buyerUserId: oauthUserId,
+          username: oauthUsername,
           planId,
-          amountEur: amountEur > 0 ? amountEur : undefined,
           eventId: `${eventId}_sale`,
         })
-        if (effectiveSponsor) {
-          void notifySponsorNewAffiliate({
-            sponsorUsername: effectiveSponsor,
-            affiliateName: oauthFullName,
-            planId,
-            eventId: `${eventId}_aff`,
-          })
-        }
       }
 
       return NextResponse.json({
@@ -348,27 +337,17 @@ export async function POST(request: NextRequest) {
       const planId = session.metadata?.plan || `${plan || 'app_member'}_${billing || 'monthly'}`
       const effectiveSponsor = (sponsor_username || session.metadata?.sponsor_username || '').trim()
       const eventId = `reg_${session.id}`
-      const amountEur = (session.amount_total || 0) / 100
-      void notifyAdminsNewMember({
-        name: full_name,
-        planId,
+      void notifyNewMemberRegistration({
+        username,
         sponsorUsername: effectiveSponsor || undefined,
         eventId,
       })
-      void notifyAdminsVipsNewSale({
-        name: full_name,
+      void notifyTeamSale({
+        buyerUserId: userId,
+        username,
         planId,
-        amountEur: amountEur > 0 ? amountEur : undefined,
         eventId: `${eventId}_sale`,
       })
-      if (effectiveSponsor) {
-        void notifySponsorNewAffiliate({
-          sponsorUsername: effectiveSponsor,
-          affiliateName: full_name,
-          planId,
-          eventId: `${eventId}_aff`,
-        })
-      }
     }
 
     return NextResponse.json({

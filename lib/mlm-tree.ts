@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { notifyTeamRankUp } from '@/lib/notifications-sales'
 
 type MlmSupabase = SupabaseClient
 
@@ -188,7 +189,7 @@ async function recalculateRanksUpwards(supabase: MlmSupabase, nodeId: string) {
       allRanks
     )
 
-    if (newRankId !== node.rank_id) {
+    if (newRankId !== node.rank_id && newRankId > (node.rank_id || 0)) {
       await supabase
         .from('mlm_nodes')
         .update({ rank_id: newRankId, updated_at: new Date().toISOString() })
@@ -199,6 +200,22 @@ async function recalculateRanksUpwards(supabase: MlmSupabase, nodeId: string) {
         .update({ mlm_rank_id: newRankId })
         .eq('id', node.user_id)
         .then(undefined, () => {})
+
+      const rankName = allRanks.find((r) => r.id === newRankId)?.name || `Rank ${newRankId}`
+      const { data: memberProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', node.user_id)
+        .maybeSingle()
+
+      if (memberProfile?.username) {
+        void notifyTeamRankUp({
+          memberUserId: node.user_id,
+          username: memberProfile.username,
+          rankName,
+          eventId: `rankup_${node.user_id}_${newRankId}`,
+        })
+      }
     }
 
     if (!node.parent_node_id) break
