@@ -155,6 +155,7 @@ export function buildTrailingOptions(
 async function resolveOrderTrailingForSymbol(
   req: OrderRequest,
   brokerSymbol: string,
+  spec?: MetaApiSymbolSpecification | null,
 ): Promise<TrailingStopLossOptions | undefined> {
   const raw =
     req.trailingStop ??
@@ -163,12 +164,16 @@ async function resolveOrderTrailingForSymbol(
       : null)
   if (raw == null) return undefined
 
-  const spec = await getSymbolSpecification(req.accountId, brokerSymbol)
+  let symbolSpec = spec
+  if (!symbolSpec) {
+    symbolSpec = await getSymbolSpecification(req.accountId, brokerSymbol)
+  }
+
   const normalized =
-    spec && typeof raw !== 'number' && (raw.mode === 'pips' || raw.mode === 'threshold_pips')
-      ? convertTrailingToRelativePoints(raw, spec, req.symbol)
-      : spec && typeof raw === 'number'
-        ? convertTrailingToRelativePoints(raw, spec, req.symbol)
+    symbolSpec && typeof raw !== 'number' && (raw.mode === 'pips' || raw.mode === 'threshold_pips')
+      ? convertTrailingToRelativePoints(raw, symbolSpec, req.symbol)
+      : symbolSpec && typeof raw === 'number'
+        ? convertTrailingToRelativePoints(raw, symbolSpec, req.symbol)
         : raw
 
   return buildTrailingOptions(normalized)
@@ -185,7 +190,93 @@ function buildOrderOptions(
   return options
 }
 
-const CONNECT_TIMEOUT_MS = 45_000
+const CONNECT_TIMEOUT_MS = 55_000
+
+async function placeOrderOnConnection(
+  connection: RpcConnection,
+  symbols: string[],
+  specCache: Map<string, MetaApiSymbolSpecification | null>,
+  req: OrderRequest,
+): Promise<OrderResult> {
+  try {
+    const brokerSymbol = resolveBrokerSymbol(req.symbol, symbols)
+    const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
+    const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
+
+    let spec = specCache.get(brokerSymbol)
+    if (spec === undefined) {
+      if (connection.getSymbolSpecification) {
+        try {
+          const raw = await connection.getSymbolSpecification(brokerSymbol)
+          spec = raw?.point ? { point: raw.point, pipSize: raw.pipSize, digits: raw.digits } : null
+        } catch {
+          spec = null
+        }
+      } else {
+        spec = null
+      }
+      specCache.set(brokerSymbol, spec)
+    }
+
+    const trailingOpts = await resolveOrderTrailingForSymbol(req, brokerSymbol, spec)
+    const orderOptions = buildOrderOptions(req, trailingOpts)
+
+    if (req.orderType === 'limit') {
+      const openPrice = req.openPrice
+      if (openPrice == null || openPrice <= 0) {
+        return { success: false, error: 'Preço LIMIT em falta' }
+      }
+      const trade =
+        req.direction === 'buy'
+          ? await connection.createLimitBuyOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
+          : await connection.createLimitSellOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
+      return {
+        success: true,
+        orderId: String(trade?.orderId ?? trade?.positionId ?? ''),
+        brokerSymbol,
+      }
+    }
+
+    const trade =
+      req.direction === 'buy'
+        ? await connection.createMarketBuyOrder(brokerSymbol, req.volume, sl, tp, orderOptions)
+        : await connection.createMarketSellOrder(brokerSymbol, req.volume, sl, tp, orderOptions)
+
+    return {
+      success: true,
+      orderId: String(trade?.orderId ?? trade?.positionId ?? ''),
+      brokerSymbol,
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao executar ordem no MT5'
+    return { success: false, error: message }
+  }
+}
+
+/** Uma ligação RPC — várias ordens em série (Premium 3 legs, evita 3× waitConnected). */
+export async function placeOrdersSequential(accountId: string, requests: OrderRequest[]): Promise<OrderResult[]> {
+  if (!requests.length) return []
+
+  let close: (() => Promise<void>) | undefined
+  try {
+    const { connection, close: closeFn } = await getRpcConnection(accountId)
+    close = closeFn
+    const symbols = await connection.getSymbols()
+    const specCache = new Map<string, MetaApiSymbolSpecification | null>()
+    const results: OrderResult[] = []
+
+    for (const req of requests) {
+      results.push(await placeOrderOnConnection(connection, symbols, specCache, req))
+    }
+
+    return results
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao ligar MetaAPI'
+    return requests.map(() => ({ success: false, error: message }))
+  } finally {
+    if (close) await close()
+  }
+}
 
 async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout>

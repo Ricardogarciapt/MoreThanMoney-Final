@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
+import {
+  appleMlmContext,
+  applePaymentReference,
+  processMlmSubscriptionRenewal,
+  processMlmSubscriptionSignup,
+} from "@/lib/mlm-subscription-integration"
 
 const supabase = getSupabaseAdmin()
 
@@ -17,6 +23,7 @@ export async function POST(request: NextRequest) {
       subscription_status,
       event_type,
       coupon_code,
+      sponsor_username,
     } = body
 
     if (!apple_original_transaction_id || !apple_product_id || !subscription_plan) {
@@ -135,6 +142,11 @@ export async function POST(request: NextRequest) {
       profileUpdate.coupon_code = coupon_code.toUpperCase()
     }
 
+    const sponsor = (sponsor_username as string | undefined)?.trim()
+    if (sponsor && !isRenewal) {
+      profileUpdate.mlm_sponsor_username = sponsor
+    }
+
     if (isRenewal) {
       // Increment renewal count
       const { data: current } = await supabase
@@ -184,6 +196,41 @@ export async function POST(request: NextRequest) {
           fetch(inviteUrl, { method: "POST" }).catch(() => {/* non-blocking */})
         }
       }
+    }
+
+    // MLM
+    try {
+      const mlmCtx = appleMlmContext(
+        apple_product_id,
+        subscription_plan === 'premium' ? 'premium_monthly' : 'app_member_monthly',
+      )
+      if (isRenewal) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('mlm_sponsor_username')
+          .eq('id', userId)
+          .single()
+        await processMlmSubscriptionRenewal(supabase, {
+          userId,
+          sponsorUsername: prof?.mlm_sponsor_username ?? null,
+          planId: mlmCtx.planId,
+          amountCents: mlmCtx.amountCents,
+          currency: mlmCtx.currency,
+          paymentReference: applePaymentReference('renewal', apple_original_transaction_id),
+        })
+      } else {
+        await processMlmSubscriptionSignup(supabase, {
+          userId,
+          sponsorUsername: sponsor,
+          planId: mlmCtx.planId,
+          amountCents: mlmCtx.amountCents,
+          currency: mlmCtx.currency,
+          paymentReference: applePaymentReference('purchase', apple_original_transaction_id),
+          platform: 'app_store',
+        })
+      }
+    } catch (mlmErr) {
+      console.error('[apple-iap] MLM error:', mlmErr)
     }
 
     return NextResponse.json({

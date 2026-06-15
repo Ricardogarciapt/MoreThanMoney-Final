@@ -107,6 +107,8 @@ export async function POST(_request: NextRequest) {
   }
 }
 
+export const maxDuration = 120
+
 export async function GET() {
   if (!BOT_TOKEN) {
     return NextResponse.json({ error: "TELEGRAM_AIBOT_TOKEN not set" })

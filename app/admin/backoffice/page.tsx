@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/auth-context'
 import MlmManager from '@/components/admin/mlm-manager'
+import MlmTreeEditor from '@/components/admin/mlm-tree-editor'
 import {
   LayoutDashboard,
   Award,
   Network,
+  GitBranch,
   Coins,
   Settings,
   ArrowLeft,
@@ -21,6 +23,7 @@ import { cn } from '@/lib/utils'
 
 const sidebarItems = [
   { id: 'dashboard',    label: 'Dashboard',             icon: LayoutDashboard },
+  { id: 'tree',         label: 'Árvore Binária',        icon: GitBranch },
   { id: 'ranks',        label: 'Plano de Compensação',  icon: Award },
   { id: 'affiliates',   label: 'Rede de Afiliados',     icon: Network },
   { id: 'commissions',  label: 'Comissões',             icon: Coins },
@@ -141,10 +144,16 @@ export default function BackofficePage() {
 
       {/* Main Content */}
       <main className="flex-1 ml-60 min-h-screen overflow-y-auto">
-        <MlmManager
-          activeSection={activeSection}
-          setActiveSection={setActiveSection}
-        />
+        {activeSection === 'tree' ? (
+          <div className="p-6">
+            <MlmTreeEditor />
+          </div>
+        ) : (
+          <MlmManager
+            activeSection={activeSection}
+            setActiveSection={setActiveSection}
+          />
+        )}
       </main>
     </div>
   )

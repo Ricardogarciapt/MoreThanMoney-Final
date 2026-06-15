@@ -15,7 +15,7 @@ import {
   countExecutedToday,
 } from './db'
 import { computeLotSize, getLotSizingSkipReason, signalForRiskSizing } from './lot-sizing'
-import { fetchLotSizingContext, isMetaApiConfigured, placeOrder } from './metaapi'
+import { fetchLotSizingContext, isMetaApiConfigured, placeOrdersSequential, type OrderResult } from './metaapi'
 import { isCopyFactoryEnabled } from './copyfactory'
 import type { MtmcopyChannelKey } from './channel-context'
 import { resolveChannelFromChat, shouldIgnoreChannelMessage } from './channel-context'
@@ -611,6 +611,17 @@ async function executeViaMtmProvider(
   const mtComment = mtCommentForProfile(executionProfile, provider.tag)
   const logTargets = await resolveLogTargets(subscribers)
 
+  await logProviderSignalEvent({
+    channel,
+    provider,
+    signal: signalForExec,
+    raw,
+    telegramMessageId,
+    lot: totalLot,
+    status: 'received',
+    detail: `${aiDetail} · A abrir ${signalForExec.symbol} ${signalForExec.direction} · ${executionSummary}`,
+  })
+
   const isPremium = channel === 'premium-signals'
   const legs = isPremium
     ? buildPremiumExitLegs(signalForExec, totalLot, {
@@ -623,9 +634,9 @@ async function executeViaMtmProvider(
   type LegResult = { success: boolean; orderId?: string; brokerSymbol?: string; error?: string; label: string; lot: number }
   const results: LegResult[] = []
 
-  if (legs?.length) {
-    const legResults = await Promise.all(
-      legs.map(async (leg) => {
+  try {
+    if (legs?.length) {
+      const orderReqs: OrderRequest[] = legs.map((leg) => {
         const req = buildOrderRequest(
           providerConn,
           provider.accountId,
@@ -635,25 +646,49 @@ async function executeViaMtmProvider(
         )
         req.takeProfit = leg.tpPrice
         req.trailingStop = leg.trailing ?? null
-        const r = await placeOrder(req)
-        return { ...r, label: leg.label, lot: req.volume }
-      }),
-    )
-    results.push(...legResults)
-  } else {
-    const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
-    if (channel === 'trade-ideas') {
-      req.trailingStop = { mode: 'pips', pips: TRADE_IDEAS_TRAILING_PIPS }
+        return req
+      })
+      const legResults = await placeOrdersSequential(provider.accountId, orderReqs)
+      legResults.forEach((r, i) => {
+        results.push({
+          ...r,
+          label: legs[i]?.label ?? `TP${i + 1}`,
+          lot: orderReqs[i]?.volume ?? 0,
+        })
+      })
+    } else {
+      const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
+      if (channel === 'trade-ideas') {
+        req.trailingStop = { mode: 'pips', pips: TRADE_IDEAS_TRAILING_PIPS }
+      }
+      const [r] = await placeOrdersSequential(provider.accountId, [req])
+      results.push({
+        ...(r ?? { success: false, error: 'Sem resposta MetaAPI' }),
+        label: signalForExec.orderType === 'limit' ? 'LIMIT' : 'MARKET',
+        lot: totalLot,
+      })
     }
-    const r = await placeOrder(req)
-    results.push({
-      ...r,
-      label: signalForExec.orderType === 'limit' ? 'LIMIT' : 'MARKET',
+  } catch (execErr) {
+    const msg = execErr instanceof Error ? execErr.message : 'Erro fatal na execução MetaAPI'
+    await logProviderSignalEvent({
+      channel,
+      provider,
+      signal: signalForExec,
+      raw,
+      telegramMessageId,
       lot: totalLot,
+      status: 'error',
+      detail: `${aiDetail} · ${msg}`,
     })
+    throw execErr
   }
 
-  const result = results[results.length - 1] ?? { success: false, error: 'Sem ordens' }
+  const result: LegResult = results[results.length - 1] ?? {
+    success: false,
+    error: 'Sem ordens',
+    label: '—',
+    lot: 0,
+  }
   const anySuccess = results.some((r) => r.success)
   const orderLabel = legs?.length
     ? `${legs.length} exits · ${results.filter((r) => r.success).length} OK`
@@ -732,7 +767,7 @@ async function executeViaMtmProvider(
 
   console.log(
     anySuccess
-      ? `[mtmcopy] ✅ ${provider.tag} ${result.brokerSymbol} ${signalForExec.direction} ${totalLot} ${orderLabel} (${executionSummary}) → ${logTargets.length} slave(s)`
+      ? `[mtmcopy] ✅ ${provider.tag} ${result.brokerSymbol ?? signalForExec.symbol} ${signalForExec.direction} ${totalLot} ${orderLabel} (${executionSummary}) → ${logTargets.length} slave(s)`
       : `[mtmcopy] ❌ ${provider.tag}: ${result.error}`,
   )
 }
@@ -876,22 +911,37 @@ async function processSignalDirect(
         })
       : null
 
-  let result: Awaited<ReturnType<typeof placeOrder>>
+  await logMtmcopySignal({
+    user_id: conn.user_id,
+    connection_id: conn.id,
+    channel_key: channel,
+    telegram_message_id: telegramMessageId ?? null,
+    symbol: signal.symbol,
+    direction,
+    entry: signal.entry,
+    sl: signal.sl,
+    tp: signal.tp[0] ?? null,
+    lot,
+    status: 'received',
+    detail: `${aiPrefix}A abrir ${signal.symbol} ${direction} · lot ${lot} ${tgRef}`.trim(),
+    raw_message: raw,
+  })
+
+  let result: OrderResult
   if (legs?.length) {
-    const legResults = await Promise.all(
-      legs.map(async (leg) => {
-        const req = buildOrderRequest(
-          conn,
-          conn.metaapi_account_id!,
-          signal,
-          leg.lot,
-          `MTMcopier-${leg.label}`,
-        )
-        req.takeProfit = leg.tpPrice
-        req.trailingStop = leg.trailing ?? null
-        return placeOrder(req)
-      }),
-    )
+    const orderReqs: OrderRequest[] = legs.map((leg) => {
+      const req = buildOrderRequest(
+        conn,
+        conn.metaapi_account_id!,
+        signal,
+        leg.lot,
+        `MTMcopier-${leg.label}`,
+      )
+      req.takeProfit = leg.tpPrice
+      req.trailingStop = leg.trailing ?? null
+      return req
+    })
+    const legResults = await placeOrdersSequential(conn.metaapi_account_id!, orderReqs)
     result = legResults[legResults.length - 1] ?? { success: false, error: 'Sem ordens' }
     if (!legResults.some((r) => r.success)) {
       result = legResults.find((r) => !r.success) ?? result
@@ -903,7 +953,8 @@ async function processSignalDirect(
     if (channel === 'trade-ideas' && conn.auto_trailing_stop) {
       req.trailingStop = { mode: 'pips', pips: TRADE_IDEAS_TRAILING_PIPS }
     }
-    result = await placeOrder(req)
+    const [single] = await placeOrdersSequential(conn.metaapi_account_id!, [req])
+    result = single ?? { success: false, error: 'Sem resposta MetaAPI' }
   }
 
   const trailingNote = conn.auto_trailing_stop

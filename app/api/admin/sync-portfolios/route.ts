@@ -66,7 +66,12 @@ export async function POST(request: NextRequest) {
           reforco_anual: a.reforco_anual,
           potencial_crescimento_percent: a.potencial_crescimento_percent,
           potencial_crescimento_valor: a.potencial_crescimento_valor,
-          entry_price: a.entry_price
+          entry_price: a.entry_price,
+          tp1_price: a.tp1_price ?? null,
+          tp2_price: a.tp2_price ?? null,
+          tp3_price: a.tp3_price ?? null,
+          stop_loss_price: a.stop_loss_price ?? null,
+          ai_validated: a.ai_validated ?? false,
         })))
 
       if (cryptoError) {
@@ -95,7 +100,12 @@ export async function POST(request: NextRequest) {
           reforco_total_5anos: a.reforco_total_5anos,
           crescimento_esperado_percent: a.crescimento_esperado_percent,
           crescimento_esperado_valor: a.crescimento_esperado_valor,
-          entry_price: a.entry_price
+          entry_price: a.entry_price,
+          tp1_price: a.tp1_price ?? null,
+          tp2_price: a.tp2_price ?? null,
+          tp3_price: a.tp3_price ?? null,
+          stop_loss_price: a.stop_loss_price ?? null,
+          ai_validated: a.ai_validated ?? false,
         })))
 
       if (etfError) {

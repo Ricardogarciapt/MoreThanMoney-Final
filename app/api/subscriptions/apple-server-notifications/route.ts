@@ -21,6 +21,12 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
+import {
+  appleMlmContext,
+  applePaymentReference,
+  processMlmSubscriptionRenewal,
+  processMlmSubscriptionSignup,
+} from "@/lib/mlm-subscription-integration"
 
 const supabase = getSupabaseAdmin()
 
@@ -110,6 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     const originalTransactionID: string = transaction.originalTransactionId ?? ""
+    const transactionID: string = String(transaction.transactionId ?? originalTransactionID)
     const productID: string = transaction.productId ?? ""
     const expiresAtMs: number | null = transaction.expiresDate ?? null
     const autoRenews: boolean = renewalInfo?.autoRenewStatus === 1
@@ -121,7 +128,7 @@ export async function POST(request: NextRequest) {
     // Find user by transaction ID
     const { data: profile } = await supabase
       .from("profiles")
-      .select("id, email, subscription_renewal_count")
+      .select("id, email, subscription_renewal_count, mlm_sponsor_username, subscription_plan")
       .eq("apple_original_transaction_id", originalTransactionID)
       .single()
 
@@ -200,6 +207,34 @@ export async function POST(request: NextRequest) {
     if (!isActive && profile.email) {
       // TODO: integrate email service
       console.log(`[apple-asn] Subscription ${status} for ${profile.email}`)
+    }
+
+    // MLM: signup ou renovação
+    if (isActive && (notificationType === "SUBSCRIBED" || isRenewal)) {
+      try {
+        const mlmCtx = appleMlmContext(productID, plan)
+        if (isRenewal) {
+          await processMlmSubscriptionRenewal(supabase, {
+            userId,
+            sponsorUsername: profile.mlm_sponsor_username,
+            planId: mlmCtx.planId,
+            amountCents: mlmCtx.amountCents,
+            currency: mlmCtx.currency,
+            paymentReference: applePaymentReference("renewal", transactionID),
+          })
+        } else if (notificationType === "SUBSCRIBED") {
+          await processMlmSubscriptionSignup(supabase, {
+            userId,
+            planId: mlmCtx.planId,
+            amountCents: mlmCtx.amountCents,
+            currency: mlmCtx.currency,
+            paymentReference: applePaymentReference("purchase", transactionID),
+            platform: "app_store",
+          })
+        }
+      } catch (mlmErr) {
+        console.error("[apple-asn] MLM error:", mlmErr)
+      }
     }
 
     return NextResponse.json({ ok: true, status, user_id: userId })

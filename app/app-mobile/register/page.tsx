@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -58,6 +58,17 @@ export default function AppMobileRegisterPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const infoMessage = searchParams.get('message')
+  const refSponsor = searchParams.get('ref')
+
+  useEffect(() => {
+    if (refSponsor?.trim()) {
+      const sponsor = refSponsor.trim()
+      setFormData((prev) => ({ ...prev, sponsorUsername: prev.sponsorUsername || sponsor }))
+      localStorage.setItem('mtm_ref_sponsor', sponsor.toLowerCase())
+      void validateSponsor(sponsor)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refSponsor])
 
   const activePlan = PLANS[selectedPlan]
   const activePricing = billingCycle === 'annual' ? activePlan.annual : activePlan.monthly
@@ -113,6 +124,10 @@ export default function AppMobileRegisterPage() {
         billing: billingCycle,
         created_at: Date.now(),
       }))
+
+      if (formData.sponsorUsername.trim()) {
+        localStorage.setItem('mtm_ref_sponsor', formData.sponsorUsername.trim().toLowerCase())
+      }
 
       const planId = `${selectedPlan}_${billingCycle}`
       const checkoutRes = await fetch('/api/stripe/register-checkout', {

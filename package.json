@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",
+    "@apple/app-store-server-library": "^3.1.0",
     "@auth/core": "^0.34.2",
     "@capacitor/android": "^8.3.4",
     "@capacitor/app": "^8.1.0",
@@ -74,6 +75,7 @@
     "iconv-lite": "^0.7.2",
     "immer": "latest",
     "input-otp": "1.4.1",
+    "jose": "^6.2.3",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.454.0",
     "metaapi.cloud-sdk": "^27.2.0",

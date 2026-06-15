@@ -102,6 +102,7 @@ const TYPE_LABELS: Record<string, string> = {
   direct_referral: 'Referência Direta',
   rank_bonus: 'Bónus de Rank',
   monthly_residual: 'Residual Mensal',
+  rank_residual: 'Residual de Rank',
   free_pack: 'Pack Grátis',
 }
 
@@ -272,6 +273,7 @@ export default function MlmManager({
   const [loadingAffiliates, setLoadingAffiliates] = useState(false)
   const [loadingCommissions, setLoadingCommissions] = useState(false)
   const [error, setError] = useState('')
+  const [syncingTree, setSyncingTree] = useState(false)
 
   // ── Fetch helpers ─────────────────────────────────────────────────────────
 
@@ -383,6 +385,29 @@ export default function MlmManager({
     } finally { setSavingSettings(false) }
   }
 
+  const syncMlmTree = async () => {
+    setSyncingTree(true)
+    setError('')
+    try {
+      const res = await adminApiCall<{
+        success: boolean
+        scanned: number
+        placed: number
+        skipped: number
+        errors: string[]
+      }>('/api/admin/mlm/sync-tree', { method: 'POST', body: JSON.stringify({ limit: 500 }) })
+      if (res.data) {
+        const { placed, scanned, skipped } = res.data
+        await fetchAffiliates()
+        if (res.data.errors?.length) {
+          setError(`Árvore: ${placed} colocados · ${scanned} analisados · ${skipped} ignorados · ${res.data.errors.length} erros`)
+        }
+      }
+    } finally {
+      setSyncingTree(false)
+    }
+  }
+
   const saveRank = async (data: Partial<MlmRank>) => {
     if (data.id) {
       await adminApiCall('/api/admin/mlm/ranks', { method: 'PUT', body: JSON.stringify(data) })
@@ -469,6 +494,17 @@ export default function MlmManager({
           <p className="text-gray-400 text-sm">Sistema de compensação binário MoreThanMoney</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={syncMlmTree}
+            disabled={syncingTree}
+            className="border-gray-700 text-gray-300 hover:text-white"
+          >
+            {syncingTree ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Network className="w-3.5 h-3.5 mr-1" />}
+            Sincronizar árvore
+          </Button>
           <span className="text-sm text-gray-400">Sistema</span>
           <button
             onClick={toggleMlm}

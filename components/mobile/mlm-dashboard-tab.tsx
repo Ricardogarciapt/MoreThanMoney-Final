@@ -175,6 +175,7 @@ const TYPE_LABELS: Record<string, string> = {
   direct_referral: 'Referência Direta',
   rank_bonus: 'Bónus Rank',
   monthly_residual: 'Residual Mensal',
+  rank_residual: 'Residual de Rank',
   free_pack: 'Pack Grátis',
 }
 

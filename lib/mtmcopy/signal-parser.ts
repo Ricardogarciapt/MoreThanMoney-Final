@@ -209,14 +209,7 @@ const ZONE_ASSET_PREFIX =
   '(?:gold|btc(?:usd)?|bitcoin|xau|silver|xag|eth(?:usd)?)?\\s*'
 
 function extractEntryFromZone(text: string, direction: 'buy' | 'sell'): number | null {
-  const single = text.match(
-    new RegExp(
-      `${ZONE_ASSET_PREFIX}(?:buy|sell)\\s+zone\\s*(\\d+(?:[.,]\\d+)?)(?!\\s*[-–—])`,
-      'i',
-    ),
-  )
-  if (single) return parseNumber(single[1])
-
+  // Intervalo primeiro — evita capturar «431» de «4310 - 4305» com regex single ambígua
   const zone =
     text.match(
       new RegExp(
@@ -225,15 +218,25 @@ function extractEntryFromZone(text: string, direction: 'buy' | 'sell'): number |
       ),
     ) ?? text.match(/zone\s*(\d+(?:[.,]\d+)?)\s*[-–—]\s*(\d+(?:[.,]\d+)?)/i)
 
-  if (!zone) return null
+  if (zone) {
+    const a = parseNumber(zone[1])
+    const b = parseNumber(zone[2])
+    if (a != null && b != null) {
+      const low = Math.min(a, b)
+      const high = Math.max(a, b)
+      return direction === 'buy' ? low : high
+    }
+  }
 
-  const a = parseNumber(zone[1])
-  const b = parseNumber(zone[2])
-  if (a == null || b == null) return null
+  const single = text.match(
+    new RegExp(
+      `${ZONE_ASSET_PREFIX}(?:buy|sell)\\s+zone\\s*(\\d+(?:[.,]\\d+)?)(?=\\s*(?:$|\\n|[^0-9]))`,
+      'i',
+    ),
+  )
+  if (single) return parseNumber(single[1])
 
-  const low = Math.min(a, b)
-  const high = Math.max(a, b)
-  return direction === 'buy' ? low : high
+  return null
 }
 
 function detectOrderType(text: string): 'market' | 'limit' {
@@ -260,6 +263,9 @@ function extractEntry(text: string, lines: string[]): number | null {
   }
 
   for (const line of lines) {
+    // Cabeçalho numerado («1. XAUUSD BUY NOW») — não usar como preço de entrada
+    if (/^\s*\d+\.\s*(?:#?[A-Z]{2,12}|gold|silver|btc)/i.test(line)) continue
+
     const l = line.toLowerCase()
     if (!/entr(y|ada|ar)|@|abertura|open|preço|preco|price|entry\s*zone|\bzone\b/.test(l)) continue
     if (/sl|tp|stop|alvo|takeprofit|stoploss/.test(l)) continue
@@ -277,7 +283,7 @@ function extractEntry(text: string, lines: string[]): number | null {
   }
 
   const inlineEntry = text.match(
-    /\b(?:buy|sell|long|short)\s+(?:now\s+)?(?:@|at)?\s*(\d+(?:[.,]\d+)?)/i,
+    /\b(?:buy|sell|long|short)\s+(?:now\s+)?(?:@|at)\s*(\d+(?:[.,]\d+)?)/i,
   )
   if (inlineEntry) return parseNumber(inlineEntry[1])
 

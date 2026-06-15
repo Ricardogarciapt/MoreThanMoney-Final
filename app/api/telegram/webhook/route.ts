@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 export async function GET() {
   const { isMetaApiConfigured } = await import("@/lib/mtmcopy/metaapi")

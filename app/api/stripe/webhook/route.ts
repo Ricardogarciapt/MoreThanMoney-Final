@@ -18,6 +18,7 @@ import {
   notifyAdminsStripeSkoolAction,
 } from '@/lib/stripe-skool-admin'
 import { processMlmCheckoutCommission } from '@/lib/mlm-checkout-commission'
+import { processMlmSubscriptionRenewal } from '@/lib/mlm-subscription-integration'
 import { upsertSponsorNode } from '@/lib/mlm-tree'
 import {
   notifyTeamSale,
@@ -431,83 +432,24 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     })
   }
 
-  // ── MLM: comissão residual mensal ao patrocinador ───────────────────────
-  // Só em renovações (billing_reason === 'subscription_cycle')
-  // e apenas se o pagamento tem valor real (> 0)
-  if (
-    invoice.billing_reason === 'subscription_cycle' &&
-    invoice.amount_paid > 0 &&
-    profile.mlm_sponsor_username
-  ) {
+  // ── MLM: comissões em renovação (residual directo + residual de rank) ───
+  if (invoice.billing_reason === 'subscription_cycle' && invoice.amount_paid > 0) {
     try {
-      const { data: mlmSettings } = await supabase
-        .from('mlm_settings')
-        .select('is_active, direct_commission_pct')
-        .eq('id', 1)
-        .single()
+      const planId =
+        (invoice.lines?.data?.[0]?.price?.metadata?.plan as string | undefined) ||
+        profile.subscription_plan ||
+        'app_member_monthly'
 
-      if (mlmSettings?.is_active) {
-        const { data: sponsor } = await supabase
-          .from('profiles')
-          .select('id, username')
-          .eq('username', profile.mlm_sponsor_username.trim())
-          .single()
-
-        if (sponsor) {
-          const commissionPct = (mlmSettings.direct_commission_pct || 20) / 100
-          const commissionAmount = parseFloat(((invoice.amount_paid / 100) * commissionPct).toFixed(2))
-          const planId =
-            (invoice.lines?.data?.[0]?.price?.metadata?.plan as string | undefined) ||
-            profile.subscription_plan ||
-            'app_member_monthly'
-
-          // Verificar idempotência — não duplicar por invoice
-          const { data: existing } = await supabase
-            .from('mlm_commissions')
-            .select('id')
-            .eq('stripe_invoice_id', invoice.id)
-            .maybeSingle()
-
-          if (!existing) {
-            await supabase.from('mlm_commissions').insert({
-              beneficiary_id: sponsor.id,
-              from_user_id: profile.id,
-              type: 'monthly_residual',
-              amount: commissionAmount,
-              currency: invoice.currency?.toUpperCase() || 'EUR',
-              source_plan: planId,
-              stripe_invoice_id: invoice.id,
-              source_amount_cents: invoice.amount_paid,
-              status: 'pending',
-              payout_status: 'pending',
-            })
-
-            // Actualizar pending_commissions do patrocinador
-            const { data: sponsorNode } = await supabase
-              .from('mlm_nodes')
-              .select('id, pending_commissions')
-              .eq('user_id', sponsor.id)
-              .maybeSingle()
-
-            if (sponsorNode) {
-              await supabase
-                .from('mlm_nodes')
-                .update({
-                  pending_commissions: (Number(sponsorNode.pending_commissions) || 0) + commissionAmount,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('user_id', sponsor.id)
-            } else {
-              await supabase.from('mlm_nodes').insert({
-                user_id: sponsor.id,
-                pending_commissions: commissionAmount,
-              }).then(undefined, () => {})
-            }
-          }
-        }
-      }
+      await processMlmSubscriptionRenewal(supabase, {
+        userId: profile.id,
+        sponsorUsername: profile.mlm_sponsor_username,
+        paymentReference: invoice.id,
+        amountCents: invoice.amount_paid,
+        currency: invoice.currency?.toUpperCase() || 'EUR',
+        planId,
+      })
     } catch (mlmErr) {
-      console.error('[MLM] Erro ao criar comissão residual:', mlmErr)
+      console.error('[MLM] Erro ao criar comissões de renovação:', mlmErr)
     }
   }
 }
