@@ -13,6 +13,9 @@ export type MlmTreeNodeView = {
   position: 'left' | 'right' | null
   sponsor_username: string | null
   rank_id: number
+  rank_name: string | null
+  rank_color: string | null
+  rank_icon: string | null
   left_count: number
   right_count: number
   left_child_id: string | null
@@ -196,10 +199,16 @@ export async function fetchMlmTreeView(
   if (!nodes?.length) return null
 
   const userIds = [...new Set(nodes.map((n) => n.user_id))]
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, username, email, mlm_sponsor_username')
-    .in('id', userIds)
+  const rankIds = [...new Set(nodes.map((n) => n.rank_id).filter((id) => id > 0))]
+
+  const [{ data: profiles }, { data: ranksData }] = await Promise.all([
+    supabase.from('profiles').select('id, username, email, mlm_sponsor_username').in('id', userIds),
+    rankIds.length
+      ? supabase.from('mlm_ranks').select('id, name, color, icon').in('id', rankIds)
+      : Promise.resolve({ data: [] as { id: number; name: string; color: string; icon: string }[] }),
+  ])
+
+  const rankMap = new Map((ranksData || []).map((r) => [r.id, r]))
 
   const profileMap = new Map((profiles || []).map((p) => [p.id, p]))
   const nodeMap = new Map(nodes.map((n) => [n.id, n as FlatNode]))
@@ -208,6 +217,7 @@ export async function fetchMlmTreeView(
     const node = nodeMap.get(nodeId)
     if (!node) return null
     const prof = profileMap.get(node.user_id)
+    const rank = node.rank_id ? rankMap.get(node.rank_id) : null
     return {
       node_id: node.id,
       user_id: node.user_id,
@@ -216,6 +226,9 @@ export async function fetchMlmTreeView(
       position: node.position,
       sponsor_username: prof?.mlm_sponsor_username ?? null,
       rank_id: node.rank_id ?? 0,
+      rank_name: rank?.name ?? null,
+      rank_color: rank?.color ?? null,
+      rank_icon: rank?.icon ?? null,
       left_count: node.left_count ?? 0,
       right_count: node.right_count ?? 0,
       left_child_id: node.left_child_id,

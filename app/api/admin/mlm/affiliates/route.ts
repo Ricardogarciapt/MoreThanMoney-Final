@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
       rank_name: rank?.name ?? null,
       rank_color: rank?.color ?? null,
       rank_icon: rank?.icon ?? null,
+      rank_id: node.rank_id ?? 0,
       left_count: node.left_count ?? 0,
       right_count: node.right_count ?? 0,
       total_earned: node.total_earned ?? 0,

@@ -152,6 +152,7 @@ export default function BackofficePage() {
           <MlmManager
             activeSection={activeSection}
             setActiveSection={setActiveSection}
+            onNavigateSection={setActiveSection}
           />
         )}
       </main>

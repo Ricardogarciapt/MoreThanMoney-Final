@@ -5,13 +5,14 @@ import { adminApiCall } from '@/lib/admin-helpers'
 import {
   Users, TrendingUp, Coins, CheckCircle2, Edit2, Trash2, Plus,
   RefreshCw, ChevronDown, Copy, Check, X, Loader2, Network,
-  ToggleLeft, ToggleRight, Search, AlertCircle, ExternalLink, UserCog
+  ToggleLeft, ToggleRight, Search, AlertCircle, ExternalLink, UserCog, Award, GitBranch
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import MlmBinaryTreeWidget from '@/components/admin/mlm-binary-tree-widget'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,7 @@ interface MlmAffiliate {
   rank_name: string | null
   rank_color: string | null
   rank_icon: string | null
+  rank_id?: number
   left_count: number
   right_count: number
   total_earned: number
@@ -238,9 +240,11 @@ function RankModal({
 export default function MlmManager({
   activeSection: externalSection,
   setActiveSection: setExternalSection,
+  onNavigateSection,
 }: {
   activeSection?: string
   setActiveSection?: (s: string) => void
+  onNavigateSection?: (s: string) => void
 }) {
   const [internalSection, setInternalSection] = useState('dashboard')
   const activeSection = externalSection ?? internalSection
@@ -260,6 +264,8 @@ export default function MlmManager({
   const [networkStats, setNetworkStats] = useState<NetworkStats | null>(null)
   const [affiliateSearch, setAffiliateSearch] = useState('')
   const [affiliateView, setAffiliateView] = useState<'all' | 'tree' | 'referred'>('all')
+  const [affiliateSubTab, setAffiliateSubTab] = useState<'lista' | 'arvore' | 'ranks'>('lista')
+  const [rankFilter, setRankFilter] = useState<number | 'all' | 'none'>('all')
   const [markingSkoolId, setMarkingSkoolId] = useState<string | null>(null)
 
   // Commissions
@@ -321,7 +327,7 @@ export default function MlmManager({
   // Load data based on active section
   useEffect(() => {
     fetchSettings()
-    if (activeSection === 'ranks' || activeSection === 'dashboard') fetchRanks()
+    if (activeSection === 'ranks' || activeSection === 'dashboard' || activeSection === 'affiliates') fetchRanks()
     if (activeSection === 'affiliates' || activeSection === 'dashboard') fetchAffiliates()
     if (activeSection === 'commissions' || activeSection === 'dashboard') fetchCommissions(commissionFilter)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -474,6 +480,24 @@ export default function MlmManager({
     a.email?.toLowerCase().includes(affiliateSearch.toLowerCase()) ||
     a.full_name?.toLowerCase().includes(affiliateSearch.toLowerCase())
   )
+
+  const treeMembers = affiliates.filter((a) => a.in_mlm_tree !== false)
+
+  const rankFilteredMembers = treeMembers.filter((a) => {
+    if (rankFilter === 'all') return true
+    if (rankFilter === 'none') return !a.rank_id || a.rank_id === 0
+    return a.rank_id === rankFilter
+  }).filter((a) =>
+    !affiliateSearch ||
+    a.username?.toLowerCase().includes(affiliateSearch.toLowerCase()) ||
+    a.email?.toLowerCase().includes(affiliateSearch.toLowerCase())
+  )
+
+  const rankCounts = ranks.map((r) => ({
+    ...r,
+    count: treeMembers.filter((a) => a.rank_id === r.id).length,
+  }))
+  const noRankCount = treeMembers.filter((a) => !a.rank_id || a.rank_id === 0).length
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -716,22 +740,6 @@ export default function MlmManager({
           <div className="space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <h3 className="text-white font-semibold text-lg">Rede de Afiliados</h3>
-              <div className="flex flex-wrap items-center gap-2">
-                {(['all', 'tree', 'referred'] as const).map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setAffiliateView(v)}
-                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                      affiliateView === v
-                        ? 'border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]'
-                        : 'border-gray-700 text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    {v === 'all' ? 'Todos' : v === 'tree' ? 'Árvore MLM' : 'Referidos Stripe'}
-                  </button>
-                ))}
-              </div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <Input
@@ -746,113 +754,278 @@ export default function MlmManager({
               </Button>
             </div>
 
-            {loadingAffiliates ? (
-              <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" /></div>
-            ) : (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-800">
-                        {['Utilizador', 'Patrocinador', 'Plataforma', 'Plano', 'Estado Sub.', 'Skool', 'Connect', 'Rank', 'Rede', 'Ganhos', 'Ações'].map((h, i) => (
-                          <th key={i} className="px-4 py-3 text-left text-gray-400 text-xs font-medium whitespace-nowrap">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredAffiliates.map(aff => {
-                        const plat = platformLabel(aff.subscription_platform)
-                        return (
-                        <tr key={aff.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
-                          <td className="px-4 py-3">
-                            <p className="text-white font-medium text-sm">{aff.username ?? '—'}</p>
-                            <p className="text-gray-500 text-xs">{aff.email ?? '—'}</p>
-                            {aff.in_mlm_tree === false && (
-                              <span className="text-[10px] text-purple-400">Referido — sem nó MLM</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-gray-400 text-xs">{aff.sponsor_username ?? aff.mlm_sponsor_username ?? '—'}</td>
-                          <td className="px-4 py-3 text-xs text-gray-300">{plat.emoji} {plat.label}</td>
-                          <td className="px-4 py-3">
-                            {aff.subscription_plan ? (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-[#D2A63C]/15 text-[#D2A63C] border border-[#D2A63C]/30 font-mono">
-                                {aff.subscription_plan}
-                              </span>
-                            ) : <span className="text-gray-600 text-xs">—</span>}
-                          </td>
-                          <td className="px-4 py-3">
-                            {(() => {
-                              const s = aff.subscription_status
-                              if (!s) return <span className="text-gray-600 text-xs">—</span>
-                              const cls = s === 'active' ? 'bg-green-500/20 text-green-400' :
-                                          s === 'trialing' ? 'bg-blue-500/20 text-blue-400' :
-                                          s === 'past_due' ? 'bg-orange-500/20 text-orange-400' :
-                                          s === 'canceled' || s === 'cancelled' ? 'bg-red-500/20 text-red-400' :
-                                          'bg-gray-500/20 text-gray-400'
-                              return <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>{s}</span>
-                            })()}
-                          </td>
-                          <td className="px-4 py-3">
-                            {aff.skool_access_pending ? (
-                              <div className="flex flex-col gap-1">
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">Pendente</span>
-                                <button
-                                  type="button"
-                                  disabled={markingSkoolId === aff.user_id}
-                                  onClick={() => handleMarkSkoolGranted(aff.user_id)}
-                                  className="text-[10px] text-green-400 hover:underline text-left"
-                                >
-                                  {markingSkoolId === aff.user_id ? '…' : 'Marcar Skool OK'}
-                                </button>
-                              </div>
-                            ) : aff.member_category === 'premium' || aff.subscription_plan === 'premium' ? (
-                              <span className="text-xs text-green-400">Premium</span>
-                            ) : (
-                              <span className="text-gray-600 text-xs">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            {(() => {
-                              const cs = aff.stripe_connect_status
-                              if (!cs || cs === 'not_started') return <span className="text-gray-600 text-xs">—</span>
-                              if (cs === 'complete') return <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">✓ Ativo</span>
-                              if (cs === 'pending') return <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">Pendente</span>
-                              return <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">{cs}</span>
-                            })()}
-                          </td>
-                          <td className="px-4 py-3">
-                            {aff.rank_name ? (
-                              <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${aff.rank_color}25`, color: aff.rank_color ?? '#D2A63C' }}>
-                                {aff.rank_icon} {aff.rank_name}
-                              </span>
-                            ) : <span className="text-gray-600 text-xs">—</span>}
-                          </td>
-                          <td className="px-4 py-3 text-gray-400 text-xs">
-                            {aff.left_count ?? 0} / {aff.right_count ?? 0}
-                          </td>
-                          <td className="px-4 py-3 text-[#D2A63C] font-medium text-sm">{formatEur(aff.total_earned ?? 0)}</td>
-                          <td className="px-4 py-3">
-                            <Link
-                              href={`/admin?tab=users&highlight=${aff.user_id}`}
-                              className="inline-flex items-center gap-1 text-xs text-[#D2A63C] hover:underline"
-                            >
-                              <UserCog className="w-3.5 h-3.5" />
-                              Gerir
-                            </Link>
-                          </td>
-                        </tr>
-                      )})}
-                      {filteredAffiliates.length === 0 && (
-                        <tr>
-                          <td colSpan={11} className="px-4 py-12 text-center text-gray-500">
-                            {affiliateSearch ? 'Nenhum afiliado encontrado para a pesquisa.' : 'Nenhum afiliado registado.'}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+            {/* Sub-tabs: Lista | Árvore | Ranks */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1">
+                {([
+                  { key: 'lista' as const, label: 'Lista', icon: Users },
+                  { key: 'arvore' as const, label: 'Árvore Binária', icon: GitBranch },
+                  { key: 'ranks' as const, label: 'Por Rank', icon: Award },
+                ]).map(({ key, label, icon: Icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setAffiliateSubTab(key)}
+                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      affiliateSubTab === key
+                        ? 'bg-[#D2A63C] text-black'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
+                  </button>
+                ))}
               </div>
+
+              {affiliateSubTab !== 'arvore' && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {(['all', 'tree', 'referred'] as const).map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setAffiliateView(v)}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                        affiliateView === v
+                          ? 'border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]'
+                          : 'border-gray-700 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      {v === 'all' ? 'Todos' : v === 'tree' ? 'Árvore MLM' : 'Referidos Stripe'}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Tab: Árvore Binária ── */}
+            {affiliateSubTab === 'arvore' && (
+              <MlmBinaryTreeWidget
+                compact
+                onOpenEditor={() => onNavigateSection?.('tree') ?? setActiveSection('tree')}
+              />
+            )}
+
+            {/* ── Tab: Por Rank ── */}
+            {affiliateSubTab === 'ranks' && (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRankFilter('all')}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                      rankFilter === 'all'
+                        ? 'border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]'
+                        : 'border-gray-700 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Todos ({treeMembers.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRankFilter('none')}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                      rankFilter === 'none'
+                        ? 'border-gray-500 bg-gray-500/15 text-gray-300'
+                        : 'border-gray-700 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    Sem rank ({noRankCount})
+                  </button>
+                  {rankCounts.map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setRankFilter(r.id)}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                        rankFilter === r.id
+                          ? 'ring-1 ring-offset-1 ring-offset-gray-950'
+                          : 'border-gray-700 text-gray-400 hover:text-white'
+                      }`}
+                      style={
+                        rankFilter === r.id
+                          ? { borderColor: r.color ?? '#D2A63C', backgroundColor: `${r.color ?? '#D2A63C'}22`, color: r.color ?? '#D2A63C' }
+                          : undefined
+                      }
+                    >
+                      {r.icon} {r.name} ({r.count})
+                    </button>
+                  ))}
+                </div>
+
+                {loadingAffiliates || loadingRanks ? (
+                  <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" /></div>
+                ) : (
+                  <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-800">
+                            {['Utilizador', 'Rank', 'Rede L/R', 'Patrocinador', 'Plano', 'Ganhos', 'Ações'].map((h, i) => (
+                              <th key={i} className="px-4 py-3 text-left text-gray-400 text-xs font-medium whitespace-nowrap">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rankFilteredMembers.map(aff => (
+                            <tr key={aff.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
+                              <td className="px-4 py-3">
+                                <p className="text-white font-medium text-sm">{aff.username ?? '—'}</p>
+                                <p className="text-gray-500 text-xs">{aff.email ?? '—'}</p>
+                              </td>
+                              <td className="px-4 py-3">
+                                {aff.rank_name ? (
+                                  <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${aff.rank_color}25`, color: aff.rank_color ?? '#D2A63C' }}>
+                                    {aff.rank_icon} {aff.rank_name}
+                                  </span>
+                                ) : <span className="text-gray-600 text-xs">Sem rank</span>}
+                              </td>
+                              <td className="px-4 py-3 text-gray-400 text-xs">{aff.left_count ?? 0} / {aff.right_count ?? 0}</td>
+                              <td className="px-4 py-3 text-gray-400 text-xs">{aff.sponsor_username ?? aff.mlm_sponsor_username ?? '—'}</td>
+                              <td className="px-4 py-3">
+                                {aff.subscription_plan ? (
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-[#D2A63C]/15 text-[#D2A63C] border border-[#D2A63C]/30 font-mono">
+                                    {aff.subscription_plan}
+                                  </span>
+                                ) : <span className="text-gray-600 text-xs">—</span>}
+                              </td>
+                              <td className="px-4 py-3 text-[#D2A63C] font-medium text-sm">{formatEur(aff.total_earned ?? 0)}</td>
+                              <td className="px-4 py-3">
+                                <Link
+                                  href={`/admin?tab=users&highlight=${aff.user_id}`}
+                                  className="inline-flex items-center gap-1 text-xs text-[#D2A63C] hover:underline"
+                                >
+                                  <UserCog className="w-3.5 h-3.5" />
+                                  Gerir
+                                </Link>
+                              </td>
+                            </tr>
+                          ))}
+                          {rankFilteredMembers.length === 0 && (
+                            <tr>
+                              <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
+                                {affiliateSearch ? 'Nenhum membro encontrado para a pesquisa.' : 'Nenhum membro com este rank na árvore.'}
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Tab: Lista ── */}
+            {affiliateSubTab === 'lista' && (
+              loadingAffiliates ? (
+                <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" /></div>
+              ) : (
+                <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-800">
+                          {['Utilizador', 'Patrocinador', 'Plataforma', 'Plano', 'Estado Sub.', 'Skool', 'Connect', 'Rank', 'Rede', 'Ganhos', 'Ações'].map((h, i) => (
+                            <th key={i} className="px-4 py-3 text-left text-gray-400 text-xs font-medium whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredAffiliates.map(aff => {
+                          const plat = platformLabel(aff.subscription_platform)
+                          return (
+                          <tr key={aff.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
+                            <td className="px-4 py-3">
+                              <p className="text-white font-medium text-sm">{aff.username ?? '—'}</p>
+                              <p className="text-gray-500 text-xs">{aff.email ?? '—'}</p>
+                              {aff.in_mlm_tree === false && (
+                                <span className="text-[10px] text-purple-400">Referido — sem nó MLM</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-gray-400 text-xs">{aff.sponsor_username ?? aff.mlm_sponsor_username ?? '—'}</td>
+                            <td className="px-4 py-3 text-xs text-gray-300">{plat.emoji} {plat.label}</td>
+                            <td className="px-4 py-3">
+                              {aff.subscription_plan ? (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-[#D2A63C]/15 text-[#D2A63C] border border-[#D2A63C]/30 font-mono">
+                                  {aff.subscription_plan}
+                                </span>
+                              ) : <span className="text-gray-600 text-xs">—</span>}
+                            </td>
+                            <td className="px-4 py-3">
+                              {(() => {
+                                const s = aff.subscription_status
+                                if (!s) return <span className="text-gray-600 text-xs">—</span>
+                                const cls = s === 'active' ? 'bg-green-500/20 text-green-400' :
+                                            s === 'trialing' ? 'bg-blue-500/20 text-blue-400' :
+                                            s === 'past_due' ? 'bg-orange-500/20 text-orange-400' :
+                                            s === 'canceled' || s === 'cancelled' ? 'bg-red-500/20 text-red-400' :
+                                            'bg-gray-500/20 text-gray-400'
+                                return <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>{s}</span>
+                              })()}
+                            </td>
+                            <td className="px-4 py-3">
+                              {aff.skool_access_pending ? (
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">Pendente</span>
+                                  <button
+                                    type="button"
+                                    disabled={markingSkoolId === aff.user_id}
+                                    onClick={() => handleMarkSkoolGranted(aff.user_id)}
+                                    className="text-[10px] text-green-400 hover:underline text-left"
+                                  >
+                                    {markingSkoolId === aff.user_id ? '…' : 'Marcar Skool OK'}
+                                  </button>
+                                </div>
+                              ) : aff.member_category === 'premium' || aff.subscription_plan === 'premium' ? (
+                                <span className="text-xs text-green-400">Premium</span>
+                              ) : (
+                                <span className="text-gray-600 text-xs">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {(() => {
+                                const cs = aff.stripe_connect_status
+                                if (!cs || cs === 'not_started') return <span className="text-gray-600 text-xs">—</span>
+                                if (cs === 'complete') return <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">✓ Ativo</span>
+                                if (cs === 'pending') return <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">Pendente</span>
+                                return <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">{cs}</span>
+                              })()}
+                            </td>
+                            <td className="px-4 py-3">
+                              {aff.rank_name ? (
+                                <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${aff.rank_color}25`, color: aff.rank_color ?? '#D2A63C' }}>
+                                  {aff.rank_icon} {aff.rank_name}
+                                </span>
+                              ) : <span className="text-gray-600 text-xs">—</span>}
+                            </td>
+                            <td className="px-4 py-3 text-gray-400 text-xs">
+                              {aff.left_count ?? 0} / {aff.right_count ?? 0}
+                            </td>
+                            <td className="px-4 py-3 text-[#D2A63C] font-medium text-sm">{formatEur(aff.total_earned ?? 0)}</td>
+                            <td className="px-4 py-3">
+                              <Link
+                                href={`/admin?tab=users&highlight=${aff.user_id}`}
+                                className="inline-flex items-center gap-1 text-xs text-[#D2A63C] hover:underline"
+                              >
+                                <UserCog className="w-3.5 h-3.5" />
+                                Gerir
+                              </Link>
+                            </td>
+                          </tr>
+                        )})}
+                        {filteredAffiliates.length === 0 && (
+                          <tr>
+                            <td colSpan={11} className="px-4 py-12 text-center text-gray-500">
+                              {affiliateSearch ? 'Nenhum afiliado encontrado para a pesquisa.' : 'Nenhum afiliado registado.'}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )
             )}
           </div>
         )}
