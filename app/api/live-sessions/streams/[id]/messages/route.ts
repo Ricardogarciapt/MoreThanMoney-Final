@@ -104,10 +104,18 @@ export async function POST(
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
     }
 
+    const { data: profileRow } = await supabaseAdmin
+      .from("profiles")
+      .select("full_name, username")
+      .eq("id", auth.session.user.id)
+      .maybeSingle()
+
     const senderName =
+      profileRow?.full_name?.trim() ||
+      profileRow?.username?.trim() ||
       auth.session.user.user_metadata?.full_name ||
       auth.session.user.user_metadata?.name ||
-      auth.session.user.email ||
+      auth.session.user.email?.split("@")[0] ||
       "Aluno"
 
     const { data, error } = await supabaseAdmin
