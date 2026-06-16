@@ -114,6 +114,26 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
     }
   }, [authUser])
 
+  // Listener directo ao Supabase como garantia extra (cobre edge cases de WebView/Capacitor)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session?.user) {
+        setCanPost(false)
+        return
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_type, member_category, full_name, email, avatar_url, username, id, is_active')
+        .eq('id', session.user.id)
+        .single()
+      if (profile) {
+        setCurrentUser(profile)
+        setCanPost(profile.user_type === 'admin' || profile.member_category === 'vip')
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
   useEffect(() => {
     if (!initialCategory) return
     const valid = CATEGORIES.some((c) => c.id === initialCategory)
