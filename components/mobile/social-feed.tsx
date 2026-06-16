@@ -18,6 +18,7 @@ import RichPostText from "./rich-post-text"
 import PostLinkPreview from "./post-link-preview"
 import { getPrimaryUrlFromText } from "@/lib/url-utils"
 import type { LinkPreviewData } from "@/lib/link-preview-types"
+import { useAuth } from "@/contexts/auth-context"
 
 interface Post {
   id: string
@@ -61,6 +62,7 @@ const CATEGORIES = [
 ]
 
 export default function SocialFeed({ initialCategory }: { initialCategory?: string | null }) {
+  const { user: authUser } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [posts, setPosts] = useState<Post[]>([])
   const [newPost, setNewPost] = useState("")
@@ -100,6 +102,17 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Sincroniza currentUser e canPost com o AuthContext (reactivo a mudanças de sessão)
+  useEffect(() => {
+    if (authUser) {
+      setCurrentUser(authUser)
+      setCanPost(authUser.user_type === 'admin' || authUser.member_category === 'vip')
+    } else {
+      setCurrentUser(null)
+      setCanPost(false)
+    }
+  }, [authUser])
 
   useEffect(() => {
     if (!initialCategory) return
@@ -150,7 +163,6 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
   useEffect(() => {
     if (!mounted) return
 
-    loadUser()
     loadPosts()
     loadViewedCategories()
     
@@ -246,40 +258,6 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
     } catch (error) {
       console.error('❌ [SOCIAL FEED] Erro ao marcar categoria como vista:', error)
       // Mesmo com erro, mantém no sessionStorage
-    }
-  }
-
-  const loadUser = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-        
-        if (error) {
-          console.error('❌ [SOCIAL FEED] Erro ao carregar perfil:', error)
-          const basicProfile = {
-            id: session.user.id,
-            email: session.user.email,
-            full_name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || 'Utilizador',
-            user_type: 'member',
-            member_category: 'standard'
-          }
-          setCurrentUser(basicProfile)
-          setCanPost(false)
-        } else {
-          setCurrentUser(profile)
-          setCanPost(
-            profile?.user_type === 'admin' || 
-            profile?.member_category === 'vip'
-          )
-        }
-      }
-    } catch (error) {
-      console.error('❌ [SOCIAL FEED] Erro crítico ao carregar user:', error)
     }
   }
 
