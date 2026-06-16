@@ -50,9 +50,10 @@ function emptyRoute(defaults: ProviderExecutionProfile): ProviderRoute {
   return {
     id: newRouteId(),
     label: "Nova rota",
-    sender_channel: "premium-signals",
+    sender_channel: null,
     account_id: "",
     strategy_id: null,
+    ai_strategy_prompt: null,
     enabled: true,
     execution: { ...defaults },
   }
@@ -244,6 +245,15 @@ export default function MtmcopyProviderPipeline({
                       sender inactivo
                     </Badge>
                   )}
+                  {(route.ai_strategy_prompt ?? "").trim() ? (
+                    <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30 text-[10px]">
+                      estratégia IA definida
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-zinc-500 border-zinc-700 text-[10px]">
+                      estratégia IA em falta
+                    </Badge>
+                  )}
                 </div>
                 <Button
                   type="button"
@@ -281,6 +291,7 @@ export default function MtmcopyProviderPipeline({
                     }}
                     className="w-full h-9 rounded-md bg-zinc-950 border border-zinc-700 text-sm text-white px-2"
                   >
+                    <option value="">Sem sender (provider manual)</option>
                     <option value="premium-signals">Premium Signals (@MTMgold)</option>
                     <option value="trade-ideas">Trade Ideas (Forex)</option>
                     {discoveredSources.map((s) => (
@@ -325,6 +336,12 @@ export default function MtmcopyProviderPipeline({
                       <Settings2 className="w-4 h-4" />
                     </Button>
                   </div>
+                  <Input
+                    value={route.account_id}
+                    onChange={(e) => updateRoute(route.id, { account_id: e.target.value.trim() })}
+                    placeholder="...ou inserir Account ID manualmente"
+                    className="mt-2 h-8 bg-zinc-950 border-zinc-700 text-xs"
+                  />
                 </div>
 
                 <div className="sm:col-span-2">
@@ -381,13 +398,15 @@ export default function MtmcopyProviderPipeline({
             : undefined
         }
         onClose={() => setConfigRoute(null)}
-        onSave={async (execution) => {
+        onSave={async ({ execution, aiStrategyPrompt }) => {
           if (!configRoute) return
           const nextRoutes = routes.map((r) =>
-            r.id === configRoute.id ? { ...r, execution } : r,
+            r.id === configRoute.id
+              ? { ...r, execution, ai_strategy_prompt: aiStrategyPrompt }
+              : r,
           )
           setRoutes(nextRoutes)
-          updateRoute(configRoute.id, { execution })
+          updateRoute(configRoute.id, { execution, ai_strategy_prompt: aiStrategyPrompt })
           await persistRoutes(nextRoutes)
         }}
       />

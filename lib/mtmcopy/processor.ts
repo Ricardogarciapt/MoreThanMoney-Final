@@ -118,7 +118,7 @@ function buildOrderRequest(
     stopLoss: conn.copy_sl ? signal.sl : null,
     takeProfit: conn.copy_tp ? (signal.tp[0] ?? null) : null,
     comment,
-    // Trailing por canal/perna (Premium: TP3 à abertura; TP2 no HIT TP1; Trade Ideas aqui)
+    // Trailing por canal/perna (Premium: trail nas pernas 2/3 só no HIT TP1)
     trailingStop: null,
   }
 }
@@ -404,15 +404,16 @@ async function processManagementUpdate(
   for (const p of mtmProviders) {
     accountIds.add(p.accountId)
   }
-  if (management.type === 'enable_trailing') {
-    for (const conn of subscribers) {
-      if (conn.metaapi_account_id) accountIds.add(conn.metaapi_account_id)
-    }
-  } else {
-    for (const conn of subscribers) {
-      if (conn.metaapi_account_id) accountIds.add(conn.metaapi_account_id)
+  for (const conn of subscribers) {
+    if (conn.metaapi_account_id && prefersDirectExecution(conn)) {
+      accountIds.add(conn.metaapi_account_id)
     }
   }
+
+  const managementOutcomes = new Map<
+    string,
+    { updated: number; closed: number; cancelled: number; errors: string[] }
+  >()
 
   for (const accountId of accountIds) {
     const providerMatch = mtmProviders.find((p) => p.accountId === accountId)
@@ -442,6 +443,7 @@ async function processManagementUpdate(
     if (!mgmt) continue
 
     const outcome = await applyManagementToAccount(accountId, mgmt, trailing)
+    managementOutcomes.set(accountId, outcome)
     const trailingLabel = trailing ? formatTrailingDistance(trailing) : '0'
     console.log(
       `[mtmcopy] gestão ${accountId}: ${outcome.updated} SL/trailing (${trailingLabel}), ${outcome.closed} fechadas, ${outcome.cancelled} ordens canceladas`,
@@ -472,16 +474,50 @@ async function processManagementUpdate(
       : management.trailingPips
         ? ` · trailing ${management.trailingPips} pips`
         : ''
+
+    let status: 'received' | 'executed' | 'skipped' | 'error' = 'received'
+    let detailSuffix = ''
+
+    if (!conn.metaapi_account_id) {
+      status = 'skipped'
+      detailSuffix = ' · conta MT5 não ligada'
+    } else if (conn.mt5_status === 'error') {
+      status = 'skipped'
+      detailSuffix = ` · ${conn.last_error ?? 'conta MT5 em erro'}`
+    } else if (!prefersDirectExecution(conn)) {
+      status = 'received'
+      detailSuffix = ' · via CopyFactory (replica do provider/mestre)'
+    } else {
+      const outcome = managementOutcomes.get(conn.metaapi_account_id)
+      if (!outcome) {
+        status = 'skipped'
+        detailSuffix = ' · gestão não aplicada nesta conta'
+      } else if (outcome.errors.length && !outcome.updated && !outcome.closed && !outcome.cancelled) {
+        status = 'error'
+        detailSuffix = ` · ${outcome.errors[0]}`
+      } else if (outcome.updated || outcome.closed || outcome.cancelled) {
+        status = 'executed'
+        detailSuffix = ` · ${outcome.updated} SL/trail · ${outcome.closed} fechadas`
+      }
+    }
+
     await logMtmcopySignal({
       user_id: conn.user_id,
       connection_id: conn.id,
       symbol: management.symbol,
       direction: null,
-      status: 'received',
-      detail: `Gestão: ${management.type}${management.tpLevel ? ` TP${management.tpLevel}` : ''}${trailingNote}${replyRef} ${tgRef}`.trim(),
+      status,
+      detail: `Gestão: ${management.type}${management.tpLevel ? ` TP${management.tpLevel}` : ''}${trailingNote}${detailSuffix}${replyRef} ${tgRef}`.trim(),
       raw_message: raw,
     })
-    await markConnectionStatus(conn.id, { last_signal_at: new Date().toISOString() })
+    await markConnectionStatus(conn.id, {
+      last_signal_at: new Date().toISOString(),
+      ...(status === 'error' && detailSuffix
+        ? { mt5_status: 'error', last_error: detailSuffix.replace(/^ · /, '') }
+        : status === 'executed'
+          ? { mt5_status: 'connected', last_error: null }
+          : {}),
+    })
   }
 }
 

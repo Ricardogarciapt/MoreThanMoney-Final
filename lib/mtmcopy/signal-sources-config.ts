@@ -75,6 +75,8 @@ export interface ProviderRoute {
   sender_chat_id?: string | null
   account_id: string
   strategy_id?: string | null
+  /** Prompt/guia lido pela IA para replicar o estilo de execução do provider. */
+  ai_strategy_prompt?: string | null
   tag?: string
   execution?: ProviderExecutionProfile
   enabled?: boolean

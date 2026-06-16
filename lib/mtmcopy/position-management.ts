@@ -14,6 +14,7 @@ import { matchesPremiumLegComment } from './premium-exits'
 import {
   PREMIUM_TIGHT_SL_PIPS,
   PREMIUM_WIDE_SL_PIPS,
+  premiumTrailingAfterTp1Hit,
   premiumTrailingForTradeActive,
   riskPipsFromPosition,
   type PremiumTradeActiveVariant,
@@ -209,6 +210,78 @@ async function applyPremiumHalfOrTrail(
   return result
 }
 
+async function applyPremiumHitTp1(
+  accountId: string,
+  positions: MetaApiPosition[],
+  symbol: string,
+): Promise<{ updated: number; closed: number; cancelled: number; errors: string[] }> {
+  const result = { updated: 0, closed: 0, cancelled: 0, errors: [] as string[] }
+  const spec = await getSymbolSpecification(accountId, symbol)
+  if (!spec) {
+    result.errors.push('Spec do símbolo indisponível')
+    return result
+  }
+
+  const leg1 = positions.filter((p) => matchesPremiumLegComment(p.comment, 1))
+  const leg2 = positions.filter((p) => matchesPremiumLegComment(p.comment, 2))
+  const leg3 = positions.filter((p) => matchesPremiumLegComment(p.comment, 3))
+
+  const riskSample = leg2[0] ?? leg3[0] ?? leg1[0] ?? positions[0]
+  const riskPips = riskSample ? riskPipsFromPosition(riskSample, spec, symbol) : null
+  const trailing = premiumTrailingAfterTp1Hit(riskPips)
+
+  for (const pos of leg1) {
+    const r = await closePositionById(accountId, pos.id)
+    if (r.success) result.closed++
+    else if (r.error) result.errors.push(r.error)
+  }
+
+  for (const pos of leg2) {
+    const mod = await modifyPositionSlTp(
+      accountId,
+      pos.id,
+      pos.openPrice,
+      pos.takeProfit,
+      trailing,
+      pos.symbol,
+    )
+    if (mod.success) result.updated++
+    else if (mod.error) result.errors.push(mod.error)
+  }
+
+  const leg3Targets = leg3.length ? leg3 : positions.filter((p) => !leg1.includes(p) && !leg2.includes(p))
+  for (const pos of leg3Targets) {
+    const mod = await modifyPositionSlTp(
+      accountId,
+      pos.id,
+      pos.stopLoss,
+      pos.takeProfit,
+      trailing,
+      pos.symbol,
+    )
+    if (mod.success) result.updated++
+    else if (mod.error) result.errors.push(mod.error)
+  }
+
+  return result
+}
+
+async function closePremiumLegPositions(
+  accountId: string,
+  positions: MetaApiPosition[],
+  tpLevel: number,
+): Promise<{ closed: number; errors: string[] }> {
+  const result = { closed: 0, errors: [] as string[] }
+  const targets = positions.filter((p) => matchesPremiumLegComment(p.comment, tpLevel))
+  const list = targets.length ? targets : positions
+  for (const pos of list) {
+    const r = await closePositionById(accountId, pos.id)
+    if (r.success) result.closed++
+    else if (r.error) result.errors.push(r.error)
+  }
+  return result
+}
+
 async function applyPremiumTradeActive(
   accountId: string,
   symbol: string,
@@ -234,6 +307,14 @@ export async function applyManagementToAccount(
   trailing?: TrailingDistance | number | null,
 ): Promise<{ updated: number; closed: number; cancelled: number; errors: string[] }> {
   const result = { updated: 0, closed: 0, cancelled: 0, errors: [] as string[] }
+
+  if (management.type === 'premium_hit_tp1' && management.symbol) {
+    const positions = filterPositions(await listOpenPositions(accountId), management.symbol)
+    if (!positions.length) {
+      return { updated: 0, closed: 0, cancelled: 0, errors: ['Sem posições MTMcopier abertas'] }
+    }
+    return applyPremiumHitTp1(accountId, positions, management.symbol)
+  }
 
   if (management.type === 'premium_trade_active' && management.symbol && management.premiumVariant) {
     return applyPremiumTradeActive(accountId, management.symbol, management.premiumVariant)
@@ -271,6 +352,13 @@ export async function applyManagementToAccount(
 
   const positions = filterPositions(await listOpenPositions(accountId), management.symbol)
   if (!positions.length) return result
+
+  if (management.type === 'close' && management.tpLevel != null && management.tpLevel >= 2) {
+    const legClose = await closePremiumLegPositions(accountId, positions, management.tpLevel)
+    result.closed += legClose.closed
+    result.errors.push(...legClose.errors)
+    return result
+  }
 
   for (const pos of positions) {
     if (management.type === 'close') {

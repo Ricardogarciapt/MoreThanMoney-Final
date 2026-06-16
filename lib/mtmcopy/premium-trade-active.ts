@@ -1,4 +1,4 @@
-import { inferPipSize, premiumTrailingWithActivation, type SymbolPointSpec } from './pip-points'
+import { inferPipSize, premiumTrailingWithActivation, type SymbolPointSpec, type TrailingDistance } from './pip-points'
 import type { MetaApiPosition } from './metaapi'
 
 /** SL ≤ 60 pips — mensagem «half/BE» activa trailing ~50 pips (não BE). */
@@ -45,6 +45,22 @@ export function riskPipsFromPosition(
   return Math.round(riskPrice / pipSize)
 }
 
-export function premiumTrailingForTradeActive(): ReturnType<typeof premiumTrailingWithActivation> {
+/** SL inicial ~50 pips — seguimento mais apertado após TP1. */
+export const PREMIUM_INTELIGENT_RISK_MAX_PIPS = 55
+/** SL inicial ~100 pips — trailing standard do runner. */
+export const PREMIUM_STANDARD_RISK_PIPS = 85
+
+export function premiumTrailingForTradeActive(): TrailingDistance {
   return premiumTrailingWithActivation()
+}
+
+/** Trailing após HIT TP1 — mais apertado se SL inicial ~50 pips; standard se ~100 pips. */
+export function premiumTrailingAfterTp1Hit(riskPips: number | null): TrailingDistance {
+  if (riskPips != null && riskPips <= PREMIUM_INTELIGENT_RISK_MAX_PIPS) {
+    return { mode: 'threshold_pips', activationPips: 20, trailPips: 25 }
+  }
+  if (riskPips != null && riskPips >= PREMIUM_STANDARD_RISK_PIPS) {
+    return premiumTrailingWithActivation()
+  }
+  return { mode: 'threshold_pips', activationPips: 35, trailPips: 40 }
 }

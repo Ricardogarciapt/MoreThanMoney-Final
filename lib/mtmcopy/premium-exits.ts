@@ -1,6 +1,5 @@
 import { normalizeExitPcts } from './copy-methods'
 import type { ParsedSignal } from './signal-parser'
-import { premiumTrailingWithActivation } from './pip-points'
 import type { TrailingDistance } from './pip-points'
 
 export interface PremiumExitLeg {
@@ -54,11 +53,8 @@ export function buildPremiumExitLegs(
   return legs.filter((l) => l.lot > 0)
 }
 
-/** TP1/TP2 sem trailing à abertura; TP2 trailing activa no HIT TP1; runner (TP3) com trailing. */
-function trailingForPremiumLeg(legIndex: number, totalLegs: number): TrailingDistance | null {
-  if (legIndex === 0) return null
-  if (legIndex === 1) return null
-  if (legIndex === totalLegs - 1 && totalLegs >= 3) return premiumTrailingWithActivation()
+/** Sem trailing à abertura — TP2 (BE+trail) e TP3 (trail) activam no HIT TP1. */
+function trailingForPremiumLeg(_legIndex: number, _totalLegs: number): TrailingDistance | null {
   return null
 }
 

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { checkAccountHealth, getAccountBalance, isMetaApiConfigured } from '@/lib/mtmcopy/metaapi'
+import { checkAccountHealth, ensureMetaApiAccountOnline, getAccountBalance, isMetaApiConfigured } from '@/lib/mtmcopy/metaapi'
 import { getSupabaseAdmin, requireAdmin } from '@/lib/admin-api-helpers'
 
 const supabaseAdmin = getSupabaseAdmin()
@@ -30,6 +30,24 @@ export async function POST(request: NextRequest) {
 
   if (!accountId) {
     return NextResponse.json({ error: 'metaapi_account_id obrigatório' }, { status: 400 })
+  }
+
+  const bodyReconnect = body.reconnect === true
+  if (bodyReconnect) {
+    const online = await ensureMetaApiAccountOnline(accountId)
+    if (!online.ok) {
+      if (connection_id) {
+        await supabaseAdmin
+          .from('mtmcopy_connections')
+          .update({
+            mt5_status: 'error',
+            last_error: online.error ?? 'Conta MT5 inacessível',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', connection_id)
+      }
+      return NextResponse.json({ ok: false, error: online.error, reconnected: false })
+    }
   }
 
   const health = await checkAccountHealth(accountId)
@@ -64,6 +82,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     balance,
+    reconnected: bodyReconnect,
     message: 'Conta MetaAPI ligada e sincronizada com MT5',
   })
 }

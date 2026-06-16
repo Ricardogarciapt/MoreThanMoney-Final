@@ -54,6 +54,163 @@ const PROVISIONING_BASE =
   process.env.METAAPI_PROVISIONING_URL ??
   'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai'
 
+/** Magic MT5 para ordens MTMcopier (MetaAPI exige magic > 0 excepto manualTrades). */
+const MTM_COPIER_MAGIC = 826_431
+
+type MetaApiErrDetails =
+  | string
+  | {
+      code?: string
+      recommendedResourceSlots?: number
+      serversByBrokers?: Record<string, string[]>
+    }
+
+function extractBrokerKeywords(server: string): string[] {
+  const trimmed = server.trim()
+  if (!trimmed) return []
+  const parts = trimmed.split(/[-_\s]+/).filter((p) => p.length >= 2)
+  const brokerish = trimmed.replace(/-(Demo|Live|Real|MT4|MT5)$/i, '').trim()
+  return [...new Set([brokerish, ...parts])].slice(0, 5)
+}
+
+export function formatMetaApiProvisionError(err: unknown): string {
+  const e = err as { message?: string; details?: MetaApiErrDetails }
+  const details = e.details
+
+  if (typeof details === 'string') {
+    if (details === 'E_AUTH') {
+      return 'Credenciais MT5 inválidas — confirma login, password e servidor.'
+    }
+    if (details === 'E_SERVER_TIMEZONE') {
+      return 'MetaAPI não conseguiu detectar o broker — tenta novamente em 1–2 minutos.'
+    }
+    if (details === 'E_NO_SYMBOLS') {
+      return 'Conta MT5 sem símbolos configurados — contacta o broker.'
+    }
+    if (details === 'ERR_OTP_REQUIRED') {
+      return 'A conta exige OTP — desactiva no app MT5 ou usa outra conta.'
+    }
+    if (details === 'E_PASSWORD_CHANGE_REQUIRED') {
+      return 'O broker exige alteração de password — muda no MT5 e tenta de novo.'
+    }
+    if (details === 'E_TRADING_ACCOUNT_DISABLED') {
+      return 'Conta MT5 desactivada no broker.'
+    }
+  }
+
+  if (details && typeof details === 'object') {
+    if (details.code === 'E_RESOURCE_SLOTS') {
+      const n = details.recommendedResourceSlots
+      return n
+        ? `Esta conta precisa de ${n} resource slots na MetaAPI — tenta novamente (ajuste automático).`
+        : 'Resource slots insuficientes na MetaAPI para este broker.'
+    }
+    if (details.code === 'E_SRV_NOT_FOUND') {
+      const suggestions = Object.values(details.serversByBrokers ?? {})
+        .flat()
+        .slice(0, 4)
+      if (suggestions.length) {
+        return `Servidor MT5 não encontrado. Sugestões: ${suggestions.join(', ')}`
+      }
+      return 'Servidor MT5 não encontrado — escolhe o nome exacto na lista de corretoras.'
+    }
+  }
+
+  const msg = e.message ?? 'Erro ao criar conta MetaAPI'
+  if (/validation failed/i.test(msg) && !details) {
+    return `${msg} — verifica login, password, servidor MT5 e que a conta não exige OTP.`
+  }
+  return msg
+}
+
+function recommendedResourceSlots(err: unknown): number | null {
+  const details = (err as { details?: MetaApiErrDetails })?.details
+  if (details && typeof details === 'object' && details.code === 'E_RESOURCE_SLOTS') {
+    const n = details.recommendedResourceSlots
+    return typeof n === 'number' && n > 0 ? n : null
+  }
+  return null
+}
+
+type CreateAccountPayload = Record<string, unknown>
+
+function buildSlaveCreatePayload(
+  req: ProvisionRequest,
+  region: string,
+  directOnly: boolean,
+  resourceSlots: number,
+): CreateAccountPayload {
+  const login = req.login.replace(/\D/g, '')
+  const payload: CreateAccountPayload = {
+    login,
+    password: req.password,
+    server: req.server.trim(),
+    name: req.userLabel,
+    platform: req.platform,
+    type: 'cloud-g2',
+    magic: MTM_COPIER_MAGIC,
+    region,
+    baseCurrency: 'USD',
+    reliability: 'high',
+    resourceSlots,
+    keywords: extractBrokerKeywords(req.server),
+    metadata: { mtmUserId: req.userId, mtmRole: 'slave' },
+  }
+
+  if (!directOnly) {
+    payload.copyFactoryRoles = ['SUBSCRIBER']
+    payload.copyFactoryResourceSlots = 1
+  }
+
+  return payload
+}
+
+function buildMasterCreatePayload(req: ProvisionRequest, region: string, resourceSlots: number): CreateAccountPayload {
+  const login = req.login.replace(/\D/g, '')
+  return {
+    login,
+    password: req.password,
+    server: req.server.trim(),
+    name: req.userLabel,
+    platform: req.platform,
+    type: 'cloud-g2',
+    magic: MTM_COPIER_MAGIC,
+    region,
+    baseCurrency: 'USD',
+    reliability: 'high',
+    resourceSlots,
+    keywords: extractBrokerKeywords(req.server),
+    copyFactoryRoles: ['PROVIDER'],
+    copyFactoryResourceSlots: 1,
+    metadata: { mtmUserId: req.userId, mtmRole: 'master' },
+  }
+}
+
+async function createAccountWithResourceRetry(
+  api: Awaited<ReturnType<typeof getApi>>,
+  payload: CreateAccountPayload,
+): Promise<{ id: string; copyFactoryRoles?: string[]; deploy?: () => Promise<void>; waitDeployed?: (t?: number) => Promise<void>; waitConnected?: (t?: number) => Promise<void>; update?: (p: Record<string, unknown>) => Promise<void> }> {
+  if (!api) throw new Error('MetaAPI indisponível')
+
+  let resourceSlots = Number(payload.resourceSlots) || 1
+  const maxAttempts = 4
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await api.metatraderAccountApi.createAccount({ ...payload, resourceSlots })
+    } catch (err: unknown) {
+      const recommended = recommendedResourceSlots(err)
+      if (recommended && recommended > resourceSlots && attempt < maxAttempts - 1) {
+        resourceSlots = recommended
+        continue
+      }
+      throw err
+    }
+  }
+
+  throw new Error('Falha ao criar conta MetaAPI após várias tentativas')
+}
+
 async function fetchAvailableRegions(): Promise<string[]> {
   const token = process.env.METAAPI_TOKEN
   if (!token) return []
@@ -162,21 +319,10 @@ export async function provisionMasterAccount(req: ProvisionRequest): Promise<Pro
         await enableCopyFactoryRole(account.id, ['PROVIDER'], 1)
       }
     } else {
-      account = await api.metatraderAccountApi.createAccount({
-        login,
-        password: req.password,
-        server: req.server.trim(),
-        name: req.userLabel,
-        platform: req.platform,
-        type: 'cloud-g2',
-        magic: 0,
-        region,
-        baseCurrency: 'USD',
-        copyFactoryRoles: ['PROVIDER'],
-        copyFactoryResourceSlots: 1,
-        reliability: 'high',
-        metadata: { mtmUserId: req.userId, mtmRole: 'master' },
-      })
+      account = await createAccountWithResourceRetry(
+        api,
+        buildMasterCreatePayload(req, region, 1),
+      )
     }
 
     const accountId = account.id ?? (account as { _id?: string })._id
@@ -210,8 +356,7 @@ export async function provisionMasterAccount(req: ProvisionRequest): Promise<Pro
 
     return { success: true, accountId, strategyId: gen.id, copyfactorySubscribed: false }
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erro ao provisionar conta mestre'
-    return { success: false, error: message }
+    return { success: false, error: formatMetaApiProvisionError(err) }
   }
 }
 
@@ -280,21 +425,10 @@ export async function provisionSlaveAccount(req: ProvisionRequest): Promise<Prov
         }
       }
     } else {
-      account = await api.metatraderAccountApi.createAccount({
-        login,
-        password: req.password,
-        server: req.server.trim(),
-        name: req.userLabel,
-        platform: req.platform,
-        type: 'cloud-g2',
-        magic: 0,
-        region,
-        baseCurrency: 'USD',
-        copyFactoryRoles: directOnly ? [] : ['SUBSCRIBER'],
-        copyFactoryResourceSlots: directOnly ? 0 : 1,
-        reliability: 'high',
-        metadata: { mtmUserId: req.userId, mtmRole: 'slave' },
-      })
+      account = await createAccountWithResourceRetry(
+        api,
+        buildSlaveCreatePayload(req, region, directOnly, 1),
+      )
     }
 
     const accountId = account.id ?? (account as { _id?: string })._id
@@ -329,8 +463,7 @@ export async function provisionSlaveAccount(req: ProvisionRequest): Promise<Prov
 
     return { success: true, accountId, copyfactorySubscribed: true }
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Erro ao provisionar conta MetaAPI'
-    return { success: false, error: message }
+    return { success: false, error: formatMetaApiProvisionError(err) }
   }
 }
 

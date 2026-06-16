@@ -191,6 +191,44 @@ function buildOrderOptions(
 }
 
 const CONNECT_TIMEOUT_MS = 55_000
+const CONNECT_MAX_ATTEMPTS = 3
+
+function isRetryableMetaApiError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message.toLowerCase() : String(err).toLowerCase()
+  return (
+    msg.includes('timeout') ||
+    msg.includes('not connected') ||
+    msg.includes('disconnected') ||
+    msg.includes('econnreset') ||
+    msg.includes('etimedout')
+  )
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** Tenta redeploy + waitConnected quando a conta MetaAPI está offline. */
+export async function ensureMetaApiAccountOnline(accountId: string): Promise<{ ok: boolean; error?: string }> {
+  const token = process.env.METAAPI_TOKEN
+  if (!token) return { ok: false, error: 'METAAPI_TOKEN em falta' }
+
+  try {
+    const MetaApi = (await import('metaapi.cloud-sdk')).default
+    const api = new (MetaApi as any)(token)
+    const account = await api.metatraderAccountApi.getAccount(accountId)
+    const state = String(account.state ?? '').toUpperCase()
+    if (state && state !== 'DEPLOYED') {
+      await account.deploy?.()
+      await withTimeout(account.waitDeployed?.(120) ?? Promise.resolve(), 120_000, 'MetaApi waitDeployed')
+    }
+    await withTimeout(account.waitConnected?.(120) ?? account.waitConnected(), 120_000, 'MetaApi waitConnected')
+    return { ok: true }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Conta MetaAPI offline'
+    return { ok: false, error: message }
+  }
+}
 
 async function placeOrderOnConnection(
   connection: RpcConnection,
@@ -290,32 +328,48 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): P
   }
 }
 
-async function getRpcConnection(accountId: string): Promise<{
+async function getRpcConnection(
+  accountId: string,
+  attempt = 0,
+): Promise<{
   connection: RpcConnection
   close: () => Promise<void>
 }> {
   const token = process.env.METAAPI_TOKEN
   if (!token) throw new Error('MetaApi não configurado (METAAPI_TOKEN em falta)')
 
-  const MetaApi = (await import('metaapi.cloud-sdk')).default
-  const api = new (MetaApi as any)(token)
-  const account = await api.metatraderAccountApi.getAccount(accountId)
+  try {
+    const MetaApi = (await import('metaapi.cloud-sdk')).default
+    const api = new (MetaApi as any)(token)
+    const account = await api.metatraderAccountApi.getAccount(accountId)
 
-  await withTimeout(account.waitConnected(), CONNECT_TIMEOUT_MS, 'MetaApi waitConnected')
+    await withTimeout(account.waitConnected(), CONNECT_TIMEOUT_MS, 'MetaApi waitConnected')
 
-  const connection = account.getRPCConnection() as RpcConnection
-  await withTimeout(connection.connect(), CONNECT_TIMEOUT_MS, 'MetaApi RPC connect')
-  await withTimeout(connection.waitSynchronized(), CONNECT_TIMEOUT_MS, 'MetaApi RPC sync')
+    const connection = account.getRPCConnection() as RpcConnection
+    await withTimeout(connection.connect(), CONNECT_TIMEOUT_MS, 'MetaApi RPC connect')
+    await withTimeout(connection.waitSynchronized(), CONNECT_TIMEOUT_MS, 'MetaApi RPC sync')
 
-  return {
-    connection,
-    close: async () => {
-      try {
-        await connection.close()
-      } catch {
-        /* ignore */
-      }
-    },
+    return {
+      connection,
+      close: async () => {
+        try {
+          await connection.close()
+        } catch {
+          /* ignore */
+        }
+      },
+    }
+  } catch (err: unknown) {
+    if (attempt < CONNECT_MAX_ATTEMPTS - 1 && isRetryableMetaApiError(err)) {
+      console.warn(
+        `[mtmcopy] MetaAPI retry ${attempt + 1}/${CONNECT_MAX_ATTEMPTS - 1} (${accountId.slice(0, 8)}…):`,
+        err instanceof Error ? err.message : err,
+      )
+      await ensureMetaApiAccountOnline(accountId)
+      await sleep(1500 * (attempt + 1))
+      return getRpcConnection(accountId, attempt + 1)
+    }
+    throw err
   }
 }
 

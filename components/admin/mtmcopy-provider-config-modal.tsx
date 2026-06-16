@@ -21,7 +21,10 @@ type Props = {
   route: ProviderRoute | null
   accountLabel?: string
   onClose: () => void
-  onSave: (execution: ProviderExecutionProfile) => void
+  onSave: (payload: {
+    execution: ProviderExecutionProfile
+    aiStrategyPrompt: string | null
+  }) => void
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -43,10 +46,12 @@ export default function MtmcopyProviderConfigModal({
   const [profile, setProfile] = useState<ProviderExecutionProfile>(
     route?.execution ?? { ...DEFAULT_PROVIDER_EXECUTION },
   )
+  const [aiStrategyPrompt, setAiStrategyPrompt] = useState<string>(route?.ai_strategy_prompt ?? "")
 
   useEffect(() => {
     if (route) {
       setProfile(route.execution ?? { ...DEFAULT_PROVIDER_EXECUTION })
+      setAiStrategyPrompt(route.ai_strategy_prompt ?? "")
     }
   }, [route?.id, open])
 
@@ -109,6 +114,19 @@ export default function MtmcopyProviderConfigModal({
                 />
               </div>
             )}
+          </Section>
+
+          <Section title="Estratégia IA do Provider">
+            <p className="text-xs text-zinc-500">
+              Descreve como este provider pensa/age (filtro de contexto, entradas, invalidação, gestão de risco).
+              Este texto pode ser usado pela IA para aproximar a lógica do trader.
+            </p>
+            <textarea
+              value={aiStrategyPrompt}
+              onChange={(e) => setAiStrategyPrompt(e.target.value)}
+              placeholder="Ex: Só entrar com confirmação M15+H1 alinhadas, evitar notícias de alto impacto, focar reversão em XAUUSD..."
+              className="w-full min-h-[110px] rounded-md bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/40"
+            />
           </Section>
 
           <Section title="Money Management">
@@ -509,7 +527,10 @@ export default function MtmcopyProviderConfigModal({
           </Button>
           <Button
             onClick={() => {
-              onSave(profile)
+              onSave({
+                execution: profile,
+                aiStrategyPrompt: aiStrategyPrompt.trim() || null,
+              })
               onClose()
             }}
             className="bg-emerald-600 hover:bg-emerald-500"

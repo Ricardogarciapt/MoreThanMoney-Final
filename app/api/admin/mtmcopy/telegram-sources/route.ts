@@ -136,6 +136,8 @@ function parseProviderRoutes(raw: unknown): ProviderRoute[] | undefined {
           : null,
       account_id,
       strategy_id: typeof r.strategy_id === 'string' ? r.strategy_id.trim() || null : null,
+      ai_strategy_prompt:
+        typeof r.ai_strategy_prompt === 'string' ? r.ai_strategy_prompt.trim() || null : null,
       tag: typeof r.tag === 'string' ? r.tag.trim() : undefined,
       execution: parseExecutionProfile(r.execution),
       enabled: r.enabled !== false,

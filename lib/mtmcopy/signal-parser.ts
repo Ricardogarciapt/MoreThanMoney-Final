@@ -416,6 +416,7 @@ export interface ParsedManagement {
     | 'enable_trailing'
     | 'cancel_orders'
     | 'premium_trade_active'
+    | 'premium_hit_tp1'
   symbol: string | null
   sl: number | null
   /** Premium — «Trade active and running» */
@@ -508,12 +509,10 @@ function parsePremiumManagement(text: string, parentText: string | null): Parsed
       }
       if (level === 1) {
         return {
-          type: 'breakeven',
+          type: 'premium_hit_tp1',
           symbol,
           sl: null,
           tpLevel: 1,
-          trailingLeg: 2,
-          trailing: premiumTrailingWithActivation(),
         }
       }
       return {

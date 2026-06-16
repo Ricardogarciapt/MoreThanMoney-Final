@@ -7,7 +7,6 @@ import {
   type OrderRequest,
 } from './metaapi'
 import { computeLotSize, getLotSizingSkipReason, signalForRiskSizing } from './lot-sizing'
-import { premiumTrailingWithActivation } from './pip-points'
 import { trailingDistanceForConnection } from './position-management'
 import {
   applySymbolFromProfile,
@@ -119,9 +118,7 @@ export async function executeAdminTestTrade(input: AdminTestTradeInput) {
     trailingStop:
       channel === 'trade-ideas'
         ? trailingDistanceForConnection(conn)
-        : channel === 'premium-signals'
-          ? premiumTrailingWithActivation()
-          : undefined,
+        : undefined,
   }
 
   const result = await placeOrder(req)
