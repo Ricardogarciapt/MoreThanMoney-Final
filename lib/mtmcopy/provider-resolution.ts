@@ -49,6 +49,7 @@ export async function resolveMtmProvidersForSignal(
           null,
         routeId: r.id,
         execution: r.execution,
+        aiStrategyPrompt: r.ai_strategy_prompt ?? null,
       })
     }
     return out

@@ -261,6 +261,11 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
     skipAi: primaryProfile.ai_validation_enabled === false,
     minConfidence: getAiMinConfidence(primaryProfile),
     forceFastPath: officialFormat,
+    channel,
+    strategyPrompt:
+      channel === 'premium-signals'
+        ? mtmProvidersPreview[0]?.aiStrategyPrompt ?? null
+        : null,
   })
   const enriched = applyValidationToSignal(signal, validation)
   const aiDetail = formatAiValidationDetail(validation)
@@ -379,9 +384,15 @@ async function processManagementUpdate(
       orderType: 'market' as const,
       raw,
     }
-    const validation = await validateSignalWithAi(raw, pseudoSignal)
+    const previewProviders = await resolveMtmProvidersForSignal(channel)
+    const validation = await validateSignalWithAi(raw, pseudoSignal, {
+      channel,
+      strategyPrompt:
+        channel === 'premium-signals'
+          ? previewProviders[0]?.aiStrategyPrompt ?? null
+          : null,
+    })
     if (!shouldExecuteSignal(validation)) {
-      const previewProviders = await resolveMtmProvidersForSignal(channel)
       await logProviderSignalEvent({
         channel,
         provider: previewProviders[0] ?? null,

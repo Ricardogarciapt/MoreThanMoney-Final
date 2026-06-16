@@ -9,6 +9,8 @@ export interface MtmChannelProvider {
   strategyId: string | null
   routeId?: string
   execution?: ProviderExecutionProfile
+  /** Prompt IA do provider (Premium Gold guideline quando vazio). */
+  aiStrategyPrompt?: string | null
 }
 
 /** Perfil de execução das contas MTM (provider) — 0,75% risco + gestão por canal */

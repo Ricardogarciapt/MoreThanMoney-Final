@@ -620,7 +620,6 @@ export function parseManagementUpdate(
   const isReplyContext = Boolean(parent) || isReplyInstruction(text)
 
   if (channel === 'premium-signals') {
-    if (!isPremiumTpHitMessage(text) && !isCancelInstruction(text)) return null
     return parsePremiumManagement(text, parent)
   }
 

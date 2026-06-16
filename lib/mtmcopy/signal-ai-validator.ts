@@ -1,4 +1,6 @@
 import type { ParsedSignal } from './signal-parser'
+import type { MtmcopyChannelKey } from './channel-context'
+import { resolvePremiumAiStrategyPrompt } from './premium-ai-guideline'
 
 export const MTMCOPY_AI_MIN_CONFIDENCE = Number(
   process.env.MTMCOPY_AI_MIN_CONFIDENCE ?? '0.35',
@@ -14,12 +16,16 @@ export interface ValidateSignalOptions {
   minConfidence?: number
   /** Formato oficial MTM — nunca chamar IA (execução imediata). */
   forceFastPath?: boolean
+  channel?: MtmcopyChannelKey
+  /** Prompt de estratégia do provider (Premium Gold). */
+  strategyPrompt?: string | null
 }
 
 /** Formatos oficiais MTM — parser fiável, não bloquear em IA (~1–2s). */
 export function isOfficialMtmTelegramFormat(raw: string): boolean {
   if (/\bmoeda\s*:/i.test(raw) && /\ba[cç][aã]o\s*:/i.test(raw)) return true
   if (/\b(?:xauusd|gold)\s+(?:buy|sell)\b/i.test(raw)) return true
+  if (/\b(?:buy|sell)\s+now\b/i.test(raw) && /\b(?:gold|xauusd)\b/i.test(raw)) return true
   if (/\bgold\s+(?:buy|sell)\s+zone\b/i.test(raw) && /\bsl\s*:/i.test(raw)) return true
   return false
 }
@@ -98,7 +104,11 @@ function normalizeDirection(v: unknown): 'buy' | 'sell' | null {
 }
 
 /** Validação heurística local — microsegundos, sem rede. */
-export function quickLocalValidate(parsed: ParsedSignal, raw: string): AiSignalValidation {
+export function quickLocalValidate(
+  parsed: ParsedSignal,
+  raw: string,
+  channel?: MtmcopyChannelKey,
+): AiSignalValidation {
   const start = performance.now()
   const issues: string[] = []
   let score = 0
@@ -149,6 +159,30 @@ export function quickLocalValidate(parsed: ParsedSignal, raw: string): AiSignalV
 
   if (/\bmoeda\s*:/i.test(raw) && /\ba[cç][aã]o\s*:/i.test(raw)) score += 0.05
   if (/\b(?:gold|btc|sell|buy)\s+zone\b/i.test(raw)) score += 0.05
+  if (/\b(?:buy|sell)\s+now\b/i.test(raw)) score += 0.05
+
+  if (channel === 'premium-signals') {
+    if (/\bgold\s+(?:buy|sell)\s+zone\b/i.test(raw) && parsed.tp.length >= 1) score += 0.05
+    if (/\b(?:buy|sell)\s+now\b/i.test(raw)) score += 0.04
+    if (/\btrade\s+active\s+and\s+running\b/i.test(raw)) {
+      return {
+        valid: false,
+        confidence: 0,
+        symbol: parsed.symbol,
+        direction: parsed.direction,
+        entry: parsed.entry,
+        sl: parsed.sl,
+        tp: parsed.tp,
+        orderType: parsed.orderType,
+        issues: ['Mensagem de gestão Premium — não é entrada'],
+        reasoning: 'Trade Active and Running (gestão, não abrir trade)',
+        source: 'local',
+        localConfidence: 0,
+        aiConfidence: null,
+        latencyMs: performance.now() - start,
+      }
+    }
+  }
 
   const confidence = clamp01(score)
 
@@ -186,7 +220,11 @@ async function fetchWithTimeout(
   }
 }
 
-async function callHaikuValidator(raw: string, parsed: ParsedSignal): Promise<AiJson | null> {
+async function callHaikuValidator(
+  raw: string,
+  parsed: ParsedSignal,
+  strategyPrompt?: string | null,
+): Promise<AiJson | null> {
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) return null
 
@@ -198,7 +236,10 @@ async function callHaikuValidator(raw: string, parsed: ParsedSignal): Promise<Ai
   const system = `És um validador de sinais de trading MTM para copy trading MT5.
 Analisa formato, zonas de entrada, SL e TP. Responde APENAS com JSON válido (sem markdown):
 {"confidence":0.0-1.0,"valid":true|false,"symbol":"XAUUSD","direction":"buy"|"sell","entry":null|number,"sl":number|null,"tp":[numbers],"order_type":"market"|"limit","issues":["..."],"reason":"..."}
-Regras: SELL → SL > TP; BUY → SL < TP. LIMIT precisa entry. confidence=probabilidade de ser sinal executável válido.`
+Regras: SELL → SL > TP; BUY → SL < TP. LIMIT precisa entry. confidence=probabilidade de ser sinal executável válido.
+Mensagens «Trade Active and Running», HIT TP, cancel = gestão (valid:false, não é entrada).
+Cada sinal de entrada Premium abre exactamente 3 pernas (TP1/TP2/TP3) — nunca tratar gestão como nova entrada.
+${strategyPrompt?.trim() ? `\n--- Estratégia do provider ---\n${strategyPrompt.trim()}` : ''}`
 
   const user = `MENSAGEM TELEGRAM:
 ${raw}
@@ -247,14 +288,20 @@ ${JSON.stringify({
   }
 }
 
-async function callOpenAiValidator(raw: string, parsed: ParsedSignal): Promise<AiJson | null> {
+async function callOpenAiValidator(
+  raw: string,
+  parsed: ParsedSignal,
+  strategyPrompt?: string | null,
+): Promise<AiJson | null> {
   const key = process.env.OPENAI_API_KEY?.trim()
   if (!key) return null
 
   const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini'
   const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '')
 
-  const system = `Validador de sinais trading. Responde só JSON: {"confidence":0-1,"valid":bool,"symbol":str,"direction":"buy"|"sell","entry":num|null,"sl":num|null,"tp":[nums],"order_type":"market"|"limit","issues":[],"reason":str}`
+  const system = `Validador de sinais trading. Responde só JSON: {"confidence":0-1,"valid":bool,"symbol":str,"direction":"buy"|"sell","entry":num|null,"sl":num|null,"tp":[nums],"order_type":"market"|"limit","issues":[],"reason":str}
+Trade Active / HIT TP / cancel = gestão, não entrada. Premium: 3 pernas por sinal.
+${strategyPrompt?.trim() ? strategyPrompt.trim() : ''}`
 
   const res = await fetchWithTimeout(
     `${baseUrl}/chat/completions`,
@@ -338,14 +385,20 @@ export async function validateSignalWithAi(
   options?: ValidateSignalOptions,
 ): Promise<AiSignalValidation> {
   const minConfidence = options?.minConfidence ?? MTMCOPY_AI_MIN_CONFIDENCE
-  const cacheKey = `${options?.skipAi ? 's' : 'a'}:${raw.trim().slice(0, 500)}`
+  const channel = options?.channel
+  const strategyPrompt =
+    channel === 'premium-signals'
+      ? resolvePremiumAiStrategyPrompt(options?.strategyPrompt)
+      : options?.strategyPrompt?.trim() || null
+
+  const cacheKey = `${options?.skipAi ? 's' : 'a'}:${channel ?? 'u'}:${raw.trim().slice(0, 500)}`
   const cached = aiCache.get(cacheKey)
   if (cached && Date.now() - cached.at < AI_CACHE_MS) {
     return cached.result
   }
 
   const start = performance.now()
-  const local = quickLocalValidate(parsed, raw)
+  const local = quickLocalValidate(parsed, raw, channel)
 
   if (shouldSkipAiCall(raw, local, minConfidence, options?.skipAi, options?.forceFastPath)) {
     const result = {
@@ -360,8 +413,8 @@ export async function validateSignalWithAi(
     return result
   }
 
-  let aiJson = await callHaikuValidator(raw, parsed)
-  if (!aiJson) aiJson = await callOpenAiValidator(raw, parsed)
+  let aiJson = await callHaikuValidator(raw, parsed, strategyPrompt)
+  if (!aiJson) aiJson = await callOpenAiValidator(raw, parsed, strategyPrompt)
 
   let result: AiSignalValidation
   if (aiJson) {

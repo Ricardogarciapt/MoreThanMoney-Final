@@ -15,6 +15,7 @@ import { Bot, Plus, Trash2, Settings2 } from "lucide-react"
 import type { ProviderExecutionProfile, ProviderRoute } from "@/lib/mtmcopy/signal-sources-config"
 import { DEFAULT_PROVIDER_EXECUTION } from "@/lib/mtmcopy/provider-execution"
 import { formatExecutionSummary } from "@/lib/mtmcopy/provider-execution"
+import { PREMIUM_AI_STRATEGY_PROMPT } from "@/lib/mtmcopy/premium-ai-guideline"
 
 type Props = {
   open: boolean
@@ -119,12 +120,27 @@ export default function MtmcopyProviderConfigModal({
           <Section title="Estratégia IA do Provider">
             <p className="text-xs text-zinc-500">
               Descreve como este provider pensa/age (filtro de contexto, entradas, invalidação, gestão de risco).
-              Este texto pode ser usado pela IA para aproximar a lógica do trader.
+              Este texto é usado pela IA do parser/validação. Se deixares vazio no Premium, usa a guideline Gold MTM.
             </p>
+            {(route.sender_channel === "premium-signals" || !route.sender_channel) && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="border-zinc-700 h-8 text-xs"
+                onClick={() => setAiStrategyPrompt(PREMIUM_AI_STRATEGY_PROMPT)}
+              >
+                Carregar guideline Gold Premium
+              </Button>
+            )}
             <textarea
               value={aiStrategyPrompt}
               onChange={(e) => setAiStrategyPrompt(e.target.value)}
-              placeholder="Ex: Só entrar com confirmação M15+H1 alinhadas, evitar notícias de alto impacto, focar reversão em XAUUSD..."
+              placeholder={
+                route.sender_channel === "premium-signals" || !route.sender_channel
+                  ? "Vazio = guideline Gold MTM por defeito (BUY/SELL NOW, zone, 3 pernas, Trade Active…)"
+                  : "Ex: Só entrar com confirmação M15+H1 alinhadas…"
+              }
               className="w-full min-h-[110px] rounded-md bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/40"
             />
           </Section>
