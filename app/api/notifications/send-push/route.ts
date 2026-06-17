@@ -185,20 +185,26 @@ export async function POST(request: NextRequest) {
     })
     const apnsTokens = fcmTokens.filter((t) => !webTokens.includes(t))
 
+    // APNs direct push for native iOS tokens
+    let apnsSent = 0
+    let apnsFailed = 0
     if (apnsTokens.length > 0) {
-      console.log(`📲 [SEND PUSH] ${apnsTokens.length} tokens APNs nativos (iOS) — push nativo pendente`)
+      const apnsResult = await sendApnsNotifications(apnsTokens, payload)
+      apnsSent   = apnsResult.sent
+      apnsFailed = apnsResult.failed
+      console.log(`📲 [SEND PUSH] APNs: ${apnsSent} enviadas, ${apnsFailed} falharam`)
     }
 
     if (webTokens.length === 0) {
       return NextResponse.json({
         success: true,
-        successCount: 0,
-        failureCount: 0,
+        successCount: apnsSent,
+        failureCount: apnsFailed,
         totalDevices: fcmTokens.length,
         recipients: targetUserIds.length,
-        apnsSkipped: apnsTokens.length,
+        apnsSent,
+        apnsFailed,
         inAppCreated: targetUserIds.length,
-        message: 'Notificações in-app criadas; apenas tokens APNs nativos encontrados',
       })
     }
 
@@ -271,12 +277,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      successCount: response.successCount,
-      failureCount: response.failureCount,
+      successCount: response.successCount + apnsSent,
+      failureCount: response.failureCount + apnsFailed,
       totalDevices: fcmTokens.length,
       recipients: targetUserIds.length,
       webSent: tokens.length,
-      apnsSkipped: apnsTokens.length,
+      apnsSent,
       inAppCreated: targetUserIds.length,
     })
   } catch (error) {
@@ -286,4 +292,81 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     )
   }
+}
+
+// ---------------------------------------------------------------------------
+// APNs direct push via HTTP/2 JWT (iOS native tokens)
+// Requires env vars: APNS_AUTH_KEY (p8 content), APNS_KEY_ID, APNS_TEAM_ID
+// Configure in Apple Developer Portal → Certificates → Keys
+// ---------------------------------------------------------------------------
+
+async function sendApnsNotifications(
+  tokens: Array<{ token: string; user_id: string }>,
+  payload: { title: string; body: string; data?: Record<string, string>; url?: string },
+): Promise<{ sent: number; failed: number }> {
+  const authKey  = process.env.APNS_AUTH_KEY?.trim()
+  const keyId    = process.env.APNS_KEY_ID?.trim()
+  const teamId   = process.env.APNS_TEAM_ID?.trim()
+  const bundleId = process.env.APNS_BUNDLE_ID?.trim() || 'pt.morethanmoney.app'
+
+  if (!authKey || !keyId || !teamId) {
+    console.warn('⚠️ [APNs] APNS_AUTH_KEY / APNS_KEY_ID / APNS_TEAM_ID não configurados — iOS push ignorado')
+    return { sent: 0, failed: tokens.length }
+  }
+
+  const jwtToken = await buildApnsJwt(authKey, keyId, teamId)
+  const apnsUrl  = `https://api.push.apple.com/3/device/`
+
+  let sent = 0, failed = 0
+
+  const apnsPayload = JSON.stringify({
+    aps: {
+      alert: { title: payload.title, body: payload.body },
+      sound: 'default',
+      badge: 1,
+    },
+    url: payload.url || payload.data?.url || '/app-mobile',
+    ...(payload.data || {}),
+  })
+
+  await Promise.allSettled(tokens.map(async ({ token }) => {
+    try {
+      const res = await fetch(`${apnsUrl}${token}`, {
+        method:  'POST',
+        headers: {
+          'authorization':  `bearer ${jwtToken}`,
+          'apns-topic':     bundleId,
+          'apns-push-type': 'alert',
+          'apns-priority':  '10',
+          'content-type':   'application/json',
+        },
+        body: apnsPayload,
+      })
+      if (res.status === 200) { sent++ }
+      else {
+        const body = await res.json().catch(() => ({}))
+        console.warn(`⚠️ [APNs] ${token.substring(0, 16)}... status=${res.status} reason=${(body as any).reason}`)
+        failed++
+      }
+    } catch (e) {
+      console.warn(`⚠️ [APNs] fetch error for token ${token.substring(0, 16)}...`, e)
+      failed++
+    }
+  }))
+
+  return { sent, failed }
+}
+
+async function buildApnsJwt(authKey: string, keyId: string, teamId: string): Promise<string> {
+  const { createSign } = await import('crypto')
+  const issuedAt  = Math.floor(Date.now() / 1000)
+  const header    = Buffer.from(JSON.stringify({ alg: 'ES256', kid: keyId })).toString('base64url')
+  const claimsObj = { iss: teamId, iat: issuedAt }
+  const claims    = Buffer.from(JSON.stringify(claimsObj)).toString('base64url')
+  const unsigned  = `${header}.${claims}`
+  const sign      = createSign('SHA256')
+  sign.update(unsigned)
+  sign.end()
+  const signature = sign.sign({ key: authKey, dsaEncoding: 'ieee-p1363' }).toString('base64url')
+  return `${unsigned}.${signature}`
 }

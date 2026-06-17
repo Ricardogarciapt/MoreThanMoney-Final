@@ -27,6 +27,7 @@ interface UsePushNotificationsOptions {
  * Hook para gerir notificações push via FCM no browser/PWA.
  * Em contexto nativo (Capacitor), toda a lógica é gerida pelo use-capacitor.ts — este hook fica inativo.
  * Na shell WKWebView (MTM System iOS), captura o evento 'mtm-push-token' e regista o token APNs no servidor.
+ * Na shell Android WebView (MTMSystemAndroid), lê window.__mtmAndroidFcmToken e regista no servidor.
  */
 export function usePushNotifications({
   userId,
@@ -62,6 +63,45 @@ export function usePushNotifications({
 
     window.addEventListener("mtm-push-token", handleNativeToken)
     return () => window.removeEventListener("mtm-push-token", handleNativeToken)
+  }, [userId])
+
+  // Registar token FCM do Android WebView nativo (MTMSystemAndroid)
+  useEffect(() => {
+    if (!userId || tokenRegistered.current) return
+    if (typeof window === "undefined") return
+    if (typeof navigator === "undefined") return
+    if (!navigator.userAgent.includes("MTMSystemAndroid")) return
+
+    const registerAndroidToken = async (token: string) => {
+      try {
+        await fetch("/api/notifications/fcm-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            token,
+            deviceInfo: { platform: "android", nativeApp: true, userAgent: navigator.userAgent },
+          }),
+        })
+        tokenRegistered.current = true
+        console.log("📲 [PUSH] Token FCM Android registado no servidor")
+      } catch (e) {
+        console.warn("[PUSH] Erro ao registar token FCM Android:", e)
+      }
+    }
+
+    // Expor função para o Android injectar o token dinamicamente
+    ;(window as any).mtmRegisterNativeToken = (token: string, platform: string) => {
+      if (platform === "android" && token && !tokenRegistered.current) {
+        registerAndroidToken(token)
+      }
+    }
+
+    // Tentar ler token já injectado
+    const existing = (window as any).__mtmAndroidFcmToken
+    if (existing && typeof existing === "string") {
+      registerAndroidToken(existing)
+    }
   }, [userId])
 
   // Registar token FCM silenciosamente se a permissão já foi concedida anteriormente (web/PWA)
