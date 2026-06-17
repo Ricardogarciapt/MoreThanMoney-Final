@@ -107,6 +107,7 @@ interface UserManagementProps {
   onRefresh?: () => void
   highlightUserId?: string | null
   initialSkoolPendingFilter?: boolean
+  initialIqonicPendingFilter?: boolean
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -117,6 +118,7 @@ export default function UserManagementComponent({
   onRefresh,
   highlightUserId,
   initialSkoolPendingFilter,
+  initialIqonicPendingFilter,
 }: UserManagementProps) {
   const { toast } = useToast()
   const [users, setUsers] = useState<UserManagement[]>(usersProp || [])
@@ -149,6 +151,7 @@ export default function UserManagementComponent({
   const [savingPlan, setSavingPlan] = useState(false)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [markingSkoolId, setMarkingSkoolId] = useState<string | null>(null)
+  const [approvingIqonicId, setApprovingIqonicId] = useState<string | null>(null)
 
   // Addons (scanners + MTMcopier)
   const [addonScannerPlan, setAddonScannerPlan] = useState<string>("none")
@@ -187,6 +190,8 @@ export default function UserManagementComponent({
       if (filterStatus !== "all") params.set("status", filterStatus)
       if (filterSubscription === "skool_pending") {
         params.set("skool_pending", "true")
+      } else if (filterSubscription === "iqonic_pending") {
+        params.set("iqonic_pending", "true")
       } else if (filterSubscription !== "all") {
         params.set("subscription", filterSubscription)
       }
@@ -220,7 +225,8 @@ export default function UserManagementComponent({
 
   useEffect(() => {
     if (initialSkoolPendingFilter) setFilterSubscription("skool_pending")
-  }, [initialSkoolPendingFilter])
+    if (initialIqonicPendingFilter) setFilterSubscription("iqonic_pending")
+  }, [initialSkoolPendingFilter, initialIqonicPendingFilter])
 
   useEffect(() => { loadUsers() }, [loadUsers])
   useEffect(() => { if (usersProp?.length) setUsers(usersProp) }, [usersProp])
@@ -253,6 +259,7 @@ export default function UserManagementComponent({
       return d !== null && d <= 7
     }).length,
     skoolPending: users.filter((u) => u.skool_access_pending).length,
+    iqonicPending: users.filter((u) => u.iqonic_validation_pending).length,
   }), [users])
 
   // ─── Shared patch helper ──────────────────────────────────────────────────────
@@ -361,6 +368,25 @@ export default function UserManagementComponent({
       })
     }
     setMarkingSkoolId(null)
+  }
+
+  const handleApproveIqonic = async (userId: string) => {
+    setApprovingIqonicId(userId)
+    const { adminApiCall } = await import("@/lib/admin-helpers")
+    const result = await adminApiCall<{ success?: boolean; coupon_code?: string; message?: string }>(
+      "/api/admin/access-migration/approve",
+      { method: "POST", body: JSON.stringify({ user_id: userId, action: "approve" }) },
+    )
+    if (result.success) {
+      toast({
+        title: "IQONIC aprovado",
+        description: result.data?.message || "Membro pode voltar a fazer login.",
+      })
+      await loadUsers()
+    } else {
+      toast({ title: "Erro", description: result.error, variant: "destructive" })
+    }
+    setApprovingIqonicId(null)
   }
 
   // Subscription dialog handlers
@@ -775,6 +801,7 @@ export default function UserManagementComponent({
             <SelectContent className="bg-gray-900 border-gray-700">
               <SelectItem value="all">Subscrição: todas</SelectItem>
               <SelectItem value="skool_pending">🏫 Skool pendente (Stripe)</SelectItem>
+              <SelectItem value="iqonic_pending">🔷 IQONIC pendente validação</SelectItem>
               <SelectItem value="expiring_soon">⚠️ Expira em 7 dias</SelectItem>
               <SelectItem value="expired">❌ Expirada</SelectItem>
             </SelectContent>
@@ -826,13 +853,14 @@ export default function UserManagementComponent({
 
                   const isHighlighted = highlightUserId === user.id
                   const skoolPending = user.skool_access_pending === true
+                  const iqonicPending = user.iqonic_validation_pending === true
 
                   return (
                     <tr
                       key={user.id}
                       id={`admin-user-${user.id}`}
                       className={`hover:bg-gray-800/40 ${
-                        isHighlighted || skoolPending
+                        isHighlighted || skoolPending || iqonicPending
                           ? "bg-amber-500/10 ring-1 ring-inset ring-amber-500/40"
                           : ""
                       }`}
@@ -870,6 +898,16 @@ export default function UserManagementComponent({
                           {skoolPending && (
                             <Badge className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40">
                               🏫 Skool pendente
+                            </Badge>
+                          )}
+                          {iqonicPending && (
+                            <Badge className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                              🔷 IQONIC pendente
+                            </Badge>
+                          )}
+                          {user.iqonic_member_id && (
+                            <Badge className="text-[10px] bg-gray-800 text-gray-300">
+                              ID: {user.iqonic_member_id}
                             </Badge>
                           )}
                         </div>
@@ -1040,7 +1078,36 @@ export default function UserManagementComponent({
                               )}
                             </Button>
                           )}
-                          {user.user_type === "pending" && (
+                          {iqonicPending && (
+                            <div className="flex flex-col items-end gap-1">
+                              {user.iqonic_proof_url && (
+                                <a
+                                  href={user.iqonic_proof_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[10px] text-[#D2A63C] underline"
+                                >
+                                  Ver print IQONIC
+                                </a>
+                              )}
+                              <Button
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                disabled={approvingIqonicId === user.id}
+                                onClick={() => handleApproveIqonic(user.id)}
+                              >
+                                {approvingIqonicId === user.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Aprovar IQONIC
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          )}
+                          {user.user_type === "pending" && !iqonicPending && (
                             <Button
                               size="sm"
                               className="bg-green-600 hover:bg-green-700"

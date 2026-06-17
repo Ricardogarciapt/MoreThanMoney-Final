@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { isRegisteredMember } from "@/lib/member-access"
 import { isMemberProtectedPath, registerRedirectUrl } from "@/lib/member-route-guard"
+import { needsAccessRevalidation } from "@/lib/access-migration"
 
 // Cache para rate limiting
 const rateLimit = new Map<string, { count: number; timestamp: number }>()
@@ -73,6 +74,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
+    pathname.startsWith("/access-migration") ||
     pathname === "/"
   ) {
     return response
@@ -188,10 +190,14 @@ export async function middleware(request: NextRequest) {
       const { data: memberProfile } = await supabaseMember
         .from("profiles")
         .select(
-          "id, user_type, member_category, is_active, subscription_plan, stripe_subscription_id, subscription_expires_at, trial_expires_at, trial_expired"
+          "id, email, user_type, member_category, is_active, subscription_plan, stripe_subscription_id, subscription_expires_at, trial_expires_at, trial_expired, profile_data"
         )
         .eq("id", memberUser.id)
         .maybeSingle()
+
+      if (memberProfile && needsAccessRevalidation(memberProfile)) {
+        return NextResponse.redirect(new URL("/access-migration", request.url))
+      }
 
       if (!isRegisteredMember(memberProfile)) {
         return NextResponse.redirect(

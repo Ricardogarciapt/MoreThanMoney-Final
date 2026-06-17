@@ -143,6 +143,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   if (!userId) return
 
+  const isAccessMigration = session.metadata?.access_migration === 'true'
+  const planId = session.metadata?.plan || 'app_member_monthly'
+
   await supabase
     .from('checkout_sessions')
     .update({ status: 'completed', completed_at: new Date().toISOString() })
@@ -279,6 +282,29 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         await handlePremiumStripeSkoolGrant(supabase, userId, planId)
       } catch (err) {
         console.error('[SKOOL-ADMIN] Erro no alerta pós-checkout premium:', err)
+      }
+    }
+
+    if (isAccessMigration) {
+      try {
+        const { completeAccessMigration } = await import('@/lib/access-migration')
+        const stripe = getStripeClient()
+        let periodEnd: string | null = null
+        if (session.subscription) {
+          const sub = await stripe.subscriptions.retrieve(session.subscription as string)
+          periodEnd = new Date(sub.current_period_end * 1000).toISOString()
+        }
+        await completeAccessMigration({
+          userId,
+          planId,
+          channel: 'stripe',
+          billingCycle: planId.includes('annual') ? 'annual' : 'monthly',
+          stripeCustomerId: session.customer as string,
+          stripeSubscriptionId: session.subscription as string,
+          periodEnd,
+        })
+      } catch (migrationErr) {
+        console.error('[access-migration] Erro pós-checkout:', migrationErr)
       }
     }
   }

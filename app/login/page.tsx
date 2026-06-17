@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { determinePostLoginRedirect, safeInternalRedirectPath } from '@/lib/role-redirect'
-import { loadRegisteredMemberProfile } from '@/lib/member-profile'
+import { loadMemberProfile } from '@/lib/member-profile'
+import { isRegisteredMember } from '@/lib/member-access'
+import { needsAccessRevalidation } from '@/lib/access-migration'
 import { buildOAuthCallbackUrl, REGISTER_NOT_FOUND_MESSAGE } from '@/lib/oauth-flow'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,6 +41,25 @@ export default function LoginPage() {
     window.location.replace(`/register?message=${encodeURIComponent(REGISTER_NOT_FOUND_MESSAGE)}`)
   }
 
+  const redirectAfterAuth = async (userId: string) => {
+    const profile = await loadMemberProfile(supabase, userId)
+    if (!profile) {
+      await rejectUnknownUser()
+      return
+    }
+    if (needsAccessRevalidation(profile)) {
+      window.location.replace('/access-migration')
+      return
+    }
+    if (!isRegisteredMember(profile)) {
+      await rejectUnknownUser()
+      return
+    }
+    const next = determinePostLoginRedirect(profile, redirectParam)
+    const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
+    window.location.replace(url)
+  }
+
   // Verificar se já está logado
   useEffect(() => {
     const checkSession = async () => {
@@ -48,8 +69,16 @@ export default function LoginPage() {
       
       if (cachedSession && isSessionValid(cachedSession)) {
         console.log('✅ [LOGIN] Sessão em cache encontrada')
-        const profile = await loadRegisteredMemberProfile(supabase, cachedSession.user.id)
+        const profile = await loadMemberProfile(supabase, cachedSession.user.id)
         if (!profile) {
+          await rejectUnknownUser()
+          return
+        }
+        if (needsAccessRevalidation(profile)) {
+          window.location.replace('/access-migration')
+          return
+        }
+        if (!isRegisteredMember(profile)) {
           await rejectUnknownUser()
           return
         }
@@ -71,8 +100,16 @@ export default function LoginPage() {
           console.log('✅ [LOGIN] Sessão encontrada')
           const { setCachedSession } = await import('@/lib/auth-cache')
           setCachedSession(session)
-          const profile = await loadRegisteredMemberProfile(supabase, session.user.id)
+          const profile = await loadMemberProfile(supabase, session.user.id)
           if (!profile) {
+            await rejectUnknownUser()
+            return
+          }
+          if (needsAccessRevalidation(profile)) {
+            window.location.replace('/access-migration')
+            return
+          }
+          if (!isRegisteredMember(profile)) {
             await rejectUnknownUser()
             return
           }
@@ -121,14 +158,7 @@ export default function LoginPage() {
         console.log('✅ Login bem-sucedido:', data.user.email)
         const { setCachedSession } = await import('@/lib/auth-cache')
         setCachedSession(data.session)
-        const profile = await loadRegisteredMemberProfile(supabase, data.session.user.id)
-        if (!profile) {
-          await rejectUnknownUser()
-          return
-        }
-        const next = determinePostLoginRedirect(profile, redirectParam)
-        const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
-        window.location.replace(url)
+        await redirectAfterAuth(data.session.user.id)
       }
     } catch (error: any) {
       console.error('❌ Exceção no login:', error)
@@ -262,8 +292,16 @@ export default function LoginPage() {
       const { setCachedSession } = await import('@/lib/auth-cache')
       if (authData.session) setCachedSession(authData.session)
 
-      const profile = await loadRegisteredMemberProfile(supabase, authData.session!.user.id)
+      const profile = await loadMemberProfile(supabase, authData.session!.user.id)
       if (!profile) {
+        await rejectUnknownUser()
+        return
+      }
+      if (needsAccessRevalidation(profile)) {
+        window.location.replace('/access-migration')
+        return
+      }
+      if (!isRegisteredMember(profile)) {
         await rejectUnknownUser()
         return
       }

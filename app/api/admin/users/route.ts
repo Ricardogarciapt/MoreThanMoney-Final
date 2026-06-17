@@ -79,6 +79,11 @@ export async function GET(request: NextRequest) {
       query = query.eq("profile_data->>skool_access_pending", "true")
     }
 
+    const iqonicPending = searchParams.get("iqonic_pending")
+    if (iqonicPending === "true") {
+      query = query.eq("profile_data->>access_validation_status", "pending")
+    }
+
     if (q.length >= 2) {
       const pattern = `%${q}%`
       query = query.or(
@@ -168,6 +173,12 @@ export async function GET(request: NextRequest) {
       return {
         ...user,
         skool_access_pending: profileData.skool_access_pending === true,
+        iqonic_validation_pending: profileData.access_validation_status === "pending",
+        iqonic_member_id:
+          typeof profileData.iqonic_member_id === "string" ? profileData.iqonic_member_id : null,
+        iqonic_proof_url:
+          typeof profileData.iqonic_proof_url === "string" ? profileData.iqonic_proof_url : null,
+        access_revalidation_required: profileData.access_revalidation_required === true,
         xp: xpMap.get(user.id) || { total_xp: 0, level: 1 },
         fast_start: fastStartMap.get(user.id) || { progress_percent: 0, steps_completed: 0 },
         subscription_days_remaining: isSubscriptionCategory(user.member_category)

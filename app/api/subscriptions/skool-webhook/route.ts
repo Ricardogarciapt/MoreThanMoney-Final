@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
+import { mergeAccessMigration } from "@/lib/access-migration"
+import { buildSubscriptionExpiry } from "@/lib/member-subscription"
 
 const supabase = getSupabaseAdmin()
 
@@ -48,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Find user by email
     const { data: profile } = await supabase
       .from("profiles")
-      .select("id, user_type, subscription_plan")
+      .select("id, user_type, subscription_plan, profile_data")
       .eq("email", email)
       .single()
 
@@ -58,6 +60,12 @@ export async function POST(request: NextRequest) {
       }
 
       if (profile) {
+        const profileData = mergeAccessMigration(profile, {
+          access_revalidation_required: false,
+          access_payment_channel: "skool",
+          access_validation_status: "approved",
+          access_migration_completed_at: new Date().toISOString(),
+        })
         // Update existing user
         await supabase.from("profiles").update({
           subscription_plan: plan,
@@ -67,6 +75,11 @@ export async function POST(request: NextRequest) {
           member_category: "skool",
           user_type: profile.user_type === "admin" ? "admin" : "member",
           is_active: true,
+          subscription_status: "active",
+          subscription_auto_renew: true,
+          subscription_expires_at: buildSubscriptionExpiry(),
+          next_billing_at: buildSubscriptionExpiry(),
+          profile_data: profileData,
           updated_at: new Date().toISOString(),
         }).eq("id", profile.id)
 

@@ -1,11 +1,13 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Users, UserCheck, UserPlus, FileText, Activity, Loader2, AlertTriangle } from "lucide-react"
+import { Users, UserCheck, UserPlus, FileText, Activity, Loader2, AlertTriangle, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { AdminStats } from "@/lib/admin-types"
+import { useToast } from "@/hooks/use-toast"
 
 interface TrialStats {
   activeTrials?: number
@@ -23,6 +25,39 @@ export default function AdminOverview({
   trialStats: TrialStats | null
   loading: boolean
 }) {
+  const { toast } = useToast()
+  const [forceLogoutLoading, setForceLogoutLoading] = useState(false)
+
+  const runForceLogout = async (dryRun: boolean) => {
+    setForceLogoutLoading(true)
+    try {
+      const { adminApiCall } = await import("@/lib/admin-helpers")
+      const result = await adminApiCall<{
+        success?: boolean
+        message?: string
+        would_affect?: number
+        signed_out?: number
+      }>("/api/admin/access-migration/force-logout", {
+        method: "POST",
+        body: JSON.stringify({ dry_run: dryRun }),
+      })
+      if (result.success) {
+        toast({
+          title: dryRun ? "Simulação concluída" : "Logout global executado",
+          description:
+            result.data?.message ||
+            (dryRun
+              ? `${result.data?.would_affect ?? 0} utilizadores seriam afectados`
+              : `${result.data?.signed_out ?? 0} sessões terminadas`),
+        })
+      } else {
+        toast({ title: "Erro", description: result.error, variant: "destructive" })
+      }
+    } finally {
+      setForceLogoutLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -110,6 +145,38 @@ export default function AdminOverview({
           </div>
         </div>
       )}
+
+      <div className="rounded-2xl border border-red-500/30 bg-red-950/20 p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <LogOut className="h-6 w-6 shrink-0 text-red-400 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-red-200">Migração de packs — logout global</h3>
+              <p className="text-sm text-red-100/80 mt-1">
+                Desloga todos os membros (excepto admin e educadores LMS) e obriga revalidação em
+                /access-migration com Stripe, Skool ou IQONIC.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button
+              variant="outline"
+              className="border-red-500/40"
+              disabled={forceLogoutLoading}
+              onClick={() => void runForceLogout(true)}
+            >
+              Simular
+            </Button>
+            <Button
+              className="bg-red-700 hover:bg-red-800 text-white"
+              disabled={forceLogoutLoading}
+              onClick={() => void runForceLogout(false)}
+            >
+              {forceLogoutLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Executar logout"}
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <div>
         <h2 className="mb-4 text-lg font-semibold tracking-tight text-white">Resumo</h2>

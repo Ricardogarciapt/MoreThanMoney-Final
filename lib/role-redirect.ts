@@ -1,5 +1,6 @@
 import { isRegisteredMember } from "@/lib/member-access"
 import { isSubscriptionActive, isSubscriptionCategory } from "@/lib/member-subscription"
+import { needsAccessRevalidation } from "@/lib/access-migration"
 
 /**
  * Tipos de conta.
@@ -26,6 +27,8 @@ export interface UserProfile {
   subscription_auto_renew?: boolean | null
   subscription_plan?: "app_member" | "premium" | null
   stripe_subscription_id?: string | null
+  profile_data?: unknown
+  email?: string
 }
 
 export type AccountKind = "admin" | "vip" | "member" | "app_only" | "trial" | "pending" | "blocked"
@@ -92,6 +95,10 @@ export function determinePostLoginRedirect(
   requestedRedirect?: string | null
 ): string {
   let safeRequested = safeInternalRedirectPath(requestedRedirect)
+
+  if (profile && needsAccessRevalidation(profile)) {
+    return "/access-migration"
+  }
 
   if (safeRequested === "/admin" && profile?.user_type !== "admin") {
     safeRequested = null
