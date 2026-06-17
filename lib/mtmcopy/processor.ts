@@ -532,6 +532,67 @@ async function processManagementUpdate(
   }
 }
 
+function subscriberLogAfterProviderExecution(
+  conn: MTMcopierConnection,
+  opts: {
+    anySuccess: boolean
+    aiDetail: string
+    providerTag: string
+    orderLabel: string
+    executionSummary: string
+    trailingNote: string
+    tgRef: string
+    resultError?: string
+  },
+): {
+  status: 'received' | 'error'
+  detail: string
+  connectionPatch: Record<string, unknown>
+} {
+  const {
+    anySuccess,
+    aiDetail,
+    providerTag,
+    orderLabel,
+    executionSummary,
+    trailingNote,
+    tgRef,
+    resultError,
+  } = opts
+
+  if (!anySuccess) {
+    return {
+      status: 'error',
+      detail: `${aiDetail} · ${providerTag} mestre: ${resultError ?? 'erro'} ${tgRef}`.trim(),
+      connectionPatch: {
+        last_error: resultError ?? 'Erro na conta mestre',
+        mt5_status: 'error',
+      },
+    }
+  }
+
+  const base = `${aiDetail} · ${providerTag} mestre · ${orderLabel} · ${executionSummary}`
+  if (conn.copyfactory_subscribed) {
+    return {
+      status: 'received',
+      detail: `${base} · CopyFactory replica (confirma no MT5)${trailingNote} ${tgRef}`.trim(),
+      connectionPatch: { last_error: null },
+    }
+  }
+  if (prefersDirectExecution(conn)) {
+    return {
+      status: 'received',
+      detail: `${base} · aguarda execução na tua conta${trailingNote} ${tgRef}`.trim(),
+      connectionPatch: {},
+    }
+  }
+  return {
+    status: 'received',
+    detail: `${base}${trailingNote} ${tgRef}`.trim(),
+    connectionPatch: {},
+  }
+}
+
 /** Sinal executado na conta MTM do canal; CopyFactory replica para slaves subscritos */
 async function executeViaMtmProvider(
   subscribers: MTMcopierConnection[],
@@ -780,6 +841,17 @@ async function executeViaMtmProvider(
         ? ` · trailing ${trailingPointsForConnection(conn)}pts`
         : ''
 
+      const slaveLog = subscriberLogAfterProviderExecution(conn, {
+        anySuccess,
+        aiDetail,
+        providerTag: provider.tag,
+        orderLabel,
+        executionSummary,
+        trailingNote,
+        tgRef,
+        resultError: result.error,
+      })
+
       await logMtmcopySignal({
         user_id: conn.user_id,
         connection_id: conn.id,
@@ -791,19 +863,15 @@ async function executeViaMtmProvider(
         sl: signalForExec.sl,
         tp: signalForExec.tp[0] ?? null,
         lot: totalLot,
-        status: anySuccess ? 'executed' : 'error',
-        detail: anySuccess
-          ? `${aiDetail} · ${provider.tag} · ${orderLabel} · ${executionSummary}${trailingNote} ${tgRef}`.trim()
-          : `${aiDetail} · ${provider.tag}: ${result.error} ${tgRef}`.trim(),
+        status: slaveLog.status,
+        detail: slaveLog.detail,
         raw_message: raw,
       })
 
       await markConnectionStatus(conn.id, {
         telegram_status: 'connected',
         last_signal_at: new Date().toISOString(),
-        ...(anySuccess
-          ? { mt5_status: 'connected', last_error: null }
-          : { last_error: result.error ?? 'Erro na conta mestre', mt5_status: 'error' }),
+        ...slaveLog.connectionPatch,
       })
     }),
   )

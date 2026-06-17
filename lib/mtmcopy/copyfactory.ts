@@ -7,7 +7,15 @@ const COPYFACTORY_BASE =
 export type CopyFactoryTradeSizeScaling =
   | { mode: 'fixedRisk'; riskFraction: number }
   | { mode: 'fixedVolume'; fixedVolume: number }
+  | { mode: 'balance'; forceTinyTrades?: boolean }
   | { mode: 'none' }
+
+export type CopyFactorySymbolMapping = { from: string; to: string }
+
+/** Mapeamentos canónicos provider → brokers comuns (ex. VT Markets XAUUSD-STD). */
+export const DEFAULT_COPYFACTORY_SYMBOL_MAPPINGS: CopyFactorySymbolMapping[] = [
+  { from: 'XAUUSD', to: 'XAUUSD-STD' },
+]
 
 export interface SubscriberOptions {
   accountId: string
@@ -21,6 +29,7 @@ export interface SubscriberOptions {
   /** false = copiar limit, stop e ordens pendentes (default copy trader) */
   skipPendingOrders?: boolean
   symbolWhitelist?: string[] | null
+  symbolMapping?: CopyFactorySymbolMapping[] | null
 }
 
 export interface ProviderStrategyOptions {
@@ -31,6 +40,13 @@ export interface ProviderStrategyOptions {
   skipPendingOrders?: boolean
   copyStopLoss?: boolean
   copyTakeProfit?: boolean
+  tradeSizeScaling?: Extract<CopyFactoryTradeSizeScaling, { mode: 'balance' }>
+  riskLimits?: Array<{
+    type: string
+    applyTo: string
+    closePositions: boolean
+    maxRelativeRisk: number
+  }>
 }
 
 export async function subscribeToStrategies(
@@ -61,6 +77,9 @@ export async function subscribeToStrategies(
     }
     if (opts.symbolWhitelist?.length) {
       subscription.symbolFilter = { included: opts.symbolWhitelist }
+    }
+    if (opts.symbolMapping?.length) {
+      subscription.symbolMapping = opts.symbolMapping
     }
     return subscription
   })
@@ -185,6 +204,8 @@ export async function upsertProviderStrategy(
         skipPendingOrders: opts.skipPendingOrders ?? false,
         copyStopLoss: opts.copyStopLoss !== false,
         copyTakeProfit: opts.copyTakeProfit !== false,
+        ...(opts.tradeSizeScaling ? { tradeSizeScaling: opts.tradeSizeScaling } : {}),
+        ...(opts.riskLimits?.length ? { riskLimits: opts.riskLimits } : {}),
       }),
     },
   )
@@ -228,6 +249,32 @@ export async function ensureCopyTraderStrategy(
     skipPendingOrders: false,
     copyStopLoss: true,
     copyTakeProfit: true,
+  })
+}
+
+const MTM_PROVIDER_RISK_LIMITS: ProviderStrategyOptions['riskLimits'] = [
+  {
+    type: 'day',
+    applyTo: 'balance-difference',
+    closePositions: true,
+    maxRelativeRisk: 0.2,
+  },
+]
+
+/** Estratégias MTM provider: scaling por saldo + micro-lotes quando abaixo do mínimo do broker. */
+export async function ensureMtmProviderStrategyScaling(
+  opts: Pick<ProviderStrategyOptions, 'strategyId' | 'accountId' | 'name' | 'description'>,
+): Promise<{ ok: boolean; error?: string }> {
+  return upsertProviderStrategy({
+    strategyId: opts.strategyId,
+    accountId: opts.accountId,
+    name: opts.name,
+    description: opts.description ?? 'Estratégia MTM · scaling por saldo',
+    skipPendingOrders: false,
+    copyStopLoss: true,
+    copyTakeProfit: true,
+    tradeSizeScaling: { mode: 'balance', forceTinyTrades: true },
+    riskLimits: MTM_PROVIDER_RISK_LIMITS,
   })
 }
 

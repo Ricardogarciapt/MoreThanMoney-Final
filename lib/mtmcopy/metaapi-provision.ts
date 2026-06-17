@@ -4,6 +4,7 @@ import {
   subscribeToStrategies,
   unsubscribeFromStrategy,
   upsertProviderStrategy,
+  DEFAULT_COPYFACTORY_SYMBOL_MAPPINGS,
 } from './copyfactory'
 import type { MtmcopyCopyMethod } from './copy-methods'
 import type { MtmcopySenderMode } from './types'
@@ -370,8 +371,7 @@ export async function provisionSlaveAccount(req: ProvisionRequest): Promise<Prov
   }
 
   const senderMode = req.senderMode ?? 'telegram'
-  const directOnly =
-    req.copyMethod === 'telegram_group' || req.copyMethod === 'strategy'
+  const directOnly = req.copyMethod === 'telegram_group'
 
   let resolvedStrategyIds: string[] = []
   if (req.strategyIds?.length) {
@@ -450,7 +450,8 @@ export async function provisionSlaveAccount(req: ProvisionRequest): Promise<Prov
       symbolWhitelist: req.symbolWhitelist,
       copySl: req.copySl,
       copyTp: req.copyTp,
-      skipPendingOrders: req.skipPendingOrders ?? false,
+      skipPendingOrders: req.copyMethod === 'strategy' ? true : (req.skipPendingOrders ?? false),
+      symbolMapping: req.copyMethod === 'strategy' ? DEFAULT_COPYFACTORY_SYMBOL_MAPPINGS : undefined,
     })
 
     if (!sub.ok) {

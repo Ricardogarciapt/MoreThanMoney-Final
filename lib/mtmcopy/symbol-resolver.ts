@@ -1,6 +1,6 @@
 /** Mapeia símbolo canónico → variantes comuns em brokers MT5 */
 const BROKER_ALIASES: Record<string, string[]> = {
-  XAUUSD: ['XAUUSD', 'GOLD', 'XAUUSDm', 'XAUUSD.', 'XAUUSD.a', 'XAUUSDpro', 'XAUUSD-i'],
+  XAUUSD: ['XAUUSD', 'XAUUSD-STD', 'GOLD', 'XAUUSDm', 'XAUUSD.', 'XAUUSD.a', 'XAUUSDpro', 'XAUUSD-i'],
   EURUSD: ['EURUSD', 'EURUSDm', 'EURUSD.', 'EURUSD.a'],
   GBPUSD: ['GBPUSD', 'GBPUSDm', 'GBPUSD.'],
   USDJPY: ['USDJPY', 'USDJPYm', 'USDJPY.'],

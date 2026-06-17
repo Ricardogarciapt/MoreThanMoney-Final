@@ -12,6 +12,7 @@ import { invalidateCopyConnectionsCache } from '@/lib/mtmcopy/db'
 import { getAccountSnapshot } from '@/lib/mtmcopy/metaapi'
 import {
   syncConnectionCopyFactory,
+  syncMtmStrategyReplication,
   tradeSizeScalingFromConnection,
 } from '@/lib/mtmcopy/connection-sync'
 import type { MTMcopierConnection } from '@/lib/mtmcopy/types'
@@ -158,12 +159,24 @@ export async function POST(request: NextRequest) {
   const strategyIds = await strategyIdsForTelegramGroupsAsync(groups)
   let cfSync: { ok: boolean; error?: string } = { ok: true }
 
-  if (prefersDirectExecution(connection)) {
-    patch.copyfactory_subscribed = false
+  if (connection.copy_method === 'strategy') {
+    cfSync = await syncMtmStrategyReplication(
+      connection,
+      connection.account_label || `MTMcopier · ${login.slice(-4)}`,
+    )
+    if (cfSync.ok) {
+      await supabase
+        .from('mtmcopy_connections')
+        .update({ copyfactory_subscribed: true, updated_at: new Date().toISOString() })
+        .eq('id', connection.id)
+      connection = { ...connection, copyfactory_subscribed: true }
+    }
+  } else if (prefersDirectExecution(connection)) {
     await supabase
       .from('mtmcopy_connections')
-      .update({ copyfactory_subscribed: false })
+      .update({ copyfactory_subscribed: false, updated_at: new Date().toISOString() })
       .eq('id', connection.id)
+    connection = { ...connection, copyfactory_subscribed: false }
   } else if (strategyIds.length) {
     cfSync = await subscribeToStrategies({
       accountId: metaapiAccountId,

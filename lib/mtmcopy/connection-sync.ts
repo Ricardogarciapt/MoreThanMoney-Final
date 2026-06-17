@@ -1,4 +1,5 @@
 import {
+  DEFAULT_COPYFACTORY_SYMBOL_MAPPINGS,
   getCopyStrategyId,
   subscribeToStrategies,
   unsubscribeFromStrategy,
@@ -68,8 +69,12 @@ export async function syncConnectionCopyFactory(
   let master = allConnections ? getMasterConnection(allConnections) : null
   const method = connectionCopyMethod(conn as MTMcopierConnection)
 
-  if (method === 'telegram_group' || method === 'strategy') {
+  if (method === 'telegram_group') {
     return { ok: true }
+  }
+
+  if (method === 'strategy') {
+    return syncMtmStrategyReplication(conn, userLabel)
   }
 
   if (method === 'master_slave' && master?.metaapi_account_id) {
@@ -113,4 +118,47 @@ export async function syncConnectionCopyFactory(
 export async function removeConnectionCopyFactory(metaapiAccountId: string | null | undefined) {
   if (!metaapiAccountId) return { ok: true }
   return unsubscribeFromStrategy(metaapiAccountId)
+}
+
+/** Subscrição CopyFactory para método «Estratégia MTM» (replica do provider com symbol mapping). */
+export async function syncMtmStrategyReplication(
+  conn: Pick<
+    MTMcopierConnection,
+    | 'metaapi_account_id'
+    | 'copyfactory_strategy_pick'
+    | 'lot_mode'
+    | 'lot_value'
+    | 'reverse_signals'
+    | 'symbols_whitelist'
+    | 'copy_sl'
+    | 'copy_tp'
+    | 'mt5_login_last4'
+    | 'mt5_server'
+    | 'account_label'
+  >,
+  userLabel: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!conn.metaapi_account_id) return { ok: false, error: 'Conta MetaAPI em falta' }
+
+  const strategyId = conn.copyfactory_strategy_pick?.trim()
+  if (!strategyId) return { ok: false, error: 'Estratégia MTM não escolhida' }
+
+  const name =
+    userLabel ||
+    conn.account_label ||
+    `MTMcopier · ****${conn.mt5_login_last4 ?? '?'} ${conn.mt5_server ?? ''}`.trim()
+
+  return subscribeToStrategies({
+    accountId: conn.metaapi_account_id,
+    name,
+    strategyIds: [strategyId],
+    multiplier: lotMultiplierFromConnection(conn),
+    tradeSizeScaling: tradeSizeScalingFromConnection(conn),
+    reverse: conn.reverse_signals ?? false,
+    symbolWhitelist: conn.symbols_whitelist,
+    copySl: conn.copy_sl !== false,
+    copyTp: conn.copy_tp !== false,
+    skipPendingOrders: true,
+    symbolMapping: DEFAULT_COPYFACTORY_SYMBOL_MAPPINGS,
+  })
 }

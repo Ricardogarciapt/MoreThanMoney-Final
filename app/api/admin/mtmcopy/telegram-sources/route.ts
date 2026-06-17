@@ -14,6 +14,7 @@ import {
   normalizeProviderExecutionProfile,
 } from '@/lib/mtmcopy/provider-execution'
 import { normalizeProviderRoutes, syncChannelProvidersFromRoutes } from '@/lib/mtmcopy/provider-routes'
+import { ensureMtmProviderStrategyScaling } from '@/lib/mtmcopy/copyfactory'
 import type { ProviderRoute } from '@/lib/mtmcopy/signal-sources-config'
 import { MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
 import { CANONICAL_TELEGRAM_CHANNELS } from '@/lib/telegram-channel-ids'
@@ -221,8 +222,27 @@ export async function PUT(request: NextRequest) {
   }
 
   await saveSignalSourcesConfig(next)
+
+  const routesForScaling = normalizeProviderRoutes(next)
+  const scalingResults: Array<{ strategy_id: string; ok: boolean; error?: string }> = []
+  for (const route of routesForScaling) {
+    if (route.enabled === false || !route.strategy_id?.trim() || !route.account_id?.trim()) continue
+    const scaled = await ensureMtmProviderStrategyScaling({
+      strategyId: route.strategy_id.trim(),
+      accountId: route.account_id.trim(),
+      name: route.tag ?? route.label ?? 'MTM Provider',
+      description: `MTM Auto · ${route.sender_channel ?? 'provider'}`,
+    })
+    scalingResults.push({
+      strategy_id: route.strategy_id.trim(),
+      ok: scaled.ok,
+      error: scaled.error,
+    })
+  }
+
   return NextResponse.json({
     success: true,
     config: { ...next, provider_routes: normalizeProviderRoutes(next) },
+    provider_scaling: scalingResults,
   })
 }
