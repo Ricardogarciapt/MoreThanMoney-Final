@@ -153,7 +153,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   // Compra de scanner com username TradingView → enviar email com instruções de acesso
   const tvUsername = session.metadata?.tradingview_username
-  const planId = session.metadata?.plan
   if (tvUsername && planId && SCANNER_PLAN_NAMES[planId]) {
     try {
       const { data: profile } = await supabase
@@ -260,7 +259,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     })
 
   } else if (session.mode === 'subscription') {
-    const planId = session.metadata?.plan || 'app_member_monthly'
     const couponCodeWebhook = (session.metadata?.coupon_code || '').trim().toUpperCase()
     const subscriptionUpdate: Record<string, unknown> = {
       stripe_customer_id: session.customer as string,
@@ -317,7 +315,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   // Notificar VIP/Admin + organização ascendente (fire-and-forget)
   try {
-    const planId = session.metadata?.plan || 'app_member_monthly'
     const { data: saleMemberProfile } = await supabase
       .from('profiles')
       .select('username, full_name')
