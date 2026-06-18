@@ -14,8 +14,42 @@ const COLORS = {
   grayDark: '#1a1a1a',
 }
 
+function resolveSiteUrl(siteUrl?: string): string {
+  return siteUrl?.replace(/\/$/, '') || 'https://www.morethanmoney.pt'
+}
+
+function resolveLogoUrl(siteUrl?: string): string {
+  return `${resolveSiteUrl(siteUrl)}/logo-mf-gold.png`
+}
+
+function resolveBannerUrl(siteUrl?: string): string {
+  return `${resolveSiteUrl(siteUrl)}/educacao-morethanmoney.png`
+}
+
+// Header com logo + banner MTM (emails transaccionais)
+const brandedHeaderComponent = (siteUrl?: string) => {
+  const logo = resolveLogoUrl(siteUrl)
+  const banner = resolveBannerUrl(siteUrl)
+  const site = resolveSiteUrl(siteUrl)
+
+  return `
+<tr>
+  <td style="background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 50%, ${COLORS.gold} 100%); padding: 24px 30px; text-align: center;">
+    <a href="${site}" style="text-decoration: none;">
+      <img src="${logo}" alt="MoreThanMoney" width="160" style="max-width: 160px; height: auto; display: inline-block;" />
+    </a>
+  </td>
+</tr>
+<tr>
+  <td style="padding: 0; line-height: 0;">
+    <img src="${banner}" alt="MoreThanMoney — Educação Financeira" width="600" style="width: 100%; max-width: 600px; height: auto; display: block;" />
+  </td>
+</tr>
+`
+}
+
 // Base Template (wrapper comum)
-const baseTemplate = (content: string, preheader?: string) => `
+const baseTemplate = (content: string, preheader?: string, siteUrl?: string) => `
 <!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -47,6 +81,7 @@ const baseTemplate = (content: string, preheader?: string) => `
     <tr>
       <td align="center">
         <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="container" style="background: white; max-width: 600px; width: 100%; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
+          ${brandedHeaderComponent(siteUrl)}
           ${content}
         </table>
         
@@ -56,11 +91,12 @@ const baseTemplate = (content: string, preheader?: string) => `
             <td style="padding: 20px; text-align: center; color: #666; font-size: 12px; line-height: 18px;">
               <p style="margin: 0 0 10px 0;">© ${new Date().getFullYear()} MoreThanMoney. Todos os direitos reservados.</p>
               <p style="margin: 0 0 10px 0;">
-                <a href="{{unsubscribe_url}}" style="color: #666; text-decoration: underline;">Cancelar subscrição</a> | 
-                <a href="{{preferences_url}}" style="color: #666; text-decoration: underline;">Preferências</a>
+                <a href="${resolveSiteUrl(siteUrl)}/faq" style="color: #666; text-decoration: underline;">FAQ</a> · 
+                <a href="${resolveSiteUrl(siteUrl)}/privacidade" style="color: #666; text-decoration: underline;">Privacidade</a> · 
+                <a href="mailto:geral@morethanmoney.pt" style="color: #666; text-decoration: underline;">Suporte</a>
               </p>
               <p style="margin: 0; color: #999;">
-                MoreThanMoney, Lda. | Portugal
+                MoreThanMoney · Portugal · <a href="${resolveSiteUrl(siteUrl)}" style="color: #999;">morethanmoney.pt</a>
               </p>
             </td>
           </tr>
@@ -284,7 +320,7 @@ export const welcomeEmailTemplate = (userName: string, userEmail: string, userna
     `)}
   `
   
-  return baseTemplate(content, 'Bem-vindo à MoreThanMoney! A tua conta foi aprovada.')
+  return baseTemplate(content, 'Bem-vindo à MoreThanMoney! A tua conta foi aprovada.', siteUrl)
 }
 
 // 2. ONBOARDING - Dia 1
@@ -889,6 +925,239 @@ export const dcaOpportunityEmailTemplate = (
   return baseTemplate(content, `${opportunities.length} oportunidades DCA detectadas!`)
 }
 
+// 9. RECUPERAÇÃO DE PASSWORD
+export const passwordRecoveryEmailTemplate = (
+  userName: string,
+  userEmail: string,
+  username: string,
+  resetLink: string,
+  siteUrl: string,
+) => {
+  const content = `
+    ${headerComponent('🔐 Recuperar Password', 'morethanmoney.pt', '🔑')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; font-size: 22px; font-weight: 700; margin: 0 0 15px 0;">
+        Olá ${userName}! 👋
+      </h2>
+      <p style="margin-bottom: 15px;">
+        Recebemos um pedido para <strong>redefinir a password</strong> da tua conta MoreThanMoney em
+        <strong>morethanmoney.pt</strong>.
+      </p>
+      <p style="margin-bottom: 15px;">
+        Se foste tu, clica no botão abaixo para escolher uma nova password. O link expira em <strong>1 hora</strong>.
+      </p>
+    `)}
+    
+    ${cardComponent(
+      '👤 Conta associada',
+      `
+        <table style="width: 100%; background: white; border-radius: 8px;">
+          <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong style="color: ${COLORS.primary};">Email:</strong></td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-family: monospace;">${userEmail}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;"><strong style="color: ${COLORS.primary};">Username:</strong></td>
+            <td style="padding: 8px 0; font-family: monospace;">${username}</td>
+          </tr>
+        </table>
+      `,
+      '🔐',
+      COLORS.primary,
+    )}
+    
+    ${buttonComponent('Definir nova password', resetLink)}
+    
+    ${textComponent(`
+      <p style="color: #666; font-size: 13px; line-height: 22px; margin: 0;">
+        Se o botão não funcionar, copia e cola este link no browser:<br>
+        <a href="${resetLink}" style="color: ${COLORS.primary}; word-break: break-all;">${resetLink}</a>
+      </p>
+    `)}
+    
+    ${dividerComponent()}
+    
+    ${textComponent(`
+      <p style="background: ${COLORS.gray}; padding: 15px; border-radius: 8px; margin: 0; font-size: 14px; color: #555;">
+        <strong>Não pediste esta alteração?</strong> Ignora este email — a tua password mantém-se igual.
+        Se receberes emails suspeitos, contacta <a href="mailto:geral@morethanmoney.pt" style="color: ${COLORS.primary};">geral@morethanmoney.pt</a>.
+      </p>
+    `)}
+  `
+
+  return baseTemplate(content, 'Recuperação de password — MoreThanMoney', siteUrl)
+}
+
+// 10. PASSWORD ALTERADA COM SUCESSO
+export const passwordChangedEmailTemplate = (
+  userName: string,
+  userEmail: string,
+  username: string,
+  siteUrl: string,
+) => {
+  const content = `
+    ${headerComponent('✅ Password Actualizada', 'A tua conta está segura', '🛡️')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; font-size: 22px; font-weight: 700; margin: 0 0 15px 0;">
+        Olá ${userName}! 👋
+      </h2>
+      <p style="margin-bottom: 15px;">
+        Confirmamos que a password da tua conta <strong>MoreThanMoney</strong> em
+        <strong>morethanmoney.pt</strong> foi alterada com sucesso.
+      </p>
+    `)}
+    
+    ${cardComponent(
+      '🔐 Os teus dados de login',
+      `
+        <table style="width: 100%; background: white; border-radius: 8px;">
+          <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong style="color: ${COLORS.primary};">Email:</strong></td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-family: monospace;">${userEmail}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong style="color: ${COLORS.primary};">Username:</strong></td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-family: monospace;">${username}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;"><strong style="color: ${COLORS.primary};">Plataforma:</strong></td>
+            <td style="padding: 8px 0;"><a href="${siteUrl}/login" style="color: ${COLORS.primary};">${siteUrl}/login</a></td>
+          </tr>
+        </table>
+      `,
+      '🔑',
+      '#28a745',
+    )}
+    
+    ${buttonComponent('Fazer login agora', `${siteUrl}/login`)}
+    
+    ${dividerComponent()}
+    
+    ${textComponent(`
+      <p style="background: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin: 0; font-size: 14px; color: #664d03;">
+        <strong>Não foste tu?</strong> Alguém pode ter acedido à tua conta. Responde imediatamente a
+        <a href="mailto:geral@morethanmoney.pt" style="color: ${COLORS.primaryDark};">geral@morethanmoney.pt</a>
+        para bloquearmos o acesso.
+      </p>
+    `)}
+  `
+
+  return baseTemplate(content, 'Password actualizada — MoreThanMoney', siteUrl)
+}
+
+// 11. NOVO REGISTO (admin)
+export const registrationAdminEmailTemplate = (
+  userName: string,
+  userEmail: string,
+  approveUrl: string,
+  rejectUrl: string,
+  siteUrl: string,
+) => {
+  const content = `
+    ${headerComponent('🔔 Novo Pedido de Registo', 'Acção necessária', '📋')}
+    
+    ${cardComponent(
+      'Informações do candidato',
+      `
+        <table style="width: 100%;">
+          <tr><td style="padding: 8px 0;"><strong>Nome:</strong></td><td>${userName}</td></tr>
+          <tr><td style="padding: 8px 0;"><strong>Email:</strong></td><td>${userEmail}</td></tr>
+          <tr><td style="padding: 8px 0;"><strong>Data:</strong></td><td>${new Date().toLocaleString('pt-PT')}</td></tr>
+        </table>
+      `,
+      '👤',
+      COLORS.primary,
+    )}
+    
+    ${buttonComponent('✅ Aprovar membro', approveUrl, 'secondary')}
+    ${buttonComponent('❌ Rejeitar', rejectUrl)}
+  `
+
+  return baseTemplate(content, 'Novo pedido de registo MTM', siteUrl)
+}
+
+// 12. REJEIÇÃO DE REGISTO
+export const registrationRejectedEmailTemplate = (
+  userName: string,
+  siteUrl: string,
+) => {
+  const content = `
+    ${headerComponent('Pedido de Registo', 'MoreThanMoney', '📩')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; margin-bottom: 15px;">Olá ${userName}</h2>
+      <p style="margin-bottom: 15px;">Obrigado pelo teu interesse na MoreThanMoney.</p>
+      <p style="margin-bottom: 15px;">
+        Após análise do teu pedido, infelizmente não podemos aprovar o registo neste momento.
+      </p>
+    `)}
+    
+    ${cardComponent(
+      'Precisas de ajuda?',
+      `<p style="margin: 0;">Contacta-nos em <a href="mailto:geral@morethanmoney.pt" style="color: ${COLORS.primary};">geral@morethanmoney.pt</a></p>`,
+      '💬',
+      COLORS.primary,
+    )}
+  `
+
+  return baseTemplate(content, 'Pedido de registo — MoreThanMoney', siteUrl)
+}
+
+// 13. ACESSO SCANNER (pós-compra)
+export const scannerAccessEmailTemplate = (
+  userName: string,
+  scannerName: string,
+  tradingviewUsername: string,
+  siteUrl: string,
+) => {
+  const content = `
+    ${headerComponent('🔓 Acesso Confirmado!', scannerName, '✅')}
+    
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; margin-bottom: 15px;">Olá ${userName}! 👋</h2>
+      <p style="margin-bottom: 15px;">
+        Obrigado pela tua compra! Vamos configurar o teu acesso ao indicador no TradingView.
+      </p>
+    `)}
+    
+    ${cardComponent(
+      'Username TradingView',
+      `
+        <p style="margin: 0; font-size: 18px; font-weight: 700;">${tradingviewUsername}</p>
+        <p style="margin: 10px 0 0 0; font-size: 13px; color: #666;">
+          Se não estiver correto, responde a este email o quanto antes.
+        </p>
+      `,
+      '📋',
+      COLORS.primary,
+    )}
+    
+    ${featuresListComponent([
+      {
+        icon: '1️⃣',
+        title: 'Confirma o username',
+        description: 'Em tradingview.com → Perfil → URL tradingview.com/u/o-teu-username/',
+      },
+      {
+        icon: '2️⃣',
+        title: 'Aguarda o convite',
+        description: 'Até 24h úteis para adicionarmos o teu username ao script.',
+      },
+      {
+        icon: '3️⃣',
+        title: 'Adiciona ao gráfico',
+        description: 'Indicadores → Os Meus Scripts → invite-only scripts.',
+      },
+    ])}
+    
+    ${buttonComponent('Ver os meus scanners', `${siteUrl}/scanner`)}
+  `
+
+  return baseTemplate(content, `Acesso ao ${scannerName}`, siteUrl)
+}
+
 // Export all components for custom templates
 export const components = {
   header: headerComponent,
@@ -901,7 +1170,7 @@ export const components = {
   image: imageComponent,
 }
 
-export const createCustomTemplate = (content: string, preheader?: string) => {
-  return baseTemplate(content, preheader)
+export const createCustomTemplate = (content: string, preheader?: string, siteUrl?: string) => {
+  return baseTemplate(content, preheader, siteUrl)
 }
 

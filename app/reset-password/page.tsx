@@ -26,6 +26,30 @@ export default function ResetPasswordPage() {
 
     const init = async () => {
       const recovered = searchParams.get('recovered') === '1'
+      const urlError = searchParams.get('error')
+
+      if (urlError === 'invalid_or_expired') {
+        if (!cancelled) {
+          setError('Link inválido ou expirado. Pede um novo em /forgot-password.')
+          setChecking(false)
+        }
+        return
+      }
+
+      const tokenHash = searchParams.get('token_hash')
+      const type = searchParams.get('type')
+      if (tokenHash && type === 'recovery') {
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: 'recovery',
+        })
+        if (otpError && !cancelled) {
+          setError('Link inválido ou expirado. Pede um novo em /forgot-password.')
+          setChecking(false)
+          return
+        }
+      }
+
       if (recovered) {
         const { data: { session } } = await supabase.auth.getSession()
         if (!cancelled) {
@@ -104,6 +128,15 @@ export default function ResetPasswordPage() {
         setError(updateError.message)
         return
       }
+
+      try {
+        await fetch('/api/auth/password-changed', { method: 'POST' })
+      } catch {
+        /* email de confirmação é best-effort */
+      }
+
+      await supabase.auth.signOut()
+
       setSuccess(true)
       setTimeout(() => {
         window.location.replace('/login')
@@ -138,7 +171,8 @@ export default function ResetPasswordPage() {
               <Alert className="bg-green-500/10 border-green-500/40">
                 <CheckCircle className="h-4 w-4 text-green-400" />
                 <AlertDescription className="text-green-200">
-                  Password actualizada com sucesso. A redirecionar para o login...
+                  Password actualizada com sucesso. Enviámos um email de confirmação com os teus dados
+                  de login. A redirecionar para o login...
                 </AlertDescription>
               </Alert>
             ) : !ready ? (

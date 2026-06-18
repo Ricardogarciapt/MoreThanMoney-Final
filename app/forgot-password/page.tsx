@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +10,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Mail, Loader2, AlertCircle, ArrowLeft, CheckCircle } from 'lucide-react'
 
 export default function ForgotPasswordPage() {
+  const searchParams = useSearchParams()
+  const linkError = searchParams.get('error')
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -21,16 +23,15 @@ export default function ForgotPasswordPage() {
     setError('')
 
     try {
-      const siteBase = (
-        process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, '') ||
-        window.location.origin
-      )
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${siteBase}/auth/reset-callback`,
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
       })
+      const data = await res.json().catch(() => ({}))
 
-      if (resetError) {
-        setError(resetError.message)
+      if (!res.ok) {
+        setError(data.error || 'Erro ao enviar email. Tenta novamente.')
         return
       }
 
@@ -60,6 +61,15 @@ export default function ForgotPasswordPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {linkError === 'invalid_or_expired' && !sent && (
+              <Alert variant="destructive" className="mb-4 bg-red-500/20 border-red-500/50">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-red-200">
+                  O link de recuperação expirou ou já foi usado. Pede um novo abaixo.
+                </AlertDescription>
+              </Alert>
+            )}
+
             {sent ? (
               <Alert className="bg-green-500/10 border-green-500/40">
                 <CheckCircle className="h-4 w-4 text-green-400" />

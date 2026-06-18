@@ -12,6 +12,12 @@ import {
 } from './metaapi'
 import { matchesPremiumLegComment } from './premium-exits'
 import {
+  findPremiumSinglePosition,
+  parsePremiumSingleComment,
+  partialVolumeForExit,
+  canPartializeVolume,
+} from './premium-single'
+import {
   PREMIUM_TIGHT_SL_PIPS,
   PREMIUM_WIDE_SL_PIPS,
   premiumTrailingAfterTp1Hit,
@@ -104,6 +110,45 @@ async function applyPremiumMaximizeZones(
 ): Promise<{ updated: number; closed: number; errors: string[] }> {
   const result = { updated: 0, closed: 0, errors: [] as string[] }
   const trailing = premiumTrailingForTradeActive()
+
+  const single = findPremiumSinglePosition(positions, symbol)
+  if (single) {
+    const meta = parsePremiumSingleComment(single.comment)
+    const vol = single.volume ?? 0
+    if (positionInProfit(single) && vol > 0) {
+      if (meta?.smallAccount || !canPartializeVolume(vol, meta?.exitPcts.tp1 ?? 33)) {
+        const mod = await modifyPositionSlTp(
+          accountId,
+          single.id,
+          single.openPrice,
+          single.takeProfit,
+          trailing,
+          single.symbol,
+        )
+        if (mod.success) result.updated++
+        else if (mod.error) result.errors.push(mod.error)
+      } else {
+        const closeVol = partialVolumeForExit(single, 1, meta)
+        if (closeVol >= 0.01 && closeVol < vol) {
+          const r = await closePositionById(accountId, single.id, closeVol)
+          if (r.success) result.closed++
+          else if (r.error) result.errors.push(r.error)
+        }
+        const mod = await modifyPositionSlTp(
+          accountId,
+          single.id,
+          single.openPrice,
+          single.takeProfit,
+          trailing,
+          single.symbol,
+        )
+        if (mod.success) result.updated++
+        else if (mod.error) result.errors.push(mod.error)
+      }
+    }
+    return result
+  }
+
   const spec = await getSymbolSpecification(accountId, symbol)
   if (!spec) {
     result.errors.push('Spec do símbolo indisponível')
@@ -154,6 +199,44 @@ async function applyPremiumHalfOrTrail(
   symbol: string,
 ): Promise<{ updated: number; closed: number; errors: string[] }> {
   const result = { updated: 0, closed: 0, errors: [] as string[] }
+
+  const single = findPremiumSinglePosition(positions, symbol)
+  if (single) {
+    const spec = await getSymbolSpecification(accountId, symbol)
+    if (!spec) {
+      result.errors.push('Spec do símbolo indisponível')
+      return result
+    }
+    const riskPips = riskPipsFromPosition(single, spec, symbol)
+    const meta = parsePremiumSingleComment(single.comment)
+    const vol = single.volume ?? 0
+
+    if (riskPips != null && riskPips > PREMIUM_WIDE_SL_PIPS && vol > 0) {
+      const half = roundLot(vol * 0.5)
+      if (half >= 0.01 && half < vol) {
+        const r = await closePositionById(accountId, single.id, half)
+        if (r.success) result.closed++
+        else if (r.error) result.errors.push(r.error)
+      }
+      return result
+    }
+
+    if (riskPips != null && riskPips <= PREMIUM_TIGHT_SL_PIPS) {
+      const trailing = premiumTrailingForTradeActive()
+      const mod = await modifyPositionSlTp(
+        accountId,
+        single.id,
+        meta?.smallAccount ? single.openPrice : single.stopLoss,
+        single.takeProfit,
+        trailing,
+        single.symbol,
+      )
+      if (mod.success) result.updated++
+      else if (mod.error) result.errors.push(mod.error)
+    }
+    return result
+  }
+
   const spec = await getSymbolSpecification(accountId, symbol)
   if (!spec) {
     result.errors.push('Spec do símbolo indisponível')
@@ -210,12 +293,105 @@ async function applyPremiumHalfOrTrail(
   return result
 }
 
+async function applyPremiumSingleExitHit(
+  accountId: string,
+  pos: MetaApiPosition,
+  exitLevel: 1 | 2 | 3,
+  symbol: string,
+): Promise<{ updated: number; closed: number; errors: string[] }> {
+  const result = { updated: 0, closed: 0, errors: [] as string[] }
+  const meta = parsePremiumSingleComment(pos.comment)
+  const spec = await getSymbolSpecification(accountId, symbol)
+  if (!spec) {
+    result.errors.push('Spec do símbolo indisponível')
+    return result
+  }
+
+  const riskPips = riskPipsFromPosition(pos, spec, symbol)
+  const trailing = premiumTrailingAfterTp1Hit(riskPips)
+  const vol = pos.volume ?? 0
+
+  if (meta?.smallAccount || !canPartializeVolume(vol, exitLevel === 1 ? meta?.exitPcts.tp1 ?? 33 : 33)) {
+    if (exitLevel === 1) {
+      const mod = await modifyPositionSlTp(
+        accountId,
+        pos.id,
+        pos.openPrice,
+        pos.takeProfit,
+        trailing,
+        pos.symbol,
+      )
+      if (mod.success) result.updated++
+      else if (mod.error) result.errors.push(mod.error)
+      return result
+    }
+    if (exitLevel >= 2) {
+      const mod = await modifyPositionSlTp(
+        accountId,
+        pos.id,
+        exitLevel === 2 ? pos.openPrice : pos.stopLoss,
+        pos.takeProfit,
+        trailing,
+        pos.symbol,
+      )
+      if (mod.success) result.updated++
+      else if (mod.error) result.errors.push(mod.error)
+    }
+    return result
+  }
+
+  const closeVol = partialVolumeForExit(pos, exitLevel, meta)
+  if (closeVol >= 0.01 && closeVol < vol) {
+    const r = await closePositionById(accountId, pos.id, closeVol)
+    if (r.success) result.closed++
+    else if (r.error) result.errors.push(r.error)
+  } else if (exitLevel === 3) {
+    const r = await closePositionById(accountId, pos.id)
+    if (r.success) result.closed++
+    else if (r.error) result.errors.push(r.error)
+    return result
+  }
+
+  if (exitLevel === 1) {
+    const mod = await modifyPositionSlTp(
+      accountId,
+      pos.id,
+      pos.openPrice,
+      pos.takeProfit,
+      trailing,
+      pos.symbol,
+    )
+    if (mod.success) result.updated++
+    else if (mod.error) result.errors.push(mod.error)
+  } else {
+    const mod = await modifyPositionSlTp(
+      accountId,
+      pos.id,
+      pos.stopLoss ?? pos.openPrice,
+      pos.takeProfit,
+      trailing,
+      pos.symbol,
+    )
+    if (mod.success) result.updated++
+    else if (mod.error) result.errors.push(mod.error)
+  }
+
+  return result
+}
+
 async function applyPremiumHitTp1(
   accountId: string,
   positions: MetaApiPosition[],
   symbol: string,
 ): Promise<{ updated: number; closed: number; cancelled: number; errors: string[] }> {
   const result = { updated: 0, closed: 0, cancelled: 0, errors: [] as string[] }
+
+  const single = findPremiumSinglePosition(positions, symbol)
+  if (single) {
+    const r = await applyPremiumSingleExitHit(accountId, single, 1, symbol)
+    return { ...result, ...r }
+  }
+
   const spec = await getSymbolSpecification(accountId, symbol)
   if (!spec) {
     result.errors.push('Spec do símbolo indisponível')
@@ -354,6 +530,21 @@ export async function applyManagementToAccount(
   if (!positions.length) return result
 
   if (management.type === 'close' && management.tpLevel != null && management.tpLevel >= 2) {
+    const single = management.symbol
+      ? findPremiumSinglePosition(positions, management.symbol)
+      : null
+    if (single && management.symbol) {
+      const r = await applyPremiumSingleExitHit(
+        accountId,
+        single,
+        management.tpLevel as 2 | 3,
+        management.symbol,
+      )
+      result.closed += r.closed
+      result.updated += r.updated
+      result.errors.push(...r.errors)
+      return result
+    }
     const legClose = await closePremiumLegPositions(accountId, positions, management.tpLevel)
     result.closed += legClose.closed
     result.errors.push(...legClose.errors)

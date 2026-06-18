@@ -1,6 +1,10 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isPremiumTp1HitConfirmed } from './channel-context'
-import { buildPremiumExitLegs } from './premium-exits'
+import {
+  buildPremiumSingleOrder,
+  scaleLotForSmallCapital,
+  shouldSkipDuplicatePremiumEntry,
+} from './premium-single'
 import { formatTrailingDistance, TRADE_IDEAS_TRAILING_PIPS } from './pip-points'
 import { prefersDirectExecution } from './copy-limits'
 import { getMtmcopySubscription } from './subscription'
@@ -15,7 +19,13 @@ import {
   countExecutedToday,
 } from './db'
 import { computeLotSize, getLotSizingSkipReason, signalForRiskSizing } from './lot-sizing'
-import { fetchLotSizingContext, isMetaApiConfigured, placeOrdersSequential, type OrderResult } from './metaapi'
+import {
+  fetchLotSizingContext,
+  getAccountSnapshot,
+  isMetaApiConfigured,
+  placeOrdersSequential,
+  type OrderResult,
+} from './metaapi'
 import { isCopyFactoryEnabled } from './copyfactory'
 import type { MtmcopyChannelKey } from './channel-context'
 import { resolveChannelFromChat, shouldIgnoreChannelMessage } from './channel-context'
@@ -696,6 +706,10 @@ async function executeViaMtmProvider(
   let totalLot = computeLotSize(providerConn, signalForLot, balance)
   totalLot = resolveLotForSymbol(mappedSymbol, totalLot, executionProfile)
 
+  const snapshot = await getAccountSnapshot(provider.accountId)
+  const equity = snapshot?.equity ?? snapshot?.balance ?? balance
+  totalLot = scaleLotForSmallCapital(totalLot, equity)
+
   const lotSkip = getLotSizingSkipReason(
     providerConn,
     signalForExec,
@@ -731,38 +745,53 @@ async function executeViaMtmProvider(
   })
 
   const isPremium = channel === 'premium-signals'
-  const legs = isPremium
-    ? buildPremiumExitLegs(signalForExec, totalLot, {
+  const premiumSingle = isPremium
+    ? buildPremiumSingleOrder(signalForExec, totalLot, {
         tp1: executionProfile.exit_pct_tp1,
         tp2: executionProfile.exit_pct_tp2,
         tp3: executionProfile.exit_pct_tp3,
-      })
+      }, equity)
     : null
+
+  if (isPremium && premiumSingle) {
+    const dup = await shouldSkipDuplicatePremiumEntry(
+      provider.accountId,
+      mappedSymbol,
+      signalForExec.direction!,
+    )
+    if (dup.skip) {
+      await logProviderSignalEvent({
+        channel,
+        provider,
+        signal: signalForExec,
+        raw,
+        telegramMessageId,
+        lot: totalLot,
+        status: 'skipped',
+        detail: `${aiDetail} · ${dup.reason}`,
+      })
+      return
+    }
+  }
 
   type LegResult = { success: boolean; orderId?: string; brokerSymbol?: string; error?: string; label: string; lot: number }
   const results: LegResult[] = []
 
   try {
-    if (legs?.length) {
-      const orderReqs: OrderRequest[] = legs.map((leg) => {
-        const req = buildOrderRequest(
-          providerConn,
-          provider.accountId,
-          signalForExec,
-          leg.lot,
-          `${mtComment}-${leg.label}`,
-        )
-        req.takeProfit = leg.tpPrice
-        req.trailingStop = leg.trailing ?? null
-        return req
-      })
-      const legResults = await placeOrdersSequential(provider.accountId, orderReqs)
-      legResults.forEach((r, i) => {
-        results.push({
-          ...r,
-          label: legs[i]?.label ?? `TP${i + 1}`,
-          lot: orderReqs[i]?.volume ?? 0,
-        })
+    if (premiumSingle) {
+      const req = buildOrderRequest(
+        providerConn,
+        provider.accountId,
+        signalForExec,
+        premiumSingle.lot,
+        `${mtComment}-${premiumSingle.comment}`,
+      )
+      req.takeProfit = null
+      const [r] = await placeOrdersSequential(provider.accountId, [req])
+      results.push({
+        ...(r ?? { success: false, error: 'Sem resposta MetaAPI' }),
+        label: `PREM 1×${premiumSingle.lot}${premiumSingle.smallAccount ? ' · cap<1k' : ''}`,
+        lot: premiumSingle.lot,
       })
     } else {
       const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
@@ -798,8 +827,8 @@ async function executeViaMtmProvider(
     lot: 0,
   }
   const anySuccess = results.some((r) => r.success)
-  const orderLabel = legs?.length
-    ? `${legs.length} exits · ${results.filter((r) => r.success).length} OK`
+  const orderLabel = premiumSingle
+    ? `1 pos · parciais ${premiumSingle.exitPcts.tp1}/${premiumSingle.exitPcts.tp2}/${premiumSingle.exitPcts.tp3}%`
     : signalForExec.orderType === 'limit' && signalForExec.entry != null
       ? `LIMIT @ ${signalForExec.entry}`
       : 'MARKET'
@@ -1000,7 +1029,14 @@ async function processSignalDirect(
   }
 
   const signalForLot = signalForRiskSizing(signal, marketPrice)
-  const lot = computeLotSize(conn, signalForLot, balance)
+  let lot = computeLotSize(conn, signalForLot, balance)
+
+  const snapshot = conn.metaapi_account_id
+    ? await getAccountSnapshot(conn.metaapi_account_id)
+    : null
+  const equity = snapshot?.equity ?? snapshot?.balance ?? balance
+  lot = scaleLotForSmallCapital(lot, equity)
+
   const lotSkip = getLotSizingSkipReason(conn, signal, balance, lot, marketPrice)
   if (lotSkip) {
     await logMtmcopySignal({
@@ -1018,13 +1054,38 @@ async function processSignalDirect(
   const direction = execDirection
 
   const isPremium = channel === 'premium-signals'
-  const legs = isPremium
-      ? buildPremiumExitLegs(signal, lot, {
+  const premiumSingle = isPremium
+    ? buildPremiumSingleOrder(
+        signal,
+        lot,
+        {
           tp1: conn.exit_pct_tp1 ?? 33,
           tp2: conn.exit_pct_tp2 ?? 33,
           tp3: conn.exit_pct_tp3 ?? 34,
-        })
-      : null
+        },
+        equity,
+      )
+    : null
+
+  if (isPremium && premiumSingle && conn.metaapi_account_id) {
+    const dup = await shouldSkipDuplicatePremiumEntry(
+      conn.metaapi_account_id,
+      signal.symbol!,
+      direction,
+    )
+    if (dup.skip) {
+      await logMtmcopySignal({
+        user_id: conn.user_id,
+        connection_id: conn.id,
+        symbol: signal.symbol,
+        direction: signal.direction,
+        status: 'skipped',
+        detail: dup.reason ?? 'Exposição Premium activa',
+        raw_message: raw,
+      })
+      return
+    }
+  }
 
   await logMtmcopySignal({
     user_id: conn.user_id,
@@ -1043,26 +1104,17 @@ async function processSignalDirect(
   })
 
   let result: OrderResult
-  if (legs?.length) {
-    const orderReqs: OrderRequest[] = legs.map((leg) => {
-      const req = buildOrderRequest(
-        conn,
-        conn.metaapi_account_id!,
-        signal,
-        leg.lot,
-        `MTMcopier-${leg.label}`,
-      )
-      req.takeProfit = leg.tpPrice
-      req.trailingStop = leg.trailing ?? null
-      return req
-    })
-    const legResults = await placeOrdersSequential(conn.metaapi_account_id!, orderReqs)
-    result = legResults[legResults.length - 1] ?? { success: false, error: 'Sem ordens' }
-    if (!legResults.some((r) => r.success)) {
-      result = legResults.find((r) => !r.success) ?? result
-    } else {
-      result = { ...legResults[legResults.length - 1]!, success: true }
-    }
+  if (premiumSingle && conn.metaapi_account_id) {
+    const req = buildOrderRequest(
+      conn,
+      conn.metaapi_account_id,
+      signal,
+      premiumSingle.lot,
+      `MTMcopier-${premiumSingle.comment}`,
+    )
+    req.takeProfit = null
+    const [single] = await placeOrdersSequential(conn.metaapi_account_id, [req])
+    result = single ?? { success: false, error: 'Sem resposta MetaAPI' }
   } else {
     const req = buildOrderRequest(conn, conn.metaapi_account_id, signal, lot, 'MTMcopier')
     if (channel === 'trade-ideas' && conn.auto_trailing_stop) {
