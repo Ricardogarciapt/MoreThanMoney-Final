@@ -11,10 +11,6 @@ export function getLogoUrl(): string {
   return `${getSiteUrl()}/logo-mf-gold.png`
 }
 
-export function getBannerUrl(): string {
-  return `${getSiteUrl()}/educacao-morethanmoney.png`
-}
-
 export function createMailTransporter() {
   return nodemailer.createTransport({
     service: 'gmail',

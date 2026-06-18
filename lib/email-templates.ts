@@ -22,27 +22,17 @@ function resolveLogoUrl(siteUrl?: string): string {
   return `${resolveSiteUrl(siteUrl)}/logo-mf-gold.png`
 }
 
-function resolveBannerUrl(siteUrl?: string): string {
-  return `${resolveSiteUrl(siteUrl)}/educacao-morethanmoney.png`
-}
-
-// Header com logo + banner MTM (emails transaccionais)
+// Header com logo MTM (emails transaccionais)
 const brandedHeaderComponent = (siteUrl?: string) => {
   const logo = resolveLogoUrl(siteUrl)
-  const banner = resolveBannerUrl(siteUrl)
   const site = resolveSiteUrl(siteUrl)
 
   return `
 <tr>
-  <td style="background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 50%, ${COLORS.gold} 100%); padding: 24px 30px; text-align: center;">
+  <td style="background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 50%, ${COLORS.gold} 100%); padding: 28px 30px; text-align: center;">
     <a href="${site}" style="text-decoration: none;">
-      <img src="${logo}" alt="MoreThanMoney" width="160" style="max-width: 160px; height: auto; display: inline-block;" />
+      <img src="${logo}" alt="MoreThanMoney" width="180" style="max-width: 180px; height: auto; display: inline-block;" />
     </a>
-  </td>
-</tr>
-<tr>
-  <td style="padding: 0; line-height: 0;">
-    <img src="${banner}" alt="MoreThanMoney — Educação Financeira" width="600" style="width: 100%; max-width: 600px; height: auto; display: block;" />
   </td>
 </tr>
 `
