@@ -74,6 +74,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
+    pathname.startsWith("/forgot-password") ||
+    pathname.startsWith("/reset-password") ||
     pathname.startsWith("/access-migration") ||
     pathname === "/"
   ) {

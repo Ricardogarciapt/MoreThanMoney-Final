@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { safeInternalRedirectPath } from '@/lib/role-redirect'
 import { verifyAppleIdentityToken } from '@/lib/apple-iap'
 
 const supabase = getSupabaseAdmin()
@@ -17,6 +18,7 @@ export async function POST(req: NextRequest) {
       fullName:   providedName = '',
       givenName:  providedGivenName = '',
       familyName: providedFamilyName = '',
+      redirect:   redirectPath = '',
     } = body
 
     if (!identityToken || !nonce) {
@@ -48,11 +50,12 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
 
     if (existingProfile) {
-      // Login — gerar magic link / session token via admin
+      const siteBase = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.morethanmoney.pt').replace(/\/$/, '')
+      const safeRedirect = safeInternalRedirectPath(redirectPath) || '/app-mobile'
       const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
         type:  'magiclink',
         email: resolvedEmail.toLowerCase(),
-        options: { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.morethanmoney.pt'}/app-mobile` },
+        options: { redirectTo: `${siteBase}${safeRedirect}` },
       })
 
       if (linkError) {

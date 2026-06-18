@@ -169,53 +169,81 @@ export default function LoginPage() {
 
   const handleAppleSignIn = async () => {
     const plugin = (window as any).Capacitor?.Plugins?.MTMPayments
-    if (!plugin) {
-      // Fallback: mostrar paywall para subscrever via Apple IAP
-      setShowApplePaywall(true)
+    if (plugin) {
+      setAppleLoading(true)
+      setError('')
+      try {
+        const result: any = await plugin.signInWithApple()
+        const res = await fetch('/api/auth/apple-signin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            identityToken: result.identityToken,
+            nonce: result.nonce,
+            appleUserId: result.appleUserId,
+            email: result.email,
+            fullName: result.fullName,
+            givenName: result.givenName,
+            familyName: result.familyName,
+            redirect: redirectParam,
+          }),
+        })
+        const data = await res.json()
+
+        if (res.status === 422 && data.requiresEmail) {
+          setError('A Apple ocultou o teu email. Usa login por email/password ou Google.')
+          return
+        }
+
+        if (!data.success) {
+          setError(data.error ?? 'Erro ao autenticar com Apple')
+          return
+        }
+
+        if (data.action === 'register') {
+          setShowApplePaywall(true)
+          return
+        }
+
+        if (data.magicLink) {
+          window.location.href = data.magicLink
+          return
+        }
+
+        window.location.replace(redirectParam || '/app-mobile')
+      } catch (err: any) {
+        if (err?.message !== 'USER_CANCELLED') {
+          setError(err?.message ?? 'Erro ao iniciar sessão com Apple')
+        }
+      } finally {
+        setAppleLoading(false)
+      }
       return
     }
+
+    // Web: OAuth Supabase (Sign in with Apple)
     setAppleLoading(true)
     setError('')
     try {
-      const result: any = await plugin.signInWithApple()
-      const res = await fetch('/api/auth/apple-signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          identityToken: result.identityToken,
-          nonce:         result.nonce,
-          appleUserId:   result.appleUserId,
-          email:         result.email,
-          fullName:      result.fullName,
-          givenName:     result.givenName,
-          familyName:    result.familyName,
-        }),
+      const fullRedirectUrl = buildOAuthCallbackUrl(window.location.origin, {
+        flow: 'login',
+        redirect: redirectParam,
       })
-      const data = await res.json()
-
-      if (!data.success) {
-        setError(data.error ?? 'Erro ao autenticar com Apple')
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'apple',
+        options: {
+          redirectTo: fullRedirectUrl,
+          skipBrowserRedirect: false,
+        },
+      })
+      if (oauthError) {
+        setError(`Erro ao iniciar Apple Login: ${oauthError.message}`)
         return
       }
-
-      if (data.action === 'register') {
-        // Novo utilizador — mostrar paywall para subscrever
-        setShowApplePaywall(true)
-        return
-      }
-
-      // Utilizador existente — usar magic link para criar sessão Supabase
-      if (data.magicLink) {
-        window.location.href = data.magicLink
-        return
-      }
-
-      // Fallback: redirecionar para app-mobile
-      window.location.replace(redirectParam || '/app-mobile')
-    } catch (err: any) {
-      if (err?.message !== 'USER_CANCELLED') {
-        setError(err?.message ?? 'Erro ao iniciar sessão com Apple')
-      }
+      if (data?.url) window.location.href = data.url
+      else setError('Erro ao gerar URL Apple. Verifica a configuração no Supabase.')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao iniciar login com Apple')
     } finally {
       setAppleLoading(false)
     }

@@ -25,6 +25,20 @@ export default function ResetPasswordPage() {
     let cancelled = false
 
     const init = async () => {
+      const recovered = searchParams.get('recovered') === '1'
+      if (recovered) {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!cancelled) {
+          if (session) {
+            setReady(true)
+          } else {
+            setError('Sessão de recuperação inválida. Pede um novo link em /forgot-password.')
+          }
+          setChecking(false)
+        }
+        return
+      }
+
       const code = searchParams.get('code')
       if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)

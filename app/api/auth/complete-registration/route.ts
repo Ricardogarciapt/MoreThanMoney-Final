@@ -6,11 +6,13 @@ import {
   normalizeSubscriptionPlan,
 } from '@/lib/stripe-prices'
 import { handlePremiumStripeSkoolGrant, isPremiumStripePlan } from '@/lib/stripe-skool-admin'
+import { finalizeStripeMemberAccess, subscriptionPlatformForStripeCheckout } from '@/lib/stripe-profile-sync'
 import {
   linkMlmBuyerAfterRegistration,
   processMlmCheckoutCommission,
 } from '@/lib/mlm-checkout-commission'
 import { isRegisteredMember } from '@/lib/member-access'
+import { needsAccessRevalidation } from '@/lib/access-migration'
 import {
   notifyNewMemberRegistration,
   notifyTeamSale,
@@ -83,7 +85,7 @@ async function createProfileAfterPayment(params: {
     subscription_plan: planMeta.subscriptionPlan,
     subscription_billing_cycle: planMeta.billingCycle,
     subscription_status: 'active',
-    subscription_platform: 'stripe',
+    subscription_platform: subscriptionPlatformForStripeCheckout(),
     checkout_source: 'stripe',
     stripe_customer_id: customerId,
     stripe_subscription_id: subscriptionId,
@@ -109,6 +111,20 @@ async function createProfileAfterPayment(params: {
 
   if (profileError) {
     console.error('❌ [COMPLETE-REG] Erro ao criar perfil:', profileError)
+    throw new Error(profileError.message)
+  }
+
+  try {
+    await finalizeStripeMemberAccess({
+      userId,
+      planId: planIdFromSession,
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscriptionId,
+      periodEnd,
+      billingCycle: planMeta.billingCycle as 'monthly' | 'annual',
+    })
+  } catch (migrationErr) {
+    console.error('❌ [COMPLETE-REG] Erro ao finalizar acesso/migração:', migrationErr)
   }
 
   await supabaseAdmin
@@ -213,12 +229,15 @@ export async function POST(request: NextRequest) {
       const { data: existingOAuthProfile } = await supabaseAdmin
         .from('profiles')
         .select(
-          'id, user_type, member_category, is_active, subscription_plan, stripe_subscription_id, subscription_expires_at, trial_expires_at, trial_expired'
+          'id, user_type, member_category, is_active, subscription_plan, stripe_subscription_id, subscription_expires_at, trial_expires_at, trial_expired, profile_data, email'
         )
         .eq('id', oauthUserId)
         .maybeSingle()
 
-      if (isRegisteredMember(existingOAuthProfile)) {
+      if (
+        isRegisteredMember(existingOAuthProfile) &&
+        !needsAccessRevalidation(existingOAuthProfile)
+      ) {
         return NextResponse.json({ success: true, userId: oauthUserId, alreadyExists: true })
       }
 
@@ -288,12 +307,32 @@ export async function POST(request: NextRequest) {
 
     const { data: existing } = await supabaseAdmin
       .from('profiles')
-      .select('id, email')
+      .select('id, email, full_name, username, phone, whatsapp')
       .eq('email', email)
       .maybeSingle()
 
     if (existing) {
-      return NextResponse.json({ success: true, userId: existing.id, alreadyExists: true })
+      await createProfileAfterPayment({
+        userId: existing.id,
+        email,
+        full_name: full_name || existing.full_name || email.split('@')[0],
+        username: username || existing.username || email.split('@')[0],
+        phone: phone || '',
+        whatsapp: whatsapp || '',
+        plan,
+        billing,
+        sponsor_username,
+        session,
+      })
+
+      console.log(`✅ [COMPLETE-REG] Perfil existente actualizado após pagamento: ${email}`)
+
+      return NextResponse.json({
+        success: true,
+        userId: existing.id,
+        alreadyExists: true,
+        profileUpdated: true,
+      })
     }
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({

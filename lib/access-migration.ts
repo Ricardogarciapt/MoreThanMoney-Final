@@ -6,6 +6,7 @@
 import type { UserProfile } from '@/lib/role-redirect'
 import { buildSubscriptionExpiry } from '@/lib/member-subscription'
 import { memberCategoryForPlan, normalizeSubscriptionPlan } from '@/lib/stripe-prices'
+import { subscriptionPlatformForStripeCheckout } from '@/lib/stripe-profile-sync'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 export type AccessPaymentChannel = 'stripe' | 'skool' | 'iqonic'
@@ -187,7 +188,8 @@ export async function completeAccessMigration(opts: CompleteMigrationOpts): Prom
     user_type: 'member',
     member_category: memberCategory,
     subscription_plan: plan,
-    subscription_platform: opts.channel === 'skool' ? 'skool' : 'stripe',
+    subscription_platform:
+      opts.channel === 'skool' ? 'skool' : subscriptionPlatformForStripeCheckout(),
     subscription_billing_cycle: billingCycle,
     subscription_status: 'active',
     subscription_auto_renew: true,
@@ -200,8 +202,12 @@ export async function completeAccessMigration(opts: CompleteMigrationOpts): Prom
 
   if (opts.stripeCustomerId) patch.stripe_customer_id = opts.stripeCustomerId
   if (opts.stripeSubscriptionId) patch.stripe_subscription_id = opts.stripeSubscriptionId
+  if (opts.channel === 'stripe') patch.checkout_source = 'stripe'
 
-  await supabase.from('profiles').update(patch).eq('id', opts.userId)
+  const { error: updateError } = await supabase.from('profiles').update(patch).eq('id', opts.userId)
+  if (updateError) {
+    throw new Error(`Falha ao actualizar perfil pós-migração: ${updateError.message}`)
+  }
 
   return { couponCode }
 }

@@ -46,7 +46,7 @@ export async function POST(_request: NextRequest) {
     // Se já existir e for admin, não alteramos o user_type/is_active.
     const { data: existing } = await supabaseAdmin
       .from("profiles")
-      .select("id,user_type,is_active,subscription_plan,stripe_subscription_id,member_category")
+      .select("id,user_type,is_active,subscription_plan,stripe_subscription_id,member_category,username")
       .eq("id", user.id)
       .maybeSingle()
     if (existing?.user_type === "admin") {
@@ -78,17 +78,30 @@ export async function POST(_request: NextRequest) {
     // Fallback: se não for possível obter setting de aprovações, assume-se auto-aprovação.
     const autoApprove = true
 
-    const row = {
+    const row: Record<string, unknown> = {
       id: user.id,
       email: (user.email || "").trim(),
       full_name: fullName,
-      username: buildUsername(user.id, user.email, meta),
+      username: existing?.username || buildUsername(user.id, user.email, meta),
       avatar_url: avatarUrl,
-      user_type: autoApprove ? "member" : "pending",
-      member_category: "standard",
-      is_active: autoApprove,
-      created_at: existing ? existing.created_at : new Date().toISOString(),
       updated_at: new Date().toISOString(),
+    }
+
+    if (!existing) {
+      Object.assign(row, {
+        user_type: autoApprove ? "member" : "pending",
+        member_category: "standard",
+        is_active: autoApprove,
+        created_at: new Date().toISOString(),
+      })
+    } else {
+      Object.assign(row, {
+        user_type: existing.user_type === "admin" ? "admin" : "member",
+        member_category: existing.member_category,
+        is_active: existing.is_active !== false,
+        subscription_plan: existing.subscription_plan,
+        stripe_subscription_id: existing.stripe_subscription_id,
+      })
     }
 
     // Serviço role bypassa RLS e garante inserção mesmo quando o client anon falha.

@@ -18,6 +18,7 @@ import {
   notifyAdminsStripeSkoolAction,
 } from '@/lib/stripe-skool-admin'
 import { processMlmCheckoutCommission } from '@/lib/mlm-checkout-commission'
+import { subscriptionPlatformForStripeCheckout } from '@/lib/stripe-profile-sync'
 import { processMlmSubscriptionRenewal } from '@/lib/mlm-subscription-integration'
 import { upsertSponsorNode } from '@/lib/mlm-tree'
 import {
@@ -239,7 +240,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       stripe_customer_id: session.customer as string,
       subscription_status: 'active',
       subscription_plan: `pack_${pack}`,
-      subscription_platform: 'stripe',
+      subscription_platform: subscriptionPlatformForStripeCheckout(),
       checkout_source: 'stripe',
       is_active: true,
       subscription_expires_at: expiresAt,
@@ -266,7 +267,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       subscription_plan: normalizeSubscriptionPlan(planId),
       member_category: memberCategoryForPlan(planId),
       subscription_status: 'active',
-      subscription_platform: 'stripe',
+      subscription_platform: subscriptionPlatformForStripeCheckout(),
       checkout_source: 'stripe',
       is_active: true,
       payment_failed_count: 0,
@@ -356,7 +357,7 @@ async function handleSubscriptionUpdate(sub: Stripe.Subscription) {
     subscription_plan: plan,
     member_category: memberCategoryForPlan(planId),
     subscription_billing_cycle: billingCycle,
-    subscription_platform: 'stripe',
+    subscription_platform: subscriptionPlatformForStripeCheckout(),
     subscription_expires_at: periodEnd,
     next_billing_at: periodEnd,
     subscription_auto_renew: !sub.cancel_at_period_end,
@@ -379,14 +380,17 @@ async function handleSubscriptionUpdate(sub: Stripe.Subscription) {
 async function handleSubscriptionCanceled(sub: Stripe.Subscription) {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, email, full_name, username, member_category, subscription_plan, subscription_platform')
+    .select('id, email, full_name, username, member_category, subscription_plan, subscription_platform, checkout_source, stripe_customer_id')
     .eq('stripe_customer_id', sub.customer as string)
     .single()
 
   if (!profile) return
 
   const wasPremiumStripe =
-    profile.subscription_platform === 'stripe' &&
+    (profile.checkout_source === 'stripe' ||
+      profile.subscription_platform === 'manual' ||
+      profile.subscription_platform === 'stripe') &&
+    Boolean(profile.stripe_customer_id) &&
     (profile.member_category === 'premium' || profile.subscription_plan === 'premium')
 
   await supabase.from('profiles').update({

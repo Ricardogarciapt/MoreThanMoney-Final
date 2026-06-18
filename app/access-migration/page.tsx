@@ -52,6 +52,8 @@ export default function AccessMigrationPage() {
     return session?.access_token ?? null
   }, [])
 
+  const [pollingMigration, setPollingMigration] = useState(false)
+
   const loadStatus = useCallback(async () => {
     setLoading(true)
     setError('')
@@ -72,7 +74,11 @@ export default function AccessMigrationPage() {
     }
     setStatus(data)
 
-    if (success || data.migration?.access_migration_completed_at) {
+    if (data.migration?.access_migration_completed_at) {
+      setStep('done')
+      setPollingMigration(false)
+    } else if (success) {
+      setPollingMigration(true)
       setStep('done')
     } else if (data.iqonic_pending) {
       setStep('iqonic_sent')
@@ -86,6 +92,18 @@ export default function AccessMigrationPage() {
   useEffect(() => {
     void loadStatus()
   }, [loadStatus])
+
+  useEffect(() => {
+    if (!pollingMigration) return
+    const interval = setInterval(() => {
+      void loadStatus()
+    }, 2500)
+    const timeout = setTimeout(() => setPollingMigration(false), 60000)
+    return () => {
+      clearInterval(interval)
+      clearTimeout(timeout)
+    }
+  }, [pollingMigration, loadStatus])
 
   const selectChannel = async (ch: Channel) => {
     if (!ch) return
@@ -373,25 +391,38 @@ export default function AccessMigrationPage() {
         {step === 'done' && (
           <Card className="bg-zinc-900/80 border-zinc-800">
             <CardContent className="pt-8 text-center space-y-4">
-              <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
-              <p className="text-lg font-medium">Subscrição activa!</p>
-              {status?.migration?.app_activation_coupon_code && (
-                <div className="bg-zinc-950 border border-[#D2A63C]/40 rounded-lg p-4">
-                  <p className="text-sm text-zinc-400 mb-1">Código activação app (sem segunda cobrança)</p>
-                  <p className="text-xl font-mono text-[#D2A63C]">
-                    {status.migration.app_activation_coupon_code}
+              {pollingMigration && !status?.migration?.access_migration_completed_at ? (
+                <>
+                  <Loader2 className="w-12 h-12 text-[#D2A63C] mx-auto animate-spin" />
+                  <p className="text-lg font-medium">A confirmar pagamento...</p>
+                  <p className="text-sm text-zinc-400">
+                    Aguarda alguns segundos enquanto activamos a tua subscrição.
                   </p>
-                </div>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
+                  <p className="text-lg font-medium">Subscrição activa!</p>
+                  {status?.migration?.app_activation_coupon_code && (
+                    <div className="bg-zinc-950 border border-[#D2A63C]/40 rounded-lg p-4">
+                      <p className="text-sm text-zinc-400 mb-1">Código activação app (sem segunda cobrança)</p>
+                      <p className="text-xl font-mono text-[#D2A63C]">
+                        {status.migration.app_activation_coupon_code}
+                      </p>
+                    </div>
+                  )}
+                  {successPlan && (
+                    <p className="text-sm text-zinc-400">Plano: {successPlan.replace(/_/g, ' ')}</p>
+                  )}
+                  <Button
+                    className="w-full bg-[#D2A63C] text-black"
+                    onClick={() => router.push('/app-mobile')}
+                    disabled={!status?.migration?.access_migration_completed_at && pollingMigration}
+                  >
+                    Entrar na app
+                  </Button>
+                </>
               )}
-              {successPlan && (
-                <p className="text-sm text-zinc-400">Plano: {successPlan.replace(/_/g, ' ')}</p>
-              )}
-              <Button
-                className="w-full bg-[#D2A63C] text-black"
-                onClick={() => router.push('/app-mobile')}
-              >
-                Entrar na app
-              </Button>
             </CardContent>
           </Card>
         )}

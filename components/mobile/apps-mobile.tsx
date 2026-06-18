@@ -25,8 +25,9 @@ function canAccessApps(user: User | null): boolean {
   if (user.user_type === "vip" || user.member_category === "vip") return true
   if (user.user_type === "member") {
     return (
-      user.member_category === "iq" ||      // Membros IQ (IQONIC)
-      user.member_category === "premium"    // Pack Premium 65€
+      user.member_category === "iq" ||
+      user.member_category === "premium" ||
+      user.subscription_plan === "premium"
     )
   }
   return false

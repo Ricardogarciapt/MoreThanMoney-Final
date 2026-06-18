@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { determinePostLoginRedirect } from '@/lib/role-redirect'
 import { loadRegisteredMemberProfile } from '@/lib/member-profile'
+import { needsAccessRevalidation } from '@/lib/access-migration'
 import { buildOAuthCallbackUrl, REGISTER_NOT_FOUND_MESSAGE } from '@/lib/oauth-flow'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Shield, Loader2, AlertCircle, Eye, EyeOff, Mail, Lock, Tag } from 'lucide-react'
+import { Shield, Loader2, AlertCircle, Eye, EyeOff, Mail, Lock, Tag, Apple } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AppMobileLoginPage() {
@@ -24,9 +25,20 @@ export default function AppMobileLoginPage() {
   const [iqonicPassword, setIqonicPassword] = useState('')
   const [iqonicLoading, setIqonicLoading] = useState(false)
   const [iqonicError, setIqonicError] = useState('')
+  const [appleLoading, setAppleLoading] = useState(false)
 
-  // Native app always redirects to /app-mobile after login
-  const redirectParam = '/app-mobile'
+  const redirectAfterAuth = async (userId: string) => {
+    const profile = await loadRegisteredMemberProfile(supabase, userId)
+    if (!profile) {
+      await rejectUnknownUser()
+      return
+    }
+    if (needsAccessRevalidation(profile)) {
+      window.location.replace('/access-migration')
+      return
+    }
+    window.location.replace(`${window.location.origin}/app-mobile`)
+  }
 
   const rejectUnknownUser = async () => {
     await supabase.auth.signOut()
@@ -47,6 +59,10 @@ export default function AppMobileLoginPage() {
           await rejectUnknownUser()
           return
         }
+        if (needsAccessRevalidation(profile)) {
+          window.location.replace('/access-migration')
+          return
+        }
         window.location.replace(`${window.location.origin}/app-mobile`)
         return
       }
@@ -61,6 +77,10 @@ export default function AppMobileLoginPage() {
           const profile = await loadRegisteredMemberProfile(supabase, session.user.id)
           if (!profile) {
             await rejectUnknownUser()
+            return
+          }
+          if (needsAccessRevalidation(profile)) {
+            window.location.replace('/access-migration')
             return
           }
           const { setCachedSession } = await import('@/lib/auth-cache')
@@ -105,12 +125,7 @@ export default function AppMobileLoginPage() {
       if (data.session) {
         const { setCachedSession } = await import('@/lib/auth-cache')
         setCachedSession(data.session)
-        const profile = await loadRegisteredMemberProfile(supabase, data.session.user.id)
-        if (!profile) {
-          await rejectUnknownUser()
-          return
-        }
-        window.location.replace(`${window.location.origin}/app-mobile`)
+        await redirectAfterAuth(data.session.user.id)
       }
     } catch {
       setError('Erro ao fazer login. Tenta novamente.')
@@ -148,6 +163,56 @@ export default function AppMobileLoginPage() {
     }
   }
 
+  const handleAppleLogin = async () => {
+    setError('')
+    setAppleLoading(true)
+    const plugin = (window as any).Capacitor?.Plugins?.MTMPayments
+    try {
+      if (plugin) {
+        const result: any = await plugin.signInWithApple()
+        const res = await fetch('/api/auth/apple-signin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            identityToken: result.identityToken,
+            nonce: result.nonce,
+            appleUserId: result.appleUserId,
+            email: result.email,
+            fullName: result.fullName,
+            redirect: '/app-mobile',
+          }),
+        })
+        const data = await res.json()
+        if (!data.success) {
+          setError(data.error ?? 'Erro ao autenticar com Apple')
+          return
+        }
+        if (data.magicLink) {
+          window.location.href = data.magicLink
+          return
+        }
+      } else {
+        const callbackUrl = buildOAuthCallbackUrl(window.location.origin, {
+          flow: 'login',
+          redirect: '/app-mobile',
+        })
+        const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: { redirectTo: callbackUrl, skipBrowserRedirect: false },
+        })
+        if (oauthError) {
+          setError(`Erro ao iniciar Apple Login: ${oauthError.message}`)
+          return
+        }
+        if (data?.url) window.location.href = data.url
+      }
+    } catch {
+      setError('Erro ao iniciar login com Apple. Tenta novamente.')
+    } finally {
+      setAppleLoading(false)
+    }
+  }
+
   const handleIqonicLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIqonicLoading(true)
@@ -170,13 +235,7 @@ export default function AppMobileLoginPage() {
 
       const { setCachedSession } = await import('@/lib/auth-cache')
       if (authData.session) setCachedSession(authData.session)
-
-      const profile = await loadRegisteredMemberProfile(supabase, authData.session!.user.id)
-      if (!profile) {
-        await rejectUnknownUser()
-        return
-      }
-      window.location.replace(`${window.location.origin}/app-mobile`)
+      await redirectAfterAuth(authData.session!.user.id)
     } catch (err: unknown) {
       setIqonicError(err instanceof Error ? err.message : 'Erro desconhecido')
     } finally {
@@ -302,6 +361,23 @@ export default function AppMobileLoginPage() {
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                   </svg>
                   Google
+                </>
+              )}
+            </Button>
+
+            <Button
+              type="button"
+              className="w-full mt-3 bg-black hover:bg-gray-900 text-white border border-white/20 font-semibold"
+              onClick={handleAppleLogin}
+              disabled={appleLoading || isLoading}
+              size="lg"
+            >
+              {appleLoading ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  <Apple className="mr-2 h-5 w-5" />
+                  Continuar com Apple
                 </>
               )}
             </Button>

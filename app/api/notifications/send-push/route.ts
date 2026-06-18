@@ -296,15 +296,18 @@ export async function POST(request: NextRequest) {
 
 // ---------------------------------------------------------------------------
 // APNs direct push via HTTP/2 JWT (iOS native tokens)
+// APNs requires HTTP/2 — uses Node.js http2 module (not fetch which is HTTP/1.1)
 // Requires env vars: APNS_AUTH_KEY (p8 content), APNS_KEY_ID, APNS_TEAM_ID
-// Configure in Apple Developer Portal → Certificates → Keys
 // ---------------------------------------------------------------------------
 
 async function sendApnsNotifications(
   tokens: Array<{ token: string; user_id: string }>,
   payload: { title: string; body: string; data?: Record<string, string>; url?: string },
 ): Promise<{ sent: number; failed: number }> {
-  const authKey  = process.env.APNS_AUTH_KEY?.trim()
+  if (tokens.length === 0) return { sent: 0, failed: 0 }
+
+  // Support both actual newlines and \n escape in env var
+  const authKey  = process.env.APNS_AUTH_KEY?.trim().replace(/\\n/g, '\n')
   const keyId    = process.env.APNS_KEY_ID?.trim()
   const teamId   = process.env.APNS_TEAM_ID?.trim()
   const bundleId = process.env.APNS_BUNDLE_ID?.trim() || 'pt.morethanmoney.app'
@@ -315,9 +318,6 @@ async function sendApnsNotifications(
   }
 
   const jwtToken = await buildApnsJwt(authKey, keyId, teamId)
-  const apnsUrl  = `https://api.push.apple.com/3/device/`
-
-  let sent = 0, failed = 0
 
   const apnsPayload = JSON.stringify({
     aps: {
@@ -329,32 +329,70 @@ async function sendApnsNotifications(
     ...(payload.data || {}),
   })
 
-  await Promise.allSettled(tokens.map(async ({ token }) => {
-    try {
-      const res = await fetch(`${apnsUrl}${token}`, {
-        method:  'POST',
-        headers: {
-          'authorization':  `bearer ${jwtToken}`,
-          'apns-topic':     bundleId,
-          'apns-push-type': 'alert',
-          'apns-priority':  '10',
-          'content-type':   'application/json',
-        },
-        body: apnsPayload,
-      })
-      if (res.status === 200) { sent++ }
-      else {
-        const body = await res.json().catch(() => ({}))
-        console.warn(`⚠️ [APNs] ${token.substring(0, 16)}... status=${res.status} reason=${(body as any).reason}`)
-        failed++
-      }
-    } catch (e) {
-      console.warn(`⚠️ [APNs] fetch error for token ${token.substring(0, 16)}...`, e)
-      failed++
-    }
-  }))
+  let sent = 0, failed = 0
 
-  return { sent, failed }
+  const { connect } = await import('http2')
+
+  return new Promise<{ sent: number; failed: number }>((resolve) => {
+    const client = connect('https://api.push.apple.com', { rejectUnauthorized: true })
+
+    client.on('error', (err) => {
+      console.error('⚠️ [APNs] HTTP/2 session error:', err.message)
+      client.destroy()
+      resolve({ sent, failed: tokens.length })
+    })
+
+    let pending = tokens.length
+
+    const finish = () => {
+      if (--pending === 0) {
+        client.close(() => resolve({ sent, failed }))
+      }
+    }
+
+    for (const { token } of tokens) {
+      const req = client.request({
+        ':method':       'POST',
+        ':path':         `/3/device/${token}`,
+        ':scheme':       'https',
+        ':authority':    'api.push.apple.com',
+        'authorization': `bearer ${jwtToken}`,
+        'apns-topic':    bundleId,
+        'apns-push-type':'alert',
+        'apns-priority': '10',
+        'content-type':  'application/json',
+      })
+
+      req.on('response', (headers) => {
+        const status = headers[':status'] as number
+        if (status === 200) {
+          sent++
+          req.resume()
+          req.on('end', finish)
+        } else {
+          let body = ''
+          req.on('data', (chunk: Buffer) => { body += chunk.toString() })
+          req.on('end', () => {
+            try {
+              const parsed = JSON.parse(body)
+              console.warn(`⚠️ [APNs] ${token.substring(0, 16)}... status=${status} reason=${(parsed as any).reason}`)
+            } catch {}
+            failed++
+            finish()
+          })
+        }
+      })
+
+      req.on('error', (err) => {
+        console.warn(`⚠️ [APNs] Request error for ${token.substring(0, 16)}...`, err.message)
+        failed++
+        finish()
+      })
+
+      req.write(apnsPayload, 'utf8')
+      req.end()
+    }
+  })
 }
 
 async function buildApnsJwt(authKey: string, keyId: string, teamId: string): Promise<string> {
