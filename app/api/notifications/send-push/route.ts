@@ -176,11 +176,10 @@ export async function POST(request: NextRequest) {
     const webTokens = fcmTokens.filter((t) => {
       const info = t.device_info as Record<string, unknown> | null
       const platform = info?.platform as string | undefined
-      // Só excluir tokens APNs raw (MTM Native Shell iOS) — que têm platform 'ios-apns'
-      // ou que são literalmente 64 hex chars (token APNs bruto).
-      // Tokens Capacitor iOS/Android têm platform 'ios'/'android' com nativeApp:true
-      // e são tokens FCM — devem ser enviados via Firebase Messaging normalmente.
-      const isRawApns = platform === 'ios-apns' || apnsPattern.test(t.token)
+      // Raw APNs tokens são exactamente 64 hex chars (32 bytes).
+      // Tokens FCM do iOS (Capacitor/Firebase SDK) têm 140-165 chars — vão via Firebase.
+      // Só classificar como APNs raw se o token for literalmente 64 hex chars.
+      const isRawApns = apnsPattern.test(t.token)
       return !isRawApns
     })
     const apnsTokens = fcmTokens.filter((t) => !webTokens.includes(t))
@@ -213,7 +212,8 @@ export async function POST(request: NextRequest) {
       notification: {
         title: payload.title,
         body: payload.body,
-        imageUrl: payload.icon || '/icon-512x512.png',
+        // FCM exige URL absoluta — URL relativa causa messaging/invalid-payload
+        ...(payload.icon?.startsWith('http') ? { imageUrl: payload.icon } : {}),
       },
       data: {
         url: payload.url || payload.data?.url || '/app-mobile',
