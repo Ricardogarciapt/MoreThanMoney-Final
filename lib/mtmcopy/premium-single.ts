@@ -53,13 +53,32 @@ export function buildPremiumSingleOrderComment(
   exitPcts: PremiumExitPcts,
   opts?: { smallAccount?: boolean; exitsDone?: number },
 ): string {
-  const sa = opts?.smallAccount ? ' · sa1' : ''
-  const ex = opts?.exitsDone != null && opts.exitsDone > 0 ? ` · ex${opts.exitsDone}` : ''
-  return `mtmcopier-${PREMIUM_SINGLE_TAG} · o${roundLot(originalLot)} · p${exitPcts.tp1}/${exitPcts.tp2}/${exitPcts.tp3}${sa}${ex}`
+  // Compact format — MT5 comment field limit is 31 chars
+  // Max possible: "PREM-99.99-33/33/34-sa-ex3" = 26 chars ✓
+  const sa = opts?.smallAccount ? '-sa' : ''
+  const ex = opts?.exitsDone != null && opts.exitsDone > 0 ? `-ex${opts.exitsDone}` : ''
+  return `PREM-${roundLot(originalLot)}-${exitPcts.tp1}/${exitPcts.tp2}/${exitPcts.tp3}${sa}${ex}`
 }
 
 export function parsePremiumSingleComment(comment: string | undefined): ParsedPremiumSingleMeta | null {
   const c = comment ?? ''
+
+  // New compact format: "PREM-2.00-33/33/34[-sa][-ex1]"
+  const newMatch = c.match(/^PREM-([\d.]+)-(\d+)\/(\d+)\/(\d+)(?:-sa)?(?:-ex(\d+))?/i)
+  if (newMatch) {
+    return {
+      originalLot: parseFloat(newMatch[1]),
+      exitPcts: {
+        tp1: Number(newMatch[2]),
+        tp2: Number(newMatch[3]),
+        tp3: Number(newMatch[4]),
+      },
+      smallAccount: /-sa/i.test(c),
+      exitsDone: newMatch[5] ? Number(newMatch[5]) : 0,
+    }
+  }
+
+  // Legacy format: "mtmcopier-PREM · o2.00 · p33/33/34"
   if (!c.toLowerCase().includes(`mtmcopier-${PREMIUM_SINGLE_TAG.toLowerCase()}`)) return null
 
   const origMatch = c.match(/·\s*o([\d.]+)/i)
@@ -116,7 +135,7 @@ function symbolMatches(posSymbol: string, signalSymbol: string): boolean {
 
 function isMtmcopierPosition(pos: MetaApiPosition): boolean {
   const c = (pos.comment ?? '').toLowerCase()
-  return c.includes('mtmcopier')
+  return c.includes('mtmcopier') || c.startsWith('prem-')
 }
 
 function directionMatches(pos: MetaApiPosition, direction: string): boolean {

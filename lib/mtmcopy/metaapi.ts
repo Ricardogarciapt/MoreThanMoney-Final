@@ -184,7 +184,7 @@ function buildOrderOptions(
   trailingOpts?: TrailingStopLossOptions,
 ): { comment?: string; trailingStopLoss?: TrailingStopLossOptions } {
   const options: { comment?: string; trailingStopLoss?: TrailingStopLossOptions } = {
-    comment: req.comment ?? 'MTMcopier',
+    comment: (req.comment ?? 'MTMcopier').slice(0, 31),
   }
   if (trailingOpts) options.trailingStopLoss = trailingOpts
   return options

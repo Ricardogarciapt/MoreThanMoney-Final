@@ -3,6 +3,7 @@ import { telegramService } from "@/lib/telegram-service"
 import { db } from "@/lib/database-service"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { processMtmcopyTelegramMessage } from "@/lib/mtmcopy/processor"
+import { getSiteOrigin } from "@/lib/site-url"
 
 import { resolveAppChannelSlug } from "@/lib/telegram-app-channels"
 
@@ -70,6 +71,29 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
     console.error(`[Telegram] Erro ao inserir mensagem em ${slug}:`, error.message)
   } else {
     console.log(`[Telegram] ✅ Mensagem ${telegramMessageId} inserida em ${slug}`)
+
+    // Push notification para membros activos (fire-and-forget — não bloqueia webhook)
+    const firstLine = (content ?? '').split('\n')[0]?.trim() ?? ''
+    const notifTitle = firstLine.slice(0, 60) || 'Novo sinal no canal'
+    const notifBody = (content ?? '').slice(0, 120) || 'Nova mensagem recebida'
+    void fetch(`${getSiteOrigin()}/api/notifications/send-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        all: true,
+        title: notifTitle,
+        body: notifBody,
+        url: `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}`,
+        data: {
+          type: 'chat_message',
+          channel: slug,
+          url: `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}`,
+        },
+        tag: `chat_${slug}_${telegramMessageId}`,
+      }),
+    }).catch((err: Error) => {
+      console.warn(`[Telegram] Push notification falhou para ${slug}:`, err.message)
+    })
   }
 }
 

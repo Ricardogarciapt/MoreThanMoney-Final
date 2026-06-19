@@ -784,7 +784,7 @@ async function executeViaMtmProvider(
         provider.accountId,
         signalForExec,
         premiumSingle.lot,
-        `${mtComment}-${premiumSingle.comment}`,
+        premiumSingle.comment,
       )
       req.takeProfit = null
       const [r] = await placeOrdersSequential(provider.accountId, [req])
@@ -1110,7 +1110,7 @@ async function processSignalDirect(
       conn.metaapi_account_id,
       signal,
       premiumSingle.lot,
-      `MTMcopier-${premiumSingle.comment}`,
+      premiumSingle.comment,
     )
     req.takeProfit = null
     const [single] = await placeOrdersSequential(conn.metaapi_account_id, [req])
