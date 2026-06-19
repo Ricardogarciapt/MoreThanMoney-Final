@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 
+// Mapeia plan_override → membership_level + package no perfil
+function resolvePlanFields(planOverride: string | null): {
+  membership_level: string
+  package: string
+} | null {
+  switch (planOverride) {
+    case "premium":
+      return { membership_level: "premium", package: "premium" }
+    case "both":
+      // Acesso completo: Premium + Trade Ideas
+      return { membership_level: "premium", package: "premium" }
+    case "trade_ideas":
+      return { membership_level: "trade_ideas", package: "trade_ideas" }
+    case "basic":
+      return { membership_level: "basic", package: "basic" }
+    default:
+      return null
+  }
+}
+
 export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin()
 
@@ -113,15 +133,69 @@ export async function POST(request: NextRequest) {
     // Incrementar used_count
     const { error: updateError } = await supabase
       .from("coupons")
-      .update({
-        used_count: coupon.used_count + 1,
-        updated_at: now.toISOString(),
-      })
+      .update({ used_count: coupon.used_count + 1, updated_at: now.toISOString() })
       .eq("id", coupon.id)
 
     if (updateError) {
       console.error("❌ [COUPONS/APPLY] Erro ao incrementar used_count:", updateError)
-      // Não falhar aqui — a utilização já foi registada
+    }
+
+    // ── Atribuir acesso ao perfil do utilizador ──────────────────────────────
+    // Só cupões que concedem acesso directo (free_subscription / free_months)
+    // Os de desconto (discount_pct) são aplicados no Stripe durante o checkout
+    const profileUpdate: Record<string, unknown> = {
+      coupon_code: normalizedCode,
+      checkout_source: "coupon",
+      subscription_platform: context?.includes("ios") ? "ios_app" : context || "coupon",
+      updated_at: now.toISOString(),
+    }
+
+    if (coupon.type === "free_subscription") {
+      // Acesso gratuito — definir plano com base em plan_override
+      const planFields = resolvePlanFields(coupon.plan_override)
+      if (planFields) {
+        profileUpdate.membership_level = planFields.membership_level
+        profileUpdate.package = planFields.package
+      }
+      profileUpdate.subscription_plan = coupon.plan_override ?? "basic"
+      profileUpdate.subscription_status = "active"
+      profileUpdate.subscription_auto_renew = false
+      // discount_value = número de meses (0 = indefinido)
+      if (coupon.discount_value && coupon.discount_value > 0) {
+        const expires = new Date(now)
+        expires.setMonth(expires.getMonth() + Number(coupon.discount_value))
+        profileUpdate.subscription_expires_at = expires.toISOString()
+      } else {
+        profileUpdate.subscription_expires_at = null
+      }
+    } else if (coupon.type === "free_months") {
+      // N meses grátis — manter plano actual, só extender prazo
+      const months = Number(coupon.discount_value) || 1
+      const expires = new Date(now)
+      expires.setMonth(expires.getMonth() + months)
+      profileUpdate.subscription_expires_at = expires.toISOString()
+      profileUpdate.subscription_status = "active"
+      if (coupon.plan_override) {
+        const planFields = resolvePlanFields(coupon.plan_override)
+        if (planFields) {
+          profileUpdate.membership_level = planFields.membership_level
+          profileUpdate.package = planFields.package
+        }
+        profileUpdate.subscription_plan = coupon.plan_override
+      }
+    }
+    // discount_pct: não altera o perfil — aplicado no Stripe checkout
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update(profileUpdate)
+      .eq("id", userId)
+
+    if (profileError) {
+      console.error("❌ [COUPONS/APPLY] Erro ao actualizar perfil:", profileError)
+      // Não falhar — uso já registado; aviso no log para seguimento manual
+    } else {
+      console.log(`✅ [COUPONS/APPLY] Perfil ${userId} actualizado com cupão ${normalizedCode} (tipo: ${coupon.type})`)
     }
 
     return NextResponse.json({
