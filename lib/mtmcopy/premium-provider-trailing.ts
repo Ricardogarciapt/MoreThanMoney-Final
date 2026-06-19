@@ -9,13 +9,8 @@ import {
   type PremiumExitLeg,
 } from './premium-exits'
 import {
-  premiumTrailingWithActivation,
   type TrailingDistance,
 } from './pip-points'
-import {
-  PREMIUM_INTELIGENT_RISK_MAX_PIPS,
-  PREMIUM_STANDARD_RISK_PIPS,
-} from './premium-trade-active'
 import type { ParsedSignal } from './signal-parser'
 
 const AI_TRAILING_TIMEOUT_MS = Number(process.env.MTMCOPY_AI_TRAILING_TIMEOUT_MS ?? '900')
@@ -37,51 +32,17 @@ export function estimateRiskPipsFromSignal(
   return Math.max(1, Math.round(dist / pipSize))
 }
 
-function rewardPipsToTp(
-  signal: ParsedSignal,
-  marketPrice: number | null,
-  tpIndex: number,
-): number | null {
-  const entry = resolveEntryForRisk(signal, marketPrice)
-  const tp = signal.tp[tpIndex]
-  if (entry == null || tp == null || tp <= 0) return null
-  const dist = Math.abs(tp - entry)
-  const pipSize = isGoldSymbol(signal.symbol) ? 0.1 : 0.0001
-  return Math.max(1, Math.round(dist / pipSize))
-}
-
 /**
  * Trailing por perna na abertura (provider):
- * - TP1: threshold antes do TP — protege lucro parcial em movimento favorável
- * - TP2: null à abertura — BE + trail activam no HIT TP1 (position-management)
- * - TP3: runner com activação larga
+ * Sem trailing à abertura — activação progressiva apenas no HIT TP1 / lifecycle automático.
  */
 export function computeProviderLegTrailing(
   legIndex: 1 | 2 | 3,
-  signal: ParsedSignal,
-  marketPrice: number | null,
-  riskPips: number | null,
+  _signal: ParsedSignal,
+  _marketPrice: number | null,
+  _riskPips: number | null,
 ): TrailingDistance | null {
-  if (legIndex === 2) return null
-
-  if (legIndex === 1) {
-    const rewardPips = rewardPipsToTp(signal, marketPrice, 0)
-    const activationPips = rewardPips
-      ? Math.max(12, Math.min(50, Math.round(rewardPips * 0.35)))
-      : 25
-    const trailPips =
-      riskPips != null && riskPips <= PREMIUM_INTELIGENT_RISK_MAX_PIPS
-        ? 20
-        : riskPips != null && riskPips >= PREMIUM_STANDARD_RISK_PIPS
-          ? 45
-          : 30
-    return { mode: 'threshold_pips', activationPips, trailPips }
-  }
-
-  if (riskPips != null && riskPips <= PREMIUM_INTELIGENT_RISK_MAX_PIPS) {
-    return { mode: 'threshold_pips', activationPips: 30, trailPips: 35 }
-  }
-  return premiumTrailingWithActivation()
+  return null
 }
 
 export function applyTrailingToPremiumLeg(

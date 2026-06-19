@@ -3,7 +3,7 @@ import {
   getMtmChannelProviders,
   type MtmChannelProvider,
 } from './provider-accounts'
-import { normalizeProviderRoutes, routeMatchesSignal } from './provider-routes'
+import { normalizeProviderRoutes, pickSingleProviderRoute } from './provider-routes'
 import {
   getSignalSourcesConfig,
   type MtmcopyTelegramChannelKey,
@@ -28,31 +28,25 @@ export async function resolveMtmProvidersForSignal(
   const routes = normalizeProviderRoutes(config)
   const envProviders = getMtmChannelProviders()
 
-  const matched = routes.filter((r) => routeMatchesSignal(r, channel, chatId))
-  if (matched.length) {
-    const seen = new Set<string>()
-    const out: MtmChannelProvider[] = []
-    for (const r of matched) {
-      const accountId = r.account_id.trim()
-      if (seen.has(accountId)) continue
-      seen.add(accountId)
-      const ch = (r.sender_channel ?? (channel !== 'unknown' ? channel : 'premium-signals')) as MtmcopyTelegramChannelKey
-      const envDefault = envProviders[ch]
-      out.push({
+  const picked = pickSingleProviderRoute(routes, channel, chatId)
+  if (picked) {
+    const ch = (picked.sender_channel ?? (channel !== 'unknown' ? channel : 'premium-signals')) as MtmcopyTelegramChannelKey
+    const envDefault = envProviders[ch]
+    return [
+      {
         channel: ch,
-        accountId,
-        tag: r.tag?.trim() || r.label?.trim() || envDefault?.tag || accountId.slice(0, 8),
+        accountId: picked.account_id.trim(),
+        tag: picked.tag?.trim() || picked.label?.trim() || envDefault?.tag || picked.account_id.slice(0, 8),
         strategyId:
-          r.strategy_id?.trim() ||
+          picked.strategy_id?.trim() ||
           config.provider_strategy_id ||
           envDefault?.strategyId ||
           null,
-        routeId: r.id,
-        execution: r.execution,
-        aiStrategyPrompt: r.ai_strategy_prompt ?? null,
-      })
-    }
-    return out
+        routeId: picked.id,
+        execution: picked.execution,
+        aiStrategyPrompt: picked.ai_strategy_prompt ?? null,
+      },
+    ]
   }
 
   const single = await resolveLegacySingleProvider(channel, config, envProviders)

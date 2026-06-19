@@ -22,7 +22,7 @@ export const COPY_METHODS: {
     id: 'strategy',
     title: 'Estratégia MTM',
     description:
-      'Sinais do canal → parser → a tua conta MT5 (risco/lotes teus). VIP: até 5 contas com subscrição Stripe.',
+      'Replica via CopyFactory a conta provider MTM (Premium 9gsL ou Trade Ideas 5IHE). Sem parser duplicado na tua conta.',
   },
   {
     id: 'telegram_group',

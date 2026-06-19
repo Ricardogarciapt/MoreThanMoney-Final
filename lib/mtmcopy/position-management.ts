@@ -413,10 +413,11 @@ async function applyPremiumHitTp1(
   }
 
   for (const pos of leg2) {
+    const exit1 = leg1[0]?.takeProfit ?? pos.openPrice
     const mod = await modifyPositionSlTp(
       accountId,
       pos.id,
-      pos.openPrice,
+      exit1 > 0 ? exit1 : pos.openPrice,
       pos.takeProfit,
       trailing,
       pos.symbol,
@@ -427,10 +428,11 @@ async function applyPremiumHitTp1(
 
   const leg3Targets = leg3.length ? leg3 : positions.filter((p) => !leg1.includes(p) && !leg2.includes(p))
   for (const pos of leg3Targets) {
+    const exit1 = leg1[0]?.takeProfit ?? pos.stopLoss ?? pos.openPrice
     const mod = await modifyPositionSlTp(
       accountId,
       pos.id,
-      pos.stopLoss,
+      exit1 > 0 ? exit1 : pos.stopLoss,
       pos.takeProfit,
       trailing,
       pos.symbol,
@@ -493,6 +495,13 @@ export async function applyManagementToAccount(
   }
 
   if (management.type === 'premium_trade_active' && management.symbol && management.premiumVariant) {
+    if (
+      accountId === CANONICAL_PREMIUM_ACCOUNT_ID ||
+      accountId === CANONICAL_TRADE_IDEAS_ACCOUNT_ID
+    ) {
+      void runPremiumProviderLifecycle(accountId, management.symbol)
+      return { updated: 0, closed: 0, cancelled: 0, errors: [] }
+    }
     return applyPremiumTradeActive(accountId, management.symbol, management.premiumVariant)
   }
 

@@ -37,8 +37,15 @@ export const MTM_PROVIDER_EXECUTION_PROFILE: Pick<
   symbols_whitelist: null,
 }
 
-const PREMIUM_ACCOUNT_DEFAULT = 'c17a8c46-7fe7-40cf-acb4-41678d42f9a9'
-const TRADE_IDEAS_ACCOUNT_DEFAULT = 'fbeeafeb-96a9-4133-bc6c-194cc281b6e0'
+import {
+  CANONICAL_PREMIUM_ACCOUNT_ID,
+  CANONICAL_PREMIUM_STRATEGY_ID,
+  CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
+  CANONICAL_TRADE_IDEAS_STRATEGY_ID,
+} from './provider-routes-defaults'
+
+const PREMIUM_ACCOUNT_DEFAULT = CANONICAL_PREMIUM_ACCOUNT_ID
+const TRADE_IDEAS_ACCOUNT_DEFAULT = CANONICAL_TRADE_IDEAS_ACCOUNT_ID
 
 function envOr(key: string, fallback: string): string {
   return process.env[key]?.trim() || fallback
@@ -46,16 +53,13 @@ function envOr(key: string, fallback: string): string {
 
 /** Contas MetaAPI MTM por canal Telegram (execução directa + CopyFactory provider). */
 export function getMtmChannelProviders(): Record<MtmcopyChannelKey, MtmChannelProvider | null> {
-  const legacyAccount = process.env.METAAPI_PROVIDER_ACCOUNT_ID?.trim() || null
-  const legacyStrategy = process.env.METAAPI_COPY_STRATEGY_ID?.trim() || null
-
   const premium: MtmChannelProvider = {
     channel: 'premium-signals',
     accountId: envOr('METAAPI_PROVIDER_PREMIUM_ACCOUNT_ID', PREMIUM_ACCOUNT_DEFAULT),
     tag: 'Conta XAUUSD PREMIUM',
     strategyId:
       process.env.METAAPI_COPY_STRATEGY_PREMIUM_ID?.trim() ||
-      legacyStrategy,
+      CANONICAL_PREMIUM_STRATEGY_ID,
   }
 
   const tradeIdeas: MtmChannelProvider = {
@@ -64,7 +68,7 @@ export function getMtmChannelProviders(): Record<MtmcopyChannelKey, MtmChannelPr
     tag: 'Conta Trade Ideas',
     strategyId:
       process.env.METAAPI_COPY_STRATEGY_TRADE_IDEAS_ID?.trim() ||
-      legacyStrategy,
+      CANONICAL_TRADE_IDEAS_STRATEGY_ID,
   }
 
   return {

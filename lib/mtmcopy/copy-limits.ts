@@ -12,13 +12,17 @@ export function connectionCopyMethod(conn: MTMcopierConnection): MtmcopyCopyMeth
   return 'telegram_group'
 }
 
-/** Execução directa MetaAPI (parser → conta do utilizador), não CopyFactory. */
+/**
+ * Execução directa MetaAPI (parser → conta do utilizador).
+ * Apenas `telegram_group` — método Estratégia MTM replica só via CopyFactory (sem parser duplicado).
+ */
 export function prefersDirectExecution(
   conn: Pick<MTMcopierConnection, 'copy_method' | 'sender_mode' | 'account_role'>,
 ): boolean {
   if ((conn.account_role ?? 'slave') === 'master') return false
   if (conn.sender_mode === 'master_account' || conn.copy_method === 'master_slave') return false
-  return conn.copy_method === 'telegram_group' || conn.copy_method === 'strategy'
+  if (conn.copy_method === 'strategy') return false
+  return conn.copy_method === 'telegram_group' || conn.copy_method == null
 }
 
 export function countTotalActive(connections: MTMcopierConnection[]): number {
@@ -37,13 +41,13 @@ export function countSlavesForMethod(
   ).length
 }
 
-/** Slaves em grupos MTM ou estratégia MTM (métodos 1 e 2). */
+/** Slaves em grupos Telegram MTM (método 1 — parser directo). */
 export function countMtmSignalSlaves(connections: MTMcopierConnection[]): number {
   return connections.filter(
     (c) =>
       c.mt5_status !== 'disconnected' &&
       (c.account_role ?? 'slave') === 'slave' &&
-      prefersDirectExecution(c),
+      connectionCopyMethod(c) === 'telegram_group',
   ).length
 }
 

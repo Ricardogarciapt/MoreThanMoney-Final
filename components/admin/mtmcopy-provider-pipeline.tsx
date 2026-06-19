@@ -245,13 +245,14 @@ export default function MtmcopyProviderPipeline({
                       sender inactivo
                     </Badge>
                   )}
-                  {(route.ai_strategy_prompt ?? "").trim() ? (
-                    <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30 text-[10px]">
-                      estratégia IA definida
+                  {route.sender_channel === "premium-signals" ||
+                  (route.ai_strategy_prompt ?? "").trim() ? (
+                    <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[10px]">
+                      Estratégia IA activa
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="text-zinc-500 border-zinc-700 text-[10px]">
-                      estratégia IA em falta
+                      IA guideline padrão
                     </Badge>
                   )}
                 </div>

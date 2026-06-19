@@ -1,5 +1,14 @@
 import type { MtmcopyChannelKey } from './channel-context'
+import { chatIdsMatch } from './channels'
 import { getMtmChannelProviders } from './provider-accounts'
+import {
+  CANONICAL_PREMIUM_ACCOUNT_ID,
+  CANONICAL_PREMIUM_STRATEGY_ID,
+  CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
+  CANONICAL_TRADE_IDEAS_STRATEGY_ID,
+  repairProviderRoutes,
+  routeBelongsToChannel,
+} from './provider-routes-defaults'
 import type {
   MtmcopyChannelProviderConfig,
   MtmcopySignalSourcesConfig,
@@ -34,16 +43,17 @@ function routeFromChannelConfig(
   }
 }
 
-/** Normaliza rotas: provider_routes → fallback channel_providers → env. */
+/** Normaliza rotas: repara canónicas → provider_routes → channel_providers → env. */
 export function normalizeProviderRoutes(config: MtmcopySignalSourcesConfig): ProviderRoute[] {
   const fromRoutes = (config.provider_routes ?? []).filter((r) => r.account_id?.trim())
   if (fromRoutes.length) {
-    return fromRoutes.map((r) => ({
+    const normalized = fromRoutes.map((r) => ({
       ...r,
       enabled: r.enabled !== false,
       account_id: r.account_id.trim(),
       strategy_id: r.strategy_id?.trim() || null,
     }))
+    return repairProviderRoutes(normalized)
   }
 
   const legacy: ProviderRoute[] = []
@@ -114,18 +124,58 @@ export function routeMatchesSignal(
 ): boolean {
   if (route.enabled === false || !route.account_id?.trim()) return false
 
+  if (channel !== 'unknown') {
+    if (route.sender_channel && route.sender_channel !== channel) return false
+    if (!routeBelongsToChannel(route, channel)) return false
+  }
+
   if (route.sender_channel && channel !== 'unknown' && route.sender_channel === channel) {
     return true
   }
 
   if (route.sender_chat_id && chatId != null) {
-    const a = String(chatId)
-    const b = route.sender_chat_id.trim()
-    if (a === b) return true
-    if (a.startsWith('-') && b.startsWith('-') && a.slice(1) === b.slice(1)) return true
+    return chatIdsMatch(route.sender_chat_id, chatId)
+  }
+
+  if (route.sender_channel && channel !== 'unknown') {
+    return route.sender_channel === channel
   }
 
   return false
+}
+
+/** Uma rota provider por sinal — evita duplicar trades na mesma conta. */
+export function pickSingleProviderRoute(
+  routes: ProviderRoute[],
+  channel: MtmcopyChannelKey,
+  chatId?: string | number | null,
+): ProviderRoute | null {
+  const matched = routes.filter((r) => routeMatchesSignal(r, channel, chatId))
+  if (!matched.length) return null
+
+  if (channel === 'premium-signals') {
+    return (
+      matched.find(
+        (r) =>
+          r.sender_channel === 'premium-signals' ||
+          r.strategy_id === CANONICAL_PREMIUM_STRATEGY_ID ||
+          r.account_id === CANONICAL_PREMIUM_ACCOUNT_ID,
+      ) ?? matched[0]!
+    )
+  }
+
+  if (channel === 'trade-ideas') {
+    return (
+      matched.find(
+        (r) =>
+          r.sender_channel === 'trade-ideas' ||
+          r.strategy_id === CANONICAL_TRADE_IDEAS_STRATEGY_ID ||
+          r.account_id === CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
+      ) ?? matched[0]!
+    )
+  }
+
+  return matched[0]!
 }
 
 export function strategyIdsFromRoutes(

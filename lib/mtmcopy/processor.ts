@@ -11,8 +11,14 @@ import {
   premiumLegMtComment,
 } from './premium-provider-trailing'
 import type { PremiumExitLeg } from './premium-exits'
-import { formatTrailingDistance, TRADE_IDEAS_TRAILING_PIPS } from './pip-points'
-import { prefersDirectExecution } from './copy-limits'
+import { formatTrailingDistance, tradeIdeasTrailingDistance } from './pip-points'
+import { resolvePremiumAiStrategyPrompt } from './premium-ai-guideline'
+import { runPremiumProviderLifecycle } from './premium-provider-lifecycle'
+import {
+  CANONICAL_PREMIUM_ACCOUNT_ID,
+  CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
+} from './provider-routes-defaults'
+import { connectionCopyMethod, prefersDirectExecution } from './copy-limits'
 import { getMtmcopySubscription } from './subscription'
 import { chatMatchesAllowlist, connectionMatchesChannel, connectionMatchesSignalSource } from './sources'
 import {
@@ -292,7 +298,9 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
 
   const { matchedConnections, subscribers } = await subscribersPromise
   const logTargets = subscribers.length ? subscribers : matchedConnections
-  const directTargets = subscribers.filter(isDirectExecutionSubscriber)
+  const directTargets = subscribers.filter(
+    (c) => connectionCopyMethod(c) === 'telegram_group' && isDirectExecutionSubscriber(c),
+  )
   const canExecute = shouldExecuteSignal(validation)
 
   const method2Task =
@@ -767,7 +775,7 @@ async function executeViaMtmProvider(
       premiumProviderLegs,
       signalForExec,
       marketPrice,
-      provider.aiStrategyPrompt ?? null,
+      provider.aiStrategyPrompt ?? resolvePremiumAiStrategyPrompt(null),
     )
   }
 
@@ -835,7 +843,7 @@ async function executeViaMtmProvider(
     } else {
       const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
       if (channel === 'trade-ideas') {
-        req.trailingStop = { mode: 'pips', pips: TRADE_IDEAS_TRAILING_PIPS }
+        req.trailingStop = tradeIdeasTrailingDistance()
       }
       const [r] = await placeOrdersSequential(provider.accountId, [req])
       results.push({
@@ -944,8 +952,8 @@ async function executeViaMtmProvider(
     }),
   )
 
-  if (anySuccess && signalForExec.orderType !== 'limit' && channel === 'trade-ideas') {
-    void applyTrailingToCopyFactorySlaves(logTargets, signalForExec.symbol!)
+  if (anySuccess && channel === 'premium-signals') {
+    void runPremiumProviderLifecycle(provider.accountId, signalForExec.symbol!)
   }
 
   console.log(
@@ -1157,8 +1165,8 @@ async function processSignalDirect(
     result = single ?? { success: false, error: 'Sem resposta MetaAPI' }
   } else {
     const req = buildOrderRequest(conn, conn.metaapi_account_id, signal, lot, 'MTMcopier')
-    if (channel === 'trade-ideas' && conn.auto_trailing_stop) {
-      req.trailingStop = { mode: 'pips', pips: TRADE_IDEAS_TRAILING_PIPS }
+    if (channel === 'trade-ideas') {
+      req.trailingStop = tradeIdeasTrailingDistance()
     }
     const [single] = await placeOrdersSequential(conn.metaapi_account_id!, [req])
     result = single ?? { success: false, error: 'Sem resposta MetaAPI' }

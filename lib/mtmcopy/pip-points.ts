@@ -10,8 +10,14 @@ export const PREMIUM_TP1_TRAILING_PIPS = PREMIUM_TRAILING_DISTANCE_PIPS
 export const PREMIUM_TP_HIT_TRAILING_PIPS = PREMIUM_TRAILING_DISTANCE_PIPS
 /** Trailing na Exit 3 (Premium). */
 export const PREMIUM_TP3_TRAILING_PIPS = PREMIUM_TRAILING_DISTANCE_PIPS
-/** Trade Ideas — trailing para acompanhar SL ~20 / TP ~50 pips. */
+/** Trade Ideas — trailing 100 points (The Trading Master). */
+export const TRADE_IDEAS_TRAILING_POINTS = 100
+/** @deprecated usar TRADE_IDEAS_TRAILING_POINTS */
 export const TRADE_IDEAS_TRAILING_PIPS = 20
+
+export function tradeIdeasTrailingDistance(): TrailingDistance {
+  return { mode: 'points', points: TRADE_IDEAS_TRAILING_POINTS }
+}
 
 /** @deprecated usar PREMIUM_TP1_TRAILING_PIPS */
 export const PREMIUM_TP_HIT_TRAILING_PIPS_LEGACY = PREMIUM_TP_HIT_TRAILING_PIPS
