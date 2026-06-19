@@ -1,6 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { telegramService } from "@/lib/telegram-service"
-import { db } from "@/lib/database-service"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { processMtmcopyTelegramMessage } from "@/lib/mtmcopy/processor"
 import { getSiteOrigin } from "@/lib/site-url"
@@ -122,20 +120,13 @@ export async function POST(request: NextRequest) {
       // MTMcopier primeiro — caminho crítico (MetaAPI / MT5)
       await runMtmcopy(message)
 
-      // Espelho, registo e legado em paralelo (após MTMcopy — não atrasam MetaAPI)
+      // Espelho e registo em paralelo (após MTMcopy — não atrasam MetaAPI)
       await Promise.all([
         (async () => {
           const { registerDiscoveredTelegramChat } = await import('@/lib/mtmcopy/signal-sources-config')
           await registerDiscoveredTelegramChat(message.chat ?? {})
         })(),
         mirrorTelegramMessage(supabase, message),
-        (async () => {
-          const signal = telegramService.processSignalMessage(message)
-          if (signal) {
-            await db.create("telegram_signals", signal)
-            console.log("Novo sinal processado:", signal)
-          }
-        })(),
       ])
     }
 
