@@ -85,7 +85,7 @@ export async function middleware(request: NextRequest) {
   // Adicionar headers de segurança básicos
   // X-Frame-Options: DENY não é aplicado em /app-mobile nem em rotas do scanner —
   // o WKWebView (iOS) e o TradingView widget necessitam de contexto de embedding livre.
-  const isNativeAppRoute = pathname.startsWith("/app-mobile") || pathname.startsWith("/scanner")
+  const isNativeAppRoute = pathname.startsWith("/app-mobile") || pathname.startsWith("/scanner") || pathname.startsWith("/apresentacoes")
   if (!isNativeAppRoute) {
     response.headers.set("X-Frame-Options", "DENY")
   }
