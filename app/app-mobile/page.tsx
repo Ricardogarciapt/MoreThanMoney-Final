@@ -70,6 +70,7 @@ function AppMobileContent() {
   const [mounted, setMounted] = useState(false)
   const validTabs = ["social", "chat", "portfolio", "scanner", "apps", "live", "mentor", "settings", "mlm"] as const
   const tabFromUrl = searchParams.get("tab")
+  const channelFromUrl = searchParams.get("channel")
   const [activeTab, setActiveTab] = useState(() =>
     tabFromUrl && validTabs.includes(tabFromUrl as (typeof validTabs)[number]) ? tabFromUrl : "social"
   )
@@ -479,7 +480,7 @@ function AppMobileContent() {
             </TabsContent>
 
             <TabsContent value="chat" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
-              {activeTab === "chat" && <ChatChannels />}
+              {activeTab === "chat" && <ChatChannels initialSlug={channelFromUrl} />}
             </TabsContent>
 
             <TabsContent value="live" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">

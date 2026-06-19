@@ -57,19 +57,24 @@ self.addEventListener('notificationclick', (event) => {
   
   event.notification.close()
   
-  // Obter URL de destino
-  const urlToOpen = event.notification.data?.url || '/app-mobile'
-  
+  // Obter URL de destino (sempre absoluta para clients.openWindow)
+  const rawUrl = event.notification.data?.url || '/app-mobile'
+  const urlToOpen = rawUrl.startsWith('http') ? rawUrl : (self.location.origin + rawUrl)
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Verificar se já existe uma janela aberta
+        // Se já existe janela aberta no mesmo path, focar e navegar sem reload
         for (const client of clientList) {
-          if (client.url.includes(urlToOpen) && 'focus' in client) {
-            return client.focus()
+          if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+            client.focus()
+            if ('navigate' in client) {
+              return client.navigate(urlToOpen)
+            }
+            return
           }
         }
-        // Se não, abrir nova janela
+        // Sem janela aberta — abrir nova
         if (clients.openWindow) {
           return clients.openWindow(urlToOpen)
         }

@@ -59,7 +59,9 @@ interface UseCapacitorOptions {
   onPushReceived?: (notification: any) => void
   onPushAction?: (action: any) => void
   onDeepLink?: (url: string) => void
-  onBackButton?: () => boolean // return true para interceptar, false para default
+  /** Tap numa notificação — navega sem recarregar página completa */
+  onPushNavigation?: (pathname: string, search: string) => void
+  onBackButton?: () => boolean
 }
 
 export function useCapacitor(options: UseCapacitorOptions = {}) {
@@ -153,13 +155,16 @@ export function useCapacitor(options: UseCapacitorOptions = {}) {
           console.log("[CAP] Notificação tap:", action.notification.data)
           options.onPushAction?.(action)
 
-          // Deep link da notificação
+          // Deep link — sem reload se onPushNavigation estiver registado
           const url = action.notification.data?.url
           if (url) {
             try {
-              const parsed = new URL(url)
-              // Navegar para o path relativo
-              window.location.href = parsed.pathname + parsed.search
+              const parsed = new URL(url, window.location.origin)
+              if (options.onPushNavigation) {
+                options.onPushNavigation(parsed.pathname, parsed.search)
+              } else {
+                window.location.href = parsed.pathname + parsed.search
+              }
             } catch {
               window.location.href = url
             }

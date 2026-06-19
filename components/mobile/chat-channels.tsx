@@ -38,6 +38,7 @@ import {
   Paperclip,
   Link2,
   Film,
+  FileText,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -446,7 +447,7 @@ function MessageContextMenu({
 type PendingMedia = {
   file: File
   previewUrl: string
-  mediaType: "image" | "video"
+  mediaType: "image" | "video" | "document"
 }
 
 // ─── Pré-visualização no composer (média + link) ─────────────────────────────
@@ -473,7 +474,17 @@ function ComposeAttachmentPreview({
     <div className="mb-2 space-y-2">
       {pendingMedia && (
         <div className="relative rounded-xl overflow-hidden border border-gray-700 bg-gray-800">
-          {pendingMedia.mediaType === "video" ? (
+          {pendingMedia.mediaType === "document" ? (
+            <div className="flex items-center gap-3 px-3 py-4">
+              <div className="w-10 h-10 rounded-lg bg-red-500/15 flex items-center justify-center shrink-0">
+                <FileText className="w-5 h-5 text-red-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-white truncate">{pendingMedia.file.name}</p>
+                <p className="text-xs text-gray-400">{(pendingMedia.file.size / 1024 / 1024).toFixed(1)} MB</p>
+              </div>
+            </div>
+          ) : pendingMedia.mediaType === "video" ? (
             <video
               src={pendingMedia.previewUrl}
               controls
@@ -491,6 +502,8 @@ function ComposeAttachmentPreview({
             <div className="flex items-center gap-2 min-w-0">
               {pendingMedia.mediaType === "video" ? (
                 <Film className="w-4 h-4 text-purple-400 shrink-0" />
+              ) : pendingMedia.mediaType === "document" ? (
+                <FileText className="w-4 h-4 text-red-400 shrink-0" />
               ) : (
                 <ImageIcon className="w-4 h-4 text-[#D2A63C] shrink-0" />
               )}
@@ -548,10 +561,12 @@ function AttachSheet({
   onClose,
   onPickImage,
   onPickVideo,
+  onPickFile,
 }: {
   onClose: () => void
   onPickImage: () => void
   onPickVideo: () => void
+  onPickFile: () => void
 }) {
   return (
     <div
@@ -570,7 +585,7 @@ function AttachSheet({
           <div className="w-10 h-1 rounded-full bg-gray-700" />
         </div>
         <p className="text-sm font-semibold text-white mb-3">Anexar</p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <button
             type="button"
             onClick={() => { onPickImage(); onClose() }}
@@ -590,6 +605,16 @@ function AttachSheet({
               <Film className="w-6 h-6 text-purple-400" />
             </div>
             <span className="text-sm text-white font-medium">Vídeo</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { onPickFile(); onClose() }}
+            className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-gray-800 active:bg-gray-700"
+          >
+            <div className="w-12 h-12 rounded-full bg-red-500/15 flex items-center justify-center">
+              <FileText className="w-6 h-6 text-red-400" />
+            </div>
+            <span className="text-sm text-white font-medium">Ficheiro</span>
           </button>
         </div>
         <p className="text-[11px] text-gray-500 text-center mt-4 leading-relaxed">
@@ -622,7 +647,8 @@ function MessageBubble({
   onOpenActions: (msg: ChatMessage) => void
 }) {
   const isTelegram = msg.message_type === "telegram_forward"
-  const isVideo = msg.message_type === "video"
+  const isVideo    = msg.message_type === "video"
+  const isDocument = msg.message_type === "document"
   const liteMode = shouldReduceSafariEffects()
   const inlineUrl =
     !liteMode && !msg.link_preview && !msg.link_url ? extractFirstUrl(msg.content || "") : null
@@ -845,7 +871,25 @@ function MessageBubble({
                 <MoreHorizontal className="w-3.5 h-3.5" />
               </button>
 
-              {msg.image_url && isVideo ? (
+              {msg.image_url && isDocument ? (
+                <a
+                  href={msg.image_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-black/20 border border-white/10 mb-1 no-underline"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-red-500/20 flex items-center justify-center shrink-0">
+                    <FileText className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-white font-medium truncate">
+                      {msg.image_url.split("/").pop()?.split("?")[0] ?? "Documento"}
+                    </p>
+                    <p className="text-[10px] text-gray-400">Toca para abrir</p>
+                  </div>
+                  <ExternalLink className="w-4 h-4 text-gray-500 shrink-0" />
+                </a>
+              ) : msg.image_url && isVideo ? (
                 <video
                   src={msg.image_url}
                   controls
@@ -944,6 +988,7 @@ function ChannelView({
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
+  const fileDocRef = useRef<HTMLInputElement>(null)
   const previewTimer = useRef<NodeJS.Timeout | null>(null)
   const isNearBottomRef = useRef(true)
   const messagesRef = useRef<ChatMessage[]>([])
@@ -983,15 +1028,16 @@ function ChannelView({
     setFetchingPreview(false)
   }, [])
 
-  const setPendingMediaFromFile = useCallback((file: File) => {
+  const setPendingMediaFromFile = useCallback((file: File, forceType?: "document") => {
     const isVideo = file.type.startsWith("video/")
-    const previewUrl = URL.createObjectURL(file)
+    const isDoc = forceType === "document" || (!file.type.startsWith("image/") && !file.type.startsWith("video/"))
+    const previewUrl = isDoc ? "" : URL.createObjectURL(file)
     setPendingMedia((prev) => {
       if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl)
       return {
         file,
         previewUrl,
-        mediaType: isVideo ? "video" : "image",
+        mediaType: isDoc ? "document" : isVideo ? "video" : "image",
       }
     })
   }, [])
@@ -1001,7 +1047,14 @@ function ChannelView({
   }, [pendingMedia])
 
   const handleDelete = async (msgId: string) => {
-    await supabase.from("chat_messages").update({ is_deleted: true }).eq("id", msgId)
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (token) {
+      await fetch(`/api/chat/messages/${msgId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    }
     setMessages((prev) => prev.filter((m) => m.id !== msgId))
   }
 
@@ -1302,8 +1355,9 @@ function ChannelView({
 
         const { publicUrl, mediaType } = await uploadRes.json()
         const asVideo = mediaType === "video" || pendingMedia.mediaType === "video"
+        const asDoc   = mediaType === "document" || pendingMedia.mediaType === "document"
         imageUrl = publicUrl
-        messageType = asVideo ? "video" : "image"
+        messageType = asDoc ? "document" : asVideo ? "video" : "image"
       }
 
       const postRes = await fetch("/api/chat/messages", {
@@ -1635,6 +1689,17 @@ function ChannelView({
                 e.target.value = ""
               }}
             />
+            <input
+              ref={fileDocRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) setPendingMediaFromFile(file, "document")
+                e.target.value = ""
+              }}
+            />
 
             <div className="flex-1 bg-gray-800 rounded-2xl px-3 py-2.5">
               <MentionInput
@@ -1684,6 +1749,7 @@ function ChannelView({
           onClose={() => setShowAttachSheet(false)}
           onPickImage={() => fileInputRef.current?.click()}
           onPickVideo={() => videoInputRef.current?.click()}
+          onPickFile={() => fileDocRef.current?.click()}
         />
       )}
 
@@ -2018,10 +2084,11 @@ interface EducatorProfile {
   member_category?: string | null
 }
 
-export default function ChatChannels() {
+export default function ChatChannels({ initialSlug }: { initialSlug?: string | null }) {
   const { user, isLoading: authLoading } = useAuth()
   const [channels, setChannels] = useState<Channel[]>([])
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null)
+  const autoSelectedSlugRef = useRef<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [chatTab, setChatTab] = useState<"channels" | "dm">("channels")
@@ -2181,6 +2248,18 @@ export default function ChatChannels() {
     fetchChannels()
     fetchBrokerUid()
   }, [authLoading, user?.id, reloadTick])
+
+  // Auto-selecionar canal vindo de notificação/deep-link
+  useEffect(() => {
+    if (!initialSlug || !channels.length) return
+    if (autoSelectedSlugRef.current === initialSlug) return
+    const flat = channels.flatMap((c) => (c.children?.length ? c.children : [c]))
+    const target = flat.find((c) => c.slug === initialSlug)
+    if (target) {
+      autoSelectedSlugRef.current = initialSlug
+      setActiveChannel(target)
+    }
+  }, [channels, initialSlug])
 
   const handleChannelSelect = (channel: Channel) => {
     if (requiresBrokerUidChannel(channel.slug) && !brokerUid) {
