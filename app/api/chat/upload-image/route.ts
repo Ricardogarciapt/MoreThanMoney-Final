@@ -53,18 +53,30 @@ export async function POST(request: NextRequest) {
 
     const isImage = file.type.startsWith("image/")
     const isVideo = file.type.startsWith("video/")
+    const isDocument = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "text/plain",
+      "text/csv",
+    ].includes(file.type)
+
     const allowedTypes = [
       "image/jpeg", "image/png", "image/gif", "image/webp", "image/heic",
       "video/mp4", "video/webm", "video/quicktime", "video/mpeg",
     ]
-    if (!isImage && !isVideo && !allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: "Tipo de ficheiro não suportado (imagem ou vídeo)" }, { status: 400 })
+    if (!isImage && !isVideo && !isDocument && !allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: "Tipo de ficheiro não suportado" }, { status: 400 })
     }
 
-    const maxSize = isVideo ? 25 * 1024 * 1024 : 10 * 1024 * 1024
+    const maxSize = isVideo ? 25 * 1024 * 1024 : isDocument ? 20 * 1024 * 1024 : 10 * 1024 * 1024
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: isVideo ? "Vídeo demasiado grande (máx 25 MB)" : "Ficheiro demasiado grande (máx 10 MB)" },
+        { error: isVideo ? "Vídeo demasiado grande (máx 25 MB)" : isDocument ? "Documento demasiado grande (máx 20 MB)" : "Ficheiro demasiado grande (máx 10 MB)" },
         { status: 400 }
       )
     }
@@ -91,7 +103,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       publicUrl: urlData.publicUrl,
-      mediaType: isVideo ? "video" : "image",
+      mediaType: isVideo ? "video" : isDocument ? "document" : "image",
+      fileName: file.name,
     })
   } catch (err: any) {
     console.error("[chat/upload-image] exception:", err)

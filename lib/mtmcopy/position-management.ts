@@ -28,7 +28,7 @@ import {
 import type { ParsedManagement } from './signal-parser'
 import type { MTMcopierConnection } from './types'
 
-const MTM_COMMENTS = ['mtmcopier', 'mtmcopier-master']
+const MTM_COMMENTS = ['mtmcopier', 'mtmcopier-master', 'mtm-premium', 'mtm auto', 'mtm-ti']
 
 function normalizeComment(comment?: string): string {
   return (comment ?? '').toLowerCase()

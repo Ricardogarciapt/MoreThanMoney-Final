@@ -45,17 +45,12 @@ export function buildPremiumExitLegs(
       tpPrice: tps[i],
       lot,
       lotFraction: fraction,
-      trailing: trailingForPremiumLeg(i, tps.length),
+      trailing: null,
       label: `TP${i + 1} · ${pct}%`,
     })
   }
 
   return legs.filter((l) => l.lot > 0)
-}
-
-/** Sem trailing à abertura — TP2 (BE+trail) e TP3 (trail) activam no HIT TP1. */
-function trailingForPremiumLeg(_legIndex: number, _totalLegs: number): TrailingDistance | null {
-  return null
 }
 
 /** Identifica perna Premium pelo comment MT5 (ex. «mtmcopier-TP2 · 33%»). */

@@ -5,6 +5,12 @@ import {
   scaleLotForSmallCapital,
   shouldSkipDuplicatePremiumEntry,
 } from './premium-single'
+import {
+  buildProviderPremiumExitLegs,
+  enrichProviderLegsWithAiTrailing,
+  premiumLegMtComment,
+} from './premium-provider-trailing'
+import type { PremiumExitLeg } from './premium-exits'
 import { formatTrailingDistance, TRADE_IDEAS_TRAILING_PIPS } from './pip-points'
 import { prefersDirectExecution } from './copy-limits'
 import { getMtmcopySubscription } from './subscription'
@@ -744,16 +750,41 @@ async function executeViaMtmProvider(
     detail: `${aiDetail} · A abrir ${signalForExec.symbol} ${signalForExec.direction} · ${executionSummary}`,
   })
 
-  const isPremium = channel === 'premium-signals'
-  const premiumSingle = isPremium
-    ? buildPremiumSingleOrder(signalForExec, totalLot, {
-        tp1: executionProfile.exit_pct_tp1,
-        tp2: executionProfile.exit_pct_tp2,
-        tp3: executionProfile.exit_pct_tp3,
-      }, equity)
-    : null
+  const isPremiumProvider = channel === 'premium-signals'
+  const exitPcts = {
+    tp1: executionProfile.exit_pct_tp1,
+    tp2: executionProfile.exit_pct_tp2,
+    tp3: executionProfile.exit_pct_tp3,
+  }
 
-  if (isPremium && premiumSingle) {
+  /** Provider MTM Auto Premium: 3 pernas + TP no broker + trailing dinâmico (+ IA opcional). */
+  let premiumProviderLegs: PremiumExitLeg[] = isPremiumProvider
+    ? buildProviderPremiumExitLegs(signalForExec, totalLot, exitPcts, marketPrice)
+    : []
+
+  if (premiumProviderLegs.length) {
+    premiumProviderLegs = await enrichProviderLegsWithAiTrailing(
+      premiumProviderLegs,
+      signalForExec,
+      marketPrice,
+      provider.aiStrategyPrompt ?? null,
+    )
+  }
+
+  if (isPremiumProvider && !premiumProviderLegs.length) {
+    await logProviderSignalEvent({
+      channel,
+      provider,
+      signal: signalForExec,
+      raw,
+      telegramMessageId,
+      status: 'skipped',
+      detail: `${aiDetail} · Sem TP1–TP3 no sinal — provider Premium exige 3 pernas`,
+    })
+    return
+  }
+
+  if (isPremiumProvider && premiumProviderLegs.length) {
     const dup = await shouldSkipDuplicatePremiumEntry(
       provider.accountId,
       mappedSymbol,
@@ -778,21 +809,29 @@ async function executeViaMtmProvider(
   const results: LegResult[] = []
 
   try {
-    if (premiumSingle) {
-      const req = buildOrderRequest(
-        providerConn,
-        provider.accountId,
-        signalForExec,
-        premiumSingle.lot,
-        premiumSingle.comment,
-      )
-      req.takeProfit = null
-      const [r] = await placeOrdersSequential(provider.accountId, [req])
-      results.push({
-        ...(r ?? { success: false, error: 'Sem resposta MetaAPI' }),
-        label: `PREM 1×${premiumSingle.lot}${premiumSingle.smallAccount ? ' · cap<1k' : ''}`,
-        lot: premiumSingle.lot,
+    if (premiumProviderLegs.length) {
+      const requests = premiumProviderLegs.map((leg) => {
+        const req = buildOrderRequest(
+          providerConn,
+          provider.accountId,
+          signalForExec,
+          leg.lot,
+          premiumLegMtComment(leg),
+        )
+        req.takeProfit = leg.tpPrice
+        req.trailingStop = leg.trailing
+        return req
       })
+      const placed = await placeOrdersSequential(provider.accountId, requests)
+      for (let i = 0; i < premiumProviderLegs.length; i++) {
+        const leg = premiumProviderLegs[i]!
+        const r = placed[i]
+        results.push({
+          ...(r ?? { success: false, error: 'Sem resposta MetaAPI' }),
+          label: `${leg.label}${leg.trailing ? ' · trail' : ''}`,
+          lot: leg.lot,
+        })
+      }
     } else {
       const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
       if (channel === 'trade-ideas') {
@@ -827,8 +866,8 @@ async function executeViaMtmProvider(
     lot: 0,
   }
   const anySuccess = results.some((r) => r.success)
-  const orderLabel = premiumSingle
-    ? `1 pos · parciais ${premiumSingle.exitPcts.tp1}/${premiumSingle.exitPcts.tp2}/${premiumSingle.exitPcts.tp3}%`
+  const orderLabel = premiumProviderLegs.length
+    ? `${premiumProviderLegs.length} pernas · TP broker · ${premiumProviderLegs.map((l) => l.label).join(' / ')}`
     : signalForExec.orderType === 'limit' && signalForExec.entry != null
       ? `LIMIT @ ${signalForExec.entry}`
       : 'MARKET'
@@ -1053,6 +1092,7 @@ async function processSignalDirect(
 
   const direction = execDirection
 
+  /** Método 1 — grupos Telegram: 1 posição + parciais 33/33/34% via mensagens HIT TP. */
   const isPremium = channel === 'premium-signals'
   const premiumSingle = isPremium
     ? buildPremiumSingleOrder(

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { canWriteChannel } from "@/lib/chat-channel-permissions"
 
-const ALLOWED_MESSAGE_TYPES = new Set(["text", "image", "video", "link"])
+const ALLOWED_MESSAGE_TYPES = new Set(["text", "image", "video", "link", "document"])
 
 const MESSAGE_SELECT = `
   *,

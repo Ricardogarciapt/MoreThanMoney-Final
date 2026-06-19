@@ -1,6 +1,7 @@
 /**
- * Premium CopyFactory — 1 posição por sinal + parciais em HIT TP1/2/3 (Telegram).
- * Substitui o modelo legacy de 3 ordens separadas (mantido compatível na gestão).
+ * Premium — subscritores directos (método 1 / grupos Telegram):
+ * 1 posição por sinal + parciais em HIT TP1/2/3 (Telegram).
+ * Contas provider MTM Auto (método 2) usam buildProviderPremiumExitLegs — 3 pernas + TP broker.
  */
 
 import { normalizeExitPcts } from './copy-methods'

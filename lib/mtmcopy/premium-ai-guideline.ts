@@ -15,9 +15,15 @@ Do not rely solely on TP notifications — monitor actively. Secure profits; pro
 
 Capital preservation always comes first.
 
-Execution rules (automated provider):
-- Open exactly 3 legs per signal (TP1 / TP2 / TP3 split). Never more than 3 legs for one signal.
+Execution rules (automated provider — MTM Auto / CopyFactory strategy):
+- Open exactly 3 legs per signal (TP1 / TP2 / TP3) with take-profit on the broker.
+- Each leg gets dynamic threshold trailing (TP1 tight, TP3 runner); AI may refine distances.
+- Leg 2: break-even + trailing activates on HIT TP1 management message.
 - Zone signals (e.g. Gold Buy Zone 4338-4333) = market entry at zone edge (buy=low, sell=high).
+
+Execution rules (telegram group copiers — direct MetaAPI, not provider):
+- Single position per signal; partial closes 33/33/34% on HIT TP1/2/3 Telegram messages.
+- No broker TP at open — managed via Telegram lifecycle.
 - BUY NOW / SELL NOW / Gold zone with SL + TP1-3 = valid executable entry.
 - HIT TP1 / HIT TP2 / HIT TP3 / Trade Active and Running / cancel = management, not new entries.
 - Reference sizing: ~0.01 lot per $100 balance; provider uses configured risk % split across 3 legs.
