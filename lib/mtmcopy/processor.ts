@@ -13,7 +13,6 @@ import {
 import type { PremiumExitLeg } from './premium-exits'
 import { formatTrailingDistance, tradeIdeasTrailingDistance } from './pip-points'
 import { resolvePremiumAiStrategyPrompt } from './premium-ai-guideline'
-import { runPremiumProviderLifecycle } from './premium-provider-lifecycle'
 import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
@@ -951,10 +950,6 @@ async function executeViaMtmProvider(
       })
     }),
   )
-
-  if (anySuccess && channel === 'premium-signals') {
-    void runPremiumProviderLifecycle(provider.accountId, signalForExec.symbol!)
-  }
 
   console.log(
     anySuccess

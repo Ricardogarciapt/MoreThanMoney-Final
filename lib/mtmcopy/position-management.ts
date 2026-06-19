@@ -30,7 +30,13 @@ import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
 } from './provider-constants'
-import { runPremiumProviderLifecycle } from './premium-provider-lifecycle'
+import {
+  applyProviderBrokerHitTp1,
+  applyProviderBrokerHitTp2,
+  hasPremiumProviderBrokerLegs,
+  isPremiumProviderBrokerLegAccount,
+  runPremiumProviderLifecycle,
+} from './premium-provider-lifecycle'
 import type { MTMcopierConnection } from './types'
 
 const MTM_COMMENTS = ['mtmcopier', 'mtmcopier-master', 'mtm-premium', 'mtm auto', 'mtm-ti']
@@ -407,6 +413,10 @@ async function applyPremiumHitTp1(
   const leg2 = positions.filter((p) => matchesPremiumLegComment(p.comment, 2))
   const leg3 = positions.filter((p) => matchesPremiumLegComment(p.comment, 3))
 
+  if (isPremiumProviderBrokerLegAccount(accountId) && (leg1.length || leg2.length || leg3.length)) {
+    return applyProviderBrokerHitTp1(accountId, positions, symbol)
+  }
+
   const riskSample = leg2[0] ?? leg3[0] ?? leg1[0] ?? positions[0]
   const riskPips = riskSample ? riskPipsFromPosition(riskSample, spec, symbol) : null
   const trailing = premiumTrailingAfterTp1Hit(riskPips)
@@ -559,6 +569,19 @@ export async function applyManagementToAccount(
       result.errors.push(...r.errors)
       return result
     }
+
+    if (
+      isPremiumProviderBrokerLegAccount(accountId) &&
+      hasPremiumProviderBrokerLegs(positions) &&
+      management.symbol
+    ) {
+      if (management.tpLevel === 2) {
+        return applyProviderBrokerHitTp2(accountId, positions, management.symbol)
+      }
+      console.log('[mtmcopy] provider HIT TP3: leg3 com TP no broker — sem fecho manual')
+      return result
+    }
+
     const legClose = await closePremiumLegPositions(accountId, positions, management.tpLevel)
     result.closed += legClose.closed
     result.errors.push(...legClose.errors)
