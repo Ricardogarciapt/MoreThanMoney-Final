@@ -292,6 +292,12 @@ function extractEntry(text: string, lines: string[]): number | null {
   )
   if (compact) return parseNumber(compact[1])
 
+  // "XAUUSD BUY LIMIT 4005.5" / "XAUUSD SELL STOP 4005.5"
+  const limitOrder = text.match(
+    /\b[A-Z]{2,12}(?:[\/\-][A-Z]{2,12})?\s+(?:buy|sell)\s+(?:limit|stop)\s+(\d+(?:[.,]\d+)?)/i,
+  )
+  if (limitOrder) return parseNumber(limitOrder[1])
+
   return null
 }
 
