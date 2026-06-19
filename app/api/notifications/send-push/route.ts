@@ -396,15 +396,29 @@ async function sendApnsNotifications(
 }
 
 async function buildApnsJwt(authKey: string, keyId: string, teamId: string): Promise<string> {
-  const { createSign } = await import('crypto')
-  const issuedAt  = Math.floor(Date.now() / 1000)
-  const header    = Buffer.from(JSON.stringify({ alg: 'ES256', kid: keyId })).toString('base64url')
-  const claimsObj = { iss: teamId, iat: issuedAt }
-  const claims    = Buffer.from(JSON.stringify(claimsObj)).toString('base64url')
-  const unsigned  = `${header}.${claims}`
-  const sign      = createSign('SHA256')
-  sign.update(unsigned)
-  sign.end()
-  const signature = sign.sign({ key: authKey, dsaEncoding: 'ieee-p1363' }).toString('base64url')
+  const issuedAt = Math.floor(Date.now() / 1000)
+  const header   = Buffer.from(JSON.stringify({ alg: 'ES256', kid: keyId })).toString('base64url')
+  const claims   = Buffer.from(JSON.stringify({ iss: teamId, iat: issuedAt })).toString('base64url')
+  const unsigned = `${header}.${claims}`
+
+  // Web Crypto API (Node.js 18+ / OpenSSL 3 compatible)
+  // subtle.sign retorna ECDSA em formato raw R||S (ieee-p1363) — correcto para APNs JWT
+  const keyDer = Buffer.from(
+    authKey.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, ''),
+    'base64',
+  )
+  const cryptoKey = await globalThis.crypto.subtle.importKey(
+    'pkcs8',
+    keyDer,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign'],
+  )
+  const sigBuffer = await globalThis.crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    cryptoKey,
+    Buffer.from(unsigned),
+  )
+  const signature = Buffer.from(sigBuffer).toString('base64url')
   return `${unsigned}.${signature}`
 }
