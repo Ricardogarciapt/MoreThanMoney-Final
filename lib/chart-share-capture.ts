@@ -183,7 +183,8 @@ export function normalizeNativeTradingViewShareUrl(url: string): string {
   if (!/^https?:\/\//i.test(u)) u = `https://${u}`
   try {
     const parsed = new URL(u)
-    if (parsed.hostname === "tradingview.com") parsed.hostname = "www.tradingview.com"
+    // Normalizar qualquer subdomínio (br., pt., uk., etc.) para www.
+    if (parsed.hostname.endsWith("tradingview.com")) parsed.hostname = "www.tradingview.com"
     if (NATIVE_TV_SHARE_PATH_RE.test(parsed.pathname) && !parsed.pathname.endsWith("/")) {
       parsed.pathname = `${parsed.pathname}/`
     }

@@ -234,7 +234,39 @@ function Avatar({ profile, size = 32 }: { profile?: MessageProfile | null; size?
 // ─── Link Preview Card ────────────────────────────────────────────────────────
 
 /** Pré-visualização lazy para URLs no texto sem card guardado na DB */
-function InlineUrlPreview({ url }: { url: string }) {
+/** Extrai o ID do snapshot TradingView de qualquer URL /x/ID (www, br, pt, etc.) */
+function extractTvSnapshotId(url: string): string | null {
+  const m = url.match(/tradingview\.com\/x\/([A-Za-z0-9]+)/i)
+  return m ? m[1] : null
+}
+
+/** Preview de snapshot TradingView — imagem S3 directa, sem API */
+function TvSnapshotPreview({ tvId }: { tvId: string }) {
+  const imgUrl = `https://s3.tradingview.com/snapshots/${tvId[0].toLowerCase()}/${tvId}.png`
+  const shareUrl = `https://www.tradingview.com/x/${tvId}/`
+  return (
+    <a
+      href={shareUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-2 block rounded-xl overflow-hidden border border-gray-600/40 hover:border-gray-500/60 transition-colors"
+    >
+      <img
+        src={imgUrl}
+        alt="Gráfico TradingView"
+        className="w-full max-h-64 object-cover bg-gray-900"
+        loading="lazy"
+      />
+      <div className="px-2.5 py-1.5 bg-black/50 text-xs text-gray-400 flex items-center gap-1.5">
+        <Link2 className="w-3 h-3 shrink-0 text-blue-400" />
+        <span className="truncate text-blue-300">tradingview.com/x/{tvId}/</span>
+      </div>
+    </a>
+  )
+}
+
+/** Preview genérico via API link-preview */
+function GenericUrlPreview({ url }: { url: string }) {
   const [preview, setPreview] = useState<NonNullable<ChatMessage["link_preview"]> | null>(null)
   const liteMode = shouldReduceSafariEffects()
 
@@ -270,6 +302,12 @@ function InlineUrlPreview({ url }: { url: string }) {
       <span className="truncate">{url}</span>
     </a>
   )
+}
+
+function InlineUrlPreview({ url }: { url: string }) {
+  const tvId = extractTvSnapshotId(url)
+  if (tvId) return <TvSnapshotPreview tvId={tvId} />
+  return <GenericUrlPreview url={url} />
 }
 
 function LinkPreviewCard({
