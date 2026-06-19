@@ -22,6 +22,7 @@ import {
   handleTradingViewKeyboardShortcut,
 } from "@/lib/trading-view-shortcuts"
 import { useToast } from "@/hooks/use-toast"
+import { isNativeApp } from "@/hooks/use-capacitor"
 import { TV_STUDY_LEGEND_OVERRIDES } from "@/lib/trading-view-scanner-config"
 import { subscribeMediaQueryChange } from "@/lib/browser-compat"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -759,67 +760,56 @@ export default function ScannerMobile({
   }
 
   const toggleFullscreen = async () => {
+    // iOS WKWebView e Android WebView não suportam requestFullscreen()
+    // Usar CSS overlay (position: fixed; inset: 0) em vez disso
+    if (isNativeApp()) {
+      setIsFullscreen(prev => !prev)
+      return
+    }
+
     if (!containerRef.current?.parentElement) return
 
     try {
       if (!document.fullscreenElement) {
-        // Tentar diferentes métodos de fullscreen
         const element = containerRef.current.parentElement
-        
+
         if (element.requestFullscreen) {
           await element.requestFullscreen()
         } else if ((element as any).webkitRequestFullscreen) {
-          // Safari
           await (element as any).webkitRequestFullscreen()
         } else if ((element as any).mozRequestFullScreen) {
-          // Firefox
           await (element as any).mozRequestFullScreen()
         } else if ((element as any).msRequestFullscreen) {
-          // IE/Edge
           await (element as any).msRequestFullscreen()
         } else {
-          alert("Fullscreen não é suportado neste browser")
+          // Fallback silencioso para CSS overlay
+          setIsFullscreen(true)
           return
         }
 
-        // Tentar rotação horizontal em fullscreen
         if (screen.orientation) {
           try {
-            // @ts-ignore - lock() não está disponível em todos os browsers
             await screen.orientation.lock?.('landscape')
-          } catch (e) {
-            console.log("Não foi possível travar a orientação")
-          }
+          } catch (e) {}
         }
         setIsFullscreen(true)
       } else {
-        // Sair do fullscreen
-        if (document.exitFullscreen) {
-          await document.exitFullscreen()
-        } else if ((document as any).webkitExitFullscreen) {
-          // Safari
-          await (document as any).webkitExitFullscreen()
-        } else if ((document as any).mozCancelFullScreen) {
-          // Firefox
-          await (document as any).mozCancelFullScreen()
-        } else if ((document as any).msExitFullscreen) {
-          // IE/Edge
-          await (document as any).msExitFullscreen()
-        }
+        if (document.exitFullscreen) await document.exitFullscreen()
+        else if ((document as any).webkitExitFullscreen) await (document as any).webkitExitFullscreen()
+        else if ((document as any).mozCancelFullScreen) await (document as any).mozCancelFullScreen()
+        else if ((document as any).msExitFullscreen) await (document as any).msExitFullscreen()
 
         if (screen.orientation) {
           try {
-            // @ts-ignore - unlock() não está disponível em todos os browsers
             await screen.orientation.unlock?.()
-          } catch (e) {
-            console.log("Não foi possível destravar a orientação")
-          }
+          } catch (e) {}
         }
         setIsFullscreen(false)
       }
     } catch (err) {
       console.error("Erro ao alternar fullscreen:", err)
-      alert("Erro ao alternar fullscreen. Tenta novamente.")
+      // Fallback silencioso para CSS overlay
+      setIsFullscreen(prev => !prev)
     }
   }
 
@@ -1246,6 +1236,13 @@ export default function ScannerMobile({
           height: widgetHeight,
           minHeight: isScannerAccess && !isFullscreen ? widgetHeight : undefined,
           width: "100%",
+          ...(isFullscreen && isNativeApp() ? {
+            position: "fixed" as const,
+            inset: 0,
+            zIndex: 9999,
+            width: "100vw",
+            height: "100dvh",
+          } : {}),
         }}
         tabIndex={isScannerAccess ? 0 : undefined}
         role={isScannerAccess ? "region" : undefined}
@@ -1298,6 +1295,32 @@ export default function ScannerMobile({
           </div>
         )}
       </div>
+
+      {/* Botão flutuante de saída — só em native app fullscreen */}
+      {isFullscreen && isNativeApp() && (
+        <button
+          onClick={toggleFullscreen}
+          style={{
+            position: "fixed",
+            top: "calc(env(safe-area-inset-top, 0px) + 12px)",
+            right: "16px",
+            zIndex: 10000,
+            background: "rgba(0,0,0,0.75)",
+            border: "1px solid #D2A63C",
+            borderRadius: "8px",
+            padding: "8px 12px",
+            color: "#D2A63C",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            fontSize: "13px",
+            fontWeight: 600,
+          }}
+        >
+          <Minimize2 style={{ width: 16, height: 16 }} />
+          Sair
+        </button>
+      )}
 
       {/* Screener / Heatmap */}
       {!isFullscreen && showScreener && (
