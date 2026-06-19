@@ -2,6 +2,8 @@
 
 import {
   resolveChartShareUrl,
+  isNativeTradingViewShareUrl,
+  normalizeNativeTradingViewShareUrl,
   type ChartUrlFallback,
 } from "@/lib/chart-share-capture"
 
@@ -117,10 +119,15 @@ export async function copyChartShareLink(
   urlFallback: ChartUrlFallback
 ): Promise<CopyChartLinkResult> {
   const nativeUrl = await getChartShareUrlFromApi(chart, widget)
-  const url = nativeUrl ?? (await resolveChartShareUrl(chart, widget, urlFallback))
+  let url = nativeUrl ?? (await resolveChartShareUrl(chart, widget, urlFallback))
 
   if (!url?.trim()) {
     throw new Error("Não foi possível obter o link do gráfico.")
+  }
+
+  // Normaliza URLs nativas TV (ex: br.tradingview.com/x/ID → www.tradingview.com/x/ID/)
+  if (nativeUrl && isNativeTradingViewShareUrl(nativeUrl)) {
+    url = normalizeNativeTradingViewShareUrl(nativeUrl)
   }
 
   if (navigator.clipboard?.writeText) {

@@ -41,7 +41,7 @@ const SCANNERS: ScannerData[] = [
     key: "goldkiller",
     name: "MTM Gold Killer V2.1",
     subtitle: "Análise Técnica Avançada",
-    image: "https://www.tradingview.com/x/X7SREOsm/",
+    image: "https://s3.tradingview.com/snapshots/x/X7SREOsm.png",
     badge: "Best Seller",
     description:
       "Um indicador avançado que combina técnicas estatísticas robustas, filtros de suavização personalizados e lógica de tendência baseada em SuperTrend para mapear oportunidades de trade com níveis de risco e recompensa claramente definidos.",
@@ -67,7 +67,7 @@ const SCANNERS: ScannerData[] = [
     key: "mtm-scanner",
     name: "Scanner MTM V3.4",
     subtitle: "Market Structures and ATR",
-    image: "https://www.tradingview.com/x/ZPM47fOg/",
+    image: "https://s3.tradingview.com/snapshots/z/ZPM47fOg.png",
     description:
       "Scanner avançado de estruturas de mercado com cálculo automático de ATR, sinais de entrada e saída optimizados e compatibilidade com múltiplos timeframes.",
     features: [
