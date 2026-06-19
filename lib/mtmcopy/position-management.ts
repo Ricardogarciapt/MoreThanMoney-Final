@@ -26,6 +26,11 @@ import {
   type PremiumTradeActiveVariant,
 } from './premium-trade-active'
 import type { ParsedManagement } from './signal-parser'
+import {
+  CANONICAL_PREMIUM_ACCOUNT_ID,
+  CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
+} from './provider-constants'
+import { runPremiumProviderLifecycle } from './premium-provider-lifecycle'
 import type { MTMcopierConnection } from './types'
 
 const MTM_COMMENTS = ['mtmcopier', 'mtmcopier-master', 'mtm-premium', 'mtm auto', 'mtm-ti']

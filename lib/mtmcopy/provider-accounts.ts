@@ -1,5 +1,11 @@
 import type { MtmcopyChannelKey } from './channel-context'
 import type { ProviderExecutionProfile } from './signal-sources-config'
+import {
+  CANONICAL_PREMIUM_ACCOUNT_ID,
+  CANONICAL_PREMIUM_STRATEGY_ID,
+  CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
+  CANONICAL_TRADE_IDEAS_STRATEGY_ID,
+} from './provider-constants'
 import type { MTMcopierConnection } from './types'
 
 export interface MtmChannelProvider {
@@ -36,13 +42,6 @@ export const MTM_PROVIDER_EXECUTION_PROFILE: Pick<
   reverse_signals: false,
   symbols_whitelist: null,
 }
-
-import {
-  CANONICAL_PREMIUM_ACCOUNT_ID,
-  CANONICAL_PREMIUM_STRATEGY_ID,
-  CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
-  CANONICAL_TRADE_IDEAS_STRATEGY_ID,
-} from './provider-routes-defaults'
 
 const PREMIUM_ACCOUNT_DEFAULT = CANONICAL_PREMIUM_ACCOUNT_ID
 const TRADE_IDEAS_ACCOUNT_DEFAULT = CANONICAL_TRADE_IDEAS_ACCOUNT_ID

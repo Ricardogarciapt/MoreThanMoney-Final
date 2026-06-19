@@ -17,7 +17,7 @@ import { runPremiumProviderLifecycle } from './premium-provider-lifecycle'
 import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
-} from './provider-routes-defaults'
+} from './provider-constants'
 import { connectionCopyMethod, prefersDirectExecution } from './copy-limits'
 import { getMtmcopySubscription } from './subscription'
 import { chatMatchesAllowlist, connectionMatchesChannel, connectionMatchesSignalSource } from './sources'

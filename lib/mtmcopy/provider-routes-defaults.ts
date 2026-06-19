@@ -2,13 +2,21 @@ import {
   resolvedPremiumSignalsChatId,
   resolvedTradeIdeasChatId,
 } from '@/lib/telegram-channel-ids'
+import {
+  CANONICAL_PREMIUM_ACCOUNT_ID,
+  CANONICAL_PREMIUM_STRATEGY_ID,
+  CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
+  CANONICAL_TRADE_IDEAS_STRATEGY_ID,
+} from './provider-constants'
 import { PREMIUM_PROVIDER_EXECUTION, TRADE_IDEAS_PROVIDER_EXECUTION } from './provider-execution'
 import type { ProviderRoute } from './signal-sources-config'
 
-export const CANONICAL_PREMIUM_ACCOUNT_ID = 'c17a8c46-7fe7-40cf-acb4-41678d42f9a9'
-export const CANONICAL_TRADE_IDEAS_ACCOUNT_ID = 'fbeeafeb-96a9-4133-bc6c-194cc281b6e0'
-export const CANONICAL_PREMIUM_STRATEGY_ID = '9gsL'
-export const CANONICAL_TRADE_IDEAS_STRATEGY_ID = '5IHE'
+export {
+  CANONICAL_PREMIUM_ACCOUNT_ID,
+  CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
+  CANONICAL_PREMIUM_STRATEGY_ID,
+  CANONICAL_TRADE_IDEAS_STRATEGY_ID,
+} from './provider-constants'
 
 /** Rotas provider MTM Auto — uma conta/estratégia por canal Telegram. */
 export function buildCanonicalProviderRoutes(): ProviderRoute[] {

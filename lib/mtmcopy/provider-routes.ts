@@ -6,6 +6,8 @@ import {
   CANONICAL_PREMIUM_STRATEGY_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_STRATEGY_ID,
+} from './provider-constants'
+import {
   repairProviderRoutes,
   routeBelongsToChannel,
 } from './provider-routes-defaults'
