@@ -909,8 +909,8 @@ export default function ScannerMobile({
       toast({
         title: "Link do gráfico copiado",
         description: native
-          ? "Link nativo TradingView (getChartUrl)."
-          : "Link construído (getChartUrl indisponível no widget).",
+          ? "Link nativo TradingView copiado."
+          : "Link construído com símbolo e timeframe. Para link nativo clica dentro do gráfico e usa ⌥S.",
       })
       return url
     } catch (e) {
@@ -961,19 +961,19 @@ export default function ScannerMobile({
       if (result === "share-link") {
         toast({
           title: "Link do gráfico copiado",
-          description: "Link nativo TradingView (⌥S).",
+          description: "Link nativo TradingView copiado.",
         })
       } else if (result === "share-link-fallback") {
         toast({
           title: "Link copiado",
           description:
-            "getChartUrl não disponível no iframe — link construído a partir do símbolo/timeframe.",
+            "Link construído com símbolo e timeframe. Para link nativo TradingView clica primeiro dentro do gráfico e volta a carregar ⌥S.",
         })
       } else if (result === "share-link-failed") {
         toast({
           title: "⌥S: link indisponível",
           description:
-            "Clica no botão «Copiar link» ou foca a borda do gráfico (Tab) e tenta de novo.",
+            "Clica dentro do gráfico e tenta ⌥S de novo para link nativo TradingView.",
           variant: "destructive",
         })
       }
@@ -982,13 +982,13 @@ export default function ScannerMobile({
   )
 
   useEffect(() => {
-    if (!isScannerAccess || !widgetLoaded) return
+    if (!widgetLoaded) return
     const onKeyDown = (e: KeyboardEvent) => {
       void runTvKeyboardShortcut(e)
     }
     window.addEventListener("keydown", onKeyDown, true)
     return () => window.removeEventListener("keydown", onKeyDown, true)
-  }, [isScannerAccess, widgetLoaded, runTvKeyboardShortcut])
+  }, [widgetLoaded, runTvKeyboardShortcut])
 
   useEffect(() => {
     if (!isScannerAccess || typeof document === "undefined") return
@@ -1160,14 +1160,14 @@ export default function ScannerMobile({
             <RotateCw className="w-3 h-3" />
           </Button>
 
-          {isScannerAccess && (
+          {!isNativeApp() && (
             <Button
               onClick={() => void copyChartLink()}
               disabled={!widgetLoaded || copyingChartLink}
               size="sm"
               variant="outline"
               className={`bg-gray-800 text-white border-gray-700 hover:bg-gray-700 ${isDesktop ? "h-9 px-3" : "h-8 px-2"}`}
-              title="Copiar link do gráfico (⌥S quando a área do gráfico tem foco)"
+              title="Copiar link do gráfico (⌥S quando o gráfico tem foco)"
             >
               {copyingChartLink ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -1455,4 +1455,3 @@ export default function ScannerMobile({
     </div>
   )
 }
-
