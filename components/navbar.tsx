@@ -7,7 +7,7 @@ import { SiteLogo } from "@/components/site-logo"
 import { usePathname } from "next/navigation"
 import UserDropdown from "@/components/user-dropdown"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
-import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap, Brain } from "lucide-react"
+import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap, Brain, MonitorPlay } from "lucide-react"
 import { shouldReduceSafariEffects } from "@/lib/supabase-session"
 
 type NavSubItem = {
@@ -49,11 +49,19 @@ export default function Navbar() {
       icon: Home,
     },
     {
+      name: "Apresentações",
+      href: "/apresentacao",
+      icon: MonitorPlay,
+      submenu: [
+        { name: "Sistema MoreThanMoney", href: "/apresentacao" },
+        { name: "Apresentação IQONIC", href: "/iqonic" },
+      ],
+    },
+    {
       name: "Educação",
-      href: "/iqonic",
+      href: "/mtm",
       icon: GraduationCap,
       submenu: [
-        { name: "Apresentação IQONIC", href: "/iqonic" },
         { name: "IQonic Academy", href: "https://iqonic.vip", external: true },
         { name: "Educação MTM", href: "/mtm" },
         { name: "Live Sessions", href: "/live-sessions" },
