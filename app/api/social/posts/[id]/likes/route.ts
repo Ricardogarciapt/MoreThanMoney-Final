@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { awardXp } from '@/lib/xp-service'
+import { notifyPostLike } from '@/lib/social-push-notify'
 
 export async function POST(
   request: NextRequest,
@@ -35,6 +36,13 @@ export async function POST(
 
     const postId = params.id
 
+    const supabaseAdmin = getSupabaseAdmin()
+    const { data: postMeta } = await supabaseAdmin
+      .from('social_posts')
+      .select('user_id')
+      .eq('id', postId)
+      .maybeSingle()
+
     // Verificar se já deu like
     const { data: existingLike } = await supabase
       .from('social_post_likes')
@@ -66,11 +74,25 @@ export async function POST(
       await supabase.rpc('increment_likes_count', { post_id: postId })
       
       // Adicionar XP para dar like
-      const supabaseAdmin = getSupabaseAdmin()
       const xpResult = await awardXp(supabaseAdmin, session.user.id, 'social_like_post', {
         actionDescription: `Like post ${postId}`,
       })
       xp = { ...xpResult, action_type: 'social_like_post' }
+
+      if (postMeta?.user_id) {
+        const { data: likerProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('full_name, username')
+          .eq('id', session.user.id)
+          .maybeSingle()
+        notifyPostLike({
+          postAuthorId: postMeta.user_id,
+          likerId: session.user.id,
+          likerName:
+            likerProfile?.full_name || likerProfile?.username || session.user.email || 'Membro',
+          postId,
+        })
+      }
     }
 
     // Buscar novo contador

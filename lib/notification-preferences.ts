@@ -88,6 +88,7 @@ export function resolveNotificationCategory(
   if (type === 'dca_daily' || type === 'dca_opportunity' || type === 'price_alert') return 'dca'
   if (type === 'telegram_forward' || type === 'telegram_signal') return 'telegram_groups'
   if (type === 'trade_ideas' || type === 'mtmcopy_signal') return 'trade_ideas'
+  if (type === 'social_interaction' || type === 'social_mention') return null
 
   if (type === 'chat_message' || type === 'social_post') {
     if (TRADE_IDEAS_CHANNELS.has(channel)) return 'trade_ideas'

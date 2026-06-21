@@ -19,6 +19,7 @@ import PostLinkPreview from "./post-link-preview"
 import { getPrimaryUrlFromText } from "@/lib/url-utils"
 import type { LinkPreviewData } from "@/lib/link-preview-types"
 import { useAuth } from "@/contexts/auth-context"
+import { notifyXpFromResponse } from "@/lib/xp-client"
 
 interface Post {
   id: string
@@ -772,6 +773,8 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
         postData
       })
       
+      let createdPostId: string | undefined
+
       const { data: insertedPost, error } = await supabase.from("posts").insert([
         {
           ...postData,
@@ -825,6 +828,7 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
           setUploading(false)
           return
         }
+        createdPostId = fallbackPost?.[0]?.id
         // Se fallback funcionou, continuar com o fluxo de sucesso
       } else if (error) {
         console.error("❌ [SOCIAL FEED] Erro ao criar post:", error)
@@ -852,64 +856,26 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
         
         setUploading(false)
         return
+      } else {
+        createdPostId = insertedPost?.[0]?.id
       }
 
-      // Se chegou aqui, a inserção foi bem-sucedida
-      // Enviar notificações para membros mencionados
-      if (mentionedUserIds.length > 0) {
-        try {
-          for (const mentionedUserId of mentionedUserIds) {
-            await fetch('/api/notifications/send-push', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userId: mentionedUserId,
-                title: `💬 ${userName} mencionou-te`,
-                body: newPost.trim().substring(0, 100),
-                data: {
-                  type: 'mention',
-                  url: '/app-mobile?tab=social',
-                  author: userName,
-                  post_id: 'new'
-                },
-                tag: 'mention'
-              })
-            })
-          }
-          console.log('✅ [SOCIAL FEED] Notificações de menção enviadas')
-        } catch (notifError) {
-          console.error('⚠️ [SOCIAL FEED] Erro ao enviar notificações de menção:', notifError)
-        }
-      }
-
-      // Enviar notificação push para todos os utilizadores sobre novo post
-      try {
-        const postTitle = newPost.trim().length > 50 
-          ? newPost.trim().substring(0, 50) + '...' 
-          : newPost.trim()
-        
-        await fetch('/api/notifications/send-push', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+      // Notificações server-side (novo post + menções)
+      if (createdPostId && session.access_token) {
+        void fetch("/api/social/feed/notify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
           body: JSON.stringify({
-            all: true, // Enviar para todos
-            title: `💎 Novo Post de ${userName}`,
-            body: postTitle,
-            data: {
-              type: 'social_post',
-              url: '/app-mobile?tab=social',
-              author: userName,
-              post_id: 'new' // Será atualizado quando o real-time sync funcionar
-            },
-            tag: 'social-post'
-          })
-        })
-        console.log('✅ [SOCIAL FEED] Notificação push enviada para novo post')
-      } catch (notifError) {
-        console.error('⚠️ [SOCIAL FEED] Erro ao enviar notificação push:', notifError)
-        // Não bloquear o fluxo se a notificação falhar
+            post_id: createdPostId,
+            content: newPost.trim(),
+            mentioned_user_ids: mentionedUserIds,
+          }),
+        }).catch((err) => console.warn("[SOCIAL FEED] notify:", err))
       }
-      
+
       // Limpar formulário e recarregar posts
       console.log('✅ [SOCIAL FEED] Post criado com sucesso! Limpando formulário...')
       setNewPost("")
@@ -1152,40 +1118,28 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
     if (!post) return
 
     try {
-      if (post.liked_by_user) {
-        // Remover like
-        const { error } = await supabase
-          .from("post_likes")
-          .delete()
-          .eq("post_id", postId)
-          .eq("user_id", currentUser.id)
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) return
 
-        if (error) {
-          console.error('❌ [SOCIAL FEED] Erro ao remover like:', error)
-          return
-        }
-      } else {
-        // Adicionar like
-        const { error } = await supabase
-          .from("post_likes")
-          .insert({
-            post_id: postId,
-            user_id: currentUser.id
-          })
-
-        if (error) {
-          console.error('❌ [SOCIAL FEED] Erro ao dar like:', error)
-          return
-        }
+      const res = await fetch(`/api/social/feed/${postId}/like`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        console.error("❌ [SOCIAL FEED] Erro ao processar like:", data.error)
+        return
       }
 
-      // Atualizar UI
+      void notifyXpFromResponse(data.xp)
+
       setPosts(posts.map(p =>
         p.id === postId
           ? {
               ...p,
-              likes_count: (p.likes_count || 0) + (post.liked_by_user ? -1 : 1),
-              liked_by_user: !post.liked_by_user,
+              likes_count: data.likes_count ?? (p.likes_count || 0) + (data.liked ? 1 : -1),
+              liked_by_user: !!data.liked,
             }
           : p
       ))
@@ -1230,75 +1184,40 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
     if (!currentUser || !comment?.trim()) return
 
     try {
-      // Extrair IDs de menções
-      const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g
-      const mentionedUserIds: string[] = []
-      let match
-      while ((match = mentionRegex.exec(comment)) !== null) {
-        mentionedUserIds.push(match[2])
-      }
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) return
 
-      const { data, error } = await supabase
-        .from('post_comments')
-        .insert({
-          post_id: postId,
-          user_id: currentUser.id,
-          user_name: currentUser.full_name || currentUser.email || 'Utilizador',
-          content: comment.trim(),
-          mentions: mentionedUserIds.length > 0 ? mentionedUserIds : null
-        })
-        .select()
-        .single()
-
-      // Enviar notificações para membros mencionados
-      if (mentionedUserIds.length > 0) {
-        try {
-          for (const mentionedUserId of mentionedUserIds) {
-            await fetch('/api/notifications/send-push', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userId: mentionedUserId,
-                title: `💬 ${currentUser.full_name || currentUser.email} mencionou-te`,
-                body: comment.trim().substring(0, 100),
-                data: {
-                  type: 'mention',
-                  url: '/app-mobile?tab=social',
-                  author: currentUser.full_name || currentUser.email,
-                  post_id: postId
-                },
-                tag: 'mention'
-              })
-            })
-          }
-          console.log('✅ [SOCIAL FEED] Notificações de menção em comentário enviadas')
-        } catch (notifError) {
-          console.error('⚠️ [SOCIAL FEED] Erro ao enviar notificações de menção:', notifError)
-        }
-      }
-
-      if (error) {
-        console.error('❌ [SOCIAL FEED] Erro ao adicionar comentário:', error)
-        alert('Erro ao adicionar comentário')
+      const res = await fetch(`/api/social/feed/${postId}/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: comment.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        console.error("❌ [SOCIAL FEED] Erro ao adicionar comentário:", data.error)
+        alert("Erro ao adicionar comentário")
         return
       }
 
-      // Adicionar comentário à lista
+      void notifyXpFromResponse(data.xp)
+
       setPostComments(prev => {
         const newMap = new Map(prev)
         const currentComments = newMap.get(postId) || []
-        newMap.set(postId, [data, ...currentComments])
+        newMap.set(postId, [data.comment, ...currentComments])
         return newMap
       })
 
-      // Limpar input
       setCommentText(prev => {
         const newMap = new Map(prev)
         newMap.set(postId, '')
         return newMap
       })
 
-      // Atualizar contador de comentários (trigger já atualiza automaticamente)
       setPosts(posts.map(p =>
         p.id === postId
           ? { ...p, comments_count: (p.comments_count || 0) + 1 }

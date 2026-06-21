@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { awardXp } from '@/lib/xp-service'
+import { notifyPostComment, notifySocialMentions } from '@/lib/social-push-notify'
 
 export async function GET(
   request: NextRequest,
@@ -91,6 +92,13 @@ export async function POST(
     const body = await request.json()
     const { content } = body
 
+    const supabaseAdmin = getSupabaseAdmin()
+    const { data: postMeta } = await supabaseAdmin
+      .from('social_posts')
+      .select('user_id')
+      .eq('id', postId)
+      .maybeSingle()
+
     // Criar comentário
     const { data: newComment, error } = await supabase
       .from('social_post_comments')
@@ -120,10 +128,26 @@ export async function POST(
     // Incrementar contador de comentários
     await supabase.rpc('increment_comments_count', { post_id: postId })
     
-    const supabaseAdmin = getSupabaseAdmin()
-    const xp = await awardXp(supabaseAdmin, session.user.id, 'social_create_comment', {
+    const supabaseAdminForXp = getSupabaseAdmin()
+    const xp = await awardXp(supabaseAdminForXp, session.user.id, 'social_create_comment', {
       actionDescription: `Comentário post ${params.id}`,
     })
+
+    const commenterName =
+      newComment?.profiles?.full_name ||
+      newComment?.profiles?.username ||
+      session.user.email ||
+      'Membro'
+
+    if (postMeta?.user_id) {
+      notifyPostComment({
+        postAuthorId: postMeta.user_id,
+        commenterId: session.user.id,
+        commenterName,
+        postId,
+        preview: content,
+      })
+    }
 
     return NextResponse.json({
       comment: newComment,

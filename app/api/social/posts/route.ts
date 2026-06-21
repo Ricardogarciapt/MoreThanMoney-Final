@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { awardXp } from '@/lib/xp-service'
+import { notifyNewSocialPost } from '@/lib/social-push-notify'
 
 export async function GET() {
   try {
@@ -24,7 +25,6 @@ export async function GET() {
       }
     )
 
-    // Buscar posts do Supabase
     const { data: posts, error } = await supabase
       .from('social_posts')
       .select(`
@@ -72,7 +72,6 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    // Verificar autenticação
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
@@ -81,7 +80,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { content, media_url, media_type } = body
 
-    // Verificar se o usuário pode criar posts (VIP ou Admin)
     const { data: profile } = await supabase
       .from('profiles')
       .select('user_type, member_category')
@@ -92,7 +90,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sem permissão para criar posts' }, { status: 403 })
     }
 
-    // Criar post no Supabase
     const { data: newPost, error } = await supabase
       .from('social_posts')
       .insert({
@@ -121,66 +118,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Erro ao criar post' }, { status: 500 })
     }
 
-    // Notificar todos os membros ativos sobre o novo post VIP/Admin (não-bloqueante)
     const postAuthorName = newPost?.profiles?.full_name || newPost?.profiles?.username || 'MTM'
-    const notifTitle = `📢 Novo post de ${postAuthorName}`
-    const notifBody = content?.substring(0, 120) || 'Publicação nova disponível.'
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt'
+    void notifyNewSocialPost({
+      authorId: session.user.id,
+      authorName: postAuthorName,
+      postId: newPost?.id ?? '',
+      content: content ?? '',
+    })
 
-    ;(async () => {
-      try {
-        const adminDb = getSupabaseAdmin()
-
-        // 1. Buscar todos os membros activos (excepto o autor)
-        const { data: activeUsers } = await adminDb
-          .from('profiles')
-          .select('id')
-          .eq('is_active', true)
-          .neq('id', session.user.id)
-
-        if (activeUsers && activeUsers.length > 0) {
-          // 2. Guardar notificação in-app para todos
-          await adminDb.from('notifications').insert(
-            activeUsers.map((u) => ({
-              user_id: u.id,
-              type: 'social_post',
-              title: notifTitle,
-              message: notifBody,
-              read: false,
-              data: {
-                post_id: newPost?.id,
-                author_id: session.user.id,
-                url: '/app-mobile?tab=social',
-              },
-            }))
-          )
-
-          // 3. Enviar push para todos os dispositivos registados
-          // Nota: omitir data.type para evitar duplicar na tabela notifications
-          // (a inserção direta acima já cobre todos os utilizadores activos)
-          await fetch(`${siteUrl}/api/notifications/send-push`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              all: true,
-              skipInApp: true,
-              title: notifTitle,
-              body: notifBody,
-              data: {
-                type: 'social_post',
-                post_id: newPost?.id ?? '',
-                url: '/app-mobile?tab=social',
-              },
-              tag: 'social_post',
-            }),
-          })
-        }
-      } catch (notifErr) {
-        console.error('❌ [POSTS] Erro ao enviar notificações:', notifErr)
-      }
-    })()
-
-    // Adicionar XP para criar post
     const supabaseAdmin = getSupabaseAdmin()
     const xp = await awardXp(supabaseAdmin, session.user.id, 'social_create_post', {
       actionDescription: `Post ${newPost.id}`,
