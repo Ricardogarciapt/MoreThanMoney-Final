@@ -149,10 +149,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const { data: fcmTokens, error: tokensError } = await supabase
+    // Apenas tokens activos; deduplica por token para evitar envios duplos
+    const { data: fcmTokensRaw, error: tokensError } = await supabase
       .from('fcm_tokens')
       .select('token, user_id, device_info')
       .in('user_id', targetUserIds)
+      .eq('active', true)
 
     if (tokensError) {
       console.error('❌ [SEND PUSH] Erro ao buscar tokens:', tokensError)
@@ -161,6 +163,14 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       )
     }
+
+    // Deduplica por token (o mesmo dispositivo pode ter registado o token várias vezes)
+    const seen = new Set<string>()
+    const fcmTokens = (fcmTokensRaw ?? []).filter((t) => {
+      if (seen.has(t.token)) return false
+      seen.add(t.token)
+      return true
+    })
 
     if (!fcmTokens?.length) {
       return NextResponse.json({
@@ -174,17 +184,16 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Tokens APNs: platform explicitamente 'ios-apns' OU exactamente 64 hex chars (32 bytes)
+    // Tudo o resto (Android FCM, iOS FCM via Firebase SDK) vai pelo Firebase Admin
     const apnsPattern = /^[0-9a-f]{64}$/i
-    const webTokens = fcmTokens.filter((t) => {
+    const isApnsToken = (t: { token: string; device_info: unknown }) => {
       const info = t.device_info as Record<string, unknown> | null
       const platform = info?.platform as string | undefined
-      // Raw APNs tokens são exactamente 64 hex chars (32 bytes).
-      // Tokens FCM do iOS (Capacitor/Firebase SDK) têm 140-165 chars — vão via Firebase.
-      // Só classificar como APNs raw se o token for literalmente 64 hex chars.
-      const isRawApns = apnsPattern.test(t.token)
-      return !isRawApns
-    })
-    const apnsTokens = fcmTokens.filter((t) => !webTokens.includes(t))
+      return platform === 'ios-apns' || apnsPattern.test(t.token)
+    }
+    const apnsTokens = fcmTokens.filter(isApnsToken)
+    const webTokens = fcmTokens.filter((t) => !isApnsToken(t))
 
     // APNs direct push for native iOS tokens
     let apnsSent = 0
