@@ -223,7 +223,7 @@ export default function SettingsMobile() {
         })
         if (!res.ok) return
         const data = await res.json()
-        if (data.user_xp) setXpData(data.user_xp)
+        setXpData(data.user_xp ?? { total_xp: 0, current_level: 1 })
       } catch {}
     }
     loadXp()
