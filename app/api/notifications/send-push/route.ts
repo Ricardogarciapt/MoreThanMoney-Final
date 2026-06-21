@@ -119,6 +119,7 @@ export async function POST(request: NextRequest) {
       url: payload.url || payload.data?.url || '/app-mobile',
     }
 
+    let inAppCreated = 0
     if (!payload.skipInApp && targetUserIds.length > 0 && notificationType !== 'system') {
       const rows = targetUserIds.map((userId) => ({
         user_id: userId,
@@ -132,6 +133,7 @@ export async function POST(request: NextRequest) {
       if (notifError) {
         console.warn('⚠️ [SEND PUSH] Falha ao criar notificações in-app:', notifError.message)
       } else {
+        inAppCreated = rows.length
         console.log(`💾 [SEND PUSH] ${rows.length} notificações in-app criadas`)
       }
     }
@@ -167,7 +169,7 @@ export async function POST(request: NextRequest) {
         failureCount: 0,
         totalDevices: 0,
         recipients: targetUserIds.length,
-        inAppCreated: targetUserIds.length,
+        inAppCreated,
         message: 'Notificações in-app criadas; nenhum dispositivo push registado',
       })
     }
@@ -203,7 +205,7 @@ export async function POST(request: NextRequest) {
         recipients: targetUserIds.length,
         apnsSent,
         apnsFailed,
-        inAppCreated: targetUserIds.length,
+        inAppCreated,
       })
     }
 
@@ -229,7 +231,7 @@ export async function POST(request: NextRequest) {
         {
           success: true,
           recipients: targetUserIds.length,
-          inAppCreated: targetUserIds.length,
+          inAppCreated,
           pushSkipped: true,
           message: 'In-app criadas; Firebase Admin não configurado para push',
         },
@@ -283,7 +285,7 @@ export async function POST(request: NextRequest) {
       recipients: targetUserIds.length,
       webSent: tokens.length,
       apnsSent,
-      inAppCreated: targetUserIds.length,
+      inAppCreated,
     })
   } catch (error) {
     console.error('❌ [SEND PUSH] Erro:', error)
