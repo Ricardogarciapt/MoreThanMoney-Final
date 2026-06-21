@@ -472,14 +472,19 @@ export default function RegisterPage() {
                 className="w-full font-semibold text-black"
                 style={{ background: `linear-gradient(135deg, ${activePlan.color}, ${selectedPlan === 'premium' ? '#5B21B6' : '#BB8525'})` }}>
                 {isLoading ? (
-                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" />A preparar pagamento...</>
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" />A preparar acesso...</>
+                ) : couponStatus?.valid && (couponStatus.type === 'free_subscription' || couponStatus.type === 'free_months') ? (
+                  <>🎁 Activar acesso gratuito — {activePlan.name}</>
                 ) : (
                   <>💳 Pagar e criar conta — {activePlan.name}</>
                 )}
               </Button>
 
               <p className="text-xs text-center text-gray-500 -mt-1">
-                🔒 Serás redirecionado para o Stripe para pagamento seguro. Após confirmação, a tua conta é criada automaticamente.
+                {couponStatus?.valid && (couponStatus.type === 'free_subscription' || couponStatus.type === 'free_months')
+                  ? '🎁 O teu primeiro mês é gratuito. Após o período experimental, a subscrição renova automaticamente.'
+                  : '🔒 Serás redirecionado para o Stripe para pagamento seguro. Após confirmação, a tua conta é criada automaticamente.'
+                }
               </p>
 
               <div className="relative my-2">

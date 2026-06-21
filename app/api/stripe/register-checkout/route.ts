@@ -3,6 +3,7 @@ import { getStripeClient } from '@/lib/stripe-client'
 import { requireStripePriceId } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl, getSiteOrigin } from '@/lib/site-url'
 import { resolveStripePromotionCode } from '@/lib/coupon-stripe-discount'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 /**
  * POST /api/stripe/register-checkout
@@ -55,6 +56,19 @@ export async function POST(request: NextRequest) {
       const promoId = await resolveStripePromotionCode(couponCode)
       if (promoId) {
         sessionParams.discounts = [{ promotion_code: promoId }]
+      } else {
+        // Sem promo code Stripe configurado — verificar tipo do cupão na DB
+        const { data: couponRow } = await getSupabaseAdmin()
+          .from('coupons')
+          .select('type, discount_value')
+          .eq('code', couponCode.trim().toUpperCase())
+          .eq('is_active', true)
+          .maybeSingle()
+
+        if (couponRow?.type === 'free_subscription' || couponRow?.type === 'free_months') {
+          const months = Math.max(1, couponRow.discount_value ?? 1)
+          sessionParams.subscription_data = { trial_period_days: months * 30 }
+        }
       }
     }
 

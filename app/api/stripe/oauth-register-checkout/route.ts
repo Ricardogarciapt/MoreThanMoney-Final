@@ -6,6 +6,7 @@ import { buildStripeReturnUrl, getSiteOrigin } from "@/lib/site-url"
 import { isRegisteredMember } from "@/lib/member-access"
 import { buildUsername } from "@/lib/member-profile"
 import { resolveStripePromotionCode } from "@/lib/coupon-stripe-discount"
+import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim()
 const SUPABASE_ANON_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim()
@@ -112,6 +113,18 @@ export async function POST(request: NextRequest) {
       const promoId = await resolveStripePromotionCode(couponCode)
       if (promoId) {
         sessionParams.discounts = [{ promotion_code: promoId }]
+      } else {
+        const { data: couponRow } = await getSupabaseAdmin()
+          .from('coupons')
+          .select('type, discount_value')
+          .eq('code', couponCode.trim().toUpperCase())
+          .eq('is_active', true)
+          .maybeSingle()
+
+        if (couponRow?.type === 'free_subscription' || couponRow?.type === 'free_months') {
+          const months = Math.max(1, couponRow.discount_value ?? 1)
+          sessionParams.subscription_data = { trial_period_days: months * 30 }
+        }
       }
     }
 
