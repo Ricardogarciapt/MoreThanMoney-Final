@@ -25,6 +25,9 @@ import { handleLiveChatEnterKey } from "@/lib/live-chat"
 import { enterLiveFullscreen } from "@/lib/live-player-viewport"
 import { useLmsHlsVideo } from "@/hooks/use-lms-hls-video"
 import { usePictureInPictureSupported } from "@/hooks/use-picture-in-picture-supported"
+import { useLmsViewerHeartbeat } from "@/hooks/use-lms-viewer-heartbeat"
+import EducatorLiveViewerBadge from "@/components/live/educator-live-viewer-badge"
+import { notifyXpFromResponse } from "@/lib/xp-client"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
@@ -361,24 +364,29 @@ export default function LiveSessionsMobile({
     const m = text.trim()
     if (!m || !selectedId) return
     setSending(true)
-    await fetch(`/api/live-sessions/streams/${selectedId}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ message: m }),
-    })
-    setText("")
-    setSending(false)
-    refreshModal()
+    try {
+      const res = await fetch(`/api/live-sessions/streams/${selectedId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ message: m }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data?.xp) void notifyXpFromResponse(data.xp)
+      setText("")
+      refreshModal()
+    } finally {
+      setSending(false)
+    }
   }
 
   const appendEmoji = (emoji: string) => {
     setText((prev) => `${prev}${emoji}`)
   }
 
-  // Para live, mostramos sempre HLS (atualização contínua + menor latência) — alinhado com live-stream-room.
   const isLive = Boolean(stream?.is_live)
   const useHls = Boolean(hlsUrl && (stream?.is_live || !stream?.playback_url))
+  const { viewerCount } = useLmsViewerHeartbeat(selectedId, Boolean(open && selectedId && isLive))
   useLmsHlsVideo(videoRef, useHls ? hlsUrl : null)
 
   const iframePlaybackUrl = useMemo(() => {
@@ -638,11 +646,20 @@ export default function LiveSessionsMobile({
               <DialogTitle className="line-clamp-2 text-left text-[13px] font-semibold text-white sm:text-sm">
                 {stream?.title || "Live"}
               </DialogTitle>
-              <p className="text-[9px] text-gray-500 sm:text-[10px]">
-                {stream?.educator?.display_name}
-                {stream?.academy?.name ? ` · ${stream.academy.name}` : ""}
-                {isLive ? " · ONLINE" : ""}
-              </p>
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                <p className="text-[9px] text-gray-500 sm:text-[10px]">
+                  {stream?.educator?.display_name}
+                  {stream?.academy?.name ? ` · ${stream.academy.name}` : ""}
+                  {isLive ? " · ONLINE" : ""}
+                </p>
+                {isLive && (
+                  <EducatorLiveViewerBadge
+                    isLive
+                    count={viewerCount}
+                    className="scale-90 origin-left py-0.5 text-[10px]"
+                  />
+                )}
+              </div>
             </div>
             <Button
               type="button"

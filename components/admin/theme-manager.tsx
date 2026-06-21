@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Palette, Save, RefreshCw, Check } from "lucide-react"
-import { themes, type ThemeConfig, applyTheme } from "@/lib/theme-config"
+import { themes, applyTheme, saveThemeToLocalStorage } from "@/lib/theme-config"
 
 export default function ThemeManager() {
   const [selectedTheme, setSelectedTheme] = useState<string>('default')
@@ -94,13 +94,24 @@ export default function ThemeManager() {
       const result = await response.json()
 
       if (response.ok) {
+        const fullColors = {
+          ...customColors,
+          background: '#000000',
+          backgroundLight: '#1a1a1a',
+          text: '#ffffff',
+          textMuted: '#a0a0a0',
+          border: `rgba(${parseInt(customColors.primary.slice(1, 3), 16)}, ${parseInt(customColors.primary.slice(3, 5), 16)}, ${parseInt(customColors.primary.slice(5, 7), 16)}, 0.3)`,
+          accent: customColors.primary,
+        }
+        applyTheme({
+          id: selectedTheme,
+          name: themes[selectedTheme]?.name ?? 'Personalizado',
+          colors: fullColors,
+        })
+        saveThemeToLocalStorage(selectedTheme)
+
         setSaveSuccess(true)
         setTimeout(() => setSaveSuccess(false), 3000)
-        
-        // Recarregar a página para aplicar o tema globalmente
-        setTimeout(() => {
-          window.location.reload()
-        }, 1000)
       } else {
         alert(`Erro ao salvar tema: ${result.error}`)
       }
@@ -333,7 +344,7 @@ export default function ThemeManager() {
           {saveSuccess && (
             <div className="bg-green-500/20 border border-green-500 rounded-lg p-4">
               <p className="text-green-400 text-sm font-medium">
-                ✅ Tema guardado com sucesso! A página irá recarregar para aplicar as mudanças.
+                ✅ Tema guardado e aplicado — visível em todo o site e app-mobile.
               </p>
             </div>
           )}

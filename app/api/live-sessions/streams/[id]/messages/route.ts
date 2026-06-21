@@ -7,6 +7,7 @@ import {
   getLmsChatRollingCutoffIso,
   shouldPurgeEntireStreamChat,
 } from "@/lib/lms-chat-retention"
+import { awardXp } from "@/lib/xp-service"
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -130,7 +131,16 @@ export async function POST(
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ success: true, data })
+
+    const xp = await awardXp(supabaseAdmin, auth.session.user.id, "live_chat_message", {
+      actionDescription: `Live chat · ${id}`,
+    })
+
+    return NextResponse.json({
+      success: true,
+      data,
+      xp: { ...xp, action_type: "live_chat_message" },
+    })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })
   }

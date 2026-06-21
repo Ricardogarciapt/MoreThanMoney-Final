@@ -157,7 +157,12 @@ export async function runProvisionJob(input: RunProvisionJobInput): Promise<MTMc
       patch.telegram_status = 'connected'
     } else {
       patch.copyfactory_subscribed = result.copyfactorySubscribed ?? false
-      patch.telegram_status = connection.telegram_channel ? connection.telegram_status : 'connected'
+      if (copyMethod === 'strategy') {
+        patch.telegram_status = 'connected'
+        patch.telegram_channel = null
+      } else {
+        patch.telegram_status = connection.telegram_channel ? connection.telegram_status : 'connected'
+      }
     }
 
     if (senderMode === 'master_account' && accountRole === 'slave') {

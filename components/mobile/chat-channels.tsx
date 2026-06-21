@@ -53,6 +53,7 @@ import {
 } from "./chat-channel-meta"
 import { shouldReduceSafariEffects, waitForSupabaseSession } from "@/lib/supabase-session"
 import { getChatMessageShareUrl } from "@/lib/chat-short-link"
+import { notifyXpFromResponse } from "@/lib/xp-client"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1428,6 +1429,10 @@ function ChannelView({
           return [...prev, newMsg]
         })
         isNearBottomRef.current = true
+      }
+
+      if (postData.xp) {
+        void notifyXpFromResponse(postData.xp)
       }
 
       if (imageUrl) {

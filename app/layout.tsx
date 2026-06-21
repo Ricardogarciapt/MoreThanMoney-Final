@@ -2,12 +2,14 @@ import type React from "react"
 import type { Metadata } from "next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import ThemeInitializer from "@/components/theme-initializer"
 import { Suspense } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from 'sonner'
 import ConditionalNavbarFooter from "@/components/conditional-navbar-footer"
 import { GoogleTranslateLoader } from "@/components/google-translate-loader"
 import { AuthProvider } from "@/contexts/auth-context"
+import XpUpdateListener from "@/components/xp-update-listener"
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
@@ -73,6 +75,7 @@ export default function RootLayout({
       </head>
       <body className="notranslate" translate="no" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+          <ThemeInitializer />
           <AuthProvider>
             <Suspense fallback={null}>
               <GoogleTranslateLoader />
@@ -81,6 +84,7 @@ export default function RootLayout({
               </ConditionalNavbarFooter>
               <Toaster />
               <Sonner richColors position="top-right" />
+              <XpUpdateListener />
             </Suspense>
           </AuthProvider>
         </ThemeProvider>

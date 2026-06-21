@@ -29,6 +29,7 @@ import {
 import Image from "next/image"
 import { SiteLogo } from "@/components/site-logo"
 import Link from "next/link"
+import { xpProgressInLevel } from "@/lib/xp-config"
 
 interface UserProfile {
   id: string
@@ -72,6 +73,24 @@ export default function MobileSidebar({
     }
   }, [isOpen, currentUser?.id])
 
+  useEffect(() => {
+    const onXpUpdated = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { total_xp?: number; level?: number }
+      if (detail?.total_xp != null) {
+        setXpData({
+          xp: detail.total_xp,
+          level: detail.level ?? 1,
+        })
+      }
+    }
+    window.addEventListener("xpUpdated", onXpUpdated)
+    return () => window.removeEventListener("xpUpdated", onXpUpdated)
+  }, [])
+
+  useEffect(() => {
+    if (currentUser?.id) loadXP()
+  }, [currentUser?.id])
+
   const loadMessages = async () => {
     try {
       if (!currentUser?.id) return
@@ -92,10 +111,10 @@ export default function MobileSidebar({
     try {
       const response = await fetch('/api/xp/get')
       const data = await response.json()
-      if (data.success && data.xp) {
+      if (data.success && data.user_xp) {
         setXpData({
-          xp: data.xp.total_xp || 0,
-          level: data.xp.current_level || 1,
+          xp: data.user_xp.total_xp || 0,
+          level: data.user_xp.current_level || 1,
         })
       }
     } catch (error) {
@@ -247,7 +266,7 @@ export default function MobileSidebar({
                   <div
                     className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] h-1.5 rounded-full transition-all"
                     style={{
-                      width: `${((xpData.xp % 1000) / 1000) * 100}%`,
+                      width: `${(xpProgressInLevel(xpData.xp) / 1000) * 100}%`,
                     }}
                   />
                 </div>

@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { connectionCopyMethod } from '@/lib/mtmcopy/copy-limits'
-import { removeConnectionCopyFactory, syncConnectionCopyFactory } from '@/lib/mtmcopy/connection-sync'
+import { removeConnectionCopyFactory, syncConnectionCopyFactory, syncMtmStrategyReplication } from '@/lib/mtmcopy/connection-sync'
 import { verifyTelegramChannel } from '@/lib/mtmcopy/telegram-bot'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
-import { normalizeTelegramGroups } from '@/lib/mtmcopy/copy-methods'
+import { normalizeTelegramGroups, normalizeTelegramChannel } from '@/lib/mtmcopy/copy-methods'
 import { attachConnectionBalances } from '@/lib/mtmcopy/connection-balances'
+import {
+  repairStrategyConnectionIfNeeded,
+  sanitizeConnectionForClient,
+} from '@/lib/mtmcopy/connection-sanitize'
 import { mtmcopyLimitsLabel, resolveMtmcopyUserLimits } from '@/lib/mtmcopy/account-limits'
 import { deriveSenderMode } from '@/lib/mtmcopy/user-copy-context'
-import type { MtmcopySenderMode } from '@/lib/mtmcopy/types'
+import type { MTMcopierConnection, MtmcopySenderMode } from '@/lib/mtmcopy/types'
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -60,17 +64,26 @@ export async function GET(request: NextRequest) {
   const connections = await attachConnectionBalances(data ?? [])
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('user_type, member_category')
+    .select('full_name, username, email, user_type, member_category')
     .eq('id', user.id)
     .maybeSingle()
+  const userLabel =
+    profile?.full_name || profile?.username || profile?.email || `MTM-${user.id.slice(0, 8)}`
+  const repaired = await Promise.all(
+    (connections as MTMcopierConnection[]).map((c) =>
+      connectionCopyMethod(c) === 'strategy'
+        ? repairStrategyConnectionIfNeeded(supabaseAdmin, c, c.account_label || userLabel)
+        : Promise.resolve(sanitizeConnectionForClient(c)),
+    ),
+  )
   const subscription = await getMtmcopySubscription(user.id, profile?.user_type)
   const limits = resolveMtmcopyUserLimits(profile?.user_type, profile?.member_category)
 
   return NextResponse.json({
-    connections,
-    connection: connections[0] ?? null,
-    sender_mode: deriveSenderMode(connections),
-    master: connections.find((c) => c.account_role === 'master') ?? null,
+    connections: repaired,
+    connection: repaired[0] ?? null,
+    sender_mode: deriveSenderMode(repaired),
+    master: repaired.find((c) => c.account_role === 'master') ?? null,
     subscribed: subscription.active,
     can_activate: subscription.active,
     limits,
@@ -124,9 +137,12 @@ export async function POST(request: NextRequest) {
   }
 
   if (telegram_channel !== undefined) {
-    payload.telegram_channel = String(telegram_channel).trim() || null
+    payload.telegram_channel = normalizeTelegramChannel(telegram_channel)
   }
-  if (account_label !== undefined) payload.account_label = String(account_label).trim() || null
+  if (account_label !== undefined) {
+    const label = String(account_label).trim()
+    payload.account_label = label && label.toLowerCase() !== 'null' ? label : null
+  }
   if (lot_mode !== undefined) payload.lot_mode = lot_mode
   if (lot_value !== undefined) payload.lot_value = lot_value
   if (max_risk_percent !== undefined) payload.max_risk_percent = max_risk_percent
@@ -161,11 +177,16 @@ export async function POST(request: NextRequest) {
       ? copy_method
       : connectionCopyMethod(existing)
 
-  if (effectiveMethod === 'telegram_group' || effectiveMethod === 'strategy') {
+  if (effectiveMethod === 'telegram_group') {
     payload.copyfactory_subscribed = false
     if (existing.metaapi_account_id && existing.copyfactory_subscribed) {
       await removeConnectionCopyFactory(existing.metaapi_account_id)
     }
+  }
+
+  if (effectiveMethod === 'strategy') {
+    payload.telegram_channel = null
+    payload.telegram_status = 'connected'
   }
 
   const { data, error } = await supabaseAdmin
@@ -186,13 +207,14 @@ export async function POST(request: NextRequest) {
 
   const channelTrimmed =
     telegram_channel !== undefined
-      ? String(telegram_channel).trim()
-      : connection?.telegram_channel?.trim()
+      ? normalizeTelegramChannel(telegram_channel)
+      : normalizeTelegramChannel(connection?.telegram_channel)
 
   const isMaster = existing.account_role === 'master'
   const isMasterMode = (existing.sender_mode ?? 'telegram') === 'master_account'
+  const needsTelegramChannel = effectiveMethod === 'telegram_group'
 
-  if (telegram_channel !== undefined && !isMaster && !isMasterMode) {
+  if (telegram_channel !== undefined && !isMaster && !isMasterMode && needsTelegramChannel) {
     if (channelTrimmed) {
       telegram_verify = await verifyTelegramChannel(channelTrimmed)
       const telegram_status = telegram_verify.ok
@@ -226,9 +248,60 @@ export async function POST(request: NextRequest) {
       if (updated) connection = updated
       telegram_verify = { ok: true, title: 'Grupos MTM (predefinição)' }
     }
+  } else if (effectiveMethod === 'strategy' && connection) {
+    const { data: updated } = await supabaseAdmin
+      .from('mtmcopy_connections')
+      .update({
+        telegram_channel: null,
+        telegram_status: 'connected',
+        last_error: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', connectionId)
+      .select()
+      .single()
+    if (updated) connection = updated
   }
 
   const connMethod = connection ? connectionCopyMethod(connection) : effectiveMethod
+  if (
+    connection?.metaapi_account_id &&
+    connection.account_role !== 'master' &&
+    connMethod === 'strategy' &&
+    !connection.copyfactory_subscribed
+  ) {
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('full_name, username, email')
+      .eq('id', user.id)
+      .maybeSingle()
+    const label =
+      connection.account_label ||
+      profile?.full_name ||
+      profile?.username ||
+      profile?.email ||
+      `MTM-${user.id.slice(0, 8)}`
+    const sync = await syncMtmStrategyReplication(connection, label)
+    if (sync.ok) {
+      const { data: updated } = await supabaseAdmin
+        .from('mtmcopy_connections')
+        .update({
+          copyfactory_subscribed: true,
+          last_error: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', connectionId)
+        .select()
+        .single()
+      if (updated) connection = updated
+    } else {
+      await supabaseAdmin
+        .from('mtmcopy_connections')
+        .update({ last_error: sync.error ?? 'Falha ao sincronizar estratégia CopyFactory' })
+        .eq('id', connectionId)
+    }
+  }
+
   if (
     connection?.metaapi_account_id &&
     connection.account_role !== 'master' &&

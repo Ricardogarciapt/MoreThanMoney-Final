@@ -67,6 +67,26 @@ export default function EducatorStudioLivePanel({ streamId, title }: EducatorStu
   }, [streamId, stream?.is_live])
 
   useEffect(() => {
+    if (!streamId || !stream?.is_live) return
+    const pollViewers = async () => {
+      try {
+        const res = await fetch(`/api/live-sessions/streams/${streamId}/viewers`, {
+          credentials: "same-origin",
+        })
+        const data = await res.json()
+        if (data.success && typeof data.viewer_count === "number") {
+          setStream((prev) => (prev ? { ...prev, viewer_count: data.viewer_count } : prev))
+        }
+      } catch {
+        /* best-effort */
+      }
+    }
+    void pollViewers()
+    const id = setInterval(pollViewers, 5000)
+    return () => clearInterval(id)
+  }, [streamId, stream?.is_live])
+
+  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages.length])
 

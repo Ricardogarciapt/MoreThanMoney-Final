@@ -3,6 +3,8 @@
 // Templates HTML premium com componentes visuais
 // =====================================================
 
+import { getFastStartJourneySteps, resolveSiteBase } from './fast-start-journey'
+
 // Cores MTM
 const COLORS = {
   primary: '#D2A63C',
@@ -240,7 +242,7 @@ const textComponent = (content: string) => `
 // Componente: Imagem destacada
 const imageComponent = (imageUrl: string, alt: string, linkUrl?: string) => {
   const img = `<img src="${imageUrl}" alt="${alt}" style="width: 100%; height: auto; display: block; border-radius: 12px;" />`
-  
+
   return `
 <tr>
   <td style="padding: 20px 30px;">
@@ -250,67 +252,174 @@ const imageComponent = (imageUrl: string, alt: string, linkUrl?: string) => {
 `
 }
 
+/** Preview visual estilo «print do site» (barra de URL + ecrã escuro MTM). */
+const sitePreviewComponent = (
+  previewPath: string,
+  previewHint: string,
+  title: string,
+  linkUrl: string,
+) => `
+<tr>
+  <td style="padding: 0 30px 16px;">
+    <a href="${linkUrl}" style="text-decoration: none; display: block;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: #0a0a0a; border-radius: 12px; border: 1px solid #2a2a2a; overflow: hidden;">
+        <tr>
+          <td style="padding: 10px 14px; background: #141414; border-bottom: 1px solid #2a2a2a;">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #D2A63C; margin-right: 6px; vertical-align: middle;"></span>
+            <span style="color: #888; font-size: 11px; font-family: monospace; vertical-align: middle;">morethanmoney.pt${previewPath.startsWith('/') ? previewPath : `/${previewPath}`}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 24px 20px; text-align: center;">
+            <p style="margin: 0 0 6px 0; color: ${COLORS.primary}; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">${previewHint}</p>
+            <p style="margin: 0; color: #f5f5f5; font-size: 17px; font-weight: 700; line-height: 1.3;">${title}</p>
+            <p style="margin: 12px 0 0 0; color: ${COLORS.primary}; font-size: 13px; font-weight: 600;">Abrir página →</p>
+          </td>
+        </tr>
+      </table>
+    </a>
+  </td>
+</tr>
+`
+
+const fastStartStepEmailComponent = (
+  stepNumber: number,
+  title: string,
+  description: string,
+  previewPath: string,
+  previewHint: string,
+  ctaLabel: string,
+  ctaUrl: string,
+) => `
+<tr>
+  <td style="padding: 0 30px 8px;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background: ${COLORS.gray}; border-radius: 12px; border-left: 4px solid ${COLORS.primary};">
+      <tr>
+        <td style="padding: 20px;">
+          <p style="margin: 0 0 8px 0; color: ${COLORS.primary}; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Passo ${stepNumber} de 6</p>
+          <h3 style="margin: 0 0 10px 0; color: ${COLORS.black}; font-size: 18px; font-weight: 700;">${title}</h3>
+          <p style="margin: 0 0 14px 0; color: #555; font-size: 14px; line-height: 22px;">${description}</p>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+${sitePreviewComponent(previewPath, previewHint, title, ctaUrl)}
+<tr>
+  <td style="padding: 0 30px 20px;">
+    <a href="${ctaUrl}" style="display: inline-block; color: ${COLORS.primaryDark}; font-size: 14px; font-weight: 700; text-decoration: underline;">${ctaLabel}</a>
+  </td>
+</tr>
+`
+
 // =====================================================
 // TEMPLATES PRONTOS
 // =====================================================
 
 // 1. BEM-VINDO (Novo Registo)
 export const welcomeEmailTemplate = (userName: string, userEmail: string, username: string, siteUrl: string) => {
+  const base = resolveSiteBase(siteUrl)
+  const steps = getFastStartJourneySteps(base)
+  const fastStartStepsHtml = steps
+    .map((s) =>
+      fastStartStepEmailComponent(
+        s.number,
+        s.title,
+        s.description,
+        s.previewPath,
+        s.previewHint,
+        s.ctaLabel,
+        s.ctaUrl,
+      ),
+    )
+    .join('')
+
   const content = `
-    ${headerComponent('🎉 Bem-vindo à MoreThanMoney!', 'A tua jornada começa agora', '🚀')}
-    
     ${textComponent(`
-      <h2 style="color: ${COLORS.primary}; font-size: 24px; font-weight: 700; margin: 0 0 15px 0;">
-        Olá ${userName}! 👋
+      <h2 style="color: ${COLORS.primary}; font-size: 26px; font-weight: 800; margin: 28px 0 12px 0; text-align: center;">
+        Bem-vindo, ${userName}! 👋
       </h2>
-      <p style="margin-bottom: 15px;">
-        Parabéns! A tua conta foi <strong>aprovada</strong> e agora fazes parte da família MoreThanMoney!
+      <p style="margin-bottom: 12px; text-align: center; font-size: 16px;">
+        A tua conta foi <strong>aprovada</strong>. Fazes agora parte do ecossistema <strong>MoreThanMoney × IQONIC</strong>.
       </p>
-      <p style="margin-bottom: 15px;">
-        Estamos entusiasmados por te ter connosco. Preparámos tudo para começares a tua jornada rumo à liberdade financeira.
+      <p style="margin-bottom: 0; text-align: center; color: #666; font-size: 14px;">
+        Segue o Fast Start abaixo — o mesmo percurso que vais encontrar na app e em <a href="${base}/fast-start" style="color: ${COLORS.primaryDark};">morethanmoney.pt/fast-start</a>.
       </p>
     `)}
-    
+
     ${cardComponent(
-      '🔐 Os Teus Dados de Acesso',
+      '🤝 MTM × IQONIC — O teu plano',
       `
-        <table style="width: 100%; background: white; border-radius: 8px; padding: 15px;">
+        <p style="margin: 0 0 12px 0; line-height: 24px;">
+          Educação prática, copy trading e crescimento de negócio num ecossistema premium.
+          Começa pela <strong>apresentação oficial</strong> para perceberes como tudo se liga.
+        </p>
+        <p style="margin: 0;">
+          <a href="${base}/apresentacao" style="color: ${COLORS.primaryDark}; font-weight: 700;">Ver apresentação MTM × IQONIC →</a>
+        </p>
+      `,
+      '✨',
+      COLORS.primary,
+    )}
+
+    ${cardComponent(
+      '🔐 Os teus dados de acesso',
+      `
+        <table style="width: 100%; background: white; border-radius: 8px;">
           <tr>
-            <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong style="color: ${COLORS.primary};">📧 Email:</strong></td>
-            <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-family: monospace;">${userEmail}</td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong style="color: ${COLORS.primary};">Email</strong></td>
+            <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-family: monospace; text-align: right;">${userEmail}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 0;"><strong style="color: ${COLORS.primary};">👤 Username:</strong></td>
-            <td style="padding: 8px 0; font-family: monospace;">${username}</td>
+            <td style="padding: 8px 0;"><strong style="color: ${COLORS.primary};">Username</strong></td>
+            <td style="padding: 8px 0; font-family: monospace; text-align: right;">${username}</td>
           </tr>
         </table>
       `,
       '🔑',
-      COLORS.primary
+      COLORS.primary,
     )}
-    
-    ${buttonComponent('🚀 Fazer Login Agora', `${siteUrl}/login`)}
-    
+
+    ${buttonComponent('🚀 Entrar na plataforma', `${base}/login`)}
+
     ${dividerComponent()}
-    
+
     ${textComponent(`
-      <p style="margin-bottom: 10px;"><strong>📱 Próximos Passos:</strong></p>
-      <ol style="margin: 0; padding-left: 20px; line-height: 28px;">
-        <li>Faz login na plataforma</li>
-        <li>Explora os portfolios MTM</li>
-        <li>Configura o teu dashboard mobile</li>
-        <li>Junta-te à comunidade Skool</li>
-      </ol>
+      <h3 style="color: ${COLORS.black}; font-size: 20px; font-weight: 800; margin: 0 0 8px 0; text-align: center;">
+        🎯 Fast Start — 6 passos
+      </h3>
+      <p style="margin: 0 0 8px 0; text-align: center; color: #666; font-size: 14px;">
+        Registo → Onboarding → App → Conta → MTMcopier → Skool
+      </p>
     `)}
-    
+
+    ${fastStartStepsHtml}
+
+    ${cardComponent(
+      '💬 Apresenta-te na comunidade',
+      `
+        <p style="margin: 0 0 10px 0; line-height: 24px;">
+          Depois de instalares a app, vai ao separador <strong>Chat</strong> e deixa uma mensagem curta:
+          quem és, o teu objetivo e o que queres aprender (trading, copy ou negócio).
+        </p>
+        <p style="margin: 0; color: #666; font-size: 13px;">
+          Exemplo: «Olá! Sou o ${userName}, quero aprender XAUUSD com copy trading e crescer no MTM.»
+        </p>
+      `,
+      '👋',
+      '#26A5E4',
+    )}
+
+    ${buttonComponent('📋 Continuar Fast Start no site', `${base}/fast-start`, 'secondary')}
+
     ${textComponent(`
-      <p style="margin-top: 20px; color: #666; font-size: 14px;">
-        Vais receber mais emails com tutoriais e dicas para aproveitares ao máximo a plataforma.
+      <p style="margin: 0; color: #666; font-size: 13px; text-align: center;">
+        Dúvidas? Responde a este email ou escreve para <a href="mailto:geral@morethanmoney.pt" style="color: ${COLORS.primaryDark};">geral@morethanmoney.pt</a>
       </p>
     `)}
   `
-  
-  return baseTemplate(content, 'Bem-vindo à MoreThanMoney! A tua conta foi aprovada.', siteUrl)
+
+  return baseTemplate(content, 'Bem-vindo à MoreThanMoney! O teu Fast Start MTM × IQONIC começa aqui.', base)
 }
 
 // 2. ONBOARDING - Dia 1
@@ -1146,6 +1255,34 @@ export const scannerAccessEmailTemplate = (
   `
 
   return baseTemplate(content, `Acesso ao ${scannerName}`, siteUrl)
+}
+
+// 9. NOTIFICAÇÃO ADMIN (campanhas manuais do painel)
+export const adminBroadcastEmailTemplate = (
+  title: string,
+  message: string,
+  siteUrl?: string,
+) => {
+  const base = resolveSiteUrl(siteUrl)
+  const safeMessage = message
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>')
+
+  const content = `
+    ${textComponent(`
+      <h2 style="color: ${COLORS.primary}; font-size: 22px; font-weight: 800; margin: 28px 0 16px 0; text-align: center;">
+        ${title}
+      </h2>
+      <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 26px; color: #333; text-align: center;">
+        ${safeMessage}
+      </p>
+    `)}
+    ${buttonComponent('Aceder à plataforma', `${base}/login`)}
+  `
+
+  return baseTemplate(content, title, base)
 }
 
 // Export all components for custom templates

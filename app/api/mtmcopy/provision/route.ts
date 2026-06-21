@@ -7,7 +7,7 @@ import { runProvisionJob } from '@/lib/mtmcopy/run-provision-job'
 import type { MtmcopyAccountRole, MtmcopySenderMode } from '@/lib/mtmcopy/types'
 import { resolveMtmcopyUserLimits } from '@/lib/mtmcopy/account-limits'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
-import { normalizeTelegramGroups, type MtmcopyCopyMethod } from '@/lib/mtmcopy/copy-methods'
+import { normalizeTelegramGroups, normalizeTelegramChannel, type MtmcopyCopyMethod } from '@/lib/mtmcopy/copy-methods'
 import {
   canAddConnection,
   getMasterConnection,
@@ -177,7 +177,12 @@ export async function POST(request: NextRequest) {
     mt5_server: server,
     mt5_platform: platform,
     mt5_status: 'pending',
-    telegram_channel: senderMode === 'telegram' ? (telegram_channel?.trim() || null) : null,
+    telegram_channel:
+      copyMethod === 'strategy'
+        ? null
+        : senderMode === 'telegram'
+          ? normalizeTelegramChannel(telegram_channel)
+          : null,
     account_label: String(account_label ?? '').trim() || null,
     is_active: subscription.active,
     copy_method: copyMethod,
@@ -188,7 +193,8 @@ export async function POST(request: NextRequest) {
     exit_pct_tp3: exit_pct_tp3 ?? 34,
     copyfactory_strategy_pick: copyfactory_strategy_pick?.trim() || null,
     updated_at: new Date().toISOString(),
-    telegram_status: senderMode === 'master_account' ? 'connected' : 'pending',
+    telegram_status:
+      copyMethod === 'strategy' || senderMode === 'master_account' ? 'connected' : 'pending',
   }
 
   if (accountRole === 'slave') {

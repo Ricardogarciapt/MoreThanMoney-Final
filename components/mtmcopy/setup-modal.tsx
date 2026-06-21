@@ -9,7 +9,7 @@ import {
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import BrokerServerSelect from "@/components/mtmcopy/broker-server-select"
-import { COPY_METHODS, TELEGRAM_GROUPS, type MtmcopyCopyMethod } from "@/lib/mtmcopy/copy-methods"
+import { COPY_METHODS, TELEGRAM_GROUPS, normalizeTelegramChannel, type MtmcopyCopyMethod } from "@/lib/mtmcopy/copy-methods"
 import {
   connectionCopyMethod,
   countCopyTraderSlaves,
@@ -372,7 +372,12 @@ export default function SetupModal({
 
     return {
       ...base,
-      telegram_channel: senderMode === "telegram" ? (telegramChannel.trim() || null) : null,
+      telegram_channel:
+        copyMethod === "strategy"
+          ? null
+          : senderMode === "telegram"
+            ? normalizeTelegramChannel(telegramChannel)
+            : null,
       lot_mode: lotMode,
       lot_value: parseFloat(lotValue) || 0.01,
       max_risk_percent: parseFloat(maxRisk) || 1,

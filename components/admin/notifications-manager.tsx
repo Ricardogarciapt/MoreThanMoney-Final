@@ -42,6 +42,7 @@ import {
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { createAdminSubscription } from "@/lib/admin-helpers"
+import EmailTemplatesPanel from "@/components/admin/email-templates-panel"
 
 interface NotificationConfig {
   id: string
@@ -73,6 +74,7 @@ export default function NotificationsManager() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingNotification, setEditingNotification] = useState<NotificationConfig | null>(null)
   const [sending, setSending] = useState(false)
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'emails'>('campaigns')
 
   const [newNotification, setNewNotification] = useState<Partial<NotificationConfig>>({
     name: '',
@@ -363,9 +365,10 @@ export default function NotificationsManager() {
               Tempo Real
             </span>
           </h2>
-          <p className="text-gray-400">Enviar notificações push e emails - Atualização automática a cada 30s</p>
+          <p className="text-gray-400">Campanhas push/email e templates transaccionais MTM</p>
         </div>
-        <Dialog 
+        {activeTab === 'campaigns' && (
+        <Dialog
           open={showCreateDialog} 
           onOpenChange={(open) => {
             console.log('🔔 [DIALOG] onOpenChange chamado:', open, 'editing:', editingNotification?.id)
@@ -524,7 +527,41 @@ export default function NotificationsManager() {
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-gray-700/50 pb-0">
+        <button
+          type="button"
+          onClick={() => setActiveTab('campaigns')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'campaigns'
+              ? 'border-[#D2A63C] text-[#D2A63C]'
+              : 'border-transparent text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          <Bell className="w-4 h-4 inline mr-2" />
+          Campanhas Push / Email
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('emails')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'emails'
+              ? 'border-[#D2A63C] text-[#D2A63C]'
+              : 'border-transparent text-gray-400 hover:text-gray-200'
+          }`}
+        >
+          <Mail className="w-4 h-4 inline mr-2" />
+          Emails do Sistema
+        </button>
+      </div>
+
+      {activeTab === 'emails' ? (
+        <EmailTemplatesPanel />
+      ) : (
+      <>
 
       {/* Stats */}
       {stats && (
@@ -698,6 +735,8 @@ export default function NotificationsManager() {
           )}
         </CardContent>
       </Card>
+      </>
+      )}
     </div>
   )
 }

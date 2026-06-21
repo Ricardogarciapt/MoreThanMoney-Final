@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { canWriteChannel } from "@/lib/chat-channel-permissions"
+import { awardXp } from "@/lib/xp-service"
 
 const ALLOWED_MESSAGE_TYPES = new Set(["text", "image", "video", "link", "document"])
 
@@ -84,7 +85,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ message: inserted })
+    const xp = await awardXp(supabase, profile.id, "chat_message_sent", {
+      actionDescription: `Chat #${channelSlug}`,
+    })
+
+    return NextResponse.json({
+      message: inserted,
+      xp: { ...xp, action_type: "chat_message_sent" },
+    })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Erro interno"
     console.error("[chat/messages] exception:", message)

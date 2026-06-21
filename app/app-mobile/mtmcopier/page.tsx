@@ -12,9 +12,14 @@ import {
 import { Button } from "@/components/ui/button"
 import SetupModal, { type MTMcopierConnection, type MtmcopySenderMode } from "@/components/mtmcopy/setup-modal"
 import {
-  StatusPill, SignalCard, EmptySignals, ModeBanner, CopyTraderBanner,
+  StatusPill, SignalCard, EmptySignals, ModeBanner, CopyTraderBanner, StrategyMtmBanner,
   formatRelative, formatMt5Money,
 } from "@/components/mtmcopy/mtmcopy-shared"
+import {
+  connectionMethodStatus,
+  connectionUsesTelegramChannel,
+  isTelegramChannelErrorMessage,
+} from "@/lib/mtmcopy/connection-sanitize"
 import {
   copyMethodLabel, parseTelegramGroups, telegramGroupsLabel,
   type MtmcopyCopyMethod,
@@ -508,7 +513,13 @@ export default function MtmcopierMobilePage() {
                       </div>
                     ) : (
                       <>
-                        {!isCopyTrader && <ModeBanner customChannel={conn.telegram_channel} />}
+                        {!isCopyTrader && (
+                          conn.copy_method === "strategy" ? (
+                            <StrategyMtmBanner strategyPick={conn.copyfactory_strategy_pick} />
+                          ) : (
+                            <ModeBanner customChannel={conn.telegram_channel} />
+                          )
+                        )}
 
                         <div className="grid grid-cols-2 gap-2">
                           <div className="rounded-lg bg-gray-800/50 border border-gray-700/50 p-2.5">
@@ -516,13 +527,19 @@ export default function MtmcopierMobilePage() {
                             <p className="text-xs text-white font-medium truncate">
                               {isCopyTrader ? MTM_MASTER_LABEL : conn.copy_method === "strategy" ? "Estratégia MTM" : copyMethodLabel(conn.copy_method)}
                             </p>
+                            {!isCopyTrader && conn.copy_method === "strategy" && (
+                              <p className="text-[10px] text-gray-500 mt-0.5 truncate">
+                                {conn.copyfactory_strategy_pick ?? "—"}
+                                {conn.copyfactory_subscribed ? " · CF activa" : " · CF pendente"}
+                              </p>
+                            )}
                             {!isCopyTrader && conn.copy_method === "telegram_group" && (
                               <p className="text-[10px] text-gray-500 mt-0.5 truncate">
                                 {telegramGroupsLabel(parseTelegramGroups(conn))}
                               </p>
                             )}
                             <div className="mt-1.5">
-                              <StatusPill status={isCopyTrader ? "connected" : conn.telegram_status} />
+                              <StatusPill status={connectionMethodStatus(conn)} />
                             </div>
                           </div>
                           <div className="rounded-lg bg-gray-800/50 border border-gray-700/50 p-2.5">
@@ -578,7 +595,9 @@ export default function MtmcopierMobilePage() {
                     )}
 
                     {/* Warnings */}
-                    {conn.telegram_status === "pending" && conn.telegram_channel && (
+                    {connectionUsesTelegramChannel(conn) &&
+                      conn.telegram_status === "pending" &&
+                      conn.telegram_channel && (
                       <div className="flex items-start gap-2 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2.5">
                         <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                         <p>Adiciona <strong>@MoreThanMoney_aibot</strong> como admin de <strong>{conn.telegram_channel}</strong>.</p>
@@ -590,7 +609,7 @@ export default function MtmcopierMobilePage() {
                         <p>A ligar a conta — normalmente 1–3 minutos.</p>
                       </div>
                     )}
-                    {conn.last_error && (
+                    {conn.last_error && !isTelegramChannelErrorMessage(conn.last_error) && (
                       <div className="flex items-start gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2.5">
                         <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                         <p className="line-clamp-2">{conn.last_error}</p>

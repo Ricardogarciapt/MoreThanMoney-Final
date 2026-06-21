@@ -16,49 +16,9 @@ import ContentConfigManager from "@/components/admin/content-config-manager"
 import NotificationsManager from "@/components/admin/notifications-manager"
 import ThemeManager from "@/components/admin/theme-manager"
 import SettingsManager from "@/components/admin/settings-manager"
+import IntegrationsStatusPanel from "@/components/admin/integrations-status-panel"
+import ChatChannelsPanel from "@/components/admin/chat-channels-panel"
 import LiveSessionsManager from "@/components/admin/live-sessions-manager"
-import { MessageCircle } from "lucide-react"
-
-function CreateDefaultGroupsButton({
-  onSuccess,
-  onError,
-}: {
-  onSuccess: () => void
-  onError: (message: string) => void
-}) {
-  const [loading, setLoading] = useState(false)
-  const handleCreate = async () => {
-    setLoading(true)
-    try {
-      const result = await adminApiCall<{ success: boolean; message?: string }>("/api/admin/create-default-groups", {
-        method: "POST",
-      })
-      if (result.success) {
-        onSuccess()
-      } else {
-        onError(result.error || "Erro ao criar grupos")
-      }
-    } catch (e) {
-      onError(e instanceof Error ? e.message : "Erro ao criar grupos")
-    } finally {
-      setLoading(false)
-    }
-  }
-  return (
-    <Button
-      onClick={handleCreate}
-      disabled={loading}
-      className="bg-[#D2A63C] text-black hover:bg-[#BB8525]"
-    >
-      {loading ? (
-        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-      ) : (
-        <MessageCircle className="w-4 h-4 mr-2" />
-      )}
-      Criar grupos padrão (Social, Crypto, Forex, Trade)
-    </Button>
-  )
-}
 
 function AdminPageClient() {
   const router = useRouter()
@@ -334,7 +294,7 @@ function AdminPageClient() {
               <div className="border-b border-[#D2A63C]/15 px-6 py-4">
                 <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Notificações</h2>
                 <p className="text-sm text-gray-400 mt-1">
-                  Enviar notificações por email e push aos utilizadores.
+                  Campanhas push/email, templates transaccionais, boas-vindas e sequência de onboarding.
                 </p>
               </div>
               <div className="p-6">
@@ -361,9 +321,20 @@ function AdminPageClient() {
             <div className="space-y-8">
               <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
                 <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Integrações & Sistemas</h2>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Estado em tempo real: Supabase, Stripe, MLM, email, Telegram e chat app-mobile.
+                  </p>
+                </div>
+                <div className="p-6">
+                  <IntegrationsStatusPanel />
+                </div>
+              </section>
+              <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+                <div className="border-b border-[#D2A63C]/15 px-6 py-4">
                   <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Tema</h2>
                   <p className="text-sm text-gray-400 mt-1">
-                    Cores e tema do site.
+                    Cores MTM — aplicadas globalmente ao guardar (site + app-mobile).
                   </p>
                 </div>
                 <div className="p-6">
@@ -374,7 +345,7 @@ function AdminPageClient() {
                 <div className="border-b border-[#D2A63C]/15 px-6 py-4">
                   <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Configurações gerais</h2>
                   <p className="text-sm text-gray-400 mt-1">
-                    Nome do site, modo manutenção, registo e aprovações.
+                    Nome do site, modo manutenção, registo e aprovações automáticas.
                   </p>
                 </div>
                 <div className="p-6">
@@ -383,13 +354,13 @@ function AdminPageClient() {
               </section>
               <section className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
                 <div className="border-b border-[#D2A63C]/15 px-6 py-4">
-                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Grupos de chat padrão</h2>
+                  <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Canais de chat (app-mobile)</h2>
                   <p className="text-sm text-gray-400 mt-1">
-                    Cria os grupos Social Chat, Crypto Chat, Forex Chat e Trade Chat e associa-te como administrador.
+                    Geral, Trading, Cripto, Ideias Forex, Telegram e Premium — ligados ao tab Chat da app.
                   </p>
                 </div>
                 <div className="p-6">
-                  <CreateDefaultGroupsButton onSuccess={() => toast({ title: "Grupos criados ou atualizados com sucesso." })} onError={(err) => toast({ title: "Erro", description: err, variant: "destructive" })} />
+                  <ChatChannelsPanel />
                 </div>
               </section>
             </div>

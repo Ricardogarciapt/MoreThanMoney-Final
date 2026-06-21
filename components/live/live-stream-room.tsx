@@ -22,6 +22,8 @@ import { useLmsHlsVideo } from "@/hooks/use-lms-hls-video"
 import { usePictureInPictureSupported } from "@/hooks/use-picture-in-picture-supported"
 import { seekHlsByDelta } from "@/lib/live-hls-seek"
 import { useLmsViewerHeartbeat } from "@/hooks/use-lms-viewer-heartbeat"
+import EducatorLiveViewerBadge from "@/components/live/educator-live-viewer-badge"
+import { notifyXpFromResponse } from "@/lib/xp-client"
 import { handleLiveChatEnterKey } from "@/lib/live-chat"
 
 interface Props {
@@ -105,7 +107,7 @@ export default function LiveStreamRoom({ streamId }: Props) {
   // Pass the effective URL to HLS.js so it never gets destroyed on a transient null
   const useHls = Boolean(effectiveHlsUrl)
   const isLive = Boolean(stream?.is_live)
-  useLmsViewerHeartbeat(streamId, Boolean(streamId && isLive))
+  const { viewerCount } = useLmsViewerHeartbeat(streamId, Boolean(streamId && isLive))
 
   const iframePlaybackUrl = useMemo(() => {
     const raw = String(stream?.playback_url || "").trim()
@@ -147,15 +149,20 @@ export default function LiveStreamRoom({ streamId }: Props) {
   const send = async () => {
     if (!canSend) return
     setSending(true)
-    await fetch(`/api/live-sessions/streams/${streamId}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ message: text }),
-    })
-    setText("")
-    setSending(false)
-    load()
+    try {
+      const res = await fetch(`/api/live-sessions/streams/${streamId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ message: text }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data?.xp) void notifyXpFromResponse(data.xp)
+      setText("")
+      load()
+    } finally {
+      setSending(false)
+    }
   }
 
   const clearChat = async () => {
@@ -222,10 +229,13 @@ export default function LiveStreamRoom({ streamId }: Props) {
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <CardTitle className="text-[#D2A63C]">{stream?.title || "Canal ao vivo"}</CardTitle>
-              <p className="text-xs text-gray-400">
-                {stream?.educator?.display_name || "Educador"} • {stream?.academy?.name || "Academia"} •{" "}
-                {stream?.is_live ? "ONLINE" : "OFFLINE"}
-              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="text-xs text-gray-400">
+                  {stream?.educator?.display_name || "Educador"} • {stream?.academy?.name || "Academia"} •{" "}
+                  {stream?.is_live ? "ONLINE" : "OFFLINE"}
+                </p>
+                {isLive && <EducatorLiveViewerBadge isLive count={viewerCount} />}
+              </div>
             </div>
             <Button
               type="button"

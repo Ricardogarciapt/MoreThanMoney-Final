@@ -171,6 +171,20 @@ export function copyMethodLabel(method?: MtmcopyCopyMethod | null): string {
   return 'Grupos de sinais'
 }
 
+/** Evita gravar a string literal «null» vinda de JSON/String(null). */
+export function normalizeTelegramChannel(value: unknown): string | null {
+  if (value == null) return null
+  const ch = String(value).trim()
+  if (!ch || ch.toLowerCase() === 'null') return null
+  return ch
+}
+
+export function strategyPickLabel(pick: string | null | undefined): string {
+  if (pick === '9gsL') return 'Premium · Ouro (9gsL)'
+  if (pick === '5IHE') return 'Ideias de Forex (5IHE)'
+  return pick ? `Estratégia ${pick}` : 'Estratégia MTM'
+}
+
 export function telegramGroupsLabel(groups: MtmcopyTelegramGroup[]): string {
   if (groups.length === 2) return 'Premium + Ideias Forex'
   if (groups.includes('trade_ideas')) return 'Ideias de Forex'

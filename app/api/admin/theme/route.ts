@@ -1,131 +1,102 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { requireAdmin } from "@/lib/admin-api-helpers"
+import { buildThemeConfig, resolveStoredTheme } from "@/lib/admin-settings-utils"
+import { defaultTheme } from "@/lib/theme-config"
 
 const supabase = getSupabaseAdmin()
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const { data, error } = await supabase
       .from('admin_settings')
       .select('setting_value')
       .eq('setting_key', 'theme_config')
-      .single()
+      .maybeSingle()
 
-    if (error) {
-      console.warn('Admin settings table might not exist:', error.message)
-      // Retornar tema padrão se a tabela não existir
-      return NextResponse.json({ 
-        theme: 'default',
-        colors: {
-          primary: '#efb810',
-          primaryLight: '#f9db5c',
-          primaryDark: '#b28405',
-          primaryDarker: '#795300',
-          background: '#000000',
-          backgroundLight: '#1a1a1a',
-          text: '#ffffff',
-          textMuted: '#a0a0a0',
-          border: 'rgba(239, 184, 16, 0.3)',
-          accent: '#efb810'
-        }
+    if (error || !data) {
+      return NextResponse.json({
+        theme: defaultTheme.id,
+        colors: defaultTheme.colors,
+        name: defaultTheme.name,
       })
     }
 
-    // Se não houver tema salvo, retornar tema padrão
-    if (!data) {
-      return NextResponse.json({ 
-        theme: 'default',
-        colors: {
-          primary: '#efb810',
-          primaryLight: '#f9db5c',
-          primaryDark: '#b28405',
-          primaryDarker: '#795300',
-          background: '#000000',
-          backgroundLight: '#1a1a1a',
-          text: '#ffffff',
-          textMuted: '#a0a0a0',
-          border: 'rgba(239, 184, 16, 0.3)',
-          accent: '#efb810'
-        }
-      })
-    }
+    const stored = resolveStoredTheme(data.setting_value)
+    const themeConfig = buildThemeConfig(stored)
 
-    return NextResponse.json(data.setting_value)
+    return NextResponse.json({
+      theme: stored.theme,
+      colors: themeConfig.colors,
+      name: themeConfig.name,
+    })
   } catch (error) {
     console.error('Error in theme GET:', error)
-    // Retornar tema padrão em caso de erro
-    return NextResponse.json({ 
-      theme: 'default',
-      colors: {
-        primary: '#efb810',
-        primaryLight: '#f9db5c',
-        primaryDark: '#b28405',
-        primaryDarker: '#795300',
-        background: '#000000',
-        backgroundLight: '#1a1a1a',
-        text: '#ffffff',
-        textMuted: '#a0a0a0',
-        border: 'rgba(239, 184, 16, 0.3)',
-        accent: '#efb810'
-      }
+    return NextResponse.json({
+      theme: defaultTheme.id,
+      colors: defaultTheme.colors,
+      name: defaultTheme.name,
     })
   }
 }
 
 export async function POST(request: NextRequest) {
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
+
   try {
     const body = await request.json()
     const { themeId, colors } = body
 
-    // Tentar salvar ou atualizar tema
-    const { data, error } = await supabase
+    const payload = {
+      theme: themeId,
+      colors,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error } = await supabase
       .from('admin_settings')
-      .upsert({
-        setting_key: 'theme_config',
-        setting_value: {
-          theme: themeId,
-          colors: colors,
-          updated_at: new Date().toISOString()
+      .upsert(
+        {
+          setting_key: 'theme_config',
+          setting_value: payload,
+          description: 'Configuração de tema do site',
         },
-        description: 'Configuração de tema do site'
-      }, {
-        onConflict: 'setting_key'
-      })
-      .select()
-      .single()
+        { onConflict: 'setting_key' },
+      )
 
     if (error) {
-      console.warn('Could not save to database:', error.message)
-      // Salvar em localStorage como fallback
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Tema salvo localmente (tabela admin_settings não existe)',
+      console.warn('Could not save theme:', error.message)
+      return NextResponse.json({
+        success: true,
+        message: 'Tema guardado localmente (fallback)',
         fallback: true,
         theme: themeId,
-        colors
+        colors,
       })
     }
 
-    // Log da atividade
     try {
       await supabase.rpc('log_activity', {
         p_user_email: 'admin@morethanmoney.pt',
         p_action: 'theme_updated',
-        p_details: `Tema atualizado para: ${themeId}`
+        p_details: `Tema actualizado: ${themeId}`,
       })
-    } catch (logError) {
-      console.warn('Erro ao registrar log:', logError)
+    } catch {
+      /* optional */
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Tema salvo com sucesso',
-      data 
+    return NextResponse.json({
+      success: true,
+      message: 'Tema guardado com sucesso',
+      theme: themeId,
+      colors,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in theme POST:', error)
-    return NextResponse.json({ 
-      error: error.message || 'Internal server error' 
-    }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 },
+    )
   }
 }

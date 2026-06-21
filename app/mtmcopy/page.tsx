@@ -16,9 +16,14 @@ import { supabase } from "@/lib/supabase"
 import { waitForSupabaseSession } from "@/lib/supabase-session"
 import { useAuth } from "@/contexts/auth-context"
 import {
-  StatusPill, SignalCard, EmptySignals, ModeBanner, CopyTraderBanner,
+  StatusPill, SignalCard, EmptySignals, ModeBanner, CopyTraderBanner, StrategyMtmBanner,
   formatRelative, formatMt5Money,
 } from "@/components/mtmcopy/mtmcopy-shared"
+import {
+  connectionMethodStatus,
+  connectionUsesTelegramChannel,
+  isTelegramChannelErrorMessage,
+} from "@/lib/mtmcopy/connection-sanitize"
 import {
   COPY_METHODS,
   TELEGRAM_GROUPS,
@@ -558,7 +563,11 @@ export default function MtmCopyPage() {
                   <CardContent>
                     {connection.account_role !== "master" && !isCopyTrader && (
                       <div className="mb-4">
-                        <ModeBanner customChannel={connection.telegram_channel} />
+                        {connection.copy_method === "strategy" ? (
+                          <StrategyMtmBanner strategyPick={connection.copyfactory_strategy_pick} />
+                        ) : (
+                          <ModeBanner customChannel={connection.telegram_channel} />
+                        )}
                       </div>
                     )}
 
@@ -583,12 +592,18 @@ export default function MtmCopyPage() {
                                   ? "Estratégia MTM"
                                   : copyMethodLabel(connection.copy_method)}
                             </p>
+                            {!isCopyTrader && connection.copy_method === "strategy" && (
+                              <p className="text-xs text-zinc-500 mb-2 truncate">
+                                {connection.copyfactory_strategy_pick ?? "—"}
+                                {connection.copyfactory_subscribed ? " · CopyFactory activa" : " · CopyFactory pendente"}
+                              </p>
+                            )}
                             {!isCopyTrader && connection.copy_method === "telegram_group" && (
                               <p className="text-xs text-zinc-500 mb-2">
                                 {telegramGroupsLabel(parseTelegramGroups(connection))}
                               </p>
                             )}
-                            <StatusPill status={isCopyTrader ? "connected" : connection.telegram_status} />
+                            <StatusPill status={connectionMethodStatus(connection)} />
                           </div>
                           <div className="rounded-xl bg-zinc-950/50 border border-zinc-800 p-4">
                             <p className="text-[10px] uppercase tracking-widest text-zinc-600 mb-2">MetaTrader</p>
@@ -687,7 +702,9 @@ export default function MtmCopyPage() {
                       </div>
                     )}
 
-                    {connection.telegram_status === "pending" && connection.telegram_channel && (
+                    {connectionUsesTelegramChannel(connection) &&
+                      connection.telegram_status === "pending" &&
+                      connection.telegram_channel && (
                       <div className="flex items-start gap-2.5 text-sm text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mb-4">
                         <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         <p>Adiciona <strong>@MoreThanMoney_aibot</strong> como admin de <strong>{connection.telegram_channel}</strong>.</p>
@@ -708,7 +725,7 @@ export default function MtmCopyPage() {
                         </p>
                       </div>
                     )}
-                    {connection.last_error && (
+                    {connection.last_error && !isTelegramChannelErrorMessage(connection.last_error) && (
                       <div className="flex items-start gap-2.5 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
                         <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         <p>{connection.last_error}</p>

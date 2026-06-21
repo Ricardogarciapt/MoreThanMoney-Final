@@ -175,15 +175,39 @@ export function CopyTraderBanner({ strategyId }: { strategyId?: string | null })
   )
 }
 
+export function StrategyMtmBanner({ strategyPick }: { strategyPick?: string | null }) {
+  const label =
+    strategyPick === '9gsL'
+      ? 'Premium · Ouro (9gsL)'
+      : strategyPick === '5IHE'
+        ? 'Ideias de Forex (5IHE)'
+        : strategyPick
+          ? `Estratégia ${strategyPick}`
+          : 'Estratégia MTM'
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-[#D2A63C]/25 bg-[#D2A63C]/5 p-4">
+      <Check className="w-5 h-5 text-[#D2A63C] shrink-0 mt-0.5" />
+      <div>
+        <p className="text-sm font-semibold text-[#D2A63C]">Estratégia MTM · CopyFactory</p>
+        <p className="text-sm text-zinc-400 mt-0.5">
+          Copias a conta provider <strong className="text-white">{label}</strong> — sem canal Telegram
+          nem bot administrador. A replicação é automática via MetaAPI CopyFactory.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function ModeBanner({ customChannel }: { customChannel: string | null }) {
-  if (customChannel) {
+  const channel = customChannel?.trim()
+  if (channel && channel.toLowerCase() !== 'null') {
     return (
       <div className="flex items-start gap-3 rounded-xl border border-sky-500/25 bg-sky-500/5 p-4">
         <MessageSquare className="w-5 h-5 text-sky-400 shrink-0 mt-0.5" />
         <div>
           <p className="text-sm font-semibold text-sky-300">Canal externo</p>
           <p className="text-sm text-zinc-400 mt-0.5">
-            A copiar apenas de <strong className="text-white">{customChannel}</strong>. O bot tem de ser administrador.
+            A copiar apenas de <strong className="text-white">{channel}</strong>. O bot tem de ser administrador.
           </p>
         </div>
       </div>

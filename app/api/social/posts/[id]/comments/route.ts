@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { awardXp } from '@/lib/xp-service'
 
 export async function GET(
   request: NextRequest,
@@ -118,46 +120,15 @@ export async function POST(
     // Incrementar contador de comentários
     await supabase.rpc('increment_comments_count', { post_id: postId })
     
-    // Adicionar XP para comentar
-    try {
-      // Buscar configuração de XP
-      const { data: xpConfig } = await supabase
-        .from('xp_config')
-        .select('xp_amount')
-        .eq('action_type', 'social_comment')
-        .single()
+    const supabaseAdmin = getSupabaseAdmin()
+    const xp = await awardXp(supabaseAdmin, session.user.id, 'social_create_comment', {
+      actionDescription: `Comentário post ${params.id}`,
+    })
 
-      const xpAmount = xpConfig?.xp_amount || 5
-
-      // Buscar XP atual
-      const { data: existingXP } = await supabase
-        .from('user_xp')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .single()
-
-      if (existingXP) {
-        const newTotalXP = existingXP.total_xp + xpAmount
-        const newLevel = Math.floor(newTotalXP / 1000) + 1
-        await supabase
-          .from('user_xp')
-          .update({ total_xp: newTotalXP, current_level: newLevel })
-          .eq('user_id', session.user.id)
-      } else {
-        await supabase
-          .from('user_xp')
-          .insert({ user_id: session.user.id, total_xp: xpAmount, current_level: 1 })
-      }
-
-      // Log XP
-      await supabase
-        .from('xp_log')
-        .insert({ user_id: session.user.id, xp_amount: xpAmount, action_type: 'social_comment' })
-    } catch (xpError) {
-      console.error('Erro ao adicionar XP:', xpError)
-    }
-
-    return NextResponse.json({ comment: newComment })
+    return NextResponse.json({
+      comment: newComment,
+      xp: { ...xp, action_type: 'social_create_comment' },
+    })
   } catch (error) {
     console.error('Erro na API de comentários:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
 
 const supabase = getSupabaseAdmin()
 
 export async function GET(request: NextRequest) {
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
+
   try {
     const { data, error } = await supabase
       .from('admin_settings')
@@ -62,6 +65,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
+
   try {
     const body = await request.json()
     const {

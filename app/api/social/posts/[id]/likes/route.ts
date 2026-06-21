@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { awardXp } from '@/lib/xp-service'
 
 export async function POST(
   request: NextRequest,
@@ -41,6 +43,7 @@ export async function POST(
       .eq('user_id', session.user.id)
       .single()
 
+    let xp = null
     if (existingLike) {
       // Remover like
       await supabase
@@ -63,43 +66,11 @@ export async function POST(
       await supabase.rpc('increment_likes_count', { post_id: postId })
       
       // Adicionar XP para dar like
-      try {
-        // Buscar configuração de XP
-        const { data: xpConfig } = await supabase
-          .from('xp_config')
-          .select('xp_amount')
-          .eq('action_type', 'social_like')
-          .single()
-
-        const xpAmount = xpConfig?.xp_amount || 2
-
-        // Buscar XP atual
-        const { data: existingXP } = await supabase
-          .from('user_xp')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .single()
-
-        if (existingXP) {
-          const newTotalXP = existingXP.total_xp + xpAmount
-          const newLevel = Math.floor(newTotalXP / 1000) + 1
-          await supabase
-            .from('user_xp')
-            .update({ total_xp: newTotalXP, current_level: newLevel })
-            .eq('user_id', session.user.id)
-        } else {
-          await supabase
-            .from('user_xp')
-            .insert({ user_id: session.user.id, total_xp: xpAmount, current_level: 1 })
-        }
-
-        // Log XP
-        await supabase
-          .from('xp_log')
-          .insert({ user_id: session.user.id, xp_amount: xpAmount, action_type: 'social_like' })
-      } catch (xpError) {
-        console.error('Erro ao adicionar XP:', xpError)
-      }
+      const supabaseAdmin = getSupabaseAdmin()
+      const xpResult = await awardXp(supabaseAdmin, session.user.id, 'social_like_post', {
+        actionDescription: `Like post ${postId}`,
+      })
+      xp = { ...xpResult, action_type: 'social_like_post' }
     }
 
     // Buscar novo contador
@@ -111,7 +82,8 @@ export async function POST(
 
     return NextResponse.json({ 
       liked: !existingLike,
-      likes_count: post?.likes_count || 0 
+      likes_count: post?.likes_count || 0,
+      xp,
     })
   } catch (error) {
     console.error('Erro na API de likes:', error)

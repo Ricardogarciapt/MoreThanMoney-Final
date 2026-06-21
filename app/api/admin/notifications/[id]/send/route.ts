@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/admin-api-helpers"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { adminBroadcastEmailTemplate } from "@/lib/email-templates"
 
 const supabase = getSupabaseAdmin()
 
@@ -7,6 +9,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
+
   try {
     const notificationId = params.id
 
@@ -91,14 +96,19 @@ export async function POST(
           } else {
             // Enviar email via sistema de email marketing
             const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt'
+            const emailHtml = adminBroadcastEmailTemplate(
+              notification.title,
+              notification.message || '',
+              siteUrl,
+            )
             const emailResponse = await fetch(`${siteUrl}/api/email-marketing/send`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 to: user.email,
                 subject: notification.title,
-                html: `<h2>${notification.title}</h2><p>${notification.message}</p>`,
-                template: 'notification'
+                html: emailHtml,
+                template: 'notification',
               })
             })
             if (emailResponse.ok) {

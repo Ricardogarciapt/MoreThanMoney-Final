@@ -125,7 +125,7 @@ export async function copyChartShareLink(
     throw new Error("Não foi possível obter o link do gráfico.")
   }
 
-  // Normaliza URLs nativas TV (ex: br.tradingview.com/x/ID → www.tradingview.com/x/ID/)
+  // Normalizar URL nativa (ex.: br.tradingview.com/x/ID → www.tradingview.com/x/ID/)
   if (nativeUrl && isNativeTradingViewShareUrl(nativeUrl)) {
     url = normalizeNativeTradingViewShareUrl(nativeUrl)
   }

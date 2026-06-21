@@ -186,7 +186,11 @@ export default function SettingsManager() {
             <div className="space-y-1">
               <Label className="text-white">Notificações por Email</Label>
               <p className="text-sm text-gray-400">
-                Envia emails para admin quando há novos registos
+                Envia emails para admin quando há novos registos. Templates em{" "}
+                <a href="/admin?tab=notifications" className="text-mtm-primary hover:underline">
+                  Notificações → Emails do Sistema
+                </a>
+                .
               </p>
             </div>
             <Switch

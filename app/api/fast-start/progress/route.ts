@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { awardXp } from '@/lib/xp-service'
 
 // Calcular progresso
 function calculateProgress(steps: any): number {
@@ -12,72 +14,6 @@ function calculateProgress(steps: any): number {
   if (steps.step_5_completed) completed++
   if (steps.step_6_completed) completed++
   return Math.round((completed * 100) / 6)
-}
-
-// Adicionar XP ao usuário
-async function addXP(supabase: any, userId: string, stepNumber: number) {
-  try {
-    // Buscar configuração de XP para onboarding steps
-    const { data: xpConfig } = await supabase
-      .from('xp_config')
-      .select('xp_amount')
-      .eq('action_type', 'onboarding_step_completed')
-      .single()
-
-    const xpAmount = xpConfig?.xp_amount || 50 // Default 50 XP por passo
-
-    // Verificar se já existe registo de XP
-    const { data: existingXP } = await supabase
-      .from('user_xp')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
-
-    let newTotalXP = 0
-    let newLevel = 1
-
-    if (existingXP) {
-      // Atualizar XP existente
-      newTotalXP = existingXP.total_xp + xpAmount
-      newLevel = Math.floor(newTotalXP / 1000) + 1
-
-      await supabase
-        .from('user_xp')
-        .update({
-          total_xp: newTotalXP,
-          current_level: newLevel,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId)
-    } else {
-      // Criar novo registo
-      newTotalXP = xpAmount
-      newLevel = 1
-
-      await supabase
-        .from('user_xp')
-        .insert({
-          user_id: userId,
-          total_xp: newTotalXP,
-          current_level: newLevel
-        })
-    }
-
-    // Adicionar log de XP
-    await supabase
-      .from('xp_log')
-      .insert({
-        user_id: userId,
-        xp_amount: xpAmount,
-        action_type: 'onboarding_step_completed',
-        action_description: `Passo ${stepNumber} do Fast Start concluído`
-      })
-
-    return { xp_gained: xpAmount, total_xp: newTotalXP, level: newLevel }
-  } catch (error: any) {
-    console.error('❌ [FAST_START] Erro ao adicionar XP:', error)
-    return null
-  }
 }
 
 // GET: Obter progresso do utilizador
@@ -381,9 +317,40 @@ export async function POST(request: NextRequest) {
       .eq('user_id', userId)
 
     // Adicionar XP apenas se não estava concluído antes
-    let xpResult = null
+    let xpResult: { xp_gained: number; total_xp: number; level: number } | null = null
     if (!wasAlreadyCompleted) {
-      xpResult = await addXP(supabase, userId, step_number)
+      const supabaseAdmin = getSupabaseAdmin()
+      const stepXp = await awardXp(supabaseAdmin, userId, 'onboarding_step_completed', {
+        actionDescription: `Passo ${step_number} do Fast Start concluído`,
+        oncePerDescription: true,
+      })
+      if (stepXp.awarded) {
+        xpResult = {
+          xp_gained: stepXp.xp_gained,
+          total_xp: stepXp.total_xp,
+          level: stepXp.level,
+        }
+      }
+
+      if (progressPercent === 100) {
+        const bonusXp = await awardXp(supabaseAdmin, userId, 'fast_start_completed', {
+          actionDescription: 'Fast Start 100% completo',
+          oncePerDescription: true,
+        })
+        if (bonusXp.awarded && xpResult) {
+          xpResult = {
+            xp_gained: xpResult.xp_gained + bonusXp.xp_gained,
+            total_xp: bonusXp.total_xp,
+            level: bonusXp.level,
+          }
+        } else if (bonusXp.awarded) {
+          xpResult = {
+            xp_gained: bonusXp.xp_gained,
+            total_xp: bonusXp.total_xp,
+            level: bonusXp.level,
+          }
+        }
+      }
     }
 
     return NextResponse.json({
@@ -399,7 +366,16 @@ export async function POST(request: NextRequest) {
       },
       xp_gained: xpResult?.xp_gained || 0,
       total_xp: xpResult?.total_xp || null,
-      level: xpResult?.level || null
+      level: xpResult?.level || null,
+      xp: xpResult
+        ? {
+            awarded: xpResult.xp_gained > 0,
+            xp_gained: xpResult.xp_gained,
+            total_xp: xpResult.total_xp,
+            level: xpResult.level,
+            action_type: progressPercent === 100 ? 'fast_start_completed' : 'onboarding_step_completed',
+          }
+        : null,
     })
   } catch (error: any) {
     console.error('❌ [FAST_START_POST] Erro geral:', error)
