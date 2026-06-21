@@ -215,16 +215,15 @@ export default function SettingsMobile() {
     const loadXp = async () => {
       if (!user?.id) return
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        const token = session?.access_token
-        if (!token) return
-        const res = await fetch("/api/xp/get", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!res.ok) return
-        const data = await res.json()
-        setXpData(data.user_xp ?? { total_xp: 0, current_level: 1 })
-      } catch {}
+        const { data } = await supabase
+          .from('user_xp')
+          .select('total_xp, current_level')
+          .eq('user_id', user.id)
+          .single()
+        setXpData(data ?? { total_xp: 0, current_level: 1 })
+      } catch {
+        setXpData({ total_xp: 0, current_level: 1 })
+      }
     }
     loadXp()
   }, [user?.id])
