@@ -1326,7 +1326,7 @@ function ChannelView({
   // ── Send message ──────────────────────────────────────────────────────────
 
   const sendPushForChannel = async (title: string, body: string, messageId?: string) => {
-    if (!["trading", "cripto", "geral"].includes(channel.slug)) return
+    if (!["trading", "cripto", "geral", "etf-stocks"].includes(channel.slug)) return
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const accessToken = session?.access_token
@@ -1441,6 +1441,7 @@ function ChannelView({
           trading: asVideo ? "📈 Novo vídeo em #Trading" : "📈 Nova imagem em #Trading",
           cripto: asVideo ? "₿ Novo vídeo em #Cripto" : "₿ Nova imagem em #Cripto",
           geral: asVideo ? "💬 Novo vídeo em #Geral" : "💬 Nova imagem em #Geral",
+          "etf-stocks": asVideo ? "📈 Novo vídeo em #ETF & Stocks" : "📈 Nova imagem em #ETF & Stocks",
         }
         sendPushForChannel(
           notifTitles[channel.slug] ?? (asVideo ? `🎬 Novo vídeo em #${channel.name}` : `📷 Nova imagem em #${channel.name}`),
@@ -1452,6 +1453,7 @@ function ChannelView({
           trading: "📈 Nova mensagem em #Trading",
           cripto: "₿ Nova mensagem em #Cripto",
           geral: "💬 Nova mensagem em #Geral",
+          "etf-stocks": "📈 Nova mensagem em #ETF & Stocks",
         }
         sendPushForChannel(
           notifTitles[channel.slug] ?? `💬 Nova mensagem em #${channel.name}`,

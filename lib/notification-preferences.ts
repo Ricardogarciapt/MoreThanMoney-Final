@@ -17,7 +17,7 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<
   },
   chat: {
     title: 'Chat da App',
-    description: 'Mensagens nos canais Geral, Trading e Cripto',
+    description: 'Mensagens nos canais Geral, Trading, Cripto e ETF & Stocks',
   },
   live_sessions: {
     title: 'Sessões ao Vivo',
@@ -69,7 +69,14 @@ const TELEGRAM_GROUP_CHANNELS = new Set([
   'telegram_forward',
 ])
 
-const APP_CHAT_CHANNELS = new Set(['geral', 'trading', 'cripto', 'general', 'crypto'])
+const APP_CHAT_CHANNELS = new Set([
+  'geral',
+  'trading',
+  'cripto',
+  'etf-stocks',
+  'general',
+  'crypto',
+])
 
 export function resolveNotificationCategory(
   type: string | undefined,

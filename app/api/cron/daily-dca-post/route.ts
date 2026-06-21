@@ -4,6 +4,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { hasDcaCronRunToday, markDcaCronRun } from '@/lib/cron-dca-guard'
 import { isCategoryEnabled, normalizeNotificationPreferences } from '@/lib/notification-preferences'
 import { formatDcaChatPost } from '@/lib/dca-post-formatter'
+import { resolveSystemUserId } from '@/lib/system-chat-user'
 
 /**
  * CRON: publicação diária DCA Inteligente nos canais #cripto e #etf-stocks
@@ -17,26 +18,6 @@ const CHANNELS = {
   crypto: { slug: 'cripto', label: 'Cripto', emoji: '₿' },
   etf: { slug: 'etf-stocks', label: 'ETF & Stocks', emoji: '📈' },
 } as const
-
-async function resolveSystemUserId(supabase: ReturnType<typeof getSupabaseAdmin>): Promise<string> {
-  const { data: bot } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('email', 'sistema@morethanmoney.pt')
-    .maybeSingle()
-  if (bot?.id) return bot.id
-
-  const { data: admin } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('user_type', 'admin')
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-  if (admin?.id) return admin.id
-
-  throw new Error('Nenhum utilizador sistema/admin encontrado para criar post DCA')
-}
 
 async function publishDcaForType(
   siteUrl: string,
