@@ -209,7 +209,7 @@ export default function SettingsMobile() {
   }
 
   // ── XP ────────────────────────────────────────────────────────────────────
-  const [xpData, setXpData] = useState<{ total_xp: number; current_level: number } | null>(null)
+  const [xpData, setXpData] = useState<{ total_xp: number; current_level: number }>({ total_xp: 0, current_level: 1 })
 
   useEffect(() => {
     const loadXp = async () => {
@@ -399,7 +399,7 @@ export default function SettingsMobile() {
         </div>
 
         {/* XP & Nível */}
-        {xpData && (
+        {(
           <div className="w-full mt-1 px-2">
             <div className="p-3 bg-gray-800/60 rounded-xl border border-[#D2A63C]/20">
               <div className="flex items-center justify-between mb-2">
