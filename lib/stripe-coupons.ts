@@ -2,6 +2,7 @@ import type Stripe from 'stripe'
 import { getStripeClient } from '@/lib/stripe-client'
 
 export type MtmCouponType = 'discount_pct' | 'free_months' | 'free_subscription'
+export type StripeDuration = 'once' | 'repeating' | 'forever'
 
 export interface MtmCouponRow {
   code: string
@@ -10,6 +11,8 @@ export interface MtmCouponRow {
   max_uses?: number | null
   valid_until?: string | null
   description?: string | null
+  stripe_duration?: StripeDuration | null
+  stripe_duration_months?: number | null
 }
 
 export interface StripeCouponSyncResult {
@@ -30,18 +33,23 @@ export async function createStripeCouponSync(row: MtmCouponRow): Promise<StripeC
     },
   }
 
+  // Determine duration: explicit override takes precedence, otherwise derive from type
+  const duration: StripeDuration = row.stripe_duration ||
+    (row.type === 'free_subscription' ? 'forever' :
+     row.type === 'free_months' ? 'repeating' : 'once')
+
   if (row.type === 'discount_pct') {
     const pct = Math.min(100, Math.max(1, Math.round(Number(row.discount_value) || 0)))
     couponParams.percent_off = pct
-    couponParams.duration = 'once'
-  } else if (row.type === 'free_months') {
-    const months = Math.max(1, Math.min(12, Math.round(Number(row.discount_value) || 1)))
-    couponParams.percent_off = 100
-    couponParams.duration = 'repeating'
-    couponParams.duration_in_months = months
   } else {
     couponParams.percent_off = 100
-    couponParams.duration = 'once'
+  }
+
+  couponParams.duration = duration
+  if (duration === 'repeating') {
+    const months = row.stripe_duration_months ??
+      (row.type === 'free_months' ? Math.max(1, Math.min(24, Math.round(Number(row.discount_value) || 1))) : 1)
+    couponParams.duration_in_months = months
   }
 
   const stripeCoupon = await stripe.coupons.create(couponParams)

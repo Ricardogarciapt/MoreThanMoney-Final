@@ -55,6 +55,8 @@ export async function POST(request: NextRequest) {
       valid_from,
       valid_until,
       description,
+      stripe_duration,
+      stripe_duration_months,
     } = body
 
     if (!code || typeof code !== "string" || !code.trim()) {
@@ -96,6 +98,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const allowedDurations = ['once', 'repeating', 'forever', null, undefined]
+    if (stripe_duration !== undefined && !allowedDurations.includes(stripe_duration)) {
+      return NextResponse.json({ error: "stripe_duration inválido. Valores: once, repeating, forever" }, { status: 400 })
+    }
+
     let stripeSync: { stripe_coupon_id: string; stripe_promotion_code_id: string } | null = null
     try {
       stripeSync = await createStripeCouponSync({
@@ -105,6 +112,8 @@ export async function POST(request: NextRequest) {
         max_uses: max_uses ?? null,
         valid_until: valid_until || null,
         description: description || null,
+        stripe_duration: stripe_duration || null,
+        stripe_duration_months: stripe_duration_months ? Number(stripe_duration_months) : null,
       })
     } catch (stripeErr: unknown) {
       const msg = stripeErr instanceof Error ? stripeErr.message : "Erro ao criar cupão no Stripe"
@@ -128,6 +137,7 @@ export async function POST(request: NextRequest) {
         valid_until: valid_until || null,
         description: description || null,
         is_active: true,
+        stripe_duration: stripe_duration || null,
         stripe_coupon_id: stripeSync.stripe_coupon_id,
         stripe_promotion_code_id: stripeSync.stripe_promotion_code_id,
       })

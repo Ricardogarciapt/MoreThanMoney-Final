@@ -42,6 +42,7 @@ import { useToast } from "@/hooks/use-toast"
 
 type CouponType = "discount_pct" | "free_months" | "free_subscription"
 type PlanOverride = "app_member" | "premium" | "both" | null
+type StripeDuration = "once" | "repeating" | "forever"
 
 interface Coupon {
   id: string
@@ -58,6 +59,7 @@ interface Coupon {
   created_at: string
   stripe_coupon_id?: string | null
   stripe_promotion_code_id?: string | null
+  stripe_duration?: StripeDuration | null
 }
 
 interface CouponFormData {
@@ -69,6 +71,8 @@ interface CouponFormData {
   valid_from: string
   valid_until: string
   description: string
+  stripe_duration: string
+  stripe_duration_months: string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -136,6 +140,8 @@ const defaultForm: CouponFormData = {
   valid_from: today,
   valid_until: "",
   description: "",
+  stripe_duration: "",
+  stripe_duration_months: "",
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -299,6 +305,11 @@ export default function CouponsPage() {
           ? new Date(form.valid_until).toISOString()
           : null,
         description: form.description || null,
+        stripe_duration: form.stripe_duration || null,
+        stripe_duration_months:
+          form.stripe_duration === "repeating" && form.stripe_duration_months
+            ? Number(form.stripe_duration_months)
+            : null,
       }
 
       const res = await fetch("/api/admin/coupons", {
@@ -659,6 +670,55 @@ export default function CouponsPage() {
                   </SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Stripe Duration */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                Duração Stripe{" "}
+                <span className="text-gray-600 normal-case">(auto se vazio)</span>
+              </label>
+              <Select
+                value={form.stripe_duration}
+                onValueChange={(v) =>
+                  setForm((f) => ({
+                    ...f,
+                    stripe_duration: v === "auto" ? "" : v,
+                    stripe_duration_months: v !== "repeating" ? "" : f.stripe_duration_months,
+                  }))
+                }
+              >
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white focus:border-[#D2A63C]/50">
+                  <SelectValue placeholder="Automático (baseado no tipo)" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  <SelectItem value="auto" className="text-gray-400 hover:bg-gray-700">
+                    Automático
+                  </SelectItem>
+                  <SelectItem value="once" className="text-white hover:bg-gray-700">
+                    Once — 1 pagamento
+                  </SelectItem>
+                  <SelectItem value="repeating" className="text-white hover:bg-gray-700">
+                    Repeating — N meses
+                  </SelectItem>
+                  <SelectItem value="forever" className="text-white hover:bg-gray-700">
+                    Forever — sempre gratuito
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {form.stripe_duration === "repeating" && (
+                <Input
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={form.stripe_duration_months}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, stripe_duration_months: e.target.value }))
+                  }
+                  placeholder="Nº de meses (ex: 3)"
+                  className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600 focus:border-[#D2A63C]/50 mt-2"
+                />
+              )}
             </div>
 
             {/* Discount value */}
