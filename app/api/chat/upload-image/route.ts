@@ -102,6 +102,7 @@ export async function POST(request: NextRequest) {
     const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName)
 
     return NextResponse.json({
+      url: urlData.publicUrl,
       publicUrl: urlData.publicUrl,
       mediaType: isVideo ? "video" : isDocument ? "document" : "image",
       fileName: file.name,
