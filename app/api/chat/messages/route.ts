@@ -2,6 +2,41 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { canWriteChannel } from "@/lib/chat-channel-permissions"
 import { awardXp } from "@/lib/xp-service"
+import { getSiteOrigin } from "@/lib/site-url"
+
+const CHANNEL_META: Record<string, { emoji: string; display: string }> = {
+  trading:    { emoji: "📈", display: "#Trading" },
+  cripto:     { emoji: "₿",  display: "#Cripto" },
+  geral:      { emoji: "💬", display: "#Geral" },
+  "etf-stocks": { emoji: "📊", display: "#ETF & Stocks" },
+}
+
+function dispatchChatPush(
+  channelSlug: string,
+  senderName: string,
+  senderId: string,
+  messageId: string,
+  content: string | null,
+  imageUrl: string | null,
+) {
+  const meta = CHANNEL_META[channelSlug] ?? { emoji: "💬", display: `#${channelSlug}` }
+  const preview = content?.substring(0, 100) || (imageUrl ? "🖼️ Imagem partilhada" : "📎 Ficheiro")
+  const url = `/app-mobile?tab=chat&channel=${encodeURIComponent(channelSlug)}`
+
+  fetch(`${getSiteOrigin()}/api/notifications/send-push`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      all: true,
+      excludeUserId: senderId,
+      title: `${meta.emoji} Nova mensagem em ${meta.display}`,
+      body: `${senderName}: ${preview}`,
+      url,
+      data: { type: "chat_message", channel: channelSlug, message_id: messageId, url },
+      tag: `chat_${channelSlug}`,
+    }),
+  }).catch((err) => console.error("[chat/messages] push dispatch error:", err))
+}
 
 const ALLOWED_MESSAGE_TYPES = new Set(["text", "image", "video", "link", "document"])
 
@@ -88,6 +123,16 @@ export async function POST(request: NextRequest) {
     const xp = await awardXp(supabase, profile.id, "chat_message_sent", {
       actionDescription: `Chat #${channelSlug}`,
     })
+
+    // Dispara push server-side (fire-and-forget — não bloqueia a resposta)
+    dispatchChatPush(
+      channelSlug,
+      profile.full_name || "Membro",
+      profile.id,
+      inserted.id,
+      content,
+      imageUrl,
+    )
 
     return NextResponse.json({
       message: inserted,
