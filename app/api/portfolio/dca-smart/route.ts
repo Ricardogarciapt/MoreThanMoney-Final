@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/supabase"
 import { cryptoPortfolio, etfPortfolio } from "@/lib/portfolio-data"
 import { fetchCryptoUsdBest } from "@/lib/crypto-usd"
@@ -262,19 +260,7 @@ async function analyzeRows(rows: DcaCryptoRow[], baseUrl: string): Promise<DCAOp
 
 async function createStrongBuyNotification(opportunity: DCAOpportunity) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-        },
-      }
-    )
+    const supabase = getSupabaseAdmin()
 
     const { data: users } = await supabase
       .from("profiles")
