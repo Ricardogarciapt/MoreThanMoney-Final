@@ -33,6 +33,8 @@ import {
   Moon,
   Trash2,
   TriangleAlert,
+  Zap,
+  Award,
 } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -40,6 +42,10 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function xpProgressInLevel(totalXp: number): number {
+  return totalXp % 1000
+}
 
 function planLabel(category: string | undefined | null): { label: string; color: string; bg: string } {
   const map: Record<string, { label: string; color: string; bg: string }> = {
@@ -201,6 +207,27 @@ export default function SettingsMobile() {
       setSavingUid(false)
     }
   }
+
+  // ── XP ────────────────────────────────────────────────────────────────────
+  const [xpData, setXpData] = useState<{ total_xp: number; current_level: number } | null>(null)
+
+  useEffect(() => {
+    const loadXp = async () => {
+      if (!user?.id) return
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token
+        if (!token) return
+        const res = await fetch("/api/xp/get", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.user_xp) setXpData(data.user_xp)
+      } catch {}
+    }
+    loadXp()
+  }, [user?.id])
 
   const isAppOnly = user?.member_category === "standard"
   const plan = planLabel(user?.member_category)
@@ -371,6 +398,35 @@ export default function SettingsMobile() {
           <p className="text-gray-400 text-sm">{user?.email}</p>
           <Badge className={`mt-1.5 border text-xs ${plan.bg} ${plan.color}`}>{plan.label}</Badge>
         </div>
+
+        {/* XP & Nível */}
+        {xpData && (
+          <div className="w-full mt-1 px-2">
+            <div className="p-3 bg-gray-800/60 rounded-xl border border-[#D2A63C]/20">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <Award className="w-3.5 h-3.5 text-[#D2A63C]" />
+                  <span className="text-xs text-gray-400 font-medium">Nível {xpData.current_level}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Zap className="w-3 h-3 text-yellow-400" />
+                  <span className="text-xs font-semibold text-yellow-400">
+                    {xpData.total_xp.toLocaleString("pt-PT")} XP
+                  </span>
+                </div>
+              </div>
+              <div className="w-full bg-gray-700/60 rounded-full h-1.5">
+                <div
+                  className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] h-1.5 rounded-full transition-all duration-500"
+                  style={{ width: `${(xpProgressInLevel(xpData.total_xp) / 1000) * 100}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-gray-500 mt-1 text-right">
+                {xpProgressInLevel(xpData.total_xp)}/1000 XP para nível {xpData.current_level + 1}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Secções ────────────────────────────────────────────────────── */}
