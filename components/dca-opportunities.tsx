@@ -41,15 +41,15 @@ interface DCAOpportunity {
   stop_loss: number
 }
 
+type DcaAssetMode = 'crypto' | 'etf'
+
 type DCAOpportunitiesProps = {
-  /**
-   * Incrementado em /portfolios após cada sync completo (MTM + CoinGecko + IA TP/SL).
-   * A análise DCA só corre quando >= 1, para um único lote alinhado com os preços da página.
-   */
   analysisSeq?: number
 }
 
 export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesProps) {
+  const [assetMode, setAssetMode] = useState<DcaAssetMode>('crypto')
+  const [aiSummary, setAiSummary] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [opportunities, setOpportunities] = useState<DCAOpportunity[]>([])
   const [categorized, setCategorized] = useState<any>(null)
@@ -69,11 +69,11 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
 
   const loadOpportunities = useCallback(async () => {
     try {
-      console.log('📊 [DCA OPPORTUNITIES] Carregando...')
+      console.log(`📊 [DCA OPPORTUNITIES] Carregando (${assetMode})...`)
       setLoading(true)
       setLoadError(null)
       
-      const response = await fetch(`/api/portfolio/dca-smart?type=crypto&t=${Date.now()}`, {
+      const response = await fetch(`/api/portfolio/dca-smart?type=${assetMode}&t=${Date.now()}`, {
         cache: "no-store",
       })
       const result = await response.json()
@@ -124,9 +124,11 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
             total_suggested_investment: 0,
           }
         )
+        setAiSummary(result.data.ai_summary || null)
       } else {
         console.error('❌ [DCA OPPORTUNITIES] API retornou erro:', result.error)
         setLoadError(result?.error || 'Erro ao analisar oportunidades.')
+        setAiSummary(null)
         setOpportunities([])
         setCategorized({ strong_buys: [], buys: [], waits: [], no_reinforce: [] })
         setSummary({
@@ -142,6 +144,7 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
     } catch (error) {
       console.error('❌ [DCA OPPORTUNITIES] Erro ao carregar:', error)
       setLoadError('Não foi possível carregar a análise. Verifica a ligação e tenta novamente.')
+      setAiSummary(null)
       setOpportunities([])
       setCategorized({ strong_buys: [], buys: [], waits: [], no_reinforce: [] })
       setSummary({
@@ -156,14 +159,14 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [assetMode])
 
   useEffect(() => {
     if (analysisSeq < 1) return
     void loadOpportunities()
     const interval = setInterval(() => void loadOpportunities(), 120000)
     return () => clearInterval(interval)
-  }, [analysisSeq, loadOpportunities])
+  }, [analysisSeq, loadOpportunities, assetMode])
 
   const createAlert = async (symbol: string, type: string, value: number, opportunityName?: string) => {
     try {
@@ -266,6 +269,9 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
     }).format(value)
   }
 
+  const formatPrice = (value: number) =>
+    assetMode === 'etf' ? `$${value.toFixed(2)}` : `$${value.toFixed(4)}`
+
   if (analysisSeq < 1) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16 px-4 text-center">
@@ -318,6 +324,30 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
                   <h2 className="text-4xl font-black text-white mb-2 tracking-tight drop-shadow-lg">
                     DCA Inteligente
                   </h2>
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAssetMode('crypto')}
+                      className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${
+                        assetMode === 'crypto'
+                          ? 'bg-white text-black shadow-lg'
+                          : 'bg-white/15 text-white/90 hover:bg-white/25'
+                      }`}
+                    >
+                      ₿ Crypto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAssetMode('etf')}
+                      className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${
+                        assetMode === 'etf'
+                          ? 'bg-white text-black shadow-lg'
+                          : 'bg-white/15 text-white/90 hover:bg-white/25'
+                      }`}
+                    >
+                      📈 ETF & Stocks
+                    </button>
+                  </div>
                   <p className="text-white/90 text-base flex flex-wrap items-center gap-3">
                     <span className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
                       <div className="w-2.5 h-2.5 rounded-full bg-white animate-pulse shadow-lg shadow-white/50"></div>
@@ -375,11 +405,23 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
                 <div className="relative z-10">
                   <div className="text-xs text-white/80 uppercase tracking-widest mb-3 font-black">💎 Sugestão de alocação</div>
                   <div className="text-sm text-white/90 space-y-1.5 mb-2">
-                    <p><strong className="text-green-400">Forte Compra:</strong> até 20% do reforço</p>
-                    <p><strong className="text-blue-400">Compra:</strong> até 15% do reforço</p>
-                    <p><strong className="text-yellow-400">Aguardar:</strong> até 5% do reforço</p>
+                    {assetMode === 'crypto' ? (
+                      <>
+                        <p><strong className="text-green-400">Forte Compra:</strong> até 20% do reforço mensal</p>
+                        <p><strong className="text-blue-400">Compra:</strong> até 15% do reforço mensal</p>
+                        <p><strong className="text-yellow-400">Aguardar:</strong> até 5% do reforço mensal</p>
+                      </>
+                    ) : (
+                      <>
+                        <p><strong className="text-green-400">Forte Compra:</strong> 2× reforço semanal</p>
+                        <p><strong className="text-blue-400">Compra:</strong> 1.5× reforço semanal</p>
+                        <p><strong className="text-yellow-400">Aguardar:</strong> 50% do reforço semanal</p>
+                      </>
+                    )}
                   </div>
-                  <div className="text-xs text-white/70 font-medium">Percentagens indicativas por ativo</div>
+                  <div className="text-xs text-white/70 font-medium">
+                    {assetMode === 'crypto' ? 'Dados CoinGecko + Binance' : 'Dados Yahoo Finance'}
+                  </div>
                 </div>
               </div>
               
@@ -396,6 +438,20 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
           </div>
         </CardContent>
       </Card>
+
+      {aiSummary && (
+        <Card className="border border-violet-500/30 bg-gradient-to-br from-violet-950/40 to-gray-950">
+          <CardContent className="p-5">
+            <p className="text-xs font-bold uppercase tracking-wider text-violet-300 mb-2">
+              🧠 Visão IA — {assetMode === 'crypto' ? 'Mercado Crypto' : 'ETF & Stocks'}
+            </p>
+            <p className="text-sm leading-relaxed text-gray-200">{aiSummary}</p>
+            <p className="mt-2 text-[10px] text-gray-500">
+              Conteúdo educativo gerado por IA. Não constitui consultoria financeira.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Mensagem de erro da API */}
       {loadError && !loading && (
@@ -541,6 +597,7 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
                   {opp.recommendation}
                 </Badge>
               </div>
+              <p className="mb-4 text-xs leading-relaxed text-gray-400">{opp.rationale}</p>
 
               {/* Preço Atual - Destaque Ultra Premium */}
               <div className="relative bg-gradient-to-br from-black/80 via-black/60 to-black/80 backdrop-blur-lg p-6 rounded-3xl mb-5 border-2 border-white/20 shadow-2xl overflow-hidden">
@@ -561,8 +618,10 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
                       <div className="text-[11px] text-white/70 uppercase tracking-widest font-black">💰 Preço Atual</div>
                       <div className="h-1 flex-1 bg-gradient-to-r from-white/30 to-transparent rounded-full"></div>
                     </div>
-                    <div className="text-5xl font-black text-white tracking-tighter mb-2">${opp.current_price.toFixed(4)}</div>
-                    <div className="text-xs text-white/60 font-semibold">vs Média Semanal CoinGecko</div>
+                    <div className="text-5xl font-black text-white tracking-tighter mb-2">{formatPrice(opp.current_price)}</div>
+                    <div className="text-xs text-white/60 font-semibold">
+                      {assetMode === 'crypto' ? 'vs Média Semanal CoinGecko' : 'Yahoo Finance · variação diária'}
+                    </div>
                   </div>
                   <div className="text-right">
                     <div className={`relative inline-flex items-center gap-3 px-5 py-4 rounded-2xl border-3 transition-all duration-300 ${
@@ -596,7 +655,11 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
                 <div className="bg-gradient-to-br from-[#D2A63C]/20 to-[#BB8525]/20 p-4 rounded-lg border border-[#D2A63C]/40">
                   <div className="text-xs text-gray-400 uppercase mb-1.5">Sugestão de investimento</div>
                   <div className="text-xl font-black text-[#D2A63C]">
-                    {opp.suggested_percent != null ? `${opp.suggested_percent}% do reforço` : '—'}
+                    {opp.suggested_percent != null
+                      ? assetMode === 'etf'
+                        ? `${opp.suggested_percent}% · reforço semanal`
+                        : `${opp.suggested_percent}% do reforço`
+                      : '—'}
                   </div>
                 </div>
                 <div className="bg-white/5 p-4 rounded-lg border border-gray-700">
@@ -609,11 +672,11 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
               <div className="flex gap-3 mb-4">
                 <div className="flex-1 bg-green-500/10 px-4 py-3 rounded-lg border border-green-500/30">
                   <div className="text-[10px] text-green-300 uppercase mb-1">Target</div>
-                  <div className="text-base font-bold text-green-400">${opp.take_profits[1].toFixed(4)}</div>
+                  <div className="text-base font-bold text-green-400">{formatPrice(opp.take_profits[1])}</div>
                 </div>
                 <div className="flex-1 bg-red-500/10 px-4 py-3 rounded-lg border border-red-500/30">
                   <div className="text-[10px] text-red-300 uppercase mb-1">Stop Loss</div>
-                  <div className="text-base font-bold text-red-400">${opp.stop_loss.toFixed(4)}</div>
+                  <div className="text-base font-bold text-red-400">{formatPrice(opp.stop_loss)}</div>
                 </div>
               </div>
 
@@ -667,15 +730,30 @@ export default function DCAOpportunities({ analysisSeq = 0 }: DCAOpportunitiesPr
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-gray-300">
-              <p className="font-medium text-amber-500 mb-2">Como Funciona o DCA Inteligente:</p>
+              <p className="font-medium text-amber-500 mb-2">
+                Como Funciona — {assetMode === 'crypto' ? 'Crypto' : 'ETF & Stocks'}:
+              </p>
               <ul className="space-y-1 text-xs">
-                <li>• <strong>Forte Compra</strong>: Variação diária ≤ -8% → Reforçar 2x o planeado</li>
-                <li>• <strong>Compra</strong>: Variação diária entre -8% e -4% → Reforçar 1.5x o planeado</li>
-                <li>• <strong>Aguardar</strong>: Variação diária entre -4% e +1.5% → Reforçar 50% do planeado</li>
-                <li>• <strong>Não Reforçar</strong>: Variação diária &gt; +1.5% → Aguardar melhor entrada</li>
+                {assetMode === 'crypto' ? (
+                  <>
+                    <li>• <strong>Forte Compra</strong>: Variação diária ≤ -8% → Reforçar 2× o planeado</li>
+                    <li>• <strong>Compra</strong>: Variação diária entre -8% e -4% → Reforçar 1.5×</li>
+                    <li>• <strong>Aguardar</strong>: Variação diária entre -4% e +1.5% → Reforçar 50%</li>
+                    <li>• <strong>Não Reforçar</strong>: Variação diária &gt; +1.5% → Aguardar melhor entrada</li>
+                  </>
+                ) : (
+                  <>
+                    <li>• <strong>Forte Compra</strong>: Variação diária ≤ -3.5% → 2× reforço semanal</li>
+                    <li>• <strong>Compra</strong>: Variação entre -3.5% e -1.8% → 1.5× reforço semanal</li>
+                    <li>• <strong>Aguardar</strong>: Variação entre -1.8% e +0.6% → 50% do reforço</li>
+                    <li>• <strong>Não Reforçar</strong>: Variação &gt; +0.6% → Manter disciplina DCA</li>
+                  </>
+                )}
               </ul>
               <p className="mt-2 text-xs text-gray-400">
-                Os preços são atualizados via CoinGecko. A análise DCA usa a variação diária (24h) como sinal principal.
+                {assetMode === 'crypto'
+                  ? 'Preços via CoinGecko. Análise IA diária também publicada no canal #Cripto.'
+                  : 'Preços via Yahoo Finance. Análise IA diária publicada no canal #ETF & Stocks.'}
               </p>
             </div>
           </div>

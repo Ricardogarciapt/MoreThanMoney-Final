@@ -47,7 +47,7 @@ export function canWriteChannel(slug: string, user: ChatChannelUser | null | und
     }
     return false
   }
-  if (slug === "cripto") {
+  if (slug === "cripto" || slug === "etf-stocks") {
     return (
       user.user_type === "admin" ||
       user.member_category === "iq" ||

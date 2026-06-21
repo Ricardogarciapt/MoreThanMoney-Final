@@ -69,8 +69,20 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
       "Discussão de cripto e portfólio",
       "Publicar: VIP, IQ ou Admin",
       "Todos os membros podem ler",
+      "Análise DCA Inteligente publicada diariamente pelo sistema MTM",
     ],
     tips: ["Recebes notificação push em mensagens novas"],
+  },
+  "etf-stocks": {
+    emoji: "📈",
+    accent: "#6366F1",
+    tag: "Portfólio",
+    rules: [
+      "ETFs e stocks do portfólio MTM (horizonte 5 anos)",
+      "Análise DCA Inteligente publicada diariamente pelo sistema MTM",
+      "Publicar: VIP, IQ ou Admin · todos podem ler",
+    ],
+    tips: ["Consulta /portfolios → Análise DCA para ver o painel completo"],
   },
 }
 

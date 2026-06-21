@@ -41,6 +41,13 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
     position: 3,
   },
   {
+    slug: 'etf-stocks',
+    name: 'ETF & Stocks',
+    description: 'Análise DCA diária do portfólio ETF e ações',
+    parent_slug: 'comunidade',
+    position: 4,
+  },
+  {
     slug: 'sinais',
     name: 'Sinais & Ideias',
     description: 'Ideias oficiais MTM e espelho Telegram',

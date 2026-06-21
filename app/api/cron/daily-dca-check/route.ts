@@ -57,22 +57,22 @@ export async function GET(request: NextRequest) {
     console.log('📊 [DCA CRON] Buscando oportunidades DCA...')
     
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt').trim()
-    const dcaResponse = await fetch(`${siteUrl}/api/portfolio/dca-smart?type=crypto`, {
-      next: { revalidate: 0 } // Sem cache
-    })
+    const [cryptoRes, etfRes] = await Promise.all([
+      fetch(`${siteUrl}/api/portfolio/dca-smart?type=crypto`, { cache: 'no-store' }),
+      fetch(`${siteUrl}/api/portfolio/dca-smart?type=etf`, { cache: 'no-store' }),
+    ])
 
-    if (!dcaResponse.ok) {
-      throw new Error(`DCA API retornou ${dcaResponse.status}`)
-    }
+    const cryptoData = cryptoRes.ok ? await cryptoRes.json() : null
+    const etfData = etfRes.ok ? await etfRes.json() : null
 
-    const dcaData = await dcaResponse.json()
-    
-    if (!dcaData.success) {
-      throw new Error('DCA API retornou success: false')
-    }
-
-    const strongBuys = dcaData.data.categorized?.strong_buys || []
-    const buys = dcaData.data.categorized?.buys || []
+    const strongBuys = [
+      ...(cryptoData?.success ? cryptoData.data.categorized?.strong_buys || [] : []),
+      ...(etfData?.success ? etfData.data.categorized?.strong_buys || [] : []),
+    ]
+    const buys = [
+      ...(cryptoData?.success ? cryptoData.data.categorized?.buys || [] : []),
+      ...(etfData?.success ? etfData.data.categorized?.buys || [] : []),
+    ]
     const totalOpportunities = strongBuys.length + buys.length
 
     console.log(`🚀 [DCA CRON] Encontradas ${strongBuys.length} Forte Compra e ${buys.length} Compra`)
@@ -121,6 +121,8 @@ export async function GET(request: NextRequest) {
           type: 'dca_opportunity',
           strong_buys_count: strongBuys.length,
           buys_count: buys.length,
+          crypto_opportunities: (cryptoData?.data?.categorized?.strong_buys?.length || 0) + (cryptoData?.data?.categorized?.buys?.length || 0),
+          etf_opportunities: (etfData?.data?.categorized?.strong_buys?.length || 0) + (etfData?.data?.categorized?.buys?.length || 0),
           url: '/portfolios',
           timestamp: new Date().toISOString()
         }
