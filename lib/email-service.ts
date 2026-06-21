@@ -6,7 +6,14 @@ import {
   scannerAccessEmailTemplate,
   welcomeEmailTemplate,
 } from './email-templates'
-import { createMailTransporter, getSiteUrl, mailFrom } from './mail-transport'
+import {
+  brandedMailAttachments,
+  createMailTransporter,
+  getEmailLogoSrc,
+  getSiteUrl,
+  mailFrom,
+  prepareBrandedEmailHtml,
+} from './mail-transport'
 
 async function sendHtmlMail(to: string, subject: string, html: string) {
   const transporter = createMailTransporter()
@@ -14,7 +21,8 @@ async function sendHtmlMail(to: string, subject: string, html: string) {
     from: mailFrom(),
     to,
     subject,
-    html,
+    html: prepareBrandedEmailHtml(html),
+    attachments: brandedMailAttachments(),
   })
 }
 
@@ -117,8 +125,6 @@ export async function sendMTMcopierSetupNotification(
   mt5Server?: string | null,
   mt5Last4?: string | null,
 ) {
-  const siteUrl = getSiteUrl()
-
   try {
     await sendHtmlMail(
       'morethanmoneypt@gmail.com',
@@ -126,7 +132,7 @@ export async function sendMTMcopierSetupNotification(
       `
       <div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; background:#f8f9fa; padding:20px;">
         <div style="text-align:center; background:linear-gradient(135deg,#D2A63C,#BB8525); padding:24px; border-radius:12px 12px 0 0;">
-          <img src="${siteUrl}/logo-mf-gold.png" alt="MTM" width="140" />
+          <img src="${getEmailLogoSrc()}" alt="MTM" width="140" />
         </div>
         <div style="background:white; padding:24px; border-radius:0 0 12px 12px;">
           <h2 style="color:#D2A63C;">Novo MTMcopier activado</h2>

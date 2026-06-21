@@ -51,7 +51,7 @@ export const SYSTEM_EMAILS: SystemEmailDefinition[] = [
     name: 'Boas-vindas + Fast Start MTM × IQONIC',
     subject: '🎉 Bem-vindo à MoreThanMoney!',
     category: 'transactional',
-    trigger: 'Quando o admin aprova um novo registo (API approve-user ou link de aprovação)',
+    trigger: 'Primeira subscrição activa — Stripe, App Store, Google Play ou aprovação admin',
     automated: true,
   },
   {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
-import { sendWelcomeEmail, sendRejectionEmail } from "@/lib/email-service"
+import { sendRejectionEmail } from "@/lib/email-service"
+import { sendNewMemberWelcomeIfEligible } from "@/lib/new-member-welcome"
 
 export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin()
@@ -43,7 +44,11 @@ export async function POST(request: NextRequest) {
 
       // Enviar email de confirmação para o utilizador
       try {
-        await sendWelcomeEmail(user.email, user.full_name || user.username || 'Utilizador', user.username || user.email)
+        await sendNewMemberWelcomeIfEligible({
+          userId,
+          source: 'admin',
+          force: true,
+        })
       } catch (emailError) {
         console.error('Erro ao enviar email de boas-vindas:', emailError)
         // Continuar mesmo se o email falhar

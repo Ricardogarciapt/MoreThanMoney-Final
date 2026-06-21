@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import nodemailer from 'nodemailer'
 import * as emailTemplates from '@/lib/email-templates'
+import { brandedMailAttachments, prepareBrandedEmailHtml } from '@/lib/mail-transport'
 
 const supabase = getSupabaseAdmin()
 
@@ -237,7 +238,8 @@ export async function GET(request: NextRequest) {
           from: `"MoreThanMoney" <${process.env.GMAIL_USER}>`,
           to: user.email,
           subject: nextStep.subject,
-          html: htmlContent
+          html: prepareBrandedEmailHtml(htmlContent),
+          attachments: brandedMailAttachments(),
         })
         
         // Atualizar status de envio

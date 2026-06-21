@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import nodemailer from 'nodemailer'
 import * as emailTemplates from '@/lib/email-templates'
+import { brandedMailAttachments, prepareBrandedEmailHtml } from '@/lib/mail-transport'
 
 const supabase = getSupabaseAdmin()
 
@@ -382,7 +383,8 @@ async function sendCampaign(campaignId: string) {
           from: `"MoreThanMoney" <${process.env.GMAIL_USER}>`,
           to: recipient.email,
           subject: campaign.subject,
-          html: htmlContent
+          html: prepareBrandedEmailHtml(htmlContent),
+          attachments: brandedMailAttachments(),
         })
         
         // Atualizar status de envio

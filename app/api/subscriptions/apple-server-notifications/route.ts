@@ -27,6 +27,7 @@ import {
   processMlmSubscriptionRenewal,
   processMlmSubscriptionSignup,
 } from "@/lib/mlm-subscription-integration"
+import { sendNewMemberWelcomeIfEligible } from "@/lib/new-member-welcome"
 
 const supabase = getSupabaseAdmin()
 
@@ -230,6 +231,13 @@ export async function POST(request: NextRequest) {
             currency: mlmCtx.currency,
             paymentReference: applePaymentReference("purchase", transactionID),
             platform: "app_store",
+          })
+          void sendNewMemberWelcomeIfEligible({
+            userId,
+            source: "app_store",
+            planId: mlmCtx.planId,
+            notifyTeam: true,
+            eventId: `apple_asn_${transactionID}`,
           })
         }
       } catch (mlmErr) {

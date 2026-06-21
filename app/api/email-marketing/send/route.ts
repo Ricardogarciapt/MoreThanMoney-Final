@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import nodemailer from "nodemailer"
+import { brandedMailAttachments, prepareBrandedEmailHtml } from "@/lib/mail-transport"
 
 const createTransporter = () =>
   nodemailer.createTransport({
@@ -34,8 +35,9 @@ export async function POST(request: NextRequest) {
       from: `"MoreThanMoney" <${process.env.GMAIL_USER || "morethanmoneypt@gmail.com"}>`,
       to,
       subject,
-      html: html || undefined,
+      html: html ? prepareBrandedEmailHtml(html) : undefined,
       text: text || undefined,
+      attachments: html ? brandedMailAttachments() : undefined,
     })
 
     return NextResponse.json({ success: true })

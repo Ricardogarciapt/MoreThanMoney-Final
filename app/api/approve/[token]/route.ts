@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
-import { sendWelcomeEmail, sendRejectionEmail } from "@/lib/email-service"
+import { sendRejectionEmail } from "@/lib/email-service"
+import { sendNewMemberWelcomeIfEligible } from "@/lib/new-member-welcome"
 import jwt from 'jsonwebtoken'
 
 const supabase = getSupabaseAdmin()
@@ -72,11 +73,11 @@ export async function GET(
       // Enviar email de boas-vindas ao utilizador
       try {
         console.log(`📧 [APPROVE] Enviando email de boas-vindas para: ${user.email}`)
-        await sendWelcomeEmail(
-          user.email,
-          user.full_name || user.username || 'Utilizador',
-          user.username || user.email
-        )
+        await sendNewMemberWelcomeIfEligible({
+          userId,
+          source: 'admin',
+          force: true,
+        })
         console.log(`✅ [APPROVE] Email de boas-vindas enviado!`)
       } catch (emailError) {
         console.error('❌ [APPROVE] Erro ao enviar email de boas-vindas:', emailError)

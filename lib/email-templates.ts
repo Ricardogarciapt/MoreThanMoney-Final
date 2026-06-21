@@ -4,6 +4,7 @@
 // =====================================================
 
 import { getFastStartJourneySteps, resolveSiteBase } from './fast-start-journey'
+import { getEmailLogoSrc } from './mail-transport'
 
 // Cores MTM
 const COLORS = {
@@ -20,8 +21,9 @@ function resolveSiteUrl(siteUrl?: string): string {
   return siteUrl?.replace(/\/$/, '') || 'https://www.morethanmoney.pt'
 }
 
-function resolveLogoUrl(siteUrl?: string): string {
-  return `${resolveSiteUrl(siteUrl)}/logo-mf-gold.png`
+/** Logo inline (CID) nos emails; URL pública só para fallback em previews. */
+function resolveLogoUrl(_siteUrl?: string): string {
+  return getEmailLogoSrc()
 }
 
 // Header com logo MTM (emails transaccionais)
@@ -340,7 +342,7 @@ export const welcomeEmailTemplate = (userName: string, userEmail: string, userna
         Bem-vindo, ${userName}! 👋
       </h2>
       <p style="margin-bottom: 12px; text-align: center; font-size: 16px;">
-        A tua conta foi <strong>aprovada</strong>. Fazes agora parte do ecossistema <strong>MoreThanMoney × IQONIC</strong>.
+        A tua subscrição está <strong>activa</strong>. Fazes agora parte do ecossistema <strong>MoreThanMoney × IQONIC</strong>.
       </p>
       <p style="margin-bottom: 0; text-align: center; color: #666; font-size: 14px;">
         Segue o Fast Start abaixo — o mesmo percurso que vais encontrar na app e em <a href="${base}/fast-start" style="color: ${COLORS.primaryDark};">morethanmoney.pt/fast-start</a>.

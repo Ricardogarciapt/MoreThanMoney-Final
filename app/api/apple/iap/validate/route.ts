@@ -6,6 +6,7 @@ import {
   applePaymentReference,
   processMlmSubscriptionSignup,
 } from '@/lib/mlm-subscription-integration'
+import { sendNewMemberWelcomeIfEligible } from '@/lib/new-member-welcome'
 
 const supabase = getSupabaseAdmin()
 
@@ -170,6 +171,19 @@ export async function POST(req: NextRequest) {
       })
     } catch (mlmErr) {
       console.error('[APPLE-IAP] Erro MLM signup:', mlmErr)
+    }
+
+    const wasAlreadyActive = existing?.subscription_status === 'active'
+    if (!wasAlreadyActive) {
+      const mlmCtx = appleMlmContext(productId, plan)
+      void sendNewMemberWelcomeIfEligible({
+        userId: resolvedUserId,
+        source: 'app_store',
+        planId: mlmCtx.planId,
+        sponsorUsername: sponsor,
+        notifyTeam: true,
+        eventId: `apple_validate_${originalTransactionId}`,
+      })
     }
 
     console.log(`✅ [APPLE-IAP] Subscrição activada: user=${resolvedUserId} plan=${plan} tx=${transactionId}`)

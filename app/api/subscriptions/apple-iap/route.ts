@@ -6,6 +6,7 @@ import {
   processMlmSubscriptionRenewal,
   processMlmSubscriptionSignup,
 } from "@/lib/mlm-subscription-integration"
+import { sendNewMemberWelcomeIfEligible } from "@/lib/new-member-welcome"
 
 const supabase = getSupabaseAdmin()
 
@@ -198,7 +199,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // MLM
+    // MLM + boas-vindas
     try {
       const mlmCtx = appleMlmContext(
         apple_product_id,
@@ -227,6 +228,14 @@ export async function POST(request: NextRequest) {
           currency: mlmCtx.currency,
           paymentReference: applePaymentReference('purchase', apple_original_transaction_id),
           platform: 'app_store',
+        })
+        void sendNewMemberWelcomeIfEligible({
+          userId,
+          source: subscription_platform === 'google_play' ? 'google_play' : 'app_store',
+          planId: mlmCtx.planId,
+          sponsorUsername: sponsor,
+          notifyTeam: true,
+          eventId: `apple_${apple_original_transaction_id}`,
         })
       }
     } catch (mlmErr) {

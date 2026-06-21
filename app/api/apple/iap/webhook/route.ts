@@ -7,6 +7,7 @@ import {
   processMlmSubscriptionRenewal,
   processMlmSubscriptionSignup,
 } from '@/lib/mlm-subscription-integration'
+import { sendNewMemberWelcomeIfEligible } from '@/lib/new-member-welcome'
 
 const supabase = getSupabaseAdmin()
 
@@ -150,6 +151,15 @@ export async function POST(req: NextRequest) {
             paymentReference: applePaymentReference('purchase', transactionId),
             platform: 'apple',
           })
+          if (notificationType === 'SUBSCRIBED') {
+            void sendNewMemberWelcomeIfEligible({
+              userId,
+              source: 'app_store',
+              planId: mlmCtx.planId,
+              notifyTeam: true,
+              eventId: `apple_webhook_${transactionId}`,
+            })
+          }
         }
       } catch (mlmErr) {
         console.error('[APPLE-WEBHOOK] MLM error:', mlmErr)

@@ -25,6 +25,7 @@ import {
   notifyTeamSale,
   notifyTeamRenewal,
 } from '@/lib/notifications-sales'
+import { sendNewMemberWelcomeIfEligible } from '@/lib/new-member-welcome'
 
 // Nomes amigáveis dos scanners por planId (para o email de instruções TradingView)
 const SCANNER_PLAN_NAMES: Record<string, string> = {
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.user_id
 
-  // Registo novo: conta ainda não existe — complete-registration trata o perfil
+  // Registo novo: provisionar conta server-side (não depende do browser / localStorage)
   if (!userId && session.metadata?.pending_registration === 'true') {
     await supabase
       .from('checkout_sessions')
@@ -117,6 +118,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       await processMlmCheckoutCommission(supabase, session, null)
     } catch (mlmErr) {
       console.error('[MLM] Erro no registo novo (pending_registration):', mlmErr)
+    }
+
+    try {
+      const { provisionStripeRegistrationFromSession } = await import(
+        '@/lib/stripe-complete-registration'
+      )
+      const provision = await provisionStripeRegistrationFromSession(session, {
+        sendSetPasswordEmail: true,
+      })
+      if (provision.ok) {
+        console.log(
+          `✅ [STRIPE-WEBHOOK] Conta provisionada server-side: ${provision.userId} (session ${session.id})`
+        )
+      } else {
+        console.warn(
+          `[STRIPE-WEBHOOK] Provisionamento pendente falhou (${provision.reason}):`,
+          provision.error || session.id
+        )
+      }
+    } catch (provisionErr) {
+      console.error('[STRIPE-WEBHOOK] Erro ao provisionar registo pós-pagamento:', provisionErr)
     }
     return
   }
@@ -328,6 +350,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       username: memberUsername,
       planId,
       eventId,
+    })
+    void sendNewMemberWelcomeIfEligible({
+      userId,
+      source: 'stripe',
+      planId,
+      eventId: `welcome_${eventId}`,
     })
   } catch (notifErr) {
     console.error('[NOTIF] Erro ao notificar venda na equipa:', notifErr)
