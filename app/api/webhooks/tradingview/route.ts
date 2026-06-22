@@ -174,11 +174,17 @@ export async function POST(request: NextRequest) {
     if (logId) await supabase.from("tradingview_signals").update({ chat_status: "error", ai_error: "chat: " + String(err) }).eq("id", logId)
   }
 
-  // Push (iOS/APK/PWA) — só Premium/IQ/VIP/admin (canal restrito)
+  // Push (iOS/APK/PWA) — só Premium/IQ/VIP/admin (canal restrito).
+  // await (não fire-and-forget): no Vercel o trabalho assíncrono é morto após a resposta.
+  let pushOk = false
   if (chatId) {
     const body = `${v.symbol ?? ticker ?? "Sinal"} ${v.direction === "buy" ? "COMPRA" : v.direction === "sell" ? "VENDA" : ""}`.trim()
-    pushPremium(supabase, chatId, "🧠 Novo sinal — Sensei Scanner", body)
-      .catch((e) => console.error("[tradingview-webhook] push error:", e))
+    try {
+      await pushPremium(supabase, chatId, "🧠 Novo sinal — Sensei Scanner", body)
+      pushOk = true
+    } catch (e) {
+      console.error("[tradingview-webhook] push error:", e)
+    }
   }
 
   // Relay Telegram (gated)
@@ -195,5 +201,5 @@ export async function POST(request: NextRequest) {
     await supabase.from("tradingview_signals").update({ telegram_status: RELAY_ENABLED ? "error" : "disabled" }).eq("id", logId)
   }
 
-  return NextResponse.json({ ok: true, valid: true, confidence: v.confidence, chat: !!chatId, telegram: tgOk, signal_id: logId })
+  return NextResponse.json({ ok: true, valid: true, confidence: v.confidence, chat: !!chatId, push: pushOk, telegram: tgOk, signal_id: logId })
 }
