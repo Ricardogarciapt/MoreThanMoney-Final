@@ -64,6 +64,7 @@ export default function Navbar() {
       submenu: [
         { name: "IQonic Academy", href: "https://iqonic.vip", external: true },
         { name: "Educação MTM", href: "/mtm" },
+        { name: "Docs", href: "/docs" },
         { name: "Live Sessions", href: "/live-sessions" },
         { name: "BackOffice IQ", href: "https://user.iqonic.life", external: true },
       ],

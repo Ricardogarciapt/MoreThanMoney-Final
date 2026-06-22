@@ -73,16 +73,27 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Verificar se o usuário é VIP ou Admin
+    // Verificar permissão: Admin, VIP ou Educador (lms_educators ativo, por email)
     const { data: profile } = await supabase
       .from('profiles')
-      .select('user_type, is_active, full_name')
+      .select('user_type, is_active, full_name, email')
       .eq('id', uploaded_by)
       .single()
 
-    if (!profile || !['admin', 'vip'].includes(profile.user_type) || !profile.is_active) {
-      return NextResponse.json({ 
-        error: 'Apenas VIPs e Admins podem fazer upload de documentos' 
+    let allowed = !!profile?.is_active && ['admin', 'vip'].includes(profile?.user_type)
+    if (!allowed && profile?.email) {
+      const { data: educator } = await supabase
+        .from('lms_educators')
+        .select('id')
+        .eq('email', profile.email)
+        .eq('is_active', true)
+        .maybeSingle()
+      allowed = !!educator
+    }
+
+    if (!profile || !allowed) {
+      return NextResponse.json({
+        error: 'Apenas Educadores, VIPs e Admins podem fazer upload de documentos'
       }, { status: 403 })
     }
 
@@ -112,11 +123,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Log da atividade
-    await supabase.rpc('log_activity', {
-      p_user_email: profile.full_name || uploaded_by,
-      p_action: 'document_created',
-      p_details: `Documento criado: ${title}`
-    }).then(() => {}).catch((e: any) => console.warn('Log falhou:', e))
+    try {
+      await supabase.rpc('log_activity', {
+        p_user_email: profile.full_name || uploaded_by,
+        p_action: 'document_created',
+        p_details: `Documento criado: ${title}`
+      })
+    } catch (e: any) {
+      console.warn('Log falhou:', e)
+    }
 
     console.log(`✅ [DOCUMENTS API] Documento criado: ${title}`)
 

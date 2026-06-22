@@ -1,10 +1,20 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import ProtectedPage from "@/components/protected-page"
 import { supabase } from "@/lib/supabase"
 import {
@@ -19,7 +29,9 @@ import {
   Archive,
   Lock,
   Unlock,
-  Loader2
+  Loader2,
+  Upload,
+  Plus
 } from "lucide-react"
 import {
   Select,
@@ -84,6 +96,21 @@ export default function DocsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [userType, setUserType] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string | null>(null)
+  const [canUpload, setCanUpload] = useState(false)
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    category: 'educacao',
+    tags: '',
+    isPublic: true,
+    linkUrl: '',
+    file: null as File | null,
+  })
 
   useEffect(() => {
     loadUserType()
@@ -99,16 +126,86 @@ export default function DocsPage() {
       const { data: { session } } = await supabase.auth.getSession()
       
       if (session?.user) {
+        setUserId(session.user.id)
         const { data: profile } = await supabase
           .from('profiles')
-          .select('user_type')
+          .select('user_type, full_name')
           .eq('id', session.user.id)
           .single()
 
         setUserType(profile?.user_type || null)
+        setUserName(profile?.full_name || null)
+
+        try {
+          const r = await fetch(`/api/documents/can-upload?userId=${session.user.id}`)
+          const j = await r.json()
+          setCanUpload(!!j.canUpload)
+        } catch (e) {
+          console.error('❌ [DOCS] Erro can-upload:', e)
+        }
       }
     } catch (error) {
       console.error('❌ [DOCS] Erro ao carregar user type:', error)
+    }
+  }
+
+  const handleUpload = async () => {
+    if (!userId) return
+    if (!form.title.trim()) {
+      alert('Indica um título.')
+      return
+    }
+    if (!form.file && !form.linkUrl.trim()) {
+      alert('Escolhe um ficheiro ou indica um link.')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      let fileUrl = form.linkUrl.trim()
+      let fileType = 'link'
+
+      if (form.file) {
+        const ext = (form.file.name.split('.').pop() || 'bin').toLowerCase()
+        const path = `documents/${userId}-${Date.now()}.${ext}`
+        const { error: upErr } = await supabase.storage
+          .from('uploads')
+          .upload(path, form.file, { upsert: false, contentType: form.file.type })
+        if (upErr) throw upErr
+        const { data: pub } = supabase.storage.from('uploads').getPublicUrl(path)
+        fileUrl = pub.publicUrl
+        fileType = ext
+      }
+
+      const tags = form.tags.split(',').map((t) => t.trim()).filter(Boolean)
+
+      const res = await fetch('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: form.title.trim(),
+          description: form.description.trim() || null,
+          file_url: fileUrl,
+          file_type: fileType,
+          category: form.category,
+          tags,
+          is_public: form.isPublic,
+          uploaded_by: userId,
+          uploader_name: userName || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'Falha ao guardar')
+
+      setUploadOpen(false)
+      setForm({ title: '', description: '', category: 'educacao', tags: '', isPublic: true, linkUrl: '', file: null })
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      await loadDocuments()
+    } catch (e: any) {
+      console.error('❌ [DOCS] Erro no upload:', e)
+      alert('Erro ao enviar: ' + (e?.message || e))
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -277,6 +374,16 @@ export default function DocsPage() {
                   🌟 Acesso VIP
                 </Badge>
               )}
+              {canUpload && (
+                <Button
+                  onClick={() => setUploadOpen(true)}
+                  size="sm"
+                  className="ml-auto bg-gradient-to-r from-[#D2A63C] to-[#BB8525] hover:opacity-90 text-black font-bold"
+                >
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  Upload de documento
+                </Button>
+              )}
             </div>
           </div>
 
@@ -422,6 +529,118 @@ export default function DocsPage() {
             </div>
           )}
         </div>
+
+        {/* Dialog de Upload */}
+        <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+          <DialogContent className="bg-gray-900 border-[#D2A63C]/40 text-white max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5 text-[#D2A63C]" />
+                Upload de documento
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="doc-title">Título *</Label>
+                <Input
+                  id="doc-title"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="Ex: Guia de Gestão de Risco"
+                  className="bg-gray-800/60 border-[#D2A63C]/30"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="doc-desc">Descrição</Label>
+                <Textarea
+                  id="doc-desc"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Breve descrição do documento"
+                  className="bg-gray-800/60 border-[#D2A63C]/30 min-h-[72px]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Categoria</Label>
+                  <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                    <SelectTrigger className="bg-gray-800/60 border-[#D2A63C]/30">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-900 border-[#D2A63C]/30 text-white">
+                      {CATEGORIES.filter((c) => c.value !== 'all').map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.icon} {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="doc-tags">Tags (vírgulas)</Label>
+                  <Input
+                    id="doc-tags"
+                    value={form.tags}
+                    onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                    placeholder="forex, risco"
+                    className="bg-gray-800/60 border-[#D2A63C]/30"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="doc-file">Ficheiro</Label>
+                <Input
+                  id="doc-file"
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })}
+                  className="bg-gray-800/60 border-[#D2A63C]/30 file:text-[#D2A63C]"
+                />
+                <p className="text-xs text-gray-500">Ou, em alternativa, indica um link abaixo.</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="doc-link">Link (alternativa ao ficheiro)</Label>
+                <Input
+                  id="doc-link"
+                  value={form.linkUrl}
+                  onChange={(e) => setForm({ ...form, linkUrl: e.target.value })}
+                  placeholder="https://..."
+                  className="bg-gray-800/60 border-[#D2A63C]/30"
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-[#D2A63C]/20 px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">Público</p>
+                  <p className="text-xs text-gray-500">Desligado = reservado a VIP</p>
+                </div>
+                <Switch checked={form.isPublic} onCheckedChange={(v) => setForm({ ...form, isPublic: v })} />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setUploadOpen(false)} disabled={submitting} className="border-gray-700">
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleUpload}
+                disabled={submitting}
+                className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] hover:opacity-90 text-black font-bold"
+              >
+                {submitting ? (
+                  <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> A enviar...</>
+                ) : (
+                  <><Upload className="h-4 w-4 mr-1.5" /> Enviar</>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </ProtectedPage>
   )
