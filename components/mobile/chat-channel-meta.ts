@@ -61,6 +61,17 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
       "Só leitura",
     ],
   },
+  "sensei-scanner": {
+    emoji: "🧠",
+    accent: "#22D3EE",
+    tag: "IA",
+    rules: [
+      "Sinais automáticos do scanner Sensei (TradingView)",
+      "Validados e geridos por IA antes de publicar",
+      "Só leitura — as entradas chegam automaticamente",
+    ],
+    tips: ["Ativa push para não perder entradas"],
+  },
   cripto: {
     emoji: "₿",
     accent: "#F59E0B",

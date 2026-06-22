@@ -75,6 +75,13 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
     parent_slug: 'sinais',
     position: 13,
   },
+  {
+    slug: 'sensei-scanner',
+    name: 'Sensei Scanner',
+    description: 'Sinais automáticos do scanner Sensei (TradingView + validação IA)',
+    parent_slug: 'sinais',
+    position: 14,
+  },
 ]
 
 export function getDefaultChannelSlugs(): string[] {
