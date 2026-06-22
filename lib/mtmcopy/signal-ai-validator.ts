@@ -1,4 +1,5 @@
-import type { ParsedSignal } from './signal-parser'
+import type { ParsedSignal, SenseiAlertType, SenseiParsedAlert } from './signal-parser'
+import { isSenseiTradingViewFormat, senseiAlertTypeLabel } from './signal-parser'
 import type { MtmcopyChannelKey } from './channel-context'
 import { resolvePremiumAiStrategyPrompt } from './premium-ai-guideline'
 
@@ -19,6 +20,8 @@ export interface ValidateSignalOptions {
   channel?: MtmcopyChannelKey
   /** Prompt de estratégia do provider (Premium Gold). */
   strategyPrompt?: string | null
+  /** Webhook TradingView Sensei — SL/TP opcionais, notificação mesmo sem direcção. */
+  senseiWebhook?: boolean
 }
 
 /** Formatos oficiais MTM — parser fiável, não bloquear em IA (~1–2s). */
@@ -27,7 +30,84 @@ export function isOfficialMtmTelegramFormat(raw: string): boolean {
   if (/\b(?:xauusd|gold)\s+(?:buy|sell)\b/i.test(raw)) return true
   if (/\b(?:buy|sell)\s+now\b/i.test(raw) && /\b(?:gold|xauusd)\b/i.test(raw)) return true
   if (/\bgold\s+(?:buy|sell)\s+zone\b/i.test(raw) && /\bsl\s*:/i.test(raw)) return true
+  if (isSenseiTradingViewFormat(raw)) return true
   return false
+}
+
+/** Validação rápida para alertas Pine Script Sensei X (todos os tipos + JSON). */
+export function validateSenseiWebhookSignal(
+  parsed: ParsedSignal | SenseiParsedAlert,
+  raw: string,
+): AiSignalValidation {
+  const start = performance.now()
+  const issues: string[] = []
+  let score = 0.4
+
+  const alertType: SenseiAlertType =
+    'alertType' in parsed && parsed.alertType ? parsed.alertType : 'idea'
+  const isManagement =
+    alertType === 'exit' || alertType === 'sl_hit' || alertType === 'tp_hit' || alertType === 'breakeven'
+  const isIdea = alertType === 'idea' || alertType === 'signal'
+  const isActivation = alertType === 'entry_trigger'
+
+  if (parsed.symbol) score += 0.25
+  else issues.push('Símbolo em falta')
+
+  if (parsed.entry != null && parsed.entry > 0) score += 0.15
+  else if (!isManagement && !isIdea) issues.push('Preço em falta')
+
+  if (parsed.direction) score += 0.15
+  else if (isActivation && parsed.sl == null) issues.push('Buy/Sell em falta no Entry Trigger')
+  else if (!isManagement && !isIdea) issues.push('Direcção em falta')
+
+  if (parsed.sl != null) score += 0.1
+  else if (isIdea) issues.push('Stop Loss em falta na ideia')
+
+  if (parsed.tp.length > 0) score += 0.1
+  else if (isIdea) issues.push('Take Profit em falta na ideia')
+
+  const confidence = clamp01(score)
+  let valid = false
+  if (isManagement) {
+    valid = Boolean(parsed.symbol) && confidence >= MTMCOPY_AI_MIN_CONFIDENCE
+  } else if (isIdea) {
+    valid =
+      Boolean(parsed.symbol) &&
+      parsed.sl != null &&
+      parsed.tp.length > 0 &&
+      confidence >= MTMCOPY_AI_MIN_CONFIDENCE
+  } else if (isActivation) {
+    valid =
+      Boolean(parsed.symbol) &&
+      parsed.entry != null &&
+      parsed.entry > 0 &&
+      (parsed.direction != null || parsed.sl != null) &&
+      confidence >= MTMCOPY_AI_MIN_CONFIDENCE
+  } else {
+    valid =
+      Boolean(parsed.symbol) &&
+      (parsed.entry != null && parsed.entry > 0 || parsed.direction != null) &&
+      confidence >= MTMCOPY_AI_MIN_CONFIDENCE
+  }
+
+  const typeLabel = senseiAlertTypeLabel(alertType)
+
+  return {
+    valid,
+    confidence,
+    symbol: parsed.symbol,
+    direction: parsed.direction,
+    entry: parsed.entry,
+    sl: parsed.sl,
+    tp: parsed.tp,
+    orderType: parsed.orderType,
+    issues,
+    reasoning: valid ? `Formato Sensei X — ${typeLabel}` : issues.join('; '),
+    source: 'local',
+    localConfidence: confidence,
+    aiConfidence: null,
+    latencyMs: performance.now() - start,
+  }
 }
 
 function shouldSkipAiCall(
@@ -398,7 +478,10 @@ export async function validateSignalWithAi(
   }
 
   const start = performance.now()
-  const local = quickLocalValidate(parsed, raw, channel)
+  const local =
+    options?.senseiWebhook && isSenseiTradingViewFormat(raw)
+      ? validateSenseiWebhookSignal(parsed, raw)
+      : quickLocalValidate(parsed, raw, channel)
 
   if (shouldSkipAiCall(raw, local, minConfidence, options?.skipAi, options?.forceFastPath)) {
     const result = {

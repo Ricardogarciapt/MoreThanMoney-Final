@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
-import { parseSignal, type ParsedSignal } from "@/lib/mtmcopy/signal-parser"
-import { validateSignalWithAi } from "@/lib/mtmcopy/signal-ai-validator"
+import {
+  parseSenseiTradingViewAlert,
+  parseSignal,
+  isSenseiTradingViewFormat,
+  senseiAlertTypeLabel,
+  type ParsedSignal,
+  type SenseiParsedAlert,
+  type SenseiTradingViewFields,
+} from "@/lib/mtmcopy/signal-parser"
+import { validateSenseiWebhookSignal, validateSignalWithAi } from "@/lib/mtmcopy/signal-ai-validator"
+import {
+  activateSenseiTradeIdea,
+  findPendingSenseiIdea,
+  mergeSenseiTriggerWithIdea,
+  saveSenseiTradeIdea,
+} from "@/lib/mtmcopy/sensei-ideas"
 import { processMtmcopyWebhookSignal } from "@/lib/mtmcopy/processor"
 import { getSiteOrigin } from "@/lib/site-url"
 import { resolvedTradeIdeasChatId } from "@/lib/telegram-channel-ids"
@@ -40,14 +54,66 @@ function buildRawSignal(symbol: string | null, action: string | null, sl: number
   return `Moeda: ${symbol ?? ""}\nAção:   ${acao}\nStoploss: ${sl ?? ""}\nTakeprofit: ${tp ?? ""}`
 }
 
-function composePost(v: { symbol: string | null; direction: "buy" | "sell" | null; entry: number | null; sl: number | null; tp: number[]; confidence: number; reasoning: string }): string {
-  const dir = v.direction === "buy" ? "🔵 COMPRA" : v.direction === "sell" ? "🔴 VENDA" : "—"
+function composePost(
+  v: {
+    symbol: string | null
+    direction: "buy" | "sell" | null
+    entry: number | null
+    sl: number | null
+    tp: number[]
+    confidence: number
+    reasoning: string
+  },
+  sensei?: SenseiParsedAlert | null,
+): string {
+  const dir =
+    v.direction === "buy" ? "🔵 COMPRA" : v.direction === "sell" ? "🔴 VENDA" : "—"
   const tpStr = v.tp.length ? v.tp.join(" / ") : "—"
   const pct = Math.round((v.confidence || 0) * 100)
+  const tfLine = sensei?.timeframe ? `⏱ Timeframe: ${sensei.timeframe}` : null
+  const title = sensei ? senseiAlertTypeLabel(sensei.alertType) : "Novo Sinal"
+
+  if (sensei?.alertType === "idea" || sensei?.alertType === "signal") {
+    return [
+      `🧠 Sensei Scanner — ${title}`,
+      ``,
+      `📊 ${v.symbol ?? "—"}   ${dir}`,
+      tfLine,
+      `🎯 Zona / entrada: ${v.entry ?? "—"}`,
+      `🛑 Stop Loss: ${v.sl ?? "—"}`,
+      `✅ Take Profit: ${tpStr}`,
+      ``,
+      `⏳ Aguarda Entry Trigger Buy ou Sell para activar.`,
+      ``,
+      `🔎 Validação: ${pct}% — ${v.reasoning}`,
+      ``,
+      `⚠️ Não é aconselhamento financeiro.`,
+    ].filter(Boolean).join("\n")
+  }
+
+  if (sensei?.alertType === "entry_trigger") {
+    return [
+      `🧠 Sensei Scanner — ${title} ✅`,
+      ``,
+      `📊 ${v.symbol ?? "—"}   ${dir}`,
+      tfLine,
+      `🎯 Entrada activada: ${v.entry ?? "Mercado"}`,
+      `🛑 Stop Loss: ${v.sl ?? "—"}`,
+      `✅ Take Profit: ${tpStr}`,
+      ``,
+      `🔎 Validação: ${pct}% — ${v.reasoning}`,
+      ``,
+      `⚠️ Não é aconselhamento financeiro.`,
+    ].filter(Boolean).join("\n")
+  }
+
+  const dirFallback =
+    v.direction === "buy" ? "🔵 COMPRA" : v.direction === "sell" ? "🔴 VENDA" : sensei ? `📡 ${senseiAlertTypeLabel(sensei.alertType).toUpperCase()}` : "📡 ALERTA"
   return [
-    `🧠 Sensei Scanner — Novo Sinal`,
+    `🧠 Sensei Scanner — ${title}`,
     ``,
-    `📊 ${v.symbol ?? "—"}   ${dir}`,
+    `📊 ${v.symbol ?? "—"}   ${dirFallback}`,
+    tfLine,
     `🎯 Entrada: ${v.entry ?? "Mercado"}`,
     `🛑 Stop Loss: ${v.sl ?? "—"}`,
     `✅ Take Profit: ${tpStr}`,
@@ -55,7 +121,7 @@ function composePost(v: { symbol: string | null; direction: "buy" | "sell" | nul
     `🔎 Validação IA: ${pct}% — ${v.reasoning}`,
     ``,
     `⚠️ Não é aconselhamento financeiro.`,
-  ].join("\n")
+  ].filter(Boolean).join("\n")
 }
 
 async function sendTelegram(token: string, chatId: string, text: string): Promise<number> {
@@ -121,18 +187,53 @@ export async function POST(request: NextRequest) {
   const price = num(pick(payload, ["price", "close", "order_price", "strategy_order_price"]))
   const sl = num(pick(payload, ["sl", "stoploss", "stop_loss", "stop"]))
   const tp = num(pick(payload, ["tp", "takeprofit", "take_profit", "target", "tp1"]))
+  const tp2 = num(pick(payload, ["tp2", "take_profit_2", "target2"]))
+  const tp3 = num(pick(payload, ["tp3", "take_profit_3", "target3"]))
   const alertName = pick(payload, ["alert_name", "alert", "name", "strategy"])
   const freeText = isJson ? pick(payload, ["message", "comment", "text"]) : String(payload.message ?? "")
 
-  // Texto bruto para o parser/validador: usa formato MTM se houver campos, senão o texto livre
+  const senseiFields: SenseiTradingViewFields = {
+    ticker,
+    action,
+    price,
+    sl,
+    tp: tp != null ? tp : tp2 != null || tp3 != null ? [tp, tp2, tp3].filter((n): n is number => n != null) : null,
+    tp1: tp,
+    tp2,
+    tp3,
+    timeframe,
+    exchange,
+    alertName,
+  }
+
+  // Texto bruto: formato MTM estruturado, senão mensagem livre Sensei / JSON
   const raw = ticker && action ? buildRawSignal(ticker, action, sl, tp) : (freeText || JSON.stringify(payload))
+  const senseiParsed = parseSenseiTradingViewAlert(raw, senseiFields)
+  const isSensei = isSenseiTradingViewFormat(raw, senseiFields) || Boolean(senseiParsed)
+
+  // Entry Trigger: fundir com ideia pendente (Entry Alert anterior)
+  let activeSensei = senseiParsed
+  let pendingIdeaId: string | null = null
+  if (senseiParsed?.alertType === "entry_trigger" && senseiParsed.symbol) {
+    let pending = await findPendingSenseiIdea(supabase, senseiParsed.symbol, senseiParsed.timeframe)
+    if (!pending && senseiParsed.timeframe) {
+      pending = await findPendingSenseiIdea(supabase, senseiParsed.symbol, null)
+    }
+    if (pending) {
+      pendingIdeaId = pending.id
+      activeSensei = mergeSenseiTriggerWithIdea(senseiParsed, pending)
+    }
+  }
+
   const parsed: ParsedSignal =
-    parseSignal(raw) ?? {
+    parseSignal(raw) ??
+    activeSensei ??
+    {
       symbol: ticker,
       direction: action && /buy|long/i.test(action) ? "buy" : action && /sell|short/i.test(action) ? "sell" : null,
       entry: price,
       sl,
-      tp: tp != null ? [tp] : [],
+      tp: [tp, tp2, tp3].filter((n): n is number => n != null),
       orderType: price != null ? "limit" : "market",
       raw,
     }
@@ -144,8 +245,15 @@ export async function POST(request: NextRequest) {
     .select("id").single()
   const logId = logRow?.id as string | undefined
 
-  // Validação IA (reutiliza o validador mtmcopy existente)
-  const v = await validateSignalWithAi(raw, parsed, { channel: "trade-ideas" })
+  // Validação (Sensei: ideia vs activação vs gestão)
+  const v =
+    isSensei && activeSensei
+      ? validateSenseiWebhookSignal(activeSensei, raw)
+      : await validateSignalWithAi(raw, parsed, {
+          channel: "trade-ideas",
+          senseiWebhook: isSensei,
+          forceFastPath: isSensei,
+        })
 
   if (logId) {
     await supabase.from("tradingview_signals").update({
@@ -163,19 +271,31 @@ export async function POST(request: NextRequest) {
 
   const parsedForExec =
     parseSignal(raw) ??
+    activeSensei ??
     ({
       symbol: v.symbol ?? ticker,
       direction: v.direction,
       entry: v.entry ?? price,
       sl: v.sl ?? sl,
-      tp: v.tp?.length ? v.tp : tp != null ? [tp] : [],
+      tp: v.tp?.length ? v.tp : [tp, tp2, tp3].filter((n): n is number => n != null),
       orderType: (v.entry ?? price) != null ? "limit" : "market",
       raw,
     } as ParsedSignal)
 
   let providerExecuted = false
   let providerDetail: string | undefined
-  if (parsedForExec.symbol && parsedForExec.direction) {
+  const isIdeaAlert = activeSensei?.alertType === "idea" || activeSensei?.alertType === "signal"
+  const canExecuteProvider =
+    !isIdeaAlert &&
+    parsedForExec.symbol &&
+    parsedForExec.direction &&
+    (activeSensei?.alertType === "entry_trigger" || !activeSensei)
+
+  if (isIdeaAlert && activeSensei) {
+    await saveSenseiTradeIdea(supabase, activeSensei, logId)
+  }
+
+  if (canExecuteProvider) {
     try {
       const exec = await processMtmcopyWebhookSignal({
         raw,
@@ -188,9 +308,10 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       console.error("[tradingview-webhook] provider exec error:", err)
     }
+    if (pendingIdeaId) await activateSenseiTradeIdea(supabase, pendingIdeaId, logId)
   }
 
-  const post = composePost(v)
+  const post = composePost(v, activeSensei)
 
   // Publica no chat #Sensei Scanner (mesma convenção do mirror Telegram)
   let chatId: string | null = null
@@ -210,9 +331,19 @@ export async function POST(request: NextRequest) {
   // await (não fire-and-forget): no Vercel o trabalho assíncrono é morto após a resposta.
   let pushOk = false
   if (chatId) {
-    const body = `${v.symbol ?? ticker ?? "Sinal"} ${v.direction === "buy" ? "COMPRA" : v.direction === "sell" ? "VENDA" : ""}`.trim()
+    const body = [
+      v.symbol ?? ticker ?? "Sinal",
+      activeSensei ? senseiAlertTypeLabel(activeSensei.alertType) : "",
+      v.direction === "buy" ? "COMPRA" : v.direction === "sell" ? "VENDA" : "",
+    ].filter(Boolean).join(" — ")
+    const pushTitle =
+      activeSensei?.alertType === "idea"
+        ? "💡 Nova ideia — Sensei Scanner"
+        : activeSensei?.alertType === "entry_trigger"
+          ? "✅ Ideia activada — Sensei Scanner"
+          : "🧠 Novo sinal — Sensei Scanner"
     try {
-      await pushPremium(supabase, chatId, "🧠 Novo sinal — Sensei Scanner", body)
+      await pushPremium(supabase, chatId, pushTitle, body)
       pushOk = true
     } catch (e) {
       console.error("[tradingview-webhook] push error:", e)

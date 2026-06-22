@@ -82,6 +82,10 @@ const SYMBOL_STOPWORDS = new Set([
   'NET',
   'WIN',
   'LOSS',
+  'ENTRY',
+  'TRIGGER',
+  'SENSEI',
+  'MTM',
 ])
 
 /** Pares forex/crypto/índices comuns */
@@ -378,6 +382,219 @@ function extractTpFromText(text: string, lines: string[]): number[] {
   }
 
   return [...new Set(tp)].filter((n) => Number.isFinite(n))
+}
+
+/** Alerta Pine Script MTM Sensei X via webhook TradingView. */
+const SENSEI_PREFIX_RE = /(?:📡\s*)?MTM\s+Sensei\s+X\s*[—–-]\s*/i
+
+/** Corpo do alerta após o prefixo Sensei X (Entry Alert = ideia · Entry Trigger = activação). */
+const SENSEI_BODY_RE =
+  /(?:(Long|Short|Buy|Sell)\s+)?(Entry\s+Alert|Entry\s+Trigger|Exit\s+Trigger|SL\s+Hit|Stop\s+Loss\s+Hit|TP\d?\s+Hit|Take\s+Profit(?:\s+\d+)?\s+Hit|Breakeven|Break\s+Even|BE\s+Set|Signal|Alert)(?:\s+(Long|Short|Buy|Sell))?\s+([A-Z][A-Z0-9]{1,11})(?:\s+(\d+[mMhHdDwW]?))?(?:\s+@\s*([\d.,]+))?/i
+
+export type SenseiAlertType =
+  | 'idea'
+  | 'entry_trigger'
+  | 'exit'
+  | 'sl_hit'
+  | 'tp_hit'
+  | 'breakeven'
+  | 'signal'
+  | 'unknown'
+
+/** Campos JSON do webhook TradingView (Pine Script Sensei X). */
+export interface SenseiTradingViewFields {
+  ticker?: string | null
+  action?: string | null
+  price?: number | null
+  sl?: number | null
+  tp?: number | number[] | null
+  tp1?: number | null
+  tp2?: number | null
+  tp3?: number | null
+  timeframe?: string | null
+  exchange?: string | null
+  alertName?: string | null
+}
+
+export interface SenseiParsedAlert extends ParsedSignal {
+  alertType: SenseiAlertType
+  timeframe?: string | null
+  exchange?: string | null
+  alertName?: string | null
+  tpLevel?: number | null
+}
+
+function mapSenseiAlertKind(kind: string): SenseiAlertType {
+  const k = kind.toLowerCase().replace(/\s+/g, ' ')
+  if (k.includes('entry alert')) return 'idea'
+  if (k.includes('entry trigger')) return 'entry_trigger'
+  if (k === 'signal' || k === 'alert') return 'idea'
+  if (k.includes('exit trigger')) return 'exit'
+  if (k.includes('sl hit') || k.includes('stop loss hit')) return 'sl_hit'
+  if (k.includes('tp') && k.includes('hit')) return 'tp_hit'
+  if (k.includes('breakeven') || k.includes('break even') || k.includes('be set')) return 'breakeven'
+  return 'unknown'
+}
+
+function tpLevelFromKind(kind: string): number | null {
+  const m = kind.match(/tp(\d)/i)
+  return m ? parseInt(m[1], 10) : null
+}
+
+function directionFromAction(action: string | null | undefined): 'buy' | 'sell' | null {
+  if (!action?.trim()) return null
+  return normalizeDirectionFromText(action)
+}
+
+function collectTpFromFields(fields?: SenseiTradingViewFields): number[] {
+  if (!fields) return []
+  const raw: (number | null | undefined)[] = []
+  if (Array.isArray(fields.tp)) raw.push(...fields.tp)
+  else if (fields.tp != null) raw.push(fields.tp)
+  raw.push(fields.tp1, fields.tp2, fields.tp3)
+  return [...new Set(raw.filter((n): n is number => n != null && Number.isFinite(n) && n > 0))]
+}
+
+function mergeSenseiParsed(
+  textParsed: Partial<SenseiParsedAlert> | null,
+  fields: SenseiTradingViewFields | undefined,
+  raw: string,
+): SenseiParsedAlert | null {
+  const fromFieldsSymbol = fields?.ticker ? normalizeSymbol(fields.ticker) : null
+  const symbol =
+    (textParsed?.symbol && isValidTradingSymbol(textParsed.symbol) ? textParsed.symbol : null) ??
+    (fromFieldsSymbol && isValidTradingSymbol(fromFieldsSymbol) ? fromFieldsSymbol : null)
+
+  if (!symbol) return null
+
+  const fieldTp = collectTpFromFields(fields)
+  const tp = [...new Set([...(textParsed?.tp ?? []), ...fieldTp])]
+
+  const direction =
+    textParsed?.direction ??
+    directionFromAction(fields?.action) ??
+    null
+
+  const entry = textParsed?.entry ?? fields?.price ?? null
+  const sl = textParsed?.sl ?? fields?.sl ?? null
+
+  const alertType = textParsed?.alertType ?? 'signal'
+  const orderType: 'market' | 'limit' =
+    textParsed?.orderType ?? (entry != null ? 'limit' : 'market')
+
+  return {
+    symbol,
+    direction,
+    entry,
+    sl,
+    tp,
+    orderType,
+    raw: raw.trim(),
+    alertType,
+    timeframe: textParsed?.timeframe ?? fields?.timeframe ?? null,
+    exchange: textParsed?.exchange ?? fields?.exchange ?? null,
+    alertName: textParsed?.alertName ?? fields?.alertName ?? null,
+    tpLevel: textParsed?.tpLevel ?? null,
+  }
+}
+
+function parseSenseiTextBlock(text: string): Partial<SenseiParsedAlert> | null {
+  if (!text?.trim()) return null
+  const stripped = text.replace(SENSEI_PREFIX_RE, '').trim()
+  const m = stripped.match(SENSEI_BODY_RE) ?? text.match(SENSEI_BODY_RE)
+  if (!m) return null
+
+  const symbol = normalizeSymbol(m[4])
+  if (!isValidTradingSymbol(symbol)) return null
+
+  const dirRaw = m[1] ?? m[3]
+  const direction = dirRaw ? normalizeDirectionFromText(dirRaw) : null
+  const entry = m[6] ? parseNumber(m[6]) : null
+  const alertType = mapSenseiAlertKind(m[2])
+  const tpLevel = tpLevelFromKind(m[2])
+
+  const lines = text.split(/\r?\n/)
+  const sl = extractSlFromText(text, lines)
+  const tp = extractTpFromText(text, lines)
+
+  return {
+    symbol,
+    direction,
+    entry,
+    sl,
+    tp,
+    orderType: entry != null ? 'limit' : 'market',
+    alertType,
+    timeframe: m[5] ?? null,
+    tpLevel,
+  }
+}
+
+export function isSenseiTradingViewFormat(
+  text: string,
+  fields?: SenseiTradingViewFields,
+): boolean {
+  if (SENSEI_PREFIX_RE.test(text) || SENSEI_BODY_RE.test(text)) return true
+  if (fields?.alertName && /sensei/i.test(fields.alertName)) return true
+  if (fields?.ticker && fields?.action && /sensei/i.test(text)) return true
+  return false
+}
+
+/**
+ * Parser Sensei X — texto Pine Script + campos JSON do webhook TradingView.
+ * Aceita Entry/Exit Trigger, SL/TP Hit, Breakeven e sinais com SL/TP inline ou em JSON.
+ */
+export function parseSenseiTradingViewAlert(
+  text: string,
+  fields?: SenseiTradingViewFields,
+): SenseiParsedAlert | null {
+  const raw = text?.trim() || ''
+  const textParsed = parseSenseiTextBlock(raw)
+  const merged = mergeSenseiParsed(textParsed, fields, raw || JSON.stringify(fields ?? {}))
+
+  if (merged) return merged
+
+  // JSON estruturado sem texto Sensei (ex.: ticker + action + sl + tp no payload)
+  if (fields?.ticker && fields?.action) {
+    const sym = normalizeSymbol(fields.ticker)
+    if (!isValidTradingSymbol(sym)) return null
+    return {
+      symbol: sym,
+      direction: directionFromAction(fields.action),
+      entry: fields.price ?? null,
+      sl: fields.sl ?? null,
+      tp: collectTpFromFields(fields),
+      orderType: fields.price != null ? 'limit' : 'market',
+      raw: raw || `Moeda: ${fields.ticker}\nAção: ${fields.action}`,
+      alertType: 'signal',
+      timeframe: fields.timeframe ?? null,
+      exchange: fields.exchange ?? null,
+      alertName: fields.alertName ?? null,
+    }
+  }
+
+  return null
+}
+
+export function senseiAlertTypeLabel(type: SenseiAlertType): string {
+  switch (type) {
+    case 'idea':
+      return 'Nova Ideia'
+    case 'entry_trigger':
+      return 'Ideia Activada'
+    case 'exit':
+      return 'Exit Trigger'
+    case 'sl_hit':
+      return 'SL Hit'
+    case 'tp_hit':
+      return 'TP Hit'
+    case 'breakeven':
+      return 'Breakeven'
+    case 'signal':
+      return 'Ideia'
+    default:
+      return 'Alerta'
+  }
 }
 
 export function parseSignal(text: string): ParsedSignal | null {
