@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin, requireAdmin } from '@/lib/admin-api-helpers'
+import { enrichConnectionsWithMetrics } from '@/lib/mtmcopy/subscriber-metrics'
 
 const supabase = getSupabaseAdmin()
 
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
   const userId = searchParams.get('user_id')
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '50', 10), 200)
   const offset = parseInt(searchParams.get('offset') ?? '0', 10)
+  const includeBalances = searchParams.get('include_balances') !== '0'
 
   if (userId) {
     const [{ data: profile, error: pErr }, { data: connections }] = await Promise.all([
@@ -37,10 +39,14 @@ export async function GET(request: NextRequest) {
     }
     const connList = connections ?? []
     const statsMap = await loadStatsMap(connList.map((c) => c.id))
-    const connection = connList.find((c) => c.is_active) ?? connList[0] ?? null
+    const enrichedList = includeBalances
+      ? await enrichConnectionsWithMetrics(connList)
+      : connList
+    const connection = enrichedList.find((c) => c.is_active) ?? enrichedList[0] ?? null
     const stats = connection ? statsMap.get(connection.id) ?? null : null
+    const metrics = connection ? pickMetrics(connection) : null
     return NextResponse.json({
-      users: [{ profile, connection, connections: connList, stats }],
+      users: [{ profile, connection, connections: enrichedList, stats, metrics }],
       total: 1,
       limit: 1,
       offset: 0,
@@ -92,14 +98,33 @@ export async function GET(request: NextRequest) {
   const connectionIds = (connections ?? []).map((c) => c.id)
   const statsMap = await loadStatsMap(connectionIds)
 
+  const balanceTargets = includeBalances
+    ? (connections ?? []).filter((c) => c.metaapi_account_id && c.mt5_status === 'connected').slice(0, 80)
+    : []
+  const metricsById = new Map<string, ReturnType<typeof pickMetrics>>()
+  if (balanceTargets.length) {
+    const enriched = await enrichConnectionsWithMetrics(balanceTargets)
+    for (const c of enriched) {
+      metricsById.set(c.id as string, pickMetrics(c))
+    }
+  }
+
   let rows = (profiles ?? []).map((profile) => {
     const connList = connByUser.get(profile.id) ?? []
     const connection = connList.find((c) => c.is_active) ?? connList[0] ?? null
+    const connectionMetrics = connection ? metricsById.get(connection.id) ?? null : null
+    const connectionsWithMetrics = connList.map((c) => ({
+      ...c,
+      ...(metricsById.get(c.id) ?? {}),
+    }))
     return {
       profile,
-      connection,
-      connections: connList,
+      connection: connection
+        ? { ...connection, ...(metricsById.get(connection.id) ?? {}) }
+        : null,
+      connections: connectionsWithMetrics,
       stats: connection ? statsMap.get(connection.id) ?? null : null,
+      metrics: connectionMetrics,
     }
   })
 
@@ -221,4 +246,20 @@ async function loadStatsMap(connectionIds: string[]) {
     })
   }
   return map
+}
+
+function pickMetrics(conn: {
+  account_balance?: number | null
+  account_equity?: number | null
+  baseline_balance?: number | null
+  pnl_amount?: number | null
+  pnl_percent?: number | null
+}) {
+  return {
+    account_balance: conn.account_balance ?? null,
+    account_equity: conn.account_equity ?? null,
+    baseline_balance: conn.baseline_balance ?? null,
+    pnl_amount: conn.pnl_amount ?? null,
+    pnl_percent: conn.pnl_percent ?? null,
+  }
 }

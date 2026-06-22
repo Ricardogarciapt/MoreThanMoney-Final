@@ -61,6 +61,11 @@ interface MTMcopierConnection {
   exit_pct_tp1?: number | null
   exit_pct_tp2?: number | null
   exit_pct_tp3?: number | null
+  account_balance?: number | null
+  account_equity?: number | null
+  pnl_percent?: number | null
+  pnl_amount?: number | null
+  baseline_balance?: number | null
 }
 
 interface ConnectionStats {
@@ -72,7 +77,9 @@ interface ConnectionStats {
 interface UserRow {
   profile: UserProfile
   connection: MTMcopierConnection | null
+  connections?: MTMcopierConnection[]
   stats: ConnectionStats | null
+  metrics?: ConnectionMetrics | null
 }
 
 interface SignalLog {
@@ -114,6 +121,73 @@ function formatRelative(iso: string) {
   if (diff < 3600) return `${Math.floor(diff / 60)}min`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`
   return `${Math.floor(diff / 86400)}d`
+}
+
+function formatMoney(n: number | null | undefined) {
+  if (n == null || !Number.isFinite(n)) return "—"
+  return n.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function formatPnlPercent(n: number | null | undefined) {
+  if (n == null || !Number.isFinite(n)) return "—"
+  const sign = n >= 0 ? "+" : ""
+  return `${sign}${n.toFixed(2)}%`
+}
+
+function ConnectionMetricsBar({
+  connection,
+  metrics,
+}: {
+  connection: MTMcopierConnection
+  metrics?: ConnectionMetrics | null
+}) {
+  const balance = metrics?.account_balance ?? connection.account_balance ?? null
+  const equity = metrics?.account_equity ?? connection.account_equity ?? null
+  const pnl = metrics?.pnl_percent ?? connection.pnl_percent ?? null
+  const pnlColor = pnl == null ? "text-gray-400" : pnl >= 0 ? "text-green-400" : "text-red-400"
+
+  if (connection.mt5_status !== "connected" || balance == null) {
+    return (
+      <p className="text-[10px] text-gray-600 mt-1.5">
+        Saldo MT5 indisponível {connection.mt5_status !== "connected" ? `(MT5 ${connection.mt5_status})` : ""}
+      </p>
+    )
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 mt-2">
+      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-zinc-800/80 border border-zinc-700 text-zinc-300">
+        <Wallet className="w-3 h-3 text-[#D2A63C]" />
+        {formatMoney(balance)}
+      </span>
+      {equity != null && equity !== balance && (
+        <span className="text-xs text-zinc-500">Eq {formatMoney(equity)}</span>
+      )}
+      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md border border-zinc-700 ${pnlColor}`}>
+        <TrendingUp className="w-3 h-3" />
+        {formatPnlPercent(pnl)}
+      </span>
+      {connection.prop_firm_type && (
+        <Badge className="text-[10px] bg-sky-500/15 text-sky-300 border-sky-500/30 uppercase">
+          {connection.prop_firm_type}
+        </Badge>
+      )}
+      {connection.copy_method && (
+        <span className="text-[10px] text-zinc-600">{connection.copy_method}</span>
+      )}
+      {connection.account_label && (
+        <span className="text-[10px] text-zinc-500 truncate max-w-[120px]">{connection.account_label}</span>
+      )}
+    </div>
+  )
+}
+
+interface ConnectionMetrics {
+  account_balance?: number | null
+  account_equity?: number | null
+  baseline_balance?: number | null
+  pnl_amount?: number | null
+  pnl_percent?: number | null
 }
 
 function userTypeBadge(type: string, category: string | null) {
@@ -577,7 +651,7 @@ function UserRow({
   showSubscriber: boolean
   onToggleSubscriber: () => void
 }) {
-  const { profile, connection, stats } = row
+  const { profile, connection, connections: connList, stats, metrics } = row
   const [togglingActive, setTogglingActive] = useState(false)
   const name = profile.full_name || profile.username || profile.email
 
@@ -638,6 +712,21 @@ function UserRow({
             </div>
           ) : (
             <p className="text-xs text-gray-600 mt-2">Sem ligação MTMcopier</p>
+          )}
+
+          {connection && (
+            <ConnectionMetricsBar connection={connection} metrics={metrics} />
+          )}
+
+          {(connList?.length ?? 0) > 1 && (
+            <div className="mt-2 space-y-1">
+              {(connList ?? []).filter((c) => c.id !== connection?.id).map((c) => (
+                <div key={c.id} className="text-[10px] text-zinc-500 border-l border-zinc-700 pl-2">
+                  <span className="text-zinc-400">{c.account_label || `····${c.mt5_login_last4}`}</span>
+                  <ConnectionMetricsBar connection={c} metrics={c} />
+                </div>
+              ))}
+            </div>
           )}
 
           {connection?.last_error && (
@@ -744,6 +833,7 @@ export default function MTMcopierManager({ highlightUserId }: MTMcopierManagerPr
       if (search) params.set("q", search)
       if (filter) params.set("filter", filter)
       params.set("limit", "100")
+      params.set("include_balances", "1")
 
       const res = await adminApiCall<{ users: UserRow[]; total: number }>(
         `/api/admin/mtmcopy/users?${params.toString()}`,
@@ -819,6 +909,12 @@ export default function MTMcopierManager({ highlightUserId }: MTMcopierManagerPr
 
   const withConnection = rows.filter((r) => r.connection).length
   const activeCopy = rows.filter((r) => r.connection?.is_active).length
+  const totalBalance = rows.reduce((sum, r) => sum + (r.metrics?.account_balance ?? r.connection?.account_balance ?? 0), 0)
+  const avgPnl =
+    rows.filter((r) => r.metrics?.pnl_percent != null).length > 0
+      ? rows.reduce((sum, r) => sum + (r.metrics?.pnl_percent ?? 0), 0) /
+        rows.filter((r) => r.metrics?.pnl_percent != null).length
+      : null
   const pendingCount = rows.filter(
     (r) => r.connection && (r.connection.telegram_status === "pending" || r.connection.mt5_status === "pending"),
   ).length
@@ -829,11 +925,13 @@ export default function MTMcopierManager({ highlightUserId }: MTMcopierManagerPr
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 flex-1">
           {[
             { label: "Utilizadores", value: total, color: "text-white" },
             { label: "Com MTMcopier", value: withConnection, color: "text-[#D2A63C]" },
             { label: "Cópia activa", value: activeCopy, color: "text-green-400" },
+            { label: "Saldo total subs.", value: totalBalance > 0 ? formatMoney(totalBalance) : "—", color: "text-sky-300" },
+            { label: "P&L médio", value: avgPnl != null ? formatPnlPercent(avgPnl) : "—", color: avgPnl != null && avgPnl >= 0 ? "text-green-400" : "text-amber-400" },
             { label: "Pendentes / Erros", value: `${pendingCount} / ${errorCount}`, color: "text-yellow-400" },
           ].map(({ label, value, color }) => (
             <div key={label} className="rounded-xl border border-gray-800 bg-gray-900/50 p-3 text-center">

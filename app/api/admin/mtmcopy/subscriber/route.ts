@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin, requireAdmin } from '@/lib/admin-api-helpers'
 import { attachConnectionBalances } from '@/lib/mtmcopy/connection-balances'
+import { computeConnectionMetrics } from '@/lib/mtmcopy/subscriber-metrics'
 import { syncConnectionCopyFactory } from '@/lib/mtmcopy/connection-sync'
 import { connectionCopyMethod } from '@/lib/mtmcopy/copy-limits'
 import { getSubscriberConfiguration } from '@/lib/mtmcopy/copyfactory'
 import { getPropFirmPreset, applyPropFirmToConnectionPatch } from '@/lib/mtmcopy/prop-firm-presets'
 import type { PropFirmType } from '@/lib/mtmcopy/prop-firm-presets'
-import { listOpenPositions, isMetaApiConfigured } from '@/lib/mtmcopy/metaapi'
+import { listOpenPositions, isMetaApiConfigured, getAccountSnapshot } from '@/lib/mtmcopy/metaapi'
 
 const supabase = getSupabaseAdmin()
 
@@ -88,15 +89,8 @@ export async function GET(request: NextRequest) {
 
       const balance = conn.account_balance ?? null
       const equity = conn.account_equity ?? null
-      let baseline = conn.baseline_balance != null ? Number(conn.baseline_balance) : null
-      if (baseline == null && balance != null) baseline = balance
-
-      const pnlAmount =
-        baseline != null && equity != null ? equity - baseline : null
-      const pnlPercent =
-        baseline != null && baseline > 0 && pnlAmount != null
-          ? (pnlAmount / baseline) * 100
-          : null
+      const metrics = computeConnectionMetrics(conn)
+      const { pnl_amount: pnlAmount, pnl_percent: pnlPercent, baseline_balance: baseline } = metrics
 
       const { data: signals } = await supabase
         .from('mtmcopy_signal_log')
@@ -238,26 +232,22 @@ export async function PATCH(request: NextRequest) {
       profile?.full_name || profile?.username || profile?.email || `MTM-${connection.user_id.slice(0, 8)}`
 
     cfSync = await syncConnectionCopyFactory(connection, userLabel)
-    if (cfSync.ok) {
-      await supabase
-        .from('mtmcopy_connections')
-        .update({
-          copyfactory_subscribed: true,
-          last_error: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', connection_id)
-      connection.copyfactory_subscribed = true
-    } else {
-      await supabase
-        .from('mtmcopy_connections')
-        .update({
-          copyfactory_subscribed: false,
-          last_error: cfSync.error ?? 'Falha CopyFactory',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', connection_id)
+    const patchAfter: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
     }
+    if (cfSync.ok) {
+      patchAfter.copyfactory_subscribed = true
+      patchAfter.last_error = null
+      if (connection.baseline_balance == null) {
+        const snap = await getAccountSnapshot(connection.metaapi_account_id)
+        if (snap?.balance != null) patchAfter.baseline_balance = snap.balance
+      }
+    } else {
+      patchAfter.copyfactory_subscribed = false
+      patchAfter.last_error = cfSync.error ?? 'Falha CopyFactory'
+    }
+    await supabase.from('mtmcopy_connections').update(patchAfter).eq('id', connection_id)
+    Object.assign(connection, patchAfter)
   }
 
   return NextResponse.json({
