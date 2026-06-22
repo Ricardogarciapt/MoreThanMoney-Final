@@ -126,6 +126,9 @@ export async function POST(request: NextRequest) {
     copyfactory_strategy_pick,
     is_audited,
     audit_label,
+    prop_firm_type,
+    apply_prop_firm_preset,
+    copy_as_manual,
   } = body
 
   if (lot_mode && !['fixed', 'risk_percent', 'multiplier'].includes(lot_mode)) {
@@ -171,6 +174,17 @@ export async function POST(request: NextRequest) {
   }
   if (typeof is_audited === 'boolean') payload.is_audited = is_audited
   if (audit_label !== undefined) payload.audit_label = String(audit_label).trim() || null
+
+  if (apply_prop_firm_preset === true && prop_firm_type) {
+    const { applyPropFirmToConnectionPatch } = await import('@/lib/mtmcopy/prop-firm-presets')
+    if (prop_firm_type === 'ftmo' || prop_firm_type === 'fundednext') {
+      Object.assign(payload, applyPropFirmToConnectionPatch(prop_firm_type))
+    }
+  } else if (prop_firm_type !== undefined) {
+    payload.prop_firm_type =
+      prop_firm_type === 'ftmo' || prop_firm_type === 'fundednext' ? prop_firm_type : null
+  }
+  if (typeof copy_as_manual === 'boolean') payload.copy_as_manual = copy_as_manual
 
   const effectiveMethod =
     copy_method === 'telegram_group' || copy_method === 'strategy' || copy_method === 'master_slave'

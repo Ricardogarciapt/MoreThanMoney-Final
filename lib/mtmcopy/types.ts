@@ -40,6 +40,9 @@ export interface MTMcopierConnection {
   copyfactory_strategy_pick?: string | null
   is_audited?: boolean
   audit_label?: string | null
+  prop_firm_type?: 'ftmo' | 'fundednext' | null
+  copy_as_manual?: boolean
+  baseline_balance?: number | null
 }
 
 export type TradingTradeSource = 'manual' | 'copy' | 'audited'

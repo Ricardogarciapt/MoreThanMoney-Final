@@ -1107,6 +1107,7 @@ async function processSignalDirect(
           tp3: conn.exit_pct_tp3 ?? 34,
         },
         equity,
+        { manual: conn.copy_as_manual === true },
       )
     : null
 

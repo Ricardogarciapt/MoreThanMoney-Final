@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import {
   RefreshCw, Search, Send, AlertTriangle, Check, Loader2,
   Activity, Power, PowerOff, ChevronDown, ChevronUp,
-  Clock, UserPlus, ExternalLink, Users, History,
+  Clock, UserPlus, ExternalLink, Users, History, Wallet, TrendingUp, Settings,
 } from "lucide-react"
 import { adminApiCall } from "@/lib/admin-helpers"
 
@@ -52,6 +52,15 @@ interface MTMcopierConnection {
   created_at: string
   updated_at: string
   metaapi_account_id: string | null
+  copyfactory_subscribed?: boolean
+  copy_method?: string | null
+  copyfactory_strategy_pick?: string | null
+  prop_firm_type?: string | null
+  copy_as_manual?: boolean
+  account_label?: string | null
+  exit_pct_tp1?: number | null
+  exit_pct_tp2?: number | null
+  exit_pct_tp3?: number | null
 }
 
 interface ConnectionStats {
@@ -113,6 +122,186 @@ function userTypeBadge(type: string, category: string | null) {
   if (category === "iq") return <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 text-[10px]">IQ</Badge>
   if (category === "skool") return <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px]">Skool</Badge>
   return <Badge variant="outline" className="text-[10px] border-gray-700 text-gray-400">{type}</Badge>
+}
+
+// ── painel Gerir subscritor ───────────────────────────────────────────────────
+
+interface SubscriberDetail {
+  connection: MTMcopierConnection
+  method: string
+  balance: number | null
+  equity: number | null
+  pnl_percent: number | null
+  pnl_amount: number | null
+  positions_count: number
+  positions: Array<{ id: string; symbol: string; type: string; volume?: number; profit?: number; comment?: string }>
+  copying_active: boolean
+  subscribed_strategy_ids: string[]
+  recent_signals: SignalLog[]
+  preset?: { label: string; consistencyHint: string } | null
+}
+
+function SubscriberManager({
+  connection,
+  onRefresh,
+}: {
+  connection: MTMcopierConnection
+  onRefresh: () => void
+}) {
+  const [detail, setDetail] = useState<SubscriberDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const res = await adminApiCall<{ subscriber: SubscriberDetail }>(
+      `/api/admin/mtmcopy/subscriber?connection_id=${connection.id}`,
+    )
+    if (res.success && res.data?.subscriber) setDetail(res.data.subscriber)
+    setLoading(false)
+  }, [connection.id])
+
+  useEffect(() => { load() }, [load])
+
+  const handleResync = async () => {
+    setSyncing(true)
+    setMsg(null)
+    const res = await adminApiCall<{ copyfactory_sync?: { ok: boolean; error?: string } }>(
+      "/api/admin/mtmcopy/subscriber",
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          connection_id: connection.id,
+          resync_copyfactory: true,
+          ...(connection.prop_firm_type === "ftmo" || connection.prop_firm_type === "fundednext"
+            ? { apply_prop_preset: true, prop_firm_type: connection.prop_firm_type }
+            : {}),
+        }),
+      },
+    )
+    if (res.success) {
+      setMsg(res.data?.copyfactory_sync?.ok ? "CopyFactory sincronizado" : res.data?.copyfactory_sync?.error ?? "Re-sync concluído")
+      await load()
+      onRefresh()
+    } else {
+      setMsg(res.error ?? "Falha no re-sync")
+    }
+    setSyncing(false)
+  }
+
+  const handleApplyFtmo = async () => {
+    setSyncing(true)
+    const res = await adminApiCall("/api/admin/mtmcopy/subscriber", {
+      method: "PATCH",
+      body: JSON.stringify({
+        connection_id: connection.id,
+        apply_prop_preset: true,
+        prop_firm_type: "ftmo",
+        resync_copyfactory: true,
+      }),
+    })
+    if (res.success) {
+      setMsg("Preset FTMO aplicado + CF re-sync")
+      await load()
+      onRefresh()
+    }
+    setSyncing(false)
+  }
+
+  if (loading) return <Loader2 className="w-5 h-5 animate-spin text-[#D2A63C] mx-auto my-4" />
+  if (!detail) return <p className="text-xs text-red-400">Não foi possível carregar subscritor</p>
+
+  const d = detail
+  const pnlColor =
+    d.pnl_percent == null ? "text-gray-400" : d.pnl_percent >= 0 ? "text-green-400" : "text-red-400"
+
+  return (
+    <div className="mb-4 rounded-xl border border-[#D2A63C]/25 bg-[#D2A63C]/5 p-4 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-bold text-[#D2A63C] flex items-center gap-2">
+          <Settings className="w-4 h-4" /> Gerir subscritor
+        </h4>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={load} className="h-7 text-xs border-gray-700">
+            <RefreshCw className="w-3 h-3 mr-1" /> Actualizar
+          </Button>
+          <Button size="sm" onClick={handleResync} disabled={syncing}
+            className="h-7 text-xs bg-[#D2A63C] text-black hover:bg-[#BB8525]">
+            {syncing ? <Loader2 className="w-3 h-3 animate-spin" /> : "Re-sync CopyFactory"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+        <div className="rounded-lg bg-gray-900/60 border border-gray-800 p-2">
+          <Wallet className="w-3.5 h-3.5 mx-auto text-gray-500 mb-1" />
+          <p className="text-sm font-bold text-white">{d.balance != null ? d.balance.toFixed(2) : "—"}</p>
+          <p className="text-[10px] text-gray-500">Saldo</p>
+        </div>
+        <div className="rounded-lg bg-gray-900/60 border border-gray-800 p-2">
+          <p className="text-sm font-bold text-white">{d.equity != null ? d.equity.toFixed(2) : "—"}</p>
+          <p className="text-[10px] text-gray-500">Equity</p>
+        </div>
+        <div className="rounded-lg bg-gray-900/60 border border-gray-800 p-2">
+          <TrendingUp className={`w-3.5 h-3.5 mx-auto mb-1 ${pnlColor}`} />
+          <p className={`text-sm font-bold ${pnlColor}`}>
+            {d.pnl_percent != null ? `${d.pnl_percent >= 0 ? "+" : ""}${d.pnl_percent.toFixed(2)}%` : "—"}
+          </p>
+          <p className="text-[10px] text-gray-500">P&L %</p>
+        </div>
+        <div className="rounded-lg bg-gray-900/60 border border-gray-800 p-2">
+          <p className={`text-sm font-bold ${d.copying_active ? "text-green-400" : "text-amber-400"}`}>
+            {d.copying_active ? "A copiar" : "Inactivo"}
+          </p>
+          <p className="text-[10px] text-gray-500">{d.method} · {d.positions_count} pos.</p>
+        </div>
+      </div>
+
+      <div className="text-xs text-gray-400 space-y-1">
+        <p>
+          CF: {connection.copyfactory_subscribed ? "subscrito" : "não subscrito"}
+          {connection.copyfactory_strategy_pick && (
+            <> · estratégia <span className="font-mono text-gray-300">{connection.copyfactory_strategy_pick}</span></>
+          )}
+        </p>
+        {d.subscribed_strategy_ids.length > 0 && (
+          <p>CF activo: {d.subscribed_strategy_ids.join(", ")}</p>
+        )}
+        {connection.prop_firm_type && (
+          <p>Prop firm: <span className="text-sky-300 uppercase">{connection.prop_firm_type}</span>
+            {connection.copy_as_manual && " · trades manuais (MTM-M)"}
+          </p>
+        )}
+        {d.preset && <p className="text-sky-300/70">{d.preset.consistencyHint}</p>}
+      </div>
+
+      {!connection.prop_firm_type && connection.copy_method === "strategy" && (
+        <Button size="sm" variant="outline" onClick={handleApplyFtmo} disabled={syncing}
+          className="text-xs border-sky-500/30 text-sky-300">
+          Aplicar preset FTMO + re-sync
+        </Button>
+      )}
+
+      {msg && <p className={`text-xs ${msg.includes("Falha") || msg.includes("erro") ? "text-red-400" : "text-green-400"}`}>{msg}</p>}
+
+      {d.positions.length > 0 && (
+        <div className="border-t border-gray-800 pt-2">
+          <p className="text-xs font-semibold text-gray-400 mb-1">Posições abertas</p>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {d.positions.map((p) => (
+              <div key={p.id} className="flex justify-between text-xs bg-gray-900/50 rounded px-2 py-1 font-mono">
+                <span>{p.symbol} {p.type} {p.volume != null ? `· ${p.volume}` : ""}</span>
+                <span className={p.profit != null && p.profit >= 0 ? "text-green-400" : "text-red-400"}>
+                  {p.profit != null ? p.profit.toFixed(2) : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ── editor completo ───────────────────────────────────────────────────────────
@@ -376,6 +565,8 @@ function UserRow({
   onUpdate,
   onCreateConnection,
   creating,
+  showSubscriber,
+  onToggleSubscriber,
 }: {
   row: UserRow
   expanded: boolean
@@ -383,6 +574,8 @@ function UserRow({
   onUpdate: (id: string, changes: Record<string, unknown>) => Promise<void>
   onCreateConnection: (userId: string) => Promise<void>
   creating: boolean
+  showSubscriber: boolean
+  onToggleSubscriber: () => void
 }) {
   const { profile, connection, stats } = row
   const [togglingActive, setTogglingActive] = useState(false)
@@ -463,6 +656,19 @@ function UserRow({
           </Link>
 
           {connection ? (
+            <button
+              type="button"
+              onClick={onToggleSubscriber}
+              className={`text-xs px-2 py-1.5 rounded border ${
+                showSubscriber
+                  ? "border-[#D2A63C]/50 bg-[#D2A63C]/10 text-[#D2A63C]"
+                  : "border-gray-700 text-gray-400 hover:text-white"
+              }`}
+            >
+              <Settings className="w-3.5 h-3.5 inline mr-1" />
+              Gerir subscritor
+            </button>
+
             <button onClick={handleToggleActive} disabled={togglingActive}
               className={`flex items-center gap-1 text-xs px-2 py-1.5 rounded border ${
                 connection.is_active
@@ -493,6 +699,9 @@ function UserRow({
           <p className="text-xs text-gray-600 mb-2">
             Registo: {formatDate(profile.created_at)} · Ligação: {formatDate(connection.created_at)}
           </p>
+          {showSubscriber && (
+            <SubscriberManager connection={connection} onRefresh={() => onUpdate(connection.id, {})} />
+          )}
           <ConnectionEditor connection={connection} onUpdate={onUpdate} />
         </div>
       )}
@@ -523,6 +732,7 @@ export default function MTMcopierManager({ highlightUserId }: MTMcopierManagerPr
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState("all")
   const [expandedId, setExpandedId] = useState<string | null>(highlightUserId ?? null)
+  const [subscriberUserId, setSubscriberUserId] = useState<string | null>(highlightUserId ?? null)
   const [creatingId, setCreatingId] = useState<string | null>(null)
 
   const fetchUsers = useCallback(async () => {
@@ -550,6 +760,7 @@ export default function MTMcopierManager({ highlightUserId }: MTMcopierManagerPr
   useEffect(() => {
     if (!highlightUserId) return
     setExpandedId(highlightUserId)
+    setSubscriberUserId(highlightUserId)
     adminApiCall<{ users: UserRow[] }>(`/api/admin/mtmcopy/users?user_id=${highlightUserId}`).then((res) => {
       if (!res.success || !res.data?.users?.[0]) return
       const row = res.data.users[0]
@@ -688,6 +899,11 @@ export default function MTMcopierManager({ highlightUserId }: MTMcopierManagerPr
               onUpdate={handleUpdate}
               onCreateConnection={handleCreateConnection}
               creating={creatingId === row.profile.id}
+              showSubscriber={subscriberUserId === row.profile.id && Boolean(row.connection)}
+              onToggleSubscriber={() => {
+                setExpandedId(row.profile.id)
+                setSubscriberUserId((id) => (id === row.profile.id ? null : row.profile.id))
+              }}
             />
           ))}
         </div>

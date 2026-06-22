@@ -11,7 +11,27 @@ import {
   resolveOrCreateMasterStrategyId,
   resolveStrategyIdsForConnectionAsync,
 } from './user-copy-context'
+import { getPropFirmPreset } from './prop-firm-presets'
 import type { MTMcopierConnection } from './types'
+
+function copyFactoryOptsFromConnection(
+  conn: Pick<
+    MTMcopierConnection,
+    'prop_firm_type' | 'copy_sl' | 'copy_tp' | 'lot_mode' | 'lot_value' | 'reverse_signals' | 'symbols_whitelist'
+  >,
+) {
+  const preset = getPropFirmPreset(conn.prop_firm_type)
+  return {
+    copySl: preset ? preset.copySl : conn.copy_sl !== false,
+    copyTp: preset ? preset.copyTp : conn.copy_tp !== false,
+    skipPendingOrders: preset?.skipPendingOrders ?? true,
+    riskLimits: preset?.riskLimits,
+    multiplier: lotMultiplierFromConnection(conn),
+    tradeSizeScaling: tradeSizeScalingFromConnection(conn),
+    reverse: conn.reverse_signals ?? false,
+    symbolWhitelist: conn.symbols_whitelist,
+  }
+}
 
 export function lotMultiplierFromConnection(conn: Pick<MTMcopierConnection, 'lot_mode' | 'lot_value'>): number {
   if (conn.lot_mode === 'multiplier') return Number(conn.lot_value) || 1
@@ -55,6 +75,7 @@ export async function syncConnectionCopyFactory(
     | 'symbols_whitelist'
     | 'copy_sl'
     | 'copy_tp'
+    | 'prop_firm_type'
     | 'mt5_login_last4'
     | 'mt5_server'
   >,
@@ -99,19 +120,20 @@ export async function syncConnectionCopyFactory(
     userLabel ||
     `MTMcopier · ****${conn.mt5_login_last4 ?? '?'} ${conn.mt5_server ?? ''}`.trim()
 
-  const tradeSizeScaling = tradeSizeScalingFromConnection(conn)
+  const cf = copyFactoryOptsFromConnection(conn)
 
   return subscribeToStrategies({
     accountId: conn.metaapi_account_id,
     name,
     strategyIds,
-    multiplier: lotMultiplierFromConnection(conn),
-    tradeSizeScaling,
-    reverse: conn.reverse_signals ?? false,
-    symbolWhitelist: conn.symbols_whitelist,
-    copySl: conn.copy_sl !== false,
-    copyTp: conn.copy_tp !== false,
-    skipPendingOrders: method === 'master_slave' ? false : undefined,
+    multiplier: cf.multiplier,
+    tradeSizeScaling: cf.tradeSizeScaling,
+    reverse: cf.reverse,
+    symbolWhitelist: cf.symbolWhitelist,
+    copySl: cf.copySl,
+    copyTp: cf.copyTp,
+    skipPendingOrders: method === 'master_slave' ? false : cf.skipPendingOrders,
+    riskLimits: cf.riskLimits,
   })
 }
 
@@ -132,6 +154,7 @@ export async function syncMtmStrategyReplication(
     | 'symbols_whitelist'
     | 'copy_sl'
     | 'copy_tp'
+    | 'prop_firm_type'
     | 'mt5_login_last4'
     | 'mt5_server'
     | 'account_label'
@@ -148,17 +171,20 @@ export async function syncMtmStrategyReplication(
     conn.account_label ||
     `MTMcopier · ****${conn.mt5_login_last4 ?? '?'} ${conn.mt5_server ?? ''}`.trim()
 
+  const cf = copyFactoryOptsFromConnection(conn)
+
   return subscribeToStrategies({
     accountId: conn.metaapi_account_id,
     name,
     strategyIds: [strategyId],
-    multiplier: lotMultiplierFromConnection(conn),
-    tradeSizeScaling: tradeSizeScalingFromConnection(conn),
-    reverse: conn.reverse_signals ?? false,
-    symbolWhitelist: conn.symbols_whitelist,
-    copySl: conn.copy_sl !== false,
-    copyTp: conn.copy_tp !== false,
-    skipPendingOrders: true,
+    multiplier: cf.multiplier,
+    tradeSizeScaling: cf.tradeSizeScaling,
+    reverse: cf.reverse,
+    symbolWhitelist: cf.symbolWhitelist,
+    copySl: cf.copySl,
+    copyTp: cf.copyTp,
+    skipPendingOrders: cf.skipPendingOrders,
+    riskLimits: cf.riskLimits,
     symbolMapping: DEFAULT_COPYFACTORY_SYMBOL_MAPPINGS,
   })
 }

@@ -26,6 +26,7 @@ import {
 import { getClientConnectionTitle, MTM_MASTER_LABEL } from "@/lib/mtmcopy/display-utils"
 import { isSafariBrowser } from "@/lib/supabase-session"
 import { formatMt5Money } from "@/components/mtmcopy/mtmcopy-shared"
+import { PROP_FIRM_PRESETS, type PropFirmType } from "@/lib/mtmcopy/prop-firm-presets"
 
 const MODAL_Z = 2147483647
 
@@ -66,6 +67,8 @@ export interface MTMcopierConnection {
   account_equity?: number | null
   metaapi_account_id?: string | null
   copyfactory_subscribed?: boolean
+  prop_firm_type?: PropFirmType | null
+  copy_as_manual?: boolean
 }
 
 type Selection = "new" | string
@@ -223,6 +226,7 @@ export default function SetupModal({
   const [exitTp1, setExitTp1] = useState("33")
   const [exitTp2, setExitTp2] = useState("33")
   const [exitTp3, setExitTp3] = useState("34")
+  const [propFirmType, setPropFirmType] = useState<"" | PropFirmType>("")
 
   const [provisioning, setProvisioning] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -284,6 +288,11 @@ export default function SetupModal({
     setExitTp1(String(selectedConn?.exit_pct_tp1 ?? 33))
     setExitTp2(String(selectedConn?.exit_pct_tp2 ?? 33))
     setExitTp3(String(selectedConn?.exit_pct_tp3 ?? 34))
+    setPropFirmType(
+      selectedConn?.prop_firm_type === "ftmo" || selectedConn?.prop_firm_type === "fundednext"
+        ? selectedConn.prop_firm_type
+        : "",
+    )
     if (selectedConn?.copy_method) {
       setCopyMethod(selectedConn.copy_method)
     } else if (selectedConn?.account_role === "master") {
@@ -345,6 +354,21 @@ export default function SetupModal({
     throw new Error("Timeout — a ligação está a demorar. Verifica o estado no painel dentro de alguns minutos.")
   }
 
+  const applyPropFirmPreset = (type: PropFirmType) => {
+    const p = PROP_FIRM_PRESETS[type]
+    setPropFirmType(type)
+    setIsAudited(true)
+    setAuditLabel(`${p.label} · conta financiada`)
+    setLotMode(p.lotMode)
+    setLotValue(String(p.lotValue))
+    setMaxRisk(String(p.maxRiskPercent))
+    setCopySl(p.copySl)
+    setCopyTp(p.copyTp)
+    setExitTp1(String(p.exitPctTp1))
+    setExitTp2(String(p.exitPctTp2))
+    setExitTp3(String(p.exitPctTp3))
+  }
+
   const buildSettingsPayload = () => {
     const symbols_whitelist = symbolsInput
       .split(/[,\s]+/)
@@ -394,6 +418,13 @@ export default function SetupModal({
       exit_pct_tp3: parseFloat(exitTp3) || 34,
       copy_method: copyMethod,
       copyfactory_strategy_pick: copyMethod === "strategy" ? strategyPick || null : null,
+      ...(propFirmType
+        ? {
+            prop_firm_type: propFirmType,
+            apply_prop_firm_preset: true,
+            copy_as_manual: true,
+          }
+        : { prop_firm_type: null }),
     }
   }
 
@@ -741,6 +772,46 @@ export default function SetupModal({
                     Nenhuma estratégia MTM disponível. O admin precisa de configurar rotas em{" "}
                     <strong>/admin/mtmcopy</strong> (Senders → Provider → CopyFactory).
                   </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {copyMethod === "strategy" && showSlaveSettings && (
+            <div className="rounded-lg border border-sky-500/25 bg-sky-500/5 p-4 space-y-3">
+              <p className="text-sm font-semibold text-sky-300">Conta financiada (Prop Firm)</p>
+              <p className="text-xs text-zinc-400">
+                Presets conservadores para passar e manter a conta — trades a mercado, 1 posição com parciais nas saídas.
+              </p>
+              <div className="grid gap-2">
+                {(Object.keys(PROP_FIRM_PRESETS) as PropFirmType[]).map((id) => {
+                  const p = PROP_FIRM_PRESETS[id]
+                  const active = propFirmType === id
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => applyPropFirmPreset(id)}
+                      className={`text-left rounded-lg border p-3 transition-colors ${
+                        active
+                          ? "border-sky-400/50 bg-sky-500/10"
+                          : "border-gray-700 hover:border-gray-600"
+                      }`}
+                    >
+                      <p className="text-white text-sm font-semibold">{p.label}</p>
+                      <p className="text-xs text-gray-400 mt-1">{p.description}</p>
+                      <p className="text-xs text-sky-300/80 mt-1">{p.consistencyHint}</p>
+                    </button>
+                  )
+                })}
+                {propFirmType && (
+                  <button
+                    type="button"
+                    onClick={() => setPropFirmType("")}
+                    className="text-xs text-gray-500 hover:text-white underline"
+                  >
+                    Remover preset prop firm
+                  </button>
                 )}
               </div>
             </div>

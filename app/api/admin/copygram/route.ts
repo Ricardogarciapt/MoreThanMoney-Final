@@ -84,6 +84,14 @@ export async function PATCH(request: NextRequest) {
     auto_trailing_stop,
     trailing_stop_points,
     reverse_signals,
+    prop_firm_type,
+    copy_as_manual,
+    baseline_balance,
+    exit_pct_tp1,
+    exit_pct_tp2,
+    exit_pct_tp3,
+    copyfactory_strategy_pick,
+    copy_method,
   } = body
 
   if (!id) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
@@ -137,6 +145,23 @@ export async function PATCH(request: NextRequest) {
     if (Number.isFinite(pts) && pts > 0) update.trailing_stop_points = pts
   }
   if (typeof reverse_signals === 'boolean') update.reverse_signals = reverse_signals
+  if (prop_firm_type !== undefined) {
+    update.prop_firm_type =
+      prop_firm_type === 'ftmo' || prop_firm_type === 'fundednext' ? prop_firm_type : null
+  }
+  if (typeof copy_as_manual === 'boolean') update.copy_as_manual = copy_as_manual
+  if (baseline_balance !== undefined) {
+    update.baseline_balance = baseline_balance != null ? Number(baseline_balance) : null
+  }
+  if (exit_pct_tp1 != null) update.exit_pct_tp1 = exit_pct_tp1
+  if (exit_pct_tp2 != null) update.exit_pct_tp2 = exit_pct_tp2
+  if (exit_pct_tp3 != null) update.exit_pct_tp3 = exit_pct_tp3
+  if (copyfactory_strategy_pick !== undefined) {
+    update.copyfactory_strategy_pick = copyfactory_strategy_pick?.trim() || null
+  }
+  if (copy_method === 'telegram_group' || copy_method === 'strategy' || copy_method === 'master_slave') {
+    update.copy_method = copy_method
+  }
 
   const { data, error } = await supabaseAdmin
     .from('mtmcopy_connections')

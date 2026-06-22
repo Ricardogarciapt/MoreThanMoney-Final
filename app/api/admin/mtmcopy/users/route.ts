@@ -7,11 +7,13 @@ const PROFILE_FIELDS =
   'id, email, full_name, username, user_type, member_category, is_active, is_verified, subscription_plan, subscription_platform, subscription_expires_at, created_at'
 
 const CONNECTION_FIELDS = `
-  id, user_id, telegram_channel, telegram_status, mt5_login, mt5_login_last4,
+  id, user_id, account_label, telegram_channel, telegram_status, mt5_login, mt5_login_last4,
   mt5_platform, mt5_server, mt5_status, lot_mode, lot_value, max_risk_percent,
   symbols_whitelist, copy_sl, copy_tp, auto_trailing_stop, trailing_stop_points,
   reverse_signals, is_active, last_signal_at,
-  last_error, created_at, updated_at, metaapi_account_id, copyfactory_subscribed
+  last_error, created_at, updated_at, metaapi_account_id, copyfactory_subscribed,
+  copy_method, copyfactory_strategy_pick, exit_pct_tp1, exit_pct_tp2, exit_pct_tp3,
+  prop_firm_type, copy_as_manual, baseline_balance, is_audited, audit_label
 `
 
 export async function GET(request: NextRequest) {
@@ -26,16 +28,19 @@ export async function GET(request: NextRequest) {
   const offset = parseInt(searchParams.get('offset') ?? '0', 10)
 
   if (userId) {
-    const [{ data: profile, error: pErr }, { data: connection }] = await Promise.all([
+    const [{ data: profile, error: pErr }, { data: connections }] = await Promise.all([
       supabase.from('profiles').select(PROFILE_FIELDS).eq('id', userId).maybeSingle(),
-      supabase.from('mtmcopy_connections').select(CONNECTION_FIELDS).eq('user_id', userId).maybeSingle(),
+      supabase.from('mtmcopy_connections').select(CONNECTION_FIELDS).eq('user_id', userId).order('created_at', { ascending: true }),
     ])
     if (pErr || !profile) {
       return NextResponse.json({ error: 'Utilizador não encontrado' }, { status: 404 })
     }
-    const stats = connection ? await loadConnectionStats(connection.id) : null
+    const connList = connections ?? []
+    const statsMap = await loadStatsMap(connList.map((c) => c.id))
+    const connection = connList.find((c) => c.is_active) ?? connList[0] ?? null
+    const stats = connection ? statsMap.get(connection.id) ?? null : null
     return NextResponse.json({
-      users: [{ profile, connection: connection ?? null, stats }],
+      users: [{ profile, connection, connections: connList, stats }],
       total: 1,
       limit: 1,
       offset: 0,
@@ -78,15 +83,22 @@ export async function GET(request: NextRequest) {
     .select(CONNECTION_FIELDS)
     .in('user_id', userIds)
 
-  const connByUser = new Map((connections ?? []).map((c) => [c.user_id, c]))
+  const connByUser = new Map<string, (typeof connections)[0][]>()
+  for (const c of connections ?? []) {
+    const list = connByUser.get(c.user_id) ?? []
+    list.push(c)
+    connByUser.set(c.user_id, list)
+  }
   const connectionIds = (connections ?? []).map((c) => c.id)
   const statsMap = await loadStatsMap(connectionIds)
 
   let rows = (profiles ?? []).map((profile) => {
-    const connection = connByUser.get(profile.id) ?? null
+    const connList = connByUser.get(profile.id) ?? []
+    const connection = connList.find((c) => c.is_active) ?? connList[0] ?? null
     return {
       profile,
       connection,
+      connections: connList,
       stats: connection ? statsMap.get(connection.id) ?? null : null,
     }
   })

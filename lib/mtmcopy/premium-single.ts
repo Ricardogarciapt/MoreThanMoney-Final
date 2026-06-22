@@ -52,13 +52,15 @@ export function canPartializeVolume(volume: number, pct: number): boolean {
 export function buildPremiumSingleOrderComment(
   originalLot: number,
   exitPcts: PremiumExitPcts,
-  opts?: { smallAccount?: boolean; exitsDone?: number },
+  opts?: { smallAccount?: boolean; exitsDone?: number; manual?: boolean },
 ): string {
   // Compact format — MT5 comment field limit is 31 chars
   // Max possible: "PREM-99.99-33/33/34-sa-ex3" = 26 chars ✓
   const sa = opts?.smallAccount ? '-sa' : ''
   const ex = opts?.exitsDone != null && opts.exitsDone > 0 ? `-ex${opts.exitsDone}` : ''
-  return `PREM-${roundLot(originalLot)}-${exitPcts.tp1}/${exitPcts.tp2}/${exitPcts.tp3}${sa}${ex}`
+  const core = `PREM-${roundLot(originalLot)}-${exitPcts.tp1}/${exitPcts.tp2}/${exitPcts.tp3}${sa}${ex}`
+  if (opts?.manual) return `MTM-M-${core}`.slice(0, 31)
+  return core
 }
 
 export function parsePremiumSingleComment(comment: string | undefined): ParsedPremiumSingleMeta | null {
@@ -110,6 +112,7 @@ export function buildPremiumSingleOrder(
   totalLot: number,
   exitPcts?: { tp1?: number | null; tp2?: number | null; tp3?: number | null },
   equityOrBalance?: number | null,
+  opts?: { manual?: boolean },
 ): PremiumSingleOrderPlan | null {
   const tps = (signal.tp ?? []).filter((n) => Number.isFinite(n) && n > 0).slice(0, 3)
   if (!tps.length) return null
@@ -121,7 +124,7 @@ export function buildPremiumSingleOrder(
 
   return {
     lot,
-    comment: buildPremiumSingleOrderComment(lot, exit, { smallAccount }),
+    comment: buildPremiumSingleOrderComment(lot, exit, { smallAccount, manual: opts?.manual }),
     exitPcts: exit,
     smallAccount,
     takeProfit: null,
@@ -136,7 +139,7 @@ function symbolMatches(posSymbol: string, signalSymbol: string): boolean {
 
 function isMtmcopierPosition(pos: MetaApiPosition): boolean {
   const c = (pos.comment ?? '').toLowerCase()
-  return c.includes('mtmcopier') || c.startsWith('prem-')
+  return c.includes('mtmcopier') || c.startsWith('prem-') || c.startsWith('mtm-m-')
 }
 
 function directionMatches(pos: MetaApiPosition, direction: string): boolean {

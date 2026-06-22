@@ -30,6 +30,12 @@ export interface SubscriberOptions {
   skipPendingOrders?: boolean
   symbolWhitelist?: string[] | null
   symbolMapping?: CopyFactorySymbolMapping[] | null
+  riskLimits?: Array<{
+    type: string
+    applyTo: string
+    closePositions: boolean
+    maxRelativeRisk: number
+  }>
 }
 
 export interface ProviderStrategyOptions {
@@ -84,9 +90,12 @@ export async function subscribeToStrategies(
     return subscription
   })
 
-  const body = {
+  const body: Record<string, unknown> = {
     name: opts.name,
     subscriptions,
+  }
+  if (opts.riskLimits?.length) {
+    body.riskLimits = opts.riskLimits
   }
 
   const res = await fetch(
@@ -276,6 +285,31 @@ export async function ensureMtmProviderStrategyScaling(
     tradeSizeScaling: { mode: 'balance', forceTinyTrades: true },
     riskLimits: MTM_PROVIDER_RISK_LIMITS,
   })
+}
+
+export async function getSubscriberConfiguration(
+  accountId: string,
+): Promise<{ ok: boolean; data?: Record<string, unknown>; error?: string }> {
+  const token = process.env.METAAPI_TOKEN
+  if (!token) return { ok: false, error: 'METAAPI_TOKEN em falta' }
+
+  const res = await fetch(
+    `${COPYFACTORY_BASE}/users/current/configuration/subscribers/${accountId}`,
+    {
+      headers: { 'auth-token': token, Accept: 'application/json' },
+    },
+  )
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    return {
+      ok: false,
+      error: (data as { message?: string }).message ?? `CopyFactory HTTP ${res.status}`,
+    }
+  }
+
+  const data = (await res.json()) as Record<string, unknown>
+  return { ok: true, data }
 }
 
 export async function getCopyStrategyId(): Promise<string | null> {
