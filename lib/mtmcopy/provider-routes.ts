@@ -175,12 +175,23 @@ export function pickSingleProviderRoute(
   }
 
   if (channel === 'trade-ideas') {
+    if (opts?.signalSource === 'webhook') {
+      return (
+        matched.find(
+          (r) =>
+            r.signal_source === 'webhook' ||
+            r.strategy_id === CANONICAL_SENSEI_STRATEGY_ID ||
+            r.account_id === CANONICAL_SENSEI_ACCOUNT_ID,
+        ) ?? matched[0]!
+      )
+    }
     return (
       matched.find(
         (r) =>
-          r.sender_channel === 'trade-ideas' ||
-          r.strategy_id === CANONICAL_TRADE_IDEAS_STRATEGY_ID ||
-          r.account_id === CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
+          (r.signal_source ?? 'telegram') !== 'webhook' &&
+          (r.sender_channel === 'trade-ideas' ||
+            r.strategy_id === CANONICAL_TRADE_IDEAS_STRATEGY_ID ||
+            r.account_id === CANONICAL_TRADE_IDEAS_ACCOUNT_ID),
       ) ?? matched[0]!
     )
   }

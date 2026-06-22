@@ -121,7 +121,9 @@ export function routeBelongsToChannel(
   route: ProviderRoute,
   channel: 'premium-signals' | 'trade-ideas',
 ): boolean {
-  if (route.signal_source === 'webhook') return false
+  if (route.signal_source === 'webhook') {
+    return channel === 'trade-ideas'
+  }
 
   if (route.sender_channel === channel) return true
 
