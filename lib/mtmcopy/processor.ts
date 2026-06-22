@@ -139,10 +139,9 @@ function buildOrderRequest(
   }
 }
 
+/** Subscritores elegíveis para log/estado — nunca expandir a todas as contas CopyFactory. */
 async function resolveLogTargets(subscribers: MTMcopierConnection[]): Promise<MTMcopierConnection[]> {
-  if (subscribers.length) return subscribers
-  const all = await getCopyConnections()
-  return all.filter((c) => c.is_active && c.copyfactory_subscribed)
+  return subscribers
 }
 
 async function filterEligibleSubscribers(
@@ -579,6 +578,14 @@ function subscriberLogAfterProviderExecution(
   } = opts
 
   if (!anySuccess) {
+    // CopyFactory: falha na conta provider não deve marcar o subscriber como erro MT5
+    if (conn.copyfactory_subscribed && !prefersDirectExecution(conn)) {
+      return {
+        status: 'skipped',
+        detail: `${aiDetail} · ${providerTag} mestre: ${resultError ?? 'erro'} (sem replica — conta subscriber intacta) ${tgRef}`.trim(),
+        connectionPatch: {},
+      }
+    }
     return {
       status: 'error',
       detail: `${aiDetail} · ${providerTag} mestre: ${resultError ?? 'erro'} ${tgRef}`.trim(),

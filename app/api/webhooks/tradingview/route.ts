@@ -83,7 +83,7 @@ function composePost(
       `🛑 Stop Loss: ${v.sl ?? "—"}`,
       `✅ Take Profit: ${tpStr}`,
       ``,
-      `⏳ Aguarda Entry Trigger Buy ou Sell para activar.`,
+      `⏳ Aguarda Entry Alert para activar a operação.`,
       ``,
       `🔎 Validação: ${pct}% — ${v.reasoning}`,
       ``,
@@ -206,12 +206,18 @@ export async function POST(request: NextRequest) {
     alertName,
   }
 
-  // Texto bruto: formato MTM estruturado, senão mensagem livre Sensei / JSON
-  const raw = ticker && action ? buildRawSignal(ticker, action, sl, tp) : (freeText || JSON.stringify(payload))
+  // Texto bruto: mensagem Sensei (Entry Buy/Sell/Alert), formato MTM, ou JSON
+  const senseiHint = freeText || alertName || ''
+  const raw =
+    senseiHint && (isSenseiTradingViewFormat(senseiHint, senseiFields) || /entry\s+(buy|sell|alert|trigger)/i.test(senseiHint))
+      ? senseiHint
+      : ticker && action
+        ? buildRawSignal(ticker, action, sl, tp)
+        : freeText || JSON.stringify(payload)
   const senseiParsed = parseSenseiTradingViewAlert(raw, senseiFields)
   const isSensei = isSenseiTradingViewFormat(raw, senseiFields) || Boolean(senseiParsed)
 
-  // Entry Trigger: fundir com ideia pendente (Entry Alert anterior)
+  // Entry Alert: fundir com ideia pendente (Entry Buy/Sell anterior) → SL/TP/direcção completos
   let activeSensei = senseiParsed
   let pendingIdeaId: string | null = null
   if (senseiParsed?.alertType === "entry_trigger" && senseiParsed.symbol) {
@@ -226,8 +232,8 @@ export async function POST(request: NextRequest) {
   }
 
   const parsed: ParsedSignal =
-    parseSignal(raw) ??
     activeSensei ??
+    parseSignal(raw) ??
     {
       symbol: ticker,
       direction: action && /buy|long/i.test(action) ? "buy" : action && /sell|short/i.test(action) ? "sell" : null,
@@ -270,8 +276,8 @@ export async function POST(request: NextRequest) {
   }
 
   const parsedForExec =
-    parseSignal(raw) ??
     activeSensei ??
+    parseSignal(raw) ??
     ({
       symbol: v.symbol ?? ticker,
       direction: v.direction,

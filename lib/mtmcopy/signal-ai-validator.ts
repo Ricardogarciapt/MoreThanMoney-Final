@@ -57,14 +57,16 @@ export function validateSenseiWebhookSignal(
   else if (!isManagement && !isIdea) issues.push('Preço em falta')
 
   if (parsed.direction) score += 0.15
-  else if (isActivation && parsed.sl == null) issues.push('Buy/Sell em falta no Entry Trigger')
+  else if (isActivation) issues.push('Direcção em falta — precisa de ideia Entry Buy/Sell pendente')
   else if (!isManagement && !isIdea) issues.push('Direcção em falta')
 
   if (parsed.sl != null) score += 0.1
-  else if (isIdea) issues.push('Stop Loss em falta na ideia')
+  else if (isIdea) issues.push('Stop Loss em falta na ideia (Entry Buy/Sell)')
+  else if (isActivation) issues.push('SL em falta — aguarda merge com ideia Entry Buy/Sell')
 
   if (parsed.tp.length > 0) score += 0.1
-  else if (isIdea) issues.push('Take Profit em falta na ideia')
+  else if (isIdea) issues.push('Take Profit em falta na ideia (Entry Buy/Sell)')
+  else if (isActivation) issues.push('TP em falta — aguarda merge com ideia Entry Buy/Sell')
 
   const confidence = clamp01(score)
   let valid = false
@@ -81,7 +83,9 @@ export function validateSenseiWebhookSignal(
       Boolean(parsed.symbol) &&
       parsed.entry != null &&
       parsed.entry > 0 &&
-      (parsed.direction != null || parsed.sl != null) &&
+      Boolean(parsed.direction) &&
+      parsed.sl != null &&
+      parsed.tp.length > 0 &&
       confidence >= MTMCOPY_AI_MIN_CONFIDENCE
   } else {
     valid =

@@ -387,9 +387,9 @@ function extractTpFromText(text: string, lines: string[]): number[] {
 /** Alerta Pine Script MTM Sensei X via webhook TradingView. */
 const SENSEI_PREFIX_RE = /(?:📡\s*)?MTM\s+Sensei\s+X\s*[—–-]\s*/i
 
-/** Corpo do alerta após o prefixo Sensei X (Entry Alert = ideia · Entry Trigger = activação). */
+/** Corpo do alerta Sensei X — Entry Buy/Sell = ideia · Entry Alert = activação (Entry Trigger = alias). */
 const SENSEI_BODY_RE =
-  /(?:(Long|Short|Buy|Sell)\s+)?(Entry\s+Alert|Entry\s+Trigger|Exit\s+Trigger|SL\s+Hit|Stop\s+Loss\s+Hit|TP\d?\s+Hit|Take\s+Profit(?:\s+\d+)?\s+Hit|Breakeven|Break\s+Even|BE\s+Set|Signal|Alert)(?:\s+(Long|Short|Buy|Sell))?\s+([A-Z][A-Z0-9]{1,11})(?:\s+(\d+[mMhHdDwW]?))?(?:\s+@\s*([\d.,]+))?/i
+  /(?:(Long|Short|Buy|Sell)\s+)?(Entry\s+(?:Buy|Sell)|Entry\s+Alert|Entry\s+Trigger|Exit\s+Trigger|SL\s+Hit|Stop\s+Loss\s+Hit|TP\d?\s+Hit|Take\s+Profit(?:\s+\d+)?\s+Hit|Breakeven|Break\s+Even|BE\s+Set|Signal|Alert)(?:\s+(Long|Short|Buy|Sell))?\s+([A-Z][A-Z0-9]{1,11})(?:\s+(\d+[mMhHdDwW]?))?(?:\s+@\s*([\d.,]+))?/i
 
 export type SenseiAlertType =
   | 'idea'
@@ -424,10 +424,30 @@ export interface SenseiParsedAlert extends ParsedSignal {
   tpLevel?: number | null
 }
 
+/** Classifica alert_name / corpo Pine Script (Entry Buy|Sell → ideia · Entry Alert → activação). */
+export function alertTypeFromSenseiLabel(label: string | null | undefined): SenseiAlertType | null {
+  if (!label?.trim()) return null
+  const k = label.toLowerCase().replace(/\s+/g, ' ')
+  if (k.includes('entry buy') || k.includes('entry sell')) return 'idea'
+  if (k.includes('entry alert') || k.includes('entry trigger')) return 'entry_trigger'
+  return null
+}
+
+function directionFromSenseiEntryKind(
+  kind: string,
+  dirRaw?: string | null,
+): 'buy' | 'sell' | null {
+  const k = kind.toLowerCase()
+  if (k.includes('entry buy')) return 'buy'
+  if (k.includes('entry sell')) return 'sell'
+  if (dirRaw) return normalizeDirectionFromText(dirRaw)
+  return null
+}
+
 function mapSenseiAlertKind(kind: string): SenseiAlertType {
   const k = kind.toLowerCase().replace(/\s+/g, ' ')
-  if (k.includes('entry alert')) return 'idea'
-  if (k.includes('entry trigger')) return 'entry_trigger'
+  if (k.includes('entry buy') || k.includes('entry sell')) return 'idea'
+  if (k.includes('entry alert') || k.includes('entry trigger')) return 'entry_trigger'
   if (k === 'signal' || k === 'alert') return 'idea'
   if (k.includes('exit trigger')) return 'exit'
   if (k.includes('sl hit') || k.includes('stop loss hit')) return 'sl_hit'
@@ -478,7 +498,10 @@ function mergeSenseiParsed(
   const entry = textParsed?.entry ?? fields?.price ?? null
   const sl = textParsed?.sl ?? fields?.sl ?? null
 
-  const alertType = textParsed?.alertType ?? 'signal'
+  const alertType =
+    textParsed?.alertType ??
+    alertTypeFromSenseiLabel(fields?.alertName) ??
+    (fields?.sl != null && collectTpFromFields(fields).length > 0 ? 'idea' : 'signal')
   const orderType: 'market' | 'limit' =
     textParsed?.orderType ?? (entry != null ? 'limit' : 'market')
 
@@ -508,7 +531,7 @@ function parseSenseiTextBlock(text: string): Partial<SenseiParsedAlert> | null {
   if (!isValidTradingSymbol(symbol)) return null
 
   const dirRaw = m[1] ?? m[3]
-  const direction = dirRaw ? normalizeDirectionFromText(dirRaw) : null
+  const direction = directionFromSenseiEntryKind(m[2], dirRaw)
   const entry = m[6] ? parseNumber(m[6]) : null
   const alertType = mapSenseiAlertKind(m[2])
   const tpLevel = tpLevelFromKind(m[2])
@@ -554,19 +577,25 @@ export function parseSenseiTradingViewAlert(
 
   if (merged) return merged
 
-  // JSON estruturado sem texto Sensei (ex.: ticker + action + sl + tp no payload)
+  // JSON estruturado (ticker + action + sl/tp) — tipo via alert_name ou SL/TP presentes
   if (fields?.ticker && fields?.action) {
     const sym = normalizeSymbol(fields.ticker)
     if (!isValidTradingSymbol(sym)) return null
+    const fromName = fields.alertName ? parseSenseiTextBlock(fields.alertName) : null
+    const fieldTp = collectTpFromFields(fields)
+    const inferredType =
+      fromName?.alertType ??
+      alertTypeFromSenseiLabel(fields.alertName) ??
+      (fields.sl != null && fieldTp.length > 0 ? 'idea' : 'entry_trigger')
     return {
       symbol: sym,
-      direction: directionFromAction(fields.action),
+      direction: fromName?.direction ?? directionFromAction(fields.action),
       entry: fields.price ?? null,
       sl: fields.sl ?? null,
-      tp: collectTpFromFields(fields),
+      tp: fieldTp,
       orderType: fields.price != null ? 'limit' : 'market',
       raw: raw || `Moeda: ${fields.ticker}\nAção: ${fields.action}`,
-      alertType: 'signal',
+      alertType: inferredType,
       timeframe: fields.timeframe ?? null,
       exchange: fields.exchange ?? null,
       alertName: fields.alertName ?? null,
@@ -581,7 +610,7 @@ export function senseiAlertTypeLabel(type: SenseiAlertType): string {
     case 'idea':
       return 'Nova Ideia'
     case 'entry_trigger':
-      return 'Ideia Activada'
+      return 'Entry Alert — Ideia Activada'
     case 'exit':
       return 'Exit Trigger'
     case 'sl_hit':

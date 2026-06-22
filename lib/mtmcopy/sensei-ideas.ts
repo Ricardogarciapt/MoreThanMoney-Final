@@ -105,7 +105,7 @@ export async function activateSenseiTradeIdea(
     .eq('status', 'pending')
 }
 
-/** Funde Entry Trigger (activação) com ideia pendente (Entry Alert). */
+/** Funde Entry Alert (activação) com ideia pendente (Entry Buy/Sell). */
 export function mergeSenseiTriggerWithIdea(
   trigger: SenseiParsedAlert,
   idea: SenseiTradeIdea | null,
