@@ -656,6 +656,7 @@ function UserRow({
           </Link>
 
           {connection ? (
+            <>
             <button
               type="button"
               onClick={onToggleSubscriber}
@@ -679,6 +680,7 @@ function UserRow({
                connection.is_active ? <><Power className="w-3.5 h-3.5" /> Ativo</> :
                <><PowerOff className="w-3.5 h-3.5" /> Pausado</>}
             </button>
+            </>
           ) : (
             <Button size="sm" variant="outline" disabled={creating}
               onClick={() => onCreateConnection(profile.id)}
