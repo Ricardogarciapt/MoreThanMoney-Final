@@ -1,10 +1,11 @@
 /** IDs canónicos MTM Auto — sem dependências (evita ciclos de import). */
 export const CANONICAL_PREMIUM_ACCOUNT_ID = 'c17a8c46-7fe7-40cf-acb4-41678d42f9a9'
 export const CANONICAL_TRADE_IDEAS_ACCOUNT_ID = 'fbeeafeb-96a9-4133-bc6c-194cc281b6e0'
-export const CANONICAL_SENSEI_ACCOUNT_ID = 'bddad3b8-353f-4a19-badf-f8df8f532678'
+export const CANONICAL_SENSEI_ACCOUNT_ID = 'a5a1dddd-0099-4d67-98f1-86b65aad5845'
 export const CANONICAL_PREMIUM_STRATEGY_ID = '9gsL'
 export const CANONICAL_TRADE_IDEAS_STRATEGY_ID = '5IHE'
-export const CANONICAL_SENSEI_STRATEGY_ID = 'ziC3'
+/** ziC3 estava ligada à demo 108127251 — MetaAPI não permite mover accountId; mADd = 18132 Live */
+export const CANONICAL_SENSEI_STRATEGY_ID = 'mADd'
 
 /** Estratégias MTM disponíveis para cópia (UI pública — sem expor IDs técnicos). */
 export const MTM_COPY_STRATEGY_CATALOG: Record<
