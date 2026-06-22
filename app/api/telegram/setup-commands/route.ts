@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { getMtmcopyBotToken } from "@/lib/mtmcopy/telegram-bot"
 
 const TELEGRAM_API = `https://api.telegram.org/bot`
 
@@ -19,9 +20,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   }
 
-  const token = process.env.TELEGRAM_BOT_TOKEN
+  const token = getMtmcopyBotToken()
   if (!token) {
-    return NextResponse.json({ error: "TELEGRAM_BOT_TOKEN não configurado" }, { status: 500 })
+    return NextResponse.json({ error: "TELEGRAM_AIBOT_TOKEN não configurado" }, { status: 500 })
   }
 
   try {
@@ -91,9 +92,9 @@ export async function POST(request: NextRequest) {
 
 // GET: show current commands
 export async function GET() {
-  const token = process.env.TELEGRAM_BOT_TOKEN
+  const token = getMtmcopyBotToken()
   if (!token) {
-    return NextResponse.json({ error: "TELEGRAM_BOT_TOKEN não configurado" }, { status: 500 })
+    return NextResponse.json({ error: "TELEGRAM_AIBOT_TOKEN não configurado" }, { status: 500 })
   }
 
   try {

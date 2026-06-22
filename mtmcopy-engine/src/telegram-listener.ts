@@ -26,9 +26,11 @@ import {
   type MTMcopierConnection,
 } from './supabase-client'
 
-const token = process.env.TELEGRAM_BOT_TOKEN
+const token =
+  process.env.TELEGRAM_AIBOT_TOKEN?.trim() ||
+  process.env.TELEGRAM_BOT_TOKEN?.trim()
 if (!token) {
-  throw new Error('[telegram-listener] TELEGRAM_BOT_TOKEN em falta no .env')
+  throw new Error('[telegram-listener] TELEGRAM_AIBOT_TOKEN em falta no .env')
 }
 
 const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS || 30000)

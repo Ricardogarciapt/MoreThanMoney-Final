@@ -238,7 +238,7 @@ Analisa formato, zonas de entrada, SL e TP. Responde APENAS com JSON válido (se
 {"confidence":0.0-1.0,"valid":true|false,"symbol":"XAUUSD","direction":"buy"|"sell","entry":null|number,"sl":number|null,"tp":[numbers],"order_type":"market"|"limit","issues":["..."],"reason":"..."}
 Regras: SELL → SL > TP; BUY → SL < TP. LIMIT precisa entry. confidence=probabilidade de ser sinal executável válido.
 Mensagens «Trade Active and Running», HIT TP, cancel = gestão (valid:false, não é entrada).
-Cada sinal de entrada Premium abre exactamente 3 pernas (TP1/TP2/TP3) — nunca tratar gestão como nova entrada.
+Cada sinal de entrada Premium abre 1 posição (parciais nos HIT TP) — nunca tratar gestão como nova entrada.
 ${strategyPrompt?.trim() ? `\n--- Estratégia do provider ---\n${strategyPrompt.trim()}` : ''}`
 
   const user = `MENSAGEM TELEGRAM:
@@ -300,7 +300,7 @@ async function callOpenAiValidator(
   const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '')
 
   const system = `Validador de sinais trading. Responde só JSON: {"confidence":0-1,"valid":bool,"symbol":str,"direction":"buy"|"sell","entry":num|null,"sl":num|null,"tp":[nums],"order_type":"market"|"limit","issues":[],"reason":str}
-Trade Active / HIT TP / cancel = gestão, não entrada. Premium: 3 pernas por sinal.
+Trade Active / HIT TP / cancel = gestão, não entrada. Premium: 1 perna + parciais nos exits.
 ${strategyPrompt?.trim() ? strategyPrompt.trim() : ''}`
 
   const res = await fetchWithTimeout(

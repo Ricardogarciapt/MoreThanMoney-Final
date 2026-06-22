@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isCopyFactoryEnabled, isMtmTelegramStrategyConfigured } from '@/lib/mtmcopy/copyfactory'
 import { isMetaApiConfigured } from '@/lib/mtmcopy/metaapi'
 import { last4 } from '@/lib/mtmcopy/metaapi-provision'
+import { lotMultiplierFromConnection } from '@/lib/mtmcopy/connection-sync'
 import { runProvisionJob } from '@/lib/mtmcopy/run-provision-job'
 import type { MtmcopyAccountRole, MtmcopySenderMode } from '@/lib/mtmcopy/types'
 import { resolveMtmcopyUserLimits } from '@/lib/mtmcopy/account-limits'
@@ -229,8 +230,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Erro ao criar ligação' }, { status: 500 })
   }
 
-  const lotMultiplier =
-    lot_mode === 'multiplier' ? Number(lot_value) || 1 : lot_mode === 'fixed' ? Number(lot_value) || 0.01 : 1
+  const lotMultiplier = lotMultiplierFromConnection({
+    lot_mode: lot_mode ?? 'multiplier',
+    lot_value: lot_value ?? 1,
+  })
 
   const finalConnection = await runProvisionJob({
     userId: user.id,
@@ -344,12 +347,7 @@ export async function PUT(request: NextRequest) {
     .eq('id', connectionId)
 
   const normalizedGroups = normalizeTelegramGroups(conn.telegram_groups, conn.telegram_group)
-  const lotMultiplier =
-    conn.lot_mode === 'multiplier'
-      ? Number(conn.lot_value) || 1
-      : conn.lot_mode === 'fixed'
-        ? Number(conn.lot_value) || 0.01
-        : 1
+  const lotMultiplier = lotMultiplierFromConnection(conn)
 
   const finalConnection = await runProvisionJob({
     userId: user.id,

@@ -43,13 +43,13 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
   "trade-ideas-setup": {
     emoji: "📡",
     accent: "#26A5E4",
-    tag: "Telegram",
+    tag: "Sensei",
     rules: [
-      "Sinais e setups oficiais MTM (espelhados do Telegram)",
+      "Sinais MTM Auto · Sensei Scanner (espelhados do Telegram)",
       "Só leitura — não podes publicar aqui",
       "Activa push para não perder entradas",
     ],
-    tips: ["As mensagens chegam automaticamente da equipa"],
+    tips: ["As mensagens chegam automaticamente da equipa / scanner"],
   },
   "premium-ideas": {
     emoji: "💎",

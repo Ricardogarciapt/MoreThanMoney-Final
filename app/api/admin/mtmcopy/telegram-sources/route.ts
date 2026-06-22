@@ -16,8 +16,14 @@ import {
 import { normalizeProviderRoutes, syncChannelProvidersFromRoutes } from '@/lib/mtmcopy/provider-routes'
 import { ensureMtmProviderStrategyScaling } from '@/lib/mtmcopy/copyfactory'
 import type { ProviderRoute } from '@/lib/mtmcopy/signal-sources-config'
-import { MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
+import {
+  getMtmcopyBotInfo,
+  getMtmcopyWebhookInfo,
+  MTMCOPY_BOT_USERNAME,
+  registerMtmcopyTelegramWebhook,
+} from '@/lib/mtmcopy/telegram-bot'
 import { CANONICAL_TELEGRAM_CHANNELS } from '@/lib/telegram-channel-ids'
+import { getSiteOrigin } from '@/lib/site-url'
 
 const supabase = getSupabaseAdmin()
 
@@ -70,8 +76,12 @@ export async function GET(request: NextRequest) {
 
   const provider_routes = normalizeProviderRoutes(config)
 
+  const [bot_info, webhook] = await Promise.all([getMtmcopyBotInfo(), getMtmcopyWebhookInfo()])
+
   return NextResponse.json({
     bot_username: MTMCOPY_BOT_USERNAME(),
+    bot_info,
+    webhook,
     config: { ...config, provider_routes },
     default_execution: DEFAULT_PROVIDER_EXECUTION,
     sources: [...channelSources, ...discoveredChannels],
@@ -244,5 +254,27 @@ export async function PUT(request: NextRequest) {
     success: true,
     config: { ...next, provider_routes: normalizeProviderRoutes(next) },
     provider_scaling: scalingResults,
+  })
+}
+
+export async function POST(request: NextRequest) {
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
+
+  const body = await request.json().catch(() => ({}))
+  if (body.action !== 'register_webhook') {
+    return NextResponse.json({ ok: false, error: 'action inválida' }, { status: 400 })
+  }
+
+  const registered = await registerMtmcopyTelegramWebhook(getSiteOrigin())
+  const [bot_info, webhook] = await Promise.all([getMtmcopyBotInfo(), getMtmcopyWebhookInfo()])
+
+  return NextResponse.json({
+    ok: registered.ok,
+    description: registered.description,
+    webhook_url: registered.webhook_url,
+    bot_username: MTMCOPY_BOT_USERNAME(),
+    bot_info,
+    webhook,
   })
 }

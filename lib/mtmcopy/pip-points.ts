@@ -19,6 +19,26 @@ export function tradeIdeasTrailingDistance(): TrailingDistance {
   return { mode: 'points', points: TRADE_IDEAS_TRAILING_POINTS }
 }
 
+/** BE a meio do risco + trailing dinâmico (Trade Ideas / Sensei Scanner). */
+export function tradeIdeasDynamicTrailing(riskPips: number | null): TrailingDistance {
+  const risk = riskPips != null && riskPips > 0 ? riskPips : 30
+  const activationPips = Math.max(5, Math.round(risk * 0.5))
+  const trailPips = Math.max(8, Math.round(risk * 0.35))
+  return { mode: 'threshold_pips', activationPips, trailPips }
+}
+
+export function riskPipsFromEntrySl(
+  entry: number | null | undefined,
+  sl: number | null | undefined,
+  spec: SymbolPointSpec,
+  symbol?: string,
+): number | null {
+  if (entry == null || sl == null || !Number.isFinite(entry) || !Number.isFinite(sl)) return null
+  const pipSize = inferPipSize(spec, symbol)
+  if (!pipSize || pipSize <= 0) return null
+  return Math.max(1, Math.round(Math.abs(entry - sl) / pipSize))
+}
+
 /** @deprecated usar PREMIUM_TP1_TRAILING_PIPS */
 export const PREMIUM_TP_HIT_TRAILING_PIPS_LEGACY = PREMIUM_TP_HIT_TRAILING_PIPS
 

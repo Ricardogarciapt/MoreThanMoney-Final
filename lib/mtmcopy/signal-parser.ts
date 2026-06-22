@@ -1,5 +1,5 @@
 import type { MtmcopyChannelKey } from './channel-context'
-import { isPremiumTpHitMessage, shouldIgnoreChannelMessage } from './channel-context'
+import { isPremiumTp1CloseAllNowMessage, isPremiumTpHitMessage, shouldIgnoreChannelMessage } from './channel-context'
 import { resolvePremiumTradeActiveVariant, type PremiumTradeActiveVariant } from './premium-trade-active'
 import {
   premiumTrailingWithActivation,
@@ -75,6 +75,8 @@ const SYMBOL_STOPWORDS = new Set([
   'RISK',
   'BREAKEVEN',
   'CLOSE',
+  'CLOSEALL',
+  'HOLD',
   'HIT',
   'PIPS',
   'NET',
@@ -436,6 +438,8 @@ export interface ParsedManagement {
   trailingLeg?: number | null
   /** SL em points do broker (ex: «SL 1000 points») */
   slPoints?: number | null
+  /** HIT TP1 + «Close all now» — fechar posição inteira em lucro */
+  closeAllAtProfit?: boolean
 }
 
 /** Símbolo na mensagem actual ou herdado do sinal em resposta. */
@@ -499,12 +503,25 @@ export function looksLikeManagementOrReplyInstruction(
   return looksLikeManagementUpdate(text, channel)
 }
 
+function resolvePremiumManagementSymbol(text: string, parentText: string | null): string {
+  const reject = /^(IFHOLD|CLOSEALL|HOLDRI|WITHRI|SETBE|BREAKEV)/i
+  const candidates = [
+    extractSymbolFromContext(text, parentText),
+    parentText ? extractSymbol(parentText) : null,
+  ]
+  for (const sym of candidates) {
+    if (!sym || reject.test(sym) || !isValidTradingSymbol(sym)) continue
+    return sym
+  }
+  return 'XAUUSD'
+}
+
 function parsePremiumManagement(text: string, parentText: string | null): ParsedManagement | null {
   if (isPremiumTpHitMessage(text)) {
     const hitTp = text.match(/\bhit\s+tp([123])\b/i)
     if (hitTp) {
       const level = parseInt(hitTp[1], 10)
-      const symbol = extractSymbolFromContext(text, parentText) ?? 'XAUUSD'
+      const symbol = resolvePremiumManagementSymbol(text, parentText)
       if (level === 3) {
         return {
           type: 'close',
@@ -519,6 +536,7 @@ function parsePremiumManagement(text: string, parentText: string | null): Parsed
           symbol,
           sl: null,
           tpLevel: 1,
+          closeAllAtProfit: isPremiumTp1CloseAllNowMessage(text),
         }
       }
       return {
@@ -532,7 +550,7 @@ function parsePremiumManagement(text: string, parentText: string | null): Parsed
 
   const tradeActiveVariant = resolvePremiumTradeActiveVariant(text)
   if (tradeActiveVariant) {
-    const symbol = extractSymbolFromContext(text, parentText) ?? 'XAUUSD'
+    const symbol = resolvePremiumManagementSymbol(text, parentText)
     return {
       type: 'premium_trade_active',
       symbol,
@@ -542,7 +560,7 @@ function parsePremiumManagement(text: string, parentText: string | null): Parsed
   }
 
   if (isCancelInstruction(text)) {
-    const symbol = extractSymbolFromContext(text, parentText) ?? 'XAUUSD'
+    const symbol = resolvePremiumManagementSymbol(text, parentText)
     return { type: 'cancel_orders', symbol, sl: null }
   }
 

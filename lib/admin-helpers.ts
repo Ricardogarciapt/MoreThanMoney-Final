@@ -142,12 +142,19 @@ export async function adminApiCall<T>(
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
 
+      const { data: { session } } = await supabase.auth.getSession()
+      const authHeaders: Record<string, string> = {}
+      if (session?.access_token) {
+        authHeaders.Authorization = `Bearer ${session.access_token}`
+      }
+
       const response = await fetch(endpoint, {
         ...fetchOptions,
         credentials: 'include',
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders,
           ...fetchOptions.headers,
         },
       })

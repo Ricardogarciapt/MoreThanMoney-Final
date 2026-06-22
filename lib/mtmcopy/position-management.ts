@@ -309,6 +309,7 @@ async function applyPremiumSingleExitHit(
   pos: MetaApiPosition,
   exitLevel: 1 | 2 | 3,
   symbol: string,
+  opts?: { beOnly?: boolean },
 ): Promise<{ updated: number; closed: number; errors: string[] }> {
   const result = { updated: 0, closed: 0, errors: [] as string[] }
   const meta = parsePremiumSingleComment(pos.comment)
@@ -351,7 +352,35 @@ async function applyPremiumSingleExitHit(
     return result
   }
 
+  if (opts?.beOnly) {
+    const mod = await modifyPositionSlTp(
+      accountId,
+      pos.id,
+      pos.openPrice,
+      pos.takeProfit,
+      trailing,
+      pos.symbol,
+    )
+    if (mod.success) result.updated++
+    else if (mod.error) result.errors.push(mod.error)
+    return result
+  }
+
   const closeVol = partialVolumeForExit(pos, exitLevel, meta)
+  if (exitLevel === 1 && !positionInProfit(pos)) {
+    const mod = await modifyPositionSlTp(
+      accountId,
+      pos.id,
+      pos.openPrice,
+      pos.takeProfit,
+      trailing,
+      pos.symbol,
+    )
+    if (mod.success) result.updated++
+    else if (mod.error) result.errors.push(mod.error)
+    return result
+  }
+
   if (closeVol >= 0.01 && closeVol < vol) {
     const r = await closePositionById(accountId, pos.id, closeVol)
     if (r.success) result.closed++
@@ -390,12 +419,55 @@ async function applyPremiumSingleExitHit(
   return result
 }
 
-async function applyPremiumHitTp1(
+async function applyPremiumCloseAllInProfit(
   accountId: string,
   positions: MetaApiPosition[],
   symbol: string,
 ): Promise<{ updated: number; closed: number; cancelled: number; errors: string[] }> {
   const result = { updated: 0, closed: 0, cancelled: 0, errors: [] as string[] }
+  const targets = positions.length ? positions : []
+
+  if (!targets.length) {
+    result.errors.push('Sem posições MTMcopier abertas')
+    return result
+  }
+
+  let closedAny = false
+  for (const pos of targets) {
+    if (!positionInProfit(pos)) continue
+    const r = await closePositionById(accountId, pos.id)
+    if (r.success) {
+      result.closed++
+      closedAny = true
+    } else if (r.error) result.errors.push(r.error)
+  }
+
+  if (!closedAny) {
+    const single = findPremiumSinglePosition(targets, symbol)
+    if (single) {
+      const r = await applyPremiumSingleExitHit(accountId, single, 1, symbol, { beOnly: true })
+      result.updated += r.updated
+      result.closed += r.closed
+      result.errors.push(...r.errors)
+    } else {
+      result.errors.push('Posição não está em lucro — sem fecho (aguarda BE manual)')
+    }
+  }
+
+  return result
+}
+
+async function applyPremiumHitTp1(
+  accountId: string,
+  positions: MetaApiPosition[],
+  symbol: string,
+  opts?: { closeAllAtProfit?: boolean },
+): Promise<{ updated: number; closed: number; cancelled: number; errors: string[] }> {
+  const result = { updated: 0, closed: 0, cancelled: 0, errors: [] as string[] }
+
+  if (opts?.closeAllAtProfit) {
+    return applyPremiumCloseAllInProfit(accountId, positions, symbol)
+  }
 
   const single = findPremiumSinglePosition(positions, symbol)
   if (single) {
@@ -506,7 +578,9 @@ export async function applyManagementToAccount(
     if (!positions.length) {
       return { updated: 0, closed: 0, cancelled: 0, errors: ['Sem posições MTMcopier abertas'] }
     }
-    return applyPremiumHitTp1(accountId, positions, management.symbol)
+    return applyPremiumHitTp1(accountId, positions, management.symbol, {
+      closeAllAtProfit: management.closeAllAtProfit,
+    })
   }
 
   if (management.type === 'premium_trade_active' && management.symbol && management.premiumVariant) {
@@ -514,8 +588,11 @@ export async function applyManagementToAccount(
       accountId === CANONICAL_PREMIUM_ACCOUNT_ID ||
       accountId === CANONICAL_TRADE_IDEAS_ACCOUNT_ID
     ) {
-      void runPremiumProviderLifecycle(accountId, management.symbol)
-      return { updated: 0, closed: 0, cancelled: 0, errors: [] }
+      const positions = filterPositions(await listOpenPositions(accountId), management.symbol)
+      if (hasPremiumProviderBrokerLegs(positions)) {
+        void runPremiumProviderLifecycle(accountId, management.symbol)
+        return { updated: 0, closed: 0, cancelled: 0, errors: [] }
+      }
     }
     return applyPremiumTradeActive(accountId, management.symbol, management.premiumVariant)
   }

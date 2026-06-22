@@ -37,7 +37,9 @@ export function detectSlugFromChannelTitle(title: string | null | undefined): Ap
     t.includes('sinais') ||
     t.includes('forex') ||
     t.includes('ideias') ||
-    t.includes('ideia')
+    t.includes('ideia') ||
+    t.includes('sensei') ||
+    t.includes('scanner')
   ) {
     return 'trade-ideas-setup'
   }

@@ -21,7 +21,7 @@ import {
   isTelegramChannelErrorMessage,
 } from "@/lib/mtmcopy/connection-sanitize"
 import {
-  copyMethodLabel, parseTelegramGroups, telegramGroupsLabel,
+  copyMethodLabel, parseTelegramGroups, strategyPickLabel, telegramGroupsLabel,
   type MtmcopyCopyMethod,
 } from "@/lib/mtmcopy/copy-methods"
 import {
@@ -529,8 +529,8 @@ export default function MtmcopierMobilePage() {
                             </p>
                             {!isCopyTrader && conn.copy_method === "strategy" && (
                               <p className="text-[10px] text-gray-500 mt-0.5 truncate">
-                                {conn.copyfactory_strategy_pick ?? "—"}
-                                {conn.copyfactory_subscribed ? " · CF activa" : " · CF pendente"}
+                                {strategyPickLabel(conn.copyfactory_strategy_pick)}
+                                {conn.copyfactory_subscribed ? " · Cópia activa" : " · Cópia pendente"}
                               </p>
                             )}
                             {!isCopyTrader && conn.copy_method === "telegram_group" && (

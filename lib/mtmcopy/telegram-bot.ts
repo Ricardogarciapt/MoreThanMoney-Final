@@ -1,10 +1,57 @@
-const BOT_TOKEN = () =>
-  process.env.TELEGRAM_AIBOT_TOKEN?.trim() || process.env.TELEGRAM_BOT_TOKEN?.trim() || ''
+/** Bot admin MTMcopier + descoberta de canais Telegram: @MoreThanMoney_aibot */
+export const MTMCOPY_BOT_USERNAME_DEFAULT = 'MoreThanMoney_aibot'
+
+/** Token canónico: TELEGRAM_AIBOT_TOKEN (não usar @MoreThanMoney_Copierbot). */
+export function getMtmcopyBotToken(): string {
+  return (
+    process.env.TELEGRAM_AIBOT_TOKEN?.trim() ||
+    process.env.TELEGRAM_BOT_TOKEN?.trim() ||
+    ''
+  )
+}
+
 export const MTMCOPY_BOT_USERNAME = () =>
-  (process.env.TELEGRAM_BOT_USERNAME || '@MoreThanMoney_aibot').replace(/^@/, '')
+  (process.env.TELEGRAM_BOT_USERNAME || `@${MTMCOPY_BOT_USERNAME_DEFAULT}`)
+    .trim()
+    .replace(/^@/, '')
+
+export interface MtmcopyBotInfo {
+  ok: boolean
+  id?: number
+  username?: string
+  first_name?: string
+  error?: string
+}
+
+export async function getMtmcopyBotInfo(): Promise<MtmcopyBotInfo> {
+  const token = getMtmcopyBotToken()
+  if (!token) return { ok: false, error: 'TELEGRAM_AIBOT_TOKEN não configurado' }
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`, {
+      next: { revalidate: 0 },
+    })
+    const data = (await res.json()) as {
+      ok?: boolean
+      description?: string
+      result?: { id?: number; username?: string; first_name?: string }
+    }
+    if (!data.ok || !data.result) {
+      return { ok: false, error: data.description ?? 'getMe falhou' }
+    }
+    return {
+      ok: true,
+      id: data.result.id,
+      username: data.result.username,
+      first_name: data.result.first_name,
+    }
+  } catch (err: unknown) {
+    return { ok: false, error: err instanceof Error ? err.message : 'getMe falhou' }
+  }
+}
 
 async function botApi<T>(method: string, params?: Record<string, string>): Promise<T | null> {
-  const token = BOT_TOKEN()
+  const token = getMtmcopyBotToken()
   if (!token) return null
 
   const url = new URL(`https://api.telegram.org/bot${token}/${method}`)
@@ -31,7 +78,7 @@ export interface ChannelVerifyResult {
 
 /** Verifica se o bot consegue ver o canal e se é administrador. */
 export async function verifyTelegramChannel(channelInput: string): Promise<ChannelVerifyResult> {
-  const token = BOT_TOKEN()
+  const token = getMtmcopyBotToken()
   if (!token) {
     return { ok: false, error: 'TELEGRAM_AIBOT_TOKEN não configurado' }
   }
@@ -47,7 +94,7 @@ export async function verifyTelegramChannel(channelInput: string): Promise<Chann
     return {
       ok: false,
       error:
-        'Canal não encontrado. Confirma o @username e adiciona o bot como administrador do canal de sinais.',
+        'Canal não encontrado. Confirma o @username e adiciona @MoreThanMoney_aibot como administrador do canal de sinais.',
     }
   }
 
@@ -78,8 +125,8 @@ export async function sendTelegramChannelMessage(
   text: string,
   options?: { parseMode?: 'HTML' | 'Markdown' },
 ): Promise<{ ok: boolean; messageId?: number; error?: string }> {
-  const token = BOT_TOKEN()
-  if (!token) return { ok: false, error: 'TELEGRAM_BOT_TOKEN não configurado' }
+  const token = getMtmcopyBotToken()
+  if (!token) return { ok: false, error: 'TELEGRAM_AIBOT_TOKEN não configurado' }
 
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
@@ -102,9 +149,40 @@ export async function sendTelegramChannelMessage(
   return { ok: true, messageId: data.result?.message_id }
 }
 
-export async function registerTelegramWebhook(siteUrl: string): Promise<{ ok: boolean; description?: string }> {
-  const token = BOT_TOKEN()
-  if (!token) return { ok: false, description: 'TELEGRAM_BOT_TOKEN em falta' }
+export async function getMtmcopyWebhookInfo(): Promise<{
+  url?: string
+  pending_update_count?: number
+  last_error_message?: string | null
+} | null> {
+  const token = getMtmcopyBotToken()
+  if (!token) return null
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`, {
+      next: { revalidate: 0 },
+    })
+    const data = (await res.json()) as { ok?: boolean; result?: Record<string, unknown> }
+    if (!data.ok || !data.result) return null
+    return {
+      url: typeof data.result.url === 'string' ? data.result.url : undefined,
+      pending_update_count:
+        typeof data.result.pending_update_count === 'number'
+          ? data.result.pending_update_count
+          : undefined,
+      last_error_message:
+        typeof data.result.last_error_message === 'string'
+          ? data.result.last_error_message
+          : null,
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function registerMtmcopyTelegramWebhook(
+  siteUrl: string,
+): Promise<{ ok: boolean; description?: string; webhook_url?: string }> {
+  const token = getMtmcopyBotToken()
+  if (!token) return { ok: false, description: 'TELEGRAM_AIBOT_TOKEN em falta' }
 
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET
   const webhookUrl = secret
@@ -116,10 +194,19 @@ export async function registerTelegramWebhook(siteUrl: string): Promise<{ ok: bo
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       url: webhookUrl,
-      allowed_updates: ['message', 'channel_post', 'edited_channel_post'],
+      allowed_updates: ['message', 'edited_message', 'channel_post', 'edited_channel_post', 'my_chat_member'],
       drop_pending_updates: false,
     }),
   })
-  const data = await res.json()
-  return { ok: data.ok === true, description: data.description }
+  const data = (await res.json()) as { ok?: boolean; description?: string }
+  return {
+    ok: data.ok === true,
+    description: data.description,
+    webhook_url: webhookUrl,
+  }
+}
+
+/** @deprecated usar registerMtmcopyTelegramWebhook */
+export async function registerTelegramWebhook(siteUrl: string) {
+  return registerMtmcopyTelegramWebhook(siteUrl)
 }

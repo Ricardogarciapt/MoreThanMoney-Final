@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-api-helpers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isMailConfigured } from '@/lib/system-emails-registry'
+import { getMtmcopyBotToken, MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
 
 export async function GET(request: NextRequest) {
   const authCheck = await requireAdmin(request)
@@ -90,16 +91,18 @@ export async function GET(request: NextRequest) {
   })
 
   // Telegram
-  const telegramConfigured = Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim())
+  const telegramConfigured = Boolean(getMtmcopyBotToken())
   integrations.push({
     id: 'telegram',
     name: 'Telegram Bot',
     category: 'signals',
     configured: telegramConfigured,
     connected: telegramConfigured,
-    detail: telegramConfigured ? 'Bot configurado · sinais → app-mobile' : 'TELEGRAM_BOT_TOKEN em falta',
-    envKeys: ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHANNEL_TRADE_IDEAS', 'TELEGRAM_CHANNEL_PREMIUM_SIGNALS'],
-    adminLink: '/app-mobile?tab=chat',
+    detail: telegramConfigured
+      ? `@${MTMCOPY_BOT_USERNAME()} · sinais + descoberta de canais`
+      : 'TELEGRAM_AIBOT_TOKEN em falta',
+    envKeys: ['TELEGRAM_AIBOT_TOKEN', 'TELEGRAM_BOT_USERNAME', 'TELEGRAM_CHANNEL_TRADE_IDEAS', 'TELEGRAM_CHANNEL_PREMIUM_SIGNALS'],
+    adminLink: '/admin/mtmcopy',
   })
 
   // Vercel / Site

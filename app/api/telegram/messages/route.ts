@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
+import { getMtmcopyBotToken } from "@/lib/mtmcopy/telegram-bot"
 
 export async function GET() {
   try {
-    const botToken = process.env.TELEGRAM_BOT_TOKEN
+    const botToken = getMtmcopyBotToken()
     const chatId = "-1002055149876"
 
     if (!botToken) {

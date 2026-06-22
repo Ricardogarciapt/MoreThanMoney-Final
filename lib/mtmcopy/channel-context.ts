@@ -40,3 +40,14 @@ export function isPremiumTpHitMessage(text: string): boolean {
 export function isPremiumTp1HitConfirmed(text: string): boolean {
   return /\bhit\s+tp1\b/i.test(text)
 }
+
+/**
+ * HIT TP1 + «Close all now» (+ BE opcional).
+ * Ex.: «HIT TP1 ✅ Close all now. If hold set BE. Hold risk with Breakeven(BE)»
+ * → fechar a posição inteira em lucro (não só parcial 33%).
+ */
+export function isPremiumTp1CloseAllNowMessage(text: string): boolean {
+  if (!isPremiumTp1HitConfirmed(text)) return false
+  if (!/\bclose\s+all\s+now\b/i.test(text)) return false
+  return true
+}

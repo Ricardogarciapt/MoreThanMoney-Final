@@ -4,8 +4,10 @@ import { getMtmChannelProviders } from './provider-accounts'
 import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
   CANONICAL_PREMIUM_STRATEGY_ID,
+  CANONICAL_SENSEI_STRATEGY_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_STRATEGY_ID,
+  MTM_COPY_STRATEGY_CATALOG,
 } from './provider-constants'
 import {
   repairProviderRoutes,
@@ -123,8 +125,13 @@ export function routeMatchesSignal(
   route: ProviderRoute,
   channel: MtmcopyChannelKey,
   chatId?: string | number | null,
+  opts?: { signalSource?: 'telegram' | 'webhook' },
 ): boolean {
   if (route.enabled === false || !route.account_id?.trim()) return false
+
+  const source = opts?.signalSource ?? 'telegram'
+  if (source === 'telegram' && route.signal_source === 'webhook') return false
+  if (source === 'webhook' && route.signal_source !== 'webhook') return false
 
   if (channel !== 'unknown') {
     if (route.sender_channel && route.sender_channel !== channel) return false
@@ -151,8 +158,9 @@ export function pickSingleProviderRoute(
   routes: ProviderRoute[],
   channel: MtmcopyChannelKey,
   chatId?: string | number | null,
+  opts?: { signalSource?: 'telegram' | 'webhook' },
 ): ProviderRoute | null {
-  const matched = routes.filter((r) => routeMatchesSignal(r, channel, chatId))
+  const matched = routes.filter((r) => routeMatchesSignal(r, channel, chatId, opts))
   if (!matched.length) return null
 
   if (channel === 'premium-signals') {
@@ -207,20 +215,31 @@ export function strategyOptionsFromRoutes(routes: ProviderRoute[]): Array<{
   description: string
   accountId?: string
 }> {
+  const seen = new Set<string>()
   return routes
     .filter((r) => r.enabled !== false && r.strategy_id?.trim())
-    .map((r) => ({
-      id: r.strategy_id!.trim(),
-      channelKey: r.sender_channel ?? null,
-      accountId: r.account_id,
-      title: r.label ?? r.tag ?? `Estratégia ${r.strategy_id!.slice(0, 8)}`,
-      description:
-        r.sender_channel === 'premium-signals'
-          ? 'Premium · Ouro'
-          : r.sender_channel === 'trade-ideas'
-            ? 'Trade Ideas · Forex'
-            : 'Rota CopyFactory personalizada',
-    }))
+    .map((r) => {
+      const sid = r.strategy_id!.trim()
+      const catalog = MTM_COPY_STRATEGY_CATALOG[sid]
+      return {
+        id: sid,
+        channelKey: r.sender_channel ?? null,
+        accountId: r.account_id,
+        title: catalog?.title ?? r.label ?? r.tag ?? 'Estratégia MTM auditada',
+        description:
+          catalog?.description ??
+          (r.sender_channel === 'premium-signals'
+            ? 'Estratégia auditada Premium · Ouro'
+            : r.sender_channel === 'trade-ideas'
+              ? 'Estratégia auditada Trade Ideas'
+              : 'Estratégia auditada do sistema MTM'),
+      }
+    })
+    .filter((o) => {
+      if (seen.has(o.id)) return false
+      seen.add(o.id)
+      return true
+    })
 }
 
 export function executionForRoute(

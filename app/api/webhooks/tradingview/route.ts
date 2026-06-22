@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { parseSignal, type ParsedSignal } from "@/lib/mtmcopy/signal-parser"
 import { validateSignalWithAi } from "@/lib/mtmcopy/signal-ai-validator"
+import { processMtmcopyWebhookSignal } from "@/lib/mtmcopy/processor"
 import { getSiteOrigin } from "@/lib/site-url"
+import { resolvedTradeIdeasChatId } from "@/lib/telegram-channel-ids"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export const runtime = "nodejs"
@@ -11,10 +13,11 @@ export const dynamic = "force-dynamic"
 const CHANNEL_SLUG = process.env.SENSEI_CHANNEL_SLUG || "sensei-scanner"
 const CHAT_SENDER = process.env.SENSEI_CHAT_SENDER || "🧠 Sensei Scanner"
 
-// Relay opcional para Telegram (bot dedicado @MoreThanMoney_aibot). DESLIGADO por defeito.
-const RELAY_ENABLED = process.env.TRADINGVIEW_RELAY_ENABLED === "true"
-const RELAY_CHAT_ID = process.env.TRADINGVIEW_RELAY_CHAT_ID || ""
-const AIBOT_TOKEN = process.env.TELEGRAM_AIBOT_TOKEN || ""
+const DEFAULT_RELAY_CHAT_ID = resolvedTradeIdeasChatId()
+const RELAY_CHAT_ID = (process.env.TRADINGVIEW_RELAY_CHAT_ID || DEFAULT_RELAY_CHAT_ID).trim()
+const AIBOT_TOKEN = (process.env.TELEGRAM_AIBOT_TOKEN || "").trim()
+const RELAY_DISABLED = (process.env.TRADINGVIEW_RELAY_ENABLED || "true").toLowerCase() === "false"
+const RELAY_ENABLED = !RELAY_DISABLED && Boolean(RELAY_CHAT_ID && AIBOT_TOKEN)
 
 type Json = Record<string, unknown>
 
@@ -158,6 +161,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, valid: false, reason: v.reasoning, confidence: v.confidence })
   }
 
+  const parsedForExec =
+    parseSignal(raw) ??
+    ({
+      symbol: v.symbol ?? ticker,
+      direction: v.direction,
+      entry: v.entry ?? price,
+      sl: v.sl ?? sl,
+      tp: v.tp?.length ? v.tp : tp != null ? [tp] : [],
+      orderType: (v.entry ?? price) != null ? "limit" : "market",
+      raw,
+    } as ParsedSignal)
+
+  let providerExecuted = false
+  let providerDetail: string | undefined
+  if (parsedForExec.symbol && parsedForExec.direction) {
+    try {
+      const exec = await processMtmcopyWebhookSignal({
+        raw,
+        signal: parsedForExec as NonNullable<ReturnType<typeof parseSignal>>,
+        validation: v,
+        externalRef: logId,
+      })
+      providerExecuted = exec.executed
+      providerDetail = exec.detail
+    } catch (err) {
+      console.error("[tradingview-webhook] provider exec error:", err)
+    }
+  }
+
   const post = composePost(v)
 
   // Publica no chat #Sensei Scanner (mesma convenção do mirror Telegram)
@@ -187,9 +219,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Relay Telegram (gated)
+  // Relay Telegram → canal Sensei Scanner (-1003853860780 por defeito)
   let tgOk = false
-  if (RELAY_ENABLED && RELAY_CHAT_ID && AIBOT_TOKEN) {
+  if (RELAY_ENABLED) {
     try {
       const mid = await sendTelegram(AIBOT_TOKEN, RELAY_CHAT_ID, post)
       tgOk = true
@@ -198,8 +230,9 @@ export async function POST(request: NextRequest) {
       if (logId) await supabase.from("tradingview_signals").update({ telegram_status: "error", telegram_chat_id: RELAY_CHAT_ID, telegram_error: String(err) }).eq("id", logId)
     }
   } else if (logId) {
-    await supabase.from("tradingview_signals").update({ telegram_status: RELAY_ENABLED ? "error" : "disabled" }).eq("id", logId)
+    const reason = !AIBOT_TOKEN ? "TELEGRAM_AIBOT_TOKEN em falta" : !RELAY_CHAT_ID ? "TRADINGVIEW_RELAY_CHAT_ID em falta" : "relay desligado"
+    await supabase.from("tradingview_signals").update({ telegram_status: "disabled", telegram_error: reason }).eq("id", logId)
   }
 
-  return NextResponse.json({ ok: true, valid: true, confidence: v.confidence, chat: !!chatId, push: pushOk, telegram: tgOk, signal_id: logId })
+  return NextResponse.json({ ok: true, valid: true, confidence: v.confidence, chat: !!chatId, push: pushOk, telegram: tgOk, provider: providerExecuted, provider_detail: providerDetail, signal_id: logId })
 }

@@ -1,5 +1,5 @@
 import type { MtmcopyChannelKey } from './channel-context'
-import { MTM_PROVIDER_EXECUTION_PROFILE } from './provider-accounts'
+import { MTM_DEFAULT_RISK_PERCENT, MTM_PROVIDER_EXECUTION_PROFILE } from './provider-accounts'
 import {
   getSignalSourcesConfig,
   type MtmcopyTelegramChannelKey,
@@ -9,11 +9,11 @@ import type { MTMcopierConnection } from './types'
 
 export type { ProviderExecutionProfile }
 
-/** Perfil MTM Auto — Premium (XAUUSD, 0.75% risco, 3 exits). */
+/** Perfil MTM Auto — Premium (XAUUSD, 1 perna + parciais Telegram). */
 export const PREMIUM_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   ...MTM_PROVIDER_EXECUTION_PROFILE,
   lot_mode: 'risk_percent',
-  lot_value: 0.75,
+  lot_value: MTM_DEFAULT_RISK_PERCENT,
   ai_validation_enabled: true,
   ai_min_confidence: 0.35,
   sl_option: 'from_room',
@@ -43,10 +43,10 @@ export const PREMIUM_PROVIDER_EXECUTION: ProviderExecutionProfile = {
 export const TRADE_IDEAS_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   ...MTM_PROVIDER_EXECUTION_PROFILE,
   lot_mode: 'risk_percent',
-  lot_value: 0.75,
+  lot_value: MTM_DEFAULT_RISK_PERCENT,
   ai_validation_enabled: true,
   ai_min_confidence: 0.35,
-  auto_trailing_stop: true,
+  auto_trailing_stop: false,
   trailing_stop_points: 200,
   sl_option: 'from_room',
   execute_if_no_sl: true,
@@ -67,6 +67,12 @@ export const TRADE_IDEAS_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   exit_pct_tp1: 33,
   exit_pct_tp2: 33,
   exit_pct_tp3: 34,
+}
+
+/** Perfil MTM Auto — Sensei Scanner (TradingView webhook + gestão programada). */
+export const SENSEI_PROVIDER_EXECUTION: ProviderExecutionProfile = {
+  ...TRADE_IDEAS_PROVIDER_EXECUTION,
+  mt_comment: 'MTM-SENSEI',
 }
 
 export const DEFAULT_PROVIDER_EXECUTION: ProviderExecutionProfile = {

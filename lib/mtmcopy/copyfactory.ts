@@ -56,10 +56,21 @@ export interface ProviderStrategyOptions {
 }
 
 export async function subscribeToStrategies(
-  opts: Omit<SubscriberOptions, 'strategyId'> & { strategyIds: string[] },
+  opts: Omit<SubscriberOptions, 'strategyId'> & {
+    strategyIds: string[]
+    freshSubscribe?: boolean
+  },
 ): Promise<{ ok: boolean; error?: string }> {
   const token = process.env.METAAPI_TOKEN
   if (!token) return { ok: false, error: 'METAAPI_TOKEN em falta' }
+
+  const { ensureMetaApiAccountOnline } = await import('./metaapi')
+  const online = await ensureMetaApiAccountOnline(opts.accountId)
+  if (!online.ok) return { ok: false, error: online.error ?? 'Conta MetaAPI offline' }
+
+  if (opts.freshSubscribe) {
+    await unsubscribeFromStrategy(opts.accountId)
+  }
 
   const ids = [...new Set(opts.strategyIds.filter(Boolean))]
   if (!ids.length) {
@@ -68,57 +79,73 @@ export async function subscribeToStrategies(
     ids.push(fallback)
   }
 
-  const subscriptions = ids.map((strategyId) => {
-    const subscription: Record<string, unknown> = {
-      strategyId,
-      skipPendingOrders: opts.skipPendingOrders ?? false,
-      copyStopLoss: opts.copySl !== false,
-      copyTakeProfit: opts.copyTp !== false,
-      reverse: opts.reverse ?? false,
-    }
-    if (opts.tradeSizeScaling && opts.tradeSizeScaling.mode !== 'none') {
-      subscription.tradeSizeScaling = opts.tradeSizeScaling
-    } else {
-      subscription.multiplier = opts.multiplier ?? 1
-    }
-    if (opts.symbolWhitelist?.length) {
-      subscription.symbolFilter = { included: opts.symbolWhitelist }
-    }
-    if (opts.symbolMapping?.length) {
-      subscription.symbolMapping = opts.symbolMapping
-    }
-    return subscription
-  })
+  const buildSubscriptions = (includeMapping: boolean, scalingOnly: boolean) =>
+    ids.map((strategyId) => {
+      const subscription: Record<string, unknown> = {
+        strategyId,
+        skipPendingOrders: opts.skipPendingOrders ?? false,
+        copyStopLoss: opts.copySl !== false,
+        copyTakeProfit: opts.copyTp !== false,
+        reverse: opts.reverse ?? false,
+      }
+      if (opts.tradeSizeScaling && opts.tradeSizeScaling.mode !== 'none') {
+        if (!scalingOnly || opts.tradeSizeScaling.mode === 'fixedVolume' || opts.tradeSizeScaling.mode === 'fixedRisk') {
+          subscription.tradeSizeScaling = opts.tradeSizeScaling
+        } else {
+          subscription.multiplier = opts.multiplier ?? 1
+        }
+      } else {
+        subscription.multiplier = opts.multiplier ?? 1
+      }
+      if (opts.symbolWhitelist?.length) {
+        subscription.symbolFilter = { included: opts.symbolWhitelist }
+      }
+      if (includeMapping && opts.symbolMapping?.length) {
+        subscription.symbolMapping = opts.symbolMapping
+      }
+      return subscription
+    })
 
-  const body: Record<string, unknown> = {
-    name: opts.name,
-    subscriptions,
-  }
-  if (opts.riskLimits?.length) {
-    body.riskLimits = opts.riskLimits
+  const putBody = (subscriptions: Record<string, unknown>[]) => {
+    const body: Record<string, unknown> = { name: opts.name, subscriptions }
+    if (opts.riskLimits?.length) body.riskLimits = opts.riskLimits
+    return body
   }
 
-  const res = await fetch(
-    `${COPYFACTORY_BASE}/users/current/configuration/subscribers/${opts.accountId}`,
-    {
-      method: 'PUT',
-      headers: {
-        'auth-token': token,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
+  const attempts: Array<{ includeMapping: boolean; scalingOnly: boolean }> = [
+    { includeMapping: true, scalingOnly: false },
+    { includeMapping: false, scalingOnly: false },
+    { includeMapping: false, scalingOnly: true },
+  ]
+
+  let lastError = 'CopyFactory falhou'
+
+  for (const attempt of attempts) {
+    const res = await fetch(
+      `${COPYFACTORY_BASE}/users/current/configuration/subscribers/${opts.accountId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'auth-token': token,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(putBody(buildSubscriptions(attempt.includeMapping, attempt.scalingOnly))),
       },
-      body: JSON.stringify(body),
-    },
-  )
+    )
 
-  if (res.status === 204 || res.ok) return { ok: true }
+    if (res.status === 204 || res.ok) return { ok: true }
 
-  const data = await res.json().catch(() => ({}))
-  const message =
-    (data as { message?: string }).message ??
-    (data as { error?: string }).error ??
-    `CopyFactory HTTP ${res.status}`
-  return { ok: false, error: message }
+    const data = await res.json().catch(() => ({}))
+    lastError =
+      (data as { message?: string }).message ??
+      (data as { error?: string }).error ??
+      `CopyFactory HTTP ${res.status}`
+
+    if (!lastError.includes('Validation failed')) break
+  }
+
+  return { ok: false, error: lastError }
 }
 
 export async function subscribeToStrategy(
@@ -272,7 +299,9 @@ const MTM_PROVIDER_RISK_LIMITS: ProviderStrategyOptions['riskLimits'] = [
 
 /** Estratégias MTM provider: scaling por saldo + micro-lotes quando abaixo do mínimo do broker. */
 export async function ensureMtmProviderStrategyScaling(
-  opts: Pick<ProviderStrategyOptions, 'strategyId' | 'accountId' | 'name' | 'description'>,
+  opts: Pick<ProviderStrategyOptions, 'strategyId' | 'accountId' | 'name' | 'description'> & {
+    copyTakeProfit?: boolean
+  },
 ): Promise<{ ok: boolean; error?: string }> {
   return upsertProviderStrategy({
     strategyId: opts.strategyId,
@@ -281,7 +310,7 @@ export async function ensureMtmProviderStrategyScaling(
     description: opts.description ?? 'Estratégia MTM · scaling por saldo',
     skipPendingOrders: false,
     copyStopLoss: true,
-    copyTakeProfit: true,
+    copyTakeProfit: opts.copyTakeProfit !== false,
     tradeSizeScaling: { mode: 'balance', forceTinyTrades: true },
     riskLimits: MTM_PROVIDER_RISK_LIMITS,
   })

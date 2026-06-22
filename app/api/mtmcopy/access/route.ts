@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { checkMtmcopyAccess } from '@/lib/mtmcopy-access'
+import { MTMCOPY_BOT_USERNAME } from '@/lib/mtmcopy/telegram-bot'
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
 
   const access = await checkMtmcopyAccess(user.id, profile?.user_type)
 
-  const botUsername = (process.env.TELEGRAM_BOT_USERNAME || '@MoreThanMoney_aibot').replace(/^@/, '')
+  const botUsername = MTMCOPY_BOT_USERNAME()
 
   return NextResponse.json({
     hasAccess: access.hasAccess,

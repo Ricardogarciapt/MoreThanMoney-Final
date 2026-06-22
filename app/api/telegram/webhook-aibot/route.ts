@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { processMtmcopyTelegramMessage } from "@/lib/mtmcopy/processor"
 import { resolveAppChannelSlug } from "@/lib/telegram-app-channels"
+import { sendTelegramChannelPush } from "@/lib/telegram-channel-push"
+import { getMtmcopyBotToken } from "@/lib/mtmcopy/telegram-bot"
 
 type TelegramChannelMessage = Parameters<typeof processMtmcopyTelegramMessage>[0]
 
@@ -17,7 +19,7 @@ async function resolveTelegramImageUrl(message: {
   photo?: Array<{ file_id: string }>
 }): Promise<string | null> {
   if (!message.photo?.length) return null
-  const botToken = process.env.TELEGRAM_BOT_TOKEN
+  const botToken = getMtmcopyBotToken()
   if (!botToken) return null
 
   const bestPhoto = message.photo[message.photo.length - 1]
@@ -34,10 +36,59 @@ async function resolveTelegramImageUrl(message: {
   }
 }
 
+async function mirrorToApp(message: TelegramChannelMessage) {
+  const chat = message.chat ?? {}
+  const slug = resolveAppChannelSlug(chat)
+  if (!slug) return
+
+  const content = message.text || message.caption || null
+  const imageUrl = await resolveTelegramImageUrl(message)
+  if (!content && !imageUrl) return
+
+  const supabase = getSupabaseAdmin()
+  const senderName = chat.title || message.sender_chat?.title || "Telegram"
+  const telegramMessageId = message.message_id
+
+  const { data: existing } = await supabase
+    .from("chat_messages")
+    .select("id")
+    .eq("telegram_message_id", telegramMessageId)
+    .eq("channel_slug", slug)
+    .maybeSingle()
+
+  if (existing) return
+
+  const { error: insertError } = await supabase.from("chat_messages").insert({
+    channel_slug: slug,
+    user_id: null,
+    content,
+    image_url: imageUrl,
+    message_type: "telegram_forward",
+    telegram_sender: senderName,
+    telegram_message_id: telegramMessageId,
+    created_at: new Date(message.date * 1000).toISOString(),
+  })
+
+  if (insertError) {
+    console.error(`[webhook-aibot] Erro ao inserir em ${slug}:`, insertError.message)
+    return
+  }
+
+  const push = await sendTelegramChannelPush({
+    slug,
+    content,
+    imageUrl,
+    telegramMessageId,
+  })
+  if (!push.ok) {
+    console.error("[webhook-aibot] push failed:", push.error ?? push.status)
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const message = (body.channel_post || body.edited_channel_post || body.message) as
+    const message = (body.channel_post || body.edited_channel_post || body.message || body.edited_message) as
       | TelegramChannelMessage
       | undefined
     if (!message) return NextResponse.json({ ok: true })
@@ -46,76 +97,16 @@ export async function POST(request: NextRequest) {
     const isGroupMessage =
       chat.type === "supergroup" || chat.type === "group" || chat.type === "channel" || chat.id < 0
 
-    // MTMcopier primeiro — entradas Premium (3 legs MetaAPI) não podem ir em after()
     if (isGroupMessage) {
-      await runMtmcopy(message)
+      await Promise.all([
+        mirrorToApp(message),
+        (async () => {
+          const { registerDiscoveredTelegramChat } = await import("@/lib/mtmcopy/signal-sources-config")
+          await registerDiscoveredTelegramChat(chat)
+        })(),
+        runMtmcopy(message),
+      ])
     }
-
-    const slug = resolveAppChannelSlug(chat)
-    if (!slug) return NextResponse.json({ ok: true })
-
-    const content = message.text || message.caption || null
-    const imageUrl = await resolveTelegramImageUrl(message)
-    if (!content && !imageUrl) return NextResponse.json({ ok: true })
-
-    const supabase = getSupabaseAdmin()
-    const senderName = chat.title || message.sender_chat?.title || "Telegram"
-    const telegramMessageId = message.message_id
-
-    const { data: existing } = await supabase
-      .from("chat_messages")
-      .select("id")
-      .eq("telegram_message_id", telegramMessageId)
-      .eq("channel_slug", slug)
-      .maybeSingle()
-
-    if (existing) return NextResponse.json({ ok: true })
-
-    const { error: insertError } = await supabase.from("chat_messages").insert({
-      channel_slug: slug,
-      user_id: null,
-      content,
-      image_url: imageUrl,
-      message_type: "telegram_forward",
-      telegram_sender: senderName,
-      telegram_message_id: telegramMessageId,
-      created_at: new Date(message.date * 1000).toISOString(),
-    })
-
-    if (insertError) {
-      console.error(`[webhook-aibot] Erro ao inserir em ${slug}:`, insertError.message)
-      return NextResponse.json({ ok: true })
-    }
-
-    const PUSH_TITLES: Record<string, string> = {
-      "trade-ideas-setup": "📊 Novo Setup de Trading!",
-      "premium-ideas": "💎 Nova Ideia Premium!",
-    }
-    const title = PUSH_TITLES[slug] ?? "📩 Nova mensagem MTM"
-    const bodyText = (content || (imageUrl ? "Nova imagem" : "Nova mensagem")).length > 120
-      ? (content || "Nova imagem").substring(0, 117) + "…"
-      : (content || (imageUrl ? "Nova imagem" : "Nova mensagem"))
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.morethanmoney.pt"
-    void Promise.all([
-      (async () => {
-        const { registerDiscoveredTelegramChat } = await import("@/lib/mtmcopy/signal-sources-config")
-        await registerDiscoveredTelegramChat(chat)
-      })(),
-      fetch(`${siteUrl}/api/notifications/send-push`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          all: true,
-          title,
-          body: bodyText,
-          data: {
-            type: slug.includes("trade") ? "trade_ideas" : "chat_message",
-            url: `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}`,
-            channel: slug,
-          },
-        }),
-      }).catch((e) => console.error("[webhook-aibot] push failed:", e)),
-    ])
 
     return NextResponse.json({ ok: true })
   } catch (error) {

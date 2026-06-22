@@ -3,6 +3,8 @@ import type { ProviderExecutionProfile } from './signal-sources-config'
 import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
   CANONICAL_PREMIUM_STRATEGY_ID,
+  CANONICAL_SENSEI_ACCOUNT_ID,
+  CANONICAL_SENSEI_STRATEGY_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_STRATEGY_ID,
 } from './provider-constants'
@@ -19,7 +21,10 @@ export interface MtmChannelProvider {
   aiStrategyPrompt?: string | null
 }
 
-/** Perfil de execução das contas MTM (provider) — 0,75% risco + gestão por canal */
+/** Risco default provider MTM Auto (% por trade). */
+export const MTM_DEFAULT_RISK_PERCENT = 0.5
+
+/** Perfil de execução das contas MTM (provider) — risco default + gestão por canal */
 export const MTM_PROVIDER_EXECUTION_PROFILE: Pick<
   MTMcopierConnection,
   | 'lot_mode'
@@ -33,7 +38,7 @@ export const MTM_PROVIDER_EXECUTION_PROFILE: Pick<
   | 'symbols_whitelist'
 > = {
   lot_mode: 'risk_percent',
-  lot_value: 0.75,
+  lot_value: MTM_DEFAULT_RISK_PERCENT,
   max_risk_percent: 2,
   copy_sl: true,
   copy_tp: true,
@@ -45,9 +50,14 @@ export const MTM_PROVIDER_EXECUTION_PROFILE: Pick<
 
 const PREMIUM_ACCOUNT_DEFAULT = CANONICAL_PREMIUM_ACCOUNT_ID
 const TRADE_IDEAS_ACCOUNT_DEFAULT = CANONICAL_TRADE_IDEAS_ACCOUNT_ID
+const SENSEI_ACCOUNT_DEFAULT = CANONICAL_SENSEI_ACCOUNT_ID
 
 function envOr(key: string, fallback: string): string {
   return process.env[key]?.trim() || fallback
+}
+
+function senseiStrategyId(): string {
+  return process.env.METAAPI_COPY_STRATEGY_SENSEI_ID?.trim() || CANONICAL_SENSEI_STRATEGY_ID
 }
 
 /** Contas MetaAPI MTM por canal Telegram (execução directa + CopyFactory provider). */

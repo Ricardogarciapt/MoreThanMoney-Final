@@ -8,6 +8,21 @@ import {
 
 const supabase = getSupabaseAdmin()
 
+/** Parse FIREBASE_SERVICE_ACCOUNT_KEY — suporta JSON com newlines literais na private key. */
+function parseFirebaseServiceAccount(raw: string): Record<string, unknown> | null {
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  try {
+    return JSON.parse(trimmed) as Record<string, unknown>
+  } catch {
+    try {
+      return JSON.parse(trimmed.replace(/\n/g, '\\n')) as Record<string, unknown>
+    } catch {
+      return null
+    }
+  }
+}
+
 /** Evita executar firebase-admin no import do módulo (build / collect page data). */
 async function getFirebaseAdmin() {
   const mod = (await import('firebase-admin')) as unknown as { default?: any } & Record<string, any>
@@ -16,10 +31,22 @@ async function getFirebaseAdmin() {
     try {
       const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim()
       if (serviceAccount) {
-        admin.initializeApp({
-          credential: admin.credential.cert(JSON.parse(serviceAccount)),
-        })
-        console.log('✅ Firebase Admin SDK inicializado')
+        const parsed = parseFirebaseServiceAccount(serviceAccount)
+        if (!parsed) {
+          console.error('❌ FIREBASE_SERVICE_ACCOUNT_KEY inválido (JSON não parseável)')
+        } else {
+          const clientProject = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim()
+          const serverProject = String(parsed.project_id ?? '')
+          if (clientProject && serverProject && clientProject !== serverProject) {
+            console.error(
+              `❌ Firebase project mismatch: client=${clientProject} server=${serverProject}`,
+            )
+          }
+          admin.initializeApp({
+            credential: admin.credential.cert(parsed),
+          })
+          console.log('✅ Firebase Admin SDK inicializado:', serverProject || clientProject)
+        }
       } else {
         console.warn('⚠️ FIREBASE_SERVICE_ACCOUNT_KEY não configurada')
       }
@@ -260,7 +287,8 @@ export async function POST(request: NextRequest) {
       // Tokens inválidos/expirados — remover da DB
       if (
         errorCode === 'messaging/invalid-registration-token' ||
-        errorCode === 'messaging/registration-token-not-registered'
+        errorCode === 'messaging/registration-token-not-registered' ||
+        errorCode === 'messaging/mismatched-credential'
       ) {
         invalidTokens.push(tokens[idx])
       }

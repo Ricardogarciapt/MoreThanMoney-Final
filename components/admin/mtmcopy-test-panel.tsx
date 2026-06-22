@@ -44,7 +44,7 @@ Ação: Buy
 Stoploss: 0.6520
 Takeprofit: 0.6580`
 
-export default function MtmcopyTestPanel() {
+export default function MtmcopyTestPanel({ embedded = false }: { embedded?: boolean }) {
   const [providers, setProviders] = useState<ProviderOption[]>([])
   const [selectedProvider, setSelectedProvider] = useState("")
   const [tradeSymbol, setTradeSymbol] = useState("XAUUSD")
@@ -187,19 +187,8 @@ export default function MtmcopyTestPanel() {
     }
   }
 
-  return (
-    <section className="overflow-hidden rounded-2xl border border-violet-500/25 bg-zinc-950/80">
-      <div className="border-b border-violet-500/20 px-6 py-4">
-        <h2 className="text-lg font-semibold text-violet-400 flex items-center gap-2">
-          <FlaskConical className="w-5 h-5" />
-          Testes · Provider & Telegram
-        </h2>
-        <p className="text-sm text-zinc-400 mt-1">
-          Envia trades de teste às contas MTM Auto ou publica sinais nos canais via @MoreThanMoney_aibot.
-        </p>
-      </div>
-
-      <div className="p-6 grid lg:grid-cols-2 gap-8">
+  const body = (
+    <div className={embedded ? "grid lg:grid-cols-2 gap-8" : "p-6 grid lg:grid-cols-2 gap-8"}>
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-emerald-400" />
@@ -338,7 +327,23 @@ export default function MtmcopyTestPanel() {
           </Button>
           {tgResult && <p className="text-sm text-zinc-300">{tgResult}</p>}
         </div>
+    </div>
+  )
+
+  if (embedded) return body
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-violet-500/25 bg-zinc-950/80">
+      <div className="border-b border-violet-500/20 px-6 py-4">
+        <h2 className="text-lg font-semibold text-violet-400 flex items-center gap-2">
+          <FlaskConical className="w-5 h-5" />
+          Testes · Provider & Telegram
+        </h2>
+        <p className="text-sm text-zinc-400 mt-1">
+          Envia trades de teste às contas MTM Auto ou publica sinais nos canais via @MoreThanMoney_aibot.
+        </p>
       </div>
+      {body}
     </section>
   )
 }

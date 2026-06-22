@@ -24,7 +24,7 @@ function copyFactoryOptsFromConnection(
   return {
     copySl: preset ? preset.copySl : conn.copy_sl !== false,
     copyTp: preset ? preset.copyTp : conn.copy_tp !== false,
-    skipPendingOrders: preset?.skipPendingOrders ?? true,
+    skipPendingOrders: preset?.skipPendingOrders ?? false,
     riskLimits: preset?.riskLimits,
     multiplier: lotMultiplierFromConnection(conn),
     tradeSizeScaling: tradeSizeScalingFromConnection(conn),
@@ -35,7 +35,7 @@ function copyFactoryOptsFromConnection(
 
 export function lotMultiplierFromConnection(conn: Pick<MTMcopierConnection, 'lot_mode' | 'lot_value'>): number {
   if (conn.lot_mode === 'multiplier') return Number(conn.lot_value) || 1
-  if (conn.lot_mode === 'fixed') return Number(conn.lot_value) || 0.01
+  // fixed / risk_percent usam tradeSizeScaling — multiplier CF deve ser 1
   return 1
 }
 
@@ -134,6 +134,7 @@ export async function syncConnectionCopyFactory(
     copyTp: cf.copyTp,
     skipPendingOrders: method === 'master_slave' ? false : cf.skipPendingOrders,
     riskLimits: cf.riskLimits,
+    freshSubscribe: method === 'strategy',
   })
 }
 
@@ -183,8 +184,9 @@ export async function syncMtmStrategyReplication(
     symbolWhitelist: cf.symbolWhitelist,
     copySl: cf.copySl,
     copyTp: cf.copyTp,
-    skipPendingOrders: cf.skipPendingOrders,
+    skipPendingOrders: false,
     riskLimits: cf.riskLimits,
     symbolMapping: DEFAULT_COPYFACTORY_SYMBOL_MAPPINGS,
+    freshSubscribe: true,
   })
 }

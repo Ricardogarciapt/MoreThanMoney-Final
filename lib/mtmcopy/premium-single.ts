@@ -1,7 +1,6 @@
 /**
- * Premium — subscritores directos (método 1 / grupos Telegram):
+ * Premium — subscritores directos (método 1) e conta provider (método 2):
  * 1 posição por sinal + parciais em HIT TP1/2/3 (Telegram).
- * Contas provider MTM Auto (método 2) usam buildProviderPremiumExitLegs — 3 pernas + TP broker.
  */
 
 import { normalizeExitPcts } from './copy-methods'

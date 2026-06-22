@@ -63,8 +63,8 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
   },
   {
     slug: 'trade-ideas-setup',
-    name: 'Telegram · Ideias Forex',
-    description: 'Sinais oficiais MTM (espelhados do Telegram)',
+    name: 'Telegram · Sensei Scanner',
+    description: 'Sinais MTM Auto / Sensei Scanner (espelhados do Telegram)',
     parent_slug: 'sinais',
     position: 12,
   },

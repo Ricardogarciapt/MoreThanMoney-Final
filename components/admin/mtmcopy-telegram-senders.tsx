@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Save, Send, RefreshCw, AlertTriangle } from "lucide-react"
+import { Loader2, Save, Send, RefreshCw, AlertTriangle, Bot } from "lucide-react"
 import { adminApiCall } from "@/lib/admin-helpers"
 
 interface SourceRow {
@@ -21,6 +21,8 @@ interface SourceRow {
 
 interface Payload {
   bot_username: string
+  bot_info?: { ok: boolean; username?: string; error?: string }
+  webhook?: { url?: string; last_error_message?: string | null }
   config: {
     enabled_chat_ids: string[]
     enabled_channels: string[]
@@ -35,6 +37,7 @@ export default function MtmcopyTelegramSenders() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [registering, setRegistering] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -76,6 +79,16 @@ export default function MtmcopyTelegramSenders() {
     })
   }
 
+  const handleRegisterWebhook = async () => {
+    setRegistering(true)
+    const res = await adminApiCall("/api/admin/mtmcopy/telegram-sources", {
+      method: "POST",
+      body: JSON.stringify({ action: "register_webhook" }),
+    })
+    setRegistering(false)
+    if (res.success) await load()
+  }
+
   const handleSave = async () => {
     if (!payload) return
     setSaving(true)
@@ -100,12 +113,25 @@ export default function MtmcopyTelegramSenders() {
     <div className="space-y-4">
       <p className="text-sm text-zinc-400">
         Escolhe quais canais Telegram alimentam sinais para a cópia MTM. Podes activar um ou ambos.
-        Bot: <strong className="text-[#D2A63C]">@{payload.bot_username}</strong>
+        Bot admin: <strong className="text-[#D2A63C]">@{payload.bot_username}</strong>
+        {payload.bot_info?.ok === false && (
+          <span className="ml-2 text-amber-400 text-xs">({payload.bot_info.error ?? "token inválido"})</span>
+        )}
+        {payload.bot_info?.username && payload.bot_info.username !== payload.bot_username && (
+          <span className="ml-2 text-red-400 text-xs">
+            (token aponta para @{payload.bot_info.username} — corrige TELEGRAM_AIBOT_TOKEN)
+          </span>
+        )}
       </p>
 
       <p className="text-xs text-zinc-600 rounded-lg border border-zinc-800 bg-zinc-900/50 px-3 py-2">
-        Contas provider, estratégias CopyFactory e risco por canal — configura na secção{" "}
-        <strong className="text-emerald-400">Pipeline Provider → MetaAPI</strong> abaixo.
+        Para descobrir novos canais, adiciona <strong className="text-[#D2A63C]">@{payload.bot_username}</strong> como
+        administrador do grupo/canal. Não uses @MoreThanMoney_Copierbot.
+        {payload.webhook?.url ? (
+          <> Webhook: <span className="text-zinc-500">{payload.webhook.url}</span></>
+        ) : (
+          <> Webhook não registado.</>
+        )}
       </p>
 
       <div className="space-y-2">
@@ -163,7 +189,17 @@ export default function MtmcopyTelegramSenders() {
         </div>
       )}
 
-      <div className="flex gap-2 justify-end">
+      <div className="flex gap-2 justify-end flex-wrap">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRegisterWebhook}
+          disabled={registering}
+          className="border-zinc-700"
+        >
+          {registering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bot className="w-3.5 h-3.5 mr-1" />}
+          Registar webhook
+        </Button>
         <Button variant="outline" size="sm" onClick={load} className="border-zinc-700">
           <RefreshCw className="w-3.5 h-3.5 mr-1" /> Actualizar
         </Button>

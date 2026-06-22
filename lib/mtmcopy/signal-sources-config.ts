@@ -68,11 +68,15 @@ export interface MtmcopyChannelProviderConfig {
   execution?: ProviderExecutionProfile
 }
 
+export type ProviderSignalSource = 'telegram' | 'webhook'
+
 export interface ProviderRoute {
   id: string
   label?: string
   sender_channel?: MtmcopyTelegramChannelKey | null
   sender_chat_id?: string | null
+  /** telegram (default) ou webhook — rotas webhook não disparam em mensagens Telegram. */
+  signal_source?: ProviderSignalSource | null
   account_id: string
   strategy_id?: string | null
   /** Prompt/guia lido pela IA para replicar o estilo de execução do provider. */
@@ -113,7 +117,7 @@ export const TELEGRAM_SIGNAL_CHANNELS: Record<
   { label: string; description: string; envVar: string; envChatId: () => string | undefined }
 > = {
   'trade-ideas': {
-    label: 'Trade Ideas (Ideias de Forex)',
+    label: 'MTM Auto · Sensei Scanner',
     description: CANONICAL_TELEGRAM_CHANNELS.tradeIdeas.title,
     envVar: 'TELEGRAM_CHANNEL_TRADE_IDEAS',
     envChatId: resolvedTradeIdeasChatId,
@@ -243,7 +247,9 @@ function discoveredChannelKey(title: string | null | undefined): MtmcopyTelegram
     t.includes('forex') ||
     t.includes('ideias') ||
     t.includes('setup') ||
-    t.includes('sinais')
+    t.includes('sinais') ||
+    t.includes('sensei') ||
+    t.includes('scanner')
   ) {
     return 'trade-ideas'
   }

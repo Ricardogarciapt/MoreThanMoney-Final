@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { MTMCOPY_BOT_USERNAME } from "@/lib/mtmcopy/telegram-bot"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
@@ -30,7 +31,7 @@ export async function GET() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
 
-    const botUsername = process.env.TELEGRAM_BOT_USERNAME || ""
+    const botUsername = MTMCOPY_BOT_USERNAME()
 
     const { data: profile } = await supabase
       .from("mentor_profiles")

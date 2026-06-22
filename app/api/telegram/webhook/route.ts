@@ -1,9 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { processMtmcopyTelegramMessage } from "@/lib/mtmcopy/processor"
+import {
+  getMtmcopyBotInfo,
+  getMtmcopyBotToken,
+  getMtmcopyWebhookInfo,
+  MTMCOPY_BOT_USERNAME,
+  registerMtmcopyTelegramWebhook,
+} from "@/lib/mtmcopy/telegram-bot"
 import { getSiteOrigin } from "@/lib/site-url"
-
 import { resolveAppChannelSlug } from "@/lib/telegram-app-channels"
+import { sendTelegramChannelPush } from "@/lib/telegram-channel-push"
 
 async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmin>, message: any) {
   const chatId = String(message.chat?.id ?? "")
@@ -39,7 +46,7 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
   if (message.photo && message.photo.length > 0) {
     const bestPhoto = message.photo[message.photo.length - 1]
     const fileId = bestPhoto.file_id
-    const botToken = process.env.TELEGRAM_BOT_TOKEN
+    const botToken = getMtmcopyBotToken()
     if (botToken) {
       try {
         const fileRes = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`)
@@ -63,6 +70,7 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
     message_type: "telegram_forward",
     telegram_sender: senderName,
     telegram_message_id: telegramMessageId,
+    ...(message.date ? { created_at: new Date(message.date * 1000).toISOString() } : {}),
   })
 
   if (error) {
@@ -70,29 +78,39 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
   } else {
     console.log(`[Telegram] ✅ Mensagem ${telegramMessageId} inserida em ${slug}`)
 
-    // Push notification para membros activos (fire-and-forget — não bloqueia webhook)
-    const firstLine = (content ?? '').split('\n')[0]?.trim() ?? ''
-    const notifTitle = firstLine.slice(0, 60) || 'Novo sinal no canal'
-    const notifBody = (content ?? '').slice(0, 120) || 'Nova mensagem recebida'
-    void fetch(`${getSiteOrigin()}/api/notifications/send-push`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        all: true,
-        title: notifTitle,
-        body: notifBody,
-        url: `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}`,
-        data: {
-          type: 'chat_message',
-          channel: slug,
-          url: `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}`,
-        },
-        tag: `chat_${slug}_${telegramMessageId}`,
-      }),
-    }).catch((err: Error) => {
-      console.warn(`[Telegram] Push notification falhou para ${slug}:`, err.message)
+    const push = await sendTelegramChannelPush({
+      slug,
+      content,
+      imageUrl,
+      telegramMessageId,
     })
+    if (!push.ok) {
+      console.warn(`[Telegram] Push falhou para ${slug}:`, push.error ?? push.status)
+    }
   }
+}
+
+async function handleTelegramChannelMessage(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  message: Parameters<typeof processMtmcopyTelegramMessage>[0],
+) {
+  const runMtmcopy = async () => {
+    try {
+      await processMtmcopyTelegramMessage(message)
+    } catch (err) {
+      console.error("[mtmcopy] erro no processamento:", err)
+    }
+  }
+
+  // Chat + push imediatos em paralelo com MTMcopier (MetaAPI não bloqueia a app)
+  await Promise.all([
+    mirrorTelegramMessage(supabase, message),
+    (async () => {
+      const { registerDiscoveredTelegramChat } = await import("@/lib/mtmcopy/signal-sources-config")
+      await registerDiscoveredTelegramChat(message.chat ?? {})
+    })(),
+    runMtmcopy(),
+  ])
 }
 
 export async function POST(request: NextRequest) {
@@ -105,56 +123,31 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const supabase = getSupabaseAdmin()
 
-    const runMtmcopy = async (message: Parameters<typeof processMtmcopyTelegramMessage>[0]) => {
-      try {
-        await processMtmcopyTelegramMessage(message)
-      } catch (err) {
-        console.error("[mtmcopy] erro no processamento:", err)
-      }
-    }
-
-    // Verificar se é uma mensagem do canal
     if (body.channel_post) {
-      const message = body.channel_post
-
-      // MTMcopier primeiro — caminho crítico (MetaAPI / MT5)
-      await runMtmcopy(message)
-
-      // Espelho e registo em paralelo (após MTMcopy — não atrasam MetaAPI)
-      await Promise.all([
-        (async () => {
-          const { registerDiscoveredTelegramChat } = await import('@/lib/mtmcopy/signal-sources-config')
-          await registerDiscoveredTelegramChat(message.chat ?? {})
-        })(),
-        mirrorTelegramMessage(supabase, message),
-      ])
+      await handleTelegramChannelMessage(supabase, body.channel_post)
     }
 
-    // Edição de mensagem no canal (updates de zona sem novo post)
     if (body.edited_channel_post) {
-      const message = body.edited_channel_post
-      await runMtmcopy(message)
-      await Promise.all([
-        (async () => {
-          const { registerDiscoveredTelegramChat } = await import('@/lib/mtmcopy/signal-sources-config')
-          await registerDiscoveredTelegramChat(message.chat ?? {})
-        })(),
-        mirrorTelegramMessage(supabase, message),
-      ])
+      await handleTelegramChannelMessage(supabase, body.edited_channel_post)
     }
 
-    // Grupos com sinais (bot como membro/admin)
     if (body.message?.chat?.type === "supergroup" || body.message?.chat?.type === "group") {
-      const { registerDiscoveredTelegramChat } = await import('@/lib/mtmcopy/signal-sources-config')
-      await registerDiscoveredTelegramChat(body.message.chat ?? {})
-      await runMtmcopy(body.message)
+      await handleTelegramChannelMessage(supabase, body.message)
     }
 
-    // Handle private messages & commands
-    if (body.message?.chat?.id && typeof body.message?.text === "string") {
+    if (body.edited_message?.chat?.type === "supergroup" || body.edited_message?.chat?.type === "group") {
+      await handleTelegramChannelMessage(supabase, body.edited_message)
+    }
+
+    // Comandos privados DM (não processar mensagens de grupos/canais)
+    if (
+      body.message?.chat?.type === "private" &&
+      body.message?.chat?.id &&
+      typeof body.message?.text === "string"
+    ) {
       const text: string = body.message.text.trim()
       const chatId = String(body.message.chat.id)
-      const botToken = process.env.TELEGRAM_BOT_TOKEN
+      const botToken = getMtmcopyBotToken()
 
       const sendMessage = async (msg: string) => {
         if (!botToken) return
@@ -266,11 +259,25 @@ export async function POST(request: NextRequest) {
 
 export const maxDuration = 120
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const { isMetaApiConfigured } = await import("@/lib/mtmcopy/metaapi")
+  const botInfo = await getMtmcopyBotInfo()
+  const webhook = await getMtmcopyWebhookInfo()
+  const register = request.nextUrl.searchParams.get("register") === "1"
+
+  let webhookRegister: { ok: boolean; description?: string; webhook_url?: string } | undefined
+  if (register) {
+    webhookRegister = await registerMtmcopyTelegramWebhook(getSiteOrigin())
+  }
+
   return NextResponse.json({
     status: "Webhook ativo",
-    bot: process.env.TELEGRAM_BOT_USERNAME || "@MoreThanMoney_aibot",
+    bot: botInfo.ok
+      ? { username: botInfo.username, name: botInfo.first_name, id: botInfo.id }
+      : { error: botInfo.error ?? "TELEGRAM_AIBOT_TOKEN em falta" },
+    expected_bot: `@${MTMCOPY_BOT_USERNAME()}`,
+    webhook,
+    webhook_register: webhookRegister,
     mtmcopy: "Bot API · Telegram → MetaAPI → MT5",
     metaapi: isMetaApiConfigured() ? "configurado" : "METAAPI_TOKEN em falta",
   })

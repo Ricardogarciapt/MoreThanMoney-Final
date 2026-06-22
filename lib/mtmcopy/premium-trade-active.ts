@@ -54,13 +54,13 @@ export function premiumTrailingForTradeActive(): TrailingDistance {
   return premiumTrailingWithActivation()
 }
 
-/** Trailing após HIT TP1 — mais apertado se SL inicial ~50 pips; standard se ~100 pips. */
+/** Trailing após HIT TP1 — activa de imediato e segue o preço (runner). */
 export function premiumTrailingAfterTp1Hit(riskPips: number | null): TrailingDistance {
-  if (riskPips != null && riskPips <= PREMIUM_INTELIGENT_RISK_MAX_PIPS) {
-    return { mode: 'threshold_pips', activationPips: 20, trailPips: 25 }
-  }
-  if (riskPips != null && riskPips >= PREMIUM_STANDARD_RISK_PIPS) {
-    return premiumTrailingWithActivation()
-  }
-  return { mode: 'threshold_pips', activationPips: 35, trailPips: 40 }
+  const trail =
+    riskPips != null && riskPips <= PREMIUM_INTELIGENT_RISK_MAX_PIPS
+      ? 20
+      : riskPips != null && riskPips >= PREMIUM_STANDARD_RISK_PIPS
+        ? 50
+        : 30
+  return { mode: 'threshold_pips', activationPips: 1, trailPips: trail }
 }

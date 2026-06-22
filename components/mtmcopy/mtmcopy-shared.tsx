@@ -7,6 +7,7 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { mtmStrategyPublicLabel } from "@/lib/mtmcopy/provider-constants"
 
 export const MTM_GOLD = "#D2A63C"
 
@@ -176,22 +177,15 @@ export function CopyTraderBanner({ strategyId }: { strategyId?: string | null })
 }
 
 export function StrategyMtmBanner({ strategyPick }: { strategyPick?: string | null }) {
-  const label =
-    strategyPick === '9gsL'
-      ? 'Premium · Ouro (9gsL)'
-      : strategyPick === '5IHE'
-        ? 'Ideias de Forex (5IHE)'
-        : strategyPick
-          ? `Estratégia ${strategyPick}`
-          : 'Estratégia MTM'
+  const label = mtmStrategyPublicLabel(strategyPick)
   return (
     <div className="flex items-start gap-3 rounded-xl border border-[#D2A63C]/25 bg-[#D2A63C]/5 p-4">
       <Check className="w-5 h-5 text-[#D2A63C] shrink-0 mt-0.5" />
       <div>
-        <p className="text-sm font-semibold text-[#D2A63C]">Estratégia MTM · CopyFactory</p>
+        <p className="text-sm font-semibold text-[#D2A63C]">Estratégia MTM</p>
         <p className="text-sm text-zinc-400 mt-0.5">
-          Copias a conta provider <strong className="text-white">{label}</strong> — sem canal Telegram
-          nem bot administrador. A replicação é automática via MetaAPI CopyFactory.
+          Copias a estratégia auditada <strong className="text-white">{label}</strong> do nosso
+          sistema — replicação automática na tua conta, sem expor detalhes técnicos internos.
         </p>
       </div>
     </div>

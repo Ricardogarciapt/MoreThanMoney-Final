@@ -1,5 +1,10 @@
 import type { MtmcopyChannelKey } from './channel-context'
 import { getMtmChannelProviders } from './provider-accounts'
+import {
+  CANONICAL_SENSEI_STRATEGY_ID,
+  MTM_COPY_STRATEGY_CATALOG,
+  mtmStrategyPublicLabel,
+} from './provider-constants'
 
 /** Métodos de cópia disponíveis ao cliente. */
 export type MtmcopyCopyMethod = 'telegram_group' | 'strategy' | 'master_slave'
@@ -22,7 +27,7 @@ export const COPY_METHODS: {
     id: 'strategy',
     title: 'Estratégia MTM',
     description:
-      'Replica via CopyFactory a conta provider MTM (Premium 9gsL ou Trade Ideas 5IHE). Sem parser duplicado na tua conta.',
+      'Copia estratégias auditadas do nosso sistema — Premium, Trade Ideas ou Sensei Scanner — com replicação automática na tua conta.',
   },
   {
     id: 'telegram_group',
@@ -76,21 +81,33 @@ export function getMtmStrategyOptions(): MtmCopyStrategyOption[] {
 
   const premium = providers['premium-signals']
   if (premium?.strategyId) {
+    const catalog = MTM_COPY_STRATEGY_CATALOG[premium.strategyId]
     out.push({
       id: premium.strategyId,
       channelKey: 'premium-signals',
-      title: 'MTM Premium · Ouro',
-      description: 'Sinais XAUUSD com gestão de exits e trailing por sessão.',
+      title: catalog?.title ?? 'MTM Auto Premium',
+      description: catalog?.description ?? 'Estratégia auditada Premium · Ouro.',
     })
   }
 
   const trade = providers['trade-ideas']
   if (trade?.strategyId) {
+    const catalog = MTM_COPY_STRATEGY_CATALOG[trade.strategyId]
     out.push({
       id: trade.strategyId,
       channelKey: 'trade-ideas',
-      title: 'MTM Trade Ideas · Forex',
-      description: 'Sinais intraday/swing com trailing automático (SL ~20 / TP ~50 pips).',
+      title: catalog?.title ?? 'MTM Auto Trade Ideas',
+      description: catalog?.description ?? 'Estratégia auditada Trade Ideas.',
+    })
+  }
+
+  const senseiCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_SENSEI_STRATEGY_ID]
+  if (senseiCatalog) {
+    out.push({
+      id: CANONICAL_SENSEI_STRATEGY_ID,
+      channelKey: 'trade-ideas',
+      title: senseiCatalog.title,
+      description: senseiCatalog.description,
     })
   }
 
@@ -180,9 +197,7 @@ export function normalizeTelegramChannel(value: unknown): string | null {
 }
 
 export function strategyPickLabel(pick: string | null | undefined): string {
-  if (pick === '9gsL') return 'Premium · Ouro (9gsL)'
-  if (pick === '5IHE') return 'Ideias de Forex (5IHE)'
-  return pick ? `Estratégia ${pick}` : 'Estratégia MTM'
+  return mtmStrategyPublicLabel(pick)
 }
 
 export function telegramGroupsLabel(groups: MtmcopyTelegramGroup[]): string {

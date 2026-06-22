@@ -5,14 +5,7 @@ import {
   scaleLotForSmallCapital,
   shouldSkipDuplicatePremiumEntry,
 } from './premium-single'
-import {
-  buildProviderPremiumExitLegs,
-  enrichProviderLegsWithAiTrailing,
-  premiumLegMtComment,
-} from './premium-provider-trailing'
-import type { PremiumExitLeg } from './premium-exits'
-import { formatTrailingDistance, tradeIdeasTrailingDistance } from './pip-points'
-import { resolvePremiumAiStrategyPrompt } from './premium-ai-guideline'
+import { formatTrailingDistance, riskPipsFromEntrySl, tradeIdeasDynamicTrailing } from './pip-points'
 import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
@@ -33,6 +26,7 @@ import { computeLotSize, getLotSizingSkipReason, signalForRiskSizing } from './l
 import {
   fetchLotSizingContext,
   getAccountSnapshot,
+  getSymbolSpecification,
   isMetaApiConfigured,
   placeOrdersSequential,
   type OrderResult,
@@ -47,6 +41,7 @@ import {
   getProviderExecutionProfile,
 } from './provider-execution'
 import { resolveMtmProvidersForSignal } from './provider-resolution'
+import { CANONICAL_SENSEI_STRATEGY_ID } from './provider-constants'
 import {
   applyManagementToAccount,
   applyTrailingToLatestPosition,
@@ -764,21 +759,12 @@ async function executeViaMtmProvider(
     tp3: executionProfile.exit_pct_tp3,
   }
 
-  /** Provider MTM Auto Premium: 3 pernas + TP no broker + trailing dinâmico (+ IA opcional). */
-  let premiumProviderLegs: PremiumExitLeg[] = isPremiumProvider
-    ? buildProviderPremiumExitLegs(signalForExec, totalLot, exitPcts, marketPrice)
-    : []
+  /** Provider Premium: 1 perna + parciais nos HIT TP1/2/3 (Telegram). */
+  const premiumProviderSingle = isPremiumProvider
+    ? buildPremiumSingleOrder(signalForExec, totalLot, exitPcts, equity)
+    : null
 
-  if (premiumProviderLegs.length) {
-    premiumProviderLegs = await enrichProviderLegsWithAiTrailing(
-      premiumProviderLegs,
-      signalForExec,
-      marketPrice,
-      provider.aiStrategyPrompt ?? resolvePremiumAiStrategyPrompt(null),
-    )
-  }
-
-  if (isPremiumProvider && !premiumProviderLegs.length) {
+  if (isPremiumProvider && !premiumProviderSingle) {
     await logProviderSignalEvent({
       channel,
       provider,
@@ -786,12 +772,12 @@ async function executeViaMtmProvider(
       raw,
       telegramMessageId,
       status: 'skipped',
-      detail: `${aiDetail} · Sem TP1–TP3 no sinal — provider Premium exige 3 pernas`,
+      detail: `${aiDetail} · Sem TP no sinal — provider Premium exige pelo menos 1 exit`,
     })
     return
   }
 
-  if (isPremiumProvider && premiumProviderLegs.length) {
+  if (isPremiumProvider && premiumProviderSingle) {
     const dup = await shouldSkipDuplicatePremiumEntry(
       provider.accountId,
       mappedSymbol,
@@ -816,33 +802,28 @@ async function executeViaMtmProvider(
   const results: LegResult[] = []
 
   try {
-    if (premiumProviderLegs.length) {
-      const requests = premiumProviderLegs.map((leg) => {
-        const req = buildOrderRequest(
-          providerConn,
-          provider.accountId,
-          signalForExec,
-          leg.lot,
-          premiumLegMtComment(leg),
-        )
-        req.takeProfit = leg.tpPrice
-        req.trailingStop = leg.trailing
-        return req
+    if (premiumProviderSingle) {
+      const req = buildOrderRequest(
+        providerConn,
+        provider.accountId,
+        signalForExec,
+        premiumProviderSingle.lot,
+        premiumProviderSingle.comment,
+      )
+      req.takeProfit = null
+      const [r] = await placeOrdersSequential(provider.accountId, [req])
+      results.push({
+        ...(r ?? { success: false, error: 'Sem resposta MetaAPI' }),
+        label: `PREM · parciais ${premiumProviderSingle.exitPcts.tp1}/${premiumProviderSingle.exitPcts.tp2}/${premiumProviderSingle.exitPcts.tp3}%`,
+        lot: premiumProviderSingle.lot,
       })
-      const placed = await placeOrdersSequential(provider.accountId, requests)
-      for (let i = 0; i < premiumProviderLegs.length; i++) {
-        const leg = premiumProviderLegs[i]!
-        const r = placed[i]
-        results.push({
-          ...(r ?? { success: false, error: 'Sem resposta MetaAPI' }),
-          label: `${leg.label}${leg.trailing ? ' · trail' : ''}`,
-          lot: leg.lot,
-        })
-      }
     } else {
       const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
       if (channel === 'trade-ideas') {
-        req.trailingStop = tradeIdeasTrailingDistance()
+        const spec = await getSymbolSpecification(provider.accountId, mappedSymbol)
+        const entry = signalForExec.entry ?? marketPrice
+        const riskPips = spec ? riskPipsFromEntrySl(entry, signalForExec.sl, spec, mappedSymbol) : null
+        req.trailingStop = tradeIdeasDynamicTrailing(riskPips)
       }
       const [r] = await placeOrdersSequential(provider.accountId, [req])
       results.push({
@@ -873,8 +854,8 @@ async function executeViaMtmProvider(
     lot: 0,
   }
   const anySuccess = results.some((r) => r.success)
-  const orderLabel = premiumProviderLegs.length
-    ? `${premiumProviderLegs.length} pernas · TP broker · ${premiumProviderLegs.map((l) => l.label).join(' / ')}`
+  const orderLabel = premiumProviderSingle
+    ? `1 perna · parciais ${premiumProviderSingle.exitPcts.tp1}/${premiumProviderSingle.exitPcts.tp2}/${premiumProviderSingle.exitPcts.tp3}%`
     : signalForExec.orderType === 'limit' && signalForExec.entry != null
       ? `LIMIT @ ${signalForExec.entry}`
       : 'MARKET'
@@ -1161,8 +1142,11 @@ async function processSignalDirect(
     result = single ?? { success: false, error: 'Sem resposta MetaAPI' }
   } else {
     const req = buildOrderRequest(conn, conn.metaapi_account_id, signal, lot, 'MTMcopier')
-    if (channel === 'trade-ideas') {
-      req.trailingStop = tradeIdeasTrailingDistance()
+    if (channel === 'trade-ideas' && conn.metaapi_account_id) {
+      const spec = await getSymbolSpecification(conn.metaapi_account_id, signal.symbol!)
+      const entry = signal.entry ?? marketPrice
+      const riskPips = spec ? riskPipsFromEntrySl(entry, signal.sl, spec, signal.symbol!) : null
+      req.trailingStop = tradeIdeasDynamicTrailing(riskPips)
     }
     const [single] = await placeOrdersSequential(conn.metaapi_account_id!, [req])
     result = single ?? { success: false, error: 'Sem resposta MetaAPI' }
@@ -1201,4 +1185,68 @@ async function processSignalDirect(
       ? `[mtmcopy] ✅ ${conn.user_id} ${result.brokerSymbol} ${direction} ${lot}`
       : `[mtmcopy] ❌ ${conn.user_id}: ${result.error}`,
   )
+}
+
+/** Execução provider a partir de webhook TradingView (rota Sensei — não Telegram). */
+export async function processMtmcopyWebhookSignal(opts: {
+  raw: string
+  signal: NonNullable<ReturnType<typeof parseSignal>>
+  validation: AiSignalValidation
+  externalRef?: string
+}): Promise<{ executed: boolean; detail?: string }> {
+  if (!isMetaApiConfigured()) {
+    return { executed: false, detail: 'MetaAPI não configurado' }
+  }
+
+  const channel: MtmcopyChannelKey = 'trade-ideas'
+  const providers = await resolveMtmProvidersForSignal(channel, null, { signalSource: 'webhook' })
+  if (!providers.length) {
+    return { executed: false, detail: 'Rota provider Sensei não configurada' }
+  }
+
+  const enriched = applyValidationToSignal(opts.signal, opts.validation)
+  const canExecute = shouldExecuteSignal(opts.validation)
+
+  if (!canExecute) {
+    await logProviderSignalEvent({
+      channel,
+      provider: providers[0],
+      signal: enriched,
+      raw: opts.raw,
+      status: 'skipped',
+      detail: `${formatAiValidationDetail(opts.validation)} · validação abaixo do mínimo`,
+    })
+    return { executed: false, detail: 'Sinal rejeitado pela validação' }
+  }
+
+  for (const prov of providers) {
+    const routeProfile = await getProviderExecutionProfile(channel, prov.execution)
+    if (!shouldExecuteForProfile(opts.validation, routeProfile)) {
+      const minPct = Math.round(getAiMinConfidence(routeProfile) * 100)
+      await logProviderSignalEvent({
+        channel,
+        provider: prov,
+        signal: enriched,
+        raw: opts.raw,
+        status: 'skipped',
+        detail: `${formatAiValidationDetail(opts.validation)} · confiança < ${minPct}%`,
+      })
+      continue
+    }
+
+    await executeViaMtmProvider(
+      [],
+      enriched,
+      opts.raw,
+      undefined,
+      prov,
+      channel,
+      opts.validation,
+    )
+  }
+
+  return {
+    executed: true,
+    detail: `Sensei · ${providers.map((p) => p.strategyId ?? CANONICAL_SENSEI_STRATEGY_ID).join(',')}`,
+  }
 }

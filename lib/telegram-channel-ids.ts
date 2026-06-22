@@ -3,15 +3,16 @@ import { telegramChatIdVariants } from '@/lib/mtmcopy/channels'
 /** IDs confirmados (bot + app-mobile) — Jun 2026 */
 export const CANONICAL_TELEGRAM_CHANNELS = {
   tradeIdeas: {
-    chatId: '-1003716578747',
-    title: 'More Than Money Ideias de Forex',
-    link: 'https://t.me/+uBDEILFejVkxMzI0',
+    chatId: '-1003853860780',
+    title: 'MoreThanMoney Sensei Scanner',
+    link: 'https://t.me/+EGUwl8eXJpQ4NTZk',
     mtmcopyKey: 'trade-ideas' as const,
     appSlug: 'trade-ideas-setup' as const,
     envVars: [
       'TELEGRAM_CHANNEL_TRADE_IDEAS',
       'TELEGRAM_TRADE_IDEAS_CHAT_ID',
       'TELEGRAM_CHANNEL_ID',
+      'TRADINGVIEW_RELAY_CHAT_ID',
     ],
   },
   premiumSignals: {

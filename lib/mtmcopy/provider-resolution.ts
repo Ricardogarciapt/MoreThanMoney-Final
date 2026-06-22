@@ -17,10 +17,37 @@ export async function resolveMtmProviderForChannel(
   return all[0] ?? null
 }
 
+/** Resolve provider por strategy ID CopyFactory (método «Estratégia MTM» / webhook). */
+export async function resolveMtmProviderForStrategyId(
+  strategyId: string,
+): Promise<MtmChannelProvider | null> {
+  const pick = strategyId?.trim()
+  if (!pick) return null
+
+  const config = await getSignalSourcesConfig()
+  const routes = normalizeProviderRoutes(config)
+  const route =
+    routes.find((r) => r.enabled !== false && r.strategy_id?.trim() === pick) ?? null
+  if (!route) return null
+
+  const ch = (route.sender_channel ?? 'trade-ideas') as MtmcopyTelegramChannelKey
+  const envDefault = getMtmChannelProviders()[ch]
+  return {
+    channel: ch,
+    accountId: route.account_id.trim(),
+    tag: route.tag?.trim() || route.label?.trim() || envDefault?.tag || 'MTM Provider',
+    strategyId: pick,
+    routeId: route.id,
+    execution: route.execution,
+    aiStrategyPrompt: route.ai_strategy_prompt ?? null,
+  }
+}
+
 /** Todas as rotas sender → mestre que correspondem ao canal/chat do sinal. */
 export async function resolveMtmProvidersForSignal(
   channel: MtmcopyChannelKey,
   chatId?: string | number | null,
+  opts?: { signalSource?: 'telegram' | 'webhook' },
 ): Promise<MtmChannelProvider[]> {
   if (channel === 'unknown' && chatId == null) return []
 
@@ -28,7 +55,7 @@ export async function resolveMtmProvidersForSignal(
   const routes = normalizeProviderRoutes(config)
   const envProviders = getMtmChannelProviders()
 
-  const picked = pickSingleProviderRoute(routes, channel, chatId)
+  const picked = pickSingleProviderRoute(routes, channel, chatId, opts)
   if (picked) {
     const ch = (picked.sender_channel ?? (channel !== 'unknown' ? channel : 'premium-signals')) as MtmcopyTelegramChannelKey
     const envDefault = envProviders[ch]

@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { getMtmcopyBotToken, MTMCOPY_BOT_USERNAME } from "@/lib/mtmcopy/telegram-bot"
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +30,8 @@ export async function GET() {
   try {
     // Aqui você carregaria as configurações do banco de dados
     const config = {
-      token: process.env.TELEGRAM_BOT_TOKEN || "",
+      token: getMtmcopyBotToken() ? "[configured]" : "",
+      bot_username: MTMCOPY_BOT_USERNAME(),
       channelId: process.env.TELEGRAM_CHANNEL_ID || "",
       webhookUrl: "",
       autoSignals: true,

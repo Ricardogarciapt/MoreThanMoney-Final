@@ -208,22 +208,70 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/** Tenta redeploy + waitConnected quando a conta MetaAPI está offline. */
+/** Tenta redeploy + waitConnected quando a conta MetaAPI está offline (REST — funciona em Node/Vercel). */
 export async function ensureMetaApiAccountOnline(accountId: string): Promise<{ ok: boolean; error?: string }> {
   const token = process.env.METAAPI_TOKEN
   if (!token) return { ok: false, error: 'METAAPI_TOKEN em falta' }
 
-  try {
-    const MetaApi = (await import('metaapi.cloud-sdk')).default
-    const api = new (MetaApi as any)(token)
-    const account = await api.metatraderAccountApi.getAccount(accountId)
-    const state = String(account.state ?? '').toUpperCase()
-    if (state && state !== 'DEPLOYED') {
-      await account.deploy?.()
-      await withTimeout(account.waitDeployed?.(120) ?? Promise.resolve(), 120_000, 'MetaApi waitDeployed')
+  const base =
+    process.env.METAAPI_PROVISIONING_URL ??
+    'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai'
+
+  const headers: Record<string, string> = {
+    'auth-token': token,
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  }
+
+  async function fetchAccount(): Promise<{ state?: string; connectionStatus?: string }> {
+    const res = await fetch(`${base}/users/current/accounts/${accountId}`, { headers })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(
+        (data as { message?: string }).message ?? `MetaAPI HTTP ${res.status}`,
+      )
     }
-    await withTimeout(account.waitConnected?.(120) ?? account.waitConnected(), 120_000, 'MetaApi waitConnected')
-    return { ok: true }
+    return res.json() as Promise<{ state?: string; connectionStatus?: string }>
+  }
+
+  async function postAction(path: string): Promise<void> {
+    const res = await fetch(`${base}/users/current/accounts/${accountId}${path}`, {
+      method: 'POST',
+      headers,
+    })
+    if (!res.ok && res.status !== 204) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(
+        (data as { message?: string }).message ?? `MetaAPI HTTP ${res.status}`,
+      )
+    }
+  }
+
+  try {
+    let account = await fetchAccount()
+    const state = String(account.state ?? '').toUpperCase()
+
+    if (state && state !== 'DEPLOYED') {
+      await postAction('/deploy')
+    }
+
+    let conn = String(account.connectionStatus ?? '').toUpperCase()
+    if (conn && conn !== 'CONNECTED') {
+      try {
+        await postAction('/reconnect')
+      } catch {
+        /* reconnect opcional */
+      }
+    }
+
+    for (let i = 0; i < 60; i++) {
+      account = await fetchAccount()
+      conn = String(account.connectionStatus ?? '').toUpperCase()
+      if (conn === 'CONNECTED') return { ok: true }
+      await sleep(2000)
+    }
+
+    return { ok: false, error: 'MetaAPI conta não conectou a tempo' }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Conta MetaAPI offline'
     return { ok: false, error: message }

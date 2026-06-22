@@ -29,6 +29,7 @@ import {
   TELEGRAM_GROUPS,
   copyMethodLabel,
   parseTelegramGroups,
+  strategyPickLabel,
   telegramGroupsLabel,
   type MtmcopyCopyMethod,
 } from "@/lib/mtmcopy/copy-methods"
@@ -594,8 +595,8 @@ export default function MtmCopyPage() {
                             </p>
                             {!isCopyTrader && connection.copy_method === "strategy" && (
                               <p className="text-xs text-zinc-500 mb-2 truncate">
-                                {connection.copyfactory_strategy_pick ?? "—"}
-                                {connection.copyfactory_subscribed ? " · CopyFactory activa" : " · CopyFactory pendente"}
+                                {strategyPickLabel(connection.copyfactory_strategy_pick)}
+                                {connection.copyfactory_subscribed ? " · Cópia activa" : " · Cópia pendente"}
                               </p>
                             )}
                             {!isCopyTrader && connection.copy_method === "telegram_group" && (
