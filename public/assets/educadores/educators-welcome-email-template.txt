@@ -1,0 +1,256 @@
+═══════════════════════════════════════════════════════════════════════════════
+                   EDUCATORS WELCOME EMAIL TEMPLATE
+═══════════════════════════════════════════════════════════════════════════════
+
+SUBJECT: Your MTM LMS Educator Account is Ready to Go!
+
+───────────────────────────────────────────────────────────────────────────────
+
+Dear [EDUCATOR_NAME],
+
+Welcome to the MoreThanMoney Learning Management System!
+
+Your educator account is now active and ready for your first live stream.
+This email contains all the information you need to get started.
+
+═══════════════════════════════════════════════════════════════════════════════
+YOUR ACCOUNT
+═══════════════════════════════════════════════════════════════════════════════
+
+Email:              [EDUCATOR_EMAIL]
+Specialty:          [SPECIALTY]
+Academy:            [ACADEMY_NAME]
+Account Status:     ACTIVE ✓
+
+Platform Access:    https://morethanmoney.pt/lms/educator/dashboard
+
+═══════════════════════════════════════════════════════════════════════════════
+FIRST STEPS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. RESET YOUR PASSWORD
+
+   You received a temporary password with this email. For security,
+   you must reset it on your first login:
+
+   → Go to: https://morethanmoney.pt/lms/educator/login
+   → Click "Forgot Password"
+   → Enter your email: [EDUCATOR_EMAIL]
+   → Follow the secure reset link
+   → Create a strong password (minimum 12 characters recommended)
+
+   Temporary Password: [TEMPORARY_PASSWORD_HASH_PLACEHOLDER]
+   (This password can only be used once)
+
+
+2. DOWNLOAD YOUR OBS CONFIGURATION
+
+   We've prepared a complete OBS Studio configuration template for you:
+
+   → Download: [LINK_TO_OBS_TEMPLATE_JSON]
+   → File: obs-template.json
+   → Size: ~8KB
+
+   This template includes all scenes, overlays, and streaming settings
+   pre-configured for you.
+
+
+3. CONFIGURE OBS STUDIO
+
+   a) Open OBS Studio on your computer
+   b) Go to: File > Import > Select json file
+   c) Choose the downloaded obs-template.json
+   d) When prompted for stream key, enter:
+
+      Stream Key: [STREAM_KEY_FIXED]
+
+   e) Test your scenes:
+      - Alt+1: First scene (Webcam)
+      - Alt+2: Second scene (Screen Share)
+      [- Alt+3: Third scene (Break Screen)] [LILIANA ONLY]
+
+   f) Verify microphone and camera are working:
+      - Check microphone input levels
+      - Confirm camera resolution (1280x720)
+      - Test speaker audio
+
+
+4. SCHEDULE YOUR FIRST STREAM
+
+   Let us know your preferred date and time:
+
+   → Reply to this email, or
+   → Contact: support@morethanmoney.pt
+
+   We'll help you promote it across our community channels.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+YOUR ASSETS & CUSTOMIZATION
+═══════════════════════════════════════════════════════════════════════════════
+
+Your Personal Directory:
+→ https://storage.supabase.co/mtm-public/educadores/[YOUR_SLUG]/
+
+This directory contains:
+✓ obs-template.json       - Your OBS configuration (ready to use)
+✓ overlay.png             - Camera overlay graphic for your streams
+[✓ intervalo-screen.png]  [LILIANA ONLY - Break screen graphic]
+↳ avatar.jpg              - Your profile picture (coming soon)
+↳ cover.jpg               - Your academy banner (coming soon)
+↳ thumbnail.jpg           - Your profile thumbnail (coming soon)
+
+All graphics are designed with MTM branding and your personal specialty.
+
+═══════════════════════════════════════════════════════════════════════════════
+STREAMING INFORMATION
+═══════════════════════════════════════════════════════════════════════════════
+
+RTMPS Server:     rtmps://live.supabase.io:443/app
+Stream Key:       [STREAM_KEY_FIXED]
+Video Bitrate:    2500 kbps
+Audio Bitrate:    128 kbps
+Resolution:       1280x720 @ 30fps
+Format:           H.264 / AAC
+
+Your unique stream key has been securely generated and is already
+configured in your OBS template.
+
+═══════════════════════════════════════════════════════════════════════════════
+PRE-STREAM CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+Before your first stream, verify:
+
+EQUIPMENT:
+  □ Microphone is connected and working
+  □ Camera is positioned at eye level
+  □ Good lighting (avoid backlighting)
+  □ Internet connection is stable (5+ Mbps upload recommended)
+  □ No background noise/clutter
+
+OBS STUDIO:
+  □ All scenes are visible and properly named
+  □ Stream key is correctly configured
+  □ Camera source is active
+  □ Microphone input shows audio levels
+  □ Overlay PNG is rendering correctly
+  □ Chat browser source is loading
+
+TEST STREAM:
+  □ Start a test stream (without announcing it)
+  □ Let it run for 2-3 minutes
+  □ Check video/audio quality in the dashboard
+  □ Verify chat is functional
+  □ Review the test recording
+  □ Make any adjustments needed
+
+═══════════════════════════════════════════════════════════════════════════════
+YOUR SCENES (OBS)
+═══════════════════════════════════════════════════════════════════════════════
+
+[ADILSON ONLY]
+───────────────
+Scene 1: Stream Palestra
+  → Webcam (1280x720)
+  → MTM Overlay graphic
+  → Optional: Chat browser source
+  → Use for: Live lectures, Q&A, direct audience engagement
+
+Scene 2: Screen Share + Chat
+  → Monitor/screen capture
+  → Chat on right side
+  → Use for: Presentations, sharing slides, demonstrations
+
+Hotkeys:
+  Alt+1     → Switch to Scene 1
+  Alt+2     → Switch to Scene 2
+  Alt+F9    → Start streaming
+  Alt+F10   → Stop streaming
+  Alt+C     → Toggle chat visibility
+
+
+[LILIANA ONLY]
+──────────────
+Scene 1: Stream Workshop
+  → Webcam (1280x720)
+  → MTM Overlay graphic
+  → Chat browser source
+  → Use for: Live workshops, Q&A, direct engagement
+
+Scene 2: Tela de Apresentação
+  → Screen share with slides
+  → Chat on right side (240px)
+  → Social media statistics overlay
+  → Use for: Case studies, growth metrics, walkthroughs
+
+Scene 3: Intervalo (Break Screen)
+  → Static branded break screen
+  → "Intervalo" + "Volte em breve" messaging
+  → Use for: Between segments, taking breaks
+
+Hotkeys:
+  Alt+1     → Switch to Scene 1 (Workshop)
+  Alt+2     → Switch to Scene 2 (Presentation)
+  Alt+3     → Switch to Scene 3 (Break)
+  Alt+F9    → Start streaming
+  Alt+F10   → Stop streaming
+  Alt+C     → Toggle chat visibility
+
+═══════════════════════════════════════════════════════════════════════════════
+SUPPORT & RESOURCES
+═══════════════════════════════════════════════════════════════════════════════
+
+Documentation:
+→ Full setup guide: https://morethanmoney.pt/docs/educators-setup
+→ Your personal README: https://morethanmoney.pt/assets/educadores/[YOUR_SLUG]/README.md
+→ LMS Dashboard: https://morethanmoney.pt/lms/educator/dashboard
+
+Need Help?
+→ Email: support@morethanmoney.pt
+→ Telegram: [COMMUNITY_TELEGRAM_LINK]
+→ Office Hours: [SCHEDULE_LINK]
+
+Technical Issues?
+→ Chat with tech support: [SUPPORT_CHAT_LINK]
+→ Scheduling a call: [CALENDAR_LINK]
+
+═══════════════════════════════════════════════════════════════════════════════
+COMMUNITY ENGAGEMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+We're excited to have you joining our educator community!
+
+A few things that help us succeed together:
+  ✓ Promote your streams in our community channels
+  ✓ Engage with your audience during streams (respond to chat)
+  ✓ Record your sessions for on-demand learning
+  ✓ Share feedback and ideas with our team
+  ✓ Connect with other educators
+
+Looking forward to your first stream!
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Questions? Don't hesitate to reach out. We're here to help!
+
+Best regards,
+
+Ricardo Garcia
+Community Manager
+MoreThanMoney
+
+support@morethanmoney.pt
++351 [PHONE_NUMBER]
+
+═══════════════════════════════════════════════════════════════════════════════
+
+[FOOTER]
+MoreThanMoney Learning Management System
+https://morethanmoney.pt
+
+This email contains your stream key and temporary password.
+Keep this email secure and do not share these credentials with others.
+Change your password immediately after first login.
+
+═══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,181 @@
+{
+  "version": "1.0",
+  "last_updated": "2024-06-23",
+  "educators": [
+    {
+      "id": "placeholder-adilson-uuid",
+      "email": "adilson@morethanmoney.pt",
+      "name": "Adilson Araujo",
+      "slug": "adilson-araujo",
+      "specialty": "Psicologia Trading",
+      "academy": "mindset",
+      "bio": "Especialista em Psicologia do Trading, Mentalidade Empreendedora e Coaching de Performance.",
+      "assets": {
+        "base_path": "public/assets/educadores/adilson-araujo",
+        "avatar": {
+          "url": "https://storage.supabase.co/mtm-public/educadores/adilson-araujo/avatar.jpg",
+          "size": "500x500",
+          "format": "jpg",
+          "status": "placeholder - waiting for AI generation"
+        },
+        "cover": {
+          "url": "https://storage.supabase.co/mtm-public/educadores/adilson-araujo/cover.jpg",
+          "size": "1500x400",
+          "format": "jpg",
+          "status": "placeholder - waiting for AI generation"
+        },
+        "overlay": {
+          "path": "public/assets/educadores/adilson-araujo/overlay.png",
+          "size": "1280x720",
+          "format": "png",
+          "status": "template placeholder - customize with design team"
+        },
+        "thumbnail": {
+          "url": "https://storage.supabase.co/mtm-public/educadores/adilson-araujo/thumbnail.jpg",
+          "size": "300x300",
+          "format": "jpg",
+          "status": "placeholder - waiting for AI generation"
+        },
+        "obs_template": {
+          "path": "public/assets/educadores/adilson-araujo/obs-template.json",
+          "format": "json",
+          "status": "ready for import"
+        }
+      },
+      "streaming": {
+        "stream_key_fixed": "to_be_generated_by_migration",
+        "youtube_enabled": false,
+        "youtube_stream_key": null,
+        "rtmps_url": "rtmps://live.supabase.io:443/app"
+      },
+      "setup_checklist": [
+        "1. Executar migration SQL: 052_lms_educators_adilson_liliana.sql",
+        "2. Copiar stream_key_fixed do educador na BD (SELECT stream_key_fixed FROM lms_educators WHERE email = 'adilson@morethanmoney.pt')",
+        "3. Gerar avatar (500x500) com IA - tema: psicologia, mindset, trading",
+        "4. Gerar cover (1500x400) com IA - tema: psicologia, mindset, trading",
+        "5. Criar overlay.png (1280x720) com design team - branding MTM + nome educador",
+        "6. Gerar thumbnail (300x300) com IA",
+        "7. Upload todas imagens para Supabase Storage: mtm-public/educadores/adilson-araujo/",
+        "8. Atualizar avatar_url na tabela lms_educators",
+        "9. Importar obs-template.json no OBS Studio",
+        "10. Configurar stream_key no OBS (substituir placeholder)",
+        "11. Testar stream com diagnóstico de áudio/vídeo",
+        "12. Comunicar educador sobre setup e credenciais"
+      ]
+    },
+    {
+      "id": "placeholder-liliana-uuid",
+      "email": "liliana@morethanmoney.pt",
+      "name": "Liliana Faria",
+      "slug": "liliana-faria",
+      "specialty": "Redes Sociais",
+      "academy": "social-media",
+      "bio": "Especialista em Construção de Audiência Autêntica, Personal Branding e Micro-Produtos Digitais.",
+      "assets": {
+        "base_path": "public/assets/educadores/liliana-faria",
+        "avatar": {
+          "url": "https://storage.supabase.co/mtm-public/educadores/liliana-faria/avatar.jpg",
+          "size": "500x500",
+          "format": "jpg",
+          "status": "placeholder - waiting for AI generation"
+        },
+        "cover": {
+          "url": "https://storage.supabase.co/mtm-public/educadores/liliana-faria/cover.jpg",
+          "size": "1500x400",
+          "format": "jpg",
+          "status": "placeholder - waiting for AI generation"
+        },
+        "overlay": {
+          "path": "public/assets/educadores/liliana-faria/overlay.png",
+          "size": "1280x720",
+          "format": "png",
+          "status": "template placeholder - customize with design team"
+        },
+        "thumbnail": {
+          "url": "https://storage.supabase.co/mtm-public/educadores/liliana-faria/thumbnail.jpg",
+          "size": "300x300",
+          "format": "jpg",
+          "status": "placeholder - waiting for AI generation"
+        },
+        "intervalo_screen": {
+          "path": "public/assets/educadores/liliana-faria/intervalo-screen.png",
+          "size": "1280x720",
+          "format": "png",
+          "status": "template placeholder - customize with design team"
+        },
+        "obs_template": {
+          "path": "public/assets/educadores/liliana-faria/obs-template.json",
+          "format": "json",
+          "status": "ready for import"
+        }
+      },
+      "streaming": {
+        "stream_key_fixed": "to_be_generated_by_migration",
+        "youtube_enabled": false,
+        "youtube_stream_key": null,
+        "rtmps_url": "rtmps://live.supabase.io:443/app"
+      },
+      "setup_checklist": [
+        "1. Executar migration SQL: 052_lms_educators_adilson_liliana.sql",
+        "2. Copiar stream_key_fixed do educador na BD (SELECT stream_key_fixed FROM lms_educators WHERE email = 'liliana@morethanmoney.pt')",
+        "3. Gerar avatar (500x500) com IA - tema: social media, personal branding, feminino, moderno",
+        "4. Gerar cover (1500x400) com IA - tema: social media, crescimento audiência, comunidade",
+        "5. Criar overlay.png (1280x720) com design team - branding MTM + nome educador",
+        "6. Gerar thumbnail (300x300) com IA",
+        "7. Criar intervalo-screen.png (1280x720) com design team - tela de pausa profissional",
+        "8. Upload todas imagens para Supabase Storage: mtm-public/educadores/liliana-faria/",
+        "9. Atualizar avatar_url na tabela lms_educators",
+        "10. Importar obs-template.json no OBS Studio",
+        "11. Configurar stream_key no OBS (substituir placeholder)",
+        "12. Validar 3 cenas OBS (Workshop, Apresentação, Intervalo)",
+        "13. Testar stream com diagnóstico de áudio/vídeo",
+        "14. Comunicar educador sobre setup e credenciais"
+      ]
+    }
+  ],
+  "database_migration": {
+    "file": "supabase/migrations/052_lms_educators_adilson_liliana.sql",
+    "status": "ready to apply",
+    "notes": "Migration inserts educadores com password hash temporário (deve ser alterado por educador na primeira login)"
+  },
+  "asset_workflow": {
+    "step_1_sql": {
+      "action": "Apply SQL migration",
+      "command": "supabase db push",
+      "expected_result": "2 educators inserted, stream_key_fixed auto-generated"
+    },
+    "step_2_ai_generation": {
+      "action": "Generate avatars, covers, thumbnails",
+      "tools": "Midjourney / DALL-E / Claude Canvas Design",
+      "prompts": {
+        "adilson_avatar": "Professional avatar for Adilson Araujo, psychology trading coach, confident smile, professional attire, mindset-focused aesthetic, modern minimalist background",
+        "adilson_cover": "Professional cover banner for Adilson Araujo, trading psychology expert, mindset coaching, professional color scheme (navy/gold), motivational atmosphere",
+        "liliana_avatar": "Professional avatar for Liliana Faria, social media expert, personal branding coach, confident friendly smile, modern aesthetic, community-focused vibe",
+        "liliana_cover": "Professional cover banner for Liliana Faria, social media growth specialist, content creator, vibrant colors, growth/community focused, modern aesthetic"
+      }
+    },
+    "step_3_design": {
+      "action": "Create overlays and custom graphics",
+      "team": "Design Team",
+      "deliverables": [
+        "overlay.png (1280x720) - camera overlay with MTM branding + educator name",
+        "intervalo-screen.png (1280x720) - break screen with professional messaging"
+      ]
+    },
+    "step_4_upload": {
+      "action": "Upload all assets to Supabase Storage",
+      "bucket": "mtm-public",
+      "path": "educadores/[educator-slug]/",
+      "files": ["avatar.jpg", "cover.jpg", "thumbnail.jpg", "overlay.png", "intervalo-screen.png (if applicable)"]
+    },
+    "step_5_database_update": {
+      "action": "Update avatar_url and other asset references",
+      "sql": "UPDATE lms_educators SET avatar_url = 'https://storage.supabase.co/mtm-public/educadores/[slug]/avatar.jpg' WHERE email = '[email]'",
+      "notes": "Ensure URLs are correct before updating"
+    },
+    "step_6_obs_configuration": {
+      "action": "Configure OBS Studio for each educator",
+      "notes": "Each educator receives obs-template.json with pre-configured scenes and settings"
+    }
+  }
+}

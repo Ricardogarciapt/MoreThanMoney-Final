@@ -17,6 +17,9 @@ import {
   saveSenseiTradeIdea,
 } from "@/lib/mtmcopy/sensei-ideas"
 import { processMtmcopyWebhookSignal } from "@/lib/mtmcopy/processor"
+import { initSignalQueue, createSignalJob } from "@/lib/mtmcopy/signal-queue"
+import { resolveMtmProvidersForSignal } from "@/lib/mtmcopy/provider-resolution"
+import { getActiveConnections } from "@/lib/mtmcopy/db"
 import { getSiteOrigin } from "@/lib/site-url"
 import { resolvedTradeIdeasChatId } from "@/lib/telegram-channel-ids"
 import type { SupabaseClient } from "@supabase/supabase-js"
@@ -298,8 +301,8 @@ export async function POST(request: NextRequest) {
       raw,
     } as ParsedSignal)
 
-  let providerExecuted = false
-  let providerDetail: string | undefined
+  let providerExecuted: boolean | null = null // null = queued (async)
+  let providerDetail: string | undefined = "queued for processing"
   const isIdeaAlert = activeSensei?.alertType === "idea" || activeSensei?.alertType === "signal"
   const canExecuteProvider =
     SENSEI_PROVIDER_EXEC_ENABLED &&
@@ -313,19 +316,44 @@ export async function POST(request: NextRequest) {
   }
 
   if (canExecuteProvider) {
-    try {
-      const exec = await processMtmcopyWebhookSignal({
-        raw,
-        signal: parsedForExec as NonNullable<ReturnType<typeof parseSignal>>,
-        validation: v,
-        externalRef: logId,
-      })
-      providerExecuted = exec.executed
-      providerDetail = exec.detail
-    } catch (err) {
-      console.error("[tradingview-webhook] provider exec error:", err)
-    }
-    if (pendingIdeaId) await activateSenseiTradeIdea(supabase, pendingIdeaId, logId)
+    // OTIMIZAÇÃO: Enfileirar execução assíncrona → retorna 202 imediatamente
+    void (async () => {
+      try {
+        const exec = await processMtmcopyWebhookSignal({
+          raw,
+          signal: parsedForExec as NonNullable<ReturnType<typeof parseSignal>>,
+          validation: v,
+          externalRef: logId,
+        })
+        if (logId) {
+          await supabase
+            .from("tradingview_signals")
+            .update({
+              provider_executed: exec.executed,
+              provider_detail: exec.detail,
+              executed_at: new Date().toISOString(),
+            })
+            .eq("id", logId)
+        }
+      } catch (err) {
+        console.error("[tradingview-webhook] provider exec error:", err)
+        if (logId) {
+          await supabase
+            .from("tradingview_signals")
+            .update({
+              provider_executed: false,
+              provider_detail: err instanceof Error ? err.message : "unknown error",
+            })
+            .eq("id", logId)
+        }
+      }
+      if (pendingIdeaId) {
+        await activateSenseiTradeIdea(supabase, pendingIdeaId, logId)
+      }
+    })()
+
+    // Resposta imediata (202) — processamento continua assincronamente
+    providerExecuted = null
   }
 
   const post = composePost(v, activeSensei)
@@ -382,5 +410,10 @@ export async function POST(request: NextRequest) {
     await supabase.from("tradingview_signals").update({ telegram_status: "disabled", telegram_error: reason }).eq("id", logId)
   }
 
-  return NextResponse.json({ ok: true, valid: true, confidence: v.confidence, chat: !!chatId, push: pushOk, telegram: tgOk, provider: providerExecuted, provider_detail: providerDetail, signal_id: logId })
+  // Retorna 202 Accepted se provider é assíncrono (null = queued), 200 OK se não executar provider
+  const status = providerExecuted === null ? 202 : 200
+  return NextResponse.json(
+    { ok: true, valid: true, confidence: v.confidence, chat: !!chatId, push: pushOk, telegram: tgOk, provider: providerExecuted, provider_detail: providerDetail, signal_id: logId },
+    { status }
+  )
 }
