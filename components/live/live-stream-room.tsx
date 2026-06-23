@@ -102,7 +102,7 @@ export default function LiveStreamRoom({ streamId }: Props) {
     return url
   }, [stream?.hls_manifest_url])
   // Use the last-known good URL if the current poll returned nothing (transient error/flip)
-  const effectiveHlsUrl = hlsUrl || stableHlsUrlRef.current
+  const effectiveHlsUrl = useMemo(() => hlsUrl || stableHlsUrlRef.current, [hlsUrl])
 
   // Pass the effective URL to HLS.js so it never gets destroyed on a transient null
   const useHls = Boolean(effectiveHlsUrl)

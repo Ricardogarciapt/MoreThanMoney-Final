@@ -323,7 +323,10 @@ export default function LiveSessionsMobile({
 
   useEffect(() => {
     if (!open || !selectedId) return
-    const id = setInterval(refreshModal, 5000)
+    const { stream } = (window as any).__mtm_state || { stream: null }
+    const isLive = Boolean(stream?.is_live)
+    const interval = isLive ? 15000 : 5000
+    const id = setInterval(refreshModal, interval)
     return () => clearInterval(id)
   }, [open, selectedId, refreshModal])
 

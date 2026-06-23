@@ -1,0 +1,148 @@
+{
+  "educator": {
+    "name": "Adilson Araujo",
+    "slug": "adilson-araujo",
+    "specialty": "Psicologia Trading",
+    "academy": "mindset"
+  },
+  "obs_config": {
+    "version": "1.0",
+    "profile_name": "MTM_Adilson_Araujo",
+    "description": "Template OBS para streams ao vivo de Psicologia do Trading"
+  },
+  "scenes": [
+    {
+      "name": "Stream Palestra",
+      "description": "Cena com webcam (1280x720) + overlay de branding MTM",
+      "sources": [
+        {
+          "type": "source:dshow_input",
+          "name": "Webcam",
+          "settings": {
+            "device": "",
+            "resolution": "1280x720",
+            "frame_rate": "30",
+            "audio_device": ""
+          },
+          "visible": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1280,
+            "height": 720
+          }
+        },
+        {
+          "type": "source:image_source",
+          "name": "Overlay Branding",
+          "settings": {
+            "file": "public/assets/educadores/adilson-araujo/overlay.png"
+          },
+          "visible": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1280,
+            "height": 720
+          }
+        },
+        {
+          "type": "source:browser_source",
+          "name": "Chat Browser",
+          "settings": {
+            "url": "https://morethanmoney.pt/lms/stream/chat",
+            "width": 400,
+            "height": 600,
+            "fps": 30,
+            "css": "body { background-color: rgba(0, 0, 0, 0.3); font-family: 'Inter', sans-serif; color: #fff; }"
+          },
+          "visible": true,
+          "position": {
+            "x": 880,
+            "y": 120,
+            "width": 380,
+            "height": 600
+          }
+        }
+      ],
+      "canvas": {
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "name": "Screen Share + Chat",
+      "description": "Compartilhamento de tela + chat lateral",
+      "sources": [
+        {
+          "type": "source:monitor_capture",
+          "name": "Screen Share",
+          "settings": {
+            "monitor": 1
+          },
+          "visible": true,
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1024,
+            "height": 720
+          }
+        },
+        {
+          "type": "source:browser_source",
+          "name": "Chat Browser",
+          "settings": {
+            "url": "https://morethanmoney.pt/lms/stream/chat",
+            "width": 240,
+            "height": 600,
+            "fps": 30
+          },
+          "visible": true,
+          "position": {
+            "x": 1040,
+            "y": 60,
+            "width": 240,
+            "height": 600
+          }
+        }
+      ],
+      "canvas": {
+        "width": 1280,
+        "height": 720
+      }
+    }
+  ],
+  "streaming": {
+    "service": "custom_rtmps",
+    "server": "rtmps://live.supabase.io:443/app",
+    "key_placeholder": "STREAM_KEY_FROM_LMS_EDUCATORS",
+    "bitrate": {
+      "video_bitrate": 2500,
+      "audio_bitrate": 128
+    },
+    "encoding": {
+      "encoder": "x264",
+      "preset": "veryfast",
+      "profile": "main",
+      "keyframe_interval": 2
+    },
+    "audio": {
+      "sample_rate": 44100,
+      "channels": 2
+    }
+  },
+  "hotkeys": {
+    "start_stream": "Alt+F9",
+    "stop_stream": "Alt+F10",
+    "switch_scene_1": "Alt+1",
+    "switch_scene_2": "Alt+2",
+    "toggle_chat": "Alt+C"
+  },
+  "tips_for_setup": [
+    "Substituir STREAM_KEY_FROM_LMS_EDUCATORS pela chave fixa no campo stream_key_fixed da BD",
+    "Ajustar resolução da câmera conforme disponibilidade do hardware",
+    "Testar áudio e vídeo antes de iniciar live",
+    "Verificar iluminação frontal para melhor qualidade de câmera",
+    "Manter chat visível durante interações com audiência"
+  ]
+}

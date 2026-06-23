@@ -96,14 +96,14 @@ export function useLmsHlsVideo(videoRef: RefObject<HTMLVideoElement | null>, hls
       destroyHls()
       const hls = new Hls({
         enableWorker: true,
-        // Live: ficar mais perto do fim da fila (menos buffer ⇒ menos atraso; risco maior de stall se a rede oscilar).
-        lowLatencyMode: true,
+        // Live: aumentar buffer para estabilidade (menos risco de stall); desativar low-latency mode para robustez.
+        lowLatencyMode: false,
         liveDurationInfinity: true,
-        liveSyncDurationCount: 2,
-        liveMaxLatencyDurationCount: 6,
+        liveSyncDurationCount: 4,
+        liveMaxLatencyDurationCount: 10,
         maxLiveSyncPlaybackRate: 1.75,
-        liveBackBufferLength: 12,
-        maxBufferLength: 6,
+        liveBackBufferLength: 20,
+        maxBufferLength: 15,
         backBufferLength: 12,
       })
       hlsRef.current = hls
