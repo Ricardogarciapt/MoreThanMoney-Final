@@ -32,9 +32,26 @@ export function canReadChannel(slug: string, user: ChatChannelUser | null | unde
   return true
 }
 
+/** Canais de sinais: Premium · Ouro, Sensei Scanner e Ideias Forex (Auto Forex). */
+export const SIGNAL_PUBLISH_CHANNELS = ["premium-ideas", "sensei-scanner", "trade-ideas"] as const
+
+/**
+ * Publicação em canais de sinais: apenas admin e VIP. O "sistema"
+ * (webhook / reencaminhamento Telegram) insere server-side com user_id null,
+ * contornando esta verificação — o reencaminhamento existente mantém-se.
+ */
+export function canPublishSignalChannel(user: ChatChannelUser | null | undefined): boolean {
+  if (!user?.is_active) return false
+  return user.user_type === "admin" || user.member_category === "vip"
+}
+
 export function canWriteChannel(slug: string, user: ChatChannelUser | null | undefined): boolean {
   if (!user?.is_active) return false
-  if (isReadOnlyChannel(slug) || slug === "trade-ideas") return false
+  // Canais de sinais (Premium Ouro, Sensei Scanner, Ideias Forex): só admin + VIP.
+  if ((SIGNAL_PUBLISH_CHANNELS as readonly string[]).includes(slug)) {
+    return canPublishSignalChannel(user)
+  }
+  if (isReadOnlyChannel(slug)) return false
   if (slug === "geral") return true
   if (slug === "trading") {
     if (user.subscription_plan === "premium" || user.member_category === "iq") return true
