@@ -19,12 +19,27 @@ export function tradeIdeasTrailingDistance(): TrailingDistance {
   return { mode: 'points', points: TRADE_IDEAS_TRAILING_POINTS }
 }
 
-/** BE a meio do risco + trailing dinâmico (Trade Ideas / Sensei Scanner). */
-export function tradeIdeasDynamicTrailing(riskPips: number | null): TrailingDistance {
-  const risk = riskPips != null && riskPips > 0 ? riskPips : 30
-  const activationPips = Math.max(5, Math.round(risk * 0.5))
-  const trailPips = Math.max(8, Math.round(risk * 0.35))
-  return { mode: 'threshold_pips', activationPips, trailPips }
+/** Auto Forex caminho de referência (50 pips) — BE a 50% do caminho. */
+export const TRADE_IDEAS_TARGET_PIPS = 50
+export const TRADE_IDEAS_BREAKEVEN_PIPS = TRADE_IDEAS_TARGET_PIPS / 2 // 25
+
+/**
+ * Trade Ideas / Sensei (Auto Forex): o trailing só inicia quando a posição está
+ * 50% positiva no caminho de 50 pips — ou seja, aos 25 pips — com colocação
+ * imediata de BE (SL na entrada) na activação e seguimento de 25 pips.
+ * Em alvos mais curtos, nunca activa além de metade do alvo conhecido.
+ */
+export function tradeIdeasDynamicTrailing(
+  riskPips: number | null,
+  targetPips?: number | null,
+): TrailingDistance {
+  const halfTarget =
+    targetPips != null && targetPips > 0
+      ? Math.round(targetPips / 2)
+      : TRADE_IDEAS_BREAKEVEN_PIPS
+  const activationPips = Math.max(5, halfTarget)
+  // trailPips = activationPips → SL fica na entrada (BE) na activação, depois segue.
+  return { mode: 'threshold_pips', activationPips, trailPips: activationPips }
 }
 
 export function riskPipsFromEntrySl(

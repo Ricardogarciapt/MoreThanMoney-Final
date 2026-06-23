@@ -830,7 +830,8 @@ async function executeViaMtmProvider(
         const spec = await getSymbolSpecification(provider.accountId, mappedSymbol)
         const entry = signalForExec.entry ?? marketPrice
         const riskPips = spec ? riskPipsFromEntrySl(entry, signalForExec.sl, spec, mappedSymbol) : null
-        req.trailingStop = tradeIdeasDynamicTrailing(riskPips)
+        const targetPips = spec ? riskPipsFromEntrySl(entry, signalForExec.tp?.[0] ?? null, spec, mappedSymbol) : null
+        req.trailingStop = tradeIdeasDynamicTrailing(riskPips, targetPips)
       }
       const [r] = await placeOrdersSequential(provider.accountId, [req])
       results.push({
@@ -1153,7 +1154,8 @@ async function processSignalDirect(
       const spec = await getSymbolSpecification(conn.metaapi_account_id, signal.symbol!)
       const entry = signal.entry ?? marketPrice
       const riskPips = spec ? riskPipsFromEntrySl(entry, signal.sl, spec, signal.symbol!) : null
-      req.trailingStop = tradeIdeasDynamicTrailing(riskPips)
+      const targetPips = spec ? riskPipsFromEntrySl(entry, signal.tp?.[0] ?? null, spec, signal.symbol!) : null
+      req.trailingStop = tradeIdeasDynamicTrailing(riskPips, targetPips)
     }
     const [single] = await placeOrdersSequential(conn.metaapi_account_id!, [req])
     result = single ?? { success: false, error: 'Sem resposta MetaAPI' }
