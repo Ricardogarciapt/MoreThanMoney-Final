@@ -20,7 +20,14 @@ export function signalForRiskSizing(
   signal: ParsedSignal,
   marketPrice?: number | null,
 ): ParsedSignal {
-  const entry = resolveEntryForRisk(signal, marketPrice)
+  // Ordens a mercado dimensionam pelo PREÇO DE MERCADO (fill real), não pela entry
+  // nominal do sinal. Sinais de "zona" enchem no extremo da zona; usar a entry
+  // nominal subestima a distância ao SL e duplica o risco (ex.: 0.5% → 1%+).
+  const isMarket = signal.orderType !== 'limit'
+  const entry =
+    isMarket && marketPrice != null && marketPrice > 0
+      ? marketPrice
+      : resolveEntryForRisk(signal, marketPrice)
   if (entry == null || entry === signal.entry) return signal
   return { ...signal, entry }
 }
