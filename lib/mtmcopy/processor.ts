@@ -708,20 +708,31 @@ async function executeViaMtmProvider(
   const executionSummary = formatExecutionSummary(executionProfile)
   let balance: number | null = null
   let marketPrice: number | null = null
-  if (executionProfile.lot_mode === 'risk_percent') {
-    const ctx = await fetchLotSizingContext(
-      provider.accountId,
-      mappedSymbol,
-      signalForExec.direction!,
-    )
-    balance = ctx.balance
-    marketPrice = ctx.marketPrice
+
+  // Chamadas MetaAPI independentes em paralelo (corta ~200ms vs. sequencial):
+  //  - lot sizing context (só risk_percent)
+  //  - account snapshot (equity, sempre)
+  //  - symbol specification (só trade-ideas, para trailing dinâmico)
+  const needsSpec = channel === 'trade-ideas'
+  const [lotCtx, snapshot, symbolSpec] = await Promise.all([
+    executionProfile.lot_mode === 'risk_percent'
+      ? fetchLotSizingContext(provider.accountId, mappedSymbol, signalForExec.direction!)
+      : Promise.resolve(null),
+    getAccountSnapshot(provider.accountId),
+    needsSpec
+      ? getSymbolSpecification(provider.accountId, mappedSymbol)
+      : Promise.resolve(null),
+  ])
+
+  if (lotCtx) {
+    balance = lotCtx.balance
+    marketPrice = lotCtx.marketPrice
   }
+
   const signalForLot = signalForRiskSizing(signalForExec, marketPrice)
   let totalLot = computeLotSize(providerConn, signalForLot, balance)
   totalLot = resolveLotForSymbol(mappedSymbol, totalLot, executionProfile)
 
-  const snapshot = await getAccountSnapshot(provider.accountId)
   const equity = snapshot?.equity ?? snapshot?.balance ?? balance
   totalLot = scaleLotForSmallCapital(totalLot, equity)
 
@@ -827,7 +838,7 @@ async function executeViaMtmProvider(
     } else {
       const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
       if (channel === 'trade-ideas') {
-        const spec = await getSymbolSpecification(provider.accountId, mappedSymbol)
+        const spec = symbolSpec
         const entry = signalForExec.entry ?? marketPrice
         const riskPips = spec ? riskPipsFromEntrySl(entry, signalForExec.sl, spec, mappedSymbol) : null
         const targetPips = spec ? riskPipsFromEntrySl(entry, signalForExec.tp?.[0] ?? null, spec, mappedSymbol) : null
