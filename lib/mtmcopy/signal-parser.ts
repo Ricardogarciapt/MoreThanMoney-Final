@@ -405,9 +405,10 @@ function extractTpFromText(text: string, lines: string[]): number[] {
 /** Alerta Pine Script MTM Sensei X via webhook TradingView. */
 const SENSEI_PREFIX_RE = /(?:📡\s*)?MTM\s+Sensei\s+X\s*[—–-]\s*/i
 
-/** Corpo do alerta Sensei X — Entry Buy/Sell = ideia · Entry Alert = activação (Entry Trigger = alias). */
+/** Corpo do alerta Sensei X — Entry Buy/Sell = ideia · Entry Alert = activação (Entry Trigger = alias).
+ *  Aceita também os formatos curtos de gestão do Pine: "EXIT 1", "SL", "BE", "TP1". */
 const SENSEI_BODY_RE =
-  /(?:(Long|Short|Buy|Sell)\s+)?(Entry\s+(?:Buy|Sell)|Entry\s+Alert|Entry\s+Trigger|Exit\s+Trigger|SL\s+Hit|Stop\s+Loss\s+Hit|TP\d?\s+Hit|Take\s+Profit(?:\s+\d+)?\s+Hit|Breakeven|Break\s+Even|BE\s+Set|Signal|Alert)(?:\s+(Long|Short|Buy|Sell))?\s+([A-Z][A-Z0-9]{1,11})(?:\s+(\d+[mMhHdDwW]?))?(?:\s+@\s*([\d.,]+))?/i
+  /(?:(Long|Short|Buy|Sell)\s+)?(Entry\s+(?:Buy|Sell)|Entry\s+Alert|Entry\s+Trigger|Exit\s+Trigger|Exit(?:\s+\d+)?|Stop\s+Loss\s+Hit|SL\s+Hit|SL|Take\s+Profit(?:\s+\d+)?\s+Hit|TP\d?\s+Hit|TP\s*\d|Breakeven|Break\s+Even|BE\s+Set|BE|Signal|Alert)(?:\s+(Long|Short|Buy|Sell))?\s+([A-Z][A-Z0-9]{1,11})(?:\s+(\d+[mMhHdDwW]?))?(?:\s+@\s*([\d.,]+))?/i
 
 export type SenseiAlertType =
   | 'idea'
@@ -481,19 +482,20 @@ function directionFromSenseiEntryKind(
 }
 
 function mapSenseiAlertKind(kind: string): SenseiAlertType {
-  const k = kind.toLowerCase().replace(/\s+/g, ' ')
+  const k = kind.toLowerCase().replace(/\s+/g, ' ').trim()
   if (k.includes('entry buy') || k.includes('entry sell')) return 'idea'
   if (k.includes('entry alert') || k.includes('entry trigger')) return 'entry_trigger'
   if (k === 'signal' || k === 'alert') return 'idea'
-  if (k.includes('exit trigger')) return 'exit'
-  if (k.includes('sl hit') || k.includes('stop loss hit')) return 'sl_hit'
-  if (k.includes('tp') && k.includes('hit')) return 'tp_hit'
-  if (k.includes('breakeven') || k.includes('break even') || k.includes('be set')) return 'breakeven'
+  // Gestão — aceita formatos longos ("Exit Trigger", "SL Hit") e curtos ("EXIT 1", "SL", "BE", "TP1").
+  if (k === 'exit' || k.startsWith('exit ') || k.includes('exit trigger')) return 'exit'
+  if (k === 'sl' || k.includes('sl hit') || k.includes('stop loss')) return 'sl_hit'
+  if (k.startsWith('tp') || (k.includes('tp') && k.includes('hit')) || k.includes('take profit')) return 'tp_hit'
+  if (k === 'be' || k.includes('breakeven') || k.includes('break even') || k.includes('be set')) return 'breakeven'
   return 'unknown'
 }
 
 function tpLevelFromKind(kind: string): number | null {
-  const m = kind.match(/tp(\d)/i)
+  const m = kind.match(/(?:tp|exit)\s*(\d)/i)
   return m ? parseInt(m[1], 10) : null
 }
 
