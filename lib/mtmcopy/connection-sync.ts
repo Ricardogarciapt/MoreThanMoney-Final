@@ -40,10 +40,13 @@ export function lotMultiplierFromConnection(conn: Pick<MTMcopierConnection, 'lot
 }
 
 /**
- * Round-up ao lote mínimo (forceTinyTrades) com coeficiente alto → micro-contas
- * abrem sempre no mínimo do broker, mantendo o cálculo de scaling.
+ * Round-up ao lote mínimo (forceTinyTrades) com coeficiente alto → contas abrem
+ * sempre no mínimo do broker, mantendo o cálculo de scaling.
  */
 const COPYFACTORY_MAX_RISK_COEFFICIENT = 100
+/** Abaixo deste saldo, o scaling não chega ao lote mínimo de forma fiável → lote fixo. */
+const MICRO_ACCOUNT_BALANCE = 1000
+const MICRO_ACCOUNT_FIXED_LOT = 0.01
 
 export function tradeSizeScalingFromConnection(
   conn: Pick<MTMcopierConnection, 'lot_mode' | 'lot_value'>,
@@ -57,10 +60,29 @@ export function tradeSizeScalingFromConnection(
     return { mode: 'fixedRisk', riskFraction: Math.min(0.5, Math.max(0.001, value / 100)), ...tiny }
   }
   if (conn.lot_mode === 'fixed') {
-    return { mode: 'fixedVolume', fixedVolume: Math.min(50, Math.max(0.01, value)), ...tiny }
+    return { mode: 'fixedVolume', tradeVolume: Math.min(50, Math.max(0.01, value)), ...tiny }
   }
   // multiplier / default → scaling por saldo + round-up ao mínimo
   return { mode: 'balance', ...tiny }
+}
+
+/**
+ * Regra automática por saldo: contas pequenas (< MICRO_ACCOUNT_BALANCE) usam lote
+ * fixo mínimo (abrem sempre, independentemente do tamanho do provider); as restantes
+ * usam o scaling normal. Aplica-se a todos os subscritores, agora e no futuro.
+ */
+export async function resolveScalingForConnection(
+  conn: Pick<MTMcopierConnection, 'lot_mode' | 'lot_value' | 'metaapi_account_id'>,
+): Promise<CopyFactoryTradeSizeScaling> {
+  const tiny = { forceTinyTrades: true, maxRiskCoefficient: COPYFACTORY_MAX_RISK_COEFFICIENT }
+  if (conn.metaapi_account_id) {
+    const { getAccountBalance } = await import('./metaapi')
+    const balance = await getAccountBalance(conn.metaapi_account_id)
+    if (balance != null && balance > 0 && balance < MICRO_ACCOUNT_BALANCE) {
+      return { mode: 'fixedVolume', tradeVolume: MICRO_ACCOUNT_FIXED_LOT, ...tiny }
+    }
+  }
+  return tradeSizeScalingFromConnection(conn)
 }
 
 export async function syncConnectionCopyFactory(
@@ -127,13 +149,14 @@ export async function syncConnectionCopyFactory(
 
   const cf = copyFactoryOptsFromConnection(conn)
   const symbolMapping = await buildSubscriberSymbolMapping(conn.metaapi_account_id)
+  const tradeSizeScaling = await resolveScalingForConnection(conn)
 
   return subscribeToStrategies({
     accountId: conn.metaapi_account_id,
     name,
     strategyIds,
     multiplier: cf.multiplier,
-    tradeSizeScaling: cf.tradeSizeScaling,
+    tradeSizeScaling,
     reverse: cf.reverse,
     symbolWhitelist: cf.symbolWhitelist,
     symbolMapping,
@@ -181,13 +204,14 @@ export async function syncMtmStrategyReplication(
 
   const cf = copyFactoryOptsFromConnection(conn)
   const symbolMapping = await buildSubscriberSymbolMapping(conn.metaapi_account_id)
+  const tradeSizeScaling = await resolveScalingForConnection(conn)
 
   return subscribeToStrategies({
     accountId: conn.metaapi_account_id,
     name,
     strategyIds: [strategyId],
     multiplier: cf.multiplier,
-    tradeSizeScaling: cf.tradeSizeScaling,
+    tradeSizeScaling,
     reverse: cf.reverse,
     symbolWhitelist: cf.symbolWhitelist,
     copySl: cf.copySl,

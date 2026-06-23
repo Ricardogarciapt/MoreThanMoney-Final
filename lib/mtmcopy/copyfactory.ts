@@ -6,7 +6,7 @@ const COPYFACTORY_BASE =
 
 export type CopyFactoryTradeSizeScaling =
   | { mode: 'fixedRisk'; riskFraction: number; forceTinyTrades?: boolean; maxRiskCoefficient?: number }
-  | { mode: 'fixedVolume'; fixedVolume: number; forceTinyTrades?: boolean; maxRiskCoefficient?: number }
+  | { mode: 'fixedVolume'; tradeVolume: number; forceTinyTrades?: boolean; maxRiskCoefficient?: number }
   | { mode: 'balance'; forceTinyTrades?: boolean; maxRiskCoefficient?: number }
   | { mode: 'none' }
 
