@@ -49,5 +49,8 @@ export function isPremiumTp1HitConfirmed(text: string): boolean {
 export function isPremiumTp1CloseAllNowMessage(text: string): boolean {
   if (!isPremiumTp1HitConfirmed(text)) return false
   if (!/\bclose\s+all\s+now\b/i.test(text)) return false
+  // "If hold set BE" / "Breakeven" / "Hold risk" → NÃO fechar tudo:
+  // segurar a posição com parcial (TP1) + BE + trailing.
+  if (/\b(set\s+be|break\s?even|hold\s+risk|if\s+hold)\b/i.test(text)) return false
   return true
 }
