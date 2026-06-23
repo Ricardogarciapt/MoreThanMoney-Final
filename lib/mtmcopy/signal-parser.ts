@@ -416,9 +416,12 @@ export interface SenseiTradingViewFields {
   tp1?: number | null
   tp2?: number | null
   tp3?: number | null
+  tp4?: number | null
   timeframe?: string | null
   exchange?: string | null
   alertName?: string | null
+  /** Estado do payload JSON: ENTRY | BE | TP1..TP4 | SL | EXIT */
+  state?: string | null
 }
 
 export interface SenseiParsedAlert extends ParsedSignal {
@@ -435,6 +438,21 @@ export function alertTypeFromSenseiLabel(label: string | null | undefined): Sens
   const k = label.toLowerCase().replace(/\s+/g, ' ')
   if (k.includes('entry buy') || k.includes('entry sell')) return 'idea'
   if (k.includes('entry alert') || k.includes('entry trigger')) return 'entry_trigger'
+  return null
+}
+
+/** Estado JSON do Pine (state) → tipo de alerta + nível de TP. */
+export function alertTypeFromState(
+  state: string | null | undefined,
+): { type: SenseiAlertType; tpLevel: number | null } | null {
+  if (!state?.trim()) return null
+  const s = state.trim().toUpperCase()
+  if (s === 'ENTRY') return { type: 'entry_trigger', tpLevel: null }
+  if (s === 'BE') return { type: 'breakeven', tpLevel: null }
+  if (s === 'SL') return { type: 'sl_hit', tpLevel: null }
+  if (s === 'EXIT') return { type: 'exit', tpLevel: null }
+  const tp = s.match(/^TP([1-4])$/)
+  if (tp) return { type: 'tp_hit', tpLevel: parseInt(tp[1], 10) }
   return null
 }
 
@@ -476,7 +494,7 @@ function collectTpFromFields(fields?: SenseiTradingViewFields): number[] {
   const raw: (number | null | undefined)[] = []
   if (Array.isArray(fields.tp)) raw.push(...fields.tp)
   else if (fields.tp != null) raw.push(fields.tp)
-  raw.push(fields.tp1, fields.tp2, fields.tp3)
+  raw.push(fields.tp1, fields.tp2, fields.tp3, fields.tp4)
   return [...new Set(raw.filter((n): n is number => n != null && Number.isFinite(n) && n > 0))]
 }
 
@@ -503,8 +521,10 @@ function mergeSenseiParsed(
   const entry = textParsed?.entry ?? fields?.price ?? null
   const sl = textParsed?.sl ?? fields?.sl ?? null
 
+  const stateInfo = alertTypeFromState(fields?.state)
   const alertType =
     textParsed?.alertType ??
+    stateInfo?.type ??
     alertTypeFromSenseiLabel(fields?.alertName) ??
     (fields?.sl != null && collectTpFromFields(fields).length > 0 ? 'idea' : 'signal')
   const orderType: 'market' | 'limit' =
@@ -522,7 +542,7 @@ function mergeSenseiParsed(
     timeframe: textParsed?.timeframe ?? fields?.timeframe ?? null,
     exchange: textParsed?.exchange ?? fields?.exchange ?? null,
     alertName: textParsed?.alertName ?? fields?.alertName ?? null,
-    tpLevel: textParsed?.tpLevel ?? null,
+    tpLevel: textParsed?.tpLevel ?? stateInfo?.tpLevel ?? null,
   }
 }
 
@@ -588,8 +608,10 @@ export function parseSenseiTradingViewAlert(
     if (!isValidTradingSymbol(sym)) return null
     const fromName = fields.alertName ? parseSenseiTextBlock(fields.alertName) : null
     const fieldTp = collectTpFromFields(fields)
+    const stateInfo = alertTypeFromState(fields.state)
     const inferredType =
       fromName?.alertType ??
+      stateInfo?.type ??
       alertTypeFromSenseiLabel(fields.alertName) ??
       (fields.sl != null && fieldTp.length > 0 ? 'idea' : 'entry_trigger')
     return {
@@ -604,6 +626,7 @@ export function parseSenseiTradingViewAlert(
       timeframe: fields.timeframe ?? null,
       exchange: fields.exchange ?? null,
       alertName: fields.alertName ?? null,
+      tpLevel: stateInfo?.tpLevel ?? null,
     }
   }
 

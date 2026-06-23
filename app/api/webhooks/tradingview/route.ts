@@ -33,6 +33,11 @@ const AIBOT_TOKEN = (process.env.TELEGRAM_AIBOT_TOKEN || "").trim()
 const RELAY_DISABLED = (process.env.TRADINGVIEW_RELAY_ENABLED || "true").toLowerCase() === "false"
 const RELAY_ENABLED = !RELAY_DISABLED && Boolean(RELAY_CHAT_ID && AIBOT_TOKEN)
 
+// Auto-execução de trades reais a partir do Sensei (alto risco): OFF por defeito.
+// Notificações/chat/Telegram funcionam sempre; só a abertura de posições é gated.
+const SENSEI_PROVIDER_EXEC_ENABLED =
+  (process.env.SENSEI_PROVIDER_EXEC_ENABLED || "false").toLowerCase() === "true"
+
 type Json = Record<string, unknown>
 
 function pick(obj: Json, keys: string[]): string | null {
@@ -189,21 +194,26 @@ export async function POST(request: NextRequest) {
   const tp = num(pick(payload, ["tp", "takeprofit", "take_profit", "target", "tp1"]))
   const tp2 = num(pick(payload, ["tp2", "take_profit_2", "target2"]))
   const tp3 = num(pick(payload, ["tp3", "take_profit_3", "target3"]))
+  const tp4 = num(pick(payload, ["tp4", "take_profit_4", "target4"]))
+  const state = pick(payload, ["state", "phase"])
   const alertName = pick(payload, ["alert_name", "alert", "name", "strategy"])
   const freeText = isJson ? pick(payload, ["message", "comment", "text"]) : String(payload.message ?? "")
 
+  const allTp = [tp, tp2, tp3, tp4].filter((n): n is number => n != null)
   const senseiFields: SenseiTradingViewFields = {
     ticker,
     action,
     price,
     sl,
-    tp: tp != null ? tp : tp2 != null || tp3 != null ? [tp, tp2, tp3].filter((n): n is number => n != null) : null,
+    tp: allTp.length ? allTp : null,
     tp1: tp,
     tp2,
     tp3,
+    tp4,
     timeframe,
     exchange,
     alertName,
+    state,
   }
 
   // Texto bruto: mensagem Sensei (Entry Buy/Sell/Alert), formato MTM, ou JSON
@@ -292,6 +302,7 @@ export async function POST(request: NextRequest) {
   let providerDetail: string | undefined
   const isIdeaAlert = activeSensei?.alertType === "idea" || activeSensei?.alertType === "signal"
   const canExecuteProvider =
+    SENSEI_PROVIDER_EXEC_ENABLED &&
     !isIdeaAlert &&
     parsedForExec.symbol &&
     parsedForExec.direction &&
