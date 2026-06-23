@@ -39,23 +39,28 @@ export function lotMultiplierFromConnection(conn: Pick<MTMcopierConnection, 'lot
   return 1
 }
 
+/**
+ * Round-up ao lote mínimo (forceTinyTrades) com coeficiente alto → micro-contas
+ * abrem sempre no mínimo do broker, mantendo o cálculo de scaling.
+ */
+const COPYFACTORY_MAX_RISK_COEFFICIENT = 100
+
 export function tradeSizeScalingFromConnection(
   conn: Pick<MTMcopierConnection, 'lot_mode' | 'lot_value'>,
-): CopyFactoryTradeSizeScaling | undefined {
+): CopyFactoryTradeSizeScaling {
   const value = Number(conn.lot_value) || 0.01
+  const tiny = {
+    forceTinyTrades: true,
+    maxRiskCoefficient: COPYFACTORY_MAX_RISK_COEFFICIENT,
+  }
   if (conn.lot_mode === 'risk_percent') {
-    return {
-      mode: 'fixedRisk',
-      riskFraction: Math.min(0.5, Math.max(0.001, value / 100)),
-    }
+    return { mode: 'fixedRisk', riskFraction: Math.min(0.5, Math.max(0.001, value / 100)), ...tiny }
   }
   if (conn.lot_mode === 'fixed') {
-    return {
-      mode: 'fixedVolume',
-      fixedVolume: Math.min(50, Math.max(0.01, value)),
-    }
+    return { mode: 'fixedVolume', fixedVolume: Math.min(50, Math.max(0.01, value)), ...tiny }
   }
-  return undefined
+  // multiplier / default → scaling por saldo + round-up ao mínimo
+  return { mode: 'balance', ...tiny }
 }
 
 export async function syncConnectionCopyFactory(

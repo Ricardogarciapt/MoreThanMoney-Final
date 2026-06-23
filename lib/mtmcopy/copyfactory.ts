@@ -5,9 +5,9 @@ const COPYFACTORY_BASE =
   'https://copyfactory-api-v1.new-york.agiliumtrade.ai'
 
 export type CopyFactoryTradeSizeScaling =
-  | { mode: 'fixedRisk'; riskFraction: number }
-  | { mode: 'fixedVolume'; fixedVolume: number }
-  | { mode: 'balance'; forceTinyTrades?: boolean }
+  | { mode: 'fixedRisk'; riskFraction: number; forceTinyTrades?: boolean; maxRiskCoefficient?: number }
+  | { mode: 'fixedVolume'; fixedVolume: number; forceTinyTrades?: boolean; maxRiskCoefficient?: number }
+  | { mode: 'balance'; forceTinyTrades?: boolean; maxRiskCoefficient?: number }
   | { mode: 'none' }
 
 export type CopyFactorySymbolMapping = { from: string; to: string }
