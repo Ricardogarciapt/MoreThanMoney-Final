@@ -1,5 +1,10 @@
 import type { MtmcopyChannelKey } from './channel-context'
-import { isPremiumTp1CloseAllNowMessage, isPremiumTpHitMessage, shouldIgnoreChannelMessage } from './channel-context'
+import {
+  isPremiumHoldRemainderAtBE,
+  isPremiumTp1CloseAllNowMessage,
+  isPremiumTpHitMessage,
+  shouldIgnoreChannelMessage,
+} from './channel-context'
 import { resolvePremiumTradeActiveVariant, type PremiumTradeActiveVariant } from './premium-trade-active'
 import {
   premiumTrailingWithActivation,
@@ -684,8 +689,10 @@ export interface ParsedManagement {
   trailingLeg?: number | null
   /** SL em points do broker (ex: «SL 1000 points») */
   slPoints?: number | null
-  /** HIT TP1 + «Close all now» — fechar posição inteira em lucro */
+  /** HIT TP1 + «Close all now» — fechar a maioria da posição em lucro */
   closeAllAtProfit?: boolean
+  /** «If hold set BE» — fechar 70% e segurar 30% em BE + trailing (em vez de fechar tudo) */
+  holdRemainderAtBE?: boolean
 }
 
 /** Símbolo na mensagem actual ou herdado do sinal em resposta. */
@@ -783,6 +790,7 @@ function parsePremiumManagement(text: string, parentText: string | null): Parsed
           sl: null,
           tpLevel: 1,
           closeAllAtProfit: isPremiumTp1CloseAllNowMessage(text),
+          holdRemainderAtBE: isPremiumHoldRemainderAtBE(text),
         }
       }
       return {

@@ -42,15 +42,20 @@ export function isPremiumTp1HitConfirmed(text: string): boolean {
 }
 
 /**
- * HIT TP1 + «Close all now» (+ BE opcional).
+ * HIT TP1 + «Close all now» → fechar a maioria da posição em lucro.
  * Ex.: «HIT TP1 ✅ Close all now. If hold set BE. Hold risk with Breakeven(BE)»
- * → fechar a posição inteira em lucro (não só parcial 33%).
  */
 export function isPremiumTp1CloseAllNowMessage(text: string): boolean {
   if (!isPremiumTp1HitConfirmed(text)) return false
   if (!/\bclose\s+all\s+now\b/i.test(text)) return false
-  // "If hold set BE" / "Breakeven" / "Hold risk" → NÃO fechar tudo:
-  // segurar a posição com parcial (TP1) + BE + trailing.
-  if (/\b(set\s+be|break\s?even|hold\s+risk|if\s+hold)\b/i.test(text)) return false
   return true
+}
+
+/**
+ * «If hold set BE» / «Hold risk with Breakeven(BE)» → ao segurar a posição,
+ * fecha-se 70% e mantêm-se os 30% restantes em break-even + trailing
+ * (em vez de fechar tudo). Esta mensagem é muitas vezes para desistir da posição.
+ */
+export function isPremiumHoldRemainderAtBE(text: string): boolean {
+  return /\b(set\s+be|break\s?even|hold\s+risk|if\s+hold)\b/i.test(text)
 }

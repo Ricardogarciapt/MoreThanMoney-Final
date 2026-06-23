@@ -419,16 +419,55 @@ async function applyPremiumSingleExitHit(
   return result
 }
 
+/** «Close all now» fecha 70% e, com «if hold set BE», segura 30% em BE + trailing. */
+const PREMIUM_CLOSE_ALL_PARTIAL_PCT = 70
+
 async function applyPremiumCloseAllInProfit(
   accountId: string,
   positions: MetaApiPosition[],
   symbol: string,
+  opts?: { holdRemainderAtBE?: boolean },
 ): Promise<{ updated: number; closed: number; cancelled: number; errors: string[] }> {
   const result = { updated: 0, closed: 0, cancelled: 0, errors: [] as string[] }
   const targets = positions.length ? positions : []
 
   if (!targets.length) {
     result.errors.push('Sem posições MTMcopier abertas')
+    return result
+  }
+
+  // «If hold set BE»: fechar 70% e manter 30% em break-even + trailing.
+  if (opts?.holdRemainderAtBE) {
+    const spec = await getSymbolSpecification(accountId, symbol)
+    let actedHold = false
+    for (const pos of targets) {
+      if (!positionInProfit(pos)) continue
+      actedHold = true
+      const vol = pos.volume ?? 0
+      const riskPips = spec ? riskPipsFromPosition(pos, spec, symbol) : null
+      const trailing = premiumTrailingAfterTp1Hit(riskPips)
+      // Fecha 70% (se a parcial for viável); senão mantém a posição inteira em BE + trailing.
+      if (canPartializeVolume(vol, PREMIUM_CLOSE_ALL_PARTIAL_PCT)) {
+        const closeVol = roundLot(vol * (PREMIUM_CLOSE_ALL_PARTIAL_PCT / 100))
+        const r = await closePositionById(accountId, pos.id, closeVol)
+        if (r.success) result.closed++
+        else if (r.error) result.errors.push(r.error)
+      }
+      // BE + trailing nos 30% restantes (ou na posição inteira em contas pequenas).
+      const mod = await modifyPositionSlTp(
+        accountId,
+        pos.id,
+        pos.openPrice,
+        pos.takeProfit,
+        trailing,
+        pos.symbol,
+      )
+      if (mod.success) result.updated++
+      else if (mod.error) result.errors.push(mod.error)
+    }
+    if (!actedHold) {
+      result.errors.push('Posição não está em lucro — sem fecho (aguarda BE manual)')
+    }
     return result
   }
 
@@ -461,12 +500,14 @@ async function applyPremiumHitTp1(
   accountId: string,
   positions: MetaApiPosition[],
   symbol: string,
-  opts?: { closeAllAtProfit?: boolean },
+  opts?: { closeAllAtProfit?: boolean; holdRemainderAtBE?: boolean },
 ): Promise<{ updated: number; closed: number; cancelled: number; errors: string[] }> {
   const result = { updated: 0, closed: 0, cancelled: 0, errors: [] as string[] }
 
   if (opts?.closeAllAtProfit) {
-    return applyPremiumCloseAllInProfit(accountId, positions, symbol)
+    return applyPremiumCloseAllInProfit(accountId, positions, symbol, {
+      holdRemainderAtBE: opts.holdRemainderAtBE,
+    })
   }
 
   const single = findPremiumSinglePosition(positions, symbol)
@@ -580,6 +621,7 @@ export async function applyManagementToAccount(
     }
     return applyPremiumHitTp1(accountId, positions, management.symbol, {
       closeAllAtProfit: management.closeAllAtProfit,
+      holdRemainderAtBE: management.holdRemainderAtBE,
     })
   }
 
