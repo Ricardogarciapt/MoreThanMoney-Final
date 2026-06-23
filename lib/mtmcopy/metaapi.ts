@@ -640,6 +640,20 @@ export async function listOpenPositions(accountId: string): Promise<MetaApiPosit
   }
 }
 
+export async function getAccountSymbols(accountId: string): Promise<string[]> {
+  let close: (() => Promise<void>) | undefined
+  try {
+    const { connection, close: closeFn } = await getRpcConnection(accountId)
+    close = closeFn
+    const symbols = await connection.getSymbols()
+    return Array.isArray(symbols) ? symbols : []
+  } catch {
+    return []
+  } finally {
+    if (close) await close()
+  }
+}
+
 export async function getSymbolSpecification(
   accountId: string,
   canonicalSymbol: string,

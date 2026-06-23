@@ -1,10 +1,10 @@
 import {
-  DEFAULT_COPYFACTORY_SYMBOL_MAPPINGS,
   getCopyStrategyId,
   subscribeToStrategies,
   unsubscribeFromStrategy,
   type CopyFactoryTradeSizeScaling,
 } from './copyfactory'
+import { buildSubscriberSymbolMapping } from './copyfactory-symbol-map'
 import { connectionCopyMethod } from './copy-limits'
 import {
   getMasterConnection,
@@ -121,6 +121,7 @@ export async function syncConnectionCopyFactory(
     `MTMcopier · ****${conn.mt5_login_last4 ?? '?'} ${conn.mt5_server ?? ''}`.trim()
 
   const cf = copyFactoryOptsFromConnection(conn)
+  const symbolMapping = await buildSubscriberSymbolMapping(conn.metaapi_account_id)
 
   return subscribeToStrategies({
     accountId: conn.metaapi_account_id,
@@ -130,11 +131,12 @@ export async function syncConnectionCopyFactory(
     tradeSizeScaling: cf.tradeSizeScaling,
     reverse: cf.reverse,
     symbolWhitelist: cf.symbolWhitelist,
+    symbolMapping,
     copySl: cf.copySl,
     copyTp: cf.copyTp,
     skipPendingOrders: method === 'master_slave' ? false : cf.skipPendingOrders,
     riskLimits: cf.riskLimits,
-    freshSubscribe: method === 'strategy',
+    freshSubscribe: false,
   })
 }
 
@@ -173,6 +175,7 @@ export async function syncMtmStrategyReplication(
     `MTMcopier · ****${conn.mt5_login_last4 ?? '?'} ${conn.mt5_server ?? ''}`.trim()
 
   const cf = copyFactoryOptsFromConnection(conn)
+  const symbolMapping = await buildSubscriberSymbolMapping(conn.metaapi_account_id)
 
   return subscribeToStrategies({
     accountId: conn.metaapi_account_id,
@@ -186,7 +189,7 @@ export async function syncMtmStrategyReplication(
     copyTp: cf.copyTp,
     skipPendingOrders: false,
     riskLimits: cf.riskLimits,
-    symbolMapping: DEFAULT_COPYFACTORY_SYMBOL_MAPPINGS,
+    symbolMapping,
     freshSubscribe: true,
   })
 }
