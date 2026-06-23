@@ -312,6 +312,12 @@ function extractEntry(text: string, lines: string[]): number | null {
   return null
 }
 
+/** Entrada explícita numa linha ("Entry: 64334.01" / "Entrada = 1.2345"). */
+function extractEntryFromText(text: string): number | null {
+  const m = text.match(/\b(?:entry|entrada|entrar)\s*[:=]\s*(\d+(?:[.,]\d+)?)/i)
+  return m ? parseNumber(m[1]) : null
+}
+
 function extractSlFromText(text: string, lines: string[]): number | null {
   for (const line of lines) {
     const l = line.toLowerCase()
@@ -351,13 +357,20 @@ function extractTpFromText(text: string, lines: string[]): number[] {
     if (v != null) tp.push(v)
   }
 
+  // "Exit 1: 65000" / "Exit2 = 65670" (formato MTM Sensei X)
+  const globalExit = text.matchAll(/\bexit\s*\d*\s*[:=]\s*(\d+(?:[.,]\d+)?)/gi)
+  for (const m of globalExit) {
+    const v = parseNumber(m[1])
+    if (v != null) tp.push(v)
+  }
+
   for (const line of lines) {
     const l = line.toLowerCase()
-    if (!/\btp\d*\b|take\s?profit|takeprofit|alvo|target|objetivo/.test(l)) continue
+    if (!/\btp\d*\b|take\s?profit|takeprofit|alvo|target|objetivo|exit\s*\d/.test(l)) continue
     if (/\btp\d*\s*:\s*hold\b/i.test(line)) continue
 
     const labeled = line.match(
-      /(?:tp\d*|take\s?profit|takeprofit|alvo|target)\s*:\s*(\d+(?:[.,]\d+)?)/i,
+      /(?:tp\d*|take\s?profit|takeprofit|alvo|target|exit\s*\d*)\s*:\s*(\d+(?:[.,]\d+)?)/i,
     )
     if (labeled) {
       const v = parseNumber(labeled[1])
@@ -556,14 +569,20 @@ function parseSenseiTextBlock(text: string): Partial<SenseiParsedAlert> | null {
   if (!isValidTradingSymbol(symbol)) return null
 
   const dirRaw = m[1] ?? m[3]
-  const direction = directionFromSenseiEntryKind(m[2], dirRaw)
-  const entry = m[6] ? parseNumber(m[6]) : null
+  const entry = (m[6] ? parseNumber(m[6]) : null) ?? extractEntryFromText(text)
   const alertType = mapSenseiAlertKind(m[2])
   const tpLevel = tpLevelFromKind(m[2])
 
   const lines = text.split(/\r?\n/)
   const sl = extractSlFromText(text, lines)
   const tp = extractTpFromText(text, lines)
+
+  // Direção: da palavra Buy/Sell; senão infere pelo SL vs entrada
+  // (SL abaixo da entrada → compra; acima → venda).
+  let direction = directionFromSenseiEntryKind(m[2], dirRaw)
+  if (!direction && entry != null && entry > 0 && sl != null && sl > 0) {
+    direction = sl < entry ? 'buy' : 'sell'
+  }
 
   return {
     symbol,
