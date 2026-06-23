@@ -83,21 +83,26 @@ export async function POST(request: NextRequest) {
 // DELETE: Remover token FCM
 export async function DELETE(request: NextRequest) {
   try {
-    const { token } = await request.json()
+    const { token, userId } = await request.json()
 
-    if (!token) {
+    if (!token && !userId) {
       return NextResponse.json(
-        { error: 'token é obrigatório' },
+        { error: 'token ou userId é obrigatório' },
         { status: 400 }
       )
     }
 
-    console.log('🗑️ [FCM TOKEN API] Removendo token:', token.substring(0, 20) + '...')
+    // Remover por token (1 dispositivo) ou por userId (desativar push do utilizador)
+    const query = supabase.from('fcm_tokens').delete()
+    if (token) {
+      console.log('🗑️ [FCM TOKEN API] Removendo token:', token.substring(0, 20) + '...')
+      query.eq('token', token)
+    } else {
+      console.log('🗑️ [FCM TOKEN API] Removendo tokens do user:', userId.substring(0, 8) + '...')
+      query.eq('user_id', userId)
+    }
 
-    const { error } = await supabase
-      .from('fcm_tokens')
-      .delete()
-      .eq('token', token)
+    const { error } = await query
 
     if (error) {
       console.error('❌ [FCM TOKEN API] Erro ao deletar:', error)

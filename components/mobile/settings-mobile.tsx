@@ -83,6 +83,8 @@ export default function SettingsMobile() {
     ...DEFAULT_NOTIFICATION_PREFERENCES,
   })
   const [savingNotifPref, setSavingNotifPref] = useState<NotificationCategory | null>(null)
+  const [pushEnabled, setPushEnabled]     = useState(false)
+  const [pushBusy, setPushBusy]           = useState(false)
   const { theme, setTheme } = useTheme()
   const [mountedTheme, setMountedTheme]   = useState(false)
 
@@ -90,6 +92,12 @@ export default function SettingsMobile() {
     try {
       const stored = localStorage.getItem("mtm_notif_sound")
       if (stored !== null) setSoundEnabled(stored !== "0")
+    } catch {}
+    try {
+      const storedPush = localStorage.getItem("mtm_push_enabled")
+      const granted =
+        typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted"
+      setPushEnabled(storedPush !== null ? storedPush !== "0" : granted)
     } catch {}
     setMountedTheme(true)
   }, [])
@@ -160,6 +168,126 @@ export default function SettingsMobile() {
     setSoundEnabled(next)
     try { localStorage.setItem("mtm_notif_sound", next ? "1" : "0") } catch {}
     toast({ title: next ? "Som activado" : "Som desactivado", description: next ? "As notificações terão som." : "As notificações serão silenciosas." })
+  }
+
+  const persistPush = (on: boolean) => {
+    setPushEnabled(on)
+    try { localStorage.setItem("mtm_push_enabled", on ? "1" : "0") } catch {}
+  }
+
+  const activatePush = async () => {
+    // ── Capacitor nativo (iOS/Android) ────────────────────────────
+    const isCapacitorNative = typeof window !== "undefined" && !!(window as any).Capacitor?.isNative
+    if (isCapacitorNative) {
+      try {
+        const { PushNotifications } = await import(/* webpackIgnore: true */ "@capacitor/push-notifications" as any)
+        let perm = await PushNotifications.checkPermissions()
+        if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") {
+          perm = await PushNotifications.requestPermissions()
+        }
+        if (perm.receive === "granted") {
+          const { data: { session } } = await supabase.auth.getSession()
+          const uid = session?.user?.id
+          if (uid) {
+            let tokenListener: { remove: () => void } | null = null
+            tokenListener = await PushNotifications.addListener(
+              "registration",
+              async (token: { value: string }) => {
+                tokenListener?.remove()
+                try {
+                  const platform = (window as any).Capacitor?.getPlatform?.() ?? "ios"
+                  await fetch("/api/notifications/fcm-token", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userId: uid, token: token.value, deviceInfo: { platform, nativeApp: true } }),
+                  })
+                } catch (e) {
+                  console.warn("[PUSH] Erro ao guardar token FCM:", e)
+                }
+              }
+            )
+          }
+          await PushNotifications.register()
+          persistPush(true)
+          toast({ title: "Notificações activadas", description: "Vais receber alertas na app." })
+        } else {
+          toast({ title: "Notificações bloqueadas", description: "Activa nas definições do dispositivo.", variant: "destructive" })
+        }
+      } catch (e) {
+        console.warn("[PUSH] Erro Capacitor:", e)
+      }
+      return
+    }
+
+    // ── Web / browser (FCM) ───────────────────────────────────────
+    if (typeof window === "undefined" || !("Notification" in window)) return
+    if (Notification.permission === "denied") {
+      toast({ title: "Notificações bloqueadas", description: "Activa as notificações nas definições do browser.", variant: "destructive" })
+      return
+    }
+    try {
+      const { requestNotificationPermission, saveFCMToken } = await import("@/lib/firebase-config")
+      const fcmToken = await requestNotificationPermission()
+      if (fcmToken) {
+        const { data: { session } } = await supabase.auth.getSession()
+        const uid = session?.user?.id
+        if (uid) await saveFCMToken(uid, fcmToken)
+        persistPush(true)
+        toast({ title: "Notificações activadas", description: "Vais receber alertas em tempo real." })
+      } else {
+        toast({ title: "Notificações não activadas", description: "Não foi possível registar as notificações neste browser.", variant: "destructive" })
+      }
+    } catch {
+      const permission = await Notification.requestPermission()
+      if (permission === "granted") {
+        persistPush(true)
+        toast({ title: "Notificações activadas", description: "Vais receber alertas em tempo real." })
+      }
+    }
+  }
+
+  const deactivatePush = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const uid = session?.user?.id
+      // Remover o token deste dispositivo (web) quando possível…
+      try {
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+          const { requestNotificationPermission, removeFCMToken } = await import("@/lib/firebase-config")
+          const fcmToken = await requestNotificationPermission()
+          if (fcmToken) await removeFCMToken(fcmToken)
+        }
+      } catch {}
+      // …e garantir o desligar removendo os tokens do utilizador.
+      if (uid) {
+        await fetch("/api/notifications/fcm-token", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: uid }),
+        })
+      }
+      persistPush(false)
+      toast({ title: "Notificações desactivadas", description: "Já não vais receber push neste perfil." })
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível desactivar as notificações.", variant: "destructive" })
+    }
+  }
+
+  const togglePush = async () => {
+    if (pushBusy) return
+    const denied =
+      typeof window !== "undefined" && "Notification" in window && Notification.permission === "denied"
+    if (denied && !pushEnabled) {
+      toast({ title: "Notificações bloqueadas", description: "Activa as notificações nas definições do browser/dispositivo.", variant: "destructive" })
+      return
+    }
+    setPushBusy(true)
+    try {
+      if (pushEnabled) await deactivatePush()
+      else await activatePush()
+    } finally {
+      setPushBusy(false)
+    }
   }
 
   const handleReplayTutorial = () => {
@@ -642,101 +770,24 @@ export default function SettingsMobile() {
           <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">Notificações</h2>
           <div className="bg-gray-800/50 rounded-xl divide-y divide-gray-700/50">
             <button
-              onClick={async () => {
-                // ── Capacitor nativo (iOS/Android) ────────────────────────────
-                const isCapacitorNative = typeof window !== "undefined" && !!(window as any).Capacitor?.isNative
-                if (isCapacitorNative) {
-                  try {
-                    const { PushNotifications } = await import(/* webpackIgnore: true */ "@capacitor/push-notifications" as any)
-                    let perm = await PushNotifications.checkPermissions()
-                    if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") {
-                      perm = await PushNotifications.requestPermissions()
-                    }
-                    if (perm.receive === "granted") {
-                      // Adicionar listener temporário para capturar o token FCM
-                      // (necessário quando use-capacitor.ts não teve oportunidade de o registar,
-                      //  ex: permissão foi negada no primeiro arranque e o utilizador activou depois)
-                      const { data: { session } } = await supabase.auth.getSession()
-                      const uid = session?.user?.id
-                      if (uid) {
-                        let tokenListener: { remove: () => void } | null = null
-                        tokenListener = await PushNotifications.addListener(
-                          "registration",
-                          async (token: { value: string }) => {
-                            tokenListener?.remove()
-                            try {
-                              const platform = (window as any).Capacitor?.getPlatform?.() ?? "ios"
-                              await fetch("/api/notifications/fcm-token", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  userId: uid,
-                                  token: token.value,
-                                  deviceInfo: { platform, nativeApp: true },
-                                }),
-                              })
-                              console.log("[PUSH] Token FCM guardado a partir de settings:", token.value.substring(0, 20) + "...")
-                            } catch (e) {
-                              console.warn("[PUSH] Erro ao guardar token FCM:", e)
-                            }
-                          }
-                        )
-                      }
-                      await PushNotifications.register()
-                      toast({ title: "Notificações activadas", description: "Vais receber alertas na app." })
-                    } else {
-                      toast({ title: "Notificações bloqueadas", description: "Activa nas definições do dispositivo.", variant: "destructive" })
-                    }
-                  } catch (e) {
-                    console.warn("[PUSH] Erro Capacitor:", e)
-                  }
-                  return
-                }
-
-                // ── Web / browser (FCM) ───────────────────────────────────────
-                if (typeof window === "undefined" || !("Notification" in window)) return
-                if (Notification.permission === "denied") {
-                  toast({
-                    title: "Notificações bloqueadas",
-                    description: "Activa as notificações nas definições do browser.",
-                    variant: "destructive",
-                  })
-                  return
-                }
-                try {
-                  const { requestNotificationPermission, saveFCMToken } = await import("@/lib/firebase-config")
-                  const fcmToken = await requestNotificationPermission()
-                  if (fcmToken) {
-                    // Obter userId para guardar o token
-                    const { data: { session } } = await supabase.auth.getSession()
-                    const uid = session?.user?.id
-                    if (uid) await saveFCMToken(uid, fcmToken)
-                    toast({ title: "Notificações activadas", description: "Vais receber alertas em tempo real." })
-                  } else if (Notification.permission === "denied") {
-                    toast({ title: "Notificações bloqueadas", description: "Activa nas definições do browser.", variant: "destructive" })
-                  }
-                } catch {
-                  // Fallback: só pedir permissão sem registar token
-                  const permission = await Notification.requestPermission()
-                  if (permission === "granted") {
-                    toast({ title: "Notificações activadas", description: "Vais receber alertas em tempo real." })
-                  }
-                }
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-t-xl hover:bg-gray-700/40 transition-colors"
+              onClick={togglePush}
+              disabled={pushBusy}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-t-xl hover:bg-gray-700/40 transition-colors disabled:opacity-60"
             >
               <Bell className="w-4 h-4 text-gray-400" />
               <span className="flex-1 text-left text-sm text-white">Push notifications</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted"
-                  ? "bg-green-500/20 text-green-400"
-                  : "bg-gray-700 text-gray-400"
-              }`}>
-                {typeof window !== "undefined" && "Notification" in window
-                  ? Notification.permission === "granted" ? "Activas" : Notification.permission === "denied" ? "Bloqueadas" : "Inactivas"
-                  : "N/D"
-                }
-              </span>
+              {(() => {
+                const denied =
+                  typeof window !== "undefined" && "Notification" in window && Notification.permission === "denied"
+                const active = pushEnabled && !denied
+                return (
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    active ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"
+                  }`}>
+                    {pushBusy ? "…" : denied ? "Bloqueadas" : pushEnabled ? "Activas" : "Desligadas"}
+                  </span>
+                )
+              })()}
             </button>
 
             {/* Som das notificações */}
