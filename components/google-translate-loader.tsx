@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import { useEffect, useRef } from "react"
-import { isSafariBrowser } from "@/lib/supabase-session"
+import { installGoogleTranslateDomGuard } from "@/lib/google-translate-safe"
 
 /** Lê o idioma destino do cookie googtrans (ex: /pt/en → en). */
 function getTranslateTarget(): string | null {
@@ -24,7 +24,6 @@ const TRANSLATE_BLOCKED_PREFIXES = [
   "/register",
   "/login",
   "/success",
-  "/app-mobile",
   "/mtmcopy",
   "/member-area",
   "/scanner",
@@ -75,12 +74,10 @@ export function GoogleTranslateLoader() {
     if (typeof document === "undefined") return
     const path = pathname || ""
 
-    if (isSafariBrowser()) {
-      document.cookie = "googtrans=; path=/; max-age=0"
-      document.cookie = `googtrans=; path=/; domain=${window.location.hostname}; max-age=0`
-    }
+    // Patch de DOM tolerante — permite Google Translate em Safari/WKWebView sem crashar o React.
+    installGoogleTranslateDomGuard()
 
-    if (isSafariBrowser() || isTranslateBlocked(path)) {
+    if (isTranslateBlocked(path)) {
       setPageTranslatable(false)
       const holder = document.getElementById("google_translate_element")
       if (holder) {
@@ -108,11 +105,13 @@ export function GoogleTranslateLoader() {
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return
     const path = pathname || ""
-    // Safari: o script muta o DOM e bloqueia React/hidratação
-    if (isSafariBrowser() || isTranslateBlocked(path)) return
+    if (isTranslateBlocked(path)) return
 
     const target = getTranslateTarget()
     if (!target) return
+
+    // Garante o patch de DOM antes de o widget mutar a página (Safari/WKWebView).
+    installGoogleTranslateDomGuard()
 
     if (document.getElementById("google-translate-cbh")) {
       scriptAppendedRef.current = true

@@ -8,6 +8,7 @@ import SocialFeed from "@/components/mobile/social-feed"
 import PortfolioMobile from "@/components/mobile/portfolio-mobile"
 import ScannerMobile from "@/components/mobile/scanner-mobile"
 import NotificationsPanel from "@/components/notifications-panel"
+import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
 import { SiteLogo } from "@/components/site-logo"
 import { shouldReduceSafariEffects } from "@/lib/supabase-session"
 import {
@@ -101,61 +102,9 @@ function AppMobileContent() {
       } catch {}
     }
 
-    // Remover elemento do Google Translate completamente
-    const removeGoogleTranslate = () => {
-      // Remover elemento principal
-      const translateElement = document.getElementById('google_translate_element')
-      if (translateElement) {
-        translateElement.remove()
-      }
-      
-      // Remover todos os elementos relacionados ao Google Translate
-      const selectors = [
-        '.skiptranslate',
-        '.goog-te-gadget',
-        '.goog-te-gadget-simple',
-        '[id*=":0.targetLanguage"]',
-        '.VIpgJd-ZVi9od-xl07Ob-lTBxed',
-        '.goog-te-banner-frame',
-        '.goog-te-menu-value'
-      ]
-      
-      selectors.forEach(selector => {
-        const elements = document.querySelectorAll(selector)
-        elements.forEach(el => {
-          try {
-            el.remove()
-          } catch (e) {
-            // Ignorar erros ao remover
-          }
-        })
-      })
-    }
-    
-    // Remover imediatamente
-    removeGoogleTranslate()
-    
-    // Usar MutationObserver para remover quando elementos são adicionados
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (node.nodeType === 1) { // Element node
-            const element = node as Element
-            if (element.id === 'google_translate_element' || 
-                element.classList.contains('skiptranslate') ||
-                element.classList.contains('goog-te-gadget')) {
-              element.remove()
-            }
-          }
-        })
-      })
-    })
-    
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    })
-    
+    // (Google Translate é agora permitido na app-mobile — o seletor de idioma
+    // ativa-o via cookie googtrans; protegido pelo patch de DOM em google-translate-safe.)
+
     // Registrar service worker para notificações push (PWA)
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/firebase-messaging-sw.js')
@@ -167,9 +116,6 @@ function AppMobileContent() {
         })
     }
     
-    return () => {
-      observer.disconnect()
-    }
   }, [])
 
   useEffect(() => {
@@ -444,6 +390,11 @@ function AppMobileContent() {
                   </p>
                 )}
               </div>
+            </div>
+
+            {/* Seletor de idioma (mesmo componente do site — 21 línguas, Google Translate) */}
+            <div className="shrink-0">
+              <LanguageSelectorEnhanced />
             </div>
 
             {/* Notification Bell */}
