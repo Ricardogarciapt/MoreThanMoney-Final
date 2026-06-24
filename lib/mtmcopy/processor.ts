@@ -49,6 +49,7 @@ import {
   trailingDistanceForManagement,
   trailingPointsForConnection,
 } from './position-management'
+import { applyPremiumManagement } from './premium-management-exec'
 import { buildTelegramMessageContext } from './reply-context'
 import {
   looksLikeManagementOrReplyInstruction,
@@ -470,7 +471,12 @@ async function processManagementUpdate(
 
     if (!mgmt) continue
 
-    const outcome = await applyManagementToAccount(accountId, mgmt, trailing)
+    // Premium: nova lógica de gestão (premium-management-plan/exec) — por PREÇO,
+    // zona vantajosa, sem BE/trailing prematuros. Demais canais: caminho legado.
+    const outcome =
+      channel === 'premium-signals'
+        ? await applyPremiumManagement(accountId, raw, ctx?.parentText ?? null, management.symbol)
+        : await applyManagementToAccount(accountId, mgmt, trailing)
     managementOutcomes.set(accountId, outcome)
     const trailingLabel = trailing ? formatTrailingDistance(trailing) : '0'
     console.log(

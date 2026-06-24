@@ -782,6 +782,9 @@ export function looksLikeManagementUpdate(text: string, channel?: MtmcopyChannel
   if (channel === 'premium-signals') {
     return (
       isPremiumTpHitMessage(text) ||
+      /\bhit\s+all\s+tp\b/i.test(text) ||
+      /\b(?:hit\s?sl|sl\s?hit|stop\s?loss\s+hit)\b/i.test(text) ||
+      /\b(?:breakeven|break\s?even|set\s+be)\b/i.test(text) ||
       isCancelInstruction(text) ||
       resolvePremiumTradeActiveVariant(text) != null
     )
@@ -862,6 +865,21 @@ function parsePremiumManagement(text: string, parentText: string | null): Parsed
       sl: null,
       premiumVariant: tradeActiveVariant,
     }
+  }
+
+  // HIT ALL TP → fecha a posição (executor Premium reclassifica a partir do texto)
+  if (/\bhit\s+all\s+tp\b/i.test(text)) {
+    return { type: 'close', symbol: resolvePremiumManagementSymbol(text, parentText), sl: null }
+  }
+
+  // HIT SL / SL hit → fecha (defensivo)
+  if (/\b(?:hit\s?sl|sl\s?hit|stop\s?loss\s+hit)\b/i.test(text)) {
+    return { type: 'close', symbol: resolvePremiumManagementSymbol(text, parentText), sl: null }
+  }
+
+  // Breakeven / Set BE isolado → BE
+  if (/\b(?:breakeven|break\s?even|set\s+be)\b/i.test(text)) {
+    return { type: 'breakeven', symbol: resolvePremiumManagementSymbol(text, parentText), sl: null }
   }
 
   if (isCancelInstruction(text)) {
