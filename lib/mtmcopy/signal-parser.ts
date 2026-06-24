@@ -20,6 +20,8 @@ export interface ParsedSignal {
   tp: number[]
   orderType: 'market' | 'limit'
   raw: string
+  /** Zona de entrada [low, high] quando o sinal indica um intervalo (ex. «Gold Sell Zone 4069 - 4075»). */
+  zone?: [number, number] | null
 }
 
 const NUMBER_RE = /\d+(?:[.,]\d+)?/g
@@ -219,8 +221,8 @@ function extractDirection(text: string): 'buy' | 'sell' | null {
 const ZONE_ASSET_PREFIX =
   '(?:gold|btc(?:usd)?|bitcoin|xau|silver|xag|eth(?:usd)?)?\\s*'
 
-function extractEntryFromZone(text: string, direction: 'buy' | 'sell'): number | null {
-  // Intervalo primeiro — evita capturar «431» de «4310 - 4305» com regex single ambígua
+/** Intervalo da zona de entrada [low, high] (ex. «Gold Sell Zone 4069 - 4075» → [4069, 4075]). */
+export function extractZoneRange(text: string): [number, number] | null {
   const zone =
     text.match(
       new RegExp(
@@ -228,15 +230,19 @@ function extractEntryFromZone(text: string, direction: 'buy' | 'sell'): number |
         'i',
       ),
     ) ?? text.match(/zone\s*(\d+(?:[.,]\d+)?)\s*[-–—]\s*(\d+(?:[.,]\d+)?)/i)
+  if (!zone) return null
+  const a = parseNumber(zone[1])
+  const b = parseNumber(zone[2])
+  if (a == null || b == null) return null
+  return [Math.min(a, b), Math.max(a, b)]
+}
 
-  if (zone) {
-    const a = parseNumber(zone[1])
-    const b = parseNumber(zone[2])
-    if (a != null && b != null) {
-      const low = Math.min(a, b)
-      const high = Math.max(a, b)
-      return direction === 'buy' ? low : high
-    }
+function extractEntryFromZone(text: string, direction: 'buy' | 'sell'): number | null {
+  // Intervalo primeiro — evita capturar «431» de «4310 - 4305» com regex single ambígua
+  const range = extractZoneRange(text)
+  if (range) {
+    const [low, high] = range
+    return direction === 'buy' ? low : high
   }
 
   const single = text.match(
@@ -707,6 +713,7 @@ export function parseSignal(text: string): ParsedSignal | null {
     tp,
     orderType,
     raw: text.trim(),
+    zone: extractZoneRange(text),
   }
 }
 
