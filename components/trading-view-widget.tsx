@@ -85,7 +85,7 @@ const scannerStudies: Record<ScannerKey, string[]> = {
   Sinergy: ["PUB;3b86bd1192124fd98583490bb7508041"],
   Goldkiller: ["PUB;a3eaa6af54de4202a2c2f807fd8baa08"],
   MTMScanner: ["PUB;134fd950920e435694c40be33e3aa98f"],
-  Sensei: ["PUB;3c3fb26fbedd4b668c0563fe4f2bb176"],
+  Sensei: ["PUB;73e1daff8be44976998dade66c6a11d7"],
 }
 
 const scannerLabels: Record<ScannerKey, string> = {
