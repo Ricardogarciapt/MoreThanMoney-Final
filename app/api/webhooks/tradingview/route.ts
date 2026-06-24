@@ -12,9 +12,12 @@ import {
 import { validateSenseiWebhookSignal, validateSignalWithAi } from "@/lib/mtmcopy/signal-ai-validator"
 import {
   activateSenseiTradeIdea,
+  attachSenseiIdeaMessages,
+  findActiveSenseiIdeaForFollowup,
   findPendingSenseiIdea,
   mergeSenseiTriggerWithIdea,
   saveSenseiTradeIdea,
+  type SenseiTradeIdea,
 } from "@/lib/mtmcopy/sensei-ideas"
 import { processMtmcopyWebhookSignal } from "@/lib/mtmcopy/processor"
 import { getSiteOrigin } from "@/lib/site-url"
@@ -59,6 +62,15 @@ function buildRawSignal(symbol: string | null, action: string | null, sl: number
   return `Moeda: ${symbol ?? ""}\nAção:   ${acao}\nStoploss: ${sl ?? ""}\nTakeprofit: ${tp ?? ""}`
 }
 
+/** Contexto da trade (entrada/TP/numeração) para ligar follow-ups à ideia. */
+interface SenseiMsgCtx {
+  entry: number | null
+  tp: number[]
+  tradeNumber: number | null
+}
+
+const DISCLAIMER = "⚠️ Não é aconselhamento financeiro."
+
 function composePost(
   v: {
     symbol: string | null
@@ -70,70 +82,87 @@ function composePost(
     reasoning: string
   },
   sensei?: SenseiParsedAlert | null,
+  ctx?: SenseiMsgCtx | null,
 ): string {
-  const dir =
-    v.direction === "buy" ? "🔵 COMPRA" : v.direction === "sell" ? "🔴 VENDA" : "—"
-  const tpStr = v.tp.length ? v.tp.join(" / ") : "—"
+  const direction = sensei?.direction ?? v.direction
+  const dir = direction === "buy" ? "🔵 COMPRA" : direction === "sell" ? "🔴 VENDA" : "—"
+  const symbol = v.symbol ?? sensei?.symbol ?? "—"
   const pct = Math.round((v.confidence || 0) * 100)
   const tfLine = sensei?.timeframe ? `⏱ Timeframe: ${sensei.timeframe}` : null
-  const title = sensei ? senseiAlertTypeLabel(sensei.alertType) : "Novo Sinal"
+  const tag = ctx?.tradeNumber != null ? ` #${ctx.tradeNumber}` : ""
+  const entry = ctx?.entry ?? v.entry ?? sensei?.entry ?? null
+  const tps = (ctx?.tp?.length ? ctx.tp : v.tp) ?? []
+  const alertType = sensei?.alertType
 
-  if (sensei?.alertType === "idea" || sensei?.alertType === "signal") {
+  // ---- Entrada: Nova Ideia / Entry Alert (Ideia Activada) ----
+  if (alertType === "idea" || alertType === "signal" || alertType === "entry_trigger") {
+    const isTrigger = alertType === "entry_trigger"
+    const title = isTrigger ? "Entry Alert — Ideia Activada" : "Nova Ideia"
+    const tpLines = [0, 1, 2, 3]
+      .map((i) => (tps[i] != null ? `✅ Take Profit ${i + 1}: ${tps[i]}` : null))
+      .filter(Boolean) as string[]
     return [
-      `🧠 Sensei Scanner — ${title}`,
+      `🧠 Sensei Scanner — ${title}${tag}${isTrigger ? " ✅" : ""}`,
       ``,
-      `📊 ${v.symbol ?? "—"}   ${dir}`,
+      `📊 ${symbol}   ${dir}`,
       tfLine,
-      `🎯 Zona / entrada: ${v.entry ?? "—"}`,
-      `🛑 Stop Loss: ${v.sl ?? "—"}`,
-      `✅ Take Profit: ${tpStr}`,
+      `🎯 ${isTrigger ? "Entrada activada" : "Ponto de Entrada"}: ${entry ?? "Mercado"}`,
+      `🛑 Stop Loss: ${v.sl ?? sensei?.sl ?? "—"}`,
+      ...tpLines,
       ``,
-      `⏳ Aguarda Entry Alert para activar a operação.`,
-      ``,
-      `🔎 Validação: ${pct}% — ${v.reasoning}`,
-      ``,
-      `⚠️ Não é aconselhamento financeiro.`,
+      `🔎 Validação: ${pct}%`,
+      DISCLAIMER,
     ].filter(Boolean).join("\n")
   }
 
-  if (sensei?.alertType === "entry_trigger") {
+  // ---- Follow-ups (sempre em resposta à entrada) ----
+  const head = `📊 ${symbol}   ${dir} com 🎯 Entrada: ${entry ?? "—"}`
+
+  if (alertType === "tp_hit") {
+    const lvl = sensei?.tpLevel ?? 1
+    const tpVal = tps[lvl - 1]
+    const last = lvl >= 4
     return [
-      `🧠 Sensei Scanner — ${title} ✅`,
+      `🧠 Sensei Scanner — TP${lvl} Hit${tag}`,
       ``,
-      `📊 ${v.symbol ?? "—"}   ${dir}`,
-      tfLine,
-      `🎯 Entrada activada: ${v.entry ?? "Mercado"}`,
-      `🛑 Stop Loss: ${v.sl ?? "—"}`,
-      `✅ Take Profit: ${tpStr}`,
-      ``,
-      `🔎 Validação: ${pct}% — ${v.reasoning}`,
-      ``,
-      `⚠️ Não é aconselhamento financeiro.`,
+      head,
+      `✅ Take Profit ${lvl}: ${tpVal ?? "—"}${last ? " — todas as saídas atingidas" : " — Fecha 25%"}`,
+      last
+        ? `🏁 Fecha a posição (saídas completas).`
+        : lvl === 1
+          ? `⚠️ Colocar BE + iniciar Trailing Stop.`
+          : `⚠️ Mantém BE + continua Trailing Stop.`,
+      DISCLAIMER,
     ].filter(Boolean).join("\n")
   }
 
-  const dirFallback =
-    v.direction === "buy" ? "🔵 COMPRA" : v.direction === "sell" ? "🔴 VENDA" : sensei ? `📡 ${senseiAlertTypeLabel(sensei.alertType).toUpperCase()}` : "📡 ALERTA"
-  return [
-    `🧠 Sensei Scanner — ${title}`,
-    ``,
-    `📊 ${v.symbol ?? "—"}   ${dirFallback}`,
-    tfLine,
-    `🎯 Entrada: ${v.entry ?? "Mercado"}`,
-    `🛑 Stop Loss: ${v.sl ?? "—"}`,
-    `✅ Take Profit: ${tpStr}`,
-    ``,
-    `🔎 Validação IA: ${pct}% — ${v.reasoning}`,
-    ``,
-    `⚠️ Não é aconselhamento financeiro.`,
-  ].filter(Boolean).join("\n")
+  if (alertType === "breakeven") {
+    return [`🧠 Sensei Scanner — Breakeven${tag}`, ``, head, `Posição Fechada.`, DISCLAIMER].join("\n")
+  }
+
+  if (alertType === "sl_hit") {
+    return [`🧠 Sensei Scanner — Stop Loss${tag}`, ``, head, DISCLAIMER].join("\n")
+  }
+
+  if (alertType === "exit") {
+    return [`🧠 Sensei Scanner — Saída${tag}`, ``, head, `🏁 Fecha a posição.`, DISCLAIMER].join("\n")
+  }
+
+  // fallback genérico
+  const title = sensei ? senseiAlertTypeLabel(sensei.alertType) : "Alerta"
+  return [`🧠 Sensei Scanner — ${title}${tag}`, ``, head, DISCLAIMER].join("\n")
 }
 
-async function sendTelegram(token: string, chatId: string, text: string): Promise<number> {
+async function sendTelegram(token: string, chatId: string, text: string, replyToMessageId?: number | null): Promise<number> {
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      disable_web_page_preview: true,
+      ...(replyToMessageId != null ? { reply_to_message_id: replyToMessageId, allow_sending_without_reply: true } : {}),
+    }),
   })
   const data = await res.json()
   if (!data.ok) throw new Error(`Telegram: ${JSON.stringify(data)}`)
@@ -230,6 +259,7 @@ export async function POST(request: NextRequest) {
   // Entry Alert: fundir com ideia pendente (Entry Buy/Sell anterior) → SL/TP/direcção completos
   let activeSensei = senseiParsed
   let pendingIdeaId: string | null = null
+  let pendingIdea: SenseiTradeIdea | null = null
   if (senseiParsed?.alertType === "entry_trigger" && senseiParsed.symbol) {
     let pending = await findPendingSenseiIdea(supabase, senseiParsed.symbol, senseiParsed.timeframe)
     if (!pending && senseiParsed.timeframe) {
@@ -237,6 +267,7 @@ export async function POST(request: NextRequest) {
     }
     if (pending) {
       pendingIdeaId = pending.id
+      pendingIdea = pending
       activeSensei = mergeSenseiTriggerWithIdea(senseiParsed, pending)
     }
   }
@@ -308,8 +339,9 @@ export async function POST(request: NextRequest) {
     parsedForExec.direction &&
     (activeSensei?.alertType === "entry_trigger" || !activeSensei)
 
+  let savedIdea: { id: string; tradeNumber: number | null } | null = null
   if (isIdeaAlert && activeSensei) {
-    await saveSenseiTradeIdea(supabase, activeSensei, logId)
+    savedIdea = await saveSenseiTradeIdea(supabase, activeSensei, logId)
   }
 
   if (canExecuteProvider) {
@@ -331,7 +363,33 @@ export async function POST(request: NextRequest) {
     if (pendingIdeaId) await activateSenseiTradeIdea(supabase, pendingIdeaId, logId)
   }
 
-  const post = composePost(v, activeSensei)
+  // Follow-up (TP/BE/SL/Saída): liga à entrada correspondente para responder em thread
+  const alertType = activeSensei?.alertType
+  const isFollowup =
+    alertType === "tp_hit" || alertType === "sl_hit" || alertType === "breakeven" || alertType === "exit"
+  let linkedIdea: SenseiTradeIdea | null = null
+  if (isFollowup && activeSensei?.symbol) {
+    linkedIdea = await findActiveSenseiIdeaForFollowup(
+      supabase,
+      activeSensei.symbol,
+      activeSensei.timeframe,
+      activeSensei.direction,
+    )
+  }
+
+  // Contexto da mensagem: entrada/TP/numeração (da ideia ligada ou da própria entrada)
+  const msgCtx: SenseiMsgCtx | null = linkedIdea
+    ? { entry: linkedIdea.entry, tp: linkedIdea.tp, tradeNumber: linkedIdea.tradeNumber }
+    : pendingIdea
+      ? { entry: activeSensei?.entry ?? pendingIdea.entry, tp: activeSensei?.tp ?? pendingIdea.tp, tradeNumber: pendingIdea.tradeNumber }
+      : savedIdea
+        ? { entry: activeSensei?.entry ?? null, tp: activeSensei?.tp ?? [], tradeNumber: savedIdea.tradeNumber }
+        : null
+
+  const post = composePost(v, activeSensei, msgCtx)
+  const replyToTelegramId = isFollowup ? linkedIdea?.telegramMessageId ?? null : null
+  // Ideia cuja mensagem de entrada/activação guardamos para os follow-ups responderem
+  const entryIdeaId = savedIdea?.id ?? (alertType === "entry_trigger" ? pendingIdeaId : null)
 
   // Publica no chat #Sensei Scanner (mesma convenção do mirror Telegram)
   let chatId: string | null = null
@@ -372,9 +430,11 @@ export async function POST(request: NextRequest) {
 
   // Relay Telegram → canal Sensei Scanner (-1003853860780 por defeito)
   let tgOk = false
+  let telegramMid: number | null = null
   if (RELAY_ENABLED) {
     try {
-      const mid = await sendTelegram(AIBOT_TOKEN, RELAY_CHAT_ID, post)
+      const mid = await sendTelegram(AIBOT_TOKEN, RELAY_CHAT_ID, post, replyToTelegramId)
+      telegramMid = mid
       tgOk = true
       if (logId) await supabase.from("tradingview_signals").update({ telegram_status: "sent", telegram_chat_id: RELAY_CHAT_ID, telegram_message_id: mid, relayed_at: new Date().toISOString() }).eq("id", logId)
     } catch (err) {
@@ -383,6 +443,15 @@ export async function POST(request: NextRequest) {
   } else if (logId) {
     const reason = !AIBOT_TOKEN ? "TELEGRAM_AIBOT_TOKEN em falta" : !RELAY_CHAT_ID ? "TRADINGVIEW_RELAY_CHAT_ID em falta" : "relay desligado"
     await supabase.from("tradingview_signals").update({ telegram_status: "disabled", telegram_error: reason }).eq("id", logId)
+  }
+
+  // Guarda os message_id da entrada/activação na ideia → follow-ups respondem em thread
+  if (entryIdeaId && (telegramMid != null || chatId)) {
+    try {
+      await attachSenseiIdeaMessages(supabase, entryIdeaId, { telegramMessageId: telegramMid, chatMessageId: chatId })
+    } catch (err) {
+      console.error("[tradingview-webhook] attach idea messages error:", err)
+    }
   }
 
   return NextResponse.json({ ok: true, valid: true, confidence: v.confidence, chat: !!chatId, push: pushOk, telegram: tgOk, provider: providerExecuted, provider_detail: providerDetail, signal_id: logId })
