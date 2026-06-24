@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { supabase } from "@/lib/supabase"
-import { isSafariBrowser } from "@/lib/supabase-session"
 
 interface Language {
   code: string
@@ -126,7 +125,6 @@ export default function LanguageSelectorEnhanced() {
 
   // Aplicar tradução salva (executado apenas uma vez ao carregar)
   const applySavedTranslation = () => {
-    if (isSafariBrowser()) return
     const savedLang = localStorage.getItem('mtm_preferred_language') || sessionStorage.getItem('mtm_active_language')
     if (savedLang && savedLang !== 'pt') {
       // Verificar se o cookie já está definido
@@ -200,14 +198,6 @@ export default function LanguageSelectorEnhanced() {
       setLoading(true)
       console.log(`🌐 [LANGUAGE] Mudando para: ${langCode}`)
 
-      if (isSafariBrowser()) {
-        localStorage.setItem('mtm_preferred_language', langCode)
-        sessionStorage.setItem('mtm_active_language', langCode)
-        setCurrentLanguage(langCode)
-        setLoading(false)
-        return
-      }
-
       // 1. Atualizar estado local IMEDIATAMENTE
       setCurrentLanguage(langCode)
 
@@ -220,7 +210,7 @@ export default function LanguageSelectorEnhanced() {
             updated_at: new Date().toISOString()
           })
           .eq('id', userId)
-          .then(({ error }) => {
+          .then(({ error }: { error: unknown }) => {
             if (error) {
               console.error('❌ [LANGUAGE] Erro ao salvar preferência:', error)
             } else {
