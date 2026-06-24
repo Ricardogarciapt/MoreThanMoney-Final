@@ -19,7 +19,7 @@ import {
   saveSenseiTradeIdea,
   type SenseiTradeIdea,
 } from "@/lib/mtmcopy/sensei-ideas"
-import { processMtmcopyWebhookSignal } from "@/lib/mtmcopy/processor"
+import { processMtmcopyWebhookSignal, processMtmcopyWebhookManagement } from "@/lib/mtmcopy/processor"
 import { getSiteOrigin } from "@/lib/site-url"
 import { resolvedTradeIdeasChatId } from "@/lib/telegram-channel-ids"
 import type { SupabaseClient } from "@supabase/supabase-js"
@@ -385,6 +385,21 @@ export async function POST(request: NextRequest) {
       : savedIdea
         ? { entry: activeSensei?.entry ?? null, tp: activeSensei?.tp ?? [], tradeNumber: savedIdea.tradeNumber }
         : null
+
+  // Gestão automática Sensei (gated): TP/BE/SL → parciais + BE + trailing ou fecho na conta Sensei
+  if (SENSEI_PROVIDER_EXEC_ENABLED && isFollowup && activeSensei?.symbol) {
+    try {
+      await processMtmcopyWebhookManagement({
+        symbol: activeSensei.symbol,
+        direction: activeSensei.direction ?? linkedIdea?.direction ?? null,
+        alertType: activeSensei.alertType,
+        tpLevel: activeSensei.tpLevel ?? null,
+        entry: linkedIdea?.entry ?? activeSensei.entry ?? null,
+      })
+    } catch (err) {
+      console.error("[tradingview-webhook] sensei management error:", err)
+    }
+  }
 
   const post = composePost(v, activeSensei, msgCtx)
   const replyToTelegramId = isFollowup ? linkedIdea?.telegramMessageId ?? null : null

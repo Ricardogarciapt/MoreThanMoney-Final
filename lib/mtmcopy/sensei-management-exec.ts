@@ -1,0 +1,153 @@
+/**
+ * MTM Auto Sensei — gestão automática da posição na conta Sensei (a5a1dddd).
+ *
+ * A entrada Sensei abre SEM TP único (ver processor: fork por conta), para os
+ * parciais serem geridos pelos alertas TP1-4. Regras (do spec Sensei):
+ *   TP1 → fecha 25% + BE (SL=entrada) + inicia trailing
+ *   TP2 → fecha 25% (do original) + mantém BE + trailing
+ *   TP3 → fecha 25% + mantém BE + trailing
+ *   TP4 / HIT ALL → fecha a posição
+ *   Breakeven (SL@BE atingido) → fecha a posição
+ *   SL → fecha a posição
+ *
+ * CopyFactory replica estas ações para os subscritores.
+ */
+
+import {
+  closePositionById,
+  getSymbolSpecification,
+  listOpenPositions,
+  modifyPositionSlTp,
+  type MetaApiPosition,
+} from './metaapi'
+import { inferPipSize, type TrailingDistance } from './pip-points'
+import type { SenseiAlertType } from './signal-parser'
+
+export type SenseiAction =
+  | { kind: 'close_fraction'; fraction: number; setBE: boolean; trailing: boolean; label: string }
+  | { kind: 'close_all'; label: string }
+
+export interface SenseiExecOutcome {
+  updated: number
+  closed: number
+  errors: string[]
+  actions: string[]
+}
+
+/**
+ * Decide a ação (PURA — testável). `fraction` é a fração do volume ATUAL a fechar,
+ * calibrada para dar 25% do ORIGINAL em cada TP (75%→0.25, 50%→0.3333, ...).
+ */
+export function decideSenseiAction(alertType: SenseiAlertType, tpLevel: number | null): SenseiAction | null {
+  if (alertType === 'tp_hit') {
+    const lvl = tpLevel ?? 1
+    if (lvl >= 4) return { kind: 'close_all', label: 'TP4/HIT ALL → fecha tudo' }
+    // 25% do original: TP1=25% de 100%, TP2=25%/75%, TP3=25%/50%
+    const fraction = lvl === 1 ? 0.25 : lvl === 2 ? 1 / 3 : 0.5
+    return { kind: 'close_fraction', fraction, setBE: true, trailing: true, label: `TP${lvl} → fecha 25% + BE + trailing` }
+  }
+  if (alertType === 'breakeven') return { kind: 'close_all', label: 'Breakeven → fecha' }
+  if (alertType === 'sl_hit') return { kind: 'close_all', label: 'SL → fecha' }
+  if (alertType === 'exit') return { kind: 'close_all', label: 'Exit → fecha' }
+  return null
+}
+
+function roundLot(n: number): number {
+  return Math.max(0.01, Math.round(n * 100) / 100)
+}
+
+function isMtmSenseiPosition(pos: MetaApiPosition): boolean {
+  const c = (pos.comment ?? '').toLowerCase()
+  return c.includes('sensei') || c.includes('mtm auto') || c.includes('mtmcopier') || c.includes('mtm-ti')
+}
+
+function symbolMatches(a: string, b: string): boolean {
+  const x = a.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const y = b.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  return x === y || x.includes(y) || y.includes(x)
+}
+
+function directionMatches(pos: MetaApiPosition, direction: 'buy' | 'sell' | null): boolean {
+  if (!direction) return true
+  const isBuy = /buy|long/i.test(pos.type)
+  return isBuy === (direction === 'buy')
+}
+
+function riskAnchoredTrailing(
+  openPrice: number,
+  sl: number | null,
+  spec: { point?: number; pipSize?: number; digits?: number } | null,
+  symbol: string,
+): TrailingDistance {
+  const pipSize = inferPipSize({ point: spec?.point ?? 0.01, pipSize: spec?.pipSize, digits: spec?.digits }, symbol)
+  if (sl != null && Number.isFinite(sl) && pipSize > 0) {
+    const riskPips = Math.max(10, Math.round(Math.abs(openPrice - sl) / pipSize))
+    return { mode: 'threshold_pips', activationPips: 1, trailPips: riskPips }
+  }
+  return { mode: 'threshold_pips', activationPips: 1, trailPips: 25 }
+}
+
+/**
+ * Aplica a gestão Sensei a UMA conta (mestre Sensei; subscritores via CopyFactory).
+ */
+export async function applySenseiManagement(opts: {
+  accountId: string
+  symbol: string
+  direction: 'buy' | 'sell' | null
+  alertType: SenseiAlertType
+  tpLevel: number | null
+  entry: number | null
+}): Promise<SenseiExecOutcome> {
+  const out: SenseiExecOutcome = { updated: 0, closed: 0, errors: [], actions: [] }
+
+  const action = decideSenseiAction(opts.alertType, opts.tpLevel)
+  if (!action) {
+    out.actions.push(`${opts.alertType}: sem ação`)
+    return out
+  }
+
+  const positions = await listOpenPositions(opts.accountId)
+  const matches = positions.filter(
+    (p) => isMtmSenseiPosition(p) && symbolMatches(p.symbol, opts.symbol) && directionMatches(p, opts.direction),
+  )
+  const pos = matches.length ? matches[matches.length - 1]! : null
+  if (!pos) {
+    out.errors.push(`Sem posição Sensei ativa em ${opts.symbol}`)
+    return out
+  }
+
+  if (action.kind === 'close_all') {
+    const r = await closePositionById(opts.accountId, pos.id)
+    if (r.success) { out.closed++; out.actions.push(action.label) }
+    else if (r.error) out.errors.push(r.error)
+    return out
+  }
+
+  // close_fraction (+ BE + trailing)
+  const current = pos.volume ?? 0
+  const vol = roundLot(current * action.fraction)
+  if (current > 0) {
+    if (vol >= current) {
+      const r = await closePositionById(opts.accountId, pos.id)
+      if (r.success) { out.closed++; out.actions.push(`${action.label} (fecha tudo: ${current})`) }
+      else if (r.error) out.errors.push(r.error)
+      return out
+    }
+    if (vol >= 0.01) {
+      const r = await closePositionById(opts.accountId, pos.id, vol)
+      if (r.success) { out.closed++; out.actions.push(`${action.label} (${vol})`) }
+      else if (r.error) out.errors.push(r.error)
+    }
+  }
+
+  if (action.setBE || action.trailing) {
+    const spec = await getSymbolSpecification(opts.accountId, opts.symbol)
+    const be = opts.entry ?? pos.openPrice
+    const trailing = action.trailing ? riskAnchoredTrailing(pos.openPrice, be, spec, opts.symbol) : undefined
+    const mod = await modifyPositionSlTp(opts.accountId, pos.id, action.setBE ? be : pos.stopLoss, pos.takeProfit, trailing, pos.symbol)
+    if (mod.success) { out.updated++; out.actions.push(`BE@${be}${action.trailing ? ' + trailing' : ''}`) }
+    else if (mod.error) out.errors.push(mod.error)
+  }
+
+  return out
+}

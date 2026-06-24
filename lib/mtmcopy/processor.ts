@@ -8,6 +8,7 @@ import {
 import { formatTrailingDistance, riskPipsFromEntrySl, tradeIdeasDynamicTrailing } from './pip-points'
 import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
+  CANONICAL_SENSEI_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
 } from './provider-constants'
 import { connectionCopyMethod, prefersDirectExecution } from './copy-limits'
@@ -844,11 +845,19 @@ async function executeViaMtmProvider(
     } else {
       const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
       if (channel === 'trade-ideas') {
-        const spec = symbolSpec
-        const entry = signalForExec.entry ?? marketPrice
-        const riskPips = spec ? riskPipsFromEntrySl(entry, signalForExec.sl, spec, mappedSymbol) : null
-        const targetPips = spec ? riskPipsFromEntrySl(entry, signalForExec.tp?.[0] ?? null, spec, mappedSymbol) : null
-        req.trailingStop = tradeIdeasDynamicTrailing(riskPips, targetPips)
+        const isSensei = provider.accountId === CANONICAL_SENSEI_ACCOUNT_ID
+        if (isSensei) {
+          // Sensei: abre só com SL — TP/parciais geridos pelos alertas (25% por TP).
+          req.takeProfit = null
+          req.trailingStop = null
+        } else {
+          // Forex (Trade Ideas): TP do sinal + trailing BE@25 pips (inalterado).
+          const spec = symbolSpec
+          const entry = signalForExec.entry ?? marketPrice
+          const riskPips = spec ? riskPipsFromEntrySl(entry, signalForExec.sl, spec, mappedSymbol) : null
+          const targetPips = spec ? riskPipsFromEntrySl(entry, signalForExec.tp?.[0] ?? null, spec, mappedSymbol) : null
+          req.trailingStop = tradeIdeasDynamicTrailing(riskPips, targetPips)
+        }
       }
       const [r] = await placeOrdersSequential(provider.accountId, [req])
       results.push({
@@ -1275,4 +1284,47 @@ export async function processMtmcopyWebhookSignal(opts: {
     executed: true,
     detail: `Sensei · ${providers.map((p) => p.strategyId ?? CANONICAL_SENSEI_STRATEGY_ID).join(',')}`,
   }
+}
+
+/**
+ * Gestão automática Sensei (webhook): TP1-4 / BE / SL → parciais + BE + trailing
+ * ou fecho, na conta Sensei. CopyFactory replica aos subscritores.
+ */
+export async function processMtmcopyWebhookManagement(opts: {
+  symbol: string
+  direction: 'buy' | 'sell' | null
+  alertType: import('./signal-parser').SenseiAlertType
+  tpLevel: number | null
+  entry: number | null
+}): Promise<{ applied: boolean; detail?: string }> {
+  if (!isMetaApiConfigured()) return { applied: false, detail: 'MetaAPI não configurado' }
+
+  const channel: MtmcopyChannelKey = 'trade-ideas'
+  const providers = await resolveMtmProvidersForSignal(channel, null, { signalSource: 'webhook' })
+  if (!providers.length) return { applied: false, detail: 'Rota Sensei não configurada' }
+
+  const { applySenseiManagement } = await import('./sensei-management-exec')
+  const details: string[] = []
+  let anyApplied = false
+  for (const prov of providers) {
+    const outcome = await applySenseiManagement({
+      accountId: prov.accountId,
+      symbol: opts.symbol,
+      direction: opts.direction,
+      alertType: opts.alertType,
+      tpLevel: opts.tpLevel,
+      entry: opts.entry,
+    })
+    if (outcome.closed || outcome.updated) anyApplied = true
+    await logProviderSignalEvent({
+      channel,
+      provider: prov,
+      symbol: opts.symbol,
+      raw: `sensei-mgmt ${opts.alertType}${opts.tpLevel ? ` TP${opts.tpLevel}` : ''}`,
+      status: outcome.errors.length && !outcome.closed && !outcome.updated ? 'error' : 'executed',
+      detail: `Gestão Sensei ${opts.alertType}${opts.tpLevel ? ` TP${opts.tpLevel}` : ''} · ${outcome.actions.join(', ') || outcome.errors.join('; ') || 'sem ação'}`,
+    })
+    details.push(outcome.actions.join(', ') || outcome.errors.join('; '))
+  }
+  return { applied: anyApplied, detail: details.join(' · ') }
 }
