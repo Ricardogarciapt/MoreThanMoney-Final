@@ -1,5 +1,9 @@
 import { chatIdsMatch } from './channels'
-import { resolvedPremiumSignalsChatId, resolvedTradeIdeasChatId } from '@/lib/telegram-channel-ids'
+import {
+  resolvedForexIdeasChatId,
+  resolvedPremiumSignalsChatId,
+  resolvedTradeIdeasChatId,
+} from '@/lib/telegram-channel-ids'
 
 export type MtmcopyChannelKey = 'trade-ideas' | 'premium-signals' | 'unknown'
 
@@ -7,10 +11,13 @@ export type MtmcopyChannelKey = 'trade-ideas' | 'premium-signals' | 'unknown'
 export function resolveChannelFromChat(chat: { id?: number; username?: string }): MtmcopyChannelKey {
   const premium = resolvedPremiumSignalsChatId()
   const trade = resolvedTradeIdeasChatId()
+  const forex = resolvedForexIdeasChatId()
 
   if (chat.id != null) {
     if (chatIdsMatch(String(chat.id), premium)) return 'premium-signals'
     if (chatIdsMatch(String(chat.id), trade)) return 'trade-ideas'
+    // Canal Forex dedicado → mesma estratégia trade-ideas (MTM Auto Forex).
+    if (chatIdsMatch(String(chat.id), forex)) return 'trade-ideas'
   }
 
   const user = chat.username?.toLowerCase().replace(/^@/, '')

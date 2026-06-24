@@ -24,6 +24,15 @@ export const CANONICAL_TELEGRAM_CHANNELS = {
     appSlug: 'premium-ideas' as const,
     envVars: ['TELEGRAM_CHANNEL_PREMIUM_SIGNALS', 'TELEGRAM_PREMIUM_IDEAS_CHAT_ID'],
   },
+  // Canal Telegram dedicado dos sinais Forex ("Moeda:/Ação:/Stoploss:/Takeprofit:").
+  // Roteia para a MESMA estratégia trade-ideas (MTM Auto Forex), conta provider forex.
+  forexIdeas: {
+    chatId: '-1003716578747',
+    title: 'More Than Money Ideias de Forex',
+    mtmcopyKey: 'trade-ideas' as const,
+    appSlug: 'trade-ideas-setup' as const,
+    envVars: ['TELEGRAM_CHANNEL_FOREX_IDEAS', 'TELEGRAM_FOREX_IDEAS_CHAT_ID'],
+  },
 }
 
 /** Normaliza ID de env (corrige -3716578747 → -1003716578747, remove \\n). */
@@ -67,6 +76,14 @@ export function resolvedPremiumSignalsChatId(): string {
   return (
     normalizeEnvChatId(readEnv(CANONICAL_TELEGRAM_CHANNELS.premiumSignals.envVars)) ??
     CANONICAL_TELEGRAM_CHANNELS.premiumSignals.chatId
+  )
+}
+
+/** Canal Forex dedicado — roteia para a estratégia trade-ideas (MTM Auto Forex). */
+export function resolvedForexIdeasChatId(): string {
+  return (
+    normalizeEnvChatId(readEnv(CANONICAL_TELEGRAM_CHANNELS.forexIdeas.envVars)) ??
+    CANONICAL_TELEGRAM_CHANNELS.forexIdeas.chatId
   )
 }
 
