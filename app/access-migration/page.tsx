@@ -258,8 +258,8 @@ export default function AccessMigrationPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-zinc-400">
-                Se já és membro activo na Skool, o acesso será restaurado em breve. Caso contrário,
-                junta-te em{' '}
+                Se já és membro activo na Skool, <strong className="text-zinc-200">informa os administradores pela Skool</strong> para
+                reactivarem o teu acesso. Caso contrário, junta-te em{' '}
                 <a
                   href="https://skool.com/morethanmoney-1132"
                   className="text-[#D2A63C] underline"

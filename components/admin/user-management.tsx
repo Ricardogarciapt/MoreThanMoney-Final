@@ -801,7 +801,6 @@ export default function UserManagementComponent({
             <SelectContent className="bg-gray-900 border-gray-700">
               <SelectItem value="all">Subscrição: todas</SelectItem>
               <SelectItem value="skool_pending">🏫 Skool pendente (Stripe)</SelectItem>
-              <SelectItem value="iqonic_pending">🔷 IQONIC pendente validação</SelectItem>
               <SelectItem value="expiring_soon">⚠️ Expira em 7 dias</SelectItem>
               <SelectItem value="expired">❌ Expirada</SelectItem>
             </SelectContent>
