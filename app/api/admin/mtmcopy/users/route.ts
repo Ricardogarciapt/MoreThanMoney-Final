@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin, requireAdmin } from '@/lib/admin-api-helpers'
 import { enrichConnectionsWithMetrics } from '@/lib/mtmcopy/subscriber-metrics'
 
+export const dynamic = 'force-dynamic'
+export const maxDuration = 30
+
 const supabase = getSupabaseAdmin()
 
 const PROFILE_FIELDS =

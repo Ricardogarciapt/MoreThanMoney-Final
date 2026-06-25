@@ -10,6 +10,29 @@ type ConnWithMeta = {
   mt5_status?: string | null
 }
 
+/**
+ * Tempo máximo (ms) à espera do snapshot ao vivo de UMA conta. Contas com o broker
+ * offline lançam TimeoutError ao fim de ~55s (×retries) na MetaApi — sem este teto,
+ * uma conta morta bloqueia toda a listagem e a função serverless morre por timeout
+ * (sintoma: a tabela de utilizadores nunca atualiza). Override: MTMCOPY_BALANCE_TIMEOUT_MS.
+ */
+const PER_ACCOUNT_TIMEOUT_MS = Number(process.env.MTMCOPY_BALANCE_TIMEOUT_MS ?? 6000)
+
+function withTimeout<R>(promise: Promise<R>, ms: number, fallback: R): Promise<R> {
+  return new Promise<R>((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms)
+    promise
+      .then((value) => {
+        clearTimeout(timer)
+        resolve(value)
+      })
+      .catch(() => {
+        clearTimeout(timer)
+        resolve(fallback)
+      })
+  })
+}
+
 export async function attachConnectionBalances<T extends ConnWithMeta>(
   connections: T[],
 ): Promise<(T & ConnectionBalanceFields)[]> {
@@ -26,7 +49,12 @@ export async function attachConnectionBalances<T extends ConnWithMeta>(
       if (!c.metaapi_account_id?.trim() || c.mt5_status !== 'connected') {
         return { ...c, account_balance: null, account_equity: null }
       }
-      const snap = await getAccountSnapshot(c.metaapi_account_id)
+      // Não esperar indefinidamente por uma conta cujo broker possa estar offline.
+      const snap = await withTimeout(
+        getAccountSnapshot(c.metaapi_account_id).catch(() => null),
+        PER_ACCOUNT_TIMEOUT_MS,
+        null,
+      )
       return {
         ...c,
         account_balance: snap?.balance ?? null,
