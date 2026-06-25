@@ -550,7 +550,7 @@ export default function OnboardingBusinessAIAgent({ context, userKey }: Onboardi
 
         <Accordion type="single" collapsible className="space-y-2">
           <AccordionItem value="faq" className="border border-gray-700 rounded-md px-3">
-            <AccordionTrigger className="text-sm text-white">FAQ MTM / IQONIC / Trading / Negócio</AccordionTrigger>
+            <AccordionTrigger className="text-sm text-white">FAQ MTM / Trading / Negócio</AccordionTrigger>
             <AccordionContent className="space-y-2 text-xs text-gray-300">
               {faqItems.map((item) => (
                 <div key={item.q}>

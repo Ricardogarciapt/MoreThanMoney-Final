@@ -37,10 +37,10 @@ const useRicardoStory = () => {
         highlight: "Conhecimento aplicado torna‑se liberdade.",
       },
       {
-        id: "iqonic",
-        title: "IQONIC",
+        id: "educador",
+        title: "Educador & Mentor",
         content:
-          "Na IQONIC cresci como educador e mentor. Liderar equipas e formar pessoas mostrou‑me o impacto de um método claro e de uma mentalidade forte para criar rendimento sustentável.",
+          "Cresci como educador e mentor. Liderar equipas e formar pessoas mostrou‑me o impacto de um método claro e de uma mentalidade forte para criar rendimento sustentável.",
         highlight: "Liderança é serviço + método + consistência.",
       },
       {
@@ -159,7 +159,7 @@ export default function RicardoStoryCard() {
           <div className="w-10 h-10 rounded-lg bg-[#D2A63C] text-black font-extrabold grid place-items-center">RG</div>
           <div>
             <h3 className="text-[#F3F3E6] text-lg font-semibold leading-tight">A minha história</h3>
-            <p className="text-xs text-gray-400">MoreThanMoney · IQONIC</p>
+            <p className="text-xs text-gray-400">MoreThanMoney</p>
           </div>
         </div>
 

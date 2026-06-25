@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 export const metadata: Metadata = {
   title: "Educação MTM | MoreThanMoney",
   description:
-    "Ecossistema MoreThanMoney: estrutura para investir com educação aplicada, Skool, IQONIC e tecnologia. Ganha enquanto aprendes com processo e risco controlado.",
+    "Ecossistema MoreThanMoney: estrutura para investir com educação aplicada, Skool, scanners e tecnologia. Ganha enquanto aprendes com processo e risco controlado.",
   openGraph: {
     title: "Educação MTM | MoreThanMoney",
     description:

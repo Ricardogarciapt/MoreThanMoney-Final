@@ -243,7 +243,7 @@ export default function MTMLandingPage() {
         </div>
       </nav>
 
-      {/* Hero Section - Estética IQONIC */}
+      {/* Hero Section - Estética MoreThanMoney */}
       <section className="relative z-10 container mx-auto px-4 py-20 md:py-32">
         <div className="max-w-6xl mx-auto text-center">
           {/* Logo MTM no centro */}
@@ -419,7 +419,7 @@ export default function MTMLandingPage() {
                 A Solução
               </p>
               <p className="text-xl text-gray-300">
-                A <span className="text-purple-400 font-bold">MTM</span> funciona como um <span className="text-cyan-400 font-bold">add-on educacional</span> da <span className="text-blue-400 font-bold">IQONIC</span>, criando a ponte entre a teoria e a profissionalização.
+                A <span className="text-[#D2A63C] font-bold">MoreThanMoney</span> reúne <span className="text-cyan-400 font-bold">educação, comunidade e tecnologia</span> num só ecossistema, criando a ponte entre a teoria e a profissionalização.
               </p>
             </div>
           </div>
@@ -570,7 +570,7 @@ export default function MTMLandingPage() {
                   <div className="flex-1">
                     <h3 className="text-2xl font-bold text-purple-400 mb-2">Fase 2: Bootcamp Prático</h3>
                     <p className="text-gray-300 text-lg">
-                      Em conjunto com a Iqonic. Aprende análise técnica aplicada e identificação de liquidez com scanners de IA.
+                      Aprende análise técnica aplicada e identificação de liquidez com os scanners de IA da MoreThanMoney.
                     </p>
                   </div>
                   <Rocket className="w-16 h-16 text-purple-400/50 flex-shrink-0" />
@@ -723,7 +723,7 @@ export default function MTMLandingPage() {
 
             <div className="bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-cyan-600/20 border-2 border-purple-500/30 rounded-xl p-8">
               <p className="text-xl text-gray-300 mb-4 text-center">
-                Na <span className="text-blue-400 font-bold">IQONIC</span>, acreditamos na <span className="text-purple-400 font-bold">elevação</span>. Além de investidor, podes tornar-te um embaixador do ecossistema.
+                Na <span className="text-[#D2A63C] font-bold">MoreThanMoney</span>, acreditamos na <span className="text-purple-400 font-bold">elevação</span>. Além de investidor, podes tornar-te um embaixador do ecossistema.
               </p>
               <p className="text-xl text-gray-300 mb-4 text-center">
                 A Jornada: Começa como um aluno, torna-te um <span className="text-cyan-400 font-bold">Rising Star</span> e constrói uma fonte de rendimento residual ajudando outros a atingirem a liberdade financeira.
@@ -795,7 +795,6 @@ export default function MTMLandingPage() {
                     <li>Acesso aos anteriores</li>
                     <li>Acesso a todos os Cursos da MoreThanMoney</li>
                     <li>Acesso aos Scanners da MoreThanMoney</li>
-                    <li>Acesso a um Ano de Iqonic</li>
                     <li>Acesso a todas as estrategias da MTM</li>
                     <li>Acesso ao Provedor do nosso Hedge FUND</li>
                   </ul>
@@ -888,12 +887,12 @@ export default function MTMLandingPage() {
             <Accordion type="single" collapsible className="rounded-2xl border border-purple-500/25 bg-gray-900/50 px-4">
               <AccordionItem value="q1" className="border-purple-500/20">
                 <AccordionTrigger className="text-left text-white hover:no-underline">
-                  Qual a diferença entre MTM e IQONIC?
+                  O que é o ecossistema MoreThanMoney?
                 </AccordionTrigger>
                 <AccordionContent className="text-gray-300 text-sm leading-relaxed">
-                  A MTM é o braço educacional e de comunidade (Skool, estrutura, processo). A IQONIC é a infraestrutura de
-                  execução e tecnologia onde aplicás o que aprendes. Juntas fecham o ciclo: estudar com método e operar com
-                  ferramentas profissionais.
+                  A MoreThanMoney reúne o braço educacional e de comunidade (Skool, estrutura, processo) e a infraestrutura
+                  de execução e tecnologia — scanners de IA, MTMcopier e app — onde aplicas o que aprendes. Juntos fecham o
+                  ciclo: estudar com método e operar com ferramentas profissionais.
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="q2" className="border-purple-500/20">

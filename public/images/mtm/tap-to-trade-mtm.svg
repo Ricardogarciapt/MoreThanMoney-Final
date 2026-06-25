@@ -1,0 +1,57 @@
+<svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tap to Trade MTM">
+  <defs>
+    <linearGradient id="ttBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0a0c"/>
+      <stop offset="1" stop-color="#15110a"/>
+    </linearGradient>
+    <linearGradient id="ttGold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#BB8525"/>
+      <stop offset="1" stop-color="#D2A63C"/>
+    </linearGradient>
+    <radialGradient id="ttGlow" cx="50%" cy="40%" r="60%">
+      <stop offset="0" stop-color="#D2A63C" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#D2A63C" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1000" height="600" rx="20" fill="url(#ttBg)"/>
+  <rect width="1000" height="600" rx="20" fill="url(#ttGlow)"/>
+  <rect x="1" y="1" width="998" height="598" rx="19" fill="none" stroke="#D2A63C" stroke-opacity="0.18"/>
+
+  <!-- left copy -->
+  <text x="70" y="150" font-family="Inter,Arial,sans-serif" font-size="20" letter-spacing="3" fill="#D2A63C" font-weight="700">MORETHANMONEY</text>
+  <text x="70" y="220" font-family="Inter,Arial,sans-serif" font-size="58" fill="#ffffff" font-weight="800">Tap to Trade</text>
+  <text x="70" y="280" font-family="Inter,Arial,sans-serif" font-size="58" fill="url(#ttGold)" font-weight="800">MTM</text>
+  <text x="70" y="335" font-family="Inter,Arial,sans-serif" font-size="22" fill="#b9b9bd">Recebe o sinal. Revês. Confirmas.</text>
+  <text x="70" y="368" font-family="Inter,Arial,sans-serif" font-size="22" fill="#b9b9bd">Controlo total, num só toque.</text>
+
+  <g transform="translate(70,420)">
+    <circle cx="14" cy="-6" r="6" fill="#D2A63C"/>
+    <text x="34" y="0" font-family="Inter,Arial,sans-serif" font-size="18" fill="#e8e8ea">Sinais em tempo real na app MTM System</text>
+    <circle cx="14" cy="34" r="6" fill="#D2A63C"/>
+    <text x="34" y="40" font-family="Inter,Arial,sans-serif" font-size="18" fill="#e8e8ea">Confirmação manual — decides tu</text>
+  </g>
+
+  <!-- phone -->
+  <g transform="translate(640,90)">
+    <rect x="0" y="0" width="300" height="420" rx="34" fill="#101014" stroke="#D2A63C" stroke-opacity="0.35" stroke-width="2"/>
+    <rect x="115" y="16" width="70" height="10" rx="5" fill="#23232a"/>
+    <!-- signal card -->
+    <rect x="22" y="48" width="256" height="150" rx="14" fill="#17130a" stroke="#D2A63C" stroke-opacity="0.3"/>
+    <text x="40" y="82" font-family="Inter,Arial,sans-serif" font-size="20" fill="#ffffff" font-weight="700">XAUUSD</text>
+    <rect x="196" y="62" width="62" height="26" rx="13" fill="#16623b"/>
+    <text x="227" y="80" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="14" fill="#5ef0a8" font-weight="700">BUY</text>
+    <text x="40" y="118" font-family="Inter,Arial,sans-serif" font-size="14" fill="#9a9aa0">Entry</text>
+    <text x="258" y="118" text-anchor="end" font-family="Inter,Arial,sans-serif" font-size="14" fill="#e8e8ea">2 412.5</text>
+    <text x="40" y="146" font-family="Inter,Arial,sans-serif" font-size="14" fill="#9a9aa0">Stop Loss</text>
+    <text x="258" y="146" text-anchor="end" font-family="Inter,Arial,sans-serif" font-size="14" fill="#f08a8a">2 405.0</text>
+    <text x="40" y="174" font-family="Inter,Arial,sans-serif" font-size="14" fill="#9a9aa0">Take Profit</text>
+    <text x="258" y="174" text-anchor="end" font-family="Inter,Arial,sans-serif" font-size="14" fill="#5ef0a8">2 430.0</text>
+    <!-- CTA button -->
+    <rect x="22" y="222" width="256" height="58" rx="14" fill="url(#ttGold)"/>
+    <text x="150" y="258" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="20" fill="#0a0a0c" font-weight="800">TAP TO TRADE</text>
+    <!-- finger -->
+    <circle cx="150" cy="251" r="30" fill="#ffffff" fill-opacity="0.10"/>
+    <circle cx="150" cy="251" r="46" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
+    <text x="40" y="320" font-family="Inter,Arial,sans-serif" font-size="13" fill="#7d7d84">Receive → Review → Confirm</text>
+  </g>
+</svg>

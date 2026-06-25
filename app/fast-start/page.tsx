@@ -304,7 +304,7 @@ export default function FastStartPage() {
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               <span className="text-mtm-primary">Fast Start</span>
-              <span className="text-white"> · MTM × IQONIC</span>
+              <span className="text-white"> · MoreThanMoney</span>
             </h1>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-4">
               {journeySteps[0]?.description ?? 'O teu plano de arranque em 6 passos — do registo ao Skool.'}
@@ -313,7 +313,7 @@ export default function FastStartPage() {
               href="/apresentacao"
               className="inline-flex items-center gap-2 text-mtm-primary hover:underline text-sm font-semibold"
             >
-              Ver apresentação MTM × IQONIC
+              Ver apresentação MoreThanMoney
               <ExternalLink className="w-4 h-4" />
             </Link>
           </div>
@@ -352,7 +352,7 @@ export default function FastStartPage() {
                     </div>
                     <div>
                       <Badge className={`${progress.step_1_completed ? 'bg-green-600' : 'bg-amber-600'} text-black mb-2`}>Passo 1 de 6</Badge>
-                      <CardTitle className="text-mtm-primary">{journeySteps[0]?.title ?? 'MTM × IQONIC'}</CardTitle>
+                      <CardTitle className="text-mtm-primary">{journeySteps[0]?.title ?? 'MoreThanMoney'}</CardTitle>
                     </div>
                   </div>
                 </div>
@@ -373,7 +373,7 @@ export default function FastStartPage() {
                   <Link href="/apresentacao">
                     <Button className="btn-primary">
                       <ExternalLink className="w-4 h-4 mr-2" />
-                      Apresentação MTM × IQONIC
+                      Apresentação MoreThanMoney
                     </Button>
                   </Link>
                 </div>

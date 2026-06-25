@@ -42,7 +42,7 @@ const PRODUCTS = [
   "o Sensei X",
   "o Plano em 3 Passos",
   "o acesso à Trading Floor",
-  "o curso IQONIC",
+  "os cursos MoreThanMoney",
   "uma vaga na Mentoria MTM",
 ]
 

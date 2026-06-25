@@ -1,0 +1,47 @@
+<svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MTM Copy — set it once">
+  <defs>
+    <linearGradient id="c2Bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0a0c"/>
+      <stop offset="1" stop-color="#120f16"/>
+    </linearGradient>
+    <linearGradient id="c2Gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#BB8525"/>
+      <stop offset="1" stop-color="#D2A63C"/>
+    </linearGradient>
+    <radialGradient id="c2Glow" cx="70%" cy="45%" r="55%">
+      <stop offset="0" stop-color="#D2A63C" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#D2A63C" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1000" height="600" rx="20" fill="url(#c2Bg)"/>
+  <rect width="1000" height="600" rx="20" fill="url(#c2Glow)"/>
+  <rect x="1" y="1" width="998" height="598" rx="19" fill="none" stroke="#D2A63C" stroke-opacity="0.18"/>
+
+  <text x="60" y="90" font-family="Inter,Arial,sans-serif" font-size="18" letter-spacing="3" fill="#D2A63C" font-weight="700">SET IT ONCE</text>
+  <text x="60" y="150" font-family="Inter,Arial,sans-serif" font-size="46" fill="#ffffff" font-weight="800">Configuras uma vez.</text>
+  <text x="60" y="205" font-family="Inter,Arial,sans-serif" font-size="46" fill="url(#c2Gold)" font-weight="800">A MTM trata do resto.</text>
+
+  <!-- toggle on -->
+  <g transform="translate(60,260)">
+    <rect width="120" height="56" rx="28" fill="#17130a" stroke="url(#c2Gold)" stroke-width="2"/>
+    <circle cx="92" cy="28" r="20" fill="url(#c2Gold)"/>
+    <text x="150" y="36" font-family="Inter,Arial,sans-serif" font-size="22" fill="#e8e8ea" font-weight="600">Cópia automática ativa</text>
+  </g>
+
+  <g font-family="Inter,Arial,sans-serif" transform="translate(60,360)">
+    <circle cx="10" cy="-5" r="6" fill="#D2A63C"/><text x="32" y="1" font-size="18" fill="#e8e8ea">Conta alinhada às estratégias em segundo plano</text>
+    <circle cx="10" cy="33" r="6" fill="#D2A63C"/><text x="32" y="39" font-size="18" fill="#e8e8ea">Gestão de risco automática por trade</text>
+    <circle cx="10" cy="71" r="6" fill="#D2A63C"/><text x="32" y="77" font-size="18" fill="#e8e8ea">Sem saltar entre apps — corre sozinho</text>
+  </g>
+
+  <!-- shield gauge -->
+  <g transform="translate(700,170)">
+    <circle cx="120" cy="160" r="140" fill="none" stroke="#23232a" stroke-width="20"/>
+    <circle cx="120" cy="160" r="140" fill="none" stroke="url(#c2Gold)" stroke-width="20" stroke-linecap="round"
+            stroke-dasharray="660 880" transform="rotate(135 120 160)"/>
+    <path d="M120 95 l52 22 v40 c0 40 -28 66 -52 78 c-24 -12 -52 -38 -52 -78 v-40 z"
+          fill="#17130a" stroke="url(#c2Gold)" stroke-width="2.5"/>
+    <path d="M100 168 l14 14 l28 -32" fill="none" stroke="#D2A63C" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="120" y="335" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="16" fill="#9a9aa0">Risco protegido 24/7</text>
+  </g>
+</svg>

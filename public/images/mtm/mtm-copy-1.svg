@@ -1,0 +1,65 @@
+<svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MTM Copy — cópia automática">
+  <defs>
+    <linearGradient id="cpBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0a0c"/>
+      <stop offset="1" stop-color="#120f16"/>
+    </linearGradient>
+    <linearGradient id="cpGold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#BB8525"/>
+      <stop offset="1" stop-color="#D2A63C"/>
+    </linearGradient>
+    <radialGradient id="cpGlow" cx="28%" cy="50%" r="55%">
+      <stop offset="0" stop-color="#D2A63C" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#D2A63C" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1000" height="600" rx="20" fill="url(#cpBg)"/>
+  <rect width="1000" height="600" rx="20" fill="url(#cpGlow)"/>
+  <rect x="1" y="1" width="998" height="598" rx="19" fill="none" stroke="#D2A63C" stroke-opacity="0.18"/>
+
+  <text x="60" y="80" font-family="Inter,Arial,sans-serif" font-size="18" letter-spacing="3" fill="#D2A63C" font-weight="700">MORETHANMONEY · MTMCOPIER</text>
+  <text x="60" y="135" font-family="Inter,Arial,sans-serif" font-size="46" fill="#ffffff" font-weight="800">MTM <tspan fill="url(#cpGold)">Copy</tspan></text>
+  <text x="60" y="172" font-family="Inter,Arial,sans-serif" font-size="20" fill="#b9b9bd">As estratégias da casa replicadas na tua conta — automático.</text>
+
+  <!-- connection lines -->
+  <g stroke="url(#cpGold)" stroke-width="2.5" fill="none" opacity="0.7">
+    <path d="M300 330 C 430 330, 470 180, 640 180"/>
+    <path d="M300 330 C 430 330, 470 300, 640 300"/>
+    <path d="M300 330 C 430 330, 470 420, 640 420"/>
+  </g>
+  <g fill="#D2A63C">
+    <circle cx="470" cy="255" r="4"/><circle cx="470" cy="300" r="4"/><circle cx="470" cy="345" r="4"/>
+  </g>
+
+  <!-- master node -->
+  <g transform="translate(150,250)">
+    <circle cx="0" cy="80" r="92" fill="#17130a" stroke="url(#cpGold)" stroke-width="3"/>
+    <text x="0" y="58" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="34" fill="url(#cpGold)" font-weight="800">M</text>
+    <text x="0" y="92" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="16" fill="#ffffff" font-weight="700">MASTER</text>
+    <text x="0" y="116" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="13" fill="#9a9aa0">Estratégia MTM</text>
+  </g>
+
+  <!-- follower nodes -->
+  <g font-family="Inter,Arial,sans-serif">
+    <g transform="translate(640,150)">
+      <rect width="280" height="60" rx="14" fill="#101014" stroke="#D2A63C" stroke-opacity="0.3"/>
+      <circle cx="34" cy="30" r="16" fill="#1c1c22"/><text x="34" y="36" text-anchor="middle" font-size="15" fill="#D2A63C">1</text>
+      <text x="64" y="27" font-size="16" fill="#e8e8ea" font-weight="600">Conta do cliente</text>
+      <text x="64" y="47" font-size="13" fill="#5ef0a8">▲ copiado · +1.2%</text>
+    </g>
+    <g transform="translate(640,270)">
+      <rect width="280" height="60" rx="14" fill="#101014" stroke="#D2A63C" stroke-opacity="0.3"/>
+      <circle cx="34" cy="30" r="16" fill="#1c1c22"/><text x="34" y="36" text-anchor="middle" font-size="15" fill="#D2A63C">2</text>
+      <text x="64" y="27" font-size="16" fill="#e8e8ea" font-weight="600">Conta do cliente</text>
+      <text x="64" y="47" font-size="13" fill="#5ef0a8">▲ copiado · +0.8%</text>
+    </g>
+    <g transform="translate(640,390)">
+      <rect width="280" height="60" rx="14" fill="#101014" stroke="#D2A63C" stroke-opacity="0.3"/>
+      <circle cx="34" cy="30" r="16" fill="#1c1c22"/><text x="34" y="36" text-anchor="middle" font-size="15" fill="#D2A63C">3</text>
+      <text x="64" y="27" font-size="16" fill="#e8e8ea" font-weight="600">Conta do cliente</text>
+      <text x="64" y="47" font-size="13" fill="#5ef0a8">▲ copiado · +1.5%</text>
+    </g>
+  </g>
+
+  <text x="60" y="540" font-family="Inter,Arial,sans-serif" font-size="15" fill="#7d7d84">CopyFactory · gestão de risco e lote por conta · sem intervenção manual</text>
+</svg>
