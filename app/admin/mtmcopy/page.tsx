@@ -9,6 +9,7 @@ import MtmcopyOpsHub from "@/components/admin/mtmcopy-ops-hub"
 import MtmcopySyncAllPanel from "@/components/admin/mtmcopy-sync-all-panel"
 import MtmcopyTestPanel from "@/components/admin/mtmcopy-test-panel"
 import MtmcopySenderLog from "@/components/admin/mtmcopy-sender-log"
+import MtmcopyProviderPerformance from "@/components/admin/mtmcopy-provider-performance"
 import {
   MtmcopyAdminSection,
   MtmcopyAdminTabNav,
@@ -27,6 +28,7 @@ import {
   Send,
   Users,
   Activity,
+  BarChart3,
 } from "lucide-react"
 import { PipelineFlow } from "@/components/mtmcopy/mtmcopy-shared"
 import { coerceBotUsername, formatTelegramBotLabel } from "@/lib/telegram-bot-display"
@@ -254,6 +256,15 @@ export default function AdminMtmcopyPage() {
                   </CardContent>
                 </Card>
               </div>
+
+              <MtmcopyAdminSection
+                title="Desempenho das estratégias"
+                description="Métricas reais das contas Provider MTM Auto (Premium · Trade Ideas · Sensei) — saldo, lucro, win rate, drawdown e profit factor via MetaStats, com subscritores CopyFactory."
+                icon={BarChart3}
+                accent="emerald"
+              >
+                <MtmcopyProviderPerformance />
+              </MtmcopyAdminSection>
 
               <div className="grid lg:grid-cols-2 gap-6">
                 <MtmcopySyncAllPanel />

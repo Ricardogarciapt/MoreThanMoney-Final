@@ -5,11 +5,14 @@ import Link from "next/link"
 import Breadcrumbs from "@/components/breadcrumbs"
 import ParticleBackground from "@/components/particle-background"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, BarChart3, Loader2, Target, TrendingUp } from "lucide-react"
+import { ArrowLeft, BarChart3, Loader2, Server, Target, TrendingUp } from "lucide-react"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/contexts/auth-context"
 import TradingDashboard from "@/components/mtmcopy/trading-dashboard"
+import MtmcopyProviderPerformance from "@/components/admin/mtmcopy-provider-performance"
 
 export default function MtmcopyMetricsPage() {
+  const { isAdmin } = useAuth()
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [subscribed, setSubscribed] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
@@ -90,6 +93,18 @@ export default function MtmcopyMetricsPage() {
             </div>
             <div className="p-4 md:p-6">
               <TradingDashboard accessToken={accessToken} variant="broker" />
+            </div>
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className="mt-8 rounded-2xl border border-emerald-500/20 bg-zinc-950/40 p-1">
+            <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-800/60 text-xs text-emerald-400">
+              <Server className="w-3.5 h-3.5" />
+              Admin · Desempenho das contas Provider (estratégias MTMcopy)
+            </div>
+            <div className="p-4 md:p-6">
+              <MtmcopyProviderPerformance />
             </div>
           </div>
         )}
