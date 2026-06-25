@@ -523,7 +523,13 @@ export default function SettingsMobile() {
         <div className="text-center">
           <p className="text-white font-semibold text-lg leading-tight">{user?.full_name ?? user?.username ?? "—"}</p>
           <p className="text-gray-400 text-sm">{user?.email}</p>
-          <Badge className={`mt-1.5 border text-xs ${plan.bg} ${plan.color}`}>{plan.label}</Badge>
+          <div className="mt-1.5 flex items-center justify-center gap-2 flex-wrap">
+            <Badge className={`border text-xs ${plan.bg} ${plan.color}`}>{plan.label}</Badge>
+            <span className="inline-flex items-center gap-1 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-xs font-semibold text-yellow-400">
+              <Zap className="w-3 h-3" />
+              {xpData.total_xp.toLocaleString("pt-PT")} XP · Nv {xpData.current_level}
+            </span>
+          </div>
         </div>
 
         {/* XP & Nível */}
