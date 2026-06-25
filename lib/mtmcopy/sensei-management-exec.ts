@@ -110,7 +110,20 @@ export async function applySenseiManagement(opts: {
   const matches = positions.filter(
     (p) => isMtmSenseiPosition(p) && symbolMatches(p.symbol, opts.symbol) && directionMatches(p, opts.direction),
   )
-  const pos = matches.length ? matches[matches.length - 1]! : null
+  // Escolhe a posição pela ENTRADA (openPrice mais próximo do entry do sinal),
+  // para o BE/SL/TP cair na trade certa quando há várias no mesmo símbolo.
+  let pos: MetaApiPosition | null = null
+  if (opts.entry != null && Number.isFinite(opts.entry) && matches.length) {
+    const tol = Math.max(Math.abs(opts.entry) * 0.003, 0.01)
+    let bestDiff = Infinity
+    for (const p of matches) {
+      const diff = Math.abs((p.openPrice ?? 0) - opts.entry)
+      if (diff < bestDiff) { bestDiff = diff; pos = p }
+    }
+    if (bestDiff > tol) pos = matches[matches.length - 1]! // fallback: mais recente
+  } else {
+    pos = matches.length ? matches[matches.length - 1]! : null
+  }
   if (!pos) {
     out.errors.push(`Sem posição Sensei ativa em ${opts.symbol}`)
     return out

@@ -13,6 +13,7 @@ import { validateSenseiWebhookSignal, validateSignalWithAi } from "@/lib/mtmcopy
 import {
   activateSenseiTradeIdea,
   attachSenseiIdeaMessages,
+  createActivatedSenseiIdea,
   findActiveSenseiIdeaForFollowup,
   findPendingSenseiIdea,
   mergeSenseiTriggerWithIdea,
@@ -219,6 +220,7 @@ export async function POST(request: NextRequest) {
   const timeframe = pick(payload, ["timeframe", "interval", "tf", "resolution"])
   const action = pick(payload, ["action", "side", "order_action", "strategy_order_action", "signal"])
   const price = num(pick(payload, ["price", "close", "order_price", "strategy_order_price"]))
+  const entry = num(pick(payload, ["entry", "entry_price"]))
   const sl = num(pick(payload, ["sl", "stoploss", "stop_loss", "stop"]))
   const tp = num(pick(payload, ["tp", "takeprofit", "take_profit", "target", "tp1"]))
   const tp2 = num(pick(payload, ["tp2", "take_profit_2", "target2"]))
@@ -233,6 +235,7 @@ export async function POST(request: NextRequest) {
     ticker,
     action,
     price,
+    entry,
     sl,
     tp: allTp.length ? allTp : null,
     tp1: tp,
@@ -340,8 +343,14 @@ export async function POST(request: NextRequest) {
     (activeSensei?.alertType === "entry_trigger" || !activeSensei)
 
   let savedIdea: { id: string; tradeNumber: number | null } | null = null
+  // Ideia/trade a que esta entrada corresponde (para guardar o message_id da entrada).
+  let entryTradeIdea: SenseiTradeIdea | null = pendingIdea
   if (isIdeaAlert && activeSensei) {
     savedIdea = await saveSenseiTradeIdea(supabase, activeSensei, logId)
+  } else if (activeSensei?.alertType === "entry_trigger" && activeSensei.symbol) {
+    // ENTRY sem ideia prévia → cria registo ativado chaveado pelo preço de entrada,
+    // para os follow-ups (BE/SL/TP) se associarem e responderem em thread.
+    entryTradeIdea = pendingIdea ?? (await createActivatedSenseiIdea(supabase, activeSensei, logId))
   }
 
   if (canExecuteProvider) {
@@ -374,14 +383,15 @@ export async function POST(request: NextRequest) {
       activeSensei.symbol,
       activeSensei.timeframe,
       activeSensei.direction,
+      activeSensei.entry, // associa pelo PREÇO DE ENTRADA original
     )
   }
 
-  // Contexto da mensagem: entrada/TP/numeração (da ideia ligada ou da própria entrada)
+  // Contexto da mensagem: entrada/TP/numeração (da ideia ligada por preço, ou da própria entrada)
   const msgCtx: SenseiMsgCtx | null = linkedIdea
     ? { entry: linkedIdea.entry, tp: linkedIdea.tp, tradeNumber: linkedIdea.tradeNumber }
-    : pendingIdea
-      ? { entry: activeSensei?.entry ?? pendingIdea.entry, tp: activeSensei?.tp ?? pendingIdea.tp, tradeNumber: pendingIdea.tradeNumber }
+    : entryTradeIdea
+      ? { entry: activeSensei?.entry ?? entryTradeIdea.entry, tp: activeSensei?.tp ?? entryTradeIdea.tp, tradeNumber: entryTradeIdea.tradeNumber }
       : savedIdea
         ? { entry: activeSensei?.entry ?? null, tp: activeSensei?.tp ?? [], tradeNumber: savedIdea.tradeNumber }
         : null
@@ -404,7 +414,7 @@ export async function POST(request: NextRequest) {
   const post = composePost(v, activeSensei, msgCtx)
   const replyToTelegramId = isFollowup ? linkedIdea?.telegramMessageId ?? null : null
   // Ideia cuja mensagem de entrada/activação guardamos para os follow-ups responderem
-  const entryIdeaId = savedIdea?.id ?? (alertType === "entry_trigger" ? pendingIdeaId : null)
+  const entryIdeaId = savedIdea?.id ?? entryTradeIdea?.id ?? null
 
   // Publica no chat #Sensei Scanner (mesma convenção do mirror Telegram)
   let chatId: string | null = null

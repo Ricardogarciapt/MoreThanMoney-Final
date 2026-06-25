@@ -101,14 +101,16 @@ export async function attachSenseiIdeaMessages(
 }
 
 /**
- * Ideia ativa/pendente mais recente para um follow-up (TP/BE/SL).
- * Liga o acompanhamento à entrada correspondente (entry, número, message_id).
+ * Ideia correspondente a um follow-up (TP/BE/SL), associada pelo PREÇO DE ENTRADA.
+ * Quando há várias ideias do mesmo símbolo, escolhe a do entry mais próximo (não a
+ * mais recente) — para o BE/SL/TP cair na trade certa e o CopyFactory/clientes não baralharem.
  */
 export async function findActiveSenseiIdeaForFollowup(
   supabase: SupabaseClient,
   symbol: string,
   timeframe?: string | null,
   direction?: 'buy' | 'sell' | null,
+  entry?: number | null,
 ): Promise<SenseiTradeIdea | null> {
   let q = supabase
     .from('sensei_trade_ideas')
@@ -116,13 +118,65 @@ export async function findActiveSenseiIdeaForFollowup(
     .eq('symbol', symbol)
     .in('status', ['activated', 'pending'])
     .order('created_at', { ascending: false })
-    .limit(1)
+    .limit(20)
 
   if (timeframe) q = q.eq('timeframe', timeframe)
   if (direction) q = q.eq('direction', direction)
 
-  const { data, error } = await q.maybeSingle()
-  if (error || !data) return null
+  const { data, error } = await q
+  if (error || !data?.length) return null
+
+  const ideas = (data as Record<string, unknown>[]).map(mapIdeaRow)
+
+  // Associa pelo preço de entrada (tolerância 0.2% do preço) — chave correta.
+  if (entry != null && Number.isFinite(entry) && entry > 0) {
+    const tol = Math.max(Math.abs(entry) * 0.002, 0.01)
+    const withEntry = ideas.filter((i) => i.entry != null)
+    let best: SenseiTradeIdea | null = null
+    let bestDiff = Infinity
+    for (const i of withEntry) {
+      const diff = Math.abs((i.entry as number) - entry)
+      if (diff < bestDiff) { bestDiff = diff; best = i }
+    }
+    if (best && bestDiff <= tol) return best
+  }
+
+  // Sem entry ou sem match por preço → a mais recente (fallback).
+  return ideas[0] ?? null
+}
+
+/**
+ * Cria (ou devolve) uma ideia ATIVADA para um ENTRY/entry_trigger sem ideia prévia,
+ * chaveada pelo preço de entrada — para os follow-ups se associarem e responderem em thread.
+ */
+export async function createActivatedSenseiIdea(
+  supabase: SupabaseClient,
+  alert: SenseiParsedAlert,
+  signalId?: string,
+): Promise<SenseiTradeIdea | null> {
+  if (!alert.symbol) return null
+  const { data, error } = await supabase
+    .from('sensei_trade_ideas')
+    .insert({
+      symbol: alert.symbol,
+      timeframe: alert.timeframe ?? null,
+      direction: alert.direction,
+      entry: alert.entry,
+      sl: alert.sl,
+      tp: alert.tp,
+      status: 'activated',
+      activated_at: new Date().toISOString(),
+      source_signal_id: signalId ?? null,
+      trigger_signal_id: signalId ?? null,
+      raw_message: alert.raw,
+      raw_payload: { alert_type: 'entry_trigger', timeframe: alert.timeframe ?? null, exchange: alert.exchange },
+    })
+    .select(IDEA_COLUMNS)
+    .single()
+  if (error || !data) {
+    console.error('[sensei-ideas] createActivated error:', error)
+    return null
+  }
   return mapIdeaRow(data as Record<string, unknown>)
 }
 

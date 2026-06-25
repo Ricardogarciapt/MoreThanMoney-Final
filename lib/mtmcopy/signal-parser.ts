@@ -431,6 +431,8 @@ export interface SenseiTradingViewFields {
   ticker?: string | null
   action?: string | null
   price?: number | null
+  /** Preço de ENTRADA original do sinal (payload Pine «entry») — chave de associação. */
+  entry?: number | null
   sl?: number | null
   tp?: number | number[] | null
   tp1?: number | null
@@ -539,7 +541,8 @@ function mergeSenseiParsed(
     directionFromAction(fields?.action) ??
     null
 
-  const entry = textParsed?.entry ?? fields?.price ?? null
+  // Entrada ORIGINAL do sinal (payload «entry»); só usa o preço do evento como último recurso.
+  const entry = textParsed?.entry ?? fields?.entry ?? fields?.price ?? null
   const sl = textParsed?.sl ?? fields?.sl ?? null
 
   const stateInfo = alertTypeFromState(fields?.state)
@@ -644,7 +647,7 @@ export function parseSenseiTradingViewAlert(
     return {
       symbol: sym,
       direction: fromName?.direction ?? directionFromAction(fields.action),
-      entry: fields.price ?? null,
+      entry: fields.entry ?? fields.price ?? null,
       sl: fields.sl ?? null,
       tp: fieldTp,
       orderType: fields.price != null ? 'limit' : 'market',
