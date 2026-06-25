@@ -1016,10 +1016,114 @@ export default function LiveSessionsManager() {
       </TabsContent>
 
       <TabsContent value="horario" className="space-y-3">
+        {/* Agendar sessão — academia, educador, data/hora, recorrência (reusa createStream) */}
         <div className="space-y-3 rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 p-4 backdrop-blur-sm">
-          <h3 className="font-semibold tracking-tight text-[#D2A63C]">Horário</h3>
+          <h3 className="font-semibold tracking-tight text-[#D2A63C]">Agendar sessão</h3>
           <p className="text-xs text-gray-400">
-            Sessões agendadas de todos os canais — interligado com a app mobile e o /live.
+            Define academia, educador, data/hora e recorrência. Aparece logo no horário da app, no /live e abaixo.
+          </p>
+          <div className="grid md:grid-cols-2 gap-2">
+            <Input
+              value={streamForm.title}
+              onChange={(e) => setStreamForm((p: any) => ({ ...p, title: e.target.value }))}
+              placeholder="Título da sessão"
+            />
+            <Input
+              type="datetime-local"
+              value={streamForm.scheduled_start_at}
+              onChange={(e) => setStreamForm((p: any) => ({ ...p, scheduled_start_at: e.target.value }))}
+              placeholder="Data e hora"
+            />
+            <select
+              className="w-full rounded border border-gray-700 bg-gray-950 px-2 py-2 text-white text-sm"
+              value={streamForm.academy_id}
+              onChange={(e) => setStreamForm((p: any) => ({ ...p, academy_id: e.target.value }))}
+            >
+              <option value="">Academia</option>
+              {academies.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+            <select
+              className="w-full rounded border border-gray-700 bg-gray-950 px-2 py-2 text-white text-sm"
+              value={streamForm.educator_id}
+              onChange={(e) => setStreamForm((p: any) => ({ ...p, educator_id: e.target.value }))}
+            >
+              <option value="">Educador</option>
+              {educators.map((e) => (
+                <option key={e.id} value={e.id}>{e.display_name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Recorrência (mesmas bindings de Salas e canais) */}
+          <div className="space-y-3 rounded-lg border border-gray-800 bg-gray-950/40 p-3">
+            <p className="text-[11px] uppercase tracking-wide text-gray-500">Recorrência</p>
+            <div className="grid md:grid-cols-2 gap-2">
+              <select
+                className="w-full rounded border border-gray-700 bg-gray-950 px-2 py-2 text-white text-sm"
+                value={streamForm.recurrence_type}
+                onChange={(e) => setStreamForm((p: any) => ({ ...p, recurrence_type: e.target.value }))}
+              >
+                <option value="none">Sem repetição</option>
+                <option value="weekly">Semanal</option>
+                <option value="fortnightly">Quinzenal</option>
+                <option value="monthly">Mensal</option>
+              </select>
+              <Input
+                type="datetime-local"
+                value={streamForm.recurrence_until_at}
+                onChange={(e) => setStreamForm((p: any) => ({ ...p, recurrence_until_at: e.target.value }))}
+                placeholder="Até quando"
+                className="border-gray-700 bg-gray-950/60 text-white"
+              />
+            </div>
+            {(streamForm.recurrence_type === "weekly" || streamForm.recurrence_type === "fortnightly") && (
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 1, label: "Seg" }, { value: 2, label: "Ter" }, { value: 3, label: "Qua" },
+                  { value: 4, label: "Qui" }, { value: 5, label: "Sex" }, { value: 6, label: "Sáb" }, { value: 0, label: "Dom" },
+                ].map((d) => (
+                  <label key={d.value} className="inline-flex items-center gap-2 rounded-full border border-gray-800 bg-black/30 px-3 py-2 text-xs text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={Array.isArray(streamForm.recurrence_weekdays) && streamForm.recurrence_weekdays.includes(d.value)}
+                      onChange={(e) => {
+                        const checked = e.target.checked
+                        setStreamForm((p: any) => {
+                          const prev = Array.isArray(p.recurrence_weekdays) ? p.recurrence_weekdays : []
+                          if (checked) return { ...p, recurrence_weekdays: Array.from(new Set([...prev, d.value])).sort() }
+                          return { ...p, recurrence_weekdays: prev.filter((x: number) => x !== d.value) }
+                        })
+                      }}
+                    />
+                    {d.label}
+                  </label>
+                ))}
+              </div>
+            )}
+            {streamForm.recurrence_type === "monthly" && (
+              <Input
+                value={streamForm.recurrence_monthly_days}
+                onChange={(e) => setStreamForm((p: any) => ({ ...p, recurrence_monthly_days: e.target.value }))}
+                placeholder="Dias do mês (ex: 1,15,30)"
+                className="border-gray-700 bg-gray-950/60 text-white"
+              />
+            )}
+          </div>
+          <Button className="bg-[#D2A63C] hover:bg-[#BB8525] text-black" onClick={createStream}>
+            Agendar sessão
+          </Button>
+          <p className="text-[11px] text-gray-500">
+            Para configuração técnica (RTMPS, chave OBS, player, thumbnail) usa a aba «Salas e canais».
+          </p>
+        </div>
+
+        {/* Sessões agendadas (timetable) */}
+        <div className="space-y-3 rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 p-4 backdrop-blur-sm">
+          <h3 className="font-semibold tracking-tight text-[#D2A63C]">Sessões agendadas</h3>
+          <p className="text-xs text-gray-400">
+            Interligado com a app mobile e o /live (mesma fonte). Edita/apaga canais na aba «Salas e canais».
           </p>
           <SessionsTimetable
             sessions={streams
@@ -1031,7 +1135,7 @@ export default function LiveSessionsManager() {
                 scheduledAt: s.scheduled_start_at as string,
                 tier: s.access_tier ?? null,
               }))}
-            emptyText="Sem sessões agendadas. Define a data num canal na aba «Salas e canais»."
+            emptyText="Sem sessões agendadas. Usa o formulário acima para agendar."
           />
         </div>
       </TabsContent>
