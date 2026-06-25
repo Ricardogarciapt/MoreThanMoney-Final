@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { LmsImageUploadField } from "@/components/admin/lms-image-upload-field"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { toast } from "sonner"
 
 type Academy = { id: string; name: string; slug: string }
@@ -447,7 +449,15 @@ export default function LiveSessionsManager() {
   }
 
   return (
-    <div className="space-y-6">
+    <Tabs defaultValue="educacao" className="space-y-6">
+      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-gray-900/60">
+        <TabsTrigger value="educacao">Educação</TabsTrigger>
+        <TabsTrigger value="educadores">Educadores</TabsTrigger>
+        <TabsTrigger value="salas">Salas e canais</TabsTrigger>
+        <TabsTrigger value="horario">Horário</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="educacao" className="space-y-6">
       <div className="space-y-3 rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 p-4 backdrop-blur-sm">
         <h3 className="font-semibold tracking-tight text-[#D2A63C]">Academias</h3>
         <p className="text-xs leading-relaxed text-gray-400">
@@ -467,7 +477,9 @@ export default function LiveSessionsManager() {
           ))}
         </div>
       </div>
+      </TabsContent>
 
+      <TabsContent value="educadores" className="space-y-6">
       <div className="space-y-3 rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 p-4 backdrop-blur-sm">
         <h3 className="text-[#D2A63C] font-semibold">Educadores (login separado)</h3>
         <div className="grid md:grid-cols-2 gap-2">
@@ -681,7 +693,9 @@ export default function LiveSessionsManager() {
           })}
         </div>
       </div>
+      </TabsContent>
 
+      <TabsContent value="salas" className="space-y-6">
       <div className="space-y-3 rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 p-4 backdrop-blur-sm">
         <h3 className="font-semibold tracking-tight text-[#D2A63C]">Streams / Canais</h3>
         <div className="grid md:grid-cols-2 gap-2">
@@ -999,7 +1013,29 @@ export default function LiveSessionsManager() {
           ))}
         </div>
       </div>
-    </div>
+      </TabsContent>
+
+      <TabsContent value="horario" className="space-y-3">
+        <div className="space-y-3 rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 p-4 backdrop-blur-sm">
+          <h3 className="font-semibold tracking-tight text-[#D2A63C]">Horário</h3>
+          <p className="text-xs text-gray-400">
+            Sessões agendadas de todos os canais — interligado com a app mobile e o /live.
+          </p>
+          <SessionsTimetable
+            sessions={streams
+              .filter((s) => s.scheduled_start_at)
+              .map((s) => ({
+                id: s.id,
+                title: s.title,
+                educatorName: educators.find((e) => e.id === s.educator_id)?.display_name ?? null,
+                scheduledAt: s.scheduled_start_at as string,
+                tier: s.access_tier ?? null,
+              }))}
+            emptyText="Sem sessões agendadas. Define a data num canal na aba «Salas e canais»."
+          />
+        </div>
+      </TabsContent>
+    </Tabs>
   )
 }
 
