@@ -54,7 +54,6 @@ export default function Navbar() {
       icon: MonitorPlay,
       submenu: [
         { name: "Sistema MoreThanMoney", href: "/apresentacao" },
-        { name: "Apresentação IQONIC", href: "/iqonic" },
       ],
     },
     {
@@ -62,21 +61,18 @@ export default function Navbar() {
       href: "/mtm",
       icon: GraduationCap,
       submenu: [
-        { name: "IQonic Academy", href: "https://iqonic.vip", external: true },
         { name: "Educação MTM", href: "/mtm" },
         { name: "Docs", href: "/docs" },
         { name: "Live Sessions", href: "/live-sessions" },
-        { name: "BackOffice IQ", href: "https://user.iqonic.life", external: true },
       ],
     },
     {
       name: "Trading",
-      href: "/swipetotrade",
+      href: "/automation",
       icon: TrendingUp,
       submenu: [
         { name: "Automatização", href: "/automation" },
         { name: "MTMcopier", href: "/mtmcopy" },
-        { name: "IQ SYNC", href: "/swipetotrade" },
         { name: "Os nossos Scanners", href: "/scanner" },
         { name: "Scanner ao Vivo", href: "/scanner-access" },
         { name: "Trading Desk", href: "/trading" },

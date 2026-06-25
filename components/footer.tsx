@@ -69,8 +69,7 @@ export default function Footer() {
             <ul className="space-y-3">
               {[
                 { name: "Início", href: "/new-landing" },
-                { name: "IQONIC", href: "/iqonic" },
-                { name: "IQ Sync", href: "/swipetotrade" },
+                { name: "MTMcopier", href: "/mtmcopy" },
                 { name: "Automatização", href: "/automation" },
                 { name: "Scanner MTM", href: "/scanner" },
                 { name: "Trading Floor", href: "/tradingfloor" },
@@ -106,7 +105,6 @@ export default function Footer() {
                 { name: "MTM Partnership Engine", href: "https://mtmugcapp.lovable.app", external: true },
                 { name: "MTM AiOS", href: "https://mtmaios.lovable.app", external: true },
                 { name: "Cursos MoreThanMoney", href: "https://www.skool.com/morethanmoney-1132/about", external: true },
-                { name: "IQONIC Platform", href: "https://iqonic.life/morethanmoney", external: true },
               ].map((link) => (
                 <li key={link.name}>
                   <Link 
