@@ -5,18 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, CreditCard, GraduationCap, Building2, Upload, CheckCircle2 } from 'lucide-react'
+import { Loader2, CreditCard, GraduationCap, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 
-type Channel = 'stripe' | 'skool' | 'iqonic' | null
-type Step = 'intro' | 'channel' | 'stripe' | 'skool' | 'iqonic' | 'done' | 'iqonic_sent'
+type Channel = 'stripe' | 'skool' | null
+type Step = 'intro' | 'channel' | 'stripe' | 'skool' | 'done'
 
 interface StatusResponse {
   required: boolean
-  iqonic_pending: boolean
   migration: {
     app_activation_coupon_code?: string | null
     access_migration_completed_at?: string | null
@@ -26,8 +23,6 @@ interface StatusResponse {
     intro: string
     annualNote: string
     couponNote: string
-    iqonicProof: string
-    iqonicPending: string
   }
 }
 
@@ -40,12 +35,9 @@ export default function AccessMigrationPage() {
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState<StatusResponse | null>(null)
   const [step, setStep] = useState<Step>('intro')
-  const [channel, setChannel] = useState<Channel>(null)
+  const [, setChannel] = useState<Channel>(null)
   const [error, setError] = useState('')
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
-  const [iqonicId, setIqonicId] = useState('')
-  const [proofFile, setProofFile] = useState<File | null>(null)
-  const [submitting, setSubmitting] = useState(false)
 
   const getToken = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -80,8 +72,6 @@ export default function AccessMigrationPage() {
     } else if (success) {
       setPollingMigration(true)
       setStep('done')
-    } else if (data.iqonic_pending) {
-      setStep('iqonic_sent')
     } else if (!data.required) {
       router.replace('/app-mobile')
       return
@@ -126,8 +116,7 @@ export default function AccessMigrationPage() {
       return
     }
     if (ch === 'stripe') setStep('stripe')
-    else if (ch === 'skool') setStep('skool')
-    else setStep('iqonic')
+    else setStep('skool')
   }
 
   const startCheckout = async (planId: string) => {
@@ -151,37 +140,6 @@ export default function AccessMigrationPage() {
       return
     }
     window.location.href = data.url
-  }
-
-  const submitIqonic = async () => {
-    if (!iqonicId.trim() || !proofFile) {
-      setError('Preenche o ID IQONIC e carrega o print da subscrição activa.')
-      return
-    }
-    setSubmitting(true)
-    setError('')
-    const token = await getToken()
-    if (!token) return
-
-    const form = new FormData()
-    form.append('iqonic_member_id', iqonicId.trim())
-    form.append('proof', proofFile)
-
-    const res = await fetch('/api/access-migration/iqonic', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: form,
-    })
-    const data = await res.json()
-    setSubmitting(false)
-
-    if (!res.ok) {
-      setError(data.error || 'Erro ao enviar')
-      return
-    }
-
-    await supabase.auth.signOut()
-    setStep('iqonic_sent')
   }
 
   if (loading) {
@@ -255,17 +213,6 @@ export default function AccessMigrationPage() {
                   <div className="text-xs text-zinc-400">Sincronização com a tua conta Skool</div>
                 </div>
               </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start gap-3 h-auto py-4 border-zinc-700"
-                onClick={() => void selectChannel('iqonic')}
-              >
-                <Building2 className="w-5 h-5 text-blue-400" />
-                <div className="text-left">
-                  <div className="font-medium">IQONIC</div>
-                  <div className="text-xs text-zinc-400">Validação manual com print</div>
-                </div>
-              </Button>
             </CardContent>
           </Card>
         )}
@@ -326,63 +273,6 @@ export default function AccessMigrationPage() {
                 <Link href="https://skool.com/morethanmoney-1132" target="_blank">
                   Ir para a Skool
                 </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {step === 'iqonic' && (
-          <Card className="bg-zinc-900/80 border-zinc-800">
-            <CardHeader>
-              <CardTitle>Validação IQONIC</CardTitle>
-              <CardDescription className="text-zinc-300 leading-relaxed">
-                {copy?.iqonicProof}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="iqonic-id">ID IQONIC</Label>
-                <Input
-                  id="iqonic-id"
-                  value={iqonicId}
-                  onChange={(e) => setIqonicId(e.target.value)}
-                  placeholder="O teu identificador IQONIC"
-                  className="bg-zinc-950 border-zinc-700"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Print subscrição activa</Label>
-                <label className="flex flex-col items-center justify-center border border-dashed border-zinc-600 rounded-lg p-6 cursor-pointer hover:border-[#D2A63C] transition-colors">
-                  <Upload className="w-8 h-8 text-zinc-500 mb-2" />
-                  <span className="text-sm text-zinc-400">
-                    {proofFile ? proofFile.name : 'Carregar imagem (JPG, PNG)'}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
-                  />
-                </label>
-              </div>
-              <Button
-                className="w-full bg-[#D2A63C] text-black font-semibold"
-                disabled={submitting}
-                onClick={() => void submitIqonic()}
-              >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enviar para validação'}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {step === 'iqonic_sent' && (
-          <Card className="bg-zinc-900/80 border-zinc-800">
-            <CardContent className="pt-8 text-center space-y-4">
-              <CheckCircle2 className="w-12 h-12 text-amber-400 mx-auto" />
-              <p className="text-zinc-200">{copy?.iqonicPending}</p>
-              <Button variant="outline" asChild>
-                <Link href="/login">Voltar ao login</Link>
               </Button>
             </CardContent>
           </Card>

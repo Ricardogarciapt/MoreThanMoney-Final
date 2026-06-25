@@ -9,14 +9,12 @@ import { memberCategoryForPlan, normalizeSubscriptionPlan } from '@/lib/stripe-p
 import { subscriptionPlatformForStripeCheckout } from '@/lib/stripe-profile-sync'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
-export type AccessPaymentChannel = 'stripe' | 'skool' | 'iqonic'
+export type AccessPaymentChannel = 'stripe' | 'skool'
 export type AccessValidationStatus = 'pending' | 'approved' | 'rejected' | null
 
 export interface AccessMigrationState {
   access_revalidation_required: boolean
   access_payment_channel: AccessPaymentChannel | null
-  iqonic_member_id: string | null
-  iqonic_proof_url: string | null
   access_validation_status: AccessValidationStatus
   access_validation_requested_at: string | null
   app_activation_coupon_code: string | null
@@ -26,8 +24,6 @@ export interface AccessMigrationState {
 const DEFAULT_STATE: AccessMigrationState = {
   access_revalidation_required: false,
   access_payment_channel: null,
-  iqonic_member_id: null,
-  iqonic_proof_url: null,
   access_validation_status: null,
   access_validation_requested_at: null,
   app_activation_coupon_code: null,
@@ -45,12 +41,9 @@ export function readAccessMigration(profile: { profile_data?: unknown } | null |
     access_revalidation_required: pd.access_revalidation_required === true,
     access_payment_channel:
       pd.access_payment_channel === 'stripe' ||
-      pd.access_payment_channel === 'skool' ||
-      pd.access_payment_channel === 'iqonic'
+      pd.access_payment_channel === 'skool'
         ? pd.access_payment_channel
         : null,
-    iqonic_member_id: typeof pd.iqonic_member_id === 'string' ? pd.iqonic_member_id : null,
-    iqonic_proof_url: typeof pd.iqonic_proof_url === 'string' ? pd.iqonic_proof_url : null,
     access_validation_status:
       pd.access_validation_status === 'pending' ||
       pd.access_validation_status === 'approved' ||
@@ -91,11 +84,6 @@ export function isAccessMigrationExempt(
   return false
 }
 
-export function isIqonicValidationPending(profile: { profile_data?: unknown } | null | undefined): boolean {
-  const m = readAccessMigration(profile)
-  return m.access_payment_channel === 'iqonic' && m.access_validation_status === 'pending'
-}
-
 /** Utilizador deve passar pelo fluxo /access-migration antes de aceder à app. */
 export function needsAccessRevalidation(
   profile: (UserProfile & { profile_data?: unknown; email?: string }) | null | undefined,
@@ -104,7 +92,6 @@ export function needsAccessRevalidation(
   if (!profile || isAccessMigrationExempt(profile, educatorEmails)) return false
   const m = readAccessMigration(profile)
   if (m.access_migration_completed_at) return false
-  if (isIqonicValidationPending(profile)) return true
   return m.access_revalidation_required === true
 }
 
@@ -220,11 +207,6 @@ export const ACCESS_MIGRATION_COPY = {
     'O pack anual é o compromisso com a MoreThanMoney para podermos prestar um serviço melhor — inclui 20% de desconto face ao mensal.',
   stripeCta: 'Pagar com Stripe (cartão)',
   skoolCta: 'Sou membro Skool',
-  iqonicCta: 'Sou membro IQONIC',
-  iqonicProof:
-    'Envia um print da tua subscrição IQONIC activa e o teu ID IQONIC. A validação manual será feita nas próximas horas — só poderás entrar após aprovação no gestor de utilizadores.',
-  iqonicPending:
-    'Pedido enviado. A tua validação será feita nas próximas horas. Receberás acesso assim que um administrador aprovar no painel /admin.',
   couponNote:
     'Após o pagamento Stripe recebes um código individual para activar a app sem seres cobrado uma segunda vez.',
 } as const

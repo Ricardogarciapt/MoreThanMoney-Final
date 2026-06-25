@@ -1,6 +1,6 @@
 import type { UserProfile } from "@/lib/role-redirect"
 import { isSubscriptionActive, isSubscriptionCategory } from "@/lib/member-subscription"
-import { isIqonicValidationPending, needsAccessRevalidation } from "@/lib/access-migration"
+import { needsAccessRevalidation } from "@/lib/access-migration"
 
 function trialIsExpired(p: UserProfile): boolean {
   if (p.trial_expired === true) return true
@@ -21,10 +21,6 @@ export function isRegisteredMember(profile: UserProfile | null | undefined): boo
 
   if (profile.user_type === "admin" && profile.is_active === true) {
     return true
-  }
-
-  if (isIqonicValidationPending(profile)) {
-    return false
   }
 
   if (needsAccessRevalidation(profile as UserProfile & { profile_data?: unknown; email?: string })) {

@@ -19,15 +19,13 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose, title = "Acesso Restrito", description = "Faça login ou registe-se para aceder a este conteúdo" }: AuthModalProps) {
-  const { signInWithEmail, signInWithIqonic, signUp, isLoading } = useAuth()
+  const { signInWithEmail, signUp, isLoading } = useAuth()
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("login")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
-  const [isIqonicLogin, setIsIqonicLogin] = useState(false)
-  const [isEducator, setIsEducator] = useState(false)
 
   // Login form
   const [loginEmail, setLoginEmail] = useState("")
@@ -52,22 +50,6 @@ export default function AuthModal({ isOpen, onClose, title = "Acesso Restrito", 
 
     if (!loginEmail || !loginPassword) {
       setError("Por favor, preencha todos os campos")
-      return
-    }
-
-    // Se for login IQONIC
-    if (isIqonicLogin) {
-      const result = await signInWithIqonic(loginEmail, loginPassword, isEducator)
-      
-      if (result.success) {
-        // Redirecionar imediatamente (sem delay)
-        const allowedRoutes = ['/app-mobile', '/scanner-access', '/portfolios']
-        onClose()
-        window.location.replace(allowedRoutes[0])
-        return
-      } else {
-        setError(result.error || "Erro ao fazer login IQONIC")
-      }
       return
     }
 
@@ -203,63 +185,6 @@ export default function AuthModal({ isOpen, onClose, title = "Acesso Restrito", 
                   </Button>
                 </div>
               </div>
-
-              {/* Toggle IQONIC Login */}
-              <div className="flex gap-2 mb-4">
-                <Button
-                  type="button"
-                  variant={!isIqonicLogin ? "default" : "outline"}
-                  className={`flex-1 ${!isIqonicLogin ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
-                  onClick={() => {
-                    setIsIqonicLogin(false)
-                    setError('')
-                  }}
-                  disabled={isLoading}
-                  size="sm"
-                >
-                  Login Normal
-                </Button>
-                <Button
-                  type="button"
-                  variant={isIqonicLogin ? "default" : "outline"}
-                  className={`flex-1 ${isIqonicLogin ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
-                  onClick={() => {
-                    setIsIqonicLogin(true)
-                    setError('')
-                  }}
-                  disabled={isLoading}
-                  size="sm"
-                >
-                  <GraduationCap className="w-4 h-4 mr-1" />
-                  IQONIC.VIP
-                </Button>
-              </div>
-
-              {/* IQONIC User Type Toggle */}
-              {isIqonicLogin && (
-                <div className="flex gap-2 mb-4">
-                  <Button
-                    type="button"
-                    variant={!isEducator ? "default" : "outline"}
-                    className={`flex-1 ${!isEducator ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
-                    onClick={() => setIsEducator(false)}
-                    disabled={isLoading}
-                    size="sm"
-                  >
-                    Estudante
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={isEducator ? "default" : "outline"}
-                    className={`flex-1 ${isEducator ? 'bg-[#D2A63C] text-black' : 'border-gray-700 text-gray-300'}`}
-                    onClick={() => setIsEducator(true)}
-                    disabled={isLoading}
-                    size="sm"
-                  >
-                    Educador
-                  </Button>
-                </div>
-              )}
 
               <Button
                 type="submit"

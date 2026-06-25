@@ -959,11 +959,11 @@ export default function MTMLandingPage() {
                   asChild
                   variant="outline"
                   size="lg"
-                  className="border-2 border-blue-500/50 text-blue-400 hover:bg-blue-500/10 font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300"
+                  className="border-2 border-[#D2A63C]/50 text-[#D2A63C] hover:bg-[#D2A63C]/10 font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300"
                 >
-                  <Link href="/iqonic">
+                  <Link href="/mtmcopy">
                     <Star className="w-5 h-5 mr-2" />
-                    Estou Pronto para a IQONIC
+                    Quero o MTMcopier
                   </Link>
                 </Button>
               </div>

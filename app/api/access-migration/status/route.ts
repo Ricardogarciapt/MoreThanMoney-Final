@@ -3,7 +3,6 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
   ACCESS_MIGRATION_COPY,
   isAccessMigrationExempt,
-  isIqonicValidationPending,
   needsAccessRevalidation,
   readAccessMigration,
 } from '@/lib/access-migration'
@@ -47,12 +46,10 @@ export async function GET(request: NextRequest) {
   const educatorEmails = await getEducatorEmails()
   const migration = readAccessMigration(profile)
   const required = needsAccessRevalidation(profile, educatorEmails)
-  const iqonicPending = isIqonicValidationPending(profile)
 
   return NextResponse.json({
     required,
     exempt: isAccessMigrationExempt(profile, educatorEmails),
-    iqonic_pending: iqonicPending,
     migration,
     copy: ACCESS_MIGRATION_COPY,
     profile: {

@@ -8,7 +8,7 @@ import {
 
 const supabase = getSupabaseAdmin()
 
-const VALID_CHANNELS: AccessPaymentChannel[] = ['stripe', 'skool', 'iqonic']
+const VALID_CHANNELS: AccessPaymentChannel[] = ['stripe', 'skool']
 
 async function authUser(request: NextRequest) {
   const authHeader = request.headers.get('Authorization')
@@ -67,16 +67,11 @@ export async function POST(request: NextRequest) {
     patch.onboarding_platform = 'skool'
   }
 
-  if (channel === 'iqonic') {
-    patch.member_category = 'iq'
-    patch.onboarding_platform = 'iqonic'
-  }
-
   await supabase.from('profiles').update(patch).eq('id', user.id)
 
   return NextResponse.json({
     success: true,
     channel,
-    next_step: channel === 'stripe' ? 'checkout' : channel === 'iqonic' ? 'iqonic_form' : 'skool_instructions',
+    next_step: channel === 'stripe' ? 'checkout' : 'skool_instructions',
   })
 }

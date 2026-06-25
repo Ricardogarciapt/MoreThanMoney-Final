@@ -85,7 +85,7 @@ export default function AutomationPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                <Link href="/swipetotrade" className="flex-1">
+                <Link href="/mtmcopy" className="flex-1">
                   <Button className="w-full bg-gradient-to-r from-blue-600 via-mtm-primary to-cyan-600 hover:from-blue-500 hover:via-mtm-primary hover:to-cyan-500 text-white font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105">
                     <Smartphone className="w-5 h-5 mr-2" />
                     Configurar IQ Sync
@@ -288,7 +288,7 @@ export default function AutomationPage() {
               Escolhe a solução que melhor se adapta ao teu estilo de trading e começa hoje mesmo.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/swipetotrade">
+              <Link href="/mtmcopy">
                 <Button className="bg-gradient-to-r from-blue-600 via-mtm-primary to-cyan-600 hover:from-blue-500 hover:via-mtm-primary hover:to-cyan-500 text-white font-bold text-lg px-8 py-6 rounded-xl transition-all duration-300 hover:scale-105">
                   <RefreshCw className="w-5 h-5 mr-2" />
                   Experimentar IQ Sync

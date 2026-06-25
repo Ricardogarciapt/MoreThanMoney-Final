@@ -40,13 +40,12 @@ function isTrialExpired(profile: Record<string, unknown>): boolean {
 function profileToUser(
   profile: unknown,
   sessionUser: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }
-): { user: User; isIqonicUser: boolean } | null {
+): { user: User } | null {
   if (!profile || typeof profile !== "object") return null
   const p = profile as Record<string, unknown>
   const member_category =
     typeof p.member_category === "string" ? p.member_category : undefined
   return {
-    isIqonicUser: member_category === "iq",
     user: {
       id: (p.id as string) ?? sessionUser.id,
       email: (p.email as string) ?? sessionUser.email ?? "",
@@ -71,11 +70,9 @@ interface AuthContextType {
   isAuthenticated: boolean
   isAdmin: boolean
   isLoading: boolean
-  isIqonicUser: boolean
   /** Membro €35 (member_category="standard") — acesso exclusivo à app mobile */
   isAppOnlyUser: boolean
   signInWithEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
-  signInWithIqonic: (email: string, password: string, isEducator?: boolean) => Promise<{ success: boolean; error?: string }>
   signUp: (email: string, password: string, userData: any) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
@@ -86,10 +83,8 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isAdmin: false,
   isLoading: true,
-  isIqonicUser: false,
   isAppOnlyUser: false,
   signInWithEmail: async () => ({ success: false }),
-  signInWithIqonic: async () => ({ success: false }),
   signUp: async () => ({ success: false }),
   logout: async () => {},
   refreshUser: async () => {},
@@ -100,7 +95,6 @@ export const useAuth = () => useContext(AuthContext)
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isIqonicUser, setIsIqonicUser] = useState(false)
 
   const enforceTrialExpiry = async (profile: unknown) => {
     if (!profile || typeof profile !== "object") return profile
@@ -141,7 +135,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (cachedSession && isSessionValid(cachedSession)) {
           console.log('⚡ [AUTH CONTEXT] Usando sessão em cache')
-          setIsIqonicUser(false)
           supabase
             .from("profiles")
             .select("*")
@@ -155,7 +148,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const mapped = profileToUser(normalized, cachedSession.user)
                 if (mapped) {
                   setUser(mapped.user)
-                  setIsIqonicUser(mapped.isIqonicUser)
                 }
               }
               setIsLoading(false)
@@ -182,13 +174,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (error || !session?.user) {
             console.log('ℹ️ [AUTH CONTEXT] Nenhuma sessão ativa')
             setUser(null)
-            setIsIqonicUser(false)
             setIsLoading(false)
             return
           }
           
           console.log('✅ [AUTH CONTEXT] Sessão Supabase encontrada:', session.user.email)
-          setIsIqonicUser(false)
           
           // Sincronizar cache imediatamente
           setCachedSession(session)
@@ -208,12 +198,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const mapped = profileToUser(normalized, session.user)
             if (mapped) {
               setUser(mapped.user)
-              setIsIqonicUser(mapped.isIqonicUser)
             }
           } else {
             console.log('ℹ️ [AUTH CONTEXT] Sessão sem perfil — aguarda registo/pagamento')
             setUser(null)
-            setIsIqonicUser(false)
           }
         } catch (timeoutError) {
           if (!mounted) return
@@ -221,19 +209,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Tentar cache novamente
           const cachedSession = getCachedSession()
           if (cachedSession && isSessionValid(cachedSession)) {
-            setIsIqonicUser(false)
             setIsLoading(false)
             // Perfil será carregado em background
           } else {
             setUser(null)
-            setIsIqonicUser(false)
           }
         }
       } catch (error) {
         console.error('❌ [AUTH CONTEXT] Erro:', error)
         if (mounted) {
           setUser(null)
-          setIsIqonicUser(false)
         }
       } finally {
         if (mounted) {
@@ -253,7 +238,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (event === 'SIGNED_IN' && session) {
         const { setCachedSession } = await import('@/lib/auth-cache')
         setCachedSession(session)
-        setIsIqonicUser(false)
         
         supabase
           .from("profiles")
@@ -267,7 +251,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               const mapped = profileToUser(normalized, session.user)
               if (mapped) {
                 setUser(mapped.user)
-                setIsIqonicUser(mapped.isIqonicUser)
               }
             }
           })
@@ -276,7 +259,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { clearCachedSession } = await import('@/lib/auth-cache')
         clearCachedSession()
         setUser(null)
-        setIsIqonicUser(false)
       }
     })
 
@@ -320,7 +302,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!isRegisteredMember(profile)) {
           await supabase.auth.signOut()
           setUser(null)
-          setIsIqonicUser(false)
           return { success: false, error: REGISTER_NOT_FOUND_MESSAGE }
         }
 
@@ -333,14 +314,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (normalizedObj && isTrialUser(normalizedObj) && isTrialExpired(normalizedObj)) {
           await supabase.auth.signOut()
           setUser(null)
-          setIsIqonicUser(false)
           return { success: false, error: 'O teu Free Trial expirou ao fim de 7 dias.' }
         }
 
         const mapped = profileToUser(normalized, data.user)
         if (mapped) {
           setUser(mapped.user)
-          setIsIqonicUser(mapped.isIqonicUser)
         }
 
         return { success: true }
@@ -436,17 +415,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   // Login com IQONIC
-  const signInWithIqonic = async (email: string, password: string, isEducator: boolean = false) => {
-    console.warn("⚠️ [AUTH CONTEXT] Login IQONIC desativado")
-    return { success: false, error: "Login IQONIC desativado." }
-  }
 
   // Logout
   const logout = async () => {
     try {
       console.log('🚪 Fazendo logout...')
       
-      setIsIqonicUser(false)
       
       // Limpar sessão Supabase
       await supabase.auth.signOut()
@@ -482,7 +456,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const mapped = profileToUser(normalized, session.user)
           if (mapped) {
             setUser(mapped.user)
-            setIsIqonicUser(mapped.isIqonicUser)
           }
         }
       } else {
@@ -501,11 +474,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated: !!user,
         isAdmin: user?.user_type === "admin" && user?.is_active === true,
         isLoading,
-        isIqonicUser,
         isAppOnlyUser:
           user?.member_category === "standard" && user?.user_type !== "admin",
         signInWithEmail,
-        signInWithIqonic,
         signUp,
         logout,
         refreshUser,

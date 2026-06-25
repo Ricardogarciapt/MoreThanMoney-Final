@@ -21,11 +21,9 @@ export default function ProtectedPage({
   allowInactive = false
 }: ProtectedPageProps) {
   const router = useRouter()
-  const { user, isIqonicUser, isAppOnlyUser, isLoading } = useAuth()
+  const { user, isAppOnlyUser, isLoading } = useAuth()
   const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'unauthenticated'>('checking')
 
-  // Rotas permitidas para utilizadores IQONIC (iq)
-  const iqonicAllowedRoutes = ['/app-mobile', '/scanner-access', '/portfolios']
   // Rotas permitidas para membros App Only (standard €35)
   const appOnlyAllowedRoutes = ['/app-mobile']
 
@@ -40,18 +38,6 @@ export default function ProtectedPage({
         if (!isRouteAllowed) {
           console.log(`⚠️ [PROTECTED PAGE] Rota ${currentPath} não permitida para membros App Only`)
           router.replace('/app-mobile')
-          setAuthState('unauthenticated')
-          return
-        }
-      }
-
-      // Verificar se é utilizador IQONIC e se a rota está permitida
-      if (isIqonicUser) {
-        const isRouteAllowed = iqonicAllowedRoutes.some(route => currentPath.startsWith(route))
-
-        if (!isRouteAllowed) {
-          console.log(`⚠️ [PROTECTED PAGE] Rota ${currentPath} não permitida para utilizadores IQONIC`)
-          router.push(iqonicAllowedRoutes[0])
           setAuthState('unauthenticated')
           return
         }
@@ -91,7 +77,7 @@ export default function ProtectedPage({
       router.push(redirectPath)
       return
     }
-  }, [user, isIqonicUser, isAppOnlyUser, isLoading, requireAdmin, allowInactive, redirectPath, router])
+  }, [user, isAppOnlyUser, isLoading, requireAdmin, allowInactive, redirectPath, router])
 
   // Mostrar loading apenas se estiver verificando
   if (authState === 'checking') {
