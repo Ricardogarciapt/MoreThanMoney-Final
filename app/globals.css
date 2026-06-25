@@ -69,10 +69,22 @@ body.mobile-route {
   overscroll-behavior-x: none;
 }
 
-/* Navbar segura — o padding-top via JS/inline style garante safe area */
+/* Navbar segura — padding-top respeita a safe area (notch/status bar) */
 .app-mobile-navbar {
-  /* Fallback declarativo para navegadores que suportem mas sem JS */
   padding-top: env(safe-area-inset-top, 0px);
+}
+
+/*
+ * Standalone (home-screen PWA) / fullscreen / Capacitor: a status bar
+ * black-translucent sobrepõe o conteúdo. Em alguns contextos iOS o
+ * env(safe-area-inset-top) resolve para ~0 e os controlos do topo (seletor de
+ * idioma, sino) ficam por baixo da status bar e não recebem toque.
+ * Garantir um mínimo de 44px de clearance nesses modos (não afeta o Safari normal).
+ */
+@media all and (display-mode: standalone), all and (display-mode: fullscreen) {
+  .app-mobile-navbar {
+    padding-top: max(env(safe-area-inset-top, 0px), 44px);
+  }
 }
 
 /* Bottom tabs — safe area declarativa como fallback */

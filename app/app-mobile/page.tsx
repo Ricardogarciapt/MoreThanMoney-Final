@@ -358,7 +358,6 @@ function AppMobileContent() {
               ? "bg-gray-900 border-b border-gray-800"
               : "bg-black/50 backdrop-blur-xl border-b border-white/10 shadow-[0_1px_0_rgba(255,255,255,0.05)]"
           }`}
-          style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
         >
           <div className={`flex items-center justify-between gap-4 px-4 transition-all duration-300 ${isHeaderCollapsed ? "py-2" : "py-3"}`}>
             {/* Menu Button */}
