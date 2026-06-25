@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import EducatorProfileDialog, { type EducatorProfilePublic } from "@/components/live/educator-profile-dialog"
+import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import {
@@ -382,34 +383,22 @@ export default function LiveSessionsLobby() {
             )}
           </section>
 
-          {/* Próximas lives */}
+          {/* Próximas lives — Horário (estilo calendário escolar) */}
           <section>
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight text-white md:text-xl">
               <Bell className="h-5 w-5 text-[#D2A63C]" />
-              Próximas lives
+              Horário · Próximas lives
             </h3>
-            {upcoming.length === 0 ? (
-              <p className="text-sm text-gray-500">Sem horários agendados. Os educadores podem definir data no studio ou no admin.</p>
-            ) : (
-              <ul className="space-y-2">
-                {upcoming.map((s) => (
-                  <li
-                    key={s.id}
-                    className="flex flex-col gap-2 rounded-lg border border-gray-800 bg-gray-950/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div>
-                      <p className="font-medium text-white">{s.title}</p>
-                      <p className="text-xs text-gray-400">
-                        {s.educator?.display_name} · {s.scheduled_start_at && new Date(s.scheduled_start_at).toLocaleString("pt-PT")}
-                      </p>
-                    </div>
-                    <Button size="sm" variant="outline" className="border-[#D2A63C]/40 text-[#D2A63C] shrink-0" onClick={notifySoon}>
-                      Notificar-me
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <SessionsTimetable
+              sessions={upcoming.map((s) => ({
+                id: s.id,
+                title: s.title,
+                educatorName: s.educator?.display_name ?? null,
+                scheduledAt: s.scheduled_start_at!,
+                tier: (s as { access_tier?: string }).access_tier ?? null,
+              }))}
+              emptyText="Sem horários agendados. Os educadores podem definir data no studio ou no admin."
+            />
           </section>
       </div>
     </div>

@@ -27,6 +27,7 @@ import { useLmsHlsVideo } from "@/hooks/use-lms-hls-video"
 import { usePictureInPictureSupported } from "@/hooks/use-picture-in-picture-supported"
 import { useLmsViewerHeartbeat } from "@/hooks/use-lms-viewer-heartbeat"
 import EducatorLiveViewerBadge from "@/components/live/educator-live-viewer-badge"
+import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { notifyXpFromResponse } from "@/lib/xp-client"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -163,7 +164,7 @@ export default function LiveSessionsMobile({
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "lms_streams" },
-        (payload) => {
+        (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
           const newRow = payload.new as { is_live?: boolean; title?: string; educator_id?: string }
           const oldRow = payload.old as { is_live?: boolean }
           // Only when going from offline → live
@@ -579,48 +580,22 @@ export default function LiveSessionsMobile({
           })}
       </div>
 
-      {/* ── Próximas sessões (calendário) ───────────────────────────────────── */}
+      {/* ── Próximas sessões (Horário — estilo calendário escolar) ──────────── */}
       {scheduledStreams.length > 0 && (
         <div className="mt-6 mb-4">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#D2A63C]" />
-            Próximas Sessões
+            Horário · Próximas Sessões
           </h3>
-          <ul className="space-y-2">
-            {scheduledStreams.map((s) => {
-              const dt = s.scheduled_start_at ? new Date(s.scheduled_start_at) : null
-              return (
-                <li
-                  key={s.id}
-                  className="flex items-center gap-3 rounded-xl border border-gray-800 bg-gray-950/80 px-3 py-2.5"
-                >
-                  {dt && (
-                    <div className="flex-shrink-0 w-10 text-center">
-                      <p className="text-[10px] uppercase text-gray-500 leading-tight">
-                        {dt.toLocaleDateString("pt-PT", { weekday: "short" })}
-                      </p>
-                      <p className="text-base font-bold text-[#D2A63C] leading-tight">{dt.getDate()}</p>
-                      <p className="text-[9px] text-gray-600">{dt.toLocaleDateString("pt-PT", { month: "short" })}</p>
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-white truncate">{s.title}</p>
-                    <p className="text-[10px] text-gray-400 truncate">
-                      {s.educator?.display_name}
-                      {dt && ` · ${dt.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}`}
-                    </p>
-                  </div>
-                  {s.access_tier && s.access_tier !== "all" && (
-                    <span className={`flex-shrink-0 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                      s.access_tier === "premium" ? "bg-purple-700 text-white" : "bg-amber-600/90 text-black"
-                    }`}>
-                      {s.access_tier === "premium" ? "Premium" : "Membro"}
-                    </span>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+          <SessionsTimetable
+            sessions={scheduledStreams.map((s) => ({
+              id: s.id,
+              title: s.title,
+              educatorName: s.educator?.display_name ?? null,
+              scheduledAt: s.scheduled_start_at!,
+              tier: s.access_tier,
+            }))}
+          />
         </div>
       )}
 
