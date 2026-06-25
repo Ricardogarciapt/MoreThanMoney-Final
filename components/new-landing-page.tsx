@@ -99,9 +99,9 @@ const PATHS = [
 
 const TECHNOLOGIES = [
   {
-    id: "iq-sync",
+    id: "tap-to-trade",
     emoji: "🔄",
-    title: "IQ Sync",
+    title: "Tap to Trade MTM",
     subtitle: "Mantém-te ligado em tempo real",
     color: "#3B82F6",
     gradient: "from-blue-900/30 to-cyan-900/10",
@@ -120,9 +120,9 @@ const TECHNOLOGIES = [
     platforms: ["App MTM System", "iOS · Android"],
   },
   {
-    id: "iq-auto",
+    id: "mtm-copy",
     emoji: "🤖",
-    title: "IQ Auto",
+    title: "MTM Copy",
     subtitle: "A revolução da automação",
     color: "#A855F7",
     gradient: "from-purple-900/30 to-pink-900/10",
@@ -138,7 +138,7 @@ const TECHNOLOGIES = [
     ],
     cta: "Explorar Tecnologia",
     href: "/automation",
-    platforms: ["Add-on IQONIC", "Integração via IQ Sync"],
+    platforms: ["Add-on MTM Copy", "Integração MTMcopier"],
   },
 ]
 

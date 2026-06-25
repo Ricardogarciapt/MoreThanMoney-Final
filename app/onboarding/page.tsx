@@ -383,67 +383,6 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        {/* Onboarding Internacional */}
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* VXA Onboarding - Mostrar baseado em lógica melhorada */}
-          {shouldShowVXA() && (
-            <Card className="card-clean">
-              <CardHeader>
-                <CardTitle className="text-mtm-primary flex items-center">
-                  <Globe className="w-6 h-6 mr-2" />
-                  Onboarding Internacional - Vision X Ambition
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-300 mb-6">
-                  Para membros da equipa internacional, aceda à plataforma Vision X Ambition para um onboarding completo e acesso às ferramentas globais.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Link href="https://www.visionxambition.com" target="_blank">
-                    <Button className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white">
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Aceder à Equipa Internacional
-                    </Button>
-                  </Link>
-                  <div className="flex items-center gap-2 text-gray-400">
-                    <Users className="w-4 h-4" />
-                    <span className="text-sm">Vision X Ambition</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* RFG Onboarding - Mostrar baseado em lógica melhorada */}
-          {shouldShowRFG() && (
-            <Card className="card-clean">
-              <CardHeader>
-                <CardTitle className="text-[#D2A63C] flex items-center">
-                  <Globe className="w-6 h-6 mr-2" />
-                  Onboarding Internacional - RFG
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-300 mb-6">
-                  Para membros da equipa internacional RFG, aceda à plataforma Revolution to Free Generations para um onboarding completo e acesso às ferramentas globais.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Link href="https://www.rfg.life" target="_blank">
-                    <Button className="w-full sm:w-auto bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 text-white">
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Aceder à Equipa RFG
-                    </Button>
-                  </Link>
-                  <div className="flex items-center gap-2 text-gray-400">
-                    <Users className="w-4 h-4" />
-                    <span className="text-sm">Revolution to Free Generations</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
         {/* Ponte para execução gamificada */}
         <div className="max-w-4xl mx-auto mt-12">
           <Card className="card-clean border-[#D2A63C]/30">
