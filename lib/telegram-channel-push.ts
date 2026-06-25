@@ -2,7 +2,7 @@ import { getSiteOrigin } from '@/lib/site-url'
 import type { AppChatChannelSlug } from '@/lib/telegram-app-channels'
 
 const PUSH_TITLES: Record<string, string> = {
-  'trade-ideas-setup': '🧠 Novo sinal Sensei Scanner!',
+  'trade-ideas-setup': '📊 Novo Sinal Forex!',
   'premium-ideas': '💎 Nova Ideia Premium!',
 }
 
