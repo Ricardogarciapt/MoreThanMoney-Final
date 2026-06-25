@@ -83,14 +83,14 @@ export default function ApresentacaoPage() {
 
       {/* Presentation iframe — fills remaining height */}
       <iframe
-        src="/apresentacoes/mtm-iqonic.html?v=2"
+        src="/apresentacoes/mtm-iqonic.html?v=3"
         style={{
           flex: 1,
           width: "100%",
           border: "none",
           display: "block",
         }}
-        title="MTM × IQONIC — Apresentação de Oportunidade 2026"
+        title="MoreThanMoney — Apresentação de Oportunidade 2026"
         allow="fullscreen"
       />
     </div>
