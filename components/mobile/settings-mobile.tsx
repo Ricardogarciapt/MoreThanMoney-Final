@@ -35,8 +35,10 @@ import {
   TriangleAlert,
   Zap,
   Award,
+  Globe,
 } from "lucide-react"
 import Image from "next/image"
+import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -564,6 +566,18 @@ export default function SettingsMobile() {
 
       {/* ── Secções ────────────────────────────────────────────────────── */}
       <div className="px-4 py-4 space-y-4">
+
+        {/* Idioma — mesmo seletor do site (21 línguas, Google Translate) */}
+        <section>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">Idioma</h2>
+          <div className="bg-gray-800/50 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <Globe className="w-4 h-4 text-gray-400 shrink-0" />
+              <span className="text-sm text-gray-300 truncate">Idioma da app</span>
+            </div>
+            <LanguageSelectorEnhanced />
+          </div>
+        </section>
 
         {/* Perfil */}
         <section>
