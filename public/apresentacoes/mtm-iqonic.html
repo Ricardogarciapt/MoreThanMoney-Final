@@ -213,6 +213,39 @@
 
   /* ── RESPONSIVE ── */
   @media(max-width:1100px) { .g3,.g4{grid-template-columns:repeat(2,1fr)} h1{font-size:38px} h2{font-size:28px} .slide{padding:44px 44px} }
+
+  /* ── MOBILE (telemóvel, retrato) ── */
+  @media(max-width:760px){
+    /* deixa o conteúdo respirar e fazer scroll vertical dentro do slide */
+    .slide{ padding:60px 16px 96px !important; justify-content:flex-start !important; align-items:stretch !important; overflow-y:auto !important; overflow-x:hidden !important; -webkit-overflow-scrolling:touch; }
+    .slide.img-slide{ justify-content:center !important; }
+    .slide > *{ width:100%; }
+    h1{ font-size:clamp(26px,8.5vw,40px) !important; }
+    h2{ font-size:clamp(21px,6.8vw,30px) !important; }
+    h3{ font-size:16px !important; }
+    .lead{ font-size:14px !important; }
+    .tag{ margin-bottom:12px; font-size:9px; letter-spacing:.14em; padding:4px 12px; }
+    .gold-line{ margin-left:auto; margin-right:auto; }
+    /* grelhas a 1 coluna */
+    .g2,.g3,.g4,.edu-grid{ grid-template-columns:1fr !important; gap:12px !important; }
+    .card{ padding:16px !important; }
+    .timeline{ gap:12px !important; }
+    .tech-block{ padding:14px !important; }
+    /* stats / ranks empilham e cabem */
+    .stats-bar{ flex-wrap:wrap !important; gap:10px !important; }
+    .stats-bar .stat{ flex:1 1 42% !important; }
+    .rank-row{ font-size:11px !important; }
+    .rank-row .rval{ font-size:11px !important; }
+    table{ font-size:11px !important; }
+    /* chrome fixo mais compacto */
+    .logo-fixed{ top:12px; left:14px; }
+    .logo-fixed .lm{ width:24px; height:24px; font-size:11px; }
+    .logo-fixed span{ font-size:10px; }
+    .slide-num{ top:14px; right:14px; font-size:10px; }
+    .nav{ bottom:14px; gap:8px; padding:7px 12px; }
+    .nav-btn{ width:32px; height:32px; font-size:14px; }
+    .dot.active{ width:14px; }
+  }
 </style>
 </head>
 <body>

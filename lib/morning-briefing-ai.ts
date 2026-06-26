@@ -6,22 +6,39 @@ export type MorningBriefingContent = {
   chatPost: string
 }
 
-function buildMetricsBlock(m: MorningBriefingMetrics): string {
-  const wow =
-    m.community.weekOverWeekPct != null
-      ? `${m.community.weekOverWeekPct >= 0 ? '+' : ''}${m.community.weekOverWeekPct}% vs semana anterior`
-      : 'primeira semana com registos'
+function fmtSignedPct(v: number | null): string {
+  if (v == null) return '—'
+  return `${v >= 0 ? '+' : ''}${Math.round(v * 10) / 10}%`
+}
 
+function buildMetricsBlock(m: MorningBriefingMetrics): string {
+  // Nota: percentagem de variação de novos membros vs semana anterior é OMITIDA de propósito.
   let block = `📊 **Comunidade (dados agregados)**
 • Membros activos: **${m.community.totalActive}**
-• Novos membros (7 dias): **${m.community.newMembersThisWeek}** (${wow})
+• Novos membros (7 dias): **${m.community.newMembersThisWeek}**
 • Mensagens no chat (7 dias): **${m.engagement.chatMessagesThisWeek}**
 • Marcações futuras: **${m.engagement.upcomingBookings}**`
+
+  if (m.trading) {
+    const t = m.trading
+    block += `\n\n🎯 **Trading (últimas 24h)**
+• TPs atingidos: **${t.tpHits24h}** _(Premium ${t.perChannel.premium} · Sensei ${t.perChannel.sensei} · Forex ${t.perChannel.forex})_`
+    if (t.newSenseiIdeas24h > 0) block += `\n• Novas ideias Sensei: **${t.newSenseiIdeas24h}**`
+  }
+
+  const liveProviders = m.providers.filter((p) => p.gainPct != null)
+  if (liveProviders.length) {
+    block += `\n\n🤖 **Estratégias MTMcopy (desempenho)**`
+    for (const p of liveProviders) {
+      const win = p.winRatePct != null ? ` · win ${Math.round(p.winRatePct)}%` : ''
+      block += `\n• ${p.label}: **${fmtSignedPct(p.gainPct)}**${win}`
+    }
+  }
 
   if (m.dca) {
     const cTotal = m.dca.cryptoStrongBuys + m.dca.cryptoBuys
     const eTotal = m.dca.etfStrongBuys + m.dca.etfBuys
-    block += `\n• Oportunidades DCA hoje: **${cTotal}** crypto · **${eTotal}** ETF`
+    block += `\n\n📈 Oportunidades DCA hoje: **${cTotal}** crypto · **${eTotal}** ETF`
   }
 
   return block
@@ -100,8 +117,13 @@ export async function generateMorningBriefing(
     {
       date: metrics.dateLabel,
       weekday: metrics.weekdayLabel,
-      community: metrics.community,
+      community: {
+        totalActive: metrics.community.totalActive,
+        newMembersThisWeek: metrics.community.newMembersThisWeek,
+      },
       engagement: metrics.engagement,
+      trading: metrics.trading,
+      providers: metrics.providers.filter((p) => p.gainPct != null),
       dca: metrics.dca,
     },
     null,
@@ -121,15 +143,18 @@ REGRAS RGPD / COMPLIANCE:
 - Conteúdo educativo — NÃO é consultoria financeira
 - Sem garantias de retorno ou promessas de ganhos
 - Tom motivacional: disciplina, comunidade, longo prazo, mindset
+- NUNCA mostres a percentagem de variação de novos membros vs semana anterior (não a tens nos dados — não a inventes)
 
 ESTRUTURA DO POST (markdown, usa emojis moderados):
 1. Cabeçalho visual com título (como "☀️ BOM DIA" ou "🌟 BOA SEMANA")
 2. Data
 3. Parágrafo de abertura caloroso (2-3 frases)
 4. Secção "O que esperar hoje" ou "Reflexão da semana" (adaptativo ao dia da semana)
-5. Secção métricas comunidade (usa os números fornecidos)
-6. Secção DCA se houver oportunidades (crypto/ETF)
-7. 2-3 bullets de acção / foco
+5. Secção métricas comunidade (usa os números fornecidos; SEM percentagem de variação de novos membros)
+6. Secção "🎯 Trading (últimas 24h)": TPs atingidos no total e por canal (Premium/Sensei/Forex) a partir de "trading"
+7. Secção "🤖 Estratégias MTMcopy": desempenho em % (gainPct) e win rate de cada estratégia em "providers" (se houver)
+8. Secção DCA se houver oportunidades (crypto/ETF)
+9. 2-3 bullets de acção / foco
 8. Notícias ou contexto macro: menciona temas gerais do mercado (ouro, índices, crypto) de forma genérica e educativa — sem preços inventados
 9. Disclaimer curto educativo
 10. Fecho "Together We Go Further"

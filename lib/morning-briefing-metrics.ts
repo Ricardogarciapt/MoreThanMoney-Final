@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { getProviderStrategyMetrics } from '@/lib/mtmcopy/provider-metrics'
 
 export type MorningBriefingMetrics = {
   dateLabel: string
@@ -15,12 +16,27 @@ export type MorningBriefingMetrics = {
     upcomingBookings: number
     bookingsCreatedThisWeek: number
   }
+  /** Desempenho dos chats de trading nas últimas 24h (TPs atingidos). */
+  trading: {
+    tpHits24h: number
+    perChannel: { premium: number; sensei: number; forex: number }
+    newSenseiIdeas24h: number
+  } | null
+  /** Desempenho das estratégias MTMcopy (providers) — % de ganho e win rate. */
+  providers: Array<{ label: string; gainPct: number | null; winRatePct: number | null; online: boolean }>
   dca: {
     cryptoStrongBuys: number
     cryptoBuys: number
     etfStrongBuys: number
     etfBuys: number
   } | null
+}
+
+const SIGNAL_CHANNELS = ['premium-ideas', 'sensei-scanner', 'trade-ideas-setup', 'trade-ideas'] as const
+
+function isTpHit(content: string): boolean {
+  const c = content.toLowerCase()
+  return (c.includes('tp') && (c.includes('hit') || c.includes('atingi'))) || c.includes('take profit')
 }
 
 function lisbonWeekday(): { weekday: string; isSunday: boolean; dateLabel: string } {
@@ -78,6 +94,7 @@ export async function gatherMorningBriefingMetrics(siteUrl: string): Promise<Mor
   const now = new Date()
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString()
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
 
   const [
     activeCount,
@@ -87,6 +104,8 @@ export async function gatherMorningBriefingMetrics(siteUrl: string): Promise<Mor
     bookingsWeek,
     upcomingBookings,
     dca,
+    tpHitMsgs,
+    senseiIdeas24h,
   ] = await Promise.all([
     supabase
       .from('profiles')
@@ -115,10 +134,46 @@ export async function gatherMorningBriefingMetrics(siteUrl: string): Promise<Mor
       .eq('status', 'active')
       .gt('start_time', now.toISOString()),
     fetchDcaSnapshot(siteUrl),
+    supabase
+      .from('chat_messages')
+      .select('channel_slug, content')
+      .gte('created_at', oneDayAgo)
+      .in('channel_slug', SIGNAL_CHANNELS as unknown as string[])
+      .or('content.ilike.%hit%,content.ilike.%atingi%,content.ilike.%take profit%')
+      .limit(800),
+    supabase
+      .from('sensei_trade_ideas')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', oneDayAgo),
   ])
 
   const newMembersThisWeek = newThisWeek.count ?? 0
   const newMembersPriorWeek = newPriorWeek.count ?? 0
+
+  const tpRows = ((tpHitMsgs as { data?: Array<{ channel_slug: string; content: string }> }).data ?? [])
+    .filter((r) => isTpHit(r.content ?? ''))
+  const trading = {
+    tpHits24h: tpRows.length,
+    perChannel: {
+      premium: tpRows.filter((r) => r.channel_slug === 'premium-ideas').length,
+      sensei: tpRows.filter((r) => r.channel_slug === 'sensei-scanner').length,
+      forex: tpRows.filter((r) => r.channel_slug === 'trade-ideas-setup' || r.channel_slug === 'trade-ideas').length,
+    },
+    newSenseiIdeas24h: (senseiIdeas24h as { count?: number }).count ?? 0,
+  }
+
+  let providers: MorningBriefingMetrics['providers'] = []
+  try {
+    const perf = await getProviderStrategyMetrics()
+    providers = (perf.providers ?? []).map((p) => ({
+      label: p.label,
+      gainPct: p.gainPct,
+      winRatePct: p.winRatePct,
+      online: p.online,
+    }))
+  } catch {
+    providers = []
+  }
 
   return {
     dateLabel,
@@ -135,6 +190,8 @@ export async function gatherMorningBriefingMetrics(siteUrl: string): Promise<Mor
       upcomingBookings: upcomingBookings.count ?? 0,
       bookingsCreatedThisWeek: bookingsWeek.count ?? 0,
     },
+    trading,
+    providers,
     dca,
   }
 }
