@@ -670,13 +670,32 @@ function AttachSheet({
 const TAP_TRADE_CHANNELS = new Set(['sensei-scanner', 'trade-ideas', 'premium-ideas', 'trade-ideas-setup'])
 const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad)/i
 const TAP_TRADE_DIR_RE = /(\b(buy|sell|long|short|compra|venda)\b|🟢|🔴)/i
+/** Sensei: só a "Entry Alert / Ideia Activada" (entrada activada) é negociável. */
+const SENSEI_ACTIVE_RE = /(entrada\s+activ|entrada\s+ativ|ideia\s+activ|ideia\s+ativ|entry\s+alert)/i
+/** Tempo máximo para um sinal estar ativo / clicável (5 minutos). */
+const TAP_TRADE_MAX_AGE_MS = 5 * 60 * 1000
+
 /** Heurística client-side: é um sinal de ENTRADA negociável? (o backend valida definitivamente) */
 function looksLikeTradeSignal(channelSlug?: string | null, content?: string | null): boolean {
   if (!channelSlug || !content || !TAP_TRADE_CHANNELS.has(channelSlug)) return false
   if (TAP_TRADE_FOLLOWUP_RE.test(content)) return false // follow-ups (TP hit/BE/SL) não são entradas
   if (!TAP_TRADE_DIR_RE.test(content)) return false // precisa de direção
   if (!/\d{2,}/.test(content)) return false // precisa de pelo menos um preço
+
+  // Sensei: exige o alerta de entrada activada COMPLETO (entrada + SL + TP)
+  if (channelSlug === 'sensei-scanner') {
+    const activated = SENSEI_ACTIVE_RE.test(content)
+    const hasSL = /stop\s*loss|🛑/i.test(content)
+    const hasTP = /take\s*profit|tp\s*\d/i.test(content)
+    if (!(activated && hasSL && hasTP)) return false
+  }
   return true
+}
+
+/** Sinal ainda ativo? (não passaram +5 min desde a publicação) */
+function isSignalActive(createdAt?: string | null): boolean {
+  if (!createdAt) return true
+  return Date.now() - new Date(createdAt).getTime() <= TAP_TRADE_MAX_AGE_MS
 }
 
 function MessageBubble({
@@ -700,7 +719,11 @@ function MessageBubble({
   onOpenActions: (msg: ChatMessage) => void
   onTapToTrade?: (msg: ChatMessage) => void
 }) {
-  const tradeable = !isOwn && !!onTapToTrade && looksLikeTradeSignal(msg.channel_slug, msg.content)
+  const tradeable =
+    !isOwn &&
+    !!onTapToTrade &&
+    looksLikeTradeSignal(msg.channel_slug, msg.content) &&
+    isSignalActive(msg.created_at)
   const isTelegram = msg.message_type === "telegram_forward"
   const isVideo    = msg.message_type === "video"
   const isDocument = msg.message_type === "document"
