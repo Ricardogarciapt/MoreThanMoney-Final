@@ -14,7 +14,6 @@ import {
   ChevronUp,
   ShieldCheck,
   Wallet,
-  Power,
   Clock,
 } from "lucide-react"
 
@@ -101,6 +100,11 @@ interface Conn {
   is_active?: boolean | null
   balance?: number | null
   broker_name?: string | null
+  auto_trailing_stop?: boolean | null
+  trailing_stop_points?: number | null
+  exit_pct_tp1?: number | null
+  exit_pct_tp2?: number | null
+  exit_pct_tp3?: number | null
 }
 
 const FILTERS: { id: Category; label: string }[] = [
@@ -135,7 +139,11 @@ export default function TapToTradeFeed() {
     lot: number
     copy_sl: boolean
     copy_tp: boolean
-    is_active: boolean
+    trailing: boolean
+    trailingPts: number
+    tp1: number
+    tp2: number
+    tp3: number
   } | null>(null)
 
   const token = useCallback(async () => {
@@ -159,7 +167,11 @@ export default function TapToTradeFeed() {
           lot: typeof c.lot_value === "number" ? c.lot_value : 0.01,
           copy_sl: c.copy_sl !== false,
           copy_tp: c.copy_tp !== false,
-          is_active: c.is_active === true,
+          trailing: c.auto_trailing_stop === true,
+          trailingPts: typeof c.trailing_stop_points === "number" ? c.trailing_stop_points : 100,
+          tp1: typeof c.exit_pct_tp1 === "number" ? c.exit_pct_tp1 : 50,
+          tp2: typeof c.exit_pct_tp2 === "number" ? c.exit_pct_tp2 : 30,
+          tp3: typeof c.exit_pct_tp3 === "number" ? c.exit_pct_tp3 : 20,
         })
       }
     } catch {
@@ -300,7 +312,7 @@ export default function TapToTradeFeed() {
       const t = await token()
       if (!t) return
       const headers = { "Content-Type": "application/json", Authorization: `Bearer ${t}` }
-      // params de risco + SL/TP
+      // risco + SL/TP + proteção (trailing) + alocação de take profit
       await fetch("/api/mtmcopy/connection", {
         method: "POST",
         headers,
@@ -311,16 +323,13 @@ export default function TapToTradeFeed() {
           lot_value: cfg.lot,
           copy_sl: cfg.copy_sl,
           copy_tp: cfg.copy_tp,
+          auto_trailing_stop: cfg.trailing,
+          trailing_stop_points: cfg.trailingPts,
+          exit_pct_tp1: cfg.tp1,
+          exit_pct_tp2: cfg.tp2,
+          exit_pct_tp3: cfg.tp3,
         }),
       })
-      // estado activo
-      if (cfg.is_active !== (conn.is_active === true)) {
-        await fetch("/api/mtmcopy/connection", {
-          method: "PATCH",
-          headers,
-          body: JSON.stringify({ connection_id: conn.id, is_active: cfg.is_active }),
-        })
-      }
       await loadConnection()
       setShowConfig(false)
     } finally {
@@ -395,12 +404,7 @@ export default function TapToTradeFeed() {
             <p className="text-[13px] font-semibold">A minha conta T2T</p>
             <p className="text-[11px] text-zinc-400 truncate">
               {hasAccount ? (
-                <>
-                  {conn?.account_label || "Conta MT5"} · {riskLabel} ·{" "}
-                  <span className={cfg?.is_active ? "text-emerald-400" : "text-zinc-500"}>
-                    {cfg?.is_active ? "ativa" : "inativa"}
-                  </span>
-                </>
+                <>{conn?.account_label || "Conta MT5"} · {riskLabel}</>
               ) : (
                 "Sem conta ligada — toca para configurar"
               )}
@@ -498,14 +502,52 @@ export default function TapToTradeFeed() {
                   </button>
                 </div>
 
-                {/* activo */}
-                <button
-                  onClick={() => setCfg({ ...cfg, is_active: !cfg.is_active })}
-                  className={`w-full flex items-center justify-between rounded-xl border px-3 py-2 text-xs ${cfg.is_active ? "border-emerald-500/40 text-emerald-400" : "border-zinc-700 text-zinc-500"}`}
-                >
-                  <span className="flex items-center gap-1"><Power className="w-3.5 h-3.5" /> Conta ativa para T2T</span>
-                  <span className="font-bold">{cfg.is_active ? "Ativa" : "Inativa"}</span>
-                </button>
+                {/* Proteção da trade — trailing / breakeven automático */}
+                <div className="rounded-xl border border-zinc-800 p-2.5">
+                  <button
+                    onClick={() => setCfg({ ...cfg, trailing: !cfg.trailing })}
+                    className="w-full flex items-center justify-between text-xs"
+                  >
+                    <span className="flex items-center gap-1 text-zinc-300"><ShieldCheck className="w-3.5 h-3.5 text-[#D2A63C]" /> Trailing / breakeven automático</span>
+                    <span className={`font-bold ${cfg.trailing ? "text-emerald-400" : "text-zinc-500"}`}>{cfg.trailing ? "On" : "Off"}</span>
+                  </button>
+                  {cfg.trailing && (
+                    <label className="block mt-2">
+                      <span className="text-[11px] text-zinc-500">Distância do trailing (pontos)</span>
+                      <input
+                        type="number"
+                        step="10"
+                        min="10"
+                        value={cfg.trailingPts}
+                        onChange={(e) => setCfg({ ...cfg, trailingPts: parseInt(e.target.value) || 0 })}
+                        className="mt-1 w-full rounded-xl bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white"
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Alocação de Take Profit (parcial por nível) */}
+                <div className="rounded-xl border border-zinc-800 p-2.5">
+                  <p className="text-[11px] text-zinc-500 mb-2">Alocação de Take Profit (% a fechar por nível)</p>
+                  {([["TP1", "tp1"], ["TP2", "tp2"], ["TP3", "tp3"]] as const).map(([label, key]) => (
+                    <div key={key} className="flex items-center gap-2 mb-1.5">
+                      <span className="text-xs text-zinc-400 w-9">{label}</span>
+                      <input
+                        type="number"
+                        step="5"
+                        min="0"
+                        max="100"
+                        value={cfg[key]}
+                        onChange={(e) => setCfg({ ...cfg, [key]: parseInt(e.target.value) || 0 })}
+                        className="flex-1 rounded-lg bg-zinc-950 border border-zinc-700 px-2 py-1.5 text-sm text-white"
+                      />
+                      <span className="text-xs text-zinc-500">%</span>
+                    </div>
+                  ))}
+                  <div className={`text-[11px] mt-1 ${cfg.tp1 + cfg.tp2 + cfg.tp3 === 100 ? "text-emerald-400" : "text-amber-400"}`}>
+                    Total: {cfg.tp1 + cfg.tp2 + cfg.tp3}%{cfg.tp1 + cfg.tp2 + cfg.tp3 !== 100 ? " · deve somar 100%" : ""}
+                  </div>
+                </div>
 
                 <button
                   onClick={saveConfig}
