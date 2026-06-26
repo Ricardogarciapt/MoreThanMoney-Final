@@ -20,12 +20,25 @@ import {
 
 const FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad)/i
 const DIR_RE = /(\b(buy|sell|long|short|compra|venda)\b|🟢|🔴)/i
+/** Sensei: só a "Entry Alert / Ideia Activada" (entrada activada) é um sinal válido. */
+const SENSEI_ACTIVE_RE = /(entrada\s+activ|entrada\s+ativ|ideia\s+activ|ideia\s+ativ|entry\s+alert)/i
+/** Mensagens de performance/resumo/saída — não são sinais negociáveis. */
+const PERF_RE = /(performance|resultado\s+do\s+dia|resumo|recap|relat[óo]rio|estat[íi]stic|balan[çc]o|total\s+de\s+pips|pips\s+(de\s+)?(hoje|esta\s+semana|do\s+dia)|fecho\s+do\s+dia|lucro\s+do\s+dia)/i
 
-function isEntrySignal(content?: string | null): boolean {
+/** Só sinais de ENTRADA válidos passam (saídas/performance/incompletos são excluídos). */
+function isEntrySignal(channelSlug: string, content?: string | null): boolean {
   if (!content) return false
-  if (FOLLOWUP_RE.test(content)) return false
-  if (!DIR_RE.test(content)) return false
-  if (!/\d{2,}/.test(content)) return false
+  if (FOLLOWUP_RE.test(content)) return false // saídas / TP hit / fecho / SL / cancelado
+  if (PERF_RE.test(content)) return false // performance / resumo do dia
+  if (!DIR_RE.test(content)) return false // precisa de direção
+  if (!/\d{2,}/.test(content)) return false // precisa de preço
+  // Sensei: exige o alerta de entrada activada COMPLETO (entrada + SL + TP)
+  if (channelSlug === "sensei-scanner") {
+    const activated = SENSEI_ACTIVE_RE.test(content)
+    const hasSL = /stop\s*loss|🛑/i.test(content)
+    const hasTP = /take\s*profit|tp\s*\d/i.test(content)
+    if (!(activated && hasSL && hasTP)) return false
+  }
   return true
 }
 
@@ -183,7 +196,7 @@ export default function TapToTradeFeed() {
     const followups = all.filter((m) => FOLLOWUP_RE.test(m.content))
     const now = Date.now()
     const sigs = all
-      .filter((m) => isEntrySignal(m.content))
+      .filter((m) => isEntrySignal(m.channel_slug, m.content))
       .map((m) => {
         const ageMs = now - new Date(m.created_at).getTime()
         const ageExpired = ageMs > T2T_MAX_AGE_MS
