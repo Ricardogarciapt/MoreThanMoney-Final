@@ -363,6 +363,8 @@ async function sendApnsNotifications(
       alert: { title: payload.title, body: payload.body },
       sound: 'default',
       badge: 1,
+      // Categoria de ações (ex: botão "Tap to Trade" no iPhone e no Apple Watch)
+      ...(payload.data?.category ? { category: payload.data.category } : {}),
     },
     url: payload.url || payload.data?.url || '/app-mobile',
     ...(payload.data || {}),

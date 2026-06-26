@@ -462,8 +462,8 @@ export default function TapToTradeFeed() {
                 >
                   {savingConn ? "A guardar…" : "Guardar configuração"}
                 </button>
-                <Link href="/app-mobile/mtmcopier" className="block text-center text-[11px] text-zinc-500 underline">
-                  Definições avançadas da conta
+                <Link href="/app-mobile/mtmcopier" className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-[#D2A63C]/40 text-[#D2A63C] font-semibold text-[13px] py-2.5">
+                  <Wallet className="w-4 h-4" /> Editar / adicionar conta MT5
                 </Link>
               </>
             ) : (
