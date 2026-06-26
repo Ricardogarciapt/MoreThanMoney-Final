@@ -666,6 +666,19 @@ function AttachSheet({
 
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 
+// ── Tap to Trade MTM — deteção de mensagens negociáveis ───────────────────────
+const TAP_TRADE_CHANNELS = new Set(['sensei-scanner', 'trade-ideas', 'premium-ideas', 'trade-ideas-setup'])
+const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad)/i
+const TAP_TRADE_DIR_RE = /(\b(buy|sell|long|short|compra|venda)\b|🟢|🔴)/i
+/** Heurística client-side: é um sinal de ENTRADA negociável? (o backend valida definitivamente) */
+function looksLikeTradeSignal(channelSlug?: string | null, content?: string | null): boolean {
+  if (!channelSlug || !content || !TAP_TRADE_CHANNELS.has(channelSlug)) return false
+  if (TAP_TRADE_FOLLOWUP_RE.test(content)) return false // follow-ups (TP hit/BE/SL) não são entradas
+  if (!TAP_TRADE_DIR_RE.test(content)) return false // precisa de direção
+  if (!/\d{2,}/.test(content)) return false // precisa de pelo menos um preço
+  return true
+}
+
 function MessageBubble({
   msg,
   isOwn,
@@ -675,6 +688,7 @@ function MessageBubble({
   onDelete,
   onLongPress,
   onOpenActions,
+  onTapToTrade,
 }: {
   msg: ChatMessage
   isOwn: boolean
@@ -684,7 +698,9 @@ function MessageBubble({
   onDelete: (msgId: string) => void
   onLongPress: (msg: ChatMessage) => void
   onOpenActions: (msg: ChatMessage) => void
+  onTapToTrade?: (msg: ChatMessage) => void
 }) {
+  const tradeable = !isOwn && !!onTapToTrade && looksLikeTradeSignal(msg.channel_slug, msg.content)
   const isTelegram = msg.message_type === "telegram_forward"
   const isVideo    = msg.message_type === "video"
   const isDocument = msg.message_type === "document"
@@ -958,6 +974,16 @@ function MessageBubble({
                 <LinkPreviewCard preview={msg.link_preview} url={msg.link_url} />
               )}
               {inlineUrl && <InlineUrlPreview url={inlineUrl} />}
+              {tradeable && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onTapToTrade!(msg) }}
+                  className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2 active:scale-[0.98] transition-transform"
+                  aria-label="Tap to Trade — abrir esta trade na tua conta"
+                >
+                  <TrendingUp className="w-4 h-4" /> Tap to Trade MTM
+                </button>
+              )}
               <p className={`text-[10px] mt-0.5 text-right leading-none ${isOwn ? "text-black/40" : "text-gray-600"}`}>
                 {formatTime(msg.created_at)}
               </p>
@@ -1095,6 +1121,38 @@ function ChannelView({
       })
     }
     setMessages((prev) => prev.filter((m) => m.id !== msgId))
+  }
+
+  // ── Tap to Trade MTM ────────────────────────────────────────────────────────
+  const [tapTrade, setTapTrade] = useState<
+    { msg: ChatMessage; status: "confirm" | "loading" | "done" | "error"; message?: string } | null
+  >(null)
+
+  const runTapTrade = async () => {
+    if (!tapTrade) return
+    const target = tapTrade.msg
+    setTapTrade({ msg: target, status: "loading" })
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) {
+        setTapTrade({ msg: target, status: "error", message: "Sessão indisponível. Faz login novamente." })
+        return
+      }
+      const res = await fetch("/api/mtmcopy/tap-to-trade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ chat_message_id: target.id }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setTapTrade({ msg: target, status: "error", message: data.error || "Falha ao abrir a trade." })
+        return
+      }
+      setTapTrade({ msg: target, status: "done", message: data.message || "Trade aberta com sucesso!" })
+    } catch (e) {
+      setTapTrade({ msg: target, status: "error", message: e instanceof Error ? e.message : "Erro inesperado" })
+    }
   }
 
   // ── Fetch messages ────────────────────────────────────────────────────────
@@ -1451,6 +1509,7 @@ function ChannelView({
             onDelete={handleDelete}
             onLongPress={setContextMsg}
             onOpenActions={setContextMsg}
+            onTapToTrade={(m) => setTapTrade({ msg: m, status: "confirm" })}
           />
         </div>
       )
@@ -1760,6 +1819,74 @@ function ChannelView({
           onDelete={() => { handleDelete(contextMsg.id); setContextMsg(null) }}
           onShare={() => shareMessage(contextMsg)}
         />
+      )}
+
+      {tapTrade && (
+        <div
+          className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/70 p-4"
+          onClick={() => tapTrade.status !== "loading" && setTapTrade(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-[#D2A63C]/30 bg-zinc-950 p-5 text-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-5 h-5 text-[#D2A63C]" />
+              <h3 className="text-base font-bold">Tap to Trade MTM</h3>
+            </div>
+
+            {tapTrade.status === "confirm" && (
+              <>
+                <p className="text-sm text-zinc-300 mb-3">
+                  Vais abrir esta trade na <strong className="text-white">tua conta MT5</strong>, com o{" "}
+                  <strong className="text-white">risco que definiste</strong> nas Definições.
+                </p>
+                <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3 text-xs text-zinc-400 max-h-28 overflow-y-auto whitespace-pre-wrap mb-4">
+                  {tapTrade.msg.content}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setTapTrade(null)}
+                    className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={runTapTrade}
+                    className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95"
+                  >
+                    Confirmar e abrir
+                  </button>
+                </div>
+              </>
+            )}
+            {tapTrade.status === "loading" && (
+              <p className="text-sm text-zinc-300 py-6 text-center">A abrir a trade na tua conta…</p>
+            )}
+            {tapTrade.status === "done" && (
+              <>
+                <p className="text-sm text-emerald-400 py-4 text-center">✅ {tapTrade.message}</p>
+                <button
+                  onClick={() => setTapTrade(null)}
+                  className="w-full rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95"
+                >
+                  Fechar
+                </button>
+              </>
+            )}
+            {tapTrade.status === "error" && (
+              <>
+                <p className="text-sm text-rose-400 py-4 text-center">⚠️ {tapTrade.message}</p>
+                <button
+                  onClick={() => setTapTrade(null)}
+                  className="w-full rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95"
+                >
+                  Fechar
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )
