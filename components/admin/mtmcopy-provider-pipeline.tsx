@@ -228,7 +228,13 @@ export default function MtmcopyProviderPipeline({
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <Switch
                     checked={route.enabled !== false}
-                    onCheckedChange={(v) => updateRoute(route.id, { enabled: v })}
+                    onCheckedChange={async (v) => {
+                      // Persiste IMEDIATAMENTE — pausar/retomar a rota tem efeito já
+                      // (o caminho de execução ignora rotas com enabled === false).
+                      const next = routes.map((r) => (r.id === route.id ? { ...r, enabled: v } : r))
+                      setRoutes(next)
+                      await persistRoutes(next)
+                    }}
                   />
                   <Input
                     value={route.label ?? ""}

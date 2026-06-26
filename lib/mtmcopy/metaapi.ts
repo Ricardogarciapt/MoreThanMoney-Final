@@ -208,6 +208,51 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+// ── Cache de ligações RPC ──────────────────────────────────────────────────────
+// Reutiliza a ligação QUENTE por conta para evitar connect + waitSynchronized
+// (lento) a cada sinal. Sem isto, cada sinal abre ~4 ligações novas (lot, snapshot,
+// spec, ordem) → 30s–1m de atraso. Desativável com MTMCOPY_RPC_CACHE_DISABLED=true.
+const RPC_CACHE_ENABLED = process.env.MTMCOPY_RPC_CACHE_DISABLED !== 'true'
+const RPC_CACHE_TTL_MS = Number(process.env.MTMCOPY_RPC_CACHE_TTL_MS ?? 10 * 60_000)
+const RPC_CACHE_MAX = Number(process.env.MTMCOPY_RPC_CACHE_MAX ?? 12)
+
+type CachedRpc = { connection: RpcConnection; realClose: () => Promise<void>; createdAt: number; lastUsed: number }
+const rpcCache = new Map<string, CachedRpc>()
+const rpcInflight = new Map<string, Promise<{ connection: RpcConnection; realClose: () => Promise<void> }>>()
+
+function rpcConnectionHealthy(conn: RpcConnection): boolean {
+  const c = conn as unknown as { terminalState?: { connected?: boolean }; synchronized?: boolean }
+  try {
+    if (typeof c.terminalState?.connected === 'boolean') return c.terminalState.connected === true
+    if (typeof c.synchronized === 'boolean') return c.synchronized === true
+  } catch {
+    /* ignore */
+  }
+  return true
+}
+
+export function invalidateRpcCache(accountId: string): void {
+  const cached = rpcCache.get(accountId)
+  if (cached) {
+    rpcCache.delete(accountId)
+    void cached.realClose()
+  }
+}
+
+function evictRpcLruIfNeeded(): void {
+  while (rpcCache.size > RPC_CACHE_MAX) {
+    let oldestKey: string | null = null
+    let oldest = Infinity
+    for (const [k, v] of rpcCache) {
+      if (v.lastUsed < oldest) { oldest = v.lastUsed; oldestKey = k }
+    }
+    if (!oldestKey) break
+    const ev = rpcCache.get(oldestKey)
+    rpcCache.delete(oldestKey)
+    if (ev) void ev.realClose()
+  }
+}
+
 /** Tenta redeploy + waitConnected quando a conta MetaAPI está offline (REST — funciona em Node/Vercel). */
 export async function ensureMetaApiAccountOnline(accountId: string): Promise<{ ok: boolean; error?: string }> {
   const token = process.env.METAAPI_TOKEN
@@ -343,24 +388,38 @@ async function placeOrderOnConnection(
 export async function placeOrdersSequential(accountId: string, requests: OrderRequest[]): Promise<OrderResult[]> {
   if (!requests.length) return []
 
-  let close: (() => Promise<void>) | undefined
-  try {
-    const { connection, close: closeFn } = await getRpcConnection(accountId)
-    close = closeFn
-    const symbols = await connection.getSymbols()
-    const specCache = new Map<string, MetaApiSymbolSpecification | null>()
-    const results: OrderResult[] = []
-
-    for (const req of requests) {
-      results.push(await placeOrderOnConnection(connection, symbols, specCache, req))
+  const run = async (forceFresh: boolean): Promise<OrderResult[]> => {
+    let close: (() => Promise<void>) | undefined
+    try {
+      const { connection, close: closeFn } = await getRpcConnection(accountId, 0, { forceFresh })
+      close = closeFn
+      const symbols = await connection.getSymbols()
+      const specCache = new Map<string, MetaApiSymbolSpecification | null>()
+      const results: OrderResult[] = []
+      for (const req of requests) {
+        results.push(await placeOrderOnConnection(connection, symbols, specCache, req))
+      }
+      return results
+    } finally {
+      if (close) await close()
     }
+  }
 
-    return results
+  try {
+    return await run(false)
   } catch (err: unknown) {
+    // Ligação cacheada possivelmente morta → invalida e tenta UMA vez com ligação fresca.
+    invalidateRpcCache(accountId)
+    if (isRetryableMetaApiError(err)) {
+      try {
+        return await run(true)
+      } catch (err2: unknown) {
+        const message = err2 instanceof Error ? err2.message : 'Erro ao ligar MetaAPI'
+        return requests.map(() => ({ success: false, error: message }))
+      }
+    }
     const message = err instanceof Error ? err.message : 'Erro ao ligar MetaAPI'
     return requests.map(() => ({ success: false, error: message }))
-  } finally {
-    if (close) await close()
   }
 }
 
@@ -376,13 +435,11 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): P
   }
 }
 
-async function getRpcConnection(
+/** Cria uma ligação RPC nova (connect + waitSynchronized). Com retries. */
+async function createRpcConnection(
   accountId: string,
   attempt = 0,
-): Promise<{
-  connection: RpcConnection
-  close: () => Promise<void>
-}> {
+): Promise<{ connection: RpcConnection; realClose: () => Promise<void> }> {
   const token = process.env.METAAPI_TOKEN
   if (!token) throw new Error('MetaApi não configurado (METAAPI_TOKEN em falta)')
 
@@ -399,7 +456,7 @@ async function getRpcConnection(
 
     return {
       connection,
-      close: async () => {
+      realClose: async () => {
         try {
           await connection.close()
         } catch {
@@ -415,10 +472,48 @@ async function getRpcConnection(
       )
       await ensureMetaApiAccountOnline(accountId)
       await sleep(1500 * (attempt + 1))
-      return getRpcConnection(accountId, attempt + 1)
+      return createRpcConnection(accountId, attempt + 1)
     }
     throw err
   }
+}
+
+/**
+ * Devolve uma ligação RPC para a conta. Reutiliza a ligação cacheada (quente) se
+ * saudável; senão cria uma nova e cacheia. `close()` é no-op para ligações cacheadas
+ * (mantém-se quente); a invalidação real faz-se via invalidateRpcCache/forceFresh.
+ */
+async function getRpcConnection(
+  accountId: string,
+  _attempt = 0,
+  opts?: { forceFresh?: boolean },
+): Promise<{ connection: RpcConnection; close: () => Promise<void> }> {
+  if (!RPC_CACHE_ENABLED) {
+    const fresh = await createRpcConnection(accountId)
+    return { connection: fresh.connection, close: fresh.realClose }
+  }
+
+  if (opts?.forceFresh) invalidateRpcCache(accountId)
+
+  const cached = rpcCache.get(accountId)
+  if (cached) {
+    if (Date.now() - cached.createdAt < RPC_CACHE_TTL_MS && rpcConnectionHealthy(cached.connection)) {
+      cached.lastUsed = Date.now()
+      return { connection: cached.connection, close: async () => {} }
+    }
+    invalidateRpcCache(accountId)
+  }
+
+  // Dedupe de criações concorrentes (ex.: lot + snapshot + spec em paralelo).
+  let inflight = rpcInflight.get(accountId)
+  if (!inflight) {
+    inflight = createRpcConnection(accountId).finally(() => rpcInflight.delete(accountId))
+    rpcInflight.set(accountId, inflight)
+  }
+  const created = await inflight
+  rpcCache.set(accountId, { ...created, createdAt: Date.now(), lastUsed: Date.now() })
+  evictRpcLruIfNeeded()
+  return { connection: created.connection, close: async () => {} }
 }
 
 export interface AccountSnapshot {
@@ -437,6 +532,7 @@ export async function getAccountSnapshot(accountId: string): Promise<AccountSnap
     if (balance == null && equity == null) return null
     return { balance, equity }
   } catch {
+    invalidateRpcCache(accountId)
     return null
   } finally {
     if (close) await close()
@@ -531,6 +627,7 @@ export async function fetchLotSizingContext(
     return { balance, marketPrice }
   } catch (err) {
     console.warn('[mtmcopy] fetchLotSizingContext falhou:', err)
+    invalidateRpcCache(accountId)
     const cached = balanceCache.get(accountId)
     return { balance: cached?.balance ?? null, marketPrice: null }
   } finally {
@@ -634,6 +731,7 @@ export async function listOpenPositions(accountId: string): Promise<MetaApiPosit
     const positions = await connection.getPositions()
     return (positions ?? []) as MetaApiPosition[]
   } catch {
+    invalidateRpcCache(accountId)
     return []
   } finally {
     if (close) await close()
