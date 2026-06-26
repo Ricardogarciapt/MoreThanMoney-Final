@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-api-helpers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { internalApiHeaders } from '@/lib/internal-api'
 import {
   SYSTEM_EMAILS,
   isMailConfigured,
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.morethanmoney.pt'
       const emailResponse = await fetch(`${siteUrl}/api/email-marketing/send`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...internalApiHeaders() },
         body: JSON.stringify({
           to,
           subject: `[TESTE] ${rendered.subject}`,

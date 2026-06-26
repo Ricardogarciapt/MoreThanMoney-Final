@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { adminBroadcastEmailTemplate } from "@/lib/email-templates"
+import { internalApiHeaders } from "@/lib/internal-api"
 
 const supabase = getSupabaseAdmin()
 
@@ -103,7 +104,7 @@ export async function POST(
             )
             const emailResponse = await fetch(`${siteUrl}/api/email-marketing/send`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', ...internalApiHeaders() },
               body: JSON.stringify({
                 to: user.email,
                 subject: notification.title,

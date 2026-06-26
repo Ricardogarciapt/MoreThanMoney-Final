@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import nodemailer from "nodemailer"
 import { brandedMailAttachments, prepareBrandedEmailHtml } from "@/lib/mail-transport"
+import { isInternalApiRequest } from "@/lib/internal-api"
+import { requireAdmin } from "@/lib/admin-api-helpers"
 
 const createTransporter = () =>
   nodemailer.createTransport({
@@ -13,6 +15,10 @@ const createTransporter = () =>
 
 /** Envio transacional simples (admin notifications, alertas manuais). */
 export async function POST(request: NextRequest) {
+  if (!isInternalApiRequest(request)) {
+    const denied = await requireAdmin(request)
+    if (denied) return denied
+  }
   try {
     const { to, subject, html, text } = await request.json()
 

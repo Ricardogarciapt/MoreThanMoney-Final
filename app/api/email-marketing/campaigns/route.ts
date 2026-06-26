@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { requireAdmin } from "@/lib/admin-api-helpers"
 import nodemailer from 'nodemailer'
 import * as emailTemplates from '@/lib/email-templates'
 import { brandedMailAttachments, prepareBrandedEmailHtml } from '@/lib/mail-transport'
@@ -18,6 +19,8 @@ const createTransporter = () => {
 
 // GET: Listar todas as campanhas
 export async function GET(request: NextRequest) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
   try {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
@@ -56,6 +59,8 @@ export async function GET(request: NextRequest) {
 
 // POST: Criar nova campanha
 export async function POST(request: NextRequest) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
   try {
     const body = await request.json()
     const {
@@ -138,6 +143,8 @@ export async function POST(request: NextRequest) {
 
 // PATCH: Atualizar ou enviar campanha
 export async function PATCH(request: NextRequest) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
   try {
     const body = await request.json()
     const { campaignId, action, ...updates } = body
@@ -176,6 +183,8 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE: Cancelar/deletar campanha
 export async function DELETE(request: NextRequest) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
   try {
     const { searchParams } = new URL(request.url)
     const campaignId = searchParams.get('id')
