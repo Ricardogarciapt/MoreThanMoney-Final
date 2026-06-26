@@ -79,9 +79,19 @@ export async function GET(request: NextRequest) {
   const subscription = await getMtmcopySubscription(user.id, profile?.user_type)
   const limits = resolveMtmcopyUserLimits(profile?.user_type, profile?.member_category)
 
+  // ?purpose=tap_to_trade → devolve a conta INDEPENDENTE do T2T como `connection`
+  const purposeParam = searchParams.get('purpose')
+  let primary = repaired[0] ?? null
+  if (purposeParam) {
+    const matchIds = new Set(
+      (data ?? []).filter((c) => (c.purpose ?? 'mtmcopy') === purposeParam).map((c) => c.id),
+    )
+    primary = repaired.find((c) => matchIds.has((c as { id: string }).id)) ?? null
+  }
+
   return NextResponse.json({
     connections: repaired,
-    connection: repaired[0] ?? null,
+    connection: primary,
     sender_mode: deriveSenderMode(repaired),
     master: repaired.find((c) => c.account_role === 'master') ?? null,
     subscribed: subscription.active,

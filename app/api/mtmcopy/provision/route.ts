@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
     exit_pct_tp2,
     exit_pct_tp3,
     copyfactory_strategy_pick,
+    purpose,
   } = body
 
   const login = String(mt5_login ?? '').trim()
@@ -196,6 +197,8 @@ export async function POST(request: NextRequest) {
     updated_at: new Date().toISOString(),
     telegram_status:
       copyMethod === 'strategy' || senderMode === 'master_account' ? 'connected' : 'pending',
+    // Conta independente do T2T (não interfere com a conta MTMcopy)
+    purpose: purpose === 'tap_to_trade' ? 'tap_to_trade' : 'mtmcopy',
   }
 
   if (accountRole === 'slave') {

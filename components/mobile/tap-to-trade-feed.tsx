@@ -124,6 +124,10 @@ export default function TapToTradeFeed() {
   // Configuração da conta (estilo PrimeSync, dentro do próprio T2T)
   const [conn, setConn] = useState<Conn | null>(null)
   const [showConfig, setShowConfig] = useState(false)
+  const [connectOpen, setConnectOpen] = useState(false)
+  const [connForm, setConnForm] = useState({ server: "", login: "", password: "", platform: "mt5" })
+  const [connBusy, setConnBusy] = useState(false)
+  const [connError, setConnError] = useState("")
   const [savingConn, setSavingConn] = useState(false)
   const [cfg, setCfg] = useState<{
     lot_mode: "risk_percent" | "fixed"
@@ -143,7 +147,7 @@ export default function TapToTradeFeed() {
     const t = await token()
     if (!t) return
     try {
-      const r = await fetch("/api/mtmcopy/connection", { headers: { Authorization: `Bearer ${t}` } })
+      const r = await fetch("/api/mtmcopy/connection?purpose=tap_to_trade", { headers: { Authorization: `Bearer ${t}` } })
       if (!r.ok) return
       const d = await r.json()
       const c: Conn | null = d.connection ?? (d.connections?.[0] ?? null)
@@ -316,6 +320,41 @@ export default function TapToTradeFeed() {
     }
   }
 
+  const connectAccount = async () => {
+    if (!connForm.server.trim() || !connForm.login.trim() || !connForm.password) {
+      setConnError("Preenche servidor, login e password.")
+      return
+    }
+    setConnBusy(true)
+    setConnError("")
+    try {
+      const t = await token()
+      if (!t) { setConnError("Sessão indisponível."); setConnBusy(false); return }
+      const res = await fetch("/api/mtmcopy/provision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+        body: JSON.stringify({
+          mt5_server: connForm.server.trim(),
+          mt5_login: connForm.login.trim(),
+          mt5_password: connForm.password,
+          mt5_platform: connForm.platform,
+          copy_method: "telegram_group",
+          purpose: "tap_to_trade",
+          account_label: "T2T",
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setConnError(data.error || "Falha ao ligar a conta."); setConnBusy(false); return }
+      setConnBusy(false)
+      setConnectOpen(false)
+      setConnForm({ server: "", login: "", password: "", platform: "mt5" })
+      await loadConnection()
+    } catch (e) {
+      setConnError(e instanceof Error ? e.message : "Erro inesperado")
+      setConnBusy(false)
+    }
+  }
+
   const hasAccount = !!conn?.metaapi_account_id
   const riskLabel = cfg
     ? cfg.lot_mode === "fixed"
@@ -370,12 +409,12 @@ export default function TapToTradeFeed() {
                 <p className="text-xs text-zinc-400 mb-3">
                   Liga a tua conta MT5 uma vez para começar a usar o T2T.
                 </p>
-                <Link
-                  href="/app-mobile/mtmcopier"
+                <button
+                  onClick={() => { setConnError(""); setConnectOpen(true) }}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] px-4 py-2"
                 >
                   <Wallet className="w-4 h-4" /> Ligar conta MT5
-                </Link>
+                </button>
               </div>
             ) : cfg ? (
               <>
@@ -467,9 +506,12 @@ export default function TapToTradeFeed() {
                 >
                   {savingConn ? "A guardar…" : "Guardar configuração"}
                 </button>
-                <Link href="/app-mobile/mtmcopier" className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-[#D2A63C]/40 text-[#D2A63C] font-semibold text-[13px] py-2.5">
+                <button
+                  onClick={() => { setConnError(""); setConnectOpen(true) }}
+                  className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-[#D2A63C]/40 text-[#D2A63C] font-semibold text-[13px] py-2.5"
+                >
                   <Wallet className="w-4 h-4" /> Editar / adicionar conta MT5
-                </Link>
+                </button>
               </>
             ) : (
               <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[#D2A63C]" /></div>
@@ -570,6 +612,33 @@ export default function TapToTradeFeed() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {connectOpen && (
+        <div className="fixed inset-0 z-[130] flex items-end sm:items-center justify-center bg-black/70 p-4" onClick={() => !connBusy && setConnectOpen(false)}>
+          <div className="w-full max-w-sm rounded-2xl border border-[#D2A63C]/30 bg-zinc-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet className="w-5 h-5 text-[#D2A63C]" />
+              <h3 className="text-base font-bold">Ligar conta MT5 (T2T)</h3>
+            </div>
+            <p className="text-[11px] text-zinc-400 mb-3">Conta de destino exclusiva do Tap to Trade — independente do MTMcopy.</p>
+            <div className="space-y-2">
+              <input value={connForm.server} onChange={(e) => setConnForm({ ...connForm, server: e.target.value })} placeholder="Servidor (ex: VTMarkets-Live)" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
+              <input value={connForm.login} onChange={(e) => setConnForm({ ...connForm, login: e.target.value })} placeholder="Número de conta (login)" inputMode="numeric" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
+              <input value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} placeholder="Password (investor ou master)" type="password" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
+              <div className="flex gap-2">
+                {(["mt5", "mt4"] as const).map((p) => (
+                  <button key={p} onClick={() => setConnForm({ ...connForm, platform: p })} className={`flex-1 rounded-xl border py-2 text-xs font-medium ${connForm.platform === p ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}>{p.toUpperCase()}</button>
+                ))}
+              </div>
+            </div>
+            {connError && <p className="text-xs text-rose-400 mt-2">{connError}</p>}
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => setConnectOpen(false)} disabled={connBusy} className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300">Cancelar</button>
+              <button onClick={connectAccount} disabled={connBusy} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black disabled:opacity-60">{connBusy ? "A ligar…" : "Ligar conta"}</button>
+            </div>
+          </div>
         </div>
       )}
 

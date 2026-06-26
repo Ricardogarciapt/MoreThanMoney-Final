@@ -94,22 +94,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Não foi possível interpretar o sinal desta mensagem' }, { status: 400 })
   }
 
-  // 3. Conta + risco do utilizador
-  const { data: conn } = await supabase
+  // 3. Conta destino — prefere a conta INDEPENDENTE do T2T (purpose=tap_to_trade);
+  //    se não existir, usa qualquer conta MT5 ligada do utilizador.
+  const { data: conns } = await supabase
     .from('mtmcopy_connections')
-    .select('id, metaapi_account_id, lot_mode, lot_value, max_risk_percent, copy_sl, copy_tp, symbols_whitelist, is_active')
+    .select('id, metaapi_account_id, lot_mode, lot_value, max_risk_percent, copy_sl, copy_tp, symbols_whitelist, is_active, purpose')
     .eq('user_id', user.id)
-    .order('is_active', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+    .neq('mt5_status', 'disconnected')
+  const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id)
+  const conn = withAccount.find((c) => c.purpose === 'tap_to_trade') ?? withAccount[0] ?? null
 
   if (!conn) {
-    return NextResponse.json({ error: 'Sem conta configurada. Liga a tua conta MT5 no T2T.', code: 'no_connection' }, { status: 400 })
+    return NextResponse.json({ error: 'Sem conta ligada. Liga a tua conta MT5 no T2T.', code: 'no_connection' }, { status: 400 })
   }
   // T2T é manual e independente do MTMcopy: NÃO exige is_active (essa flag é da cópia
   // automática, que requer subscrição). Basta uma conta MT5 ligada.
   if (!conn.metaapi_account_id) {
-    return NextResponse.json({ error: 'Conta MT5 não configurada (MetaAPI). Define-a em Definições.', code: 'no_account' }, { status: 400 })
+    return NextResponse.json({ error: 'Conta MT5 não configurada (MetaAPI).', code: 'no_account' }, { status: 400 })
   }
 
   // Whitelist de símbolos (se definida)
