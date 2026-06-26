@@ -84,6 +84,8 @@ export interface ProviderRoute {
   tag?: string
   execution?: ProviderExecutionProfile
   enabled?: boolean
+  /** Disponível no Tap to Trade (app-mobile) — sinais deste provider aparecem no feed Tap to Trade. */
+  tap_to_trade?: boolean
 }
 
 export interface MtmcopySignalSourcesConfig {

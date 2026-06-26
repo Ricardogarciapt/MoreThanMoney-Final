@@ -7,6 +7,8 @@ import {
   signalForRiskSizing,
 } from '@/lib/mtmcopy/lot-sizing'
 import { fetchLotSizingContext, placeOrder, type OrderRequest } from '@/lib/mtmcopy/metaapi'
+import { getSignalSourcesConfig } from '@/lib/mtmcopy/signal-sources-config'
+import { normalizeProviderRoutes } from '@/lib/mtmcopy/provider-routes'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -14,6 +16,26 @@ export const maxDuration = 30
 const supabase = getSupabaseAdmin()
 
 const SIGNAL_CHANNELS = ['sensei-scanner', 'trade-ideas', 'premium-ideas', 'trade-ideas-setup']
+const SENDER_TO_CHAT: Record<string, string[]> = {
+  'premium-signals': ['premium-ideas'],
+  'trade-ideas': ['sensei-scanner', 'trade-ideas-setup', 'trade-ideas'],
+}
+
+/** Canais de chat ativos no Tap to Trade (providers com tap_to_trade + enabled). */
+async function tapToTradeEnabledChannels(): Promise<Set<string> | null> {
+  try {
+    const routes = normalizeProviderRoutes(await getSignalSourcesConfig())
+    const set = new Set<string>()
+    for (const r of routes) {
+      if (r.tap_to_trade === true && r.enabled !== false) {
+        for (const ch of SENDER_TO_CHAT[r.sender_channel ?? ''] ?? []) set.add(ch)
+      }
+    }
+    return set
+  } catch {
+    return null // falha de config não bloqueia (validação do sinal ainda aplica)
+  }
+}
 
 async function authenticate(request: NextRequest) {
   const authHeader = request.headers.get('Authorization')
@@ -67,6 +89,11 @@ export async function POST(request: NextRequest) {
   }
   if (!SIGNAL_CHANNELS.includes(message.channel_slug)) {
     return NextResponse.json({ error: 'Esta mensagem não é um sinal de trading' }, { status: 400 })
+  }
+  // Provider tem de estar ativo no Tap to Trade (toggle em /admin/mtmcopy)
+  const enabledChannels = await tapToTradeEnabledChannels()
+  if (enabledChannels && !enabledChannels.has(message.channel_slug)) {
+    return NextResponse.json({ error: 'Este provider não está ativo no Tap to Trade.', code: 'provider_off' }, { status: 403 })
   }
 
   // 2. Interpretar o sinal — parser do conteúdo, com fallback à ideia Sensei estruturada

@@ -150,6 +150,7 @@ export default function MobileSidebar({
     { id: 'social', label: 'Feed', icon: Users, href: '/app-mobile?tab=social' },
     { id: 'chat', label: 'Chat', icon: MessageSquare, href: '/app-mobile?tab=chat' },
     { id: 'live', label: 'Ao vivo', icon: Video, href: '/app-mobile?tab=live' },
+    { id: 'tap-to-trade', label: 'Tap to Trade', icon: Zap, href: '/app-mobile?tab=tap-to-trade' },
     { id: 'mentor', label: 'Mentor', icon: Brain, href: '/app-mobile?tab=mentor' },
     { id: 'portfolio', label: 'Portfólio', icon: Wallet, href: '/app-mobile?tab=portfolio' },
     { id: 'scanner', label: 'Scanner', icon: BarChart3, href: '/app-mobile?tab=scanner' },

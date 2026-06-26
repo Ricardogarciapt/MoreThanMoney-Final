@@ -152,6 +152,7 @@ function parseProviderRoutes(raw: unknown): ProviderRoute[] | undefined {
       tag: typeof r.tag === 'string' ? r.tag.trim() : undefined,
       execution: parseExecutionProfile(r.execution),
       enabled: r.enabled !== false,
+      tap_to_trade: r.tap_to_trade === true,
     })
   }
   return routes

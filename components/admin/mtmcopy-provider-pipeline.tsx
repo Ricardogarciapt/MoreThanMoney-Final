@@ -261,6 +261,19 @@ export default function MtmcopyProviderPipeline({
                       IA guideline padrão
                     </Badge>
                   )}
+                  <label className="flex items-center gap-1.5 text-[10px] text-zinc-400 ml-1 whitespace-nowrap">
+                    <Switch
+                      checked={route.tap_to_trade === true}
+                      onCheckedChange={async (v) => {
+                        // Ativa este provider no Tap to Trade (app-mobile) — persiste já.
+                        const next = routes.map((r) => (r.id === route.id ? { ...r, tap_to_trade: v } : r))
+                        setRoutes(next)
+                        await persistRoutes(next)
+                      }}
+                      className="scale-75"
+                    />
+                    <span className={route.tap_to_trade ? "text-[#D2A63C] font-semibold" : ""}>Tap to Trade</span>
+                  </label>
                 </div>
                 <Button
                   type="button"

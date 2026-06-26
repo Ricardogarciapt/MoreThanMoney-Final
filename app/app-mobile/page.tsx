@@ -479,7 +479,7 @@ function AppMobileContent() {
           id="app-mobile-bottom-tabs"
           data-tutorial="bottom-nav"
           className="app-mobile-bottom-tabs fixed bottom-0 left-0 right-0 z-[110] bg-black border-t border-gray-800 px-2 pt-2"
-          style={{ display: (mounted && typeof navigator !== 'undefined' && navigator.userAgent.includes('MTMNativeApp')) ? 'none' : "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "0.25rem", paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
+          style={{ display: (mounted && typeof navigator !== 'undefined' && navigator.userAgent.includes('MTMNativeApp')) ? 'none' : "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "0.25rem", paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
         >
           <button
             data-tutorial-tab="social"
@@ -508,19 +508,6 @@ function AppMobileContent() {
           </button>
 
           <button
-            data-tutorial-tab="tap-to-trade"
-            onClick={() => handleTabChange("tap-to-trade")}
-            className={`py-3 rounded-lg transition-all relative ${
-              activeTab === "tap-to-trade"
-                ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
-                : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
-            }`}
-          >
-            <Zap className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "tap-to-trade" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[10px] font-medium leading-tight ${activeTab === "tap-to-trade" ? "text-[#D2A63C]" : ""}`}>Tap Trade</div>
-          </button>
-
-          <button
             data-tutorial-tab="live"
             onClick={() => handleTabChange("live")}
             className={`py-3 rounded-lg transition-all relative ${
@@ -534,16 +521,16 @@ function AppMobileContent() {
           </button>
 
           <button
-            data-tutorial-tab="apps"
-            onClick={() => handleTabChange("apps")}
+            data-tutorial-tab="tap-to-trade"
+            onClick={() => handleTabChange("tap-to-trade")}
             className={`py-3 rounded-lg transition-all relative ${
-              activeTab === "apps"
+              activeTab === "tap-to-trade"
                 ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
                 : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
             }`}
           >
-            <LayoutGrid className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "apps" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[10px] font-medium leading-tight ${activeTab === "apps" ? "text-[#D2A63C]" : ""}`}>Apps</div>
+            <Zap className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "tap-to-trade" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "tap-to-trade" ? "text-[#D2A63C]" : ""}`}>Tap Trade</div>
           </button>
 
           <button

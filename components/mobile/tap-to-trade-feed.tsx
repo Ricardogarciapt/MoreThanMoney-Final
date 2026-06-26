@@ -63,13 +63,38 @@ export default function TapToTradeFeed() {
   const [loading, setLoading] = useState(true)
   const [cat, setCat] = useState<Category>("all")
   const [tap, setTap] = useState<{ sig: Sig; status: "confirm" | "loading" | "done" | "error"; message?: string } | null>(null)
+  const [providers, setProviders] = useState<{ label: string; strategy: string }[]>([])
+  const [noProviders, setNoProviders] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
+    // 1) providers/estratégias ativas no Tap to Trade (definidas no /admin/mtmcopy)
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    let channels: string[] = []
+    if (token) {
+      try {
+        const r = await fetch("/api/mtmcopy/tap-to-trade/providers", { headers: { Authorization: `Bearer ${token}` } })
+        if (r.ok) {
+          const d = await r.json()
+          setProviders(d.providers ?? [])
+          channels = (d.channels ?? []) as string[]
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    setNoProviders(channels.length === 0)
+    if (channels.length === 0) {
+      setItems([])
+      setLoading(false)
+      return
+    }
+    // 2) sinais de entrada só dos canais dos providers ativos
     const { data } = await supabase
       .from("chat_messages")
       .select("id, channel_slug, content, created_at")
-      .in("channel_slug", SIGNAL_CHANNELS)
+      .in("channel_slug", channels)
       .eq("is_deleted", false)
       .order("created_at", { ascending: false })
       .limit(80)
@@ -128,6 +153,17 @@ export default function TapToTradeFeed() {
         </Link>
       </p>
 
+      {providers.length > 0 && (
+        <div className="flex items-center gap-1.5 mb-3 overflow-x-auto no-scrollbar">
+          <span className="text-[11px] text-zinc-500 shrink-0">Estratégias ativas:</span>
+          {providers.map((p, i) => (
+            <span key={i} className="shrink-0 text-[11px] px-2 py-0.5 rounded-full bg-[#D2A63C]/15 text-[#D2A63C] border border-[#D2A63C]/30 whitespace-nowrap">
+              {p.label}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* filtros por categoria */}
       <div className="flex gap-1.5 mb-3 overflow-x-auto no-scrollbar">
         {FILTERS.map((f) => (
@@ -148,7 +184,9 @@ export default function TapToTradeFeed() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-zinc-500 text-sm">
           <TrendingUp className="w-10 h-10 mx-auto mb-3 text-zinc-700" />
-          Sem sinais de entrada recentes nesta categoria.
+          {noProviders
+            ? "Nenhum provider está ativo no Tap to Trade neste momento."
+            : "Sem sinais de entrada recentes nesta categoria."}
         </div>
       ) : (
         <div className="space-y-2.5">
