@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import {
@@ -171,6 +170,8 @@ export default function TapToTradeFeed() {
     setLoading(true)
     const t = await token()
     let channels: string[] = []
+    let senseiIds = new Set<string>()
+    let senseiFilterOn = false
     if (t) {
       try {
         const r = await fetch("/api/mtmcopy/tap-to-trade/providers", { headers: { Authorization: `Bearer ${t}` } })
@@ -178,6 +179,10 @@ export default function TapToTradeFeed() {
           const d = await r.json()
           setProviders(d.providers ?? [])
           channels = (d.channels ?? []) as string[]
+          if (Array.isArray(d.senseiSignalIds)) {
+            senseiIds = new Set(d.senseiSignalIds as string[])
+            senseiFilterOn = true
+          }
         }
       } catch {
         /* ignore */
@@ -202,6 +207,8 @@ export default function TapToTradeFeed() {
     const now = Date.now()
     const sigs = all
       .filter((m) => isEntrySignal(m.channel_slug, m.content))
+      // Sensei: só ideias activadas (abrem na conta provider = aparecem no chat)
+      .filter((m) => m.channel_slug !== "sensei-scanner" || !senseiFilterOn || senseiIds.has(m.id))
       .map((m) => {
         const ageMs = now - new Date(m.created_at).getTime()
         const ageExpired = ageMs > T2T_MAX_AGE_MS

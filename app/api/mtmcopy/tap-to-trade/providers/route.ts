@@ -43,9 +43,26 @@ export async function GET(request: NextRequest) {
     }
   })
 
+  // Sensei: só as ideias ACTIVADAS (= trades que abrem na conta provider + aparecem
+  // no chat) são elegíveis para T2T → melhora a qualidade dos sinais.
+  let senseiSignalIds: string[] = []
+  if (channelSet.has('sensei-scanner')) {
+    const { data: ideas } = await supabase
+      .from('sensei_trade_ideas')
+      .select('chat_message_id')
+      .eq('status', 'activated')
+      .not('chat_message_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(60)
+    senseiSignalIds = (ideas ?? [])
+      .map((i) => i.chat_message_id as string | null)
+      .filter((id): id is string => !!id)
+  }
+
   return NextResponse.json({
     providers,
     channels: [...channelSet],
+    senseiSignalIds,
     enabled: providers.length > 0,
   })
 }
