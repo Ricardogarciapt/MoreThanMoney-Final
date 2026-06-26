@@ -89,6 +89,25 @@ export function buildCanonicalProviderRoutes(): ProviderRoute[] {
 /** Repara rotas mal configuradas (chat errado, sender_channel null, contas trocadas). */
 export function repairProviderRoutes(routes: ProviderRoute[]): ProviderRoute[] {
   const canonical = buildCanonicalProviderRoutes()
+
+  // As rotas canónicas são reconstruídas a cada leitura para corrigir corrupção
+  // (chat errado, etc.), mas isso apagava as flags editáveis pelo admin. Voltamos
+  // a sobrepor as flags guardadas (tap_to_trade, enabled) por conta.
+  const savedByAccount = new Map<string, ProviderRoute>()
+  for (const r of routes) {
+    const acc = r.account_id?.trim()
+    if (acc && !savedByAccount.has(acc)) savedByAccount.set(acc, r)
+  }
+  const canonicalMerged = canonical.map((c) => {
+    const saved = savedByAccount.get(c.account_id.trim())
+    if (!saved) return c
+    return {
+      ...c,
+      enabled: saved.enabled !== false,
+      tap_to_trade: saved.tap_to_trade === true,
+    }
+  })
+
   const custom = routes.filter(
     (r) =>
       r.enabled !== false &&
@@ -97,7 +116,7 @@ export function repairProviderRoutes(routes: ProviderRoute[]): ProviderRoute[] {
       r.id !== 'legacy-global',
   )
 
-  const merged = [...canonical, ...custom]
+  const merged = [...canonicalMerged, ...custom]
   const seenAccount = new Set<string>()
   return merged.filter((r) => {
     const acc = r.account_id.trim()

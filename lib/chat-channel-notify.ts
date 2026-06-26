@@ -1,4 +1,8 @@
 import { getSiteOrigin } from '@/lib/site-url'
+import {
+  tapToTradeEnabledChannels,
+  T2T_SIGNAL_CHANNELS,
+} from '@/lib/mtmcopy/tap-to-trade-channels'
 
 type ChatChannelNotifyOptions = {
   channelSlug: string
@@ -15,8 +19,20 @@ export async function notifyChatChannelMessage(
   options: ChatChannelNotifyOptions,
 ): Promise<{ ok: boolean; status: number; data?: Record<string, unknown> }> {
   const siteUrl = getSiteOrigin()
-  const type = options.notificationType ?? 'chat_message'
-  const url = `/app-mobile?tab=chat&channel=${encodeURIComponent(options.channelSlug)}`
+  let type = options.notificationType ?? 'chat_message'
+  let url = `/app-mobile?tab=chat&channel=${encodeURIComponent(options.channelSlug)}`
+  let tag = `chat_${options.channelSlug}`
+
+  // Se o sinal vem de um provider ativo no Tap to Trade, a notificação leva
+  // directamente ao T2T para aceitar a trade num toque.
+  if (options.messageId && T2T_SIGNAL_CHANNELS.includes(options.channelSlug)) {
+    const enabled = await tapToTradeEnabledChannels()
+    if (enabled?.has(options.channelSlug)) {
+      url = `/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(options.messageId)}`
+      type = 'tap_to_trade'
+      tag = `t2t_${options.channelSlug}`
+    }
+  }
 
   const res = await fetch(`${siteUrl}/api/notifications/send-push`, {
     method: 'POST',
@@ -33,7 +49,7 @@ export async function notifyChatChannelMessage(
         url,
         ...(options.messageId ? { message_id: options.messageId } : {}),
       },
-      tag: `chat_${options.channelSlug}`,
+      tag,
     }),
   })
 

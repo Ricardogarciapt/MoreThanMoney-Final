@@ -4,6 +4,7 @@ export type NotificationCategory =
   | 'live_sessions'
   | 'trade_ideas'
   | 'telegram_groups'
+  | 'tap_to_trade'
 
 export type NotificationPreferences = Record<NotificationCategory, boolean>
 
@@ -31,6 +32,10 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<
     title: 'Grupos Telegram',
     description: 'Premium, mentor e outros canais espelhados do Telegram',
   },
+  tap_to_trade: {
+    title: 'T2T · Tap to Trade',
+    description: 'Sinais prontos a abrir num toque — toca para aceitar a trade',
+  },
 }
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
@@ -39,6 +44,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   live_sessions: true,
   trade_ideas: true,
   telegram_groups: true,
+  tap_to_trade: true,
 }
 
 export function normalizeNotificationPreferences(
@@ -84,6 +90,7 @@ export function resolveNotificationCategory(
 ): NotificationCategory | null {
   const channel = String(data?.channel ?? data?.channel_slug ?? '').toLowerCase()
 
+  if (type === 'tap_to_trade' || type === 'tap_to_trade_signal') return 'tap_to_trade'
   if (type === 'live_session') return 'live_sessions'
   if (type === 'dca_daily' || type === 'dca_opportunity' || type === 'price_alert') return 'dca'
   if (type === 'telegram_forward' || type === 'telegram_signal') return 'telegram_groups'

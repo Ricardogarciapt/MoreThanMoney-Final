@@ -3,16 +3,11 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getSignalSourcesConfig } from '@/lib/mtmcopy/signal-sources-config'
 import { normalizeProviderRoutes } from '@/lib/mtmcopy/provider-routes'
 import { mtmStrategyPublicLabel } from '@/lib/mtmcopy/provider-constants'
+import { T2T_SENDER_TO_CHAT as SENDER_TO_CHAT } from '@/lib/mtmcopy/tap-to-trade-channels'
 
 export const dynamic = 'force-dynamic'
 
 const supabase = getSupabaseAdmin()
-
-/** Mapeia o sender_channel da rota → canais de chat onde os sinais aparecem. */
-const SENDER_TO_CHAT: Record<string, string[]> = {
-  'premium-signals': ['premium-ideas'],
-  'trade-ideas': ['sensei-scanner', 'trade-ideas-setup', 'trade-ideas'],
-}
 
 async function authed(request: NextRequest): Promise<boolean> {
   const authHeader = request.headers.get('Authorization')

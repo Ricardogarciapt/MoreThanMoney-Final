@@ -7,35 +7,12 @@ import {
   signalForRiskSizing,
 } from '@/lib/mtmcopy/lot-sizing'
 import { fetchLotSizingContext, placeOrder, type OrderRequest } from '@/lib/mtmcopy/metaapi'
-import { getSignalSourcesConfig } from '@/lib/mtmcopy/signal-sources-config'
-import { normalizeProviderRoutes } from '@/lib/mtmcopy/provider-routes'
+import { tapToTradeEnabledChannels, T2T_SIGNAL_CHANNELS as SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 const supabase = getSupabaseAdmin()
-
-const SIGNAL_CHANNELS = ['sensei-scanner', 'trade-ideas', 'premium-ideas', 'trade-ideas-setup']
-const SENDER_TO_CHAT: Record<string, string[]> = {
-  'premium-signals': ['premium-ideas'],
-  'trade-ideas': ['sensei-scanner', 'trade-ideas-setup', 'trade-ideas'],
-}
-
-/** Canais de chat ativos no Tap to Trade (providers com tap_to_trade + enabled). */
-async function tapToTradeEnabledChannels(): Promise<Set<string> | null> {
-  try {
-    const routes = normalizeProviderRoutes(await getSignalSourcesConfig())
-    const set = new Set<string>()
-    for (const r of routes) {
-      if (r.tap_to_trade === true && r.enabled !== false) {
-        for (const ch of SENDER_TO_CHAT[r.sender_channel ?? ''] ?? []) set.add(ch)
-      }
-    }
-    return set
-  } catch {
-    return null // falha de config não bloqueia (validação do sinal ainda aplica)
-  }
-}
 
 async function authenticate(request: NextRequest) {
   const authHeader = request.headers.get('Authorization')

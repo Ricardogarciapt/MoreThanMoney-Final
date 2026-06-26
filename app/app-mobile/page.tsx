@@ -530,7 +530,7 @@ function AppMobileContent() {
             }`}
           >
             <Zap className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "tap-to-trade" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[10px] font-medium leading-tight ${activeTab === "tap-to-trade" ? "text-[#D2A63C]" : ""}`}>Tap Trade</div>
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "tap-to-trade" ? "text-[#D2A63C]" : ""}`}>T2T</div>
           </button>
 
           <button
