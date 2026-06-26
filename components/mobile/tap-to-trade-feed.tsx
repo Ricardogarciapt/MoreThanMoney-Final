@@ -223,6 +223,11 @@ export default function TapToTradeFeed() {
     loadConnection()
   }, [load, loadConnection])
 
+  // Vindo de /automation ("Ativar Tap to Trade") → abre logo a config/ligação da conta
+  useEffect(() => {
+    if (searchParams?.get("setup") === "1") setShowConfig(true)
+  }, [searchParams])
+
   // Deep-link: notificação T2T → abrir directamente a confirmação da trade
   useEffect(() => {
     const sigId = searchParams?.get("signal") || searchParams?.get("msg")
