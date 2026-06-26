@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import BrokerServerSelect from "@/components/mtmcopy/broker-server-select"
 import {
   TrendingUp,
   RefreshCw,
@@ -630,15 +631,29 @@ export default function TapToTradeFeed() {
               <h3 className="text-base font-bold">Ligar conta MT5 (T2T)</h3>
             </div>
             <p className="text-[11px] text-zinc-400 mb-3">Conta de destino exclusiva do Tap to Trade — independente do MTMcopy.</p>
-            <div className="space-y-2">
-              <input value={connForm.server} onChange={(e) => setConnForm({ ...connForm, server: e.target.value })} placeholder="Servidor (ex: VTMarkets-Live)" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
-              <input value={connForm.login} onChange={(e) => setConnForm({ ...connForm, login: e.target.value })} placeholder="Número de conta (login)" inputMode="numeric" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
-              <input value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} placeholder="Password (investor ou master)" type="password" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
-              <div className="flex gap-2">
-                {(["mt5", "mt4"] as const).map((p) => (
-                  <button key={p} onClick={() => setConnForm({ ...connForm, platform: p })} className={`flex-1 rounded-xl border py-2 text-xs font-medium ${connForm.platform === p ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}>{p.toUpperCase()}</button>
-                ))}
+            <div className="space-y-2.5">
+              {/* Plataforma */}
+              <div>
+                <label className="text-[11px] text-zinc-500">Plataforma</label>
+                <div className="flex gap-2 mt-1">
+                  {(["mt5", "mt4"] as const).map((p) => (
+                    <button key={p} onClick={() => setConnForm({ ...connForm, platform: p })} className={`flex-1 rounded-xl border py-2 text-xs font-medium ${connForm.platform === p ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}>{p.toUpperCase()}</button>
+                  ))}
+                </div>
               </div>
+              {/* Servidor — pesquisa MetaApi + colar nome exato */}
+              <div>
+                <label className="text-[11px] text-zinc-500">Servidor (corretora)</label>
+                <BrokerServerSelect
+                  platform={connForm.platform}
+                  server={connForm.server}
+                  onServerChange={(s) => setConnForm({ ...connForm, server: s })}
+                  disabled={connBusy}
+                />
+              </div>
+              {/* Login + password (podes colar) */}
+              <input value={connForm.login} onChange={(e) => setConnForm({ ...connForm, login: e.target.value })} placeholder="Número de conta (login) — podes colar" inputMode="numeric" autoComplete="off" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
+              <input value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} placeholder="Password (investor/master) — podes colar" type="password" autoComplete="off" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
             </div>
             {connError && <p className="text-xs text-rose-400 mt-2">{connError}</p>}
             <div className="flex gap-2 mt-4">
