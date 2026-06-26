@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Wallet,
   Power,
+  Clock,
 } from "lucide-react"
 
 const FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad)/i
@@ -53,11 +54,26 @@ function directionOf(content: string): "BUY" | "SELL" | "" {
   return ""
 }
 
+/** Tempo máximo para um sinal estar ativo (5 minutos). */
+const T2T_MAX_AGE_MS = 5 * 60 * 1000
+
+/** Extrai o símbolo do sinal (para emparelhar com follow-ups TP/fecho). */
+function symbolOf(content: string): string | null {
+  const c = content.toUpperCase()
+  const m =
+    c.match(/\b(XAUUSD|XAGUSD|NAS100|US30|US500|GER40|UK100|JP225|SPX500|BTCUSD|ETHUSD|SOLUSD|XRPUSD)\b/) ||
+    c.match(/\b[A-Z]{3}(USD|EUR|GBP|JPY|AUD|CAD|CHF|NZD)\b/) ||
+    c.match(/\bXAU\b|\bGOLD\b/)
+  return m ? m[0] : null
+}
+
 interface Sig {
   id: string
   channel_slug: string
   content: string
   created_at: string
+  expired?: boolean
+  reason?: string
 }
 
 interface Conn {
@@ -161,8 +177,29 @@ export default function TapToTradeFeed() {
       .in("channel_slug", channels)
       .eq("is_deleted", false)
       .order("created_at", { ascending: false })
-      .limit(80)
-    const sigs = ((data ?? []) as Sig[]).filter((m) => isEntrySignal(m.content))
+      .limit(120)
+    const all = (data ?? []) as Sig[]
+    // follow-ups (TP atingido / fechado / SL / cancelado) para marcar sinais resolvidos
+    const followups = all.filter((m) => FOLLOWUP_RE.test(m.content))
+    const now = Date.now()
+    const sigs = all
+      .filter((m) => isEntrySignal(m.content))
+      .map((m) => {
+        const ageMs = now - new Date(m.created_at).getTime()
+        const ageExpired = ageMs > T2T_MAX_AGE_MS
+        const sym = symbolOf(m.content)
+        const resolved = followups.some(
+          (f) =>
+            f.channel_slug === m.channel_slug &&
+            new Date(f.created_at).getTime() > new Date(m.created_at).getTime() &&
+            (!sym || symbolOf(f.content) === sym),
+        )
+        return {
+          ...m,
+          expired: ageExpired || resolved,
+          reason: resolved ? "Fechado / TP atingido" : ageExpired ? "Passaram +5 min" : "",
+        }
+      })
     setItems(sigs)
     setLoading(false)
   }, [token])
@@ -461,22 +498,35 @@ export default function TapToTradeFeed() {
           {filtered.map((s) => {
             const dir = directionOf(s.content)
             return (
-              <div key={s.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3">
+              <div key={s.id} className={`rounded-2xl border p-3 ${s.expired ? "border-zinc-800/60 bg-zinc-900/30 opacity-70" : "border-zinc-800 bg-zinc-900/60"}`}>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[11px] font-semibold text-[#D2A63C]">{CHANNEL_LABEL[s.channel_slug] ?? s.channel_slug}</span>
-                  {dir && (
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${dir === "BUY" ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
-                      {dir}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {s.expired && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-700/60 text-zinc-300 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Expirado
+                      </span>
+                    )}
+                    {dir && (
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${dir === "BUY" ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
+                        {dir}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <p className="text-[13px] text-zinc-200 whitespace-pre-wrap break-words leading-snug line-clamp-5">{s.content}</p>
-                <button
-                  onClick={() => setTap({ sig: s, status: "confirm" })}
-                  className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2.5 active:scale-[0.98] transition-transform"
-                >
-                  <Zap className="w-4 h-4" /> Tap to Trade
-                </button>
+                {s.expired ? (
+                  <div className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-zinc-800/70 text-zinc-500 font-semibold text-[12px] py-2.5 cursor-not-allowed">
+                    <Clock className="w-4 h-4" /> Sinal expirado{s.reason ? ` · ${s.reason}` : ""}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setTap({ sig: s, status: "confirm" })}
+                    className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2.5 active:scale-[0.98] transition-transform"
+                  >
+                    <Zap className="w-4 h-4" /> Tap to Trade
+                  </button>
+                )}
               </div>
             )
           })}

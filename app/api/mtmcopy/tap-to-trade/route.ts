@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
   // 1. Mensagem do chat
   const { data: message, error: msgErr } = await supabase
     .from('chat_messages')
-    .select('id, channel_slug, content, telegram_message_id')
+    .select('id, channel_slug, content, telegram_message_id, created_at')
     .eq('id', chatMessageId)
     .maybeSingle()
   if (msgErr || !message) {
@@ -66,6 +66,11 @@ export async function POST(request: NextRequest) {
   }
   if (!SIGNAL_CHANNELS.includes(message.channel_slug)) {
     return NextResponse.json({ error: 'Esta mensagem não é um sinal de trading' }, { status: 400 })
+  }
+  // Sinal expirado: passaram mais de 5 minutos desde a publicação
+  const ageMs = message.created_at ? Date.now() - new Date(message.created_at).getTime() : 0
+  if (ageMs > 5 * 60 * 1000) {
+    return NextResponse.json({ error: 'Sinal expirado — passaram mais de 5 minutos.', code: 'expired' }, { status: 410 })
   }
   // Provider tem de estar ativo no Tap to Trade (toggle em /admin/mtmcopy)
   const enabledChannels = await tapToTradeEnabledChannels()
