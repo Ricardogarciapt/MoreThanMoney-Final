@@ -116,6 +116,7 @@ export default function TapToTradeFeed() {
   const [items, setItems] = useState<Sig[]>([])
   const [loading, setLoading] = useState(true)
   const [cat, setCat] = useState<Category>("all")
+  const [limitMode, setLimitMode] = useState<"last5" | "all">("last5")
   const [tap, setTap] = useState<{ sig: Sig; status: "confirm" | "loading" | "done" | "error"; message?: string } | null>(null)
   const [providers, setProviders] = useState<{ label: string; strategy: string }[]>([])
   const [noProviders, setNoProviders] = useState(false)
@@ -247,6 +248,7 @@ export default function TapToTradeFeed() {
   }, [searchParams, items])
 
   const filtered = items.filter((s) => cat === "all" || categoryOf(s.content) === cat)
+  const shown = limitMode === "last5" ? filtered.slice(0, 5) : filtered
 
   const runTap = async () => {
     if (!tap) return
@@ -482,6 +484,26 @@ export default function TapToTradeFeed() {
         </div>
       )}
 
+      {/* alcance: últimos 5 (default) vs todos */}
+      <div className="flex items-center gap-1.5 mb-2">
+        <button
+          onClick={() => setLimitMode("last5")}
+          className={`text-xs px-3 py-1.5 rounded-full border font-medium ${
+            limitMode === "last5" ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"
+          }`}
+        >
+          Últimos 5 sinais
+        </button>
+        <button
+          onClick={() => setLimitMode("all")}
+          className={`text-xs px-3 py-1.5 rounded-full border font-medium ${
+            limitMode === "all" ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"
+          }`}
+        >
+          Todos
+        </button>
+      </div>
+
       {/* filtros por categoria */}
       <div className="flex gap-1.5 mb-3 overflow-x-auto no-scrollbar">
         {FILTERS.map((f) => (
@@ -499,7 +521,7 @@ export default function TapToTradeFeed() {
 
       {loading && items.length === 0 ? (
         <div className="flex justify-center py-16"><Loader2 className="w-7 h-7 animate-spin text-[#D2A63C]" /></div>
-      ) : filtered.length === 0 ? (
+      ) : shown.length === 0 ? (
         <div className="text-center py-16 text-zinc-500 text-sm">
           <TrendingUp className="w-10 h-10 mx-auto mb-3 text-zinc-700" />
           {noProviders
@@ -508,7 +530,7 @@ export default function TapToTradeFeed() {
         </div>
       ) : (
         <div className="space-y-2.5">
-          {filtered.map((s) => {
+          {shown.map((s) => {
             const dir = directionOf(s.content)
             return (
               <div key={s.id} className={`rounded-2xl border p-3 ${s.expired ? "border-zinc-800/60 bg-zinc-900/30 opacity-70" : "border-zinc-800 bg-zinc-900/60"}`}>
