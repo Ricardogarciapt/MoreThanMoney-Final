@@ -48,7 +48,7 @@ export interface SystemEmailSampleData {
 export const SYSTEM_EMAILS: SystemEmailDefinition[] = [
   {
     id: 'welcome',
-    name: 'Boas-vindas + Fast Start MTM × IQONIC',
+    name: 'Boas-vindas + Fast Start MoreThanMoney',
     subject: '🎉 Bem-vindo à MoreThanMoney!',
     category: 'transactional',
     trigger: 'Primeira subscrição activa — Stripe, App Store, Google Play ou aprovação admin',

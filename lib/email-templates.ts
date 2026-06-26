@@ -342,7 +342,7 @@ export const welcomeEmailTemplate = (userName: string, userEmail: string, userna
         Bem-vindo, ${userName}! 👋
       </h2>
       <p style="margin-bottom: 12px; text-align: center; font-size: 16px;">
-        A tua subscrição está <strong>activa</strong>. Fazes agora parte do ecossistema <strong>MoreThanMoney × IQONIC</strong>.
+        A tua subscrição está <strong>activa</strong>. Fazes agora parte do ecossistema <strong>MoreThanMoney</strong>.
       </p>
       <p style="margin-bottom: 0; text-align: center; color: #666; font-size: 14px;">
         Segue o Fast Start abaixo — o mesmo percurso que vais encontrar na app e em <a href="${base}/fast-start" style="color: ${COLORS.primaryDark};">morethanmoney.pt/fast-start</a>.
@@ -350,14 +350,14 @@ export const welcomeEmailTemplate = (userName: string, userEmail: string, userna
     `)}
 
     ${cardComponent(
-      '🤝 MTM × IQONIC — O teu plano',
+      '🤝 MoreThanMoney — O teu plano',
       `
         <p style="margin: 0 0 12px 0; line-height: 24px;">
           Educação prática, copy trading e crescimento de negócio num ecossistema premium.
           Começa pela <strong>apresentação oficial</strong> para perceberes como tudo se liga.
         </p>
         <p style="margin: 0;">
-          <a href="${base}/apresentacao" style="color: ${COLORS.primaryDark}; font-weight: 700;">Ver apresentação MTM × IQONIC →</a>
+          <a href="${base}/apresentacao" style="color: ${COLORS.primaryDark}; font-weight: 700;">Ver apresentação MoreThanMoney →</a>
         </p>
       `,
       '✨',
@@ -421,7 +421,7 @@ export const welcomeEmailTemplate = (userName: string, userEmail: string, userna
     `)}
   `
 
-  return baseTemplate(content, 'Bem-vindo à MoreThanMoney! O teu Fast Start MTM × IQONIC começa aqui.', base)
+  return baseTemplate(content, 'Bem-vindo à MoreThanMoney! O teu Fast Start começa aqui.', base)
 }
 
 // 2. ONBOARDING - Dia 1
@@ -1285,6 +1285,51 @@ export const adminBroadcastEmailTemplate = (
   `
 
   return baseTemplate(content, title, base)
+}
+
+/**
+ * Email de lançamento / conversão — anúncio da plataforma + app, sistema
+ * independente, ativação em /register, encerramento do WhatsApp e transição IQONIC.
+ */
+export const platformLaunchEmailTemplate = (userName?: string, siteUrl?: string) => {
+  const base = resolveSiteUrl(siteUrl)
+  const name = (userName ?? '').trim()
+  const content = `
+    ${headerComponent('Chegou a MoreThanMoney', 'A tua plataforma de trading, educação e IA', '🚀')}
+    ${textComponent(`
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        ${name ? `Olá ${name},` : 'Olá,'}
+      </p>
+      <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Como sabem, lançámos a nossa <strong>Plataforma <a href="${base}" style="color: ${COLORS.primaryDark}; font-weight: 700; text-decoration: none;">www.MoreThanMoney.pt</a></strong> e a <strong>aplicação MTM</strong> — tudo o que precisas, num só sistema.
+      </p>
+      <div style="background: ${COLORS.gray}; border-left: 4px solid ${COLORS.primary}; border-radius: 8px; padding: 16px 20px; margin: 0 0 24px 0;">
+        <p style="margin: 0 0 10px 0; font-size: 15px; line-height: 24px; color: #1a1a1a;"><strong>O que tens acesso na MoreThanMoney:</strong></p>
+        <p style="margin: 0; font-size: 15px; line-height: 26px; color: #333;">
+          🎓 <strong>Educação</strong> aplicada (Forex, Cripto, Marketing &amp; IA)<br>
+          🔍 <strong>Scanners de IA</strong> exclusivos (Gold Killer, V3.4, Sensei X)<br>
+          🤖 <strong>Automatismos</strong> — MTMcopier: Tap to Trade MTM &amp; MTM Copy<br>
+          📱 <strong>App MTM System</strong> (iOS + Android) + comunidade e live sessions
+        </p>
+      </div>
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Somos um <strong>sistema independente</strong> — todos os membros que querem ter acesso à Educação, Scanners, automatismos e IA devem proceder à sua <strong>ativação</strong> em
+        <a href="${base}/register" style="color: ${COLORS.primaryDark}; font-weight: 700;">MoreThanMoney.pt/register</a>.
+      </p>
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        ⚠️ Nas próximas <strong>48 horas</strong>, a comunidade de WhatsApp será encerrada para fazermos a migração para a app.
+      </p>
+      <p style="margin: 0 0 8px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Como vou manter a minha educação <strong>exclusiva na MoreThanMoney</strong>, todos os clientes ativos na IQONIC devem fazer a transição e <strong>cancelar a sua subscrição</strong>.
+      </p>
+    `)}
+    ${buttonComponent('Ativar agora em MoreThanMoney.pt/register', `${base}/register`)}
+    ${textComponent(`
+      <p style="margin: 24px 0 4px 0; font-size: 16px; line-height: 26px; color: #333;">Muito obrigado a todos.</p>
+      <p style="margin: 0; font-size: 16px; line-height: 26px; color: ${COLORS.primaryDark}; font-weight: 700;">Equipa MTM</p>
+    `)}
+  `
+  return baseTemplate(content, 'Chegou a MoreThanMoney — ativa o teu acesso em MoreThanMoney.pt/register', base)
 }
 
 // Export all components for custom templates
