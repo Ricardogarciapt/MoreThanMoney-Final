@@ -8,11 +8,15 @@ import path from "path"
  */
 const MTM_IMAGES: Record<string, string> = {
   problema: "Problema.png",
-  ecossistema: "Ecossistema.png",
+  ecossistema: "ecossistema-mtm.svg",
   estrategia1: "A Escada Do Sucesso - Parte 1 .png",
   estrategia2: "Escada do Sucesso  - Parte 2.png",
-  escolhaCaminho: "Escolha de Caminho.png",
+  escolhaCaminho: "escolha-caminho-mtm.svg",
   diferenca: "A Diferença.png",
+}
+
+function contentTypeFor(filename: string): string {
+  return filename.toLowerCase().endsWith(".svg") ? "image/svg+xml" : "image/png"
 }
 
 // Fallbacks para "diferenca" (encoding ç pode variar entre macOS/Linux/deploy)
@@ -38,7 +42,7 @@ export async function GET(request: NextRequest) {
       const buffer = await readFile(filePath)
       return new NextResponse(buffer, {
         headers: {
-          "Content-Type": "image/png",
+          "Content-Type": contentTypeFor(filename),
           "Cache-Control": "public, max-age=31536000, immutable",
         },
       })
