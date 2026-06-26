@@ -104,11 +104,10 @@ export async function POST(request: NextRequest) {
     .maybeSingle()
 
   if (!conn) {
-    return NextResponse.json({ error: 'Sem conta configurada. Define a tua conta em Definições.', code: 'no_connection' }, { status: 400 })
+    return NextResponse.json({ error: 'Sem conta configurada. Liga a tua conta MT5 no T2T.', code: 'no_connection' }, { status: 400 })
   }
-  if (!conn.is_active) {
-    return NextResponse.json({ error: 'A tua conta MTMcopier está inativa.', code: 'inactive' }, { status: 400 })
-  }
+  // T2T é manual e independente do MTMcopy: NÃO exige is_active (essa flag é da cópia
+  // automática, que requer subscrição). Basta uma conta MT5 ligada.
   if (!conn.metaapi_account_id) {
     return NextResponse.json({ error: 'Conta MT5 não configurada (MetaAPI). Define-a em Definições.', code: 'no_account' }, { status: 400 })
   }
