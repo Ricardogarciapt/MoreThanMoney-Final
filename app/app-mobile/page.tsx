@@ -20,6 +20,7 @@ import {
   LayoutGrid,
   Video,
   MessageSquare,
+  Zap,
   Bell,
   X,
 } from "lucide-react"
@@ -28,6 +29,7 @@ import LiveSessionsMobile from "@/components/mobile/live-sessions-mobile"
 import MentorMobile from "@/components/mobile/mentor-mobile"
 import AppsMobile from "@/components/mobile/apps-mobile"
 import ChatChannels from "@/components/mobile/chat-channels"
+import TapToTradeFeed from "@/components/mobile/tap-to-trade-feed"
 import SettingsMobile from "@/components/mobile/settings-mobile"
 import OnboardingTutorial, { useOnboarding } from "@/components/mobile/onboarding-tutorial"
 import MlmDashboardTab from "@/components/mobile/mlm-dashboard-tab"
@@ -69,7 +71,7 @@ function AppMobileContent() {
     onForegroundMessage: handleForegroundMessage,
   })
   const [mounted, setMounted] = useState(false)
-  const validTabs = ["social", "chat", "portfolio", "scanner", "apps", "live", "mentor", "settings", "mlm"] as const
+  const validTabs = ["social", "chat", "tap-to-trade", "portfolio", "scanner", "apps", "live", "mentor", "settings", "mlm"] as const
   const tabFromUrl = searchParams.get("tab")
   const channelFromUrl = searchParams.get("channel")
   const [activeTab, setActiveTab] = useState(() =>
@@ -433,6 +435,10 @@ function AppMobileContent() {
               {activeTab === "chat" && <ChatChannels initialSlug={channelFromUrl} />}
             </TabsContent>
 
+            <TabsContent value="tap-to-trade" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
+              {activeTab === "tap-to-trade" && <TapToTradeFeed />}
+            </TabsContent>
+
             <TabsContent value="live" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
               <LiveSessionsMobile
                 isActive={activeTab === "live"}
@@ -473,7 +479,7 @@ function AppMobileContent() {
           id="app-mobile-bottom-tabs"
           data-tutorial="bottom-nav"
           className="app-mobile-bottom-tabs fixed bottom-0 left-0 right-0 z-[110] bg-black border-t border-gray-800 px-2 pt-2"
-          style={{ display: (mounted && typeof navigator !== 'undefined' && navigator.userAgent.includes('MTMNativeApp')) ? 'none' : "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "0.25rem", paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
+          style={{ display: (mounted && typeof navigator !== 'undefined' && navigator.userAgent.includes('MTMNativeApp')) ? 'none' : "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "0.25rem", paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))' }}
         >
           <button
             data-tutorial-tab="social"
@@ -499,6 +505,19 @@ function AppMobileContent() {
           >
             <MessageSquare className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "chat" ? "text-[#D2A63C]" : ""}`} />
             <div className={`text-[10px] font-medium leading-tight ${activeTab === "chat" ? "text-[#D2A63C]" : ""}`}>Chat</div>
+          </button>
+
+          <button
+            data-tutorial-tab="tap-to-trade"
+            onClick={() => handleTabChange("tap-to-trade")}
+            className={`py-3 rounded-lg transition-all relative ${
+              activeTab === "tap-to-trade"
+                ? "bg-black/80 text-[#D2A63C] shadow-[0_0_20px_rgba(210,166,60,0.6),0_4px_12px_rgba(210,166,60,0.4)] border-2 border-[#D2A63C]"
+                : "text-gray-300 hover:bg-[#D2A63C]/20 border-2 border-transparent"
+            }`}
+          >
+            <Zap className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "tap-to-trade" ? "text-[#D2A63C]" : ""}`} />
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "tap-to-trade" ? "text-[#D2A63C]" : ""}`}>Tap Trade</div>
           </button>
 
           <button
