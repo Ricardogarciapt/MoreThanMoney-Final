@@ -57,7 +57,7 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
   {
     slug: 'trade-ideas',
     name: 'Ideias Forex',
-    description: 'Ideias da comunidade — requer UID TMGM',
+    description: 'Ideias da comunidade — requer UID VT Markets',
     parent_slug: 'sinais',
     position: 11,
   },

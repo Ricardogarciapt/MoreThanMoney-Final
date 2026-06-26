@@ -24,14 +24,14 @@ import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 
-const TMGM_REFERRAL = "https://www.tmgm.com?r_code=IB2230037877A&expiry_date=Nw=="
+const VTMARKETS_REFERRAL = "https://www.vtmarkets.net/campaign?cs=7d17097uqs"
 
 const STEPS = [
   {
     id: 1,
     icon: ExternalLink,
-    title: "Acede ao site da TMGM",
-    description: "Clica no botão abaixo para abrir o registo oficial da TMGM com o nosso link de parceiro.",
+    title: "Acede ao site da VT Markets",
+    description: "Clica no botão abaixo para abrir o registo oficial da VT Markets com o nosso link de parceiro.",
     detail: "Ao usares o nosso link garantes que a conta fica associada ao grupo MTM — isso dá-te acesso às melhores condições de suporte.",
     action: "open_link",
   },
@@ -40,7 +40,7 @@ const STEPS = [
     icon: User,
     title: "Cria a tua conta",
     description: "Preenche os teus dados pessoais: nome completo, email, data de nascimento e país de residência.",
-    detail: "Usa dados reais — a TMGM é uma corretora regulada e vai verificar a tua identidade.",
+    detail: "Usa dados reais — a VT Markets é uma corretora regulada e vai verificar a tua identidade.",
     action: null,
   },
   {
@@ -63,16 +63,16 @@ const STEPS = [
     id: 5,
     icon: Smartphone,
     title: "Instala a plataforma MetaTrader",
-    description: "Descarrega o MetaTrader 4 ou 5 (MT4/MT5) disponível no site da TMGM ou na App Store / Play Store.",
-    detail: "A TMGM fornece-te os dados de login (servidor, número de conta e password) assim que a conta estiver ativa.",
+    description: "Descarrega o MetaTrader 4 ou 5 (MT4/MT5) disponível no site da VT Markets ou na App Store / Play Store.",
+    detail: "A VT Markets fornece-te os dados de login (servidor, número de conta e password) assim que a conta estiver ativa.",
     action: null,
   },
   {
     id: 6,
     icon: TrendingUp,
     title: "Regista o teu UID na MTM",
-    description: "Após criares a conta, copia o teu número de conta TMGM (UID) e guarda-o aqui.",
-    detail: "O UID é o número da tua conta na TMGM (ex: 12345678). Vais encontrá-lo no painel da TMGM após o login. Este passo desbloqueia as salas exclusivas de Trade Ideas.",
+    description: "Após criares a conta, copia o teu número de conta VT Markets (UID) e guarda-o aqui.",
+    detail: "O UID é o número da tua conta na VT Markets (ex: 12345678). Vais encontrá-lo no painel da VT Markets após o login. Este passo desbloqueia as salas exclusivas de Trade Ideas.",
     action: "save_uid",
   },
 ]
@@ -121,7 +121,7 @@ export default function AccountOpenPage() {
   }
 
   const handleOpenLink = () => {
-    window.open(TMGM_REFERRAL, "_blank", "noopener,noreferrer")
+    window.open(VTMARKETS_REFERRAL, "_blank", "noopener,noreferrer")
     setLinkOpened(true)
     markStepDone(1)
     setTimeout(() => setExpandedStep(2), 400)
@@ -129,7 +129,7 @@ export default function AccountOpenPage() {
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(TMGM_REFERRAL)
+      await navigator.clipboard.writeText(VTMARKETS_REFERRAL)
       setCopiedLink(true)
       setTimeout(() => setCopiedLink(false), 2000)
       toast({ title: "Link copiado!" })
@@ -182,7 +182,7 @@ export default function AccountOpenPage() {
         </button>
         <div className="flex-1">
           <h1 className="font-bold text-white text-base">Abrir Conta na Corretora</h1>
-          <p className="text-xs text-gray-400">TMGM — Parceiro oficial MTM</p>
+          <p className="text-xs text-gray-400">VT Markets — Parceiro oficial MTM</p>
         </div>
         <div className="w-8 h-8 rounded-lg bg-[#D2A63C]/10 border border-[#D2A63C]/30 flex items-center justify-center">
           <TrendingUp className="w-4 h-4 text-[#D2A63C]" />
@@ -200,7 +200,7 @@ export default function AccountOpenPage() {
                 <Shield className="w-6 h-6 text-[#D2A63C]" />
               </div>
               <div>
-                <h2 className="font-bold text-white text-lg leading-tight">TMGM — Corretora Parceira</h2>
+                <h2 className="font-bold text-white text-lg leading-tight">VT Markets — Corretora Parceira</h2>
                 <p className="text-sm text-gray-300 mt-1 leading-relaxed">
                   Regulada pela ASIC (Austrália) e FSCA (África do Sul). Spreads competitivos, execução rápida e suporte em português.
                 </p>
@@ -315,7 +315,7 @@ export default function AccountOpenPage() {
                           className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
                         >
                           <ExternalLink className="w-4 h-4" />
-                          Abrir TMGM com o nosso link
+                          Abrir VT Markets com o nosso link
                         </button>
                         <button
                           onClick={handleCopyLink}
@@ -351,7 +351,7 @@ export default function AccountOpenPage() {
                           </div>
                         )}
                         <div>
-                          <label className="text-xs text-gray-400 mb-1.5 block">Número de conta TMGM (UID)</label>
+                          <label className="text-xs text-gray-400 mb-1.5 block">Número de conta VT Markets (UID)</label>
                           <input
                             type="text"
                             value={uid}

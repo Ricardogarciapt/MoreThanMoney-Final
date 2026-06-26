@@ -1780,7 +1780,7 @@ function BrokerUidModal({
 
   const handleSave = async () => {
     const trimmed = uid.trim()
-    if (!trimmed) { setError("Insere o teu número de conta TMGM."); return }
+    if (!trimmed) { setError("Insere o teu número de conta VT Markets."); return }
     setSaving(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -1824,7 +1824,7 @@ function BrokerUidModal({
             <div>
               <h3 className="font-bold text-white text-lg leading-tight">Conta de Corretora Necessária</h3>
               <p className="text-sm text-gray-400 mt-1 leading-relaxed">
-                Para acederes aos canais de Trade Ideas, precisas de ter uma conta activa na <strong className="text-white">TMGM</strong>, parceira oficial MTM.
+                Para acederes aos canais de Trade Ideas, precisas de ter uma conta activa na <strong className="text-white">VT Markets</strong>, parceira oficial MTM.
               </p>
             </div>
           </div>
@@ -1834,7 +1834,7 @@ function BrokerUidModal({
           {/* UID input */}
           <div>
             <label className="text-xs text-gray-400 uppercase tracking-wide mb-2 block">
-              O teu número de conta TMGM (UID)
+              O teu número de conta VT Markets (UID)
             </label>
             <input
               type="text"
@@ -1846,7 +1846,7 @@ function BrokerUidModal({
             />
             {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
             <p className="text-xs text-gray-500 mt-1.5">
-              Encontras o teu UID no painel da TMGM após o login.
+              Encontras o teu UID no painel da VT Markets após o login.
             </p>
           </div>
 
@@ -1870,7 +1870,7 @@ function BrokerUidModal({
               href="/app-mobile/accountopen"
               className="text-sm text-[#D2A63C] font-medium underline"
             >
-              Abre a tua conta TMGM aqui →
+              Abre a tua conta VT Markets aqui →
             </a>
           </div>
 

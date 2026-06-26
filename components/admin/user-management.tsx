@@ -1050,7 +1050,7 @@ export default function UserManagementComponent({
                             <span className="font-mono text-xs bg-gray-800 text-green-300 px-2 py-1 rounded border border-green-500/20">
                               {user.broker_uid}
                             </span>
-                            <p className="text-[10px] text-gray-500">TMGM</p>
+                            <p className="text-[10px] text-gray-500">VT Markets</p>
                           </div>
                         ) : (
                           <span className="text-xs text-gray-600 italic">Não registado</span>

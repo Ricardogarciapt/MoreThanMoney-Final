@@ -37,7 +37,7 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
     tag: "Ideias",
     rules: [
       "Canal de leitura com ideias da comunidade",
-      "Requer UID TMGM registado no perfil",
+      "Requer UID VT Markets registado no perfil",
     ],
   },
   "trade-ideas-setup": {

@@ -329,7 +329,7 @@ export default function SettingsMobile() {
         .update({ broker_uid: brokerUid.trim() })
         .eq("id", user.id)
       if (error) throw error
-      toast({ title: "UID guardado", description: "Número de conta TMGM actualizado." })
+      toast({ title: "UID guardado", description: "Número de conta VT Markets actualizado." })
       setEditingUid(false)
     } catch {
       toast({ title: "Erro", description: "Não foi possível guardar o UID.", variant: "destructive" })
@@ -717,7 +717,7 @@ export default function SettingsMobile() {
           <div className="bg-gray-800/50 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-white font-medium">UID TMGM</p>
+                <p className="text-sm text-white font-medium">UID VT Markets</p>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {brokerUid || "Não registado — obrigatório para Trade Ideas"}
                 </p>
@@ -752,7 +752,7 @@ export default function SettingsMobile() {
                 href="/app-mobile/accountopen"
                 className="block text-center text-xs text-[#D2A63C] underline"
               >
-                Abrir conta TMGM →
+                Abrir conta VT Markets →
               </a>
             )}
           </div>

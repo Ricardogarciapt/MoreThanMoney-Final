@@ -66,11 +66,11 @@ export function getFastStartJourneySteps(siteUrl?: string): FastStartJourneyStep
       number: 4,
       title: 'Abre a tua conta de trading',
       description:
-        'Independentemente da academia que escolheres (IQONIC, Skool ou outra), abre conta demo ou real na app — guia passo a passo TMGM + MT5.',
+        'Independentemente da academia que escolheres (Skool ou outra), abre conta demo ou real na app — guia passo a passo VT Markets + MT5.',
       ctaLabel: 'Abrir conta de trading',
       ctaUrl: `${base}${APP_ACCOUNT_OPEN_PATH}`,
       previewPath: APP_ACCOUNT_OPEN_PATH,
-      previewHint: 'TMGM · KYC · MT5 · UID MTM',
+      previewHint: 'VT Markets · KYC · MT5 · UID MTM',
     },
     {
       number: 5,
