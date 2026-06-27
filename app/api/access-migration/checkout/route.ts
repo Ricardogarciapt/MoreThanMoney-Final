@@ -5,6 +5,7 @@ import { getStripeClient } from '@/lib/stripe-client'
 import { requireStripePriceId } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl } from '@/lib/site-url'
 import { needsAccessRevalidation } from '@/lib/access-migration'
+import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 
 const supabase = getSupabaseAdmin()
 
@@ -16,6 +17,9 @@ const PACK_PLANS = new Set([
 ])
 
 export async function POST(request: NextRequest) {
+  if (isIosAppRequest(request)) {
+    return NextResponse.json(IOS_IAP_REQUIRED, { status: 403 })
+  }
   const authHeader = request.headers.get('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Autenticação necessária' }, { status: 401 })

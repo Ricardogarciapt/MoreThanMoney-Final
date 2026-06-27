@@ -4,6 +4,7 @@ import { requireStripePriceId } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl, getSiteOrigin } from '@/lib/site-url'
 import { resolveStripePromotionCode } from '@/lib/coupon-stripe-discount'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 
 /**
  * POST /api/stripe/register-checkout
@@ -12,6 +13,9 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  */
 export async function POST(request: NextRequest) {
   try {
+    if (isIosAppRequest(request)) {
+      return NextResponse.json(IOS_IAP_REQUIRED, { status: 403 })
+    }
     const body = await request.json()
     const { planId, email, fullName, username, phone, regToken, sponsorUsername, couponCode } = body
 

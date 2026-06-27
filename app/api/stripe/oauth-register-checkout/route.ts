@@ -7,6 +7,7 @@ import { isRegisteredMember } from "@/lib/member-access"
 import { buildUsername } from "@/lib/member-profile"
 import { resolveStripePromotionCode } from "@/lib/coupon-stripe-discount"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { isIosAppRequest, IOS_IAP_REQUIRED } from "@/lib/is-native-request"
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim()
 const SUPABASE_ANON_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim()
@@ -17,6 +18,9 @@ const SUPABASE_ANON_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim
  */
 export async function POST(request: NextRequest) {
   try {
+    if (isIosAppRequest(request)) {
+      return NextResponse.json(IOS_IAP_REQUIRED, { status: 403 })
+    }
     const body = await request.json()
     const { planId, regToken, sponsorUsername, couponCode } = body
 

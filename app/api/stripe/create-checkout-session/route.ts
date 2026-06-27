@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getStripeClient } from '@/lib/stripe-client'
 import { requireStripePriceId } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl } from '@/lib/site-url'
+import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -15,6 +16,10 @@ const SCANNER_LIFETIME_PLANS = new Set([
 
 export async function POST(request: NextRequest) {
   try {
+    // App iOS: compras têm de ser via Apple In-App Purchase (Guideline 3.1.1)
+    if (isIosAppRequest(request)) {
+      return NextResponse.json(IOS_IAP_REQUIRED, { status: 403 })
+    }
     // Autenticar utilizador
     const authHeader = request.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {

@@ -33,6 +33,12 @@ import {
 } from "@/lib/mtmcopy/display-utils"
 import type { MtmcopyUserLimits } from "@/lib/mtmcopy/account-limits"
 
+/** App iOS nativa (MTM System) — compras têm de ser via App Store (Apple 3.1.1). */
+const isIosNativeApp = () =>
+  typeof navigator !== "undefined" &&
+  /mtmnativeapp/i.test(navigator.userAgent) &&
+  /iphone|ipad|ipod/i.test(navigator.userAgent)
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ConnRow = MTMcopierConnection & {
@@ -276,6 +282,11 @@ export default function MtmcopierMobilePage() {
 
   // ── Checkout ──────────────────────────────────────────────────────────────────
   const handleCheckout = async () => {
+    // App iOS: subscrições via App Store (Apple Guideline 3.1.1)
+    if (isIosNativeApp()) {
+      setError("A subscrição MTMcopy na app iOS é feita via App Store — vai a Definições → Subscrição.")
+      return
+    }
     setCheckingOut(true)
     setError("")
     try {
@@ -406,16 +417,20 @@ export default function MtmcopierMobilePage() {
           ) : hasConnections && (
             <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 space-y-3">
               <p className="text-amber-100/90 text-sm">
-                Contas pré-configuradas. A cópia automática só arranca após activares a subscrição (+20€/mês).
+                Contas pré-configuradas. A cópia automática só arranca após activares a subscrição{isIosNativeApp() ? "" : " (+20€/mês)"}.
               </p>
-              <button
-                onClick={handleCheckout}
-                disabled={checkingOut}
-                className="w-full py-2.5 rounded-xl bg-[#D2A63C] text-black font-bold text-sm flex items-center justify-center gap-2"
-              >
-                {checkingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                Activar subscrição
-              </button>
+              {isIosNativeApp() ? (
+                <p className="text-xs text-amber-100/70">Ativa a subscrição na <strong>App Store</strong>: Definições → Subscrição.</p>
+              ) : (
+                <button
+                  onClick={handleCheckout}
+                  disabled={checkingOut}
+                  className="w-full py-2.5 rounded-xl bg-[#D2A63C] text-black font-bold text-sm flex items-center justify-center gap-2"
+                >
+                  {checkingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                  Activar subscrição
+                </button>
+              )}
             </div>
           )}
 
@@ -436,7 +451,7 @@ export default function MtmcopierMobilePage() {
                 <Plus className="w-4 h-4" />
                 Configurar conta MT5
               </button>
-              {!subscribed && (
+              {!subscribed && !isIosNativeApp() && (
                 <button
                   onClick={handleCheckout}
                   disabled={checkingOut}
