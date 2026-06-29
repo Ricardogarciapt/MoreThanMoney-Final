@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import BrokerServerSelect from "@/components/mtmcopy/broker-server-select"
+import { T2T_BROKERS } from "@/lib/mtmcopy/t2t-brokers"
 import {
   TrendingUp,
   RefreshCw,
@@ -120,6 +120,7 @@ const FILTERS: { id: Category; label: string }[] = [
   { id: "indices", label: "Índices" },
 ]
 
+
 export default function TapToTradeFeed() {
   const searchParams = useSearchParams()
   const [items, setItems] = useState<Sig[]>([])
@@ -137,7 +138,7 @@ export default function TapToTradeFeed() {
   const [conn, setConn] = useState<Conn | null>(null)
   const [showConfig, setShowConfig] = useState(false)
   const [connectOpen, setConnectOpen] = useState(false)
-  const [connForm, setConnForm] = useState<{ server: string; login: string; password: string; platform: "mt5" | "mt4" }>({ server: "", login: "", password: "", platform: "mt5" })
+  const [connForm, setConnForm] = useState<{ broker: string; server: string; login: string; password: string; platform: "mt5" }>({ broker: T2T_BROKERS[0].id, server: T2T_BROKERS[0].servers[0], login: "", password: "", platform: "mt5" })
   const [connBusy, setConnBusy] = useState(false)
   const [connError, setConnError] = useState("")
   const [savingConn, setSavingConn] = useState(false)
@@ -366,8 +367,13 @@ export default function TapToTradeFeed() {
   }
 
   const connectAccount = async () => {
+    // Apenas 1 conta T2T por cliente — tem de remover a atual antes de ligar outra.
+    if (conn?.metaapi_account_id) {
+      setConnError("Já tens uma conta T2T ligada. Remove-a primeiro para ligar outra.")
+      return
+    }
     if (!connForm.server.trim() || !connForm.login.trim() || !connForm.password) {
-      setConnError("Preenche servidor, login e password.")
+      setConnError("Escolhe a corretora e o servidor e preenche login e password.")
       return
     }
     setConnBusy(true)
@@ -392,7 +398,7 @@ export default function TapToTradeFeed() {
       if (!res.ok) { setConnError(data.error || "Falha ao ligar a conta."); setConnBusy(false); return }
       setConnBusy(false)
       setConnectOpen(false)
-      setConnForm({ server: "", login: "", password: "", platform: "mt5" })
+      setConnForm({ broker: T2T_BROKERS[0].id, server: T2T_BROKERS[0].servers[0], login: "", password: "", platform: "mt5" })
       await loadConnection()
     } catch (e) {
       setConnError(e instanceof Error ? e.message : "Erro inesperado")
@@ -652,7 +658,7 @@ export default function TapToTradeFeed() {
                   onClick={() => { setConnError(""); setConnectOpen(true) }}
                   className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-[#D2A63C]/40 text-[#D2A63C] font-semibold text-[13px] py-2.5"
                 >
-                  <Wallet className="w-4 h-4" /> Editar / adicionar conta MT5
+                  <Wallet className="w-4 h-4" /> Gerir conta (ver / remover)
                 </button>
 
                 {/* Zona de risco — fechar tudo de uma vez */}
@@ -805,37 +811,50 @@ export default function TapToTradeFeed() {
                 >
                   <Trash2 className="w-3.5 h-3.5" /> {removingConn ? "A remover…" : "Remover conta"}
                 </button>
-                <p className="text-[10px] text-zinc-500 pt-1">Para trocar de conta, remove esta e liga a nova abaixo.</p>
+                <p className="text-[10px] text-zinc-500 pt-1">Só é permitida 1 conta T2T. Remove esta para ligar outra.</p>
               </div>
             )}
-            <div className="space-y-2.5">
-              {/* Plataforma */}
-              <div>
-                <label className="text-[11px] text-zinc-500">Plataforma</label>
-                <div className="flex gap-2 mt-1">
-                  {(["mt5", "mt4"] as const).map((p) => (
-                    <button key={p} onClick={() => setConnForm({ ...connForm, platform: p })} className={`flex-1 rounded-xl border py-2 text-xs font-medium ${connForm.platform === p ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}>{p.toUpperCase()}</button>
-                  ))}
+            {!hasAccount && (
+              <div className="space-y-2.5">
+                {/* Corretora — apenas FTMO, FundedNext, VT Markets */}
+                <div>
+                  <label className="text-[11px] text-zinc-500">Corretora</label>
+                  <div className="grid grid-cols-3 gap-2 mt-1">
+                    {T2T_BROKERS.map((b) => (
+                      <button
+                        key={b.id}
+                        onClick={() => setConnForm({ ...connForm, broker: b.id, server: b.servers[0] })}
+                        className={`rounded-xl border py-2 text-xs font-medium ${connForm.broker === b.id ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
+                      >
+                        {b.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+                {/* Servidor — apenas os da corretora escolhida */}
+                <div>
+                  <label className="text-[11px] text-zinc-500">Servidor</label>
+                  <select
+                    value={connForm.server}
+                    onChange={(e) => setConnForm({ ...connForm, server: e.target.value })}
+                    className="mt-1 w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"
+                  >
+                    {(T2T_BROKERS.find((b) => b.id === connForm.broker)?.servers ?? []).map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Login + password (podes colar) */}
+                <input value={connForm.login} onChange={(e) => setConnForm({ ...connForm, login: e.target.value })} placeholder="Número de conta (login) — podes colar" inputMode="numeric" autoComplete="off" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
+                <input value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} placeholder="Password (investor/master) — podes colar" type="password" autoComplete="off" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
               </div>
-              {/* Servidor — pesquisa MetaApi + colar nome exato */}
-              <div>
-                <label className="text-[11px] text-zinc-500">Servidor (corretora)</label>
-                <BrokerServerSelect
-                  platform={connForm.platform}
-                  server={connForm.server}
-                  onServerChange={(s) => setConnForm({ ...connForm, server: s })}
-                  disabled={connBusy}
-                />
-              </div>
-              {/* Login + password (podes colar) */}
-              <input value={connForm.login} onChange={(e) => setConnForm({ ...connForm, login: e.target.value })} placeholder="Número de conta (login) — podes colar" inputMode="numeric" autoComplete="off" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
-              <input value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} placeholder="Password (investor/master) — podes colar" type="password" autoComplete="off" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
-            </div>
+            )}
             {connError && <p className="text-xs text-rose-400 mt-2">{connError}</p>}
             <div className="flex gap-2 mt-4">
-              <button onClick={() => setConnectOpen(false)} disabled={connBusy} className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300">Cancelar</button>
-              <button onClick={connectAccount} disabled={connBusy} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black disabled:opacity-60">{connBusy ? "A ligar…" : "Ligar conta"}</button>
+              <button onClick={() => setConnectOpen(false)} disabled={connBusy} className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300">{hasAccount ? "Fechar" : "Cancelar"}</button>
+              {!hasAccount && (
+                <button onClick={connectAccount} disabled={connBusy} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black disabled:opacity-60">{connBusy ? "A ligar…" : "Ligar conta"}</button>
+              )}
             </div>
           </div>
         </div>

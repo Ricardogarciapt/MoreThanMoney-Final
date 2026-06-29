@@ -120,6 +120,30 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Tap to Trade: apenas corretoras permitidas (FTMO / FundedNext / VT Markets) e 1 conta.
+  if (purpose === 'tap_to_trade') {
+    const { isAllowedT2TServer } = await import('@/lib/mtmcopy/t2t-brokers')
+    if (!isAllowedT2TServer(server)) {
+      return NextResponse.json(
+        { error: 'No Tap to Trade só podes ligar contas FTMO, FundedNext ou VT Markets.' },
+        { status: 400 },
+      )
+    }
+    const { data: existingT2T } = await supabaseAdmin
+      .from('mtmcopy_connections')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('purpose', 'tap_to_trade')
+      .neq('mt5_status', 'disconnected')
+      .maybeSingle()
+    if (existingT2T) {
+      return NextResponse.json(
+        { error: 'Já tens uma conta Tap to Trade ligada. Remove-a primeiro para ligar outra.', code: 't2t_account_exists' },
+        { status: 409 },
+      )
+    }
+  }
+
   const { data: profileRow } = await supabaseAdmin
     .from('profiles')
     .select('user_type, member_category, full_name, username, email')
