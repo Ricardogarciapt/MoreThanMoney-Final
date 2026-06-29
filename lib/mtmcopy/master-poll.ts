@@ -128,7 +128,7 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
         // Gera sinal T2T (funciona mesmo sem Telegram)
         if (appChannel) {
           const text = formatSignalText(p, dir)
-          const { data: msg } = await supabase
+          const { data: msg, error: msgErr } = await supabase
             .from('chat_messages')
             .insert({
               channel_slug: appChannel,
@@ -140,22 +140,34 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
             })
             .select('id')
             .single()
-          const signalMsgId = msg?.id ? String(msg.id) : null
-          if (signalMsgId) {
+          if (msgErr || !msg?.id) {
+            // Falha a criar o sinal (ex.: canal de chat ainda não existe / FK) → LIBERTA o
+            // claim do snapshot para a próxima ronda voltar a tentar (auto-recuperação),
+            // em vez de "consumir" a posição sem nunca gerar o sinal.
+            console.error('[master-poll] sinal não criado, a libertar claim:', appChannel, msgErr?.message)
             await supabase
               .from('mtmcopy_master_positions')
-              .update({ signal_chat_message_id: signalMsgId })
+              .delete()
               .eq('master_account_id', accountId)
               .eq('broker_position_id', id)
               .then(undefined, () => {})
-            await notifyChatChannelMessage({
-              channelSlug: appChannel,
-              title: `📈 Novo sinal ${p.symbol}`,
-              body: text.split('\n')[0],
-              messageId: signalMsgId,
-              notificationType: 'trade_ideas',
-            }).catch(() => {})
+            result.opened--
+            continue
           }
+          const signalMsgId = String(msg.id)
+          await supabase
+            .from('mtmcopy_master_positions')
+            .update({ signal_chat_message_id: signalMsgId })
+            .eq('master_account_id', accountId)
+            .eq('broker_position_id', id)
+            .then(undefined, () => {})
+          await notifyChatChannelMessage({
+            channelSlug: appChannel,
+            title: `📈 Novo sinal ${p.symbol}`,
+            body: text.split('\n')[0],
+            messageId: signalMsgId,
+            notificationType: 'trade_ideas',
+          }).catch(() => {})
         }
       } else {
         const slChanged = num(existing.stop_loss) !== num(p.stopLoss)
