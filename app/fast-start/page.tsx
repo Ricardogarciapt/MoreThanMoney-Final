@@ -22,6 +22,10 @@ import {
 } from "@/lib/fast-start-journey"
 import { notifyXpFromResponse } from "@/lib/xp-client"
 
+// Links de instalação das apps nativas (Play Store / App Store)
+const ANDROID_APP_URL = "https://play.google.com/store/apps/details?id=pt.morethanmoney.app"
+const IOS_APP_URL = "https://apps.apple.com/app/id6778558643"
+
 interface Progress {
   step_1_completed: boolean
   step_2_completed: boolean
@@ -503,9 +507,32 @@ export default function FastStartPage() {
                     <Link href="/app-mobile">
                       <Button className="w-full btn-primary mb-2">
                         <Download className="w-4 h-4 mr-2" />
-                        Abrir App MoreThanMoney
+                        Abrir App MoreThanMoney (Web)
                       </Button>
                     </Link>
+
+                    {/* Instalar a app nativa no telemóvel */}
+                    <div className="rounded-lg border border-mtm-primary/30 bg-black/40 p-4">
+                      <p className="font-semibold text-mtm-primary mb-3">📲 Instala a app no teu telemóvel</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <a href={ANDROID_APP_URL} target="_blank" rel="noopener noreferrer">
+                          <Button className="w-full btn-primary">
+                            <Download className="w-4 h-4 mr-2" />
+                            Android (Google Play)
+                          </Button>
+                        </a>
+                        <a href={IOS_APP_URL} target="_blank" rel="noopener noreferrer">
+                          <Button className="w-full btn-primary">
+                            <Download className="w-4 h-4 mr-2" />
+                            iPhone (App Store)
+                          </Button>
+                        </a>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-3">
+                        Android: toca em <strong>Instalar</strong>. iPhone: instala pela App Store / TestFlight.
+                      </p>
+                    </div>
+
                     <div className="rounded-lg border border-mtm-primary/30 bg-mtm-primary/5 p-4 text-sm text-gray-300">
                       <p className="font-semibold text-mtm-primary mb-2">💬 Apresenta-te no Chat</p>
                       <p>
