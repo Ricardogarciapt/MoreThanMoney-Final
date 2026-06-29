@@ -113,7 +113,11 @@ function parseNumber(raw: string): number | null {
 }
 
 export function normalizeSymbol(raw: string): string {
-  let s = raw.toUpperCase().replace(/[\/\-\s#]/g, '')
+  let s = raw.toUpperCase().trim()
+  // Remove sufixo de corretora introduzido por '.' ou '_' (XAUUSD.r, EURUSD_i, US30.cash → base).
+  // NÃO divide em '-' ou '/' porque esses são notação de par (EUR/USD, EUR-USD → EURUSD).
+  s = s.split(/[._]/)[0]
+  s = s.replace(/[\/\-\s#]/g, '')
   if (SYMBOL_ALIASES[s]) return SYMBOL_ALIASES[s]
   if (s === 'XAUUSD' || s === 'XAGUSD') return s
   if (/^XAUUSD?$/.test(s)) return 'XAUUSD'

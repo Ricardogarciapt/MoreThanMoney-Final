@@ -1,33 +1,108 @@
-/** Mapeia símbolo canónico → variantes comuns em brokers MT5 */
+/**
+ * Resolve o símbolo canónico do sinal (ex.: XAUUSD) para o símbolo REAL da corretora,
+ * que muitas vezes traz sufixos/prefixos próprios (XAUUSD.r, EURUSDm, US30.cash, GER40+,
+ * _i, .pro, -5, #, micro, ecn, raw, …). Matching tolerante mas SEGURO: compara o "core"
+ * por igualdade (nunca substring), por isso US30 nunca casa com US3000.
+ */
+
+/** Símbolo canónico → equivalentes conhecidos noutras nomenclaturas (índices/metais/cripto). */
 const BROKER_ALIASES: Record<string, string[]> = {
-  XAUUSD: ['XAUUSD', 'XAUUSD-STD', 'GOLD', 'XAUUSDm', 'XAUUSD.', 'XAUUSD.a', 'XAUUSDpro', 'XAUUSD-i'],
-  EURUSD: ['EURUSD', 'EURUSDm', 'EURUSD.', 'EURUSD.a'],
-  GBPUSD: ['GBPUSD', 'GBPUSDm', 'GBPUSD.'],
-  USDJPY: ['USDJPY', 'USDJPYm', 'USDJPY.'],
-  BTCUSD: ['BTCUSD', 'BTCUSDm', 'BTCUSD.', 'BTCUSDT'],
-  NAS100: ['NAS100', 'US100', 'USTEC', 'US500', 'NASDAQ'],
-  US30: ['US30', 'DJ30', 'DOW30', 'USA30'],
-  GER40: ['GER40', 'DE40', 'DAX40'],
+  XAUUSD: ['XAUUSD', 'GOLD', 'GOLDUSD'],
+  XAGUSD: ['XAGUSD', 'SILVER', 'SILVERUSD'],
+  BTCUSD: ['BTCUSD', 'BTCUSDT', 'BITCOIN'],
+  ETHUSD: ['ETHUSD', 'ETHUSDT', 'ETHEREUM'],
+  NAS100: ['NAS100', 'US100', 'USTEC', 'USTECH', 'NASDAQ', 'NDX', 'USNAS100'],
+  SPX500: ['SPX500', 'US500', 'SP500', 'SPX', 'USSPX500'],
+  US30: ['US30', 'DJ30', 'DOW30', 'USA30', 'WS30', 'DJI', 'US30CASH'],
+  GER40: ['GER40', 'DE40', 'DAX40', 'DAX', 'GER30', 'DE30'],
+  UK100: ['UK100', 'FTSE100', 'FTSE', 'UK100GBP'],
+  JPN225: ['JPN225', 'JP225', 'NIKKEI', 'NIKKEI225'],
+  USOIL: ['USOIL', 'WTI', 'CRUDE', 'XTIUSD', 'OILUSD', 'UKOIL', 'BRENT', 'XBRUSD'],
+}
+
+/** Sufixos/segmentos de corretora a remover (sem separador) para chegar ao core. */
+const TRAILING_SUFFIXES = [
+  'MICRO', 'CASH', 'SPOT', 'PERP', 'CENT', 'ECN', 'RAW', 'PRO', 'STD', 'ZERO', 'PLUS',
+  'MINI', 'FT', 'SB', 'M', 'C', 'I', 'A', 'E', 'Z', 'S', 'R', 'X', 'N', 'P', 'K', 'U', 'V',
+]
+
+/** Constrói o conjunto de "cores" possíveis de um símbolo (>=3 chars). */
+function coresOf(symbol: string): Set<string> {
+  const up = (symbol || '').toUpperCase().trim()
+  const out = new Set<string>()
+  if (!up) return out
+  out.add(up)
+
+  // 1) parte antes do 1.º separador (XAUUSD.r → XAUUSD, US30_cash → US30, GER40+ → GER40)
+  const beforeSep = up.split(/[._\-+#/\\ :]/)[0]
+  if (beforeSep) out.add(beforeSep)
+
+  // 2) forma compacta (sem separadores)
+  const compact = up.replace(/[^A-Z0-9]/g, '')
+  if (compact) out.add(compact)
+
+  // 3) remover sufixos conhecidos (com e sem separador) — preservando >=3 chars
+  for (const base of [beforeSep, compact]) {
+    if (!base) continue
+    for (const suf of TRAILING_SUFFIXES) {
+      if (base.length - suf.length >= 3 && base.endsWith(suf)) {
+        out.add(base.slice(0, base.length - suf.length))
+      }
+    }
+  }
+  return out
+}
+
+/** Expande um símbolo canónico nos seus cores + aliases conhecidos. */
+function canonicalCores(canonical: string): Set<string> {
+  const up = (canonical || '').toUpperCase().trim()
+  const cores = coresOf(up)
+  // aliases: se o canónico (ou um alias) corresponder a uma família, junta todos
+  for (const [key, list] of Object.entries(BROKER_ALIASES)) {
+    if (key === up || list.includes(up) || [...cores].some((c) => c === key || list.includes(c))) {
+      cores.add(key)
+      for (const a of list) cores.add(a)
+    }
+  }
+  return cores
 }
 
 export function resolveBrokerSymbol(canonical: string, availableSymbols: string[]): string {
-  const upper = canonical.toUpperCase()
-  const set = new Set(availableSymbols.map((s) => s.toUpperCase()))
+  const up = (canonical || '').toUpperCase().trim()
+  if (!availableSymbols?.length) return up
 
-  if (set.has(upper)) {
-    return availableSymbols.find((s) => s.toUpperCase() === upper) ?? upper
+  // 1) match exato (preserva a grafia da corretora)
+  const exact = availableSymbols.find((s) => s.toUpperCase().trim() === up)
+  if (exact) return exact
+
+  const wanted = canonicalCores(up)
+
+  // 2) match por core — escolhe o MELHOR candidato (menos "extra" = mais próximo do core)
+  let best: { sym: string; score: number } | null = null
+  for (const s of availableSymbols) {
+    const cands = coresOf(s)
+    let matched = false
+    for (const c of cands) {
+      if (c.length >= 3 && wanted.has(c)) { matched = true; break }
+    }
+    if (!matched) continue
+    // score: menor diferença de comprimento entre a grafia da corretora e o core canónico
+    const compactLen = s.replace(/[^A-Z0-9]/g, '').length
+    const score = Math.abs(compactLen - up.replace(/[^A-Z0-9]/g, '').length)
+    if (!best || score < best.score) best = { sym: s, score }
   }
+  if (best) return best.sym
 
-  const aliases = BROKER_ALIASES[upper] ?? [upper]
-  for (const alias of aliases) {
-    const hit = availableSymbols.find((s) => s.toUpperCase() === alias.toUpperCase())
-    if (hit) return hit
-  }
+  // 3) sem correspondência → devolve o canónico (o caller reporta erro claro)
+  return up
+}
 
-  const compact = upper.replace(/[^A-Z0-9]/g, '')
-  const fuzzy = availableSymbols.find((s) => {
-    const sc = s.toUpperCase().replace(/[^A-Z0-9]/g, '')
-    return sc === compact || sc.startsWith(compact) || compact.startsWith(sc)
-  })
-  return fuzzy ?? upper
+/**
+ * Versão estrita: devolve null se a corretora NÃO tiver o símbolo (em vez de adivinhar).
+ * Útil para dar erro claro ("X não disponível nesta corretora") antes de enviar a ordem.
+ */
+export function findBrokerSymbol(canonical: string, availableSymbols: string[]): string | null {
+  const resolved = resolveBrokerSymbol(canonical, availableSymbols)
+  const hit = availableSymbols.find((s) => s.toUpperCase().trim() === resolved.toUpperCase().trim())
+  return hit ?? null
 }
