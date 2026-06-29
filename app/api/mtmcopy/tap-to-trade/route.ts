@@ -10,7 +10,10 @@ import { fetchLotSizingContext, placeOrder, type OrderRequest } from '@/lib/mtmc
 import { tapToTradeEnabledChannels, T2T_SIGNAL_CHANNELS as SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 30
+// 60s: uma ligação MetaApi fria pode demorar até ~55s (CONNECT_TIMEOUT_MS). Com 30s a
+// função expirava antes de abrir a trade sob carga/ligação fria. Com a cache de RPC
+// quente, as execuções seguintes na mesma conta são rápidas.
+export const maxDuration = 60
 
 const supabase = getSupabaseAdmin()
 

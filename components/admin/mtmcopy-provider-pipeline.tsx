@@ -213,6 +213,10 @@ export default function MtmcopyProviderPipeline({
                 setConfigRoute(route)
               }}
               onKeyDown={(e) => {
+                // Só ativa o toggle quando o foco é a própria linha — NÃO quando se
+                // escreve num input/select/textarea filho (ex.: o label, onde o Espaço
+                // abria as configurações em vez de escrever).
+                if (e.target !== e.currentTarget) return
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault()
                   setConfigRoute(route)
