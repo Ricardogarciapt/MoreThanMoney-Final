@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getSignalSourcesConfig } from '@/lib/mtmcopy/signal-sources-config'
 import { normalizeProviderRoutes } from '@/lib/mtmcopy/provider-routes'
 import { mtmStrategyPublicLabel } from '@/lib/mtmcopy/provider-constants'
-import { T2T_SENDER_TO_CHAT as SENDER_TO_CHAT } from '@/lib/mtmcopy/tap-to-trade-channels'
+import { appChannelsForRoute } from '@/lib/mtmcopy/tap-to-trade-channels'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
 
   const channelSet = new Set<string>()
   const providers = active.map((r) => {
-    const senderKey = r.sender_channel ?? ''
-    for (const ch of SENDER_TO_CHAT[senderKey] ?? []) channelSet.add(ch)
+    // inclui rotas custom (sem sender_channel) via app_channel / fallback genérico
+    for (const ch of appChannelsForRoute(r)) channelSet.add(ch)
     return {
       label: (r.label ?? r.tag ?? '').trim() || mtmStrategyPublicLabel(r.strategy_id),
       strategy: mtmStrategyPublicLabel(r.strategy_id),

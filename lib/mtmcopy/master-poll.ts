@@ -25,10 +25,14 @@ function directionFromType(type: string | undefined): 'buy' | 'sell' {
 }
 
 function formatSignalText(p: MetaApiPosition, dir: 'buy' | 'sell'): string {
-  const lines = [`${dir === 'buy' ? '🟢 BUY' : '🔴 SELL'} ${p.symbol}`]
-  if (p.openPrice) lines.push(`Entrada: ${p.openPrice}`)
+  // Símbolo + direção na 1.ª linha (parser fiável) e SEM "entrada" → o cliente entra
+  // a MERCADO, espelhando a posição já viva do mestre. SL/TP dão o preço (p/ o filtro
+  // isEntrySignal). "Ref" só quando não há SL/TP (não é interpretado como entrada).
+  const tag = dir === 'buy' ? '🟢' : '🔴'
+  const lines = [`${tag} ${p.symbol} ${dir.toUpperCase()}`]
   if (p.stopLoss) lines.push(`SL: ${p.stopLoss}`)
   if (p.takeProfit) lines.push(`TP: ${p.takeProfit}`)
+  if (!p.stopLoss && !p.takeProfit && p.openPrice) lines.push(`Ref: ${p.openPrice}`)
   return lines.join('\n')
 }
 
@@ -60,7 +64,13 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
     seen.add(accountId)
     result.accounts++
 
-    const appChannel = appChannelsForRoute(route)[0] ?? null
+    // Canal onde o sinal aparece no feed T2T. Para rotas custom sem app_channel,
+    // usa 'trade-ideas-setup' (canal de sinais genérico) — evita o filtro estrito do
+    // 'sensei-scanner' (que exige "entrada activada"). Editável via route.app_channel.
+    const appChannel =
+      route.app_channel?.trim() ||
+      appChannelsForRoute(route).find((c) => c !== 'sensei-scanner') ||
+      'trade-ideas-setup'
 
     let current: MetaApiPosition[] = []
     try {
