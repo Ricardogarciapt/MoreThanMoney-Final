@@ -1,78 +1,132 @@
 import { getSiteOrigin } from '@/lib/site-url'
 import type { AppChatChannelSlug } from '@/lib/telegram-app-channels'
 import { tapToTradeEnabledChannels } from '@/lib/mtmcopy/tap-to-trade-channels'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 const PUSH_TITLES: Record<string, string> = {
   'trade-ideas-setup': '📊 Novo Sinal Forex!',
   'premium-ideas': '💎 Nova Ideia Premium!',
 }
 
+type PushResult = { ok: boolean; status?: number; error?: string }
+
+/** user_ids com conta Tap to Trade ATIVA (ligada). */
+async function activeT2TUserIds(): Promise<string[]> {
+  const supabase = getSupabaseAdmin()
+  const { data } = await supabase
+    .from('mtmcopy_connections')
+    .select('user_id')
+    .eq('purpose', 'tap_to_trade')
+    .not('metaapi_account_id', 'is', null)
+    .neq('mt5_status', 'disconnected')
+  return [...new Set((data ?? []).map((r) => r.user_id as string).filter(Boolean))]
+}
+
+async function postPush(body: Record<string, unknown>): Promise<PushResult> {
+  try {
+    const res = await fetch(`${getSiteOrigin()}/api/notifications/send-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      return { ok: false, status: res.status, error: text || res.statusText }
+    }
+    return { ok: true, status: res.status }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'push fetch failed' }
+  }
+}
+
+/**
+ * Notificação de mensagem/sinal de canal. Para canais de sinais ATIVOS no Tap to Trade:
+ *  - Clientes COM conta T2T → push "⚡ Tap to Trade" (categoria de preferência `tap_to_trade`)
+ *    que ENCAMINHA direto para o tab T2T (aceitar). Podem desligar o chat e manter só estas.
+ *  - Restantes → push "ideia" (categoria `trade_ideas`) que encaminha para o chat respetivo.
+ * Para canais normais → 1 push de chat.
+ */
 export async function sendTelegramChannelPush(opts: {
   slug: AppChatChannelSlug | string
   content: string | null
   imageUrl?: string | null
   telegramMessageId?: number
-  /** id da chat_message inserida — necessário para a ação "Tap to Trade" na notificação */
+  /** id da chat_message — necessário para a ação "Tap to Trade" / deep-link ao sinal */
   chatMessageId?: string
-}): Promise<{ ok: boolean; status?: number; error?: string }> {
+}): Promise<PushResult> {
   const slug = opts.slug
   const firstLine = (opts.content ?? '').split('\n')[0]?.trim() ?? ''
-  const title =
-    PUSH_TITLES[slug as AppChatChannelSlug] ??
-    (firstLine.slice(0, 60) || 'Nova mensagem MTM')
+  const ideaTitle =
+    PUSH_TITLES[slug as AppChatChannelSlug] ?? (firstLine.slice(0, 60) || 'Nova mensagem MTM')
   const body =
     (opts.content ?? '').slice(0, 120) ||
     (opts.imageUrl ? 'Nova imagem no canal' : 'Nova mensagem recebida')
+  const chatUrl = `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}`
+  const tag = opts.telegramMessageId ? `chat_${slug}_${opts.telegramMessageId}` : `chat_${slug}`
 
-  const url = `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}`
-  const tag = opts.telegramMessageId
-    ? `chat_${slug}_${opts.telegramMessageId}`
-    : `chat_${slug}`
-
-  // Sinal T2T de provider ATIVO no Tap to Trade → anexa ação "Tap to Trade" (botão
-  // aceitar na notificação, iPhone/Watch + Android) + signal_id para abrir a confirmação.
-  let t2tCategory: string | undefined
+  // É um sinal T2T (canal ativo no Tap to Trade) e temos o id da mensagem?
+  let t2tUsers: string[] = []
   if (opts.chatMessageId) {
     try {
       const enabled = await tapToTradeEnabledChannels()
-      if (enabled?.has(slug)) t2tCategory = 'T2T_SIGNAL'
+      if (enabled?.has(slug)) t2tUsers = await activeT2TUserIds()
     } catch {
-      // se falhar a config, segue sem o botão (não bloqueia a notificação)
+      // segue como push normal
     }
   }
 
-  try {
-    const res = await fetch(`${getSiteOrigin()}/api/notifications/send-push`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        all: true,
-        title,
-        body,
-        url,
-        data: {
-          type: slug.includes('trade') ? 'trade_ideas' : 'chat_message',
-          channel: slug,
-          url,
-          ...(opts.chatMessageId
-            ? { message_id: opts.chatMessageId, signal_id: opts.chatMessageId }
-            : {}),
-          ...(t2tCategory ? { category: t2tCategory } : {}),
-        },
-        tag,
-      }),
+  // Sinal T2T → 2 audiências (prioriza T2T para quem tem conta)
+  if (opts.chatMessageId && t2tUsers.length) {
+    const t2tUrl = `/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(opts.chatMessageId)}`
+    // 1) Clientes COM conta T2T → "Tap to Trade" → tab T2T (categoria tap_to_trade)
+    const r1 = await postPush({
+      userIds: t2tUsers,
+      title: `⚡ Tap to Trade: ${firstLine.slice(0, 48) || slug}`,
+      body,
+      url: t2tUrl,
+      data: {
+        type: 'tap_to_trade',
+        channel: slug,
+        url: t2tUrl,
+        message_id: opts.chatMessageId,
+        signal_id: opts.chatMessageId,
+        category: 'T2T_SIGNAL',
+      },
+      tag: `t2t_${slug}_${opts.chatMessageId}`,
     })
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      return { ok: false, status: res.status, error: text || res.statusText }
-    }
-
-    return { ok: true, status: res.status }
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : 'push fetch failed',
-    }
+    // 2) Restantes → "ideia" → chat (exclui os que já receberam a T2T)
+    const r2 = await postPush({
+      all: true,
+      excludeUserIds: t2tUsers,
+      title: ideaTitle,
+      body,
+      url: chatUrl,
+      data: {
+        type: 'trade_ideas',
+        channel: slug,
+        url: chatUrl,
+        message_id: opts.chatMessageId,
+        signal_id: opts.chatMessageId,
+      },
+      tag,
+    })
+    return { ok: r1.ok || r2.ok, status: r1.status ?? r2.status, error: r1.error ?? r2.error }
   }
+
+  // Canal normal (ou T2T sem clientes com conta) → 1 push de chat/ideia
+  return postPush({
+    all: true,
+    title: ideaTitle,
+    body,
+    url: chatUrl,
+    data: {
+      type: slug.includes('trade') ? 'trade_ideas' : 'chat_message',
+      channel: slug,
+      url: chatUrl,
+      ...(opts.chatMessageId
+        ? { message_id: opts.chatMessageId, signal_id: opts.chatMessageId }
+        : {}),
+    },
+    tag,
+  })
 }

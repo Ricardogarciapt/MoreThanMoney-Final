@@ -62,6 +62,7 @@ interface PushNotificationPayload {
   userIds?: string[]
   all?: boolean
   excludeUserId?: string
+  excludeUserIds?: string[]
   /** Quando true, não duplica entrada in-app (o caller já inseriu em notifications) */
   skipInApp?: boolean
   title: string
@@ -130,6 +131,10 @@ export async function POST(request: NextRequest) {
 
     if (payload.excludeUserId) {
       targetUserIds = targetUserIds.filter((id) => id !== payload.excludeUserId)
+    }
+    if (payload.excludeUserIds?.length) {
+      const excl = new Set(payload.excludeUserIds)
+      targetUserIds = targetUserIds.filter((id) => !excl.has(id))
     }
 
     targetUserIds = await filterUsersByPreferences(targetUserIds, category)

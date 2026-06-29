@@ -17,7 +17,7 @@ import { appChannelsForRoute } from './tap-to-trade-channels'
 import { listOpenPositions, type MetaApiPosition } from './metaapi'
 import { closeT2TForSlaves, editT2TForSlaves } from './t2t-management'
 import { syncProviderRouteChannels } from './provider-channels-sync'
-import { notifyChatChannelMessage } from '@/lib/chat-channel-notify'
+import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 
 const supabase = getSupabaseAdmin()
 
@@ -161,12 +161,10 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
             .eq('master_account_id', accountId)
             .eq('broker_position_id', id)
             .then(undefined, () => {})
-          await notifyChatChannelMessage({
-            channelSlug: appChannel,
-            title: `📈 Novo sinal ${p.symbol}`,
-            body: text.split('\n')[0],
-            messageId: signalMsgId,
-            notificationType: 'trade_ideas',
+          await sendTelegramChannelPush({
+            slug: appChannel,
+            content: text,
+            chatMessageId: signalMsgId,
           }).catch(() => {})
         }
       } else {
