@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Wallet,
   Clock,
+  Trash2,
 } from "lucide-react"
 
 const FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad)/i
@@ -92,6 +93,10 @@ interface Conn {
   id: string
   account_label?: string | null
   metaapi_account_id?: string | null
+  mt5_login?: string | number | null
+  mt5_server?: string | null
+  mt5_platform?: string | null
+  mt5_status?: string | null
   lot_mode?: string | null
   lot_value?: number | null
   max_risk_percent?: number | null
@@ -133,6 +138,7 @@ export default function TapToTradeFeed() {
   const [connBusy, setConnBusy] = useState(false)
   const [connError, setConnError] = useState("")
   const [savingConn, setSavingConn] = useState(false)
+  const [removingConn, setRemovingConn] = useState(false)
   const [cfg, setCfg] = useState<{
     lot_mode: "risk_percent" | "fixed"
     risk: number
@@ -372,6 +378,30 @@ export default function TapToTradeFeed() {
     }
   }
 
+  const removeAccount = async () => {
+    if (!conn) return
+    if (!window.confirm("Remover a conta T2T ligada? Vais deixar de poder aceitar sinais até ligares outra.")) return
+    setRemovingConn(true)
+    setConnError("")
+    try {
+      const t = await token()
+      if (!t) { setConnError("Sessão indisponível."); return }
+      const res = await fetch(`/api/mtmcopy/connection?id=${encodeURIComponent(conn.id)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${t}` },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setConnError(data.error || "Falha ao remover a conta."); return }
+      setConnectOpen(false)
+      setConn(null)
+      await loadConnection()
+    } catch (e) {
+      setConnError(e instanceof Error ? e.message : "Erro inesperado")
+    } finally {
+      setRemovingConn(false)
+    }
+  }
+
   const hasAccount = !!conn?.metaapi_account_id
   const riskLabel = cfg
     ? cfg.lot_mode === "fixed"
@@ -430,13 +460,32 @@ export default function TapToTradeFeed() {
               </div>
             ) : cfg ? (
               <>
-                {/* saldo */}
-                {typeof conn?.balance === "number" && (
-                  <div className="flex items-center gap-2 text-xs text-zinc-400">
-                    <Wallet className="w-3.5 h-3.5 text-[#D2A63C]" />
-                    Saldo: <span className="text-white font-semibold">{conn.balance.toLocaleString("pt-PT", { style: "currency", currency: "USD" })}</span>
+                {/* Dados da conta ligada */}
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-[13px] font-semibold text-white">
+                      <Wallet className="w-4 h-4 text-[#D2A63C]" /> {conn?.account_label || "Conta MT5"}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      conn?.mt5_status === "connected" ? "bg-emerald-500/15 text-emerald-400"
+                        : conn?.mt5_status === "error" ? "bg-rose-500/15 text-rose-400"
+                        : "bg-zinc-700/60 text-zinc-300"
+                    }`}>
+                      {conn?.mt5_status === "connected" ? "Ligada"
+                        : conn?.mt5_status === "error" ? "Erro"
+                        : conn?.mt5_status === "disconnected" ? "Desligada"
+                        : "A ligar…"}
+                    </span>
                   </div>
-                )}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-zinc-400">
+                    <span>Login: <span className="text-zinc-200">{conn?.mt5_login ?? "—"}</span></span>
+                    <span>Plataforma: <span className="text-zinc-200 uppercase">{conn?.mt5_platform || "mt5"}</span></span>
+                    <span className="col-span-2 truncate">Servidor: <span className="text-zinc-200">{conn?.mt5_server || "—"}</span></span>
+                    {typeof conn?.balance === "number" && (
+                      <span className="col-span-2">Saldo: <span className="text-white font-semibold">{conn.balance.toLocaleString("pt-PT", { style: "currency", currency: "USD" })}</span></span>
+                    )}
+                  </div>
+                </div>
 
                 {/* modo de risco */}
                 <div>
@@ -670,9 +719,33 @@ export default function TapToTradeFeed() {
           <div className="w-full max-w-sm rounded-2xl border border-[#D2A63C]/30 bg-zinc-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 mb-1">
               <Wallet className="w-5 h-5 text-[#D2A63C]" />
-              <h3 className="text-base font-bold">Ligar conta MT5 (T2T)</h3>
+              <h3 className="text-base font-bold">{hasAccount ? "Editar conta MT5 (T2T)" : "Ligar conta MT5 (T2T)"}</h3>
             </div>
             <p className="text-[11px] text-zinc-400 mb-3">Conta de destino exclusiva do Tap to Trade — independente do MTMcopy.</p>
+            {hasAccount && (
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 mb-3 text-[11px] text-zinc-400 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-white">{conn?.account_label || "Conta MT5"}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    conn?.mt5_status === "connected" ? "bg-emerald-500/15 text-emerald-400"
+                      : conn?.mt5_status === "error" ? "bg-rose-500/15 text-rose-400"
+                      : "bg-zinc-700/60 text-zinc-300"
+                  }`}>
+                    {conn?.mt5_status === "connected" ? "Ligada" : conn?.mt5_status === "error" ? "Erro" : conn?.mt5_status === "disconnected" ? "Desligada" : "A ligar…"}
+                  </span>
+                </div>
+                <div>Login: <span className="text-zinc-200">{conn?.mt5_login ?? "—"}</span> · {(conn?.mt5_platform || "mt5").toUpperCase()}</div>
+                <div className="truncate">Servidor: <span className="text-zinc-200">{conn?.mt5_server || "—"}</span></div>
+                <button
+                  onClick={removeAccount}
+                  disabled={removingConn || connBusy}
+                  className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-rose-500/40 text-rose-400 text-[12px] font-semibold px-3 py-1.5 disabled:opacity-60"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> {removingConn ? "A remover…" : "Remover conta"}
+                </button>
+                <p className="text-[10px] text-zinc-500 pt-1">Para trocar de conta, remove esta e liga a nova abaixo.</p>
+              </div>
+            )}
             <div className="space-y-2.5">
               {/* Plataforma */}
               <div>
