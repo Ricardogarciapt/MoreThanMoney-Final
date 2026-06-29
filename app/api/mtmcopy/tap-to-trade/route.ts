@@ -131,14 +131,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: skip }, { status: 400 })
   }
 
-  // 5. Executar na conta do utilizador
+  // 5. Decidir tipo de ordem (market / limit / stop) conforme entry vs preço de mercado.
+  //    BUY:  entry acima do mercado → STOP (breakout) · abaixo → LIMIT (pullback)
+  //    SELL: entry abaixo do mercado → STOP · acima → LIMIT
+  let orderType: 'market' | 'limit' | 'stop' = 'market'
+  let openPrice: number | null = null
+  if (signal.entry != null && signal.entry > 0) {
+    const px = ctx.marketPrice
+    if (px && px > 0) {
+      const diff = Math.abs(signal.entry - px) / px
+      if (diff < 0.0003) {
+        orderType = 'market' // praticamente a mercado → entra já
+      } else if (signal.direction === 'buy') {
+        orderType = signal.entry > px ? 'stop' : 'limit'
+        openPrice = signal.entry
+      } else {
+        orderType = signal.entry < px ? 'stop' : 'limit'
+        openPrice = signal.entry
+      }
+    } else {
+      orderType = 'limit' // sem preço de mercado → pendente no entry
+      openPrice = signal.entry
+    }
+  }
+
+  // 6. Executar na conta do utilizador (SL + 1.º TP; restantes TPs/gestão são espelhados do mestre)
   const orderReq: OrderRequest = {
     accountId: conn.metaapi_account_id,
     symbol: signal.symbol,
     direction: signal.direction,
     volume: lot,
-    orderType: signal.orderType === 'limit' && signal.entry != null ? 'limit' : 'market',
-    openPrice: signal.orderType === 'limit' ? signal.entry : null,
+    orderType,
+    openPrice,
     stopLoss: conn.copy_sl !== false ? signal.sl : null,
     takeProfit: conn.copy_tp !== false ? (signal.tp?.[0] ?? null) : null,
     comment: 'TapToTrade MTM',
@@ -157,7 +181,9 @@ export async function POST(request: NextRequest) {
       sl: signal.sl,
       tp: signal.tp?.[0] ?? null,
       lot,
-      status: result.success ? 'executed' : 'error',
+      // 'open' = posição T2T ativa a ser gerida (espelha o mestre); 'closed' quando fechada
+      status: result.success ? 'open' : 'error',
+      broker_position_id: result.success ? (result.orderId ?? null) : null,
       detail: result.success
         ? `Tap to Trade · ordem ${orderReq.orderType} · ${result.orderId ?? ''}`.trim()
         : `Tap to Trade falhou: ${result.error ?? 'erro'}`,

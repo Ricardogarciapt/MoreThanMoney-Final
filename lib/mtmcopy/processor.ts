@@ -33,6 +33,11 @@ import {
   type OrderResult,
 } from './metaapi'
 import { isCopyFactoryEnabled } from './copyfactory'
+import {
+  openT2TRowsForManagement,
+  reconcileT2TPositionsClosed,
+  type OpenT2TPosition,
+} from './t2t-management'
 import type { MtmcopyChannelKey } from './channel-context'
 import { resolveChannelFromChat, shouldIgnoreChannelMessage } from './channel-context'
 import { hasMtmProviderConfigured, type MtmChannelProvider } from './provider-accounts'
@@ -440,6 +445,19 @@ async function processManagementUpdate(
     }
   }
 
+  // T2T: estende a gestão do mestre às contas Tap to Trade com posição aberta neste
+  // canal+símbolo (se a estratégia está ativa no T2T). Mesma lógica por estratégia.
+  let t2tPositions: OpenT2TPosition[] = []
+  try {
+    t2tPositions = await openT2TRowsForManagement(channel, management.symbol)
+    for (const p of t2tPositions) accountIds.add(p.accountId)
+    if (t2tPositions.length) {
+      console.log(`[mtmcopy] gestão T2T: +${t2tPositions.length} posição(ões) Tap to Trade`)
+    }
+  } catch (e) {
+    console.warn('[mtmcopy] T2T management resolve falhou:', e)
+  }
+
   const managementOutcomes = new Map<
     string,
     { updated: number; closed: number; cancelled: number; errors: string[] }
@@ -501,6 +519,13 @@ async function processManagementUpdate(
         symbol: management.symbol,
       })
     }
+  }
+
+  // T2T: marca como fechadas as posições Tap to Trade que a gestão do mestre encerrou
+  if (t2tPositions.length) {
+    await reconcileT2TPositionsClosed(t2tPositions).catch((e) =>
+      console.warn('[mtmcopy] T2T reconcile falhou:', e),
+    )
   }
 
   for (const conn of subscribers) {

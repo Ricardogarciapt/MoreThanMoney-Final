@@ -21,6 +21,7 @@ import {
 } from '@/lib/notifications-sales'
 import { sendPasswordRecoveryEmail } from '@/lib/email-service'
 import { sendNewMemberWelcomeIfEligible } from '@/lib/new-member-welcome'
+import { sendNewMemberEmailToUplinesAndAdmin } from '@/lib/new-member-email'
 import { getSiteUrl } from '@/lib/mail-transport'
 
 const supabaseAdmin = getSupabaseAdmin()
@@ -258,6 +259,13 @@ function fireRegistrationNotifications(
     username,
     planId,
     eventId: `${eventId}_sale`,
+  })
+  // Email "novo membro" → uplines (organização) + admin (ricardo.subtilgarcia + morethanmoney)
+  void sendNewMemberEmailToUplinesAndAdmin({
+    buyerUserId: userId,
+    memberName: session.metadata?.full_name || username,
+    memberUsername: username,
+    planId,
   })
 }
 

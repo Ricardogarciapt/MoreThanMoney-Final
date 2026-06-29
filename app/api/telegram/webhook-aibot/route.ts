@@ -58,16 +58,20 @@ async function mirrorToApp(message: TelegramChannelMessage) {
 
   if (existing) return
 
-  const { error: insertError } = await supabase.from("chat_messages").insert({
-    channel_slug: slug,
-    user_id: null,
-    content,
-    image_url: imageUrl,
-    message_type: "telegram_forward",
-    telegram_sender: senderName,
-    telegram_message_id: telegramMessageId,
-    created_at: new Date(message.date * 1000).toISOString(),
-  })
+  const { data: inserted, error: insertError } = await supabase
+    .from("chat_messages")
+    .insert({
+      channel_slug: slug,
+      user_id: null,
+      content,
+      image_url: imageUrl,
+      message_type: "telegram_forward",
+      telegram_sender: senderName,
+      telegram_message_id: telegramMessageId,
+      created_at: new Date(message.date * 1000).toISOString(),
+    })
+    .select("id")
+    .single()
 
   if (insertError) {
     console.error(`[webhook-aibot] Erro ao inserir em ${slug}:`, insertError.message)
@@ -79,6 +83,7 @@ async function mirrorToApp(message: TelegramChannelMessage) {
     content,
     imageUrl,
     telegramMessageId,
+    chatMessageId: inserted?.id ? String(inserted.id) : undefined,
   })
   if (!push.ok) {
     console.error("[webhook-aibot] push failed:", push.error ?? push.status)

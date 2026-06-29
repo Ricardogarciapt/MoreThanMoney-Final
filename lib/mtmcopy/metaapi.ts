@@ -7,7 +7,7 @@ export interface OrderRequest {
   symbol: string
   direction: 'buy' | 'sell'
   volume: number
-  orderType?: 'market' | 'limit'
+  orderType?: 'market' | 'limit' | 'stop'
   openPrice?: number | null
   stopLoss?: number | null
   takeProfit?: number | null
@@ -55,6 +55,22 @@ type RpcConnection = {
     options?: { comment?: string },
   ) => Promise<{ orderId?: string; positionId?: string }>
   createLimitSellOrder: (
+    symbol: string,
+    volume: number,
+    openPrice: number,
+    sl?: number,
+    tp?: number,
+    options?: { comment?: string },
+  ) => Promise<{ orderId?: string; positionId?: string }>
+  createStopBuyOrder: (
+    symbol: string,
+    volume: number,
+    openPrice: number,
+    sl?: number,
+    tp?: number,
+    options?: { comment?: string },
+  ) => Promise<{ orderId?: string; positionId?: string }>
+  createStopSellOrder: (
     symbol: string,
     volume: number,
     openPrice: number,
@@ -704,7 +720,44 @@ export async function placeLimitOrder(req: OrderRequest): Promise<OrderResult> {
   }
 }
 
+export async function placeStopOrder(req: OrderRequest): Promise<OrderResult> {
+  let close: (() => Promise<void>) | undefined
+  try {
+    const openPrice = req.openPrice
+    if (openPrice == null || openPrice <= 0) {
+      return { success: false, error: 'Preço STOP em falta' }
+    }
+
+    const { connection, close: closeFn } = await getRpcConnection(req.accountId)
+    close = closeFn
+
+    const symbols = await connection.getSymbols()
+    const brokerSymbol = resolveBrokerSymbol(req.symbol, symbols)
+
+    const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
+    const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
+    const orderOptions = { comment: req.comment ?? 'MTMcopier' }
+
+    const trade =
+      req.direction === 'buy'
+        ? await connection.createStopBuyOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
+        : await connection.createStopSellOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
+
+    return {
+      success: true,
+      orderId: String(trade?.orderId ?? trade?.positionId ?? ''),
+      brokerSymbol,
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erro ao colocar ordem STOP no MT5'
+    return { success: false, error: message }
+  } finally {
+    if (close) await close()
+  }
+}
+
 export async function placeOrder(req: OrderRequest): Promise<OrderResult> {
+  if (req.orderType === 'stop') return placeStopOrder(req)
   if (req.orderType === 'limit') return placeLimitOrder(req)
   return placeMarketOrder(req)
 }

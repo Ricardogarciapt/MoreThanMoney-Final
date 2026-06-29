@@ -1348,3 +1348,51 @@ export const createCustomTemplate = (content: string, preheader?: string, siteUr
   return baseTemplate(content, preheader, siteUrl)
 }
 
+/**
+ * Notificação de NOVO MEMBRO — enviada aos uplines (organização ascendente) e ao admin
+ * quando há uma inscrição genuína. Usa o template/branding MTM (logo, footer).
+ */
+export const newMemberNotificationEmailTemplate = (params: {
+  recipientName: string
+  memberName: string
+  memberUsername: string
+  planLabel: string
+  isAdmin: boolean
+  siteUrl?: string
+}) => {
+  const site = resolveSiteUrl(params.siteUrl)
+  const tag = params.memberUsername.startsWith('@')
+    ? params.memberUsername
+    : `@${params.memberUsername}`
+
+  const header = headerComponent(
+    params.isAdmin ? 'Novo membro na MoreThanMoney' : 'Novo membro na tua equipa!',
+    params.isAdmin ? 'Notificação de administração' : 'A tua organização MoreThanMoney cresceu',
+    '🎉',
+  )
+
+  const intro = textComponent(
+    params.isAdmin
+      ? 'Entrou agora um novo membro na MoreThanMoney. Detalhes abaixo:'
+      : `Parabéns, ${params.recipientName}! ${tag} acabou de entrar na tua equipa MoreThanMoney.`,
+  )
+
+  const card = cardComponent(
+    'Detalhes do membro',
+    `<p style="margin:4px 0;"><strong>Nome:</strong> ${params.memberName}</p>
+     <p style="margin:4px 0;"><strong>Utilizador:</strong> ${tag}</p>
+     <p style="margin:4px 0;"><strong>Plano:</strong> ${params.planLabel}</p>`,
+    '👤',
+  )
+
+  const cta = params.isAdmin
+    ? buttonComponent('Abrir painel admin', `${site}/admin`, 'primary')
+    : buttonComponent('Ver a minha equipa', `${site}/app-mobile?tab=fast-start`, 'primary')
+
+  return createCustomTemplate(
+    header + intro + card + cta,
+    params.isAdmin ? 'Novo membro registado na MoreThanMoney' : 'Novo membro na tua equipa MoreThanMoney',
+    params.siteUrl,
+  )
+}
+

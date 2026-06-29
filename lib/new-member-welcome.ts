@@ -5,6 +5,7 @@ import {
   notifyNewMemberRegistration,
   notifyTeamSale,
 } from '@/lib/notifications-sales'
+import { sendNewMemberEmailToUplinesAndAdmin } from '@/lib/new-member-email'
 
 export type WelcomeEmailSource = 'stripe' | 'app_store' | 'google_play' | 'admin' | 'manual'
 
@@ -103,6 +104,13 @@ export async function sendNewMemberWelcomeIfEligible(
         eventId: `${eventId}_sale`,
       })
     }
+    // Email "novo membro" → uplines + admin (idempotente via profile_data)
+    void sendNewMemberEmailToUplinesAndAdmin({
+      buyerUserId: params.userId,
+      memberName: userName,
+      memberUsername: username,
+      planId: params.planId,
+    })
   }
 
   console.log(`✅ [new-member-welcome] Enviado para ${email} (${params.source})`)
