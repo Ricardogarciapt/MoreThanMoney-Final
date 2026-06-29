@@ -8,7 +8,12 @@
  * estratégia esteja ATIVA no Tap to Trade.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { listOpenPositions, listPendingOrders } from './metaapi'
+import {
+  listOpenPositions,
+  listPendingOrders,
+  closePositionById,
+  modifyPositionSlTp,
+} from './metaapi'
 import { tapToTradeEnabledChannels, T2T_SENDER_TO_CHAT } from './tap-to-trade-channels'
 
 const supabase = getSupabaseAdmin()
@@ -75,6 +80,95 @@ export async function openT2TRowsForManagement(
     }
   }
   return out
+}
+
+/** Resolve posições T2T abertas por canal de chat (slug direto) + símbolo. */
+async function resolveOpenT2TByChannelSlug(
+  channelSlug: string,
+  symbol?: string | null,
+): Promise<OpenT2TPosition[]> {
+  const { data: rows } = await supabase
+    .from('mtmcopy_signal_log')
+    .select('id, connection_id, symbol, broker_position_id')
+    .eq('status', 'open')
+    .not('broker_position_id', 'is', null)
+    .eq('channel_key', channelSlug)
+    .limit(500)
+  if (!rows?.length) return []
+
+  const sym = symbol?.trim().toUpperCase() || ''
+  const matched = sym
+    ? rows.filter((r) => {
+        const rs = ((r.symbol as string | null) ?? '').toUpperCase()
+        return rs.includes(sym) || sym.includes(rs)
+      })
+    : rows
+  if (!matched.length) return []
+
+  const connIds = [...new Set(matched.map((r) => r.connection_id as string))]
+  const { data: conns } = await supabase
+    .from('mtmcopy_connections')
+    .select('id, metaapi_account_id')
+    .in('id', connIds)
+  const accById = new Map(
+    (conns ?? []).map((c) => [c.id as string, (c.metaapi_account_id as string | null) ?? null]),
+  )
+
+  const out: OpenT2TPosition[] = []
+  for (const r of matched) {
+    const accountId = accById.get(r.connection_id as string)
+    if (accountId) {
+      out.push({
+        rowId: r.id as string,
+        accountId,
+        symbol: ((r.symbol as string | null) ?? '').toString(),
+        brokerPositionId: (r.broker_position_id as string | null) ?? null,
+      })
+    }
+  }
+  return out
+}
+
+/** Master FECHOU (detetado por polling) → fecha as posições T2T slave correspondentes. */
+export async function closeT2TForSlaves(channelSlug: string, symbol: string): Promise<number> {
+  const rows = await resolveOpenT2TByChannelSlug(channelSlug, symbol)
+  let n = 0
+  for (const r of rows) {
+    if (!r.brokerPositionId) continue
+    try {
+      await closePositionById(r.accountId, r.brokerPositionId)
+      await supabase
+        .from('mtmcopy_signal_log')
+        .update({ status: 'closed' })
+        .eq('id', r.rowId)
+        .then(undefined, () => {})
+      n++
+    } catch (e) {
+      console.warn('[t2t-management] close slave falhou', r.accountId, e)
+    }
+  }
+  return n
+}
+
+/** Master EDITOU SL/TP (detetado por polling) → aplica nas posições T2T slave. */
+export async function editT2TForSlaves(
+  channelSlug: string,
+  symbol: string,
+  sl: number | null,
+  tp: number | null,
+): Promise<number> {
+  const rows = await resolveOpenT2TByChannelSlug(channelSlug, symbol)
+  let n = 0
+  for (const r of rows) {
+    if (!r.brokerPositionId) continue
+    try {
+      await modifyPositionSlTp(r.accountId, r.brokerPositionId, sl, tp, null, r.symbol)
+      n++
+    } catch (e) {
+      console.warn('[t2t-management] edit slave falhou', r.accountId, e)
+    }
+  }
+  return n
 }
 
 /**

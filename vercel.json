@@ -6,6 +6,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/cron/mtmcopy-master-poll",
+      "schedule": "*/2 * * * *"
+    },
+    {
       "path": "/api/cron/nightly-tp-sl",
       "schedule": "*/15 * * * *"
     },
