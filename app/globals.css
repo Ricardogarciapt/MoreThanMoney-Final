@@ -1316,3 +1316,15 @@ body.scanner-access-route [contenteditable="true"] {
 .ticker-scroll:hover {
   animation-play-state: paused;
 }
+
+/* Altura dinâmica com fallback: WebViews antigos (Chromium <108, ex.: BlueStacks 101)
+   não suportam `dvh` → a linha dvh é ignorada e usa-se `vh` (correto em WebView/standalone,
+   sem barra do browser). Offset configurável via --app-dvh-offset (default 0). */
+.app-dvh {
+  height: calc(100vh - var(--app-dvh-offset, 0px));
+  height: calc(100dvh - var(--app-dvh-offset, 0px));
+}
+.app-min-dvh {
+  min-height: calc(100vh - var(--app-dvh-offset, 0px));
+  min-height: calc(100dvh - var(--app-dvh-offset, 0px));
+}

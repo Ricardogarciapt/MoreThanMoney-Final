@@ -1543,9 +1543,10 @@ function ChannelView({
 
   return (
     // Fill the viewport minus the app header (~68 px) and the bottom tab bar (~66 px)
+    // app-dvh = altura com fallback vh para WebViews antigos (BlueStacks/Chromium 101 não tem dvh)
     <div
-      className="flex flex-col bg-gray-900"
-      style={{ height: "calc(100dvh - 152px)" }}
+      className="flex flex-col bg-gray-900 app-dvh"
+      style={{ "--app-dvh-offset": "152px" } as any}
     >
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 bg-gray-900 border-b border-gray-800 flex-shrink-0">

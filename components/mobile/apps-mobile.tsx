@@ -142,8 +142,8 @@ export default function AppsMobile() {
         <iframe
           src={activeApp.url}
           title={activeApp.title}
-          className="w-full flex-1 bg-black"
-          style={{ height: "calc(100dvh - 11rem)" }}
+          className="w-full flex-1 bg-black app-dvh"
+          style={{ "--app-dvh-offset": "11rem" } as any}
           loading="lazy"
         />
       </div>

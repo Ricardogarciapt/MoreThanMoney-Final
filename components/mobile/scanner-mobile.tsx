@@ -1241,7 +1241,7 @@ export default function ScannerMobile({
             inset: 0,
             zIndex: 9999,
             width: "100vw",
-            height: "100dvh",
+            height: "100vh", // vh (não dvh): suportado em WebViews antigos; inset:0 já fixa
           } : {}),
         }}
         tabIndex={isScannerAccess ? 0 : undefined}
