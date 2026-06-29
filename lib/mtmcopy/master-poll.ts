@@ -16,6 +16,7 @@ import { normalizeProviderRoutes } from './provider-routes'
 import { appChannelsForRoute } from './tap-to-trade-channels'
 import { listOpenPositions, type MetaApiPosition } from './metaapi'
 import { closeT2TForSlaves, editT2TForSlaves } from './t2t-management'
+import { syncProviderRouteChannels } from './provider-channels-sync'
 import { notifyChatChannelMessage } from '@/lib/chat-channel-notify'
 
 const supabase = getSupabaseAdmin()
@@ -50,6 +51,11 @@ export interface MasterPollResult {
 
 export async function pollMasterAccounts(): Promise<MasterPollResult> {
   const result: MasterPollResult = { accounts: 0, opened: 0, closed: 0, edited: 0 }
+
+  // Mantém os canais de chat dedicados em sync (ativo→aparece, inativo→desaparece)
+  await syncProviderRouteChannels().catch((e) =>
+    console.warn('[master-poll] sync canais falhou:', e),
+  )
 
   const routes = normalizeProviderRoutes(await getSignalSourcesConfig())
   // Contas-mestre a vigiar: rota ativa + com account_id + ativa no Tap to Trade.

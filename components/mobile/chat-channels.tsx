@@ -677,7 +677,9 @@ const TAP_TRADE_MAX_AGE_MS = 5 * 60 * 1000
 
 /** Heurística client-side: é um sinal de ENTRADA negociável? (o backend valida definitivamente) */
 function looksLikeTradeSignal(channelSlug?: string | null, content?: string | null): boolean {
-  if (!channelSlug || !content || !TAP_TRADE_CHANNELS.has(channelSlug)) return false
+  // canais base + canais dedicados de rotas provider (t2t-<id>, auto-criados)
+  const isT2TChannel = !!channelSlug && (TAP_TRADE_CHANNELS.has(channelSlug) || channelSlug.startsWith('t2t-'))
+  if (!channelSlug || !content || !isT2TChannel) return false
   if (TAP_TRADE_FOLLOWUP_RE.test(content)) return false // follow-ups (TP hit/BE/SL) não são entradas
   if (!TAP_TRADE_DIR_RE.test(content)) return false // precisa de direção
   if (!/\d{2,}/.test(content)) return false // precisa de pelo menos um preço

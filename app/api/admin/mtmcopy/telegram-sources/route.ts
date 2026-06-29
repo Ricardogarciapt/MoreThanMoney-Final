@@ -234,6 +234,12 @@ export async function PUT(request: NextRequest) {
 
   await saveSignalSourcesConfig(next)
 
+  // Cria/apaga os canais de chat dedicados conforme as rotas ativas (instantâneo)
+  const { syncProviderRouteChannels } = await import('@/lib/mtmcopy/provider-channels-sync')
+  await syncProviderRouteChannels().catch((e) =>
+    console.warn('[telegram-sources] sync canais falhou:', e),
+  )
+
   const routesForScaling = normalizeProviderRoutes(next)
   const scalingResults: Array<{ strategy_id: string; ok: boolean; error?: string }> = []
   for (const route of routesForScaling) {

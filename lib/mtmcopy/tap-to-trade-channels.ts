@@ -8,21 +8,25 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
   'trade-ideas': ['sensei-scanner', 'trade-ideas-setup', 'trade-ideas'],
 }
 
-/** Canais de sinais "base" (canónicos) — fallback para rotas custom sem app_channel. */
+/** Canais de sinais "base" (canónicos). */
 export const T2T_SIGNAL_CHANNELS = ['sensei-scanner', 'trade-ideas', 'premium-ideas', 'trade-ideas-setup']
 
+/** Slug do canal de chat DEDICADO de uma rota provider (estável, por id da rota). */
+export function deriveProviderChannelSlug(r: ProviderRoute): string {
+  return `t2t-${r.id}`
+}
+
 /**
- * Canal(is) de chat onde os sinais de uma rota provider aparecem.
- * Permite ligar rotas SEM sender_channel canónico ao Tap to Trade:
+ * Canal(is) de chat onde os sinais de uma rota provider aparecem:
  *  1) app_channel explícito na rota; senão
- *  2) mapa canónico por sender_channel; senão (rota custom)
- *  3) canais de sinais genéricos (a rota fica funcional já; pode-se refinar com app_channel).
+ *  2) mapa canónico por sender_channel (Premium/Sensei/Trade Ideas); senão (rota custom)
+ *  3) canal DEDICADO da rota (t2t-<id>) — auto-criado no chat quando a rota está ativa.
  */
 export function appChannelsForRoute(r: ProviderRoute): string[] {
   if (r.app_channel?.trim()) return [r.app_channel.trim()]
   const mapped = T2T_SENDER_TO_CHAT[r.sender_channel ?? '']
   if (mapped?.length) return mapped
-  return T2T_SIGNAL_CHANNELS
+  return [deriveProviderChannelSlug(r)]
 }
 
 /**
