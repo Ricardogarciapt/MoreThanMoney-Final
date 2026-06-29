@@ -25,8 +25,9 @@ import { notifyXpFromResponse } from "@/lib/xp-client"
 // Links de instalação das apps nativas
 // Android: APK direto alojado no site (qualquer user instala, sem ser tester / sem Play)
 const ANDROID_APP_URL = "/downloads/MoreThanMoney.apk"
-// iOS: App Store (canónico). Se ainda não aprovado, usar link público do TestFlight.
+// iOS: App Store (canónico) + TestFlight (instalação enquanto não aprovado na store)
 const IOS_APP_URL = "https://apps.apple.com/app/id6778558643"
+const IOS_TESTFLIGHT_URL = "https://testflight.apple.com/join/jPJx7CRx"
 
 interface Progress {
   step_1_completed: boolean
@@ -529,10 +530,16 @@ export default function FastStartPage() {
                             iPhone (App Store)
                           </Button>
                         </a>
+                        <a href={IOS_TESTFLIGHT_URL} target="_blank" rel="noopener noreferrer" className="sm:col-span-2">
+                          <Button variant="outline" className="w-full border-mtm-primary/40 text-mtm-primary">
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            iPhone — TestFlight (beta)
+                          </Button>
+                        </a>
                       </div>
                       <p className="text-xs text-gray-400 mt-3">
                         <strong>Android:</strong> descarrega o APK e toca em <strong>Instalar</strong> (permite "fontes desconhecidas" se pedir).{" "}
-                        <strong>iPhone:</strong> pela App Store / TestFlight.
+                        <strong>iPhone:</strong> App Store, ou <strong>TestFlight</strong> para a versão beta.
                       </p>
                     </div>
 
