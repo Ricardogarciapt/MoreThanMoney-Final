@@ -86,6 +86,12 @@ export interface ProviderRoute {
   enabled?: boolean
   /** Disponível no Tap to Trade (app-mobile) — sinais deste provider aparecem no feed Tap to Trade. */
   tap_to_trade?: boolean
+  /**
+   * Canal de chat (app-mobile) onde os sinais desta rota aparecem. Permite ligar rotas
+   * SEM sender_channel canónico ao Tap to Trade. Se ausente: usa o mapa canónico
+   * (sender_channel) ou, para rotas custom, os canais de sinais genéricos.
+   */
+  app_channel?: string | null
 }
 
 export interface MtmcopySignalSourcesConfig {

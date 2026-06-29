@@ -64,17 +64,18 @@ export async function POST(request: NextRequest) {
   if (msgErr || !message) {
     return NextResponse.json({ error: 'Mensagem não encontrada' }, { status: 404 })
   }
-  if (!SIGNAL_CHANNELS.includes(message.channel_slug)) {
-    return NextResponse.json({ error: 'Esta mensagem não é um sinal de trading' }, { status: 400 })
-  }
   // Sinal expirado: passaram mais de 5 minutos desde a publicação
   const ageMs = message.created_at ? Date.now() - new Date(message.created_at).getTime() : 0
   if (ageMs > 5 * 60 * 1000) {
     return NextResponse.json({ error: 'Sinal expirado — passaram mais de 5 minutos.', code: 'expired' }, { status: 410 })
   }
-  // Provider tem de estar ativo no Tap to Trade (toggle em /admin/mtmcopy)
+  // Provider tem de estar ativo no Tap to Trade (toggle em /admin/mtmcopy) — inclui rotas
+  // custom sem sender_channel canónico. Fallback aos canais base se a config falhar.
   const enabledChannels = await tapToTradeEnabledChannels()
-  if (enabledChannels && !enabledChannels.has(message.channel_slug)) {
+  const channelIsT2T = enabledChannels
+    ? enabledChannels.has(message.channel_slug)
+    : SIGNAL_CHANNELS.includes(message.channel_slug)
+  if (!channelIsT2T) {
     return NextResponse.json({ error: 'Este provider não está ativo no Tap to Trade.', code: 'provider_off' }, { status: 403 })
   }
 

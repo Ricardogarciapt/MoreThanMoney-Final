@@ -1,6 +1,6 @@
 import { getSiteOrigin } from '@/lib/site-url'
 import type { AppChatChannelSlug } from '@/lib/telegram-app-channels'
-import { tapToTradeEnabledChannels, T2T_SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
+import { tapToTradeEnabledChannels } from '@/lib/mtmcopy/tap-to-trade-channels'
 
 const PUSH_TITLES: Record<string, string> = {
   'trade-ideas-setup': '📊 Novo Sinal Forex!',
@@ -32,7 +32,7 @@ export async function sendTelegramChannelPush(opts: {
   // Sinal T2T de provider ATIVO no Tap to Trade → anexa ação "Tap to Trade" (botão
   // aceitar na notificação, iPhone/Watch + Android) + signal_id para abrir a confirmação.
   let t2tCategory: string | undefined
-  if (opts.chatMessageId && T2T_SIGNAL_CHANNELS.includes(slug)) {
+  if (opts.chatMessageId) {
     try {
       const enabled = await tapToTradeEnabledChannels()
       if (enabled?.has(slug)) t2tCategory = 'T2T_SIGNAL'

@@ -1,5 +1,5 @@
 import { getSiteOrigin } from '@/lib/site-url'
-import { tapToTradeEnabledChannels, T2T_SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
+import { tapToTradeEnabledChannels } from '@/lib/mtmcopy/tap-to-trade-channels'
 
 type ChatChannelNotifyOptions = {
   channelSlug: string
@@ -26,7 +26,7 @@ export async function notifyChatChannelMessage(
   // (botão na notificação — aparece no iPhone E no Apple Watch). O toque no corpo
   // continua a abrir o chat; o botão executa a trade.
   let t2tCategory: string | undefined
-  if (options.messageId && T2T_SIGNAL_CHANNELS.includes(options.channelSlug)) {
+  if (options.messageId) {
     const enabled = await tapToTradeEnabledChannels()
     if (enabled?.has(options.channelSlug)) t2tCategory = 'T2T_SIGNAL'
   }
