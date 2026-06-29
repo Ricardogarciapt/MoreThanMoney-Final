@@ -18,6 +18,23 @@ import { tapToTradeEnabledChannels, T2T_SENDER_TO_CHAT } from './tap-to-trade-ch
 
 const supabase = getSupabaseAdmin()
 
+function normSym(s: string | null | undefined): string {
+  return (s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+}
+
+/**
+ * Match de símbolo SEGURO: igualdade canónica (evita EUR ⊂ EURUSD ou US30 ⊂ US3000)
+ * mas tolera sufixos de broker (ex.: XAUUSD.r) exigindo prefixo com ≥6 chars.
+ */
+function symbolsMatch(a: string | null | undefined, b: string | null | undefined): boolean {
+  const x = normSym(a)
+  const y = normSym(b)
+  if (!x || !y) return false
+  if (x === y) return true
+  const [short, long] = x.length <= y.length ? [x, y] : [y, x]
+  return short.length >= 6 && long.startsWith(short)
+}
+
 export interface OpenT2TPosition {
   rowId: string
   accountId: string
@@ -49,12 +66,8 @@ export async function openT2TRowsForManagement(
     .limit(500)
   if (!rows?.length) return []
 
-  const sym = symbol?.trim().toUpperCase() || ''
-  const matched = sym
-    ? rows.filter((r) => {
-        const rs = ((r.symbol as string | null) ?? '').toUpperCase()
-        return rs.includes(sym) || sym.includes(rs)
-      })
+  const matched = symbol
+    ? rows.filter((r) => symbolsMatch(r.symbol as string | null, symbol))
     : rows
   if (!matched.length) return []
 
@@ -96,12 +109,8 @@ async function resolveOpenT2TByChannelSlug(
     .limit(500)
   if (!rows?.length) return []
 
-  const sym = symbol?.trim().toUpperCase() || ''
-  const matched = sym
-    ? rows.filter((r) => {
-        const rs = ((r.symbol as string | null) ?? '').toUpperCase()
-        return rs.includes(sym) || sym.includes(rs)
-      })
+  const matched = symbol
+    ? rows.filter((r) => symbolsMatch(r.symbol as string | null, symbol))
     : rows
   if (!matched.length) return []
 
@@ -198,9 +207,8 @@ export async function reconcileT2TPositionsClosed(rows: OpenT2TPosition[]): Prom
       ] as string[]
 
       for (const r of accRows) {
-        const sym = r.symbol?.toUpperCase()
-        const stillOpen = sym
-          ? openSymbols.some((s) => s.includes(sym) || sym.includes(s))
+        const stillOpen = r.symbol
+          ? openSymbols.some((s) => symbolsMatch(s, r.symbol))
           : false
         if (!stillOpen) closedRowIds.push(r.rowId)
       }

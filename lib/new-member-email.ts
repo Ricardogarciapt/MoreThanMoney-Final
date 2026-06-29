@@ -43,8 +43,24 @@ export async function sendNewMemberEmailToUplinesAndAdmin(
         ? (buyer.profile_data as Record<string, unknown>)
         : {}
 
-    if (!params.force && typeof pdata.new_member_notify_sent_at === 'string') {
-      return { sent: false, recipients: 0, skipped: 'already_sent' }
+    // Claim ATÓMICO da flag (evita 2 webhooks Stripe concorrentes → emails duplicados):
+    // grava a flag SÓ se ainda está null; se 0 linhas afetadas → outro já tratou.
+    if (!params.force) {
+      if (typeof pdata.new_member_notify_sent_at === 'string') {
+        return { sent: false, recipients: 0, skipped: 'already_sent' }
+      }
+      const { data: claimed } = await supabase
+        .from('profiles')
+        .update({
+          profile_data: { ...pdata, new_member_notify_sent_at: new Date().toISOString() },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', params.buyerUserId)
+        .filter('profile_data->>new_member_notify_sent_at', 'is', null)
+        .select('id')
+      if (!claimed?.length) {
+        return { sent: false, recipients: 0, skipped: 'already_sent' }
+      }
     }
 
     // ── Resolver emails dos uplines (organização ascendente, ativos) ────
@@ -111,18 +127,7 @@ export async function sendNewMemberEmailToUplinesAndAdmin(
       }
     }
 
-    // ── Marca como enviado ──────────────────────────────────────────────
-    await supabase
-      .from('profiles')
-      .update({
-        profile_data: { ...pdata, new_member_notify_sent_at: new Date().toISOString() },
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', params.buyerUserId)
-      .then(undefined, (err) =>
-        console.warn('[new-member-email] erro ao marcar flag:', err),
-      )
-
+    // (flag já gravada no claim atómico acima)
     console.log(
       `✅ [new-member-email] ${params.memberName}: ${recipients} destinatário(s) (admin + uplines)`,
     )

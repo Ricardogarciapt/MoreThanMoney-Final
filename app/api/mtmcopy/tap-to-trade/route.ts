@@ -171,30 +171,50 @@ export async function POST(request: NextRequest) {
     takeProfit: conn.copy_tp !== false ? (signal.tp?.[0] ?? null) : null,
     comment: 'TapToTrade MTM',
   }
-  const result = await placeOrder(orderReq)
-
-  // 6. Log
-  await supabase
+  // 6a. Idempotência: reserva (claim) este sinal para este utilizador ANTES de executar.
+  //     Unique (user_id, chat_message_id) → duplo-toque / retry de rede não abre 2 trades.
+  const { error: claimErr } = await supabase
     .from('mtmcopy_signal_log')
     .insert({
       user_id: user.id,
       connection_id: conn.id,
+      chat_message_id: chatMessageId,
       symbol: signal.symbol,
       direction: signal.direction,
       entry: signal.entry,
       sl: signal.sl,
       tp: signal.tp?.[0] ?? null,
       lot,
-      // 'open' = posição T2T ativa a ser gerida (espelha o mestre); 'closed' quando fechada
+      status: 'pending',
+      channel_key: message.channel_slug,
+      telegram_message_id: message.telegram_message_id ?? null,
+    })
+  if (claimErr) {
+    if ((claimErr as { code?: string }).code === '23505') {
+      return NextResponse.json(
+        { error: 'Já aceitaste este sinal.', code: 'already_accepted' },
+        { status: 409 },
+      )
+    }
+    console.error('[tap-to-trade] claim error:', claimErr)
+  }
+
+  // 6b. Executar na conta do utilizador
+  const result = await placeOrder(orderReq)
+
+  // 6c. Atualiza a reserva com o resultado ('open' = ativa/gerida; 'closed' ao fechar)
+  await supabase
+    .from('mtmcopy_signal_log')
+    .update({
       status: result.success ? 'open' : 'error',
       broker_position_id: result.success ? (result.orderId ?? null) : null,
       detail: result.success
         ? `Tap to Trade · ordem ${orderReq.orderType} · ${result.orderId ?? ''}`.trim()
         : `Tap to Trade falhou: ${result.error ?? 'erro'}`,
-      channel_key: message.channel_slug,
-      telegram_message_id: message.telegram_message_id ?? null,
     })
-    .then(undefined, (e) => console.error('[tap-to-trade] log error:', e))
+    .eq('user_id', user.id)
+    .eq('chat_message_id', chatMessageId)
+    .then(undefined, (e) => console.error('[tap-to-trade] update log error:', e))
 
   if (!result.success) {
     return NextResponse.json({ error: result.error || 'Falha ao abrir a ordem' }, { status: 502 })

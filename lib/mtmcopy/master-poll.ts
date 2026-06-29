@@ -101,8 +101,31 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
       const existing = snapById.get(id)
 
       if (!existing) {
-        // NOVA → gera sinal T2T (funciona mesmo sem Telegram)
-        let signalMsgId: string | null = null
+        // Reserva ATÓMICA do snapshot (unique master_account_id+broker_position_id).
+        // Só quem INSERE (ganha o claim) gera o sinal + notifica → sem duplicados entre
+        // execuções de cron sobrepostas, e snapshot gravado antes de notificar.
+        const { data: claimed } = await supabase
+          .from('mtmcopy_master_positions')
+          .upsert(
+            {
+              master_account_id: accountId,
+              broker_position_id: id,
+              channel_key: appChannel,
+              symbol: p.symbol,
+              direction: dir,
+              volume: p.volume ?? null,
+              open_price: p.openPrice ?? null,
+              stop_loss: p.stopLoss ?? null,
+              take_profit: p.takeProfit ?? null,
+              status: 'open',
+            },
+            { onConflict: 'master_account_id,broker_position_id', ignoreDuplicates: true },
+          )
+          .select('id')
+        if (!claimed?.length) continue // outra execução já tratou esta posição
+        result.opened++
+
+        // Gera sinal T2T (funciona mesmo sem Telegram)
         if (appChannel) {
           const text = formatSignalText(p, dir)
           const { data: msg } = await supabase
@@ -117,8 +140,14 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
             })
             .select('id')
             .single()
-          signalMsgId = msg?.id ? String(msg.id) : null
+          const signalMsgId = msg?.id ? String(msg.id) : null
           if (signalMsgId) {
+            await supabase
+              .from('mtmcopy_master_positions')
+              .update({ signal_chat_message_id: signalMsgId })
+              .eq('master_account_id', accountId)
+              .eq('broker_position_id', id)
+              .then(undefined, () => {})
             await notifyChatChannelMessage({
               channelSlug: appChannel,
               title: `📈 Novo sinal ${p.symbol}`,
@@ -128,23 +157,6 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
             }).catch(() => {})
           }
         }
-        await supabase
-          .from('mtmcopy_master_positions')
-          .insert({
-            master_account_id: accountId,
-            broker_position_id: id,
-            channel_key: appChannel,
-            symbol: p.symbol,
-            direction: dir,
-            volume: p.volume ?? null,
-            open_price: p.openPrice ?? null,
-            stop_loss: p.stopLoss ?? null,
-            take_profit: p.takeProfit ?? null,
-            signal_chat_message_id: signalMsgId,
-            status: 'open',
-          })
-          .then(undefined, () => {})
-        result.opened++
       } else {
         const slChanged = num(existing.stop_loss) !== num(p.stopLoss)
         const tpChanged = num(existing.take_profit) !== num(p.takeProfit)
