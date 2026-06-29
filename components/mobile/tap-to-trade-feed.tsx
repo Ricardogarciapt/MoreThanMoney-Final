@@ -129,6 +129,9 @@ export default function TapToTradeFeed() {
   const [tap, setTap] = useState<{ sig: Sig; status: "confirm" | "loading" | "done" | "error"; message?: string } | null>(null)
   const [providers, setProviders] = useState<{ label: string; strategy: string }[]>([])
   const [noProviders, setNoProviders] = useState(false)
+  // Sinais que este utilizador já aceitou: { chat_message_id: status }
+  const [accepted, setAccepted] = useState<Record<string, string>>({})
+  const [closingAll, setClosingAll] = useState(false)
 
   // Configuração da conta (estilo PrimeSync, dentro do próprio T2T)
   const [conn, setConn] = useState<Conn | null>(null)
@@ -245,6 +248,18 @@ export default function TapToTradeFeed() {
         }
       })
     setItems(sigs)
+    // Quais destes sinais o utilizador já aceitou (persiste entre reloads)
+    if (t) {
+      try {
+        const ra = await fetch("/api/mtmcopy/tap-to-trade/accepted", { headers: { Authorization: `Bearer ${t}` } })
+        if (ra.ok) {
+          const da = await ra.json()
+          setAccepted(da.accepted ?? {})
+        }
+      } catch {
+        /* ignore */
+      }
+    }
     setLoading(false)
   }, [token])
 
@@ -302,9 +317,16 @@ export default function TapToTradeFeed() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
+        // Já aceite anteriormente (idempotência) → marca o cartão como aceite
+        if (res.status === 409 || data.code === "already_accepted") {
+          setAccepted((a) => ({ ...a, [sig.id]: "open" }))
+          setTap({ sig, status: "error", message: data.error || "Já aceitaste este sinal." })
+          return
+        }
         setTap({ sig, status: "error", message: data.error || "Falha ao abrir a trade." })
         return
       }
+      setAccepted((a) => ({ ...a, [sig.id]: "open" }))
       setTap({ sig, status: "done", message: data.message || "Trade aberta com sucesso!" })
     } catch (e) {
       setTap({ sig, status: "error", message: e instanceof Error ? e.message : "Erro inesperado" })
@@ -399,6 +421,27 @@ export default function TapToTradeFeed() {
       setConnError(e instanceof Error ? e.message : "Erro inesperado")
     } finally {
       setRemovingConn(false)
+    }
+  }
+
+  const emergencyStop = async () => {
+    if (!window.confirm("Fechar TODAS as posições abertas na tua conta T2T agora?")) return
+    setClosingAll(true)
+    try {
+      const t = await token()
+      if (!t) return
+      const res = await fetch("/api/mtmcopy/tap-to-trade/close-all", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${t}` },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { window.alert(data.error || "Falha ao fechar posições."); return }
+      window.alert(`Fechadas ${data.closed ?? 0} de ${data.total ?? 0} posição(ões).`)
+      await load()
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Erro inesperado")
+    } finally {
+      setClosingAll(false)
     }
   }
 
@@ -611,6 +654,18 @@ export default function TapToTradeFeed() {
                 >
                   <Wallet className="w-4 h-4" /> Editar / adicionar conta MT5
                 </button>
+
+                {/* Zona de risco — fechar tudo de uma vez */}
+                <div className="mt-1 pt-3 border-t border-rose-500/20">
+                  <button
+                    onClick={emergencyStop}
+                    disabled={closingAll}
+                    className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-rose-500/40 text-rose-400 font-semibold text-[13px] py-2.5 disabled:opacity-60"
+                  >
+                    <ShieldCheck className="w-4 h-4" /> {closingAll ? "A fechar…" : "Emergency stop — fechar todas as posições"}
+                  </button>
+                  <p className="text-[10px] text-zinc-500 mt-1.5 text-center">Fecha imediatamente todas as posições abertas na tua conta T2T.</p>
+                </div>
               </>
             ) : (
               <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-[#D2A63C]" /></div>
@@ -696,7 +751,14 @@ export default function TapToTradeFeed() {
                   </div>
                 </div>
                 <p className="text-[13px] text-zinc-200 whitespace-pre-wrap break-words leading-snug line-clamp-5">{s.content}</p>
-                {s.expired ? (
+                {accepted[s.id] ? (
+                  <div className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 font-semibold text-[12px] py-2.5">
+                    <ShieldCheck className="w-4 h-4" />
+                    {accepted[s.id] === "closed" ? "Aceite · posição fechada"
+                      : accepted[s.id] === "error" ? "Aceite · erro na execução"
+                      : "Já aceitaste este sinal"}
+                  </div>
+                ) : s.expired ? (
                   <div className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-zinc-800/70 text-zinc-500 font-semibold text-[12px] py-2.5 cursor-not-allowed">
                     <Clock className="w-4 h-4" /> Sinal expirado{s.reason ? ` · ${s.reason}` : ""}
                   </div>
