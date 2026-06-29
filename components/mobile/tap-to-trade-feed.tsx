@@ -134,7 +134,7 @@ export default function TapToTradeFeed() {
   const [conn, setConn] = useState<Conn | null>(null)
   const [showConfig, setShowConfig] = useState(false)
   const [connectOpen, setConnectOpen] = useState(false)
-  const [connForm, setConnForm] = useState({ server: "", login: "", password: "", platform: "mt5" })
+  const [connForm, setConnForm] = useState<{ server: string; login: string; password: string; platform: "mt5" | "mt4" }>({ server: "", login: "", password: "", platform: "mt5" })
   const [connBusy, setConnBusy] = useState(false)
   const [connError, setConnError] = useState("")
   const [savingConn, setSavingConn] = useState(false)
