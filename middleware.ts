@@ -47,6 +47,12 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
+  // /.well-known/* (ex.: assetlinks.json p/ Android App Links, apple-app-site-association)
+  // tem de ser servido cru, sem auth/headers/redirects, senão a verificação falha.
+  if (pathname.startsWith('/.well-known/')) {
+    return response
+  }
+
   const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim()
   const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim()
   const hasSupabaseEnv = Boolean(supabaseUrl && supabaseAnonKey)
