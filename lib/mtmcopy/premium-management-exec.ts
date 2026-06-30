@@ -107,6 +107,8 @@ export async function applyPremiumManagement(
   rawText: string,
   parentText: string | null,
   symbolHint: string | null,
+  /** Hora ORIGINAL da mensagem (ms). Não gere posições abertas DEPOIS disto. */
+  messageTimeMs?: number,
 ): Promise<PremiumExecOutcome> {
   const out: PremiumExecOutcome = { updated: 0, closed: 0, cancelled: 0, errors: [], actions: [] }
 
@@ -124,6 +126,20 @@ export async function applyPremiumManagement(
   if (!pos) {
     out.errors.push(`Sem posição Premium ativa em ${symbol}`)
     return out
+  }
+
+  // GUARD: uma mensagem de gestão refere-se à trade que estava aberta QUANDO foi enviada.
+  // Se a posição atual abriu DEPOIS da mensagem (ex.: msg das 15:26 reprocessada por edição
+  // a fechar a trade aberta às 15:39), é outra trade → não mexer. Tolerância p/ skew de relógio.
+  if (messageTimeMs && pos.time) {
+    const openedMs = new Date(pos.time).getTime()
+    const TOLERANCE_MS = 60_000
+    if (Number.isFinite(openedMs) && openedMs > messageTimeMs + TOLERANCE_MS) {
+      out.actions.push(
+        `ignorado: posição (${new Date(openedMs).toISOString()}) mais recente que a mensagem (${new Date(messageTimeMs).toISOString()})`,
+      )
+      return out
+    }
   }
 
   const meta = parsePremiumSingleComment(pos.comment)

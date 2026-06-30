@@ -95,6 +95,10 @@ export interface TelegramMessage {
   message_id?: number
   text?: string
   caption?: string
+  /** Hora ORIGINAL de envio (Unix s). Em mensagens editadas mantém-se a original. */
+  date?: number
+  /** Hora da edição (Unix s) — NÃO usar para o guard de gestão (ver processManagementUpdate). */
+  edit_date?: number
   reply_to_message?: {
     message_id?: number
     text?: string
@@ -249,7 +253,15 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
     if (management) {
       const targets = subscribers.length ? subscribers : matchedConnections
       if (targets.length || mtmProvider) {
-        await processManagementUpdate(targets, management, text, message.message_id, channel, ctx)
+        await processManagementUpdate(
+          targets,
+          management,
+          text,
+          message.message_id,
+          channel,
+          ctx,
+          message.date ? message.date * 1000 : undefined,
+        )
       }
     } else {
       await logProviderSignalEvent({
@@ -393,6 +405,8 @@ async function processManagementUpdate(
   telegramMessageId?: number,
   channel: MtmcopyChannelKey = 'unknown',
   ctx?: { isReply?: boolean; parentText?: string | null; parentMessageId?: number | null },
+  /** Hora ORIGINAL da mensagem (ms). Gestão não atua em posições abertas DEPOIS disto. */
+  messageTimeMs?: number,
 ) {
   const tgRef = telegramMessageId != null ? `tg:${telegramMessageId}` : ''
   const replyRef = ctx?.isReply && ctx.parentMessageId != null ? ` · reply tg:${ctx.parentMessageId}` : ''
@@ -502,7 +516,7 @@ async function processManagementUpdate(
     // zona vantajosa, sem BE/trailing prematuros. Demais canais: caminho legado.
     const outcome =
       channel === 'premium-signals'
-        ? await applyPremiumManagement(accountId, raw, ctx?.parentText ?? null, management.symbol)
+        ? await applyPremiumManagement(accountId, raw, ctx?.parentText ?? null, management.symbol, messageTimeMs)
         : await applyManagementToAccount(accountId, mgmt, trailing)
     managementOutcomes.set(accountId, outcome)
     const trailingLabel = trailing ? formatTrailingDistance(trailing) : '0'

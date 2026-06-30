@@ -123,6 +123,8 @@ export interface MetaApiPosition {
   stopLoss?: number
   takeProfit?: number
   comment?: string
+  /** Hora de abertura (ISO). Usado para não gerir uma posição mais recente que a mensagem. */
+  time?: string
 }
 
 export interface MetaApiPendingOrder {
