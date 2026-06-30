@@ -158,8 +158,8 @@ export default function TapToTradeFeed() {
   } | null>(null)
 
   const token = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    return session?.access_token ?? null
+    const { getAccessToken } = await import("@/lib/auth-token")
+    return getAccessToken()
   }, [])
 
   const loadConnection = useCallback(async () => {

@@ -215,15 +215,16 @@ export default function MlmDashboardTab() {
     setLoading(true)
     setError('')
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) {
+      const { getAccessToken } = await import('@/lib/auth-token')
+      const token = await getAccessToken()
+      if (!token) {
         setError('Sessão expirada. Faz login novamente.')
         setLoading(false)
         return
       }
 
       const res = await fetch('/api/mlm/dashboard', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
 
       if (!res.ok) {

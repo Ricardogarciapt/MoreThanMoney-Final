@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
+import { getAccessToken } from "@/lib/auth-token"
 import { clearCachedSession } from "@/lib/auth-cache"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -108,8 +109,7 @@ export default function SettingsMobile() {
     const loadPrefs = async () => {
       if (!user?.id) return
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        const token = session?.access_token
+        const token = await getAccessToken()
         if (!token) return
         const res = await fetch("/api/notifications/preferences", {
           headers: { Authorization: `Bearer ${token}` },
@@ -127,8 +127,7 @@ export default function SettingsMobile() {
     setNotifPrefs(next)
     setSavingNotifPref(key)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
+      const token = await getAccessToken()
       if (!token) throw new Error("Sessão inválida")
       const res = await fetch("/api/notifications/preferences", {
         method: "PATCH",
@@ -188,8 +187,7 @@ export default function SettingsMobile() {
           perm = await PushNotifications.requestPermissions()
         }
         if (perm.receive === "granted") {
-          const { data: { session } } = await supabase.auth.getSession()
-          const uid = session?.user?.id
+          const uid = user?.id
           if (uid) {
             let tokenListener: { remove: () => void } | null = null
             tokenListener = await PushNotifications.addListener(
@@ -231,8 +229,7 @@ export default function SettingsMobile() {
       const { requestNotificationPermission, saveFCMToken } = await import("@/lib/firebase-config")
       const fcmToken = await requestNotificationPermission()
       if (fcmToken) {
-        const { data: { session } } = await supabase.auth.getSession()
-        const uid = session?.user?.id
+        const uid = user?.id
         if (uid) await saveFCMToken(uid, fcmToken)
         persistPush(true)
         toast({ title: "Notificações activadas", description: "Vais receber alertas em tempo real." })
@@ -250,8 +247,7 @@ export default function SettingsMobile() {
 
   const deactivatePush = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const uid = session?.user?.id
+      const uid = user?.id
       // Remover o token deste dispositivo (web) quando possível…
       try {
         if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
@@ -454,8 +450,7 @@ export default function SettingsMobile() {
     if (deleteConfirmText !== "ELIMINAR") return
     setDeletingAccount(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
+      const token = await getAccessToken()
       if (!token) throw new Error("Sessão inválida")
 
       const res = await fetch("/api/user/delete-account", {

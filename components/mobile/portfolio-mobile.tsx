@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { supabase } from "@/lib/supabase"
+import { getAccessToken } from "@/lib/auth-token"
 import Image from "next/image"
 import {
   TrendingUp,
@@ -390,7 +391,7 @@ export default function PortfolioMobile() {
   }
 
   const flushPersonalToServer = async (assets: PersonalAsset[]) => {
-    const { data: { session } } = await supabase.auth.getSession()
+    const session = await getAccessToken() // token (truthy = autenticado; verificação leve)
     if (!session) return
     await Promise.all(
       assets
@@ -418,7 +419,7 @@ export default function PortfolioMobile() {
 
   const loadPersonalPortfolio = useCallback(async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const session = await getAccessToken() // token (truthy = autenticado; verificação leve)
       if (!session) {
         const saved = localStorage.getItem(PERSONAL_PORTFOLIO_STORAGE)
         setPersonalAssets(saved ? JSON.parse(saved) : [])
@@ -490,7 +491,7 @@ export default function PortfolioMobile() {
     personalPersistTimerRef.current = setTimeout(() => {
       personalPersistTimerRef.current = null
       void (async () => {
-        const { data: { session } } = await supabase.auth.getSession()
+        const session = await getAccessToken() // token (truthy = autenticado; verificação leve)
         if (!session) {
           localStorage.setItem(PERSONAL_PORTFOLIO_STORAGE, JSON.stringify(next))
           return
@@ -506,7 +507,7 @@ export default function PortfolioMobile() {
       return
     }
 
-    const { data: { session } } = await supabase.auth.getSession()
+    const session = await getAccessToken() // token (truthy = autenticado; verificação leve)
 
     if (session) {
       const res = await fetch("/api/portfolio/personal", {
@@ -553,7 +554,7 @@ export default function PortfolioMobile() {
   const handleRemoveAsset = async (id: string) => {
     if (!confirm("Remover este ativo do portfólio?")) return
 
-    const { data: { session } } = await supabase.auth.getSession()
+    const session = await getAccessToken() // token (truthy = autenticado; verificação leve)
     if (session && isUuid(id)) {
       const res = await fetch(`/api/portfolio/personal?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
@@ -1258,7 +1259,7 @@ www.morethanmoney.com`
               category: a.category,
             }))}
             onImportToPortfolio={async (rows) => {
-              const { data: { session } } = await supabase.auth.getSession()
+              const session = await getAccessToken() // token (truthy = autenticado; verificação leve)
               if (session) {
                 const created: PersonalAsset[] = []
                 for (const r of rows) {

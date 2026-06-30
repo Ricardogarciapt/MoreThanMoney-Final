@@ -1137,8 +1137,8 @@ function ChannelView({
   }, [pendingMedia])
 
   const handleDelete = async (msgId: string) => {
-    const { data: { session } } = await supabase.auth.getSession()
-    const token = session?.access_token
+    const { getAccessToken } = await import("@/lib/auth-token")
+    const token = await getAccessToken()
     if (token) {
       await fetch(`/api/chat/messages/${msgId}`, {
         method: "DELETE",
@@ -1158,8 +1158,8 @@ function ChannelView({
     const target = tapTrade.msg
     setTapTrade({ msg: target, status: "loading" })
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
+      const { getAccessToken } = await import("@/lib/auth-token")
+      const token = await getAccessToken()
       if (!token) {
         setTapTrade({ msg: target, status: "error", message: "Sessão indisponível. Faz login novamente." })
         return
@@ -1428,8 +1428,8 @@ function ChannelView({
     let imageUrl: string | null = null
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
+      const { getAccessToken } = await import("@/lib/auth-token")
+      const accessToken = await getAccessToken()
       if (!accessToken) {
         setSendError("Sessão expirada. Faz login novamente.")
         return
