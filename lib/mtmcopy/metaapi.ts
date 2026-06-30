@@ -830,7 +830,10 @@ export async function getHistoryDeals(
   // com conexão própria, sem mexer no fluxo de ordens/posições existente.
   let connection: (RpcConnection & { close?: () => Promise<void> }) | undefined
   try {
-    const mod = (await import('metaapi.cloud-sdk/esm-node')) as { default?: unknown }
+    // webpackIgnore: o build NODE do SDK usa builtins (module/fs/...) que o webpack não
+    // resolve no bundle do cliente. Esta função só corre no servidor → import nativo em
+    // runtime (sem empacotar). Sem isto, o build do site falha (Can't resolve 'module').
+    const mod = (await import(/* webpackIgnore: true */ 'metaapi.cloud-sdk/esm-node')) as { default?: unknown }
     const MetaApiNode = (mod.default ?? mod) as new (token: string) => {
       metatraderAccountApi: { getAccount: (id: string) => Promise<MetaApiAccountNode> }
     }
