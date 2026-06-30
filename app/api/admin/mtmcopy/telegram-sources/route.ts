@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+
+// Pausar/retomar uma rota re-sincroniza as subscrições CopyFactory (pode ser lento).
+export const dynamic = 'force-dynamic'
+export const maxDuration = 120
+
 import { getSupabaseAdmin, requireAdmin } from '@/lib/admin-api-helpers'
 import {
   TELEGRAM_SIGNAL_CHANNELS,
@@ -257,10 +262,35 @@ export async function PUT(request: NextRequest) {
     })
   }
 
+  // Se alguma rota mudou de estado (pausar/retomar provider), re-sincroniza as
+  // subscrições CopyFactory dos subscribers: a lista de estratégias é recalculada só
+  // das rotas ATIVAS, por isso a estratégia da rota desativada é removida da subscrição
+  // → o CopyFactory deixa de copiar NOVAS trades dessa rota (as posições abertas mantêm-se).
+  let subscribersResynced = false
+  try {
+    const prevRoutes = normalizeProviderRoutes(current)
+    const prevEnabled = new Map(
+      prevRoutes.map((r) => [r.account_id?.trim() || r.id, r.enabled !== false]),
+    )
+    const enabledChanged =
+      prevRoutes.length !== routesForScaling.length ||
+      routesForScaling.some(
+        (r) => prevEnabled.get(r.account_id?.trim() || r.id) !== (r.enabled !== false),
+      )
+    if (enabledChanged) {
+      const { runMtmcopySystemSync } = await import('@/lib/mtmcopy/system-sync')
+      await runMtmcopySystemSync()
+      subscribersResynced = true
+    }
+  } catch (e) {
+    console.warn('[telegram-sources] resync de subscribers falhou:', e)
+  }
+
   return NextResponse.json({
     success: true,
     config: { ...next, provider_routes: normalizeProviderRoutes(next) },
     provider_scaling: scalingResults,
+    subscribers_resynced: subscribersResynced,
   })
 }
 

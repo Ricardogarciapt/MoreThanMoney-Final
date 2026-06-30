@@ -197,6 +197,23 @@ export async function syncMtmStrategyReplication(
   const strategyId = conn.copyfactory_strategy_pick?.trim()
   if (!strategyId) return { ok: false, error: 'Estratégia MTM não escolhida' }
 
+  // Só mantém a subscrição se a ROTA dessa estratégia estiver ATIVA. Se o admin pausar a
+  // rota (toggle enabled=false em /admin/mtmcopy), DESINSCREVE → o CopyFactory deixa de
+  // copiar NOVAS trades dessa estratégia (as posições já abertas mantêm-se). É isto que
+  // faz o toggle do provider ter efeito real nas contas subscriber.
+  try {
+    const { getSignalSourcesConfig } = await import('./signal-sources-config')
+    const { normalizeProviderRoutes } = await import('./provider-routes')
+    const routes = normalizeProviderRoutes(await getSignalSourcesConfig())
+    const route = routes.find((r) => r.strategy_id?.trim() === strategyId)
+    if (route && route.enabled === false) {
+      await unsubscribeFromStrategy(conn.metaapi_account_id).catch(() => {})
+      return { ok: false, error: 'Pausado: provider desativado pelo admin' }
+    }
+  } catch {
+    /* se a config falhar, segue e tenta subscrever normalmente */
+  }
+
   const name =
     userLabel ||
     conn.account_label ||
