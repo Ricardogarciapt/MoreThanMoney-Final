@@ -166,6 +166,32 @@ export const onMessageListener = async (callback: (payload: any) => void) => {
     onMessage(messagingInstance, (payload) => {
       console.log('📨 [FCM] Mensagem recebida (foreground):', payload)
       callback(payload)
+
+      // Em FOREGROUND o FCM não mostra a notificação de SISTEMA (só dispara onMessage),
+      // por isso no browser (ex.: macOS) não aparecia toast no Centro de Notificações.
+      // Mostramo-la via service worker (mesmas opções do SW → o clique encaminha igual).
+      try {
+        if (
+          typeof Notification !== 'undefined' &&
+          Notification.permission === 'granted' &&
+          typeof navigator !== 'undefined' &&
+          'serviceWorker' in navigator
+        ) {
+          const title = payload?.notification?.title || payload?.data?.title || 'MoreThanMoney'
+          const options: NotificationOptions = {
+            body: payload?.notification?.body || payload?.data?.body || '',
+            icon: payload?.notification?.icon || '/icon-512x512.png',
+            badge: '/icon-32x32.png',
+            tag: payload?.data?.tag || payload?.data?.type || 'mtm-notification',
+            data: payload?.data || {},
+          }
+          navigator.serviceWorker.ready
+            .then((reg) => reg.showNotification(title, options))
+            .catch(() => {})
+        }
+      } catch {
+        /* ignore */
+      }
     })
   } catch (error) {
     console.error('❌ [FCM] Erro ao configurar listener:', error)
