@@ -56,7 +56,7 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
     accent: "#A78BFA",
     tag: "Premium",
     rules: [
-      "Exclusivo Pack Premium, IQONIC ou VIP",
+      "Exclusivo Pack Premium ou VIP",
       "Ideias premium da equipa (Telegram)",
       "Só leitura",
     ],

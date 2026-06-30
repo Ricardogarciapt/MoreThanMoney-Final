@@ -311,7 +311,7 @@ Responde sempre em Português de Portugal. Sê específico, técnico e prático 
 
 Contexto MTM:
 - Plataforma de cursos: Skool (morethanmoney-1132)
-- Comunidade: MoreThanMoney|IQONIC
+- Comunidade: MoreThanMoney
 - Scanner GoldKiller: curso gratuito no Skool
 - Mentoria: programa premium estruturado
 

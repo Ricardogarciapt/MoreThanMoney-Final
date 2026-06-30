@@ -71,7 +71,7 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
   {
     slug: 'premium-ideas',
     name: 'Premium · Ouro',
-    description: 'Sinais premium XAUUSD — Pack Premium / IQONIC',
+    description: 'Sinais premium XAUUSD — Pack Premium',
     parent_slug: 'sinais',
     position: 13,
   },
