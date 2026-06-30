@@ -40,14 +40,17 @@ export default function UserProfilePage() {
 
   const loadProfile = async () => {
     try {
+      // O param pode ser um UUID (menções antigas) ou um @username (menções novas).
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)
+      const decoded = decodeURIComponent(userId).replace(/^@/, '')
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
-        .single()
+        .eq(isUuid ? 'id' : 'username', isUuid ? userId : decoded)
+        .maybeSingle()
 
-      if (error) {
-        console.error('Erro ao carregar perfil:', error)
+      if (error || !data) {
+        if (error) console.error('Erro ao carregar perfil:', error)
         setProfile(null)
       } else {
         setProfile(data)

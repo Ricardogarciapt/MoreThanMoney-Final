@@ -177,14 +177,15 @@ export default function MentionInput({
     const beforeMention = displayValue.substring(0, mentionPosition.start)
     const afterMention = displayValue.substring(mentionPosition.end)
     
-    // No valor interno, usar formato completo
+    // Menção pelo USERNAME (handle): mostra e linka por @username, nunca pelo id longo.
+    const handle = user.username || user.full_name || user.email || user.id
     const internalBeforeMention = value.substring(0, mentionPosition.start)
     const internalAfterMention = value.substring(mentionPosition.end)
-    const mentionTextInternal = `@[${user.full_name || user.username || user.email}](${user.id})`
+    const mentionTextInternal = `@[${handle}](${handle})`
     const newInternalValue = internalBeforeMention + mentionTextInternal + internalAfterMention
-    
-    // No display, mostrar apenas o nome
-    const mentionTextDisplay = `@${user.full_name || user.username || user.email}`
+
+    // No display, mostrar apenas o @username
+    const mentionTextDisplay = `@${handle}`
     const newDisplayValue = beforeMention + mentionTextDisplay + afterMention
     
     onChange(newInternalValue)
@@ -300,11 +301,11 @@ export default function MentionInput({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-white font-semibold text-sm truncate">
-                  {user.full_name || user.username || user.email}
+                  @{user.username || user.full_name || user.email}
                 </p>
-                {user.username && user.username !== user.full_name && (
+                {user.full_name && user.full_name !== user.username && (
                   <p className="text-gray-400 text-xs truncate">
-                    @{user.username}
+                    {user.full_name}
                   </p>
                 )}
               </div>

@@ -56,7 +56,7 @@ export default function MentionText({ text, className = "" }: MentionTextProps) 
           return (
             <Link
               key={i}
-              href={`/profile/${part.id}`}
+              href={`/profile/${encodeURIComponent(part.id)}`}
               className="text-[#D2A63C] font-semibold hover:underline"
               onClick={(e) => e.stopPropagation()}
             >
