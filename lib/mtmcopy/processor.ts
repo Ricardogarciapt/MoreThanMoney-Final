@@ -84,6 +84,13 @@ import {
   shouldSkipSymbolForProfile,
 } from './provider-profile-apply'
 
+/**
+ * Premium é um provider de confiança e estruturado: executa pela validação LOCAL sem
+ * esperar pelo LLM (corta ~0.5–1.2s → menos slippage). As mensagens de gestão (HIT TP,
+ * Trade Active…) são filtradas antes deste ponto. Reversível: MTMCOPY_PREMIUM_FAST_EXEC=false.
+ */
+const PREMIUM_FAST_EXEC = process.env.MTMCOPY_PREMIUM_FAST_EXEC !== 'false'
+
 export interface TelegramMessage {
   message_id?: number
   text?: string
@@ -282,7 +289,8 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
   const validation = await validateSignalWithAi(text, signal, {
     skipAi: primaryProfile.ai_validation_enabled === false,
     minConfidence: getAiMinConfidence(primaryProfile),
-    forceFastPath: officialFormat,
+    // Premium: fast-path (sem esperar pelo LLM) quando o parser local valida o sinal.
+    forceFastPath: officialFormat || (PREMIUM_FAST_EXEC && channel === 'premium-signals'),
     channel,
     strategyPrompt:
       channel === 'premium-signals'
