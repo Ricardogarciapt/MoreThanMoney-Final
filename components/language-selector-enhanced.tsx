@@ -86,6 +86,41 @@ const SUPPORTED_LANGUAGES: Language[] = [
   { code: 'tr', name: 'Turkish', flag: '🇹🇷', nativeName: 'Türkçe' },
 ]
 
+/** www.morethanmoney.pt → morethanmoney.pt (mantém localhost/IP como está). */
+function rootDomain(host: string): string {
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return host // IP
+  const parts = host.split('.')
+  if (parts.length <= 2) return host
+  return parts.slice(-2).join('.')
+}
+
+/**
+ * Apaga o cookie googtrans em TODOS os scopes possíveis (host-only, domínio exato,
+ * domínio raiz com e sem ponto). É isto que faltava: o Google Translate guarda o
+ * cookie em `.morethanmoney.pt` (com ponto), que o código antigo nunca limpava →
+ * a 2.ª troca de idioma ficava presa no idioma anterior.
+ */
+function clearGoogtransCookies() {
+  if (typeof document === 'undefined') return
+  const host = window.location.hostname
+  const root = rootDomain(host)
+  const expired = 'expires=Thu, 01 Jan 1970 00:00:00 GMT'
+  const scopes = ['', `; domain=${host}`, `; domain=.${host}`, `; domain=${root}`, `; domain=.${root}`]
+  for (const s of scopes) {
+    document.cookie = `googtrans=; path=/${s}; ${expired}`
+  }
+}
+
+/** Define o cookie googtrans de forma consistente em host-only + domínio raiz com ponto. */
+function setGoogtransCookie(value: string) {
+  if (typeof document === 'undefined') return
+  const host = window.location.hostname
+  const root = rootDomain(host)
+  const maxAge = 'max-age=31536000'
+  document.cookie = `googtrans=${value}; path=/; ${maxAge}`
+  document.cookie = `googtrans=${value}; path=/; domain=.${root}; ${maxAge}`
+}
+
 export default function LanguageSelectorEnhanced() {
   const [currentLanguage, setCurrentLanguage] = useState<string>('pt')
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null)
@@ -111,9 +146,9 @@ export default function LanguageSelectorEnhanced() {
   // Função auxiliar para aplicar tradução no Google Translate (usando cookie)
   const applyGoogleTranslate = (langCode: string, savePreference: boolean = true) => {
     const cookieValue = `/pt/${langCode}`
-    document.cookie = `googtrans=${cookieValue}; path=/; max-age=31536000`
-    document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname}; max-age=31536000`
-    
+    clearGoogtransCookies()
+    setGoogtransCookie(cookieValue)
+
     if (savePreference) {
       sessionStorage.setItem('mtm_active_language', langCode)
       sessionStorage.setItem('mtm_user_manual_selection', 'true')
@@ -134,9 +169,9 @@ export default function LanguageSelectorEnhanced() {
       // Se o cookie não existe ou está diferente, definir e recarregar
       if (!existingCookie || !existingCookie.includes(cookieValue)) {
         console.log(`🌐 [LANGUAGE] Aplicando tradução salva: ${savedLang}`)
-        document.cookie = `googtrans=${cookieValue}; path=/; max-age=31536000`
-        document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname}; max-age=31536000`
-        
+        clearGoogtransCookies()
+        setGoogtransCookie(cookieValue)
+
         setCurrentLanguage(savedLang)
         
         // Recarregar página apenas uma vez
@@ -228,10 +263,9 @@ export default function LanguageSelectorEnhanced() {
 
       // 4. Se for português, restaurar página original
       if (langCode === 'pt') {
-        // Remover cookie do Google Translate
-        document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-        document.cookie = `googtrans=; path=/; domain=${window.location.hostname}; expires=Thu, 01 Jan 1970 00:00:00 GMT`
-        
+        // Remover cookie do Google Translate em TODOS os scopes (incl. .dominio-raiz)
+        clearGoogtransCookies()
+
         const translateSelect = document.querySelector('.goog-te-combo') as HTMLSelectElement
         if (translateSelect) {
           translateSelect.value = ''
@@ -256,13 +290,13 @@ export default function LanguageSelectorEnhanced() {
       // 5. MÉTODO SIMPLIFICADO: Usar apenas cookie + recarregar página
       // O Google Translate lê o cookie automaticamente quando a página carrega
       console.log(`🌐 [LANGUAGE] Definindo cookie e recarregando página para aplicar ${langCode}...`)
-      
-      // Definir cookie do Google Translate (método mais confiável)
-      // O formato é: googtrans=/[idioma_origem]/[idioma_destino]
+
+      // IMPORTANTE: limpar PRIMEIRO todos os scopes (senão um cookie antigo em
+      // .morethanmoney.pt fixa o idioma anterior na 2.ª troca), depois definir o novo.
       const cookieValue = `/pt/${langCode}`
-      document.cookie = `googtrans=${cookieValue}; path=/; max-age=31536000` // 1 ano
-      document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname}; max-age=31536000`
-      
+      clearGoogtransCookies()
+      setGoogtransCookie(cookieValue)
+
       console.log(`🍪 [LANGUAGE] Cookie definido: googtrans=${cookieValue}`)
       
       // Recarregar página imediatamente - o Google Translate lerá o cookie automaticamente
