@@ -27,6 +27,11 @@ export const T2T_BROKERS: T2TBroker[] = [
       'VTMarkets-Live 5', 'VTMarkets-Live 6', 'VTMarkets-Live 7', 'VTMarkets-Live 8', 'VTMarkets-Demo',
     ],
   },
+  {
+    id: 'thetradingmaster',
+    label: 'The Trading Master',
+    servers: ['TheTradingMaster-Live'],
+  },
 ]
 
 const ALLOWED = new Set(

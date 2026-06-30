@@ -819,7 +819,7 @@ export default function TapToTradeFeed() {
                 {/* Corretora — apenas FTMO, FundedNext, VT Markets */}
                 <div>
                   <label className="text-[11px] text-zinc-500">Corretora</label>
-                  <div className="grid grid-cols-3 gap-2 mt-1">
+                  <div className="grid grid-cols-2 gap-2 mt-1">
                     {T2T_BROKERS.map((b) => (
                       <button
                         key={b.id}
