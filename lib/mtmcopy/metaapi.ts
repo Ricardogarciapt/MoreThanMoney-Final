@@ -32,6 +32,12 @@ type RpcConnection = {
   getSymbolSpecification?: (symbol: string) => Promise<MetaApiSymbolSpecification>
   getAccountInformation: () => Promise<{ balance?: number; equity?: number }>
   getSymbolPrice?: (symbol: string) => Promise<{ bid?: number; ask?: number }>
+  getDealsByTimeRange?: (
+    startTime: Date,
+    endTime: Date,
+    offset?: number,
+    limit?: number,
+  ) => Promise<{ deals?: unknown[] } | unknown[]>
   createMarketBuyOrder: (
     symbol: string,
     volume: number,
@@ -789,6 +795,64 @@ export async function listOpenPositions(accountId: string): Promise<MetaApiPosit
   } finally {
     if (close) await close()
   }
+}
+
+export interface MetaApiDeal {
+  id?: string
+  positionId?: string
+  orderId?: string
+  symbol?: string
+  type?: string // DEAL_TYPE_BUY | DEAL_TYPE_SELL | DEAL_TYPE_BALANCE …
+  entryType?: string // DEAL_ENTRY_IN | DEAL_ENTRY_OUT | DEAL_ENTRY_INOUT
+  volume?: number
+  price?: number
+  profit?: number
+  commission?: number
+  swap?: number
+  time?: string | Date
+}
+
+/**
+ * Histórico de deals (execuções) de uma conta entre datas — base para reconstruir
+ * os TRADES FECHADOS (entrada+saída por posição) e o P&L real.
+ */
+export async function getHistoryDeals(
+  accountId: string,
+  fromTime: Date,
+  toTime: Date = new Date(),
+): Promise<MetaApiDeal[]> {
+  const token = process.env.METAAPI_TOKEN
+  if (!token) return []
+  // IMPORTANTE: as queries de histórico (getDealsByTimeRange) no build default (esm-web)
+  // tocam `window` → "window is not defined" no servidor. Usamos o build NODE do SDK,
+  // com conexão própria, sem mexer no fluxo de ordens/posições existente.
+  let connection: (RpcConnection & { close?: () => Promise<void> }) | undefined
+  try {
+    const mod = (await import('metaapi.cloud-sdk/esm-node')) as { default?: unknown }
+    const MetaApiNode = (mod.default ?? mod) as new (token: string) => {
+      metatraderAccountApi: { getAccount: (id: string) => Promise<MetaApiAccountNode> }
+    }
+    const api = new MetaApiNode(token)
+    const account = await api.metatraderAccountApi.getAccount(accountId)
+    await withTimeout(account.waitConnected(), CONNECT_TIMEOUT_MS, 'history waitConnected')
+    connection = account.getRPCConnection() as RpcConnection & { close?: () => Promise<void> }
+    await withTimeout(connection.connect(), CONNECT_TIMEOUT_MS, 'history connect')
+    await withTimeout(connection.waitSynchronized(), CONNECT_TIMEOUT_MS, 'history sync')
+    if (typeof connection.getDealsByTimeRange !== 'function') return []
+    const raw = await connection.getDealsByTimeRange(fromTime, toTime)
+    const deals = (Array.isArray(raw) ? raw : (raw?.deals ?? [])) as MetaApiDeal[]
+    return deals ?? []
+  } catch (e) {
+    console.warn('[getHistoryDeals] erro:', e instanceof Error ? e.message : e)
+    return []
+  } finally {
+    if (connection?.close) await connection.close().catch(() => {})
+  }
+}
+
+type MetaApiAccountNode = {
+  waitConnected: () => Promise<void>
+  getRPCConnection: () => RpcConnection
 }
 
 export async function getAccountSymbols(accountId: string): Promise<string[]> {
