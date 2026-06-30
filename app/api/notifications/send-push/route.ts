@@ -152,7 +152,9 @@ export async function POST(request: NextRequest) {
     }
 
     let inAppCreated = 0
-    if (!payload.skipInApp && targetUserIds.length > 0 && notificationType !== 'system') {
+    // 'system' passa a criar in-app (sino) também. Marcadores internos (cron) ficam de
+    // fora; envios internos que não queiram sino devem usar skipInApp:true.
+    if (!payload.skipInApp && targetUserIds.length > 0 && notificationType !== 'cron_marker') {
       const rows = targetUserIds.map((userId) => ({
         user_id: userId,
         type: notificationType,
