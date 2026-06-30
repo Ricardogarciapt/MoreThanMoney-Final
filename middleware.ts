@@ -39,37 +39,60 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim()
-  const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim()
-  const hasSupabaseEnv = Boolean(supabaseUrl && supabaseAnonKey)
-
-  if (hasSupabaseEnv) {
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
-        },
-      },
-    })
-
-    // Atualizar sessão do usuário
-    await supabase.auth.getUser()
-  }
-
-  // Não aplicar middleware em rotas de autenticação, callbacks e ficheiros estáticos
   const pathname = request.nextUrl.pathname
-  
-  // Excluir ficheiros estáticos (imagens, etc.)
+
+  // Excluir ficheiros estáticos (imagens, etc.) — sair cedo, sem tocar em auth
   const staticExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.pdf', '.mp4', '.mp3', '.woff', '.woff2', '.ttf', '.eot']
   if (staticExtensions.some(ext => pathname.toLowerCase().endsWith(ext))) {
     return response
   }
-  
+
+  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim()
+  const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim()
+  const hasSupabaseEnv = Boolean(supabaseUrl && supabaseAnonKey)
+  const isApiRoute = pathname.startsWith("/api/")
+
+  // Cliente Supabase ÚNICO + user em cache: no máximo UMA chamada de rede (getUser)
+  // por request, reutilizada por todos os blocos de proteção abaixo. Evita os 2-3
+  // round-trips de auth que tornavam cada navegação lenta (sobretudo no Safari).
+  let supabaseClient: ReturnType<typeof createServerClient> | null = null
+  const getSupabase = () => {
+    if (!supabaseClient) {
+      supabaseClient = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, options)
+            )
+          },
+        },
+      })
+    }
+    return supabaseClient
+  }
+
+  let userFetched = false
+  let cachedUser: Awaited<ReturnType<ReturnType<typeof createServerClient>["auth"]["getUser"]>>["data"]["user"] = null
+  const getCachedUser = async () => {
+    if (!hasSupabaseEnv) return null
+    if (!userFetched) {
+      userFetched = true
+      const { data } = await getSupabase().auth.getUser()
+      cachedUser = data.user
+    }
+    return cachedUser
+  }
+
+  // Refrescar a sessão (cookie) apenas em PÁGINAS. Em /api/* cada rota autentica-se
+  // sozinha, por isso evitamos o round-trip de auth em cada chamada de API (chat,
+  // preços, polling…). Estáticos já saíram acima.
+  if (hasSupabaseEnv && !isApiRoute) {
+    await getCachedUser()
+  }
+
   if (
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/login") ||
@@ -149,18 +172,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/mtmcopy/metrics") || pathname.startsWith("/mtmcopy/app")
 
   if (mtmcopyNeedsAuth && hasSupabaseEnv) {
-    const supabaseMtmcopy = createServerClient(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
-        },
-      },
-    })
-
-    const { data: { user: mtmcopyUser } } = await supabaseMtmcopy.auth.getUser()
+    const mtmcopyUser = await getCachedUser()
     if (!mtmcopyUser) {
       const redirect = encodeURIComponent(pathname + request.nextUrl.search)
       return NextResponse.redirect(new URL(`/login?redirect=${redirect}`, request.url))
@@ -171,25 +183,10 @@ export async function middleware(request: NextRequest) {
 
   // ── Membros sem perfil (OAuth backdoor) → /register ───────────────────────
   if (isMemberProtectedPath(pathname) && hasSupabaseEnv) {
-    const supabaseMember = createServerClient(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
-        },
-      },
-    })
-
-    const {
-      data: { user: memberUser },
-    } = await supabaseMember.auth.getUser()
+    const memberUser = await getCachedUser()
 
     if (memberUser) {
-      const { data: memberProfile } = await supabaseMember
+      const { data: memberProfile } = await getSupabase()
         .from("profiles")
         .select(
           "id, email, user_type, member_category, is_active, subscription_plan, stripe_subscription_id, subscription_expires_at, trial_expires_at, trial_expired, profile_data"
@@ -220,24 +217,12 @@ export async function middleware(request: NextRequest) {
 
   // ── Protecção /aios — apenas admins ───────────────────────────────────────
   if (pathname.startsWith("/aios") && hasSupabaseEnv) {
-    // Supabase já está inicializado acima neste middleware
-    const supabase2 = createServerClient(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          )
-        },
-      },
-    })
-
-    const { data: { user: aiosUser } } = await supabase2.auth.getUser()
+    const aiosUser = await getCachedUser()
     if (!aiosUser) {
       return NextResponse.redirect(new URL('/login?redirect=/aios', request.url))
     }
 
-    const { data: aiosProfile } = await supabase2
+    const { data: aiosProfile } = await getSupabase()
       .from('profiles')
       .select('user_type')
       .eq('id', aiosUser.id)
