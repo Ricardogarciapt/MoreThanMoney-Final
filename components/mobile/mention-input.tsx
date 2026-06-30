@@ -44,8 +44,8 @@ export default function MentionInput({
     }
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const currentUserId = session?.user?.id
+      const { getCurrentUserId } = await import("@/lib/auth-token")
+      const currentUserId = await getCurrentUserId()
 
       let queryBuilder = supabase
         .from('profiles')

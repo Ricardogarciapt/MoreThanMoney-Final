@@ -438,13 +438,14 @@ export default function ScannerMobile({
     if (!isScannerAccess) return
     const loadProfile = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user?.id) return
-        setCurrentUserId(session.user.id)
+        const { getCurrentUserId } = await import("@/lib/auth-token")
+        const uid = await getCurrentUserId()
+        if (!uid) return
+        setCurrentUserId(uid)
         const { data: profile } = await supabase
           .from("profiles")
           .select("user_type, member_category")
-          .eq("id", session.user.id)
+          .eq("id", uid)
           .maybeSingle()
         if (profile) {
           setIsAdmin(profile.user_type === "admin")

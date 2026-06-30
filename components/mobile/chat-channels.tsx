@@ -1936,12 +1936,13 @@ function BrokerUidModal({
     if (!trimmed) { setError("Insere o teu número de conta VT Markets."); return }
     setSaving(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) throw new Error("Sem sessão")
+      const { getCurrentUserId } = await import("@/lib/auth-token")
+      const uid = await getCurrentUserId()
+      if (!uid) throw new Error("Sem sessão")
       const { error: dbErr } = await supabase
         .from("profiles")
         .update({ broker_uid: trimmed })
-        .eq("id", session.user.id)
+        .eq("id", uid)
       if (dbErr) throw dbErr
       onSave(trimmed)
     } catch {
@@ -2382,12 +2383,13 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
 
     const fetchBrokerUid = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user) return
+        const { getCurrentUserId } = await import("@/lib/auth-token")
+        const uid = await getCurrentUserId()
+        if (!uid) return
         const { data } = await supabase
           .from("profiles")
           .select("broker_uid")
-          .eq("id", session.user.id)
+          .eq("id", uid)
           .single()
         if (data?.broker_uid) setBrokerUid(data.broker_uid)
       } catch {}

@@ -17,20 +17,27 @@ import { supabase } from "@/lib/supabase"
 
 let cachedToken: string | null = null
 let cachedExp = 0 // epoch em segundos
+let cachedUserId: string | null = null
 let subscribed = false
 
-function decodeExp(token: string): number {
+function decodePayload(token: string): { exp?: number; sub?: string } {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1] ?? ""))
-    return typeof payload?.exp === "number" ? payload.exp : 0
+    return JSON.parse(atob(token.split(".")[1] ?? "")) ?? {}
   } catch {
-    return 0
+    return {}
   }
 }
 
 function setFromSession(token: string | null | undefined) {
   cachedToken = token ?? null
-  cachedExp = cachedToken ? decodeExp(cachedToken) : 0
+  if (cachedToken) {
+    const payload = decodePayload(cachedToken)
+    cachedExp = typeof payload.exp === "number" ? payload.exp : 0
+    cachedUserId = typeof payload.sub === "string" ? payload.sub : null
+  } else {
+    cachedExp = 0
+    cachedUserId = null
+  }
 }
 
 function ensureSubscription() {
@@ -54,6 +61,12 @@ export async function getAccessToken(): Promise<string | null> {
   } = await supabase.auth.getSession()
   setFromSession(session?.access_token)
   return cachedToken
+}
+
+/** User id atual (sub do JWT), lido do token em cache — sem lock e sempre coerente. */
+export async function getCurrentUserId(): Promise<string | null> {
+  await getAccessToken() // garante token/cache atualizados
+  return cachedUserId
 }
 
 /** Cabeçalhos de autorização prontos (vazio se não houver sessão). */

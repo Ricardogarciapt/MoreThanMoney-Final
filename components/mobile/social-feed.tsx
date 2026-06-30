@@ -287,12 +287,12 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
     try {
       console.log('🔄 [SOCIAL FEED] Iniciando carregamento de posts...')
       
-      // Verificar autenticação
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      // Verificar autenticação (id via token em cache — sem lock do navigator.locks)
+      const { getCurrentUserId } = await import("@/lib/auth-token")
+      const sessionUserId = await getCurrentUserId()
       console.log('🔐 [SOCIAL FEED] Sessão:', {
-        autenticado: !!session?.user,
-        user_id: session?.user?.id || 'N/A',
-        email: session?.user?.email || 'N/A'
+        autenticado: !!sessionUserId,
+        user_id: sessionUserId || 'N/A',
       })
 
       // Query base com colunas obrigatórias - SEMPRE usar estas
@@ -418,12 +418,13 @@ export default function SocialFeed({ initialCategory }: { initialCategory?: stri
         
         // Carregar likes do usuário atual
         try {
-          const { data: { session } } = await supabase.auth.getSession()
-          if (session?.user) {
+          const { getCurrentUserId } = await import("@/lib/auth-token")
+          const likesUid = await getCurrentUserId()
+          if (likesUid) {
             const { data: likesData, error: likesError } = await supabase
               .from("post_likes")
               .select("post_id")
-              .eq("user_id", session.user.id)
+              .eq("user_id", likesUid)
             
             if (likesError) {
               console.error("❌ [SOCIAL FEED] Erro ao carregar likes:", likesError)
