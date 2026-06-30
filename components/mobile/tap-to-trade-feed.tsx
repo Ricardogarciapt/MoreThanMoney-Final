@@ -97,6 +97,7 @@ interface Conn {
   mt5_server?: string | null
   mt5_platform?: string | null
   mt5_status?: string | null
+  last_error?: string | null
   lot_mode?: string | null
   lot_value?: number | null
   max_risk_percent?: number | null
@@ -451,7 +452,10 @@ export default function TapToTradeFeed() {
     }
   }
 
-  const hasAccount = !!conn?.metaapi_account_id
+  // Existe uma ligação (mesmo pendente/erro) → mostrar a conta + estado.
+  const hasAccount = !!conn
+  // Pronta a operar (conta MetaApi criada e ligada à corretora).
+  const isReady = !!conn?.metaapi_account_id && conn?.mt5_status === "connected"
   const riskLabel = cfg
     ? cfg.lot_mode === "fixed"
       ? `${cfg.lot} lote fixo`
@@ -534,6 +538,15 @@ export default function TapToTradeFeed() {
                       <span className="col-span-2">Saldo: <span className="text-white font-semibold">{conn.balance.toLocaleString("pt-PT", { style: "currency", currency: "USD" })}</span></span>
                     )}
                   </div>
+                  {conn?.mt5_status !== "connected" && (
+                    <div className={`mt-1 rounded-lg px-2.5 py-2 text-[11px] leading-snug ${conn?.mt5_status === "error" ? "bg-rose-500/10 text-rose-300" : "bg-amber-500/10 text-amber-300"}`}>
+                      {conn?.mt5_status === "error" ? (
+                        <>⚠️ {conn?.last_error || "Falha ao ligar à corretora."} Confirma login, password e servidor — abre <strong>Gerir conta</strong> → <strong>Remover</strong> e liga de novo.</>
+                      ) : (
+                        <>⏳ A validar com a corretora… pode demorar até ~1&nbsp;min. Puxa para atualizar.</>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* modo de risco */}
@@ -869,8 +882,8 @@ export default function TapToTradeFeed() {
             </div>
             {tap.status === "confirm" && (
               <>
-                {!hasAccount && (
-                  <p className="text-xs text-amber-400 mb-2">Liga a tua conta MT5 na secção "A minha conta T2T" antes de aceitar.</p>
+                {!isReady && (
+                  <p className="text-xs text-amber-400 mb-2">A tua conta MT5 ainda não está ligada (verifica o estado em "A minha conta T2T") — a trade só abre depois de ligada.</p>
                 )}
                 <p className="text-sm text-zinc-300 mb-3">
                   Vais abrir esta trade na <strong className="text-white">tua conta</strong>, com <strong className="text-white">{riskLabel}</strong>.
