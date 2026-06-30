@@ -107,18 +107,46 @@ export function getChannelMeta(slug: string): ChannelMeta {
   )
 }
 
+/**
+ * Limpa o conteúdo para a pré-visualização de UMA linha na lista de canais:
+ * remove sintaxe Markdown (tabelas `|---|`, **negrito**, _itálico_, `código`, títulos,
+ * links) e colapsa todo o espaço em branco (\n, \t, espaços múltiplos) num só espaço.
+ * Sem isto, posts com tabelas Markdown (ex.: DCA) apareciam esticados/partidos.
+ */
+export function sanitizePreviewText(raw: string): string {
+  return raw
+    .replace(/```[\s\S]*?```/g, " ") // blocos de código
+    .replace(/^\s*\|?\s*:?-{2,}.*$/gm, " ") // linhas separadoras de tabela |---|---|
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // [texto](url) → texto
+    .replace(/[|*_`#>~]+/g, " ") // marcadores markdown + pipes de tabela
+    .replace(/\s+/g, " ") // colapsar todo o whitespace
+    .trim()
+}
+
+/** O corpo já começa pelo nome do remetente? (evita prefixo redundante) */
+function bodyRepeatsSender(body: string, sender: string): boolean {
+  const norm = (s: string) =>
+    s.toLowerCase().replace(/[^\p{L}\p{N} ]+/gu, "").replace(/\s+/g, " ").trim()
+  const b = norm(body)
+  const s = norm(sender)
+  return s.length >= 4 && b.startsWith(s.slice(0, Math.min(s.length, 24)))
+}
+
 export function formatPreviewText(
   content: string | null,
   imageUrl: string | null,
   telegramSender: string | null,
   messageType: string
 ): string {
+  const clean = content ? sanitizePreviewText(content) : ""
   if (messageType === "telegram_forward" && telegramSender) {
-    const body = content?.trim() || "Nova mensagem"
+    const body = clean || "Nova mensagem"
+    // Não repetir o nome do remetente quando o próprio corpo já começa por ele.
+    if (bodyRepeatsSender(body, telegramSender)) return body
     return `${telegramSender}: ${body}`
   }
-  if (imageUrl && !content?.trim()) return "📷 Imagem"
-  if (content?.trim()) return content.trim()
+  if (imageUrl && !clean) return "📷 Imagem"
+  if (clean) return clean
   return "Nova mensagem"
 }
 
