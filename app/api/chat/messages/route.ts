@@ -111,6 +111,10 @@ export async function POST(request: NextRequest) {
         link_preview: linkPreview,
         message_type: messageType,
         reply_to_id: replyToId,
+        // Push despachado aqui (dispatchChatPush) → marca para o trigger da BD NÃO
+        // duplicar. Inserções diretas (app iOS nativa) ficam notified=false → o trigger
+        // notify_native_chat_message trata do push.
+        notified: true,
       })
       .select(MESSAGE_SELECT)
       .single()
