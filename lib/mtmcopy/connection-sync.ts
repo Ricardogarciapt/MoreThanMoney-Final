@@ -105,6 +105,7 @@ export async function syncConnectionCopyFactory(
     | 'prop_firm_type'
     | 'mt5_login_last4'
     | 'mt5_server'
+    | 'strategy_lots'
   >,
   userLabel: string,
   allConnections?: MTMcopierConnection[],
@@ -189,24 +190,40 @@ export async function syncMtmStrategyReplication(
     | 'mt5_login_last4'
     | 'mt5_server'
     | 'account_label'
+    | 'strategy_lots'
   >,
   userLabel: string,
 ): Promise<{ ok: boolean; error?: string }> {
   if (!conn.metaapi_account_id) return { ok: false, error: 'Conta MetaAPI em falta' }
 
-  const strategyId = conn.copyfactory_strategy_pick?.trim()
-  if (!strategyId) return { ok: false, error: 'Estratégia MTM não escolhida' }
+  // Lotes por estratégia (ex.: Premium 0.01 + Trade Ideas 0.02 na mesma conta). Quando
+  // definidos, as CHAVES definem quais estratégias esta conta copia e cada uma usa
+  // fixedVolume ao seu lote — sobrepõe-se a copyfactory_strategy_pick / lot_mode.
+  const perStrategyLots = conn.strategy_lots && typeof conn.strategy_lots === 'object' ? conn.strategy_lots : null
+  const lotStrategyIds = perStrategyLots
+    ? Object.keys(perStrategyLots).map((s) => s.trim()).filter(Boolean)
+    : []
 
-  // Só mantém a subscrição se a ROTA dessa estratégia estiver ATIVA. Se o admin pausar a
-  // rota (toggle enabled=false em /admin/mtmcopy), DESINSCREVE → o CopyFactory deixa de
-  // copiar NOVAS trades dessa estratégia (as posições já abertas mantêm-se). É isto que
-  // faz o toggle do provider ter efeito real nas contas subscriber.
+  let strategyIds = lotStrategyIds.length ? lotStrategyIds : []
+  if (!strategyIds.length) {
+    const single = conn.copyfactory_strategy_pick?.trim()
+    if (!single) return { ok: false, error: 'Estratégia MTM não escolhida' }
+    strategyIds = [single]
+  }
+
+  // Só mantém a subscrição de uma estratégia se a ROTA dela estiver ATIVA. Se o admin pausar
+  // a rota (toggle enabled=false em /admin/mtmcopy), essa estratégia é EXCLUÍDA → o CopyFactory
+  // deixa de copiar NOVAS trades dela (posições abertas mantêm-se). É isto que faz o toggle do
+  // provider ter efeito real. Com várias estratégias, só as ativas ficam.
   try {
     const { getSignalSourcesConfig } = await import('./signal-sources-config')
     const { normalizeProviderRoutes } = await import('./provider-routes')
     const routes = normalizeProviderRoutes(await getSignalSourcesConfig())
-    const route = routes.find((r) => r.strategy_id?.trim() === strategyId)
-    if (route && route.enabled === false) {
+    const disabled = new Set(
+      routes.filter((r) => r.enabled === false).map((r) => r.strategy_id?.trim()).filter(Boolean),
+    )
+    strategyIds = strategyIds.filter((id) => !disabled.has(id))
+    if (!strategyIds.length) {
       await unsubscribeFromStrategy(conn.metaapi_account_id).catch(() => {})
       return { ok: false, error: 'Pausado: provider desativado pelo admin' }
     }
@@ -223,12 +240,25 @@ export async function syncMtmStrategyReplication(
   const symbolMapping = await buildSubscriberSymbolMapping(conn.metaapi_account_id)
   const tradeSizeScaling = await resolveScalingForConnection(conn)
 
+  // fixedVolume por estratégia (clamp 0.01–50) para as que têm lote definido.
+  const perStrategyScaling = perStrategyLots
+    ? Object.fromEntries(
+        strategyIds
+          .filter((id) => Number(perStrategyLots[id]) > 0)
+          .map((id) => [
+            id,
+            { mode: 'fixedVolume' as const, tradeVolume: Math.min(50, Math.max(0.01, Number(perStrategyLots[id]))) },
+          ]),
+      )
+    : undefined
+
   return subscribeToStrategies({
     accountId: conn.metaapi_account_id,
     name,
-    strategyIds: [strategyId],
+    strategyIds,
     multiplier: cf.multiplier,
     tradeSizeScaling,
+    perStrategyScaling,
     reverse: cf.reverse,
     symbolWhitelist: cf.symbolWhitelist,
     copySl: cf.copySl,

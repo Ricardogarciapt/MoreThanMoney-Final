@@ -1,6 +1,6 @@
 import type { TrailingDistance } from './pip-points'
 import { convertTrailingToRelativePoints } from './pip-points'
-import { resolveBrokerSymbol } from './symbol-resolver'
+import { resolveBrokerSymbol, rankedBrokerSymbols } from './symbol-resolver'
 
 export interface OrderRequest {
   accountId: string
@@ -111,6 +111,8 @@ export interface MetaApiSymbolSpecification {
   point: number
   pipSize?: number
   digits?: number
+  /** SYMBOL_TRADE_MODE_FULL | ..._LONGONLY | ..._SHORTONLY | ..._CLOSEONLY | ..._DISABLED */
+  tradeMode?: string
 }
 
 export interface MetaApiPosition {
@@ -347,6 +349,72 @@ export async function ensureMetaApiAccountOnline(accountId: string): Promise<{ o
   }
 }
 
+/** O tradeMode do MT5 permite ABRIR posição nesta direção? (DISABLED/CLOSEONLY não; LONG/SHORTONLY conforme). */
+function tradeModeAllowsOpen(tradeMode: string | undefined, direction: 'buy' | 'sell'): boolean {
+  if (!tradeMode) return true // desconhecido → não desqualifica
+  const t = tradeMode.toUpperCase()
+  if (t.includes('DISABLED') || t.includes('CLOSE')) return false
+  if (t.includes('LONGONLY') || t.includes('LONG_ONLY')) return direction === 'buy'
+  if (t.includes('SHORTONLY') || t.includes('SHORT_ONLY')) return direction === 'sell'
+  return true // FULL (ou desconhecido tolerado)
+}
+
+async function fetchSpec(
+  connection: RpcConnection,
+  brokerSymbol: string,
+  specCache?: Map<string, MetaApiSymbolSpecification | null>,
+): Promise<MetaApiSymbolSpecification | null> {
+  const cached = specCache?.get(brokerSymbol)
+  if (cached !== undefined) return cached
+  let spec: MetaApiSymbolSpecification | null = null
+  if (connection.getSymbolSpecification) {
+    // 1 retry: um fetch falhado (transiente) devolveria tradeMode indefinido e faria o
+    // seletor aceitar um símbolo disabled por engano.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const raw = await connection.getSymbolSpecification(brokerSymbol)
+        spec = raw?.point ? { point: raw.point, pipSize: raw.pipSize, digits: raw.digits, tradeMode: raw.tradeMode } : null
+        break
+      } catch {
+        spec = null
+        if (attempt === 0) await sleep(200)
+      }
+    }
+  }
+  specCache?.set(brokerSymbol, spec)
+  return spec
+}
+
+/**
+ * Resolve o símbolo da corretora escolhendo a 1ª variante NEGOCIÁVEL para a direção.
+ * Corretoras como a VT Markets têm o símbolo "bare" (EURUSD) com trade DISABLED e a
+ * variante nativa (EURUSD-STD) com trade FULL — o match exato devolveria o disabled.
+ * Percorre os candidatos ranqueados (exato → sufixo nativo) e salta os não-negociáveis.
+ */
+async function resolveTradeableBrokerSymbol(
+  connection: RpcConnection,
+  symbols: string[],
+  canonical: string,
+  direction: 'buy' | 'sell',
+  specCache?: Map<string, MetaApiSymbolSpecification | null>,
+): Promise<{ brokerSymbol: string; spec: MetaApiSymbolSpecification | null }> {
+  const ranked = rankedBrokerSymbols(canonical, symbols)
+  if (!ranked.length) return { brokerSymbol: resolveBrokerSymbol(canonical, symbols), spec: null }
+  // Duas passagens: preferir uma variante DEFINITIVAMENTE negociável (tradeMode FULL/
+  // LONG/SHORT conforme). Só se nenhuma existir se cai numa de tradeMode desconhecido
+  // (spec transiente) — nunca uma explicitamente DISABLED/CLOSEONLY.
+  let unknownFallback: { brokerSymbol: string; spec: MetaApiSymbolSpecification | null } | null = null
+  for (const cand of ranked.slice(0, 8)) {
+    const spec = await fetchSpec(connection, cand, specCache)
+    if (spec?.tradeMode) {
+      if (tradeModeAllowsOpen(spec.tradeMode, direction)) return { brokerSymbol: cand, spec }
+      continue // tradeMode conhecido mas não permite → salta (não é fallback)
+    }
+    if (!unknownFallback) unknownFallback = { brokerSymbol: cand, spec } // tradeMode desconhecido
+  }
+  return unknownFallback ?? { brokerSymbol: ranked[0], spec: null }
+}
+
 async function placeOrderOnConnection(
   connection: RpcConnection,
   symbols: string[],
@@ -354,7 +422,8 @@ async function placeOrderOnConnection(
   req: OrderRequest,
 ): Promise<OrderResult> {
   try {
-    const brokerSymbol = resolveBrokerSymbol(req.symbol, symbols)
+    const picked = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction, specCache)
+    const brokerSymbol = picked.brokerSymbol
     const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
     const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
 
@@ -363,7 +432,7 @@ async function placeOrderOnConnection(
       if (connection.getSymbolSpecification) {
         try {
           const raw = await connection.getSymbolSpecification(brokerSymbol)
-          spec = raw?.point ? { point: raw.point, pipSize: raw.pipSize, digits: raw.digits } : null
+          spec = raw?.point ? { point: raw.point, pipSize: raw.pipSize, digits: raw.digits, tradeMode: raw.tradeMode } : null
         } catch {
           spec = null
         }
@@ -666,7 +735,7 @@ export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> 
     close = closeFn
 
     const symbols = await connection.getSymbols()
-    const brokerSymbol = resolveBrokerSymbol(req.symbol, symbols)
+    const { brokerSymbol } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
 
     const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
     const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
@@ -704,7 +773,7 @@ export async function placeLimitOrder(req: OrderRequest): Promise<OrderResult> {
     close = closeFn
 
     const symbols = await connection.getSymbols()
-    const brokerSymbol = resolveBrokerSymbol(req.symbol, symbols)
+    const { brokerSymbol } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
 
     const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
     const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
@@ -740,7 +809,7 @@ export async function placeStopOrder(req: OrderRequest): Promise<OrderResult> {
     close = closeFn
 
     const symbols = await connection.getSymbols()
-    const brokerSymbol = resolveBrokerSymbol(req.symbol, symbols)
+    const { brokerSymbol } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
 
     const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
     const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined

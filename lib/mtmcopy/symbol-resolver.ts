@@ -67,34 +67,63 @@ function canonicalCores(canonical: string): Set<string> {
   return cores
 }
 
+/**
+ * Devolve TODOS os símbolos da corretora que correspondem ao canónico, ordenados do
+ * melhor para o pior: match exato primeiro, depois por core preferindo o sufixo NATIVO
+ * (mais frequente na conta) e a grafia mais próxima. A execução percorre esta lista para
+ * escolher a 1ª variante NEGOCIÁVEL (ex.: VT Markets tem EURUSD bare = DISABLED e
+ * EURUSD-STD = FULL; o exato bare vem 1º mas é disabled → salta para -STD).
+ */
+export function rankedBrokerSymbols(canonical: string, availableSymbols: string[]): string[] {
+  const up = (canonical || '').toUpperCase().trim()
+  if (!availableSymbols?.length) return []
+
+  // Frequência de cada sufixo ([.-]XXX no fim) na conta — para preferir o sufixo NATIVO
+  // da corretora entre variantes do mesmo core. Ex.: VT tem -STD (71×), .s (32×), .crp
+  // (1×) → prefere -STD (o negociável na conta Standard).
+  const suffixFreq = new Map<string, number>()
+  for (const s of availableSymbols) {
+    const m = s.toUpperCase().match(/([.\-][A-Z0-9]+)$/)
+    if (m) suffixFreq.set(m[1], (suffixFreq.get(m[1]) ?? 0) + 1)
+  }
+  const suffixScore = (s: string): number => {
+    const m = s.toUpperCase().match(/([.\-][A-Z0-9]+)$/)
+    return m ? (suffixFreq.get(m[1]) ?? 0) : 0
+  }
+
+  const wanted = canonicalCores(up)
+  const wantedCompact = up.replace(/[^A-Z0-9]/g, '').length
+  const exactUp = up
+
+  const ranked: Array<{ sym: string; exact: boolean; suffix: number; score: number }> = []
+  for (const s of availableSymbols) {
+    const su = s.toUpperCase().trim()
+    const exact = su === exactUp
+    let matched = exact
+    if (!matched) {
+      for (const c of coresOf(s)) {
+        if (c.length >= 3 && wanted.has(c)) { matched = true; break }
+      }
+    }
+    if (!matched) continue
+    // Normaliza maiúsculas ANTES de compactar — senão sufixos minúsculos (".crp") são
+    // removidos pelo [^A-Z0-9] e o símbolo parece um match perfeito.
+    const compactLen = s.toUpperCase().replace(/[^A-Z0-9]/g, '').length
+    ranked.push({ sym: s, exact, suffix: suffixScore(s), score: Math.abs(compactLen - wantedCompact) })
+  }
+  // exato 1º; depois sufixo nativo (freq desc); depois grafia mais próxima (score asc).
+  ranked.sort((a, b) =>
+    (a.exact === b.exact ? 0 : a.exact ? -1 : 1) || (b.suffix - a.suffix) || (a.score - b.score),
+  )
+  return ranked.map((r) => r.sym)
+}
+
 export function resolveBrokerSymbol(canonical: string, availableSymbols: string[]): string {
   const up = (canonical || '').toUpperCase().trim()
   if (!availableSymbols?.length) return up
-
-  // 1) match exato (preserva a grafia da corretora)
-  const exact = availableSymbols.find((s) => s.toUpperCase().trim() === up)
-  if (exact) return exact
-
-  const wanted = canonicalCores(up)
-
-  // 2) match por core — escolhe o MELHOR candidato (menos "extra" = mais próximo do core)
-  let best: { sym: string; score: number } | null = null
-  for (const s of availableSymbols) {
-    const cands = coresOf(s)
-    let matched = false
-    for (const c of cands) {
-      if (c.length >= 3 && wanted.has(c)) { matched = true; break }
-    }
-    if (!matched) continue
-    // score: menor diferença de comprimento entre a grafia da corretora e o core canónico
-    const compactLen = s.replace(/[^A-Z0-9]/g, '').length
-    const score = Math.abs(compactLen - up.replace(/[^A-Z0-9]/g, '').length)
-    if (!best || score < best.score) best = { sym: s, score }
-  }
-  if (best) return best.sym
-
-  // 3) sem correspondência → devolve o canónico (o caller reporta erro claro)
-  return up
+  const ranked = rankedBrokerSymbols(up, availableSymbols)
+  // sem correspondência → devolve o canónico (o caller reporta erro claro)
+  return ranked[0] ?? up
 }
 
 /**

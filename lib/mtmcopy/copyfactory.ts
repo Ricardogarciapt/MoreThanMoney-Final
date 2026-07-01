@@ -59,6 +59,9 @@ export async function subscribeToStrategies(
   opts: Omit<SubscriberOptions, 'strategyId'> & {
     strategyIds: string[]
     freshSubscribe?: boolean
+    /** Scaling específico por estratégia (ex.: Premium 0.01 lotes, Trade Ideas 0.02 na
+     *  mesma conta). Sobrepõe-se ao tradeSizeScaling global para as estratégias listadas. */
+    perStrategyScaling?: Record<string, CopyFactoryTradeSizeScaling>
   },
 ): Promise<{ ok: boolean; error?: string }> {
   const token = process.env.METAAPI_TOKEN
@@ -88,9 +91,10 @@ export async function subscribeToStrategies(
         copyTakeProfit: opts.copyTp !== false,
         reverse: opts.reverse ?? false,
       }
-      if (opts.tradeSizeScaling && opts.tradeSizeScaling.mode !== 'none') {
-        if (!scalingOnly || opts.tradeSizeScaling.mode === 'fixedVolume' || opts.tradeSizeScaling.mode === 'fixedRisk') {
-          subscription.tradeSizeScaling = opts.tradeSizeScaling
+      const scaling = opts.perStrategyScaling?.[strategyId] ?? opts.tradeSizeScaling
+      if (scaling && scaling.mode !== 'none') {
+        if (!scalingOnly || scaling.mode === 'fixedVolume' || scaling.mode === 'fixedRisk') {
+          subscription.tradeSizeScaling = scaling
         } else {
           subscription.multiplier = opts.multiplier ?? 1
         }
