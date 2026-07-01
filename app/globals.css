@@ -108,6 +108,16 @@ body.mobile-route {
   overscroll-behavior-x: none;
 }
 
+/* O <main> (.app-mobile-page) é h-[100dvh] overflow-hidden e ESTA área é o scroller
+   real (header fixo em cima, tab bar fixed em baixo). Garantir scroll táctil suave e
+   que o overscroll não "escapa" para o body preso — corrige o scroll travado em
+   WebView (app-mobile PWA / Android WebView). */
+.app-mobile-scroll-area {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
+
 /* ============================================================
    Tema Claro — App Mobile (Definições → Aparência)
    A app é construída com classes Tailwind "dark-first"
