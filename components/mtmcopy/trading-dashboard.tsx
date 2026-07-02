@@ -8,6 +8,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MTM_GOLD } from "@/components/mtmcopy/mtmcopy-shared"
+import PerformanceMetrics, { type PerformanceData } from "@/components/mtmcopy/performance-metrics"
 
 type MetricsTab = "copy" | "journal" | "plan"
 
@@ -55,6 +56,7 @@ interface MetricsResponse {
     is_trading?: boolean | null
   } | null
   auditedAccounts?: { id: string; label: string; mt5_status: string }[]
+  performance?: PerformanceData | null
 }
 
 function KpiCard({
@@ -163,7 +165,7 @@ export default function TradingDashboard({
 
   if (!metrics) return null
 
-  const { summary, topSymbols, dailyActivity, accountBalances, journal, tradingPlan, auditedAccounts } = metrics
+  const { summary, topSymbols, dailyActivity, accountBalances, journal, tradingPlan, auditedAccounts, performance } = metrics
   const buyPct = summary.buys + summary.sells > 0
     ? Math.round((summary.buys / (summary.buys + summary.sells)) * 100)
     : 50
@@ -204,6 +206,15 @@ export default function TradingDashboard({
           </button>
         </div>
       </div>
+
+      {performance && (
+        <div className="mb-6 rounded-2xl border border-[#D2A63C]/20 bg-zinc-950/40 p-4 md:p-5">
+          <div className="flex items-center gap-2 mb-4 text-xs uppercase tracking-widest text-[#D2A63C]">
+            <BarChart3 className="w-3.5 h-3.5" /> Performance real · trades fechadas
+          </div>
+          <PerformanceMetrics performance={performance} />
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2 mb-5">
         {tabs.map(({ id, label, icon: Icon }) => (

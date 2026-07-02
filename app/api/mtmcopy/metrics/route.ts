@@ -22,6 +22,153 @@ type SignalRow = {
   connection_id: string
 }
 
+type ClosedTradeRow = {
+  pnl: number | null
+  lot_size: number | null
+  symbol: string | null
+  direction: string | null
+  opened_at: string | null
+  closed_at: string | null
+  trade_source: string | null
+  risk_amount: number | null
+  mtmcopy_connection_id: string | null
+}
+
+/** Métricas de performance reais a partir das trades FECHADAS (pnl) — curva de equity,
+ *  drawdown, profit factor, expectancy, por conta/símbolo/mês e deteção de red-flags. */
+function computePerformance(
+  rawTrades: ClosedTradeRow[],
+  labelById: Map<string, string>,
+) {
+  // ordenar cronologicamente pelo fecho (fallback abertura) e só com pnl
+  const trades = rawTrades
+    .filter((t) => t.pnl != null)
+    .map((t) => ({ ...t, pnl: Number(t.pnl), ts: t.closed_at ?? t.opened_at ?? '' }))
+    .filter((t) => Number.isFinite(t.pnl) && t.ts)
+    .sort((a, b) => a.ts.localeCompare(b.ts))
+
+  if (!trades.length) return null
+
+  let cumulative = 0
+  let peak = 0
+  let maxDrawdown = 0
+  const equityCurve: { date: string; pnl: number; cumulative: number }[] = []
+  let grossProfit = 0
+  let grossLoss = 0
+  let wins = 0
+  let losses = 0
+  let bestTrade = -Infinity
+  let worstTrade = Infinity
+
+  for (const t of trades) {
+    cumulative += t.pnl
+    peak = Math.max(peak, cumulative)
+    maxDrawdown = Math.max(maxDrawdown, peak - cumulative)
+    equityCurve.push({ date: t.ts.slice(0, 10), pnl: round2(t.pnl), cumulative: round2(cumulative) })
+    if (t.pnl >= 0) { wins++; grossProfit += t.pnl } else { losses++; grossLoss += Math.abs(t.pnl) }
+    bestTrade = Math.max(bestTrade, t.pnl)
+    worstTrade = Math.min(worstTrade, t.pnl)
+  }
+
+  const totalPnl = cumulative
+  const count = trades.length
+  const winRate = count ? Math.round((wins / count) * 100) : 0
+  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0
+  const avgWin = wins ? grossProfit / wins : 0
+  const avgLoss = losses ? grossLoss / losses : 0
+  const expectancy = count ? totalPnl / count : 0
+  const maxDrawdownPct = peak > 0 ? (maxDrawdown / peak) * 100 : 0
+  const returnOverMaxDD = maxDrawdown > 0 ? totalPnl / maxDrawdown : null
+
+  // por conta
+  const perAccount = new Map<string, { pnl: number; trades: number; wins: number }>()
+  for (const t of trades) {
+    const key = t.mtmcopy_connection_id ?? 'manual'
+    const a = perAccount.get(key) ?? { pnl: 0, trades: 0, wins: 0 }
+    a.pnl += t.pnl; a.trades++; if (t.pnl >= 0) a.wins++
+    perAccount.set(key, a)
+  }
+  const byAccount = [...perAccount.entries()]
+    .map(([id, a]) => ({
+      label: id === 'manual' ? 'Manual' : (labelById.get(id) ?? 'Conta'),
+      pnl: round2(a.pnl), trades: a.trades,
+      winRate: a.trades ? Math.round((a.wins / a.trades) * 100) : 0,
+    }))
+    .sort((a, b) => b.pnl - a.pnl)
+
+  // por símbolo (top por |pnl|)
+  const perSymbol = new Map<string, { pnl: number; trades: number }>()
+  for (const t of trades) {
+    if (!t.symbol) continue
+    const s = perSymbol.get(t.symbol) ?? { pnl: 0, trades: 0 }
+    s.pnl += t.pnl; s.trades++
+    perSymbol.set(t.symbol, s)
+  }
+  const bySymbol = [...perSymbol.entries()]
+    .map(([symbol, s]) => ({ symbol, pnl: round2(s.pnl), trades: s.trades }))
+    .sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl))
+    .slice(0, 8)
+
+  // mensal
+  const perMonth = new Map<string, { pnl: number; trades: number }>()
+  for (const t of trades) {
+    const m = t.ts.slice(0, 7)
+    const mm = perMonth.get(m) ?? { pnl: 0, trades: 0 }
+    mm.pnl += t.pnl; mm.trades++
+    perMonth.set(m, mm)
+  }
+  const monthly = [...perMonth.entries()]
+    .map(([month, m]) => ({ month, pnl: round2(m.pnl), trades: m.trades }))
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .slice(-12)
+
+  // red-flags: aumento de lote após perdas consecutivas (martingale) por conta
+  const redFlags: string[] = []
+  const byAcctChrono = new Map<string, typeof trades>()
+  for (const t of trades) {
+    const key = t.mtmcopy_connection_id ?? 'manual'
+    if (!byAcctChrono.has(key)) byAcctChrono.set(key, [])
+    byAcctChrono.get(key)!.push(t)
+  }
+  for (const [id, list] of byAcctChrono) {
+    let consecLosses = 0
+    for (let i = 1; i < list.length; i++) {
+      if (list[i - 1].pnl < 0) consecLosses++; else consecLosses = 0
+      const prevLot = Number(list[i - 1].lot_size) || 0
+      const curLot = Number(list[i].lot_size) || 0
+      if (consecLosses >= 2 && prevLot > 0 && curLot >= prevLot * 1.8) {
+        const label = id === 'manual' ? 'Manual' : (labelById.get(id) ?? 'Conta')
+        redFlags.push(`⚠️ ${label}: lote aumentado (${prevLot}→${curLot}) após ${consecLosses} perdas seguidas — possível martingale.`)
+        break
+      }
+    }
+  }
+
+  return {
+    totalPnl: round2(totalPnl),
+    tradeCount: count,
+    wins, losses, winRate,
+    profitFactor: profitFactor === Infinity ? null : round2(profitFactor),
+    avgWin: round2(avgWin),
+    avgLoss: round2(avgLoss),
+    expectancy: round2(expectancy),
+    maxDrawdown: round2(maxDrawdown),
+    maxDrawdownPct: round2(maxDrawdownPct),
+    returnOverMaxDD: returnOverMaxDD == null ? null : round2(returnOverMaxDD),
+    bestTrade: round2(bestTrade),
+    worstTrade: round2(worstTrade),
+    equityCurve,
+    byAccount,
+    bySymbol,
+    monthly,
+    redFlags,
+  }
+}
+
+function round2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100
+}
+
 function connectionDisplayLabel(c: {
   account_label?: string | null
   mt5_login?: string | null
@@ -47,7 +194,7 @@ export async function GET(request: NextRequest) {
   const startDate = startOfMonth.toISOString().slice(0, 10)
   const endDate = new Date().toISOString().slice(0, 10)
 
-  const [{ data: connections }, { data: signals }, { data: tradingPlan }, journalMetricsRes, { data: journalTrades }] =
+  const [{ data: connections }, { data: signals }, { data: tradingPlan }, journalMetricsRes, { data: journalTrades }, { data: closedTrades }] =
     await Promise.all([
       supabaseAdmin
         .from('mtmcopy_connections')
@@ -79,6 +226,15 @@ export async function GET(request: NextRequest) {
         .eq('user_id', user.id)
         .order('opened_at', { ascending: false })
         .limit(200),
+      supabaseAdmin
+        .from('trading_plan_trades')
+        .select('pnl, lot_size, symbol, direction, opened_at, closed_at, trade_source, risk_amount, mtmcopy_connection_id')
+        .eq('user_id', user.id)
+        .eq('execution_mode', 'executed')
+        .eq('status', 'closed')
+        .not('pnl', 'is', null)
+        .order('closed_at', { ascending: true, nullsFirst: false })
+        .limit(2000),
     ])
 
   const rows = (signals ?? []) as SignalRow[]
@@ -166,6 +322,9 @@ export async function GET(request: NextRequest) {
   const journalExecuted = trades.filter((t) => t.execution_mode === 'executed')
   const journalAnalysis = trades.filter((t) => t.execution_mode === 'analysis')
 
+  const labelById = new Map(conns.map((c) => [c.id, connectionDisplayLabel(c)]))
+  const performance = computePerformance((closedTrades ?? []) as ClosedTradeRow[], labelById)
+
   return NextResponse.json({
     summary: {
       totalSignals: tradeSignals.length,
@@ -197,6 +356,7 @@ export async function GET(request: NextRequest) {
         audited: trades.filter((t) => t.trade_source === 'audited').length,
       },
     },
+    performance,
     tradingPlan: tradingPlan ?? null,
     auditedAccounts: conns
       .filter((c) => c.is_audited)
