@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { decodeJWSPayload, APPLE_BUNDLE_ID } from '@/lib/apple-iap'
+import { verifyAppleTransaction, verifyAppleNotification } from '@/lib/apple-iap-verify'
 import {
   appleMlmContext,
   applePaymentReference,
@@ -22,9 +22,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'signedPayload obrigatório' }, { status: 400 })
     }
 
-    const notification = decodeJWSPayload(signedPayload)
+    // Verificação CRIPTOGRÁFICA da notificação assinada (App Store Server V2).
+    const notification = await verifyAppleNotification(signedPayload)
     if (!notification) {
-      return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
+      return NextResponse.json({ error: 'Assinatura da notificação inválida' }, { status: 400 })
     }
 
     const notificationType = notification.notificationType as string
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     }
 
     const signedTransactionInfo = data.signedTransactionInfo as string | undefined
-    const tx      = signedTransactionInfo ? decodeJWSPayload(signedTransactionInfo)      : null
+    const tx      = signedTransactionInfo ? await verifyAppleTransaction(signedTransactionInfo) : null
 
     if (!tx) {
       return NextResponse.json({ ok: true })

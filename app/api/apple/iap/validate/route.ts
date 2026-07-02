@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { decodeJWSPayload, productToSubscriptionPlan, APPLE_BUNDLE_ID } from '@/lib/apple-iap'
+import { productToSubscriptionPlan, APPLE_BUNDLE_ID } from '@/lib/apple-iap'
+import { verifyAppleTransaction } from '@/lib/apple-iap-verify'
 import {
   appleMlmContext,
   applePaymentReference,
@@ -28,10 +29,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'jwsToken obrigatório' }, { status: 400 })
     }
 
-    // Decode the StoreKit 2 JWS payload
-    const txPayload = decodeJWSPayload(jwsToken)
+    // Verificação CRIPTOGRÁFICA da signed transaction (StoreKit 2) contra os certificados
+    // raiz da Apple. Se a assinatura não for válida, rejeita (evita ativação por pedido forjado).
+    const txPayload = await verifyAppleTransaction(jwsToken)
     if (!txPayload) {
-      return NextResponse.json({ error: 'JWS token inválido' }, { status: 400 })
+      return NextResponse.json({ error: 'Assinatura da transação inválida' }, { status: 400 })
     }
 
     const productId            = txPayload.productId as string
