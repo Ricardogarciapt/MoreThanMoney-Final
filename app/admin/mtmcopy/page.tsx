@@ -29,8 +29,10 @@ import {
   Users,
   Activity,
   BarChart3,
+  Globe,
 } from "lucide-react"
 import { PipelineFlow } from "@/components/mtmcopy/mtmcopy-shared"
+import MtmcopyGlobalPerformance from "@/components/admin/mtmcopy-global-performance"
 import { coerceBotUsername, formatTelegramBotLabel } from "@/lib/telegram-bot-display"
 
 function parseTab(
@@ -264,6 +266,15 @@ export default function AdminMtmcopyPage() {
                 accent="emerald"
               >
                 <MtmcopyProviderPerformance />
+              </MtmcopyAdminSection>
+
+              <MtmcopyAdminSection
+                title="Visão global do sistema"
+                description="Performance agregada de TODAS as contas e utilizadores (copiado, manual e auditado) — curva de equity, drawdown, profit factor, P&L por conta/mês e alertas de risco. Mesmo motor do terminal do utilizador."
+                icon={Globe}
+                accent="gold"
+              >
+                <MtmcopyGlobalPerformance />
               </MtmcopyAdminSection>
 
               <div className="grid lg:grid-cols-2 gap-6">

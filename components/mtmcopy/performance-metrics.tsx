@@ -19,28 +19,9 @@ import {
 } from "recharts"
 import { AlertTriangle, TrendingDown, TrendingUp } from "lucide-react"
 import { MTM_GOLD } from "@/components/mtmcopy/mtmcopy-shared"
+import type { PerformanceData } from "@/lib/mtmcopy/performance"
 
-export interface PerformanceData {
-  totalPnl: number
-  tradeCount: number
-  wins: number
-  losses: number
-  winRate: number
-  profitFactor: number | null
-  avgWin: number
-  avgLoss: number
-  expectancy: number
-  maxDrawdown: number
-  maxDrawdownPct: number
-  returnOverMaxDD: number | null
-  bestTrade: number
-  worstTrade: number
-  equityCurve: { date: string; pnl: number; cumulative: number }[]
-  byAccount: { label: string; pnl: number; trades: number; winRate: number }[]
-  bySymbol: { symbol: string; pnl: number; trades: number }[]
-  monthly: { month: string; pnl: number; trades: number }[]
-  redFlags: string[]
-}
+export type { PerformanceData }
 
 const fmtEur = (n: number) =>
   `${n >= 0 ? "+" : "−"}€${Math.abs(n).toLocaleString("pt-PT", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
