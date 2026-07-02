@@ -40,7 +40,7 @@ import { useToast } from "@/hooks/use-toast"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type CouponType = "discount_pct" | "free_months" | "free_subscription"
+type CouponType = "discount_pct" | "free_months" | "free_subscription" | "partnership"
 type PlanOverride = "app_member" | "premium" | "both" | null
 type StripeDuration = "once" | "repeating" | "forever"
 
@@ -57,6 +57,8 @@ interface Coupon {
   description: string | null
   is_active: boolean
   created_at: string
+  grant_days?: number | null
+  grants_vip?: boolean | null
   stripe_coupon_id?: string | null
   stripe_promotion_code_id?: string | null
   stripe_duration?: StripeDuration | null
@@ -83,6 +85,8 @@ interface CouponFormData {
   stripe_duration: string
   stripe_duration_months: string
   apple_offer_id: string
+  grant_days: string
+  grants_vip: boolean
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -113,6 +117,8 @@ function couponTypeLabel(type: CouponType): string {
       return "Meses Grátis"
     case "free_subscription":
       return "Subscrição Gratuita"
+    case "partnership":
+      return "Parceria (creator)"
   }
 }
 
@@ -124,6 +130,8 @@ function couponValueLabel(coupon: Coupon): string {
       return `${coupon.discount_value} ${coupon.discount_value === 1 ? "mês" : "meses"}`
     case "free_subscription":
       return "—"
+    case "partnership":
+      return `${coupon.grant_days ?? 60}d${coupon.grants_vip ? " · VIP" : ""}`
   }
 }
 
@@ -153,6 +161,8 @@ const defaultForm: CouponFormData = {
   stripe_duration: "",
   stripe_duration_months: "",
   apple_offer_id: "auto",
+  grant_days: "60",
+  grants_vip: true,
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -318,8 +328,13 @@ export default function CouponsPage() {
       toast({ title: "O código é obrigatório", variant: "destructive" })
       return
     }
-    if (form.type !== "free_subscription" && !form.discount_value) {
+    const isPartnership = form.type === "partnership"
+    if (!isPartnership && form.type !== "free_subscription" && !form.discount_value) {
       toast({ title: "O valor do desconto é obrigatório", variant: "destructive" })
+      return
+    }
+    if (isPartnership && (!form.grant_days || Number(form.grant_days) <= 0)) {
+      toast({ title: "Indica os dias de acesso (ex: 60)", variant: "destructive" })
       return
     }
 
@@ -329,9 +344,9 @@ export default function CouponsPage() {
         code: form.code.trim().toUpperCase(),
         type: form.type,
         discount_value:
-          form.type === "free_subscription" ? 0 : Number(form.discount_value),
+          form.type === "free_subscription" || isPartnership ? 0 : Number(form.discount_value),
         plan_override:
-          form.plan_override === "any" ? null : form.plan_override,
+          isPartnership ? "premium" : form.plan_override === "any" ? null : form.plan_override,
         max_uses: form.max_uses ? Number(form.max_uses) : null,
         valid_from: form.valid_from
           ? new Date(form.valid_from).toISOString()
@@ -340,12 +355,13 @@ export default function CouponsPage() {
           ? new Date(form.valid_until).toISOString()
           : null,
         description: form.description || null,
-        stripe_duration: form.stripe_duration || null,
+        stripe_duration: isPartnership ? null : form.stripe_duration || null,
         stripe_duration_months:
           form.stripe_duration === "repeating" && form.stripe_duration_months
             ? Number(form.stripe_duration_months)
             : null,
         apple_offer_id: form.apple_offer_id === "auto" ? "" : form.apple_offer_id,
+        ...(isPartnership ? { grant_days: Number(form.grant_days), grants_vip: form.grants_vip } : {}),
       }
 
       const res = await fetch("/api/admin/coupons", {
@@ -728,12 +744,52 @@ export default function CouponsPage() {
                   <SelectItem value="free_subscription" className="text-white hover:bg-gray-700">
                     Subscrição Gratuita
                   </SelectItem>
+                  <SelectItem value="partnership" className="text-white hover:bg-gray-700">
+                    Parceria (creator/UGC)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Partnership — dias de acesso + VIP */}
+            {form.type === "partnership" && (
+              <div className="space-y-3 rounded-lg border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-3">
+                <p className="text-xs text-[#D2A63C]">
+                  Código de parceria: concede Premium diretamente ao resgatar (site + app), sem Stripe/Apple.
+                  Resgatável em Definições → &ldquo;Ativar código de parceria&rdquo;.
+                </p>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                    Dias de acesso *
+                  </label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="365"
+                    value={form.grant_days}
+                    onChange={(e) => setForm((f) => ({ ...f, grant_days: e.target.value }))}
+                    placeholder="Ex: 60"
+                    className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600 focus:border-[#D2A63C]/50"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, grants_vip: !f.grants_vip }))}
+                  className="flex items-center justify-between w-full"
+                >
+                  <span className="text-sm text-white">Conceder estatuto VIP ⭐</span>
+                  <span className={cn(
+                    "text-xs px-2 py-0.5 rounded-full",
+                    form.grants_vip ? "bg-yellow-500/20 text-yellow-400" : "bg-gray-700 text-gray-400"
+                  )}>
+                    {form.grants_vip ? "Sim" : "Não"}
+                  </span>
+                </button>
+              </div>
+            )}
+
             {/* Stripe Duration */}
-            <div className="space-y-1.5">
+            <div className={cn("space-y-1.5", form.type === "partnership" && "hidden")}>
               <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">
                 Duração Stripe{" "}
                 <span className="text-gray-600 normal-case">(auto se vazio)</span>
@@ -782,7 +838,7 @@ export default function CouponsPage() {
             </div>
 
             {/* Discount value */}
-            {form.type !== "free_subscription" && (
+            {form.type !== "free_subscription" && form.type !== "partnership" && (
               <div className="space-y-1.5">
                 <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">
                   {form.type === "discount_pct"
@@ -806,7 +862,7 @@ export default function CouponsPage() {
             )}
 
             {/* Plan override */}
-            <div className="space-y-1.5">
+            <div className={cn("space-y-1.5", form.type === "partnership" && "hidden")}>
               <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">
                 Aplica-se ao plano
               </label>
@@ -837,7 +893,7 @@ export default function CouponsPage() {
             </div>
 
             {/* Apple promotional offer (IAP) */}
-            <div className="space-y-1.5">
+            <div className={cn("space-y-1.5", form.type === "partnership" && "hidden")}>
               <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">
                 Oferta Apple (IAP){" "}
                 <span className="text-gray-600 normal-case">

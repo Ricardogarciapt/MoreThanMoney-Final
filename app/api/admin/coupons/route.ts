@@ -58,6 +58,8 @@ export async function POST(request: NextRequest) {
       stripe_duration,
       stripe_duration_months,
       apple_offer_id,
+      grant_days,
+      grants_vip,
     } = body
 
     if (!code || typeof code !== "string" || !code.trim()) {
@@ -67,12 +69,45 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const allowedTypes = ["discount_pct", "free_months", "free_subscription"]
+    const allowedTypes = ["discount_pct", "free_months", "free_subscription", "partnership"]
     if (!type || !allowedTypes.includes(type)) {
       return NextResponse.json(
         { error: `Tipo inválido. Valores permitidos: ${allowedTypes.join(", ")}` },
         { status: 400 }
       )
+    }
+
+    // ── Código de parceria (influencer/UGC): concede acesso direto, sem Stripe/Apple ──
+    if (type === "partnership") {
+      const normalizedCode = code.trim().toUpperCase()
+      const { data: dup } = await supabase.from("coupons").select("id").eq("code", normalizedCode).maybeSingle()
+      if (dup) {
+        return NextResponse.json({ error: `Já existe um código "${normalizedCode}"` }, { status: 409 })
+      }
+      const days = Number(grant_days) > 0 ? Math.floor(Number(grant_days)) : 60
+      const { data, error } = await supabase
+        .from("coupons")
+        .insert({
+          code: normalizedCode,
+          type: "partnership",
+          discount_value: 0,
+          plan_override: "premium",
+          grant_days: days,
+          grants_vip: grants_vip !== false, // default true
+          max_uses: max_uses ?? null,
+          used_count: 0,
+          valid_from: valid_from || new Date().toISOString(),
+          valid_until: valid_until || null,
+          description: description || `Parceria — ${days} dias de Premium${grants_vip !== false ? " + VIP" : ""}`,
+          is_active: true,
+        })
+        .select()
+        .single()
+      if (error) {
+        console.error("❌ [ADMIN COUPONS POST partnership] Erro:", error)
+        return NextResponse.json({ error: "Erro ao criar código de parceria", details: error.message }, { status: 500 })
+      }
+      return NextResponse.json({ data, stripe_synced: false }, { status: 201 })
     }
 
     const allowedPlans = ["app_member", "premium", "both", null, undefined]

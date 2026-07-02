@@ -37,6 +37,8 @@ import {
   Zap,
   Award,
   Globe,
+  Gift,
+  RefreshCw,
 } from "lucide-react"
 import Image from "next/image"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
@@ -479,6 +481,58 @@ export default function SettingsMobile() {
     }
   }
 
+  // ── Código de parceria (influencer/UGC) ────────────────────────────────────
+  const [redeemCode, setRedeemCode]   = useState("")
+  const [redeeming, setRedeeming]     = useState(false)
+  const [restoring, setRestoring]     = useState(false)
+
+  const redeemPartnershipCode = async () => {
+    const code = redeemCode.trim().toUpperCase()
+    if (!code) return
+    setRedeeming(true)
+    try {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Sessão inválida")
+      const res = await fetch("/api/partnership/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        throw new Error(data.message ?? "Não foi possível resgatar o código.")
+      }
+      toast({ title: "Código ativado 🎉", description: data.message })
+      setRedeemCode("")
+      // Recarregar para refletir o novo acesso Premium/VIP em toda a app.
+      clearCachedSession()
+      setTimeout(() => window.location.reload(), 1200)
+    } catch (err: any) {
+      toast({ title: "Código inválido", description: err?.message ?? "Tenta novamente.", variant: "destructive" })
+    } finally {
+      setRedeeming(false)
+    }
+  }
+
+  const restorePurchases = async () => {
+    setRestoring(true)
+    try {
+      // App nativa iOS: pedir à App Store para restaurar (StoreKit) e revalidar.
+      const plugin = (typeof window !== "undefined" && (window as any).Capacitor?.Plugins?.MTMPayments) || null
+      if (plugin?.restorePurchases) {
+        try { await plugin.restorePurchases() } catch {}
+        try { await plugin.checkEntitlements?.() } catch {}
+      }
+      // Web e app: re-sincronizar o entitlement a partir do Supabase.
+      clearCachedSession()
+      toast({ title: "Compras restauradas", description: "Sincronizámos o teu acesso. A atualizar…" })
+      setTimeout(() => window.location.reload(), 1200)
+    } catch {
+      toast({ title: "Não foi possível restaurar", description: "Tenta novamente ou contacta o suporte.", variant: "destructive" })
+      setRestoring(false)
+    }
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-900 pb-28">
@@ -703,6 +757,56 @@ export default function SettingsMobile() {
                 </a>
               </div>
             )}
+          </div>
+        </section>
+
+        {/* Parceria & Compras — código de creator + restaurar compras */}
+        <section>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">Parceria &amp; Compras</h2>
+          <div className="bg-gray-800/50 rounded-xl divide-y divide-gray-700/50">
+            {/* Resgatar código de parceria */}
+            <div className="px-4 py-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Gift className="w-4 h-4 text-[#D2A63C]" />
+                <span className="text-sm text-white font-medium">Ativar código de parceria</span>
+              </div>
+              <p className="text-xs text-gray-500 mb-2">
+                Tens um código de creator/UGC? Ativa aqui o teu acesso Premium + VIP.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={redeemCode}
+                  onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
+                  placeholder="Ex: CREATOR60"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  className="h-9 bg-gray-900 border-gray-700 text-white text-sm font-mono uppercase"
+                  onKeyDown={(e) => e.key === "Enter" && !redeeming && redeemPartnershipCode()}
+                />
+                <Button
+                  size="sm"
+                  onClick={redeemPartnershipCode}
+                  disabled={redeeming || !redeemCode.trim()}
+                  className="h-9 px-4 bg-[#D2A63C] hover:bg-[#c49a2e] text-black font-semibold whitespace-nowrap"
+                >
+                  {redeeming ? <Loader2 className="w-4 h-4 animate-spin" /> : "Ativar"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Restaurar compras */}
+            <button
+              onClick={restorePurchases}
+              disabled={restoring}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-700/40 transition-colors disabled:opacity-60"
+            >
+              <RefreshCw className={`w-4 h-4 text-gray-400 ${restoring ? "animate-spin" : ""}`} />
+              <div className="flex-1 text-left">
+                <span className="text-sm text-white">Restaurar compras</span>
+                <p className="text-xs text-gray-500 mt-0.5">Recupera a tua subscrição neste dispositivo</p>
+              </div>
+              {restoring && <span className="text-xs text-gray-500">…</span>}
+            </button>
           </div>
         </section>
 
