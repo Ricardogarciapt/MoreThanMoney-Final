@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
     const enrichedList = includeBalances
       ? await enrichConnectionsWithMetrics(connList)
       : connList
+    if (includeBalances) persistDiscoveredBaselines(connList, enrichedList as never[])
     const connection = enrichedList.find((c) => c.is_active) ?? enrichedList[0] ?? null
     const stats = connection ? statsMap.get(connection.id) ?? null : null
     const metrics = connection ? pickMetrics(connection) : null
@@ -107,6 +108,7 @@ export async function GET(request: NextRequest) {
   const metricsById = new Map<string, ReturnType<typeof pickMetrics>>()
   if (balanceTargets.length) {
     const enriched = await enrichConnectionsWithMetrics(balanceTargets)
+    persistDiscoveredBaselines(balanceTargets as never[], enriched as never[])
     for (const c of enriched) {
       metricsById.set(c.id as string, pickMetrics(c))
     }
@@ -217,6 +219,26 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ success: true, connection, profile })
+}
+
+// Auto-preenche baseline_balance quando é null mas já temos saldo live — assim a % de
+// crescimento passa a aparecer para contas reconectadas (o baseline nunca foi gravado).
+// Fire-and-forget (não bloqueia a resposta).
+function persistDiscoveredBaselines(
+  originals: Array<{ id?: string; baseline_balance?: number | null }>,
+  enriched: Array<{ id?: string; account_balance?: number | null }>,
+) {
+  const balById = new Map(enriched.map((e) => [e.id, e.account_balance]))
+  for (const c of originals) {
+    if (!c.id || c.baseline_balance != null) continue
+    const bal = Number(balById.get(c.id))
+    if (Number.isFinite(bal) && bal > 0) {
+      void supabase
+        .from('mtmcopy_connections')
+        .update({ baseline_balance: bal, updated_at: new Date().toISOString() })
+        .eq('id', c.id)
+    }
+  }
 }
 
 async function loadConnectionStats(connectionId: string) {

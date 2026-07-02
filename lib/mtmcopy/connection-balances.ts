@@ -16,7 +16,11 @@ type ConnWithMeta = {
  * uma conta morta bloqueia toda a listagem e a função serverless morre por timeout
  * (sintoma: a tabela de utilizadores nunca atualiza). Override: MTMCOPY_BALANCE_TIMEOUT_MS.
  */
-const PER_ACCOUNT_TIMEOUT_MS = Number(process.env.MTMCOPY_BALANCE_TIMEOUT_MS ?? 6000)
+// 12s (não 6s): contas pouco acedidas fazem "cold connect" à MetaAPI (o getRpcConnection
+// pode precisar de 2-3 tentativas c/ backoff), o que ultrapassava os 6s e devolvia saldo
+// null → a % de crescimento não aparecia (ex.: contas do Ruben). As contas correm em
+// paralelo (Promise.all), por isso o teto não se multiplica; fica < maxDuration (30s).
+const PER_ACCOUNT_TIMEOUT_MS = Number(process.env.MTMCOPY_BALANCE_TIMEOUT_MS ?? 12000)
 
 function withTimeout<R>(promise: Promise<R>, ms: number, fallback: R): Promise<R> {
   return new Promise<R>((resolve) => {
