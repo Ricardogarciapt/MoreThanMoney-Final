@@ -37,6 +37,44 @@ export function planAmountCentsEur(planOrProductId: string): number {
   return PLAN_AMOUNT_CENTS_EUR[planOrProductId] ?? 3500
 }
 
+/** Resolve a oferta promocional Apple para um cupão do site (sincronizado com a tabela `coupons`).
+ *  1) Usa apple_offer_id/apple_offer_products se definidos na BD (controlo explícito do admin).
+ *  2) Caso contrário, deriva do tipo/valor do cupão para uma das ofertas configuradas na ASC.
+ *  Devolve null quando o cupão não tem equivalente Apple (ex.: migração per-user, grátis-para-sempre)
+ *  — esses concedem-se pela WEB (login sem pagar), não por IAP. */
+export function resolveAppleOfferForCoupon(coupon: {
+  apple_offer_id?: string | null
+  apple_offer_products?: string[] | null
+  type?: string | null
+  discount_value?: number | string | null
+  plan_override?: string | null
+}): { offerIdentifier: string; applicableProducts: string[] } | null {
+  const premiumProducts = [APPLE_PRODUCTS.premium_monthly, APPLE_PRODUCTS.premium_annual]
+  const memberProducts = [APPLE_PRODUCTS.member_monthly, APPLE_PRODUCTS.member_annual]
+  const allProducts = Object.values(APPLE_PRODUCTS) as string[]
+
+  // 1) Mapeamento explícito na BD
+  if (coupon.apple_offer_id) {
+    const products = coupon.apple_offer_products?.length ? coupon.apple_offer_products : allProducts
+    return { offerIdentifier: coupon.apple_offer_id, applicableProducts: products }
+  }
+
+  // 2) Derivação por tipo (só ofertas que EXISTEM na ASC: founder_50pct, mtm_founder)
+  const val = Number(coupon.discount_value)
+  const plan = coupon.plan_override
+  if (coupon.type === 'discount_pct' && val >= 50) {
+    return { offerIdentifier: APPLE_PROMO_OFFERS.founder_50pct, applicableProducts: premiumProducts }
+  }
+  if ((coupon.type === 'free_months' || coupon.type === 'free_subscription') && val >= 1) {
+    const products =
+      plan === 'app_member' ? memberProducts : plan === 'premium' ? premiumProducts : allProducts
+    return { offerIdentifier: APPLE_PROMO_OFFERS.mtm_founder, applicableProducts: products }
+  }
+
+  // free_subscription value 0 (migração per-user) / outros → sem oferta Apple (só web)
+  return null
+}
+
 // Mapeamento de produto → plano Supabase
 export function productToSubscriptionPlan(productId: string): { plan: string; category: string; billing: string } {
   switch (productId) {

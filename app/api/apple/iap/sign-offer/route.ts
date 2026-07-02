@@ -1,23 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { signPromotionalOffer, APPLE_PRODUCTS, APPLE_PROMO_OFFERS } from '@/lib/apple-iap'
+import { signPromotionalOffer, resolveAppleOfferForCoupon } from '@/lib/apple-iap'
 
 const supabase = getSupabaseAdmin()
-
-// Mapeamento cupão → oferta promocional Apple
-const COUPON_TO_OFFER: Record<string, { offerIdentifier: string; applicableProducts: string[] }> = {
-  '50OFFFOUNDER': {
-    offerIdentifier: APPLE_PROMO_OFFERS.founder_50pct,
-    applicableProducts: [APPLE_PRODUCTS.premium_monthly, APPLE_PRODUCTS.premium_annual],
-  },
-  'MTMFOUNDER': {
-    offerIdentifier: APPLE_PROMO_OFFERS.mtm_founder,
-    applicableProducts: [
-      APPLE_PRODUCTS.member_monthly, APPLE_PRODUCTS.member_annual,
-      APPLE_PRODUCTS.premium_monthly, APPLE_PRODUCTS.premium_annual,
-    ],
-  },
-}
 
 // POST /api/apple/iap/sign-offer
 // Valida cupão e assina a oferta promocional Apple para desconto no IAP.
@@ -34,7 +19,7 @@ export async function POST(req: NextRequest) {
     // 1. Verificar se o cupão existe e é válido na nossa tabela
     const { data: coupon } = await supabase
       .from('coupons')
-      .select('id, code, type, discount_value, max_uses, used_count, valid_from, valid_until, is_active')
+      .select('id, code, type, discount_value, plan_override, max_uses, used_count, valid_from, valid_until, is_active, apple_offer_id, apple_offer_products')
       .eq('code', code)
       .eq('is_active', true)
       .maybeSingle()
@@ -55,8 +40,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false, error: 'Cupão esgotado' })
     }
 
-    // 2. Obter oferta Apple correspondente
-    const offerConfig = COUPON_TO_OFFER[code]
+    // 2. Obter oferta Apple correspondente (sincronizado com a tabela coupons)
+    const offerConfig = resolveAppleOfferForCoupon(coupon)
     if (!offerConfig) {
       // Cupão válido no nosso sistema mas sem oferta Apple configurada
       return NextResponse.json({
