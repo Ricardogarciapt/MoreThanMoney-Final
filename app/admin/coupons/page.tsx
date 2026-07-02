@@ -60,7 +60,16 @@ interface Coupon {
   stripe_coupon_id?: string | null
   stripe_promotion_code_id?: string | null
   stripe_duration?: StripeDuration | null
+  apple_offer_id?: string | null
+  apple_offer_products?: string[] | null
 }
+
+// Ofertas promocionais Apple configuradas na App Store Connect (IAP).
+const APPLE_OFFERS = [
+  { value: "auto", label: "Auto (pelo tipo)" },
+  { value: "founder_50pct", label: "founder_50pct — 50% off" },
+  { value: "mtm_founder", label: "mtm_founder — 1 mês grátis" },
+] as const
 
 interface CouponFormData {
   code: string
@@ -73,6 +82,7 @@ interface CouponFormData {
   description: string
   stripe_duration: string
   stripe_duration_months: string
+  apple_offer_id: string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -142,6 +152,7 @@ const defaultForm: CouponFormData = {
   description: "",
   stripe_duration: "",
   stripe_duration_months: "",
+  apple_offer_id: "auto",
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -256,6 +267,30 @@ export default function CouponsPage() {
     }
   }
 
+  // ── Update Apple promotional offer mapping (inline) ─────────────────────────
+
+  const handleAppleOffer = async (coupon: Coupon, value: string) => {
+    const apple_offer_id = value === "auto" ? "" : value
+    // optimistic
+    setCoupons((prev) =>
+      prev.map((c) =>
+        c.id === coupon.id ? { ...c, apple_offer_id: apple_offer_id || null } : c
+      )
+    )
+    try {
+      const res = await fetch("/api/admin/coupons", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: coupon.id, apple_offer_id }),
+      })
+      if (!res.ok) throw new Error()
+      toast({ title: "Oferta Apple actualizada", description: coupon.code })
+    } catch {
+      toast({ title: "Erro ao actualizar oferta Apple", variant: "destructive" })
+      fetchCoupons()
+    }
+  }
+
   // ── Delete ─────────────────────────────────────────────────────────────────
 
   const handleDelete = async (id: string) => {
@@ -310,6 +345,7 @@ export default function CouponsPage() {
           form.stripe_duration === "repeating" && form.stripe_duration_months
             ? Number(form.stripe_duration_months)
             : null,
+        apple_offer_id: form.apple_offer_id === "auto" ? "" : form.apple_offer_id,
       }
 
       const res = await fetch("/api/admin/coupons", {
@@ -448,6 +484,7 @@ export default function CouponsPage() {
                     <th className="text-left px-4 py-3 font-medium">Tipo</th>
                     <th className="text-left px-4 py-3 font-medium">Valor</th>
                     <th className="text-left px-4 py-3 font-medium">Plano</th>
+                    <th className="text-left px-4 py-3 font-medium">Oferta Apple</th>
                     <th className="text-left px-4 py-3 font-medium">Usos</th>
                     <th className="text-left px-4 py-3 font-medium">Válido até</th>
                     <th className="text-left px-4 py-3 font-medium">Estado</th>
@@ -520,6 +557,29 @@ export default function CouponsPage() {
                       {/* Plan */}
                       <td className="px-4 py-3.5 text-gray-400 text-xs">
                         {planOverrideLabel(coupon.plan_override)}
+                      </td>
+
+                      {/* Apple offer (IAP) — editável inline */}
+                      <td className="px-4 py-3.5">
+                        <Select
+                          value={coupon.apple_offer_id ?? "auto"}
+                          onValueChange={(v) => handleAppleOffer(coupon, v)}
+                        >
+                          <SelectTrigger className="h-7 w-[150px] text-xs bg-gray-800 border-gray-700 text-white focus:border-[#D2A63C]/50">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-gray-800 border-gray-700">
+                            {APPLE_OFFERS.map((o) => (
+                              <SelectItem
+                                key={o.value}
+                                value={o.value}
+                                className="text-white hover:bg-gray-700 text-xs"
+                              >
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </td>
 
                       {/* Uses */}
@@ -772,6 +832,37 @@ export default function CouponsPage() {
                   <SelectItem value="both" className="text-white hover:bg-gray-700">
                     Ambos
                   </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Apple promotional offer (IAP) */}
+            <div className="space-y-1.5">
+              <label className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                Oferta Apple (IAP){" "}
+                <span className="text-gray-600 normal-case">
+                  (auto = pelo tipo do cupão)
+                </span>
+              </label>
+              <Select
+                value={form.apple_offer_id}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, apple_offer_id: v }))
+                }
+              >
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white focus:border-[#D2A63C]/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  {APPLE_OFFERS.map((o) => (
+                    <SelectItem
+                      key={o.value}
+                      value={o.value}
+                      className="text-white hover:bg-gray-700"
+                    >
+                      {o.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

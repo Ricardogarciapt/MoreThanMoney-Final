@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
       description,
       stripe_duration,
       stripe_duration_months,
+      apple_offer_id,
     } = body
 
     if (!code || typeof code !== "string" || !code.trim()) {
@@ -103,6 +104,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "stripe_duration inválido. Valores: once, repeating, forever" }, { status: 400 })
     }
 
+    // Oferta promocional Apple (IAP) — null/'' = derivar automaticamente pelo tipo do cupão.
+    const allowedAppleOffers = ['founder_50pct', 'mtm_founder', '', null, undefined]
+    if (apple_offer_id !== undefined && !allowedAppleOffers.includes(apple_offer_id)) {
+      return NextResponse.json({ error: "apple_offer_id inválido. Valores: founder_50pct, mtm_founder" }, { status: 400 })
+    }
+
     let stripeSync: { stripe_coupon_id: string; stripe_promotion_code_id: string } | null = null
     try {
       stripeSync = await createStripeCouponSync({
@@ -140,6 +147,7 @@ export async function POST(request: NextRequest) {
         stripe_duration: stripe_duration || null,
         stripe_coupon_id: stripeSync.stripe_coupon_id,
         stripe_promotion_code_id: stripeSync.stripe_promotion_code_id,
+        apple_offer_id: apple_offer_id || null,
       })
       .select()
       .single()
@@ -193,9 +201,14 @@ export async function PATCH(request: NextRequest) {
       "valid_from",
       "discount_value",
       "plan_override",
+      "apple_offer_id",
+      "apple_offer_products",
     ]
     for (const key of allowedUpdates) {
-      if (key in rest) updates[key] = rest[key]
+      if (key in rest) {
+        // '' (auto) → null: deriva a oferta Apple pelo tipo do cupão
+        updates[key] = key === "apple_offer_id" && !rest[key] ? null : rest[key]
+      }
     }
 
     const { data: existing } = await supabase
