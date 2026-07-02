@@ -464,6 +464,55 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Erro ao atualizar estado' }, { status: 500 })
   }
 
+  // Aplica o estado REALMENTE no CopyFactory — a flag na BD não pausa a cópia por si só
+  // (o CopyFactory replica no lado do MetaAPI, autónomo). OFF → unsubscribe (pausa imediata;
+  // posições abertas mantêm-se). ON → subscribe fresh (retoma com a config atual da BD).
+  const applyCopyState = async (target: MTMcopierConnection) => {
+    if (!target.metaapi_account_id || target.account_role === 'master') return
+    const tMethod = connectionCopyMethod(target)
+    // Só CopyFactory (strategy/master_slave). telegram_group = execução direta gateada por is_active.
+    if (tMethod !== 'strategy' && tMethod !== 'master_slave') return
+    try {
+      if (is_active) {
+        const label = target.account_label || ''
+        const res =
+          tMethod === 'strategy'
+            ? await syncMtmStrategyReplication(target, label)
+            : await syncConnectionCopyFactory(target, label)
+        await supabaseAdmin
+          .from('mtmcopy_connections')
+          .update({
+            copyfactory_subscribed: res.ok,
+            last_error: res.ok ? null : res.error ?? null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', target.id)
+      } else {
+        await removeConnectionCopyFactory(target.metaapi_account_id)
+        await supabaseAdmin
+          .from('mtmcopy_connections')
+          .update({ copyfactory_subscribed: false, updated_at: new Date().toISOString() })
+          .eq('id', target.id)
+      }
+    } catch (err) {
+      console.error('[mtmcopy] aplicar estado CopyFactory falhou:', err)
+    }
+  }
+
+  const conn = data as MTMcopierConnection
+  if (conn.account_role === 'master') {
+    // O mestre não é subscritor — pausar/retomar o mestre afeta os SLAVES que copiam dele.
+    const { data: slaves } = await supabaseAdmin
+      .from('mtmcopy_connections')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('account_role', 'slave')
+      .neq('mt5_status', 'disconnected')
+    for (const s of slaves ?? []) await applyCopyState(s as MTMcopierConnection)
+  } else {
+    await applyCopyState(conn)
+  }
+
   return NextResponse.json({ success: true, connection: data })
 }
 
