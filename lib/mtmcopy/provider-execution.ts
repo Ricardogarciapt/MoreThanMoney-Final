@@ -39,15 +39,17 @@ export const PREMIUM_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   trailing_stop_points: 0,
 }
 
-/** Perfil MTM Auto — Trade Ideas (forex + trailing). */
+/** Perfil MTM Auto — Trade Ideas (forex + trailing).
+ *  Risco 0.3%/trade (reduzido de 0.5% — perdas grandes em cross voláteis, ver análise
+ *  2026-07-02) e trailing stop ATIVO e mais apertado (15 pips) para proteger lucros. */
 export const TRADE_IDEAS_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   ...MTM_PROVIDER_EXECUTION_PROFILE,
   lot_mode: 'risk_percent',
-  lot_value: MTM_DEFAULT_RISK_PERCENT,
+  lot_value: 0.3,
   ai_validation_enabled: true,
   ai_min_confidence: 0.35,
-  auto_trailing_stop: false,
-  trailing_stop_points: 200,
+  auto_trailing_stop: true,
+  trailing_stop_points: 150,
   sl_option: 'from_room',
   execute_if_no_sl: true,
   tp_option: 'from_room',
@@ -69,9 +71,14 @@ export const TRADE_IDEAS_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   exit_pct_tp3: 34,
 }
 
-/** Perfil MTM Auto — Sensei Scanner (TradingView webhook + gestão programada). */
+/** Perfil MTM Auto — Sensei Scanner (TradingView webhook + gestão programada).
+ *  Mantém 0.5% e trailing OFF (não herda as mudanças do Trade Ideas — o Sensei está
+ *  lucrativo a 0.5%). */
 export const SENSEI_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   ...TRADE_IDEAS_PROVIDER_EXECUTION,
+  lot_value: MTM_DEFAULT_RISK_PERCENT,
+  auto_trailing_stop: false,
+  trailing_stop_points: 200,
   mt_comment: 'MTM-SENSEI',
 }
 
