@@ -107,6 +107,45 @@ export async function hasRecentDuplicateGlobal(
   return false
 }
 
+/**
+ * Duplicado do PROVIDER (conta mestre). Só considera EXECUÇÕES anteriores do provider
+ * (connection_id IS NULL = conta sistema/mestre, status='executed'). NÃO conta as pernas
+ * irmãs dos SUBSCRITORES do mesmo sinal (received / execuções com connection_id) que se
+ * registam quase em simultâneo — senão o provider salta-se a si próprio numa corrida
+ * (bug: um subscritor loga tg:<id> primeiro e o provider vê-o como "duplicado").
+ */
+export async function hasRecentProviderDuplicate(
+  rawMessage: string,
+  telegramMessageId?: number,
+): Promise<boolean> {
+  const supabase = getSupabaseAdmin()
+  const since = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+
+  const { data: byRaw } = await supabase
+    .from('mtmcopy_signal_log')
+    .select('id')
+    .is('connection_id', null)
+    .eq('status', 'executed')
+    .eq('raw_message', rawMessage)
+    .gte('created_at', since)
+    .limit(1)
+  if (byRaw?.length) return true
+
+  if (telegramMessageId != null) {
+    const { data: byTg } = await supabase
+      .from('mtmcopy_signal_log')
+      .select('id')
+      .is('connection_id', null)
+      .eq('status', 'executed')
+      .ilike('detail', `%tg:${telegramMessageId}%`)
+      .gte('created_at', since)
+      .limit(1)
+    if (byTg?.length) return true
+  }
+
+  return false
+}
+
 export async function countExecutedToday(connectionId: string): Promise<number> {
   const supabase = getSupabaseAdmin()
   const start = new Date()

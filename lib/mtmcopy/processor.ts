@@ -20,7 +20,7 @@ import {
   logMtmcopySignal,
   markConnectionStatus,
   hasRecentDuplicate,
-  hasRecentDuplicateGlobal,
+  hasRecentProviderDuplicate,
   countExecutedToday,
 } from './db'
 import { computeLotSize, getLotSizingSkipReason, signalForRiskSizing } from './lot-sizing'
@@ -686,7 +686,7 @@ async function executeViaMtmProvider(
   const tgRef = telegramMessageId != null ? `tg:${telegramMessageId}` : ''
 
   const [isDuplicate, executionProfile, providerConn] = await Promise.all([
-    hasRecentDuplicateGlobal(raw, telegramMessageId),
+    hasRecentProviderDuplicate(raw, telegramMessageId),
     getProviderExecutionProfile(channel, provider.execution),
     buildProviderConnection(channel, provider.execution),
   ])
