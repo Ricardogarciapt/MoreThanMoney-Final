@@ -680,7 +680,7 @@ export function senseiAlertTypeLabel(type: SenseiAlertType): string {
     case 'tp_hit':
       return 'TP Hit'
     case 'breakeven':
-      return 'Breakeven'
+      return 'Coloca BreakEven'
     case 'signal':
       return 'Ideia'
     default:

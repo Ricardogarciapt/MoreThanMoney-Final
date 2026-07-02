@@ -138,11 +138,17 @@ function composePost(
   }
 
   if (alertType === "breakeven") {
-    return [`🧠 Sensei Scanner — Breakeven${tag}`, ``, head, `Posição Fechada.`, DISCLAIMER].join("\n")
+    return [
+      `🧠 Sensei Scanner — Coloca BreakEven${tag}`,
+      ``,
+      head,
+      `🔒 Move o Stop Loss para o ponto de entrada (BreakEven) — protege a posição sem risco. A posição continua aberta.`,
+      DISCLAIMER,
+    ].join("\n")
   }
 
   if (alertType === "sl_hit") {
-    return [`🧠 Sensei Scanner — Stop Loss${tag}`, ``, head, DISCLAIMER].join("\n")
+    return [`🧠 Sensei Scanner — Stop Loss${tag}`, ``, head, `🛑 Stop Loss atingido — posição encerrada.`, DISCLAIMER].join("\n")
   }
 
   if (alertType === "exit") {
