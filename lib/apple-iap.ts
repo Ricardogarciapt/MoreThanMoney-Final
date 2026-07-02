@@ -75,7 +75,8 @@ export function signPromotionalOffer(opts: {
   nonce: string
   timestamp: number
 }): { signature: string; keyIdentifier: string; nonce: string; timestamp: number } | null {
-  const keyPem  = process.env.APPLE_IAP_KEY
+  // Aceita a chave com newlines reais (multiline) ou com \n escapado (single-line em env var).
+  const keyPem  = process.env.APPLE_IAP_KEY?.replace(/\\n/g, '\n')
   const keyId   = process.env.APPLE_IAP_KEY_ID
 
   if (!keyPem || !keyId) {
