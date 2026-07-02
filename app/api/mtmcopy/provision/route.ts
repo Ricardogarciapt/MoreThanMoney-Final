@@ -8,7 +8,7 @@ import { runProvisionJob } from '@/lib/mtmcopy/run-provision-job'
 import type { MtmcopyAccountRole, MtmcopySenderMode } from '@/lib/mtmcopy/types'
 import { resolveMtmcopyUserLimits } from '@/lib/mtmcopy/account-limits'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
-import { normalizeTelegramGroups, normalizeTelegramChannel, type MtmcopyCopyMethod } from '@/lib/mtmcopy/copy-methods'
+import { normalizeTelegramGroups, normalizeTelegramChannel, strategyIdsForTelegramGroupsAsync, type MtmcopyCopyMethod } from '@/lib/mtmcopy/copy-methods'
 import {
   canAddConnection,
   getMasterConnection,
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
   if (notReady) return notReady
 
   const body = await request.json().catch(() => ({}))
-  const copyMethod = parseCopyMethod(body)
+  let copyMethod = parseCopyMethod(body)
 
   const senderMode: MtmcopySenderMode =
     copyMethod === 'master_slave' ? 'master_account' : 'telegram'
@@ -162,13 +162,37 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Escolhe uma estratégia MTM' }, { status: 400 })
   }
 
+  // Ativar cópia REAL: se um slave MTM Copy escolhe grupo(s) que mapeiam para estratégia(s)
+  // canónica(s) do CopyFactory, provisiona como 'strategy' (conta ganha role SUBSCRIBER +
+  // subscreve no CopyFactory → copia mesmo). Antes o defeito 'telegram_group' provisionava
+  // directOnly (sem role) → a conta ligava mas NÃO copiava. Grupos sem estratégia canónica
+  // mantêm 'telegram_group' (execução direta por sinais).
+  let resolvedPick = copyfactory_strategy_pick?.trim() || null
+  let resolvedStrategyLots: Record<string, number> | null = null
+  if (purpose !== 'tap_to_trade' && accountRole === 'slave' && copyMethod === 'telegram_group' && normalizedGroups.length) {
+    try {
+      const stratIds = await strategyIdsForTelegramGroupsAsync(normalizedGroups)
+      if (stratIds.length === 1) {
+        copyMethod = 'strategy'
+        resolvedPick = resolvedPick ?? stratIds[0]
+      } else if (stratIds.length > 1) {
+        copyMethod = 'strategy'
+        resolvedPick = resolvedPick ?? stratIds[0]
+        const lot = lot_value != null && Number(lot_value) > 0 ? Number(lot_value) : 0.01
+        resolvedStrategyLots = Object.fromEntries(stratIds.map((id) => [id, lot]))
+      }
+    } catch {
+      /* resolução falhou → mantém telegram_group */
+    }
+  }
+
   const activeConnections = await listActiveConnections(user.id)
   const limits = resolveMtmcopyUserLimits(profileRow?.user_type, profileRow?.member_category)
   const limitCheck = canAddConnection(activeConnections, senderMode, accountRole, {
     isAdmin: subscription.reason === 'admin',
     limits,
     copyMethod,
-    copyfactoryStrategyPick: copyfactory_strategy_pick?.trim() || null,
+    copyfactoryStrategyPick: resolvedPick,
   })
   if (!limitCheck.ok) {
     return NextResponse.json({ error: limitCheck.error }, { status: 400 })
@@ -217,7 +241,8 @@ export async function POST(request: NextRequest) {
     exit_pct_tp1: exit_pct_tp1 ?? 33,
     exit_pct_tp2: exit_pct_tp2 ?? 33,
     exit_pct_tp3: exit_pct_tp3 ?? 34,
-    copyfactory_strategy_pick: copyfactory_strategy_pick?.trim() || null,
+    copyfactory_strategy_pick: resolvedPick,
+    strategy_lots: resolvedStrategyLots,
     updated_at: new Date().toISOString(),
     telegram_status:
       copyMethod === 'strategy' || senderMode === 'master_account' ? 'connected' : 'pending',
@@ -280,7 +305,7 @@ export async function POST(request: NextRequest) {
     symbolsWhitelist: symbols_whitelist,
     copySl: copy_sl,
     copyTp: copy_tp,
-    copyfactoryStrategyPick: copyfactory_strategy_pick?.trim() || null,
+    copyfactoryStrategyPick: resolvedPick,
     normalizedGroups,
   })
 
