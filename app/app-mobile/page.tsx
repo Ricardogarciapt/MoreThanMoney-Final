@@ -279,14 +279,17 @@ function AppMobileContent() {
     return () => { supabase.removeChannel(channel) }
   }, [user?.id])
 
-  // ── Pedido de permissão web/PWA (delay de 3s, apenas uma vez) ─────
+  // ── Pedido de permissão web/PWA (delay de 3s) — educado: não re-pede se o
+  //    utilizador dispensou nos últimos 7 dias (evita ser abusivo). ───────────
   useEffect(() => {
     if (!userLoaded || isNative) return
     if (typeof window === "undefined" || !("Notification" in window)) return
-    if (Notification.permission === "default") {
-      const t = setTimeout(() => setShowPermissionPrompt(true), 3000)
-      return () => clearTimeout(t)
-    }
+    if (Notification.permission !== "default") return
+    let snoozed = 0
+    try { snoozed = Number(localStorage.getItem("mtm_push_prompt_snooze") || 0) } catch {}
+    if (Date.now() - snoozed < 7 * 86400000) return
+    const t = setTimeout(() => setShowPermissionPrompt(true), 3000)
+    return () => clearTimeout(t)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLoaded, isNative])
 
@@ -650,7 +653,10 @@ function AppMobileContent() {
                     Activar
                   </button>
                   <button
-                    onClick={() => setShowPermissionPrompt(false)}
+                    onClick={() => {
+                      try { localStorage.setItem("mtm_push_prompt_snooze", String(Date.now())) } catch {}
+                      setShowPermissionPrompt(false)
+                    }}
                     className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm rounded-xl transition-colors border border-white/10"
                   >
                     Agora não
