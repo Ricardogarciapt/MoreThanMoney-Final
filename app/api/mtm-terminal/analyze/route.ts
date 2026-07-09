@@ -4,7 +4,10 @@ import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/supabase"
 import { findTerminalAsset } from "@/lib/mtm-terminal-assets"
 import { fetchTerminalQuote } from "@/lib/mtm-terminal-quote"
-import { streamTerminalAnalysis } from "@/lib/mtm-terminal-analysis"
+import { generateTerminalDashboard } from "@/lib/mtm-terminal-analysis"
+
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
 async function getAuthedClient() {
   const cookieStore = await cookies()
@@ -17,9 +20,7 @@ async function getAuthedClient() {
           return cookieStore.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          )
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
         },
       },
     }
@@ -62,7 +63,7 @@ async function requireAccess() {
   return { ok: true as const }
 }
 
-/** GET — devolve a análise diária JÁ guardada (gerada pelo cron das 9h). */
+/** GET — dashboard diário já guardado (gerado pelo cron das 9h). */
 export async function GET(request: NextRequest) {
   const access = await requireAccess()
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status })
@@ -75,19 +76,14 @@ export async function GET(request: NextRequest) {
     const admin = getSupabaseAdmin()
     const { data } = await admin
       .from("mtm_terminal_daily")
-      .select("analysis, quote, generated_at, model")
+      .select("dashboard, quote, generated_at, model")
       .eq("symbol", asset.symbol)
       .maybeSingle()
 
     return NextResponse.json({
       success: true,
-      cached: data
-        ? {
-            analysis: data.analysis,
-            quote: data.quote,
-            generatedAt: data.generated_at,
-            model: data.model,
-          }
+      cached: data?.dashboard
+        ? { dashboard: data.dashboard, quote: data.quote, generatedAt: data.generated_at, model: data.model }
         : null,
     })
   } catch {
@@ -95,82 +91,45 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/** POST — análise ao vivo em streaming (botão Atualizar / auto ao abrir sem cache). */
+/** POST — gera o dashboard ao vivo (botão Atualizar / sem cache), guarda e devolve. */
 export async function POST(request: NextRequest) {
   try {
     const access = await requireAccess()
     if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status })
 
-    const body = await request.json()
-    const { symbol, timeframe, question } = body as {
-      symbol?: string
-      timeframe?: string
-      question?: string
-    }
-
-    const asset = symbol ? findTerminalAsset(symbol) : undefined
+    const body = await request.json().catch(() => ({}))
+    const symbol = String(body.symbol || "").toUpperCase().trim()
+    const asset = findTerminalAsset(symbol)
     if (!asset) return NextResponse.json({ error: "Ativo inválido" }, { status: 400 })
 
     const quote = await fetchTerminalQuote(asset)
+    const { data: dashboard, model } = await generateTerminalDashboard(asset, quote)
 
-    const encoder = new TextEncoder()
-    const stream = new ReadableStream({
-      async start(controller) {
-        controller.enqueue(
-          encoder.encode(
-            `data: ${JSON.stringify({ type: "quote", quote, symbol: asset.symbol, tvSymbol: asset.tvSymbol })}\n\n`
-          )
-        )
-        try {
-          let full = ""
-          await streamTerminalAnalysis(
-            asset,
+    // Aquece o cache diário
+    try {
+      await getSupabaseAdmin()
+        .from("mtm_terminal_daily")
+        .upsert(
+          {
+            symbol: asset.symbol,
+            name: asset.name,
+            dashboard,
             quote,
-            (text) => {
-              full += text
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "text", text })}\n\n`))
-            },
-            { timeframe, question }
-          )
-          // Aquece o cache diário com a análise gerada ao vivo (exceto perguntas ad-hoc)
-          if (!question && full.trim()) {
-            try {
-              await getSupabaseAdmin()
-                .from("mtm_terminal_daily")
-                .upsert(
-                  {
-                    symbol: asset.symbol,
-                    name: asset.name,
-                    analysis: full,
-                    quote,
-                    model: process.env.ANTHROPIC_MODEL || null,
-                    generated_at: new Date().toISOString(),
-                  },
-                  { onConflict: "symbol" }
-                )
-            } catch {
-              /* cache best-effort */
-            }
-          }
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`))
-        } catch (err) {
-          const errMsg = err instanceof Error ? err.message : "Erro interno"
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "error", message: errMsg })}\n\n`))
-        } finally {
-          controller.close()
-        }
-      },
-    })
+            model,
+            generated_at: new Date().toISOString(),
+          },
+          { onConflict: "symbol" }
+        )
+    } catch {
+      /* cache best-effort */
+    }
 
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-    })
+    return NextResponse.json({ success: true, dashboard, quote, model })
   } catch (error) {
     console.error("Erro no Terminal MTM:", error)
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Erro interno do servidor" },
+      { status: 500 }
+    )
   }
 }

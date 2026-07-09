@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { TERMINAL_ASSETS } from "@/lib/mtm-terminal-assets"
 import { fetchTerminalQuote } from "@/lib/mtm-terminal-quote"
-import { generateTerminalAnalysis } from "@/lib/mtm-terminal-analysis"
+import { generateTerminalDashboard } from "@/lib/mtm-terminal-analysis"
 
 /**
  * CRON: análise diária do Terminal MTM.
@@ -26,16 +26,12 @@ export async function GET(request: NextRequest) {
   for (const asset of TERMINAL_ASSETS) {
     try {
       const quote = await fetchTerminalQuote(asset)
-      const { text, model } = await generateTerminalAnalysis(asset, quote, { timeframe: "1-4 semanas" })
-      if (!text) {
-        results.push({ symbol: asset.symbol, ok: false, error: "sem texto" })
-        continue
-      }
+      const { data: dashboard, model } = await generateTerminalDashboard(asset, quote)
       const { error } = await admin.from("mtm_terminal_daily").upsert(
         {
           symbol: asset.symbol,
           name: asset.name,
-          analysis: text,
+          dashboard,
           quote,
           model,
           generated_at: new Date().toISOString(),

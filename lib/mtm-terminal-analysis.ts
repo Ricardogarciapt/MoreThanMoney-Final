@@ -76,6 +76,187 @@ export function buildUserPrompt(
   }.${liveContext}${opts?.question ? `\n\nPergunta adicional do trader: ${opts.question}` : ""}`
 }
 
+// ─── Dashboard estruturado (JSON) ────────────────────────────────────────────
+export interface TerminalDashboard {
+  verdict: { direction: "BULLISH" | "BEARISH" | "NEUTRO"; conviction: "Alto" | "Médio" | "Baixo"; rationale: string }
+  sentiment: {
+    retailBias: "bullish" | "bearish" | "neutral"
+    retailPct: number
+    institutional: string
+    fearGreed: number
+    fearGreedLabel: string
+  }
+  macro: string[]
+  institutions: { name: string; stance: string }[]
+  news: { headline: string; impact: "alto" | "medio" | "baixo" }[]
+  scenarios: { kind: "bull" | "base" | "bear"; movePct: number; triggers: string }[]
+  levels: { supports: number[]; resistances: number[] }
+  risks: string[]
+  recommendation: { bias: string; timing: string; risk: string }
+}
+
+const DASHBOARD_SCHEMA = {
+  type: "object",
+  properties: {
+    verdict: {
+      type: "object",
+      properties: {
+        direction: { type: "string", enum: ["BULLISH", "BEARISH", "NEUTRO"] },
+        conviction: { type: "string", enum: ["Alto", "Médio", "Baixo"] },
+        rationale: { type: "string" },
+      },
+      required: ["direction", "conviction", "rationale"],
+      additionalProperties: false,
+    },
+    sentiment: {
+      type: "object",
+      properties: {
+        retailBias: { type: "string", enum: ["bullish", "bearish", "neutral"] },
+        retailPct: { type: "number" },
+        institutional: { type: "string" },
+        fearGreed: { type: "number" },
+        fearGreedLabel: { type: "string" },
+      },
+      required: ["retailBias", "retailPct", "institutional", "fearGreed", "fearGreedLabel"],
+      additionalProperties: false,
+    },
+    macro: { type: "array", items: { type: "string" } },
+    institutions: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { name: { type: "string" }, stance: { type: "string" } },
+        required: ["name", "stance"],
+        additionalProperties: false,
+      },
+    },
+    news: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: { headline: { type: "string" }, impact: { type: "string", enum: ["alto", "medio", "baixo"] } },
+        required: ["headline", "impact"],
+        additionalProperties: false,
+      },
+    },
+    scenarios: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          kind: { type: "string", enum: ["bull", "base", "bear"] },
+          movePct: { type: "number" },
+          triggers: { type: "string" },
+        },
+        required: ["kind", "movePct", "triggers"],
+        additionalProperties: false,
+      },
+    },
+    levels: {
+      type: "object",
+      properties: {
+        supports: { type: "array", items: { type: "number" } },
+        resistances: { type: "array", items: { type: "number" } },
+      },
+      required: ["supports", "resistances"],
+      additionalProperties: false,
+    },
+    risks: { type: "array", items: { type: "string" } },
+    recommendation: {
+      type: "object",
+      properties: { bias: { type: "string" }, timing: { type: "string" }, risk: { type: "string" } },
+      required: ["bias", "timing", "risk"],
+      additionalProperties: false,
+    },
+  },
+  required: ["verdict", "sentiment", "macro", "institutions", "news", "scenarios", "levels", "risks", "recommendation"],
+  additionalProperties: false,
+} as const
+
+const DASHBOARD_SYSTEM_PROMPT = `És um analista sénior de mercados (Goldman Sachs / JP Morgan / BlackRock, 20+ anos). Produz uma análise institucional ACIONÁVEL de um ativo, em português europeu, em JSON estruturado para um dashboard.
+
+Preenche todos os campos com dados concretos e números:
+- verdict: BULLISH/BEARISH/NEUTRO + convicção + racional curto (1 frase).
+- sentiment: retailBias + retailPct (0-100, % de retail bullish), institutional (posicionamento COT/fluxos/smart money, 1 frase), fearGreed (0-100) + label.
+- macro: 2-4 pontos macro/geopolíticos que impactam o ativo AGORA (Fed/BCE/inflação/taxas/guerras/eleições).
+- institutions: 2-4 instituições (Goldman, JP Morgan, Morgan Stanley, BlackRock, Bridgewater) com a tese/target curto.
+- news: 2-4 catalisadores recentes (7-30 dias) com impacto alto/medio/baixo.
+- scenarios: EXATAMENTE 3 (kind bull/base/bear) com movePct (% esperada, negativa no bear) + gatilhos.
+- levels: 2-3 supports e 2-3 resistances (números plausíveis à volta do preço atual dado).
+- risks: 2-4 riscos que invalidam a tese.
+- recommendation: bias (direção preferida), timing, risk (gestão de risco). Se for melhor aguardar, diz.
+
+Usa o preço ao vivo fornecido como âncora real. Sê direto e institucional, nada de vago. NÃO incluas texto fora do JSON.`
+
+function isModelNotFoundFetch(status: number, body: string): boolean {
+  if (status === 404) return true
+  const b = body.toLowerCase()
+  return b.includes("not_found") || b.includes("model:")
+}
+
+/** Gera o dashboard estruturado (JSON) com fallback de modelo. */
+export async function generateTerminalDashboard(
+  asset: TerminalAsset,
+  quote: TerminalQuote,
+): Promise<{ data: TerminalDashboard; model: string }> {
+  const userPrompt =
+    buildUserPrompt(asset, quote, { timeframe: "1-4 semanas" }) +
+    "\n\nResponde APENAS com o objeto JSON válido (sem ```), com esta forma exata:\n" +
+    JSON.stringify(DASHBOARD_EXAMPLE)
+  const key = process.env.ANTHROPIC_API_KEY?.trim()
+  let lastErr = "sem modelo"
+  for (const model of modelCandidates()) {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": key ?? "", "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({
+        model,
+        max_tokens: 2000,
+        system: DASHBOARD_SYSTEM_PROMPT,
+        messages: [{ role: "user", content: userPrompt }],
+      }),
+    })
+    if (!resp.ok) {
+      const body = await resp.text()
+      lastErr = `Anthropic ${resp.status}: ${body.slice(0, 200)}`
+      if (isModelNotFoundFetch(resp.status, body)) continue
+      throw new Error(lastErr)
+    }
+    const json = await resp.json()
+    const block = (json.content ?? []).find((b: { type: string }) => b.type === "text")
+    const data = parseJsonLoose(block?.text ?? "") as TerminalDashboard
+    return { data, model }
+  }
+  throw new Error(lastErr)
+}
+
+/** Extrai o objeto JSON da resposta (tolera ```json fences e texto à volta). */
+function parseJsonLoose(text: string): unknown {
+  let t = text.trim()
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  if (fence) t = fence[1].trim()
+  const start = t.indexOf("{")
+  const end = t.lastIndexOf("}")
+  if (start >= 0 && end > start) t = t.slice(start, end + 1)
+  return JSON.parse(t)
+}
+
+const DASHBOARD_EXAMPLE = {
+  verdict: { direction: "BULLISH", conviction: "Médio", rationale: "..." },
+  sentiment: { retailBias: "bullish", retailPct: 62, institutional: "...", fearGreed: 58, fearGreedLabel: "Ganância" },
+  macro: ["...", "..."],
+  institutions: [{ name: "Goldman Sachs", stance: "..." }],
+  news: [{ headline: "...", impact: "alto" }],
+  scenarios: [
+    { kind: "bull", movePct: 3.2, triggers: "..." },
+    { kind: "base", movePct: 0.8, triggers: "..." },
+    { kind: "bear", movePct: -2.1, triggers: "..." },
+  ],
+  levels: { supports: [0], resistances: [0] },
+  risks: ["..."],
+  recommendation: { bias: "...", timing: "...", risk: "..." },
+}
+
 /** Geração NÃO-streaming (usada pelo cron diário). Tenta modelos com fallback. */
 export async function generateTerminalAnalysis(
   asset: TerminalAsset,
