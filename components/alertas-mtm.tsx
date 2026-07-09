@@ -87,6 +87,9 @@ const DIR_META = {
   neutral: { label: "NEUTRO", cls: "border-gray-500/40 bg-gray-500/15 text-gray-300", Icon: Minus },
 } as const
 
+/** Scanner Momentum MTM — mostra os plots da estratégia no gráfico do alerta. */
+const MOMENTUM_STUDIES = ["PUB;00ec48baf0ee43f0a43e1658bb54cdab", "PUB;38080827cf244587b5e7dbb9f272db0a"]
+
 type AssetClass = "gold_btc" | "forex" | "index" | "crypto_perp" | "other"
 const CLASS_LABELS: Record<AssetClass, string> = {
   gold_btc: "Ouro & BTC",
@@ -207,6 +210,7 @@ function AlertCard({ alert }: { alert: MtmAlert }) {
                 interval={alert.timeframe && /^\d+$/.test(alert.timeframe) ? alert.timeframe : "60"}
                 height={280}
                 compact
+                studies={MOMENTUM_STUDIES}
               />
             </div>
           )
