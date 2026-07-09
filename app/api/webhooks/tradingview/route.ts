@@ -23,6 +23,7 @@ import {
 import { processMtmcopyWebhookSignal, processMtmcopyWebhookManagement } from "@/lib/mtmcopy/processor"
 import { getSiteOrigin } from "@/lib/site-url"
 import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId } from "@/lib/telegram-channel-ids"
+import { getExecSwitches } from "@/lib/mtmcopy/exec-switches"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export const runtime = "nodejs"
@@ -421,9 +422,12 @@ export async function POST(request: NextRequest) {
   let providerDetail: string | undefined
   const isIdeaAlert = activeSensei?.alertType === "idea" || activeSensei?.alertType === "signal"
   // Auto-copy CopyFactory: Ouro/BTC → conta Sensei; Forex → conta MTM Auto Forex (5IHE).
-  // Ambos gated pelo mesmo master switch SENSEI_PROVIDER_EXEC_ENABLED.
+  // Master switch SENSEI_PROVIDER_EXEC_ENABLED + interruptor por-execução (runtime, DB).
+  const execSwitches = await getExecSwitches()
+  const execSwitchOn = assetClass === "forex" ? execSwitches.forex : execSwitches.sensei
   const canExecuteProvider =
     SENSEI_PROVIDER_EXEC_ENABLED &&
+    execSwitchOn &&
     (assetClass === "gold_btc" || assetClass === "forex") &&
     !isIdeaAlert &&
     parsedForExec.symbol &&

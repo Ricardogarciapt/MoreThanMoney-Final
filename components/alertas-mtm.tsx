@@ -87,6 +87,27 @@ const DIR_META = {
   neutral: { label: "NEUTRO", cls: "border-gray-500/40 bg-gray-500/15 text-gray-300", Icon: Minus },
 } as const
 
+type AssetClass = "gold_btc" | "forex" | "index" | "crypto_perp" | "other"
+const CLASS_LABELS: Record<AssetClass, string> = {
+  gold_btc: "Ouro & BTC",
+  forex: "Forex",
+  index: "Índices",
+  crypto_perp: "Cripto Perp",
+  other: "Outros",
+}
+const FX_CODES = new Set(["EUR", "USD", "GBP", "JPY", "CHF", "AUD", "NZD", "CAD", "SGD", "SEK", "NOK", "MXN", "ZAR"])
+const IDX_SET = new Set(["UK100", "US30", "US100", "US500", "SPX500", "SPX", "NAS100", "NAS", "NDX", "DJI", "GER40", "DE40", "DE30", "DAX", "JP225", "JPN225", "FRA40", "EU50", "US2000", "HK50", "AUS200", "ESP35", "IT40"])
+function classifyAssetClient(ticker: string | null): AssetClass {
+  if (!ticker) return "other"
+  const norm = ticker.toUpperCase().replace(/[^A-Z0-9.]/g, "").replace(/^[A-Z]+:/, "")
+  if (/XAUUSD/.test(norm) || /^BTCUSD$/.test(norm)) return "gold_btc"
+  if (/\.P$/.test(norm) || /USDT/.test(norm) || /PERP/.test(norm)) return "crypto_perp"
+  const letters = norm.replace(/[^A-Z]/g, "")
+  if (letters.length === 6 && FX_CODES.has(letters.slice(0, 3)) && FX_CODES.has(letters.slice(3, 6))) return "forex"
+  if (IDX_SET.has(norm) || IDX_SET.has(letters)) return "index"
+  return "other"
+}
+
 function CopyBtn({ value }: { value: number | null }) {
   const [copied, setCopied] = useState(false)
   if (value == null) return null
@@ -286,6 +307,9 @@ export default function AlertasMtm() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [dirFilter, setDirFilter] = useState<"all" | "buy" | "sell">("all")
+  const [classFilter, setClassFilter] = useState<"all" | AssetClass>("all")
+  const [tfFilter, setTfFilter] = useState<string>("all")
+  const [stratFilter, setStratFilter] = useState<string>("all")
   const searchRef = useRef("")
 
   const load = useCallback(async () => {
@@ -323,7 +347,16 @@ export default function AlertasMtm() {
     }
   }, [load])
 
-  const visible = dirFilter === "all" ? alerts : alerts.filter((a) => a.direction === dirFilter)
+  const tfOptions = [...new Set(alerts.map((a) => a.timeframe).filter(Boolean))] as string[]
+  const stratOptions = [...new Set(alerts.map((a) => a.strategy).filter(Boolean))] as string[]
+
+  const visible = alerts.filter((a) => {
+    if (dirFilter !== "all" && a.direction !== dirFilter) return false
+    if (classFilter !== "all" && classifyAssetClient(a.ticker) !== classFilter) return false
+    if (tfFilter !== "all" && a.timeframe !== tfFilter) return false
+    if (stratFilter !== "all" && a.strategy !== stratFilter) return false
+    return true
+  })
 
   return (
     <div className="space-y-4">
@@ -374,6 +407,53 @@ export default function AlertasMtm() {
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+
+      {/* Filtros: classe · timeframe · estratégia */}
+      <div className="flex flex-wrap gap-2">
+        <select
+          value={classFilter}
+          onChange={(e) => setClassFilter(e.target.value as "all" | AssetClass)}
+          className="rounded-md border border-gray-700 bg-black/60 px-2.5 py-1.5 text-xs text-gray-200"
+        >
+          <option value="all">Todas as classes</option>
+          {(Object.keys(CLASS_LABELS) as AssetClass[]).map((c) => (
+            <option key={c} value={c}>{CLASS_LABELS[c]}</option>
+          ))}
+        </select>
+        <select
+          value={tfFilter}
+          onChange={(e) => setTfFilter(e.target.value)}
+          className="rounded-md border border-gray-700 bg-black/60 px-2.5 py-1.5 text-xs text-gray-200"
+        >
+          <option value="all">Todos os timeframes</option>
+          {tfOptions.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+        <select
+          value={stratFilter}
+          onChange={(e) => setStratFilter(e.target.value)}
+          className="rounded-md border border-gray-700 bg-black/60 px-2.5 py-1.5 text-xs text-gray-200"
+        >
+          <option value="all">Todas as estratégias</option>
+          {stratOptions.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        {(classFilter !== "all" || tfFilter !== "all" || stratFilter !== "all" || dirFilter !== "all") && (
+          <button
+            onClick={() => {
+              setClassFilter("all")
+              setTfFilter("all")
+              setStratFilter("all")
+              setDirFilter("all")
+            }}
+            className="rounded-md border border-gray-700 px-2.5 py-1.5 text-xs text-gray-400 hover:text-white"
+          >
+            Limpar filtros
+          </button>
+        )}
       </div>
 
       {loading && (
