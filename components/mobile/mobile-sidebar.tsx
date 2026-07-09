@@ -154,6 +154,7 @@ export default function MobileSidebar({
     { id: 'mentor', label: 'Mentor', icon: Brain, href: '/app-mobile?tab=mentor' },
     { id: 'portfolio', label: 'Portfólio', icon: Wallet, href: '/app-mobile?tab=portfolio' },
     { id: 'scanner', label: 'Scanner', icon: BarChart3, href: '/app-mobile?tab=scanner' },
+    { id: 'trading-alerts', label: 'Trading Alerts', icon: Bell, href: '/app-mobile?tab=trading-alerts' },
     { id: 'apps', label: 'Apps', icon: LayoutGrid, href: '/app-mobile?tab=apps' },
     { id: 'mlm', label: 'Afiliados', icon: Network, href: '/app-mobile?tab=mlm' },
   ]

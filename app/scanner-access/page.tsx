@@ -17,6 +17,7 @@ import PositionCalculator from "@/components/position-calculator"
 import TradingJournalCalendar from "@/components/trading-journal-calendar"
 import TradingJournal from "@/components/trading-journal"
 import ScannerMobile from "@/components/mobile/scanner-mobile"
+import AlertasMtm from "@/components/alertas-mtm"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
@@ -46,6 +47,7 @@ import {
   X,
   BookOpen,
   Download,
+  Bell,
 } from "lucide-react"
 
 interface ChecklistItem {
@@ -75,6 +77,7 @@ export default function ScannerAccessPage() {
   const [loadingPlan, setLoadingPlan] = useState(false)
   const [exportingPlan, setExportingPlan] = useState(false)
   const [showScreener, setShowScreener] = useState(false)
+  const [showAlerts, setShowAlerts] = useState(false)
 
   // Trading Plan Form State
   const [tradingPlan, setTradingPlan] = useState({
@@ -552,6 +555,18 @@ export default function ScannerAccessPage() {
                   <BarChart3 className="h-4 w-4 mr-2" />
                   {showScreener ? "Esconder Screener" : "Mostrar Screener / Heatmap"}
                 </Button>
+                <Button
+                  variant={showAlerts ? "default" : "outline"}
+                  className={
+                    showAlerts
+                      ? "bg-[#D2A63C] text-black hover:bg-[#BB8525]"
+                      : "border-[#D2A63C]/60 text-[#D2A63C] hover:bg-[#D2A63C]/10"
+                  }
+                  onClick={() => setShowAlerts((prev) => !prev)}
+                >
+                  <Bell className="h-4 w-4 mr-2" />
+                  {showAlerts ? "Esconder Alertas" : "Alertas MTM"}
+                </Button>
               </div>
             </div>
             <ScannerMobile
@@ -561,6 +576,15 @@ export default function ScannerAccessPage() {
             />
           </div>
         </div>
+
+        {/* Painel de Alertas MTM */}
+        {showAlerts && (
+          <div className="w-full px-2 md:px-4 mb-8 md:mb-12">
+            <div className="max-w-[98%] mx-auto bg-gradient-to-br from-[#BB8525]/10 to-black rounded-lg border border-[#D2A63C]/30 p-3 md:p-6 backdrop-blur-sm">
+              <AlertasMtm />
+            </div>
+          </div>
+        )}
 
         <div className="container mx-auto px-4">
 

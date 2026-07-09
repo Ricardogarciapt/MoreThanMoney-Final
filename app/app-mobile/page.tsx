@@ -29,6 +29,7 @@ import LiveSessionsMobile from "@/components/mobile/live-sessions-mobile"
 import MentorMobile from "@/components/mobile/mentor-mobile"
 import AppsMobile from "@/components/mobile/apps-mobile"
 import ChatChannels from "@/components/mobile/chat-channels"
+import TradingAlertsMobile from "@/components/mobile/trading-alerts-mobile"
 import TapToTradeFeed from "@/components/mobile/tap-to-trade-feed"
 import SettingsMobile from "@/components/mobile/settings-mobile"
 import OnboardingTutorial, { useOnboarding } from "@/components/mobile/onboarding-tutorial"
@@ -71,7 +72,7 @@ function AppMobileContent() {
     onForegroundMessage: handleForegroundMessage,
   })
   const [mounted, setMounted] = useState(false)
-  const validTabs = ["social", "chat", "tap-to-trade", "portfolio", "scanner", "apps", "live", "mentor", "settings", "mlm"] as const
+  const validTabs = ["social", "chat", "tap-to-trade", "portfolio", "scanner", "apps", "live", "mentor", "settings", "mlm", "trading-alerts"] as const
   const tabFromUrl = searchParams.get("tab")
   const channelFromUrl = searchParams.get("channel")
   const [activeTab, setActiveTab] = useState(() =>
@@ -472,6 +473,10 @@ function AppMobileContent() {
 
             <TabsContent value="mlm" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
               <MlmDashboardTab />
+            </TabsContent>
+
+            <TabsContent value="trading-alerts" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
+              {activeTab === "trading-alerts" && <TradingAlertsMobile />}
             </TabsContent>
 
           </Tabs>

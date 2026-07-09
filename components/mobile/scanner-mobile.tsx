@@ -53,6 +53,7 @@ import {
   Globe,
   Settings,
   BarChart3,
+  Bell,
   ZoomIn,
   ZoomOut,
   Minimize,
@@ -1321,6 +1322,19 @@ export default function ScannerMobile({
           <Minimize2 style={{ width: 16, height: 16 }} />
           Sair
         </button>
+      )}
+
+      {/* Alertas MTM — acesso centralizado (webview app iOS/Android) */}
+      {!isFullscreen && !isDesktop && (
+        <div className="px-4 pt-3">
+          <a
+            href="/app-mobile?tab=trading-alerts"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#D2A63C]/50 bg-[#D2A63C]/10 py-2.5 text-sm font-semibold text-[#D2A63C] transition-colors hover:bg-[#D2A63C]/20"
+          >
+            <Bell style={{ width: 16, height: 16 }} />
+            Alertas MTM &amp; Configurar
+          </a>
+        </div>
       )}
 
       {/* Screener / Heatmap */}
