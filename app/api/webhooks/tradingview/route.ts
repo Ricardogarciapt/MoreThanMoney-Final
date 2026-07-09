@@ -420,10 +420,11 @@ export async function POST(request: NextRequest) {
   let providerExecuted = false
   let providerDetail: string | undefined
   const isIdeaAlert = activeSensei?.alertType === "idea" || activeSensei?.alertType === "signal"
-  // Auto-copy Sensei só para Ouro/BTC. Forex (MTM Auto Forex) entra numa fase dedicada.
+  // Auto-copy CopyFactory: Ouro/BTC → conta Sensei; Forex → conta MTM Auto Forex (5IHE).
+  // Ambos gated pelo mesmo master switch SENSEI_PROVIDER_EXEC_ENABLED.
   const canExecuteProvider =
     SENSEI_PROVIDER_EXEC_ENABLED &&
-    assetClass === "gold_btc" &&
+    (assetClass === "gold_btc" || assetClass === "forex") &&
     !isIdeaAlert &&
     parsedForExec.symbol &&
     parsedForExec.direction &&
@@ -450,6 +451,7 @@ export async function POST(request: NextRequest) {
         signal: parsedForExec as NonNullable<ReturnType<typeof parseSignal>>,
         validation: v,
         externalRef: logId,
+        target: assetClass === "forex" ? "forex" : "sensei",
       })
       providerExecuted = exec.executed
       providerDetail = exec.detail

@@ -46,8 +46,8 @@ import {
   formatExecutionSummary,
   getProviderExecutionProfile,
 } from './provider-execution'
-import { resolveMtmProvidersForSignal } from './provider-resolution'
-import { CANONICAL_SENSEI_STRATEGY_ID } from './provider-constants'
+import { resolveMtmProvidersForSignal, resolveMtmProviderForStrategyId } from './provider-resolution'
+import { CANONICAL_SENSEI_STRATEGY_ID, CANONICAL_TRADE_IDEAS_STRATEGY_ID } from './provider-constants'
 import {
   applyManagementToAccount,
   applyTrailingToLatestPosition,
@@ -1269,21 +1269,33 @@ async function processSignalDirect(
   )
 }
 
-/** Execução provider a partir de webhook TradingView (rota Sensei — não Telegram). */
+/**
+ * Execução provider a partir de webhook TradingView.
+ * target='sensei' (default) → conta Sensei (Ouro/BTC).
+ * target='forex' → conta MTM Auto Forex (5IHE), resolvida por strategy id,
+ * sem tocar na rota canónica nem no caminho Telegram.
+ */
 export async function processMtmcopyWebhookSignal(opts: {
   raw: string
   signal: NonNullable<ReturnType<typeof parseSignal>>
   validation: AiSignalValidation
   externalRef?: string
+  target?: 'sensei' | 'forex'
 }): Promise<{ executed: boolean; detail?: string }> {
   if (!isMetaApiConfigured()) {
     return { executed: false, detail: 'MetaAPI não configurado' }
   }
 
   const channel: MtmcopyChannelKey = 'trade-ideas'
-  const providers = await resolveMtmProvidersForSignal(channel, null, { signalSource: 'webhook' })
+  const providers =
+    opts.target === 'forex'
+      ? await (async () => {
+          const p = await resolveMtmProviderForStrategyId(CANONICAL_TRADE_IDEAS_STRATEGY_ID)
+          return p ? [p] : []
+        })()
+      : await resolveMtmProvidersForSignal(channel, null, { signalSource: 'webhook' })
   if (!providers.length) {
-    return { executed: false, detail: 'Rota provider Sensei não configurada' }
+    return { executed: false, detail: opts.target === 'forex' ? 'Rota MTM Auto Forex não configurada' : 'Rota provider Sensei não configurada' }
   }
 
   const enriched = applyValidationToSignal(opts.signal, opts.validation)
@@ -1329,7 +1341,7 @@ export async function processMtmcopyWebhookSignal(opts: {
 
   return {
     executed: true,
-    detail: `Sensei · ${providers.map((p) => p.strategyId ?? CANONICAL_SENSEI_STRATEGY_ID).join(',')}`,
+    detail: `${opts.target === 'forex' ? 'Auto Forex' : 'Sensei'} · ${providers.map((p) => p.strategyId ?? CANONICAL_SENSEI_STRATEGY_ID).join(',')}`,
   }
 }
 
