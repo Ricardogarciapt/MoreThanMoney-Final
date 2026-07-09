@@ -112,6 +112,9 @@ function TerminalGate() {
   return <TerminalContent />
 }
 
+/** Scanner Momentum MTM — dá ao cliente a perspetiva do ativo (4H por defeito). */
+const MOMENTUM_STUDIES = ["PUB;00ec48baf0ee43f0a43e1658bb54cdab", "PUB;38080827cf244587b5e7dbb9f272db0a"]
+
 const DIR_META = {
   BULLISH: { cls: "border-green-500/40 bg-green-500/15 text-green-400", Icon: TrendingUp, bar: "#34d399" },
   BEARISH: { cls: "border-red-500/40 bg-red-500/15 text-red-400", Icon: TrendingDown, bar: "#f87171" },
@@ -329,7 +332,12 @@ function TerminalContent() {
             </CardContent>
           </Card>
 
-          <TvChartEmbed tvSymbol={selected.tvSymbol} interval="240" height={340} />
+          <TvChartEmbed
+            tvSymbol={selected.tvSymbol}
+            interval="240"
+            height={440}
+            studies={MOMENTUM_STUDIES}
+          />
 
           {error && (
             <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">{error}</div>

@@ -211,7 +211,7 @@ export async function generateTerminalDashboard(
       headers: { "content-type": "application/json", "x-api-key": key ?? "", "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
         model,
-        max_tokens: 2000,
+        max_tokens: 1500,
         system: DASHBOARD_SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],
       }),

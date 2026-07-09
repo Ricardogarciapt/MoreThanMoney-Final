@@ -40,6 +40,8 @@ interface TvChartEmbedProps {
   height?: number
   /** Compacto = sem barra de ferramentas (para cartões de alerta) */
   compact?: boolean
+  /** Studies/indicadores a aplicar (ex.: PUB;<id> dos scanners MTM) */
+  studies?: string[]
 }
 
 export default function TvChartEmbed({
@@ -47,9 +49,12 @@ export default function TvChartEmbed({
   interval = "60",
   height = 420,
   compact = false,
+  studies,
 }: TvChartEmbedProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const idRef = useRef(`tvchart_${Math.abs(hashCode(tvSymbol + interval + (compact ? "c" : "f")))}`)
+  const idRef = useRef(
+    `tvchart_${Math.abs(hashCode(tvSymbol + interval + (compact ? "c" : "f") + (studies?.join(",") ?? "")))}`
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -79,12 +84,13 @@ export default function TvChartEmbed({
         save_image: false,
         backgroundColor: "rgba(0,0,0,1)",
         gridColor: "rgba(210,166,60,0.06)",
+        ...(studies && studies.length ? { studies } : {}),
       })
     })
     return () => {
       cancelled = true
     }
-  }, [tvSymbol, interval, compact])
+  }, [tvSymbol, interval, compact, studies])
 
   return (
     <div
