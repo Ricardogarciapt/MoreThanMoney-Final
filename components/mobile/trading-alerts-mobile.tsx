@@ -16,6 +16,7 @@ import {
   Clock,
   Loader2,
   Settings2,
+  ArrowLeft,
   Save,
   Pin,
   Ban,
@@ -261,15 +262,31 @@ export default function TradingAlertsMobile() {
           <BellRing className="h-5 w-5 text-[#D2A63C]" />
           <h2 className="text-lg font-bold text-white">Trading Alerts</h2>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setShowManager((v) => !v)}
-          className="border-[#D2A63C]/40 text-[#D2A63C]"
-        >
-          <SlidersHorizontal className="mr-1 h-4 w-4" />
-          Gerir
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                if (window.history.length > 1) window.history.back()
+                else window.location.href = "/app-mobile?tab=scanner"
+              }
+            }}
+            className="border-gray-600 text-gray-300"
+          >
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            Voltar
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowManager((v) => !v)}
+            className="border-[#D2A63C]/40 text-[#D2A63C]"
+          >
+            <SlidersHorizontal className="mr-1 h-4 w-4" />
+            Gerir
+          </Button>
+        </div>
       </div>
 
       {/* Gestor de preferências */}

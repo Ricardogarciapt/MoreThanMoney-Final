@@ -22,7 +22,7 @@ import {
 } from "@/lib/mtmcopy/sensei-ideas"
 import { processMtmcopyWebhookSignal, processMtmcopyWebhookManagement } from "@/lib/mtmcopy/processor"
 import { getSiteOrigin } from "@/lib/site-url"
-import { resolvedTradeIdeasChatId } from "@/lib/telegram-channel-ids"
+import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId } from "@/lib/telegram-channel-ids"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export const runtime = "nodejs"
@@ -160,6 +160,75 @@ function composePost(
   return [`🧠 Sensei Scanner — ${title}${tag}`, ``, head, DISCLAIMER].join("\n")
 }
 
+// ─── Roteamento por classe de ativo ──────────────────────────────────────────
+type AssetClass = "gold_btc" | "forex" | "index" | "crypto_perp" | "other"
+
+const FOREX_CODES = new Set(["EUR", "USD", "GBP", "JPY", "CHF", "AUD", "NZD", "CAD", "SGD", "SEK", "NOK", "MXN", "ZAR"])
+const INDEX_SET = new Set([
+  "UK100", "US30", "US100", "US500", "SPX500", "SPX", "NAS100", "NAS", "NDX", "DJI",
+  "GER40", "DE40", "DE30", "DAX", "JP225", "JPN225", "FRA40", "EU50", "STOXX50",
+  "US2000", "HK50", "AUS200", "ESP35", "IT40",
+])
+
+/** Classifica o ticker do webhook para escolher canal/telegram/copy. */
+function classifyAsset(rawTicker: string | null): AssetClass {
+  if (!rawTicker) return "other"
+  const norm = rawTicker.toUpperCase().replace(/[^A-Z0-9.]/g, "").replace(/^[A-Z]+:/, "")
+  // Ouro + BTC spot (Sensei)
+  if (/XAUUSD/.test(norm) || /^BTCUSD$/.test(norm)) return "gold_btc"
+  // Cripto perpétuos (.P, USDT, PERP)
+  if (/\.P$/.test(norm) || /USDT/.test(norm) || /PERP/.test(norm)) return "crypto_perp"
+  const letters = norm.replace(/[^A-Z]/g, "")
+  if (letters.length === 6 && FOREX_CODES.has(letters.slice(0, 3)) && FOREX_CODES.has(letters.slice(3, 6))) return "forex"
+  if (INDEX_SET.has(norm) || INDEX_SET.has(letters)) return "index"
+  return "other"
+}
+
+interface SignalRoute {
+  channel: string | null // null = só Alertas MTM (sem chat)
+  telegram: string | null // null = sem relay Telegram
+  sender: string
+  push: boolean
+  autoCopy: boolean // execução automática CopyFactory
+}
+
+function resolveRoute(cls: AssetClass): SignalRoute {
+  switch (cls) {
+    case "gold_btc":
+      return { channel: "sensei-scanner", telegram: resolvedTradeIdeasChatId(), sender: "🧠 Sensei Scanner", push: true, autoCopy: true }
+    case "forex":
+      return { channel: "trade-ideas-setup", telegram: resolvedForexIdeasChatId(), sender: "💱 Ideias de Forex", push: true, autoCopy: false }
+    case "index":
+      return { channel: "trade-ideas", telegram: null, sender: "📈 Ideias de Índices", push: true, autoCopy: false }
+    case "crypto_perp":
+      return { channel: "cripto-perps", telegram: null, sender: "🪙 Perpétuos Cripto", push: true, autoCopy: false }
+    default:
+      return { channel: null, telegram: null, sender: "", push: false, autoCopy: false }
+  }
+}
+
+/** Card genérico (forex/índices/cripto) — não usa a marca Sensei. */
+function composeGenericPost(
+  route: SignalRoute,
+  v: { symbol: string | null; direction: "buy" | "sell" | null; entry: number | null; sl: number | null; tp: number[]; confidence: number },
+  timeframe: string | null,
+): string {
+  const dir = v.direction === "buy" ? "🔵 COMPRA" : v.direction === "sell" ? "🔴 VENDA" : "—"
+  const tps = (v.tp ?? []).map((t, i) => `✅ Take Profit ${i + 1}: ${t}`).filter(Boolean)
+  return [
+    `${route.sender} — Novo Sinal`,
+    ``,
+    `📊 ${v.symbol ?? "—"}   ${dir}`,
+    timeframe ? `⏱ Timeframe: ${timeframe}` : null,
+    `🎯 Entrada: ${v.entry ?? "Mercado"}`,
+    `🛑 Stop Loss: ${v.sl ?? "—"}`,
+    ...tps,
+    ``,
+    `🔎 Validação: ${Math.round((v.confidence || 0) * 100)}%`,
+    DISCLAIMER,
+  ].filter(Boolean).join("\n")
+}
+
 async function sendTelegram(token: string, chatId: string, text: string, replyToMessageId?: number | null): Promise<number> {
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
@@ -177,7 +246,7 @@ async function sendTelegram(token: string, chatId: string, text: string, replyTo
 }
 
 /** Push só para membros Premium/IQ/VIP/admin (canal #Sensei Scanner é restrito). */
-async function pushPremium(supabase: SupabaseClient, messageId: string, title: string, body: string): Promise<void> {
+async function pushPremium(supabase: SupabaseClient, channelSlug: string, messageId: string, title: string, body: string): Promise<void> {
   const { data: members } = await supabase
     .from("profiles")
     .select("id")
@@ -185,7 +254,7 @@ async function pushPremium(supabase: SupabaseClient, messageId: string, title: s
     .or("subscription_plan.eq.premium,member_category.eq.iq,member_category.eq.vip,user_type.eq.admin")
   const userIds = (members ?? []).map((m: { id: string }) => m.id)
   if (!userIds.length) return
-  const url = `/app-mobile?tab=chat&channel=${encodeURIComponent(CHANNEL_SLUG)}`
+  const url = `/app-mobile?tab=chat&channel=${encodeURIComponent(channelSlug)}`
   await fetch(`${getSiteOrigin()}/api/notifications/send-push`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -194,8 +263,8 @@ async function pushPremium(supabase: SupabaseClient, messageId: string, title: s
       title,
       body,
       url,
-      data: { type: "chat_message", channel: CHANNEL_SLUG, message_id: messageId, url },
-      tag: `chat_${CHANNEL_SLUG}`,
+      data: { type: "chat_message", channel: channelSlug, message_id: messageId, url },
+      tag: `chat_${channelSlug}`,
     }),
   })
 }
@@ -235,6 +304,10 @@ export async function POST(request: NextRequest) {
   const state = pick(payload, ["state", "phase"])
   const alertName = pick(payload, ["alert_name", "alert", "name", "strategy"])
   const freeText = isJson ? pick(payload, ["message", "comment", "text"]) : String(payload.message ?? "")
+
+  // Classe de ativo → canal / Telegram / auto-copy
+  const assetClass = classifyAsset(ticker)
+  const route = resolveRoute(assetClass)
 
   const allTp = [tp, tp2, tp3, tp4].filter((n): n is number => n != null)
   const senseiFields: SenseiTradingViewFields = {
@@ -325,6 +398,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, valid: false, reason: v.reasoning, confidence: v.confidence })
   }
 
+  // Ativos sem canal dedicado (stocks/ETFs/outros) → só sistema de Alertas MTM (sem chat/Telegram)
+  if (!route.channel) {
+    if (logId) await supabase.from("tradingview_signals").update({ chat_status: "filtered", telegram_status: "filtered" }).eq("id", logId)
+    return NextResponse.json({ ok: true, valid: true, filtered: true, asset_class: assetClass, signal_id: logId })
+  }
+
   const parsedForExec =
     activeSensei ??
     parseSignal(raw) ??
@@ -341,8 +420,10 @@ export async function POST(request: NextRequest) {
   let providerExecuted = false
   let providerDetail: string | undefined
   const isIdeaAlert = activeSensei?.alertType === "idea" || activeSensei?.alertType === "signal"
+  // Auto-copy Sensei só para Ouro/BTC. Forex (MTM Auto Forex) entra numa fase dedicada.
   const canExecuteProvider =
     SENSEI_PROVIDER_EXEC_ENABLED &&
+    assetClass === "gold_btc" &&
     !isIdeaAlert &&
     parsedForExec.symbol &&
     parsedForExec.direction &&
@@ -403,7 +484,7 @@ export async function POST(request: NextRequest) {
         : null
 
   // Gestão automática Sensei (gated): TP/BE/SL → parciais + BE + trailing ou fecho na conta Sensei
-  if (SENSEI_PROVIDER_EXEC_ENABLED && isFollowup && activeSensei?.symbol) {
+  if (SENSEI_PROVIDER_EXEC_ENABLED && assetClass === "gold_btc" && isFollowup && activeSensei?.symbol) {
     try {
       await processMtmcopyWebhookManagement({
         symbol: activeSensei.symbol,
@@ -417,17 +498,20 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const post = composePost(v, activeSensei, msgCtx)
+  const post =
+    assetClass === "gold_btc"
+      ? composePost(v, activeSensei, msgCtx)
+      : composeGenericPost(route, v, timeframe)
   const replyToTelegramId = isFollowup ? linkedIdea?.telegramMessageId ?? null : null
   // Ideia cuja mensagem de entrada/activação guardamos para os follow-ups responderem
   const entryIdeaId = savedIdea?.id ?? entryTradeIdea?.id ?? null
 
-  // Publica no chat #Sensei Scanner (mesma convenção do mirror Telegram)
+  // Publica no canal de chat correspondente à classe de ativo
   let chatId: string | null = null
   try {
     const { data: msg, error } = await supabase
       .from("chat_messages")
-      .insert({ channel_slug: CHANNEL_SLUG, message_type: "telegram_forward", content: post, telegram_sender: CHAT_SENDER, user_id: null })
+      .insert({ channel_slug: route.channel, message_type: "telegram_forward", content: post, telegram_sender: route.sender, user_id: null })
       .select("id").single()
     if (error) throw error
     chatId = msg.id as string
@@ -439,40 +523,44 @@ export async function POST(request: NextRequest) {
   // Push (iOS/APK/PWA) — só Premium/IQ/VIP/admin (canal restrito).
   // await (não fire-and-forget): no Vercel o trabalho assíncrono é morto após a resposta.
   let pushOk = false
-  if (chatId) {
+  if (chatId && route.push) {
     const body = [
       v.symbol ?? ticker ?? "Sinal",
       activeSensei ? senseiAlertTypeLabel(activeSensei.alertType) : "",
       v.direction === "buy" ? "COMPRA" : v.direction === "sell" ? "VENDA" : "",
     ].filter(Boolean).join(" — ")
     const pushTitle =
-      activeSensei?.alertType === "idea"
-        ? "💡 Nova ideia — Sensei Scanner"
-        : activeSensei?.alertType === "entry_trigger"
-          ? "✅ Ideia activada — Sensei Scanner"
-          : "🧠 Novo sinal — Sensei Scanner"
+      assetClass === "gold_btc"
+        ? activeSensei?.alertType === "idea"
+          ? "💡 Nova ideia — Sensei Scanner"
+          : activeSensei?.alertType === "entry_trigger"
+            ? "✅ Ideia activada — Sensei Scanner"
+            : "🧠 Novo sinal — Sensei Scanner"
+        : `${route.sender} — Novo sinal`
     try {
-      await pushPremium(supabase, chatId, pushTitle, body)
+      await pushPremium(supabase, route.channel, chatId, pushTitle, body)
       pushOk = true
     } catch (e) {
       console.error("[tradingview-webhook] push error:", e)
     }
   }
 
-  // Relay Telegram → canal Sensei Scanner (-1003853860780 por defeito)
+  // Relay Telegram → grupo correspondente à classe (Ouro/BTC: -1003853860780, Forex: -1003716578747)
+  const relayChatId = route.telegram
+  const relayOn = Boolean(relayChatId && AIBOT_TOKEN && !RELAY_DISABLED)
   let tgOk = false
   let telegramMid: number | null = null
-  if (RELAY_ENABLED) {
+  if (relayOn && relayChatId) {
     try {
-      const mid = await sendTelegram(AIBOT_TOKEN, RELAY_CHAT_ID, post, replyToTelegramId)
+      const mid = await sendTelegram(AIBOT_TOKEN, relayChatId, post, replyToTelegramId)
       telegramMid = mid
       tgOk = true
-      if (logId) await supabase.from("tradingview_signals").update({ telegram_status: "sent", telegram_chat_id: RELAY_CHAT_ID, telegram_message_id: mid, relayed_at: new Date().toISOString() }).eq("id", logId)
+      if (logId) await supabase.from("tradingview_signals").update({ telegram_status: "sent", telegram_chat_id: relayChatId, telegram_message_id: mid, relayed_at: new Date().toISOString() }).eq("id", logId)
     } catch (err) {
-      if (logId) await supabase.from("tradingview_signals").update({ telegram_status: "error", telegram_chat_id: RELAY_CHAT_ID, telegram_error: String(err) }).eq("id", logId)
+      if (logId) await supabase.from("tradingview_signals").update({ telegram_status: "error", telegram_chat_id: relayChatId, telegram_error: String(err) }).eq("id", logId)
     }
   } else if (logId) {
-    const reason = !AIBOT_TOKEN ? "TELEGRAM_AIBOT_TOKEN em falta" : !RELAY_CHAT_ID ? "TRADINGVIEW_RELAY_CHAT_ID em falta" : "relay desligado"
+    const reason = !relayChatId ? "sem grupo Telegram para esta classe" : !AIBOT_TOKEN ? "TELEGRAM_AIBOT_TOKEN em falta" : "relay desligado"
     await supabase.from("tradingview_signals").update({ telegram_status: "disabled", telegram_error: reason }).eq("id", logId)
   }
 

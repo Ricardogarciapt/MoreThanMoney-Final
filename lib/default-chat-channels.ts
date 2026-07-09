@@ -56,15 +56,15 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
   },
   {
     slug: 'trade-ideas',
-    name: 'Ideias Forex',
-    description: 'Ideias da comunidade — requer UID VT Markets',
+    name: 'Ideias de Índices',
+    description: 'Sinais de índices (webhook TradingView) — tap-to-trade',
     parent_slug: 'sinais',
     position: 11,
   },
   {
     slug: 'trade-ideas-setup',
-    name: 'Telegram · Sensei Scanner',
-    description: 'Sinais MTM Auto / Sensei Scanner (espelhados do Telegram)',
+    name: 'Ideias de Forex',
+    description: 'Sinais de forex (webhook TradingView) — tap-to-trade / MTM Auto Forex',
     parent_slug: 'sinais',
     position: 12,
   },
@@ -77,10 +77,17 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
   },
   {
     slug: 'sensei-scanner',
-    name: 'Sensei Scanner',
-    description: 'Sinais automáticos do scanner Sensei (TradingView + validação IA)',
+    name: 'Ideias de Sinais Ouro e BTC',
+    description: 'Sinais automáticos Ouro/BTC do scanner Sensei (TradingView + validação IA)',
     parent_slug: 'sinais',
     position: 14,
+  },
+  {
+    slug: 'cripto-perps',
+    name: 'Ideias de Perpetuos Cripto',
+    description: 'Sinais de perpétuos cripto (webhook TradingView)',
+    parent_slug: 'sinais',
+    position: 15,
   },
 ]
 
