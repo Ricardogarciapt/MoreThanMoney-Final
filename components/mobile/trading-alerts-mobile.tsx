@@ -245,6 +245,10 @@ export default function TradingAlertsMobile() {
         if (!sub.symbols.some((s) => t.includes(norm(s)))) return false
       }
       if (sub.timeframes.length > 0 && a.timeframe && !sub.timeframes.includes(a.timeframe)) return false
+      if (sub.strategies.length > 0) {
+        const st = norm(a.strategy || "")
+        if (!st || !sub.strategies.some((s) => st.includes(norm(s)))) return false
+      }
       return true
     })
   }, [alerts, sub])
