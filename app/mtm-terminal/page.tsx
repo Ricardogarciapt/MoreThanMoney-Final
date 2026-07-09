@@ -36,6 +36,7 @@ import {
   Sparkles,
   ShieldAlert,
   Radio,
+  RefreshCw,
 } from "lucide-react"
 
 /** Acesso: admin, vip ou premium (mesma regra das Apps MTM). */
@@ -108,7 +109,10 @@ function TerminalContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [quote, setQuote] = useState<LiveQuote | null>(null)
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null)
+  const [fromCache, setFromCache] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
+  const runAnalysisRef = useRef<() => void>(() => {})
 
   const tvInterval = useMemo(
     () => TIMEFRAMES.find((t) => t.value === timeframe)?.tvInterval || "240",
@@ -136,6 +140,8 @@ function TerminalContent() {
     setError(null)
     setAnalysis("")
     setQuote(null)
+    setFromCache(false)
+    setGeneratedAt(null)
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
@@ -183,6 +189,48 @@ function TerminalContent() {
       setLoading(false)
     }
   }
+
+  // Mantém a referência da análise ao vivo para o auto-load poder chamá-la
+  runAnalysisRef.current = runAnalysis
+
+  // Ao abrir / mudar de ativo: mostra a análise diária guardada; se não houver, gera ao vivo
+  useEffect(() => {
+    let cancelled = false
+    const loadForAsset = async () => {
+      setError(null)
+      setAnalysis("")
+      setQuote(null)
+      setFromCache(false)
+      setGeneratedAt(null)
+      setLoading(true)
+      try {
+        const res = await fetch(`/api/mtm-terminal/analyze?symbol=${selected.symbol}`, {
+          credentials: "include",
+          cache: "no-store",
+        })
+        const data = await res.json()
+        if (cancelled) return
+        if (res.ok && data.cached && data.cached.analysis) {
+          setAnalysis(data.cached.analysis)
+          setQuote(data.cached.quote || null)
+          setGeneratedAt(data.cached.generatedAt || null)
+          setFromCache(true)
+          setLoading(false)
+          return
+        }
+      } catch {
+        /* sem cache — cai para análise ao vivo */
+      }
+      if (cancelled) return
+      setLoading(false)
+      runAnalysisRef.current()
+    }
+    loadForAsset()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected.symbol])
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -300,7 +348,7 @@ function TerminalContent() {
                   </>
                 ) : (
                   <>
-                    <BrainCircuit className="mr-2 h-4 w-4" /> Analisar {selected.symbol}
+                    <RefreshCw className="mr-2 h-4 w-4" /> Atualizar análise
                   </>
                 )}
               </Button>
@@ -359,9 +407,14 @@ function TerminalContent() {
           {/* Análise IA */}
           <Card className="border-[#D2A63C]/20 bg-gradient-to-br from-[#1a1a1a] to-black">
             <CardContent className="p-5">
-              <div className="mb-3 flex items-center gap-2 border-b border-white/10 pb-3">
+              <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-white/10 pb-3">
                 <BrainCircuit className="h-5 w-5 text-[#D2A63C]" />
                 <h2 className="font-semibold text-white">Relatório de Análise Institucional</h2>
+                {fromCache && generatedAt && (
+                  <span className="ml-auto text-[11px] text-gray-500">
+                    Atualizado {new Date(generatedAt).toLocaleString("pt-PT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · atualiza diariamente às 9h
+                  </span>
+                )}
               </div>
 
               {error && (

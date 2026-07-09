@@ -190,8 +190,8 @@ export async function GET(request: NextRequest) {
     const admin = getSupabaseAdmin()
     let query = admin
       .from("tradingview_signals")
-      .select("id, ticker, exchange, timeframe, action, price, sl, tp, alert_name, message, ai_analysis, raw_payload, chat_status, created_at")
-      .order("created_at", { ascending: false })
+      .select("id, ticker, exchange, timeframe, action, price, sl, tp, alert_name, message, ai_analysis, raw_payload, chat_status, received_at")
+      .order("received_at", { ascending: false })
       .limit(limit)
 
     if (symbolFilter) query = query.ilike("ticker", `%${symbolFilter}%`)
@@ -221,7 +221,7 @@ export async function GET(request: NextRequest) {
         message: row.message,
         aiAnalysis: row.ai_analysis,
         chartImageUrl: extractChartImage(raw, row.message),
-        createdAt: row.created_at,
+        createdAt: row.received_at,
         status: row.chat_status,
       }
     })

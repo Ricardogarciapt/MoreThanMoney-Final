@@ -209,6 +209,27 @@ Deno.serve(async (req: Request) => {
     })
   }
 
+  // Gate do chat/Telegram Sensei: só XAUUSD e BTCUSD vão para o chat #Sensei Scanner.
+  // Os restantes ativos da watchlist ficam guardados em tradingview_signals e aparecem
+  // apenas no sistema de Alertas MTM (site + app), não no chat Sensei.
+  const normTicker = (ticker ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const CHAT_TICKERS = (Deno.env.get('SENSEI_CHAT_TICKERS') ?? 'XAUUSD,BTCUSD')
+    .split(',')
+    .map((s) => s.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''))
+    .filter(Boolean)
+  const allowChat = normTicker !== '' && CHAT_TICKERS.some((t) => normTicker.includes(t))
+
+  if (!allowChat) {
+    await supabase
+      .from('tradingview_signals')
+      .update({ chat_status: 'filtered', telegram_status: 'filtered' })
+      .eq('id', row.id)
+    return new Response(
+      JSON.stringify({ success: true, id: row.id, valid: true, chat: false, telegram: false, filtered: true, ticker }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
   let chatOk = false
   try {
     const { data: msg, error: chatErr } = await supabase
