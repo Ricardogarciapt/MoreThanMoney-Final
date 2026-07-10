@@ -190,7 +190,7 @@ export async function GET(request: NextRequest) {
     const admin = getSupabaseAdmin()
     let query = admin
       .from("tradingview_signals")
-      .select("id, ticker, exchange, timeframe, action, price, sl, tp, alert_name, message, ai_analysis, raw_payload, chat_status, received_at")
+      .select("id, ticker, exchange, timeframe, action, price, sl, tp, alert_name, message, ai_analysis, raw_payload, chat_status, chart_image_url, received_at")
       .order("received_at", { ascending: false })
       .limit(limit)
 
@@ -220,7 +220,7 @@ export async function GET(request: NextRequest) {
         confirmations: extractConfirmations(raw),
         message: row.message,
         aiAnalysis: row.ai_analysis,
-        chartImageUrl: extractChartImage(raw, row.message),
+        chartImageUrl: (row.chart_image_url as string | null) || extractChartImage(raw, row.message),
         createdAt: row.received_at,
         status: row.chat_status,
       }
