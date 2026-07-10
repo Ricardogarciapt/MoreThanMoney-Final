@@ -53,6 +53,7 @@ interface Subscription {
   timeframes: string[]
 }
 
+const DEFAULT_ALERT_SYMBOLS = ["XAUUSD", "EURUSD", "GBPUSD", "USDCAD", "USDJPY", "BTCUSD", "US30"]
 const STRATEGIES = ["GoldenZone", "Momentum", "KillShot", "Supernova", "Winzone", "Sinergy", "Goldkiller", "Sensei", "MTMScanner"]
 const TIMEFRAMES = ["5", "15", "30", "60", "240", "D"]
 const SYMBOLS = TERMINAL_ASSETS.map((a) => a.symbol)
@@ -163,7 +164,7 @@ function MobileAlertCard({ alert }: { alert: MtmAlert }) {
 export default function TradingAlertsMobile() {
   const { toast } = useToast()
   const [sub, setSub] = useState<Subscription>({
-    enabled: true, push_enabled: true, symbols: [], strategies: [], timeframes: [],
+    enabled: true, push_enabled: true, symbols: DEFAULT_ALERT_SYMBOLS, strategies: [], timeframes: [],
   })
   const [alerts, setAlerts] = useState<MtmAlert[]>([])
   const [loading, setLoading] = useState(true)

@@ -25,10 +25,13 @@ async function getClient() {
   )
 }
 
+/** Ativos que cada utilizador recebe por defeito nos Alertas MTM (o resto liga nos settings). */
+export const DEFAULT_ALERT_SYMBOLS = ["XAUUSD", "EURUSD", "GBPUSD", "USDCAD", "USDJPY", "BTCUSD", "US30"]
+
 const DEFAULT_SUB = {
   enabled: true,
   push_enabled: true,
-  symbols: [] as string[],
+  symbols: DEFAULT_ALERT_SYMBOLS,
   strategies: [] as string[],
   timeframes: [] as string[],
 }

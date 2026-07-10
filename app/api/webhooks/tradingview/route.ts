@@ -230,6 +230,60 @@ function composeGenericPost(
   ].filter(Boolean).join("\n")
 }
 
+// ─── Gate de qualidade para auto-copy (confirmações + timeframe ajustado) ─────
+const PREF_TF_MIN: Record<AssetClass, number[]> = {
+  gold_btc: [15, 30, 60, 240],
+  forex: [15, 30, 60],
+  index: [30, 60, 240],
+  crypto_perp: [15, 30, 60, 240],
+  other: [],
+}
+
+function tfToMinutes(tf: string | null): number | null {
+  if (!tf) return null
+  const s = String(tf).trim().toUpperCase()
+  if (/^\d+$/.test(s)) return parseInt(s, 10)
+  const m = s.match(/^(\d+)\s*(M|MIN|H|D|W)$/)
+  if (m) {
+    const n = parseInt(m[1], 10)
+    return m[2] === "H" ? n * 60 : m[2] === "D" ? n * 1440 : m[2] === "W" ? n * 10080 : n
+  }
+  if (s === "D") return 1440
+  if (s === "W") return 10080
+  return null
+}
+
+/** Nº de confirmações passadas no payload (zonetouch/bandtouch/trendtracker...), ou null se não houver. */
+function confirmationsPassed(raw: Json): number | null {
+  const toBool = (v: unknown) =>
+    v === true || v === 1 || (typeof v === "string" && /^(true|1|yes|sim|ok|pass|passed|✅)$/i.test(v.trim()))
+  const src = raw.confirmations
+  if (src && typeof src === "object" && !Array.isArray(src)) {
+    const vals = Object.values(src as Record<string, unknown>)
+    return vals.length ? vals.filter(toBool).length : null
+  }
+  if (Array.isArray(src)) {
+    const arr = src as Array<Record<string, unknown>>
+    return arr.length ? arr.filter((c) => toBool(c.passed ?? c.value ?? c.status)).length : null
+  }
+  const keys = ["zonetouch", "bandtouch", "trendtracker", "trend_tracker"]
+  const present = keys.filter((k) => k in raw || k.toUpperCase() in raw)
+  if (!present.length) return null
+  return present.filter((k) => toBool(raw[k] ?? raw[k.toUpperCase()])).length
+}
+
+/** Só as melhores ideias abrem: confirmações suficientes + timeframe ajustado ao ativo. */
+function passesQualityGate(raw: Json, timeframe: string | null, cls: AssetClass): boolean {
+  // Confirmações: se existirem, exige pelo menos 2 passadas.
+  const passed = confirmationsPassed(raw)
+  if (passed !== null && passed < 2) return false
+  // Timeframe: se conhecido, tem de estar nos ajustados ao ativo.
+  const min = tfToMinutes(timeframe)
+  const pref = PREF_TF_MIN[cls]
+  if (min !== null && pref.length && !pref.includes(min)) return false
+  return true
+}
+
 async function sendTelegram(token: string, chatId: string, text: string, replyToMessageId?: number | null): Promise<number> {
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
@@ -432,6 +486,7 @@ export async function POST(request: NextRequest) {
     !isIdeaAlert &&
     parsedForExec.symbol &&
     parsedForExec.direction &&
+    passesQualityGate(payload, timeframe, assetClass) &&
     (activeSensei?.alertType === "entry_trigger" || !activeSensei)
 
   let savedIdea: { id: string; tradeNumber: number | null } | null = null

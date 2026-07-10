@@ -90,6 +90,9 @@ export default function SettingsMobile() {
   const [savingNotifPref, setSavingNotifPref] = useState<NotificationCategory | null>(null)
   const [pushEnabled, setPushEnabled]     = useState(false)
   const [pushBusy, setPushBusy]           = useState(false)
+  const [mtmAlertsOn, setMtmAlertsOn]     = useState(true)
+  const [mtmAlertsBusy, setMtmAlertsBusy] = useState(false)
+  const mtmSubRef = useRef<any>(null)
   const { theme, setTheme } = useTheme()
   const [mountedTheme, setMountedTheme]   = useState(false)
 
@@ -123,6 +126,60 @@ export default function SettingsMobile() {
     }
     loadPrefs()
   }, [user?.id])
+
+  // Carregar estado do switch de Trading Alerts (subscrição)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch("/api/mtm-alerts/subscriptions", { credentials: "include", cache: "no-store" })
+        const data = await res.json()
+        if (!cancelled && data?.subscription) {
+          mtmSubRef.current = data.subscription
+          setMtmAlertsOn(data.subscription.enabled !== false)
+        }
+      } catch {
+        /* mantém default ligado */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const toggleMtmAlerts = async () => {
+    if (mtmAlertsBusy) return
+    setMtmAlertsBusy(true)
+    const next = !mtmAlertsOn
+    setMtmAlertsOn(next)
+    try {
+      const cur = mtmSubRef.current ?? {}
+      const res = await fetch("/api/mtm-alerts/subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          enabled: next,
+          push_enabled: cur.push_enabled !== false,
+          symbols: cur.symbols ?? [],
+          strategies: cur.strategies ?? [],
+          timeframes: cur.timeframes ?? [],
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Falha")
+      mtmSubRef.current = data.subscription
+      toast({
+        title: next ? "Trading Alerts activados" : "Trading Alerts desactivados",
+        description: next ? "Vais receber alertas dos teus ativos." : "Deixas de receber notificações de Trading Alerts.",
+      })
+    } catch {
+      setMtmAlertsOn(!next)
+      toast({ title: "Erro", description: "Não foi possível guardar.", variant: "destructive" })
+    } finally {
+      setMtmAlertsBusy(false)
+    }
+  }
 
   const toggleNotifPref = async (key: NotificationCategory) => {
     const next = { ...notifPrefs, [key]: !notifPrefs[key] }
@@ -924,6 +981,21 @@ export default function SettingsMobile() {
                 soundEnabled ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"
               }`}>
                 {soundEnabled ? "Ligado" : "Desligado"}
+              </span>
+            </button>
+
+            {/* Trading Alerts (MTM) */}
+            <button
+              onClick={toggleMtmAlerts}
+              disabled={mtmAlertsBusy}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-b-xl hover:bg-gray-700/40 transition-colors disabled:opacity-60"
+            >
+              <Bell className="w-4 h-4 text-[#D2A63C]" />
+              <span className="flex-1 text-left text-sm text-white">Notificações de Trading Alerts</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                mtmAlertsOn ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"
+              }`}>
+                {mtmAlertsBusy ? "…" : mtmAlertsOn ? "Ligadas" : "Desligadas"}
               </span>
             </button>
           </div>
