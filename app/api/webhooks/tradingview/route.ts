@@ -655,7 +655,13 @@ export async function POST(request: NextRequest) {
   // Só ENTRADAS (não follow-ups) e para todas as classes de ativo.
   // await (não fire-and-forget): no Vercel o trabalho assíncrono é morto após a resposta.
   let pushOk = false
-  if (initSignalKind === "entry") {
+  // Perpétuos cripto só enviam push em 1H (SL curtos noutros TF → overtrading/ruído).
+  const cryptoPerpBlocked =
+    assetClass === "crypto_perp" && (() => {
+      const m = tfToMinutes(timeframe)
+      return m !== null && m !== 60
+    })()
+  if (initSignalKind === "entry" && !cryptoPerpBlocked) {
     const dir =
       v.direction === "buy"
         ? "COMPRA"
