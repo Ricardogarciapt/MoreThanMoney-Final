@@ -75,9 +75,10 @@ export default function Navbar() {
         { name: "MTMcopier", href: "/mtmcopy" },
         { name: "Os nossos Scanners", href: "/scanner" },
         { name: "Scanner ao Vivo", href: "/scanner-access" },
-        { name: "Trading Desk", href: "/trading" },
+        { name: "Alertas MTM", href: "/alertas-mtm" },
         { name: "Portefólios", href: "/portfolios" },
         { name: "Terminal MTM", href: "/mtm-terminal" },
+        { name: "Trading Desk", href: "/trading" },
       ],
     },
     {

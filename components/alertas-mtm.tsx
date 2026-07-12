@@ -54,6 +54,25 @@ interface MtmAlert {
   chartImageUrl: string | null
   createdAt: string
   status: string | null
+  tradeStatus: string | null
+  assetClass: "gold_btc" | "forex" | "index" | "crypto_perp" | "other"
+  slDistance: number | null
+  slPercent: number | null
+  slPips: number | null
+  slUnit: "pips" | "pts"
+  crypto: { margin: number; leverage: number; notionalUsd: number; quantity: number | null } | null
+}
+
+const TRADE_STATE_META: Record<string, { label: string; cls: string }> = {
+  pending: { label: "Pendente", cls: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
+  active: { label: "Ativa", cls: "border-blue-500/40 bg-blue-500/10 text-blue-300" },
+  be: { label: "BreakEven", cls: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
+  exit_1: { label: "Exit 1", cls: "border-green-500/40 bg-green-500/10 text-green-300" },
+  exit_2: { label: "Exit 2", cls: "border-green-500/40 bg-green-500/10 text-green-300" },
+  exit_3: { label: "Exit 3", cls: "border-green-500/40 bg-green-500/10 text-green-300" },
+  exit_4: { label: "Exit 4", cls: "border-green-600/50 bg-green-600/15 text-green-300" },
+  loss: { label: "Loss", cls: "border-red-500/40 bg-red-500/15 text-red-400" },
+  closed: { label: "Fechada", cls: "border-gray-500/40 bg-gray-500/10 text-gray-300" },
 }
 
 function fmt(n: number | null): string {
@@ -148,8 +167,36 @@ function LevelRow({
 function AlertCard({ alert }: { alert: MtmAlert }) {
   const [showChart, setShowChart] = useState(false)
   const [showAnalysis, setShowAnalysis] = useState(false)
+  const [analysis, setAnalysis] = useState<string | null>(alert.aiAnalysis)
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
   const dir = DIR_META[alert.direction]
   const passed = alert.confirmations.filter((c) => c.passed).length
+
+  // Gestão da trade (IA) — sempre disponível; gera na hora se ainda não existir.
+  const toggleAnalysis = async () => {
+    const next = !showAnalysis
+    setShowAnalysis(next)
+    if (next && !analysis && !loadingAnalysis) {
+      setLoadingAnalysis(true)
+      setAnalysisError(null)
+      try {
+        const res = await fetch("/api/mtm-alerts/manage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ id: alert.id }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || "Falha ao gerar gestão IA")
+        setAnalysis(data.analysis)
+      } catch (err: any) {
+        setAnalysisError(err?.message || "Falha ao gerar gestão IA")
+      } finally {
+        setLoadingAnalysis(false)
+      }
+    }
+  }
 
   return (
     <Card className="border-[#D2A63C]/20 bg-gradient-to-br from-[#141414] to-black">
@@ -173,6 +220,11 @@ function AlertCard({ alert }: { alert: MtmAlert }) {
             <Badge variant="outline" className="border-gray-600 text-gray-400">
               <Clock className="mr-1 h-3 w-3" />
               {alert.timeframe}
+            </Badge>
+          )}
+          {alert.tradeStatus && TRADE_STATE_META[alert.tradeStatus] && (
+            <Badge className={`border font-semibold ${TRADE_STATE_META[alert.tradeStatus].cls}`}>
+              {TRADE_STATE_META[alert.tradeStatus].label}
             </Badge>
           )}
           <span className="ml-auto flex items-center gap-1 text-xs text-gray-500">
@@ -236,6 +288,31 @@ function AlertCard({ alert }: { alert: MtmAlert }) {
           ))}
         </div>
 
+        {/* SL em pips/pontos + alavancagem/tamanho (cripto perp) */}
+        {(alert.slPips != null || alert.crypto) && (
+          <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+            {alert.slPips != null && (
+              <span className="rounded-md border border-red-500/20 bg-red-500/5 px-2 py-1 text-red-300">
+                🛑 SL: {alert.slPips} {alert.slUnit}
+                {alert.slPercent != null ? ` · ${alert.slPercent.toFixed(2)}%` : ""}
+              </span>
+            )}
+            {alert.crypto && (
+              <>
+                <span className="rounded-md border border-purple-500/20 bg-purple-500/5 px-2 py-1 text-purple-300">
+                  ⚡ Alav: {alert.crypto.leverage}x
+                </span>
+                <span className="rounded-md border border-[#D2A63C]/20 bg-[#D2A63C]/5 px-2 py-1 text-[#D2A63C]">
+                  💵 Margem ${alert.crypto.margin} · Posição ${alert.crypto.notionalUsd}
+                  {alert.crypto.quantity != null
+                    ? ` (${alert.crypto.quantity.toLocaleString("pt-PT", { maximumFractionDigits: 4 })} un)`
+                    : ""}
+                </span>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Confirmações */}
         {alert.confirmations.length > 0 && (
           <div className="mt-3">
@@ -276,22 +353,36 @@ function AlertCard({ alert }: { alert: MtmAlert }) {
               {showChart ? "Esconder gráfico" : "Gráfico ao vivo"}
             </Button>
           )}
-          {alert.aiAnalysis && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowAnalysis((v) => !v)}
-              className="border-purple-500/40 text-purple-300 hover:bg-purple-500/10"
-            >
-              {showAnalysis ? <ChevronUp className="mr-1 h-3 w-3" /> : <ChevronDown className="mr-1 h-3 w-3" />}
-              Gestão da trade (IA)
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={toggleAnalysis}
+            className="border-purple-500/40 text-purple-300 hover:bg-purple-500/10"
+          >
+            {loadingAnalysis ? (
+              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+            ) : showAnalysis ? (
+              <ChevronUp className="mr-1 h-3 w-3" />
+            ) : (
+              <ChevronDown className="mr-1 h-3 w-3" />
+            )}
+            Gestão da trade (IA)
+          </Button>
         </div>
 
-        {showAnalysis && alert.aiAnalysis && (
+        {showAnalysis && (
           <div className="mt-3 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3">
-            <MarkdownRenderer content={alert.aiAnalysis} />
+            {loadingAnalysis ? (
+              <p className="flex items-center gap-2 text-sm text-purple-300">
+                <Loader2 className="h-4 w-4 animate-spin" /> A analisar a gestão da trade...
+              </p>
+            ) : analysisError ? (
+              <p className="text-sm text-red-300">{analysisError}</p>
+            ) : analysis ? (
+              <MarkdownRenderer content={analysis} />
+            ) : (
+              <p className="text-sm text-gray-400">Sem análise disponível.</p>
+            )}
           </div>
         )}
 

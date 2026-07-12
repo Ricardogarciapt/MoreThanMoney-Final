@@ -24,7 +24,9 @@ import {
   Check,
   X as XIcon,
   SlidersHorizontal,
+  Sparkles,
 } from "lucide-react"
+import MarkdownRenderer from "@/components/dashboard-gestao/markdown-renderer"
 
 interface AlertConfirmation {
   name: string
@@ -44,6 +46,23 @@ interface MtmAlert {
   confirmations: AlertConfirmation[]
   chartImageUrl: string | null
   createdAt: string
+  aiAnalysis: string | null
+  tradeStatus: string | null
+  slPips: number | null
+  slUnit: "pips" | "pts"
+  crypto: { margin: number; leverage: number; notionalUsd: number; quantity: number | null } | null
+}
+
+const TRADE_STATE_META: Record<string, { label: string; cls: string }> = {
+  pending: { label: "Pendente", cls: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
+  active: { label: "Ativa", cls: "border-blue-500/40 bg-blue-500/10 text-blue-300" },
+  be: { label: "BreakEven", cls: "border-amber-500/40 bg-amber-500/10 text-amber-300" },
+  exit_1: { label: "Exit 1", cls: "border-green-500/40 bg-green-500/10 text-green-300" },
+  exit_2: { label: "Exit 2", cls: "border-green-500/40 bg-green-500/10 text-green-300" },
+  exit_3: { label: "Exit 3", cls: "border-green-500/40 bg-green-500/10 text-green-300" },
+  exit_4: { label: "Exit 4", cls: "border-green-600/50 bg-green-600/15 text-green-300" },
+  loss: { label: "Loss", cls: "border-red-500/40 bg-red-500/15 text-red-400" },
+  closed: { label: "Fechada", cls: "border-gray-500/40 bg-gray-500/10 text-gray-300" },
 }
 interface Subscription {
   enabled: boolean
@@ -93,6 +112,35 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
 function MobileAlertCard({ alert }: { alert: MtmAlert }) {
   const d = DIR[alert.direction]
   const passed = alert.confirmations.filter((c) => c.passed).length
+  const [showAnalysis, setShowAnalysis] = useState(false)
+  const [analysis, setAnalysis] = useState<string | null>(alert.aiAnalysis)
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
+
+  const toggleAnalysis = async () => {
+    const next = !showAnalysis
+    setShowAnalysis(next)
+    if (next && !analysis && !loadingAnalysis) {
+      setLoadingAnalysis(true)
+      setAnalysisError(null)
+      try {
+        const res = await fetch("/api/mtm-alerts/manage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ id: alert.id }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || "Falha ao gerar gestão IA")
+        setAnalysis(data.analysis)
+      } catch (err: any) {
+        setAnalysisError(err?.message || "Falha ao gerar gestão IA")
+      } finally {
+        setLoadingAnalysis(false)
+      }
+    }
+  }
+
   return (
     <div className="rounded-xl border border-[#D2A63C]/20 bg-gradient-to-br from-[#141414] to-black p-3">
       <div className="flex items-center justify-between gap-2">
@@ -106,6 +154,11 @@ function MobileAlertCard({ alert }: { alert: MtmAlert }) {
             <span className="rounded border border-gray-700 px-1.5 py-0.5 text-[10px] text-gray-400">
               {alert.timeframe}
             </span>
+          )}
+          {alert.tradeStatus && TRADE_STATE_META[alert.tradeStatus] && (
+            <Badge className={`border text-[10px] font-semibold ${TRADE_STATE_META[alert.tradeStatus].cls}`}>
+              {TRADE_STATE_META[alert.tradeStatus].label}
+            </Badge>
           )}
         </div>
         <span className="flex items-center gap-1 text-[10px] text-gray-500">
@@ -141,6 +194,30 @@ function MobileAlertCard({ alert }: { alert: MtmAlert }) {
         ))}
       </div>
 
+      {/* SL em pips/pontos + alavancagem/tamanho (cripto perp) para $10 */}
+      {(alert.slPips != null || alert.crypto) && (
+        <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+          {alert.slPips != null && (
+            <span className="rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-red-300">
+              🛑 SL: {alert.slPips} {alert.slUnit}
+            </span>
+          )}
+          {alert.crypto && (
+            <>
+              <span className="rounded border border-[#D2A63C]/30 bg-[#D2A63C]/10 px-1.5 py-0.5 text-[#D2A63C]">
+                ⚡ Alav: {alert.crypto.leverage}x
+              </span>
+              <span className="rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-blue-300">
+                💵 Margem ${alert.crypto.margin} · Posição ${alert.crypto.notionalUsd}
+                {alert.crypto.quantity != null
+                  ? ` (${alert.crypto.quantity.toLocaleString("pt-PT", { maximumFractionDigits: 4 })} un)`
+                  : ""}
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
       {alert.confirmations.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {alert.confirmations.map((c) => (
@@ -155,6 +232,28 @@ function MobileAlertCard({ alert }: { alert: MtmAlert }) {
             </span>
           ))}
           <span className="ml-auto text-[10px] text-gray-500">{passed}/{alert.confirmations.length}</span>
+        </div>
+      )}
+
+      {/* Gestão da trade (IA) — sempre disponível */}
+      <button
+        onClick={toggleAnalysis}
+        className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-purple-500/40 bg-purple-500/10 px-2 py-1.5 text-[11px] font-medium text-purple-300"
+      >
+        {loadingAnalysis ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+        Gestão da trade (IA)
+      </button>
+      {showAnalysis && (
+        <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-2 text-xs">
+          {loadingAnalysis ? (
+            <p className="flex items-center gap-2 text-purple-300"><Loader2 className="h-3 w-3 animate-spin" /> A analisar...</p>
+          ) : analysisError ? (
+            <p className="text-red-300">{analysisError}</p>
+          ) : analysis ? (
+            <MarkdownRenderer content={analysis} />
+          ) : (
+            <p className="text-gray-400">Sem análise disponível.</p>
+          )}
         </div>
       )}
     </div>

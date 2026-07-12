@@ -130,6 +130,9 @@ function TerminalContent() {
   const [error, setError] = useState<string | null>(null)
   const [generatedAt, setGeneratedAt] = useState<string | null>(null)
   const [fromCache, setFromCache] = useState(false)
+  // Guarda o ativo cujo pedido está "vivo" — evita que uma resposta lenta de um
+  // ativo sobreponha os dados de outro depois de trocar de ativo (preço preso).
+  const activeSymbolRef = useRef<string>(selected.symbol)
 
   const grouped = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -145,6 +148,7 @@ function TerminalContent() {
   }, [search])
 
   const generate = useCallback(async (asset: TerminalAsset) => {
+    activeSymbolRef.current = asset.symbol
     setLoading(true)
     setError(null)
     setFromCache(false)
@@ -156,19 +160,23 @@ function TerminalContent() {
         body: JSON.stringify({ symbol: asset.symbol }),
       })
       const data = await res.json()
+      // Ignora respostas de um ativo que já não é o selecionado
+      if (activeSymbolRef.current !== asset.symbol) return
       if (!res.ok) throw new Error(data.error || "Falha ao gerar análise")
       setDashboard(data.dashboard)
       setQuote(data.quote)
       setGeneratedAt(new Date().toISOString())
     } catch (err: any) {
+      if (activeSymbolRef.current !== asset.symbol) return
       setError(err?.message || "Erro ao gerar análise")
     } finally {
-      setLoading(false)
+      if (activeSymbolRef.current === asset.symbol) setLoading(false)
     }
   }, [])
 
   // Ao abrir / mudar de ativo: mostra o dashboard diário guardado; se não houver, gera
   useEffect(() => {
+    activeSymbolRef.current = selected.symbol
     let cancelled = false
     const load = async () => {
       setLoading(true)
@@ -183,7 +191,7 @@ function TerminalContent() {
           cache: "no-store",
         })
         const data = await res.json()
-        if (cancelled) return
+        if (cancelled || activeSymbolRef.current !== selected.symbol) return
         if (res.ok && data.cached?.dashboard) {
           setDashboard(data.cached.dashboard)
           setQuote(data.cached.quote || null)

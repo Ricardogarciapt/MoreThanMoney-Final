@@ -35,6 +35,13 @@ export interface MtmAlert {
   chartImageUrl: string | null
   createdAt: string
   status: string | null
+  tradeStatus: string | null
+  assetClass: "gold_btc" | "forex" | "index" | "crypto_perp" | "other"
+  slDistance: number | null
+  slPercent: number | null
+  slPips: number | null
+  slUnit: "pips" | "pts"
+  crypto: { margin: number; leverage: number; notionalUsd: number; quantity: number | null } | null
 }
 
 function num(v: unknown): number | null {
@@ -49,6 +56,45 @@ function resolveDirection(action: string | null): "buy" | "sell" | "neutral" {
   if (/(buy|long|compra|bull|up)/.test(a)) return "buy"
   if (/(sell|short|venda|bear|down)/.test(a)) return "sell"
   return "neutral"
+}
+
+type AlertAssetClass = "gold_btc" | "forex" | "index" | "crypto_perp" | "other"
+const FX_CODES = new Set(["EUR", "USD", "GBP", "JPY", "CHF", "AUD", "NZD", "CAD", "SGD", "SEK", "NOK", "MXN", "ZAR"])
+const IDX_SET = new Set(["UK100", "US30", "US100", "US500", "SPX500", "SPX", "NAS100", "NAS", "NDX", "DJI", "GER40", "DE40", "DE30", "DAX", "JP225", "JPN225", "FRA40", "EU50", "US2000", "HK50", "AUS200", "ESP35", "IT40"])
+function classifyAssetClass(ticker: string | null): AlertAssetClass {
+  if (!ticker) return "other"
+  const norm = ticker.toUpperCase().replace(/[^A-Z0-9.]/g, "").replace(/^[A-Z]+:/, "")
+  if (/XAUUSD/.test(norm) || /^BTCUSD$/.test(norm)) return "gold_btc"
+  if (/\.P$/.test(norm) || /USDT/.test(norm) || /PERP/.test(norm)) return "crypto_perp"
+  const letters = norm.replace(/[^A-Z]/g, "")
+  if (letters.length === 6 && FX_CODES.has(letters.slice(0, 3)) && FX_CODES.has(letters.slice(3, 6))) return "forex"
+  if (IDX_SET.has(norm) || IDX_SET.has(letters)) return "index"
+  return "other"
+}
+
+/** Distância de SL em pips (forex) ou pontos + %. */
+function slInfo(ticker: string | null, entry: number | null, sl: number | null, cls: AlertAssetClass) {
+  if (entry == null || sl == null || entry <= 0) {
+    return { slDistance: null, slPercent: null, slPips: null, slUnit: "pts" as const }
+  }
+  const dist = Math.abs(entry - sl)
+  const pct = (dist / entry) * 100
+  if (cls === "forex") {
+    const jpy = /JPY/.test((ticker || "").toUpperCase())
+    const pip = jpy ? 0.01 : 0.0001
+    return { slDistance: dist, slPercent: pct, slPips: Math.round((dist / pip) * 10) / 10, slUnit: "pips" as const }
+  }
+  return { slDistance: dist, slPercent: pct, slPips: Math.round(dist * 100) / 100, slUnit: "pts" as const }
+}
+
+/** Cripto perp: alavancagem sugerida + tamanho de posição para margem $10 (SL ≈ 50% da margem). */
+function cryptoSizing(entry: number | null, slPercent: number | null) {
+  const margin = 10
+  let leverage = slPercent && slPercent > 0 ? Math.round(50 / slPercent) : 10
+  leverage = Math.max(1, Math.min(25, leverage))
+  const notionalUsd = margin * leverage
+  const quantity = entry && entry > 0 ? notionalUsd / entry : null
+  return { margin, leverage, notionalUsd, quantity }
 }
 
 /** Extrai múltiplos take-profits do payload bruto (tp, tp1..tp5, targets[]). */
@@ -190,7 +236,8 @@ export async function GET(request: NextRequest) {
     const admin = getSupabaseAdmin()
     let query = admin
       .from("tradingview_signals")
-      .select("id, ticker, exchange, timeframe, action, price, sl, tp, alert_name, message, ai_analysis, raw_payload, chat_status, chart_image_url, received_at")
+      .select("id, ticker, exchange, timeframe, action, price, sl, tp, alert_name, message, ai_analysis, raw_payload, chat_status, chart_image_url, trade_status, signal_kind, received_at")
+      .or("signal_kind.is.null,signal_kind.eq.entry")
       .order("received_at", { ascending: false })
       .limit(limit)
 
@@ -203,6 +250,10 @@ export async function GET(request: NextRequest) {
 
     const alerts: MtmAlert[] = (data || []).map((row: any) => {
       const raw = (row.raw_payload && typeof row.raw_payload === "object" ? row.raw_payload : {}) as Record<string, unknown>
+      const entry = num(row.price)
+      const stopLoss = extractStopLoss(num(row.sl), raw)
+      const cls = classifyAssetClass(row.ticker)
+      const sl = slInfo(row.ticker, entry, stopLoss, cls)
       return {
         id: row.id,
         ticker: row.ticker,
@@ -211,8 +262,8 @@ export async function GET(request: NextRequest) {
         timeframe: row.timeframe,
         action: row.action,
         direction: resolveDirection(row.action),
-        entry: num(row.price),
-        stopLoss: extractStopLoss(num(row.sl), raw),
+        entry,
+        stopLoss,
         takeProfits: extractTakeProfits(num(row.tp), raw),
         alertName: row.alert_name,
         strategy: pickStr(raw, ["strategy", "strategy_name", "scanner", "estrategia"]) || row.alert_name,
@@ -223,6 +274,13 @@ export async function GET(request: NextRequest) {
         chartImageUrl: (row.chart_image_url as string | null) || extractChartImage(raw, row.message),
         createdAt: row.received_at,
         status: row.chat_status,
+        tradeStatus: (row.trade_status as string | null) ?? "active",
+        assetClass: cls,
+        slDistance: sl.slDistance,
+        slPercent: sl.slPercent,
+        slPips: sl.slPips,
+        slUnit: sl.slUnit,
+        crypto: cls === "crypto_perp" ? cryptoSizing(entry, sl.slPercent) : null,
       }
     })
 

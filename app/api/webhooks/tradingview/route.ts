@@ -636,6 +636,43 @@ export async function POST(request: NextRequest) {
     await supabase.from("tradingview_signals").update({ telegram_status: "disabled", telegram_error: reason }).eq("id", logId)
   }
 
+  // Estado da trade para os Alertas MTM (Pendente / Ativa / Exit N / Loss / Fechada)
+  try {
+    const isFollow = isFollowup && Boolean(activeSensei)
+    const tradeStatus = isFollow
+      ? alertType === "sl_hit"
+        ? "loss"
+        : alertType === "exit"
+          ? "closed"
+          : alertType === "tp_hit"
+            ? `exit_${activeSensei?.tpLevel ?? 1}`
+            : "be" // breakeven → continua ativa (protegida)
+      : activeSensei?.alertType === "idea"
+        ? "pending"
+        : "active"
+    const signalKind = isFollow ? "followup" : "entry"
+    if (logId) {
+      await supabase.from("tradingview_signals").update({ trade_status: tradeStatus, signal_kind: signalKind }).eq("id", logId)
+    }
+    // Follow-up: atualiza o estado da entrada correspondente mais recente
+    if (isFollow && ticker) {
+      const { data: entryRow } = await supabase
+        .from("tradingview_signals")
+        .select("id")
+        .eq("ticker", ticker)
+        .eq("signal_kind", "entry")
+        .in("trade_status", ["active", "pending", "be", "exit_1", "exit_2", "exit_3"])
+        .order("received_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (entryRow?.id) {
+        await supabase.from("tradingview_signals").update({ trade_status: tradeStatus }).eq("id", entryRow.id)
+      }
+    }
+  } catch (e) {
+    console.error("[tradingview-webhook] trade_status error:", e)
+  }
+
   // Guarda os message_id da entrada/activação na ideia → follow-ups respondem em thread
   if (entryIdeaId && (telegramMid != null || chatId)) {
     try {
