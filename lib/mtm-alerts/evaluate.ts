@@ -8,6 +8,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { fetchYahooQuote } from "@/lib/yahoo-market"
 import { fetchBinanceSpotUsd } from "@/lib/crypto-usd"
+import { notifySignalOutcome } from "@/lib/mtm-alerts/notify-outcome"
 
 const CRYPTO_BASES = new Set([
   "BTC", "ETH", "SOL", "XRP", "BNB", "ADA", "DOGE", "LTC", "AVAX", "LINK",
@@ -79,8 +80,9 @@ export async function evaluateOpenAlerts(limit = 200): Promise<{ scanned: number
   const admin = getSupabaseAdmin()
   const { data: rows } = await admin
     .from("tradingview_signals")
-    .select("id, ticker, action, price, sl, tp, raw_payload, trade_status, signal_kind")
-    .or("trade_status.is.null,trade_status.in.(pending,active,be)")
+    .select("id, ticker, action, price, sl, tp, raw_payload, trade_status, signal_kind, chat_message_id")
+    // inclui exit_1..3 para poder escalar TP1→TP2→TP3 em passagens seguintes
+    .or("trade_status.is.null,trade_status.in.(pending,active,be,exit_1,exit_2,exit_3)")
     .or("signal_kind.is.null,signal_kind.eq.entry")
     .order("received_at", { ascending: false })
     .limit(limit)
@@ -119,7 +121,18 @@ export async function evaluateOpenAlerts(limit = 200): Promise<{ scanned: number
     if (cand === cur) continue
 
     const { error } = await admin.from("tradingview_signals").update({ trade_status: cand }).eq("id", r.id)
-    if (!error) updated++
+    if (!error) {
+      updated++
+      // Notifica seguidores + quem aceitou no T2T quando bate SL ou um TP
+      if (cand === "loss" || cand.startsWith("exit_")) {
+        await notifySignalOutcome({
+          entryId: r.id,
+          chatMessageId: (r as { chat_message_id?: string | null }).chat_message_id ?? null,
+          ticker: r.ticker,
+          status: cand,
+        })
+      }
+    }
   }
 
   return { scanned: list.length, updated, skipped }

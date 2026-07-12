@@ -24,6 +24,7 @@ import { processMtmcopyWebhookSignal, processMtmcopyWebhookManagement } from "@/
 import { getSiteOrigin } from "@/lib/site-url"
 import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId } from "@/lib/telegram-channel-ids"
 import { getExecSwitches } from "@/lib/mtmcopy/exec-switches"
+import { notifySignalOutcome } from "@/lib/mtm-alerts/notify-outcome"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export const runtime = "nodejs"
@@ -736,7 +737,7 @@ export async function POST(request: NextRequest) {
     if (isFollow && ticker) {
       const { data: entryRow } = await supabase
         .from("tradingview_signals")
-        .select("id")
+        .select("id, chat_message_id")
         .eq("ticker", ticker)
         .eq("signal_kind", "entry")
         .in("trade_status", ["active", "pending", "be", "exit_1", "exit_2", "exit_3"])
@@ -745,6 +746,19 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
       if (entryRow?.id) {
         await supabase.from("tradingview_signals").update({ trade_status: tradeStatus }).eq("id", entryRow.id)
+        // Notifica seguidores + quem aceitou no T2T quando bate SL ou um TP
+        if (tradeStatus === "loss" || tradeStatus.startsWith("exit_")) {
+          try {
+            await notifySignalOutcome({
+              entryId: entryRow.id,
+              chatMessageId: (entryRow as { chat_message_id?: string | null }).chat_message_id ?? null,
+              ticker,
+              status: tradeStatus,
+            })
+          } catch (e) {
+            console.error("[tradingview-webhook] notify outcome error:", e)
+          }
+        }
       }
     }
   } catch (e) {
