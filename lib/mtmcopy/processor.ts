@@ -719,6 +719,11 @@ async function executeViaMtmProvider(
   }
 
   const mappedSymbol = applySymbolFromProfile(signal.symbol!, executionProfile)
+  // Premium (Ouro/BTC) e Forex → risco 0.5% por trade (forçado). CopyFactory replica por saldo.
+  const FX_CODES = new Set(['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD'])
+  const clean6 = mappedSymbol.toUpperCase().replace(/[^A-Z]/g, '')
+  const isForexSym = clean6.length === 6 && FX_CODES.has(clean6.slice(0, 3)) && FX_CODES.has(clean6.slice(3, 6))
+  const forceRisk05 = channel === 'premium-signals' || isForexSym
   const skipSymbol = shouldSkipSymbolForProfile(mappedSymbol, executionProfile)
   if (skipSymbol) {
     await logProviderSignalEvent({
@@ -769,7 +774,7 @@ async function executeViaMtmProvider(
   //  - symbol specification (só trade-ideas, para trailing dinâmico)
   const needsSpec = channel === 'trade-ideas'
   const [lotCtx, snapshot, symbolSpec] = await Promise.all([
-    executionProfile.lot_mode === 'risk_percent'
+    executionProfile.lot_mode === 'risk_percent' || forceRisk05
       ? fetchLotSizingContext(provider.accountId, mappedSymbol, signalForExec.direction!)
       : Promise.resolve(null),
     getAccountSnapshot(provider.accountId),
@@ -783,15 +788,33 @@ async function executeViaMtmProvider(
     marketPrice = lotCtx.marketPrice
   }
 
+  // Forex: SL máximo 20 pips (200 pontos) da entrada; TP fica conforme sinal.
+  if (isForexSym && signalForExec.sl != null && signalForExec.sl > 0) {
+    const entryRef = signalForExec.entry ?? marketPrice
+    if (entryRef && entryRef > 0) {
+      const pip = clean6.includes('JPY') ? 0.01 : 0.0001
+      const maxDist = 20 * pip
+      const dist = Math.abs(entryRef - signalForExec.sl)
+      if (dist > maxDist) {
+        signalForExec.sl = signalForExec.direction === 'buy' ? entryRef - maxDist : entryRef + maxDist
+      }
+    }
+  }
+
+  // Premium/Forex → risco 0.5% por trade (sobrepõe config da conta provider).
+  const lotConn = forceRisk05
+    ? { ...providerConn, lot_mode: 'risk_percent' as const, lot_value: 0.5 }
+    : providerConn
+
   const signalForLot = signalForRiskSizing(signalForExec, marketPrice)
-  let totalLot = computeLotSize(providerConn, signalForLot, balance)
+  let totalLot = computeLotSize(lotConn, signalForLot, balance)
   totalLot = resolveLotForSymbol(mappedSymbol, totalLot, executionProfile)
 
   const equity = snapshot?.equity ?? snapshot?.balance ?? balance
   totalLot = scaleLotForSmallCapital(totalLot, equity)
 
   const lotSkip = getLotSizingSkipReason(
-    providerConn,
+    lotConn,
     signalForExec,
     balance,
     totalLot,
