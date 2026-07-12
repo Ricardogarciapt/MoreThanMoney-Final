@@ -75,6 +75,15 @@ const TRADE_STATE_META: Record<string, { label: string; cls: string }> = {
   closed: { label: "Fechada", cls: "border-gray-500/40 bg-gray-500/10 text-gray-300" },
 }
 
+/** Categoria de desempenho para filtro e estatísticas dos alertas. */
+type StateCat = "pending" | "active" | "win" | "loss"
+function stateCategory(tradeStatus: string | null): StateCat {
+  if (tradeStatus === "pending") return "pending"
+  if (tradeStatus === "loss") return "loss"
+  if (tradeStatus && (tradeStatus.startsWith("exit_") || tradeStatus === "closed")) return "win"
+  return "active"
+}
+
 function fmt(n: number | null): string {
   if (n == null) return "—"
   return n.toLocaleString("pt-PT", { maximumFractionDigits: 6 })
@@ -108,6 +117,43 @@ const DIR_META = {
 
 /** Scanner Momentum MTM — mostra os plots da estratégia no gráfico do alerta. */
 const MOMENTUM_STUDIES = ["PUB;00ec48baf0ee43f0a43e1658bb54cdab", "PUB;38080827cf244587b5e7dbb9f272db0a"]
+
+/** Studies (Pine público) por estratégia MTM — os mesmos do Scanner ao Vivo. */
+const STRATEGY_STUDIES: Record<string, string[]> = {
+  GoldenZone: ["PUB;0b373fb0e6634a73bc8b838cf0690725"],
+  Momentum: ["PUB;00ec48baf0ee43f0a43e1658bb54cdab", "PUB;38080827cf244587b5e7dbb9f272db0a"],
+  KillShot: ["PUB;c1f81145e78a49ce92bd1f81f9c103dd"],
+  Supernova: ["PUB;c16bafd7d0874182a1415648ec3ed7b8"],
+  Winzone: [
+    "PUB;6c003d30b2154ef3a31074d5c703954f",
+    "PUB;e6adb5e5246c43f4a8dcffde5c98db4e",
+    "PUB;162198dcae874d5da28f7b048feb76e7",
+    "PUB;b6587ba7dc7b4489927cfd94d1fb8a9f",
+    "PUB;0bf15eb0edba447f84e19fce69391ccb",
+  ],
+  Sinergy: ["PUB;3b86bd1192124fd98583490bb7508041"],
+  Goldkiller: ["PUB;a3eaa6af54de4202a2c2f807fd8baa08"],
+  MTMScanner: ["PUB;134fd950920e435694c40be33e3aa98f"],
+  Sensei: ["PUB;73e1daff8be44976998dade66c6a11d7"],
+}
+
+/** Resolve os studies certos a partir do nome da estratégia do alerta. */
+function studiesForStrategy(strategy: string | null): string[] {
+  if (!strategy) return MOMENTUM_STUDIES
+  const norm = strategy.toLowerCase().replace(/[^a-z0-9]/g, "")
+  for (const [key, studies] of Object.entries(STRATEGY_STUDIES)) {
+    if (norm.includes(key.toLowerCase())) return studies
+  }
+  // Aliases comuns
+  if (norm.includes("golden")) return STRATEGY_STUDIES.GoldenZone
+  if (norm.includes("kill") && norm.includes("shot")) return STRATEGY_STUDIES.KillShot
+  if (norm.includes("gold") && norm.includes("killer")) return STRATEGY_STUDIES.Goldkiller
+  if (norm.includes("nova")) return STRATEGY_STUDIES.Supernova
+  if (norm.includes("win")) return STRATEGY_STUDIES.Winzone
+  if (norm.includes("siner") || norm.includes("syner")) return STRATEGY_STUDIES.Sinergy
+  if (norm.includes("scanner")) return STRATEGY_STUDIES.MTMScanner
+  return MOMENTUM_STUDIES
+}
 
 type AssetClass = "gold_btc" | "forex" | "index" | "crypto_perp" | "other"
 const CLASS_LABELS: Record<AssetClass, string> = {
@@ -262,7 +308,7 @@ function AlertCard({ alert }: { alert: MtmAlert }) {
                 interval={alert.timeframe && /^\d+$/.test(alert.timeframe) ? alert.timeframe : "60"}
                 height={280}
                 compact
-                studies={MOMENTUM_STUDIES}
+                studies={studiesForStrategy(alert.strategy)}
               />
             </div>
           )
@@ -405,6 +451,7 @@ export default function AlertasMtm() {
   const [classFilter, setClassFilter] = useState<"all" | AssetClass>("all")
   const [tfFilter, setTfFilter] = useState<string>("all")
   const [stratFilter, setStratFilter] = useState<string>("all")
+  const [stateFilter, setStateFilter] = useState<"all" | StateCat>("all")
   const searchRef = useRef("")
 
   const load = useCallback(async () => {
@@ -450,8 +497,36 @@ export default function AlertasMtm() {
     if (classFilter !== "all" && classifyAssetClient(a.ticker) !== classFilter) return false
     if (tfFilter !== "all" && a.timeframe !== tfFilter) return false
     if (stratFilter !== "all" && a.strategy !== stratFilter) return false
+    if (stateFilter !== "all" && stateCategory(a.tradeStatus) !== stateFilter) return false
     return true
   })
+
+  // Desempenho (respeita ativo/classe/timeframe/estratégia/direção, ignora o filtro de estado
+  // para os contadores refletirem sempre o universo filtrado)
+  const perfBase = alerts.filter((a) => {
+    if (dirFilter !== "all" && a.direction !== dirFilter) return false
+    if (classFilter !== "all" && classifyAssetClient(a.ticker) !== classFilter) return false
+    if (tfFilter !== "all" && a.timeframe !== tfFilter) return false
+    if (stratFilter !== "all" && a.strategy !== stratFilter) return false
+    return true
+  })
+  const perf = perfBase.reduce(
+    (acc, a) => {
+      acc[stateCategory(a.tradeStatus)]++
+      return acc
+    },
+    { pending: 0, active: 0, win: 0, loss: 0 } as Record<StateCat, number>
+  )
+  const closed = perf.win + perf.loss
+  const winRate = closed > 0 ? Math.round((perf.win / closed) * 100) : null
+
+  const STATE_TABS: { key: "all" | StateCat; label: string; count: number; cls: string }[] = [
+    { key: "all", label: "Todos", count: perfBase.length, cls: "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" },
+    { key: "pending", label: "Pendentes", count: perf.pending, cls: "border-amber-500 bg-amber-500/15 text-amber-300" },
+    { key: "active", label: "Ativas", count: perf.active, cls: "border-blue-500 bg-blue-500/15 text-blue-300" },
+    { key: "win", label: "Wins", count: perf.win, cls: "border-green-500 bg-green-500/15 text-green-300" },
+    { key: "loss", label: "Loss", count: perf.loss, cls: "border-red-500 bg-red-500/15 text-red-300" },
+  ]
 
   return (
     <div className="space-y-4">
@@ -536,19 +611,49 @@ export default function AlertasMtm() {
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
-        {(classFilter !== "all" || tfFilter !== "all" || stratFilter !== "all" || dirFilter !== "all") && (
+        {(classFilter !== "all" || tfFilter !== "all" || stratFilter !== "all" || dirFilter !== "all" || stateFilter !== "all") && (
           <button
             onClick={() => {
               setClassFilter("all")
               setTfFilter("all")
               setStratFilter("all")
               setDirFilter("all")
+              setStateFilter("all")
             }}
             className="rounded-md border border-gray-700 px-2.5 py-1.5 text-xs text-gray-400 hover:text-white"
           >
             Limpar filtros
           </button>
         )}
+      </div>
+
+      {/* Estado / desempenho: Pendentes · Ativas · Wins · Loss + win rate */}
+      <div className="flex flex-col gap-2 rounded-lg border border-[#D2A63C]/20 bg-black/40 p-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-1.5">
+          {STATE_TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setStateFilter(t.key)}
+              className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+                stateFilter === t.key ? t.cls : "border-gray-700 text-gray-400 hover:text-white"
+              }`}
+            >
+              {t.label}
+              <span className="rounded bg-black/40 px-1 text-[10px]">{t.count}</span>
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-gray-400">Win rate</span>
+          <span
+            className={`font-mono font-bold ${
+              winRate == null ? "text-gray-500" : winRate >= 50 ? "text-green-400" : "text-red-400"
+            }`}
+          >
+            {winRate == null ? "—" : `${winRate}%`}
+          </span>
+          <span className="text-gray-600">({perf.win}W · {perf.loss}L)</span>
+        </div>
       </div>
 
       {loading && (

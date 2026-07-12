@@ -24,6 +24,14 @@ export type MorningBriefingMetrics = {
   } | null
   /** Desempenho das estratégias MTMcopy (providers) — % de ganho e win rate. */
   providers: Array<{ label: string; gainPct: number | null; winRatePct: number | null; online: boolean }>
+  /** Desempenho dos Alertas MTM (últimos 7 dias): pendentes/ativas/wins/loss + win rate. */
+  alerts: {
+    pending: number
+    active: number
+    wins: number
+    loss: number
+    winRatePct: number | null
+  } | null
   dca: {
     cryptoStrongBuys: number
     cryptoBuys: number
@@ -106,6 +114,7 @@ export async function gatherMorningBriefingMetrics(siteUrl: string): Promise<Mor
     dca,
     tpHitMsgs,
     senseiIdeas24h,
+    alertSignals,
   ] = await Promise.all([
     supabase
       .from('profiles')
@@ -145,6 +154,12 @@ export async function gatherMorningBriefingMetrics(siteUrl: string): Promise<Mor
       .from('sensei_trade_ideas')
       .select('id', { count: 'exact', head: true })
       .gte('created_at', oneDayAgo),
+    supabase
+      .from('tradingview_signals')
+      .select('trade_status, signal_kind')
+      .gte('received_at', sevenDaysAgo)
+      .or('signal_kind.is.null,signal_kind.eq.entry')
+      .limit(2000),
   ])
 
   const newMembersThisWeek = newThisWeek.count ?? 0
@@ -161,6 +176,23 @@ export async function gatherMorningBriefingMetrics(siteUrl: string): Promise<Mor
     },
     newSenseiIdeas24h: (senseiIdeas24h as { count?: number }).count ?? 0,
   }
+
+  const alertStatusRows = ((alertSignals as { data?: Array<{ trade_status: string | null }> }).data ?? [])
+  const alertCounts = alertStatusRows.reduce(
+    (acc, r) => {
+      const s = r.trade_status
+      if (s === 'pending') acc.pending++
+      else if (s === 'loss') acc.loss++
+      else if (s && (s.startsWith('exit_') || s === 'closed')) acc.wins++
+      else acc.active++
+      return acc
+    },
+    { pending: 0, active: 0, wins: 0, loss: 0 }
+  )
+  const alertClosed = alertCounts.wins + alertCounts.loss
+  const alerts: MorningBriefingMetrics['alerts'] = alertStatusRows.length
+    ? { ...alertCounts, winRatePct: alertClosed > 0 ? Math.round((alertCounts.wins / alertClosed) * 100) : null }
+    : null
 
   let providers: MorningBriefingMetrics['providers'] = []
   try {
@@ -192,6 +224,7 @@ export async function gatherMorningBriefingMetrics(siteUrl: string): Promise<Mor
     },
     trading,
     providers,
+    alerts,
     dca,
   }
 }

@@ -35,6 +35,13 @@ function buildMetricsBlock(m: MorningBriefingMetrics): string {
     }
   }
 
+  if (m.alerts) {
+    const a = m.alerts
+    const win = a.winRatePct != null ? ` · win rate **${a.winRatePct}%**` : ''
+    block += `\n\n🔔 **Alertas MTM (7 dias)**
+• Pendentes ${a.pending} · Ativas ${a.active} · Wins **${a.wins}** · Loss **${a.loss}**${win}`
+  }
+
   if (m.dca) {
     const cTotal = m.dca.cryptoStrongBuys + m.dca.cryptoBuys
     const eTotal = m.dca.etfStrongBuys + m.dca.etfBuys
@@ -124,6 +131,7 @@ export async function generateMorningBriefing(
       engagement: metrics.engagement,
       trading: metrics.trading,
       providers: metrics.providers.filter((p) => p.gainPct != null),
+      alerts: metrics.alerts,
       dca: metrics.dca,
     },
     null,
@@ -153,6 +161,7 @@ ESTRUTURA DO POST (markdown, usa emojis moderados):
 5. Secção métricas comunidade (usa os números fornecidos; SEM percentagem de variação de novos membros)
 6. Secção "🎯 Trading (últimas 24h)": TPs atingidos no total e por canal (Premium/Sensei/Forex) a partir de "trading"
 7. Secção "🤖 Estratégias MTMcopy": desempenho em % (gainPct) e win rate de cada estratégia em "providers" (se houver)
+8. Secção "🔔 Alertas MTM (7 dias)": desempenho dos alertas em "alerts" — pendentes, ativas, wins, loss e win rate (se houver)
 8. Secção DCA se houver oportunidades (crypto/ETF)
 9. 2-3 bullets de acção / foco
 8. Notícias ou contexto macro: menciona temas gerais do mercado (ouro, índices, crypto) de forma genérica e educativa — sem preços inventados

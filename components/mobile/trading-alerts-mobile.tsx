@@ -83,6 +83,14 @@ const DIR = {
   neutral: { label: "NEUTRO", cls: "border-gray-500/40 bg-gray-500/15 text-gray-300", Icon: Minus },
 } as const
 
+type StateCat = "pending" | "active" | "win" | "loss"
+function stateCategory(tradeStatus: string | null): StateCat {
+  if (tradeStatus === "pending") return "pending"
+  if (tradeStatus === "loss") return "loss"
+  if (tradeStatus && (tradeStatus.startsWith("exit_") || tradeStatus === "closed")) return "win"
+  return "active"
+}
+
 function fmt(n: number | null) {
   return n == null ? "—" : n.toLocaleString("pt-PT", { maximumFractionDigits: 6 })
 }
@@ -269,6 +277,7 @@ export default function TradingAlertsMobile() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showManager, setShowManager] = useState(false)
+  const [stateFilter, setStateFilter] = useState<"all" | StateCat>("all")
 
   const loadSub = useCallback(async () => {
     try {
@@ -338,7 +347,7 @@ export default function TradingAlertsMobile() {
   }
 
   // Feed filtrado às preferências (símbolos escolhidos; vazio = todos)
-  const visible = useMemo(() => {
+  const subFiltered = useMemo(() => {
     const norm = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "")
     return alerts.filter((a) => {
       if (sub.symbols.length > 0) {
@@ -353,6 +362,25 @@ export default function TradingAlertsMobile() {
       return true
     })
   }, [alerts, sub])
+
+  // Desempenho dos alertas subscritos + feed final (com filtro de estado)
+  const perf = useMemo(() => {
+    const acc = { pending: 0, active: 0, win: 0, loss: 0 } as Record<StateCat, number>
+    subFiltered.forEach((a) => acc[stateCategory(a.tradeStatus)]++)
+    return acc
+  }, [subFiltered])
+  const winRate = perf.win + perf.loss > 0 ? Math.round((perf.win / (perf.win + perf.loss)) * 100) : null
+  const visible = useMemo(
+    () => (stateFilter === "all" ? subFiltered : subFiltered.filter((a) => stateCategory(a.tradeStatus) === stateFilter)),
+    [subFiltered, stateFilter]
+  )
+  const STATE_TABS: { key: "all" | StateCat; label: string; count: number; cls: string }[] = [
+    { key: "all", label: "Todos", count: subFiltered.length, cls: "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" },
+    { key: "pending", label: "Pendentes", count: perf.pending, cls: "border-amber-500 bg-amber-500/15 text-amber-300" },
+    { key: "active", label: "Ativas", count: perf.active, cls: "border-blue-500 bg-blue-500/15 text-blue-300" },
+    { key: "win", label: "Wins", count: perf.win, cls: "border-green-500 bg-green-500/15 text-green-300" },
+    { key: "loss", label: "Loss", count: perf.loss, cls: "border-red-500 bg-red-500/15 text-red-300" },
+  ]
 
   return (
     <div className="space-y-3 px-3 pb-24 pt-3">
@@ -444,6 +472,34 @@ export default function TradingAlertsMobile() {
           </Button>
         </div>
       )}
+
+      {/* Estado / desempenho: Pendentes · Ativas · Wins · Loss + win rate */}
+      <div className="rounded-xl border border-[#D2A63C]/20 bg-black/40 p-2">
+        <div className="flex items-center justify-between px-1 pb-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Desempenho</span>
+          <span className="text-[11px] text-gray-400">
+            Win rate{" "}
+            <span className={`font-mono font-bold ${winRate == null ? "text-gray-500" : winRate >= 50 ? "text-green-400" : "text-red-400"}`}>
+              {winRate == null ? "—" : `${winRate}%`}
+            </span>{" "}
+            <span className="text-gray-600">({perf.win}W·{perf.loss}L)</span>
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {STATE_TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setStateFilter(t.key)}
+              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors ${
+                stateFilter === t.key ? t.cls : "border-gray-700 text-gray-400"
+              }`}
+            >
+              {t.label}
+              <span className="rounded bg-black/40 px-1 text-[9px]">{t.count}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Feed */}
       {loading ? (
