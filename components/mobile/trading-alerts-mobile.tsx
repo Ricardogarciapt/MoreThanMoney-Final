@@ -73,7 +73,7 @@ interface Subscription {
 }
 
 const DEFAULT_ALERT_SYMBOLS = ["XAUUSD", "EURUSD", "GBPUSD", "USDCAD", "USDJPY", "BTCUSD", "US30"]
-const STRATEGIES = ["GoldenZone", "Momentum", "KillShot", "Supernova", "Winzone", "Sinergy", "Goldkiller", "Sensei", "MTMScanner"]
+const STRATEGIES = ["MTMScanner", "Goldkiller", "Sensei"]
 const TIMEFRAMES = ["5", "15", "30", "60", "240", "D"]
 const SYMBOLS = TERMINAL_ASSETS.map((a) => a.symbol)
 
