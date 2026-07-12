@@ -20,13 +20,7 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   reactStrictMode: true,
-  serverExternalPackages: ["ssh2", "metaapi.cloud-sdk", "@sparticuz/chromium", "puppeteer-core"],
-  // Garante que os binários + bibliotecas partilhadas do Chromium (libnss3, etc.)
-  // são incluídos nas funções serverless que fazem a captura headless.
-  outputFileTracingIncludes: {
-    "/api/cron/mtm-alert-charts": ["./node_modules/@sparticuz/chromium/**"],
-    "/api/mtm-alerts/capture": ["./node_modules/@sparticuz/chromium/**"],
-  },
+  serverExternalPackages: ["ssh2", "metaapi.cloud-sdk"],
   async redirects() {
     return [
       {

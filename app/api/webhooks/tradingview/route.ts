@@ -364,6 +364,17 @@ export async function POST(request: NextRequest) {
   const assetClass = classifyAsset(ticker)
   const route = resolveRoute(assetClass)
 
+  // Perpétuos cripto: só 1H vai para o chat/canal (SL curtos noutros TF → overtrading).
+  // Os restantes timeframes ficam só em tradingview_signals (sem chat/Telegram).
+  if (assetClass === "crypto_perp") {
+    const tfMin = tfToMinutes(timeframe)
+    if (tfMin !== null && tfMin !== 60) {
+      route.channel = null
+      route.telegram = null
+      route.push = false
+    }
+  }
+
   const allTp = [tp, tp2, tp3, tp4].filter((n): n is number => n != null)
   const senseiFields: SenseiTradingViewFields = {
     ticker,

@@ -211,7 +211,7 @@ export async function generateTerminalDashboard(
       headers: { "content-type": "application/json", "x-api-key": key ?? "", "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
         model,
-        max_tokens: 1500,
+        max_tokens: 2800,
         system: DASHBOARD_SYSTEM_PROMPT,
         messages: [{ role: "user", content: userPrompt }],
       }),
@@ -230,15 +230,38 @@ export async function generateTerminalDashboard(
   throw new Error(lastErr)
 }
 
-/** Extrai o objeto JSON da resposta (tolera ```json fences e texto à volta). */
+/** Extrai o objeto JSON da resposta (tolera ```json fences, vírgulas finais e truncagem). */
 function parseJsonLoose(text: string): unknown {
   let t = text.trim()
   const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i)
   if (fence) t = fence[1].trim()
   const start = t.indexOf("{")
+  if (start >= 0) t = t.slice(start)
   const end = t.lastIndexOf("}")
-  if (start >= 0 && end > start) t = t.slice(start, end + 1)
-  return JSON.parse(t)
+  if (end > 0) t = t.slice(0, end + 1)
+
+  const stripTrailingCommas = (s: string) => s.replace(/,(\s*[}\]])/g, "$1")
+
+  try {
+    return JSON.parse(stripTrailingCommas(t))
+  } catch {
+    // JSON possivelmente truncado — remove cauda incompleta e fecha o que ficou aberto
+    let repaired = t.replace(/,\s*"[^"]*"?\s*:?\s*[^,{}\[\]]*$/, "")
+    const stack: string[] = []
+    let inStr = false
+    let esc = false
+    for (const ch of repaired) {
+      if (esc) { esc = false; continue }
+      if (ch === "\\") { esc = true; continue }
+      if (ch === '"') { inStr = !inStr; continue }
+      if (inStr) continue
+      if (ch === "{") stack.push("}")
+      else if (ch === "[") stack.push("]")
+      else if (ch === "}" || ch === "]") stack.pop()
+    }
+    while (stack.length) repaired += stack.pop()
+    return JSON.parse(stripTrailingCommas(repaired))
+  }
 }
 
 const DASHBOARD_EXAMPLE = {
