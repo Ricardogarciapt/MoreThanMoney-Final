@@ -269,14 +269,31 @@ export async function PUT(request: NextRequest) {
   let subscribersResynced = false
   try {
     const prevRoutes = normalizeProviderRoutes(current)
-    const prevEnabled = new Map(
-      prevRoutes.map((r) => [r.account_id?.trim() || r.id, r.enabled !== false]),
-    )
+    // Indexa por route ID (não account_id) — rotas que partilham conta (Premium 0.01 +
+    // Trade Ideas 0.02) têm de registar mudança individualmente.
+    const prevEnabled = new Map(prevRoutes.map((r) => [r.id, r.enabled !== false]))
+    const nowById = new Map(routesForScaling.map((r) => [r.id, r]))
+
+    // Rotas que passaram de ATIVA → PAUSADA: pára o CopyFactory dessa estratégia JÁ
+    // (autoritário, não depende do re-subscribe). Deixa posições abertas a correr.
+    const { removeProviderStrategy } = await import('@/lib/mtmcopy/copyfactory')
+    for (const [id, wasEnabled] of prevEnabled) {
+      const nowRoute = nowById.get(id)
+      const nowEnabled = nowRoute ? nowRoute.enabled !== false : false // removida = pausada
+      if (wasEnabled && !nowEnabled) {
+        const stratId = (nowRoute?.strategy_id ?? prevRoutes.find((r) => r.id === id)?.strategy_id ?? '').trim()
+        if (stratId) {
+          await removeProviderStrategy(stratId).catch((e) =>
+            console.warn('[telegram-sources] removeProviderStrategy falhou:', stratId, e),
+          )
+        }
+      }
+    }
+
     const enabledChanged =
       prevRoutes.length !== routesForScaling.length ||
-      routesForScaling.some(
-        (r) => prevEnabled.get(r.account_id?.trim() || r.id) !== (r.enabled !== false),
-      )
+      routesForScaling.some((r) => prevEnabled.get(r.id) !== (r.enabled !== false)) ||
+      prevRoutes.some((r) => !nowById.has(r.id))
     if (enabledChanged) {
       const { runMtmcopySystemSync } = await import('@/lib/mtmcopy/system-sync')
       await runMtmcopySystemSync()

@@ -191,6 +191,40 @@ export async function unsubscribeFromStrategy(
   return { ok: false, error: message }
 }
 
+/**
+ * Remove uma estratégia do CopyFactory (PAUSA autoritária).
+ * Pára IMEDIATAMENTE a cópia de novas trades dessa estratégia em TODOS os slaves,
+ * sem depender de re-subscrever cada um. As posições já abertas mantêm-se
+ * (closeOnRemovalOfStrategy é false por defeito em cada subscrição). Ao retomar,
+ * a estratégia é recriada por ensureMtmProviderStrategyScaling.
+ */
+export async function removeProviderStrategy(
+  strategyId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const token = process.env.METAAPI_TOKEN
+  if (!token) return { ok: false, error: 'METAAPI_TOKEN em falta' }
+  if (!strategyId?.trim()) return { ok: false, error: 'strategyId em falta' }
+
+  const res = await fetch(
+    `${COPYFACTORY_BASE}/users/current/configuration/strategies/${strategyId.trim()}`,
+    {
+      method: 'DELETE',
+      headers: { 'auth-token': token, Accept: 'application/json' },
+    },
+  )
+
+  if (res.status === 204 || res.ok) return { ok: true }
+  // 404 = já não existe → considera pausado
+  if (res.status === 404) return { ok: true }
+
+  const data = await res.json().catch(() => ({}))
+  const message =
+    (data as { message?: string }).message ??
+    (data as { error?: string }).error ??
+    `CopyFactory HTTP ${res.status}`
+  return { ok: false, error: message }
+}
+
 export function isCopyFactoryEnabled(): boolean {
   return Boolean(process.env.METAAPI_TOKEN?.trim())
 }
