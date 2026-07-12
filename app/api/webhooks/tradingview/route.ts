@@ -433,10 +433,28 @@ export async function POST(request: NextRequest) {
       raw,
     }
 
+  // Estado inicial da trade (garante que TODOS os caminhos, incluindo "só Alertas MTM",
+  // gravam trade_status/signal_kind — senão o avaliador de win/loss ignorava-os).
+  const initAlertType = activeSensei?.alertType
+  const initIsFollow =
+    initAlertType === "tp_hit" || initAlertType === "sl_hit" || initAlertType === "breakeven" || initAlertType === "exit"
+  const initTradeStatus = initIsFollow
+    ? initAlertType === "sl_hit"
+      ? "loss"
+      : initAlertType === "exit"
+        ? "closed"
+        : initAlertType === "tp_hit"
+          ? `exit_${activeSensei?.tpLevel ?? 1}`
+          : "be"
+    : initAlertType === "idea"
+      ? "pending"
+      : "active"
+  const initSignalKind = initIsFollow ? "followup" : "entry"
+
   // Log inicial
   const { data: logRow } = await supabase
     .from("tradingview_signals")
-    .insert({ ticker, exchange, timeframe, action, price, sl, tp, alert_name: alertName, message: freeText, raw_payload: payload, ai_status: "pending" })
+    .insert({ ticker, exchange, timeframe, action, price, sl, tp, alert_name: alertName, message: freeText, raw_payload: payload, ai_status: "pending", trade_status: initTradeStatus, signal_kind: initSignalKind })
     .select("id").single()
   const logId = logRow?.id as string | undefined
 

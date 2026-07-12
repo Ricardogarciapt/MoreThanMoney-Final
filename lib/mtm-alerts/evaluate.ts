@@ -80,7 +80,7 @@ export async function evaluateOpenAlerts(limit = 200): Promise<{ scanned: number
   const { data: rows } = await admin
     .from("tradingview_signals")
     .select("id, ticker, action, price, sl, tp, raw_payload, trade_status, signal_kind")
-    .in("trade_status", ["pending", "active", "be"])
+    .or("trade_status.is.null,trade_status.in.(pending,active,be)")
     .or("signal_kind.is.null,signal_kind.eq.entry")
     .order("received_at", { ascending: false })
     .limit(limit)
