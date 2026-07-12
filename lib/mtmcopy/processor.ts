@@ -1187,9 +1187,9 @@ async function processSignalDirect(
         signal,
         lot,
         {
-          tp1: conn.exit_pct_tp1 ?? 33,
-          tp2: conn.exit_pct_tp2 ?? 33,
-          tp3: conn.exit_pct_tp3 ?? 34,
+          tp1: conn.exit_pct_tp1 ?? 75,
+          tp2: conn.exit_pct_tp2 ?? 15,
+          tp3: conn.exit_pct_tp3 ?? 10,
         },
         equity,
         { manual: conn.copy_as_manual === true },

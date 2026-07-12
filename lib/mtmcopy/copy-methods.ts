@@ -206,8 +206,9 @@ export function telegramGroupsLabel(groups: MtmcopyTelegramGroup[]): string {
   return 'Premium · Ouro'
 }
 
+// Prioridade: fechar >70% dos lotes no Exit 1 (uma posição, parciais por saída).
 export function defaultExitPcts(): { tp1: number; tp2: number; tp3: number } {
-  return { tp1: 33, tp2: 33, tp3: 34 }
+  return { tp1: 75, tp2: 15, tp3: 10 }
 }
 
 export function normalizeExitPcts(
@@ -215,9 +216,9 @@ export function normalizeExitPcts(
   tp2?: number | null,
   tp3?: number | null,
 ): { tp1: number; tp2: number; tp3: number } {
-  const a = Math.max(0, Number(tp1) || 33)
-  const b = Math.max(0, Number(tp2) || 33)
-  const c = Math.max(0, Number(tp3) || 34)
+  const a = Math.max(0, Number(tp1) || 75)
+  const b = Math.max(0, Number(tp2) || 15)
+  const c = Math.max(0, Number(tp3) || 10)
   const sum = a + b + c
   if (sum <= 0) return defaultExitPcts()
   return {
