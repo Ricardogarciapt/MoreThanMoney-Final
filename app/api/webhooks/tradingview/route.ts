@@ -301,27 +301,68 @@ async function sendTelegram(token: string, chatId: string, text: string, replyTo
 }
 
 /** Push só para membros Premium/IQ/VIP/admin (canal #Sensei Scanner é restrito). */
-async function pushPremium(supabase: SupabaseClient, channelSlug: string, messageId: string, title: string, body: string): Promise<void> {
-  const { data: members } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("is_active", true)
-    .or("subscription_plan.eq.premium,member_category.eq.iq,member_category.eq.vip,user_type.eq.admin")
-  const userIds = (members ?? []).map((m: { id: string }) => m.id)
-  if (!userIds.length) return
-  const url = `/app-mobile?tab=chat&channel=${encodeURIComponent(channelSlug)}`
+/** Símbolos que cada utilizador recebe por defeito (o resto liga nos settings). */
+const ALERT_DEFAULT_SYMBOLS = ["XAUUSD", "EURUSD", "GBPUSD", "USDCAD", "USDJPY", "BTCUSD", "US30"]
+
+/**
+ * Push dos Alertas MTM POR SUBSCRIÇÃO pessoal (símbolos/timeframes/push_enabled).
+ * Mesma lógica de match do trigger in-app, mas só a utilizadores com dispositivo
+ * ativo e com push ligado. Devolve o nº de destinatários.
+ */
+async function pushSignalSubscribers(
+  supabase: SupabaseClient,
+  opts: { ticker: string | null; timeframe: string | null; title: string; body: string; url: string; signalId?: string }
+): Promise<number> {
+  const { ticker, timeframe, title, body, url, signalId } = opts
+  if (!ticker) return 0
+  const norm = ticker.toUpperCase().replace(/[^A-Z0-9]/g, "")
+
+  const { data: tokenRows } = await supabase.from("fcm_tokens").select("user_id").eq("active", true)
+  const deviceUsers = [...new Set((tokenRows ?? []).map((t: { user_id: string }) => t.user_id).filter(Boolean))]
+  if (!deviceUsers.length) return 0
+
+  const [{ data: profs }, { data: subs }] = await Promise.all([
+    supabase.from("profiles").select("id").eq("is_active", true).in("id", deviceUsers),
+    supabase
+      .from("user_signal_subscriptions")
+      .select("user_id, enabled, push_enabled, symbols, timeframes")
+      .in("user_id", deviceUsers),
+  ])
+  const activeSet = new Set((profs ?? []).map((p: { id: string }) => p.id))
+  const subMap = new Map<string, { enabled: boolean | null; push_enabled: boolean | null; symbols: string[] | null; timeframes: string[] | null }>()
+  for (const s of subs ?? []) subMap.set(s.user_id, s as any)
+
+  const matchSym = (syms: string[]) => syms.some((sym) => norm.includes(sym.toUpperCase().replace(/[^A-Z0-9]/g, "")))
+
+  const targets: string[] = []
+  for (const uid of deviceUsers) {
+    if (!activeSet.has(uid)) continue
+    const s = subMap.get(uid)
+    if (s) {
+      if (s.enabled === false || s.push_enabled === false) continue
+      const syms = Array.isArray(s.symbols) && s.symbols.length ? s.symbols : ALERT_DEFAULT_SYMBOLS
+      if (!matchSym(syms)) continue
+      if (Array.isArray(s.timeframes) && s.timeframes.length && timeframe && !s.timeframes.includes(timeframe)) continue
+    } else {
+      if (!matchSym(ALERT_DEFAULT_SYMBOLS)) continue
+    }
+    targets.push(uid)
+  }
+  if (!targets.length) return 0
+
   await fetch(`${getSiteOrigin()}/api/notifications/send-push`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      userIds,
+      userIds: targets,
       title,
       body,
       url,
-      data: { type: "chat_message", channel: channelSlug, message_id: messageId, url },
-      tag: `chat_${channelSlug}`,
+      data: { type: "trade_alert", ticker, signal_id: signalId ?? "", url },
+      tag: `mtm_alert_${norm}`,
     }),
   })
+  return targets.length
 }
 
 export async function POST(request: NextRequest) {
@@ -610,26 +651,39 @@ export async function POST(request: NextRequest) {
     if (logId) await supabase.from("tradingview_signals").update({ chat_status: "error", ai_error: "chat: " + String(err) }).eq("id", logId)
   }
 
-  // Push (iOS/APK/PWA) — só Premium/IQ/VIP/admin (canal restrito).
+  // Push (iOS/APK/PWA) — por SUBSCRIÇÃO pessoal (símbolos/timeframes/push_enabled).
+  // Só ENTRADAS (não follow-ups) e para todas as classes de ativo.
   // await (não fire-and-forget): no Vercel o trabalho assíncrono é morto após a resposta.
   let pushOk = false
-  if (chatId && route.push) {
-    const body = [
-      v.symbol ?? ticker ?? "Sinal",
-      activeSensei ? senseiAlertTypeLabel(activeSensei.alertType) : "",
-      v.direction === "buy" ? "COMPRA" : v.direction === "sell" ? "VENDA" : "",
-    ].filter(Boolean).join(" — ")
-    const pushTitle =
-      assetClass === "gold_btc"
-        ? activeSensei?.alertType === "idea"
-          ? "💡 Nova ideia — Sensei Scanner"
-          : activeSensei?.alertType === "entry_trigger"
-            ? "✅ Ideia activada — Sensei Scanner"
-            : "🧠 Novo sinal — Sensei Scanner"
-        : `${route.sender} — Novo sinal`
+  if (initSignalKind === "entry") {
+    const dir =
+      v.direction === "buy"
+        ? "COMPRA"
+        : v.direction === "sell"
+          ? "VENDA"
+          : action && /buy|long|compra/i.test(action)
+            ? "COMPRA"
+            : action && /sell|short|venda/i.test(action)
+              ? "VENDA"
+              : ""
+    const sym = v.symbol ?? ticker ?? "Sinal"
+    const pushTitle = `🔔 Alerta MTM — ${sym}${dir ? " " + dir : ""}`
+    const pushBody = [alertName || route.sender || "Sinal", price != null ? `@ ${price}` : "", timeframe ? `· ${timeframe}` : ""]
+      .filter(Boolean)
+      .join(" ")
+    const pushUrl = route.channel
+      ? `/app-mobile?tab=chat&channel=${encodeURIComponent(route.channel)}`
+      : "/app-mobile?tab=trading-alerts"
     try {
-      await pushPremium(supabase, route.channel, chatId, pushTitle, body)
-      pushOk = true
+      const n = await pushSignalSubscribers(supabase, {
+        ticker,
+        timeframe,
+        title: pushTitle,
+        body: pushBody,
+        url: pushUrl,
+        signalId: logId,
+      })
+      pushOk = n > 0
     } catch (e) {
       console.error("[tradingview-webhook] push error:", e)
     }
