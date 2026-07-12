@@ -475,23 +475,41 @@ export async function POST(request: NextRequest) {
       raw,
     }
 
+  // Evento de gestão em JSON (GoldKiller/MTMScanner enviam event: tp_hit/sl_hit/exit/be
+  // em tempo real). Estes NÃO criam card novo — só atualizam o estado da entrada + notificam.
+  const mgmtRaw = (pick(payload, ["event", "event_type", "mgmt"]) || "").toLowerCase()
+  const mgmtStatus: string | null =
+    !isSensei && mgmtRaw
+      ? /sl_hit|stop.?hit|stoploss/.test(mgmtRaw)
+        ? "loss"
+        : /exit|close/.test(mgmtRaw)
+          ? "closed"
+          : /tp_hit|tp.?hit|takeprofit/.test(mgmtRaw)
+            ? `exit_${Math.min(4, Math.max(1, Math.round(num(pick(payload, ["tp_level", "level"])) ?? 1)))}`
+            : /break.?even|(^|[^a-z])be([^a-z]|$)/.test(mgmtRaw)
+              ? "be"
+              : null
+      : null
+
   // Estado inicial da trade (garante que TODOS os caminhos, incluindo "só Alertas MTM",
   // gravam trade_status/signal_kind — senão o avaliador de win/loss ignorava-os).
   const initAlertType = activeSensei?.alertType
   const initIsFollow =
     initAlertType === "tp_hit" || initAlertType === "sl_hit" || initAlertType === "breakeven" || initAlertType === "exit"
-  const initTradeStatus = initIsFollow
-    ? initAlertType === "sl_hit"
-      ? "loss"
-      : initAlertType === "exit"
-        ? "closed"
-        : initAlertType === "tp_hit"
-          ? `exit_${activeSensei?.tpLevel ?? 1}`
-          : "be"
-    : initAlertType === "idea"
-      ? "pending"
-      : "active"
-  const initSignalKind = initIsFollow ? "followup" : "entry"
+  const initTradeStatus = mgmtStatus
+    ? mgmtStatus
+    : initIsFollow
+      ? initAlertType === "sl_hit"
+        ? "loss"
+        : initAlertType === "exit"
+          ? "closed"
+          : initAlertType === "tp_hit"
+            ? `exit_${activeSensei?.tpLevel ?? 1}`
+            : "be"
+      : initAlertType === "idea"
+        ? "pending"
+        : "active"
+  const initSignalKind = mgmtStatus || initIsFollow ? "followup" : "entry"
 
   // Log inicial
   const { data: logRow } = await supabase
@@ -499,6 +517,35 @@ export async function POST(request: NextRequest) {
     .insert({ ticker, exchange, timeframe, action, price, sl, tp, alert_name: alertName, message: freeText, raw_payload: payload, ai_status: "pending", trade_status: initTradeStatus, signal_kind: initSignalKind })
     .select("id").single()
   const logId = logRow?.id as string | undefined
+
+  // Atalho para eventos de gestão JSON: atualiza a entrada + notifica na hora, sem chat/cópia.
+  if (mgmtStatus && ticker) {
+    try {
+      const { data: entryRow } = await supabase
+        .from("tradingview_signals")
+        .select("id, chat_message_id")
+        .eq("ticker", ticker)
+        .eq("signal_kind", "entry")
+        .in("trade_status", ["active", "pending", "be", "exit_1", "exit_2", "exit_3"])
+        .order("received_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (entryRow?.id) {
+        await supabase.from("tradingview_signals").update({ trade_status: mgmtStatus }).eq("id", entryRow.id)
+        if (mgmtStatus === "loss" || mgmtStatus.startsWith("exit_")) {
+          await notifySignalOutcome({
+            entryId: entryRow.id,
+            chatMessageId: (entryRow as { chat_message_id?: string | null }).chat_message_id ?? null,
+            ticker,
+            status: mgmtStatus,
+          })
+        }
+      }
+    } catch (e) {
+      console.error("[tradingview-webhook] mgmt event error:", e)
+    }
+    return NextResponse.json({ ok: true, followup: true, status: mgmtStatus, signal_id: logId })
+  }
 
   // Validação (Sensei: ideia vs activação vs gestão)
   const v =
