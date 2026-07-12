@@ -117,7 +117,77 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
   )
 }
 
-function MobileAlertCard({ alert }: { alert: MtmAlert }) {
+/** Acompanhamento da ação de preço de um sinal seguido (sem execução). */
+function MobileSignalTracker({ alert }: { alert: MtmAlert }) {
+  const [price, setPrice] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    if (!alert.ticker) return
+    let active = true
+    const run = async () => {
+      try {
+        const res = await fetch(`/api/mtm-alerts/price?ticker=${encodeURIComponent(alert.ticker!)}`, {
+          credentials: "include",
+          cache: "no-store",
+        })
+        const data = await res.json()
+        if (active) setPrice(typeof data.price === "number" ? data.price : null)
+      } catch {
+        /* ignora */
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    run()
+    const iv = setInterval(run, 30000)
+    return () => {
+      active = false
+      clearInterval(iv)
+    }
+  }, [alert.ticker])
+
+  const dir = alert.direction === "sell" ? "sell" : "buy"
+  const entry = alert.entry
+  const pnlPct =
+    price != null && entry != null && entry !== 0
+      ? ((dir === "buy" ? price - entry : entry - price) / entry) * 100
+      : null
+  const reached = (lvl: number) => (price == null ? false : dir === "buy" ? price >= lvl : price <= lvl)
+  const slHit = price != null && alert.stopLoss != null && (dir === "buy" ? price <= alert.stopLoss : price >= alert.stopLoss)
+
+  return (
+    <div className="mt-2 rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-2 text-xs">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="flex items-center gap-1 text-cyan-300"><BellRing className="h-3 w-3 animate-pulse" /> A acompanhar</span>
+        {loading ? <Loader2 className="h-3 w-3 animate-spin text-cyan-300" /> : <span className="font-mono font-bold text-white">{fmt(price)}</span>}
+      </div>
+      {pnlPct != null && (
+        <p className={`text-center font-bold ${pnlPct >= 0 ? "text-green-400" : "text-red-400"}`}>
+          {pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(2)}% desde a entrada
+        </p>
+      )}
+      <div className="mt-1 space-y-0.5">
+        {alert.stopLoss != null && (
+          <div className="flex justify-between"><span className="text-gray-400">🛑 Stop</span><span className="font-mono text-red-300">{fmt(alert.stopLoss)}{slHit && " • atingido"}</span></div>
+        )}
+        {alert.takeProfits.map((tp, i) => (
+          <div key={i} className="flex justify-between"><span className="text-gray-400">🎯 Exit {i + 1}</span><span className="font-mono text-green-300">{fmt(tp)}{reached(tp) && " • atingido"}</span></div>
+        ))}
+      </div>
+      <p className="mt-1 text-center text-[9px] text-gray-500">Só acompanhamento — sem execução.</p>
+    </div>
+  )
+}
+
+function MobileAlertCard({
+  alert,
+  following,
+  onToggleFollow,
+}: {
+  alert: MtmAlert
+  following: boolean
+  onToggleFollow: (id: string, follow: boolean) => void
+}) {
   const d = DIR[alert.direction]
   const passed = alert.confirmations.filter((c) => c.passed).length
   const [showAnalysis, setShowAnalysis] = useState(false)
@@ -243,14 +313,26 @@ function MobileAlertCard({ alert }: { alert: MtmAlert }) {
         </div>
       )}
 
-      {/* Gestão da trade (IA) — sempre disponível */}
-      <button
-        onClick={toggleAnalysis}
-        className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-purple-500/40 bg-purple-500/10 px-2 py-1.5 text-[11px] font-medium text-purple-300"
-      >
-        {loadingAnalysis ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-        Gestão da trade (IA)
-      </button>
+      {/* Ações: Gestão IA + Seguir sinal */}
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <button
+          onClick={toggleAnalysis}
+          className="flex items-center justify-center gap-1 rounded-lg border border-purple-500/40 bg-purple-500/10 px-2 py-1.5 text-[11px] font-medium text-purple-300"
+        >
+          {loadingAnalysis ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+          Gestão IA
+        </button>
+        <button
+          onClick={() => onToggleFollow(alert.id, !following)}
+          className={`flex items-center justify-center gap-1 rounded-lg border px-2 py-1.5 text-[11px] font-medium ${
+            following ? "border-cyan-500/60 bg-cyan-500/15 text-cyan-300" : "border-cyan-500/40 bg-cyan-500/10 text-cyan-300"
+          }`}
+        >
+          <BellRing className="h-3 w-3" />
+          {following ? "A seguir ✓" : "Seguir sinal"}
+        </button>
+      </div>
+      {following && <MobileSignalTracker alert={alert} />}
       {showAnalysis && (
         <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-2 text-xs">
           {loadingAnalysis ? (
@@ -278,6 +360,36 @@ export default function TradingAlertsMobile() {
   const [saving, setSaving] = useState(false)
   const [showManager, setShowManager] = useState(false)
   const [stateFilter, setStateFilter] = useState<"all" | StateCat>("all")
+  const [followed, setFollowed] = useState<Set<string>>(new Set())
+
+  const loadFollowed = useCallback(async () => {
+    try {
+      const res = await fetch("/api/mtm-alerts/follow", { credentials: "include", cache: "no-store" })
+      const data = await res.json()
+      if (Array.isArray(data.followed)) setFollowed(new Set(data.followed))
+    } catch {
+      /* ignora */
+    }
+  }, [])
+
+  const toggleFollow = useCallback(async (id: string, follow: boolean) => {
+    setFollowed((prev) => {
+      const next = new Set(prev)
+      if (follow) next.add(id)
+      else next.delete(id)
+      return next
+    })
+    try {
+      await fetch("/api/mtm-alerts/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ signalId: id, follow }),
+      })
+    } catch {
+      /* otimista */
+    }
+  }, [])
 
   const loadSub = useCallback(async () => {
     try {
@@ -305,7 +417,8 @@ export default function TradingAlertsMobile() {
   useEffect(() => {
     loadSub()
     loadAlerts()
-  }, [loadSub, loadAlerts])
+    loadFollowed()
+  }, [loadSub, loadAlerts, loadFollowed])
 
   useEffect(() => {
     if (!supabase) return
@@ -516,7 +629,12 @@ export default function TradingAlertsMobile() {
       ) : (
         <div className="space-y-3">
           {visible.map((a) => (
-            <MobileAlertCard key={a.id} alert={a} />
+            <MobileAlertCard
+              key={a.id}
+              alert={a}
+              following={followed.has(a.id)}
+              onToggleFollow={toggleFollow}
+            />
           ))}
         </div>
       )}

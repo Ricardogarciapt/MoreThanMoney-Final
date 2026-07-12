@@ -27,6 +27,7 @@ import {
   Pin,
   Ban,
   Crosshair,
+  Radio,
 } from "lucide-react"
 
 interface AlertConfirmation {
@@ -192,7 +193,111 @@ function LevelRow({
   )
 }
 
-function AlertCard({ alert }: { alert: MtmAlert }) {
+/** Acompanhamento da ação de preço de um sinal seguido (sem execução). */
+function SignalTracker({
+  ticker,
+  entry,
+  stopLoss,
+  takeProfits,
+  direction,
+}: {
+  ticker: string | null
+  entry: number | null
+  stopLoss: number | null
+  takeProfits: number[]
+  direction: "buy" | "sell" | "neutral"
+}) {
+  const [price, setPrice] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!ticker) return
+    let active = true
+    const run = async () => {
+      try {
+        const res = await fetch(`/api/mtm-alerts/price?ticker=${encodeURIComponent(ticker)}`, {
+          credentials: "include",
+          cache: "no-store",
+        })
+        const data = await res.json()
+        if (active) setPrice(typeof data.price === "number" ? data.price : null)
+      } catch {
+        /* ignora */
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    run()
+    const iv = setInterval(run, 30000)
+    return () => {
+      active = false
+      clearInterval(iv)
+    }
+  }, [ticker])
+
+  const dir = direction === "sell" ? "sell" : "buy"
+  const pnlPct =
+    price != null && entry != null && entry !== 0
+      ? ((dir === "buy" ? price - entry : entry - price) / entry) * 100
+      : null
+  const reached = (lvl: number) => (price == null ? false : dir === "buy" ? price >= lvl : price <= lvl)
+  const slHit = price != null && stopLoss != null && (dir === "buy" ? price <= stopLoss : price >= stopLoss)
+  const distPct = (lvl: number) => (price != null && price !== 0 ? ((lvl - price) / price) * 100 : null)
+
+  return (
+    <div className="mt-3 rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-cyan-300">
+          <Radio className="h-3.5 w-3.5 animate-pulse" /> A acompanhar preço
+        </span>
+        {loading ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-300" />
+        ) : (
+          <span className="font-mono text-sm font-bold text-white">{fmt(price)}</span>
+        )}
+      </div>
+      {pnlPct != null && (
+        <p className={`mb-2 text-center text-sm font-bold ${pnlPct >= 0 ? "text-green-400" : "text-red-400"}`}>
+          {pnlPct >= 0 ? "+" : ""}
+          {pnlPct.toFixed(2)}% desde a entrada
+        </p>
+      )}
+      <div className="space-y-1 text-[11px]">
+        {stopLoss != null && (
+          <div className="flex items-center justify-between">
+            <span className="text-gray-400">🛑 Stop</span>
+            <span className="font-mono text-red-300">
+              {fmt(stopLoss)}
+              {distPct(stopLoss) != null && <span className="ml-1 text-gray-500">({distPct(stopLoss)!.toFixed(2)}%)</span>}
+              {slHit && <span className="ml-1 text-red-400">• atingido</span>}
+            </span>
+          </div>
+        )}
+        {takeProfits.map((tp, i) => (
+          <div key={i} className="flex items-center justify-between">
+            <span className="text-gray-400">🎯 Exit {i + 1}</span>
+            <span className="font-mono text-green-300">
+              {fmt(tp)}
+              {distPct(tp) != null && <span className="ml-1 text-gray-500">({distPct(tp)!.toFixed(2)}%)</span>}
+              {reached(tp) && <span className="ml-1 text-green-400">• atingido</span>}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-center text-[10px] text-gray-500">Só acompanhamento — sem execução automática.</p>
+    </div>
+  )
+}
+
+function AlertCard({
+  alert,
+  following,
+  onToggleFollow,
+}: {
+  alert: MtmAlert
+  following: boolean
+  onToggleFollow: (id: string, follow: boolean) => void
+}) {
   const [showChart, setShowChart] = useState(false)
   const [showAnalysis, setShowAnalysis] = useState(false)
   const [analysis, setAnalysis] = useState<string | null>(alert.aiAnalysis)
@@ -396,7 +501,30 @@ function AlertCard({ alert }: { alert: MtmAlert }) {
             )}
             Gestão da trade (IA)
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onToggleFollow(alert.id, !following)}
+            className={
+              following
+                ? "border-cyan-500/60 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/20"
+                : "border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10"
+            }
+          >
+            <Radio className="mr-1 h-3 w-3" />
+            {following ? "A seguir ✓" : "Seguir sinal"}
+          </Button>
         </div>
+
+        {following && (
+          <SignalTracker
+            ticker={alert.ticker}
+            entry={alert.entry}
+            stopLoss={alert.stopLoss}
+            takeProfits={alert.takeProfits}
+            direction={alert.direction}
+          />
+        )}
 
         {showAnalysis && (
           <div className="mt-3 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3">
@@ -434,7 +562,37 @@ export default function AlertasMtm() {
   const [tfFilter, setTfFilter] = useState<string>("all")
   const [stratFilter, setStratFilter] = useState<string>("all")
   const [stateFilter, setStateFilter] = useState<"all" | StateCat>("all")
+  const [followed, setFollowed] = useState<Set<string>>(new Set())
   const searchRef = useRef("")
+
+  const loadFollowed = useCallback(async () => {
+    try {
+      const res = await fetch("/api/mtm-alerts/follow", { credentials: "include", cache: "no-store" })
+      const data = await res.json()
+      if (Array.isArray(data.followed)) setFollowed(new Set(data.followed))
+    } catch {
+      /* ignora */
+    }
+  }, [])
+
+  const toggleFollow = useCallback(async (id: string, follow: boolean) => {
+    setFollowed((prev) => {
+      const next = new Set(prev)
+      if (follow) next.add(id)
+      else next.delete(id)
+      return next
+    })
+    try {
+      await fetch("/api/mtm-alerts/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ signalId: id, follow }),
+      })
+    } catch {
+      /* otimista */
+    }
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -454,7 +612,8 @@ export default function AlertasMtm() {
 
   useEffect(() => {
     load()
-  }, [load])
+    loadFollowed()
+  }, [load, loadFollowed])
 
   useEffect(() => {
     if (!supabase) return
@@ -658,7 +817,12 @@ export default function AlertasMtm() {
       {!loading && !error && visible.length > 0 && (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {visible.map((a) => (
-            <AlertCard key={a.id} alert={a} />
+            <AlertCard
+              key={a.id}
+              alert={a}
+              following={followed.has(a.id)}
+              onToggleFollow={toggleFollow}
+            />
           ))}
         </div>
       )}
