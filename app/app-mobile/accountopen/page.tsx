@@ -44,12 +44,9 @@ const BROKERS: Record<string, Broker> = {
   },
 }
 
-/** Só o app iOS nativo (UA MTMNativeApp + iPhone) mantém VT Markets; tudo o resto → PU Prime. */
+/** Corretora de registo em todas as plataformas: PU Prime (site, Android, PWA e app iOS). */
 function pickBroker(): Broker {
-  if (typeof navigator === "undefined") return BROKERS.puprime
-  const ua = navigator.userAgent || ""
-  const iosNative = /MTMNativeApp/i.test(ua) && /iPhone|iPad|iPod/i.test(ua)
-  return iosNative ? BROKERS.vtmarkets : BROKERS.puprime
+  return BROKERS.puprime
 }
 
 function makeSteps(b: string) {

@@ -614,7 +614,7 @@ export default function FastStartPage() {
                     </Link>
                     <div className="rounded-lg border border-mtm-primary/30 bg-mtm-primary/5 p-4 text-sm text-gray-300">
                       <p>
-                        Guia na app: registo VT Markets, KYC, depósito, MT5 e UID MTM.
+                        Guia na app: registo PU Prime, KYC, depósito, MT5 e UID MTM.
                         Podes começar em <strong>demo</strong> para ganhar confiança enquanto aprendes.
                       </p>
                     </div>
