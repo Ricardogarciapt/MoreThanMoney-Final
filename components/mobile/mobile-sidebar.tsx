@@ -391,6 +391,16 @@ export default function MobileSidebar({
                 <ChevronRight className="w-4 h-4 text-gray-500" />
               </Link>
 
+              {/* Alertas MTM — alertas nativos + gráficos (abaixo de MTMcopier) */}
+              <button
+                onClick={() => { handleTabClick("trading-alerts"); onClose() }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
+              >
+                <Bell className="w-5 h-5 text-[#D2A63C]" />
+                <span className="flex-1 text-left font-medium">Alertas MTM</span>
+                <ChevronRight className="w-4 h-4 text-gray-500" />
+              </button>
+
               {isAppOnlyUser ? (
                 <button
                   onClick={() => { handleTabClick("settings") }}
