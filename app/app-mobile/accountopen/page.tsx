@@ -24,58 +24,44 @@ import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 
-const VTMARKETS_REFERRAL = "https://www.vtmarkets.net/campaign?cs=7d17097uqs"
+// Corretora de registo. PU Prime por defeito (site + Android + web); VT Markets só
+// no app iOS nativo (que tem o seu próprio fluxo nativo — isto é rede de segurança).
+type Broker = { key: string; name: string; referral: string; blurb: string; tags: string[] }
+const BROKERS: Record<string, Broker> = {
+  puprime: {
+    key: "puprime",
+    name: "PU Prime",
+    referral: "https://www.puprime.com/campaign?cs=morethanmoney",
+    blurb: "Spreads competitivos, execução rápida, MT4/MT5 e depósitos flexíveis. Suporte em português.",
+    tags: ["MT4 / MT5", "Execução rápida", "Suporte PT", "Spreads baixos"],
+  },
+  vtmarkets: {
+    key: "vtmarkets",
+    name: "VT Markets",
+    referral: "https://www.vtmarkets.net/campaign?cs=7d17097uqs",
+    blurb: "Regulada pela ASIC (Austrália) e FSCA (África do Sul). Spreads competitivos, execução rápida e suporte em português.",
+    tags: ["Regulada ASIC", "MT4 / MT5", "Suporte PT", "Spreads baixos"],
+  },
+}
 
-const STEPS = [
-  {
-    id: 1,
-    icon: ExternalLink,
-    title: "Acede ao site da VT Markets",
-    description: "Clica no botão abaixo para abrir o registo oficial da VT Markets com o nosso link de parceiro.",
-    detail: "Ao usares o nosso link garantes que a conta fica associada ao grupo MTM — isso dá-te acesso às melhores condições de suporte.",
-    action: "open_link",
-  },
-  {
-    id: 2,
-    icon: User,
-    title: "Cria a tua conta",
-    description: "Preenche os teus dados pessoais: nome completo, email, data de nascimento e país de residência.",
-    detail: "Usa dados reais — a VT Markets é uma corretora regulada e vai verificar a tua identidade.",
-    action: null,
-  },
-  {
-    id: 3,
-    icon: FileText,
-    title: "Verificação de identidade (KYC)",
-    description: "Faz upload do teu documento de identificação (CC ou Passaporte) e um comprovativo de morada.",
-    detail: "A verificação demora normalmente entre 30 minutos e 24 horas. Tens de a completar antes de poderes depositar.",
-    action: null,
-  },
-  {
-    id: 4,
-    icon: CreditCard,
-    title: "Faz o teu primeiro depósito",
-    description: "O depósito mínimo recomendado é de €100. Podes depositar via transferência bancária, cartão ou Skrill.",
-    detail: "Recomendamos começar com um valor com que te sintas confortável. Não há pressão — podes começar com o mínimo.",
-    action: null,
-  },
-  {
-    id: 5,
-    icon: Smartphone,
-    title: "Instala a plataforma MetaTrader",
-    description: "Descarrega o MetaTrader 4 ou 5 (MT4/MT5) disponível no site da VT Markets ou na App Store / Play Store.",
-    detail: "A VT Markets fornece-te os dados de login (servidor, número de conta e password) assim que a conta estiver ativa.",
-    action: null,
-  },
-  {
-    id: 6,
-    icon: TrendingUp,
-    title: "Regista o teu UID na MTM",
-    description: "Após criares a conta, copia o teu número de conta VT Markets (UID) e guarda-o aqui.",
-    detail: "O UID é o número da tua conta na VT Markets (ex: 12345678). Vais encontrá-lo no painel da VT Markets após o login. Este passo desbloqueia as salas exclusivas de Trade Ideas.",
-    action: "save_uid",
-  },
-]
+/** Só o app iOS nativo (UA MTMNativeApp + iPhone) mantém VT Markets; tudo o resto → PU Prime. */
+function pickBroker(): Broker {
+  if (typeof navigator === "undefined") return BROKERS.puprime
+  const ua = navigator.userAgent || ""
+  const iosNative = /MTMNativeApp/i.test(ua) && /iPhone|iPad|iPod/i.test(ua)
+  return iosNative ? BROKERS.vtmarkets : BROKERS.puprime
+}
+
+function makeSteps(b: string) {
+  return [
+    { id: 1, icon: ExternalLink, title: `Acede ao site da ${b}`, description: `Clica no botão abaixo para abrir o registo oficial da ${b} com o nosso link de parceiro.`, detail: "Ao usares o nosso link garantes que a conta fica associada ao grupo MTM — isso dá-te acesso às melhores condições de suporte.", action: "open_link" as const },
+    { id: 2, icon: User, title: "Cria a tua conta", description: "Preenche os teus dados pessoais: nome completo, email, data de nascimento e país de residência.", detail: `Usa dados reais — a ${b} é uma corretora regulada e vai verificar a tua identidade.`, action: null },
+    { id: 3, icon: FileText, title: "Verificação de identidade (KYC)", description: "Faz upload do teu documento de identificação (CC ou Passaporte) e um comprovativo de morada.", detail: "A verificação demora normalmente entre 30 minutos e 24 horas. Tens de a completar antes de poderes depositar.", action: null },
+    { id: 4, icon: CreditCard, title: "Faz o teu primeiro depósito", description: "O depósito mínimo recomendado é de €100. Podes depositar via transferência bancária, cartão ou Skrill.", detail: "Recomendamos começar com um valor com que te sintas confortável. Não há pressão — podes começar com o mínimo.", action: null },
+    { id: 5, icon: Smartphone, title: "Instala a plataforma MetaTrader", description: `Descarrega o MetaTrader 4 ou 5 (MT4/MT5) disponível no site da ${b} ou na App Store / Play Store.`, detail: `A ${b} fornece-te os dados de login (servidor, número de conta e password) assim que a conta estiver ativa.`, action: null },
+    { id: 6, icon: TrendingUp, title: "Regista o teu UID na MTM", description: `Após criares a conta, copia o teu número de conta ${b} (UID) e guarda-o aqui.`, detail: `O UID é o número da tua conta na ${b} (ex: 12345678). Vais encontrá-lo no painel da ${b} após o login. Este passo desbloqueia as salas exclusivas de Trade Ideas.`, action: "save_uid" as const },
+  ]
+}
 
 export default function AccountOpenPage() {
   const router = useRouter()
@@ -87,8 +73,12 @@ export default function AccountOpenPage() {
   const [savedUid, setSavedUid] = useState("")
   const [savingUid, setSavingUid] = useState(false)
   const [linkOpened, setLinkOpened] = useState(false)
+  const [broker, setBroker] = useState<Broker>(BROKERS.puprime)
+
+  const STEPS = makeSteps(broker.name)
 
   useEffect(() => {
+    setBroker(pickBroker())
     loadSavedUid()
   }, [])
 
@@ -121,7 +111,7 @@ export default function AccountOpenPage() {
   }
 
   const handleOpenLink = () => {
-    window.open(VTMARKETS_REFERRAL, "_blank", "noopener,noreferrer")
+    window.open(broker.referral, "_blank", "noopener,noreferrer")
     setLinkOpened(true)
     markStepDone(1)
     setTimeout(() => setExpandedStep(2), 400)
@@ -129,7 +119,7 @@ export default function AccountOpenPage() {
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(VTMARKETS_REFERRAL)
+      await navigator.clipboard.writeText(broker.referral)
       setCopiedLink(true)
       setTimeout(() => setCopiedLink(false), 2000)
       toast({ title: "Link copiado!" })
@@ -182,7 +172,7 @@ export default function AccountOpenPage() {
         </button>
         <div className="flex-1">
           <h1 className="font-bold text-white text-base">Abrir Conta na Corretora</h1>
-          <p className="text-xs text-gray-400">VT Markets — Parceiro oficial MTM</p>
+          <p className="text-xs text-gray-400">{broker.name} — Parceiro oficial MTM</p>
         </div>
         <div className="w-8 h-8 rounded-lg bg-[#D2A63C]/10 border border-[#D2A63C]/30 flex items-center justify-center">
           <TrendingUp className="w-4 h-4 text-[#D2A63C]" />
@@ -200,12 +190,12 @@ export default function AccountOpenPage() {
                 <Shield className="w-6 h-6 text-[#D2A63C]" />
               </div>
               <div>
-                <h2 className="font-bold text-white text-lg leading-tight">VT Markets — Corretora Parceira</h2>
+                <h2 className="font-bold text-white text-lg leading-tight">{broker.name} — Corretora Parceira</h2>
                 <p className="text-sm text-gray-300 mt-1 leading-relaxed">
-                  Regulada pela ASIC (Austrália) e FSCA (África do Sul). Spreads competitivos, execução rápida e suporte em português.
+                  {broker.blurb}
                 </p>
                 <div className="flex flex-wrap gap-2 mt-3">
-                  {["Regulada ASIC", "MT4 / MT5", "Suporte PT", "Spreads baixos"].map(tag => (
+                  {broker.tags.map(tag => (
                     <span
                       key={tag}
                       className="text-xs px-2 py-0.5 rounded-full bg-[#D2A63C]/10 text-[#D2A63C] border border-[#D2A63C]/20"
@@ -315,7 +305,7 @@ export default function AccountOpenPage() {
                           className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
                         >
                           <ExternalLink className="w-4 h-4" />
-                          Abrir VT Markets com o nosso link
+                          Abrir {broker.name} com o nosso link
                         </button>
                         <button
                           onClick={handleCopyLink}
@@ -351,7 +341,7 @@ export default function AccountOpenPage() {
                           </div>
                         )}
                         <div>
-                          <label className="text-xs text-gray-400 mb-1.5 block">Número de conta VT Markets (UID)</label>
+                          <label className="text-xs text-gray-400 mb-1.5 block">Número de conta {broker.name} (UID)</label>
                           <input
                             type="text"
                             value={uid}
