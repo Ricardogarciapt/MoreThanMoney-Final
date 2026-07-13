@@ -19,7 +19,7 @@ export async function GET() {
   const { data: profile } = await supabase
     .from("lms_educators")
     .select(
-      "academy_id, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url"
+      "academy_id, avatar_url, bio, specialty, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url"
     )
     .eq("id", payload.educatorId)
     .maybeSingle()
@@ -29,6 +29,9 @@ export async function GET() {
     educator: {
       ...payload,
       academy_id: profile?.academy_id ?? null,
+      avatar_url: profile?.avatar_url ?? null,
+      bio: profile?.bio ?? null,
+      specialty: profile?.specialty ?? null,
       restream_enabled: Boolean(profile?.restream_enabled),
       restream_ingest_url: profile?.restream_ingest_url ?? null,
       restream_stream_key: profile?.restream_stream_key ?? null,

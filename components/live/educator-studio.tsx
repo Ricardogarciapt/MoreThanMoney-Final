@@ -25,6 +25,8 @@ import EducatorFeedbacksList from "@/components/live/educator-feedbacks-list"
 import StreamKeyCard from "@/components/live/stream-key-card"
 import EducatorStudioLivePanel from "@/components/live/educator-studio-live-panel"
 import EducatorLiveViewerBadge from "@/components/live/educator-live-viewer-badge"
+import { LmsImageUploadField } from "@/components/admin/lms-image-upload-field"
+import { ScheduleEditor } from "@/components/live/schedule-editor"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { LMS_CATEGORY_OPTIONS } from "@/lib/lms-categories"
@@ -47,6 +49,10 @@ type StreamRow = {
   scheduled_start_at?: string | null
   viewer_count?: number | null
   access_tier?: "all" | "app_member" | "premium" | null
+  thumbnail_url?: string | null
+  square_image_url?: string | null
+  playlist_url?: string | null
+  playlist_access_tier?: "all" | "app_member" | "premium" | null
 }
 
 const CATEGORIES = [{ value: "", label: "— Categoria —" }, ...LMS_CATEGORY_OPTIONS]
@@ -580,13 +586,28 @@ export default function EducatorStudio() {
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
             <p className="hidden max-w-[200px] text-right text-[10px] leading-snug text-gray-500 lg:block">
-              Bio, foto e academia: Admin → Educação (LMS).
+              Bio e academia: Admin → Educação (LMS).
             </p>
             <Button variant="outline" size="sm" className="border-red-900/50 text-red-300" onClick={logout}>
               Sair
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Foto de educador — editável pelo próprio (auto-guarda) */}
+      <div className="mb-2 max-w-md rounded-xl border border-gray-800/80 bg-zinc-950/60 p-3">
+        <LmsImageUploadField
+          label="A tua foto (educador)"
+          description="Aparece na tua sala e no lobby. Quadrada fica melhor."
+          scope="educator_avatar"
+          value={me.avatar_url || ""}
+          commit="blur"
+          uploadUrl="/api/live-sessions/educator-auth/upload-image"
+          onUrlChange={() => {
+            loadMe()
+          }}
+        />
       </div>
 
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
@@ -748,6 +769,56 @@ export default function EducatorStudio() {
                     </select>
                   </div>
                 </div>
+
+                {/* Imagens da sala + playlist de aulas */}
+                <div className="grid gap-3 md:grid-cols-2">
+                  <LmsImageUploadField
+                    label="Thumbnail da sala"
+                    description="Cartão da live no lobby; se vazio, usa a tua foto."
+                    scope="stream_thumbnail"
+                    refId={stream.id}
+                    value={stream.thumbnail_url || ""}
+                    commit="blur"
+                    uploadUrl="/api/live-sessions/educator-auth/upload-image"
+                    onUrlChange={(url) => patchStream(stream.id, { thumbnail_url: url.trim() || null })}
+                  />
+                  <LmsImageUploadField
+                    label="Imagem quadrada da sala"
+                    description="Versão quadrada (grelhas/avatar da sala)."
+                    scope="stream_square"
+                    refId={stream.id}
+                    value={stream.square_image_url || ""}
+                    commit="blur"
+                    uploadUrl="/api/live-sessions/educator-auth/upload-image"
+                    onUrlChange={(url) => patchStream(stream.id, { square_image_url: url.trim() || null })}
+                  />
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Playlist YouTube (rever aulas)</p>
+                    <Input
+                      defaultValue={stream.playlist_url || ""}
+                      className="border-gray-700 bg-black/50 text-xs"
+                      placeholder="https://youtube.com/playlist?list=…"
+                      onBlur={(e) => patchStream(stream.id, { playlist_url: e.target.value.trim() || null })}
+                    />
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Quem vê a playlist</p>
+                    <select
+                      className="w-full rounded-md border border-gray-700 bg-black/50 px-2 py-2 text-sm text-white"
+                      defaultValue={stream.playlist_access_tier || ""}
+                      onChange={(e) => patchStream(stream.id, { playlist_access_tier: e.target.value || null })}
+                    >
+                      <option value="">Todos</option>
+                      <option value="app_member">Membro ($35) e superiores</option>
+                      <option value="premium">Premium ($65) apenas</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Horário semanal recorrente desta sala */}
+                <ScheduleEditor streamId={stream.id} apiBase="/api/live-sessions/educator-auth/schedules" title="Horário semanal desta sala" />
 
                 <Collapsible defaultOpen={false} className="rounded-lg border border-gray-800/90 bg-black/25">
                   <CollapsibleTrigger className="group flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm text-gray-300 transition hover:bg-white/[0.04]">

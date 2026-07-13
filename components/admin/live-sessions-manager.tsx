@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { LmsImageUploadField } from "@/components/admin/lms-image-upload-field"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
+import { ScheduleEditor } from "@/components/live/schedule-editor"
 import { toast } from "sonner"
 
 type Academy = { id: string; name: string; slug: string }
@@ -44,6 +45,9 @@ type Stream = {
   scheduled_start_at?: string | null
   viewer_count?: number | null
   access_tier?: "all" | "app_member" | "premium" | null
+  square_image_url?: string | null
+  playlist_url?: string | null
+  playlist_access_tier?: "all" | "app_member" | "premium" | null
   academy?: { name: string }
   educator?: { display_name: string }
 }
@@ -930,7 +934,7 @@ export default function LiveSessionsManager() {
                   <p>{s.educator?.display_name} • {s.academy?.name}</p>
                 </div>
               </div>
-              <div className="max-w-md">
+              <div className="grid gap-2 md:grid-cols-2">
                 <LmsImageUploadField
                   label="Thumbnail desta sala"
                   scope="stream_thumbnail"
@@ -939,7 +943,52 @@ export default function LiveSessionsManager() {
                   commit="blur"
                   onUrlChange={(url) => patchStreamAdmin(s.id, { thumbnail_url: url.trim() || null })}
                 />
+                <LmsImageUploadField
+                  label="Imagem quadrada da sala"
+                  description="Usada em grelhas/avatares quadrados da sala do educador."
+                  scope="stream_square"
+                  refId={s.id}
+                  value={s.square_image_url || ""}
+                  commit="blur"
+                  onUrlChange={(url) => patchStreamAdmin(s.id, { square_image_url: url.trim() || null })}
+                />
               </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Acesso por plano</p>
+                  <select
+                    className="w-full rounded border border-gray-700 bg-black/50 px-2 py-2 text-white text-xs"
+                    value={s.access_tier || "all"}
+                    onChange={(ev) => patchStreamAdmin(s.id, { access_tier: ev.target.value })}
+                  >
+                    <option value="all">Todos os membros</option>
+                    <option value="app_member">Pack Membro ($35/mês) e superiores</option>
+                    <option value="premium">Pack Premium ($65/mês) apenas</option>
+                  </select>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Playlist YouTube (rever aulas)</p>
+                  <Input
+                    key={`pl-${s.id}-${s.playlist_url || ""}`}
+                    defaultValue={s.playlist_url || ""}
+                    className="border-gray-700 bg-black/50 font-mono text-[11px]"
+                    placeholder="https://youtube.com/playlist?list=…"
+                    onBlur={(ev) => patchStreamAdmin(s.id, { playlist_url: ev.target.value.trim() || null })}
+                  />
+                  <select
+                    className="mt-1 w-full rounded border border-gray-700 bg-black/50 px-2 py-1.5 text-white text-[11px]"
+                    value={s.playlist_access_tier || ""}
+                    onChange={(ev) => patchStreamAdmin(s.id, { playlist_access_tier: ev.target.value || null })}
+                  >
+                    <option value="">Playlist: visível para todos</option>
+                    <option value="app_member">Playlist: Membro ($35) e superiores</option>
+                    <option value="premium">Playlist: Premium ($65) apenas</option>
+                  </select>
+                </div>
+              </div>
+
+              <ScheduleEditor streamId={s.id} apiBase="/api/admin/live-sessions/schedules" title="Horário semanal desta sala" />
               {(s.category || s.scheduled_start_at) && (
                 <p className="text-gray-400">
                   {s.category && <>Categoria: {s.category} · </>}
