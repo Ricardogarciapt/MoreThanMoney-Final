@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
       thumbnail_url: String(body.thumbnail_url || "").trim() || null,
       square_image_url: String(body.square_image_url || "").trim() || null,
       playlist_url: String(body.playlist_url || "").trim() || null,
+      playlist_title: String(body.playlist_title || "").trim() || null,
       playlist_access_tier: ["all", "app_member", "premium"].includes(body.playlist_access_tier)
         ? body.playlist_access_tier
         : null,
@@ -89,6 +90,7 @@ export async function PATCH(request: NextRequest) {
       "thumbnail_url",
       "square_image_url",
       "playlist_url",
+      "playlist_title",
       "playlist_access_tier",
       "category",
       "scheduled_start_at",

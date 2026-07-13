@@ -45,6 +45,7 @@ type StreamListItem = {
   access_tier?: "all" | "app_member" | "premium" | null
   scheduled_start_at?: string | null
   playlist_url?: string | null
+  playlist_title?: string | null
   playlist_access_tier?: "all" | "app_member" | "premium" | null
 }
 
@@ -671,6 +672,7 @@ export default function LiveSessionsMobile({
             <div className="shrink-0 border-b border-gray-800/70 bg-black/30 px-2 py-2 sm:px-3">
               <LmsPlaylistSection
                 playlistUrl={stream.playlist_url}
+                playlistTitle={stream.playlist_title}
                 canAccess={canAccessStream(
                   (user as any)?.member_category,
                   (user as any)?.user_type,

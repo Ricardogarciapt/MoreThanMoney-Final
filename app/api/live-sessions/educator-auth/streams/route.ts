@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
     const thumbnail_url = String(body.thumbnail_url || "").trim() || null
     const square_image_url = String(body.square_image_url || "").trim() || null
     const playlist_url = String(body.playlist_url || "").trim() || null
+    const playlist_title = String(body.playlist_title || "").trim() || null
     const playlist_access_tier = ["all", "app_member", "premium"].includes(body.playlist_access_tier)
       ? body.playlist_access_tier
       : null
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
         thumbnail_url,
         square_image_url,
         playlist_url,
+        playlist_title,
         playlist_access_tier,
         access_tier,
         category,
@@ -132,6 +134,7 @@ export async function PATCH(request: NextRequest) {
     if (body.thumbnail_url !== undefined) updates.thumbnail_url = String(body.thumbnail_url || "").trim() || null
     if (body.square_image_url !== undefined) updates.square_image_url = String(body.square_image_url || "").trim() || null
     if (body.playlist_url !== undefined) updates.playlist_url = String(body.playlist_url || "").trim() || null
+    if (body.playlist_title !== undefined) updates.playlist_title = String(body.playlist_title || "").trim() || null
     if (body.playlist_access_tier !== undefined)
       updates.playlist_access_tier = ["all", "app_member", "premium"].includes(body.playlist_access_tier)
         ? body.playlist_access_tier

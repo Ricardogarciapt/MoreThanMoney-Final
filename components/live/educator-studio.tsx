@@ -52,6 +52,7 @@ type StreamRow = {
   thumbnail_url?: string | null
   square_image_url?: string | null
   playlist_url?: string | null
+  playlist_title?: string | null
   playlist_access_tier?: "all" | "app_member" | "premium" | null
 }
 
@@ -796,6 +797,12 @@ export default function EducatorStudio() {
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div>
                     <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Playlist YouTube (rever aulas)</p>
+                    <Input
+                      defaultValue={stream.playlist_title || ""}
+                      className="mb-1 border-gray-700 bg-black/50 text-xs"
+                      placeholder="Nome da playlist (ex: Aulas de Sensei)"
+                      onBlur={(e) => patchStream(stream.id, { playlist_title: e.target.value.trim() || null })}
+                    />
                     <Input
                       defaultValue={stream.playlist_url || ""}
                       className="border-gray-700 bg-black/50 text-xs"

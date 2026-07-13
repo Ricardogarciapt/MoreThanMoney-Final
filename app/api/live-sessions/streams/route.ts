@@ -14,6 +14,7 @@ const STREAM_SELECT_PUBLIC = `
   thumbnail_url,
   square_image_url,
   playlist_url,
+  playlist_title,
   playlist_access_tier,
   is_live,
   educator_id,

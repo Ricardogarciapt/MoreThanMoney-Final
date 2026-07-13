@@ -47,6 +47,7 @@ type Stream = {
   access_tier?: "all" | "app_member" | "premium" | null
   square_image_url?: string | null
   playlist_url?: string | null
+  playlist_title?: string | null
   playlist_access_tier?: "all" | "app_member" | "premium" | null
   academy?: { name: string }
   educator?: { display_name: string }
@@ -976,6 +977,13 @@ export default function LiveSessionsManager() {
                 </div>
                 <div>
                   <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Playlist YouTube (rever aulas)</p>
+                  <Input
+                    key={`pln-${s.id}-${s.playlist_title || ""}`}
+                    defaultValue={s.playlist_title || ""}
+                    className="mb-1 border-gray-700 bg-black/50 text-[11px]"
+                    placeholder="Nome da playlist (ex: Aulas de Sensei)"
+                    onBlur={(ev) => patchStreamAdmin(s.id, { playlist_title: ev.target.value.trim() || null })}
+                  />
                   <Input
                     key={`pl-${s.id}-${s.playlist_url || ""}`}
                     defaultValue={s.playlist_url || ""}

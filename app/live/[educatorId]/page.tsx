@@ -35,7 +35,7 @@ export default function LiveByEducatorPage() {
   const { user } = useAuth()
   const [streamId, setStreamId] = useState<string>("")
   const [educator, setEducator] = useState<EducatorPublic | null>(null)
-  const [playlist, setPlaylist] = useState<{ url: string | null; tier: string | null }>({ url: null, tier: null })
+  const [playlist, setPlaylist] = useState<{ url: string | null; tier: string | null; title: string | null }>({ url: null, tier: null, title: null })
   const [loading, setLoading] = useState(true)
   // Track consecutive empty polls to avoid killing the player on transient API failures
   const emptyPollsRef = useRef(0)
@@ -54,7 +54,12 @@ export default function LiveByEducatorPage() {
           fetch(`/api/live-sessions/streams?educatorId=${educatorId}`).then((r) => r.json()).catch(() => ({ data: [] })),
         ])
         const withPlaylist = (allStreamsRes.data || []).find((s: { playlist_url?: string | null }) => s.playlist_url)
-        if (withPlaylist) setPlaylist({ url: withPlaylist.playlist_url, tier: withPlaylist.playlist_access_tier ?? null })
+        if (withPlaylist)
+          setPlaylist({
+            url: withPlaylist.playlist_url,
+            tier: withPlaylist.playlist_access_tier ?? null,
+            title: withPlaylist.playlist_title ?? null,
+          })
         const first = (streamsRes.data || [])[0]
         if (first?.id) {
           emptyPollsRef.current = 0
@@ -138,6 +143,7 @@ export default function LiveByEducatorPage() {
           {!loading && playlist.url && (
             <LmsPlaylistSection
               playlistUrl={playlist.url}
+              playlistTitle={playlist.title}
               canAccess={planAllows(
                 (user as { subscription_plan?: string })?.subscription_plan,
                 (user as { user_type?: string })?.user_type,

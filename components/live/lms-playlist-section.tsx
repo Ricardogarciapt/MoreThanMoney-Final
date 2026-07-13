@@ -20,11 +20,14 @@ export function extractPlaylistId(url?: string | null): string | null {
 
 export function LmsPlaylistSection({
   playlistUrl,
+  playlistTitle,
   canAccess,
   tierLabel,
   defaultOpen = false,
 }: {
   playlistUrl?: string | null
+  /** nome dado pelo educador; fallback "Rever aulas · Playlist" */
+  playlistTitle?: string | null
   canAccess: boolean
   /** rótulo do plano necessário, p/ mensagem de bloqueio */
   tierLabel?: string | null
@@ -43,7 +46,7 @@ export function LmsPlaylistSection({
       >
         <span className="flex items-center gap-2 text-sm font-semibold text-white">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#D2A63C]" />
-          Rever aulas · Playlist
+          {playlistTitle?.trim() || "Rever aulas · Playlist"}
         </span>
         <span className="text-[10px] text-gray-500">{open ? "Fechar" : "Abrir"}</span>
       </button>
