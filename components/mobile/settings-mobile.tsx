@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import { getAccessToken } from "@/lib/auth-token"
 import { clearCachedSession } from "@/lib/auth-cache"
+import { ConversionBanner } from "@/components/conversion-banner"
 import { useToast } from "@/hooks/use-toast"
 import {
   NOTIFICATION_CATEGORY_LABELS,
@@ -593,6 +594,10 @@ export default function SettingsMobile() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-900 pb-28">
+      {/* ── Funil de conversão (grátis → pagante) ──────────────────────── */}
+      <div className="px-4 pt-3">
+        <ConversionBanner compact />
+      </div>
       {/* ── Avatar + nome ──────────────────────────────────────────────── */}
       <div className="px-4 pt-6 pb-4 flex flex-col items-center gap-3 border-b border-gray-800">
         <div className="relative">

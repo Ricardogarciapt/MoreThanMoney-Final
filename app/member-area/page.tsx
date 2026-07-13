@@ -31,6 +31,7 @@ import Image from "next/image"
 import { CyberpunkCard } from "@/components/cyberpunk-card"
 import NotificationsPanel from "@/components/notifications-panel"
 import { MemberSubscriptionCard } from "@/components/member-subscription-card"
+import { ConversionBanner } from "@/components/conversion-banner"
 
 interface UserProfile {
   id: string
@@ -485,6 +486,11 @@ export default function MemberAreaPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Funil de conversão */}
+        <div className="max-w-4xl mx-auto mb-4">
+          <ConversionBanner />
+        </div>
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="max-w-4xl mx-auto">
