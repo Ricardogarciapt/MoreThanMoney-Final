@@ -45,6 +45,16 @@ type StreamListItem = {
   scheduled_start_at?: string | null
 }
 
+type TimetableApiSession = {
+  id: string
+  streamId: string
+  educatorId?: string | null
+  title: string
+  educatorName?: string | null
+  scheduledAt: string
+  tier?: string | null
+}
+
 type StreamDetail = StreamListItem & {
   stream_key?: string | null
   hls_manifest_url?: string | null
@@ -96,6 +106,7 @@ export default function LiveSessionsMobile({
   const { user } = useAuth()
   const [liveStreams, setLiveStreams] = useState<StreamListItem[]>([])
   const [scheduledStreams, setScheduledStreams] = useState<StreamListItem[]>([])
+  const [scheduledSessions, setScheduledSessions] = useState<TimetableApiSession[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -130,9 +141,10 @@ export default function LiveSessionsMobile({
   const loadLive = useCallback(async () => {
     setLoading(true)
     try {
-      const [liveRes, allRes] = await Promise.all([
+      const [liveRes, allRes, schedRes] = await Promise.all([
         fetch("/api/live-sessions/streams?live=true").then((r) => r.json()),
         fetch("/api/live-sessions/streams").then((r) => r.json()),
+        fetch("/api/live-sessions/schedule?days=21&limit=14").then((r) => r.json()).catch(() => ({ data: [] })),
       ])
       setLiveStreams(liveRes.data || [])
       // Próximas lives: não live, com scheduled_start_at no futuro
@@ -142,9 +154,11 @@ export default function LiveSessionsMobile({
         .sort((a: StreamListItem, b: StreamListItem) => new Date(a.scheduled_start_at!).getTime() - new Date(b.scheduled_start_at!).getTime())
         .slice(0, 10)
       setScheduledStreams(upcoming)
+      setScheduledSessions((schedRes.data || []) as TimetableApiSession[])
     } catch {
       setLiveStreams([])
       setScheduledStreams([])
+      setScheduledSessions([])
     } finally {
       setLoading(false)
     }
@@ -581,19 +595,19 @@ export default function LiveSessionsMobile({
       </div>
 
       {/* ── Próximas sessões (Horário — estilo calendário escolar) ──────────── */}
-      {scheduledStreams.length > 0 && (
+      {scheduledSessions.length > 0 && (
         <div className="mt-6 mb-4">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#D2A63C]" />
             Horário · Próximas Sessões
           </h3>
           <SessionsTimetable
-            sessions={scheduledStreams.map((s) => ({
+            sessions={scheduledSessions.map((s) => ({
               id: s.id,
               title: s.title,
-              educatorName: s.educator?.display_name ?? null,
-              scheduledAt: s.scheduled_start_at!,
-              tier: s.access_tier,
+              educatorName: s.educatorName ?? null,
+              scheduledAt: s.scheduledAt,
+              tier: s.tier,
             }))}
           />
         </div>

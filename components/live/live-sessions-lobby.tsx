@@ -81,6 +81,9 @@ export default function LiveSessionsLobby() {
   const [academies, setAcademies] = useState<Academy[]>([])
   const [streams, setStreams] = useState<Stream[]>([])
   const [educators, setEducators] = useState<EducatorPublic[]>([])
+  const [scheduledSessions, setScheduledSessions] = useState<
+    Array<{ id: string; streamId: string; title: string; educatorName?: string | null; scheduledAt: string; tier?: string | null }>
+  >([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<string>("")
@@ -94,14 +97,16 @@ export default function LiveSessionsLobby() {
   const loadAll = useCallback(async () => {
     setLoading(true)
     try {
-      const [aRes, sRes, eRes] = await Promise.all([
+      const [aRes, sRes, eRes, schedRes] = await Promise.all([
         fetch("/api/live-sessions/academies").then((r) => r.json()),
         fetch("/api/live-sessions/streams").then((r) => r.json()),
         fetch("/api/live-sessions/educators-public").then((r) => r.json()),
+        fetch("/api/live-sessions/schedule?days=21&limit=12").then((r) => r.json()).catch(() => ({ data: [] })),
       ])
       setAcademies(Array.isArray(aRes?.data) ? aRes.data : [])
       setStreams(Array.isArray(sRes?.data) ? sRes.data : [])
       setEducators(Array.isArray(eRes?.data) ? eRes.data : [])
+      setScheduledSessions(Array.isArray(schedRes?.data) ? schedRes.data : [])
     } finally {
       setLoading(false)
     }
@@ -390,13 +395,21 @@ export default function LiveSessionsLobby() {
               Horário · Próximas lives
             </h3>
             <SessionsTimetable
-              sessions={upcoming.map((s) => ({
-                id: s.id,
-                title: s.title,
-                educatorName: s.educator?.display_name ?? null,
-                scheduledAt: s.scheduled_start_at!,
-                tier: (s as { access_tier?: string }).access_tier ?? null,
-              }))}
+              sessions={(scheduledSessions.length > 0
+                ? scheduledSessions.map((s) => ({
+                    id: s.id,
+                    title: s.title,
+                    educatorName: s.educatorName ?? null,
+                    scheduledAt: s.scheduledAt,
+                    tier: s.tier ?? null,
+                  }))
+                : upcoming.map((s) => ({
+                    id: s.id,
+                    title: s.title,
+                    educatorName: s.educator?.display_name ?? null,
+                    scheduledAt: s.scheduled_start_at!,
+                    tier: (s as { access_tier?: string }).access_tier ?? null,
+                  })))}
               emptyText="Sem horários agendados. Os educadores podem definir data no studio ou no admin."
             />
           </section>
