@@ -349,6 +349,12 @@ async function sendCampaign(campaignId: string) {
               templateData.siteUrl
             )
             break
+          case 'android_update':
+            htmlContent = emailTemplates.androidUpdateEmailTemplate(
+              templateData.userName,
+              templateData.siteUrl
+            )
+            break
           default:
             console.warn(`⚠️ Template ${campaign.template_name} não encontrado, usando welcome`)
             htmlContent = emailTemplates.welcomeEmailTemplate(

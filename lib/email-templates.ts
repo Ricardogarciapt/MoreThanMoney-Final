@@ -1332,6 +1332,46 @@ export const platformLaunchEmailTemplate = (userName?: string, siteUrl?: string)
   return baseTemplate(content, 'Chegou a MoreThanMoney — ativa o teu acesso em MoreThanMoney.pt/register', base)
 }
 
+/**
+ * App Android ATUALIZADA — aviso aos membros de que a nova versão da app Android
+ * está disponível, com os novos Alertas MTM nativos no menu "Mais".
+ */
+export const androidUpdateEmailTemplate = (userName?: string, siteUrl?: string) => {
+  const base = resolveSiteUrl(siteUrl)
+  const name = (userName ?? '').trim()
+  const content = `
+    ${headerComponent('A app Android foi atualizada', 'Nova versão com Alertas MTM nativos', '🤖')}
+    ${textComponent(`
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        ${name ? `Olá ${name},` : 'Olá,'}
+      </p>
+      <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Acabámos de atualizar a <strong>app MoreThanMoney para Android</strong>. Já podes descarregar a versão mais recente e ter tudo à distância de um toque.
+      </p>
+      <div style="background: ${COLORS.gray}; border-left: 4px solid ${COLORS.primary}; border-radius: 8px; padding: 16px 20px; margin: 0 0 24px 0;">
+        <p style="margin: 0 0 10px 0; font-size: 15px; line-height: 24px; color: #1a1a1a;"><strong>Novidades desta versão:</strong></p>
+        <p style="margin: 0; font-size: 15px; line-height: 26px; color: #333;">
+          🔔 <strong>Alertas MTM</strong> nativos no menu <strong>Mais</strong> — entradas, SL e TP com gráficos<br>
+          📈 Segue sinais e acompanha o <strong>desempenho</strong> (pendentes, wins e loss) em tempo real<br>
+          ⚡ Melhorias de estabilidade e desempenho
+        </p>
+      </div>
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        <strong>Android:</strong> descarrega o APK e toca em <strong>Instalar</strong> (permite "fontes desconhecidas" se pedir).
+      </p>
+    `)}
+    ${buttonComponent('Descarregar a app Android', `${base}/fast-start`)}
+    ${textComponent(`
+      <p style="margin: 24px 0 8px 0; font-size: 15px; line-height: 24px; color: #666;">
+        📱 <strong>iPhone?</strong> A versão iOS está disponível na App Store.
+      </p>
+      <p style="margin: 16px 0 4px 0; font-size: 16px; line-height: 26px; color: #333;">Bons trades,</p>
+      <p style="margin: 0; font-size: 16px; line-height: 26px; color: ${COLORS.primaryDark}; font-weight: 700;">Equipa MTM</p>
+    `)}
+  `
+  return baseTemplate(content, 'A app Android MoreThanMoney foi atualizada — nova versão com Alertas MTM', base)
+}
+
 // Export all components for custom templates
 export const components = {
   header: headerComponent,
