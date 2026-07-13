@@ -41,12 +41,47 @@ function tvInterval(tf: string | null): string {
   return "60"
 }
 
+// Indicadores TradingView (PUB;<id>) publicados de cada scanner MTM — para
+// sobrepor no gráfico o mesmo study que gerou o alerta.
+const SCANNER_STUDIES: Record<string, string[]> = {
+  GoldenZone: ["PUB;0b373fb0e6634a73bc8b838cf0690725"],
+  Momentum: ["PUB;00ec48baf0ee43f0a43e1658bb54cdab", "PUB;38080827cf244587b5e7dbb9f272db0a"],
+  KillShot: ["PUB;c1f81145e78a49ce92bd1f81f9c103dd"],
+  Supernova: ["PUB;c16bafd7d0874182a1415648ec3ed7b8"],
+  Winzone: [
+    "PUB;6c003d30b2154ef3a31074d5c703954f", "PUB;e6adb5e5246c43f4a8dcffde5c98db4e",
+    "PUB;162198dcae874d5da28f7b048feb76e7", "PUB;b6587ba7dc7b4489927cfd94d1fb8a9f",
+    "PUB;0bf15eb0edba447f84e19fce69391ccb",
+  ],
+  Sinergy: ["PUB;3b86bd1192124fd98583490bb7508041"],
+  Goldkiller: ["PUB;a3eaa6af54de4202a2c2f807fd8baa08"],
+  MTMScanner: ["PUB;134fd950920e435694c40be33e3aa98f"],
+  Sensei: ["PUB;73e1daff8be44976998dade66c6a11d7"],
+}
+
+/** Resolve o study do scanner a partir do nome que vem no alerta (strategy/alert_name). */
+function resolveStudies(strategy: string | null): string[] | undefined {
+  const s = (strategy ?? "").toLowerCase().replace(/[^a-z]/g, "")
+  if (!s) return undefined
+  if (s.includes("sensei")) return SCANNER_STUDIES.Sensei
+  if (s.includes("goldkiller")) return SCANNER_STUDIES.Goldkiller
+  if (s.includes("goldenzone")) return SCANNER_STUDIES.GoldenZone
+  if (s.includes("killshot")) return SCANNER_STUDIES.KillShot
+  if (s.includes("supernova")) return SCANNER_STUDIES.Supernova
+  if (s.includes("momentum")) return SCANNER_STUDIES.Momentum
+  if (s.includes("sinergy") || s.includes("quantum")) return SCANNER_STUDIES.Sinergy
+  if (s.includes("winzone") || s.includes("sniper")) return SCANNER_STUDIES.Winzone
+  if (s.includes("mtm") || s.includes("scanner")) return SCANNER_STUDIES.MTMScanner
+  return SCANNER_STUDIES.MTMScanner // fallback: indicador MTM base
+}
+
 /**
  * Gráfico TradingView do alerta — montado apenas quando o cartão entra no ecrã
  * (IntersectionObserver), para não carregar dezenas de widgets de uma vez.
+ * Sobrepõe o indicador/study do scanner que gerou o alerta.
  * Inline e visível por defeito (site, app-mobile e iOS via webview).
  */
-function LazyAlertChart({ tvSymbol, timeframe }: { tvSymbol: string; timeframe: string | null }) {
+function LazyAlertChart({ tvSymbol, timeframe, strategy }: { tvSymbol: string; timeframe: string | null; strategy: string | null }) {
   const ref = useRef<HTMLDivElement>(null)
   const [show, setShow] = useState(false)
   useEffect(() => {
@@ -62,9 +97,15 @@ function LazyAlertChart({ tvSymbol, timeframe }: { tvSymbol: string; timeframe: 
   return (
     <div ref={ref} className="mt-2">
       {show ? (
-        <TvChartEmbed tvSymbol={tvSymbol} interval={tvInterval(timeframe)} compact height={180} />
+        <TvChartEmbed
+          tvSymbol={tvSymbol}
+          interval={tvInterval(timeframe)}
+          compact
+          height={200}
+          studies={resolveStudies(strategy)}
+        />
       ) : (
-        <div className="h-[180px] w-full rounded-lg border border-[#D2A63C]/20 bg-black/40" />
+        <div className="h-[200px] w-full rounded-lg border border-[#D2A63C]/20 bg-black/40" />
       )}
     </div>
   )
@@ -296,7 +337,7 @@ function MobileAlertCard({
           loading="lazy"
         />
       ) : alert.tvSymbol ? (
-        <LazyAlertChart tvSymbol={alert.tvSymbol} timeframe={alert.timeframe} />
+        <LazyAlertChart tvSymbol={alert.tvSymbol} timeframe={alert.timeframe} strategy={alert.strategy} />
       ) : null}
 
       <div className="mt-2 space-y-1 rounded-lg bg-black/30 p-2 text-xs">
