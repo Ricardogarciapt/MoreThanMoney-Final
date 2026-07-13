@@ -93,6 +93,12 @@ export async function POST(request: NextRequest) {
       },
     }
 
+    // Intro offer: 1º mês Premium a 34,99€ (desconto único), só no plano premium mensal
+    // e só para quem ainda não é Premium ativo (evita reaplicar a subscritores atuais).
+    if (planId === 'premium_monthly' && profile?.subscription_status !== 'active') {
+      sessionParams.discounts = [{ coupon: 'INTRO_PREMIUM_1M' }]
+    }
+
     const session = await stripe.checkout.sessions.create(sessionParams)
 
     // Registar sessão de checkout (não bloquear se a tabela ainda não existir)

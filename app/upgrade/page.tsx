@@ -234,6 +234,11 @@ export default function UpgradePage() {
                       {billing === 'annual' && (
                         <p className="text-xs text-gray-400 mt-0.5">{pricing.total}</p>
                       )}
+                      {isPremiumCard && billing === 'monthly' && (
+                        <p className="mt-1 inline-block rounded-full bg-[#D2A63C]/15 px-2 py-0.5 text-[11px] font-bold text-[#D2A63C]">
+                          1º mês 34,99€
+                        </p>
+                      )}
                     </div>
                   </div>
 
