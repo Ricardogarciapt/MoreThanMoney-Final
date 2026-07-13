@@ -196,9 +196,12 @@ function buildTvSymbol(ticker: string | null, exchange: string | null): string |
   if (asset?.tvSymbol) return asset.tvSymbol
   // 2) Mapa de índices/commodities de corretora
   if (TV_INDEX_MAP[t]) return TV_INDEX_MAP[t]
-  // 3) exchange explícita do alerta
+  // 3) Cripto perpétuos/spot Binance (ex.: BTCUSDT.P, SOLUSDT.P, ONDOUSDT) → BINANCE:
+  //    (só quotes de cripto ou sufixo .P — NÃO "USD" puro, que é forex/metais)
+  if (/(USDT|USDC|BUSD)(\.P)?$/.test(t) || /\.P$/.test(t)) return `BINANCE:${t}`
+  // 4) exchange explícita do alerta
   if (exchange) return `${exchange.toUpperCase()}:${t}`
-  // 4) Forex de 6 letras sem exchange → OANDA (resolve bem no TradingView)
+  // 5) Forex de 6 letras sem exchange → OANDA (resolve bem no TradingView)
   if (/^[A-Z]{6}$/.test(t)) return `OANDA:${t}`
   return t
 }
