@@ -859,18 +859,21 @@ async function executeViaMtmProvider(
   })
 
   const isPremiumProvider = channel === 'premium-signals'
+  // Mecânica "1 posição + parciais por Exit": Premium usa sempre; outras rotas por opt-in
+  // (execution.partial_exits) — programável nas configurações da rota, sem afetar ativos.
+  const usePartialExits = isPremiumProvider || executionProfile.partial_exits === true
   const exitPcts = {
     tp1: executionProfile.exit_pct_tp1,
     tp2: executionProfile.exit_pct_tp2,
     tp3: executionProfile.exit_pct_tp3,
   }
 
-  /** Provider Premium: 1 perna + parciais nos HIT TP1/2/3 (Telegram). */
-  const premiumProviderSingle = isPremiumProvider
+  /** 1 posição + parciais por Exit (fecho por preço via monitor). */
+  const premiumProviderSingle = usePartialExits
     ? buildPremiumSingleOrder(signalForExec, totalLot, exitPcts, equity)
     : null
 
-  if (isPremiumProvider && !premiumProviderSingle) {
+  if (usePartialExits && !premiumProviderSingle) {
     await logProviderSignalEvent({
       channel,
       provider,

@@ -55,10 +55,16 @@ export interface ProviderExecutionProfile {
   symbols_execute_only?: string[] | null
   symbols_avoid?: string[] | null
   symbol_lot_exceptions?: SymbolLotException[]
-  /** Percentagens de saída Premium (TP1/TP2/TP3) — só canal premium-signals */
+  /** Percentagens de saída por Exit (TP1/TP2/TP3). Default 75/15/10 (>70% no Exit 1). */
   exit_pct_tp1?: number | null
   exit_pct_tp2?: number | null
   exit_pct_tp3?: number | null
+  /** Mecânica de 1 posição + parciais por Exit (como o Premium). Opt-in para rotas
+   *  fora do canal premium-signals; premium-signals usa sempre. Default off. */
+  partial_exits?: boolean
+  /** Fechar os parciais/BE/trailing por PREÇO (monitor), não por mensagem. Default off
+   *  (também gated pelo interruptor global premium_price_monitor). */
+  price_monitor?: boolean
 }
 
 export interface MtmcopyChannelProviderConfig {

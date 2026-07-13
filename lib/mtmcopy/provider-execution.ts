@@ -32,9 +32,9 @@ export const PREMIUM_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   symbols_execute_only: ['XAUUSD', 'GOLD'],
   symbols_avoid: null,
   symbol_lot_exceptions: [],
-  exit_pct_tp1: 33,
-  exit_pct_tp2: 33,
-  exit_pct_tp3: 34,
+  exit_pct_tp1: 75,
+  exit_pct_tp2: 15,
+  exit_pct_tp3: 10,
   auto_trailing_stop: false,
   trailing_stop_points: 0,
 }
@@ -66,9 +66,9 @@ export const TRADE_IDEAS_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   symbols_execute_only: null,
   symbols_avoid: null,
   symbol_lot_exceptions: [],
-  exit_pct_tp1: 33,
-  exit_pct_tp2: 33,
-  exit_pct_tp3: 34,
+  exit_pct_tp1: 75,
+  exit_pct_tp2: 15,
+  exit_pct_tp3: 10,
 }
 
 /** Perfil MTM Auto — Sensei Scanner (TradingView webhook + gestão programada).
@@ -100,9 +100,9 @@ export const DEFAULT_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   symbols_execute_only: null,
   symbols_avoid: null,
   symbol_lot_exceptions: [],
-  exit_pct_tp1: 33,
-  exit_pct_tp2: 33,
-  exit_pct_tp3: 34,
+  exit_pct_tp1: 75,
+  exit_pct_tp2: 15,
+  exit_pct_tp3: 10,
 }
 
 export function executionProfileToConnectionFields(
@@ -223,6 +223,8 @@ export function normalizeProviderExecutionProfile(
       raw.exit_pct_tp3 != null && Number(raw.exit_pct_tp3) > 0
         ? Number(raw.exit_pct_tp3)
         : base.exit_pct_tp3,
+    partial_exits: raw.partial_exits === true ? true : (base.partial_exits ?? false),
+    price_monitor: raw.price_monitor === true ? true : (base.price_monitor ?? false),
   }
 }
 
