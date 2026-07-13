@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
   if (typeof body.sensei === "boolean") patch.sensei = body.sensei
   if (typeof body.forex === "boolean") patch.forex = body.forex
   if (typeof body.premium === "boolean") patch.premium = body.premium
+  if (typeof body.premium_price_monitor === "boolean") patch.premium_price_monitor = body.premium_price_monitor
   const switches = await setExecSwitches(patch)
   return NextResponse.json({ success: true, switches })
 }

@@ -9,6 +9,9 @@ export interface ExecSwitches {
   sensei: boolean // Ouro/BTC (conta Sensei)
   forex: boolean // MTM Auto Forex (conta 5IHE)
   premium: boolean // MTM Auto Premium
+  /** Monitor de preço Premium: fecha parciais/BE/trailing por PREÇO (não por mensagem).
+   *  Default FALSE — ligar só depois de validar em demo. */
+  premium_price_monitor: boolean
 }
 
 const KEY = "mtmcopy_exec_switches"
@@ -26,9 +29,10 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       sensei: v.sensei !== false,
       forex: v.forex !== false,
       premium: v.premium !== false,
+      premium_price_monitor: v.premium_price_monitor === true, // default OFF
     }
   } catch {
-    return { sensei: true, forex: true, premium: true }
+    return { sensei: true, forex: true, premium: true, premium_price_monitor: false }
   }
 }
 

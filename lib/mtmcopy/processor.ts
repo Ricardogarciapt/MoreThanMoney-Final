@@ -512,6 +512,17 @@ async function processManagementUpdate(
 
     if (!mgmt) continue
 
+    // Se o monitor de preço Premium estiver LIGADO, ele é a autoridade dos parciais
+    // (por preço) — ignora a gestão Premium por mensagem para não fechar a dobrar.
+    if (channel === 'premium-signals') {
+      const { getExecSwitches } = await import('./exec-switches')
+      const sw = await getExecSwitches()
+      if (sw.premium_price_monitor) {
+        console.log('[mtmcopy] gestão Premium por mensagem ignorada (monitor de preço ativo)')
+        continue
+      }
+    }
+
     // Premium: nova lógica de gestão (premium-management-plan/exec) — por PREÇO,
     // zona vantajosa, sem BE/trailing prematuros. Demais canais: caminho legado.
     const outcome =
@@ -912,6 +923,33 @@ async function executeViaMtmProvider(
         label: `PREM · parciais ${premiumProviderSingle.exitPcts.tp1}/${premiumProviderSingle.exitPcts.tp2}/${premiumProviderSingle.exitPcts.tp3}%`,
         lot: premiumProviderSingle.lot,
       })
+      // Regista a trade Premium ativa para o monitor de preço (fecha parciais por PREÇO).
+      if (r?.success) {
+        try {
+          const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
+          const tps = signalForExec.tp ?? []
+          await getSupabaseAdmin().from('mtmcopy_premium_active').insert({
+            account_id: provider.accountId,
+            symbol: mappedSymbol,
+            direction: signalForExec.direction,
+            entry: signalForExec.entry ?? marketPrice ?? null,
+            sl: signalForExec.sl ?? null,
+            tp1: tps[0] ?? null,
+            tp2: tps[1] ?? null,
+            tp3: tps[2] ?? null,
+            exit_pct_tp1: premiumProviderSingle.exitPcts.tp1,
+            exit_pct_tp2: premiumProviderSingle.exitPcts.tp2,
+            exit_pct_tp3: premiumProviderSingle.exitPcts.tp3,
+            original_lot: premiumProviderSingle.lot,
+            small_account: premiumProviderSingle.smallAccount === true,
+            exits_done: 0,
+            trailing_started: false,
+            status: 'open',
+          })
+        } catch (e) {
+          console.error('[mtmcopy] persist premium active falhou:', e)
+        }
+      }
     } else {
       const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
       if (channel === 'trade-ideas') {
