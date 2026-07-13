@@ -40,8 +40,8 @@ interface TvChartEmbedProps {
   height?: number
   /** Compacto = sem barra de ferramentas (para cartões de alerta) */
   compact?: boolean
-  /** Studies/indicadores a aplicar (ex.: PUB;<id> dos scanners MTM) */
-  studies?: string[]
+  /** Studies/indicadores a aplicar. String (PUB;<id>) ou {id, inputs} p/ ocultar painéis. */
+  studies?: Array<string | { id: string; inputs?: Record<string, unknown> }>
 }
 
 export default function TvChartEmbed({

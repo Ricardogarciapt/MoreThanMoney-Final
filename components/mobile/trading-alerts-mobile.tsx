@@ -59,11 +59,23 @@ const SCANNER_STUDIES: Record<string, string[]> = {
   Sensei: ["PUB;73e1daff8be44976998dade66c6a11d7"],
 }
 
+type StudySpec = string | { id: string; inputs?: Record<string, unknown> }
+
+// No gráfico compacto dos alertas, ocultar os PAINÉIS do Sensei (tabelas de
+// Confirmações/Regras/Trade Panel/Estatísticas) — ocupam muito espaço. Mantém os
+// plots (DEMAs, POC, bandas, linhas de entrada/SL/TP). Chaves = títulos dos inputs.
+const SENSEI_NO_PANELS: Record<string, unknown> = {
+  "Painel de Confirmacoes  (topo direita)": false,
+  "Painel de Regras  (base esquerda)": false,
+  "Sensei Trade Panel  (base direita)": false,
+  "Estatisticas (Win-rate / RR)": false,
+}
+
 /** Resolve o study do scanner a partir do nome que vem no alerta (strategy/alert_name). */
-function resolveStudies(strategy: string | null): string[] | undefined {
+function resolveStudies(strategy: string | null): StudySpec[] | undefined {
   const s = (strategy ?? "").toLowerCase().replace(/[^a-z]/g, "")
   if (!s) return undefined
-  if (s.includes("sensei")) return SCANNER_STUDIES.Sensei
+  if (s.includes("sensei")) return [{ id: SCANNER_STUDIES.Sensei[0], inputs: SENSEI_NO_PANELS }]
   if (s.includes("goldkiller")) return SCANNER_STUDIES.Goldkiller
   if (s.includes("goldenzone")) return SCANNER_STUDIES.GoldenZone
   if (s.includes("killshot")) return SCANNER_STUDIES.KillShot
