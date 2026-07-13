@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export type LmsImageScope = "educator_avatar" | "stream_thumbnail"
+export type LmsImageScope = "educator_avatar" | "stream_thumbnail" | "stream_square"
 
 export function LmsImageUploadField({
   label,
@@ -16,6 +16,8 @@ export function LmsImageUploadField({
   refId,
   /** immediate = cada alteração no campo (formulários); blur = só ao sair do campo ou após upload (evita PATCH por tecla) */
   commit = "immediate",
+  /** endpoint de upload — admin por defeito; o studio passa a rota do educador */
+  uploadUrl = "/api/admin/live-sessions/upload-image",
 }: {
   label: string
   description?: string
@@ -25,6 +27,7 @@ export function LmsImageUploadField({
   /** UUID do educador ou do stream (opcional); organiza pastas no storage */
   refId?: string | null
   commit?: "immediate" | "blur"
+  uploadUrl?: string
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -50,7 +53,7 @@ export function LmsImageUploadField({
       fd.append("file", file)
       fd.append("scope", scope)
       if (refId?.trim()) fd.append("refId", refId.trim())
-      const res = await fetch("/api/admin/live-sessions/upload-image", {
+      const res = await fetch(uploadUrl, {
         method: "POST",
         body: fd,
         credentials: "same-origin",

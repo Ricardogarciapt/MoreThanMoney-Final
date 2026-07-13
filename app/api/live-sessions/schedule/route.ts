@@ -58,15 +58,11 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const slotTierByStreamDay = new Map<string, string | null>()
-    for (const s of slots) slotTierByStreamDay.set(`${s.stream_id}:${s.weekday}:${s.start_time}`, s.access_tier ?? null)
-
     const projected = projectSchedule(slots, { from: now, days })
     const recurring = projected.map((p) => {
       const stream = streamById.get(p.streamId)
-      // tier do slot (se definido) senão o da sala
-      const slot = slots.find((s) => s.stream_id === p.streamId)
-      const tier = (slot?.access_tier ?? stream?.access_tier) ?? "all"
+      // tier do slot específico da ocorrência (se definido) senão o da sala
+      const tier = (p.accessTier ?? stream?.access_tier) ?? "all"
       return {
         id: p.id,
         streamId: p.streamId,

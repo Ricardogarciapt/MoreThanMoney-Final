@@ -35,6 +35,11 @@ export async function POST(request: NextRequest) {
       title: String(body.title || "").trim(),
       description: String(body.description || "").trim() || null,
       thumbnail_url: String(body.thumbnail_url || "").trim() || null,
+      square_image_url: String(body.square_image_url || "").trim() || null,
+      playlist_url: String(body.playlist_url || "").trim() || null,
+      playlist_access_tier: ["all", "app_member", "premium"].includes(body.playlist_access_tier)
+        ? body.playlist_access_tier
+        : null,
       category: String(body.category || "").trim() || null,
       scheduled_start_at: body.scheduled_start_at ? String(body.scheduled_start_at) : null,
       viewer_count: typeof body.viewer_count === "number" ? body.viewer_count : 0,
@@ -82,6 +87,9 @@ export async function PATCH(request: NextRequest) {
       "title",
       "description",
       "thumbnail_url",
+      "square_image_url",
+      "playlist_url",
+      "playlist_access_tier",
       "category",
       "scheduled_start_at",
       "viewer_count",

@@ -22,9 +22,12 @@ export interface ProjectedSession {
   /** id único da ocorrência (stream + instante) */
   id: string
   streamId: string
+  slotId: string
   scheduledAt: string // ISO UTC
   /** minutos, se definido */
   durationMin?: number | null
+  /** tier próprio do slot (null => herda o da sala) */
+  accessTier?: string | null
 }
 
 /** Offset (minutos, local-UTC) do fuso `tz` no instante `date`. */
@@ -128,8 +131,10 @@ export function projectSchedule(
       out.push({
         id: `${slot.stream_id}:${when.toISOString()}`,
         streamId: slot.stream_id,
+        slotId: slot.id,
         scheduledAt: when.toISOString(),
         durationMin: slot.duration_min ?? null,
+        accessTier: slot.access_tier ?? null,
       })
     }
   }

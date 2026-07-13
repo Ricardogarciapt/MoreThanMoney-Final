@@ -48,6 +48,12 @@ export async function POST(request: NextRequest) {
 
     const description = String(body.description || "").trim() || null
     const thumbnail_url = String(body.thumbnail_url || "").trim() || null
+    const square_image_url = String(body.square_image_url || "").trim() || null
+    const playlist_url = String(body.playlist_url || "").trim() || null
+    const playlist_access_tier = ["all", "app_member", "premium"].includes(body.playlist_access_tier)
+      ? body.playlist_access_tier
+      : null
+    const access_tier = ["all", "app_member", "premium"].includes(body.access_tier) ? body.access_tier : "all"
     const category = normalizeLmsCategory(String(body.category || "").trim()) || null
     const scheduled_start_at = body.scheduled_start_at ? String(body.scheduled_start_at) : null
 
@@ -80,6 +86,10 @@ export async function POST(request: NextRequest) {
         title,
         description,
         thumbnail_url,
+        square_image_url,
+        playlist_url,
+        playlist_access_tier,
+        access_tier,
         category,
         rtmps_url: effectiveUseRestream ? restreamBase : DEFAULT_RESTREAM_INGEST_URL,
         stream_key: effectiveUseRestream ? restreamKey : restreamEnabled ? null : row.stream_key_fixed || null,
@@ -120,6 +130,14 @@ export async function PATCH(request: NextRequest) {
     const updates: Record<string, unknown> = {}
     if (body.description !== undefined) updates.description = String(body.description || "").trim() || null
     if (body.thumbnail_url !== undefined) updates.thumbnail_url = String(body.thumbnail_url || "").trim() || null
+    if (body.square_image_url !== undefined) updates.square_image_url = String(body.square_image_url || "").trim() || null
+    if (body.playlist_url !== undefined) updates.playlist_url = String(body.playlist_url || "").trim() || null
+    if (body.playlist_access_tier !== undefined)
+      updates.playlist_access_tier = ["all", "app_member", "premium"].includes(body.playlist_access_tier)
+        ? body.playlist_access_tier
+        : null
+    if (body.access_tier !== undefined)
+      updates.access_tier = ["all", "app_member", "premium"].includes(body.access_tier) ? body.access_tier : "all"
     if (body.category !== undefined) updates.category = normalizeLmsCategory(String(body.category || "").trim())
     if (body.title !== undefined) {
       const t = String(body.title || "").trim()
