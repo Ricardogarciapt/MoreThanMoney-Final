@@ -46,9 +46,20 @@ export async function POST(request: NextRequest) {
     // Obter ou criar customer Stripe
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('stripe_customer_id, email, full_name, mlm_sponsor_username')
+      .select('stripe_customer_id, email, full_name, mlm_sponsor_username, subscription_platform, subscription_status')
       .eq('id', user.id)
       .single()
+
+    // Guard cross-canal: não abrir checkout Stripe a quem já tem subscrição ATIVA
+    // gerida pela loja (Apple/Google) — evita dupla cobrança. Muda-se na respetiva loja.
+    if (mode === 'subscription' && profile?.subscription_status === 'active' &&
+        (profile?.subscription_platform === 'app_store' || profile?.subscription_platform === 'google_play')) {
+      const store = profile.subscription_platform === 'app_store' ? 'App Store' : 'Google Play'
+      return NextResponse.json({
+        error: `Já tens uma subscrição ativa gerida pela ${store}. Para mudar de pack, faz upgrade/downgrade na ${store} (Definições → Subscrições).`,
+        code: 'managed_by_store',
+      }, { status: 409 })
+    }
 
     const sponsorUsername = (sponsorCode || profile?.mlm_sponsor_username || '').trim()
 

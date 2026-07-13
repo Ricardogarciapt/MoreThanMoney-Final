@@ -23,12 +23,14 @@ import {
   Calendar,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  CreditCard
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { CyberpunkCard } from "@/components/cyberpunk-card"
 import NotificationsPanel from "@/components/notifications-panel"
+import { MemberSubscriptionCard } from "@/components/member-subscription-card"
 
 interface UserProfile {
   id: string
@@ -41,6 +43,13 @@ interface UserProfile {
   phone?: string
   whatsapp?: string
   created_at?: string
+  member_category?: string | null
+  subscription_plan?: string | null
+  subscription_platform?: string | null
+  subscription_status?: string | null
+  subscription_expires_at?: string | null
+  subscription_billing_cycle?: string | null
+  has_stripe_customer?: boolean
 }
 
 export default function MemberAreaPage() {
@@ -171,7 +180,14 @@ export default function MemberAreaPage() {
           is_active: profile.is_active,
           phone: profile.phone,
           whatsapp: profile.whatsapp,
-          created_at: profile.created_at
+          created_at: profile.created_at,
+          member_category: profile.member_category,
+          subscription_plan: profile.subscription_plan,
+          subscription_platform: profile.subscription_platform,
+          subscription_status: profile.subscription_status,
+          subscription_expires_at: profile.subscription_expires_at,
+          subscription_billing_cycle: profile.subscription_billing_cycle,
+          has_stripe_customer: Boolean(profile.stripe_customer_id),
         })
 
         setFormData({
@@ -472,10 +488,14 @@ export default function MemberAreaPage() {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="max-w-4xl mx-auto">
-          <TabsList className="grid w-full grid-cols-3 bg-gray-900 border border-[#D2A63C]/30">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-900 border border-[#D2A63C]/30">
             <TabsTrigger value="profile" className="data-[state=active]:bg-[#D2A63C] data-[state=active]:text-black">
               <User className="w-4 h-4 mr-2" />
               Perfil
+            </TabsTrigger>
+            <TabsTrigger value="subscription" className="data-[state=active]:bg-[#D2A63C] data-[state=active]:text-black">
+              <CreditCard className="w-4 h-4 mr-2" />
+              Subscrição
             </TabsTrigger>
             <TabsTrigger value="security" className="data-[state=active]:bg-[#D2A63C] data-[state=active]:text-black">
               <Lock className="w-4 h-4 mr-2" />
@@ -598,6 +618,19 @@ export default function MemberAreaPage() {
                 </form>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Subscription Tab */}
+          <TabsContent value="subscription" className="mt-6 space-y-6">
+            <MemberSubscriptionCard
+              memberCategory={user?.member_category}
+              subscriptionPlan={user?.subscription_plan}
+              subscriptionPlatform={user?.subscription_platform}
+              subscriptionStatus={user?.subscription_status}
+              subscriptionExpiresAt={user?.subscription_expires_at}
+              billingCycle={user?.subscription_billing_cycle}
+              hasStripeCustomer={user?.has_stripe_customer}
+            />
           </TabsContent>
 
           {/* Security Tab */}
