@@ -10,6 +10,15 @@ export interface T2TBroker {
 
 export const T2T_BROKERS: T2TBroker[] = [
   {
+    id: 'puprime',
+    label: 'PU Prime',
+    // Servidores MT5 documentados da PU Prime (variantes de espaçamento incluídas — Live2 e Live 2).
+    servers: [
+      'PUPrime-Live', 'PUPrime-Live2', 'PUPrime-Live 2', 'PUPrime-Live 3', 'PUPrime-Live 4',
+      'PUPrime-Live 5', 'PUPrime-Live 6', 'PUPrime-Live 7', 'PUPrime-Live 8', 'PUPrime-Demo',
+    ],
+  },
+  {
     id: 'ftmo',
     label: 'FTMO',
     servers: ['FTMO-Server', 'FTMO-Server2', 'FTMO-Server3', 'FTMO-Server4', 'FTMO-Server5', 'FTMO-Demo', 'FTMO-Demo2'],
