@@ -19,6 +19,10 @@ function getTranslateTarget(): string | null {
   return target && target !== "pt" ? target : null
 }
 
+// Rotas onde NÃO carregamos o Google Translate: dashboards internos/interativos
+// (tabelas, forms de auth/pagamento) onde a mutação do DOM pelo Translate não
+// compensa. A landing pública (/new-landing = homepage) é traduzível — o guard
+// de DOM (installGoogleTranslateDomGuard) protege contra o crash do React.
 const TRANSLATE_BLOCKED_PREFIXES = [
   "/admin",
   "/register",
@@ -27,7 +31,6 @@ const TRANSLATE_BLOCKED_PREFIXES = [
   "/mtmcopy",
   "/member-area",
   "/scanner",
-  "/new-landing",
 ]
 
 function isTranslateBlocked(path: string): boolean {
