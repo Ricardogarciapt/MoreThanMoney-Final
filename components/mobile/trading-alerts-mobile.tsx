@@ -27,6 +27,48 @@ import {
   Sparkles,
 } from "lucide-react"
 import MarkdownRenderer from "@/components/dashboard-gestao/markdown-renderer"
+import TvChartEmbed from "@/components/tv-chart-embed"
+
+/** Normaliza o timeframe do alerta para um intervalo TradingView válido. */
+function tvInterval(tf: string | null): string {
+  const t = (tf ?? "").trim().toLowerCase()
+  const map: Record<string, string> = {
+    "1m": "1", "3m": "3", "5m": "5", "15m": "15", "30m": "30",
+    "1h": "60", "2h": "120", "4h": "240", "1d": "D", "d": "D", "1w": "W", "w": "W",
+  }
+  if (map[t]) return map[t]
+  if (/^\d+$/.test(t)) return t            // já é "15", "60", "240"…
+  return "60"
+}
+
+/**
+ * Gráfico TradingView do alerta — montado apenas quando o cartão entra no ecrã
+ * (IntersectionObserver), para não carregar dezenas de widgets de uma vez.
+ * Inline e visível por defeito (site, app-mobile e iOS via webview).
+ */
+function LazyAlertChart({ tvSymbol, timeframe }: { tvSymbol: string; timeframe: string | null }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || show) return
+    const io = new IntersectionObserver(
+      (entries) => { if (entries.some((e) => e.isIntersecting)) { setShow(true); io.disconnect() } },
+      { rootMargin: "300px" },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [show])
+  return (
+    <div ref={ref} className="mt-2">
+      {show ? (
+        <TvChartEmbed tvSymbol={tvSymbol} interval={tvInterval(timeframe)} compact height={180} />
+      ) : (
+        <div className="h-[180px] w-full rounded-lg border border-[#D2A63C]/20 bg-black/40" />
+      )}
+    </div>
+  )
+}
 
 interface AlertConfirmation {
   name: string
@@ -246,14 +288,16 @@ function MobileAlertCard({
       </div>
       {alert.strategy && <p className="mt-0.5 text-[11px] text-blue-300">{alert.strategy}</p>}
 
-      {alert.chartImageUrl && (
+      {alert.chartImageUrl ? (
         <img
           src={alert.chartImageUrl}
           alt={alert.ticker || "chart"}
           className="mt-2 max-h-40 w-full rounded-lg border border-gray-700 object-cover"
           loading="lazy"
         />
-      )}
+      ) : alert.tvSymbol ? (
+        <LazyAlertChart tvSymbol={alert.tvSymbol} timeframe={alert.timeframe} />
+      ) : null}
 
       <div className="mt-2 space-y-1 rounded-lg bg-black/30 p-2 text-xs">
         <div className="flex items-center justify-between">

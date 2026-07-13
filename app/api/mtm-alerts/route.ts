@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/supabase"
+import { TERMINAL_ASSETS } from "@/lib/mtm-terminal-assets"
 
 /**
  * Alertas MTM — lê os sinais gerados pelo webhook TradingView existente
@@ -172,11 +173,33 @@ function extractConfirmations(raw: Record<string, unknown>): AlertConfirmation[]
 }
 
 /** Constrói símbolo TradingView a partir de exchange + ticker. */
+// Índices/commodities de corretora → símbolo TradingView resolúvel.
+const TV_INDEX_MAP: Record<string, string> = {
+  US30: "DJ:DJI", DJ30: "DJ:DJI", WALL: "DJ:DJI",
+  NAS100: "NASDAQ:NDX", US100: "NASDAQ:NDX", USTEC: "NASDAQ:NDX",
+  SPX500: "SP:SPX", US500: "SP:SPX", SPX: "SP:SPX",
+  GER40: "XETR:DAX", DE40: "XETR:DAX", GER30: "XETR:DAX", DAX: "XETR:DAX",
+  UK100: "TVC:UKX", UKX: "TVC:UKX",
+  FRA40: "EURONEXT:PX1", EU50: "TVC:SX5E", STOXX50: "TVC:SX5E",
+  JP225: "TVC:NI225", JPN225: "TVC:NI225", NIKKEI: "TVC:NI225",
+  AUS200: "ASX:XJO", HK50: "TVC:HSI",
+  USOIL: "TVC:USOIL", WTI: "TVC:USOIL", UKOIL: "TVC:UKOIL", BRENT: "TVC:UKBRENT",
+  XAUUSD: "OANDA:XAUUSD", GOLD: "OANDA:XAUUSD", XAGUSD: "OANDA:XAGUSD", SILVER: "OANDA:XAGUSD",
+}
+
 function buildTvSymbol(ticker: string | null, exchange: string | null): string | null {
   if (!ticker) return null
   const t = ticker.toUpperCase().replace(/[^A-Z0-9:._]/g, "")
   if (t.includes(":")) return t
+  // 1) Catálogo do terminal (já tem os tvSymbol corretos, ex.: OANDA:XAUUSD, DJ:DJI)
+  const asset = TERMINAL_ASSETS.find((a) => a.symbol.toUpperCase() === t)
+  if (asset?.tvSymbol) return asset.tvSymbol
+  // 2) Mapa de índices/commodities de corretora
+  if (TV_INDEX_MAP[t]) return TV_INDEX_MAP[t]
+  // 3) exchange explícita do alerta
   if (exchange) return `${exchange.toUpperCase()}:${t}`
+  // 4) Forex de 6 letras sem exchange → OANDA (resolve bem no TradingView)
+  if (/^[A-Z]{6}$/.test(t)) return `OANDA:${t}`
   return t
 }
 
