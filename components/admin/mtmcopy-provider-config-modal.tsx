@@ -190,28 +190,57 @@ export default function MtmcopyProviderConfigModal({
             <p className="text-xs text-emerald-400/80">{formatExecutionSummary(profile)}</p>
           </Section>
 
-          {(route.sender_channel === "premium-signals" || route.sender_chat_id) && (
-            <Section title="Saídas Premium (TP1 / TP2 / TP3)">
-              <p className="text-xs text-zinc-500">
-                Percentagem do lote total fechada em cada take profit (máx. 3 exits).
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                {(["exit_pct_tp1", "exit_pct_tp2", "exit_pct_tp3"] as const).map((key, i) => (
-                  <div key={key}>
-                    <label className="text-xs text-zinc-500 block mb-1">Exit {i + 1} %</label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={profile[key] ?? (i === 2 ? 34 : 33)}
-                      onChange={(e) => set({ [key]: Number(e.target.value) })}
-                      className="bg-zinc-900 border-zinc-700 h-9"
+          {(() => {
+            const isPremium = route.sender_channel === "premium-signals"
+            const partialsOn = isPremium || profile.partial_exits === true
+            return (
+              <Section title="Parciais por Exit (1 posição, fecha por saída)">
+                <p className="text-xs text-zinc-500">
+                  Uma posição por sinal que fecha lotes parciais em cada take profit. Prioridade:
+                  fechar &gt;70% no Exit 1. Contas pequenas fecham tudo no Exit 1.
+                </p>
+                {!isPremium && (
+                  <label className="flex items-center gap-2 text-xs text-zinc-400">
+                    <Switch
+                      checked={profile.partial_exits === true}
+                      onCheckedChange={(v) => set(v ? { partial_exits: true, price_monitor: true } : { partial_exits: false })}
                     />
+                    Ativar mecânica de parciais por Exit nesta rota
+                  </label>
+                )}
+                <label className="flex items-center gap-2 text-xs text-zinc-400">
+                  <Switch
+                    checked={isPremium || profile.price_monitor === true}
+                    disabled={isPremium}
+                    onCheckedChange={(v) => set({ price_monitor: v })}
+                  />
+                  Fechar parciais / BE / trailing por PREÇO (monitor) — não por mensagem
+                  {isPremium && <span className="text-zinc-600"> (Premium: sempre)</span>}
+                </label>
+                {partialsOn && (
+                  <div className="grid grid-cols-3 gap-2 pt-1">
+                    {(["exit_pct_tp1", "exit_pct_tp2", "exit_pct_tp3"] as const).map((key, i) => (
+                      <div key={key}>
+                        <label className="text-xs text-zinc-500 block mb-1">Exit {i + 1} %</label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={profile[key] ?? [75, 15, 10][i]}
+                          onChange={(e) => set({ [key]: Number(e.target.value) })}
+                          className="bg-zinc-900 border-zinc-700 h-9"
+                        />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </Section>
-          )}
+                )}
+                <p className="text-[10px] text-zinc-600">
+                  Requer o interruptor global &laquo;monitor de preço Premium&raquo; ligado. O CopyFactory
+                  replica os fechos parciais aos subscritores.
+                </p>
+              </Section>
+            )
+          })()}
 
           <Section title="Stop Loss & Take Profit">
             <div className="grid sm:grid-cols-2 gap-3">

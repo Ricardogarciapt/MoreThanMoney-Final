@@ -926,8 +926,9 @@ async function executeViaMtmProvider(
         label: `PREM · parciais ${premiumProviderSingle.exitPcts.tp1}/${premiumProviderSingle.exitPcts.tp2}/${premiumProviderSingle.exitPcts.tp3}%`,
         lot: premiumProviderSingle.lot,
       })
-      // Regista a trade Premium ativa para o monitor de preço (fecha parciais por PREÇO).
-      if (r?.success) {
+      // Regista a trade ativa para o monitor de preço (fecha parciais por PREÇO).
+      // Premium sempre; outras rotas só se tiverem price_monitor ligado na config.
+      if (r?.success && (isPremiumProvider || executionProfile.price_monitor === true)) {
         try {
           const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
           const tps = signalForExec.tp ?? []
