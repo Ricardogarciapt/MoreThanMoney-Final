@@ -56,26 +56,17 @@ const SCANNER_STUDIES: Record<string, string[]> = {
   Sinergy: ["PUB;3b86bd1192124fd98583490bb7508041"],
   Goldkiller: ["PUB;a3eaa6af54de4202a2c2f807fd8baa08"],
   MTMScanner: ["PUB;134fd950920e435694c40be33e3aa98f"],
-  Sensei: ["PUB;73e1daff8be44976998dade66c6a11d7"],
+  // Variante "sem painéis" do Sensei (publicada) — só plots, sem as tabelas laterais.
+  Sensei: ["PUB;25c2231a331e413b8e7498364c5b94ab"],
 }
 
 type StudySpec = string | { id: string; inputs?: Record<string, unknown> }
-
-// No gráfico compacto dos alertas, ocultar os PAINÉIS do Sensei (tabelas de
-// Confirmações/Regras/Trade Panel/Estatísticas) — ocupam muito espaço. Mantém os
-// plots (DEMAs, POC, bandas, linhas de entrada/SL/TP). Chaves = títulos dos inputs.
-const SENSEI_NO_PANELS: Record<string, unknown> = {
-  "Painel de Confirmacoes  (topo direita)": false,
-  "Painel de Regras  (base esquerda)": false,
-  "Sensei Trade Panel  (base direita)": false,
-  "Estatisticas (Win-rate / RR)": false,
-}
 
 /** Resolve o study do scanner a partir do nome que vem no alerta (strategy/alert_name). */
 function resolveStudies(strategy: string | null): StudySpec[] | undefined {
   const s = (strategy ?? "").toLowerCase().replace(/[^a-z]/g, "")
   if (!s) return undefined
-  if (s.includes("sensei")) return [{ id: SCANNER_STUDIES.Sensei[0], inputs: SENSEI_NO_PANELS }]
+  if (s.includes("sensei")) return SCANNER_STUDIES.Sensei
   if (s.includes("goldkiller")) return SCANNER_STUDIES.Goldkiller
   if (s.includes("goldenzone")) return SCANNER_STUDIES.GoldenZone
   if (s.includes("killshot")) return SCANNER_STUDIES.KillShot
