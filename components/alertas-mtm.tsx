@@ -124,7 +124,8 @@ const DIR_META = {
 const STRATEGY_STUDIES: Record<string, string[]> = {
   Goldkiller: ["PUB;a3eaa6af54de4202a2c2f807fd8baa08"],
   MTMScanner: ["PUB;134fd950920e435694c40be33e3aa98f"],
-  Sensei: ["PUB;73e1daff8be44976998dade66c6a11d7"],
+  // Sensei variante SEM painéis (só plots) — igual à app-mobile.
+  Sensei: ["PUB;25c2231a331e413b8e7498364c5b94ab"],
 }
 const DEFAULT_STUDIES = STRATEGY_STUDIES.MTMScanner
 
