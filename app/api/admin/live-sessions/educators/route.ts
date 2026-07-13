@@ -55,6 +55,13 @@ export async function POST(request: NextRequest) {
 
     const password_hash = await bcrypt.hash(password, 10)
 
+    // "Promover user a educador": se existe um profile com este email, liga por profile_id.
+    const { data: linkedProfile } = await supabase
+      .from("profiles")
+      .select("id")
+      .ilike("email", email)
+      .maybeSingle()
+
     const { data, error } = await supabase
       .from("lms_educators")
       .insert({
@@ -65,6 +72,7 @@ export async function POST(request: NextRequest) {
         specialty: specialty || null,
         avatar_url: avatar_url || null,
         academy_id,
+        profile_id: linkedProfile?.id ?? null,
         stream_key_fixed: null,
         is_active: true,
       })
@@ -122,6 +130,14 @@ export async function PATCH(request: NextRequest) {
     if (!id) return NextResponse.json({ error: "id é obrigatório" }, { status: 400 })
 
     const updates: Record<string, any> = {}
+    if (body.email !== undefined) {
+      const newEmail = String(body.email || "").trim().toLowerCase()
+      if (!newEmail) return NextResponse.json({ error: "email não pode ser vazio" }, { status: 400 })
+      updates.email = newEmail
+      // Religa o profile correspondente ao novo email (promoção/reatribuição).
+      const { data: p } = await supabase.from("profiles").select("id").ilike("email", newEmail).maybeSingle()
+      updates.profile_id = p?.id ?? null
+    }
     if (body.display_name !== undefined) updates.display_name = String(body.display_name || "").trim()
     if (body.bio !== undefined) updates.bio = String(body.bio || "").trim() || null
     if (body.specialty !== undefined) updates.specialty = String(body.specialty || "").trim() || null

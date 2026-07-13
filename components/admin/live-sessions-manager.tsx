@@ -375,6 +375,7 @@ export default function LiveSessionsManager() {
   const beginEditEducator = (educator: Educator) => {
     setEditingEducatorId(educator.id)
     setEditingEducatorForm({
+      email: (educator as any).email || "",
       display_name: educator.display_name || "",
       bio: educator.bio || "",
       specialty: educator.specialty || "",
@@ -396,6 +397,7 @@ export default function LiveSessionsManager() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: editingEducatorId,
+        email: editingEducatorForm.email,
         display_name: editingEducatorForm.display_name,
         bio: editingEducatorForm.bio,
         specialty: editingEducatorForm.specialty,
@@ -575,6 +577,11 @@ export default function LiveSessionsManager() {
 
                 {isEditing && (
                   <div className="grid md:grid-cols-2 gap-2">
+                    <Input
+                      value={editingEducatorForm.email}
+                      onChange={(event) => setEditingEducatorForm((prev: any) => ({ ...prev, email: event.target.value }))}
+                      placeholder="Email de login"
+                    />
                     <Input
                       value={editingEducatorForm.display_name}
                       onChange={(event) => setEditingEducatorForm((prev: any) => ({ ...prev, display_name: event.target.value }))}
