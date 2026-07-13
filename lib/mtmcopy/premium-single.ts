@@ -213,7 +213,7 @@ export function partialVolumeForExit(
   const current = pos.volume ?? 0
   if (current <= 0) return 0
 
-  const pcts = meta?.exitPcts ?? { tp1: 33, tp2: 33, tp3: 34 }
+  const pcts = meta?.exitPcts ?? { tp1: 75, tp2: 15, tp3: 10 }
   const pct = exitLevel === 1 ? pcts.tp1 : exitLevel === 2 ? pcts.tp2 : pcts.tp3
   const base = meta?.originalLot && meta.originalLot > 0 ? meta.originalLot : current
   let vol = roundLot(base * (pct / 100))
