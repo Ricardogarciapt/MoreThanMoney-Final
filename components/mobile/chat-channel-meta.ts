@@ -23,9 +23,9 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
   trading: {
     emoji: "📈",
     accent: "#D2A63C",
-    tag: "Comunidade",
+    tag: "Aberto",
     rules: [
-      "Publicar: membros com 3+ meses OU Pack Premium/IQ",
+      "Aberto a todos os membros ativos (ler e publicar)",
       "Partilha setups com contexto (par, timeframe, racional)",
       "Não é consultoria — decisão final é sempre tua",
     ],
@@ -75,11 +75,10 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
   cripto: {
     emoji: "₿",
     accent: "#F59E0B",
-    tag: "VIP",
+    tag: "Aberto",
     rules: [
+      "Aberto a todos os membros ativos (ler e publicar)",
       "Discussão de cripto e portfólio",
-      "Publicar: VIP, IQ ou Admin",
-      "Todos os membros podem ler",
       "Análise DCA Inteligente publicada diariamente pelo sistema MTM",
     ],
     tips: ["Recebes notificação push em mensagens novas"],
@@ -87,13 +86,43 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
   "etf-stocks": {
     emoji: "📈",
     accent: "#6366F1",
-    tag: "Portfólio",
+    tag: "Aberto",
     rules: [
+      "Aberto a todos os membros ativos (ler e publicar)",
       "ETFs e stocks do portfólio MTM (horizonte 5 anos)",
       "Análise DCA Inteligente publicada diariamente pelo sistema MTM",
-      "Publicar: VIP, IQ ou Admin · todos podem ler",
     ],
     tips: ["Consulta /portfolios → Análise DCA para ver o painel completo"],
+  },
+  "social-ugc": {
+    emoji: "🎬",
+    accent: "#EC4899",
+    tag: "Aberto",
+    rules: ["Aberto a todos os membros ativos", "Conteúdo social, criadores e UGC", "Sem spam ou autopromoção abusiva"],
+  },
+  ia: {
+    emoji: "🤖",
+    accent: "#22D3EE",
+    tag: "Aberto",
+    rules: ["Aberto a todos os membros ativos", "Ferramentas de IA, prompts e automação"],
+  },
+  fitness: {
+    emoji: "💪",
+    accent: "#34D399",
+    tag: "Aberto",
+    rules: ["Aberto a todos os membros ativos", "Saúde, treino e performance física"],
+  },
+  mindset: {
+    emoji: "🧠",
+    accent: "#A78BFA",
+    tag: "Aberto",
+    rules: ["Aberto a todos os membros ativos", "Mentalidade, hábitos e desenvolvimento pessoal"],
+  },
+  lideranca: {
+    emoji: "🚀",
+    accent: "#F59E0B",
+    tag: "Aberto",
+    rules: ["Aberto a todos os membros ativos", "Liderança, equipas e crescimento profissional"],
   },
 }
 

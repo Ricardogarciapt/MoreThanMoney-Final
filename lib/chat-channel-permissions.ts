@@ -45,6 +45,19 @@ export function canPublishSignalChannel(user: ChatChannelUser | null | undefined
   return user.user_type === "admin" || user.member_category === "vip"
 }
 
+/** Canais de comunidade abertos a todos os membros ativos (ler e publicar). */
+export const OPEN_COMMUNITY_CHANNELS = [
+  "geral",
+  "trading",
+  "cripto",
+  "etf-stocks",
+  "social-ugc",
+  "ia",
+  "fitness",
+  "mindset",
+  "lideranca",
+] as const
+
 export function canWriteChannel(slug: string, user: ChatChannelUser | null | undefined): boolean {
   if (!user?.is_active) return false
   // Canais de sinais (Premium Ouro, Sensei Scanner, Ideias Forex): só admin + VIP.
@@ -52,24 +65,7 @@ export function canWriteChannel(slug: string, user: ChatChannelUser | null | und
     return canPublishSignalChannel(user)
   }
   if (isReadOnlyChannel(slug)) return false
-  if (slug === "geral") return true
-  if (slug === "trading") {
-    if (user.subscription_plan === "premium" || user.member_category === "iq") return true
-    if (user.user_type === "admin") return true
-    if (user.created_at) {
-      const joinedAt = new Date(user.created_at)
-      const threeMonthsAgo = new Date()
-      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
-      return joinedAt <= threeMonthsAgo
-    }
-    return false
-  }
-  if (slug === "cripto" || slug === "etf-stocks") {
-    return (
-      user.user_type === "admin" ||
-      user.member_category === "iq" ||
-      user.member_category === "vip"
-    )
-  }
+  // Comunidade (Cripto, Trading, ETF & Stocks, Social/UGC, IA, Fitness, MindSet, Liderança): abertos a todos.
+  if ((OPEN_COMMUNITY_CHANNELS as readonly string[]).includes(slug)) return true
   return false
 }
