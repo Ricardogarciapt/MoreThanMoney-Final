@@ -7,7 +7,18 @@ import { GraduationCap, Loader2 } from "lucide-react"
 import ProtectedPage from "@/components/protected-page"
 import LiveStreamRoom from "@/components/live/live-stream-room"
 import EducatorRatingsSection from "@/components/live/educator-ratings-section"
+import { LmsPlaylistSection } from "@/components/live/lms-playlist-section"
+import { useAuth } from "@/contexts/auth-context"
 import { Badge } from "@/components/ui/badge"
+
+function planAllows(userPlan: string | null | undefined, userType: string | null | undefined, tier?: string | null): boolean {
+  if (userType === "admin") return true
+  const t = tier || "all"
+  if (t === "all") return true
+  if (t === "app_member") return userPlan === "app_member" || userPlan === "premium"
+  if (t === "premium") return userPlan === "premium"
+  return false
+}
 
 type EducatorPublic = {
   id: string
@@ -21,8 +32,10 @@ type EducatorPublic = {
 export default function LiveByEducatorPage() {
   const params = useParams<{ educatorId: string }>()
   const educatorId = params?.educatorId || ""
+  const { user } = useAuth()
   const [streamId, setStreamId] = useState<string>("")
   const [educator, setEducator] = useState<EducatorPublic | null>(null)
+  const [playlist, setPlaylist] = useState<{ url: string | null; tier: string | null }>({ url: null, tier: null })
   const [loading, setLoading] = useState(true)
   // Track consecutive empty polls to avoid killing the player on transient API failures
   const emptyPollsRef = useRef(0)
@@ -35,10 +48,13 @@ export default function LiveByEducatorPage() {
       // Do NOT call setLoading(true) here — that would unmount LiveStreamRoom every 20s!
       // loading starts true (useState(true)) and goes false after the first successful fetch.
       try {
-        const [streamsRes, ratingsRes] = await Promise.all([
+        const [streamsRes, ratingsRes, allStreamsRes] = await Promise.all([
           fetch(`/api/live-sessions/streams?educatorId=${educatorId}&live=true`).then((r) => r.json()),
           fetch(`/api/live-sessions/educators/${educatorId}/ratings`).then((r) => r.json()),
+          fetch(`/api/live-sessions/streams?educatorId=${educatorId}`).then((r) => r.json()).catch(() => ({ data: [] })),
         ])
+        const withPlaylist = (allStreamsRes.data || []).find((s: { playlist_url?: string | null }) => s.playlist_url)
+        if (withPlaylist) setPlaylist({ url: withPlaylist.playlist_url, tier: withPlaylist.playlist_access_tier ?? null })
         const first = (streamsRes.data || [])[0]
         if (first?.id) {
           emptyPollsRef.current = 0
@@ -118,6 +134,25 @@ export default function LiveByEducatorPage() {
           )}
 
           {!loading && streamId && <LiveStreamRoom streamId={streamId} />}
+
+          {!loading && playlist.url && (
+            <LmsPlaylistSection
+              playlistUrl={playlist.url}
+              canAccess={planAllows(
+                (user as { subscription_plan?: string })?.subscription_plan,
+                (user as { user_type?: string })?.user_type,
+                playlist.tier,
+              )}
+              tierLabel={
+                playlist.tier === "premium"
+                  ? "membros Premium (€65)"
+                  : playlist.tier === "app_member"
+                    ? "membros da app (€35) e superiores"
+                    : null
+              }
+              defaultOpen
+            />
+          )}
 
           {!loading && educatorId && (
             <EducatorRatingsSection educatorId={educatorId} streamId={streamId || null} variant="channel" />

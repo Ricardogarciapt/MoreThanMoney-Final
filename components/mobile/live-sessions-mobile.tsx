@@ -28,6 +28,7 @@ import { usePictureInPictureSupported } from "@/hooks/use-picture-in-picture-sup
 import { useLmsViewerHeartbeat } from "@/hooks/use-lms-viewer-heartbeat"
 import EducatorLiveViewerBadge from "@/components/live/educator-live-viewer-badge"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
+import { LmsPlaylistSection } from "@/components/live/lms-playlist-section"
 import { notifyXpFromResponse } from "@/lib/xp-client"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -43,6 +44,8 @@ type StreamListItem = {
   academy?: { name: string } | null
   access_tier?: "all" | "app_member" | "premium" | null
   scheduled_start_at?: string | null
+  playlist_url?: string | null
+  playlist_access_tier?: "all" | "app_member" | "premium" | null
 }
 
 type TimetableApiSession = {
@@ -663,6 +666,26 @@ export default function LiveSessionsMobile({
               <X className="h-5 w-5" />
             </Button>
           </DialogHeader>
+
+          {stream?.playlist_url && (
+            <div className="shrink-0 border-b border-gray-800/70 bg-black/30 px-2 py-2 sm:px-3">
+              <LmsPlaylistSection
+                playlistUrl={stream.playlist_url}
+                canAccess={canAccessStream(
+                  (user as any)?.member_category,
+                  (user as any)?.user_type,
+                  stream.playlist_access_tier,
+                )}
+                tierLabel={
+                  stream.playlist_access_tier === "premium"
+                    ? "membros Premium (€65)"
+                    : stream.playlist_access_tier === "app_member"
+                      ? "membros da app (€35) e superiores"
+                      : null
+                }
+              />
+            </div>
+          )}
 
           <div
             className={cn(
