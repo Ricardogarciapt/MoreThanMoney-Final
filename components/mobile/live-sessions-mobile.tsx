@@ -107,6 +107,18 @@ export default function LiveSessionsMobile({
 }: LiveSessionsMobileProps) {
   const router = useRouter()
   const { toast } = useToast()
+
+  // Upsell de sessões/aulas bloqueadas. No app iOS nativo a compra é por Apple IAP
+  // (ecrã nativo) — nunca abrir checkout Stripe dentro do WebView (política Apple).
+  const goUpgrade = useCallback(() => {
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : ""
+    const isIOSNative = /MTMNativeApp/i.test(ua) && /iPhone|iPad|iPod/i.test(ua)
+    if (isIOSNative) {
+      toast({ title: "Conteúdo Premium", description: "Faz upgrade da tua subscrição em Mais → Subscrição." })
+      return
+    }
+    router.push("/upgrade")
+  }, [router, toast])
   const { user } = useAuth()
   const [liveStreams, setLiveStreams] = useState<StreamListItem[]>([])
   const [scheduledStreams, setScheduledStreams] = useState<StreamListItem[]>([])
@@ -543,7 +555,7 @@ export default function LiveSessionsMobile({
               <button
                 key={s.id}
                 type="button"
-                onClick={() => hasAccess ? openModal(s.id) : undefined}
+                onClick={() => (hasAccess ? openModal(s.id) : goUpgrade())}
                 className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/90 text-left shadow-md transition active:scale-[0.98] hover:border-[#D2A63C]/40"
               >
                 <div className="relative aspect-video w-full bg-gray-900">
@@ -576,6 +588,9 @@ export default function LiveSessionsMobile({
                       <p className="text-[10px] font-semibold text-white/90 text-center px-2">
                         {s.access_tier === "premium" ? "Pack Premium ($65/mês)" : "Pack Membro ($35/mês)"}
                       </p>
+                      <span className="mt-0.5 rounded-full bg-[#D2A63C] px-2 py-0.5 text-[9px] font-bold text-black">
+                        Fazer upgrade
+                      </span>
                     </div>
                   )}
                 </div>

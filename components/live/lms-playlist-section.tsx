@@ -18,6 +18,28 @@ export function extractPlaylistId(url?: string | null): string | null {
   return null
 }
 
+/** CTA de upgrade — no iOS nativo NÃO abre Stripe (política Apple); usa a subscrição in-app. */
+function UpgradeButton() {
+  const onClick = () => {
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : ""
+    const isIOSNative = /MTMNativeApp/i.test(ua) && /iPhone|iPad|iPod/i.test(ua)
+    if (isIOSNative) {
+      alert("Faz upgrade da tua subscrição em Mais → Subscrição.")
+      return
+    }
+    window.location.href = "/upgrade"
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-2 rounded-full bg-[#D2A63C] px-3 py-1 text-[11px] font-bold text-black"
+    >
+      Fazer upgrade
+    </button>
+  )
+}
+
 export function LmsPlaylistSection({
   playlistUrl,
   playlistTitle,
@@ -68,6 +90,7 @@ export function LmsPlaylistSection({
               <p className="text-xs text-gray-400">
                 🔒 As aulas gravadas desta sala estão disponíveis para {tierLabel || "membros com o plano necessário"}.
               </p>
+              <UpgradeButton />
             </div>
           )}
         </div>
