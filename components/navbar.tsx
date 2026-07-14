@@ -76,6 +76,7 @@ export default function Navbar() {
         { name: "Os nossos Scanners", href: "/scanner" },
         { name: "Scanner ao Vivo", href: "/scanner-access" },
         { name: "Alertas MTM", href: "/alertas-mtm" },
+        { name: "Trade Ideas", href: "/trading-ideas" },
         { name: "Portefólios", href: "/portfolios" },
         { name: "Terminal MTM", href: "/mtm-terminal" },
         { name: "Trading Desk", href: "/trading" },
