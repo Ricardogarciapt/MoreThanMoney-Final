@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { isTrialProfile, trialExpired, trialDaysLeft } from "@/lib/trial-access"
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -19,9 +20,26 @@ export async function GET(request: NextRequest) {
 
   const { data: p } = await supabaseAdmin
     .from("profiles")
-    .select("member_category, subscription_platform, subscription_status, conversion_deadline, user_type")
+    .select("member_category, subscription_platform, subscription_status, conversion_deadline, user_type, trial_expires_at, trial_expired, is_active")
     .eq("id", user.id)
     .single()
+
+  // ── Free trial de 3 dias (guest) — funil agressivo ─────────────────────────
+  if (isTrialProfile(p) && p?.user_type !== "admin") {
+    const expired = trialExpired(p)
+    const daysLeft = trialDaysLeft(p)
+    return NextResponse.json({
+      isFreeGranted: true,
+      phase: expired ? "trial_expired" : "trial",
+      blocking: expired, // pós-trial → banner insistente (não fechável)
+      memberCategory: (p?.member_category || "premium").toLowerCase(),
+      deadline: p?.trial_expires_at,
+      daysLeft,
+      offer: expired
+        ? { title: "O teu trial terminou — desbloqueia Premium por 34,99€", plan: "premium" }
+        : { title: `Faltam ${daysLeft} dia${daysLeft === 1 ? "" : "s"} do teu Premium grátis — garante já 34,99€`, plan: "premium" },
+    })
+  }
 
   const platform = (p?.subscription_platform || "manual").toLowerCase()
   const isManualFree = (platform === "manual" || !p?.subscription_platform) && p?.subscription_status === "active"

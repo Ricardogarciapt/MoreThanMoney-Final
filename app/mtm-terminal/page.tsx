@@ -44,6 +44,8 @@ function canAccessTerminal(user: User | null): boolean {
   if (!user || user.is_active === false) return false
   if (user.user_type === "admin") return true
   if (user.user_type === "vip" || user.member_category === "vip") return true
+  // Free trial (guest Premium): acesso total enquanto is_active (cron fecha ao expirar)
+  if (user.user_type === "guest" && user.member_category === "premium") return true
   if (user.user_type === "member") {
     return (
       user.member_category === "iq" ||

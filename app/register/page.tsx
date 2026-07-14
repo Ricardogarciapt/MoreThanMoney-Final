@@ -34,6 +34,7 @@ const PLANS = {
 }
 
 export default function RegisterPage() {
+  const [mode, setMode] = useState<'trial' | 'paid'>('trial')
   const [selectedPlan, setSelectedPlan] = useState<'app_member' | 'premium'>('app_member')
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
   const [formData, setFormData] = useState({
@@ -100,6 +101,54 @@ export default function RegisterPage() {
     }
   }
 
+  // ── Registo com FREE TRIAL de 3 dias (sem cartão) ──────────────────────────
+  const handleTrialSubmit = async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/auth/register-trial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.full_name,
+          username: formData.username,
+          phone: formData.phone || '',
+          whatsapp: formData.whatsapp || '',
+          sponsorUsername: formData.sponsorUsername || '',
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        if (data?.code === 'ACCOUNT_EXISTS') {
+          setError('Já tens conta com este email. Inicia sessão para continuares.')
+        } else {
+          setError(data?.error || 'Não foi possível iniciar o teu trial. Tenta novamente.')
+        }
+        setIsLoading(false)
+        return
+      }
+
+      // Login imediato (a conta já existe e está confirmada)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      })
+      if (signInError) {
+        // Conta criada, mas login falhou → mandar para o login
+        router.push('/app-mobile/login?message=' + encodeURIComponent('Conta criada! Inicia sessão para começares o teu trial.'))
+        return
+      }
+
+      // Trial ativo → entrar na app
+      window.location.href = '/app-mobile'
+    } catch (err: any) {
+      setError(err?.message || 'Erro inesperado. Tenta novamente.')
+      setIsLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -109,6 +158,12 @@ export default function RegisterPage() {
     if (!formData.username.trim()) { setError('Nome de utilizador é obrigatório'); return }
     if (formData.password.length < 6) { setError('A palavra-passe deve ter pelo menos 6 carateres'); return }
     if (formData.password !== formData.confirmPassword) { setError('As palavras-passe não coincidem'); return }
+
+    // FREE TRIAL 3 dias (sem cartão) — cria conta e entra logo na app.
+    if (mode === 'trial') {
+      await handleTrialSubmit()
+      return
+    }
 
     setIsLoading(true)
 
@@ -236,10 +291,52 @@ export default function RegisterPage() {
             <span className="text-black font-black text-2xl">M</span>
           </div>
           <h1 className="text-3xl font-bold text-white">Criar Conta MTM</h1>
-          <p className="text-gray-400 mt-2">Escolhe o teu plano e começa hoje</p>
+          <p className="text-gray-400 mt-2">
+            {mode === 'trial' ? 'Experimenta o Premium 3 dias grátis — sem cartão' : 'Escolhe o teu plano e começa hoje'}
+          </p>
         </div>
 
+        {/* Modo: Free Trial vs Subscrever já */}
+        <div className="flex justify-center">
+          <div className="inline-flex rounded-xl bg-gray-900 p-1 border border-gray-800">
+            <button
+              type="button"
+              onClick={() => setMode('trial')}
+              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'trial' ? 'bg-[#D2A63C] text-black shadow' : 'text-gray-400 hover:text-white'}`}
+            >
+              🎁 Grátis 3 dias
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('paid')}
+              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'paid' ? 'bg-white text-black shadow' : 'text-gray-400 hover:text-white'}`}
+            >
+              Subscrever já
+            </button>
+          </div>
+        </div>
+
+        {/* Cartão de benefícios do trial */}
+        {mode === 'trial' && (
+          <div className="rounded-2xl border-2 border-[#D2A63C]/50 bg-[#D2A63C]/10 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Globe className="w-4 h-4 text-[#D2A63C]" />
+              <span className="font-bold text-white">3 dias de Premium — grátis, sem cartão</span>
+            </div>
+            <ul className="space-y-1.5">
+              {['Acesso completo à app MTM System', 'Ferramentas de trading + Scanner', 'Live Sessions e comunidade', 'Alertas e sinais em tempo real', 'Sem cartão · cancela quando quiseres'].map((f) => (
+                <li key={f} className="flex items-center gap-2 text-xs text-gray-200">
+                  <Check className="w-3.5 h-3.5 shrink-0 text-[#D2A63C]" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-gray-400 mt-3">Ao fim dos 3 dias, continuas Premium por apenas 34,99€ no 1º mês. Sem compromisso.</p>
+          </div>
+        )}
+
         {/* Billing Toggle */}
+        {mode === 'paid' && (<>
         <div className="flex justify-center">
           <div className="inline-flex rounded-xl bg-gray-900 p-1 border border-gray-800">
             <button
@@ -316,13 +413,19 @@ export default function RegisterPage() {
             )
           })}
         </div>
+        </>)}
 
         {/* Registration Form */}
         <Card className="bg-gray-900/50 border-gray-800">
           <CardHeader>
             <CardTitle className="text-lg text-white">
-              Criar conta — <span style={{ color: activePlan.color }}>{activePlan.name}</span>
-              <span className="text-gray-400 font-normal text-sm ml-2">({activePricing.label})</span>
+              {mode === 'trial' ? (
+                <>Criar conta — <span style={{ color: '#D2A63C' }}>Trial Premium 3 dias</span>
+                  <span className="text-gray-400 font-normal text-sm ml-2">(grátis, sem cartão)</span></>
+              ) : (
+                <>Criar conta — <span style={{ color: activePlan.color }}>{activePlan.name}</span>
+                  <span className="text-gray-400 font-normal text-sm ml-2">({activePricing.label})</span></>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -408,6 +511,7 @@ export default function RegisterPage() {
                 )}
               </div>
 
+              {mode === 'paid' && (
               <div>
                 <Label htmlFor="couponCode" className="text-gray-300">
                   Cupão de oferta <span className="text-gray-500 font-normal">(opcional)</span>
@@ -439,6 +543,7 @@ export default function RegisterPage() {
                   </div>
                 )}
               </div>
+              )}
 
               <div>
                 <Label htmlFor="password" className="text-gray-300">Palavra-passe *</Label>
@@ -470,9 +575,13 @@ export default function RegisterPage() {
 
               <Button type="submit" disabled={isLoading} size="lg"
                 className="w-full font-semibold text-black"
-                style={{ background: `linear-gradient(135deg, ${activePlan.color}, ${selectedPlan === 'premium' ? '#5B21B6' : '#BB8525'})` }}>
+                style={{ background: mode === 'trial'
+                  ? 'linear-gradient(135deg, #D2A63C, #BB8525)'
+                  : `linear-gradient(135deg, ${activePlan.color}, ${selectedPlan === 'premium' ? '#5B21B6' : '#BB8525'})` }}>
                 {isLoading ? (
                   <><Loader2 className="mr-2 h-5 w-5 animate-spin" />A preparar acesso...</>
+                ) : mode === 'trial' ? (
+                  <>🎁 Começar grátis — 3 dias de Premium</>
                 ) : couponStatus?.valid && (couponStatus.type === 'free_subscription' || couponStatus.type === 'free_months') ? (
                   <>🎁 Activar acesso gratuito — {activePlan.name}</>
                 ) : (
@@ -481,12 +590,15 @@ export default function RegisterPage() {
               </Button>
 
               <p className="text-xs text-center text-gray-500 -mt-1">
-                {couponStatus?.valid && (couponStatus.type === 'free_subscription' || couponStatus.type === 'free_months')
+                {mode === 'trial'
+                  ? '🎁 Sem cartão. Entras já na app com Premium por 3 dias. Depois continuas por 34,99€/mês (1º mês) — cancela quando quiseres.'
+                  : couponStatus?.valid && (couponStatus.type === 'free_subscription' || couponStatus.type === 'free_months')
                   ? '🎁 O teu primeiro mês é gratuito. Após o período experimental, a subscrição renova automaticamente.'
                   : '🔒 Serás redirecionado para o Stripe para pagamento seguro. Após confirmação, a tua conta é criada automaticamente.'
                 }
               </p>
 
+              {mode === 'paid' && (<>
               <div className="relative my-2">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-700" />
@@ -512,6 +624,7 @@ export default function RegisterPage() {
                   </>
                 )}
               </Button>
+              </>)}
             </form>
 
             <div className="mt-6 text-center space-y-2">

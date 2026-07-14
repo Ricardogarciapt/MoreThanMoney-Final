@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { isRegisteredMember } from "@/lib/member-access"
 import { isMemberProtectedPath, registerRedirectUrl } from "@/lib/member-route-guard"
+import { isExpiredTrial } from "@/lib/trial-access"
 import { needsAccessRevalidation } from "@/lib/access-migration"
 
 // Cache para rate limiting
@@ -195,7 +196,7 @@ export async function middleware(request: NextRequest) {
       const { data: memberProfile } = await getSupabase()
         .from("profiles")
         .select(
-          "id, email, user_type, member_category, is_active, subscription_plan, stripe_subscription_id, subscription_expires_at, trial_expires_at, trial_expired, profile_data"
+          "id, email, user_type, member_category, is_active, subscription_plan, subscription_platform, subscription_status, stripe_subscription_id, subscription_expires_at, trial_expires_at, trial_expired, profile_data"
         )
         .eq("id", memberUser.id)
         .maybeSingle()
@@ -205,6 +206,13 @@ export async function middleware(request: NextRequest) {
       }
 
       if (!isRegisteredMember(memberProfile)) {
+        // Trial terminado → funil agressivo: na web vai direto ao /upgrade (Stripe).
+        // No iOS nativo NÃO se envia p/ Stripe (compliance) — segue o fluxo normal.
+        const ua = request.headers.get("user-agent") || ""
+        const iosNative = /MTMNativeApp/i.test(ua) && /iPhone|iPad|iPod/i.test(ua)
+        if (isExpiredTrial(memberProfile) && !iosNative) {
+          return NextResponse.redirect(new URL("/upgrade?from=trial", request.url))
+        }
         return NextResponse.redirect(
           new URL(
             registerRedirectUrl(request.nextUrl.origin, {

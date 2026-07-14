@@ -11,6 +11,8 @@ import { supabase } from "@/lib/supabase"
 
 type Status = {
   isFreeGranted: boolean
+  phase?: "trial" | "trial_expired" | string
+  blocking?: boolean
   memberCategory?: string | null
   deadline?: string
   daysLeft?: number
@@ -45,12 +47,15 @@ export function ConversionBanner({ compact = false }: { compact?: boolean }) {
     })()
   }, [])
 
-  if (!status?.isFreeGranted || dismissed) return null
+  const blocking = Boolean(status?.blocking)
+  // Banner bloqueante (trial terminado) não se fecha — funil agressivo.
+  if (!status?.isFreeGranted || (dismissed && !blocking)) return null
 
   const deadlineStr = status.deadline
     ? new Date(status.deadline).toLocaleDateString("pt-PT", { day: "2-digit", month: "long" })
     : ""
   const days = status.daysLeft ?? 0
+  const expired = status.phase === "trial_expired" || blocking
 
   const onUpgrade = () => {
     if (isIOSNative()) {
@@ -67,14 +72,15 @@ export function ConversionBanner({ compact = false }: { compact?: boolean }) {
 
   return (
     <div
-      className={`relative flex items-center gap-3 border border-[#D2A63C]/40 bg-gradient-to-r from-[#1a1508] to-[#0d0b06] ${
-        compact ? "rounded-xl px-3 py-2.5" : "rounded-2xl px-4 py-3"
-      }`}
+      className={`relative flex items-center gap-3 border bg-gradient-to-r ${
+        expired ? "border-[#D2A63C] from-[#241a06] to-[#120d04]" : "border-[#D2A63C]/40 from-[#1a1508] to-[#0d0b06]"
+      } ${compact ? "rounded-xl px-3 py-2.5" : "rounded-2xl px-4 py-3"}`}
     >
       <div className="min-w-0 flex-1">
         <p className={`font-semibold text-white ${compact ? "text-xs" : "text-sm"}`}>
-          ⏳ O teu acesso gratuito termina a <b className="text-[#D2A63C]">{deadlineStr}</b>
-          {days > 0 ? ` · faltam ${days} dias` : ""}
+          {expired
+            ? "🔒 O teu trial Premium terminou"
+            : <>⏳ O teu Premium grátis termina a <b className="text-[#D2A63C]">{deadlineStr}</b>{days > 0 ? ` · faltam ${days} dia${days === 1 ? "" : "s"}` : ""}</>}
         </p>
         <p className={`text-gray-300 ${compact ? "text-[10px]" : "text-xs"} mt-0.5`}>
           {status.offer?.title || "Continua com a tua subscrição"}
@@ -86,16 +92,18 @@ export function ConversionBanner({ compact = false }: { compact?: boolean }) {
         onClick={onUpgrade}
         className={`shrink-0 rounded-full bg-[#D2A63C] font-bold text-black ${compact ? "px-3 py-1 text-[11px]" : "px-4 py-1.5 text-xs"}`}
       >
-        Continuar
+        {expired ? "Desbloquear" : "Continuar"}
       </button>
-      <button
-        type="button"
-        onClick={dismiss}
-        aria-label="Fechar"
-        className="shrink-0 rounded-full px-1.5 text-gray-500 hover:text-white"
-      >
-        ✕
-      </button>
+      {!blocking && (
+        <button
+          type="button"
+          onClick={dismiss}
+          aria-label="Fechar"
+          className="shrink-0 rounded-full px-1.5 text-gray-500 hover:text-white"
+        >
+          ✕
+        </button>
+      )}
     </div>
   )
 }
