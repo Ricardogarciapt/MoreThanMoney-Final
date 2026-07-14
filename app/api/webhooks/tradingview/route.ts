@@ -274,7 +274,17 @@ function confirmationsPassed(raw: Json): number | null {
 }
 
 /** Só as melhores ideias abrem: confirmações suficientes + timeframe ajustado ao ativo. */
-function passesQualityGate(raw: Json, timeframe: string | null, cls: AssetClass): boolean {
+function passesQualityGate(
+  raw: Json,
+  timeframe: string | null,
+  cls: AssetClass,
+  isGoldKiller = false,
+): boolean {
+  // GoldKiller é um scanner dedicado de Ouro em 5m: a própria entrada É a decisão do
+  // scanner (Momentum/Supertrend são só confirmações informativas, muitas vezes 0-1).
+  // Aplicar o gate genérico (>=2 confirmações + timeframe 15m+) mataria todos os sinais
+  // GoldKiller — por isso a estratégia própria passa direto.
+  if (isGoldKiller) return true
   // Confirmações: se existirem, exige pelo menos 2 passadas.
   const passed = confirmationsPassed(raw)
   if (passed !== null && passed < 2) return false
@@ -623,7 +633,7 @@ export async function POST(request: NextRequest) {
     !isIdeaAlert &&
     parsedForExec.symbol &&
     parsedForExec.direction &&
-    passesQualityGate(payload, timeframe, assetClass) &&
+    passesQualityGate(payload, timeframe, assetClass, isGoldKiller) &&
     (activeSensei?.alertType === "entry_trigger" || !activeSensei)
 
   let savedIdea: { id: string; tradeNumber: number | null } | null = null
