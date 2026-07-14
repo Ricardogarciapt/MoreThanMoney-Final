@@ -1,0 +1,114 @@
+import { NextRequest, NextResponse } from "next/server"
+
+export const dynamic = "force-dynamic"
+
+/**
+ * POST /api/manychat/closer
+ *
+ * Closer de vendas para o ManyChat (Instagram/DM). Sempre-ligado (Vercel) — a
+ * ManyChat chama este endpoint num passo "External Request" e mapeia
+ * `response.answer` → campo `Claude_resposta`, depois responde com esse texto.
+ *
+ * Mesma "alma" do AIOS (nota mtm-sales-brain): provas reais, sem promessas de
+ * lucro, regra Apple (iPhone → subscrever na app). Segurança opcional: se
+ * MANYCHAT_CLOSER_SECRET estiver definido, exige header `x-mtm-secret`.
+ */
+
+const CLOSER_SYSTEM = `És o closer de vendas da MoreThanMoney a responder a uma mensagem direta no Instagram/DM.
+Objetivo: acolher, criar confiança e levar a pessoa a (1) descarregar a app grátis / criar conta e (2) subir a Premium.
+Estilo: humano, caloroso, direto, curto (máximo ~70 palavras, 1 a 3 frases), no máximo um emoji.
+
+FACTOS REAIS (a MoreThanMoney é uma comunidade portuguesa de educação financeira e trading):
+- Prova da comunidade: 675 trades acompanhados, 63% de win rate, +7.060€ documentados, 356 membros ativos.
+- App MTM System (grátis): alertas, scanner, live sessions, ferramentas de trading.
+- Produtos: App grátis · Pack Membro 35€/mês · Pack Premium 65€/mês (1º mês só 34,99€).
+- NOVO: no registo há um FREE TRIAL de 3 dias de Premium, sem cartão — a melhor porta de entrada.
+- Links: registo/trial → morethanmoney.pt/register · Premium → morethanmoney.pt/upgrade · App iPhone → apps.apple.com/pt/app/id6778558643 · App Android → morethanmoney.pt/downloads/MoreThanMoney.apk
+
+REGRAS ABSOLUTAS:
+- Usa só os factos acima. NUNCA prometas lucros — é educação, não aconselhamento financeiro.
+- Termina sempre com UM passo concreto (começar o trial grátis, descarregar a app, ou /upgrade) e, quando fizer sentido, uma pergunta que puxe resposta.
+- Se a pessoa estiver no iPhone/app da Apple, encaminha para subscrever DENTRO da app (NUNCA envies links de pagamento). Caso contrário podes usar morethanmoney.pt/register ou /upgrade.
+- Responde SEMPRE no mesmo idioma da mensagem da pessoa.
+- Devolve APENAS JSON válido: {"answer":"a tua resposta de DM"}`
+
+async function callClaude(question: string, idioma: string | null, name: string | null): Promise<string> {
+  const key = process.env.ANTHROPIC_API_KEY?.trim()
+  if (!key) throw new Error("ANTHROPIC_API_KEY em falta")
+  const model =
+    process.env.MANYCHAT_CLOSER_MODEL?.trim() ||
+    process.env.ANTHROPIC_MODEL?.trim() ||
+    "claude-3-5-haiku-20241022"
+
+  const lang = (idioma || "").trim() || "português de Portugal"
+  const who = name ? ` O primeiro nome da pessoa é ${name}.` : ""
+  const user = `Idioma a usar: ${lang}.${who}\nMensagem da pessoa: "${question}"`
+
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 20000)
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 400,
+        system: CLOSER_SYSTEM,
+        messages: [{ role: "user", content: user }],
+      }),
+      signal: ctrl.signal,
+    })
+    if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 200)}`)
+    const data = await res.json()
+    const text: string = (data?.content || [])
+      .filter((p: any) => p?.type === "text")
+      .map((p: any) => p.text)
+      .join("")
+      .trim()
+    // Tenta extrair {"answer":"..."}; se falhar, usa o texto direto.
+    try {
+      const m = text.match(/\{[\s\S]*\}/)
+      if (m) {
+        const j = JSON.parse(m[0])
+        if (typeof j?.answer === "string" && j.answer.trim()) return j.answer.trim()
+      }
+    } catch { /* usa texto direto */ }
+    return text
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+export async function POST(request: NextRequest) {
+  // Segurança opcional por segredo partilhado.
+  const secret = process.env.MANYCHAT_CLOSER_SECRET?.trim()
+  if (secret && request.headers.get("x-mtm-secret") !== secret) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  }
+
+  let body: any = {}
+  try { body = await request.json() } catch { /* corpo vazio */ }
+  const question = String(body.question || body.last_input_text || body.text || "").trim()
+  if (!question) {
+    return NextResponse.json({ error: "pergunta vazia" }, { status: 400 })
+  }
+  const idioma = body.idioma || body.lang || null
+  const name = body.name || body.first_name || null
+
+  try {
+    const answer = await callClaude(question, idioma, name)
+    return NextResponse.json({ answer, idioma: idioma || "pt", engine: "mtm-closer" })
+  } catch (e: any) {
+    // Fallback seguro para a ManyChat nunca ficar sem resposta.
+    return NextResponse.json({
+      answer:
+        "Olá! 👋 Somos a MoreThanMoney — educação e trading com provas reais (675 trades, 63% win rate, +7.060€). Começa grátis 3 dias em morethanmoney.pt/register. Estás no iPhone ou Android?",
+      engine: "mtm-closer-fallback",
+      error: e?.message || "erro",
+    })
+  }
+}
