@@ -11,6 +11,48 @@ import { cookies } from "next/headers"
 export { getSupabaseAdmin } from "./supabase-admin-client"
 
 /**
+ * Devolve o utilizador autenticado a partir da sessão (cookies), NUNCA do corpo do
+ * pedido. Usar em rotas que operam sobre o próprio perfil do utilizador para evitar
+ * IDOR — o `userId` tem de vir daqui, não de input do cliente.
+ */
+export async function getAuthenticatedUser(): Promise<{
+  userId?: string
+  email?: string
+  error?: string
+}> {
+  try {
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          },
+        },
+      }
+    )
+
+    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
+
+    if (userError || !authUser) {
+      return { error: "Não autenticado" }
+    }
+
+    return { userId: authUser.id, email: authUser.email ?? undefined }
+  } catch (error: any) {
+    console.error('❌ [USER API] Erro ao obter utilizador autenticado:', error)
+    return { error: error.message || 'Erro desconhecido' }
+  }
+}
+
+/**
  * Verifica se o utilizador é admin (server-side)
  */
 export async function verifyAdminAccess(): Promise<{

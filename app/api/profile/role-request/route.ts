@@ -1,21 +1,38 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getSupabaseAnonServerClient } from "@/lib/supabase-admin-client"
-
-const supabase = getSupabaseAnonServerClient()
+import { getAuthenticatedUser, getSupabaseAdmin } from "@/lib/admin-api-helpers"
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, requestedRole, reason } = await request.json()
+    // Autorização: utilizador da sessão, nunca do corpo do pedido.
+    const auth = await getAuthenticatedUser()
+    if (!auth.userId) {
+      return NextResponse.json({ error: auth.error || "Não autenticado" }, { status: 401 })
+    }
+    const userId = auth.userId
 
-    if (!userId || !requestedRole) {
+    const { requestedRole, reason } = await request.json()
+
+    if (!requestedRole) {
       return NextResponse.json({ error: "Dados obrigatórios em falta" }, { status: 400 })
     }
 
-    // Verificar se o usuário existe e obter role atual
-    const { data: user, error: userError } = await supabase.from("users").select("user_type").eq("id", userId).single()
+    // Só roles válidos (constraint da BD: member/affiliate/admin)
+    const ALLOWED_ROLES = ["member", "affiliate", "admin"]
+    if (!ALLOWED_ROLES.includes(requestedRole)) {
+      return NextResponse.json({ error: "Role inválido" }, { status: 400 })
+    }
+
+    const supabase = getSupabaseAdmin()
+
+    // Verificar se o utilizador existe e obter role atual
+    const { data: user, error: userError } = await supabase
+      .from("profiles")
+      .select("user_type")
+      .eq("id", userId)
+      .single()
 
     if (userError || !user) {
-      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
+      return NextResponse.json({ error: "Utilizador não encontrado" }, { status: 404 })
     }
 
     // Verificar se já existe um pedido pendente
@@ -24,7 +41,7 @@ export async function POST(request: NextRequest) {
       .select("id")
       .eq("user_id", userId)
       .eq("status", "pending")
-      .single()
+      .maybeSingle()
 
     if (existingRequest) {
       return NextResponse.json(
@@ -40,7 +57,7 @@ export async function POST(request: NextRequest) {
       .from("role_change_requests")
       .insert({
         user_id: userId,
-        current_role: user.user_type,
+        current_user_role: user.user_type ?? "member",
         requested_role: requestedRole,
         reason: reason || null,
         status: "pending",
@@ -64,20 +81,21 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-
-    if (!userId) {
-      return NextResponse.json({ error: "User ID é obrigatório" }, { status: 400 })
+    // Autorização: só devolve os pedidos do próprio utilizador (sessão), nunca por userId do cliente.
+    const auth = await getAuthenticatedUser()
+    if (!auth.userId) {
+      return NextResponse.json({ error: auth.error || "Não autenticado" }, { status: 401 })
     }
 
-    // Buscar pedidos do usuário
+    const supabase = getSupabaseAdmin()
+
+    // Buscar pedidos do utilizador autenticado
     const { data, error } = await supabase
       .from("role_change_requests")
       .select("*")
-      .eq("user_id", userId)
+      .eq("user_id", auth.userId)
       .order("created_at", { ascending: false })
 
     if (error) {
