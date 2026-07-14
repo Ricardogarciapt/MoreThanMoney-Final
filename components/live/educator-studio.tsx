@@ -738,7 +738,7 @@ export default function EducatorStudio() {
                     <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Modo do player</p>
                     <select
                       className="w-full rounded-md border border-gray-700 bg-black/50 px-2 py-2 text-sm text-white"
-                      defaultValue={stream.playback_mode || "youtube_first"}
+                      defaultValue={stream.playback_mode || "hls_first"}
                       onChange={(e) => patchStream(stream.id, { playback_mode: e.target.value })}
                     >
                       <option value="youtube_first">YouTube primeiro (seguro)</option>

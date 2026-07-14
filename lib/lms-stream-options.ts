@@ -7,7 +7,8 @@ export type LmsIngestProvider = (typeof LMS_INGEST_PROVIDERS)[number]
 export function normalizePlaybackMode(value: unknown): LmsPlaybackMode {
   const v = String(value || "").trim().toLowerCase()
   if (LMS_PLAYBACK_MODES.includes(v as LmsPlaybackMode)) return v as LmsPlaybackMode
-  return "youtube_first"
+  // Default HLS-first: menor latência (o resolver faz fallback a YouTube se não houver HLS).
+  return "hls_first"
 }
 
 export function normalizeIngestProvider(value: unknown): LmsIngestProvider {

@@ -83,7 +83,7 @@ export default function LiveSessionsManager() {
     rtmps_url: "",
     stream_key: "",
     category: "",
-    playback_mode: "youtube_first",
+    playback_mode: "hls_first",
     ingest_provider: "restream",
     scheduled_start_at: "",
     viewer_count: "",
@@ -257,7 +257,7 @@ export default function LiveSessionsManager() {
     const commonPayload = {
       ...streamForm,
       category: streamForm.category || null,
-      playback_mode: streamForm.playback_mode || "youtube_first",
+      playback_mode: streamForm.playback_mode || "hls_first",
       ingest_provider: streamForm.ingest_provider || "restream",
       viewer_count:
         streamForm.viewer_count === "" || streamForm.viewer_count === undefined ? 0 : Number(streamForm.viewer_count),
@@ -319,7 +319,7 @@ export default function LiveSessionsManager() {
       rtmps_url: "",
       stream_key: "",
       category: "",
-      playback_mode: "youtube_first",
+      playback_mode: "hls_first",
       ingest_provider: "restream",
       scheduled_start_at: "",
       viewer_count: "",
@@ -1020,13 +1020,13 @@ export default function LiveSessionsManager() {
                 </p>
               )}
               <p className="text-gray-400">
-                Player: {s.playback_mode || "youtube_first"} · Ingest: {s.ingest_provider || "restream"}
+                Player: {s.playback_mode || "hls_first"} · Ingest: {s.ingest_provider || "restream"}
               </p>
               <p className="text-gray-300">Stream key MTM: {s.stream_key || "não definida"}</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 <select
                   className="w-full rounded border border-gray-700 bg-black/50 px-2 py-2 text-white text-xs"
-                  value={s.playback_mode || "youtube_first"}
+                  value={s.playback_mode || "hls_first"}
                   onChange={(ev) => patchStreamAdmin(s.id, { playback_mode: ev.target.value })}
                 >
                   <option value="youtube_first">Player: YouTube primeiro</option>
