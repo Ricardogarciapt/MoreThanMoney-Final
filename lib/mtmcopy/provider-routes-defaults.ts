@@ -9,6 +9,8 @@ import {
   CANONICAL_SENSEI_STRATEGY_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_STRATEGY_ID,
+  CANONICAL_GOLDKILLER_ACCOUNT_ID,
+  CANONICAL_GOLDKILLER_STRATEGY_ID,
 } from './provider-constants'
 import {
   PREMIUM_PROVIDER_EXECUTION,
@@ -83,6 +85,23 @@ export function buildCanonicalProviderRoutes(): ProviderRoute[] {
       },
       enabled: true,
     },
+    {
+      id: 'canonical-goldkiller',
+      label: 'MTM Auto Goldkiller',
+      sender_channel: 'trade-ideas',
+      sender_chat_id: resolvedTradeIdeasChatId(),
+      signal_source: 'webhook',
+      account_id: CANONICAL_GOLDKILLER_ACCOUNT_ID,
+      strategy_id: CANONICAL_GOLDKILLER_STRATEGY_ID,
+      tag: 'MTM Auto Goldkiller',
+      ai_strategy_prompt: null,
+      execution: {
+        ...SENSEI_PROVIDER_EXECUTION,
+        lot_value: MTM_DEFAULT_RISK_PERCENT,
+        mt_comment: 'MTM Auto Goldkiller',
+      },
+      enabled: true,
+    },
   ]
 }
 
@@ -130,9 +149,11 @@ function isCanonicalRoute(r: ProviderRoute): boolean {
   if (r.account_id === CANONICAL_PREMIUM_ACCOUNT_ID) return true
   if (r.account_id === CANONICAL_TRADE_IDEAS_ACCOUNT_ID) return true
   if (r.account_id === CANONICAL_SENSEI_ACCOUNT_ID) return true
+  if (r.account_id === CANONICAL_GOLDKILLER_ACCOUNT_ID) return true
   if (r.strategy_id === CANONICAL_PREMIUM_STRATEGY_ID) return true
   if (r.strategy_id === CANONICAL_TRADE_IDEAS_STRATEGY_ID) return true
   if (r.strategy_id === CANONICAL_SENSEI_STRATEGY_ID) return true
+  if (r.strategy_id === CANONICAL_GOLDKILLER_STRATEGY_ID) return true
   return false
 }
 

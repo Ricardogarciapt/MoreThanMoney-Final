@@ -9,6 +9,7 @@ export interface ExecSwitches {
   sensei: boolean // Ouro/BTC (conta Sensei)
   forex: boolean // MTM Auto Forex (conta 5IHE)
   premium: boolean // MTM Auto Premium
+  goldkiller: boolean // MTM Auto GoldKiller (conta SDNb / 181271197)
   /** Monitor de preço Premium: fecha parciais/BE/trailing por PREÇO (não por mensagem).
    *  Default FALSE — ligar só depois de validar em demo. */
   premium_price_monitor: boolean
@@ -29,10 +30,11 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       sensei: v.sensei !== false,
       forex: v.forex !== false,
       premium: v.premium !== false,
+      goldkiller: v.goldkiller !== false, // default ON
       premium_price_monitor: v.premium_price_monitor === true, // default OFF
     }
   } catch {
-    return { sensei: true, forex: true, premium: true, premium_price_monitor: false }
+    return { sensei: true, forex: true, premium: true, goldkiller: true, premium_price_monitor: false }
   }
 }
 

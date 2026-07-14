@@ -408,8 +408,9 @@ export async function POST(request: NextRequest) {
 
   // GoldKiller: trada Ouro (mesma classe que o Sensei) mas é um scanner distinto →
   // identifica-se pelo nome da estratégia/alerta e vai para o seu canal próprio
-  // "Sinais Scanner Goldkiller" (chat + Tap to Trade). Auto-copy fica DESLIGADO até
-  // a conta GoldKiller (181271197) estar ligada — não copia para a conta Sensei.
+  // "Sinais Scanner Goldkiller" (chat + Tap to Trade). Auto-copy para a conta GoldKiller
+  // (SDNb / 181271197), com 0.5% de risco e trailing conforme o scanner — NÃO copia
+  // para a conta Sensei.
   const stratText = `${alertName || ""} ${freeText || ""}`.toLowerCase()
   const isGoldKiller =
     assetClass === "gold_btc" && /goldkiller|gold\s*kill/.test(stratText) && !/sensei/.test(stratText)
@@ -417,7 +418,7 @@ export async function POST(request: NextRequest) {
     route.channel = "sinais-goldkiller"
     route.telegram = null
     route.sender = "🥇 GoldKiller Scanner"
-    route.autoCopy = false
+    route.autoCopy = true
   }
 
   // Perpétuos cripto: só 1H vai para o chat/canal (SL curtos noutros TF → overtrading).
@@ -610,12 +611,15 @@ export async function POST(request: NextRequest) {
   // Auto-copy CopyFactory: Ouro/BTC → conta Sensei; Forex → conta MTM Auto Forex (5IHE).
   // Master switch SENSEI_PROVIDER_EXEC_ENABLED + interruptor por-execução (runtime, DB).
   const execSwitches = await getExecSwitches()
-  const execSwitchOn = assetClass === "forex" ? execSwitches.forex : execSwitches.sensei
+  const execSwitchOn = isGoldKiller
+    ? execSwitches.goldkiller
+    : assetClass === "forex"
+      ? execSwitches.forex
+      : execSwitches.sensei
   const canExecuteProvider =
     SENSEI_PROVIDER_EXEC_ENABLED &&
     execSwitchOn &&
     (assetClass === "gold_btc" || assetClass === "forex") &&
-    !isGoldKiller &&
     !isIdeaAlert &&
     parsedForExec.symbol &&
     parsedForExec.direction &&
@@ -643,7 +647,7 @@ export async function POST(request: NextRequest) {
         signal: parsedForExec as NonNullable<ReturnType<typeof parseSignal>>,
         validation: v,
         externalRef: logId,
-        target: assetClass === "forex" ? "forex" : "sensei",
+        target: isGoldKiller ? "goldkiller" : assetClass === "forex" ? "forex" : "sensei",
       })
       providerExecuted = exec.executed
       providerDetail = exec.detail
@@ -678,7 +682,13 @@ export async function POST(request: NextRequest) {
         : null
 
   // Gestão automática Sensei (gated): TP/BE/SL → parciais + BE + trailing ou fecho na conta Sensei
-  if (SENSEI_PROVIDER_EXEC_ENABLED && assetClass === "gold_btc" && !isGoldKiller && isFollowup && activeSensei?.symbol) {
+  if (
+    SENSEI_PROVIDER_EXEC_ENABLED &&
+    assetClass === "gold_btc" &&
+    isFollowup &&
+    activeSensei?.symbol &&
+    (!isGoldKiller || execSwitches.goldkiller)
+  ) {
     try {
       await processMtmcopyWebhookManagement({
         symbol: activeSensei.symbol,
@@ -686,9 +696,10 @@ export async function POST(request: NextRequest) {
         alertType: activeSensei.alertType,
         tpLevel: activeSensei.tpLevel ?? null,
         entry: linkedIdea?.entry ?? activeSensei.entry ?? null,
+        target: isGoldKiller ? "goldkiller" : "sensei",
       })
     } catch (err) {
-      console.error("[tradingview-webhook] sensei management error:", err)
+      console.error("[tradingview-webhook] sensei/goldkiller management error:", err)
     }
   }
 

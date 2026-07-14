@@ -47,7 +47,12 @@ import {
   getProviderExecutionProfile,
 } from './provider-execution'
 import { resolveMtmProvidersForSignal, resolveMtmProviderForStrategyId } from './provider-resolution'
-import { CANONICAL_SENSEI_STRATEGY_ID, CANONICAL_TRADE_IDEAS_STRATEGY_ID } from './provider-constants'
+import {
+  CANONICAL_SENSEI_STRATEGY_ID,
+  CANONICAL_TRADE_IDEAS_STRATEGY_ID,
+  CANONICAL_GOLDKILLER_STRATEGY_ID,
+  CANONICAL_GOLDKILLER_ACCOUNT_ID,
+} from './provider-constants'
 import {
   applyManagementToAccount,
   applyTrailingToLatestPosition,
@@ -734,7 +739,11 @@ async function executeViaMtmProvider(
   const FX_CODES = new Set(['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD'])
   const clean6 = mappedSymbol.toUpperCase().replace(/[^A-Z]/g, '')
   const isForexSym = clean6.length === 6 && FX_CODES.has(clean6.slice(0, 3)) && FX_CODES.has(clean6.slice(3, 6))
-  const forceRisk05 = channel === 'premium-signals' || isForexSym
+  // GoldKiller: 0.5% de risco por trade (conta própria), tal como Premium/Forex.
+  const isGoldKillerProvider =
+    provider.accountId === CANONICAL_GOLDKILLER_ACCOUNT_ID ||
+    provider.strategyId === CANONICAL_GOLDKILLER_STRATEGY_ID
+  const forceRisk05 = channel === 'premium-signals' || isForexSym || isGoldKillerProvider
   const skipSymbol = shouldSkipSymbolForProfile(mappedSymbol, executionProfile)
   if (skipSymbol) {
     await logProviderSignalEvent({
@@ -1345,7 +1354,7 @@ export async function processMtmcopyWebhookSignal(opts: {
   signal: NonNullable<ReturnType<typeof parseSignal>>
   validation: AiSignalValidation
   externalRef?: string
-  target?: 'sensei' | 'forex'
+  target?: 'sensei' | 'forex' | 'goldkiller'
 }): Promise<{ executed: boolean; detail?: string }> {
   if (!isMetaApiConfigured()) {
     return { executed: false, detail: 'MetaAPI não configurado' }
@@ -1358,9 +1367,22 @@ export async function processMtmcopyWebhookSignal(opts: {
           const p = await resolveMtmProviderForStrategyId(CANONICAL_TRADE_IDEAS_STRATEGY_ID)
           return p ? [p] : []
         })()
-      : await resolveMtmProvidersForSignal(channel, null, { signalSource: 'webhook' })
+      : opts.target === 'goldkiller'
+        ? await (async () => {
+            const p = await resolveMtmProviderForStrategyId(CANONICAL_GOLDKILLER_STRATEGY_ID)
+            return p ? [p] : []
+          })()
+        : await resolveMtmProvidersForSignal(channel, null, { signalSource: 'webhook' })
   if (!providers.length) {
-    return { executed: false, detail: opts.target === 'forex' ? 'Rota MTM Auto Forex não configurada' : 'Rota provider Sensei não configurada' }
+    return {
+      executed: false,
+      detail:
+        opts.target === 'forex'
+          ? 'Rota MTM Auto Forex não configurada'
+          : opts.target === 'goldkiller'
+            ? 'Rota MTM Auto GoldKiller não configurada'
+            : 'Rota provider Sensei não configurada',
+    }
   }
 
   const enriched = applyValidationToSignal(opts.signal, opts.validation)
@@ -1406,7 +1428,7 @@ export async function processMtmcopyWebhookSignal(opts: {
 
   return {
     executed: true,
-    detail: `${opts.target === 'forex' ? 'Auto Forex' : 'Sensei'} · ${providers.map((p) => p.strategyId ?? CANONICAL_SENSEI_STRATEGY_ID).join(',')}`,
+    detail: `${opts.target === 'forex' ? 'Auto Forex' : opts.target === 'goldkiller' ? 'Auto GoldKiller' : 'Sensei'} · ${providers.map((p) => p.strategyId ?? CANONICAL_SENSEI_STRATEGY_ID).join(',')}`,
   }
 }
 
@@ -1420,12 +1442,21 @@ export async function processMtmcopyWebhookManagement(opts: {
   alertType: import('./signal-parser').SenseiAlertType
   tpLevel: number | null
   entry: number | null
+  target?: 'sensei' | 'goldkiller'
 }): Promise<{ applied: boolean; detail?: string }> {
   if (!isMetaApiConfigured()) return { applied: false, detail: 'MetaAPI não configurado' }
 
   const channel: MtmcopyChannelKey = 'trade-ideas'
-  const providers = await resolveMtmProvidersForSignal(channel, null, { signalSource: 'webhook' })
-  if (!providers.length) return { applied: false, detail: 'Rota Sensei não configurada' }
+  const providers =
+    opts.target === 'goldkiller'
+      ? await (async () => {
+          const p = await resolveMtmProviderForStrategyId(CANONICAL_GOLDKILLER_STRATEGY_ID)
+          return p ? [p] : []
+        })()
+      : await resolveMtmProvidersForSignal(channel, null, { signalSource: 'webhook' })
+  if (!providers.length) {
+    return { applied: false, detail: opts.target === 'goldkiller' ? 'Rota GoldKiller não configurada' : 'Rota Sensei não configurada' }
+  }
 
   const { applySenseiManagement } = await import('./sensei-management-exec')
   const details: string[] = []
