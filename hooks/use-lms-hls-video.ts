@@ -96,15 +96,20 @@ export function useLmsHlsVideo(videoRef: RefObject<HTMLVideoElement | null>, hls
       destroyHls()
       const hls = new Hls({
         enableWorker: true,
-        // Live: aumentar buffer para estabilidade (menos risco de stall); desativar low-latency mode para robustez.
+        // Live: reduzir a latência (jogar mais perto do live edge) mantendo robustez.
+        // LL-HLS off (o ingest pode não ter partes), mas apanhamos o edge mais cedo
+        // e recuperamos de pequenos buracos sem parar.
         lowLatencyMode: false,
         liveDurationInfinity: true,
-        liveSyncDurationCount: 4,
-        liveMaxLatencyDurationCount: 10,
-        maxLiveSyncPlaybackRate: 1.75,
-        liveBackBufferLength: 20,
-        maxBufferLength: 15,
-        backBufferLength: 12,
+        liveSyncDurationCount: 3,          // era 4 — menos delay face ao live
+        liveMaxLatencyDurationCount: 6,    // era 10 — recupera latência mais cedo
+        maxLiveSyncPlaybackRate: 2,        // era 1.75 — acelera para apanhar o edge
+        maxBufferLength: 20,               // era 15 — mais almofada contra stalls
+        liveBackBufferLength: 10,          // era 20 — liberta memória
+        backBufferLength: 8,               // era 12
+        maxBufferHole: 0.5,                // salta pequenos buracos em vez de parar
+        highBufferWatchdogPeriod: 1,       // deteta stalls mais depressa
+        nudgeMaxRetry: 8,                  // era 3 — recupera de stalls sem crashar
       })
       hlsRef.current = hls
       const tryNextCandidate = () => {

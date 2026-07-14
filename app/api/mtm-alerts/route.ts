@@ -258,18 +258,44 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(Number(searchParams.get("limit")) || 30, 100)
   const symbolFilter = (searchParams.get("symbol") || "").toUpperCase().trim()
 
-  try {
-    const admin = getSupabaseAdmin()
-    let query = admin
-      .from("tradingview_signals")
-      .select("id, ticker, exchange, timeframe, action, price, sl, tp, alert_name, message, ai_analysis, raw_payload, chat_status, chart_image_url, trade_status, signal_kind, received_at")
-      .or("signal_kind.is.null,signal_kind.eq.entry")
-      .order("received_at", { ascending: false })
-      .limit(limit)
+    const SELECT =
+      "id, ticker, exchange, timeframe, action, price, sl, tp, alert_name, message, ai_analysis, raw_payload, chat_status, chart_image_url, trade_status, signal_kind, received_at"
+    let data: unknown[] | null = null
+    let error: { message: string } | null = null
 
-    if (symbolFilter) query = query.ilike("ticker", `%${symbolFilter}%`)
+    if (symbolFilter) {
+      // Pesquisa por símbolo → feed cronológico direto.
+      const res = await admin
+        .from("tradingview_signals")
+        .select(SELECT)
+        .or("signal_kind.is.null,signal_kind.eq.entry")
+        .ilike("ticker", `%${symbolFilter}%`)
+        .order("received_at", { ascending: false })
+        .limit(limit)
+      data = res.data
+      error = res.error
+    } else {
+      // Feed principal: garante os últimos N POR estratégia (senão GoldKiller e outras
+      // de baixo volume ficam afogadas pelos milhares de Sensei/Scanner recentes).
+      const res = await admin.rpc("mtm_recent_alerts", {
+        p_per_strategy: 12,
+        p_total: Math.max(limit, 80),
+      })
+      data = res.data
+      error = res.error
+      // Fallback: se a função não existir/falhar, usa o feed cronológico direto.
+      if (error) {
+        const fb = await admin
+          .from("tradingview_signals")
+          .select(SELECT)
+          .or("signal_kind.is.null,signal_kind.eq.entry")
+          .order("received_at", { ascending: false })
+          .limit(Math.max(limit, 80))
+        data = fb.data
+        error = fb.error
+      }
+    }
 
-    const { data, error } = await query
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
