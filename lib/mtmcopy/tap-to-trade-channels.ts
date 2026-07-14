@@ -9,7 +9,7 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
 }
 
 /** Canais de sinais "base" (canónicos). */
-export const T2T_SIGNAL_CHANNELS = ['sensei-scanner', 'trade-ideas', 'premium-ideas', 'trade-ideas-setup']
+export const T2T_SIGNAL_CHANNELS = ['sensei-scanner', 'trade-ideas', 'premium-ideas', 'trade-ideas-setup', 'sinais-goldkiller']
 
 /** Slug do canal de chat DEDICADO de uma rota provider (estável, por id da rota). */
 export function deriveProviderChannelSlug(r: ProviderRoute): string {

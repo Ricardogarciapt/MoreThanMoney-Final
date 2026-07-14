@@ -124,6 +124,13 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
     parent_slug: 'sinais',
     position: 15,
   },
+  {
+    slug: 'sinais-goldkiller',
+    name: 'Sinais Scanner Goldkiller',
+    description: 'Sinais automáticos do scanner GoldKiller (XAUUSD) — tap-to-trade',
+    parent_slug: 'sinais',
+    position: 16,
+  },
 ]
 
 export function getDefaultChannelSlugs(): string[] {

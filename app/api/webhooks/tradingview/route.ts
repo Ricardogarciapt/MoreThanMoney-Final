@@ -406,6 +406,20 @@ export async function POST(request: NextRequest) {
   const assetClass = classifyAsset(ticker)
   const route = resolveRoute(assetClass)
 
+  // GoldKiller: trada Ouro (mesma classe que o Sensei) mas é um scanner distinto →
+  // identifica-se pelo nome da estratégia/alerta e vai para o seu canal próprio
+  // "Sinais Scanner Goldkiller" (chat + Tap to Trade). Auto-copy fica DESLIGADO até
+  // a conta GoldKiller (181271197) estar ligada — não copia para a conta Sensei.
+  const stratText = `${alertName || ""} ${freeText || ""}`.toLowerCase()
+  const isGoldKiller =
+    assetClass === "gold_btc" && /goldkiller|gold\s*kill/.test(stratText) && !/sensei/.test(stratText)
+  if (isGoldKiller) {
+    route.channel = "sinais-goldkiller"
+    route.telegram = null
+    route.sender = "🥇 GoldKiller Scanner"
+    route.autoCopy = false
+  }
+
   // Perpétuos cripto: só 1H vai para o chat/canal (SL curtos noutros TF → overtrading).
   // Os restantes timeframes ficam só em tradingview_signals (sem chat/Telegram).
   if (assetClass === "crypto_perp") {
@@ -601,6 +615,7 @@ export async function POST(request: NextRequest) {
     SENSEI_PROVIDER_EXEC_ENABLED &&
     execSwitchOn &&
     (assetClass === "gold_btc" || assetClass === "forex") &&
+    !isGoldKiller &&
     !isIdeaAlert &&
     parsedForExec.symbol &&
     parsedForExec.direction &&
@@ -663,7 +678,7 @@ export async function POST(request: NextRequest) {
         : null
 
   // Gestão automática Sensei (gated): TP/BE/SL → parciais + BE + trailing ou fecho na conta Sensei
-  if (SENSEI_PROVIDER_EXEC_ENABLED && assetClass === "gold_btc" && isFollowup && activeSensei?.symbol) {
+  if (SENSEI_PROVIDER_EXEC_ENABLED && assetClass === "gold_btc" && !isGoldKiller && isFollowup && activeSensei?.symbol) {
     try {
       await processMtmcopyWebhookManagement({
         symbol: activeSensei.symbol,
@@ -678,7 +693,7 @@ export async function POST(request: NextRequest) {
   }
 
   const post =
-    assetClass === "gold_btc"
+    assetClass === "gold_btc" && !isGoldKiller
       ? composePost(v, activeSensei, msgCtx)
       : composeGenericPost(route, v, timeframe)
   const replyToTelegramId = isFollowup ? linkedIdea?.telegramMessageId ?? null : null

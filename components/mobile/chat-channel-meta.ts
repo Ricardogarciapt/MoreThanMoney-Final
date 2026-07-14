@@ -72,6 +72,17 @@ export const CHANNEL_META: Record<string, ChannelMeta> = {
     ],
     tips: ["Ativa push para não perder entradas"],
   },
+  "sinais-goldkiller": {
+    emoji: "🥇",
+    accent: "#D2A63C",
+    tag: "GoldKiller",
+    rules: [
+      "Sinais automáticos do scanner GoldKiller (XAUUSD)",
+      "Só leitura — as entradas chegam automaticamente",
+      "Podes usar em Tap to Trade para executar na tua conta",
+    ],
+    tips: ["Ativa push para não perder entradas"],
+  },
   cripto: {
     emoji: "₿",
     accent: "#F59E0B",

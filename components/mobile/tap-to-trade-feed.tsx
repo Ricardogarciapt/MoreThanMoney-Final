@@ -47,6 +47,7 @@ const CHANNEL_LABEL: Record<string, string> = {
   "premium-ideas": "Premium · Ouro",
   "trade-ideas-setup": "Ideias Forex",
   "trade-ideas": "Trade Ideas",
+  "sinais-goldkiller": "GoldKiller",
 }
 
 type Category = "all" | "gold" | "forex" | "crypto" | "indices"

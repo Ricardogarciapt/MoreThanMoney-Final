@@ -8,7 +8,12 @@ export type ChatChannelUser = {
 }
 
 export function isReadOnlyChannel(slug: string) {
-  return slug === "trade-ideas-setup" || slug === "premium-ideas" || slug === "sensei-scanner"
+  return (
+    slug === "trade-ideas-setup" ||
+    slug === "premium-ideas" ||
+    slug === "sensei-scanner" ||
+    slug === "sinais-goldkiller"
+  )
 }
 
 export function isPremiumChannel(slug: string) {
@@ -21,7 +26,7 @@ export function requiresBrokerUidChannel(slug: string) {
 
 export function canReadChannel(slug: string, user: ChatChannelUser | null | undefined): boolean {
   if (!user?.is_active) return false
-  if (slug === "premium-ideas" || slug === "sensei-scanner") {
+  if (slug === "premium-ideas" || slug === "sensei-scanner" || slug === "sinais-goldkiller") {
     return (
       user.subscription_plan === "premium" ||
       user.member_category === "iq" ||
