@@ -258,6 +258,8 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(Number(searchParams.get("limit")) || 30, 100)
   const symbolFilter = (searchParams.get("symbol") || "").toUpperCase().trim()
 
+  try {
+    const admin = getSupabaseAdmin()
     const SELECT =
       "id, ticker, exchange, timeframe, action, price, sl, tp, alert_name, message, ai_analysis, raw_payload, chat_status, chart_image_url, trade_status, signal_kind, received_at"
     let data: unknown[] | null = null
