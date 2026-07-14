@@ -45,11 +45,11 @@ type Stream = {
   ingest_provider?: "restream" | "mtm_direct" | null
   scheduled_start_at?: string | null
   viewer_count?: number | null
-  access_tier?: "all" | "app_member" | "premium" | null
+  access_tier?: "all" | "app_member" | "premium" | "vip" | null
   square_image_url?: string | null
   playlist_url?: string | null
   playlist_title?: string | null
-  playlist_access_tier?: "all" | "app_member" | "premium" | null
+  playlist_access_tier?: "all" | "app_member" | "premium" | "vip" | null
   academy?: { name: string }
   educator?: { display_name: string }
 }
@@ -818,6 +818,7 @@ export default function LiveSessionsManager() {
             <option value="all">Todos os membros</option>
             <option value="app_member">Pack Membro ($35/mês) e superiores</option>
             <option value="premium">Pack Premium ($65/mês) apenas</option>
+            <option value="vip">VIP e Admin apenas</option>
           </select>
         </div>
 
@@ -980,6 +981,7 @@ export default function LiveSessionsManager() {
                     <option value="all">Todos os membros</option>
                     <option value="app_member">Pack Membro ($35/mês) e superiores</option>
                     <option value="premium">Pack Premium ($65/mês) apenas</option>
+                    <option value="vip">VIP e Admin apenas</option>
                   </select>
                 </div>
                 <div>

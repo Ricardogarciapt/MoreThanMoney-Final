@@ -48,12 +48,12 @@ type StreamRow = {
   ingest_provider?: "restream" | "mtm_direct" | null
   scheduled_start_at?: string | null
   viewer_count?: number | null
-  access_tier?: "all" | "app_member" | "premium" | null
+  access_tier?: "all" | "app_member" | "premium" | "vip" | null
   thumbnail_url?: string | null
   square_image_url?: string | null
   playlist_url?: string | null
   playlist_title?: string | null
-  playlist_access_tier?: "all" | "app_member" | "premium" | null
+  playlist_access_tier?: "all" | "app_member" | "premium" | "vip" | null
 }
 
 const CATEGORIES = [{ value: "", label: "— Categoria —" }, ...LMS_CATEGORY_OPTIONS]

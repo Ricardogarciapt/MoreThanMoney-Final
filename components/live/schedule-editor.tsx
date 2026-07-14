@@ -33,6 +33,7 @@ const TIERS = [
   { v: "all", label: "Todos" },
   { v: "app_member", label: "Membro (€35)+" },
   { v: "premium", label: "Premium (€65)" },
+  { v: "vip", label: "VIP e Admin" },
 ]
 
 function weekdayLabel(w: number) {

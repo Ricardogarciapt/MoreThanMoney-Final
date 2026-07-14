@@ -23,6 +23,7 @@ function dayKey(d: Date): string {
 
 function tierLabel(tier?: string | null): { label: string; className: string } | null {
   if (!tier || tier === "all") return null
+  if (tier === "vip") return { label: "VIP", className: "bg-[#D2A63C] text-black" }
   if (tier === "premium") return { label: "Premium", className: "bg-purple-700 text-white" }
   return { label: "Membro", className: "bg-amber-600/90 text-black" }
 }

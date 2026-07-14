@@ -51,10 +51,10 @@ export async function POST(request: NextRequest) {
     const square_image_url = String(body.square_image_url || "").trim() || null
     const playlist_url = String(body.playlist_url || "").trim() || null
     const playlist_title = String(body.playlist_title || "").trim() || null
-    const playlist_access_tier = ["all", "app_member", "premium"].includes(body.playlist_access_tier)
+    const playlist_access_tier = ["all", "app_member", "premium", "vip"].includes(body.playlist_access_tier)
       ? body.playlist_access_tier
       : null
-    const access_tier = ["all", "app_member", "premium"].includes(body.access_tier) ? body.access_tier : "all"
+    const access_tier = ["all", "app_member", "premium", "vip"].includes(body.access_tier) ? body.access_tier : "all"
     const category = normalizeLmsCategory(String(body.category || "").trim()) || null
     const scheduled_start_at = body.scheduled_start_at ? String(body.scheduled_start_at) : null
 
@@ -136,11 +136,11 @@ export async function PATCH(request: NextRequest) {
     if (body.playlist_url !== undefined) updates.playlist_url = String(body.playlist_url || "").trim() || null
     if (body.playlist_title !== undefined) updates.playlist_title = String(body.playlist_title || "").trim() || null
     if (body.playlist_access_tier !== undefined)
-      updates.playlist_access_tier = ["all", "app_member", "premium"].includes(body.playlist_access_tier)
+      updates.playlist_access_tier = ["all", "app_member", "premium", "vip"].includes(body.playlist_access_tier)
         ? body.playlist_access_tier
         : null
     if (body.access_tier !== undefined)
-      updates.access_tier = ["all", "app_member", "premium"].includes(body.access_tier) ? body.access_tier : "all"
+      updates.access_tier = ["all", "app_member", "premium", "vip"].includes(body.access_tier) ? body.access_tier : "all"
     if (body.category !== undefined) updates.category = normalizeLmsCategory(String(body.category || "").trim())
     if (body.title !== undefined) {
       const t = String(body.title || "").trim()

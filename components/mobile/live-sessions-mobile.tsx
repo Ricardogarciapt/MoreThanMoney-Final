@@ -42,11 +42,11 @@ type StreamListItem = {
   playback_url?: string | null
   educator?: { id: string; display_name: string; avatar_url?: string | null } | null
   academy?: { name: string } | null
-  access_tier?: "all" | "app_member" | "premium" | null
+  access_tier?: "all" | "app_member" | "premium" | "vip" | null
   scheduled_start_at?: string | null
   playlist_url?: string | null
   playlist_title?: string | null
-  playlist_access_tier?: "all" | "app_member" | "premium" | null
+  playlist_access_tier?: "all" | "app_member" | "premium" | "vip" | null
 }
 
 type TimetableApiSession = {
@@ -82,7 +82,7 @@ type LiveSessionsMobileProps = {
 function canAccessStream(
   memberCategory: string | null | undefined,
   userType: string | null | undefined,
-  tier: "all" | "app_member" | "premium" | null | undefined
+  tier: "all" | "app_member" | "premium" | "vip" | null | undefined
 ): boolean {
   if (!tier || tier === "all") return true
   if (userType === "admin" || userType === "vip" || memberCategory === "vip") return true

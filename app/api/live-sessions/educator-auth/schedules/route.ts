@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
 import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-auth"
 
 const supabase = getSupabaseAdmin()
-const TIERS = ["all", "app_member", "premium"]
+const TIERS = ["all", "app_member", "premium", "vip"]
 
 async function currentEducatorId(): Promise<string | null> {
   const cookieStore = await cookies()

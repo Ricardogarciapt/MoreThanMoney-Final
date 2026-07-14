@@ -3,7 +3,7 @@ import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
 
 const supabase = getSupabaseAdmin()
 
-const TIERS = ["all", "app_member", "premium"]
+const TIERS = ["all", "app_member", "premium", "vip"]
 
 function normSlot(body: Record<string, unknown>) {
   const weekday = Number(body.weekday)

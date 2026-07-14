@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       square_image_url: String(body.square_image_url || "").trim() || null,
       playlist_url: String(body.playlist_url || "").trim() || null,
       playlist_title: String(body.playlist_title || "").trim() || null,
-      playlist_access_tier: ["all", "app_member", "premium"].includes(body.playlist_access_tier)
+      playlist_access_tier: ["all", "app_member", "premium", "vip"].includes(body.playlist_access_tier)
         ? body.playlist_access_tier
         : null,
       category: String(body.category || "").trim() || null,
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       ingest_provider: normalizeIngestProvider(body.ingest_provider),
       chat_enabled: body.chat_enabled !== false,
       is_live: Boolean(body.is_live),
-      access_tier: ["all", "app_member", "premium"].includes(body.access_tier) ? body.access_tier : "all",
+      access_tier: ["all", "app_member", "premium", "vip"].includes(body.access_tier) ? body.access_tier : "all",
     }
 
     if (!payload.academy_id || !payload.educator_id || !payload.title) {

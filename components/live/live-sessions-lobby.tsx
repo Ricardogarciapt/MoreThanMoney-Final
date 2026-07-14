@@ -42,7 +42,7 @@ type Stream = {
   category?: string | null
   scheduled_start_at?: string | null
   viewer_count?: number | null
-  access_tier?: "all" | "app_member" | "premium" | null
+  access_tier?: "all" | "app_member" | "premium" | "vip" | null
   academy?: { id: string; name: string } | null
   educator?: {
     id: string
@@ -65,11 +65,14 @@ function streamVisual(stream: Stream): string | null {
 function canAccessStream(
   userPlan: "app_member" | "premium" | null | undefined,
   userType: string | undefined,
-  streamTier: "all" | "app_member" | "premium" | null | undefined
+  streamTier: "all" | "app_member" | "premium" | "vip" | null | undefined,
+  memberCategory?: string | null
 ): boolean {
   if (userType === "admin") return true
   const tier = streamTier ?? "all"
   if (tier === "all") return true
+  // Tier VIP: exclusivo a membros VIP (e admin, já tratado acima).
+  if (tier === "vip") return userType === "vip" || memberCategory === "vip"
   if (tier === "app_member") return userPlan === "app_member" || userPlan === "premium"
   if (tier === "premium") return userPlan === "premium"
   return false
@@ -381,6 +384,7 @@ export default function LiveSessionsLobby() {
                     featured
                     userPlan={user?.subscription_plan}
                     userType={user?.user_type}
+                    memberCategory={user?.member_category}
                     onEducatorProfile={() => openEducatorFromStream(stream)}
                   />
                 ))}
@@ -423,19 +427,21 @@ function StreamMarketCard({
   featured,
   userPlan,
   userType,
+  memberCategory,
   onEducatorProfile,
 }: {
   stream: Stream
   featured?: boolean
   userPlan?: "app_member" | "premium" | null
   userType?: string
+  memberCategory?: string | null
   onEducatorProfile?: () => void
 }) {
   const img = streamVisual(stream)
   const viewers = typeof stream.viewer_count === "number" ? stream.viewer_count : null
   const enterHref = stream.educator?.id ? `/live/${stream.educator.id}` : `/live-sessions/${stream.id}`
   const showEducatorProfile = Boolean(stream.educator?.id && onEducatorProfile)
-  const hasAccess = canAccessStream(userPlan, userType, stream.access_tier)
+  const hasAccess = canAccessStream(userPlan, userType, stream.access_tier, memberCategory)
 
   return (
     <Card

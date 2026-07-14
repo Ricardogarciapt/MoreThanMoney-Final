@@ -6,6 +6,7 @@ export const LMS_CATEGORY_VALUES = [
   "fitness",
   "mindset",
   "ia",
+  "empreendedorismo",
 ] as const
 
 export type LmsCategoryValue = (typeof LMS_CATEGORY_VALUES)[number]
@@ -18,6 +19,7 @@ export const LMS_CATEGORY_OPTIONS: { value: LmsCategoryValue; label: string }[] 
   { value: "fitness", label: "Fitness" },
   { value: "mindset", label: "Mindset" },
   { value: "ia", label: "IA" },
+  { value: "empreendedorismo", label: "Trading & Empreendedorismo" },
 ]
 
 export function normalizeLmsCategory(input?: string | null): LmsCategoryValue | null {
