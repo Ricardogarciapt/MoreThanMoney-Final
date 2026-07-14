@@ -11,6 +11,7 @@ import { LmsImageUploadField } from "@/components/admin/lms-image-upload-field"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { ScheduleEditor } from "@/components/live/schedule-editor"
+import { ptWallTimeToUtcIso, toNaiveLocalWall } from "@/lib/pt-time"
 import { toast } from "sonner"
 
 type Academy = { id: string; name: string; slug: string }
@@ -197,7 +198,9 @@ export default function LiveSessionsManager() {
     const pushIfValid = (d: Date) => {
       if (d.getTime() < start.getTime()) return
       if (d.getTime() > until.getTime()) return
-      starts.push(d.toISOString())
+      // A hora de parede (ex.: 21:00) é sempre hora de Portugal, independentemente do
+      // fuso do browser do admin → convertida para o instante UTC correto (DST-aware).
+      starts.push(ptWallTimeToUtcIso(toNaiveLocalWall(d)))
     }
 
     if (type === "monthly") {
@@ -268,7 +271,11 @@ export default function LiveSessionsManager() {
     if (type === "none") {
       const payload = {
         ...commonPayload,
-        scheduled_start_at: streamForm.scheduled_start_at || null,
+        // "21:00" = 21:00 de Portugal → instante UTC correto (DST-aware), para não
+        // aparecer 1h à frente no site/apps.
+        scheduled_start_at: streamForm.scheduled_start_at
+          ? ptWallTimeToUtcIso(streamForm.scheduled_start_at)
+          : null,
       }
       await fetch("/api/admin/live-sessions/streams", {
         method: "POST",
