@@ -13,7 +13,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-type ProviderKey = "premium" | "trade-ideas" | "sensei"
+type ProviderKey = "premium" | "trade-ideas" | "sensei" | "goldkiller"
 
 interface ProviderStrategyMetrics {
   key: ProviderKey
@@ -47,10 +47,13 @@ interface Payload {
   error?: string
 }
 
+const DEFAULT_ACCENT = { ring: "border-zinc-700/40", text: "text-zinc-200", dot: "bg-zinc-400" }
+
 const ACCENT: Record<ProviderKey, { ring: string; text: string; dot: string }> = {
   premium: { ring: "border-[#D2A63C]/30", text: "text-[#D2A63C]", dot: "bg-[#D2A63C]" },
   "trade-ideas": { ring: "border-emerald-500/30", text: "text-emerald-400", dot: "bg-emerald-400" },
   sensei: { ring: "border-violet-500/30", text: "text-violet-300", dot: "bg-violet-400" },
+  goldkiller: { ring: "border-amber-500/30", text: "text-amber-300", dot: "bg-amber-400" },
 }
 
 function fmtMoney(v: number | null): string {
@@ -80,7 +83,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "po
 }
 
 function ProviderCard({ p }: { p: ProviderStrategyMetrics }) {
-  const accent = ACCENT[p.key]
+  const accent = ACCENT[p.key] ?? DEFAULT_ACCENT
   const profitTone = p.profit == null ? "muted" : p.profit >= 0 ? "pos" : "neg"
   const gainTone = p.gainPct == null ? "muted" : p.gainPct >= 0 ? "pos" : "neg"
 
