@@ -767,6 +767,7 @@ export default function EducatorStudio() {
                       <option value="all">Todos os membros</option>
                       <option value="app_member">Pack Membro ($35/mês)</option>
                       <option value="premium">Pack Premium ($65/mês)</option>
+                      <option value="vip">VIP apenas</option>
                     </select>
                   </div>
                 </div>
@@ -820,6 +821,7 @@ export default function EducatorStudio() {
                       <option value="">Todos</option>
                       <option value="app_member">Membro ($35) e superiores</option>
                       <option value="premium">Premium ($65) apenas</option>
+                      <option value="vip">VIP apenas</option>
                     </select>
                   </div>
                 </div>
