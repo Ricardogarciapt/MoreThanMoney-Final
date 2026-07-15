@@ -1,14 +1,33 @@
 import { NextRequest, NextResponse } from "next/server"
+import nodemailer from "nodemailer"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { isInternalApiRequest } from "@/lib/internal-api"
 import {
-  createMailTransporter,
   mailFrom,
   prepareBrandedEmailHtml,
   brandedMailAttachments,
 } from "@/lib/mail-transport"
 import { buildBroadcast } from "@/lib/broadcast-emails"
+
+/**
+ * Transporter POOLED: uma única ligação/login reutilizado para todo o lote.
+ * (O Gmail bloqueia com "454 Too many login attempts" se cada email reautenticar.)
+ */
+function createPooledTransporter() {
+  return nodemailer.createTransport({
+    pool: true,
+    maxConnections: 1,
+    maxMessages: Infinity,
+    service: "gmail",
+    auth: {
+      user: process.env.GMAIL_USER || "morethanmoneypt@gmail.com",
+      pass: process.env.GMAIL_APP_PASSWORD || "",
+    },
+    rateDelta: 1000,
+    rateLimit: 3,
+  })
+}
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -76,7 +95,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, dryRun: true, total, template })
   }
 
-  const transporter = createMailTransporter()
+  const transporter = createPooledTransporter()
 
   if (test) {
     const mail = buildBroadcast(template, "Ricardo")
@@ -88,6 +107,7 @@ export async function POST(request: NextRequest) {
       text: mail.text,
       attachments: brandedMailAttachments(),
     })
+    transporter.close()
     return NextResponse.json({ success: true, test: true, to: testTo, subject: mail.subject })
   }
 
@@ -115,6 +135,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  transporter.close()
   const nextOffset = offset + batch.length
   const done = nextOffset >= total
 
@@ -125,7 +146,7 @@ export async function POST(request: NextRequest) {
     processed: batch.length,
     sent,
     failed,
-    failures: failures.slice(0, 20),
+    failures: failures.slice(0, 50),
     nextOffset: done ? null : nextOffset,
     done,
   })
