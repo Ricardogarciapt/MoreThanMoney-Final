@@ -32,7 +32,27 @@ REGRAS ABSOLUTAS:
 - Responde SEMPRE no mesmo idioma da mensagem da pessoa.
 - Devolve APENAS JSON válido: {"answer":"a tua resposta de DM"}`
 
-async function callClaude(question: string, idioma: string | null, name: string | null): Promise<string> {
+const PERSONAL_SYSTEM = `És o Ricardo (Ricardo Subtil Garcia) a responder pessoalmente no teu Instagram @ricardogarciapt. NÃO és um bot de vendas — és tu, humano, caloroso e genuíno.
+Objetivo: criar RELAÇÃO com a pessoa e, quando fizer sentido, encaminhá-la SEM PRESSÃO para o perfil da marca @morethanmoney_mtm, onde está a app grátis, o trial de 3 dias e a equipa que acompanha.
+Estilo: primeira pessoa ("eu"), soa a pessoa real e não a script, curto (máximo ~55 palavras, 1 a 3 frases), no máximo um emoji. Termina quase sempre com uma pergunta genuína (em que ponto está, o que a trouxe até ti).
+
+CONTEXTO:
+- És trader e fundador da MoreThanMoney (comunidade portuguesa de educação financeira e trading).
+- No teu perfil pessoal preferes conversar e perceber a pessoa; se ela quiser ver o sistema/app/trial, dizes que está tudo reunido no @morethanmoney_mtm.
+
+REGRAS ABSOLUTAS:
+- NUNCA prometas lucros — é educação, não aconselhamento financeiro.
+- NÃO faças hard-sell. NÃO envies links de pagamento, PDFs nem freebies. O "próximo passo" é a pessoa continuar no @morethanmoney_mtm ou responder-te aqui.
+- Responde SEMPRE no mesmo idioma da mensagem da pessoa.
+- Devolve APENAS JSON válido: {"answer":"a tua resposta"}`
+
+async function callClaude(
+  question: string,
+  idioma: string | null,
+  name: string | null,
+  mode: string | null,
+  source: string | null,
+): Promise<string> {
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) throw new Error("ANTHROPIC_API_KEY em falta")
   const model =
@@ -40,9 +60,13 @@ async function callClaude(question: string, idioma: string | null, name: string 
     process.env.ANTHROPIC_MODEL?.trim() ||
     "claude-3-5-haiku-20241022"
 
+  const system = (mode || "").trim().toLowerCase() === "personal_router" ? PERSONAL_SYSTEM : CLOSER_SYSTEM
   const lang = (idioma || "").trim() || "português de Portugal"
   const who = name ? ` O primeiro nome da pessoa é ${name}.` : ""
-  const user = `Idioma a usar: ${lang}.${who}\nMensagem da pessoa: "${question}"`
+  const src = (source || "").trim().toLowerCase() === "comment"
+    ? "\nContexto: a pessoa COMENTOU numa publicação (não é uma DM privada). Agradece/reage ao comentário de forma natural e leva a conversa para a DM."
+    : ""
+  const user = `Idioma a usar: ${lang}.${who}${src}\nMensagem da pessoa: "${question}"`
 
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 20000)
@@ -57,7 +81,7 @@ async function callClaude(question: string, idioma: string | null, name: string 
       body: JSON.stringify({
         model,
         max_tokens: 400,
-        system: CLOSER_SYSTEM,
+        system,
         messages: [{ role: "user", content: user }],
       }),
       signal: ctrl.signal,
@@ -98,16 +122,20 @@ export async function POST(request: NextRequest) {
   }
   const idioma = body.idioma || body.lang || null
   const name = body.name || body.first_name || null
+  const mode = body.mode || body.persona || null
+  const source = body.source || body.trigger || null
 
   try {
-    const answer = await callClaude(question, idioma, name)
-    return NextResponse.json({ answer, idioma: idioma || "pt", engine: "mtm-closer" })
+    const answer = await callClaude(question, idioma, name, mode, source)
+    return NextResponse.json({ answer, idioma: idioma || "pt", engine: mode === "personal_router" ? "mtm-personal-router" : "mtm-closer" })
   } catch (e: any) {
     // Fallback seguro para a ManyChat nunca ficar sem resposta.
+    const fallback = mode === "personal_router"
+      ? "Olá! 👋 Aqui é o Ricardo (não é bot). Obrigado pela mensagem! Conta-me em duas linhas o que te trouxe — trading, o meu percurso, uma dúvida — e falo contigo. E se quiseres ver a app e o sistema, tenho tudo reunido no @morethanmoney_mtm."
+      : "Olá! 👋 Somos a MoreThanMoney — educação e trading com provas reais (675 trades, 63% win rate, +7.060€). Começa grátis 3 dias em morethanmoney.pt/register. Estás no iPhone ou Android?"
     return NextResponse.json({
-      answer:
-        "Olá! 👋 Somos a MoreThanMoney — educação e trading com provas reais (675 trades, 63% win rate, +7.060€). Começa grátis 3 dias em morethanmoney.pt/register. Estás no iPhone ou Android?",
-      engine: "mtm-closer-fallback",
+      answer: fallback,
+      engine: mode === "personal_router" ? "mtm-personal-router-fallback" : "mtm-closer-fallback",
       error: e?.message || "erro",
     })
   }
