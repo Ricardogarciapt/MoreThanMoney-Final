@@ -28,6 +28,12 @@ const nextConfig = {
         destination: '/icon-512x512.png',
         permanent: false,
       },
+      {
+        // Página /trading-ideas removida — encaminha para a homepage.
+        source: '/trading-ideas',
+        destination: '/',
+        permanent: true,
+      },
     ]
   },
   async headers() {
