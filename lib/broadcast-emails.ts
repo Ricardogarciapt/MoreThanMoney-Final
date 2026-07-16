@@ -1,4 +1,5 @@
 import { getEmailLogoSrc, getSiteUrl } from "@/lib/mail-transport"
+import { renderRiskAuditHtml, type RiskAudit } from "@/lib/mtmcopy/risk-audit"
 
 /**
  * Emails de broadcast à comunidade (review da app + desafio mensal).
@@ -76,4 +77,38 @@ export function monthlyChallengeEmail(name: string): BroadcastEmail {
 export function buildBroadcast(template: string, name: string): BroadcastEmail {
   if (template === "monthly_challenge") return monthlyChallengeEmail(name)
   return reviewEmail(name)
+}
+
+/** Shell de relatório (mesmo branding, rodapé de disclaimer em vez de unsubscribe). */
+function reportShell(inner: string): string {
+  const site = getSiteUrl()
+  const logo = getEmailLogoSrc()
+  return `<!doctype html><html><body style="margin:0;background:#0b0b0f;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#e9e9ee">
+  <div style="max-width:560px;margin:0 auto;padding:28px 22px">
+    <div style="text-align:center;margin-bottom:18px">
+      <img src="${logo}" alt="MoreThanMoney" width="120" style="max-width:120px;height:auto"/>
+    </div>
+    <div style="background:#15151d;border:1px solid #26263a;border-radius:16px;padding:26px 22px">
+      ${inner}
+    </div>
+    <p style="margin:16px 0 0;text-align:center;font-size:11px;line-height:1.6;color:#6a6a78">
+      Relatório informativo gerado pela MoreThanMoney a pedido. Não constitui aconselhamento financeiro.<br/>
+      <a href="${site}" style="color:#8a8a9a">morethanmoney.pt</a>
+    </p>
+  </div></body></html>`
+}
+
+/** Email branded com a auditoria de risco da conta do cliente. */
+export function riskAuditEmail(name: string, audit: RiskAudit): BroadcastEmail {
+  const first = (name || "").trim().split(/\s+/)[0] || "Olá"
+  const intro = `<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#d5d5df">Olá ${first}, aqui está a auditoria de risco da tua conta ligada à MoreThanMoney. Revê os pontos abaixo e fala connosco se quiseres ajustar algo.</p>`
+  return {
+    subject: `A tua auditoria de risco MoreThanMoney — risco ${audit.level}`,
+    html: reportShell(intro + renderRiskAuditHtml(audit)),
+    text:
+      `Olá ${first},\n\nAuditoria de risco da tua conta (nível: ${audit.level}).\n\n` +
+      `O que observámos:\n${audit.flags.map((f) => `- ${f}`).join("\n")}\n\n` +
+      `Recomendações:\n${audit.recommendations.map((r) => `- ${r}`).join("\n")}\n\n` +
+      `Relatório informativo, não é aconselhamento financeiro.\n— MoreThanMoney`,
+  }
 }

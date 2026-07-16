@@ -10,8 +10,10 @@ import {
   RefreshCw, Search, Send, AlertTriangle, Check, Loader2,
   Activity, Power, PowerOff, ChevronDown, ChevronUp,
   Clock, UserPlus, ExternalLink, Users, History, Wallet, TrendingUp, Settings,
+  ShieldAlert, Mail,
 } from "lucide-react"
 import { adminApiCall } from "@/lib/admin-helpers"
+import type { RiskAudit } from "@/lib/mtmcopy/risk-audit"
 
 // ── tipos ────────────────────────────────────────────────────────────────────
 
@@ -226,6 +228,29 @@ function SubscriberManager({
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [audit, setAudit] = useState<RiskAudit | null>(null)
+  const [auditing, setAuditing] = useState(false)
+  const [emailing, setEmailing] = useState(false)
+  const [auditMsg, setAuditMsg] = useState<string | null>(null)
+
+  const runAudit = async (sendEmail: boolean) => {
+    if (sendEmail) setEmailing(true); else setAuditing(true)
+    setAuditMsg(null)
+    const res = await adminApiCall<{ audit: RiskAudit; email?: { sent: boolean; to?: string; error?: string } }>(
+      "/api/admin/mtmcopy/risk-audit",
+      { method: "POST", body: JSON.stringify({ connection_id: connection.id, send_email: sendEmail }) },
+    )
+    if (res.success && res.data?.audit) {
+      setAudit(res.data.audit)
+      if (sendEmail) {
+        const e = res.data.email
+        setAuditMsg(e?.sent ? `Relatório enviado a ${e.to}` : `Não enviado: ${e?.error ?? "erro"}`)
+      }
+    } else {
+      setAuditMsg(res.error ?? "Falha na auditoria")
+    }
+    if (sendEmail) setEmailing(false); else setAuditing(false)
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -356,6 +381,59 @@ function SubscriberManager({
           Aplicar preset FTMO + re-sync
         </Button>
       )}
+
+      {/* ── Auditoria de risco ── */}
+      <div className="pt-2 border-t border-gray-800/70 space-y-2">
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => runAudit(false)} disabled={auditing || emailing}
+            className="h-7 text-xs border-gray-700">
+            {auditing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <ShieldAlert className="w-3 h-3 mr-1" />}
+            Auditoria de risco
+          </Button>
+          {audit && (
+            <Button size="sm" onClick={() => runAudit(true)} disabled={emailing || auditing}
+              className="h-7 text-xs bg-[#D2A63C] text-black hover:bg-[#BB8525]">
+              {emailing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Mail className="w-3 h-3 mr-1" />}
+              Enviar ao cliente
+            </Button>
+          )}
+        </div>
+
+        {audit && (
+          <div className="rounded-lg border border-gray-800 bg-gray-950/60 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-gray-500">Nível de risco</span>
+              <span className="text-xs font-extrabold uppercase" style={{
+                color: audit.level === "elevado" ? "#f26d6d" : audit.level === "moderado" ? "#f6c85a" : "#3ecf8e",
+              }}>{audit.level}</span>
+              <span className="text-[10px] text-gray-600 ml-auto">score {audit.score}</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-[10px]">
+              <div className="rounded bg-gray-900/60 border border-gray-800 p-1.5">
+                <p className="font-bold text-white text-xs">{audit.balance != null ? audit.balance.toFixed(0) : "—"}</p>
+                <p className="text-gray-500">Saldo</p>
+              </div>
+              <div className="rounded bg-gray-900/60 border border-gray-800 p-1.5">
+                <p className="font-bold text-white text-xs">{audit.margin_level != null ? `${audit.margin_level.toFixed(0)}%` : "—"}</p>
+                <p className="text-gray-500">Margem</p>
+              </div>
+              <div className="rounded bg-gray-900/60 border border-gray-800 p-1.5">
+                <p className="font-bold text-white text-xs">{audit.sizing.lot_mode === "risk_percent" ? `${audit.sizing.max_risk_percent ?? "?"}%` : audit.sizing.lot_value ?? "—"}</p>
+                <p className="text-gray-500">Lote</p>
+              </div>
+              <div className="rounded bg-gray-900/60 border border-gray-800 p-1.5">
+                <p className="font-bold text-white text-xs">{audit.open_positions.count}</p>
+                <p className="text-gray-500">Posições</p>
+              </div>
+            </div>
+            <ul className="text-[11px] text-gray-400 list-disc pl-4 space-y-0.5">
+              {audit.flags.map((f, i) => <li key={i}>{f}</li>)}
+            </ul>
+          </div>
+        )}
+
+        {auditMsg && <p className={`text-xs ${auditMsg.includes("Não") || auditMsg.includes("Falha") ? "text-red-400" : "text-green-400"}`}>{auditMsg}</p>}
+      </div>
 
       {msg && <p className={`text-xs ${msg.includes("Falha") || msg.includes("erro") ? "text-red-400" : "text-green-400"}`}>{msg}</p>}
 

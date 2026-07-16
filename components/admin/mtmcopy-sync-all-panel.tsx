@@ -110,29 +110,7 @@ export default function MtmcopySyncAllPanel({ embedded = false }: { embedded?: b
             <Badge variant="outline" className="border-zinc-700 text-zinc-400">
               Subscribers: {result.summary.ok}/{result.summary.total} OK
             </Badge>
-            {result.warnings && result.warnings.length > 0 && (
-              <Badge className="bg-amber-500/20 text-amber-300">
-                {result.warnings.length} aviso{result.warnings.length > 1 ? "s" : ""}
-              </Badge>
-            )}
           </div>
-
-          {result.warnings && result.warnings.length > 0 && (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-              <p className="text-xs font-semibold text-amber-300 mb-2 flex items-center gap-1.5">
-                <AlertTriangle className="w-3.5 h-3.5" /> Divergências a rever (não alteram trading)
-              </p>
-              <div className="space-y-1">
-                {result.warnings.map((w) => (
-                  <div key={`${w.connection_id}-${w.kind}`} className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-amber-400/80 font-mono">{w.kind}</span>
-                    <span className="text-zinc-400">{w.detail}</span>
-                    <span className="text-zinc-600 font-mono">{w.connection_id.slice(0, 8)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {result.provider.scaling.length > 0 && (
             <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3">
