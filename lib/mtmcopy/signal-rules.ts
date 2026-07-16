@@ -19,6 +19,9 @@ export interface SignalRules {
   xau_buy_only: boolean
   /** Se true, execução exige confirmações conhecidas (bloqueia sinais sem info de confirmações). */
   exec_require_confirmations: boolean
+  /** Se true, uma ideia/setup validada com preço de entrada coloca ordem LIMIT na conta
+   *  provider (o entry_trigger dessa ideia não faz market → evita duplo preenchimento). */
+  exec_allow_limit_ideas: boolean
 }
 
 const KEY = "mtmcopy_signal_rules"
@@ -34,6 +37,7 @@ export const DEFAULT_SIGNAL_RULES: SignalRules = {
   ],
   xau_buy_only: true,
   exec_require_confirmations: true,
+  exec_allow_limit_ideas: true,
 }
 
 export function normalizeSymbol(s: string | null | undefined): string {

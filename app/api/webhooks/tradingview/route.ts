@@ -635,16 +635,34 @@ export async function POST(request: NextRequest) {
   const execGate = isGoldKiller
     ? { ok: true as const }
     : passesExecGate(signalRules, execSymbolForGate, execDirForGate, execConfCount)
+  // Ordens LIMIT validadas: uma ideia/setup com preço de entrada pode colocar uma ordem
+  // limit na conta provider. O entry_trigger dessa mesma ideia depois NÃO faz market
+  // (guard provider_order_placed) → evita duplo preenchimento.
+  const isLimitIdea =
+    isIdeaAlert &&
+    signalRules.exec_allow_limit_ideas &&
+    parsedForExec.entry != null &&
+    Boolean(parsedForExec.symbol) &&
+    Boolean(parsedForExec.direction)
+  let pendingHadLimit = false
+  if (activeSensei?.alertType === "entry_trigger" && pendingIdeaId) {
+    const { data: pi } = await supabase
+      .from("sensei_trade_ideas")
+      .select("provider_order_placed")
+      .eq("id", pendingIdeaId)
+      .maybeSingle()
+    pendingHadLimit = (pi as { provider_order_placed?: boolean } | null)?.provider_order_placed === true
+  }
   const canExecuteProvider =
     SENSEI_PROVIDER_EXEC_ENABLED &&
     execSwitchOn &&
     (assetClass === "gold_btc" || assetClass === "forex") &&
-    !isIdeaAlert &&
     parsedForExec.symbol &&
     parsedForExec.direction &&
     passesQualityGate(payload, timeframe, assetClass, isGoldKiller) &&
     execGate.ok &&
-    (activeSensei?.alertType === "entry_trigger" || !activeSensei)
+    !pendingHadLimit &&
+    ((!isIdeaAlert && (activeSensei?.alertType === "entry_trigger" || !activeSensei)) || isLimitIdea)
 
   let savedIdea: { id: string; tradeNumber: number | null } | null = null
   // Ideia/trade a que esta entrada corresponde (para guardar o message_id da entrada).
@@ -671,6 +689,10 @@ export async function POST(request: NextRequest) {
       })
       providerExecuted = exec.executed
       providerDetail = exec.detail
+      // Marca a ideia como já tendo ordem no provider → o entry_trigger não duplica.
+      if (isLimitIdea && exec.executed && savedIdea?.id) {
+        await supabase.from("sensei_trade_ideas").update({ provider_order_placed: true }).eq("id", savedIdea.id)
+      }
     } catch (err) {
       console.error("[tradingview-webhook] provider exec error:", err)
     }
