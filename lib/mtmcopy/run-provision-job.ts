@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import type { MtmcopyCopyMethod } from '@/lib/mtmcopy/copy-methods'
+import type { MtmcopyCopyMethod, MtmcopyTelegramGroup } from '@/lib/mtmcopy/copy-methods'
 import { provisionMasterAccount, provisionSlaveAccount } from '@/lib/mtmcopy/metaapi-provision'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
 import type { MTMcopierConnection, MtmcopyAccountRole, MtmcopySenderMode } from '@/lib/mtmcopy/types'
@@ -30,7 +30,7 @@ export interface RunProvisionJobInput {
   copySl?: boolean
   copyTp?: boolean
   copyfactoryStrategyPick?: string | null
-  normalizedGroups: Array<'premium' | 'trade_ideas'>
+  normalizedGroups: MtmcopyTelegramGroup[]
 }
 
 /** Provisionamento MetaAPI + CopyFactory — tem de correr em await (não after). */

@@ -117,11 +117,12 @@ export function connectionMatchesChannel(
   }
 
   const groups = parseTelegramGroups(conn)
-  if (!groups.length) return true
 
   const keys = groups
     .map((g) => channelKeyForTelegramGroup(g))
     .filter((k): k is MtmcopyChannelKey => k != null)
-  if (!keys.length) return true
+  // Grupos webhook/CopyFactory (Sensei/GoldKiller) não têm canal telegram directo:
+  // não devem "apanhar" execução directa dos canais Premium/Forex.
+  if (!keys.length) return false
   return keys.includes(channel)
 }

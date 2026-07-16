@@ -9,7 +9,7 @@ import {
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import BrokerServerSelect from "@/components/mtmcopy/broker-server-select"
-import { COPY_METHODS, TELEGRAM_GROUPS, normalizeTelegramChannel, type MtmcopyCopyMethod } from "@/lib/mtmcopy/copy-methods"
+import { COPY_METHODS, TELEGRAM_GROUPS, MTMCOPY_TELEGRAM_GROUP_IDS, parseTelegramGroups, normalizeTelegramChannel, type MtmcopyCopyMethod, type MtmcopyTelegramGroup } from "@/lib/mtmcopy/copy-methods"
 import {
   connectionCopyMethod,
   countCopyTraderSlaves,
@@ -40,8 +40,8 @@ export interface MTMcopierConnection {
   copyfactory_strategy_id?: string | null
   telegram_channel: string | null
   copy_method?: MtmcopyCopyMethod | null
-  telegram_group?: "premium" | "trade_ideas" | null
-  telegram_groups?: ("premium" | "trade_ideas")[] | null
+  telegram_group?: MtmcopyTelegramGroup | null
+  telegram_groups?: MtmcopyTelegramGroup[] | null
   copyfactory_strategy_pick?: string | null
   exit_pct_tp1?: number | null
   exit_pct_tp2?: number | null
@@ -85,15 +85,9 @@ function deriveCopyMethod(connections: MTMcopierConnection[]): MtmcopyCopyMethod
   return deriveSenderMode(connections) === "master_account" ? "master_slave" : "telegram_group"
 }
 
-function parseGroupsFromConn(conn: MTMcopierConnection | null): ("premium" | "trade_ideas")[] {
-  const fromArray = (conn?.telegram_groups ?? []).filter(
-    (g): g is "premium" | "trade_ideas" => g === "premium" || g === "trade_ideas",
-  )
-  if (fromArray.length) return fromArray
-  if (conn?.telegram_group === "premium" || conn?.telegram_group === "trade_ideas") {
-    return [conn.telegram_group]
-  }
-  return ["premium"]
+function parseGroupsFromConn(conn: MTMcopierConnection | null): MtmcopyTelegramGroup[] {
+  if (!conn) return ["premium"]
+  return parseTelegramGroups(conn)
 }
 
 interface StrategyOption {
@@ -220,7 +214,7 @@ export default function SetupModal({
   const [autoTrailing, setAutoTrailing] = useState(false)
   const [trailingPoints, setTrailingPoints] = useState("200")
   const [reverse, setReverse] = useState(false)
-  const [telegramGroups, setTelegramGroups] = useState<("premium" | "trade_ideas")[]>(["premium"])
+  const [telegramGroups, setTelegramGroups] = useState<MtmcopyTelegramGroup[]>(["premium"])
   const [strategyPick, setStrategyPick] = useState("")
   const [strategies, setStrategies] = useState<StrategyOption[]>([])
   const [exitTp1, setExitTp1] = useState("33")
@@ -311,7 +305,7 @@ export default function SetupModal({
     setError("")
   }, [selectedId, selectedConn, strategies, copyMethod, isMasterSelected])
 
-  const toggleTelegramGroup = (id: "premium" | "trade_ideas") => {
+  const toggleTelegramGroup = (id: MtmcopyTelegramGroup) => {
     setTelegramGroups((prev) => {
       if (prev.includes(id)) {
         const next = prev.filter((g) => g !== id)
@@ -821,14 +815,14 @@ export default function SetupModal({
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1.5">Grupos de sinais *</label>
-                <p className="text-xs text-gray-500 mb-2">Podes escolher um ou ambos os grupos.</p>
+                <p className="text-xs text-gray-500 mb-2">Escolhe um ou vários chats de sinais para esta conta copiar.</p>
                 <div className="flex flex-wrap gap-2 mb-2">
                   <button
                     type="button"
-                    onClick={() => setTelegramGroups(["premium", "trade_ideas"])}
+                    onClick={() => setTelegramGroups([...MTMCOPY_TELEGRAM_GROUP_IDS])}
                     className="text-xs px-3 py-1.5 rounded-lg border border-gray-600 text-gray-300 hover:border-[#D2A63C]/40"
                   >
-                    Ambos os grupos
+                    Todos os sinais
                   </button>
                 </div>
                 <div className="grid gap-2">

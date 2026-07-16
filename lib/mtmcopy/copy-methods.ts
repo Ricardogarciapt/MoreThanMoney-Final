@@ -1,7 +1,10 @@
 import type { MtmcopyChannelKey } from './channel-context'
 import { getMtmChannelProviders } from './provider-accounts'
 import {
+  CANONICAL_PREMIUM_STRATEGY_ID,
+  CANONICAL_TRADE_IDEAS_STRATEGY_ID,
   CANONICAL_SENSEI_STRATEGY_ID,
+  CANONICAL_GOLDKILLER_STRATEGY_ID,
   MTM_COPY_STRATEGY_CATALOG,
   mtmStrategyPublicLabel,
 } from './provider-constants'
@@ -9,7 +12,27 @@ import {
 /** Métodos de cópia disponíveis ao cliente. */
 export type MtmcopyCopyMethod = 'telegram_group' | 'strategy' | 'master_slave'
 
-export type MtmcopyTelegramGroup = 'premium' | 'trade_ideas'
+export type MtmcopyTelegramGroup = 'premium' | 'trade_ideas' | 'sensei' | 'goldkiller'
+
+/** Todos os grupos de sinais válidos (chats que recebem sinais → fontes copiáveis). */
+export const MTMCOPY_TELEGRAM_GROUP_IDS: MtmcopyTelegramGroup[] = [
+  'premium',
+  'trade_ideas',
+  'sensei',
+  'goldkiller',
+]
+
+/** Grupo de sinais → estratégia CopyFactory canónica (fonte real da cópia). */
+export const TELEGRAM_GROUP_STRATEGY_ID: Record<MtmcopyTelegramGroup, string> = {
+  premium: CANONICAL_PREMIUM_STRATEGY_ID,
+  trade_ideas: CANONICAL_TRADE_IDEAS_STRATEGY_ID,
+  sensei: CANONICAL_SENSEI_STRATEGY_ID,
+  goldkiller: CANONICAL_GOLDKILLER_STRATEGY_ID,
+}
+
+function isTelegramGroup(v: unknown): v is MtmcopyTelegramGroup {
+  return v === 'premium' || v === 'trade_ideas' || v === 'sensei' || v === 'goldkiller'
+}
 
 export interface MtmCopyStrategyOption {
   id: string
@@ -33,7 +56,7 @@ export const COPY_METHODS: {
     id: 'telegram_group',
     title: 'Grupos de sinais',
     description:
-      'Premium ou Trade Ideas → execução directa na tua conta. VIP: até 5 contas (subscrição MTMcopier).',
+      'Escolhe os chats de sinais a copiar — Premium · Ouro, Ideias de Forex, Sensei Scanner ou GoldKiller. VIP: até 5 contas (subscrição MTMcopier).',
   },
   {
     id: 'master_slave',
@@ -66,11 +89,30 @@ export const TELEGRAM_GROUPS: {
       'Sinais intraday e swing em pares forex. Set & forget com gestão de risco e trailing automático.',
     chatId: '-1003716578747',
   },
+  {
+    id: 'sensei',
+    channelKey: 'trade-ideas',
+    title: 'Sensei Scanner',
+    description:
+      'Sinais auditados do Scanner Sensei (TradingView) — multi-ativo, gestão programada. Cópia via CopyFactory.',
+    chatId: '-1003853860780',
+  },
+  {
+    id: 'goldkiller',
+    channelKey: 'premium-signals',
+    title: 'Scanner GoldKiller · Ouro',
+    description:
+      'Sinais do Scanner GoldKiller (XAUUSD) — 0.5% de risco por trade e trailing conforme o scanner. Cópia via CopyFactory.',
+    chatId: '',
+  },
 ]
 
 export function channelKeyForTelegramGroup(group: MtmcopyTelegramGroup | null | undefined): MtmcopyChannelKey | null {
   if (group === 'premium') return 'premium-signals'
   if (group === 'trade_ideas') return 'trade-ideas'
+  // Sensei e GoldKiller chegam por webhook (scanner) e executam SÓ via CopyFactory —
+  // não pela execução directa de Telegram (Premium/Forex). Não devolvem canal telegram
+  // para não "apanhar" sinais desses canais na execução directa.
   return null
 }
 
@@ -118,11 +160,9 @@ export function normalizeTelegramGroups(
   groups: unknown,
   single?: MtmcopyTelegramGroup | null,
 ): MtmcopyTelegramGroup[] {
-  const fromArray = Array.isArray(groups)
-    ? groups.filter((g): g is MtmcopyTelegramGroup => g === 'premium' || g === 'trade_ideas')
-    : []
+  const fromArray = Array.isArray(groups) ? groups.filter(isTelegramGroup) : []
   if (fromArray.length) return [...new Set(fromArray)]
-  if (single === 'premium' || single === 'trade_ideas') return [single]
+  if (isTelegramGroup(single)) return [single]
   return ['premium']
 }
 
@@ -130,26 +170,27 @@ export function parseTelegramGroups(conn: {
   telegram_groups?: string[] | null
   telegram_group?: MtmcopyTelegramGroup | null
 }): MtmcopyTelegramGroup[] {
-  const fromArray = (conn.telegram_groups ?? []).filter(
-    (g): g is MtmcopyTelegramGroup => g === 'premium' || g === 'trade_ideas',
-  )
-  if (fromArray.length) return fromArray
-  if (conn.telegram_group === 'premium' || conn.telegram_group === 'trade_ideas') {
-    return [conn.telegram_group]
-  }
+  const fromArray = (conn.telegram_groups ?? []).filter(isTelegramGroup)
+  if (fromArray.length) return [...new Set(fromArray)]
+  if (isTelegramGroup(conn.telegram_group)) return [conn.telegram_group]
   return ['premium']
 }
 
 export function strategyIdsForTelegramGroups(groups: MtmcopyTelegramGroup[]): string[] {
   const providers = getMtmChannelProviders()
   const ids: string[] = []
-  if (groups.includes('premium') && providers['premium-signals']?.strategyId) {
-    ids.push(providers['premium-signals'].strategyId!)
+  for (const g of groups) {
+    if (g === 'premium') {
+      // provider configurado tem prioridade; senão a estratégia canónica Premium.
+      ids.push(providers['premium-signals']?.strategyId ?? TELEGRAM_GROUP_STRATEGY_ID.premium)
+    } else if (g === 'trade_ideas') {
+      ids.push(providers['trade-ideas']?.strategyId ?? TELEGRAM_GROUP_STRATEGY_ID.trade_ideas)
+    } else {
+      // Sensei / GoldKiller → estratégia canónica (webhook → CopyFactory).
+      ids.push(TELEGRAM_GROUP_STRATEGY_ID[g])
+    }
   }
-  if (groups.includes('trade_ideas') && providers['trade-ideas']?.strategyId) {
-    ids.push(providers['trade-ideas'].strategyId!)
-  }
-  return [...new Set(ids)]
+  return [...new Set(ids.filter(Boolean))]
 }
 
 /** Estratégias configuradas no admin (várias rotas sender → mestre). */
@@ -177,9 +218,20 @@ export async function strategyIdsForTelegramGroupsAsync(
   const { normalizeProviderRoutes, strategyIdsFromRoutes } = await import('./provider-routes')
   const config = await getSignalSourcesConfig()
   const routes = normalizeProviderRoutes(config)
-  const fromRoutes = strategyIdsFromRoutes(routes, groups)
-  if (fromRoutes.length) return fromRoutes
-  return strategyIdsForTelegramGroups(groups)
+
+  const ids: string[] = []
+  for (const g of groups) {
+    if (g === 'premium' || g === 'trade_ideas') {
+      // Premium/Forex: rotas configuradas no admin têm prioridade (permite remapear).
+      const fromRoutes = strategyIdsFromRoutes(routes, [g])
+      if (fromRoutes.length) ids.push(...fromRoutes)
+      else ids.push(...strategyIdsForTelegramGroups([g]))
+    } else {
+      // Sensei / GoldKiller → estratégia canónica (webhook → CopyFactory).
+      ids.push(...strategyIdsForTelegramGroups([g]))
+    }
+  }
+  return [...new Set(ids.filter(Boolean))]
 }
 
 export function copyMethodLabel(method?: MtmcopyCopyMethod | null): string {
@@ -200,10 +252,18 @@ export function strategyPickLabel(pick: string | null | undefined): string {
   return mtmStrategyPublicLabel(pick)
 }
 
+const TELEGRAM_GROUP_SHORT_LABEL: Record<MtmcopyTelegramGroup, string> = {
+  premium: 'Premium · Ouro',
+  trade_ideas: 'Ideias de Forex',
+  sensei: 'Sensei Scanner',
+  goldkiller: 'GoldKiller · Ouro',
+}
+
 export function telegramGroupsLabel(groups: MtmcopyTelegramGroup[]): string {
-  if (groups.length === 2) return 'Premium + Ideias Forex'
-  if (groups.includes('trade_ideas')) return 'Ideias de Forex'
-  return 'Premium · Ouro'
+  const uniq = [...new Set(groups)].filter(isTelegramGroup)
+  if (!uniq.length) return TELEGRAM_GROUP_SHORT_LABEL.premium
+  if (uniq.length === MTMCOPY_TELEGRAM_GROUP_IDS.length) return 'Todos os sinais'
+  return uniq.map((g) => TELEGRAM_GROUP_SHORT_LABEL[g]).join(' + ')
 }
 
 // Prioridade: fechar >70% dos lotes no Exit 1 (uma posição, parciais por saída).
