@@ -5,6 +5,7 @@ import {
   CANONICAL_TRADE_IDEAS_STRATEGY_ID,
   CANONICAL_SENSEI_STRATEGY_ID,
   CANONICAL_GOLDKILLER_STRATEGY_ID,
+  CANONICAL_BOOSTER_STRATEGY_ID,
   MTM_COPY_STRATEGY_CATALOG,
   mtmStrategyPublicLabel,
 } from './provider-constants'
@@ -153,6 +154,16 @@ export function getMtmStrategyOptions(): MtmCopyStrategyOption[] {
     })
   }
 
+  const boosterCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_BOOSTER_STRATEGY_ID]
+  if (boosterCatalog) {
+    out.push({
+      id: CANONICAL_BOOSTER_STRATEGY_ID,
+      channelKey: 'premium-signals',
+      title: boosterCatalog.title,
+      description: boosterCatalog.description,
+    })
+  }
+
   return out
 }
 
@@ -200,15 +211,26 @@ export async function getMtmStrategyOptionsAsync(): Promise<MtmCopyStrategyOptio
   const config = await getSignalSourcesConfig()
   const routes = normalizeProviderRoutes(config)
   const fromRoutes = strategyOptionsFromRoutes(routes)
-  if (fromRoutes.length) {
-    return fromRoutes.map((r) => ({
-      id: r.id,
-      channelKey: r.channelKey ?? 'premium-signals',
-      title: r.title,
-      description: r.description,
-    }))
+  const list: MtmCopyStrategyOption[] = fromRoutes.length
+    ? fromRoutes.map((r) => ({
+        id: r.id,
+        channelKey: r.channelKey ?? 'premium-signals',
+        title: r.title,
+        description: r.description,
+      }))
+    : getMtmStrategyOptions()
+
+  // Estratégias SÓ-CATÁLOGO (copiáveis, mas sem rota de execução de sinais) — ex.: 20X Booster.
+  const boosterCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_BOOSTER_STRATEGY_ID]
+  if (boosterCatalog && !list.some((o) => o.id === CANONICAL_BOOSTER_STRATEGY_ID)) {
+    list.push({
+      id: CANONICAL_BOOSTER_STRATEGY_ID,
+      channelKey: 'premium-signals',
+      title: boosterCatalog.title,
+      description: boosterCatalog.description,
+    })
   }
-  return getMtmStrategyOptions()
+  return list
 }
 
 export async function strategyIdsForTelegramGroupsAsync(
