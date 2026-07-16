@@ -24,6 +24,7 @@ import { processMtmcopyWebhookSignal, processMtmcopyWebhookManagement } from "@/
 import { getSiteOrigin } from "@/lib/site-url"
 import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId } from "@/lib/telegram-channel-ids"
 import { getExecSwitches } from "@/lib/mtmcopy/exec-switches"
+import { getSignalRules, passesAlertGate, passesExecGate } from "@/lib/mtmcopy/signal-rules"
 import { notifySignalOutcome } from "@/lib/mtm-alerts/notify-outcome"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
@@ -626,6 +627,14 @@ export async function POST(request: NextRequest) {
     : assetClass === "forex"
       ? execSwitches.forex
       : execSwitches.sensei
+  // Regras de sinal (ruído + execução), data-driven, afináveis sem redeploy.
+  const signalRules = await getSignalRules()
+  const execConfCount = confirmationsPassed(payload)
+  const execSymbolForGate = parsedForExec.symbol ?? ticker
+  const execDirForGate = parsedForExec.direction ?? v.direction ?? null
+  const execGate = isGoldKiller
+    ? { ok: true as const }
+    : passesExecGate(signalRules, execSymbolForGate, execDirForGate, execConfCount)
   const canExecuteProvider =
     SENSEI_PROVIDER_EXEC_ENABLED &&
     execSwitchOn &&
@@ -634,6 +643,7 @@ export async function POST(request: NextRequest) {
     parsedForExec.symbol &&
     parsedForExec.direction &&
     passesQualityGate(payload, timeframe, assetClass, isGoldKiller) &&
+    execGate.ok &&
     (activeSensei?.alertType === "entry_trigger" || !activeSensei)
 
   let savedIdea: { id: string; tradeNumber: number | null } | null = null
@@ -671,6 +681,10 @@ export async function POST(request: NextRequest) {
   const alertType = activeSensei?.alertType
   const isFollowup =
     alertType === "tp_hit" || alertType === "sl_hit" || alertType === "breakeven" || alertType === "exit"
+  // Gate de RUÍDO: entradas de baixa qualidade (poucas confirmações / símbolo-ruído) não
+  // vão para chat/Telegram/push. Follow-ups (TP/BE/SL) e GoldKiller passam sempre.
+  const alertOk =
+    isFollowup || isGoldKiller || passesAlertGate(signalRules, execSymbolForGate, execConfCount)
   let linkedIdea: SenseiTradeIdea | null = null
   if (isFollowup && activeSensei?.symbol) {
     linkedIdea = await findActiveSenseiIdeaForFollowup(
@@ -721,18 +735,22 @@ export async function POST(request: NextRequest) {
   // Ideia cuja mensagem de entrada/activação guardamos para os follow-ups responderem
   const entryIdeaId = savedIdea?.id ?? entryTradeIdea?.id ?? null
 
-  // Publica no canal de chat correspondente à classe de ativo
+  // Publica no canal de chat correspondente à classe de ativo (só se passar o gate de ruído)
   let chatId: string | null = null
-  try {
-    const { data: msg, error } = await supabase
-      .from("chat_messages")
-      .insert({ channel_slug: route.channel, message_type: "telegram_forward", content: post, telegram_sender: route.sender, user_id: null })
-      .select("id").single()
-    if (error) throw error
-    chatId = msg.id as string
-    if (logId) await supabase.from("tradingview_signals").update({ chat_status: "sent", chat_message_id: chatId }).eq("id", logId)
-  } catch (err) {
-    if (logId) await supabase.from("tradingview_signals").update({ chat_status: "error", ai_error: "chat: " + String(err) }).eq("id", logId)
+  if (!alertOk) {
+    if (logId) await supabase.from("tradingview_signals").update({ chat_status: "suppressed", telegram_status: "suppressed" }).eq("id", logId)
+  } else {
+    try {
+      const { data: msg, error } = await supabase
+        .from("chat_messages")
+        .insert({ channel_slug: route.channel, message_type: "telegram_forward", content: post, telegram_sender: route.sender, user_id: null })
+        .select("id").single()
+      if (error) throw error
+      chatId = msg.id as string
+      if (logId) await supabase.from("tradingview_signals").update({ chat_status: "sent", chat_message_id: chatId }).eq("id", logId)
+    } catch (err) {
+      if (logId) await supabase.from("tradingview_signals").update({ chat_status: "error", ai_error: "chat: " + String(err) }).eq("id", logId)
+    }
   }
 
   // Push (iOS/APK/PWA) — por SUBSCRIÇÃO pessoal (símbolos/timeframes/push_enabled).
@@ -745,7 +763,7 @@ export async function POST(request: NextRequest) {
       const m = tfToMinutes(timeframe)
       return m !== null && m !== 60
     })()
-  if (initSignalKind === "entry" && !cryptoPerpBlocked) {
+  if (alertOk && initSignalKind === "entry" && !cryptoPerpBlocked) {
     const dir =
       v.direction === "buy"
         ? "COMPRA"
@@ -781,7 +799,7 @@ export async function POST(request: NextRequest) {
 
   // Relay Telegram → grupo correspondente à classe (Ouro/BTC: -1003853860780, Forex: -1003716578747)
   const relayChatId = route.telegram
-  const relayOn = Boolean(relayChatId && AIBOT_TOKEN && !RELAY_DISABLED)
+  const relayOn = Boolean(alertOk && relayChatId && AIBOT_TOKEN && !RELAY_DISABLED)
   let tgOk = false
   let telegramMid: number | null = null
   if (relayOn && relayChatId) {
