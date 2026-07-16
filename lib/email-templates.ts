@@ -1372,6 +1372,44 @@ export const androidUpdateEmailTemplate = (userName?: string, siteUrl?: string) 
   return baseTemplate(content, 'A app Android MoreThanMoney foi atualizada — nova versão com Alertas MTM', base)
 }
 
+/**
+ * Confirmação de SAÍDA / remoção RGPD — enviada a quem pediu para sair da lista de
+ * subscrição e/ou eliminação de conta. É um email transacional (não leva rodapé de
+ * unsubscribe — a pessoa já saiu).
+ */
+export const unsubscribeConfirmationEmailTemplate = (userName?: string, siteUrl?: string) => {
+  const base = resolveSiteUrl(siteUrl)
+  const name = (userName ?? '').trim()
+  const content = `
+    ${headerComponent('Pedido processado', 'Saíste da lista MoreThanMoney', '✅')}
+    ${textComponent(`
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        ${name ? `Olá ${name},` : 'Olá,'}
+      </p>
+      <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Confirmamos que o teu pedido foi processado: foste <strong>removido(a) da nossa lista de
+        subscrição de email</strong> e a tua conta MoreThanMoney foi <strong>eliminada</strong>,
+        juntamente com os teus dados pessoais.
+      </p>
+      <div style="background: ${COLORS.gray}; border-left: 4px solid ${COLORS.primary}; border-radius: 8px; padding: 16px 20px; margin: 0 0 24px 0;">
+        <p style="margin: 0; font-size: 15px; line-height: 26px; color: #333;">
+          ✅ <strong>Sem mais comunicações</strong> — não voltarás a receber emails nossos.<br>
+          🔒 <strong>Dados eliminados</strong> — conforme o teu pedido (RGPD).
+        </p>
+      </div>
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Se algum dia quiseres regressar, és sempre bem-vindo(a) em
+        <a href="${base}" style="color: ${COLORS.primaryDark}; font-weight: 700; text-decoration: none;">morethanmoney.pt</a>.
+      </p>
+      <p style="margin: 24px 0 4px 0; font-size: 15px; line-height: 24px; color: #666;">
+        Qualquer questão: <a href="mailto:morethanmoneypt@gmail.com" style="color: ${COLORS.primaryDark};">morethanmoneypt@gmail.com</a>
+      </p>
+      <p style="margin: 16px 0 0 0; font-size: 16px; line-height: 26px; color: ${COLORS.primaryDark}; font-weight: 700;">Equipa MoreThanMoney</p>
+    `)}
+  `
+  return baseTemplate(content, 'Confirmação — saíste da lista MoreThanMoney', base)
+}
+
 // Export all components for custom templates
 export const components = {
   header: headerComponent,
