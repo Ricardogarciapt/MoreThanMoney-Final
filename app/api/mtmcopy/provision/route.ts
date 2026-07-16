@@ -120,12 +120,13 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Tap to Trade: apenas corretoras permitidas (FTMO / FundedNext / VT Markets) e 1 conta.
+  // Tap to Trade: apenas corretoras permitidas (whitelist T2T_BROKERS) e 1 conta.
   if (purpose === 'tap_to_trade') {
-    const { isAllowedT2TServer } = await import('@/lib/mtmcopy/t2t-brokers')
+    const { isAllowedT2TServer, T2T_BROKERS } = await import('@/lib/mtmcopy/t2t-brokers')
     if (!isAllowedT2TServer(server)) {
+      const names = T2T_BROKERS.map((b) => b.label).join(', ')
       return NextResponse.json(
-        { error: 'No Tap to Trade só podes ligar contas FTMO, FundedNext ou VT Markets.' },
+        { error: `No Tap to Trade só podes ligar contas destas corretoras: ${names}.` },
         { status: 400 },
       )
     }
