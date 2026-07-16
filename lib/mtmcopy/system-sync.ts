@@ -27,6 +27,47 @@ export interface ConnectionSyncResult {
   error?: string
 }
 
+export interface SyncWarning {
+  connection_id: string
+  user_id: string
+  kind: string
+  detail: string
+}
+
+const PROVISIONING_BASE =
+  process.env.METAAPI_PROVISIONING_URL ??
+  'https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai'
+
+/**
+ * Lê todos os accountIds existentes no MetaAPI numa só chamada.
+ * Devolve `null` se a listagem falhar ou vier vazia — assim NUNCA se despromove
+ * uma conta por engano quando a API está indisponível (evita falsos disconnects).
+ */
+async function fetchExistingMetaApiAccountIds(): Promise<Set<string> | null> {
+  const token = process.env.METAAPI_TOKEN
+  if (!token) return null
+  try {
+    const res = await fetch(`${PROVISIONING_BASE}/users/current/accounts?limit=1000`, {
+      headers: { 'auth-token': token, Accept: 'application/json' },
+    })
+    if (!res.ok) return null
+    const data = (await res.json()) as unknown
+    const items = (Array.isArray(data) ? data : ((data as { items?: unknown[] })?.items ?? [])) as Array<{
+      _id?: string
+      id?: string
+    }>
+    if (!items.length) return null
+    const ids = new Set<string>()
+    for (const a of items) {
+      const id = a._id ?? a.id
+      if (id) ids.add(id)
+    }
+    return ids.size ? ids : null
+  } catch {
+    return null
+  }
+}
+
 export interface SystemSyncResult {
   ok: boolean
   metaapi_configured: boolean
@@ -36,6 +77,7 @@ export interface SystemSyncResult {
     scaling: Array<{ strategy_id: string; account_id: string; ok: boolean; error?: string }>
   }
   connections: ConnectionSyncResult[]
+  warnings: SyncWarning[]
   summary: {
     total: number
     ok: number
@@ -132,7 +174,11 @@ export async function runMtmcopySystemSync(opts?: {
 
   const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]))
 
+  // Listagem única de contas MetaAPI existentes (para detetar contas removidas sem N chamadas).
+  const existingAccountIds = metaapiConfigured ? await fetchExistingMetaApiAccountIds() : null
+
   const connectionResults: ConnectionSyncResult[] = []
+  const warnings: SyncWarning[] = []
 
   for (const raw of connections ?? []) {
     const conn = raw as MTMcopierConnection
@@ -237,6 +283,81 @@ export async function runMtmcopySystemSync(opts?: {
           await supabase.from('mtmcopy_connections').update(updates).eq('id', conn.id)
         }
       }
+
+      // --- Reconciliação de estado (aditiva, conservadora): BD ↔ realidade ---
+      const recPatch: Record<string, unknown> = {}
+
+      // (a) Linha-fantasma: marcada como ligada mas sem conta MetaAPI associada.
+      if (!conn.metaapi_account_id && conn.mt5_status === 'connected') {
+        recPatch.mt5_status = 'pending'
+        recPatch.is_active = false
+        if (!conn.last_error) {
+          recPatch.last_error = 'Ligação incompleta — sem conta MT5 associada.'
+        }
+        actions.push('ghost_normalized')
+      }
+
+      // (b) Conta removida no MetaAPI → despromover (só quando a listagem é fiável).
+      if (
+        conn.metaapi_account_id &&
+        existingAccountIds &&
+        !existingAccountIds.has(conn.metaapi_account_id)
+      ) {
+        recPatch.mt5_status = 'disconnected'
+        recPatch.is_active = false
+        recPatch.copyfactory_subscribed = false
+        recPatch.last_error = 'Conta removida no MetaApi.'
+        actions.push('account_gone')
+      }
+
+      // (c) Reconciliar copyfactory_subscribed com o CopyFactory VIVO — nos dois sentidos,
+      //     independentemente de is_active (foi o que deixou contas subscritas marcadas como não).
+      if (
+        conn.copyfactory_strategy_pick &&
+        conn.metaapi_account_id &&
+        (!existingAccountIds || existingAccountIds.has(conn.metaapi_account_id)) &&
+        recPatch.mt5_status == null
+      ) {
+        const cf = await getSubscriberConfiguration(conn.metaapi_account_id)
+        if (cf.ok) {
+          const subs =
+            (cf.data?.subscriptions as Array<{
+              strategyId?: string
+              tradeSizeScaling?: { mode?: string; tradeVolume?: number }
+            }>) ?? []
+          const pick = conn.copyfactory_strategy_pick.trim()
+          const live = subs.find((s) => s.strategyId === pick)
+          const actuallySubscribed = Boolean(live)
+          if (actuallySubscribed !== Boolean(conn.copyfactory_subscribed)) {
+            recPatch.copyfactory_subscribed = actuallySubscribed
+            actions.push(actuallySubscribed ? 'cf_flag_synced_true' : 'cf_flag_synced_false')
+          }
+          // Aviso (report-only) de divergência de lote BD vs CopyFactory vivo — não altera trading.
+          const scaling = live?.tradeSizeScaling
+          if (scaling?.mode === 'fixedVolume' && conn.lot_mode === 'fixed') {
+            if (Number(conn.lot_value) !== Number(scaling.tradeVolume)) {
+              warnings.push({
+                connection_id: conn.id,
+                user_id: conn.user_id,
+                kind: 'lot_value_mismatch',
+                detail: `BD fixo ${conn.lot_value} vs CopyFactory ${scaling.tradeVolume}`,
+              })
+            }
+          } else if (scaling?.mode === 'fixedVolume' && conn.lot_mode !== 'fixed') {
+            warnings.push({
+              connection_id: conn.id,
+              user_id: conn.user_id,
+              kind: 'lot_mode_mismatch',
+              detail: `BD ${conn.lot_mode} ${conn.lot_value} vs CopyFactory fixo ${scaling.tradeVolume}`,
+            })
+          }
+        }
+      }
+
+      if (Object.keys(recPatch).length) {
+        recPatch.updated_at = new Date().toISOString()
+        await supabase.from('mtmcopy_connections').update(recPatch).eq('id', conn.id)
+      }
     } catch (err) {
       ok = false
       error = err instanceof Error ? err.message : 'Erro de sincronização'
@@ -261,6 +382,7 @@ export async function runMtmcopySystemSync(opts?: {
     metaapi_configured: metaapiConfigured,
     provider: providerResult,
     connections: connectionResults,
+    warnings,
     summary: {
       total: connectionResults.length,
       ok: okCount,
