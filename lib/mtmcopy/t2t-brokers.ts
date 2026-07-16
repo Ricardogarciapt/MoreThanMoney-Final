@@ -41,6 +41,16 @@ export const T2T_BROKERS: T2TBroker[] = [
     label: 'The Trading Master',
     servers: ['TheTradingMaster-Live'],
   },
+  {
+    id: 'monaxa',
+    label: 'Monaxa',
+    // Servidores MT5 Monaxa (variantes de espaçamento incluídas — Live2 e Live 2).
+    servers: [
+      'Monaxa-Live', 'Monaxa-Live2', 'Monaxa-Live 2', 'Monaxa-Live 3', 'Monaxa-Live 4',
+      'Monaxa-Live 5', 'Monaxa-Live 6', 'Monaxa-Live 7', 'Monaxa-Live 8',
+      'Monaxa-Server', 'Monaxa-Demo',
+    ],
+  },
 ]
 
 const ALLOWED = new Set(
