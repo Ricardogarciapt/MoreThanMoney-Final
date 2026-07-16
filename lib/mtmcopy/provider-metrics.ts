@@ -19,12 +19,14 @@ import {
   CANONICAL_SENSEI_STRATEGY_ID,
   CANONICAL_GOLDKILLER_ACCOUNT_ID,
   CANONICAL_GOLDKILLER_STRATEGY_ID,
+  CANONICAL_BOOSTER_ACCOUNT_ID,
+  CANONICAL_BOOSTER_STRATEGY_ID,
   MTM_COPY_STRATEGY_CATALOG,
 } from './provider-constants'
 import { fetchMetaApiOverview } from './metaapi-admin'
 import { getAccountSnapshot } from './metaapi'
 
-export type ProviderKey = 'premium' | 'trade-ideas' | 'sensei' | 'goldkiller'
+export type ProviderKey = 'premium' | 'trade-ideas' | 'sensei' | 'goldkiller' | 'booster'
 
 export interface ProviderStrategyMetrics {
   key: ProviderKey
@@ -70,6 +72,7 @@ const PROVIDERS: ProviderDef[] = [
   { key: 'trade-ideas', accountId: CANONICAL_TRADE_IDEAS_ACCOUNT_ID, strategyId: CANONICAL_TRADE_IDEAS_STRATEGY_ID },
   { key: 'sensei', accountId: CANONICAL_SENSEI_ACCOUNT_ID, strategyId: CANONICAL_SENSEI_STRATEGY_ID },
   { key: 'goldkiller', accountId: CANONICAL_GOLDKILLER_ACCOUNT_ID, strategyId: CANONICAL_GOLDKILLER_STRATEGY_ID },
+  { key: 'booster', accountId: CANONICAL_BOOSTER_ACCOUNT_ID, strategyId: CANONICAL_BOOSTER_STRATEGY_ID },
 ]
 
 function token(): string | null {
