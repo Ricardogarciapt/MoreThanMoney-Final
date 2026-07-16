@@ -32,6 +32,9 @@ type RpcConnection = {
   getSymbolSpecification?: (symbol: string) => Promise<MetaApiSymbolSpecification>
   getAccountInformation: () => Promise<{ balance?: number; equity?: number }>
   getSymbolPrice?: (symbol: string) => Promise<{ bid?: number; ask?: number }>
+  /** Adiciona o símbolo ao Market Watch (necessário antes de negociar pares não-selecionados
+   *  numa conta recém-criada — caso contrário o terminal rejeita com "Unknown symbol"). */
+  subscribeToMarketData?: (symbol: string) => Promise<unknown>
   getDealsByTimeRange?: (
     startTime: Date,
     endTime: Date,
@@ -415,6 +418,24 @@ async function resolveTradeableBrokerSymbol(
   return unknownFallback ?? { brokerSymbol: ranked[0], spec: null }
 }
 
+/**
+ * Garante que o símbolo está selecionado no Market Watch antes de negociar.
+ * Numa conta recém-criada, os pares não-default não estão selecionados e o terminal
+ * rejeita a ordem com "Unknown symbol". subscribeToMarketData/getSymbolPrice forçam a
+ * seleção. Idempotente e à prova de falhas (nunca lança).
+ */
+async function ensureSymbolReady(connection: RpcConnection, brokerSymbol: string): Promise<void> {
+  try {
+    if (connection.subscribeToMarketData) {
+      await connection.subscribeToMarketData(brokerSymbol)
+    } else if (connection.getSymbolPrice) {
+      await connection.getSymbolPrice(brokerSymbol)
+    }
+  } catch {
+    /* seleção best-effort — se falhar, a ordem seguinte reporta o erro real */
+  }
+}
+
 async function placeOrderOnConnection(
   connection: RpcConnection,
   symbols: string[],
@@ -444,6 +465,8 @@ async function placeOrderOnConnection(
 
     const trailingOpts = await resolveOrderTrailingForSymbol(req, brokerSymbol, spec)
     const orderOptions = buildOrderOptions(req, trailingOpts)
+
+    await ensureSymbolReady(connection, brokerSymbol)
 
     if (req.orderType === 'limit') {
       const openPrice = req.openPrice
@@ -743,6 +766,8 @@ export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> 
     const trailingOpts = await resolveOrderTrailingForSymbol(req, brokerSymbol)
     const orderOptions = buildOrderOptions(req, trailingOpts)
 
+    await ensureSymbolReady(connection, brokerSymbol)
+
     const trade =
       req.direction === 'buy'
         ? await connection.createMarketBuyOrder(brokerSymbol, req.volume, sl, tp, orderOptions)
@@ -779,6 +804,8 @@ export async function placeLimitOrder(req: OrderRequest): Promise<OrderResult> {
     const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
     const orderOptions = { comment: req.comment ?? 'MTMcopier' }
 
+    await ensureSymbolReady(connection, brokerSymbol)
+
     const trade =
       req.direction === 'buy'
         ? await connection.createLimitBuyOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
@@ -814,6 +841,8 @@ export async function placeStopOrder(req: OrderRequest): Promise<OrderResult> {
     const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
     const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
     const orderOptions = { comment: req.comment ?? 'MTMcopier' }
+
+    await ensureSymbolReady(connection, brokerSymbol)
 
     const trade =
       req.direction === 'buy'
