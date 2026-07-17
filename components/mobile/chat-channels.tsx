@@ -54,6 +54,7 @@ import {
 import { shouldReduceSafariEffects, waitForSupabaseSession } from "@/lib/supabase-session"
 import { getChatMessageShareUrl } from "@/lib/chat-short-link"
 import { notifyXpFromResponse } from "@/lib/xp-client"
+import { useT } from "@/components/i18n-provider"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -114,13 +115,13 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })
 }
 
-function formatDay(iso: string) {
+function formatDay(iso: string, t: (key: string) => string) {
   const d = new Date(iso)
   const today = new Date()
   const yesterday = new Date(today)
   yesterday.setDate(today.getDate() - 1)
-  if (d.toDateString() === today.toDateString()) return "Hoje"
-  if (d.toDateString() === yesterday.toDateString()) return "Ontem"
+  if (d.toDateString() === today.toDateString()) return t("chat.today")
+  if (d.toDateString() === yesterday.toDateString()) return t("chat.yesterday")
   return d.toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" })
 }
 
@@ -243,6 +244,7 @@ function extractTvSnapshotId(url: string): string | null {
 
 /** Preview de snapshot TradingView — imagem S3 directa, sem API */
 function TvSnapshotPreview({ tvId }: { tvId: string }) {
+  const t = useT()
   const imgUrl = `https://s3.tradingview.com/snapshots/${tvId[0].toLowerCase()}/${tvId}.png`
   const shareUrl = `https://www.tradingview.com/x/${tvId}/`
   return (
@@ -254,7 +256,7 @@ function TvSnapshotPreview({ tvId }: { tvId: string }) {
     >
       <img
         src={imgUrl}
-        alt="Gráfico TradingView"
+        alt={t("chat.tvChartAlt")}
         className="w-full max-h-64 object-cover bg-gray-900"
         loading="lazy"
       />
@@ -374,6 +376,7 @@ function MessageContextMenu({
   onDelete: () => void
   onShare: () => void
 }) {
+  const t = useT()
   const hasText = !!msg.content
   const canDel = isOwn || isAdmin
   const shareUrl = getChatMessageShareUrl(msg)
@@ -399,14 +402,14 @@ function MessageContextMenu({
         {/* Message preview */}
         <div className="mx-4 mt-4 mb-3 px-3 py-2.5 bg-gray-800 rounded-xl border-l-[3px] border-[#D2A63C]">
           <p className="text-[11px] font-semibold text-[#D2A63C] leading-tight mb-1">
-            {isOwn ? "Tu" : (msg.profile?.full_name || msg.telegram_sender || "")}
+            {isOwn ? t("chat.you") : (msg.profile?.full_name || msg.telegram_sender || "")}
           </p>
           <p className="text-sm text-gray-300 line-clamp-2 leading-snug">
             {msg.message_type === "video"
-              ? "🎬 Vídeo"
+              ? t("chat.videoWithIcon")
               : msg.image_url && !msg.content
-              ? "📷 Imagem"
-              : msg.content || msg.link_url || "Mensagem"}
+              ? t("chat.imageWithIcon")
+              : msg.content || msg.link_url || t("chat.message")}
           </p>
         </div>
 
@@ -421,7 +424,7 @@ function MessageContextMenu({
               className="w-full flex items-center gap-4 px-3 py-4 rounded-xl active:bg-gray-700/50"
             >
               <CornerUpLeft className="w-5 h-5 text-[#D2A63C]" />
-              <span className="text-[15px] text-white">Responder</span>
+              <span className="text-[15px] text-white">{t("chat.reply")}</span>
             </button>
           )}
           <button
@@ -430,7 +433,7 @@ function MessageContextMenu({
             className="w-full flex items-center gap-4 px-3 py-4 rounded-xl active:bg-gray-700/50"
           >
             <Share2 className="w-5 h-5 text-emerald-400" />
-            <span className="text-[15px] text-white">Partilhar</span>
+            <span className="text-[15px] text-white">{t("chat.share")}</span>
           </button>
           {(hasText || shareUrl) && (
             <button
@@ -439,7 +442,7 @@ function MessageContextMenu({
               className="w-full flex items-center gap-4 px-3 py-4 rounded-xl active:bg-gray-700/50"
             >
               <Copy className="w-5 h-5 text-blue-400" />
-              <span className="text-[15px] text-white">Copiar</span>
+              <span className="text-[15px] text-white">{t("chat.copy")}</span>
             </button>
           )}
           {openUrl && (
@@ -451,7 +454,7 @@ function MessageContextMenu({
               className="w-full flex items-center gap-4 px-3 py-4 rounded-xl active:bg-gray-700/50"
             >
               <ExternalLink className="w-5 h-5 text-purple-400" />
-              <span className="text-[15px] text-white">Abrir link / média</span>
+              <span className="text-[15px] text-white">{t("chat.openLinkMedia")}</span>
             </a>
           )}
           {canDel && (
@@ -463,7 +466,7 @@ function MessageContextMenu({
                 className="w-full flex items-center gap-4 px-3 py-4 rounded-xl active:bg-red-900/30"
               >
                 <Trash2 className="w-5 h-5 text-red-400" />
-                <span className="text-[15px] text-red-400">Apagar mensagem</span>
+                <span className="text-[15px] text-red-400">{t("chat.deleteMessage")}</span>
               </button>
             </>
           )}
@@ -475,7 +478,7 @@ function MessageContextMenu({
             onClick={onClose}
             className="w-full py-4 rounded-2xl bg-gray-700/80 text-white text-[15px] font-semibold active:bg-gray-600"
           >
-            Cancelar
+            {t("chat.cancel")}
           </button>
         </div>
       </div>
@@ -506,6 +509,7 @@ function ComposeAttachmentPreview({
   onClearMedia: () => void
   onClearLink: () => void
 }) {
+  const t = useT()
   const showLink = !!(fetchingPreview || linkPreview || detectedUrl)
   if (!pendingMedia && !showLink) return null
 
@@ -533,7 +537,7 @@ function ComposeAttachmentPreview({
           ) : (
             <img
               src={pendingMedia.previewUrl}
-              alt="Pré-visualização"
+              alt={t("chat.previewAlt")}
               className="w-full max-h-44 object-cover"
             />
           )}
@@ -552,7 +556,7 @@ function ComposeAttachmentPreview({
               type="button"
               onClick={onClearMedia}
               className="p-1.5 rounded-full bg-gray-700/80 text-gray-300 shrink-0"
-              aria-label="Remover anexo"
+              aria-label={t("chat.removeAttachment")}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -565,7 +569,7 @@ function ComposeAttachmentPreview({
           {fetchingPreview ? (
             <div className="flex items-center gap-2 px-3 py-3 bg-gray-800 rounded-xl border border-gray-700 text-xs text-gray-400">
               <Loader2 className="w-4 h-4 animate-spin text-[#D2A63C]" />
-              <span>A carregar pré-visualização do link...</span>
+              <span>{t("chat.loadingLinkPreview")}</span>
             </div>
           ) : linkPreview && detectedUrl ? (
             <div className="relative">
@@ -574,7 +578,7 @@ function ComposeAttachmentPreview({
                 type="button"
                 onClick={onClearLink}
                 className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-gray-200"
-                aria-label="Remover link"
+                aria-label={t("chat.removeLink")}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -607,6 +611,7 @@ function AttachSheet({
   onPickVideo: () => void
   onPickFile: () => void
 }) {
+  const t = useT()
   return (
     <div
       className="fixed inset-0 z-50 flex items-end"
@@ -615,7 +620,7 @@ function AttachSheet({
         backdropFilter: shouldReduceSafariEffects() ? undefined : "blur(3px)",
       }}
     >
-      <button type="button" className="absolute inset-0" onClick={onClose} aria-label="Fechar" />
+      <button type="button" className="absolute inset-0" onClick={onClose} aria-label={t("chat.close")} />
       <div
         className="relative w-full bg-gray-900 rounded-t-3xl border-t border-gray-800 shadow-2xl px-4 pt-3 pb-6"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 20px)" }}
@@ -623,7 +628,7 @@ function AttachSheet({
         <div className="flex justify-center mb-4">
           <div className="w-10 h-1 rounded-full bg-gray-700" />
         </div>
-        <p className="text-sm font-semibold text-white mb-3">Anexar</p>
+        <p className="text-sm font-semibold text-white mb-3">{t("chat.attach")}</p>
         <div className="grid grid-cols-3 gap-3">
           <button
             type="button"
@@ -633,7 +638,7 @@ function AttachSheet({
             <div className="w-12 h-12 rounded-full bg-[#D2A63C]/15 flex items-center justify-center">
               <ImageIcon className="w-6 h-6 text-[#D2A63C]" />
             </div>
-            <span className="text-sm text-white font-medium">Foto</span>
+            <span className="text-sm text-white font-medium">{t("chat.photo")}</span>
           </button>
           <button
             type="button"
@@ -643,7 +648,7 @@ function AttachSheet({
             <div className="w-12 h-12 rounded-full bg-purple-500/15 flex items-center justify-center">
               <Film className="w-6 h-6 text-purple-400" />
             </div>
-            <span className="text-sm text-white font-medium">Vídeo</span>
+            <span className="text-sm text-white font-medium">{t("chat.video")}</span>
           </button>
           <button
             type="button"
@@ -653,11 +658,11 @@ function AttachSheet({
             <div className="w-12 h-12 rounded-full bg-red-500/15 flex items-center justify-center">
               <FileText className="w-6 h-6 text-red-400" />
             </div>
-            <span className="text-sm text-white font-medium">Ficheiro</span>
+            <span className="text-sm text-white font-medium">{t("chat.file")}</span>
           </button>
         </div>
         <p className="text-[11px] text-gray-500 text-center mt-4 leading-relaxed">
-          Cola um link na mensagem para ver a pré-visualização automaticamente.
+          {t("chat.pasteLinkHint")}
         </p>
       </div>
     </div>
@@ -721,6 +726,7 @@ function MessageBubble({
   onOpenActions: (msg: ChatMessage) => void
   onTapToTrade?: (msg: ChatMessage) => void
 }) {
+  const t = useT()
   const tradeable =
     !isOwn &&
     !!onTapToTrade &&
@@ -910,9 +916,9 @@ function MessageBubble({
                     ) : rmHasImage ? (
                       <p className="text-[11px] text-gray-400 leading-tight mt-0.5 flex items-center gap-1">
                         {rm.message_type === "video" ? (
-                          <><Film className="w-3 h-3 flex-shrink-0" /> Vídeo</>
+                          <><Film className="w-3 h-3 flex-shrink-0" /> {t("chat.video")}</>
                         ) : (
-                          <><ImageIcon className="w-3 h-3 flex-shrink-0" /> Foto</>
+                          <><ImageIcon className="w-3 h-3 flex-shrink-0" /> {t("chat.photo")}</>
                         )}
                       </p>
                     ) : null}
@@ -946,7 +952,7 @@ function MessageBubble({
                 className={`absolute top-1 ${isOwn ? "left-1" : "right-1"} w-6 h-6 rounded-full flex items-center justify-center ${
                   isOwn ? "bg-black/15 text-black/50" : "bg-black/25 text-gray-400"
                 } active:scale-95 z-10`}
-                aria-label="Opções da mensagem"
+                aria-label={t("chat.messageOptions")}
               >
                 <MoreHorizontal className="w-3.5 h-3.5" />
               </button>
@@ -963,9 +969,9 @@ function MessageBubble({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-white font-medium truncate">
-                      {msg.image_url.split("/").pop()?.split("?")[0] ?? "Documento"}
+                      {msg.image_url.split("/").pop()?.split("?")[0] ?? t("chat.document")}
                     </p>
-                    <p className="text-[10px] text-gray-400">Toca para abrir</p>
+                    <p className="text-[10px] text-gray-400">{t("chat.tapToOpen")}</p>
                   </div>
                   <ExternalLink className="w-4 h-4 text-gray-500 shrink-0" />
                 </a>
@@ -982,7 +988,7 @@ function MessageBubble({
                 <a href={msg.image_url} target="_blank" rel="noopener noreferrer">
                   <img
                     src={msg.image_url}
-                    alt="Imagem"
+                    alt={t("chat.imageAlt")}
                     loading="lazy"
                     decoding="async"
                     className="rounded-xl max-w-full mb-1"
@@ -1004,7 +1010,7 @@ function MessageBubble({
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onTapToTrade!(msg) }}
                   className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2 active:scale-[0.98] transition-transform"
-                  aria-label="Tap to Trade — abrir esta trade na tua conta"
+                  aria-label={t("chat.tapToTradeAria")}
                 >
                   <TrendingUp className="w-4 h-4" /> Tap to Trade MTM
                 </button>
@@ -1084,6 +1090,7 @@ function ChannelView({
   const messagesRef = useRef<ChatMessage[]>([])
   const PAGE_SIZE = chatPageSize()
   const liteMode = shouldReduceSafariEffects()
+  const t = useT()
 
   // Lock parent scroll container so only the message list scrolls
   useEffect(() => {
@@ -1161,7 +1168,7 @@ function ChannelView({
       const { getAccessToken } = await import("@/lib/auth-token")
       const token = await getAccessToken()
       if (!token) {
-        setTapTrade({ msg: target, status: "error", message: "Sessão indisponível. Faz login novamente." })
+        setTapTrade({ msg: target, status: "error", message: t("chat.sessionRelogin") })
         return
       }
       const res = await fetch("/api/mtmcopy/tap-to-trade", {
@@ -1171,12 +1178,12 @@ function ChannelView({
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setTapTrade({ msg: target, status: "error", message: data.error || "Falha ao abrir a trade." })
+        setTapTrade({ msg: target, status: "error", message: data.error || t("chat.tradeOpenFailed") })
         return
       }
-      setTapTrade({ msg: target, status: "done", message: data.message || "Trade aberta com sucesso!" })
+      setTapTrade({ msg: target, status: "done", message: data.message || t("chat.tradeOpened") })
     } catch (e) {
-      setTapTrade({ msg: target, status: "error", message: e instanceof Error ? e.message : "Erro inesperado" })
+      setTapTrade({ msg: target, status: "error", message: e instanceof Error ? e.message : t("chat.unexpectedError") })
     }
   }
 
@@ -1186,7 +1193,7 @@ function ChannelView({
     setMessagesError(null)
     const token = await waitForSupabaseSession()
     if (!token) {
-      setMessagesError("Sessão indisponível. Fecha e abre o chat ou faz login novamente.")
+      setMessagesError(t("chat.sessionUnavailableReopen"))
       setLoading(false)
       return
     }
@@ -1201,7 +1208,7 @@ function ChannelView({
 
     if (error) {
       console.error("[chat] fetchMessages:", error.message)
-      setMessagesError("Não foi possível carregar as mensagens.")
+      setMessagesError(t("chat.loadMessagesError"))
       setLoading(false)
       return
     }
@@ -1415,7 +1422,7 @@ function ChannelView({
     const hasMedia = !!pendingMedia
     if ((!hasText && !hasLink && !hasMedia) || sending || uploading) return
     if (!currentUser?.id) {
-      setSendError("Sessão inválida. Faz login novamente.")
+      setSendError(t("chat.invalidSession"))
       return
     }
 
@@ -1431,7 +1438,7 @@ function ChannelView({
       const { getAccessToken } = await import("@/lib/auth-token")
       const accessToken = await getAccessToken()
       if (!accessToken) {
-        setSendError("Sessão expirada. Faz login novamente.")
+        setSendError(t("chat.expiredSession"))
         return
       }
 
@@ -1448,7 +1455,7 @@ function ChannelView({
         })
         if (!uploadRes.ok) {
           const uploadErr = await uploadRes.json().catch(() => ({}))
-          setSendError(uploadErr.error || "Falha ao enviar ficheiro. Tenta outra vez.")
+          setSendError(uploadErr.error || t("chat.uploadFailed"))
           return
         }
 
@@ -1478,7 +1485,7 @@ function ChannelView({
 
       const postData = await postRes.json().catch(() => ({}))
       if (!postRes.ok) {
-        setSendError(postData.error || "Não foi possível publicar a mensagem.")
+        setSendError(postData.error || t("chat.postFailed"))
         return
       }
 
@@ -1500,7 +1507,7 @@ function ChannelView({
       clearLinkPreview()
       clearPendingMedia()
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Erro inesperado ao publicar."
+      const message = err instanceof Error ? err.message : t("chat.unexpectedPost")
       setSendError(message)
     } finally {
       setSending(false)
@@ -1513,7 +1520,7 @@ function ChannelView({
   const renderMessages = () => {
     let lastDay = ""
     return messages.map((msg) => {
-      const day = formatDay(msg.created_at)
+      const day = formatDay(msg.created_at, t)
       const showDay = day !== lastDay
       lastDay = day
       return (
@@ -1570,7 +1577,7 @@ function ChannelView({
         {isPremiumChannel(channel.slug) && (
           <div className="flex items-center gap-1 text-[#D2A63C] text-[11px]">
             <Lock className="w-3.5 h-3.5" />
-            <span>Premium</span>
+            <span>{t("chat.premium")}</span>
           </div>
         )}
         {isReadOnlyChannel(channel.slug) && (
@@ -1579,7 +1586,7 @@ function ChannelView({
         <button
           onClick={() => setShowInfo(true)}
           className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
-          aria-label="Info do canal"
+          aria-label={t("chat.channelInfo")}
         >
           <Info className="w-4 h-4" />
         </button>
@@ -1608,26 +1615,26 @@ function ChannelView({
                 }}
                 className="text-xs text-[#D2A63C] underline"
               >
-                Tentar novamente
+                {t("chat.retry")}
               </button>
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
               <span className="text-4xl">{getChannelMeta(channel.slug).emoji}</span>
-              <p className="text-white font-medium">Bem-vindo a #{channel.name}</p>
+              <p className="text-white font-medium">{t("chat.welcome")} #{channel.name}</p>
               <p className="text-gray-500 text-sm">
-                {channel.description || "Este canal está pronto para a conversa."}
+                {channel.description || t("chat.channelReady")}
               </p>
               {canWrite ? (
-                <p className="text-[#D2A63C] text-xs">Sê o primeiro a escrever!</p>
+                <p className="text-[#D2A63C] text-xs">{t("chat.beFirst")}</p>
               ) : (
-                <p className="text-gray-600 text-xs">Canal de leitura — as mensagens aparecem aqui.</p>
+                <p className="text-gray-600 text-xs">{t("chat.readOnlyChannel")}</p>
               )}
               <button
                 onClick={() => setShowInfo(true)}
                 className="mt-2 text-xs text-gray-400 underline"
               >
-                Ver regras do canal
+                {t("chat.viewRules")}
               </button>
             </div>
           ) : (
@@ -1643,7 +1650,7 @@ function ChannelView({
                   ) : (
                     <ChevronDown className="w-3.5 h-3.5" />
                   )}
-                  Carregar mensagens anteriores
+                  {t("chat.loadOlder")}
                 </button>
               )}
               {renderMessages()}
@@ -1657,7 +1664,7 @@ function ChannelView({
             onClick={() => scrollToBottom()}
             className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#D2A63C] text-black text-xs font-semibold shadow-lg"
           >
-            {pendingNew > 0 ? `${pendingNew} nova${pendingNew > 1 ? "s" : ""}` : "Ir ao fim"}
+            {pendingNew > 0 ? `${pendingNew} ${pendingNew > 1 ? t("chat.newMany") : t("chat.newOne")}` : t("chat.goToEnd")}
             <ChevronDown className="w-3.5 h-3.5" />
           </button>
         )}
@@ -1688,7 +1695,7 @@ function ChannelView({
                     <p className="text-[11px] text-gray-400 truncate leading-tight mt-0.5">{rtText}</p>
                   ) : rtHasImage ? (
                     <p className="text-[11px] text-gray-500 leading-tight mt-0.5 flex items-center gap-1">
-                      <ImageIcon className="w-3 h-3 flex-shrink-0" /> Foto
+                      <ImageIcon className="w-3 h-3 flex-shrink-0" /> {t("chat.photo")}
                     </p>
                   ) : null}
                 </div>
@@ -1726,7 +1733,7 @@ function ChannelView({
                 type="button"
                 onClick={() => setSendError(null)}
                 className="p-0.5 text-red-400 hover:text-red-300"
-                aria-label="Fechar erro"
+                aria-label={t("chat.closeError")}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -1739,7 +1746,7 @@ function ChannelView({
               onClick={() => setShowAttachSheet(true)}
               disabled={uploading}
               className="p-2 rounded-lg text-gray-400 hover:text-[#D2A63C] hover:bg-gray-800 transition-colors flex-shrink-0 disabled:opacity-40"
-              aria-label="Anexar foto, vídeo ou link"
+              aria-label={t("chat.attachPhotoVideoLink")}
             >
               {uploading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -1785,7 +1792,7 @@ function ChannelView({
               <MentionInput
                 value={text}
                 onChange={setText}
-                placeholder="Escreve uma mensagem... (@nome para mencionar)"
+                placeholder={t("chat.messagePlaceholder")}
                 className="w-full bg-transparent text-white text-[14px] placeholder-gray-500 resize-none outline-none leading-relaxed"
                 rows={1}
               />
@@ -1809,15 +1816,15 @@ function ChannelView({
           {isReadOnlyChannel(channel.slug) ? (
             <>
               <TelegramIcon className="w-4 h-4 text-[#26A5E4]" />
-              <p className="text-xs text-gray-500">Só leitura</p>
+              <p className="text-xs text-gray-500">{t("chat.readOnly")}</p>
             </>
           ) : (
             <>
               <Lock className="w-4 h-4 text-gray-600" />
               <p className="text-xs text-gray-500">
                 {channel.slug === "trading"
-                  ? "Precisas de 3 meses de membro ou plano Premium para publicar."
-                  : "Não tens permissão para publicar neste canal."}
+                  ? t("chat.needMemberOrPremium")
+                  : t("chat.noPermissionPost")}
               </p>
             </>
           )}
@@ -1864,8 +1871,8 @@ function ChannelView({
             {tapTrade.status === "confirm" && (
               <>
                 <p className="text-sm text-zinc-300 mb-3">
-                  Vais abrir esta trade na <strong className="text-white">tua conta MT5</strong>, com o{" "}
-                  <strong className="text-white">risco que definiste</strong> nas Definições.
+                  {t("chat.tapConfirm1")} <strong className="text-white">{t("chat.tapConfirmMt5")}</strong>{t("chat.tapConfirm2")}{" "}
+                  <strong className="text-white">{t("chat.tapConfirmRisk")}</strong> {t("chat.tapConfirm3")}
                 </p>
                 <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3 text-xs text-zinc-400 max-h-28 overflow-y-auto whitespace-pre-wrap mb-4">
                   {tapTrade.msg.content}
@@ -1875,19 +1882,19 @@ function ChannelView({
                     onClick={() => setTapTrade(null)}
                     className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95"
                   >
-                    Cancelar
+                    {t("chat.cancel")}
                   </button>
                   <button
                     onClick={runTapTrade}
                     className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95"
                   >
-                    Confirmar e abrir
+                    {t("chat.confirmOpen")}
                   </button>
                 </div>
               </>
             )}
             {tapTrade.status === "loading" && (
-              <p className="text-sm text-zinc-300 py-6 text-center">A abrir a trade na tua conta…</p>
+              <p className="text-sm text-zinc-300 py-6 text-center">{t("chat.openingTrade")}</p>
             )}
             {tapTrade.status === "done" && (
               <>
@@ -1896,7 +1903,7 @@ function ChannelView({
                   onClick={() => setTapTrade(null)}
                   className="w-full rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95"
                 >
-                  Fechar
+                  {t("chat.close")}
                 </button>
               </>
             )}
@@ -1907,7 +1914,7 @@ function ChannelView({
                   onClick={() => setTapTrade(null)}
                   className="w-full rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95"
                 >
-                  Fechar
+                  {t("chat.close")}
                 </button>
               </>
             )}
@@ -1927,13 +1934,14 @@ function BrokerUidModal({
   onSave: (uid: string) => void
   onClose: () => void
 }) {
+  const t = useT()
   const [uid, setUid] = useState("")
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
   const handleSave = async () => {
     const trimmed = uid.trim()
-    if (!trimmed) { setError("Insere o teu número de conta VT Markets."); return }
+    if (!trimmed) { setError(t("chat.enterVtAccount")); return }
     setSaving(true)
     try {
       const { getCurrentUserId } = await import("@/lib/auth-token")
@@ -1946,7 +1954,7 @@ function BrokerUidModal({
       if (dbErr) throw dbErr
       onSave(trimmed)
     } catch {
-      setError("Erro ao guardar. Tenta novamente.")
+      setError(t("chat.saveError"))
     } finally {
       setSaving(false)
     }
@@ -1976,9 +1984,9 @@ function BrokerUidModal({
               <TrendingUp className="w-6 h-6 text-[#D2A63C]" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-lg leading-tight">Conta de Corretora Necessária</h3>
+              <h3 className="font-bold text-white text-lg leading-tight">{t("chat.brokerRequired")}</h3>
               <p className="text-sm text-gray-400 mt-1 leading-relaxed">
-                Para acederes aos canais de Trade Ideas, precisas de ter uma conta activa na <strong className="text-white">VT Markets</strong>, parceira oficial MTM.
+                {t("chat.brokerBody1")} <strong className="text-white">VT Markets</strong>{t("chat.brokerBody2")}
               </p>
             </div>
           </div>
@@ -1988,19 +1996,19 @@ function BrokerUidModal({
           {/* UID input */}
           <div>
             <label className="text-xs text-gray-400 uppercase tracking-wide mb-2 block">
-              O teu número de conta VT Markets (UID)
+              {t("chat.vtAccountLabel")}
             </label>
             <input
               type="text"
               value={uid}
               onChange={e => { setUid(e.target.value); setError("") }}
-              placeholder="Ex: 12345678"
+              placeholder={t("chat.vtPlaceholder")}
               autoFocus
               className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#D2A63C]/60 font-mono"
             />
             {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
             <p className="text-xs text-gray-500 mt-1.5">
-              Encontras o teu UID no painel da VT Markets após o login.
+              {t("chat.uidHint")}
             </p>
           </div>
 
@@ -2011,20 +2019,20 @@ function BrokerUidModal({
             className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] transition-transform"
           >
             {saving ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> A guardar...</>
+              <><Loader2 className="w-4 h-4 animate-spin" /> {t("chat.saving")}</>
             ) : (
-              <><Check className="w-4 h-4" /> Confirmar e entrar</>
+              <><Check className="w-4 h-4" /> {t("chat.confirmEnter")}</>
             )}
           </button>
 
           {/* Open account link */}
           <div className="text-center space-y-1">
-            <p className="text-xs text-gray-500">Ainda não tens conta?</p>
+            <p className="text-xs text-gray-500">{t("chat.noAccountYet")}</p>
             <a
               href="/app-mobile/accountopen"
               className="text-sm text-[#D2A63C] font-medium underline"
             >
-              Abre a tua conta VT Markets aqui →
+              {t("chat.openVtAccount")}
             </a>
           </div>
 
@@ -2032,7 +2040,7 @@ function BrokerUidModal({
             onClick={onClose}
             className="w-full py-2 text-gray-500 text-sm hover:text-gray-300 transition-colors"
           >
-            Fechar
+            {t("chat.close")}
           </button>
         </div>
       </div>
@@ -2051,6 +2059,7 @@ function ChannelInfoSheet({
   canWrite: boolean
   onClose: () => void
 }) {
+  const t = useT()
   const meta = getChannelMeta(channel.slug)
 
   return (
@@ -2099,7 +2108,7 @@ function ChannelInfoSheet({
                     canWrite ? "bg-green-500/15 text-green-400" : "bg-gray-700 text-gray-400"
                   }`}
                 >
-                  {canWrite ? "Podes publicar" : "Só leitura"}
+                  {canWrite ? t("chat.canPost") : t("chat.readOnly")}
                 </span>
               </div>
             </div>
@@ -2108,7 +2117,7 @@ function ChannelInfoSheet({
           <div className="space-y-4">
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                Regras do canal
+                {t("chat.channelRules")}
               </p>
               <ul className="space-y-2">
                 {meta.rules.map((rule) => (
@@ -2122,7 +2131,7 @@ function ChannelInfoSheet({
 
             {meta.tips && meta.tips.length > 0 && (
               <div className="p-3 rounded-xl bg-gray-800/60 border border-gray-700/50">
-                <p className="text-xs font-semibold text-[#D2A63C] mb-1.5">Dica</p>
+                <p className="text-xs font-semibold text-[#D2A63C] mb-1.5">{t("chat.tip")}</p>
                 {meta.tips.map((tip) => (
                   <p key={tip} className="text-xs text-gray-400 leading-relaxed">
                     {tip}
@@ -2136,7 +2145,7 @@ function ChannelInfoSheet({
             onClick={onClose}
             className="w-full mt-5 py-3 rounded-2xl bg-gray-800 text-white font-medium text-sm"
           >
-            Fechar
+            {t("chat.close")}
           </button>
         </div>
       </div>
@@ -2234,6 +2243,7 @@ interface EducatorProfile {
 }
 
 export default function ChatChannels({ initialSlug }: { initialSlug?: string | null }) {
+  const t = useT()
   const { user, isLoading: authLoading } = useAuth()
   const [channels, setChannels] = useState<Channel[]>([])
   const [activeChannel, setActiveChannel] = useState<Channel | null>(null)
@@ -2337,7 +2347,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
 
       const token = await waitForSupabaseSession()
       if (!token) {
-        setError("Sessão indisponível. Fecha a app e abre novamente.")
+        setError(t("chat.sessionUnavailableApp"))
         setLoading(false)
         return
       }
@@ -2349,7 +2359,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
 
       if (error) {
         console.error("[chat] fetchChannels:", error.message)
-        setError("Erro ao carregar canais.")
+        setError(t("chat.loadError"))
         setLoading(false)
         return
       }
@@ -2447,7 +2457,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
           onClick={() => setReloadTick((t) => t + 1)}
           className="text-xs text-[#D2A63C] underline mt-1"
         >
-          Tentar novamente
+          {t("chat.retry")}
         </button>
       </div>
     )
@@ -2478,11 +2488,11 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
       <div className="px-4 pt-4 pb-3 border-b border-gray-800">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-white">Chat</h2>
+            <h2 className="text-lg font-bold text-white">{t("chat.title")}</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              {allFlatChannels.length} canais
+              {allFlatChannels.length} {t("chat.channels")}
               {totalUnread > 0 && (
-                <span className="text-[#D2A63C]"> · {totalUnread} com novidades</span>
+                <span className="text-[#D2A63C]"> · {totalUnread} {t("chat.withNews")}</span>
               )}
             </p>
           </div>
@@ -2491,7 +2501,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-800 border border-gray-700 text-xs text-gray-300 hover:border-[#D2A63C]/40"
           >
             <Inbox className="w-3.5 h-3.5 text-[#D2A63C]" />
-            Privadas
+            {t("chat.private")}
           </Link>
         </div>
       </div>
@@ -2507,7 +2517,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
           }`}
         >
           <MessageCircle className="w-4 h-4" />
-          Canais
+          {t("chat.tabChannels")}
         </button>
         <button
           onClick={() => { setChatTab("dm"); loadEducators() }}
@@ -2518,7 +2528,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
           }`}
         >
           <Users className="w-4 h-4" />
-          Directo
+          {t("chat.tabDirect")}
         </button>
       </div>
 
@@ -2534,20 +2544,20 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
                 setDmSearch(e.target.value)
                 searchMembers(e.target.value)
               }}
-              placeholder="Procurar membro por nome..."
+              placeholder={t("chat.searchMember")}
               className="w-full bg-gray-800 border border-gray-700 rounded-xl pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#D2A63C]/50"
             />
           </div>
 
           {dmSearch.trim().length >= 2 && (
             <div className="mb-5">
-              <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">Resultados</p>
+              <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-2">{t("chat.results")}</p>
               {searchingMembers ? (
                 <div className="flex justify-center py-4">
                   <Loader2 className="w-5 h-5 animate-spin text-[#D2A63C]" />
                 </div>
               ) : memberResults.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">Nenhum membro encontrado</p>
+                <p className="text-sm text-gray-500 text-center py-4">{t("chat.noMemberFound")}</p>
               ) : (
                 <div className="space-y-2">
                   {memberResults.map((member) => (
@@ -2590,12 +2600,12 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
           ) : educators.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
               <GraduationCap className="w-10 h-10 mx-auto mb-2 opacity-40" />
-              <p className="text-sm">Nenhum educador disponível</p>
+              <p className="text-sm">{t("chat.noEducator")}</p>
             </div>
           ) : (
             <div className="space-y-3">
               <p className="text-[11px] uppercase tracking-wide text-gray-500 mb-3">
-                Educadores e equipa MTM
+                {t("chat.educatorsTeam")}
               </p>
               {educators.map((edu) => (
                 <button
@@ -2607,7 +2617,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
                   {edu.avatar_url ? (
                     <Image
                       src={edu.avatar_url}
-                      alt={edu.full_name || edu.username || "Educador"}
+                      alt={edu.full_name || edu.username || t("chat.educator")}
                       width={44}
                       height={44}
                       className="w-11 h-11 rounded-full border border-[#D2A63C]/30"
@@ -2620,7 +2630,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
                   <div className="flex-1 min-w-0 text-left">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <p className="font-semibold text-sm text-white truncate">
-                        {edu.full_name || edu.username || "Educador"}
+                        {edu.full_name || edu.username || t("chat.educator")}
                       </p>
                       <MemberBadge profile={edu} size="xs" />
                     </div>
@@ -2628,7 +2638,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
                       <p className="text-xs text-gray-400">@{edu.username}</p>
                     )}
                     <p className="text-[11px] text-[#D2A63C] mt-0.5">
-                      {edu.user_type === "admin" ? "Admin · Educador" : "Educador"}
+                      {edu.user_type === "admin" ? t("chat.adminEducator") : t("chat.educator")}
                     </p>
                   </div>
                   {sendingDm === edu.id ? (
@@ -2653,7 +2663,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
                 type="search"
                 value={channelSearch}
                 onChange={(e) => setChannelSearch(e.target.value)}
-                placeholder="Procurar canal..."
+                placeholder={t("chat.searchChannel")}
                 className="w-full bg-gray-800 border border-gray-700 rounded-xl pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#D2A63C]/50"
               />
             </div>
@@ -2662,7 +2672,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
           <div className="divide-y divide-gray-800/40">
             {channelSearch.trim() ? (
               filteredChannels.length === 0 ? (
-                <p className="text-center text-gray-500 text-sm py-10">Nenhum canal encontrado</p>
+                <p className="text-center text-gray-500 text-sm py-10">{t("chat.noChannelFound")}</p>
               ) : (
                 filteredChannels.map((channel) => (
                   <ChannelRow

@@ -10,6 +10,7 @@ import EducatorProfileDialog, { type EducatorProfilePublic } from "@/components/
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
+import { useT } from "@/components/i18n-provider"
 import {
   Radio,
   Search,
@@ -81,6 +82,7 @@ function canAccessStream(
 export default function LiveSessionsLobby() {
   const { toast } = useToast()
   const { user } = useAuth()
+  const t = useT()
   const [academies, setAcademies] = useState<Academy[]>([])
   const [streams, setStreams] = useState<Stream[]>([])
   const [educators, setEducators] = useState<EducatorPublic[]>([])
@@ -155,8 +157,8 @@ export default function LiveSessionsLobby() {
 
   const notifySoon = () => {
     toast({
-      title: "Brevemente",
-      description: "Alertas por email e push para próximas lives estarão disponíveis em breve.",
+      title: t("live.soonTitle"),
+      description: t("live.soonDesc"),
     })
   }
 
@@ -200,7 +202,7 @@ export default function LiveSessionsLobby() {
       <div className="flex min-h-[40vh] items-center justify-center text-gray-400">
         <div className="text-center space-y-2">
           <Radio className="h-10 w-10 mx-auto text-[#D2A63C] animate-pulse" />
-          <p>A carregar salas e especialistas…</p>
+          <p>{t("live.loadingRooms")}</p>
         </div>
       </div>
     )
@@ -216,13 +218,13 @@ export default function LiveSessionsLobby() {
           <div className="max-w-2xl space-y-3">
             <Badge className="border-[#D2A63C]/40 bg-black/50 text-[#D2A63C]">
               <Sparkles className="mr-1 h-3 w-3" />
-              Shopping de conhecimento
+              {t("live.heroBadge")}
             </Badge>
             <h2 className="text-2xl font-bold tracking-tight text-white md:text-3xl lg:text-4xl">
-              Escolhe a tua <span className="text-[#D2A63C]">sala</span>. Aprende em direto com quem domina o tema.
+              {t("live.heroTitleBefore")}<span className="text-[#D2A63C]">{t("live.heroTitleHighlight")}</span>{t("live.heroTitleAfter")}
             </h2>
             <p className="text-sm text-gray-400 md:text-base leading-relaxed">
-              Especialistas MTM ao vivo. Entra na sessão que faz sentido para ti — fiscalidade, mercados, poupança e muito mais.
+              {t("live.heroSubtitle")}
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <div className="inline-flex items-center gap-2 rounded-full border border-red-500/40 bg-red-950/40 px-4 py-2 text-sm">
@@ -230,11 +232,11 @@ export default function LiveSessionsLobby() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-60" />
                   <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
                 </span>
-                <span className="font-semibold text-white">Agora:</span>
+                <span className="font-semibold text-white">{t("live.now")}</span>
                 <span className="text-red-200">
                   {liveCount === 0
-                    ? "Nenhuma sessão em direto"
-                    : `${liveCount} ${liveCount === 1 ? "sessão em direto" : "sessões em direto"}`}
+                    ? t("live.noLiveSession")
+                    : `${liveCount} ${liveCount === 1 ? t("live.liveSessionSingular") : t("live.liveSessionPlural")}`}
                 </span>
               </div>
             </div>
@@ -243,7 +245,7 @@ export default function LiveSessionsLobby() {
           <div className="hidden self-start lg:block">
             <Link href="/live-sessions/studio" className="shrink-0">
               <Button className="bg-[#D2A63C] text-black hover:bg-[#BB8525]">
-                Abrir studio
+                {t("live.openStudio")}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
@@ -256,7 +258,7 @@ export default function LiveSessionsLobby() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Pesquisar por tema (IRS, cripto, crédito…) ou nome do educador…"
+              placeholder={t("live.searchPlaceholder")}
               className="border-gray-700 bg-black/50 pl-10 text-white placeholder:text-gray-500"
             />
           </div>
@@ -265,7 +267,7 @@ export default function LiveSessionsLobby() {
             value={academyFilter}
             onChange={(e) => setAcademyFilter(e.target.value)}
           >
-            <option value="">Todas as academias MTM</option>
+            <option value="">{t("live.allAcademies")}</option>
             {academies.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
@@ -275,7 +277,7 @@ export default function LiveSessionsLobby() {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <span className="w-full text-xs font-medium text-gray-500 sm:w-auto sm:mr-2 sm:self-center">Filtros rápidos</span>
+          <span className="w-full text-xs font-medium text-gray-500 sm:w-auto sm:mr-2 sm:self-center">{t("live.quickFilters")}</span>
           {QUICK_FILTERS.map((f) => (
             <button
               key={f.id}
@@ -297,7 +299,7 @@ export default function LiveSessionsLobby() {
       <div className="flex flex-col gap-3 rounded-2xl border border-[#D2A63C]/20 bg-black/40 px-4 py-4 lg:hidden">
         <Link href="/live-sessions/studio" className="shrink-0">
           <Button className="w-full bg-[#D2A63C] text-black hover:bg-[#BB8525]">
-            Abrir studio
+            {t("live.openStudio")}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </Link>
@@ -315,17 +317,17 @@ export default function LiveSessionsLobby() {
           {/* Slideshow educadores */}
           <section>
             <div className="mb-4 flex items-center justify-between gap-2">
-              <h3 className="text-lg font-semibold tracking-tight text-white md:text-xl">Especialistas MTM</h3>
-              <span className="text-xs text-gray-500">Desliza para ver todos</span>
+              <h3 className="text-lg font-semibold tracking-tight text-white md:text-xl">{t("live.specialistsHeading")}</h3>
+              <span className="text-xs text-gray-500">{t("live.swipeToSeeAll")}</span>
             </div>
             <div className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-[#D2A63C]/30">
-              {educators.length === 0 && <p className="text-sm text-gray-500">Ainda não há educadores públicos ativos.</p>}
+              {educators.length === 0 && <p className="text-sm text-gray-500">{t("live.noPublicEducators")}</p>}
               {educators.map((ed) => (
                 <button
                   key={ed.id}
                   type="button"
                   className="w-[280px] shrink-0 snap-start text-left"
-                  aria-label={`Ver perfil de ${ed.display_name}`}
+                  aria-label={`${t("live.viewProfileOf")} ${ed.display_name}`}
                   onClick={() => void openEducatorDialog(ed)}
                 >
                   <Card className="w-full overflow-hidden border-[#D2A63C]/20 bg-gradient-to-b from-gray-900/90 to-black/90 backdrop-blur transition hover:border-[#D2A63C]/45">
@@ -342,7 +344,7 @@ export default function LiveSessionsLobby() {
                         <Circle
                           className={`h-2 w-2 ${ed.is_live ? "fill-emerald-400 text-emerald-400" : "fill-gray-500 text-gray-500"}`}
                         />
-                        {ed.is_live ? "Online" : "Offline"}
+                        {ed.is_live ? t("live.online") : t("live.offline")}
                       </div>
                     </div>
                     <CardContent className="p-4 space-y-2">
@@ -353,7 +355,7 @@ export default function LiveSessionsLobby() {
                         </Badge>
                       )}
                       <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed">
-                        {ed.bio || "Bio disponível no perfil — contacta o admin para completar."}
+                        {ed.bio || t("live.bioFallback")}
                       </p>
                       {ed.academy?.name && (
                         <p className="text-[10px] uppercase tracking-wider text-gray-600">{ed.academy.name}</p>
@@ -369,11 +371,11 @@ export default function LiveSessionsLobby() {
           <section>
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight text-white md:text-xl">
               <Radio className="h-5 w-5 text-red-500" />
-              Online agora
+              {t("live.onlineNow")}
             </h3>
             {liveStreams.length === 0 ? (
               <p className="rounded-xl border border-dashed border-gray-800 bg-black/30 p-8 text-center text-sm text-gray-500">
-                Nenhuma sala em direto. Volta mais tarde ou agenda uma notificação abaixo.
+                {t("live.noLiveRoom")}
               </p>
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -396,7 +398,7 @@ export default function LiveSessionsLobby() {
           <section>
             <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight text-white md:text-xl">
               <Bell className="h-5 w-5 text-[#D2A63C]" />
-              Horário · Próximas lives
+              {t("live.scheduleUpcomingLives")}
             </h3>
             <SessionsTimetable
               sessions={(scheduledSessions.length > 0
@@ -416,7 +418,7 @@ export default function LiveSessionsLobby() {
                     scheduledAt: s.scheduled_start_at!,
                     tier: (s as { access_tier?: string }).access_tier ?? null,
                   })))}
-              emptyText="Sem horários agendados. Os educadores podem definir data no studio ou no admin."
+              emptyText={t("live.scheduleEmpty")}
             />
           </section>
       </div>
@@ -439,6 +441,7 @@ function StreamMarketCard({
   memberCategory?: string | null
   onEducatorProfile?: () => void
 }) {
+  const t = useT()
   const img = streamVisual(stream)
   const viewers = typeof stream.viewer_count === "number" ? stream.viewer_count : null
   const enterHref = stream.educator?.id ? `/live/${stream.educator.id}` : `/live-sessions/${stream.id}`
@@ -456,7 +459,7 @@ function StreamMarketCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={img} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
         ) : (
-          <div className="flex h-full items-center justify-center text-gray-600 text-sm">Sem imagem</div>
+          <div className="flex h-full items-center justify-center text-gray-600 text-sm">{t("live.noImage")}</div>
         )}
         {stream.is_live && (
           <div className="absolute left-3 top-3">
@@ -465,13 +468,13 @@ function StreamMarketCard({
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-70" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
               </span>
-              Live
+              {t("live.badgeLive")}
             </span>
           </div>
         )}
         {!stream.is_live && (
           <div className="absolute left-3 top-3">
-            <Badge className="bg-gray-900/90 text-gray-300 border-gray-700">Offline</Badge>
+            <Badge className="bg-gray-900/90 text-gray-300 border-gray-700">{t("live.offline")}</Badge>
           </div>
         )}
         {stream.access_tier === "premium" && (
@@ -484,7 +487,7 @@ function StreamMarketCard({
         {stream.access_tier === "app_member" && (
           <div className="absolute right-3 top-3">
             <span className="inline-flex items-center gap-1 rounded-md bg-amber-600/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-black shadow">
-              Membro
+              {t("live.badgeMember")}
             </span>
           </div>
         )}
@@ -492,14 +495,14 @@ function StreamMarketCard({
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/75 backdrop-blur-sm">
             <Lock className="h-8 w-8 text-white/70" />
             <p className="text-xs font-semibold text-white/90 text-center px-4">
-              {stream.access_tier === "premium" ? "Pack Premium ($65/mês)" : "Pack Membro ($35/mês)"}
+              {stream.access_tier === "premium" ? t("live.packPremiumPrice") : t("live.packMemberPrice")}
             </p>
             <Link
               href="/register"
               className="mt-1 rounded-full bg-[#D2A63C] px-4 py-1.5 text-xs font-bold text-black hover:bg-[#BB8525]"
               onClick={(e) => e.stopPropagation()}
             >
-              Ver planos
+              {t("live.viewPlans")}
             </Link>
           </div>
         )}
@@ -515,7 +518,7 @@ function StreamMarketCard({
               <button
                 type="button"
                 className="h-full w-full"
-                aria-label={`Ver perfil de ${stream.educator?.display_name || "Educador"}`}
+                aria-label={`${t("live.viewProfileOf")} ${stream.educator?.display_name || t("live.educatorFallback")}`}
                 onClick={onEducatorProfile}
               >
                 {stream.educator?.avatar_url ? (
@@ -537,13 +540,13 @@ function StreamMarketCard({
               <button
                 type="button"
                 className="block w-full truncate text-left text-sm font-semibold text-white hover:text-[#D2A63C]"
-                aria-label={`Ver perfil de ${stream.educator?.display_name || "Educador"}`}
+                aria-label={`${t("live.viewProfileOf")} ${stream.educator?.display_name || t("live.educatorFallback")}`}
                 onClick={onEducatorProfile}
               >
-                {stream.educator?.display_name || "Educador"}
+                {stream.educator?.display_name || t("live.educatorFallback")}
               </button>
             ) : (
-              <p className="text-sm font-semibold text-white truncate">{stream.educator?.display_name || "Educador"}</p>
+              <p className="text-sm font-semibold text-white truncate">{stream.educator?.display_name || t("live.educatorFallback")}</p>
             )}
             {stream.educator?.specialty && (
               <p className="text-[11px] text-[#D2A63C]/90 truncate">{stream.educator.specialty}</p>
@@ -554,7 +557,7 @@ function StreamMarketCard({
         <div className="flex items-center justify-between gap-2 text-xs text-gray-500">
           <span className="inline-flex items-center gap-1">
             <Users className="h-3.5 w-3.5" />
-            {viewers != null && viewers > 0 ? `${viewers} a assistir` : "Junta-te à sala"}
+            {viewers != null && viewers > 0 ? `${viewers} ${t("live.watching")}` : t("live.joinRoom")}
           </span>
           {stream.category && (
             <Badge variant="outline" className="border-gray-700 text-[10px] text-gray-400">
@@ -564,13 +567,13 @@ function StreamMarketCard({
         </div>
         {hasAccess ? (
           <Link href={enterHref} className="block">
-            <Button className="w-full bg-[#D2A63C] font-semibold text-black hover:bg-[#BB8525]">Entrar na sala</Button>
+            <Button className="w-full bg-[#D2A63C] font-semibold text-black hover:bg-[#BB8525]">{t("live.enterRoom")}</Button>
           </Link>
         ) : (
           <Link href="/register" className="block">
             <Button variant="outline" className="w-full border-[#D2A63C]/40 text-[#D2A63C]">
               <Lock className="mr-2 h-3.5 w-3.5" />
-              Ver planos de acesso
+              {t("live.viewAccessPlans")}
             </Button>
           </Link>
         )}

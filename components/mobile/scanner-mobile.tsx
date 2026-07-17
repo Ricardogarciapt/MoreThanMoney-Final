@@ -22,6 +22,7 @@ import {
   handleTradingViewKeyboardShortcut,
 } from "@/lib/trading-view-shortcuts"
 import { useToast } from "@/hooks/use-toast"
+import { useT } from "@/components/i18n-provider"
 import { isNativeApp } from "@/hooks/use-capacitor"
 import { TV_STUDY_LEGEND_OVERRIDES } from "@/lib/trading-view-scanner-config"
 import { subscribeMediaQueryChange } from "@/lib/browser-compat"
@@ -230,8 +231,15 @@ export default function ScannerMobile({
   showScreener = true,
   widgetRef: externalWidgetRef,
 }: ScannerMobileProps = {}) {
+  const t = useT()
   const isScannerAccess = integration === "scanner-access"
   const tvContainerId = isScannerAccess ? "tradingview_scanner_access_widget" : "tradingview_mobile_widget"
+  const categoryLabelKeys: Record<keyof typeof assetCategories, string> = {
+    forex: "scanner.catForex",
+    crypto: "scanner.catCrypto",
+    indices: "scanner.catIndices",
+    commodities: "scanner.catCommodities",
+  }
   const containerRef = useRef<HTMLDivElement>(null)
   const controlsRef = useRef<HTMLDivElement>(null)
   const scannerAccessWrapRef = useRef<HTMLDivElement>(null)
@@ -255,64 +263,64 @@ export default function ScannerMobile({
   // Checklist Trading
   const [checklistSections, setChecklistSections] = useState<ChecklistSection[]>([
     {
-      title: "Rotina Pre-Trading",
+      title: "scanner.secPreTradingTitle",
       icon: Clock,
       color: "text-blue-400",
       bgColor: "bg-blue-500/10",
       borderColor: "border-blue-500/30",
       items: [
-        { id: "1", label: "Verificar notícias económicas do dia", checked: false },
-        { id: "2", label: "Analisar calendário económico", checked: false },
-        { id: "3", label: "Verificar correlações entre mercados", checked: false },
-        { id: "4", label: "Revisar posições abertas", checked: false }
+        { id: "1", label: "scanner.chk1", checked: false },
+        { id: "2", label: "scanner.chk2", checked: false },
+        { id: "3", label: "scanner.chk3", checked: false },
+        { id: "4", label: "scanner.chk4", checked: false }
       ]
     },
     {
-      title: "Estratégia de Saída",
+      title: "scanner.secExitTitle",
       icon: Target,
       color: "text-green-400",
       bgColor: "bg-green-500/10",
       borderColor: "border-green-500/30",
       items: [
-        { id: "5", label: "Definir stop loss para cada posição", checked: false },
-        { id: "6", label: "Estabelecer take profit targets", checked: false },
-        { id: "7", label: "Planificar saída parcial", checked: false }
+        { id: "5", label: "scanner.chk5", checked: false },
+        { id: "6", label: "scanner.chk6", checked: false },
+        { id: "7", label: "scanner.chk7", checked: false }
       ]
     },
     {
-      title: "Gestão de Risco",
+      title: "scanner.secRiskTitle",
       icon: Shield,
       color: "text-red-400",
       bgColor: "bg-red-500/10",
       borderColor: "border-red-500/30",
       items: [
-        { id: "8", label: "Calcular risco por trade (1-2% do capital)", checked: false },
-        { id: "9", label: "Verificar exposição total do portfólio", checked: false },
-        { id: "10", label: "Confirmar posição sizing correto", checked: false }
+        { id: "8", label: "scanner.chk8", checked: false },
+        { id: "9", label: "scanner.chk9", checked: false },
+        { id: "10", label: "scanner.chk10", checked: false }
       ]
     },
     {
-      title: "Estratégia de Entrada",
+      title: "scanner.secEntryTitle",
       icon: TrendingUp,
       color: "text-purple-400",
       bgColor: "bg-purple-500/10",
       borderColor: "border-purple-500/30",
       items: [
-        { id: "11", label: "Identificar setups de entrada válidos", checked: false },
-        { id: "12", label: "Confirmar confirmação de sinal", checked: false },
-        { id: "13", label: "Verificar alinhamento com tendência", checked: false }
+        { id: "11", label: "scanner.chk11", checked: false },
+        { id: "12", label: "scanner.chk12", checked: false },
+        { id: "13", label: "scanner.chk13", checked: false }
       ]
     },
     {
-      title: "Gestão da Trade",
+      title: "scanner.secManageTitle",
       icon: ChartColumn,
       color: "text-orange-400",
       bgColor: "bg-orange-500/10",
       borderColor: "border-orange-500/30",
       items: [
-        { id: "14", label: "Monitorizar posições abertas", checked: false },
-        { id: "15", label: "Ajustar stops se necessário", checked: false },
-        { id: "16", label: "Registar resultados e aprendizagens", checked: false }
+        { id: "14", label: "scanner.chk14", checked: false },
+        { id: "15", label: "scanner.chk15", checked: false },
+        { id: "16", label: "scanner.chk16", checked: false }
       ]
     }
   ])
@@ -640,7 +648,7 @@ export default function ScannerMobile({
         } else if (attempt < 10) {
           setTimeout(() => waitForTV(attempt + 1), 200)
         } else {
-          setError("TradingView não inicializou após carregamento do script")
+          setError(t("scanner.errTvInit"))
         }
       }
       waitForTV(0)
@@ -652,7 +660,7 @@ export default function ScannerMobile({
         console.warn("[TV] Falha ao carregar tv.js — a tentar novamente em 2s")
         setTimeout(() => loadTradingViewScript(1), 2000)
       } else {
-        setError("Falha ao carregar TradingView. Verifica a ligação à internet.")
+        setError(t("scanner.errTvLoad"))
       }
     }
 
@@ -757,7 +765,7 @@ export default function ScannerMobile({
       setError(null)
     } catch (err: any) {
       console.error("Erro ao carregar widget:", err)
-      setError("Erro ao carregar widget")
+      setError(t("scanner.errWidget"))
     }
   }
 
@@ -909,20 +917,20 @@ export default function ScannerMobile({
         chartUrlFallback
       )
       toast({
-        title: "Link do gráfico copiado",
+        title: t("scanner.toastLinkCopiedTitle"),
         description: native
-          ? "Link nativo TradingView copiado."
-          : "Link construído com símbolo e timeframe. Para link nativo clica dentro do gráfico e usa ⌥S.",
+          ? t("scanner.toastLinkNativeDesc")
+          : t("scanner.toastLinkBuiltDesc"),
       })
       return url
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao copiar link."
-      toast({ title: "Link indisponível", description: msg, variant: "destructive" })
+      const msg = e instanceof Error ? e.message : t("scanner.toastLinkCopyError")
+      toast({ title: t("scanner.toastLinkUnavailableTitle"), description: msg, variant: "destructive" })
       return null
     } finally {
       setCopyingChartLink(false)
     }
-  }, [widgetLoaded, copyingChartLink, chartUrlFallback, toast])
+  }, [widgetLoaded, copyingChartLink, chartUrlFallback, toast, t])
 
   const openShareSocial = useCallback(async () => {
     if (!widgetLoaded || openingShareSocial) return
@@ -939,18 +947,18 @@ export default function ScannerMobile({
       setSharePrefetch({ image, chartUrl })
       setShowShareSocial(true)
       toast({
-        title: image ? "Snapshot copiado" : "A abrir partilha",
+        title: image ? t("scanner.toastSnapshotCopiedTitle") : t("scanner.toastOpeningShareTitle"),
         description: image
-          ? "Imagem na área de transferência. Cola o link do gráfico no modal se quiseres."
-          : "Cola o link TradingView (Share chart / ⌥S) no campo do modal.",
+          ? t("scanner.toastSnapshotDesc")
+          : t("scanner.toastOpeningShareDesc"),
       })
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao preparar partilha."
-      toast({ title: "Erro", description: msg, variant: "destructive" })
+      const msg = e instanceof Error ? e.message : t("scanner.toastShareError")
+      toast({ title: t("scanner.toastErrorTitle"), description: msg, variant: "destructive" })
     } finally {
       setOpeningShareSocial(false)
     }
-  }, [widgetLoaded, openingShareSocial, chartUrlFallback, toast])
+  }, [widgetLoaded, openingShareSocial, chartUrlFallback, toast, t])
 
   const runTvKeyboardShortcut = useCallback(
     async (e: KeyboardEvent) => {
@@ -962,25 +970,23 @@ export default function ScannerMobile({
       )
       if (result === "share-link") {
         toast({
-          title: "Link do gráfico copiado",
-          description: "Link nativo TradingView copiado.",
+          title: t("scanner.toastLinkCopiedTitle"),
+          description: t("scanner.toastLinkNativeDesc"),
         })
       } else if (result === "share-link-fallback") {
         toast({
-          title: "Link copiado",
-          description:
-            "Link construído com símbolo e timeframe. Para link nativo TradingView clica primeiro dentro do gráfico e volta a carregar ⌥S.",
+          title: t("scanner.toastLinkCopiedShortTitle"),
+          description: t("scanner.toastLinkBuiltFallbackDesc"),
         })
       } else if (result === "share-link-failed") {
         toast({
-          title: "⌥S: link indisponível",
-          description:
-            "Clica dentro do gráfico e tenta ⌥S de novo para link nativo TradingView.",
+          title: t("scanner.toastShortcutUnavailableTitle"),
+          description: t("scanner.toastShortcutUnavailableDesc"),
           variant: "destructive",
         })
       }
     },
-    [chartUrlFallback, toast]
+    [chartUrlFallback, toast, t]
   )
 
   useEffect(() => {
@@ -1048,7 +1054,7 @@ export default function ScannerMobile({
                 } ${isDesktop ? "px-4 py-2.5 text-sm" : "px-3 py-2 text-xs"}`}
               >
                 <Icon className={isDesktop ? "w-4 h-4" : "w-4 h-4"} />
-                <span>{category.label}</span>
+                <span>{t(categoryLabelKeys[key as keyof typeof assetCategories])}</span>
               </button>
             )
           })}
@@ -1083,7 +1089,7 @@ export default function ScannerMobile({
           </Select>
           {isDesktop && !isScannerAccess && (
             <div className="rounded-md border border-gray-700 bg-gray-800 text-gray-300 text-xs px-3 flex items-center">
-              Layout: Desktop
+              {t("scanner.layoutDesktop")}
             </div>
           )}
         </div>
@@ -1125,12 +1131,12 @@ export default function ScannerMobile({
             {isFullscreen ? (
               <>
                 <Minimize2 className="w-3 h-3 mr-1.5" />
-                Sair Fullscreen
+                {t("scanner.exitFullscreen")}
               </>
             ) : (
               <>
                 <Maximize2 className="w-3 h-3 mr-1.5" />
-                Fullscreen
+                {t("scanner.fullscreen")}
               </>
             )}
           </Button>
@@ -1169,7 +1175,7 @@ export default function ScannerMobile({
               size="sm"
               variant="outline"
               className={`bg-gray-800 text-white border-gray-700 hover:bg-gray-700 ${isDesktop ? "h-9 px-3" : "h-8 px-2"}`}
-              title="Copiar link do gráfico (⌥S quando o gráfico tem foco)"
+              title={t("scanner.copyChartLinkTitle")}
             >
               {copyingChartLink ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -1186,7 +1192,7 @@ export default function ScannerMobile({
               size="sm"
               variant="outline"
               className={`bg-gray-800 text-[#D2A63C] border-[#D2A63C]/40 hover:bg-[#D2A63C]/10 ${isDesktop ? "h-9 px-3" : "h-8 px-2"}`}
-              title="Partilhar no Social (copia snapshot antes de abrir)"
+              title={t("scanner.shareSocialTitle")}
             >
               {openingShareSocial ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -1200,11 +1206,11 @@ export default function ScannerMobile({
         {/* Settings Panel */}
         {showSettings && (
           <div className={`bg-gray-800 rounded-lg space-y-3 ${isDesktop ? "p-4" : "p-3"}`}>
-            <h3 className="text-white text-sm font-semibold">Configurações</h3>
-            
+            <h3 className="text-white text-sm font-semibold">{t("scanner.settings")}</h3>
+
             {/* Favorite Timeframes */}
             <div>
-              <label className="text-xs text-gray-300 mb-2 block">Timeframes Favoritos:</label>
+              <label className="text-xs text-gray-300 mb-2 block">{t("scanner.favoriteTimeframes")}</label>
               <div className="flex flex-wrap gap-1">
                 {intervals.map((interval) => (
                   <button
@@ -1248,7 +1254,7 @@ export default function ScannerMobile({
         }}
         tabIndex={isScannerAccess ? 0 : undefined}
         role={isScannerAccess ? "region" : undefined}
-        aria-label={isScannerAccess ? "Área do gráfico TradingView" : undefined}
+        aria-label={isScannerAccess ? t("scanner.chartAreaAria") : undefined}
         onKeyDown={
           isScannerAccess
             ? (e) => {
@@ -1281,7 +1287,7 @@ export default function ScannerMobile({
           <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/90">
             <div className="text-center">
               <div className="w-12 h-12 border-4 border-[#D2A63C] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-[#D2A63C] font-medium">A carregar gráfico...</p>
+              <p className="text-[#D2A63C] font-medium">{t("scanner.loadingChart")}</p>
             </div>
           </div>
         )}
@@ -1291,7 +1297,7 @@ export default function ScannerMobile({
             <div className="text-center p-4">
               <p className="text-red-400 mb-4">{error}</p>
               <Button onClick={loadWidget} className="bg-[#D2A63C] text-black">
-                Tentar Novamente
+                {t("scanner.retry")}
               </Button>
             </div>
           </div>
@@ -1320,7 +1326,7 @@ export default function ScannerMobile({
           }}
         >
           <Minimize2 style={{ width: 16, height: 16 }} />
-          Sair
+          {t("scanner.exit")}
         </button>
       )}
 
@@ -1332,7 +1338,7 @@ export default function ScannerMobile({
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#D2A63C]/50 bg-[#D2A63C]/10 py-2.5 text-sm font-semibold text-[#D2A63C] transition-colors hover:bg-[#D2A63C]/20"
           >
             <Bell style={{ width: 16, height: 16 }} />
-            Alertas MTM &amp; Configurar
+            {t("scanner.mtmAlertsConfigure")}
           </a>
         </div>
       )}
@@ -1377,7 +1383,7 @@ export default function ScannerMobile({
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Brain className="h-5 w-5 text-amber-400" />
-                  <h3 className="text-white font-bold text-lg">Checklist de Trading</h3>
+                  <h3 className="text-white font-bold text-lg">{t("scanner.checklistTitle")}</h3>
                 </div>
                 <Button
                   onClick={handleResetChecklist}
@@ -1386,7 +1392,7 @@ export default function ScannerMobile({
                   className="border-amber-500 text-amber-400 hover:bg-amber-500/10 bg-black/50 h-8"
                 >
                   <RefreshIcon className="h-3 w-3 mr-1" />
-                  Reset
+                  {t("scanner.reset")}
                 </Button>
               </div>
 
@@ -1394,7 +1400,7 @@ export default function ScannerMobile({
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
-                    {completedItems}/{totalItems} Completo
+                    {completedItems}/{totalItems} {t("scanner.complete")}
                   </Badge>
                   <span className="text-xs text-amber-400 font-semibold">{progressPercentage}%</span>
                 </div>
@@ -1420,7 +1426,7 @@ export default function ScannerMobile({
                           <div className="flex items-center gap-2">
                             <SectionIcon className={`h-4 w-4 ${section.color}`} />
                             <h4 className={`text-sm font-semibold ${section.color}`}>
-                              {section.title}
+                              {t(section.title)}
                             </h4>
                           </div>
                           <Badge className="bg-white/10 text-white border-white/20 text-xs">
@@ -1453,7 +1459,7 @@ export default function ScannerMobile({
                                 htmlFor={`mobile-${item.id}`}
                                 className="text-xs leading-relaxed cursor-pointer text-gray-200 hover:text-white flex-1"
                               >
-                                {item.label}
+                                {t(item.label)}
                               </label>
                             </div>
                           ))}

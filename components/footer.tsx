@@ -1,8 +1,12 @@
+"use client"
+
 import Link from "next/link"
 import { SiteLogo } from "@/components/site-logo"
 import { Facebook, Instagram, Twitter, Youtube, Mail, MapPin, FileText, Lock, ExternalLink } from "lucide-react"
+import { useT } from "@/components/i18n-provider"
 
 export default function Footer() {
+  const t = useT()
   return (
     <footer className="bg-gradient-to-b from-black via-gray-900 to-black border-t border-mtm-primary/20">
       <div className="container mx-auto px-4 py-12">
@@ -18,7 +22,7 @@ export default function Footer() {
               />
             </Link>
             <p className="text-gray-400 text-sm leading-relaxed">
-              Plataforma integrada de formação financeira e serviços de automatização com inteligência artificial.
+              {t("navfooter.footerDescription")}
             </p>
             <div className="flex space-x-4">
               <Link 
@@ -64,17 +68,17 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
               <span className="w-1 h-6 bg-gradient-to-b from-mtm-primary to-amber-600 rounded-full"></span>
-              Links Rápidos
+              {t("navfooter.footerQuickLinks")}
             </h3>
             <ul className="space-y-3">
               {[
-                { name: "Início", href: "/new-landing" },
+                { name: t("navfooter.navHome"), href: "/new-landing" },
                 { name: "MTMcopier", href: "/mtmcopy" },
-                { name: "Automatização", href: "/automation" },
+                { name: t("navfooter.subAutomation"), href: "/automation" },
                 { name: "Scanner MTM", href: "/scanner" },
                 { name: "Trading Floor", href: "/tradingfloor" },
-                { name: "Work", href: "/work" },
-                { name: "Onboarding", href: "/onboarding" },
+                { name: t("navfooter.footerWork"), href: "/work" },
+                { name: t("navfooter.navOnboarding"), href: "/onboarding" },
               ].map((link) => (
                 <li key={link.name}>
                   <Link 
@@ -93,18 +97,18 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
               <span className="w-1 h-6 bg-gradient-to-b from-mtm-primary to-amber-600 rounded-full"></span>
-              Recursos
+              {t("navfooter.footerResources")}
             </h3>
             <ul className="space-y-3">
               {[
-                { name: "Scanner ao Vivo", href: "/scanner-access" },
-                { name: "Registo", href: "/register" },
-                { name: "Entrar", href: "/login" },
-                { name: "Apps IA MTM", href: "/app-mobile?tab=apps" },
+                { name: t("navfooter.subLiveScanner"), href: "/scanner-access" },
+                { name: t("navfooter.footerRegister"), href: "/register" },
+                { name: t("navfooter.footerLogin"), href: "/login" },
+                { name: t("navfooter.footerAiAppsMtm"), href: "/app-mobile?tab=apps" },
                 { name: "MTM Studio", href: "https://mtmbrandbuilder.lovable.app", external: true },
                 { name: "MTM Partnership Engine", href: "https://mtmugcapp.lovable.app", external: true },
                 { name: "MTM AiOS", href: "https://mtmaios.lovable.app", external: true },
-                { name: "Cursos MoreThanMoney", href: "https://www.skool.com/morethanmoney-1132/about", external: true },
+                { name: t("navfooter.footerMtmCourses"), href: "https://www.skool.com/morethanmoney-1132/about", external: true },
               ].map((link) => (
                 <li key={link.name}>
                   <Link 
@@ -126,7 +130,7 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-2">
               <span className="w-1 h-6 bg-gradient-to-b from-mtm-primary to-amber-600 rounded-full"></span>
-              Contato
+              {t("navfooter.footerContact")}
             </h3>
             <ul className="space-y-3">
               <li className="flex items-center gap-3 text-gray-400 hover:text-mtm-primary transition-colors">
@@ -147,7 +151,7 @@ export default function Footer() {
         <div className="border-t border-mtm-primary/20 mt-12 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-500 text-sm text-center md:text-left">
-              © {new Date().getFullYear()} MoreThanMoney. Todos os direitos reservados.
+              © {new Date().getFullYear()} MoreThanMoney. {t("navfooter.footerRights")}
             </p>
             <div className="flex items-center gap-6 text-sm flex-wrap justify-center">
               <Link 
@@ -162,14 +166,14 @@ export default function Footer() {
                 className="text-gray-400 hover:text-mtm-primary transition-colors flex items-center gap-2 group"
               >
                 <Lock className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                <span>Privacidade</span>
+                <span>{t("navfooter.footerPrivacy")}</span>
               </Link>
               <Link 
                 href="/terms" 
                 className="text-gray-400 hover:text-mtm-primary transition-colors flex items-center gap-2 group"
               >
                 <FileText className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                <span>Termos</span>
+                <span>{t("navfooter.footerTerms")}</span>
               </Link>
             </div>
           </div>

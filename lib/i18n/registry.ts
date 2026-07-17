@@ -6,6 +6,10 @@ import { REGISTER_MESSAGES } from "./messages/register"
 import { UPGRADE_MESSAGES } from "./messages/upgrade"
 import { APPMOBILE_MESSAGES } from "./messages/app-mobile"
 import { LANDING_MESSAGES } from "./messages/landing"
+import { NAVFOOTER_MESSAGES } from "./messages/navfooter"
+import { CHAT_MESSAGES } from "./messages/chat"
+import { LIVE_MESSAGES } from "./messages/live"
+import { SCANNER_MESSAGES } from "./messages/scanner"
 
 type NsSource = Partial<Record<Lang, Record<string, string>>>
 
@@ -29,4 +33,8 @@ export const ALL_MESSAGES = merge(
   UPGRADE_MESSAGES,
   APPMOBILE_MESSAGES,
   LANDING_MESSAGES,
+  NAVFOOTER_MESSAGES,
+  CHAT_MESSAGES,
+  LIVE_MESSAGES,
+  SCANNER_MESSAGES,
 )

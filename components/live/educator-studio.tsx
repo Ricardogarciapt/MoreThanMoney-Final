@@ -506,8 +506,41 @@ export default function EducatorStudio() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {error && <p className="text-red-400 text-sm">{error}</p>}
+
+      {/* Cabeçalho do studio — sempre no topo (identidade + estado + sair) */}
+      <div className="sticky top-0 z-10 -mx-1 rounded-xl border border-gray-800/80 bg-zinc-950/90 px-3 py-3 shadow-lg shadow-black/25 backdrop-blur-md supports-[backdrop-filter]:bg-zinc-950/75 sm:-mx-0 sm:px-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
+            <Link
+              href="/live-sessions"
+              className="inline-flex shrink-0 items-center text-sm text-gray-400 hover:text-[#D2A63C]"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Lobby
+            </Link>
+            <div className="hidden h-8 w-px shrink-0 bg-gray-800 sm:block" aria-hidden />
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-bold text-white sm:text-xl">Olá, {me.displayName}</h2>
+              <p className="truncate text-xs text-gray-500">{me.email}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Badge variant="outline" className="max-w-full truncate border-gray-600 text-gray-300">
+                  {academyName || "Academia — admin LMS"}
+                </Badge>
+                <Badge className={liveCount > 0 ? "bg-red-600 text-white" : "bg-gray-700 text-gray-200"}>
+                  {liveCount} ao vivo · {streams.length} canal(is)
+                </Badge>
+              </div>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <Button variant="outline" size="sm" className="border-red-900/50 text-red-300" onClick={logout}>
+              Sair
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {liveStreams.length > 0 && studioPreviewStreamId && (
         <Card className="overflow-hidden border-red-900/40 bg-gradient-to-br from-gray-950 via-black to-gray-950 shadow-[0_0_40px_rgba(220,38,38,0.12)]">
@@ -560,56 +593,6 @@ export default function EducatorStudio() {
           </CardContent>
         </Card>
       )}
-
-      <div className="sticky top-0 z-10 -mx-1 mb-1 rounded-xl border border-gray-800/80 bg-zinc-950/90 px-3 py-3 shadow-lg shadow-black/25 backdrop-blur-md supports-[backdrop-filter]:bg-zinc-950/75 sm:-mx-0 sm:mb-2 sm:px-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
-            <Link
-              href="/live-sessions"
-              className="inline-flex shrink-0 items-center text-sm text-gray-400 hover:text-[#D2A63C]"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Lobby
-            </Link>
-            <div className="hidden h-8 w-px shrink-0 bg-gray-800 sm:block" aria-hidden />
-            <div className="min-w-0">
-              <h2 className="truncate text-lg font-bold text-white sm:text-xl">Olá, {me.displayName}</h2>
-              <p className="truncate text-xs text-gray-500">{me.email}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Badge variant="outline" className="max-w-full truncate border-gray-600 text-gray-300">
-                  {academyName || "Academia — admin LMS"}
-                </Badge>
-                <Badge className={liveCount > 0 ? "bg-red-600 text-white" : "bg-gray-700 text-gray-200"}>
-                  {liveCount} ao vivo · {streams.length} canal(is)
-                </Badge>
-              </div>
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            <p className="hidden max-w-[200px] text-right text-[10px] leading-snug text-gray-500 lg:block">
-              Bio e academia: Admin → Educação (LMS).
-            </p>
-            <Button variant="outline" size="sm" className="border-red-900/50 text-red-300" onClick={logout}>
-              Sair
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Foto de educador — editável pelo próprio (auto-guarda) */}
-      <div className="mb-2 max-w-md rounded-xl border border-gray-800/80 bg-zinc-950/60 p-3">
-        <LmsImageUploadField
-          label="A tua foto (educador)"
-          description="Aparece na tua sala e no lobby. Quadrada fica melhor."
-          scope="educator_avatar"
-          value={me.avatar_url || ""}
-          commit="blur"
-          uploadUrl="/api/live-sessions/educator-auth/upload-image"
-          onUrlChange={() => {
-            loadMe()
-          }}
-        />
-      </div>
 
       <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
         <section className="min-w-0 space-y-4" aria-labelledby="studio-sessions-heading">
@@ -1012,6 +995,21 @@ export default function EducatorStudio() {
         </section>
 
         <aside className="min-w-0 space-y-4 xl:sticky xl:top-4 xl:self-start">
+          {/* Foto de educador — editável pelo próprio (auto-guarda) */}
+          <div className="rounded-xl border border-gray-800/80 bg-zinc-950/60 p-3">
+            <LmsImageUploadField
+              label="A tua foto (educador)"
+              description="Aparece na tua sala e no lobby. Quadrada fica melhor."
+              scope="educator_avatar"
+              value={me.avatar_url || ""}
+              commit="blur"
+              uploadUrl="/api/live-sessions/educator-auth/upload-image"
+              onUrlChange={() => {
+                loadMe()
+              }}
+            />
+          </div>
+
           <div className="hidden rounded-lg border border-gray-800/60 bg-black/25 px-3 py-2 xl:block">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Integração e métricas</p>
             <p className="mt-0.5 text-xs text-gray-600">Restream ao nível do teu perfil; contadores por canal.</p>

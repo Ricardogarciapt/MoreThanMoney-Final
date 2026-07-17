@@ -16,6 +16,7 @@ import {
   Lock,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { useT } from "@/components/i18n-provider"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import LiveFinancialDisclaimer from "@/components/live/live-financial-disclaimer"
@@ -108,6 +109,7 @@ export default function LiveSessionsMobile({
 }: LiveSessionsMobileProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const t = useT()
 
   // Upsell de sessões/aulas bloqueadas. No app iOS nativo a compra é por Apple IAP
   // (ecrã nativo) — nunca abrir checkout Stripe dentro do WebView (política Apple).
@@ -115,11 +117,11 @@ export default function LiveSessionsMobile({
     const ua = typeof navigator !== "undefined" ? navigator.userAgent : ""
     const isIOSNative = /MTMNativeApp/i.test(ua) && /iPhone|iPad|iPod/i.test(ua)
     if (isIOSNative) {
-      toast({ title: "Conteúdo Premium", description: "Faz upgrade da tua subscrição em Mais → Subscrição." })
+      toast({ title: t("live.premiumContentTitle"), description: t("live.premiumContentDesc") })
       return
     }
     router.push("/upgrade")
-  }, [router, toast])
+  }, [router, toast, t])
   const { user } = useAuth()
   const [liveStreams, setLiveStreams] = useState<StreamListItem[]>([])
   const [scheduledStreams, setScheduledStreams] = useState<StreamListItem[]>([])
@@ -201,8 +203,8 @@ export default function LiveSessionsMobile({
           // Only when going from offline → live
           if (newRow.is_live && !oldRow.is_live) {
             toast({
-              title: "🔴 Live a começar!",
-              description: `${newRow.title || "Sessão"} iniciou. Vai já! `,
+              title: t("live.liveStartingTitle"),
+              description: `${newRow.title || t("live.sessionFallback")} ${t("live.liveStartedDesc")} `,
               duration: 6000,
             })
             loadLive()
@@ -212,7 +214,7 @@ export default function LiveSessionsMobile({
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [isActive, loadLive, toast])
+  }, [isActive, loadLive, toast, t])
 
   const openModal = useCallback(
     async (id: string): Promise<boolean> => {
@@ -232,8 +234,8 @@ export default function LiveSessionsMobile({
         const streamRes = await fetch(`/api/live-sessions/streams/${id}`).then((r) => r.json())
         if (!streamRes?.success || !streamRes.data) {
           toast({
-            title: "Sala indisponível",
-            description: streamRes?.error || "Esta transmissão não foi encontrada ou já terminou.",
+            title: t("live.roomUnavailableTitle"),
+            description: streamRes?.error || t("live.roomUnavailableDesc"),
             variant: "destructive",
           })
           setOpen(false)
@@ -249,8 +251,8 @@ export default function LiveSessionsMobile({
         return true
       } catch {
         toast({
-          title: "Erro ao abrir a live",
-          description: "Não foi possível carregar a sessão. Tenta novamente.",
+          title: t("live.openLiveErrorTitle"),
+          description: t("live.openLiveErrorDesc"),
           variant: "destructive",
         })
         setOpen(false)
@@ -261,7 +263,7 @@ export default function LiveSessionsMobile({
         return false
       }
     },
-    [router, toast]
+    [router, toast, t]
   )
 
   const resetModal = useCallback(() => {
@@ -312,16 +314,16 @@ export default function LiveSessionsMobile({
             if (ok) openedFromUrlRef.current = true
           } else {
             toast({
-              title: "Educador offline",
-              description: "Não há transmissão em direto neste momento.",
+              title: t("live.educatorOfflineTitle"),
+              description: t("live.educatorOfflineDesc"),
               variant: "destructive",
             })
             router.replace("/app-mobile?tab=live", { scroll: false })
           }
         } catch {
           toast({
-            title: "Erro",
-            description: "Não foi possível abrir a sala do educador.",
+            title: t("live.errorTitle"),
+            description: t("live.openEducatorRoomError"),
             variant: "destructive",
           })
         }
@@ -329,7 +331,7 @@ export default function LiveSessionsMobile({
     }
 
     void run()
-  }, [isActive, initialStreamId, initialEducatorId, openModal, toast, router])
+  }, [isActive, initialStreamId, initialEducatorId, openModal, toast, router, t])
 
   useEffect(() => {
     if (!initialStreamId?.trim() && !initialEducatorId?.trim()) {
@@ -513,8 +515,8 @@ export default function LiveSessionsMobile({
     <div className="min-h-[50vh] px-2 pb-28 pt-2 sm:px-3" data-live-player-guard>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-[#D2A63C]">Live Sessions</h2>
-          <p className="text-xs text-gray-500">Sessões em direto dentro da app-mobile</p>
+          <h2 className="text-lg font-bold tracking-tight text-[#D2A63C]">{t("live.title")}</h2>
+          <p className="text-xs text-gray-500">{t("live.subtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -524,7 +526,7 @@ export default function LiveSessionsMobile({
             className="border-[#D2A63C]/30 text-gray-200"
             onClick={() => loadLive()}
           >
-            Atualizar
+            {t("live.refresh")}
           </Button>
         </div>
       </div>
@@ -538,7 +540,7 @@ export default function LiveSessionsMobile({
       {!loading && liveStreams.length === 0 && (
         <div className="rounded-2xl border border-dashed border-[#D2A63C]/25 bg-black/40 p-8 text-center text-sm text-gray-400">
           <Radio className="mx-auto mb-2 h-8 w-8 text-[#D2A63C]/50" />
-          Nenhuma sessão em direto neste momento.
+          {t("live.emptyLiveNow")}
         </div>
       )}
 
@@ -546,7 +548,7 @@ export default function LiveSessionsMobile({
         {!loading &&
           liveStreams.map((s) => {
             const img = streamVisualUrl(s)
-            const educatorName = s.educator?.display_name || "Educador"
+            const educatorName = s.educator?.display_name || t("live.educatorFallback")
             const hasAccess = canAccessStream(
               (user as any)?.member_category,
               (user as any)?.user_type,
@@ -568,10 +570,10 @@ export default function LiveSessionsMobile({
                       className="absolute inset-0 h-full w-full object-contain object-center"
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-xs text-gray-500">Sem imagem</div>
+                    <div className="flex h-full items-center justify-center text-xs text-gray-500">{t("live.noImage")}</div>
                   )}
                   <span className="absolute left-2 top-2 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white shadow">
-                    Live
+                    {t("live.badgeLive")}
                   </span>
                   {s.access_tier === "premium" && (
                     <span className="absolute right-2 top-2 rounded-md bg-purple-700 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white shadow">
@@ -580,17 +582,17 @@ export default function LiveSessionsMobile({
                   )}
                   {s.access_tier === "app_member" && (
                     <span className="absolute right-2 top-2 rounded-md bg-amber-600/90 px-1.5 py-0.5 text-[9px] font-bold uppercase text-black shadow">
-                      Membro
+                      {t("live.badgeMember")}
                     </span>
                   )}
                   {!hasAccess && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/75 backdrop-blur-sm">
                       <Lock className="h-6 w-6 text-white/70" />
                       <p className="text-[10px] font-semibold text-white/90 text-center px-2">
-                        {s.access_tier === "premium" ? "Pack Premium ($65/mês)" : "Pack Membro ($35/mês)"}
+                        {s.access_tier === "premium" ? t("live.packPremiumPrice") : t("live.packMemberPrice")}
                       </p>
                       <span className="mt-0.5 rounded-full bg-[#D2A63C] px-2 py-0.5 text-[9px] font-bold text-black">
-                        Fazer upgrade
+                        {t("live.upgradeCta")}
                       </span>
                     </div>
                   )}
@@ -600,7 +602,7 @@ export default function LiveSessionsMobile({
                   {s.educator?.display_name ? (
                     <p
                       className="mt-0.5 truncate text-[10px] text-gray-400"
-                      aria-label={`Canal de ${educatorName}`}
+                      aria-label={`${t("live.channelOf")} ${educatorName}`}
                     >
                       {s.educator.display_name}
                     </p>
@@ -619,7 +621,7 @@ export default function LiveSessionsMobile({
         <div className="mt-6 mb-4">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-white">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#D2A63C]" />
-            Horário · Próximas Sessões
+            {t("live.scheduleHeading")}
           </h3>
           <SessionsTimetable
             sessions={scheduledSessions.map((s) => ({
@@ -657,13 +659,13 @@ export default function LiveSessionsMobile({
           <DialogHeader className="flex shrink-0 flex-row items-start justify-between gap-2 border-b border-[#D2A63C]/15 bg-black/40 px-2 py-2 pr-2 sm:px-3">
             <div className="min-w-0 flex-1 text-left">
               <DialogTitle className="line-clamp-2 text-left text-[13px] font-semibold text-white sm:text-sm">
-                {stream?.title || "Live"}
+                {stream?.title || t("live.streamTitleFallback")}
               </DialogTitle>
               <div className="mt-0.5 flex flex-wrap items-center gap-2">
                 <p className="text-[9px] text-gray-500 sm:text-[10px]">
                   {stream?.educator?.display_name}
                   {stream?.academy?.name ? ` · ${stream.academy.name}` : ""}
-                  {isLive ? " · ONLINE" : ""}
+                  {isLive ? ` · ${t("live.onlineTag")}` : ""}
                 </p>
                 {isLive && (
                   <EducatorLiveViewerBadge
@@ -697,9 +699,9 @@ export default function LiveSessionsMobile({
                 )}
                 tierLabel={
                   stream.playlist_access_tier === "premium"
-                    ? "membros Premium (€65)"
+                    ? t("live.playlistTierPremium")
                     : stream.playlist_access_tier === "app_member"
-                      ? "membros da app (€35) e superiores"
+                      ? t("live.playlistTierMember")
                       : null
                 }
               />
@@ -729,7 +731,7 @@ export default function LiveSessionsMobile({
                         type="button"
                         onClick={closeDisclaimer}
                         className="absolute -top-2 -right-2 z-10 rounded-full border border-gray-700 bg-black/70 p-1 text-gray-200 hover:bg-black/90"
-                        aria-label="Fechar aviso"
+                        aria-label={t("live.closeNotice")}
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -750,7 +752,7 @@ export default function LiveSessionsMobile({
                   <iframe
                     ref={iframeRef}
                     src={iframePlaybackUrl}
-                    title={stream?.title || "Live"}
+                    title={stream?.title || t("live.streamTitleFallback")}
                     className={iframeClassBase}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                     allowFullScreen
@@ -766,7 +768,7 @@ export default function LiveSessionsMobile({
                   />
                 ) : (
                   <div className="flex h-full min-h-0 w-full flex-1 items-center justify-center px-4 text-center text-xs text-gray-500 sm:aspect-video">
-                    Stream sem playback configurado.
+                    {t("live.noPlayback")}
                   </div>
                 )}
               </div>
@@ -779,7 +781,7 @@ export default function LiveSessionsMobile({
                         type="button"
                         onClick={toggleMute}
                         className="shrink-0 text-[#D2A63C]/80 hover:text-[#D2A63C]"
-                        aria-label={muted || volume === 0 ? "Ativar som" : "Silenciar"}
+                        aria-label={muted || volume === 0 ? t("live.unmute") : t("live.mute")}
                       >
                         {muted || volume === 0 ? (
                           <VolumeX className="h-4 w-4" />
@@ -795,7 +797,7 @@ export default function LiveSessionsMobile({
                         value={muted ? 0 : volume}
                         onChange={(e) => handleVolumeChange(Number(e.target.value))}
                         className="h-2 flex-1 accent-[#D2A63C]"
-                        aria-label="Volume"
+                        aria-label={t("live.volume")}
                       />
                       <span className="w-8 text-right text-[10px] text-gray-500">
                         {Math.round((muted ? 0 : volume) * 100)}%
@@ -812,7 +814,7 @@ export default function LiveSessionsMobile({
                       onClick={openFullscreen}
                     >
                       <Maximize2 className="mr-2 h-4 w-4" />
-                      {inAppFullscreen || isNativeFullscreen ? "Reduzir" : "Ecrã inteiro"}
+                      {inAppFullscreen || isNativeFullscreen ? t("live.reduce") : t("live.fullscreen")}
                     </Button>
                     {useHls && pipSupported && (
                       <Button
@@ -830,7 +832,7 @@ export default function LiveSessionsMobile({
 
                   {isLive && stream?.playback_url && !useHls && (
                     <p className="text-[10px] text-gray-500">
-                      Volume: usa os controlos do player embebido (YouTube, etc.).
+                      {t("live.embedVolumeHint")}
                     </p>
                   )}
 
@@ -845,12 +847,12 @@ export default function LiveSessionsMobile({
                       {showChat ? (
                         <>
                           <MessageCircleOff className="mr-2 h-4 w-4" />
-                          Esconder chat
+                          {t("live.hideChat")}
                         </>
                       ) : (
                         <>
                           <MessageCircle className="mr-2 h-4 w-4" />
-                          Mostrar chat
+                          {t("live.showChat")}
                         </>
                       )}
                     </Button>
@@ -863,7 +865,7 @@ export default function LiveSessionsMobile({
                         onClick={() => setFeedbackOpen(true)}
                       >
                         <MessageSquare className="mr-2 h-4 w-4" />
-                        Feedback
+                        {t("live.feedback")}
                       </Button>
                     ) : null}
                   </div>
@@ -883,7 +885,7 @@ export default function LiveSessionsMobile({
                         <p className="text-gray-200">{msg.message}</p>
                       </div>
                     ))}
-                    {messages.length === 0 && <p className="text-xs text-gray-500">Sem mensagens ainda.</p>}
+                    {messages.length === 0 && <p className="text-xs text-gray-500">{t("live.noMessages")}</p>}
                   </div>
                 </div>
                 <div className="shrink-0 border-t border-gray-800 p-2">
@@ -896,7 +898,7 @@ export default function LiveSessionsMobile({
                       onKeyDown={(e) =>
                         handleLiveChatEnterKey(e, send, { disabled: !text.trim() || sending })
                       }
-                      placeholder="Mensagem… (Enter para enviar)"
+                      placeholder={t("live.messagePlaceholder")}
                     />
                     <div className="flex flex-col gap-1">
                       <EmojiChatPicker onPick={appendEmoji} />
@@ -907,7 +909,7 @@ export default function LiveSessionsMobile({
                         disabled={!text.trim() || sending}
                         onClick={send}
                       >
-                        Enviar
+                        {t("live.send")}
                       </Button>
                     </div>
                   </div>
@@ -927,7 +929,7 @@ export default function LiveSessionsMobile({
           )}
         >
           <DialogHeader className="shrink-0 border-b border-[#D2A63C]/15 px-4 py-3">
-            <DialogTitle className="text-base font-semibold text-[#D2A63C]">Feedback</DialogTitle>
+            <DialogTitle className="text-base font-semibold text-[#D2A63C]">{t("live.feedback")}</DialogTitle>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
             {stream?.educator?.id ? (

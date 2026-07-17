@@ -7,6 +7,7 @@ import { SiteLogo } from "@/components/site-logo"
 import { usePathname } from "next/navigation"
 import UserDropdown from "@/components/user-dropdown"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
+import { useT } from "@/components/i18n-provider"
 import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap, Brain, MonitorPlay } from "lucide-react"
 import { shouldReduceSafariEffects } from "@/lib/supabase-session"
 
@@ -25,6 +26,7 @@ type NavItem = {
 }
 
 export default function Navbar() {
+  const t = useT()
   const pathname = usePathname()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [openDesktopSubmenu, setOpenDesktopSubmenu] = useState<string | null>(null)
@@ -44,55 +46,55 @@ export default function Navbar() {
 
   const navigation: NavItem[] = [
     {
-      name: "Início",
+      name: t("navfooter.navHome"),
       href: "/new-landing",
       icon: Home,
     },
     {
-      name: "Apresentações",
+      name: t("navfooter.navPresentations"),
       href: "/apresentacao",
       icon: MonitorPlay,
       submenu: [
-        { name: "Sistema MoreThanMoney", href: "/apresentacao" },
+        { name: t("navfooter.subMtmSystem"), href: "/apresentacao" },
       ],
     },
     {
-      name: "Educação",
+      name: t("navfooter.navEducation"),
       href: "/mtm",
       icon: GraduationCap,
       submenu: [
-        { name: "Educação MTM", href: "/mtm" },
-        { name: "Docs", href: "/docs" },
-        { name: "Live Sessions", href: "/live-sessions" },
+        { name: t("navfooter.subMtmEducation"), href: "/mtm" },
+        { name: t("navfooter.subDocs"), href: "/docs" },
+        { name: t("navfooter.subLiveSessions"), href: "/live-sessions" },
       ],
     },
     {
-      name: "Trading",
+      name: t("navfooter.navTrading"),
       href: "/automation",
       icon: TrendingUp,
       submenu: [
-        { name: "Automatização", href: "/automation" },
+        { name: t("navfooter.subAutomation"), href: "/automation" },
         { name: "MTMcopier", href: "/mtmcopy" },
-        { name: "Os nossos Scanners", href: "/scanner" },
-        { name: "Scanner ao Vivo", href: "/scanner-access" },
-        { name: "Alertas MTM", href: "/alertas-mtm" },
-        { name: "Portefólios", href: "/portfolios" },
-        { name: "Terminal MTM", href: "/mtm-terminal" },
-        { name: "Trading Desk", href: "/trading" },
+        { name: t("navfooter.subOurScanners"), href: "/scanner" },
+        { name: t("navfooter.subLiveScanner"), href: "/scanner-access" },
+        { name: t("navfooter.subMtmAlerts"), href: "/alertas-mtm" },
+        { name: t("navfooter.subPortfolios"), href: "/portfolios" },
+        { name: t("navfooter.subMtmTerminal"), href: "/mtm-terminal" },
+        { name: t("navfooter.subTradingDesk"), href: "/trading" },
       ],
     },
     {
-      name: "Onboarding",
+      name: t("navfooter.navOnboarding"),
       href: "/onboarding",
       icon: Rocket,
     },
     {
-      name: "Início Rápido",
+      name: t("navfooter.navFastStart"),
       href: "/fast-start",
       icon: Zap,
     },
     {
-      name: "Apps IA",
+      name: t("navfooter.navAiApps"),
       href: "/app-mobile?tab=apps",
       icon: Brain,
       submenu: [
@@ -166,9 +168,9 @@ export default function Navbar() {
       pathname === "/live" ||
       Boolean(pathname?.startsWith("/live/"))
     if (isMenuOpen && onLive) {
-      setOpenMobileSubmenu("Educação")
+      setOpenMobileSubmenu(t("navfooter.navEducation"))
     }
-  }, [isMenuOpen, pathname])
+  }, [isMenuOpen, pathname, t])
 
   useEffect(() => () => clearDesktopCloseTimer(), [clearDesktopCloseTimer])
 
@@ -334,7 +336,7 @@ export default function Navbar() {
               <button
                 onClick={() => setIsMenuOpen((prev) => !prev)}
                 className="inline-flex items-center justify-center p-2 rounded-lg text-mtm-primary hover:bg-mtm-primary/10 transition-colors"
-                aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
+                aria-label={isMenuOpen ? t("navfooter.closeMenu") : t("navfooter.openMenu")}
                 type="button"
               >
                 {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -347,7 +349,7 @@ export default function Navbar() {
           <div className="fixed inset-0 lg:hidden" style={{ zIndex: MOBILE_OVERLAY_Z }}>
             <button
               className={`absolute inset-0 ${overlayBlur}`}
-              aria-label="Fechar menu"
+              aria-label={t("navfooter.closeMenu")}
               onClick={closeMenu}
               type="button"
             />
@@ -365,7 +367,7 @@ export default function Navbar() {
                 <button
                   onClick={closeMenu}
                   className="p-2 rounded-lg text-mtm-primary hover:bg-mtm-primary/10"
-                  aria-label="Fechar menu"
+                  aria-label={t("navfooter.closeMenu")}
                   type="button"
                 >
                   <X className="h-6 w-6" />
