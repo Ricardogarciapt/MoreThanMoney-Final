@@ -76,8 +76,11 @@ export async function POST(request: NextRequest) {
       phone,
       whatsapp,
       user_type: "guest",
-      member_category: "premium", // sabor Premium durante o trial
-      subscription_plan: "premium",
+      // Trial = SÓ acesso básico à app (não Premium). As features Premium só
+      // se desbloqueiam ao pagar o intro de 1º mês (€35). O acesso à app vem do
+      // ramo guest de isRegisteredMember (enquanto o trial não expira).
+      member_category: "standard",
+      subscription_plan: "app_member",
       subscription_billing_cycle: "monthly",
       subscription_platform: "trial",
       subscription_status: "trialing",
