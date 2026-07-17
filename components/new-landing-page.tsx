@@ -26,6 +26,7 @@ import {
 import Link from "next/link"
 import Image from "next/image"
 import ParticleBackground from "@/components/particle-background"
+import { useT } from "@/components/i18n-provider"
 import { shouldReduceSafariEffects } from "@/lib/supabase-session"
 import { getRandomTestimonials } from "@/lib/testimonials-service"
 import type { Testimonial } from "@/lib/testimonials-service"
@@ -227,6 +228,7 @@ function testimonialInitials(name?: string): string {
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function NewLandingPage() {
+  const t = useT()
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [activePath, setActivePath] = useState<string | null>(null)
@@ -261,23 +263,21 @@ export default function NewLandingPage() {
       <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-16 pb-8">
         <div className="text-center max-w-4xl mx-auto z-10 relative">
           <Badge className="mb-6 bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/30 px-4 py-2 text-sm">
-            🔥 Plataforma de Educação, Desenvolvimento Pessoal e Trading
+            🔥 {t("landing.heroBadge")}
           </Badge>
 
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight">
             <span className="bg-gradient-to-r from-[#F3F3E6] via-[#D2A63C] to-[#BB8525] bg-clip-text text-transparent">
-              Aprende.
+              {t("landing.heroTitle1")}
             </span>{" "}
-            <span className="text-white">Analisa.</span>{" "}
+            <span className="text-white">{t("landing.heroTitle2")}</span>{" "}
             <span className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] bg-clip-text text-transparent">
-              Cresce.
+              {t("landing.heroTitle3")}
             </span>
           </h1>
 
           <p className="text-lg md:text-xl text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
-            A MTM combina <strong className="text-white">educação real</strong>,{" "}
-            <strong className="text-white">tecnologia de análise</strong> e uma{" "}
-            <strong className="text-white">comunidade ativa</strong> para trader que quer evoluir de verdade.
+            {t("landing.heroSubtitle")}
           </p>
 
           {/* Vídeo de Apresentação */}
@@ -315,7 +315,7 @@ export default function NewLandingPage() {
               className="bg-[#D2A63C] hover:bg-[#BB8525] text-black font-bold px-8 py-4 text-base"
               onClick={() => scrollTo("choose-path")}
             >
-              Escolhe o teu caminho
+              {t("landing.ctaChoosePath")}
               <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
             <Button
@@ -324,7 +324,7 @@ export default function NewLandingPage() {
               className="border-[#D2A63C]/40 text-[#D2A63C] hover:bg-[#D2A63C]/10 px-8 py-4 text-base"
               onClick={() => scrollTo("technologies")}
             >
-              Ver as tecnologias
+              {t("landing.ctaViewTech")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
@@ -332,10 +332,10 @@ export default function NewLandingPage() {
           {/* Quick stats */}
           <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-400">
             {[
-              { label: "Comunidade activa", value: "🏆" },
-              { label: "Scanners exclusivos", value: "3" },
-              { label: "Cursos disponíveis", value: "📚" },
-              { label: "Live sessions/mês", value: "🎥" },
+              { label: t("landing.statCommunity"), value: "🏆" },
+              { label: t("landing.statScanners"), value: "3" },
+              { label: t("landing.statCourses"), value: "📚" },
+              { label: t("landing.statLiveSessions"), value: "🎥" },
             ].map((stat) => (
               <div key={stat.label} className="flex items-center gap-1.5">
                 <span>{stat.value}</span>
@@ -355,12 +355,12 @@ export default function NewLandingPage() {
       <section id="choose-path" className="py-24 px-4 relative z-10">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
-            <Badge className="mb-4 bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/30">🎯 O teu caminho</Badge>
+            <Badge className="mb-4 bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/30">🎯 {t("landing.choosePathBadge")}</Badge>
             <h2 className="text-3xl md:text-5xl font-black mb-4">
-              Por onde queres <span className="text-[#D2A63C]">começar?</span>
+              {t("landing.choosePathTitlePre")} <span className="text-[#D2A63C]">{t("landing.choosePathTitleHighlight")}</span>
             </h2>
             <p className="text-gray-400 max-w-xl mx-auto text-lg">
-              Cada pessoa tem o seu ritmo. Escolhe o que faz mais sentido para ti agora.
+              {t("landing.choosePathSubtitle")}
             </p>
           </div>
 
@@ -438,13 +438,13 @@ export default function NewLandingPage() {
       <section id="technologies" className="py-24 px-4 relative z-10 bg-gray-900/30">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
-            <Badge className="mb-4 bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/30">⚡ Tecnologia</Badge>
+            <Badge className="mb-4 bg-[#D2A63C]/20 text-[#D2A63C] border-[#D2A63C]/30">⚡ {t("landing.techBadge")}</Badge>
             <h2 className="text-3xl md:text-5xl font-black mb-4">
-              Duas tecnologias que{" "}
-              <span className="text-[#D2A63C]">libertam</span>
+              {t("landing.techTitlePre")}{" "}
+              <span className="text-[#D2A63C]">{t("landing.techTitleHighlight")}</span>
             </h2>
             <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-              Construídas especificamente para traders que querem resultados — sem complicação, sem perder tempo.
+              {t("landing.techSubtitle")}
             </p>
           </div>
 

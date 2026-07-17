@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/auth-context'
+import { useT } from '@/components/i18n-provider'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -17,7 +18,7 @@ import {
 const PLANS = {
   app_member: {
     id: 'app_member',
-    name: 'Pack Membro',
+    name: 'upgrade.planMemberName',
     icon: Smartphone,
     color: '#D2A63C',
     colorBg: 'rgba(210,166,60,0.08)',
@@ -25,16 +26,16 @@ const PLANS = {
     monthly: { price: 35, label: '35€/mês', planId: 'app_member_monthly' },
     annual:  { price: 28, label: '28€/mês', total: '336€/ano', planId: 'app_member_annual' },
     features: [
-      'App MTM System (iOS e Android)',
-      'Feed Social e Chat de Comunidade',
-      'Live Sessions MTM (assistir)',
-      'Onboarding e tutorial guiado',
-      'Suporte por email',
+      'upgrade.memberFeat1',
+      'upgrade.memberFeat2',
+      'upgrade.memberFeat3',
+      'upgrade.memberFeat4',
+      'upgrade.memberFeat5',
     ],
   },
   premium: {
     id: 'premium',
-    name: 'Pack Premium',
+    name: 'upgrade.planPremiumName',
     icon: Globe,
     color: '#7C3AED',
     colorBg: 'rgba(124,58,237,0.08)',
@@ -42,15 +43,15 @@ const PLANS = {
     monthly: { price: 65, label: '65€/mês', planId: 'premium_monthly' },
     annual:  { price: 52, label: '52€/mês', total: '624€/ano', planId: 'premium_annual' },
     features: [
-      'Tudo do Pack Membro',
-      'Acesso completo ao site morethanmoney.pt',
-      'Scanners AI exclusivos (GoldKiller + MTM)',
-      'Portfólio MTM com análises DCA',
-      'Live Sessions Premium + gravações',
-      'Comunidade Skool MTM',
-      'Cursos: Forex, Cripto, Marketing Digital, IA',
-      'Ferramentas avançadas de trading',
-      'Suporte prioritário',
+      'upgrade.premiumFeat1',
+      'upgrade.premiumFeat2',
+      'upgrade.premiumFeat3',
+      'upgrade.premiumFeat4',
+      'upgrade.premiumFeat5',
+      'upgrade.premiumFeat6',
+      'upgrade.premiumFeat7',
+      'upgrade.premiumFeat8',
+      'upgrade.premiumFeat9',
     ],
     highlight: true,
   },
@@ -60,22 +61,10 @@ type PlanKey = keyof typeof PLANS
 
 // ─── FAQ ───────────────────────────────────────────────────────────────────────
 const FAQ = [
-  {
-    q: 'Posso fazer downgrade se mudar de ideias?',
-    a: 'Sim. Podes mudar de plano a qualquer momento. O ajuste é feito pro-rata — pagas apenas pelo que usas.',
-  },
-  {
-    q: 'O que acontece ao meu acesso ao mudar de plano?',
-    a: 'O upgrade é imediato após confirmação do pagamento. O downgrade é aplicado no próximo ciclo de faturação.',
-  },
-  {
-    q: 'O pagamento anual tem benefício?',
-    a: 'Sim — ao pagar anualmente poupas 20% relativamente ao plano mensal (equivalente a 2 meses grátis).',
-  },
-  {
-    q: 'Como cancelo a subscrição?',
-    a: 'Podes cancelar a qualquer momento no portal do Stripe (link enviado por email) ou contactando o suporte.',
-  },
+  { q: 'upgrade.faq1q', a: 'upgrade.faq1a' },
+  { q: 'upgrade.faq2q', a: 'upgrade.faq2a' },
+  { q: 'upgrade.faq3q', a: 'upgrade.faq3a' },
+  { q: 'upgrade.faq4q', a: 'upgrade.faq4a' },
 ]
 
 function FAQItem({ q, a }: { q: string; a: string }) {
@@ -102,6 +91,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 export default function UpgradePage() {
   const { user } = useAuth()
   const router = useRouter()
+  const t = useT()
 
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly')
   const [loading, setLoading] = useState<string | null>(null)
@@ -129,13 +119,13 @@ export default function UpgradePage() {
       })
       const data = await res.json()
       if (!res.ok || !data.url) {
-        setError(data.error || 'Não foi possível iniciar o pagamento. Tenta novamente.')
+        setError(data.error || t('upgrade.errCheckout'))
         setLoading(null)
         return
       }
       window.location.href = data.url
     } catch {
-      setError('Erro de rede. Tenta novamente.')
+      setError(t('upgrade.errNetwork'))
       setLoading(null)
     }
   }
@@ -146,13 +136,13 @@ export default function UpgradePage() {
       <div className="border-b border-gray-800 bg-gray-950/90 backdrop-blur sticky top-0 z-40">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between max-w-5xl">
           <Link href="/new-landing" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm">
-            ← Voltar
+            ← {t('upgrade.back')}
           </Link>
           <span className="font-bold text-[#D2A63C]">MoreThanMoney</span>
           {user ? (
             <span className="text-xs text-gray-400">{user.email}</span>
           ) : (
-            <Link href="/login?redirect=/upgrade" className="text-sm text-[#D2A63C] hover:underline">Login</Link>
+            <Link href="/login?redirect=/upgrade" className="text-sm text-[#D2A63C] hover:underline">{t('upgrade.login')}</Link>
           )}
         </div>
       </div>
@@ -162,13 +152,13 @@ export default function UpgradePage() {
         {/* Hero */}
         <div className="text-center mb-10">
           <Badge className="mb-4 bg-[#D2A63C]/15 text-[#D2A63C] border-[#D2A63C]/30">
-            ⚡ Upgrade de Plano
+            ⚡ {t('upgrade.badge')}
           </Badge>
           <h1 className="text-3xl md:text-5xl font-black mb-4">
-            Escolhe o teu plano MTM
+            {t('upgrade.title')}
           </h1>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Começa com o Pack Membro e evolui quando quiseres — sem complicações, sem contratos, cancela a qualquer momento.
+            {t('upgrade.subtitle')}
           </p>
 
           {/* Billing toggle */}
@@ -177,13 +167,13 @@ export default function UpgradePage() {
               onClick={() => setBilling('monthly')}
               className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${billing === 'monthly' ? 'bg-white text-black shadow' : 'text-gray-400 hover:text-white'}`}
             >
-              Mensal
+              {t('upgrade.billingMonthly')}
             </button>
             <button
               onClick={() => setBilling('annual')}
               className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${billing === 'annual' ? 'bg-white text-black shadow' : 'text-gray-400 hover:text-white'}`}
             >
-              Anual
+              {t('upgrade.billingAnnual')}
               <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-semibold">−20%</span>
             </button>
           </div>
@@ -209,7 +199,7 @@ export default function UpgradePage() {
                 {isPremiumCard && (
                   <div className="absolute top-0 left-0 right-0 text-center py-1.5 text-xs font-bold text-black"
                     style={{ background: plan.color }}>
-                    ⭐ MAIS POPULAR
+                    ⭐ {t('upgrade.mostPopular')}
                   </div>
                 )}
 
@@ -222,21 +212,21 @@ export default function UpgradePage() {
                         <Icon className="w-5 h-5" style={{ color: plan.color }} />
                       </div>
                       <div>
-                        <h2 className="font-bold text-white text-lg">{plan.name}</h2>
+                        <h2 className="font-bold text-white text-lg">{t(plan.name)}</h2>
                         {isActive && (
-                          <span className="text-xs text-green-400 font-medium">● Plano atual</span>
+                          <span className="text-xs text-green-400 font-medium">● {t('upgrade.currentPlan')}</span>
                         )}
                       </div>
                     </div>
                     <div className="text-right">
                       <span className="text-3xl font-black text-white">{pricing.price}€</span>
-                      <span className="text-gray-400 text-sm">/mês</span>
+                      <span className="text-gray-400 text-sm">{t('upgrade.perMonth')}</span>
                       {billing === 'annual' && (
                         <p className="text-xs text-gray-400 mt-0.5">{pricing.total}</p>
                       )}
                       {isPremiumCard && billing === 'monthly' && (
                         <p className="mt-1 inline-block rounded-full bg-[#D2A63C]/15 px-2 py-0.5 text-[11px] font-bold text-[#D2A63C]">
-                          1º mês 34,99€
+                          {t('upgrade.firstMonthPromo')}
                         </p>
                       )}
                     </div>
@@ -247,7 +237,7 @@ export default function UpgradePage() {
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm">
                         <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: plan.color }} />
-                        <span className={isPremiumCard ? 'text-gray-200' : 'text-gray-300'}>{f}</span>
+                        <span className={isPremiumCard ? 'text-gray-200' : 'text-gray-300'}>{t(f)}</span>
                       </li>
                     ))}
                   </ul>
@@ -256,7 +246,7 @@ export default function UpgradePage() {
                   {isActive ? (
                     <div className="w-full py-3 rounded-xl border text-center text-sm font-semibold text-gray-400"
                       style={{ borderColor: plan.color + '60' }}>
-                      ✓ Plano ativo
+                      ✓ {t('upgrade.planActive')}
                     </div>
                   ) : (
                     <Button
@@ -269,13 +259,13 @@ export default function UpgradePage() {
                       }}
                     >
                       {loading === pricing.planId ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />A processar...</>
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('upgrade.processing')}</>
                       ) : isPremium ? (
-                        'Mudar de plano'
+                        t('upgrade.changePlan')
                       ) : plan.id === 'premium' ? (
-                        <>Fazer upgrade <ArrowRight className="ml-2 h-4 w-4" /></>
+                        <>{t('upgrade.doUpgrade')} <ArrowRight className="ml-2 h-4 w-4" /></>
                       ) : (
-                        <>Ativar este plano <ArrowRight className="ml-2 h-4 w-4" /></>
+                        <>{t('upgrade.activatePlan')} <ArrowRight className="ml-2 h-4 w-4" /></>
                       )}
                     </Button>
                   )}
@@ -294,9 +284,9 @@ export default function UpgradePage() {
         {/* Não tem conta */}
         {!user && (
           <div className="mb-8 text-center text-sm text-gray-400">
-            Já tens conta?{' '}
+            {t('upgrade.haveAccount')}{' '}
             <Link href="/login?redirect=/upgrade" className="text-[#D2A63C] hover:underline">
-              Faz login para gerir a tua subscrição
+              {t('upgrade.loginToManage')}
             </Link>
           </div>
         )}
@@ -304,43 +294,43 @@ export default function UpgradePage() {
         {/* Garantias */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
           {[
-            { icon: Shield,   title: 'Pagamento Seguro',      text: 'Processado pelo Stripe — os teus dados nunca passam pelos nossos servidores' },
-            { icon: Zap,      title: 'Ativação Imediata',     text: 'Acesso disponível logo após confirmação do pagamento' },
-            { icon: CreditCard, title: 'Cancela Quando Quiseres', text: 'Sem compromisos — cancela a qualquer momento, sem multas' },
-            { icon: Star,     title: 'Suporte Dedicado',      text: 'Equipa MTM disponível para te ajudar a tirar o máximo proveito' },
+            { icon: Shield,     title: 'upgrade.guaranteeSecureTitle',  text: 'upgrade.guaranteeSecureText' },
+            { icon: Zap,        title: 'upgrade.guaranteeInstantTitle', text: 'upgrade.guaranteeInstantText' },
+            { icon: CreditCard, title: 'upgrade.guaranteeCancelTitle',  text: 'upgrade.guaranteeCancelText' },
+            { icon: Star,       title: 'upgrade.guaranteeSupportTitle', text: 'upgrade.guaranteeSupportText' },
           ].map(({ icon: Icon, title, text }) => (
             <div key={title} className="text-center rounded-xl border border-gray-800 bg-gray-900/40 p-4">
               <Icon className="w-6 h-6 text-[#D2A63C] mx-auto mb-2" />
-              <p className="text-xs font-bold text-white mb-1">{title}</p>
-              <p className="text-xs text-gray-500 leading-relaxed">{text}</p>
+              <p className="text-xs font-bold text-white mb-1">{t(title)}</p>
+              <p className="text-xs text-gray-500 leading-relaxed">{t(text)}</p>
             </div>
           ))}
         </div>
 
         {/* Comparação de funcionalidades */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-center mb-6">Comparação de funcionalidades</h2>
+          <h2 className="text-2xl font-bold text-center mb-6">{t('upgrade.comparisonTitle')}</h2>
           <div className="rounded-2xl border border-gray-800 overflow-hidden">
             <div className="grid grid-cols-3 bg-gray-900 border-b border-gray-800">
-              <div className="p-4 text-sm font-semibold text-gray-400">Funcionalidade</div>
-              <div className="p-4 text-center text-sm font-bold text-[#D2A63C]">Membro</div>
+              <div className="p-4 text-sm font-semibold text-gray-400">{t('upgrade.colFeature')}</div>
+              <div className="p-4 text-center text-sm font-bold text-[#D2A63C]">{t('upgrade.colMember')}</div>
               <div className="p-4 text-center text-sm font-bold text-purple-400">Premium</div>
             </div>
             {[
-              ['App Mobile MTM (iOS/Android)', true, true],
-              ['Feed Social e Chat', true, true],
-              ['Live Sessions MTM', true, true],
-              ['Scanners AI (GoldKiller + MTM)', false, true],
-              ['Acesso ao site morethanmoney.pt', false, true],
-              ['Portfólio MTM + análises DCA', false, true],
-              ['Live Sessions Premium + gravações', false, true],
-              ['Comunidade Skool MTM', false, true],
-              ['Cursos completos (Forex, Cripto, IA)', false, true],
-              ['Ferramentas avançadas de trading', false, true],
-              ['Suporte prioritário', false, true],
+              ['upgrade.cmp1', true, true],
+              ['upgrade.cmp2', true, true],
+              ['upgrade.cmp3', true, true],
+              ['upgrade.cmp4', false, true],
+              ['upgrade.cmp5', false, true],
+              ['upgrade.cmp6', false, true],
+              ['upgrade.cmp7', false, true],
+              ['upgrade.cmp8', false, true],
+              ['upgrade.cmp9', false, true],
+              ['upgrade.cmp10', false, true],
+              ['upgrade.cmp11', false, true],
             ].map(([feature, membro, premium]) => (
               <div key={String(feature)} className="grid grid-cols-3 border-b border-gray-800/50 hover:bg-gray-900/30 transition-colors">
-                <div className="p-4 text-sm text-gray-300">{String(feature)}</div>
+                <div className="p-4 text-sm text-gray-300">{t(String(feature))}</div>
                 <div className="p-4 flex justify-center items-center">
                   {membro
                     ? <Check className="w-5 h-5 text-[#D2A63C]" />
@@ -360,16 +350,16 @@ export default function UpgradePage() {
 
         {/* FAQ */}
         <div className="mb-12 max-w-2xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-6">Perguntas Frequentes</h2>
+          <h2 className="text-2xl font-bold text-center mb-6">{t('upgrade.faqTitle')}</h2>
           <div className="space-y-3">
-            {FAQ.map(({ q, a }) => <FAQItem key={q} q={q} a={a} />)}
+            {FAQ.map(({ q, a }) => <FAQItem key={q} q={t(q)} a={t(a)} />)}
           </div>
         </div>
 
         {/* CTA final */}
         <div className="text-center py-8 border-t border-gray-800">
           <p className="text-gray-400 mb-6 text-sm">
-            Ainda tens dúvidas? Fala connosco →{' '}
+            {t('upgrade.stillQuestions')} →{' '}
             <a href="mailto:suporte@morethanmoney.pt" className="text-[#D2A63C] hover:underline">
               suporte@morethanmoney.pt
             </a>
@@ -382,9 +372,9 @@ export default function UpgradePage() {
               className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold px-10"
             >
               {loading ? (
-                <><Loader2 className="mr-2 h-5 w-5 animate-spin" />A processar...</>
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('upgrade.processing')}</>
               ) : (
-                <>Fazer upgrade para Premium <Zap className="ml-2 h-5 w-5" /></>
+                <>{t('upgrade.upgradeToPremium')} <Zap className="ml-2 h-5 w-5" /></>
               )}
             </Button>
           )}

@@ -43,6 +43,7 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
+import { useT } from "@/components/i18n-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -67,6 +68,7 @@ function planLabel(category: string | undefined | null): { label: string; color:
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SettingsMobile() {
+  const t = useT()
   const { user } = useAuth()
   const { toast } = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -215,8 +217,8 @@ export default function SettingsMobile() {
   }
 
   const THEME_OPTIONS: { id: "dark" | "light"; label: string; icon: typeof Moon }[] = [
-    { id: "dark",  label: "Escuro", icon: Moon },
-    { id: "light", label: "Claro",  icon: Sun },
+    { id: "dark",  label: t("appmobile.themeDark"),  icon: Moon },
+    { id: "light", label: t("appmobile.themeLight"), icon: Sun },
   ]
 
   const handleThemeChange = (next: "dark" | "light") => {
@@ -640,7 +642,7 @@ export default function SettingsMobile() {
             <Badge className={`border text-xs ${plan.bg} ${plan.color}`}>{plan.label}</Badge>
             <span className="inline-flex items-center gap-1 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-xs font-semibold text-yellow-400">
               <Zap className="w-3 h-3" />
-              {xpData.total_xp.toLocaleString("pt-PT")} XP · Nv {xpData.current_level}
+              {xpData.total_xp.toLocaleString("pt-PT")} XP · {t("appmobile.levelShort")} {xpData.current_level}
             </span>
           </div>
         </div>
@@ -652,7 +654,7 @@ export default function SettingsMobile() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                   <Award className="w-3.5 h-3.5 text-[#D2A63C]" />
-                  <span className="text-xs text-gray-400 font-medium">Nível {xpData.current_level}</span>
+                  <span className="text-xs text-gray-400 font-medium">{t("appmobile.level")} {xpData.current_level}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Zap className="w-3 h-3 text-yellow-400" />
@@ -668,7 +670,7 @@ export default function SettingsMobile() {
                 />
               </div>
               <p className="text-[10px] text-gray-500 mt-1 text-right">
-                {xpProgressInLevel(xpData.total_xp)}/1000 XP para nível {xpData.current_level + 1}
+                {xpProgressInLevel(xpData.total_xp)}/1000 XP {t("appmobile.xpToLevel")} {xpData.current_level + 1}
               </p>
             </div>
           </div>
@@ -680,11 +682,11 @@ export default function SettingsMobile() {
 
         {/* Idioma — mesmo seletor do site (21 línguas, Google Translate) */}
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">Idioma</h2>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">{t("appmobile.langSection")}</h2>
           <div className="bg-gray-800/50 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <Globe className="w-4 h-4 text-gray-400 shrink-0" />
-              <span className="text-sm text-gray-300 truncate">Idioma da app</span>
+              <span className="text-sm text-gray-300 truncate">{t("appmobile.appLanguage")}</span>
             </div>
             <LanguageSelectorEnhanced />
           </div>
@@ -692,20 +694,20 @@ export default function SettingsMobile() {
 
         {/* Perfil */}
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">Perfil</h2>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">{t("appmobile.profileSection")}</h2>
           <div className="bg-gray-800/50 rounded-xl divide-y divide-gray-700/50">
             {/* Nome */}
             <div className="px-4 py-3">
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-400">Nome</span>
+                  <span className="text-sm text-gray-400">{t("appmobile.name")}</span>
                 </div>
                 <button
                   onClick={() => { setEditingName(!editingName); setNewName(user?.full_name ?? "") }}
                   className="text-xs text-[#D2A63C] hover:underline"
                 >
-                  {editingName ? "Cancelar" : "Editar"}
+                  {editingName ? t("appmobile.cancel") : t("appmobile.edit")}
                 </button>
               </div>
               {editingName ? (
@@ -713,7 +715,7 @@ export default function SettingsMobile() {
                   <Input
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    placeholder="O teu nome"
+                    placeholder={t("appmobile.namePlaceholder")}
                     className="h-9 bg-gray-900 border-gray-700 text-white text-sm"
                     onKeyDown={(e) => e.key === "Enter" && saveName()}
                   />
@@ -735,7 +737,7 @@ export default function SettingsMobile() {
             <div className="px-4 py-3 flex items-center gap-3">
               <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
               <div>
-                <p className="text-xs text-gray-400">Email</p>
+                <p className="text-xs text-gray-400">{t("appmobile.email")}</p>
                 <p className="text-sm text-white">{user?.email}</p>
               </div>
             </div>
@@ -744,14 +746,14 @@ export default function SettingsMobile() {
 
         {/* Segurança */}
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">Segurança</h2>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">{t("appmobile.securitySection")}</h2>
           <div className="bg-gray-800/50 rounded-xl">
             <button
               onClick={() => setChangingPw(!changingPw)}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-700/40 transition-colors"
             >
               <Lock className="w-4 h-4 text-gray-400" />
-              <span className="flex-1 text-left text-sm text-white">Alterar password</span>
+              <span className="flex-1 text-left text-sm text-white">{t("appmobile.changePassword")}</span>
               <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform ${changingPw ? "rotate-90" : ""}`} />
             </button>
             {changingPw && (
@@ -760,19 +762,19 @@ export default function SettingsMobile() {
                   type="password"
                   value={newPw}
                   onChange={(e) => setNewPw(e.target.value)}
-                  placeholder="Nova password"
+                  placeholder={t("appmobile.newPasswordPlaceholder")}
                   className="h-9 bg-gray-900 border-gray-700 text-white text-sm"
                 />
                 <Input
                   type="password"
                   value={confirmPw}
                   onChange={(e) => setConfirmPw(e.target.value)}
-                  placeholder="Confirmar nova password"
+                  placeholder={t("appmobile.confirmPasswordPlaceholder")}
                   className="h-9 bg-gray-900 border-gray-700 text-white text-sm"
                 />
                 {newPw && confirmPw && newPw !== confirmPw && (
                   <p className="text-xs text-red-400 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> As passwords não coincidem
+                    <AlertCircle className="w-3 h-3" /> {t("appmobile.passwordsDontMatch")}
                   </p>
                 )}
                 <Button
@@ -780,7 +782,7 @@ export default function SettingsMobile() {
                   disabled={savingPw || !newPw || !confirmPw}
                   className="w-full h-9 bg-[#D2A63C] hover:bg-[#c49a2e] text-black font-semibold text-sm"
                 >
-                  {savingPw ? <Loader2 className="w-4 h-4 animate-spin" /> : "Guardar password"}
+                  {savingPw ? <Loader2 className="w-4 h-4 animate-spin" /> : t("appmobile.savePassword")}
                 </Button>
               </div>
             )}
@@ -789,14 +791,14 @@ export default function SettingsMobile() {
 
         {/* Plano */}
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">Plano</h2>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">{t("appmobile.planSection")}</h2>
           <div className={`rounded-xl border p-4 ${plan.bg}`}>
             <div className="flex items-start justify-between">
               <div>
                 <p className={`font-semibold text-sm ${plan.color}`}>{plan.label}</p>
                 {user?.subscription_expires_at && (
                   <p className="text-xs text-gray-400 mt-0.5">
-                    Válido até {new Date(user.subscription_expires_at).toLocaleDateString("pt-PT")}
+                    {t("appmobile.validUntil")} {new Date(user.subscription_expires_at).toLocaleDateString("pt-PT")}
                   </p>
                 )}
               </div>
@@ -805,7 +807,7 @@ export default function SettingsMobile() {
             {isAppOnly && (
               <div className="mt-3 pt-3 border-t border-gray-700/40">
                 <p className="text-xs text-gray-400 mb-2">
-                  Faz upgrade para acederes ao Scanner, Portfólio e todas as funcionalidades premium.
+                  {t("appmobile.upgradePrompt")}
                 </p>
                 <a
                   href="https://morethanmoney.pt/upgrade"
@@ -814,7 +816,7 @@ export default function SettingsMobile() {
                   className="flex items-center justify-center gap-2 w-full py-2 bg-[#D2A63C] hover:bg-[#c49a2e] text-black text-sm font-semibold rounded-lg transition-colors"
                 >
                   <CreditCard className="w-4 h-4" />
-                  Ver planos de upgrade
+                  {t("appmobile.viewUpgradePlans")}
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>
@@ -824,22 +826,22 @@ export default function SettingsMobile() {
 
         {/* Parceria & Compras — código de creator + restaurar compras */}
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">Parceria &amp; Compras</h2>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">{t("appmobile.partnershipSection")}</h2>
           <div className="bg-gray-800/50 rounded-xl divide-y divide-gray-700/50">
             {/* Resgatar código de parceria */}
             <div className="px-4 py-3">
               <div className="flex items-center gap-2 mb-1">
                 <Gift className="w-4 h-4 text-[#D2A63C]" />
-                <span className="text-sm text-white font-medium">Ativar código de parceria</span>
+                <span className="text-sm text-white font-medium">{t("appmobile.activatePartnershipCode")}</span>
               </div>
               <p className="text-xs text-gray-500 mb-2">
-                Tens um código de creator/UGC? Ativa aqui o teu acesso Premium + VIP.
+                {t("appmobile.partnershipHint")}
               </p>
               <div className="flex gap-2">
                 <Input
                   value={redeemCode}
                   onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
-                  placeholder="Ex: CREATOR60"
+                  placeholder={t("appmobile.partnershipPlaceholder")}
                   autoCapitalize="characters"
                   autoCorrect="off"
                   className="h-9 bg-gray-900 border-gray-700 text-white text-sm font-mono uppercase"
@@ -851,7 +853,7 @@ export default function SettingsMobile() {
                   disabled={redeeming || !redeemCode.trim()}
                   className="h-9 px-4 bg-[#D2A63C] hover:bg-[#c49a2e] text-black font-semibold whitespace-nowrap"
                 >
-                  {redeeming ? <Loader2 className="w-4 h-4 animate-spin" /> : "Ativar"}
+                  {redeeming ? <Loader2 className="w-4 h-4 animate-spin" /> : t("appmobile.activate")}
                 </Button>
               </div>
             </div>
@@ -864,8 +866,8 @@ export default function SettingsMobile() {
             >
               <RefreshCw className={`w-4 h-4 text-gray-400 ${restoring ? "animate-spin" : ""}`} />
               <div className="flex-1 text-left">
-                <span className="text-sm text-white">Restaurar compras</span>
-                <p className="text-xs text-gray-500 mt-0.5">Recupera a tua subscrição neste dispositivo</p>
+                <span className="text-sm text-white">{t("appmobile.restorePurchases")}</span>
+                <p className="text-xs text-gray-500 mt-0.5">{t("appmobile.restorePurchasesHint")}</p>
               </div>
               {restoring && <span className="text-xs text-gray-500">…</span>}
             </button>
@@ -874,20 +876,20 @@ export default function SettingsMobile() {
 
         {/* Corretora */}
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">Corretora</h2>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">{t("appmobile.brokerSection")}</h2>
           <div className="bg-gray-800/50 rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-white font-medium">UID da corretora</p>
+                <p className="text-sm text-white font-medium">{t("appmobile.brokerUid")}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {brokerUid || "Não registado — obrigatório para Trade Ideas"}
+                  {brokerUid || t("appmobile.brokerUidNotSet")}
                 </p>
               </div>
               <button
                 onClick={() => setEditingUid(!editingUid)}
                 className="text-xs text-[#D2A63C] underline"
               >
-                {editingUid ? "Cancelar" : brokerUid ? "Editar" : "Adicionar"}
+                {editingUid ? t("appmobile.cancel") : brokerUid ? t("appmobile.edit") : t("appmobile.add")}
               </button>
             </div>
             {editingUid && (
@@ -896,7 +898,7 @@ export default function SettingsMobile() {
                   type="text"
                   value={brokerUid}
                   onChange={e => setBrokerUid(e.target.value)}
-                  placeholder="Ex: 12345678"
+                  placeholder={t("appmobile.brokerUidPlaceholder")}
                   className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm font-mono placeholder-gray-500 focus:outline-none focus:border-[#D2A63C]/50"
                 />
                 <button
@@ -904,7 +906,7 @@ export default function SettingsMobile() {
                   disabled={savingUid}
                   className="w-full py-2.5 rounded-lg bg-[#D2A63C] text-black font-semibold text-sm disabled:opacity-50"
                 >
-                  {savingUid ? "A guardar..." : "Guardar UID"}
+                  {savingUid ? t("appmobile.saving") : t("appmobile.saveUid")}
                 </button>
               </div>
             )}
@@ -913,7 +915,7 @@ export default function SettingsMobile() {
                 href="/app-mobile/accountopen"
                 className="block text-center text-xs text-[#D2A63C] underline"
               >
-                Abrir conta na corretora →
+                {t("appmobile.openBrokerAccount")} →
               </a>
             )}
           </div>
@@ -921,7 +923,7 @@ export default function SettingsMobile() {
 
         {/* Aparência — Tema */}
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">Aparência</h2>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">{t("appmobile.appearanceSection")}</h2>
           <div className="bg-gray-800/50 rounded-xl p-2">
             <div className="flex gap-2">
               {THEME_OPTIONS.map(({ id, label, icon: Icon }) => {
@@ -942,13 +944,13 @@ export default function SettingsMobile() {
                 )
               })}
             </div>
-            <p className="text-xs text-gray-500 mt-2 px-1">Escolhe o tema da app — a preferência fica guardada neste dispositivo.</p>
+            <p className="text-xs text-gray-500 mt-2 px-1">{t("appmobile.themeHint")}</p>
           </div>
         </section>
 
         {/* Notificações */}
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">Notificações</h2>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">{t("appmobile.notificationsSection")}</h2>
           <div className="bg-gray-800/50 rounded-xl divide-y divide-gray-700/50">
             <button
               onClick={togglePush}
@@ -956,7 +958,7 @@ export default function SettingsMobile() {
               className="w-full flex items-center gap-3 px-4 py-3 rounded-t-xl hover:bg-gray-700/40 transition-colors disabled:opacity-60"
             >
               <Bell className="w-4 h-4 text-gray-400" />
-              <span className="flex-1 text-left text-sm text-white">Push notifications</span>
+              <span className="flex-1 text-left text-sm text-white">{t("appmobile.pushNotifications")}</span>
               {(() => {
                 const denied =
                   typeof window !== "undefined" && "Notification" in window && Notification.permission === "denied"
@@ -965,7 +967,7 @@ export default function SettingsMobile() {
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                     active ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"
                   }`}>
-                    {pushBusy ? "…" : denied ? "Bloqueadas" : pushEnabled ? "Activas" : "Desligadas"}
+                    {pushBusy ? "…" : denied ? t("appmobile.statusBlocked") : pushEnabled ? t("appmobile.statusActive") : t("appmobile.statusOff")}
                   </span>
                 )
               })()}
@@ -981,11 +983,11 @@ export default function SettingsMobile() {
               ) : (
                 <VolumeX className="w-4 h-4 text-gray-400" />
               )}
-              <span className="flex-1 text-left text-sm text-white">Som das notificações</span>
+              <span className="flex-1 text-left text-sm text-white">{t("appmobile.notificationSound")}</span>
               <span className={`text-xs px-2 py-0.5 rounded-full ${
                 soundEnabled ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"
               }`}>
-                {soundEnabled ? "Ligado" : "Desligado"}
+                {soundEnabled ? t("appmobile.soundOn") : t("appmobile.soundOff")}
               </span>
             </button>
 
@@ -996,17 +998,17 @@ export default function SettingsMobile() {
               className="w-full flex items-center gap-3 px-4 py-3 rounded-b-xl hover:bg-gray-700/40 transition-colors disabled:opacity-60"
             >
               <Bell className="w-4 h-4 text-[#D2A63C]" />
-              <span className="flex-1 text-left text-sm text-white">Notificações de Trading Alerts</span>
+              <span className="flex-1 text-left text-sm text-white">{t("appmobile.tradingAlerts")}</span>
               <span className={`text-xs px-2 py-0.5 rounded-full ${
                 mtmAlertsOn ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"
               }`}>
-                {mtmAlertsBusy ? "…" : mtmAlertsOn ? "Ligadas" : "Desligadas"}
+                {mtmAlertsBusy ? "…" : mtmAlertsOn ? t("appmobile.alertsOn") : t("appmobile.alertsOff")}
               </span>
             </button>
           </div>
 
           <p className="text-xs text-gray-500 px-1 mt-3 mb-2">
-            Escolhe que alertas queres receber no site e na app (push + sino).
+            {t("appmobile.notifPrefsHint")}
           </p>
           <div className="bg-gray-800/50 rounded-xl divide-y divide-gray-700/50">
             {(Object.keys(NOTIFICATION_CATEGORY_LABELS) as NotificationCategory[]).map((key) => {
@@ -1027,7 +1029,7 @@ export default function SettingsMobile() {
                   <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5 ${
                     enabled ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-400"
                   }`}>
-                    {saving ? "…" : enabled ? "On" : "Off"}
+                    {saving ? "…" : enabled ? t("appmobile.prefOn") : t("appmobile.prefOff")}
                   </span>
                 </button>
               )
@@ -1037,7 +1039,7 @@ export default function SettingsMobile() {
 
         {/* App */}
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">App</h2>
+          <h2 className="text-xs font-semibold text-gray-400 uppercase mb-2 px-1">{t("appmobile.appSection")}</h2>
           <div className="bg-gray-800/50 rounded-xl">
             <button
               onClick={handleReplayTutorial}
@@ -1045,8 +1047,8 @@ export default function SettingsMobile() {
             >
               <PlayCircle className="w-4 h-4 text-[#D2A63C]" />
               <div className="flex-1 text-left">
-                <span className="text-sm text-white">Rever tutorial</span>
-                <p className="text-xs text-gray-500 mt-0.5">Recomeça o guia de boas-vindas da app</p>
+                <span className="text-sm text-white">{t("appmobile.replayTutorial")}</span>
+                <p className="text-xs text-gray-500 mt-0.5">{t("appmobile.replayTutorialHint")}</p>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-500" />
             </button>
@@ -1060,7 +1062,7 @@ export default function SettingsMobile() {
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium"
           >
             <LogOut className="w-4 h-4" />
-            Terminar sessão
+            {t("appmobile.logout")}
           </button>
         </section>
 
@@ -1072,7 +1074,7 @@ export default function SettingsMobile() {
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-700/20 transition-colors"
             >
               <Trash2 className="w-4 h-4 text-gray-500" />
-              <span className="flex-1 text-left text-sm text-gray-500">Eliminar conta</span>
+              <span className="flex-1 text-left text-sm text-gray-500">{t("appmobile.deleteAccount")}</span>
               <ChevronRight className={`w-4 h-4 text-gray-600 transition-transform ${showDeleteSection ? "rotate-90" : ""}`} />
             </button>
 
@@ -1082,15 +1084,15 @@ export default function SettingsMobile() {
                 <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
                   <TriangleAlert className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
                   <div className="text-xs text-red-300 leading-relaxed">
-                    <p className="font-semibold mb-1">Esta acção é irreversível.</p>
-                    <p>A tua conta, histórico, portfólio e todos os dados associados serão eliminados permanentemente. Não é possível recuperar informação após a eliminação.</p>
+                    <p className="font-semibold mb-1">{t("appmobile.deleteWarningTitle")}</p>
+                    <p>{t("appmobile.deleteWarningBody")}</p>
                   </div>
                 </div>
 
                 {/* Campo de confirmação */}
                 <div>
                   <p className="text-xs text-gray-400 mb-2">
-                    Para confirmar, escreve <span className="font-mono font-bold text-red-400">ELIMINAR</span> no campo abaixo:
+                    {t("appmobile.deleteConfirmPrefix")} <span className="font-mono font-bold text-red-400">ELIMINAR</span> {t("appmobile.deleteConfirmSuffix")}
                   </p>
                   <Input
                     value={deleteConfirmText}
@@ -1110,17 +1112,17 @@ export default function SettingsMobile() {
                 >
                   {deletingAccount ? (
                     <span className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" /> A eliminar...
+                      <Loader2 className="w-4 h-4 animate-spin" /> {t("appmobile.deleting")}
                     </span>
                   ) : (
                     <span className="flex items-center gap-2">
-                      <Trash2 className="w-4 h-4" /> Eliminar conta permanentemente
+                      <Trash2 className="w-4 h-4" /> {t("appmobile.deleteAccountPermanently")}
                     </span>
                   )}
                 </Button>
 
                 <p className="text-xs text-gray-500 text-center">
-                  Se precisares de ajuda, contacta{" "}
+                  {t("appmobile.needHelp")}{" "}
                   <a href="mailto:suporte@morethanmoney.pt" className="text-[#D2A63C] underline">
                     suporte@morethanmoney.pt
                   </a>

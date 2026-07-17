@@ -1,0 +1,32 @@
+import { I18N_LANGS, type Lang } from "./config"
+import { MESSAGES as CORE } from "./messages"
+
+// ── Namespaces (cada lote de migração cria o seu ficheiro e regista-o aqui) ──
+import { REGISTER_MESSAGES } from "./messages/register"
+import { UPGRADE_MESSAGES } from "./messages/upgrade"
+import { APPMOBILE_MESSAGES } from "./messages/app-mobile"
+import { LANDING_MESSAGES } from "./messages/landing"
+
+type NsSource = Partial<Record<Lang, Record<string, string>>>
+
+function merge(...sources: NsSource[]): Record<Lang, Record<string, string>> {
+  const out = {} as Record<Lang, Record<string, string>>
+  for (const lang of I18N_LANGS) {
+    const acc: Record<string, string> = {}
+    for (const src of sources) {
+      const d = src[lang]
+      if (d) Object.assign(acc, d)
+    }
+    out[lang] = acc
+  }
+  return out
+}
+
+/** Dicionário agregado (núcleo + todos os namespaces). */
+export const ALL_MESSAGES = merge(
+  CORE,
+  REGISTER_MESSAGES,
+  UPGRADE_MESSAGES,
+  APPMOBILE_MESSAGES,
+  LANDING_MESSAGES,
+)

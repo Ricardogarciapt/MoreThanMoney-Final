@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertCircle, Eye, EyeOff, Smartphone, Globe, Check, Loader2, CheckCircle2, XCircle, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { buildOAuthCallbackUrl, OAUTH_PENDING_REG_KEY } from '@/lib/oauth-flow'
+import { useT } from '@/components/i18n-provider'
 
 type PlanId = 'app_member_monthly' | 'app_member_annual' | 'premium_monthly' | 'premium_annual'
 type BillingCycle = 'monthly' | 'annual'
@@ -34,6 +35,7 @@ const PLANS = {
 }
 
 export default function RegisterPage() {
+  const t = useT()
   const [mode, setMode] = useState<'trial' | 'paid'>('trial')
   const [selectedPlan, setSelectedPlan] = useState<'app_member' | 'premium'>('app_member')
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
@@ -95,7 +97,7 @@ export default function RegisterPage() {
       const data = await res.json()
       setCouponStatus(data)
     } catch {
-      setCouponStatus({ valid: false, message: 'Erro ao validar cupão' })
+      setCouponStatus({ valid: false, message: t('register.errorCoupon') })
     } finally {
       setValidatingCoupon(false)
     }
@@ -122,9 +124,9 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         if (data?.code === 'ACCOUNT_EXISTS') {
-          setError('Já tens conta com este email. Inicia sessão para continuares.')
+          setError(t('register.errorAccountExists'))
         } else {
-          setError(data?.error || 'Não foi possível iniciar o teu trial. Tenta novamente.')
+          setError(data?.error || t('register.errorTrialFailed'))
         }
         setIsLoading(false)
         return
@@ -137,14 +139,14 @@ export default function RegisterPage() {
       })
       if (signInError) {
         // Conta criada, mas login falhou → mandar para o login
-        router.push('/app-mobile/login?message=' + encodeURIComponent('Conta criada! Inicia sessão para começares o teu trial.'))
+        router.push('/app-mobile/login?message=' + encodeURIComponent(t('register.accountCreatedLogin')))
         return
       }
 
       // Trial ativo → entrar na app
       window.location.href = '/app-mobile'
     } catch (err: any) {
-      setError(err?.message || 'Erro inesperado. Tenta novamente.')
+      setError(err?.message || t('register.errorUnexpected'))
       setIsLoading(false)
     }
   }
@@ -153,11 +155,11 @@ export default function RegisterPage() {
     e.preventDefault()
     setError('')
 
-    if (!formData.full_name.trim()) { setError('Nome completo é obrigatório'); return }
-    if (!formData.email.trim()) { setError('Email é obrigatório'); return }
-    if (!formData.username.trim()) { setError('Nome de utilizador é obrigatório'); return }
-    if (formData.password.length < 6) { setError('A palavra-passe deve ter pelo menos 6 carateres'); return }
-    if (formData.password !== formData.confirmPassword) { setError('As palavras-passe não coincidem'); return }
+    if (!formData.full_name.trim()) { setError(t('register.errorFullNameRequired')); return }
+    if (!formData.email.trim()) { setError(t('register.errorEmailRequired')); return }
+    if (!formData.username.trim()) { setError(t('register.errorUsernameRequired')); return }
+    if (formData.password.length < 6) { setError(t('register.errorPasswordShort')); return }
+    if (formData.password !== formData.confirmPassword) { setError(t('register.errorPasswordMismatch')); return }
 
     setIsLoading(true)
 
@@ -206,9 +208,9 @@ export default function RegisterPage() {
         const err = await checkoutRes.json().catch(() => ({}))
         // Plano ainda não configurado no Stripe — informar utilizador
         if (err.error?.includes('não encontrado') || err.error?.includes('não configurado')) {
-          setError('Este plano ainda não está disponível para pagamento online. Por favor contacta-nos em suporte@morethanmoney.pt')
+          setError(t('register.errorPlanUnavailable'))
         } else {
-          setError(err.error || 'Erro ao iniciar checkout. Tenta novamente.')
+          setError(err.error || t('register.errorCheckout'))
         }
         localStorage.removeItem(`mtm_pending_reg_${regToken}`)
         setIsLoading(false)
@@ -217,7 +219,7 @@ export default function RegisterPage() {
 
       const { url } = await checkoutRes.json()
       if (!url) {
-        setError('Não foi possível redirecionar para pagamento. Tenta novamente.')
+        setError(t('register.errorRedirect'))
         localStorage.removeItem(`mtm_pending_reg_${regToken}`)
         setIsLoading(false)
         return
@@ -227,7 +229,7 @@ export default function RegisterPage() {
       window.location.href = url
 
     } catch (err: any) {
-      setError(err.message || 'Erro inesperado. Tenta novamente.')
+      setError(err.message || t('register.errorUnexpected'))
       setIsLoading(false)
     }
   }
@@ -260,9 +262,9 @@ export default function RegisterPage() {
       })
       if (oauthError) { setError(oauthError.message); setIsLoading(false); return }
       if (data?.url) window.location.href = data.url
-      else { setError('Erro ao gerar URL do Google'); setIsLoading(false) }
+      else { setError(t('register.errorGoogleUrl')); setIsLoading(false) }
     } catch (error: any) {
-      setError('Erro ao iniciar registo com Google')
+      setError(t('register.errorGoogle'))
       setIsLoading(false)
     }
   }
@@ -278,7 +280,7 @@ export default function RegisterPage() {
             className="flex items-center gap-1 text-[#D2A63C] text-sm font-medium active:opacity-60 transition-opacity"
           >
             <ChevronLeft className="w-5 h-5" />
-            Voltar
+            {t('register.back')}
           </button>
         </div>
 
@@ -287,9 +289,9 @@ export default function RegisterPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#D2A63C] mb-4">
             <span className="text-black font-black text-2xl">M</span>
           </div>
-          <h1 className="text-3xl font-bold text-white">Criar Conta MTM</h1>
+          <h1 className="text-3xl font-bold text-white">{t('register.title')}</h1>
           <p className="text-gray-400 mt-2">
-            {mode === 'trial' ? 'Experimenta o Premium 3 dias grátis — sem cobrança nos 3 dias' : 'Escolhe o teu plano e começa hoje'}
+            {mode === 'trial' ? t('register.subtitleTrial') : t('register.subtitlePaid')}
           </p>
         </div>
 
@@ -301,14 +303,14 @@ export default function RegisterPage() {
               onClick={() => setMode('trial')}
               className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'trial' ? 'bg-[#D2A63C] text-black shadow' : 'text-gray-400 hover:text-white'}`}
             >
-              🎁 Grátis 3 dias
+              {t('register.modeTrial')}
             </button>
             <button
               type="button"
               onClick={() => setMode('paid')}
               className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'paid' ? 'bg-white text-black shadow' : 'text-gray-400 hover:text-white'}`}
             >
-              Subscrever já
+              {t('register.modePaid')}
             </button>
           </div>
         </div>
@@ -318,17 +320,17 @@ export default function RegisterPage() {
           <div className="rounded-2xl border-2 border-[#D2A63C]/50 bg-[#D2A63C]/10 p-5">
             <div className="flex items-center gap-2 mb-3">
               <Globe className="w-4 h-4 text-[#D2A63C]" />
-              <span className="font-bold text-white">3 dias de Premium grátis — sem cobrança nos 3 dias</span>
+              <span className="font-bold text-white">{t('register.trialCardTitle')}</span>
             </div>
             <ul className="space-y-1.5">
-              {['Acesso completo à app MTM System', 'Ferramentas de trading + Scanner', 'Live Sessions e comunidade', 'Alertas e sinais em tempo real', 'Cancela quando quiseres — sem compromisso'].map((f) => (
-                <li key={f} className="flex items-center gap-2 text-xs text-gray-200">
+              {['register.trialFeature1', 'register.trialFeature2', 'register.trialFeature3', 'register.trialFeature4', 'register.trialFeature5'].map((k) => (
+                <li key={k} className="flex items-center gap-2 text-xs text-gray-200">
                   <Check className="w-3.5 h-3.5 shrink-0 text-[#D2A63C]" />
-                  {f}
+                  {t(k)}
                 </li>
               ))}
             </ul>
-            <p className="text-[11px] text-gray-400 mt-3">Ao fim dos 3 dias, continuas Premium por apenas 34,99€ no 1º mês. Sem compromisso.</p>
+            <p className="text-[11px] text-gray-400 mt-3">{t('register.trialCardNote')}</p>
           </div>
         )}
 
@@ -340,13 +342,13 @@ export default function RegisterPage() {
               onClick={() => setBillingCycle('monthly')}
               className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${billingCycle === 'monthly' ? 'bg-white text-black shadow' : 'text-gray-400 hover:text-white'}`}
             >
-              Mensal
+              {t('register.billingMonthly')}
             </button>
             <button
               onClick={() => setBillingCycle('annual')}
               className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${billingCycle === 'annual' ? 'bg-white text-black shadow' : 'text-gray-400 hover:text-white'}`}
             >
-              Anual
+              {t('register.billingAnnual')}
               <span className="ml-2 text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">-20%</span>
             </button>
           </div>
@@ -403,7 +405,7 @@ export default function RegisterPage() {
                 </ul>
                 {planKey === 'premium' && (
                   <div className="mt-3 text-xs px-2 py-1 rounded-full text-center font-semibold" style={{ backgroundColor: `${plan.color}25`, color: plan.color }}>
-                    Mais popular
+                    {t('register.mostPopular')}
                   </div>
                 )}
               </button>
@@ -417,10 +419,10 @@ export default function RegisterPage() {
           <CardHeader>
             <CardTitle className="text-lg text-white">
               {mode === 'trial' ? (
-                <>Criar conta — <span style={{ color: '#D2A63C' }}>Trial Premium 3 dias</span>
-                  <span className="text-gray-400 font-normal text-sm ml-2">(3 dias grátis · depois 34,99€)</span></>
+                <>{t('register.formTitlePrefix')} <span style={{ color: '#D2A63C' }}>{t('register.formTitleTrialPlan')}</span>
+                  <span className="text-gray-400 font-normal text-sm ml-2">{t('register.formTitleTrialNote')}</span></>
               ) : (
-                <>Criar conta — <span style={{ color: activePlan.color }}>{activePlan.name}</span>
+                <>{t('register.formTitlePrefix')} <span style={{ color: activePlan.color }}>{activePlan.name}</span>
                   <span className="text-gray-400 font-normal text-sm ml-2">({activePricing.label})</span></>
               )}
             </CardTitle>
@@ -442,44 +444,44 @@ export default function RegisterPage() {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="full_name" className="text-gray-300">Nome Completo *</Label>
+                  <Label htmlFor="full_name" className="text-gray-300">{t('register.labelFullName')}</Label>
                   <Input id="full_name" name="full_name" type="text" value={formData.full_name}
                     onChange={handleInputChange} className="bg-gray-800 border-gray-700 text-white"
-                    placeholder="O teu nome completo" required disabled={isLoading} />
+                    placeholder={t('register.placeholderFullName')} required disabled={isLoading} />
                 </div>
                 <div>
-                  <Label htmlFor="username" className="text-gray-300">Nome de Utilizador *</Label>
+                  <Label htmlFor="username" className="text-gray-300">{t('register.labelUsername')}</Label>
                   <Input id="username" name="username" type="text" value={formData.username}
                     onChange={handleInputChange} className="bg-gray-800 border-gray-700 text-white"
-                    placeholder="nome_utilizador" required disabled={isLoading} />
+                    placeholder={t('register.placeholderUsername')} required disabled={isLoading} />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="email" className="text-gray-300">Email *</Label>
+                <Label htmlFor="email" className="text-gray-300">{t('register.labelEmail')}</Label>
                 <Input id="email" name="email" type="email" value={formData.email}
                   onChange={handleInputChange} className="bg-gray-800 border-gray-700 text-white"
-                  placeholder="email@exemplo.com" required disabled={isLoading} />
+                  placeholder={t('register.placeholderEmail')} required disabled={isLoading} />
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="phone" className="text-gray-300">Telefone</Label>
+                  <Label htmlFor="phone" className="text-gray-300">{t('register.labelPhone')}</Label>
                   <Input id="phone" name="phone" type="tel" value={formData.phone}
                     onChange={handleInputChange} className="bg-gray-800 border-gray-700 text-white"
-                    placeholder="+351 912 345 678" disabled={isLoading} />
+                    placeholder={t('register.placeholderPhone')} disabled={isLoading} />
                 </div>
                 <div>
-                  <Label htmlFor="whatsapp" className="text-gray-300">WhatsApp</Label>
+                  <Label htmlFor="whatsapp" className="text-gray-300">{t('register.labelWhatsapp')}</Label>
                   <Input id="whatsapp" name="whatsapp" type="tel" value={formData.whatsapp}
                     onChange={handleInputChange} className="bg-gray-800 border-gray-700 text-white"
-                    placeholder="+351 912 345 678" disabled={isLoading} />
+                    placeholder={t('register.placeholderPhone')} disabled={isLoading} />
                 </div>
               </div>
 
               <div>
                 <Label htmlFor="sponsorUsername" className="text-gray-300">
-                  Código do patrocinador <span className="text-gray-500 font-normal">(opcional)</span>
+                  {t('register.labelSponsor')} <span className="text-gray-500 font-normal">{t('register.optional')}</span>
                 </Label>
                 <div className="relative">
                   <Input
@@ -490,7 +492,7 @@ export default function RegisterPage() {
                     onChange={handleInputChange}
                     onBlur={() => validateSponsor(formData.sponsorUsername)}
                     className="bg-gray-800 border-gray-700 text-white pr-8"
-                    placeholder="Username de quem te convidou"
+                    placeholder={t('register.placeholderSponsor')}
                     disabled={isLoading}
                   />
                   {validatingSponsor && (
@@ -500,9 +502,9 @@ export default function RegisterPage() {
                 {sponsorStatus !== null && !validatingSponsor && (
                   <div className={`flex items-center gap-1.5 mt-1 text-xs ${sponsorStatus.valid ? 'text-green-400' : 'text-red-400'}`}>
                     {sponsorStatus.valid ? (
-                      <><CheckCircle2 className="w-3.5 h-3.5" /> Patrocinador: {sponsorStatus.name}</>
+                      <><CheckCircle2 className="w-3.5 h-3.5" /> {t('register.sponsorValidPrefix')} {sponsorStatus.name}</>
                     ) : (
-                      <><XCircle className="w-3.5 h-3.5" /> Utilizador não encontrado</>
+                      <><XCircle className="w-3.5 h-3.5" /> {t('register.sponsorNotFound')}</>
                     )}
                   </div>
                 )}
@@ -511,7 +513,7 @@ export default function RegisterPage() {
               {mode === 'paid' && (
               <div>
                 <Label htmlFor="couponCode" className="text-gray-300">
-                  Cupão de oferta <span className="text-gray-500 font-normal">(opcional)</span>
+                  {t('register.labelCoupon')} <span className="text-gray-500 font-normal">{t('register.optional')}</span>
                 </Label>
                 <div className="relative">
                   <Input
@@ -522,7 +524,7 @@ export default function RegisterPage() {
                     onChange={handleInputChange}
                     onBlur={() => validateCoupon(formData.couponCode)}
                     className="bg-gray-800 border-gray-700 text-white pr-8 uppercase placeholder:normal-case"
-                    placeholder="Código de cupão (ex: MTM2024)"
+                    placeholder={t('register.placeholderCoupon')}
                     disabled={isLoading}
                     style={{ textTransform: formData.couponCode ? 'uppercase' : 'none' }}
                   />
@@ -543,12 +545,12 @@ export default function RegisterPage() {
               )}
 
               <div>
-                <Label htmlFor="password" className="text-gray-300">Palavra-passe *</Label>
+                <Label htmlFor="password" className="text-gray-300">{t('register.labelPassword')}</Label>
                 <div className="relative">
                   <Input id="password" name="password" type={showPassword ? "text" : "password"}
                     value={formData.password} onChange={handleInputChange}
                     className="bg-gray-800 border-gray-700 text-white pr-10"
-                    placeholder="Mínimo 6 carateres" required disabled={isLoading} />
+                    placeholder={t('register.placeholderPassword')} required disabled={isLoading} />
                   <button type="button" onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300" tabIndex={-1}>
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -557,12 +559,12 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <Label htmlFor="confirmPassword" className="text-gray-300">Confirmar Palavra-passe *</Label>
+                <Label htmlFor="confirmPassword" className="text-gray-300">{t('register.labelConfirmPassword')}</Label>
                 <div className="relative">
                   <Input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? "text" : "password"}
                     value={formData.confirmPassword} onChange={handleInputChange}
                     className="bg-gray-800 border-gray-700 text-white pr-10"
-                    placeholder="Confirma a tua palavra-passe" required disabled={isLoading} />
+                    placeholder={t('register.placeholderConfirmPassword')} required disabled={isLoading} />
                   <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300" tabIndex={-1}>
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -576,22 +578,22 @@ export default function RegisterPage() {
                   ? 'linear-gradient(135deg, #D2A63C, #BB8525)'
                   : `linear-gradient(135deg, ${activePlan.color}, ${selectedPlan === 'premium' ? '#5B21B6' : '#BB8525'})` }}>
                 {isLoading ? (
-                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" />A preparar acesso...</>
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('register.submitPreparing')}</>
                 ) : mode === 'trial' ? (
-                  <>🎁 Começar grátis — 3 dias de Premium</>
+                  <>{t('register.submitTrial')}</>
                 ) : couponStatus?.valid && (couponStatus.type === 'free_subscription' || couponStatus.type === 'free_months') ? (
-                  <>🎁 Activar acesso gratuito — {activePlan.name}</>
+                  <>{t('register.submitFreeAccess')} {activePlan.name}</>
                 ) : (
-                  <>💳 Pagar e criar conta — {activePlan.name}</>
+                  <>{t('register.submitPay')} {activePlan.name}</>
                 )}
               </Button>
 
               <p className="text-xs text-center text-gray-500 -mt-1">
                 {mode === 'trial'
-                  ? '🎁 3 dias de Premium sem cobrança. Adicionas o cartão agora, não te cobramos nos 3 dias e cancelas quando quiseres. Ao fim dos 3 dias, 34,99€ no 1º mês (depois 65€/mês).'
+                  ? t('register.helperTrial')
                   : couponStatus?.valid && (couponStatus.type === 'free_subscription' || couponStatus.type === 'free_months')
-                  ? '🎁 O teu primeiro mês é gratuito. Após o período experimental, a subscrição renova automaticamente.'
-                  : '🔒 Serás redirecionado para o Stripe para pagamento seguro. Após confirmação, a tua conta é criada automaticamente.'
+                  ? t('register.helperFree')
+                  : t('register.helperStripe')
                 }
               </p>
 
@@ -601,14 +603,14 @@ export default function RegisterPage() {
                   <div className="w-full border-t border-gray-700" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-gray-900 text-gray-400">Ou regista-te com</span>
+                  <span className="px-2 bg-gray-900 text-gray-400">{t('register.orRegisterWith')}</span>
                 </div>
               </div>
 
               <Button type="button" onClick={handleGoogleRegister} disabled={isLoading}
                 className="w-full bg-white hover:bg-gray-100 text-gray-900" size="lg">
                 {isLoading ? (
-                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" />A processar...</>
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('register.processing')}</>
                 ) : (
                   <>
                     <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
@@ -626,19 +628,19 @@ export default function RegisterPage() {
 
             <div className="mt-6 text-center space-y-2">
               <p className="text-gray-400 text-sm">
-                Já tens uma conta?{' '}
-                <Link href="/login" className="text-[#D2A63C] hover:underline font-medium">Iniciar Sessão</Link>
+                {t('register.haveAccount')}{' '}
+                <Link href="/login" className="text-[#D2A63C] hover:underline font-medium">{t('register.signIn')}</Link>
               </p>
               <p className="text-gray-600 text-xs">
-                Subscrição auto-renovável. Cancela a qualquer momento.{' '}
+                {t('register.autoRenew')}{' '}
                 <br />
-                Ao criar conta aceitas os nossos{" "}
+                {t('register.termsPrefix')}{" "}
                 <Link href="/terms" className="text-[#D2A63C] hover:underline">
-                  Termos de Serviço
+                  {t('register.termsOfService')}
                 </Link>{" "}
-                e{" "}
+                {t('register.and')}{" "}
                 <Link href="/privacidade" className="text-[#D2A63C] hover:underline">
-                  Política de Privacidade
+                  {t('register.privacyPolicy')}
                 </Link>
                 .
               </p>

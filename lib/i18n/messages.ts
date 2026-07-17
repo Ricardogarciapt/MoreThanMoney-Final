@@ -6,26 +6,10 @@ import type { Lang } from "./config"
  * `pt` é a fonte; as restantes são geradas e afináveis. Chave em falta → cai para `pt`.
  */
 
-export type MessageKey =
-  | "common.loading"
-  | "common.save"
-  | "common.cancel"
-  | "common.close"
-  | "common.back"
-  | "common.retry"
-  | "common.confirm"
-  | "common.search"
-  | "auth.login"
-  | "auth.logout"
-  | "auth.email"
-  | "auth.password"
-  | "nav.settings"
-  | "nav.language"
-  | "cta.upgradePremium"
-  | "live.now"
-  | "signals.none"
+/** Chave de tradução — string livre (namespaced, ex.: "register.title"). */
+export type MessageKey = string
 
-type Dict = Record<MessageKey, string>
+type Dict = Record<string, string>
 
 const pt: Dict = {
   "common.loading": "A carregar…",
