@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { Toaster as Sonner } from 'sonner'
 import ConditionalNavbarFooter from "@/components/conditional-navbar-footer"
 import { GoogleTranslateLoader } from "@/components/google-translate-loader"
+import { I18nProvider } from "@/components/i18n-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import XpUpdateListener from "@/components/xp-update-listener"
 
@@ -77,15 +78,17 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <ThemeInitializer />
           <AuthProvider>
-            <Suspense fallback={null}>
-              <GoogleTranslateLoader />
-              <ConditionalNavbarFooter>
-                {children}
-              </ConditionalNavbarFooter>
-              <Toaster />
-              <Sonner richColors position="top-right" />
-              <XpUpdateListener />
-            </Suspense>
+            <I18nProvider>
+              <Suspense fallback={null}>
+                <GoogleTranslateLoader />
+                <ConditionalNavbarFooter>
+                  {children}
+                </ConditionalNavbarFooter>
+                <Toaster />
+                <Sonner richColors position="top-right" />
+                <XpUpdateListener />
+              </Suspense>
+            </I18nProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
