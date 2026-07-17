@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { SessionsTimetable } from "@/components/live/sessions-timetable"
 import { ScheduleEditor } from "@/components/live/schedule-editor"
 import { ptWallTimeToUtcIso, toNaiveLocalWall } from "@/lib/pt-time"
+import { LMS_LANGUAGES, DEFAULT_LMS_LANGUAGE } from "@/lib/lms/languages"
 import { toast } from "sonner"
 
 type Academy = { id: string; name: string; slug: string }
@@ -21,6 +22,7 @@ type Educator = {
   email: string
   bio?: string | null
   specialty?: string | null
+  language?: string | null
   avatar_url?: string | null
   academy_id?: string | null
   is_active: boolean
@@ -69,6 +71,7 @@ export default function LiveSessionsManager() {
     academy_id: "",
     bio: "",
     specialty: "",
+    language: DEFAULT_LMS_LANGUAGE,
     avatar_url: "",
   })
 
@@ -159,10 +162,11 @@ export default function LiveSessionsManager() {
         academy_id: educatorForm.academy_id || null,
         bio: educatorForm.bio || null,
         specialty: educatorForm.specialty || null,
+        language: educatorForm.language || DEFAULT_LMS_LANGUAGE,
         avatar_url: educatorForm.avatar_url || null,
       }),
     })
-    setEducatorForm({ email: "", display_name: "", password: "", academy_id: "", bio: "", specialty: "", avatar_url: "" })
+    setEducatorForm({ email: "", display_name: "", password: "", academy_id: "", bio: "", specialty: "", language: DEFAULT_LMS_LANGUAGE, avatar_url: "" })
     load()
   }
 
@@ -389,6 +393,7 @@ export default function LiveSessionsManager() {
       specialty: educator.specialty || "",
       avatar_url: educator.avatar_url || "",
       academy_id: educator.academy_id || "",
+      language: educator.language || DEFAULT_LMS_LANGUAGE,
       password: "",
       is_active: educator.is_active,
       restream_enabled: Boolean(educator.restream_enabled),
@@ -411,6 +416,7 @@ export default function LiveSessionsManager() {
         specialty: editingEducatorForm.specialty,
         avatar_url: editingEducatorForm.avatar_url,
         academy_id: editingEducatorForm.academy_id || null,
+        language: editingEducatorForm.language || DEFAULT_LMS_LANGUAGE,
         is_active: Boolean(editingEducatorForm.is_active),
         password: editingEducatorForm.password || undefined,
         restream_enabled: Boolean(editingEducatorForm.restream_enabled),
@@ -426,6 +432,7 @@ export default function LiveSessionsManager() {
       specialty: "",
       avatar_url: "",
       academy_id: "",
+      language: DEFAULT_LMS_LANGUAGE,
       password: "",
       is_active: true,
       restream_enabled: false,
@@ -525,6 +532,18 @@ export default function LiveSessionsManager() {
               </option>
             ))}
           </select>
+          <select
+            className="w-full rounded border border-gray-700 bg-gray-950 px-2 py-2 text-white text-sm"
+            value={educatorForm.language}
+            onChange={(e) => setEducatorForm((p: any) => ({ ...p, language: e.target.value }))}
+            title="Idioma do educador (as suas salas e horário ficam neste idioma)"
+          >
+            {LMS_LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.flag} {l.name}
+              </option>
+            ))}
+          </select>
         </div>
         <Textarea
           value={educatorForm.bio}
@@ -604,6 +623,18 @@ export default function LiveSessionsManager() {
                       {academies.map((academy) => (
                         <option key={academy.id} value={academy.id}>
                           {academy.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="w-full rounded border border-gray-700 bg-gray-950 px-2 py-2 text-white text-sm"
+                      value={editingEducatorForm.language || DEFAULT_LMS_LANGUAGE}
+                      onChange={(event) => setEditingEducatorForm((prev: any) => ({ ...prev, language: event.target.value }))}
+                      title="Idioma do educador"
+                    >
+                      {LMS_LANGUAGES.map((l) => (
+                        <option key={l.code} value={l.code}>
+                          {l.flag} {l.name}
                         </option>
                       ))}
                     </select>

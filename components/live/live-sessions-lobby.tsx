@@ -85,7 +85,7 @@ export default function LiveSessionsLobby() {
   const [streams, setStreams] = useState<Stream[]>([])
   const [educators, setEducators] = useState<EducatorPublic[]>([])
   const [scheduledSessions, setScheduledSessions] = useState<
-    Array<{ id: string; streamId: string; title: string; educatorName?: string | null; scheduledAt: string; tier?: string | null }>
+    Array<{ id: string; streamId: string; title: string; educatorName?: string | null; language?: string | null; scheduledAt: string; tier?: string | null }>
   >([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
@@ -404,6 +404,7 @@ export default function LiveSessionsLobby() {
                     id: s.id,
                     title: s.title,
                     educatorName: s.educatorName ?? null,
+                    language: s.language ?? null,
                     scheduledAt: s.scheduledAt,
                     tier: s.tier ?? null,
                   }))
@@ -411,6 +412,7 @@ export default function LiveSessionsLobby() {
                     id: s.id,
                     title: s.title,
                     educatorName: s.educator?.display_name ?? null,
+                    language: (s.educator as { language?: string | null } | null)?.language ?? null,
                     scheduledAt: s.scheduled_start_at!,
                     tier: (s as { access_tier?: string }).access_tier ?? null,
                   })))}

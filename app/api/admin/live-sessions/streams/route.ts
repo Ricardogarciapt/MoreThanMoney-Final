@@ -6,6 +6,30 @@ import { normalizeIngestProvider, normalizePlaybackMode } from "@/lib/lms-stream
 
 const supabase = getSupabaseAdmin()
 
+/**
+ * Dispara a notificação "🔴 Estamos em Direto!" para todos os utilizadores.
+ * Mesma payload que a rota do educador (presence) — antes só o studio do educador
+ * notificava; o toggle/criação do admin não, por isso nem todas as sessões disparavam.
+ * Await (não fire-and-forget) para garantir o envio antes de a função serverless congelar.
+ */
+async function sendLiveNotification(stream: { id: string; title?: string | null }): Promise<void> {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.morethanmoney.pt"
+  try {
+    await fetch(`${siteUrl}/api/notifications/send-push`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        all: true,
+        title: "🔴 Estamos em Direto!",
+        body: `"${stream.title ?? "Sessão"}" está agora ao vivo. Entra já!`,
+        data: { type: "live_session", url: "/app-mobile?tab=live", streamId: stream.id },
+      }),
+    })
+  } catch (e) {
+    console.error("[admin/streams] live push failed:", e)
+  }
+}
+
 export async function GET(request: NextRequest) {
   const authCheck = await requireAdmin(request)
   if (authCheck) return authCheck
@@ -66,6 +90,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Sala criada já em direto → notifica.
+    if (data?.is_live) await sendLiveNotification(data)
+
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })
@@ -113,6 +141,17 @@ export async function PATCH(request: NextRequest) {
     if (updates.description !== undefined) updates.description = String(updates.description || "").trim() || null
     if (updates.playback_mode !== undefined) updates.playback_mode = normalizePlaybackMode(updates.playback_mode)
     if (updates.ingest_provider !== undefined) updates.ingest_provider = normalizeIngestProvider(updates.ingest_provider)
+
+    // Deteta a transição desligado→ligado para notificar só uma vez (não em cada PATCH).
+    let wasLive = false
+    if (updates.is_live === true) {
+      const { data: prev } = await supabase
+        .from("lms_streams")
+        .select("is_live")
+        .eq("id", id)
+        .maybeSingle()
+      wasLive = Boolean(prev?.is_live)
+    }
 
     if (updates.is_live === true) {
       updates.live_started_at = new Date().toISOString()
@@ -184,6 +223,10 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Notifica só quando o admin liga (transição desligado→ligado).
+    if (updates.is_live === true && !wasLive && data) await sendLiveNotification(data)
+
     return NextResponse.json({ success: true, data })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })

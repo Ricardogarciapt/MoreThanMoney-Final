@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs"
 import { getSupabaseAdmin, requireAdmin } from "@/lib/admin-api-helpers"
 import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
 import { generateMtmIngestStreamKey } from "@/lib/lms-stream-keys"
+import { normalizeLmsLanguage } from "@/lib/lms/languages"
 
 const supabase = getSupabaseAdmin()
 
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase
     .from("lms_educators")
     .select(
-      "id, email, display_name, bio, avatar_url, specialty, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url, created_at, updated_at"
+      "id, email, display_name, bio, avatar_url, specialty, language, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url, created_at, updated_at"
     )
     .order("created_at", { ascending: false })
 
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
     const bio = String(body.bio || "").trim()
     const specialty = String(body.specialty || "").trim()
     const avatar_url = String(body.avatar_url || "").trim()
+    const language = normalizeLmsLanguage(body.language)
     let academy_id = body.academy_id || null
 
     if (!email || !display_name || !password) {
@@ -71,13 +73,14 @@ export async function POST(request: NextRequest) {
         bio: bio || null,
         specialty: specialty || null,
         avatar_url: avatar_url || null,
+        language,
         academy_id,
         profile_id: linkedProfile?.id ?? null,
         stream_key_fixed: null,
         is_active: true,
       })
       .select(
-        "id, email, display_name, bio, avatar_url, specialty, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url, created_at, updated_at"
+        "id, email, display_name, bio, avatar_url, specialty, language, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url, created_at, updated_at"
       )
       .single()
 
@@ -88,7 +91,7 @@ export async function POST(request: NextRequest) {
       .from("lms_educators")
       .update({ stream_key_fixed: fixedKey })
       .eq("id", data.id)
-      .select("id, email, display_name, bio, avatar_url, specialty, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, created_at, updated_at")
+      .select("id, email, display_name, bio, avatar_url, specialty, language, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, created_at, updated_at")
       .single()
     if (keyError || !updatedEducator) return NextResponse.json({ error: keyError?.message || "Erro ao gerar chave fixa" }, { status: 500 })
 
@@ -141,6 +144,7 @@ export async function PATCH(request: NextRequest) {
     if (body.display_name !== undefined) updates.display_name = String(body.display_name || "").trim()
     if (body.bio !== undefined) updates.bio = String(body.bio || "").trim() || null
     if (body.specialty !== undefined) updates.specialty = String(body.specialty || "").trim() || null
+    if (body.language !== undefined) updates.language = normalizeLmsLanguage(body.language)
     if (body.avatar_url !== undefined) updates.avatar_url = String(body.avatar_url || "").trim() || null
     if (body.academy_id !== undefined) updates.academy_id = body.academy_id || null
     if (body.youtube_stream_key !== undefined) updates.youtube_stream_key = String(body.youtube_stream_key || "").trim() || null
@@ -165,7 +169,7 @@ export async function PATCH(request: NextRequest) {
       .update(updates)
       .eq("id", id)
       .select(
-        "id, email, display_name, bio, avatar_url, specialty, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url, created_at, updated_at"
+        "id, email, display_name, bio, avatar_url, specialty, language, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url, created_at, updated_at"
       )
       .single()
 

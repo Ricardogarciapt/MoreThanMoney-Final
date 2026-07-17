@@ -6,18 +6,25 @@ const supabase = getSupabaseAdmin()
 
 export const dynamic = "force-dynamic"
 
+type EducatorMini = { id: string; display_name: string; language?: string | null }
 type StreamMini = {
   id: string
   title: string
   access_tier: string | null
   educator_id: string | null
-  educator?: { id: string; display_name: string } | { id: string; display_name: string }[] | null
+  educator?: EducatorMini | EducatorMini[] | null
 }
 
 function educatorName(e: StreamMini["educator"]): string | null {
   if (!e) return null
   const one = Array.isArray(e) ? e[0] : e
   return one?.display_name ?? null
+}
+
+function educatorLanguage(e: StreamMini["educator"]): string {
+  if (!e) return "pt"
+  const one = Array.isArray(e) ? e[0] : e
+  return (one?.language ?? "pt") || "pt"
 }
 
 /**
@@ -36,7 +43,7 @@ export async function GET(req: NextRequest) {
       .from("lms_stream_schedules")
       .select(
         "id, stream_id, weekday, start_time, duration_min, timezone, access_tier, is_active, " +
-          "stream:lms_streams(id, title, access_tier, educator_id, educator:lms_educators(id, display_name))",
+          "stream:lms_streams(id, title, access_tier, educator_id, educator:lms_educators(id, display_name, language))",
       )
       .eq("is_active", true)
 
@@ -69,6 +76,7 @@ export async function GET(req: NextRequest) {
         educatorId: stream?.educator_id ?? null,
         title: stream?.title ?? "Sessão",
         educatorName: educatorName(stream?.educator),
+        language: educatorLanguage(stream?.educator),
         scheduledAt: p.scheduledAt,
         tier,
       }
@@ -77,7 +85,7 @@ export async function GET(req: NextRequest) {
     // 2) One-offs (scheduled_start_at no futuro) — não duplicar salas já cobertas por recorrência no mesmo instante
     const { data: oneOffRows } = await supabase
       .from("lms_streams")
-      .select("id, title, access_tier, scheduled_start_at, educator_id, educator:lms_educators(id, display_name)")
+      .select("id, title, access_tier, scheduled_start_at, educator_id, educator:lms_educators(id, display_name, language)")
       .eq("is_live", false)
       .gt("scheduled_start_at", now.toISOString())
 
@@ -87,6 +95,7 @@ export async function GET(req: NextRequest) {
       educatorId: (s.educator_id as string | null) ?? null,
       title: String(s.title ?? "Sessão"),
       educatorName: educatorName(s.educator as StreamMini["educator"]),
+      language: educatorLanguage(s.educator as StreamMini["educator"]),
       scheduledAt: String(s.scheduled_start_at),
       tier: (s.access_tier as string | null) ?? "all",
     }))

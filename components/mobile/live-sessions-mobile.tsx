@@ -55,6 +55,7 @@ type TimetableApiSession = {
   educatorId?: string | null
   title: string
   educatorName?: string | null
+  language?: string | null
   scheduledAt: string
   tier?: string | null
 }
@@ -625,6 +626,7 @@ export default function LiveSessionsMobile({
               id: s.id,
               title: s.title,
               educatorName: s.educatorName ?? null,
+              language: s.language ?? null,
               scheduledAt: s.scheduledAt,
               tier: s.tier,
             }))}
