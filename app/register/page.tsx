@@ -159,21 +159,19 @@ export default function RegisterPage() {
     if (formData.password.length < 6) { setError('A palavra-passe deve ter pelo menos 6 carateres'); return }
     if (formData.password !== formData.confirmPassword) { setError('As palavras-passe não coincidem'); return }
 
-    // FREE TRIAL 3 dias (sem cartão) — cria conta e entra logo na app.
-    if (mode === 'trial') {
-      await handleTrialSubmit()
-      return
-    }
-
     setIsLoading(true)
 
+    // Trial de 3 dias COM cartão (Stripe): recolhe o método de pagamento, 3 dias sem
+    // cobrança, e ao fim cobra o 1º mês a 34,99€ (intro). Cancela quando quiser.
+    const isTrialFlow = mode === 'trial'
+
     try {
-      // ── FLUXO: Pagamento Stripe PRIMEIRO, conta criada DEPOIS ──────────────
-      // 1. Gerar token único para esta sessão de registo
+      // ── FLUXO: Pagamento/registo Stripe PRIMEIRO, conta criada DEPOIS ──────────
       const regToken = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
-      // 2. Guardar dados do formulário no localStorage (mesmo browser)
-      //    A página /success irá recuperar estes dados para criar a conta.
+      // No trial é sempre Premium mensal (3 dias grátis + intro 34,99€ no 1º mês).
+      const planId = isTrialFlow ? 'premium_monthly' : `${selectedPlan}_${billingCycle}`
+
       localStorage.setItem(`mtm_pending_reg_${regToken}`, JSON.stringify({
         email: formData.email,
         password: formData.password,
@@ -182,14 +180,12 @@ export default function RegisterPage() {
         phone: formData.phone || '',
         whatsapp: formData.whatsapp || '',
         sponsor_username: formData.sponsorUsername || '',
-        coupon_code: formData.couponCode || '',
-        plan: selectedPlan,
-        billing: billingCycle,
+        coupon_code: isTrialFlow ? '' : (formData.couponCode || ''),
+        plan: isTrialFlow ? 'premium' : selectedPlan,
+        billing: 'monthly',
         created_at: Date.now(),
       }))
 
-      // 3. Criar sessão Stripe (não requer conta Supabase)
-      const planId = `${selectedPlan}_${billingCycle}` // ex: app_member_monthly
       const checkoutRes = await fetch('/api/stripe/register-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -201,7 +197,8 @@ export default function RegisterPage() {
           phone: formData.phone || '',
           regToken,
           sponsorUsername: formData.sponsorUsername || '',
-          couponCode: formData.couponCode || '',
+          couponCode: isTrialFlow ? '' : (formData.couponCode || ''),
+          trial: isTrialFlow,
         }),
       })
 
@@ -292,7 +289,7 @@ export default function RegisterPage() {
           </div>
           <h1 className="text-3xl font-bold text-white">Criar Conta MTM</h1>
           <p className="text-gray-400 mt-2">
-            {mode === 'trial' ? 'Experimenta o Premium 3 dias grátis — sem cartão' : 'Escolhe o teu plano e começa hoje'}
+            {mode === 'trial' ? 'Experimenta o Premium 3 dias grátis — sem cobrança nos 3 dias' : 'Escolhe o teu plano e começa hoje'}
           </p>
         </div>
 
@@ -321,10 +318,10 @@ export default function RegisterPage() {
           <div className="rounded-2xl border-2 border-[#D2A63C]/50 bg-[#D2A63C]/10 p-5">
             <div className="flex items-center gap-2 mb-3">
               <Globe className="w-4 h-4 text-[#D2A63C]" />
-              <span className="font-bold text-white">3 dias de Premium — grátis, sem cartão</span>
+              <span className="font-bold text-white">3 dias de Premium grátis — sem cobrança nos 3 dias</span>
             </div>
             <ul className="space-y-1.5">
-              {['Acesso completo à app MTM System', 'Ferramentas de trading + Scanner', 'Live Sessions e comunidade', 'Alertas e sinais em tempo real', 'Sem cartão · cancela quando quiseres'].map((f) => (
+              {['Acesso completo à app MTM System', 'Ferramentas de trading + Scanner', 'Live Sessions e comunidade', 'Alertas e sinais em tempo real', 'Cancela quando quiseres — sem compromisso'].map((f) => (
                 <li key={f} className="flex items-center gap-2 text-xs text-gray-200">
                   <Check className="w-3.5 h-3.5 shrink-0 text-[#D2A63C]" />
                   {f}
@@ -421,7 +418,7 @@ export default function RegisterPage() {
             <CardTitle className="text-lg text-white">
               {mode === 'trial' ? (
                 <>Criar conta — <span style={{ color: '#D2A63C' }}>Trial Premium 3 dias</span>
-                  <span className="text-gray-400 font-normal text-sm ml-2">(grátis, sem cartão)</span></>
+                  <span className="text-gray-400 font-normal text-sm ml-2">(3 dias grátis · depois 34,99€)</span></>
               ) : (
                 <>Criar conta — <span style={{ color: activePlan.color }}>{activePlan.name}</span>
                   <span className="text-gray-400 font-normal text-sm ml-2">({activePricing.label})</span></>
@@ -591,7 +588,7 @@ export default function RegisterPage() {
 
               <p className="text-xs text-center text-gray-500 -mt-1">
                 {mode === 'trial'
-                  ? '🎁 Sem cartão. Entras já na app com Premium por 3 dias. Depois continuas por 34,99€/mês (1º mês) — cancela quando quiseres.'
+                  ? '🎁 3 dias de Premium sem cobrança. Adicionas o cartão agora, não te cobramos nos 3 dias e cancelas quando quiseres. Ao fim dos 3 dias, 34,99€ no 1º mês (depois 65€/mês).'
                   : couponStatus?.valid && (couponStatus.type === 'free_subscription' || couponStatus.type === 'free_months')
                   ? '🎁 O teu primeiro mês é gratuito. Após o período experimental, a subscrição renova automaticamente.'
                   : '🔒 Serás redirecionado para o Stripe para pagamento seguro. Após confirmação, a tua conta é criada automaticamente.'

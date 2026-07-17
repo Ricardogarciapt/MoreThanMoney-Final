@@ -17,11 +17,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(IOS_IAP_REQUIRED, { status: 403 })
     }
     const body = await request.json()
-    const { planId, email, fullName, username, phone, regToken, sponsorUsername, couponCode } = body
+    const { planId, email, fullName, username, phone, regToken, sponsorUsername, couponCode, trial } = body
 
     if (!planId || !email || !fullName || !username) {
       return NextResponse.json({ error: 'planId, email, fullName e username são obrigatórios' }, { status: 400 })
     }
+
+    // Trial de 3 dias COM cartão: recolhe o método de pagamento no registo, não cobra
+    // nos 3 dias, e ao fim cobra o 1º mês a 34,99€ (intro). Cancela quando quiser.
+    const isTrial = trial === true && planId === 'premium_monthly'
 
     const priceId = requireStripePriceId(planId)
     const stripe = getStripeClient()
@@ -53,10 +57,17 @@ export async function POST(request: NextRequest) {
         phone: phone || '',
         sponsor_username: sponsorUsername || '',
         coupon_code: couponCode || '',
+        is_trial: isTrial ? '1' : '',
       },
     }
 
-    if (couponCode) {
+    if (isTrial) {
+      // 3 dias grátis (sem cobrança) → depois 1º mês 34,99€ (INTRO_PREMIUM_1M), renova 65€.
+      // Cartão obrigatório para poder cobrar ao fim dos 3 dias.
+      sessionParams.subscription_data = { trial_period_days: 3 }
+      sessionParams.discounts = [{ coupon: 'INTRO_PREMIUM_1M' }]
+      sessionParams.payment_method_collection = 'always'
+    } else if (couponCode) {
       const promoId = await resolveStripePromotionCode(couponCode)
       if (promoId) {
         sessionParams.discounts = [{ promotion_code: promoId }]
