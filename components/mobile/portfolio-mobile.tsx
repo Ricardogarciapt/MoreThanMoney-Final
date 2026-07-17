@@ -32,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { PortfolioRebalanceAssistant } from "@/components/mobile/portfolio-rebalance-assistant"
+import { useT } from "@/components/i18n-provider"
 
 interface MTMAsset {
   symbol: string
@@ -109,6 +110,7 @@ function dbRowToPersonal(row: Record<string, unknown>): PersonalAsset {
 }
 
 export default function PortfolioMobile() {
+  const t = useT()
   const [mounted, setMounted] = useState(false)
   const [mtmAssets, setMtmAssets] = useState<MTMAsset[]>([])
   const [personalAssets, setPersonalAssets] = useState<PersonalAsset[]>([])
@@ -503,7 +505,7 @@ export default function PortfolioMobile() {
 
   const handleAddAsset = async () => {
     if (!newAsset.symbol || !newAsset.name || newAsset.quantity <= 0 || newAsset.purchase_price <= 0) {
-      alert("Por favor, preenche todos os campos corretamente")
+      alert(t("portfolio.fillFieldsError"))
       return
     }
 
@@ -525,7 +527,7 @@ export default function PortfolioMobile() {
       })
       const data = await res.json()
       if (!res.ok) {
-        alert(data.error || "Erro ao guardar no servidor")
+        alert(data.error || t("portfolio.saveServerError"))
         return
       }
       setPersonalAssets((prev) => [...prev, dbRowToPersonal(data.asset as Record<string, unknown>)])
@@ -552,7 +554,7 @@ export default function PortfolioMobile() {
   }
 
   const handleRemoveAsset = async (id: string) => {
-    if (!confirm("Remover este ativo do portfólio?")) return
+    if (!confirm(t("portfolio.removeConfirm"))) return
 
     const session = await getAccessToken() // token (truthy = autenticado; verificação leve)
     if (session && isUuid(id)) {
@@ -562,7 +564,7 @@ export default function PortfolioMobile() {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        alert((data as { error?: string }).error || "Erro ao remover no servidor")
+        alert((data as { error?: string }).error || t("portfolio.removeServerError"))
         return
       }
     }
@@ -620,13 +622,13 @@ export default function PortfolioMobile() {
 
       if (response.ok && result.alert) {
         handleAddAlert(asset.id, 'price_above', tp)
-        alert(`✅ Alerta Take Profit criado!\n\n${asset.symbol}\nPreço Atual: $${formatPrice(asset.current_price)}\nTarget: $${formatPrice(tp)}\n\nSerás notificado quando atingir o alvo!`)
+        alert(`${t("portfolio.tpAlertCreated")}\n\n${asset.symbol}\n${t("portfolio.currentPrice")}: $${formatPrice(asset.current_price)}\n${t("portfolio.targetLabel")}: $${formatPrice(tp)}\n\n${t("portfolio.tpAlertNotify")}`)
       } else {
-        throw new Error(result.error || 'Erro desconhecido')
+        throw new Error(result.error || t("portfolio.unknownError"))
       }
     } catch (error: any) {
       console.error('❌ Erro ao criar TP alert:', error)
-      alert(`❌ Erro ao criar alerta:\n${error.message || 'Verifica a conexão'}`)
+      alert(`${t("portfolio.alertCreateError")}\n${error.message || t("portfolio.checkConnection")}`)
     }
   }
 
@@ -647,13 +649,13 @@ export default function PortfolioMobile() {
 
       if (response.ok && result.alert) {
         handleAddAlert(asset.id, 'price_below', sl)
-        alert(`✅ Alerta Stop Loss criado!\n\n${asset.symbol}\nPreço Atual: $${formatPrice(asset.current_price)}\nStop Loss: $${formatPrice(sl)}\n\nSerás notificado quando atingir o stop loss!`)
+        alert(`${t("portfolio.slAlertCreated")}\n\n${asset.symbol}\n${t("portfolio.currentPrice")}: $${formatPrice(asset.current_price)}\n${t("portfolio.stopLoss")}: $${formatPrice(sl)}\n\n${t("portfolio.slAlertNotify")}`)
       } else {
-        throw new Error(result.error || 'Erro desconhecido')
+        throw new Error(result.error || t("portfolio.unknownError"))
       }
     } catch (error: any) {
       console.error('❌ Erro ao criar SL alert:', error)
-      alert(`❌ Erro ao criar alerta:\n${error.message || 'Verifica a conexão'}`)
+      alert(`${t("portfolio.alertCreateError")}\n${error.message || t("portfolio.checkConnection")}`)
     }
   }
 
@@ -717,12 +719,12 @@ export default function PortfolioMobile() {
     try {
       const successful = document.execCommand('copy')
       if (successful) {
-        alert("✅ Texto copiado!")
+        alert(t("portfolio.textCopied"))
       } else {
-        alert("❌ Erro ao copiar. Tenta manualmente: " + text)
+        alert(t("portfolio.copyErrorManual") + " " + text)
       }
     } catch (err) {
-      alert("❌ Erro ao copiar. Tenta manualmente: " + text)
+      alert(t("portfolio.copyErrorManual") + " " + text)
     }
     
     document.body.removeChild(textArea)
@@ -730,13 +732,13 @@ export default function PortfolioMobile() {
 
   const sharePNLCard = async (platform?: string) => {
     const pnl = calculatePNL()
-    const message = `💼 Meu Portfólio MTM
+    const message = `💼 ${t("portfolio.myMtmPortfolio")}
 
-📊 Performance Total: ${pnl.percentage >= 0 ? '+' : ''}${pnl.percentage.toFixed(2)}%
+📊 ${t("portfolio.performanceTotal")}: ${pnl.percentage >= 0 ? '+' : ''}${pnl.percentage.toFixed(2)}%
 💰 PNL: €${pnl.total.toFixed(2)}
-📈 Ativos: ${personalAssets.length}
+📈 ${t("portfolio.shareAssets")}: ${personalAssets.length}
 
-Gerado via MTM App 🚀
+${t("portfolio.shareGeneratedVia")}
 www.morethanmoney.com`
 
     const shareUrl = "https://morethanmoney.com"
@@ -753,7 +755,7 @@ www.morethanmoney.com`
         case "instagram":
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(message).then(() => {
-              alert("✅ Texto copiado! Cole no Instagram Stories ou Feed.")
+              alert(t("portfolio.copiedInstagram"))
             }).catch(() => {
               fallbackCopyTextToClipboard(message)
             })
@@ -774,7 +776,7 @@ www.morethanmoney.com`
       if (navigator.share) {
         try {
           await navigator.share({
-            title: 'Meu Portfólio MTM',
+            title: t("portfolio.myMtmPortfolio"),
             text: message,
           })
         } catch (error) {
@@ -783,7 +785,7 @@ www.morethanmoney.com`
       } else {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(message).then(() => {
-            alert("✅ Estatísticas copiadas! Cole nas redes sociais.")
+            alert(t("portfolio.statsCopied"))
           }).catch(() => {
             fallbackCopyTextToClipboard(message)
           })
@@ -812,10 +814,10 @@ www.morethanmoney.com`
               <Image src="/icon-512x512.png" alt="MTM" width={32} height={32} className="rounded-lg" />
             </div>
             <div>
-              <h1 className="text-black text-xl font-black tracking-tight">Portfolio Dashboard</h1>
+              <h1 className="text-black text-xl font-black tracking-tight">{t("portfolio.dashboardTitle")}</h1>
               <p className="text-black/70 text-xs font-bold flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-black animate-pulse"></div>
-                Sincronizado em tempo real
+                {t("portfolio.syncedRealtime")}
               </p>
             </div>
           </div>
@@ -840,12 +842,12 @@ www.morethanmoney.com`
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#D2A63C] data-[state=active]:to-[#BB8525] data-[state=active]:text-black data-[state=active]:font-black rounded-xl transition-all duration-300 data-[state=active]:shadow-lg data-[state=active]:shadow-[#D2A63C]/50"
             >
               💎 MTM Pro
-            </TabsTrigger>
+            </TabsTrigger>{/* MTM Pro = brand term, not translated */}
             <TabsTrigger 
               value="personal" 
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-[#D2A63C] data-[state=active]:to-[#BB8525] data-[state=active]:text-black data-[state=active]:font-black rounded-xl transition-all duration-300 data-[state=active]:shadow-lg data-[state=active]:shadow-[#D2A63C]/50"
             >
-              📊 Meu Portfolio
+              📊 {t("portfolio.tabMyPortfolio")}
             </TabsTrigger>
           </TabsList>
 
@@ -856,10 +858,10 @@ www.morethanmoney.com`
             <Card className="relative overflow-hidden bg-gradient-to-br from-green-900/40 to-black border-2 border-green-500/30">
               <div className="absolute -top-10 -right-10 w-32 h-32 bg-green-500/20 rounded-full blur-3xl"></div>
               <CardContent className="p-4 relative z-10">
-                <p className="text-[10px] text-green-300 uppercase tracking-wider mb-1 font-black">Total Assets</p>
+                <p className="text-[10px] text-green-300 uppercase tracking-wider mb-1 font-black">{t("portfolio.totalAssets")}</p>
                 <p className="text-3xl font-black text-white">{mtmAssets.length}</p>
                 <p className="text-xs text-green-400 mt-1">
-                  {mtmAssets.filter(a => a.current_price).length} sincronizados
+                  {mtmAssets.filter(a => a.current_price).length} {t("portfolio.synced")}
                 </p>
               </CardContent>
             </Card>
@@ -867,11 +869,11 @@ www.morethanmoney.com`
             <Card className="relative overflow-hidden bg-gradient-to-br from-[#D2A63C]/40 to-black border-2 border-[#D2A63C]/30">
               <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#D2A63C]/20 rounded-full blur-3xl"></div>
               <CardContent className="p-4 relative z-10">
-                <p className="text-[10px] text-[#D2A63C] uppercase tracking-wider mb-1 font-black">Performance</p>
+                <p className="text-[10px] text-[#D2A63C] uppercase tracking-wider mb-1 font-black">{t("portfolio.performance")}</p>
                 <p className={`text-3xl font-black ${calculateTotalMTMPerformance() >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {calculateTotalMTMPerformance() >= 0 ? '+' : ''}{calculateTotalMTMPerformance().toFixed(1)}%
                 </p>
-                <p className="text-xs text-gray-400 mt-1">Média geral</p>
+                <p className="text-xs text-gray-400 mt-1">{t("portfolio.overallAverage")}</p>
               </CardContent>
             </Card>
           </div>
@@ -884,9 +886,9 @@ www.morethanmoney.com`
                 <Target className="w-4 h-4 text-blue-400" />
               </div>
               <div>
-                <p className="text-white font-bold text-sm mb-1">Portfólio MoreThanMoney</p>
+                <p className="text-white font-bold text-sm mb-1">{t("portfolio.mtmPortfolioTitle")}</p>
                 <p className="text-gray-300 text-xs leading-relaxed">
-                  Ativos recomendados pela equipa MTM com <span className="text-[#D2A63C] font-bold">alvos de saída e stop loss</span> validados por IA
+                  {t("portfolio.recommendedPre")} <span className="text-[#D2A63C] font-bold">{t("portfolio.recommendedHighlight")}</span> {t("portfolio.recommendedPost")}
                 </p>
               </div>
             </div>
@@ -912,7 +914,7 @@ www.morethanmoney.com`
                     asset.status === 'closed' ? 'bg-blue-500/20 text-blue-300 border-blue-500/50' :
                     'bg-gray-500/20 text-gray-300 border-gray-500/50'
                   }`}>
-                    {asset.status === 'active' ? '🟢 ATIVO' : asset.status === 'closed' ? '🔵 FECHADO' : '👁️ OBSERVAÇÃO'}
+                    {asset.status === 'active' ? t("portfolio.statusActive") : asset.status === 'closed' ? t("portfolio.statusClosed") : t("portfolio.statusWatching")}
                   </div>
                 </div>
 
@@ -930,7 +932,7 @@ www.morethanmoney.com`
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-[#D2A63C] animate-pulse"></div>
-                        <p className="text-[11px] text-white/80 uppercase tracking-widest font-black">Preços Live</p>
+                        <p className="text-[11px] text-white/80 uppercase tracking-widest font-black">{t("portfolio.livePrices")}</p>
                       </div>
                       {asset.current_price && asset.entry_price && (
                         <div className={`px-3 py-1 rounded-full text-xs font-black ${
@@ -948,7 +950,7 @@ www.morethanmoney.com`
                       {/* Entry Price */}
                       <div>
                         <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-2 font-bold flex items-center gap-1.5">
-                          💼 Entrada
+                          {t("portfolio.entry")}
                         </p>
                         <p className="font-black text-white text-2xl tracking-tight">
                           ${formatPrice(asset.entry_price)}
@@ -958,7 +960,7 @@ www.morethanmoney.com`
                       {/* Current Price */}
                       <div>
                         <p className="text-[11px] text-gray-500 uppercase tracking-widest mb-2 font-bold flex items-center gap-1.5">
-                          💹 Atual
+                          {t("portfolio.current")}
                           {!asset.current_price && (
                             <Loader2 className="w-3 h-3 animate-spin text-[#D2A63C]" />
                           )}
@@ -969,7 +971,7 @@ www.morethanmoney.com`
                           </p>
                         ) : (
                           <p className="font-black text-gray-600 text-2xl tracking-tight animate-pulse">
-                            Carregando...
+                            {t("portfolio.loading")}
                           </p>
                         )}
                       </div>
@@ -991,13 +993,13 @@ www.morethanmoney.com`
                           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg">
                             <span className="text-base">🎯</span>
                           </div>
-                          <p className="text-xs text-white uppercase tracking-widest font-black">Estratégia de Saída</p>
+                          <p className="text-xs text-white uppercase tracking-widest font-black">{t("portfolio.exitStrategy")}</p>
                         </div>
                         {asset.ai_validated && (
                           <div className="relative">
                             <div className="absolute inset-0 bg-gradient-to-r from-[#D2A63C] to-[#BB8525] blur-md opacity-50 animate-pulse"></div>
                             <span className="relative text-[10px] px-3 py-1.5 bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black rounded-full font-black flex items-center gap-1.5 shadow-lg">
-                              <span className="animate-pulse">🤖</span> Validado IA
+                              <span className="animate-pulse">🤖</span> {t("portfolio.aiValidated")}
                             </span>
                           </div>
                         )}
@@ -1012,7 +1014,7 @@ www.morethanmoney.com`
                               <div className="w-6 h-6 rounded-lg bg-green-500/30 flex items-center justify-center">
                                 <span className="text-xs">1️⃣</span>
                               </div>
-                              <span className="text-xs text-green-200 font-bold uppercase tracking-wide">Take Profit 1</span>
+                              <span className="text-xs text-green-200 font-bold uppercase tracking-wide">{t("portfolio.takeProfit1")}</span>
                             </div>
                             <span className="text-green-300 font-black text-lg tracking-tight">${formatPrice(asset.target_1)}</span>
                           </div>
@@ -1026,7 +1028,7 @@ www.morethanmoney.com`
                                 <div className="w-6 h-6 rounded-lg bg-green-400/30 flex items-center justify-center">
                                   <span className="text-xs">2️⃣</span>
                                 </div>
-                                <span className="text-xs text-green-200 font-bold uppercase tracking-wide">Take Profit 2</span>
+                                <span className="text-xs text-green-200 font-bold uppercase tracking-wide">{t("portfolio.takeProfit2")}</span>
                               </div>
                               <span className="text-green-300 font-black text-lg tracking-tight">${formatPrice(asset.target_2)}</span>
                             </div>
@@ -1041,7 +1043,7 @@ www.morethanmoney.com`
                                 <div className="w-6 h-6 rounded-lg bg-green-300/30 flex items-center justify-center">
                                   <span className="text-xs">3️⃣</span>
                                 </div>
-                                <span className="text-xs text-green-200 font-bold uppercase tracking-wide">Take Profit 3</span>
+                                <span className="text-xs text-green-200 font-bold uppercase tracking-wide">{t("portfolio.takeProfit3")}</span>
                               </div>
                               <span className="text-green-300 font-black text-lg tracking-tight">${formatPrice(asset.target_3)}</span>
                             </div>
@@ -1057,7 +1059,7 @@ www.morethanmoney.com`
                                 <div className="w-8 h-8 rounded-xl bg-red-500/40 flex items-center justify-center shadow-lg animate-pulse">
                                   <span className="text-base">🛑</span>
                                 </div>
-                                <span className="text-sm text-red-200 font-black uppercase tracking-wide">Stop Loss</span>
+                                <span className="text-sm text-red-200 font-black uppercase tracking-wide">{t("portfolio.stopLoss")}</span>
                               </div>
                               <span className="text-red-300 font-black text-xl tracking-tight">${formatPrice(asset.stop_loss)}</span>
                             </div>
@@ -1072,21 +1074,21 @@ www.morethanmoney.com`
                 <div className="grid grid-cols-3 gap-3">
                   <div className="relative bg-gradient-to-br from-green-500/20 to-green-600/20 p-3 rounded-2xl border-2 border-green-500/40 overflow-hidden">
                     <div className="absolute inset-0 bg-green-500/10 animate-pulse"></div>
-                    <p className="text-[10px] text-green-300 uppercase tracking-wider mb-1.5 font-bold relative z-10">Exit 1</p>
+                    <p className="text-[10px] text-green-300 uppercase tracking-wider mb-1.5 font-bold relative z-10">{t("portfolio.exit1")}</p>
                     <p className="font-black text-green-300 text-base relative z-10">
                       {asset.target_1 ? `$${formatPrice(asset.target_1)}` : '-'}
                     </p>
                   </div>
                   <div className="relative bg-gradient-to-br from-green-400/20 to-green-500/20 p-3 rounded-2xl border-2 border-green-400/40 overflow-hidden">
                     <div className="absolute inset-0 bg-green-400/10 animate-pulse"></div>
-                    <p className="text-[10px] text-green-300 uppercase tracking-wider mb-1.5 font-bold relative z-10">Exit 2</p>
+                    <p className="text-[10px] text-green-300 uppercase tracking-wider mb-1.5 font-bold relative z-10">{t("portfolio.exit2")}</p>
                     <p className="font-black text-green-300 text-base relative z-10">
                       {asset.target_2 ? `$${formatPrice(asset.target_2)}` : '-'}
                     </p>
                   </div>
                   <div className="relative bg-gradient-to-br from-green-300/20 to-green-400/20 p-3 rounded-2xl border-2 border-green-300/40 overflow-hidden">
                     <div className="absolute inset-0 bg-green-300/10 animate-pulse"></div>
-                    <p className="text-[10px] text-green-300 uppercase tracking-wider mb-1.5 font-bold relative z-10">Exit 3</p>
+                    <p className="text-[10px] text-green-300 uppercase tracking-wider mb-1.5 font-bold relative z-10">{t("portfolio.exit3")}</p>
                     <p className="font-black text-green-300 text-base relative z-10">
                       {asset.target_3 ? `$${formatPrice(asset.target_3)}` : '-'}
                     </p>
@@ -1103,7 +1105,7 @@ www.morethanmoney.com`
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-sm text-black/80">Desempenho Total</p>
+                  <p className="text-sm text-black/80">{t("portfolio.totalPerformance")}</p>
                   <h3 className={`text-2xl font-bold ${
                     calculateTotalPortfolioPerformance() >= 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
@@ -1162,7 +1164,7 @@ www.morethanmoney.com`
                         className="text-white hover:bg-gray-700 cursor-pointer flex items-center gap-2"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                        Copiar Texto
+                        {t("portfolio.copyText")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -1170,34 +1172,34 @@ www.morethanmoney.com`
                     <DialogTrigger asChild>
                       <Button size="sm" className="bg-black text-white hover:bg-black/90">
                         <Plus className="w-4 h-4 mr-1" />
-                        Adicionar
+                        {t("portfolio.add")}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="bg-gray-900 border-[#D2A63C]/30 text-white w-[90%] max-w-md">
                       <DialogHeader>
-                        <DialogTitle className="text-[#D2A63C]">Adicionar Ativo</DialogTitle>
+                        <DialogTitle className="text-[#D2A63C]">{t("portfolio.addAsset")}</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4">
                         <div>
-                          <Label>Símbolo</Label>
+                          <Label>{t("portfolio.symbol")}</Label>
                           <Input
-                            placeholder="Ex: BTCUSD"
+                            placeholder={t("portfolio.symbolPlaceholder")}
                             value={newAsset.symbol}
                             onChange={(e) => setNewAsset({ ...newAsset, symbol: e.target.value })}
                             className="bg-gray-800 border-gray-700 text-white"
                           />
                         </div>
                         <div>
-                          <Label>Nome</Label>
+                          <Label>{t("portfolio.name")}</Label>
                           <Input
-                            placeholder="Ex: Bitcoin"
+                            placeholder={t("portfolio.namePlaceholder")}
                             value={newAsset.name}
                             onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
                             className="bg-gray-800 border-gray-700 text-white"
                           />
                         </div>
                         <div>
-                          <Label>Quantidade</Label>
+                          <Label>{t("portfolio.quantity")}</Label>
                           <Input
                             type="number"
                             step="0.0001"
@@ -1208,7 +1210,7 @@ www.morethanmoney.com`
                           />
                         </div>
                         <div>
-                          <Label>Preço de Compra</Label>
+                          <Label>{t("portfolio.purchasePrice")}</Label>
                           <Input
                             type="number"
                             step="0.01"
@@ -1222,7 +1224,7 @@ www.morethanmoney.com`
                           onClick={handleAddAsset}
                           className="w-full bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black hover:opacity-90"
                         >
-                          Adicionar Ativo
+                          {t("portfolio.addAsset")}
                         </Button>
                       </div>
                     </DialogContent>
@@ -1234,7 +1236,7 @@ www.morethanmoney.com`
               {personalAssets.length > 0 && (
                 <div ref={pnlCardRef} className="bg-black/30 p-3 rounded-lg">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-black/80">PNL Total</span>
+                    <span className="text-sm text-black/80">{t("portfolio.pnlTotal")}</span>
                     <span className={`font-bold text-lg ${calculatePNL().total >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       €{calculatePNL().total.toFixed(2)}
                     </span>
@@ -1310,13 +1312,13 @@ www.morethanmoney.com`
             <Card className="bg-gray-900 border-[#D2A63C]/30">
               <CardContent className="p-8 text-center">
                 <BarChart3 className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400 mb-4">Ainda não tens ativos no teu portfólio</p>
+                <p className="text-gray-400 mb-4">{t("portfolio.emptyState")}</p>
                 <Button
                   onClick={() => setShowAddAsset(true)}
                   className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black hover:opacity-90"
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Primeiro Ativo
+                  {t("portfolio.addFirstAsset")}
                 </Button>
               </CardContent>
             </Card>
@@ -1341,21 +1343,21 @@ www.morethanmoney.com`
 
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <div className="bg-gray-800 p-2 rounded-lg">
-                      <p className="text-xs text-gray-400 mb-1">Quantidade</p>
+                      <p className="text-xs text-gray-400 mb-1">{t("portfolio.quantity")}</p>
                       <p className="font-semibold text-white">{asset.quantity}</p>
                     </div>
                     <div className="bg-gray-800 p-2 rounded-lg">
-                      <p className="text-xs text-gray-400 mb-1">Valorização</p>
+                      <p className="text-xs text-gray-400 mb-1">{t("portfolio.valorization")}</p>
                       <p className={`font-bold ${asset.performance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {asset.performance >= 0 ? '+' : ''}{asset.performance.toFixed(2)}%
                       </p>
                     </div>
                     <div className="bg-gray-800 p-2 rounded-lg">
-                      <p className="text-xs text-gray-400 mb-1">Preço Compra</p>
+                      <p className="text-xs text-gray-400 mb-1">{t("portfolio.purchasePriceShort")}</p>
                       <p className="font-semibold text-white">${asset.purchase_price.toLocaleString()}</p>
                     </div>
                     <div className="bg-gray-800 p-2 rounded-lg">
-                      <p className="text-xs text-gray-400 mb-1">Preço Atual</p>
+                      <p className="text-xs text-gray-400 mb-1">{t("portfolio.currentPrice")}</p>
                       <p className="font-semibold text-white">${asset.current_price.toLocaleString()}</p>
                     </div>
                   </div>
@@ -1368,7 +1370,7 @@ www.morethanmoney.com`
                       className="bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 h-9"
                     >
                       <Target className="h-3 w-3 mr-1.5" />
-                      Alerta TP (+20%)
+                      {t("portfolio.tpAlertBtn")}
                     </Button>
                     <Button
                       onClick={() => createSLAlert(asset)}
@@ -1376,7 +1378,7 @@ www.morethanmoney.com`
                       className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 h-9"
                     >
                       <Shield className="h-3 w-3 mr-1.5" />
-                      Alerta SL (-15%)
+                      {t("portfolio.slAlertBtn")}
                     </Button>
                   </div>
 
@@ -1385,7 +1387,7 @@ www.morethanmoney.com`
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-sm text-gray-400 flex items-center gap-1">
                         <Bell className="w-3 h-3" />
-                        Alertas
+                        {t("portfolio.alerts")}
                       </p>
                       <Dialog>
                         <DialogTrigger asChild>
@@ -1395,28 +1397,28 @@ www.morethanmoney.com`
                         </DialogTrigger>
                         <DialogContent className="bg-gray-900 border-[#D2A63C]/30 text-white w-[90%] max-w-md">
                           <DialogHeader>
-                            <DialogTitle className="text-[#D2A63C]">Novo Alerta</DialogTitle>
+                            <DialogTitle className="text-[#D2A63C]">{t("portfolio.newAlert")}</DialogTitle>
                           </DialogHeader>
                           <div className="space-y-4">
                             <Button
                               onClick={() => {
-                                const value = prompt("Preço acima de:")
+                                const value = prompt(t("portfolio.priceAbovePrompt"))
                                 if (value) handleAddAlert(asset.id, "price_above", parseFloat(value))
                               }}
                               className="w-full bg-green-500/20 text-green-400 hover:bg-green-500/30"
                             >
                               <TrendingUp className="w-4 h-4 mr-2" />
-                              Alerta Acima de
+                              {t("portfolio.alertAbove")}
                             </Button>
                             <Button
                               onClick={() => {
-                                const value = prompt("Preço abaixo de:")
+                                const value = prompt(t("portfolio.priceBelowPrompt"))
                                 if (value) handleAddAlert(asset.id, "price_below", parseFloat(value))
                               }}
                               className="w-full bg-red-500/20 text-red-400 hover:bg-red-500/30"
                             >
                               <TrendingDown className="w-4 h-4 mr-2" />
-                              Alerta Abaixo de
+                              {t("portfolio.alertBelow")}
                             </Button>
                           </div>
                         </DialogContent>
@@ -1441,7 +1443,7 @@ www.morethanmoney.com`
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-gray-500 text-center py-2">Nenhum alerta configurado</p>
+                      <p className="text-xs text-gray-500 text-center py-2">{t("portfolio.noAlerts")}</p>
                     )}
                   </div>
                 </CardContent>

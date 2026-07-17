@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
+import { useT } from "@/components/i18n-provider"
 import { supabase } from "@/lib/supabase"
 import { T2T_BROKERS } from "@/lib/mtmcopy/t2t-brokers"
 import {
@@ -114,16 +115,17 @@ interface Conn {
   exit_pct_tp3?: number | null
 }
 
-const FILTERS: { id: Category; label: string }[] = [
-  { id: "all", label: "Todos" },
-  { id: "gold", label: "Gold" },
-  { id: "forex", label: "Forex" },
-  { id: "crypto", label: "Crypto" },
-  { id: "indices", label: "Índices" },
+const FILTERS: { id: Category; labelKey: string }[] = [
+  { id: "all", labelKey: "t2t.filterAll" },
+  { id: "gold", labelKey: "t2t.filterGold" },
+  { id: "forex", labelKey: "t2t.filterForex" },
+  { id: "crypto", labelKey: "t2t.filterCrypto" },
+  { id: "indices", labelKey: "t2t.filterIndices" },
 ]
 
 
 export default function TapToTradeFeed() {
+  const t = useT()
   const searchParams = useSearchParams()
   const [items, setItems] = useState<Sig[]>([])
   const [loading, setLoading] = useState(true)
@@ -164,10 +166,10 @@ export default function TapToTradeFeed() {
   }, [])
 
   const loadConnection = useCallback(async () => {
-    const t = await token()
-    if (!t) return
+    const tok = await token()
+    if (!tok) return
     try {
-      const r = await fetch("/api/mtmcopy/connection?purpose=tap_to_trade", { headers: { Authorization: `Bearer ${t}` } })
+      const r = await fetch("/api/mtmcopy/connection?purpose=tap_to_trade", { headers: { Authorization: `Bearer ${tok}` } })
       if (!r.ok) return
       const d = await r.json()
       const c: Conn | null = d.connection ?? (d.connections?.[0] ?? null)
@@ -193,13 +195,13 @@ export default function TapToTradeFeed() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const t = await token()
+    const tok = await token()
     let channels: string[] = []
     let senseiIds = new Set<string>()
     let senseiFilterOn = false
-    if (t) {
+    if (tok) {
       try {
-        const r = await fetch("/api/mtmcopy/tap-to-trade/providers", { headers: { Authorization: `Bearer ${t}` } })
+        const r = await fetch("/api/mtmcopy/tap-to-trade/providers", { headers: { Authorization: `Bearer ${tok}` } })
         if (r.ok) {
           const d = await r.json()
           setProviders(d.providers ?? [])
@@ -247,14 +249,14 @@ export default function TapToTradeFeed() {
         return {
           ...m,
           expired: ageExpired || resolved,
-          reason: resolved ? "Fechado / TP atingido" : ageExpired ? "Passaram +5 min" : "",
+          reason: resolved ? "resolved" : ageExpired ? "aged" : "",
         }
       })
     setItems(sigs)
     // Quais destes sinais o utilizador já aceitou (persiste entre reloads)
-    if (t) {
+    if (tok) {
       try {
-        const ra = await fetch("/api/mtmcopy/tap-to-trade/accepted", { headers: { Authorization: `Bearer ${t}` } })
+        const ra = await fetch("/api/mtmcopy/tap-to-trade/accepted", { headers: { Authorization: `Bearer ${tok}` } })
         if (ra.ok) {
           const da = await ra.json()
           setAccepted(da.accepted ?? {})
@@ -308,14 +310,14 @@ export default function TapToTradeFeed() {
     const sig = tap.sig
     setTap({ sig, status: "loading" })
     try {
-      const t = await token()
-      if (!t) {
-        setTap({ sig, status: "error", message: "Sessão indisponível. Faz login novamente." })
+      const tok = await token()
+      if (!tok) {
+        setTap({ sig, status: "error", message: t("t2t.sessionUnavailableLogin") })
         return
       }
       const res = await fetch("/api/mtmcopy/tap-to-trade", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
         body: JSON.stringify({ chat_message_id: sig.id }),
       })
       const data = await res.json().catch(() => ({}))
@@ -323,16 +325,16 @@ export default function TapToTradeFeed() {
         // Já aceite anteriormente (idempotência) → marca o cartão como aceite
         if (res.status === 409 || data.code === "already_accepted") {
           setAccepted((a) => ({ ...a, [sig.id]: "open" }))
-          setTap({ sig, status: "error", message: data.error || "Já aceitaste este sinal." })
+          setTap({ sig, status: "error", message: data.error || t("t2t.alreadyAcceptedMsg") })
           return
         }
-        setTap({ sig, status: "error", message: data.error || "Falha ao abrir a trade." })
+        setTap({ sig, status: "error", message: data.error || t("t2t.openTradeFailed") })
         return
       }
       setAccepted((a) => ({ ...a, [sig.id]: "open" }))
-      setTap({ sig, status: "done", message: data.message || "Trade aberta com sucesso!" })
+      setTap({ sig, status: "done", message: data.message || t("t2t.tradeOpened") })
     } catch (e) {
-      setTap({ sig, status: "error", message: e instanceof Error ? e.message : "Erro inesperado" })
+      setTap({ sig, status: "error", message: e instanceof Error ? e.message : t("t2t.unexpectedError") })
     }
   }
 
@@ -340,9 +342,9 @@ export default function TapToTradeFeed() {
     if (!conn || !cfg) return
     setSavingConn(true)
     try {
-      const t = await token()
-      if (!t) return
-      const headers = { "Content-Type": "application/json", Authorization: `Bearer ${t}` }
+      const tok = await token()
+      if (!tok) return
+      const headers = { "Content-Type": "application/json", Authorization: `Bearer ${tok}` }
       // risco + SL/TP + proteção (trailing) + alocação de take profit
       await fetch("/api/mtmcopy/connection", {
         method: "POST",
@@ -371,21 +373,21 @@ export default function TapToTradeFeed() {
   const connectAccount = async () => {
     // Apenas 1 conta T2T por cliente — tem de remover a atual antes de ligar outra.
     if (conn?.metaapi_account_id) {
-      setConnError("Já tens uma conta T2T ligada. Remove-a primeiro para ligar outra.")
+      setConnError(t("t2t.alreadyHasAccount"))
       return
     }
     if (!connForm.server.trim() || !connForm.login.trim() || !connForm.password) {
-      setConnError("Escolhe a corretora e o servidor e preenche login e password.")
+      setConnError(t("t2t.fillBrokerServerLogin"))
       return
     }
     setConnBusy(true)
     setConnError("")
     try {
-      const t = await token()
-      if (!t) { setConnError("Sessão indisponível."); setConnBusy(false); return }
+      const tok = await token()
+      if (!tok) { setConnError(t("t2t.sessionUnavailable")); setConnBusy(false); return }
       const res = await fetch("/api/mtmcopy/provision", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
         body: JSON.stringify({
           mt5_server: connForm.server.trim(),
           mt5_login: connForm.login.trim(),
@@ -397,57 +399,57 @@ export default function TapToTradeFeed() {
         }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setConnError(data.error || "Falha ao ligar a conta."); setConnBusy(false); return }
+      if (!res.ok) { setConnError(data.error || t("t2t.linkAccountFailed")); setConnBusy(false); return }
       setConnBusy(false)
       setConnectOpen(false)
       setConnForm({ broker: T2T_BROKERS[0].id, server: T2T_BROKERS[0].servers[0], login: "", password: "", platform: "mt5" })
       await loadConnection()
     } catch (e) {
-      setConnError(e instanceof Error ? e.message : "Erro inesperado")
+      setConnError(e instanceof Error ? e.message : t("t2t.unexpectedError"))
       setConnBusy(false)
     }
   }
 
   const removeAccount = async () => {
     if (!conn) return
-    if (!window.confirm("Remover a conta T2T ligada? Vais deixar de poder aceitar sinais até ligares outra.")) return
+    if (!window.confirm(t("t2t.confirmRemoveAccount"))) return
     setRemovingConn(true)
     setConnError("")
     try {
-      const t = await token()
-      if (!t) { setConnError("Sessão indisponível."); return }
+      const tok = await token()
+      if (!tok) { setConnError(t("t2t.sessionUnavailable")); return }
       const res = await fetch(`/api/mtmcopy/connection?id=${encodeURIComponent(conn.id)}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${t}` },
+        headers: { Authorization: `Bearer ${tok}` },
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setConnError(data.error || "Falha ao remover a conta."); return }
+      if (!res.ok) { setConnError(data.error || t("t2t.removeAccountFailed")); return }
       setConnectOpen(false)
       setConn(null)
       await loadConnection()
     } catch (e) {
-      setConnError(e instanceof Error ? e.message : "Erro inesperado")
+      setConnError(e instanceof Error ? e.message : t("t2t.unexpectedError"))
     } finally {
       setRemovingConn(false)
     }
   }
 
   const emergencyStop = async () => {
-    if (!window.confirm("Fechar TODAS as posições abertas na tua conta T2T agora?")) return
+    if (!window.confirm(t("t2t.confirmCloseAll"))) return
     setClosingAll(true)
     try {
-      const t = await token()
-      if (!t) return
+      const tok = await token()
+      if (!tok) return
       const res = await fetch("/api/mtmcopy/tap-to-trade/close-all", {
         method: "POST",
-        headers: { Authorization: `Bearer ${t}` },
+        headers: { Authorization: `Bearer ${tok}` },
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { window.alert(data.error || "Falha ao fechar posições."); return }
-      window.alert(`Fechadas ${data.closed ?? 0} de ${data.total ?? 0} posição(ões).`)
+      if (!res.ok) { window.alert(data.error || t("t2t.closePositionsFailed")); return }
+      window.alert(`${t("t2t.closedResultPre")}${data.closed ?? 0}${t("t2t.closedResultMid")}${data.total ?? 0}${t("t2t.closedResultSuf")}`)
       await load()
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Erro inesperado")
+      window.alert(e instanceof Error ? e.message : t("t2t.unexpectedError"))
     } finally {
       setClosingAll(false)
     }
@@ -459,8 +461,8 @@ export default function TapToTradeFeed() {
   const isReady = !!conn?.metaapi_account_id && conn?.mt5_status === "connected"
   const riskLabel = cfg
     ? cfg.lot_mode === "fixed"
-      ? `${cfg.lot} lote fixo`
-      : `${cfg.risk}% risco / trade`
+      ? `${cfg.lot}${t("t2t.lotFixedSuffix")}`
+      : `${cfg.risk}${t("t2t.riskPerTradeSuffix")}`
     : "—"
 
   return (
@@ -469,12 +471,12 @@ export default function TapToTradeFeed() {
         <h1 className="text-xl font-black flex items-center gap-2">
           <Zap className="w-5 h-5 text-[#D2A63C]" /> T2T <span className="text-[#D2A63C]">Tap to Trade</span>
         </h1>
-        <button onClick={load} disabled={loading} className="p-2 rounded-lg border border-zinc-700 text-zinc-400" aria-label="Atualizar">
+        <button onClick={load} disabled={loading} className="p-2 rounded-lg border border-zinc-700 text-zinc-400" aria-label={t("t2t.refresh")}>
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
         </button>
       </div>
       <p className="text-xs text-zinc-400 mb-3">
-        Aceita um sinal e abre-o na <strong className="text-zinc-200">tua conta</strong> com o teu risco — configurado aqui mesmo.
+        {t("t2t.introBefore")}<strong className="text-zinc-200">{t("t2t.yourAccount")}</strong>{t("t2t.introAfter")}
       </p>
 
       {/* Configuração da conta (PrimeSync-style, dentro do T2T) */}
@@ -485,12 +487,12 @@ export default function TapToTradeFeed() {
         >
           <Settings className="w-4 h-4 text-[#D2A63C]" />
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-semibold">A minha conta T2T</p>
+            <p className="text-[13px] font-semibold">{t("t2t.myAccount")}</p>
             <p className="text-[11px] text-zinc-400 truncate">
               {hasAccount ? (
-                <>{conn?.account_label || "Conta MT5"} · {riskLabel}</>
+                <>{conn?.account_label || t("t2t.mt5Account")} · {riskLabel}</>
               ) : (
-                "Sem conta ligada — toca para configurar"
+                t("t2t.noAccountTapConfigure")
               )}
             </p>
           </div>
@@ -503,13 +505,13 @@ export default function TapToTradeFeed() {
               <div className="text-center py-2">
                 <Wallet className="w-8 h-8 mx-auto mb-2 text-zinc-600" />
                 <p className="text-xs text-zinc-400 mb-3">
-                  Liga a tua conta MT5 uma vez para começar a usar o T2T.
+                  {t("t2t.linkOnceHelp")}
                 </p>
                 <button
                   onClick={() => { setConnError(""); setConnectOpen(true) }}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] px-4 py-2"
                 >
-                  <Wallet className="w-4 h-4" /> Ligar conta MT5
+                  <Wallet className="w-4 h-4" /> {t("t2t.linkMt5Account")}
                 </button>
               </div>
             ) : cfg ? (
@@ -518,33 +520,33 @@ export default function TapToTradeFeed() {
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-[13px] font-semibold text-white">
-                      <Wallet className="w-4 h-4 text-[#D2A63C]" /> {conn?.account_label || "Conta MT5"}
+                      <Wallet className="w-4 h-4 text-[#D2A63C]" /> {conn?.account_label || t("t2t.mt5Account")}
                     </span>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       conn?.mt5_status === "connected" ? "bg-emerald-500/15 text-emerald-400"
                         : conn?.mt5_status === "error" ? "bg-rose-500/15 text-rose-400"
                         : "bg-zinc-700/60 text-zinc-300"
                     }`}>
-                      {conn?.mt5_status === "connected" ? "Ligada"
-                        : conn?.mt5_status === "error" ? "Erro"
-                        : conn?.mt5_status === "disconnected" ? "Desligada"
-                        : "A ligar…"}
+                      {conn?.mt5_status === "connected" ? t("t2t.statusConnected")
+                        : conn?.mt5_status === "error" ? t("t2t.statusError")
+                        : conn?.mt5_status === "disconnected" ? t("t2t.statusDisconnected")
+                        : t("t2t.statusConnecting")}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-zinc-400">
-                    <span>Login: <span className="text-zinc-200">{conn?.mt5_login ?? "—"}</span></span>
-                    <span>Plataforma: <span className="text-zinc-200 uppercase">{conn?.mt5_platform || "mt5"}</span></span>
-                    <span className="col-span-2 truncate">Servidor: <span className="text-zinc-200">{conn?.mt5_server || "—"}</span></span>
+                    <span>{t("t2t.loginLabel")} <span className="text-zinc-200">{conn?.mt5_login ?? "—"}</span></span>
+                    <span>{t("t2t.platformLabel")} <span className="text-zinc-200 uppercase">{conn?.mt5_platform || "mt5"}</span></span>
+                    <span className="col-span-2 truncate">{t("t2t.serverLabel")} <span className="text-zinc-200">{conn?.mt5_server || "—"}</span></span>
                     {typeof conn?.balance === "number" && (
-                      <span className="col-span-2">Saldo: <span className="text-white font-semibold">{conn.balance.toLocaleString("pt-PT", { style: "currency", currency: "USD" })}</span></span>
+                      <span className="col-span-2">{t("t2t.balanceLabel")} <span className="text-white font-semibold">{conn.balance.toLocaleString("pt-PT", { style: "currency", currency: "USD" })}</span></span>
                     )}
                   </div>
                   {conn?.mt5_status !== "connected" && (
                     <div className={`mt-1 rounded-lg px-2.5 py-2 text-[11px] leading-snug ${conn?.mt5_status === "error" ? "bg-rose-500/10 text-rose-300" : "bg-amber-500/10 text-amber-300"}`}>
                       {conn?.mt5_status === "error" ? (
-                        <>⚠️ {conn?.last_error || "Falha ao ligar à corretora."} Confirma login, password e servidor — abre <strong>Gerir conta</strong> → <strong>Remover</strong> e liga de novo.</>
+                        <>⚠️ {conn?.last_error || t("t2t.brokerConnectFailed")} {t("t2t.errorHintBefore")}<strong>{t("t2t.manageAccount")}</strong> → <strong>{t("t2t.remove")}</strong>{t("t2t.errorHintAfter")}</>
                       ) : (
-                        <>⏳ A validar com a corretora… pode demorar até ~1&nbsp;min. Puxa para atualizar.</>
+                        <>⏳ {t("t2t.validatingBroker")}</>
                       )}
                     </div>
                   )}
@@ -552,26 +554,26 @@ export default function TapToTradeFeed() {
 
                 {/* modo de risco */}
                 <div>
-                  <p className="text-[11px] text-zinc-500 mb-1.5">Dimensão da posição</p>
+                  <p className="text-[11px] text-zinc-500 mb-1.5">{t("t2t.positionSize")}</p>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => setCfg({ ...cfg, lot_mode: "risk_percent" })}
                       className={`rounded-xl border py-2 text-xs font-medium ${cfg.lot_mode === "risk_percent" ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
                     >
-                      % de risco
+                      {t("t2t.riskPercentMode")}
                     </button>
                     <button
                       onClick={() => setCfg({ ...cfg, lot_mode: "fixed" })}
                       className={`rounded-xl border py-2 text-xs font-medium ${cfg.lot_mode === "fixed" ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
                     >
-                      Lote fixo
+                      {t("t2t.fixedLot")}
                     </button>
                   </div>
                 </div>
 
                 {cfg.lot_mode === "risk_percent" ? (
                   <label className="block">
-                    <span className="text-[11px] text-zinc-500">Risco por trade (% do saldo)</span>
+                    <span className="text-[11px] text-zinc-500">{t("t2t.riskPerTrade")}</span>
                     <input
                       type="number"
                       step="0.1"
@@ -584,7 +586,7 @@ export default function TapToTradeFeed() {
                   </label>
                 ) : (
                   <label className="block">
-                    <span className="text-[11px] text-zinc-500">Lote fixo</span>
+                    <span className="text-[11px] text-zinc-500">{t("t2t.fixedLot")}</span>
                     <input
                       type="number"
                       step="0.01"
@@ -602,15 +604,15 @@ export default function TapToTradeFeed() {
                     onClick={() => setCfg({ ...cfg, copy_sl: !cfg.copy_sl })}
                     className={`flex items-center justify-between rounded-xl border px-3 py-2 text-xs ${cfg.copy_sl ? "border-emerald-500/40 text-emerald-400" : "border-zinc-700 text-zinc-500"}`}
                   >
-                    <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" /> Copiar SL</span>
-                    <span className="font-bold">{cfg.copy_sl ? "On" : "Off"}</span>
+                    <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" /> {t("t2t.copySl")}</span>
+                    <span className="font-bold">{cfg.copy_sl ? t("t2t.on") : t("t2t.off")}</span>
                   </button>
                   <button
                     onClick={() => setCfg({ ...cfg, copy_tp: !cfg.copy_tp })}
                     className={`flex items-center justify-between rounded-xl border px-3 py-2 text-xs ${cfg.copy_tp ? "border-emerald-500/40 text-emerald-400" : "border-zinc-700 text-zinc-500"}`}
                   >
-                    <span className="flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> Copiar TP</span>
-                    <span className="font-bold">{cfg.copy_tp ? "On" : "Off"}</span>
+                    <span className="flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /> {t("t2t.copyTp")}</span>
+                    <span className="font-bold">{cfg.copy_tp ? t("t2t.on") : t("t2t.off")}</span>
                   </button>
                 </div>
 
@@ -620,12 +622,12 @@ export default function TapToTradeFeed() {
                     onClick={() => setCfg({ ...cfg, trailing: !cfg.trailing })}
                     className="w-full flex items-center justify-between text-xs"
                   >
-                    <span className="flex items-center gap-1 text-zinc-300"><ShieldCheck className="w-3.5 h-3.5 text-[#D2A63C]" /> Trailing / breakeven automático</span>
-                    <span className={`font-bold ${cfg.trailing ? "text-emerald-400" : "text-zinc-500"}`}>{cfg.trailing ? "On" : "Off"}</span>
+                    <span className="flex items-center gap-1 text-zinc-300"><ShieldCheck className="w-3.5 h-3.5 text-[#D2A63C]" /> {t("t2t.trailingAuto")}</span>
+                    <span className={`font-bold ${cfg.trailing ? "text-emerald-400" : "text-zinc-500"}`}>{cfg.trailing ? t("t2t.on") : t("t2t.off")}</span>
                   </button>
                   {cfg.trailing && (
                     <label className="block mt-2">
-                      <span className="text-[11px] text-zinc-500">Distância do trailing (pontos)</span>
+                      <span className="text-[11px] text-zinc-500">{t("t2t.trailingDistance")}</span>
                       <input
                         type="number"
                         step="10"
@@ -640,7 +642,7 @@ export default function TapToTradeFeed() {
 
                 {/* Alocação de Take Profit (parcial por nível) */}
                 <div className="rounded-xl border border-zinc-800 p-2.5">
-                  <p className="text-[11px] text-zinc-500 mb-2">Alocação de Take Profit (% a fechar por nível)</p>
+                  <p className="text-[11px] text-zinc-500 mb-2">{t("t2t.tpAllocation")}</p>
                   {([["TP1", "tp1"], ["TP2", "tp2"], ["TP3", "tp3"]] as const).map(([label, key]) => (
                     <div key={key} className="flex items-center gap-2 mb-1.5">
                       <span className="text-xs text-zinc-400 w-9">{label}</span>
@@ -657,7 +659,7 @@ export default function TapToTradeFeed() {
                     </div>
                   ))}
                   <div className={`text-[11px] mt-1 ${cfg.tp1 + cfg.tp2 + cfg.tp3 === 100 ? "text-emerald-400" : "text-amber-400"}`}>
-                    Total: {cfg.tp1 + cfg.tp2 + cfg.tp3}%{cfg.tp1 + cfg.tp2 + cfg.tp3 !== 100 ? " · deve somar 100%" : ""}
+                    {t("t2t.totalLabel")} {cfg.tp1 + cfg.tp2 + cfg.tp3}%{cfg.tp1 + cfg.tp2 + cfg.tp3 !== 100 ? t("t2t.mustSum100") : ""}
                   </div>
                 </div>
 
@@ -666,13 +668,13 @@ export default function TapToTradeFeed() {
                   disabled={savingConn}
                   className="w-full rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2.5 disabled:opacity-60"
                 >
-                  {savingConn ? "A guardar…" : "Guardar configuração"}
+                  {savingConn ? t("t2t.saving") : t("t2t.saveConfig")}
                 </button>
                 <button
                   onClick={() => { setConnError(""); setConnectOpen(true) }}
                   className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-[#D2A63C]/40 text-[#D2A63C] font-semibold text-[13px] py-2.5"
                 >
-                  <Wallet className="w-4 h-4" /> Gerir conta (ver / remover)
+                  <Wallet className="w-4 h-4" /> {t("t2t.manageAccountFull")}
                 </button>
 
                 {/* Zona de risco — fechar tudo de uma vez */}
@@ -682,9 +684,9 @@ export default function TapToTradeFeed() {
                     disabled={closingAll}
                     className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-rose-500/40 text-rose-400 font-semibold text-[13px] py-2.5 disabled:opacity-60"
                   >
-                    <ShieldCheck className="w-4 h-4" /> {closingAll ? "A fechar…" : "Emergency stop — fechar todas as posições"}
+                    <ShieldCheck className="w-4 h-4" /> {closingAll ? t("t2t.closing") : t("t2t.emergencyStop")}
                   </button>
-                  <p className="text-[10px] text-zinc-500 mt-1.5 text-center">Fecha imediatamente todas as posições abertas na tua conta T2T.</p>
+                  <p className="text-[10px] text-zinc-500 mt-1.5 text-center">{t("t2t.emergencyStopHelp")}</p>
                 </div>
               </>
             ) : (
@@ -696,7 +698,7 @@ export default function TapToTradeFeed() {
 
       {providers.length > 0 && (
         <div className="flex items-center gap-1.5 mb-3 overflow-x-auto no-scrollbar">
-          <span className="text-[11px] text-zinc-500 shrink-0">Estratégias ativas:</span>
+          <span className="text-[11px] text-zinc-500 shrink-0">{t("t2t.activeStrategies")}</span>
           {providers.map((p, i) => (
             <span key={i} className="shrink-0 text-[11px] px-2 py-0.5 rounded-full bg-[#D2A63C]/15 text-[#D2A63C] border border-[#D2A63C]/30 whitespace-nowrap">
               {p.label}
@@ -713,7 +715,7 @@ export default function TapToTradeFeed() {
             limitMode === "last5" ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"
           }`}
         >
-          Últimos 5 sinais
+          {t("t2t.last5")}
         </button>
         <button
           onClick={() => setLimitMode("all")}
@@ -721,7 +723,7 @@ export default function TapToTradeFeed() {
             limitMode === "all" ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"
           }`}
         >
-          Todos
+          {t("t2t.all")}
         </button>
       </div>
 
@@ -735,7 +737,7 @@ export default function TapToTradeFeed() {
               cat === f.id ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"
             }`}
           >
-            {f.label}
+            {t(f.labelKey)}
           </button>
         ))}
       </div>
@@ -746,8 +748,8 @@ export default function TapToTradeFeed() {
         <div className="text-center py-16 text-zinc-500 text-sm">
           <TrendingUp className="w-10 h-10 mx-auto mb-3 text-zinc-700" />
           {noProviders
-            ? "Nenhum provider está ativo no Tap to Trade neste momento."
-            : "Sem sinais de entrada recentes nesta categoria."}
+            ? t("t2t.noProviders")
+            : t("t2t.noSignals")}
         </div>
       ) : (
         <div className="space-y-2.5">
@@ -760,7 +762,7 @@ export default function TapToTradeFeed() {
                   <div className="flex items-center gap-1.5">
                     {s.expired && (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-700/60 text-zinc-300 flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> Expirado
+                        <Clock className="w-3 h-3" /> {t("t2t.expired")}
                       </span>
                     )}
                     {dir && (
@@ -774,13 +776,13 @@ export default function TapToTradeFeed() {
                 {accepted[s.id] ? (
                   <div className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 font-semibold text-[12px] py-2.5">
                     <ShieldCheck className="w-4 h-4" />
-                    {accepted[s.id] === "closed" ? "Aceite · posição fechada"
-                      : accepted[s.id] === "error" ? "Aceite · erro na execução"
-                      : "Já aceitaste este sinal"}
+                    {accepted[s.id] === "closed" ? t("t2t.acceptedClosed")
+                      : accepted[s.id] === "error" ? t("t2t.acceptedError")
+                      : t("t2t.alreadyAccepted")}
                   </div>
                 ) : s.expired ? (
                   <div className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-zinc-800/70 text-zinc-500 font-semibold text-[12px] py-2.5 cursor-not-allowed">
-                    <Clock className="w-4 h-4" /> Sinal expirado{s.reason ? ` · ${s.reason}` : ""}
+                    <Clock className="w-4 h-4" /> {t("t2t.signalExpired")}{s.reason ? ` · ${s.reason === "resolved" ? t("t2t.reasonResolved") : t("t2t.reasonAged")}` : ""}
                   </div>
                 ) : (
                   <button
@@ -801,38 +803,38 @@ export default function TapToTradeFeed() {
           <div className="w-full max-w-sm rounded-2xl border border-[#D2A63C]/30 bg-zinc-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 mb-1">
               <Wallet className="w-5 h-5 text-[#D2A63C]" />
-              <h3 className="text-base font-bold">{hasAccount ? "Editar conta MT5 (T2T)" : "Ligar conta MT5 (T2T)"}</h3>
+              <h3 className="text-base font-bold">{hasAccount ? t("t2t.editMt5Title") : t("t2t.linkMt5Title")}</h3>
             </div>
-            <p className="text-[11px] text-zinc-400 mb-3">Conta de destino exclusiva do Tap to Trade — independente do MTMcopy.</p>
+            <p className="text-[11px] text-zinc-400 mb-3">{t("t2t.exclusiveAccountNote")}</p>
             {hasAccount && (
               <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 mb-3 text-[11px] text-zinc-400 space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-semibold text-white">{conn?.account_label || "Conta MT5"}</span>
+                  <span className="text-[12px] font-semibold text-white">{conn?.account_label || t("t2t.mt5Account")}</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                     conn?.mt5_status === "connected" ? "bg-emerald-500/15 text-emerald-400"
                       : conn?.mt5_status === "error" ? "bg-rose-500/15 text-rose-400"
                       : "bg-zinc-700/60 text-zinc-300"
                   }`}>
-                    {conn?.mt5_status === "connected" ? "Ligada" : conn?.mt5_status === "error" ? "Erro" : conn?.mt5_status === "disconnected" ? "Desligada" : "A ligar…"}
+                    {conn?.mt5_status === "connected" ? t("t2t.statusConnected") : conn?.mt5_status === "error" ? t("t2t.statusError") : conn?.mt5_status === "disconnected" ? t("t2t.statusDisconnected") : t("t2t.statusConnecting")}
                   </span>
                 </div>
-                <div>Login: <span className="text-zinc-200">{conn?.mt5_login ?? "—"}</span> · {(conn?.mt5_platform || "mt5").toUpperCase()}</div>
-                <div className="truncate">Servidor: <span className="text-zinc-200">{conn?.mt5_server || "—"}</span></div>
+                <div>{t("t2t.loginLabel")} <span className="text-zinc-200">{conn?.mt5_login ?? "—"}</span> · {(conn?.mt5_platform || "mt5").toUpperCase()}</div>
+                <div className="truncate">{t("t2t.serverLabel")} <span className="text-zinc-200">{conn?.mt5_server || "—"}</span></div>
                 <button
                   onClick={removeAccount}
                   disabled={removingConn || connBusy}
                   className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-rose-500/40 text-rose-400 text-[12px] font-semibold px-3 py-1.5 disabled:opacity-60"
                 >
-                  <Trash2 className="w-3.5 h-3.5" /> {removingConn ? "A remover…" : "Remover conta"}
+                  <Trash2 className="w-3.5 h-3.5" /> {removingConn ? t("t2t.removing") : t("t2t.removeAccount")}
                 </button>
-                <p className="text-[10px] text-zinc-500 pt-1">Só é permitida 1 conta T2T. Remove esta para ligar outra.</p>
+                <p className="text-[10px] text-zinc-500 pt-1">{t("t2t.onlyOneAccount")}</p>
               </div>
             )}
             {!hasAccount && (
               <div className="space-y-2.5">
                 {/* Corretora — apenas FTMO, FundedNext, VT Markets */}
                 <div>
-                  <label className="text-[11px] text-zinc-500">Corretora</label>
+                  <label className="text-[11px] text-zinc-500">{t("t2t.brokerField")}</label>
                   <div className="grid grid-cols-2 gap-2 mt-1">
                     {T2T_BROKERS.map((b) => (
                       <button
@@ -847,7 +849,7 @@ export default function TapToTradeFeed() {
                 </div>
                 {/* Servidor — apenas os da corretora escolhida */}
                 <div>
-                  <label className="text-[11px] text-zinc-500">Servidor</label>
+                  <label className="text-[11px] text-zinc-500">{t("t2t.serverField")}</label>
                   <select
                     value={connForm.server}
                     onChange={(e) => setConnForm({ ...connForm, server: e.target.value })}
@@ -859,15 +861,15 @@ export default function TapToTradeFeed() {
                   </select>
                 </div>
                 {/* Login + password (podes colar) */}
-                <input value={connForm.login} onChange={(e) => setConnForm({ ...connForm, login: e.target.value })} placeholder="Número de conta (login) — podes colar" inputMode="numeric" autoComplete="off" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
-                <input value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} placeholder="Password (investor/master) — podes colar" type="password" autoComplete="off" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
+                <input value={connForm.login} onChange={(e) => setConnForm({ ...connForm, login: e.target.value })} placeholder={t("t2t.loginPlaceholder")} inputMode="numeric" autoComplete="off" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
+                <input value={connForm.password} onChange={(e) => setConnForm({ ...connForm, password: e.target.value })} placeholder={t("t2t.passwordPlaceholder")} type="password" autoComplete="off" className="w-full rounded-xl bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white" />
               </div>
             )}
             {connError && <p className="text-xs text-rose-400 mt-2">{connError}</p>}
             <div className="flex gap-2 mt-4">
-              <button onClick={() => setConnectOpen(false)} disabled={connBusy} className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300">{hasAccount ? "Fechar" : "Cancelar"}</button>
+              <button onClick={() => setConnectOpen(false)} disabled={connBusy} className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300">{hasAccount ? t("t2t.close") : t("t2t.cancel")}</button>
               {!hasAccount && (
-                <button onClick={connectAccount} disabled={connBusy} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black disabled:opacity-60">{connBusy ? "A ligar…" : "Ligar conta"}</button>
+                <button onClick={connectAccount} disabled={connBusy} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black disabled:opacity-60">{connBusy ? t("t2t.linking") : t("t2t.linkAccount")}</button>
               )}
             </div>
           </div>
@@ -884,29 +886,29 @@ export default function TapToTradeFeed() {
             {tap.status === "confirm" && (
               <>
                 {!isReady && (
-                  <p className="text-xs text-amber-400 mb-2">A tua conta MT5 ainda não está ligada (verifica o estado em "A minha conta T2T") — a trade só abre depois de ligada.</p>
+                  <p className="text-xs text-amber-400 mb-2">{t("t2t.notLinkedWarning")}</p>
                 )}
                 <p className="text-sm text-zinc-300 mb-3">
-                  Vais abrir esta trade na <strong className="text-white">tua conta</strong>, com <strong className="text-white">{riskLabel}</strong>.
+                  {t("t2t.confirmBefore")}<strong className="text-white">{t("t2t.yourAccount")}</strong>{t("t2t.confirmMiddle")}<strong className="text-white">{riskLabel}</strong>{t("t2t.confirmEnd")}
                 </p>
                 <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3 text-xs text-zinc-400 max-h-28 overflow-y-auto whitespace-pre-wrap mb-4">{tap.sig.content}</div>
                 <div className="flex gap-2">
-                  <button onClick={() => setTap(null)} className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95">Cancelar</button>
-                  <button onClick={runTap} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95">Confirmar e abrir</button>
+                  <button onClick={() => setTap(null)} className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95">{t("t2t.cancel")}</button>
+                  <button onClick={runTap} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95">{t("t2t.confirmOpen")}</button>
                 </div>
               </>
             )}
-            {tap.status === "loading" && <p className="text-sm text-zinc-300 py-6 text-center">A abrir a trade na tua conta…</p>}
+            {tap.status === "loading" && <p className="text-sm text-zinc-300 py-6 text-center">{t("t2t.openingTrade")}</p>}
             {tap.status === "done" && (
               <>
                 <p className="text-sm text-emerald-400 py-4 text-center">✅ {tap.message}</p>
-                <button onClick={() => setTap(null)} className="w-full rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95">Fechar</button>
+                <button onClick={() => setTap(null)} className="w-full rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95">{t("t2t.close")}</button>
               </>
             )}
             {tap.status === "error" && (
               <>
                 <p className="text-sm text-rose-400 py-4 text-center">⚠️ {tap.message}</p>
-                <button onClick={() => setTap(null)} className="w-full rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95">Fechar</button>
+                <button onClick={() => setTap(null)} className="w-full rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95">{t("t2t.close")}</button>
               </>
             )}
           </div>

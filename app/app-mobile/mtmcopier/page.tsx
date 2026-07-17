@@ -10,6 +10,7 @@ import {
   AlertTriangle, BarChart3, History, ChevronDown, ChevronUp, Power,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useT } from "@/components/i18n-provider"
 import SetupModal, { type MTMcopierConnection, type MtmcopySenderMode } from "@/components/mtmcopy/setup-modal"
 import {
   StatusPill, SignalCard, EmptySignals, ModeBanner, CopyTraderBanner, StrategyMtmBanner,
@@ -72,6 +73,7 @@ interface AccessStatus {
 // ─── Signal History (mobile) ──────────────────────────────────────────────────
 
 function SignalHistoryMobile({ accessToken }: { accessToken: string }) {
+  const t = useT()
   const [signals, setSignals] = useState<SignalLog[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -102,7 +104,7 @@ function SignalHistoryMobile({ accessToken }: { accessToken: string }) {
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
           <History className="w-3.5 h-3.5" />
-          Histórico de sinais
+          {t("mtmcopier.signalHistory")}
           {total > 0 && <span className="normal-case font-normal">({total})</span>}
         </h2>
         <button onClick={load} className="p-1.5 hover:bg-gray-800 rounded-lg transition-colors">
@@ -127,8 +129,8 @@ function SignalHistoryMobile({ accessToken }: { accessToken: string }) {
               className="w-full flex items-center justify-center gap-1.5 text-sm text-gray-400 hover:text-white py-2 transition-colors"
             >
               {expanded
-                ? <><ChevronUp className="w-4 h-4" /> Ver menos</>
-                : <><ChevronDown className="w-4 h-4" /> Ver todos ({signals.length})</>}
+                ? <><ChevronUp className="w-4 h-4" /> {t("mtmcopier.showLess")}</>
+                : <><ChevronDown className="w-4 h-4" /> {t("mtmcopier.showAll")} ({signals.length})</>}
             </button>
           )}
         </>
@@ -140,6 +142,7 @@ function SignalHistoryMobile({ accessToken }: { accessToken: string }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function MtmcopierMobilePage() {
+  const t = useT()
   const router = useRouter()
   const [access, setAccess] = useState<AccessStatus | null>(null)
   const [connections, setConnections] = useState<ConnRow[]>([])
@@ -207,7 +210,7 @@ export default function MtmcopierMobilePage() {
   ) => {
     try {
       const tok = await waitForSupabaseSession()
-      if (!tok) { setError("Sessão expirada. Faz login novamente."); return }
+      if (!tok) { setError(t("mtmcopier.sessionExpired")); return }
       setAccessToken(tok)
 
       const res = await fetch("/api/mtmcopy/connection", {
@@ -236,7 +239,7 @@ export default function MtmcopierMobilePage() {
       setSetupSelectionId(selectionId)
       setShowSetup(true)
     } catch {
-      setError("Não foi possível abrir a configuração.")
+      setError(t("mtmcopier.cannotOpenSetup"))
     }
   }
 
@@ -269,12 +272,12 @@ export default function MtmcopierMobilePage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || "Erro ao atualizar estado.")
+        setError(data.error || t("mtmcopier.errorUpdateState"))
       } else {
         setConnections(prev => prev.map(c => c.id === conn.id ? { ...c, is_active: !c.is_active } : c))
       }
     } catch {
-      setError("Erro de rede.")
+      setError(t("mtmcopier.networkError"))
     } finally {
       setTogglingId(null)
     }
@@ -284,7 +287,7 @@ export default function MtmcopierMobilePage() {
   const handleCheckout = async () => {
     // App iOS: subscrições via App Store (Apple Guideline 3.1.1)
     if (isIosNativeApp()) {
-      setError("A subscrição MTMcopy na app iOS é feita via App Store — vai a Definições → Subscrição.")
+      setError(t("mtmcopier.iosSubscribeError"))
       return
     }
     setCheckingOut(true)
@@ -298,10 +301,10 @@ export default function MtmcopierMobilePage() {
         body: JSON.stringify({ planId: "mtmcopy_addon_monthly" }),
       })
       const data = await res.json()
-      if (!res.ok || !data.url) { setError(data.error || "Erro ao iniciar pagamento."); return }
+      if (!res.ok || !data.url) { setError(data.error || t("mtmcopier.errorStartPayment")); return }
       window.location.href = data.url
     } catch {
-      setError("Erro de rede.")
+      setError(t("mtmcopier.networkError"))
     } finally {
       setCheckingOut(false)
     }
@@ -317,10 +320,10 @@ export default function MtmcopierMobilePage() {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       const data = await res.json()
-      setVerifyMsg(data.ok ? (data.message || "Ligação Telegram confirmada.") : (data.error || "Não foi possível verificar."))
+      setVerifyMsg(data.ok ? (data.message || t("mtmcopier.telegramConfirmed")) : (data.error || t("mtmcopier.cannotVerify")))
       if (data.ok) await loadData(accessToken)
     } catch {
-      setVerifyMsg("Erro de rede.")
+      setVerifyMsg(t("mtmcopier.networkError"))
     } finally {
       setVerifying(false)
     }
@@ -351,10 +354,9 @@ export default function MtmcopierMobilePage() {
             <Lock className="w-9 h-9 text-gray-500" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-xl font-bold">Sem acesso a esta função</h2>
+            <h2 className="text-xl font-bold">{t("mtmcopier.noAccessTitle")}</h2>
             <p className="text-gray-400 text-sm leading-relaxed">
-              O MTMcopier ainda não está disponível no teu plano.
-              Fala com o teu sponsor ou visita o site para mais informações.
+              {t("mtmcopier.noAccessDesc")}
             </p>
           </div>
           <div className="w-full space-y-3">
@@ -364,10 +366,10 @@ export default function MtmcopierMobilePage() {
               className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#D2A63C]/10 border border-[#D2A63C]/30 text-[#D2A63C] font-semibold"
             >
               <ExternalLink className="w-4 h-4" />
-              Saber mais sobre o MTMcopier
+              {t("mtmcopier.learnMore")}
             </a>
             <button onClick={() => router.back()} className="w-full py-3 rounded-xl bg-gray-800 text-gray-300 font-medium">
-              Voltar
+              {t("mtmcopier.back")}
             </button>
           </div>
         </div>
@@ -399,7 +401,7 @@ export default function MtmcopierMobilePage() {
           <Send className="w-5 h-5 text-[#D2A63C]" />
           <div className="flex-1">
             <h1 className="font-bold text-lg leading-none">MTMcopier</h1>
-            <p className="text-xs text-gray-400 mt-0.5">Gestão de contas MT5</p>
+            <p className="text-xs text-gray-400 mt-0.5">{t("mtmcopier.headerSubtitle")}</p>
           </div>
           <button onClick={() => loadData(accessToken ?? undefined)} className="p-2 hover:bg-gray-800 rounded-lg transition-colors">
             <RefreshCw className="w-4 h-4 text-gray-400" />
@@ -412,15 +414,15 @@ export default function MtmcopierMobilePage() {
           {subscribed ? (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span className="text-sm text-emerald-400 font-medium">Subscrição activa</span>
+              <span className="text-sm text-emerald-400 font-medium">{t("mtmcopier.subscriptionActive")}</span>
             </div>
           ) : hasConnections && (
             <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 space-y-3">
               <p className="text-amber-100/90 text-sm">
-                Contas pré-configuradas. A cópia automática só arranca após activares a subscrição{isIosNativeApp() ? "" : " (+20€/mês)"}.
+                {t("mtmcopier.preconfiguredNote")}{isIosNativeApp() ? "" : ` ${t("mtmcopier.priceSuffix")}`}.
               </p>
               {isIosNativeApp() ? (
-                <p className="text-xs text-amber-100/70">Ativa a subscrição na <strong>App Store</strong>: Definições → Subscrição.</p>
+                <p className="text-xs text-amber-100/70">{t("mtmcopier.iosActivatePre")} <strong>App Store</strong>{t("mtmcopier.iosActivatePost")}</p>
               ) : (
                 <button
                   onClick={handleCheckout}
@@ -428,7 +430,7 @@ export default function MtmcopierMobilePage() {
                   className="w-full py-2.5 rounded-xl bg-[#D2A63C] text-black font-bold text-sm flex items-center justify-center gap-2"
                 >
                   {checkingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                  Activar subscrição
+                  {t("mtmcopier.activateSubscription")}
                 </button>
               )}
             </div>
@@ -441,15 +443,15 @@ export default function MtmcopierMobilePage() {
                 <Send className="w-7 h-7 text-gray-500" />
               </div>
               <div>
-                <p className="text-white font-semibold">Nenhuma conta configurada</p>
-                <p className="text-gray-400 text-sm mt-1">Configura a tua primeira conta MT5 para começar a copiar sinais.</p>
+                <p className="text-white font-semibold">{t("mtmcopier.noAccountsTitle")}</p>
+                <p className="text-gray-400 text-sm mt-1">{t("mtmcopier.noAccountsDesc")}</p>
               </div>
               <button
                 onClick={() => openSetup("new")}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#D2A63C] text-black font-bold text-sm"
               >
                 <Plus className="w-4 h-4" />
-                Configurar conta MT5
+                {t("mtmcopier.setupMt5Account")}
               </button>
               {!subscribed && !isIosNativeApp() && (
                 <button
@@ -458,7 +460,7 @@ export default function MtmcopierMobilePage() {
                   className="w-full py-3 rounded-xl bg-gray-800 text-gray-300 font-medium text-sm flex items-center justify-center gap-2"
                 >
                   {checkingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  Ativar MTMcopier (+20€/mês)
+                  {t("mtmcopier.activateMtmcopier")} {t("mtmcopier.priceSuffix")}
                 </button>
               )}
             </div>
@@ -468,7 +470,7 @@ export default function MtmcopierMobilePage() {
               <div className="flex items-center justify-between">
                 <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Power className="w-3.5 h-3.5" />
-                  As tuas contas ({connections.length}{accountLimits?.unlimited ? "" : `/${accountLimits?.maxAccounts ?? 4}`})
+                  {t("mtmcopier.yourAccounts")} ({connections.length}{accountLimits?.unlimited ? "" : `/${accountLimits?.maxAccounts ?? 4}`})
                 </h2>
                 <button
                   onClick={() => {
@@ -481,7 +483,7 @@ export default function MtmcopierMobilePage() {
                   className="flex items-center gap-1 text-xs text-[#D2A63C] font-semibold py-1.5 px-3 rounded-lg bg-[#D2A63C]/10 border border-[#D2A63C]/20"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  Nova conta
+                  {t("mtmcopier.newAccount")}
                 </button>
               </div>
 
@@ -513,14 +515,14 @@ export default function MtmcopierMobilePage() {
                         {togglingId === conn.id
                           ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           : null}
-                        {conn.is_active ? "Ativo" : "Pausado"}
+                        {conn.is_active ? t("mtmcopier.active") : t("mtmcopier.paused")}
                       </button>
                     </div>
 
                     {/* Mode/method info */}
                     {isMasterConnection(conn.account_role) ? (
                       <div className="rounded-lg bg-[#D2A63C]/5 border border-[#D2A63C]/20 p-3">
-                        <p className="text-[10px] uppercase tracking-wider text-[#D2A63C]/70 mb-1">Copy trader pessoal</p>
+                        <p className="text-[10px] uppercase tracking-wider text-[#D2A63C]/70 mb-1">{t("mtmcopier.personalCopyTrader")}</p>
                         <p className="text-sm font-semibold text-white">{MTM_MASTER_LABEL}</p>
                         <div className="mt-2">
                           <StatusPill status={conn.mt5_status} />
@@ -538,14 +540,14 @@ export default function MtmcopierMobilePage() {
 
                         <div className="grid grid-cols-2 gap-2">
                           <div className="rounded-lg bg-gray-800/50 border border-gray-700/50 p-2.5">
-                            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Método</p>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">{t("mtmcopier.method")}</p>
                             <p className="text-xs text-white font-medium truncate">
-                              {isCopyTrader ? MTM_MASTER_LABEL : conn.copy_method === "strategy" ? "Estratégia MTM" : copyMethodLabel(conn.copy_method)}
+                              {isCopyTrader ? MTM_MASTER_LABEL : conn.copy_method === "strategy" ? t("mtmcopier.mtmStrategy") : copyMethodLabel(conn.copy_method)}
                             </p>
                             {!isCopyTrader && conn.copy_method === "strategy" && (
                               <p className="text-[10px] text-gray-500 mt-0.5 truncate">
                                 {strategyPickLabel(conn.copyfactory_strategy_pick)}
-                                {conn.copyfactory_subscribed ? " · Cópia activa" : " · Cópia pendente"}
+                                {conn.copyfactory_subscribed ? ` · ${t("mtmcopier.copyActive")}` : ` · ${t("mtmcopier.copyPending")}`}
                               </p>
                             )}
                             {!isCopyTrader && conn.copy_method === "telegram_group" && (
@@ -575,35 +577,35 @@ export default function MtmcopierMobilePage() {
                     {conn.account_role !== "master" && (
                       <div className="grid grid-cols-3 gap-2">
                         <div className="rounded-lg bg-[#D2A63C]/10 border border-[#D2A63C]/25 p-2 text-center">
-                          <p className="text-[10px] text-[#D2A63C]/80 mb-0.5">Saldo</p>
+                          <p className="text-[10px] text-[#D2A63C]/80 mb-0.5">{t("mtmcopier.balance")}</p>
                           <p className="text-xs font-semibold text-white tabular-nums">{formatMt5Money(conn.account_balance)}</p>
                           {conn.account_equity != null && conn.account_equity !== conn.account_balance && (
-                            <p className="text-[9px] text-gray-500 mt-0.5">eq {formatMt5Money(conn.account_equity)}</p>
+                            <p className="text-[9px] text-gray-500 mt-0.5">{t("mtmcopier.equityShort")} {formatMt5Money(conn.account_equity)}</p>
                           )}
                         </div>
                         {isCopyTrader ? (
                           <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 p-2 text-center">
-                            <p className="text-[10px] text-gray-500 mb-0.5">Multiplicador</p>
+                            <p className="text-[10px] text-gray-500 mb-0.5">{t("mtmcopier.multiplier")}</p>
                             <p className="text-xs text-white font-medium">
                               {conn.lot_mode === "multiplier" ? conn.lot_value : "1"}×
                             </p>
                           </div>
                         ) : (
                           <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 p-2 text-center">
-                            <p className="text-[10px] text-gray-500 mb-0.5">Modo lote</p>
+                            <p className="text-[10px] text-gray-500 mb-0.5">{t("mtmcopier.lotMode")}</p>
                             <p className="text-xs text-white font-medium">
-                              {conn.lot_mode === "fixed" ? "Fixo" : conn.lot_mode === "risk_percent" ? `${conn.lot_value}%` : `${conn.lot_value}×`}
+                              {conn.lot_mode === "fixed" ? t("mtmcopier.fixed") : conn.lot_mode === "risk_percent" ? `${conn.lot_value}%` : `${conn.lot_value}×`}
                             </p>
                           </div>
                         )}
                         <div className="rounded-lg bg-gray-800/40 border border-gray-700/40 p-2 text-center">
                           <p className="text-[10px] text-gray-500 mb-0.5">
-                            {isCopyTrader ? "Estado cópia" : "Último sinal"}
+                            {isCopyTrader ? t("mtmcopier.copyState") : t("mtmcopier.lastSignal")}
                           </p>
                           <p className="text-xs text-white font-medium">
                             {isCopyTrader
-                              ? (conn.copyfactory_subscribed ? "Activa" : "Pendente")
-                              : (conn.last_signal_at ? formatRelative(conn.last_signal_at) : "Nenhum")}
+                              ? (conn.copyfactory_subscribed ? t("mtmcopier.statusActive") : t("mtmcopier.statusPending"))
+                              : (conn.last_signal_at ? formatRelative(conn.last_signal_at) : t("mtmcopier.none"))}
                           </p>
                         </div>
                       </div>
@@ -615,13 +617,13 @@ export default function MtmcopierMobilePage() {
                       conn.telegram_channel && (
                       <div className="flex items-start gap-2 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2.5">
                         <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                        <p>Adiciona <strong>@MoreThanMoney_aibot</strong> como admin de <strong>{conn.telegram_channel}</strong>.</p>
+                        <p>{t("mtmcopier.addBotPre")} <strong>@MoreThanMoney_aibot</strong> {t("mtmcopier.addBotMid")} <strong>{conn.telegram_channel}</strong>.</p>
                       </div>
                     )}
                     {conn.mt5_status === "pending" && (
                       <div className="flex items-start gap-2 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2.5">
                         <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                        <p>A ligar a conta — normalmente 1–3 minutos.</p>
+                        <p>{t("mtmcopier.connectingAccount")}</p>
                       </div>
                     )}
                     {conn.last_error && !isTelegramChannelErrorMessage(conn.last_error) && (
@@ -637,7 +639,7 @@ export default function MtmcopierMobilePage() {
                       className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-600 rounded-lg px-3 py-2 transition-all"
                     >
                       <Settings2 className="w-3.5 h-3.5" />
-                      Editar esta conta
+                      {t("mtmcopier.editAccount")}
                     </button>
                   </div>
                 ))}
@@ -652,7 +654,7 @@ export default function MtmcopierMobilePage() {
                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#D2A63C] text-black font-bold text-sm"
                   >
                     {verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                    Verificar Telegram
+                    {t("mtmcopier.verifyTelegram")}
                   </button>
                 )}
                 {verifyMsg && (
@@ -666,7 +668,7 @@ export default function MtmcopierMobilePage() {
                     className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gray-800 border border-gray-700 text-gray-200 text-sm font-medium"
                   >
                     <BarChart3 className="w-4 h-4 text-[#D2A63C]" />
-                    Terminal de métricas
+                    {t("mtmcopier.metricsTerminal")}
                   </a>
                 )}
               </div>

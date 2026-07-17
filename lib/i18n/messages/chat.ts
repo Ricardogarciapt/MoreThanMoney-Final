@@ -469,7 +469,7 @@ export const CHAT_MESSAGES: Partial<Record<Lang, Record<string, string>>> = {
     "chat.enterVtAccount": "Gib deine VT Markets Kontonummer ein.",
     "chat.saveError": "Fehler beim Speichern. Versuche es erneut.",
     "chat.brokerRequired": "Broker-Konto erforderlich",
-    "chat.brokerBody1": "Für den Zugang zu den Trade-Ideas-Kanälen brauchst du ein aktives Konto bei",
+    "chat.brokerBody1": "Für den Zugang zu den Trade Ideas-Kanälen brauchst du ein aktives Konto bei",
     "chat.brokerBody2": ", offizieller MTM-Partner.",
     "chat.vtAccountLabel": "Deine VT Markets Kontonummer (UID)",
     "chat.vtPlaceholder": "z. B. 12345678",

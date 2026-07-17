@@ -10,6 +10,10 @@ import { NAVFOOTER_MESSAGES } from "./messages/navfooter"
 import { CHAT_MESSAGES } from "./messages/chat"
 import { LIVE_MESSAGES } from "./messages/live"
 import { SCANNER_MESSAGES } from "./messages/scanner"
+import { MEMBERAREA_MESSAGES } from "./messages/memberarea"
+import { T2T_MESSAGES } from "./messages/t2t"
+import { PORTFOLIO_MESSAGES } from "./messages/portfolio"
+import { MTMCOPIER_MESSAGES } from "./messages/mtmcopier"
 
 type NsSource = Partial<Record<Lang, Record<string, string>>>
 
@@ -37,4 +41,8 @@ export const ALL_MESSAGES = merge(
   CHAT_MESSAGES,
   LIVE_MESSAGES,
   SCANNER_MESSAGES,
+  MEMBERAREA_MESSAGES,
+  T2T_MESSAGES,
+  PORTFOLIO_MESSAGES,
+  MTMCOPIER_MESSAGES,
 )

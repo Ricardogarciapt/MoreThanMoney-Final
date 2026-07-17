@@ -28,6 +28,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useT } from "@/components/i18n-provider"
 import { CyberpunkCard } from "@/components/cyberpunk-card"
 import NotificationsPanel from "@/components/notifications-panel"
 import { MemberSubscriptionCard } from "@/components/member-subscription-card"
@@ -54,6 +55,7 @@ interface UserProfile {
 }
 
 export default function MemberAreaPage() {
+  const t = useT()
   const [activeTab, setActiveTab] = useState("profile")
   const [isEditing, setIsEditing] = useState(false)
   const [error, setError] = useState("")
@@ -226,7 +228,7 @@ export default function MemberAreaPage() {
     setIsSaving(true)
 
     if (!user) {
-      setError("Utilizador não autenticado.")
+      setError(t("memberarea.notAuthenticated"))
       setIsSaving(false)
       return
     }
@@ -250,12 +252,12 @@ export default function MemberAreaPage() {
       }
 
       console.log('✅ [MEMBER AREA] Perfil atualizado')
-      setSuccess("Perfil atualizado com sucesso!")
+      setSuccess(t("memberarea.profileUpdated"))
       setIsEditing(false)
       await loadUser() // Recarregar dados
     } catch (err: any) {
       console.error("❌ [MEMBER AREA] Erro ao atualizar:", err)
-      setError(err.message || "Erro ao atualizar perfil")
+      setError(err.message || t("memberarea.profileUpdateError"))
     } finally {
       setIsSaving(false)
     }
@@ -268,20 +270,20 @@ export default function MemberAreaPage() {
     setIsSaving(true)
 
     if (!user) {
-      setError("Utilizador não autenticado.")
+      setError(t("memberarea.notAuthenticated"))
       setIsSaving(false)
       return
     }
 
     // Validações
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError("As passwords não coincidem.")
+      setError(t("memberarea.passwordsNoMatch"))
       setIsSaving(false)
       return
     }
 
     if (passwordData.newPassword.length < 6) {
-      setError("A password deve ter pelo menos 6 caracteres.")
+      setError(t("memberarea.passwordTooShort"))
       setIsSaving(false)
       return
     }
@@ -298,7 +300,7 @@ export default function MemberAreaPage() {
       }
 
       console.log('✅ [MEMBER AREA] Password alterada')
-      setSuccess("Password alterada com sucesso!")
+      setSuccess(t("memberarea.passwordChanged"))
       setPasswordData({
         currentPassword: "",
         newPassword: "",
@@ -306,7 +308,7 @@ export default function MemberAreaPage() {
       })
     } catch (err: any) {
       console.error("❌ [MEMBER AREA] Erro ao alterar password:", err)
-      setError(err.message || "Erro ao alterar password")
+      setError(err.message || t("memberarea.passwordChangeError"))
     } finally {
       setIsSaving(false)
     }
@@ -319,13 +321,13 @@ export default function MemberAreaPage() {
     setIsSaving(true)
 
     if (!user) {
-      setError("Utilizador não autenticado.")
+      setError(t("memberarea.notAuthenticated"))
       setIsSaving(false)
       return
     }
 
     if (!emailData.newEmail || !emailData.password) {
-      setError("Preencha todos os campos.")
+      setError(t("memberarea.fillAllFields"))
       setIsSaving(false)
       return
     }
@@ -342,14 +344,14 @@ export default function MemberAreaPage() {
       }
 
       console.log('✅ [MEMBER AREA] Email alterado')
-      setSuccess("Email alterado com sucesso! Verifica o teu novo email para confirmar a alteração.")
+      setSuccess(t("memberarea.emailChanged"))
       setEmailData({
         newEmail: "",
         password: ""
       })
     } catch (err: any) {
       console.error("❌ [MEMBER AREA] Erro ao alterar email:", err)
-      setError(err.message || "Erro ao alterar email")
+      setError(err.message || t("memberarea.emailChangeError"))
     } finally {
       setIsSaving(false)
     }
@@ -395,17 +397,17 @@ export default function MemberAreaPage() {
       <div className="min-h-screen bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-[#D2A63C] mx-auto mb-4" />
-          <p className="text-gray-300">A carregar área de membro...</p>
+          <p className="text-gray-300">{t("memberarea.loading")}</p>
         </div>
       </div>
     )
   }
 
   const userTypeBadge = {
-    admin: { label: "Admin", color: "bg-red-500/20 text-red-400 border-red-500/30" },
-    trial: { label: "Trial", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-    guest: { label: "Guest", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
-    member: { label: "Membro", color: "bg-green-500/20 text-green-400 border-green-500/30" },
+    admin: { label: t("memberarea.badgeAdmin"), color: "bg-red-500/20 text-red-400 border-red-500/30" },
+    trial: { label: t("memberarea.badgeTrial"), color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+    guest: { label: t("memberarea.badgeGuest"), color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+    member: { label: t("memberarea.badgeMember"), color: "bg-green-500/20 text-green-400 border-green-500/30" },
   }
   const badge = userTypeBadge[user.user_type as keyof typeof userTypeBadge] || userTypeBadge.member
 
@@ -418,12 +420,12 @@ export default function MemberAreaPage() {
             <Link href="/new-landing">
               <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
+                {t("memberarea.back")}
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-[#D2A63C]">Área de Membros</h1>
-              <p className="text-gray-300">Gerir os teus dados e configurações</p>
+              <h1 className="text-3xl font-bold text-[#D2A63C]">{t("memberarea.title")}</h1>
+              <p className="text-gray-300">{t("memberarea.subtitle")}</p>
             </div>
           </div>
           <Button 
@@ -432,7 +434,7 @@ export default function MemberAreaPage() {
             className="border-red-500 text-red-400 hover:bg-red-500/10"
           >
             <LogOut className="w-4 h-4 mr-2" />
-            Sair
+            {t("memberarea.logout")}
           </Button>
         </div>
 
@@ -469,18 +471,18 @@ export default function MemberAreaPage() {
                 </div>
               )}
               {user.is_active && (
-                <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 rounded-full border-2 border-gray-900" title="Conta Ativa">
+                <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 rounded-full border-2 border-gray-900" title={t("memberarea.accountActive")}>
                   <CheckCircle className="w-4 h-4 text-white" />
                 </div>
               )}
             </div>
             <div className="text-center md:text-left flex-1">
-              <h2 className="text-3xl font-bold text-white mb-1">{user.full_name || user.username || "Utilizador"}</h2>
+              <h2 className="text-3xl font-bold text-white mb-1">{user.full_name || user.username || t("memberarea.fallbackUser")}</h2>
               <p className="text-gray-400 text-lg mb-2">{user.email}</p>
               <Badge className={badge.color}>{badge.label}</Badge>
               {user.created_at && (
                 <p className="text-sm text-gray-500 mt-2 flex items-center justify-center md:justify-start">
-                  <Calendar className="w-3 h-3 mr-1" /> Membro desde: {new Date(user.created_at).toLocaleDateString()}
+                  <Calendar className="w-3 h-3 mr-1" /> {t("memberarea.memberSince")} {new Date(user.created_at).toLocaleDateString()}
                 </p>
               )}
             </div>
@@ -497,19 +499,19 @@ export default function MemberAreaPage() {
           <TabsList className="grid w-full grid-cols-4 bg-gray-900 border border-[#D2A63C]/30">
             <TabsTrigger value="profile" className="data-[state=active]:bg-[#D2A63C] data-[state=active]:text-black">
               <User className="w-4 h-4 mr-2" />
-              Perfil
+              {t("memberarea.tabProfile")}
             </TabsTrigger>
             <TabsTrigger value="subscription" className="data-[state=active]:bg-[#D2A63C] data-[state=active]:text-black">
               <CreditCard className="w-4 h-4 mr-2" />
-              Subscrição
+              {t("memberarea.tabSubscription")}
             </TabsTrigger>
             <TabsTrigger value="security" className="data-[state=active]:bg-[#D2A63C] data-[state=active]:text-black">
               <Lock className="w-4 h-4 mr-2" />
-              Segurança
+              {t("memberarea.tabSecurity")}
             </TabsTrigger>
             <TabsTrigger value="notifications" className="data-[state=active]:bg-[#D2A63C] data-[state=active]:text-black">
               <AlertCircle className="w-4 h-4 mr-2" />
-              Notificações
+              {t("memberarea.tabNotifications")}
             </TabsTrigger>
           </TabsList>
 
@@ -520,14 +522,14 @@ export default function MemberAreaPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-[#D2A63C] flex items-center">
                     <User className="w-5 h-5 mr-2" />
-                    Informações Pessoais
+                    {t("memberarea.personalInfo")}
                   </CardTitle>
                   <Button
                     onClick={() => setIsEditing(!isEditing)}
                     variant={isEditing ? "outline" : "default"}
                     className={isEditing ? "border-[#D2A63C] text-[#D2A63C]" : "bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black"}
                   >
-                    {isEditing ? "Cancelar" : "Editar"}
+                    {isEditing ? t("memberarea.cancel") : t("memberarea.edit")}
                   </Button>
                 </div>
               </CardHeader>
@@ -535,7 +537,7 @@ export default function MemberAreaPage() {
                 <form onSubmit={handleProfileUpdate} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <Label htmlFor="full_name" className="text-gray-300">Nome Completo</Label>
+                      <Label htmlFor="full_name" className="text-gray-300">{t("memberarea.fullName")}</Label>
                       <Input
                         id="full_name"
                         name="full_name"
@@ -547,7 +549,7 @@ export default function MemberAreaPage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="username" className="text-gray-300">Nome de Utilizador</Label>
+                      <Label htmlFor="username" className="text-gray-300">{t("memberarea.username")}</Label>
                       <Input
                         id="username"
                         name="username"
@@ -559,7 +561,7 @@ export default function MemberAreaPage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="email" className="text-gray-300">Email</Label>
+                      <Label htmlFor="email" className="text-gray-300">{t("memberarea.email")}</Label>
                       <Input
                         id="email"
                         name="email"
@@ -568,11 +570,11 @@ export default function MemberAreaPage() {
                         disabled
                         className="bg-gray-800 border-gray-700 text-gray-500"
                       />
-                      <p className="text-xs text-gray-400 mt-1">O email não pode ser alterado</p>
+                      <p className="text-xs text-gray-400 mt-1">{t("memberarea.emailCantChange")}</p>
                     </div>
 
                     <div>
-                      <Label htmlFor="phone" className="text-gray-300">Telefone</Label>
+                      <Label htmlFor="phone" className="text-gray-300">{t("memberarea.phone")}</Label>
                       <Input
                         id="phone"
                         name="phone"
@@ -584,7 +586,7 @@ export default function MemberAreaPage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="whatsapp" className="text-gray-300">WhatsApp</Label>
+                      <Label htmlFor="whatsapp" className="text-gray-300">{t("memberarea.whatsapp")}</Label>
                       <Input
                         id="whatsapp"
                         name="whatsapp"
@@ -596,10 +598,10 @@ export default function MemberAreaPage() {
                     </div>
 
                     <div>
-                      <Label className="text-gray-300">Tipo de Conta</Label>
+                      <Label className="text-gray-300">{t("memberarea.accountType")}</Label>
                       <div className="flex items-center gap-2 mt-2">
                         <Shield className="w-4 h-4 text-[#D2A63C]" />
-                        <span className="text-[#D2A63C] font-medium capitalize">{user.user_type || "Membro"}</span>
+                        <span className="text-[#D2A63C] font-medium capitalize">{user.user_type || t("memberarea.accountTypeMember")}</span>
                       </div>
                     </div>
                   </div>
@@ -608,7 +610,7 @@ export default function MemberAreaPage() {
                     <div className="flex gap-4 pt-4">
                       <Button type="submit" disabled={isSaving} className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black">
                         {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                        {isSaving ? "A guardar..." : "Guardar Alterações"}
+                        {isSaving ? t("memberarea.saving") : t("memberarea.saveChanges")}
                       </Button>
                       <Button
                         type="button"
@@ -617,7 +619,7 @@ export default function MemberAreaPage() {
                         className="border-gray-700 text-gray-300"
                         disabled={isSaving}
                       >
-                        Cancelar
+                        {t("memberarea.cancel")}
                       </Button>
                     </div>
                   )}
@@ -646,13 +648,13 @@ export default function MemberAreaPage() {
               <CardHeader>
                 <CardTitle className="text-[#D2A63C] flex items-center">
                   <Lock className="w-5 h-5 mr-2" />
-                  Alterar Palavra-passe
+                  {t("memberarea.changePassword")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handlePasswordChange} className="space-y-4">
                   <div>
-                    <Label htmlFor="newPassword" className="text-gray-300">Nova Palavra-passe</Label>
+                    <Label htmlFor="newPassword" className="text-gray-300">{t("memberarea.newPassword")}</Label>
                     <div className="relative">
                       <Input
                         id="newPassword"
@@ -661,7 +663,7 @@ export default function MemberAreaPage() {
                         onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
                         disabled={isSaving}
                         className="bg-gray-800 border-gray-700 text-white pr-10"
-                        placeholder="Mínimo 6 carateres"
+                        placeholder={t("memberarea.newPasswordPlaceholder")}
                       />
                       <button
                         type="button"
@@ -674,7 +676,7 @@ export default function MemberAreaPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="confirmPassword" className="text-gray-300">Confirmar Palavra-passe</Label>
+                    <Label htmlFor="confirmPassword" className="text-gray-300">{t("memberarea.confirmPassword")}</Label>
                     <div className="relative">
                       <Input
                         id="confirmPassword"
@@ -683,7 +685,7 @@ export default function MemberAreaPage() {
                         onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                         disabled={isSaving}
                         className="bg-gray-800 border-gray-700 text-white pr-10"
-                        placeholder="Repete a nova palavra-passe"
+                        placeholder={t("memberarea.confirmPasswordPlaceholder")}
                       />
                       <button
                         type="button"
@@ -697,7 +699,7 @@ export default function MemberAreaPage() {
 
                   <Button type="submit" disabled={isSaving} className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black">
                     {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                    {isSaving ? "A alterar..." : "Alterar Palavra-passe"}
+                    {isSaving ? t("memberarea.changing") : t("memberarea.changePassword")}
                   </Button>
                 </form>
               </CardContent>
@@ -708,13 +710,13 @@ export default function MemberAreaPage() {
               <CardHeader>
                 <CardTitle className="text-[#D2A63C] flex items-center">
                   <Mail className="w-5 h-5 mr-2" />
-                  Alterar Email
+                  {t("memberarea.changeEmail")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleEmailChange} className="space-y-4">
                   <div>
-                    <Label htmlFor="currentEmail" className="text-gray-300">Email Atual</Label>
+                    <Label htmlFor="currentEmail" className="text-gray-300">{t("memberarea.currentEmail")}</Label>
                     <Input
                       id="currentEmail"
                       type="email"
@@ -725,7 +727,7 @@ export default function MemberAreaPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="newEmail" className="text-gray-300">Novo Email</Label>
+                    <Label htmlFor="newEmail" className="text-gray-300">{t("memberarea.newEmail")}</Label>
                     <Input
                       id="newEmail"
                       type="email"
@@ -738,7 +740,7 @@ export default function MemberAreaPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="emailPassword" className="text-gray-300">Palavra-passe Atual (para confirmação)</Label>
+                    <Label htmlFor="emailPassword" className="text-gray-300">{t("memberarea.currentPasswordConfirm")}</Label>
                     <div className="relative">
                       <Input
                         id="emailPassword"
@@ -747,7 +749,7 @@ export default function MemberAreaPage() {
                         onChange={(e) => setEmailData(prev => ({ ...prev, password: e.target.value }))}
                         disabled={isSaving}
                         className="bg-gray-800 border-gray-700 text-white pr-10"
-                        placeholder="Confirma a tua palavra-passe"
+                        placeholder={t("memberarea.currentPasswordPlaceholder")}
                       />
                       <button
                         type="button"
@@ -761,13 +763,13 @@ export default function MemberAreaPage() {
 
                   <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                     <p className="text-sm text-blue-300">
-                      ⚠️ Receberás um email de confirmação no novo endereço. O email só será alterado após confirmação.
+                      {t("memberarea.emailConfirmWarning")}
                     </p>
                   </div>
 
                   <Button type="submit" disabled={isSaving} className="bg-gradient-to-r from-[#D2A63C] to-[#BB8525] text-black">
                     {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                    {isSaving ? "A alterar..." : "Alterar Email"}
+                    {isSaving ? t("memberarea.changing") : t("memberarea.changeEmail")}
                   </Button>
                 </form>
               </CardContent>
@@ -782,14 +784,14 @@ export default function MemberAreaPage() {
 
         {/* Quick Actions */}
         <div className="max-w-4xl mx-auto mt-8">
-          <h2 className="text-xl font-semibold text-[#D2A63C] mb-4">Ações Rápidas</h2>
+          <h2 className="text-xl font-semibold text-[#D2A63C] mb-4">{t("memberarea.quickActions")}</h2>
           <div className="grid md:grid-cols-3 gap-4">
             <Link href="/scanner-access">
               <Card className="bg-gray-900/50 border-gray-700 hover:border-[#D2A63C]/50 transition-all cursor-pointer">
                 <CardContent className="p-4 text-center">
                   <Shield className="w-8 h-8 text-[#D2A63C] mx-auto mb-2" />
-                  <h3 className="font-semibold text-white">Scanner ao Vivo</h3>
-                  <p className="text-gray-400 text-sm">Aceder aos scanners MTM</p>
+                  <h3 className="font-semibold text-white">{t("memberarea.scannerLive")}</h3>
+                  <p className="text-gray-400 text-sm">{t("memberarea.scannerLiveDesc")}</p>
                 </CardContent>
               </Card>
             </Link>
@@ -798,8 +800,8 @@ export default function MemberAreaPage() {
               <Card className="bg-gray-900/50 border-gray-700 hover:border-[#D2A63C]/50 transition-all cursor-pointer">
                 <CardContent className="p-4 text-center">
                   <Shield className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-                  <h3 className="font-semibold text-white">Portfólios</h3>
-                  <p className="text-gray-400 text-sm">Portfólios inteligentes</p>
+                  <h3 className="font-semibold text-white">{t("memberarea.portfolios")}</h3>
+                  <p className="text-gray-400 text-sm">{t("memberarea.portfoliosDesc")}</p>
                 </CardContent>
               </Card>
             </Link>
@@ -810,8 +812,8 @@ export default function MemberAreaPage() {
                   <div className="cyberpunk-icon mx-auto mb-4">
                     <Shield className="w-6 h-6 text-green-400" />
                   </div>
-                  <h3 className="font-bold text-white mb-2">Automatização</h3>
-                  <p className="text-gray-400 text-sm">Ferramentas automáticas</p>
+                  <h3 className="font-bold text-white mb-2">{t("memberarea.automation")}</h3>
+                  <p className="text-gray-400 text-sm">{t("memberarea.automationDesc")}</p>
                 </div>
               </CyberpunkCard>
             </Link>
