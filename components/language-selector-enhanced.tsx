@@ -86,6 +86,16 @@ const SUPPORTED_LANGUAGES: Language[] = [
   { code: 'tr', name: 'Turkish', flag: '🇹🇷', nativeName: 'Türkçe' },
 ]
 
+/** Mercados-alvo prioritários — aparecem no topo do seletor (por esta ordem). */
+const PRIORITY_LANGUAGE_CODES = ['pt', 'en', 'es', 'de', 'fr'] as const
+
+const PRIORITY_LANGUAGES: Language[] = PRIORITY_LANGUAGE_CODES.map(
+  (code) => SUPPORTED_LANGUAGES.find((l) => l.code === code)!,
+)
+const OTHER_LANGUAGES: Language[] = SUPPORTED_LANGUAGES.filter(
+  (l) => !(PRIORITY_LANGUAGE_CODES as readonly string[]).includes(l.code),
+)
+
 /** www.morethanmoney.pt → morethanmoney.pt (mantém localhost/IP como está). */
 function rootDomain(host: string): string {
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return host // IP
@@ -369,9 +379,9 @@ export default function LanguageSelectorEnhanced() {
         )}
         
         <DropdownMenuSeparator className="bg-gray-700" />
-        
-        <div className="max-h-64 overflow-y-auto">
-          {SUPPORTED_LANGUAGES.map((lang) => (
+
+        {(() => {
+          const renderItem = (lang: Language) => (
             <DropdownMenuItem
               key={lang.code}
               onClick={() => handleLanguageChange(lang.code)}
@@ -392,8 +402,22 @@ export default function LanguageSelectorEnhanced() {
                 <Check className="h-4 w-4 text-[#D2A63C]" />
               )}
             </DropdownMenuItem>
-          ))}
-        </div>
+          )
+
+          return (
+            <div className="max-h-72 overflow-y-auto">
+              <p className="px-3 pt-1.5 pb-1 text-[11px] uppercase tracking-wide text-gray-500">
+                Principais
+              </p>
+              {PRIORITY_LANGUAGES.map(renderItem)}
+              <DropdownMenuSeparator className="bg-gray-700" />
+              <p className="px-3 pt-1.5 pb-1 text-[11px] uppercase tracking-wide text-gray-500">
+                Outros idiomas
+              </p>
+              {OTHER_LANGUAGES.map(renderItem)}
+            </div>
+          )
+        })()}
 
         <DropdownMenuSeparator className="bg-gray-700" />
         
