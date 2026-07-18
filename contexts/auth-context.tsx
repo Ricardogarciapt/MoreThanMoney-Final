@@ -135,26 +135,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (cachedSession && isSessionValid(cachedSession)) {
           console.log('⚡ [AUTH CONTEXT] Usando sessão em cache')
-          supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", cachedSession.user.id)
-            .maybeSingle()
-            .then(async ({ data: profile }: { data: any }) => {
-              if (!mounted) return
-              const p = profile ?? (await loadMemberProfile(supabase, cachedSession.user.id))
-              if (p && isRegisteredMember(p)) {
-                const normalized = await enforceTrialExpiry(p)
-                const mapped = profileToUser(normalized, cachedSession.user)
-                if (mapped) {
-                  setUser(mapped.user)
-                }
+          // IMPORTANTE: aguardar (await) o perfil ANTES de sair — se usarmos .then()
+          // e depois `return`, o `finally` faz setIsLoading(false) de imediato,
+          // enquanto `user` ainda é null. O ProtectedPage vê (isLoading=false,
+          // user=null) e reenvia para o login → spinner infinito. Com timeout para
+          // nunca ficar pendurado (sob latência alta o perfil pode demorar).
+          try {
+            const profileQuery = supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", cachedSession.user.id)
+              .maybeSingle()
+            const { data: profile }: { data: any } = await Promise.race([
+              profileQuery,
+              new Promise<any>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 4000)),
+            ])
+            if (!mounted) return
+            const p = profile ?? (await loadMemberProfile(supabase, cachedSession.user.id))
+            if (p && isRegisteredMember(p)) {
+              const normalized = await enforceTrialExpiry(p)
+              const mapped = profileToUser(normalized, cachedSession.user)
+              if (mapped) {
+                setUser(mapped.user)
               }
-              setIsLoading(false)
-            })
-            .catch(() => {
-              if (mounted) setIsLoading(false)
-            })
+            }
+          } catch {
+            // Timeout/erro — segue sem user (mostra login) em vez de spinner eterno.
+          }
+          // `finally` (fim do try externo) faz setIsLoading(false) — agora só DEPOIS
+          // de `user` estar resolvido.
           return
         }
         
