@@ -30,6 +30,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { LanguageMenuItem } from "@/components/language-menu-item"
 
 interface UserProfile {
   id: string
@@ -592,6 +593,9 @@ export default function UserDropdown() {
               <span>O Meu Perfil</span>
             </DropdownMenuItem>
           </Link>
+
+          {/* Seletor de idioma (bandeira) — grava preferred_language na BD + aplica dicionário */}
+          <LanguageMenuItem />
 
           <Link href="/scanner-access">
             <DropdownMenuItem className="cursor-pointer text-gray-300 hover:text-white hover:bg-[#D2A63C]/10 focus:bg-[#D2A63C]/10 focus:text-white">
