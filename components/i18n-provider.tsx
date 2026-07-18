@@ -79,6 +79,18 @@ export function I18nProvider({
       /* ignore */
     }
     setLangState(n)
+    // Persiste o idioma no perfil (conduz app, emails e suporte). Fire-and-forget:
+    // se o utilizador não estiver autenticado, a rota devolve 401 e ignoramos.
+    try {
+      void fetch("/api/profile/update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ updates: { preferred_language: n } }),
+        keepalive: true,
+      }).catch(() => {})
+    } catch {
+      /* ignore */
+    }
   }, [])
 
   const value = useMemo<I18nContextValue>(

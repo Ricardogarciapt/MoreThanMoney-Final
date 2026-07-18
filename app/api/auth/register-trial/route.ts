@@ -24,6 +24,8 @@ export async function POST(request: NextRequest) {
     const phone = body.phone ? String(body.phone).trim() : null
     const whatsapp = body.whatsapp ? String(body.whatsapp).trim() : null
     const sponsorUsername = body.sponsorUsername ? String(body.sponsorUsername).trim() : null
+    const country = body.country ? String(body.country).trim() : null
+    const preferred_language = body.preferred_language ? String(body.preferred_language).trim() : null
 
     if (!email || !email.includes("@")) {
       return NextResponse.json({ error: "Email inválido" }, { status: 400 })
@@ -75,6 +77,8 @@ export async function POST(request: NextRequest) {
       username,
       phone,
       whatsapp,
+      country,
+      preferred_language,
       user_type: "guest",
       // Trial = SÓ acesso básico à app (não Premium). As features Premium só
       // se desbloqueiam ao pagar o intro de 1º mês (€35). O acesso à app vem do

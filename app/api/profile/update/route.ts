@@ -13,6 +13,8 @@ const ALLOWED_FIELDS = [
   "jifu_id",
   "jifu_affiliate_link",
   "birth_date",
+  "preferred_language",
+  "country",
 ] as const
 
 export async function PUT(request: NextRequest) {

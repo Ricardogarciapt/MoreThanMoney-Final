@@ -10,7 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertCircle, Eye, EyeOff, Smartphone, Globe, Check, Loader2, CheckCircle2, XCircle, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { buildOAuthCallbackUrl, OAUTH_PENDING_REG_KEY } from '@/lib/oauth-flow'
-import { useT } from '@/components/i18n-provider'
+import { useT, useI18n } from '@/components/i18n-provider'
+import { COUNTRIES, langForCountry } from '@/lib/countries'
 
 type PlanId = 'app_member_monthly' | 'app_member_annual' | 'premium_monthly' | 'premium_annual'
 type BillingCycle = 'monthly' | 'annual'
@@ -36,6 +37,7 @@ const PLANS = {
 
 export default function RegisterPage() {
   const t = useT()
+  const { lang: uiLang, setLang } = useI18n()
   const [mode, setMode] = useState<'trial' | 'paid'>('trial')
   const [selectedPlan, setSelectedPlan] = useState<'app_member' | 'premium'>('app_member')
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly')
@@ -47,6 +49,7 @@ export default function RegisterPage() {
     confirmPassword: '',
     phone: '',
     whatsapp: '',
+    country: '',
     sponsorUsername: '',
     couponCode: '',
   })
@@ -118,6 +121,8 @@ export default function RegisterPage() {
           phone: formData.phone || '',
           whatsapp: formData.whatsapp || '',
           sponsorUsername: formData.sponsorUsername || '',
+          country: formData.country || null,
+          preferred_language: uiLang,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -199,6 +204,8 @@ export default function RegisterPage() {
           phone: formData.phone || '',
           regToken,
           sponsorUsername: formData.sponsorUsername || '',
+          country: formData.country || null,
+          preferred_language: uiLang,
           couponCode: isTrialFlow ? '' : (formData.couponCode || ''),
           trial: isTrialFlow,
         }),
@@ -462,6 +469,27 @@ export default function RegisterPage() {
                 <Input id="email" name="email" type="email" value={formData.email}
                   onChange={handleInputChange} className="bg-gray-800 border-gray-700 text-white"
                   placeholder={t('register.placeholderEmail')} required disabled={isLoading} />
+              </div>
+
+              <div>
+                <Label htmlFor="country" className="text-gray-300">{t('register.labelCountry')}</Label>
+                <select
+                  id="country"
+                  name="country"
+                  value={formData.country}
+                  onChange={(e) => {
+                    const code = e.target.value
+                    setFormData(prev => ({ ...prev, country: code }))
+                    if (code) setLang(langForCountry(code)) // aplica o idioma do site
+                  }}
+                  disabled={isLoading}
+                  className="mt-1 w-full rounded-md bg-gray-800 border border-gray-700 text-white px-3 py-2 text-sm"
+                >
+                  <option value="">{t('register.placeholderCountry')}</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
