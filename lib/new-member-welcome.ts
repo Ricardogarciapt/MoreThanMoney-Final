@@ -44,7 +44,7 @@ export async function sendNewMemberWelcomeIfEligible(
   const supabase = getSupabaseAdmin()
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('id, email, full_name, username, profile_data, mlm_sponsor_username, is_active, subscription_status')
+    .select('id, email, full_name, username, profile_data, mlm_sponsor_username, is_active, subscription_status, preferred_language')
     .eq('id', params.userId)
     .maybeSingle()
 
@@ -65,7 +65,8 @@ export async function sendNewMemberWelcomeIfEligible(
   const userName = profile.full_name?.trim() || email.split('@')[0] || 'Membro'
   const username = profile.username?.trim() || email.split('@')[0] || 'membro'
 
-  const mailResult = await sendWelcomeEmail(email, userName, username)
+  const lang = (profile as { preferred_language?: string }).preferred_language || 'pt'
+  const mailResult = await sendWelcomeEmail(email, userName, username, lang)
   if (!mailResult.success) {
     console.error('[new-member-welcome] Falha ao enviar:', mailResult.error)
     return { sent: false, skipped: true, reason: 'send_failed' }

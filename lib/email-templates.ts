@@ -5,6 +5,7 @@
 
 import { getFastStartJourneySteps, resolveSiteBase } from './fast-start-journey'
 import { getEmailLogoSrc } from './mail-transport'
+import { ONBOARDING_EMAIL_COPY } from './onboarding-email-copy'
 
 // Cores MTM
 const COLORS = {
@@ -444,8 +445,9 @@ export const welcomeEmailTemplate = (userName: string, userEmail: string, userna
 }
 
 // 1b. ONBOARDING LAUNCH — email simplificado (plano de 48h, 8 passos)
-export const onboardingLaunchEmailTemplate = (userName: string, siteUrl: string) => {
+export const onboardingLaunchEmailTemplate = (userName: string, siteUrl: string, lang: string = 'pt') => {
   const base = resolveSiteBase(siteUrl)
+  const c = ONBOARDING_EMAIL_COPY[lang] || ONBOARDING_EMAIL_COPY.pt
   const li = (n: number, title: string, desc: string) => `
     <tr>
       <td style="width: 34px; vertical-align: top; padding: 6px 10px 6px 0;">
@@ -460,30 +462,30 @@ export const onboardingLaunchEmailTemplate = (userName: string, siteUrl: string)
   const content = `
     ${textComponent(`
       <h2 style="color: ${COLORS.primary}; font-size: 26px; font-weight: 800; margin: 26px 0 12px 0; text-align: center;">
-        Bem-vindo à MoreThanMoney 👋
+        ${c.heading}
       </h2>
       <p style="margin: 0 0 12px 0; text-align: center; font-size: 16px;">
-        O teu <strong>onboarding está pronto e funcional</strong>. Segue os passos por ordem em <a href="${base}/onboarding" style="color: ${COLORS.primaryDark}; font-weight:700;">morethanmoney.pt/onboarding</a> e em <strong>48 horas</strong> tens os primeiros resultados a acontecer.
+        ${c.intro1a}<a href="${base}/onboarding" style="color: ${COLORS.primaryDark}; font-weight:700;">morethanmoney.pt/onboarding</a>${c.intro1b}
       </p>
       <p style="margin: 0; text-align: center; color: #666; font-size: 14px;">
-        Vieste por cripto, UGC ou social media? Começas já no <em>learn while you earn</em> — a automação e os alertas trabalham enquanto exploras a tua área.
+        ${c.intro2}
       </p>
     `)}
 
-    ${buttonComponent('🚀 Ver o meu Onboarding', `${base}/onboarding`)}
+    ${buttonComponent(c.ctaOnboarding, `${base}/onboarding`)}
 
     ${cardComponent(
-      '⚡ O teu plano de 48 horas',
+      c.planTitle,
       `
         <table style="width:100%; border-collapse:collapse;">
-          ${li(1, 'Instala a app', 'App Store, APK Android ou Web App — a conta é a mesma, sempre sincronizada.')}
-          ${li(2, 'Cria a conta e entra', '3 dias de Premium grátis, sem cobrança. Ao fim do trial, 1.º mês por 34,99€.')}
-          ${li(3, 'Ativa a automação', 'Cópia automática, Tap to Trade ou Alertas — escolhe o modo certo para ti.')}
-          ${li(4, 'Configura os alertas', 'Ativa as notificações push das estratégias (Premium, Forex, Sensei, GoldKiller).')}
-          ${li(5, 'Aceita um Tap to Trade', 'Recebes o sinal, revês os detalhes e executas na tua conta com um toque.')}
-          ${li(6, 'Scanners & Ferramentas', 'Gold Killer, MTM V3.4 e Sensei X + DCA diário de cripto e ETFs.')}
-          ${li(7, 'Vê uma aula ao vivo', 'Sessões com os educadores MTM, várias por semana, no separador Ao Vivo.')}
-          ${li(8, 'Marca a tua chamada de Onboarding', '30 min com a equipa para deixar conta, automação e plano de estudo prontos.')}
+          ${li(1, c.step1t, c.step1d)}
+          ${li(2, c.step2t, c.step2d)}
+          ${li(3, c.step3t, c.step3d)}
+          ${li(4, c.step4t, c.step4d)}
+          ${li(5, c.step5t, c.step5d)}
+          ${li(6, c.step6t, c.step6d)}
+          ${li(7, c.step7t, c.step7d)}
+          ${li(8, c.step8t, c.step8d)}
         </table>
       `,
       '🎯',
@@ -491,31 +493,31 @@ export const onboardingLaunchEmailTemplate = (userName: string, siteUrl: string)
     )}
 
     ${cardComponent(
-      '📲 Instala a app',
+      c.installTitle,
       `
-        <p style="margin: 0 0 10px 0; line-height: 22px;">Escolhe a tua plataforma:</p>
-        <p style="margin: 0 0 6px 0;">🍎 <a href="https://apps.apple.com/app/id6778558643" style="color:${COLORS.primaryDark}; font-weight:700;">App Store (iPhone)</a> &nbsp;·&nbsp; <a href="https://testflight.apple.com/join/jPJx7CRx" style="color:${COLORS.primaryDark};">Beta TestFlight</a></p>
-        <p style="margin: 0 0 6px 0;">🤖 <a href="${base}/downloads/MoreThanMoney.apk" style="color:${COLORS.primaryDark}; font-weight:700;">APK Android</a> &nbsp;<span style="color:#999; font-size:12px;">(autoriza "fontes desconhecidas")</span></p>
-        <p style="margin: 0;">🌐 <a href="${base}/app-mobile" style="color:${COLORS.primaryDark}; font-weight:700;">Web App</a> &nbsp;<span style="color:#999; font-size:12px;">(sem instalar nada)</span></p>
+        <p style="margin: 0 0 10px 0; line-height: 22px;">${c.installIntro}</p>
+        <p style="margin: 0 0 6px 0;">🍎 <a href="https://apps.apple.com/app/id6778558643" style="color:${COLORS.primaryDark}; font-weight:700;">${c.installAppStore}</a> &nbsp;·&nbsp; <a href="https://testflight.apple.com/join/jPJx7CRx" style="color:${COLORS.primaryDark};">${c.installTestflight}</a></p>
+        <p style="margin: 0 0 6px 0;">🤖 <a href="${base}/downloads/MoreThanMoney.apk" style="color:${COLORS.primaryDark}; font-weight:700;">APK Android</a> &nbsp;<span style="color:#999; font-size:12px;">${c.installApkNote}</span></p>
+        <p style="margin: 0;">🌐 <a href="${base}/app-mobile" style="color:${COLORS.primaryDark}; font-weight:700;">Web App</a> &nbsp;<span style="color:#999; font-size:12px;">${c.installWebNote}</span></p>
       `,
       '⬇️',
       '#26A5E4',
     )}
 
-    ${buttonComponent('📅 Marcar Onboarding (30 min)', 'https://calendly.com/morethanmoneypt/onboarding-de-novos-membros')}
+    ${buttonComponent(c.ctaCall, 'https://calendly.com/morethanmoneypt/onboarding-de-novos-membros')}
 
     ${dividerComponent()}
 
     ${textComponent(`
       <p style="margin: 0; color: #666; font-size: 13px; text-align: center;">
-        Dúvidas? <a href="https://instagram.com/morethanmoneypt" style="color: ${COLORS.primaryDark};">@morethanmoneypt</a>
+        ${c.footer} <a href="https://instagram.com/morethanmoneypt" style="color: ${COLORS.primaryDark};">@morethanmoneypt</a>
         · <a href="mailto:morethanmoneypt@gmail.com" style="color: ${COLORS.primaryDark};">morethanmoneypt@gmail.com</a>
-        · <a href="https://calendly.com/morethanmoneypt/reuniao-pontual" style="color: ${COLORS.primaryDark};">marca uma reunião</a>
+        · <a href="https://calendly.com/morethanmoneypt/reuniao-pontual" style="color: ${COLORS.primaryDark};">${c.footerMeeting}</a>
       </p>
     `)}
   `
 
-  return baseTemplate(content, 'O teu onboarding MTM está pronto — o plano de 48 horas.', base)
+  return baseTemplate(content, c.preview, base)
 }
 
 // 2. ONBOARDING - Dia 1

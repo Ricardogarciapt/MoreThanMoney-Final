@@ -7,6 +7,7 @@ import {
   welcomeEmailTemplate,
   onboardingLaunchEmailTemplate,
 } from './email-templates'
+import { ONBOARDING_EMAIL_COPY } from './onboarding-email-copy'
 import {
   brandedMailAttachments,
   createMailTransporter,
@@ -45,15 +46,15 @@ export async function sendRegistrationNotification(userEmail: string, userName: 
   }
 }
 
-export async function sendWelcomeEmail(userEmail: string, userName: string, username: string) {
+export async function sendWelcomeEmail(userEmail: string, userName: string, username: string, lang: string = 'pt') {
   const siteUrl = getSiteUrl()
+  const copy = ONBOARDING_EMAIL_COPY[lang] || ONBOARDING_EMAIL_COPY.pt
   try {
     await sendHtmlMail(
       userEmail,
-      '🎉 Bem-vindo à MoreThanMoney — o teu onboarding está pronto!',
-      // Onboarding mail atualizado (plano de 48h, encaminha para /onboarding).
-      // O welcomeEmailTemplate (Fast Start) fica disponível como legado.
-      onboardingLaunchEmailTemplate(userName, siteUrl),
+      copy.subject, // assunto no idioma do membro
+      // Onboarding mail atualizado (plano de 48h, traduzido, encaminha para /onboarding).
+      onboardingLaunchEmailTemplate(userName, siteUrl, lang),
     )
     return { success: true }
   } catch (error) {
