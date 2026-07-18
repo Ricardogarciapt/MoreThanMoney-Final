@@ -350,6 +350,25 @@ export const welcomeEmailTemplate = (userName: string, userEmail: string, userna
     `)}
 
     ${cardComponent(
+      '🧭 Guia de Onboarding — começa aqui',
+      `
+        <p style="margin: 0 0 12px 0; line-height: 24px;">
+          Preparámos um <strong>guia visual passo a passo</strong> com tudo o que precisas:
+          instalar a app, criar conta, ativar a automação, configurar os alertas, aceitar o
+          primeiro Tap to Trade e ver as aulas ao vivo — pensado para teres
+          <strong>resultados nas primeiras 48 horas</strong>.
+        </p>
+        <p style="margin: 0; color: #666; font-size: 13px;">
+          Disponível em 🇵🇹 PT · 🇬🇧 EN · 🇪🇸 ES · 🇩🇪 DE · 🇫🇷 FR — muda o idioma no topo do guia.
+        </p>
+      `,
+      '🧭',
+      COLORS.primary,
+    )}
+
+    ${buttonComponent('🧭 Abrir o Guia de Onboarding (plano de 48h)', `${base}/onboarding`)}
+
+    ${cardComponent(
       '🤝 MoreThanMoney — O teu plano',
       `
         <p style="margin: 0 0 12px 0; line-height: 24px;">
