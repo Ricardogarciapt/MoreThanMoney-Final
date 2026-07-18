@@ -31,14 +31,43 @@ export default function LoginPage() {
   const isNativeApp = typeof window !== "undefined" && sessionStorage.getItem("mtm_native") === "1"
 
   const rejectUnknownUser = async () => {
-    await supabase.auth.signOut()
+    // signOut com timeout — se a chamada de rede pendurar, não pode congelar o fluxo.
+    try {
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((resolve) => setTimeout(resolve, 2000)),
+      ])
+    } catch { /* segue */ }
     const { clearCachedSession } = await import('@/lib/auth-cache')
     clearCachedSession()
     window.location.replace(`/register?message=${encodeURIComponent(REGISTER_NOT_FOUND_MESSAGE)}`)
   }
 
+  /**
+   * Lê o perfil com timeout. NUNCA pode pendurar: se a query não responder em 5s
+   * devolve 'timeout' e o login segue na mesma (fail-open) — a sessão existe e o
+   * middleware/página de destino fazem a validação de acesso.
+   */
+  const loadProfileForRedirect = async (userId: string) => {
+    try {
+      return await Promise.race([
+        loadMemberProfile(supabase, userId),
+        new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 5000)),
+      ])
+    } catch {
+      return 'timeout' as const
+    }
+  }
+
   const redirectAfterAuth = async (userId: string) => {
-    const profile = await loadMemberProfile(supabase, userId)
+    const result = await loadProfileForRedirect(userId)
+    if (result === 'timeout') {
+      // Sessão válida mas o perfil demorou — navegar mesmo assim (o destino valida).
+      const next = redirectParam || '/app-mobile'
+      window.location.replace(`${window.location.origin}${next}`)
+      return
+    }
+    const profile = result
     if (!profile) {
       await rejectUnknownUser()
       return
@@ -65,22 +94,7 @@ export default function LoginPage() {
       
       if (cachedSession && isSessionValid(cachedSession)) {
         console.log('✅ [LOGIN] Sessão em cache encontrada')
-        const profile = await loadMemberProfile(supabase, cachedSession.user.id)
-        if (!profile) {
-          await rejectUnknownUser()
-          return
-        }
-        if (needsAccessRevalidation(profile)) {
-          window.location.replace('/access-migration')
-          return
-        }
-        if (!isRegisteredMember(profile)) {
-          await rejectUnknownUser()
-          return
-        }
-        const next = determinePostLoginRedirect(profile, redirectParam)
-        const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
-        window.location.replace(url)
+        await redirectAfterAuth(cachedSession.user.id)
         return
       }
       
@@ -96,22 +110,7 @@ export default function LoginPage() {
           console.log('✅ [LOGIN] Sessão encontrada')
           const { setCachedSession } = await import('@/lib/auth-cache')
           setCachedSession(session)
-          const profile = await loadMemberProfile(supabase, session.user.id)
-          if (!profile) {
-            await rejectUnknownUser()
-            return
-          }
-          if (needsAccessRevalidation(profile)) {
-            window.location.replace('/access-migration')
-            return
-          }
-          if (!isRegisteredMember(profile)) {
-            await rejectUnknownUser()
-            return
-          }
-          const next = determinePostLoginRedirect(profile, redirectParam)
-          const url = next.startsWith('http') ? next : `${window.location.origin}${next}`
-          window.location.replace(url)
+          await redirectAfterAuth(session.user.id)
         }
       } catch (error) {
         // Timeout ou erro - continuar normalmente (mostrar login)

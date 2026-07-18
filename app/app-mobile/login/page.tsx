@@ -24,7 +24,21 @@ export default function AppMobileLoginPage() {
   const [appleLoading, setAppleLoading] = useState(false)
 
   const redirectAfterAuth = async (userId: string) => {
-    const profile = await loadRegisteredMemberProfile(supabase, userId)
+    // Perfil com timeout — NUNCA pode pendurar o login. Se demorar >5s, navega na
+    // mesma (fail-open): a sessão existe e o middleware valida o acesso no destino.
+    let profile: Awaited<ReturnType<typeof loadRegisteredMemberProfile>> | 'timeout'
+    try {
+      profile = await Promise.race([
+        loadRegisteredMemberProfile(supabase, userId),
+        new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 5000)),
+      ])
+    } catch {
+      profile = 'timeout'
+    }
+    if (profile === 'timeout') {
+      window.location.replace(`${window.location.origin}/app-mobile`)
+      return
+    }
     if (!profile) {
       await rejectUnknownUser()
       return
@@ -37,7 +51,13 @@ export default function AppMobileLoginPage() {
   }
 
   const rejectUnknownUser = async () => {
-    await supabase.auth.signOut()
+    // signOut com timeout — uma chamada de rede pendurada não pode congelar o fluxo.
+    try {
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((resolve) => setTimeout(resolve, 2000)),
+      ])
+    } catch { /* segue */ }
     const { clearCachedSession } = await import('@/lib/auth-cache')
     clearCachedSession()
     window.location.replace(`/app-mobile/register?message=${encodeURIComponent(REGISTER_NOT_FOUND_MESSAGE)}`)
@@ -50,16 +70,7 @@ export default function AppMobileLoginPage() {
       const cachedSession = getCachedSession()
 
       if (cachedSession && isSessionValid(cachedSession)) {
-        const profile = await loadRegisteredMemberProfile(supabase, cachedSession.user.id)
-        if (!profile) {
-          await rejectUnknownUser()
-          return
-        }
-        if (needsAccessRevalidation(profile)) {
-          window.location.replace('/access-migration')
-          return
-        }
-        window.location.replace(`${window.location.origin}/app-mobile`)
+        await redirectAfterAuth(cachedSession.user.id)
         return
       }
 
@@ -70,18 +81,9 @@ export default function AppMobileLoginPage() {
         ])
         const { data: { session } } = await sessionPromise
         if (session) {
-          const profile = await loadRegisteredMemberProfile(supabase, session.user.id)
-          if (!profile) {
-            await rejectUnknownUser()
-            return
-          }
-          if (needsAccessRevalidation(profile)) {
-            window.location.replace('/access-migration')
-            return
-          }
           const { setCachedSession } = await import('@/lib/auth-cache')
           setCachedSession(session)
-          window.location.replace(`${window.location.origin}/app-mobile`)
+          await redirectAfterAuth(session.user.id)
         }
       } catch {
         // Sem sessão — mostrar login

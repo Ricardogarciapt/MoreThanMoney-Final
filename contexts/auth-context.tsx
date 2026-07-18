@@ -238,16 +238,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     loadUser()
     
-    // Escutar mudanças de autenticação para sincronizar automaticamente
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+    // Trabalho do evento de auth — corre FORA do callback do supabase (ver abaixo).
+    const handleAuthEvent = async (event: any, session: any) => {
       if (!mounted) return
-      
+
       console.log('🔔 [AUTH CONTEXT] Auth evento:', event)
-      
+
       if (event === 'SIGNED_IN' && session) {
         const { setCachedSession } = await import('@/lib/auth-cache')
         setCachedSession(session)
-        
+
         supabase
           .from("profiles")
           .select("*")
@@ -269,6 +269,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         clearCachedSession()
         setUser(null)
       }
+    }
+
+    // Escutar mudanças de autenticação para sincronizar automaticamente.
+    // IMPORTANTE: o callback tem de ser SÍNCRONO e despachar o trabalho com
+    // setTimeout(0) — o supabase-js segura um lock de auth enquanto aguarda os
+    // callbacks; trabalho async aqui dentro (imports/queries) pode deadlockar o
+    // signInWithPassword → login preso em "a processar".
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
+      setTimeout(() => { void handleAuthEvent(event, session) }, 0)
     })
 
     return () => {
