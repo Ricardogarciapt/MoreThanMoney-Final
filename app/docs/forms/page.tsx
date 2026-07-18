@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Globe, Monitor, Users, TrendingUp, ArrowRight, Loader2, LineChart, Smartphone, ShoppingBag, FileText } from "lucide-react"
+import { Globe, Monitor, Users, TrendingUp, ArrowRight, Loader2, LineChart, Smartphone, ShoppingBag, FileText, Dumbbell } from "lucide-react"
 
 /**
  * /docs/forms — hub público de formulários MTM (um formulário por tema).
@@ -28,6 +28,7 @@ const BADGE_ICONS: Record<string, typeof LineChart> = {
   trading: LineChart,
   ugc: Smartphone,
   sales: ShoppingBag,
+  fitness: Dumbbell,
 }
 
 export default function FormsHubPage() {
