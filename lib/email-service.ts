@@ -5,6 +5,7 @@ import {
   registrationRejectedEmailTemplate,
   scannerAccessEmailTemplate,
   welcomeEmailTemplate,
+  onboardingLaunchEmailTemplate,
 } from './email-templates'
 import {
   brandedMailAttachments,
@@ -49,8 +50,10 @@ export async function sendWelcomeEmail(userEmail: string, userName: string, user
   try {
     await sendHtmlMail(
       userEmail,
-      '🎉 Bem-vindo à MoreThanMoney!',
-      welcomeEmailTemplate(userName, userEmail, username, siteUrl),
+      '🎉 Bem-vindo à MoreThanMoney — o teu onboarding está pronto!',
+      // Onboarding mail atualizado (plano de 48h, encaminha para /onboarding).
+      // O welcomeEmailTemplate (Fast Start) fica disponível como legado.
+      onboardingLaunchEmailTemplate(userName, siteUrl),
     )
     return { success: true }
   } catch (error) {
