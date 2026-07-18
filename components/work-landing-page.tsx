@@ -406,15 +406,13 @@ export default function WorkLandingPage() {
                     ))}
                   </ul>
                   <p className="mb-8 text-sm text-amber-400/90">{role.compensation}</p>
-                  <a
-                    href={WHATSAPP_LINK}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Link
+                    href="/docs/forms/work"
                     className="work-btn-cta inline-flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 py-3.5 text-sm font-medium text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 hover:shadow-[0_0_24px_-8px_rgba(212,175,55,0.4)]"
                   >
                     Candidatar-me
                     <ChevronRight className="h-4 w-4" />
-                  </a>
+                  </Link>
                 </div>
               </div>
             ))}
@@ -547,15 +545,21 @@ export default function WorkLandingPage() {
           >
             Estamos a selecionar pessoas ambiciosas para crescer connosco.
           </p>
-          <div data-reveal className="delay-2 mt-12">
+          <div data-reveal className="delay-2 mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <Link
+              href="/docs/forms/work"
+              className="work-btn-cta inline-flex items-center gap-2 rounded-full bg-amber-500 px-10 py-5 text-lg font-medium text-black hover:bg-amber-400"
+            >
+              Candidatar-me agora
+              <ChevronRight className="h-5 w-5" />
+            </Link>
             <a
               href={WHATSAPP_LINK}
               target="_blank"
               rel="noopener noreferrer"
-              className="work-btn-cta inline-flex items-center gap-2 rounded-full bg-amber-500 px-10 py-5 text-lg font-medium text-black hover:bg-amber-400"
+              className="work-btn-cta inline-flex items-center gap-2 rounded-full border border-white/25 px-8 py-4 text-sm font-medium text-white hover:bg-white/10"
             >
               Falar com a equipa
-              <ChevronRight className="h-5 w-5" />
             </a>
           </div>
         </div>
