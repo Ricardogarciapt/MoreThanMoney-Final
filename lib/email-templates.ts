@@ -510,7 +510,7 @@ export const onboardingLaunchEmailTemplate = (userName: string, siteUrl: string,
 
     ${textComponent(`
       <p style="margin: 0; color: #666; font-size: 13px; text-align: center;">
-        ${c.footer} <a href="https://instagram.com/morethanmoneypt" style="color: ${COLORS.primaryDark};">@morethanmoneypt</a>
+        ${c.footer} <a href="https://instagram.com/morethanmoney.pt" style="color: ${COLORS.primaryDark};">@morethanmoney.pt</a>
         · <a href="mailto:morethanmoneypt@gmail.com" style="color: ${COLORS.primaryDark};">morethanmoneypt@gmail.com</a>
         · <a href="https://calendly.com/morethanmoneypt/reuniao-pontual" style="color: ${COLORS.primaryDark};">${c.footerMeeting}</a>
       </p>

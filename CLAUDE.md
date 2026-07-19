@@ -12,7 +12,7 @@
 - **Repositório local:** `/Users/ricardogarcia/Documents/Repositório SITE/SITE-MORETHANMONEY-FINAL-39aae3022258dec0b1e9cce3dc39489035c05b36`
 - **Branch principal:** `main` (auto-deploy Vercel)
 - **Supabase project:** `iwscxotvmtkphajmasof` (eu-north-1)
-- **ManyChat page:** @morethanmoneypt
+- **ManyChat page:** @morethanmoney.pt
 
 ---
 
@@ -76,7 +76,7 @@ Identifica e qualifica potenciais membros MTM.
 
 **Contexto:**
 - Público-alvo: adultos 25-45 anos, Portugal/Brasil, querem sair da "armadilha das 40h/semana"
-- Canal principal: Instagram (@morethanmoneypt) + ManyChat
+- Canal principal: Instagram (@morethanmoney.pt) + ManyChat
 - Qualificação: motivação para mudar · disponibilidade · situação financeira básica
 - Tag principal: `MTM_lead_ativo` (ID: 88157092)
 

@@ -169,12 +169,12 @@ const CAPABILITIES: Record<string, { label: string; icon: React.ElementType }[]>
 // ── Quick links per agent ─────────────────────────────────────────────────────
 const QUICK_LINKS: Record<string, { label: string; url: string }[]> = {
   prospeccao: [
-    { label: "Instagram MTM", url: "https://instagram.com/morethanmoneypt" },
+    { label: "Instagram MTM", url: "https://instagram.com/morethanmoney.pt" },
     { label: "ManyChat", url: "https://app.manychat.com" },
   ],
   chatbot_builder: [
     { label: "ManyChat Dashboard", url: "https://app.manychat.com" },
-    { label: "Instagram MTM", url: "https://instagram.com/morethanmoneypt" },
+    { label: "Instagram MTM", url: "https://instagram.com/morethanmoney.pt" },
   ],
   setter: [
     { label: "Calendly Onboarding", url: "https://calendly.com/morethanmoneypt/onboarding-de-novos-membros" },
@@ -189,13 +189,13 @@ const QUICK_LINKS: Record<string, { label: string; url: string }[]> = {
     { label: "CMVM", url: "https://www.cmvm.pt" },
   ],
   content_creation: [
-    { label: "Instagram MTM", url: "https://instagram.com/morethanmoneypt" },
+    { label: "Instagram MTM", url: "https://instagram.com/morethanmoney.pt" },
     { label: "Canva", url: "https://www.canva.com" },
     { label: "Postiz", url: "https://postiz.com" },
   ],
   partnerships: [
     { label: "LinkedIn", url: "https://linkedin.com" },
-    { label: "Instagram MTM", url: "https://instagram.com/morethanmoneypt" },
+    { label: "Instagram MTM", url: "https://instagram.com/morethanmoney.pt" },
   ],
   trading: [
     { label: "TradingView XAUUSD", url: "https://www.tradingview.com/chart/?symbol=XAUUSD" },

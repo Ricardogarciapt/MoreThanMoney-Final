@@ -13,7 +13,7 @@ Contexto MTM:
 - Mentoria de liberdade financeira focada em trading consciente e mindset
 - Público-alvo: adultos 25-45 anos que querem sair da "armadilha das 40h/semana"
 - Produto principal: mentoria premium com acesso ao Scanner GoldKiller e comunidade
-- Plataforma: Instagram (@morethanmoneypt), Skool, ManyChat
+- Plataforma: Instagram (@morethanmoney.pt), Skool, ManyChat
 
 Tens acesso a ferramentas para:
 - Consultar estatísticas de utilizadores da plataforma
