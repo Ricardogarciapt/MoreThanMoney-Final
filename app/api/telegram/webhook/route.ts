@@ -149,6 +149,36 @@ export async function POST(request: NextRequest) {
       await handleTelegramChannelMessage(supabase, body.edited_message)
     }
 
+    // Callback dos botões (Aprovar/Rejeitar acesso broker)
+    if (body.callback_query?.data) {
+      try {
+        const cq = body.callback_query
+        const { handleBrokerApproval } = await import("@/lib/telegram-broker-gate")
+        await handleBrokerApproval(supabase, cq.data, String(cq.message?.chat?.id ?? ""), Number(cq.message?.message_id ?? 0))
+        const bt = getMtmcopyBotToken()
+        if (bt) {
+          await fetch(`https://api.telegram.org/bot${bt}/answerCallbackQuery`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ callback_query_id: cq.id }),
+          })
+        }
+      } catch (e) {
+        console.error("[telegram-callback]", e)
+      }
+    }
+
+    // Print screen (foto) em DM → prova de depósito do funil broker-gated
+    if (body.message?.chat?.type === "private" && Array.isArray(body.message?.photo) && body.message.photo.length) {
+      try {
+        const fileId = body.message.photo[body.message.photo.length - 1].file_id
+        const { handleProofPhoto } = await import("@/lib/telegram-broker-gate")
+        await handleProofPhoto(supabase, String(body.message.chat.id), fileId, body.message.from?.first_name ?? null)
+      } catch (e) {
+        console.error("[broker-gate-photo]", e)
+      }
+    }
+
     // Comandos privados DM (não processar mensagens de grupos/canais)
     if (
       body.message?.chat?.type === "private" &&
@@ -261,14 +291,10 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // /grupos — grupos de sinais para copiar manualmente
-      else if (text === "/grupos" || text === "/grupos@MoreThanMoney_aibot" || text === "/sinal") {
-        await sendMessage(
-          "💬 <b>Grupos de sinais MTM</b> — entra e copia os sinais:\n\n" +
-          "💱 <a href='https://t.me/+cVcMbCRt2rlmNzg0'>Ideias de Forex</a>\n" +
-          "🧠 <a href='https://t.me/+mbqBggXniu5lNTBk'>Sensei Scanner</a>\n\n" +
-          "Para copiares com um toque, ativa o <b>Tap to Trade</b> na app: /app"
-        )
+      // /grupos — acesso aos grupos é BROKER-GATED (conta PU Prime + depósito $300)
+      else if (text === "/grupos" || text === "/grupos@MoreThanMoney_aibot" || text === "/sinal" || text === "/acesso") {
+        const { brokerStepMessage } = await import("@/lib/telegram-broker-gate")
+        await sendMessage(brokerStepMessage())
       }
 
       // /premium — ser Premium
@@ -306,20 +332,35 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Mensagem LIVRE (não-comando) em DM → funil IA persona (descobre interesse + encaminha)
+      // /admin — regista este chat como aprovador dos pedidos de acesso broker
+      else if (text === "/admin") {
+        await supabase.from("site_settings").upsert(
+          { key: "telegram_admin_chat_id", value: { chat_id: chatId }, updated_at: new Date().toISOString() },
+          { onConflict: "key" },
+        )
+        await sendMessage("✅ Ficaste como <b>aprovador</b> dos pedidos de acesso broker. Recebes aqui os pedidos com botões Aprovar/Rejeitar.")
+      }
+
+      // Mensagem LIVRE (não-comando) em DM → UID da corretora OU funil IA persona
       else if (!text.startsWith("/")) {
         try {
-          const { runLeadFunnelReply } = await import("@/lib/telegram-lead-funnel")
-          const reply = await runLeadFunnelReply({
-            chatId,
-            firstName: body.message.from?.first_name ?? null,
-            username: body.message.from?.username ?? null,
-            userText: text,
-          })
-          await sendMessage(
-            reply ||
-              "Diz-me só: procuras <b>sinais para copiar à mão</b>, <b>Tap to Trade</b> (1 toque) ou algo <b>automático</b>? 🙂",
-          )
+          const bg = await import("@/lib/telegram-broker-gate")
+          const uid = bg.looksLikeBrokerUid(text)
+          if (uid) {
+            await bg.handleBrokerUid(supabase, chatId, uid, body.message.from?.first_name ?? null)
+          } else {
+            const { runLeadFunnelReply } = await import("@/lib/telegram-lead-funnel")
+            const reply = await runLeadFunnelReply({
+              chatId,
+              firstName: body.message.from?.first_name ?? null,
+              username: body.message.from?.username ?? null,
+              userText: text,
+            })
+            await sendMessage(
+              reply ||
+                "Diz-me só: procuras <b>sinais para copiar à mão</b>, <b>Tap to Trade</b> (1 toque) ou algo <b>automático</b>? 🙂",
+            )
+          }
         } catch (e) {
           console.error("[telegram-funnel] erro:", e)
         }
