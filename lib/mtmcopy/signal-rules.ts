@@ -115,6 +115,9 @@ export function passesExecGate(
   const s = normalizeSymbol(symbol)
   const dir = String(direction ?? "").toLowerCase()
   const isXau = s === "XAUUSD"
+  // Instrumentos do Sensei (ouro + BTC) — isentos da whitelist FX (essa é p/ o MTMScanner).
+  // BTC opera BUY e SELL (só o ouro tem xau_buy_only).
+  const isSenseiInstrument = isXau || s === "BTCUSD"
 
   if (isSymbolExcludedForScanner(rules, symbol, scanner)) {
     return { ok: false, reason: `${s} excluído para o scanner ${String(scanner).toLowerCase()}` }
@@ -123,7 +126,7 @@ export function passesExecGate(
   if (isXau && rules.xau_buy_only && dir !== "buy") return { ok: false, reason: "XAU só BUY" }
 
   const wl = rules.exec_symbol_whitelist.map(normalizeSymbol)
-  if (wl.length && !wl.includes(s) && !isXau) return { ok: false, reason: `${s} fora da whitelist de execução` }
+  if (wl.length && !wl.includes(s) && !isSenseiInstrument) return { ok: false, reason: `${s} fora da whitelist de execução` }
 
   const need = dir === "sell" ? rules.exec_sell_min_confirmations : rules.exec_min_confirmations
   if (confCount === null) {
