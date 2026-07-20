@@ -1570,3 +1570,51 @@ export const newMemberNotificationEmailTemplate = (params: {
   )
 }
 
+/**
+ * Convite de LEAD QUENTE — standard para leads que aparecem via qualquer fluxo nosso
+ * (ManyChat closer, registo, funil de conversão). Conversão direta para teste grátis
+ * (/register) + "Conhece a MTM" (/new-landing). Métricas e testemunhos REAIS (sales brain,
+ * docs/mtm-sales-brain.md). Prints alojados em /email/*.png.
+ */
+export const hotLeadInviteTemplate = (params: { name?: string; siteUrl?: string }) => {
+  const site = resolveSiteUrl(params.siteUrl)
+  const greeting = params.name ? `Olá ${params.name} 👋` : 'Olá 👋'
+
+  const header = brandedHeaderComponent(site)
+  const hero = headerComponent(
+    'Estás a um passo do ecossistema que os traders portugueses escolhem.',
+    'Aprender de Verdade',
+    '🚀',
+  )
+  const intro = textComponent(
+    `${greeting} Já fazes parte da nossa rede — falta-te o que muda o jogo: os <strong>sistemas</strong>, os <strong>alertas</strong> e a <strong>comunidade</strong> da MoreThanMoney, tudo na app.`,
+  )
+  const systems = cardComponent(
+    'Os sistemas que vais ter',
+    `<p style="margin:6px 0"><strong>🛰️ MTM Scanner</strong> — oportunidades filtradas em tempo real.</p>
+     <p style="margin:6px 0"><strong>🔔 Trading Alerts</strong> — sinais Sensei &amp; GoldKiller com entrada, SL e alvos.</p>
+     <p style="margin:6px 0"><strong>⚡ Tap to Trade</strong> — copia um sinal com um único toque.</p>
+     <p style="margin:6px 0"><strong>🔁 MTM Copy</strong> — copy trading automático no MT5.</p>
+     <p style="margin:6px 0"><strong>🎓 Salas &amp; Aulas</strong> + <strong>💬 Comunidade</strong> (356 membros).</p>`,
+    '🧰',
+  )
+  const proof = cardComponent(
+    'Prova real da comunidade',
+    `<p style="margin:6px 0;font-size:18px"><strong>675 trades</strong> · <strong>63% win rate</strong> · <strong>+7.060€</strong> acumulado.</p>
+     <p style="margin:6px 0;color:#555">Estratégias reais espelhadas via MTM Copy · win rate 58–65% nas contas mestre.</p>
+     <p style="margin:10px 0 4px;font-style:italic;color:#333">"Grato por estar na melhor comunidade, ecossistema de educação financeira do país."</p>
+     <p style="margin:4px 0;font-style:italic;color:#333">"O melhor resultado não é o saldo das contas… é o poder de saber proteger capital."</p>`,
+    '📊',
+  )
+  const ctaTrial = buttonComponent('Começar o meu teste grátis →', `${site}/register`, 'primary')
+  const landing = textComponent(
+    `Ainda a decidir? <a href="${site}/new-landing" style="color:${COLORS.primaryDark};font-weight:700;text-decoration:none">Conhece a MTM →</a> · 3 dias grátis · sem cartão · cancela quando quiseres.`,
+  )
+
+  return createCustomTemplate(
+    header + hero + intro + systems + proof + ctaTrial + landing,
+    'Scanner, alertas e cópia automática + comunidade. Testa grátis, sem cartão.',
+    params.siteUrl,
+  )
+}
+
