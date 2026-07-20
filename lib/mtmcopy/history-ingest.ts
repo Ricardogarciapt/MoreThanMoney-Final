@@ -166,9 +166,27 @@ export async function ingestClosedTradesForAllConnections(): Promise<{
  * para perceber porque a ingestão está a 0 (getHistoryDeals partido = todas 0; ou só as
  * slaves vazias = ingerir as mestres). NÃO escreve nada.
  */
-export async function diagnoseIngestion(): Promise<
-  Array<{ label: string; mt5: string | null; account: string; dealsFetched: number; closedPositions: number; ms: number }>
-> {
+export async function diagnoseIngestion(): Promise<{
+  env: Record<string, unknown>
+  accounts: Array<{ label: string; mt5: string | null; account: string; dealsFetched: number; closedPositions: number; ms: number }>
+}> {
+  // Diagnóstico do ambiente: token + os dois imports do SDK (o esm-node é o suspeito).
+  const env: Record<string, unknown> = { tokenPresent: Boolean(process.env.METAAPI_TOKEN) }
+  try {
+    const m = (await import(/* webpackIgnore: true */ 'metaapi.cloud-sdk/esm-node')) as { default?: unknown }
+    env.esmNodeImport = m ? 'ok' : 'empty'
+    env.esmNodeHasDefault = Boolean(m?.default)
+  } catch (e) {
+    env.esmNodeImport = `ERROR: ${e instanceof Error ? e.message : String(e)}`
+  }
+  try {
+    const m2 = (await import('metaapi.cloud-sdk')) as { default?: unknown }
+    env.defaultImport = m2 ? 'ok' : 'empty'
+    env.defaultHasDefault = Boolean(m2?.default)
+  } catch (e) {
+    env.defaultImport = `ERROR: ${e instanceof Error ? e.message : String(e)}`
+  }
+
   const supabase = getSupabaseAdmin()
   const { data: conns } = await supabase
     .from('mtmcopy_connections')
@@ -211,5 +229,5 @@ export async function diagnoseIngestion(): Promise<
       ms: Date.now() - t0,
     })
   }
-  return out
+  return { env, accounts: out }
 }
