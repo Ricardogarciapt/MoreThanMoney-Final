@@ -225,6 +225,76 @@ export async function handleBrokerApproval(
   return true
 }
 
+// ============================ PAINEL DE ADMIN (só o aprovador vê) ============================
+
+export function adminPanelKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "📊 Performance 30d", callback_data: "admin:perf" },
+        { text: "👥 Leads", callback_data: "admin:leads" },
+      ],
+      [
+        { text: "🔓 Pendentes", callback_data: "admin:pending" },
+        { text: "👑 Premium ativos", callback_data: "admin:subs" },
+      ],
+      [
+        { text: "🌐 Painel admin", url: "https://www.morethanmoney.pt/admin" },
+        { text: "🛰️ MTM Copy", url: "https://www.morethanmoney.pt/admin/mtmcopy" },
+      ],
+      [{ text: "📈 Grupo de leads (conteúdo)", url: "https://www.morethanmoney.pt/admin/telegram-sources" }],
+    ],
+  }
+}
+
+/** Executa uma ação do painel de admin (callback admin:*) — só para o chat aprovador. */
+export async function handleAdminAction(supabase: Supa, action: string, chatId: string): Promise<void> {
+  const adminId = await getAdminChatId(supabase)
+  if (!adminId || String(chatId) !== String(adminId)) {
+    await send(chatId, "⛔ Sem permissão.")
+    return
+  }
+  const since = new Date(Date.now() - 30 * 864e5).toISOString()
+  if (action === "perf") {
+    const { data } = await supabase
+      .from("trading_plan_trades")
+      .select("pnl")
+      .eq("trade_source", "strategy")
+      .not("pnl", "is", null)
+      .gte("opened_at", since)
+      .limit(3000)
+    const n = data?.length ?? 0
+    const wins = (data ?? []).filter((t) => Number(t.pnl) > 0).length
+    const pnl = (data ?? []).reduce((s, t) => s + Number(t.pnl ?? 0), 0)
+    await send(
+      chatId,
+      `📊 <b>Performance (executado, 30d)</b>\n\nTrades: <b>${n}</b>\nWin rate: <b>${n ? Math.round((wins / n) * 1000) / 10 : 0}%</b>\nResultado: <b>${Math.round(pnl)}€</b>`,
+    )
+  } else if (action === "leads") {
+    const { data } = await supabase.from("telegram_leads").select("stage")
+    const by: Record<string, number> = {}
+    for (const l of data ?? []) by[(l as { stage?: string }).stage ?? "?"] = (by[(l as { stage?: string }).stage ?? "?"] ?? 0) + 1
+    const lines = Object.entries(by).map(([k, v]) => `• ${k}: <b>${v}</b>`).join("\n") || "sem leads"
+    await send(chatId, `👥 <b>Leads Telegram</b> (total ${data?.length ?? 0})\n\n${lines}`)
+  } else if (action === "pending") {
+    const { data } = await supabase
+      .from("telegram_leads")
+      .select("chat_id, broker_uid, first_name")
+      .eq("stage", "pending_review")
+      .limit(20)
+    if (!data?.length) {
+      await send(chatId, "🔓 Sem pedidos pendentes de aprovação. ✅")
+    } else {
+      const lines = data.map((l) => `• ${(l as { first_name?: string }).first_name ?? "?"} — UID <code>${(l as { broker_uid?: string }).broker_uid}</code> (chat ${(l as { chat_id?: string }).chat_id})`).join("\n")
+      await send(chatId, `🔓 <b>Pendentes de aprovação (${data.length})</b>\n\n${lines}\n\nOs pedidos com foto + botões chegam aqui automaticamente.`)
+    }
+  } else if (action === "subs") {
+    const { count: prem } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("member_category", "premium").eq("is_active", true)
+    const { count: granted } = await supabase.from("telegram_leads").select("chat_id", { count: "exact", head: true }).eq("stage", "granted")
+    await send(chatId, `👑 <b>Subscrições</b>\n\nPremium ativos (app): <b>${prem ?? 0}</b>\nLeads com acesso broker: <b>${granted ?? 0}</b>`)
+  }
+}
+
 /** Mensagem que instrui o passo do broker (usada pela IA / comando). */
 export function brokerStepMessage(): string {
   return (

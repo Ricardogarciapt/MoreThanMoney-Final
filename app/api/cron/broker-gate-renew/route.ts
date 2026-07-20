@@ -11,13 +11,17 @@ export const dynamic = "force-dynamic"
  *  - resolve o utilizador que resgatou o cupão (profiles.coupon_code)
  *  - lê o saldo do broker (broker_clients por UID)
  *  - saldo ≥ $300 (ou sem dados frescos = grace) → RENOVA Premium +31 dias
- *  - saldo < $300 com dados FRESCOS → sinaliza 'at_risk' + notifica admin (não revoga
- *    à cega — os exports são manuais e podem estar velhos)
+ *  - saldo < $300 com dados FRESCOS → REVOGA (Premium off + cupão off + expulsa dos
+ *    grupos Forex/Sensei/Premium) + notifica lead e admin. Grace se dados não frescos
+ *    (>40d) ou sem registo — não revoga à cega (exports do broker são manuais).
  * Auto-renováveis: mantém o Premium vivo enquanto o cliente está ativo no broker.
  */
 const MIN_DEPOSIT = 300
 const FRESH_DAYS = 40
 const PREMIUM_CHAT = "-1002424441843" // grupo "MoreThanMoney Premium Signals"
+const FOREX_CHAT = "-1003716578747"
+const SENSEI_CHAT = "-1003853860780"
+const ALL_GROUPS = [FOREX_CHAT, SENSEI_CHAT, PREMIUM_CHAT]
 
 async function tg(method: string, body: Record<string, unknown>) {
   const token = process.env.TELEGRAM_BOT_TOKEN
@@ -37,6 +41,15 @@ async function tg(method: string, body: Record<string, unknown>) {
 async function premiumGroupInvite(chatId: string): Promise<string | null> {
   const r = await tg("createChatInviteLink", { chat_id: PREMIUM_CHAT, member_limit: 1, name: `premium ${chatId}` })
   return (r as { result?: { invite_link?: string } } | null)?.result?.invite_link ?? null
+}
+/** Remove o utilizador de todos os grupos (ban + unban = kick sem banir p/ sempre). */
+async function kickFromGroups(userId: string) {
+  const uid = Number(userId)
+  if (!uid) return
+  for (const chat of ALL_GROUPS) {
+    await tg("banChatMember", { chat_id: chat, user_id: uid, revoke_messages: false })
+    await tg("unbanChatMember", { chat_id: chat, user_id: uid, only_if_banned: true })
+  }
 }
 
 async function notifyAdmin(supabase: ReturnType<typeof getSupabaseAdmin>, text: string) {
@@ -65,7 +78,7 @@ export async function GET(request: NextRequest) {
   const now = new Date()
   const in31 = new Date(now.getTime() + 31 * 864e5).toISOString()
   let renewed = 0
-  let atRisk = 0
+  let revoked = 0
   let pendingRedeem = 0
   let premiumGranted = 0
   const risky: string[] = []
@@ -133,23 +146,36 @@ export async function GET(request: NextRequest) {
         }
       }
     } else if (fresh && bal < MIN_DEPOSIT) {
-      // saldo caiu abaixo do mínimo (dados frescos) → sinaliza (revogação é decisão do admin)
-      atRisk++
+      // AUTO-REVOGAÇÃO: saldo abaixo do mínimo com dados FRESCOS → remove acesso.
+      revoked++
       risky.push(`${prof.email ?? l.chat_id} (UID ${l.broker_uid}, saldo $${bal})`)
       await supabase
+        .from("profiles")
+        .update({ member_category: "standard", subscription_status: "inactive", is_active: false, updated_at: now.toISOString() })
+        .eq("id", prof.id)
+      if (l.coupon_code) {
+        await supabase.from("coupons").update({ is_active: false }).eq("code", l.coupon_code as string)
+      }
+      await kickFromGroups(String(l.chat_id))
+      await supabase
         .from("telegram_leads")
-        .update({ stage: "at_risk", updated_at: now.toISOString() })
+        .update({ stage: "revoked", premium_group_granted_at: null, updated_at: now.toISOString() })
         .eq("chat_id", l.chat_id as string)
+      await tg("sendMessage", {
+        chat_id: l.chat_id,
+        text: `⚠️ O teu acesso foi <b>suspenso</b> — o saldo na PU Prime desceu abaixo de $${MIN_DEPOSIT}. Repõe o saldo e envia-me novo print para reativar. 🙏`,
+        parse_mode: "HTML",
+      })
     }
   }
 
   if (risky.length) {
     await notifyAdmin(
       supabase,
-      `⚠️ <b>Broker-gate — saldo abaixo de $${MIN_DEPOSIT}</b>\n\n${risky.join("\n")}\n\n` +
-        `O Premium destes NÃO foi renovado. Confirma e revoga se quiseres.`,
+      `⚠️ <b>Broker-gate — acesso REVOGADO (saldo < $${MIN_DEPOSIT})</b>\n\n${risky.join("\n")}\n\n` +
+        `Premium desativado + expulsos dos grupos. Repõem o saldo + novo print para reativar.`,
     )
   }
 
-  return NextResponse.json({ ok: true, renewed, premiumGranted, atRisk, pendingRedeem, total: (leads ?? []).length })
+  return NextResponse.json({ ok: true, renewed, premiumGranted, revoked, pendingRedeem, total: (leads ?? []).length })
 }

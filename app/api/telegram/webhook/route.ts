@@ -153,8 +153,12 @@ export async function POST(request: NextRequest) {
     if (body.callback_query?.data) {
       try {
         const cq = body.callback_query
-        const { handleBrokerApproval } = await import("@/lib/telegram-broker-gate")
-        await handleBrokerApproval(supabase, cq.data, String(cq.message?.chat?.id ?? ""), Number(cq.message?.message_id ?? 0))
+        const bg = await import("@/lib/telegram-broker-gate")
+        if (typeof cq.data === "string" && cq.data.startsWith("admin:")) {
+          await bg.handleAdminAction(supabase, cq.data.slice(6), String(cq.from?.id ?? cq.message?.chat?.id ?? ""))
+        } else {
+          await bg.handleBrokerApproval(supabase, cq.data, String(cq.message?.chat?.id ?? ""), Number(cq.message?.message_id ?? 0))
+        }
         const bt = getMtmcopyBotToken()
         if (bt) {
           await fetch(`https://api.telegram.org/bot${bt}/answerCallbackQuery`, {
@@ -332,13 +336,25 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // /admin — regista este chat como aprovador dos pedidos de acesso broker
-      else if (text === "/admin") {
+      // /admin ou /painel — regista aprovador + mostra o painel de admin (só o admin vê)
+      else if (text === "/admin" || text === "/painel") {
         await supabase.from("site_settings").upsert(
           { key: "telegram_admin_chat_id", value: { chat_id: chatId }, updated_at: new Date().toISOString() },
           { onConflict: "key" },
         )
-        await sendMessage("✅ Ficaste como <b>aprovador</b> dos pedidos de acesso broker. Recebes aqui os pedidos com botões Aprovar/Rejeitar.")
+        const { adminPanelKeyboard } = await import("@/lib/telegram-broker-gate")
+        if (botToken) {
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: "🛠️ <b>Painel de Admin MTM</b>\n\nAprovador registado ✅. Recebes aqui os pedidos de acesso (UID + print) com botões. Escolhe:",
+              parse_mode: "HTML",
+              reply_markup: adminPanelKeyboard(),
+            }),
+          })
+        }
       }
 
       // Mensagem LIVRE (não-comando) em DM → UID da corretora OU funil IA persona
