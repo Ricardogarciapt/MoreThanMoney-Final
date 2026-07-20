@@ -23,7 +23,7 @@ export const MASTER_STRATEGIES: Array<{ strategy: string; accountId: string }> =
   { strategy: 'MTM Auto Forex', accountId: CANONICAL_TRADE_IDEAS_ACCOUNT_ID },
   { strategy: 'MTM Auto Sensei', accountId: CANONICAL_SENSEI_ACCOUNT_ID },
   { strategy: 'MTM Auto GoldKiller', accountId: CANONICAL_GOLDKILLER_ACCOUNT_ID },
-  { strategy: 'MTM 20X Booster', accountId: CANONICAL_BOOSTER_ACCOUNT_ID },
+  // Monaxa 20X Booster removida do track record a pedido do Ricardo (2026-07-20).
 ]
 /** Dono do track record das estratégias (morethanmoneypt@gmail.com). */
 const STRATEGY_OWNER_USER_ID = 'e8d2d7e0-b30d-4465-8159-75e2d4afc534'
