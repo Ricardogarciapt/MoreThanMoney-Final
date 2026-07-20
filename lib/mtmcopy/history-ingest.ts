@@ -15,14 +15,15 @@ import {
 
 const HISTORY_DAYS = 90
 
-/** Contas-mestre canónicas → TRACK RECORD agregado por estratégia (não são conexões de
- *  utilizador; ingeridas para um plano dedicado, com connId sintético estável p/ dedup). */
-export const MASTER_STRATEGIES: Array<{ strategy: string; accountId: string; connId: string }> = [
-  { strategy: 'MTM Auto Premium', accountId: CANONICAL_PREMIUM_ACCOUNT_ID, connId: 'a0000000-0000-4000-8000-000000000001' },
-  { strategy: 'MTM Auto Forex', accountId: CANONICAL_TRADE_IDEAS_ACCOUNT_ID, connId: 'a0000000-0000-4000-8000-000000000002' },
-  { strategy: 'MTM Auto Sensei', accountId: CANONICAL_SENSEI_ACCOUNT_ID, connId: 'a0000000-0000-4000-8000-000000000003' },
-  { strategy: 'MTM Auto GoldKiller', accountId: CANONICAL_GOLDKILLER_ACCOUNT_ID, connId: 'a0000000-0000-4000-8000-000000000004' },
-  { strategy: 'MTM 20X Booster', accountId: CANONICAL_BOOSTER_ACCOUNT_ID, connId: 'a0000000-0000-4000-8000-000000000005' },
+/** Contas-mestre canónicas → TRACK RECORD agregado por estratégia. Não são conexões de
+ *  utilizador (mtmcopy_connection_id fica NULL, por causa da FK); distinguem-se por
+ *  trade_source='strategy' + setup_type=estratégia, num plano dedicado. */
+export const MASTER_STRATEGIES: Array<{ strategy: string; accountId: string }> = [
+  { strategy: 'MTM Auto Premium', accountId: CANONICAL_PREMIUM_ACCOUNT_ID },
+  { strategy: 'MTM Auto Forex', accountId: CANONICAL_TRADE_IDEAS_ACCOUNT_ID },
+  { strategy: 'MTM Auto Sensei', accountId: CANONICAL_SENSEI_ACCOUNT_ID },
+  { strategy: 'MTM Auto GoldKiller', accountId: CANONICAL_GOLDKILLER_ACCOUNT_ID },
+  { strategy: 'MTM 20X Booster', accountId: CANONICAL_BOOSTER_ACCOUNT_ID },
 ]
 /** Dono do track record das estratégias (morethanmoneypt@gmail.com). */
 const STRATEGY_OWNER_USER_ID = 'e8d2d7e0-b30d-4465-8159-75e2d4afc534'
@@ -200,7 +201,7 @@ export async function ingestMasterStrategyTrades(): Promise<{ strategies: number
         rows.push({
           user_id: STRATEGY_OWNER_USER_ID,
           plan_id: planId,
-          mtmcopy_connection_id: m.connId,
+          mtmcopy_connection_id: null, // FK → mtmcopy_connections; masters não são conexões
           broker_position_id: positionId,
           symbol: inDeal.symbol ?? '',
           direction: inDeal.type === 'DEAL_TYPE_BUY' ? 'long' : 'short',
@@ -218,9 +219,9 @@ export async function ingestMasterStrategyTrades(): Promise<{ strategies: number
         })
       }
       if (!rows.length) continue
-      const { error } = await supabase
-        .from('trading_plan_trades')
-        .upsert(rows, { onConflict: 'mtmcopy_connection_id,broker_position_id', ignoreDuplicates: false })
+      // Idempotente sem índice único: substitui as trades desta estratégia a cada passagem.
+      await supabase.from('trading_plan_trades').delete().eq('trade_source', 'strategy').eq('setup_type', m.strategy)
+      const { error } = await supabase.from('trading_plan_trades').insert(rows)
       if (error) { console.error('[history-ingest] master', m.strategy, error.message); continue }
       ingested += rows.length
     } catch (e) {

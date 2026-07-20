@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   const [{ data: closedTrades }, { data: connections }, { count: usersWithTrades }] = await Promise.all([
     supabase
       .from('trading_plan_trades')
-      .select('pnl, lot_size, symbol, direction, opened_at, closed_at, trade_source, risk_amount, mtmcopy_connection_id')
+      .select('pnl, lot_size, symbol, direction, opened_at, closed_at, trade_source, risk_amount, mtmcopy_connection_id, setup_type')
       .eq('execution_mode', 'executed')
       .eq('status', 'closed')
       .not('pnl', 'is', null)
@@ -44,8 +44,12 @@ export async function GET(request: NextRequest) {
     else if (c.mt5_login_last4) label = `****${c.mt5_login_last4}`
     labelById.set(c.id, label)
   }
-  // Track record por estratégia (contas-mestre) — rótulos legíveis.
-  for (const m of MASTER_STRATEGIES) labelById.set(m.connId, m.strategy)
+  // Track record por estratégia (contas-mestre): agrupa por setup_type (em memória, sem FK)
+  // com rótulo legível — aparecem como "contas" próprias no breakdown.
+  for (const m of MASTER_STRATEGIES) labelById.set(`strat:${m.strategy}`, m.strategy)
+  for (const r of (closedTrades ?? []) as Array<Record<string, unknown>>) {
+    if (r.trade_source === 'strategy' && r.setup_type) r.mtmcopy_connection_id = `strat:${r.setup_type as string}`
+  }
 
   const performance = computePerformance((closedTrades ?? []) as ClosedTradeRow[], labelById)
 
