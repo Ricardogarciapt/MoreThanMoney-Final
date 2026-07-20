@@ -198,6 +198,9 @@ export function normalizeProviderExecutionProfile(
           days: raw.trading_schedule.days,
           start_hour: raw.trading_schedule.start_hour ?? 0,
           end_hour: raw.trading_schedule.end_hour ?? 24,
+          exempt_symbols: Array.isArray(raw.trading_schedule.exempt_symbols)
+            ? raw.trading_schedule.exempt_symbols.map(String)
+            : undefined,
         }
       : { mode: 'always' as const },
     copy_close_orders: raw.copy_close_orders ?? base.copy_close_orders,

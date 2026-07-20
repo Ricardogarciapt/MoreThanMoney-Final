@@ -743,7 +743,7 @@ async function executeViaMtmProvider(
     return
   }
 
-  if (!isWithinTradingSchedule(executionProfile)) {
+  if (!isWithinTradingSchedule(executionProfile, signal.symbol)) {
     await logProviderSignalEvent({
       channel,
       provider,

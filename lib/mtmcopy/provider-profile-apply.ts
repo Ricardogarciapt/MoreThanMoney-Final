@@ -53,9 +53,14 @@ export function shouldSkipSymbolForProfile(
   return null
 }
 
-export function isWithinTradingSchedule(profile: ProviderExecutionProfile): boolean {
+export function isWithinTradingSchedule(profile: ProviderExecutionProfile, symbol?: string | null): boolean {
   const sched = profile.trading_schedule
   if (!sched || sched.mode === 'always') return true
+  // Símbolos isentos do horário (ex.: BTCUSD no Sensei) operam 24h.
+  if (symbol && sched.exempt_symbols?.length) {
+    const s = String(symbol).toUpperCase().replace(/[^A-Z0-9]/g, '')
+    if (sched.exempt_symbols.map((e) => String(e).toUpperCase().replace(/[^A-Z0-9]/g, '')).includes(s)) return true
+  }
   const now = new Date()
   let day: number
   let hour: number

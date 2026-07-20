@@ -27,6 +27,9 @@ export interface TradingSchedule {
   end_hour?: number
   /** Fuso IANA (ex.: 'Europe/London') p/ interpretar start_hour/end_hour. Ausente = UTC. */
   timezone?: string
+  /** Símbolos ISENTOS do horário (executam 24h). Ex.: ["BTCUSD"] no Sensei — o bloqueio
+   *  de sessão asiática é só para o ouro; o cripto opera 24/7. */
+  exempt_symbols?: string[]
 }
 
 export interface ProviderExecutionProfile {
