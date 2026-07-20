@@ -295,6 +295,25 @@ export async function POST(request: NextRequest) {
           "🌐 <a href='https://www.morethanmoney.pt/new-landing'>Conhece a MTM</a>"
         )
       }
+
+      // Mensagem LIVRE (não-comando) em DM → funil IA persona (descobre interesse + encaminha)
+      else if (!text.startsWith("/")) {
+        try {
+          const { runLeadFunnelReply } = await import("@/lib/telegram-lead-funnel")
+          const reply = await runLeadFunnelReply({
+            chatId,
+            firstName: body.message.from?.first_name ?? null,
+            username: body.message.from?.username ?? null,
+            userText: text,
+          })
+          await sendMessage(
+            reply ||
+              "Diz-me só: procuras <b>sinais para copiar à mão</b>, <b>Tap to Trade</b> (1 toque) ou algo <b>automático</b>? 🙂",
+          )
+        } catch (e) {
+          console.error("[telegram-funnel] erro:", e)
+        }
+      }
     }
 
     return NextResponse.json({ ok: true })
