@@ -15,6 +15,19 @@ import {
 
 const HISTORY_DAYS = 90
 
+/** Contas-mestre canónicas → TRACK RECORD agregado por estratégia (não são conexões de
+ *  utilizador; ingeridas para um plano dedicado, com connId sintético estável p/ dedup). */
+export const MASTER_STRATEGIES: Array<{ strategy: string; accountId: string; connId: string }> = [
+  { strategy: 'MTM Auto Premium', accountId: CANONICAL_PREMIUM_ACCOUNT_ID, connId: 'a0000000-0000-4000-8000-000000000001' },
+  { strategy: 'MTM Auto Forex', accountId: CANONICAL_TRADE_IDEAS_ACCOUNT_ID, connId: 'a0000000-0000-4000-8000-000000000002' },
+  { strategy: 'MTM Auto Sensei', accountId: CANONICAL_SENSEI_ACCOUNT_ID, connId: 'a0000000-0000-4000-8000-000000000003' },
+  { strategy: 'MTM Auto GoldKiller', accountId: CANONICAL_GOLDKILLER_ACCOUNT_ID, connId: 'a0000000-0000-4000-8000-000000000004' },
+  { strategy: 'MTM 20X Booster', accountId: CANONICAL_BOOSTER_ACCOUNT_ID, connId: 'a0000000-0000-4000-8000-000000000005' },
+]
+/** Dono do track record das estratégias (morethanmoneypt@gmail.com). */
+const STRATEGY_OWNER_USER_ID = 'e8d2d7e0-b30d-4465-8159-75e2d4afc534'
+const STRATEGY_PLAN_NAME = 'MTM Estratégias — mestre'
+
 function num(v: unknown): number {
   const n = Number(v)
   return Number.isFinite(n) ? n : 0
@@ -136,6 +149,87 @@ export async function ingestClosedTradesForConnection(
   return { ingested: rows.length, openSkipped }
 }
 
+async function getOrCreateStrategyPlanId(supabase: SupabaseAdmin): Promise<string | null> {
+  const { data } = await supabase
+    .from('trading_plans')
+    .select('id')
+    .eq('user_id', STRATEGY_OWNER_USER_ID)
+    .eq('plan_name', STRATEGY_PLAN_NAME)
+    .maybeSingle()
+  if (data?.id) return data.id as string
+  const { data: created, error } = await supabase
+    .from('trading_plans')
+    .insert({ user_id: STRATEGY_OWNER_USER_ID, plan_name: STRATEGY_PLAN_NAME, trading_style: 'swing', is_active: false })
+    .select('id')
+    .single()
+  if (error) console.error('[history-ingest] criar plano estratégias falhou:', error.message)
+  return (created?.id as string) ?? null
+}
+
+/**
+ * TRACK RECORD por ESTRATÉGIA: ingere os trades fechados das contas-mestre canónicas
+ * (Premium/Forex/Sensei/GoldKiller/Booster) para um plano dedicado, com label por
+ * estratégia (setup_type) e connId sintético estável (dedup). NÃO são conexões de
+ * utilizador — servem o registo agregado das estratégias (admin/marketing).
+ */
+export async function ingestMasterStrategyTrades(): Promise<{ strategies: number; ingested: number }> {
+  const supabase = getSupabaseAdmin()
+  const planId = await getOrCreateStrategyPlanId(supabase)
+  if (!planId) return { strategies: 0, ingested: 0 }
+  const from = new Date(Date.now() - HISTORY_DAYS * 86_400_000)
+  let ingested = 0
+  for (const m of MASTER_STRATEGIES) {
+    try {
+      const deals = await getHistoryDeals(m.accountId, from)
+      const byPosition = new Map<string, MetaApiDeal[]>()
+      for (const d of deals) {
+        if (!d.positionId) continue
+        if (d.type !== 'DEAL_TYPE_BUY' && d.type !== 'DEAL_TYPE_SELL') continue
+        const arr = byPosition.get(d.positionId) ?? []
+        arr.push(d)
+        byPosition.set(d.positionId, arr)
+      }
+      const rows: Record<string, unknown>[] = []
+      for (const [positionId, posDeals] of byPosition) {
+        posDeals.sort((a, b) => toMs(a.time) - toMs(b.time))
+        const inDeal = posDeals.find((d) => d.entryType === 'DEAL_ENTRY_IN') ?? posDeals[0]
+        const outDeals = posDeals.filter((d) => d.entryType === 'DEAL_ENTRY_OUT' || d.entryType === 'DEAL_ENTRY_INOUT')
+        if (!outDeals.length) continue // ainda aberta
+        const lastOut = outDeals[outDeals.length - 1]
+        const pnl = posDeals.reduce((s, d) => s + num(d.profit) + num(d.commission) + num(d.swap), 0)
+        rows.push({
+          user_id: STRATEGY_OWNER_USER_ID,
+          plan_id: planId,
+          mtmcopy_connection_id: m.connId,
+          broker_position_id: positionId,
+          symbol: inDeal.symbol ?? '',
+          direction: inDeal.type === 'DEAL_TYPE_BUY' ? 'long' : 'short',
+          entry_price: num(inDeal.price),
+          exit_price: num(lastOut.price) || null,
+          lot_size: num(inDeal.volume),
+          risk_amount: 0,
+          pnl: Math.round(pnl * 100) / 100,
+          status: 'closed',
+          trade_source: 'strategy',
+          execution_mode: 'executed',
+          setup_type: m.strategy,
+          opened_at: toIso(inDeal.time),
+          closed_at: toIso(lastOut.time),
+        })
+      }
+      if (!rows.length) continue
+      const { error } = await supabase
+        .from('trading_plan_trades')
+        .upsert(rows, { onConflict: 'mtmcopy_connection_id,broker_position_id', ignoreDuplicates: false })
+      if (error) { console.error('[history-ingest] master', m.strategy, error.message); continue }
+      ingested += rows.length
+    } catch (e) {
+      console.error('[history-ingest] master', m.strategy, e instanceof Error ? e.message : e)
+    }
+  }
+  return { strategies: MASTER_STRATEGIES.length, ingested }
+}
+
 /** Ingere o histórico de TODAS as contas ligadas (T2T + MTM Copy + auditadas). */
 export async function ingestClosedTradesForAllConnections(): Promise<{
   connections: number
@@ -156,6 +250,12 @@ export async function ingestClosedTradesForAllConnections(): Promise<{
       } catch (e) {
         console.error('[history-ingest] conta', (c as IngestConn).id, e instanceof Error ? e.message : e)
       }
+    }
+    // Track record agregado por estratégia (contas-mestre canónicas).
+    try {
+      n += (await ingestMasterStrategyTrades()).ingested
+    } catch (e) {
+      console.error('[history-ingest] estratégias-mestre:', e instanceof Error ? e.message : e)
     }
     return n
   }
