@@ -24,19 +24,28 @@ async function latestIgPost(): Promise<{ caption: string; permalink: string; med
   const token = process.env.INSTAGRAM_TOKEN?.trim()
   if (!token) return null
   try {
-    let igId = process.env.INSTAGRAM_BUSINESS_ID?.trim()
-    if (!igId) {
-      const acc = await (
-        await fetch(`https://graph.facebook.com/v21.0/me/accounts?fields=instagram_business_account&access_token=${token}`)
-      ).json()
-      igId = acc?.data?.find((p: { instagram_business_account?: { id?: string } }) => p.instagram_business_account?.id)?.instagram_business_account?.id
-    }
-    if (!igId) return null
-    const m = await (
+    // Fluxo Instagram Login (graph.instagram.com) — o token do "Generate Instagram
+    // Access Token" acede /me/media diretamente. Fallback: fluxo FB Page (graph.facebook).
+    let m = await (
       await fetch(
-        `https://graph.facebook.com/v21.0/${igId}/media?fields=caption,permalink,media_url,thumbnail_url,media_type&limit=1&access_token=${token}`,
+        `https://graph.instagram.com/me/media?fields=caption,permalink,media_url,thumbnail_url,media_type&limit=1&access_token=${token}`,
       )
     ).json()
+    if (m?.error) {
+      let igId = process.env.INSTAGRAM_BUSINESS_ID?.trim()
+      if (!igId) {
+        const acc = await (
+          await fetch(`https://graph.facebook.com/v21.0/me/accounts?fields=instagram_business_account&access_token=${token}`)
+        ).json()
+        igId = acc?.data?.find((p: { instagram_business_account?: { id?: string } }) => p.instagram_business_account?.id)?.instagram_business_account?.id
+      }
+      if (!igId) return null
+      m = await (
+        await fetch(
+          `https://graph.facebook.com/v21.0/${igId}/media?fields=caption,permalink,media_url,thumbnail_url,media_type&limit=1&access_token=${token}`,
+        )
+      ).json()
+    }
     const p = m?.data?.[0]
     if (!p) return null
     return {
