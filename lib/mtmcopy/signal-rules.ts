@@ -22,6 +22,11 @@ export interface SignalRules {
   /** Se true, uma ideia/setup validada com preço de entrada coloca ordem LIMIT na conta
    *  provider (o entry_trigger dessa ideia não faz market → evita duplo preenchimento). */
   exec_allow_limit_ideas: boolean
+  /** Exclusão de símbolos POR-SCANNER (alerta + execução). Chave = nome do scanner em
+   *  minúsculas (match por substring no strategy do payload), valor = símbolos a barrar.
+   *  Ex.: { mtmscanner: ["XAUUSD"] } → o MTMScanner não dá nem executa ouro (fica p/ o
+   *  GoldKiller/Sensei, que gerem o ouro melhor). Não afeta os outros scanners. */
+  scanner_symbol_exclusions: Record<string, string[]>
 }
 
 const KEY = "mtmcopy_signal_rules"
@@ -38,6 +43,8 @@ export const DEFAULT_SIGNAL_RULES: SignalRules = {
   xau_buy_only: true,
   exec_require_confirmations: true,
   exec_allow_limit_ideas: true,
+  // Ouro sai do MTMScanner (GoldKiller 67% + Sensei 58% já o gerem, com SL/TP dinâmico).
+  scanner_symbol_exclusions: { mtmscanner: ["XAUUSD", "XAGUSD"] },
 }
 
 export function normalizeSymbol(s: string | null | undefined): string {
@@ -70,13 +77,28 @@ export async function setSignalRules(patch: Partial<SignalRules>): Promise<Signa
   return next
 }
 
+/** Símbolo barrado especificamente para este scanner? (ex.: MTMScanner + XAUUSD). */
+export function isSymbolExcludedForScanner(
+  rules: SignalRules,
+  symbol: string | null,
+  scanner: string | null | undefined,
+): boolean {
+  const key = String(scanner ?? "").toLowerCase().trim()
+  if (!key) return false
+  const s = normalizeSymbol(symbol)
+  const list = rules.scanner_symbol_exclusions?.[key] ?? []
+  return list.map(normalizeSymbol).includes(s)
+}
+
 /** ALERTA: deve publicar-se esta ENTRADA? (follow-ups e GoldKiller passam sempre — tratados pelo chamador.) */
 export function passesAlertGate(
   rules: SignalRules,
   symbol: string | null,
   confCount: number | null,
+  scanner?: string | null,
 ): boolean {
   const s = normalizeSymbol(symbol)
+  if (isSymbolExcludedForScanner(rules, symbol, scanner)) return false
   if (rules.alert_symbol_blacklist.map(normalizeSymbol).includes(s)) return false
   if (confCount !== null && confCount < rules.alert_min_confirmations) return false
   return true
@@ -88,10 +110,15 @@ export function passesExecGate(
   symbol: string | null,
   direction: string | null,
   confCount: number | null,
+  scanner?: string | null,
 ): { ok: boolean; reason?: string } {
   const s = normalizeSymbol(symbol)
   const dir = String(direction ?? "").toLowerCase()
   const isXau = s === "XAUUSD"
+
+  if (isSymbolExcludedForScanner(rules, symbol, scanner)) {
+    return { ok: false, reason: `${s} excluído para o scanner ${String(scanner).toLowerCase()}` }
+  }
 
   if (isXau && rules.xau_buy_only && dir !== "buy") return { ok: false, reason: "XAU só BUY" }
 
