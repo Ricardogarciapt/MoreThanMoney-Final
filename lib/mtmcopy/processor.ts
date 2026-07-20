@@ -734,6 +734,38 @@ async function executeViaMtmProvider(
     return
   }
 
+  // Backstop anti-runaway: teto diário de trades POR canal na conta-mestre. Alto e
+  // configurável (MTMCOPY_MAX_PROVIDER_DAILY, default 40) → não trava volume normal
+  // (~<10/canal/dia), apenas um loop/misfire. 0 desliga. Falha-aberto: um erro na própria
+  // verificação NUNCA bloqueia um trade legítimo.
+  try {
+    const providerDailyCap = Number(process.env.MTMCOPY_MAX_PROVIDER_DAILY ?? 40)
+    if (providerDailyCap > 0) {
+      const dayStart = new Date(); dayStart.setUTCHours(0, 0, 0, 0)
+      const { count: execToday } = await getSupabaseAdmin()
+        .from('mtmcopy_signal_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('channel_key', channel)
+        .eq('status', 'executed')
+        .gte('created_at', dayStart.toISOString())
+      if ((execToday ?? 0) >= providerDailyCap) {
+        console.warn(`[mtmcopy] BACKSTOP: teto diário do canal ${channel} atingido (${execToday}/${providerDailyCap}) — trade ignorado`)
+        await logProviderSignalEvent({
+          channel,
+          provider,
+          signal,
+          raw,
+          telegramMessageId,
+          status: 'skipped',
+          detail: `Backstop: teto diário do canal atingido (${execToday}/${providerDailyCap})`,
+        })
+        return
+      }
+    }
+  } catch (e) {
+    console.warn('[mtmcopy] backstop cap: verificação falhou, a permitir o trade —', e instanceof Error ? e.message : e)
+  }
+
   const mappedSymbol = applySymbolFromProfile(signal.symbol!, executionProfile)
   // Premium (Ouro/BTC) e Forex → risco 0.5% por trade (forçado). CopyFactory replica por saldo.
   const FX_CODES = new Set(['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD'])
