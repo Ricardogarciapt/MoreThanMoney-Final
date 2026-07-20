@@ -132,6 +132,69 @@ export async function runLeadFunnelReply(input: {
   return answer
 }
 
+type Supa = ReturnType<typeof getSupabaseAdmin>
+
+/** Regista os grupos onde o bot está (mapa em site_settings) — para descobrir o grupo de leads. */
+export async function recordTelegramGroup(
+  supabase: Supa,
+  chat: { id: number | string; title?: string | null },
+): Promise<void> {
+  try {
+    const gid = String(chat.id)
+    const { data } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'telegram_known_groups')
+      .maybeSingle()
+    const map = (data?.value ?? {}) as Record<string, { title?: string | null; at?: string }>
+    if (map[gid]?.title !== (chat.title ?? null)) {
+      map[gid] = { title: chat.title ?? null, at: new Date().toISOString() }
+      await supabase
+        .from('site_settings')
+        .upsert(
+          { key: 'telegram_known_groups', value: map, updated_at: new Date().toISOString() },
+          { onConflict: 'key' },
+        )
+    }
+  } catch {
+    /* best-effort */
+  }
+}
+
+/** Novo membro no GRUPO DE LEADS → dá boas-vindas no grupo com botão p/ DM (o bot não pode iniciar DM). */
+export async function handleLeadsGroupNewMembers(
+  supabase: Supa,
+  chat: { id: number | string; title?: string | null },
+  members: Array<{ first_name?: string; is_bot?: boolean }>,
+): Promise<void> {
+  const { data } = await supabase
+    .from('site_settings')
+    .select('value')
+    .eq('key', 'telegram_leads_group_id')
+    .maybeSingle()
+  const leadsId = (data?.value as { chat_id?: string } | null)?.chat_id
+  if (!leadsId || String(chat.id) !== String(leadsId)) return
+
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const botUser = process.env.TELEGRAM_BOT_USERNAME?.replace(/^@/, '') || 'MoreThanMoney_aibot'
+  if (!token) return
+  for (const m of members) {
+    if (m.is_bot) continue
+    const name = m.first_name || 'bem-vindo'
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chat.id,
+        text: `👋 Bem-vindo${name ? `, ${name}` : ''}! Fala comigo em privado e ajudo-te a começar — sinais manuais, Tap to Trade ou algo automático. 🙂`,
+        reply_markup: {
+          inline_keyboard: [[{ text: '💬 Falar com o assistente MTM', url: `https://t.me/${botUser}?start=lead` }]],
+        },
+      }),
+    }).catch(() => {})
+  }
+}
+
 /** Mensagem de boas-vindas do funil (novo membro / primeiro contacto). */
 export function leadWelcomeMessage(firstName?: string | null): string {
   const nome = firstName ? ` ${firstName}` : ''

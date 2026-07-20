@@ -133,6 +133,16 @@ export async function POST(request: NextRequest) {
 
     if (body.message?.chat?.type === "supergroup" || body.message?.chat?.type === "group") {
       await handleTelegramChannelMessage(supabase, body.message)
+      // Descobrir o grupo de leads (regista os grupos vistos) + boas-vindas a novos membros
+      try {
+        const { recordTelegramGroup, handleLeadsGroupNewMembers } = await import("@/lib/telegram-lead-funnel")
+        await recordTelegramGroup(supabase, body.message.chat)
+        if (Array.isArray(body.message.new_chat_members) && body.message.new_chat_members.length) {
+          await handleLeadsGroupNewMembers(supabase, body.message.chat, body.message.new_chat_members)
+        }
+      } catch (e) {
+        console.error("[telegram-leads-group]", e)
+      }
     }
 
     if (body.edited_message?.chat?.type === "supergroup" || body.edited_message?.chat?.type === "group") {
