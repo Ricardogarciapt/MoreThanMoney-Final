@@ -162,6 +162,20 @@ function buildOrderRequest(
   }
 }
 
+/** Aborta a colocação de ordem se a MetaAPI pendurar além de `ms` → converte um hang
+ *  (que mataria a função Vercel sem logar) num erro apanhável que é logado como 'error'. */
+function withOrderTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`Timeout ${ms}ms ao colocar ordem (${label}) — MetaAPI não respondeu`)),
+        ms,
+      ),
+    ),
+  ])
+}
+
 /** Subscritores elegíveis para log/estado — nunca expandir a todas as contas CopyFactory. */
 async function resolveLogTargets(subscribers: MTMcopierConnection[]): Promise<MTMcopierConnection[]> {
   return subscribers
@@ -971,7 +985,11 @@ async function executeViaMtmProvider(
         premiumProviderSingle.comment,
       )
       req.takeProfit = null
-      const [r] = await placeOrdersSequential(provider.accountId, [req])
+      const [r] = await withOrderTimeout(
+        placeOrdersSequential(provider.accountId, [req]),
+        20_000,
+        `PREM ${req.symbol} ${req.direction}`,
+      )
       results.push({
         ...(r ?? { success: false, error: 'Sem resposta MetaAPI' }),
         label: `PREM · parciais ${premiumProviderSingle.exitPcts.tp1}/${premiumProviderSingle.exitPcts.tp2}/${premiumProviderSingle.exitPcts.tp3}%`,
@@ -1022,10 +1040,21 @@ async function executeViaMtmProvider(
           req.trailingStop = tradeIdeasDynamicTrailing(riskPips, targetPips)
         }
       }
-      const [r] = await placeOrdersSequential(provider.accountId, [req])
+      // GoldKiller: scalp 5m em XAU → abre SEMPRE a MERCADO. A ordem LIMIT no preço exato
+      // pendurava (não enchia) e a função Vercel morria em timeout SEM abrir a trade nem
+      // logar — por isso os sinais chegavam mas nada abria na conta. Mercado enche na hora.
+      if (provider.accountId === CANONICAL_GOLDKILLER_ACCOUNT_ID) {
+        req.orderType = 'market'
+        req.openPrice = null
+      }
+      const [r] = await withOrderTimeout(
+        placeOrdersSequential(provider.accountId, [req]),
+        20_000,
+        `${provider.tag} ${req.symbol} ${req.direction}`,
+      )
       results.push({
         ...(r ?? { success: false, error: 'Sem resposta MetaAPI' }),
-        label: signalForExec.orderType === 'limit' ? 'LIMIT' : 'MARKET',
+        label: req.orderType === 'limit' ? 'LIMIT' : 'MARKET',
         lot: totalLot,
       })
     }
