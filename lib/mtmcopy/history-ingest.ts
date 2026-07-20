@@ -148,14 +148,26 @@ export async function ingestClosedTradesForAllConnections(): Promise<{
     .neq('mt5_status', 'disconnected')
     .not('metaapi_account_id', 'is', null)
 
-  let ingested = 0
-  for (const c of conns ?? []) {
-    try {
-      const r = await ingestClosedTradesForConnection(c as IngestConn)
-      ingested += r.ingested
-    } catch (e) {
-      console.error('[history-ingest] conta', (c as IngestConn).id, e instanceof Error ? e.message : e)
+  const runPass = async (): Promise<number> => {
+    let n = 0
+    for (const c of conns ?? []) {
+      try {
+        n += (await ingestClosedTradesForConnection(c as IngestConn)).ingested
+      } catch (e) {
+        console.error('[history-ingest] conta', (c as IngestConn).id, e instanceof Error ? e.message : e)
+      }
     }
+    return n
+  }
+
+  let ingested = await runPass()
+  // Guarda de COLD-START: o getHistoryDeals falha na 1ª invocação de um lambda frio
+  // (import esm-node/conexão MetaApi ainda não prontos → devolve [] instantâneo). Como o
+  // cron corre de 6h em 6h, cada execução é fria. Se a 1ª passagem ingeriu 0 mas há contas,
+  // repete com o lambda já quente — foi isto que manteve trading_plan_trades congelado.
+  if (ingested === 0 && (conns?.length ?? 0) > 0) {
+    console.warn('[history-ingest] 1ª passagem 0 (cold-start provável) — a repetir com lambda quente')
+    ingested = await runPass()
   }
   return { connections: conns?.length ?? 0, ingested }
 }
