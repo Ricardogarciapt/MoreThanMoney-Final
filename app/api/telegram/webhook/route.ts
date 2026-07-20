@@ -193,12 +193,16 @@ export async function POST(request: NextRequest) {
       // /start sem token
       else if (text === "/start") {
         await sendMessage(
-          "👋 <b>Bem-vindo ao bot MoreThanMoney!</b>\n\n" +
-          "Para ligar o teu Telegram ao mentor, segue o link na plataforma em <b>morethanmoney.pt</b>.\n\n" +
-          "Comandos disponíveis:\n" +
-          "/sinais — Últimos sinais de trading\n" +
-          "/status — Estado da ligação\n" +
-          "/ajuda — Ajuda"
+          "👋 <b>Bem-vindo à MoreThanMoney!</b>\n\n" +
+          "O ecossistema português de trading: scanner, alertas, comunidade e app. " +
+          "<b>675 trades reais · 63% win · +7.060€</b>.\n\n" +
+          "Por onde queres começar?\n" +
+          "📲 /app — Testar grátis (3 dias, sem cartão)\n" +
+          "💬 /grupos — Entrar nos grupos de sinais\n" +
+          "📊 /sinais — Ver os últimos sinais\n" +
+          "🏦 /corretora — Abrir conta (PU Prime)\n" +
+          "👑 /premium — Ser Premium\n" +
+          "ℹ️ /ajuda — Todos os comandos"
         )
       }
 
@@ -236,15 +240,59 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // /app — teste grátis + descarregar app
+      else if (text === "/app" || text === "/app@MoreThanMoney_aibot" || text === "/teste") {
+        await sendMessage(
+          "📲 <b>Testa a MoreThanMoney grátis</b>\n\n" +
+          "3 dias grátis · sem cartão · cancela quando quiseres.\n\n" +
+          "▶️ <a href='https://www.morethanmoney.pt/register'>Começar o teste grátis</a>\n" +
+          "🍏 <a href='https://apps.apple.com/pt/app/id6778558643'>App iOS</a>\n" +
+          "🤖 <a href='https://www.morethanmoney.pt/downloads/MoreThanMoney.apk'>App Android</a>"
+        )
+      }
+
+      // /grupos — grupos de sinais para copiar manualmente
+      else if (text === "/grupos" || text === "/grupos@MoreThanMoney_aibot" || text === "/sinal") {
+        await sendMessage(
+          "💬 <b>Grupos de sinais MTM</b> — entra e copia os sinais:\n\n" +
+          "💱 <a href='https://t.me/+cVcMbCRt2rlmNzg0'>Ideias de Forex</a>\n" +
+          "🧠 Sensei Scanner — <i>brevemente</i> (pede ao admin)\n\n" +
+          "Para copiares com um toque, ativa o <b>Tap to Trade</b> na app: /app"
+        )
+      }
+
+      // /premium — ser Premium
+      else if (text === "/premium" || text === "/premium@MoreThanMoney_aibot") {
+        await sendMessage(
+          "👑 <b>MoreThanMoney Premium</b>\n\n" +
+          "Scanner, Trading Alerts, Tap to Trade, salas Premium, aulas e comunidade.\n\n" +
+          "🎁 <b>1º mês 34,99€</b> (depois 65€/mês)\n" +
+          "▶️ <a href='https://www.morethanmoney.pt/upgrade'>Subscrever Premium</a>\n" +
+          "🆓 Ou testa grátis primeiro: /app"
+        )
+      }
+
+      // /corretora — abrir conta PU Prime
+      else if (text === "/corretora" || text === "/corretora@MoreThanMoney_aibot" || text === "/conta") {
+        await sendMessage(
+          "🏦 <b>Abrir conta na corretora (PU Prime)</b>\n\n" +
+          "É a corretora que usamos para copiar os sinais no MT5.\n\n" +
+          "▶️ <a href='https://www.puprime.com/campaign?cs=morethanmoney'>Abrir conta PU Prime</a>\n\n" +
+          "Depois liga-a na app para o <b>Tap to Trade</b> / <b>MTM Copy</b>: /app"
+        )
+      }
+
       // /ajuda
       else if (text === "/ajuda" || text === "/ajuda@MoreThanMoney_aibot" || text === "/help") {
         await sendMessage(
-          "ℹ️ <b>Comandos disponíveis:</b>\n\n" +
-          "/start — Ligar ao mentor MTM\n" +
-          "/sinais — Ver últimos sinais de trading\n" +
-          "/status — Verificar ligação\n" +
-          "/ajuda — Esta mensagem\n\n" +
-          "🌐 Plataforma: <a href='https://morethanmoney.pt'>morethanmoney.pt</a>"
+          "ℹ️ <b>Comandos MoreThanMoney</b>\n\n" +
+          "/app — Teste grátis da app 📲\n" +
+          "/sinais — Últimos sinais 📊\n" +
+          "/grupos — Grupos de sinais 💬\n" +
+          "/premium — Ser Premium 👑\n" +
+          "/corretora — Abrir conta (PU Prime) 🏦\n" +
+          "/status — Estado da ligação\n\n" +
+          "🌐 <a href='https://www.morethanmoney.pt/new-landing'>Conhece a MTM</a>"
         )
       }
     }
