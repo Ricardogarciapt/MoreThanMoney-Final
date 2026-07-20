@@ -5,6 +5,13 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getHistoryDeals, type MetaApiDeal } from './metaapi'
+import {
+  CANONICAL_PREMIUM_ACCOUNT_ID,
+  CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
+  CANONICAL_SENSEI_ACCOUNT_ID,
+  CANONICAL_GOLDKILLER_ACCOUNT_ID,
+  CANONICAL_BOOSTER_ACCOUNT_ID,
+} from './provider-constants'
 
 const HISTORY_DAYS = 90
 
@@ -151,4 +158,58 @@ export async function ingestClosedTradesForAllConnections(): Promise<{
     }
   }
   return { connections: conns?.length ?? 0, ingested }
+}
+
+/**
+ * DIAGNÓSTICO (read-only): corre getHistoryDeals nas contas slave ligadas E nas contas
+ * mestre canónicas, reportando quantos deals/posições fechadas cada uma devolve. Serve
+ * para perceber porque a ingestão está a 0 (getHistoryDeals partido = todas 0; ou só as
+ * slaves vazias = ingerir as mestres). NÃO escreve nada.
+ */
+export async function diagnoseIngestion(): Promise<
+  Array<{ label: string; mt5: string | null; account: string; dealsFetched: number; closedPositions: number; ms: number }>
+> {
+  const supabase = getSupabaseAdmin()
+  const { data: conns } = await supabase
+    .from('mtmcopy_connections')
+    .select('account_label, audit_label, metaapi_account_id, mt5_status')
+    .not('metaapi_account_id', 'is', null)
+
+  const masters: Array<[string, string]> = [
+    ['MASTER Premium', CANONICAL_PREMIUM_ACCOUNT_ID],
+    ['MASTER Forex/TradeIdeas', CANONICAL_TRADE_IDEAS_ACCOUNT_ID],
+    ['MASTER Sensei', CANONICAL_SENSEI_ACCOUNT_ID],
+    ['MASTER GoldKiller', CANONICAL_GOLDKILLER_ACCOUNT_ID],
+    ['MASTER Booster', CANONICAL_BOOSTER_ACCOUNT_ID],
+  ]
+  const targets: Array<{ label: string; accountId: string; mt5: string | null }> = [
+    ...((conns ?? []) as Array<Record<string, unknown>>).map((c) => ({
+      label: `slave ${(c.account_label as string) ?? (c.audit_label as string) ?? '?'}`,
+      accountId: c.metaapi_account_id as string,
+      mt5: (c.mt5_status as string) ?? null,
+    })),
+    ...masters.map(([label, accountId]) => ({ label, accountId, mt5: null })),
+  ]
+
+  const from = new Date(Date.now() - HISTORY_DAYS * 86_400_000)
+  const out: Array<{ label: string; mt5: string | null; account: string; dealsFetched: number; closedPositions: number; ms: number }> = []
+  for (const t of targets) {
+    const t0 = Date.now()
+    const deals = await getHistoryDeals(t.accountId, from)
+    const closed = new Set<string>()
+    for (const d of deals) {
+      if (d.positionId && (d.entryType === 'DEAL_ENTRY_OUT' || d.entryType === 'DEAL_ENTRY_INOUT')) {
+        closed.add(d.positionId)
+      }
+    }
+    out.push({
+      label: t.label,
+      mt5: t.mt5,
+      account: `${t.accountId.slice(0, 8)}…`,
+      dealsFetched: deals.length,
+      closedPositions: closed.size,
+      ms: Date.now() - t0,
+    })
+  }
+  return out
 }

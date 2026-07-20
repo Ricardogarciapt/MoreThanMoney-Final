@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { isCronAuthorized } from "@/lib/cron-auth"
-import { ingestClosedTradesForAllConnections } from "@/lib/mtmcopy/history-ingest"
+import { ingestClosedTradesForAllConnections, diagnoseIngestion } from "@/lib/mtmcopy/history-ingest"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -16,6 +16,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // ?debug=1 → diagnóstico read-only (deals por conta slave + mestre), não ingere.
+    if (new URL(request.url).searchParams.get("debug") === "1") {
+      return NextResponse.json({ ok: true, debug: await diagnoseIngestion() })
+    }
     const result = await ingestClosedTradesForAllConnections()
     return NextResponse.json({ ok: true, ...result })
   } catch (e) {
