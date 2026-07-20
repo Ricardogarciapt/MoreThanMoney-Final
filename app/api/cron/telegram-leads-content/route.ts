@@ -19,6 +19,37 @@ const CTA_TRIAL = { text: "📲 Testar grátis", url: "https://www.morethanmoney
 const CTA_FOREX = { text: "💱 Grupo Forex", url: "https://t.me/+cVcMbCRt2rlmNzg0" }
 const CTA_SENSEI = { text: "🧠 Grupo Sensei", url: "https://t.me/+mbqBggXniu5lNTBk" }
 
+/** Último post do Instagram @morethanmoney.pt via Graph API (se houver token). */
+async function latestIgPost(): Promise<{ caption: string; permalink: string; media_url: string; is_video: boolean } | null> {
+  const token = process.env.INSTAGRAM_TOKEN?.trim()
+  if (!token) return null
+  try {
+    let igId = process.env.INSTAGRAM_BUSINESS_ID?.trim()
+    if (!igId) {
+      const acc = await (
+        await fetch(`https://graph.facebook.com/v21.0/me/accounts?fields=instagram_business_account&access_token=${token}`)
+      ).json()
+      igId = acc?.data?.find((p: { instagram_business_account?: { id?: string } }) => p.instagram_business_account?.id)?.instagram_business_account?.id
+    }
+    if (!igId) return null
+    const m = await (
+      await fetch(
+        `https://graph.facebook.com/v21.0/${igId}/media?fields=caption,permalink,media_url,thumbnail_url,media_type&limit=1&access_token=${token}`,
+      )
+    ).json()
+    const p = m?.data?.[0]
+    if (!p) return null
+    return {
+      caption: (p.caption ?? "").slice(0, 700),
+      permalink: p.permalink,
+      media_url: p.media_type === "VIDEO" ? p.thumbnail_url ?? p.media_url : p.media_url,
+      is_video: p.media_type === "VIDEO",
+    }
+  } catch {
+    return null
+  }
+}
+
 /** Win rate real das estratégias-mestre nos últimos 30d (fallback = prova vetada). */
 async function recentWinRate(supabase: ReturnType<typeof getSupabaseAdmin>): Promise<number | null> {
   try {
@@ -88,6 +119,32 @@ export async function GET(request: NextRequest) {
   const wr = await recentWinRate(supabase)
   // Roda o post pelo dia do ano (determinístico, sem repetir seguidos)
   const dayOfYear = Math.floor((Date.now() - Date.UTC(new Date().getUTCFullYear(), 0, 0)) / 864e5)
+
+  // Slot Instagram (1 em cada 4 dias, se houver token): último post do @morethanmoney.pt
+  if (process.env.INSTAGRAM_TOKEN && dayOfYear % 4 === 3) {
+    const ig = await latestIgPost()
+    if (ig) {
+      const r = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          photo: ig.media_url,
+          caption: `📸 <b>Do nosso Instagram</b> @morethanmoney.pt\n\n${ig.caption}`.slice(0, 1000),
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "Ver no Instagram", url: ig.permalink }],
+              [{ text: "📲 Testar grátis", url: "https://www.morethanmoney.pt/register" }],
+            ],
+          },
+        }),
+      })
+      const j = await r.json().catch(() => ({}))
+      return NextResponse.json({ ok: r.ok, posted: r.ok, type: "instagram", detail: j?.description ?? null })
+    }
+  }
+
   const post = buildPost(dayOfYear, wr)
 
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
