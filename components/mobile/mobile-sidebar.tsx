@@ -358,17 +358,6 @@ export default function MobileSidebar({
 
             {/* Abrir Conta + Settings */}
             <div className="p-4 space-y-1">
-              {/* Fast Start — arranque rápido (mesmo conteúdo de /fast-start) */}
-              <Link
-                href="/app-mobile/fast-start"
-                onClick={onClose}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[#D2A63C]/10 border border-[#D2A63C]/30 text-[#D2A63C] hover:bg-[#D2A63C]/20 transition-all"
-              >
-                <Zap className="w-5 h-5" />
-                <span className="flex-1 text-left font-medium">Fast Start</span>
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-
               {/* Abrir Conta na Corretora */}
               <Link
                 href="/app-mobile/accountopen"

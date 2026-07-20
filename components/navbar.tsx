@@ -89,11 +89,6 @@ export default function Navbar() {
       icon: Rocket,
     },
     {
-      name: t("navfooter.navFastStart"),
-      href: "/fast-start",
-      icon: Zap,
-    },
-    {
       name: t("navfooter.navAiApps"),
       href: "/app-mobile?tab=apps",
       icon: Brain,

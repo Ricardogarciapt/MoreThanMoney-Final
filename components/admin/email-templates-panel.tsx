@@ -317,11 +317,11 @@ export default function EmailTemplatesPanel() {
           <p className="text-sm text-gray-400 mb-3">Recursos relacionados</p>
           <div className="flex flex-wrap gap-3">
             <a
-              href="/fast-start"
+              href="/onboarding"
               target="_blank"
               className="text-sm text-[#D2A63C] hover:underline flex items-center gap-1"
             >
-              Fast Start site <ExternalLink className="w-3 h-3" />
+              Onboarding site <ExternalLink className="w-3 h-3" />
             </a>
             <a
               href="https://www.skool.com/morethanmoney-1132/classroom/6124701a?md=0bdb4c0a86a84614ad1ddea4de3baa21"
