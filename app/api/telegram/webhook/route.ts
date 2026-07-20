@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
         await sendMessage(
           "💬 <b>Grupos de sinais MTM</b> — entra e copia os sinais:\n\n" +
           "💱 <a href='https://t.me/+cVcMbCRt2rlmNzg0'>Ideias de Forex</a>\n" +
-          "🧠 Sensei Scanner — <i>brevemente</i> (pede ao admin)\n\n" +
+          "🧠 <a href='https://t.me/+mbqBggXniu5lNTBk'>Sensei Scanner</a>\n\n" +
           "Para copiares com um toque, ativa o <b>Tap to Trade</b> na app: /app"
         )
       }
