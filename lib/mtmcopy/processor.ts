@@ -60,7 +60,7 @@ import {
   trailingDistanceForManagement,
   trailingPointsForConnection,
 } from './position-management'
-import { applyPremiumManagement } from './premium-management-exec'
+import { applyPremiumManagement, classifyPremiumMessage } from './premium-management-exec'
 import { buildTelegramMessageContext } from './reply-context'
 import {
   looksLikeManagementOrReplyInstruction,
@@ -517,14 +517,22 @@ async function processManagementUpdate(
 
     if (!mgmt) continue
 
-    // Se o monitor de preço Premium estiver LIGADO, ele é a autoridade dos parciais
-    // (por preço) — ignora a gestão Premium por mensagem para não fechar a dobrar.
+    // Monitor de preço Premium LIGADO = autoridade dos PARCIAIS POR TP (fecha 75/15/10 ao
+    // preço). Só se saltam as mensagens de HIT TP (que o monitor já trata) para não fechar
+    // a dobrar. Os overrides MANUAIS (Close all now / Close half / BE / SL) NÃO são
+    // detetáveis por preço → passam sempre, senão uma saída manual com lucro falhava e a
+    // trade podia reverter ao SL tendo pips de lucro no canal.
     if (channel === 'premium-signals') {
       const { getExecSwitches } = await import('./exec-switches')
       const sw = await getExecSwitches()
       if (sw.premium_price_monitor) {
-        console.log('[mtmcopy] gestão Premium por mensagem ignorada (monitor de preço ativo)')
-        continue
+        const pk = classifyPremiumMessage(raw)?.kind
+        const isTpHit = pk === 'hit_tp1' || pk === 'hit_tp2' || pk === 'hit_tp3' || pk === 'hit_all'
+        if (isTpHit) {
+          console.log(`[mtmcopy] Premium: HIT TP por mensagem ignorado (monitor trata por preço) — ${pk}`)
+          continue
+        }
+        console.log(`[mtmcopy] Premium: override manual aplicado apesar do monitor — ${pk ?? 'n/d'}`)
       }
     }
 
