@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { isCronAuthorized } from "@/lib/cron-auth"
-import { ingestClosedTradesForAllConnections, diagnoseIngestion } from "@/lib/mtmcopy/history-ingest"
+import { ingestClosedTradesForAllConnections, diagnoseIngestion, ingestMasterStrategyTrades } from "@/lib/mtmcopy/history-ingest"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -16,8 +16,17 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const dbg = new URL(request.url).searchParams.get("debug")
+    // ?debug=masters → corre só a ingestão das estratégias-mestre e devolve o erro exato.
+    if (dbg === "masters") {
+      try {
+        return NextResponse.json({ ok: true, masters: await ingestMasterStrategyTrades() })
+      } catch (e) {
+        return NextResponse.json({ ok: false, mastersError: e instanceof Error ? e.message : String(e) })
+      }
+    }
     // ?debug=1 → diagnóstico read-only (deals por conta slave + mestre), não ingere.
-    if (new URL(request.url).searchParams.get("debug") === "1") {
+    if (dbg === "1") {
       return NextResponse.json({ ok: true, debug: await diagnoseIngestion() })
     }
     const result = await ingestClosedTradesForAllConnections()
