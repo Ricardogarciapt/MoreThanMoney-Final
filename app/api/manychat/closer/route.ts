@@ -25,6 +25,7 @@ FACTOS REAIS (a MoreThanMoney é uma comunidade portuguesa de educação finance
 - NOVO: no registo há um FREE TRIAL de 3 dias de Premium, sem cartão — a melhor porta de entrada.
 - DESAFIO DO MÊS: todos os meses a comunidade oferece 3 mensalidades Premium a quem mais partilha os conceitos da MoreThanMoney, participa nas chamadas ao vivo e divulga nas redes (menciona quando fizer sentido; NUNCA prémio em troca de reviews).
 - Links: registo/trial → morethanmoney.pt/register · Premium → morethanmoney.pt/upgrade · App iPhone → apps.apple.com/pt/app/id6778558643 · App Android → morethanmoney.pt/downloads/MoreThanMoney.apk
+- COPYTRADING (copiar sinais/estratégias de forma automática — "MTM Copy" / "Tap to Trade"): se a pessoa quer COPIAR trades / algo AUTOMÁTICO / passivo, o caminho NÃO é o app trial — encaminha-a para o nosso assistente no Telegram: https://t.me/MoreThanMoney_aibot?start=lead — lá abre conta na corretora e ganha acesso aos grupos de sinais + à cópia automática. Explica em 1 frase e manda o link.
 
 REGRAS ABSOLUTAS:
 - Usa só os factos acima. NUNCA prometas lucros — é educação, não aconselhamento financeiro.
@@ -127,17 +128,34 @@ export async function POST(request: NextRequest) {
   const mode = body.mode || body.persona || null
   const source = body.source || body.trigger || null
 
+  // Deteta intenção de COPYTRADING (copiar/automático) → funil Telegram broker-gate.
+  const copytrading =
+    /copy\s*trad|copytrading|autom[aá]tic|copiar (os |as )?(trades|sinais|opera)|mtm\s*copy|piloto autom|passiv|tap\s*to\s*trade/i.test(
+      question,
+    )
+  const TG_FUNIL = "https://t.me/MoreThanMoney_aibot?start=lead"
+
   try {
     const answer = await callClaude(question, idioma, name, mode, source)
-    return NextResponse.json({ answer, idioma: idioma || "pt", engine: mode === "personal_router" ? "mtm-personal-router" : "mtm-closer" })
+    return NextResponse.json({
+      answer,
+      idioma: idioma || "pt",
+      engine: mode === "personal_router" ? "mtm-personal-router" : "mtm-closer",
+      route: copytrading ? "copytrading" : "app",
+      telegram_url: TG_FUNIL,
+    })
   } catch (e: any) {
     // Fallback seguro para a ManyChat nunca ficar sem resposta.
-    const fallback = mode === "personal_router"
-      ? "Olá! 👋 Aqui é o Ricardo (não é bot). Obrigado pela mensagem! Conta-me em duas linhas o que te trouxe — trading, o meu percurso, uma dúvida — e falo contigo. E se quiseres ver a app e o sistema, tenho tudo reunido no @morethanmoney.pt."
-      : "Olá! 👋 Somos a MoreThanMoney — educação e trading com provas reais (675 trades, 63% win rate, +7.060€). Começa grátis 3 dias em morethanmoney.pt/register. Estás no iPhone ou Android?"
+    const fallback = copytrading
+      ? `Boa escolha! Para copiares os nossos sinais/estratégias (copytrading), fala com o nosso assistente aqui 👉 ${TG_FUNIL} — ele guia-te para abrires conta e teres acesso.`
+      : mode === "personal_router"
+        ? "Olá! 👋 Aqui é o Ricardo (não é bot). Obrigado pela mensagem! Conta-me em duas linhas o que te trouxe — trading, o meu percurso, uma dúvida — e falo contigo. E se quiseres ver a app e o sistema, tenho tudo reunido no @morethanmoney.pt."
+        : "Olá! 👋 Somos a MoreThanMoney — educação e trading com provas reais (675 trades, 63% win rate, +7.060€). Começa grátis 3 dias em morethanmoney.pt/register. Estás no iPhone ou Android?"
     return NextResponse.json({
       answer: fallback,
       engine: mode === "personal_router" ? "mtm-personal-router-fallback" : "mtm-closer-fallback",
+      route: copytrading ? "copytrading" : "app",
+      telegram_url: TG_FUNIL,
       error: e?.message || "erro",
     })
   }
