@@ -17,6 +17,27 @@ export const dynamic = "force-dynamic"
  */
 const MIN_DEPOSIT = 300
 const FRESH_DAYS = 40
+const PREMIUM_CHAT = "-1002424441843" // grupo "MoreThanMoney Premium Signals"
+
+async function tg(method: string, body: Record<string, unknown>) {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  if (!token) return null
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+    return await r.json()
+  } catch {
+    return null
+  }
+}
+/** Link pessoal one-time para o grupo Premium (upsell escondido). */
+async function premiumGroupInvite(chatId: string): Promise<string | null> {
+  const r = await tg("createChatInviteLink", { chat_id: PREMIUM_CHAT, member_limit: 1, name: `premium ${chatId}` })
+  return (r as { result?: { invite_link?: string } } | null)?.result?.invite_link ?? null
+}
 
 async function notifyAdmin(supabase: ReturnType<typeof getSupabaseAdmin>, text: string) {
   const { data } = await supabase.from("site_settings").select("value").eq("key", "telegram_admin_chat_id").maybeSingle()
@@ -36,7 +57,7 @@ export async function GET(request: NextRequest) {
 
   const { data: leads } = await supabase
     .from("telegram_leads")
-    .select("chat_id, broker_uid, coupon_code")
+    .select("chat_id, broker_uid, coupon_code, premium_group_granted_at")
     .eq("stage", "granted")
     .not("coupon_code", "is", null)
     .not("broker_uid", "is", null)
@@ -46,12 +67,13 @@ export async function GET(request: NextRequest) {
   let renewed = 0
   let atRisk = 0
   let pendingRedeem = 0
+  let premiumGranted = 0
   const risky: string[] = []
 
   for (const l of leads ?? []) {
     const { data: prof } = await supabase
       .from("profiles")
-      .select("id, email")
+      .select("id, email, member_category, subscription_status, subscription_platform")
       .eq("coupon_code", l.coupon_code as string)
       .maybeSingle()
     if (!prof) {
@@ -81,6 +103,35 @@ export async function GET(request: NextRequest) {
         })
         .eq("id", prof.id)
       renewed++
+
+      // UPSELL ESCONDIDO: se PAGA Premium (Stripe/Apple, não 'manual') + depósito > $300
+      // e ainda não tem o grupo Premium → puxa-o para lá com link pessoal.
+      if (
+        bal !== null &&
+        bal > MIN_DEPOSIT &&
+        !l.premium_group_granted_at &&
+        prof.member_category === "premium" &&
+        prof.subscription_status === "active" &&
+        prof.subscription_platform &&
+        prof.subscription_platform !== "manual"
+      ) {
+        const link = await premiumGroupInvite(String(l.chat_id))
+        if (link) {
+          await tg("sendMessage", {
+            chat_id: l.chat_id,
+            text:
+              `👑 <b>Desbloqueaste o grupo Premium exclusivo!</b>\n\n` +
+              `Por seres Premium ativo + conta ≥ $${MIN_DEPOSIT}, tens acesso aos sinais Premium:\n${link}`,
+            parse_mode: "HTML",
+            disable_web_page_preview: true,
+          })
+          await supabase
+            .from("telegram_leads")
+            .update({ premium_group_granted_at: now.toISOString() })
+            .eq("chat_id", l.chat_id as string)
+          premiumGranted++
+        }
+      }
     } else if (fresh && bal < MIN_DEPOSIT) {
       // saldo caiu abaixo do mínimo (dados frescos) → sinaliza (revogação é decisão do admin)
       atRisk++
@@ -100,5 +151,5 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  return NextResponse.json({ ok: true, renewed, atRisk, pendingRedeem, total: (leads ?? []).length })
+  return NextResponse.json({ ok: true, renewed, premiumGranted, atRisk, pendingRedeem, total: (leads ?? []).length })
 }
