@@ -25,6 +25,8 @@ export interface TradingSchedule {
   days?: number[]
   start_hour?: number
   end_hour?: number
+  /** Fuso IANA (ex.: 'Europe/London') p/ interpretar start_hour/end_hour. Ausente = UTC. */
+  timezone?: string
 }
 
 export interface ProviderExecutionProfile {

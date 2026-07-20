@@ -739,7 +739,9 @@ async function executeViaMtmProvider(
   // (~<10/canal/dia), apenas um loop/misfire. 0 desliga. Falha-aberto: um erro na própria
   // verificação NUNCA bloqueia um trade legítimo.
   try {
-    const providerDailyCap = Number(process.env.MTMCOPY_MAX_PROVIDER_DAILY ?? 40)
+    // Canal Premium: SEM teto (por decisão). Restantes canais: backstop configurável.
+    const providerDailyCap =
+      channel === 'premium-signals' ? 0 : Number(process.env.MTMCOPY_MAX_PROVIDER_DAILY ?? 40)
     if (providerDailyCap > 0) {
       const dayStart = new Date(); dayStart.setUTCHours(0, 0, 0, 0)
       const { count: execToday } = await getSupabaseAdmin()

@@ -25,7 +25,9 @@ export const PREMIUM_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   symbol_suffix: '',
   symbol_mappings: [],
   mt_comment: 'MTM-PREMIUM',
-  trading_schedule: { mode: 'always' },
+  // MTM Auto Premium NÃO opera na sessão da Ásia: só abre da abertura de Londres (08:00)
+  // às 22:00 hora de Londres (à prova de horário de verão via timezone). 22:00→08:00 = Ásia.
+  trading_schedule: { mode: 'custom', timezone: 'Europe/London', start_hour: 8, end_hour: 22 },
   copy_close_orders: true,
   copy_modify_orders: true,
   close_opposite_positions: false,
@@ -192,6 +194,7 @@ export function normalizeProviderExecutionProfile(
     trading_schedule: raw.trading_schedule?.mode === 'custom'
       ? {
           mode: 'custom' as const,
+          timezone: raw.trading_schedule.timezone,
           days: raw.trading_schedule.days,
           start_hour: raw.trading_schedule.start_hour ?? 0,
           end_hour: raw.trading_schedule.end_hour ?? 24,

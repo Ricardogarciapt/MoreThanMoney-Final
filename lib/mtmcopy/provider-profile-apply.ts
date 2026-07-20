@@ -57,8 +57,20 @@ export function isWithinTradingSchedule(profile: ProviderExecutionProfile): bool
   const sched = profile.trading_schedule
   if (!sched || sched.mode === 'always') return true
   const now = new Date()
-  const day = now.getUTCDay()
-  const hour = now.getUTCHours()
+  let day: number
+  let hour: number
+  if (sched.timezone) {
+    // Dia da semana + hora no fuso configurado (à prova de horário de verão).
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: sched.timezone, weekday: 'short', hour: '2-digit', hour12: false,
+    }).formatToParts(now)
+    const wdMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+    day = wdMap[parts.find((p) => p.type === 'weekday')?.value ?? ''] ?? now.getUTCDay()
+    hour = Number(parts.find((p) => p.type === 'hour')?.value ?? now.getUTCHours()) % 24
+  } else {
+    day = now.getUTCDay()
+    hour = now.getUTCHours()
+  }
   if (sched.days?.length && !sched.days.includes(day)) return false
   const start = sched.start_hour ?? 0
   const end = sched.end_hour ?? 24
