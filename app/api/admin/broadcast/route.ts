@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
   let body: any = {}
   try { body = await request.json() } catch { /* vazio */ }
   const template = String(body.template || "app_review")
+  const segment = body.segment ? String(body.segment) : null
   const dryRun = !!body.dryRun
   const test = !!body.test
   const testTo = body.testTo ? String(body.testTo) : (process.env.GMAIL_USER || "morethanmoneypt@gmail.com")
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, username")
+    .select("id, email, full_name, username, conversion_deadline, stripe_subscription_id, subscription_platform")
     .not("email", "is", null)
     .order("id", { ascending: true })
 
@@ -89,10 +90,25 @@ export async function POST(request: NextRequest) {
       return true
     })
 
-  const total = recipients.length
+  // Segmentação opcional. "founder_conversion": só o cohort grátis-concedido (Fundador)
+  // com deadline ativo, sem subscrição paga, excluindo emails de teste.
+  let filtered = recipients
+  if (segment === "founder_conversion") {
+    const now = Date.now()
+    filtered = recipients.filter(
+      (p: any) =>
+        p.conversion_deadline &&
+        new Date(p.conversion_deadline).getTime() > now &&
+        !p.stripe_subscription_id &&
+        !["stripe", "apple"].includes(String(p.subscription_platform || "").toLowerCase()) &&
+        !/@test\.|@example\./i.test(String(p.email)),
+    )
+  }
+
+  const total = filtered.length
 
   if (dryRun) {
-    return NextResponse.json({ success: true, dryRun: true, total, template })
+    return NextResponse.json({ success: true, dryRun: true, total, template, segment })
   }
 
   const transporter = createPooledTransporter()
@@ -111,7 +127,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, test: true, to: testTo, subject: mail.subject })
   }
 
-  const batch = recipients.slice(offset, offset + limit)
+  const batch = filtered.slice(offset, offset + limit)
   let sent = 0
   let failed = 0
   const failures: string[] = []
