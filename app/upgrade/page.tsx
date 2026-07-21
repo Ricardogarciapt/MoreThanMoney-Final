@@ -55,6 +55,27 @@ const PLANS = {
     ],
     highlight: true,
   },
+  elite: {
+    id: 'elite',
+    name: 'Fundador · Elite',
+    icon: Star,
+    color: '#E0B44A',
+    colorBg: 'rgba(224,180,74,0.10)',
+    colorBorder: 'rgba(224,180,74,0.45)',
+    monthly: { price: 50, label: '597€/ano', total: '597€/ano', planId: 'elite_annual' },
+    annual:  { price: 50, label: '597€/ano', total: '597€/ano', planId: 'elite_annual' },
+    features: [
+      'Tudo do Premium — 1 ano completo',
+      'Estatuto Fundador vitalício (preço travado)',
+      'Scanners lifetime (GoldKiller)',
+      'Acesso a produtos PAMM',
+      'Isenção de fees (promoções exclusivas)',
+      'Formação: criar negócios digitais',
+      'Acompanhamento direto',
+      'Comunidade VIP fechada',
+    ],
+    highlight: true,
+  },
 } as const
 
 type PlanKey = keyof typeof PLANS
@@ -99,6 +120,8 @@ export default function UpgradePage() {
 
   const currentPlan = user?.subscription_plan ?? 'app_member'
   const isPremium   = currentPlan === 'premium'
+  // Elite usa strings literais (fora do dicionário i18n); o resto usa chaves upgrade.*
+  const label = (s: string) => (s.startsWith('upgrade.') ? t(s) : s)
 
   const handleCheckout = async (planKey: PlanKey) => {
     setError('')
@@ -180,30 +203,32 @@ export default function UpgradePage() {
         </div>
 
         {/* Cards de plano */}
-        <div className="grid md:grid-cols-2 gap-6 mb-10">
+        <div className="grid md:grid-cols-3 gap-5 mb-10">
           {(Object.values(PLANS) as typeof PLANS[PlanKey][]).map((plan) => {
             const pricing  = billing === 'annual' ? plan.annual : plan.monthly
             const Icon     = plan.icon
-            const isActive = currentPlan === plan.id
+            const isEliteCard = plan.id === 'elite'
+            const isActive = currentPlan === plan.id || (isEliteCard && (user as any)?.member_category === 'vip')
             const isPremiumCard = plan.id === 'premium'
+            const featured = isPremiumCard || isEliteCard
 
             return (
               <div
                 key={plan.id}
                 className="rounded-2xl border-2 flex flex-col overflow-hidden relative"
                 style={{
-                  borderColor: isPremiumCard ? plan.color : (isActive ? plan.color : '#374151'),
-                  background:  isPremiumCard ? plan.colorBg : '#111827',
+                  borderColor: featured ? plan.color : (isActive ? plan.color : '#374151'),
+                  background:  featured ? plan.colorBg : '#111827',
                 }}
               >
-                {isPremiumCard && (
+                {featured && (
                   <div className="absolute top-0 left-0 right-0 text-center py-1.5 text-xs font-bold text-black"
                     style={{ background: plan.color }}>
-                    ⭐ {t('upgrade.mostPopular')}
+                    {isEliteCard ? '👑 Fundador · Elite' : `⭐ ${t('upgrade.mostPopular')}`}
                   </div>
                 )}
 
-                <div className={`p-6 flex-1 ${isPremiumCard ? 'pt-9' : ''}`}>
+                <div className={`p-6 flex-1 ${featured ? 'pt-9' : ''}`}>
                   {/* Header do card */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -212,7 +237,7 @@ export default function UpgradePage() {
                         <Icon className="w-5 h-5" style={{ color: plan.color }} />
                       </div>
                       <div>
-                        <h2 className="font-bold text-white text-lg">{t(plan.name)}</h2>
+                        <h2 className="font-bold text-white text-lg">{label(plan.name)}</h2>
                         {isActive && (
                           <span className="text-xs text-green-400 font-medium">● {t('upgrade.currentPlan')}</span>
                         )}
@@ -221,8 +246,8 @@ export default function UpgradePage() {
                     <div className="text-right">
                       <span className="text-3xl font-black text-white">{pricing.price}€</span>
                       <span className="text-gray-400 text-sm">{t('upgrade.perMonth')}</span>
-                      {billing === 'annual' && (
-                        <p className="text-xs text-gray-400 mt-0.5">{pricing.total}</p>
+                      {(billing === 'annual' || isEliteCard) && (pricing as any).total && (
+                        <p className="text-xs text-gray-400 mt-0.5">{isEliteCard ? '597€/ano · pago 1×' : (pricing as any).total}</p>
                       )}
                       {isPremiumCard && billing === 'monthly' && (
                         <p className="mt-1 inline-block rounded-full bg-[#D2A63C]/15 px-2 py-0.5 text-[11px] font-bold text-[#D2A63C]">
@@ -237,7 +262,7 @@ export default function UpgradePage() {
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm">
                         <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: plan.color }} />
-                        <span className={isPremiumCard ? 'text-gray-200' : 'text-gray-300'}>{t(f)}</span>
+                        <span className={featured ? 'text-gray-200' : 'text-gray-300'}>{label(f)}</span>
                       </li>
                     ))}
                   </ul>
@@ -260,6 +285,8 @@ export default function UpgradePage() {
                     >
                       {loading === pricing.planId ? (
                         <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('upgrade.processing')}</>
+                      ) : isEliteCard ? (
+                        <>Quero ser Fundador <ArrowRight className="ml-2 h-4 w-4" /></>
                       ) : isPremium ? (
                         t('upgrade.changePlan')
                       ) : plan.id === 'premium' ? (
