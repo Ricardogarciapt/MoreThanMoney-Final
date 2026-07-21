@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, username, conversion_deadline, stripe_subscription_id, subscription_platform")
+    .select("id, email, full_name, username, conversion_deadline, stripe_subscription_id, subscription_platform, mtmcopy_subscription_active")
     .not("email", "is", null)
     .order("id", { ascending: true })
 
@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
         new Date(p.conversion_deadline).getTime() > now &&
         !p.stripe_subscription_id &&
         !["stripe", "apple"].includes(String(p.subscription_platform || "").toLowerCase()) &&
+        !p.mtmcopy_subscription_active && // exclui quem já paga o add-on MTM Copy
         !/@test\.|@example\./i.test(String(p.email)),
     )
   }
