@@ -25,8 +25,10 @@ const THRESHOLD = Number(process.env.IG_CURATION_THRESHOLD ?? 0.65)
 const MAX_SCORE_PER_RUN = Number(process.env.IG_CURATION_MAX_PER_RUN ?? 8)
 
 const IG_ACCOUNTS = [
-  { id: "17841474872672009", username: "morethanmoney.pt" },
-  { id: "17841405656956716", username: "ricardogarciapt" },
+  // @morethanmoney.pt: System User token (nunca expira, negócio MoreThanMoney).
+  { id: "17841474872672009", username: "morethanmoney.pt", tokenEnv: "INSTAGRAM_TOKEN" },
+  // @ricardogarciapt: Página noutro negócio → token próprio (fallback ao INSTAGRAM_TOKEN).
+  { id: "17841405656956716", username: "ricardogarciapt", tokenEnv: "INSTAGRAM_TOKEN_RICARDO" },
 ]
 
 const CTA_DM = { text: "💬 Falar com o assistente MTM", url: `https://t.me/${process.env.TELEGRAM_BOT_USERNAME?.replace(/^@/, "") || "MoreThanMoney_aibot"}?start=lead` }
@@ -171,8 +173,8 @@ function GRAPH_TG(token: string) {
 export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const igToken = process.env.INSTAGRAM_TOKEN?.trim()
-  if (!igToken) return NextResponse.json({ ok: false, error: "INSTAGRAM_TOKEN em falta" })
+  if (!process.env.INSTAGRAM_TOKEN?.trim() && !process.env.INSTAGRAM_TOKEN_RICARDO?.trim())
+    return NextResponse.json({ ok: false, error: "INSTAGRAM_TOKEN em falta" })
   const botToken = getMtmcopyBotToken()
   if (!botToken) return NextResponse.json({ ok: false, error: "sem bot token" })
 
@@ -185,7 +187,9 @@ export async function GET(request: NextRequest) {
 
   for (const acc of IG_ACCOUNTS) {
     if (stats.scored >= MAX_SCORE_PER_RUN) break
-    const items = [...(await fetchEdge(acc.id, "media", igToken)), ...(await fetchEdge(acc.id, "stories", igToken))]
+    const token = process.env[acc.tokenEnv]?.trim() || process.env.INSTAGRAM_TOKEN?.trim()
+    if (!token) continue
+    const items = [...(await fetchEdge(acc.id, "media", token)), ...(await fetchEdge(acc.id, "stories", token))]
     for (const item of items) {
       stats.seen++
       // Dedup: já processado?
