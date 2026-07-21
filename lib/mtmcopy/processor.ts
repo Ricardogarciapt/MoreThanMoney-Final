@@ -756,14 +756,23 @@ async function executeViaMtmProvider(
     return
   }
 
-  // Backstop anti-runaway: teto diário de trades POR canal na conta-mestre. Alto e
-  // configurável (MTMCOPY_MAX_PROVIDER_DAILY, default 40) → não trava volume normal
-  // (~<10/canal/dia), apenas um loop/misfire. 0 desliga. Falha-aberto: um erro na própria
-  // verificação NUNCA bloqueia um trade legítimo.
+  // Backstop anti-runaway: teto diário de trades POR canal na conta-mestre. Só existe para
+  // travar um loop/misfire — NÃO deve travar volume legítimo. Reset à meia-noite UTC, o que
+  // fazia a sessão asiática (logo a seguir ao reset) correr livre e depois Londres bater no
+  // teto a meio da manhã. O canal trade-ideas faz ~40+ trades/dia reais, por isso o default
+  // tem de ficar bem acima disso (default 120, era 40). Override global
+  // MTMCOPY_MAX_PROVIDER_DAILY ou por-canal MTMCOPY_MAX_PROVIDER_DAILY_<CANAL>
+  // (ex.: MTMCOPY_MAX_PROVIDER_DAILY_TRADE_IDEAS=200). 0 desliga. Falha-aberto: um erro na
+  // própria verificação NUNCA bloqueia um trade legítimo.
   try {
-    // Canal Premium: SEM teto (por decisão). Restantes canais: backstop configurável.
+    // Canal Premium: SEM teto (por decisão). Restantes canais: backstop configurável (global
+    // ou por-canal). Default 120 → margem 3x sobre o volume legítimo, ainda trava runaways.
+    const perChannelCapEnv =
+      process.env[`MTMCOPY_MAX_PROVIDER_DAILY_${channel.replace(/[^a-z0-9]/gi, '_').toUpperCase()}`]
     const providerDailyCap =
-      channel === 'premium-signals' ? 0 : Number(process.env.MTMCOPY_MAX_PROVIDER_DAILY ?? 40)
+      channel === 'premium-signals'
+        ? 0
+        : Number(perChannelCapEnv ?? process.env.MTMCOPY_MAX_PROVIDER_DAILY ?? 120)
     if (providerDailyCap > 0) {
       const dayStart = new Date(); dayStart.setUTCHours(0, 0, 0, 0)
       const { count: execToday } = await getSupabaseAdmin()

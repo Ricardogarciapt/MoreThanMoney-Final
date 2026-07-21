@@ -6,9 +6,12 @@ const TELEGRAM_API = `https://api.telegram.org/bot`
 
 // Bot commands to register
 const BOT_COMMANDS = [
-  { command: "start", description: "Ligar o teu Telegram ao mentor MTM" },
+  { command: "start", description: "Começar e ligar ao assistente MTM" },
+  { command: "app", description: "Descarregar a app e testar grátis" },
   { command: "sinais", description: "Ver os últimos sinais de trading" },
-  { command: "status", description: "Estado do bot e ligação ativa" },
+  { command: "grupos", description: "Aceder aos grupos de sinais (Forex/Sensei)" },
+  { command: "premium", description: "Subir a Premium" },
+  { command: "corretora", description: "Abrir conta na corretora (PU Prime)" },
   { command: "ajuda", description: "Ajuda e comandos disponíveis" },
 ]
 
