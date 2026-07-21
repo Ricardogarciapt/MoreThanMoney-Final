@@ -244,15 +244,25 @@ export default function UpgradePage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-3xl font-black text-white">{pricing.price}€</span>
-                      <span className="text-gray-400 text-sm">{t('upgrade.perMonth')}</span>
-                      {(billing === 'annual' || isEliteCard) && (pricing as any).total && (
-                        <p className="text-xs text-gray-400 mt-0.5">{isEliteCard ? '597€/ano · pago 1×' : (pricing as any).total}</p>
-                      )}
-                      {isPremiumCard && billing === 'monthly' && (
-                        <p className="mt-1 inline-block rounded-full bg-[#D2A63C]/15 px-2 py-0.5 text-[11px] font-bold text-[#D2A63C]">
-                          {t('upgrade.firstMonthPromo')}
-                        </p>
+                      {isEliteCard ? (
+                        <>
+                          <span className="text-3xl font-black text-white">597€</span>
+                          <span className="text-gray-400 text-sm">/ano</span>
+                          <p className="text-xs text-gray-400 mt-0.5">≈50€/mês · pago 1× · só anual</p>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-3xl font-black text-white">{pricing.price}€</span>
+                          <span className="text-gray-400 text-sm">{t('upgrade.perMonth')}</span>
+                          {billing === 'annual' && (pricing as any).total && (
+                            <p className="text-xs text-gray-400 mt-0.5">{(pricing as any).total}</p>
+                          )}
+                          {isPremiumCard && billing === 'monthly' && (
+                            <p className="mt-1 inline-block rounded-full bg-[#D2A63C]/15 px-2 py-0.5 text-[11px] font-bold text-[#D2A63C]">
+                              {t('upgrade.firstMonthPromo')}
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
