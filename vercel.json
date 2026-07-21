@@ -68,6 +68,10 @@
     {
       "path": "/api/cron/ig-curation",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/ig-publish",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
