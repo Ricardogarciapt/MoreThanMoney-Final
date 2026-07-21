@@ -57,7 +57,7 @@ const PLANS = {
   },
   elite: {
     id: 'elite',
-    name: 'Fundador · Elite',
+    name: 'Elite Anual',
     icon: Star,
     color: '#E0B44A',
     colorBg: 'rgba(224,180,74,0.10)',
@@ -66,7 +66,7 @@ const PLANS = {
     annual:  { price: 50, label: '597€/ano', total: '597€/ano', planId: 'elite_annual' },
     features: [
       'Tudo do Premium — 1 ano completo',
-      'Estatuto Fundador vitalício (preço travado)',
+      'Estatuto Elite vitalício (preço travado)',
       'Scanners lifetime (GoldKiller)',
       'Acesso a produtos PAMM',
       'Isenção de fees (promoções exclusivas)',
@@ -224,7 +224,7 @@ export default function UpgradePage() {
                 {featured && (
                   <div className="absolute top-0 left-0 right-0 text-center py-1.5 text-xs font-bold text-black"
                     style={{ background: plan.color }}>
-                    {isEliteCard ? '👑 Fundador · Elite' : `⭐ ${t('upgrade.mostPopular')}`}
+                    {isEliteCard ? '👑 Elite' : `⭐ ${t('upgrade.mostPopular')}`}
                   </div>
                 )}
 
@@ -286,7 +286,7 @@ export default function UpgradePage() {
                       {loading === pricing.planId ? (
                         <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('upgrade.processing')}</>
                       ) : isEliteCard ? (
-                        <>Quero ser Fundador <ArrowRight className="ml-2 h-4 w-4" /></>
+                        <>Quero ser Elite <ArrowRight className="ml-2 h-4 w-4" /></>
                       ) : isPremium ? (
                         t('upgrade.changePlan')
                       ) : plan.id === 'premium' ? (
