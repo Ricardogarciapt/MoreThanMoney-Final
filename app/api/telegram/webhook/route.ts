@@ -202,52 +202,69 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // /start with token — vincular ao mentor
+      // Boas-vindas (reutilizada por /start e por deep-links de funil)
+      const welcomeMsg =
+        "👋 <b>Bem-vindo à MoreThanMoney!</b>\n\n" +
+        "O ecossistema português de trading: scanner, alertas, comunidade e app. " +
+        "<b>675 trades reais · 63% win · +7.060€</b>.\n\n" +
+        "Por onde queres começar?\n" +
+        "📲 /app — Testar grátis (3 dias, sem cartão)\n" +
+        "💬 /grupos — Entrar nos grupos de sinais\n" +
+        "📊 /sinais — Ver os últimos sinais\n" +
+        "🏦 /corretora — Abrir conta (PU Prime)\n" +
+        "👑 /premium — Ser Premium\n" +
+        "ℹ️ /ajuda — Todos os comandos"
+
+      // Tokens reservados dos deep-links de captação — NÃO são tokens de mentor.
+      const RESERVED_START = new Set([
+        "lead", "leads", "funnel", "funil", "broker",
+        "premium", "app", "sinais", "grupos", "corretora", "start",
+      ])
+
+      // /start <token> — token de mentor OU deep-link de funil
       const startMatch = text.match(/^\/start\s+([a-zA-Z0-9_]+)$/)
       if (startMatch?.[1]) {
         const token = startMatch[1]
+        let linked = false
 
-        const { data: profile } = await supabase
-          .from("mentor_profiles")
-          .select("user_id")
-          .eq("telegram_start_token", token)
-          .maybeSingle()
-
-        if (profile?.user_id) {
-          await supabase
+        // Só procura mentor se NÃO for um token reservado do funil.
+        if (!RESERVED_START.has(token.toLowerCase())) {
+          const { data: profile } = await supabase
             .from("mentor_profiles")
-            .update({ telegram_chat_id: chatId })
-            .eq("user_id", profile.user_id)
+            .select("user_id")
+            .eq("telegram_start_token", token)
+            .maybeSingle()
 
-          await supabase.from("notifications").insert({
-            user_id: profile.user_id,
-            type: "mentor",
-            title: "Telegram ligado ao Mentor",
-            message: "Canal privado do mentor ativo. Vais receber lembretes e progresso por aqui também.",
-            data: { source: "telegram" },
-            read: false,
-          })
+          if (profile?.user_id) {
+            await supabase
+              .from("mentor_profiles")
+              .update({ telegram_chat_id: chatId })
+              .eq("user_id", profile.user_id)
 
-          await sendMessage("✅ <b>Telegram ligado com sucesso!</b>\n\nVais receber as tuas notificações de mentor por aqui. Bem-vindo ao MTM! 🚀")
-        } else {
-          await sendMessage("❌ Token inválido ou expirado. Vai à plataforma MTM e tenta novamente.")
+            await supabase.from("notifications").insert({
+              user_id: profile.user_id,
+              type: "mentor",
+              title: "Telegram ligado ao Mentor",
+              message: "Canal privado do mentor ativo. Vais receber lembretes e progresso por aqui também.",
+              data: { source: "telegram" },
+              read: false,
+            })
+
+            await sendMessage("✅ <b>Telegram ligado com sucesso!</b>\n\nVais receber as tuas notificações de mentor por aqui. Bem-vindo ao MTM! 🚀")
+            linked = true
+          }
+        }
+
+        // Deep-link de funil (lead/broker/…) OU token de mentor não encontrado:
+        // NUNCA dead-end — arranca o funil com as boas-vindas.
+        if (!linked) {
+          await sendMessage(welcomeMsg)
         }
       }
 
       // /start sem token
       else if (text === "/start") {
-        await sendMessage(
-          "👋 <b>Bem-vindo à MoreThanMoney!</b>\n\n" +
-          "O ecossistema português de trading: scanner, alertas, comunidade e app. " +
-          "<b>675 trades reais · 63% win · +7.060€</b>.\n\n" +
-          "Por onde queres começar?\n" +
-          "📲 /app — Testar grátis (3 dias, sem cartão)\n" +
-          "💬 /grupos — Entrar nos grupos de sinais\n" +
-          "📊 /sinais — Ver os últimos sinais\n" +
-          "🏦 /corretora — Abrir conta (PU Prime)\n" +
-          "👑 /premium — Ser Premium\n" +
-          "ℹ️ /ajuda — Todos os comandos"
-        )
+        await sendMessage(welcomeMsg)
       }
 
       // /sinais — últimos sinais
