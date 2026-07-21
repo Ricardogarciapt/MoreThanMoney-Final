@@ -27,6 +27,11 @@ export interface SignalRules {
    *  Ex.: { mtmscanner: ["XAUUSD"] } → o MTMScanner não dá nem executa ouro (fica p/ o
    *  GoldKiller/Sensei, que gerem o ouro melhor). Não afeta os outros scanners. */
   scanner_symbol_exclusions: Record<string, string[]>
+  /** Exclusão de CLASSES DE ATIVO por-scanner (robusto vs lista de símbolos). Chave =
+   *  scanner em minúsculas; valor = classes ("forex","gold_btc","index","crypto_perp").
+   *  Ex.: { sensei: ["forex"] } → o Sensei não dá nem executa NENHUM par de forex — cobre
+   *  pares presentes e futuros (usa a classe do classifyAsset, não uma lista fixa). */
+  scanner_asset_exclusions: Record<string, string[]>
 }
 
 const KEY = "mtmcopy_signal_rules"
@@ -45,6 +50,8 @@ export const DEFAULT_SIGNAL_RULES: SignalRules = {
   exec_allow_limit_ideas: true,
   // Ouro sai do MTMScanner (GoldKiller 67% + Sensei 58% já o gerem, com SL/TP dinâmico).
   scanner_symbol_exclusions: { mtmscanner: ["XAUUSD", "XAGUSD"] },
+  // Sensei = ouro+BTC; o forex é do MTMScanner. Bloqueia QUALQUER forex do Sensei (por classe).
+  scanner_asset_exclusions: { sensei: ["forex"] },
 }
 
 export function normalizeSymbol(s: string | null | undefined): string {
@@ -90,14 +97,29 @@ export function isSymbolExcludedForScanner(
   return list.map(normalizeSymbol).includes(s)
 }
 
+/** Classe de ativo barrada para este scanner? (ex.: Sensei + "forex" → sem forex, robusto). */
+export function isAssetExcludedForScanner(
+  rules: SignalRules,
+  assetClass: string | null | undefined,
+  scanner: string | null | undefined,
+): boolean {
+  const key = String(scanner ?? "").toLowerCase().trim()
+  const cls = String(assetClass ?? "").toLowerCase().trim()
+  if (!key || !cls) return false
+  const list = rules.scanner_asset_exclusions?.[key] ?? []
+  return list.map((c) => String(c).toLowerCase()).includes(cls)
+}
+
 /** ALERTA: deve publicar-se esta ENTRADA? (follow-ups e GoldKiller passam sempre — tratados pelo chamador.) */
 export function passesAlertGate(
   rules: SignalRules,
   symbol: string | null,
   confCount: number | null,
   scanner?: string | null,
+  assetClass?: string | null,
 ): boolean {
   const s = normalizeSymbol(symbol)
+  if (isAssetExcludedForScanner(rules, assetClass, scanner)) return false
   if (isSymbolExcludedForScanner(rules, symbol, scanner)) return false
   if (rules.alert_symbol_blacklist.map(normalizeSymbol).includes(s)) return false
   if (confCount !== null && confCount < rules.alert_min_confirmations) return false
@@ -111,6 +133,7 @@ export function passesExecGate(
   direction: string | null,
   confCount: number | null,
   scanner?: string | null,
+  assetClass?: string | null,
 ): { ok: boolean; reason?: string } {
   const s = normalizeSymbol(symbol)
   const dir = String(direction ?? "").toLowerCase()
@@ -119,6 +142,9 @@ export function passesExecGate(
   // BTC opera BUY e SELL (só o ouro tem xau_buy_only).
   const isSenseiInstrument = isXau || s === "BTCUSD"
 
+  if (isAssetExcludedForScanner(rules, assetClass, scanner)) {
+    return { ok: false, reason: `classe ${String(assetClass).toLowerCase()} excluída para o scanner ${String(scanner).toLowerCase()}` }
+  }
   if (isSymbolExcludedForScanner(rules, symbol, scanner)) {
     return { ok: false, reason: `${s} excluído para o scanner ${String(scanner).toLowerCase()}` }
   }

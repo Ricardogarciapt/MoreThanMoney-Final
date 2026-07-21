@@ -650,7 +650,7 @@ export async function POST(request: NextRequest) {
   const execDirForGate = parsedForExec.direction ?? v.direction ?? null
   const execGate = isGoldKiller
     ? { ok: true as const }
-    : passesExecGate(signalRules, execSymbolForGate, execDirForGate, execConfCount, scannerKey)
+    : passesExecGate(signalRules, execSymbolForGate, execDirForGate, execConfCount, scannerKey, assetClass)
   // Ordens LIMIT validadas: uma ideia/setup com preço de entrada pode colocar uma ordem
   // limit na conta provider. O entry_trigger dessa mesma ideia depois NÃO faz market
   // (guard provider_order_placed) → evita duplo preenchimento.
@@ -722,7 +722,7 @@ export async function POST(request: NextRequest) {
   // Gate de RUÍDO: entradas de baixa qualidade (poucas confirmações / símbolo-ruído) não
   // vão para chat/Telegram/push. Follow-ups (TP/BE/SL) e GoldKiller passam sempre.
   const alertOk =
-    isFollowup || isGoldKiller || passesAlertGate(signalRules, execSymbolForGate, execConfCount, scannerKey)
+    isFollowup || isGoldKiller || passesAlertGate(signalRules, execSymbolForGate, execConfCount, scannerKey, assetClass)
   let linkedIdea: SenseiTradeIdea | null = null
   if (isFollowup && activeSensei?.symbol) {
     linkedIdea = await findActiveSenseiIdeaForFollowup(
