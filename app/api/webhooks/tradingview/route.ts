@@ -22,7 +22,7 @@ import {
 } from "@/lib/mtmcopy/sensei-ideas"
 import { processMtmcopyWebhookSignal, processMtmcopyWebhookManagement } from "@/lib/mtmcopy/processor"
 import { getSiteOrigin } from "@/lib/site-url"
-import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId } from "@/lib/telegram-channel-ids"
+import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId, resolvedGoldkillerScannerChatId } from "@/lib/telegram-channel-ids"
 import { getExecSwitches } from "@/lib/mtmcopy/exec-switches"
 import { getSignalRules, passesAlertGate, passesExecGate } from "@/lib/mtmcopy/signal-rules"
 import { notifySignalOutcome } from "@/lib/mtm-alerts/notify-outcome"
@@ -443,7 +443,9 @@ export async function POST(request: NextRequest) {
         : null
   if (isGoldKiller) {
     route.channel = "sinais-goldkiller"
-    route.telegram = null
+    // Canal Telegram dedicado GoldKiller (bot admin). Publica lá + chat app + auto-copy.
+    // Resolver durável (sobrevive a Basic→Supergroup); env TELEGRAM_CHANNEL_GOLDKILLER se definido.
+    route.telegram = resolvedGoldkillerScannerChatId()
     route.sender = "🥇 GoldKiller Scanner"
     route.autoCopy = true
   }
