@@ -72,6 +72,10 @@
     {
       "path": "/api/cron/ig-publish",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/telegram-webhook-guard",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
