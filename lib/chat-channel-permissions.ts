@@ -12,7 +12,8 @@ export function isReadOnlyChannel(slug: string) {
     slug === "trade-ideas-setup" ||
     slug === "premium-ideas" ||
     slug === "sensei-scanner" ||
-    slug === "sinais-goldkiller"
+    slug === "sinais-goldkiller" ||
+    slug === "sinais-scanner-mtm"
   )
 }
 
@@ -21,7 +22,7 @@ export function isPremiumChannel(slug: string) {
 }
 
 export function requiresBrokerUidChannel(slug: string) {
-  return slug === "trade-ideas" || slug === "trade-ideas-setup" || slug === "premium-ideas"
+  return slug === "trade-ideas" || slug === "trade-ideas-setup" || slug === "premium-ideas" || slug === "sinais-scanner-mtm"
 }
 
 export function canReadChannel(slug: string, user: ChatChannelUser | null | undefined): boolean {

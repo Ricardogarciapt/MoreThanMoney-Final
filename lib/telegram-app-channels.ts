@@ -1,11 +1,18 @@
 import { telegramChatIdVariants } from '@/lib/mtmcopy/channels'
 import {
   CANONICAL_TELEGRAM_CHANNELS,
+  resolvedForexIdeasChatId,
+  resolvedGoldkillerScannerChatId,
   resolvedPremiumSignalsChatId,
   resolvedTradeIdeasChatId,
 } from '@/lib/telegram-channel-ids'
 
-export type AppChatChannelSlug = 'trade-ideas-setup' | 'premium-ideas'
+export type AppChatChannelSlug =
+  | 'trade-ideas-setup'
+  | 'premium-ideas'
+  | 'sensei-scanner'
+  | 'sinais-goldkiller'
+  | 'sinais-scanner-mtm'
 
 const map = new Map<string, AppChatChannelSlug>()
 
@@ -16,11 +23,21 @@ function registerChatId(raw: string | undefined, slug: AppChatChannelSlug) {
   }
 }
 
-/** Reconstrói o mapa a partir das env vars + IDs canónicos. */
+/**
+ * Reconstrói o mapa id→chat da app a partir dos IDs canónicos.
+ * Cada scanner tem o SEU chat dedicado (pedido do Ricardo):
+ *  - Sensei (grupo -1003853860780)      → sensei-scanner    ("Sinais Scanner Sensei")
+ *  - Forex  (grupo -1003716578747)      → trade-ideas-setup ("Ideias de Forex")
+ *  - GoldKiller (grupo -5454326270)     → sinais-goldkiller ("Sinais Scanner Gold Killer")
+ *  - Premium (@MTMgold)                 → premium-ideas
+ */
 export function buildAppChannelMap(): Map<string, AppChatChannelSlug> {
   map.clear()
 
-  registerChatId(resolvedTradeIdeasChatId(), 'trade-ideas-setup')
+  // O canónico "tradeIdeas" é o grupo Sensei Scanner → chat sensei-scanner.
+  registerChatId(resolvedTradeIdeasChatId(), 'sensei-scanner')
+  registerChatId(resolvedForexIdeasChatId(), 'trade-ideas-setup')
+  registerChatId(resolvedGoldkillerScannerChatId(), 'sinais-goldkiller')
   registerChatId(resolvedPremiumSignalsChatId(), 'premium-ideas')
 
   return map
@@ -31,18 +48,15 @@ export function detectSlugFromChannelTitle(title: string | null | undefined): Ap
   if (!title) return null
   const t = title.toLowerCase()
   if (t.includes('premium') || t.includes('mtmgold')) return 'premium-ideas'
-  if (
-    t.includes('trade') ||
-    t.includes('setup') ||
-    t.includes('sinais') ||
-    t.includes('forex') ||
-    t.includes('ideias') ||
-    t.includes('ideia') ||
-    t.includes('sensei') ||
-    t.includes('scanner')
-  ) {
-    return 'trade-ideas-setup'
-  }
+  // GoldKiller ANTES de "scanner" genérico (o título GoldKiller também contém "scanner").
+  if (t.includes('goldkiller') || t.includes('gold killer') || t.includes('gold-killer')) return 'sinais-goldkiller'
+  if (t.includes('sensei')) return 'sensei-scanner'
+  if (t.includes('forex')) return 'trade-ideas-setup'
+  // "MTM Scanner" dedicado.
+  if (t.includes('mtm scanner') || t.includes('scanner mtm')) return 'sinais-scanner-mtm'
+  if (t.includes('setup') || t.includes('ideias')) return 'trade-ideas-setup'
+  // "scanner" genérico remanescente → trade-ideas-setup (Forex/setup).
+  if (t.includes('scanner') || t.includes('sinais')) return 'trade-ideas-setup'
   return null
 }
 

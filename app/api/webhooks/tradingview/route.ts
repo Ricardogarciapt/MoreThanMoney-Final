@@ -455,6 +455,11 @@ export async function POST(request: NextRequest) {
     route.telegram = resolvedGoldkillerScannerChatId()
     route.sender = "🥇 GoldKiller Scanner"
     route.autoCopy = true
+  } else if (scannerKey === "mtmscanner") {
+    // MTM Scanner (Forex) → chat dedicado "Sinais Scanner MTM"; Telegram mantém-se no
+    // canal Forex (resolveRoute), como pedido. Execução continua pela rota Trade Ideas (5IHE).
+    route.channel = "sinais-scanner-mtm"
+    route.sender = "📊 MTM Scanner"
   }
 
   // Perpétuos cripto: só 1H vai para o chat/canal (SL curtos noutros TF → overtrading).

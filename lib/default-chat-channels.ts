@@ -112,7 +112,7 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
   },
   {
     slug: 'sensei-scanner',
-    name: 'Ideias de Sinais Ouro e BTC',
+    name: 'Sinais Scanner Sensei',
     description: 'Sinais automáticos Ouro/BTC do scanner Sensei (TradingView + validação IA)',
     parent_slug: 'sinais',
     position: 14,
@@ -126,10 +126,17 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
   },
   {
     slug: 'sinais-goldkiller',
-    name: 'Sinais Scanner Goldkiller',
+    name: 'Sinais Scanner Gold Killer',
     description: 'Sinais automáticos do scanner GoldKiller (XAUUSD) — tap-to-trade',
     parent_slug: 'sinais',
     position: 16,
+  },
+  {
+    slug: 'sinais-scanner-mtm',
+    name: 'Sinais Scanner MTM',
+    description: 'Sinais do MTM Scanner (Forex) — tap-to-trade / MTM Auto Trade Ideas',
+    parent_slug: 'sinais',
+    position: 17,
   },
 ]
 
