@@ -1,6 +1,8 @@
 import { chatIdsMatch } from './channels'
 import {
+  channelKeyFromTitle,
   resolvedForexIdeasChatId,
+  resolvedGoldkillerScannerChatId,
   resolvedPremiumSignalsChatId,
   resolvedTradeIdeasChatId,
 } from '@/lib/telegram-channel-ids'
@@ -8,20 +10,33 @@ import {
 export type MtmcopyChannelKey = 'trade-ideas' | 'premium-signals' | 'unknown'
 
 /** Identifica o canal MTM oficial a partir do update Telegram. */
-export function resolveChannelFromChat(chat: { id?: number; username?: string }): MtmcopyChannelKey {
+export function resolveChannelFromChat(chat: {
+  id?: number
+  username?: string
+  title?: string
+}): MtmcopyChannelKey {
   const premium = resolvedPremiumSignalsChatId()
   const trade = resolvedTradeIdeasChatId()
   const forex = resolvedForexIdeasChatId()
+  const goldkiller = resolvedGoldkillerScannerChatId()
 
   if (chat.id != null) {
     if (chatIdsMatch(String(chat.id), premium)) return 'premium-signals'
     if (chatIdsMatch(String(chat.id), trade)) return 'trade-ideas'
     // Canal Forex dedicado → mesma estratégia trade-ideas (MTM Auto Forex).
     if (chatIdsMatch(String(chat.id), forex)) return 'trade-ideas'
+    // Canal GoldKiller dedicado → trade-ideas (rota MTM Auto GoldKiller por conteúdo).
+    if (chatIdsMatch(String(chat.id), goldkiller)) return 'trade-ideas'
   }
 
   const user = chat.username?.toLowerCase().replace(/^@/, '')
   if (user === 'mtmgold') return 'premium-signals'
+
+  // Fallback por TÍTULO — durável quando o id muda (Basic→Supergroup) ou em canais
+  // dedicados novos. Consistente com a allowlist (getEffectiveSignalChatIds), que já
+  // resolve os chats descobertos pelo mesmo título.
+  const fromTitle = channelKeyFromTitle(chat.title)
+  if (fromTitle) return fromTitle
 
   return 'unknown'
 }

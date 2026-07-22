@@ -33,6 +33,18 @@ export const CANONICAL_TELEGRAM_CHANNELS = {
     appSlug: 'trade-ideas-setup' as const,
     envVars: ['TELEGRAM_CHANNEL_FOREX_IDEAS', 'TELEGRAM_FOREX_IDEAS_CHAT_ID'],
   },
+  // Canal Telegram dedicado do scanner GoldKiller ("More Than Money - Goldkiller Scanner").
+  // Roteia para a MESMA chave trade-ideas; a rota MTM Auto GoldKiller é escolhida por
+  // CONTEÚDO (scannerKey goldkiller) dentro de trade-ideas.
+  // ⚠️ id de Basic Group; muda se promovido a supergroup (bot admin costuma converter) →
+  //    o match por TÍTULO (channelKeyFromTitle) é o mecanismo durável; o id é best-effort.
+  goldkillerScanner: {
+    chatId: '-5454326270',
+    title: 'More Than Money - Goldkiller Scanner',
+    mtmcopyKey: 'trade-ideas' as const,
+    appSlug: 'trade-ideas-setup' as const,
+    envVars: ['TELEGRAM_CHANNEL_GOLDKILLER', 'TELEGRAM_GOLDKILLER_CHAT_ID'],
+  },
 }
 
 /** Normaliza ID de env (corrige -3716578747 → -1003716578747, remove \\n). */
@@ -85,6 +97,42 @@ export function resolvedForexIdeasChatId(): string {
     normalizeEnvChatId(readEnv(CANONICAL_TELEGRAM_CHANNELS.forexIdeas.envVars)) ??
     CANONICAL_TELEGRAM_CHANNELS.forexIdeas.chatId
   )
+}
+
+/** Canal GoldKiller dedicado — roteia para a chave trade-ideas (rota por conteúdo). */
+export function resolvedGoldkillerScannerChatId(): string {
+  return (
+    normalizeEnvChatId(readEnv(CANONICAL_TELEGRAM_CHANNELS.goldkillerScanner.envVars)) ??
+    CANONICAL_TELEGRAM_CHANNELS.goldkillerScanner.chatId
+  )
+}
+
+/**
+ * Resolve a chave de canal MTM a partir do TÍTULO do grupo Telegram (mecanismo
+ * durável, sobrevive a mudanças de id em promoção Basic→Supergroup). Fonte única
+ * de verdade partilhada pelo gate de execução (channel-context) e pela allowlist
+ * (signal-sources-config). Retorna null se o título não corresponder a nenhum canal.
+ */
+export function channelKeyFromTitle(
+  title: string | null | undefined,
+): 'trade-ideas' | 'premium-signals' | null {
+  if (!title) return null
+  const t = title.toLowerCase()
+  if (t.includes('premium') || t.includes('mtmgold')) return 'premium-signals'
+  if (
+    t.includes('goldkiller') ||
+    t.includes('gold killer') ||
+    t.includes('scanner') ||
+    t.includes('sensei') ||
+    t.includes('trade') ||
+    t.includes('forex') ||
+    t.includes('ideias') ||
+    t.includes('setup') ||
+    t.includes('sinais')
+  ) {
+    return 'trade-ideas'
+  }
+  return null
 }
 
 /** Todas as variantes de ID para matching robusto. */

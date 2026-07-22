@@ -2,6 +2,9 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
   allChatIdVariants,
   CANONICAL_TELEGRAM_CHANNELS,
+  channelKeyFromTitle,
+  resolvedForexIdeasChatId,
+  resolvedGoldkillerScannerChatId,
   resolvedPremiumSignalsChatId,
   resolvedTradeIdeasChatId,
 } from '@/lib/telegram-channel-ids'
@@ -257,22 +260,9 @@ function legacyEnvChatId(key: MtmcopyTelegramChannelKey): string {
   return key === 'trade-ideas' ? resolvedTradeIdeasChatId() : resolvedPremiumSignalsChatId()
 }
 
+// Fonte única de verdade: mesmo resolver por título usado pelo gate de execução.
 function discoveredChannelKey(title: string | null | undefined): MtmcopyTelegramChannelKey | null {
-  if (!title) return null
-  const t = title.toLowerCase()
-  if (t.includes('premium')) return 'premium-signals'
-  if (
-    t.includes('trade') ||
-    t.includes('forex') ||
-    t.includes('ideias') ||
-    t.includes('setup') ||
-    t.includes('sinais') ||
-    t.includes('sensei') ||
-    t.includes('scanner')
-  ) {
-    return 'trade-ideas'
-  }
-  return null
+  return channelKeyFromTitle(title)
 }
 
 export async function getEffectiveSignalChatIds(): Promise<Set<string>> {
@@ -281,6 +271,12 @@ export async function getEffectiveSignalChatIds(): Promise<Set<string>> {
 
   for (const key of config.enabled_channels) {
     rawIds.push(legacyEnvChatId(key))
+    // trade-ideas engloba os canais dedicados Forex + GoldKiller (mesma chave).
+    // Incluí-los na allowlist evita depender da corrida da descoberta no 1º sinal.
+    if (key === 'trade-ideas') {
+      rawIds.push(resolvedForexIdeasChatId())
+      rawIds.push(resolvedGoldkillerScannerChatId())
+    }
   }
   config.enabled_chat_ids.forEach((id) => rawIds.push(id))
 
