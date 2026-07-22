@@ -170,14 +170,17 @@ export default function RegisterPage() {
 
     // Trial de 3 dias COM cartão (Stripe): recolhe o método de pagamento, 3 dias sem
     // cobrança, e ao fim cobra o 1º mês a 34,99€ (intro). Cancela quando quiser.
-    const isTrialFlow = mode === 'trial'
+    // Um cupão (ex.: broker MTM-BROKER-*) sobrepõe-se ao trial-intro de 3 dias:
+    // aplica o cupão (acesso Premium grátis) em vez de recolher cartão.
+    const hasCoupon = formData.couponCode.trim().length > 0
+    const isTrialFlow = mode === 'trial' && !hasCoupon
 
     try {
       // ── FLUXO: Pagamento/registo Stripe PRIMEIRO, conta criada DEPOIS ──────────
       const regToken = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
-      // No trial é sempre Premium mensal (3 dias grátis + intro 34,99€ no 1º mês).
-      const planId = isTrialFlow ? 'premium_monthly' : `${selectedPlan}_${billingCycle}`
+      // Em modo trial é sempre Premium mensal (trial-intro OU cupão de acesso Premium).
+      const planId = mode === 'trial' ? 'premium_monthly' : `${selectedPlan}_${billingCycle}`
 
       localStorage.setItem(`mtm_pending_reg_${regToken}`, JSON.stringify({
         email: formData.email,
@@ -187,8 +190,8 @@ export default function RegisterPage() {
         phone: formData.phone || '',
         whatsapp: formData.whatsapp || '',
         sponsor_username: formData.sponsorUsername || '',
-        coupon_code: isTrialFlow ? '' : (formData.couponCode || ''),
-        plan: isTrialFlow ? 'premium' : selectedPlan,
+        coupon_code: formData.couponCode.trim().toUpperCase(),
+        plan: mode === 'trial' ? 'premium' : selectedPlan,
         billing: 'monthly',
         created_at: Date.now(),
       }))
@@ -206,7 +209,7 @@ export default function RegisterPage() {
           sponsorUsername: formData.sponsorUsername || '',
           country: formData.country || null,
           preferred_language: uiLang,
-          couponCode: isTrialFlow ? '' : (formData.couponCode || ''),
+          couponCode: formData.couponCode.trim().toUpperCase(),
           trial: isTrialFlow,
         }),
       })
@@ -538,7 +541,6 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              {mode === 'paid' && (
               <div>
                 <Label htmlFor="couponCode" className="text-gray-300">
                   {t('register.labelCoupon')} <span className="text-gray-500 font-normal">{t('register.optional')}</span>
@@ -570,7 +572,6 @@ export default function RegisterPage() {
                   </div>
                 )}
               </div>
-              )}
 
               <div>
                 <Label htmlFor="password" className="text-gray-300">{t('register.labelPassword')}</Label>
