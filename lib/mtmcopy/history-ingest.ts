@@ -246,6 +246,9 @@ export async function ingestClosedTradesForAllConnections(): Promise<{
   const runPass = async (): Promise<number> => {
     let n = 0
     for (const c of conns ?? []) {
+      // Booster 20x (capital bónus): histórico excluído das métricas de utilizador —
+      // percentagens desta conta ficam a zero no sistema (pedido do Ricardo, 2026-07-22).
+      if ((c as IngestConn).metaapi_account_id === CANONICAL_BOOSTER_ACCOUNT_ID) continue
       try {
         n += (await ingestClosedTradesForConnection(c as IngestConn)).ingested
       } catch (e) {

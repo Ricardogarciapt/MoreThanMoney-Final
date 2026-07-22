@@ -179,7 +179,15 @@ export async function getProviderStrategyMetrics(): Promise<ProviderPerformanceP
         base.wonTrades = num(m.wonTrades)
         base.lostTrades = num(m.lostTrades)
         base.winRatePct = num(m.wonTradesPercent)
-      } else {
+      }
+      if (def.key === 'booster') {
+        // Booster 20x: capital maioritariamente bónus → percentagens sem significado.
+        // Pedido do Ricardo (2026-07-22): mostrar 0 nas percentagens desta conta.
+        base.gainPct = 0
+        base.maxDrawdownPct = 0
+        base.winRatePct = 0
+      }
+      if (!m) {
         // Fallback leve: só saldo/equity via snapshot (uma tentativa).
         const snap = await getAccountSnapshot(def.accountId).catch(() => null)
         if (snap) {
