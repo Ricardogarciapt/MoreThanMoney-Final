@@ -324,9 +324,9 @@ const ALERT_DEFAULT_SYMBOLS = ["XAUUSD", "EURUSD", "GBPUSD", "USDCAD", "USDJPY",
  */
 async function pushSignalSubscribers(
   supabase: SupabaseClient,
-  opts: { ticker: string | null; timeframe: string | null; title: string; body: string; url: string; signalId?: string }
+  opts: { ticker: string | null; timeframe: string | null; title: string; body: string; url: string; signalId?: string; category?: string; messageId?: string | null }
 ): Promise<number> {
-  const { ticker, timeframe, title, body, url, signalId } = opts
+  const { ticker, timeframe, title, body, url, signalId, category, messageId } = opts
   if (!ticker) return 0
   const norm = ticker.toUpperCase().replace(/[^A-Z0-9]/g, "")
 
@@ -371,7 +371,14 @@ async function pushSignalSubscribers(
       title,
       body,
       url,
-      data: { type: "trade_alert", ticker, signal_id: signalId ?? "", url },
+      data: {
+        type: "trade_alert",
+        ticker,
+        signal_id: signalId ?? "",
+        url,
+        ...(messageId ? { message_id: messageId } : {}),
+        ...(category ? { category } : {}),
+      },
       tag: `mtm_alert_${norm}`,
     }),
   })
@@ -815,12 +822,16 @@ export async function POST(request: NextRequest) {
               ? "VENDA"
               : ""
     const sym = v.symbol ?? ticker ?? "Sinal"
-    const pushTitle = `🔔 Alerta MTM — ${sym}${dir ? " " + dir : ""}`
-    const pushBody = [alertName || route.sender || "Sinal", price != null ? `@ ${price}` : "", timeframe ? `· ${timeframe}` : ""]
+    // Nome do chat/scanner de origem (ex.: "🥇 GoldKiller Scanner", "🧠 Sensei Scanner").
+    const chatName = route.sender || alertName || "MTM"
+    const pushTitle = "💡 Nova Ideia"
+    const pushBody = [`Sinal · ${chatName}`, sym, dir, price != null ? `@ ${price}` : ""]
       .filter(Boolean)
-      .join(" ")
+      .join(" · ")
+    // Toque → chat específico do sinal (com âncora à mensagem p/ scroll/realce e ação T2T).
+    // O atalho directo p/ o menu T2T é wired quando o âmbito dos canais T2T estiver fixado.
     const pushUrl = route.channel
-      ? `/app-mobile?tab=chat&channel=${encodeURIComponent(route.channel)}`
+      ? `/app-mobile?tab=chat&channel=${encodeURIComponent(route.channel)}${chatId ? `&msg=${encodeURIComponent(chatId)}` : ""}`
       : "/app-mobile?tab=trading-alerts"
     try {
       const n = await pushSignalSubscribers(supabase, {
@@ -830,6 +841,7 @@ export async function POST(request: NextRequest) {
         body: pushBody,
         url: pushUrl,
         signalId: logId,
+        messageId: chatId,
       })
       pushOk = n > 0
     } catch (e) {
