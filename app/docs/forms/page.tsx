@@ -56,7 +56,7 @@ export default function FormsHubPage() {
           </h1>
           <p className="text-lg text-gray-300 mb-2">Inspire. Educate. Transform.</p>
           <p className="text-sm text-gray-500">
-            Escolhe a vaga e candidata-te — um formulário por tema. / Choose your role and apply below.
+            Choose your role and apply below — one application form per position.
           </p>
 
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -81,7 +81,7 @@ export default function FormsHubPage() {
           </div>
         ) : forms.length === 0 ? (
           <p className="text-center text-gray-500 py-20">
-            Não há formulários disponíveis de momento. / No forms available right now.
+            No application forms available right now.
           </p>
         ) : (
           <div className="space-y-4">

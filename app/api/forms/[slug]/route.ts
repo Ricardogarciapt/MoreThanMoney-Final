@@ -39,7 +39,7 @@ export async function GET(
   try {
     const slug = params.slug
     if (!SLUG_RE.test(slug)) {
-      return NextResponse.json({ error: 'Formulário não encontrado' }, { status: 404 })
+      return NextResponse.json({ error: 'Form not found' }, { status: 404 })
     }
     const supabase = getSupabaseAdmin()
     const { data, error } = await supabase
@@ -52,7 +52,7 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
     if (!data) {
-      return NextResponse.json({ error: 'Formulário não encontrado' }, { status: 404 })
+      return NextResponse.json({ error: 'Form not found' }, { status: 404 })
     }
     return NextResponse.json({ form: data })
   } catch (e: any) {
@@ -68,13 +68,13 @@ export async function POST(
   try {
     const slug = params.slug
     if (!SLUG_RE.test(slug)) {
-      return NextResponse.json({ error: 'Formulário não encontrado' }, { status: 404 })
+      return NextResponse.json({ error: 'Form not found' }, { status: 404 })
     }
 
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
     const rate = checkRateLimit(`form-submit:${ip}`, 8, 60_000)
     if (!rate.allowed) {
-      return NextResponse.json({ error: 'Demasiadas tentativas — tenta daqui a 1 minuto. / Too many attempts.' }, { status: 429 })
+      return NextResponse.json({ error: 'Too many attempts — please try again in a minute.' }, { status: 429 })
     }
 
     const supabase = getSupabaseAdmin()
@@ -88,7 +88,7 @@ export async function POST(
       return NextResponse.json({ error: formError.message }, { status: 500 })
     }
     if (!form) {
-      return NextResponse.json({ error: 'Formulário não encontrado' }, { status: 404 })
+      return NextResponse.json({ error: 'Form not found' }, { status: 404 })
     }
 
     const body = await request.json().catch(() => ({}))

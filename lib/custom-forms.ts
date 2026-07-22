@@ -98,7 +98,7 @@ export function validateSubmission(fields: CustomFormField[], data: unknown): Su
       // chips só aceitam valores da lista de opções
       const valid = arr.filter((v) => field.options?.includes(v))
       if (field.required && !valid.length) {
-        return { ok: false, error: `Preenche: ${field.label} / Please fill in: ${field.label}`, clean, email }
+        return { ok: false, error: `Please fill in: ${field.label}`, clean, email }
       }
       if (valid.length) clean[field.name] = valid
       continue
@@ -107,7 +107,7 @@ export function validateSubmission(fields: CustomFormField[], data: unknown): Su
     if (field.type === 'checkbox') {
       const checked = raw === true
       if (field.required && !checked) {
-        return { ok: false, error: 'É necessário aceitar o tratamento de dados (RGPD). / Consent is required.', clean, email }
+        return { ok: false, error: 'Data-processing consent (GDPR) is required.', clean, email }
       }
       clean[field.name] = checked
       continue
@@ -115,14 +115,14 @@ export function validateSubmission(fields: CustomFormField[], data: unknown): Su
 
     const value = str(raw, cap)
     if (field.type === 'select' && value && !field.options?.includes(value)) {
-      return { ok: false, error: `Opção inválida em: ${field.label} / Invalid option in: ${field.label}`, clean, email }
+      return { ok: false, error: `Invalid option in: ${field.label}`, clean, email }
     }
     if (field.required && !value) {
-      return { ok: false, error: `Preenche: ${field.label} / Please fill in: ${field.label}`, clean, email }
+      return { ok: false, error: `Please fill in: ${field.label}`, clean, email }
     }
     if (field.type === 'email' && value) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-        return { ok: false, error: 'Email inválido. / Invalid email.', clean, email }
+        return { ok: false, error: 'Invalid email address.', clean, email }
       }
       if (!email) email = value.toLowerCase()
     }

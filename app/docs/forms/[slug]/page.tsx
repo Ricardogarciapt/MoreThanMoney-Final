@@ -72,12 +72,12 @@ export default function DynamicFormPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(data?.error || "Something went wrong. Please try again. / Algo correu mal, tenta novamente.")
+        setError(data?.error || "Something went wrong. Please try again.")
         return
       }
       setSubmitted(true)
     } catch {
-      setError("Network error. Please try again. / Erro de rede, tenta novamente.")
+      setError("Network error. Please try again.")
     } finally {
       setSubmitting(false)
     }
@@ -94,9 +94,9 @@ export default function DynamicFormPage() {
   if (notFound || !form) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center px-4 text-center">
-        <p className="text-gray-400 mb-6">Formulário não encontrado. / Form not found.</p>
+        <p className="text-gray-400 mb-6">Form not found.</p>
         <Link href="/docs/forms" className="text-gold-500 hover:text-gold-400 text-sm inline-flex items-center gap-2">
-          <ArrowLeft className="w-4 h-4" /> Ver formulários disponíveis
+          <ArrowLeft className="w-4 h-4" /> See available forms
         </Link>
       </div>
     )
@@ -108,11 +108,8 @@ export default function DynamicFormPage() {
         <div className="max-w-lg w-full text-center rounded-2xl border border-gold-500/30 bg-gradient-to-b from-gold-500/10 to-transparent p-10">
           <CheckCircle2 className="w-14 h-14 text-gold-500 mx-auto mb-6" />
           <h1 className="text-2xl font-bold text-white mb-3">Application received!</h1>
-          <p className="text-gray-300 mb-2">
+          <p className="text-gray-300 mb-8">
             Thank you for applying. Our team will review your application and contact you by email or WhatsApp.
-          </p>
-          <p className="text-sm text-gray-500 mb-8">
-            Candidatura recebida — a nossa equipa vai analisá-la e entrar em contacto contigo.
           </p>
           <Link
             href="/"
