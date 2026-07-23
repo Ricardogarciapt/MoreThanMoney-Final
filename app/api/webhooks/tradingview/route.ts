@@ -454,7 +454,10 @@ export async function POST(request: NextRequest) {
         : /sensei/.test(stratText)
           ? "sensei"
           : null
-  if (scannerKey === "mtmperps") {
+  // Endpoint dedicado /api/webhooks/tradingview-perps reencaminha para aqui com este
+  // header → força o modo perps independentemente do nome do alerta (fonte = a lista).
+  const forcedPerps = request.headers.get("x-mtm-perps") === "1"
+  if (scannerKey === "mtmperps" || forcedPerps) {
     // Lista única de perps → sempre canal "Ideias de Perpétuos Cripto", em PAPEL.
     // Execução real (Bybit, motor de cópia próprio) fica para a Fase 2, atrás de flag.
     assetClass = "crypto_perp"
