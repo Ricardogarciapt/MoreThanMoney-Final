@@ -67,7 +67,7 @@ const SCANNERS: ScannerData[] = [
     key: "aurumflow",
     name: "MTM Aurum Flow",
     subtitle: "Perpétuos Cripto · Tendência",
-    image: "/scanner-preview.png",
+    image: "/aurum-flow-preview.png",
     badge: "Novo",
     description:
       "O scanner de perpétuos cripto da MTM (otimizado para 1H). Só opera a favor da tendência (stack DEMA) com confirmação de momentum e entrega um plano completo e estático por sinal — entrada, stop e 3 alvos — com distâncias em % e cálculo de alavancagem e custo para o tamanho da tua conta.",
