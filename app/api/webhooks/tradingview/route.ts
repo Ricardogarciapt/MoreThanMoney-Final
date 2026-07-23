@@ -754,7 +754,8 @@ export async function POST(request: NextRequest) {
   // Gate de RUÍDO: entradas de baixa qualidade (poucas confirmações / símbolo-ruído) não
   // vão para chat/Telegram/push. Follow-ups (TP/BE/SL) e GoldKiller passam sempre.
   const alertOk =
-    isFollowup || isGoldKiller || passesAlertGate(signalRules, execSymbolForGate, execConfCount, scannerKey, assetClass)
+    isFollowup || isGoldKiller || forcedPerps || scannerKey === "mtmperps" ||
+    passesAlertGate(signalRules, execSymbolForGate, execConfCount, scannerKey, assetClass)
   let linkedIdea: SenseiTradeIdea | null = null
   if (isFollowup && activeSensei?.symbol) {
     linkedIdea = await findActiveSenseiIdeaForFollowup(
