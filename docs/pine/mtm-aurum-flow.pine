@@ -1,0 +1,315 @@
+// Este software e código faz parte integrante da propriedade intelectual de RicardoGarciaPT e sua Empresa MoreThanMoney
+// MoreThanMoney - Aurum Flow — variante do MTM Scanner afinada para PERPÉTUOS CRIPTO (timeframe 1H).
+// Alterações-chave vs Scanner V3.5:
+//  1) Filtro de tendência OBRIGATÓRIO pela stack DEMA (só compra em tendência de alta, só vende em baixa)
+//  2) Confirmação por RSI
+//  3) Defaults ATR/RR do backtest (SL 1.5×ATR · TP1 1.5R · TP2 3R · TP3 6R)
+//  4) Alertas apontam para o webhook DEDICADO dos perps (/api/webhooks/tradingview-perps)
+
+//@version=5
+indicator("MoreThanMoney - Aurum Flow", overlay=true)
+
+// Função para calcular a Média Móvel Exponencial Dupla (DEMA)
+dema(src, length) =>
+    ema1 = ta.ema(src, length)
+    ema2 = ta.ema(ema1, length)
+    2 * ema1 - ema2
+
+// Definições para o indicador de Média Móvel DEMA
+lengthDEMA15 = 15
+lengthDEMA50 = 50
+lengthDEMA238 = 238
+
+dema15 = dema(close, lengthDEMA15)
+dema50 = dema(close, lengthDEMA50)
+dema238 = dema(close, lengthDEMA238)
+
+plot(dema15, color=color.blue, title="DEMA 15")
+plot(dema50, color=color.green, title="DEMA 50")
+plot(dema238, color=#ffce2b, title="DEMA 238")
+
+// Definições para o indicador de Bollinger Bands
+lengthBB = input.int(20, "Período das Bandas de Bollinger")
+srcBB = input.source(close, "Fonte para Bandas de Bollinger")
+multBB = input.float(2.0, "Multiplicador das Bandas de Bollinger")
+
+// Definições para o indicador de POC
+lengthPOC = input.int(14, "Período do POC")
+var float highestVolPrice = na
+var float highestVol = 0.0
+
+// Reset das variáveis para POC
+if (bar_index % lengthPOC == 0)
+    highestVol := 0.0
+    highestVolPrice := na
+
+for i = 0 to lengthPOC - 1
+    if volume[i] > highestVol
+        highestVol := volume[i]
+        highestVolPrice := close[i]
+
+// Plotando o POC
+plot(highestVolPrice, color=color.orange, linewidth=1, title="Linha do POC")
+
+// ===================== AURUM FLOW — filtros para perpétuos cripto =====================
+afGroup = "==== AURUM FLOW (Perps) ===="
+useTrendFilter = input.bool(true, "Só operar a favor da tendência (stack DEMA)", group=afGroup, tooltip="COMPRA só em tendência de alta (DEMA15>DEMA50>DEMA238); VENDA só em baixa. Recomendado para perps.")
+useRSIFilter   = input.bool(true, "Confirmar com RSI", group=afGroup)
+rsiLen         = input.int(14, "Período RSI", minval=2, group=afGroup)
+rsiBuyMin      = input.float(50, "RSI mínimo p/ COMPRA", group=afGroup)
+rsiSellMax     = input.float(50, "RSI máximo p/ VENDA", group=afGroup)
+
+rsiVal   = ta.rsi(close, rsiLen)
+uptrend  = dema15 > dema50 and dema50 > dema238
+downtrend = dema15 < dema50 and dema50 < dema238
+
+// Cores dos sinais de compra e venda
+buySignalColor = color.green
+sellSignalColor = color.red
+
+// Lógica de sinais — cruzamento do POC, agora FILTRADO por tendência + RSI (Aurum Flow)
+rawBuy  = ta.crossover(close, highestVolPrice)
+rawSell = ta.crossunder(close, highestVolPrice)
+buyOk   = (not useTrendFilter or uptrend) and (not useRSIFilter or rsiVal >= rsiBuyMin)
+sellOk  = (not useTrendFilter or downtrend) and (not useRSIFilter or rsiVal <= rsiSellMax)
+isBuySignal  = rawBuy and buyOk
+isSellSignal = rawSell and sellOk
+
+plotshape(isBuySignal, style=shape.labelup, location=location.belowbar, color=buySignalColor, text="B", size=size.tiny, title="Sinal de Compra")
+plotshape(isSellSignal, style=shape.labeldown, location=location.abovebar, color=sellSignalColor, text="S", size=size.tiny, title="Sinal de Venda")
+
+// Fases do Momentum
+bGR = 'Fase de Momentum'
+bTP = 'A fase de momentum fornece uma indicação do momentum inicial da tendência e identifica um ponto provável de topo ou fundo em mercados laterais.\n\n' +
+      'Completo - exibe apenas as fases de momentum concluídas\n' +
+      'Detalhado - exibe todo o processo de contagem das fases de momentum\n' +
+      'Nenhum - desativa a exibição das fases de momentum'
+
+bSh = input.string('Nenhum', 'Exibir Fases', options=['Completo', 'Detalhado', 'Nenhum'], group=bGR, tooltip=bTP)
+
+eGR = 'Fase de Exaustão da Tendência'
+eTP = 'A fase de exaustão da tendência visa identificar quando a tendência está enfraquecendo/exaurindo e possivelmente começando a reverter. A fase de exaustão da tendência começa apenas se uma fase de momentum já estiver estabelecida.\n\n' +
+      'Completo - exibe apenas as fases de exaustão da tendência concluídas\n' +
+      'Detalhado - exibe todo o processo de contagem das fases de exaustão da tendência\n' +
+      'Nenhum - desativa a exibição das fases de exaustão da tendência'
+
+eSh = input.string('Nenhum', 'Exibir Fases', options=['Completo', 'Detalhado', 'Nenhum'], group=eGR, tooltip=eTP)
+
+tGR = 'Configurações de Trade'
+tso = input.string('Momentum', 'Opções Específicas de Configuração de Trade', options=['Momentum', 'Exaustão', 'Qualificado', 'Nenhum'], group=tGR)
+war = input.bool(true, 'Reversões de Preço contra as Configurações de Trade Específicas da Fase', group=tGR)
+
+var bool BnoShw = false
+Bcmpltd = bSh == 'Completo'
+BnoShw := bSh == 'Nenhum' ? false : true
+
+var bool noShw = false
+cmpltd = eSh == 'Completo'
+noShw := eSh == 'Nenhum' ? false : true
+
+type bar
+    float o = open
+    float h = high
+    float l = low
+    float c = close
+    int i = bar_index
+
+type trb
+    int bSC
+    float bSH
+    float bSL
+    int sSC
+    float sSH
+    float sSL
+
+bar b = bar.new()
+var trb S = trb.new()
+
+gnC = #089981
+rdC = #f23645
+shpD = shape.labeldown
+locA = location.abovebar
+dspN = false
+
+con = b.c < b.c[4]
+
+if con
+    S.bSC := S.bSC == 9 ? 1 : S.bSC + 1
+    S.sSC := 0
+else
+    S.sSC := S.sSC == 9 ? 1 : S.sSC + 1
+    S.bSC := 0
+
+// Saída de valores dos indicadores para Possivel reversão
+plotshape(S.bSC, "Possivel Reversão Compra", style=shape.circle, location=location.belowbar, color=color.green, size=size.tiny, title="Reversão Possivel Compra")
+plotshape(S.sSC, "Possivel Reversão Venda", style=shape.circle, location=location.abovebar, color=color.red, size=size.tiny, title="Reversão Possivel Venda")
+
+// ===================== CONFIGURAÇÃO ATR (defaults do backtest) =====================
+atrGroup = "==== CONFIGURAÇÃO ATR ===="
+useATR = input.bool(true, "Usar ATR para Risk-Reward", group=atrGroup)
+atrPeriod = input.int(14, "Período do ATR", minval=1, group=atrGroup)
+atrMultiplierSL = input.float(1.5, "Multiplicador ATR para Stop Loss", step=0.1, group=atrGroup)
+
+atrValue = ta.atr(atrPeriod)
+
+// RR do backtest: TP1 1.5R (parcial+BE), TP2 3R (runner), TP3 6R (stretch)
+tp1RR = input.float(1.5, "TP1 Ratio (1:X)", minval=0.1, step=0.1, group=atrGroup)
+tp2RR = input.float(3.0, "TP2 Ratio (1:X)", minval=0.1, step=0.1, group=atrGroup)
+tp3RR = input.float(6.0, "TP3 Ratio (1:X)", minval=0.1, step=0.1, group=atrGroup)
+
+showTP1 = input.bool(true, "Exibir TP1", group=atrGroup)
+showTP2 = input.bool(true, "Exibir TP2", group=atrGroup)
+showTP3 = input.bool(true, "Exibir TP3", group=atrGroup)
+
+// ------------------------ Definições de entrada/saída ----------------------
+entry_source    = input.source(title="Fonte das Entradas", defval=close, group="===== DEFINIÇÕES =====")
+box_length      = input.int(title="Distância da posição Esquerda", defval=4, minval=1, group="===== DEFINIÇÕES =====")
+box_length2     = input.int(title="Distância da posição Direita", defval=1, minval=1, group="===== DEFINIÇÕES =====")
+use_cstm_entry  = input.bool(title="Usa entrada customizada?", defval=false, group="===== DEFINIÇÕES =====")
+custom_entry    = input.price(title="Preço de Entrada: ", confirm=false, defval=0.0, group="===== DEFINIÇÕES =====")
+
+use_TPs         = input.bool(title="Usa niveis de TP (modo %)?", defval=false, group="=== TAKEPROFIT (modo %) ===")
+slx             = input.float(title="Percentagem para SL", defval=0.3, step=0.1, group="=== TAKEPROFIT (modo %) ===")
+tp1x            = input.float(title="Percentagem para TP1", defval=0.4, step=0.1, group="=== TAKEPROFIT (modo %) ===")
+tp2x            = input.float(title="Percentagem para TP2", defval=0.8, step=0.1, group="=== TAKEPROFIT (modo %) ===")
+tp3x            = input.float(title="Percentagem para TP3", defval=1.2, step=0.1, group="=== TAKEPROFIT (modo %) ===")
+
+long_alert      = input.bool(title="Permite Alertas de COMPRA", defval=true, group="====== ALERTAS ======")
+short_alert     = input.bool(title="Permite Alertas de VENDA", defval=true, group="====== ALERTAS ======")
+order_type      = input.string(title="Alerta para ordens", options=["LIMIT", "MARKET"], defval="MARKET", group="====== ALERTAS ======")
+alertsOn        = input.bool(title="Emitir alertas para o site MTM", defval=true, group="====== ALERTAS ======", tooltip="Cria 1 alerta com condição 'Any alert() function call' e cola o URL do webhook dedicado dos perps")
+
+// Atribuir dinamicamente a posição com base nos sinais
+var string position = na
+if (isBuySignal)
+    position := "BUY"
+else if (isSellSignal)
+    position := "SELL"
+
+// ———————   Lógica para entrada, TP, SL com base na posição e ATR  ———————
+round_price(x) =>
+    xx = int(x / syminfo.mintick)
+    xx * syminfo.mintick
+
+Price_in = use_cstm_entry ? custom_entry : entry_source
+
+var float tp1 = na
+var float tp2 = na
+var float tp3 = na
+var float sl = na
+var float entry1 = na
+var int et  = 0
+
+line l11 = na
+line l2  = na
+line l3  = na
+line l4  = na
+line l5  = na
+label lb11 = na
+label lb2  = na
+label lb3  = na
+label lb4  = na
+label lb5  = na
+
+dt = time - time[box_length]
+
+if position == "BUY" or position == "SELL"
+    entry1 := round_price(Price_in)
+    et := time[box_length2]
+    if useATR
+        sl_distance = atrValue * atrMultiplierSL
+        if position == "BUY"
+            sl := round_price(entry1 - sl_distance)
+            tp1 := round_price(entry1 + (sl_distance * tp1RR))
+            tp2 := round_price(entry1 + (sl_distance * tp2RR))
+            tp3 := round_price(entry1 + (sl_distance * tp3RR))
+        else
+            sl := round_price(entry1 + sl_distance)
+            tp1 := round_price(entry1 - (sl_distance * tp1RR))
+            tp2 := round_price(entry1 - (sl_distance * tp2RR))
+            tp3 := round_price(entry1 - (sl_distance * tp3RR))
+    else if use_TPs
+        if position == "BUY"
+            tp1 := round_price(entry1 * (1 + (tp1x / 100)))
+            tp2 := round_price(entry1 * (1 + (tp2x / 100)))
+            tp3 := round_price(entry1 * (1 + (tp3x / 100)))
+            sl := round_price(entry1 * (1 - (slx / 100)))
+        else
+            tp1 := round_price(entry1 * (1 - (tp1x / 100)))
+            tp2 := round_price(entry1 * (1 - (tp2x / 100)))
+            tp3 := round_price(entry1 * (1 - (tp3x / 100)))
+            sl := round_price(entry1 * (1 + (slx / 100)))
+
+var linefill linefill3 = na
+var linefill linefill4 = na
+var linefill linefill5 = na
+var linefill linefill6 = na
+
+if barstate.islast
+    linefill.delete(linefill3)
+    linefill.delete(linefill4)
+    linefill.delete(linefill5)
+    linefill.delete(linefill6)
+
+    l11 := line.new(et, entry1, time + dt * 2, entry1, color=color.purple, style=line.style_solid, xloc=xloc.bar_time)
+    l2 := line.new(et, sl, time + dt * 2, sl, color=color.red, style=line.style_solid, xloc=xloc.bar_time)
+    lb11 := label.new(time + dt * 4, entry1, text="Entry:" + str.tostring(entry1), color=color.blue, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, textalign=text.align_left, size=size.normal)
+    lb2 := label.new(time + dt * 4, sl, text="Stop:" + str.tostring(sl), color=color.red, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, textalign=text.align_left, size=size.normal)
+
+    if showTP1
+        l3 := line.new(et, tp1, time + dt * 2, tp1, color=color.green, style=line.style_solid, xloc=xloc.bar_time)
+        lb3 := label.new(time + dt * 4, tp1, text="TP1 (1:" + str.tostring(tp1RR) + "):" + str.tostring(tp1), color=color.green, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, textalign=text.align_left, size=size.normal)
+        linefill3 := linefill.new(l11, l3, color=color.new(color.green, 85))
+    if showTP2
+        l4 := line.new(et, tp2, time + dt * 2, tp2, color=color.green, style=line.style_solid, xloc=xloc.bar_time)
+        lb4 := label.new(time + dt * 4, tp2, text="TP2 (1:" + str.tostring(tp2RR) + "):" + str.tostring(tp2), color=color.green, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, textalign=text.align_left, size=size.normal)
+        linefill5 := linefill.new(l11, l4, color=color.new(color.green, 90))
+    if showTP3
+        l5 := line.new(et, tp3, time + dt * 2, tp3, color=color.green, style=line.style_solid, xloc=xloc.bar_time)
+        lb5 := label.new(time + dt * 4, tp3, text="TP3 (1:" + str.tostring(tp3RR) + "):" + str.tostring(tp3), color=color.green, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, textalign=text.align_left, size=size.normal)
+        linefill6 := linefill.new(l11, l5, color=color.new(color.green, 95))
+
+    linefill4 := linefill.new(l2, l11, color=color.new(color.red, 85))
+
+    label.delete(lb11[1])
+    line.delete(l11[1])
+    line.delete(l2[1])
+    label.delete(lb2[1])
+    line.delete(l3[1])
+    label.delete(lb3[1])
+    line.delete(l4[1])
+    label.delete(lb4[1])
+    line.delete(l5[1])
+    label.delete(lb5[1])
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  AURUM FLOW — ALERTAS DINÂMICOS → webhook DEDICADO dos perpétuos cripto
+//  No TradingView: 1 alerta, condição "Any alert() function call", cola o URL:
+//  https://www.morethanmoney.pt/api/webhooks/tradingview-perps?secret=mtm-tv-sensei-2026
+//  (ou mete "secret" no próprio JSON). Usa no gráfico o timeframe 1H.
+// ═══════════════════════════════════════════════════════════════════════════
+sc_conf = '{"Tendencia Alta":' + (uptrend ? 'true' : 'false') + ',"Tendencia Baixa":' + (downtrend ? 'true' : 'false') + ',"RSI":' + str.tostring(math.round(rsiVal)) + ',"Acima POC":' + (close > highestVolPrice ? 'true' : 'false') + '}'
+
+f_json_af(_dir) =>
+    m = '{"strategy":"MTM Aurum Flow","alert_name":"MTM Perps Aurum Flow","ticker":"' + syminfo.ticker + '"'
+    m := m + ',"exchange":"' + syminfo.prefix + '"'
+    m := m + ',"timeframe":"' + timeframe.period + '"'
+    m := m + ',"action":"' + _dir + '"'
+    m := m + ',"order_type":"' + order_type + '"'
+    m := m + ',"entry":' + str.tostring(entry1)
+    m := m + ',"sl":' + str.tostring(sl)
+    m := m + ',"tp1":' + str.tostring(tp1)
+    m := m + ',"tp2":' + str.tostring(tp2)
+    m := m + ',"tp3":' + str.tostring(tp3)
+    m := m + ',"confirmations":' + sc_conf + '}'
+    m
+
+valid_af = not na(entry1) and not na(sl) and not na(tp1) and not na(tp2) and not na(tp3)
+
+if alertsOn and isBuySignal and long_alert and valid_af
+    alert(f_json_af("buy"), alert.freq_once_per_bar_close)
+if alertsOn and isSellSignal and short_alert and valid_af
+    alert(f_json_af("sell"), alert.freq_once_per_bar_close)
+
+alertcondition(isBuySignal and long_alert, "Aurum Flow COMPRA", "MTM Perps Aurum Flow BUY")
+alertcondition(isSellSignal and short_alert, "Aurum Flow VENDA", "MTM Perps Aurum Flow SELL")
