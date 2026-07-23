@@ -833,17 +833,23 @@ export async function POST(request: NextRequest) {
     const pushBody = [`Sinal · ${chatName}`, sym, dir, price != null ? `@ ${price}` : ""]
       .filter(Boolean)
       .join(" · ")
-    // Toque → chat específico do sinal (com âncora à mensagem p/ scroll/realce e ação T2T).
-    // O atalho directo p/ o menu T2T é wired quando o âmbito dos canais T2T estiver fixado.
-    const pushUrl = route.channel
-      ? `/app-mobile?tab=chat&channel=${encodeURIComponent(route.channel)}${chatId ? `&msg=${encodeURIComponent(chatId)}` : ""}`
-      : "/app-mobile?tab=trading-alerts"
+    // Âmbito T2T (decisão): MTM Scanner + GoldKiller + Forex (Premium vem por outro push).
+    // Sinal num canal T2T → o toque abre direto o T2T + menu de aceitação (?signal=<msgId>).
+    // Restantes → chat específico do sinal (com âncora à mensagem p/ scroll/realce).
+    const T2T_NOTIF_CHANNELS = new Set(["trade-ideas-setup", "sinais-scanner-mtm", "sinais-goldkiller"])
+    const isT2TNotif = Boolean(route.channel && chatId && T2T_NOTIF_CHANNELS.has(route.channel))
+    const pushUrl = isT2TNotif
+      ? `/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(chatId as string)}`
+      : route.channel
+        ? `/app-mobile?tab=chat&channel=${encodeURIComponent(route.channel)}${chatId ? `&msg=${encodeURIComponent(chatId)}` : ""}`
+        : "/app-mobile?tab=trading-alerts"
     try {
       const n = await pushSignalSubscribers(supabase, {
         ticker,
         timeframe,
         title: pushTitle,
         body: pushBody,
+        category: isT2TNotif ? "T2T_SIGNAL" : undefined,
         url: pushUrl,
         signalId: logId,
         messageId: chatId,

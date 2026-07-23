@@ -5,11 +5,17 @@ import { normalizeProviderRoutes } from './provider-routes'
 /** Mapeia o sender_channel da rota provider → canais de chat onde os sinais aparecem. */
 export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
   'premium-signals': ['premium-ideas'],
-  'trade-ideas': ['sensei-scanner', 'trade-ideas-setup', 'trade-ideas'],
+  // trade-ideas cobre Forex + MTM Scanner. Sensei fica FORA do T2T (decisão): o
+  // GoldKiller usa app_channel próprio ('sinais-goldkiller') na rota, não este mapa.
+  'trade-ideas': ['trade-ideas-setup', 'sinais-scanner-mtm'],
 }
 
-/** Canais de sinais "base" (canónicos). */
-export const T2T_SIGNAL_CHANNELS = ['sensei-scanner', 'trade-ideas', 'premium-ideas', 'trade-ideas-setup', 'sinais-goldkiller']
+/**
+ * Âmbito T2T decidido: MTM Scanner + GoldKiller + Forex + Premium (Sensei fora).
+ * Nota: a lista viva é calculada dinamicamente por tapToTradeEnabledChannels() a partir
+ * das rotas com tap_to_trade=true; esta constante é o espelho canónico/documental.
+ */
+export const T2T_SIGNAL_CHANNELS = ['trade-ideas-setup', 'sinais-scanner-mtm', 'sinais-goldkiller', 'premium-ideas']
 
 /** Slug do canal de chat DEDICADO de uma rota provider (estável, por id da rota). */
 export function deriveProviderChannelSlug(r: ProviderRoute): string {
