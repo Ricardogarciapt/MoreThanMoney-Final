@@ -124,6 +124,9 @@ export function repairProviderRoutes(routes: ProviderRoute[]): ProviderRoute[] {
       ...c,
       enabled: saved.enabled !== false,
       tap_to_trade: saved.tap_to_trade === true,
+      // Preserva o chat T2T dedicado editável (ex.: GoldKiller → 'sinais-goldkiller'),
+      // senão a reconstrução canónica mapeava-o pelo sender_channel partilhado ('trade-ideas').
+      app_channel: saved.app_channel ?? c.app_channel,
     }
   })
 
