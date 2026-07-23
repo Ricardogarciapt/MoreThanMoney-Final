@@ -213,12 +213,15 @@ label lb5  = na
 
 dt = time - time[box_length]
 
-if position == "BUY" or position == "SELL"
+// ESTÁTICO: entry/SL/TP são calculados SÓ na barra do sinal e ficam CONGELADOS
+// (via var) até ao próximo sinal — não recalculam a cada barra. É este o valor que
+// vai no alerta e é copiado, ligado àquele sinal.
+if isBuySignal or isSellSignal
     entry1 := round_price(Price_in)
-    et := time[box_length2]
+    et := time
     if useATR
         sl_distance = atrValue * atrMultiplierSL
-        if position == "BUY"
+        if isBuySignal
             sl := round_price(entry1 - sl_distance)
             tp1 := round_price(entry1 + (sl_distance * tp1RR))
             tp2 := round_price(entry1 + (sl_distance * tp2RR))
@@ -229,7 +232,7 @@ if position == "BUY" or position == "SELL"
             tp2 := round_price(entry1 - (sl_distance * tp2RR))
             tp3 := round_price(entry1 - (sl_distance * tp3RR))
     else if use_TPs
-        if position == "BUY"
+        if isBuySignal
             tp1 := round_price(entry1 * (1 + (tp1x / 100)))
             tp2 := round_price(entry1 * (1 + (tp2x / 100)))
             tp3 := round_price(entry1 * (1 + (tp3x / 100)))
