@@ -8,8 +8,35 @@ import {
   processMlmSubscriptionSignup,
 } from '@/lib/mlm-subscription-integration'
 import { sendNewMemberWelcomeIfEligible } from '@/lib/new-member-welcome'
+import { sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
 
 const supabase = getSupabaseAdmin()
+
+/** Alerta o admin (DM) quando uma compra Apple colide com uma subscrição Stripe ativa. */
+async function alertCrossChannelConflict(opts: {
+  userId: string
+  email?: string
+  stripeSubscriptionId?: string | null
+  applePlan: string
+}): Promise<void> {
+  try {
+    const { data } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'telegram_admin_chat_id')
+      .maybeSingle()
+    const adminChatId = data?.value ? String(data.value).replace(/["\s]/g, '') : ''
+    if (!adminChatId) return
+    await sendTelegramChannelMessage(
+      adminChatId,
+      `⚠️ DUPLA SUBSCRIÇÃO — o utilizador ${opts.email ?? opts.userId} comprou "${opts.applePlan}" na App Store ` +
+        `mas já tinha uma subscrição STRIPE ativa (${opts.stripeSubscriptionId ?? '?'}).\n\n` +
+        `A compra Apple foi honrada (já foi cobrada). Cancela a subscrição Stripe no fim do período para evitar dupla cobrança.`,
+    )
+  } catch {
+    /* alerta best-effort */
+  }
+}
 
 // POST /api/apple/iap/validate
 // Recebe o JWS token de StoreKit 2, activa a subscrição em Supabase e regista o cupão se aplicável.
@@ -94,6 +121,19 @@ export async function POST(req: NextRequest) {
     }
 
     const sponsor = (sponsorUsername as string | undefined)?.trim()
+
+    // Guard cross-canal: detectar subscrição Stripe ATIVA antes de marcar app_store.
+    // Honramos a compra Apple (já foi cobrada), mas alertamos p/ reconciliação e mantemos
+    // o stripe_subscription_id (não é apagado) para o admin poder cancelar a do Stripe.
+    const { data: current } = await supabase
+      .from('profiles')
+      .select('email, subscription_platform, subscription_status, stripe_subscription_id')
+      .eq('id', resolvedUserId)
+      .maybeSingle()
+    const hadActiveStripe =
+      current?.subscription_status === 'active' &&
+      current?.subscription_platform === 'stripe' &&
+      !!current?.stripe_subscription_id
 
     // Activar subscrição no Supabase
     const updatePayload: Record<string, unknown> = {
@@ -185,6 +225,16 @@ export async function POST(req: NextRequest) {
         sponsorUsername: sponsor,
         notifyTeam: true,
         eventId: `apple_validate_${originalTransactionId}`,
+      })
+    }
+
+    if (hadActiveStripe) {
+      console.warn(`⚠️ [APPLE-IAP] Compra Apple sobre Stripe ATIVO: user=${resolvedUserId} stripeSub=${current?.stripe_subscription_id}`)
+      void alertCrossChannelConflict({
+        userId: resolvedUserId,
+        email: current?.email as string | undefined,
+        stripeSubscriptionId: current?.stripe_subscription_id as string | null,
+        applePlan: `${category}/${billing}`,
       })
     }
 
