@@ -89,8 +89,7 @@ interface ChecklistSection {
 const scannerOrder = [
   "GoldenZone",
   "Momentum",
-  "KillShot",
-  "Supernova",
+  "AurumFlow",
   "Winzone",
   "Sinergy",
   "Goldkiller",
@@ -104,8 +103,7 @@ type ScannerKey = (typeof scannerOrder)[number]
 const scannerStudies: Record<ScannerKey, string[]> = {
   GoldenZone: ["PUB;0b373fb0e6634a73bc8b838cf0690725"],
   Momentum: ["PUB;00ec48baf0ee43f0a43e1658bb54cdab", "PUB;38080827cf244587b5e7dbb9f272db0a"],
-  KillShot: ["PUB;c1f81145e78a49ce92bd1f81f9c103dd"],
-  Supernova: ["PUB;c16bafd7d0874182a1415648ec3ed7b8"],
+  AurumFlow: ["PUB;3Be75e0a0b09754473bf43b8bb0d472635"],
   Winzone: [
     "PUB;6c003d30b2154ef3a31074d5c703954f",
     "PUB;e6adb5e5246c43f4a8dcffde5c98db4e",
@@ -122,8 +120,7 @@ const scannerStudies: Record<ScannerKey, string[]> = {
 const scannerLabels: Record<ScannerKey, string> = {
   GoldenZone: "Golden Zone",
   Momentum: "Momentum",
-  KillShot: "Kill Shot",
-  Supernova: "Supernova",
+  AurumFlow: "Aurum Flow",
   Winzone: "Sniper Pro",
   Sinergy: "Quantum",
   Goldkiller: "GoldKiller",
@@ -134,8 +131,7 @@ const scannerLabels: Record<ScannerKey, string> = {
 const scannerLogos: Record<ScannerKey, { icon: any; color: string; bgColor: string }> = {
   GoldenZone: { icon: Crown, color: "text-gold-300", bgColor: "bg-gradient-to-r from-gold-500 to-yellow-400" },
   Momentum: { icon: Waves, color: "text-blue-300", bgColor: "bg-gradient-to-r from-blue-600 to-cyan-500" },
-  KillShot: { icon: Skull, color: "text-gray-300", bgColor: "bg-gradient-to-r from-gray-600 to-slate-500" },
-  Supernova: { icon: Zap, color: "text-amber-300", bgColor: "bg-gradient-to-r from-amber-500 to-orange-500" },
+  AurumFlow: { icon: Zap, color: "text-amber-300", bgColor: "bg-gradient-to-r from-amber-500 to-yellow-500" },
   Winzone: { icon: Shield, color: "text-blue-300", bgColor: "bg-gradient-to-r from-blue-700 to-sky-500" },
   Sinergy: { icon: Star, color: "text-cyan-300", bgColor: "bg-gradient-to-r from-cyan-600 to-teal-500" },
   Goldkiller: { icon: Target, color: "text-yellow-300", bgColor: "bg-gradient-to-r from-yellow-600 to-amber-500" },
@@ -251,12 +247,12 @@ export default function ScannerMobile({
   const [selectedSymbol, setSelectedSymbol] = useState("OANDA:XAUUSD")
   const [selectedInterval, setSelectedInterval] = useState("15")
   const [selectedStudies, setSelectedStudies] = useState<ScannerKey[]>(() => {
-    if (typeof window === 'undefined') return ["KillShot"]
+    if (typeof window === 'undefined') return ["AurumFlow"]
     try {
       const saved = localStorage.getItem("mtm_mobile_active_scanners")
-      return saved ? JSON.parse(saved) : (["KillShot"] as ScannerKey[])
+      return saved ? JSON.parse(saved) : (["AurumFlow"] as ScannerKey[])
     } catch {
-      return ["KillShot"]
+      return ["AurumFlow"]
     }
   })
   
