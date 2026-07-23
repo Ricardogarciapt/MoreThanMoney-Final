@@ -160,6 +160,22 @@ export function isRecapOrAnnouncement(text: string): boolean {
 }
 
 function extractSymbol(text: string): string | null {
+  // PRIORIDADE: formato scanner "📊 SÍMBOLO 🔵/🔴 COMPRA/VENDA" — o símbolo está na MESMA
+  // linha da direção. Sem isto, os fallbacks apanhavam "Scanner"/"Ideias de" do cabeçalho
+  // (≥6 chars passavam no isValidTradingSymbol) → T2T abria símbolo inválido → 502.
+  for (const line of text.split(/\r?\n/)) {
+    if (!/🔵|🔴|🟢|🟩|🟥|📈|📉|⬆️|⬇️|\b(?:compra[r]?|venda[r]?|buy|sell|long|short)\b/i.test(line)) continue
+    // Remove as palavras de direção antes de extrair, senão o SYMBOL_RE cola-as ao símbolo
+    // quando há 1 só espaço (ex.: "XAUUSD BUY" → "XAUUSDBUY").
+    const cleaned = line.replace(/\b(?:compra[r]?|venda[r]?|buy|sell|long|short|now|j[aá]|at)\b/gi, ' ')
+    // Padrão inclui índices com dígitos (NAS100, US30, GER40) além de pares/metais.
+    const SYM_LINE_RE = /#?([A-Z]{2,7}\d{2,4}|[A-Z]{2,6}[\/\-]?[A-Z]{2,6}|[A-Z]{3,10})\b/gi
+    for (const m of cleaned.matchAll(SYM_LINE_RE)) {
+      const sym = normalizeSymbol(m[1])
+      if (isValidTradingSymbol(sym)) return sym
+    }
+  }
+
   const moedaLine = text.match(/^\s*moeda\s*:\s*#?([A-Z0-9]{2,12}(?:[\/\-][A-Z0-9]{2,12})?)/im)
   if (moedaLine?.[1]) {
     const sym = normalizeSymbol(moedaLine[1])
