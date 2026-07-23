@@ -159,27 +159,28 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // 5b. Validar SL/TP vs direção — o scanner às vezes envia o SL do lado errado
-  //     (ex.: VENDA com SL ABAIXO da entrada) → a MetaApi rejeita com "invalid stops".
-  //     SL do lado errado → rejeita (nunca abrir sem proteção); TP do lado errado → abre sem TP.
+  // 5b. Ajustar SL/TP para "encaixar" na MetaApi. O scanner às vezes envia o SL/TP do lado
+  //     errado (ex.: VENDA com SL ABAIXO da entrada) → "invalid stops". Recolocamos SL/TP
+  //     no lado CORRETO (SL protetor, TP no lucro) preservando a DISTÂNCIA do sinal à entrada.
+  //     Sinais já corretos ficam exatamente iguais.
   const priceRef = openPrice ?? ctx.marketPrice ?? signal.entry ?? null
+  const entryRef = signal.entry && signal.entry > 0 ? signal.entry : priceRef
   let orderSl = conn.copy_sl !== false ? signal.sl : null
   let orderTp = conn.copy_tp !== false ? (signal.tp?.[0] ?? null) : null
-  if (orderSl != null && priceRef && priceRef > 0) {
-    const slSideOk = signal.direction === 'buy' ? orderSl < priceRef : orderSl > priceRef
-    if (!slSideOk) {
-      return NextResponse.json(
-        {
-          error: `Sinal com Stop Loss inválido: ${orderSl} está do lado errado para ${signal.direction === 'buy' ? 'COMPRA' : 'VENDA'} (ref. ${priceRef}). Não executado — o sinal tem o SL trocado.`,
-          code: 'invalid_sl',
-        },
-        { status: 400 },
-      )
+  let adjustedStops = false
+  if (priceRef && priceRef > 0 && entryRef && entryRef > 0) {
+    if (orderSl != null && orderSl > 0) {
+      const d = Math.abs(entryRef - orderSl)
+      const fixed = signal.direction === 'buy' ? priceRef - d : priceRef + d
+      if (d > 0 && Math.abs(fixed - orderSl) > 1e-9) adjustedStops = true
+      if (d > 0) orderSl = fixed
     }
-  }
-  if (orderTp != null && priceRef && priceRef > 0) {
-    const tpSideOk = signal.direction === 'buy' ? orderTp > priceRef : orderTp < priceRef
-    if (!tpSideOk) orderTp = null // TP do lado errado (não crítico) → abre sem TP
+    if (orderTp != null && orderTp > 0) {
+      const d = Math.abs(entryRef - orderTp)
+      const fixed = signal.direction === 'buy' ? priceRef + d : priceRef - d
+      if (d > 0 && Math.abs(fixed - orderTp) > 1e-9) adjustedStops = true
+      if (d > 0) orderTp = fixed
+    }
   }
 
   // 6. Executar na conta do utilizador (SL + 1.º TP; restantes TPs/gestão são espelhados do mestre)
@@ -232,7 +233,7 @@ export async function POST(request: NextRequest) {
       status: result.success ? 'open' : 'error',
       broker_position_id: result.success ? (result.orderId ?? null) : null,
       detail: result.success
-        ? `Tap to Trade · ordem ${orderReq.orderType} · ${result.orderId ?? ''}`.trim()
+        ? `Tap to Trade · ordem ${orderReq.orderType} · ${result.orderId ?? ''}${adjustedStops ? ' · SL/TP ajustado ao lado correto' : ''}`.trim()
         : `Tap to Trade falhou: ${result.error ?? 'erro'}`,
     })
     .eq('user_id', user.id)
