@@ -72,7 +72,7 @@ type ScannerKey = (typeof scannerOrder)[number]
 const scannerStudies: Record<ScannerKey, string[]> = {
   GoldenZone: ["PUB;0b373fb0e6634a73bc8b838cf0690725"],
   Momentum: ["PUB;00ec48baf0ee43f0a43e1658bb54cdab", "PUB;38080827cf244587b5e7dbb9f272db0a"],
-  AurumFlow: ["PUB;3Be75e0a0b09754473bf43b8bb0d472635"],
+  AurumFlow: ["PUB;039b58f362ea4bbeb81867687c2fffd5"],
   Winzone: [
     "PUB;6c003d30b2154ef3a31074d5c703954f",
     "PUB;e6adb5e5246c43f4a8dcffde5c98db4e",
