@@ -429,7 +429,7 @@ export async function POST(request: NextRequest) {
   const freeText = isJson ? pick(payload, ["message", "comment", "text"]) : String(payload.message ?? "")
 
   // Classe de ativo → canal / Telegram / auto-copy
-  const assetClass = classifyAsset(ticker)
+  let assetClass = classifyAsset(ticker)
   const route = resolveRoute(assetClass)
 
   // GoldKiller: trada Ouro (mesma classe que o Sensei) mas é um scanner distinto →
@@ -441,14 +441,29 @@ export async function POST(request: NextRequest) {
   const isGoldKiller =
     assetClass === "gold_btc" && /goldkiller|gold[\s_-]*kill/.test(stratText) && !/sensei/.test(stratText)
   // Identidade do scanner (p/ exclusões por-scanner nos gates, ex.: MTMScanner sem ouro).
-  const scannerKey = /mtm[\s_-]*scanner/.test(stratText)
-    ? "mtmscanner"
-    : isGoldKiller
-      ? "goldkiller"
-      : /sensei/.test(stratText)
-        ? "sensei"
-        : null
-  if (isGoldKiller) {
+  // Nova dinâmica dedicada de perpétuos cripto — identifica-se pelo nome do alerta
+  // (ex.: "MTM Perps"/"MTM Perps X"), não pelo ticker, para poder incluir o BTC perp
+  // desta lista sem o roubar ao Sensei (que envia BTCUSDT.P para o fluxo gold_btc).
+  const isMtmPerps = /mtm[\s_-]*perps?\b|perps?[\s_-]*scanner/.test(stratText)
+  const scannerKey = isMtmPerps
+    ? "mtmperps"
+    : /mtm[\s_-]*scanner/.test(stratText)
+      ? "mtmscanner"
+      : isGoldKiller
+        ? "goldkiller"
+        : /sensei/.test(stratText)
+          ? "sensei"
+          : null
+  if (scannerKey === "mtmperps") {
+    // Lista única de perps → sempre canal "Ideias de Perpétuos Cripto", em PAPEL.
+    // Execução real (Bybit, motor de cópia próprio) fica para a Fase 2, atrás de flag.
+    assetClass = "crypto_perp"
+    route.channel = "cripto-perps"
+    route.telegram = null
+    route.sender = "🪙 Perpétuos Cripto"
+    route.push = true
+    route.autoCopy = false
+  } else if (isGoldKiller) {
     route.channel = "sinais-goldkiller"
     // Canal Telegram dedicado GoldKiller (bot admin). Publica lá + chat app + auto-copy.
     // Resolver durável (sobrevive a Basic→Supergroup); env TELEGRAM_CHANNEL_GOLDKILLER se definido.
