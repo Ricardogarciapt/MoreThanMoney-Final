@@ -6,6 +6,7 @@ const PRICE_ENV_KEYS: Record<string, string> = {
   premium_monthly: 'STRIPE_PRICE_PREMIUM_MONTHLY',
   premium_annual: 'STRIPE_PRICE_PREMIUM_ANNUAL',
   goldkiller_lifetime: 'STRIPE_PRICE_GOLDKILLER_LIFETIME',
+  aurumflow_lifetime: 'STRIPE_PRICE_AURUMFLOW_LIFETIME',
   mtm_scanner_monthly: 'STRIPE_PRICE_MTM_SCANNER_MONTHLY',
   mtm_scanner_lifetime: 'STRIPE_PRICE_MTM_SCANNER_LIFETIME',
   scanners_monthly: 'STRIPE_PRICE_SCANNERS_MONTHLY',

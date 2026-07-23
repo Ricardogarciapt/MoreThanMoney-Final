@@ -64,6 +64,32 @@ const SCANNERS: ScannerData[] = [
     ],
   },
   {
+    key: "aurumflow",
+    name: "MTM Aurum Flow",
+    subtitle: "Perpétuos Cripto · Tendência",
+    image: "/scanner-preview.png",
+    badge: "Novo",
+    description:
+      "O scanner de perpétuos cripto da MTM (otimizado para 1H). Só opera a favor da tendência (stack DEMA) com confirmação de momentum e entrega um plano completo e estático por sinal — entrada, stop e 3 alvos — com distâncias em % e cálculo de alavancagem e custo para o tamanho da tua conta.",
+    features: [
+      "Filtro de tendência obrigatório (DEMA 15/50/238) + confirmação RSI",
+      "Níveis estáticos: entrada, SL e TP1–TP3 fixados na barra do sinal",
+      "Stops e alvos por ATR (SL 1.5×ATR · alvos 1:1.5 / 1:3 / 1:6)",
+      "Distância de cada nível em pontos e percentagem",
+      "Painel de conta: alavancagem útil, notional e custo de fees",
+    ],
+    techSpecs: [
+      "Timeframe recomendado: 1H",
+      "Mercados: perpétuos cripto (Bybit / Binance)",
+      "Gestão de risco integrada (risco % por trade)",
+      "Alertas JSON prontos para webhook e copytrading",
+      "Baseado no motor proprietário do MTM Scanner",
+    ],
+    products: [
+      { id: "af-lifetime", label: "Acesso Vitalício", price: "50€", priceNote: "Pagamento único", planId: "aurumflow_lifetime", highlight: true },
+    ],
+  },
+  {
     key: "mtm-scanner",
     name: "Scanner MTM V3.4",
     subtitle: "Market Structures and ATR",

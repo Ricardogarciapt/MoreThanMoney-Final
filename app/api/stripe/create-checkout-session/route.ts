@@ -10,6 +10,7 @@ const supabaseAdmin = getSupabaseAdmin()
 
 const SCANNER_LIFETIME_PLANS = new Set([
   'goldkiller_lifetime',
+  'aurumflow_lifetime',
   'mtm_scanner_lifetime',
   'scanners_lifetime',
 ])
