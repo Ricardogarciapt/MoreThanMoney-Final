@@ -271,6 +271,17 @@ export default function TapToTradeFeed() {
   useEffect(() => {
     load()
     loadConnection()
+    // Sinais novos aparecem sozinhos: refresca a cada 20s e sempre que a app volta ao foco
+    // (sem isto o tab só carregava ao montar → sinais publicados depois não surgiam).
+    const iv = setInterval(load, 20000)
+    const onVis = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") load()
+    }
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVis)
+    return () => {
+      clearInterval(iv)
+      if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVis)
+    }
   }, [load, loadConnection])
 
   // Vindo de /automation ("Ativar Tap to Trade") → abre logo a config/ligação da conta

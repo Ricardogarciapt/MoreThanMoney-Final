@@ -116,6 +116,8 @@ export interface MetaApiSymbolSpecification {
   digits?: number
   /** SYMBOL_TRADE_MODE_FULL | ..._LONGONLY | ..._SHORTONLY | ..._CLOSEONLY | ..._DISABLED */
   tradeMode?: string
+  /** Distância mínima (em points) do preço para colocar SL/TP. Broker rejeita stops mais colados. */
+  stopsLevel?: number
 }
 
 export interface MetaApiPosition {
@@ -376,7 +378,7 @@ async function fetchSpec(
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const raw = await connection.getSymbolSpecification(brokerSymbol)
-        spec = raw?.point ? { point: raw.point, pipSize: raw.pipSize, digits: raw.digits, tradeMode: raw.tradeMode } : null
+        spec = raw?.point ? { point: raw.point, pipSize: raw.pipSize, digits: raw.digits, tradeMode: raw.tradeMode, stopsLevel: raw.stopsLevel } : null
         break
       } catch {
         spec = null
@@ -445,15 +447,15 @@ async function placeOrderOnConnection(
   try {
     const picked = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction, specCache)
     const brokerSymbol = picked.brokerSymbol
-    const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
-    const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
+    let sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
+    let tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
 
     let spec = specCache.get(brokerSymbol)
     if (spec === undefined) {
       if (connection.getSymbolSpecification) {
         try {
           const raw = await connection.getSymbolSpecification(brokerSymbol)
-          spec = raw?.point ? { point: raw.point, pipSize: raw.pipSize, digits: raw.digits, tradeMode: raw.tradeMode } : null
+          spec = raw?.point ? { point: raw.point, pipSize: raw.pipSize, digits: raw.digits, tradeMode: raw.tradeMode, stopsLevel: raw.stopsLevel } : null
         } catch {
           spec = null
         }
@@ -467,6 +469,34 @@ async function placeOrderOnConnection(
     const orderOptions = buildOrderOptions(req, trailingOpts)
 
     await ensureSymbolReady(connection, brokerSymbol)
+
+    // Afasta SL/TP colados ao preço até à distância mínima do broker (stopsLevel). O scanner
+    // às vezes envia SL a ~1.8 pips → o MT5 rejeita com "invalid stops". Referência: openPrice
+    // nas pendentes, preço de mercado nas imediatas. Só afasta o que está DENTRO do mínimo;
+    // SL/TP com folga ficam intactos. Complementa o ajuste de LADO feito na rota do T2T.
+    if ((sl != null || tp != null) && spec?.point && spec.point > 0 && typeof spec.stopsLevel === 'number' && spec.stopsLevel > 0) {
+      let refPrice: number | null = req.orderType === 'market' ? null : (req.openPrice ?? null)
+      if (refPrice == null && connection.getSymbolPrice) {
+        try {
+          const q = await connection.getSymbolPrice(brokerSymbol)
+          refPrice = req.direction === 'buy' ? (q?.ask ?? q?.bid ?? null) : (q?.bid ?? q?.ask ?? null)
+        } catch {
+          /* sem preço → não afasta (a ordem reporta o erro real se houver) */
+        }
+      }
+      if (refPrice && refPrice > 0) {
+        const minDist = spec.stopsLevel * spec.point * 1.15 // margem sobre o mínimo do broker
+        const round = (v: number) => (spec?.digits != null ? Number(v.toFixed(spec.digits)) : v)
+        if (sl != null) {
+          if (req.direction === 'buy' && sl > refPrice - minDist) sl = round(refPrice - minDist)
+          else if (req.direction === 'sell' && sl < refPrice + minDist) sl = round(refPrice + minDist)
+        }
+        if (tp != null) {
+          if (req.direction === 'buy' && tp < refPrice + minDist) tp = round(refPrice + minDist)
+          else if (req.direction === 'sell' && tp > refPrice - minDist) tp = round(refPrice - minDist)
+        }
+      }
+    }
 
     if (req.orderType === 'limit') {
       const openPrice = req.openPrice
