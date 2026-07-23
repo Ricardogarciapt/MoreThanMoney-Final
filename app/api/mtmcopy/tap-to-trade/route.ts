@@ -159,6 +159,29 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // 5b. Validar SL/TP vs direção — o scanner às vezes envia o SL do lado errado
+  //     (ex.: VENDA com SL ABAIXO da entrada) → a MetaApi rejeita com "invalid stops".
+  //     SL do lado errado → rejeita (nunca abrir sem proteção); TP do lado errado → abre sem TP.
+  const priceRef = openPrice ?? ctx.marketPrice ?? signal.entry ?? null
+  let orderSl = conn.copy_sl !== false ? signal.sl : null
+  let orderTp = conn.copy_tp !== false ? (signal.tp?.[0] ?? null) : null
+  if (orderSl != null && priceRef && priceRef > 0) {
+    const slSideOk = signal.direction === 'buy' ? orderSl < priceRef : orderSl > priceRef
+    if (!slSideOk) {
+      return NextResponse.json(
+        {
+          error: `Sinal com Stop Loss inválido: ${orderSl} está do lado errado para ${signal.direction === 'buy' ? 'COMPRA' : 'VENDA'} (ref. ${priceRef}). Não executado — o sinal tem o SL trocado.`,
+          code: 'invalid_sl',
+        },
+        { status: 400 },
+      )
+    }
+  }
+  if (orderTp != null && priceRef && priceRef > 0) {
+    const tpSideOk = signal.direction === 'buy' ? orderTp > priceRef : orderTp < priceRef
+    if (!tpSideOk) orderTp = null // TP do lado errado (não crítico) → abre sem TP
+  }
+
   // 6. Executar na conta do utilizador (SL + 1.º TP; restantes TPs/gestão são espelhados do mestre)
   const orderReq: OrderRequest = {
     accountId: conn.metaapi_account_id,
@@ -167,8 +190,8 @@ export async function POST(request: NextRequest) {
     volume: lot,
     orderType,
     openPrice,
-    stopLoss: conn.copy_sl !== false ? signal.sl : null,
-    takeProfit: conn.copy_tp !== false ? (signal.tp?.[0] ?? null) : null,
+    stopLoss: orderSl,
+    takeProfit: orderTp,
     comment: 'TapToTrade MTM',
   }
   // 6a. Idempotência: reserva (claim) este sinal para este utilizador ANTES de executar.
