@@ -112,6 +112,7 @@ long_alert  = input.bool(true, "Permite Alertas de COMPRA", group=alGroup)
 short_alert = input.bool(true, "Permite Alertas de VENDA", group=alGroup)
 order_type  = input.string("MARKET", "Alerta para ordens", options=["LIMIT", "MARKET"], group=alGroup)
 alertsOn    = input.bool(true, "Emitir alertas para o site MTM", group=alGroup, tooltip="1 alerta, condição 'Any alert() function call', cola o URL do webhook dedicado dos perps.")
+alertIntrabar = input.bool(true, "Alertas intra-vela (mais cedo)", group=alGroup, tooltip="ON = dispara assim que o setup H1 aciona, sem esperar o fecho da vela (não fica preso ao topo da hora; pode repintar se a condição se inverter). OFF = só no fecho da vela H1 (confirmado, mas 1×/hora).")
 
 // entrada
 entry_source   = input.source(close, "Fonte das Entradas", group="===== ENTRADA =====")
@@ -287,10 +288,12 @@ f_json_af(_dir) =>
 
 valid_af = not na(entry1) and not na(sl) and not na(tp1)
 
+// Intra-vela (once_per_bar) dispara mal o setup H1 aciona; senão só no fecho (once_per_bar_close).
+af_freq = alertIntrabar ? alert.freq_once_per_bar : alert.freq_once_per_bar_close
 if alertsOn and isBuySignal and long_alert and valid_af
-    alert(f_json_af("buy"), alert.freq_once_per_bar_close)
+    alert(f_json_af("buy"), af_freq)
 if alertsOn and isSellSignal and short_alert and valid_af
-    alert(f_json_af("sell"), alert.freq_once_per_bar_close)
+    alert(f_json_af("sell"), af_freq)
 
 alertcondition(isBuySignal and long_alert, "Aurum Flow COMPRA", "MTM Perps Aurum Flow BUY")
 alertcondition(isSellSignal and short_alert, "Aurum Flow VENDA", "MTM Perps Aurum Flow SELL")
