@@ -438,6 +438,43 @@ async function ensureSymbolReady(connection: RpcConnection, brokerSymbol: string
   }
 }
 
+/**
+ * Uma ordem LIMIT tem de estar do LADO CERTO do mercado (BUY LIMIT abaixo do ask, SELL
+ * LIMIT acima do bid) e além da freeze/stops distance — senão o MT5 rejeita com "Invalid
+ * price in the request". Os sinais de scalp do scanner chegam com entry ≈ mercado e como
+ * o webhook mapeia "há entry" → LIMIT, ficavam do lado errado e falhavam. Aqui decidimos
+ * o tipo EFETIVO: se a LIMIT é válida mantém-se; se não, perto do mercado → MARKET,
+ * claramente do lado do breakout → STOP. Best-effort: sem preço, mantém LIMIT.
+ */
+async function resolveEffectiveOrderType(
+  connection: RpcConnection,
+  brokerSymbol: string,
+  direction: 'buy' | 'sell',
+  openPrice: number,
+  spec: MetaApiSymbolSpecification | null,
+): Promise<'limit' | 'market' | 'stop'> {
+  if (!connection.getSymbolPrice) return 'limit'
+  try {
+    const q = await connection.getSymbolPrice(brokerSymbol)
+    const px = direction === 'buy' ? (q?.ask ?? q?.bid ?? null) : (q?.bid ?? q?.ask ?? null)
+    if (px == null || px <= 0) return 'limit'
+    const minDist =
+      spec?.point && typeof spec.stopsLevel === 'number' && spec.stopsLevel > 0
+        ? spec.stopsLevel * spec.point * 1.15
+        : spec?.point && spec.point > 0
+          ? spec.point * 10
+          : px * 0.0002
+    if (direction === 'buy') {
+      if (openPrice <= px - minDist) return 'limit' // abaixo do mercado → BUY LIMIT válida
+      return openPrice > px + minDist ? 'stop' : 'market' // acima → breakout (STOP) senão MARKET
+    }
+    if (openPrice >= px + minDist) return 'limit' // acima do mercado → SELL LIMIT válida
+    return openPrice < px - minDist ? 'stop' : 'market' // abaixo → breakdown (STOP) senão MARKET
+  } catch {
+    return 'limit'
+  }
+}
+
 async function placeOrderOnConnection(
   connection: RpcConnection,
   symbols: string[],
@@ -503,15 +540,24 @@ async function placeOrderOnConnection(
       if (openPrice == null || openPrice <= 0) {
         return { success: false, error: 'Preço LIMIT em falta' }
       }
-      const trade =
-        req.direction === 'buy'
-          ? await connection.createLimitBuyOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
-          : await connection.createLimitSellOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
-      return {
-        success: true,
-        orderId: String(trade?.orderId ?? trade?.positionId ?? ''),
-        brokerSymbol,
+      // Evita "Invalid price": se a LIMIT ficaria do lado errado do mercado, cai para
+      // MARKET (entry colada ao mercado, típico dos scalps do scanner) ou STOP (breakout).
+      const effType = await resolveEffectiveOrderType(connection, brokerSymbol, req.direction, openPrice, spec ?? null)
+      if (effType === 'limit') {
+        const trade =
+          req.direction === 'buy'
+            ? await connection.createLimitBuyOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
+            : await connection.createLimitSellOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
+        return { success: true, orderId: String(trade?.orderId ?? trade?.positionId ?? ''), brokerSymbol }
       }
+      if (effType === 'stop') {
+        const trade =
+          req.direction === 'buy'
+            ? await connection.createStopBuyOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
+            : await connection.createStopSellOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
+        return { success: true, orderId: String(trade?.orderId ?? trade?.positionId ?? ''), brokerSymbol }
+      }
+      // effType === 'market' → cai para a execução a mercado abaixo
     }
 
     const trade =
@@ -828,7 +874,7 @@ export async function placeLimitOrder(req: OrderRequest): Promise<OrderResult> {
     close = closeFn
 
     const symbols = await connection.getSymbols()
-    const { brokerSymbol } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
+    const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
 
     const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
     const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
@@ -836,10 +882,25 @@ export async function placeLimitOrder(req: OrderRequest): Promise<OrderResult> {
 
     await ensureSymbolReady(connection, brokerSymbol)
 
-    const trade =
-      req.direction === 'buy'
-        ? await connection.createLimitBuyOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
-        : await connection.createLimitSellOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
+    // Anti "Invalid price": LIMIT do lado errado do mercado → MARKET (perto) ou STOP (breakout).
+    const effType = await resolveEffectiveOrderType(connection, brokerSymbol, req.direction, openPrice, spec)
+    let trade
+    if (effType === 'market') {
+      trade =
+        req.direction === 'buy'
+          ? await connection.createMarketBuyOrder(brokerSymbol, req.volume, sl, tp, orderOptions)
+          : await connection.createMarketSellOrder(brokerSymbol, req.volume, sl, tp, orderOptions)
+    } else if (effType === 'stop') {
+      trade =
+        req.direction === 'buy'
+          ? await connection.createStopBuyOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
+          : await connection.createStopSellOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
+    } else {
+      trade =
+        req.direction === 'buy'
+          ? await connection.createLimitBuyOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
+          : await connection.createLimitSellOrder(brokerSymbol, req.volume, openPrice, sl, tp, orderOptions)
+    }
 
     return {
       success: true,
