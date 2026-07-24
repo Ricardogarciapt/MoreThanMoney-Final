@@ -20,8 +20,9 @@ export default function MtmcopyGlobalPerformance({ className }: { className?: st
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  // silent = refresh automático (não pisca o spinner nem apaga os dados atuais)
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
     setError(null)
     try {
       const res = await fetch("/api/admin/mtmcopy/global-performance", { cache: "no-store" })
@@ -29,13 +30,17 @@ export default function MtmcopyGlobalPerformance({ className }: { className?: st
       if (!res.ok) throw new Error(json.error || "Falha a obter performance global")
       setData(json)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro")
+      if (!silent) setError(e instanceof Error ? e.message : "Erro")
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    void load()
+    const id = setInterval(() => void load(true), 60_000) // auto-update a cada 60s
+    return () => clearInterval(id)
+  }, [load])
 
   return (
     <div className={className}>
@@ -44,8 +49,11 @@ export default function MtmcopyGlobalPerformance({ className }: { className?: st
           <Globe className="w-4 h-4 text-[#D2A63C]" />
           Visão global do sistema · performance agregada
           {data && (
-            <span className="text-[11px] font-normal text-zinc-500">
+            <span className="text-[11px] font-normal text-zinc-500 flex items-center gap-1.5">
               {data.totalTrades} trades · {data.accountsTracked} contas
+              <span className="inline-flex items-center gap-1 text-emerald-500/80">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> auto
+              </span>
             </span>
           )}
         </div>
@@ -65,7 +73,7 @@ export default function MtmcopyGlobalPerformance({ className }: { className?: st
       ) : error ? (
         <p className="text-sm text-red-400">{error}</p>
       ) : data?.performance ? (
-        <PerformanceMetrics performance={data.performance} showRiskAlerts={false} />
+        <PerformanceMetrics performance={data.performance} showRiskAlerts={false} showBreakdowns={false} />
       ) : (
         <p className="text-sm text-zinc-500 text-center py-8">
           Sem trades fechadas no sistema ainda para agregar.

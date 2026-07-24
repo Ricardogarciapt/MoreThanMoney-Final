@@ -57,9 +57,12 @@ function Kpi({
 export default function PerformanceMetrics({
   performance,
   showRiskAlerts = true,
+  showBreakdowns = true,
 }: {
   performance: PerformanceData
   showRiskAlerts?: boolean
+  /** P&L por conta + Top símbolos. Desligado na visão global admin (duplica os provider-cards). */
+  showBreakdowns?: boolean
 }) {
   const p = performance
   if (!p || p.tradeCount === 0) {
@@ -125,7 +128,7 @@ export default function PerformanceMetrics({
         </ResponsiveContainer>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-5">
+      <div className={`grid gap-5 ${showBreakdowns ? "md:grid-cols-2" : ""}`}>
         {/* Monthly P&L */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
           <div className="flex items-center gap-2 mb-3 text-sm font-bold text-white">
@@ -149,7 +152,8 @@ export default function PerformanceMetrics({
           </ResponsiveContainer>
         </div>
 
-        {/* Por conta */}
+        {/* Por conta + Top símbolos (escondido na visão global admin) */}
+        {showBreakdowns && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
           <p className="text-sm font-bold text-white mb-3">P&L por conta</p>
           <div className="space-y-2">
@@ -179,6 +183,7 @@ export default function PerformanceMetrics({
             </>
           )}
         </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
