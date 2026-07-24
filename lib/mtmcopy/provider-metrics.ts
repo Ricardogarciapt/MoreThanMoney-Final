@@ -91,23 +91,32 @@ function num(v: unknown): number | null {
   return typeof n === 'number' && Number.isFinite(n) ? n : null
 }
 
-/** Vai buscar o objeto `metrics` do MetaStats (ou null se indisponível). */
+/** Resolve o valor da promise ou `fallback` se demorar mais de `ms` (não bloqueia a rota). */
+function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([p, new Promise<T>((r) => setTimeout(() => r(fallback), ms))])
+}
+
+/** Vai buscar o objeto `metrics` do MetaStats (ou null se indisponível). Timeout 8s. */
 async function fetchMetaStats(
   accountId: string,
   region: string | null,
 ): Promise<Record<string, unknown> | null> {
   const t = token()
   if (!t) return null
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 8000)
   try {
     const res = await fetch(
       `${metastatsBase(region)}/users/current/accounts/${accountId}/metrics`,
-      { headers: { Accept: 'application/json', 'auth-token': t } },
+      { headers: { Accept: 'application/json', 'auth-token': t }, signal: ctrl.signal },
     )
     if (!res.ok) return null
     const data = (await res.json().catch(() => null)) as { metrics?: Record<string, unknown> } | null
     return data?.metrics ?? null
   } catch {
     return null
+  } finally {
+    clearTimeout(timer)
   }
 }
 
@@ -188,8 +197,10 @@ export async function getProviderStrategyMetrics(): Promise<ProviderPerformanceP
         base.winRatePct = 0
       }
       if (!m) {
-        // Fallback leve: só saldo/equity via snapshot (uma tentativa).
-        const snap = await getAccountSnapshot(def.accountId).catch(() => null)
+        // Fallback leve: só saldo/equity via snapshot. LIMITADO a 8s — sem isto, uma
+        // ligação RPC MetaApi que espera 55s (waitConnected) por conta estoura os 60s da
+        // rota → 504 em todo o painel. Melhor mostrar "MetaStats indisponível" que pendurar.
+        const snap = await withTimeout(getAccountSnapshot(def.accountId).catch(() => null), 8000, null)
         if (snap) {
           base.balance = snap.balance
           base.equity = snap.equity
