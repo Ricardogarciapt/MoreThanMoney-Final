@@ -585,33 +585,23 @@ export async function POST(request: NextRequest) {
         : "active"
   const initSignalKind = mgmtStatus || initIsFollow ? "followup" : "entry"
 
-  // Card estático do sinal (imagem sempre disponível, cacheável) — só para entradas.
-  // URL determinístico a partir dos parâmetros da trade → mostra o desenho (entry/SL/TP +
-  // distâncias %, alavancagem, custo). As 4 superfícies já leem chart_image_url.
-  let chartImageUrl: string | null = null
-  if (initSignalKind === "entry") {
-    const og = new URLSearchParams()
-    const put = (k: string, val: unknown) => { if (val !== null && val !== undefined && val !== "") og.set(k, String(val)) }
-    const pf = (k: string) => num(pick(payload, [k]))
-    put("sym", ticker)
-    put("dir", action)
-    put("tf", timeframe)
-    put("strat", (route.sender || alertName || "MTM").replace(/[^\p{L}\p{N} .·-]/gu, "").trim())
-    put("entry", entry ?? price)
-    put("sl", sl)
-    put("tp1", tp); put("tp2", tp2); put("tp3", tp3)
-    put("slpct", pf("sl_pct"))
-    put("tp1pct", pf("tp1_pct")); put("tp2pct", pf("tp2_pct")); put("tp3pct", pf("tp3_pct"))
-    put("lev", pf("leverage")); put("cost", pf("fee_cost")); put("acct", pf("account"))
-    chartImageUrl = `${url.origin}/api/og/signal?${og.toString()}`
-  }
-
   // Log inicial
   const { data: logRow } = await supabase
     .from("tradingview_signals")
-    .insert({ ticker, exchange, timeframe, action, price, sl, tp, alert_name: alertName, message: freeText, raw_payload: payload, ai_status: "pending", trade_status: initTradeStatus, signal_kind: initSignalKind, chart_image_url: chartImageUrl })
+    .insert({ ticker, exchange, timeframe, action, price, sl, tp, alert_name: alertName, message: freeText, raw_payload: payload, ai_status: "pending", trade_status: initTradeStatus, signal_kind: initSignalKind })
     .select("id").single()
   const logId = logRow?.id as string | undefined
+
+  // Imagem do sinal (só entradas): aponta o cartão para a rota lazy, que renderiza o gráfico
+  // TradingView REAL (chart-img) com as linhas da trade na 1.ª visualização (CDN cacheia por
+  // sinal → quota só gasta em sinais vistos) e cai no card sintético /api/og/signal se falhar.
+  if (initSignalKind === "entry" && logId) {
+    await supabase
+      .from("tradingview_signals")
+      .update({ chart_image_url: `${url.origin}/api/signals/chart-image?id=${logId}` })
+      .eq("id", logId)
+      .then(undefined, (e) => console.error("[webhook] chart_image_url update:", e))
+  }
 
   // Atalho para eventos de gestão JSON: atualiza a entrada + notifica na hora, sem chat/cópia.
   if (mgmtStatus && ticker) {
