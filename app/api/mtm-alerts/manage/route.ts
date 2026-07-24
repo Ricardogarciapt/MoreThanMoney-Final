@@ -109,15 +109,16 @@ export async function POST(request: NextRequest) {
     const admin = getSupabaseAdmin()
     const { data: row, error } = await admin
       .from("tradingview_signals")
-      .select("id, ticker, exchange, timeframe, action, price, sl, tp, alert_name, message, ai_analysis, raw_payload, trade_status")
+      .select("id, ticker, exchange, timeframe, action, price, sl, tp, alert_name, message, ai_management, ai_management_state, raw_payload, trade_status")
       .eq("id", id)
       .maybeSingle()
 
     if (error || !row) return NextResponse.json({ error: "Sinal não encontrado" }, { status: 404 })
 
-    // Já existe análise guardada e não foi pedido refresh → devolve-a
-    if (row.ai_analysis && !body.refresh) {
-      return NextResponse.json({ success: true, analysis: row.ai_analysis, cached: true })
+    // Gestão guardada para o ESTADO ATUAL da trade e sem refresh → devolve-a.
+    // Re-gera quando o estado muda (ativa→BE→TP→SL) → fica sempre sincronizada.
+    if (row.ai_management && row.ai_management_state === (row.trade_status ?? null) && !body.refresh) {
+      return NextResponse.json({ success: true, analysis: row.ai_management, cached: true })
     }
 
     const result = await generate(buildPrompt(row))
@@ -130,7 +131,10 @@ export async function POST(request: NextRequest) {
 
     // Guarda para reutilização (best-effort)
     try {
-      await admin.from("tradingview_signals").update({ ai_analysis: result.text }).eq("id", id)
+      await admin
+        .from("tradingview_signals")
+        .update({ ai_management: result.text, ai_management_state: row.trade_status ?? null })
+        .eq("id", id)
     } catch {
       /* best-effort */
     }
