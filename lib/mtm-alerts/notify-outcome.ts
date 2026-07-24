@@ -13,9 +13,10 @@ function siteOrigin(): string {
 }
 
 const OUTCOME_META: Record<string, { emoji: string; label: string; body: string }> = {
+  be: { emoji: "🛡️", label: "Break-even — protege", body: "O preço avançou a teu favor. Protege a trade: move o Stop Loss para a entrada." },
   loss: { emoji: "🛑", label: "SL atingido", body: "A trade fechou no stop loss." },
-  exit_1: { emoji: "🎯", label: "TP1 atingido", body: "Take profit 1 alcançado." },
-  exit_2: { emoji: "🎯", label: "TP2 atingido", body: "Take profit 2 alcançado." },
+  exit_1: { emoji: "🎯", label: "TP1 atingido — protege o resto", body: "Take profit 1 alcançado. Garante parte e protege o restante em break-even." },
+  exit_2: { emoji: "🎯", label: "TP2 atingido", body: "Take profit 2 alcançado. A trade está a correr a teu favor." },
   exit_3: { emoji: "🎯", label: "TP3 atingido", body: "Take profit 3 alcançado." },
   exit_4: { emoji: "🎯", label: "TP4 atingido", body: "Take profit 4 alcançado." },
   closed: { emoji: "✅", label: "Trade fechada", body: "A trade foi encerrada." },
@@ -66,7 +67,8 @@ export async function notifySignalOutcome(opts: {
   if (!userIds.length) return 0
 
   const title = `${meta.emoji} ${meta.label} — ${opts.ticker ?? "Sinal"}`
-  const url = "/app-mobile?tab=trading-alerts"
+  // Deep-link ao SINAL específico (a app abre o modal do alerta com o gráfico ao vivo).
+  const url = `/app-mobile?tab=trading-alerts&signal=${opts.entryId}`
   try {
     await fetch(`${siteOrigin()}/api/notifications/send-push`, {
       method: "POST",

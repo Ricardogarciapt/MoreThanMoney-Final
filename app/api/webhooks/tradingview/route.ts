@@ -617,7 +617,7 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
       if (entryRow?.id) {
         await supabase.from("tradingview_signals").update({ trade_status: mgmtStatus }).eq("id", entryRow.id)
-        if (mgmtStatus === "loss" || mgmtStatus.startsWith("exit_")) {
+        if (mgmtStatus === "loss" || mgmtStatus === "be" || mgmtStatus.startsWith("exit_")) {
           await notifySignalOutcome({
             entryId: entryRow.id,
             chatMessageId: (entryRow as { chat_message_id?: string | null }).chat_message_id ?? null,
@@ -940,8 +940,8 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
       if (entryRow?.id) {
         await supabase.from("tradingview_signals").update({ trade_status: tradeStatus }).eq("id", entryRow.id)
-        // Notifica seguidores + quem aceitou no T2T quando bate SL ou um TP
-        if (tradeStatus === "loss" || tradeStatus.startsWith("exit_")) {
+        // Notifica seguidores + quem aceitou no T2T: break-even (proteger), SL ou um TP
+        if (tradeStatus === "loss" || tradeStatus === "be" || tradeStatus.startsWith("exit_")) {
           try {
             await notifySignalOutcome({
               entryId: entryRow.id,
