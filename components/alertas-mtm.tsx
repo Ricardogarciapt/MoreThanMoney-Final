@@ -369,8 +369,18 @@ function AlertCard({
 
         {alert.session && <p className="mt-1 text-xs text-gray-500">🌍 {alert.session}</p>}
 
-        {/* Imagem do gráfico no momento do sinal (chart_url / snapshot TradingView) */}
-        {alert.chartImageUrl ? (
+        {/* Gráfico: imagem do sinal por defeito; o botão "Gráfico ao vivo" alterna para o live. */}
+        {showChart && alert.tvSymbol ? (
+          <div className="mt-3">
+            <TvChartEmbed
+              tvSymbol={alert.tvSymbol}
+              interval={alert.timeframe && /^\d+$/.test(alert.timeframe) ? alert.timeframe : "60"}
+              height={280}
+              compact
+              studies={studiesForStrategy(alert.strategy)}
+            />
+          </div>
+        ) : alert.chartImageUrl ? (
           <a
             href={alert.chartImageUrl}
             target="_blank"
@@ -378,29 +388,17 @@ function AlertCard({
             className="mt-3 block overflow-hidden rounded-lg border border-gray-600/40"
           >
             <div className="flex items-center justify-between bg-black/60 px-2 py-1 text-[10px] uppercase tracking-wider text-gray-400">
-              <span>Gráfico no momento do alerta</span>
+              <span>Gráfico do sinal</span>
               <span className="text-[#D2A63C]">Abrir ↗</span>
             </div>
             <img
               src={alert.chartImageUrl}
               alt={`Gráfico ${alert.ticker}`}
-              className="max-h-72 w-full bg-gray-900 object-cover"
+              className="max-h-96 w-full bg-gray-900 object-contain"
               loading="lazy"
             />
           </a>
-        ) : (
-          showChart && alert.tvSymbol && (
-            <div className="mt-3">
-              <TvChartEmbed
-                tvSymbol={alert.tvSymbol}
-                interval={alert.timeframe && /^\d+$/.test(alert.timeframe) ? alert.timeframe : "60"}
-                height={280}
-                compact
-                studies={studiesForStrategy(alert.strategy)}
-              />
-            </div>
-          )
-        )}
+        ) : null}
 
         {/* Níveis */}
         <div className="mt-3 rounded-lg bg-black/30 px-3">
@@ -476,7 +474,7 @@ function AlertCard({
 
         {/* Ações */}
         <div className="mt-3 flex flex-wrap gap-2">
-          {!alert.chartImageUrl && alert.tvSymbol && (
+          {alert.tvSymbol && (
             <Button
               size="sm"
               variant="outline"
@@ -484,7 +482,7 @@ function AlertCard({
               className="border-[#D2A63C]/40 text-[#D2A63C] hover:bg-[#D2A63C]/10"
             >
               <LineChart className="mr-1 h-3 w-3" />
-              {showChart ? "Esconder gráfico" : "Gráfico ao vivo"}
+              {showChart ? "Ver imagem do sinal" : "Gráfico ao vivo"}
             </Button>
           )}
           <Button

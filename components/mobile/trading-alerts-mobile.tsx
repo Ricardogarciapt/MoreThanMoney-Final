@@ -25,6 +25,7 @@ import {
   X as XIcon,
   SlidersHorizontal,
   Sparkles,
+  LineChart,
 } from "lucide-react"
 import MarkdownRenderer from "@/components/dashboard-gestao/markdown-renderer"
 import TvChartEmbed from "@/components/tv-chart-embed"
@@ -280,6 +281,7 @@ function MobileAlertCard({
   const [analysis, setAnalysis] = useState<string | null>(alert.aiAnalysis)
   const [loadingAnalysis, setLoadingAnalysis] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [showChart, setShowChart] = useState(false)
 
   const toggleAnalysis = async () => {
     const next = !showAnalysis
@@ -332,11 +334,15 @@ function MobileAlertCard({
       </div>
       {alert.strategy && <p className="mt-0.5 text-[11px] text-blue-300">{alert.strategy}</p>}
 
-      {alert.chartImageUrl ? (
+      {showChart && alert.tvSymbol ? (
+        <div className="mt-2">
+          <LazyAlertChart tvSymbol={alert.tvSymbol} timeframe={alert.timeframe} strategy={alert.strategy} />
+        </div>
+      ) : alert.chartImageUrl ? (
         <img
           src={alert.chartImageUrl}
           alt={alert.ticker || "chart"}
-          className="mt-2 max-h-40 w-full rounded-lg border border-gray-700 object-cover"
+          className="mt-2 w-full rounded-lg border border-gray-700 object-contain"
           loading="lazy"
         />
       ) : alert.tvSymbol ? (
@@ -420,6 +426,15 @@ function MobileAlertCard({
           {following ? "A seguir ✓" : "Seguir sinal"}
         </button>
       </div>
+      {alert.tvSymbol && (
+        <button
+          onClick={() => setShowChart((v) => !v)}
+          className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-[#D2A63C]/40 bg-[#D2A63C]/10 px-2 py-1.5 text-[11px] font-medium text-[#D2A63C]"
+        >
+          <LineChart className="h-3 w-3" />
+          {showChart ? "Ver imagem do sinal" : "Gráfico ao vivo"}
+        </button>
+      )}
       {following && <MobileSignalTracker alert={alert} />}
       {showAnalysis && (
         <div className="mt-2 rounded-lg border border-purple-500/20 bg-purple-500/5 p-2 text-xs">
