@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getBybitWalletBalance, bybitConfigured } from "@/lib/bybit"
 
 export const dynamic = "force-dynamic"
+// Bybit bloqueia IPs de certas regiões (ex.: EUA). Corre em Frankfurt (UE), que a Bybit aceita.
+export const preferredRegion = "fra1"
 
 /**
  * Valida as keys Bybit lendo o saldo (SEM colocar ordens). Protegido por CRON_SECRET.

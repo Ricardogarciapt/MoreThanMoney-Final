@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { placeBybitOrder, toBybitSymbol, bybitConfigured } from "@/lib/bybit"
 
 export const dynamic = "force-dynamic"
+export const preferredRegion = "fra1"
 
 /**
  * Coloca uma ordem de TESTE na conta-mestre Bybit. Protegido por CRON_SECRET e
