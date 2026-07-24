@@ -64,6 +64,7 @@ export async function GET(req: NextRequest) {
     entry,
     sl: slv,
     tps,
+    alertName: sig.alert_name,
   })
 
   if (!png) {

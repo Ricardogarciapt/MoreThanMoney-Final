@@ -34,6 +34,7 @@ export interface ChartImgSignal {
   entry: number | null
   sl: number | null
   tps: number[]
+  alertName?: string | null
   width?: number
   height?: number
 }
@@ -44,6 +45,26 @@ const hline = (price: number, color: string, width = 2) => ({
   override: { lineWidth: width, lineColor: color },
 })
 
+// Studies built-in do chart-img que reproduzem os plots dos scanners MTM.
+// Família MTM/Aurum: stack DEMA (15/50/238) + POC (Volume Profile) + RSI.
+const DEMA = (len: number, color: string) => ({ name: "Double EMA", input: [len], override: { "Plot.color": color, "Plot.linewidth": 2 } })
+const POC = { name: "Volume Profile Visible Range", override: { "graphics.horizlines.pocLines.color": "rgb(255,165,0)" } }
+const RSI = { name: "Relative Strength Index" }
+
+/** Studies (em ordem de prioridade) para o scanner do sinal, pelo nome do alerta. */
+export function studiesForScanner(alertName?: string | null): { name: string; input?: unknown; override?: unknown }[] {
+  const a = (alertName || "").toLowerCase()
+  // Aurum Flow e MTM Scanner partilham a base DEMA+POC+RSI
+  if (/aurum|mtm\s*scanner|perps/.test(a)) {
+    return [DEMA(15, "rgb(59,130,246)"), DEMA(50, "rgb(22,185,129)"), DEMA(238, "rgb(210,166,60)"), POC, RSI]
+  }
+  // Sensei / GoldKiller (ouro) — DEMA + POC como contexto (afina-se depois com os plots próprios)
+  if (/sensei|goldkiller|gold/.test(a)) {
+    return [DEMA(50, "rgb(22,185,129)"), DEMA(238, "rgb(210,166,60)"), POC, RSI]
+  }
+  return [DEMA(50, "rgb(22,185,129)"), DEMA(238, "rgb(210,166,60)")]
+}
+
 /**
  * Renderiza o gráfico real com as linhas da trade. Devolve os bytes PNG ou null (falha/sem key).
  * Só desenha níveis válidos; respeita o limite de params do plano (máx 5 linhas ≈ PRO).
@@ -52,10 +73,28 @@ export async function renderSignalChartPng(sig: ChartImgSignal): Promise<ArrayBu
   const key = process.env.CHARTIMG_API_KEY
   if (!key) return null
 
-  const drawings: unknown[] = []
-  if (sig.entry != null && sig.entry > 0) drawings.push(hline(sig.entry, "rgb(59,130,246)", 2)) // azul
-  if (sig.sl != null && sig.sl > 0) drawings.push(hline(sig.sl, "rgb(239,68,68)", 2)) // vermelho
-  for (const tp of sig.tps.filter((x) => x > 0).slice(0, 3)) drawings.push(hline(tp, "rgb(22,185,129)", 2)) // verde
+  // Orçamento combinado de studies+drawings (limite do plano): PRO 5 · MEGA 10.
+  const budget = Math.max(2, Number(process.env.CHARTIMG_MAX_PARAMS || 5))
+  const st = studiesForScanner(sig.alertName)
+  const tps = sig.tps.filter((x) => x > 0).slice(0, 3)
+
+  // Lista ordenada por prioridade (trade primeiro, depois contexto do study), tag s/d.
+  type Item = { t: "s" | "d"; v: unknown }
+  const seq: Item[] = []
+  if (sig.entry != null && sig.entry > 0) seq.push({ t: "d", v: hline(sig.entry, "rgb(59,130,246)", 2) })
+  if (sig.sl != null && sig.sl > 0) seq.push({ t: "d", v: hline(sig.sl, "rgb(239,68,68)", 2) })
+  if (tps[0]) seq.push({ t: "d", v: hline(tps[0], "rgb(22,185,129)", 2) })
+  if (st[0]) seq.push({ t: "s", v: st[0] }) // DEMA rápida
+  if (st[1]) seq.push({ t: "s", v: st[1] }) // DEMA média
+  if (st[2]) seq.push({ t: "s", v: st[2] }) // DEMA lenta / POC
+  if (tps[1]) seq.push({ t: "d", v: hline(tps[1], "rgb(22,185,129)", 2) })
+  if (st[3]) seq.push({ t: "s", v: st[3] })
+  if (tps[2]) seq.push({ t: "d", v: hline(tps[2], "rgb(22,185,129)", 2) })
+  if (st[4]) seq.push({ t: "s", v: st[4] })
+
+  const chosen = seq.slice(0, budget)
+  const studies = chosen.filter((x) => x.t === "s").map((x) => x.v)
+  const drawings = chosen.filter((x) => x.t === "d").map((x) => x.v)
 
   const body = {
     symbol: sig.symbol,
@@ -63,6 +102,7 @@ export async function renderSignalChartPng(sig: ChartImgSignal): Promise<ArrayBu
     theme: "dark",
     width: Math.min(sig.width ?? 1200, 1920),
     height: Math.min(sig.height ?? 675, 1080),
+    studies,
     drawings,
   }
 
