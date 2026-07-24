@@ -240,13 +240,13 @@ export interface BybitPerpTradeResult {
   slSet: boolean
 }
 
-/** Normaliza as frações parciais para o nº de TPs (default 40/30/30 em 3 níveis; senão iguais). */
+/** Normaliza as frações parciais para o nº de TPs (default 50/30/20 em 3 níveis; senão iguais). */
 function normalizePartials(partials: number[] | null | undefined, n: number): number[] {
   if (partials && partials.length === n && partials.every((p) => p > 0)) {
     const sum = partials.reduce((a, b) => a + b, 0)
     return partials.map((p) => p / sum)
   }
-  if (n === 3) return [0.4, 0.3, 0.3]
+  if (n === 3) return [0.5, 0.3, 0.2]
   return Array.from({ length: n }, () => 1 / n)
 }
 
