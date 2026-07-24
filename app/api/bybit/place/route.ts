@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import {
-  placeBybitOrder,
   toBybitSymbol,
   bybitConfigured,
   getBybitEquity,
   getBybitInstrumentInfo,
   computeMasterQty,
+  placeBybitPerp,
 } from "@/lib/bybit"
 
 // Edge + fra1: a Bybit bloqueia IPs dos EUA (serverless Node corre em iad1). Só as Edge
@@ -15,16 +15,18 @@ export const runtime = "edge"
 export const preferredRegion = "fra1"
 export const dynamic = "force-dynamic"
 
-const DEFAULT_RISK_PCT = 0.001 // 0.1% da equity arriscada ao SL
-const DEFAULT_COST_PCT = 0.01 // teto: 1% da equity em margem
+const DEFAULT_RISK_PCT = 0.01 // 1% da equity arriscada ao SL
+const DEFAULT_COST_ABS = 10 // teto: $10 de margem por posição
+const DEFAULT_LEVERAGE = 3
 
 /**
- * Coloca a ordem-MESTRE na Bybit (Copy Trading nativo replica p/ seguidores).
- * Faz o sizing AQUI (fra1) porque o webhook em iad1 não lê a wallet Bybit.
- * Interna: CRON_SECRET. Só executa com BYBIT_PERPS_EXEC_ENABLED=true (senão skipped).
+ * Coloca a ordem-MESTRE na Bybit (Copy Trading nativo replica p/ seguidores): entrada a
+ * mercado + SL completo + TPs parciais (reduce-only). Faz o SIZING aqui (fra1) porque o
+ * webhook em iad1 não lê a wallet. Gated por BYBIT_PERPS_EXEC_ENABLED.
  *   POST /api/bybit/place   Authorization: Bearer <CRON_SECRET>
- *   body: { symbol, side, entry, sl?, tp?, leverage?, riskPct?, costPct?, qty? }
- * Se `qty` vier definida, usa-a direto (bypass do sizing — testes).
+ *   body: { symbol, side, entry, sl?, tps?: number[], partials?: number[],
+ *           leverage?, riskPct?, costAbs?, qty? }
+ * `tps` = [tp1,tp2,tp3]; se vier só `tp`, usa-se como nível único. `qty` direta salta o sizing.
  */
 export async function POST(req: NextRequest) {
   const secret = process.env.CRON_SECRET
@@ -47,23 +49,30 @@ export async function POST(req: NextRequest) {
   const num = (v: unknown) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null)
   const entry = num(b.entry) ?? num(b.price)
   const sl = num(b.sl)
-  const tp = num(b.tp)
-  const leverage = num(b.leverage) ?? 3
+  const takeProfits = Array.isArray(b.tps)
+    ? (b.tps as unknown[]).map(num).filter((n): n is number => n != null && n > 0)
+    : [num(b.tp)].filter((n): n is number => n != null && n > 0)
+  const partials = Array.isArray(b.partials)
+    ? (b.partials as unknown[]).map(num).filter((n): n is number => n != null && n > 0)
+    : null
+  const leverage = num(b.leverage) ?? DEFAULT_LEVERAGE
   const riskPct = num(b.riskPct) ?? (Number(process.env.BYBIT_RISK_PCT) || DEFAULT_RISK_PCT)
-  const costPct = num(b.costPct) ?? (Number(process.env.BYBIT_COST_PCT) || DEFAULT_COST_PCT)
+  const costAbs = num(b.costAbs) ?? (Number(process.env.BYBIT_COST_ABS) || DEFAULT_COST_ABS)
 
-  // qty: direta (testes) ou dimensionada (menor entre risco riskPct e margem costPct×lev).
+  const instrument = await getBybitInstrumentInfo(symbol)
+
+  // qty: direta (testes) ou dimensionada (menor entre risco riskPct e margem ≤ costAbs).
   let qty = num(b.qty) ?? 0
   let sizing = "qty direta"
   if (!(qty > 0)) {
     if (!(entry != null && entry > 0)) {
       return NextResponse.json({ ok: false, error: "entry necessário para o sizing" }, { status: 400 })
     }
-    const [equity, instrument] = await Promise.all([getBybitEquity(), getBybitInstrumentInfo(symbol)])
+    const equity = await getBybitEquity()
     if (!(equity != null && equity > 0)) {
       return NextResponse.json({ ok: false, error: "equity Bybit indisponível" }, { status: 502 })
     }
-    const r = computeMasterQty({ equity, entry, sl, leverage, riskPct, costPct, instrument })
+    const r = computeMasterQty({ equity, entry, sl, leverage, riskPct, costAbs, instrument })
     qty = r.qty
     sizing = `equity $${equity.toFixed(2)} · ${r.reason}`
     if (!(qty > 0)) {
@@ -71,24 +80,27 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const order = await placeBybitOrder({
+  const trade = await placeBybitPerp({
     symbol,
     side,
     qty,
-    orderType: "market",
-    stopLoss: sl,
-    takeProfit: tp,
     leverage,
+    stopLoss: sl,
+    takeProfits,
+    partials,
+    instrument,
   })
 
   return NextResponse.json({
-    ok: order.ok,
-    retCode: order.retCode,
-    retMsg: order.retMsg,
-    orderId: (order.result as { orderId?: string } | null)?.orderId ?? null,
+    ok: trade.ok,
+    retCode: trade.retCode,
+    retMsg: trade.retMsg,
+    orderId: trade.orderId,
     symbol,
     side,
     qty,
+    slSet: trade.slSet,
+    tps: trade.tps.map((t) => ({ price: t.price, qty: t.qty, ok: t.ok, err: t.ok ? undefined : t.retMsg })),
     sizing,
   })
 }

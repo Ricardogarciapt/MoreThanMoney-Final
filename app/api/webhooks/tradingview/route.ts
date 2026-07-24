@@ -934,7 +934,7 @@ export async function POST(request: NextRequest) {
     const bybitSide = v.direction === "sell" ? "sell" : "buy"
     const bybitEntry = v.entry ?? entry ?? price ?? null
     const bybitSl = v.sl ?? sl ?? null
-    const bybitTp = tp ?? tp2 ?? null
+    const bybitTps = [tp, tp2, tp3].filter((n): n is number => n != null && n > 0)
     if (cronSecret && (v.symbol ?? ticker) && bybitEntry != null) {
       try {
         const res = await fetch(`${url.origin}/api/bybit/place`, {
@@ -945,7 +945,7 @@ export async function POST(request: NextRequest) {
             side: bybitSide,
             entry: bybitEntry,
             sl: bybitSl,
-            tp: bybitTp,
+            tps: bybitTps,
           }),
         })
         const j = (await res.json().catch(() => ({}))) as {

@@ -141,13 +141,21 @@ export function roundQtyToStep(qty: number, step: number): number {
   return Number(rounded.toFixed(decimals))
 }
 
+/** Arredonda um PREÇO ao tickSize do símbolo (senão o MT5/Bybit rejeita SL/TP com preço inválido). */
+export function roundToTick(price: number, tick: number): number {
+  if (!(tick > 0)) return price
+  const rounded = Math.round(price / tick) * tick
+  const decimals = (String(tick).split(".")[1] || "").length
+  return Number(rounded.toFixed(decimals))
+}
+
 export interface MasterSizingInput {
   equity: number
   entry: number
   sl: number | null
   leverage: number
-  riskPct: number // fração da equity arriscada ao SL (ex.: 0.001 = 0.1%)
-  costPct: number // teto: fração da equity gasta em margem (ex.: 0.01 = 1%)
+  riskPct: number // fração da equity arriscada ao SL (ex.: 0.01 = 1%)
+  costAbs: number // teto: margem máxima gasta por posição, em USDT (ex.: 10 = $10)
   instrument: BybitInstrument | null
 }
 
@@ -158,17 +166,17 @@ export interface MasterSizingResult {
 }
 
 /**
- * Dimensiona a ordem-mestre: o MENOR entre (a) risco riskPct ao SL e (b) margem costPct×lev.
- * Nunca arrisca mais que riskPct nem gasta mais que costPct de margem. Arredonda ao qtyStep;
- * marca belowMin se o mínimo do símbolo forçar uma qty maior que o teto (deixa o caller decidir).
+ * Dimensiona a ordem-mestre: o MENOR entre (a) risco riskPct ao SL e (b) margem ≤ costAbs USDT.
+ * Nunca arrisca mais que riskPct da equity nem gasta mais que costAbs de margem. Arredonda ao
+ * qtyStep; marca belowMin se o mínimo do símbolo forçar uma qty maior que o teto.
  */
 export function computeMasterQty(i: MasterSizingInput): MasterSizingResult {
   const stopDist = i.sl != null && i.sl > 0 ? Math.abs(i.entry - i.sl) : null
   const qtyByRisk = stopDist && stopDist > 0 ? (i.equity * i.riskPct) / stopDist : Infinity
-  const notionalCap = i.equity * i.costPct * Math.max(1, i.leverage)
+  const notionalCap = i.costAbs * Math.max(1, i.leverage) // margem máx × alavancagem
   const qtyByCost = i.entry > 0 ? notionalCap / i.entry : Infinity
   let qty = Math.min(qtyByRisk, qtyByCost)
-  const which = qtyByRisk <= qtyByCost ? `risco ${(i.riskPct * 100).toFixed(2)}%` : `custo ${(i.costPct * 100).toFixed(2)}%`
+  const which = qtyByRisk <= qtyByCost ? `risco ${(i.riskPct * 100).toFixed(2)}%` : `custo $${i.costAbs}`
   const step = i.instrument?.qtyStep ?? 0
   qty = roundQtyToStep(qty, step)
   const min = i.instrument?.minOrderQty ?? 0
@@ -210,6 +218,100 @@ export async function placeBybitOrder(o: BybitOrderInput) {
   if (o.stopLoss && o.stopLoss > 0) body.stopLoss = String(o.stopLoss)
   if (o.takeProfit && o.takeProfit > 0) body.takeProfit = String(o.takeProfit)
   return signedRequest("POST", "/v5/order/create", body)
+}
+
+export interface BybitPerpTradeInput {
+  symbol: string
+  side: "buy" | "sell"
+  qty: number
+  leverage?: number | null
+  stopLoss?: number | null
+  takeProfits?: number[] | null // [tp1, tp2, tp3] — saídas parciais + TP máximo
+  partials?: number[] | null // frações por TP (ex.: [0.4,0.3,0.3]); a última corre até ao TP máximo
+  instrument?: BybitInstrument | null
+}
+
+export interface BybitPerpTradeResult {
+  ok: boolean
+  orderId: string | null
+  retCode: number
+  retMsg: string
+  tps: { price: number; qty: number; ok: boolean; retMsg: string }[]
+  slSet: boolean
+}
+
+/** Normaliza as frações parciais para o nº de TPs (default 40/30/30 em 3 níveis; senão iguais). */
+function normalizePartials(partials: number[] | null | undefined, n: number): number[] {
+  if (partials && partials.length === n && partials.every((p) => p > 0)) {
+    const sum = partials.reduce((a, b) => a + b, 0)
+    return partials.map((p) => p / sum)
+  }
+  if (n === 3) return [0.4, 0.3, 0.3]
+  return Array.from({ length: n }, () => 1 / n)
+}
+
+/**
+ * Abre a posição-MESTRE a mercado com SL COMPLETO + TPs PARCIAIS (ordens reduce-only limit
+ * em cada nível — TP1/TP2 fecham parte, o resto corre até ao TP máximo). Preços arredondados
+ * ao tickSize e quantidades ao qtyStep (senão a Bybit rejeita SL/TP). O Copy Trading nativo
+ * replica a posição, o SL e os fechos parciais para os seguidores.
+ */
+export async function placeBybitPerp(o: BybitPerpTradeInput): Promise<BybitPerpTradeResult> {
+  if (o.leverage && o.leverage > 0) await setBybitLeverage(o.symbol, o.leverage) // best-effort
+
+  const tick = o.instrument?.tickSize ?? 0
+  const step = o.instrument?.qtyStep ?? 0
+  const minQty = o.instrument?.minOrderQty ?? 0
+  const rp = (p: number) => (tick > 0 ? roundToTick(p, tick) : p)
+  const sl = o.stopLoss != null && o.stopLoss > 0 ? rp(o.stopLoss) : null
+
+  // 1) Entrada a mercado com SL completo na posição (tpslMode Full → SL cobre toda a posição).
+  const entry = await signedRequest("POST", "/v5/order/create", {
+    category: "linear",
+    symbol: o.symbol,
+    side: o.side === "buy" ? "Buy" : "Sell",
+    orderType: "Market",
+    qty: String(o.qty),
+    timeInForce: "IOC",
+    positionIdx: 0,
+    tpslMode: "Full",
+    ...(sl != null ? { stopLoss: String(sl) } : {}),
+  })
+  const orderId = (entry.result as { orderId?: string } | null)?.orderId ?? null
+  if (!entry.ok) {
+    return { ok: false, orderId, retCode: entry.retCode, retMsg: entry.retMsg, tps: [], slSet: false }
+  }
+
+  // 2) TPs parciais como ordens reduce-only LIMIT do lado oposto. Leg abaixo do mínimo do
+  //    símbolo é saltada e a sua quota vai para o último nível (evita rejeições em contas pequenas).
+  const tps: BybitPerpTradeResult["tps"] = []
+  const levels = (o.takeProfits ?? []).filter((t) => t != null && t > 0)
+  if (levels.length) {
+    const parts = normalizePartials(o.partials, levels.length)
+    const oppSide = o.side === "buy" ? "Sell" : "Buy"
+    let allocated = 0
+    for (let i = 0; i < levels.length; i++) {
+      const isLast = i === levels.length - 1
+      let legQty = isLast ? roundQtyToStep(o.qty - allocated, step) : roundQtyToStep(o.qty * parts[i], step)
+      if (!isLast && minQty > 0 && legQty < minQty) continue // quota fica p/ o último nível
+      if (legQty <= 0) continue
+      allocated += legQty
+      const r = await signedRequest("POST", "/v5/order/create", {
+        category: "linear",
+        symbol: o.symbol,
+        side: oppSide,
+        orderType: "Limit",
+        qty: String(legQty),
+        price: String(rp(levels[i])),
+        reduceOnly: true,
+        timeInForce: "GTC",
+        positionIdx: 0,
+      })
+      tps.push({ price: rp(levels[i]), qty: legQty, ok: r.ok, retMsg: r.retMsg })
+    }
+  }
+
+  return { ok: true, orderId, retCode: entry.retCode, retMsg: entry.retMsg, tps, slSet: sl != null }
 }
 
 /** Ticker `.P`/`USDT` → símbolo linear Bybit (ex.: BTCUSDT.P → BTCUSDT). */
