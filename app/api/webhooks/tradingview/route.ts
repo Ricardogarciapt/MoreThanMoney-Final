@@ -890,6 +890,51 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Execução Bybit (ordem-MESTRE do Copy Trading nativo) para entries perp 1H. A chamada
+  // vai à rota edge /api/bybit/place (fra1) porque este webhook corre em iad1 (EUA) e a
+  // Bybit geo-bloqueia. A rota é gated por BYBIT_PERPS_EXEC_ENABLED (default OFF → skipped),
+  // por isso é seguro chamar sempre; só dispara ordem real quando ligares a flag.
+  if (assetClass === "crypto_perp" && alertOk && initSignalKind === "entry" && !cryptoPerpBlocked) {
+    const cronSecret = process.env.CRON_SECRET
+    const bybitSide = v.direction === "sell" ? "sell" : "buy"
+    const bybitEntry = v.entry ?? entry ?? price ?? null
+    const bybitSl = v.sl ?? sl ?? null
+    const bybitTp = tp ?? tp2 ?? null
+    if (cronSecret && (v.symbol ?? ticker) && bybitEntry != null) {
+      try {
+        const res = await fetch(`${url.origin}/api/bybit/place`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${cronSecret}` },
+          body: JSON.stringify({
+            symbol: v.symbol ?? ticker,
+            side: bybitSide,
+            entry: bybitEntry,
+            sl: bybitSl,
+            tp: bybitTp,
+          }),
+        })
+        const j = (await res.json().catch(() => ({}))) as {
+          ok?: boolean; skipped?: boolean; orderId?: string | null; retMsg?: string; sizing?: string; reason?: string; error?: string
+        }
+        const detail = j.skipped
+          ? `skipped: ${j.reason ?? "flag off"}`
+          : j.ok
+            ? `#${j.orderId} · ${j.sizing ?? ""}`
+            : `falhou: ${j.retMsg ?? j.error ?? "?"}`
+        if (logId) {
+          await supabase.from("tradingview_signals").update({
+            bybit_order_id: j.ok ? j.orderId ?? null : null,
+            bybit_exec_detail: detail.slice(0, 300),
+          }).eq("id", logId)
+        }
+        console.log(`[webhook][bybit] ${v.symbol ?? ticker} ${bybitSide} → ${detail}`)
+      } catch (e) {
+        console.error("[webhook][bybit] place error:", e)
+        if (logId) await supabase.from("tradingview_signals").update({ bybit_exec_detail: `erro: ${String(e).slice(0, 200)}` }).eq("id", logId)
+      }
+    }
+  }
+
   // Relay Telegram → grupo correspondente à classe (Ouro/BTC: -1003853860780, Forex: -1003716578747)
   const relayChatId = route.telegram
   const relayOn = Boolean(alertOk && relayChatId && AIBOT_TOKEN && !RELAY_DISABLED)

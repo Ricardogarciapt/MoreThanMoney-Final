@@ -99,6 +99,87 @@ export async function setBybitLeverage(symbol: string, leverage: number) {
   return { ...r, ok: true }
 }
 
+/** Equity total (USDT) da conta unificada. null se indisponível. */
+export async function getBybitEquity(): Promise<number | null> {
+  const r = await getBybitWalletBalance()
+  const list = (r.result as { list?: { totalEquity?: string }[] } | null)?.list ?? []
+  const eq = Number(list[0]?.totalEquity)
+  return Number.isFinite(eq) && eq > 0 ? eq : null
+}
+
+export interface BybitInstrument {
+  minOrderQty: number
+  qtyStep: number
+  tickSize: number
+}
+
+/** Regras de lote/preço do símbolo linear (público, sem assinatura). Para arredondar a qty. */
+export async function getBybitInstrumentInfo(symbol: string): Promise<BybitInstrument | null> {
+  try {
+    const url = `${base()}/v5/market/instruments-info?category=linear&symbol=${encodeURIComponent(symbol)}`
+    const res = await fetch(url)
+    const j = (await res.json()) as {
+      result?: { list?: { lotSizeFilter?: { minOrderQty?: string; qtyStep?: string }; priceFilter?: { tickSize?: string } }[] }
+    }
+    const it = j.result?.list?.[0]
+    if (!it) return null
+    return {
+      minOrderQty: Number(it.lotSizeFilter?.minOrderQty ?? 0) || 0,
+      qtyStep: Number(it.lotSizeFilter?.qtyStep ?? 0) || 0,
+      tickSize: Number(it.priceFilter?.tickSize ?? 0) || 0,
+    }
+  } catch {
+    return null
+  }
+}
+
+/** Arredonda qty ao qtyStep (para baixo) e devolve string com os decimais do step. */
+export function roundQtyToStep(qty: number, step: number): number {
+  if (!(step > 0)) return qty
+  const rounded = Math.floor(qty / step) * step
+  const decimals = (String(step).split(".")[1] || "").length
+  return Number(rounded.toFixed(decimals))
+}
+
+export interface MasterSizingInput {
+  equity: number
+  entry: number
+  sl: number | null
+  leverage: number
+  riskPct: number // fração da equity arriscada ao SL (ex.: 0.001 = 0.1%)
+  costPct: number // teto: fração da equity gasta em margem (ex.: 0.01 = 1%)
+  instrument: BybitInstrument | null
+}
+
+export interface MasterSizingResult {
+  qty: number
+  reason: string
+  belowMin: boolean
+}
+
+/**
+ * Dimensiona a ordem-mestre: o MENOR entre (a) risco riskPct ao SL e (b) margem costPct×lev.
+ * Nunca arrisca mais que riskPct nem gasta mais que costPct de margem. Arredonda ao qtyStep;
+ * marca belowMin se o mínimo do símbolo forçar uma qty maior que o teto (deixa o caller decidir).
+ */
+export function computeMasterQty(i: MasterSizingInput): MasterSizingResult {
+  const stopDist = i.sl != null && i.sl > 0 ? Math.abs(i.entry - i.sl) : null
+  const qtyByRisk = stopDist && stopDist > 0 ? (i.equity * i.riskPct) / stopDist : Infinity
+  const notionalCap = i.equity * i.costPct * Math.max(1, i.leverage)
+  const qtyByCost = i.entry > 0 ? notionalCap / i.entry : Infinity
+  let qty = Math.min(qtyByRisk, qtyByCost)
+  const which = qtyByRisk <= qtyByCost ? `risco ${(i.riskPct * 100).toFixed(2)}%` : `custo ${(i.costPct * 100).toFixed(2)}%`
+  const step = i.instrument?.qtyStep ?? 0
+  qty = roundQtyToStep(qty, step)
+  const min = i.instrument?.minOrderQty ?? 0
+  let belowMin = false
+  if (min > 0 && qty < min) {
+    belowMin = true
+    qty = min // caller decide se aceita o mínimo do símbolo (excede ligeiramente o teto)
+  }
+  return { qty, reason: `${which} → ${qty}${belowMin ? " (min do símbolo)" : ""}`, belowMin }
+}
+
 export interface BybitOrderInput {
   symbol: string // ex.: BTCUSDT (linear perp)
   side: "buy" | "sell"
