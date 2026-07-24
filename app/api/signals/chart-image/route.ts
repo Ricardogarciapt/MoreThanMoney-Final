@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import {
-  renderSignalChartPng,
+  renderSignalChart,
   buildChartImgSymbol,
   tfToChartImgInterval,
 } from "@/lib/chart-image"
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
   put("lev", num(rp.leverage)); put("cost", num(rp.fee_cost)); put("acct", num(rp.account))
   const ogUrl = `${origin}/api/og/signal?${og.toString()}`
 
-  const png = await renderSignalChartPng({
+  const r = await renderSignalChart({
     symbol: buildChartImgSymbol(sig.ticker, sig.exchange),
     interval: tfToChartImgInterval(sig.timeframe),
     direction: dir,
@@ -66,6 +66,11 @@ export async function GET(req: NextRequest) {
     tps,
     alertName: sig.alert_name,
   })
+  const png = r.png
+
+  if (req.nextUrl.searchParams.get("debug") === "1") {
+    return NextResponse.json({ ok: !!png, error: r.error, body: r.body })
+  }
 
   if (!png) {
     // sem imagem real → cai no card sintético (302, sem cache longo para poder recuperar)

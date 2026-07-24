@@ -70,8 +70,13 @@ export function studiesForScanner(alertName?: string | null): { name: string; in
  * Só desenha níveis válidos; respeita o limite de params do plano (máx 5 linhas ≈ PRO).
  */
 export async function renderSignalChartPng(sig: ChartImgSignal): Promise<ArrayBuffer | null> {
+  return (await renderSignalChart(sig)).png
+}
+
+/** Igual, mas devolve também o erro/body para debug. */
+export async function renderSignalChart(sig: ChartImgSignal): Promise<{ png: ArrayBuffer | null; error?: string; body?: unknown }> {
   const key = process.env.CHARTIMG_API_KEY
-  if (!key) return null
+  if (!key) return { png: null, error: "sem CHARTIMG_API_KEY" }
 
   // Orçamento combinado de studies+drawings (limite do plano): PRO 5 · MEGA 10.
   const budget = Math.max(2, Number(process.env.CHARTIMG_MAX_PARAMS || 5))
@@ -116,18 +121,17 @@ export async function renderSignalChartPng(sig: ChartImgSignal): Promise<ArrayBu
       signal: ctrl.signal,
     })
     if (!res.ok) {
-      console.error("[chart-image] chart-img erro", res.status, (await res.text()).slice(0, 200))
-      return null
+      const t = (await res.text()).slice(0, 400)
+      console.error("[chart-image] chart-img erro", res.status, t)
+      return { png: null, error: `${res.status} ${t}`, body }
     }
     const ct = res.headers.get("content-type") || ""
     if (!ct.startsWith("image/")) {
-      console.error("[chart-image] resposta não-imagem", ct)
-      return null
+      return { png: null, error: `content-type ${ct}`, body }
     }
-    return await res.arrayBuffer()
+    return { png: await res.arrayBuffer() }
   } catch (e) {
-    console.error("[chart-image] fetch falhou", e instanceof Error ? e.message : e)
-    return null
+    return { png: null, error: e instanceof Error ? e.message : String(e), body }
   } finally {
     clearTimeout(timer)
   }
