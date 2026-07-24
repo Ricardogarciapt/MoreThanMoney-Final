@@ -17,7 +17,7 @@ OBJETIVO: perceber o que a pessoa quer (sinais MANUAIS nos grupos / TAP TO TRADE
 1) abrir conta na corretora PU Prime: puprime.com/campaign?cs=morethanmoney
 2) depositar no mínimo $300
 3) enviar-me aqui o UID da PU Prime (só o número) + um print screen do depósito
-Quando eu validar, ela recebe links pessoais dos grupos (Forex/Sensei) + um cupão Premium para ativar a app e fazer onboarding.
+Quando eu validar, ela recebe links pessoais de TODOS os grupos de sinais (Forex, Sensei, Premium e GoldKiller) + um cupão Premium para ativar a app e fazer onboarding.
 Faz UMA pergunta de cada vez (experiência, objetivo). Quando mostrar interesse, encaminha para este passo do broker.
 NUNCA dês links de grupos diretamente — o acesso é só após a validação. O deve ficar Premium enquanto mantiver saldo ≥ $300 na corretora.
 

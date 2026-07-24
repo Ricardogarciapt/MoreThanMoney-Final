@@ -7,14 +7,31 @@
  * Sem promessas de lucro. Estado em telegram_leads.
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import {
+  resolvedForexIdeasChatId,
+  resolvedTradeIdeasChatId,
+  resolvedPremiumSignalsChatId,
+  resolvedGoldkillerScannerChatId,
+} from '@/lib/telegram-channel-ids'
 
 type Supa = ReturnType<typeof getSupabaseAdmin>
 
 export const PUPRIME_LINK = 'https://www.puprime.com/campaign?cs=morethanmoney'
 export const MIN_DEPOSIT = 300
-const FOREX_CHAT = '-1003716578747'
-const SENSEI_CHAT = '-1003853860780'
 const BOT = () => process.env.TELEGRAM_BOT_TOKEN
+
+/**
+ * Os 4 grupos de sinais libertados após validação. chatId canónico (resolvido por env) +
+ * link estático de fallback (para grupos que não geram convite pessoal, ex.: Basic group).
+ */
+function accessGroups(): { label: string; chatId: string; fallback: string | null }[] {
+  return [
+    { label: '💱 Grupo Forex', chatId: resolvedForexIdeasChatId(), fallback: process.env.TELEGRAM_FOREX_LINK || 'https://t.me/+cVcMbCRt2rlmNzg0' },
+    { label: '🧠 Grupo Sensei', chatId: resolvedTradeIdeasChatId(), fallback: process.env.TELEGRAM_SENSEI_LINK || 'https://t.me/+mbqBggXniu5lNTBk' },
+    { label: '👑 Grupo Premium', chatId: resolvedPremiumSignalsChatId(), fallback: process.env.TELEGRAM_PREMIUM_LINK || 'https://t.me/MTMgold' },
+    { label: '🥇 Grupo GoldKiller', chatId: resolvedGoldkillerScannerChatId(), fallback: process.env.TELEGRAM_GOLDKILLER_LINK || null },
+  ]
+}
 
 async function tg(method: string, body: Record<string, unknown>) {
   const token = BOT()
@@ -174,13 +191,16 @@ export async function grantBrokerAccess(supabase: Supa, chatId: string): Promise
   if ((lead as { stage?: string } | null)?.stage === 'granted') return
   const uid = (lead as { broker_uid?: string } | null)?.broker_uid ?? null
 
-  // links de convite pessoais (one-time)
+  // Link de convite pessoal (one-time) por grupo; fallback estático se o grupo não gerar.
   const mkLink = async (chat: string) => {
     const r = await tg('createChatInviteLink', { chat_id: chat, member_limit: 1, name: `lead ${chatId}` })
     return (r as { result?: { invite_link?: string } } | null)?.result?.invite_link ?? null
   }
-  const forex = await mkLink(FOREX_CHAT)
-  const sensei = await mkLink(SENSEI_CHAT)
+  const linkLines: string[] = []
+  for (const g of accessGroups()) {
+    const url = (await mkLink(g.chatId)) || g.fallback
+    if (url) linkLines.push(`<a href="${url}">${g.label}</a>`)
+  }
 
   const coupon = (lead as { coupon_code?: string } | null)?.coupon_code || (await createPremiumCoupon(supabase, chatId, uid))
 
@@ -189,9 +209,7 @@ export async function grantBrokerAccess(supabase: Supa, chatId: string): Promise
     .update({ stage: 'granted', coupon_code: coupon, granted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('chat_id', chatId)
 
-  const links = [forex ? `💱 <a href="${forex}">Grupo Forex</a>` : null, sensei ? `🧠 <a href="${sensei}">Grupo Sensei</a>` : null]
-    .filter(Boolean)
-    .join('\n')
+  const links = linkLines.join('\n')
   await send(
     chatId,
     `🎉 <b>Acesso libertado!</b>\n\n` +
