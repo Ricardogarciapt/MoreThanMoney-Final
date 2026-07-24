@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: r.ok,
     testnet,
+    httpStatus: r.status,
     retCode: r.retCode,
     retMsg: r.retMsg,
     totalEquity,

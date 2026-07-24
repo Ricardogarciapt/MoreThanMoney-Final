@@ -56,12 +56,14 @@ async function signedRequest(
   const timer = setTimeout(() => ctrl.abort(), 15000)
   try {
     const res = await fetch(url, { method, headers, body: method === "POST" ? body : undefined, signal: ctrl.signal })
-    const json = (await res.json().catch(() => ({}))) as { retCode?: number; retMsg?: string; result?: unknown }
+    const text = await res.text()
+    let json: { retCode?: number; retMsg?: string; result?: unknown } = {}
+    try { json = JSON.parse(text) } catch { /* resposta não-JSON */ }
     return {
       ok: res.ok && json.retCode === 0,
       status: res.status,
       retCode: json.retCode ?? -1,
-      retMsg: json.retMsg ?? "",
+      retMsg: json.retMsg ?? (text ? `[${res.status}] ${text.slice(0, 180)}` : `[${res.status}] vazio`),
       result: json.result ?? null,
     }
   } catch (e) {
