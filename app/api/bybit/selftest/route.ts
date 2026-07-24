@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getBybitWalletBalance, bybitConfigured } from "@/lib/bybit"
 
-export const dynamic = "force-dynamic"
-// Bybit bloqueia IPs de certas regiões (ex.: EUA). Corre em Frankfurt (UE), que a Bybit aceita.
+// Edge Runtime + fra1: só as Edge Functions respeitam preferredRegion na Vercel Pro.
+// Corre em Frankfurt (UE) → contorna o geo-bloqueio da Bybit (serverless Node corre em iad1/EUA).
+export const runtime = "edge"
 export const preferredRegion = "fra1"
+export const dynamic = "force-dynamic"
 
 /**
  * Valida as keys Bybit lendo o saldo (SEM colocar ordens). Protegido por CRON_SECRET.

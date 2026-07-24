@@ -1,4 +1,11 @@
-import crypto from "crypto"
+// HMAC-SHA256 via Web Crypto → funciona em Edge Runtime (necessário para correr em fra1,
+// já que a Bybit bloqueia IPs dos EUA e o serverless Node da Vercel corre em iad1).
+async function hmacHex(secret: string, payload: string): Promise<string> {
+  const enc = new TextEncoder()
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(payload))
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("")
+}
 
 // Cliente Bybit v5 (linear perpetuals). Coloca ordens na conta-MESTRE do Copy Trading;
 // a Bybit trata da cópia para os seguidores. Keys em env (nunca em código):
@@ -43,7 +50,7 @@ async function signedRequest(
     payloadForSign = ts + key + RECV_WINDOW + body
   }
 
-  const sign = crypto.createHmac("sha256", secret).update(payloadForSign).digest("hex")
+  const sign = await hmacHex(secret, payloadForSign)
   const headers: Record<string, string> = {
     "X-BAPI-API-KEY": key,
     "X-BAPI-TIMESTAMP": ts,
