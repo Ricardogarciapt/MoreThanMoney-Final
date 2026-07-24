@@ -188,6 +188,32 @@ function classifyAsset(rawTicker: string | null): AssetClass {
   return "other"
 }
 
+const CRYPTO_BASES = new Set([
+  "BTC", "ETH", "SOL", "XRP", "BNB", "DOGE", "ADA", "AVAX", "LINK", "DOT", "MATIC", "LTC",
+  "HYPE", "SUI", "APT", "ARB", "OP", "TON", "TRX", "NEAR", "INJ", "SEI", "TIA", "ATOM",
+  "FIL", "ETC", "BCH", "UNI", "AAVE", "PEPE", "WIF", "BONK", "SHIB", "FTM", "RNDR", "TAO",
+])
+
+/**
+ * O ticker é MESMO um perpétuo cripto? Usado para não deixar forex/índices/metais serem
+ * forçados para o canal de perps (e para a execução Bybit, que só tem cripto). Um alerta
+ * do Aurum Flow disparado num USDCAD/ XAUUSD nunca deve virar "crypto_perp".
+ */
+function isCryptoPerpTicker(rawTicker: string | null): boolean {
+  if (!rawTicker) return false
+  const norm = rawTicker.toUpperCase().replace(/[^A-Z0-9.]/g, "").replace(/^[A-Z]+:/, "")
+  if (/XAU|XAG|XPT|XPD/.test(norm)) return false // metais preciosos não são cripto
+  const letters = norm.replace(/[^A-Z]/g, "")
+  // par fiat-fiat (forex) → não
+  if (letters.length === 6 && FOREX_CODES.has(letters.slice(0, 3)) && FOREX_CODES.has(letters.slice(3, 6))) return false
+  if (INDEX_SET.has(norm) || INDEX_SET.has(letters)) return false
+  // marcadores explícitos de perp cripto
+  if (/\.P$/.test(norm) || /USDT/.test(norm) || /USDC/.test(norm) || /PERP/.test(norm)) return true
+  // base cripto conhecida (ex.: BTCUSD, SOLUSD, HYPEUSD)
+  const base = letters.replace(/(USD|USDT|USDC)$/, "")
+  return CRYPTO_BASES.has(base)
+}
+
 interface SignalRoute {
   channel: string | null // null = só Alertas MTM (sem chat)
   telegram: string | null // null = sem relay Telegram
@@ -457,7 +483,12 @@ export async function POST(request: NextRequest) {
   // Endpoint dedicado /api/webhooks/tradingview-perps reencaminha para aqui com este
   // header → força o modo perps independentemente do nome do alerta (fonte = a lista).
   const forcedPerps = request.headers.get("x-mtm-perps") === "1"
-  if (scannerKey === "mtmperps" || forcedPerps) {
+  // Só força perps se o ticker for MESMO cripto. Um forex/índice/ouro que apareça no alerta
+  // dos perps (ex.: USDCAD no Aurum Flow) segue a sua classe natural e nunca vai ao chat de
+  // perps nem à Bybit (que só tem cripto). Evita sinais errados no canal + ordens inválidas.
+  const perpsRequested = scannerKey === "mtmperps" || forcedPerps
+  const isCryptoPerp = isCryptoPerpTicker(ticker)
+  if (perpsRequested && isCryptoPerp) {
     // Lista única de perps → sempre canal "Ideias de Perpétuos Cripto", em PAPEL.
     // Execução real (Bybit, motor de cópia próprio) fica para a Fase 2, atrás de flag.
     assetClass = "crypto_perp"
@@ -466,6 +497,10 @@ export async function POST(request: NextRequest) {
     route.sender = "🪙 Perpétuos Cripto"
     route.push = true
     route.autoCopy = false
+  } else if (perpsRequested && !isCryptoPerp) {
+    // Sinal não-cripto no endpoint dos perps → segue a classificação natural do ticker
+    // (USDCAD → forex, XAUUSD → gold_btc, etc.). Não sobrepõe route/assetClass.
+    console.warn(`[webhook][perps] ticker não-cripto ignorado no modo perps: ${ticker}`)
   } else if (isGoldKiller) {
     route.channel = "sinais-goldkiller"
     // Canal Telegram dedicado GoldKiller (bot admin). Publica lá + chat app + auto-copy.
