@@ -65,7 +65,7 @@ export default function MtmcopyGlobalPerformance({ className }: { className?: st
       ) : error ? (
         <p className="text-sm text-red-400">{error}</p>
       ) : data?.performance ? (
-        <PerformanceMetrics performance={data.performance} />
+        <PerformanceMetrics performance={data.performance} showRiskAlerts={false} />
       ) : (
         <p className="text-sm text-zinc-500 text-center py-8">
           Sem trades fechadas no sistema ainda para agregar.

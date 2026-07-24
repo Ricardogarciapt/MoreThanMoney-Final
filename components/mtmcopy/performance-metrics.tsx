@@ -54,7 +54,13 @@ function Kpi({
   )
 }
 
-export default function PerformanceMetrics({ performance }: { performance: PerformanceData }) {
+export default function PerformanceMetrics({
+  performance,
+  showRiskAlerts = true,
+}: {
+  performance: PerformanceData
+  showRiskAlerts?: boolean
+}) {
   const p = performance
   if (!p || p.tradeCount === 0) {
     return (
@@ -72,7 +78,7 @@ export default function PerformanceMetrics({ performance }: { performance: Perfo
   return (
     <div className="space-y-5">
       {/* Red flags */}
-      {p.redFlags.length > 0 && (
+      {showRiskAlerts && p.redFlags.length > 0 && (
         <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 space-y-1.5">
           <div className="flex items-center gap-2 text-red-400 text-xs font-bold uppercase tracking-wider">
             <AlertTriangle className="w-4 h-4" /> Alertas de risco
