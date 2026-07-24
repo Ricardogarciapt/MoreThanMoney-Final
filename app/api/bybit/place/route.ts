@@ -15,8 +15,7 @@ export const runtime = "edge"
 export const preferredRegion = "fra1"
 export const dynamic = "force-dynamic"
 
-const DEFAULT_RISK_PCT = 0.01 // 1% da equity arriscada ao SL
-const DEFAULT_COST_ABS = 10 // teto: $10 de margem por posição
+const DEFAULT_COST_PCT = 0.10 // margem por posição = 10% da equity
 const DEFAULT_LEVERAGE = 3
 
 /**
@@ -56,8 +55,9 @@ export async function POST(req: NextRequest) {
     ? (b.partials as unknown[]).map(num).filter((n): n is number => n != null && n > 0)
     : null
   const leverage = num(b.leverage) ?? DEFAULT_LEVERAGE
-  const riskPct = num(b.riskPct) ?? (Number(process.env.BYBIT_RISK_PCT) || DEFAULT_RISK_PCT)
-  const costAbs = num(b.costAbs) ?? (Number(process.env.BYBIT_COST_ABS) || DEFAULT_COST_ABS)
+  const costPct = num(b.costPct) ?? (Number(process.env.BYBIT_COST_PCT) || DEFAULT_COST_PCT)
+  const riskPct = num(b.riskPct) ?? (Number(process.env.BYBIT_RISK_PCT) || null) // teto opcional
+  const costAbs = num(b.costAbs) ?? (Number(process.env.BYBIT_COST_ABS) || null) // teto opcional
 
   const instrument = await getBybitInstrumentInfo(symbol)
 
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     if (!(equity != null && equity > 0)) {
       return NextResponse.json({ ok: false, error: "equity Bybit indisponível" }, { status: 502 })
     }
-    const r = computeMasterQty({ equity, entry, sl, leverage, riskPct, costAbs, instrument })
+    const r = computeMasterQty({ equity, entry, sl, leverage, costPct, riskPct, costAbs, instrument })
     qty = r.qty
     sizing = `equity $${equity.toFixed(2)} · ${r.reason}`
     if (!(qty > 0)) {

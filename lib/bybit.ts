@@ -154,8 +154,9 @@ export interface MasterSizingInput {
   entry: number
   sl: number | null
   leverage: number
-  riskPct: number // fração da equity arriscada ao SL (ex.: 0.01 = 1%)
-  costAbs: number // teto: margem máxima gasta por posição, em USDT (ex.: 10 = $10)
+  costPct: number // margem por posição como fração da equity (ex.: 0.10 = 10%)
+  riskPct?: number | null // teto opcional: fração da equity arriscada ao SL
+  costAbs?: number | null // teto opcional: margem máxima por posição, em USDT
   instrument: BybitInstrument | null
 }
 
@@ -166,26 +167,29 @@ export interface MasterSizingResult {
 }
 
 /**
- * Dimensiona a ordem-mestre: o MENOR entre (a) risco riskPct ao SL e (b) margem ≤ costAbs USDT.
- * Nunca arrisca mais que riskPct da equity nem gasta mais que costAbs de margem. Arredonda ao
- * qtyStep; marca belowMin se o mínimo do símbolo forçar uma qty maior que o teto.
+ * Dimensiona a ordem-mestre pela margem = costPct da equity × alavancagem. Se riskPct e/ou
+ * costAbs forem dados, funcionam como TETOS (o menor ganha). Arredonda ao qtyStep; marca
+ * belowMin se o mínimo do símbolo forçar uma qty maior que o alvo.
  */
 export function computeMasterQty(i: MasterSizingInput): MasterSizingResult {
+  const lev = Math.max(1, i.leverage)
   const stopDist = i.sl != null && i.sl > 0 ? Math.abs(i.entry - i.sl) : null
-  const qtyByRisk = stopDist && stopDist > 0 ? (i.equity * i.riskPct) / stopDist : Infinity
-  const notionalCap = i.costAbs * Math.max(1, i.leverage) // margem máx × alavancagem
-  const qtyByCost = i.entry > 0 ? notionalCap / i.entry : Infinity
-  let qty = Math.min(qtyByRisk, qtyByCost)
-  const which = qtyByRisk <= qtyByCost ? `risco ${(i.riskPct * 100).toFixed(2)}%` : `custo $${i.costAbs}`
+  const cands: { q: number; label: string }[] = []
+  if (i.entry > 0 && i.costPct > 0) cands.push({ q: (i.equity * i.costPct * lev) / i.entry, label: `${(i.costPct * 100).toFixed(0)}% equity` })
+  if (i.riskPct && i.riskPct > 0 && stopDist && stopDist > 0) cands.push({ q: (i.equity * i.riskPct) / stopDist, label: `risco ${(i.riskPct * 100).toFixed(2)}%` })
+  if (i.costAbs && i.costAbs > 0 && i.entry > 0) cands.push({ q: (i.costAbs * lev) / i.entry, label: `custo $${i.costAbs}` })
+  if (!cands.length) return { qty: 0, reason: "sem base de sizing", belowMin: false }
+
+  const winner = cands.reduce((a, b) => (b.q < a.q ? b : a))
   const step = i.instrument?.qtyStep ?? 0
-  qty = roundQtyToStep(qty, step)
+  let qty = roundQtyToStep(winner.q, step)
   const min = i.instrument?.minOrderQty ?? 0
   let belowMin = false
   if (min > 0 && qty < min) {
     belowMin = true
-    qty = min // caller decide se aceita o mínimo do símbolo (excede ligeiramente o teto)
+    qty = min
   }
-  return { qty, reason: `${which} → ${qty}${belowMin ? " (min do símbolo)" : ""}`, belowMin }
+  return { qty, reason: `${winner.label} → ${qty}${belowMin ? " (min do símbolo)" : ""}`, belowMin }
 }
 
 export interface BybitOrderInput {
@@ -265,7 +269,12 @@ export async function placeBybitPerp(o: BybitPerpTradeInput): Promise<BybitPerpT
   const rp = (p: number) => (tick > 0 ? roundToTick(p, tick) : p)
   const sl = o.stopLoss != null && o.stopLoss > 0 ? rp(o.stopLoss) : null
 
-  // 1) Entrada a mercado com SL completo na posição (tpslMode Full → SL cobre toda a posição).
+  const levels = (o.takeProfits ?? []).filter((t) => t != null && t > 0)
+  const finalTp = levels.length ? rp(levels[levels.length - 1]) : null // TP máximo → vai na posição
+  const intermediates = levels.slice(0, -1) // TP1/TP2 → ordens reduce-only parciais
+
+  // 1) Entrada a mercado com SL COMPLETO + TP FINAL na posição (tpslMode Full → aparecem no
+  //    cartão da posição e cobrem o que sobrar depois das saídas parciais).
   const entry = await signedRequest("POST", "/v5/order/create", {
     category: "linear",
     symbol: o.symbol,
@@ -276,38 +285,34 @@ export async function placeBybitPerp(o: BybitPerpTradeInput): Promise<BybitPerpT
     positionIdx: 0,
     tpslMode: "Full",
     ...(sl != null ? { stopLoss: String(sl) } : {}),
+    ...(finalTp != null ? { takeProfit: String(finalTp) } : {}),
   })
   const orderId = (entry.result as { orderId?: string } | null)?.orderId ?? null
   if (!entry.ok) {
     return { ok: false, orderId, retCode: entry.retCode, retMsg: entry.retMsg, tps: [], slSet: false }
   }
 
-  // 2) TPs parciais como ordens reduce-only LIMIT do lado oposto. Leg abaixo do mínimo do
-  //    símbolo é saltada e a sua quota vai para o último nível (evita rejeições em contas pequenas).
+  // 2) Saídas PARCIAIS (TP1/TP2) como ordens reduce-only LIMIT do lado oposto. O que sobrar
+  //    corre até ao TP final da posição. Leg abaixo do mínimo do símbolo é saltada.
   const tps: BybitPerpTradeResult["tps"] = []
-  const levels = (o.takeProfits ?? []).filter((t) => t != null && t > 0)
-  if (levels.length) {
-    const parts = normalizePartials(o.partials, levels.length)
+  if (intermediates.length) {
+    const parts = normalizePartials(o.partials, levels.length) // frações sobre a posição inteira
     const oppSide = o.side === "buy" ? "Sell" : "Buy"
-    let allocated = 0
-    for (let i = 0; i < levels.length; i++) {
-      const isLast = i === levels.length - 1
-      let legQty = isLast ? roundQtyToStep(o.qty - allocated, step) : roundQtyToStep(o.qty * parts[i], step)
-      if (!isLast && minQty > 0 && legQty < minQty) continue // quota fica p/ o último nível
-      if (legQty <= 0) continue
-      allocated += legQty
+    for (let i = 0; i < intermediates.length; i++) {
+      const legQty = roundQtyToStep(o.qty * parts[i], step)
+      if (legQty <= 0 || (minQty > 0 && legQty < minQty)) continue // quota fica p/ o TP final
       const r = await signedRequest("POST", "/v5/order/create", {
         category: "linear",
         symbol: o.symbol,
         side: oppSide,
         orderType: "Limit",
         qty: String(legQty),
-        price: String(rp(levels[i])),
+        price: String(rp(intermediates[i])),
         reduceOnly: true,
         timeInForce: "GTC",
         positionIdx: 0,
       })
-      tps.push({ price: rp(levels[i]), qty: legQty, ok: r.ok, retMsg: r.retMsg })
+      tps.push({ price: rp(intermediates[i]), qty: legQty, ok: r.ok, retMsg: r.retMsg })
     }
   }
 
