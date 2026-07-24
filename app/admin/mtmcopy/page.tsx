@@ -237,11 +237,11 @@ export default function AdminMtmcopyPage() {
                 </Card>
                 <Card className="bg-zinc-900/60 border-zinc-800">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-xs uppercase tracking-widest text-zinc-500">Estratégias</CardTitle>
+                    <CardTitle className="text-xs uppercase tracking-widest text-zinc-500">Execução</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm font-medium text-white">Premium · Trade Ideas · Sensei</p>
-                    <p className="text-xs text-zinc-600 mt-1">3 rotas provider auditadas</p>
+                    <p className="text-sm font-medium text-white">MetaAPI (MT5) · Bybit (perps)</p>
+                    <p className="text-xs text-zinc-600 mt-1">Métricas por estratégia abaixo ↓</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-zinc-900/60 border-zinc-800">
@@ -261,7 +261,7 @@ export default function AdminMtmcopyPage() {
 
               <MtmcopyAdminSection
                 title="Desempenho das estratégias"
-                description="Métricas reais das contas Provider MTM Auto (Premium · Trade Ideas · Sensei) — saldo, lucro, win rate, drawdown e profit factor via MetaStats, com subscritores CopyFactory."
+                description="Métricas reais das contas Provider MTM Auto (MT5 via MetaStats + Bybit perps) — saldo, lucro, win rate, drawdown e profit factor, com subscritores CopyFactory."
                 icon={BarChart3}
                 accent="emerald"
               >
