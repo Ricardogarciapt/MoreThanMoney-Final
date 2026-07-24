@@ -85,6 +85,36 @@ export function getBybitWalletBalance() {
   return signedRequest("GET", "/v5/account/wallet-balance", { accountType: "UNIFIED" })
 }
 
+export interface BybitPosition {
+  symbol: string
+  side: "Buy" | "Sell" | ""
+  size: number
+  avgPrice: number
+  stopLoss: number | null
+  takeProfit: number | null
+  trailingStop: number | null
+  unrealisedPnl: number | null
+}
+
+/** Posições abertas (linear USDT). size>0 = aberta. */
+export async function getBybitPositions(): Promise<{ ok: boolean; retMsg: string; positions: BybitPosition[] }> {
+  const r = await signedRequest("GET", "/v5/position/list", { category: "linear", settleCoin: "USDT" })
+  const list = (r.result as { list?: Record<string, string>[] } | null)?.list ?? []
+  const positions: BybitPosition[] = list
+    .map((p) => ({
+      symbol: String(p.symbol ?? ""),
+      side: (p.side as "Buy" | "Sell" | "") ?? "",
+      size: Number(p.size ?? 0) || 0,
+      avgPrice: Number(p.avgPrice ?? 0) || 0,
+      stopLoss: Number(p.stopLoss) > 0 ? Number(p.stopLoss) : null,
+      takeProfit: Number(p.takeProfit) > 0 ? Number(p.takeProfit) : null,
+      trailingStop: Number(p.trailingStop) > 0 ? Number(p.trailingStop) : null,
+      unrealisedPnl: Number.isFinite(Number(p.unrealisedPnl)) ? Number(p.unrealisedPnl) : null,
+    }))
+    .filter((p) => p.size > 0)
+  return { ok: r.ok, retMsg: r.retMsg, positions }
+}
+
 /** Define a alavancagem do símbolo (idempotente; ignora "leverage not modified"). */
 export async function setBybitLeverage(symbol: string, leverage: number) {
   const lev = String(Math.max(1, Math.round(leverage)))
