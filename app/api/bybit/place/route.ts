@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
     side,
     qty,
     slSet: trade.slSet,
+    tpFinalSet: trade.tpFinalSet,
     tps: trade.tps.map((t) => ({ price: t.price, qty: t.qty, ok: t.ok, err: t.ok ? undefined : t.retMsg })),
     sizing,
   })
