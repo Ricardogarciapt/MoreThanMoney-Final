@@ -39,15 +39,27 @@ export interface ChartImgSignal {
   height?: number
 }
 
-const hline = (price: number, color: string, width = 2) => ({
+// Linha horizontal com etiqueta de texto (ex.: "ENTRY 65000"). O preço também sai no eixo.
+const hline = (price: number, color: string, text: string) => ({
   name: "Horizontal Line",
   input: { price },
-  override: { lineWidth: width, lineColor: color },
+  override: {
+    lineWidth: 2,
+    lineColor: color,
+    showLabel: true,
+    text,
+    textColor: color,
+    fontSize: 14,
+    horzLabelsAlign: "left",
+    vertLabelsAlign: "bottom",
+    showPrice: true,
+  },
 })
 
 // Studies built-in do chart-img que reproduzem os plots dos scanners MTM.
 // Família MTM/Aurum: stack DEMA (15/50/238) + POC (Volume Profile) + RSI.
-const DEMA = (len: number) => ({ name: "Double EMA", input: { length: len } })
+// chart-img ignora chaves de input desconhecidas → mando as variantes prováveis do "Length".
+const DEMA = (len: number) => ({ name: "Double EMA", input: { length: len, Length: len, in_0: len } })
 const POC = { name: "Volume Profile Visible Range" }
 const RSI = { name: "Relative Strength Index" }
 
@@ -78,28 +90,16 @@ export async function renderSignalChart(sig: ChartImgSignal): Promise<{ png: Arr
   const key = process.env.CHARTIMG_API_KEY
   if (!key) return { png: null, error: "sem CHARTIMG_API_KEY" }
 
-  // Orçamento combinado de studies+drawings (limite do plano): PRO 5 · MEGA 10.
+  // Só o gráfico real + linhas Entry/SL/Exits com etiqueta de texto (sem studies).
+  // 5 linhas cabem no limite de drawings do PRO.
   const budget = Math.max(2, Number(process.env.CHARTIMG_MAX_PARAMS || 5))
-  const st = studiesForScanner(sig.alertName)
   const tps = sig.tps.filter((x) => x > 0).slice(0, 3)
+  const lbl = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: v >= 1000 ? 1 : 5 })
 
-  // Lista ordenada por prioridade (trade primeiro, depois contexto do study), tag s/d.
-  type Item = { t: "s" | "d"; v: unknown }
-  const seq: Item[] = []
-  if (sig.entry != null && sig.entry > 0) seq.push({ t: "d", v: hline(sig.entry, "rgb(59,130,246)", 2) })
-  if (sig.sl != null && sig.sl > 0) seq.push({ t: "d", v: hline(sig.sl, "rgb(239,68,68)", 2) })
-  if (tps[0]) seq.push({ t: "d", v: hline(tps[0], "rgb(22,185,129)", 2) })
-  if (st[0]) seq.push({ t: "s", v: st[0] }) // DEMA rápida
-  if (st[1]) seq.push({ t: "s", v: st[1] }) // DEMA média
-  if (st[2]) seq.push({ t: "s", v: st[2] }) // DEMA lenta / POC
-  if (tps[1]) seq.push({ t: "d", v: hline(tps[1], "rgb(22,185,129)", 2) })
-  if (st[3]) seq.push({ t: "s", v: st[3] })
-  if (tps[2]) seq.push({ t: "d", v: hline(tps[2], "rgb(22,185,129)", 2) })
-  if (st[4]) seq.push({ t: "s", v: st[4] })
-
-  const chosen = seq.slice(0, budget)
-  const studies = chosen.filter((x) => x.t === "s").map((x) => x.v)
-  const drawings = chosen.filter((x) => x.t === "d").map((x) => x.v)
+  const drawings: unknown[] = []
+  if (sig.entry != null && sig.entry > 0) drawings.push(hline(sig.entry, "rgb(59,130,246)", `ENTRY ${lbl(sig.entry)}`))
+  if (sig.sl != null && sig.sl > 0) drawings.push(hline(sig.sl, "rgb(239,68,68)", `SL ${lbl(sig.sl)}`))
+  tps.forEach((tp, i) => drawings.push(hline(tp, "rgb(22,185,129)", `TP${i + 1} ${lbl(tp)}`)))
 
   const body = {
     symbol: sig.symbol,
@@ -107,8 +107,7 @@ export async function renderSignalChart(sig: ChartImgSignal): Promise<{ png: Arr
     theme: "dark",
     width: Math.min(sig.width ?? 1200, 1920),
     height: Math.min(sig.height ?? 675, 1080),
-    studies,
-    drawings,
+    drawings: drawings.slice(0, budget),
   }
 
   const ctrl = new AbortController()
