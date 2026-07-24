@@ -58,7 +58,7 @@ export default function MtmcopyGlobalPerformance({ className }: { className?: st
           )}
         </div>
         <button
-          onClick={load}
+          onClick={() => load()}
           className="text-zinc-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-zinc-800"
           title="Atualizar"
         >
