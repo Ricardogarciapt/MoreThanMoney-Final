@@ -93,14 +93,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Trailing: ao atingir TP1 (Exit 1) → break-even + trailing stop nativo. ON por defeito.
+  const trailing = typeof b.trailing === "boolean" ? b.trailing : process.env.BYBIT_TRAIL_ENABLED !== "false"
+
   const trade = await placeBybitPerp({
     symbol,
     side,
     qty,
+    entry,
     leverage,
     stopLoss: sl,
     takeProfits,
     partials,
+    trailing,
     instrument,
   })
 
@@ -115,6 +120,7 @@ export async function POST(req: NextRequest) {
     leverage,
     slSet: trade.slSet,
     tpFinalSet: trade.tpFinalSet,
+    trailingSet: trade.trailingSet,
     tps: trade.tps.map((t) => ({ price: t.price, qty: t.qty, ok: t.ok, err: t.ok ? undefined : t.retMsg })),
     sizing,
   })

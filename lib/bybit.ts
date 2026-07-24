@@ -275,7 +275,13 @@ export async function placeBybitOrder(o: BybitOrderInput) {
  */
 export async function setBybitPositionTpSl(
   symbol: string,
-  o: { stopLoss?: number | null; takeProfit?: number | null; positionIdx?: number },
+  o: {
+    stopLoss?: number | null
+    takeProfit?: number | null
+    trailingStop?: number | null // distância do trailing (preço); >0 ativa
+    activePrice?: number | null // preço a que o trailing ARRANCA (ex.: TP1/Exit 1)
+    positionIdx?: number
+  },
 ) {
   const body: Record<string, unknown> = {
     category: "linear",
@@ -285,6 +291,10 @@ export async function setBybitPositionTpSl(
   }
   if (o.stopLoss && o.stopLoss > 0) body.stopLoss = String(o.stopLoss)
   if (o.takeProfit && o.takeProfit > 0) body.takeProfit = String(o.takeProfit)
+  if (o.trailingStop && o.trailingStop > 0) {
+    body.trailingStop = String(o.trailingStop)
+    if (o.activePrice && o.activePrice > 0) body.activePrice = String(o.activePrice)
+  }
   let r = await signedRequest("POST", "/v5/position/trading-stop", body)
   // 10001/130125 etc. logo após o fill = posição ainda não pronta → 1 retry.
   if (!r.ok && r.retCode !== 34040 /* not modified */) {
@@ -298,10 +308,12 @@ export interface BybitPerpTradeInput {
   symbol: string
   side: "buy" | "sell"
   qty: number
+  entry?: number | null // preço de entrada — usado para o trailing (BE em TP1)
   leverage?: number | null
   stopLoss?: number | null
   takeProfits?: number[] | null // [tp1, tp2, tp3] — saídas parciais + TP máximo
   partials?: number[] | null // frações por TP (ex.: [0.4,0.3,0.3]); a última corre até ao TP máximo
+  trailing?: boolean // ao atingir TP1 (Exit 1): BE + trailing stop nativo Bybit
   instrument?: BybitInstrument | null
 }
 
@@ -313,6 +325,7 @@ export interface BybitPerpTradeResult {
   tps: { price: number; qty: number; ok: boolean; retMsg: string }[]
   slSet: boolean
   tpFinalSet: boolean
+  trailingSet: boolean
 }
 
 /** Normaliza as frações parciais para o nº de TPs (default 50/30/20 em 3 níveis; senão iguais). */
@@ -349,6 +362,19 @@ export async function placeBybitPerp(o: BybitPerpTradeInput): Promise<BybitPerpT
   const finalTp = levels.length ? rp(levels[levels.length - 1]) : null // TP máximo → vai na posição
   const intermediates = levels.slice(0, -1) // TP1/TP2 → ordens reduce-only parciais
 
+  // Trailing stop nativo: ativa no TP1 (Exit 1). No arranque o stop fica em BREAK-EVEN
+  // (trailingStop = |entry - TP1| → em TP1 o stop = entry) e trail a partir daí.
+  const tp1 = levels.length ? rp(levels[0]) : null
+  let trailingStop: number | null = null
+  let activePrice: number | null = null
+  if (o.trailing && tp1 != null && o.entry != null && o.entry > 0) {
+    const dist = rp(Math.abs(o.entry - tp1))
+    if (dist > 0) {
+      trailingStop = dist
+      activePrice = tp1
+    }
+  }
+
   // 1) Entrada a mercado (sem tp/sl nos parâmetros — colocados a seguir na posição).
   const entry = await signedRequest("POST", "/v5/order/create", {
     category: "linear",
@@ -361,17 +387,19 @@ export async function placeBybitPerp(o: BybitPerpTradeInput): Promise<BybitPerpT
   })
   const orderId = (entry.result as { orderId?: string } | null)?.orderId ?? null
   if (!entry.ok) {
-    return { ok: false, orderId, retCode: entry.retCode, retMsg: entry.retMsg, tps: [], slSet: false, tpFinalSet: false }
+    return { ok: false, orderId, retCode: entry.retCode, retMsg: entry.retMsg, tps: [], slSet: false, tpFinalSet: false, trailingSet: false }
   }
 
-  // 1b) SL COMPLETO + TP FINAL na posição via trading-stop (aparecem no cartão; o Full
-  //     auto-ajusta ao que sobrar depois das saídas parciais). Fiável (vs params da ordem).
+  // 1b) SL COMPLETO + TP FINAL + TRAILING na posição via trading-stop (aparecem no cartão; o
+  //     Full auto-ajusta ao que sobrar). O trailing arranca no TP1 (BE) e trail daí. Fiável.
   let slSet = false
   let tpFinalSet = false
-  if (sl != null || finalTp != null) {
-    const ts = await setBybitPositionTpSl(o.symbol, { stopLoss: sl, takeProfit: finalTp })
+  let trailingSet = false
+  if (sl != null || finalTp != null || trailingStop != null) {
+    const ts = await setBybitPositionTpSl(o.symbol, { stopLoss: sl, takeProfit: finalTp, trailingStop, activePrice })
     slSet = ts.ok && sl != null
     tpFinalSet = ts.ok && finalTp != null
+    trailingSet = ts.ok && trailingStop != null
   }
 
   // 2) Saídas PARCIAIS (TP1/TP2) como ordens reduce-only LIMIT do lado oposto. O que sobrar
@@ -398,7 +426,7 @@ export async function placeBybitPerp(o: BybitPerpTradeInput): Promise<BybitPerpT
     }
   }
 
-  return { ok: true, orderId, retCode: entry.retCode, retMsg: entry.retMsg, tps, slSet, tpFinalSet }
+  return { ok: true, orderId, retCode: entry.retCode, retMsg: entry.retMsg, tps, slSet, tpFinalSet, trailingSet }
 }
 
 /** Ticker `.P`/`USDT` → símbolo linear Bybit (ex.: BTCUSDT.P → BTCUSDT). */
