@@ -12,10 +12,13 @@ export const maxDuration = 60
 async function fetchBybitProvider(origin: string): Promise<ProviderStrategyMetrics | null> {
   const secret = process.env.CRON_SECRET
   if (!secret) return null
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 12000) // não bloqueia o painel se a Bybit estiver lenta
   try {
     const res = await fetch(`${origin}/api/bybit/metrics`, {
       headers: { Authorization: `Bearer ${secret}` },
       cache: 'no-store',
+      signal: ctrl.signal,
     })
     if (!res.ok) return null
     const m = (await res.json()) as {
@@ -48,6 +51,8 @@ async function fetchBybitProvider(origin: string): Promise<ProviderStrategyMetri
     }
   } catch {
     return null
+  } finally {
+    clearTimeout(timer)
   }
 }
 
@@ -57,8 +62,11 @@ export async function GET(request: NextRequest) {
   if (denied) return denied
 
   try {
-    const data = await getProviderStrategyMetrics()
-    const bybit = await fetchBybitProvider(new URL(request.url).origin)
+    // Em paralelo: as MetaStats (5 contas) e a Bybit não somam tempos (evita 504).
+    const [data, bybit] = await Promise.all([
+      getProviderStrategyMetrics(),
+      fetchBybitProvider(new URL(request.url).origin),
+    ])
     if (bybit) {
       data.providers.push(bybit)
       data.configured = true // mostra o painel mesmo se a MetaAPI não estiver configurada

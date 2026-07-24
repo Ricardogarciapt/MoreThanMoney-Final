@@ -156,19 +156,24 @@ export interface BybitPerpMetrics {
  * A Bybit limita cada janela de closed-pnl a 7 dias → varremos `windowDays` em blocos.
  */
 export async function getBybitPerpMetrics(windowDays = 30): Promise<BybitPerpMetrics> {
-  const equity = await getBybitEquity()
   const now = Date.now()
   const WEEK = 7 * 24 * 60 * 60 * 1000
+  // Janelas de 7 dias (limite da Bybit) EM PARALELO — evita 5 pedidos em série (timeout/504).
+  const windows: { start: number; end: number }[] = []
+  for (let start = now - windowDays * 24 * 60 * 60 * 1000; start < now; start += WEEK) {
+    windows.push({ start: Math.floor(start), end: Math.floor(Math.min(start + WEEK, now)) })
+  }
+  const [equity, results] = await Promise.all([
+    getBybitEquity(),
+    Promise.all(
+      windows.map((w) =>
+        signedRequest("GET", "/v5/position/closed-pnl", { category: "linear", startTime: w.start, endTime: w.end, limit: 100 }),
+      ),
+    ),
+  ])
   let profit = 0, wins = 0, losses = 0, grossWin = 0, grossLoss = 0, trades = 0
   let ok = true, retMsg = "OK"
-  for (let start = now - windowDays * 24 * 60 * 60 * 1000; start < now; start += WEEK) {
-    const end = Math.min(start + WEEK, now)
-    const r = await signedRequest("GET", "/v5/position/closed-pnl", {
-      category: "linear",
-      startTime: Math.floor(start),
-      endTime: Math.floor(end),
-      limit: 100,
-    })
+  for (const r of results) {
     if (!r.ok) { ok = false; retMsg = r.retMsg; continue }
     const list = (r.result as { list?: Record<string, string>[] } | null)?.list ?? []
     for (const it of list) {
