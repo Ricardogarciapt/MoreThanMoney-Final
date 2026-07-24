@@ -5,6 +5,7 @@ import {
   getBybitEquity,
   getBybitInstrumentInfo,
   computeMasterQty,
+  computeDynamicLeverage,
   placeBybitPerp,
 } from "@/lib/bybit"
 
@@ -16,7 +17,10 @@ export const preferredRegion = "fra1"
 export const dynamic = "force-dynamic"
 
 const DEFAULT_COST_PCT = 0.10 // margem por posição = 10% da equity
-const DEFAULT_LEVERAGE = 3
+const DEFAULT_BASE_LEVERAGE = 10 // alavancagem no SL de referência
+const DEFAULT_VOL_REF_PCT = 0.01 // SL 1% → base leverage
+const DEFAULT_MAX_LEVERAGE = 20 // teto (também limitado pelo máx do símbolo)
+const DEFAULT_MIN_LEVERAGE = 1
 
 /**
  * Coloca a ordem-MESTRE na Bybit (Copy Trading nativo replica p/ seguidores): entrada a
@@ -54,12 +58,21 @@ export async function POST(req: NextRequest) {
   const partials = Array.isArray(b.partials)
     ? (b.partials as unknown[]).map(num).filter((n): n is number => n != null && n > 0)
     : null
-  const leverage = num(b.leverage) ?? DEFAULT_LEVERAGE
   const costPct = num(b.costPct) ?? (Number(process.env.BYBIT_COST_PCT) || DEFAULT_COST_PCT)
   const riskPct = num(b.riskPct) ?? (Number(process.env.BYBIT_RISK_PCT) || null) // teto opcional
   const costAbs = num(b.costAbs) ?? (Number(process.env.BYBIT_COST_ABS) || null) // teto opcional
 
   const instrument = await getBybitInstrumentInfo(symbol)
+
+  // Alavancagem dinâmica pela volatilidade (dist. do SL), base 10x, clampada ao máx do símbolo.
+  // `leverage` no body força um valor fixo (testes).
+  const baseLev = Number(process.env.BYBIT_BASE_LEVERAGE) || DEFAULT_BASE_LEVERAGE
+  const refVol = Number(process.env.BYBIT_VOL_REF_PCT) || DEFAULT_VOL_REF_PCT
+  const symbolMaxLev = instrument?.maxLeverage && instrument.maxLeverage > 0 ? instrument.maxLeverage : DEFAULT_MAX_LEVERAGE
+  const maxLev = Math.min(Number(process.env.BYBIT_MAX_LEVERAGE) || DEFAULT_MAX_LEVERAGE, symbolMaxLev)
+  const leverage =
+    num(b.leverage) ??
+    computeDynamicLeverage(entry ?? 0, sl, { base: baseLev, refVolPct: refVol, min: DEFAULT_MIN_LEVERAGE, max: maxLev })
 
   // qty: direta (testes) ou dimensionada (menor entre risco riskPct e margem ≤ costAbs).
   let qty = num(b.qty) ?? 0
@@ -99,6 +112,7 @@ export async function POST(req: NextRequest) {
     symbol,
     side,
     qty,
+    leverage,
     slSet: trade.slSet,
     tpFinalSet: trade.tpFinalSet,
     tps: trade.tps.map((t) => ({ price: t.price, qty: t.qty, ok: t.ok, err: t.ok ? undefined : t.retMsg })),

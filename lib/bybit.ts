@@ -111,15 +111,22 @@ export interface BybitInstrument {
   minOrderQty: number
   qtyStep: number
   tickSize: number
+  maxLeverage: number
 }
 
-/** Regras de lote/preço do símbolo linear (público, sem assinatura). Para arredondar a qty. */
+/** Regras de lote/preço/alavancagem do símbolo linear (público, sem assinatura). */
 export async function getBybitInstrumentInfo(symbol: string): Promise<BybitInstrument | null> {
   try {
     const url = `${base()}/v5/market/instruments-info?category=linear&symbol=${encodeURIComponent(symbol)}`
     const res = await fetch(url)
     const j = (await res.json()) as {
-      result?: { list?: { lotSizeFilter?: { minOrderQty?: string; qtyStep?: string }; priceFilter?: { tickSize?: string } }[] }
+      result?: {
+        list?: {
+          lotSizeFilter?: { minOrderQty?: string; qtyStep?: string }
+          priceFilter?: { tickSize?: string }
+          leverageFilter?: { maxLeverage?: string }
+        }[]
+      }
     }
     const it = j.result?.list?.[0]
     if (!it) return null
@@ -127,10 +134,29 @@ export async function getBybitInstrumentInfo(symbol: string): Promise<BybitInstr
       minOrderQty: Number(it.lotSizeFilter?.minOrderQty ?? 0) || 0,
       qtyStep: Number(it.lotSizeFilter?.qtyStep ?? 0) || 0,
       tickSize: Number(it.priceFilter?.tickSize ?? 0) || 0,
+      maxLeverage: Number(it.leverageFilter?.maxLeverage ?? 0) || 0,
     }
   } catch {
     return null
   }
+}
+
+/**
+ * Alavancagem DINÂMICA pela volatilidade (distância do SL). No SL de referência usa a base
+ * (ex.: SL 1% → 10x); SL mais largo (mais volátil) baixa a leverage, SL mais apertado sobe —
+ * mantendo o RISCO ~constante já que a margem fica fixa (10% da equity). Clampada a [min,max].
+ * leverage = base × (refVolPct / stopDistPct).
+ */
+export function computeDynamicLeverage(
+  entry: number,
+  sl: number | null,
+  opts: { base: number; refVolPct: number; min: number; max: number },
+): number {
+  if (!(entry > 0) || sl == null || !(sl > 0)) return Math.min(opts.max, Math.max(opts.min, opts.base))
+  const stopDistPct = Math.abs(entry - sl) / entry
+  if (!(stopDistPct > 0)) return Math.min(opts.max, Math.max(opts.min, opts.base))
+  const lev = opts.base * (opts.refVolPct / stopDistPct)
+  return Math.max(opts.min, Math.min(opts.max, Math.round(lev)))
 }
 
 /** Arredonda qty ao qtyStep (para baixo) e devolve string com os decimais do step. */
