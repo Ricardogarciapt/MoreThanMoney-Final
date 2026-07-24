@@ -137,6 +137,61 @@ export async function getBybitEquity(): Promise<number | null> {
   return Number.isFinite(eq) && eq > 0 ? eq : null
 }
 
+export interface BybitPerpMetrics {
+  ok: boolean
+  retMsg: string
+  equity: number | null
+  profit: number | null
+  trades: number
+  wonTrades: number
+  lostTrades: number
+  winRatePct: number | null
+  profitFactor: number | null
+  windowDays: number
+}
+
+/**
+ * Métricas de desempenho da conta-mestre (para o painel de providers do admin).
+ * Lê o closed-PnL (linear) recente + equity. profitFactor = ganhos/|perdas|.
+ * A Bybit limita cada janela de closed-pnl a 7 dias → varremos `windowDays` em blocos.
+ */
+export async function getBybitPerpMetrics(windowDays = 30): Promise<BybitPerpMetrics> {
+  const equity = await getBybitEquity()
+  const now = Date.now()
+  const WEEK = 7 * 24 * 60 * 60 * 1000
+  let profit = 0, wins = 0, losses = 0, grossWin = 0, grossLoss = 0, trades = 0
+  let ok = true, retMsg = "OK"
+  for (let start = now - windowDays * 24 * 60 * 60 * 1000; start < now; start += WEEK) {
+    const end = Math.min(start + WEEK, now)
+    const r = await signedRequest("GET", "/v5/position/closed-pnl", {
+      category: "linear",
+      startTime: Math.floor(start),
+      endTime: Math.floor(end),
+      limit: 100,
+    })
+    if (!r.ok) { ok = false; retMsg = r.retMsg; continue }
+    const list = (r.result as { list?: Record<string, string>[] } | null)?.list ?? []
+    for (const it of list) {
+      const pnl = Number(it.closedPnl) || 0
+      trades++
+      profit += pnl
+      if (pnl > 0) { wins++; grossWin += pnl } else if (pnl < 0) { losses++; grossLoss += Math.abs(pnl) }
+    }
+  }
+  return {
+    ok,
+    retMsg,
+    equity,
+    profit: trades ? Number(profit.toFixed(2)) : null,
+    trades,
+    wonTrades: wins,
+    lostTrades: losses,
+    winRatePct: trades ? Number(((wins / trades) * 100).toFixed(1)) : null,
+    profitFactor: grossLoss > 0 ? Number((grossWin / grossLoss).toFixed(2)) : null,
+    windowDays,
+  }
+}
+
 export interface BybitInstrument {
   minOrderQty: number
   qtyStep: number
