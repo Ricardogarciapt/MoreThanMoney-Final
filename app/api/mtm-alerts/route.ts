@@ -257,6 +257,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const limit = Math.min(Number(searchParams.get("limit")) || 30, 100)
   const symbolFilter = (searchParams.get("symbol") || "").toUpperCase().trim()
+  const idFilter = (searchParams.get("id") || "").trim()
 
   try {
     const admin = getSupabaseAdmin()
@@ -265,7 +266,12 @@ export async function GET(request: NextRequest) {
     let data: unknown[] | null = null
     let error: { message: string } | null = null
 
-    if (symbolFilter) {
+    if (idFilter) {
+      // Sinal específico (deep-link da notificação) — para abrir o modal do alerta.
+      const res = await admin.from("tradingview_signals").select(SELECT).eq("id", idFilter).limit(1)
+      data = res.data
+      error = res.error
+    } else if (symbolFilter) {
       // Pesquisa por símbolo → feed cronológico direto.
       const res = await admin
         .from("tradingview_signals")

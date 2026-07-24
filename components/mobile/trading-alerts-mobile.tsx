@@ -270,10 +270,12 @@ function MobileAlertCard({
   alert,
   following,
   onToggleFollow,
+  defaultShowChart,
 }: {
   alert: MtmAlert
   following: boolean
   onToggleFollow: (id: string, follow: boolean) => void
+  defaultShowChart?: boolean
 }) {
   const d = DIR[alert.direction]
   const passed = alert.confirmations.filter((c) => c.passed).length
@@ -281,7 +283,7 @@ function MobileAlertCard({
   const [analysis, setAnalysis] = useState<string | null>(alert.aiAnalysis)
   const [loadingAnalysis, setLoadingAnalysis] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
-  const [showChart, setShowChart] = useState(false)
+  const [showChart, setShowChart] = useState(!!defaultShowChart)
 
   const toggleAnalysis = async () => {
     const next = !showAnalysis
@@ -464,6 +466,7 @@ export default function TradingAlertsMobile() {
   const [showManager, setShowManager] = useState(false)
   const [stateFilter, setStateFilter] = useState<"all" | StateCat>("all")
   const [followed, setFollowed] = useState<Set<string>>(new Set())
+  const [focusAlert, setFocusAlert] = useState<MtmAlert | null>(null)
 
   const loadFollowed = useCallback(async () => {
     try {
@@ -522,6 +525,24 @@ export default function TradingAlertsMobile() {
     loadAlerts()
     loadFollowed()
   }, [loadSub, loadAlerts, loadFollowed])
+
+  // Deep-link da notificação: ?signal=<id> → abre o modal do alerta (com gráfico ao vivo).
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const sigId = new URLSearchParams(window.location.search).get("signal")
+    if (!sigId) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/mtm-alerts?id=${encodeURIComponent(sigId)}`, { credentials: "include", cache: "no-store" })
+        const data = await res.json()
+        if (!cancelled && data.alerts?.[0]) setFocusAlert(data.alerts[0] as MtmAlert)
+      } catch {
+        /* ignora */
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     if (!supabase) return
@@ -600,6 +621,31 @@ export default function TradingAlertsMobile() {
 
   return (
     <div className="space-y-3 px-3 pb-24 pt-3">
+      {/* Modal do sinal (deep-link da notificação): card + gráfico ao vivo + info */}
+      {focusAlert && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-3 pt-8"
+          onClick={() => setFocusAlert(null)}
+        >
+          <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-sm font-semibold text-[#D2A63C]">📍 Sinal seguido</span>
+              <button
+                onClick={() => setFocusAlert(null)}
+                className="rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-white"
+              >
+                Fechar ✕
+              </button>
+            </div>
+            <MobileAlertCard
+              alert={focusAlert}
+              following={followed.has(focusAlert.id)}
+              onToggleFollow={toggleFollow}
+              defaultShowChart
+            />
+          </div>
+        </div>
+      )}
       {/* Cabeçalho */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
