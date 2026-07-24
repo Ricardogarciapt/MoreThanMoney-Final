@@ -110,7 +110,10 @@ async function fetchMetaStats(
       `${metastatsBase(region)}/users/current/accounts/${accountId}/metrics`,
       { headers: { Accept: 'application/json', 'auth-token': t }, signal: ctrl.signal },
     )
-    if (!res.ok) return null
+    if (!res.ok) {
+      console.warn(`[provider-metrics] MetaStats ${res.status} acc=${accountId.slice(0, 8)} region=${region ?? '(default)'} → ${(await res.text().catch(() => '')).slice(0, 120)}`)
+      return null
+    }
     const data = (await res.json().catch(() => null)) as { metrics?: Record<string, unknown> } | null
     return data?.metrics ?? null
   } catch {
@@ -131,10 +134,17 @@ export async function getProviderStrategyMetrics(): Promise<ProviderPerformanceP
     return { configured: false, providers: [], fetchedAt }
   }
 
-  const overview = await fetchMetaApiOverview().catch(() => null)
+  const overview = await fetchMetaApiOverview().catch((e) => {
+    console.warn('[provider-metrics] fetchMetaApiOverview falhou:', e instanceof Error ? e.message : String(e))
+    return null
+  })
 
   const accountById = new Map(
     (overview?.accounts ?? []).map((a) => [a.id, a] as const),
+  )
+  console.warn(
+    `[provider-metrics] overview: ${overview?.accounts?.length ?? 0} contas · ` +
+      (overview?.accounts ?? []).map((a) => `${a.id.slice(0, 8)}:${a.state}/${a.connectionStatus ?? '?'}@${a.region || '?'}`).join(' '),
   )
 
   function subscriberCount(strategyId: string): number {
