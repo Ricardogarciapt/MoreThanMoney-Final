@@ -47,8 +47,8 @@ const hline = (price: number, color: string, width = 2) => ({
 
 // Studies built-in do chart-img que reproduzem os plots dos scanners MTM.
 // Família MTM/Aurum: stack DEMA (15/50/238) + POC (Volume Profile) + RSI.
-const DEMA = (len: number, color: string) => ({ name: "Double EMA", input: [len], override: { "Plot.color": color, "Plot.linewidth": 2 } })
-const POC = { name: "Volume Profile Visible Range", override: { "graphics.horizlines.pocLines.color": "rgb(255,165,0)" } }
+const DEMA = (len: number) => ({ name: "Double EMA", input: { length: len } })
+const POC = { name: "Volume Profile Visible Range" }
 const RSI = { name: "Relative Strength Index" }
 
 /** Studies (em ordem de prioridade) para o scanner do sinal, pelo nome do alerta. */
@@ -56,13 +56,13 @@ export function studiesForScanner(alertName?: string | null): { name: string; in
   const a = (alertName || "").toLowerCase()
   // Aurum Flow e MTM Scanner partilham a base DEMA+POC+RSI
   if (/aurum|mtm\s*scanner|perps/.test(a)) {
-    return [DEMA(15, "rgb(59,130,246)"), DEMA(50, "rgb(22,185,129)"), DEMA(238, "rgb(210,166,60)"), POC, RSI]
+    return [DEMA(15), DEMA(50), DEMA(238), POC, RSI]
   }
   // Sensei / GoldKiller (ouro) — DEMA + POC como contexto (afina-se depois com os plots próprios)
   if (/sensei|goldkiller|gold/.test(a)) {
-    return [DEMA(50, "rgb(22,185,129)"), DEMA(238, "rgb(210,166,60)"), POC, RSI]
+    return [DEMA(50), DEMA(238), POC, RSI]
   }
-  return [DEMA(50, "rgb(22,185,129)"), DEMA(238, "rgb(210,166,60)")]
+  return [DEMA(50), DEMA(238)]
 }
 
 /**
