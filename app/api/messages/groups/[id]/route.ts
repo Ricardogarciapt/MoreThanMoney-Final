@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 // GET: Obter mensagens do grupo
 export async function GET(
@@ -34,8 +35,13 @@ export async function GET(
     const resolvedParams = await Promise.resolve(params)
     const groupId = resolvedParams.id
 
+    // Ler via admin client (bypass RLS — auth já validada; autorização feita pela
+    // verificação de membro abaixo). Evita chat de grupo "em branco" quando o token
+    // do cookie está stale e o auth.uid() das queries RLS falha.
+    const adminDb = getSupabaseAdmin()
+
     // Buscar informações do grupo
-    const { data: group } = await supabase
+    const { data: group } = await adminDb
       .from('group_conversations')
       .select('name, is_mobile_visible')
       .eq('id', groupId)
@@ -48,7 +54,7 @@ export async function GET(
     // Se for grupo mobile visível, todos podem ver mensagens
     // Caso contrário, apenas membros podem ver
     if (!group.is_mobile_visible) {
-      const { data: member } = await supabase
+      const { data: member } = await adminDb
         .from('group_members')
         .select('*')
         .eq('group_id', groupId)
@@ -61,7 +67,7 @@ export async function GET(
     }
 
     // Buscar mensagens (sem join a profiles)
-    const { data: messages, error } = await supabase
+    const { data: messages, error } = await adminDb
       .from('messages')
       .select('*')
       .eq('group_id', groupId)
@@ -76,7 +82,7 @@ export async function GET(
     const senderIds = [...new Set(list.map((m: { sender_id: string }) => m.sender_id).filter(Boolean))]
     const senderMap: Record<string, { id: string; full_name?: string; username?: string; avatar_url?: string; email?: string }> = {}
     if (senderIds.length > 0) {
-      const { data: profiles } = await supabase
+      const { data: profiles } = await adminDb
         .from('profiles')
         .select('id, full_name, username, avatar_url, email')
         .in('id', senderIds)
@@ -88,7 +94,7 @@ export async function GET(
     }))
 
     // Marcar mensagens como lidas (opcional - pode melhorar)
-    await supabase
+    await adminDb
       .from('messages')
       .update({ read: true, read_at: new Date().toISOString() })
       .eq('group_id', groupId)

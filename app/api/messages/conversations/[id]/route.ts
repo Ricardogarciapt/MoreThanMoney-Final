@@ -37,8 +37,13 @@ export async function GET(
       return NextResponse.json({ error: 'Conversa inválida' }, { status: 400 })
     }
 
+    // Ler via admin client (bypass RLS — auth já validada acima). Evita conversa "em
+    // branco" quando o token do cookie está stale e o auth.uid() das queries RLS falha,
+    // embora o POST (que usa admin) insira na mesma — mensagens gravadas mas não lidas.
+    const adminDb = getSupabaseAdmin()
+
     // Verificar se o usuário tem acesso à conversa
-    const { data: conversation, error: convError } = await supabase
+    const { data: conversation, error: convError } = await adminDb
       .from('conversations')
       .select('*')
       .eq('id', conversationId)
@@ -53,7 +58,7 @@ export async function GET(
     }
 
     // Buscar mensagens (sem join a profiles)
-    const { data: messages, error } = await supabase
+    const { data: messages, error } = await adminDb
       .from('messages')
       .select('*')
       .eq('conversation_id', conversationId)
@@ -68,7 +73,7 @@ export async function GET(
     const senderIds = [...new Set(list.map((m: { sender_id: string }) => m.sender_id).filter(Boolean))]
     const senderMap: Record<string, { id: string; full_name?: string; username?: string; avatar_url?: string; email?: string }> = {}
     if (senderIds.length > 0) {
-      const { data: profiles } = await supabase
+      const { data: profiles } = await adminDb
         .from('profiles')
         .select('id, full_name, username, avatar_url, email')
         .in('id', senderIds)
@@ -80,7 +85,7 @@ export async function GET(
     }))
 
     // Marcar mensagens como lidas
-    await supabase
+    await adminDb
       .from('messages')
       .update({ read: true, read_at: new Date().toISOString() })
       .eq('conversation_id', conversationId)

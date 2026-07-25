@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,14 +55,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Sub-reads via admin (bypass RLS — já scoped às conversas do user acima). Evita
+    // previews/contagens vazias quando o token do cookie está stale (mesmo motivo do
+    // "conversa em branco").
+    const adminDb = getSupabaseAdmin()
+
     // Buscar última mensagem e contagem de não lidas para cada conversa
     const conversationsWithMessages = await Promise.all(
       (conversations || []).map(async (conv) => {
         const otherUserId = conv.user1_id === session.user.id ? conv.user2_id : conv.user1_id
-        
+
         let otherUser: { id: string; full_name?: string; username?: string; avatar_url?: string; email?: string } | null = null
         if (otherUserId) {
-          const { data: profile } = await supabase
+          const { data: profile } = await adminDb
             .from('profiles')
             .select('id, full_name, username, avatar_url, email')
             .eq('id', otherUserId)
@@ -70,7 +76,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Última mensagem
-        const { data: lastMessage, error: lastMessageError } = await supabase
+        const { data: lastMessage, error: lastMessageError } = await adminDb
           .from('messages')
           .select('*')
           .eq('conversation_id', conv.id)
@@ -83,7 +89,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Contagem de não lidas
-        const { count: unreadCount, error: unreadError } = await supabase
+        const { count: unreadCount, error: unreadError } = await adminDb
           .from('messages')
           .select('*', { count: 'exact', head: true })
           .eq('conversation_id', conv.id)
