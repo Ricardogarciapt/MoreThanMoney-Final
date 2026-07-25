@@ -515,11 +515,11 @@ export async function POST(request: NextRequest) {
     route.sender = "📊 MTM Scanner"
   }
 
-  // Perpétuos cripto: só 1H vai para o chat/canal (SL curtos noutros TF → overtrading).
-  // Os restantes timeframes ficam só em tradingview_signals (sem chat/Telegram).
+  // Perpétuos cripto: 30m e 1H vão para o chat/canal + execução; outros TF ficam só
+  // em tradingview_signals (sem chat/Telegram/execução) para não gerar overtrading.
   if (assetClass === "crypto_perp") {
     const tfMin = tfToMinutes(timeframe)
-    if (tfMin !== null && tfMin !== 60) {
+    if (tfMin !== null && tfMin !== 60 && tfMin !== 30) {
       route.channel = null
       route.telegram = null
       route.push = false
@@ -874,11 +874,11 @@ export async function POST(request: NextRequest) {
   // Só ENTRADAS (não follow-ups) e para todas as classes de ativo.
   // await (não fire-and-forget): no Vercel o trabalho assíncrono é morto após a resposta.
   let pushOk = false
-  // Perpétuos cripto só enviam push em 1H (SL curtos noutros TF → overtrading/ruído).
+  // Perpétuos cripto: push/execução em 30m e 1H; outros TF ficam bloqueados (overtrading/ruído).
   const cryptoPerpBlocked =
     assetClass === "crypto_perp" && (() => {
       const m = tfToMinutes(timeframe)
-      return m !== null && m !== 60
+      return m !== null && m !== 60 && m !== 30
     })()
   if (alertOk && initSignalKind === "entry" && !cryptoPerpBlocked) {
     const dir =
@@ -935,7 +935,16 @@ export async function POST(request: NextRequest) {
     const bybitEntry = v.entry ?? entry ?? price ?? null
     const bybitSl = v.sl ?? sl ?? null
     const bybitTps = [tp, tp2, tp3].filter((n): n is number => n != null && n > 0)
-    if (cronSecret && (v.symbol ?? ticker) && bybitEntry != null) {
+    const normSym = String(v.symbol ?? ticker).toUpperCase().replace(/^[A-Z]+:/, "").replace(/\.P$/, "")
+    if (cronSecret && normSym && bybitEntry != null) {
+      // Lista de símbolos que o Copy Trading da Bybit não suporta (auto-preenchida) → salta sem tentar.
+      const { data: usRow } = await supabase.from("site_settings").select("value").eq("key", "bybit_copy_unsupported").maybeSingle()
+      const unsupported: string[] = Array.isArray((usRow?.value as { symbols?: unknown })?.symbols)
+        ? ((usRow!.value as { symbols: string[] }).symbols)
+        : []
+      if (unsupported.includes(normSym)) {
+        if (logId) await supabase.from("tradingview_signals").update({ bybit_exec_detail: `skip: ${normSym} não suportado no Copy` }).eq("id", logId)
+      } else {
       try {
         const res = await fetch(`${url.origin}/api/bybit/place`, {
           method: "POST",
@@ -956,16 +965,25 @@ export async function POST(request: NextRequest) {
           : j.ok
             ? `#${j.orderId} · ${j.sizing ?? ""}`
             : `falhou: ${j.retMsg ?? j.error ?? "?"}`
+        // Copy Trading não suporta o símbolo → memoriza p/ saltar de futuro (sem repetir o erro).
+        if (!j.ok && !j.skipped && /not\s*support|does not currently support/i.test(String(j.retMsg ?? j.error ?? ""))) {
+          const next = Array.from(new Set([...unsupported, normSym]))
+          await supabase.from("site_settings").upsert(
+            { key: "bybit_copy_unsupported", value: { symbols: next }, updated_at: new Date().toISOString() },
+            { onConflict: "key" },
+          ).then(undefined, () => {})
+        }
         if (logId) {
           await supabase.from("tradingview_signals").update({
             bybit_order_id: j.ok ? j.orderId ?? null : null,
             bybit_exec_detail: detail.slice(0, 300),
           }).eq("id", logId)
         }
-        console.log(`[webhook][bybit] ${v.symbol ?? ticker} ${bybitSide} → ${detail}`)
+        console.log(`[webhook][bybit] ${normSym} ${bybitSide} → ${detail}`)
       } catch (e) {
         console.error("[webhook][bybit] place error:", e)
         if (logId) await supabase.from("tradingview_signals").update({ bybit_exec_detail: `erro: ${String(e).slice(0, 200)}` }).eq("id", logId)
+      }
       }
     }
   }

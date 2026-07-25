@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import {
   toBybitSymbol,
   bybitConfigured,
-  getBybitEquity,
+  getBybitWallet,
+  getBybitPositions,
   getBybitInstrumentInfo,
   computeMasterQty,
   computeDynamicLeverage,
@@ -16,7 +17,8 @@ export const runtime = "edge"
 export const preferredRegion = "fra1"
 export const dynamic = "force-dynamic"
 
-const DEFAULT_COST_PCT = 0.10 // margem por posição = 10% da equity
+const DEFAULT_COST_PCT = 0.03 // margem por posição = 3% da equity
+const DEFAULT_MAX_POSITIONS = 5 // nº máx de posições abertas em simultâneo
 const DEFAULT_BASE_LEVERAGE = 10 // alavancagem no SL de referência
 const DEFAULT_VOL_REF_PCT = 0.01 // SL 1% → base leverage
 const DEFAULT_MAX_LEVERAGE = 20 // teto (também limitado pelo máx do símbolo)
@@ -74,20 +76,41 @@ export async function POST(req: NextRequest) {
     num(b.leverage) ??
     computeDynamicLeverage(entry ?? 0, sl, { base: baseLev, refVolPct: refVol, min: DEFAULT_MIN_LEVERAGE, max: maxLev })
 
-  // qty: direta (testes) ou dimensionada (menor entre risco riskPct e margem ≤ costAbs).
+  // qty: direta (testes) ou dimensionada (margem costPct × alavancagem).
   let qty = num(b.qty) ?? 0
   let sizing = "qty direta"
   if (!(qty > 0)) {
     if (!(entry != null && entry > 0)) {
       return NextResponse.json({ ok: false, error: "entry necessário para o sizing" }, { status: 400 })
     }
-    const equity = await getBybitEquity()
+    // Saldo + posições abertas em paralelo (gates de risco antes de abrir).
+    const [wallet, positions] = await Promise.all([getBybitWallet(), getBybitPositions()])
+    const equity = wallet.equity
     if (!(equity != null && equity > 0)) {
       return NextResponse.json({ ok: false, error: "equity Bybit indisponível" }, { status: 502 })
     }
+
+    // Cap de posições simultâneas — protege a margem (a lista de perps dispara muitos sinais).
+    const maxPositions = Number(process.env.BYBIT_MAX_POSITIONS) || DEFAULT_MAX_POSITIONS
+    if (positions.ok && positions.positions.length >= maxPositions) {
+      return NextResponse.json({
+        ok: false, skipped: true,
+        reason: `cap de ${maxPositions} posições atingido (${positions.positions.length} abertas)`,
+      })
+    }
+
+    // Skip se o saldo disponível não cobre a margem necessária (≈ costPct da equity).
+    const requiredMargin = equity * costPct
+    if (wallet.available != null && wallet.available < requiredMargin) {
+      return NextResponse.json({
+        ok: false, skipped: true,
+        reason: `saldo baixo: disponível $${wallet.available.toFixed(2)} < margem $${requiredMargin.toFixed(2)}`,
+      })
+    }
+
     const r = computeMasterQty({ equity, entry, sl, leverage, costPct, riskPct, costAbs, instrument })
     qty = r.qty
-    sizing = `equity $${equity.toFixed(2)} · ${r.reason}`
+    sizing = `equity $${equity.toFixed(2)} · ${positions.positions.length}/${maxPositions} pos · ${r.reason}`
     if (!(qty > 0)) {
       return NextResponse.json({ ok: false, error: `qty=0 após sizing (${sizing})` }, { status: 422 })
     }

@@ -137,6 +137,18 @@ export async function getBybitEquity(): Promise<number | null> {
   return Number.isFinite(eq) && eq > 0 ? eq : null
 }
 
+/** Equity + saldo DISPONÍVEL (margem livre) da conta unificada. Para o gate de margem. */
+export async function getBybitWallet(): Promise<{ equity: number | null; available: number | null }> {
+  const r = await getBybitWalletBalance()
+  const row = (r.result as { list?: { totalEquity?: string; totalAvailableBalance?: string }[] } | null)?.list?.[0]
+  const eq = Number(row?.totalEquity)
+  const av = Number(row?.totalAvailableBalance)
+  return {
+    equity: Number.isFinite(eq) && eq > 0 ? eq : null,
+    available: Number.isFinite(av) && av >= 0 ? av : null,
+  }
+}
+
 export interface BybitPerpMetrics {
   ok: boolean
   retMsg: string
