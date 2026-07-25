@@ -650,10 +650,12 @@ export default function LiveSessionsMobile({
           data-live-player-guard
           className={cn(
             "flex flex-col gap-0 overflow-hidden border-0 bg-[#08080a] p-0 shadow-none [&>button]:hidden",
-            "fixed left-0 right-0 top-0 z-[100] w-screen max-w-[100vw] translate-x-0 translate-y-0 rounded-none",
-            "bottom-[var(--app-mobile-footer-tabs-height,calc(5.5rem+env(safe-area-inset-bottom,0px)))] h-[calc(100dvh-var(--app-mobile-footer-tabs-height,calc(5.5rem+env(safe-area-inset-bottom,0px))))] min-h-0",
-            "sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:h-[min(92dvh,820px)] sm:max-h-[min(92dvh,820px)] sm:w-[calc(100vw-1rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg sm:border sm:border-[#D2A63C]/25 sm:shadow-lg",
-            showChat ? "sm:h-[min(92dvh,820px)]" : "sm:h-auto sm:max-h-[85dvh]"
+            // Componente mobile-first (app-mobile / webviews nativas): o modal ocupa SEMPRE
+            // o frame todo (topo até acima da barra de tabs), independentemente do breakpoint.
+            // Antes, na webview o viewport CSS cruzava o `sm:` (640px) e caía no cartão
+            // flutuante `max-w-lg` centrado — ficava pequeno com a lista por trás.
+            "fixed inset-x-0 top-0 z-[100] w-screen max-w-[100vw] translate-x-0 translate-y-0 rounded-none",
+            "bottom-[var(--app-mobile-footer-tabs-height,calc(5.5rem+env(safe-area-inset-bottom,0px)))] h-[calc(100dvh-var(--app-mobile-footer-tabs-height,calc(5.5rem+env(safe-area-inset-bottom,0px))))] min-h-0"
           )}
         >
           <DialogHeader className="flex shrink-0 flex-row items-start justify-between gap-2 border-b border-[#D2A63C]/15 bg-black/40 px-2 py-2 pr-2 sm:px-3">
@@ -721,7 +723,7 @@ export default function LiveSessionsMobile({
                   "relative flex min-h-0 w-full flex-1 flex-col overflow-hidden border-y border-[#D2A63C]/20 bg-black sm:rounded-xl sm:border sm:border-[#D2A63C]/15",
                   inAppFullscreen
                     ? "min-h-0 flex-1 rounded-none border-x-0 sm:rounded-xl sm:border-x"
-                    : "flex-1 border-x-0 sm:min-h-0 sm:flex-none sm:rounded-xl sm:border-x"
+                    : "flex-1 border-x-0 max-sm:min-h-[46dvh] sm:min-h-0 sm:flex-none sm:rounded-xl sm:border-x"
                 )}
               >
                 {disclaimerOpen && (

@@ -30,11 +30,17 @@ More Than Money · por Ricardo Garcia · @morethanmoney.pt
 **Corpo:**
 Se abriste este guia, é porque alguma coisa dentro de ti já percebeu que o plano "estuda, trabalha 40 anos, reforma-te" deixou de funcionar. Não estás sozinho — e não estás errado.
 
-Eu sou o Ricardo. Comecei exatamente onde tu estás agora: sem experiência, com mais dúvidas do que certezas, e com medo de perder o pouco que tinha. A diferença não foi sorte nem um talento especial. Foi dar o **primeiro passo certo** — e depois o seguinte.
+Eu sou o Ricardo. Cresci no Porto, numa **família humilde e adotiva**. Entrei na **GNR** à procura de disciplina e de uma saída — de criar os meus próprios limites em vez de deixar a vida decidir por mim.
 
-Este guia não te promete ficar rico depressa. Promete-te outra coisa, mais valiosa: **clareza**. No fim destas páginas vais saber exatamente qual é o teu próximo passo concreto.
+Mas o verdadeiro empurrão veio no pior momento: a minha mulher a lutar contra um **cancro da mama** e uma **filha de 3 anos** que precisava de um pai presente — não de um pai afogado em pressão e más escolhas financeiras. Foi aí que **queimei as pontes** e decidi aprender uma competência digital que me libertasse.
 
-» CALLOUT: "Não precisas de saber tudo para começar. Precisas de começar para aprender."
+Comecei como quase toda a gente: à procura do "dinheiro fácil e rápido". Achei que era mais esperto que os bancos e os traders profissionais. A minha **primeira conta de 3.000€ foi à vida**. A lição? Ninguém se safa sozinho.
+
+Tudo mudou quando parei de tentar adivinhar e me **rodeei de pessoas que já tinham os resultados que eu queria**. Foi essa comunidade — e a disciplina que a farda me deu — que me permitiu sair da GNR de forma consciente e construir a **More Than Money**.
+
+Este guia não te promete ficar rico depressa. Promete-te **clareza**. No fim destas páginas vais saber exatamente qual é o teu próximo passo concreto.
+
+» CALLOUT: "Onde come um, comem dois — e o tempo não para. Não se vence sozinho: vence-se em comunidade."
 
 **Assinatura:** — Ricardo Garcia, fundador da More Than Money
 

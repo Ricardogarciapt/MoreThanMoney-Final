@@ -259,27 +259,17 @@ export default function MentionInput({
 
   return (
     <div className="relative">
-      {rows === 1 ? (
-        <input
-          ref={textareaRef as React.RefObject<HTMLInputElement>}
-          value={displayValue}
-          onChange={handleInputChange as any}
-          onKeyDown={handleKeyDown as any}
-          placeholder={placeholder}
-          className={className}
-          type="text"
-        />
-      ) : (
-        <textarea
-          ref={textareaRef as React.RefObject<HTMLTextAreaElement>}
-          value={displayValue}
-          onChange={handleInputChange as any}
-          onKeyDown={handleKeyDown as any}
-          placeholder={placeholder}
-          className={className}
-          rows={rows}
-        />
-      )}
+      {/* Sempre textarea: Enter insere nova linha (o envio faz-se pelo botão).
+          Com rows={1} mantém o aspeto compacto de uma linha, mas cresce ao escrever. */}
+      <textarea
+        ref={textareaRef as React.RefObject<HTMLTextAreaElement>}
+        value={displayValue}
+        onChange={handleInputChange as any}
+        onKeyDown={handleKeyDown as any}
+        placeholder={placeholder}
+        className={className}
+        rows={rows}
+      />
 
       {/* Popup de Sugestões de Menção */}
       {showMentions && mentionUsers.length > 0 && (
