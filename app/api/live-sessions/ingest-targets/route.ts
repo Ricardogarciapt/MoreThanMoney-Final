@@ -36,14 +36,15 @@ async function targetsFor(name: string): Promise<string[]> {
 }
 
 function authed(req: NextRequest): boolean {
-  const secret = process.env.RTMP_RELAY_SECRET
-  const given = new URL(req.url).searchParams.get("secret") || req.headers.get("x-relay-secret")
+  const secret = (process.env.RTMP_RELAY_SECRET || "").trim()
+  const given = (new URL(req.url).searchParams.get("secret") || req.headers.get("x-relay-secret") || "").trim()
   return !!secret && given === secret
 }
 
 /** SRS forward backend — chamado pelo SRS em cada publish. Devolve os destinos de forward. */
 export async function POST(req: NextRequest) {
-  if (!authed(req)) return NextResponse.json({ code: 403 }, { status: 403 })
+  // hasEnv: diagnóstico seguro (só booleano, nunca o valor) para distinguir env-em-falta de mismatch.
+  if (!authed(req)) return NextResponse.json({ code: 403, hasEnv: !!(process.env.RTMP_RELAY_SECRET || "").trim() }, { status: 403 })
   const body = (await req.json().catch(() => ({}))) as { stream?: string }
   const urls = await targetsFor(String(body?.stream || ""))
   // code:0 = SRS reencaminha para urls; urls vazio = só HLS (sem forward). Nunca bloqueia o publish.
