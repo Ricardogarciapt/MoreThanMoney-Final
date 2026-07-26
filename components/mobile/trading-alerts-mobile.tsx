@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
-import { TERMINAL_ASSETS } from "@/lib/mtm-terminal-assets"
+import { TERMINAL_ASSETS, type TerminalAssetType } from "@/lib/mtm-terminal-assets"
 import {
   Bell,
   BellRing,
@@ -67,6 +67,7 @@ type StudySpec = string | { id: string; inputs?: Record<string, unknown> }
 function resolveStudies(strategy: string | null): StudySpec[] | undefined {
   const s = (strategy ?? "").toLowerCase().replace(/[^a-z]/g, "")
   if (!s) return undefined
+  if (s.includes("aurum")) return SCANNER_STUDIES.Sensei // Aurum Flow = família Sensei (perpétuos)
   if (s.includes("sensei")) return SCANNER_STUDIES.Sensei
   if (s.includes("goldkiller")) return SCANNER_STUDIES.Goldkiller
   if (s.includes("goldenzone")) return SCANNER_STUDIES.GoldenZone
@@ -160,9 +161,18 @@ interface Subscription {
 }
 
 const DEFAULT_ALERT_SYMBOLS = ["XAUUSD", "EURUSD", "GBPUSD", "USDCAD", "USDJPY", "BTCUSD", "US30"]
-const STRATEGIES = ["MTMScanner", "Goldkiller", "Sensei"]
+// Estratégias MTM que geram alertas (inclui Aurum Flow — scanner de perpétuos cripto).
+const STRATEGIES = ["Sensei", "Goldkiller", "MTMScanner", "Aurum Flow"]
 const TIMEFRAMES = ["5", "15", "30", "60", "240", "D"]
-const SYMBOLS = TERMINAL_ASSETS.map((a) => a.symbol)
+
+// Ativos agrupados por CLASSE (dropdowns no seletor de alertas).
+const ASSET_CLASSES: { key: TerminalAssetType; label: string }[] = [
+  { key: "commodity", label: "Metais / Commodities" },
+  { key: "index", label: "Índices" },
+  { key: "forex", label: "Forex" },
+  { key: "crypto", label: "Cripto" },
+  { key: "stock", label: "Ações" },
+]
 
 const DIR = {
   buy: { label: "COMPRA", cls: "border-green-500/40 bg-green-500/15 text-green-400", Icon: TrendingUp },
@@ -699,10 +709,25 @@ export default function TradingAlertsMobile() {
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
               Ativos ({sub.symbols.length || "todos"})
             </p>
-            <div className="flex flex-wrap gap-1.5">
-              {SYMBOLS.map((s) => (
-                <Chip key={s} label={s} active={sub.symbols.includes(s)} onClick={() => toggle("symbols", s)} />
-              ))}
+            <div className="space-y-1.5">
+              {ASSET_CLASSES.map((cls) => {
+                const assets = TERMINAL_ASSETS.filter((a) => a.type === cls.key)
+                if (assets.length === 0) return null
+                const selected = assets.filter((a) => sub.symbols.includes(a.symbol)).length
+                return (
+                  <details key={cls.key} className="rounded-lg border border-[#D2A63C]/15 bg-black/30">
+                    <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-semibold text-gray-300">
+                      <span>{cls.label}</span>
+                      <span className="text-[10px] text-gray-500">{selected ? `${selected}/${assets.length}` : `${assets.length} ativos`}</span>
+                    </summary>
+                    <div className="flex flex-wrap gap-1.5 px-3 pb-3">
+                      {assets.map((a) => (
+                        <Chip key={a.symbol} label={a.symbol} active={sub.symbols.includes(a.symbol)} onClick={() => toggle("symbols", a.symbol)} />
+                      ))}
+                    </div>
+                  </details>
+                )
+              })}
             </div>
           </div>
 
