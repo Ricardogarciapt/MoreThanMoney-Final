@@ -89,15 +89,14 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
 
   const media = (await fetchMedia(acc.id, token)).filter((m) => (m.comments_count ?? 0) > 0)
   for (const post of media) {
-    if (res.dmsSent + res.publicFallback >= MAX_DM_PER_ACCOUNT) break
+    if (res.leads >= MAX_DM_PER_ACCOUNT) break
     const comments = await gget(`${post.id}/comments?fields=id,text,username,timestamp&limit=50`, token)
     if (!comments.ok) { res.errors.push(`comments ${post.id}: ${comments.json?.error?.message ?? comments.status}`); continue }
     for (const c of (comments.json?.data ?? [])) {
-      if (res.dmsSent + res.publicFallback >= MAX_DM_PER_ACCOUNT) break
+      if (res.leads >= MAX_DM_PER_ACCOUNT) break
       const commenter: string | null = c.username ?? null
       if (commenter && own.has(commenter.toLowerCase())) continue
-      // Janela de 7 dias (private_reply); comentários mais antigos ignoram-se.
-      if (c.timestamp && new Date(c.timestamp).getTime() < cutoff) continue
+      // PROSPECTOR: deteta intenção em TODO o conteúdo (sem cortar por data — nada se perde).
       const intent = detectIntent(c.text)
       if (!intent) continue
 
@@ -106,19 +105,22 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
       res.leads++
 
       const handle = commenter ? ` @${commenter}` : ""
-      // SETTER: DM privada (private_replies). Fallback → resposta pública sem link.
       const dmText = intent.dm(commenter ? ` ${commenter.split(" ")[0]}` : "")
-      const dm = await gpost(`${c.id}/private_replies`, { message: dmText }, token)
-      let dm_status = "sent"
+      // SETTER: DM só dentro da janela de 7 dias (regra Meta). Fora → loga como window_expired
+      // (segues à mão). Dentro → private_reply; se falhar (scope), resposta pública sem link.
+      const withinWindow = !c.timestamp || new Date(c.timestamp).getTime() >= cutoff
+      let dm_status = "window_expired"
       let dm_error: string | null = null
-      if (dm.ok) {
-        res.dmsSent++
-      } else {
-        dm_status = "public_fallback"
-        dm_error = String(dm.json?.error?.message ?? dm.status).slice(0, 200)
-        const pub = await gpost(`${c.id}/replies`, { message: intent.pub(handle) }, token)
-        if (pub.ok) res.publicFallback++
-        else { dm_status = "error"; res.errors.push(`${intent.key} ${c.id}: dm(${dm_error}) pub(${pub.json?.error?.message ?? pub.status})`) }
+      if (withinWindow) {
+        const dm = await gpost(`${c.id}/private_replies`, { message: dmText }, token)
+        if (dm.ok) { dm_status = "sent"; res.dmsSent++ }
+        else {
+          dm_status = "public_fallback"
+          dm_error = String(dm.json?.error?.message ?? dm.status).slice(0, 200)
+          const pub = await gpost(`${c.id}/replies`, { message: intent.pub(handle) }, token)
+          if (pub.ok) res.publicFallback++
+          else { dm_status = "error"; res.errors.push(`${intent.key} ${c.id}: dm(${dm_error}) pub(${pub.json?.error?.message ?? pub.status})`) }
+        }
       }
       await supabase.from("ig_leads").upsert({
         comment_id: c.id, media_id: post.id, ig_account_id: acc.id, ig_username: acc.username,
