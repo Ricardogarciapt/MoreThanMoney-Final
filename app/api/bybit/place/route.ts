@@ -5,6 +5,8 @@ import {
   getBybitWallet,
   getBybitPositions,
   getBybitInstrumentInfo,
+  getBybitFunding,
+  fundingGate,
   computeMasterQty,
   computeDynamicLeverage,
   placeBybitPerp,
@@ -23,6 +25,8 @@ const DEFAULT_BASE_LEVERAGE = 10 // alavancagem no SL de referência
 const DEFAULT_VOL_REF_PCT = 0.01 // SL 1% → base leverage
 const DEFAULT_MAX_LEVERAGE = 20 // teto (também limitado pelo máx do símbolo)
 const DEFAULT_MIN_LEVERAGE = 1
+const DEFAULT_FUNDING_MAX_ADVERSE = 0.0005 // 0,05% por período — acima disto é funding forte
+const DEFAULT_FUNDING_WINDOW_MIN = 15 // só bloqueia se o acerto for dentro de 15 min
 
 /**
  * Coloca a ordem-MESTRE na Bybit (Copy Trading nativo replica p/ seguidores): entrada a
@@ -64,7 +68,21 @@ export async function POST(req: NextRequest) {
   const riskPct = num(b.riskPct) ?? (Number(process.env.BYBIT_RISK_PCT) || null) // teto opcional
   const costAbs = num(b.costAbs) ?? (Number(process.env.BYBIT_COST_ABS) || null) // teto opcional
 
-  const instrument = await getBybitInstrumentInfo(symbol)
+  const [instrument, funding] = await Promise.all([getBybitInstrumentInfo(symbol), getBybitFunding(symbol)])
+
+  // Gate de FUNDING — o "imposto silencioso" dos perps. Bloqueia só o pior caso: funding
+  // adverso forte + acerto iminente (abriríamos a pagar a taxa logo, sem a posição correr).
+  // ON por defeito; BYBIT_FUNDING_GATE_ENABLED=false desliga.
+  const fg = fundingGate(side, funding, Date.now(), {
+    maxAdverse: Number(process.env.BYBIT_FUNDING_MAX_ADVERSE) || DEFAULT_FUNDING_MAX_ADVERSE,
+    windowMin: Number(process.env.BYBIT_FUNDING_WINDOW_MIN) || DEFAULT_FUNDING_WINDOW_MIN,
+  })
+  if (process.env.BYBIT_FUNDING_GATE_ENABLED !== "false" && fg.block) {
+    return NextResponse.json({
+      ok: false, skipped: true, reason: fg.reason,
+      funding: { rate: fg.rate, adverse: fg.adverse, minsToFunding: fg.minsToFunding },
+    })
+  }
 
   // Alavancagem dinâmica pela volatilidade (dist. do SL), base 10x, clampada ao máx do símbolo.
   // `leverage` no body força um valor fixo (testes).
@@ -146,5 +164,6 @@ export async function POST(req: NextRequest) {
     trailingSet: trade.trailingSet,
     tps: trade.tps.map((t) => ({ price: t.price, qty: t.qty, ok: t.ok, err: t.ok ? undefined : t.retMsg })),
     sizing,
+    funding: { rate: fg.rate, adverse: fg.adverse, minsToFunding: fg.minsToFunding },
   })
 }

@@ -243,6 +243,73 @@ export async function getBybitInstrumentInfo(symbol: string): Promise<BybitInstr
   }
 }
 
+export interface BybitFunding {
+  fundingRate: number // taxa prevista para o próximo acerto (fração; 0.0001 = 0.01% por período)
+  nextFundingTime: number // epoch ms do próximo acerto de funding
+  markPrice: number | null
+}
+
+/**
+ * Funding rate atual + próximo acerto (público, sem assinatura). Nos perps, longs pagam shorts
+ * quando fundingRate>0 (e o contrário quando <0). É o "imposto silencioso": segurar contra o
+ * funding corrói o resultado — a pesquisa é unânime em que pode virar uma estratégia lucrativa
+ * em perdedora. Usado pelo gate de funding antes de abrir a ordem-mestre.
+ */
+export async function getBybitFunding(symbol: string): Promise<BybitFunding | null> {
+  try {
+    const url = `${base()}/v5/market/tickers?category=linear&symbol=${encodeURIComponent(symbol)}`
+    const res = await fetch(url)
+    const j = (await res.json()) as {
+      result?: { list?: { fundingRate?: string; nextFundingTime?: string; markPrice?: string }[] }
+    }
+    const it = j.result?.list?.[0]
+    if (!it) return null
+    return {
+      fundingRate: Number(it.fundingRate ?? 0) || 0,
+      nextFundingTime: Number(it.nextFundingTime ?? 0) || 0,
+      markPrice: it.markPrice != null && Number.isFinite(Number(it.markPrice)) ? Number(it.markPrice) : null,
+    }
+  } catch {
+    return null
+  }
+}
+
+export interface FundingGateResult {
+  block: boolean
+  adverse: boolean
+  rate: number
+  minsToFunding: number | null
+  reason: string
+}
+
+/**
+ * Gate de FUNDING. A funding rate é o imposto silencioso dos perps: se abrires CONTRA o funding
+ * mesmo antes do acerto, pagas já a taxa sem a posição ter tempo de correr. Este gate é
+ * conservador — bloqueia SÓ o pior caso: funding adverso ao nosso lado (long paga quando
+ * rate>0; short paga quando rate<0) com magnitude acima do teto E acerto iminente (dentro da
+ * janela em minutos). Fora disso deixa passar — não toca na lógica de tendência que dá edge.
+ */
+export function fundingGate(
+  side: "buy" | "sell",
+  f: BybitFunding | null,
+  nowMs: number,
+  opts: { maxAdverse: number; windowMin: number },
+): FundingGateResult {
+  if (!f) return { block: false, adverse: false, rate: 0, minsToFunding: null, reason: "sem dados de funding" }
+  const rate = f.fundingRate
+  // custo para o NOSSO lado: long paga se rate>0, short paga se rate<0. adverseCost>0 = pagamos.
+  const adverseCost = side === "buy" ? rate : -rate
+  const adverse = adverseCost > 0
+  const minsToFunding = f.nextFundingTime > 0 ? Math.round((f.nextFundingTime - nowMs) / 60000) : null
+  const imminent = minsToFunding != null && minsToFunding >= 0 && minsToFunding <= opts.windowMin
+  const block = adverse && adverseCost >= opts.maxAdverse && imminent
+  const pct = (rate * 100).toFixed(4)
+  const reason = block
+    ? `funding adverso ${pct}% p/ ${side} e acerto em ${minsToFunding}min (teto ${(opts.maxAdverse * 100).toFixed(3)}%)`
+    : `funding ${pct}% (${adverse ? "adverso" : "a favor"}${minsToFunding != null ? `, acerto em ${minsToFunding}min` : ""})`
+  return { block, adverse, rate, minsToFunding, reason }
+}
+
 /**
  * Alavancagem DINÂMICA pela volatilidade (distância do SL). No SL de referência usa a base
  * (ex.: SL 1% → 10x); SL mais largo (mais volátil) baixa a leverage, SL mais apertado sobe —
