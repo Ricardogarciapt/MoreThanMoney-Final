@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
         member_category:            memberCategory,
         subscription_plan:          'premium',
         subscription_status:        'active',
-        subscription_platform:      'partnership',
+        subscription_platform:      'coupon',   // CHECK só aceita app_store/skool/manual/coupon/trial (não 'partnership')
         subscription_billing_cycle: 'monthly',
         subscription_expires_at:    expiresAt,
         next_billing_at:            expiresAt,
