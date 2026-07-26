@@ -313,14 +313,32 @@ export async function handleAdminAction(supabase: Supa, action: string, chatId: 
   }
 }
 
+export const APP_REGISTER_LINK = 'https://www.morethanmoney.pt/register'
+export const APP_ANDROID_LINK = 'https://www.morethanmoney.pt/downloads/MoreThanMoney.apk'
+export const TRIAL_CODE = '14DayTrial'
+
+/** Porta suave: experimentar a app GRÁTIS 14 dias (sem depósito). Reduz o gargalo do broker-gate. */
+export function trialStepMessage(): string {
+  return (
+    `🎁 <b>Começa GRÁTIS — sem depositar nada:</b>\n\n` +
+    `1️⃣ Descarrega a app MTM (iOS: App Store "MTM System" · Android: ${APP_ANDROID_LINK})\n` +
+    `2️⃣ Cria conta em ${APP_REGISTER_LINK}\n` +
+    `3️⃣ Em <b>Mais → Definições → Resgatar código</b>, usa <code>${TRIAL_CODE}</code> → <b>14 dias Premium grátis</b> 🚀\n\n` +
+    `Vês por dentro os sinais, o Tap-to-Trade e as sessões ao vivo. Quando quiseres os <b>grupos de sinais + copytrading</b>, é só o passo da corretora (escreve /acesso). 💪`
+  )
+}
+
 /** Mensagem que instrui o passo do broker (usada pela IA / comando). */
 export function brokerStepMessage(): string {
   return (
-    `🔓 <b>Para teres acesso aos grupos de sinais + app Premium:</b>\n\n` +
-    `1️⃣ Abre conta na PU Prime (a corretora que usamos): ${PUPRIME_LINK}\n` +
+    `🔓 <b>Duas formas de entrar:</b>\n\n` +
+    `🎁 <b>A) Experimenta GRÁTIS já</b> — sem depositar:\n` +
+    `Descarrega a app, cria conta em ${APP_REGISTER_LINK} e usa o código <code>${TRIAL_CODE}</code> (Mais → Definições → Resgatar código) → <b>14 dias Premium grátis</b>.\n\n` +
+    `💎 <b>B) Grupos de sinais + copytrading</b> (acesso completo):\n` +
+    `1️⃣ Abre conta na PU Prime: ${PUPRIME_LINK}\n` +
     `2️⃣ Deposita no mínimo <b>$${MIN_DEPOSIT}</b>\n` +
-    `3️⃣ Envia-me aqui o teu <b>UID</b> da PU Prime (só o número)\n` +
+    `3️⃣ Envia-me o teu <b>UID</b> da PU Prime (só o número)\n` +
     `4️⃣ Envia um <b>print screen</b> do depósito\n\n` +
-    `Assim que validar, liberto os grupos + dou-te o cupão Premium para a app. 🚀`
+    `Assim que validar, liberto os grupos + cupão Premium. Começa pela A se quiseres testar primeiro. 🚀`
   )
 }

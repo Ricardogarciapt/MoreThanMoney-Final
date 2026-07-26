@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
         "O ecossistema português de trading: scanner, alertas, comunidade e app. " +
         "<b>675 trades reais · 63% win · +7.060€</b>.\n\n" +
         "Por onde queres começar?\n" +
-        "📲 /app — Testar grátis (3 dias, sem cartão)\n" +
+        "🎁 /app — 14 dias Premium GRÁTIS (código 14DayTrial, sem cartão)\n" +
         "💬 /grupos — Entrar nos grupos de sinais\n" +
         "📊 /sinais — Ver os últimos sinais\n" +
         "🏦 /corretora — Abrir conta (PU Prime)\n" +
@@ -302,11 +302,12 @@ export async function POST(request: NextRequest) {
       }
 
       // /app — teste grátis + descarregar app
-      else if (text === "/app" || text === "/app@MoreThanMoney_aibot" || text === "/teste") {
+      else if (text === "/app" || text === "/app@MoreThanMoney_aibot" || text === "/teste" || text === "/trial") {
         await sendMessage(
           "📲 <b>Testa a MoreThanMoney grátis</b>\n\n" +
-          "3 dias grátis · sem cartão · cancela quando quiseres.\n\n" +
-          "▶️ <a href='https://www.morethanmoney.pt/register'>Começar o teste grátis</a>\n" +
+          "🎁 <b>14 dias Premium grátis</b> com o código <code>14DayTrial</code> — sem cartão. Vê os sinais, o Tap-to-Trade e as sessões ao vivo por dentro.\n\n" +
+          "1️⃣ Descarrega a app · 2️⃣ Cria conta · 3️⃣ <b>Mais → Definições → Resgatar código</b> → <code>14DayTrial</code>\n\n" +
+          "▶️ <a href='https://www.morethanmoney.pt/register'>Criar conta</a>\n" +
           "🍏 <a href='https://apps.apple.com/pt/app/id6778558643'>App iOS</a>\n" +
           "🤖 <a href='https://www.morethanmoney.pt/downloads/MoreThanMoney.apk'>App Android</a>"
         )
