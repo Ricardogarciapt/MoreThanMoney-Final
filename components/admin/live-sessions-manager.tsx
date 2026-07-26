@@ -396,10 +396,11 @@ export default function LiveSessionsManager() {
       language: educator.language || DEFAULT_LMS_LANGUAGE,
       password: "",
       is_active: educator.is_active,
-      restream_enabled: Boolean(educator.restream_enabled),
-      restream_ingest_url: (educator.restream_ingest_url || "").trim() || DEFAULT_RESTREAM_INGEST_URL,
-      restream_stream_key: educator.restream_stream_key || "",
-      restream_embed_url: educator.restream_embed_url || "",
+      youtube_enabled: Boolean((educator as any).youtube_enabled),
+      youtube_stream_key: (educator as any).youtube_stream_key || "",
+      tiktok_enabled: Boolean((educator as any).tiktok_enabled),
+      tiktok_server: (educator as any).tiktok_server || "",
+      tiktok_stream_key: (educator as any).tiktok_stream_key || "",
     })
   }
 
@@ -419,10 +420,11 @@ export default function LiveSessionsManager() {
         language: editingEducatorForm.language || DEFAULT_LMS_LANGUAGE,
         is_active: Boolean(editingEducatorForm.is_active),
         password: editingEducatorForm.password || undefined,
-        restream_enabled: Boolean(editingEducatorForm.restream_enabled),
-        restream_ingest_url: String(editingEducatorForm.restream_ingest_url || "").trim() || null,
-        restream_stream_key: String(editingEducatorForm.restream_stream_key || "").trim() || null,
-        restream_embed_url: String(editingEducatorForm.restream_embed_url || "").trim() || null,
+        youtube_enabled: Boolean(editingEducatorForm.youtube_enabled),
+        youtube_stream_key: String(editingEducatorForm.youtube_stream_key || "").trim() || null,
+        tiktok_enabled: Boolean(editingEducatorForm.tiktok_enabled),
+        tiktok_server: String(editingEducatorForm.tiktok_server || "").trim() || null,
+        tiktok_stream_key: String(editingEducatorForm.tiktok_stream_key || "").trim() || null,
       }),
     })
     setEditingEducatorId(null)
@@ -590,8 +592,10 @@ export default function LiveSessionsManager() {
                   <p className="font-semibold text-white">{e.display_name}</p>
                   <p>{e.email} {e.is_active ? "(ativo)" : "(inativo)"}</p>
                   <p className="text-gray-400">Streams: {educatorStreams.length}</p>
-                  {e.restream_enabled && (
-                    <p className="text-cyan-400">Restream ativo no site (player por embed)</p>
+                  {((e as any).youtube_enabled || (e as any).tiktok_enabled) && (
+                    <p className="text-cyan-400">
+                      Multistream: {[(e as any).youtube_enabled ? "YouTube" : null, (e as any).tiktok_enabled ? "TikTok" : null].filter(Boolean).join(" + ")}
+                    </p>
                   )}
                   {firstStream && (
                     <>
@@ -675,43 +679,60 @@ export default function LiveSessionsManager() {
                       Educador ativo
                     </label>
                     <p className="md:col-span-2 text-[11px] font-semibold uppercase tracking-wide text-cyan-600/90">
-                      Restream.io (OBS → Restream → MTM)
+                      Multistream (1 OBS → HLS do site + YouTube + TikTok em simultâneo)
                     </p>
+                    <p className="md:col-span-2 text-[11px] text-gray-500">
+                      O educador transmite 1× para <span className="font-mono">rtmp://stream.morethanmoney.pt/live</span> com a sua chave fixa; o servidor SRS reencaminha para os destinos ativos abaixo.
+                    </p>
+                    {/* YouTube */}
                     <label className="md:col-span-2 inline-flex items-center gap-2 text-gray-300">
                       <input
                         type="checkbox"
-                        checked={Boolean(editingEducatorForm.restream_enabled)}
+                        checked={Boolean(editingEducatorForm.youtube_enabled)}
                         onChange={(event) =>
-                          setEditingEducatorForm((prev: any) => ({ ...prev, restream_enabled: event.target.checked }))
+                          setEditingEducatorForm((prev: any) => ({ ...prev, youtube_enabled: event.target.checked }))
                         }
                       />
-                      Usar player Restream no site para este educador
+                      Reencaminhar para YouTube LIVE
+                    </label>
+                    <Input
+                      type="password"
+                      className="md:col-span-2 font-mono text-[11px]"
+                      value={editingEducatorForm.youtube_stream_key || ""}
+                      onChange={(event) =>
+                        setEditingEducatorForm((prev: any) => ({ ...prev, youtube_stream_key: event.target.value }))
+                      }
+                      placeholder="Stream key do YouTube (Estúdio → Transmitir)"
+                      autoComplete="off"
+                    />
+                    {/* TikTok */}
+                    <label className="md:col-span-2 inline-flex items-center gap-2 text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(editingEducatorForm.tiktok_enabled)}
+                        onChange={(event) =>
+                          setEditingEducatorForm((prev: any) => ({ ...prev, tiktok_enabled: event.target.checked }))
+                        }
+                      />
+                      Reencaminhar para TikTok LIVE
                     </label>
                     <Input
                       className="md:col-span-2 font-mono text-[11px]"
-                      value={editingEducatorForm.restream_ingest_url}
+                      value={editingEducatorForm.tiktok_server || ""}
                       onChange={(event) =>
-                        setEditingEducatorForm((prev: any) => ({ ...prev, restream_ingest_url: event.target.value }))
+                        setEditingEducatorForm((prev: any) => ({ ...prev, tiktok_server: event.target.value }))
                       }
-                      placeholder={`RTMP Restream (${DEFAULT_RESTREAM_INGEST_URL})`}
+                      placeholder="TikTok Server URL (ex.: rtmp://live-api-…/live/)"
                     />
                     <Input
                       type="password"
                       className="md:col-span-2 font-mono text-[11px]"
-                      value={editingEducatorForm.restream_stream_key}
+                      value={editingEducatorForm.tiktok_stream_key || ""}
                       onChange={(event) =>
-                        setEditingEducatorForm((prev: any) => ({ ...prev, restream_stream_key: event.target.value }))
+                        setEditingEducatorForm((prev: any) => ({ ...prev, tiktok_stream_key: event.target.value }))
                       }
-                      placeholder="Stream key Restream (painel Restream)"
+                      placeholder="TikTok Stream Key (LIVE Studio / TikTok Live Access)"
                       autoComplete="off"
-                    />
-                    <Input
-                      className="md:col-span-2 font-mono text-[11px]"
-                      value={editingEducatorForm.restream_embed_url}
-                      onChange={(event) =>
-                        setEditingEducatorForm((prev: any) => ({ ...prev, restream_embed_url: event.target.value }))
-                      }
-                      placeholder="URL embed do player (https://embed.restream.io/…)"
                     />
                   </div>
                 )}
