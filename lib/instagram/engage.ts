@@ -229,12 +229,17 @@ export async function diagnoseIgAccess(): Promise<any> {
     const first = media.json?.data?.[0]
     const insights = first ? await gget(`${first.id}/insights?metric=reach`, token) : { ok: false, json: {} }
     const comments = first ? await gget(`${first.id}/comments?fields=id,text&limit=1`, token) : { ok: false, json: {} }
+    // Scopes reais do token (debug_token) → ver se tem instagram_manage_messages (DM/private_replies).
+    const dbg = await gget(`debug_token?input_token=${encodeURIComponent(token)}`, token)
+    const scopes: string[] = (dbg.json?.data?.scopes ?? []) as string[]
     out.push({
       account: acc.username,
       hasToken: true,
       canReadMedia: media.ok,
       canReadInsights: insights.ok, // → instagram_manage_insights
       canReadComments: comments.ok, // → instagram_manage_comments (reply usa o mesmo scope)
+      canDM: scopes.includes("instagram_manage_messages"), // → private_replies (setter)
+      scopes,
       sampleMediaCount: (media.json?.data ?? []).length,
       errors: [media.ok ? null : media.json?.error?.message, insights.ok ? null : (insights as any).json?.error?.message, comments.ok ? null : (comments as any).json?.error?.message].filter(Boolean),
     })
