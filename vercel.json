@@ -10,6 +10,10 @@
       "schedule": "0 11 * * *"
     },
     {
+      "path": "/api/cron/ig-funnel",
+      "schedule": "*/30 * * * *"
+    },
+    {
       "path": "/api/cron/mtmcopy-master-poll",
       "schedule": "*/2 * * * *"
     },
