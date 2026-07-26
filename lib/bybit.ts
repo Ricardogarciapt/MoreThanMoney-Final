@@ -473,6 +473,47 @@ export async function setBybitPositionTpSl(
   return r
 }
 
+export interface QuickWinPlan {
+  takeProfits: number[]
+  partials: number[]
+  quickTp: number | null
+  reason: string
+}
+
+/**
+ * "Ganho rápido" (scalp) — apanha o spike de volatilidade logo a seguir ao sinal 1H: injeta uma
+ * perna de saída CEDO que banca `quickFrac` da posição a `quickR`×R (R = |entry−sl|; sem SL usa
+ * `quickPct`×entry), e deixa o RESTO correr a tendência até aos TPs originais. Efeitos: (1) lucro
+ * rápido garantido; (2) o trailing nativo passa a ativar neste scalp → stop a break-even mais
+ * cedo; (3) a posição fecha parte mais depressa → liberta o cap de posições e apanha o próximo
+ * sinal. Só injeta se o quickTp cair ESTRITAMENTE entre a entrada e o 1º TP (senão o TP1 do sinal
+ * já está perto) e houver ≥1 TP original (o último continua o runner da tendência).
+ */
+export function buildQuickWinPlan(
+  side: "buy" | "sell",
+  entry: number,
+  sl: number | null,
+  takeProfits: number[],
+  opts: { quickR: number; quickPct: number; quickFrac: number },
+): QuickWinPlan {
+  const tps = takeProfits.filter((t) => t > 0)
+  const passthrough = (reason: string): QuickWinPlan => ({ takeProfits: tps, partials: [], quickTp: null, reason })
+  if (!(entry > 0) || tps.length === 0 || !(opts.quickFrac > 0) || opts.quickFrac >= 1) return passthrough("quick-win off/sem base")
+  const risk = sl != null && sl > 0 ? Math.abs(entry - sl) : null
+  const dist = risk != null && opts.quickR > 0 ? opts.quickR * risk : opts.quickPct > 0 ? opts.quickPct * entry : 0
+  if (!(dist > 0)) return passthrough("quick-win sem distância")
+  const quickTp = side === "buy" ? entry + dist : entry - dist
+  const tp1 = tps[0]
+  const inside = side === "buy" ? quickTp > entry && quickTp < tp1 : quickTp < entry && quickTp > tp1
+  if (!inside) return passthrough("quick-win fora do intervalo (TP1 já perto)")
+  // Frações: quickFrac no scalp; o resto (1−quickFrac) repartido pelos TPs originais (50/30/20 p/ 3).
+  const rest = 1 - opts.quickFrac
+  const n = tps.length
+  const baseSplit = n === 3 ? [0.5, 0.3, 0.2] : Array.from({ length: n }, () => 1 / n)
+  const partials = [opts.quickFrac, ...baseSplit.map((f) => f * rest)]
+  return { takeProfits: [quickTp, ...tps], partials, quickTp, reason: `scalp ${(opts.quickFrac * 100).toFixed(0)}% @ ${quickTp}` }
+}
+
 export interface BybitPerpTradeInput {
   symbol: string
   side: "buy" | "sell"

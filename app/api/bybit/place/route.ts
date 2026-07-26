@@ -7,6 +7,7 @@ import {
   getBybitInstrumentInfo,
   getBybitFunding,
   fundingGate,
+  buildQuickWinPlan,
   computeMasterQty,
   computeDynamicLeverage,
   placeBybitPerp,
@@ -27,6 +28,9 @@ const DEFAULT_MAX_LEVERAGE = 20 // teto (também limitado pelo máx do símbolo)
 const DEFAULT_MIN_LEVERAGE = 1
 const DEFAULT_FUNDING_MAX_ADVERSE = 0.0005 // 0,05% por período — acima disto é funding forte
 const DEFAULT_FUNDING_WINDOW_MIN = 15 // só bloqueia se o acerto for dentro de 15 min
+const DEFAULT_QUICK_R = 0.5 // scalp de ganho rápido a meio-R (metade do risco)
+const DEFAULT_QUICK_PCT = 0.004 // sem SL: scalp a 0,4% da entrada
+const DEFAULT_QUICK_FRAC = 0.25 // fecha 25% da posição no scalp rápido
 
 /**
  * Coloca a ordem-MESTRE na Bybit (Copy Trading nativo replica p/ seguidores): entrada a
@@ -134,8 +138,22 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Trailing: ao atingir TP1 (Exit 1) → break-even + trailing stop nativo. ON por defeito.
+  // Trailing: ao atingir a 1ª saída (Exit 1) → break-even + trailing stop nativo. ON por defeito.
   const trailing = typeof b.trailing === "boolean" ? b.trailing : process.env.BYBIT_TRAIL_ENABLED !== "false"
+
+  // GANHO RÁPIDO: perna de scalp cedo que banca parte da posição no spike pós-sinal 1H e deixa o
+  // resto correr a tendência (o trailing passa a ativar no scalp → BE mais cedo; liberta o cap de
+  // posições p/ apanhar o próximo sinal). ON por defeito; só quando não há `partials` explícitas.
+  const quickEnabled = process.env.BYBIT_QUICK_WIN_ENABLED !== "false" && partials == null
+  const qw = quickEnabled
+    ? buildQuickWinPlan(side, entry ?? 0, sl, takeProfits, {
+        quickR: Number(process.env.BYBIT_QUICK_R) || DEFAULT_QUICK_R,
+        quickPct: Number(process.env.BYBIT_QUICK_PCT) || DEFAULT_QUICK_PCT,
+        quickFrac: Number(process.env.BYBIT_QUICK_FRAC) || DEFAULT_QUICK_FRAC,
+      })
+    : { takeProfits, partials: null as number[] | null, quickTp: null, reason: "quick-win off/partials manuais" }
+  const finalTakeProfits = qw.quickTp != null ? qw.takeProfits : takeProfits
+  const finalPartials = qw.quickTp != null ? qw.partials : partials
 
   const trade = await placeBybitPerp({
     symbol,
@@ -144,8 +162,8 @@ export async function POST(req: NextRequest) {
     entry,
     leverage,
     stopLoss: sl,
-    takeProfits,
-    partials,
+    takeProfits: finalTakeProfits,
+    partials: finalPartials,
     trailing,
     instrument,
   })
@@ -165,5 +183,6 @@ export async function POST(req: NextRequest) {
     tps: trade.tps.map((t) => ({ price: t.price, qty: t.qty, ok: t.ok, err: t.ok ? undefined : t.retMsg })),
     sizing,
     funding: { rate: fg.rate, adverse: fg.adverse, minsToFunding: fg.minsToFunding },
+    quickWin: qw.quickTp != null ? { tp: qw.quickTp, reason: qw.reason } : null,
   })
 }
