@@ -9,7 +9,7 @@
  */
 import { NextRequest, NextResponse } from "next/server"
 import { isCronAuthorized } from "@/lib/cron-auth"
-import { runIgEngagement } from "@/lib/instagram/engage"
+import { runIgEngagement, diagnoseIgAccess } from "@/lib/instagram/engage"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 120
@@ -17,6 +17,11 @@ export const maxDuration = 120
 export async function GET(request: NextRequest) {
   if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+  // ?mode=diagnose → só verifica scopes/capacidades do token (read-only, NÃO publica nada).
+  const mode = new URL(request.url).searchParams.get("mode")
+  if (mode === "diagnose") {
+    return NextResponse.json(await diagnoseIgAccess())
   }
   const result = await runIgEngagement()
   const totalReplied = result.accounts.reduce((s, a) => s + a.replied, 0)
