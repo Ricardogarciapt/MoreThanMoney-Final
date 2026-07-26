@@ -127,9 +127,13 @@ export async function POST(req: NextRequest) {
     }
 
     const memberCategory = grantsVip ? 'vip' : 'premium'
+    // UPSERT (não UPDATE) — alguns users não têm linha em profiles (trigger de signup
+    // nem sempre a cria); com update simples o resgate não concedia nada (0 linhas).
     const { error: grantError } = await supabase
       .from('profiles')
-      .update({
+      .upsert({
+        id:                         userId,
+        email:                      user.email ?? undefined,
         member_category:            memberCategory,
         subscription_plan:          'premium',
         subscription_status:        'active',
@@ -142,8 +146,7 @@ export async function POST(req: NextRequest) {
         is_active:                  true,
         coupon_code:                code,
         updated_at:                 now.toISOString(),
-      })
-      .eq('id', userId)
+      }, { onConflict: 'id' })
 
     if (grantError) {
       console.error('[PARTNERSHIP/REDEEM] grant:', grantError)
