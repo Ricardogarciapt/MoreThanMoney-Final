@@ -47,13 +47,20 @@ export async function GET(req: NextRequest) {
   const totalMaintMargin = n(row?.totalMaintenanceMargin)
   const totalMarginBalance = n(row?.totalMarginBalance)
 
-  // Diagnóstico automático da causa provável do available=0
+  // Disponível CALCULADO (robusto ao caso dos totais vazios): USDT equity − margem de posições/ordens.
+  const usdt = coins.find((c) => c.coin === "USDT") ?? coins[0]
+  const usdtEquity = usdt?.equity ?? usdt?.walletBalance ?? null
+  const usdtIM = (usdt?.positionIM ?? 0) + (usdt?.orderIM ?? 0)
+  const availableCalculado =
+    totalAvailable != null ? totalAvailable : usdtEquity != null ? Math.max(0, usdtEquity - usdtIM) : null
+
+  // Diagnóstico automático
   let diagnostico = "available OK"
-  if ((totalAvailable ?? 0) <= 0.01) {
+  if (totalAvailable == null && availableCalculado != null && availableCalculado > 0.01) {
+    diagnostico = `Bybit devolveu os totais agregados VAZIOS (modo de margem da UTA) → o disponível REAL é ~$${availableCalculado.toFixed(2)} (equity USDT − margem). O motor já usa este cálculo (fix getBybitWallet).`
+  } else if ((availableCalculado ?? 0) <= 0.01) {
     if ((totalEquity ?? 0) <= 0.01) diagnostico = "conta UNIFIED sem equity → os fundos estão NOUTRA carteira (Funding/Spot/subconta). Transfere USDT para a Unified Trading Account."
-    else if ((totalInitialMargin ?? 0) >= (totalEquity ?? 0) * 0.9) diagnostico = "quase toda a equity está presa como margem inicial de posições/ordens abertas → fecha/reduz posições para libertar."
-    else if (coins.every((c) => (c.availableToWithdraw ?? 0) <= 0.01)) diagnostico = "há equity mas 0 disponível por moeda → provável colateral desligado ou moeda não-USDT sem ser aceite como margem. Vê 'Margin' nas definições da conta Bybit."
-    else diagnostico = "available=0 com equity>0 e margem baixa → verifica o modo de margem (isolada) e o collateral da conta."
+    else diagnostico = "quase toda a equity está presa como margem de posições/ordens abertas → fecha/reduz posições para libertar."
   }
 
   return NextResponse.json({
@@ -69,6 +76,7 @@ export async function GET(req: NextRequest) {
       totalInitialMargin,
       totalMaintenanceMargin: totalMaintMargin,
     },
+    availableCalculado,
     moedas: coins,
     posicoesAbertas: pos.positions.length,
     posicoes: pos.positions.map((p) => ({ symbol: p.symbol, side: p.side, size: p.size, uPnl: p.unrealisedPnl })),

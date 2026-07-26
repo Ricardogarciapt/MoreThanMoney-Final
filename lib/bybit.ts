@@ -140,13 +140,37 @@ export async function getBybitEquity(): Promise<number | null> {
 /** Equity + saldo DISPONÍVEL (margem livre) da conta unificada. Para o gate de margem. */
 export async function getBybitWallet(): Promise<{ equity: number | null; available: number | null }> {
   const r = await getBybitWalletBalance()
-  const row = (r.result as { list?: { totalEquity?: string; totalAvailableBalance?: string }[] } | null)?.list?.[0]
-  const eq = Number(row?.totalEquity)
-  const av = Number(row?.totalAvailableBalance)
-  return {
-    equity: Number.isFinite(eq) && eq > 0 ? eq : null,
-    available: Number.isFinite(av) && av >= 0 ? av : null,
+  const row = (r.result as {
+    list?: {
+      totalEquity?: string
+      totalAvailableBalance?: string
+      coin?: { coin?: string; equity?: string; walletBalance?: string; availableToWithdraw?: string; totalPositionIM?: string; totalOrderIM?: string }[]
+    }[]
+  } | null)?.list?.[0]
+
+  // ⚠️ Bybit devolve os TOTAIS agregados USD (totalAvailableBalance/InitialMargin) VAZIOS ("")
+  //    em certos modos de margem da UTA. `Number("")` = 0 → lia-se "disponível $0" e saltava tudo
+  //    por "saldo baixo". Só aceitar o total se for um número REAL (não vazio).
+  const numOrNull = (v: unknown) => (v != null && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null)
+  const eq = numOrNull(row?.totalEquity)
+
+  let available = numOrNull(row?.totalAvailableBalance)
+  if (available == null) {
+    // Fallback: calcular a partir da moeda USDT — availableToWithdraw, ou equity − margem (posições+ordens).
+    const usdt = (row?.coin || []).find((c) => c.coin === "USDT") || row?.coin?.[0]
+    const direct = numOrNull(usdt?.availableToWithdraw)
+    if (direct != null) {
+      available = direct
+    } else {
+      const cEq = numOrNull(usdt?.equity) ?? numOrNull(usdt?.walletBalance)
+      if (cEq != null) {
+        const im = (numOrNull(usdt?.totalPositionIM) ?? 0) + (numOrNull(usdt?.totalOrderIM) ?? 0)
+        available = Math.max(0, cEq - im)
+      }
+    }
   }
+
+  return { equity: eq != null && eq > 0 ? eq : null, available }
 }
 
 export interface BybitPerpMetrics {
