@@ -89,7 +89,7 @@ async function llmReply(commentText: string, caption: string, commentId: string,
       method: "POST",
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-3-5-haiku-latest",
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 80,
         system:
           "És o Ricardo (MoreThanMoney), a responder a um comentário no teu Instagram. Escreve UMA resposta de APREÇO curtíssima (máx 12 palavras), em português de Portugal, calorosa, no máximo 1-2 emojis. NUNCA prometas lucros, NUNCA metas links, NUNCA vendas. Só agradecer/aquecer. Devolve só a frase.",
@@ -190,15 +190,17 @@ async function engageAccount(acc: (typeof IG_ACCOUNTS)[number], ownUsernames: Se
       if (commenter && ownUsernames.has(commenter.toLowerCase())) continue // não responder a nós próprios
       if (!isGenuineComment(c.text)) { res.skippedSpam++; continue } // ignora GIF/emoji/bait
 
-      const { data: existing } = await supabase.from("ig_engagement_log").select("comment_id").eq("comment_id", c.id).maybeSingle()
+      // Dedup: só salta comentários JÁ respondidos com sucesso (erros são retentados no próximo run).
+      const { data: existing } = await supabase.from("ig_engagement_log").select("comment_id").eq("comment_id", c.id).eq("status", "replied").maybeSingle()
       if (existing) { res.skippedDup++; continue }
 
       const reply = USE_LLM ? await llmReply(c.text, post.caption ?? "", c.id, commenter) : templateReply(c.id, c.text, commenter)
       const posted = await gpost(`${c.id}/replies`, { message: reply }, token)
-      await supabase.from("ig_engagement_log").insert({
+      // upsert (não insert) — um erro anterior pode já ter deixado a linha (comment_id é PK).
+      await supabase.from("ig_engagement_log").upsert({
         comment_id: c.id, media_id: post.id, ig_account_id: acc.id, ig_username: acc.username,
         commenter, reply_text: reply, reply_id: posted.json?.id ?? null, status: posted.ok ? "replied" : "error",
-      })
+      }, { onConflict: "comment_id" })
       if (posted.ok) { res.replied++; perPost++ }
       else res.errors.push(`reply ${c.id}: ${posted.json?.error?.message ?? posted.status}`)
     }
