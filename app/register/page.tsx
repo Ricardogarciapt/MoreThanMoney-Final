@@ -65,6 +65,7 @@ export default function RegisterPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const infoMessage = searchParams.get('message')
+  const refCode = searchParams.get('ref') || '' // código de referral (convida & ganha)
 
   const activePlan = PLANS[selectedPlan]
   const activePricing = billingCycle === 'annual' ? activePlan.annual : activePlan.monthly
@@ -121,6 +122,7 @@ export default function RegisterPage() {
           phone: formData.phone || '',
           whatsapp: formData.whatsapp || '',
           sponsorUsername: formData.sponsorUsername || '',
+          ref: refCode || undefined,
           country: formData.country || null,
           preferred_language: uiLang,
         }),

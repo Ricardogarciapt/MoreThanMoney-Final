@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { sendNewMemberWelcomeIfEligible } from "@/lib/new-member-welcome"
 import { TRIAL_DAYS, trialExpiresAtISO } from "@/lib/trial-access"
+import { applyReferral, REFERRED_TRIAL_DAYS } from "@/lib/referral"
 
 const supabaseAdmin = getSupabaseAdmin()
 
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
     const phone = body.phone ? String(body.phone).trim() : null
     const whatsapp = body.whatsapp ? String(body.whatsapp).trim() : null
     const sponsorUsername = body.sponsorUsername ? String(body.sponsorUsername).trim() : null
+    const ref = body.ref ? String(body.ref).trim() : null // código de referral (opcional)
     const country = body.country ? String(body.country).trim() : null
     const preferred_language = body.preferred_language ? String(body.preferred_language).trim() : null
 
@@ -68,7 +70,11 @@ export async function POST(request: NextRequest) {
 
     const userId = authData.user.id
     const now = new Date()
-    const trialEnds = trialExpiresAtISO(now)
+    // Convidado por referral → trial estendido (REFERRED_TRIAL_DAYS); senão o normal.
+    const referredTrialDays = ref ? REFERRED_TRIAL_DAYS : TRIAL_DAYS
+    const trialEnds = ref
+      ? new Date(now.getTime() + referredTrialDays * 86400000).toISOString()
+      : trialExpiresAtISO(now)
 
     const profileRow = {
       id: userId,
@@ -93,6 +99,7 @@ export async function POST(request: NextRequest) {
       trial_expired: false,
       conversion_deadline: trialEnds, // funil agressivo dispara ao fim do trial
       mlm_sponsor_username: sponsorUsername || null,
+      referred_by_code: ref || null,
       updated_at: now.toISOString(),
     }
 
@@ -105,6 +112,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Erro ao criar perfil: " + profileError.message }, { status: 500 })
     }
 
+    // Referral: recompensa o referrer (+15d Premium) por este registo (best-effort).
+    if (ref) {
+      try { await applyReferral(supabaseAdmin, ref, userId) } catch { /* silencioso */ }
+    }
+
     // Email de boas-vindas (best-effort — não bloqueia o registo).
     try { await sendNewMemberWelcomeIfEligible({ userId }) } catch { /* silencioso */ }
 
@@ -112,7 +124,8 @@ export async function POST(request: NextRequest) {
       success: true,
       userId,
       trialExpiresAt: trialEnds,
-      trialDays: TRIAL_DAYS,
+      trialDays: referredTrialDays,
+      referred: !!ref,
     })
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || "Erro interno do servidor" }, { status: 500 })
