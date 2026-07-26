@@ -311,6 +311,24 @@ export function fundingGate(
 }
 
 /**
+ * Boost de SIZE quando o funding está A NOSSO FAVOR (vai pagar-nos). Aumenta ligeiramente a
+ * margem (o multiplicador aplica-se ao costPct) MANTENDO a alavancagem → mais size sem aproximar
+ * a liquidação (a distância entry→liq depende da leverage, não da margem). Só age quando o favor
+ * ≥ minFavor; bounded por boostPct. Devolve o multiplicador a aplicar ao costPct (1 = sem boost).
+ */
+export function fundingFavorMultiplier(
+  side: "buy" | "sell",
+  f: BybitFunding | null,
+  opts: { minFavor: number; boostPct: number },
+): { mult: number; favor: number; reason: string } {
+  if (!f) return { mult: 1, favor: 0, reason: "sem funding" }
+  const favor = side === "buy" ? -f.fundingRate : f.fundingRate // >0 = o funding paga-nos
+  if (!(favor >= opts.minFavor) || !(opts.boostPct > 0)) return { mult: 1, favor, reason: "sem boost" }
+  const mult = 1 + opts.boostPct
+  return { mult, favor, reason: `funding a favor ${(favor * 100).toFixed(4)}% → size ×${mult.toFixed(2)}` }
+}
+
+/**
  * Alavancagem DINÂMICA pela volatilidade (distância do SL). No SL de referência usa a base
  * (ex.: SL 1% → 10x); SL mais largo (mais volátil) baixa a leverage, SL mais apertado sobe —
  * mantendo o RISCO ~constante já que a margem fica fixa (10% da equity). Clampada a [min,max].

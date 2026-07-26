@@ -7,6 +7,7 @@ import {
   getBybitInstrumentInfo,
   getBybitFunding,
   fundingGate,
+  fundingFavorMultiplier,
   buildQuickWinPlan,
   computeMasterQty,
   computeDynamicLeverage,
@@ -31,6 +32,8 @@ const DEFAULT_FUNDING_WINDOW_MIN = 15 // só bloqueia se o acerto for dentro de 
 const DEFAULT_QUICK_R = 0.5 // scalp de ganho rápido a meio-R (metade do risco)
 const DEFAULT_QUICK_PCT = 0.004 // sem SL: scalp a 0,4% da entrada
 const DEFAULT_QUICK_FRAC = 0.25 // fecha 25% da posição no scalp rápido
+const DEFAULT_FUNDING_FAVOR_MIN = 0.0005 // 0,05%/período — favor mínimo p/ dar boost de size
+const DEFAULT_FUNDING_FAVOR_BOOST = 0.2 // +20% de margem quando o funding paga-nos
 
 /**
  * Coloca a ordem-MESTRE na Bybit (Copy Trading nativo replica p/ seguidores): entrada a
@@ -88,6 +91,16 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // Boost de size quando o funding está A NOSSO FAVOR (vai pagar-nos): +margem à MESMA leverage
+  // (mais size sem aproximar a liquidação). ON por defeito; BYBIT_FUNDING_FAVOR_ENABLED=false desliga.
+  const favor =
+    process.env.BYBIT_FUNDING_FAVOR_ENABLED !== "false"
+      ? fundingFavorMultiplier(side, funding, {
+          minFavor: Number(process.env.BYBIT_FUNDING_FAVOR_MIN) || DEFAULT_FUNDING_FAVOR_MIN,
+          boostPct: Number(process.env.BYBIT_FUNDING_FAVOR_BOOST) || DEFAULT_FUNDING_FAVOR_BOOST,
+        })
+      : { mult: 1, favor: 0, reason: "off" }
+
   // Alavancagem dinâmica pela volatilidade (dist. do SL), base 10x, clampada ao máx do símbolo.
   // `leverage` no body força um valor fixo (testes).
   const baseLev = Number(process.env.BYBIT_BASE_LEVERAGE) || DEFAULT_BASE_LEVERAGE
@@ -121,8 +134,11 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Skip se o saldo disponível não cobre a margem necessária (≈ costPct da equity).
-    const requiredMargin = equity * costPct
+    // Margem efetiva = costPct × boost de funding-a-favor (1 se não houver favor/boost off).
+    const effectiveCostPct = costPct * favor.mult
+
+    // Skip se o saldo disponível não cobre a margem necessária (≈ costPct efetiva da equity).
+    const requiredMargin = equity * effectiveCostPct
     if (wallet.available != null && wallet.available < requiredMargin) {
       return NextResponse.json({
         ok: false, skipped: true,
@@ -130,9 +146,9 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const r = computeMasterQty({ equity, entry, sl, leverage, costPct, riskPct, costAbs, instrument })
+    const r = computeMasterQty({ equity, entry, sl, leverage, costPct: effectiveCostPct, riskPct, costAbs, instrument })
     qty = r.qty
-    sizing = `equity $${equity.toFixed(2)} · ${positions.positions.length}/${maxPositions} pos · ${r.reason}`
+    sizing = `equity $${equity.toFixed(2)} · ${positions.positions.length}/${maxPositions} pos · ${r.reason}${favor.mult !== 1 ? ` · ${favor.reason}` : ""}`
     if (!(qty > 0)) {
       return NextResponse.json({ ok: false, error: `qty=0 após sizing (${sizing})` }, { status: 422 })
     }
@@ -183,6 +199,7 @@ export async function POST(req: NextRequest) {
     tps: trade.tps.map((t) => ({ price: t.price, qty: t.qty, ok: t.ok, err: t.ok ? undefined : t.retMsg })),
     sizing,
     funding: { rate: fg.rate, adverse: fg.adverse, minsToFunding: fg.minsToFunding },
+    fundingFavor: favor.mult !== 1 ? { mult: favor.mult, favor: favor.favor } : null,
     quickWin: qw.quickTp != null ? { tp: qw.quickTp, reason: qw.reason } : null,
   })
 }

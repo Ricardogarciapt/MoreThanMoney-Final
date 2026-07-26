@@ -1,11 +1,12 @@
 // Este software e código faz parte integrante da propriedade intelectual de RicardoGarciaPT e sua Empresa MoreThanMoney
-// MoreThanMoney - Aurum Flow — variante do MTM Scanner afinada para PERPÉTUOS CRIPTO (timeframe 1H).
+// MoreThanMoney - Aurum Flow — variante do MTM Scanner afinada para PERPÉTUOS CRIPTO (usa o TIMEFRAME DO GRÁFICO escolhido).
 //  1) Filtro de tendência OBRIGATÓRIO pela stack DEMA (só compra em alta, só vende em baixa) + RSI
 //  2) Defaults ATR/RR do backtest (SL 1.5×ATR · TP1 1.5R · TP2 3R · TP3 6R)
 //  3) Níveis ESTÁTICOS — entry/SL/TP congelados na barra do sinal
 //  4) Labels com DISTÂNCIA (pontos + %) de cada nível à entrada
 //  5) Gestão de conta: alavancagem útil + notional + custo de fees para o tamanho de conta configurado
 //  6) Alertas → webhook DEDICADO dos perps (/api/webhooks/tradingview-perps)
+//  7) Alerta INTRA-VELA por defeito (não espera o fecho da vela) — dispara no timeframe do gráfico
 
 //@version=6
 indicator("MoreThanMoney - Aurum Flow", overlay=true)
@@ -100,7 +101,7 @@ riskPct     = input.float(1.0, "Risco por trade (%)", minval=0.1, step=0.1, grou
 takerFeePct = input.float(0.055, "Taxa taker (%)", step=0.005, group=accGroup, tooltip="Bybit taker ~0.055%. Custo ida+volta = notional × taxa × 2.")
 maxLev      = input.float(25.0, "Alavancagem máxima permitida", minval=1, group=accGroup)
 showPanel   = input.bool(true, "Mostrar painel de conta/custo", group=accGroup)
-usePips     = input.bool(false, "Distâncias em 'pips' (×10) em vez de pontos", group=accGroup, tooltip="Cripto não tem pips reais; por defeito mostra pontos de preço + %.")
+usePips     = input.bool(true, "Distâncias em 'pips' (×10) em vez de pontos", group=accGroup, tooltip="Cripto não tem pips reais; por defeito mostra pontos de preço + %.")
 
 // ───────────────────────── Alertas ─────────────────────────
 alGroup = "====== ALERTAS ======"
@@ -108,7 +109,7 @@ long_alert  = input.bool(true, "Permite Alertas de COMPRA", group=alGroup)
 short_alert = input.bool(true, "Permite Alertas de VENDA", group=alGroup)
 order_type  = input.string("MARKET", "Alerta para ordens", options=["LIMIT", "MARKET"], group=alGroup)
 alertsOn    = input.bool(true, "Emitir alertas para o site MTM", group=alGroup, tooltip="1 alerta, condição 'Any alert() function call', cola o URL do webhook dedicado dos perps.")
-alertIntrabar = input.bool(true, "Alertas intra-vela (mais cedo)", group=alGroup, tooltip="ON = dispara assim que o setup H1 aciona, sem esperar o fecho da vela (não fica preso ao topo da hora; pode repintar se a condição se inverter). OFF = só no fecho da vela H1 (confirmado, mas 1×/hora).")
+intrabarAlerts = input.bool(true, "Alerta INTRA-VELA (não esperar o fecho)", group=alGroup, tooltip="ON (recomendado p/ ganhos rápidos): dispara assim que o sinal aciona, no timeframe do gráfico — não espera o fecho da vela. Custo: o sinal pode repintar (acionar e reverter antes do fecho). OFF = só no fecho da vela (confirmado, sem repaint).")
 
 // entrada
 entry_source   = input.source(close, "Fonte das Entradas", group="===== ENTRADA =====")
@@ -259,7 +260,8 @@ if showPanel and barstate.islast and not na(entry1)
 // ───────────────────────── Alertas → webhook DEDICADO dos perps ─────────────────────────
 //  1 alerta, condição "Any alert() function call", URL:
 //  https://www.morethanmoney.pt/api/webhooks/tradingview-perps?secret=mtm-tv-sensei-2026
-//  Gráfico no timeframe 1H.
+//  Usa o TIMEFRAME DO GRÁFICO (o alerta dispara nesse TF). Por defeito INTRA-VELA (não espera o
+//  fecho da vela); desliga o toggle "Alerta INTRA-VELA" para voltar a disparar só no fecho.
 sc_conf = '{"Tendencia Alta":' + (uptrend ? 'true' : 'false') + ',"Tendencia Baixa":' + (downtrend ? 'true' : 'false') + ',"RSI":' + str.tostring(math.round(rsiVal)) + ',"Acima POC":' + (close > highestVolPrice ? 'true' : 'false') + '}'
 
 f_json_af(_dir) =>
@@ -288,12 +290,14 @@ f_json_af(_dir) =>
 
 valid_af = not na(entry1) and not na(sl) and not na(tp1)
 
-// Intra-vela (once_per_bar) dispara mal o setup H1 aciona; senão só no fecho (once_per_bar_close).
-af_freq = alertIntrabar ? alert.freq_once_per_bar : alert.freq_once_per_bar_close
+// Frequência do alerta: INTRA-VELA (assim que o sinal aciona, sem esperar o fecho da vela) ou só
+// no fecho. Usa sempre o TIMEFRAME DO GRÁFICO escolhido.
+alertFreq = intrabarAlerts ? alert.freq_once_per_bar : alert.freq_once_per_bar_close
+
 if alertsOn and isBuySignal and long_alert and valid_af
-    alert(f_json_af("buy"), af_freq)
+    alert(f_json_af("buy"), alertFreq)
 if alertsOn and isSellSignal and short_alert and valid_af
-    alert(f_json_af("sell"), af_freq)
+    alert(f_json_af("sell"), alertFreq)
 
 alertcondition(isBuySignal and long_alert, "Aurum Flow COMPRA", "MTM Perps Aurum Flow BUY")
 alertcondition(isSellSignal and short_alert, "Aurum Flow VENDA", "MTM Perps Aurum Flow SELL")
