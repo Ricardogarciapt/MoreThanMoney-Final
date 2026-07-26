@@ -30,6 +30,7 @@ import {
   CalendarClock,
   ExternalLink,
   Instagram,
+  Users,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -189,6 +190,11 @@ export default function AdminSocialPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Link href="/admin/social/leads">
+              <Button variant="outline">
+                <Users className="mr-1 h-4 w-4" /> Leads &amp; Engagement
+              </Button>
+            </Link>
             <Button variant="outline" size="icon" onClick={load}>
               <RefreshCw className="h-4 w-4" />
             </Button>
