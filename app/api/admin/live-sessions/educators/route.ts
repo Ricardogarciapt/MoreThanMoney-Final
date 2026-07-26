@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase
     .from("lms_educators")
     .select(
-      "id, email, display_name, bio, avatar_url, specialty, language, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url, created_at, updated_at"
+      "id, email, display_name, bio, avatar_url, specialty, language, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, tiktok_stream_key, tiktok_server, tiktok_enabled, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url, created_at, updated_at"
     )
     .order("created_at", { ascending: false })
 
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         is_active: true,
       })
       .select(
-        "id, email, display_name, bio, avatar_url, specialty, language, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url, created_at, updated_at"
+        "id, email, display_name, bio, avatar_url, specialty, language, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, tiktok_stream_key, tiktok_server, tiktok_enabled, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url, created_at, updated_at"
       )
       .single()
 
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       .from("lms_educators")
       .update({ stream_key_fixed: fixedKey })
       .eq("id", data.id)
-      .select("id, email, display_name, bio, avatar_url, specialty, language, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, created_at, updated_at")
+      .select("id, email, display_name, bio, avatar_url, specialty, language, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, tiktok_stream_key, tiktok_server, tiktok_enabled, created_at, updated_at")
       .single()
     if (keyError || !updatedEducator) return NextResponse.json({ error: keyError?.message || "Erro ao gerar chave fixa" }, { status: 500 })
 
@@ -149,6 +149,13 @@ export async function PATCH(request: NextRequest) {
     if (body.academy_id !== undefined) updates.academy_id = body.academy_id || null
     if (body.youtube_stream_key !== undefined) updates.youtube_stream_key = String(body.youtube_stream_key || "").trim() || null
     if (body.youtube_enabled !== undefined) updates.youtube_enabled = Boolean(body.youtube_enabled)
+    if (body.tiktok_stream_key !== undefined) updates.tiktok_stream_key = String(body.tiktok_stream_key || "").trim() || null
+    if (body.tiktok_server !== undefined) {
+      let s = String(body.tiktok_server || "").trim()
+      if (s && !s.endsWith("/")) s += "/"
+      updates.tiktok_server = s || null
+    }
+    if (body.tiktok_enabled !== undefined) updates.tiktok_enabled = Boolean(body.tiktok_enabled)
     if (body.restream_enabled !== undefined) updates.restream_enabled = Boolean(body.restream_enabled)
     if (body.restream_ingest_url !== undefined) {
       updates.restream_ingest_url = String(body.restream_ingest_url || "").trim() || null
@@ -169,7 +176,7 @@ export async function PATCH(request: NextRequest) {
       .update(updates)
       .eq("id", id)
       .select(
-        "id, email, display_name, bio, avatar_url, specialty, language, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url, created_at, updated_at"
+        "id, email, display_name, bio, avatar_url, specialty, language, academy_id, is_active, stream_key_fixed, youtube_stream_key, youtube_enabled, tiktok_stream_key, tiktok_server, tiktok_enabled, restream_enabled, restream_ingest_url, restream_stream_key, restream_embed_url, created_at, updated_at"
       )
       .single()
 

@@ -76,6 +76,9 @@ export default function EducatorStudio() {
   const [keyOpStreamId, setKeyOpStreamId] = useState<string | null>(null)
   const [restreamSaving, setRestreamSaving] = useState(false)
   const [restreamKeyVisible, setRestreamKeyVisible] = useState(false)
+  const [tiktokSaving, setTiktokSaving] = useState(false)
+  const [tiktokKeyVisible, setTiktokKeyVisible] = useState(false)
+  const [tiktokForm, setTiktokForm] = useState({ enabled: false, server: "", key: "" })
   const [restreamForm, setRestreamForm] = useState({
     enabled: false,
     ingest: DEFAULT_RESTREAM_INGEST_URL,
@@ -117,6 +120,11 @@ export default function EducatorStudio() {
       ingest: ((me as any).restream_ingest_url as string)?.trim() || DEFAULT_RESTREAM_INGEST_URL,
       key: ((me as any).restream_stream_key as string) || "",
       embed: ((me as any).restream_embed_url as string) || "",
+    })
+    setTiktokForm({
+      enabled: Boolean((me as any).tiktok_enabled),
+      server: ((me as any).tiktok_server as string) || "",
+      key: ((me as any).tiktok_stream_key as string) || "",
     })
   }, [me])
 
@@ -419,6 +427,31 @@ export default function EducatorStudio() {
       await loadMe()
     } finally {
       setRestreamSaving(false)
+    }
+  }
+
+  const saveTiktokProfile = async () => {
+    setTiktokSaving(true)
+    setError("")
+    try {
+      const res = await fetch("/api/educator/update-tiktok", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          tiktok_enabled: tiktokForm.enabled,
+          tiktok_server: tiktokForm.server.trim() || null,
+          tiktok_key: tiktokForm.key.trim() || null,
+        }),
+      })
+      const j = await res.json()
+      if (!res.ok) {
+        setError(j.error || "Erro ao guardar TikTok")
+        return
+      }
+      await loadMe()
+    } finally {
+      setTiktokSaving(false)
     }
   }
 
@@ -1015,47 +1048,46 @@ export default function EducatorStudio() {
             <p className="mt-0.5 text-xs text-gray-600">Restream ao nível do teu perfil; contadores por canal.</p>
           </div>
 
-          <Card className="border border-cyan-900/40 bg-gradient-to-br from-gray-950 to-black">
+          <Card className="border border-fuchsia-900/40 bg-gradient-to-br from-gray-950 to-black">
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base text-cyan-300">
+              <CardTitle className="flex items-center gap-2 text-base text-fuchsia-300">
                 <Radio className="h-4 w-4" />
-                Restream.io (OBS → Restream → site)
+                TikTok LIVE (multistream)
               </CardTitle>
               <p className="text-xs font-normal text-gray-500">
-                A chave aqui é a que o <strong className="text-gray-400">Restream</strong> mostra (texto livre, não o formato{" "}
-                <code className="text-gray-500">mtm_…</code>). Podes <strong className="text-gray-400">editar e guardar</strong>{" "}
-                sempre que o Restream rote a chave. No OBS: servidor (RTMPS) + chave do Restream.
+                Transmites <strong className="text-gray-400">1×</strong> para o servidor MTM e o site
+                replica a stream para o teu <strong className="text-gray-400">TikTok</strong> ao mesmo tempo.
+                Cola o <strong className="text-gray-400">Server</strong> + a <strong className="text-gray-400">Stream Key</strong>{" "}
+                que o TikTok LIVE te dá (app → LIVE → transmitir com software de terceiros).
               </p>
             </CardHeader>
             <CardContent className="space-y-3">
               <label className="flex items-center gap-2 text-xs text-gray-300">
                 <input
                   type="checkbox"
-                  checked={restreamForm.enabled}
-                  onChange={(e) => setRestreamForm((p) => ({ ...p, enabled: e.target.checked }))}
+                  checked={tiktokForm.enabled}
+                  onChange={(e) => setTiktokForm((p) => ({ ...p, enabled: e.target.checked }))}
                 />
-                Usar Restream (para OBS → Restream → YouTube)
+                Ativar multistream para o TikTok
               </label>
               <div>
-                <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Servidor RTMPS Restream</p>
+                <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Server TikTok (rtmp://…)</p>
                 <Input
-                  value={restreamForm.ingest}
-                  onChange={(e) => setRestreamForm((p) => ({ ...p, ingest: e.target.value }))}
+                  value={tiktokForm.server}
+                  onChange={(e) => setTiktokForm((p) => ({ ...p, server: e.target.value }))}
                   className="border-gray-700 bg-black/50 font-mono text-xs"
-                  placeholder={DEFAULT_RESTREAM_INGEST_URL}
+                  placeholder="rtmp://…tiktokcdn.com/live/"
                 />
               </div>
               <div>
-                <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">
-                  Chave de stream Restream (editável — não é a chave mtm_… do servidor MTM)
-                </p>
+                <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Stream Key TikTok</p>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
                   <Input
-                    type={restreamKeyVisible ? "text" : "password"}
-                    value={restreamForm.key}
-                    onChange={(e) => setRestreamForm((p) => ({ ...p, key: e.target.value }))}
+                    type={tiktokKeyVisible ? "text" : "password"}
+                    value={tiktokForm.key}
+                    onChange={(e) => setTiktokForm((p) => ({ ...p, key: e.target.value }))}
                     className="border-gray-700 bg-black/50 font-mono text-xs sm:flex-1"
-                    placeholder="Cola ou edita a Stream key do painel Restream"
+                    placeholder="Cola a Stream Key do TikTok LIVE"
                     autoComplete="off"
                     spellCheck={false}
                   />
@@ -1064,20 +1096,20 @@ export default function EducatorStudio() {
                     variant="outline"
                     size="sm"
                     className="shrink-0 border-gray-600 text-gray-200"
-                    onClick={() => setRestreamKeyVisible((v) => !v)}
+                    onClick={() => setTiktokKeyVisible((v) => !v)}
                   >
-                    {restreamKeyVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    <span className="ml-2">{restreamKeyVisible ? "Ocultar" : "Mostrar"}</span>
+                    {tiktokKeyVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    <span className="ml-2">{tiktokKeyVisible ? "Ocultar" : "Mostrar"}</span>
                   </Button>
                 </div>
               </div>
               <Button
                 type="button"
-                disabled={restreamSaving}
-                className="bg-cyan-700 text-white hover:bg-cyan-600"
-                onClick={saveRestreamProfile}
+                disabled={tiktokSaving}
+                className="bg-fuchsia-700 text-white hover:bg-fuchsia-600"
+                onClick={saveTiktokProfile}
               >
-                {restreamSaving ? "A guardar…" : "Guardar definições Restream"}
+                {tiktokSaving ? "A guardar…" : "Guardar TikTok"}
               </Button>
             </CardContent>
           </Card>
