@@ -25,6 +25,14 @@ interface Engage {
   status: string
   replied_at: string
 }
+interface Tg {
+  chat_id: string
+  stage: string
+  coupon_code?: string | null
+  username?: string | null
+  first_name?: string | null
+  updated_at: string
+}
 interface Stats {
   totalLeads: number
   dmsSent: number
@@ -33,6 +41,15 @@ interface Stats {
   byIntent: Record<string, number>
   totalReplies: number
   repliesOk: number
+  telegramTotal: number
+  tgGranted: number
+  tgByStage: Record<string, number>
+}
+
+const TG_STYLE: Record<string, string> = {
+  granted: "bg-emerald-100 text-emerald-800",
+  pending: "bg-blue-100 text-blue-800",
+  rejected: "bg-red-100 text-red-800",
 }
 
 const DM_STYLE: Record<string, string> = {
@@ -58,9 +75,10 @@ function fmt(iso: string) {
 export default function SocialLeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [engage, setEngage] = useState<Engage[]>([])
+  const [telegram, setTelegram] = useState<Tg[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<"leads" | "engage">("leads")
+  const [tab, setTab] = useState<"leads" | "engage" | "telegram">("leads")
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -69,6 +87,7 @@ export default function SocialLeadsPage() {
       const j = await r.json()
       setLeads(j.leads || [])
       setEngage(j.engage || [])
+      setTelegram(j.telegram || [])
       setStats(j.stats || null)
     } finally {
       setLoading(false)
@@ -98,12 +117,13 @@ export default function SocialLeadsPage() {
 
       {/* Stats */}
       {stats && (
-        <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
-          <Stat icon={<Users className="h-4 w-4" />} label="Leads (funil)" value={stats.totalLeads} />
+        <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-6">
+          <Stat icon={<Users className="h-4 w-4" />} label="Leads IG (funil)" value={stats.totalLeads} />
           <Stat icon={<Send className="h-4 w-4" />} label="DMs enviadas" value={stats.dmsSent} accent="text-emerald-600" />
           <Stat icon={<MessageCircle className="h-4 w-4" />} label="Fallback público" value={stats.publicFb} accent="text-amber-600" />
           <Stat icon={<MessageCircle className="h-4 w-4" />} label="Fora da janela 7d" value={stats.windowExp} accent="text-neutral-500" />
           <Stat icon={<Heart className="h-4 w-4" />} label="Respostas apreço" value={stats.repliesOk} accent="text-rose-600" />
+          <Stat icon={<Send className="h-4 w-4" />} label="Telegram (grants)" value={stats.tgGranted} accent="text-sky-600" />
         </div>
       )}
 
@@ -126,6 +146,9 @@ export default function SocialLeadsPage() {
         </Button>
         <Button variant={tab === "engage" ? "default" : "outline"} size="sm" onClick={() => setTab("engage")}>
           Engagement ({engage.length})
+        </Button>
+        <Button variant={tab === "telegram" ? "default" : "outline"} size="sm" onClick={() => setTab("telegram")}>
+          Telegram ({telegram.length})
         </Button>
       </div>
 
@@ -167,7 +190,7 @@ export default function SocialLeadsPage() {
               )}
             </tbody>
           </table>
-        ) : (
+        ) : tab === "engage" ? (
           <table className="w-full text-sm">
             <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-500">
               <tr>
@@ -194,6 +217,40 @@ export default function SocialLeadsPage() {
                 <tr>
                   <td colSpan={5} className="p-6 text-center text-neutral-400">
                     Ainda sem respostas de engagement registadas.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-500">
+              <tr>
+                <th className="p-2">Atualizado</th>
+                <th className="p-2">Contacto</th>
+                <th className="p-2">Etapa</th>
+                <th className="p-2">Cupão</th>
+                <th className="p-2">Chat ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              {telegram.map((t) => (
+                <tr key={t.chat_id} className="border-t align-top">
+                  <td className="whitespace-nowrap p-2 text-neutral-500">{fmt(t.updated_at)}</td>
+                  <td className="whitespace-nowrap p-2 font-medium">
+                    {t.username ? `@${t.username}` : t.first_name || "—"}
+                  </td>
+                  <td className="whitespace-nowrap p-2">
+                    <Badge className={TG_STYLE[t.stage] || "bg-neutral-100 text-neutral-700"}>{t.stage}</Badge>
+                  </td>
+                  <td className="whitespace-nowrap p-2 text-xs text-neutral-600">{t.coupon_code || "—"}</td>
+                  <td className="whitespace-nowrap p-2 text-xs text-neutral-400">{t.chat_id}</td>
+                </tr>
+              ))}
+              {!telegram.length && (
+                <tr>
+                  <td colSpan={5} className="p-6 text-center text-neutral-400">
+                    Ainda sem leads de Telegram (funil broker-gate).
                   </td>
                 </tr>
               )}

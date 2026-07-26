@@ -12,12 +12,14 @@ export async function GET(request: NextRequest) {
   if (authCheck) return authCheck
 
   try {
-    const [leadsQ, engageQ] = await Promise.all([
+    const [leadsQ, engageQ, tgQ] = await Promise.all([
       supabase.from("ig_leads").select("*").order("created_at", { ascending: false }).limit(300),
       supabase.from("ig_engagement_log").select("*").order("replied_at", { ascending: false }).limit(300),
+      supabase.from("telegram_leads").select("*").order("updated_at", { ascending: false }).limit(300),
     ])
     const leads = (leadsQ.data || []) as Record<string, any>[]
     const engage = (engageQ.data || []) as Record<string, any>[]
+    const telegram = (tgQ.data || []) as Record<string, any>[]
 
     const dmsSent = leads.filter((l) => l.dm_status === "sent").length
     const publicFb = leads.filter((l) => l.dm_status === "public_fallback").length
@@ -28,11 +30,22 @@ export async function GET(request: NextRequest) {
       return acc
     }, {})
     const repliesOk = engage.filter((e) => e.status === "replied").length
+    const tgByStage = telegram.reduce((acc: Record<string, number>, t) => {
+      const k = t.stage || "?"
+      acc[k] = (acc[k] || 0) + 1
+      return acc
+    }, {})
+    const tgGranted = telegram.filter((t) => t.stage === "granted").length
 
     return NextResponse.json({
       leads,
       engage,
-      stats: { totalLeads: leads.length, dmsSent, publicFb, windowExp, byIntent, totalReplies: engage.length, repliesOk },
+      telegram,
+      stats: {
+        totalLeads: leads.length, dmsSent, publicFb, windowExp, byIntent,
+        totalReplies: engage.length, repliesOk,
+        telegramTotal: telegram.length, tgGranted, tgByStage,
+      },
     })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? "erro", leads: [], engage: [], stats: {} }, { status: 500 })
