@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { Client } from "ssh2"
+import { requireAdmin } from "@/lib/admin-api-helpers"
 
 // Parse VPS_HOST — strip http(s):// prefix if present
 const rawHost = process.env.VPS_HOST || "vmi3355213.contaboserver.net"
@@ -44,6 +45,8 @@ function ssh(command: string, timeoutMs = 30000): Promise<{ stdout: string; code
 
 // ── GET — status do n8n + VPS ─────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
+  const authCheck = await requireAdmin(req)
+  if (authCheck) return authCheck
   try {
     const { searchParams } = new URL(req.url)
     const cmd = searchParams.get("cmd") || "status"
@@ -80,6 +83,8 @@ export async function GET(req: NextRequest) {
 
 // ── POST — ações sobre o n8n ──────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const authCheck = await requireAdmin(req)
+  if (authCheck) return authCheck
   try {
     // Parse body once — avoids double req.json() issue
     const body = await req.json()
