@@ -22,7 +22,7 @@ export const preferredRegion = "fra1"
 export const dynamic = "force-dynamic"
 
 const DEFAULT_COST_PCT = 0.03 // margem por posição = 3% da equity
-const DEFAULT_MAX_POSITIONS = 5 // nº máx de posições abertas em simultâneo
+const DEFAULT_MAX_POSITIONS = 0 // 0 = SEM cap (só a margem disponível trava); >0 = nº máx simultâneo
 const DEFAULT_BASE_LEVERAGE = 10 // alavancagem no SL de referência
 const DEFAULT_VOL_REF_PCT = 0.01 // SL 1% → base leverage
 const DEFAULT_MAX_LEVERAGE = 20 // teto (também limitado pelo máx do símbolo)
@@ -125,9 +125,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "equity Bybit indisponível" }, { status: 502 })
     }
 
-    // Cap de posições simultâneas — protege a margem (a lista de perps dispara muitos sinais).
-    const maxPositions = Number(process.env.BYBIT_MAX_POSITIONS) || DEFAULT_MAX_POSITIONS
-    if (positions.ok && positions.positions.length >= maxPositions) {
+    // Cap de posições simultâneas. 0/ausente = SEM cap (só a margem disponível trava).
+    // Repor um limite com BYBIT_MAX_POSITIONS=5 (ou o valor desejado).
+    const maxPositions = process.env.BYBIT_MAX_POSITIONS != null ? Number(process.env.BYBIT_MAX_POSITIONS) : DEFAULT_MAX_POSITIONS
+    if (maxPositions > 0 && positions.ok && positions.positions.length >= maxPositions) {
       return NextResponse.json({
         ok: false, skipped: true,
         reason: `cap de ${maxPositions} posições atingido (${positions.positions.length} abertas)`,
@@ -148,7 +149,7 @@ export async function POST(req: NextRequest) {
 
     const r = computeMasterQty({ equity, entry, sl, leverage, costPct: effectiveCostPct, riskPct, costAbs, instrument })
     qty = r.qty
-    sizing = `equity $${equity.toFixed(2)} · ${positions.positions.length}/${maxPositions} pos · ${r.reason}${favor.mult !== 1 ? ` · ${favor.reason}` : ""}`
+    sizing = `equity $${equity.toFixed(2)} · ${positions.positions.length}/${maxPositions > 0 ? maxPositions : "∞"} pos · ${r.reason}${favor.mult !== 1 ? ` · ${favor.reason}` : ""}`
     if (!(qty > 0)) {
       return NextResponse.json({ ok: false, error: `qty=0 após sizing (${sizing})` }, { status: 422 })
     }
