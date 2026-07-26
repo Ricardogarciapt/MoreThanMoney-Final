@@ -191,7 +191,7 @@ const QUICK_LINKS: Record<string, { label: string; url: string }[]> = {
   content_creation: [
     { label: "Instagram MTM", url: "https://instagram.com/morethanmoney.pt" },
     { label: "Canva", url: "https://www.canva.com" },
-    { label: "Postiz", url: "https://postiz.com" },
+    { label: "Social MTM (motor próprio)", url: "/admin/social" },
   ],
   partnerships: [
     { label: "LinkedIn", url: "https://linkedin.com" },
