@@ -106,9 +106,42 @@ export function founderConversionEmail(name: string): BroadcastEmail {
   }
 }
 
+/**
+ * Convite para beta-testar a app Android (teste fechado da Play).
+ * Precisamos de 12+ testers durante 14 dias para desbloquear a produção na Play.
+ * Link de opt-in (o email do tester tem de estar na lista de testers da faixa Alpha).
+ */
+export function androidBetaEmail(name: string): BroadcastEmail {
+  const site = getSiteUrl()
+  const optin = "https://play.google.com/apps/testing/pt.morethanmoney.app"
+  const apk = `${site}/downloads/MoreThanMoney.apk`
+  const inner = `
+    <h1 style="margin:0 0 12px;font-size:20px;color:#f6c85a">${name}, ajuda-nos a lançar a app MTM no Android 📲</h1>
+    <p style="margin:0 0 14px;font-size:15px;line-height:1.6">Lançámos a nova <b>app MoreThanMoney para Android</b> — Feed, Chat, sinais <b>Tap-to-Trade</b> e sessões ao vivo, agora <b>nativos</b>.</p>
+    <p style="margin:0 0 10px;font-size:15px;line-height:1.6">Se tens <b>Android</b>, precisamos de ti como <b>beta tester</b> (2 min — e ajuda-nos a desbloquear o lançamento público):</p>
+    <ol style="margin:0 0 6px;padding-left:18px;font-size:14px;line-height:1.8;color:#d5d5df">
+      <li>No telemóvel Android, abre o link abaixo.</li>
+      <li>Toca em <b>"Become a tester"</b> e depois instala pela Play Store.</li>
+      <li>Mantém a app instalada uns dias. Só isso 🙏</li>
+    </ol>
+    <div style="text-align:center;margin:22px 0">
+      <a href="${optin}" style="display:inline-block;background:#f6c85a;color:#0b0b0f;text-decoration:none;font-weight:700;font-size:15px;padding:14px 26px;border-radius:10px">📲 Tornar-me beta tester (Android)</a>
+    </div>
+    <p style="margin:0 0 4px;font-size:12px;line-height:1.6;color:#8a8a98">Ou copia o link: <a href="${optin}" style="color:#8a8a9a">${optin}</a></p>
+    <p style="margin:0 0 18px;font-size:12px;line-height:1.6;color:#8a8a98">Preferes já, sem Play? APK direto: <a href="${apk}" style="color:#8a8a9a">${apk}</a></p>
+    <p style="margin:0;font-size:14px;line-height:1.6">Obrigado — a tua ajuda vale ouro 🚀</p>
+    <p style="margin:14px 0 0;font-size:14px;line-height:1.6">— Ricardo, MoreThanMoney</p>`
+  return {
+    subject: "Ajuda-nos a lançar a app MTM no Android 📲 (2 min)",
+    html: shell(inner),
+    text: `${name}, ajuda-nos a lançar a app MTM no Android.\n\nSe tens Android, sê beta tester (2 min):\n1) No telemóvel Android abre: ${optin}\n2) Toca "Become a tester" e instala pela Play Store.\n3) Mantém a app instalada uns dias.\n\nOu APK direto: ${apk}\n\nObrigado — Ricardo, MoreThanMoney\n\nCancelar: responde a este email com "Cancelar".`,
+  }
+}
+
 export function buildBroadcast(template: string, name: string): BroadcastEmail {
   if (template === "monthly_challenge") return monthlyChallengeEmail(name)
   if (template === "founder_conversion") return founderConversionEmail(name)
+  if (template === "android_beta") return androidBetaEmail(name)
   return reviewEmail(name)
 }
 
