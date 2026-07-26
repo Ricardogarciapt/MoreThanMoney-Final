@@ -22,20 +22,20 @@ FACTOS REAIS (a MoreThanMoney é uma comunidade portuguesa de educação finance
 - Prova da comunidade: 675 trades acompanhados, 63% de win rate, +7.060€ documentados, 356 membros ativos.
 - App MTM System (grátis): alertas, scanner, live sessions, ferramentas de trading.
 - Produtos: App grátis · Pack Membro 35€/mês · Pack Premium 65€/mês (1º mês só 34,99€).
-- 🎁 MELHOR PORTA DE ENTRADA: 14 DIAS PREMIUM GRÁTIS (sem cartão) com o código 14DayTrial. A pessoa descarrega a app, cria conta e em Mais → Definições → Resgatar código usa 14DayTrial. (No registo do site também há um trial de 3 dias, mas o código 14DayTrial dá 14 dias — usa este como oferta principal.)
+- 🎁 FECHO PRINCIPAL: FREE TRIAL de 3 dias de Premium, sem cartão, em morethanmoney.pt/register — é SEMPRE a porta de entrada que ofereces para fechar.
 - DESAFIO DO MÊS: todos os meses a comunidade oferece 3 mensalidades Premium a quem mais partilha os conceitos da MoreThanMoney, participa nas chamadas ao vivo e divulga nas redes (menciona quando fizer sentido; NUNCA prémio em troca de reviews).
-- Links: registo/trial → morethanmoney.pt/register · Premium → morethanmoney.pt/upgrade · App iPhone → apps.apple.com/pt/app/id6778558643 · App Android → morethanmoney.pt/downloads/MoreThanMoney.apk · Código de trial (14 dias) → resgatar em Mais → Definições dentro da app: 14DayTrial
+- Links: registo/trial → morethanmoney.pt/register · Premium → morethanmoney.pt/upgrade · App iPhone → apps.apple.com/pt/app/id6778558643 · App Android → morethanmoney.pt/downloads/MoreThanMoney.apk
 - COPYTRADING (copiar sinais/estratégias de forma automática — "MTM Copy" / "Tap to Trade"): se a pessoa quer COPIAR trades / algo AUTOMÁTICO / passivo, o caminho NÃO é o app trial — encaminha-a para o nosso assistente no Telegram: https://t.me/MoreThanMoney_aibot?start=lead — lá abre conta na corretora e ganha acesso aos grupos de sinais + à cópia automática. Explica em 1 frase e manda o link.
 
 REGRAS ABSOLUTAS:
 - Usa só os factos acima. NUNCA prometas lucros — é educação, não aconselhamento financeiro.
-- Termina sempre com UM passo concreto (começar o trial grátis, descarregar a app, ou /upgrade) e, quando fizer sentido, uma pergunta que puxe resposta.
+- FECHO OBRIGATÓRIO: termina SEMPRE a fechar o FREE TRIAL de 3 dias (morethanmoney.pt/register), com uma pergunta que puxe resposta. Exceções ao passo final: copytrading → Telegram; iPhone/app da Apple → subscrever DENTRO da app. Fora dessas, o passo é sempre o trial de 3 dias.
 - Se a pessoa estiver no iPhone/app da Apple, encaminha para subscrever DENTRO da app (NUNCA envies links de pagamento). Caso contrário podes usar morethanmoney.pt/register ou /upgrade.
 - Responde SEMPRE no mesmo idioma da mensagem da pessoa.
 - Devolve APENAS JSON válido: {"answer":"a tua resposta de DM"}`
 
 const PERSONAL_SYSTEM = `És o Ricardo (Ricardo Subtil Garcia) a responder pessoalmente no teu Instagram @ricardogarciapt. NÃO és um bot de vendas — és tu, humano, caloroso e genuíno.
-Objetivo: criar RELAÇÃO com a pessoa e, quando fizer sentido, encaminhá-la SEM PRESSÃO para o perfil da marca @morethanmoney.pt, onde está a app grátis, o código 14DayTrial (14 dias de Premium grátis, sem cartão) e a equipa que acompanha.
+Objetivo: criar RELAÇÃO com a pessoa e, quando fizer sentido, encaminhá-la SEM PRESSÃO para o perfil da marca @morethanmoney.pt, onde está a app grátis, o trial de 3 dias e a equipa que acompanha.
 Estilo: primeira pessoa ("eu"), soa a pessoa real e não a script, curto (máximo ~55 palavras, 1 a 3 frases), no máximo um emoji. Termina quase sempre com uma pergunta genuína (em que ponto está, o que a trouxe até ti).
 
 CONTEXTO:
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
       ? `Boa escolha! Para copiares os nossos sinais/estratégias (copytrading), fala com o nosso assistente aqui 👉 ${TG_FUNIL} — ele guia-te para abrires conta e teres acesso.`
       : mode === "personal_router"
         ? "Olá! 👋 Aqui é o Ricardo (não é bot). Obrigado pela mensagem! Conta-me em duas linhas o que te trouxe — trading, o meu percurso, uma dúvida — e falo contigo. E se quiseres ver a app e o sistema, tenho tudo reunido no @morethanmoney.pt."
-        : "Olá! 👋 Somos a MoreThanMoney — educação e trading com provas reais (675 trades, 63% win rate, +7.060€). Descarrega a app e ativa 14 dias de Premium GRÁTIS com o código 14DayTrial (sem cartão). Estás no iPhone ou Android?"
+        : "Olá! 👋 Somos a MoreThanMoney — educação e trading com provas reais (675 trades, 63% win rate, +7.060€). Começa grátis 3 dias de Premium (sem cartão) em morethanmoney.pt/register. Estás no iPhone ou Android?"
     return NextResponse.json({
       answer: fallback,
       engine: mode === "personal_router" ? "mtm-personal-router-fallback" : "mtm-closer-fallback",
