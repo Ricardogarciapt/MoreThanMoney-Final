@@ -65,19 +65,55 @@ export async function generateDmReply(
   }
 }
 
-/** IDs das contas IG (públicos). Env sobrepõe-se se definido. */
-const BRAND_IG_ID = process.env.INSTAGRAM_BUSINESS_ID?.trim() || "17841474872672009" // @morethanmoney.pt
-const PERSONAL_IG_ID = process.env.INSTAGRAM_PERSONAL_ID?.trim() || "17841405656956716" // @ricardogarciapt
+/**
+ * IDs das contas IG. Aceita VÁRIOS ids por conta (o webhook de mensagens pode
+ * mandar o id IG-scoped OU o business id — já vimos a marca aparecer como
+ * 17841474872672009 e 621570614380294). Env sobrepõe/estende (lista separada por vírgulas).
+ */
+const BRAND_IG_IDS = [
+  process.env.INSTAGRAM_BUSINESS_ID,
+  "17841474872672009", // @morethanmoney.pt (IG-scoped)
+  "621570614380294",   // @morethanmoney.pt (visto no app)
+  ...(process.env.INSTAGRAM_BRAND_IDS || "").split(","),
+].map((s) => (s || "").trim()).filter(Boolean)
+
+const PERSONAL_IG_IDS = [
+  process.env.INSTAGRAM_PERSONAL_ID,
+  "17841405656956716", // @ricardogarciapt
+  ...(process.env.INSTAGRAM_PERSONAL_IDS || "").split(","),
+].map((s) => (s || "").trim()).filter(Boolean)
+
+function personalToken(): string | null {
+  return process.env.INSTAGRAM_TOKEN_RICARDO?.trim() || process.env.INSTAGRAM_TOKEN_PERSONAL?.trim() || null
+}
+function brandToken(): string | null {
+  return process.env.INSTAGRAM_TOKEN?.trim() || null
+}
 
 /** Escolhe o token IG certo para a conta que recebeu a mensagem (marca vs pessoal). */
 export function tokenForIgAccount(igAccountId: string | null): string | null {
-  const personalToken = process.env.INSTAGRAM_TOKEN_RICARDO?.trim() || process.env.INSTAGRAM_TOKEN_PERSONAL?.trim() || null
-  const brandToken = process.env.INSTAGRAM_TOKEN?.trim() || null
-  if (igAccountId && igAccountId === PERSONAL_IG_ID) return personalToken || brandToken
-  if (igAccountId && igAccountId === BRAND_IG_ID) return brandToken
-  // conta desconhecida → tenta a marca (default)
-  void BRAND_IG_ID
-  return brandToken
+  return candidateTokensForIgAccount(igAccountId)[0] || null
+}
+
+/**
+ * Tokens candidatos, POR ORDEM de tentativa. Devolvemos o mais provável primeiro
+ * e o(s) outro(s) como fallback — se o id não bater certo (ou vier num formato que
+ * não conhecemos), o webhook tenta o próximo token em vez de falhar a resposta.
+ * Isto garante que @ricardogarciapt responde mesmo que o entry.id não coincida.
+ */
+export function candidateTokensForIgAccount(igAccountId: string | null): string[] {
+  const p = personalToken()
+  const b = brandToken()
+  const id = (igAccountId || "").trim()
+  const isPersonal = !!id && PERSONAL_IG_IDS.includes(id)
+  const isBrand = !!id && BRAND_IG_IDS.includes(id)
+  let order: (string | null)[]
+  if (isPersonal) order = [p, b]
+  else if (isBrand) order = [b, p]
+  // Conta desconhecida → tenta a marca primeiro, depois a pessoal (nunca fica sem resposta).
+  else order = [b, p]
+  // dedup + remove nulls
+  return order.filter((t, i): t is string => !!t && order.indexOf(t) === i)
 }
 
 /** Envia uma DM pela Graph API (janela de 24h; resposta imediata cai sempre dentro). */
@@ -86,9 +122,11 @@ export async function sendInstagramDm(
   recipientId: string,
   text: string,
   token: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; authError?: boolean }> {
   try {
-    const res = await fetch(`https://graph.facebook.com/v21.0/${igAccountId}/messages`, {
+    // Endpoint "me/messages" resolve a conta pelo próprio token — evita erros quando
+    // o entry.id não é exatamente o id que o token espera.
+    const res = await fetch(`https://graph.facebook.com/v21.0/me/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -99,10 +137,36 @@ export async function sendInstagramDm(
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok || data?.error) {
-      return { ok: false, error: data?.error?.message || `HTTP ${res.status}` }
+      const code = data?.error?.code
+      // 190=token inválido, 200/10/3=permissão/escopo, 100 subcode 2534014=conta não corresponde.
+      const authError = [190, 200, 10, 3, 100].includes(Number(code)) || res.status === 401 || res.status === 403
+      return { ok: false, error: data?.error?.message || `HTTP ${res.status}`, authError }
     }
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "erro" }
   }
+}
+
+/**
+ * Envia tentando os tokens candidatos por ordem (pessoal→marca ou vice-versa).
+ * Se o 1º token for rejeitado por auth/permissão, tenta o seguinte. Assim a resposta
+ * sai pela conta certa mesmo que o routing por id não seja exato.
+ */
+export async function sendInstagramDmResilient(
+  igAccountId: string,
+  recipientId: string,
+  text: string,
+): Promise<{ ok: boolean; error?: string; usedFallback?: boolean }> {
+  const candidates = candidateTokensForIgAccount(igAccountId)
+  if (candidates.length === 0) return { ok: false, error: "sem token IG configurado" }
+  let lastErr: string | undefined
+  for (let i = 0; i < candidates.length; i++) {
+    const r = await sendInstagramDm(igAccountId, recipientId, text, candidates[i])
+    if (r.ok) return { ok: true, usedFallback: i > 0 }
+    lastErr = r.error
+    // Só vale a pena tentar o próximo token se o erro foi de auth/permissão.
+    if (!r.authError) break
+  }
+  return { ok: false, error: lastErr }
 }

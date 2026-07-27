@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
-import { generateDmReply, sendInstagramDm, tokenForIgAccount } from "@/lib/instagram/dm-closer"
+import { generateDmReply, sendInstagramDmResilient, candidateTokensForIgAccount } from "@/lib/instagram/dm-closer"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -84,8 +84,7 @@ export async function POST(request: NextRequest) {
       }
       if (alreadySeen) continue
 
-      const token = tokenForIgAccount(accountId)
-      if (!token) {
+      if (candidateTokensForIgAccount(accountId).length === 0) {
         try {
           await supabase.from("ig_dm_log").update({ status: "error", error: "sem token IG" }).eq("mid", mid)
         } catch {}
@@ -94,7 +93,7 @@ export async function POST(request: NextRequest) {
 
       try {
         const reply = await generateDmReply(msg.text)
-        const sent = await sendInstagramDm(accountId, senderId, reply, token)
+        const sent = await sendInstagramDmResilient(accountId, senderId, reply)
         try {
           await supabase
             .from("ig_dm_log")
