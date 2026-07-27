@@ -65,16 +65,19 @@ export async function generateDmReply(
   }
 }
 
+/** IDs das contas IG (públicos). Env sobrepõe-se se definido. */
+const BRAND_IG_ID = process.env.INSTAGRAM_BUSINESS_ID?.trim() || "17841474872672009" // @morethanmoney.pt
+const PERSONAL_IG_ID = process.env.INSTAGRAM_PERSONAL_ID?.trim() || "17841405656956716" // @ricardogarciapt
+
 /** Escolhe o token IG certo para a conta que recebeu a mensagem (marca vs pessoal). */
 export function tokenForIgAccount(igAccountId: string | null): string | null {
-  const brandId = process.env.INSTAGRAM_BUSINESS_ID?.trim()
-  const personalId = process.env.INSTAGRAM_PERSONAL_ID?.trim()
-  if (igAccountId && personalId && igAccountId === personalId) {
-    return process.env.INSTAGRAM_TOKEN_PERSONAL?.trim() || process.env.INSTAGRAM_TOKEN?.trim() || null
-  }
-  // default: marca
-  void brandId
-  return process.env.INSTAGRAM_TOKEN?.trim() || null
+  const personalToken = process.env.INSTAGRAM_TOKEN_RICARDO?.trim() || process.env.INSTAGRAM_TOKEN_PERSONAL?.trim() || null
+  const brandToken = process.env.INSTAGRAM_TOKEN?.trim() || null
+  if (igAccountId && igAccountId === PERSONAL_IG_ID) return personalToken || brandToken
+  if (igAccountId && igAccountId === BRAND_IG_ID) return brandToken
+  // conta desconhecida → tenta a marca (default)
+  void BRAND_IG_ID
+  return brandToken
 }
 
 /** Envia uma DM pela Graph API (janela de 24h; resposta imediata cai sempre dentro). */
