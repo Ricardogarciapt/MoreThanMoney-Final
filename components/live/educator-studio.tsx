@@ -852,11 +852,11 @@ export default function EducatorStudio() {
                   </CollapsibleTrigger>
                   <CollapsibleContent className="space-y-4 border-t border-gray-800/60 px-3 pb-3 pt-3">
                     <StreamKeyCard
-                      title="Servidor Restream (RTMPS / OBS)"
+                      title="Servidor RTMP MTM (OBS)"
                       intro={
                         <>
                           No OBS: define <strong className="text-gray-400">Serviço personalizado</strong> e cola o
-                          servidor + chave do Restream (campos separados).
+                          servidor + a chave desta sala (campos separados). A chave já está atribuída — não precisas de gerar nada.
                         </>
                       }
                       hideDeployHint
@@ -918,9 +918,9 @@ export default function EducatorStudio() {
                     Criar novo canal
                   </CardTitle>
                   <p className="text-xs font-normal text-gray-500">
-                    Com <strong className="text-gray-400">Restream</strong>, o OBS usa o cartão Restream desta página
-                    (coluna à direita em ecrã grande, ou abaixo no telemóvel). A chave <code className="text-gray-500">mtm_…</code>{" "}
-                    por canal é para ingestão HLS no servidor More Than Money.
+                    Cada canal nasce já com <strong className="text-gray-400">servidor e chave <code className="text-gray-500">mtm_…</code></strong>{" "}
+                    atribuídos (servidor RTMP More Than Money). No OBS usa o cartão{" "}
+                    <strong className="text-gray-400">Servidor RTMP MTM</strong> de cada sala — não precisas de gerar chaves.
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-3">

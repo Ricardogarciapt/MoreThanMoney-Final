@@ -5,6 +5,8 @@ import { getEducatorCookieName, verifyEducatorToken } from "@/lib/lms-educator-a
 import { normalizeLmsCategory } from "@/lib/lms-categories"
 import { DEFAULT_RESTREAM_INGEST_URL, normalizeRestreamIngestUrl } from "@/lib/lms-restream"
 import { normalizeIngestProvider, normalizePlaybackMode } from "@/lib/lms-stream-options"
+import { getLmsIngestServerUrl } from "@/lib/lms-stream-ingest"
+import { generateMtmIngestStreamKey } from "@/lib/lms-stream-keys"
 
 const supabase = getSupabaseAdmin()
 
@@ -44,6 +46,13 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       )
+    }
+
+    // Garante chave de ingestão fixa do educador — canais nascem SEMPRE com chave + URL do servidor MTM (SRS).
+    let educatorFixedKey = ((row as any).stream_key_fixed as string | null) || null
+    if (!educatorFixedKey) {
+      educatorFixedKey = generateMtmIngestStreamKey(educator.educatorId)
+      await supabase.from("lms_educators").update({ stream_key_fixed: educatorFixedKey }).eq("id", educator.educatorId)
     }
 
     const description = String(body.description || "").trim() || null
@@ -93,8 +102,8 @@ export async function POST(request: NextRequest) {
         playlist_access_tier,
         access_tier,
         category,
-        rtmps_url: effectiveUseRestream ? restreamBase : DEFAULT_RESTREAM_INGEST_URL,
-        stream_key: effectiveUseRestream ? restreamKey : restreamEnabled ? null : row.stream_key_fixed || null,
+        rtmps_url: effectiveUseRestream ? restreamBase : getLmsIngestServerUrl(),
+        stream_key: effectiveUseRestream ? restreamKey : educatorFixedKey,
         ingest_provider: ingestProvider,
         playback_mode: playbackMode,
         chat_enabled: body.chat_enabled !== false,
