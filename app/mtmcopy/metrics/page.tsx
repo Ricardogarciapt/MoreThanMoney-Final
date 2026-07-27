@@ -97,18 +97,33 @@ export default function MtmcopyMetricsPage() {
           </div>
         )}
 
+        {/* Desempenho das estratégias ativas (Premium, Trade Ideas, Sensei, GoldKiller, Bybit
+            Perps) — prova social para o membro, via rota pública sanitizada (sem saldos absolutos). */}
+        {accessToken && subscribed && (
+          <div className="mt-8 rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-1">
+            <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-800/60 text-xs text-zinc-500">
+              <TrendingUp className="w-3.5 h-3.5 text-[#D2A63C]" />
+              Desempenho das estratégias ativas
+            </div>
+            <div className="p-4 md:p-6">
+              <MtmcopyProviderPerformance
+                apiPath="/api/mtmcopy/provider-performance"
+                authToken={accessToken}
+              />
+            </div>
+          </div>
+        )}
+
         {isAdmin && (
-          // O desempenho dos providers vive só na consola admin (fonte única — evita duplicar
-          // o mesmo painel/chamada aqui). Esta página é o dashboard do próprio membro.
           <Link
             href="/admin/mtmcopy"
             className="mt-8 flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/20 bg-zinc-950/40 px-5 py-4 hover:border-emerald-500/40 transition-colors"
           >
             <span className="flex items-center gap-2 text-sm text-emerald-400">
               <Server className="w-4 h-4" />
-              Admin · Desempenho das contas Provider
+              Admin · Consola MTMcopier completa
             </span>
-            <span className="text-xs text-zinc-500">Abrir consola MTMcopier →</span>
+            <span className="text-xs text-zinc-500">Abrir →</span>
           </Link>
         )}
 

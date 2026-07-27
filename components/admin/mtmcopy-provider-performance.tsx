@@ -156,7 +156,17 @@ function ProviderCard({ p }: { p: ProviderStrategyMetrics }) {
   )
 }
 
-export default function MtmcopyProviderPerformance({ className }: { className?: string }) {
+export default function MtmcopyProviderPerformance({
+  className,
+  apiPath = "/api/admin/mtmcopy/provider-performance",
+  authToken,
+}: {
+  className?: string
+  /** Fonte de dados — admin por defeito; passar a rota pública p/ a página de membro. */
+  apiPath?: string
+  /** Bearer token (rota pública de membro usa auth por token; admin usa cookie/sessão). */
+  authToken?: string | null
+}) {
   const [data, setData] = useState<Payload | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -165,7 +175,10 @@ export default function MtmcopyProviderPerformance({ className }: { className?: 
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/admin/mtmcopy/provider-performance", { cache: "no-store" })
+      const res = await fetch(apiPath, {
+        cache: "no-store",
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+      })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error || body.message || `HTTP ${res.status}`)
