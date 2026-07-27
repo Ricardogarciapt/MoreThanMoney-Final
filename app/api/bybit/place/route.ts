@@ -13,6 +13,7 @@ import {
   computeDynamicLeverage,
   placeBybitPerp,
 } from "@/lib/bybit"
+import { perpsTrendGuard } from "@/lib/bybit-trend-guard"
 
 // Edge + fra1: a Bybit bloqueia IPs dos EUA (serverless Node corre em iad1). Só as Edge
 // Functions respeitam preferredRegion na Vercel Pro → esta rota corre em Frankfurt (UE).
@@ -93,6 +94,18 @@ export async function POST(req: NextRequest) {
 
   // Boost de size quando o funding está A NOSSO FAVOR (vai pagar-nos): +margem à MESMA leverage
   // (mais size sem aproximar a liquidação). ON por defeito; BYBIT_FUNDING_FAVOR_ENABLED=false desliga.
+  // Guarda de TENDÊNCIA macro — só entra a favor do BTC + do "cripto 30" (breadth top-30).
+  // Evita ser apanhado em contratendência. ON por defeito; BYBIT_PERPS_TREND_GUARD=false desliga.
+  const tg = await perpsTrendGuard(side === "sell" ? "Sell" : "Buy")
+  if (!tg.allow) {
+    return NextResponse.json({
+      ok: false,
+      skipped: true,
+      reason: tg.reason,
+      trend: { btc: tg.btc, market: tg.market },
+    })
+  }
+
   const favor =
     process.env.BYBIT_FUNDING_FAVOR_ENABLED !== "false"
       ? fundingFavorMultiplier(side, funding, {
