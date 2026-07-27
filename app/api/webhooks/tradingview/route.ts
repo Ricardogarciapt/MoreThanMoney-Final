@@ -454,6 +454,31 @@ export async function POST(request: NextRequest) {
   const alertName = pick(payload, ["alert_name", "alert", "name", "strategy"])
   const freeText = isJson ? pick(payload, ["message", "comment", "text"]) : String(payload.message ?? "")
 
+  // ── Entrada por ZONA + reação Premium (gatilho A) ─────────────────────────────
+  // Um alerta Pine de reação DENTRO da zona dispara a entrada de um pendente Premium
+  // (mtmcopy_premium_pending). Isolado do routing normal — marca-se com event=premium_zone_reaction
+  // ou nome de alerta com "premium zone"/"zone reaction". Respeita a config (off/shadow/live).
+  {
+    const zoneStrat = `${alertName || ""} ${freeText || ""}`.toLowerCase()
+    const eventField = String(pick(payload, ["event", "event_type", "type"]) || "").toLowerCase()
+    const isPremiumZoneReaction =
+      eventField === "premium_zone_reaction" || /premium[\s_-]*zone|zone[\s_-]*reaction/.test(zoneStrat)
+    if (isPremiumZoneReaction) {
+      const dir = /sell|short/i.test(String(action || ""))
+        ? "sell"
+        : /buy|long/i.test(String(action || ""))
+          ? "buy"
+          : null
+      const px = price ?? entry ?? null
+      if (dir && px != null && px > 0) {
+        const { triggerPremiumZoneByReaction } = await import("@/lib/mtmcopy/premium-zone-monitor")
+        const r = await triggerPremiumZoneByReaction(String(ticker || "XAUUSD"), dir, px)
+        return NextResponse.json({ ok: true, premium_zone_reaction: true, fired: r.fired })
+      }
+      return NextResponse.json({ ok: true, premium_zone_reaction: true, fired: 0, note: "sem direção/preço válidos" })
+    }
+  }
+
   // Classe de ativo → canal / Telegram / auto-copy
   let assetClass = classifyAsset(ticker)
   const route = resolveRoute(assetClass)

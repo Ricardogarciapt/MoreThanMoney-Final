@@ -1,0 +1,58 @@
+//@version=5
+// ─────────────────────────────────────────────────────────────────────────────
+// MTM Premium — Reação de Zona (gatilho A)
+//
+// COMO FUNCIONA:
+//  O sinal Premium (Telegram) traz a ZONA [low,high]. O servidor guarda-o como PENDENTE.
+//  Este script NÃO conhece a zona — ele apenas deteta uma VELA DE REAÇÃO (engolfo ou
+//  rejeição por pavio) no fecho da vela e dispara um webhook com {action, price}.
+//  O servidor (triggerPremiumZoneByReaction) só ABRE se esse preço estiver DENTRO de um
+//  pendente com a mesma direção. Assim entras "na zona, com reação" — não às cegas.
+//
+// USAR:
+//  1) Aplica no gráfico do XAUUSD (Ouro), no timeframe que usas para o Premium (ex.: 5m/15m).
+//  2) Cria um alerta → condição "Any alert() function call on this symbol".
+//  3) Webhook URL:  https://www.morethanmoney.pt/api/webhooks/tradingview?secret=SEU_SECRET
+//     (ou mete o secret no JSON abaixo). Frequência: "Once Per Bar Close".
+// ─────────────────────────────────────────────────────────────────────────────
+
+indicator("MTM Premium — Reação de Zona", overlay=true)
+
+// ── Inputs ───────────────────────────────────────────────────────────────────
+useEngulfing = input.bool(true,  "Engolfo (reversão)")
+useRejection = input.bool(true,  "Rejeição por pavio")
+wickRatio    = input.float(1.5,  "Pavio ≥ corpo ×", minval=0.5, step=0.1)
+secret       = input.string("mtm-tv-sensei-2026", "Webhook secret (ou no URL)")
+
+// ── Componentes da vela ──────────────────────────────────────────────────────
+body     = math.abs(close - open)
+upWick   = high - math.max(close, open)
+dnWick   = math.min(close, open) - low
+bull     = close > open
+bear     = close < open
+
+// ── Engolfo ──────────────────────────────────────────────────────────────────
+bullEngulf = useEngulfing and bull and close[1] < open[1] and close >= open[1] and open <= close[1]
+bearEngulf = useEngulfing and bear and close[1] > open[1] and close <= open[1] and open >= close[1]
+
+// ── Rejeição por pavio (martelo / estrela cadente) ───────────────────────────
+bullReject = useRejection and dnWick >= body * wickRatio and close >= (high + low) / 2
+bearReject = useRejection and upWick >= body * wickRatio and close <= (high + low) / 2
+
+// ── Sinais de reação ─────────────────────────────────────────────────────────
+buyReact  = bullEngulf or bullReject
+sellReact = bearEngulf or bearReject
+
+// ── Marcas no gráfico ────────────────────────────────────────────────────────
+plotshape(buyReact,  title="Reação BUY",  style=shape.triangleup,   location=location.belowbar, color=color.new(color.lime, 0), size=size.small)
+plotshape(sellReact, title="Reação SELL", style=shape.triangledown, location=location.abovebar, color=color.new(color.red, 0),  size=size.small)
+
+// ── Webhook (JSON) ───────────────────────────────────────────────────────────
+// O preço enviado é o CLOSE da vela de reação; o servidor confirma se cai na zona pendente.
+f_msg(_side) =>
+    '{"secret":"' + secret + '","event":"premium_zone_reaction","ticker":"' + syminfo.ticker + '","action":"' + _side + '","price":' + str.tostring(close) + ',"timeframe":"' + timeframe.period + '"}'
+
+if buyReact
+    alert(f_msg("buy"), alert.freq_once_per_bar_close)
+if sellReact
+    alert(f_msg("sell"), alert.freq_once_per_bar_close)

@@ -61,6 +61,7 @@ import {
   trailingPointsForConnection,
 } from './position-management'
 import { applyPremiumManagement, classifyPremiumMessage } from './premium-management-exec'
+import { getPremiumZoneConfig } from './premium-zone-config'
 import { buildTelegramMessageContext } from './reply-context'
 import {
   looksLikeManagementOrReplyInstruction,
@@ -1000,6 +1001,60 @@ async function executeViaMtmProvider(
         detail: `${aiDetail} · ${dup.reason}`,
       })
       return
+    }
+  }
+
+  // ── Entrada por ZONA + reação (Premium) ──────────────────────────────────────
+  // Em vez de entrar a mercado no instante do sinal, guarda o sinal como PENDENTE com a zona
+  // e entra só quando um gatilho dispara (A=TradingView, C=reconfirmação, B=toque). Isto dá
+  // entrada na zona com reação de preço em vez de às cegas. mode='off' → nada muda;
+  // 'shadow' → abre a mercado como hoje E regista o que a zona teria feito; 'live' → só entra no gatilho.
+  if (isPremiumProvider && premiumProviderSingle && Array.isArray((signalForExec as any).zone)) {
+    const zoneCfg = await getPremiumZoneConfig()
+    if (zoneCfg.mode !== 'off') {
+      const [zA, zB] = (signalForExec as any).zone as [number, number]
+      const zoneLow = Math.min(zA, zB)
+      const zoneHigh = Math.max(zA, zB)
+      try {
+        const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
+        await getSupabaseAdmin().from('mtmcopy_premium_pending').insert({
+          account_id: provider.accountId,
+          channel,
+          symbol: mappedSymbol,
+          direction: signalForExec.direction,
+          zone_low: zoneLow,
+          zone_high: zoneHigh,
+          entry: signalForExec.entry ?? marketPrice ?? null,
+          sl: signalForExec.sl ?? null,
+          tp: signalForExec.tp ?? [],
+          exit_pct_tp1: premiumProviderSingle.exitPcts.tp1,
+          exit_pct_tp2: premiumProviderSingle.exitPcts.tp2,
+          exit_pct_tp3: premiumProviderSingle.exitPcts.tp3,
+          lot: premiumProviderSingle.lot,
+          equity,
+          comment: premiumProviderSingle.comment,
+          telegram_message_id: telegramMessageId ?? null,
+          mode: zoneCfg.mode,
+          status: 'pending',
+          expires_at: new Date(Date.now() + zoneCfg.expiry_min * 60_000).toISOString(),
+        })
+      } catch {
+        /* não bloquear a execução por falha ao gravar o pendente */
+      }
+      if (zoneCfg.mode === 'live') {
+        await logProviderSignalEvent({
+          channel,
+          provider,
+          signal: signalForExec,
+          raw,
+          telegramMessageId,
+          lot: totalLot,
+          status: 'received',
+          detail: `${aiDetail} · Zona ${zoneLow}–${zoneHigh}: PENDENTE criado — aguarda gatilho (A/C/B), não entrou a mercado · ${executionSummary}`,
+        })
+        return
+      }
+      // shadow: continua e abre a mercado como hoje; o pendente regista o que a zona teria feito.
     }
   }
 

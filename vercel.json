@@ -66,6 +66,10 @@
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/cron/premium-zone-monitor",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/telegram-leads-content",
       "schedule": "0 11,18 * * *"
     },
