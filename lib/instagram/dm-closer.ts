@@ -1,0 +1,101 @@
+/**
+ * DM self-hosted da More Than Money — cérebro (AI closer) + envio pela Graph API.
+ *
+ * 1º nível: responde às DMs do Instagram diretamente (webhook /api/webhooks/instagram).
+ * ManyChat fica como FAILSAFE (se este nível estiver off ou falhar).
+ */
+
+const DM_SYSTEM = `És o assistente de vendas e onboarding da More Than Money (MTM · morethanmoney.pt), a falar por DM do Instagram do Ricardo Garcia.
+
+OBJETIVO: transformar interesse em ação — oferecer uma subscrição GRÁTIS da MTM, levar a pessoa a registar-se e ensiná-la a usar. Caloroso, humano, direto. Nada de robótico.
+
+REGRAS DE ESTILO:
+- Português de Portugal, tom próximo (é uma DM, não um email). Curto: 2-5 frases.
+- No máximo 1 pergunta e 1 call-to-action por mensagem.
+- Emojis com moderação (1-2). Nunca "spam".
+- Nunca inventes números, promessas de lucro garantido, nem dados que não sabes. Sê honesto.
+
+OFERTA E ONBOARDING (usa quando a pessoa mostra interesse):
+- Oferece a subscrição GRÁTIS: manda a pessoa a morethanmoney.pt/register, criar conta (email + password), e no campo CUPÃO meter o código que lhe deres (ex.: CREATOR60 = Premium+VIP 60 dias; MEMBER30 = Membro 30 dias). Sem cartão.
+- Depois de registar: entrar em morethanmoney.pt/mtmcopy para ligar a cópia automática das estratégias, e explorar scanners/sinais no scanner-access.
+- Oferece-te para ajudar passo a passo se tiverem dúvidas.
+
+O QUE A MTM OFERECE (fala com naturalidade, sem despejar tudo): scanners de trading, sinais, cópia automática (MTM Copy), academia/lives, e uma app. Provas reais existem no site.
+
+Responde SÓ com a mensagem para enviar à pessoa (texto puro, sem aspas, sem JSON, sem prefixos).`
+
+/** Gera a resposta do closer para uma mensagem recebida. */
+export async function generateDmReply(
+  message: string,
+  opts: { name?: string | null; lang?: string | null } = {},
+): Promise<string> {
+  const key = process.env.ANTHROPIC_API_KEY?.trim()
+  if (!key) throw new Error("ANTHROPIC_API_KEY em falta")
+  const model =
+    process.env.MANYCHAT_CLOSER_MODEL?.trim() ||
+    process.env.ANTHROPIC_MODEL?.trim() ||
+    "claude-3-5-haiku-20241022"
+  const lang = (opts.lang || "").trim() || "português de Portugal"
+  const who = opts.name ? ` O primeiro nome da pessoa é ${opts.name}.` : ""
+  const user = `Idioma a usar: ${lang}.${who}\nMensagem da pessoa: "${message}"`
+
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 20000)
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model, max_tokens: 400, system: DM_SYSTEM, messages: [{ role: "user", content: user }] }),
+      signal: ctrl.signal,
+    })
+    if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 200)}`)
+    const data = await res.json()
+    const text: string = (data?.content || [])
+      .filter((p: { type?: string }) => p?.type === "text")
+      .map((p: { text?: string }) => p.text || "")
+      .join("")
+      .trim()
+    return text
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** Escolhe o token IG certo para a conta que recebeu a mensagem (marca vs pessoal). */
+export function tokenForIgAccount(igAccountId: string | null): string | null {
+  const brandId = process.env.INSTAGRAM_BUSINESS_ID?.trim()
+  const personalId = process.env.INSTAGRAM_PERSONAL_ID?.trim()
+  if (igAccountId && personalId && igAccountId === personalId) {
+    return process.env.INSTAGRAM_TOKEN_PERSONAL?.trim() || process.env.INSTAGRAM_TOKEN?.trim() || null
+  }
+  // default: marca
+  void brandId
+  return process.env.INSTAGRAM_TOKEN?.trim() || null
+}
+
+/** Envia uma DM pela Graph API (janela de 24h; resposta imediata cai sempre dentro). */
+export async function sendInstagramDm(
+  igAccountId: string,
+  recipientId: string,
+  text: string,
+  token: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`https://graph.facebook.com/v21.0/${igAccountId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: { text: text.slice(0, 990) },
+        access_token: token,
+      }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || data?.error) {
+      return { ok: false, error: data?.error?.message || `HTTP ${res.status}` }
+    }
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "erro" }
+  }
+}
