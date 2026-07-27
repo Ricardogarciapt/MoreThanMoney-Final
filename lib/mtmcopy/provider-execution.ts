@@ -34,9 +34,11 @@ export const PREMIUM_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   symbols_execute_only: ['XAUUSD', 'GOLD'],
   symbols_avoid: null,
   symbol_lot_exceptions: [],
-  exit_pct_tp1: 75,
-  exit_pct_tp2: 15,
-  exit_pct_tp3: 10,
+  // Runner maior (2026-07-27): banca 50% no TP1 (era 75%) e deixa 50% correr até TP2/TP3 com
+  // BE+trailing pós-TP1 → acompanha melhor o price action / maximiza os movimentos grandes.
+  exit_pct_tp1: 50,
+  exit_pct_tp2: 25,
+  exit_pct_tp3: 25,
   auto_trailing_stop: false,
   trailing_stop_points: 0,
 }

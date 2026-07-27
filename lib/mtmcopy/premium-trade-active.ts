@@ -56,11 +56,13 @@ export function premiumTrailingForTradeActive(): TrailingDistance {
 
 /** Trailing após HIT TP1 — activa de imediato e segue o preço (runner). */
 export function premiumTrailingAfterTp1Hit(riskPips: number | null): TrailingDistance {
+  // Trailing pós-TP1 ALARGADO (2026-07-27) — com o runner maior (50%), dá mais espaço para o
+  // preço correr antes de o stop apertar (segue movimentos maiores em vez de o cortar cedo).
   const trail =
     riskPips != null && riskPips <= PREMIUM_INTELIGENT_RISK_MAX_PIPS
-      ? 20
+      ? 30
       : riskPips != null && riskPips >= PREMIUM_STANDARD_RISK_PIPS
-        ? 50
-        : 30
+        ? 75
+        : 45
   return { mode: 'threshold_pips', activationPips: 1, trailPips: trail }
 }
