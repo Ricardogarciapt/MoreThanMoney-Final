@@ -126,7 +126,12 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const memberCategory = grantsVip ? 'vip' : 'premium'
+    // Tier concedido: por defeito Premium (+VIP se grants_vip). plan_override='app_member' concede
+    // apenas MEMBRO (app_member / standard) — sem acesso escalado a Premium/VIP.
+    const planOverride = String((coupon as { plan_override?: string }).plan_override || '').trim().toLowerCase()
+    const isMemberTier = planOverride === 'app_member' || planOverride === 'member'
+    const grantedPlan = isMemberTier ? 'app_member' : 'premium'
+    const memberCategory = isMemberTier ? 'standard' : grantsVip ? 'vip' : 'premium'
     // UPSERT (não UPDATE) — alguns users não têm linha em profiles (trigger de signup
     // nem sempre a cria); com update simples o resgate não concedia nada (0 linhas).
     const { error: grantError } = await supabase
@@ -135,7 +140,7 @@ export async function POST(req: NextRequest) {
         id:                         userId,
         email:                      user.email ?? undefined,
         member_category:            memberCategory,
-        subscription_plan:          'premium',
+        subscription_plan:          grantedPlan,
         subscription_status:        'active',
         subscription_platform:      'coupon',   // CHECK só aceita app_store/skool/manual/coupon/trial (não 'partnership')
         subscription_billing_cycle: 'monthly',
@@ -166,11 +171,13 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: grantsVip
-        ? `Parceria ativada! Tens Premium + VIP durante ${grantDays} dias.`
-        : `Parceria ativada! Tens Premium durante ${grantDays} dias.`,
+      message: isMemberTier
+        ? `Ativado! Tens acesso Membro durante ${grantDays} dias.`
+        : grantsVip
+          ? `Parceria ativada! Tens Premium + VIP durante ${grantDays} dias.`
+          : `Parceria ativada! Tens Premium durante ${grantDays} dias.`,
       member_category: memberCategory,
-      subscription_plan: 'premium',
+      subscription_plan: grantedPlan,
       subscription_expires_at: expiresAt,
       grant_days: grantDays,
       vip: grantsVip,
