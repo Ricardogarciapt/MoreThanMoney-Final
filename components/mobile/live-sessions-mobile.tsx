@@ -692,6 +692,7 @@ export default function LiveSessionsMobile({
           {stream?.playlist_url && (
             <div className="shrink-0 border-b border-gray-800/70 bg-black/30 px-2 py-2 sm:px-3">
               <LmsPlaylistSection
+                defaultOpen={!stream?.is_live}
                 playlistUrl={stream.playlist_url}
                 playlistTitle={stream.playlist_title}
                 canAccess={canAccessStream(

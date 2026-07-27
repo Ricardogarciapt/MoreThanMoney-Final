@@ -6,6 +6,24 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import EducatorFeedbacksList from "@/components/live/educator-feedbacks-list"
+import { LmsPlaylistSection } from "@/components/live/lms-playlist-section"
+import { useAuth } from "@/contexts/auth-context"
+
+/** Acesso à playlist da sala pelo tier (mesma lógica do lobby). */
+function canAccessPlaylist(
+  userPlan: string | undefined,
+  userType: string | undefined,
+  memberCategory: string | undefined,
+  tier: "all" | "app_member" | "premium" | "vip" | null | undefined,
+): boolean {
+  if (userType === "admin") return true
+  const t = tier ?? "all"
+  if (t === "all") return true
+  if (t === "vip") return userType === "vip" || memberCategory === "vip"
+  if (t === "app_member") return userPlan === "app_member" || userPlan === "premium"
+  if (t === "premium") return userPlan === "premium"
+  return false
+}
 
 export type EducatorProfilePublic = {
   id: string
@@ -23,6 +41,9 @@ type StreamPreview = {
   is_live: boolean
   scheduled_start_at?: string | null
   academy?: { name: string } | null
+  playlist_url?: string | null
+  playlist_title?: string | null
+  playlist_access_tier?: "all" | "app_member" | "premium" | "vip" | null
 }
 
 type Props = {
@@ -40,7 +61,9 @@ export default function EducatorProfileDialog({
   streams,
   streamsLoading = false,
 }: Props) {
+  const { user } = useAuth()
   const now = Date.now()
+  const playlistStreams = streams.filter((s) => s.playlist_url)
   const onlineNow = streams.filter((s) => s.is_live).slice(0, 3)
   const upcoming = streams
     .filter((s) => !s.is_live && s.scheduled_start_at && new Date(s.scheduled_start_at).getTime() > now)
@@ -145,6 +168,38 @@ export default function EducatorProfileDialog({
                   </div>
                 )}
               </section>
+
+              {playlistStreams.length > 0 && (
+                <section className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="h-4 w-4 text-[#D2A63C]" />
+                    <p className="text-sm font-semibold">Aulas gravadas</p>
+                  </div>
+                  {playlistStreams.map((s) => (
+                    <LmsPlaylistSection
+                      key={s.id}
+                      defaultOpen={!s.is_live}
+                      playlistUrl={s.playlist_url}
+                      playlistTitle={s.playlist_title || `${s.title} · Playlist`}
+                      canAccess={canAccessPlaylist(
+                        (user as { subscription_plan?: string })?.subscription_plan,
+                        (user as { user_type?: string })?.user_type,
+                        (user as { member_category?: string })?.member_category,
+                        s.playlist_access_tier,
+                      )}
+                      tierLabel={
+                        s.playlist_access_tier === "premium"
+                          ? "membros Premium (€65)"
+                          : s.playlist_access_tier === "app_member"
+                            ? "membros da app (€35) e superiores"
+                            : s.playlist_access_tier === "vip"
+                              ? "membros VIP"
+                              : null
+                      }
+                    />
+                  ))}
+                </section>
+              )}
 
               <EducatorFeedbacksList educatorId={educator.id} variant="channel" className="border-gray-800" />
             </>

@@ -239,6 +239,7 @@ export default function LiveByEducatorPage() {
 
           {!loading && playlist.url && (
             <LmsPlaylistSection
+              defaultOpen={!streamId}
               playlistUrl={playlist.url}
               playlistTitle={playlist.title}
               canAccess={planAllows(
