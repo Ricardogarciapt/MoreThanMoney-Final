@@ -542,12 +542,23 @@ async function processManagementUpdate(
       const sw = await getExecSwitches()
       if (sw.premium_price_monitor) {
         const pk = classifyPremiumMessage(raw)?.kind
-        const isTpHit = pk === 'hit_tp1' || pk === 'hit_tp2' || pk === 'hit_tp3' || pk === 'hit_all'
-        if (isTpHit) {
-          console.log(`[mtmcopy] Premium: HIT TP por mensagem ignorado (monitor trata por preço) — ${pk}`)
+        // Monitor LIGADO = AUTORIDADE ÚNICA das saídas (parciais 75/15/10 por preço + BE e
+        // trailing SÓ depois do TP1). Saltam-se as mensagens que o monitor já trata por preço:
+        // HIT TP E os BE/close prematuros do "trade active"/"breakeven" — que estavam a fechar
+        // as trades no break-even ANTES do TP1 (0 parciais em 27 trades). Só o SL-hit real passa.
+        const monitorOwns =
+          pk === 'hit_tp1' ||
+          pk === 'hit_tp2' ||
+          pk === 'hit_tp3' ||
+          pk === 'hit_all' ||
+          pk === 'breakeven' ||
+          pk === 'trade_active_close_all' ||
+          pk === 'trade_active_close_half'
+        if (monitorOwns) {
+          console.log(`[mtmcopy] Premium: gestão por mensagem ignorada (monitor trata por preço) — ${pk}`)
           continue
         }
-        console.log(`[mtmcopy] Premium: override manual aplicado apesar do monitor — ${pk ?? 'n/d'}`)
+        console.log(`[mtmcopy] Premium: override aplicado apesar do monitor — ${pk ?? 'n/d'}`)
       }
     }
 

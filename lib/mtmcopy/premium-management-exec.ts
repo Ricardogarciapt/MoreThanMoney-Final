@@ -124,7 +124,9 @@ export async function applyPremiumManagement(
   const positions = await listOpenPositions(accountId)
   const pos = findPremiumSinglePosition(positions, symbol)
   if (!pos) {
-    out.errors.push(`Sem posição Premium ativa em ${symbol}`)
+    // Gestão sem posição = a trade já foi fechada (parcial/monitor/SL) ou nunca abriu.
+    // No-op benigno, NÃO erro (elimina os falsos 'error' de gestão tardia/redundante).
+    out.actions.push(`Sem posição Premium ativa em ${symbol} — gestão ignorada (trade já fechada)`)
     return out
   }
 
