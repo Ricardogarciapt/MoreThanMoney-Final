@@ -18,6 +18,7 @@ const BROKER_ALIASES: Record<string, string[]> = {
   UK100: ['UK100', 'FTSE100', 'FTSE', 'UK100GBP'],
   JPN225: ['JPN225', 'JP225', 'NIKKEI', 'NIKKEI225'],
   USOIL: ['USOIL', 'WTI', 'CRUDE', 'XTIUSD', 'OILUSD', 'UKOIL', 'BRENT', 'XBRUSD'],
+  NATGAS: ['NATGAS', 'NATURALGAS', 'NGAS', 'XNGUSD', 'NG', 'GAS', 'NATURAL_GAS', 'NATURALGASUSD'],
 }
 
 /** Sufixos/segmentos de corretora a remover (sem separador) para chegar ao core. */

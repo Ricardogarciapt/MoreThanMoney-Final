@@ -125,7 +125,11 @@ export async function applySenseiManagement(opts: {
     pos = matches.length ? matches[matches.length - 1]! : null
   }
   if (!pos) {
-    out.errors.push(`Sem posição Sensei ativa em ${opts.symbol}`)
+    // Sem posição correspondente = a trade já foi fechada (SL/TP/parcial anterior ou pelo
+    // price-monitor) ou nunca chegou a abrir. Uma atualização de gestão sem posição é um
+    // no-op benigno, NÃO um erro — evita dezenas de falsos 'error' no log por mensagens de
+    // gestão tardias/redundantes. (Falhas reais de ENTRADA aparecem no log de entrada.)
+    out.actions.push(`Sem posição ativa em ${opts.symbol} — gestão ignorada (trade já fechada)`)
     return out
   }
 

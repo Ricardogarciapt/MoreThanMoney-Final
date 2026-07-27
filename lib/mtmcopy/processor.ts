@@ -898,6 +898,28 @@ async function executeViaMtmProvider(
   const equity = snapshot?.equity ?? snapshot?.balance ?? balance
   totalLot = scaleLotForSmallCapital(totalLot, equity)
 
+  // Guarda de sanidade de stops (todas as classes de ativo): um SL a mais de 25% do preço é
+  // lixo de parse/sinal. Em vez de abrir com um stop absurdo (risco enorme ou rejeição
+  // "invalid stops" pelo broker), saltamos a entrada. O forex já foi apertado a 20 pips acima.
+  {
+    const entryRefSane = signalForExec.entry ?? marketPrice
+    if (entryRefSane && entryRefSane > 0 && signalForExec.sl != null && signalForExec.sl > 0) {
+      const frac = Math.abs(entryRefSane - signalForExec.sl) / entryRefSane
+      if (frac > 0.25) {
+        await logProviderSignalEvent({
+          channel,
+          provider,
+          signal: signalForExec,
+          raw,
+          telegramMessageId,
+          status: 'skipped',
+          detail: `${aiDetail} · SL absurdo (${(frac * 100).toFixed(0)}% do preço) — entrada saltada por segurança · ${executionSummary}`,
+        })
+        return
+      }
+    }
+  }
+
   const lotSkip = getLotSizingSkipReason(
     lotConn,
     signalForExec,
