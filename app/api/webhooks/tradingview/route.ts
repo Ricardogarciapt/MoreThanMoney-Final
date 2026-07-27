@@ -311,8 +311,14 @@ function passesQualityGate(
   // GoldKiller é um scanner dedicado de Ouro em 5m: a própria entrada É a decisão do
   // scanner (Momentum/Supertrend são só confirmações informativas, muitas vezes 0-1).
   // Aplicar o gate genérico (>=2 confirmações + timeframe 15m+) mataria todos os sinais
-  // GoldKiller — por isso a estratégia própria passa direto.
-  if (isGoldKiller) return true
+  // GoldKiller — por isso NÃO se aplica esse. Mas reforça-se um filtro LOCAL próprio (zero lag):
+  // a GoldKiller é um scalp de 5m → rejeita sinais fora do intervalo de scalp (timeframe alto,
+  // se conhecido), que quase sempre são ruído/erro. As confirmações (0-1) continuam informativas.
+  if (isGoldKiller) {
+    const gkMin = tfToMinutes(timeframe)
+    if (gkMin !== null && gkMin > 15) return false
+    return true
+  }
   // Confirmações: se existirem, exige pelo menos 2 passadas.
   const passed = confirmationsPassed(raw)
   if (passed !== null && passed < 2) return false
@@ -321,6 +327,14 @@ function passesQualityGate(
   const pref = PREF_TF_MIN[cls]
   if (min !== null && pref.length && !pref.includes(min)) return false
   return true
+}
+
+/** Sanidade de stops (LOCAL, ~0 lag): rejeita SL absurdo (>25% do preço) — lixo de parse/sinal.
+ *  Sem SL definido não bloqueia (a gestão trata). Protege scalp/GoldKiller de entradas com stop lixo. */
+function stopsSane(refPrice: number | null | undefined, sl: number | null | undefined): boolean {
+  if (sl == null || !(sl > 0)) return true
+  if (refPrice == null || !(refPrice > 0)) return true
+  return Math.abs(refPrice - sl) / refPrice <= 0.25
 }
 
 async function sendTelegram(token: string, chatId: string, text: string, replyToMessageId?: number | null): Promise<number> {
@@ -699,7 +713,9 @@ export async function POST(request: NextRequest) {
       : await validateSignalWithAi(raw, parsed, {
           channel: "trade-ideas",
           senseiWebhook: isSensei,
-          forceFastPath: isSensei,
+          // GoldKiller é scalp 5m no XAU → SEM chamada LLM no caminho da entrada (zero lag).
+          // O filtro dela é o gate LOCAL reforçado (passesQualityGate + stopsSane), rápido.
+          forceFastPath: isSensei || isGoldKiller,
         })
 
   if (logId) {
@@ -779,6 +795,7 @@ export async function POST(request: NextRequest) {
     parsedForExec.symbol &&
     parsedForExec.direction &&
     passesQualityGate(payload, timeframe, assetClass, isGoldKiller) &&
+    stopsSane(parsedForExec.entry ?? price, parsedForExec.sl) &&
     execGate.ok &&
     !pendingHadLimit &&
     ((!isIdeaAlert && (activeSensei?.alertType === "entry_trigger" || !activeSensei)) || isLimitIdea)
