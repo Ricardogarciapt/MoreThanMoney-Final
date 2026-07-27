@@ -168,6 +168,15 @@ export async function POST(request: NextRequest) {
   let orderSl = conn.copy_sl !== false ? signal.sl : null
   let orderTp = conn.copy_tp !== false ? (signal.tp?.[0] ?? null) : null
   let adjustedStops = false
+  // 5a. Guarda de sanidade: descarta SL/TP absurdos ANTES de re-ancorar. Um sinal/parse com TP
+  //     ou SL a mais de 25% do preço é lixo (ex.: TP ≈ 2× a entrada → 8190 num XAU a 4095) e,
+  //     re-ancorado, produzia um "TP afastado" inalcançável ou uma rejeição "invalid stops".
+  //     Nesses casos deixamos o stop a null — a gestão de saídas é espelhada do mestre.
+  const SANE_STOP_FRAC = 0.25
+  const isInsaneStop = (v: number | null): boolean =>
+    v == null || !(v > 0) || !entryRef || entryRef <= 0 || Math.abs(entryRef - v) / entryRef > SANE_STOP_FRAC
+  if (isInsaneStop(orderSl)) orderSl = null
+  if (isInsaneStop(orderTp)) orderTp = null
   if (priceRef && priceRef > 0 && entryRef && entryRef > 0) {
     if (orderSl != null && orderSl > 0) {
       const d = Math.abs(entryRef - orderSl)
