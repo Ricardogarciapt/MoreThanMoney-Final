@@ -44,12 +44,13 @@ export const PREMIUM_PROVIDER_EXECUTION: ProviderExecutionProfile = {
 }
 
 /** Perfil MTM Auto — Trade Ideas (forex + trailing).
- *  Risco 0.3%/trade (reduzido de 0.5% — perdas grandes em cross voláteis, ver análise
- *  2026-07-02) e trailing stop ATIVO e mais apertado (15 pips) para proteger lucros. */
+ *  Risco 0.05%/trade (pedido do Ricardo, 2026-07-27 — antes 0.3%, original 0.5%) e
+ *  trailing stop ATIVO e mais apertado (15 pips) para proteger lucros. O processor
+ *  também força 0.05% em símbolos forex (forcedRiskPct) — manter os dois alinhados. */
 export const TRADE_IDEAS_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   ...MTM_PROVIDER_EXECUTION_PROFILE,
   lot_mode: 'risk_percent',
-  lot_value: 0.3,
+  lot_value: 0.05,
   ai_validation_enabled: true,
   ai_min_confidence: 0.35,
   auto_trailing_stop: true,

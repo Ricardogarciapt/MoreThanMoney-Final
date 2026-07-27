@@ -812,15 +812,17 @@ async function executeViaMtmProvider(
   }
 
   const mappedSymbol = applySymbolFromProfile(signal.symbol!, executionProfile)
-  // Premium (Ouro/BTC) e Forex → risco 0.5% por trade (forçado). CopyFactory replica por saldo.
+  // Risco por trade FORÇADO (sobrepõe config da conta provider; CopyFactory replica por saldo):
+  //   Premium (Ouro/BTC) e GoldKiller → 0.5% · Forex (MTM Auto Forex) → 0.05% (pedido
+  //   do Ricardo, 2026-07-27 — reduzido de 0.5%).
   const FX_CODES = new Set(['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD'])
   const clean6 = mappedSymbol.toUpperCase().replace(/[^A-Z]/g, '')
   const isForexSym = clean6.length === 6 && FX_CODES.has(clean6.slice(0, 3)) && FX_CODES.has(clean6.slice(3, 6))
-  // GoldKiller: 0.5% de risco por trade (conta própria), tal como Premium/Forex.
   const isGoldKillerProvider =
     provider.accountId === CANONICAL_GOLDKILLER_ACCOUNT_ID ||
     provider.strategyId === CANONICAL_GOLDKILLER_STRATEGY_ID
   const forceRisk05 = channel === 'premium-signals' || isForexSym || isGoldKillerProvider
+  const forcedRiskPct = isForexSym && channel !== 'premium-signals' && !isGoldKillerProvider ? 0.05 : 0.5
   const skipSymbol = shouldSkipSymbolForProfile(mappedSymbol, executionProfile)
   if (skipSymbol) {
     await logProviderSignalEvent({
@@ -898,9 +900,9 @@ async function executeViaMtmProvider(
     }
   }
 
-  // Premium/Forex → risco 0.5% por trade (sobrepõe config da conta provider).
+  // Risco forçado: Premium/GoldKiller 0.5% · Forex 0.05% (ver forcedRiskPct acima).
   const lotConn = forceRisk05
-    ? { ...providerConn, lot_mode: 'risk_percent' as const, lot_value: 0.5 }
+    ? { ...providerConn, lot_mode: 'risk_percent' as const, lot_value: forcedRiskPct }
     : providerConn
 
   const signalForLot = signalForRiskSizing(signalForExec, marketPrice)
