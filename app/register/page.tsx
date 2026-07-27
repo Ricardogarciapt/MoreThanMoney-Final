@@ -177,6 +177,49 @@ export default function RegisterPage() {
     const hasCoupon = formData.couponCode.trim().length > 0
     const isTrialFlow = mode === 'trial' && !hasCoupon
 
+    // Cupão de PARCERIA (creator/UGC, ex.: MTMCREATOR/CREATOR60): concede Premium+VIP pelo prazo
+    // do cupão SEM cartão. Cria a conta (sem pagamento) e resgata direto — NÃO vai ao Stripe.
+    const isPartnershipCoupon = hasCoupon && couponStatus?.valid === true && couponStatus?.type === 'partnership'
+    if (isPartnershipCoupon) {
+      try {
+        const reg = await fetch('/api/auth/register-trial', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            full_name: formData.full_name,
+            username: formData.username,
+            sponsorUsername: formData.sponsorUsername || undefined,
+          }),
+        })
+        if (!reg.ok) {
+          const e = await reg.json().catch(() => ({}))
+          setError(e.error || t('register.errorCheckout'))
+          setIsLoading(false)
+          return
+        }
+        const { data: si } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        })
+        const token = si.session?.access_token
+        if (token) {
+          await fetch('/api/partnership/redeem', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ code: formData.couponCode.trim().toUpperCase() }),
+          }).catch(() => {})
+        }
+        window.location.href = '/mtmcopy'
+        return
+      } catch {
+        setError(t('register.errorCheckout'))
+        setIsLoading(false)
+        return
+      }
+    }
+
     try {
       // ── FLUXO: Pagamento/registo Stripe PRIMEIRO, conta criada DEPOIS ──────────
       const regToken = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`

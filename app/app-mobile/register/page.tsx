@@ -110,6 +110,50 @@ export default function AppMobileRegisterPage() {
       const pendingCoupon = couponCode.trim().toUpperCase()
       if (pendingCoupon) {
         localStorage.setItem('mtm_pending_coupon', pendingCoupon)
+        // Cupão de PARCERIA (creator/UGC): concede Premium+VIP pelo prazo do cupão SEM cartão.
+        // Cria a conta e resgata direto — não vai ao Stripe.
+        try {
+          const vr = await fetch('/api/coupons/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: pendingCoupon }),
+          }).then((r) => r.json()).catch(() => null)
+          if (vr?.valid === true && vr?.type === 'partnership') {
+            const reg = await fetch('/api/auth/register-trial', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: formData.email,
+                password: formData.password,
+                full_name: formData.full_name,
+                username: formData.username,
+                sponsorUsername: formData.sponsorUsername || undefined,
+              }),
+            })
+            if (!reg.ok) {
+              const e = await reg.json().catch(() => ({}))
+              setError(e.error || 'Erro ao criar conta')
+              setIsLoading(false)
+              return
+            }
+            const { data: si } = await supabase.auth.signInWithPassword({
+              email: formData.email,
+              password: formData.password,
+            })
+            const token = si.session?.access_token
+            if (token) {
+              await fetch('/api/partnership/redeem', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ code: pendingCoupon }),
+              }).catch(() => {})
+            }
+            window.location.href = '/app-mobile'
+            return
+          }
+        } catch {
+          /* segue fluxo normal (Stripe) se a validação falhar */
+        }
       }
 
       localStorage.setItem(`mtm_pending_reg_${regToken}`, JSON.stringify({

@@ -80,6 +80,15 @@ export async function POST(request: NextRequest) {
           .eq('is_active', true)
           .maybeSingle()
 
+        // Cupão de PARCERIA (creator/UGC): concede acesso pelo prazo do cupão SEM cartão.
+        // NÃO deve criar checkout Stripe — o cliente resgata via /api/partnership/redeem.
+        if (couponRow?.type === 'partnership') {
+          return NextResponse.json(
+            { error: 'Cupão de parceria: concede acesso sem cartão — usa o fluxo de resgate.', code: 'PARTNERSHIP_COUPON' },
+            { status: 400 }
+          )
+        }
+
         if (couponRow?.type === 'free_subscription' || couponRow?.type === 'free_months') {
           const months = Math.max(1, couponRow.discount_value ?? 1)
           sessionParams.subscription_data = { trial_period_days: months * 30 }
