@@ -31,7 +31,8 @@ const TRANSLATE_BLOCKED_PREFIXES = [
   "/admin",
   "/dashboard",
   "/dashboard-gestao",
-  "/mtmcopy",
+  // "/mtmcopy" removido (2026-07-27): a página /mtmcopy deve ser traduzível pelo seletor de
+  // idioma. O guard anti-crash React (lib/google-translate-safe.ts) protege a mutação do DOM.
   "/member-area",
   "/scanner",
   // "/app-mobile" removido (2026-07-17): o app iOS/mobile carrega /app-mobile e o
