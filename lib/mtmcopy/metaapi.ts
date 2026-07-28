@@ -171,6 +171,13 @@ export interface MetaApiPendingOrder {
   type: string
   state?: string
   comment?: string
+  openPrice?: number
+  currentPrice?: number
+  stopLoss?: number
+  takeProfit?: number
+  /** Hora de colocação da ordem (ISO). MetaApi expõe `time`/`brokerTime`. */
+  time?: string
+  brokerTime?: string
 }
 
 export function buildTrailingOptions(
@@ -1267,5 +1274,76 @@ export async function cancelPendingOrdersForSymbol(
     if (closeConn) await closeConn()
   }
 
+  return result
+}
+
+export interface SweepResult {
+  scanned: number
+  cancelled: number
+  kept: number
+  details: Array<{ id: string; symbol: string; reason: string }>
+  errors: string[]
+}
+
+/**
+ * Limpa ordens LIMIT/STOP pendentes "mortas" numa conta (ex.: MTM Auto Forex):
+ *  - **idade** > `maxAgeMinutes` (o setup ficou obsoleto e nunca encheu), ou
+ *  - o **preço já atingiu o TP** (o movimento aconteceu sem a entrada encher → oportunidade
+ *    perdida), ou o **SL** (setup invalidado).
+ * Cancela essas; mantém as que ainda podem encher. Idempotente e seguro a correr em cron.
+ */
+export async function sweepStalePendingOrders(
+  accountId: string,
+  opts: { maxAgeMinutes: number; nowMs: number; cancelOnTpHit?: boolean; cancelOnSlHit?: boolean },
+): Promise<SweepResult> {
+  const cancelOnTp = opts.cancelOnTpHit !== false
+  const cancelOnSl = opts.cancelOnSlHit !== false
+  const result: SweepResult = { scanned: 0, cancelled: 0, kept: 0, details: [], errors: [] }
+  let closeConn: (() => Promise<void>) | undefined
+  try {
+    const { connection, close: closeFn } = await getRpcConnection(accountId)
+    closeConn = closeFn
+    if (!connection.getOrders || !connection.cancelOrder) {
+      result.errors.push('MetaAPI getOrders/cancelOrder indisponível')
+      return result
+    }
+    const orders = (await connection.getOrders()) as MetaApiPendingOrder[]
+    result.scanned = orders.length
+
+    for (const order of orders) {
+      const isBuy = /buy/i.test(order.type)
+      const isSell = /sell/i.test(order.type)
+      const px = typeof order.currentPrice === 'number' && order.currentPrice > 0 ? order.currentPrice : null
+      const tp = typeof order.takeProfit === 'number' && order.takeProfit > 0 ? order.takeProfit : null
+      const sl = typeof order.stopLoss === 'number' && order.stopLoss > 0 ? order.stopLoss : null
+      const openedMs = order.time || order.brokerTime ? Date.parse((order.time || order.brokerTime) as string) : NaN
+      const ageMin = Number.isFinite(openedMs) ? (opts.nowMs - openedMs) / 60_000 : null
+
+      let reason: string | null = null
+      if (ageMin != null && ageMin > opts.maxAgeMinutes) {
+        reason = `idade ${Math.round(ageMin)}min > ${opts.maxAgeMinutes}min`
+      } else if (cancelOnTp && px != null && tp != null && ((isBuy && px >= tp) || (isSell && px <= tp))) {
+        reason = 'preço já atingiu o TP (setup consumido)'
+      } else if (cancelOnSl && px != null && sl != null && ((isBuy && px <= sl) || (isSell && px >= sl))) {
+        reason = 'preço já atingiu o SL (setup invalidado)'
+      }
+
+      if (!reason) {
+        result.kept++
+        continue
+      }
+      try {
+        await connection.cancelOrder(order.id)
+        result.cancelled++
+        result.details.push({ id: order.id, symbol: order.symbol, reason })
+      } catch (err: unknown) {
+        result.errors.push(`${order.symbol} ${order.id}: ${err instanceof Error ? err.message : 'cancel falhou'}`)
+      }
+    }
+  } catch (err: unknown) {
+    result.errors.push(err instanceof Error ? err.message : 'Erro no sweep de pendentes')
+  } finally {
+    if (closeConn) await closeConn()
+  }
   return result
 }
