@@ -774,10 +774,12 @@ export async function POST(request: NextRequest) {
   const execConfCount = confirmationsPassed(payload)
   const execSymbolForGate = parsedForExec.symbol ?? ticker
   const execDirForGate = parsedForExec.direction ?? v.direction ?? null
-  // Sensei X: scanner dedicado com SCORE próprio (não usa confirmações zonetouch/bandtouch,
-  // nem a BUY-bias genérica). Trata-se como o GoldKiller (bypass do gate genérico + market),
-  // mas afinado pelo próprio score do scanner (filtro de qualidade nativo do Sensei).
-  const isSenseiScored = isSensei || scannerKey === "sensei"
+  // Sensei X (Ouro/BTC): scanner dedicado da conta Sensei — a entrada É a decisão do scanner
+  // (não usa confirmações zonetouch/bandtouch, nem a BUY-bias genérica). Trata-se como o
+  // GoldKiller (bypass do gate genérico + market na conta Sensei), afinado pelo score próprio
+  // quando presente. Só se aplica ao fluxo gold_btc; o Sensei forex (alta frequência, conta
+  // Trade-Ideas) mantém a whitelist/gate próprios.
+  const isSenseiScored = (isSensei || scannerKey === "sensei") && assetClass === "gold_btc"
   const senseiScoreRaw =
     payload && typeof payload === "object" && !Array.isArray(payload)
       ? (payload as Record<string, unknown>).score
