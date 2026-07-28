@@ -176,10 +176,15 @@ export async function relayPremiumMessage(
       .maybeSingle()
     if (!ins) return // já existia
 
-    const relayToken = (process.env[cfg.bot_token_env]?.trim() || getMtmcopyBotToken() || "").trim()
-    const ingestToken = getMtmcopyBotToken()
+    // Token de ENVIO = bot configurado (WifiMoney). NUNCA cair para o aibot/marca —
+    // se o token não estiver no runtime, não envia (senão vazava o nome da marca).
+    const relayToken = (process.env[cfg.bot_token_env]?.trim() || "").trim()
+    const ingestToken = getMtmcopyBotToken() // só para DESCARREGAR fotos do MTMgold
     if (!relayToken) {
-      await supabase.from("telegram_relay_log").update({ status: "error", error: "sem token de relay" }).eq("id", ins.id)
+      await supabase
+        .from("telegram_relay_log")
+        .update({ status: "error", error: `token ${cfg.bot_token_env} em falta no runtime — não envio pela marca` })
+        .eq("id", ins.id)
       return
     }
 
