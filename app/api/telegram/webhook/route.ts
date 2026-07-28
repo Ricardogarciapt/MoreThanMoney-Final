@@ -110,6 +110,11 @@ async function handleTelegramChannelMessage(
       await registerDiscoveredTelegramChat(message.chat ?? {})
     })(),
     runMtmcopy(),
+    // Relay MTMgold (Premium) → canal do parceiro (Alcy), marca escondida. Gated na config.
+    (async () => {
+      const { relayPremiumMessage } = await import("@/lib/telegram/relay")
+      await relayPremiumMessage(supabase, message)
+    })(),
   ])
 }
 
