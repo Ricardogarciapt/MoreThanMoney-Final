@@ -99,11 +99,13 @@ export function sanitizeForAlcy(input: string | null | undefined, signature: str
   return t
 }
 
-async function sendMessageVia(token: string, chatId: string, text: string) {
+async function sendMessageVia(token: string, chatId: string, text: string, replyToTarget?: number | null) {
+  const body: Record<string, unknown> = { chat_id: chatId, text, disable_web_page_preview: true }
+  if (replyToTarget) body.reply_parameters = { message_id: replyToTarget, allow_sending_without_reply: true }
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
+    body: JSON.stringify(body),
   })
   const data = (await res.json().catch(() => ({}))) as { ok?: boolean; description?: string; result?: { message_id?: number } }
   return { ok: !!data.ok, messageId: data.result?.message_id, error: data.description }
@@ -116,16 +118,19 @@ async function sendPhotoVia(
   chatId: string,
   fileId: string,
   caption: string,
+  replyToTarget?: number | null,
 ) {
   // 1) Resolver caminho do ficheiro no bot que RECEBEU (file_id é válido nesse bot).
   const fileRes = await fetch(`https://api.telegram.org/bot${ingestToken}/getFile?file_id=${fileId}`)
   const fileData = (await fileRes.json().catch(() => ({}))) as { ok?: boolean; result?: { file_path?: string } }
   if (!fileData.ok || !fileData.result?.file_path) {
     // Fallback: tenta enviar por file_id direto (só funciona se relay=ingest bot).
+    const body: Record<string, unknown> = { chat_id: chatId, photo: fileId, caption: caption || undefined }
+    if (replyToTarget) body.reply_parameters = { message_id: replyToTarget, allow_sending_without_reply: true }
     const res = await fetch(`https://api.telegram.org/bot${relayToken}/sendPhoto`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, photo: fileId, caption: caption || undefined }),
+      body: JSON.stringify(body),
     })
     const d = (await res.json().catch(() => ({}))) as { ok?: boolean; description?: string; result?: { message_id?: number } }
     return { ok: !!d.ok, messageId: d.result?.message_id, error: d.description }
@@ -136,6 +141,7 @@ async function sendPhotoVia(
   const form = new FormData()
   form.append("chat_id", chatId)
   if (caption) form.append("caption", caption)
+  if (replyToTarget) form.append("reply_parameters", JSON.stringify({ message_id: replyToTarget, allow_sending_without_reply: true }))
   form.append("photo", new Blob([buf]), "chart.jpg")
   const res = await fetch(`https://api.telegram.org/bot${relayToken}/sendPhoto`, { method: "POST", body: form })
   const d = (await res.json().catch(() => ({}))) as { ok?: boolean; description?: string; result?: { message_id?: number } }
@@ -178,6 +184,22 @@ export async function relayPremiumMessage(
 
     // Token de ENVIO = bot configurado (WifiMoney). NUNCA cair para o aibot/marca —
     // se o token não estiver no runtime, não envia (senão vazava o nome da marca).
+    // Encadeamento de respostas: se a mensagem do MTMgold é reply a outra, publica a versão
+    // no destino como reply à versão correspondente (mesma cadeia sinal→follow-ups, igual ao Premium).
+    let replyToTarget: number | null = null
+    const replyToSource = Number(message?.reply_to_message?.message_id)
+    if (replyToSource) {
+      const { data: parent } = await supabase
+        .from("telegram_relay_log")
+        .select("target_message_id")
+        .eq("source_chat_id", cfg.source_chat_id)
+        .eq("source_message_id", replyToSource)
+        .eq("target_chat_id", cfg.target_chat_id)
+        .eq("status", "sent")
+        .maybeSingle()
+      replyToTarget = parent?.target_message_id ?? null
+    }
+
     const relayToken = (process.env[cfg.bot_token_env]?.trim() || "").trim()
     const ingestToken = getMtmcopyBotToken() // só para DESCARREGAR fotos do MTMgold
     if (!relayToken) {
@@ -192,9 +214,9 @@ export async function relayPremiumMessage(
 
     let result: { ok: boolean; messageId?: number; error?: string }
     if (photo && cfg.relay_photos) {
-      result = await sendPhotoVia(relayToken, ingestToken, cfg.target_chat_id, photo.file_id, cleanCaption)
+      result = await sendPhotoVia(relayToken, ingestToken, cfg.target_chat_id, photo.file_id, cleanCaption, replyToTarget)
     } else if (text) {
-      result = await sendMessageVia(relayToken, cfg.target_chat_id, cleanCaption)
+      result = await sendMessageVia(relayToken, cfg.target_chat_id, cleanCaption, replyToTarget)
     } else {
       // foto com relay_photos=false → nada a enviar
       await supabase.from("telegram_relay_log").update({ status: "skipped", error: "foto desativada" }).eq("id", ins.id)
