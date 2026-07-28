@@ -79,6 +79,17 @@ export default function ScannerAccessPage() {
   const [showScreener, setShowScreener] = useState(false)
   const [showAlerts, setShowAlerts] = useState(false)
 
+  // Clique num alerta → encaminha o chart do scanner para o símbolo/timeframe/scanner do sinal
+  const [scannerSymbol, setScannerSymbol] = useState<string | undefined>()
+  const [scannerInterval, setScannerInterval] = useState<string | undefined>()
+  const [scannerStudies, setScannerStudies] = useState<("Goldkiller" | "MTMScanner" | "Sensei")[] | undefined>()
+  const handleSelectAlert = ({ tvSymbol, interval, scannerKey }: { tvSymbol: string; interval: string; scannerKey: "Goldkiller" | "MTMScanner" | "Sensei" }) => {
+    setScannerSymbol(tvSymbol)
+    setScannerInterval(interval)
+    setScannerStudies([scannerKey])
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
   // Trading Plan Form State
   const [tradingPlan, setTradingPlan] = useState({
     plan_name: 'Meu Plano de Trading',
@@ -497,7 +508,13 @@ export default function ScannerAccessPage() {
   if (isMobile) {
     return (
       <ProtectedPage redirectPath="/login?redirect=/scanner-access" loadingMessage="A verificar acesso ao scanner...">
-        <ScannerMobile integration="scanner-access" showScreener={showScreener} />
+        <ScannerMobile
+          integration="scanner-access"
+          showScreener={showScreener}
+          externalSymbol={scannerSymbol}
+          externalInterval={scannerInterval}
+          externalStudies={scannerStudies}
+        />
       </ProtectedPage>
     )
   }
@@ -573,6 +590,9 @@ export default function ScannerAccessPage() {
               integration="scanner-access"
               showScreener={showScreener}
               widgetRef={tradingViewWidgetRef as RefObject<TradingViewWidgetRef>}
+              externalSymbol={scannerSymbol}
+              externalInterval={scannerInterval}
+              externalStudies={scannerStudies}
             />
           </div>
         </div>
@@ -581,7 +601,7 @@ export default function ScannerAccessPage() {
         {showAlerts && (
           <div className="w-full px-2 md:px-4 mb-8 md:mb-12">
             <div className="max-w-[98%] mx-auto bg-gradient-to-br from-[#BB8525]/10 to-black rounded-lg border border-[#D2A63C]/30 p-3 md:p-6 backdrop-blur-sm">
-              <AlertasMtm />
+              <AlertasMtm onSelectAlert={handleSelectAlert} />
             </div>
           </div>
         )}

@@ -73,13 +73,17 @@ const TRADE_STATE_META: Record<string, { label: string; cls: string }> = {
   exit_3: { label: "Exit 3", cls: "border-green-500/40 bg-green-500/10 text-green-300" },
   exit_4: { label: "Exit 4", cls: "border-green-600/50 bg-green-600/15 text-green-300" },
   loss: { label: "Loss", cls: "border-red-500/40 bg-red-500/15 text-red-400" },
+  discarded: { label: "Descartado", cls: "border-slate-500/40 bg-slate-500/10 text-slate-300" },
+  expired: { label: "Expirado", cls: "border-slate-500/40 bg-slate-500/10 text-slate-400" },
   closed: { label: "Fechada", cls: "border-gray-500/40 bg-gray-500/10 text-gray-300" },
 }
 
 /** Categoria de desempenho para filtro e estatísticas dos alertas. */
-type StateCat = "pending" | "active" | "win" | "loss"
+type StateCat = "pending" | "active" | "win" | "loss" | "discarded"
 function stateCategory(tradeStatus: string | null): StateCat {
   if (tradeStatus === "pending") return "pending"
+  // SL antes de ativar (discarded) ou expirado sem ativar → não é loss real
+  if (tradeStatus === "discarded" || tradeStatus === "expired") return "discarded"
   if (tradeStatus === "loss") return "loss"
   if (tradeStatus && (tradeStatus.startsWith("exit_") || tradeStatus === "closed")) return "win"
   return "active"
@@ -137,6 +141,15 @@ function studiesForStrategy(strategy: string | null): string[] {
   if (norm.includes("goldkiller") || (norm.includes("gold") && norm.includes("kill"))) return STRATEGY_STUDIES.Goldkiller
   if (norm.includes("scanner") || norm.includes("mtmscanner")) return STRATEGY_STUDIES.MTMScanner
   return DEFAULT_STUDIES
+}
+
+/** Estratégia do alerta → chave de scanner do ScannerMobile (para abrir no gráfico). */
+export function strategyToScannerKey(strategy: string | null): "Goldkiller" | "MTMScanner" | "Sensei" {
+  if (!strategy) return "MTMScanner"
+  const norm = strategy.toLowerCase().replace(/[^a-z0-9]/g, "")
+  if (norm.includes("sensei")) return "Sensei"
+  if (norm.includes("goldkiller") || (norm.includes("gold") && norm.includes("kill"))) return "Goldkiller"
+  return "MTMScanner"
 }
 
 type AssetClass = "gold_btc" | "forex" | "index" | "crypto_perp" | "other"
@@ -294,10 +307,12 @@ function AlertCard({
   alert,
   following,
   onToggleFollow,
+  onSelectAlert,
 }: {
   alert: MtmAlert
   following: boolean
   onToggleFollow: (id: string, follow: boolean) => void
+  onSelectAlert?: (p: { tvSymbol: string; interval: string; scannerKey: "Goldkiller" | "MTMScanner" | "Sensei" }) => void
 }) {
   const [showChart, setShowChart] = useState(false)
   const [showAnalysis, setShowAnalysis] = useState(false)
@@ -474,6 +489,22 @@ function AlertCard({
 
         {/* Ações */}
         <div className="mt-3 flex flex-wrap gap-2">
+          {alert.tvSymbol && onSelectAlert && (
+            <Button
+              size="sm"
+              onClick={() =>
+                onSelectAlert({
+                  tvSymbol: alert.tvSymbol!,
+                  interval: alert.timeframe && /^\d+$/.test(alert.timeframe) ? alert.timeframe : "60",
+                  scannerKey: strategyToScannerKey(alert.strategy),
+                })
+              }
+              className="bg-[#D2A63C] text-black hover:bg-[#BB8525]"
+            >
+              <LineChart className="mr-1 h-3 w-3" />
+              Abrir no gráfico
+            </Button>
+          )}
           {alert.tvSymbol && (
             <Button
               size="sm"
@@ -551,7 +582,11 @@ function AlertCard({
   )
 }
 
-export default function AlertasMtm() {
+export default function AlertasMtm({
+  onSelectAlert,
+}: {
+  onSelectAlert?: (p: { tvSymbol: string; interval: string; scannerKey: "Goldkiller" | "MTMScanner" | "Sensei" }) => void
+} = {}) {
   const [alerts, setAlerts] = useState<MtmAlert[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -655,7 +690,7 @@ export default function AlertasMtm() {
       acc[stateCategory(a.tradeStatus)]++
       return acc
     },
-    { pending: 0, active: 0, win: 0, loss: 0 } as Record<StateCat, number>
+    { pending: 0, active: 0, win: 0, loss: 0, discarded: 0 } as Record<StateCat, number>
   )
   const closed = perf.win + perf.loss
   const winRate = closed > 0 ? Math.round((perf.win / closed) * 100) : null
@@ -666,6 +701,7 @@ export default function AlertasMtm() {
     { key: "active", label: "Ativas", count: perf.active, cls: "border-blue-500 bg-blue-500/15 text-blue-300" },
     { key: "win", label: "Wins", count: perf.win, cls: "border-green-500 bg-green-500/15 text-green-300" },
     { key: "loss", label: "Loss", count: perf.loss, cls: "border-red-500 bg-red-500/15 text-red-300" },
+    { key: "discarded", label: "Descartados", count: perf.discarded, cls: "border-slate-500 bg-slate-500/15 text-slate-300" },
   ]
 
   return (
@@ -821,6 +857,7 @@ export default function AlertasMtm() {
               alert={a}
               following={followed.has(a.id)}
               onToggleFollow={toggleFollow}
+              onSelectAlert={onSelectAlert}
             />
           ))}
         </div>

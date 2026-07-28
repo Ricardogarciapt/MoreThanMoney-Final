@@ -220,12 +220,19 @@ export type ScannerMobileProps = {
   integration?: ScannerMobileIntegration
   showScreener?: boolean
   widgetRef?: RefObject<TradingViewWidgetRef | null>
+  /** Controlo externo (ex.: clique num alerta → símbolo/timeframe/scanner do sinal). */
+  externalSymbol?: string
+  externalInterval?: string
+  externalStudies?: ScannerKey[]
 }
 
 export default function ScannerMobile({
   integration = "standalone",
   showScreener = true,
   widgetRef: externalWidgetRef,
+  externalSymbol,
+  externalInterval,
+  externalStudies,
 }: ScannerMobileProps = {}) {
   const t = useT()
   const isScannerAccess = integration === "scanner-access"
@@ -244,9 +251,10 @@ export default function ScannerMobile({
   const [widgetLoaded, setWidgetLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [selectedSymbol, setSelectedSymbol] = useState("OANDA:XAUUSD")
-  const [selectedInterval, setSelectedInterval] = useState("15")
+  const [selectedSymbol, setSelectedSymbol] = useState(externalSymbol || "OANDA:XAUUSD")
+  const [selectedInterval, setSelectedInterval] = useState(externalInterval || "15")
   const [selectedStudies, setSelectedStudies] = useState<ScannerKey[]>(() => {
+    if (externalStudies?.length) return externalStudies
     if (typeof window === 'undefined') return ["AurumFlow"]
     try {
       const saved = localStorage.getItem("mtm_mobile_active_scanners")
@@ -255,6 +263,11 @@ export default function ScannerMobile({
       return ["AurumFlow"]
     }
   })
+
+  // Controlo externo (ex.: clique num alerta → símbolo/timeframe/scanner do sinal)
+  useEffect(() => { if (externalSymbol) setSelectedSymbol(externalSymbol) }, [externalSymbol])
+  useEffect(() => { if (externalInterval) setSelectedInterval(externalInterval) }, [externalInterval])
+  useEffect(() => { if (externalStudies?.length) setSelectedStudies(externalStudies) }, [externalStudies])
   
   // Checklist Trading
   const [checklistSections, setChecklistSections] = useState<ChecklistSection[]>([

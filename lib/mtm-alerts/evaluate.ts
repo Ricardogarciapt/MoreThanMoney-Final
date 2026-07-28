@@ -56,7 +56,7 @@ export async function resolveCurrentPrice(ticker: string | null): Promise<number
   return q.price
 }
 
-type Status = "pending" | "active" | "be" | "exit_1" | "exit_2" | "exit_3" | "exit_4" | "loss" | "closed"
+type Status = "pending" | "active" | "be" | "exit_1" | "exit_2" | "exit_3" | "exit_4" | "loss" | "discarded" | "closed"
 const RANK: Record<string, number> = { pending: 0, active: 1, be: 1, exit_1: 2, exit_2: 3, exit_3: 4, exit_4: 5, closed: 6 }
 const isWin = (s: string | null) => Boolean(s && (s.startsWith("exit_") || s === "closed"))
 
@@ -113,23 +113,28 @@ export async function evaluateOpenAlerts(limit = 200): Promise<{ scanned: number
 
     const cur = r.trade_status as string | null
     // Nunca reverter um win para loss; só progride o rank.
+    let finalCand: Status = cand
     if (cand === "loss") {
       if (isWin(cur)) continue
+      // SL atingido mas o sinal NUNCA foi ativado (ainda pending/sem estado) → DESCARTADO,
+      // não é um loss real (a trade não chegou a abrir).
+      const activated = cur === "active" || cur === "be" || String(cur ?? "").startsWith("exit_")
+      if (!activated) finalCand = "discarded"
     } else if ((RANK[cand] ?? 1) <= (RANK[cur ?? "active"] ?? 1)) {
       continue
     }
-    if (cand === cur) continue
+    if (finalCand === cur) continue
 
-    const { error } = await admin.from("tradingview_signals").update({ trade_status: cand }).eq("id", r.id)
+    const { error } = await admin.from("tradingview_signals").update({ trade_status: finalCand }).eq("id", r.id)
     if (!error) {
       updated++
-      // Notifica seguidores + quem aceitou no T2T quando bate SL ou um TP
-      if (cand === "loss" || cand.startsWith("exit_")) {
+      // Notifica seguidores + T2T só em LOSS real (ativado) ou TP — nunca em descartado.
+      if (finalCand === "loss" || finalCand.startsWith("exit_")) {
         await notifySignalOutcome({
           entryId: r.id,
           chatMessageId: (r as { chat_message_id?: string | null }).chat_message_id ?? null,
           ticker: r.ticker,
-          status: cand,
+          status: finalCand,
         })
       }
     }
