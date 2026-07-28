@@ -347,8 +347,26 @@ function AlertCard({
     }
   }
 
+  const cardClickable = Boolean(onSelectAlert && alert.tvSymbol)
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardClickable) return
+    // Não intercepta cliques em controlos (botões, links, inputs)
+    if ((e.target as HTMLElement).closest('button, a, input, textarea, select, [role="button"]')) return
+    onSelectAlert!({
+      tvSymbol: alert.tvSymbol!,
+      interval: alert.timeframe && /^\d+$/.test(alert.timeframe) ? alert.timeframe : "60",
+      scannerKey: strategyToScannerKey(alert.strategy),
+    })
+  }
+
   return (
-    <Card className="border-[#D2A63C]/20 bg-gradient-to-br from-[#141414] to-black">
+    <Card
+      onClick={handleCardClick}
+      title={cardClickable ? "Abrir no gráfico do scanner" : undefined}
+      className={`border-[#D2A63C]/20 bg-gradient-to-br from-[#141414] to-black ${
+        cardClickable ? "cursor-pointer transition-colors hover:border-[#D2A63C]/60" : ""
+      }`}
+    >
       <CardContent className="p-4">
         {/* Strategy badge */}
         {alert.strategy && (
