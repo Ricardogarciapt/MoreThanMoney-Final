@@ -1176,6 +1176,24 @@ async function executeViaMtmProvider(
         req.orderType = 'market'
         req.openPrice = null
       }
+      // Trade-Ideas (forex): LIMIT no lado errado do mercado → a MetaAPI rejeita "Invalid price"
+      // (buy-limit tem de estar ABAIXO do mercado; sell-limit ACIMA). Quando o preço já cruzou a
+      // entrada, o LIMIT fica inválido MAS o mercado já está igual ou MELHOR que a entrada
+      // pretendida → abre-se a MERCADO (fill igual-ou-melhor) em vez de perder o sinal com erro.
+      if (
+        req.orderType === 'limit' &&
+        req.openPrice != null &&
+        marketPrice != null &&
+        marketPrice > 0
+      ) {
+        const wrongSide =
+          (req.direction === 'buy' && req.openPrice >= marketPrice) ||
+          (req.direction === 'sell' && req.openPrice <= marketPrice)
+        if (wrongSide) {
+          req.orderType = 'market'
+          req.openPrice = null
+        }
+      }
       const [r] = await withOrderTimeout(
         placeOrdersSequential(provider.accountId, [req]),
         20_000,
