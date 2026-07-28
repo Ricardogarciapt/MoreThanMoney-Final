@@ -11,14 +11,46 @@ const BROKER_ALIASES: Record<string, string[]> = {
   XAGUSD: ['XAGUSD', 'SILVER', 'SILVERUSD'],
   BTCUSD: ['BTCUSD', 'BTCUSDT', 'BITCOIN'],
   ETHUSD: ['ETHUSD', 'ETHUSDT', 'ETHEREUM'],
-  NAS100: ['NAS100', 'US100', 'USTEC', 'USTECH', 'NASDAQ', 'NDX', 'USNAS100'],
-  SPX500: ['SPX500', 'US500', 'SP500', 'SPX', 'USSPX500'],
-  US30: ['US30', 'DJ30', 'DOW30', 'USA30', 'WS30', 'DJI', 'US30CASH'],
-  GER40: ['GER40', 'DE40', 'DAX40', 'DAX', 'GER30', 'DE30'],
-  UK100: ['UK100', 'FTSE100', 'FTSE', 'UK100GBP'],
-  JPN225: ['JPN225', 'JP225', 'NIKKEI', 'NIKKEI225'],
-  USOIL: ['USOIL', 'WTI', 'CRUDE', 'XTIUSD', 'OILUSD', 'UKOIL', 'BRENT', 'XBRUSD'],
-  NATGAS: ['NATGAS', 'NATURALGAS', 'NGAS', 'XNGUSD', 'NG', 'GAS', 'NATURAL_GAS', 'NATURALGASUSD'],
+  NAS100: ['NAS100', 'US100', 'USTEC', 'USTECH', 'NASDAQ', 'NDX', 'USNAS100', 'NAS100USD'],
+  SPX500: ['SPX500', 'US500', 'SP500', 'SPX', 'USSPX500', 'SPX500USD'],
+  US30: ['US30', 'DJ30', 'DOW30', 'USA30', 'WS30', 'DJI', 'US30CASH', 'US30USD', 'DOWUSD'],
+  GER40: ['GER40', 'DE40', 'DAX40', 'DAX', 'GER30', 'DE30', 'GER40CASH', 'DE40CASH'],
+  UK100: ['UK100', 'FTSE100', 'FTSE', 'UK100GBP', 'UK100CASH'],
+  JPN225: ['JPN225', 'JP225', 'NIKKEI', 'NIKKEI225', 'N225'],
+  // Petróleo WTI — tickers reais de corretora (VT usa USOUSD; outras WTI/XTI/USOIL).
+  USOIL: ['USOIL', 'WTI', 'WTIUSD', 'CRUDE', 'CRUDEOIL', 'XTIUSD', 'OILUSD', 'USOUSD', 'USOILSPOT'],
+  // Petróleo Brent (instrumento distinto — só se o sinal pedir Brent).
+  UKOIL: ['UKOIL', 'BRENT', 'BRENTUSD', 'XBRUSD', 'UKOUSD', 'BRENTOIL'],
+  // Gás natural.
+  NATGAS: ['NATGAS', 'NATURALGAS', 'NGAS', 'XNGUSD', 'XNG', 'NGUSD', 'GASUSD', 'NATURAL_GAS', 'NATURALGASUSD'],
+}
+
+/**
+ * Tokens DISTINTIVOS por família p/ match por substring (contains) quando o core exato
+ * falha — apanha tickers de corretora com grafias diferentes (VT: petróleo=USOUSD, etc.).
+ * REGRA: só tokens que NÃO são prefixo de outro símbolo válido (evita US30↔US3000). Por
+ * isso NÃO se usam aqui os canónicos de índice (US30/UK100/GER40/NAS100/SPX500); só as
+ * grafias inequívocas (DAX, FTSE, DOW, NIKKEI, NASDAQ, WTI, XTI, NGAS, …). >=3 chars.
+ */
+const FAMILY_TOKENS: Record<string, string[]> = {
+  USOIL: ['USOIL', 'USOUSD', 'WTIUSD', 'XTIUSD', 'CRUDE', 'OILUSD', 'WTI', 'XTI'],
+  UKOIL: ['UKOIL', 'UKOUSD', 'BRENT', 'XBRUSD'],
+  NATGAS: ['NATGAS', 'NATURALGAS', 'NGAS', 'XNGUSD', 'XNG', 'GASUSD'],
+  US30: ['DJ30', 'DOW', 'WS30', 'DJI', 'USA30'],
+  GER40: ['DAX'],
+  UK100: ['FTSE'],
+  NAS100: ['USTEC', 'NASDAQ', 'NDX'],
+  SPX500: ['SP500', 'SPX500'],
+  JPN225: ['NIKKEI', 'N225'],
+}
+
+/** Tokens distintivos da família a que o canónico pertence (para match por substring). */
+function familyTokensFor(canonical: string): string[] {
+  const up = (canonical || '').toUpperCase().trim()
+  for (const [key, list] of Object.entries(BROKER_ALIASES)) {
+    if (key === up || list.includes(up)) return FAMILY_TOKENS[key] ?? []
+  }
+  return FAMILY_TOKENS[up] ?? []
 }
 
 /** Sufixos/segmentos de corretora a remover (sem separador) para chegar ao core. */
@@ -93,28 +125,39 @@ export function rankedBrokerSymbols(canonical: string, availableSymbols: string[
   }
 
   const wanted = canonicalCores(up)
+  const tokens = familyTokensFor(up) // grafias distintivas (fallback contains p/ commodities/índices)
   const wantedCompact = up.replace(/[^A-Z0-9]/g, '').length
   const exactUp = up
 
-  const ranked: Array<{ sym: string; exact: boolean; suffix: number; score: number }> = []
+  const ranked: Array<{ sym: string; exact: boolean; fuzzy: boolean; suffix: number; score: number }> = []
   for (const s of availableSymbols) {
     const su = s.toUpperCase().trim()
     const exact = su === exactUp
     let matched = exact
+    let fuzzy = false
     if (!matched) {
       for (const c of coresOf(s)) {
         if (c.length >= 3 && wanted.has(c)) { matched = true; break }
       }
     }
+    // Fallback SÓ p/ famílias (commodities/índices): o core exato falhou mas o símbolo da
+    // corretora contém uma grafia distintiva da família (ex.: USOUSD contém 'USOUSD'/'WTI').
+    if (!matched && tokens.length) {
+      const compact = su.replace(/[^A-Z0-9]/g, '')
+      if (tokens.some((t) => t.length >= 3 && compact.includes(t))) { matched = true; fuzzy = true }
+    }
     if (!matched) continue
     // Normaliza maiúsculas ANTES de compactar — senão sufixos minúsculos (".crp") são
     // removidos pelo [^A-Z0-9] e o símbolo parece um match perfeito.
     const compactLen = s.toUpperCase().replace(/[^A-Z0-9]/g, '').length
-    ranked.push({ sym: s, exact, suffix: suffixScore(s), score: Math.abs(compactLen - wantedCompact) })
+    ranked.push({ sym: s, exact, fuzzy, suffix: suffixScore(s), score: Math.abs(compactLen - wantedCompact) })
   }
-  // exato 1º; depois sufixo nativo (freq desc); depois grafia mais próxima (score asc).
+  // exato 1º; core-match antes de fuzzy; depois sufixo nativo (freq desc); grafia mais próxima.
   ranked.sort((a, b) =>
-    (a.exact === b.exact ? 0 : a.exact ? -1 : 1) || (b.suffix - a.suffix) || (a.score - b.score),
+    (a.exact === b.exact ? 0 : a.exact ? -1 : 1) ||
+    (a.fuzzy === b.fuzzy ? 0 : a.fuzzy ? 1 : -1) ||
+    (b.suffix - a.suffix) ||
+    (a.score - b.score),
   )
   return ranked.map((r) => r.sym)
 }
