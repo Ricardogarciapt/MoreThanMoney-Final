@@ -42,8 +42,10 @@ const RELAY_ENABLED = !RELAY_DISABLED && Boolean(RELAY_CHAT_ID && AIBOT_TOKEN)
 
 // Auto-execução de trades reais a partir do Sensei (alto risco): OFF por defeito.
 // Notificações/chat/Telegram funcionam sempre; só a abertura de posições é gated.
+// Aceita ambos os nomes de env (SENSEI_PROVIDER_EXEC_ENABLED histórico + PROVIDER_EXEC_ENABLED)
+// para evitar o mismatch que mantinha Sensei/GoldKiller/Forex sem abrir.
 const SENSEI_PROVIDER_EXEC_ENABLED =
-  (process.env.SENSEI_PROVIDER_EXEC_ENABLED || "false").toLowerCase() === "true"
+  (process.env.SENSEI_PROVIDER_EXEC_ENABLED || process.env.PROVIDER_EXEC_ENABLED || "false").toLowerCase() === "true"
 
 type Json = Record<string, unknown>
 
