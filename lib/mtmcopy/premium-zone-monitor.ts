@@ -37,6 +37,43 @@ type PendingRow = {
   expires_at: string
 }
 
+/**
+ * Descarta entradas de zona PENDENTES quando chega um "close"/exit do Telegram para esse
+ * símbolo. Se a trade nunca abriu (estava fora da zona à espera de reação) e o sinal já
+ * mandou fechar, não faz sentido continuar a aguardar a ativação — cancela o pendente.
+ * Idempotente (só atua em status='pending'). Sem symbolHint → cancela todos os pendentes.
+ */
+export async function cancelPremiumPendingOnClose(
+  symbolHint: string | null,
+  reason = "close recebido antes de entrar",
+): Promise<number> {
+  const admin = getSupabaseAdmin()
+  const { data } = await admin
+    .from("mtmcopy_premium_pending")
+    .select("id, symbol")
+    .eq("status", "pending")
+  const rows = (data ?? []) as { id: string; symbol: string }[]
+  if (!rows.length) return 0
+
+  const norm = (s: string) => (s || "").toUpperCase().replace(/[^A-Z]/g, "")
+  const target = norm(symbolHint || "")
+  const ids = rows
+    .filter((r) => {
+      if (!target) return true
+      const s = norm(r.symbol)
+      return s === target || s.startsWith(target) || target.startsWith(s)
+    })
+    .map((r) => r.id)
+  if (!ids.length) return 0
+
+  await admin
+    .from("mtmcopy_premium_pending")
+    .update({ status: "cancelled", note: reason })
+    .in("id", ids)
+    .eq("status", "pending")
+  return ids.length
+}
+
 /** Dispara a entrada de um pendente (partilhado entre poller server-side e webhook TradingView). */
 export async function firePendingEntry(
   row: PendingRow,

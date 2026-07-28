@@ -505,6 +505,32 @@ async function processManagementUpdate(
     { updated: number; closed: number; cancelled: number; errors: string[] }
   >()
 
+  // Regra: se chega um CLOSE/EXIT do Premium e ainda existe uma entrada de zona PENDENTE
+  // (nunca abriu por estar fora da zona), descarta-a — não esperar pela ativação. Corre UMA
+  // vez por mensagem, antes do loop por conta (idempotente: só atua em status='pending').
+  if (channel === 'premium-signals') {
+    const closeKind = classifyPremiumMessage(raw)?.kind
+    const isClose =
+      closeKind === 'hit_all' ||
+      closeKind === 'hit_tp1' ||
+      closeKind === 'hit_tp2' ||
+      closeKind === 'hit_tp3' ||
+      closeKind === 'sl_hit' ||
+      closeKind === 'trade_active_close_all' ||
+      closeKind === 'trade_active_close_half'
+    if (isClose) {
+      try {
+        const { cancelPremiumPendingOnClose } = await import('./premium-zone-monitor')
+        const n = await cancelPremiumPendingOnClose(management.symbol ?? null, `close "${closeKind}" antes de entrar`)
+        if (n > 0) {
+          console.log(`[mtmcopy] Premium: ${n} entrada(s) de zona pendente(s) descartada(s) — ${closeKind}`)
+        }
+      } catch (e) {
+        console.warn('[mtmcopy] cancelar pendente de zona falhou:', e)
+      }
+    }
+  }
+
   for (const accountId of accountIds) {
     const providerMatch = mtmProviders.find((p) => p.accountId === accountId)
     const related = subscribers.filter(

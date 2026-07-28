@@ -50,6 +50,15 @@ export const PREMIUM_INTELIGENT_RISK_MAX_PIPS = 55
 /** SL inicial ~100 pips — trailing standard do runner. */
 export const PREMIUM_STANDARD_RISK_PIPS = 85
 
+/**
+ * Zona LARGA — entrada com SL ~100 pips (entrada na zona mais larga). Nestes casos
+ * arranca-se o trailing MAIS CEDO, ainda antes do Exit 1, para proteger lucro se o
+ * preço correr e reverter sem tocar o TP1. Tolerância p/ baixo (≥90 conta como larga).
+ */
+export const PREMIUM_WIDE_ZONE_SL_PIPS = 100
+/** Zona larga: lucro (pips) a partir do qual arranca o trailing (antes do Exit 1). */
+export const PREMIUM_WIDE_ZONE_TRAIL_ACTIVATION_PIPS = 40.5
+
 export function premiumTrailingForTradeActive(): TrailingDistance {
   return premiumTrailingWithActivation()
 }

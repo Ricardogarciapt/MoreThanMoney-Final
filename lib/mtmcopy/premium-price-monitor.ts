@@ -13,7 +13,11 @@ import {
   modifyPositionSlTp,
   type MetaApiPosition,
 } from './metaapi'
-import { premiumTrailingAfterTp1Hit } from './premium-trade-active'
+import {
+  premiumTrailingAfterTp1Hit,
+  PREMIUM_WIDE_ZONE_SL_PIPS,
+  PREMIUM_WIDE_ZONE_TRAIL_ACTIVATION_PIPS,
+} from './premium-trade-active'
 
 interface ActiveRow {
   id: string
@@ -32,6 +36,12 @@ interface ActiveRow {
   small_account: boolean
   exits_done: number
   trailing_started: boolean
+  early_trail_started: boolean
+}
+
+/** Tamanho de pip por símbolo (ouro 0.1, JPY 0.01, resto 0.0001). */
+function pipSizeFor(symbol: string): number {
+  return /xau|gold/i.test(symbol) ? 0.1 : /jpy/i.test(symbol) ? 0.01 : 0.0001
 }
 
 function roundLot(n: number): number {
@@ -99,6 +109,42 @@ export async function runPremiumPriceMonitor(): Promise<{
 
       const price = pos.currentPrice
       if (price == null || !Number.isFinite(price)) continue
+
+      // ── Regra ZONA LARGA (SL ~100 pips): arranca trailing a +40.5 pips, ANTES do Exit 1 ──
+      // Se a entrada veio da zona mais larga (SL grande) e a trade já tem +40.5 pips de lucro,
+      // arma o trailing para proteger o lucro caso o preço reverta sem tocar o TP1. O BE
+      // continua a ser colocado no Exit 1 (regras existentes, abaixo).
+      if (
+        row.exits_done === 0 &&
+        !row.trailing_started &&
+        !row.early_trail_started &&
+        row.entry && row.entry > 0 &&
+        row.sl && row.sl > 0
+      ) {
+        const pipSize = pipSizeFor(row.symbol)
+        const riskPips = Math.max(1, Math.round(Math.abs(row.entry - row.sl) / pipSize))
+        const isWideZone = riskPips >= PREMIUM_WIDE_ZONE_SL_PIPS - 10 // tolerância: ≥90 conta como ~100
+        if (isWideZone) {
+          const profitPips = (row.direction === 'buy' ? price - row.entry : row.entry - price) / pipSize
+          if (profitPips >= PREMIUM_WIDE_ZONE_TRAIL_ACTIVATION_PIPS) {
+            try {
+              const trailing = premiumTrailingAfterTp1Hit(riskPips)
+              // Mantém o SL original como piso e arma o trailing (aperta à medida que corre).
+              await modifyPositionSlTp(accountId, pos.id, row.sl, undefined, trailing, row.symbol)
+              await admin
+                .from('mtmcopy_premium_active')
+                .update({ early_trail_started: true, updated_at: new Date().toISOString() })
+                .eq('id', row.id)
+              actions++
+              detail.push(
+                `${row.symbol}: zona larga (${riskPips}p SL) → trailing a +${PREMIUM_WIDE_ZONE_TRAIL_ACTIVATION_PIPS}p (pré-Exit 1)`,
+              )
+            } catch {
+              detail.push(`${row.symbol}: trailing zona larga falhou`)
+            }
+          }
+        }
+      }
 
       const nextLevel = row.exits_done + 1
       if (nextLevel > 3) continue
