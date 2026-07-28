@@ -1165,10 +1165,14 @@ async function executeViaMtmProvider(
           req.trailingStop = tradeIdeasDynamicTrailing(riskPips, targetPips)
         }
       }
-      // GoldKiller: scalp 5m em XAU → abre SEMPRE a MERCADO. A ordem LIMIT no preço exato
-      // pendurava (não enchia) e a função Vercel morria em timeout SEM abrir a trade nem
-      // logar — por isso os sinais chegavam mas nada abria na conta. Mercado enche na hora.
-      if (provider.accountId === CANONICAL_GOLDKILLER_ACCOUNT_ID) {
+      // GoldKiller + Sensei: scanners scored (a entrada É a decisão do scanner) → abrem SEMPRE
+      // a MERCADO. A ordem LIMIT no preço exato pendurava (não enchia) e a função Vercel morria
+      // em timeout SEM abrir a trade nem logar — por isso os sinais chegavam mas nada abria na
+      // conta. Mercado enche na hora. (Sensei abre só com SL; TP/parciais geridos pelos alertas.)
+      if (
+        provider.accountId === CANONICAL_GOLDKILLER_ACCOUNT_ID ||
+        provider.accountId === CANONICAL_SENSEI_ACCOUNT_ID
+      ) {
         req.orderType = 'market'
         req.openPrice = null
       }

@@ -309,7 +309,12 @@ function passesQualityGate(
   timeframe: string | null,
   cls: AssetClass,
   isGoldKiller = false,
+  isSensei = false,
 ): boolean {
+  // Sensei X: scanner com SCORE próprio (não usa as confirmações zonetouch/bandtouch).
+  // O gate genérico mataria todos os sinais → confia-se no scanner; o filtro de qualidade
+  // é o score (aplicado no canExecuteProvider). Aqui só passa.
+  if (isSensei) return true
   // GoldKiller é um scanner dedicado de Ouro em 5m: a própria entrada É a decisão do
   // scanner (Momentum/Supertrend são só confirmações informativas, muitas vezes 0-1).
   // Aplicar o gate genérico (>=2 confirmações + timeframe 15m+) mataria todos os sinais
@@ -769,9 +774,27 @@ export async function POST(request: NextRequest) {
   const execConfCount = confirmationsPassed(payload)
   const execSymbolForGate = parsedForExec.symbol ?? ticker
   const execDirForGate = parsedForExec.direction ?? v.direction ?? null
-  const execGate = isGoldKiller
-    ? { ok: true as const }
-    : passesExecGate(signalRules, execSymbolForGate, execDirForGate, execConfCount, scannerKey, assetClass)
+  // Sensei X: scanner dedicado com SCORE próprio (não usa confirmações zonetouch/bandtouch,
+  // nem a BUY-bias genérica). Trata-se como o GoldKiller (bypass do gate genérico + market),
+  // mas afinado pelo próprio score do scanner (filtro de qualidade nativo do Sensei).
+  const isSenseiScored = isSensei || scannerKey === "sensei"
+  const senseiScoreRaw =
+    payload && typeof payload === "object" && !Array.isArray(payload)
+      ? (payload as Record<string, unknown>).score
+      : undefined
+  const senseiScore =
+    typeof senseiScoreRaw === "number"
+      ? senseiScoreRaw
+      : typeof senseiScoreRaw === "string" && senseiScoreRaw.trim() !== "" && !Number.isNaN(Number(senseiScoreRaw))
+        ? Number(senseiScoreRaw)
+        : null
+  const SENSEI_MIN_SCORE = Number(process.env.SENSEI_MIN_SCORE || 8)
+  // Só bloqueia se o score EXISTE e está abaixo do mínimo (score ausente = compat. c/ formatos antigos).
+  const senseiScoreOk = !isSenseiScored || senseiScore == null || senseiScore >= SENSEI_MIN_SCORE
+  const execGate =
+    isGoldKiller || isSenseiScored
+      ? { ok: true as const }
+      : passesExecGate(signalRules, execSymbolForGate, execDirForGate, execConfCount, scannerKey, assetClass)
   // Ordens LIMIT validadas: uma ideia/setup com preço de entrada pode colocar uma ordem
   // limit na conta provider. O entry_trigger dessa mesma ideia depois NÃO faz market
   // (guard provider_order_placed) → evita duplo preenchimento.
@@ -796,7 +819,8 @@ export async function POST(request: NextRequest) {
     (assetClass === "gold_btc" || assetClass === "forex") &&
     parsedForExec.symbol &&
     parsedForExec.direction &&
-    passesQualityGate(payload, timeframe, assetClass, isGoldKiller) &&
+    passesQualityGate(payload, timeframe, assetClass, isGoldKiller, isSenseiScored) &&
+    senseiScoreOk &&
     stopsSane(parsedForExec.entry ?? price, parsedForExec.sl) &&
     execGate.ok &&
     !pendingHadLimit &&
