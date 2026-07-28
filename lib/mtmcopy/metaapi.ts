@@ -118,6 +118,37 @@ export interface MetaApiSymbolSpecification {
   tradeMode?: string
   /** Distância mínima (em points) do preço para colocar SL/TP. Broker rejeita stops mais colados. */
   stopsLevel?: number
+  /** Lote mínimo negociável (ex.: índices na VT = 0.1/1.0 → 0.01 dá "Invalid volume"). */
+  minVolume?: number
+  /** Lote máximo negociável. */
+  maxVolume?: number
+  /** Incremento de lote (o volume tem de ser múltiplo disto). */
+  volumeStep?: number
+}
+
+/**
+ * Normaliza o volume às regras do símbolo da corretora: sobe ao mínimo, arredonda ao step
+ * e limita ao máximo. Resolve os "Invalid volume" (ex.: índices UK100/GER40/US30 com lote
+ * mínimo > 0.01). Se o spec não trouxer limites, devolve o volume como está (best-effort).
+ */
+export function clampVolume(volume: number, spec: MetaApiSymbolSpecification | null | undefined): number {
+  const min = spec?.minVolume && spec.minVolume > 0 ? spec.minVolume : null
+  const step = spec?.volumeStep && spec.volumeStep > 0 ? spec.volumeStep : null
+  const max = spec?.maxVolume && spec.maxVolume > 0 ? spec.maxVolume : null
+
+  let v = Number.isFinite(volume) && volume > 0 ? volume : (min ?? 0.01)
+  if (min != null && v < min) v = min
+  if (step != null) {
+    v = Math.round(v / step) * step
+    if (min != null && v < min) v = min // após arredondar, nunca abaixo do mínimo
+  }
+  if (max != null && v > max) v = max
+
+  const decimals = step
+    ? Math.min(8, (String(step).split('.')[1] || '').length)
+    : 2
+  v = Number(v.toFixed(decimals))
+  return v > 0 ? v : (min ?? 0.01)
 }
 
 export interface MetaApiPosition {
@@ -378,7 +409,18 @@ async function fetchSpec(
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const raw = await connection.getSymbolSpecification(brokerSymbol)
-        spec = raw?.point ? { point: raw.point, pipSize: raw.pipSize, digits: raw.digits, tradeMode: raw.tradeMode, stopsLevel: raw.stopsLevel } : null
+        spec = raw?.point
+          ? {
+              point: raw.point,
+              pipSize: raw.pipSize,
+              digits: raw.digits,
+              tradeMode: raw.tradeMode,
+              stopsLevel: raw.stopsLevel,
+              minVolume: raw.minVolume,
+              maxVolume: raw.maxVolume,
+              volumeStep: raw.volumeStep,
+            }
+          : null
         break
       } catch {
         spec = null
@@ -492,7 +534,9 @@ async function placeOrderOnConnection(
       if (connection.getSymbolSpecification) {
         try {
           const raw = await connection.getSymbolSpecification(brokerSymbol)
-          spec = raw?.point ? { point: raw.point, pipSize: raw.pipSize, digits: raw.digits, tradeMode: raw.tradeMode, stopsLevel: raw.stopsLevel } : null
+          spec = raw?.point
+            ? { point: raw.point, pipSize: raw.pipSize, digits: raw.digits, tradeMode: raw.tradeMode, stopsLevel: raw.stopsLevel, minVolume: raw.minVolume, maxVolume: raw.maxVolume, volumeStep: raw.volumeStep }
+            : null
         } catch {
           spec = null
         }
@@ -501,6 +545,8 @@ async function placeOrderOnConnection(
       }
       specCache.set(brokerSymbol, spec)
     }
+
+    req.volume = clampVolume(req.volume, spec) // sobe ao lote mínimo do broker (índices)
 
     const trailingOpts = await resolveOrderTrailingForSymbol(req, brokerSymbol, spec)
     const orderOptions = buildOrderOptions(req, trailingOpts)
@@ -834,7 +880,8 @@ export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> 
     close = closeFn
 
     const symbols = await connection.getSymbols()
-    const { brokerSymbol } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
+    const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
+    req.volume = clampVolume(req.volume, spec) // sobe ao lote mínimo do broker (índices)
 
     const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
     const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
@@ -875,6 +922,7 @@ export async function placeLimitOrder(req: OrderRequest): Promise<OrderResult> {
 
     const symbols = await connection.getSymbols()
     const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
+    req.volume = clampVolume(req.volume, spec) // sobe ao lote mínimo do broker (índices)
 
     const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
     const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
@@ -927,7 +975,8 @@ export async function placeStopOrder(req: OrderRequest): Promise<OrderResult> {
     close = closeFn
 
     const symbols = await connection.getSymbols()
-    const { brokerSymbol } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
+    const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
+    req.volume = clampVolume(req.volume, spec) // sobe ao lote mínimo do broker (índices)
 
     const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
     const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
