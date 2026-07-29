@@ -24,30 +24,67 @@ function ema(values: number[], period: number): number | null {
 
 /** Tendência do BTC por EMA(21) vs EMA(50) em klines 4h (Bybit público, sem auth). */
 export async function getBtcTrend(): Promise<{ trend: Trend; detail: string }> {
+  // 1) Bybit (klines 4h nativos). Funciona na rota edge fra1; em iad1 (EUA) a Bybit
+  //    GEO-BLOQUEIA e devolve HTML → o parse rebentava e caía para "flat".
+  const viaBybit = await btcTrendFromBybit()
+  if (viaBybit) return viaBybit
+  // 2) Fallback CoinGecko (NÃO geo-bloqueado → funciona no webhook iad1). Preços horários
+  //    reamostrados a 4h. É o que torna o trend-guard fiável no runtime do webhook.
+  const viaCg = await btcTrendFromCoinGecko()
+  if (viaCg) return viaCg
+  return { trend: "flat", detail: "BTC: sem fonte de preço" }
+}
+
+/** Trend a partir de closes 4h cronológicos (EMA21 vs EMA50). null se dados insuficientes. */
+function trendFromCloses4h(closes: number[], src: string): { trend: Trend; detail: string } | null {
+  const fast = ema(closes, 21)
+  const slow = ema(closes, 50)
+  if (fast == null || slow == null) return null
+  const spread = ((fast - slow) / slow) * 100
+  const trend: Trend = spread > 0.15 ? "up" : spread < -0.15 ? "down" : "flat"
+  return { trend, detail: `BTC 4h EMA21${fast > slow ? ">" : "<"}EMA50 (${spread.toFixed(2)}%) [${src}]` }
+}
+
+async function btcTrendFromBybit(): Promise<{ trend: Trend; detail: string } | null> {
   try {
-    const url =
-      "https://api.bybit.com/v5/market/kline?category=linear&symbol=BTCUSDT&interval=240&limit=120"
     const ctrl = new AbortController()
     const t = setTimeout(() => ctrl.abort(), 6000)
-    const res = await fetch(url, { signal: ctrl.signal })
+    const res = await fetch(
+      "https://api.bybit.com/v5/market/kline?category=linear&symbol=BTCUSDT&interval=240&limit=120",
+      { signal: ctrl.signal },
+    )
     clearTimeout(t)
+    if (!res.ok) return null
     const j = await res.json()
     const list: string[][] = j?.result?.list ?? []
-    if (!list.length) return { trend: "flat", detail: "sem klines BTC" }
-    // Bybit devolve do mais recente para o mais antigo → invertemos para cronológico.
-    const closes = list
-      .map((row) => Number(row[4]))
-      .filter((n) => Number.isFinite(n))
-      .reverse()
-    const fast = ema(closes, 21)
-    const slow = ema(closes, 50)
-    const last = closes[closes.length - 1]
-    if (fast == null || slow == null || last == null) return { trend: "flat", detail: "klines BTC insuficientes" }
-    const spread = ((fast - slow) / slow) * 100
-    const trend: Trend = spread > 0.15 ? "up" : spread < -0.15 ? "down" : "flat"
-    return { trend, detail: `BTC 4h EMA21${fast > slow ? ">" : "<"}EMA50 (${spread.toFixed(2)}%)` }
-  } catch (e) {
-    return { trend: "flat", detail: `erro BTC: ${e instanceof Error ? e.message : "?"}` }
+    if (!list.length) return null
+    const closes = list.map((row) => Number(row[4])).filter((n) => Number.isFinite(n)).reverse()
+    return trendFromCloses4h(closes, "bybit")
+  } catch {
+    return null
+  }
+}
+
+async function btcTrendFromCoinGecko(): Promise<{ trend: Trend; detail: string } | null> {
+  try {
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), 6000)
+    // days=11 → ~264 pontos horários (auto-granularidade CoinGecko). Reamostrados a 4h.
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=11",
+      { signal: ctrl.signal },
+    )
+    clearTimeout(t)
+    if (!res.ok) return null
+    const j = await res.json()
+    const prices: number[][] = Array.isArray(j?.prices) ? j.prices : []
+    if (prices.length < 60) return null
+    const hourly = prices.map((p) => Number(p[1])).filter((n) => Number.isFinite(n))
+    // reamostra horário → 4h (1 em cada 4)
+    const closes4h = hourly.filter((_, i) => i % 4 === 0)
+    return trendFromCloses4h(closes4h, "coingecko")
+  } catch {
+    return null
   }
 }
 
