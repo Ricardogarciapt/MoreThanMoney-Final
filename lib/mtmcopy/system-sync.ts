@@ -221,9 +221,13 @@ export async function runMtmcopySystemSync(opts?: {
             patch.last_error = sync.error ?? 'Falha CopyFactory'
             actions.push('copyfactory_failed')
           }
-        } else if (!conn.copyfactory_subscribed && conn.metaapi_account_id && conn.mt5_status === 'connected') {
+        } else if (conn.is_active && !conn.copyfactory_subscribed && conn.metaapi_account_id && conn.mt5_status === 'connected') {
           await repairStrategyConnectionIfNeeded(supabase, conn, userLabel, { forceResync: true })
           actions.push('strategy_repair')
+        } else if (!conn.is_active && conn.copyfactory_subscribed) {
+          // Pausada mas ainda subscrita → auto-cura (remove CopyFactory), conta fica p/ estatísticas.
+          await repairStrategyConnectionIfNeeded(supabase, conn, userLabel)
+          actions.push('strategy_paused_unsub')
         }
 
         if (Object.keys(patch).length > 1) {

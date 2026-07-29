@@ -470,30 +470,37 @@ export async function PATCH(request: NextRequest) {
   const applyCopyState = async (target: MTMcopierConnection) => {
     if (!target.metaapi_account_id || target.account_role === 'master') return
     const tMethod = connectionCopyMethod(target)
-    // Só CopyFactory (strategy/master_slave). telegram_group = execução direta gateada por is_active.
-    if (tMethod !== 'strategy' && tMethod !== 'master_slave') return
     try {
-      if (is_active) {
-        const label = target.account_label || ''
-        const res =
-          tMethod === 'strategy'
-            ? await syncMtmStrategyReplication(target, label)
-            : await syncConnectionCopyFactory(target, label)
-        await supabaseAdmin
-          .from('mtmcopy_connections')
-          .update({
-            copyfactory_subscribed: res.ok,
-            last_error: res.ok ? null : res.error ?? null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', target.id)
-      } else {
-        await removeConnectionCopyFactory(target.metaapi_account_id)
-        await supabaseAdmin
-          .from('mtmcopy_connections')
-          .update({ copyfactory_subscribed: false, updated_at: new Date().toISOString() })
-          .eq('id', target.id)
+      if (!is_active) {
+        // PAUSAR: garante SEMPRE que não fica subscrição CopyFactory viva, seja qual for
+        // o método — fecha o buraco de contas telegram_group/legadas com subscrição órfã
+        // que, de outra forma, continuariam a copiar mesmo pausadas. A conta MetaApi
+        // mantém-se ligada (mt5) para estatísticas; só se corta a replicação.
+        if (target.copyfactory_subscribed || tMethod === 'strategy' || tMethod === 'master_slave') {
+          await removeConnectionCopyFactory(target.metaapi_account_id)
+          await supabaseAdmin
+            .from('mtmcopy_connections')
+            .update({ copyfactory_subscribed: false, updated_at: new Date().toISOString() })
+            .eq('id', target.id)
+        }
+        return
       }
+      // RETOMAR: só CopyFactory (strategy/master_slave); telegram_group retoma via is_active
+      // no processor (execução direta), sem subscrição.
+      if (tMethod !== 'strategy' && tMethod !== 'master_slave') return
+      const label = target.account_label || ''
+      const res =
+        tMethod === 'strategy'
+          ? await syncMtmStrategyReplication(target, label)
+          : await syncConnectionCopyFactory(target, label)
+      await supabaseAdmin
+        .from('mtmcopy_connections')
+        .update({
+          copyfactory_subscribed: res.ok,
+          last_error: res.ok ? null : res.error ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', target.id)
     } catch (err) {
       console.error('[mtmcopy] aplicar estado CopyFactory falhou:', err)
     }

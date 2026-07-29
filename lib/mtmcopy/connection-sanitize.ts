@@ -1,7 +1,11 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { connectionCopyMethod } from './copy-limits'
 import { normalizeTelegramChannel } from './copy-methods'
-import { syncMtmStrategyReplication, syncConnectionCopyFactory } from './connection-sync'
+import {
+  syncMtmStrategyReplication,
+  syncConnectionCopyFactory,
+  removeConnectionCopyFactory,
+} from './connection-sync'
 import type { MTMcopierConnection } from './types'
 
 const TELEGRAM_CHANNEL_ERROR_RE = /Canal não encontrado|administrador do canal/i
@@ -56,15 +60,24 @@ export async function repairStrategyConnectionIfNeeded(
     return sanitizeConnectionForClient(conn)
   }
 
+  // Conta em PAUSA (is_active=false): a cópia CopyFactory tem de ficar desligada.
+  // NUNCA (re)subscrever enquanto pausada — este resync era o bug de dinheiro real
+  // (a pausa removia a subscrição, mas o próximo GET/​system-sync re-subscrevia e as
+  // trades voltavam a abrir). A conta MetaApi mantém-se ligada (mt5) só p/ estatísticas.
+  const paused = conn.is_active === false
   const badChannel = normalizeTelegramChannel(conn.telegram_channel) !== null
   const badTelegram =
     conn.telegram_status === 'error' || isTelegramChannelErrorMessage(conn.last_error)
   const needsCf =
+    !paused &&
     conn.metaapi_account_id &&
     conn.mt5_status === 'connected' &&
     (!conn.copyfactory_subscribed || opts?.forceResync === true)
+  // Auto-cura: pausada mas ainda com subscrição viva (bug antigo, ou pausa não removeu
+  // por causa do método) → remove agora a subscrição CopyFactory.
+  const needsUnsub = paused && conn.copyfactory_subscribed === true && !!conn.metaapi_account_id
 
-  if (!badChannel && !badTelegram && !needsCf) {
+  if (!badChannel && !badTelegram && !needsCf && !needsUnsub) {
     return sanitizeConnectionForClient(conn)
   }
 
@@ -88,6 +101,9 @@ export async function repairStrategyConnectionIfNeeded(
     } else if (!conn.last_error || isTelegramChannelErrorMessage(conn.last_error)) {
       patch.last_error = sync.error ?? 'Falha ao sincronizar estratégia CopyFactory'
     }
+  } else if (needsUnsub) {
+    await removeConnectionCopyFactory(conn.metaapi_account_id).catch(() => {})
+    patch.copyfactory_subscribed = false
   }
 
   const { data } = await supabase

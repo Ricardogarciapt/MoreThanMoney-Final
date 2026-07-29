@@ -106,13 +106,28 @@ export async function POST(request: NextRequest) {
     .eq('user_id', user.id)
     .neq('mt5_status', 'disconnected')
   const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id)
-  const conn = withAccount.find((c) => c.purpose === 'tap_to_trade') ?? withAccount[0] ?? null
+  const t2tConn = withAccount.find((c) => c.purpose === 'tap_to_trade')
+
+  // O user pode pausar o T2T de forma independente da cópia (is_active=false na conta T2T),
+  // mantendo a conta MT5 ligada só para estatísticas. Se a conta dedicada de T2T está em
+  // pausa, respeita-a: não executa aqui nem "salta" para outra conta.
+  if (t2tConn && t2tConn.is_active === false) {
+    return NextResponse.json(
+      { error: 'O Tap to Trade está em pausa nesta conta. Retoma-o no T2T para executar sinais.', code: 't2t_paused' },
+      { status: 400 },
+    )
+  }
+
+  // Conta destino: a conta T2T ativa; senão a 1ª conta MT5 ATIVA (nunca uma conta pausada —
+  // essa fica ligada apenas para estatísticas).
+  const conn =
+    (t2tConn && t2tConn.is_active !== false ? t2tConn : null) ??
+    withAccount.find((c) => c.is_active !== false) ??
+    null
 
   if (!conn) {
-    return NextResponse.json({ error: 'Sem conta ligada. Liga a tua conta MT5 no T2T.', code: 'no_connection' }, { status: 400 })
+    return NextResponse.json({ error: 'Sem conta ligada (ou todas em pausa). Liga/retoma a tua conta MT5 no T2T.', code: 'no_connection' }, { status: 400 })
   }
-  // T2T é manual e independente do MTMcopy: NÃO exige is_active (essa flag é da cópia
-  // automática, que requer subscrição). Basta uma conta MT5 ligada.
   if (!conn.metaapi_account_id) {
     return NextResponse.json({ error: 'Conta MT5 não configurada (MetaAPI).', code: 'no_account' }, { status: 400 })
   }

@@ -71,6 +71,19 @@ export default function MentionInput({
     }
   }, [])
 
+  // Opção especial "@todos" (mencionar todos os membros do canal). Reutiliza o
+  // fluxo normal de inserção via username="todos" → token @[todos](todos).
+  const ALL_MENTION: MentionUser = { id: "all", full_name: "Todos os membros", username: "todos" }
+  const mentionMatchesAll = (q: string): boolean => {
+    const s = q.trim().toLowerCase()
+    return "todos".startsWith(s) || "all".startsWith(s)
+  }
+  // Lista efetiva mostrada: prepende "@todos" quando o texto após @ é prefixo de todos/all.
+  const mentionOptions: MentionUser[] =
+    showMentions && mentionMatchesAll(mentionQuery)
+      ? [ALL_MENTION, ...mentionUsers.filter((u) => u.id !== ALL_MENTION.id)]
+      : mentionUsers
+
   // Converter valor interno (com formato completo) para exibição (apenas nome)
   const getDisplayValue = (internalValue: string): string => {
     return internalValue.replace(/@\[([^\]]+)\]\([^)]+\)/g, '@$1')
@@ -211,20 +224,20 @@ export default function MentionInput({
 
   // Navegar nas sugestões com teclado
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (!showMentions || mentionUsers.length === 0) return
+    if (!showMentions || mentionOptions.length === 0) return
 
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setSelectedMentionIndex(prev => 
-        prev < mentionUsers.length - 1 ? prev + 1 : prev
+      setSelectedMentionIndex(prev =>
+        prev < mentionOptions.length - 1 ? prev + 1 : prev
       )
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setSelectedMentionIndex(prev => prev > 0 ? prev - 1 : 0)
     } else if (e.key === 'Enter' || e.key === 'Tab') {
       e.preventDefault()
-      if (mentionUsers[selectedMentionIndex]) {
-        insertMention(mentionUsers[selectedMentionIndex])
+      if (mentionOptions[selectedMentionIndex]) {
+        insertMention(mentionOptions[selectedMentionIndex])
       }
     } else if (e.key === 'Escape') {
       setShowMentions(false)
@@ -272,13 +285,13 @@ export default function MentionInput({
       />
 
       {/* Popup de Sugestões de Menção */}
-      {showMentions && mentionUsers.length > 0 && (
+      {showMentions && mentionOptions.length > 0 && (
         <div
           ref={mentionListRef}
           className="absolute z-50 bg-gray-900 border border-[#D2A63C]/30 rounded-lg shadow-xl max-h-48 overflow-y-auto"
           style={getMentionPopupStyle()}
         >
-          {mentionUsers.map((user, index) => (
+          {mentionOptions.map((user, index) => (
             <button
               key={user.id}
               onClick={() => insertMention(user)}
