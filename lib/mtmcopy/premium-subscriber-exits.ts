@@ -161,5 +161,22 @@ export async function mirrorPremiumExit(
       out.detail.push(`${accountId.slice(0, 8)}: exceção ${e instanceof Error ? e.message : '?'}`)
     }
   }
+
+  // Auditoria persistente (os logs da Vercel rodam): 1 linha por espelhagem que tocou contas.
+  if (out.acted || out.skipped) {
+    try {
+      await getSupabaseAdmin()
+        .from('mtmcopy_signal_log')
+        .insert({
+          symbol,
+          direction,
+          status: 'executed',
+          channel_key: 'premium-signals',
+          detail: `[premium-mirror] ${action.kind}: ${out.acted} subs agiram, ${out.skipped} seguraram/ignoraram (${out.accounts} contas) — ${out.detail.slice(0, 6).join(' | ')}`.slice(0, 500),
+        })
+    } catch {
+      /* auditoria best-effort — não bloqueia a gestão */
+    }
+  }
   return out
 }
