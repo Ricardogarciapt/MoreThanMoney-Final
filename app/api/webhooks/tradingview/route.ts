@@ -815,6 +815,23 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
     pendingHadLimit = (pi as { provider_order_placed?: boolean } | null)?.provider_order_placed === true
   }
+  // ── GATE DEDICADO DO SENSEI X (Ouro/BTC) ──────────────────────────────────────
+  // O parser partilhado (mergeSenseiParsed) nem sempre classifica a ENTRADA do Sensei X
+  // como `entry_trigger` → a cláusula genérica falhava e a trade nunca abria (confirmado:
+  // entradas ENTRY chegam mas 0 execuções). Aqui lê-se o `state` CRU do payload: `state:"ENTRY"`
+  // é inequivocamente uma entrada a mercado (os follow-ups trazem BE/SL/TP1..). Executa pelo
+  // MESMO executor (processor força MARKET na conta Sensei) → sem caminho paralelo/dupla ordem.
+  const senseiState = String(
+    (payload && typeof payload === "object" && !Array.isArray(payload)
+      ? (payload as Record<string, unknown>).state
+      : "") ?? "",
+  ).toUpperCase()
+  const isSenseiXEntry =
+    isSenseiScored &&
+    senseiState === "ENTRY" &&
+    Boolean(parsedForExec.symbol) &&
+    Boolean(parsedForExec.direction)
+
   const canExecuteProvider =
     SENSEI_PROVIDER_EXEC_ENABLED &&
     execSwitchOn &&
@@ -826,12 +843,19 @@ export async function POST(request: NextRequest) {
     stopsSane(parsedForExec.entry ?? price, parsedForExec.sl) &&
     execGate.ok &&
     !pendingHadLimit &&
-    ((!isIdeaAlert && (activeSensei?.alertType === "entry_trigger" || !activeSensei)) || isLimitIdea)
+    ((!isIdeaAlert && (activeSensei?.alertType === "entry_trigger" || !activeSensei)) ||
+      isLimitIdea ||
+      isSenseiXEntry)
 
   let savedIdea: { id: string; tradeNumber: number | null } | null = null
   // Ideia/trade a que esta entrada corresponde (para guardar o message_id da entrada).
   let entryTradeIdea: SenseiTradeIdea | null = pendingIdea
-  if (isIdeaAlert && activeSensei) {
+  if (isSenseiXEntry && activeSensei?.symbol) {
+    // Sensei X ENTRY (gate dedicado): cria SEMPRE registo ATIVADO (chaveado pelo preço de
+    // entrada) para os follow-ups (BE/SL/TP) se associarem e responderem em thread — mesmo
+    // que o parser tenha classificado como "idea" (que de outra forma ficaria só pendente).
+    entryTradeIdea = pendingIdea ?? (await createActivatedSenseiIdea(supabase, activeSensei, logId))
+  } else if (isIdeaAlert && activeSensei) {
     savedIdea = await saveSenseiTradeIdea(supabase, activeSensei, logId)
   } else if (activeSensei?.alertType === "entry_trigger" && activeSensei.symbol) {
     // ENTRY sem ideia prévia → cria registo ativado chaveado pelo preço de entrada,
