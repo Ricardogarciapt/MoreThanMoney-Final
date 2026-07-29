@@ -126,6 +126,19 @@ export function decidePremiumActions(
 ): PremiumAction[] {
   switch (msg.kind) {
     case 'trade_active_close_all': {
+      // "Trade active and running… Close all now. If hold set BE" — a própria mensagem dá a
+      // OPÇÃO de segurar. Modo HOLD (default, PREMIUM_HOLD_RUNNERS≠"false"): confia no sistema
+      // para apanhar o MÁXIMO → põe BE + trailing e NÃO fecha os 70%, deixando o runner correr
+      // até Exit 2/Exit 3 (onde os parciais HIT TP2/HIT TP3 fazem as saídas). Risco limitado:
+      // BE + trailing tornam o runner à prova de perda (pior caso = BE / lucro trailado).
+      const holdRunners = process.env.PREMIUM_HOLD_RUNNERS !== 'false'
+      if (holdRunners) {
+        return [
+          { type: 'set_be', reason: 'Trade active → BE (segura até Exit 2/3)' },
+          { type: 'start_trailing', reason: 'Trade active → trailing protege o runner até Exit 2/3' },
+        ]
+      }
+      // Modo antigo (de-risk): zona vantajosa fecha 70%; entrada normal segura só com BE.
       if (isAdvantageousZoneEntry(pos, signal)) {
         return [
           { type: 'set_be', reason: 'Trade active (zona vantajosa) → BE' },
@@ -136,7 +149,6 @@ export function decidePremiumActions(
           },
         ]
       }
-      // Entrada normal: segura risk-free até aos TPs seguintes.
       return [{ type: 'set_be', reason: 'Trade active (entrada normal) → BE, segura até aos TPs' }]
     }
 
