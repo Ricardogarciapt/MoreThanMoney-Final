@@ -99,11 +99,29 @@ export async function perpsTrendGuard(side: "Buy" | "Sell"): Promise<TrendGuardR
   const isBuy = side === "Buy"
   const against = isBuy ? "down" : "up"
   const withT = isBuy ? "up" : "down"
+  const detail = `${btcR.detail} · ${mktR.detail}`
 
+  // Modo do guard (afinável sem redeploy):
+  //  - "btc_primary" (default): o BTC 4h manda. Bloqueia SÓ se o BTC 4h estiver contra a direção.
+  //    A breadth Cripto30 (24h, mais ruidosa) só desempata quando o BTC está flat. Assim os
+  //    SHORTS num BTC-down deixam de ser vetados por um repique de breadth verde (o edge do
+  //    backtest: SELL +58.9R). Longs continuam bloqueados em BTC-down.
+  //  - "strict": comportamento antigo (BTC E breadth têm de concordar; nenhum contra).
+  const mode = (process.env.BYBIT_TREND_GUARD_MODE || "btc_primary").toLowerCase()
+
+  if (mode !== "strict") {
+    if (btc === against) {
+      return { allow: false, reason: `BTC 4h contratendência (${side}): ${detail}`, btc, market }
+    }
+    if (btc === "flat" && market === against) {
+      return { allow: false, reason: `BTC 4h flat + breadth contra (${side}): ${detail}`, btc, market }
+    }
+    return { allow: true, reason: `OK btc-primário (${side}): ${detail}`, btc, market }
+  }
+
+  // ── modo "strict" (antigo) ──
   const anyAgainst = btc === against || market === against
   const anyWith = btc === withT || market === withT
-
-  const detail = `${btcR.detail} · ${mktR.detail}`
   if (anyAgainst) {
     return { allow: false, reason: `contratendência macro (${side}): ${detail}`, btc, market }
   }
