@@ -45,6 +45,18 @@ export const CANONICAL_TELEGRAM_CHANNELS = {
     appSlug: 'trade-ideas-setup' as const,
     envVars: ['TELEGRAM_CHANNEL_GOLDKILLER', 'TELEGRAM_GOLDKILLER_CHAT_ID'],
   },
+  // Canal Telegram dedicado do MTM Scanner (sinais Ouro/BTC). Bot admin em
+  // https://t.me/+ue9JuMRwMv0zMGQ0. chatId vazio → resolve-se por env (define-se o id
+  // numérico -100… em TELEGRAM_CHANNEL_MTMSCANNER na Vercel). Enquanto não houver id,
+  // resolvedMtmScannerChatId() devolve null e NÃO relaya (não polui outros canais).
+  mtmScanner: {
+    chatId: '',
+    title: 'Sinais Scanner MTM Ouro e BTC',
+    link: 'https://t.me/+ue9JuMRwMv0zMGQ0',
+    mtmcopyKey: 'trade-ideas' as const,
+    appSlug: 'trade-ideas-setup' as const,
+    envVars: ['TELEGRAM_CHANNEL_MTMSCANNER', 'TELEGRAM_MTMSCANNER_CHAT_ID'],
+  },
 }
 
 /** Normaliza ID de env (corrige -3716578747 → -1003716578747, remove \\n). */
@@ -105,6 +117,11 @@ export function resolvedGoldkillerScannerChatId(): string {
     normalizeEnvChatId(readEnv(CANONICAL_TELEGRAM_CHANNELS.goldkillerScanner.envVars)) ??
     CANONICAL_TELEGRAM_CHANNELS.goldkillerScanner.chatId
   )
+}
+
+/** Canal MTM Scanner (Ouro/BTC) — só relaya quando o id numérico estiver em env; senão null. */
+export function resolvedMtmScannerChatId(): string | null {
+  return normalizeEnvChatId(readEnv(CANONICAL_TELEGRAM_CHANNELS.mtmScanner.envVars))
 }
 
 /**

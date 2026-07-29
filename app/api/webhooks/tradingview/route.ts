@@ -22,7 +22,7 @@ import {
 } from "@/lib/mtmcopy/sensei-ideas"
 import { processMtmcopyWebhookSignal, processMtmcopyWebhookManagement } from "@/lib/mtmcopy/processor"
 import { getSiteOrigin } from "@/lib/site-url"
-import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId, resolvedGoldkillerScannerChatId } from "@/lib/telegram-channel-ids"
+import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId, resolvedGoldkillerScannerChatId, resolvedMtmScannerChatId } from "@/lib/telegram-channel-ids"
 import { getExecSwitches } from "@/lib/mtmcopy/exec-switches"
 import { evaluatePerpsSignalGate } from "@/lib/mtmcopy/perps-signal-gate"
 import { getSignalRules, passesAlertGate, passesExecGate } from "@/lib/mtmcopy/signal-rules"
@@ -556,14 +556,15 @@ export async function POST(request: NextRequest) {
     route.sender = "🥇 GoldKiller Scanner"
     route.autoCopy = true
   } else if (scannerKey === "mtmscanner") {
-    // MTM Scanner → chat dedicado "Sinais Scanner MTM" (site). No Telegram só relaya no canal
-    // FOREX (sinais forex); NUNCA no Telegram Sensei. Antes, sinais MTM Scanner em Ouro/BTC
-    // herdavam o Telegram default do gold_btc (= Telegram Sensei, resolvedTradeIdeasChatId) e
-    // poluíam o canal Sensei (ex.: ticket #8705647 XAU do MTMScanner). Assim o Telegram Sensei
-    // fica sincronizado só com os sinais do scanner Sensei (MTM Sensei X).
+    // MTM Scanner → chat dedicado "Sinais Scanner MTM Ouro e BTC" (site). Telegram:
+    //  • Ouro/BTC → canal dedicado NOVO (resolvedMtmScannerChatId; env TELEGRAM_CHANNEL_MTMSCANNER).
+    //  • Forex    → canal Forex (sinais forex).
+    // NUNCA o Telegram Sensei (esse fica só com o scanner Sensei / MTM Sensei X). Se o id do
+    // canal novo ainda não estiver em env, resolvedMtmScannerChatId()=null → não relaya (seguro).
     route.channel = "sinais-scanner-mtm"
-    route.sender = "📊 MTM Scanner"
-    route.telegram = assetClass === "forex" ? resolvedForexIdeasChatId() : null
+    route.sender = "📊 MTM Scanner Ouro e BTC"
+    route.telegram =
+      assetClass === "forex" ? resolvedForexIdeasChatId() : resolvedMtmScannerChatId()
   }
 
   // Perpétuos cripto: 30m e 1H vão para o chat/canal + execução; outros TF ficam só
