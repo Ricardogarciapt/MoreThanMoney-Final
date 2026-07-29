@@ -17,8 +17,6 @@ import {
   CANONICAL_PREMIUM_STRATEGY_ID,
   CANONICAL_TRADE_IDEAS_STRATEGY_ID,
   CANONICAL_SENSEI_STRATEGY_ID,
-  CANONICAL_GOLDKILLER_ACCOUNT_ID,
-  CANONICAL_GOLDKILLER_STRATEGY_ID,
   CANONICAL_BOOSTER_ACCOUNT_ID,
   CANONICAL_BOOSTER_STRATEGY_ID,
   MTM_COPY_STRATEGY_CATALOG,
@@ -71,7 +69,8 @@ const PROVIDERS: ProviderDef[] = [
   { key: 'premium', accountId: CANONICAL_PREMIUM_ACCOUNT_ID, strategyId: CANONICAL_PREMIUM_STRATEGY_ID },
   { key: 'trade-ideas', accountId: CANONICAL_TRADE_IDEAS_ACCOUNT_ID, strategyId: CANONICAL_TRADE_IDEAS_STRATEGY_ID },
   { key: 'sensei', accountId: CANONICAL_SENSEI_ACCOUNT_ID, strategyId: CANONICAL_SENSEI_STRATEGY_ID },
-  { key: 'goldkiller', accountId: CANONICAL_GOLDKILLER_ACCOUNT_ID, strategyId: CANONICAL_GOLDKILLER_STRATEGY_ID },
+  // GoldKiller removido dos desempenhos das estratégias: deixou de copiar para contas
+  // (exec-switch goldkiller=false, só T2T). Sem cópia → não é prova social de estratégia copiável.
   { key: 'booster', accountId: CANONICAL_BOOSTER_ACCOUNT_ID, strategyId: CANONICAL_BOOSTER_STRATEGY_ID },
 ]
 
