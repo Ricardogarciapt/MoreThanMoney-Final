@@ -56,6 +56,53 @@ export async function resolveCurrentPrice(ticker: string | null): Promise<number
   return q.price
 }
 
+/** Perp cripto? (o scanner de perps manda tickers tipo LDOUSDT.P). */
+function isBybitPerp(ticker: string | null): boolean {
+  if (!ticker) return false
+  const t = ticker.toUpperCase()
+  return /\.P$/i.test(t) || /USDT$/i.test(t.replace(/[^A-Z0-9]/g, ""))
+}
+
+/** Símbolo Bybit linear a partir do ticker do webhook (LDOUSDT.P → LDOUSDT). */
+function bybitSymbol(ticker: string): string {
+  return ticker.toUpperCase().replace(/\.P$/i, "").replace(/[^A-Z0-9]/g, "")
+}
+
+type Candle = { hi: number; lo: number }
+
+/** Velas 15m públicas da Bybit (linear) desde `sinceMs`, em ordem cronológica. Cache por-run. */
+async function fetchBybitPath(
+  symbol: string,
+  sinceMs: number,
+  cache: Map<string, Candle[]>,
+): Promise<Candle[]> {
+  if (cache.has(symbol)) return cache.get(symbol)!
+  const out: Candle[] = []
+  try {
+    const end = Date.now()
+    // 48h de janela chega para resolver um scalp de 1h; 1000 velas de 15m = ~10 dias.
+    const url =
+      `https://api.bybit.com/v5/market/kline?category=linear&symbol=${symbol}` +
+      `&interval=15&start=${sinceMs}&end=${end}&limit=1000`
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), 6000)
+    const res = await fetch(url, { signal: ctrl.signal })
+    clearTimeout(t)
+    const j = await res.json()
+    const list: string[][] = j?.result?.list ?? []
+    // Bybit devolve recente→antigo; invertemos para cronológico.
+    for (const row of list.slice().reverse()) {
+      const hi = Number(row[2])
+      const lo = Number(row[3])
+      if (Number.isFinite(hi) && Number.isFinite(lo)) out.push({ hi, lo })
+    }
+  } catch {
+    /* fail-open: sem velas → devolve vazio, o alerta fica pending (não resolve à toa) */
+  }
+  cache.set(symbol, out)
+  return out
+}
+
 type Status = "pending" | "active" | "be" | "exit_1" | "exit_2" | "exit_3" | "exit_4" | "loss" | "discarded" | "closed"
 const RANK: Record<string, number> = { pending: 0, active: 1, be: 1, exit_1: 2, exit_2: 3, exit_3: 4, exit_4: 5, closed: 6 }
 const isWin = (s: string | null) => Boolean(s && (s.startsWith("exit_") || s === "closed"))
@@ -76,11 +123,48 @@ function candidateStatus(dir: "buy" | "sell", price: number, entry: number | nul
   return null
 }
 
+/**
+ * Avaliação por CAMINHO (path-based) para perps: percorre as velas desde a entrada e resolve
+ * pelo que aconteceu (TP ou SL a bater primeiro), não pelo preço atual — o snapshot perdia
+ * TP/SL que bateram e reverteram (por isso 346/348 ficavam pending). Entrada a mercado →
+ * considera-se ativada na 1ª vela. Um win (exit_n) nunca é revertido para loss.
+ */
+function evaluatePerpPath(
+  dir: "buy" | "sell",
+  sl: number | null,
+  tps: number[],
+  candles: Candle[],
+): Status | null {
+  if (!candles.length) return null
+  const sorted = [...new Set(tps)].filter((n) => Number.isFinite(n))
+  sorted.sort((a, b) => (dir === "buy" ? a - b : b - a))
+  let rank = 0 // 0 = sem win; 1..n = exit_1..n
+  for (const c of candles) {
+    const slHit = sl != null && (dir === "buy" ? c.lo <= sl : c.hi >= sl)
+    let hiIdx = -1
+    for (let i = 0; i < sorted.length; i++) {
+      const hit = dir === "buy" ? c.hi >= sorted[i] : c.lo <= sorted[i]
+      if (hit) hiIdx = i
+    }
+    if (rank === 0) {
+      // Antes de qualquer TP: SL nesta vela = loss (se TP e SL na mesma vela, conservador = loss).
+      if (slHit) return "loss"
+      if (hiIdx >= 0) rank = hiIdx + 1
+    } else {
+      // Já há win → só escala; SL depois de TP não reverte (BE protege).
+      if (hiIdx + 1 > rank) rank = hiIdx + 1
+    }
+    if (sorted.length > 0 && rank >= sorted.length) break
+  }
+  if (rank === 0) return null // ainda aberto (nem TP nem SL) → mantém pending
+  return `exit_${Math.min(rank, 4)}` as Status
+}
+
 export async function evaluateOpenAlerts(limit = 200): Promise<{ scanned: number; updated: number; skipped: number }> {
   const admin = getSupabaseAdmin()
   const { data: rows } = await admin
     .from("tradingview_signals")
-    .select("id, ticker, action, price, sl, tp, raw_payload, trade_status, signal_kind, chat_message_id")
+    .select("id, ticker, action, price, sl, tp, raw_payload, trade_status, signal_kind, chat_message_id, received_at")
     // inclui exit_1..3 para poder escalar TP1→TP2→TP3 em passagens seguintes
     .or("trade_status.is.null,trade_status.in.(pending,active,be,exit_1,exit_2,exit_3)")
     .or("signal_kind.is.null,signal_kind.eq.entry")
@@ -90,6 +174,7 @@ export async function evaluateOpenAlerts(limit = 200): Promise<{ scanned: number
   let updated = 0
   let skipped = 0
   const list = rows ?? []
+  const klineCache = new Map<string, Candle[]>()
 
   for (const r of list) {
     const a = String(r.action ?? "").toLowerCase()
@@ -105,10 +190,21 @@ export async function evaluateOpenAlerts(limit = 200): Promise<{ scanned: number
       nn(raw.exit1), nn(raw.exit2), nn(raw.exit3),
     ].filter((n): n is number => n != null)
 
-    const price = await resolveCurrentPrice(r.ticker)
-    if (price == null) { skipped++; continue }
-
-    const cand = candidateStatus(dir, price, entry, sl, [...new Set(tps)])
+    // Perps: avaliação por CAMINHO (velas Bybit desde a entrada) — resolve TP/SL que bateram
+    // e reverteram, que o snapshot de preço perdia. Restantes ativos: snapshot como antes.
+    let cand: Status | null
+    if (isBybitPerp(r.ticker)) {
+      const sinceMs = (r as { received_at?: string | null }).received_at
+        ? Date.parse((r as { received_at: string }).received_at)
+        : NaN
+      if (!Number.isFinite(sinceMs)) { skipped++; continue }
+      const candles = await fetchBybitPath(bybitSymbol(r.ticker!), sinceMs, klineCache)
+      cand = evaluatePerpPath(dir, sl, [...new Set(tps)], candles)
+    } else {
+      const price = await resolveCurrentPrice(r.ticker)
+      if (price == null) { skipped++; continue }
+      cand = candidateStatus(dir, price, entry, sl, [...new Set(tps)])
+    }
     if (!cand) continue
 
     const cur = r.trade_status as string | null
@@ -117,9 +213,10 @@ export async function evaluateOpenAlerts(limit = 200): Promise<{ scanned: number
     if (cand === "loss") {
       if (isWin(cur)) continue
       // SL atingido mas o sinal NUNCA foi ativado (ainda pending/sem estado) → DESCARTADO,
-      // não é um loss real (a trade não chegou a abrir).
+      // não é um loss real (a trade não chegou a abrir). NOTA: perps entram a MERCADO (ativam
+      // sempre na 1ª vela via path-eval) → SL é loss real, não descartado.
       const activated = cur === "active" || cur === "be" || String(cur ?? "").startsWith("exit_")
-      if (!activated) finalCand = "discarded"
+      if (!activated && !isBybitPerp(r.ticker)) finalCand = "discarded"
     } else if ((RANK[cand] ?? 1) <= (RANK[cur ?? "active"] ?? 1)) {
       continue
     }

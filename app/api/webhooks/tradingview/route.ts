@@ -24,6 +24,7 @@ import { processMtmcopyWebhookSignal, processMtmcopyWebhookManagement } from "@/
 import { getSiteOrigin } from "@/lib/site-url"
 import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId, resolvedGoldkillerScannerChatId } from "@/lib/telegram-channel-ids"
 import { getExecSwitches } from "@/lib/mtmcopy/exec-switches"
+import { evaluatePerpsSignalGate } from "@/lib/mtmcopy/perps-signal-gate"
 import { getSignalRules, passesAlertGate, passesExecGate } from "@/lib/mtmcopy/signal-rules"
 import { notifySignalOutcome } from "@/lib/mtm-alerts/notify-outcome"
 import type { SupabaseClient } from "@supabase/supabase-js"
@@ -891,11 +892,25 @@ export async function POST(request: NextRequest) {
   const alertType = activeSensei?.alertType
   const isFollowup =
     alertType === "tp_hit" || alertType === "sl_hit" || alertType === "breakeven" || alertType === "exit"
+  // Gate dos SINAIS de perps: trend-guard macro (BTC 4h + Cripto30) + scorecard por moeda.
+  // Backtest (5d, 346 sinais): SELL +58.9R vs BUY −32.3R; o trend-guard triplica o R/trade
+  // e sobe o winrate para ~52%. Aplica-se ao que PUBLICA no chat E ao que executa na Bybit.
+  let perpsGate: { allow: boolean; reason: string } = { allow: true, reason: "" }
+  if (perpsRequested && !isFollowup && execSymbolForGate && (execDirForGate === "buy" || execDirForGate === "sell")) {
+    perpsGate = await evaluatePerpsSignalGate(execSymbolForGate, execDirForGate)
+    if (!perpsGate.allow && logId) {
+      await supabase
+        .from("tradingview_signals")
+        .update({ trade_status: "filtered", ai_error: `perps-gate: ${perpsGate.reason}`.slice(0, 300) })
+        .eq("id", logId)
+    }
+  }
   // Gate de RUÍDO: entradas de baixa qualidade (poucas confirmações / símbolo-ruído) não
   // vão para chat/Telegram/push. Follow-ups (TP/BE/SL) e GoldKiller passam sempre.
   const alertOk =
-    isFollowup || isGoldKiller || forcedPerps || scannerKey === "mtmperps" ||
-    passesAlertGate(signalRules, execSymbolForGate, execConfCount, scannerKey, assetClass)
+    isFollowup ||
+    isGoldKiller ||
+    (perpsRequested ? perpsGate.allow : passesAlertGate(signalRules, execSymbolForGate, execConfCount, scannerKey, assetClass))
   let linkedIdea: SenseiTradeIdea | null = null
   if (isFollowup && activeSensei?.symbol) {
     linkedIdea = await findActiveSenseiIdeaForFollowup(
