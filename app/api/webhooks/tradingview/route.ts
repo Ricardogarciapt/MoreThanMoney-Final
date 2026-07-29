@@ -555,16 +555,23 @@ export async function POST(request: NextRequest) {
     route.telegram = resolvedGoldkillerScannerChatId()
     route.sender = "🥇 GoldKiller Scanner"
     route.autoCopy = true
-  } else if (scannerKey === "mtmscanner") {
-    // MTM Scanner → chat dedicado "Sinais Scanner MTM Ouro e BTC" (site). Telegram:
-    //  • Ouro/BTC → canal dedicado NOVO (resolvedMtmScannerChatId; env TELEGRAM_CHANNEL_MTMSCANNER).
-    //  • Forex    → canal Forex (sinais forex).
-    // NUNCA o Telegram Sensei (esse fica só com o scanner Sensei / MTM Sensei X). Se o id do
-    // canal novo ainda não estiver em env, resolvedMtmScannerChatId()=null → não relaya (seguro).
+  } else if (scannerKey === "mtmscanner" && assetClass === "gold_btc") {
+    // MTM Scanner OURO/BTC → chat + canal Telegram dedicado NOVO ("Sinais Scanner MTM Ouro e BTC",
+    // env TELEGRAM_CHANNEL_MTMSCANNER). NUNCA o Telegram Sensei. Se o id ainda não estiver em env,
+    // resolvedMtmScannerChatId()=null → não relaya (seguro).
+    // Os sinais do MTM Scanner em FOREX e ÍNDICES seguem as rotas naturais (resolveRoute):
+    //   forex → "Ideias de Forex"; índices → "Ideias de Índices" (MTM Scanner É o provedor de índices).
     route.channel = "sinais-scanner-mtm"
     route.sender = "📊 MTM Scanner Ouro e BTC"
-    route.telegram =
-      assetClass === "forex" ? resolvedForexIdeasChatId() : resolvedMtmScannerChatId()
+    route.telegram = resolvedMtmScannerChatId()
+  }
+
+  // Índices: o provedor é o MTM Scanner (o lucrativo, ~36% vs Sensei X ~5%). O Sensei X é fraco
+  // em índices → NÃO publica em "Ideias de Índices" (mantém o canal limpo com o provedor certo).
+  if (assetClass === "index" && scannerKey === "sensei") {
+    route.channel = null
+    route.telegram = null
+    route.push = false
   }
 
   // Perpétuos cripto: 30m e 1H vão para o chat/canal + execução; outros TF ficam só
