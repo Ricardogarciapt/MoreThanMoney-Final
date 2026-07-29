@@ -50,8 +50,9 @@ export const CANONICAL_TELEGRAM_CHANNELS = {
   // numérico -100… em TELEGRAM_CHANNEL_MTMSCANNER na Vercel). Enquanto não houver id,
   // resolvedMtmScannerChatId() devolve null e NÃO relaya (não polui outros canais).
   mtmScanner: {
-    chatId: '',
-    title: 'Sinais Scanner MTM Ouro e BTC',
+    // id confirmado via auto-descoberta (mtmcopy_telegram_discovered): "MTM - Scanner Ouro e BTC".
+    chatId: '-1004363723837',
+    title: 'MTM - Scanner Ouro e BTC',
     link: 'https://t.me/+ue9JuMRwMv0zMGQ0',
     mtmcopyKey: 'trade-ideas' as const,
     appSlug: 'trade-ideas-setup' as const,
@@ -119,9 +120,12 @@ export function resolvedGoldkillerScannerChatId(): string {
   )
 }
 
-/** Canal MTM Scanner (Ouro/BTC) — só relaya quando o id numérico estiver em env; senão null. */
+/** Canal MTM Scanner (Ouro/BTC). Env se definido; senão o id canónico confirmado; null se vazio. */
 export function resolvedMtmScannerChatId(): string | null {
-  return normalizeEnvChatId(readEnv(CANONICAL_TELEGRAM_CHANNELS.mtmScanner.envVars))
+  return (
+    normalizeEnvChatId(readEnv(CANONICAL_TELEGRAM_CHANNELS.mtmScanner.envVars)) ??
+    (CANONICAL_TELEGRAM_CHANNELS.mtmScanner.chatId || null)
+  )
 }
 
 /**
