@@ -556,10 +556,14 @@ export async function POST(request: NextRequest) {
     route.sender = "🥇 GoldKiller Scanner"
     route.autoCopy = true
   } else if (scannerKey === "mtmscanner") {
-    // MTM Scanner (Forex) → chat dedicado "Sinais Scanner MTM"; Telegram mantém-se no
-    // canal Forex (resolveRoute), como pedido. Execução continua pela rota Trade Ideas (5IHE).
+    // MTM Scanner → chat dedicado "Sinais Scanner MTM" (site). No Telegram só relaya no canal
+    // FOREX (sinais forex); NUNCA no Telegram Sensei. Antes, sinais MTM Scanner em Ouro/BTC
+    // herdavam o Telegram default do gold_btc (= Telegram Sensei, resolvedTradeIdeasChatId) e
+    // poluíam o canal Sensei (ex.: ticket #8705647 XAU do MTMScanner). Assim o Telegram Sensei
+    // fica sincronizado só com os sinais do scanner Sensei (MTM Sensei X).
     route.channel = "sinais-scanner-mtm"
     route.sender = "📊 MTM Scanner"
+    route.telegram = assetClass === "forex" ? resolvedForexIdeasChatId() : null
   }
 
   // Perpétuos cripto: 30m e 1H vão para o chat/canal + execução; outros TF ficam só
