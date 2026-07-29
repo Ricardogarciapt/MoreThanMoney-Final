@@ -18,6 +18,7 @@ import {
   PREMIUM_WIDE_ZONE_SL_PIPS,
   PREMIUM_WIDE_ZONE_TRAIL_ACTIVATION_PIPS,
 } from './premium-trade-active'
+import { mirrorPremiumExit } from './premium-subscriber-exits'
 
 interface ActiveRow {
   id: string
@@ -171,6 +172,10 @@ export async function runPremiumPriceMonitor(): Promise<{
         if (r.success) {
           actions++
           detail.push(`${row.symbol}: conta pequena → fecha tudo no Exit 1`)
+          // Subscritores escalam o seu Exit 1 (cada um conforme o seu lote), mesmo com a mestre pequena.
+          const pct1 = pcts[0] ?? 33
+          const m = await mirrorPremiumExit(row.symbol, row.direction, { kind: 'close_frac', frac: pct1 / 100 })
+          if (m.acted || m.skipped) detail.push(`${row.symbol}: subs Exit 1 → ${m.acted} escalaram, ${m.skipped} seguraram`)
         }
         await admin
           .from('mtmcopy_premium_active')
@@ -187,10 +192,20 @@ export async function runPremiumPriceMonitor(): Promise<{
         const r = await closePositionById(accountId, pos.id)
         ok = r.success
         if (ok) detail.push(`${row.symbol}: Exit ${nextLevel} → fecha tudo (${currentVol})`)
+        // Espelha o fecho total aos subscritores (CopyFactory não replica parciais).
+        if (ok) {
+          const m = await mirrorPremiumExit(row.symbol, row.direction, { kind: 'close_all' })
+          if (m.acted) detail.push(`${row.symbol}: Exit ${nextLevel} → ${m.acted} subs fechados`)
+        }
       } else {
         const r = await closePositionById(accountId, pos.id, wanted)
         ok = r.success
         if (ok) detail.push(`${row.symbol}: Exit ${nextLevel} → fecha ${pct}% (${wanted})`)
+        // Espelha a MESMA fração aos subscritores; cada um escala conforme o seu lote.
+        if (ok && currentVol > 0) {
+          const m = await mirrorPremiumExit(row.symbol, row.direction, { kind: 'close_frac', frac: wanted / currentVol })
+          if (m.acted || m.skipped) detail.push(`${row.symbol}: Exit ${nextLevel} subs → ${m.acted} escalaram, ${m.skipped} seguraram`)
+        }
       }
       if (!ok) {
         detail.push(`${row.symbol}: fecho Exit ${nextLevel} falhou`)
@@ -213,6 +228,9 @@ export async function runPremiumPriceMonitor(): Promise<{
           await modifyPositionSlTp(accountId, pos.id, row.entry, undefined, trailing, row.symbol)
           patch.trailing_started = true
           detail.push(`${row.symbol}: BE + trailing após Exit 1`)
+          // Espelha BE + trailing aos subscritores (protege o runner deles até Exit 2/3).
+          const m = await mirrorPremiumExit(row.symbol, row.direction, { kind: 'be_trailing', beSl: row.entry, trailing })
+          if (m.acted) detail.push(`${row.symbol}: BE+trailing em ${m.acted} subs`)
         } catch {
           detail.push(`${row.symbol}: trailing falhou`)
         }
