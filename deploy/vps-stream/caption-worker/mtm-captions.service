@@ -1,0 +1,17 @@
+[Unit]
+Description=MTM Live Captions Manager (ASR + tradução das sessões ao vivo)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/mtm-captions
+EnvironmentFile=/etc/mtm-captions.env
+ExecStart=/usr/bin/node /opt/mtm-captions/caption-manager.js
+Restart=always
+RestartSec=5
+# ffmpeg pode usar bastante CPU com várias sessões em simultâneo
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

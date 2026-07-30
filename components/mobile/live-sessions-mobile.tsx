@@ -20,6 +20,7 @@ import { useT } from "@/components/i18n-provider"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import LiveFinancialDisclaimer from "@/components/live/live-financial-disclaimer"
+import LiveCaptions from "./live-captions"
 import EmojiChatPicker from "@/components/live/emoji-chat-picker"
 import EducatorRatingsSection from "@/components/live/educator-ratings-section"
 import { handleLiveChatEnterKey } from "@/lib/live-chat"
@@ -773,6 +774,17 @@ export default function LiveSessionsMobile({
                   <div className="flex h-full min-h-0 w-full flex-1 items-center justify-center px-4 text-center text-xs text-gray-500 sm:aspect-video">
                     {t("live.noPlayback")}
                   </div>
+                )}
+                {/* Legendas ao vivo + seletor de idioma — só para HLS ao vivo (não YouTube embed). */}
+                {isLive && hlsUrl && stream?.id && (
+                  <LiveCaptions
+                    streamId={stream.id}
+                    sourceLanguage={
+                      ((stream as any)?.caption_source_language as string) ||
+                      ((stream as any)?.educator?.language as string) ||
+                      "pt"
+                    }
+                  />
                 )}
               </div>
 
