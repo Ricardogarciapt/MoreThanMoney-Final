@@ -24,6 +24,7 @@ import { seekHlsByDelta } from "@/lib/live-hls-seek"
 import { useLmsViewerHeartbeat } from "@/hooks/use-lms-viewer-heartbeat"
 import EducatorLiveViewerBadge from "@/components/live/educator-live-viewer-badge"
 import LiveCaptions from "@/components/mobile/live-captions"
+import LiveDubAudio from "@/components/mobile/live-dub-audio"
 import { notifyXpFromResponse } from "@/lib/xp-client"
 import { handleLiveChatEnterKey } from "@/lib/live-chat"
 
@@ -323,7 +324,10 @@ export default function LiveStreamRoom({ streamId }: Props) {
           </div>
 
           {(iframePlaybackUrl || effectiveHlsUrl) && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {effectiveHlsUrl && streamId && (
+                <LiveDubAudio streamId={streamId} videoRef={videoRef} />
+              )}
               <Button type="button" variant="outline" size="sm" className="border-gray-700 text-gray-200" onClick={openFullscreen}>
                 <Maximize2 className="mr-2 h-4 w-4" />
                 Ecrã inteiro
