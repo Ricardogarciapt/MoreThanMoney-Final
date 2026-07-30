@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/admin-api-helpers'
 import { translateCaption } from '@/lib/lms-captions/translate'
+import { synthesizeToStorage } from '@/lib/lms-captions/tts'
 import { normalizeCaptionLang } from '@/lib/lms-captions/constants'
 
 // GET /api/live-sessions/streams/[id]/captions?since=<seq>&limit=<n>&lang=<code>
@@ -21,10 +22,11 @@ export async function GET(
     const limit = Math.min(Number.parseInt(url.searchParams.get('limit') || '40', 10) || 40, 100)
     const langRaw = url.searchParams.get('lang') || ''
     const lang = langRaw ? normalizeCaptionLang(langRaw) : ''
+    const wantAudio = url.searchParams.get('audio') === '1' // dobragem na voz clonada
 
     const { data, error } = await supabase
       .from('lms_stream_captions')
-      .select('seq, source_language, source_text, translations, t_start_ms, t_end_ms, is_final, created_at')
+      .select('seq, source_language, source_text, translations, audio, t_start_ms, t_end_ms, is_final, created_at')
       .eq('stream_id', id)
       .gt('seq', since)
       .order('seq', { ascending: true })
@@ -40,6 +42,7 @@ export async function GET(
       source_language: string
       source_text: string
       translations: Record<string, string> | null
+      audio: Record<string, string> | null
       t_start_ms: number | null
       t_end_ms: number | null
       is_final: boolean
@@ -69,12 +72,38 @@ export async function GET(
       )
     }
 
+    // Dobragem: gera TTS (voz clonada) do texto resolvido, on-demand, cacheado no storage.
+    // Só para idioma != origem (o PT original usa o áudio real do stream).
+    if (wantAudio && lang) {
+      await Promise.all(
+        cues.map(async (c) => {
+          if (!c.is_final) return
+          const src = normalizeCaptionLang(c.source_language)
+          if (lang === src) return
+          if (c.audio && c.audio[lang]) return
+          const t = c.translations?.[lang] || ''
+          if (!t) return
+          const audioUrl = await synthesizeToStorage(supabase, t, `${id}/${c.seq}-${lang}.mp3`)
+          if (audioUrl) {
+            c.audio = { ...(c.audio || {}), [lang]: audioUrl }
+            await supabase
+              .from('lms_stream_captions')
+              .update({ audio: c.audio })
+              .eq('stream_id', id)
+              .eq('seq', c.seq)
+          }
+        }),
+      )
+    }
+
     const captions = cues.map((c) => ({
       ...c,
       // texto já resolvido no idioma pedido (ou origem se não houver/for a origem)
       text: lang && lang !== normalizeCaptionLang(c.source_language)
         ? c.translations?.[lang] || c.source_text
         : c.source_text,
+      // URL do áudio dobrado (voz clonada) no idioma pedido, se existir
+      audioUrl: lang && lang !== normalizeCaptionLang(c.source_language) ? c.audio?.[lang] || null : null,
     }))
 
     const latestSeq = captions.length ? captions[captions.length - 1].seq : since

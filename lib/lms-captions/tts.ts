@@ -9,6 +9,25 @@ const FISH_MODEL = process.env.FISH_MODEL || 'speech-1.6'
 
 export type SynthResult = { buffer: Buffer; contentType: string } | null
 
+/** Gera TTS e guarda no bucket público `lms-tts`; devolve o URL público (ou null). */
+export async function synthesizeToStorage(
+  supabase: { storage: any },
+  text: string,
+  path: string,
+): Promise<string | null> {
+  const out = await synthesizeSpeech(text)
+  if (!out) return null
+  const { error } = await supabase.storage
+    .from('lms-tts')
+    .upload(path, out.buffer, { contentType: out.contentType, upsert: true })
+  if (error) {
+    console.error('[lms-tts] upload falhou:', error.message)
+    return null
+  }
+  const { data } = supabase.storage.from('lms-tts').getPublicUrl(path)
+  return (data?.publicUrl as string) || null
+}
+
 /**
  * Gera fala (mp3) na voz clonada a partir de texto (já no idioma-alvo).
  * Devolve null em falha (o chamador decide o fallback).
