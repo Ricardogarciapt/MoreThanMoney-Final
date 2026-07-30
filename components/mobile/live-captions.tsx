@@ -1,19 +1,22 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { supabase } from "@/lib/supabase"
 import { Subtitles, Check, ChevronDown } from "lucide-react"
-import { CAPTION_LANGUAGE_LABELS, captionLanguagesFor } from "@/lib/lms-captions/constants"
+import {
+  CAPTION_LANGUAGE_LABELS,
+  captionLanguagesFor,
+  normalizeCaptionLang,
+} from "@/lib/lms-captions/constants"
 
 // Legendas ao vivo (closed captions) com tradução + seletor de idioma da sessão.
-// Overlay sobre o player + botão CC. Recebe cues por Supabase Realtime (INSERT em
-// lms_stream_captions); o idioma é escolhido pelo espetador (inicia no idioma do app).
+// Overlay sobre o player + botão CC. Faz polling ao endpoint /captions?lang=<idioma>,
+// que resolve/traduz o idioma escolhido on-demand (suporta os 21 idiomas do site).
 
 type Cue = {
   seq: number
   source_language: string
   source_text: string
-  translations: Record<string, string> | null
+  text?: string
   is_final: boolean
 }
 
@@ -29,10 +32,10 @@ function initialLang(): string {
   if (typeof window === "undefined") return "pt"
   // 1º a escolha de legendas memorizada; senão o idioma do app (cookie); senão PT.
   const saved = window.localStorage?.getItem(CAPTION_LANG_KEY)
-  if (saved) return saved.toLowerCase().slice(0, 2)
+  if (saved) return normalizeCaptionLang(saved)
   const m = document.cookie.match(/(?:^|;\s*)mtm_lang=([^;]+)/)
   const raw = m ? decodeURIComponent(m[1]) : ""
-  return (raw || "pt").toLowerCase().slice(0, 2)
+  return normalizeCaptionLang(raw || "pt")
 }
 
 export default function LiveCaptions({
@@ -47,61 +50,49 @@ export default function LiveCaptions({
   const [menuOpen, setMenuOpen] = useState(false)
   const [cue, setCue] = useState<Cue | null>(null)
   const seqRef = useRef(0)
+  const cueRef = useRef<Cue | null>(null)
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const langs = useMemo(() => captionLanguagesFor(sourceLanguage), [sourceLanguage])
 
-  // Subscrição Realtime aos cues de legenda deste stream.
+  // Polling ao endpoint (resolve/traduz o idioma pedido on-demand). Ao trocar de idioma,
+  // recua o `since` para re-obter o cue atual já no novo idioma.
   useEffect(() => {
     if (!streamId || !enabled) return
     let active = true
-    seqRef.current = 0
+    seqRef.current = Math.max(0, (cueRef.current?.seq ?? 1) - 1)
 
-    const applyCue = (c: Cue) => {
+    const apply = (c: Cue) => {
       if (!active || !c || c.is_final === false) return
-      if (c.seq <= seqRef.current) return
       seqRef.current = c.seq
+      cueRef.current = c
       setCue(c)
       if (clearTimer.current) clearTimeout(clearTimer.current)
-      // Limpa a legenda após 12s de silêncio (não fica "presa" no ecrã).
       clearTimer.current = setTimeout(() => active && setCue(null), 12000)
     }
 
-    // Recupera o último cue para não começar em branco a meio da sessão.
-    fetch(`/api/live-sessions/streams/${streamId}/captions?since=0&limit=1`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
+    const poll = async () => {
+      try {
+        const r = await fetch(
+          `/api/live-sessions/streams/${streamId}/captions?since=${seqRef.current}&limit=15&lang=${encodeURIComponent(lang)}`,
+        )
+        if (!r.ok) return
+        const d = await r.json()
         const last = d?.captions?.[d.captions.length - 1]
-        if (last) applyCue(last as Cue)
-      })
-      .catch(() => {})
+        if (last) apply(last as Cue)
+      } catch {}
+    }
 
-    const channel = supabase
-      .channel(`captions:${streamId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "lms_stream_captions",
-          filter: `stream_id=eq.${streamId}`,
-        },
-        (payload: { new: Cue }) => applyCue(payload.new as Cue),
-      )
-      .subscribe()
-
+    poll()
+    const t = setInterval(poll, 1300)
     return () => {
       active = false
+      clearInterval(t)
       if (clearTimer.current) clearTimeout(clearTimer.current)
-      supabase.removeChannel(channel)
     }
-  }, [streamId, enabled])
+  }, [streamId, enabled, lang])
 
-  const text = cue
-    ? lang === cue.source_language
-      ? cue.source_text
-      : cue.translations?.[lang] || cue.source_text
-    : ""
+  const text = cue?.text ?? cue?.source_text ?? ""
 
   return (
     <>
@@ -148,7 +139,7 @@ export default function LiveCaptions({
               <ChevronDown className="h-3 w-3" />
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-8 z-50 w-40 overflow-hidden rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
+              <div className="absolute right-0 top-8 z-50 max-h-64 w-40 overflow-y-auto rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
                 {langs.map((l) => (
                   <button
                     key={l}
