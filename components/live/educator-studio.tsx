@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import EducatorDvrPanel from "@/components/live/educator-dvr-panel"
 import {
   ArrowLeft,
   BarChart3,
@@ -1194,6 +1195,8 @@ export default function EducatorStudio() {
               </div>
             </CardContent>
           </Card>
+
+          <EducatorDvrPanel />
 
           <Card className="border-gray-800 bg-gray-950/90">
             <CardHeader className="pb-2">

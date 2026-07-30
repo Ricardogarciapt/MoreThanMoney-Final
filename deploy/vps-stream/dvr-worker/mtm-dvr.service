@@ -1,0 +1,19 @@
+[Unit]
+Description=MTM DVR worker (assemble multi-audio recordings + cleanup)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+EnvironmentFile=/opt/mtm-stream/dvr-worker/mtm-dvr.env
+ExecStart=/usr/bin/node /opt/mtm-stream/dvr-worker/dvr-worker.js
+Restart=always
+RestartSec=5
+# Nice/ionice: a montagem ffmpeg não deve competir com o streaming ao vivo.
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+
+[Install]
+WantedBy=multi-user.target
