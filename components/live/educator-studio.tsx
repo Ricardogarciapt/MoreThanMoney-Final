@@ -20,6 +20,7 @@ import {
   Users,
   Youtube,
   MessageSquare,
+  Mic2,
 } from "lucide-react"
 import EducatorFeedbacksList from "@/components/live/educator-feedbacks-list"
 import StreamKeyCard from "@/components/live/stream-key-card"
@@ -79,6 +80,9 @@ export default function EducatorStudio() {
   const [tiktokSaving, setTiktokSaving] = useState(false)
   const [tiktokKeyVisible, setTiktokKeyVisible] = useState(false)
   const [tiktokForm, setTiktokForm] = useState({ enabled: false, server: "", key: "" })
+  const [voiceSaving, setVoiceSaving] = useState(false)
+  const [voiceId, setVoiceId] = useState("")
+  const DEFAULT_VOICE_ID = "1e0fa8b490c744acba94da72710e6db2" // clone Fish "Ricardo Garcia"
   const [restreamForm, setRestreamForm] = useState({
     enabled: false,
     ingest: DEFAULT_RESTREAM_INGEST_URL,
@@ -126,6 +130,7 @@ export default function EducatorStudio() {
       server: ((me as any).tiktok_server as string) || "",
       key: ((me as any).tiktok_stream_key as string) || "",
     })
+    setVoiceId(((me as any).fish_voice_id as string) || "")
   }, [me])
 
   const academyName = useMemo(() => {
@@ -452,6 +457,28 @@ export default function EducatorStudio() {
       await loadMe()
     } finally {
       setTiktokSaving(false)
+    }
+  }
+
+  /** Define a voz Fish do educador para as traduções dobradas (vazio = Ricardo Garcia). */
+  const saveVoiceProfile = async () => {
+    setVoiceSaving(true)
+    setError("")
+    try {
+      const res = await fetch("/api/live-sessions/educator-auth/voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ fish_voice_id: voiceId.trim() || null }),
+      })
+      const j = await res.json()
+      if (!res.ok) {
+        setError(j.error || "Erro ao guardar a voz")
+        return
+      }
+      await loadMe()
+    } finally {
+      setVoiceSaving(false)
     }
   }
 
@@ -1111,6 +1138,60 @@ export default function EducatorStudio() {
               >
                 {tiktokSaving ? "A guardar…" : "Guardar TikTok"}
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-emerald-900/40 bg-gradient-to-br from-gray-950 to-black">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base text-emerald-300">
+                <Mic2 className="h-4 w-4" />
+                Voz da dobragem (Fish AI)
+              </CardTitle>
+              <p className="text-xs font-normal text-gray-500">
+                As sessões são traduzidas ao vivo (EN/ES/DE…) e faladas na tua{" "}
+                <strong className="text-gray-400">voz clonada</strong>. Cola o{" "}
+                <strong className="text-gray-400">Voice ID</strong> do teu modelo Fish Audio.
+                Se deixares vazio, usamos a voz <strong className="text-gray-400">Ricardo Garcia</strong> (default).
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Fish Voice ID</p>
+                <Input
+                  value={voiceId}
+                  onChange={(e) => setVoiceId(e.target.value)}
+                  className="border-gray-700 bg-black/50 font-mono text-xs"
+                  placeholder={`${DEFAULT_VOICE_ID} (Ricardo Garcia)`}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <p className="mt-1 text-[11px] text-gray-600">
+                  {voiceId.trim()
+                    ? "A dobragem das tuas sessões usa esta voz."
+                    : "Sem ID definido → dobragem na voz Ricardo Garcia."}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  disabled={voiceSaving}
+                  className="bg-emerald-700 text-white hover:bg-emerald-600"
+                  onClick={saveVoiceProfile}
+                >
+                  {voiceSaving ? "A guardar…" : "Guardar voz"}
+                </Button>
+                {voiceId.trim() && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-gray-600 text-gray-300"
+                    onClick={() => setVoiceId("")}
+                  >
+                    Repor Ricardo
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
 
