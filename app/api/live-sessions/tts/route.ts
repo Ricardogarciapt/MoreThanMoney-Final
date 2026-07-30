@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const out = await synthesizeSpeech(text, { voiceId: body.voiceId })
   if (!out) return NextResponse.json({ error: 'Falha no TTS Fish' }, { status: 502 })
 
-  return new NextResponse(out.buffer, {
+  return new NextResponse(new Uint8Array(out.buffer), {
     status: 200,
     headers: { 'Content-Type': out.contentType, 'Cache-Control': 'no-store' },
   })
