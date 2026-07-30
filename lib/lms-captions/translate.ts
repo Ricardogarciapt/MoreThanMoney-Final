@@ -21,48 +21,6 @@ function extractJson(raw: string): Record<string, unknown> {
   return JSON.parse(j) as Record<string, unknown>
 }
 
-// DeepL — tradutor mais rápido + free tier (500k car./mês). Códigos por idioma.
-const DEEPL_TARGET: Record<string, string> = { en: 'EN-US', es: 'ES', fr: 'FR', de: 'DE', pt: 'PT-PT' }
-function deeplEndpoint(): string {
-  // Chaves free terminam em ":fx" → api-free; caso contrário API pro.
-  const k = process.env.DEEPL_API_KEY || ''
-  const base = process.env.DEEPL_API_URL || (k.endsWith(':fx') ? 'https://api-free.deepl.com' : 'https://api.deepl.com')
-  return `${base.replace(/\/$/, '')}/v2/translate`
-}
-
-/** Tradução via DeepL (mais rápida; 1 pedido por idioma-alvo, em paralelo). */
-async function translateWithDeepL(
-  text: string,
-  source: string,
-  langs: string[],
-): Promise<Record<string, string>> {
-  const key = process.env.DEEPL_API_KEY
-  if (!key) throw new Error('sem DEEPL_API_KEY')
-  const url = deeplEndpoint()
-  const src = (DEEPL_TARGET[source] || source).split('-')[0].toUpperCase()
-  const results = await Promise.all(
-    langs.map(async (l) => {
-      const target = DEEPL_TARGET[l] || l.toUpperCase()
-      const body = new URLSearchParams({ text, target_lang: target, source_lang: src, preserve_formatting: '1' })
-      const r = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `DeepL-Auth-Key ${key}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body,
-      })
-      if (!r.ok) return [l, ''] as const
-      const d = (await r.json()) as { translations?: { text?: string }[] }
-      return [l, (d.translations?.[0]?.text || '').trim()] as const
-    }),
-  )
-  const out: Record<string, string> = {}
-  for (const [l, t] of results) if (t) out[l] = t
-  if (Object.keys(out).length === 0) throw new Error('deepl vazio')
-  return out
-}
-
 /**
  * Tradução via endpoint livre do Google Translate (sem chave, 0 €). Fallback sempre
  * disponível — 1 pedido por idioma-alvo, em paralelo. Não-oficial: pode limitar sob
@@ -146,15 +104,7 @@ export async function translateCaption(
     `Devolve JSON no formato {"<codigo_idioma>": "<traducao>"} exatamente com estes códigos.\n\n` +
     `Legenda: ${JSON.stringify(text)}`
 
-  // Ordem: DeepL (mais rápido + free tier) → Claude (qualidade) → OpenAI (fallback).
-  if (process.env.DEEPL_API_KEY) {
-    try {
-      return await translateWithDeepL(text, source, langs)
-    } catch (err) {
-      console.warn('[lms-captions] DeepL falhou, tenta Claude/OpenAI:', (err as Error).message)
-    }
-  }
-
+  // Ordem: Claude (qualidade) → OpenAI → Google grátis (sempre disponível, 0€).
   let parsed: Record<string, unknown> | null = null
   try {
     const res = await anthropic.messages.create({
