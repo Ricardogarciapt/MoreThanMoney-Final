@@ -63,6 +63,39 @@ async function translateWithDeepL(
   return out
 }
 
+/**
+ * Tradução via endpoint livre do Google Translate (sem chave, 0 €). Fallback sempre
+ * disponível — 1 pedido por idioma-alvo, em paralelo. Não-oficial: pode limitar sob
+ * carga; serve de rede de segurança para as legendas nunca ficarem sem tradução.
+ */
+async function translateWithGoogleFree(
+  text: string,
+  source: string,
+  langs: string[],
+): Promise<Record<string, string>> {
+  const src = (source || 'pt').toLowerCase().slice(0, 2)
+  const results = await Promise.all(
+    langs.map(async (l) => {
+      const url =
+        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src}` +
+        `&tl=${encodeURIComponent(l)}&dt=t&q=${encodeURIComponent(text)}`
+      try {
+        const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+        if (!r.ok) return [l, ''] as const
+        const data = (await r.json()) as unknown[]
+        const segs = (data?.[0] as unknown[]) || []
+        const out = segs.map((s) => (Array.isArray(s) ? String(s[0] ?? '') : '')).join('')
+        return [l, out.trim()] as const
+      } catch {
+        return [l, ''] as const
+      }
+    }),
+  )
+  const out: Record<string, string> = {}
+  for (const [l, t] of results) if (t) out[l] = t
+  return out
+}
+
 /** Tradução via OpenAI (fallback quando a Anthropic falha/sem créditos). */
 async function translateWithOpenAI(prompt: string): Promise<Record<string, unknown>> {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -140,8 +173,8 @@ export async function translateCaption(
     try {
       parsed = await translateWithOpenAI(prompt)
     } catch (err2) {
-      console.error('[lms-captions] tradução falhou (Anthropic+OpenAI):', (err2 as Error).message)
-      return {}
+      console.warn('[lms-captions] OpenAI falhou, fallback Google grátis:', (err2 as Error).message)
+      return await translateWithGoogleFree(text, source, langs)
     }
   }
 
