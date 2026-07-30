@@ -14,8 +14,9 @@ export async function synthesizeToStorage(
   supabase: { storage: any },
   text: string,
   path: string,
+  voiceId?: string,
 ): Promise<string | null> {
-  const out = await synthesizeSpeech(text)
+  const out = await synthesizeSpeech(text, { voiceId })
   if (!out) return null
   const { error } = await supabase.storage
     .from('lms-tts')

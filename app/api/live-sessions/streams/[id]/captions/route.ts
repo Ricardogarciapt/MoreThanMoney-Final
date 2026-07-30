@@ -75,6 +75,16 @@ export async function GET(
     // Dobragem: gera TTS (voz clonada) do texto resolvido, on-demand, cacheado no storage.
     // Só para idioma != origem (o PT original usa o áudio real do stream).
     if (wantAudio && lang) {
+      // voz do educador deste stream (default = Ricardo, tratado na lib)
+      const { data: st } = await supabase
+        .from('lms_streams')
+        .select('educator:lms_educators(fish_voice_id)')
+        .eq('id', id)
+        .single()
+      const voiceId =
+        ((st?.educator as { fish_voice_id?: string } | null)?.fish_voice_id || undefined) as
+          | string
+          | undefined
       await Promise.all(
         cues.map(async (c) => {
           if (!c.is_final) return
@@ -83,7 +93,7 @@ export async function GET(
           if (c.audio && c.audio[lang]) return
           const t = c.translations?.[lang] || ''
           if (!t) return
-          const audioUrl = await synthesizeToStorage(supabase, t, `${id}/${c.seq}-${lang}.mp3`)
+          const audioUrl = await synthesizeToStorage(supabase, t, `${id}/${c.seq}-${lang}.mp3`, voiceId)
           if (audioUrl) {
             c.audio = { ...(c.audio || {}), [lang]: audioUrl }
             await supabase
