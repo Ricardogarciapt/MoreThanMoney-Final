@@ -18,6 +18,12 @@ type Cue = {
 }
 
 const CAPTION_LANG_KEY = "mtm_caption_lang"
+const CAPTION_ON_KEY = "mtm_captions_on"
+
+function initialEnabled(): boolean {
+  if (typeof window === "undefined") return true
+  return window.localStorage?.getItem(CAPTION_ON_KEY) !== "0" // default ligado
+}
 
 function initialLang(): string {
   if (typeof window === "undefined") return "pt"
@@ -36,7 +42,7 @@ export default function LiveCaptions({
   streamId: string
   sourceLanguage?: string
 }) {
-  const [enabled, setEnabled] = useState(true)
+  const [enabled, setEnabled] = useState(initialEnabled)
   const [lang, setLang] = useState<string>(initialLang)
   const [menuOpen, setMenuOpen] = useState(false)
   const [cue, setCue] = useState<Cue | null>(null)
@@ -113,7 +119,11 @@ export default function LiveCaptions({
         <button
           type="button"
           onClick={() => {
-            setEnabled((v) => !v)
+            setEnabled((v) => {
+              const nv = !v
+              try { window.localStorage?.setItem(CAPTION_ON_KEY, nv ? "1" : "0") } catch {}
+              return nv
+            })
             setMenuOpen(false)
           }}
           aria-label="Legendas"
