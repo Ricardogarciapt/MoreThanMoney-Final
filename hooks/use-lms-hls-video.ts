@@ -101,9 +101,9 @@ export function useLmsHlsVideo(videoRef: RefObject<HTMLVideoElement | null>, hls
         // e recuperamos de pequenos buracos sem parar.
         lowLatencyMode: false,
         liveDurationInfinity: true,
-        liveSyncDurationCount: 2,          // era 3/4 — joga ainda mais perto do live edge (fragmentos SRS de 1s)
-        liveMaxLatencyDurationCount: 6,    // era 10 — recupera latência mais cedo
-        maxLiveSyncPlaybackRate: 2,        // era 1.75 — acelera para apanhar o edge
+        liveSyncDurationCount: 3,          // NÃO baixar para 2: joga demasiado perto do edge → desfasa áudio/vídeo
+        liveMaxLatencyDurationCount: 8,    // margem antes de recuperar (evita saltos que desincronizam)
+        maxLiveSyncPlaybackRate: 1.1,      // acelera MUITO pouco p/ apanhar o edge — >1.1 desincroniza o áudio
         maxBufferLength: 20,               // era 15 — mais almofada contra stalls
         liveBackBufferLength: 10,          // era 20 — liberta memória
         backBufferLength: 8,               // era 12
