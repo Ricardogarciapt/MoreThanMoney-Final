@@ -1,22 +1,15 @@
 #!/usr/bin/env node
 /**
- * MTM — Trabalhador de legendas ao vivo (corre no VPS de streaming).
+ * MTM — Trabalhador de legendas ao vivo (VPS de streaming).
  *
- * Fluxo: ffmpeg capta o áudio do HLS local (SRS) em segmentos WAV curtos → OpenAI
- * transcreve no idioma de origem → POST ao endpoint de ingest do site, que traduz
- * (Claude) e grava o cue (Realtime para o web; polling para as apps nativas).
+ * ffmpeg extrai áudio PCM CONTÍNUO do HLS/FLV local → segmenta por PAUSAS naturais
+ * (frases completas, sem cortar palavras a meio) → whisper-1 transcreve (verbose_json,
+ * filtra música/ruído por confiança) → POST ao ingest do site, que traduz (Claude) e grava.
  *
- * Uso:
- *   STREAM_ID=<uuid> STREAM_KEY=<key> SOURCE_LANG=pt \
- *   OPENAI_API_KEY=... LMS_CAPTION_WORKER_SECRET=... \
- *   node caption-worker.js
- *
- * Requer: Node 18+ (fetch/FormData/Blob globais) e ffmpeg no PATH.
+ * Seguir a fala: em vez de blocos fixos de N segundos, acumula áudio até detetar ~0.5s de
+ * silêncio (fim de frase) e só aí transcreve — dá continuidade e quase-simultaneidade.
  */
 const { spawn } = require("child_process")
-const fs = require("fs")
-const os = require("os")
-const path = require("path")
 
 const API = (process.env.MTM_API_BASE || "https://www.morethanmoney.pt").replace(/\/$/, "")
 const SECRET = process.env.LMS_CAPTION_WORKER_SECRET
@@ -24,147 +17,155 @@ const OPENAI = process.env.OPENAI_API_KEY
 const STREAM_ID = process.env.STREAM_ID
 const STREAM_KEY = process.env.STREAM_KEY
 const SOURCE_LANG = (process.env.SOURCE_LANG || "pt").toLowerCase().slice(0, 2)
-const SEG = Number(process.env.CAPTION_SEGMENT_SECONDS || 3)
-// whisper-1 devolve verbose_json com no_speech_prob/avg_logprob por segmento → permite
-// filtrar música/ruído/alucinações (o gpt-4o-transcribe não dá essa confiança).
 const MODEL = process.env.CAPTION_ASR_MODEL || "whisper-1"
-const MAX_NO_SPEECH = Number(process.env.CAPTION_MAX_NO_SPEECH || 0.5)
-const MIN_LOGPROB = Number(process.env.CAPTION_MIN_LOGPROB || -0.9)
 const INPUT =
-  process.env.CAPTION_INPUT_URL ||
-  // HTTP-FLV local do SRS (fluxo contínuo, ~1-2s) — muito menos latência que o HLS
-  // segmentado para a transcrição. Fallback p/ HLS via CAPTION_INPUT_URL se necessário.
-  `http://127.0.0.1:8080/live/${STREAM_KEY}.flv`
+  process.env.CAPTION_INPUT_URL || `http://127.0.0.1:8080/live/${STREAM_KEY}.flv`
+
+// Áudio: PCM 16-bit LE mono 16 kHz
+const SR = 16000, BPS = 2
+const FRAME_MS = 100
+const FRAME_BYTES = Math.round((SR * BPS * FRAME_MS) / 1000) // 3200
+const SILENCE_PEAK = Number(process.env.CAPTION_SILENCE_PEAK || 500)
+const SILENCE_MS = Number(process.env.CAPTION_SILENCE_MS || 500)   // pausa = fim de frase
+const MIN_SPEECH_MS = Number(process.env.CAPTION_MIN_SPEECH_MS || 500)
+const MAX_PHRASE_MS = Number(process.env.CAPTION_MAX_PHRASE_MS || 8000)
+const SILENCE_FRAMES = Math.round(SILENCE_MS / FRAME_MS)
+// Filtros de confiança (whisper verbose_json)
+const MAX_NO_SPEECH = Number(process.env.CAPTION_MAX_NO_SPEECH || 0.8)
+const MIN_LOGPROB = Number(process.env.CAPTION_MIN_LOGPROB || -2.0)
 
 for (const [k, v] of Object.entries({ SECRET, OPENAI, STREAM_ID })) {
-  if (!v) {
-    console.error(`[caption-worker] falta env ${k}`)
-    process.exit(1)
-  }
+  if (!v) { console.error(`[caption-worker] falta env ${k}`); process.exit(1) }
 }
 
-// Fragmentos de "silêncio" que os modelos de ASR às vezes alucinam — descartar.
-const NOISE = new Set(["", ".", "...", "obrigado", "thank you", "thanks for watching", "..."])
+const NOISE = new Set(["", ".", "...", "obrigado", "obrigado.", "thank you", "thanks for watching", "tchau", "amém", "you"])
+// Frases que o Whisper ALUCINA sobre silêncio/música (não são fala real) → descartar.
+const HALLUC = [
+  /amara\.?org/i, /legendas? (pela|feitas|by|comunidade)/i, /subtitles? by/i,
+  /thanks? for watching/i, /obrigado por (assistir|ver|verem)/i, /subscribe|inscrev/i,
+  /[♪♫🎵🎶]/, /^\s*(sim|não|ok|okay|yeah|uh|hmm)[.!\s]*$/i,
+]
+function isArtifact(t) {
+  const s = t.trim()
+  if (HALLUC.some((r) => r.test(s))) return true
+  const words = s.toLowerCase().replace(/[.,!?;:]/g, "").split(/\s+/).filter(Boolean)
+  // repetição excessiva (ex.: "sim sim sim sim"): poucas palavras únicas OU >=4 iguais seguidas
+  if (words.length >= 4) {
+    const uniq = new Set(words)
+    if (uniq.size <= Math.max(1, Math.floor(words.length * 0.34))) return true
+    let run = 1
+    for (let i = 1; i < words.length; i++) { if (words[i] === words[i - 1]) { if (++run >= 4) return true } else run = 1 }
+  }
+  return false
+}
 function clean(t) {
   const s = (t || "").trim()
   if (s.length < 2) return ""
   if (NOISE.has(s.toLowerCase())) return ""
+  if (isArtifact(s)) return ""
   return s
 }
+function peak(buf) {
+  let p = 0
+  for (let i = 0; i + 1 < buf.length; i += 2) { const s = Math.abs(buf.readInt16LE(i)); if (s > p) p = s }
+  return p
+}
+function wavHeader(dataLen) {
+  const b = Buffer.alloc(44)
+  b.write("RIFF", 0); b.writeUInt32LE(36 + dataLen, 4); b.write("WAVE", 8)
+  b.write("fmt ", 12); b.writeUInt32LE(16, 16); b.writeUInt16LE(1, 20); b.writeUInt16LE(1, 22)
+  b.writeUInt32LE(SR, 24); b.writeUInt32LE(SR * BPS, 28); b.writeUInt16LE(BPS, 32); b.writeUInt16LE(16, 34)
+  b.write("data", 36); b.writeUInt32LE(dataLen, 40)
+  return b
+}
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mtmcap-"))
-let seq = 0
-const processed = new Set()
+console.log(`[caption-worker] stream=${STREAM_ID} lang=${SOURCE_LANG} model=${MODEL} input=${INPUT}`)
 
-console.log(`[caption-worker] stream=${STREAM_ID} lang=${SOURCE_LANG} input=${INPUT}`)
-
-const ff = spawn("ffmpeg", [
-  "-loglevel", "error",
-  "-i", INPUT,
-  "-vn", "-ac", "1", "-ar", "16000",
-  "-f", "segment", "-segment_time", String(SEG), "-reset_timestamps", "1",
-  path.join(dir, "seg_%05d.wav"),
-])
+const ff = spawn("ffmpeg", ["-loglevel", "error", "-i", INPUT, "-vn", "-ac", "1", "-ar", String(SR), "-f", "s16le", "-"])
 ff.stderr.on("data", (d) => process.stderr.write(`[ffmpeg] ${d}`))
-ff.on("exit", (code) => {
-  console.log(`[caption-worker] ffmpeg terminou (${code}) — a sair`)
-  cleanup()
-  process.exit(code || 0)
+ff.on("exit", (code) => { console.log(`[caption-worker] ffmpeg terminou (${code})`); process.exit(code || 0) })
+
+let seq = 0
+let lastText = ""       // contexto p/ o prompt do whisper (continuidade)
+let carry = Buffer.alloc(0)          // bytes soltos < 1 frame
+let phrase = []                      // frames (Buffers) da frase atual
+let speechFrames = 0                 // nº de frames com fala na frase
+let silenceRun = 0                   // frames de silêncio consecutivos
+let busy = false
+
+ff.stdout.on("data", (chunk) => {
+  let buf = Buffer.concat([carry, chunk])
+  let off = 0
+  while (off + FRAME_BYTES <= buf.length) {
+    const frame = buf.subarray(off, off + FRAME_BYTES)
+    off += FRAME_BYTES
+    const isSpeech = peak(frame) >= SILENCE_PEAK
+    if (isSpeech) { phrase.push(frame); speechFrames++; silenceRun = 0 }
+    else {
+      silenceRun++
+      if (speechFrames > 0) phrase.push(frame) // mantém a pausa curta dentro da frase
+    }
+    const phraseMs = phrase.length * FRAME_MS
+    const speechMs = speechFrames * FRAME_MS
+    // Fim de frase: pausa suficiente após fala real, OU frase demasiado longa
+    if ((silenceRun >= SILENCE_FRAMES && speechMs >= MIN_SPEECH_MS) || phraseMs >= MAX_PHRASE_MS) {
+      flush()
+    }
+  }
+  carry = buf.subarray(off)
 })
 
-// Um segmento está completo quando o seguinte já existe (o último ainda está a escrever).
-const tick = setInterval(() => {
-  let files
-  try {
-    files = fs.readdirSync(dir).filter((f) => f.endsWith(".wav")).sort()
-  } catch {
-    return
-  }
-  const complete = files.slice(0, Math.max(0, files.length - 1))
-  for (const f of complete) {
-    if (processed.has(f)) continue
-    processed.add(f)
-    handle(path.join(dir, f)).catch((e) => console.error("[caption-worker] handle:", e.message))
-  }
-}, 1000)
-
-// Pico de amplitude do WAV (PCM 16-bit LE mono, header 44 bytes). Silêncio → ~0.
-function peakAmplitude(buf) {
-  let peak = 0
-  for (let i = 44; i + 1 < buf.length; i += 2) {
-    const s = Math.abs(buf.readInt16LE(i))
-    if (s > peak) peak = s
-  }
-  return peak // 0..32767
+function flush() {
+  if (speechFrames * FRAME_MS < MIN_SPEECH_MS) { phrase = []; speechFrames = 0; silenceRun = 0; return }
+  const pcm = Buffer.concat(phrase)
+  phrase = []; speechFrames = 0; silenceRun = 0
+  if (busy) return // evita sobreposição de pedidos; a frase seguinte apanha o resto
+  busy = true
+  transcribe(pcm)
+    .then((t) => {
+      const c = clean(t)
+      if (!c || c === lastText) return
+      // Eco do prompt: se a nova frase contém/está contida na anterior → é repetição/eco.
+      if (lastText && (c.includes(lastText) || lastText.includes(c)) && Math.min(c.length, lastText.length) > 12) return
+      lastText = c
+      seq++
+      return postCue(seq, c)
+    })
+    .catch((e) => console.error("[caption-worker] flush:", e.message))
+    .finally(() => { busy = false })
 }
-const SILENCE_PEAK = Number(process.env.CAPTION_SILENCE_PEAK || 500) // abaixo disto = silêncio
 
-async function handle(file) {
-  let buf
-  try {
-    buf = fs.readFileSync(file)
-  } catch {
-    return
-  }
-  fs.unlink(file, () => {})
-  if (buf.length < 8000) return // ~silêncio muito curto
-  // Salta segmentos silenciosos — sem isto o ASR ALUCINA (produz frases aleatórias).
-  if (peakAmplitude(buf) < SILENCE_PEAK) return
-  const text = clean(await transcribe(buf))
-  if (!text) return
-  // Dedupe: não repetir o mesmo texto em cues seguidos (eco/alucinação repetida).
-  if (text === lastText) return
-  lastText = text
-  seq += 1
-  await postCue(seq, text)
-}
-let lastText = ""
-
-async function transcribe(buf) {
+async function transcribe(pcm) {
+  const wav = Buffer.concat([wavHeader(pcm.length), pcm])
   const form = new FormData()
-  form.append("file", new Blob([buf], { type: "audio/wav" }), "audio.wav")
+  form.append("file", new Blob([wav], { type: "audio/wav" }), "audio.wav")
   form.append("model", MODEL)
   form.append("language", SOURCE_LANG)
   form.append("temperature", "0")
   form.append("response_format", "verbose_json")
-  if (process.env.CAPTION_PROMPT) form.append("prompt", process.env.CAPTION_PROMPT)
+  // NB: NÃO passar prompt — o Whisper pode injetar palavras do prompt que não foram ditas
+  // (fabricação). A segmentação por pausa já dá frases completas sem precisar de contexto.
   const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${OPENAI}` },
-    body: form,
+    method: "POST", headers: { Authorization: `Bearer ${OPENAI}` }, body: form,
   })
-  if (!r.ok) {
-    console.error("[caption-worker] ASR", r.status, (await r.text()).slice(0, 200))
-    return ""
-  }
+  if (!r.ok) { console.error("[caption-worker] ASR", r.status, (await r.text()).slice(0, 160)); return "" }
   const d = await r.json().catch(() => ({}))
-  // Só aceita segmentos com FALA confiante — descarta música/ruído/alucinações.
   const segs = Array.isArray(d.segments) ? d.segments : []
-  const good = segs.filter(
-    (s) => (s.no_speech_prob ?? 1) < MAX_NO_SPEECH && (s.avg_logprob ?? -10) > MIN_LOGPROB,
-  )
+  const good = segs.filter((s) => (s.no_speech_prob ?? 1) < MAX_NO_SPEECH && (s.avg_logprob ?? -10) > MIN_LOGPROB)
   return good.map((s) => (s.text || "").trim()).join(" ").trim()
 }
 
-async function postCue(seq, text) {
+async function postCue(n, text) {
   try {
     const r = await fetch(`${API}/api/live-sessions/streams/${STREAM_ID}/captions/ingest`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-caption-secret": SECRET },
-      body: JSON.stringify({ seq, source_text: text, source_language: SOURCE_LANG }),
+      body: JSON.stringify({ seq: n, source_text: text, source_language: SOURCE_LANG }),
     })
-    if (!r.ok) console.error("[caption-worker] ingest", r.status, (await r.text()).slice(0, 200))
-    else console.log(`[caption-worker] cue #${seq}: ${text}`)
-  } catch (e) {
-    console.error("[caption-worker] ingest erro:", e.message)
-  }
+    if (!r.ok) console.error("[caption-worker] ingest", r.status, (await r.text()).slice(0, 160))
+    else console.log(`[caption-worker] cue #${n}: ${text}`)
+  } catch (e) { console.error("[caption-worker] ingest erro:", e.message) }
 }
 
-function cleanup() {
-  clearInterval(tick)
-  try {
-    fs.rmSync(dir, { recursive: true, force: true })
-  } catch {}
-}
-process.on("SIGINT", () => { ff.kill("SIGINT"); cleanup(); process.exit(0) })
-process.on("SIGTERM", () => { ff.kill("SIGTERM"); cleanup(); process.exit(0) })
+process.on("SIGINT", () => { ff.kill("SIGINT"); process.exit(0) })
+process.on("SIGTERM", () => { ff.kill("SIGTERM"); process.exit(0) })

@@ -48,7 +48,7 @@ export default function LiveCaptions({
   const [enabled, setEnabled] = useState(initialEnabled)
   const [lang, setLang] = useState<string>(initialLang)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [cue, setCue] = useState<Cue | null>(null)
+  const [lines, setLines] = useState<string[]>([]) // rolo das últimas ~2 frases (continuidade)
   const seqRef = useRef(0)
   const cueRef = useRef<Cue | null>(null)
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -66,9 +66,12 @@ export default function LiveCaptions({
       if (!active || !c || c.is_final === false) return
       seqRef.current = c.seq
       cueRef.current = c
-      setCue(c)
+      const t = (c.text ?? c.source_text ?? "").trim()
+      if (!t) return
+      // Rolo: mantém as últimas 2 frases (a anterior sobe, a nova entra) → continuidade.
+      setLines((prev) => (prev[prev.length - 1] === t ? prev : [...prev, t].slice(-2)))
       if (clearTimer.current) clearTimeout(clearTimer.current)
-      clearTimer.current = setTimeout(() => active && setCue(null), 12000)
+      clearTimer.current = setTimeout(() => active && setLines([]), 10000)
     }
 
     const poll = async () => {
@@ -78,8 +81,8 @@ export default function LiveCaptions({
         )
         if (!r.ok) return
         const d = await r.json()
-        const last = d?.captions?.[d.captions.length - 1]
-        if (last) apply(last as Cue)
+        // Processa TODOS os cues novos por ordem (não só o último) → não perde fala.
+        for (const c of d?.captions ?? []) apply(c as Cue)
       } catch {}
     }
 
@@ -92,14 +95,14 @@ export default function LiveCaptions({
     }
   }, [streamId, enabled, lang])
 
-  const text = cue?.text ?? cue?.source_text ?? ""
+  const text = lines.join(" ")
 
   return (
     <>
-      {/* Overlay de legenda (sobre o vídeo, acima dos controlos nativos) */}
+      {/* Overlay de legenda (sobre o vídeo, acima dos controlos nativos) — rolo contínuo */}
       {enabled && text && (
         <div className="pointer-events-none absolute inset-x-0 bottom-14 z-40 flex justify-center px-3">
-          <span className="max-w-[92%] rounded-md bg-black/75 px-3 py-1.5 text-center text-[15px] font-medium leading-snug text-white shadow-lg sm:text-base">
+          <span className="max-w-[92%] rounded-md bg-black/75 px-3 py-1.5 text-center text-[15px] font-medium leading-snug text-white shadow-lg sm:text-base line-clamp-3">
             {text}
           </span>
         </div>
