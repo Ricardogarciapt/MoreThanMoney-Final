@@ -23,6 +23,7 @@ import { usePictureInPictureSupported } from "@/hooks/use-picture-in-picture-sup
 import { seekHlsByDelta } from "@/lib/live-hls-seek"
 import { useLmsViewerHeartbeat } from "@/hooks/use-lms-viewer-heartbeat"
 import EducatorLiveViewerBadge from "@/components/live/educator-live-viewer-badge"
+import LiveCaptions from "@/components/mobile/live-captions"
 import { notifyXpFromResponse } from "@/lib/xp-client"
 import { handleLiveChatEnterKey } from "@/lib/live-chat"
 
@@ -307,6 +308,17 @@ export default function LiveStreamRoom({ streamId }: Props) {
               <div className="h-[420px] rounded-lg border border-gray-700 bg-black flex items-center justify-center text-gray-400">
                 Nenhum playback definido. Configura playback no admin ou HLS no servidor de stream.
               </div>
+            )}
+            {/* Legendas ao vivo + seletor de idioma (só HLS) */}
+            {effectiveHlsUrl && streamId && (
+              <LiveCaptions
+                streamId={streamId}
+                sourceLanguage={
+                  ((stream as any)?.caption_source_language as string) ||
+                  ((stream as any)?.educator?.language as string) ||
+                  "pt"
+                }
+              />
             )}
           </div>
 

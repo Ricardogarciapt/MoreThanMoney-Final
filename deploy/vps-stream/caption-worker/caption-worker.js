@@ -25,7 +25,11 @@ const STREAM_ID = process.env.STREAM_ID
 const STREAM_KEY = process.env.STREAM_KEY
 const SOURCE_LANG = (process.env.SOURCE_LANG || "pt").toLowerCase().slice(0, 2)
 const SEG = Number(process.env.CAPTION_SEGMENT_SECONDS || 3)
-const MODEL = process.env.CAPTION_ASR_MODEL || "gpt-4o-transcribe"
+// whisper-1 devolve verbose_json com no_speech_prob/avg_logprob por segmento → permite
+// filtrar música/ruído/alucinações (o gpt-4o-transcribe não dá essa confiança).
+const MODEL = process.env.CAPTION_ASR_MODEL || "whisper-1"
+const MAX_NO_SPEECH = Number(process.env.CAPTION_MAX_NO_SPEECH || 0.5)
+const MIN_LOGPROB = Number(process.env.CAPTION_MIN_LOGPROB || -0.9)
 const INPUT =
   process.env.CAPTION_INPUT_URL ||
   // HTTP-FLV local do SRS (fluxo contínuo, ~1-2s) — muito menos latência que o HLS
@@ -108,20 +112,22 @@ async function handle(file) {
   if (peakAmplitude(buf) < SILENCE_PEAK) return
   const text = clean(await transcribe(buf))
   if (!text) return
+  // Dedupe: não repetir o mesmo texto em cues seguidos (eco/alucinação repetida).
+  if (text === lastText) return
+  lastText = text
   seq += 1
   await postCue(seq, text)
 }
+let lastText = ""
 
 async function transcribe(buf) {
   const form = new FormData()
   form.append("file", new Blob([buf], { type: "audio/wav" }), "audio.wav")
   form.append("model", MODEL)
   form.append("language", SOURCE_LANG)
-  form.append("response_format", "json")
   form.append("temperature", "0")
-  // Contexto p/ reduzir alucinações e fixar o domínio (trading/educação financeira).
-  form.append("prompt", process.env.CAPTION_PROMPT ||
-    "Sessão ao vivo de trading e educação financeira. Termos: stop loss, breakeven, long, short, XAUUSD, BTC, resistência, suporte.")
+  form.append("response_format", "verbose_json")
+  if (process.env.CAPTION_PROMPT) form.append("prompt", process.env.CAPTION_PROMPT)
   const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI}` },
@@ -132,7 +138,12 @@ async function transcribe(buf) {
     return ""
   }
   const d = await r.json().catch(() => ({}))
-  return d.text || ""
+  // Só aceita segmentos com FALA confiante — descarta música/ruído/alucinações.
+  const segs = Array.isArray(d.segments) ? d.segments : []
+  const good = segs.filter(
+    (s) => (s.no_speech_prob ?? 1) < MAX_NO_SPEECH && (s.avg_logprob ?? -10) > MIN_LOGPROB,
+  )
+  return good.map((s) => (s.text || "").trim()).join(" ").trim()
 }
 
 async function postCue(seq, text) {
