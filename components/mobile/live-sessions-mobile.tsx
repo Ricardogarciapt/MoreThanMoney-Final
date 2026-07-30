@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import LiveFinancialDisclaimer from "@/components/live/live-financial-disclaimer"
 import LiveCaptions from "./live-captions"
+import LiveDubAudio from "./live-dub-audio"
 import EmojiChatPicker from "@/components/live/emoji-chat-picker"
 import EducatorRatingsSection from "@/components/live/educator-ratings-section"
 import { handleLiveChatEnterKey } from "@/lib/live-chat"
@@ -817,6 +818,8 @@ export default function LiveSessionsMobile({
                       <span className="w-8 text-right text-[10px] text-gray-500">
                         {Math.round((muted ? 0 : volume) * 100)}%
                       </span>
+                      {/* Seletor de faixa de áudio (dobragem ao vivo na voz do educador) */}
+                      {stream?.id && <LiveDubAudio streamId={stream.id} videoRef={videoRef} />}
                     </div>
                   )}
 
