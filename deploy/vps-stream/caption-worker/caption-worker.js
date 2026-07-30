@@ -28,7 +28,9 @@ const SEG = Number(process.env.CAPTION_SEGMENT_SECONDS || 3)
 const MODEL = process.env.CAPTION_ASR_MODEL || "gpt-4o-transcribe"
 const INPUT =
   process.env.CAPTION_INPUT_URL ||
-  `http://127.0.0.1:8080/live/${STREAM_KEY}.m3u8` // SRS HLS local
+  // HTTP-FLV local do SRS (fluxo contínuo, ~1-2s) — muito menos latência que o HLS
+  // segmentado para a transcrição. Fallback p/ HLS via CAPTION_INPUT_URL se necessário.
+  `http://127.0.0.1:8080/live/${STREAM_KEY}.flv`
 
 for (const [k, v] of Object.entries({ SECRET, OPENAI, STREAM_ID })) {
   if (!v) {

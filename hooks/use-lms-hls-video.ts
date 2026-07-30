@@ -101,7 +101,7 @@ export function useLmsHlsVideo(videoRef: RefObject<HTMLVideoElement | null>, hls
         // e recuperamos de pequenos buracos sem parar.
         lowLatencyMode: false,
         liveDurationInfinity: true,
-        liveSyncDurationCount: 3,          // era 4 — menos delay face ao live
+        liveSyncDurationCount: 2,          // era 3/4 — joga ainda mais perto do live edge (fragmentos SRS de 1s)
         liveMaxLatencyDurationCount: 6,    // era 10 — recupera latência mais cedo
         maxLiveSyncPlaybackRate: 2,        // era 1.75 — acelera para apanhar o edge
         maxBufferLength: 20,               // era 15 — mais almofada contra stalls
