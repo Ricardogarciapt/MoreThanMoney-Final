@@ -17,8 +17,13 @@ type Cue = {
   is_final: boolean
 }
 
+const CAPTION_LANG_KEY = "mtm_caption_lang"
+
 function initialLang(): string {
-  if (typeof document === "undefined") return "pt"
+  if (typeof window === "undefined") return "pt"
+  // 1º a escolha de legendas memorizada; senão o idioma do app (cookie); senão PT.
+  const saved = window.localStorage?.getItem(CAPTION_LANG_KEY)
+  if (saved) return saved.toLowerCase().slice(0, 2)
   const m = document.cookie.match(/(?:^|;\s*)mtm_lang=([^;]+)/)
   const raw = m ? decodeURIComponent(m[1]) : ""
   return (raw || "pt").toLowerCase().slice(0, 2)
@@ -75,7 +80,7 @@ export default function LiveCaptions({
           table: "lms_stream_captions",
           filter: `stream_id=eq.${streamId}`,
         },
-        (payload) => applyCue(payload.new as Cue),
+        (payload: { new: Cue }) => applyCue(payload.new as Cue),
       )
       .subscribe()
 
@@ -140,6 +145,7 @@ export default function LiveCaptions({
                     type="button"
                     onClick={() => {
                       setLang(l)
+                      try { window.localStorage?.setItem(CAPTION_LANG_KEY, l) } catch {}
                       setMenuOpen(false)
                     }}
                     className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs hover:bg-gray-800 ${
