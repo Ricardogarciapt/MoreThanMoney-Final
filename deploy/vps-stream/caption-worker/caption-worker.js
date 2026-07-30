@@ -84,6 +84,17 @@ const tick = setInterval(() => {
   }
 }, 1000)
 
+// Pico de amplitude do WAV (PCM 16-bit LE mono, header 44 bytes). Silêncio → ~0.
+function peakAmplitude(buf) {
+  let peak = 0
+  for (let i = 44; i + 1 < buf.length; i += 2) {
+    const s = Math.abs(buf.readInt16LE(i))
+    if (s > peak) peak = s
+  }
+  return peak // 0..32767
+}
+const SILENCE_PEAK = Number(process.env.CAPTION_SILENCE_PEAK || 500) // abaixo disto = silêncio
+
 async function handle(file) {
   let buf
   try {
@@ -93,6 +104,8 @@ async function handle(file) {
   }
   fs.unlink(file, () => {})
   if (buf.length < 8000) return // ~silêncio muito curto
+  // Salta segmentos silenciosos — sem isto o ASR ALUCINA (produz frases aleatórias).
+  if (peakAmplitude(buf) < SILENCE_PEAK) return
   const text = clean(await transcribe(buf))
   if (!text) return
   seq += 1
@@ -105,6 +118,10 @@ async function transcribe(buf) {
   form.append("model", MODEL)
   form.append("language", SOURCE_LANG)
   form.append("response_format", "json")
+  form.append("temperature", "0")
+  // Contexto p/ reduzir alucinações e fixar o domínio (trading/educação financeira).
+  form.append("prompt", process.env.CAPTION_PROMPT ||
+    "Sessão ao vivo de trading e educação financeira. Termos: stop loss, breakeven, long, short, XAUUSD, BTC, resistência, suporte.")
   const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI}` },
