@@ -24,7 +24,7 @@ const OPENAI = process.env.OPENAI_API_KEY
 const STREAM_ID = process.env.STREAM_ID
 const STREAM_KEY = process.env.STREAM_KEY
 const SOURCE_LANG = (process.env.SOURCE_LANG || "pt").toLowerCase().slice(0, 2)
-const SEG = Number(process.env.CAPTION_SEGMENT_SECONDS || 5)
+const SEG = Number(process.env.CAPTION_SEGMENT_SECONDS || 3)
 const MODEL = process.env.CAPTION_ASR_MODEL || "gpt-4o-transcribe"
 const INPUT =
   process.env.CAPTION_INPUT_URL ||
