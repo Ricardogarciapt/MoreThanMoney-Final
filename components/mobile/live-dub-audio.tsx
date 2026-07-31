@@ -45,7 +45,16 @@ export default function LiveDubAudio({
       return
     }
 
-    if (v) v.muted = true // silencia o áudio original; ouve-se a dobragem
+    // Silencia o áudio original e MANTÉM-no silenciado: os controlos nativos do <video>,
+    // a política de autoplay ou uma reconexão HLS podem "des-silenciar" — re-forçamos sempre.
+    const enforceMute = () => {
+      const el = videoRef.current
+      if (el && !el.muted) el.muted = true
+    }
+    if (v) {
+      v.muted = true
+      v.addEventListener("volumechange", enforceMute)
+    }
     setActive(true)
     let running = true
     sinceRef.current = 0
@@ -54,6 +63,7 @@ export default function LiveDubAudio({
 
     const poll = async () => {
       try {
+        enforceMute() // garante que o original continua silenciado durante a dobragem
         const r = await fetch(
           `/api/live-sessions/streams/${streamId}/captions?since=${sinceRef.current}&limit=8&audio=1&lang=${lang}`,
         )
@@ -98,6 +108,7 @@ export default function LiveDubAudio({
     return () => {
       running = false
       if (t) clearInterval(t)
+      if (v) v.removeEventListener("volumechange", enforceMute)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang, streamId])
