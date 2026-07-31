@@ -134,6 +134,18 @@ export default function EducatorDvrPanel() {
               >
                 <Download className="h-3.5 w-3.5" /> Descarregar
               </a>
+              {!deleting && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    if (confirm("Apagar a tua gravação do servidor? Não é reversível.")) act("confirm_delete")
+                  }}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-red-300 hover:text-red-200"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Apagar do servidor
+                </button>
+              )}
             </div>
 
             {status === "recorded" && (
