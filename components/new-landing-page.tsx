@@ -30,6 +30,7 @@ import { useT } from "@/components/i18n-provider"
 import { shouldReduceSafariEffects } from "@/lib/supabase-session"
 import { getRandomTestimonials } from "@/lib/testimonials-service"
 import type { Testimonial } from "@/lib/testimonials-service"
+import CertifiedShowcase from "@/components/avaliacoes/certified-showcase"
 
 // ─── Path Selector ─────────────────────────────────────────────────────────────
 
@@ -786,6 +787,14 @@ export default function NewLandingPage() {
                 }`}
               />
             ))}
+          </div>
+
+          {/* Alunos certificados — prova social (vazio se ainda não houver) */}
+          <div className="mt-16">
+            <CertifiedShowcase
+              title="Alunos já certificados"
+              subtitle="Formaram-se com a MoreThanMoney e têm o certificado oficial que o comprova."
+            />
           </div>
         </div>
       </section>

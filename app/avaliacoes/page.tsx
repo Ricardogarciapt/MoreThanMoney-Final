@@ -2,6 +2,7 @@ import Link from "next/link"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { getAuthenticatedUser } from "@/lib/admin-api-helpers"
 import { Award, Rocket, GraduationCap, ShieldCheck, ArrowRight, CheckCircle2, Download } from "lucide-react"
+import CertifiedShowcase from "@/components/avaliacoes/certified-showcase"
 
 export const dynamic = "force-dynamic"
 export const metadata = {
@@ -67,6 +68,10 @@ export default async function AvaliacoesPage() {
 
       {/* Cards */}
       <section className="mx-auto max-w-5xl px-4 py-12">
+        <div className="mb-6 text-center">
+          <h2 className="text-xl font-bold text-white md:text-2xl">Escolhe a tua avaliação e começa</h2>
+          <p className="mt-1 text-sm text-gray-400">Responde ao quiz e recebe o certificado no teu email — leva poucos minutos.</p>
+        </div>
         <div className="grid gap-6 md:grid-cols-3">
           {list.map((a: any, i: number) => {
             const Icon = ICONS[a.kind] || GraduationCap
@@ -131,8 +136,17 @@ export default async function AvaliacoesPage() {
         {list.length === 0 && (
           <p className="text-center text-sm text-gray-500">Ainda não há avaliações disponíveis.</p>
         )}
+      </section>
 
-        <p className="mx-auto mt-10 max-w-2xl text-center text-xs text-gray-500">
+      {/* Vitrine de alunos certificados (prova social) */}
+      <section className="border-t border-[#D2A63C]/10 bg-gradient-to-b from-[#D2A63C]/5 to-transparent">
+        <div className="mx-auto max-w-6xl px-4 py-12">
+          <CertifiedShowcase />
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-4 pb-12">
+        <p className="mx-auto max-w-2xl text-center text-xs text-gray-500">
           Já tens um certificado? Podes validar a sua autenticidade em{" "}
           <Link href="/avaliacoes/validar" className="text-[#D2A63C] hover:underline">
             /avaliacoes/validar
