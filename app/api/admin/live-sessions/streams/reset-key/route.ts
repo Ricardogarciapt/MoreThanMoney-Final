@@ -27,12 +27,14 @@ export async function POST(request: NextRequest) {
     }
 
     const streamKey = generateMtmIngestStreamKey(stream.educator_id)
+    // A chave é POR EDUCADOR (fixa). Fonte de verdade = lms_educators.stream_key_fixed.
     await supabase
       .from("lms_educators")
       .update({ stream_key_fixed: streamKey })
       .eq("id", stream.educator_id)
 
-    const { data, error } = await supabase
+    // Aplica a nova chave a TODAS as salas do educador (ficam consistentes; sem órfãs).
+    const { error } = await supabase
       .from("lms_streams")
       .update({
         stream_key: streamKey,
@@ -40,15 +42,13 @@ export async function POST(request: NextRequest) {
         is_live: false,
         live_ended_at: new Date().toISOString(),
       })
-      .eq("id", streamId)
-      .select("*")
-      .single()
+      .eq("educator_id", stream.educator_id)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, data, stream_key: streamKey })
+    return NextResponse.json({ success: true, stream_key: streamKey })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Erro interno" }, { status: 500 })
   }

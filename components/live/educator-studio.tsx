@@ -884,12 +884,16 @@ export default function EducatorStudio() {
                       intro={
                         <>
                           No OBS: define <strong className="text-gray-400">Serviço personalizado</strong> e cola o
-                          servidor + a chave desta sala (campos separados). A chave já está atribuída — não precisas de gerar nada.
+                          servidor + a chave (campos separados). A chave é <strong className="text-gray-400">fixa e única por educador</strong> —
+                          usa <strong className="text-gray-400">Copiar</strong>. Se precisares, gera uma{" "}
+                          <strong className="text-gray-400">nova chave</strong> (aplica-se a todas as tuas salas).
                         </>
                       }
                       hideDeployHint
                       rtmpUrl={stream.rtmps_url}
                       streamKey={stream.stream_key}
+                      onRegenerate={() => regenerateMtmIngestKey(stream.id)}
+                      loading={keyOpStreamId === stream.id}
                     />
                     <div className="space-y-1">
                       <p className="text-[11px] uppercase tracking-wide text-gray-500">Playback URL manual (YouTube, etc.)</p>
