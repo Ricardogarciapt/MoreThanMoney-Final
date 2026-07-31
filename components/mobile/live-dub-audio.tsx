@@ -27,6 +27,7 @@ export default function LiveDubAudio({
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const queueRef = useRef<string[]>([])
   const sinceRef = useRef(0)
+  const lastSeqRef = useRef(-1) // último seq já enfileirado (dedupe → não repete a frase)
 
   useEffect(() => {
     const v = videoRef.current
@@ -48,6 +49,7 @@ export default function LiveDubAudio({
     setActive(true)
     let running = true
     sinceRef.current = 0
+    lastSeqRef.current = -1
     queueRef.current = []
 
     const poll = async () => {
@@ -58,6 +60,8 @@ export default function LiveDubAudio({
         if (!r.ok || !running) return
         const d = await r.json()
         for (const c of d?.captions ?? []) {
+          if (c.seq <= lastSeqRef.current) continue // dedupe → nunca repete a frase
+          lastSeqRef.current = c.seq
           if (c.audioUrl) queueRef.current.push(c.audioUrl)
           sinceRef.current = c.seq
         }
@@ -83,6 +87,7 @@ export default function LiveDubAudio({
           if (cues.length < 100) break
         }
         sinceRef.current = s
+        lastSeqRef.current = s
       } catch {}
       if (running) {
         poll()
