@@ -61,8 +61,8 @@ export default function LiveDubAudio({
           if (c.audioUrl) queueRef.current.push(c.audioUrl)
           sinceRef.current = c.seq
         }
-        // prioridade = mínimo atraso: se a fila acumula, salta para o clip mais recente
-        if (queueRef.current.length > 1) queueRef.current = queueRef.current.slice(-1)
+        // A dobragem toca TODAS as frases por ordem (pode acumular atraso — aceitável).
+        // O áudio ORIGINAL é que tem prioridade de lag mínimo (canal PT, sem dobragem).
         if (a && a.paused) playNext()
       } catch {}
     }

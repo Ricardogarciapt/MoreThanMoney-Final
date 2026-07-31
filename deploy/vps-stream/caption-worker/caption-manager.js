@@ -16,8 +16,8 @@ const SECRET = process.env.LMS_CAPTION_WORKER_SECRET
 const POLL = Number(process.env.CAPTION_POLL_SECONDS || 15) * 1000
 const WORKER = path.join(__dirname, "caption-worker.js")
 
-if (!SECRET || !process.env.OPENAI_API_KEY) {
-  console.error("[caption-manager] falta LMS_CAPTION_WORKER_SECRET ou OPENAI_API_KEY")
+if (!SECRET || !(process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY)) {
+  console.error("[caption-manager] falta LMS_CAPTION_WORKER_SECRET ou uma key ASR (GROQ_API_KEY grátis / OPENAI_API_KEY)")
   process.exit(1)
 }
 

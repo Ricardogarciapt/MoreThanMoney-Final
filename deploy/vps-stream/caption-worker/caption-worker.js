@@ -14,10 +14,17 @@ const { spawn } = require("child_process")
 const API = (process.env.MTM_API_BASE || "https://www.morethanmoney.pt").replace(/\/$/, "")
 const SECRET = process.env.LMS_CAPTION_WORKER_SECRET
 const OPENAI = process.env.OPENAI_API_KEY
+const GROQ = process.env.GROQ_API_KEY
 const STREAM_ID = process.env.STREAM_ID
 const STREAM_KEY = process.env.STREAM_KEY
 const SOURCE_LANG = (process.env.SOURCE_LANG || "pt").toLowerCase().slice(0, 2)
-const MODEL = process.env.CAPTION_ASR_MODEL || "whisper-1"
+// ASR: Groq Whisper (GRÁTIS, mesmo modelo) por defeito se houver GROQ_API_KEY; senão OpenAI.
+const ASR_PROVIDER = process.env.CAPTION_ASR_PROVIDER || (GROQ ? "groq" : "openai")
+const ASR_KEY = ASR_PROVIDER === "groq" ? GROQ : OPENAI
+const ASR_URL = ASR_PROVIDER === "groq"
+  ? "https://api.groq.com/openai/v1/audio/transcriptions"
+  : "https://api.openai.com/v1/audio/transcriptions"
+const MODEL = process.env.CAPTION_ASR_MODEL || (ASR_PROVIDER === "groq" ? "whisper-large-v3-turbo" : "whisper-1")
 const INPUT =
   process.env.CAPTION_INPUT_URL || `http://127.0.0.1:8080/live/${STREAM_KEY}.flv`
 
@@ -34,8 +41,8 @@ const SILENCE_FRAMES = Math.round(SILENCE_MS / FRAME_MS)
 const MAX_NO_SPEECH = Number(process.env.CAPTION_MAX_NO_SPEECH || 0.8)
 const MIN_LOGPROB = Number(process.env.CAPTION_MIN_LOGPROB || -2.0)
 
-for (const [k, v] of Object.entries({ SECRET, OPENAI, STREAM_ID })) {
-  if (!v) { console.error(`[caption-worker] falta env ${k}`); process.exit(1) }
+for (const [k, v] of Object.entries({ SECRET, ASR_KEY, STREAM_ID })) {
+  if (!v) { console.error(`[caption-worker] falta env ${k} (ASR_KEY = GROQ_API_KEY ou OPENAI_API_KEY)`); process.exit(1) }
 }
 
 const NOISE = new Set(["", ".", "...", "obrigado", "obrigado.", "thank you", "thanks for watching", "tchau", "amém", "you"])
@@ -79,7 +86,7 @@ function wavHeader(dataLen) {
   return b
 }
 
-console.log(`[caption-worker] stream=${STREAM_ID} lang=${SOURCE_LANG} model=${MODEL} input=${INPUT}`)
+console.log(`[caption-worker] stream=${STREAM_ID} lang=${SOURCE_LANG} asr=${ASR_PROVIDER} model=${MODEL} input=${INPUT}`)
 
 const ff = spawn("ffmpeg", ["-loglevel", "error", "-i", INPUT, "-vn", "-ac", "1", "-ar", String(SR), "-f", "s16le", "-"])
 ff.stderr.on("data", (d) => process.stderr.write(`[ffmpeg] ${d}`))
@@ -145,14 +152,18 @@ async function transcribe(pcm) {
   form.append("response_format", "verbose_json")
   // NB: NÃO passar prompt — o Whisper pode injetar palavras do prompt que não foram ditas
   // (fabricação). A segmentação por pausa já dá frases completas sem precisar de contexto.
-  const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-    method: "POST", headers: { Authorization: `Bearer ${OPENAI}` }, body: form,
+  const r = await fetch(ASR_URL, {
+    method: "POST", headers: { Authorization: `Bearer ${ASR_KEY}` }, body: form,
   })
   if (!r.ok) { console.error("[caption-worker] ASR", r.status, (await r.text()).slice(0, 160)); return "" }
   const d = await r.json().catch(() => ({}))
   const segs = Array.isArray(d.segments) ? d.segments : []
-  const good = segs.filter((s) => (s.no_speech_prob ?? 1) < MAX_NO_SPEECH && (s.avg_logprob ?? -10) > MIN_LOGPROB)
-  return good.map((s) => (s.text || "").trim()).join(" ").trim()
+  // Filtro de confiança quando o provider fornece os campos; se não (ex.: Groq turbo),
+  // defaults deixam passar e a limpeza fica pelos filtros de texto (NOISE/HALLUC).
+  const good = segs.filter((s) => (s.no_speech_prob ?? 0) < MAX_NO_SPEECH && (s.avg_logprob ?? 0) > MIN_LOGPROB)
+  const joined = good.map((s) => (s.text || "").trim()).join(" ").trim()
+  // Fallback: alguns providers devolvem só `text` sem `segments`.
+  return joined || (typeof d.text === "string" ? d.text.trim() : "")
 }
 
 async function postCue(n, text) {
