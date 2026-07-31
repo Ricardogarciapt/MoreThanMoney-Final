@@ -20,6 +20,7 @@ import IntegrationsStatusPanel from "@/components/admin/integrations-status-pane
 import ChatChannelsPanel from "@/components/admin/chat-channels-panel"
 import LiveSessionsManager from "@/components/admin/live-sessions-manager"
 import DvrRecordingsManager from "@/components/admin/dvr-recordings-manager"
+import AvaliacoesManager from "@/components/admin/avaliacoes-manager"
 
 function AdminPageClient() {
   const router = useRouter()
@@ -223,6 +224,7 @@ function AdminPageClient() {
               {activeSection === "content" && "Conteúdo"}
               {activeSection === "education" && "Educação / LMS"}
               {activeSection === "dvr" && "Gravações DVR"}
+              {activeSection === "avaliacoes" && "Avaliações & Certificados"}
               {activeSection === "notifications" && "Notificações"}
               {activeSection === "settings" && "Configurações"}
             </h1>
@@ -330,6 +332,21 @@ function AdminPageClient() {
               </div>
               <div className="p-6">
                 <DvrRecordingsManager />
+              </div>
+            </div>
+          )}
+
+          {activeSection === "avaliacoes" && (
+            <div className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+              <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Avaliações &amp; Certificados</h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  Motor de avaliações (Fast Start, Bootcamp, Teste Final): editar perguntas e respostas certas,
+                  definir nota mínima por curso, ver certificados emitidos e emitir em lote a quem já concluiu.
+                </p>
+              </div>
+              <div className="p-6">
+                <AvaliacoesManager />
               </div>
             </div>
           )}

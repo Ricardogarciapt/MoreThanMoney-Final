@@ -66,6 +66,7 @@ export default function Navbar() {
         { name: t("navfooter.subMtmEducation"), href: "/mtm" },
         { name: t("navfooter.subDocs"), href: "/docs" },
         { name: t("navfooter.subLiveSessions"), href: "/live-sessions" },
+        { name: t("navfooter.subAvaliacoes"), href: "/avaliacoes" },
       ],
     },
     {

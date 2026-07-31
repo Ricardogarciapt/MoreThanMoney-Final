@@ -18,6 +18,7 @@ import {
   Ticket,
   Inbox,
   Film,
+  Award,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -28,6 +29,7 @@ const navItems = [
   { id: "content", label: "Conteúdo", icon: FileText },
   { id: "education", label: "Educação (LMS)", icon: GraduationCap },
   { id: "dvr", label: "Gravações DVR", icon: Film },
+  { id: "avaliacoes", label: "Avaliações", icon: Award },
   { id: "notifications", label: "Notificações", icon: Bell },
   { id: "settings", label: "Configurações", icon: Settings },
 ]
