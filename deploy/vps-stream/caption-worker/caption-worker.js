@@ -94,6 +94,27 @@ ff.stderr.on("data", (d) => process.stderr.write(`[ffmpeg] ${d}`))
 ff.on("exit", (code) => { console.log(`[caption-worker] ffmpeg terminou (${code})`); process.exit(code || 0) })
 
 let seq = 0
+let seqReady = false
+// Continua a numeração a partir do MÁXIMO já existente nesta stream (senão os cues novos
+// ficam com seq mais baixo que os antigos e o player/dobragem — que estão na borda — não os veem).
+async function initSeqFromMax() {
+  let s = 0
+  for (let i = 0; i < 50; i++) {
+    try {
+      const r = await fetch(`${API}/api/live-sessions/streams/${STREAM_ID}/captions?since=${s}&limit=100`)
+      if (!r.ok) break
+      const d = await r.json()
+      const cues = d?.captions ?? []
+      if (!cues.length) break
+      s = d.latestSeq ?? cues[cues.length - 1].seq
+      if (cues.length < 100) break
+    } catch { break }
+  }
+  seq = s
+  seqReady = true
+  console.log(`[caption-worker] seq inicial = ${seq}`)
+}
+initSeqFromMax()
 let lastText = ""       // contexto p/ o prompt do whisper (continuidade)
 let carry = Buffer.alloc(0)          // bytes soltos < 1 frame
 let phrase = []                      // frames (Buffers) da frase atual
@@ -133,6 +154,7 @@ function flush() {
     .then((t) => {
       const c = clean(t)
       if (!c || c === lastText) return
+      if (!seqReady) return // espera pela numeração inicial (evita colisão de seq)
       // Eco do prompt: se a nova frase contém/está contida na anterior → é repetição/eco.
       if (lastText && (c.includes(lastText) || lastText.includes(c)) && Math.min(c.length, lastText.length) > 12) return
       lastText = c
