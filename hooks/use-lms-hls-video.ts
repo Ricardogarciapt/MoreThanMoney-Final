@@ -105,13 +105,15 @@ export function useLmsHlsVideo(videoRef: RefObject<HTMLVideoElement | null>, hls
         liveMaxLatencyDurationCount: 8,    // margem antes de recuperar (evita saltos que desincronizam)
         maxLiveSyncPlaybackRate: 1.1,      // acelera MUITO pouco p/ apanhar o edge — >1.1 desincroniza o áudio
         maxBufferLength: 20,               // era 15 — mais almofada contra stalls
-        liveBackBufferLength: 10,          // era 20 — liberta memória
-        backBufferLength: 8,               // era 12
+        liveBackBufferLength: 20,          // back-buffer para poder recuar ~7s na dobragem
+        backBufferLength: 20,              // idem (dobragem atrasa o vídeo ~7s p/ sincronizar a voz)
         maxBufferHole: 0.5,                // salta pequenos buracos em vez de parar
         highBufferWatchdogPeriod: 1,       // deteta stalls mais depressa
         nudgeMaxRetry: 8,                  // era 3 — recupera de stalls sem crashar
       })
       hlsRef.current = hls
+      // Expor a instância ao LiveDubAudio para atrasar o vídeo (liveSyncDuration) só na dobragem.
+      try { (video as any).__mtmHls = hls } catch {}
       const tryNextCandidate = () => {
         const next = candidateUrls.find((u) => !triedFallbackRef.current.has(u))
         if (!next) return false

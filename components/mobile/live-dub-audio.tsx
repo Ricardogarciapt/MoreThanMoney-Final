@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react"
 import { Volume2, ChevronDown, Check } from "lucide-react"
 
 // Dobragem ao vivo: seletor de canal de ÁUDIO. Ao escolher um idioma dobrado, silencia
-// o vídeo e toca a voz clonada (TTS por frase, servido em /captions?audio=1&lang=). O PT
-// original mantém o áudio real do stream. v1: reprodução em fila (quase ao vivo).
+// o vídeo e toca a voz clonada (TTS por frase, servido em /captions?audio=1&lang=).
+// O áudio dobrado chega ~6-8s atrasado (ASR→tradução→TTS); por isso, no canal dobrado
+// ATRASAMOS o vídeo ~DUB_VIDEO_DELAY_S para as vozes sincronizarem. O PT original fica rápido.
 
 const DUB_LANGS: [string, string][] = [
   ["", "Português (original)"],
@@ -14,6 +15,17 @@ const DUB_LANGS: [string, string][] = [
   ["fr", "Français"],
   ["de", "Deutsch"],
 ]
+
+// Atraso do vídeo (segundos) para alinhar com a voz dobrada. Ajustável.
+const DUB_VIDEO_DELAY_S = 7
+
+function liveEdgeOf(v: HTMLVideoElement): number {
+  try {
+    if (v.seekable && v.seekable.length) return v.seekable.end(v.seekable.length - 1)
+    if (v.buffered && v.buffered.length) return v.buffered.end(v.buffered.length - 1)
+  } catch {}
+  return 0
+}
 
 export default function LiveDubAudio({
   streamId,
@@ -32,22 +44,37 @@ export default function LiveDubAudio({
 
   useEffect(() => {
     const v = videoRef.current
+    const hls = (v as any)?.__mtmHls
     if (!audioRef.current && typeof Audio !== "undefined") {
       audioRef.current = new Audio()
       audioRef.current.onended = playNext
     }
     const a = audioRef.current
 
+    // ---- Canal ORIGINAL: restaura latência baixa e volta à borda ao vivo ----
+    const restoreLive = () => {
+      try {
+        if (hls?.config) {
+          hls.config.liveSyncDuration = undefined // volta a usar liveSyncDurationCount (3)
+          hls.config.liveMaxLatencyDuration = undefined
+        }
+        if (v) {
+          const edge = liveEdgeOf(v)
+          if (edge > 2 && edge - v.currentTime > 3) v.currentTime = edge - 1.5 // apanha o edge
+        }
+      } catch {}
+    }
+
     if (!lang) {
       if (v) v.muted = false
       if (a) { a.pause(); a.src = "" }
       queueRef.current = []
       setActive(false)
+      restoreLive()
       return
     }
 
-    // Silencia o áudio original e MANTÉM-no silenciado: os controlos nativos do <video>,
-    // a política de autoplay ou uma reconexão HLS podem "des-silenciar" — re-forçamos sempre.
+    // ---- Canal DOBRADO: silencia o original, ATRASA o vídeo ~DUB_VIDEO_DELAY_S ----
     const enforceMute = () => {
       const el = videoRef.current
       if (el && !el.muted) el.muted = true
@@ -56,6 +83,26 @@ export default function LiveDubAudio({
       v.muted = true
       v.addEventListener("volumechange", enforceMute)
     }
+    // hls.js: passa a jogar DUB_VIDEO_DELAY_S atrás do edge e segura aí (não recupera latência).
+    if (hls?.config) {
+      hls.config.liveSyncDuration = DUB_VIDEO_DELAY_S
+      hls.config.liveMaxLatencyDuration = DUB_VIDEO_DELAY_S + 12
+    }
+    // Mantém o vídeo ~DUB_VIDEO_DELAY_S atrás (seek inicial + correções; funciona também no HLS nativo).
+    const holdDelay = () => {
+      const el = videoRef.current
+      if (!el) return
+      const edge = liveEdgeOf(el)
+      if (edge < DUB_VIDEO_DELAY_S) return // ainda sem buffer suficiente
+      const latency = edge - el.currentTime
+      const bufStart = el.buffered && el.buffered.length ? el.buffered.start(0) : 0
+      const target = Math.max(bufStart + 0.5, edge - DUB_VIDEO_DELAY_S)
+      // Demasiado perto do edge (adiantou) ou demasiado atrás (derivou) → recoloca no alvo.
+      if (latency < DUB_VIDEO_DELAY_S - 2 || latency > DUB_VIDEO_DELAY_S + 5) {
+        try { el.currentTime = target } catch {}
+      }
+    }
+
     setActive(true)
     let running = true
     sinceRef.current = 0
@@ -64,7 +111,7 @@ export default function LiveDubAudio({
 
     const poll = async () => {
       try {
-        enforceMute() // garante que o original continua silenciado durante a dobragem
+        enforceMute()
         const r = await fetch(
           `/api/live-sessions/streams/${streamId}/captions?since=${sinceRef.current}&limit=8&audio=1&lang=${lang}`,
         )
@@ -76,15 +123,13 @@ export default function LiveDubAudio({
           if (c.audioUrl) queueRef.current.push(c.audioUrl)
           sinceRef.current = c.seq
         }
-        // A dobragem toca TODAS as frases por ordem (pode acumular atraso — aceitável).
-        // O áudio ORIGINAL é que tem prioridade de lag mínimo (canal PT, sem dobragem).
         if (a && a.paused) playNext()
       } catch {}
     }
 
-    // Arranca na BORDA AO VIVO: caminha até ao último seq SEM gerar áudio (sem audio=1),
-    // e só dobra o que vem a seguir — senão reproduzia toda a sessão desde o início (áudio errado).
+    // Arranca na BORDA AO VIVO: caminha até ao último seq SEM gerar áudio, e só dobra o que vem a seguir.
     let t: ReturnType<typeof setInterval> | null = null
+    let delayTimer: ReturnType<typeof setInterval> | null = null
     ;(async () => {
       try {
         let s = 0
@@ -101,6 +146,9 @@ export default function LiveDubAudio({
         lastSeqRef.current = s
       } catch {}
       if (running) {
+        // Seek inicial para o atraso + manutenção (dá tempo ao buffer encher).
+        setTimeout(() => { if (running) holdDelay() }, 1200)
+        delayTimer = setInterval(() => { if (running) holdDelay() }, 2000)
         poll()
         t = setInterval(poll, 1500)
       }
@@ -109,6 +157,7 @@ export default function LiveDubAudio({
     return () => {
       running = false
       if (t) clearInterval(t)
+      if (delayTimer) clearInterval(delayTimer)
       if (v) v.removeEventListener("volumechange", enforceMute)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -140,7 +189,8 @@ export default function LiveDubAudio({
         <ChevronDown className="h-3 w-3" />
       </button>
       {menu && (
-        <div className="absolute right-0 top-8 z-50 w-44 overflow-hidden rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
+        // Abre PARA CIMA (o botão fica no fundo do player → menu para baixo saía do ecrã).
+        <div className="absolute bottom-full right-0 z-50 mb-1 w-44 overflow-hidden rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
           {DUB_LANGS.map(([code, name]) => (
             <button
               key={code || "orig"}
