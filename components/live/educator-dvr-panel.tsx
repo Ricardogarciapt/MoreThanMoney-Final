@@ -12,6 +12,7 @@ const DVR_BASE = "https://stream.morethanmoney.pt/dvr"
 const DUB_OPTIONS: [string, string][] = [
   ["en", "English"],
   ["es", "Español"],
+  ["fr", "Français"],
   ["de", "Deutsch"],
 ]
 
@@ -43,7 +44,7 @@ export default function EducatorDvrPanel() {
   const [job, setJob] = useState<Job | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [picked, setPicked] = useState<string[]>(["en", "es", "de"])
+  const [picked, setPicked] = useState<string[]>(["en", "es", "fr", "de"])
   const timer = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const load = useCallback(async () => {

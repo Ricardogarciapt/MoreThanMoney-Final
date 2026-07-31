@@ -11,6 +11,7 @@ const DUB_LANGS: [string, string][] = [
   ["", "Português (original)"],
   ["en", "English"],
   ["es", "Español"],
+  ["fr", "Français"],
   ["de", "Deutsch"],
 ]
 

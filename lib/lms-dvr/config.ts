@@ -5,7 +5,7 @@
 export const DVR_PUBLIC_BASE = "https://stream.morethanmoney.pt/dvr"
 
 // Idiomas de dobragem oferecidos por defeito (além do PT original).
-export const DVR_DEFAULT_DUB_LANGS = ["en", "es", "de"] as const
+export const DVR_DEFAULT_DUB_LANGS = ["en", "es", "fr", "de"] as const
 
 export function dvrDownloadUrl(file: string): string {
   return `${DVR_PUBLIC_BASE}/${file}`
