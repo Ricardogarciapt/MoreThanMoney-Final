@@ -97,6 +97,9 @@ export default function LiveSessionsManager() {
     access_tier: "all", // all | app_member | premium
   })
   const [editingEducatorId, setEditingEducatorId] = useState<string | null>(null)
+  const [lastKey, setLastKey] = useState<{ streamId: string; key: string } | null>(null)
+  const [copiedKey, setCopiedKey] = useState(false)
+  const [keyBusyId, setKeyBusyId] = useState<string | null>(null)
   const [editingEducatorForm, setEditingEducatorForm] = useState<any>({
     display_name: "",
     bio: "",
@@ -355,12 +358,39 @@ export default function LiveSessionsManager() {
   }
 
   const resetKey = async (streamId: string) => {
-    await fetch("/api/admin/live-sessions/streams/reset-key", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ streamId }),
-    })
-    load()
+    setKeyBusyId(streamId)
+    try {
+      const res = await fetch("/api/admin/live-sessions/streams/reset-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ streamId }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        window.alert(j.error || `Erro ao gerar chave (${res.status})`)
+        return
+      }
+      if (j.stream_key) {
+        setLastKey({ streamId, key: j.stream_key })
+        setCopiedKey(false)
+      }
+      await load()
+    } catch (e: any) {
+      window.alert("Erro de rede ao gerar a chave. Tenta de novo.")
+    } finally {
+      setKeyBusyId(null)
+    }
+  }
+
+  const copyKey = async (key: string) => {
+    try {
+      await navigator.clipboard.writeText(key)
+      setCopiedKey(true)
+      setTimeout(() => setCopiedKey(false), 2000)
+    } catch {
+      window.prompt("Copia a chave:", key)
+    }
   }
 
   const deleteStream = async (streamId: string, title: string) => {
@@ -600,7 +630,22 @@ export default function LiveSessionsManager() {
                   {firstStream && (
                     <>
                       <p className="text-gray-300">RTMPS: {firstStream.rtmps_url || "não definida"}</p>
-                      <p className="text-gray-300">Chave OBS fixa: {e.stream_key_fixed || firstStream.stream_key || "não definida"}</p>
+                      <div className="flex flex-wrap items-center gap-2 text-gray-300">
+                        <span>Chave OBS fixa:</span>
+                        <code className="rounded bg-black/40 px-1.5 py-0.5 font-mono text-[11px] text-gray-200">
+                          {e.stream_key_fixed || firstStream.stream_key || "não definida"}
+                        </code>
+                        {(e.stream_key_fixed || firstStream.stream_key) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 border-gray-700 px-2 text-[11px] text-gray-200"
+                            onClick={() => copyKey((e.stream_key_fixed || firstStream.stream_key) as string)}
+                          >
+                            Copiar
+                          </Button>
+                        )}
+                      </div>
                     </>
                   )}
                   </div>
@@ -1127,13 +1172,31 @@ export default function LiveSessionsManager() {
                 >
                   {s.is_live ? "Parar transmissão" : "Iniciar transmissão"}
                 </Button>
-                <Button size="sm" className="bg-[#D2A63C] hover:bg-[#BB8525] text-black" onClick={() => resetKey(s.id)}>
-                  Nova chave MTM (HLS)
+                <Button size="sm" disabled={keyBusyId === s.id} className="bg-[#D2A63C] hover:bg-[#BB8525] text-black" onClick={() => resetKey(s.id)}>
+                  {keyBusyId === s.id ? "A gerar…" : "Nova chave MTM (HLS)"}
                 </Button>
                 <Button size="sm" variant="destructive" onClick={() => deleteStream(s.id, s.title)}>
                   Apagar canal
                 </Button>
               </div>
+              {lastKey?.streamId === s.id && (
+                <div className="mt-2 rounded-lg border border-[#D2A63C]/40 bg-[#D2A63C]/10 p-2">
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#D2A63C]">
+                    Nova chave MTM — cola no OBS (Stream Key)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      readOnly
+                      value={lastKey.key}
+                      onFocus={(ev) => ev.currentTarget.select()}
+                      className="border-gray-700 bg-black/40 font-mono text-xs"
+                    />
+                    <Button size="sm" className="shrink-0 bg-[#D2A63C] text-black hover:bg-[#BB8525]" onClick={() => copyKey(lastKey.key)}>
+                      {copiedKey ? "Copiado ✓" : "Copiar"}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
