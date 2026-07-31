@@ -88,7 +88,8 @@ function wavHeader(dataLen) {
 
 console.log(`[caption-worker] stream=${STREAM_ID} lang=${SOURCE_LANG} asr=${ASR_PROVIDER} model=${MODEL} input=${INPUT}`)
 
-const ff = spawn("ffmpeg", ["-loglevel", "error", "-i", INPUT, "-vn", "-ac", "1", "-ar", String(SR), "-f", "s16le", "-"])
+// -threads 1 + prioridade baixa: o ASR NUNCA pode roubar CPU ao SRS (streaming = prioridade).
+const ff = spawn("ffmpeg", ["-nostats", "-threads", "1", "-loglevel", "error", "-i", INPUT, "-vn", "-ac", "1", "-ar", String(SR), "-f", "s16le", "-"])
 ff.stderr.on("data", (d) => process.stderr.write(`[ffmpeg] ${d}`))
 ff.on("exit", (code) => { console.log(`[caption-worker] ffmpeg terminou (${code})`); process.exit(code || 0) })
 
