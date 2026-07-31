@@ -19,6 +19,7 @@ import SettingsManager from "@/components/admin/settings-manager"
 import IntegrationsStatusPanel from "@/components/admin/integrations-status-panel"
 import ChatChannelsPanel from "@/components/admin/chat-channels-panel"
 import LiveSessionsManager from "@/components/admin/live-sessions-manager"
+import DvrRecordingsManager from "@/components/admin/dvr-recordings-manager"
 
 function AdminPageClient() {
   const router = useRouter()
@@ -221,6 +222,7 @@ function AdminPageClient() {
               {activeSection === "users" && "Utilizadores"}
               {activeSection === "content" && "Conteúdo"}
               {activeSection === "education" && "Educação / LMS"}
+              {activeSection === "dvr" && "Gravações DVR"}
               {activeSection === "notifications" && "Notificações"}
               {activeSection === "settings" && "Configurações"}
             </h1>
@@ -313,6 +315,21 @@ function AdminPageClient() {
               </div>
               <div className="p-6">
                 <LiveSessionsManager />
+              </div>
+            </div>
+          )}
+
+          {activeSection === "dvr" && (
+            <div className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+              <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">Gravações DVR das sessões</h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  Explorar as gravações de todos os educadores: descarregar o original (PT) ou o
+                  multi-áudio (PT + dobragens EN/ES/FR/DE), preparar a montagem e apagar do servidor.
+                </p>
+              </div>
+              <div className="p-6">
+                <DvrRecordingsManager />
               </div>
             </div>
           )}
