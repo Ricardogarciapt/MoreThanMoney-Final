@@ -3,6 +3,8 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { getAuthenticatedUser } from "@/lib/admin-api-helpers"
 import { Award, Rocket, GraduationCap, ShieldCheck, ArrowRight, CheckCircle2, Download } from "lucide-react"
 import CertifiedShowcase from "@/components/avaliacoes/certified-showcase"
+import CertificatePreview from "@/components/avaliacoes/certificate-preview"
+import type { CertTemplate } from "@/lib/avaliacoes/config"
 
 export const dynamic = "force-dynamic"
 export const metadata = {
@@ -35,17 +37,18 @@ export default async function AvaliacoesPage() {
   }
 
   // certificados já emitidos ao utilizador autenticado
-  const passedBySlug: Record<string, { cert_code: string; cert_url: string | null }> = {}
+  const passedBySlug: Record<string, { cert_code: string; cert_url: string | null; name: string; grade_value: number | null }> = {}
   const auth = await getAuthenticatedUser()
   if (auth.userId) {
     const { data: attempts } = await supabase
       .from("assessment_attempts")
-      .select("assessment_slug, cert_code, cert_url, created_at")
+      .select("assessment_slug, cert_code, cert_url, name, grade_value, created_at")
       .eq("user_id", auth.userId)
       .eq("passed", true)
       .order("created_at", { ascending: false })
     for (const a of attempts || []) {
-      if (!passedBySlug[a.assessment_slug]) passedBySlug[a.assessment_slug] = { cert_code: a.cert_code, cert_url: a.cert_url }
+      if (!passedBySlug[a.assessment_slug])
+        passedBySlug[a.assessment_slug] = { cert_code: a.cert_code, cert_url: a.cert_url, name: a.name, grade_value: a.grade_value }
     }
   }
 
@@ -102,6 +105,15 @@ export default async function AvaliacoesPage() {
 
                 {done ? (
                   <div className="mt-5 space-y-2">
+                    <CertificatePreview
+                      template={a.slug as CertTemplate}
+                      name={done.name}
+                      gradeText={
+                        a.grade_display === "valores20" && done.grade_value != null
+                          ? Number(done.grade_value).toFixed(1).replace(".", ",")
+                          : null
+                      }
+                    />
                     <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
                       <CheckCircle2 className="h-4 w-4" /> Certificado emitido
                     </div>

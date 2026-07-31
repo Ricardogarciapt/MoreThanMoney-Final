@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import CertificatePreview from "@/components/avaliacoes/certificate-preview"
+import type { CertTemplate } from "@/lib/avaliacoes/config"
 import {
   Loader2,
   ArrowLeft,
@@ -158,6 +160,10 @@ export default function QuizRunner({ slug }: { slug: string }) {
 
           {result.passed ? (
             <div className="mt-6 space-y-3">
+              {/* Pré-visualização do certificado do aluno */}
+              <div className="mx-auto max-w-md">
+                <CertificatePreview template={slug as CertTemplate} name={name} gradeText={result.gradeText} />
+              </div>
               <div className="flex items-center justify-center gap-2 text-sm text-gray-300">
                 <Mail className="h-4 w-4 text-[#D2A63C]" /> Enviámos uma cópia do certificado para <strong>{email}</strong>.
               </div>
