@@ -86,11 +86,36 @@ export default function LiveCaptions({
       } catch {}
     }
 
-    poll()
-    const t = setInterval(poll, 1300)
+    let timer: ReturnType<typeof setInterval> | null = null
+    const startPolling = () => {
+      poll()
+      timer = setInterval(poll, 1300)
+    }
+    // No 1º carregamento arranca na BORDA AO VIVO (senão mostrava o histórico desde o seq 0).
+    // Na troca de idioma, seqRef já foi recuado para o cue atual — não voltar a saltar.
+    if (seqRef.current === 0) {
+      ;(async () => {
+        try {
+          let s = 0
+          for (let i = 0; i < 50 && active; i++) {
+            const r = await fetch(`/api/live-sessions/streams/${streamId}/captions?since=${s}&limit=100`)
+            if (!r.ok) break
+            const d = await r.json()
+            const cues = d?.captions ?? []
+            if (!cues.length) break
+            s = d.latestSeq ?? cues[cues.length - 1].seq
+            if (cues.length < 100) break
+          }
+          seqRef.current = Math.max(0, s - 1)
+        } catch {}
+        if (active) startPolling()
+      })()
+    } else {
+      startPolling()
+    }
     return () => {
       active = false
-      clearInterval(t)
+      if (timer) clearInterval(timer)
       if (clearTimer.current) clearTimeout(clearTimer.current)
     }
   }, [streamId, enabled, lang])
