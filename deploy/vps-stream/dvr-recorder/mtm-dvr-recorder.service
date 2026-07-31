@@ -1,0 +1,18 @@
+[Unit]
+Description=MTM DVR recorder (ffmpeg -c copy do FLV → /mnt/dvr; desacoplado do SRS)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+EnvironmentFile=/opt/mtm-stream/dvr-recorder/mtm-dvr-recorder.env
+ExecStart=/usr/bin/node /opt/mtm-stream/dvr-recorder/dvr-recorder.js
+Restart=always
+RestartSec=5
+# Prioridade baixa: a gravação (mesmo -c copy) NUNCA compete com o SRS/streaming.
+Nice=15
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target
