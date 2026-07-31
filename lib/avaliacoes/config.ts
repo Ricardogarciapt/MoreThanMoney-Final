@@ -106,6 +106,16 @@ export function makeCertCode(template: CertTemplate): string {
   return `MTM-${CODE_PREFIX[template]}-${rand}`
 }
 
+/** Primeiro + último nome (para o certificado). "Maria M. de Vasconcelos" → "Maria Vasconcelos". */
+export function firstLastName(full: string): string {
+  const parts = String(full || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+  if (parts.length <= 1) return parts[0] || ""
+  return `${parts[0]} ${parts[parts.length - 1]}`
+}
+
 export function formatPtDate(d: Date = new Date()): string {
   const dd = String(d.getDate()).padStart(2, "0")
   const mm = String(d.getMonth() + 1).padStart(2, "0")

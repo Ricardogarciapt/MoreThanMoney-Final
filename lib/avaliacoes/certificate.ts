@@ -1,8 +1,9 @@
 import fs from "fs"
 import path from "path"
 import PDFDocument from "pdfkit"
+import QRCode from "qrcode"
 import type { CertTemplate } from "./config"
-import { formatPtDate } from "./config"
+import { formatPtDate, firstLastName } from "./config"
 import { getSiteUrl } from "@/lib/mail-transport"
 
 // Gerador de certificados: usa os fundos limpos exportados do Canva (public/certificados)
@@ -100,9 +101,29 @@ export type CertificateInput = {
   date?: Date
 }
 
+// Geometria do QR (canto inferior direito) — fundo branco para garantir leitura.
+const QR_BOX = 112
+const QR_MARGIN = 18
+const QR_X = W - QR_BOX - QR_MARGIN
+const QR_Y = H - QR_BOX - QR_MARGIN
+
 export async function generateCertificatePdf(input: CertificateInput): Promise<Buffer> {
   const cfg = TEMPLATES[input.template]
-  const [bg, scriptFont] = await Promise.all([loadAsset(cfg.bg), loadAsset("GreatVibes-Regular.ttf")])
+  const site = getSiteUrl()
+  const validateUrl = `${site}/avaliacoes/validar/${input.code}`
+
+  const [bg, scriptFont, qrPng] = await Promise.all([
+    loadAsset(cfg.bg),
+    loadAsset("GreatVibes-Regular.ttf"),
+    QRCode.toBuffer(validateUrl, {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 240,
+      color: { dark: "#101011", light: "#ffffff" },
+    }),
+  ])
+
+  const displayName = firstLastName(input.name) || input.name
 
   return await new Promise<Buffer>((resolve, reject) => {
     try {
@@ -115,9 +136,9 @@ export async function generateCertificatePdf(input: CertificateInput): Promise<B
       doc.registerFont("Script", scriptFont)
       doc.image(bg, 0, 0, { width: W, height: H })
 
-      // nome (script, auto-ajuste)
-      const ns = fitFontSize(doc, input.name, "Script", cfg.name.size, 22, cfg.name.maxW)
-      drawBaseline(doc, input.name, cfg.name, "Script", ns)
+      // nome (primeiro + último, script dourado, auto-ajuste)
+      const ns = fitFontSize(doc, displayName, "Script", cfg.name.size, 22, cfg.name.maxW)
+      drawBaseline(doc, displayName, cfg.name, "Script", ns)
 
       // nota
       if (cfg.grade && input.gradeText) {
@@ -126,11 +147,16 @@ export async function generateCertificatePdf(input: CertificateInput): Promise<B
         drawBaseline(doc, label, g, "Times-Bold", g.size)
       }
 
-      // rodapé: código de validação + data de emissão
-      const site = getSiteUrl().replace(/^https?:\/\//, "")
-      const footer = `Certificado nº ${input.code}  ·  Emitido em ${formatPtDate(input.date)}  ·  Verificar em ${site}/avaliacoes/validar`
+      // QR de validação (canto inferior direito, sobre fundo branco arredondado)
+      doc.save()
+      doc.roundedRect(QR_X, QR_Y, QR_BOX, QR_BOX, 8).fill("#ffffff")
+      doc.image(qrPng, QR_X + 8, QR_Y + 8, { width: QR_BOX - 16, height: QR_BOX - 16 })
+      doc.restore()
+
+      // rodapé: código de validação + data de emissão (à esquerda do QR)
+      const footer = `Certificado nº ${input.code}  ·  Emitido em ${formatPtDate(input.date)}  ·  Validar: aponta a câmara ao QR →`
       doc.font("Helvetica").fillColor(cfg.footerColor).fontSize(9)
-      doc.text(footer, 40, H - 24, { width: W - 80, align: "center", lineBreak: false })
+      doc.text(footer, 40, H - 24, { width: QR_X - 60, align: "center", lineBreak: false })
 
       doc.end()
     } catch (e) {
