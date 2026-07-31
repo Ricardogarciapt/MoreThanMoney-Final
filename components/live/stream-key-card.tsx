@@ -19,7 +19,7 @@ export type StreamKeyCardProps = {
   /** Título do bloco (por defeito: configuração genérica OBS) */
   title?: string
   /** Texto introdutório (ex.: aviso Restream vs MTM) */
-  intro?: string
+  intro?: React.ReactNode
   /** Rótulo do botão de sincronizar */
   syncButtonLabel?: string
   syncButtonLabelWhenHasKey?: string
