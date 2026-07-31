@@ -61,6 +61,7 @@ export async function POST(
         source_language: source,
         source_text: text,
         translations,
+        audio: {}, // nova transcrição deste seq → invalida qualquer TTS antigo (evita dobragem stale)
         is_final: isFinal,
         t_start_ms: Number.isFinite(body.t_start_ms as number) ? body.t_start_ms : null,
         t_end_ms: Number.isFinite(body.t_end_ms as number) ? body.t_end_ms : null,

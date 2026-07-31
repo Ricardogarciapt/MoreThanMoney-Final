@@ -64,11 +64,33 @@ export default function LiveDubAudio({
         if (a && a.paused) playNext()
       } catch {}
     }
-    poll()
-    const t = setInterval(poll, 1500)
+
+    // Arranca na BORDA AO VIVO: caminha até ao último seq SEM gerar áudio (sem audio=1),
+    // e só dobra o que vem a seguir — senão reproduzia toda a sessão desde o início (áudio errado).
+    let t: ReturnType<typeof setInterval> | null = null
+    ;(async () => {
+      try {
+        let s = 0
+        for (let i = 0; i < 50 && running; i++) {
+          const r = await fetch(`/api/live-sessions/streams/${streamId}/captions?since=${s}&limit=100&lang=${lang}`)
+          if (!r.ok) break
+          const d = await r.json()
+          const cues = d?.captions ?? []
+          if (!cues.length) break
+          s = d.latestSeq ?? cues[cues.length - 1].seq
+          if (cues.length < 100) break
+        }
+        sinceRef.current = s
+      } catch {}
+      if (running) {
+        poll()
+        t = setInterval(poll, 1500)
+      }
+    })()
+
     return () => {
       running = false
-      clearInterval(t)
+      if (t) clearInterval(t)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang, streamId])
