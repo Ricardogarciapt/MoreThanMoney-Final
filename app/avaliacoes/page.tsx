@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { getAuthenticatedUser } from "@/lib/admin-api-helpers"
 import { Award, Rocket, GraduationCap, ShieldCheck, ArrowRight, CheckCircle2, Download } from "lucide-react"
 import CertifiedShowcase from "@/components/avaliacoes/certified-showcase"
-import CertificatePreview from "@/components/avaliacoes/certificate-preview"
+import CertificateRender from "@/components/avaliacoes/certificate-render"
 import type { CertTemplate } from "@/lib/avaliacoes/config"
 
 export const dynamic = "force-dynamic"
@@ -105,12 +105,13 @@ export default async function AvaliacoesPage() {
 
                 {done ? (
                   <div className="mt-5 space-y-2">
-                    <CertificatePreview
+                    <CertificateRender
                       template={a.slug as CertTemplate}
+                      courseTitle={a.title}
                       name={done.name}
                       gradeText={
                         a.grade_display === "valores20" && done.grade_value != null
-                          ? Number(done.grade_value).toFixed(1).replace(".", ",")
+                          ? `${Number(done.grade_value).toFixed(1).replace(".", ",")} valores`
                           : null
                       }
                     />
