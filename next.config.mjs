@@ -20,7 +20,7 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   reactStrictMode: true,
-  serverExternalPackages: ["ssh2", "metaapi.cloud-sdk"],
+  serverExternalPackages: ["ssh2", "metaapi.cloud-sdk", "pdfkit"],
   async redirects() {
     return [
       {
