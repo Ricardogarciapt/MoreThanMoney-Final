@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   let q = supabase
     .from("assessment_attempts")
-    .select("id, assessment_slug, name, email, score_percent, grade_value, passed, cert_code, cert_url, emailed_at, created_at")
+    .select("id, assessment_slug, name, email, score_percent, grade_value, passed, cert_code, cert_url, emailed_at, feedback, created_at")
     .order("created_at", { ascending: false })
     .limit(500)
   if (slug) q = q.eq("assessment_slug", slug)

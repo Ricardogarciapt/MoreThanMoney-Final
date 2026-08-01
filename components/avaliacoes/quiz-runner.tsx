@@ -44,6 +44,8 @@ export default function QuizRunner({ slug }: { slug: string }) {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [answers, setAnswers] = useState<Record<string, number>>({})
+  const [opinion, setOpinion] = useState("")
+  const [favorite, setFavorite] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<SubmitResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -97,7 +99,12 @@ export default function QuizRunner({ slug }: { slug: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), answers }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          answers,
+          feedback: { opinion: opinion.trim(), favorite: favorite.trim() },
+        }),
       })
       const j = await r.json()
       if (!r.ok) setError(j?.error || "Erro ao submeter.")
@@ -284,6 +291,36 @@ export default function QuizRunner({ slug }: { slug: string }) {
             </div>
           )
         })}
+      </div>
+
+      {/* Opinião sobre o teste (opcional) */}
+      <div className="mt-6 rounded-xl border border-[#D2A63C]/20 bg-gray-950/40 p-5">
+        <h3 className="text-sm font-semibold text-[#D2A63C]">A tua opinião (opcional)</h3>
+        <p className="mt-0.5 text-xs text-gray-500">Ajuda-nos a melhorar a formação.</p>
+        <div className="mt-3 space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-400">O que achaste deste teste?</label>
+            <textarea
+              value={opinion}
+              onChange={(e) => setOpinion(e.target.value)}
+              rows={2}
+              maxLength={1000}
+              placeholder="A tua opinião sobre o teste…"
+              className="w-full resize-y rounded-lg border border-gray-700 bg-black/40 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-[#D2A63C] focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-400">Qual foi a parte que mais gostaste?</label>
+            <textarea
+              value={favorite}
+              onChange={(e) => setFavorite(e.target.value)}
+              rows={2}
+              maxLength={1000}
+              placeholder="A parte que mais gostaste…"
+              className="w-full resize-y rounded-lg border border-gray-700 bg-black/40 px-3 py-2 text-sm text-white placeholder-gray-600 focus:border-[#D2A63C] focus:outline-none"
+            />
+          </div>
+        </div>
       </div>
 
       {error && (

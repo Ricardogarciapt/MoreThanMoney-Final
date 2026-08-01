@@ -50,6 +50,7 @@ type Attempt = {
   cert_code: string | null
   cert_url: string | null
   emailed_at: string | null
+  feedback: { opinion?: string; favorite?: string } | null
   created_at: string
 }
 
@@ -371,6 +372,12 @@ function CertificadosTab({
                 <td className="px-3 py-2">
                   <div className="text-gray-200">{a.name}</div>
                   <div className="text-[11px] text-gray-500">{a.email}</div>
+                  {a.feedback && (a.feedback.opinion || a.feedback.favorite) && (
+                    <div className="mt-1 max-w-[260px] space-y-0.5 border-l-2 border-[#D2A63C]/30 pl-2 text-[11px] text-gray-400">
+                      {a.feedback.opinion && <div>💬 {a.feedback.opinion}</div>}
+                      {a.feedback.favorite && <div>⭐ {a.feedback.favorite}</div>}
+                    </div>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-gray-400">{a.assessment_slug}</td>
                 <td className="px-3 py-2 text-gray-300">

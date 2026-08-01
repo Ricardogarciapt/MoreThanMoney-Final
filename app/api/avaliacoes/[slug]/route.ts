@@ -85,6 +85,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
 
   const auth = await getAuthenticatedUser()
 
+  // Opinião opcional sobre o teste
+  let feedback: { opinion?: string; favorite?: string } | null = null
+  if (body?.feedback && typeof body.feedback === "object") {
+    const opinion = String(body.feedback.opinion || "").trim().slice(0, 1000)
+    const favorite = String(body.feedback.favorite || "").trim().slice(0, 1000)
+    if (opinion || favorite) feedback = { opinion, favorite }
+  }
+
   try {
     const result = await submitAttempt({
       assessment,
@@ -93,6 +101,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ slug: stri
       email,
       answers,
       userId: auth.userId || null,
+      feedback,
     })
     return NextResponse.json({ success: true, result })
   } catch (e: any) {

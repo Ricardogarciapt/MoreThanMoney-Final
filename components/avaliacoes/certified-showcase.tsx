@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
-import { Award, BadgeCheck } from "lucide-react"
+import { BadgeCheck } from "lucide-react"
+import CertificateRender from "@/components/avaliacoes/certificate-render"
+import type { CertTemplate } from "@/lib/avaliacoes/config"
 
-type Item = { name: string; course: string; grade: string | null; code: string; date: string }
+type Item = { name: string; course: string; template: string; grade: string | null; code: string; date: string }
 
 export default function CertifiedShowcase({
   title = "Alunos já certificados",
@@ -32,16 +33,15 @@ export default function CertifiedShowcase({
   }, [])
 
   if (!items.length) return null
-  // duplica a lista para o loop contínuo
-  const track = [...items, ...items]
+  const track = [...items, ...items] // duplica para loop contínuo
 
   return (
     <section className="overflow-hidden py-4">
       <style>{`
         @keyframes mtm-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        .mtm-marquee-track { animation: mtm-marquee 60s linear infinite; }
+        .mtm-marquee-track { animation: mtm-marquee 90s linear infinite; }
         .mtm-marquee-track:hover { animation-play-state: paused; }
-        @media (prefers-reduced-motion: reduce) { .mtm-marquee-track { animation: none; } }
+        @media (prefers-reduced-motion: reduce) { .mtm-marquee-track { animation: none; overflow-x: auto; } }
       `}</style>
 
       <div className="mb-6 text-center">
@@ -53,26 +53,19 @@ export default function CertifiedShowcase({
       </div>
 
       <div className="relative">
-        {/* fades laterais */}
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-black to-transparent" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-black to-transparent" />
 
-        <div className="flex w-max mtm-marquee-track gap-4">
+        <div className="flex w-max mtm-marquee-track gap-4 px-2">
           {track.map((it, i) => (
-            <Link
-              key={i}
-              href={`/avaliacoes/validar/${it.code}`}
-              className="group flex w-[260px] flex-shrink-0 items-center gap-3 rounded-xl border border-[#D2A63C]/20 bg-gradient-to-br from-gray-950 to-black p-4 transition-colors hover:border-[#D2A63C]/50"
-            >
-              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#D2A63C]/15 ring-1 ring-[#D2A63C]/30">
-                <Award className="h-5 w-5 text-[#D2A63C]" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-white">{it.name}</p>
-                <p className="truncate text-xs text-gray-400">{it.course}</p>
-                {it.grade && <p className="text-[11px] font-medium text-[#D2A63C]">{it.grade}</p>}
-              </div>
-            </Link>
+            <div key={i} className="w-[240px] flex-shrink-0">
+              <CertificateRender
+                template={it.template as CertTemplate}
+                courseTitle={it.course}
+                name={it.name}
+                gradeText={it.grade}
+              />
+            </div>
           ))}
         </div>
       </div>

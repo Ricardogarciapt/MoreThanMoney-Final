@@ -35,6 +35,7 @@ export async function GET() {
     items.push({
       name: firstLastName(r.name) || r.name,
       course: m?.title || r.assessment_slug,
+      template: r.assessment_slug, // = cert_template (fast-start|bootcamp|teste-final)
       grade: gradeText,
       code: r.cert_code,
       date: r.created_at,

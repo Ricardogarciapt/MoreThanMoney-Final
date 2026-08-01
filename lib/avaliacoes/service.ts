@@ -74,8 +74,9 @@ export async function submitAttempt(params: {
   email: string
   answers: Record<string, number>
   userId?: string | null
+  feedback?: { opinion?: string; favorite?: string } | null
 }): Promise<SubmitResult> {
-  const { assessment, questions, name, email, answers, userId } = params
+  const { assessment, questions, name, email, answers, userId, feedback } = params
   const grade = gradeAnswers(assessment, questions, answers)
 
   const answerLog = questions.map((q) => ({
@@ -100,6 +101,7 @@ export async function submitAttempt(params: {
       score_percent: grade.percent,
       grade_value: grade.gradeValue,
       passed: false,
+      feedback: feedback || null,
     })
     return {
       passed: false,
@@ -132,6 +134,7 @@ export async function submitAttempt(params: {
     passed: true,
     cert_code: code,
     cert_url: certUrl,
+    feedback: feedback || null,
   })
   if (insErr) throw new Error(insErr.message)
 
