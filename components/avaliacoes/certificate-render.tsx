@@ -32,6 +32,7 @@ export default function CertificateRender({
   return (
     <div
       className={`relative overflow-hidden rounded-xl bg-gradient-to-br from-[#D2A63C] via-[#8a6a1e] to-[#5a4614] p-[2px] shadow-lg ${className}`}
+      style={{ containerType: "inline-size" } as React.CSSProperties}
     >
       <div className="relative overflow-hidden rounded-[10px] bg-gradient-to-br from-gray-950 via-black to-gray-950 px-5 py-6 text-center">
         {/* brilho suave no topo */}
@@ -50,8 +51,8 @@ export default function CertificateRender({
 
           <p className="mt-4 text-[11px] uppercase tracking-wider text-gray-500">Atribuído a</p>
           <p
-            className="mt-0.5 truncate text-3xl leading-tight text-[#ecc76b] sm:text-4xl"
-            style={{ fontFamily: "'GreatVibesMTM', cursive" }}
+            className="mt-0.5 whitespace-nowrap leading-tight text-[#ecc76b]"
+            style={{ fontFamily: "'GreatVibesMTM', cursive", fontSize: "clamp(15px, 11cqw, 34px)" }}
           >
             {display}
           </p>
