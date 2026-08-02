@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import LiveStreamRoom from "@/components/live/live-stream-room"
+import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
+import { useT } from "@/components/i18n-provider"
 import { Loader2, Radio, Users, CalendarClock, ArrowRight } from "lucide-react"
 
 type Stream = {
@@ -21,6 +23,7 @@ export default function FreeSessionHub() {
   const [live, setLive] = useState<Stream[]>([])
   const [upcoming, setUpcoming] = useState<Upcoming[]>([])
   const [selected, setSelected] = useState<string | null>(null)
+  const t = useT()
 
   const load = async () => {
     try {
@@ -60,17 +63,23 @@ export default function FreeSessionHub() {
 
   return (
     <main className="min-h-screen bg-black text-white">
+      {/* Barra própria (sem navbar do site) — logótipo + seletor de idioma (dicionário) */}
+      <div className="flex items-center justify-between border-b border-[#D2A63C]/15 px-4 py-3">
+        <Link href="/" className="flex items-center gap-2">
+          <img src="/logo-mf-gold.png" alt="MoreThanMoney" className="h-7 w-auto" />
+          <span className="hidden text-sm font-semibold tracking-tight text-[#D2A63C] sm:inline">MoreThanMoney</span>
+        </Link>
+        <LanguageSelectorEnhanced />
+      </div>
+
       {/* Hero */}
       <section className="border-b border-[#D2A63C]/15">
         <div className="mx-auto max-w-6xl px-4 py-10 text-center">
           <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-300">
-            <Radio className="h-3.5 w-3.5" /> Transmissões abertas a todos
+            <Radio className="h-3.5 w-3.5" /> {t("freesession.badge")}
           </div>
-          <h1 className="text-3xl font-bold tracking-tight md:text-5xl">Sessões Gratuitas</h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-gray-300 md:text-lg">
-            Sessões ao vivo da MoreThanMoney, abertas a toda a gente — sem necessidade de conta. Com legendas
-            traduzidas e dobragem na voz do educador.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight md:text-5xl">{t("freesession.title")}</h1>
+          <p className="mx-auto mt-4 max-w-2xl text-base text-gray-300 md:text-lg">{t("freesession.subtitle")}</p>
         </div>
       </section>
 
@@ -105,7 +114,7 @@ export default function FreeSessionHub() {
             {selectedStream && (
               <div className="mb-2 flex items-center gap-2 text-sm text-gray-300">
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-300">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" /> AO VIVO
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" /> {t("freesession.live")}
                 </span>
                 <span className="font-semibold text-white">{selectedStream.title}</span>
                 {typeof selectedStream.viewer_count === "number" && (
@@ -121,20 +130,18 @@ export default function FreeSessionHub() {
         ) : (
           <div className="rounded-2xl border border-[#D2A63C]/20 bg-gradient-to-br from-gray-950 to-black p-10 text-center">
             <Radio className="mx-auto h-10 w-10 text-gray-600" />
-            <h2 className="mt-4 text-xl font-bold">Nenhuma sessão gratuita ao vivo neste momento</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm text-gray-400">
-              As sessões gratuitas aparecem aqui automaticamente quando arrancam. Volta na próxima sessão agendada.
-            </p>
+            <h2 className="mt-4 text-xl font-bold">{t("freesession.emptyTitle")}</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm text-gray-400">{t("freesession.emptyText")}</p>
 
             {upcoming.length > 0 && (
               <div className="mx-auto mt-8 max-w-md text-left">
                 <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#D2A63C]">
-                  <CalendarClock className="h-4 w-4" /> Próximas sessões gratuitas
+                  <CalendarClock className="h-4 w-4" /> {t("freesession.upcoming")}
                 </p>
                 <ul className="space-y-2">
                   {upcoming.map((u) => (
                     <li key={u.id} className="flex items-center justify-between rounded-lg border border-gray-800 bg-black/30 px-3 py-2 text-sm">
-                      <span className="text-gray-200">{u.title || "Sessão ao vivo"}</span>
+                      <span className="text-gray-200">{u.title || t("freesession.sessionFallback")}</span>
                       <span className="text-xs text-gray-500">
                         {new Date(u.scheduledAt).toLocaleString("pt-PT", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                       </span>
@@ -146,7 +153,7 @@ export default function FreeSessionHub() {
 
             <div className="mt-8">
               <Link href="/live-sessions" className="inline-flex items-center gap-2 rounded-lg border border-[#D2A63C]/40 px-5 py-2.5 text-sm font-semibold text-[#D2A63C] hover:bg-[#D2A63C]/10">
-                Ver todas as sessões <ArrowRight className="h-4 w-4" />
+                {t("freesession.viewAll")} <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>

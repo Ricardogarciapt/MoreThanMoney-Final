@@ -14,6 +14,7 @@ import { MEMBERAREA_MESSAGES } from "./messages/memberarea"
 import { T2T_MESSAGES } from "./messages/t2t"
 import { PORTFOLIO_MESSAGES } from "./messages/portfolio"
 import { MTMCOPIER_MESSAGES } from "./messages/mtmcopier"
+import { FREESESSION_MESSAGES } from "./messages/freesession"
 
 type NsSource = Partial<Record<Lang, Record<string, string>>>
 
@@ -45,4 +46,5 @@ export const ALL_MESSAGES = merge(
   T2T_MESSAGES,
   PORTFOLIO_MESSAGES,
   MTMCOPIER_MESSAGES,
+  FREESESSION_MESSAGES,
 )

@@ -26,7 +26,7 @@ export default function ConditionalNavbarFooter({ children }: { children: React.
   }
 
   // Rotas standalone: não renderizar navbar/footer global.
-  const standalonePaths = ["/iqcharts2", "/charts-primeverse", "/app-mobile", "/work", "/tradingfloor", "/apresentacao"]
+  const standalonePaths = ["/iqcharts2", "/charts-primeverse", "/app-mobile", "/work", "/tradingfloor", "/apresentacao", "/FreeSession"]
   const isStandalonePage = standalonePaths.some(isExactOrChildPath)
 
   // In the native app every route is standalone — hide Navbar & Footer site-wide
