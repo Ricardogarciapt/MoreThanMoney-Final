@@ -19,7 +19,7 @@ const DUB_LANGS: [string, string][] = [
 // Atraso do vídeo (segundos) para alinhar com a voz dobrada. O ÁUDIO é sempre tocado
 // INTEIRO e por ordem (nunca se saltam frases). Para não derivar, atrasa-se o VÍDEO
 // e, se a fila crescer, acelera-se levemente a fala (sem perder palavras).
-const DUB_VIDEO_DELAY_S = 9      // latência típica do pipeline ASR→tradução→TTS
+const DUB_VIDEO_DELAY_S = 12     // latência típica do pipeline ASR→tradução→TTS (+3s afinado)
 const DUB_CATCHUP_AT = 2         // a partir de N clips pendentes acelera um pouco
 const DUB_RATE_NORMAL = 1.0
 const DUB_RATE_CATCHUP = 1.06    // +6% imperceptível, recupera atraso SEM cortar frases
@@ -116,6 +116,8 @@ export default function LiveDubAudio({
     sinceRef.current = 0
     lastSeqRef.current = -1
     queueRef.current = []
+    // Trocar de idioma: corta imediatamente o áudio do idioma anterior e re-alinha o atraso.
+    if (a) { try { a.pause() } catch {}; a.src = ""; a.playbackRate = DUB_RATE_NORMAL }
 
     const poll = async () => {
       try {
