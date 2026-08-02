@@ -19,6 +19,8 @@ export type SubscriptionInfo = {
   subscriptionExpiresAt?: string | null
   billingCycle?: string | null
   hasStripeCustomer?: boolean
+  /** PrimeVerse: esconde qualquer CTA de upgrade/portal (Member sem upsell) */
+  hideUpgrade?: boolean
 }
 
 const PLAN_LABEL: Record<string, string> = {
@@ -159,7 +161,7 @@ export function MemberSubscriptionCard(info: SubscriptionInfo) {
         ) : null}
 
         {/* Cross-sell: quem não é Premium vê upgrade (exceto Apple, que sobe na App Store) */}
-        {!isPremium && !isApple && !isPlay && (
+        {!info.hideUpgrade && !isPremium && !isApple && !isPlay && (
           <div>
             <button
               type="button"

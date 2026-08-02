@@ -22,6 +22,8 @@ export interface User {
   phone?: string
   whatsapp?: string
   subscription_expires_at?: string | null
+  /** origem do login — "primeverse" = cliente PrimeVerse tratado como Member sem upsell */
+  login_provider?: string | null
 }
 
 function isTrialUser(profile: Record<string, unknown>): boolean {
@@ -61,6 +63,7 @@ function profileToUser(
       phone: p.phone as string | undefined,
       whatsapp: p.whatsapp as string | undefined,
       subscription_expires_at: (p.subscription_expires_at as string | null) ?? null,
+      login_provider: (p.login_provider as string | null) ?? null,
     },
   }
 }
@@ -72,6 +75,8 @@ interface AuthContextType {
   isLoading: boolean
   /** Membro €35 (member_category="standard") — acesso exclusivo à app mobile */
   isAppOnlyUser: boolean
+  /** Cliente que entrou via PrimeVerse — Member sem qualquer upsell/upgrade */
+  isPrimeverse: boolean
   signInWithEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   signUp: (email: string, password: string, userData: any) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
@@ -84,6 +89,7 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   isLoading: true,
   isAppOnlyUser: false,
+  isPrimeverse: false,
   signInWithEmail: async () => ({ success: false }),
   signUp: async () => ({ success: false }),
   logout: async () => {},
@@ -494,6 +500,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         isAppOnlyUser:
           user?.member_category === "standard" && user?.user_type !== "admin",
+        isPrimeverse: user?.login_provider === "primeverse",
         signInWithEmail,
         signUp,
         logout,

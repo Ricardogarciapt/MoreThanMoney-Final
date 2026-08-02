@@ -43,7 +43,7 @@ function AppMobileContent() {
   const STUDIO_URL = "https://mtmbrandbuilder.lovable.app"
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { user, isAppOnlyUser, isLoading: authLoading } = useAuth()
+  const { user, isAppOnlyUser, isPrimeverse, isLoading: authLoading } = useAuth()
 
   // ── Capacitor native bridge (iOS/Android) ──────────────────────────
   const { isNative, isIOS: isIOSDevice } = useCapacitor({
@@ -161,9 +161,11 @@ function AppMobileContent() {
         email:  user.email ?? '',
         name:   (user as any).full_name ?? (user as any).username ?? '',
         plan,
+        // PrimeVerse: Member sem upsell → shell nativo suprime o paywall/IAP
+        primeverse: isPrimeverse,
       }
     }))
-  }, [mounted, authLoading, user, isAppOnlyUser])
+  }, [mounted, authLoading, user, isAppOnlyUser, isPrimeverse])
 
   useEffect(() => {
     const tab = searchParams.get("tab")

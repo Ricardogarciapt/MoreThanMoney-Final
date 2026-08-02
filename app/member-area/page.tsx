@@ -52,6 +52,7 @@ interface UserProfile {
   subscription_expires_at?: string | null
   subscription_billing_cycle?: string | null
   has_stripe_customer?: boolean
+  login_provider?: string | null
 }
 
 export default function MemberAreaPage() {
@@ -191,6 +192,7 @@ export default function MemberAreaPage() {
           subscription_expires_at: profile.subscription_expires_at,
           subscription_billing_cycle: profile.subscription_billing_cycle,
           has_stripe_customer: Boolean(profile.stripe_customer_id),
+          login_provider: profile.login_provider,
         })
 
         setFormData({
@@ -638,6 +640,7 @@ export default function MemberAreaPage() {
               subscriptionExpiresAt={user?.subscription_expires_at}
               billingCycle={user?.subscription_billing_cycle}
               hasStripeCustomer={user?.has_stripe_customer}
+              hideUpgrade={user?.login_provider === "primeverse"}
             />
           </TabsContent>
 

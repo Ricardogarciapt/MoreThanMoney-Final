@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/auth-context'
@@ -110,9 +110,14 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 
 // ─── Página ────────────────────────────────────────────────────────────────────
 export default function UpgradePage() {
-  const { user } = useAuth()
+  const { user, isPrimeverse, isLoading } = useAuth()
   const router = useRouter()
   const t = useT()
+
+  // PrimeVerse: Member sem upsell — não tem acesso à página de upgrade.
+  useEffect(() => {
+    if (!isLoading && isPrimeverse) router.replace('/member-area')
+  }, [isLoading, isPrimeverse, router])
 
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly')
   const [loading, setLoading] = useState<string | null>(null)

@@ -24,6 +24,10 @@ export default function LoginPage() {
   const [showApplePaywall, setShowApplePaywall] = useState(false)
   const [appleLoading, setAppleLoading] = useState(false)
   const [error, setError] = useState('')
+  const [pvOpen, setPvOpen] = useState(false)
+  const [pvUser, setPvUser] = useState('')
+  const [pvPass, setPvPass] = useState('')
+  const [pvLoading, setPvLoading] = useState(false)
   const searchParams = useSearchParams()
   const isAdminLogin = searchParams.get('admin') === 'true'
   const redirectParam = safeInternalRedirectPath(searchParams.get('redirect'))
@@ -292,6 +296,34 @@ export default function LoginPage() {
 
 
 
+  const handlePrimeverseLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPvLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/auth/primeverse-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: pvUser.trim(), password: pvPass }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Falha no login PrimeVerse.')
+        setPvLoading(false)
+        return
+      }
+      try {
+        const { clearCachedSession } = await import('@/lib/auth-cache')
+        clearCachedSession()
+      } catch { /* ignore */ }
+      const next = redirectParam || data.redirect || '/member-area'
+      window.location.replace(next.startsWith('http') ? next : `${window.location.origin}${next}`)
+    } catch {
+      setError('Erro ao ligar ao PrimeVerse. Tenta novamente.')
+      setPvLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-black py-12 px-4">
       <div className="max-w-md w-full space-y-8">
@@ -476,6 +508,46 @@ export default function LoginPage() {
                 </>
               )}
             </Button>
+
+            {/* PrimeVerse Login — clientes do ecossistema PrimeVerse/PU Prime entram como Member grátis */}
+            <Button
+              type="button"
+              onClick={() => setPvOpen((v) => !v)}
+              className="w-full mt-3 bg-[#0e2a3a] hover:bg-[#123a50] text-white border border-cyan-500/40 font-semibold"
+              disabled={isLoading}
+              size="lg"
+            >
+              Entrar com PrimeVerse
+            </Button>
+            {pvOpen && (
+              <form onSubmit={handlePrimeverseLogin} className="mt-3 space-y-2 rounded-lg border border-cyan-500/30 bg-black/40 p-3">
+                <p className="text-xs text-gray-400">
+                  És cliente PrimeVerse? Entra com as tuas credenciais do hub — acesso de membro incluído.
+                </p>
+                <Input
+                  type="text"
+                  placeholder="Utilizador ou email PrimeVerse"
+                  value={pvUser}
+                  onChange={(e) => setPvUser(e.target.value)}
+                  required
+                  disabled={pvLoading}
+                  className="bg-gray-800 border-gray-700 text-white"
+                />
+                <Input
+                  type="password"
+                  placeholder="Password PrimeVerse"
+                  value={pvPass}
+                  onChange={(e) => setPvPass(e.target.value)}
+                  required
+                  disabled={pvLoading}
+                  className="bg-gray-800 border-gray-700 text-white"
+                />
+                <Button type="submit" disabled={pvLoading} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold">
+                  {pvLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Entrar via PrimeVerse
+                </Button>
+              </form>
+            )}
 
 
                         {/* Registro Link */}

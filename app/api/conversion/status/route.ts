@@ -20,9 +20,14 @@ export async function GET(request: NextRequest) {
 
   const { data: p } = await supabaseAdmin
     .from("profiles")
-    .select("member_category, subscription_platform, subscription_status, conversion_deadline, user_type, trial_expires_at, trial_expired, is_active")
+    .select("member_category, subscription_platform, subscription_status, conversion_deadline, user_type, trial_expires_at, trial_expired, is_active, login_provider")
     .eq("id", user.id)
     .single()
+
+  // ── PrimeVerse: Member sem qualquer funil de upgrade ───────────────────────
+  if (p?.login_provider === "primeverse") {
+    return NextResponse.json({ isFreeGranted: false, memberCategory: (p?.member_category || "standard").toLowerCase() })
+  }
 
   // ── Free trial de 3 dias (guest) — funil agressivo ─────────────────────────
   if (isTrialProfile(p) && p?.user_type !== "admin") {

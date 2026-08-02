@@ -69,7 +69,7 @@ function planLabel(category: string | undefined | null): { label: string; color:
 
 export default function SettingsMobile() {
   const t = useT()
-  const { user } = useAuth()
+  const { user, isPrimeverse } = useAuth()
   const { toast } = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -596,10 +596,12 @@ export default function SettingsMobile() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-900 pb-28">
-      {/* ── Funil de conversão (grátis → pagante) ──────────────────────── */}
-      <div className="px-4 pt-3">
-        <ConversionBanner compact />
-      </div>
+      {/* ── Funil de conversão (grátis → pagante) — nunca para PrimeVerse ── */}
+      {!isPrimeverse && (
+        <div className="px-4 pt-3">
+          <ConversionBanner compact />
+        </div>
+      )}
       {/* ── Avatar + nome ──────────────────────────────────────────────── */}
       <div className="px-4 pt-6 pb-4 flex flex-col items-center gap-3 border-b border-gray-800">
         <div className="relative">
@@ -804,7 +806,7 @@ export default function SettingsMobile() {
               </div>
               <Shield className={`w-5 h-5 ${plan.color}`} />
             </div>
-            {isAppOnly && (
+            {isAppOnly && !isPrimeverse && (
               <div className="mt-3 pt-3 border-t border-gray-700/40">
                 <p className="text-xs text-gray-400 mb-2">
                   {t("appmobile.upgradePrompt")}
