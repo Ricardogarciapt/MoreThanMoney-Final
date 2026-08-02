@@ -13,6 +13,10 @@ const supabase = getSupabaseAdmin()
 // Quantos clips TTS gerar por chamada (mantém cada request dentro do limite serverless).
 const TTS_BATCH = 10
 
+function siteUrl(): string {
+  return (process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "") || "https://www.morethanmoney.pt")
+}
+
 function unauthorized(req: NextRequest): boolean {
   const secret = getDvrWorkerSecret()
   return !secret || req.headers.get("x-caption-secret") !== secret
@@ -42,10 +46,40 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  // 2) montagem multi-áudio
+  // 2) upload para o YouTube de gravações já montadas (connector opcional)
+  const { data: yt } = await supabase
+    .from("lms_dvr_jobs")
+    .select("id, stream_id, stream_key, base_file, multi_file, youtube_playlist_id")
+    .eq("youtube_status", "pending")
+    .eq("status", "ready")
+    .order("updated_at", { ascending: true })
+    .limit(1)
+    .maybeSingle()
+  if (yt && (yt.multi_file || yt.base_file)) {
+    await supabase.from("lms_dvr_jobs").update({ youtube_status: "uploading" }).eq("id", yt.id)
+    const { data: s } = await supabase
+      .from("lms_streams")
+      .select("title, academy:lms_academies(name)")
+      .eq("id", yt.stream_id)
+      .maybeSingle()
+    const title = (s?.title as string) || "Sessão MoreThanMoney"
+    const academy = ((s?.academy as { name?: string } | null)?.name as string) || "MoreThanMoney"
+    return NextResponse.json({
+      action: "youtube",
+      jobId: yt.id,
+      file: yt.multi_file || yt.base_file, // prefere multi-áudio
+      title: `${title} · ${academy}`,
+      description: `Sessão MoreThanMoney (${academy}). Gravação com múltiplas faixas de áudio e legendas traduzidas.`,
+      privacyStatus: "unlisted",
+      playlistId: yt.youtube_playlist_id || null,
+      playlistTitle: `${academy} · Rever aulas`,
+    })
+  }
+
+  // 3) montagem multi-áudio + legendas
   const { data: job } = await supabase
     .from("lms_dvr_jobs")
-    .select("id, stream_id, stream_key, base_file, langs, status")
+    .select("id, stream_id, stream_key, base_file, langs, subtitle_langs, status")
     .in("status", ["pending", "assembling"])
     .order("updated_at", { ascending: true })
     .limit(1)
@@ -127,6 +161,14 @@ export async function GET(req: NextRequest) {
       .filter((x) => x.url)
   }
 
+  // Legendas a embutir (mov_text) + sidecar: URL do nosso endpoint que gera WebVTT/SRT.
+  const subLangs = ((job.subtitle_langs as string[]) || []).map(normalizeCaptionLang).filter(Boolean)
+  const base = siteUrl()
+  const subtitles = subLangs.map((lang) => ({
+    lang,
+    vttUrl: `${base}/api/live-sessions/dvr/${job.stream_id}/subtitles/${lang}.vtt`,
+  }))
+
   return NextResponse.json({
     action: "assemble",
     jobId: job.id,
@@ -136,6 +178,8 @@ export async function GET(req: NextRequest) {
     langs: targetLangs,
     sourceLang: srcLang,
     manifest,
+    subtitleLangs: subLangs,
+    subtitles,
   })
 }
 
@@ -148,6 +192,17 @@ export async function POST(req: NextRequest) {
   if (!jobId) return NextResponse.json({ error: "jobId em falta" }, { status: 400 })
 
   if (result === "assembled") {
+    // Legendas sidecar: mapa lang → URL do nosso endpoint (WebVTT). Sempre disponíveis.
+    const { data: jrow } = await supabase
+      .from("lms_dvr_jobs")
+      .select("stream_id, subtitle_langs")
+      .eq("id", jobId)
+      .maybeSingle()
+    const subLangs: string[] = (jrow?.subtitle_langs as string[]) || []
+    const subtitleFiles: Record<string, string> = {}
+    for (const l of subLangs) {
+      subtitleFiles[l] = `${siteUrl()}/api/live-sessions/dvr/${jrow?.stream_id}/subtitles/${l}.vtt`
+    }
     await supabase
       .from("lms_dvr_jobs")
       .update({
@@ -156,9 +211,53 @@ export async function POST(req: NextRequest) {
         download_url: b?.download_url || null,
         size_bytes: b?.size_bytes ?? null,
         duration_s: b?.duration_s ?? null,
+        subtitle_files: subtitleFiles,
         error: null,
         updated_at: new Date().toISOString(),
       })
+      .eq("id", jobId)
+    return NextResponse.json({ success: true })
+  }
+
+  // Connector YouTube: upload concluído → guarda ligações + alimenta a playlist "Rever aulas"
+  if (result === "youtube_done") {
+    const videoId = String(b?.video_id || "")
+    const videoUrl = String(b?.video_url || (videoId ? `https://youtu.be/${videoId}` : ""))
+    const playlistId = String(b?.playlist_id || "")
+    const playlistUrl = String(b?.playlist_url || (playlistId ? `https://www.youtube.com/playlist?list=${playlistId}` : ""))
+    await supabase
+      .from("lms_dvr_jobs")
+      .update({
+        youtube_status: "done",
+        youtube_video_id: videoId || null,
+        youtube_video_url: videoUrl || null,
+        youtube_playlist_id: playlistId || null,
+        youtube_playlist_url: playlistUrl || null,
+        youtube_error: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", jobId)
+    // Liga a playlist ao stream para o viewer "Rever aulas" a mostrar automaticamente.
+    if (playlistUrl) {
+      const { data: jr } = await supabase.from("lms_dvr_jobs").select("stream_id").eq("id", jobId).maybeSingle()
+      if (jr?.stream_id) {
+        const { data: sExisting } = await supabase
+          .from("lms_streams")
+          .select("playlist_url")
+          .eq("id", jr.stream_id)
+          .maybeSingle()
+        const patch: Record<string, unknown> = { playlist_url: playlistUrl }
+        if (!(sExisting?.playlist_url)) patch.playlist_title = "Rever aulas"
+        await supabase.from("lms_streams").update(patch).eq("id", jr.stream_id)
+      }
+    }
+    return NextResponse.json({ success: true })
+  }
+
+  if (result === "youtube_error") {
+    await supabase
+      .from("lms_dvr_jobs")
+      .update({ youtube_status: "error", youtube_error: String(b?.error || "erro").slice(0, 500), updated_at: new Date().toISOString() })
       .eq("id", jobId)
     return NextResponse.json({ success: true })
   }

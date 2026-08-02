@@ -5,11 +5,15 @@
  *   • delete  → apaga as gravações no /mnt/dvr (poupa recursos) e reporta 'deleted'
  *   • assemble→ quando o site tem todos os clips TTS prontos, monta 1 MP4 multi-áudio
  *               (vídeo + PT original + faixas dobradas EN/ES/DE alinhadas às legendas)
- *               e reporta 'assembled' com o URL de download.
+ *               + faixas de legendas (mov_text) embutidas, e reporta 'assembled'.
+ *   • youtube → faz upload da gravação montada para o YouTube (não-listado) e adiciona
+ *               a uma playlist "Rever aulas"; reporta 'youtube_done'.
  *
- * Sem estado próprio: a fonte de verdade é o site. Uma gravação por educador.
+ * Sem estado próprio: a fonte de verdade é o site. Uma gravação por SALA (stream).
  * Env: MTM_API_BASE, LMS_CAPTION_WORKER_SECRET, DVR_DIR(=/mnt/dvr),
  *      DVR_PUBLIC_BASE(=https://stream.morethanmoney.pt/dvr), POLL_SECONDS(=20)
+ * Connector YouTube (opcional, requer `npm i googleapis` na pasta do worker):
+ *      YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN
  */
 const { execFile } = require("child_process")
 const fs = require("fs")
@@ -100,18 +104,37 @@ async function assemble(job) {
       outLangs.push({ lang, track })
     }
 
+    // Legendas (mov_text) — descarrega os VTT que têm cues e embute-as como faixas.
+    const outSubs = [] // { lang, file }
+    for (const s of job.subtitles || []) {
+      if (!s || !s.vttUrl) continue
+      try {
+        const f = path.join(tmp, `sub-${s.lang}.vtt`)
+        await download(s.vttUrl, f)
+        const txt = fs.readFileSync(f, "utf8")
+        if (txt.includes("-->")) outSubs.push({ lang: s.lang, file: f }) // só se tiver cues
+      } catch (e) { log("sub fail", s.lang, e.message) }
+    }
+
     const multiName = `${job.streamKey}-multi.mp4`
     const outFile = path.join(DVR_DIR, multiName)
-    // mux: vídeo + PT original (do base) + faixas dobradas
+    // mux: vídeo + PT original (do base) + faixas dobradas + legendas
     const args = ["-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", base]
     outLangs.forEach((o) => args.push("-i", o.track))
+    outSubs.forEach((s) => args.push("-i", s.file))
+    const subInputBase = 1 + outLangs.length // índice do 1º input de legendas
     args.push("-map", "0:v:0", "-map", "0:a:0")
     outLangs.forEach((_, i) => args.push("-map", `${i + 1}:a:0`))
+    outSubs.forEach((_, i) => args.push("-map", `${subInputBase + i}:0`))
     args.push("-c:v", "copy", "-c:a", "aac")
+    if (outSubs.length) args.push("-c:s", "mov_text")
     // metadata: faixa 0 = PT
     args.push("-metadata:s:a:0", `language=${ISO3[job.sourceLang] || "por"}`, "-metadata:s:a:0", `title=${LABEL[job.sourceLang] || "Original"}`, "-disposition:a:0", "default")
     outLangs.forEach((o, i) => {
       args.push(`-metadata:s:a:${i + 1}`, `language=${ISO3[o.lang] || o.lang}`, `-metadata:s:a:${i + 1}`, `title=${LABEL[o.lang] || o.lang}`)
+    })
+    outSubs.forEach((s, i) => {
+      args.push(`-metadata:s:s:${i}`, `language=${ISO3[s.lang] || s.lang}`, `-metadata:s:s:${i}`, `title=${LABEL[s.lang] || s.lang}`)
     })
     args.push("-movflags", "+faststart", outFile)
     await sh("ffmpeg", args)
@@ -122,10 +145,76 @@ async function assemble(job) {
       multi_file: multiName, download_url: `${PUBLIC_BASE}/${multiName}`,
       size_bytes: size, duration_s: Math.round(durationS),
     })
-    log(`assembled ${multiName} (${(size / 1e6).toFixed(1)}MB, ${outLangs.length + 1} faixas)`)
+    log(`assembled ${multiName} (${(size / 1e6).toFixed(1)}MB, ${outLangs.length + 1} áudio, ${outSubs.length} legendas)`)
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true })
   }
+}
+
+// ── Connector YouTube ─────────────────────────────────────────────────────────
+// Upload não-listado + adição a uma playlist "Rever aulas". OAuth2 por refresh token.
+function getYoutubeClient() {
+  const cid = process.env.YOUTUBE_CLIENT_ID
+  const secret = process.env.YOUTUBE_CLIENT_SECRET
+  const refresh = process.env.YOUTUBE_REFRESH_TOKEN
+  if (!cid || !secret || !refresh) throw new Error("credenciais YOUTUBE_* em falta")
+  let google
+  try { ({ google } = require("googleapis")) } catch { throw new Error("googleapis não instalado (npm i googleapis)") }
+  const oauth2 = new google.auth.OAuth2(cid, secret)
+  oauth2.setCredentials({ refresh_token: refresh })
+  return google.youtube({ version: "v3", auth: oauth2 })
+}
+
+async function ensurePlaylist(yt, title, existingId) {
+  if (existingId) return existingId
+  // Procura uma playlist minha com o mesmo título antes de criar (evita duplicados).
+  try {
+    let pageToken
+    do {
+      const res = await yt.playlists.list({ part: ["snippet"], mine: true, maxResults: 50, pageToken })
+      const found = (res.data.items || []).find((p) => (p.snippet && p.snippet.title) === title)
+      if (found) return found.id
+      pageToken = res.data.nextPageToken
+    } while (pageToken)
+  } catch (e) { log("playlist list fail", e.message) }
+  const created = await yt.playlists.insert({
+    part: ["snippet", "status"],
+    requestBody: { snippet: { title }, status: { privacyStatus: "unlisted" } },
+  })
+  return created.data.id
+}
+
+async function uploadYoutube(job) {
+  const file = path.join(DVR_DIR, job.file)
+  if (!fs.existsSync(file)) throw new Error(`ficheiro em falta: ${file}`)
+  const yt = getYoutubeClient()
+  const up = await yt.videos.insert({
+    part: ["snippet", "status"],
+    requestBody: {
+      snippet: { title: String(job.title || "Sessão MoreThanMoney").slice(0, 100), description: String(job.description || "") },
+      status: { privacyStatus: job.privacyStatus || "unlisted", selfDeclaredMadeForKids: false },
+    },
+    media: { body: fs.createReadStream(file) },
+  })
+  const videoId = up.data.id
+  if (!videoId) throw new Error("upload sem videoId")
+  let playlistId = null
+  try {
+    playlistId = await ensurePlaylist(yt, job.playlistTitle || "Rever aulas", job.playlistId)
+    if (playlistId) {
+      await yt.playlistItems.insert({
+        part: ["snippet"],
+        requestBody: { snippet: { playlistId, resourceId: { kind: "youtube#video", videoId } } },
+      })
+    }
+  } catch (e) { log("playlist add fail", e.message) }
+  await report({
+    jobId: job.jobId, result: "youtube_done",
+    video_id: videoId, video_url: `https://youtu.be/${videoId}`,
+    playlist_id: playlistId || null,
+    playlist_url: playlistId ? `https://www.youtube.com/playlist?list=${playlistId}` : null,
+  })
+  log(`youtube ok: https://youtu.be/${videoId}${playlistId ? ` (playlist ${playlistId})` : ""}`)
 }
 
 async function doDelete(job) {
@@ -141,13 +230,18 @@ async function tick() {
   if (!job || job.action === "none" || !job.action) return
   try {
     if (job.action === "delete") return await doDelete(job)
+    if (job.action === "youtube") return await uploadYoutube(job)
     if (job.action === "assemble") {
       if (!job.ready) { log(`a preparar áudio… faltam ${job.remaining}`); return }
       return await assemble(job)
     }
   } catch (e) {
     log("job erro:", e.message)
-    if (job.jobId) { try { await report({ jobId: job.jobId, result: "error", error: e.message }) } catch {} }
+    if (job.action === "youtube" && job.jobId) {
+      try { await report({ jobId: job.jobId, result: "youtube_error", error: e.message }) } catch {}
+    } else if (job.jobId) {
+      try { await report({ jobId: job.jobId, result: "error", error: e.message }) } catch {}
+    }
   }
 }
 

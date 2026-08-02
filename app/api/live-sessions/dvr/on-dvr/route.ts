@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
 
     if (!st?.id) return new NextResponse("0", { status: 200 }) // key desconhecida — ignora
 
-    // Uma gravação por educador: upsert por educator_id (substitui a anterior).
-    // Reinicia o ciclo — a nova gravação fica "recorded" e sem multi-áudio.
+    // Uma gravação por SALA (stream): upsert por stream_id (substitui a anterior).
+    // Reinicia o ciclo — a nova gravação fica "recorded" e sem multi-áudio/legendas.
     await supabase
       .from("lms_dvr_jobs")
       .upsert(
@@ -49,9 +49,15 @@ export async function POST(req: NextRequest) {
           size_bytes: null,
           duration_s: null,
           error: null,
+          subtitle_langs: [],
+          subtitle_files: {},
+          youtube_status: null,
+          youtube_video_id: null,
+          youtube_video_url: null,
+          youtube_error: null,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "educator_id" },
+        { onConflict: "stream_id" },
       )
 
     return new NextResponse("0", { status: 200 })
