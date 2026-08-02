@@ -283,14 +283,26 @@ function RecordingRow({
 
           {/* YouTube */}
           {r.youtubeStatus === "done" && r.youtubeVideoUrl ? (
-            <a
-              href={r.youtubeVideoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-md border border-red-800/60 px-2 py-1 text-xs text-red-300 hover:bg-red-950/30"
-            >
-              <Youtube className="h-3.5 w-3.5" /> Ver no YouTube
-            </a>
+            <>
+              <a
+                href={r.youtubeVideoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-md border border-red-800/60 px-2 py-1 text-xs text-red-300 hover:bg-red-950/30"
+              >
+                <Youtube className="h-3.5 w-3.5" /> Vídeo
+              </a>
+              {r.youtubePlaylistUrl && (
+                <a
+                  href={r.youtubePlaylistUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-md border border-gray-700 px-2 py-1 text-xs text-gray-300 hover:bg-white/5"
+                >
+                  Playlist da sala
+                </a>
+              )}
+            </>
           ) : ytBusy ? (
             <span className="inline-flex items-center gap-1 rounded-md border border-red-900/40 px-2 py-1 text-[11px] text-red-300">
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> {YT_LABEL[r.youtubeStatus || ""]}
