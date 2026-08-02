@@ -47,11 +47,11 @@ type Stream = {
   ingest_provider?: "restream" | "mtm_direct" | null
   scheduled_start_at?: string | null
   viewer_count?: number | null
-  access_tier?: "all" | "app_member" | "premium" | "vip" | null
+  access_tier?: "free" | "all" | "app_member" | "premium" | "vip" | null
   square_image_url?: string | null
   playlist_url?: string | null
   playlist_title?: string | null
-  playlist_access_tier?: "all" | "app_member" | "premium" | "vip" | null
+  playlist_access_tier?: "free" | "all" | "app_member" | "premium" | "vip" | null
   academy?: { name: string }
   educator?: { display_name: string }
 }
