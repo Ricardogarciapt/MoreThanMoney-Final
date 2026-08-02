@@ -184,55 +184,105 @@ async function ensurePlaylist(yt, title, existingId) {
   return created.data.id
 }
 
-async function uploadYoutube(job) {
-  const file = path.join(DVR_DIR, job.file)
-  if (!fs.existsSync(file)) throw new Error(`ficheiro em falta: ${file}`)
-  const yt = getYoutubeClient()
-  const up = await yt.videos.insert({
-    part: ["snippet", "status"],
-    requestBody: {
-      snippet: { title: String(job.title || "Sessão MoreThanMoney").slice(0, 100), description: String(job.description || "") },
-      status: { privacyStatus: job.privacyStatus || "unlisted", selfDeclaredMadeForKids: false },
-    },
-    media: { body: fs.createReadStream(file) },
-  })
-  const videoId = up.data.id
-  if (!videoId) throw new Error("upload sem videoId")
+// ISO 639-2 (tags do ffprobe) → 639-1
+const ISO2 = { por: "pt", eng: "en", spa: "es", deu: "de", fra: "fr", ita: "it", nld: "nl" }
 
-  // Legendas (CC) por idioma → aparecem no seletor de CC do player do YouTube.
-  for (const c of job.captions || []) {
-    if (!c || !c.srtUrl) continue
-    try {
-      const r = await fetch(c.srtUrl)
-      if (!r.ok) continue
-      const srt = await r.text()
-      if (!srt.includes("-->")) continue // sem cues
-      await yt.captions.insert({
-        part: ["snippet"],
-        requestBody: { snippet: { videoId, language: c.lang, name: (LABEL[c.lang] || c.lang) } },
-        media: { mimeType: "application/octet-stream", body: srt },
+/** Mapa { idioma-2-letras: ordinal da faixa de áudio } a partir das tags do ficheiro. */
+async function ffprobeAudioLangs(file) {
+  const out = await sh("ffprobe", [
+    "-v", "error", "-select_streams", "a",
+    "-show_entries", "stream_tags=language", "-of", "json", file,
+  ])
+  let j = {}
+  try { j = JSON.parse(String(out)) } catch { j = {} }
+  const map = {}
+  ;(j.streams || []).forEach((st, i) => {
+    const lang3 = (st.tags && st.tags.language) || ""
+    const two = ISO2[lang3] || lang3.slice(0, 2)
+    if (two && map[two] === undefined) map[two] = i // ordinal dentro das faixas de áudio
+  })
+  return map
+}
+
+// Upload para o YouTube: UM vídeo por idioma (vídeo + a faixa de áudio desse idioma + CC +
+// título traduzido). Extrai cada faixa do master multi-áudio; o master FICA no DVR.
+async function uploadYoutube(job) {
+  const master = job.masterFile ? path.join(DVR_DIR, job.masterFile) : null
+  const baseF = job.baseFile ? path.join(DVR_DIR, job.baseFile) : null
+  const src = master && fs.existsSync(master) ? master : baseF
+  if (!src || !fs.existsSync(src)) throw new Error("ficheiro em falta p/ youtube")
+
+  const yt = getYoutubeClient()
+  const audioMap = await ffprobeAudioLangs(src) // { lang: ordinal }
+  let playlistId = null
+  try { playlistId = await ensurePlaylist(yt, job.playlistTitle || "Gravações", job.playlistId) } catch (e) { log("playlist fail", e.message) }
+
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ytdvr-"))
+  const results = []
+  try {
+    for (const up of job.uploads || []) {
+      const ordinal = audioMap[up.lang]
+      // sem faixa de áudio nesse idioma → salta (exceto a fonte, que usa a faixa 0)
+      if (ordinal === undefined && up.lang !== job.sourceLang) continue
+      const idx = ordinal === undefined ? 0 : ordinal
+      const outFile = path.join(tmp, `${up.lang}.mp4`)
+      // vídeo + só a faixa de áudio desse idioma (copy = rápido; áudio já alinhado por timestamp)
+      await sh("ffmpeg", [
+        "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", src,
+        "-map", "0:v:0", "-map", `0:a:${idx}`, "-c", "copy", "-movflags", "+faststart", outFile,
+      ])
+      const ins = await yt.videos.insert({
+        part: ["snippet", "status"],
+        requestBody: {
+          snippet: { title: String(up.title || "").slice(0, 100), description: String(up.description || "") },
+          status: { privacyStatus: job.privacyStatus || "unlisted", selfDeclaredMadeForKids: false },
+        },
+        media: { body: fs.createReadStream(outFile) },
       })
-      log(`cc ${c.lang} enviado`)
-    } catch (e) { log("cc fail", c.lang, e.message) }
+      const videoId = ins.data.id
+      fs.rmSync(outFile, { force: true })
+      if (!videoId) continue
+      // CC nesse idioma
+      try {
+        const r = await fetch(up.srtUrl)
+        if (r.ok) {
+          const srt = await r.text()
+          if (srt.includes("-->")) {
+            await yt.captions.insert({
+              part: ["snippet"],
+              requestBody: { snippet: { videoId, language: up.lang, name: (LABEL[up.lang] || up.lang) } },
+              media: { mimeType: "application/octet-stream", body: srt },
+            })
+          }
+        }
+      } catch (e) { log("cc fail", up.lang, e.message) }
+      // playlist
+      if (playlistId) {
+        try {
+          await yt.playlistItems.insert({
+            part: ["snippet"],
+            requestBody: { snippet: { playlistId, resourceId: { kind: "youtube#video", videoId } } },
+          })
+        } catch (e) { log("pl add fail", e.message) }
+      }
+      results.push({ lang: up.lang, videoId })
+      log(`youtube ${up.lang} ok https://youtu.be/${videoId}`)
+    }
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true })
   }
 
-  let playlistId = null
-  try {
-    playlistId = await ensurePlaylist(yt, job.playlistTitle || "Rever aulas", job.playlistId)
-    if (playlistId) {
-      await yt.playlistItems.insert({
-        part: ["snippet"],
-        requestBody: { snippet: { playlistId, resourceId: { kind: "youtube#video", videoId } } },
-      })
-    }
-  } catch (e) { log("playlist add fail", e.message) }
+  if (!results.length) throw new Error("nenhum vídeo enviado (sem faixas de áudio?)")
+  const first = results[0]
   await report({
     jobId: job.jobId, result: "youtube_done",
-    video_id: videoId, video_url: `https://youtu.be/${videoId}`,
+    video_id: first.videoId, video_url: `https://youtu.be/${first.videoId}`,
     playlist_id: playlistId || null,
     playlist_url: playlistId ? `https://www.youtube.com/playlist?list=${playlistId}` : null,
+    videos: results,
   })
-  log(`youtube ok: https://youtu.be/${videoId}${playlistId ? ` (playlist ${playlistId})` : ""}`)
+  // O master multi-áudio+CC FICA no DVR (1 gravação por sala). Não apagar.
+  log(`youtube done: ${results.length} vídeos${playlistId ? ` (playlist ${playlistId})` : ""}`)
 }
 
 async function doDelete(job) {

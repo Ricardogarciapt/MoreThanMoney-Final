@@ -46,10 +46,11 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  // 2) upload para o YouTube de gravações já montadas (connector opcional)
+  // 2) upload para o YouTube: UM vídeo por idioma (vídeo + áudio dublado + CC + título
+  //    traduzido). Extraído do master multi-áudio; o master fica no DVR (1 por sala).
   const { data: yt } = await supabase
     .from("lms_dvr_jobs")
-    .select("id, stream_id, stream_key, base_file, multi_file, subtitle_langs, youtube_playlist_id")
+    .select("id, stream_id, stream_key, base_file, multi_file, langs, subtitle_langs, youtube_playlist_id")
     .eq("youtube_status", "pending")
     .eq("status", "ready")
     .order("updated_at", { ascending: true })
@@ -59,30 +60,41 @@ export async function GET(req: NextRequest) {
     await supabase.from("lms_dvr_jobs").update({ youtube_status: "uploading" }).eq("id", yt.id)
     const { data: s } = await supabase
       .from("lms_streams")
-      .select("title, academy:lms_academies(name)")
+      .select("title, caption_source_language, academy:lms_academies(name)")
       .eq("id", yt.stream_id)
       .maybeSingle()
     const title = (s?.title as string) || "Sessão MoreThanMoney"
     const academy = ((s?.academy as { name?: string } | null)?.name as string) || "MoreThanMoney"
-    // Legendas a enviar como CC (SRT) para cada idioma → seletor de CC no player.
-    const subLangs = ((yt.subtitle_langs as string[]) || []).map(normalizeCaptionLang).filter(Boolean)
+    const srcLang = normalizeCaptionLang((s?.caption_source_language as string) || "pt")
+
+    // Idiomas com faixa de áudio no master = fonte + dobragens. Um vídeo YouTube por cada.
+    const dubLangs = ((yt.langs as string[]) || []).map(normalizeCaptionLang).filter((l) => l && l !== srcLang)
+    const allLangs = [srcLang, ...dubLangs]
+    const TAG: Record<string, string> = { pt: "PT", en: "EN", es: "ES", fr: "FR", de: "DE" }
+
+    // Títulos traduzidos (título na língua da dublagem).
+    let titles: Record<string, string> = {}
+    try { titles = dubLangs.length ? await translateCaption(title, srcLang, dubLangs) : {} } catch { titles = {} }
+
     const base = siteUrl()
-    const captions = subLangs.map((lang) => ({
+    const uploads = allLangs.map((lang) => ({
       lang,
+      title: `${lang === srcLang ? title : titles[lang] || title} · ${TAG[lang] || lang.toUpperCase()}`,
+      description: `Sessão MoreThanMoney — ${academy}. Áudio ${TAG[lang] || lang.toUpperCase()} + legendas.`,
       srtUrl: `${base}/api/live-sessions/dvr/${yt.stream_id}/subtitles/${lang}.srt`,
     }))
+
     return NextResponse.json({
       action: "youtube",
       jobId: yt.id,
-      file: yt.multi_file || yt.base_file, // prefere multi-áudio
-      title: `${title} · ${academy}`,
-      description: `Sessão MoreThanMoney (${academy}). Gravação com múltiplas faixas de áudio e legendas traduzidas.`,
+      masterFile: yt.multi_file || null,
+      baseFile: yt.base_file || null,
+      sourceLang: srcLang,
       privacyStatus: "unlisted",
       playlistId: yt.youtube_playlist_id || null,
-      // Playlist por SALA (dump das gravações dessa sala). Os admins depois curam
-      // as playlists de curso no YouTube e colam o link no LMS manualmente.
+      // Playlist por SALA. Os admins depois curam as playlists de curso no YouTube.
       playlistTitle: `${title} · Gravações (${academy})`,
-      captions,
+      uploads,
     })
   }
 
