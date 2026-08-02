@@ -12,13 +12,14 @@
  * Sem estado próprio: a fonte de verdade é o site. Uma gravação por SALA (stream).
  * Env: MTM_API_BASE, LMS_CAPTION_WORKER_SECRET, DVR_DIR(=/mnt/dvr),
  *      DVR_PUBLIC_BASE(=https://stream.morethanmoney.pt/dvr), POLL_SECONDS(=20)
- * Connector YouTube (opcional, requer `npm i googleapis` na pasta do worker):
+ * Connector YouTube (opcional, SEM dependências — usa a API REST via fetch/https nativos):
  *      YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN
  */
 const { execFile } = require("child_process")
 const fs = require("fs")
 const os = require("os")
 const path = require("path")
+const https = require("https")
 
 const API = (process.env.MTM_API_BASE || "https://www.morethanmoney.pt").replace(/\/$/, "")
 const SECRET = process.env.LMS_CAPTION_WORKER_SECRET || ""
@@ -151,37 +152,98 @@ async function assemble(job) {
   }
 }
 
-// ── Connector YouTube ─────────────────────────────────────────────────────────
-// Upload não-listado + adição a uma playlist "Rever aulas". OAuth2 por refresh token.
-function getYoutubeClient() {
+// ── Connector YouTube (REST puro, sem dependências) ─────────────────────────────
+// Access token a partir do refresh token (OAuth2).
+async function ytAccessToken() {
   const cid = process.env.YOUTUBE_CLIENT_ID
   const secret = process.env.YOUTUBE_CLIENT_SECRET
   const refresh = process.env.YOUTUBE_REFRESH_TOKEN
   if (!cid || !secret || !refresh) throw new Error("credenciais YOUTUBE_* em falta")
-  let google
-  try { ({ google } = require("googleapis")) } catch { throw new Error("googleapis não instalado (npm i googleapis)") }
-  const oauth2 = new google.auth.OAuth2(cid, secret)
-  oauth2.setCredentials({ refresh_token: refresh })
-  return google.youtube({ version: "v3", auth: oauth2 })
+  const body = new URLSearchParams({ client_id: cid, client_secret: secret, refresh_token: refresh, grant_type: "refresh_token" })
+  const r = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body,
+  })
+  const j = await r.json().catch(() => ({}))
+  if (!j.access_token) throw new Error("token: " + JSON.stringify(j).slice(0, 200))
+  return j.access_token
 }
 
-async function ensurePlaylist(yt, title, existingId) {
+async function ytJson(token, method, url, bodyObj) {
+  const r = await fetch(url, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: bodyObj ? JSON.stringify(bodyObj) : undefined,
+  })
+  const t = await r.text()
+  let j = {}
+  try { j = t ? JSON.parse(t) : {} } catch { j = { raw: t } }
+  if (!r.ok) throw new Error(`${method} ${url.split("?")[0]} → ${r.status} ${t.slice(0, 200)}`)
+  return j
+}
+
+// Procura playlist minha pelo título (evita duplicados) ou cria uma não-listada.
+async function ensurePlaylist(token, title, existingId) {
   if (existingId) return existingId
-  // Procura uma playlist minha com o mesmo título antes de criar (evita duplicados).
   try {
-    let pageToken
+    let pageToken = ""
     do {
-      const res = await yt.playlists.list({ part: ["snippet"], mine: true, maxResults: 50, pageToken })
-      const found = (res.data.items || []).find((p) => (p.snippet && p.snippet.title) === title)
+      const u = `https://www.googleapis.com/youtube/v3/playlists?part=snippet&mine=true&maxResults=50${pageToken ? `&pageToken=${pageToken}` : ""}`
+      const res = await ytJson(token, "GET", u)
+      const found = (res.items || []).find((p) => p.snippet && p.snippet.title === title)
       if (found) return found.id
-      pageToken = res.data.nextPageToken
+      pageToken = res.nextPageToken || ""
     } while (pageToken)
   } catch (e) { log("playlist list fail", e.message) }
-  const created = await yt.playlists.insert({
-    part: ["snippet", "status"],
-    requestBody: { snippet: { title }, status: { privacyStatus: "unlisted" } },
+  const created = await ytJson(token, "POST", "https://www.googleapis.com/youtube/v3/playlists?part=snippet,status", {
+    snippet: { title }, status: { privacyStatus: "unlisted" },
   })
-  return created.data.id
+  return created.id
+}
+
+// Upload resumable de um vídeo (stream do ficheiro) → devolve videoId.
+async function ytUploadVideo(token, filePath, snippet, privacyStatus) {
+  const meta = JSON.stringify({ snippet, status: { privacyStatus: privacyStatus || "unlisted", selfDeclaredMadeForKids: false } })
+  const init = await fetch("https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "content-type": "application/json; charset=UTF-8", "X-Upload-Content-Type": "video/*" },
+    body: meta,
+  })
+  if (!init.ok) throw new Error(`init upload ${init.status} ${(await init.text()).slice(0, 200)}`)
+  const uploadUrl = init.headers.get("location")
+  if (!uploadUrl) throw new Error("sem URL de upload resumable")
+  const size = fs.statSync(filePath).size
+  const u = new URL(uploadUrl)
+  return await new Promise((resolve, reject) => {
+    const req = https.request(
+      { method: "PUT", hostname: u.hostname, path: u.pathname + u.search, headers: { "content-length": size, "content-type": "video/*" } },
+      (res) => {
+        let data = ""
+        res.on("data", (d) => (data += d))
+        res.on("end", () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            try { resolve(JSON.parse(data).id) } catch { reject(new Error("parse upload resp: " + data.slice(0, 200))) }
+          } else reject(new Error(`PUT upload ${res.statusCode} ${data.slice(0, 200)}`))
+        })
+      },
+    )
+    req.on("error", reject)
+    fs.createReadStream(filePath).pipe(req)
+  })
+}
+
+// Legendas (multipart/related: metadata JSON + ficheiro SRT).
+async function ytInsertCaption(token, videoId, lang, name, srt) {
+  const boundary = "mtmcc" + videoId + lang
+  const meta = JSON.stringify({ snippet: { videoId, language: lang, name } })
+  const body =
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n` +
+    `--${boundary}\r\nContent-Type: application/octet-stream\r\n\r\n${srt}\r\n--${boundary}--\r\n`
+  const r = await fetch("https://www.googleapis.com/upload/youtube/v3/captions?uploadType=multipart&part=snippet", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "content-type": `multipart/related; boundary=${boundary}` },
+    body,
+  })
+  if (!r.ok) throw new Error(`cc ${r.status} ${(await r.text()).slice(0, 160)}`)
 }
 
 // ISO 639-2 (tags do ffprobe) → 639-1
@@ -212,10 +274,10 @@ async function uploadYoutube(job) {
   const src = master && fs.existsSync(master) ? master : baseF
   if (!src || !fs.existsSync(src)) throw new Error("ficheiro em falta p/ youtube")
 
-  const yt = getYoutubeClient()
+  const token = await ytAccessToken()
   const audioMap = await ffprobeAudioLangs(src) // { lang: ordinal }
   let playlistId = null
-  try { playlistId = await ensurePlaylist(yt, job.playlistTitle || "Gravações", job.playlistId) } catch (e) { log("playlist fail", e.message) }
+  try { playlistId = await ensurePlaylist(token, job.playlistTitle || "Gravações", job.playlistId) } catch (e) { log("playlist fail", e.message) }
 
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "ytdvr-"))
   const results = []
@@ -231,37 +293,26 @@ async function uploadYoutube(job) {
         "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", src,
         "-map", "0:v:0", "-map", `0:a:${idx}`, "-c", "copy", "-movflags", "+faststart", outFile,
       ])
-      const ins = await yt.videos.insert({
-        part: ["snippet", "status"],
-        requestBody: {
-          snippet: { title: String(up.title || "").slice(0, 100), description: String(up.description || "") },
-          status: { privacyStatus: job.privacyStatus || "unlisted", selfDeclaredMadeForKids: false },
-        },
-        media: { body: fs.createReadStream(outFile) },
-      })
-      const videoId = ins.data.id
-      fs.rmSync(outFile, { force: true })
+      let videoId
+      try {
+        videoId = await ytUploadVideo(token, outFile, { title: String(up.title || "").slice(0, 100), description: String(up.description || "") }, job.privacyStatus)
+      } finally {
+        fs.rmSync(outFile, { force: true })
+      }
       if (!videoId) continue
       // CC nesse idioma
       try {
         const r = await fetch(up.srtUrl)
         if (r.ok) {
           const srt = await r.text()
-          if (srt.includes("-->")) {
-            await yt.captions.insert({
-              part: ["snippet"],
-              requestBody: { snippet: { videoId, language: up.lang, name: (LABEL[up.lang] || up.lang) } },
-              media: { mimeType: "application/octet-stream", body: srt },
-            })
-          }
+          if (srt.includes("-->")) await ytInsertCaption(token, videoId, up.lang, LABEL[up.lang] || up.lang, srt)
         }
       } catch (e) { log("cc fail", up.lang, e.message) }
       // playlist
       if (playlistId) {
         try {
-          await yt.playlistItems.insert({
-            part: ["snippet"],
-            requestBody: { snippet: { playlistId, resourceId: { kind: "youtube#video", videoId } } },
+          await ytJson(token, "POST", "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet", {
+            snippet: { playlistId, resourceId: { kind: "youtube#video", videoId } },
           })
         } catch (e) { log("pl add fail", e.message) }
       }
