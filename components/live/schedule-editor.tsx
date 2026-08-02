@@ -30,7 +30,8 @@ const WEEKDAYS = [
 
 const TIERS = [
   { v: "", label: "Herda da sala" },
-  { v: "all", label: "Todos" },
+  { v: "free", label: "Gratuito (público)" },
+  { v: "all", label: "Todos os membros" },
   { v: "app_member", label: "Membro (€35)+" },
   { v: "premium", label: "Premium (€65)" },
   { v: "vip", label: "VIP e Admin" },

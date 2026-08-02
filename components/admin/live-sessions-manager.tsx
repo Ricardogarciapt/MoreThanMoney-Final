@@ -912,6 +912,7 @@ export default function LiveSessionsManager() {
             value={streamForm.access_tier}
             onChange={(e) => setStreamForm((p: any) => ({ ...p, access_tier: e.target.value }))}
           >
+            <option value="free">Gratuito — público (/FreeSession)</option>
             <option value="all">Todos os membros</option>
             <option value="app_member">Pack Membro ($35/mês) e superiores</option>
             <option value="premium">Pack Premium ($65/mês) apenas</option>
@@ -1075,6 +1076,7 @@ export default function LiveSessionsManager() {
                     value={s.access_tier || "all"}
                     onChange={(ev) => patchStreamAdmin(s.id, { access_tier: ev.target.value })}
                   >
+                    <option value="free">Gratuito — público</option>
                     <option value="all">Todos os membros</option>
                     <option value="app_member">Pack Membro ($35/mês) e superiores</option>
                     <option value="premium">Pack Premium ($65/mês) apenas</option>

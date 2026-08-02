@@ -11,6 +11,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   pt: {
     "navfooter.navHome": "Início",
     "navfooter.navPresentations": "Apresentações",
+    "navfooter.navFreeSessions": "Sessões Gratuitas",
     "navfooter.navEducation": "Educação",
     "navfooter.navTrading": "Trading",
     "navfooter.navOnboarding": "Onboarding",
@@ -47,6 +48,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   en: {
     "navfooter.navHome": "Home",
     "navfooter.navPresentations": "Presentations",
+    "navfooter.navFreeSessions": "Free Sessions",
     "navfooter.navEducation": "Education",
     "navfooter.navTrading": "Trading",
     "navfooter.navOnboarding": "Onboarding",
@@ -83,6 +85,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   es: {
     "navfooter.navHome": "Inicio",
     "navfooter.navPresentations": "Presentaciones",
+    "navfooter.navFreeSessions": "Sesiones Gratuitas",
     "navfooter.navEducation": "Educación",
     "navfooter.navTrading": "Trading",
     "navfooter.navOnboarding": "Onboarding",
@@ -119,6 +122,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   fr: {
     "navfooter.navHome": "Accueil",
     "navfooter.navPresentations": "Présentations",
+    "navfooter.navFreeSessions": "Sessions Gratuites",
     "navfooter.navEducation": "Éducation",
     "navfooter.navTrading": "Trading",
     "navfooter.navOnboarding": "Onboarding",
@@ -155,6 +159,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   de: {
     "navfooter.navHome": "Startseite",
     "navfooter.navPresentations": "Präsentationen",
+    "navfooter.navFreeSessions": "Kostenlose Sitzungen",
     "navfooter.navEducation": "Bildung",
     "navfooter.navTrading": "Trading",
     "navfooter.navOnboarding": "Onboarding",
@@ -191,6 +196,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   it: {
     "navfooter.navHome": "Home",
     "navfooter.navPresentations": "Presentazioni",
+    "navfooter.navFreeSessions": "Sessioni Gratuite",
     "navfooter.navEducation": "Formazione",
     "navfooter.navTrading": "Trading",
     "navfooter.navOnboarding": "Onboarding",
@@ -227,6 +233,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   nl: {
     "navfooter.navHome": "Home",
     "navfooter.navPresentations": "Presentaties",
+    "navfooter.navFreeSessions": "Gratis Sessies",
     "navfooter.navEducation": "Educatie",
     "navfooter.navTrading": "Trading",
     "navfooter.navOnboarding": "Onboarding",
@@ -263,6 +270,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   "zh-CN": {
     "navfooter.navHome": "首页",
     "navfooter.navPresentations": "演示",
+    "navfooter.navFreeSessions": "免费课程",
     "navfooter.navEducation": "教育",
     "navfooter.navTrading": "交易",
     "navfooter.navOnboarding": "入门指引",
@@ -298,6 +306,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   ja: {
     "navfooter.navHome": "ホーム",
     "navfooter.navPresentations": "プレゼンテーション",
+    "navfooter.navFreeSessions": "無料セッション",
     "navfooter.navEducation": "教育",
     "navfooter.navTrading": "トレード",
     "navfooter.navOnboarding": "オンボーディング",
@@ -333,6 +342,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   ar: {
     "navfooter.navHome": "الرئيسية",
     "navfooter.navPresentations": "العروض التقديمية",
+    "navfooter.navFreeSessions": "جلسات مجانية",
     "navfooter.navEducation": "التعليم",
     "navfooter.navTrading": "التداول",
     "navfooter.navOnboarding": "الإعداد",
@@ -368,6 +378,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   ru: {
     "navfooter.navHome": "Главная",
     "navfooter.navPresentations": "Презентации",
+    "navfooter.navFreeSessions": "Бесплатные эфиры",
     "navfooter.navEducation": "Образование",
     "navfooter.navTrading": "Трейдинг",
     "navfooter.navOnboarding": "Онбординг",
@@ -404,6 +415,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   hi: {
     "navfooter.navHome": "होम",
     "navfooter.navPresentations": "प्रस्तुतियाँ",
+    "navfooter.navFreeSessions": "निःशुल्क सत्र",
     "navfooter.navEducation": "शिक्षा",
     "navfooter.navTrading": "ट्रेडिंग",
     "navfooter.navOnboarding": "ऑनबोर्डिंग",
@@ -439,6 +451,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   sr: {
     "navfooter.navHome": "Početna",
     "navfooter.navPresentations": "Prezentacije",
+    "navfooter.navFreeSessions": "Besplatne sesije",
     "navfooter.navEducation": "Edukacija",
     "navfooter.navTrading": "Trgovanje",
     "navfooter.navOnboarding": "Onboarding",
@@ -475,6 +488,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   hr: {
     "navfooter.navHome": "Početna",
     "navfooter.navPresentations": "Prezentacije",
+    "navfooter.navFreeSessions": "Besplatne sesije",
     "navfooter.navEducation": "Edukacija",
     "navfooter.navTrading": "Trgovanje",
     "navfooter.navOnboarding": "Onboarding",
@@ -511,6 +525,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   bs: {
     "navfooter.navHome": "Početna",
     "navfooter.navPresentations": "Prezentacije",
+    "navfooter.navFreeSessions": "Besplatne sesije",
     "navfooter.navEducation": "Edukacija",
     "navfooter.navTrading": "Trgovanje",
     "navfooter.navOnboarding": "Onboarding",
@@ -547,6 +562,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   sq: {
     "navfooter.navHome": "Ballina",
     "navfooter.navPresentations": "Prezantime",
+    "navfooter.navFreeSessions": "Sesionet Falas",
     "navfooter.navEducation": "Edukimi",
     "navfooter.navTrading": "Tregtimi",
     "navfooter.navOnboarding": "Onboarding",
@@ -583,6 +599,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   bg: {
     "navfooter.navHome": "Начало",
     "navfooter.navPresentations": "Презентации",
+    "navfooter.navFreeSessions": "Безплатни сесии",
     "navfooter.navEducation": "Образование",
     "navfooter.navTrading": "Трейдинг",
     "navfooter.navOnboarding": "Онбординг",
@@ -619,6 +636,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   ro: {
     "navfooter.navHome": "Acasă",
     "navfooter.navPresentations": "Prezentări",
+    "navfooter.navFreeSessions": "Sesiuni Gratuite",
     "navfooter.navEducation": "Educație",
     "navfooter.navTrading": "Trading",
     "navfooter.navOnboarding": "Onboarding",
@@ -655,6 +673,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   pl: {
     "navfooter.navHome": "Strona główna",
     "navfooter.navPresentations": "Prezentacje",
+    "navfooter.navFreeSessions": "Darmowe sesje",
     "navfooter.navEducation": "Edukacja",
     "navfooter.navTrading": "Trading",
     "navfooter.navOnboarding": "Onboarding",
@@ -691,6 +710,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   uk: {
     "navfooter.navHome": "Головна",
     "navfooter.navPresentations": "Презентації",
+    "navfooter.navFreeSessions": "Безкоштовні ефіри",
     "navfooter.navEducation": "Освіта",
     "navfooter.navTrading": "Трейдинг",
     "navfooter.navOnboarding": "Онбординг",
@@ -727,6 +747,7 @@ export const NAVFOOTER_MESSAGES: Partial<Record<Lang, Record<string, string>>> =
   tr: {
     "navfooter.navHome": "Ana Sayfa",
     "navfooter.navPresentations": "Sunumlar",
+    "navfooter.navFreeSessions": "Ücretsiz Oturumlar",
     "navfooter.navEducation": "Eğitim",
     "navfooter.navTrading": "Trading",
     "navfooter.navOnboarding": "Onboarding",

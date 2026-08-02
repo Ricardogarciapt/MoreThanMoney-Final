@@ -21,13 +21,15 @@ export async function GET(
 
     const { data: streamMeta } = await supabaseAdmin
       .from("lms_streams")
-      .select("live_ended_at")
+      .select("live_ended_at, access_tier")
       .eq("id", id)
       .maybeSingle()
 
     const rollingCutoff = getLmsChatRollingCutoffIso()
+    // Sessões GRATUITAS: o chat auto-limpa assim que a transmissão termina (não espera 24h).
+    const freeSessionEnded = streamMeta?.access_tier === "free" && !!streamMeta?.live_ended_at
 
-    if (shouldPurgeEntireStreamChat(streamMeta?.live_ended_at)) {
+    if (freeSessionEnded || shouldPurgeEntireStreamChat(streamMeta?.live_ended_at)) {
       await supabaseAdmin.from("lms_stream_messages").delete().eq("stream_id", id)
     } else {
       await supabaseAdmin

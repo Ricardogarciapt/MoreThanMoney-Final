@@ -808,6 +808,7 @@ export default function EducatorStudio() {
                       defaultValue={stream.access_tier || "all"}
                       onChange={(e) => patchStream(stream.id, { access_tier: e.target.value || null })}
                     >
+                      <option value="free">Gratuito — público (/FreeSession)</option>
                       <option value="all">Todos os membros</option>
                       <option value="app_member">Pack Membro ($35/mês)</option>
                       <option value="premium">Pack Premium ($65/mês)</option>

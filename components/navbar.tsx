@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation"
 import UserDropdown from "@/components/user-dropdown"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
 import { useT } from "@/components/i18n-provider"
-import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap, Brain, MonitorPlay } from "lucide-react"
+import { Menu, X, ChevronDown, Home, GraduationCap, TrendingUp, Rocket, Zap, Brain, MonitorPlay, Radio } from "lucide-react"
 import { shouldReduceSafariEffects } from "@/lib/supabase-session"
 
 type NavSubItem = {
@@ -57,6 +57,11 @@ export default function Navbar() {
       submenu: [
         { name: t("navfooter.subMtmSystem"), href: "/apresentacao" },
       ],
+    },
+    {
+      name: t("navfooter.navFreeSessions"),
+      href: "/FreeSession",
+      icon: Radio,
     },
     {
       name: t("navfooter.navEducation"),

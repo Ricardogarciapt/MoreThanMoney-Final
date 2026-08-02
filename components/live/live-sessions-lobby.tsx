@@ -71,7 +71,7 @@ function canAccessStream(
 ): boolean {
   if (userType === "admin") return true
   const tier = streamTier ?? "all"
-  if (tier === "all") return true
+  if (tier === "free" || tier === "all") return true
   // Tier VIP: exclusivo a membros VIP (e admin, já tratado acima).
   if (tier === "vip") return userType === "vip" || memberCategory === "vip"
   if (tier === "app_member") return userPlan === "app_member" || userPlan === "premium"
