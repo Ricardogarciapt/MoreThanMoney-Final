@@ -10,8 +10,12 @@ export const DVR_DEFAULT_DUB_LANGS = ["en", "es", "fr", "de"] as const
 // Idiomas de legendas embutidas/sidecar (inclui PT, a língua-fonte).
 export const DVR_CAPTION_LANGS = ["pt", "en", "es", "fr", "de"] as const
 
-// Connector YouTube (upload não-listado → playlist). Ligado só quando as credenciais existem.
+// Connector YouTube (upload não-listado → playlist). O upload real corre no VPS (que tem
+// as credenciais YOUTUBE_*). O site só precisa de SABER que está ligado — via a flag
+// DVR_YOUTUBE_ENABLED=1 (não guarda segredos na Vercel) ou, em ambientes que as tenham,
+// pela presença das 3 credenciais.
 export function isYoutubeConnectorEnabled(): boolean {
+  if (process.env.DVR_YOUTUBE_ENABLED === "1") return true
   return Boolean(
     process.env.YOUTUBE_CLIENT_ID &&
       process.env.YOUTUBE_CLIENT_SECRET &&
