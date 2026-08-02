@@ -121,6 +121,8 @@ let phrase = []                      // frames (Buffers) da frase atual
 let speechFrames = 0                 // nº de frames com fala na frase
 let silenceRun = 0                   // frames de silêncio consecutivos
 let busy = false
+let consumedFrames = 0               // total de frames de áudio já lidos (relógio do stream)
+let phraseStartMs = null             // ms do 1º frame de fala da frase atual (p/ t_start_ms)
 
 ff.stdout.on("data", (chunk) => {
   let buf = Buffer.concat([carry, chunk])
@@ -128,8 +130,13 @@ ff.stdout.on("data", (chunk) => {
   while (off + FRAME_BYTES <= buf.length) {
     const frame = buf.subarray(off, off + FRAME_BYTES)
     off += FRAME_BYTES
+    const frameStartMs = consumedFrames * FRAME_MS
+    consumedFrames++
     const isSpeech = peak(frame) >= SILENCE_PEAK
-    if (isSpeech) { phrase.push(frame); speechFrames++; silenceRun = 0 }
+    if (isSpeech) {
+      if (phrase.length === 0) phraseStartMs = frameStartMs // início da frase = 1º frame de fala
+      phrase.push(frame); speechFrames++; silenceRun = 0
+    }
     else {
       silenceRun++
       if (speechFrames > 0) phrase.push(frame) // mantém a pausa curta dentro da frase
@@ -145,9 +152,11 @@ ff.stdout.on("data", (chunk) => {
 })
 
 function flush() {
-  if (speechFrames * FRAME_MS < MIN_SPEECH_MS) { phrase = []; speechFrames = 0; silenceRun = 0; return }
+  if (speechFrames * FRAME_MS < MIN_SPEECH_MS) { phrase = []; speechFrames = 0; silenceRun = 0; phraseStartMs = null; return }
+  const startMs = phraseStartMs ?? 0
+  const endMs = startMs + phrase.length * FRAME_MS
   const pcm = Buffer.concat(phrase)
-  phrase = []; speechFrames = 0; silenceRun = 0
+  phrase = []; speechFrames = 0; silenceRun = 0; phraseStartMs = null
   if (busy) return // evita sobreposição de pedidos; a frase seguinte apanha o resto
   busy = true
   transcribe(pcm)
@@ -159,7 +168,7 @@ function flush() {
       if (lastText && (c.includes(lastText) || lastText.includes(c)) && Math.min(c.length, lastText.length) > 12) return
       lastText = c
       seq++
-      return postCue(seq, c)
+      return postCue(seq, c, startMs, endMs)
     })
     .catch((e) => console.error("[caption-worker] flush:", e.message))
     .finally(() => { busy = false })
@@ -189,12 +198,16 @@ async function transcribe(pcm) {
   return joined || (typeof d.text === "string" ? d.text.trim() : "")
 }
 
-async function postCue(n, text) {
+async function postCue(n, text, t_start_ms, t_end_ms) {
   try {
     const r = await fetch(`${API}/api/live-sessions/streams/${STREAM_ID}/captions/ingest`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-caption-secret": SECRET },
-      body: JSON.stringify({ seq: n, source_text: text, source_language: SOURCE_LANG }),
+      body: JSON.stringify({
+        seq: n, source_text: text, source_language: SOURCE_LANG,
+        t_start_ms: Number.isFinite(t_start_ms) ? Math.round(t_start_ms) : null,
+        t_end_ms: Number.isFinite(t_end_ms) ? Math.round(t_end_ms) : null,
+      }),
     })
     if (!r.ok) console.error("[caption-worker] ingest", r.status, (await r.text()).slice(0, 160))
     else console.log(`[caption-worker] cue #${n}: ${text}`)
