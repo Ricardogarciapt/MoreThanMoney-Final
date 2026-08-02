@@ -18,6 +18,12 @@ const DUB_LANGS: [string, string][] = [
 
 // Atraso do vídeo (segundos) para alinhar com a voz dobrada. Ajustável.
 const DUB_VIDEO_DELAY_S = 7
+// Anti-deriva: se a fila de clips crescer, o áudio está a ficar atrás do vídeo.
+// Acelera levemente para recuperar; acima do limite duro, salta clips antigos.
+const DUB_MAX_QUEUE = 4          // limite duro: descarta os mais antigos (mantém near-live)
+const DUB_CATCHUP_AT = 2         // a partir de N clips pendentes começa a acelerar
+const DUB_RATE_NORMAL = 1.0
+const DUB_RATE_CATCHUP = 1.08    // +8% imperceptível, recupera o atraso sem cortar frases
 
 function liveEdgeOf(v: HTMLVideoElement): number {
   try {
@@ -66,7 +72,7 @@ export default function LiveDubAudio({
     }
 
     if (!lang) {
-      if (v) v.muted = false
+      if (v) { v.muted = false; v.volume = 1 } // restaura o áudio original
       if (a) { a.pause(); a.src = "" }
       queueRef.current = []
       setActive(false)
@@ -74,13 +80,14 @@ export default function LiveDubAudio({
       return
     }
 
-    // ---- Canal DOBRADO: silencia o original, ATRASA o vídeo ~DUB_VIDEO_DELAY_S ----
+    // ---- Canal DOBRADO: ESCONDE o áudio original, ATRASA o vídeo ~DUB_VIDEO_DELAY_S ----
     const enforceMute = () => {
       const el = videoRef.current
-      if (el && !el.muted) el.muted = true
+      if (el && (!el.muted || el.volume !== 0)) { el.muted = true; el.volume = 0 } // silêncio total do original
     }
     if (v) {
       v.muted = true
+      v.volume = 0
       v.addEventListener("volumechange", enforceMute)
     }
     // hls.js: passa a jogar DUB_VIDEO_DELAY_S atrás do edge e segura aí (não recupera latência).
@@ -122,6 +129,10 @@ export default function LiveDubAudio({
           lastSeqRef.current = c.seq
           if (c.audioUrl) queueRef.current.push(c.audioUrl)
           sinceRef.current = c.seq
+        }
+        // Anti-deriva: se a fila passou o limite, o áudio está muito atrás → salta os mais antigos.
+        if (queueRef.current.length > DUB_MAX_QUEUE) {
+          queueRef.current = queueRef.current.slice(-DUB_MAX_QUEUE)
         }
         if (a && a.paused) playNext()
       } catch {}
@@ -167,6 +178,9 @@ export default function LiveDubAudio({
     const a = audioRef.current
     const url = queueRef.current.shift()
     if (a && url) {
+      // Catch-up: quantos mais clips pendentes, mais depressa toca (recupera o atraso
+      // sem cortar frases). Volta a 1.0x quando a fila esvazia.
+      a.playbackRate = queueRef.current.length >= DUB_CATCHUP_AT ? DUB_RATE_CATCHUP : DUB_RATE_NORMAL
       a.src = url
       a.play().catch(() => {})
     }
