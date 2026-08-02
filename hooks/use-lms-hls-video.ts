@@ -78,20 +78,10 @@ export function useLmsHlsVideo(videoRef: RefObject<HTMLVideoElement | null>, hls
       }
     }
 
-    const canNative =
-      video.canPlayType("application/vnd.apple.mpegurl") !== "" ||
-      video.canPlayType("application/x-mpegURL") !== ""
-
-    if (canNative) {
-      destroyHls()
-      video.src = currentUrl
-      const cleanupAutoplay = tryAutoplay()
-      return () => {
-        cleanupAutoplay?.()
-        resetVideo()
-      }
-    }
-
+    // PRIORIDADE ao hls.js: o Chrome reporta canPlayType('application/x-mpegURL')='maybe'
+    // mas NÃO toca HLS nativo — e só com hls.js conseguimos atrasar o vídeo na dobragem
+    // (liveSyncDuration). Usamos nativo apenas quando o hls.js NÃO é suportado (Safari/iOS),
+    // tratado no fallback video.src no fim.
     if (Hls.isSupported()) {
       destroyHls()
       const hls = new Hls({
