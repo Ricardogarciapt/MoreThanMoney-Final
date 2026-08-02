@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
   // 2) upload para o YouTube de gravações já montadas (connector opcional)
   const { data: yt } = await supabase
     .from("lms_dvr_jobs")
-    .select("id, stream_id, stream_key, base_file, multi_file, youtube_playlist_id")
+    .select("id, stream_id, stream_key, base_file, multi_file, subtitle_langs, youtube_playlist_id")
     .eq("youtube_status", "pending")
     .eq("status", "ready")
     .order("updated_at", { ascending: true })
@@ -64,6 +64,13 @@ export async function GET(req: NextRequest) {
       .maybeSingle()
     const title = (s?.title as string) || "Sessão MoreThanMoney"
     const academy = ((s?.academy as { name?: string } | null)?.name as string) || "MoreThanMoney"
+    // Legendas a enviar como CC (SRT) para cada idioma → seletor de CC no player.
+    const subLangs = ((yt.subtitle_langs as string[]) || []).map(normalizeCaptionLang).filter(Boolean)
+    const base = siteUrl()
+    const captions = subLangs.map((lang) => ({
+      lang,
+      srtUrl: `${base}/api/live-sessions/dvr/${yt.stream_id}/subtitles/${lang}.srt`,
+    }))
     return NextResponse.json({
       action: "youtube",
       jobId: yt.id,
@@ -72,7 +79,10 @@ export async function GET(req: NextRequest) {
       description: `Sessão MoreThanMoney (${academy}). Gravação com múltiplas faixas de áudio e legendas traduzidas.`,
       privacyStatus: "unlisted",
       playlistId: yt.youtube_playlist_id || null,
-      playlistTitle: `${academy} · Rever aulas`,
+      // Playlist por SALA (dump das gravações dessa sala). Os admins depois curam
+      // as playlists de curso no YouTube e colam o link no LMS manualmente.
+      playlistTitle: `${title} · Gravações (${academy})`,
+      captions,
     })
   }
 
@@ -237,20 +247,9 @@ export async function POST(req: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", jobId)
-    // Liga a playlist ao stream para o viewer "Rever aulas" a mostrar automaticamente.
-    if (playlistUrl) {
-      const { data: jr } = await supabase.from("lms_dvr_jobs").select("stream_id").eq("id", jobId).maybeSingle()
-      if (jr?.stream_id) {
-        const { data: sExisting } = await supabase
-          .from("lms_streams")
-          .select("playlist_url")
-          .eq("id", jr.stream_id)
-          .maybeSingle()
-        const patch: Record<string, unknown> = { playlist_url: playlistUrl }
-        if (!(sExisting?.playlist_url)) patch.playlist_title = "Rever aulas"
-        await supabase.from("lms_streams").update(patch).eq("id", jr.stream_id)
-      }
-    }
+    // NÃO liga automaticamente ao stream: a playlist criada é um "dump" das gravações
+    // da sala. Os admins curam as playlists de curso no YouTube e colam o link no LMS
+    // manualmente (não sobrescrevemos a playlist de curso já configurada).
     return NextResponse.json({ success: true })
   }
 

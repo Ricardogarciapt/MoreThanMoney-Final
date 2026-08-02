@@ -198,6 +198,24 @@ async function uploadYoutube(job) {
   })
   const videoId = up.data.id
   if (!videoId) throw new Error("upload sem videoId")
+
+  // Legendas (CC) por idioma → aparecem no seletor de CC do player do YouTube.
+  for (const c of job.captions || []) {
+    if (!c || !c.srtUrl) continue
+    try {
+      const r = await fetch(c.srtUrl)
+      if (!r.ok) continue
+      const srt = await r.text()
+      if (!srt.includes("-->")) continue // sem cues
+      await yt.captions.insert({
+        part: ["snippet"],
+        requestBody: { snippet: { videoId, language: c.lang, name: (LABEL[c.lang] || c.lang) } },
+        media: { mimeType: "application/octet-stream", body: srt },
+      })
+      log(`cc ${c.lang} enviado`)
+    } catch (e) { log("cc fail", c.lang, e.message) }
+  }
+
   let playlistId = null
   try {
     playlistId = await ensurePlaylist(yt, job.playlistTitle || "Rever aulas", job.playlistId)

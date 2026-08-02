@@ -75,16 +75,24 @@ export function LmsPlaylistSection({
       {open && (
         <div className="px-3 pb-3">
           {canAccess ? (
-            <div className="relative w-full overflow-hidden rounded-lg border border-gray-800 bg-black" style={{ aspectRatio: "16 / 9" }}>
-              <iframe
-                src={`https://www.youtube.com/embed/videoseries?list=${id}`}
-                title="Playlist de aulas"
-                className="absolute inset-0 h-full w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                loading="lazy"
-              />
-            </div>
+            <>
+              <div className="relative w-full overflow-hidden rounded-lg border border-gray-800 bg-black" style={{ aspectRatio: "16 / 9" }}>
+                <iframe
+                  // cc_load_policy=1 → legendas ligadas por defeito; controlos completos
+                  // mantêm o menu ⚙️ do YouTube (seletor de CC e de faixa de áudio).
+                  src={`https://www.youtube.com/embed/videoseries?list=${id}&cc_load_policy=1&hl=pt&cc_lang_pref=pt&rel=0`}
+                  title="Playlist de aulas"
+                  className="absolute inset-0 h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+              <p className="mt-1.5 text-[10px] leading-relaxed text-gray-500">
+                No ⚙️ do leitor podes escolher as <strong className="text-gray-400">legendas (CC)</strong> e, quando o
+                vídeo tem várias faixas, o <strong className="text-gray-400">idioma do áudio</strong>.
+              </p>
+            </>
           ) : (
             <div className="rounded-lg border border-dashed border-gray-700 bg-black/40 px-3 py-4 text-center">
               <p className="text-xs text-gray-400">

@@ -5,7 +5,7 @@ import Link from "next/link"
 import LiveStreamRoom from "@/components/live/live-stream-room"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
 import { useT } from "@/components/i18n-provider"
-import { Loader2, Radio, Users, CalendarClock, ArrowRight } from "lucide-react"
+import { Loader2, Radio, Users, CalendarClock } from "lucide-react"
 
 type Stream = {
   id: string
@@ -150,12 +150,6 @@ export default function FreeSessionHub() {
                 </ul>
               </div>
             )}
-
-            <div className="mt-8">
-              <Link href="/live-sessions" className="inline-flex items-center gap-2 rounded-lg border border-[#D2A63C]/40 px-5 py-2.5 text-sm font-semibold text-[#D2A63C] hover:bg-[#D2A63C]/10">
-                {t("freesession.viewAll")} <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
           </div>
         )}
       </section>
