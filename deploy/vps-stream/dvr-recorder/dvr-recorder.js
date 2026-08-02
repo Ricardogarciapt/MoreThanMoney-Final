@@ -26,6 +26,11 @@ const POLL_MS = (parseInt(process.env.POLL_SECONDS || "8", 10) || 8) * 1000
 const KEY_RE = /^mtm_[a-z0-9]+_[a-f0-9]+$/i
 
 const recorders = new Map() // key -> { proc, file }
+const recentStops = new Map() // key -> timestamp do último stop (evita corrida stop→start)
+// Não reiniciar (nem apagar o ficheiro) de uma gravação que parou há pouco: quando o
+// publisher sai, o SRS ainda lista o stream por 1-2 ticks → sem isto, um restart imediato
+// apagava a gravação acabada de fazer (linha do rmSync). > POLL para cobrir o lag do SRS.
+const RESTART_COOLDOWN_MS = 12000
 
 function log(...a) { console.log(new Date().toISOString(), ...a) }
 
@@ -69,6 +74,7 @@ function startRecording(key) {
   proc.stderr.on("data", (d) => process.stderr.write(`[rec ${key}] ${d}`))
   proc.on("exit", (code) => {
     recorders.delete(key)
+    recentStops.set(key, Date.now()) // marca o stop → bloqueia restart imediato (corrida)
     log("REC stop", key, `(code ${code})`)
     // regista a gravação no site (só se o ficheiro existe e tem tamanho)
     try {
@@ -85,9 +91,17 @@ async function tick() {
       .map((s) => String(s?.name || "").replace(/\.flv$/i, ""))
       .filter((k) => KEY_RE.test(k)),
   )
-  // arranca gravação p/ novos publishers
+  // arranca gravação p/ novos publishers (com cooldown p/ não reiniciar/apagar logo após um stop)
   for (const key of publishing) {
-    if (!recorders.has(key)) startRecording(key)
+    if (recorders.has(key)) continue
+    const stoppedAt = recentStops.get(key)
+    if (stoppedAt && Date.now() - stoppedAt < RESTART_COOLDOWN_MS) continue // evita corrida stop→start (apagava a gravação)
+    recentStops.delete(key)
+    startRecording(key)
+  }
+  // limpa marcas de stop antigas de streams que já não publicam (novo publish futuro grava logo)
+  for (const [key, ts] of recentStops) {
+    if (!publishing.has(key) && Date.now() - ts > RESTART_COOLDOWN_MS) recentStops.delete(key)
   }
   // termina gravadores cujo publisher já saiu (o ffmpeg costuma sair sozinho quando o FLV acaba;
   // isto é a rede de segurança para o finalizar graciosamente)
