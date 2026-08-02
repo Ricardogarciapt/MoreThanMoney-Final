@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/admin-api-helpers"
+import {
+  DVR_DEFAULT_DUB_LANGS,
+  DVR_CAPTION_LANGS,
+  isYoutubeConnectorEnabled,
+  isDvrAutoProcessEnabled,
+} from "@/lib/lms-dvr/config"
 
 // SRS http_hook `on_dvr`: chamado quando o SRS fecha um ficheiro de gravação (DVR).
 // Mapeia a stream (key) → educador e regista que existe UMA gravação base para ele.
@@ -33,7 +39,9 @@ export async function POST(req: NextRequest) {
     if (!st?.id) return new NextResponse("0", { status: 200 }) // key desconhecida — ignora
 
     // Uma gravação por SALA (stream): upsert por stream_id (substitui a anterior).
-    // Reinicia o ciclo — a nova gravação fica "recorded" e sem multi-áudio/legendas.
+    // Processamento automático (default): monta logo multi-áudio + legendas e, se o
+    // connector estiver ligado, faz upload p/ YouTube. Manual se DVR_AUTOPROCESS=0.
+    const auto = isDvrAutoProcessEnabled()
     await supabase
       .from("lms_dvr_jobs")
       .upsert(
@@ -42,16 +50,16 @@ export async function POST(req: NextRequest) {
           educator_id: st.educator_id,
           stream_key: streamKey,
           base_file: baseFile,
-          status: "recorded",
-          langs: [],
+          status: auto ? "pending" : "recorded",
+          langs: auto ? [...DVR_DEFAULT_DUB_LANGS] : [],
           multi_file: null,
           download_url: null,
           size_bytes: null,
           duration_s: null,
           error: null,
-          subtitle_langs: [],
+          subtitle_langs: auto ? [...DVR_CAPTION_LANGS] : [],
           subtitle_files: {},
-          youtube_status: null,
+          youtube_status: auto && isYoutubeConnectorEnabled() ? "pending" : null,
           youtube_video_id: null,
           youtube_video_url: null,
           youtube_error: null,

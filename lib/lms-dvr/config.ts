@@ -19,6 +19,13 @@ export function isYoutubeConnectorEnabled(): boolean {
   )
 }
 
+// Processamento automático das gravações: ao terminar a transmissão, monta logo o
+// multi-áudio + legendas (e, se o connector estiver ligado, faz upload p/ YouTube).
+// Liga por defeito; desliga com DVR_AUTOPROCESS=0.
+export function isDvrAutoProcessEnabled(): boolean {
+  return process.env.DVR_AUTOPROCESS !== "0"
+}
+
 export function dvrDownloadUrl(file: string): string {
   return `${DVR_PUBLIC_BASE}/${file}`
 }
