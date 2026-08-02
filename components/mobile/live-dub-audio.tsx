@@ -16,14 +16,13 @@ const DUB_LANGS: [string, string][] = [
   ["de", "Deutsch"],
 ]
 
-// Atraso do vídeo (segundos) para alinhar com a voz dobrada. Ajustável.
-const DUB_VIDEO_DELAY_S = 7
-// Anti-deriva: se a fila de clips crescer, o áudio está a ficar atrás do vídeo.
-// Acelera levemente para recuperar; acima do limite duro, salta clips antigos.
-const DUB_MAX_QUEUE = 4          // limite duro: descarta os mais antigos (mantém near-live)
-const DUB_CATCHUP_AT = 2         // a partir de N clips pendentes começa a acelerar
+// Atraso do vídeo (segundos) para alinhar com a voz dobrada. O ÁUDIO é sempre tocado
+// INTEIRO e por ordem (nunca se saltam frases). Para não derivar, atrasa-se o VÍDEO
+// e, se a fila crescer, acelera-se levemente a fala (sem perder palavras).
+const DUB_VIDEO_DELAY_S = 9      // latência típica do pipeline ASR→tradução→TTS
+const DUB_CATCHUP_AT = 2         // a partir de N clips pendentes acelera um pouco
 const DUB_RATE_NORMAL = 1.0
-const DUB_RATE_CATCHUP = 1.08    // +8% imperceptível, recupera o atraso sem cortar frases
+const DUB_RATE_CATCHUP = 1.06    // +6% imperceptível, recupera atraso SEM cortar frases
 
 function liveEdgeOf(v: HTMLVideoElement): number {
   try {
@@ -63,6 +62,7 @@ export default function LiveDubAudio({
         if (hls?.config) {
           hls.config.liveSyncDuration = undefined // volta a usar liveSyncDurationCount (3)
           hls.config.liveMaxLatencyDuration = undefined
+          hls.config.maxLiveSyncPlaybackRate = 1.1 // pode voltar a apanhar o edge
         }
         if (v) {
           const edge = liveEdgeOf(v)
@@ -93,7 +93,8 @@ export default function LiveDubAudio({
     // hls.js: passa a jogar DUB_VIDEO_DELAY_S atrás do edge e segura aí (não recupera latência).
     if (hls?.config) {
       hls.config.liveSyncDuration = DUB_VIDEO_DELAY_S
-      hls.config.liveMaxLatencyDuration = DUB_VIDEO_DELAY_S + 12
+      hls.config.liveMaxLatencyDuration = DUB_VIDEO_DELAY_S + 15
+      hls.config.maxLiveSyncPlaybackRate = 1 // NÃO acelerar p/ o edge — mantém o vídeo atrasado
     }
     // Mantém o vídeo ~DUB_VIDEO_DELAY_S atrás (seek inicial + correções; funciona também no HLS nativo).
     const holdDelay = () => {
@@ -127,12 +128,8 @@ export default function LiveDubAudio({
         for (const c of d?.captions ?? []) {
           if (c.seq <= lastSeqRef.current) continue // dedupe → nunca repete a frase
           lastSeqRef.current = c.seq
-          if (c.audioUrl) queueRef.current.push(c.audioUrl)
+          if (c.audioUrl) queueRef.current.push(c.audioUrl) // NUNCA se descartam clips (não roubar palavras)
           sinceRef.current = c.seq
-        }
-        // Anti-deriva: se a fila passou o limite, o áudio está muito atrás → salta os mais antigos.
-        if (queueRef.current.length > DUB_MAX_QUEUE) {
-          queueRef.current = queueRef.current.slice(-DUB_MAX_QUEUE)
         }
         if (a && a.paused) playNext()
       } catch {}
