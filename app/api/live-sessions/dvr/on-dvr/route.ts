@@ -29,12 +29,17 @@ export async function POST(req: NextRequest) {
 
     const baseFile = filePath.split("/").pop() || `${streamKey}.mp4`
 
-    // stream + educador a partir da key
-    const { data: st } = await supabase
+    // stream + educador a partir da key. NOTA: várias salas do mesmo educador podem
+    // partilhar o stream_key → NÃO usar maybeSingle (falha com >1). Escolhe a que está
+    // AO VIVO; senão a mais recentemente atualizada (a que acabou de transmitir).
+    const { data: sts } = await supabase
       .from("lms_streams")
-      .select("id, educator_id")
+      .select("id, educator_id, is_live, updated_at")
       .eq("stream_key", streamKey)
-      .maybeSingle()
+      .order("is_live", { ascending: false })
+      .order("updated_at", { ascending: false })
+      .limit(1)
+    const st = sts?.[0]
 
     if (!st?.id) return new NextResponse("0", { status: 200 }) // key desconhecida — ignora
 
