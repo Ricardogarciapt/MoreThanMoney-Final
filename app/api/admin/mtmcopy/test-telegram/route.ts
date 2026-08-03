@@ -4,9 +4,11 @@ import { TELEGRAM_GROUPS } from '@/lib/mtmcopy/copy-methods'
 import { processMtmcopyTelegramMessage } from '@/lib/mtmcopy/processor'
 import { sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
 
+// chatIds fixos: o canal Telegram trade-ideas continua a existir mesmo depois de
+// 'trade_ideas' (Forex) ter saído das opções copiáveis de MTM Copy.
 const CHANNEL_CHAT: Record<string, string> = {
-  'premium-signals': TELEGRAM_GROUPS.find((g) => g.id === 'premium')!.chatId,
-  'trade-ideas': TELEGRAM_GROUPS.find((g) => g.id === 'trade_ideas')!.chatId,
+  'premium-signals': TELEGRAM_GROUPS.find((g) => g.id === 'premium')?.chatId ?? '-1002424441843',
+  'trade-ideas': '-1003716578747',
 }
 
 export async function POST(request: NextRequest) {
