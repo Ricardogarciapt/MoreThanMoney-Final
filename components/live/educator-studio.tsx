@@ -710,7 +710,22 @@ export default function EducatorStudio() {
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <CardTitle className="text-lg text-white">{stream.title}</CardTitle>
+                      {/* Nome da sessão editável pelo educador (commit no blur/Enter) */}
+                      <input
+                        type="text"
+                        defaultValue={stream.title}
+                        aria-label="Nome da sessão"
+                        title="Editar o nome da sessão"
+                        className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1 py-0.5 text-lg font-semibold text-white hover:border-gray-700 focus:border-[#D2A63C] focus:bg-black/40 focus:outline-none"
+                        onBlur={(e) => {
+                          const t = e.target.value.trim()
+                          if (t && t !== stream.title) patchStream(stream.id, { title: t })
+                          else e.target.value = stream.title
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") (e.target as HTMLInputElement).blur()
+                        }}
+                      />
                       <Badge className={stream.is_live ? "bg-red-600" : "bg-gray-700"}>
                         {stream.is_live ? "LIVE" : "OFFLINE"}
                       </Badge>
