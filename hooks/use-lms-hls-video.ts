@@ -116,13 +116,30 @@ export function useLmsHlsVideo(videoRef: RefObject<HTMLVideoElement | null>, hls
       const liveDebug =
         typeof window !== "undefined" && window.localStorage?.getItem("mtm_live_debug") === "1"
 
+      // Em LIVE, erros fatais transitórios são comuns (restart/gap do stream). Recuperar
+      // PRIMEIRO com o hls.js (startLoad/recoverMediaError) — só trocar de path após esgotar,
+      // e NUNCA desistir: se não houver candidatos, volta ao canónico e recarrega.
+      let recoverTries = 0
+      hls.on(Hls.Events.FRAG_BUFFERED, () => { recoverTries = 0 })
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (liveDebug || process.env.NODE_ENV === "development") {
-          console.warn("[MTM HLS]", data?.type, data?.details, data?.fatal ? "(fatal)" : "", {
-            url: currentUrl,
-          })
+          console.warn("[MTM HLS]", data?.type, data?.details, data?.fatal ? "(fatal)" : "", { url: currentUrl })
         }
-        if (data?.fatal && tryNextCandidate()) return
+        if (!data?.fatal) return
+        if (recoverTries < 8) {
+          recoverTries++
+          try {
+            if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError()
+            else hls.startLoad() // NETWORK_ERROR e outros: re-tenta a fonte atual (o canónico funciona)
+          } catch {}
+          return
+        }
+        recoverTries = 0
+        if (tryNextCandidate()) return // esgotou a recuperação → tenta outro path
+        // sem mais candidatos → volta ao canónico e recarrega (não morre em live)
+        currentUrl = inputUrl
+        triedFallbackRef.current.clear()
+        try { hls.loadSource(inputUrl); hls.startLoad() } catch {}
       })
 
       hls.loadSource(currentUrl)
