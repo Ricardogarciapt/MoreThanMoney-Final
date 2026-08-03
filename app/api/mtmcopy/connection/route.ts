@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { connectionCopyMethod } from '@/lib/mtmcopy/copy-limits'
 import { removeConnectionCopyFactory, syncConnectionCopyFactory, syncMtmStrategyReplication } from '@/lib/mtmcopy/connection-sync'
+import { deleteMetaApiAccount } from '@/lib/mtmcopy/metaapi-provision'
+import { removeProviderStrategy } from '@/lib/mtmcopy/copyfactory'
 import { verifyTelegramChannel } from '@/lib/mtmcopy/telegram-bot'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
 import { normalizeTelegramGroups, normalizeTelegramChannel } from '@/lib/mtmcopy/copy-methods'
@@ -561,6 +563,18 @@ export async function DELETE(request: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq('id', slave.id)
+    }
+  }
+
+  // Sync MetaApi na remoção: apaga a estratégia (se master) + APAGA a conta MetaApi
+  // (undeploy + delete → para de faturar). Sem isto ficavam contas órfãs a pagar.
+  if (existing.account_role === 'master' && existing.copyfactory_strategy_id) {
+    await removeProviderStrategy(existing.copyfactory_strategy_id).catch(() => {})
+  }
+  if (existing.metaapi_account_id) {
+    const removed = await deleteMetaApiAccount(existing.metaapi_account_id).catch(() => false)
+    if (!removed) {
+      console.warn('[mtmcopy] conta MetaApi não removida (o reconciliador limpa depois):', existing.metaapi_account_id)
     }
   }
 

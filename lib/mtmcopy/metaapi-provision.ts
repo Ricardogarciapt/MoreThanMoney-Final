@@ -277,6 +277,50 @@ async function enableCopyFactoryRole(
   })
 }
 
+/** Undeploy de uma conta MetaApi (para de faturar o essencial; mantém a conta/config). */
+export async function undeployMetaApiAccount(accountId: string): Promise<void> {
+  const token = process.env.METAAPI_TOKEN
+  if (!token || !accountId) return
+  await fetch(`${PROVISIONING_BASE}/users/current/accounts/${accountId}/undeploy`, {
+    method: 'POST',
+    headers: { 'auth-token': token },
+  }).catch(() => {})
+}
+
+/**
+ * Undeploy + APAGA definitivamente uma conta MetaApi (para de faturar por completo).
+ * Tolerante a 404 (já não existe). Re-tenta enquanto a conta faz undeploy. true = removida.
+ */
+export async function deleteMetaApiAccount(accountId: string): Promise<boolean> {
+  const token = process.env.METAAPI_TOKEN
+  if (!token || !accountId) return false
+  await undeployMetaApiAccount(accountId) // o DELETE exige a conta não-deployada
+  for (let i = 0; i < 6; i++) {
+    const r = await fetch(`${PROVISIONING_BASE}/users/current/accounts/${accountId}`, {
+      method: 'DELETE',
+      headers: { 'auth-token': token },
+    }).catch(() => null)
+    if (r && (r.status === 404 || (r.status >= 200 && r.status < 300))) return true
+    await new Promise((res) => setTimeout(res, 3000)) // aguarda o undeploy terminar
+  }
+  return false
+}
+
+/** Ajusta a fiabilidade da conta (high = 2× custo/failover; regular = metade). */
+export async function setMetaApiAccountReliability(
+  accountId: string,
+  reliability: 'high' | 'regular',
+): Promise<boolean> {
+  const token = process.env.METAAPI_TOKEN
+  if (!token || !accountId) return false
+  const r = await fetch(`${PROVISIONING_BASE}/users/current/accounts/${accountId}`, {
+    method: 'PATCH',
+    headers: { 'auth-token': token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reliability }),
+  }).catch(() => null)
+  return !!r && r.ok
+}
+
 async function deployAccount(account: {
   deploy?: () => Promise<void>
   waitDeployed?: (t?: number) => Promise<void>
