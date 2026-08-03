@@ -909,7 +909,7 @@ export async function POST(request: NextRequest) {
   // e sobe o winrate para ~52%. Aplica-se ao que PUBLICA no chat E ao que executa na Bybit.
   let perpsGate: { allow: boolean; reason: string } = { allow: true, reason: "" }
   if (perpsRequested && !isFollowup && execSymbolForGate && (execDirForGate === "buy" || execDirForGate === "sell")) {
-    perpsGate = await evaluatePerpsSignalGate(execSymbolForGate, execDirForGate)
+    perpsGate = await evaluatePerpsSignalGate(execSymbolForGate, execDirForGate, { entry: entry ?? price, sl })
     if (!perpsGate.allow && logId) {
       await supabase
         .from("tradingview_signals")
