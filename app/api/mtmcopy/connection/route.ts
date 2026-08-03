@@ -294,7 +294,7 @@ export async function POST(request: NextRequest) {
     connection?.metaapi_account_id &&
     connection.account_role !== 'master' &&
     connMethod === 'strategy' &&
-    !connection.copyfactory_subscribed
+    connection.is_active !== false // re-empurra SEMPRE (mesmo já subscrita) p/ as settings aplicarem; nunca em pausa
   ) {
     const { data: profile } = await supabaseAdmin
       .from('profiles')
