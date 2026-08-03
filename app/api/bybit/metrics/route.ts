@@ -17,6 +17,8 @@ export async function GET(req: NextRequest) {
   if (!bybitConfigured()) {
     return NextResponse.json({ ok: false, error: "sem BYBIT_API_KEY/SECRET" }, { status: 400 })
   }
-  const m = await getBybitPerpMetrics(30)
+  const daysParam = Number(new URL(req.url).searchParams.get("days"))
+  const days = Number.isFinite(daysParam) && daysParam > 0 ? Math.min(daysParam, 90) : 30
+  const m = await getBybitPerpMetrics(days)
   return NextResponse.json(m)
 }

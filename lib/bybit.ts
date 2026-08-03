@@ -173,6 +173,16 @@ export async function getBybitWallet(): Promise<{ equity: number | null; availab
   return { equity: eq != null && eq > 0 ? eq : null, available }
 }
 
+export interface BybitSymbolStat {
+  symbol: string
+  trades: number
+  wins: number
+  losses: number
+  profit: number
+  winRatePct: number
+  profitFactor: number | null
+}
+
 export interface BybitPerpMetrics {
   ok: boolean
   retMsg: string
@@ -184,6 +194,7 @@ export interface BybitPerpMetrics {
   winRatePct: number | null
   profitFactor: number | null
   windowDays: number
+  bySymbol?: BybitSymbolStat[]
 }
 
 /**
@@ -209,6 +220,8 @@ export async function getBybitPerpMetrics(windowDays = 30): Promise<BybitPerpMet
   ])
   let profit = 0, wins = 0, losses = 0, grossWin = 0, grossLoss = 0, trades = 0
   let ok = true, retMsg = "OK"
+  // Acumulador por símbolo (para pruning de pares / anti-overtrading).
+  const sym = new Map<string, { trades: number; wins: number; losses: number; profit: number; gw: number; gl: number }>()
   for (const r of results) {
     if (!r.ok) { ok = false; retMsg = r.retMsg; continue }
     const list = (r.result as { list?: Record<string, string>[] } | null)?.list ?? []
@@ -217,8 +230,24 @@ export async function getBybitPerpMetrics(windowDays = 30): Promise<BybitPerpMet
       trades++
       profit += pnl
       if (pnl > 0) { wins++; grossWin += pnl } else if (pnl < 0) { losses++; grossLoss += Math.abs(pnl) }
+      const s = String(it.symbol || "?")
+      const e = sym.get(s) ?? { trades: 0, wins: 0, losses: 0, profit: 0, gw: 0, gl: 0 }
+      e.trades++; e.profit += pnl
+      if (pnl > 0) { e.wins++; e.gw += pnl } else if (pnl < 0) { e.losses++; e.gl += Math.abs(pnl) }
+      sym.set(s, e)
     }
   }
+  const bySymbol: BybitSymbolStat[] = [...sym.entries()]
+    .map(([symbol, e]) => ({
+      symbol,
+      trades: e.trades,
+      wins: e.wins,
+      losses: e.losses,
+      profit: Number(e.profit.toFixed(2)),
+      winRatePct: e.trades ? Number(((e.wins / e.trades) * 100).toFixed(1)) : 0,
+      profitFactor: e.gl > 0 ? Number((e.gw / e.gl).toFixed(2)) : null,
+    }))
+    .sort((a, b) => a.profit - b.profit)
   return {
     ok,
     retMsg,
@@ -230,6 +259,7 @@ export async function getBybitPerpMetrics(windowDays = 30): Promise<BybitPerpMet
     winRatePct: trades ? Number(((wins / trades) * 100).toFixed(1)) : null,
     profitFactor: grossLoss > 0 ? Number((grossWin / grossLoss).toFixed(2)) : null,
     windowDays,
+    bySymbol,
   }
 }
 
