@@ -17,13 +17,12 @@ export type MtmcopyTelegramGroup = 'premium' | 'trade_ideas' | 'sensei' | 'goldk
 
 /**
  * Grupos de sinais OFERECIDOS ao cliente como fontes copiáveis.
- * O cliente pode copiar QUALQUER um dos nossos grupos de sinais de Telegram
- * (Premium · Ouro, Ideias de Forex, Sensei Scanner, GoldKiller), não apenas Premium/Sensei.
+ * Só os que NÃO são «Estratégia MTM» — para não repetir a mesma fonte de sinais:
+ * Ideias de Forex + GoldKiller. Premium/Sensei/Booster copiam-se pelo método «Estratégia MTM».
+ * O tipo mantém 'premium'/'sensei' para retrocompatibilidade de ligações antigas.
  */
 export const MTMCOPY_TELEGRAM_GROUP_IDS: MtmcopyTelegramGroup[] = [
-  'premium',
   'trade_ideas',
-  'sensei',
   'goldkiller',
 ]
 
@@ -55,13 +54,13 @@ export const COPY_METHODS: {
     id: 'strategy',
     title: 'Estratégia MTM',
     description:
-      'Copia estratégias auditadas do nosso sistema — Premium, Trade Ideas ou Sensei Scanner — com replicação automática na tua conta.',
+      'Copia estratégias auditadas do nosso sistema — Premium, Sensei Scanner ou 20X Booster — com replicação automática na tua conta.',
   },
   {
     id: 'telegram_group',
     title: 'Grupos de sinais',
     description:
-      'Escolhe os chats de sinais a copiar — Premium · Ouro, Ideias de Forex, Sensei Scanner ou GoldKiller. VIP: até 5 contas (subscrição MTMcopier).',
+      'Escolhe os chats de sinais a copiar — Ideias de Forex ou GoldKiller. VIP: até 5 contas (subscrição MTMcopier).',
   },
   {
     id: 'master_slave',
@@ -78,14 +77,8 @@ export const TELEGRAM_GROUPS: {
   description: string
   chatId: string
 }[] = [
-  {
-    id: 'premium',
-    channelKey: 'premium-signals',
-    title: 'Premium · Ouro',
-    description:
-      'Sinais consistentes em XAUUSD com scalping por sessão. Três saídas por trade — seguimos as orientações do chat.',
-    chatId: '-1002424441843',
-  },
+  // Premium e Sensei NÃO aparecem aqui — copiam-se pelo método «Estratégia MTM»
+  // (evita repetir a mesma fonte de sinais em dois métodos).
   {
     id: 'trade_ideas',
     channelKey: 'trade-ideas',
@@ -93,14 +86,6 @@ export const TELEGRAM_GROUPS: {
     description:
       'Sinais intraday e swing em pares forex. Set & forget com gestão de risco e trailing automático.',
     chatId: '-1003716578747',
-  },
-  {
-    id: 'sensei',
-    channelKey: 'trade-ideas',
-    title: 'Sensei Scanner',
-    description:
-      'Sinais auditados do Scanner Sensei (TradingView) — multi-ativo, gestão programada. Cópia via CopyFactory.',
-    chatId: '-1003853860780',
   },
   {
     id: 'goldkiller',
@@ -137,16 +122,7 @@ export function getMtmStrategyOptions(): MtmCopyStrategyOption[] {
     })
   }
 
-  const trade = providers['trade-ideas']
-  if (trade?.strategyId) {
-    const catalog = MTM_COPY_STRATEGY_CATALOG[trade.strategyId]
-    out.push({
-      id: trade.strategyId,
-      channelKey: 'trade-ideas',
-      title: catalog?.title ?? 'MTM Auto Trade Ideas',
-      description: catalog?.description ?? 'Estratégia auditada Trade Ideas.',
-    })
-  }
+  // Forex (Trade Ideas) NÃO é oferecido como «Estratégia MTM» — é um Grupo de sinais.
 
   const senseiCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_SENSEI_STRATEGY_ID]
   if (senseiCatalog) {
@@ -215,14 +191,22 @@ export async function getMtmStrategyOptionsAsync(): Promise<MtmCopyStrategyOptio
   const config = await getSignalSourcesConfig()
   const routes = normalizeProviderRoutes(config)
   const fromRoutes = strategyOptionsFromRoutes(routes)
-  const list: MtmCopyStrategyOption[] = fromRoutes.length
-    ? fromRoutes.map((r) => ({
-        id: r.id,
-        channelKey: r.channelKey ?? 'premium-signals',
-        title: r.title,
-        description: r.description,
-      }))
-    : getMtmStrategyOptions()
+  // «Estratégia MTM» oferece só as estratégias auto (Premium, Sensei, Booster).
+  // Forex e GoldKiller copiam-se pelos «Grupos de sinais» — não como estratégia (evita repetir a fonte).
+  const NON_STRATEGY_IDS = new Set<string>([
+    CANONICAL_TRADE_IDEAS_STRATEGY_ID,
+    CANONICAL_GOLDKILLER_STRATEGY_ID,
+  ])
+  const list: MtmCopyStrategyOption[] = (
+    fromRoutes.length
+      ? fromRoutes.map((r) => ({
+          id: r.id,
+          channelKey: r.channelKey ?? 'premium-signals',
+          title: r.title,
+          description: r.description,
+        }))
+      : getMtmStrategyOptions()
+  ).filter((o) => !NON_STRATEGY_IDS.has(o.id))
 
   // Estratégias SÓ-CATÁLOGO (copiáveis, mas sem rota de execução de sinais) — ex.: 20X Booster.
   const boosterCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_BOOSTER_STRATEGY_ID]
