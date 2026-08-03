@@ -17,7 +17,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
   try {
-    const result = await evaluateOpenAlerts()
+    // origin + CRON_SECRET → o avaliador vai buscar as velas dos perps à rota edge/fra1
+    // /api/bybit/klines (este cron corre em node/iad1, onde a Bybit está geo-bloqueada).
+    const result = await evaluateOpenAlerts(300, {
+      origin: new URL(request.url).origin,
+      secret: process.env.CRON_SECRET,
+    })
     return NextResponse.json({ success: true, ...result })
   } catch (err) {
     return NextResponse.json(

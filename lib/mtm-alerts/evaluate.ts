@@ -70,27 +70,48 @@ function bybitSymbol(ticker: string): string {
 
 type Candle = { hi: number; lo: number }
 
-/** Velas 15m públicas da Bybit (linear) desde `sinceMs`, em ordem cronológica. Cache por-run. */
+/**
+ * Velas 15m públicas da Bybit (linear) desde `sinceMs`, em ordem cronológica. Cache por-run.
+ * A Bybit geo-bloqueia os IPs dos EUA e este avaliador corre em node/iad1 → a chamada DIRETA
+ * a api.bybit.com falha (velas vazias → tudo ficava pending). Quando há `origin`, vai buscar
+ * as velas à rota interna edge/fra1 `/api/bybit/klines` (contorna o geo-bloqueio). Sem origin
+ * (ex.: correr em fra1/local) tenta a Bybit diretamente.
+ */
 async function fetchBybitPath(
   symbol: string,
   sinceMs: number,
   cache: Map<string, Candle[]>,
+  ctx?: { origin?: string | null; secret?: string | null },
 ): Promise<Candle[]> {
   if (cache.has(symbol)) return cache.get(symbol)!
   const out: Candle[] = []
   try {
     const end = Date.now()
-    // 48h de janela chega para resolver um scalp de 1h; 1000 velas de 15m = ~10 dias.
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), 8000)
+    let list: string[][] = []
+    if (ctx?.origin && ctx?.secret) {
+      // Via edge/fra1 interna (contorna geo-bloqueio da Bybit no iad1)
+      const res = await fetch(
+        `${ctx.origin}/api/bybit/klines?symbol=${encodeURIComponent(symbol)}&since=${sinceMs}&interval=15`,
+        { headers: { authorization: `Bearer ${ctx.secret}` }, signal: ctrl.signal },
+      )
+      const j = await res.json()
+      // A rota já devolve {candles:[{hi,lo}]} em ordem cronológica.
+      const cs = (j?.candles ?? []) as { hi: number; lo: number }[]
+      clearTimeout(t)
+      for (const c of cs) if (Number.isFinite(c.hi) && Number.isFinite(c.lo)) out.push({ hi: c.hi, lo: c.lo })
+      cache.set(symbol, out)
+      return out
+    }
+    // Fallback: Bybit direta (só resolve se a região não estiver geo-bloqueada)
     const url =
       `https://api.bybit.com/v5/market/kline?category=linear&symbol=${symbol}` +
       `&interval=15&start=${sinceMs}&end=${end}&limit=1000`
-    const ctrl = new AbortController()
-    const t = setTimeout(() => ctrl.abort(), 6000)
     const res = await fetch(url, { signal: ctrl.signal })
     clearTimeout(t)
     const j = await res.json()
-    const list: string[][] = j?.result?.list ?? []
-    // Bybit devolve recente→antigo; invertemos para cronológico.
+    list = j?.result?.list ?? []
     for (const row of list.slice().reverse()) {
       const hi = Number(row[2])
       const lo = Number(row[3])
@@ -160,7 +181,10 @@ function evaluatePerpPath(
   return `exit_${Math.min(rank, 4)}` as Status
 }
 
-export async function evaluateOpenAlerts(limit = 200): Promise<{ scanned: number; updated: number; skipped: number }> {
+export async function evaluateOpenAlerts(
+  limit = 300,
+  ctx?: { origin?: string | null; secret?: string | null },
+): Promise<{ scanned: number; updated: number; skipped: number }> {
   const admin = getSupabaseAdmin()
   const { data: rows } = await admin
     .from("tradingview_signals")
@@ -168,7 +192,9 @@ export async function evaluateOpenAlerts(limit = 200): Promise<{ scanned: number
     // inclui exit_1..3 para poder escalar TP1→TP2→TP3 em passagens seguintes
     .or("trade_status.is.null,trade_status.in.(pending,active,be,exit_1,exit_2,exit_3)")
     .or("signal_kind.is.null,signal_kind.eq.entry")
-    .order("received_at", { ascending: false })
+    // ASCENDENTE: resolve primeiro os mais ANTIGOS (limpa o backlog que estava preso por
+    // geo-bloqueio; um sinal antigo já bateu TP/SL, um recente pode ainda estar aberto).
+    .order("received_at", { ascending: true })
     .limit(limit)
 
   let updated = 0
@@ -198,7 +224,7 @@ export async function evaluateOpenAlerts(limit = 200): Promise<{ scanned: number
         ? Date.parse((r as { received_at: string }).received_at)
         : NaN
       if (!Number.isFinite(sinceMs)) { skipped++; continue }
-      const candles = await fetchBybitPath(bybitSymbol(r.ticker!), sinceMs, klineCache)
+      const candles = await fetchBybitPath(bybitSymbol(r.ticker!), sinceMs, klineCache, ctx)
       cand = evaluatePerpPath(dir, sl, [...new Set(tps)], candles)
     } else {
       const price = await resolveCurrentPrice(r.ticker)
