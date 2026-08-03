@@ -273,7 +273,11 @@ export async function evaluateOpenAlerts(
     if (!error) {
       updated++
       // Notifica seguidores + T2T só em LOSS real (ativado) ou TP — nunca em descartado.
-      if (finalCand === "loss" || finalCand.startsWith("exit_")) {
+      // GUARDA: só notifica sinais RECENTES (<36h). Resolver backlog antigo (dias) apenas
+      // atualiza o estado em silêncio — não dispara notificações históricas em massa.
+      const recvMs = r.received_at ? Date.parse(String(r.received_at)) : NaN
+      const fresh = Number.isFinite(recvMs) && Date.now() - recvMs < 36 * 3600 * 1000
+      if (fresh && (finalCand === "loss" || finalCand.startsWith("exit_"))) {
         await notifySignalOutcome({
           entryId: r.id,
           chatMessageId: (r as { chat_message_id?: string | null }).chat_message_id ?? null,
