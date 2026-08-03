@@ -186,20 +186,41 @@ export async function evaluateOpenAlerts(
   ctx?: { origin?: string | null; secret?: string | null },
 ): Promise<{ scanned: number; updated: number; skipped: number }> {
   const admin = getSupabaseAdmin()
-  const { data: rows } = await admin
+  const cols = "id, ticker, action, price, sl, tp, raw_payload, trade_status, signal_kind, chat_message_id, received_at"
+  const openStatus = "trade_status.is.null,trade_status.in.(pending,active,be,exit_1,exit_2,exit_3)"
+  const openKind = "signal_kind.is.null,signal_kind.eq.entry"
+
+  // PASSAGEM 1 — PERPS primeiro (avaliação path-based via velas Bybit, resolvível). Tem orçamento
+  // PRÓPRIO para não ser esfomeada pelo enorme backlog de não-perps (que usam snapshot e muitas
+  // vezes não resolvem, ficando a re-aparecer no topo da fila ascendente).
+  const { data: perpRows } = await admin
     .from("tradingview_signals")
-    .select("id, ticker, action, price, sl, tp, raw_payload, trade_status, signal_kind, chat_message_id, received_at")
-    // inclui exit_1..3 para poder escalar TP1→TP2→TP3 em passagens seguintes
-    .or("trade_status.is.null,trade_status.in.(pending,active,be,exit_1,exit_2,exit_3)")
-    .or("signal_kind.is.null,signal_kind.eq.entry")
-    // ASCENDENTE: resolve primeiro os mais ANTIGOS (limpa o backlog que estava preso por
-    // geo-bloqueio; um sinal antigo já bateu TP/SL, um recente pode ainda estar aberto).
+    .select(cols)
+    .or(openStatus)
+    .or(openKind)
+    .or("ticker.ilike.%USDT%,ticker.ilike.%.P")
+    .order("received_at", { ascending: true })
+    .limit(Math.max(limit, 500))
+
+  // PASSAGEM 2 — restantes (snapshot). ASCENDENTE: tenta os mais antigos primeiro.
+  const { data: otherRows } = await admin
+    .from("tradingview_signals")
+    .select(cols)
+    .or(openStatus)
+    .or(openKind)
     .order("received_at", { ascending: true })
     .limit(limit)
 
   let updated = 0
   let skipped = 0
-  const list = rows ?? []
+  // Perps primeiro; dedup por id (um perp já processado na passagem 1 não repete).
+  const seen = new Set<string>()
+  const list = [...(perpRows ?? []), ...(otherRows ?? [])].filter((r) => {
+    const id = String((r as { id: string }).id)
+    if (seen.has(id)) return false
+    seen.add(id)
+    return true
+  })
   const klineCache = new Map<string, Candle[]>()
 
   for (const r of list) {
