@@ -1,0 +1,1225 @@
+// Este software e codigo sao parte integrante da propriedade intelectual de RicardoGarciaPT e da sua empresa MoreThanMoney
+// ===== VERSAO AJUSTADA (auditoria de sinais 2026-08-03) =====
+//  • VENDAS OFF por defeito (SELL 1.8-4.4% win em todos os TFs = -374R). Toggle allowSell + sellExtra.
+//  • Filtro HTF passa a EMA200 (era 50) — so a favor da tendencia maior.
+//  • strictAuto: opcional, so dispara nos setups walk-forward validados.
+//  Alertas/payload inalterados.
+//@version=6
+indicator('MTM — Sensei X', overlay = true, max_lines_count = 500, max_labels_count = 500, max_boxes_count = 10, max_bars_back = 2000)
+
+// =====================================================================
+// HELPER FUNCTIONS
+// =====================================================================
+dema(src, length) =>
+    ema1 = ta.ema(src, length)
+    ema2 = ta.ema(ema1, length)
+    2 * ema1 - ema2
+
+round_p(x) =>
+    math.round(x / syminfo.mintick) * syminfo.mintick
+
+conf_emoji(score) =>
+    score >= 18 ? '👑' : score >= 15 ? '💎' : score >= 12 ? '⚡' : score >= 9 ? '⚠️' : '🔴'
+
+_ck(v) => v ? '✅' : '❌'
+
+gr_dots(s) =>
+    s >= 5 ? '●●●●●' : s >= 4 ? '●●●●○' : s >= 3 ? '●●●○○' : s >= 2 ? '●●○○○' : s >= 1 ? '●○○○○' : '○○○○○'
+
+gc_col(s, c_ok, c_mid, c_fail) =>
+    s >= 4 ? c_ok : s >= 3 ? c_mid : c_fail
+
+// =====================================================================
+// INPUTS — THEME
+// =====================================================================
+gr_theme = '━━━ TEMA ━━━'
+themeMode = input.string('Light', 'Tema do Indicador', options = ['Dark', 'Classic', 'Light', 'Pop'], group = gr_theme, tooltip = 'Dark: modern dark | Classic: night blue | Light: light background | Pop: vibrant neon')
+
+// =====================================================================
+// INPUTS — TRADING STYLE
+// =====================================================================
+gr_style = '━━━ ESTILO DE TRADING ━━━'
+autoOpt = input.bool(true, 'Sensei Otimizado (auto por símbolo × timeframe)', group = gr_style, tooltip = 'ON: aplica automaticamente a melhor configuração validada (walk-forward) por par+timeframe. Faz override do Estilo abaixo. OFF: usa o Estilo selecionado. Sem config validada para o par+TF, volta sempre ao Estilo.')
+tradeStyle = input.string('Scalp', 'Estilo de Trading', options = ['Agressivo', 'Scalp', 'Intraday', 'Swing', 'Conservador', 'Personalizado'], group = gr_style, tooltip = 'Usado quando "Sensei Otimizado" está OFF (ou sem config validada).\nEach style tunes: min score, cooldown, ADX, SL multiplier and PHASE MODE.\nAgressivo: Momentum, balanced filters\nScalp: Momentum, minimal cooldown\nIntraday: Momentum, day-trade balance (moderate cooldown/ADX)\nSwing: Exaustao, high confluence\nConservador: Exaustao, max precision\nPersonalizado: uses CORE + RISK MANAGEMENT + manual Phase Mode')
+
+// =====================================================================
+// INPUTS — SIGNAL DISPLAY
+// =====================================================================
+gr_disp = '━━━ EXIBICAO DE SINAIS ━━━'
+signalDisplay = input.string('Mostrar Ativo', 'Modo de Exibicao', options = ['Mostrar Ativo', 'Mostrar Tudo'], group = gr_disp, tooltip = 'Mostrar Ativo: mostra apenas a trade ATIVA. Ao atingir Exit total ou BE final, as linhas sao removidas e fica so a marca de entrada.\nMostrar Tudo: marca tambem os eventos (E1-E4/SL/BE) das trades anteriores no momento em que ocorrem.')
+
+// =====================================================================
+// INPUTS — CORE
+// =====================================================================
+gr_core = '━━━ NUCLEO ━━━'
+minScore = input.int(12, 'Confirmacoes Minimas (de 20)', minval = 6, maxval = 20, group = gr_core, tooltip = 'Used only in Personalizado style.')
+lengthPOC = input.int(14, 'Periodo do POC', minval = 5, maxval = 50, group = gr_core)
+showDEMA = input.bool(true, 'Mostrar DEMAs', group = gr_core)
+showPOC = input.bool(true, 'Mostrar POC', group = gr_core)
+
+// =====================================================================
+// INPUTS — QUALITY FILTERS
+// =====================================================================
+gr_filters = '━━━ FILTROS DE QUALIDADE ━━━'
+useHTF = input.bool(true, 'Filtro de Tendencia HTF', group = gr_filters, tooltip = 'Only allows BUY above the higher-timeframe EMA and SELL below it. Aligns entries with the larger trend.')
+htfTF = input.timeframe('240', 'Timeframe HTF', group = gr_filters)
+useSession = input.bool(false, 'Filtro de Sessao', group = gr_filters, tooltip = 'Only generates signals inside the defined session (chart timezone).')
+sessStr = input.session('0000-2400', 'Sessao Permitida', group = gr_filters)
+useChop = input.bool(true, 'Anti-Chop (ADX minimo)', group = gr_filters, tooltip = 'Blocks signals in ranging markets: requires ADX above the minimum.')
+adxChopMin = input.float(15.0, 'ADX minimo (anti-chop)', step = 1.0, group = gr_filters)
+confirmClose = input.bool(true, 'Apenas Fecho de Vela', group = gr_filters, tooltip = 'ON: signals only on closed bars (no intrabar repaint). Recommended for webhooks.')
+htfEmaLen = input.int(200, 'EMA do HTF (200 = tendencia forte)', minval = 20, group = gr_filters, tooltip = 'Auditoria 2026-08: entradas contra a tendencia maior foram varridas. 200 filtra melhor que 50.')
+
+// ─── VIES DE LADO + SETUPS VALIDADOS (auditoria de sinais 2026-08-03) ───
+gr_bias = '━━━ VIES DE LADO (auditoria) ━━━'
+allowBuy = input.bool(true, 'Permitir COMPRAS', group = gr_bias)
+allowSell = input.bool(false, 'Permitir VENDAS', group = gr_bias, tooltip = 'Auditoria: SELL 1.8-4.4% win em TODOS os timeframes (-374R). OFF por defeito. So liga se validares um edge de venda.')
+sellExtra = input.int(3, 'Score extra exigido p/ VENDA', minval = 0, maxval = 8, group = gr_bias, tooltip = 'Se ligares VENDAS, exige +N confirmacoes face a COMPRA (venda so com sinal muito forte).')
+strictAuto = input.bool(false, 'So operar setups validados (auto)', group = gr_bias, tooltip = 'ON: bloqueia sinais em pares/timeframes SEM config walk-forward validada. Corta exposicao a setups nao testados (a maioria perdia ~100%).')
+
+// =====================================================================
+// INPUTS — PHASE MODE (Momentum / Exaustao)
+// =====================================================================
+gr_phase = '━━━ MODO DE FASE ━━━'
+phaseModeInput = input.string('Momentum', 'Modo de Fase (Personalizado)', options = ['Momentum', 'Exaustao'], group = gr_phase, tooltip = 'Momentum: trigger on setup completion. Continuation. Scalp/Agressivo.\nExaustao: trigger on full countdown. Reversal. Swing/Conservador.')
+momCount = input.int(9, 'Contagem Setup Momentum', minval = 4, maxval = 13, group = gr_phase)
+exhCount = input.int(13, 'Contagem Countdown Exaustao', minval = 8, maxval = 21, group = gr_phase)
+showPhaseLbls = input.bool(true, 'Mostrar contagem de fase', group = gr_phase)
+
+// =====================================================================
+// INPUTS — ORDER FLOW
+// =====================================================================
+gr_of = '━━━ ORDER FLOW ━━━'
+useLTFOF = input.bool(true, 'Delta Real via Timeframe Inferior', group = gr_of, tooltip = 'Computes the volume delta (buy vs sell) using lower-timeframe candles. More accurate than the on-chart proxy. Auto fallback to proxy when no data.')
+ltfRes = input.timeframe('1', 'Timeframe do Order Flow', group = gr_of)
+ofImbThr = input.float(0.25, 'Limiar de Imbalance (0-1)', step = 0.05, minval = 0.0, maxval = 1.0, group = gr_of, tooltip = 'Minimum |delta|/total-volume fraction to flag a strong order-flow imbalance.')
+
+// =====================================================================
+// INPUTS — SENSEI BANDS
+// =====================================================================
+gr_sensei_bands = '━━━ SENSEI BANDS ━━━'
+senseiLen = input.int(89, 'Comprimento da Banda', minval = 20, maxval = 200, group = gr_sensei_bands)
+senseiType = input.string('Active', 'Modo da Cloud', options = ['Active', 'Passive'], group = gr_sensei_bands)
+showBands = input.bool(true, 'Mostrar Banda (1σ)', group = gr_sensei_bands)
+showCloud = input.bool(true, 'Mostrar Cloud', group = gr_sensei_bands)
+senseiBullCol = input.color(color.new(#7C3AED, 0), 'Cor Bull', group = gr_sensei_bands)
+senseiBearCol = input.color(color.new(#374151, 0), 'Cor Bear', group = gr_sensei_bands)
+
+// =====================================================================
+// INPUTS — RISK MANAGEMENT
+// =====================================================================
+gr_rm = '━━━ GESTAO DE RISCO ━━━'
+riskMode = input.string('ATR', 'Modo de Risco', options = ['ATR', 'Percent'], group = gr_rm, tooltip = 'ATR: SL = ATR × multiplier.\nPercent: SL = Entry × %. In both, Exits are R multiples of the SL.')
+atrPer = input.int(14, 'Periodo ATR', minval = 1, group = gr_rm)
+slMult = input.float(1.5, 'Multiplicador SL (× ATR)', step = 0.1, minval = 0.5, maxval = 5.0, group = gr_rm, tooltip = 'Used in ATR mode (Personalizado).')
+slPct = input.float(0.5, 'SL em % (modo Percentagem)', step = 0.1, minval = 0.05, group = gr_rm)
+tp1RR = input.float(1.5, 'Exit 1  (1 : X)', step = 0.1, minval = 0.5, group = gr_rm, inline = 'e1')
+pct1 = input.int(25, '%', minval = 0, maxval = 100, group = gr_rm, inline = 'e1')
+tp2RR = input.float(2.5, 'Exit 2  (1 : X)', step = 0.1, minval = 0.5, group = gr_rm, inline = 'e2')
+pct2 = input.int(25, '%', minval = 0, maxval = 100, group = gr_rm, inline = 'e2')
+tp3RR = input.float(4.0, 'Exit 3  (1 : X)', step = 0.1, minval = 0.5, group = gr_rm, inline = 'e3')
+pct3 = input.int(25, '%', minval = 0, maxval = 100, group = gr_rm, inline = 'e3')
+tp4RR = input.float(6.0, 'Exit 4  (1 : X)', step = 0.1, minval = 0.5, group = gr_rm, inline = 'e4')
+pct4 = input.int(25, '%', minval = 0, maxval = 100, group = gr_rm, inline = 'e4')
+showTP1 = input.bool(true, 'Exit 1', inline = 'tp', group = gr_rm)
+showTP2 = input.bool(true, 'Exit 2', inline = 'tp', group = gr_rm)
+showTP3 = input.bool(true, 'Exit 3', inline = 'tp', group = gr_rm)
+showTP4 = input.bool(true, 'Exit 4', inline = 'tp', group = gr_rm)
+trailMode = input.string('Off', 'Trailing Stop', options = ['Off', 'ATR'], group = gr_rm, tooltip = 'ATR: after entry, the SL trails price at a distance of ATR × multiplier (favorable direction only).')
+trailMult = input.float(1.5, 'Trailing ATR ×', step = 0.1, minval = 0.3, group = gr_rm)
+
+// =====================================================================
+// AUTO OPTIMIZED — PER-SYMBOL × TIMEFRAME (MTM walk-forward, holdout-validated)
+// Só ativa quando existe config validada para o par+TF (a_valid). Caso contrário
+// mantém o Estilo de Trading selecionado. Matriz validada (teste out-of-sample S3):
+//   1h  BTCUSD : Mom    ADX16 minS15 SLx2.0 RR 1.5/3/5/8   cd8 BE Exit2  (HO PF 1.40)
+//   1h  ETHUSDT: Mom    ADX22 minS15 SLx2.5 RR 1.5/3/5/8   cd8 BE Exit2  (HO PF 1.66)
+//   1h  XAUUSD : Mom    ADX16 minS13 SLx2.5 RR 1.5/3/5/8   cd4 BE Exit2  (HO PF 2.25)
+//   1h  USDJPY : Exaust ADX16 minS13 SLx2.5 RR 2/3/4.5/6.5 cd8 BE Exit1  (HO PF 1.28)
+//   15m NAS100 : Mom    ADX22 minS13 SLx2.5 RR 1.5/3/5/8   cd4 BE Exit2  (HO PF 1.32)
+//   15m USDCAD : Mom    ADX16 minS13 SLx2.5 RR 2/3/4.5/6.5 cd4 BE Exit1  (HO PF 1.42)
+//   (5m: nenhum ativo passou validação — não usar em 5m)
+// =====================================================================
+_sym = syminfo.ticker
+_tfsec = timeframe.in_seconds()
+_is15 = _tfsec == 900
+_is60 = _tfsec == 3600
+_isBTC = str.contains(_sym, 'BTC')
+_isETH = str.contains(_sym, 'ETH')
+_isXAU = str.contains(_sym, 'XAU') or str.contains(_sym, 'GOLD')
+_isNAS = str.contains(_sym, 'NAS') or str.contains(_sym, 'US100') or str.contains(_sym, 'NDX') or str.contains(_sym, 'USTEC')
+_isJPY = str.contains(_sym, 'USDJPY')
+_isCAD = str.contains(_sym, 'USDCAD')
+a_valid = false
+a_phase = 'Momentum'
+a_minScore = 15
+a_adx = 16
+a_sl = 2.0
+a_cd = 8
+a_be = 'Exit 1'
+a_rr1 = 1.5
+a_rr2 = 3.0
+a_rr3 = 5.0
+a_rr4 = 8.0
+if _is60 and _isBTC
+    a_valid := true
+    a_phase := 'Momentum'
+    a_adx := 16
+    a_minScore := 15
+    a_sl := 2.0
+    a_cd := 8
+    a_be := 'Exit 2'
+    a_rr1 := 1.5
+    a_rr2 := 3.0
+    a_rr3 := 5.0
+    a_rr4 := 8.0
+if _is60 and _isETH
+    a_valid := true
+    a_phase := 'Momentum'
+    a_adx := 22
+    a_minScore := 15
+    a_sl := 2.5
+    a_cd := 8
+    a_be := 'Exit 2'
+    a_rr1 := 1.5
+    a_rr2 := 3.0
+    a_rr3 := 5.0
+    a_rr4 := 8.0
+if _is60 and _isXAU
+    a_valid := true
+    a_phase := 'Momentum'
+    a_adx := 16
+    a_minScore := 13
+    a_sl := 2.5
+    a_cd := 4
+    a_be := 'Exit 2'
+    a_rr1 := 1.5
+    a_rr2 := 3.0
+    a_rr3 := 5.0
+    a_rr4 := 8.0
+if _is60 and _isJPY
+    a_valid := true
+    a_phase := 'Exaustao'
+    a_adx := 16
+    a_minScore := 13
+    a_sl := 2.5
+    a_cd := 8
+    a_be := 'Exit 1'
+    a_rr1 := 2.0
+    a_rr2 := 3.0
+    a_rr3 := 4.5
+    a_rr4 := 6.5
+if _is15 and _isNAS
+    a_valid := true
+    a_phase := 'Momentum'
+    a_adx := 22
+    a_minScore := 13
+    a_sl := 2.5
+    a_cd := 4
+    a_be := 'Exit 2'
+    a_rr1 := 1.5
+    a_rr2 := 3.0
+    a_rr3 := 5.0
+    a_rr4 := 8.0
+if _is15 and _isCAD
+    a_valid := true
+    a_phase := 'Momentum'
+    a_adx := 16
+    a_minScore := 13
+    a_sl := 2.5
+    a_cd := 4
+    a_be := 'Exit 1'
+    a_rr1 := 2.0
+    a_rr2 := 3.0
+    a_rr3 := 4.5
+    a_rr4 := 6.5
+autoOn = autoOpt and a_valid
+
+// Ensure exits are always monotonic (E1 < E2 < E3 < E4) regardless of input order
+var float rr1 = na
+var float rr2 = na
+var float rr3 = na
+var float rr4 = na
+if barstate.isfirst
+    if autoOn
+        rr1 := a_rr1
+        rr2 := a_rr2
+        rr3 := a_rr3
+        rr4 := a_rr4
+    else
+        _rrArr = array.from(tp1RR, tp2RR, tp3RR, tp4RR)
+        array.sort(_rrArr, order.ascending)
+        rr1 := array.get(_rrArr, 0)
+        rr2 := array.get(_rrArr, 1)
+        rr3 := array.get(_rrArr, 2)
+        rr4 := array.get(_rrArr, 3)
+
+// =====================================================================
+// INPUTS — BREAKEVEN
+// =====================================================================
+gr_be = '━━━ BREAKEVEN ━━━'
+beMoveMode = input.string('Exit 1', 'Mover SL para BE em:', options = ['Exit 1', 'Exit 2', 'Exit 3', 'Points'], group = gr_be)
+bePoints = input.float(10.0, 'Pontos (modo Pontos)', step = 1.0, group = gr_be)
+beCompletes = input.bool(false, 'BE atingido conclui a trade', group = gr_be, tooltip = 'ON: when the SL is moved to BE, the trade is considered complete and active lines are removed (only the entry remains).')
+eff_be = autoOn ? a_be : beMoveMode
+
+// =====================================================================
+// INPUTS — SIGNALS
+// =====================================================================
+gr_sig = '━━━ SINAIS ━━━'
+dynLevels = input.bool(false, 'Niveis Dinamicos (estilo MTM Scanner)', group = gr_sig, tooltip = 'OFF (recommended): locks Entry/SL/TP at the signal bar.\nON: Entry follows the current close and levels recalculate every bar.')
+
+// =====================================================================
+// INPUTS — PANELS
+// =====================================================================
+gr_panels = '━━━ PAINEIS ━━━'
+showConfPanel = input.bool(true, 'Painel de Confirmacoes  (topo direita)', group = gr_panels)
+showSetupRules = input.bool(true, 'Painel de Regras  (base esquerda)', group = gr_panels)
+showTradePanel = input.bool(true, 'Sensei Trade Panel  (base direita)', group = gr_panels)
+showStats = input.bool(true, 'Estatisticas (Win-rate / RR)', group = gr_panels)
+
+// =====================================================================
+// INPUTS — SMC / STRUCTURE
+// =====================================================================
+gr_smc = '━━━ SMC / ESTRUTURA ━━━'
+smcLen = input.int(50, 'CHoCH Period', minval = 10, maxval = 200, group = gr_smc)
+smcShortLen = input.int(3, 'IDM Period', minval = 1, maxval = 20, group = gr_smc)
+bullCss = input.color(#089981, 'Cor Bullish', group = gr_smc)
+bearCss = input.color(#ff5252, 'Cor Bearish', group = gr_smc)
+showChoch = input.bool(true, 'CHoCH', inline = 's1', group = gr_smc)
+showBos = input.bool(true, 'BOS', inline = 's1', group = gr_smc)
+showIdm = input.bool(true, 'IDM', inline = 's2', group = gr_smc)
+idmCss = input.color(color.gray, '', inline = 's2', group = gr_smc)
+showSweeps = input.bool(true, 'Sweeps', inline = 's3', group = gr_smc)
+sweepsCss = input.color(color.gray, '', inline = 's3', group = gr_smc)
+showCircles = input.bool(true, 'Circulos de Swing', group = gr_smc)
+showOB = input.bool(true, 'Order Blocks', group = gr_smc)
+
+// =====================================================================
+// INPUTS — ALERTS
+// =====================================================================
+gr_alert = '━━━ ALERTAS ━━━'
+long_alert = input.bool(true, 'Alertas COMPRA', inline = 'a1', group = gr_alert)
+short_alert = input.bool(true, 'Alertas VENDA', inline = 'a1', group = gr_alert)
+order_type = input.string('MARKET', 'Tipo de Ordem (webhook)', options = ['MARKET', 'LIMIT'], group = gr_alert)
+alert_entry = input.bool(true, 'Notify ENTRY (Entry Trigger)', group = gr_alert)
+alert_be = input.bool(true, 'Notify BREAKEVEN', group = gr_alert)
+alert_tp = input.bool(true, 'Notify EXITS (TP1-4)', group = gr_alert)
+alert_sl = input.bool(true, 'Notify STOP LOSS', group = gr_alert)
+alert_watchlist = input.bool(true, 'Modo Watchlist (multi-condicao)', group = gr_alert, tooltip = 'ON: enables JSON alert() compatible with Watchlists/Webhooks. Create ONE alert with "any alert() function call" and select your watchlist. Each symbol fires a payload at every state (ENTRY/BE/TP/SL) with close_pct for partial management.')
+
+// =====================================================================
+// THEME — COLOR PALETTE
+// =====================================================================
+th_bg = themeMode == 'Dark' ? color.new(#0D0D1A, 5) : themeMode == 'Classic' ? color.new(#0F172A, 5) : themeMode == 'Light' ? color.new(#F0F4FF, 8) : color.new(#1A0030, 5)
+th_bg2 = themeMode == 'Dark' ? color.new(#131325, 10) : themeMode == 'Classic' ? color.new(#1E1B4B, 10) : themeMode == 'Light' ? color.new(#E0EAFF, 10) : color.new(#2D0047, 10)
+th_text = themeMode == 'Light' ? color.new(#1E1B4B, 0) : color.white
+th_text2 = themeMode == 'Light' ? color.new(#374151, 0) : color.new(#94A3B8, 0)
+th_bull = themeMode == 'Pop' ? color.new(#00FF88, 0) : themeMode == 'Light' ? color.new(#166534, 0) : color.new(#22C55E, 0)
+th_bear = themeMode == 'Pop' ? color.new(#FF0055, 0) : themeMode == 'Light' ? color.new(#991B1B, 0) : color.new(#EF4444, 0)
+th_accent = themeMode == 'Dark' ? color.new(#7C3AED, 0) : themeMode == 'Classic' ? color.new(#4F46E5, 0) : themeMode == 'Light' ? color.new(#7C3AED, 0) : color.new(#CC00FF, 0)
+th_gold = themeMode == 'Pop' ? color.new(#FFD700, 0) : color.new(#F59E0B, 0)
+th_ok = themeMode == 'Pop' ? color.new(#00FF88, 0) : themeMode == 'Light' ? color.new(#166534, 0) : color.new(#4ADE80, 0)
+th_fail = themeMode == 'Pop' ? color.new(#FF0055, 0) : themeMode == 'Light' ? color.new(#991B1B, 0) : color.new(#F87171, 0)
+th_entry_line = themeMode == 'Classic' ? color.new(#4F46E5, 0) : themeMode == 'Pop' ? color.new(#CC00FF, 0) : color.new(#7C3AED, 0)
+th_buy_badge = themeMode == 'Pop' ? color.new(#00FF88, 15) : themeMode == 'Light' ? color.new(#166534, 15) : color.new(#7C3AED, 15)
+th_sell_badge = themeMode == 'Pop' ? color.new(#FF0055, 15) : themeMode == 'Light' ? color.new(#991B1B, 15) : color.new(#DC2626, 15)
+th_sl_line = themeMode == 'Pop' ? color.new(#FF0055, 0) : color.red
+th_be_line = themeMode == 'Pop' ? color.new(#FF8800, 0) : color.orange
+th_tp1_line = themeMode == 'Pop' ? color.new(#00FF88, 0) : color.new(#22C55E, 0)
+th_tp2_line = themeMode == 'Pop' ? color.new(#00CC66, 0) : color.new(#16A34A, 0)
+th_tp3_line = themeMode == 'Pop' ? color.new(#009944, 0) : color.new(#15803D, 0)
+th_tp4_line = themeMode == 'Pop' ? color.new(#007733, 0) : color.new(#0F766E, 0)
+
+// =====================================================================
+// EFFECTIVE PARAMETERS PER STYLE  (with AUTO override per símbolo × timeframe)
+// =====================================================================
+eff_minScore = autoOn ? a_minScore : (tradeStyle == 'Conservador' ? 16 : tradeStyle == 'Swing' ? 14 : tradeStyle == 'Intraday' ? 12 : tradeStyle == 'Agressivo' ? 11 : tradeStyle == 'Scalp' ? 10 : tradeStyle == 'Personalizado' ? minScore : 12)
+eff_cooldown = autoOn ? a_cd : (tradeStyle == 'Conservador' ? 12 : tradeStyle == 'Swing' ? 8 : tradeStyle == 'Intraday' ? 5 : tradeStyle == 'Agressivo' ? 4 : tradeStyle == 'Scalp' ? 2 : 5)
+eff_adx_cont = autoOn ? a_adx : (tradeStyle == 'Conservador' ? 26 : tradeStyle == 'Swing' ? 22 : tradeStyle == 'Intraday' ? 18 : tradeStyle == 'Agressivo' ? 18 : tradeStyle == 'Scalp' ? 14 : 18)
+act_slMult = autoOn ? a_sl : (tradeStyle == 'Conservador' ? 2.5 : tradeStyle == 'Swing' ? 2.0 : tradeStyle == 'Intraday' ? 1.3 : tradeStyle == 'Agressivo' ? 1.5 : tradeStyle == 'Scalp' ? 1.0 : tradeStyle == 'Personalizado' ? slMult : 1.5)
+phaseMode = autoOn ? a_phase : (tradeStyle == 'Scalp' or tradeStyle == 'Agressivo' or tradeStyle == 'Intraday' ? 'Momentum' : tradeStyle == 'Swing' or tradeStyle == 'Conservador' ? 'Exaustao' : phaseModeInput)
+
+// =====================================================================
+// PIP UNIT
+// =====================================================================
+pip_unit = syminfo.mintick < 0.01 ? syminfo.mintick * 10 : syminfo.mintick
+
+// =====================================================================
+// DEMAs
+// =====================================================================
+dema15 = dema(close, 15)
+dema50 = dema(close, 50)
+dema238 = dema(close, 238)
+plot(showDEMA ? dema15 : na, 'DEMA 15', color = color.new(#3B82F6, 0), linewidth = 1)
+plot(showDEMA ? dema50 : na, 'DEMA 50', color = color.new(#10B981, 0), linewidth = 1)
+plot(showDEMA ? dema238 : na, 'DEMA 238', color = color.new(#F59E0B, 0), linewidth = 2)
+
+// =====================================================================
+// POC
+// =====================================================================
+var float pocPrice = na
+var float pocVol = 0.0
+if bar_index % lengthPOC == 0
+    pocVol := 0.0
+    pocPrice := na
+    for i = 0 to lengthPOC - 1 by 1
+        if volume[i] > pocVol
+            pocVol := volume[i]
+            pocPrice := close[i]
+plot(showPOC ? pocPrice : na, 'POC', color = color.orange, linewidth = 1, style = plot.style_circles)
+
+// =====================================================================
+// SENSEI BANDS — 1σ + CLOUD
+// =====================================================================
+senseiBasis = ta.sma(close, senseiLen)
+senseiStdev = ta.stdev(close, senseiLen)
+senseiU1 = senseiBasis + 1.0 * senseiStdev
+senseiL1 = senseiBasis - 1.0 * senseiStdev
+senseiFastLen = senseiType == 'Active' ? math.round(senseiLen * 0.382) : math.round(senseiLen * 0.5)
+senseiCF = ta.ema(close, senseiFastLen)
+senseiCS = ta.ema(close, senseiLen)
+senseiCloudBull = senseiCF >= senseiCS
+bandCol = senseiCloudBull ? senseiBullCol : senseiBearCol
+p_u1 = plot(showBands ? senseiU1 : na, 'Band U1', color = color.new(bandCol, 10), linewidth = 1)
+p_l1 = plot(showBands ? senseiL1 : na, 'Band L1', color = color.new(bandCol, 10), linewidth = 1)
+p_cf = plot(showCloud ? senseiCF : na, 'Cloud F', color = color.new(senseiBullCol, 20), linewidth = 1)
+p_cs = plot(showCloud ? senseiCS : na, 'Cloud S', color = color.new(senseiBearCol, 20), linewidth = 1)
+fill(p_u1, p_l1, color = showBands ? color.new(bandCol, 92) : color(na), title = 'Band Fill')
+fill(p_cf, p_cs, color = showCloud ? (senseiCloudBull ? color.new(senseiBullCol, 45) : color.new(senseiBearCol, 45)) : color(na), title = 'Cloud Fill')
+
+// =====================================================================
+// ATR / VOLUME / RSI / ADX
+// =====================================================================
+atrVal = ta.atr(atrPer)
+volMA = ta.sma(volume, 20)
+atrMA = ta.sma(atrVal, 20)
+rsi14 = ta.rsi(close, 14)
+adxLen = 14
+tr_ = math.max(high - low, math.abs(high - close[1]), math.abs(low - close[1]))
+dmP_ = high - high[1] > low[1] - low ? math.max(high - high[1], 0.0) : 0.0
+dmM_ = low[1] - low > high - high[1] ? math.max(low[1] - low, 0.0) : 0.0
+atrAdx_ = ta.rma(tr_, adxLen)
+diP_ = ta.rma(dmP_, adxLen) / atrAdx_ * 100
+diM_ = ta.rma(dmM_, adxLen) / atrAdx_ * 100
+dx_ = math.abs(diP_ - diM_) / (diP_ + diM_) * 100
+adxVal = ta.rma(dx_, adxLen)
+
+// =====================================================================
+// ORDER FLOW — Real delta via LTF (with proxy fallback) + Absorption
+// =====================================================================
+[ltfC, ltfO, ltfV] = request.security_lower_tf(syminfo.tickerid, ltfRes, [close, open, volume])
+f_ltf_delta() =>
+    float up = 0.0
+    float dn = 0.0
+    int sz = array.size(ltfV)
+    if sz > 0
+        for k = 0 to sz - 1 by 1
+            v = array.get(ltfV, k)
+            c = array.get(ltfC, k)
+            o = array.get(ltfO, k)
+            if c >= o
+                up := up + v
+            else
+                dn := dn + v
+    [up, dn, sz]
+[ltfUp, ltfDn, ltfSz] = f_ltf_delta()
+ltfDelta = ltfUp - ltfDn
+ltfTot = ltfUp + ltfDn
+ltfValid = useLTFOF and ltfSz > 0 and ltfTot > 0
+
+// On-chart proxy (fallback)
+ofSign = close > open ? 1 : close < open ? -1 : 0
+ofDeltaProxy = math.sum(volume * ofSign, 14)
+
+ofBull = ltfValid ? ltfDelta > 0 : ofDeltaProxy > 0
+ofBear = ltfValid ? ltfDelta < 0 : ofDeltaProxy < 0
+ofImbalanceBull = ltfValid and ltfDelta > 0 and ltfDelta >= ltfTot * ofImbThr
+ofImbalanceBear = ltfValid and ltfDelta < 0 and -ltfDelta >= ltfTot * ofImbThr
+
+c_body = math.abs(close - open)
+c_range = high - low
+c_brat = c_range > 0 ? c_body / c_range : 0.0
+c_cpct = c_range > 0 ? (close - low) / c_range : 0.5
+buyPressure = c_cpct > 0.55 and ofBull
+sellPressure = c_cpct < 0.45 and ofBear
+absorption = volume > volMA * 1.5 and c_brat < 0.40
+
+volaSafe = atrVal > 0 and atrVal <= atrMA * 2.5
+volaExpand = atrVal > atrVal[3]
+vol_on_signal = volume >= volMA * 0.90
+
+// =====================================================================
+// QUALITY FILTERS — HTF / SESSION / ANTI-CHOP / CLOSE
+// =====================================================================
+htfEma = request.security(syminfo.tickerid, htfTF, ta.ema(close, htfEmaLen))
+htfBull = not na(htfEma) and close > htfEma
+htfBear = not na(htfEma) and close < htfEma
+htfBuyOK = not useHTF or htfBull
+htfSellOK = not useHTF or htfBear
+inSess = not useSession or not na(time(timeframe.period, sessStr))
+chopOK = not useChop or adxVal > adxChopMin
+bar_ok = not confirmClose or barstate.isconfirmed
+
+// =====================================================================
+// PHASE — MOMENTUM (setup) + EXHAUSTION (countdown)
+// =====================================================================
+flipDown = close < close[4]
+flipUp = close > close[4]
+var int buySetup = 0
+var int sellSetup = 0
+buySetup := flipDown ? buySetup + 1 : 0
+sellSetup := flipUp ? sellSetup + 1 : 0
+momBuyComplete = buySetup == momCount
+momSellComplete = sellSetup == momCount
+var int buyCD = 0
+var int sellCD = 0
+var bool buyCDact = false
+var bool sellCDact = false
+if momBuyComplete
+    buyCDact := true
+    buyCD := 0
+if momSellComplete
+    sellCDact := true
+    sellCD := 0
+if buyCDact and close <= low[2]
+    buyCD := buyCD + 1
+if sellCDact and close >= high[2]
+    sellCD := sellCD + 1
+exhBuyComplete = buyCDact and buyCD == exhCount
+exhSellComplete = sellCDact and sellCD == exhCount
+if exhBuyComplete
+    buyCDact := false
+    buyCD := 0
+if exhSellComplete
+    sellCDact := false
+    sellCD := 0
+if momSellComplete
+    buyCDact := false
+if momBuyComplete
+    sellCDact := false
+phaseBuyTrigger = phaseMode == 'Momentum' ? momBuyComplete : exhBuyComplete
+phaseSellTrigger = phaseMode == 'Momentum' ? momSellComplete : exhSellComplete
+var int last_phase_buy = na
+var int last_phase_sell = na
+if phaseBuyTrigger
+    last_phase_buy := bar_index
+if phaseSellTrigger
+    last_phase_sell := bar_index
+phaseBuyRecent = not na(last_phase_buy) and bar_index - last_phase_buy <= 6
+phaseSellRecent = not na(last_phase_sell) and bar_index - last_phase_sell <= 6
+plotshape(showPhaseLbls and momBuyComplete, 'Momentum Buy', shape.triangleup, location.belowbar, color.new(bullCss, 30), size = size.tiny)
+plotshape(showPhaseLbls and momSellComplete, 'Momentum Sell', shape.triangledown, location.abovebar, color.new(bearCss, 30), size = size.tiny)
+plotshape(showPhaseLbls and exhBuyComplete, 'Exaustao Buy', shape.diamond, location.belowbar, color.new(bullCss, 0), size = size.tiny)
+plotshape(showPhaseLbls and exhSellComplete, 'Exaustao Sell', shape.diamond, location.abovebar, color.new(bearCss, 0), size = size.tiny)
+
+// =====================================================================
+// SMC STRUCTURE ENGINE
+// =====================================================================
+swings(slen) =>
+    var int os_ = 0
+    var int topx_ = na
+    var int btmx_ = na
+    up_ = ta.highest(slen)
+    dn_ = ta.lowest(slen)
+    os_ := high[slen] > up_ ? 0 : low[slen] < dn_ ? 1 : os_[1]
+    top_ = os_ == 0 and os_[1] != 0 ? high[slen] : na
+    btm_ = os_ == 1 and os_[1] != 1 ? low[slen] : na
+    topx_ := os_ == 0 and os_[1] != 0 ? bar_index[slen] : topx_
+    btmx_ := os_ == 1 and os_[1] != 1 ? bar_index[slen] : btmx_
+    [top_, topx_, btm_, btmx_]
+
+n = bar_index
+[top, topx, btm, btmx] = swings(smcLen)
+[stop_, stopx_, sbtm_, sbtmx_] = swings(smcShortLen)
+var int os_ms = 0
+var bool top_crossed = false
+var bool btm_crossed = false
+var float max_ms = na
+var float min_ms = na
+var int max_x1 = na
+var int min_x1 = na
+var float topy = na
+var float btmy = na
+var bool stop_crossed = false
+var bool sbtm_crossed = false
+var int choch_bull_bar = na
+var int choch_bear_bar = na
+var int bos_bull_bar = na
+var int bos_bear_bar = na
+if not na(top)
+    topy := top
+    top_crossed := false
+if not na(btm)
+    btmy := btm
+    btm_crossed := false
+if close > topy and not top_crossed
+    os_ms := 1
+    top_crossed := true
+    choch_bull_bar := n
+if close < btmy and not btm_crossed
+    os_ms := 0
+    btm_crossed := true
+    choch_bear_bar := n
+if os_ms != os_ms[1]
+    max_ms := high
+    min_ms := low
+    max_x1 := n
+    min_x1 := n
+    stop_crossed := false
+    sbtm_crossed := false
+    if os_ms == 1 and showChoch
+        line.new(topx, topy, n, topy, color = bullCss, style = line.style_dashed)
+        label.new(int(math.avg(n, topx)), topy, 'CHoCH', color = color(na), style = label.style_label_down, textcolor = bullCss, size = size.tiny)
+    else if os_ms == 0 and showChoch
+        line.new(btmx, btmy, n, btmy, color = bearCss, style = line.style_dashed)
+        label.new(int(math.avg(n, btmx)), btmy, 'CHoCH', color = color(na), style = label.style_label_up, textcolor = bearCss, size = size.tiny)
+var float stopy_ = na
+var float sbtmy_ = na
+stopy_ := na(stop_) ? stopy_ : stop_
+sbtmy_ := na(sbtm_) ? sbtmy_ : sbtm_
+if low < sbtmy_ and not sbtm_crossed and os_ms == 1 and sbtmy_ != btmy
+    if showIdm
+        line.new(sbtmx_, sbtmy_, n, sbtmy_, color = idmCss, style = line.style_dotted)
+        label.new(int(math.avg(n, sbtmx_)), sbtmy_, 'IDM', color = color(na), style = label.style_label_up, textcolor = idmCss, size = size.tiny)
+    sbtm_crossed := true
+if close > max_ms and sbtm_crossed and os_ms == 1
+    if showBos
+        line.new(max_x1, max_ms, n, max_ms, color = bullCss)
+        label.new(int(math.avg(n, max_x1)), max_ms, 'BOS', color = color(na), style = label.style_label_down, textcolor = bullCss, size = size.tiny)
+    bos_bull_bar := n
+    sbtm_crossed := false
+if high > stopy_ and not stop_crossed and os_ms == 0 and stopy_ != topy
+    if showIdm
+        line.new(stopx_, stopy_, n, stopy_, color = idmCss, style = line.style_dotted)
+        label.new(int(math.avg(n, stopx_)), stopy_, 'IDM', color = color(na), style = label.style_label_down, textcolor = idmCss, size = size.tiny)
+    stop_crossed := true
+if close < min_ms and stop_crossed and os_ms == 0
+    if showBos
+        line.new(min_x1, min_ms, n, min_ms, color = bearCss)
+        label.new(int(math.avg(n, min_x1)), min_ms, 'BOS', color = color(na), style = label.style_label_up, textcolor = bearCss, size = size.tiny)
+    bos_bear_bar := n
+    stop_crossed := false
+if high > max_ms and close < max_ms and os_ms == 1 and n - max_x1 > 1 and showSweeps
+    line.new(max_x1, max_ms, n, max_ms, color = sweepsCss, style = line.style_dotted)
+    label.new(int(math.avg(n, max_x1)), max_ms, 'x', color = color(na), style = label.style_label_down, textcolor = sweepsCss)
+if low < min_ms and close > min_ms and os_ms == 0 and n - min_x1 > 1 and showSweeps
+    line.new(min_x1, min_ms, n, min_ms, color = sweepsCss, style = line.style_dotted)
+    label.new(int(math.avg(n, min_x1)), min_ms, 'x', color = color(na), style = label.style_label_up, textcolor = sweepsCss)
+max_ms := math.max(high, max_ms)
+min_ms := math.min(low, min_ms)
+if max_ms > max_ms[1]
+    max_x1 := n
+if min_ms < min_ms[1]
+    min_x1 := n
+
+// =====================================================================
+// ORDER BLOCKS
+// =====================================================================
+var float ob_bull_top = na
+var float ob_bull_bot = na
+var int ob_bull_bar = na
+var float ob_bear_top = na
+var float ob_bear_bot = na
+var int ob_bear_bar = na
+if os_ms == 1 and os_ms[1] == 0
+    for k = 1 to 6 by 1
+        if close[k] < open[k]
+            ob_bull_top := high[k]
+            ob_bull_bot := low[k]
+            ob_bull_bar := bar_index - k
+            break
+if os_ms == 0 and os_ms[1] == 1
+    for k = 1 to 6 by 1
+        if close[k] > open[k]
+            ob_bear_top := high[k]
+            ob_bear_bot := low[k]
+            ob_bear_bar := bar_index - k
+            break
+
+// =====================================================================
+// 20 CONFIRMATIONS — PHASE / ORDER FLOW / VOLATILITY
+// =====================================================================
+choch_bull_recent = not na(choch_bull_bar) and n - choch_bull_bar <= 25
+choch_bear_recent = not na(choch_bear_bar) and n - choch_bear_bar <= 25
+bos_bull_recent = not na(bos_bull_bar) and n - bos_bull_bar <= 35
+bos_bear_recent = not na(bos_bear_bar) and n - bos_bear_bar <= 35
+
+cA1b = dema15 > dema50
+cA1s = dema15 < dema50
+cA2b = dema50 > dema238
+cA2s = dema50 < dema238
+cA3b = dema15 > dema15[1] and dema15 > dema15[2]
+cA3s = dema15 < dema15[1] and dema15 < dema15[2]
+cA4b = dema50 > dema50[3]
+cA4s = dema50 < dema50[3]
+cA5b = close > dema15
+cA5s = close < dema15
+
+cB1b = vol_on_signal
+cB1s = vol_on_signal
+cB2b = volaExpand
+cB2s = volaExpand
+cB3b = adxVal > eff_adx_cont
+cB3s = adxVal > eff_adx_cont
+cB4b = rsi14 > 38 and rsi14 < 72
+cB4s = rsi14 > 28 and rsi14 < 62
+cB5b = ofBull
+cB5s = ofBear
+
+cC1b = os_ms == 1
+cC1s = os_ms == 0
+cC2b = choch_bull_recent
+cC2s = choch_bear_recent
+cC3b = bos_bull_recent
+cC3s = bos_bear_recent
+cC4b = not na(pocPrice) and close > pocPrice
+cC4s = not na(pocPrice) and close < pocPrice
+cC5b = ofImbalanceBull
+cC5s = ofImbalanceBear
+
+cD1b = senseiCloudBull
+cD1s = not senseiCloudBull
+cD2b = close > senseiL1 and close < senseiU1 + senseiStdev
+cD2s = close < senseiU1 and close > senseiL1 - senseiStdev
+cD3b = phaseBuyRecent
+cD3s = phaseSellRecent
+cD4b = buyPressure
+cD4s = sellPressure
+cD5b = volaSafe
+cD5s = volaSafe
+
+bull_score = (cA1b?1:0)+(cA2b?1:0)+(cA3b?1:0)+(cA4b?1:0)+(cA5b?1:0)+(cB1b?1:0)+(cB2b?1:0)+(cB3b?1:0)+(cB4b?1:0)+(cB5b?1:0)+(cC1b?1:0)+(cC2b?1:0)+(cC3b?1:0)+(cC4b?1:0)+(cC5b?1:0)+(cD1b?1:0)+(cD2b?1:0)+(cD3b?1:0)+(cD4b?1:0)+(cD5b?1:0)
+bear_score = (cA1s?1:0)+(cA2s?1:0)+(cA3s?1:0)+(cA4s?1:0)+(cA5s?1:0)+(cB1s?1:0)+(cB2s?1:0)+(cB3s?1:0)+(cB4s?1:0)+(cB5s?1:0)+(cC1s?1:0)+(cC2s?1:0)+(cC3s?1:0)+(cC4s?1:0)+(cC5s?1:0)+(cD1s?1:0)+(cD2s?1:0)+(cD3s?1:0)+(cD4s?1:0)+(cD5s?1:0)
+grA_bull = (cA1b?1:0)+(cA2b?1:0)+(cA3b?1:0)+(cA4b?1:0)+(cA5b?1:0)
+grA_bear = (cA1s?1:0)+(cA2s?1:0)+(cA3s?1:0)+(cA4s?1:0)+(cA5s?1:0)
+grB_bull = (cB1b?1:0)+(cB2b?1:0)+(cB3b?1:0)+(cB4b?1:0)+(cB5b?1:0)
+grB_bear = (cB1s?1:0)+(cB2s?1:0)+(cB3s?1:0)+(cB4s?1:0)+(cB5s?1:0)
+grC_bull = (cC1b?1:0)+(cC2b?1:0)+(cC3b?1:0)+(cC4b?1:0)+(cC5b?1:0)
+grC_bear = (cC1s?1:0)+(cC2s?1:0)+(cC3s?1:0)+(cC4s?1:0)+(cC5s?1:0)
+grD_bull = (cD1b?1:0)+(cD2b?1:0)+(cD3b?1:0)+(cD4b?1:0)+(cD5b?1:0)
+grD_bear = (cD1s?1:0)+(cD2s?1:0)+(cD3s?1:0)+(cD4s?1:0)+(cD5s?1:0)
+
+// =====================================================================
+// SIGNAL TRIGGERS — POC cross + Phase + confluences + filters
+// (v2 ajustada: allowBuy/allowSell + sellExtra + strictAuto)
+// =====================================================================
+_poc_up = ta.crossover(close, pocPrice)
+_poc_dn = ta.crossunder(close, pocPrice)
+poc_up = not na(pocPrice) and _poc_up
+poc_dn = not na(pocPrice) and _poc_dn
+base_buy = poc_up or (phaseBuyTrigger and (na(pocPrice) or close >= pocPrice))
+base_sell = poc_dn or (phaseSellTrigger and (na(pocPrice) or close <= pocPrice))
+var int last_sig_bar = na
+cooldown = na(last_sig_bar) or bar_index - last_sig_bar >= eff_cooldown
+buy_conf = volaSafe and vol_on_signal and not ofBear and not (absorption and ofBear)
+sell_conf = volaSafe and vol_on_signal and not ofBull and not (absorption and ofBull)
+_validOK = not strictAuto or a_valid
+isBuySignal = allowBuy and base_buy and bull_score >= eff_minScore and buy_conf and cooldown and inSess and chopOK and bar_ok and htfBuyOK and _validOK
+isSellSignal = allowSell and base_sell and bear_score >= eff_minScore + sellExtra and sell_conf and cooldown and inSess and chopOK and bar_ok and htfSellOK and _validOK
+if isBuySignal or isSellSignal
+    last_sig_bar := bar_index
+new_signal = isBuySignal or isSellSignal
+var string last_sig_type = 'CON'
+if isBuySignal
+    last_sig_type := (phaseMode == 'Exaustao' and exhBuyComplete) ? 'REV' : 'CON'
+else if isSellSignal
+    last_sig_type := (phaseMode == 'Exaustao' and exhSellComplete) ? 'REV' : 'CON'
+sig_type = last_sig_type
+
+// =====================================================================
+// LEVEL CALCULATION — ATR or Percent
+// =====================================================================
+sl_distance(atr_v, px) =>
+    riskMode == 'ATR' ? atr_v * act_slMult : px * (slPct / 100.0)
+calc_lvl(pos, atr_v) =>
+    e = round_p(close)
+    d = sl_distance(atr_v, e)
+    sl = pos == 'BUY' ? round_p(e - d) : round_p(e + d)
+    t1 = pos == 'BUY' ? round_p(e + d * rr1) : round_p(e - d * rr1)
+    t2 = pos == 'BUY' ? round_p(e + d * rr2) : round_p(e - d * rr2)
+    t3 = pos == 'BUY' ? round_p(e + d * rr3) : round_p(e - d * rr3)
+    t4 = pos == 'BUY' ? round_p(e + d * rr4) : round_p(e - d * rr4)
+    [e, sl, t1, t2, t3, t4]
+var float fix_entry = na
+var float fix_sl = na
+var float fix_tp1 = na
+var float fix_tp2 = na
+var float fix_tp3 = na
+var float fix_tp4 = na
+var string fix_pos = na
+var float fix_sl_pips = na
+var string position = na
+if isBuySignal
+    position := 'BUY'
+else if isSellSignal
+    position := 'SELL'
+if new_signal
+    [e, s, t1, t2, t3, t4] = calc_lvl(position, atrVal)
+    fix_entry := e
+    fix_sl := s
+    fix_tp1 := t1
+    fix_tp2 := t2
+    fix_tp3 := t3
+    fix_tp4 := t4
+    fix_pos := position
+    fix_sl_pips := math.round(math.abs(e - s) / pip_unit)
+cur_pos = dynLevels ? position : fix_pos
+entry_lvl = dynLevels ? round_p(close) : fix_entry
+var float sl_lvl = na
+var float tp1_lvl = na
+var float tp2_lvl = na
+var float tp3_lvl = na
+var float tp4_lvl = na
+if dynLevels and not na(cur_pos)
+    [e, s, t1, t2, t3, t4] = calc_lvl(cur_pos, atrVal)
+    sl_lvl := s
+    tp1_lvl := t1
+    tp2_lvl := t2
+    tp3_lvl := t3
+    tp4_lvl := t4
+else
+    sl_lvl := fix_sl
+    tp1_lvl := fix_tp1
+    tp2_lvl := fix_tp2
+    tp3_lvl := fix_tp3
+    tp4_lvl := fix_tp4
+
+// =====================================================================
+// BREAKEVEN + TRAILING STOP
+// =====================================================================
+var bool be_trig = false
+var float be_lvl = na
+be_target = na(tp1_lvl) ? float(na) : eff_be == 'Exit 1' ? tp1_lvl : eff_be == 'Exit 2' ? tp2_lvl : eff_be == 'Exit 3' ? tp3_lvl : cur_pos == 'BUY' ? entry_lvl + bePoints * syminfo.mintick : cur_pos == 'SELL' ? entry_lvl - bePoints * syminfo.mintick : float(na)
+be_hit = not na(be_target) and not be_trig and ((cur_pos == 'BUY' and high >= be_target) or (cur_pos == 'SELL' and low <= be_target))
+if new_signal
+    be_trig := false
+    be_lvl := na
+if be_hit and not be_trig
+    be_trig := true
+    be_lvl := entry_lvl
+
+var float trail_sl = na
+if new_signal
+    trail_sl := na
+trail_cand = cur_pos == 'BUY' ? close - atrVal * trailMult : cur_pos == 'SELL' ? close + atrVal * trailMult : na
+if trailMode == 'ATR' and not na(cur_pos) and not new_signal
+    trail_sl := na(trail_sl) ? trail_cand : (cur_pos == 'BUY' ? math.max(trail_sl, trail_cand) : math.min(trail_sl, trail_cand))
+
+base_sl2 = be_trig ? be_lvl : sl_lvl
+eff_sl = trailMode == 'ATR' and not na(trail_sl) and not na(base_sl2) ? (cur_pos == 'BUY' ? math.max(base_sl2, trail_sl) : math.min(base_sl2, trail_sl)) : base_sl2
+
+// =====================================================================
+// HIT DETECTION + COMPLETION STATE + STATISTICS
+// =====================================================================
+var bool tp1_hit = false
+var bool tp2_hit = false
+var bool tp3_hit = false
+var bool tp4_hit = false
+var bool trade_done = false
+var bool sl_done = false
+if new_signal
+    tp1_hit := false
+    tp2_hit := false
+    tp3_hit := false
+    tp4_hit := false
+    trade_done := false
+    sl_done := false
+after_entry = not new_signal and not na(cur_pos)
+tp1_now = after_entry and not trade_done and not tp1_hit and not na(tp1_lvl) and ((cur_pos == 'BUY' and high >= tp1_lvl) or (cur_pos == 'SELL' and low <= tp1_lvl))
+tp2_now = after_entry and not trade_done and not tp2_hit and not na(tp2_lvl) and ((cur_pos == 'BUY' and high >= tp2_lvl) or (cur_pos == 'SELL' and low <= tp2_lvl))
+tp3_now = after_entry and not trade_done and not tp3_hit and not na(tp3_lvl) and ((cur_pos == 'BUY' and high >= tp3_lvl) or (cur_pos == 'SELL' and low <= tp3_lvl))
+tp4_now = after_entry and not trade_done and not tp4_hit and not na(tp4_lvl) and ((cur_pos == 'BUY' and high >= tp4_lvl) or (cur_pos == 'SELL' and low <= tp4_lvl))
+if tp1_now
+    tp1_hit := true
+if tp2_now
+    tp2_hit := true
+if tp3_now
+    tp3_hit := true
+if tp4_now
+    tp4_hit := true
+sl_now = after_entry and not trade_done and not na(eff_sl) and ((cur_pos == 'BUY' and low <= eff_sl) or (cur_pos == 'SELL' and high >= eff_sl))
+lastTP_now = showTP4 ? tp4_now : showTP3 ? tp3_now : showTP2 ? tp2_now : tp1_now
+done_now = (lastTP_now or sl_now or (beCompletes and be_hit)) and not trade_done
+
+// Statistics — realized R at close
+var int st_wins = 0
+var int st_losses = 0
+var float st_sumR = 0.0
+if done_now
+    trade_done := true
+    if sl_now
+        sl_done := true
+    risk_d = math.abs(fix_entry - fix_sl)
+    exitP = sl_now ? eff_sl : tp4_hit ? tp4_lvl : tp3_hit ? tp3_lvl : tp2_hit ? tp2_lvl : tp1_hit ? tp1_lvl : close
+    r_out = risk_d > 0 ? (cur_pos == 'BUY' ? (exitP - fix_entry) : (fix_entry - exitP)) / risk_d : 0.0
+    if r_out > 0
+        st_wins := st_wins + 1
+    else if r_out < 0
+        st_losses := st_losses + 1
+    st_sumR := st_sumR + r_out
+st_total = st_wins + st_losses
+st_wr = st_total > 0 ? st_wins / st_total * 100.0 : 0.0
+st_avgR = st_total > 0 ? st_sumR / st_total : 0.0
+
+act_score = cur_pos == 'BUY' ? bull_score : cur_pos == 'SELL' ? bear_score : 0
+trade_active = not na(cur_pos) and not na(entry_lvl) and not trade_done
+
+// =====================================================================
+// VISUALS — SHAPES + BARCOLOR + BADGE  (entry always visible)
+// =====================================================================
+plotshape(isBuySignal, 'BUY', shape.labelup, location.belowbar, color.new(th_bull, 10), textcolor = color.white, text = '▲', size = size.small)
+plotshape(isSellSignal, 'SELL', shape.labeldown, location.abovebar, color.new(th_bear, 10), textcolor = color.white, text = '▼', size = size.small)
+sig_bar_col = isBuySignal ? color.new(th_bull, 45) : isSellSignal ? color.new(th_bear, 45) : na
+barcolor(sig_bar_col, title = 'Vela de sinal')
+if isBuySignal
+    _pips_txt = not na(fix_sl_pips) ? '  SL:' + str.tostring(fix_sl_pips) + 'p' : ''
+    label.new(bar_index, low - atrVal * 1.8, text = sig_type + '  +' + str.tostring(bull_score) + '/20' + _pips_txt, color = th_buy_badge, textcolor = color.white, style = label.style_label_up, size = size.small)
+if isSellSignal
+    _pips_txt = not na(fix_sl_pips) ? '  SL:' + str.tostring(fix_sl_pips) + 'p' : ''
+    label.new(bar_index, high + atrVal * 1.8, text = sig_type + '  +' + str.tostring(bear_score) + '/20' + _pips_txt, color = th_sell_badge, textcolor = color.white, style = label.style_label_down, size = size.small)
+
+// =====================================================================
+// LIVE EVENT PLOTTING (replaces heavy history loop — performance)
+// Marks E1-E4 / SL / BE the moment they occur (persistent in Mostrar Tudo)
+// =====================================================================
+plot_hist = signalDisplay == 'Mostrar Tudo'
+if plot_hist and tp1_now and showTP1
+    label.new(bar_index, tp1_lvl, 'E1 ✔', color = color.new(th_tp1_line, 10), textcolor = color.white, style = label.style_label_left, size = size.tiny)
+if plot_hist and tp2_now and showTP2
+    label.new(bar_index, tp2_lvl, 'E2 ✔', color = color.new(th_tp2_line, 10), textcolor = color.white, style = label.style_label_left, size = size.tiny)
+if plot_hist and tp3_now and showTP3
+    label.new(bar_index, tp3_lvl, 'E3 ✔', color = color.new(th_tp3_line, 10), textcolor = color.white, style = label.style_label_left, size = size.tiny)
+if plot_hist and tp4_now and showTP4
+    label.new(bar_index, tp4_lvl, 'E4 🏆', color = color.new(th_tp4_line, 10), textcolor = color.white, style = label.style_label_left, size = size.tiny)
+if plot_hist and be_hit
+    label.new(bar_index, entry_lvl, 'BE ⭕', color = color.new(th_be_line, 10), textcolor = color.white, style = label.style_label_left, size = size.tiny)
+if plot_hist and sl_now
+    label.new(bar_index, eff_sl, be_trig ? 'BE ⭕' : 'SL ❌', color = color.new(be_trig ? th_be_line : th_sl_line, 10), textcolor = color.white, style = label.style_label_left, size = size.tiny)
+
+// =====================================================================
+// ALERTS — MULTI-STATE WEBHOOK (JSON) + Entry Trigger + Watchlist
+// =====================================================================
+f_num(x) => na(x) ? 'null' : str.tostring(x, '#.#####')
+f_payload(_state, _action, _closePct) =>
+    s = '{"ticker":"' + syminfo.ticker + '","tf":"' + timeframe.period + '"'
+    s := s + ',"strategy":"MTM Sensei X","style":"' + tradeStyle + '"'
+    s := s + ',"state":"' + _state + '","action":"' + _action + '"'
+    s := s + ',"order_type":"' + order_type + '","close_pct":' + str.tostring(_closePct)
+    s := s + ',"entry":' + f_num(entry_lvl) + ',"sl":' + f_num(eff_sl)
+    s := s + ',"sl_pips":' + (na(fix_sl_pips) ? 'null' : str.tostring(fix_sl_pips))
+    s := s + ',"tp1":' + f_num(tp1_lvl) + ',"tp2":' + f_num(tp2_lvl)
+    s := s + ',"tp3":' + f_num(tp3_lvl) + ',"tp4":' + f_num(tp4_lvl)
+    s := s + ',"alloc":[' + str.tostring(pct1) + ',' + str.tostring(pct2) + ',' + str.tostring(pct3) + ',' + str.tostring(pct4) + ']'
+    s := s + ',"be":' + (be_trig ? f_num(be_lvl) : 'null')
+    s := s + ',"score":' + str.tostring(act_score) + ',"type":"' + sig_type + '"'
+    s := s + ',"price":' + f_num(close) + '}'
+    s
+cur_action = cur_pos == 'BUY' ? 'BUY' : cur_pos == 'SELL' ? 'SELL' : 'NONE'
+if alert_watchlist
+    if isBuySignal and long_alert and alert_entry
+        alert(f_payload('ENTRY', 'BUY', 100), alert.freq_once_per_bar)
+    if isSellSignal and short_alert and alert_entry
+        alert(f_payload('ENTRY', 'SELL', 100), alert.freq_once_per_bar)
+    if be_hit and alert_be
+        alert(f_payload('BE', cur_action, 0), alert.freq_once_per_bar)
+    if tp1_now and alert_tp
+        alert(f_payload('TP1', cur_action, pct1), alert.freq_once_per_bar)
+    if tp2_now and alert_tp
+        alert(f_payload('TP2', cur_action, pct2), alert.freq_once_per_bar)
+    if tp3_now and alert_tp
+        alert(f_payload('TP3', cur_action, pct3), alert.freq_once_per_bar)
+    if tp4_now and alert_tp
+        alert(f_payload('TP4', cur_action, pct4), alert.freq_once_per_bar)
+    if sl_now and alert_sl
+        alert(f_payload('SL', cur_action, 100), alert.freq_once_per_bar)
+alertcondition(long_alert and isBuySignal, 'Entry Trigger — BUY', '🟢 ENTRY BUY {{ticker}} {{interval}} @ {{close}}')
+alertcondition(short_alert and isSellSignal, 'Entry Trigger — SELL', '🔴 ENTRY SELL {{ticker}} {{interval}} @ {{close}}')
+alertcondition(isBuySignal or isSellSignal, 'Entry Trigger', '📡 MTM Sensei X — Entry Trigger {{ticker}} {{interval}} @ {{close}}')
+alertcondition(be_hit, 'BreakEven', '⚠️ BE {{ticker}} {{interval}} — move SL to Entry')
+alertcondition(tp1_now, 'Exit 1', '✅ EXIT 1 {{ticker}} {{interval}}')
+alertcondition(tp2_now, 'Exit 2', '✅ EXIT 2 {{ticker}} {{interval}}')
+alertcondition(tp3_now, 'Exit 3', '✅ EXIT 3 {{ticker}} {{interval}}')
+alertcondition(tp4_now, 'Exit 4', '🏆 EXIT 4 {{ticker}} {{interval}}')
+alertcondition(sl_now, 'Stop Loss', '❌ SL {{ticker}} {{interval}}')
+
+// =====================================================================
+// DRAWING — ACTIVE TRADE (Entry / SL / Exits)
+// =====================================================================
+var line l_en = na
+var line l_sl_ = na
+var line l_t1 = na
+var line l_t2 = na
+var line l_t3 = na
+var line l_t4 = na
+var label lb_en = na
+var label lb_sl_ = na
+var label lb_t1 = na
+var label lb_t2 = na
+var label lb_t3 = na
+var label lb_t4 = na
+var linefill lf_sl_ = na
+var linefill lf_t1_ = na
+var linefill lf_t2_ = na
+var linefill lf_t3_ = na
+var linefill lf_t4_ = na
+clear_active() =>
+    line.delete(l_en)
+    line.delete(l_sl_)
+    line.delete(l_t1)
+    line.delete(l_t2)
+    line.delete(l_t3)
+    line.delete(l_t4)
+    label.delete(lb_en)
+    label.delete(lb_sl_)
+    label.delete(lb_t1)
+    label.delete(lb_t2)
+    label.delete(lb_t3)
+    label.delete(lb_t4)
+    linefill.delete(lf_sl_)
+    linefill.delete(lf_t1_)
+    linefill.delete(lf_t2_)
+    linefill.delete(lf_t3_)
+    linefill.delete(lf_t4_)
+if barstate.islast
+    clear_active()
+    if trade_active
+        dt_ = time - time[4]
+        et_ = time[1]
+        trange_ = time + dt_ * 2
+        tlb_ = time + dt_ * 4
+        em_ = conf_emoji(act_score)
+        etx_ = (cur_pos == 'BUY' ? '▲ BUY' : '▼ SELL') + '   ' + str.tostring(act_score) + '/20 ' + em_
+        l_en := line.new(et_, entry_lvl, trange_, entry_lvl, color = th_entry_line, width = 2, xloc = xloc.bar_time)
+        lb_en := label.new(tlb_, entry_lvl, 'ENTRY  ' + str.tostring(entry_lvl) + '   ' + etx_, color = color.new(th_entry_line, 8), textcolor = color.white, style = label.style_label_left, xloc = xloc.bar_time, size = size.normal)
+        be_c = be_trig ? th_be_line : th_sl_line
+        be_tx = be_trig ? 'BE ⭕  ' : trailMode == 'ATR' and not na(trail_sl) ? 'TRAIL ❌  ' : 'SL ❌  '
+        _pips_lbl = not na(fix_sl_pips) ? '  [' + str.tostring(fix_sl_pips) + 'p]' : ''
+        l_sl_ := line.new(et_, eff_sl, trange_, eff_sl, color = be_c, width = 2, xloc = xloc.bar_time)
+        lb_sl_ := label.new(tlb_, eff_sl, be_tx + str.tostring(eff_sl) + _pips_lbl, color = color.new(be_c, 8), textcolor = color.white, style = label.style_label_left, xloc = xloc.bar_time, size = size.normal)
+        lf_sl_ := linefill.new(l_sl_, l_en, color = color.new(be_c, 91))
+        if showTP1 and not na(tp1_lvl) and not tp1_hit
+            l_t1 := line.new(et_, tp1_lvl, trange_, tp1_lvl, color = th_tp1_line, width = 1, xloc = xloc.bar_time)
+            lb_t1 := label.new(tlb_, tp1_lvl, 'EXIT 1  1:' + str.tostring(rr1, '#.#') + '  ' + str.tostring(pct1) + '%   ' + str.tostring(tp1_lvl), color = color.new(th_tp1_line, 8), textcolor = color.white, style = label.style_label_left, xloc = xloc.bar_time, size = size.normal)
+            lf_t1_ := linefill.new(l_en, l_t1, color = color.new(th_tp1_line, 92))
+        if showTP2 and not na(tp2_lvl) and not tp2_hit
+            l_t2 := line.new(et_, tp2_lvl, trange_, tp2_lvl, color = th_tp2_line, width = 1, xloc = xloc.bar_time)
+            lb_t2 := label.new(tlb_, tp2_lvl, 'EXIT 2  1:' + str.tostring(rr2, '#.#') + '  ' + str.tostring(pct2) + '%   ' + str.tostring(tp2_lvl), color = color.new(th_tp2_line, 8), textcolor = color.white, style = label.style_label_left, xloc = xloc.bar_time, size = size.normal)
+            lf_t2_ := linefill.new(l_en, l_t2, color = color.new(th_tp2_line, 94))
+        if showTP3 and not na(tp3_lvl) and not tp3_hit
+            l_t3 := line.new(et_, tp3_lvl, trange_, tp3_lvl, color = th_tp3_line, width = 1, xloc = xloc.bar_time)
+            lb_t3 := label.new(tlb_, tp3_lvl, 'EXIT 3  1:' + str.tostring(rr3, '#.#') + '  ' + str.tostring(pct3) + '%   ' + str.tostring(tp3_lvl), color = color.new(th_tp3_line, 8), textcolor = color.white, style = label.style_label_left, xloc = xloc.bar_time, size = size.normal)
+            lf_t3_ := linefill.new(l_en, l_t3, color = color.new(th_tp3_line, 95))
+        if showTP4 and not na(tp4_lvl) and not tp4_hit
+            l_t4 := line.new(et_, tp4_lvl, trange_, tp4_lvl, color = th_tp4_line, width = 1, style = line.style_dashed, xloc = xloc.bar_time)
+            lb_t4 := label.new(tlb_, tp4_lvl, 'EXIT 4  1:' + str.tostring(rr4, '#.#') + '  ' + str.tostring(pct4) + '%   ' + str.tostring(tp4_lvl), color = color.new(th_tp4_line, 8), textcolor = color.white, style = label.style_label_left, xloc = xloc.bar_time, size = size.normal)
+            lf_t4_ := linefill.new(l_en, l_t4, color = color.new(th_tp4_line, 96))
+
+// =====================================================================
+// CONFIRMATIONS PANEL — TABLE (top right)
+// =====================================================================
+var table tbl_conf = na
+if barstate.islast and showConfPanel
+    table.delete(tbl_conf)
+    has_pos = trade_active
+    ib = has_pos and cur_pos == 'BUY'
+    sc_ = has_pos ? (ib ? bull_score : bear_score) : math.max(bull_score, bear_score)
+    em_ = conf_emoji(sc_)
+    tp_ = sig_type == 'REV' ? '⚡ REV' : '➜ CON'
+    gA = ib ? grA_bull : grA_bear
+    gB = ib ? grB_bull : grB_bear
+    gC = ib ? grC_bull : grC_bear
+    gD = ib ? grD_bull : grD_bear
+    bcol = sc_ >= 16 ? color.new(#14532D, 8) : sc_ >= 12 ? color.new(#1E3A5F, 8) : color.new(#3B0F0F, 8)
+    nrows = showStats ? 8 : 7
+    tbl_conf := table.new(position.top_right, 2, nrows, bgcolor = th_bg, border_color = th_accent, border_width = 1, frame_color = th_accent, frame_width = 1)
+    dir_txt = has_pos ? (ib ? '🟢 BUY' : '🔴 SELL') + '  ' + str.tostring(sc_) + '/20  ' + em_ + '  ' + tp_ : '— A aguardar sinal —'
+    table.cell(tbl_conf, 0, 0, 'CONFIRMACOES SENSEI', text_color = color.white, bgcolor = th_accent, text_size = size.small, text_halign = text.align_center)
+    table.cell(tbl_conf, 1, 0, dir_txt, text_color = color.white, bgcolor = bcol, text_size = size.small, text_halign = text.align_center)
+    table.cell(tbl_conf, 0, 1, 'TENDENCIA DEMA', text_color = th_text, bgcolor = th_bg, text_size = size.small, text_halign = text.align_left)
+    table.cell(tbl_conf, 1, 1, gr_dots(gA) + '  ' + str.tostring(gA) + '/5', text_color = gc_col(gA, th_ok, th_gold, th_fail), bgcolor = th_bg, text_size = size.small, text_halign = text.align_right)
+    table.cell(tbl_conf, 0, 2, 'MOM / VOL / ORDER FLOW', text_color = th_text, bgcolor = th_bg2, text_size = size.small, text_halign = text.align_left)
+    table.cell(tbl_conf, 1, 2, gr_dots(gB) + '  ' + str.tostring(gB) + '/5', text_color = gc_col(gB, th_ok, th_gold, th_fail), bgcolor = th_bg2, text_size = size.small, text_halign = text.align_right)
+    table.cell(tbl_conf, 0, 3, 'SMC / STRUCTURE', text_color = th_text, bgcolor = th_bg, text_size = size.small, text_halign = text.align_left)
+    table.cell(tbl_conf, 1, 3, gr_dots(gC) + '  ' + str.tostring(gC) + '/5', text_color = gc_col(gC, th_ok, th_gold, th_fail), bgcolor = th_bg, text_size = size.small, text_halign = text.align_right)
+    table.cell(tbl_conf, 0, 4, 'SENSEI / FASE / VOLAT.', text_color = th_text, bgcolor = th_bg2, text_size = size.small, text_halign = text.align_left)
+    table.cell(tbl_conf, 1, 4, gr_dots(gD) + '  ' + str.tostring(gD) + '/5', text_color = gc_col(gD, th_ok, th_gold, th_fail), bgcolor = th_bg2, text_size = size.small, text_halign = text.align_right)
+    table.cell(tbl_conf, 0, 5, 'TOTAL', text_color = th_gold, bgcolor = th_bg, text_size = size.small, text_halign = text.align_left)
+    table.cell(tbl_conf, 1, 5, str.tostring(sc_) + ' / 20  ' + em_, text_color = th_gold, bgcolor = th_bg, text_size = size.small, text_halign = text.align_right)
+    _p_disp = not na(fix_sl_pips) ? str.tostring(fix_sl_pips) + ' pips' : '—'
+    _rm_disp = riskMode == 'ATR' ? 'ATR×' + str.tostring(act_slMult, '#.#') : '%' + str.tostring(slPct, '#.#')
+    table.cell(tbl_conf, 0, 6, 'SL  (' + _rm_disp + ')', text_color = th_sl_line, bgcolor = th_bg2, text_size = size.small, text_halign = text.align_left)
+    table.cell(tbl_conf, 1, 6, _p_disp, text_color = th_sl_line, bgcolor = th_bg2, text_size = size.small, text_halign = text.align_right)
+    if showStats
+        wr_col = st_wr >= 55 ? th_ok : st_wr >= 45 ? th_gold : th_fail
+        table.cell(tbl_conf, 0, 7, 'WR / R med / N', text_color = th_gold, bgcolor = th_bg, text_size = size.small, text_halign = text.align_left)
+        table.cell(tbl_conf, 1, 7, str.tostring(st_wr, '#.#') + '%  ' + str.tostring(st_avgR, '#.##') + 'R  (' + str.tostring(st_total) + ')', text_color = wr_col, bgcolor = th_bg, text_size = size.small, text_halign = text.align_right)
+
+// =====================================================================
+// SETUP RULES PANEL — TABLE (bottom left)
+// =====================================================================
+var table tbl_rules = na
+if barstate.islast and showSetupRules
+    table.delete(tbl_rules)
+    ck_bias = bull_score >= bear_score
+    tbl_rules := table.new(position.bottom_left, 3, 8, bgcolor = th_bg, border_color = th_accent, border_width = 1, frame_color = th_accent, frame_width = 1)
+    ck_dir_txt = ck_bias ? '🟢 BULL  ' + str.tostring(bull_score) + '/20' : '🔴 BEAR  ' + str.tostring(bear_score) + '/20'
+    ck_dir_col = ck_bias ? th_ok : th_fail
+    table.cell(tbl_rules, 0, 0, '📋 CHECKLIST SENSEI', text_color = color.white, bgcolor = th_accent, text_size = size.tiny, text_halign = text.align_center)
+    table.cell(tbl_rules, 1, 0, ck_dir_txt, text_color = ck_dir_col, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_center)
+    table.cell(tbl_rules, 2, 0, tradeStyle + ' · ' + phaseMode, text_color = th_text2, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_center)
+    table.cell(tbl_rules, 0, 1, 'TENDENCIA', text_color = th_gold, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 1, 1, _ck(ck_bias ? cA1b : cA1s) + ' DEMA15>50  ' + _ck(ck_bias ? cA2b : cA2s) + ' 50>238', text_color = th_text, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 2, 1, _ck(ck_bias ? cA3b : cA3s) + ' Slope  ' + _ck(ck_bias ? cA5b : cA5s) + ' P>DEMA', text_color = th_text, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 0, 2, 'MOM/OF', text_color = th_gold, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 1, 2, _ck(cB1b) + ' Vol  ' + _ck(ck_bias ? cB5b : cB5s) + ' OF Δ', text_color = th_text, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 2, 2, _ck(cB3b) + ' ADX>' + str.tostring(eff_adx_cont) + '  ' + _ck(ck_bias ? cC5b : cC5s) + ' Imbal', text_color = th_text, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 0, 3, 'ESTRUTURA', text_color = th_gold, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 1, 3, _ck(ck_bias ? cC1b : cC1s) + ' OS  ' + _ck(ck_bias ? cC2b : cC2s) + ' CHoCH', text_color = th_text, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 2, 3, _ck(ck_bias ? cC3b : cC3s) + ' BOS  ' + _ck(ck_bias ? cC4b : cC4s) + ' POC', text_color = th_text, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 0, 4, 'FASE/VOLAT', text_color = th_gold, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 1, 4, _ck(ck_bias ? cD1b : cD1s) + ' Cloud  ' + _ck(ck_bias ? cD3b : cD3s) + ' Fase', text_color = th_text, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 2, 4, _ck(cD5b) + ' Vol safe  ' + _ck(ck_bias ? cD4b : cD4s) + ' Pressao', text_color = th_text, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 0, 5, 'FILTROS', text_color = th_gold, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 1, 5, _ck(ck_bias ? htfBuyOK : htfSellOK) + ' HTF  ' + _ck(inSess) + ' Sessao', text_color = th_text, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 2, 5, _ck(chopOK) + ' Anti-chop  ' + _ck(ltfValid) + ' OF-LTF', text_color = th_text, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    trig_txt = ck_bias ? (base_buy ? '✅ Gatilho ativo' : '— sem gatilho') : (base_sell ? '✅ Gatilho ativo' : '— sem gatilho')
+    trig_col = (ck_bias and base_buy) or (not ck_bias and base_sell) ? th_ok : th_text2
+    table.cell(tbl_rules, 0, 6, '🎯 GATILHO', text_color = th_gold, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 1, 6, trig_txt, text_color = trig_col, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 2, 6, cooldown ? '✅ Cooldown ok' : '⏳ ' + str.tostring(eff_cooldown - (n - nz(last_sig_bar, n - eff_cooldown))) + ' bars', text_color = cooldown ? th_ok : th_text2, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 0, 7, '📡 ' + (alert_watchlist ? 'Watchlist ON' : 'OFF'), text_color = alert_watchlist ? th_ok : th_text2, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_rules, 1, 7, 'SENSEI By MoreThanMoney', text_color = color.new(#8B2FC9, 20), bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_center)
+    table.cell(tbl_rules, 2, 7, 'morethanmoney.pt', text_color = th_text2, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_center)
+
+// =====================================================================
+// SENSEI TRADE PANEL — TABLE (bottom right) — only with ACTIVE trade
+// =====================================================================
+var table tbl_trade = na
+if barstate.islast and showTradePanel and trade_active
+    table.delete(tbl_trade)
+    ib_t = cur_pos == 'BUY'
+    sc_t = ib_t ? bull_score : bear_score
+    em_t = conf_emoji(sc_t)
+    tbl_trade := table.new(position.bottom_right, 2, 12, bgcolor = th_bg, border_color = th_accent, border_width = 1, frame_color = th_accent, frame_width = 1)
+    table.cell(tbl_trade, 0, 0, 'SENSEI TRADE PANEL', text_color = color.white, bgcolor = th_accent, text_size = size.small, text_halign = text.align_center)
+    table.cell(tbl_trade, 1, 0, tradeStyle + '  ' + str.tostring(sc_t) + '/20 ' + em_t, text_color = th_gold, bgcolor = th_accent, text_size = size.small, text_halign = text.align_center)
+    entry_str = not na(entry_lvl) ? str.tostring(entry_lvl, '#.#####') : '—'
+    sl_disp = not na(eff_sl) ? str.tostring(eff_sl, '#.#####') : '—'
+    tp1_str = not na(tp1_lvl) ? str.tostring(tp1_lvl, '#.#####') + (tp1_hit ? ' ✔' : '') : '—'
+    tp2_str = not na(tp2_lvl) ? str.tostring(tp2_lvl, '#.#####') + (tp2_hit ? ' ✔' : '') : '—'
+    tp3_str = not na(tp3_lvl) ? str.tostring(tp3_lvl, '#.#####') + (tp3_hit ? ' ✔' : '') : '—'
+    tp4_str = not na(tp4_lvl) ? str.tostring(tp4_lvl, '#.#####') + (tp4_hit ? ' ✔' : '') : '—'
+    sl_lbl = be_trig ? '⭕ BE' : trailMode == 'ATR' and not na(trail_sl) ? '❌ TRAIL' : '❌ SL'
+    type_str = sig_type == 'REV' ? '⚡ REVERSAO' : '➜ CONTINUACAO'
+    sl_pips_disp = not na(fix_sl_pips) ? str.tostring(fix_sl_pips) + ' pips' : '—'
+    table.cell(tbl_trade, 0, 1, '📌 ENTRY', text_color = color.new(#C084FC, 0), bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_trade, 1, 1, entry_str, text_color = th_text, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_right)
+    be_c2 = be_trig ? th_be_line : th_sl_line
+    table.cell(tbl_trade, 0, 2, sl_lbl, text_color = be_c2, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_trade, 1, 2, sl_disp, text_color = be_c2, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(tbl_trade, 0, 3, '📍 SL em Pips', text_color = th_sl_line, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_trade, 1, 3, sl_pips_disp, text_color = th_sl_line, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_right)
+    e1col = tp1_hit ? th_ok : color.new(#22C55E, 0)
+    table.cell(tbl_trade, 0, 4, '✅ E1 1:' + str.tostring(rr1, '#.#') + ' (' + str.tostring(pct1) + '%)', text_color = e1col, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_trade, 1, 4, tp1_str, text_color = e1col, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_right)
+    e2col = tp2_hit ? th_ok : color.new(#16A34A, 0)
+    table.cell(tbl_trade, 0, 5, '✅ E2 1:' + str.tostring(rr2, '#.#') + ' (' + str.tostring(pct2) + '%)', text_color = e2col, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_trade, 1, 5, tp2_str, text_color = e2col, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_right)
+    e3col = tp3_hit ? th_ok : color.new(#15803D, 0)
+    table.cell(tbl_trade, 0, 6, '✅ E3 1:' + str.tostring(rr3, '#.#') + ' (' + str.tostring(pct3) + '%)', text_color = e3col, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_trade, 1, 6, tp3_str, text_color = e3col, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_right)
+    e4col = tp4_hit ? th_ok : color.new(#0F766E, 0)
+    table.cell(tbl_trade, 0, 7, '🏆 E4 1:' + str.tostring(rr4, '#.#') + ' (' + str.tostring(pct4) + '%)', text_color = e4col, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_trade, 1, 7, tp4_str, text_color = e4col, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_right)
+    of_txt = ltfValid ? (ofBull ? '🟢 +' : ofBear ? '🔴 -' : '•') + str.tostring(math.round(math.abs(ltfDelta))) : 'proxy'
+    of_col = ofBull ? th_ok : ofBear ? th_fail : th_text2
+    table.cell(tbl_trade, 0, 8, '💧 Order Flow Δ', text_color = th_text2, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_trade, 1, 8, of_txt, text_color = of_col, bgcolor = th_bg2, text_size = size.tiny, text_halign = text.align_right)
+    adx_col = adxVal > 25 ? th_ok : adxVal > 18 ? th_gold : th_fail
+    rsi_col = (ib_t and rsi14 > 38 and rsi14 < 72) or (not ib_t and rsi14 > 28 and rsi14 < 62) ? th_ok : th_fail
+    table.cell(tbl_trade, 0, 9, 'ADX  ' + str.tostring(adxVal, '#.#'), text_color = adx_col, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_trade, 1, 9, 'RSI  ' + str.tostring(rsi14, '#.#'), text_color = rsi_col, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(tbl_trade, 0, 10, '📊 WR / R med', text_color = th_text2, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_trade, 1, 10, str.tostring(st_wr, '#.#') + '%  ' + str.tostring(st_avgR, '#.##') + 'R', text_color = th_gold, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_right)
+    table.cell(tbl_trade, 0, 11, '⚡ Tipo', text_color = th_text2, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_left)
+    table.cell(tbl_trade, 1, 11, type_str, text_color = th_text, bgcolor = th_bg, text_size = size.tiny, text_halign = text.align_right)
+
+// =====================================================================
+// SMC — ACTIVE EXTENSIONS (barstate.islast)
+// =====================================================================
+var line ext_choch = line.new(na, na, na, na, style = line.style_dashed)
+var line ext_bos = line.new(na, na, na, na)
+var line ext_idm = line.new(na, na, na, na, style = line.style_dotted, color = idmCss)
+var label ext_choch_lbl = label.new(na, na, 'CHoCH', color = color(na), size = size.tiny)
+var label ext_bos_lbl = label.new(na, na, 'BOS', color = color(na), size = size.tiny)
+var label ext_idm_lbl = label.new(na, na, 'IDM', color = color(na), size = size.tiny, textcolor = idmCss)
+if barstate.islast
+    if os_ms == 1
+        if showChoch
+            ext_choch.set_xy1(btmx, btmy)
+            ext_choch.set_xy2(n, btmy)
+            ext_choch.set_color(bearCss)
+            ext_choch_lbl.set_xy(n, btmy)
+            ext_choch_lbl.set_style(label.style_label_up)
+            ext_choch_lbl.set_textcolor(bearCss)
+        if showBos
+            ext_bos.set_xy1(max_x1, max_ms)
+            ext_bos.set_xy2(n, max_ms)
+            ext_bos.set_color(bullCss)
+            ext_bos_lbl.set_xy(n, max_ms)
+            ext_bos_lbl.set_style(label.style_label_down)
+            ext_bos_lbl.set_textcolor(bullCss)
+        if not sbtm_crossed and showIdm
+            ext_idm.set_xy1(sbtmx_, sbtmy_)
+            ext_idm.set_xy2(n + 15, sbtmy_)
+            ext_idm_lbl.set_xy(n + 15, sbtmy_)
+            ext_idm_lbl.set_style(label.style_label_up)
+            ext_idm.set_color(idmCss)
+            ext_idm_lbl.set_textcolor(idmCss)
+        else
+            ext_idm.set_color(na)
+            ext_idm_lbl.set_textcolor(na)
+    else
+        if showChoch
+            ext_choch.set_xy1(topx, topy)
+            ext_choch.set_xy2(n, topy)
+            ext_choch.set_color(bullCss)
+            ext_choch_lbl.set_xy(n, topy)
+            ext_choch_lbl.set_style(label.style_label_down)
+            ext_choch_lbl.set_textcolor(bullCss)
+        if showBos
+            ext_bos.set_xy1(min_x1, min_ms)
+            ext_bos.set_xy2(n, min_ms)
+            ext_bos.set_color(bearCss)
+            ext_bos_lbl.set_xy(n, min_ms)
+            ext_bos_lbl.set_style(label.style_label_up)
+            ext_bos_lbl.set_textcolor(bearCss)
+        if not stop_crossed and showIdm
+            ext_idm.set_xy1(stopx_, stopy_)
+            ext_idm.set_xy2(n + 15, stopy_)
+            ext_idm_lbl.set_xy(n + 15, stopy_)
+            ext_idm_lbl.set_style(label.style_label_down)
+            ext_idm.set_color(idmCss)
+            ext_idm_lbl.set_textcolor(idmCss)
+        else
+            ext_idm.set_color(na)
+            ext_idm_lbl.set_textcolor(na)
+
+plot(showCircles ? top : na, 'Swing High', color.new(bearCss, 50), 5, plot.style_circles, offset = -smcLen)
+plot(showCircles ? btm : na, 'Swing Low', color.new(bullCss, 50), 5, plot.style_circles, offset = -smcLen)
+
+// =====================================================================
+// ORDER BLOCKS VISUAL
+// =====================================================================
+var box ob_bull_box = na
+var box ob_bear_box = na
+if barstate.islast and showOB
+    box.delete(ob_bull_box)
+    box.delete(ob_bear_box)
+    if not na(ob_bull_bar) and not na(ob_bull_top)
+        ob_bull_box := box.new(ob_bull_bar, ob_bull_top, bar_index + 25, ob_bull_bot, border_color = color.new(bullCss, 20), bgcolor = color.new(bullCss, 88), text = 'OB Bull', text_color = bullCss, text_size = size.tiny)
+    if not na(ob_bear_bar) and not na(ob_bear_top)
+        ob_bear_box := box.new(ob_bear_bar, ob_bear_top, bar_index + 25, ob_bear_bot, border_color = color.new(bearCss, 20), bgcolor = color.new(bearCss, 88), text = 'OB Bear', text_color = bearCss, text_size = size.tiny)
+
+// Este software e codigo sao parte integrante da propriedade intelectual de RicardoGarciaPT e da sua empresa MoreThanMoney

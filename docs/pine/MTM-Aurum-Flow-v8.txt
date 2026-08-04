@@ -1,0 +1,257 @@
+// Este software e código faz parte integrante da propriedade intelectual de RicardoGarciaPT e sua Empresa MoreThanMoney
+// MoreThanMoney - AURUM FLOW v8 — motor reescrito com base na investigação de perps cripto + auditoria Bybit (2026-08).
+//
+// PORQUÊ v8 (research + dados reais):
+//   • A investigação é unânime: em cripto o edge robusto é TIME-SERIES MOMENTUM (trend-following),
+//     normalizado por volatilidade e com filtro de REGIME — não mean-reversion. (~32%/ano vol-normalizado.)
+//   • Trend-following adaptado a cripto = DONCHIAN CHANNELS + sizing por volatilidade.
+//   • Funding é positivo ~92% do tempo → viés estrutural LONG; shorts só com confirmação forte.
+//   • Auditoria Bybit (60d): 78% win mas PF 0.88 → 1 perda gigante apaga tudo → CAP de SL obrigatório.
+//
+// O QUE MUDA vs v6/v7:
+//   1) Entrada = BREAKOUT DONCHIAN (novo máximo/mínimo de N velas) a favor da tendência — momentum, não POC-cross.
+//   2) Regime: EMA200 de timeframe superior (def. 4h) + banda de VOLATILIDADE (ATR% saudável; salta morto e spike).
+//   3) LONG-BIAS: vendas DESLIGADAS por defeito (funding favorece longs) — toggle para reativar.
+//   4) CAP de SL (alinha com o gate do site, 3.5%): a perda por trade fica limitada → arruma o PF<1.
+//   5) Sizing vol-normalizado (risco % constante: SL largo→menos notional) + alertas ANTI-REPAINT (fecho da vela).
+//   6) Payload/alerta INALTERADOS → webhook dedicado dos perps.
+//
+// ALERTA: 1 alerta, "Any alert() function call",
+//   URL: https://www.morethanmoney.pt/api/webhooks/tradingview-perps?secret=mtm-tv-sensei-2026
+
+//@version=6
+indicator("MoreThanMoney - Aurum Flow", overlay=true, max_labels_count=300, max_lines_count=300)
+
+// ───────────────────────── Tendência local (DEMA) ─────────────────────────
+dema(src, length) =>
+    e1 = ta.ema(src, length)
+    e2 = ta.ema(e1, length)
+    2 * e1 - e2
+
+dema15  = dema(close, 15)
+dema50  = dema(close, 50)
+dema238 = dema(close, 238)
+plot(dema15,  color=color.new(color.blue, 0),   title="DEMA 15")
+plot(dema50,  color=color.new(color.green, 0),   title="DEMA 50")
+plot(dema238, color=#ffce2b, title="DEMA 238", linewidth=2)
+uptrend   = dema15 > dema50 and dema50 > dema238
+downtrend = dema15 < dema50 and dema50 < dema238
+
+// ───────────────────────── REGIME: tendência de topo (HTF) ─────────────────────────
+regGroup = "==== REGIME (obrigatório) ===="
+useHTF   = input.bool(true,  "Exigir tendência de topo (EMA200 HTF)", group=regGroup)
+htfTF    = input.timeframe("240", "Timeframe de topo (def. 4h)", group=regGroup)
+htfEmaLn = input.int(200, "EMA do timeframe de topo", minval=20, group=regGroup)
+useStack = input.bool(true,  "Exigir stack DEMA local a favor", group=regGroup, tooltip="COMPRA só com DEMA15>50>238; VENDA só com <.")
+htfEma   = request.security(syminfo.tickerid, htfTF, ta.ema(close, htfEmaLn))
+htfUp    = close > htfEma
+htfDown  = close < htfEma
+plot(htfEma, color=color.new(color.orange, 0), title="EMA200 HTF", linewidth=2)
+
+// ───────────────────────── Banda de VOLATILIDADE (regime) ─────────────────────────
+volGroup  = "==== VOLATILIDADE ===="
+atrPeriod = input.int(14, "Período ATR", minval=1, group=volGroup)
+minAtrPct = input.float(0.15, "ATR% mínimo (salta o morto)", step=0.05, group=volGroup)
+maxAtrPct = input.float(4.0,  "ATR% máximo (salta o spike)", step=0.5, group=volGroup)
+atrValue  = ta.atr(atrPeriod)
+atrPct    = close != 0 ? atrValue / close * 100 : 0.0
+volOk     = atrPct >= minAtrPct and atrPct <= maxAtrPct
+
+// ───────────────────────── Confirmação RSI (opcional) ─────────────────────────
+useRSI    = input.bool(true, "Confirmar com RSI", group=volGroup)
+rsiLen    = input.int(14, "Período RSI", minval=2, group=volGroup)
+rsiVal    = ta.rsi(close, rsiLen)
+
+// ───────────────────────── Lados (LONG-BIAS por funding) ─────────────────────────
+sideGroup = "==== LADOS (long-bias) ===="
+allowBuy  = input.bool(true,  "Permitir COMPRAS", group=sideGroup)
+allowSell = input.bool(false, "Permitir VENDAS (funding favorece longs)", group=sideGroup, tooltip="Funding +92% do tempo positivo → longs pagos. Liga só se validares um edge de venda.")
+
+// ───────────────────────── ENTRADA: Donchian breakout (momentum) ─────────────────────────
+dcGroup = "==== DONCHIAN (breakout) ===="
+dcLen   = input.int(20, "Donchian — período do canal", minval=5, group=dcGroup, tooltip="Rompe o máx/mín das últimas N velas = novo momentum. 20 (rápido) a 55 (Turtle).")
+hh = ta.highest(high, dcLen)[1]
+ll = ta.lowest(low, dcLen)[1]
+plot(hh, color=color.new(color.teal, 40), title="Donchian sup")
+plot(ll, color=color.new(color.maroon, 40), title="Donchian inf")
+
+rawBuy  = ta.crossover(close, hh)
+rawSell = ta.crossunder(close, ll)
+buyOk   = (not useHTF or htfUp)   and (not useStack or uptrend)   and (not useRSI or rsiVal >= 50) and volOk
+sellOk  = (not useHTF or htfDown) and (not useStack or downtrend) and (not useRSI or rsiVal <= 50) and volOk
+isBuySignal  = allowBuy  and rawBuy  and buyOk
+isSellSignal = allowSell and rawSell and sellOk
+
+plotshape(isBuySignal,  style=shape.labelup,   location=location.belowbar, color=color.green, text="B", size=size.tiny, title="Compra")
+plotshape(isSellSignal, style=shape.labeldown, location=location.abovebar, color=color.red,   text="S", size=size.tiny, title="Venda")
+
+// ───────────────────────── Risco / RR (ATR) + CAP de SL ─────────────────────────
+rrGroup = "==== RISK-REWARD (ATR) ===="
+atrMultSL = input.float(1.5, "SL = ATR ×", step=0.1, group=rrGroup)
+slMaxPct  = input.float(3.5, "CAP de SL (% máx do preço)", step=0.1, group=rrGroup, tooltip="Alinha com o gate do site: nenhuma trade arrisca mais que isto → arruma o PF<1.")
+tp1RR = input.float(1.5, "TP1 (1:X)", minval=0.1, step=0.1, group=rrGroup)
+tp2RR = input.float(3.0, "TP2 (1:X)", minval=0.1, step=0.1, group=rrGroup)
+tp3RR = input.float(6.0, "TP3 (1:X)", minval=0.1, step=0.1, group=rrGroup)
+
+// ───────────────────────── Gestão / conta (sizing vol-normalizado) ─────────────────────────
+accGroup = "==== GESTÃO / CONTA ===="
+accountSize = input.float(1000.0, "Tamanho da conta (USD)", minval=1, group=accGroup)
+riskPct     = input.float(1.0, "Risco por trade (%)", minval=0.1, step=0.1, group=accGroup)
+takerFeePct = input.float(0.055, "Taxa taker (%)", step=0.005, group=accGroup)
+maxLev      = input.float(25.0, "Alavancagem máxima", minval=1, group=accGroup)
+showPanel   = input.bool(true, "Mostrar painel", group=accGroup)
+
+// ───────────────────────── Alertas ─────────────────────────
+alGroup = "====== ALERTAS ======"
+alertsOn = input.bool(true, "Emitir alertas p/ o site MTM", group=alGroup)
+intrabarAlerts = input.bool(false, "Alerta INTRA-VELA (repaint)", group=alGroup, tooltip="OFF (recomendado): só no FECHO da vela — sem repaint. ON: dispara já mas pode repintar.")
+
+// ───────────────────────── Níveis estáticos (congelados na barra do sinal) ─────────────────────────
+round_price(x) =>
+    xx = int(x / syminfo.mintick)
+    xx * syminfo.mintick
+
+var string sigDir = na
+if isBuySignal
+    sigDir := "BUY"
+else if isSellSignal
+    sigDir := "SELL"
+
+var float entry1 = na
+var float sl = na
+var float tp1 = na
+var float tp2 = na
+var float tp3 = na
+var float slPct = na
+var float tp1Pct = na
+var float tp2Pct = na
+var float tp3Pct = na
+var float posNotional = na
+var float levNeeded = na
+var float marginUsed = na
+var float riskAmt = na
+var float feeCost = na
+var int   et = 0
+
+if isBuySignal or isSellSignal
+    entry1 := round_price(close)
+    et := time
+    // distância de SL por ATR, CAPADA ao máximo % do preço
+    dAtr = atrValue * atrMultSL
+    dCap = entry1 * slMaxPct / 100.0
+    d = math.min(dAtr, dCap)
+    if isBuySignal
+        sl  := round_price(entry1 - d)
+        tp1 := round_price(entry1 + d * tp1RR)
+        tp2 := round_price(entry1 + d * tp2RR)
+        tp3 := round_price(entry1 + d * tp3RR)
+    else
+        sl  := round_price(entry1 + d)
+        tp1 := round_price(entry1 - d * tp1RR)
+        tp2 := round_price(entry1 - d * tp2RR)
+        tp3 := round_price(entry1 - d * tp3RR)
+    slPct  := entry1 != 0 ? math.abs(entry1 - sl)  / entry1 * 100 : na
+    tp1Pct := entry1 != 0 ? math.abs(tp1 - entry1) / entry1 * 100 : na
+    tp2Pct := entry1 != 0 ? math.abs(tp2 - entry1) / entry1 * 100 : na
+    tp3Pct := entry1 != 0 ? math.abs(tp3 - entry1) / entry1 * 100 : na
+    // sizing VOL-NORMALIZADO: risco em USD fixo; notional = risco / (SL%) → SL largo = menos size.
+    riskAmt := accountSize * riskPct / 100
+    posNotional := slPct > 0 ? riskAmt / (slPct / 100) : na
+    levNeeded := (not na(posNotional) and accountSize > 0) ? math.max(1.0, posNotional / accountSize) : na
+    levNeeded := not na(levNeeded) ? math.min(levNeeded, maxLev) : na
+    marginUsed := (not na(posNotional) and not na(levNeeded) and levNeeded > 0) ? posNotional / levNeeded : na
+    feeCost := not na(posNotional) ? posNotional * takerFeePct / 100 * 2 : na
+
+// ───────────────────────── Linhas + labels ─────────────────────────
+dt = time - time[1]
+var line lE = na
+var line lS = na
+var line l1 = na
+var line l2 = na
+var line l3 = na
+var label bE = na
+var label bS = na
+var label b1 = na
+var label b2 = na
+var label b3 = na
+
+if barstate.islast and not na(entry1)
+    line.delete(lE)
+    line.delete(lS)
+    line.delete(l1)
+    line.delete(l2)
+    line.delete(l3)
+    label.delete(bE)
+    label.delete(bS)
+    label.delete(b1)
+    label.delete(b2)
+    label.delete(b3)
+    xR = time + dt * 4
+    lE := line.new(et, entry1, xR, entry1, color=color.blue, xloc=xloc.bar_time, width=2)
+    lS := line.new(et, sl,     xR, sl,     color=color.red,  xloc=xloc.bar_time, width=1)
+    l1 := line.new(et, tp1,    xR, tp1,    color=color.green, xloc=xloc.bar_time)
+    l2 := line.new(et, tp2,    xR, tp2,    color=color.green, xloc=xloc.bar_time)
+    l3 := line.new(et, tp3,    xR, tp3,    color=color.green, xloc=xloc.bar_time)
+    bE := label.new(xR, entry1, "ENTRY " + str.tostring(entry1, format.mintick), color=color.blue, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+    bS := label.new(xR, sl,  "SL " + str.tostring(sl, format.mintick) + " (-" + str.tostring(slPct, "#.##") + "%)", color=color.red, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+    b1 := label.new(xR, tp1, "TP1 " + str.tostring(tp1, format.mintick) + " (+" + str.tostring(tp1Pct, "#.##") + "% | 1:" + str.tostring(tp1RR) + ")", color=color.green, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+    b2 := label.new(xR, tp2, "TP2 " + str.tostring(tp2, format.mintick) + " (+" + str.tostring(tp2Pct, "#.##") + "% | 1:" + str.tostring(tp2RR) + ")", color=color.green, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+    b3 := label.new(xR, tp3, "TP3 " + str.tostring(tp3, format.mintick) + " (+" + str.tostring(tp3Pct, "#.##") + "% | 1:" + str.tostring(tp3RR) + ")", color=color.green, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+
+// ───────────────────────── Painel ─────────────────────────
+var table pnl = table.new(position.bottom_right, 2, 7, border_width=1, frame_color=color.gray, frame_width=1)
+if showPanel and barstate.islast and not na(entry1)
+    bg = color.new(color.black, 15)
+    tc = color.white
+    table.cell(pnl, 0, 0, "AURUM v8 · " + (na(sigDir) ? "—" : sigDir), bgcolor=color.new(color.blue, 0), text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 0, syminfo.ticker, bgcolor=color.new(color.blue, 0), text_color=tc, text_size=size.small)
+    table.cell(pnl, 0, 1, "ATR%", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 1, str.tostring(atrPct, "#.##") + "%", bgcolor=bg, text_color=(volOk ? color.lime : color.red), text_size=size.small)
+    table.cell(pnl, 0, 2, "SL dist.", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 2, str.tostring(slPct, "#.##") + "%", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 0, 3, "Notional", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 3, "$" + str.tostring(posNotional, "#.##"), bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 0, 4, "Alav. útil", bgcolor=bg, text_color=color.yellow, text_size=size.small)
+    table.cell(pnl, 1, 4, str.tostring(levNeeded, "#.#") + "x", bgcolor=bg, text_color=color.yellow, text_size=size.small)
+    table.cell(pnl, 0, 5, "Margem", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 5, "$" + str.tostring(marginUsed, "#.##"), bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 0, 6, "Custo fees", bgcolor=bg, text_color=tc, text_size=size.small)
+    table.cell(pnl, 1, 6, "$" + str.tostring(feeCost, "#.##"), bgcolor=bg, text_color=tc, text_size=size.small)
+
+// ───────────────────────── Payload → webhook dedicado dos perps ─────────────────────────
+sc_conf = '{"HTF Alta":' + (htfUp ? 'true' : 'false') + ',"HTF Baixa":' + (htfDown ? 'true' : 'false') + ',"Stack Alta":' + (uptrend ? 'true' : 'false') + ',"Stack Baixa":' + (downtrend ? 'true' : 'false') + ',"RSI":' + str.tostring(math.round(rsiVal)) + ',"ATR%":' + str.tostring(atrPct, "#.###") + ',"Donchian":' + str.tostring(dcLen) + '}'
+
+f_json_af(_dir) =>
+    m = '{"strategy":"MTM Aurum Flow v8","alert_name":"MTM Perps Aurum Flow","ticker":"' + syminfo.ticker + '"'
+    m := m + ',"exchange":"' + syminfo.prefix + '"'
+    m := m + ',"timeframe":"' + timeframe.period + '"'
+    m := m + ',"action":"' + _dir + '"'
+    m := m + ',"order_type":"MARKET"'
+    m := m + ',"entry":' + str.tostring(entry1)
+    m := m + ',"sl":' + str.tostring(sl)
+    m := m + ',"tp1":' + str.tostring(tp1)
+    m := m + ',"tp2":' + str.tostring(tp2)
+    m := m + ',"tp3":' + str.tostring(tp3)
+    m := m + ',"sl_pct":' + str.tostring(slPct)
+    m := m + ',"tp1_pct":' + str.tostring(tp1Pct)
+    m := m + ',"tp2_pct":' + str.tostring(tp2Pct)
+    m := m + ',"tp3_pct":' + str.tostring(tp3Pct)
+    m := m + ',"account":' + str.tostring(accountSize)
+    m := m + ',"risk_pct":' + str.tostring(riskPct)
+    m := m + ',"leverage":' + str.tostring(levNeeded)
+    m := m + ',"notional":' + str.tostring(posNotional)
+    m := m + ',"margin":' + str.tostring(marginUsed)
+    m := m + ',"fee_cost":' + str.tostring(feeCost)
+    m := m + ',"confirmations":' + sc_conf + '}'
+    m
+
+valid_af = not na(entry1) and not na(sl) and not na(tp1)
+alertFreq = intrabarAlerts ? alert.freq_once_per_bar : alert.freq_once_per_bar_close
+
+if alertsOn and isBuySignal and valid_af
+    alert(f_json_af("buy"), alertFreq)
+if alertsOn and isSellSignal and valid_af
+    alert(f_json_af("sell"), alertFreq)
+
+alertcondition(isBuySignal,  "Aurum v8 COMPRA", "MTM Perps Aurum Flow BUY")
+alertcondition(isSellSignal, "Aurum v8 VENDA",  "MTM Perps Aurum Flow SELL")

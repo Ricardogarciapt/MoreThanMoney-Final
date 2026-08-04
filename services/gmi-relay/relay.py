@@ -84,20 +84,26 @@ def load_state():
 def save_state(s):
     json.dump(s, open(STATE_FILE, "w"))
 
+RELAY_POST_URL = os.environ.get("RELAY_POST_URL", "https://www.morethanmoney.pt/api/telegram/relay-post")
+RELAY_SECRET = os.environ.get("RELAY_SECRET", "")
+
 def bot_send(text: str):
+    """Publica via o ENDPOINT do site (que tem o token válido do bot na Vercel).
+    O relay nunca precisa do token do bot — só do CRON_SECRET."""
     if DRY_RUN:
-        print("──── PUBLICARIA NA PREMIUM ────\n" + text + "\n")
+        print("──── PUBLICARIA ────\n" + text + "\n")
         return True
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    data = urllib.parse.urlencode({
-        "chat_id": DEST_CHAT, "text": text, "disable_web_page_preview": "true",
-    }).encode()
+    data = json.dumps({"chat_id": DEST_CHAT, "text": text}).encode()
+    req = urllib.request.Request(
+        RELAY_POST_URL, data=data,
+        headers={"Content-Type": "application/json", "authorization": f"Bearer {RELAY_SECRET}"},
+    )
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, data=data), timeout=20) as r:
+        with urllib.request.urlopen(req, timeout=20) as r:
             j = json.load(r)
             return bool(j.get("ok"))
     except Exception as e:
-        print("erro sendMessage:", e); return False
+        print("erro relay-post:", e); return False
 
 async def run_once(client, state):
     cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=LOOKBACK_H)
