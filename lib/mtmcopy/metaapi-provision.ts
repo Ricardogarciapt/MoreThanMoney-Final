@@ -4,8 +4,9 @@ import {
   subscribeToStrategies,
   unsubscribeFromStrategy,
   upsertProviderStrategy,
-  DEFAULT_COPYFACTORY_SYMBOL_MAPPINGS,
+  buildSuffixSymbolMappings,
 } from './copyfactory'
+import { buildSubscriberSymbolMapping } from './copyfactory-symbol-map'
 import type { MtmcopyCopyMethod } from './copy-methods'
 import type { MtmcopySenderMode } from './types'
 
@@ -27,6 +28,8 @@ export interface ProvisionRequest {
   copySl?: boolean
   copyTp?: boolean
   skipPendingOrders?: boolean
+  /** Sufixo dos símbolos no broker do seguidor (ex.: '.s' PU Prime, '-STD' VT Markets). */
+  symbolSuffix?: string | null
   /** Grupos / estratégia MTM: só MetaAPI directo, sem subscrição CopyFactory */
   copyMethod?: MtmcopyCopyMethod
 }
@@ -497,7 +500,16 @@ export async function provisionSlaveAccount(req: ProvisionRequest): Promise<Prov
       // Espelhar ordens PENDENTES (limit/stop) também no método 'strategy' — decisão 2026-08-03:
       // uma buy/sell limit colocada na mestre aparece já como pendente nos seguidores.
       skipPendingOrders: req.skipPendingOrders ?? false,
-      symbolMapping: req.copyMethod === 'strategy' ? DEFAULT_COPYFACTORY_SYMBOL_MAPPINGS : undefined,
+      // Mapeamento de símbolos do seguidor:
+      //  1) sufixo manual (ex.: '.s' PU Prime, '-STD' VT Markets) → gera todos os símbolos base;
+      //  2) senão, AUTO-DETEÇÃO pelos símbolos reais do broker (resolve XAUUSD→XAUUSD.s/-STD/…);
+      //  3) se a conta ainda não expõe símbolos (acabou de ligar) devolve [] e o re-sync corrige depois.
+      // (O default fixo XAUUSD-STD partia PU Prime, que é o broker de registo por defeito.)
+      symbolMapping: req.symbolSuffix
+        ? buildSuffixSymbolMappings(req.symbolSuffix)
+        : req.copyMethod === 'strategy'
+          ? await buildSubscriberSymbolMapping(accountId)
+          : undefined,
     })
 
     if (!sub.ok) {

@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
     exit_pct_tp3,
     copyfactory_strategy_pick,
     purpose,
+    symbol_suffix,
   } = body
 
   const login = String(mt5_login ?? '').trim()
@@ -249,6 +250,8 @@ export async function POST(request: NextRequest) {
       copyMethod === 'strategy' || senderMode === 'master_account' ? 'connected' : 'pending',
     // Conta independente do T2T (não interfere com a conta MTMcopy)
     purpose: purpose === 'tap_to_trade' ? 'tap_to_trade' : 'mtmcopy',
+    // Sufixo do broker do seguidor (ex.: '.s' PU Prime, '-STD' VT Markets) → symbolMapping CopyFactory
+    symbol_suffix: String(symbol_suffix ?? '').trim() || null,
   }
 
   if (accountRole === 'slave') {

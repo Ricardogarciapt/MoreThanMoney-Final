@@ -108,6 +108,7 @@ function loadFormFromConnection(conn: MTMcopierConnection | null) {
     auditLabel: conn?.audit_label ?? "",
     telegramChannel: conn?.telegram_channel ?? "",
     mt5Server: conn?.mt5_server ?? "",
+    symbolSuffix: (conn as { symbol_suffix?: string | null } | null)?.symbol_suffix ?? "",
     lotMode: (conn?.lot_mode ?? "fixed") as MTMcopierConnection["lot_mode"],
     lotValue: String(conn?.lot_value ?? "0.01"),
     maxRisk: String(conn?.max_risk_percent ?? "1"),
@@ -205,6 +206,7 @@ export default function SetupModal({
   const [mt5Login, setMt5Login] = useState("")
   const [mt5Password, setMt5Password] = useState("")
   const [mt5Server, setMt5Server] = useState("")
+  const [symbolSuffix, setSymbolSuffix] = useState("")
   const [lotMode, setLotMode] = useState<MTMcopierConnection["lot_mode"]>("fixed")
   const [lotValue, setLotValue] = useState("0.01")
   const [maxRisk, setMaxRisk] = useState("1")
@@ -268,6 +270,7 @@ export default function SetupModal({
     setAuditLabel(f.auditLabel)
     setTelegramChannel(f.telegramChannel)
     setMt5Server(f.mt5Server)
+    setSymbolSuffix(f.symbolSuffix)
     setLotMode(f.lotMode)
     setLotValue(f.lotValue)
     setMaxRisk(f.maxRisk)
@@ -373,6 +376,7 @@ export default function SetupModal({
       account_label: accountLabel.trim() || null,
       is_audited: isAudited,
       audit_label: isAudited ? auditLabel.trim() || null : null,
+      symbol_suffix: symbolSuffix.trim() || null,
     }
 
     if (!showSlaveSettings) {
@@ -993,6 +997,23 @@ export default function SetupModal({
                 onServerChange={setMt5Server}
                 disabled={saving}
               />
+              <div className="space-y-1">
+                <label className="text-sm text-gray-300">
+                  Sufixo dos símbolos <span className="text-gray-500">(opcional)</span>
+                </label>
+                <Input
+                  value={symbolSuffix}
+                  onChange={(e) => setSymbolSuffix(e.target.value)}
+                  placeholder="ex.: .s (PU Prime) · -STD (VT Markets) · vazio"
+                  className="bg-gray-800 border-gray-700 text-white"
+                  disabled={saving}
+                  autoComplete="off"
+                />
+                <p className="text-xs text-gray-500">
+                  Sufixo do teu broker nos símbolos (ex.: no PU Prime o ouro é XAUUSD<strong>.s</strong>).
+                  Usado para mapear as cópias — deixa vazio se os símbolos forem iguais aos nossos.
+                </p>
+              </div>
             </>
           )}
 

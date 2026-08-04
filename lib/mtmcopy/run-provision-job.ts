@@ -138,6 +138,7 @@ export async function runProvisionJob(input: RunProvisionJobInput): Promise<MTMc
             copySl: copySl ?? connection.copy_sl ?? true,
             copyTp: copyTp ?? connection.copy_tp ?? true,
             skipPendingOrders: copyMethod === 'master_slave' ? false : undefined,
+            symbolSuffix: (connection as { symbol_suffix?: string | null }).symbol_suffix ?? undefined,
           })
 
   const patch: Record<string, unknown> = {

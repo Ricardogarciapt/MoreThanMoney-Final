@@ -17,6 +17,33 @@ export const DEFAULT_COPYFACTORY_SYMBOL_MAPPINGS: CopyFactorySymbolMapping[] = [
   { from: 'XAUUSD', to: 'XAUUSD-STD' },
 ]
 
+/**
+ * Símbolos base que as estratégias MTM negoceiam (ouro + Sensei multi-ativo + índices/cripto).
+ * Usados para gerar o mapeamento por SUFIXO do broker do seguidor (ex. PU Prime '.s',
+ * VT Markets '-STD'). O símbolo do provider (ex. XAUUSD) é remapeado para XAUUSD<sufixo>.
+ */
+export const MTM_BASE_SYMBOLS: string[] = [
+  'XAUUSD', 'XAGUSD',
+  'EURUSD', 'GBPUSD', 'USDJPY', 'USDCHF', 'USDCAD', 'AUDUSD', 'NZDUSD',
+  'EURJPY', 'GBPJPY', 'EURGBP', 'EURCHF', 'EURCAD', 'EURNZD', 'EURAUD',
+  'GBPCHF', 'GBPCAD', 'GBPAUD', 'GBPNZD',
+  'AUDJPY', 'AUDNZD', 'AUDCAD', 'AUDCHF',
+  'NZDJPY', 'NZDCAD', 'NZDCHF', 'CADJPY', 'CADCHF', 'CHFJPY',
+  'NAS100', 'US30', 'US500', 'GER40', 'UK100',
+  'BTCUSD', 'ETHUSD', 'USOIL',
+]
+
+/**
+ * Constrói o mapeamento CopyFactory a partir do SUFIXO do broker do seguidor.
+ * Ex.: sufixo '.s' → [{from:'XAUUSD', to:'XAUUSD.s'}, ...]. Sufixo vazio → sem mapeamento
+ * (o broker usa os símbolos base tal como o provider).
+ */
+export function buildSuffixSymbolMappings(suffix?: string | null): CopyFactorySymbolMapping[] {
+  const s = (suffix ?? '').trim()
+  if (!s) return []
+  return MTM_BASE_SYMBOLS.map((base) => ({ from: base, to: `${base}${s}` }))
+}
+
 export interface SubscriberOptions {
   accountId: string
   name: string

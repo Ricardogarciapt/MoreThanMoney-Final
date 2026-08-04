@@ -141,6 +141,7 @@ export async function POST(request: NextRequest) {
     prop_firm_type,
     apply_prop_firm_preset,
     copy_as_manual,
+    symbol_suffix,
   } = body
 
   if (lot_mode && !['fixed', 'risk_percent', 'multiplier'].includes(lot_mode)) {
@@ -197,6 +198,11 @@ export async function POST(request: NextRequest) {
       prop_firm_type === 'ftmo' || prop_firm_type === 'fundednext' ? prop_firm_type : null
   }
   if (typeof copy_as_manual === 'boolean') payload.copy_as_manual = copy_as_manual
+  if (symbol_suffix !== undefined) {
+    // sufixo do broker do seguidor (ex.: '.s' PU Prime, '-STD' VT Markets) → symbolMapping CopyFactory
+    const suf = String(symbol_suffix ?? '').trim()
+    payload.symbol_suffix = suf || null
+  }
 
   const effectiveMethod =
     copy_method === 'telegram_group' || copy_method === 'strategy' || copy_method === 'master_slave'
