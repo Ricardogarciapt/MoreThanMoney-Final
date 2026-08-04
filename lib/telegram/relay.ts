@@ -21,6 +21,8 @@ export type RelayConfig = {
   source_chat_id: string
   target_chat_id: string
   signature: string
+  /** Cabeçalho de marca do parceiro (ex.: "🟡 Wifi Money") prefixado a cada mensagem. */
+  header: string
   bot_token_env: string
   relay_photos: boolean
   skip_new_position: boolean
@@ -30,10 +32,17 @@ const DEFAULTS: RelayConfig = {
   enabled: false,
   source_chat_id: "-1002424441843",
   target_chat_id: "-1004343748070",
-  signature: "Alcy",
-  bot_token_env: "TELEGRAM_AIBOT_TOKEN",
+  signature: "Gold Did",
+  header: "🟡 Wifi Money",
+  bot_token_env: "TELEGRAM_WIFIMONEY_TOKEN",
   relay_photos: true,
   skip_new_position: false,
+}
+
+/** Aplica cabeçalho de marca + sanitização + assinatura. */
+function brandForPartner(text: string | null | undefined, cfg: RelayConfig): string {
+  const body = sanitizeForAlcy(text, cfg.signature)
+  return cfg.header ? `${cfg.header}\n\n${body}` : body
 }
 
 export async function getRelayConfig(
@@ -149,6 +158,55 @@ async function sendPhotoVia(
 }
 
 /**
+ * Relay de TEXTO enviado PELO SITE (bot-posted) para o canal do parceiro. O webhook NÃO
+ * entrega ao bot as suas próprias mensagens, por isso este caminho cobre tudo o que o
+ * MoreThanMoney_bot publica na Premium (relay GMI, sinais Premium…). Best-effort.
+ * `sourceChatId` opcional: se vier, só relaya quando for o canal-fonte configurado.
+ */
+export async function relayTextToWifi(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  text: string,
+  sourceMessageId: number,
+  sourceChatId?: string,
+): Promise<{ ok: boolean; skipped?: string; error?: string; messageId?: number }> {
+  try {
+    const cfg = await getRelayConfig(supabase)
+    if (!cfg.enabled) return { ok: false, skipped: "disabled" }
+    if (sourceChatId && !chatMatches(sourceChatId, cfg.source_chat_id)) return { ok: false, skipped: "not_source" }
+    if (!text || !text.trim()) return { ok: false, skipped: "empty" }
+    if (cfg.skip_new_position && text.trim().toUpperCase() === "NEW POSITION") return { ok: false, skipped: "new_position" }
+
+    // Dedup por (source_chat_id, source_message_id, target).
+    const { data: ins } = await supabase
+      .from("telegram_relay_log")
+      .insert({
+        source_chat_id: cfg.source_chat_id,
+        source_message_id: sourceMessageId,
+        target_chat_id: cfg.target_chat_id,
+        status: "pending",
+      })
+      .select("id")
+      .maybeSingle()
+    if (!ins) return { ok: false, skipped: "dup" }
+
+    const relayToken = (process.env[cfg.bot_token_env]?.trim() || "").trim()
+    if (!relayToken) {
+      await supabase.from("telegram_relay_log").update({ status: "error", error: `token ${cfg.bot_token_env} em falta` }).eq("id", ins.id)
+      return { ok: false, error: `token ${cfg.bot_token_env} em falta` }
+    }
+    const clean = brandForPartner(text, cfg)
+    const result = await sendMessageVia(relayToken, cfg.target_chat_id, clean)
+    await supabase
+      .from("telegram_relay_log")
+      .update({ status: result.ok ? "sent" : "error", target_message_id: result.messageId ?? null, error: result.ok ? null : result.error ?? "falha" })
+      .eq("id", ins.id)
+    return { ok: result.ok, messageId: result.messageId, error: result.error }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+/**
  * Republica uma mensagem de canal (channel_post) do MTMgold no canal do parceiro,
  * com a marca escondida. Best-effort: nunca lança (não bloqueia o webhook).
  */
@@ -210,7 +268,7 @@ export async function relayPremiumMessage(
       return
     }
 
-    const cleanCaption = sanitizeForAlcy(text, cfg.signature)
+    const cleanCaption = brandForPartner(text, cfg)
 
     let result: { ok: boolean; messageId?: number; error?: string }
     if (photo && cfg.relay_photos) {

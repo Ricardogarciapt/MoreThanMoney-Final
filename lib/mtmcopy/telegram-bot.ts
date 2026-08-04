@@ -146,7 +146,19 @@ export async function sendTelegramChannelMessage(
   if (!data.ok) {
     return { ok: false, error: data.description ?? 'Falha ao enviar mensagem' }
   }
-  return { ok: true, messageId: data.result?.message_id }
+  const messageId = data.result?.message_id
+  // Relay best-effort para o parceiro (Wifi Money): cobre as mensagens que o próprio bot
+  // publica na Premium (o webhook não as entrega). Só dispara se o chat for o canal-fonte.
+  try {
+    const [{ relayTextToWifi }, { getSupabaseAdmin }] = await Promise.all([
+      import('@/lib/telegram/relay'),
+      import('@/lib/supabase-admin-client'),
+    ])
+    await relayTextToWifi(getSupabaseAdmin(), text, messageId ?? Date.now(), chatId)
+  } catch {
+    /* nunca bloquear o envio principal */
+  }
+  return { ok: true, messageId }
 }
 
 export async function getMtmcopyWebhookInfo(): Promise<{
