@@ -42,12 +42,15 @@ KEEP = [
     re.compile(r"new\s+signal", re.I),
     re.compile(r"move\s+sl|breakeven|trail\s+sl", re.I),
 ]
-# Linhas/frases da fonte a REMOVER (branding/promo)
+# Linhas/frases da FONTE a REMOVER (só branding/promo deles). O conselho de risk management
+# ("use suitable lot sizes / money management is key") FICA — é útil e alinhado com o guia.
 STRIP_LINES = re.compile(
-    r"(master\s+trades|master\s+circle|vip\b|by\s+cr|join\s+|subscribe|t\.me/|@\w+|"
-    r"use suitable lot sizes|money management is|consistency discipline|another big day)",
+    r"(master\s+trades|master\s+circle|master\s+circle|\bvip\b|by\s+cr|join\s+|subscribe|"
+    r"t\.me/|@\w+|another big day|see you tomorrow|great session)",
     re.I,
 )
+# Cabeçalho de marca MTM (comportamento como o canal Premium existente).
+MTM_HEADER = "🏦 MTM Premium"
 
 def sanitize(text: str) -> str:
     lines = []
@@ -57,6 +60,12 @@ def sanitize(text: str) -> str:
         lines.append(ln.rstrip())
     out = "\n".join([l for l in lines if l.strip()])
     return out.strip()
+
+def brand(text: str) -> str:
+    """Aplica o branding MTM: cabeçalho no topo (evita duplicar se já lá estiver)."""
+    if text.lower().startswith(MTM_HEADER.lower()):
+        return text
+    return f"{MTM_HEADER}\n\n{text}"
 
 def should_forward(text: str) -> bool:
     if not text or len(text.strip()) < 4:
@@ -107,7 +116,7 @@ async def run_once(client, state):
             state["last_id"] = m.id
         clean = sanitize(m.message)
         if should_forward(m.message) and clean:
-            if bot_send(clean):
+            if bot_send(brand(clean)):
                 sent += 1
                 await asyncio.sleep(1)  # respeitar rate limit
     save_state(state)
