@@ -494,7 +494,9 @@ export async function provisionSlaveAccount(req: ProvisionRequest): Promise<Prov
       symbolWhitelist: req.symbolWhitelist,
       copySl: req.copySl,
       copyTp: req.copyTp,
-      skipPendingOrders: req.copyMethod === 'strategy' ? true : (req.skipPendingOrders ?? false),
+      // Espelhar ordens PENDENTES (limit/stop) também no método 'strategy' — decisão 2026-08-03:
+      // uma buy/sell limit colocada na mestre aparece já como pendente nos seguidores.
+      skipPendingOrders: req.skipPendingOrders ?? false,
       symbolMapping: req.copyMethod === 'strategy' ? DEFAULT_COPYFACTORY_SYMBOL_MAPPINGS : undefined,
     })
 
