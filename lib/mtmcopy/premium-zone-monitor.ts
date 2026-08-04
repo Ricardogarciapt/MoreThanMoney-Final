@@ -35,6 +35,8 @@ type PendingRow = {
   touched_zone: boolean
   last_price: number | null
   expires_at: string
+  /** null = Premium normal · 'golddid' = perfil Gold Did (1 posição, BE @ +5.0, fecho no TP2). */
+  profile?: string | null
 }
 
 /**
@@ -132,7 +134,10 @@ export async function firePendingEntry(
 
   let legs: OrderRequest[]
   let runnerLot = lot // lote a GERIR (BE/trailing); em híbrido é só o runner
-  if (exec.mode === "hybrid" && tp1 != null && lot > 0) {
+  if (row.profile === "golddid") {
+    // GOLD DID: 1 posição só, sem TP no broker (o BE @ +5.0 e o fecho no TP2 são do monitor).
+    legs = [mkReq(lot, null, "")]
+  } else if (exec.mode === "hybrid" && tp1 != null && lot > 0) {
     // DIETA p/ contas pequenas: <$500 não têm margem para 2 posições → 1 perna só (fecha no TP1).
     let balance: number | null = null
     try {
@@ -177,9 +182,11 @@ export async function firePendingEntry(
     // Híbrido: se o scalp abriu mas o runner falhou (ou vice-versa) → segue com o que abriu.
     const legNote = legs.length > 1 ? ` [scalp:${legs[0].volume} runner:${legs[1].volume} · ${results[1]?.success ? "ok" : "runner-falhou"}]` : ""
     const tps = Array.isArray(row.tp) ? row.tp : []
+    // Símbolo REAL no broker (ex.: XAUUSD→XAUUSD.s no PU Prime do Alcy) → o monitor encontra a posição.
+    const activeSymbol = (first as { brokerSymbol?: string }).brokerSymbol || row.symbol
     await supabase.from("mtmcopy_premium_active").insert({
       account_id: row.account_id,
-      symbol: row.symbol,
+      symbol: activeSymbol,
       direction: row.direction,
       entry: price,
       sl: row.sl ?? null,
@@ -195,6 +202,7 @@ export async function firePendingEntry(
       exits_done: 0,
       trailing_started: false,
       status: "open",
+      profile: row.profile ?? null,
     })
     await supabase
       .from("mtmcopy_premium_pending")

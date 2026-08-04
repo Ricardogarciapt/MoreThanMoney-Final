@@ -38,7 +38,12 @@ interface ActiveRow {
   exits_done: number
   trailing_started: boolean
   early_trail_started: boolean
+  /** null = Premium normal · 'golddid' = perfil Gold Did (BE @ +5.0 sem trailing, fecho no TP2). */
+  profile: string | null
 }
+
+/** Gold Did: BE quando o preço avança este tanto (guia GMI: 50 pips = +5.0 no ouro, 1 pip = 0.1). */
+const GOLDDID_BE_PRICE_MOVE = 5.0
 
 /** Tamanho de pip por símbolo (ouro 0.1, JPY 0.01, resto 0.0001). */
 function pipSizeFor(symbol: string): number {
@@ -97,7 +102,7 @@ export async function runPremiumPriceMonitor(): Promise<{
         (p) =>
           p.symbol?.toUpperCase() === row.symbol.toUpperCase() &&
           positionDir(p) === row.direction &&
-          /prem/i.test(p.comment ?? ''),
+          (/prem/i.test(p.comment ?? '') || /gold\s*did/i.test(p.comment ?? '')),
       )
       if (!pos) {
         // Posição já não existe (fechada por trailing/SL/TP) → encerra o registo.
@@ -110,6 +115,45 @@ export async function runPremiumPriceMonitor(): Promise<{
 
       const price = pos.currentPrice
       if (price == null || !Number.isFinite(price)) continue
+
+      // ── PERFIL GOLD DID ────────────────────────────────────────────────────────
+      // Gestão SIMPLES da conta do Alcy: BE aos +5.0 (50 pips, sem trailing) e fecha no TP2.
+      // (usa trailing_started como marcador de "BE feito" — Gold Did não faz trailing.)
+      if (row.profile === 'golddid') {
+        if (row.entry && row.entry > 0 && !row.trailing_started) {
+          const move = row.direction === 'buy' ? price - row.entry : row.entry - price
+          if (move >= GOLDDID_BE_PRICE_MOVE) {
+            try {
+              await modifyPositionSlTp(accountId, pos.id, row.entry, undefined, undefined, row.symbol)
+              await admin
+                .from('mtmcopy_premium_active')
+                .update({ trailing_started: true, updated_at: new Date().toISOString() })
+                .eq('id', row.id)
+              actions++
+              detail.push(`${row.symbol}: Gold Did → BE a +${GOLDDID_BE_PRICE_MOVE}`)
+            } catch {
+              detail.push(`${row.symbol}: Gold Did BE falhou`)
+            }
+          }
+        }
+        const tp2 = row.tp2
+        if (tp2 && tp2 > 0 && (row.direction === 'buy' ? price >= tp2 : price <= tp2)) {
+          try {
+            const r = await closePositionById(accountId, pos.id)
+            if (r?.success) {
+              await admin
+                .from('mtmcopy_premium_active')
+                .update({ status: 'closed', exits_done: 2, updated_at: new Date().toISOString() })
+                .eq('id', row.id)
+              actions++
+              detail.push(`${row.symbol}: Gold Did → fechou no TP2 ${tp2}`)
+            }
+          } catch {
+            detail.push(`${row.symbol}: Gold Did fecho TP2 falhou`)
+          }
+        }
+        continue // Gold Did NÃO corre a gestão Premium (parciais/trailing/BE-no-TP1)
+      }
 
       // ── Regra ZONA LARGA (SL ~100 pips): arranca trailing a +40.5 pips, ANTES do Exit 1 ──
       // Se a entrada veio da zona mais larga (SL grande) e a trade já tem +40.5 pips de lucro,

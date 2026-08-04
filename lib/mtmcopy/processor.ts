@@ -1081,6 +1081,48 @@ async function executeViaMtmProvider(
       } catch {
         /* não bloquear a execução por falha ao gravar o pendente */
       }
+
+      // ── GOLD DID (teste conta Alcy) ─────────────────────────────────────────────
+      // 2º pendente na conta do Alcy (provider próprio) que segue o MESMO sinal Premium mas
+      // com perfil próprio: 1 posição, BE @ +5.0 (50 pips) sem trailing, fecho no TP2. Gated.
+      try {
+        const { getPremiumExecConfig } = await import('./premium-daily-stop')
+        const gd = await getPremiumExecConfig()
+        if (gd.goldDidEnabled) {
+          const { CANONICAL_GOLDDID_ACCOUNT_ID } = await import('./provider-constants')
+          const { buildPremiumSingleOrderComment } = await import('./premium-single')
+          const goldDidLot = 0.01 // conta de teste do Alcy (lote fixo pequeno)
+          const gdComment = buildPremiumSingleOrderComment(
+            goldDidLot,
+            { tp1: 0, tp2: 100, tp3: 0 }, // 100% no Exit 2 (fecha no TP2)
+            { strategyTag: 'Gold Did' },
+          )
+          await getSupabaseAdmin().from('mtmcopy_premium_pending').insert({
+            account_id: CANONICAL_GOLDDID_ACCOUNT_ID,
+            channel,
+            symbol: mappedSymbol,
+            direction: signalForExec.direction,
+            zone_low: zoneLow,
+            zone_high: zoneHigh,
+            entry: signalForExec.entry ?? marketPrice ?? null,
+            sl: signalForExec.sl ?? null,
+            tp: signalForExec.tp ?? [],
+            exit_pct_tp1: 0,
+            exit_pct_tp2: 100,
+            exit_pct_tp3: 0,
+            lot: goldDidLot,
+            comment: gdComment,
+            telegram_message_id: telegramMessageId ?? null,
+            mode: zoneCfg.mode,
+            status: 'pending',
+            profile: 'golddid',
+            expires_at: new Date(Date.now() + zoneCfg.expiry_min * 60_000).toISOString(),
+          })
+        }
+      } catch {
+        /* Gold Did é opcional (teste) — nunca bloqueia o Premium */
+      }
+
       if (zoneCfg.mode === 'live') {
         await logProviderSignalEvent({
           channel,

@@ -85,6 +85,8 @@ export interface PremiumExecConfig {
   runnerPct: number
   /** Saldo mínimo (USD) para abrir 2 pernas; abaixo disto → dieta de TP (1 posição). */
   minBalanceTwoLegs: number
+  /** Gold Did (conta Alcy) executa os sinais Premium com perfil próprio (BE@+5.0, fecho TP2). */
+  goldDidEnabled: boolean
 }
 
 export async function getPremiumExecConfig(): Promise<PremiumExecConfig> {
@@ -96,8 +98,8 @@ export async function getPremiumExecConfig(): Promise<PremiumExecConfig> {
       v.mode === 'full' || v.mode === 'hybrid' ? v.mode : v.brokerTp1Full === true ? 'full' : 'off'
     const scalpPct = typeof v.scalpPct === 'number' && v.scalpPct > 0 && v.scalpPct < 100 ? v.scalpPct : 75
     const minBalanceTwoLegs = typeof v.minBalanceTwoLegs === 'number' && v.minBalanceTwoLegs >= 0 ? v.minBalanceTwoLegs : 500
-    return { mode, scalpPct, runnerPct: 100 - scalpPct, minBalanceTwoLegs }
+    return { mode, scalpPct, runnerPct: 100 - scalpPct, minBalanceTwoLegs, goldDidEnabled: v.goldDidEnabled === true }
   } catch {
-    return { mode: 'off', scalpPct: 75, runnerPct: 25, minBalanceTwoLegs: 500 }
+    return { mode: 'off', scalpPct: 75, runnerPct: 25, minBalanceTwoLegs: 500, goldDidEnabled: false }
   }
 }
