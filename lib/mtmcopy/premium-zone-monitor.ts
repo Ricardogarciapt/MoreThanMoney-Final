@@ -98,7 +98,28 @@ export async function firePendingEntry(
     return { ok: true, detail: `shadow ${source} @ ${price}` }
   }
 
-  // LIVE: abre a mercado com o lote/SL/comment guardados (TP null — parciais pelo price-monitor).
+  // LIMITE DIÁRIO DE SL (guia GMI: max 2–3 SL/dia → para). Gate config-driven, default off.
+  const { isPremiumPausedToday } = await import("./premium-daily-stop")
+  const dailyStop = await isPremiumPausedToday()
+  if (dailyStop.paused) {
+    await supabase
+      .from("mtmcopy_premium_pending")
+      .update({ status: "skipped", note: `Limite diário de SL atingido (${dailyStop.count}/${dailyStop.maxSl}) — pausa até amanhã` })
+      .eq("id", row.id)
+      .eq("status", "pending")
+    return { ok: false, detail: `daily SL limit ${dailyStop.count}/${dailyStop.maxSl}` }
+  }
+
+  // TP1 BROKER-SIDE opcional (env PREMIUM_BROKER_TP1_FULL=true): coloca o TP1 como ordem REAL
+  // na mestre → num fast move até ao Exit 1 o broker fecha NO INSTANTE (não espera o canal/cron),
+  // e a CopyFactory replica o fecho a todos. Fecha 100% no TP1 ("fechar a trade na exit 1").
+  // Parcial+runner no TP1 fica para fase 2 (ordem reduce em modo netting, a validar no live).
+  const tpsRow = Array.isArray(row.tp) ? row.tp : []
+  const brokerTp1 = process.env.PREMIUM_BROKER_TP1_FULL === "true" && tpsRow[0] != null && tpsRow[0] > 0
+    ? Number(tpsRow[0])
+    : null
+
+  // LIVE: abre a mercado com o lote/SL/comment guardados. TP1 broker-side se ligado; senão parciais pelo price-monitor.
   const req: OrderRequest = {
     accountId: row.account_id,
     symbol: row.symbol,
@@ -107,7 +128,7 @@ export async function firePendingEntry(
     orderType: "market",
     openPrice: null,
     stopLoss: row.sl ?? null,
-    takeProfit: null,
+    takeProfit: brokerTp1,
     comment: row.comment ?? "MTM-PREMIUM",
   }
 

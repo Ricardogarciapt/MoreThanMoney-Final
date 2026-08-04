@@ -118,6 +118,15 @@ export async function applyPremiumManagement(
     return out
   }
 
+  // Limite diário de SL (guia GMI): conta cada HIT SL do dia → ao Nº-limite pausa novas entradas.
+  if (msg.kind === 'sl_hit') {
+    try {
+      const { incrementPremiumSlToday } = await import('./premium-daily-stop')
+      const n = await incrementPremiumSlToday()
+      out.actions.push(`SL do dia #${n} contabilizado (limite diário)`)
+    } catch { /* não bloquear a gestão */ }
+  }
+
   const parent = parentText ? parseSignal(parentText) : null
   const symbol = parent?.symbol ?? symbolHint ?? 'XAUUSD'
 
