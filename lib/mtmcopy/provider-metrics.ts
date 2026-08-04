@@ -19,12 +19,14 @@ import {
   CANONICAL_SENSEI_STRATEGY_ID,
   CANONICAL_BOOSTER_ACCOUNT_ID,
   CANONICAL_BOOSTER_STRATEGY_ID,
+  CANONICAL_GOLDDID_ACCOUNT_ID,
+  CANONICAL_GOLDDID_STRATEGY_ID,
   MTM_COPY_STRATEGY_CATALOG,
 } from './provider-constants'
 import { fetchMetaApiOverview } from './metaapi-admin'
 import { getAccountSnapshot } from './metaapi'
 
-export type ProviderKey = 'premium' | 'trade-ideas' | 'sensei' | 'goldkiller' | 'booster' | 'bybit-perps'
+export type ProviderKey = 'premium' | 'trade-ideas' | 'sensei' | 'goldkiller' | 'booster' | 'golddid' | 'bybit-perps'
 
 export interface ProviderStrategyMetrics {
   key: ProviderKey
@@ -72,6 +74,8 @@ const PROVIDERS: ProviderDef[] = [
   // GoldKiller removido dos desempenhos das estratégias: deixou de copiar para contas
   // (exec-switch goldkiller=false, só T2T). Sem cópia → não é prova social de estratégia copiável.
   { key: 'booster', accountId: CANONICAL_BOOSTER_ACCOUNT_ID, strategyId: CANONICAL_BOOSTER_STRATEGY_ID },
+  // Gold Did — conta PU Prime (Alcy) que executa os sinais Premium com gestão própria (BE@+5.0, TP2).
+  { key: 'golddid', accountId: CANONICAL_GOLDDID_ACCOUNT_ID, strategyId: CANONICAL_GOLDDID_STRATEGY_ID },
 ]
 
 function token(): string | null {

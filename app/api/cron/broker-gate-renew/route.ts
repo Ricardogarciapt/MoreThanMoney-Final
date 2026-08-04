@@ -21,7 +21,8 @@ const FRESH_DAYS = 40
 const PREMIUM_CHAT = "-1002424441843" // grupo "MoreThanMoney Premium Signals"
 const FOREX_CHAT = "-1003716578747"
 const SENSEI_CHAT = "-1003853860780"
-const ALL_GROUPS = [FOREX_CHAT, SENSEI_CHAT, PREMIUM_CHAT]
+const FOREX_SWINGS_CHAT = process.env.TELEGRAM_FOREX_SWINGS_CHAT || "-1004362819270"
+const ALL_GROUPS = [FOREX_CHAT, FOREX_SWINGS_CHAT, SENSEI_CHAT, PREMIUM_CHAT]
 
 async function tg(method: string, body: Record<string, unknown>) {
   const token = process.env.TELEGRAM_BOT_TOKEN

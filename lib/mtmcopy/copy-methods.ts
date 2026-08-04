@@ -13,29 +13,35 @@ import {
 /** Métodos de cópia disponíveis ao cliente. */
 export type MtmcopyCopyMethod = 'telegram_group' | 'strategy' | 'master_slave'
 
-export type MtmcopyTelegramGroup = 'premium' | 'trade_ideas' | 'sensei' | 'goldkiller'
+export type MtmcopyTelegramGroup = 'premium' | 'trade_ideas' | 'sensei' | 'goldkiller' | 'forex_swings'
 
 /**
  * Grupos de sinais OFERECIDOS ao cliente como fontes copiáveis.
  * Só os que NÃO são «Estratégia MTM» — para não repetir a mesma fonte de sinais:
- * Ideias de Forex + GoldKiller. Premium/Sensei/Booster copiam-se pelo método «Estratégia MTM».
- * O tipo mantém 'premium'/'sensei' para retrocompatibilidade de ligações antigas.
+ * Ideias de Forex + GoldKiller + Forex Swings. Premium/Sensei/Booster copiam-se pelo método
+ * «Estratégia MTM». O tipo mantém 'premium'/'sensei' para retrocompatibilidade de ligações antigas.
  */
 export const MTMCOPY_TELEGRAM_GROUP_IDS: MtmcopyTelegramGroup[] = [
   'trade_ideas',
+  'forex_swings',
   'goldkiller',
 ]
 
-/** Grupo de sinais → estratégia CopyFactory canónica (fonte real da cópia). */
+/** Grupo de sinais → estratégia CopyFactory canónica (fonte real da cópia).
+ *  Forex Swings executa na MESMA conta mestre Forex (fbeeafeb / 5IHE) — comentário «Forex Swings». */
 export const TELEGRAM_GROUP_STRATEGY_ID: Record<MtmcopyTelegramGroup, string> = {
   premium: CANONICAL_PREMIUM_STRATEGY_ID,
   trade_ideas: CANONICAL_TRADE_IDEAS_STRATEGY_ID,
   sensei: CANONICAL_SENSEI_STRATEGY_ID,
   goldkiller: CANONICAL_GOLDKILLER_STRATEGY_ID,
+  forex_swings: CANONICAL_TRADE_IDEAS_STRATEGY_ID,
 }
 
 function isTelegramGroup(v: unknown): v is MtmcopyTelegramGroup {
-  return v === 'premium' || v === 'trade_ideas' || v === 'sensei' || v === 'goldkiller'
+  return (
+    v === 'premium' || v === 'trade_ideas' || v === 'sensei' ||
+    v === 'goldkiller' || v === 'forex_swings'
+  )
 }
 
 export interface MtmCopyStrategyOption {
@@ -60,7 +66,7 @@ export const COPY_METHODS: {
     id: 'telegram_group',
     title: 'Grupos de sinais',
     description:
-      'Escolhe os chats de sinais a copiar — Ideias de Forex ou GoldKiller. VIP: até 5 contas (subscrição MTMcopier).',
+      'Escolhe os chats de sinais a copiar — Ideias de Forex, Forex Swings ou GoldKiller. VIP: até 5 contas (subscrição MTMcopier).',
   },
   {
     id: 'master_slave',
@@ -86,6 +92,14 @@ export const TELEGRAM_GROUPS: {
     description:
       'Sinais intraday e swing em pares forex. Set & forget com gestão de risco e trailing automático.',
     chatId: '-1003716578747',
+  },
+  {
+    id: 'forex_swings',
+    channelKey: 'trade-ideas',
+    title: 'MTM Auto FOREX Swings',
+    description:
+      'Sinais swing de forex (maioritariamente set & forget) executados na conta MTM Auto Forex com trailing automático. Cópia via CopyFactory.',
+    chatId: '-1004362819270',
   },
   {
     id: 'goldkiller',
@@ -267,6 +281,7 @@ const TELEGRAM_GROUP_SHORT_LABEL: Record<MtmcopyTelegramGroup, string> = {
   trade_ideas: 'Ideias de Forex',
   sensei: 'Sensei Scanner',
   goldkiller: 'GoldKiller · Ouro',
+  forex_swings: 'Forex Swings',
 }
 
 export function telegramGroupsLabel(groups: MtmcopyTelegramGroup[]): string {
