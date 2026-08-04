@@ -70,3 +70,19 @@ export async function isPremiumPausedToday(): Promise<{ paused: boolean; count: 
   const count = st.date === todayLisbon() ? st.count : 0
   return { paused: count >= cfg.maxSl, count, maxSl: cfg.maxSl }
 }
+
+/**
+ * Config de execução Premium (site_settings.premium_execution). Afinável sem redeploy.
+ * brokerTp1Full: coloca o TP1 como ordem REAL na mestre (fecha 100% no Exit 1 no instante,
+ * apanha os fast moves; CopyFactory replica). Default off.
+ */
+export async function getPremiumBrokerTp1Full(): Promise<boolean> {
+  try {
+    const { data } = await getSupabaseAdmin()
+      .from('site_settings').select('value').eq('key', 'premium_execution').maybeSingle()
+    const v = (data?.value ?? {}) as { brokerTp1Full?: boolean }
+    return v.brokerTp1Full === true
+  } catch {
+    return false
+  }
+}

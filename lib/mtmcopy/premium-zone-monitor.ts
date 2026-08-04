@@ -99,7 +99,7 @@ export async function firePendingEntry(
   }
 
   // LIMITE DIÁRIO DE SL (guia GMI: max 2–3 SL/dia → para). Gate config-driven, default off.
-  const { isPremiumPausedToday } = await import("./premium-daily-stop")
+  const { isPremiumPausedToday, getPremiumBrokerTp1Full } = await import("./premium-daily-stop")
   const dailyStop = await isPremiumPausedToday()
   if (dailyStop.paused) {
     await supabase
@@ -115,7 +115,8 @@ export async function firePendingEntry(
   // e a CopyFactory replica o fecho a todos. Fecha 100% no TP1 ("fechar a trade na exit 1").
   // Parcial+runner no TP1 fica para fase 2 (ordem reduce em modo netting, a validar no live).
   const tpsRow = Array.isArray(row.tp) ? row.tp : []
-  const brokerTp1 = process.env.PREMIUM_BROKER_TP1_FULL === "true" && tpsRow[0] != null && tpsRow[0] > 0
+  const brokerTp1Full = await getPremiumBrokerTp1Full()
+  const brokerTp1 = brokerTp1Full && tpsRow[0] != null && tpsRow[0] > 0
     ? Number(tpsRow[0])
     : null
 
