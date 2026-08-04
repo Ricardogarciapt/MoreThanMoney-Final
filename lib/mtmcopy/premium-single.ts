@@ -48,35 +48,45 @@ export function canPartializeVolume(volume: number, pct: number): boolean {
   return partial >= 0.01 && partial < volume
 }
 
+/** Nome curto/legível da estratégia no comentário da ordem (limite MT5 = 31 chars). */
+export function shortStrategyTag(name?: string | null): string {
+  const n = (name ?? '').trim()
+  if (!n) return 'Premium'
+  // usa o nome tal como é se couber; remove acentos/carateres exóticos
+  return n.replace(/[^A-Za-z0-9 .]/g, '').slice(0, 16).trim() || 'Premium'
+}
+
 export function buildPremiumSingleOrderComment(
   originalLot: number,
   exitPcts: PremiumExitPcts,
-  opts?: { smallAccount?: boolean; exitsDone?: number; manual?: boolean },
+  opts?: { smallAccount?: boolean; exitsDone?: number; manual?: boolean; strategyTag?: string },
 ): string {
-  // Compact format — MT5 comment field limit is 31 chars
-  // Max possible: "PREM-99.99-33/33/34-sa-ex3" = 26 chars ✓
+  // Comentário LEGÍVEL: «<Estratégia>-<lote>-<saída parcial tp1/tp2/tp3>». MT5 = 31 chars.
+  // Ex.: "Premium-0.01-75/15/10" · "Gold Did-0.01-75/15/10". O prefixo é o NOME da estratégia.
+  const tag = shortStrategyTag(opts?.strategyTag)
   const sa = opts?.smallAccount ? '-sa' : ''
   const ex = opts?.exitsDone != null && opts.exitsDone > 0 ? `-ex${opts.exitsDone}` : ''
-  const core = `PREM-${roundLot(originalLot)}-${exitPcts.tp1}/${exitPcts.tp2}/${exitPcts.tp3}${sa}${ex}`
-  if (opts?.manual) return `MTM-M-${core}`.slice(0, 31)
-  return core
+  const core = `${tag}-${roundLot(originalLot)}-${exitPcts.tp1}/${exitPcts.tp2}/${exitPcts.tp3}${sa}${ex}`
+  if (opts?.manual) return `M ${core}`.slice(0, 31)
+  return core.slice(0, 31)
 }
 
 export function parsePremiumSingleComment(comment: string | undefined): ParsedPremiumSingleMeta | null {
   const c = comment ?? ''
 
-  // New compact format: "PREM-2.00-33/33/34[-sa][-ex1]"
-  const newMatch = c.match(/^PREM-([\d.]+)-(\d+)\/(\d+)\/(\d+)(?:-sa)?(?:-ex(\d+))?/i)
+  // Formato legível: "<Estratégia>-<lote>-<tp1>/<tp2>/<tp3>[-sa][-exN]" (inclui o antigo "PREM-…").
+  // O prefixo é o NOME da estratégia (Premium, Gold Did, …). Grupo 1 = nome; 2 = lote; 3-5 = saída.
+  const newMatch = c.match(/^([A-Za-z][A-Za-z0-9 .]*?)-([\d.]+)-(\d+)\/(\d+)\/(\d+)(?:-sa)?(?:-ex(\d+))?/i)
   if (newMatch) {
     return {
-      originalLot: parseFloat(newMatch[1]),
+      originalLot: parseFloat(newMatch[2]),
       exitPcts: {
-        tp1: Number(newMatch[2]),
-        tp2: Number(newMatch[3]),
-        tp3: Number(newMatch[4]),
+        tp1: Number(newMatch[3]),
+        tp2: Number(newMatch[4]),
+        tp3: Number(newMatch[5]),
       },
       smallAccount: /-sa/i.test(c),
-      exitsDone: newMatch[5] ? Number(newMatch[5]) : 0,
+      exitsDone: newMatch[6] ? Number(newMatch[6]) : 0,
     }
   }
 
@@ -111,7 +121,7 @@ export function buildPremiumSingleOrder(
   totalLot: number,
   exitPcts?: { tp1?: number | null; tp2?: number | null; tp3?: number | null },
   equityOrBalance?: number | null,
-  opts?: { manual?: boolean },
+  opts?: { manual?: boolean; strategyTag?: string },
 ): PremiumSingleOrderPlan | null {
   const tps = (signal.tp ?? []).filter((n) => Number.isFinite(n) && n > 0).slice(0, 3)
   if (!tps.length) return null
@@ -123,7 +133,7 @@ export function buildPremiumSingleOrder(
 
   return {
     lot,
-    comment: buildPremiumSingleOrderComment(lot, exit, { smallAccount, manual: opts?.manual }),
+    comment: buildPremiumSingleOrderComment(lot, exit, { smallAccount, manual: opts?.manual, strategyTag: opts?.strategyTag }),
     exitPcts: exit,
     smallAccount,
     takeProfit: null,
@@ -138,7 +148,9 @@ function symbolMatches(posSymbol: string, signalSymbol: string): boolean {
 
 function isMtmcopierPosition(pos: MetaApiPosition): boolean {
   const c = (pos.comment ?? '').toLowerCase()
-  return c.includes('mtmcopier') || c.startsWith('prem-') || c.startsWith('mtm-m-')
+  // legado + novo formato legível (<Estratégia>-<lote>-<saída>) via o próprio parser
+  return c.includes('mtmcopier') || c.startsWith('prem-') || c.startsWith('mtm-m-') ||
+    parsePremiumSingleComment(pos.comment) != null
 }
 
 function directionMatches(pos: MetaApiPosition, direction: string): boolean {
