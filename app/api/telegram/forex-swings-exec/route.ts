@@ -3,6 +3,31 @@ import { placeOrder, type OrderRequest } from '@/lib/mtmcopy/metaapi'
 import { tradeIdeasTrailingDistance } from '@/lib/mtmcopy/pip-points'
 import { CANONICAL_TRADE_IDEAS_ACCOUNT_ID } from '@/lib/mtmcopy/provider-constants'
 import { getForexSwingsExecConfig } from '@/lib/mtmcopy/forex-swings-exec'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
+
+const FS_CHAT_SLUG = 'ideias-e-sinais'
+
+/** Insere o sinal (formato parseável) no chat da app + dispara push T2T. Independente da execução. */
+async function feedAppChat(symbol: string, direction: 'buy' | 'sell', sl: number | null, tp: number | null) {
+  try {
+    const tag = direction === 'buy' ? '🔵' : '🔴'
+    const lines = [`${tag} ${symbol} ${direction.toUpperCase()}`]
+    if (sl != null) lines.push(`SL: ${sl}`)
+    if (tp != null) lines.push(`TP: ${tp}`)
+    lines.push('', '🌊 Forex Swings — set & forget')
+    const content = lines.join('\n')
+    const { data, error } = await getSupabaseAdmin()
+      .from('chat_messages')
+      .insert({ channel_slug: FS_CHAT_SLUG, user_id: null, content, message_type: 'forex_swings_signal', notified: true })
+      .select('id')
+      .single()
+    if (error) { console.warn('[forex-swings-exec] chat insert falhou:', error.message); return }
+    await sendTelegramChannelPush({ slug: FS_CHAT_SLUG, content, chatMessageId: data?.id as string }).catch(() => {})
+  } catch (e) {
+    console.warn('[forex-swings-exec] feedAppChat erro:', e instanceof Error ? e.message : String(e))
+  }
+}
 
 /**
  * Execução dos sinais "Forex Swings" (relay fs-relay do canal James) na conta mestre MTM Auto Forex.
@@ -38,6 +63,9 @@ export async function POST(req: NextRequest) {
   }
 
   const cfg = await getForexSwingsExecConfig()
+
+  // Sempre: alimenta o chat da app + push T2T (membros veem e podem executar na conta deles).
+  await feedAppChat(symbol, direction, sl, tp)
 
   const orderReq: OrderRequest = {
     accountId: CANONICAL_TRADE_IDEAS_ACCOUNT_ID, // fbeeafeb — MTM Auto Forex (5IHE)

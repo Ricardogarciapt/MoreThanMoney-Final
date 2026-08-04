@@ -9,6 +9,17 @@ export type ChannelMeta = {
 }
 
 export const CHANNEL_META: Record<string, ChannelMeta> = {
+  "ideias-e-sinais": {
+    emoji: "🌊",
+    accent: "#2DD4BF",
+    tag: "Forex Swings",
+    rules: [
+      "Canal de leitura — sinais swing de forex (MTM Auto FOREX Swings)",
+      "Set & forget com trailing automático",
+      "Tap to Trade: executa na tua conta ligada",
+    ],
+    tips: ["Toca em ⚡ para executar o sinal na tua conta"],
+  },
   geral: {
     emoji: "💬",
     accent: "#38BDF8",

@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 const PUSH_TITLES: Record<string, string> = {
   'trade-ideas-setup': '📊 Novo Sinal Forex!',
+  'ideias-e-sinais': '🌊 Nova Ideia Forex Swing!',
   'premium-ideas': '💎 Nova Ideia Premium!',
 }
 

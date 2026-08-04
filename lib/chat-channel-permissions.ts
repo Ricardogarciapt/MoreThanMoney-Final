@@ -10,6 +10,7 @@ export type ChatChannelUser = {
 export function isReadOnlyChannel(slug: string) {
   return (
     slug === "trade-ideas-setup" ||
+    slug === "ideias-e-sinais" ||
     slug === "premium-ideas" ||
     slug === "sensei-scanner" ||
     slug === "sinais-goldkiller" ||

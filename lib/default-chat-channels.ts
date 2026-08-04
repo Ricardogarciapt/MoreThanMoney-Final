@@ -104,6 +104,13 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
     position: 12,
   },
   {
+    slug: 'ideias-e-sinais',
+    name: 'Ideias e Sinais',
+    description: 'Sinais swing de forex (MTM Auto FOREX Swings) — set & forget, tap-to-trade',
+    parent_slug: 'sinais',
+    position: 13,
+  },
+  {
     slug: 'premium-ideas',
     name: 'Premium · Ouro',
     description: 'Sinais premium XAUUSD — Pack Premium',
