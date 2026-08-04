@@ -6,6 +6,7 @@ import {
   CANONICAL_SENSEI_STRATEGY_ID,
   CANONICAL_GOLDKILLER_STRATEGY_ID,
   CANONICAL_BOOSTER_STRATEGY_ID,
+  CANONICAL_GOLDDID_STRATEGY_ID,
   MTM_COPY_STRATEGY_CATALOG,
   mtmStrategyPublicLabel,
 } from './provider-constants'
@@ -60,7 +61,7 @@ export const COPY_METHODS: {
     id: 'strategy',
     title: 'Estratégia MTM',
     description:
-      'Copia estratégias auditadas do nosso sistema — Premium, Sensei Scanner ou 20X Booster — com replicação automática na tua conta.',
+      'Copia estratégias auditadas do nosso sistema — Premium, Sensei Scanner, 20X Booster ou Gold Did — com replicação automática na tua conta.',
   },
   {
     id: 'telegram_group',
@@ -158,6 +159,17 @@ export function getMtmStrategyOptions(): MtmCopyStrategyOption[] {
     })
   }
 
+  // Gold Did — segue os sinais Premium (Ouro) com gestão própria; copiável por qualquer membro.
+  const goldDidCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_GOLDDID_STRATEGY_ID]
+  if (goldDidCatalog) {
+    out.push({
+      id: CANONICAL_GOLDDID_STRATEGY_ID,
+      channelKey: 'premium-signals',
+      title: goldDidCatalog.title,
+      description: goldDidCatalog.description,
+    })
+  }
+
   return out
 }
 
@@ -222,7 +234,7 @@ export async function getMtmStrategyOptionsAsync(): Promise<MtmCopyStrategyOptio
       : getMtmStrategyOptions()
   ).filter((o) => !NON_STRATEGY_IDS.has(o.id))
 
-  // Estratégias SÓ-CATÁLOGO (copiáveis, mas sem rota de execução de sinais) — ex.: 20X Booster.
+  // Estratégias SÓ-CATÁLOGO (copiáveis, mas sem rota de execução de sinais) — ex.: 20X Booster, Gold Did.
   const boosterCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_BOOSTER_STRATEGY_ID]
   if (boosterCatalog && !list.some((o) => o.id === CANONICAL_BOOSTER_STRATEGY_ID)) {
     list.push({
@@ -230,6 +242,15 @@ export async function getMtmStrategyOptionsAsync(): Promise<MtmCopyStrategyOptio
       channelKey: 'premium-signals',
       title: boosterCatalog.title,
       description: boosterCatalog.description,
+    })
+  }
+  const goldDidCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_GOLDDID_STRATEGY_ID]
+  if (goldDidCatalog && !list.some((o) => o.id === CANONICAL_GOLDDID_STRATEGY_ID)) {
+    list.push({
+      id: CANONICAL_GOLDDID_STRATEGY_ID,
+      channelKey: 'premium-signals',
+      title: goldDidCatalog.title,
+      description: goldDidCatalog.description,
     })
   }
   return list
