@@ -1,0 +1,18 @@
+# systemd unit — correr no VPS (ubuntu). Copiar para /etc/systemd/system/gmi-relay.service
+# Depois: sudo systemctl daemon-reload && sudo systemctl enable --now gmi-relay
+[Unit]
+Description=GMI -> MTM Premium Telegram relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/gmi-relay
+EnvironmentFile=/opt/gmi-relay/.env
+ExecStart=/opt/gmi-relay/.venv/bin/python /opt/gmi-relay/relay.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
