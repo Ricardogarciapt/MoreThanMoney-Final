@@ -5,6 +5,7 @@ import {
   type CopyFactoryTradeSizeScaling,
 } from './copyfactory'
 import { buildSubscriberSymbolMapping } from './copyfactory-symbol-map'
+import { expandWhitelistForCopyFactory } from './symbol-resolver'
 import { connectionCopyMethod } from './copy-limits'
 import {
   getMasterConnection,
@@ -29,7 +30,10 @@ function copyFactoryOptsFromConnection(
     multiplier: lotMultiplierFromConnection(conn),
     tradeSizeScaling: tradeSizeScalingFromConnection(conn),
     reverse: conn.reverse_signals ?? false,
-    symbolWhitelist: conn.symbols_whitelist,
+    // O symbolFilter do CopyFactory compara com o símbolo do PROVIDER (canónico) — expande
+    // entradas com sufixo de corretora (XAUUSD.S) para incluir o canónico e aliases, senão
+    // uma whitelist com sufixo local filtrava TODAS as trades e a conta não copiava nada.
+    symbolWhitelist: expandWhitelistForCopyFactory(conn.symbols_whitelist),
   }
 }
 

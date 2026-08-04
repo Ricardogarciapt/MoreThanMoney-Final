@@ -162,6 +162,46 @@ export function rankedBrokerSymbols(canonical: string, availableSymbols: string[
   return ranked.map((r) => r.sym)
 }
 
+/**
+ * Dois símbolos pertencem à mesma família? (ex.: XAUUSD ↔ XAUUSD.S ↔ GOLD ↔ GOLD.r)
+ * Compara os CORES canónicos (com aliases) de ambos — nunca substring cega, por isso
+ * US30 nunca casa com US3000. Para whitelists e filtros configurados pelo utilizador,
+ * onde o membro escreve o símbolo COM o sufixo da corretora dele.
+ */
+export function symbolMatchesCanonical(a: string | null | undefined, b: string | null | undefined): boolean {
+  const ua = (a || '').toUpperCase().trim()
+  const ub = (b || '').toUpperCase().trim()
+  if (!ua || !ub) return false
+  if (ua === ub) return true
+  const coresA = canonicalCores(ua)
+  const coresB = canonicalCores(ub)
+  for (const c of coresA) {
+    if (c.length >= 3 && coresB.has(c)) return true
+  }
+  return false
+}
+
+/**
+ * Expande entradas de whitelist para o filtro CopyFactory: cada entrada (possivelmente
+ * com sufixo de corretora, ex.: "XAUUSD.S") passa a incluir também o canónico e os
+ * aliases da família ("XAUUSD", "GOLD", …). O symbolFilter do CopyFactory compara com o
+ * símbolo do PROVIDER (canónico) — sem esta expansão, uma whitelist com sufixo local
+ * filtraria TODAS as trades e a conta nunca copiaria nada.
+ */
+export function expandWhitelistForCopyFactory(entries: string[] | null | undefined): string[] | null {
+  if (!entries?.length) return entries ?? null
+  const out = new Set<string>()
+  for (const entry of entries) {
+    const up = (entry || '').toUpperCase().trim()
+    if (!up) continue
+    out.add(up)
+    for (const core of canonicalCores(up)) {
+      if (core.length >= 3) out.add(core)
+    }
+  }
+  return out.size ? [...out] : null
+}
+
 export function resolveBrokerSymbol(canonical: string, availableSymbols: string[]): string {
   const up = (canonical || '').toUpperCase().trim()
   if (!availableSymbols?.length) return up

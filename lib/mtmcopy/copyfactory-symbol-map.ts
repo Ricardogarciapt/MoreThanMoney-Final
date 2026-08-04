@@ -9,10 +9,17 @@ import type { CopyFactorySymbolMapping } from './copyfactory'
  */
 const SOURCE_SYMBOLS = [
   'XAUUSD', 'XAGUSD',
+  // Majors
   'EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'USDCHF', 'NZDUSD',
-  'EURJPY', 'GBPJPY', 'EURGBP',
+  // Crosses (MTMScanner/Forex negoceia crosses — sem mapping, brokers com sufixo ignoravam-nos)
+  'EURJPY', 'GBPJPY', 'EURGBP', 'AUDJPY', 'CADJPY', 'CHFJPY', 'NZDJPY',
+  'EURAUD', 'EURCAD', 'EURCHF', 'EURNZD', 'GBPAUD', 'GBPCAD', 'GBPCHF', 'GBPNZD',
+  'AUDCAD', 'AUDCHF', 'AUDNZD', 'NZDCAD', 'NZDCHF', 'CADCHF',
+  // Cripto
   'BTCUSD', 'ETHUSD',
-  'US30', 'NAS100', 'US500', 'GER40',
+  // Índices + energia
+  'US30', 'NAS100', 'US500', 'GER40', 'UK100', 'JPN225',
+  'USOIL', 'UKOIL', 'NATGAS',
 ]
 
 type CacheEntry = { at: number; mapping: CopyFactorySymbolMapping[] }

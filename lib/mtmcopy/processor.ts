@@ -24,6 +24,7 @@ import {
   countExecutedToday,
 } from './db'
 import { computeLotSize, getLotSizingSkipReason, signalForRiskSizing } from './lot-sizing'
+import { symbolMatchesCanonical } from './symbol-resolver'
 import {
   fetchLotSizingContext,
   getAccountSnapshot,
@@ -1247,7 +1248,8 @@ async function executeViaMtmProvider(
 
   void Promise.all(
     logTargets.map(async (conn) => {
-      if (conn.symbols_whitelist?.length && !conn.symbols_whitelist.includes(signalForExec.symbol!)) {
+      // Whitelist por FAMÍLIA de símbolo (tolera sufixos/prefixos de corretora: XAUUSD.S ↔ XAUUSD)
+      if (conn.symbols_whitelist?.length && !conn.symbols_whitelist.some((w) => symbolMatchesCanonical(signalForExec.symbol, w))) {
         await logMtmcopySignal({
           user_id: conn.user_id,
           connection_id: conn.id,
@@ -1343,7 +1345,8 @@ async function processSignalDirect(
     return
   }
 
-  if (conn.symbols_whitelist?.length && !conn.symbols_whitelist.includes(signal.symbol!)) {
+  // Whitelist por FAMÍLIA de símbolo (tolera sufixos/prefixos de corretora: XAUUSD.S ↔ XAUUSD)
+  if (conn.symbols_whitelist?.length && !conn.symbols_whitelist.some((w) => symbolMatchesCanonical(signal.symbol, w))) {
     await logMtmcopySignal({
       user_id: conn.user_id,
       connection_id: conn.id,

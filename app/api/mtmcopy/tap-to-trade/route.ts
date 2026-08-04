@@ -7,6 +7,7 @@ import {
   signalForRiskSizing,
 } from '@/lib/mtmcopy/lot-sizing'
 import { fetchLotSizingContext, placeOrder, type OrderRequest } from '@/lib/mtmcopy/metaapi'
+import { symbolMatchesCanonical } from '@/lib/mtmcopy/symbol-resolver'
 import { tapToTradeEnabledChannels, T2T_SIGNAL_CHANNELS as SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
 
 export const dynamic = 'force-dynamic'
@@ -135,7 +136,9 @@ export async function POST(request: NextRequest) {
   // Whitelist de símbolos (se definida)
   const symU = signal.symbol.toUpperCase()
   if (Array.isArray(conn.symbols_whitelist) && conn.symbols_whitelist.length) {
-    const allowed = conn.symbols_whitelist.some((s) => symU.includes(String(s).toUpperCase()))
+    // Match por FAMÍLIA de símbolo — a whitelist pode ter o sufixo da corretora do membro
+    // (XAUUSD.S) e o sinal vir canónico (XAUUSD); nunca por substring cega.
+    const allowed = conn.symbols_whitelist.some((s) => symbolMatchesCanonical(symU, String(s)))
     if (!allowed) {
       return NextResponse.json({ error: `${signal.symbol} não está na tua whitelist de símbolos.` }, { status: 400 })
     }

@@ -1,3 +1,4 @@
+import { symbolMatchesCanonical } from './symbol-resolver'
 import { MTMCOPY_AI_MIN_CONFIDENCE } from './signal-ai-validator'
 import type { AiSignalValidation } from './signal-ai-validator'
 import type { ParsedSignal } from './signal-parser'
@@ -43,11 +44,12 @@ export function shouldSkipSymbolForProfile(
   if (avoid.some((s) => upper.includes(s) || s.includes(upper))) {
     return 'Símbolo na lista de evitar'
   }
+  // Matching por FAMÍLIA de símbolo (tolera sufixos/prefixos de corretora: XAUUSD.S ↔ XAUUSD ↔ GOLD)
   const only = (profile.symbols_execute_only ?? []).map((s) => s.toUpperCase())
-  if (only.length && !only.some((s) => upper.includes(s) || s.includes(upper))) {
+  if (only.length && !only.some((s) => symbolMatchesCanonical(upper, s))) {
     return 'Símbolo fora da lista permitida'
   }
-  if (profile.symbols_whitelist?.length && !profile.symbols_whitelist.includes(upper)) {
+  if (profile.symbols_whitelist?.length && !profile.symbols_whitelist.some((s) => symbolMatchesCanonical(upper, s))) {
     return 'Símbolo fora da whitelist'
   }
   return null
