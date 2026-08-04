@@ -73,16 +73,28 @@ export async function isPremiumPausedToday(): Promise<{ paused: boolean; count: 
 
 /**
  * Config de execução Premium (site_settings.premium_execution). Afinável sem redeploy.
- * brokerTp1Full: coloca o TP1 como ordem REAL na mestre (fecha 100% no Exit 1 no instante,
- * apanha os fast moves; CopyFactory replica). Default off.
+ * mode:
+ *  'off'    → 1 posição, sem TP broker (parcial+BE+trailing reativos — fiel ao PDF, mas com lag no fast move)
+ *  'full'   → 1 posição, TP1 no broker (fecha 100% no Exit 1 no instante; SEM runner)
+ *  'hybrid' → 2 pernas: scalp (scalpPct, TP1 no broker, fecha instantâneo) + runner (resto, BE+trailing)
+ * brokerTp1Full: legado (true ≈ mode 'full').
  */
-export async function getPremiumBrokerTp1Full(): Promise<boolean> {
+export interface PremiumExecConfig {
+  mode: 'off' | 'full' | 'hybrid'
+  scalpPct: number
+  runnerPct: number
+}
+
+export async function getPremiumExecConfig(): Promise<PremiumExecConfig> {
   try {
     const { data } = await getSupabaseAdmin()
       .from('site_settings').select('value').eq('key', 'premium_execution').maybeSingle()
-    const v = (data?.value ?? {}) as { brokerTp1Full?: boolean }
-    return v.brokerTp1Full === true
+    const v = (data?.value ?? {}) as Partial<PremiumExecConfig> & { brokerTp1Full?: boolean }
+    let mode: PremiumExecConfig['mode'] =
+      v.mode === 'full' || v.mode === 'hybrid' ? v.mode : v.brokerTp1Full === true ? 'full' : 'off'
+    const scalpPct = typeof v.scalpPct === 'number' && v.scalpPct > 0 && v.scalpPct < 100 ? v.scalpPct : 75
+    return { mode, scalpPct, runnerPct: 100 - scalpPct }
   } catch {
-    return false
+    return { mode: 'off', scalpPct: 75, runnerPct: 25 }
   }
 }

@@ -99,7 +99,7 @@ export async function firePendingEntry(
   }
 
   // LIMITE DIÁRIO DE SL (guia GMI: max 2–3 SL/dia → para). Gate config-driven, default off.
-  const { isPremiumPausedToday, getPremiumBrokerTp1Full } = await import("./premium-daily-stop")
+  const { isPremiumPausedToday, getPremiumExecConfig } = await import("./premium-daily-stop")
   const dailyStop = await isPremiumPausedToday()
   if (dailyStop.paused) {
     await supabase
@@ -110,27 +110,41 @@ export async function firePendingEntry(
     return { ok: false, detail: `daily SL limit ${dailyStop.count}/${dailyStop.maxSl}` }
   }
 
-  // TP1 BROKER-SIDE opcional (env PREMIUM_BROKER_TP1_FULL=true): coloca o TP1 como ordem REAL
-  // na mestre → num fast move até ao Exit 1 o broker fecha NO INSTANTE (não espera o canal/cron),
-  // e a CopyFactory replica o fecho a todos. Fecha 100% no TP1 ("fechar a trade na exit 1").
-  // Parcial+runner no TP1 fica para fase 2 (ordem reduce em modo netting, a validar no live).
+  // EXECUÇÃO (config premium_execution): 'off' 1 posição sem TP broker · 'full' 1 posição c/ TP1 broker ·
+  // 'hybrid' 2 pernas → scalp (TP1 no broker, fecha instantâneo no fast move) + runner (BE+trailing, fiel ao PDF).
   const tpsRow = Array.isArray(row.tp) ? row.tp : []
-  const brokerTp1Full = await getPremiumBrokerTp1Full()
-  const brokerTp1 = brokerTp1Full && tpsRow[0] != null && tpsRow[0] > 0
-    ? Number(tpsRow[0])
-    : null
-
-  // LIVE: abre a mercado com o lote/SL/comment guardados. TP1 broker-side se ligado; senão parciais pelo price-monitor.
-  const req: OrderRequest = {
+  const exec = await getPremiumExecConfig()
+  const tp1 = tpsRow[0] != null && tpsRow[0] > 0 ? Number(tpsRow[0]) : null
+  const lot = row.lot ?? 0
+  const STEP = 0.01, MINLOT = 0.01
+  const roundStep = (v: number) => Number((Math.round(v / STEP) * STEP).toFixed(2))
+  const mkReq = (vol: number, tp: number | null, tag: string): OrderRequest => ({
     accountId: row.account_id,
     symbol: row.symbol,
     direction: row.direction,
-    volume: row.lot ?? 0,
+    volume: vol,
     orderType: "market",
     openPrice: null,
     stopLoss: row.sl ?? null,
-    takeProfit: brokerTp1,
-    comment: row.comment ?? "MTM-PREMIUM",
+    takeProfit: tp,
+    comment: `${row.comment ?? "MTM-PREMIUM"}${tag}`,
+  })
+
+  let legs: OrderRequest[]
+  let runnerLot = lot // lote a GERIR (BE/trailing); em híbrido é só o runner
+  if (exec.mode === "hybrid" && tp1 != null && lot > 0) {
+    const scalp = roundStep((lot * exec.scalpPct) / 100)
+    const runner = roundStep(lot - scalp)
+    if (scalp >= MINLOT && runner >= MINLOT) {
+      legs = [mkReq(scalp, tp1, "-S"), mkReq(runner, null, "-R")]
+      runnerLot = runner
+    } else {
+      legs = [mkReq(lot, tp1, "")] // lote pequeno demais p/ dividir → full (TP1 instantâneo, sem runner)
+    }
+  } else if (exec.mode === "full" && tp1 != null) {
+    legs = [mkReq(lot, tp1, "")]
+  } else {
+    legs = [mkReq(lot, null, "")] // 'off': parciais+BE+trailing reativos
   }
 
   // Claim idempotente: só avança se ESTA chamada mudar o estado de 'pending'.
@@ -144,14 +158,17 @@ export async function firePendingEntry(
   if (!claimed) return { ok: false, detail: "já processado por outro gatilho" }
 
   try {
-    const [r] = await placeOrdersSequential(row.account_id, [req])
-    if (!r?.success) {
+    const results = await placeOrdersSequential(row.account_id, legs)
+    const first = results[0]
+    if (!first?.success) {
       await supabase
         .from("mtmcopy_premium_pending")
-        .update({ status: "error", note: `Falha ao abrir: ${r?.error ?? "sem resposta MetaAPI"}` })
+        .update({ status: "error", note: `Falha ao abrir: ${first?.error ?? "sem resposta MetaAPI"}` })
         .eq("id", row.id)
-      return { ok: false, detail: r?.error ?? "sem resposta MetaAPI" }
+      return { ok: false, detail: first?.error ?? "sem resposta MetaAPI" }
     }
+    // Híbrido: se o scalp abriu mas o runner falhou (ou vice-versa) → segue com o que abriu.
+    const legNote = legs.length > 1 ? ` [scalp:${legs[0].volume} runner:${legs[1].volume} · ${results[1]?.success ? "ok" : "runner-falhou"}]` : ""
     const tps = Array.isArray(row.tp) ? row.tp : []
     await supabase.from("mtmcopy_premium_active").insert({
       account_id: row.account_id,
@@ -165,7 +182,8 @@ export async function firePendingEntry(
       exit_pct_tp1: row.exit_pct_tp1,
       exit_pct_tp2: row.exit_pct_tp2,
       exit_pct_tp3: row.exit_pct_tp3,
-      original_lot: row.lot,
+      // Em híbrido, a gestão (BE/trailing/parciais) atua sobre o RUNNER → guarda o lote do runner.
+      original_lot: runnerLot,
       small_account: false,
       exits_done: 0,
       trailing_started: false,
@@ -173,9 +191,9 @@ export async function firePendingEntry(
     })
     await supabase
       .from("mtmcopy_premium_pending")
-      .update({ broker_position_id: r.orderId ?? null, note: `Entrou ${row.direction} @ ${price} (${source}) · #${r.orderId ?? "?"}` })
+      .update({ broker_position_id: first.orderId ?? null, note: `Entrou ${row.direction} @ ${price} (${source}) · #${first.orderId ?? "?"}${legNote}` })
       .eq("id", row.id)
-    return { ok: true, detail: `live ${source} @ ${price} · #${r.orderId ?? "?"}` }
+    return { ok: true, detail: `live ${source} @ ${price} · #${first.orderId ?? "?"}${legNote}` }
   } catch (e) {
     await supabase
       .from("mtmcopy_premium_pending")
