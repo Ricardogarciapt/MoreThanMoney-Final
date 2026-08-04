@@ -41,7 +41,10 @@ const DEFAULTS: RelayConfig = {
 
 /** Aplica cabeçalho de marca + sanitização + assinatura. */
 function brandForPartner(text: string | null | undefined, cfg: RelayConfig): string {
-  const body = sanitizeForAlcy(text, cfg.signature)
+  let body = sanitizeForAlcy(text, cfg.signature)
+  // Remove o cabeçalho de marca original (linha a começar por 🏦, ex.: "🏦 MTM Premium")
+  // para não duplicar com o header do parceiro.
+  if (cfg.header) body = body.replace(/^\s*🏦[^\n]*\n+/, "")
   return cfg.header ? `${cfg.header}\n\n${body}` : body
 }
 
