@@ -83,6 +83,8 @@ export interface PremiumExecConfig {
   mode: 'off' | 'full' | 'hybrid'
   scalpPct: number
   runnerPct: number
+  /** Saldo mínimo (USD) para abrir 2 pernas; abaixo disto → dieta de TP (1 posição). */
+  minBalanceTwoLegs: number
 }
 
 export async function getPremiumExecConfig(): Promise<PremiumExecConfig> {
@@ -90,11 +92,12 @@ export async function getPremiumExecConfig(): Promise<PremiumExecConfig> {
     const { data } = await getSupabaseAdmin()
       .from('site_settings').select('value').eq('key', 'premium_execution').maybeSingle()
     const v = (data?.value ?? {}) as Partial<PremiumExecConfig> & { brokerTp1Full?: boolean }
-    let mode: PremiumExecConfig['mode'] =
+    const mode: PremiumExecConfig['mode'] =
       v.mode === 'full' || v.mode === 'hybrid' ? v.mode : v.brokerTp1Full === true ? 'full' : 'off'
     const scalpPct = typeof v.scalpPct === 'number' && v.scalpPct > 0 && v.scalpPct < 100 ? v.scalpPct : 75
-    return { mode, scalpPct, runnerPct: 100 - scalpPct }
+    const minBalanceTwoLegs = typeof v.minBalanceTwoLegs === 'number' && v.minBalanceTwoLegs >= 0 ? v.minBalanceTwoLegs : 500
+    return { mode, scalpPct, runnerPct: 100 - scalpPct, minBalanceTwoLegs }
   } catch {
-    return { mode: 'off', scalpPct: 75, runnerPct: 25 }
+    return { mode: 'off', scalpPct: 75, runnerPct: 25, minBalanceTwoLegs: 500 }
   }
 }

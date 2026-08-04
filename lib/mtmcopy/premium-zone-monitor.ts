@@ -133,13 +133,20 @@ export async function firePendingEntry(
   let legs: OrderRequest[]
   let runnerLot = lot // lote a GERIR (BE/trailing); em híbrido é só o runner
   if (exec.mode === "hybrid" && tp1 != null && lot > 0) {
+    // DIETA p/ contas pequenas: <$500 não têm margem para 2 posições → 1 perna só (fecha no TP1).
+    let balance: number | null = null
+    try {
+      balance = (await fetchLotSizingContext(row.account_id, row.symbol, row.direction)).balance
+    } catch { /* sem saldo → assume que pode (fail-open) */ }
+    const canAffordTwoLegs = balance == null || balance >= exec.minBalanceTwoLegs
     const scalp = roundStep((lot * exec.scalpPct) / 100)
     const runner = roundStep(lot - scalp)
-    if (scalp >= MINLOT && runner >= MINLOT) {
+    if (canAffordTwoLegs && scalp >= MINLOT && runner >= MINLOT) {
       legs = [mkReq(scalp, tp1, "-S"), mkReq(runner, null, "-R")]
       runnerLot = runner
     } else {
-      legs = [mkReq(lot, tp1, "")] // lote pequeno demais p/ dividir → full (TP1 instantâneo, sem runner)
+      // dieta de TP: 1 posição a fechar no TP1 (sem 2ª perna → sem margem/exposição extra)
+      legs = [mkReq(lot, tp1, "")]
     }
   } else if (exec.mode === "full" && tp1 != null) {
     legs = [mkReq(lot, tp1, "")]
