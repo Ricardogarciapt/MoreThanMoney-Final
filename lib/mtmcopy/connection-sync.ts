@@ -241,13 +241,20 @@ export async function syncMtmStrategyReplication(
   const tradeSizeScaling = await resolveScalingForConnection(conn)
 
   // fixedVolume por estratégia (clamp 0.01–50) para as que têm lote definido.
+  // forceTinyTrades: parciais do mestre (ex.: fecho de 33% de 0.01) arredondam PARA CIMA
+  // ao lote mínimo do broker em vez de falharem — lote mínimo forçado em todas as estratégias.
   const perStrategyScaling = perStrategyLots
     ? Object.fromEntries(
         strategyIds
           .filter((id) => Number(perStrategyLots[id]) > 0)
           .map((id) => [
             id,
-            { mode: 'fixedVolume' as const, tradeVolume: Math.min(50, Math.max(0.01, Number(perStrategyLots[id]))) },
+            {
+              mode: 'fixedVolume' as const,
+              tradeVolume: Math.min(50, Math.max(0.01, Number(perStrategyLots[id]))),
+              forceTinyTrades: true,
+              maxRiskCoefficient: COPYFACTORY_MAX_RISK_COEFFICIENT,
+            },
           ]),
       )
     : undefined
