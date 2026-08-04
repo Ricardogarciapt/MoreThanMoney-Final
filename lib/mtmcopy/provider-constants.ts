@@ -12,6 +12,10 @@ export const CANONICAL_TRADE_IDEAS_STRATEGY_ID = '5IHE'
 export const CANONICAL_SENSEI_STRATEGY_ID = 'mADd'
 export const CANONICAL_GOLDKILLER_STRATEGY_ID = 'SDNb'
 export const CANONICAL_BOOSTER_STRATEGY_ID = 'pIrJ'
+/** Gold Did — conta PU Prime do Alcy (4dacaf5a) executa os sinais Premium com gestão própria
+ *  (BE aos +5.0 sem trailing, alvo TP2). Estratégia CopyFactory e68I. */
+export const CANONICAL_GOLDDID_ACCOUNT_ID = '4dacaf5a-2ea0-4236-b630-9acd2da446d1'
+export const CANONICAL_GOLDDID_STRATEGY_ID = 'e68I'
 
 /** Estratégias MTM disponíveis para cópia (UI pública — sem expor IDs técnicos). */
 export const MTM_COPY_STRATEGY_CATALOG: Record<
@@ -46,6 +50,11 @@ export const MTM_COPY_STRATEGY_CATALOG: Record<
       'reduzidos e aceita Tap to Trade. Capital maioritariamente BÓNUS (não-levantável) — ' +
       'usa lote fixo pequeno (0.01) e só com capital que aceitas perder. Não indicado para ' +
       'contas conservadoras.',
+  },
+  [CANONICAL_GOLDDID_STRATEGY_ID]: {
+    title: 'Gold Did',
+    publicLabel: 'Gold Did',
+    description: 'Ouro (XAUUSD) a seguir os sinais Premium com gestão simples: break-even aos 50 pips (sem trailing) e alvo no TP2.',
   },
 }
 
