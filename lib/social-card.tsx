@@ -18,12 +18,22 @@ const INK = "#0b0d12"
 const PAPER = "#f5f2ea"
 const MUTED = "#9a9ea8"
 
+/** Eyebrow + acento por tipo de CTA (dá variedade aos posts sem sair da marca). */
+function variantFor(cta: string): { eyebrow: string; accent: string } {
+  if (/SINAIS|SINAL|COPY|GRUPO/.test(cta)) return { eyebrow: "COPYTRADING", accent: "#D2A63C" }
+  if (/PREMIUM/.test(cta)) return { eyebrow: "MTM PREMIUM", accent: "#E4B94A" }
+  if (/APP|QUERO|MUNDO|COMEC|COMEÇ|TRIAL|GR[AÁ]TIS/.test(cta)) return { eyebrow: "COMEÇA GRÁTIS", accent: "#C9922E" }
+  return { eyebrow: "MORE THAN MONEY", accent: "#D2A63C" }
+}
+
 export function socialCardElement(params: SocialCardParams) {
   const hook = (params.hook || "Disciplina cria liberdade.").slice(0, 160)
   const cta = (params.cta || "").toUpperCase().slice(0, 16)
   const handle = (params.handle || "morethanmoney.pt").replace(/^@/, "")
   const showProof = params.proof !== false
-  const kicker = (params.kicker || "MORE THAN MONEY").toUpperCase().slice(0, 40)
+  const v = variantFor(cta)
+  const GOLD = params.handle && params.handle.includes("ricardo") ? "#D2A63C" : v.accent
+  const kicker = (params.kicker || v.eyebrow).toUpperCase().slice(0, 40)
   const hookSize = hook.length > 110 ? 62 : hook.length > 70 ? 74 : hook.length > 40 ? 88 : 104
 
   return (
