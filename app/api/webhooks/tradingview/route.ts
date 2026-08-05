@@ -771,6 +771,10 @@ export async function POST(request: NextRequest) {
       raw,
     } as ParsedSignal)
 
+  // Forex (conta MTM Auto Forex): entrar a MERCADO (fill garantido) em vez de limit/pullback —
+  // o trailing dinâmico da conta trata do resto. (Sensei gold/btc já é forçado a market no processor.)
+  if (assetClass === "forex" && parsedForExec) parsedForExec.orderType = "market"
+
   let providerExecuted = false
   let providerDetail: string | undefined
   const isIdeaAlert = activeSensei?.alertType === "idea" || activeSensei?.alertType === "signal"
@@ -846,7 +850,8 @@ export async function POST(request: NextRequest) {
     Boolean(parsedForExec.direction)
 
   const canExecuteProvider =
-    SENSEI_PROVIDER_EXEC_ENABLED &&
+    // Master switch = interruptor por-ativo na BD (mtmcopy_exec_switches), afinável sem redeploy.
+    // (Antes exigia também o env SENSEI_PROVIDER_EXEC_ENABLED, que mantinha tudo OFF por defeito.)
     execSwitchOn &&
     (assetClass === "gold_btc" || assetClass === "forex") &&
     parsedForExec.symbol &&
@@ -945,7 +950,7 @@ export async function POST(request: NextRequest) {
 
   // Gestão automática Sensei (gated): TP/BE/SL → parciais + BE + trailing ou fecho na conta Sensei
   if (
-    SENSEI_PROVIDER_EXEC_ENABLED &&
+    execSwitches.sensei &&
     assetClass === "gold_btc" &&
     isFollowup &&
     activeSensei?.symbol &&

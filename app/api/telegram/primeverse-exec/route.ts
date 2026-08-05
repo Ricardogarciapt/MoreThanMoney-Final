@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { placeOrder, type OrderRequest } from '@/lib/mtmcopy/metaapi'
 import { CANONICAL_SENSEI_ACCOUNT_ID } from '@/lib/mtmcopy/provider-constants'
 import { getPrimeverseExecConfig } from '@/lib/mtmcopy/primeverse-exec'
+import { computeRiskLot } from '@/lib/mtmcopy/risk-sizing'
 import { getSiteOrigin } from '@/lib/site-url'
 
 /**
@@ -47,7 +48,14 @@ export async function POST(req: NextRequest) {
 
   const tp = tps[cfg.tpLevel - 1] ?? tps[0] ?? null
   const wantBybit = symbol === 'BTCUSD' && cfg.bybit
-  const summary = { trader, symbol, direction, orderType, entry, sl, tp, senseiLot: cfg.senseiLot, bybit: wantBybit }
+
+  // Sizing por RISCO (0.5% ao SL) na conta Sensei — usa a entry do sinal do kingfkg.
+  const sizing = cfg.riskPct > 0
+    ? await computeRiskLot(CANONICAL_SENSEI_ACCOUNT_ID, symbol, sl, cfg.riskPct, entry, cfg.senseiLot)
+    : { lot: cfg.senseiLot, basis: 'fixed' as const, equity: null, entry }
+  const lot = sizing.lot
+
+  const summary = { trader, symbol, direction, orderType, entry, sl, tp, lot, sizing: sizing.basis, riskPct: cfg.riskPct, bybit: wantBybit }
 
   if (cfg.mode === 'shadow') {
     console.log('[primeverse-exec] SHADOW —', JSON.stringify(summary))
@@ -63,7 +71,7 @@ export async function POST(req: NextRequest) {
       accountId: CANONICAL_SENSEI_ACCOUNT_ID,
       symbol,
       direction,
-      volume: cfg.senseiLot,
+      volume: lot,
       orderType,
       openPrice: orderType === 'limit' ? entry : null,
       stopLoss: sl,

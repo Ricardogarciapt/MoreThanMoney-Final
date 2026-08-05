@@ -3,6 +3,7 @@ import { placeOrder, type OrderRequest } from '@/lib/mtmcopy/metaapi'
 import { tradeIdeasTrailingDistance } from '@/lib/mtmcopy/pip-points'
 import { CANONICAL_TRADE_IDEAS_ACCOUNT_ID } from '@/lib/mtmcopy/provider-constants'
 import { getForexSwingsExecConfig } from '@/lib/mtmcopy/forex-swings-exec'
+import { computeRiskLot } from '@/lib/mtmcopy/risk-sizing'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 
@@ -67,11 +68,17 @@ export async function POST(req: NextRequest) {
   // Sempre: alimenta o chat da app + push T2T (membros veem e podem executar na conta deles).
   await feedAppChat(symbol, direction, sl, tp)
 
+  // Sizing por RISCO (0.5% ao SL) — ordem a mercado, sem entry → usa o preço de mercado atual.
+  const sizing = cfg.riskPct > 0
+    ? await computeRiskLot(CANONICAL_TRADE_IDEAS_ACCOUNT_ID, symbol, sl, cfg.riskPct, null, cfg.lot)
+    : { lot: cfg.lot, basis: 'fixed' as const, equity: null, entry: null }
+  const lot = sizing.lot
+
   const orderReq: OrderRequest = {
     accountId: CANONICAL_TRADE_IDEAS_ACCOUNT_ID, // fbeeafeb — MTM Auto Forex (5IHE)
     symbol,
     direction,
-    volume: cfg.lot,
+    volume: lot,
     orderType: 'market',
     openPrice: null,
     stopLoss: sl,
@@ -85,7 +92,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, skipped: 'off' })
   }
 
-  const summary = { symbol, direction, lot: cfg.lot, sl, tp, comment: 'Forex Swings', trailing: orderReq.trailingStop != null }
+  const summary = { symbol, direction, lot, sizing: sizing.basis, riskPct: cfg.riskPct, sl, tp, comment: 'Forex Swings', trailing: orderReq.trailingStop != null }
 
   if (cfg.mode === 'shadow') {
     console.log('[forex-swings-exec] SHADOW — abriria:', JSON.stringify(summary))

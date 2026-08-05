@@ -1145,6 +1145,25 @@ export async function getSymbolSpecification(
   }
 }
 
+/** Preço de mercado (mid) atual de um símbolo na conta — para sizing por risco de ordens a mercado. */
+export async function getMarketPrice(accountId: string, canonicalSymbol: string): Promise<number | null> {
+  let close: (() => Promise<void>) | undefined
+  try {
+    const { connection, close: closeFn } = await getRpcConnection(accountId)
+    close = closeFn
+    if (!connection.getSymbolPrice) return null
+    const symbols = await connection.getSymbols()
+    const brokerSymbol = resolveBrokerSymbol(canonicalSymbol, symbols)
+    const q = await connection.getSymbolPrice(brokerSymbol)
+    const mid = q?.ask != null && q?.bid != null ? (q.ask + q.bid) / 2 : (q?.ask ?? q?.bid ?? null)
+    return typeof mid === 'number' && mid > 0 ? mid : null
+  } catch {
+    return null
+  } finally {
+    if (close) await close()
+  }
+}
+
 export async function modifyPositionSlTp(
   accountId: string,
   positionId: string,

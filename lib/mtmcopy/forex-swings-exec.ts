@@ -14,7 +14,10 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  */
 export interface ForexSwingsExecConfig {
   mode: 'off' | 'shadow' | 'live'
+  /** Lote de fallback quando não dá para calcular por risco (sem equity/SL/preço). */
   lot: number
+  /** % de risco ao SL por posição (default 0.5). 0 = usa lote fixo `lot`. */
+  riskPct: number
 }
 
 const KEY = 'forex_swings_execution'
@@ -27,8 +30,9 @@ export async function getForexSwingsExecConfig(): Promise<ForexSwingsExecConfig>
     const mode: ForexSwingsExecConfig['mode'] =
       v.mode === 'shadow' || v.mode === 'live' ? v.mode : 'off'
     const lot = typeof v.lot === 'number' && v.lot > 0 ? v.lot : 0.01
-    return { mode, lot }
+    const riskPct = typeof v.riskPct === 'number' && v.riskPct >= 0 ? v.riskPct : 0.5
+    return { mode, lot, riskPct }
   } catch {
-    return { mode: 'off', lot: 0.01 }
+    return { mode: 'off', lot: 0.01, riskPct: 0.5 }
   }
 }

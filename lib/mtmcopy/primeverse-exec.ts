@@ -17,7 +17,10 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 export interface PrimeverseExecConfig {
   mode: 'off' | 'shadow' | 'live'
   trader: string
+  /** Lote de fallback na conta Sensei quando não dá para calcular por risco. */
   senseiLot: number
+  /** % de risco ao SL por posição (default 0.5). 0 = usa lote fixo `senseiLot`. */
+  riskPct: number
   tpLevel: number
   bybit: boolean
 }
@@ -33,10 +36,11 @@ export async function getPrimeverseExecConfig(): Promise<PrimeverseExecConfig> {
       v.mode === 'shadow' || v.mode === 'live' ? v.mode : 'off'
     const trader = (typeof v.trader === 'string' && v.trader.trim()) ? v.trader.trim().toLowerCase() : 'kingfkg'
     const senseiLot = typeof v.senseiLot === 'number' && v.senseiLot > 0 ? v.senseiLot : 0.01
+    const riskPct = typeof v.riskPct === 'number' && v.riskPct >= 0 ? v.riskPct : 0.5
     const tpLevel = typeof v.tpLevel === 'number' && v.tpLevel >= 1 && v.tpLevel <= 5 ? Math.round(v.tpLevel) : 1
     const bybit = v.bybit !== false
-    return { mode, trader, senseiLot, tpLevel, bybit }
+    return { mode, trader, senseiLot, riskPct, tpLevel, bybit }
   } catch {
-    return { mode: 'off', trader: 'kingfkg', senseiLot: 0.01, tpLevel: 1, bybit: true }
+    return { mode: 'off', trader: 'kingfkg', senseiLot: 0.01, riskPct: 0.5, tpLevel: 1, bybit: true }
   }
 }
