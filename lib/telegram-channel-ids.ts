@@ -39,7 +39,8 @@ export const CANONICAL_TELEGRAM_CHANNELS = {
   // ⚠️ id de Basic Group; muda se promovido a supergroup (bot admin costuma converter) →
   //    o match por TÍTULO (channelKeyFromTitle) é o mecanismo durável; o id é best-effort.
   goldkillerScanner: {
-    chatId: '-5454326270',
+    // Grupo promovido a SUPERGRUPO a 2026-07-25 → id mudou (o velho -5454326270 morreu).
+    chatId: '-1003912183521',
     title: 'More Than Money - Goldkiller Scanner',
     mtmcopyKey: 'trade-ideas' as const,
     appSlug: 'trade-ideas-setup' as const,
