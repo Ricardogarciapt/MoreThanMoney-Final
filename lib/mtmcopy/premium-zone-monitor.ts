@@ -303,6 +303,26 @@ export async function runPremiumZoneMonitor(): Promise<{ checked: number; fired:
       }
     }
 
+    // Regra London/NY: NÃO perder o movimento. Entra a MERCADO já se:
+    //  (a) o preço está FAVORÁVEL — já passou a ponta da zona no bom sentido (BUY ≤ zone_high / SELL ≥ zone_low), ou
+    //  (b) o preço está a FUGIR — > flee_pips além da ponta da zona (o limit é só p/ a janela ±flee_pips).
+    const fleePips = Number((cfg as unknown as { flee_pips?: number }).flee_pips) || 50
+    const pip = /xau|gold/i.test(row.symbol) ? 0.1 : /btc/i.test(row.symbol) ? 1 : 0.0001
+    const fleeDist = fleePips * pip
+    let marketNow = false
+    if (row.direction === "buy") {
+      if (price <= row.zone_high) marketNow = true
+      else if (price - row.zone_high > fleeDist) marketNow = true
+    } else {
+      if (price >= row.zone_low) marketNow = true
+      else if (row.zone_low - price > fleeDist) marketNow = true
+    }
+    if (marketNow && row.mode === "live") {
+      const res = await firePendingEntry(row, "market_flee", price)
+      if (res.ok) fired++
+      continue
+    }
+
     const inZone = priceInZone(price, row.zone_low, row.zone_high)
     const nowTouched = row.touched_zone || inZone
 
