@@ -2,9 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CAPTION_INTERNAL_MARK, uploadBufferToBucket } from '@/lib/instagram/publish'
 import { renderSocialCardBuffer } from '@/lib/social-card'
+import { canvaConfigured, canvaAutofillImage } from '@/lib/canva-connect'
 
-/** Gera o card de marca EM PROCESSO (sem HTTP) e faz upload → URL público estável. */
+/**
+ * Imagem do post: 1º tenta o Canva Connect (teus templates reais, se configurado + plano pago);
+ * senão / se falhar, cai no card gerado em processo. Upload → URL público estável.
+ */
 async function buildCardImage(hook: string, cta: string, handle: string): Promise<string | null> {
+  if (canvaConfigured()) {
+    const viaCanva = await canvaAutofillImage(hook, cta)
+    if (viaCanva) return viaCanva
+  }
   try {
     const buf = await renderSocialCardBuffer({ hook, cta, handle })
     return await uploadBufferToBucket(buf, 'image/png', 'auto')
