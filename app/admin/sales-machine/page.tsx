@@ -92,6 +92,21 @@ export default function SalesMachinePage() {
       {flash && <div className="rounded-lg bg-emerald-900/40 px-3 py-2 text-sm text-emerald-300">{flash}</div>}
       {err && <div className="rounded-lg bg-red-900/40 px-3 py-2 text-sm text-red-300">{err}</div>}
 
+      {/* Canva Connect (visuais reais dos teus templates) */}
+      <div className={`${card} flex items-center justify-between`}>
+        <div className="text-sm">
+          <span className="font-semibold">🎨 Canva</span>{" "}
+          <span className="text-neutral-400">liga os teus templates reais (requer plano pago). Sem isto, usa o card gerado.</span>
+          {typeof window !== "undefined" && new URLSearchParams(window.location.search).get("canva") === "ligado" && (
+            <span className="ml-2 text-emerald-400">✓ ligado</span>
+          )}
+          {typeof window !== "undefined" && (new URLSearchParams(window.location.search).get("canva") || "").startsWith("erro") && (
+            <span className="ml-2 text-red-400">✗ falhou — tenta de novo</span>
+          )}
+        </div>
+        <a href="/api/admin/canva/connect" className={`${btn} bg-violet-600 hover:bg-violet-500`}>Ligar Canva</a>
+      </div>
+
       {/* Métricas */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Metric label="Novos leads 24h" value={f.novos24h} />
