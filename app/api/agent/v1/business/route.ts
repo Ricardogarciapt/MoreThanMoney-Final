@@ -189,6 +189,15 @@ export async function GET(request: NextRequest) {
         return agentOk(await getLeads(sb, url.searchParams.get("stage"), limit))
       case "tasks":
         return agentOk(await getTasks(sb, url.searchParams.get("status"), limit))
+      // Máquina de vendas — usada pela FRIDAY (funnel) e EDITH (admin) do AIOS.
+      case "funnel":
+      case "sales":
+      case "content":
+      case "admin": {
+        const { buildSalesState, salesStateSummary } = await import("@/lib/sales-machine")
+        const state = await buildSalesState()
+        return agentOk({ ...state, resumo: salesStateSummary(state) })
+      }
       default:
         return agentError("resource desconhecido: " + resource, 400)
     }
@@ -211,6 +220,14 @@ export async function POST(request: NextRequest) {
   const sb = getSupabaseAdmin()
 
   try {
+    // ----- Máquina de vendas (FRIDAY/EDITH): comandos partilhados com o hub -----
+    const SALES_ACTIONS = new Set(["approve_post", "reject_post", "set_autopilot", "set_exec", "generate_now", "repost_now", "digest_now"])
+    if (SALES_ACTIONS.has(action)) {
+      const { runSalesCommand } = await import("@/lib/sales-machine")
+      const r = await runSalesCommand({ action, id: body.id, account: body.account, key: body.key, on: body.on })
+      return r.ok ? agentOk(r) : agentError(String(r.error || "falhou"), 400)
+    }
+
     // ----- Escrita interna: criar tarefa (imediata) -----
     if (action === "create_task") {
       if (!body.title) return agentError("Falta 'title'.", 400)
