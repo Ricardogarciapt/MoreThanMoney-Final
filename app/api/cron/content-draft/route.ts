@@ -173,7 +173,6 @@ export async function GET(req: NextRequest) {
       }
     }),
   )
-  })
 
   const { data, error } = await supabase.from('social_scheduled_posts').insert(rows).select('id')
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
