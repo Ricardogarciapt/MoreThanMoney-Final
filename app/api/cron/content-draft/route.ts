@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { CAPTION_INTERNAL_MARK } from '@/lib/instagram/publish'
+import { CAPTION_INTERNAL_MARK, rehostMedia } from '@/lib/instagram/publish'
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://www.morethanmoney.pt'
+
+/** Gera o card de marca (server-side) e re-hospeda no bucket → URL público estável. */
+async function buildCardImage(hook: string, cta: string, handle: string): Promise<string | null> {
+  try {
+    const q = new URLSearchParams({ hook, cta, handle }).toString()
+    return await rehostMedia(`${SITE}/api/og/social-card?${q}`, { prefix: 'auto' })
+  } catch (e) {
+    console.error('[content-draft] card falhou:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
 
 /**
  * GERADOR AUTÓNOMO DE CONTEÚDO (Fase 2 da máquina de vendas).
@@ -42,6 +55,7 @@ ESTILO: português de Portugal, humano, direto, gancho forte na 1.ª linha, 60�
 FORMATO DE SAÍDA (exato, sem JSON, sem markdown, sem texto fora dos blocos). Para CADA post escreve um bloco:
 ===POST===
 KEYWORD: <UMA palavra-chave das indicadas>
+HOOK: <frase de impacto para a IMAGEM do post, no máx. 10 palavras, sem hashtags nem emojis>
 VISUAL: <1 frase: o que mostrar na imagem para o designer>
 CAPTION:
 <a legenda completa PRONTA A PUBLICAR, já com o CTA e as hashtags — pode ter várias linhas>
@@ -85,10 +99,11 @@ async function draftBatch(assigned: string[]): Promise<Array<{ hook: string; cap
     for (const block of text.split('===POST===').slice(1)) {
       const body = block.split('===END===')[0]
       const kw = (body.match(/KEYWORD:\s*([^\n]+)/i)?.[1] || '').trim().toUpperCase()
+      const hk = (body.match(/HOOK:\s*([^\n]+)/i)?.[1] || '').trim()
       const vis = (body.match(/VISUAL:\s*([^\n]+)/i)?.[1] || '').trim()
       const cap = (body.split(/CAPTION:\s*/i)[1] || '').trim()
       if (!cap) continue
-      out.push({ hook: cap.split('\n')[0].slice(0, 120), caption: cap, cta_keyword: kw, visual_brief: vis })
+      out.push({ hook: (hk || cap.split('\n')[0]).slice(0, 120), caption: cap, cta_keyword: kw, visual_brief: vis })
     }
     return out
   } finally {
@@ -100,12 +115,12 @@ export async function GET(req: NextRequest) {
   if (!(await authorized(req))) return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
   const supabase = getSupabaseAdmin()
 
-  // Guarda anti-inundação: quantos rascunhos por rever já existem?
+  // Guarda anti-inundação: conta posts ainda não publicados (rascunho ou aprovados por publicar).
   const { count: pending } = await supabase
     .from('social_scheduled_posts')
     .select('id', { count: 'exact', head: true })
     .eq('ig_account_id', IG_MTM)
-    .eq('status', 'draft')
+    .in('status', ['draft', 'approved', 'processing'])
   if ((pending ?? 0) >= TARGET_BACKLOG) {
     return NextResponse.json({ ok: true, skipped: 'backlog_cheio', pending })
   }
@@ -122,32 +137,55 @@ export async function GET(req: NextRequest) {
   }
   if (!drafts.length) return NextResponse.json({ ok: false, error: 'sem rascunhos gerados' }, { status: 500 })
 
-  // Agenda escalonado: próximos dias às 18:00 UTC (~19:00 Lisboa). Ricardo aprova antes de cada hora.
+  // Autopilot: se ligado, os posts COM imagem entram já como 'approved' (publicam sem toque).
+  // Flag em site_settings.content_autopilot { morethanmoney: true|false }. Default: false (rascunho).
+  const { data: apRow } = await supabase.from('site_settings').select('value').eq('key', 'content_autopilot').maybeSingle()
+  const autopilot = Boolean((apRow?.value as { morethanmoney?: boolean } | null)?.morethanmoney)
+
+  // Agenda escalonado: próximos dias às 18:00 UTC (~19:00 Lisboa).
   const now = Date.now()
-  const rows = drafts.slice(0, BATCH).map((d, i) => {
-    const when = new Date(now + (i + 1) * 24 * 3600 * 1000)
-    when.setUTCHours(18, 0, 0, 0)
-    const cta = (d.cta_keyword || assigned[i] || 'APP').toUpperCase()
-    const caption =
-      `${(d.caption || '').trim()}\n\n${CAPTION_INTERNAL_MARK}\n` +
-      `🎨 Visual: ${d.visual_brief || '—'}\n` +
-      `🔑 CTA: comentário "${cta}" → funil automático\n` +
-      `🤖 Rascunho gerado pela máquina de vendas — revê, anexa imagem e aprova.`
-    return {
-      channel: 'instagram',
-      ig_account_id: IG_MTM,
-      ig_username: 'morethanmoney.pt',
-      media_type: 'IMAGE',
-      media_urls: [] as string[],
-      caption,
-      pillar: `cta:${cta.toLowerCase()}`,
-      scheduled_at: when.toISOString(),
-      status: 'draft',
-      created_by: 'sales-machine',
-    }
+  const rows = await Promise.all(
+    drafts.slice(0, BATCH).map(async (d, i) => {
+      const when = new Date(now + (i + 1) * 24 * 3600 * 1000)
+      when.setUTCHours(18, 0, 0, 0)
+      const cta = (d.cta_keyword || assigned[i] || 'APP').toUpperCase()
+      // Gera o card de marca (imagem) para publicação sem toque.
+      const card = await buildCardImage(d.hook, cta, 'morethanmoney.pt')
+      // Só auto-publica se o autopilot estiver ligado E houver imagem; senão fica rascunho.
+      const status = autopilot && card ? 'approved' : 'draft'
+      const caption =
+        `${(d.caption || '').trim()}\n\n${CAPTION_INTERNAL_MARK}\n` +
+        `🎨 Visual sugerido: ${d.visual_brief || '—'}\n` +
+        `🔑 CTA: comentário "${cta}" → funil automático\n` +
+        `🤖 ${status === 'approved' ? 'Auto-publicado pela máquina de vendas (card de marca gerado).' : 'Rascunho da máquina — revê/troca a imagem e aprova.'}`
+      return {
+        channel: 'instagram',
+        ig_account_id: IG_MTM,
+        ig_username: 'morethanmoney.pt',
+        media_type: 'IMAGE',
+        media_urls: card ? [card] : ([] as string[]),
+        caption,
+        pillar: `cta:${cta.toLowerCase()}`,
+        scheduled_at: when.toISOString(),
+        status,
+        created_by: 'sales-machine',
+        ...(status === 'approved' ? { approved_by: 'sales-machine', approved_at: new Date().toISOString() } : {}),
+      }
+    }),
+  )
   })
 
   const { data, error } = await supabase.from('social_scheduled_posts').insert(rows).select('id')
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true, created: data?.length ?? 0, day: todayLisbon(), ctas: assigned })
+  const approved = rows.filter((r) => r.status === 'approved').length
+  return NextResponse.json({
+    ok: true,
+    created: data?.length ?? 0,
+    approved,
+    drafts: (data?.length ?? 0) - approved,
+    withImage: rows.filter((r) => r.media_urls.length > 0).length,
+    autopilot,
+    day: todayLisbon(),
+    ctas: assigned,
+  })
 }
