@@ -317,6 +317,17 @@ export async function runPremiumZoneMonitor(): Promise<{ checked: number; fired:
       if (price >= row.zone_low) marketNow = true
       else if (row.zone_low - price > fleeDist) marketNow = true
     }
+    // GUARDA anti-"fecho instantâneo": só entrar a mercado se AINDA há espaço até ao TP1
+    // (>= min_room pips). Se o preço já fugiu até/além do TP1, o movimento acabou → NÃO perseguir
+    // (evita entrar colado ao TP e fechar em segundos só a pagar comissão).
+    if (marketNow) {
+      const tp1 = Array.isArray(row.tp) && row.tp.length ? Number(row.tp[0]) : null
+      if (tp1 != null && tp1 > 0) {
+        const minRoom = (Number((cfg as unknown as { min_room_pips?: number }).min_room_pips) || 30) * pip
+        const room = row.direction === "buy" ? tp1 - price : price - tp1
+        if (!(room >= minRoom)) marketNow = false
+      }
+    }
     if (marketNow && row.mode === "live") {
       const res = await firePendingEntry(row, "market_flee", price)
       if (res.ok) fired++
