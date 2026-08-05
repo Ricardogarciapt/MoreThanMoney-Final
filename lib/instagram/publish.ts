@@ -208,6 +208,17 @@ async function fetchPermalink(mediaId: string, token: string): Promise<string | 
  * se ainda não estiver pronto lança MediaNotReadyError com o creation_id para o
  * cron guardar e retomar na próxima ronda (sem recriar containers).
  */
+/**
+ * Sentinela de nota INTERNA na legenda. Tudo a partir daqui (brief visual, notas do rascunho
+ * gerado pela máquina) é cortado antes de publicar — viaja com o rascunho para o Ricardo rever,
+ * mas NUNCA vai para o Instagram.
+ */
+export const CAPTION_INTERNAL_MARK = "—INTERNO—"
+export function publicCaption(raw: string): string {
+  const i = raw.indexOf(CAPTION_INTERNAL_MARK)
+  return (i >= 0 ? raw.slice(0, i) : raw).trim()
+}
+
 export async function publishScheduledPost(post: ScheduledPost): Promise<PublishResult> {
   const igId = post.ig_account_id
   const token = tokenForAccount(igId)
@@ -215,7 +226,7 @@ export async function publishScheduledPost(post: ScheduledPost): Promise<Publish
 
   const urls = (post.media_urls || []).filter(Boolean)
   if (urls.length === 0) throw new Error("Post sem media_urls")
-  const caption = post.caption || ""
+  const caption = publicCaption(post.caption || "")
 
   // Retoma: se já existe um container criado (ex.: Reels a processar), só publica.
   if (post.creation_id) {
