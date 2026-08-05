@@ -44,7 +44,7 @@ export function socialCardElement(params: SocialCardParams) {
           <div style={{ width: 18, height: 18, borderRadius: 9, background: GOLD, display: "flex", marginRight: 18 }} />
           <div style={{ color: GOLD, fontSize: 30, fontWeight: 700, letterSpacing: 4 }}>{kicker}</div>
         </div>
-        <div style={{ color: MUTED, fontSize: 28, fontWeight: 600 }}>@{handle}</div>
+        <div style={{ color: MUTED, fontSize: 28, fontWeight: 600 }}>{"@" + handle}</div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column" }}>
@@ -76,7 +76,7 @@ export function socialCardElement(params: SocialCardParams) {
               borderRadius: 999,
             }}
           >
-            Comenta «{cta}» ↓
+            {"Comenta «" + cta + "» ↓"}
           </div>
         ) : (
           <div style={{ display: "flex", color: PAPER, fontSize: 36, fontWeight: 700 }}>morethanmoney.pt</div>
