@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
 
   try {
     // ----- Máquina de vendas (FRIDAY/EDITH): comandos partilhados com o hub -----
-    const SALES_ACTIONS = new Set(["approve_post", "reject_post", "set_autopilot", "set_exec", "generate_now", "repost_now", "digest_now"])
+    const SALES_ACTIONS = new Set(["approve_post", "reject_post", "attach_image", "set_autopilot", "set_exec", "generate_now", "repost_now", "digest_now"])
     if (SALES_ACTIONS.has(action)) {
       const { runSalesCommand } = await import("@/lib/sales-machine")
       const r = await runSalesCommand({ action, id: body.id, account: body.account, key: body.key, on: body.on })

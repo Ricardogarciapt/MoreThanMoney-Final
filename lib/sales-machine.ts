@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getExecSwitches, setExecSwitches } from '@/lib/mtmcopy/exec-switches'
-import { publicCaption } from '@/lib/instagram/publish'
+import { publicCaption, rehostMedia } from '@/lib/instagram/publish'
 
 /**
  * Núcleo da MÁQUINA DE VENDAS — estado + comandos, partilhado pelo hub (/api/sales-machine)
@@ -86,6 +86,7 @@ export interface SalesCommand {
   account?: string
   key?: string
   on?: boolean
+  url?: string
 }
 
 /** Executa um comando da máquina de vendas. Devolve {ok, ...} — nunca lança (erros no campo error). */
@@ -107,6 +108,16 @@ export async function runSalesCommand(cmd: SalesCommand): Promise<Record<string,
         if (!cmd.id) return { ok: false, error: 'id em falta' }
         const { error } = await supabase.from('social_scheduled_posts').delete().eq('id', cmd.id).in('status', ['draft', 'approved'])
         return error ? { ok: false, error: error.message } : { ok: true, rejected: cmd.id }
+      }
+      case 'attach_image': {
+        // Encaixa uma imagem (ex.: export do Canva via MCP) num rascunho: re-hospeda no bucket + set media_urls.
+        if (!cmd.id || !cmd.url) return { ok: false, error: 'id e url obrigatórios' }
+        const stable = await rehostMedia(cmd.url, { prefix: 'canva' })
+        const { error } = await supabase
+          .from('social_scheduled_posts')
+          .update({ media_urls: [stable], updated_at: new Date().toISOString() })
+          .eq('id', cmd.id)
+        return error ? { ok: false, error: error.message } : { ok: true, id: cmd.id, image: stable }
       }
       case 'set_autopilot': {
         const acc = (cmd.account || '').trim()
