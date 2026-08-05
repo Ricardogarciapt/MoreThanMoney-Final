@@ -35,12 +35,16 @@ KEEP = [
     re.compile(r"gold\s+(buy|sell)\s+(setup|now|zone)", re.I),
     re.compile(r"gold\s+(buy|sell)\s+zone", re.I),
     re.compile(r"\b(sell|buy)\s+zone\b", re.I),
-    re.compile(r"hit\s+(tp\d|sl)\b", re.I),
-    re.compile(r"tp\d\s+hit", re.I),
+    # TP/SL hits — cobre formato Londres ("HIT TP2 +pips") E Nova Iorque ("TP 1 HIT", "TP1 ✅✅").
+    re.compile(r"hit\s+(all\s+)?(tp\s*\d|sl)\b", re.I),
+    re.compile(r"tp\s*\d\s*hit", re.I),
+    re.compile(r"tp\s*\d[^\n]{0,4}✅", re.I),   # TP1 ✅ / TP4 ✅✅ (hit por checkmark)
+    re.compile(r"\bsl\s*hit\b", re.I),
     re.compile(r"running\s+[+-]?\d+\s*pips", re.I),
+    re.compile(r"[+-]?\d+\s*pips\b", re.I),          # qualquer resultado em pips
     re.compile(r"(london|new\s*york)\s+(performance|session)", re.I),
     re.compile(r"new\s+signal", re.I),
-    re.compile(r"move\s+sl|breakeven|trail\s+sl", re.I),
+    re.compile(r"move\s+sl|breakeven|set\s+be\b|trail\s+sl", re.I),
 ]
 # Linhas/frases da FONTE a REMOVER (só branding/promo deles). O conselho de risk management
 # ("use suitable lot sizes / money management is key") FICA — é útil e alinhado com o guia.
