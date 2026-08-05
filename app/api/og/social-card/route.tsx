@@ -38,7 +38,6 @@ export async function GET(req: NextRequest) {
           background: INK,
           backgroundImage: `radial-gradient(1200px 600px at 50% -10%, rgba(210,166,60,0.22), rgba(210,166,60,0) 60%)`,
           padding: "88px 84px",
-          fontFamily: "sans-serif",
         }}
       >
         {/* Topo: kicker + handle */}
@@ -83,7 +82,7 @@ export async function GET(req: NextRequest) {
                 borderRadius: 999,
               }}
             >
-              Comenta «{cta}» 👇
+              Comenta «{cta}» ↓
             </div>
           ) : (
             <div style={{ display: "flex", color: PAPER, fontSize: 36, fontWeight: 700 }}>morethanmoney.pt</div>
