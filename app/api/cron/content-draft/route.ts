@@ -134,12 +134,16 @@ export async function GET(req: NextRequest) {
       `🔑 CTA: comentário "${cta}" → funil automático\n` +
       `🤖 Rascunho gerado pela máquina de vendas — revê, anexa imagem e aprova.`
     return {
+      channel: 'instagram',
       ig_account_id: IG_MTM,
+      ig_username: 'morethanmoney.pt',
       media_type: 'IMAGE',
       media_urls: [] as string[],
       caption,
-      scheduled_for: when.toISOString(),
+      pillar: `cta:${cta.toLowerCase()}`,
+      scheduled_at: when.toISOString(),
       status: 'draft',
+      created_by: 'sales-machine',
     }
   })
 
