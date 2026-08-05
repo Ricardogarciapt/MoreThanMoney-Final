@@ -39,8 +39,15 @@ que te será indicada. Ex.: «Comenta "SINAIS" que eu envio o acesso 👇». O c
 
 ESTILO: português de Portugal, humano, direto, gancho forte na 1.ª linha, 60–120 palavras, no máx. 1–2 emojis, 3–5 hashtags no fim.
 
-Devolve APENAS JSON válido: um array com ${BATCH} objetos:
-[{"hook":"1.ª linha/gancho","caption":"legenda completa PRONTA A PUBLICAR já com o CTA e hashtags","cta_keyword":"UMA das indicadas","visual_brief":"o que mostrar na imagem/vídeo, 1 frase para o designer"}]`
+FORMATO DE SAÍDA (exato, sem JSON, sem markdown, sem texto fora dos blocos). Para CADA post escreve um bloco:
+===POST===
+KEYWORD: <UMA palavra-chave das indicadas>
+VISUAL: <1 frase: o que mostrar na imagem para o designer>
+CAPTION:
+<a legenda completa PRONTA A PUBLICAR, já com o CTA e as hashtags — pode ter várias linhas>
+===END===
+
+Repete o bloco ${BATCH} vezes. Nada antes do primeiro ===POST=== nem depois do último ===END===.`
 
 function todayLisbon(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
@@ -73,10 +80,17 @@ async function draftBatch(assigned: string[]): Promise<Array<{ hook: string; cap
     if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 200)}`)
     const data = await res.json()
     const text: string = (data?.content || []).filter((p: any) => p?.type === 'text').map((p: any) => p.text).join('').trim()
-    const m = text.match(/\[[\s\S]*\]/)
-    if (!m) throw new Error('sem JSON no output')
-    const arr = JSON.parse(m[0])
-    return Array.isArray(arr) ? arr : []
+    // Parser do formato delimitado (robusto a legendas multi-linha).
+    const out: Array<{ hook: string; caption: string; cta_keyword: string; visual_brief: string }> = []
+    for (const block of text.split('===POST===').slice(1)) {
+      const body = block.split('===END===')[0]
+      const kw = (body.match(/KEYWORD:\s*([^\n]+)/i)?.[1] || '').trim().toUpperCase()
+      const vis = (body.match(/VISUAL:\s*([^\n]+)/i)?.[1] || '').trim()
+      const cap = (body.split(/CAPTION:\s*/i)[1] || '').trim()
+      if (!cap) continue
+      out.push({ hook: cap.split('\n')[0].slice(0, 120), caption: cap, cta_keyword: kw, visual_brief: vis })
+    }
+    return out
   } finally {
     clearTimeout(timer)
   }
