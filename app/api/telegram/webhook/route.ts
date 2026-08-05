@@ -399,6 +399,18 @@ export async function POST(request: NextRequest) {
               reply ||
                 "Diz-me só: procuras <b>sinais para copiar à mão</b>, <b>Tap to Trade</b> (1 toque) ou algo <b>automático</b>? 🙂",
             )
+            // Supervisão: se o lead está quente (compra/UID/falar contigo), avisa o admin.
+            try {
+              const { maybeEscalateLead } = await import("@/lib/mtm-sdr-escalation")
+              await maybeEscalateLead({
+                chatId,
+                username: body.message.from?.username ?? null,
+                firstName: body.message.from?.first_name ?? null,
+                userText: text,
+                aiReply: reply,
+                channel: "telegram",
+              })
+            } catch {}
           }
         } catch (e) {
           console.error("[telegram-funnel] erro:", e)
