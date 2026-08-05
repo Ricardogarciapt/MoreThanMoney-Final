@@ -87,13 +87,16 @@ def save_state(s):
 RELAY_POST_URL = os.environ.get("RELAY_POST_URL", "https://www.morethanmoney.pt/api/telegram/relay-post")
 RELAY_SECRET = os.environ.get("RELAY_SECRET", "")
 
-def bot_send(text: str):
-    """Publica via o ENDPOINT do site (que tem o token válido do bot na Vercel).
-    O relay nunca precisa do token do bot — só do CRON_SECRET."""
+def bot_send(text: str, reply_to=None):
+    """Publica via o ENDPOINT do site (token válido na Vercel). Devolve o message_id
+    publicado na Premium (para encadear updates como resposta) ou None."""
     if DRY_RUN:
-        print("──── PUBLICARIA ────\n" + text + "\n")
-        return True
-    data = json.dumps({"chat_id": DEST_CHAT, "text": text}).encode()
+        print(("──── PUBLICARIA" + (f" (reply→{reply_to})" if reply_to else "") + " ────\n") + text + "\n")
+        return -1
+    payload = {"chat_id": DEST_CHAT, "text": text}
+    if reply_to:
+        payload["reply_to_message_id"] = reply_to
+    data = json.dumps(payload).encode()
     req = urllib.request.Request(
         RELAY_POST_URL, data=data,
         headers={"Content-Type": "application/json", "authorization": f"Bearer {RELAY_SECRET}"},
@@ -101,9 +104,9 @@ def bot_send(text: str):
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
             j = json.load(r)
-            return bool(j.get("ok"))
+            return j.get("messageId") if j.get("ok") else None
     except Exception as e:
-        print("erro relay-post:", e); return False
+        print("erro relay-post:", e); return None
 
 async def run_once(client, state):
     cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=LOOKBACK_H)
@@ -116,13 +119,25 @@ async def run_once(client, state):
         if m.message:
             batch.append(m)
     batch.reverse()  # cronológico
+    state.setdefault("map", {})  # source_msg_id -> premium_msg_id (encadeamento)
     sent = 0
     for m in batch:
         if m.id > state["last_id"]:
             state["last_id"] = m.id
         clean = sanitize(m.message)
         if should_forward(m.message) and clean:
-            if bot_send(brand(clean)):
+            # se este update responde a um sinal já publicado, publica como RESPOSTA a ele
+            reply_to = None
+            src_reply = getattr(getattr(m, "reply_to", None), "reply_to_msg_id", None)
+            if src_reply and str(src_reply) in state["map"]:
+                reply_to = state["map"][str(src_reply)]
+            pid = bot_send(brand(clean), reply_to)
+            if pid:
+                if pid != -1:
+                    state["map"][str(m.id)] = pid
+                    if len(state["map"]) > 800:  # limita o crescimento do state
+                        for k in list(state["map"])[:-500]:
+                            del state["map"][k]
                 sent += 1
                 await asyncio.sleep(1)  # respeitar rate limit
     save_state(state)

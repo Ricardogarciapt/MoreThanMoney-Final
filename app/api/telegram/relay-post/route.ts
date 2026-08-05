@@ -11,12 +11,17 @@ export async function POST(req: NextRequest) {
   if (!secret || auth !== `Bearer ${secret}`) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
   }
-  const body = (await req.json().catch(() => ({}))) as { chat_id?: string | number; text?: string }
+  const body = (await req.json().catch(() => ({}))) as {
+    chat_id?: string | number
+    text?: string
+    reply_to_message_id?: number
+  }
   const chatId = body.chat_id != null ? String(body.chat_id) : ''
   const text = (body.text ?? '').toString()
   if (!chatId || !text.trim()) {
     return NextResponse.json({ ok: false, error: 'chat_id e text obrigatórios' }, { status: 400 })
   }
-  const r = await sendTelegramChannelMessage(chatId, text.trim())
+  const replyTo = typeof body.reply_to_message_id === 'number' ? body.reply_to_message_id : null
+  const r = await sendTelegramChannelMessage(chatId, text.trim(), { replyToMessageId: replyTo })
   return NextResponse.json({ ok: r.ok, messageId: r.messageId, error: r.error })
 }

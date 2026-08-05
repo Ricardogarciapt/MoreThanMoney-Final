@@ -123,7 +123,7 @@ export async function verifyTelegramChannel(channelInput: string): Promise<Chann
 export async function sendTelegramChannelMessage(
   chatId: string,
   text: string,
-  options?: { parseMode?: 'HTML' | 'Markdown' },
+  options?: { parseMode?: 'HTML' | 'Markdown'; replyToMessageId?: number | null },
 ): Promise<{ ok: boolean; messageId?: number; error?: string }> {
   const token = getMtmcopyBotToken()
   if (!token) return { ok: false, error: 'TELEGRAM_AIBOT_TOKEN não configurado' }
@@ -136,6 +136,10 @@ export async function sendTelegramChannelMessage(
       text,
       parse_mode: options?.parseMode,
       disable_web_page_preview: true,
+      // Encadeamento: update (TP/SL/BE) publicado como RESPOSTA à mensagem do sinal.
+      ...(options?.replyToMessageId
+        ? { reply_parameters: { message_id: options.replyToMessageId, allow_sending_without_reply: true } }
+        : {}),
     }),
   })
   const data = (await res.json()) as {
@@ -154,7 +158,7 @@ export async function sendTelegramChannelMessage(
       import('@/lib/telegram/relay'),
       import('@/lib/supabase-admin-client'),
     ])
-    await relayTextToWifi(getSupabaseAdmin(), text, messageId ?? Date.now(), chatId)
+    await relayTextToWifi(getSupabaseAdmin(), text, messageId ?? Date.now(), chatId, options?.replyToMessageId ?? null)
   } catch {
     /* nunca bloquear o envio principal */
   }
