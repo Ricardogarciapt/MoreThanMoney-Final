@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { CAPTION_INTERNAL_MARK, rehostMedia } from '@/lib/instagram/publish'
+import { CAPTION_INTERNAL_MARK, uploadBufferToBucket } from '@/lib/instagram/publish'
+import { renderSocialCardBuffer } from '@/lib/social-card'
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://www.morethanmoney.pt'
-
-/** Gera o card de marca (server-side) e re-hospeda no bucket → URL público estável. */
+/** Gera o card de marca EM PROCESSO (sem HTTP) e faz upload → URL público estável. */
 async function buildCardImage(hook: string, cta: string, handle: string): Promise<string | null> {
   try {
-    const q = new URLSearchParams({ hook, cta, handle }).toString()
-    return await rehostMedia(`${SITE}/api/og/social-card?${q}`, { prefix: 'auto' })
+    const buf = await renderSocialCardBuffer({ hook, cta, handle })
+    return await uploadBufferToBucket(buf, 'image/png', 'auto')
   } catch (e) {
     console.error('[content-draft] card falhou:', e instanceof Error ? e.message : e)
     return null

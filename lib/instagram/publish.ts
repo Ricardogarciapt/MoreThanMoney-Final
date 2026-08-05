@@ -111,6 +111,15 @@ export async function rehostMedia(
   if (!res.ok) throw new Error(`rehostMedia: fetch falhou (${res.status})`)
   const contentType = res.headers.get("content-type") || "image/jpeg"
   const buf = Buffer.from(await res.arrayBuffer())
+  return uploadBufferToBucket(buf, contentType, opts.prefix)
+}
+
+/** Faz upload de um Buffer no bucket público `uploads` e devolve o URL público estável. */
+export async function uploadBufferToBucket(
+  buf: Buffer,
+  contentType = "image/png",
+  prefix = "social",
+): Promise<string> {
   const ext = contentType.includes("png")
     ? "png"
     : contentType.includes("mp4") || contentType.includes("video")
@@ -118,12 +127,10 @@ export async function rehostMedia(
       : contentType.includes("webp")
         ? "webp"
         : "jpg"
-  const key = `${opts.prefix || "social"}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`
+  const key = `${prefix}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`
   const admin = getSupabaseAdmin()
-  const { error } = await admin.storage
-    .from("uploads")
-    .upload(key, buf, { contentType, upsert: true })
-  if (error) throw new Error(`rehostMedia: upload falhou — ${error.message}`)
+  const { error } = await admin.storage.from("uploads").upload(key, buf, { contentType, upsert: true })
+  if (error) throw new Error(`uploadBufferToBucket: upload falhou — ${error.message}`)
   const { data } = admin.storage.from("uploads").getPublicUrl(key)
   return data.publicUrl
 }
