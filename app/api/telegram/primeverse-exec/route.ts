@@ -4,6 +4,36 @@ import { CANONICAL_SENSEI_ACCOUNT_ID } from '@/lib/mtmcopy/provider-constants'
 import { getPrimeverseExecConfig } from '@/lib/mtmcopy/primeverse-exec'
 import { computeRiskLot } from '@/lib/mtmcopy/risk-sizing'
 import { getSiteOrigin } from '@/lib/site-url'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
+
+/** Classe de ativo → chat existente da app (reutilizados). */
+function chatForSymbol(s: string): string | null {
+  if (/XAU|GOLD|XAG|SILVER|OIL|WTI|BRENT|NAT.?GAS|NGAS|COPPER/i.test(s)) return 'sinais-scanner-mtm' // ouro/comodities
+  if (/BTC|ETH|SOL|XRP|DOGE|BNB|ADA|LTC|USDT|USDC/i.test(s)) return 'cripto-perps'                    // cripto
+  if (/NAS100|US30|US500|US100|SPX|SP500|GER40|DAX|UK100|JP225|NDX|DJI|NIKKEI|DOW/i.test(s)) return 'trade-ideas' // índices
+  if (/^[A-Z]{6}$/.test(s) || /[A-Z]{3}\/[A-Z]{3}/.test(s)) return 'trade-ideas-setup'                // forex
+  return null
+}
+
+/** Insere o sinal (formato parseável) no chat da classe + dispara push T2T. */
+async function feedPrimeverseChat(slug: string, symbol: string, direction: 'buy' | 'sell', sl: number | null, tp: number | null) {
+  try {
+    const tag = direction === 'buy' ? '🔵' : '🔴'
+    const lines = [`${tag} ${symbol} ${direction.toUpperCase()}`]
+    if (sl != null) lines.push(`SL: ${sl}`)
+    if (tp != null) lines.push(`TP: ${tp}`)
+    lines.push('', '📡 PrimeVerse')
+    const content = lines.join('\n')
+    const { data } = await getSupabaseAdmin()
+      .from('chat_messages')
+      .insert({ channel_slug: slug, user_id: null, content, message_type: 'primeverse_signal', notified: true })
+      .select('id').single()
+    await sendTelegramChannelPush({ slug, content, chatMessageId: data?.id as string }).catch(() => {})
+  } catch (e) {
+    console.warn('[primeverse] feedChat erro:', e instanceof Error ? e.message : String(e))
+  }
+}
 
 /**
  * Execução dos sinais do TOP trader PrimeVerse (relay pv-relay) no sistema Sensei.
@@ -42,9 +72,16 @@ export async function POST(req: NextRequest) {
 
   const cfg = await getPrimeverseExecConfig()
 
-  if (!ALLOWED.has(symbol)) return NextResponse.json({ ok: true, skipped: 'symbol', symbol })
   if (trader !== cfg.trader) return NextResponse.json({ ok: true, skipped: 'trader', trader })
-  if (cfg.mode === 'off') return NextResponse.json({ ok: true, skipped: 'off' })
+
+  // ROUTING: encaminha para o chat da CLASSE DE ATIVO + push T2T (todos os ativos, independente
+  // do modo de execução — é display/T2T, não execução). Reutiliza os chats existentes.
+  const chatSlug = chatForSymbol(symbol)
+  if (chatSlug) await feedPrimeverseChat(chatSlug, symbol, direction, sl, tps[0] ?? null)
+
+  // EXECUÇÃO: só XAUUSD/BTCUSD (a conta Sensei só trada esses), gated pelo modo.
+  if (!ALLOWED.has(symbol)) return NextResponse.json({ ok: true, routed: chatSlug, exec: 'skipped_symbol' })
+  if (cfg.mode === 'off') return NextResponse.json({ ok: true, routed: chatSlug, exec: 'off' })
 
   const tp = tps[cfg.tpLevel - 1] ?? tps[0] ?? null
   const wantBybit = symbol === 'BTCUSD' && cfg.bybit

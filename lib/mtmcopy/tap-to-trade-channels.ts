@@ -7,7 +7,7 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
   'premium-signals': ['premium-ideas'],
   // trade-ideas cobre Forex + MTM Scanner + Índices + Forex Swings (mesma conta mestre 5IHE).
   // Sensei fica FORA do T2T (decisão); o GoldKiller usa app_channel próprio ('sinais-goldkiller').
-  'trade-ideas': ['trade-ideas-setup', 'sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais'],
+  'trade-ideas': ['trade-ideas-setup', 'sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'cripto-perps'],
 }
 
 /**

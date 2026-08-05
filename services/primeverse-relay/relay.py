@@ -45,10 +45,11 @@ RX_SL = re.compile(r"Stop\s*Loss:\s*([0-9]+\.?[0-9]*)", re.I)
 RX_TP = re.compile(r"TP\d\s*:\s*([0-9]+\.?[0-9]*)", re.I)
 
 def norm_symbol(s):
-    s = s.upper()
+    s = s.upper().strip()
     if "XAU" in s or "GOLD" in s: return "XAUUSD"
     if "BTC" in s: return "BTCUSD"
-    return s.replace("/", "")
+    if "ETH" in s: return "ETHUSD"
+    return s.replace("/", "").replace(" ", "")
 
 def parse_entry(text):
     t = clean(text)
@@ -98,7 +99,9 @@ async def run_once(client, state):
         sig = parse_entry(m.message)
         if not sig: continue
         if sig["trader"] != TRADER: continue
-        if sig["symbol"] not in SYMBOLS: continue
+        # PV_SYMBOLS="ALL" (ou vazio) → envia todas as classes (o endpoint roteia p/ o chat certo
+        # e executa só XAU/BTC). Senão, filtra pela lista.
+        if SYMBOLS and "ALL" not in SYMBOLS and sig["symbol"] not in SYMBOLS: continue
         if post_exec(sig): sent += 1
         await asyncio.sleep(1)
     save_state(state)
