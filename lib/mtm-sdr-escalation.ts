@@ -45,7 +45,11 @@ export async function maybeEscalateLead(input: EscalateInput): Promise<boolean> 
     if (Date.now() - lastTs < 6 * 3600 * 1000) return false
 
     const who = input.username ? `@${input.username}` : input.firstName || input.chatId
-    const jump = input.username ? `\n➡️ Saltar: https://t.me/${input.username}` : ''
+    // Link de salto sensível ao canal: Instagram → instagram.com; senão Telegram → t.me.
+    const isIg = (input.channel || '').toLowerCase().includes('insta') || (input.channel || '').toLowerCase() === 'ig'
+    const jump = input.username
+      ? `\n➡️ Saltar: ${isIg ? `https://instagram.com/${input.username}` : `https://t.me/${input.username}`}`
+      : ''
     const ch = input.channel ? ` [${input.channel}]` : ''
     const msg =
       `🔥 LEAD QUENTE${ch} — ${who}\n\n` +

@@ -137,6 +137,21 @@ export async function POST(request: NextRequest) {
 
   try {
     const answer = await callClaude(question, idioma, name, mode, source)
+    // Escalada de lead QUENTE para o admin (supervisão): intenção de compra / falar com humano / depósito.
+    // Best-effort, não bloqueia a resposta ao ManyChat.
+    try {
+      const { maybeEscalateLead } = await import("@/lib/mtm-sdr-escalation")
+      const igUser = String(body.ig_username || body.username || "").trim() || null
+      const subId = String(body.subscriber_id || body.user_id || body.id || igUser || "manychat").trim()
+      void maybeEscalateLead({
+        chatId: subId,
+        username: igUser,
+        firstName: name,
+        userText: question,
+        aiReply: answer,
+        channel: mode === "personal_router" ? "instagram-pessoal" : "instagram",
+      })
+    } catch { /* escalada é opcional */ }
     return NextResponse.json({
       answer,
       idioma: idioma || "pt",
