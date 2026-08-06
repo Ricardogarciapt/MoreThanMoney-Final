@@ -17,13 +17,13 @@ function chatForSymbol(s: string): string | null {
 }
 
 /** Insere o sinal (formato parseável) no chat da classe + dispara push T2T. */
-async function feedPrimeverseChat(slug: string, symbol: string, direction: 'buy' | 'sell', sl: number | null, tp: number | null) {
+async function feedPrimeverseChat(slug: string, symbol: string, direction: 'buy' | 'sell', sl: number | null, tp: number | null, trader?: string) {
   try {
     const tag = direction === 'buy' ? '🔵' : '🔴'
     const lines = [`${tag} ${symbol} ${direction.toUpperCase()}`]
     if (sl != null) lines.push(`SL: ${sl}`)
     if (tp != null) lines.push(`TP: ${tp}`)
-    lines.push('', '📡 PrimeVerse')
+    lines.push('', `📡 PrimeVerse${trader ? ` · ${trader}` : ''}`)
     const content = lines.join('\n')
     const { data } = await getSupabaseAdmin()
       .from('chat_messages')
@@ -72,12 +72,13 @@ export async function POST(req: NextRequest) {
 
   const cfg = await getPrimeverseExecConfig()
 
-  if (trader !== cfg.trader) return NextResponse.json({ ok: true, skipped: 'trader', trader })
-
-  // ROUTING: encaminha para o chat da CLASSE DE ATIVO + push T2T (todos os ativos, independente
-  // do modo de execução — é display/T2T, não execução). Reutiliza os chats existentes.
+  // ROUTING (display/T2T): encaminha para o chat da CLASSE DE ATIVO — de TODOS os traders PrimeVerse,
+  // independente do trader/modo. Reutiliza os chats existentes. A EXECUÇÃO é que fica restrita ao top.
   const chatSlug = chatForSymbol(symbol)
-  if (chatSlug) await feedPrimeverseChat(chatSlug, symbol, direction, sl, tps[0] ?? null)
+  if (chatSlug) await feedPrimeverseChat(chatSlug, symbol, direction, sl, tps[0] ?? null, trader)
+
+  // EXECUÇÃO: só o top trader (cfg.trader) — os outros ficam só no chat.
+  if (trader !== cfg.trader) return NextResponse.json({ ok: true, routed: chatSlug, exec: 'skipped_trader', trader })
 
   // EXECUÇÃO: só XAUUSD/BTCUSD (a conta Sensei só trada esses), gated pelo modo.
   if (!ALLOWED.has(symbol)) return NextResponse.json({ ok: true, routed: chatSlug, exec: 'skipped_symbol' })
