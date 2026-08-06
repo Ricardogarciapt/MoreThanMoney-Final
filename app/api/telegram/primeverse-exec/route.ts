@@ -27,7 +27,7 @@ async function feedPrimeverseChat(slug: string, symbol: string, direction: 'buy'
     const content = lines.join('\n')
     const { data } = await getSupabaseAdmin()
       .from('chat_messages')
-      .insert({ channel_slug: slug, user_id: null, content, message_type: 'primeverse_signal', notified: true })
+      .insert({ channel_slug: slug, user_id: null, content, message_type: 'telegram_forward', notified: true })
       .select('id').single()
     await sendTelegramChannelPush({ slug, content, chatMessageId: data?.id as string }).catch(() => {})
   } catch (e) {

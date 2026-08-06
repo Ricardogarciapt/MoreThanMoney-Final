@@ -134,7 +134,7 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
               channel_slug: appChannel,
               user_id: null,
               content: text,
-              message_type: 'master_poll_signal',
+              message_type: 'telegram_forward',
               telegram_sender: route.label ?? route.tag ?? 'MTM Provider',
               created_at: new Date().toISOString(),
             })

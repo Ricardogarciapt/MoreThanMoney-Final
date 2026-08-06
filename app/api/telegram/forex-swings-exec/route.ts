@@ -20,7 +20,7 @@ async function feedAppChat(symbol: string, direction: 'buy' | 'sell', sl: number
     const content = lines.join('\n')
     const { data, error } = await getSupabaseAdmin()
       .from('chat_messages')
-      .insert({ channel_slug: FS_CHAT_SLUG, user_id: null, content, message_type: 'forex_swings_signal', notified: true })
+      .insert({ channel_slug: FS_CHAT_SLUG, user_id: null, content, message_type: 'telegram_forward', notified: true })
       .select('id')
       .single()
     if (error) { console.warn('[forex-swings-exec] chat insert falhou:', error.message); return }
