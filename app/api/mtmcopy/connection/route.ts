@@ -142,6 +142,9 @@ export async function POST(request: NextRequest) {
     apply_prop_firm_preset,
     copy_as_manual,
     symbol_suffix,
+    t2t_sources,
+    t2t_asset_classes,
+    t2t_risk_level,
   } = body
 
   if (lot_mode && !['fixed', 'risk_percent', 'multiplier'].includes(lot_mode)) {
@@ -202,6 +205,24 @@ export async function POST(request: NextRequest) {
     // sufixo do broker do seguidor (ex.: '.s' PU Prime, '-STD' VT Markets) → symbolMapping CopyFactory
     const suf = String(symbol_suffix ?? '').trim()
     payload.symbol_suffix = suf || null
+  }
+
+  // Preferências do Tap to Trade: que FONTES / CLASSES de ativo seguir (arrays; []=seguir tudo) + risco.
+  if (t2t_sources !== undefined) {
+    const allowed = ['premium', 'sensei', 'james', 'primeverse', 'aurum']
+    payload.t2t_sources = Array.isArray(t2t_sources)
+      ? t2t_sources.map((s) => String(s)).filter((s) => allowed.includes(s))
+      : null
+  }
+  if (t2t_asset_classes !== undefined) {
+    const allowed = ['gold', 'forex', 'crypto', 'indices']
+    payload.t2t_asset_classes = Array.isArray(t2t_asset_classes)
+      ? t2t_asset_classes.map((s) => String(s)).filter((s) => allowed.includes(s))
+      : null
+  }
+  if (t2t_risk_level !== undefined) {
+    const lvl = String(t2t_risk_level)
+    payload.t2t_risk_level = ['low', 'medium', 'high'].includes(lvl) ? lvl : null
   }
 
   const effectiveMethod =

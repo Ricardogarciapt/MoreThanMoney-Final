@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { useT } from "@/components/i18n-provider"
 import { supabase } from "@/lib/supabase"
 import { T2T_BROKERS } from "@/lib/mtmcopy/t2t-brokers"
-import { isAllowedT2TSource } from "@/lib/mtmcopy/t2t-source"
+import { isAllowedT2TSource, matchesT2TPrefs, T2T_SOURCES, T2T_ASSET_CLASSES } from "@/lib/mtmcopy/t2t-source"
 import {
   TrendingUp,
   RefreshCw,
@@ -117,7 +117,14 @@ interface Conn {
   exit_pct_tp1?: number | null
   exit_pct_tp2?: number | null
   exit_pct_tp3?: number | null
+  t2t_sources?: string[] | null
+  t2t_asset_classes?: string[] | null
+  t2t_risk_level?: string | null
 }
+
+/** Preset de risco → risco por trade (%). */
+const RISK_PRESET: Record<string, number> = { low: 0.5, medium: 1, high: 2 }
+const RISK_LABEL: Record<string, string> = { low: "Baixo", medium: "Médio", high: "Alto" }
 
 const FILTERS: { id: Category; labelKey: string }[] = [
   { id: "all", labelKey: "t2t.filterAll" },
@@ -151,6 +158,9 @@ export default function TapToTradeFeed() {
   const [connError, setConnError] = useState("")
   const [savingConn, setSavingConn] = useState(false)
   const [removingConn, setRemovingConn] = useState(false)
+  // "O que seguir": fontes + classes de ativo + nível de risco (prefs por-user na conta T2T)
+  const [follow, setFollow] = useState<{ sources: string[]; assetClasses: string[]; risk: string | null }>({ sources: [], assetClasses: [], risk: null })
+  const [savingFollow, setSavingFollow] = useState(false)
   const [cfg, setCfg] = useState<{
     lot_mode: "risk_percent" | "fixed"
     risk: number
@@ -190,6 +200,11 @@ export default function TapToTradeFeed() {
           tp1: typeof c.exit_pct_tp1 === "number" ? c.exit_pct_tp1 : 50,
           tp2: typeof c.exit_pct_tp2 === "number" ? c.exit_pct_tp2 : 30,
           tp3: typeof c.exit_pct_tp3 === "number" ? c.exit_pct_tp3 : 20,
+        })
+        setFollow({
+          sources: Array.isArray(c.t2t_sources) ? c.t2t_sources : [],
+          assetClasses: Array.isArray(c.t2t_asset_classes) ? c.t2t_asset_classes : [],
+          risk: c.t2t_risk_level ?? null,
         })
       }
     } catch {
@@ -317,7 +332,10 @@ export default function TapToTradeFeed() {
     }
   }, [searchParams, items])
 
-  const filtered = items.filter((s) => cat === "all" || categoryOf(s.content) === cat)
+  const filtered = items
+    // "O que seguir": só as fontes + classes de ativo que o user escolheu ([]=todas)
+    .filter((s) => matchesT2TPrefs(s.channel_slug, s.content, { sources: follow.sources, assetClasses: follow.assetClasses }))
+    .filter((s) => cat === "all" || categoryOf(s.content) === cat)
   const shown = limitMode === "last5" ? filtered.slice(0, 5) : filtered
 
   const runTap = async () => {
@@ -383,6 +401,41 @@ export default function TapToTradeFeed() {
     } finally {
       setSavingConn(false)
     }
+  }
+
+  // Guarda as preferências "O que seguir" (fontes/classes/risco). O risco também aplica o sizing.
+  const saveFollow = async (next: { sources: string[]; assetClasses: string[]; risk: string | null }) => {
+    setFollow(next) // otimista → feed filtra já
+    if (!conn) return
+    setSavingFollow(true)
+    try {
+      const tok = await token()
+      if (!tok) return
+      const body: Record<string, unknown> = {
+        connection_id: conn.id,
+        t2t_sources: next.sources,
+        t2t_asset_classes: next.assetClasses,
+        t2t_risk_level: next.risk,
+      }
+      // Nível de risco → aplica o sizing por % (o motor de execução usa max_risk_percent).
+      if (next.risk && RISK_PRESET[next.risk] != null) {
+        body.lot_mode = "risk_percent"
+        body.max_risk_percent = RISK_PRESET[next.risk]
+      }
+      await fetch("/api/mtmcopy/connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+        body: JSON.stringify(body),
+      })
+      await loadConnection()
+    } finally {
+      setSavingFollow(false)
+    }
+  }
+  const toggleFollow = (kind: "sources" | "assetClasses", key: string) => {
+    const cur = follow[kind]
+    const nextArr = cur.includes(key) ? cur.filter((x) => x !== key) : [...cur, key]
+    saveFollow({ ...follow, [kind]: nextArr })
   }
 
   const connectAccount = async () => {
@@ -710,6 +763,66 @@ export default function TapToTradeFeed() {
           </div>
         )}
       </div>
+
+      {/* O QUE SEGUIR — o user escolhe fontes, ativos e risco. Vazio = segue tudo. */}
+      {hasAccount && (
+        <div className="rounded-2xl border border-[#D2A63C]/25 bg-zinc-900/60 mb-3 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="w-4 h-4 text-[#D2A63C]" />
+            <p className="text-[13px] font-semibold">O que seguir</p>
+            {savingFollow && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#D2A63C]" />}
+          </div>
+
+          <p className="text-[11px] text-zinc-500 mb-1.5">Fontes {follow.sources.length === 0 && <span className="text-zinc-600">(todas)</span>}</p>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {T2T_SOURCES.map((s) => {
+              const on = follow.sources.includes(s.key)
+              return (
+                <button
+                  key={s.key}
+                  onClick={() => toggleFollow("sources", s.key)}
+                  title={s.hint}
+                  className={`text-xs px-3 py-1.5 rounded-full border font-medium ${on ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
+                >
+                  {on ? "✓ " : ""}{s.label}
+                </button>
+              )
+            })}
+          </div>
+
+          <p className="text-[11px] text-zinc-500 mb-1.5">Ativos {follow.assetClasses.length === 0 && <span className="text-zinc-600">(todos)</span>}</p>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {T2T_ASSET_CLASSES.map((a) => {
+              const on = follow.assetClasses.includes(a.key)
+              return (
+                <button
+                  key={a.key}
+                  onClick={() => toggleFollow("assetClasses", a.key)}
+                  className={`text-xs px-3 py-1.5 rounded-full border font-medium ${on ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
+                >
+                  {on ? "✓ " : ""}{a.label}
+                </button>
+              )
+            })}
+          </div>
+
+          <p className="text-[11px] text-zinc-500 mb-1.5">Risco por trade</p>
+          <div className="grid grid-cols-3 gap-2">
+            {(["low", "medium", "high"] as const).map((lvl) => {
+              const on = follow.risk === lvl
+              return (
+                <button
+                  key={lvl}
+                  onClick={() => saveFollow({ ...follow, risk: lvl })}
+                  className={`rounded-xl border py-2 text-xs font-semibold ${on ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
+                >
+                  {RISK_LABEL[lvl]}<span className="block text-[10px] font-normal opacity-70">{RISK_PRESET[lvl]}%</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {providers.length > 0 && (
         <div className="flex items-center gap-1.5 mb-3 overflow-x-auto no-scrollbar">
