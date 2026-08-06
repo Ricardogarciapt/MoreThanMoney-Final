@@ -79,7 +79,12 @@ export async function resolveScalingForConnection(
   conn: Pick<MTMcopierConnection, 'lot_mode' | 'lot_value' | 'metaapi_account_id'>,
 ): Promise<CopyFactoryTradeSizeScaling> {
   const tiny = { forceTinyTrades: true, maxRiskCoefficient: COPYFACTORY_MAX_RISK_COEFFICIENT }
-  if (conn.metaapi_account_id) {
+  // Modo EXPLÍCITO (risco% ou lote fixo) é sempre respeitado — o forceTinyTrades já arredonda ao
+  // lote mínimo do broker, por isso a regra de conta-micro (lote fixo 0.01) é redundante e não deve
+  // sobrepor-se ao que o dono pediu. A regra micro só se aplica quando NÃO há modo explícito
+  // (multiplier / balance / default) — aí protege contas pequenas com lote fixo mínimo.
+  const explicit = conn.lot_mode === 'risk_percent' || conn.lot_mode === 'fixed'
+  if (!explicit && conn.metaapi_account_id) {
     const { getAccountBalance } = await import('./metaapi')
     const balance = await getAccountBalance(conn.metaapi_account_id)
     if (balance != null && balance > 0 && balance < MICRO_ACCOUNT_BALANCE) {
