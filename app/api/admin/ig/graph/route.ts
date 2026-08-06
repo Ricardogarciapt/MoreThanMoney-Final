@@ -18,14 +18,19 @@ export async function POST(req: NextRequest) {
   if (!secret || (req.headers.get('authorization') || '') !== `Bearer ${secret}`) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
   }
-  const token = process.env.INSTAGRAM_TOKEN || process.env.IG_TOKEN || process.env.META_IG_TOKEN
-  if (!token) return NextResponse.json({ ok: false, error: 'INSTAGRAM_TOKEN em falta no servidor' }, { status: 500 })
-
   const body = (await req.json().catch(() => ({}))) as {
     method?: string
     path?: string
     params?: Record<string, string | number>
+    account?: string
   }
+  // account='ricardo' → token pessoal (@ricardogarciapt); senão o da marca (@morethanmoney.pt).
+  const acc = (body.account || '').toLowerCase()
+  const token =
+    acc === 'ricardo' || acc === 'personal' || acc === 'ricardogarciapt'
+      ? process.env.INSTAGRAM_TOKEN_RICARDO || process.env.INSTAGRAM_TOKEN
+      : process.env.INSTAGRAM_TOKEN || process.env.IG_TOKEN || process.env.META_IG_TOKEN
+  if (!token) return NextResponse.json({ ok: false, error: 'token IG em falta no servidor' }, { status: 500 })
   const method = (body.method || 'GET').toUpperCase()
   const path = (body.path || '').replace(/^\/+/, '')
   if (!path) return NextResponse.json({ ok: false, error: 'path obrigatório' }, { status: 400 })
