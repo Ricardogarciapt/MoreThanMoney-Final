@@ -24,22 +24,33 @@ export const TRADE_IDEAS_TARGET_PIPS = 50
 export const TRADE_IDEAS_BREAKEVEN_PIPS = TRADE_IDEAS_TARGET_PIPS / 2 // 25
 
 /**
- * Trade Ideas / Sensei (Auto Forex): o trailing só inicia quando a posição está
- * 50% positiva no caminho de 50 pips — ou seja, aos 25 pips — com colocação
- * imediata de BE (SL na entrada) na activação e seguimento de 25 pips.
- * Em alvos mais curtos, nunca activa além de metade do alvo conhecido.
+ * Trade Ideas / Sensei (Auto Forex) — trailing dinâmico MELHORADO (2026-08-06).
+ *
+ * Base = RISCO da trade (distância entrada→SL, "1R"); só se não houver risco é que usa metade do alvo.
+ *  - Activa a **1R** de lucro (antes: metade do alvo — tarde em alvos largos).
+ *  - Segue a **0.6R** (antes: seguia a distância inteira, só bloqueava breakeven). Como trail < activação,
+ *    no instante da activação o SL já bloqueia (activação − trail) ≈ 0.4R de LUCRO, e depois acompanha.
+ * Resultado: bloqueia lucro mais cedo e mais apertado, dá menos devolução, sem sufocar a trade.
+ * Tunável por opts (activationR/trailR/minPips) sem redeploy quando ligado a config.
  */
 export function tradeIdeasDynamicTrailing(
   riskPips: number | null,
   targetPips?: number | null,
+  opts?: { activationR?: number; trailR?: number; minPips?: number },
 ): TrailingDistance {
-  const halfTarget =
-    targetPips != null && targetPips > 0
-      ? Math.round(targetPips / 2)
-      : TRADE_IDEAS_BREAKEVEN_PIPS
-  const activationPips = Math.max(5, halfTarget)
-  // trailPips = activationPips → SL fica na entrada (BE) na activação, depois segue.
-  return { mode: 'threshold_pips', activationPips, trailPips: activationPips }
+  const activationR = opts?.activationR ?? 1.0
+  const trailR = opts?.trailR ?? 0.6
+  const minPips = opts?.minPips ?? 5
+  const base =
+    riskPips != null && riskPips > 0
+      ? riskPips
+      : targetPips != null && targetPips > 0
+        ? Math.round(targetPips / 2)
+        : TRADE_IDEAS_BREAKEVEN_PIPS
+  const activationPips = Math.max(minPips, Math.round(base * activationR))
+  // trail < activation → bloqueia lucro já na activação; nunca acima da activação (senão nunca dispara).
+  const trailPips = Math.max(minPips, Math.min(activationPips, Math.round(base * trailR)))
+  return { mode: 'threshold_pips', activationPips, trailPips }
 }
 
 export function riskPipsFromEntrySl(

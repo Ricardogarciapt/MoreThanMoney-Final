@@ -29,6 +29,7 @@ import { symbolMatchesCanonical } from './symbol-resolver'
 import {
   fetchLotSizingContext,
   getAccountSnapshot,
+  getRiskTickContext,
   getSymbolSpecification,
   isMetaApiConfigured,
   placeOrdersSequential,
@@ -841,8 +842,8 @@ async function executeViaMtmProvider(
 
   const mappedSymbol = applySymbolFromProfile(signal.symbol!, executionProfile)
   // Risco por trade FORÇADO (sobrepõe config da conta provider; CopyFactory replica por saldo):
-  //   Premium (Ouro/BTC) e GoldKiller → 0.5% · Forex (MTM Auto Forex) → 0.05% (pedido
-  //   do Ricardo, 2026-07-27 — reduzido de 0.5%).
+  //   Premium (Ouro/BTC), GoldKiller E Forex (MTM Auto Forex) → 0.5% (pedido do Ricardo,
+  //   2026-08-06 — forex repõe 0.5%, TODAS as cotações; sizing por tickValue real abaixo).
   const FX_CODES = new Set(['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD'])
   const clean6 = mappedSymbol.toUpperCase().replace(/[^A-Z]/g, '')
   const isForexSym = clean6.length === 6 && FX_CODES.has(clean6.slice(0, 3)) && FX_CODES.has(clean6.slice(3, 6))
@@ -850,7 +851,7 @@ async function executeViaMtmProvider(
     provider.accountId === CANONICAL_GOLDKILLER_ACCOUNT_ID ||
     provider.strategyId === CANONICAL_GOLDKILLER_STRATEGY_ID
   const forceRisk05 = channel === 'premium-signals' || isForexSym || isGoldKillerProvider
-  const forcedRiskPct = isForexSym && channel !== 'premium-signals' && !isGoldKillerProvider ? 0.05 : 0.5
+  const forcedRiskPct = 0.5
   const skipSymbol = shouldSkipSymbolForProfile(mappedSymbol, executionProfile)
   if (skipSymbol) {
     await logProviderSignalEvent({
@@ -900,13 +901,18 @@ async function executeViaMtmProvider(
   //  - account snapshot (equity, sempre)
   //  - symbol specification (só trade-ideas, para trailing dinâmico)
   const needsSpec = channel === 'trade-ideas'
-  const [lotCtx, snapshot, symbolSpec] = await Promise.all([
-    executionProfile.lot_mode === 'risk_percent' || forceRisk05
+  const needsRisk = executionProfile.lot_mode === 'risk_percent' || forceRisk05
+  const [lotCtx, snapshot, symbolSpec, tickCtx] = await Promise.all([
+    needsRisk
       ? fetchLotSizingContext(provider.accountId, mappedSymbol, signalForExec.direction!)
       : Promise.resolve(null),
     getAccountSnapshot(provider.accountId),
     needsSpec
       ? getSymbolSpecification(provider.accountId, mappedSymbol)
+      : Promise.resolve(null),
+    // tickValue REAL (currency-agnostic) → sizing exato p/ QUALQUER par (JPY, USD-base, cruzados).
+    needsRisk
+      ? getRiskTickContext(provider.accountId, mappedSymbol, signalForExec.direction!)
       : Promise.resolve(null),
   ])
 
@@ -935,6 +941,23 @@ async function executeViaMtmProvider(
 
   const signalForLot = signalForRiskSizing(signalForExec, marketPrice)
   let totalLot = computeLotSize(lotConn, signalForLot, balance)
+  // Sizing EXATO por tickValue real da MetaApi (currency-agnostic): substitui a heurística de
+  // contractSize, que subestimava JPY/USD-base/cruzados e os clampava a 0.01. Só quando risco%.
+  if (needsRisk && tickCtx && tickCtx.tickSize > 0 && tickCtx.tickValue > 0 && balance && balance > 0) {
+    const entryForLot = signalForLot.entry ?? marketPrice
+    const slForLot = signalForLot.sl
+    if (entryForLot && slForLot && entryForLot > 0 && slForLot > 0) {
+      const slDist = Math.abs(entryForLot - slForLot)
+      const valuePerLot = (slDist / tickCtx.tickSize) * tickCtx.tickValue // perda por 1.0 lote se bater SL
+      const riskPctUsed = Number((lotConn as { lot_value?: number | string }).lot_value) || forcedRiskPct
+      if (slDist > 0 && valuePerLot > 0) {
+        const raw = (balance * (riskPctUsed / 100)) / valuePerLot
+        const cap = lotConn.max_risk_percent != null && lotConn.max_risk_percent > 0 ? Math.min(50, lotConn.max_risk_percent) : 50
+        const exact = Math.min(cap, Math.max(0.01, Math.round(raw * 100) / 100))
+        if (exact > 0) totalLot = exact
+      }
+    }
+  }
   totalLot = resolveLotForSymbol(mappedSymbol, totalLot, executionProfile)
 
   const equity = snapshot?.equity ?? snapshot?.balance ?? balance

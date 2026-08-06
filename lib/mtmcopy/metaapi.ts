@@ -1145,6 +1145,45 @@ export async function getSymbolSpecification(
   }
 }
 
+/**
+ * Contexto de TICK para dimensionamento por risco CURRENCY-AGNOSTIC.
+ * tickValue = valor (na moeda da conta) de 1 tick para 1.0 lote (profitTickValue da MetaApi);
+ * tickSize = tamanho do tick em preço. Assim, valor de N de distância ao SL para 1 lote =
+ * (distancia/tickSize) * tickValue — correto p/ QUALQUER par (JPY, cruzados, USD-base, ouro, índices).
+ * Devolve null se o broker não expuser estes campos (o chamador cai na heurística).
+ */
+export async function getRiskTickContext(
+  accountId: string,
+  canonicalSymbol: string,
+  direction: 'buy' | 'sell' = 'buy',
+): Promise<{ tickSize: number; tickValue: number } | null> {
+  let close: (() => Promise<void>) | undefined
+  try {
+    const { connection, close: closeFn } = await getRpcConnection(accountId)
+    close = closeFn
+    const symbols = await connection.getSymbols()
+    const brokerSymbol = resolveBrokerSymbol(canonicalSymbol, symbols)
+    const spec = connection.getSymbolSpecification ? await connection.getSymbolSpecification(brokerSymbol) : null
+    const s = spec as unknown as { tickSize?: number; point?: number } | null
+    const tickSize = s?.tickSize && s.tickSize > 0 ? s.tickSize : s?.point && s.point > 0 ? s.point : null
+    let tickValue: number | null = null
+    if (connection.getSymbolPrice) {
+      const p = (await connection.getSymbolPrice(brokerSymbol)) as unknown as {
+        profitTickValue?: number
+        lossTickValue?: number
+      } | null
+      const tv = direction === 'sell' ? p?.lossTickValue ?? p?.profitTickValue : p?.profitTickValue ?? p?.lossTickValue
+      if (tv && tv > 0) tickValue = tv
+    }
+    if (!tickSize || !tickValue) return null
+    return { tickSize, tickValue }
+  } catch {
+    return null
+  } finally {
+    if (close) await close()
+  }
+}
+
 /** Preço de mercado (mid) atual de um símbolo na conta — para sizing por risco de ordens a mercado. */
 export async function getMarketPrice(accountId: string, canonicalSymbol: string): Promise<number | null> {
   let close: (() => Promise<void>) | undefined
