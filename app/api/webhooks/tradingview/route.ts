@@ -1061,7 +1061,11 @@ export async function POST(request: NextRequest) {
   // por isso é seguro chamar sempre; só dispara ordem real quando ligares a flag.
   if (assetClass === "crypto_perp" && alertOk && initSignalKind === "entry" && !cryptoPerpBlocked) {
     const cronSecret = process.env.CRON_SECRET
-    const bybitSide = v.direction === "sell" ? "sell" : "buy"
+    // Lado robusto: v.direction OU o campo `action` do payload (evita colocar BUY num SELL se v.direction vier null).
+    const dirResolved =
+      v.direction ??
+      (action && /sell|short|venda/i.test(action) ? "sell" : action && /buy|long|compra/i.test(action) ? "buy" : null)
+    const bybitSide = dirResolved === "sell" ? "sell" : "buy"
     const bybitEntry = v.entry ?? entry ?? price ?? null
     const bybitSl = v.sl ?? sl ?? null
     const bybitTps = [tp, tp2, tp3].filter((n): n is number => n != null && n > 0)
