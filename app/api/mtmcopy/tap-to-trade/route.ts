@@ -98,6 +98,20 @@ export async function POST(request: NextRequest) {
   if (!signal || !signal.symbol || !signal.direction) {
     return NextResponse.json({ error: 'Não foi possível interpretar o sinal desta mensagem' }, { status: 400 })
   }
+  // Só entradas COMPLETAS são negociáveis: exige TP (alvo) e exclui updates/follow-ups (só-SL,
+  // "Ref:", TP hit, BE, fecho). Espelha o filtro do chat/feed (defesa em profundidade contra
+  // abrir ouro em sinais incompletos do Premium).
+  const hasTp = Array.isArray(signal.tp) && signal.tp.some((t) => typeof t === 'number' && t > 0)
+  const isFollowupMsg =
+    /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad)/i.test(
+      message.content || '',
+    )
+  if (isFollowupMsg || !hasTp) {
+    return NextResponse.json(
+      { error: 'Sinal incompleto (sem alvo/TP) ou é um update — não é negociável.', code: 'incomplete_signal' },
+      { status: 400 },
+    )
+  }
 
   // 3. Conta destino — prefere a conta INDEPENDENTE do T2T (purpose=tap_to_trade);
   //    se não existir, usa qualquer conta MT5 ligada do utilizador.

@@ -691,6 +691,8 @@ function looksLikeTradeSignal(channelSlug?: string | null, content?: string | nu
   if (TAP_TRADE_FOLLOWUP_RE.test(content)) return false // follow-ups (TP hit/BE/SL) não são entradas
   if (!TAP_TRADE_DIR_RE.test(content)) return false // precisa de direção
   if (!/\d{2,}/.test(content)) return false // precisa de pelo menos um preço
+  // Entrada COMPLETA: exige TP (alvo). Exclui updates só-SL / "Ref:" / resumos → não são negociáveis.
+  if (!/\btp\s*\d|\btp\s*:|take\s*profit|🎯/i.test(content)) return false
 
   // Sensei: exige o alerta de entrada activada COMPLETO (entrada + SL + TP)
   if (channelSlug === 'sensei-scanner') {

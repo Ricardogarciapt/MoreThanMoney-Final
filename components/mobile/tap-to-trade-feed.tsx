@@ -33,6 +33,8 @@ function isEntrySignal(channelSlug: string, content?: string | null): boolean {
   if (PERF_RE.test(content)) return false // performance / resumo do dia
   if (!DIR_RE.test(content)) return false // precisa de direção
   if (!/\d{2,}/.test(content)) return false // precisa de preço
+  // Entrada COMPLETA: exige TP (alvo). Exclui updates só-SL / "Ref:" → não são negociáveis.
+  if (!/\btp\s*\d|\btp\s*:|take\s*profit|🎯/i.test(content)) return false
   // Sensei: exige o alerta de entrada activada COMPLETO (entrada + SL + TP)
   if (channelSlug === "sensei-scanner") {
     const activated = SENSEI_ACTIVE_RE.test(content)
