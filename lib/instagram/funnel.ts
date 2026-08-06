@@ -3,13 +3,13 @@
  *
  * PROSPECTOR: varre os comentários dos posts/reels e deteta INTENÇÃO por palavra-chave
  *   (as CTAs dos reels: MUNDO, EU VOU, DISCIPLINA, PREMIUM, SINAIS, APP...).
- * SETTER: envia uma DM PRIVADA ao comentador (Graph `private_replies`, janela de 7 dias) com a
- *   oferta certa (trial 3 dias / grupos Telegram) + link, e regista o lead em `ig_leads`.
- * CLOSER: a resposta do lead na DM entra no closer AI já vivo (/api/manychat/closer via ManyChat)
- *   e o link fecha (register → trial). Este ficheiro faz o 1º toque (prospector+setter).
- *
- * ⚠️ `private_replies` exige o scope `instagram_manage_messages` no token. Se faltar, cai para
- *   resposta PÚBLICA de apreço (sem link, para não parecer spam) e marca o lead p/ DM manual.
+ * SETTER: tenta uma DM PRIVADA (Graph `private_replies`) com a oferta + link; se o scope de DM
+ *   faltar (app sem `instagram_manage_messages`, ManyChat Essential), cai para RESPOSTA PÚBLICA
+ *   QUE JÁ LEVA O LINK. Regista o lead em `ig_leads`.
+ * CLOSER (modelo ESSENTIAL, sem ManyChat): o fecho NÃO é no IG — o link leva ao funil do Telegram
+ *   (`MoreThanMoney_aibot?start=lead` → lead-funnel + broker-gate) ou ao `/register` (trial
+ *   self-serve). Toda a conversa/close é nativa (Telegram/site), não precisa de ManyChat nem de
+ *   webhook de mensagens do IG. (/api/manychat/closer fica só para quando o ManyChat existir.)
  */
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { IG_ACCOUNTS, tokenForAccount } from "./publish"
@@ -35,13 +35,14 @@ const INTENTS: Intent[] = [
     key: "copytrading",
     kw: ["SINAIS", "SINAL", "COPY", "COPYTRADING", "COPIAR", "GRUPO", "GRUPOS"],
     dm: (h) => `Boa${h}! 🙌 Para os sinais + copytrading, fala com o nosso assistente aqui 👉 ${TELEGRAM} — ele guia-te a abrir conta e ter acesso. 🚀`,
-    pub: (h) => `Já te enviei DM${h}! 📩 (dá uma olhada nos pedidos de mensagem)`,
+    // Sem DM (app sem scope de mensagens): a resposta PÚBLICA leva já o link → o lead auto-serve-se.
+    pub: (h) => `Boa${h}! 🔥 Sinais + copytrading é aqui no nosso Telegram 👉 ${TELEGRAM} (abre conta e tens acesso). 🚀`,
   },
   {
     key: "trial",
     kw: ["MUNDO", "EU VOU", "EUVOU", "DISCIPLINA", "PREMIUM", "APP", "TRIAL", "GRÁTIS", "GRATIS", "QUERO", "COMEÇAR", "COMECAR", "BORA"],
     dm: (h) => `Boa${h}! 🙌 Começa GRÁTIS: 3 dias de Premium, sem cartão 👉 ${REGISTER} — qualquer dúvida diz-me aqui na DM que ajudo. 🚀`,
-    pub: (h) => `Já te enviei DM${h}! 📩 Vem daí 🚀`,
+    pub: (h) => `Boa${h}! 🚀 Começa GRÁTIS 3 dias de Premium (sem cartão) 👉 ${REGISTER} — qualquer dúvida, comenta aqui que ajudo! 🙌`,
   },
 ]
 
