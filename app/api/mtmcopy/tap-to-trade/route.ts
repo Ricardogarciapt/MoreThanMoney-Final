@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { parseSignal, type ParsedSignal } from '@/lib/mtmcopy/signal-parser'
+import { isAllowedT2TSource } from '@/lib/mtmcopy/t2t-source'
 import {
   computeLotSize,
   getLotSizingSkipReason,
@@ -101,6 +102,13 @@ export async function POST(request: NextRequest) {
   // Só entradas COMPLETAS são negociáveis: exige TP (alvo) e exclui updates/follow-ups (só-SL,
   // "Ref:", TP hit, BE, fecho). Espelha o filtro do chat/feed (defesa em profundidade contra
   // abrir ouro em sinais incompletos do Premium).
+  // Fonte permitida? SÓ Premium/Sensei/James/PrimeVerse são negociáveis (evita poluição do T2T).
+  if (!isAllowedT2TSource(message.channel_slug, message.content)) {
+    return NextResponse.json(
+      { error: 'Este sinal não é negociável por Tap to Trade.', code: 'source_not_allowed' },
+      { status: 400 },
+    )
+  }
   const hasTp = Array.isArray(signal.tp) && signal.tp.some((t) => typeof t === 'number' && t > 0)
   const isFollowupMsg =
     /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad)/i.test(

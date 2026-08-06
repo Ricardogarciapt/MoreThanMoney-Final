@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { isAllowedT2TSource } from "@/lib/mtmcopy/t2t-source"
 import { useAuth } from "@/contexts/auth-context"
 import {
   canReadChannel,
@@ -685,9 +686,8 @@ const TAP_TRADE_MAX_AGE_MS = 5 * 60 * 1000
 
 /** Heurística client-side: é um sinal de ENTRADA negociável? (o backend valida definitivamente) */
 function looksLikeTradeSignal(channelSlug?: string | null, content?: string | null): boolean {
-  // canais base + canais dedicados de rotas provider (t2t-<id>, auto-criados)
-  const isT2TChannel = !!channelSlug && (TAP_TRADE_CHANNELS.has(channelSlug) || channelSlug.startsWith('t2t-'))
-  if (!channelSlug || !content || !isT2TChannel) return false
+  // Só as 4 fontes permitidas (Premium/Sensei/James/PrimeVerse) — filtro por FONTE, não só canal.
+  if (!channelSlug || !content || !isAllowedT2TSource(channelSlug, content)) return false
   if (TAP_TRADE_FOLLOWUP_RE.test(content)) return false // follow-ups (TP hit/BE/SL) não são entradas
   if (!TAP_TRADE_DIR_RE.test(content)) return false // precisa de direção
   if (!/\d{2,}/.test(content)) return false // precisa de pelo menos um preço

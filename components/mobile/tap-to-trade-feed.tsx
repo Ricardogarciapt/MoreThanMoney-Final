@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { useT } from "@/components/i18n-provider"
 import { supabase } from "@/lib/supabase"
 import { T2T_BROKERS } from "@/lib/mtmcopy/t2t-brokers"
+import { isAllowedT2TSource } from "@/lib/mtmcopy/t2t-source"
 import {
   TrendingUp,
   RefreshCw,
@@ -29,6 +30,7 @@ const PERF_RE = /(performance|resultado\s+do\s+dia|resumo|recap|relat[óo]rio|es
 /** Só sinais de ENTRADA válidos passam (saídas/performance/incompletos são excluídos). */
 function isEntrySignal(channelSlug: string, content?: string | null): boolean {
   if (!content) return false
+  if (!isAllowedT2TSource(channelSlug, content)) return false // só Premium/Sensei/James/PrimeVerse
   if (FOLLOWUP_RE.test(content)) return false // saídas / TP hit / fecho / SL / cancelado
   if (PERF_RE.test(content)) return false // performance / resumo do dia
   if (!DIR_RE.test(content)) return false // precisa de direção
