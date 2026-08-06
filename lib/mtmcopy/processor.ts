@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isPremiumTp1HitConfirmed } from './channel-context'
 import {
   buildPremiumSingleOrder,
+  claimSignalOnce,
   scaleLotForSmallCapital,
   shouldSkipDuplicatePremiumEntry,
 } from './premium-single'
@@ -1024,6 +1025,22 @@ async function executeViaMtmProvider(
   }
 
   if (isPremiumProvider && premiumProviderSingle) {
+    // Guard ATÓMICO anti-triplicação: a fonte (NY/Londres) às vezes repete o sinal em várias
+    // mensagens e o forwarder externo mete outra cópia → 2-3 chegadas em segundos. A 1.ª reclama
+    // a chave; as restantes são rejeitadas ANTES de criar pendente/abrir ordem (à prova de corrida).
+    const claimed = await claimSignalOnce(`premium:${mappedSymbol}:${signalForExec.direction}`)
+    if (!claimed) {
+      await logProviderSignalEvent({
+        channel,
+        provider,
+        signal: signalForExec,
+        raw,
+        telegramMessageId,
+        status: 'skipped',
+        detail: `${aiDetail} · Sinal duplicado ignorado (guard anti-triplicação: ${mappedSymbol} ${signalForExec.direction})`,
+      })
+      return
+    }
     const dup = await shouldSkipDuplicatePremiumEntry(
       provider.accountId,
       mappedSymbol,
@@ -1511,6 +1528,20 @@ async function processSignalDirect(
     : null
 
   if (isPremium && premiumSingle && conn.metaapi_account_id) {
+    // Guard atómico por conta: cada subscritor abre 1x — chegadas duplicadas do sinal são rejeitadas.
+    const claimed = await claimSignalOnce(`premium-sub:${conn.metaapi_account_id}:${signal.symbol}:${direction}`)
+    if (!claimed) {
+      await logMtmcopySignal({
+        user_id: conn.user_id,
+        connection_id: conn.id,
+        symbol: signal.symbol,
+        direction: signal.direction,
+        status: 'skipped',
+        detail: 'Sinal duplicado ignorado (guard anti-triplicação)',
+        raw_message: raw,
+      })
+      return
+    }
     const dup = await shouldSkipDuplicatePremiumEntry(
       conn.metaapi_account_id,
       signal.symbol!,

@@ -7,6 +7,39 @@ import { normalizeExitPcts } from './copy-methods'
 import { listOpenPositions, type MetaApiPosition } from './metaapi'
 import { matchesPremiumLegComment } from './premium-exits'
 import type { ParsedSignal } from './signal-parser'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+
+/**
+ * Guard ATÓMICO anti-duplicação (à prova de corrida): a 1.ª chegada de um sinal "reclama" a chave;
+ * chegadas concorrentes do mesmo sinal (fonte repete, forwarder externo, relay 2x) falham o INSERT
+ * e são rejeitadas. TTL curto permite um sinal genuinamente novo mais tarde. Serializa via unique PK.
+ */
+export async function claimSignalOnce(key: string, ttlSec = 900): Promise<boolean> {
+  try {
+    const supabase = getSupabaseAdmin()
+    // Limpa reclamações expiradas desta chave (permite novo sinal após o TTL).
+    await supabase
+      .from('mtmcopy_signal_dedup')
+      .delete()
+      .eq('key', key)
+      .lt('created_at', new Date(Date.now() - ttlSec * 1000).toISOString())
+    const { data, error } = await supabase
+      .from('mtmcopy_signal_dedup')
+      .insert({ key })
+      .select('key')
+    if (error) {
+      // 23505 = unique_violation → já reclamado por uma chegada anterior (duplicado).
+      if ((error as { code?: string }).code === '23505') return false
+      // Em erro inesperado, NÃO bloqueia a execução (fail-open) para não perder sinais legítimos.
+      console.error('[dedup] claimSignalOnce erro (fail-open):', error.message)
+      return true
+    }
+    return Boolean(data && data.length)
+  } catch (e) {
+    console.error('[dedup] claimSignalOnce exceção (fail-open):', e instanceof Error ? e.message : e)
+    return true
+  }
+}
 
 export const PREMIUM_SINGLE_TAG = 'PREM'
 export const SMALL_CAPITAL_THRESHOLD = 1000
