@@ -36,7 +36,7 @@ async function buildCardImage(hook: string, cta: string, handle: string): Promis
 export const dynamic = 'force-dynamic'
 
 const IG_MTM = '17841474872672009' // @morethanmoney.pt
-const TARGET_BACKLOG = Number(process.env.CONTENT_DRAFT_BACKLOG || 4) // máx. rascunhos por rever
+const TARGET_BACKLOG = Number(process.env.CONTENT_DRAFT_BACKLOG || 8) // buffer de posts na fila (≈1 semana a 1/dia)
 const BATCH = Number(process.env.CONTENT_DRAFT_BATCH || 3) // quantos gerar por passagem
 
 // CTAs válidos = palavras-chave que o ig-funnel reconhece (lib/instagram/funnel.ts INTENTS).
