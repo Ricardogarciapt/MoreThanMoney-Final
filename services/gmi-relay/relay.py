@@ -16,6 +16,7 @@ ENV:
   GMI_LOOKBACK_H  default 3   (1ª passagem: quantas horas para trás considerar)
 """
 import os, re, json, time, html, asyncio, datetime, urllib.request, urllib.parse
+import hashlib
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
@@ -135,8 +136,13 @@ async def run_once(client, state):
             src_reply = getattr(getattr(m, "reply_to", None), "reply_to_msg_id", None)
             if src_reply and str(src_reply) in state["map"]:
                 reply_to = state["map"][str(src_reply)]
+            _h = hashlib.md5(re.sub(r"\s+", " ", clean.strip().lower()).encode()).hexdigest()
+            _recent = state.setdefault("recent", [])
+            if _h in _recent:
+                continue  # dedup de conteudo: sinal ja publicado recentemente
             pid = bot_send(brand(clean), reply_to)
             if pid:
+                _recent.append(_h); state["recent"] = _recent[-80:]
                 if pid != -1:
                     state["map"][str(m.id)] = pid
                     if len(state["map"]) > 800:  # limita o crescimento do state

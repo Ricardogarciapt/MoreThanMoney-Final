@@ -98,7 +98,8 @@ async def run_once(client, state):
         if m.id > state["last_id"]: state["last_id"] = m.id
         sig = parse_entry(m.message)
         if not sig: continue
-        if sig["trader"] != TRADER: continue
+        # (trader filtrado no endpoint p/ EXECUCAO; chat recebe todos)
+        pass  # ex-filtro trader
         # PV_SYMBOLS="ALL" (ou vazio) → envia todas as classes (o endpoint roteia p/ o chat certo
         # e executa só XAU/BTC). Senão, filtra pela lista.
         if SYMBOLS and "ALL" not in SYMBOLS and sig["symbol"] not in SYMBOLS: continue
