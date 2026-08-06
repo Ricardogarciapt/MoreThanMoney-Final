@@ -518,6 +518,9 @@ export async function POST(request: NextRequest) {
   // (ex.: "MTM Perps"/"MTM Perps X"), não pelo ticker, para poder incluir o BTC perp
   // desta lista sem o roubar ao Sensei (que envia BTCUSDT.P para o fluxo gold_btc).
   const isMtmPerps = /mtm[\s_-]*perps?\b|perps?[\s_-]*scanner/.test(stratText)
+  // Aurum Flow (ORB) — fonte de perps distinta do MTM Perps (Sensei X). Marca própria no chat
+  // + gate de execução por-fonte (backtest 2026-08: ORB rentável em ETH, negativo em BTC).
+  const isAurumFlow = /aurum\s*flow/.test(stratText)
   const scannerKey = isMtmPerps
     ? "mtmperps"
     : /mtm[\s_-]*scanner/.test(stratText)
@@ -541,7 +544,8 @@ export async function POST(request: NextRequest) {
     assetClass = "crypto_perp"
     route.channel = "cripto-perps"
     route.telegram = null
-    route.sender = "🪙 Perpétuos Cripto"
+    // Marca a origem: Aurum Flow ORB vs a dinâmica MTM Perps (Sensei X) — mesmo chat, fontes distintas.
+    route.sender = isAurumFlow ? "⚡ Aurum Flow ORB" : "🪙 Perpétuos Cripto"
     route.push = true
     route.autoCopy = false
   } else if (perpsRequested && !isCryptoPerp) {
@@ -1062,7 +1066,13 @@ export async function POST(request: NextRequest) {
     const bybitSl = v.sl ?? sl ?? null
     const bybitTps = [tp, tp2, tp3].filter((n): n is number => n != null && n > 0)
     const normSym = String(v.symbol ?? ticker).toUpperCase().replace(/^[A-Z]+:/, "").replace(/\.P$/, "")
-    if (cronSecret && normSym && bybitEntry != null) {
+    // Backtest 2026-08: o ORB do Aurum é rentável em ETH mas NEGATIVO (PF<1) em BTC → BTC fica em
+    // SHADOW (vai ao chat, não executa na Bybit). ETH e restantes seguem para a ordem-mestre.
+    const aurumBtcShadow = isAurumFlow && /^BTC/.test(normSym)
+    if (aurumBtcShadow && logId) {
+      await supabase.from("tradingview_signals").update({ bybit_exec_detail: "shadow: Aurum ORB BTC (backtest PF<1)" }).eq("id", logId)
+    }
+    if (cronSecret && normSym && bybitEntry != null && !aurumBtcShadow) {
       // Lista de símbolos que o Copy Trading da Bybit não suporta (auto-preenchida) → salta sem tentar.
       const { data: usRow } = await supabase.from("site_settings").select("value").eq("key", "bybit_copy_unsupported").maybeSingle()
       const unsupported: string[] = Array.isArray((usRow?.value as { symbols?: unknown })?.symbols)
