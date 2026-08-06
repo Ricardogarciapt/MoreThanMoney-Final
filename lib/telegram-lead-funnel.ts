@@ -124,6 +124,7 @@ export async function runLeadFunnelReply(input: {
         stage,
         history: nextHistory,
         message_count: (lead?.message_count ?? 0) + 1,
+        followup_count: 0, // lead respondeu → reinicia a sequência de follow-up
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'chat_id' },
