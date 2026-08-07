@@ -3,6 +3,7 @@ import { isPremiumTp1HitConfirmed } from './channel-context'
 import {
   buildPremiumSingleOrder,
   claimSignalOnce,
+  findPremiumSinglePosition,
   scaleLotForSmallCapital,
   shouldSkipDuplicatePremiumEntry,
 } from './premium-single'
@@ -32,6 +33,8 @@ import {
   getRiskTickContext,
   getSymbolSpecification,
   isMetaApiConfigured,
+  listOpenPositions,
+  modifyPositionSlTp,
   placeOrdersSequential,
   type OrderResult,
 } from './metaapi'
@@ -313,6 +316,33 @@ export async function processMtmcopyTelegramMessage(message: TelegramMessage) {
       detail: 'Sinal não reconhecido pelo parser',
     })
     return
+  }
+
+  // EDIÇÃO de SL pelo canal (Ricardo): quando o Premium EDITA a mensagem para mover o SL, e já
+  // existe posição aberta desse símbolo, corrige o SL na conta-mestre (o CopyFactory replica aos
+  // copiadores). Detetado por `edit_date`. Se não há posição aberta, segue o fluxo normal.
+  if (message.edit_date && channel === 'premium-signals' && signal.symbol && signal.sl != null && signal.sl > 0) {
+    try {
+      const positions = await listOpenPositions(CANONICAL_PREMIUM_ACCOUNT_ID)
+      const pos = findPremiumSinglePosition(positions, signal.symbol)
+      if (pos?.id) {
+        const r = await modifyPositionSlTp(CANONICAL_PREMIUM_ACCOUNT_ID, pos.id, signal.sl, pos.takeProfit ?? undefined)
+        await logProviderSignalEvent({
+          channel,
+          provider: mtmProvider,
+          raw: text,
+          telegramMessageId: message.message_id,
+          status: r.success ? 'executed' : 'error',
+          detail: r.success
+            ? `Edição do canal: SL ${signal.symbol} → ${signal.sl} aplicado na conta-mestre (CopyFactory replica)`
+            : `Edição do canal: falha ao mover SL (${r.error ?? '?'})`,
+        })
+        return
+      }
+      // sem posição aberta desse símbolo → não é edição de trade viva; segue o fluxo normal
+    } catch (e) {
+      console.error('[mtmcopy] edição de SL falhou:', e)
+    }
   }
 
   const subscribersPromise = resolveMatchedSubscribers(message, channel)
