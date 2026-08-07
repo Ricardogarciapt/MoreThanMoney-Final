@@ -269,9 +269,12 @@ export async function runPremiumPriceMonitor(): Promise<{
               ? Math.max(1, Math.round(Math.abs(row.entry - row.sl) / pipSize))
               : null
           const trailing = premiumTrailingAfterTp1Hit(riskPips)
-          await modifyPositionSlTp(accountId, pos.id, row.entry, undefined, trailing, row.symbol)
+          // O RUNNER deve ter TP (pedido Ricardo): alvo final do sinal (tp3 → tp2 → tp1) como
+          // rede — fecha no alvo mesmo se o trailing não apanhar; o Exit 2 parcial continua antes.
+          const runnerTp = (row.tp3 && row.tp3 > 0 ? row.tp3 : null) ?? (row.tp2 && row.tp2 > 0 ? row.tp2 : null) ?? (row.tp1 && row.tp1 > 0 ? row.tp1 : null) ?? undefined
+          await modifyPositionSlTp(accountId, pos.id, row.entry, runnerTp, trailing, row.symbol)
           patch.trailing_started = true
-          detail.push(`${row.symbol}: BE + trailing após Exit 1`)
+          detail.push(`${row.symbol}: BE + trailing + TP runner (${runnerTp ?? '—'}) após Exit 1`)
           // Espelha BE + trailing aos subscritores (protege o runner deles até Exit 2/3).
           const m = await mirrorPremiumExit(row.symbol, row.direction, { kind: 'be_trailing', beSl: row.entry, trailing })
           if (m.acted) detail.push(`${row.symbol}: BE+trailing em ${m.acted} subs`)
