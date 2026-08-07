@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse, after } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { processMtmcopyTelegramMessage } from "@/lib/mtmcopy/processor"
 import {
@@ -128,16 +128,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const supabase = getSupabaseAdmin()
 
+    // IMPORTANTE: o processamento de sinais (mirror + MetaApi) é PESADO (ligação MetaApi fria pode
+    // demorar dezenas de segundos). Se o awaitássemos antes de responder, o Telegram dava "Read timeout
+    // expired" e PARAVA de entregar TODAS as mensagens (foi o que aconteceu 06/08 → Premium sem relay).
+    // Com after() respondemos 200 imediatamente e processamos em background (até maxDuration=120s).
     if (body.channel_post) {
-      await handleTelegramChannelMessage(supabase, body.channel_post)
+      after(() => handleTelegramChannelMessage(supabase, body.channel_post).catch((e) => console.error("[tg channel_post]", e)))
     }
 
     if (body.edited_channel_post) {
-      await handleTelegramChannelMessage(supabase, body.edited_channel_post)
+      after(() => handleTelegramChannelMessage(supabase, body.edited_channel_post).catch((e) => console.error("[tg edited_channel_post]", e)))
     }
 
     if (body.message?.chat?.type === "supergroup" || body.message?.chat?.type === "group") {
-      await handleTelegramChannelMessage(supabase, body.message)
+      after(() => handleTelegramChannelMessage(supabase, body.message).catch((e) => console.error("[tg group]", e)))
       // Descobrir o grupo de leads (regista os grupos vistos) + boas-vindas a novos membros
       try {
         const { recordTelegramGroup, handleLeadsGroupNewMembers } = await import("@/lib/telegram-lead-funnel")
@@ -151,7 +155,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (body.edited_message?.chat?.type === "supergroup" || body.edited_message?.chat?.type === "group") {
-      await handleTelegramChannelMessage(supabase, body.edited_message)
+      after(() => handleTelegramChannelMessage(supabase, body.edited_message).catch((e) => console.error("[tg edited_message]", e)))
     }
 
     // Callback dos botões (Aprovar/Rejeitar acesso broker)
