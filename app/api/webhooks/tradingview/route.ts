@@ -578,16 +578,8 @@ export async function POST(request: NextRequest) {
     route.push = false
   }
 
-  // Perpétuos cripto: 30m e 1H vão para o chat/canal + execução; outros TF ficam só
-  // em tradingview_signals (sem chat/Telegram/execução) para não gerar overtrading.
-  if (assetClass === "crypto_perp") {
-    const tfMin = tfToMinutes(timeframe)
-    if (tfMin !== null && tfMin !== 60 && tfMin !== 30) {
-      route.channel = null
-      route.telegram = null
-      route.push = false
-    }
-  }
+  // Perpétuos cripto: o sistema SEGUE o timeframe do alerta (qualquer TF — 15m é 15m).
+  // Sem trava de TF: o que o scanner disparar vai a chat/push/execução (decisão do Ricardo 2026-08-06).
 
   const allTp = [tp, tp2, tp3, tp4].filter((n): n is number => n != null)
   const senseiFields: SenseiTradingViewFields = {
@@ -1005,11 +997,8 @@ export async function POST(request: NextRequest) {
   // await (não fire-and-forget): no Vercel o trabalho assíncrono é morto após a resposta.
   let pushOk = false
   // Perpétuos cripto: push/execução em 30m e 1H; outros TF ficam bloqueados (overtrading/ruído).
-  const cryptoPerpBlocked =
-    assetClass === "crypto_perp" && (() => {
-      const m = tfToMinutes(timeframe)
-      return m !== null && m !== 60 && m !== 30
-    })()
+  // Segue o timeframe do alerta: sem bloqueio por TF nos perps (15m/5m/1H — o que o alarme mandar).
+  const cryptoPerpBlocked = false
   if (alertOk && initSignalKind === "entry" && !cryptoPerpBlocked) {
     const dir =
       v.direction === "buy"
