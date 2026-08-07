@@ -892,8 +892,9 @@ function MessageBubble({
           {!isOwn && <Avatar profile={msg.profile} size={28} />}
 
           <div className={`flex flex-col max-w-[80%] ${isOwn ? "items-end" : "items-start"}`}>
-            {/* Name row */}
-            {!isOwn && (
+            {/* Name row — no Premium · Ouro escondemos a etiqueta do remetente (pedido Ricardo:
+                chat idêntico ao Telegram, sem "MTM Auto Premium"/marca do relay). */}
+            {!isOwn && !(msg.channel_slug === "premium-ideas" && isTelegram) && (
               <div className="flex items-center gap-1.5 mb-0.5 ml-1">
                 <span className="text-xs font-semibold text-white">
                   {isTelegram ? msg.telegram_sender || "Telegram" : msg.profile?.full_name || ""}
