@@ -130,25 +130,16 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
         // duplicado em bruto (era o erro do GoldKiller/Ideias de Forex). Só o Premium (sem webhook)
         // mantém o post — e SEM etiqueta (pedido Ricardo). A posição continua a ser rastreada
         // (claim acima) e a sincronização SL/TP→slaves usa symbol, não a mensagem.
+        // Canais que NÃO devem receber o render terso do master-poll:
+        //  - WEBHOOK_FORMATTED: já recebem o sinal formatado do webhook (composeGenericPost).
+        //  - 'premium-ideas': o chat Premium mostra SÓ o relay literal do Telegram (pedido Ricardo).
+        //    O render "MTM Auto Premium" confundia (duplicava/entrava sem ser do grupo). A posição
+        //    continua rastreada (claim acima) para a gestão T2T (close/edit sync aos slaves).
         const WEBHOOK_FORMATTED = new Set([
           'sinais-goldkiller', 'trade-ideas', 'trade-ideas-setup', 'sinais-scanner-mtm', 'sensei-scanner', 'ideias-de-indices',
+          'premium-ideas',
         ])
-        // PREMIUM: o literal do Telegram é espelhado por /api/telegram/relay-post. O render terso do
-        // master-poll passa a FALLBACK — só posta se NÃO houver literal recente (telegram_message_id não
-        // nulo) no premium-ideas nos últimos 5 min. Assim não duplica, mas não perde entradas que abram
-        // sem relay (trade manual / relay em baixo). A posição continua rastreada (claim acima).
-        let premiumLiteralExists = false
-        if (appChannel === 'premium-ideas') {
-          const { data: lit } = await supabase
-            .from('chat_messages')
-            .select('id')
-            .eq('channel_slug', 'premium-ideas')
-            .not('telegram_message_id', 'is', null)
-            .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
-            .limit(1)
-          premiumLiteralExists = Boolean(lit?.length)
-        }
-        if (appChannel && !WEBHOOK_FORMATTED.has(appChannel) && !premiumLiteralExists) {
+        if (appChannel && !WEBHOOK_FORMATTED.has(appChannel)) {
           const text = formatSignalText(p, dir)
           const senderLabel = appChannel === 'premium-ideas' ? null : (route.label ?? route.tag ?? 'MTM Provider')
           const { data: msg, error: msgErr } = await supabase
