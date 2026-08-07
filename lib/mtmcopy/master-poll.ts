@@ -133,7 +133,22 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
         const WEBHOOK_FORMATTED = new Set([
           'sinais-goldkiller', 'trade-ideas', 'trade-ideas-setup', 'sinais-scanner-mtm', 'sensei-scanner', 'ideias-de-indices',
         ])
-        if (appChannel && !WEBHOOK_FORMATTED.has(appChannel)) {
+        // PREMIUM: o literal do Telegram é espelhado por /api/telegram/relay-post. O render terso do
+        // master-poll passa a FALLBACK — só posta se NÃO houver literal recente (telegram_message_id não
+        // nulo) no premium-ideas nos últimos 5 min. Assim não duplica, mas não perde entradas que abram
+        // sem relay (trade manual / relay em baixo). A posição continua rastreada (claim acima).
+        let premiumLiteralExists = false
+        if (appChannel === 'premium-ideas') {
+          const { data: lit } = await supabase
+            .from('chat_messages')
+            .select('id')
+            .eq('channel_slug', 'premium-ideas')
+            .not('telegram_message_id', 'is', null)
+            .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+            .limit(1)
+          premiumLiteralExists = Boolean(lit?.length)
+        }
+        if (appChannel && !WEBHOOK_FORMATTED.has(appChannel) && !premiumLiteralExists) {
           const text = formatSignalText(p, dir)
           const senderLabel = appChannel === 'premium-ideas' ? null : (route.label ?? route.tag ?? 'MTM Provider')
           const { data: msg, error: msgErr } = await supabase
