@@ -64,7 +64,7 @@ import {
   trailingPointsForConnection,
 } from './position-management'
 import { applyPremiumManagement, classifyPremiumMessage } from './premium-management-exec'
-import { getPremiumZoneConfig } from './premium-zone-config'
+import { getPremiumZoneConfig, zoneEntryDecision } from './premium-zone-config'
 import { buildTelegramMessageContext } from './reply-context'
 import {
   looksLikeManagementOrReplyInstruction,
@@ -1101,6 +1101,26 @@ async function executeViaMtmProvider(
       const [zA, zB] = (signalForExec as any).zone as [number, number]
       const zoneLow = Math.min(zA, zB)
       const zoneHigh = Math.max(zA, zB)
+      // EXPEDITO (decisão Ricardo 2026-08): entra a MERCADO já quando o preço está na zona (favorável)
+      // ou já fugiu além da ponta; só fica PENDENTE na PONTA da zona (janela ±flee_pips) → aguarda reação.
+      const zonePx = marketPrice ?? signalForExec.entry ?? 0
+      const zoneTp1 = Array.isArray(signalForExec.tp) && signalForExec.tp.length ? Number(signalForExec.tp[0]) : null
+      const zoneDecision: 'market' | 'pending' | 'skip' =
+        zoneCfg.mode === 'shadow'
+          ? 'market'
+          : zoneEntryDecision({
+              direction: signalForExec.direction === 'sell' ? 'sell' : 'buy',
+              price: zonePx,
+              zoneLow,
+              zoneHigh,
+              tp1: zoneTp1,
+              symbol: mappedSymbol,
+              fleePips: zoneCfg.flee_pips,
+              minRoomPips: zoneCfg.min_room_pips,
+            })
+      // Pendente do PROVIDER só quando NÃO entra já a mercado (senão o monitor duplicava a entrada).
+      // Shadow cria sempre (registo comparativo).
+      if (zoneDecision !== 'market' || zoneCfg.mode === 'shadow') {
       try {
         const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
         await getSupabaseAdmin().from('mtmcopy_premium_pending').insert({
@@ -1126,6 +1146,7 @@ async function executeViaMtmProvider(
         })
       } catch {
         /* não bloquear a execução por falha ao gravar o pendente */
+      }
       }
 
       // ── GOLD DID (teste conta Alcy) ─────────────────────────────────────────────
@@ -1170,6 +1191,32 @@ async function executeViaMtmProvider(
       }
 
       if (zoneCfg.mode === 'live') {
+        if (zoneDecision === 'pending') {
+          await logProviderSignalEvent({
+            channel,
+            provider,
+            signal: signalForExec,
+            raw,
+            telegramMessageId,
+            lot: totalLot,
+            status: 'received',
+            detail: `${aiDetail} · Zona ${zoneLow}–${zoneHigh}: PENDENTE (ponta da zona) — aguarda reação · ${executionSummary}`,
+          })
+          return
+        }
+        if (zoneDecision === 'skip') {
+          await logProviderSignalEvent({
+            channel,
+            provider,
+            signal: signalForExec,
+            raw,
+            telegramMessageId,
+            status: 'skipped',
+            detail: `${aiDetail} · Zona ${zoneLow}–${zoneHigh}: sem espaço até ao TP1 (movimento esgotado) — não persegue`,
+          })
+          return
+        }
+        // 'market': preço na zona/favorável → entra a MERCADO JÁ (expedito). Cai para a execução.
         await logProviderSignalEvent({
           channel,
           provider,
@@ -1178,9 +1225,8 @@ async function executeViaMtmProvider(
           telegramMessageId,
           lot: totalLot,
           status: 'received',
-          detail: `${aiDetail} · Zona ${zoneLow}–${zoneHigh}: PENDENTE criado — aguarda gatilho (A/C/B), não entrou a mercado · ${executionSummary}`,
+          detail: `${aiDetail} · Zona ${zoneLow}–${zoneHigh}: entra a MERCADO (preço na zona/favorável) · ${executionSummary}`,
         })
-        return
       }
       // shadow: continua e abre a mercado como hoje; o pendente regista o que a zona teria feito.
     }

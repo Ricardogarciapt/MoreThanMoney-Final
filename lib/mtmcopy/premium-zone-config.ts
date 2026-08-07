@@ -24,6 +24,10 @@ export interface PremiumZoneConfig {
   trig_touch: boolean
   expiry_min: number
   cancel_on_sl_break: boolean
+  /** Janela (pips) além da ponta da zona onde ainda se ESPERA reação (limite). Fora dela entra a mercado. */
+  flee_pips: number
+  /** Espaço mínimo (pips) até ao TP1 para entrar a mercado (evita entrar colado ao TP). */
+  min_room_pips: number
 }
 
 const KEY = "mtmcopy_premium_zone"
@@ -35,6 +39,8 @@ export const DEFAULT_PREMIUM_ZONE_CONFIG: PremiumZoneConfig = {
   trig_touch: false,
   expiry_min: 30,
   cancel_on_sl_break: true,
+  flee_pips: 50,
+  min_room_pips: 30,
 }
 
 export async function getPremiumZoneConfig(): Promise<PremiumZoneConfig> {
@@ -54,6 +60,8 @@ export async function getPremiumZoneConfig(): Promise<PremiumZoneConfig> {
       trig_touch: v.trig_touch === true,
       expiry_min: Number.isFinite(expiry) && expiry > 0 ? Math.min(expiry, 720) : 30,
       cancel_on_sl_break: v.cancel_on_sl_break !== false,
+      flee_pips: Number.isFinite(Number(v.flee_pips)) && Number(v.flee_pips) > 0 ? Number(v.flee_pips) : 50,
+      min_room_pips: Number.isFinite(Number(v.min_room_pips)) && Number(v.min_room_pips) >= 0 ? Number(v.min_room_pips) : 30,
     }
   } catch {
     return { ...DEFAULT_PREMIUM_ZONE_CONFIG }
@@ -79,4 +87,36 @@ export function priceInZone(price: number, low: number, high: number, tolFrac = 
   const hi = Math.max(low, high)
   const tol = ((lo + hi) / 2) * tolFrac
   return price >= lo - tol && price <= hi + tol
+}
+
+/**
+ * Decisão de entrada por zona (MESMA regra do zone-monitor, para ser expedito já no sinal):
+ *  - 'market'  → preço FAVORÁVEL (dentro/além da zona no bom sentido) OU já FUGIU além da ponta (>flee) → entra a mercado.
+ *  - 'pending' → preço na PONTA da zona (janela ±flee além da aresta) → espera reação (o limite).
+ *  - 'skip'    → ia entrar a mercado mas já não há espaço até ao TP1 (evita entrar colado ao alvo).
+ */
+export function zoneEntryDecision(opts: {
+  direction: "buy" | "sell"
+  price: number
+  zoneLow: number
+  zoneHigh: number
+  tp1?: number | null
+  symbol: string
+  fleePips?: number
+  minRoomPips?: number
+}): "market" | "pending" | "skip" {
+  const { direction, price, zoneLow, zoneHigh, tp1, symbol } = opts
+  if (!(price > 0)) return "pending"
+  const pip = /xau|gold/i.test(symbol) ? 0.1 : /btc/i.test(symbol) ? 1 : 0.0001
+  const fleeDist = (opts.fleePips ?? 50) * pip
+  let marketNow = false
+  if (direction === "buy") marketNow = price <= zoneHigh || price - zoneHigh > fleeDist
+  else marketNow = price >= zoneLow || zoneLow - price > fleeDist
+  if (!marketNow) return "pending"
+  if (tp1 != null && tp1 > 0) {
+    const minRoom = (opts.minRoomPips ?? 30) * pip
+    const room = direction === "buy" ? tp1 - price : price - tp1
+    if (!(room >= minRoom)) return "skip"
+  }
+  return "market"
 }
