@@ -25,6 +25,7 @@ import {
   TrendingUp,
   Send,
   Network,
+  Globe,
 } from "lucide-react"
 import Image from "next/image"
 import { SiteLogo } from "@/components/site-logo"
@@ -377,6 +378,17 @@ export default function MobileSidebar({
               >
                 <Send className="w-5 h-5 text-[#D2A63C]" />
                 <span className="flex-1 text-left font-medium">MTMcopier</span>
+                <ChevronRight className="w-4 h-4 text-gray-500" />
+              </Link>
+
+              {/* PrimeVerse Hub — abre hub.primeverse.ca DENTRO da app (WebView), sem sair */}
+              <Link
+                href="/app-mobile/primeverse-hub"
+                onClick={onClose}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-all"
+              >
+                <Globe className="w-5 h-5 text-[#D2A63C]" />
+                <span className="flex-1 text-left font-medium">PrimeVerse Hub</span>
                 <ChevronRight className="w-4 h-4 text-gray-500" />
               </Link>
 
