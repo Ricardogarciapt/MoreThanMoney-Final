@@ -161,6 +161,7 @@ export default function TapToTradeFeed() {
   // "O que seguir": fontes + classes de ativo + nível de risco (prefs por-user na conta T2T)
   const [follow, setFollow] = useState<{ sources: string[]; assetClasses: string[]; risk: string | null }>({ sources: [], assetClasses: [], risk: null })
   const [savingFollow, setSavingFollow] = useState(false)
+  const [followDirty, setFollowDirty] = useState(false)
   const [cfg, setCfg] = useState<{
     lot_mode: "risk_percent" | "fixed"
     risk: number
@@ -403,9 +404,13 @@ export default function TapToTradeFeed() {
     }
   }
 
-  // Guarda as preferências "O que seguir" (fontes/classes/risco). O risco também aplica o sizing.
-  const saveFollow = async (next: { sources: string[]; assetClasses: string[]; risk: string | null }) => {
-    setFollow(next) // otimista → feed filtra já
+  // Atualiza LOCALMENTE as prefs "O que seguir" (marca por-guardar) — só persiste no botão Guardar.
+  const setFollowLocal = (next: { sources: string[]; assetClasses: string[]; risk: string | null }) => {
+    setFollow(next)
+    setFollowDirty(true)
+  }
+  // PERSISTE as prefs (botão Guardar). O risco também aplica o sizing por %.
+  const persistFollow = async () => {
     if (!conn) return
     setSavingFollow(true)
     try {
@@ -413,14 +418,13 @@ export default function TapToTradeFeed() {
       if (!tok) return
       const body: Record<string, unknown> = {
         connection_id: conn.id,
-        t2t_sources: next.sources,
-        t2t_asset_classes: next.assetClasses,
-        t2t_risk_level: next.risk,
+        t2t_sources: follow.sources,
+        t2t_asset_classes: follow.assetClasses,
+        t2t_risk_level: follow.risk,
       }
-      // Nível de risco → aplica o sizing por % (o motor de execução usa max_risk_percent).
-      if (next.risk && RISK_PRESET[next.risk] != null) {
+      if (follow.risk && RISK_PRESET[follow.risk] != null) {
         body.lot_mode = "risk_percent"
-        body.max_risk_percent = RISK_PRESET[next.risk]
+        body.max_risk_percent = RISK_PRESET[follow.risk]
       }
       await fetch("/api/mtmcopy/connection", {
         method: "POST",
@@ -428,6 +432,7 @@ export default function TapToTradeFeed() {
         body: JSON.stringify(body),
       })
       await loadConnection()
+      setFollowDirty(false)
     } finally {
       setSavingFollow(false)
     }
@@ -435,7 +440,7 @@ export default function TapToTradeFeed() {
   const toggleFollow = (kind: "sources" | "assetClasses", key: string) => {
     const cur = follow[kind]
     const nextArr = cur.includes(key) ? cur.filter((x) => x !== key) : [...cur, key]
-    saveFollow({ ...follow, [kind]: nextArr })
+    setFollowLocal({ ...follow, [kind]: nextArr })
   }
 
   const connectAccount = async () => {
@@ -813,7 +818,7 @@ export default function TapToTradeFeed() {
               return (
                 <button
                   key={lvl}
-                  onClick={() => saveFollow({ ...follow, risk: lvl })}
+                  onClick={() => setFollowLocal({ ...follow, risk: lvl })}
                   className={`rounded-xl border py-2 text-xs font-semibold ${on ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
                 >
                   {RISK_LABEL[lvl]}<span className="block text-[10px] font-normal opacity-70">{RISK_PRESET[lvl]}%</span>
@@ -821,6 +826,15 @@ export default function TapToTradeFeed() {
               )
             })}
           </div>
+
+          {/* Botão Guardar — só persiste ao clicar (pedido Ricardo) */}
+          <button
+            onClick={persistFollow}
+            disabled={savingFollow || !followDirty || !conn}
+            className={`mt-3 w-full rounded-xl py-2.5 text-[13px] font-bold ${followDirty && conn ? "bg-[#D2A63C] text-black" : "bg-zinc-800 text-zinc-500"} disabled:opacity-60`}
+          >
+            {savingFollow ? "A guardar…" : followDirty ? "Guardar" : "Guardado ✓"}
+          </button>
         </div>
       )}
 
