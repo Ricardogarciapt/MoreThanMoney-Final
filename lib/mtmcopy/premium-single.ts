@@ -227,8 +227,21 @@ export function hasOpenPremiumRunnerLegs(
   )
 }
 
+/** Posição já em BREAKEVEN (sem risco)? BUY: SL ≥ entrada; SELL: SL ≤ entrada. Sem SL = tem risco. */
+export function isPositionAtBreakeven(pos: MetaApiPosition): boolean {
+  const sl = pos.stopLoss
+  const entry = pos.openPrice
+  if (sl == null || !(sl > 0) || !(entry != null && entry > 0)) return false
+  const isBuy = /buy|long/i.test(pos.type)
+  const eps = entry * 0.0002 // pequena folga p/ arredondamentos do broker
+  return isBuy ? sl >= entry - eps : sl <= entry + eps
+}
+
 /**
- * Se já existe exposição Premium no par (single ou pernas 2/3), não abrir trade duplicada.
+ * Exposição Premium: NÃO abrir nova entrada enquanto houver posição com RISCO VIVO no par
+ * (SL ainda não movido para BE). Assim que o runner vai a BE (após TP1), empilhar é SEGURO
+ * (o anterior não pode perder) → deixa entrar o sinal seguinte da sessão (modelo close+reentra
+ * do canal Premium). Regra pedida pelo Ricardo 2026-08-07.
  */
 export async function shouldSkipDuplicatePremiumEntry(
   accountId: string,
@@ -237,15 +250,18 @@ export async function shouldSkipDuplicatePremiumEntry(
 ): Promise<{ skip: boolean; reason?: string }> {
   const positions = await listOpenPositions(accountId)
   const mtm = positions.filter(isMtmcopierPosition)
+  const openHere = mtm.filter((p) => symbolMatches(p.symbol, symbol))
+  const risky = openHere.filter((p) => !isPositionAtBreakeven(p))
 
-  if (hasOpenPremiumRunnerLegs(mtm, symbol, direction)) {
+  if (risky.length > 0) {
     return {
       skip: true,
       reason:
-        'Exposição Premium activa (perna 2/3 ou posição única) — preferir gestão da trade existente',
+        'Exposição Premium com RISCO VIVO (SL ainda não em BE) — preferir gestão da trade existente',
     }
   }
 
+  // Sem posição, ou todas as abertas já em BE (sem risco) → a nova entrada da sessão pode abrir.
   return { skip: false }
 }
 
