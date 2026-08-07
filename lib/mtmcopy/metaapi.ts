@@ -1030,17 +1030,28 @@ export function isMetaApiConfigured(): boolean {
 }
 
 export async function listOpenPositions(accountId: string): Promise<MetaApiPosition[]> {
-  let close: (() => Promise<void>) | undefined
+  // TETO TOTAL de 10s (fail-open): numa reconexão RPC lenta, o getRpcConnection/getPositions podia
+  // pendurar até ~55s e MATAR a função (master-poll) antes de colocar a ordem — foi o que perdeu a
+  // trade das 15:14. Ao estourar, devolve [] → a verificação de exposição não bloqueia e a trade ABRE.
   try {
-    const { connection, close: closeFn } = await getRpcConnection(accountId)
-    close = closeFn
-    const positions = await connection.getPositions()
-    return (positions ?? []) as MetaApiPosition[]
+    return await withTimeout(
+      (async () => {
+        let close: (() => Promise<void>) | undefined
+        try {
+          const { connection, close: closeFn } = await getRpcConnection(accountId)
+          close = closeFn
+          const positions = await connection.getPositions()
+          return (positions ?? []) as MetaApiPosition[]
+        } finally {
+          if (close) await close()
+        }
+      })(),
+      10_000,
+      `listOpenPositions ${accountId}`,
+    )
   } catch {
     invalidateRpcCache(accountId)
     return []
-  } finally {
-    if (close) await close()
   }
 }
 
