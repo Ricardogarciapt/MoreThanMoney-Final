@@ -1051,7 +1051,13 @@ async function executeViaMtmProvider(
     // Guard ATÓMICO anti-triplicação: a fonte (NY/Londres) às vezes repete o sinal em várias
     // mensagens e o forwarder externo mete outra cópia → 2-3 chegadas em segundos. A 1.ª reclama
     // a chave; as restantes são rejeitadas ANTES de criar pendente/abrir ordem (à prova de corrida).
-    const claimed = await claimSignalOnce(`premium:${mappedSymbol}:${signalForExec.direction}`)
+    // Chave inclui o NÍVEL (SL arredondado): reenvios do MESMO sinal (mesmo nível, segundos depois —
+    // a fonte repete e o par com-TP/só-SL) colapsam; mas uma NOVA entrada da sessão (o trader faz
+    // "close now" e reentra noutro nível) NÃO é bloqueada. TTL curto (180s) só apanha a rajada de
+    // reenvios — não trava reentradas legítimas minutos depois. (Antes: símbolo:direção 900s → bloqueava
+    // todas as reentradas de ouro durante 15 min.)
+    const dedupLevel = Math.round(Number(signalForExec.sl ?? signalForExec.entry ?? 0))
+    const claimed = await claimSignalOnce(`premium:${mappedSymbol}:${signalForExec.direction}:${dedupLevel}`, 180)
     if (!claimed) {
       await logProviderSignalEvent({
         channel,
@@ -1552,7 +1558,8 @@ async function processSignalDirect(
 
   if (isPremium && premiumSingle && conn.metaapi_account_id) {
     // Guard atómico por conta: cada subscritor abre 1x — chegadas duplicadas do sinal são rejeitadas.
-    const claimed = await claimSignalOnce(`premium-sub:${conn.metaapi_account_id}:${signal.symbol}:${direction}`)
+    const subLevel = Math.round(Number(signal.sl ?? signal.entry ?? 0))
+    const claimed = await claimSignalOnce(`premium-sub:${conn.metaapi_account_id}:${signal.symbol}:${direction}:${subLevel}`, 180)
     if (!claimed) {
       await logMtmcopySignal({
         user_id: conn.user_id,
