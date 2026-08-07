@@ -59,6 +59,31 @@ export function isAllowedT2TSource(channelSlug?: string | null, content?: string
   return t2tSourceKey(channelSlug, content) !== null
 }
 
+// Follow-ups / gestão (TP hit, BE, fecho, SL, cancelado) — não são ENTRADAS.
+const T2T_FOLLOWUP_RE =
+  /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|close\s*all|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad)/i
+// Performance / resumo / recap (London/New York Performance, Total Win/Loss/Net PIPS…) — NUNCA são T2T.
+const T2T_PERF_RE =
+  /(performance|resultado\s+do\s+dia|resumo|recap|relat[óo]rio|estat[íi]stic|balan[çc]o|total\s+(de\s+)?pips|total\s+(win|loss|net)|pips\s+(de\s+)?(hoje|esta\s+semana|do\s+dia)|fecho\s+do\s+dia|lucro\s+do\s+dia)/i
+const T2T_DIR_RE = /(\b(buy|sell|long|short|compra|venda)\b|🟢|🔴|🔵)/i
+
+/**
+ * É uma ENTRADA T2T negociável (para gerar sinal + notificação "⚡ Tap to Trade")?
+ * Exclui mensagens de acompanhamento/gestão e de performance/resumo — que NÃO devem virar T2T.
+ * (As mensagens de gestão do Premium servem para gerir a trade já aceite, não para abrir nova.)
+ */
+export function isT2TEntrySignal(channelSlug?: string | null, content?: string | null): boolean {
+  if (!content) return false
+  if (!isAllowedT2TSource(channelSlug, content)) return false
+  if (T2T_PERF_RE.test(content)) return false      // performance / resumo do dia
+  if (T2T_FOLLOWUP_RE.test(content)) return false  // update/gestão/saída — não é entrada
+  if (!T2T_DIR_RE.test(content)) return false       // precisa de direção
+  if (!/\d{2,}/.test(content)) return false          // precisa de preço
+  // Entrada COMPLETA: exige alvo (TP). Exclui updates só-SL / "Ref:".
+  if (!/\btp\s*\d|\btp\s*:|take\s*profit|🎯/i.test(content)) return false
+  return true
+}
+
 /** Classe de ativo de um sinal, a partir do conteúdo (mesma heurística do feed). */
 export function t2tAssetClass(content?: string | null): T2TAssetClass | 'other' {
   const c = (content ?? '').toUpperCase()

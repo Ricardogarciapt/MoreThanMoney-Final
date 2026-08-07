@@ -1,6 +1,7 @@
 import { getSiteOrigin } from '@/lib/site-url'
 import type { AppChatChannelSlug } from '@/lib/telegram-app-channels'
 import { tapToTradeEnabledChannels } from '@/lib/mtmcopy/tap-to-trade-channels'
+import { isT2TEntrySignal } from '@/lib/mtmcopy/t2t-source'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 const PUSH_TITLES: Record<string, string> = {
@@ -65,9 +66,11 @@ export async function sendTelegramChannelPush(opts: {
   const chatUrl = `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}`
   const tag = opts.telegramMessageId ? `chat_${slug}_${opts.telegramMessageId}` : `chat_${slug}`
 
-  // É um sinal T2T (canal ativo no Tap to Trade) e temos o id da mensagem?
+  // É uma ENTRADA T2T? Só entradas negociáveis geram a notificação "⚡ Tap to Trade".
+  // Mensagens de acompanhamento/gestão (updates, "close all", BE) e de PERFORMANCE/resumo
+  // (London/New York Performance, Total Win/Loss/Net PIPS) NÃO são T2T → push de chat normal.
   let t2tUsers: string[] = []
-  if (opts.chatMessageId) {
+  if (opts.chatMessageId && isT2TEntrySignal(slug, opts.content)) {
     try {
       const enabled = await tapToTradeEnabledChannels()
       if (enabled?.has(slug)) t2tUsers = await activeT2TUserIds()

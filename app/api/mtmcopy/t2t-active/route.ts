@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { parseSignal } from '@/lib/mtmcopy/signal-parser'
-import { isAllowedT2TSource, matchesT2TPrefs } from '@/lib/mtmcopy/t2t-source'
+import { isT2TEntrySignal, matchesT2TPrefs } from '@/lib/mtmcopy/t2t-source'
 import { tapToTradeEnabledChannels, T2T_SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
 
 /**
@@ -21,9 +21,6 @@ async function authenticate(request: NextRequest) {
   const { data: { user }, error } = await supabase.auth.getUser(accessToken)
   return error || !user ? null : user
 }
-
-const FOLLOWUP_RE =
-  /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad)/i
 
 export async function GET(request: NextRequest) {
   const user = await authenticate(request)
@@ -59,8 +56,7 @@ export async function GET(request: NextRequest) {
   // 3) Só ENTRADAS negociáveis + fontes que o user segue
   const now = Date.now()
   const signals = (rows ?? [])
-    .filter((m) => m.content && isAllowedT2TSource(m.channel_slug, m.content))
-    .filter((m) => !FOLLOWUP_RE.test(m.content as string))
+    .filter((m) => isT2TEntrySignal(m.channel_slug, m.content)) // exclui follow-ups + performance/resumo
     .filter((m) => matchesT2TPrefs(m.channel_slug, m.content as string, prefs))
     .map((m) => {
       const sig = parseSignal(m.content as string)
