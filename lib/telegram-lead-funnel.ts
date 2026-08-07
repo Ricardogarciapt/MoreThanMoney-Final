@@ -42,6 +42,7 @@ interface LeadRow {
   first_name: string | null
   interest: string | null
   stage: string | null
+  source: string | null
   history: Array<{ role: 'user' | 'assistant'; text: string }> | null
   message_count: number | null
 }
@@ -64,6 +65,8 @@ export async function runLeadFunnelReply(input: {
   firstName?: string | null
   username?: string | null
   userText: string
+  /** Canal de origem — para segmentar com as MESMAS tags (telegram | whatsapp | instagram). */
+  source?: string
 }): Promise<string | null> {
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) return null
@@ -75,7 +78,7 @@ export async function runLeadFunnelReply(input: {
   const supabase = getSupabaseAdmin()
   const { data: existing } = await supabase
     .from('telegram_leads')
-    .select('chat_id, first_name, interest, stage, history, message_count')
+    .select('chat_id, first_name, interest, stage, source, history, message_count')
     .eq('chat_id', input.chatId)
     .maybeSingle()
   const lead = (existing ?? null) as LeadRow | null
@@ -116,6 +119,14 @@ export async function runLeadFunnelReply(input: {
   ].slice(-16)
   const interest = lead?.interest || detectInterest(input.userText)
   const stage = interest ? 'routed' : lead?.stage === 'new' || !lead ? 'qualifying' : lead?.stage || 'qualifying'
+  const source = input.source || lead?.source || 'telegram'
+  // Tags canónicas — MESMO vocabulário em todos os canais para segmentar os contactos.
+  const tags = Array.from(new Set([
+    'lead',
+    `src:${source}`,
+    interest ? `interest:${interest}` : null,
+    `stage:${stage}`,
+  ].filter(Boolean))) as string[]
   try {
     await supabase.from('telegram_leads').upsert(
       {
@@ -124,6 +135,8 @@ export async function runLeadFunnelReply(input: {
         first_name: input.firstName ?? lead?.first_name ?? null,
         interest,
         stage,
+        source,
+        tags,
         history: nextHistory,
         message_count: (lead?.message_count ?? 0) + 1,
         followup_count: 0, // lead respondeu → reinicia a sequência de follow-up
@@ -207,6 +220,10 @@ export function leadWelcomeMessage(firstName?: string | null): string {
     `👋 Olá${nome}, bem-vindo à MoreThanMoney!\n\n` +
     `Comunidade PT de trading: 675 trades reais · 63% win · +7.060€. ` +
     `Para te ajudar melhor — o que procuras: **sinais para copiar à mão**, ` +
-    `**Tap to Trade** (1 toque na app) ou **algo automático**? 🙂`
+    `**Tap to Trade** (1 toque na app) ou **algo automático**? 🙂\n\n` +
+    // Dica de tradução — o lead pode escrever no seu idioma (respondo nele) e usar o
+    // "Traduzir" nativo do Telegram (toque longo na mensagem) para ler em qualquer língua.
+    `🌐 Fala no teu idioma — respondo-te nele. (Para traduzir qualquer mensagem: toque longo → Traduzir.)\n` +
+    `Write in your own language — I'll reply in it. (Long-press any message → Translate.)`
   )
 }

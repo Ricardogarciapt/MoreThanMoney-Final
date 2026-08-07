@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { runLeadFunnelReply } from '@/lib/telegram-lead-funnel'
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 /**
  * Webhook do WhatsApp (Meta Cloud API) — funil de vendas MTM no WhatsApp, reutilizando o MESMO
@@ -27,6 +28,36 @@ export async function GET(req: NextRequest) {
 }
 
 interface WAMessage { from?: string; type?: string; text?: { body?: string } }
+
+/**
+ * O funil de WhatsApp só trata LEADS NOVOS — nunca contactos/clientes já existentes.
+ * "Existente" = já é utilizador registado (profiles.phone/whatsapp ou users.phone) OU já tem
+ * um registo de lead com outra origem que não o próprio bot de WhatsApp (ex.: contacto humano).
+ * Um número novo (ou já iniciado por este bot) continua o funil normalmente.
+ */
+async function isNewWhatsAppLead(phone: string): Promise<boolean> {
+  const supabase = getSupabaseAdmin()
+  const digits = phone.replace(/\D/g, '')
+  const last9 = digits.slice(-9)
+  // 1) Já é cliente/utilizador registado? → NÃO é lead novo (não abordar).
+  const like = `%${last9}`
+  const { data: prof } = await supabase
+    .from('profiles')
+    .select('id')
+    .or(`phone.ilike.${like},whatsapp.ilike.${like}`)
+    .limit(1)
+  if (prof?.length) return false
+  const { data: usr } = await supabase.from('users').select('id').ilike('phone', like).limit(1)
+  if (usr?.length) return false
+  // 2) Já existe lead com origem diferente do bot de WhatsApp (contacto humano/outro canal)?
+  const { data: lead } = await supabase
+    .from('telegram_leads')
+    .select('source')
+    .eq('chat_id', `wa:${phone}`)
+    .maybeSingle()
+  if (lead && lead.source && lead.source !== 'whatsapp') return false
+  return true
+}
 
 async function sendWhatsApp(to: string, body: string): Promise<void> {
   const token = process.env.WHATSAPP_TOKEN
@@ -64,12 +95,18 @@ export async function POST(req: NextRequest) {
         const from = m.from
         const text = m.text?.body?.trim()
         if (!from || !text) continue
-        // Mesmo funil do Telegram — estado por chat_id ('wa:<numero>').
+        // SÓ leads novos — nunca contactos/clientes existentes.
+        if (!(await isNewWhatsAppLead(from))) {
+          console.log('[whatsapp] contacto existente — funil ignorado:', from)
+          continue
+        }
+        // Mesmo funil do Telegram + MESMAS tags (source='whatsapp') — estado por chat_id 'wa:<n>'.
         const reply = await runLeadFunnelReply({
           chatId: `wa:${from}`,
           firstName: contactName,
           username: from,
           userText: text,
+          source: 'whatsapp',
         })
         await sendWhatsApp(
           from,
