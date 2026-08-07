@@ -86,6 +86,39 @@ function symbolOf(content: string): string | null {
   return m ? m[0] : null
 }
 
+/**
+ * Extrai os campos estruturados de um sinal (símbolo, direção, entrada, SL, TPs)
+ * a partir do texto cru — que chega em formatos diferentes por fonte (Premium literal
+ * do Telegram, "📡 PrimeVerse", master-poll "🟢 XAUUSD BUY"). Serve SÓ para o card
+ * harmonizado do tab T2T; NÃO altera o texto guardado nem os chats.
+ */
+interface SignalFields {
+  symbol: string | null
+  direction: "BUY" | "SELL" | ""
+  entry: string | null   // preço ou "Mercado"
+  sl: string | null
+  tps: string[]
+}
+function parseSignalFields(content: string): SignalFields {
+  const numRe = "(\\d+(?:[.,]\\d+)?)"
+  const entryM = content.match(new RegExp(`(?:entrada|entry|entrar)\\s*[:=]?\\s*${numRe}`, "i"))
+  const marketM = /(?:entrada|entry)\s*[:=]?\s*(mercado|market)/i.test(content)
+  const slM = content.match(new RegExp(`(?:sl|stop\\s?loss|stoploss|s\\/l)\\s*[:=]?\\s*${numRe}`, "i"))
+  const tps: string[] = []
+  const seen = new Set<string>()
+  for (const m of content.matchAll(new RegExp(`(?:tp\\s*\\d*|take\\s?profit\\s*\\d*|alvo\\s*\\d*|target\\s*\\d*)\\s*[:=]?\\s*${numRe}`, "gi"))) {
+    const v = m[1]
+    if (v && !seen.has(v)) { seen.add(v); tps.push(v) }
+  }
+  return {
+    symbol: symbolOf(content),
+    direction: directionOf(content),
+    entry: entryM ? entryM[1] : marketM ? "Mercado" : null,
+    sl: slM ? slM[1] : null,
+    tps,
+  }
+}
+
 interface Sig {
   id: string
   channel_slug: string
@@ -896,7 +929,10 @@ export default function TapToTradeFeed() {
       ) : (
         <div className="space-y-2.5">
           {shown.map((s) => {
-            const dir = directionOf(s.content)
+            const f = parseSignalFields(s.content)
+            const dir = f.direction
+            // Card harmonizado quando conseguimos ler símbolo + direção; senão cai no texto cru.
+            const structured = Boolean(f.symbol && dir)
             return (
               <div key={s.id} className={`rounded-2xl border p-3 ${s.expired ? "border-zinc-800/60 bg-zinc-900/30 opacity-70" : "border-zinc-800 bg-zinc-900/60"}`}>
                 <div className="flex items-center justify-between mb-1.5">
@@ -914,7 +950,23 @@ export default function TapToTradeFeed() {
                     )}
                   </div>
                 </div>
-                <p className="text-[13px] text-zinc-200 whitespace-pre-wrap break-words leading-snug line-clamp-5">{s.content}</p>
+                {structured ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-[15px] font-bold text-white tracking-wide">{f.symbol}</span>
+                      <span className={`text-[11px] font-semibold ${dir === "BUY" ? "text-emerald-400" : "text-rose-400"}`}>{dir === "BUY" ? "COMPRA" : "VENDA"}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="text-[11px] px-2 py-0.5 rounded-lg bg-zinc-800/80 text-zinc-300">🎯 {f.entry ?? "Mercado"}</span>
+                      {f.sl && <span className="text-[11px] px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-300">🛑 SL {f.sl}</span>}
+                      {f.tps.map((tp, i) => (
+                        <span key={i} className="text-[11px] px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-300">✅ TP{i + 1} {tp}</span>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-zinc-200 whitespace-pre-wrap break-words leading-snug line-clamp-5">{s.content}</p>
+                )}
                 {accepted[s.id] ? (
                   <div className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 font-semibold text-[12px] py-2.5">
                     <ShieldCheck className="w-4 h-4" />

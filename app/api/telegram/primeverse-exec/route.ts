@@ -38,11 +38,16 @@ async function feedPrimeverseChat(slug: string, symbol: string, direction: 'buy'
         `⚠️ Não é aconselhamento financeiro.`,
       ].filter(Boolean).join('\n')
     } else {
-      // OURO/FOREX/ÍNDICES: MANTÉM o marcador "📡 PrimeVerse" — o T2T depende dele para reconhecer a fonte.
+      // OURO/FOREX/ÍNDICES: traz TODOS os dados do sinal (entrada, timeframe, SL, todos os TPs) ao chat
+      // + T2T. MANTÉM a 1.ª linha `emoji SÍMBOLO DIREÇÃO` (o parser T2T lê símbolo/direção daqui) e o
+      // marcador "📡 PrimeVerse" (o T2T depende dele para reconhecer a fonte). O parser aceita TP1/TP2/TP3
+      // e "Entrada:" — logo o enriquecimento não parte a deteção.
       const tag = direction === 'buy' ? '🔵' : '🔴'
       const lines = [`${tag} ${symbol} ${direction.toUpperCase()}`]
-      if (sl != null) lines.push(`SL: ${sl}`)
-      if (tp != null) lines.push(`TP: ${tp}`)
+      if (timeframe) lines.push(`⏱ Timeframe: ${timeframe}`)
+      lines.push(`🎯 Entrada: ${entry != null && entry > 0 ? entry : 'Mercado'}`)
+      if (sl != null) lines.push(`🛑 SL: ${sl}`)
+      tpList.forEach((t, i) => lines.push(`✅ TP${i + 1}: ${t}`))
       lines.push('', `📡 PrimeVerse${trader ? ` · ${trader}` : ''}`)
       content = lines.join('\n')
     }
@@ -72,6 +77,7 @@ interface Body {
   entry?: number
   sl?: number
   tps?: number[]
+  timeframe?: string
 }
 
 const ALLOWED = new Set(['XAUUSD', 'BTCUSD'])
@@ -90,13 +96,14 @@ export async function POST(req: NextRequest) {
   const entry = typeof b.entry === 'number' ? b.entry : null
   const sl = typeof b.sl === 'number' ? b.sl : null
   const tps = Array.isArray(b.tps) ? b.tps.filter((n) => typeof n === 'number' && n > 0) : []
+  const timeframe = typeof b.timeframe === 'string' && b.timeframe.trim() ? b.timeframe.trim() : null
 
   const cfg = await getPrimeverseExecConfig()
 
   // ROUTING (display/T2T): encaminha para o chat da CLASSE DE ATIVO — de TODOS os traders PrimeVerse,
   // independente do trader/modo. Reutiliza os chats existentes. A EXECUÇÃO é que fica restrita ao top.
   const chatSlug = chatForSymbol(symbol)
-  if (chatSlug) await feedPrimeverseChat(chatSlug, symbol, direction, sl, tps[0] ?? null, trader, null, entry, tps)
+  if (chatSlug) await feedPrimeverseChat(chatSlug, symbol, direction, sl, tps[0] ?? null, trader, timeframe, entry, tps)
 
   // EXECUÇÃO: só o top trader (cfg.trader) — os outros ficam só no chat.
   if (trader !== cfg.trader) return NextResponse.json({ ok: true, routed: chatSlug, exec: 'skipped_trader', trader })
