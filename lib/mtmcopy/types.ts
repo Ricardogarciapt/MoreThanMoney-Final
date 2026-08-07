@@ -21,6 +21,7 @@ export interface MTMcopierConnection {
   lot_value: number
   max_risk_percent: number | null
   symbols_whitelist: string[] | null
+  cf_no_risk_limits?: boolean | null
   copy_sl: boolean
   copy_tp: boolean
   auto_trailing_stop: boolean

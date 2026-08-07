@@ -63,6 +63,9 @@ export interface SubscriberOptions {
     closePositions: boolean
     maxRelativeRisk: number
   }>
+  /** true → envia riskLimits:[] em CADA subscrição → remove o DD/close-positions do strategy
+   *  SÓ nesta conta (override por-subscritor). Ex.: PAMM VT sem travão de drawdown. */
+  noRiskLimits?: boolean
 }
 
 export interface ProviderStrategyOptions {
@@ -133,6 +136,10 @@ export async function subscribeToStrategies(
       }
       if (includeMapping && opts.symbolMapping?.length) {
         subscription.symbolMapping = opts.symbolMapping
+      }
+      // Override por-subscrição: riskLimits vazio remove o DD/close-positions do strategy só nesta conta.
+      if (opts.noRiskLimits) {
+        subscription.riskLimits = []
       }
       return subscription
     })

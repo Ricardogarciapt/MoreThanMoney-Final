@@ -18,7 +18,7 @@ import type { MTMcopierConnection } from './types'
 function copyFactoryOptsFromConnection(
   conn: Pick<
     MTMcopierConnection,
-    'prop_firm_type' | 'copy_sl' | 'copy_tp' | 'lot_mode' | 'lot_value' | 'reverse_signals' | 'symbols_whitelist'
+    'prop_firm_type' | 'copy_sl' | 'copy_tp' | 'lot_mode' | 'lot_value' | 'reverse_signals' | 'symbols_whitelist' | 'cf_no_risk_limits'
   >,
 ) {
   const preset = getPropFirmPreset(conn.prop_firm_type)
@@ -27,6 +27,8 @@ function copyFactoryOptsFromConnection(
     copyTp: preset ? preset.copyTp : conn.copy_tp !== false,
     skipPendingOrders: preset?.skipPendingOrders ?? false,
     riskLimits: preset?.riskLimits,
+    // Remove o DD do strategy só nesta conta (ex.: PAMM VT) — envia riskLimits:[] por-subscrição.
+    noRiskLimits: conn.cf_no_risk_limits === true,
     multiplier: lotMultiplierFromConnection(conn),
     tradeSizeScaling: tradeSizeScalingFromConnection(conn),
     reverse: conn.reverse_signals ?? false,
@@ -174,6 +176,7 @@ export async function syncConnectionCopyFactory(
     copyTp: cf.copyTp,
     skipPendingOrders: method === 'master_slave' ? false : cf.skipPendingOrders,
     riskLimits: cf.riskLimits,
+    noRiskLimits: cf.noRiskLimits,
     freshSubscribe: false,
   })
 }
@@ -281,6 +284,7 @@ export async function syncMtmStrategyReplication(
     copyTp: cf.copyTp,
     skipPendingOrders: false,
     riskLimits: cf.riskLimits,
+    noRiskLimits: cf.noRiskLimits,
     symbolMapping,
     freshSubscribe: true,
   })
