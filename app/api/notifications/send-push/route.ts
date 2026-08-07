@@ -253,6 +253,7 @@ export async function POST(request: NextRequest) {
     }
 
     const tokens = webTokens.map((t) => t.token)
+    const prioFcm = pushPriority(payload.data?.type)
     const message = {
       notification: {
         title: payload.title,
@@ -264,6 +265,12 @@ export async function POST(request: NextRequest) {
         url: payload.url || payload.data?.url || '/app-mobile',
         tag: payload.tag || 'mtm-notification',
         ...(payload.data || {}),
+      },
+      // Prioridade: Trade Alerts seguidos > Tap to Trade > restantes (respeita os toggles do user).
+      android: { priority: 'high' as const },
+      apns: {
+        headers: { 'apns-priority': '10' },
+        payload: { aps: { 'interruption-level': prioFcm.level, 'relevance-score': prioFcm.relevance } },
       },
       tokens,
     }
@@ -346,6 +353,21 @@ export async function POST(request: NextRequest) {
 // Requires env vars: APNS_AUTH_KEY (p8 content), APNS_KEY_ID, APNS_TEAM_ID
 // ---------------------------------------------------------------------------
 
+/**
+ * Prioridade da notificação (watch + app), respeitando os toggles do user (já filtrados antes):
+ *  1º Trade Alerts que o user segue  → time-sensitive, relevância máxima
+ *  2º Tap to Trade                   → time-sensitive, relevância alta
+ *  restantes                         → active, relevância normal
+ * relevance-score ordena a stack de notificações; interruption-level fura o Focus.
+ */
+function pushPriority(type?: string): { level: 'time-sensitive' | 'active'; relevance: number } {
+  const t = (type || '').toLowerCase()
+  if (t === 'trade_ideas' || t === 'trade_alert' || t === 'mtm_alert' || t === 'telegram_signal') return { level: 'time-sensitive', relevance: 1.0 }
+  if (t === 'tap_to_trade' || t === 'tap_to_trade_signal') return { level: 'time-sensitive', relevance: 0.85 }
+  if (t === 'live_session') return { level: 'active', relevance: 0.6 }
+  return { level: 'active', relevance: 0.4 }
+}
+
 async function sendApnsNotifications(
   tokens: Array<{ token: string; user_id: string }>,
   payload: { title: string; body: string; data?: Record<string, string>; url?: string },
@@ -365,11 +387,14 @@ async function sendApnsNotifications(
 
   const jwtToken = await buildApnsJwt(authKey, keyId, teamId)
 
+  const prio = pushPriority(payload.data?.type)
   const apnsPayload = JSON.stringify({
     aps: {
       alert: { title: payload.title, body: payload.body },
       sound: 'default',
       badge: 1,
+      'interruption-level': prio.level,   // Trade Alerts/T2T furam o Focus (time-sensitive)
+      'relevance-score': prio.relevance,  // ordena a stack: Trade Alerts > T2T > restantes
       // Categoria de ações (ex: botão "Tap to Trade" no iPhone e no Apple Watch)
       ...(payload.data?.category ? { category: payload.data.category } : {}),
     },
