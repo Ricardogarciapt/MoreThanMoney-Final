@@ -125,9 +125,17 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
         if (!claimed?.length) continue // outra execução já tratou esta posição
         result.opened++
 
-        // Gera sinal T2T (funciona mesmo sem Telegram)
-        if (appChannel) {
+        // Gera sinal T2T (funciona mesmo sem Telegram). MAS: os canais que JÁ recebem o sinal
+        // FORMATADO do webhook (composeGenericPost: "— Novo Sinal") NÃO devem levar aqui o
+        // duplicado em bruto (era o erro do GoldKiller/Ideias de Forex). Só o Premium (sem webhook)
+        // mantém o post — e SEM etiqueta (pedido Ricardo). A posição continua a ser rastreada
+        // (claim acima) e a sincronização SL/TP→slaves usa symbol, não a mensagem.
+        const WEBHOOK_FORMATTED = new Set([
+          'sinais-goldkiller', 'trade-ideas', 'trade-ideas-setup', 'sinais-scanner-mtm', 'sensei-scanner', 'ideias-de-indices',
+        ])
+        if (appChannel && !WEBHOOK_FORMATTED.has(appChannel)) {
           const text = formatSignalText(p, dir)
+          const senderLabel = appChannel === 'premium-ideas' ? null : (route.label ?? route.tag ?? 'MTM Provider')
           const { data: msg, error: msgErr } = await supabase
             .from('chat_messages')
             .insert({
@@ -135,7 +143,7 @@ export async function pollMasterAccounts(): Promise<MasterPollResult> {
               user_id: null,
               content: text,
               message_type: 'telegram_forward',
-              telegram_sender: route.label ?? route.tag ?? 'MTM Provider',
+              telegram_sender: senderLabel,
               created_at: new Date().toISOString(),
             })
             .select('id')
