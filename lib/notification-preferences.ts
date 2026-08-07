@@ -5,6 +5,7 @@ export type NotificationCategory =
   | 'trade_ideas'
   | 'telegram_groups'
   | 'tap_to_trade'
+  | 'primeverse'
 
 export type NotificationPreferences = Record<NotificationCategory, boolean>
 
@@ -36,6 +37,10 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<
     title: 'T2T · Tap to Trade',
     description: 'Sinais prontos a abrir num toque — toca para aceitar a trade',
   },
+  primeverse: {
+    title: 'PrimeVerse Hub',
+    description: 'Notificações do hub.primeverse.ca dentro da app MTM',
+  },
 }
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
@@ -45,6 +50,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   trade_ideas: true,
   telegram_groups: true,
   tap_to_trade: true,
+  primeverse: false, // opt-in — o cliente liga se quiser as notificações do PrimeVerse Hub
 }
 
 export function normalizeNotificationPreferences(
@@ -90,6 +96,7 @@ export function resolveNotificationCategory(
 ): NotificationCategory | null {
   const channel = String(data?.channel ?? data?.channel_slug ?? '').toLowerCase()
 
+  if (type === 'primeverse' || type === 'primeverse_hub' || channel.includes('primeverse')) return 'primeverse'
   if (type === 'tap_to_trade' || type === 'tap_to_trade_signal') return 'tap_to_trade'
   if (type === 'live_session') return 'live_sessions'
   if (type === 'dca_daily' || type === 'dca_opportunity' || type === 'price_alert') return 'dca'
