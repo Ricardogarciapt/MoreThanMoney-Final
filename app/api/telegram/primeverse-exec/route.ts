@@ -17,14 +17,35 @@ function chatForSymbol(s: string): string | null {
 }
 
 /** Insere o sinal (formato parseável) no chat da classe + dispara push T2T. */
-async function feedPrimeverseChat(slug: string, symbol: string, direction: 'buy' | 'sell', sl: number | null, tp: number | null, trader?: string) {
+async function feedPrimeverseChat(slug: string, symbol: string, direction: 'buy' | 'sell', sl: number | null, tp: number | null, trader?: string, timeframe?: string | null, entry?: number | null, tps?: number[]) {
   try {
-    const tag = direction === 'buy' ? '🔵' : '🔴'
-    const lines = [`${tag} ${symbol} ${direction.toUpperCase()}`]
-    if (sl != null) lines.push(`SL: ${sl}`)
-    if (tp != null) lines.push(`TP: ${tp}`)
-    lines.push('', `📡 PrimeVerse${trader ? ` · ${trader}` : ''}`)
-    const content = lines.join('\n')
+    const tpList = (tps && tps.length ? tps : tp != null ? [tp] : []).filter((n) => n != null && n > 0)
+    let content: string
+    if (slug === 'cripto-perps') {
+      // PERPS: formato padrão MTM ("— Novo Sinal"), fonte PrimeVerse OCULTA (pedido Ricardo).
+      // Perps são executados via Bybit (não T2T) → não precisam do marcador no texto.
+      const dir = direction === 'buy' ? '🔵 COMPRA' : '🔴 VENDA'
+      content = [
+        `🪙 Perpétuos Cripto — Novo Sinal`,
+        ``,
+        `📊 ${symbol}   ${dir}`,
+        timeframe ? `⏱ Timeframe: ${timeframe}` : null,
+        `🎯 Entrada: ${entry != null && entry > 0 ? entry : 'Mercado'}`,
+        sl != null ? `🛑 Stop Loss: ${sl}` : null,
+        ...tpList.map((t, i) => `✅ Take Profit ${i + 1}: ${t}`),
+        ``,
+        `🔎 Validação: 100%`,
+        `⚠️ Não é aconselhamento financeiro.`,
+      ].filter(Boolean).join('\n')
+    } else {
+      // OURO/FOREX/ÍNDICES: MANTÉM o marcador "📡 PrimeVerse" — o T2T depende dele para reconhecer a fonte.
+      const tag = direction === 'buy' ? '🔵' : '🔴'
+      const lines = [`${tag} ${symbol} ${direction.toUpperCase()}`]
+      if (sl != null) lines.push(`SL: ${sl}`)
+      if (tp != null) lines.push(`TP: ${tp}`)
+      lines.push('', `📡 PrimeVerse${trader ? ` · ${trader}` : ''}`)
+      content = lines.join('\n')
+    }
     const { data } = await getSupabaseAdmin()
       .from('chat_messages')
       .insert({ channel_slug: slug, user_id: null, content, message_type: 'telegram_forward', notified: true })
@@ -75,7 +96,7 @@ export async function POST(req: NextRequest) {
   // ROUTING (display/T2T): encaminha para o chat da CLASSE DE ATIVO — de TODOS os traders PrimeVerse,
   // independente do trader/modo. Reutiliza os chats existentes. A EXECUÇÃO é que fica restrita ao top.
   const chatSlug = chatForSymbol(symbol)
-  if (chatSlug) await feedPrimeverseChat(chatSlug, symbol, direction, sl, tps[0] ?? null, trader)
+  if (chatSlug) await feedPrimeverseChat(chatSlug, symbol, direction, sl, tps[0] ?? null, trader, null, entry, tps)
 
   // EXECUÇÃO: só o top trader (cfg.trader) — os outros ficam só no chat.
   if (trader !== cfg.trader) return NextResponse.json({ ok: true, routed: chatSlug, exec: 'skipped_trader', trader })
