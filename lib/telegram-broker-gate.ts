@@ -247,6 +247,13 @@ export async function handleBrokerApproval(
 
 // ============================ PAINEL DE ADMIN (só o aprovador vê) ============================
 
+/** É o chat do admin (Ricardo)? Só ele vê/usa o painel e a máquina de vendas. */
+export async function isAdminChat(supabase: Supa, chatId: string | number | null | undefined): Promise<boolean> {
+  if (chatId == null) return false
+  const adminId = await getAdminChatId(supabase)
+  return !!adminId && String(chatId) === String(adminId)
+}
+
 export function adminPanelKeyboard() {
   return {
     inline_keyboard: [
@@ -258,6 +265,19 @@ export function adminPanelKeyboard() {
         { text: "🔓 Pendentes", callback_data: "admin:pending" },
         { text: "👑 Premium ativos", callback_data: "admin:subs" },
       ],
+      // ── Máquina de Vendas (só admin) ──
+      [
+        { text: "⚙️ Estado Máquina Vendas", callback_data: "admin:sm_state" },
+      ],
+      [
+        { text: "🟢 Ativar Máquina", callback_data: "admin:sm_on" },
+        { text: "🔴 Desativar", callback_data: "admin:sm_off" },
+      ],
+      [
+        { text: "✍️ Gerar conteúdo", callback_data: "admin:sm_generate" },
+        { text: "📨 Digest de vendas", callback_data: "admin:sm_digest" },
+      ],
+      [{ text: "🤖 Falar com a IA do site", callback_data: "admin:ai_help" }],
       [
         { text: "🌐 Painel admin", url: "https://www.morethanmoney.pt/admin" },
         { text: "🛰️ MTM Copy", url: "https://www.morethanmoney.pt/admin/mtmcopy" },
@@ -312,6 +332,34 @@ export async function handleAdminAction(supabase: Supa, action: string, chatId: 
     const { count: prem } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("member_category", "premium").eq("is_active", true)
     const { count: granted } = await supabase.from("telegram_leads").select("chat_id", { count: "exact", head: true }).eq("stage", "granted")
     await send(chatId, `👑 <b>Subscrições</b>\n\nPremium ativos (app): <b>${prem ?? 0}</b>\nLeads com acesso broker: <b>${granted ?? 0}</b>`)
+  } else if (action.startsWith("sm_")) {
+    // ── Máquina de Vendas (só admin) ──
+    const { buildSalesState, runSalesCommand, salesStateSummary } = await import("@/lib/sales-machine")
+    if (action === "sm_state") {
+      const s = await buildSalesState()
+      await send(chatId, `⚙️ <b>Máquina de Vendas</b>\n\n${salesStateSummary(s)}`)
+    } else if (action === "sm_on") {
+      await runSalesCommand({ action: "set_autopilot", account: "morethanmoney", on: true })
+      await runSalesCommand({ action: "set_autopilot", account: "ricardo", on: true })
+      await send(chatId, "🟢 <b>Máquina de Vendas ATIVADA</b> — autopilot de conteúdo ligado (marca + Ricardo). Vou gerar/agendar conteúdo e preparar tudo para aprovação.")
+    } else if (action === "sm_off") {
+      await runSalesCommand({ action: "set_autopilot", account: "morethanmoney", on: false })
+      await runSalesCommand({ action: "set_autopilot", account: "ricardo", on: false })
+      await send(chatId, "🔴 <b>Máquina de Vendas DESATIVADA</b> — autopilot de conteúdo desligado.")
+    } else if (action === "sm_generate") {
+      await send(chatId, "✍️ A gerar conteúdo…")
+      const r = await runSalesCommand({ action: "generate_now" })
+      await send(chatId, r.ok ? "✅ Conteúdo gerado — vai a rascunhos para aprovares." : `⚠️ Falhou: ${r.error ?? "erro"}`)
+    } else if (action === "sm_digest") {
+      await send(chatId, "📨 A preparar o digest de vendas…")
+      const r = await runSalesCommand({ action: "digest_now" })
+      await send(chatId, r.ok ? "✅ Digest de vendas gerado." : `⚠️ Falhou: ${r.error ?? "erro"}`)
+    }
+  } else if (action === "ai_help") {
+    await send(
+      chatId,
+      "🤖 <b>IA do site</b> — escreve-me aqui em linguagem natural (só tu, admin). Consigo consultar o negócio e arrancar tarefas do site.\n\nEx.: <i>“como está o funil hoje?”</i>, <i>“cria uma tarefa para rever os rascunhos”</i>, <i>“gera conteúdo para a marca”</i>.",
+    )
   }
 }
 

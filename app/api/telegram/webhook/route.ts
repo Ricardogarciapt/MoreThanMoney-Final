@@ -384,10 +384,23 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Mensagem LIVRE (não-comando) em DM → UID da corretora OU funil IA persona
+      // Mensagem LIVRE (não-comando) em DM → ADMIN fala com a IA do site · OU UID da corretora · OU funil IA persona
       else if (!text.startsWith("/")) {
         try {
           const bg = await import("@/lib/telegram-broker-gate")
+          // ADMIN (Ricardo): texto livre vai para a IA DO SITE (consulta o negócio + arranca tarefas).
+          // NÃO se mistura com o funil de leads. Só o chat aprovador.
+          if (await bg.isAdminChat(supabase, chatId)) {
+            try {
+              const { runSiteAgentChat } = await import("@/lib/agent-site-api")
+              const { reply } = await runSiteAgentChat(text, "Canal: Telegram admin (Ricardo). Responde curto e podes arrancar tarefas/comandos do site.")
+              await sendMessage(reply || "✅ Feito.")
+            } catch (e) {
+              console.error("[telegram-admin-ai]", e)
+              await sendMessage("⚠️ A IA do site não respondeu agora. Tenta /admin para o painel.")
+            }
+            return NextResponse.json({ ok: true })
+          }
           const uid = bg.looksLikeBrokerUid(text)
           if (uid) {
             await bg.handleBrokerUid(supabase, chatId, uid, body.message.from?.first_name ?? null)
