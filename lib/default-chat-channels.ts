@@ -140,8 +140,8 @@ export const DEFAULT_CHAT_CHANNELS: DefaultChatChannel[] = [
   },
   {
     slug: 'sinais-scanner-mtm',
-    name: 'Sinais Scanner MTM',
-    description: 'Sinais do MTM Scanner (Forex) — tap-to-trade / MTM Auto Trade Ideas',
+    name: 'Sinais Primeverse',
+    description: 'Sinais PrimeVerse (Forex) — tap-to-trade',
     parent_slug: 'sinais',
     position: 17,
   },
