@@ -21,6 +21,7 @@ const MAX_DM_PER_ACCOUNT = Number(process.env.IG_FUNNEL_MAX_PER_ACCOUNT) || 30
 
 const REGISTER = "https://www.morethanmoney.pt/register"
 const TELEGRAM = "https://t.me/MoreThanMoney_aibot?start=lead"
+const CRIADORES = "https://www.morethanmoney.pt/criadores"
 
 interface Intent {
   key: string
@@ -37,6 +38,20 @@ const INTENTS: Intent[] = [
     dm: (h) => `Boa${h}! 🙌 Para os sinais + copytrading, fala com o nosso assistente aqui 👉 ${TELEGRAM} — ele guia-te a abrir conta e ter acesso. 🚀`,
     // Sem DM (app sem scope de mensagens): a resposta PÚBLICA leva já o link → o lead auto-serve-se.
     pub: (h) => `Boa${h}! 🔥 Sinais + copytrading é aqui no nosso Telegram 👉 ${TELEGRAM} (abre conta e tens acesso). 🚀`,
+  },
+  {
+    // RECRUTAMENTO DE CRIADORES (carrossel «TRAZ O TEU CONTEÚDO. NÓS VENDEMOS POR TI.»).
+    // Antes do 'trial' porque "QUERO CRIAR" deve cair aqui, não no trial. Filtro anti-vendedor:
+    // a resposta PEDE 1 exemplo do conteúdo/portfólio ANTES de encaminhar para o Ricardo — quem só
+    // quer fazer spam/vender cursos genéricos não passa esta porta. Qualificação fina no dm-closer.
+    key: "educator",
+    kw: ["CRIAR", "CRIADOR", "CRIADORA", "CRIADORES", "EDUCADOR", "EDUCADORA", "CREATE", "CREATOR", "EDUCATOR", "UGC"],
+    dm: (h) =>
+      `Boa${h}! 🙌 Que bom quereres criar com a MTM. Vê o modelo (ficas com 90–95%, 0€ de entrada) e candidata-te 👉 ${CRIADORES}. ` +
+      `Para avançar, responde-me aqui com 1 exemplo do teu conteúdo (link do perfil/portfólio) + a tua área — se encaixar, o Ricardo (@ricardogarciapt) fala contigo em privado. 🚀`,
+    pub: (h) =>
+      `Boa${h}! 🔥 Candidaturas de criadores abertas 👉 ${CRIADORES}. ` +
+      `Manda-nos DM com 1 exemplo do teu conteúdo + a tua área e o Ricardo (@ricardogarciapt) fala contigo. 🙌`,
   },
   {
     key: "trial",
