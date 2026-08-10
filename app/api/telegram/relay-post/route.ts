@@ -23,6 +23,9 @@ export async function POST(req: NextRequest) {
     chat_id?: string | number
     text?: string
     reply_to_message_id?: number
+    /** Texto do SINAL-PAI (o SETUP a que este HIT/update responde) — dá o contexto ao executor
+     *  para casar a gestão com o sinal certo, mesmo sem threading no Telegram. */
+    reply_to_text?: string
   }
   const chatId = body.chat_id != null ? String(body.chat_id) : ''
   const text = (body.text ?? '').toString()
@@ -30,6 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'chat_id e text obrigatórios' }, { status: 400 })
   }
   const replyTo = typeof body.reply_to_message_id === 'number' ? body.reply_to_message_id : null
+  const replyText = typeof body.reply_to_text === 'string' && body.reply_to_text.trim() ? body.reply_to_text.trim() : null
   const r = await sendTelegramChannelMessage(chatId, text.trim(), { replyToMessageId: replyTo })
 
   // EXECUÇÃO: o Telegram não entrega ao webhook as mensagens do próprio bot, por isso o
@@ -44,7 +48,11 @@ export async function POST(req: NextRequest) {
         chat: { id: Number(chatId), type: 'channel', title: 'MTM Premium' },
         text: execText,
         message_id: r.messageId ?? 0,
-        ...(replyTo ? { reply_to_message: { message_id: replyTo } } : {}),
+        // reply_to_message com TEXT → o executor resolve o sinal-pai direto (sem depender de
+        // threading/lookup). Passamos o message_id (se houver) e/ou o texto do SETUP.
+        ...(replyTo || replyText
+          ? { reply_to_message: { ...(replyTo ? { message_id: replyTo } : {}), ...(replyText ? { text: replyText } : {}) } }
+          : {}),
       } as Parameters<typeof processMtmcopyTelegramMessage>[0])
     } catch (e) {
       console.error('[relay-post] processador erro:', e instanceof Error ? e.message : e)
