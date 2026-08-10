@@ -71,14 +71,29 @@ export async function POST(req: NextRequest) {
     } catch { /* best-effort: sem mapa → publica na mesma, só não encadeia */ }
   }
 
+  // DEDUP ATÓMICO: com ids da fonte, reservamos a linha no mapa ANTES de publicar. Conflito no
+  // unique (source_chat_id, source_message_id, target_chat_id) → já foi relayado (pelo real-time OU
+  // por um poll anterior) → NÃO repetir: evita duplicados no canal e dupla execução. Isto é o que
+  // permite ao POLLER de segurança reenviar sem risco (só passam mensagens ainda em falta).
+  let claimId: string | null = null
+  if (sourceChatId && sourceMsgId != null) {
+    const { data: claim } = await supabase
+      .from('telegram_relay_log')
+      .insert({ source_chat_id: sourceChatId, source_message_id: sourceMsgId, target_chat_id: chatId, status: 'pending' })
+      .select('id')
+      .maybeSingle()
+    if (!claim) return NextResponse.json({ ok: true, skipped: 'dup' })
+    claimId = claim.id as string
+  }
+
   const r = await sendTelegramChannelMessage(chatId, outText, { replyToMessageId: replyToDest })
 
-  // Guarda o mapa fonte→destino para futuras RESPOSTAS encadearem. Best-effort (dedup pelo unique).
-  if (r.ok && r.messageId && sourceChatId && sourceMsgId != null) {
+  // Fecha a reserva com o id da msg no destino (para futuras RESPOSTAS encadearem por este mapa).
+  if (claimId) {
     await supabase
       .from('telegram_relay_log')
-      .insert({ source_chat_id: sourceChatId, source_message_id: sourceMsgId, target_chat_id: chatId, target_message_id: r.messageId, status: 'sent' })
-      .then(() => {}, () => {})
+      .update({ status: r.ok ? 'sent' : 'error', target_message_id: r.messageId ?? null, error: r.ok ? null : (r.error ?? 'falha') })
+      .eq('id', claimId)
   }
 
   // EXECUÇÃO: o Telegram não entrega ao webhook as mensagens do próprio bot, por isso o
