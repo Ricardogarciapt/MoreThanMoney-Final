@@ -82,6 +82,8 @@ export function canAddConnection(
     limits?: MtmcopyUserLimits
     copyMethod?: MtmcopyCopyMethod
     copyfactoryStrategyPick?: string | null
+    /** 'tap_to_trade' → conta T2T: não conta contra o limite de slaves de cópia (tem cap próprio no provision). */
+    purpose?: string | null
   },
 ): { ok: boolean; error?: string } {
   const limits = options?.limits
@@ -132,6 +134,9 @@ export function canAddConnection(
   }
 
   if (copyMethod === 'telegram_group' || copyMethod === 'strategy') {
+    // Contas Tap to Trade têm cap próprio (no provision) e não competem com o limite de slaves de
+    // cópia → o total-de-contas por plano continua a aplicar-se (verificado acima).
+    if (options?.purpose === 'tap_to_trade') return { ok: true }
     if (countMtmSignalSlaves(active) >= maxSignalSlaves) {
       return {
         ok: false,

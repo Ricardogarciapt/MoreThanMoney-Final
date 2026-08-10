@@ -121,9 +121,9 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Tap to Trade: apenas corretoras permitidas (whitelist T2T_BROKERS). Permite VÁRIAS contas T2T
-  // (fan-out: aceitar um sinal abre em todas), até um limite razoável.
-  const T2T_MAX_ACCOUNTS = 5
+  // Tap to Trade: apenas corretoras permitidas (whitelist T2T_BROKERS). Permite até DUAS contas T2T
+  // por user (fan-out: aceitar um sinal abre nas duas). Cap próprio, independente do limite de cópia.
+  const T2T_MAX_ACCOUNTS = 2
   if (purpose === 'tap_to_trade') {
     const { isAllowedT2TServer, T2T_BROKERS } = await import('@/lib/mtmcopy/t2t-brokers')
     if (!isAllowedT2TServer(server)) {
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       .neq('mt5_status', 'disconnected')
     if ((existingT2T ?? 0) >= T2T_MAX_ACCOUNTS) {
       return NextResponse.json(
-        { error: `Já tens ${T2T_MAX_ACCOUNTS} contas Tap to Trade. Remove uma para ligar outra.`, code: 't2t_account_limit' },
+        { error: `Podes ter no máximo ${T2T_MAX_ACCOUNTS} contas Tap to Trade. Remove uma para ligar outra.`, code: 't2t_account_limit' },
         { status: 409 },
       )
     }
@@ -196,6 +196,7 @@ export async function POST(request: NextRequest) {
     limits,
     copyMethod,
     copyfactoryStrategyPick: resolvedPick,
+    purpose,
   })
   if (!limitCheck.ok) {
     return NextResponse.json({ error: limitCheck.error }, { status: 400 })

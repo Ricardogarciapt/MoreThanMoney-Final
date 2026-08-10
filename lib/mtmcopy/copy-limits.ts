@@ -41,12 +41,15 @@ export function countSlavesForMethod(
   ).length
 }
 
-/** Slaves em grupos Telegram MTM (método 1 — parser directo). */
+/** Slaves em grupos Telegram MTM (método 1 — parser directo). Exclui contas Tap to Trade
+ *  (purpose='tap_to_trade'): o T2T tem o seu próprio limite (no provision) e não deve consumir
+ *  o orçamento de slaves de cópia — assim um user pode ter 2 T2T independentemente da cópia. */
 export function countMtmSignalSlaves(connections: MTMcopierConnection[]): number {
   return connections.filter(
     (c) =>
       c.mt5_status !== 'disconnected' &&
       (c.account_role ?? 'slave') === 'slave' &&
+      (c as { purpose?: string }).purpose !== 'tap_to_trade' &&
       connectionCopyMethod(c) === 'telegram_group',
   ).length
 }
