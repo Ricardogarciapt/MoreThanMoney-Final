@@ -78,6 +78,11 @@ interface Body {
   sl?: number
   tps?: number[]
   timeframe?: string
+  /** 'setup' = alerta pendente (só mostra o sinal, NÃO executa) · 'entry_hit' = o preço chegou ao
+   *  Entry ("🟢 ENTRY HIT") → executa a MERCADO (preço ≈ entry, logo SL/TP ficam corretos).
+   *  Default 'entry_hit' (retrocompat). Os setups do kingfkg são níveis pendentes: entrar a mercado
+   *  neles fica com o preço longe do Entry → SL enorme. Por isso só se executa no ENTRY HIT. */
+  kind?: 'setup' | 'entry_hit'
 }
 
 const ALLOWED = new Set(['XAUUSD', 'BTCUSD'])
@@ -92,7 +97,10 @@ export async function POST(req: NextRequest) {
   const symbol = (b.symbol || '').toString().trim().toUpperCase()
   const dir = (b.direction || '').toString().trim().toLowerCase()
   const direction: 'buy' | 'sell' = dir === 'sell' ? 'sell' : 'buy'
-  const orderType: 'market' | 'limit' = (b.orderType || '').toLowerCase() === 'limit' ? 'limit' : 'market'
+  const kind: 'setup' | 'entry_hit' = b.kind === 'setup' ? 'setup' : 'entry_hit'
+  // No ENTRY HIT o preço está NO Entry → entra a MERCADO (nunca limit longe do preço). No setup nunca
+  // se executa, por isso o orderType do setup é irrelevante.
+  const orderType: 'market' | 'limit' = kind === 'entry_hit' ? 'market' : ((b.orderType || '').toLowerCase() === 'limit' ? 'limit' : 'market')
   const entry = typeof b.entry === 'number' ? b.entry : null
   const sl = typeof b.sl === 'number' ? b.sl : null
   const tps = Array.isArray(b.tps) ? b.tps.filter((n) => typeof n === 'number' && n > 0) : []
@@ -100,10 +108,17 @@ export async function POST(req: NextRequest) {
 
   const cfg = await getPrimeverseExecConfig()
 
-  // ROUTING (display/T2T): encaminha para o chat da CLASSE DE ATIVO — de TODOS os traders PrimeVerse,
-  // independente do trader/modo. Reutiliza os chats existentes. A EXECUÇÃO é que fica restrita ao top.
+  // SETUP (alerta pendente): só MOSTRA o sinal no chat da classe de ativo (de TODOS os traders) e
+  // NÃO executa nada — o Entry do kingfkg é um nível pendente; entrar a mercado aqui poria o SL
+  // enorme (preço longe do Entry). A execução acontece SÓ quando chega o "🟢 ENTRY HIT".
   const chatSlug = chatForSymbol(symbol)
-  if (chatSlug) await feedPrimeverseChat(chatSlug, symbol, direction, sl, tps[0] ?? null, trader, timeframe, entry, tps)
+  if (kind === 'setup') {
+    if (chatSlug) await feedPrimeverseChat(chatSlug, symbol, direction, sl, tps[0] ?? null, trader, timeframe, entry, tps)
+    return NextResponse.json({ ok: true, routed: chatSlug, kind, exec: 'aguarda_entry_hit' })
+  }
+
+  // ── kind === 'entry_hit' ── o preço chegou ao Entry → executar a mercado (SL/TP corretos).
+  // Não re-mostra o card (já foi mostrado no setup) para não duplicar no chat.
 
   // EXECUÇÃO: só o top trader (cfg.trader) — os outros ficam só no chat.
   if (trader !== cfg.trader) return NextResponse.json({ ok: true, routed: chatSlug, exec: 'skipped_trader', trader })
