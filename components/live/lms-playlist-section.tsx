@@ -1,6 +1,90 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Carregador único da IFrame Player API do YouTube (partilhado por todos os players da página).
+let ytApiPromise: Promise<any> | null = null
+function loadYouTubeApi(): Promise<any> {
+  if (typeof window === "undefined") return Promise.reject()
+  const w = window as any
+  if (w.YT?.Player) return Promise.resolve(w.YT)
+  if (ytApiPromise) return ytApiPromise
+  ytApiPromise = new Promise((resolve) => {
+    const prev = w.onYouTubeIframeAPIReady
+    w.onYouTubeIframeAPIReady = () => { prev?.(); resolve(w.YT) }
+    if (!document.getElementById("yt-iframe-api")) {
+      const s = document.createElement("script")
+      s.id = "yt-iframe-api"
+      s.src = "https://www.youtube.com/iframe_api"
+      document.head.appendChild(s)
+    }
+  })
+  return ytApiPromise
+}
+
+/** Player de playlist com botões próprios de Anterior/Próximo (via IFrame API). */
+function PlaylistPlayer({ playlistId }: { playlistId: string }) {
+  const hostRef = useRef<HTMLDivElement | null>(null)
+  const playerRef = useRef<any>(null)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    loadYouTubeApi().then((YT) => {
+      if (cancelled || !hostRef.current) return
+      playerRef.current = new YT.Player(hostRef.current, {
+        width: "100%",
+        height: "100%",
+        playerVars: {
+          listType: "playlist",
+          list: playlistId,
+          rel: 0,
+          modestbranding: 1,
+          cc_load_policy: 1,
+          hl: "pt",
+          cc_lang_pref: "pt",
+          playsinline: 1,
+        },
+        events: { onReady: () => !cancelled && setReady(true) },
+      })
+    })
+    return () => {
+      cancelled = true
+      try { playerRef.current?.destroy?.() } catch { /* noop */ }
+      playerRef.current = null
+    }
+  }, [playlistId])
+
+  const prev = () => playerRef.current?.previousVideo?.()
+  const next = () => playerRef.current?.nextVideo?.()
+
+  return (
+    <>
+      <div className="relative w-full overflow-hidden rounded-lg border border-gray-800 bg-black" style={{ aspectRatio: "16 / 9" }}>
+        <div ref={hostRef} className="absolute inset-0 h-full w-full" />
+      </div>
+      <div className="mt-2 flex items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={prev}
+          disabled={!ready}
+          className="rounded-full border border-gray-700 bg-gray-900 px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-40"
+        >
+          ◀ Anterior
+        </button>
+        <button
+          type="button"
+          onClick={next}
+          disabled={!ready}
+          className="rounded-full border border-[#D2A63C]/50 bg-[#D2A63C]/15 px-3 py-1.5 text-[12px] font-semibold text-[#D2A63C] disabled:opacity-40"
+        >
+          Próximo ▶
+        </button>
+      </div>
+    </>
+  )
+}
 
 /**
  * "Rever aulas" — playlist de YouTube associada a uma sala, para os alunos
@@ -76,20 +160,12 @@ export function LmsPlaylistSection({
         <div className="px-3 pb-3">
           {canAccess ? (
             <>
-              <div className="relative w-full overflow-hidden rounded-lg border border-gray-800 bg-black" style={{ aspectRatio: "16 / 9" }}>
-                <iframe
-                  // cc_load_policy=1 → legendas ligadas por defeito; controlos completos
-                  // mantêm o menu ⚙️ do YouTube (seletor de CC e de faixa de áudio).
-                  src={`https://www.youtube.com/embed/videoseries?list=${id}&cc_load_policy=1&hl=pt&cc_lang_pref=pt&rel=0`}
-                  title="Playlist de aulas"
-                  className="absolute inset-0 h-full w-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  loading="lazy"
-                />
-              </div>
+              {/* Player com botões próprios Anterior/Próximo (avança/recua entre vídeos da playlist),
+                  além das setas nativas do YouTube. */}
+              <PlaylistPlayer playlistId={id} />
               <p className="mt-1.5 text-[10px] leading-relaxed text-gray-500">
-                No ⚙️ do leitor podes escolher as <strong className="text-gray-400">legendas (CC)</strong> e, quando o
+                Usa <strong className="text-gray-400">◀ Anterior / Próximo ▶</strong> para navegar entre as aulas.
+                No ⚙️ do leitor escolhes as <strong className="text-gray-400">legendas (CC)</strong> e, quando o
                 vídeo tem várias faixas, o <strong className="text-gray-400">idioma do áudio</strong>.
               </p>
             </>
