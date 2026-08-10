@@ -14,6 +14,14 @@ ENV:
   GMI_STATE_FILE  default ./gmi_relay_state.json
   GMI_POLL_SEC    default 45  (loop; 0 = uma passagem só)
   GMI_LOOKBACK_H  default 3   (1ª passagem: quantas horas para trás considerar)
+
+2026-08-10 — robustez das RESPOSTAS + execução:
+  - NUNCA larga uma mensagem: o last_id só avança até à última msg REALMENTE tratada
+    (filtrada ou publicada com sucesso). Se um envio falha, para aí e retenta no ciclo seguinte
+    (preserva a ordem SETUP→HIT). Guarda-fim: msg venenosa desiste após 5 falhas.
+  - Passa reply_to_text (texto do SINAL-PAI) + source_chat_id/source_message_id/reply_to_source_id
+    ao endpoint → o executor casa a gestão ao sinal certo E o servidor faz dedup atómico por id
+    da fonte (idempotente em retries, mesmo após restart/perda do state).
 """
 import os, re, json, time, html, asyncio, datetime, urllib.request, urllib.parse
 import hashlib
@@ -59,7 +67,7 @@ MTM_HEADER = "🏦 MTM Premium"
 
 def sanitize(text: str) -> str:
     lines = []
-    for ln in text.splitlines():
+    for ln in (text or "").splitlines():
         if STRIP_LINES.search(ln):
             continue
         lines.append(ln.rstrip())
@@ -92,15 +100,26 @@ def save_state(s):
 RELAY_POST_URL = os.environ.get("RELAY_POST_URL", "https://www.morethanmoney.pt/api/telegram/relay-post")
 RELAY_SECRET = os.environ.get("RELAY_SECRET", "")
 
-def bot_send(text: str, reply_to=None):
-    """Publica via o ENDPOINT do site (token válido na Vercel). Devolve o message_id
-    publicado na Premium (para encadear updates como resposta) ou None."""
+def bot_send(text: str, reply_to=None, source_msg_id=None, reply_to_source_id=None, reply_to_text=None):
+    """Publica via o ENDPOINT do site (token válido na Vercel).
+    Devolve:
+      int>0  → message_id publicado na Premium (para encadear updates como resposta)
+      -1     → DRY_RUN (não publicou)
+      -2     → o servidor devolveu skipped:'dup' (já relayado antes; sucesso, sem novo id)
+      None   → FALHA (rede/erro) → o chamador NÃO deve avançar o last_id (retenta)."""
     if DRY_RUN:
         print(("──── PUBLICARIA" + (f" (reply→{reply_to})" if reply_to else "") + " ────\n") + text + "\n")
         return -1
     payload = {"chat_id": DEST_CHAT, "text": text}
     if reply_to:
         payload["reply_to_message_id"] = reply_to
+    if source_msg_id is not None:
+        payload["source_chat_id"] = str(SOURCE_ID)
+        payload["source_message_id"] = int(source_msg_id)
+    if reply_to_source_id:
+        payload["reply_to_source_id"] = int(reply_to_source_id)
+    if reply_to_text:
+        payload["reply_to_text"] = reply_to_text
     data = json.dumps(payload).encode()
     req = urllib.request.Request(
         RELAY_POST_URL, data=data,
@@ -109,7 +128,11 @@ def bot_send(text: str, reply_to=None):
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
             j = json.load(r)
-            return j.get("messageId") if j.get("ok") else None
+            if not j.get("ok"):
+                print("relay-post ok=false:", j.get("error")); return None
+            if j.get("skipped") == "dup":
+                return -2
+            return j.get("messageId") or -1
     except Exception as e:
         print("erro relay-post:", e); return None
 
@@ -124,32 +147,63 @@ async def run_once(client, state):
         if m.message:
             batch.append(m)
     batch.reverse()  # cronológico
-    state.setdefault("map", {})  # source_msg_id -> premium_msg_id (encadeamento)
+    state.setdefault("map", {})              # source_msg_id -> premium_msg_id (encadeamento)
+    fails = state.setdefault("fails", {})    # source_msg_id -> nº de falhas de envio consecutivas
+    text_by_id = {m.id: m.message for m in batch}
     sent = 0
+    new_last = state["last_id"]              # só avança até à última msg REALMENTE tratada
     for m in batch:
-        if m.id > state["last_id"]:
-            state["last_id"] = m.id
-        clean = sanitize(m.message)
-        if should_forward(m.message) and clean:
-            # se este update responde a um sinal já publicado, publica como RESPOSTA a ele
-            reply_to = None
-            src_reply = getattr(getattr(m, "reply_to", None), "reply_to_msg_id", None)
-            if src_reply and str(src_reply) in state["map"]:
+        clean = sanitize(m.message or "")
+        forwardable = should_forward(m.message or "") and bool(clean)
+        if not forwardable:
+            new_last = max(new_last, m.id)   # nada a publicar → seguro avançar
+            continue
+        # dedup de conteúdo (mesmo texto publicado há pouco)
+        _h = hashlib.md5(re.sub(r"\s+", " ", clean.strip().lower()).encode()).hexdigest()
+        _recent = state.setdefault("recent", [])
+        if _h in _recent:
+            new_last = max(new_last, m.id)
+            continue
+        # contexto do SINAL-PAI: encadear no destino (reply_to) + casar a execução (reply_to_text)
+        reply_to = None
+        reply_to_text = None
+        src_reply = getattr(getattr(m, "reply_to", None), "reply_to_msg_id", None)
+        if src_reply:
+            if str(src_reply) in state["map"]:
                 reply_to = state["map"][str(src_reply)]
-            _h = hashlib.md5(re.sub(r"\s+", " ", clean.strip().lower()).encode()).hexdigest()
-            _recent = state.setdefault("recent", [])
-            if _h in _recent:
-                continue  # dedup de conteudo: sinal ja publicado recentemente
-            pid = bot_send(brand(clean), reply_to)
-            if pid:
-                _recent.append(_h); state["recent"] = _recent[-80:]
-                if pid != -1:
-                    state["map"][str(m.id)] = pid
-                    if len(state["map"]) > 800:  # limita o crescimento do state
-                        for k in list(state["map"])[:-500]:
-                            del state["map"][k]
-                sent += 1
-                await asyncio.sleep(1)  # respeitar rate limit
+            ptext = text_by_id.get(src_reply)
+            if ptext is None:
+                try:
+                    pm = await client.get_messages(SOURCE_ID, ids=src_reply)
+                    ptext = pm.message if pm else None
+                except Exception:
+                    ptext = None
+            reply_to_text = sanitize(ptext) if ptext else None
+        pid = bot_send(brand(clean), reply_to, source_msg_id=m.id,
+                       reply_to_source_id=src_reply, reply_to_text=reply_to_text)
+        if pid is None:
+            # ENVIO FALHOU → NÃO avançar além desta msg; retenta no próximo ciclo (preserva ordem).
+            n = fails.get(str(m.id), 0) + 1
+            fails[str(m.id)] = n
+            if n >= 5:
+                print(f"[gmi-relay] DESISTO da msg {m.id} após {n} falhas — avanço para não bloquear.")
+                fails.pop(str(m.id), None)
+                new_last = max(new_last, m.id)
+                continue
+            print(f"[gmi-relay] envio falhou msg {m.id} (tentativa {n}) — paro aqui, retento a seguir.")
+            break
+        # sucesso (ou dup no servidor)
+        fails.pop(str(m.id), None)
+        _recent.append(_h); state["recent"] = _recent[-80:]
+        if isinstance(pid, int) and pid > 0:
+            state["map"][str(m.id)] = pid
+            if len(state["map"]) > 800:  # limita o crescimento do state
+                for k in list(state["map"])[:-500]:
+                    del state["map"][k]
+        new_last = max(new_last, m.id)
+        sent += 1
+        await asyncio.sleep(1)  # respeitar rate limit
+    state["last_id"] = new_last
     save_state(state)
     return len(batch), sent
 
