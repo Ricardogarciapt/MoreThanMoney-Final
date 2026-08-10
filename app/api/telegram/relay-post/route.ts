@@ -22,25 +22,70 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as {
     chat_id?: string | number
     text?: string
+    /** id da msg NO DESTINO a que responder (se o VPS já o souber). Normalmente não sabe. */
     reply_to_message_id?: number
     /** Texto do SINAL-PAI (o SETUP a que este HIT/update responde) — dá o contexto ao executor
-     *  para casar a gestão com o sinal certo, mesmo sem threading no Telegram. */
+     *  para casar a gestão com o sinal certo. */
     reply_to_text?: string
+    /** id + canal da msg NA FONTE (New York/London Intelligence) — para encadear as RESPOSTAS
+     *  no destino (mapa fonte→destino em telegram_relay_log), tal como aparecem no canal original. */
+    source_chat_id?: string | number
+    source_message_id?: number
+    reply_to_source_id?: number
   }
   const chatId = body.chat_id != null ? String(body.chat_id) : ''
-  const text = (body.text ?? '').toString()
-  if (!chatId || !text.trim()) {
+  const rawText = (body.text ?? '').toString()
+  if (!chatId || !rawText.trim()) {
     return NextResponse.json({ ok: false, error: 'chat_id e text obrigatórios' }, { status: 400 })
   }
+
+  const supabase = getSupabaseAdmin()
+  const slug = resolveAppChannelSlug({ id: Number(chatId) })
+
+  // BRANDING do canal: garante o cabeçalho "🏦 MTM Premium" (como no canal original), sem duplicar.
+  let outText = rawText.trim()
+  if (slug === 'premium-ideas' && !/^\s*🏦/.test(outText)) {
+    outText = `🏦 MTM Premium\n\n${outText}`
+  }
+
   const replyTo = typeof body.reply_to_message_id === 'number' ? body.reply_to_message_id : null
   const replyText = typeof body.reply_to_text === 'string' && body.reply_to_text.trim() ? body.reply_to_text.trim() : null
-  const r = await sendTelegramChannelMessage(chatId, text.trim(), { replyToMessageId: replyTo })
+  const sourceChatId = body.source_chat_id != null ? String(body.source_chat_id) : null
+  const sourceMsgId = typeof body.source_message_id === 'number' ? body.source_message_id : null
+  const replyToSourceId = typeof body.reply_to_source_id === 'number' ? body.reply_to_source_id : null
+
+  // THREADING (Respostas como no original): resolve a msg-pai NO DESTINO a partir da msg-pai na FONTE.
+  let replyToDest: number | null = replyTo
+  if (replyToDest == null && replyToSourceId != null && sourceChatId) {
+    try {
+      const { data: parent } = await supabase
+        .from('telegram_relay_log')
+        .select('target_message_id')
+        .eq('source_chat_id', sourceChatId)
+        .eq('source_message_id', replyToSourceId)
+        .eq('target_chat_id', chatId)
+        .eq('status', 'sent')
+        .order('created_at', { ascending: false })
+        .maybeSingle()
+      replyToDest = parent?.target_message_id ?? null
+    } catch { /* best-effort: sem mapa → publica na mesma, só não encadeia */ }
+  }
+
+  const r = await sendTelegramChannelMessage(chatId, outText, { replyToMessageId: replyToDest })
+
+  // Guarda o mapa fonte→destino para futuras RESPOSTAS encadearem. Best-effort (dedup pelo unique).
+  if (r.ok && r.messageId && sourceChatId && sourceMsgId != null) {
+    await supabase
+      .from('telegram_relay_log')
+      .insert({ source_chat_id: sourceChatId, source_message_id: sourceMsgId, target_chat_id: chatId, target_message_id: r.messageId, status: 'sent' })
+      .then(() => {}, () => {})
+  }
 
   // EXECUÇÃO: o Telegram não entrega ao webhook as mensagens do próprio bot, por isso o
   // processador (Premium/Forex/Sensei-telegram) nunca as veria. Alimentamo-lo aqui direto.
   // O processador auto-filtra por allowlist de canais (chats não-ativos são ignorados) e
   // tem guarda de duplicados — seguro chamar para tudo o que passa por aqui.
-  const execText = text.trim().replace(/^\s*🏦[^\n]*\n+/, '') // tira o cabeçalho de marca
+  const execText = outText.replace(/^\s*🏦[^\n]*\n+/, '') // tira o cabeçalho de marca
   if (r.ok) {
     try {
       const { processMtmcopyTelegramMessage } = await import('@/lib/mtmcopy/processor')
@@ -61,9 +106,7 @@ export async function POST(req: NextRequest) {
     // ESPELHO DO LITERAL → chat da app (só Premium/'premium-ideas'). Sem etiqueta (telegram_sender=null,
     // pedido Ricardo). Dedup por telegram_message_id. O T2T reconhece a entrada pelo próprio texto.
     try {
-      const slug = resolveAppChannelSlug({ id: Number(chatId) })
       if (slug === 'premium-ideas' && r.messageId) {
-        const supabase = getSupabaseAdmin()
         const { data: dup } = await supabase
           .from('chat_messages')
           .select('id')

@@ -32,8 +32,10 @@ const DEFAULTS: RelayConfig = {
   enabled: false,
   source_chat_id: "-1002424441843",
   target_chat_id: "-1004343748070",
-  signature: "Gold Did",
-  header: "🟡 Wifi Money",
+  // Marca do parceiro = "Gold Did" (NÃO "Wifi Money") e SEM assinatura "— Alcy"/"— …".
+  // A config viva (site_settings.telegram_relay_alcy) já reflete isto; estes defaults ficam alinhados.
+  signature: "",
+  header: "🟡 Gold Did",
   bot_token_env: "TELEGRAM_WIFIMONEY_TOKEN",
   relay_photos: true,
   skip_new_position: false,
