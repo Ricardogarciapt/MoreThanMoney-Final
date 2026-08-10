@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 
   // ?purpose=tap_to_trade → devolve a conta INDEPENDENTE do T2T como `connection`
   const purposeParam = searchParams.get('purpose')
-  let primary = repaired[0] ?? null
+  let primary: (typeof repaired)[number] | null = repaired[0] ?? null
   if (purposeParam) {
     const matchIds = new Set(
       (data ?? []).filter((c) => (c.purpose ?? 'mtmcopy') === purposeParam).map((c) => c.id),
