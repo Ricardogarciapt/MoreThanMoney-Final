@@ -91,9 +91,17 @@ export async function GET(request: NextRequest) {
     primary = repaired.find((c) => matchIds.has((c as { id: string }).id)) ?? null
   }
 
+  // Contas T2T do user (fan-out): dedicadas (purpose) + marcadas (t2t_enabled). Para a UI listar
+  // e o user escolher "uma ou várias" (liga/desliga o T2T por conta).
+  const t2tIds = new Set(
+    (data ?? []).filter((c) => (c.purpose ?? 'mtmcopy') === 'tap_to_trade' || (c as { t2t_enabled?: boolean }).t2t_enabled === true).map((c) => c.id),
+  )
+  const t2t_connections = repaired.filter((c) => t2tIds.has((c as { id: string }).id))
+
   return NextResponse.json({
     connections: repaired,
     connection: primary,
+    t2t_connections,
     sender_mode: deriveSenderMode(repaired),
     master: repaired.find((c) => c.account_role === 'master') ?? null,
     subscribed: subscription.active,
@@ -145,6 +153,9 @@ export async function POST(request: NextRequest) {
     t2t_sources,
     t2t_asset_classes,
     t2t_risk_level,
+    t2t_enabled,
+    t2t_lot_mode,
+    t2t_lot_value,
   } = body
 
   if (lot_mode && !['fixed', 'risk_percent', 'multiplier'].includes(lot_mode)) {
@@ -223,6 +234,16 @@ export async function POST(request: NextRequest) {
   if (t2t_risk_level !== undefined) {
     const lvl = String(t2t_risk_level)
     payload.t2t_risk_level = ['low', 'medium', 'high'].includes(lvl) ? lvl : null
+  }
+  // T2T multi-conta: liga/desliga esta conta no fan-out do Tap to Trade + sizing T2T próprio
+  // (independente do sizing da cópia). t2t_lot_value null → usa o preset t2t_risk_level/lot_mode.
+  if (typeof t2t_enabled === 'boolean') payload.t2t_enabled = t2t_enabled
+  if (t2t_lot_mode !== undefined) {
+    payload.t2t_lot_mode = ['fixed', 'risk_percent', 'multiplier'].includes(String(t2t_lot_mode)) ? String(t2t_lot_mode) : null
+  }
+  if (t2t_lot_value !== undefined) {
+    const v = Number(t2t_lot_value)
+    payload.t2t_lot_value = Number.isFinite(v) && v > 0 ? v : null
   }
 
   const effectiveMethod =
