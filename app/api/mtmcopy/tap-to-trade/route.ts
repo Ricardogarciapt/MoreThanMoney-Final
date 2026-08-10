@@ -121,186 +121,139 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // 3. Conta destino — prefere a conta INDEPENDENTE do T2T (purpose=tap_to_trade);
-  //    se não existir, usa qualquer conta MT5 ligada do utilizador.
+  // 3. Contas destino — FAN-OUT. Aceitar o sinal abre em TODAS as contas do user com T2T ligado
+  //    (t2t_enabled, ou a conta dedicada purpose=tap_to_trade). Cada conta é dimensionada pelo SEU
+  //    próprio saldo → risco idêntico "por equidade". O sizing T2T (t2t_lot_mode/value) é próprio e
+  //    NÃO mexe no sizing da cópia (lot_mode/value). Retrocompat: sem contas marcadas, usa a 1ª ativa.
   const { data: conns } = await supabase
     .from('mtmcopy_connections')
-    .select('id, metaapi_account_id, lot_mode, lot_value, max_risk_percent, copy_sl, copy_tp, symbols_whitelist, is_active, purpose')
+    .select('id, account_label, mt5_login_last4, metaapi_account_id, lot_mode, lot_value, max_risk_percent, copy_sl, copy_tp, symbols_whitelist, is_active, purpose, t2t_enabled, t2t_lot_mode, t2t_lot_value')
     .eq('user_id', user.id)
     .neq('mt5_status', 'disconnected')
   const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id)
-  const t2tConn = withAccount.find((c) => c.purpose === 'tap_to_trade')
+  const t2tTargets = withAccount.filter((c) => c.purpose === 'tap_to_trade' || c.t2t_enabled === true)
 
-  // O user pode pausar o T2T de forma independente da cópia (is_active=false na conta T2T),
-  // mantendo a conta MT5 ligada só para estatísticas. Se a conta dedicada de T2T está em
-  // pausa, respeita-a: não executa aqui nem "salta" para outra conta.
-  if (t2tConn && t2tConn.is_active === false) {
-    return NextResponse.json(
-      { error: 'O Tap to Trade está em pausa nesta conta. Retoma-o no T2T para executar sinais.', code: 't2t_paused' },
-      { status: 400 },
-    )
+  // Contas T2T pausadas (is_active=false) ficam ligadas só para estatísticas → não executam.
+  let targets = t2tTargets.filter((c) => c.is_active !== false)
+  if (t2tTargets.length && !targets.length) {
+    return NextResponse.json({ error: 'O Tap to Trade está em pausa nas tuas contas. Retoma-o no T2T para executar sinais.', code: 't2t_paused' }, { status: 400 })
   }
-
-  // Conta destino: a conta T2T ativa; senão a 1ª conta MT5 ATIVA (nunca uma conta pausada —
-  // essa fica ligada apenas para estatísticas).
-  const conn =
-    (t2tConn && t2tConn.is_active !== false ? t2tConn : null) ??
-    withAccount.find((c) => c.is_active !== false) ??
-    null
-
-  if (!conn) {
+  // Retrocompat (conta única): sem nenhuma conta marcada como T2T → a 1ª conta MT5 ativa.
+  if (!targets.length) {
+    const fallback = withAccount.find((c) => c.is_active !== false)
+    if (fallback) targets = [fallback]
+  }
+  if (!targets.length) {
     return NextResponse.json({ error: 'Sem conta ligada (ou todas em pausa). Liga/retoma a tua conta MT5 no T2T.', code: 'no_connection' }, { status: 400 })
   }
-  if (!conn.metaapi_account_id) {
-    return NextResponse.json({ error: 'Conta MT5 não configurada (MetaAPI).', code: 'no_account' }, { status: 400 })
-  }
 
-  // Whitelist de símbolos (se definida)
   const symU = signal.symbol.toUpperCase()
-  if (Array.isArray(conn.symbols_whitelist) && conn.symbols_whitelist.length) {
-    // Match por FAMÍLIA de símbolo — a whitelist pode ter o sufixo da corretora do membro
-    // (XAUUSD.S) e o sinal vir canónico (XAUUSD); nunca por substring cega.
-    const allowed = conn.symbols_whitelist.some((s) => symbolMatchesCanonical(symU, String(s)))
-    if (!allowed) {
-      return NextResponse.json({ error: `${signal.symbol} não está na tua whitelist de símbolos.` }, { status: 400 })
-    }
-  }
+  // Valores já validados (o guard de "sinal incompleto" garante symbol/direction) — capturados
+  // aqui porque o narrowing do TS não atravessa a closure executeOnAccount abaixo.
+  const sSymbol = signal.symbol as string
+  const sDirection = signal.direction as 'buy' | 'sell'
 
-  // 4. Saldo + preço de mercado → lote por risco
-  const ctx = await fetchLotSizingContext(conn.metaapi_account_id, signal.symbol, signal.direction)
-  const riskSignal = signalForRiskSizing(signal, ctx.marketPrice)
-  const lot = computeLotSize(conn, riskSignal, ctx.balance)
-  const skip = getLotSizingSkipReason(conn, signal, ctx.balance, lot, ctx.marketPrice)
-  if (skip) {
-    return NextResponse.json({ error: skip }, { status: 400 })
-  }
+  type AcctResult = { account: string; connectionId: string; ok: boolean; skipped?: boolean; orderId?: string | null; lot?: number; symbol?: string; sl?: number | null; tp?: number | null; error?: string }
 
-  // 5. Decidir tipo de ordem (market / limit / stop) conforme entry vs preço de mercado.
-  //    BUY:  entry acima do mercado → STOP (breakout) · abaixo → LIMIT (pullback)
-  //    SELL: entry abaixo do mercado → STOP · acima → LIMIT
-  let orderType: 'market' | 'limit' | 'stop' = 'market'
-  let openPrice: number | null = null
-  if (signal.entry != null && signal.entry > 0) {
-    const px = ctx.marketPrice
-    if (px && px > 0) {
-      const diff = Math.abs(signal.entry - px) / px
-      if (diff < 0.0003) {
-        orderType = 'market' // praticamente a mercado → entra já
-      } else if (signal.direction === 'buy') {
-        orderType = signal.entry > px ? 'stop' : 'limit'
-        openPrice = signal.entry
-      } else {
-        orderType = signal.entry < px ? 'stop' : 'limit'
-        openPrice = signal.entry
+  // Executa o sinal NUMA conta (whitelist → claim idempotente por conta → sizing pelo saldo dela →
+  // tipo de ordem + SL/TP re-ancorados → placeOrder). Nunca lança (devolve o resultado agregável).
+  const executeOnAccount = async (conn: (typeof targets)[number]): Promise<AcctResult> => {
+    const label = conn.account_label || (conn.mt5_login_last4 ? `••${conn.mt5_login_last4}` : conn.id.slice(0, 6))
+    try {
+      // Whitelist de símbolos por conta (match por FAMÍLIA — tolera sufixo da corretora).
+      if (Array.isArray(conn.symbols_whitelist) && conn.symbols_whitelist.length) {
+        const allowed = conn.symbols_whitelist.some((s) => symbolMatchesCanonical(symU, String(s)))
+        if (!allowed) return { account: label, connectionId: conn.id, ok: false, skipped: true, error: `${signal.symbol} fora da whitelist` }
       }
-    } else {
-      orderType = 'limit' // sem preço de mercado → pendente no entry
-      openPrice = signal.entry
+      // Idempotência POR CONTA: (user_id, chat_message_id, connection_id) → cada conta abre 1×.
+      const { error: claimErr } = await supabase.from('mtmcopy_signal_log').insert({
+        user_id: user.id, connection_id: conn.id, chat_message_id: chatMessageId,
+        symbol: signal.symbol, direction: signal.direction, entry: signal.entry, sl: signal.sl,
+        tp: signal.tp?.[0] ?? null, lot: null, status: 'pending',
+        channel_key: message.channel_slug, telegram_message_id: message.telegram_message_id ?? null,
+      })
+      if (claimErr) {
+        if ((claimErr as { code?: string }).code === '23505') return { account: label, connectionId: conn.id, ok: false, skipped: true, error: 'já aceite' }
+        console.error('[tap-to-trade] claim error:', claimErr)
+      }
+      // Sizing T2T próprio (não usa o sizing da cópia): t2t_lot_mode/value se definidos, senão lot_*.
+      const sizingConn = { ...conn, lot_mode: conn.t2t_lot_mode ?? conn.lot_mode, lot_value: conn.t2t_lot_value ?? conn.lot_value }
+      const ctx = await fetchLotSizingContext(conn.metaapi_account_id!, sSymbol, sDirection)
+      const riskSignal = signalForRiskSizing(signal, ctx.marketPrice)
+      const lot = computeLotSize(sizingConn, riskSignal, ctx.balance)
+      const skip = getLotSizingSkipReason(sizingConn, signal, ctx.balance, lot, ctx.marketPrice)
+      if (skip) {
+        await supabase.from('mtmcopy_signal_log').update({ status: 'error', detail: `T2T: ${skip}` }).eq('user_id', user.id).eq('chat_message_id', chatMessageId).eq('connection_id', conn.id)
+        return { account: label, connectionId: conn.id, ok: false, error: skip }
+      }
+      // Tipo de ordem (market/limit/stop) conforme entry vs preço de mercado DESTA corretora.
+      let orderType: 'market' | 'limit' | 'stop' = 'market'
+      let openPrice: number | null = null
+      if (signal.entry != null && signal.entry > 0) {
+        const px = ctx.marketPrice
+        if (px && px > 0) {
+          const diff = Math.abs(signal.entry - px) / px
+          if (diff < 0.0003) orderType = 'market'
+          else if (signal.direction === 'buy') { orderType = signal.entry > px ? 'stop' : 'limit'; openPrice = signal.entry }
+          else { orderType = signal.entry < px ? 'stop' : 'limit'; openPrice = signal.entry }
+        } else { orderType = 'limit'; openPrice = signal.entry }
+      }
+      // Re-ancorar SL/TP ao lado correto preservando a distância do sinal (+ guarda de sanidade 25%).
+      const priceRef = openPrice ?? ctx.marketPrice ?? signal.entry ?? null
+      const entryRef = signal.entry && signal.entry > 0 ? signal.entry : priceRef
+      let orderSl = conn.copy_sl !== false ? signal.sl : null
+      let orderTp = conn.copy_tp !== false ? (signal.tp?.[0] ?? null) : null
+      let adjustedStops = false
+      const SANE_STOP_FRAC = 0.25
+      const isInsaneStop = (v: number | null): boolean => v == null || !(v > 0) || !entryRef || entryRef <= 0 || Math.abs(entryRef - v) / entryRef > SANE_STOP_FRAC
+      if (isInsaneStop(orderSl)) orderSl = null
+      if (isInsaneStop(orderTp)) orderTp = null
+      if (priceRef && priceRef > 0 && entryRef && entryRef > 0) {
+        if (orderSl != null && orderSl > 0) { const d = Math.abs(entryRef - orderSl); const fixed = signal.direction === 'buy' ? priceRef - d : priceRef + d; if (d > 0 && Math.abs(fixed - orderSl) > 1e-9) adjustedStops = true; if (d > 0) orderSl = fixed }
+        if (orderTp != null && orderTp > 0) { const d = Math.abs(entryRef - orderTp); const fixed = signal.direction === 'buy' ? priceRef + d : priceRef - d; if (d > 0 && Math.abs(fixed - orderTp) > 1e-9) adjustedStops = true; if (d > 0) orderTp = fixed }
+      }
+      const orderReq: OrderRequest = { accountId: conn.metaapi_account_id!, symbol: sSymbol, direction: sDirection, volume: lot, orderType, openPrice, stopLoss: orderSl, takeProfit: orderTp, comment: 'TapToTrade MTM' }
+      const result = await placeOrder(orderReq)
+      await supabase.from('mtmcopy_signal_log').update({
+        lot,
+        status: result.success ? 'open' : 'error',
+        broker_position_id: result.success ? (result.orderId ?? null) : null,
+        detail: result.success
+          ? `Tap to Trade · ordem ${orderReq.orderType} · ${result.orderId ?? ''}${adjustedStops ? ' · SL/TP ajustado ao lado correto' : ''}`.trim()
+          : `Tap to Trade falhou: ${result.error ?? 'erro'}`,
+      }).eq('user_id', user.id).eq('chat_message_id', chatMessageId).eq('connection_id', conn.id).then(undefined, (e) => console.error('[tap-to-trade] update log error:', e))
+      return { account: label, connectionId: conn.id, ok: result.success, orderId: result.orderId, lot, symbol: result.brokerSymbol ?? sSymbol, sl: orderReq.stopLoss, tp: orderReq.takeProfit, error: result.success ? undefined : (result.error ?? 'erro') }
+    } catch (e) {
+      return { account: label, connectionId: conn.id, ok: false, error: e instanceof Error ? e.message : String(e) }
     }
   }
 
-  // 5b. Ajustar SL/TP para "encaixar" na MetaApi. O scanner às vezes envia o SL/TP do lado
-  //     errado (ex.: VENDA com SL ABAIXO da entrada) → "invalid stops". Recolocamos SL/TP
-  //     no lado CORRETO (SL protetor, TP no lucro) preservando a DISTÂNCIA do sinal à entrada.
-  //     Sinais já corretos ficam exatamente iguais.
-  const priceRef = openPrice ?? ctx.marketPrice ?? signal.entry ?? null
-  const entryRef = signal.entry && signal.entry > 0 ? signal.entry : priceRef
-  let orderSl = conn.copy_sl !== false ? signal.sl : null
-  let orderTp = conn.copy_tp !== false ? (signal.tp?.[0] ?? null) : null
-  let adjustedStops = false
-  // 5a. Guarda de sanidade: descarta SL/TP absurdos ANTES de re-ancorar. Um sinal/parse com TP
-  //     ou SL a mais de 25% do preço é lixo (ex.: TP ≈ 2× a entrada → 8190 num XAU a 4095) e,
-  //     re-ancorado, produzia um "TP afastado" inalcançável ou uma rejeição "invalid stops".
-  //     Nesses casos deixamos o stop a null — a gestão de saídas é espelhada do mestre.
-  const SANE_STOP_FRAC = 0.25
-  const isInsaneStop = (v: number | null): boolean =>
-    v == null || !(v > 0) || !entryRef || entryRef <= 0 || Math.abs(entryRef - v) / entryRef > SANE_STOP_FRAC
-  if (isInsaneStop(orderSl)) orderSl = null
-  if (isInsaneStop(orderTp)) orderTp = null
-  if (priceRef && priceRef > 0 && entryRef && entryRef > 0) {
-    if (orderSl != null && orderSl > 0) {
-      const d = Math.abs(entryRef - orderSl)
-      const fixed = signal.direction === 'buy' ? priceRef - d : priceRef + d
-      if (d > 0 && Math.abs(fixed - orderSl) > 1e-9) adjustedStops = true
-      if (d > 0) orderSl = fixed
+  const results = await Promise.all(targets.map(executeOnAccount))
+  const opened = results.filter((r) => r.ok)
+  const realErrors = results.filter((r) => !r.ok && !r.skipped)
+
+  if (!opened.length) {
+    // Todas já aceites antes → 409; senão devolve o 1.º erro real.
+    if (results.length && results.every((r) => r.skipped && r.error === 'já aceite')) {
+      return NextResponse.json({ error: 'Já aceitaste este sinal.', code: 'already_accepted' }, { status: 409 })
     }
-    if (orderTp != null && orderTp > 0) {
-      const d = Math.abs(entryRef - orderTp)
-      const fixed = signal.direction === 'buy' ? priceRef + d : priceRef - d
-      if (d > 0 && Math.abs(fixed - orderTp) > 1e-9) adjustedStops = true
-      if (d > 0) orderTp = fixed
-    }
-  }
-
-  // 6. Executar na conta do utilizador (SL + 1.º TP; restantes TPs/gestão são espelhados do mestre)
-  const orderReq: OrderRequest = {
-    accountId: conn.metaapi_account_id,
-    symbol: signal.symbol,
-    direction: signal.direction,
-    volume: lot,
-    orderType,
-    openPrice,
-    stopLoss: orderSl,
-    takeProfit: orderTp,
-    comment: 'TapToTrade MTM',
-  }
-  // 6a. Idempotência: reserva (claim) este sinal para este utilizador ANTES de executar.
-  //     Unique (user_id, chat_message_id) → duplo-toque / retry de rede não abre 2 trades.
-  const { error: claimErr } = await supabase
-    .from('mtmcopy_signal_log')
-    .insert({
-      user_id: user.id,
-      connection_id: conn.id,
-      chat_message_id: chatMessageId,
-      symbol: signal.symbol,
-      direction: signal.direction,
-      entry: signal.entry,
-      sl: signal.sl,
-      tp: signal.tp?.[0] ?? null,
-      lot,
-      status: 'pending',
-      channel_key: message.channel_slug,
-      telegram_message_id: message.telegram_message_id ?? null,
-    })
-  if (claimErr) {
-    if ((claimErr as { code?: string }).code === '23505') {
-      return NextResponse.json(
-        { error: 'Já aceitaste este sinal.', code: 'already_accepted' },
-        { status: 409 },
-      )
-    }
-    console.error('[tap-to-trade] claim error:', claimErr)
-  }
-
-  // 6b. Executar na conta do utilizador
-  const result = await placeOrder(orderReq)
-
-  // 6c. Atualiza a reserva com o resultado ('open' = ativa/gerida; 'closed' ao fechar)
-  await supabase
-    .from('mtmcopy_signal_log')
-    .update({
-      status: result.success ? 'open' : 'error',
-      broker_position_id: result.success ? (result.orderId ?? null) : null,
-      detail: result.success
-        ? `Tap to Trade · ordem ${orderReq.orderType} · ${result.orderId ?? ''}${adjustedStops ? ' · SL/TP ajustado ao lado correto' : ''}`.trim()
-        : `Tap to Trade falhou: ${result.error ?? 'erro'}`,
-    })
-    .eq('user_id', user.id)
-    .eq('chat_message_id', chatMessageId)
-    .then(undefined, (e) => console.error('[tap-to-trade] update log error:', e))
-
-  if (!result.success) {
-    return NextResponse.json({ error: result.error || 'Falha ao abrir a ordem' }, { status: 502 })
+    return NextResponse.json({ error: realErrors[0]?.error || 'Falha ao abrir a ordem', accounts: results }, { status: 502 })
   }
 
   return NextResponse.json({
     success: true,
-    orderId: result.orderId,
-    symbol: result.brokerSymbol ?? signal.symbol,
+    accounts: results,
+    opened: opened.length,
+    total: targets.length,
+    // Compat com a UI de conta-única: 1.º sucesso no topo.
+    orderId: opened[0].orderId,
+    symbol: opened[0].symbol,
     direction: signal.direction,
-    lot,
-    sl: orderReq.stopLoss,
-    tp: orderReq.takeProfit,
-    message: `Trade ${signal.direction.toUpperCase()} ${signal.symbol} aberta · ${lot} lote`,
+    lot: opened[0].lot,
+    sl: opened[0].sl,
+    tp: opened[0].tp,
+    message: opened.length > 1
+      ? `Trade ${signal.direction.toUpperCase()} ${signal.symbol} aberta em ${opened.length} contas`
+      : `Trade ${signal.direction.toUpperCase()} ${signal.symbol} aberta · ${opened[0].lot} lote`,
   })
 }

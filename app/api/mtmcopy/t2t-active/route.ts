@@ -29,16 +29,21 @@ export async function GET(request: NextRequest) {
   // 1) Conta + prefs de "o que seguir" do utilizador
   const { data: conns } = await supabase
     .from('mtmcopy_connections')
-    .select('id, account_label, metaapi_account_id, is_active, purpose, mt5_status, t2t_sources, t2t_asset_classes')
+    .select('id, account_label, metaapi_account_id, is_active, purpose, mt5_status, t2t_sources, t2t_asset_classes, t2t_enabled')
     .eq('user_id', user.id)
     .neq('mt5_status', 'disconnected')
   const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id)
-  const t2tConn = withAccount.find((c) => c.purpose === 'tap_to_trade') ?? withAccount[0] ?? null
-  const activeAccount = t2tConn && t2tConn.is_active !== false ? t2tConn : withAccount.find((c) => c.is_active !== false) ?? null
-  const hasAccount = Boolean(activeAccount?.metaapi_account_id)
+  // Contas T2T (fan-out): dedicadas (purpose) + marcadas (t2t_enabled). Retrocompat: 1ª ligada.
+  let t2tAccounts = withAccount.filter((c) => c.purpose === 'tap_to_trade' || c.t2t_enabled === true)
+  if (!t2tAccounts.length && withAccount[0]) t2tAccounts = [withAccount[0]]
+  const activeAccounts = t2tAccounts.filter((c) => c.is_active !== false)
+  const t2tConn = t2tAccounts.find((c) => c.purpose === 'tap_to_trade') ?? t2tAccounts[0] ?? null
+  const hasAccount = activeAccounts.length > 0
+  // "O que seguir" — usa as prefs da conta primária (o feed é único para o user).
+  const prefsConn = activeAccounts[0] ?? t2tConn
   const prefs = {
-    sources: (t2tConn?.t2t_sources as string[] | null) ?? [],
-    assetClasses: (t2tConn?.t2t_asset_classes as string[] | null) ?? [],
+    sources: (prefsConn?.t2t_sources as string[] | null) ?? [],
+    assetClasses: (prefsConn?.t2t_asset_classes as string[] | null) ?? [],
   }
 
   // 2) Canais T2T ativos + mensagens recentes
@@ -80,7 +85,9 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     hasAccount,
-    accountLabel: activeAccount?.account_label ?? null,
+    accountLabel: activeAccounts[0]?.account_label ?? null,
+    accountCount: activeAccounts.length,
+    accounts: activeAccounts.map((c) => ({ id: c.id, label: c.account_label ?? null })),
     ttlSec: T2T_MAX_AGE_MS / 1000,
     signals,
   })

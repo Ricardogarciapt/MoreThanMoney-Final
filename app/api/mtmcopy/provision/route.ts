@@ -121,7 +121,9 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Tap to Trade: apenas corretoras permitidas (whitelist T2T_BROKERS) e 1 conta.
+  // Tap to Trade: apenas corretoras permitidas (whitelist T2T_BROKERS). Permite VÁRIAS contas T2T
+  // (fan-out: aceitar um sinal abre em todas), até um limite razoável.
+  const T2T_MAX_ACCOUNTS = 5
   if (purpose === 'tap_to_trade') {
     const { isAllowedT2TServer, T2T_BROKERS } = await import('@/lib/mtmcopy/t2t-brokers')
     if (!isAllowedT2TServer(server)) {
@@ -131,16 +133,15 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       )
     }
-    const { data: existingT2T } = await supabaseAdmin
+    const { count: existingT2T } = await supabaseAdmin
       .from('mtmcopy_connections')
-      .select('id')
+      .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .eq('purpose', 'tap_to_trade')
+      .or('purpose.eq.tap_to_trade,t2t_enabled.eq.true')
       .neq('mt5_status', 'disconnected')
-      .maybeSingle()
-    if (existingT2T) {
+    if ((existingT2T ?? 0) >= T2T_MAX_ACCOUNTS) {
       return NextResponse.json(
-        { error: 'Já tens uma conta Tap to Trade ligada. Remove-a primeiro para ligar outra.', code: 't2t_account_exists' },
+        { error: `Já tens ${T2T_MAX_ACCOUNTS} contas Tap to Trade. Remove uma para ligar outra.`, code: 't2t_account_limit' },
         { status: 409 },
       )
     }
