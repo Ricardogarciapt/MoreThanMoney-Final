@@ -153,6 +153,7 @@ interface Conn {
   t2t_sources?: string[] | null
   t2t_asset_classes?: string[] | null
   t2t_risk_level?: string | null
+  t2t_enabled?: boolean | null
 }
 
 /** Preset de risco → risco por trade (%). */
@@ -184,6 +185,10 @@ export default function TapToTradeFeed() {
 
   // Configuração da conta (estilo PrimeSync, dentro do próprio T2T)
   const [conn, setConn] = useState<Conn | null>(null)
+  // Multi-conta: todas as contas T2T do user (fan-out). O user escolhe uma ou várias ligando o T2T
+  // por conta. `conn` acima é a primária (para a config detalhada existente).
+  const [t2tConns, setT2tConns] = useState<Conn[]>([])
+  const [togglingId, setTogglingId] = useState<string | null>(null)
   const [showConfig, setShowConfig] = useState(false)
   const [connectOpen, setConnectOpen] = useState(false)
   const [connForm, setConnForm] = useState<{ broker: string; server: string; login: string; password: string; platform: "mt5" }>({ broker: T2T_BROKERS[0].id, server: T2T_BROKERS[0].servers[0], login: "", password: "", platform: "mt5" })
@@ -220,7 +225,12 @@ export default function TapToTradeFeed() {
       const r = await fetch("/api/mtmcopy/connection?purpose=tap_to_trade", { headers: { Authorization: `Bearer ${tok}` } })
       if (!r.ok) return
       const d = await r.json()
+      // Contas T2T do user (fan-out). Se a API ainda não devolver a lista, cai para a conta única.
+      const list: Conn[] = Array.isArray(d.t2t_connections) && d.t2t_connections.length
+        ? d.t2t_connections
+        : (Array.isArray(d.connections) ? d.connections.filter((x: Conn) => x.t2t_enabled === true) : [])
       const c: Conn | null = d.connection ?? (d.connections?.[0] ?? null)
+      setT2tConns(list.length ? list : (c ? [c] : []))
       setConn(c)
       if (c) {
         setCfg({
@@ -476,12 +486,24 @@ export default function TapToTradeFeed() {
     setFollowLocal({ ...follow, [kind]: nextArr })
   }
 
-  const connectAccount = async () => {
-    // Apenas 1 conta T2T por cliente — tem de remover a atual antes de ligar outra.
-    if (conn?.metaapi_account_id) {
-      setConnError(t("t2t.alreadyHasAccount"))
-      return
+  // Liga/desliga o T2T (fan-out) numa conta. Aceitar um sinal abre em TODAS as contas ligadas.
+  const toggleAccountT2T = async (id: string, enabled: boolean) => {
+    setTogglingId(id)
+    try {
+      const tok = await token()
+      if (!tok) return
+      await fetch("/api/mtmcopy/connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ connection_id: id, t2t_enabled: enabled }),
+      })
+      await loadConnection()
+    } finally {
+      setTogglingId(null)
     }
+  }
+
+  const connectAccount = async () => {
     if (!connForm.server.trim() || !connForm.login.trim() || !connForm.password) {
       setConnError(t("t2t.fillBrokerServerLogin"))
       return
@@ -607,6 +629,48 @@ export default function TapToTradeFeed() {
 
         {showConfig && (
           <div className="px-3 pb-3 border-t border-zinc-800 pt-3 space-y-3">
+            {/* Contas T2T (fan-out): escolhe UMA ou VÁRIAS. Aceitar um sinal abre em todas as ligadas. */}
+            {t2tConns.length > 0 && (
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-white">Contas Tap to Trade</span>
+                  <span className="text-[10px] text-zinc-500">{t2tConns.filter((c) => c.t2t_enabled !== false && c.is_active !== false).length} ativa(s)</span>
+                </div>
+                <p className="text-[10px] leading-snug text-zinc-500">Aceitar um sinal abre em <strong className="text-zinc-300">todas</strong> as contas ligadas, cada uma com o risco pelo seu próprio saldo.</p>
+                {t2tConns.map((c) => {
+                  const on = c.t2t_enabled !== false
+                  return (
+                    <div key={c.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-black/30 px-2.5 py-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 text-[12px] font-semibold text-white truncate">
+                          <Wallet className="w-3.5 h-3.5 text-[#D2A63C] shrink-0" /> {c.account_label || t("t2t.mt5Account")}
+                        </div>
+                        <div className="text-[10px] text-zinc-500 truncate">
+                          {c.mt5_login ?? "—"} · {c.mt5_server || "—"}
+                          {typeof c.balance === "number" ? ` · ${c.balance.toLocaleString("pt-PT", { style: "currency", currency: "USD" })}` : ""}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={togglingId === c.id}
+                        onClick={() => toggleAccountT2T(c.id, !on)}
+                        aria-label={on ? "Desligar T2T nesta conta" : "Ligar T2T nesta conta"}
+                        className={`relative ml-2 h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${on ? "bg-[#D2A63C]" : "bg-zinc-700"}`}
+                      >
+                        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${on ? "left-[22px]" : "left-0.5"}`} />
+                      </button>
+                    </div>
+                  )
+                })}
+                <button
+                  type="button"
+                  onClick={() => { setConnError(""); setConnectOpen(true) }}
+                  className="w-full rounded-lg border border-dashed border-zinc-700 py-2 text-[12px] font-semibold text-zinc-300"
+                >
+                  + Adicionar outra conta
+                </button>
+              </div>
+            )}
             {!hasAccount ? (
               <div className="text-center py-2">
                 <Wallet className="w-8 h-8 mx-auto mb-2 text-zinc-600" />
@@ -1021,7 +1085,7 @@ export default function TapToTradeFeed() {
                 >
                   <Trash2 className="w-3.5 h-3.5" /> {removingConn ? t("t2t.removing") : t("t2t.removeAccount")}
                 </button>
-                <p className="text-[10px] text-zinc-500 pt-1">{t("t2t.onlyOneAccount")}</p>
+                <p className="text-[10px] text-zinc-500 pt-1">Podes ligar várias contas — aceitar um sinal abre em todas as que tiveres com o Tap to Trade ligado (acima).</p>
               </div>
             )}
             {!hasAccount && (
