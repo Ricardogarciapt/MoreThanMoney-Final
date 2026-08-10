@@ -82,8 +82,21 @@ export async function POST(req: NextRequest) {
       .insert({ source_chat_id: sourceChatId, source_message_id: sourceMsgId, target_chat_id: chatId, status: 'pending' })
       .select('id')
       .maybeSingle()
-    if (!claim) return NextResponse.json({ ok: true, skipped: 'dup' })
-    claimId = claim.id as string
+    if (claim) {
+      claimId = claim.id as string
+    } else {
+      // Conflito no unique → já existe linha. Só é duplicado REAL se já foi publicada ('sent').
+      // Se ficou em 'error'/'pending' (envio anterior falhou), reaproveitamos a linha p/ RETENTAR.
+      const { data: ex } = await supabase
+        .from('telegram_relay_log')
+        .select('id, status')
+        .eq('source_chat_id', sourceChatId)
+        .eq('source_message_id', sourceMsgId)
+        .eq('target_chat_id', chatId)
+        .maybeSingle()
+      if (!ex || ex.status === 'sent') return NextResponse.json({ ok: true, skipped: 'dup' })
+      claimId = ex.id as string
+    }
   }
 
   const r = await sendTelegramChannelMessage(chatId, outText, { replyToMessageId: replyToDest })
