@@ -158,12 +158,10 @@ async def run_once(client, state):
         if not forwardable:
             new_last = max(new_last, m.id)   # nada a publicar → seguro avançar
             continue
-        # dedup de conteúdo (mesmo texto publicado há pouco)
-        _h = hashlib.md5(re.sub(r"\s+", " ", clean.strip().lower()).encode()).hexdigest()
-        _recent = state.setdefault("recent", [])
-        if _h in _recent:
-            new_last = max(new_last, m.id)
-            continue
+        # NOTA: NÃO deduplicamos por conteúdo. Setups diferentes geram gestão com texto IDÊNTICO
+        # (ex.: "Trade active and running +50PIPS … set BE", "HIT TP2 +99PIPS") e um dedup por hash
+        # largava a 2ª — quebrando o thread e perdendo BE/Exit1. O servidor (relay-post) já faz dedup
+        # ATÓMICO por (source_chat_id, source_message_id) → cada mensagem-fonte publica no máximo 1×.
         # contexto do SINAL-PAI: encadear no destino (reply_to) + casar a execução (reply_to_text)
         reply_to = None
         reply_to_text = None
@@ -194,7 +192,6 @@ async def run_once(client, state):
             break
         # sucesso (ou dup no servidor)
         fails.pop(str(m.id), None)
-        _recent.append(_h); state["recent"] = _recent[-80:]
         if isinstance(pid, int) and pid > 0:
             state["map"][str(m.id)] = pid
             if len(state["map"]) > 800:  # limita o crescimento do state
@@ -202,7 +199,7 @@ async def run_once(client, state):
                     del state["map"][k]
         new_last = max(new_last, m.id)
         sent += 1
-        await asyncio.sleep(1)  # respeitar rate limit
+        await asyncio.sleep(0.2)  # pequeno intervalo p/ rate limit, sem "fugas de tempo"
     state["last_id"] = new_last
     save_state(state)
     return len(batch), sent
