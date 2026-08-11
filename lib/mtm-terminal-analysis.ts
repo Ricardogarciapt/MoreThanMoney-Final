@@ -1,5 +1,6 @@
 import type { TerminalAsset } from "@/lib/mtm-terminal-assets"
 import { buildLivePriceContext, type TerminalQuote } from "@/lib/mtm-terminal-quote"
+import { buildLevelsContext, type TerminalLevels } from "@/lib/mtm-terminal-levels"
 
 /**
  * Modelos a tentar por ordem. O ANTHROPIC_MODEL configurado vem primeiro (se
@@ -131,7 +132,7 @@ Preenche todos os campos com dados concretos e números:
 - institutions: 2-4 instituições (Goldman, JP Morgan, Morgan Stanley, BlackRock, Bridgewater) com a tese/target curto.
 - news: 2-4 catalisadores recentes (7-30 dias) com impacto alto/medio/baixo.
 - scenarios: EXATAMENTE 3 (kind bull/base/bear) com movePct (% esperada, negativa no bear) + gatilhos.
-- levels: 2-3 supports e 2-3 resistances (números plausíveis à volta do preço atual dado).
+- levels: 2-3 supports e 2-3 resistances. Se te forem fornecidos NÍVEIS TÉCNICOS REAIS (calculados de OHLC), usa ESSES números EXATOS; nunca inventes níveis diferentes.
 - risks: 2-4 riscos que invalidam a tese.
 - recommendation: bias (direção preferida), timing, risk (gestão de risco). Se for melhor aguardar, diz.
 
@@ -147,9 +148,11 @@ function isModelNotFoundFetch(status: number, body: string): boolean {
 export async function generateTerminalDashboard(
   asset: TerminalAsset,
   quote: TerminalQuote,
+  levels?: TerminalLevels | null,
 ): Promise<{ data: TerminalDashboard; model: string }> {
   const userPrompt =
     buildUserPrompt(asset, quote, { timeframe: "1-4 semanas" }) +
+    buildLevelsContext(levels ?? null) +
     "\n\nResponde APENAS com o objeto JSON válido (sem ```), com esta forma exata:\n" +
     JSON.stringify(DASHBOARD_EXAMPLE)
   const key = process.env.ANTHROPIC_API_KEY?.trim()
@@ -174,6 +177,10 @@ export async function generateTerminalDashboard(
     const json = await resp.json()
     const block = (json.content ?? []).find((b: { type: string }) => b.type === "text")
     const data = parseJsonLoose(block?.text ?? "") as TerminalDashboard
+    // Autoridade dos números: se temos níveis REAIS (OHLC), sobrepõem-se ao que o LLM devolveu.
+    if (levels && (levels.supports.length || levels.resistances.length)) {
+      data.levels = { supports: levels.supports, resistances: levels.resistances }
+    }
     return { data, model }
   }
   throw new Error(lastErr)

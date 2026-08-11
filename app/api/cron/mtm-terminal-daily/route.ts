@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { TERMINAL_ASSETS } from "@/lib/mtm-terminal-assets"
 import { fetchTerminalQuote } from "@/lib/mtm-terminal-quote"
+import { fetchTerminalLevels } from "@/lib/mtm-terminal-levels"
 import { generateTerminalDashboard } from "@/lib/mtm-terminal-analysis"
 
 /**
@@ -26,7 +27,8 @@ export async function GET(request: NextRequest) {
   for (const asset of TERMINAL_ASSETS) {
     try {
       const quote = await fetchTerminalQuote(asset)
-      const { data: dashboard, model } = await generateTerminalDashboard(asset, quote)
+      const levels = await fetchTerminalLevels(asset, quote.price)
+      const { data: dashboard, model } = await generateTerminalDashboard(asset, quote, levels)
       const { error } = await admin.from("mtm_terminal_daily").upsert(
         {
           symbol: asset.symbol,

@@ -4,6 +4,7 @@ import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/supabase"
 import { findTerminalAsset } from "@/lib/mtm-terminal-assets"
 import { fetchTerminalQuote } from "@/lib/mtm-terminal-quote"
+import { fetchTerminalLevels } from "@/lib/mtm-terminal-levels"
 import { generateTerminalDashboard } from "@/lib/mtm-terminal-analysis"
 
 export const runtime = "nodejs"
@@ -80,11 +81,28 @@ export async function GET(request: NextRequest) {
       .eq("symbol", asset.symbol)
       .maybeSingle()
 
+    if (!data?.dashboard) return NextResponse.json({ success: true, cached: null })
+
+    // SEMPRE os dados mais recentes: recalcula o PREÇO e os NÍVEIS técnicos (OHLC) a cada load e
+    // sobrepõe-nos ao cache diário (o narrativo/IA fica do cron das 9h; os números ficam frescos).
+    const dashboard = data.dashboard as { levels?: { supports: number[]; resistances: number[] } }
+    let quote = data.quote
+    try {
+      const fresh = await fetchTerminalQuote(asset)
+      if (fresh.price != null) {
+        quote = fresh
+        const levels = await fetchTerminalLevels(asset, fresh.price)
+        if (levels && (levels.supports.length || levels.resistances.length)) {
+          dashboard.levels = { supports: levels.supports, resistances: levels.resistances }
+        }
+      }
+    } catch {
+      /* mantém o cache se a atualização ao vivo falhar */
+    }
+
     return NextResponse.json({
       success: true,
-      cached: data?.dashboard
-        ? { dashboard: data.dashboard, quote: data.quote, generatedAt: data.generated_at, model: data.model }
-        : null,
+      cached: { dashboard, quote, generatedAt: data.generated_at, model: data.model },
     })
   } catch {
     return NextResponse.json({ success: true, cached: null })
@@ -103,7 +121,9 @@ export async function POST(request: NextRequest) {
     if (!asset) return NextResponse.json({ error: "Ativo inválido" }, { status: 400 })
 
     const quote = await fetchTerminalQuote(asset)
-    const { data: dashboard, model } = await generateTerminalDashboard(asset, quote)
+    // Níveis técnicos REAIS (OHLC) — os suportes/resistências deixam de ser inventados pelo LLM.
+    const levels = await fetchTerminalLevels(asset, quote.price)
+    const { data: dashboard, model } = await generateTerminalDashboard(asset, quote, levels)
 
     // Aquece o cache diário
     try {
