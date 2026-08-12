@@ -127,6 +127,10 @@ export function normalizeSymbol(raw: string): string {
 function isValidTradingSymbol(symbol: string): boolean {
   if (!symbol || SYMBOL_STOPWORDS.has(symbol)) return false
   if (/^(BUY|SELL|LONG|SHORT|HOLD|ZONE|NOW)$/.test(symbol)) return false
+  // Rejeita "símbolos" que são frases de GESTÃO/ruído coladas (≥6 chars passavam): ex. "TRADEACTIVE"
+  // de "Trade active and running", "CLOSEALL", "HITALLTP", "NEWPOSITION", "TRADECLOSED". Nenhuma
+  // palavra inglesa de gestão é um instrumento — abriam posições inválidas (símbolo TRADEACTIVE no log).
+  if (/TRADE|ACTIVE|RUNNING|CLOSE|BREAKEVEN|HIT|POSITION|STANDBY|SECURED|PROFIT|PIPS|SETUP/.test(symbol)) return false
   if (symbol.length >= 6) return true
   return ['XAUUSD', 'XAGUSD', 'BTCUSD', 'ETHUSD', 'NAS100', 'US30', 'GER40', 'UK100', 'WTI', 'UKOIL', 'USOIL'].includes(
     symbol,
