@@ -35,13 +35,38 @@ export interface SenseiExecOutcome {
 }
 
 /**
+ * Modo runner: no TP final, em vez de fechar tudo, fecha metade do restante e
+ * deixa o resto correr com trailing (server-side). Backtest (14.933 sinais, 90d):
+ * exit_3/exit_4 batem MAIS que exit_1 — quando o sistema acerta, o preço viaja
+ * longe, por isso fechar no último TP labelado deixa a cauda em cima da mesa.
+ * Flag env `MTMCOPY_RUNNER_MODE` (off por defeito, reversível). Ver task F1 #55.
+ */
+export function runnerModeEnabled(): boolean {
+  return String(process.env.MTMCOPY_RUNNER_MODE ?? '').toLowerCase().trim() === 'on'
+}
+
+/**
  * Decide a ação (PURA — testável). `fraction` é a fração do volume ATUAL a fechar,
  * calibrada para dar 25% do ORIGINAL em cada TP (75%→0.25, 50%→0.3333, ...).
+ * `runner` (default false): no TP final deixa uma porção a correr com trailing.
  */
-export function decideSenseiAction(alertType: SenseiAlertType, tpLevel: number | null): SenseiAction | null {
+export function decideSenseiAction(
+  alertType: SenseiAlertType,
+  tpLevel: number | null,
+  runner = false,
+): SenseiAction | null {
   if (alertType === 'tp_hit') {
     const lvl = tpLevel ?? 1
-    if (lvl >= 4) return { kind: 'close_all', label: 'TP4/HIT ALL → fecha tudo' }
+    if (lvl >= 4) {
+      // Runner: fecha 50% do que resta (≈12,5% do original) e mantém BE+trailing
+      // para a porção final "deixar correr" para lá do TP4. Sem runner: fecha tudo.
+      // setBE:false — no TP4 o stop já trailou fundo no lucro; repor a entrada
+      // devolveria o ganho. Mantém o SL já avançado e continua o trailing.
+      if (runner) {
+        return { kind: 'close_fraction', fraction: 0.5, setBE: false, trailing: true, label: 'TP4/HIT ALL → runner: fecha 50% + deixa correr (trailing)' }
+      }
+      return { kind: 'close_all', label: 'TP4/HIT ALL → fecha tudo' }
+    }
     // 25% do original: TP1=25% de 100%, TP2=25%/75%, TP3=25%/50%
     const fraction = lvl === 1 ? 0.25 : lvl === 2 ? 1 / 3 : 0.5
     return { kind: 'close_fraction', fraction, setBE: true, trailing: true, label: `TP${lvl} → fecha 25% + BE + trailing` }
@@ -100,7 +125,7 @@ export async function applySenseiManagement(opts: {
 }): Promise<SenseiExecOutcome> {
   const out: SenseiExecOutcome = { updated: 0, closed: 0, errors: [], actions: [] }
 
-  const action = decideSenseiAction(opts.alertType, opts.tpLevel)
+  const action = decideSenseiAction(opts.alertType, opts.tpLevel, runnerModeEnabled())
   if (!action) {
     out.actions.push(`${opts.alertType}: sem ação`)
     return out
