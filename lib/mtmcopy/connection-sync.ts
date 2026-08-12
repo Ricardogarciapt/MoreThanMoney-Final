@@ -68,14 +68,7 @@ export function tradeSizeScalingFromConnection(
   if (conn.lot_mode === 'fixed') {
     return { mode: 'fixedVolume', tradeVolume: Math.min(50, Math.max(0.01, value)), ...tiny }
   }
-  if (conn.lot_mode === 'multiplier') {
-    // MULTIPLICADOR PURO (lote-a-lote × N) — AGNÓSTICO À MOEDA BASE. Permite copiar entre contas
-    // com moedas diferentes (ex.: mestre USD → subscritor EUR); o scaling por SALDO exige a mesma
-    // baseCurrency e a CopyFactory recusava ("same baseCurrency"). Mode 'none' → subscribeToStrategies
-    // envia `multiplier` puro (sem comparar saldos).
-    return { mode: 'none' }
-  }
-  // default (sem lot_mode) → scaling por saldo + round-up ao mínimo
+  // multiplier / default → scaling por saldo + round-up ao mínimo
   return { mode: 'balance', ...tiny }
 }
 
