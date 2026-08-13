@@ -38,6 +38,7 @@ import {
   placeOrdersSequential,
   type OrderResult,
 } from './metaapi'
+import { isMarketOpen } from './market-hours'
 import { isCopyFactoryEnabled } from './copyfactory'
 import {
   openT2TRowsForManagement,
@@ -1358,6 +1359,13 @@ async function executeViaMtmProvider(
           req.orderType = 'market'
           req.openPrice = null
         }
+      }
+      // Gate de horário: não tentar abrir com o mercado FECHADO (fim de semana / rollover) —
+      // evita as falhas "market closed" do GoldKiller (ouro) e do forex. Cripto passa sempre.
+      const mh = isMarketOpen(req.symbol)
+      if (!mh.open) {
+        results.push({ success: false, error: `mercado fechado (${mh.reason}) — ordem ignorada`, label: 'SKIP', lot: totalLot })
+        continue
       }
       const [r] = await withOrderTimeout(
         placeOrdersSequential(provider.accountId, [req]),

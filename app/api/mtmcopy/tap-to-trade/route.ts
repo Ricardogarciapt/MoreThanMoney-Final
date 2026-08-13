@@ -8,6 +8,7 @@ import {
   signalForRiskSizing,
 } from '@/lib/mtmcopy/lot-sizing'
 import { fetchLotSizingContext, placeOrder, type OrderRequest } from '@/lib/mtmcopy/metaapi'
+import { isMarketOpen } from '@/lib/mtmcopy/market-hours'
 import { symbolMatchesCanonical } from '@/lib/mtmcopy/symbol-resolver'
 import { tapToTradeEnabledChannels, T2T_SIGNAL_CHANNELS as SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
 
@@ -211,6 +212,11 @@ export async function POST(request: NextRequest) {
       if (priceRef && priceRef > 0 && entryRef && entryRef > 0) {
         if (orderSl != null && orderSl > 0) { const d = Math.abs(entryRef - orderSl); const fixed = signal.direction === 'buy' ? priceRef - d : priceRef + d; if (d > 0 && Math.abs(fixed - orderSl) > 1e-9) adjustedStops = true; if (d > 0) orderSl = fixed }
         if (orderTp != null && orderTp > 0) { const d = Math.abs(entryRef - orderTp); const fixed = signal.direction === 'buy' ? priceRef + d : priceRef - d; if (d > 0 && Math.abs(fixed - orderTp) > 1e-9) adjustedStops = true; if (d > 0) orderTp = fixed }
+      }
+      // Gate de horário: não tentar abrir com o mercado fechado (fim de semana / rollover).
+      const mh = isMarketOpen(sSymbol)
+      if (!mh.open) {
+        return { account: label, connectionId: conn.id, ok: false, symbol: sSymbol, error: `mercado fechado (${mh.reason})` }
       }
       const orderReq: OrderRequest = { accountId: conn.metaapi_account_id!, symbol: sSymbol, direction: sDirection, volume: lot, orderType, openPrice, stopLoss: orderSl, takeProfit: orderTp, comment: 'TapToTrade MTM' }
       const result = await placeOrder(orderReq)

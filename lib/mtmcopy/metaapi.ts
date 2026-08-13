@@ -151,6 +151,37 @@ export function clampVolume(volume: number, spec: MetaApiSymbolSpecification | n
   return v > 0 ? v : (min ?? 0.01)
 }
 
+/**
+ * Afasta SL/TP colados ao preço até à distância mínima do broker (stopsLevel) — resolve os
+ * "invalid stops" quando o scanner envia um SL/TP a poucos pips do preço. PURA e fail-open:
+ * sem refPrice/spec/stopsLevel devolve os valores como estão; só move o que está DENTRO do
+ * mínimo, deixando intacto o que tem folga. Extraído de placeOrderOnConnection (Família A)
+ * para reutilizar nos caminhos de ordem única (placeMarketOrder/Limit/Stop) e no modify.
+ */
+export function clampStopsToMinDistance(
+  spec: { point?: number; stopsLevel?: number; digits?: number } | null | undefined,
+  refPrice: number | null | undefined,
+  direction: 'buy' | 'sell',
+  sl: number | undefined,
+  tp: number | undefined,
+): { sl: number | undefined; tp: number | undefined } {
+  if (!refPrice || refPrice <= 0) return { sl, tp }
+  if (!spec?.point || spec.point <= 0 || typeof spec.stopsLevel !== 'number' || spec.stopsLevel <= 0) return { sl, tp }
+  const minDist = spec.stopsLevel * spec.point * 1.15 // margem sobre o mínimo do broker
+  const round = (v: number) => (spec?.digits != null ? Number(v.toFixed(spec.digits)) : v)
+  let outSl = sl
+  let outTp = tp
+  if (sl != null) {
+    if (direction === 'buy' && sl > refPrice - minDist) outSl = round(refPrice - minDist)
+    else if (direction === 'sell' && sl < refPrice + minDist) outSl = round(refPrice + minDist)
+  }
+  if (tp != null) {
+    if (direction === 'buy' && tp < refPrice + minDist) outTp = round(refPrice + minDist)
+    else if (direction === 'sell' && tp > refPrice - minDist) outTp = round(refPrice - minDist)
+  }
+  return { sl: outSl, tp: outTp }
+}
+
 export interface MetaApiPosition {
   id: string
   symbol: string
@@ -890,13 +921,29 @@ export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> 
     const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
     req.volume = clampVolume(req.volume, spec) // sobe ao lote mínimo do broker (índices)
 
-    const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
-    const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
+    let sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
+    let tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
 
     const trailingOpts = await resolveOrderTrailingForSymbol(req, brokerSymbol)
     const orderOptions = buildOrderOptions(req, trailingOpts)
 
     await ensureSymbolReady(connection, brokerSymbol)
+
+    // Afasta SL/TP colados ao preço de mercado até ao mínimo do broker (fail-open).
+    if (sl != null || tp != null) {
+      try {
+        let refPrice: number | null = null
+        if (connection.getSymbolPrice) {
+          const q = await connection.getSymbolPrice(brokerSymbol)
+          refPrice = req.direction === 'buy' ? (q?.ask ?? q?.bid ?? null) : (q?.bid ?? q?.ask ?? null)
+        }
+        const c = clampStopsToMinDistance(spec, refPrice, req.direction, sl, tp)
+        sl = c.sl
+        tp = c.tp
+      } catch {
+        /* fail-open: mantém sl/tp originais */
+      }
+    }
 
     const trade =
       req.direction === 'buy'
@@ -931,9 +978,16 @@ export async function placeLimitOrder(req: OrderRequest): Promise<OrderResult> {
     const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
     req.volume = clampVolume(req.volume, spec) // sobe ao lote mínimo do broker (índices)
 
-    const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
-    const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
+    let sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
+    let tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
     const orderOptions = { comment: req.comment ?? 'MTMcopier' }
+
+    // Afasta SL/TP colados ao preço da pendente até ao mínimo do broker (fail-open).
+    {
+      const c = clampStopsToMinDistance(spec, openPrice, req.direction, sl, tp)
+      sl = c.sl
+      tp = c.tp
+    }
 
     await ensureSymbolReady(connection, brokerSymbol)
 
@@ -985,9 +1039,16 @@ export async function placeStopOrder(req: OrderRequest): Promise<OrderResult> {
     const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(connection, symbols, req.symbol, req.direction)
     req.volume = clampVolume(req.volume, spec) // sobe ao lote mínimo do broker (índices)
 
-    const sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
-    const tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
+    let sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
+    let tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
     const orderOptions = { comment: req.comment ?? 'MTMcopier' }
+
+    // Afasta SL/TP colados ao preço da pendente até ao mínimo do broker (fail-open).
+    {
+      const c = clampStopsToMinDistance(spec, openPrice, req.direction, sl, tp)
+      sl = c.sl
+      tp = c.tp
+    }
 
     await ensureSymbolReady(connection, brokerSymbol)
 
