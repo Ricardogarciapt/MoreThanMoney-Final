@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Save, RefreshCw, CheckCircle2, XCircle, AlertTriangle } from "lucide-react"
+import { Loader2, Save, RefreshCw, CheckCircle2, XCircle, AlertTriangle, SlidersHorizontal } from "lucide-react"
+import MtmcopyAccountConfig from "@/components/admin/mtmcopy-account-config"
 
 type Switches = {
   sensei: boolean
@@ -83,6 +84,7 @@ export default function MtmcopyStrategyControl() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [showAccounts, setShowAccounts] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -156,6 +158,19 @@ export default function MtmcopyStrategyControl() {
 
   return (
     <div className="space-y-6">
+      {showAccounts && <MtmcopyAccountConfig onClose={() => setShowAccounts(false)} />}
+
+      {/* Modal de configuração das contas do cascade Copy Trader Ricardo Garcia */}
+      <div className="flex items-center justify-between rounded-xl border border-[#D2A63C]/25 bg-[#D2A63C]/5 px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-[#D2A63C]">Copy Trader Ricardo Garcia — contas</p>
+          <p className="text-xs text-zinc-400">Risco/lote/trailing por conta, undeploy, métricas do zero e adicionar slaves.</p>
+        </div>
+        <Button size="sm" onClick={() => setShowAccounts(true)} className="bg-[#D2A63C] text-black hover:bg-[#c0972f]">
+          <SlidersHorizontal className="mr-1.5 h-4 w-4" /> Configurar contas
+        </Button>
+      </div>
+
       {msg && (
         <div className="text-sm px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 flex items-center gap-2">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4 text-emerald-400" />}

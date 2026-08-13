@@ -164,6 +164,8 @@ export async function PATCH(request: NextRequest) {
     copy_tp,
     copyfactory_strategy_pick,
     is_active,
+    auto_trailing_stop,
+    trailing_stop_points,
   } = body as Record<string, unknown>
 
   if (!connection_id || typeof connection_id !== 'string') {
@@ -199,6 +201,12 @@ export async function PATCH(request: NextRequest) {
   if (lot_mode !== undefined) update.lot_mode = lot_mode
   if (lot_value !== undefined) update.lot_value = lot_value
   if (max_risk_percent !== undefined) update.max_risk_percent = max_risk_percent
+  // Trailing (lido pelo motor de execução; não precisa de resync CopyFactory)
+  if (typeof auto_trailing_stop === 'boolean') update.auto_trailing_stop = auto_trailing_stop
+  if (trailing_stop_points !== undefined && trailing_stop_points !== null) {
+    const tp = Number(trailing_stop_points)
+    if (Number.isFinite(tp) && tp >= 0) update.trailing_stop_points = tp
+  }
   if (exit_pct_tp1 != null) update.exit_pct_tp1 = exit_pct_tp1
   if (exit_pct_tp2 != null) update.exit_pct_tp2 = exit_pct_tp2
   if (exit_pct_tp3 != null) update.exit_pct_tp3 = exit_pct_tp3
