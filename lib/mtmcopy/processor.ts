@@ -1362,21 +1362,22 @@ async function executeViaMtmProvider(
       }
       // Gate de horário: não tentar abrir com o mercado FECHADO (fim de semana / rollover) —
       // evita as falhas "market closed" do GoldKiller (ouro) e do forex. Cripto passa sempre.
+      // (bloco linear, não loop → if/else em vez de continue).
       const mh = isMarketOpen(req.symbol)
       if (!mh.open) {
         results.push({ success: false, error: `mercado fechado (${mh.reason}) — ordem ignorada`, label: 'SKIP', lot: totalLot })
-        continue
+      } else {
+        const [r] = await withOrderTimeout(
+          placeOrdersSequential(provider.accountId, [req]),
+          20_000,
+          `${provider.tag} ${req.symbol} ${req.direction}`,
+        )
+        results.push({
+          ...(r ?? { success: false, error: 'Sem resposta MetaAPI' }),
+          label: req.orderType === 'limit' ? 'LIMIT' : 'MARKET',
+          lot: totalLot,
+        })
       }
-      const [r] = await withOrderTimeout(
-        placeOrdersSequential(provider.accountId, [req]),
-        20_000,
-        `${provider.tag} ${req.symbol} ${req.direction}`,
-      )
-      results.push({
-        ...(r ?? { success: false, error: 'Sem resposta MetaAPI' }),
-        label: req.orderType === 'limit' ? 'LIMIT' : 'MARKET',
-        lot: totalLot,
-      })
     }
   } catch (execErr) {
     const msg = execErr instanceof Error ? execErr.message : 'Erro fatal na execução MetaAPI'
