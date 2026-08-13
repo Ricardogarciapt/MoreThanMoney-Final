@@ -8,7 +8,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  *  mode:
  *   'off'    → não executa nada (default — nada abre até ligares)
  *   'shadow' → só regista o que ABRIRIA (validação sem risco)
- *   'live'   → abre ordem de mercado real na conta mestre (comentário "Forex Swings" + trailing)
+ *   'live'   → abre ordem de mercado real na conta mestre (comentário "Forex Swings", SEM trailing)
  *  lot: volume fixo por ordem (default 0.01) — set & forget, previsível.
  * Afinável sem redeploy.
  */

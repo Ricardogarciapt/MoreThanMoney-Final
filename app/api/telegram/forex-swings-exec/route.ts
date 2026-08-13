@@ -84,8 +84,9 @@ export async function POST(req: NextRequest) {
     stopLoss: sl,
     takeProfit: tp,
     comment: 'Forex Swings',
-    // set & forget: trailing dinâmico padrão da conta Forex (BE + trail server-side)
-    trailingStop: body.trailing === false ? null : tradeIdeasTrailingDistance(),
+    // SEM trailing por decisão do Ricardo (2026-08-13): os Forex Swings são swings de gestão
+    // própria (SL/TP fixos), o trailing tirava movimento. Só liga se vier trailing:true explícito.
+    trailingStop: body.trailing === true ? tradeIdeasTrailingDistance() : null,
   }
 
   if (cfg.mode === 'off') {
