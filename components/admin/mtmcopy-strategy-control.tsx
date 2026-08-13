@@ -21,12 +21,26 @@ type PerpsRules = {
   funding?: { enabled?: boolean }
 }
 type ScoreRow = { sym?: string; netR?: number; wr?: number; sample?: number }
+type ShadowBucket = {
+  n: number
+  hit_target: number
+  hit_sl: number
+  open: number
+  expired: number
+  winRate: number | null
+  avgRunR: number | null
+}
+type SenseiShadow = {
+  config: { enabled: boolean; allowSell: boolean; goldTargetDistance: number }
+  summary: { all: ShadowBucket; buy: ShadowBucket; sell: ShadowBucket }
+} | null
 type Config = {
   switches: Switches
   primeverse: { mode: string }
   forexSwings: { mode: string }
   perpsRules: PerpsRules
   perpsSuggestions: { keep: ScoreRow[]; cut: ScoreRow[] }
+  senseiShadow: SenseiShadow
   envFlags: Record<string, boolean>
 }
 
@@ -166,6 +180,68 @@ export default function MtmcopyStrategyControl() {
           ))}
         </CardContent>
       </Card>
+
+      {/* Shadow do Sensei (#57/#59) — validação sem executar */}
+      {cfg.senseiShadow && (
+        <Card className="bg-zinc-900/60 border-zinc-800">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="text-sm text-zinc-200 flex items-center gap-2">
+                Shadow do Sensei <span className="text-xs font-normal text-zinc-500">#57 entra-no-sinal + 100pips · #59 SELLs</span>
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500">{cfg.senseiShadow.config.enabled ? "a recolher" : "parado"}</span>
+                <Toggle
+                  on={cfg.senseiShadow.config.enabled}
+                  disabled={saving}
+                  onClick={() => save({ sensei_shadow: { enabled: !cfg.senseiShadow!.config.enabled } })}
+                />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-zinc-500 mb-3">
+              Não executa nem posta — mede o que a nova política faria. Compara com o Sensei live (baseline ~21%).
+              Alvo ouro: {cfg.senseiShadow.config.goldTargetDistance} ({Math.round(cfg.senseiShadow.config.goldTargetDistance * 10)} pips).
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-zinc-500 text-left">
+                    <th className="py-1 pr-3 font-medium">Lado</th>
+                    <th className="py-1 px-2 font-medium text-right">Win%</th>
+                    <th className="py-1 px-2 font-medium text-right">Alvo</th>
+                    <th className="py-1 px-2 font-medium text-right">SL</th>
+                    <th className="py-1 px-2 font-medium text-right">Abertas</th>
+                    <th className="py-1 px-2 font-medium text-right">Correu ×alvo</th>
+                  </tr>
+                </thead>
+                <tbody className="tabular-nums">
+                  {([
+                    { label: "BUY", b: cfg.senseiShadow.summary.buy, color: "text-emerald-400" },
+                    { label: "SELL", b: cfg.senseiShadow.summary.sell, color: "text-red-400" },
+                    { label: "Total", b: cfg.senseiShadow.summary.all, color: "text-zinc-200" },
+                  ] as const).map(({ label, b, color }) => (
+                    <tr key={label} className="border-t border-zinc-800/60">
+                      <td className={`py-1.5 pr-3 font-medium ${color}`}>{label}</td>
+                      <td className="py-1.5 px-2 text-right text-white">
+                        {b.winRate != null ? `${b.winRate}%` : "—"}
+                      </td>
+                      <td className="py-1.5 px-2 text-right text-emerald-400">{b.hit_target}</td>
+                      <td className="py-1.5 px-2 text-right text-red-400/80">{b.hit_sl}</td>
+                      <td className="py-1.5 px-2 text-right text-zinc-400">{b.open}</td>
+                      <td className="py-1.5 px-2 text-right text-[#D2A63C]">{b.avgRunR != null ? `${b.avgRunR}×` : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {cfg.senseiShadow.summary.all.n === 0 && (
+              <p className="text-xs text-zinc-600 mt-3">Sem trades-sombra ainda — aparecem à medida que chegam sinais do Sensei.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Modos de execução PrimeVerse / Forex Swings */}
       <div className="grid sm:grid-cols-2 gap-4">

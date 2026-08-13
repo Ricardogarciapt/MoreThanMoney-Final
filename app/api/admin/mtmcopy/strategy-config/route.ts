@@ -53,6 +53,41 @@ function envFlags(): Record<string, boolean> {
   }
 }
 
+type ShadowRow = {
+  side: "buy" | "sell"
+  status: string
+  entry: number
+  target_dist: number
+  max_favorable: number | null
+}
+
+/** Resumo do shadow do Sensei (#57/#59): win rate por lado + upside do "deixa correr". */
+function shadowSummary(rows: ShadowRow[]) {
+  const bucket = (side: "buy" | "sell" | null) => {
+    const r = side ? rows.filter((x) => x.side === side) : rows
+    const tgt = r.filter((x) => x.status === "hit_target").length
+    const sl = r.filter((x) => x.status === "hit_sl").length
+    const open = r.filter((x) => x.status === "open").length
+    const expired = r.filter((x) => x.status === "expired").length
+    const dec = tgt + sl
+    // upside: p/ os winners, quantos "R" (múltiplos do alvo) correu além da entrada
+    const wins = r.filter((x) => x.status === "hit_target" && x.max_favorable != null && x.target_dist > 0)
+    const avgRunR = wins.length
+      ? wins.reduce((a, x) => a + Math.abs((x.max_favorable as number) - x.entry) / x.target_dist, 0) / wins.length
+      : null
+    return {
+      n: r.length,
+      hit_target: tgt,
+      hit_sl: sl,
+      open,
+      expired,
+      winRate: dec ? Math.round((100 * tgt) / dec) : null,
+      avgRunR: avgRunR != null ? Number(avgRunR.toFixed(2)) : null,
+    }
+  }
+  return { all: bucket(null), buy: bucket("buy"), sell: bucket("sell") }
+}
+
 /** Do scorecard por-moeda dos perps, deriva as sugestões manter/remover (netR). */
 function perpsSuggestions(scorecard: Setting): { keep: unknown[]; cut: unknown[] } {
   const rows = Array.isArray(scorecard.scorecard) ? (scorecard.scorecard as Array<Record<string, unknown>>) : []
@@ -69,13 +104,34 @@ export async function GET(request: NextRequest) {
   const authCheck = await requireAdmin(request)
   if (authCheck) return authCheck
 
-  const [switches, primeverse, forexSwings, perpsRules, perpsScore] = await Promise.all([
+  const [switches, primeverse, forexSwings, perpsRules, perpsScore, shadowCfg] = await Promise.all([
     getExecSwitches(),
     readSetting("primeverse_execution"),
     readSetting("forex_swings_execution"),
     readSetting("perps_gate_rules"),
     readSetting("perps_coin_scorecard"),
+    readSetting("sensei_shadow_config"),
   ])
+
+  // Resultados do shadow do Sensei (#57/#59) — últimas 1000 trades-sombra
+  let senseiShadow: { config: Record<string, unknown>; summary: ReturnType<typeof shadowSummary> } | null = null
+  try {
+    const { data: shadowRows } = await getSupabaseAdmin()
+      .from("sensei_shadow_trades")
+      .select("side,status,entry,target_dist,max_favorable")
+      .order("created_at", { ascending: false })
+      .limit(1000)
+    senseiShadow = {
+      config: {
+        enabled: shadowCfg.enabled === true,
+        allowSell: shadowCfg.allowSell !== false,
+        goldTargetDistance: typeof shadowCfg.goldTargetDistance === "number" ? shadowCfg.goldTargetDistance : 10,
+      },
+      summary: shadowSummary((shadowRows ?? []) as ShadowRow[]),
+    }
+  } catch {
+    /* tabela pode ainda não ter dados */
+  }
 
   return NextResponse.json({
     ok: true,
@@ -90,6 +146,7 @@ export async function GET(request: NextRequest) {
       funding: perpsRules.funding ?? { enabled: false },
     },
     perpsSuggestions: perpsSuggestions(perpsScore),
+    senseiShadow,
     envFlags: envFlags(),
   })
 }
@@ -152,6 +209,18 @@ export async function POST(request: NextRequest) {
     if (pr.funding && typeof pr.funding === "object") next.funding = pr.funding
     await writeSetting("perps_gate_rules", next, "Regras do gate de perps (afinável sem redeploy)")
     applied.push("perps_rules")
+  }
+
+  // 4) Config do shadow do Sensei (#57/#59)
+  if (body.sensei_shadow && typeof body.sensei_shadow === "object") {
+    const cur = await readSetting("sensei_shadow_config")
+    const s = body.sensei_shadow as Record<string, unknown>
+    const next: Setting = { ...cur }
+    if (typeof s.enabled === "boolean") next.enabled = s.enabled
+    if (typeof s.allowSell === "boolean") next.allowSell = s.allowSell
+    if (typeof s.goldTargetDistance === "number" && s.goldTargetDistance > 0) next.goldTargetDistance = s.goldTargetDistance
+    await writeSetting("sensei_shadow_config", next, "Shadow do Sensei (#57/#59)")
+    applied.push("sensei_shadow")
   }
 
   if (!applied.length) return NextResponse.json({ ok: false, error: "nada para aplicar" }, { status: 400 })
