@@ -7,6 +7,7 @@ import {
   FlaskConical,
   LayoutDashboard,
   Send,
+  SlidersHorizontal,
   UserCog,
   Users,
   Wrench,
@@ -14,6 +15,7 @@ import {
 
 export type MtmcopyAdminTab =
   | "overview"
+  | "strategies"
   | "senders"
   | "subscribers"
   | "logs"
@@ -27,6 +29,7 @@ export const MTMCOPY_ADMIN_TABS: {
   icon: typeof LayoutDashboard
 }[] = [
   { id: "overview", label: "Visão geral", short: "Visão", icon: LayoutDashboard },
+  { id: "strategies", label: "Estratégias", short: "Estrat.", icon: SlidersHorizontal },
   { id: "senders", label: "Senders", short: "Senders", icon: Send },
   { id: "subscribers", label: "Subscribers", short: "Subs", icon: Users },
   { id: "logs", label: "Monitorização", short: "Logs", icon: Activity },

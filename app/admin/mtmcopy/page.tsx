@@ -10,6 +10,7 @@ import MtmcopySyncAllPanel from "@/components/admin/mtmcopy-sync-all-panel"
 import MtmcopyTestPanel from "@/components/admin/mtmcopy-test-panel"
 import MtmcopySenderLog from "@/components/admin/mtmcopy-sender-log"
 import MtmcopyProviderPerformance from "@/components/admin/mtmcopy-provider-performance"
+import MtmcopyStrategyControl from "@/components/admin/mtmcopy-strategy-control"
 import {
   MtmcopyAdminSection,
   MtmcopyAdminTabNav,
@@ -41,6 +42,7 @@ function parseTab(
 ): MtmcopyAdminTab {
   const valid: MtmcopyAdminTab[] = [
     "overview",
+    "strategies",
     "senders",
     "subscribers",
     "logs",
@@ -147,6 +149,7 @@ export default function AdminMtmcopyPage() {
           {(
             [
               { id: "overview" as const, label: "Visão geral" },
+              { id: "strategies" as const, label: "Estratégias" },
               { id: "senders" as const, label: "Senders" },
               { id: "subscribers" as const, label: "Subscribers" },
               { id: "logs" as const, label: "Monitorização" },
@@ -293,6 +296,17 @@ export default function AdminMtmcopyPage() {
                 </Card>
               </div>
             </>
+          )}
+
+          {activeTab === "strategies" && (
+            <MtmcopyAdminSection
+              title="Controlo de estratégias"
+              description="On/off por estratégia (runtime, sem redeploy), modos PrimeVerse/Forex Swings, limites de risco dos perps, sugestões de watchlist e o estado das flags de execução da Vercel."
+              icon={BarChart3}
+              accent="emerald"
+            >
+              <MtmcopyStrategyControl />
+            </MtmcopyAdminSection>
           )}
 
           {activeTab === "senders" && (
