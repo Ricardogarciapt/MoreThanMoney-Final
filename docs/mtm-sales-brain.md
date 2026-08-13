@@ -39,8 +39,8 @@ Persona ideal: PT/BR, quer aprender a investir/trading a sério, sem enganos, co
 |---|---|---|
 | **App MTM** | **Grátis** | Descarregar e entrar. Feed, comunidade, conteúdo base. Base do funil. |
 | **Comunidade Skool** | **350$ ÚNICO** (one-time) | Entrada na comunidade Skool. **Grátis para membros Premium** (não pagam os 350$). |
-| **Membro** | **35€/mês** (28€/mês no anual) | Acesso de membro à app, salas base, comunidade. |
-| **Premium** | **65€/mês** — **1º mês 34,99€ (oferta intro)**; anual 52€/mês | Tudo: Scanner, Trading Alerts, Tap to Trade, aulas + **Skool grátis** + **funcionalidades do SITE** (Terminal MTM, MTM Alerts, Portefólios, Listas de Visualização das aulas, Planos de trading e rotas web-only que não existem na app). |
+| **Membro** | **35€/mês** (28€/mês no anual) | Acesso à app, salas base, comunidade. **SEM as funcionalidades do site** (é essa a diferença para o Premium). |
+| **Premium** | **65€/mês** — **1º mês 34,99€ (oferta intro)**; anual 52€/mês | Tudo o do Membro **+ as funcionalidades do SITE** (Terminal MTM, MTM Alerts, Portefólios, Listas de Visualização das aulas, Planos de trading e rotas web-only que não existem na app) **+ Skool grátis** + Scanner, Trading Alerts, Tap to Trade, aulas, salas Premium. **A diferença Membro→Premium = as funcionalidades do site.** |
 | **Elite** | **€597/ano** | Alto-ticket: acesso PAMM, isenção de fees (promoções), formação criar negócios digitais, acompanhamento direto, estatuto Fundador vitalício (preço travado), scanners lifetime. Badge VIP. |
 | **MTM Copy (add-on)** | +20€/mês | Copy trading via MetaApi (copiar estratégias no MT5). |
 
