@@ -174,7 +174,7 @@ const initialTestimonials: Testimonial[] = [
     location: "Lisboa, Portugal",
     role: "Empresária",
     content:
-      "A plataforma IQONIC combinada com os scanners MTM deu-me as ferramentas necessárias para criar uma fonte de rendimento passivo. Recomendo a todos!",
+      "A plataforma MoreThanMoney combinada com os scanners MTM deu-me as ferramentas necessárias para criar uma fonte de rendimento passivo. Recomendo a todos!",
     rating: 5,
     profit: "+3,800 pips",
     profitPercentage: 380,

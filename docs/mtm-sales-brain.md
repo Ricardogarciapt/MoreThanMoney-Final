@@ -38,10 +38,12 @@ Persona ideal: PT/BR, quer aprender a investir/trading a sério, sem enganos, co
 | Produto | Preço | O que dá |
 |---|---|---|
 | **App MTM** | **Grátis** | Descarregar e entrar. Feed, comunidade, conteúdo base. Base do funil. |
-| **Membro** | **35€/mês** (28€/mês no anual) | Acesso de membro à app, salas base, comunidade. |
-| **Premium** | **65€/mês** — **1º mês 34,99€ (oferta intro)**; anual 52€/mês | Tudo: Scanner, salas Premium, Trading Alerts, Tap to Trade, aulas, comunidade Premium. |
-| **Oferta Fundador** | **50% (código FOUNDER50)** | Para migração de fundadores — Premium a metade do preço. |
+| **Comunidade Skool** | **350$ ÚNICO** (one-time) | Entrada na comunidade Skool. **Grátis para membros Premium** (não pagam os 350$). |
+| **Premium** | **65€/mês** — **1º mês 34,99€ (oferta intro)**; anual 52€/mês | Tudo: Scanner, Trading Alerts, Tap to Trade, aulas + **Skool grátis** + **funcionalidades do SITE** (Terminal MTM, MTM Alerts, Portefólios, Listas de Visualização das aulas, Planos de trading e rotas web-only que não existem na app). |
+| **Elite** | *a ajustar* (antes €597/ano) | Alto-ticket — perks a confirmar. |
 | **MTM Copy (add-on)** | +20€/mês | Copy trading via MetaApi (copiar estratégias no MT5). |
+
+*Nota: IQONIC descontinuado — nenhuma comunicação deve mencioná-lo.*
 
 - iOS: subscrição por **Apple IAP** (dentro da app). Web/Android: **Stripe** (`/upgrade`).
 - Já pagas Stripe? Fazes login na app **sem pagar de novo** (entitlement unificado, sem dupla cobrança).
