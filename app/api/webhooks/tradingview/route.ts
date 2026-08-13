@@ -10,6 +10,7 @@ import {
   type SenseiTradingViewFields,
 } from "@/lib/mtmcopy/signal-parser"
 import { validateSenseiWebhookSignal, validateSignalWithAi } from "@/lib/mtmcopy/signal-ai-validator"
+import { recordSenseiShadow } from "@/lib/mtmcopy/sensei-shadow"
 import {
   activateSenseiTradeIdea,
   attachSenseiIdeaMessages,
@@ -860,6 +861,28 @@ export async function POST(request: NextRequest) {
     ((!isIdeaAlert && (activeSensei?.alertType === "entry_trigger" || !activeSensei)) ||
       isLimitIdea ||
       isSenseiXEntry)
+
+  // ── SHADOW #57/#59 (não executa, não posta) ──────────────────────────────────
+  // Regista o que a nova política do Sensei FARIA — entrar-NO-SINAL (sem esperar gatilho) +
+  // alvo ~100 pips + permitir SELLs — para validar com dados reais antes de ir a dinheiro real.
+  // Ignora o execGate/score de propósito (é isso que queremos medir). Gated por
+  // site_settings.sensei_shadow_config.enabled. Best-effort (nunca afeta o fluxo live).
+  if (
+    isSenseiScored &&
+    initSignalKind === "entry" &&
+    (parsedForExec.direction === "buy" || parsedForExec.direction === "sell")
+  ) {
+    const shadowEntry = parsedForExec.entry ?? price
+    if (shadowEntry != null && shadowEntry > 0) {
+      await recordSenseiShadow({
+        ticker: String(parsedForExec.symbol ?? ticker),
+        side: parsedForExec.direction,
+        entry: shadowEntry,
+        sl: parsedForExec.sl ?? null,
+        timeframe,
+      }).catch(() => {})
+    }
+  }
 
   let savedIdea: { id: string; tradeNumber: number | null } | null = null
   // Ideia/trade a que esta entrada corresponde (para guardar o message_id da entrada).
