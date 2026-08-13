@@ -21,6 +21,8 @@ import {
   CANONICAL_BOOSTER_STRATEGY_ID,
   CANONICAL_GOLDDID_ACCOUNT_ID,
   CANONICAL_GOLDDID_STRATEGY_ID,
+  CANONICAL_COPYTRADER_RG_ACCOUNT_ID,
+  CANONICAL_COPYTRADER_RG_STRATEGY_ID,
   MTM_COPY_STRATEGY_CATALOG,
 } from './provider-constants'
 import { fetchMetaApiOverview } from './metaapi-admin'
@@ -76,6 +78,8 @@ const PROVIDERS: ProviderDef[] = [
   { key: 'booster', accountId: CANONICAL_BOOSTER_ACCOUNT_ID, strategyId: CANONICAL_BOOSTER_STRATEGY_ID },
   // Gold Did — conta PU Prime (Alcy) que executa os sinais Premium com gestão própria (BE@+5.0, TP2).
   { key: 'golddid', accountId: CANONICAL_GOLDDID_ACCOUNT_ID, strategyId: CANONICAL_GOLDDID_STRATEGY_ID },
+  // Copy Trader Ricardo Garcia — intermédia (0f38257a) que copia o Premium e revende (su0a) aos slaves RG.
+  { key: 'copytrader-rg', accountId: CANONICAL_COPYTRADER_RG_ACCOUNT_ID, strategyId: CANONICAL_COPYTRADER_RG_STRATEGY_ID },
 ]
 
 function token(): string | null {
