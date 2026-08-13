@@ -117,6 +117,17 @@ tp1RR = input.float(1.5, "TP1 / Exit1 — BE aqui (1:X)", minval=0.1, step=0.1, 
 tp2RR = input.float(3.0, "TP2 / runner (1:X)", minval=0.1, step=0.1, group=rrGroup)
 tp3RR = input.float(4.5, "TP3 (1:X)", minval=0.1, step=0.1, group=rrGroup)
 tp4RR = input.float(6.0, "TP4 (1:X)", minval=0.1, step=0.1, group=rrGroup)
+// ═══ PERFIL SWING (perpétuos) — #58 ═══
+// Perp = SWING: TP1 fica no BE (1.5R) mas os alvos altos abrem MUITO (deixa correr).
+// Backtest (14.933 sinais): alvos longe (TP3/TP4) batem mais que os curtos → o valor está na cauda.
+// Ouro mantém-se sempre no ORB intradiário. Toggle p/ voltar ao intradiário nos perps.
+useSwing   = input.bool(true, "Perfil SWING nos perpétuos (alvos largos + deixa correr)", group=rrGroup, tooltip="ON: nos perps usa TP2≥4R, TP3≥7R, TP4≥12R e mantém o rompimento válido 3× mais tempo (entradas de swing). O ouro fica sempre no ORB intradiário.")
+swingPerp  = useSwing and isPerp
+etp1RR     = tp1RR
+etp2RR     = swingPerp ? math.max(tp2RR, 4.0)  : tp2RR
+etp3RR     = swingPerp ? math.max(tp3RR, 7.0)  : tp3RR
+etp4RR     = swingPerp ? math.max(tp4RR, 12.0) : tp4RR
+eValidBars = swingPerp ? orbValidBars * 3 : orbValidBars
 
 // ═════════════════════════ GESTÃO / CONTA ═════════════════════════
 accGroup = "==== GESTÃO / CONTA ===="
@@ -210,7 +221,7 @@ for i = 0 to 2
             array.set(rLbl, i, label.new(b0, rh, array.get(sNm, i) + "\nRange: " + str.tostring(rngPts, "#") + "\nHigh: " + str.tostring(rh, format.mintick) + "\nLow: " + str.tostring(rl, format.mintick), color=color.new(col, 20), textcolor=color.white, style=label.style_label_down, size=size.small))
         // rompimento (range trancada, dentro da validade, ainda não disparada)
         if array.get(rLock, i)
-            ageOk = na(array.get(rLockBar, i)) or (bar_index - array.get(rLockBar, i) <= orbValidBars)
+            ageOk = na(array.get(rLockBar, i)) or (bar_index - array.get(rLockBar, i) <= eValidBars)
             rh = array.get(rHigh, i)
             rl = array.get(rLow, i)
             if ageOk and not array.get(firedL, i) and close > rh and close[1] <= rh
@@ -427,16 +438,16 @@ if isBuySignal or isSellSignal
     d = math.min(math.max(dBase, syminfo.mintick), dCap)
     if isBuySignal
         sl  := round_price(entry1 - d)
-        tp1 := round_price(entry1 + d * tp1RR)
-        tp2 := round_price(entry1 + d * tp2RR)
-        tp3 := round_price(entry1 + d * tp3RR)
-        tp4 := round_price(entry1 + d * tp4RR)
+        tp1 := round_price(entry1 + d * etp1RR)
+        tp2 := round_price(entry1 + d * etp2RR)
+        tp3 := round_price(entry1 + d * etp3RR)
+        tp4 := round_price(entry1 + d * etp4RR)
     else
         sl  := round_price(entry1 + d)
-        tp1 := round_price(entry1 - d * tp1RR)
-        tp2 := round_price(entry1 - d * tp2RR)
-        tp3 := round_price(entry1 - d * tp3RR)
-        tp4 := round_price(entry1 - d * tp4RR)
+        tp1 := round_price(entry1 - d * etp1RR)
+        tp2 := round_price(entry1 - d * etp2RR)
+        tp3 := round_price(entry1 - d * etp3RR)
+        tp4 := round_price(entry1 - d * etp4RR)
     slPct := entry1 != 0 ? d / entry1 * 100 : na
     // sizing vol-normalizado (risco $ fixo)
     riskAmt := accountSize * riskPct / 100
@@ -493,10 +504,10 @@ if barstate.islast and not na(entry1)
     l4 := line.new(et, tp4,    xR, tp4,    color=color.green, xloc=xloc.bar_time)
     bE := label.new(xR, entry1, "Entry: " + str.tostring(entry1, format.mintick) + " | risco " + str.tostring(riskPct, "#.#") + "% | " + sizeStr, color=color.blue, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
     bS := label.new(xR, sl,  "SL: " + str.tostring(sl, format.mintick) + " | -$" + str.tostring(riskAmt, "#"), color=color.red, textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
-    b1 := label.new(xR, tp1, "TP1: " + str.tostring(tp1, format.mintick) + " (" + str.tostring(tp1RR, "#.#") + "R) | +$" + str.tostring(riskAmt * tp1RR, "#"), color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
-    b2 := label.new(xR, tp2, "TP2: " + str.tostring(tp2, format.mintick) + " (" + str.tostring(tp2RR, "#.#") + "R) | +$" + str.tostring(riskAmt * tp2RR, "#"), color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
-    b3 := label.new(xR, tp3, "TP3: " + str.tostring(tp3, format.mintick) + " (" + str.tostring(tp3RR, "#.#") + "R) | +$" + str.tostring(riskAmt * tp3RR, "#"), color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
-    b4 := label.new(xR, tp4, "TP4: " + str.tostring(tp4, format.mintick) + " (" + str.tostring(tp4RR, "#.#") + "R) | +$" + str.tostring(riskAmt * tp4RR, "#"), color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+    b1 := label.new(xR, tp1, "TP1: " + str.tostring(tp1, format.mintick) + " (" + str.tostring(etp1RR, "#.#") + "R) | +$" + str.tostring(riskAmt * etp1RR, "#"), color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+    b2 := label.new(xR, tp2, "TP2: " + str.tostring(tp2, format.mintick) + " (" + str.tostring(etp2RR, "#.#") + "R) | +$" + str.tostring(riskAmt * etp2RR, "#"), color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+    b3 := label.new(xR, tp3, "TP3: " + str.tostring(tp3, format.mintick) + " (" + str.tostring(etp3RR, "#.#") + "R) | +$" + str.tostring(riskAmt * etp3RR, "#"), color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
+    b4 := label.new(xR, tp4, "TP4: " + str.tostring(tp4, format.mintick) + " (" + str.tostring(etp4RR, "#.#") + "R) | +$" + str.tostring(riskAmt * etp4RR, "#"), color=color.new(color.green, 0), textcolor=color.white, style=label.style_label_left, xloc=xloc.bar_time, size=size.small)
 
 // ═════════════════════════ ORDER BLOCKS VISUAL ═════════════════════════
 var box ob_bull_box = na
