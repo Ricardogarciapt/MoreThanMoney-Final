@@ -1163,7 +1163,7 @@ export default function InternalStudio({
       pc.onconnectionstatechange = () => {
         if (pc.connectionState === "connected") {
           setPhase("live")
-          setMsg("A transmitir ao vivo ✓ (o VPS está a gravar para o DVR)")
+          setMsg("A transmitir ao vivo ✓ (dobragem + legendas ativas)")
           // só AGORA marca a sala LIVE (media do browser ligou) — não espera OBS
           fetch(`/api/live-sessions/whip?streamId=${encodeURIComponent(targetId)}`, {
             method: "PATCH",

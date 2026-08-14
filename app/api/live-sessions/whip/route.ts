@@ -72,9 +72,17 @@ async function kickExistingPublisher(key: string): Promise<void> {
   }
 }
 
-/** Chaves cujo browser-stream é re-encodado (publica p/ <key>_rtc). Ver POST. */
+/**
+ * Chave de publicação do WHIP. O browser publica SEMPRE direto p/ `<key>`.
+ *
+ * (Histórico: chaves em LMS_RTC_REENCODE_KEYS publicavam p/ `<key>_rtc` e um ffmpeg no VPS
+ * re-encodava com GOP fixo → HLS sem freezes. MAS na t3.medium o libx264 do re-encode saturava
+ * o SRS: o CircuitBreaker do SRS disparava a 100% CPU e RECUSAVA o publish RTMP do `<key>` →
+ * players pretos. O re-encode não cabe neste hardware. Voltámos ao publish direto: SRS só faz
+ * rtc_to_rtmp + HLS (leve). Se algum dia houver VPS maior, reativar via LMS_RTC_REENCODE_KEYS.)
+ */
 function publishKeyFor(key: string): string {
-  const list = (process.env.LMS_RTC_REENCODE_KEYS || "mtm_c6e156d5_1d7c9b9c556a2524248f894b1cbf344f")
+  const list = (process.env.LMS_RTC_REENCODE_KEYS || "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean)

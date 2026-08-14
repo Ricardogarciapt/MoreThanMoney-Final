@@ -72,12 +72,14 @@ export function getLmsHlsPublicBaseUrl(): string {
 }
 
 /**
- * Chaves cujo browser-stream é re-encodado no VPS (ver whip/route.ts + mtm-rtc-reencode@).
- * Para estas, além do HLS single-quality, existe um ladder ABR (720p+480p) em
- * /hls-abr/<key>/master.m3u8 → dá o menu de qualidade nos players (web/iOS/Android).
+ * Chaves com ladder ABR (720p+480p) em /hls-abr/<key>/master.m3u8 → menu de qualidade.
+ *
+ * DESLIGADO por defeito: o ladder ABR exige um 2º transcode no VPS que, somado ao re-encode,
+ * satura a t3.medium (SRS CircuitBreaker a 100% CPU → players pretos). Só ligar via
+ * LMS_HLS_ABR_KEYS num VPS com CPU a sobrar. Sem isto, os players usam o HLS único do `<key>`.
  */
 function reencodeKeys(): string[] {
-  return (process.env.LMS_RTC_REENCODE_KEYS || "mtm_c6e156d5_1d7c9b9c556a2524248f894b1cbf344f")
+  return (process.env.LMS_HLS_ABR_KEYS || "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean)
