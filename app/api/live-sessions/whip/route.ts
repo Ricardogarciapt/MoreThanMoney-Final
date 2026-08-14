@@ -72,6 +72,15 @@ async function kickExistingPublisher(key: string): Promise<void> {
   }
 }
 
+/** Chaves cujo browser-stream é re-encodado (publica p/ <key>_rtc). Ver POST. */
+function publishKeyFor(key: string): string {
+  const list = (process.env.LMS_RTC_REENCODE_KEYS || "mtm_c6e156d5_1d7c9b9c556a2524248f894b1cbf344f")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+  return list.includes(key) ? `${key}_rtc` : key
+}
+
 async function requireEducator() {
   const cookieStore = await cookies()
   const token = cookieStore.get(getEducatorCookieName())?.value
@@ -137,10 +146,15 @@ export async function POST(request: NextRequest) {
   const key = await resolveTargetKey(edu.educatorId, streamId)
   if (!key) return NextResponse.json({ error: "stream_not_found" }, { status: 404 })
 
-  // liberta qualquer publisher preso na mesma stream (evita 502 "duplicate publisher")
-  await kickExistingPublisher(key)
+  // Chaves com re-encode: o browser publica p/ <key>_rtc; um ffmpeg no VPS recodifica com GOP fixo
+  // (keyframe cada 2s) e republica <key> -> HLS SEM freezes nos apps (o browser tem keyframes
+  // irregulares, ao contrário do OBS). Sem re-encode, publica direto p/ <key>.
+  const publishKey = publishKeyFor(key)
 
-  const q = `/rtc/v1/whip/?app=live&stream=${encodeURIComponent(key)}`
+  // liberta qualquer publisher preso na mesma stream (evita 502 "duplicate publisher")
+  await kickExistingPublisher(publishKey)
+
+  const q = `/rtc/v1/whip/?app=live&stream=${encodeURIComponent(publishKey)}`
   let answer: string | null = null
   let resource: string | null = null
   const errors: string[] = []
@@ -208,7 +222,7 @@ export async function DELETE(request: NextRequest) {
   const streamId = request.nextUrl.searchParams.get("streamId")
   // liberta a sessão RTC no SRS de imediato (para poder re-publicar sem esperar o timeout)
   const key = await resolveTargetKey(edu.educatorId, streamId)
-  if (key) await kickExistingPublisher(key)
+  if (key) await kickExistingPublisher(publishKeyFor(key))
   if (streamId) {
     await supabase
       .from("lms_streams")
