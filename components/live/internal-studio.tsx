@@ -62,6 +62,7 @@ type Layer = {
   visible: boolean
   mediaId?: string // p/ type==="media"
   text?: string // p/ type==="ticker"
+  opts?: { transparent?: boolean; opacity?: number } // p/ type==="timer"
 }
 type SceneKey = "intro" | "soon" | "disclaimer" | "camera" | "screen"
 type Scene = { key: SceneKey; label: string; bgImage: keyof typeof ASSET | null; frame: boolean; layers: Layer[] }
@@ -184,6 +185,7 @@ export default function InternalStudio({
   const [camId, setCamId] = useState<string>("")
   const [micId, setMicId] = useState<string>("")
   const [showConfig, setShowConfig] = useState(false)
+  const [timerConfigId, setTimerConfigId] = useState<string | null>(null)
   const [phase, setPhase] = useState<Phase>("idle")
   const [msg, setMsg] = useState<string | null>(null)
 
@@ -733,11 +735,18 @@ export default function InternalStudio({
       } else if (l.type === "screen" && screenVideoRef.current && screenStreamRef.current) {
         drawVideoCover(screenVideoRef.current, x, y, w, h)
       } else if (l.type === "timer" && timerVideoRef.current) {
+        const transparent = l.opts?.transparent !== false // default: transparente
+        const opacity = l.opts?.opacity ?? 1
+        ctx.save()
+        ctx.globalAlpha = opacity
+        // "screen": o fundo escuro do webm desaparece (preto → transparente), ficam os dígitos
+        if (transparent) ctx.globalCompositeOperation = "screen"
         try {
           ctx.drawImage(timerVideoRef.current, x, y, w, h)
         } catch {
           /* not ready */
         }
+        ctx.restore()
       } else if (l.type === "media" && l.mediaId) {
         const el = mediaElsRef.current[l.mediaId]
         if (el instanceof HTMLVideoElement) drawVideoCover(el, x, y, w, h)
@@ -840,7 +849,7 @@ export default function InternalStudio({
   }, [scene, selected, introBgMediaId])
 
   // ── interação ──
-  const toCanvas = (e: React.PointerEvent) => {
+  const toCanvas = (e: { clientX: number; clientY: number }) => {
     const canvas = canvasRef.current!
     const r = canvas.getBoundingClientRect()
     return { x: ((e.clientX - r.left) / r.width) * CW, y: ((e.clientY - r.top) / r.height) * CH }
@@ -883,6 +892,52 @@ export default function InternalStudio({
       persist(scenes)
     }
   }
+
+  // duplo clique num timer → abre configuração
+  const onDoubleClick = (e: React.MouseEvent) => {
+    const p = toCanvas(e)
+    const ordered = [...scene.layers].sort((a, b) => b.z - a.z)
+    for (const l of ordered) {
+      if (l.type !== "timer" || !l.visible) continue
+      const x = l.x * CW,
+        y = l.y * CH,
+        w = l.w * CW,
+        h = l.h * CH
+      if (p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h) {
+        setSelected(l.id)
+        setTimerConfigId(l.id)
+        return
+      }
+    }
+  }
+
+  const setTimerOpts = useCallback(
+    (id: string, patch: { transparent?: boolean; opacity?: number }) => {
+      setScenes((prev) => {
+        const next = prev.map((s) =>
+          s.key === activeScene
+            ? { ...s, layers: s.layers.map((l) => (l.id === id ? { ...l, opts: { ...l.opts, ...patch } } : l)) }
+            : s,
+        )
+        persist(next)
+        return next
+      })
+    },
+    [activeScene, persist],
+  )
+
+  const restartTimer = useCallback(() => {
+    const v = timerVideoRef.current
+    if (v) {
+      try {
+        v.currentTime = 0
+        void v.play()
+      } catch {
+        /* ignora */
+      }
+    }
+    setMsg("Timer reiniciado.")
+  }, [])
 
   // ── TRANSMITIR (WHIP) ──
   const startBroadcast = useCallback(async () => {
@@ -1025,9 +1080,41 @@ export default function InternalStudio({
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
+              onDoubleClick={onDoubleClick}
               className="w-full cursor-move rounded-lg"
               style={{ aspectRatio: "16 / 9", touchAction: "none" }}
             />
+            {timerConfigId && (() => {
+              const t = scene.layers.find((l) => l.id === timerConfigId)
+              if (!t) return null
+              const transparent = t.opts?.transparent !== false
+              const opacity = t.opts?.opacity ?? 1
+              return (
+                <div className="absolute left-1/2 top-1/2 z-10 w-64 -translate-x-1/2 -translate-y-1/2 space-y-2 rounded-xl border border-[#D2A63C]/50 bg-zinc-950/95 p-3 shadow-2xl">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-[#D2A63C]">Configurar timer</p>
+                    <button onClick={() => setTimerConfigId(null)} className="text-zinc-500 hover:text-white">✕</button>
+                  </div>
+                  <label className="flex items-center justify-between text-xs text-zinc-300">
+                    Fundo transparente
+                    <input type="checkbox" checked={transparent} onChange={(e) => setTimerOpts(t.id, { transparent: e.target.checked })} className="h-4 w-4 accent-[#D2A63C]" />
+                  </label>
+                  <label className="block text-xs text-zinc-300">
+                    Opacidade
+                    <input type="range" min={0.2} max={1} step={0.05} value={opacity} onChange={(e) => setTimerOpts(t.id, { opacity: parseFloat(e.target.value) })} className="mt-1 w-full accent-[#D2A63C]" />
+                  </label>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1 border-zinc-700" onClick={restartTimer}>
+                      <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reiniciar
+                    </Button>
+                    <Button size="sm" className="flex-1 bg-[#D2A63C] text-black hover:bg-[#c0972f]" onClick={() => setTimerConfigId(null)}>
+                      OK
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-zinc-600">Arrasta o timer para mover · pega no canto para redimensionar. Duplo-clique abre isto.</p>
+                </div>
+              )
+            })()}
             {live && (
               <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-red-600 px-2 py-1 text-xs font-bold text-white">
                 <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> AO VIVO
