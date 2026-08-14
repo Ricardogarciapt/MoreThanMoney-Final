@@ -253,7 +253,37 @@ export async function getMtmStrategyOptionsAsync(): Promise<MtmCopyStrategyOptio
       description: goldDidCatalog.description,
     })
   }
-  return list
+
+  // Visibilidade ao CLIENTE (/mtmcopy · «Estratégia MTM»): por defeito só Premium + Sensei.
+  // O admin pode expor outras (Booster, Gold Did, …) via site_settings 'mtmcopy_client_strategies'
+  // = {"ids": ["9gsL","mADd", …]}. Vazio/ausente → default Premium+Sensei.
+  const visibleIds = await getClientVisibleStrategyIds()
+  const filtered = list.filter((o) => visibleIds.includes(o.id))
+  // salvaguarda: nunca devolver vazio (se a allowlist não casar com nenhuma), cai em Premium+Sensei
+  return filtered.length
+    ? filtered
+    : list.filter((o) => o.id === CANONICAL_PREMIUM_STRATEGY_ID || o.id === CANONICAL_SENSEI_STRATEGY_ID)
+}
+
+/**
+ * IDs de estratégia visíveis ao cliente na «Estratégia MTM». Definível no admin em
+ * site_settings.mtmcopy_client_strategies = {"ids":[...]}. Default = Premium (9gsL) + Sensei (mADd).
+ */
+export async function getClientVisibleStrategyIds(): Promise<string[]> {
+  const def = [CANONICAL_PREMIUM_STRATEGY_ID, CANONICAL_SENSEI_STRATEGY_ID]
+  try {
+    const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
+    const { data } = await getSupabaseAdmin()
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'mtmcopy_client_strategies')
+      .maybeSingle()
+    const raw = (data?.value as { ids?: unknown } | null)?.ids
+    const ids = Array.isArray(raw) ? raw.map((x) => String(x).trim()).filter(Boolean) : []
+    return ids.length ? ids : def
+  } catch {
+    return def
+  }
 }
 
 export async function strategyIdsForTelegramGroupsAsync(
