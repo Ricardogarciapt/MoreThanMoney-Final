@@ -161,6 +161,7 @@ export default function InternalStudio({
   const micGainRef = useRef<GainNode | null>(null)
   const pcGainRef = useRef<GainNode | null>(null)
   const srcGainRef = useRef<GainNode | null>(null)
+  const introGainRef = useRef<GainNode | null>(null)
   const micConnectedRef = useRef(false)
   const screenAudioConnectedRef = useRef(false)
   const mediaElsRef = useRef<Record<string, HTMLVideoElement | HTMLImageElement | HTMLAudioElement>>({})
@@ -193,10 +194,11 @@ export default function InternalStudio({
 
   const [sources, setSources] = useState<MediaSource[]>([])
   const [urlInput, setUrlInput] = useState("")
-  const [mixer, setMixer] = useState<{ mic: ChannelState; pc: ChannelState; src: ChannelState }>({
+  const [mixer, setMixer] = useState<{ mic: ChannelState; pc: ChannelState; src: ChannelState; intro: ChannelState }>({
     mic: { on: true, vol: 1 },
     pc: { on: true, vol: 0.8 },
     src: { on: true, vol: 0.8 },
+    intro: { on: true, vol: 0.7 },
   })
 
   const scene = useMemo(() => scenes.find((s) => s.key === activeScene)!, [scenes, activeScene])
@@ -275,8 +277,10 @@ export default function InternalStudio({
       micGainRef.current = mk(mixer.mic.on ? mixer.mic.vol : 0)
       pcGainRef.current = mk(mixer.pc.on ? mixer.pc.vol : 0)
       srcGainRef.current = mk(mixer.src.on ? mixer.src.vol : 0)
-      // monitorização só das fontes de média (evita feedback do mic)
+      introGainRef.current = mk(mixer.intro.on ? mixer.intro.vol : 0)
+      // monitorização só das fontes de média/intro (evita feedback do mic)
       srcGainRef.current.connect(ac.destination)
+      introGainRef.current.connect(ac.destination)
     }
     if (acRef.current.state === "suspended") acRef.current.resume().catch(() => {})
     return acRef.current
@@ -287,6 +291,7 @@ export default function InternalStudio({
     if (micGainRef.current) micGainRef.current.gain.value = mixer.mic.on ? mixer.mic.vol : 0
     if (pcGainRef.current) pcGainRef.current.gain.value = mixer.pc.on ? mixer.pc.vol : 0
     if (srcGainRef.current) srcGainRef.current.gain.value = mixer.src.on ? mixer.src.vol : 0
+    if (introGainRef.current) introGainRef.current.gain.value = mixer.intro.on ? mixer.intro.vol : 0
   }, [mixer])
 
   const connectMicAudio = useCallback(
@@ -322,6 +327,21 @@ export default function InternalStudio({
       try {
         const node = ac.createMediaElementSource(el)
         node.connect(srcGainRef.current!)
+        mediaSrcNodesRef.current.add(el)
+      } catch {
+        /* ignora */
+      }
+    },
+    [ensureAudio],
+  )
+  // música de intro → canal "Áudio da Intro" (slider próprio no mixer)
+  const connectIntroAudio = useCallback(
+    (el: HTMLMediaElement) => {
+      if (mediaSrcNodesRef.current.has(el)) return
+      const ac = ensureAudio()
+      try {
+        const node = ac.createMediaElementSource(el)
+        node.connect(introGainRef.current!)
         mediaSrcNodesRef.current.add(el)
       } catch {
         /* ignora */
@@ -403,13 +423,13 @@ export default function InternalStudio({
     if (el) {
       if (shouldPlay) {
         el.loop = true
-        connectMediaAudio(el)
+        connectIntroAudio(el)
         if (el.paused) el.play().catch(() => {})
       } else if (!el.paused) {
         el.pause()
       }
     }
-  }, [activeScene, introMusicId, connectMediaAudio])
+  }, [activeScene, introMusicId, connectIntroAudio])
 
   // persiste a escolha da música de intro quando muda
   const introMusicInitRef = useRef(true)
@@ -466,19 +486,22 @@ export default function InternalStudio({
 
   /** Sobe já um ficheiro local (blob) para o storage e promove a fonte a remota (URL durável). */
   const promoteToOnline = async (id: string, name: string, blobUrl: string) => {
-    if (!educator) return
     try {
       const blob = await fetch(blobUrl).then((r) => r.blob())
       const fd = new FormData()
       fd.append("file", new File([blob], name, { type: blob.type || "application/octet-stream" }))
       const res = await fetch("/api/live-sessions/studio-asset", { method: "POST", credentials: "same-origin", body: fd })
-      if (!res.ok) return
-      const j = await res.json()
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setMsg(`Guardado só nesta sessão (${j?.error || res.status}). Inicia sessão de educador p/ guardar online.`)
+        return
+      }
       if (typeof j?.url === "string") {
         setSources((prev) => prev.map((x) => (x.id === id ? { ...x, src: j.url, remote: true } : x)))
+        setMsg(`✓ ${name} guardado online`)
       }
-    } catch {
-      /* fica local nesta sessão */
+    } catch (e) {
+      setMsg("Upload falhou: " + (e instanceof Error ? e.message : "erro") + " — fica local nesta sessão.")
     }
   }
 
@@ -754,7 +777,7 @@ export default function InternalStudio({
         const durationSec = l.opts?.durationSec ?? 300
         let st = timerStateRef.current[l.id]
         if (!st) {
-          st = { remainingMs: durationSec * 1000, running: false }
+          st = { remainingMs: durationSec * 1000, running: true } // arranca automaticamente
           timerStateRef.current[l.id] = st
         }
         if (st.running && st.remainingMs > 0) {
@@ -769,7 +792,7 @@ export default function InternalStudio({
         const ss = String(totalSec % 60).padStart(2, "0")
         const label = `${mm}:${ss}`
         const opacity = l.opts?.opacity ?? 1
-        const color = l.opts?.color || "#FFFFFF"
+        const color = l.opts?.color || "#D2A63C" // dourado por defeito
         ctx.save()
         ctx.globalAlpha = opacity
         // dígitos ajustados à altura da caixa
@@ -1092,7 +1115,7 @@ export default function InternalStudio({
   const live = phase === "live"
   const connecting = phase === "connecting"
 
-  const chan = (key: "mic" | "pc" | "src", label: string, icon: React.ReactNode) => {
+  const chan = (key: "mic" | "pc" | "src" | "intro", label: string, icon: React.ReactNode) => {
     const c = mixer[key]
     return (
       <div className="flex items-center gap-2">
@@ -1196,8 +1219,8 @@ export default function InternalStudio({
                   </label>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] text-zinc-400">Cor</span>
-                    {["#FFFFFF", "#D2A63C", "#22c55e", "#ef4444"].map((c) => (
-                      <button key={c} onClick={() => setTimerOpts(t.id, { color: c })} className={`h-5 w-5 rounded-full border ${(t.opts?.color || "#FFFFFF") === c ? "border-white" : "border-zinc-700"}`} style={{ backgroundColor: c }} />
+                    {["#D2A63C", "#FFFFFF", "#22c55e", "#ef4444"].map((c) => (
+                      <button key={c} onClick={() => setTimerOpts(t.id, { color: c })} className={`h-5 w-5 rounded-full border ${(t.opts?.color || "#D2A63C") === c ? "border-white" : "border-zinc-700"}`} style={{ backgroundColor: c }} />
                     ))}
                   </div>
                   <label className="block text-xs text-zinc-300">
@@ -1292,7 +1315,8 @@ export default function InternalStudio({
             {chan("mic", "Microfone", <Mic className="h-3 w-3" />)}
             {chan("pc", "Áudio do PC", <Monitor className="h-3 w-3" />)}
             {chan("src", "Áudio da fonte", <Music className="h-3 w-3" />)}
-            <p className="text-[11px] text-zinc-600">Controla o que entra na transmissão. Ouves só as fontes de média (o mic não é monitorizado para evitar retorno).</p>
+            {chan("intro", "Áudio da Intro", <Music className="h-3 w-3" />)}
+            <p className="text-[11px] text-zinc-600">Controla o que entra na transmissão. Ouves as fontes de média e a intro (o mic não é monitorizado para evitar retorno).</p>
           </div>
 
           {/* Botão para abrir configurações */}
