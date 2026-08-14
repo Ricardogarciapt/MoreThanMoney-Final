@@ -237,8 +237,11 @@ export default function InternalStudio({
             setSources(remote)
             remote.forEach(registerMediaElement)
           }
-          if (saved?.introMusicId) setIntroMusicId(saved.introMusicId)
-          if (saved?.introBgMediaId) setIntroBgMediaId(saved.introBgMediaId)
+          // só restaura as refs da intro se a fonte respetiva existir (evita refs penduradas
+          // de uploads que falharam antes)
+          const remoteIds = new Set((saved?.sources || []).filter((x) => x.remote).map((x) => x.id))
+          if (saved?.introMusicId && remoteIds.has(saved.introMusicId)) setIntroMusicId(saved.introMusicId)
+          if (saved?.introBgMediaId && remoteIds.has(saved.introBgMediaId)) setIntroBgMediaId(saved.introBgMediaId)
           if (saved?.mixer) setMixer(saved.mixer)
         }
       } catch {
