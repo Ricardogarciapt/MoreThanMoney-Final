@@ -22,7 +22,9 @@ import {
   Youtube,
   MessageSquare,
   Mic2,
+  Video,
 } from "lucide-react"
+import InternalStudio from "@/components/live/internal-studio"
 import EducatorFeedbacksList from "@/components/live/educator-feedbacks-list"
 import StreamKeyCard from "@/components/live/stream-key-card"
 import EducatorStudioLivePanel from "@/components/live/educator-studio-live-panel"
@@ -142,6 +144,7 @@ export default function EducatorStudio() {
   const liveCount = useMemo(() => streams.filter((s) => s.is_live).length, [streams])
   const liveStreams = useMemo(() => streams.filter((s) => s.is_live), [streams])
   const [studioPreviewStreamId, setStudioPreviewStreamId] = useState<string | null>(null)
+  const [internalStudioStreamId, setInternalStudioStreamId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!me?.educatorId) return
@@ -749,6 +752,22 @@ export default function EducatorStudio() {
                     <Button
                       size="sm"
                       variant="outline"
+                      className={
+                        internalStudioStreamId === stream.id
+                          ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
+                          : "border-[#D2A63C]/60 text-[#D2A63C] hover:bg-[#D2A63C]/10"
+                      }
+                      onClick={() =>
+                        setInternalStudioStreamId((prev) => (prev === stream.id ? null : stream.id))
+                      }
+                      title="Transmitir do browser (sem OBS) — câmara, ecrã e cenas MTM"
+                    >
+                      <Video className="mr-1 h-3 w-3" />
+                      {internalStudioStreamId === stream.id ? "Fechar studio" : "Studio no browser"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
                       className="border-orange-800 text-orange-200"
                       onClick={() => clearChat(stream.id)}
                     >
@@ -761,6 +780,16 @@ export default function EducatorStudio() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 p-4">
+                {internalStudioStreamId === stream.id && (
+                  <div className="rounded-xl border border-[#D2A63C]/40 bg-black/40 p-3">
+                    <div className="mb-3 flex items-center gap-2">
+                      <Video className="h-4 w-4 text-[#D2A63C]" />
+                      <p className="text-sm font-semibold text-[#D2A63C]">Studio no browser (sem OBS)</p>
+                      <span className="text-xs text-gray-500">— câmara, ecrã e cenas MTM, transmite direto para esta sala</span>
+                    </div>
+                    <InternalStudio presetStreamId={stream.id} presetStreamTitle={stream.title} />
+                  </div>
+                )}
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   <div>
                     <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Agenda (próxima live)</p>

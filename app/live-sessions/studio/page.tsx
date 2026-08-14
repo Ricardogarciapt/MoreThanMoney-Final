@@ -1,4 +1,4 @@
-import StudioModeSwitch from "@/components/live/studio-mode-switch"
+import EducatorStudio from "@/components/live/educator-studio"
 import { LiveSessionsShell } from "@/components/live/live-sessions-shell"
 
 export default function LiveSessionsStudioPage() {
@@ -6,10 +6,10 @@ export default function LiveSessionsStudioPage() {
     <LiveSessionsShell
       title="Studio do educador"
       showEducatorLink={false}
-      subtitle="Só vês os teus canais e chaves RTMP/OBS. Gestão global (academias oficiais, educadores) em Admin → Educação / LMS."
+      subtitle="Transmite por OBS/RTMP ou direto do browser (botão “Studio no browser” em cada sala). Só vês os teus canais e chaves. Gestão global em Admin → Educação / LMS."
     >
       <div className="mx-auto max-w-7xl">
-        <StudioModeSwitch />
+        <EducatorStudio />
       </div>
     </LiveSessionsShell>
   )
