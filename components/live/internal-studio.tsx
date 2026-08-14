@@ -107,7 +107,12 @@ const DEFAULT_SCENES: Scene[] = [
 
 const STORAGE_PREFIX = "mtm-internal-studio-layout-v2"
 
-type LayoutPayload = { layers?: Record<string, Layer[]>; sources?: MediaSource[]; introMusicId?: string | null }
+type LayoutPayload = {
+  layers?: Record<string, Layer[]>
+  sources?: MediaSource[]
+  introMusicId?: string | null
+  introBgMediaId?: string | null
+}
 
 /** Na cena Intro o timer fica SEMPRE à frente (z máximo), independentemente do que foi gravado. */
 function enforceIntroTimerOnTop(list: Scene[]): Scene[] {
@@ -171,6 +176,7 @@ export default function InternalStudio({
   const [scenes, setScenes] = useState<Scene[]>(DEFAULT_SCENES)
   const [activeScene, setActiveScene] = useState<SceneKey>("intro")
   const [introMusicId, setIntroMusicId] = useState<string | null>(null)
+  const [introBgMediaId, setIntroBgMediaId] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [camOn, setCamOn] = useState(false)
   const [screenOn, setScreenOn] = useState(false)
@@ -219,6 +225,7 @@ export default function InternalStudio({
             remote.forEach(registerMediaElement)
           }
           if (saved?.introMusicId) setIntroMusicId(saved.introMusicId)
+          if (saved?.introBgMediaId) setIntroBgMediaId(saved.introBgMediaId)
         }
       } catch {
         /* sem sessão */
@@ -417,7 +424,7 @@ export default function InternalStudio({
     }
     persistRef.current()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [introMusicId])
+  }, [introMusicId, introBgMediaId])
 
   // ── fontes de média (OBS-like) ──
   function registerMediaElement(s: MediaSource) {
@@ -544,7 +551,7 @@ export default function InternalStudio({
       const layers: Record<string, Layer[]> = {}
       nextScenes.forEach((s) => (layers[s.key] = s.layers))
       const srcs = (nextSources ?? sources).filter((s) => s.remote) // blobs não sobrevivem a reload
-      const payload = { layers, sources: srcs, introMusicId }
+      const payload = { layers, sources: srcs, introMusicId, introBgMediaId }
       // cache local imediato
       try {
         window.localStorage.setItem(`${STORAGE_PREFIX}:${educator?.id ?? "anon"}`, JSON.stringify(payload))
@@ -564,7 +571,7 @@ export default function InternalStudio({
         }, 800)
       }
     },
-    [educator, sources, introMusicId],
+    [educator, sources, introMusicId, introBgMediaId],
   )
 
   const updateLayer = useCallback(
@@ -606,10 +613,45 @@ export default function InternalStudio({
     [activeScene, persist, selected],
   )
 
-  const saveLayout = useCallback(() => {
+  /** Faz upload de um blob local para o storage e devolve o URL público (durável). */
+  const uploadLocalSource = useCallback(async (s: MediaSource): Promise<string | null> => {
+    try {
+      const blob = await fetch(s.src).then((r) => r.blob())
+      const fd = new FormData()
+      fd.append("file", new File([blob], s.name, { type: blob.type || "application/octet-stream" }))
+      const res = await fetch("/api/live-sessions/studio-asset", { method: "POST", credentials: "same-origin", body: fd })
+      if (!res.ok) return null
+      const j = await res.json()
+      return typeof j?.url === "string" ? j.url : null
+    } catch {
+      return null
+    }
+  }, [])
+
+  const saveLayout = useCallback(async () => {
+    setMsg("A guardar tudo…")
+    // 1) sobe ficheiros locais → URLs duráveis (para guardar MESMO tudo)
+    let workingSources = sources
+    if (educator) {
+      const pending = sources.filter((s) => !s.remote)
+      if (pending.length) {
+        const uploaded = await Promise.all(
+          pending.map(async (s) => {
+            const url = await uploadLocalSource(s)
+            return url ? { id: s.id, url } : null
+          }),
+        )
+        const map = new Map(uploaded.filter(Boolean).map((u) => [u!.id, u!.url] as const))
+        if (map.size) {
+          workingSources = sources.map((s) => (map.has(s.id) ? { ...s, src: map.get(s.id)!, remote: true } : s))
+          setSources(workingSources)
+        }
+      }
+    }
+    // 2) grava layers (TODAS as cenas) + fontes + intro
     const layers: Record<string, Layer[]> = {}
     scenes.forEach((s) => (layers[s.key] = s.layers))
-    const payload = { layers, sources: sources.filter((s) => s.remote), introMusicId }
+    const payload = { layers, sources: workingSources.filter((s) => s.remote), introMusicId, introBgMediaId }
     try {
       window.localStorage.setItem(`${STORAGE_PREFIX}:${educator?.id ?? "anon"}`, JSON.stringify(payload))
     } catch {
@@ -617,18 +659,21 @@ export default function InternalStudio({
     }
     if (educator) {
       if (serverSaveTimerRef.current) clearTimeout(serverSaveTimerRef.current)
-      fetch("/api/live-sessions/studio-layout", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify(payload),
-      })
-        .then(() => setMsg("Posições gravadas ✓ (guardadas na tua conta)"))
-        .catch(() => setMsg("Gravado localmente (servidor indisponível)"))
+      try {
+        const r = await fetch("/api/live-sessions/studio-layout", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify(payload),
+        })
+        setMsg(r.ok ? "Tudo guardado na tua conta ✓ (cenas, fontes, imagem/música de intro e posições)" : "Gravado localmente (servidor indisponível)")
+      } catch {
+        setMsg("Gravado localmente (servidor indisponível)")
+      }
     } else {
-      setMsg("Posições gravadas localmente ✓")
+      setMsg("Guardado localmente ✓")
     }
-  }, [scenes, sources, educator, introMusicId])
+  }, [scenes, sources, educator, introMusicId, introBgMediaId, uploadLocalSource])
 
   const resetScene = useCallback(() => {
     const def = DEFAULT_SCENES.find((s) => s.key === activeScene)!
@@ -745,6 +790,17 @@ export default function InternalStudio({
           }
         }
       }
+      // imagem de intro personalizada: SEMPRE full-frame (por cima do fundo default)
+      if (scene.key === "intro" && introBgMediaId) {
+        const el = mediaElsRef.current[introBgMediaId]
+        if (el instanceof HTMLImageElement && el.complete && el.naturalWidth) {
+          try {
+            ctx.drawImage(el, 0, 0, CW, CH)
+          } catch {
+            /* ignora */
+          }
+        }
+      }
       ;[...scene.layers].sort((a, b) => a.z - b.z).forEach(drawLayer)
       if (scene.frame) {
         const f = imagesRef.current.frame
@@ -762,7 +818,7 @@ export default function InternalStudio({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
-  }, [scene, selected])
+  }, [scene, selected, introBgMediaId])
 
   // ── interação ──
   const toCanvas = (e: React.PointerEvent) => {
@@ -1028,14 +1084,25 @@ export default function InternalStudio({
                   {s.label}
                 </button>
               ))}
-              <button
-                onClick={() => setShowConfig((v) => !v)}
-                className="col-span-2 rounded-lg bg-zinc-800 px-2 py-2 text-xs text-zinc-300 hover:text-white"
-              >
-                <Settings2 className="mr-1 inline h-3.5 w-3.5" /> {showConfig ? "Fechar configuração" : "Fontes, dispositivos e mixer …"}
-              </button>
             </div>
           </div>
+
+          {/* Mixer de áudio — sempre visível, abaixo das cenas e acima das configurações */}
+          <div className="space-y-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+            <p className="text-xs font-medium text-zinc-400">Mixer de áudio</p>
+            {chan("mic", "Microfone", <Mic className="h-3 w-3" />)}
+            {chan("pc", "Áudio do PC", <Monitor className="h-3 w-3" />)}
+            {chan("src", "Áudio da fonte", <Music className="h-3 w-3" />)}
+            <p className="text-[11px] text-zinc-600">Controla o que entra na transmissão. Ouves só as fontes de média (o mic não é monitorizado para evitar retorno).</p>
+          </div>
+
+          {/* Botão para abrir configurações */}
+          <button
+            onClick={() => setShowConfig((v) => !v)}
+            className="w-full rounded-lg bg-zinc-800 px-2 py-2 text-xs text-zinc-300 hover:text-white"
+          >
+            <Settings2 className="mr-1 inline h-3.5 w-3.5" /> {showConfig ? "Fechar configurações" : "Fontes, dispositivos e rodapé …"}
+          </button>
 
           {showConfig && (
             <>
@@ -1111,6 +1178,44 @@ export default function InternalStudio({
                 <p className="text-[11px] text-zinc-600">Ficheiros locais valem para esta sessão; URLs ficam guardados.</p>
               </div>
 
+              {/* Imagem de intro (full-frame) */}
+              <div className="space-y-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                <p className="text-xs font-medium text-zinc-400">Imagem de intro (full-frame)</p>
+                <p className="text-[11px] text-zinc-600">Ocupa sempre o ecrã todo na cena <strong className="text-zinc-400">Intro</strong>. Sem escolha, usa a moldura MTM.</p>
+                <select
+                  value={introBgMediaId ?? ""}
+                  onChange={(e) => setIntroBgMediaId(e.target.value || null)}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-white"
+                >
+                  <option value="">— predefinida (MTM) —</option>
+                  {sources.filter((s) => s.kind === "image").map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                <label className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-700 px-2 py-1.5 text-[11px] text-zinc-300 hover:border-[#D2A63C] hover:text-white">
+                  <ImageIcon className="h-3.5 w-3.5" /> Carregar imagem de intro
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) {
+                        const src = URL.createObjectURL(f)
+                        const s: MediaSource = { id: `img${Math.round(performance.now())}`, kind: "image", name: f.name, src, remote: false }
+                        registerMediaElement(s)
+                        setSources((prev) => [...prev, s])
+                        setIntroBgMediaId(s.id)
+                        setActiveScene("intro")
+                      }
+                      e.currentTarget.value = ""
+                    }}
+                  />
+                </label>
+              </div>
+
               {/* Música de intro */}
               <div className="space-y-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
                 <p className="text-xs font-medium text-zinc-400">Música de intro (loop)</p>
@@ -1149,15 +1254,6 @@ export default function InternalStudio({
                 {sources.filter((s) => s.kind === "audio").length === 0 && (
                   <p className="text-[11px] text-zinc-600">Carrega um mp3 aqui ou em Fontes.</p>
                 )}
-              </div>
-
-              {/* Mixer */}
-              <div className="space-y-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
-                <p className="text-xs font-medium text-zinc-400">Mixer de áudio</p>
-                {chan("mic", "Microfone", <Mic className="h-3 w-3" />)}
-                {chan("pc", "Áudio do PC", <Monitor className="h-3 w-3" />)}
-                {chan("src", "Áudio da fonte", <Music className="h-3 w-3" />)}
-                <p className="text-[11px] text-zinc-600">Controla o que entra na transmissão. Ouves só as fontes de média (o mic não é monitorizado para evitar retorno).</p>
               </div>
 
               {/* Rodapé deslizante (ticker) */}
