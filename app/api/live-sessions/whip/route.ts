@@ -21,13 +21,16 @@ import { generateMtmIngestStreamKey } from "@/lib/lms-stream-keys"
 
 const supabase = getSupabaseAdmin()
 
-// Base do WHIP no SRS. Default = host público de streaming na porta RTC (8000).
-function whipBase(): string {
-  const raw =
-    process.env.LMS_WHIP_BASE?.trim() ||
-    process.env.LMS_SRS_HTTP_BASE?.trim() ||
-    "http://stream.morethanmoney.pt:8000"
-  return raw.replace(/\/+$/, "")
+/**
+ * Bases candidatas para o signaling WHIP no SRS. Se LMS_WHIP_BASE estiver definido, usa só essa.
+ * Caso contrário tenta a HTTP-API padrão do SRS (1985) e depois a porta RTC (8000) — deployments
+ * variam. O media (UDP) vai sempre direto ao rtc_server; só o POST de signaling passa por aqui.
+ */
+function whipBases(): string[] {
+  const explicit = process.env.LMS_WHIP_BASE?.trim() || process.env.LMS_SRS_HTTP_BASE?.trim()
+  if (explicit) return [explicit.replace(/\/+$/, "")]
+  const host = process.env.RTMP_SERVER_HOST?.replace(/^rtmps?:\/\//i, "").split("/")[0] || "stream.morethanmoney.pt"
+  return [`http://${host}:1985`, `http://${host}:8000`]
 }
 
 async function requireEducator() {
@@ -95,30 +98,38 @@ export async function POST(request: NextRequest) {
   const key = await resolveTargetKey(edu.educatorId, streamId)
   if (!key) return NextResponse.json({ error: "stream_not_found" }, { status: 404 })
 
-  const target = `${whipBase()}/rtc/v1/whip/?app=live&stream=${encodeURIComponent(key)}`
-
-  let answer: string
+  const q = `/rtc/v1/whip/?app=live&stream=${encodeURIComponent(key)}`
+  let answer: string | null = null
   let resource: string | null = null
-  try {
-    const srs = await fetch(target, {
-      method: "POST",
-      headers: { "Content-Type": "application/sdp" },
-      body: offer,
-      // O SRS pode demorar a responder num cold path; sem cache.
-      cache: "no-store",
-    })
-    if (!srs.ok) {
-      const detail = await srs.text().catch(() => "")
-      return NextResponse.json(
-        { error: "srs_rejected", status: srs.status, detail: detail.slice(0, 500) },
-        { status: 502 },
-      )
+  const errors: string[] = []
+  for (const base of whipBases()) {
+    try {
+      const srs = await fetch(`${base}${q}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/sdp" },
+        body: offer,
+        cache: "no-store",
+      })
+      if (!srs.ok) {
+        const detail = await srs.text().catch(() => "")
+        errors.push(`${base}: HTTP ${srs.status} ${detail.slice(0, 200)}`)
+        continue
+      }
+      const body = await srs.text()
+      if (!body.includes("v=0")) {
+        errors.push(`${base}: resposta sem SDP`)
+        continue
+      }
+      answer = body
+      resource = srs.headers.get("Location")
+      break
+    } catch (e) {
+      errors.push(`${base}: ${e instanceof Error ? e.message : "fetch failed"}`)
     }
-    answer = await srs.text()
-    resource = srs.headers.get("Location")
-  } catch (e) {
+  }
+  if (!answer) {
     return NextResponse.json(
-      { error: "srs_unreachable", detail: e instanceof Error ? e.message : "fetch failed" },
+      { error: "srs_unreachable", detail: errors.join(" | ").slice(0, 500) },
       { status: 502 },
     )
   }
