@@ -31,14 +31,7 @@ export default function InternalStudioModal({
   const [chatInput, setChatInput] = useState("")
   const chatEndRef = useRef<HTMLDivElement | null>(null)
 
-  // fecha com ESC
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [onClose])
+  // O modal só fecha no X (não em ESC nem em clique fora) — evita sair sem querer a meio de um live.
 
   // chat: poll
   const loadMessages = useCallback(async () => {
@@ -132,11 +125,8 @@ export default function InternalStudioModal({
   )
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-2 sm:p-4" onClick={onClose}>
-      <div
-        className="flex h-[94vh] w-[97vw] max-w-[1500px] flex-col overflow-hidden rounded-2xl border border-[#D2A63C]/40 bg-zinc-950 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-1 sm:p-2">
+      <div className="flex h-[97vh] w-[99vw] max-w-[1900px] flex-col overflow-hidden rounded-2xl border border-[#D2A63C]/40 bg-zinc-950 shadow-2xl">
         {/* Header: nome editável */}
         <div className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2.5">
           <Pencil className="h-4 w-4 shrink-0 text-[#D2A63C]" />
