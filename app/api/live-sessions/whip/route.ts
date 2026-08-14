@@ -30,7 +30,9 @@ function whipBases(): string[] {
   const explicit = process.env.LMS_WHIP_BASE?.trim() || process.env.LMS_SRS_HTTP_BASE?.trim()
   if (explicit) return [explicit.replace(/\/+$/, "")]
   const host = process.env.RTMP_SERVER_HOST?.replace(/^rtmps?:\/\//i, "").split("/")[0] || "stream.morethanmoney.pt"
-  return [`http://${host}:1985`, `http://${host}:8000`]
+  // 1º: caminho TLS via nginx (443, já público) que faz proxy p/ a http-api do SRS (1985) em /rtc/.
+  // Fallbacks diretos caso o nginx não tenha a location (deployments antigos).
+  return [`https://${host}`, `http://${host}:1985`, `http://${host}:8000`]
 }
 
 async function requireEducator() {

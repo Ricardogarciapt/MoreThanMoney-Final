@@ -788,6 +788,16 @@ export default function EducatorStudio() {
                       <span className="text-xs text-gray-500">— câmara, ecrã e cenas MTM, transmite direto para esta sala</span>
                     </div>
                     <InternalStudio presetStreamId={stream.id} presetStreamTitle={stream.title} />
+                    <div className="mt-3 border-t border-zinc-800 pt-3">
+                      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[#D2A63C]">
+                        <Video className="h-3.5 w-3.5" /> Gravação (DVR do VPS) · guardar · traduzir · YouTube
+                      </p>
+                      <p className="mb-2 text-[11px] text-gray-500">
+                        Quando transmites do browser, o VPS grava automaticamente pela chave da sala. Aqui descarregas o
+                        MP4 multi-áudio, geras legendas/dobragens e envias para o YouTube — o mesmo pipeline do OBS.
+                      </p>
+                      <EducatorDvrPanel />
+                    </div>
                   </div>
                 )}
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
