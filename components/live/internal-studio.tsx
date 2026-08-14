@@ -38,6 +38,9 @@ import {
 const CW = 1280
 const CH = 720
 const HANDLE = 16
+// Cap de bitrate do vídeo enviado por WebRTC (bps). DVR grava -c copy, logo herda este bitrate →
+// gravações mais leves no disco de 120GB + menos carga no VPS + ingest WebRTC mais estável.
+const VIDEO_MAX_BITRATE = 1_200_000
 
 const FRAME_WINDOW = { x: 0.032, y: 0.113, w: 0.935, h: 0.829 }
 
@@ -1043,9 +1046,24 @@ export default function InternalStudio({
 
       const pc = new RTCPeerConnection({ iceServers: [] })
       pcRef.current = pc
-      canvasStream.getVideoTracks().forEach((t) => pc.addTrack(t, canvasStream))
+      const vTrack = canvasStream.getVideoTracks()[0]
+      const vSender = vTrack ? pc.addTrack(vTrack, canvasStream) : null
       const audioTrack = masterRef.current!.stream.getAudioTracks()[0]
       if (audioTrack) pc.addTrack(audioTrack, masterRef.current!.stream)
+
+      // Cap de bitrate do vídeo: DVR mais leve (grava -c copy, logo herda este bitrate) + menos
+      // carga no VPS + WebRTC mais estável. ~1.2 Mbps é suficiente p/ 720p de aula/ecrã.
+      if (vSender) {
+        try {
+          const p = vSender.getParameters()
+          if (!p.encodings || !p.encodings.length) p.encodings = [{}]
+          p.encodings[0].maxBitrate = VIDEO_MAX_BITRATE
+          p.encodings[0].maxFramerate = 30
+          await vSender.setParameters(p)
+        } catch {
+          /* alguns browsers só aceitam setParameters após a negociação */
+        }
+      }
 
       pc.onconnectionstatechange = () => {
         if (pc.connectionState === "connected") {
