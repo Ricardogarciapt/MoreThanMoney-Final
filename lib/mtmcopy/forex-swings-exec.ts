@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { CANONICAL_TRADE_IDEAS_ACCOUNT_ID } from './provider-constants'
 
 /**
  * Execução dos sinais "Forex Swings" (canal James → relay fs-relay) na conta mestre MTM Auto Forex
@@ -18,9 +19,12 @@ export interface ForexSwingsExecConfig {
   lot: number
   /** % de risco ao SL por posição (default 0.5). 0 = usa lote fixo `lot`. */
   riskPct: number
+  /** Conta MetaApi onde a ordem-mestre abre (CopyFactory replica p/ subscritores). Configurável. */
+  accountId: string
 }
 
 const KEY = 'forex_swings_execution'
+const DEFAULT_ACCOUNT = CANONICAL_TRADE_IDEAS_ACCOUNT_ID
 
 export async function getForexSwingsExecConfig(): Promise<ForexSwingsExecConfig> {
   try {
@@ -31,8 +35,9 @@ export async function getForexSwingsExecConfig(): Promise<ForexSwingsExecConfig>
       v.mode === 'shadow' || v.mode === 'live' ? v.mode : 'off'
     const lot = typeof v.lot === 'number' && v.lot > 0 ? v.lot : 0.01
     const riskPct = typeof v.riskPct === 'number' && v.riskPct >= 0 ? v.riskPct : 0.5
-    return { mode, lot, riskPct }
+    const accountId = typeof v.accountId === 'string' && v.accountId.trim() ? v.accountId.trim() : DEFAULT_ACCOUNT
+    return { mode, lot, riskPct, accountId }
   } catch {
-    return { mode: 'off', lot: 0.01, riskPct: 0.5 }
+    return { mode: 'off', lot: 0.01, riskPct: 0.5, accountId: DEFAULT_ACCOUNT }
   }
 }

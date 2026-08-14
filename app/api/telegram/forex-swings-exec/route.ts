@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { placeOrder, type OrderRequest } from '@/lib/mtmcopy/metaapi'
 import { tradeIdeasTrailingDistance } from '@/lib/mtmcopy/pip-points'
-import { CANONICAL_TRADE_IDEAS_ACCOUNT_ID } from '@/lib/mtmcopy/provider-constants'
 import { getForexSwingsExecConfig } from '@/lib/mtmcopy/forex-swings-exec'
 import { computeRiskLot } from '@/lib/mtmcopy/risk-sizing'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
@@ -69,13 +68,14 @@ export async function POST(req: NextRequest) {
   await feedAppChat(symbol, direction, sl, tp)
 
   // Sizing por RISCO (0.5% ao SL) — ordem a mercado, sem entry → usa o preço de mercado atual.
+  // Com riskPct=0 usa lote FIXO cfg.lot. Conta-mestre configurável (cfg.accountId).
   const sizing = cfg.riskPct > 0
-    ? await computeRiskLot(CANONICAL_TRADE_IDEAS_ACCOUNT_ID, symbol, sl, cfg.riskPct, null, cfg.lot)
+    ? await computeRiskLot(cfg.accountId, symbol, sl, cfg.riskPct, null, cfg.lot)
     : { lot: cfg.lot, basis: 'fixed' as const, equity: null, entry: null }
   const lot = sizing.lot
 
   const orderReq: OrderRequest = {
-    accountId: CANONICAL_TRADE_IDEAS_ACCOUNT_ID, // fbeeafeb — MTM Auto Forex (5IHE)
+    accountId: cfg.accountId, // conta-mestre Forex Swings (configurável em site_settings.forex_swings_execution)
     symbol,
     direction,
     volume: lot,
