@@ -24,7 +24,7 @@ import {
   Mic2,
   Video,
 } from "lucide-react"
-import InternalStudio from "@/components/live/internal-studio"
+import InternalStudioModal from "@/components/live/internal-studio-modal"
 import EducatorFeedbacksList from "@/components/live/educator-feedbacks-list"
 import StreamKeyCard from "@/components/live/stream-key-card"
 import EducatorStudioLivePanel from "@/components/live/educator-studio-live-panel"
@@ -780,26 +780,6 @@ export default function EducatorStudio() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 p-4">
-                {internalStudioStreamId === stream.id && (
-                  <div className="rounded-xl border border-[#D2A63C]/40 bg-black/40 p-3">
-                    <div className="mb-3 flex items-center gap-2">
-                      <Video className="h-4 w-4 text-[#D2A63C]" />
-                      <p className="text-sm font-semibold text-[#D2A63C]">Studio no browser (sem OBS)</p>
-                      <span className="text-xs text-gray-500">— câmara, ecrã e cenas MTM, transmite direto para esta sala</span>
-                    </div>
-                    <InternalStudio presetStreamId={stream.id} presetStreamTitle={stream.title} />
-                    <div className="mt-3 border-t border-zinc-800 pt-3">
-                      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[#D2A63C]">
-                        <Video className="h-3.5 w-3.5" /> Gravação (DVR do VPS) · guardar · traduzir · YouTube
-                      </p>
-                      <p className="mb-2 text-[11px] text-gray-500">
-                        Quando transmites do browser, o VPS grava automaticamente pela chave da sala. Aqui descarregas o
-                        MP4 multi-áudio, geras legendas/dobragens e envias para o YouTube — o mesmo pipeline do OBS.
-                      </p>
-                      <EducatorDvrPanel />
-                    </div>
-                  </div>
-                )}
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   <div>
                     <p className="mb-1 text-[11px] uppercase tracking-wide text-gray-500">Agenda (próxima live)</p>
@@ -1297,6 +1277,20 @@ export default function EducatorStudio() {
           </Card>
         </aside>
       </div>
+
+      {internalStudioStreamId &&
+        (() => {
+          const s = streams.find((x) => x.id === internalStudioStreamId)
+          if (!s) return null
+          return (
+            <InternalStudioModal
+              streamId={s.id}
+              title={s.title}
+              onClose={() => setInternalStudioStreamId(null)}
+              onTitleChange={() => me?.educatorId && loadStreams(me.educatorId)}
+            />
+          )
+        })()}
     </div>
   )
 }

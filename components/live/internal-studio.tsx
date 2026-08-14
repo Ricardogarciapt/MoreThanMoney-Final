@@ -49,7 +49,7 @@ const ASSET = {
   timer: "/studio/timer-5min.webm",
 }
 
-type LayerType = "camera" | "timer" | "screen" | "media"
+type LayerType = "camera" | "timer" | "screen" | "media" | "ticker"
 type Layer = {
   id: string
   type: LayerType
@@ -60,6 +60,7 @@ type Layer = {
   z: number
   visible: boolean
   mediaId?: string // p/ type==="media"
+  text?: string // p/ type==="ticker"
 }
 type SceneKey = "soon" | "disclaimer" | "camera" | "screen"
 type Scene = { key: SceneKey; label: string; bgImage: keyof typeof ASSET | null; frame: boolean; layers: Layer[] }
@@ -140,6 +141,7 @@ export default function InternalStudio({
   const mediaElsRef = useRef<Record<string, HTMLVideoElement | HTMLImageElement | HTMLAudioElement>>({})
   const mediaSrcNodesRef = useRef<WeakSet<HTMLMediaElement>>(new WeakSet())
   const serverSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const tickerOffsetsRef = useRef<Record<string, number>>({})
 
   const [educator, setEducator] = useState<{ id: string; name: string } | null>(null)
   const [targets, setTargets] = useState<StreamTarget[]>([])
@@ -467,6 +469,25 @@ export default function InternalStudio({
     [activeScene, connectMediaAudio, toggleMediaPlay],
   )
 
+  const addTicker = useCallback(() => {
+    const layer: Layer = {
+      id: `tick${Math.round(performance.now())}`,
+      type: "ticker",
+      x: 0.04,
+      y: 0.86,
+      w: 0.92,
+      h: 0.09,
+      z: 20,
+      visible: true,
+      text: "MoreThanMoney · A Gameplan — escreve aqui o teu texto",
+    }
+    setScenes((prev) => prev.map((sc) => (sc.key === activeScene ? { ...sc, layers: [...sc.layers, layer] } : sc)))
+    setSelected(layer.id)
+    setMsg("Rodapé adicionado — arrasta, redimensiona e escreve o texto.")
+  }, [activeScene])
+
+  const tickers = useMemo(() => scene.layers.filter((l) => l.type === "ticker"), [scene])
+
   // ── persistência ──
   const persist = useCallback(
     (nextScenes: Scene[], nextSources?: MediaSource[]) => {
@@ -505,6 +526,31 @@ export default function InternalStudio({
       )
     },
     [activeScene],
+  )
+
+  const updateTickerText = useCallback(
+    (id: string, text: string) => {
+      setScenes((prev) => {
+        const next = prev.map((s) =>
+          s.key === activeScene ? { ...s, layers: s.layers.map((l) => (l.id === id ? { ...l, text } : l)) } : s,
+        )
+        persist(next)
+        return next
+      })
+    },
+    [activeScene, persist],
+  )
+
+  const removeLayer = useCallback(
+    (id: string) => {
+      setScenes((prev) => {
+        const next = prev.map((s) => (s.key === activeScene ? { ...s, layers: s.layers.filter((l) => l.id !== id) } : s))
+        persist(next)
+        return next
+      })
+      if (selected === id) setSelected(null)
+    },
+    [activeScene, persist, selected],
   )
 
   const saveLayout = useCallback(() => {
@@ -586,6 +632,34 @@ export default function InternalStudio({
             /* ignora */
           }
         }
+      } else if (l.type === "ticker") {
+        const text = (l.text && l.text.trim()) || "Escreve aqui o texto do rodapé…"
+        // barra
+        ctx.fillStyle = "rgba(10,14,26,0.85)"
+        ctx.fillRect(x, y, w, h)
+        ctx.fillStyle = "#D2A63C"
+        ctx.fillRect(x, y, w, 3)
+        ctx.save()
+        ctx.beginPath()
+        ctx.rect(x, y, w, h)
+        ctx.clip()
+        const fs = Math.max(14, Math.min(h * 0.5, 32))
+        ctx.font = `600 ${fs}px sans-serif`
+        ctx.textBaseline = "middle"
+        ctx.fillStyle = "#ffffff"
+        const gap = 120
+        const tw = ctx.measureText(text).width + gap
+        let off = tickerOffsetsRef.current[l.id] ?? 0
+        off = (off + 1.6) % tw
+        tickerOffsetsRef.current[l.id] = off
+        let sx = x + w - off
+        while (sx < x + w) {
+          ctx.fillText(text, sx, y + h / 2)
+          sx += tw
+        }
+        // desenha a cópia à esquerda p/ loop contínuo
+        ctx.fillText(text, x + w - off - tw, y + h / 2)
+        ctx.restore()
       } else if (l.type !== "media") {
         ctx.fillStyle = "rgba(210,166,60,0.10)"
         ctx.fillRect(x, y, w, h)
@@ -991,6 +1065,32 @@ export default function InternalStudio({
                 {chan("pc", "Áudio do PC", <Monitor className="h-3 w-3" />)}
                 {chan("src", "Áudio da fonte", <Music className="h-3 w-3" />)}
                 <p className="text-[11px] text-zinc-600">Controla o que entra na transmissão. Ouves só as fontes de média (o mic não é monitorizado para evitar retorno).</p>
+              </div>
+
+              {/* Rodapé deslizante (ticker) */}
+              <div className="space-y-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                <p className="text-xs font-medium text-zinc-400">Rodapé deslizante (ticker)</p>
+                <Button size="sm" variant="outline" className="w-full border-zinc-700" onClick={addTicker}>
+                  <Plus className="mr-1.5 h-4 w-4" /> Adicionar rodapé nesta cena
+                </Button>
+                {tickers.map((t) => (
+                  <div key={t.id} className="space-y-1 rounded-lg bg-zinc-800/60 p-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-zinc-400">Texto (desliza da direita p/ a esquerda)</span>
+                      <button onClick={() => removeLayer(t.id)} className="text-zinc-500 hover:text-red-400">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <textarea
+                      defaultValue={t.text}
+                      onChange={(e) => updateTickerText(t.id, e.target.value)}
+                      rows={2}
+                      className="w-full resize-none rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-white"
+                      placeholder="Escreve o texto do rodapé…"
+                    />
+                  </div>
+                ))}
+                {tickers.length === 0 && <p className="text-[11px] text-zinc-600">Sem rodapé nesta cena. O rodapé é arrastável, redimensionável e a posição/texto ficam gravados.</p>}
               </div>
             </>
           )}
