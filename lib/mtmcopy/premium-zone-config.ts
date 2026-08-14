@@ -28,6 +28,13 @@ export interface PremiumZoneConfig {
   flee_pips: number
   /** Espaço mínimo (pips) até ao TP1 para entrar a mercado (evita entrar colado ao TP). */
   min_room_pips: number
+  /**
+   * Nº de CAMADAS de entrada por sinal (position building na zona). 1 = comportamento clássico
+   * (1 perna com o lote total). 2 = divide o MESMO lote/risco em 2 pernas: a 1ª na metade da zona
+   * mais perto do preço (entra na reação inicial), a 2ª na metade mais funda (entra se o preço
+   * aprofundar). Mantém o risco total; só faz média na zona. Requer mode='live' + zona no sinal.
+   */
+  layers: number
 }
 
 const KEY = "mtmcopy_premium_zone"
@@ -41,6 +48,7 @@ export const DEFAULT_PREMIUM_ZONE_CONFIG: PremiumZoneConfig = {
   cancel_on_sl_break: true,
   flee_pips: 50,
   min_room_pips: 30,
+  layers: 1,
 }
 
 export async function getPremiumZoneConfig(): Promise<PremiumZoneConfig> {
@@ -62,6 +70,7 @@ export async function getPremiumZoneConfig(): Promise<PremiumZoneConfig> {
       cancel_on_sl_break: v.cancel_on_sl_break !== false,
       flee_pips: Number.isFinite(Number(v.flee_pips)) && Number(v.flee_pips) > 0 ? Number(v.flee_pips) : 50,
       min_room_pips: Number.isFinite(Number(v.min_room_pips)) && Number(v.min_room_pips) >= 0 ? Number(v.min_room_pips) : 30,
+      layers: Number.isFinite(Number(v.layers)) && Number(v.layers) >= 1 ? Math.min(Math.floor(Number(v.layers)), 3) : 1,
     }
   } catch {
     return { ...DEFAULT_PREMIUM_ZONE_CONFIG }

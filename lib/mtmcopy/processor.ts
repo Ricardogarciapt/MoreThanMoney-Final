@@ -1149,32 +1149,58 @@ async function executeViaMtmProvider(
               fleePips: zoneCfg.flee_pips,
               minRoomPips: zoneCfg.min_room_pips,
             })
-      // Pendente do PROVIDER só quando NÃO entra já a mercado (senão o monitor duplicava a entrada).
-      // Shadow cria sempre (registo comparativo).
-      if (zoneDecision !== 'market' || zoneCfg.mode === 'shadow') {
+      // CAMADAS (position building na zona). 1 perna = lote total (clássico). 2 pernas = MESMO lote/risco
+      // dividido em duas: a 1ª na metade da zona mais perto do preço (entra na reação inicial), a 2ª na
+      // metade mais funda (entra se o preço aprofundar). Ambas seguem a zona pelo monitor. Só 'live'.
+      const nLegs =
+        zoneCfg.mode === 'live' && Number(zoneCfg.layers) >= 2 && premiumProviderSingle.lot >= 0.02 ? 2 : 1
+      const zoneMid = (zoneLow + zoneHigh) / 2
+      const isBuyDir = signalForExec.direction !== 'sell'
+      const legZoneFor = (i: number): [number, number] => {
+        if (nLegs === 1) return [zoneLow, zoneHigh]
+        // i=0 = camada RASA (perto do preço); i=1 = camada FUNDA. buy: preço desce (perto=high); sell: sobe (perto=low).
+        if (isBuyDir) return i === 0 ? [zoneMid, zoneHigh] : [zoneLow, zoneMid]
+        return i === 0 ? [zoneLow, zoneMid] : [zoneMid, zoneHigh]
+      }
+      const legLotFor = (i: number): number => {
+        if (nLegs === 1) return premiumProviderSingle!.lot
+        const half = Math.max(0.01, Math.round((premiumProviderSingle!.lot / nLegs) * 100) / 100)
+        // última perna absorve o resto para o somatório bater certo com o lote total (mantém o risco)
+        return i < nLegs - 1
+          ? half
+          : Math.max(0.01, Math.round((premiumProviderSingle!.lot - half * (nLegs - 1)) * 100) / 100)
+      }
+      // Cria pendente quando NÃO entra já a mercado (single) OU sempre que há 2 camadas (ambas seguem
+      // a zona pelo monitor). Shadow cria sempre (registo comparativo). 'skip' nunca cria.
+      const createPending =
+        nLegs >= 2 ? zoneDecision !== 'skip' : zoneDecision !== 'market' || zoneCfg.mode === 'shadow'
+      if (createPending) {
       try {
         const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
-        await getSupabaseAdmin().from('mtmcopy_premium_pending').insert({
-          account_id: provider.accountId,
-          channel,
-          symbol: mappedSymbol,
-          direction: signalForExec.direction,
-          zone_low: zoneLow,
-          zone_high: zoneHigh,
-          entry: signalForExec.entry ?? marketPrice ?? null,
-          sl: signalForExec.sl ?? null,
-          tp: signalForExec.tp ?? [],
-          exit_pct_tp1: premiumProviderSingle.exitPcts.tp1,
-          exit_pct_tp2: premiumProviderSingle.exitPcts.tp2,
-          exit_pct_tp3: premiumProviderSingle.exitPcts.tp3,
-          lot: premiumProviderSingle.lot,
-          equity,
-          comment: premiumProviderSingle.comment,
-          telegram_message_id: telegramMessageId ?? null,
-          mode: zoneCfg.mode,
-          status: 'pending',
-          expires_at: new Date(Date.now() + zoneCfg.expiry_min * 60_000).toISOString(),
-        })
+        for (let i = 0; i < nLegs; i++) {
+          const [lz, hz] = legZoneFor(i)
+          await getSupabaseAdmin().from('mtmcopy_premium_pending').insert({
+            account_id: provider.accountId,
+            channel,
+            symbol: mappedSymbol,
+            direction: signalForExec.direction,
+            zone_low: lz,
+            zone_high: hz,
+            entry: signalForExec.entry ?? marketPrice ?? null,
+            sl: signalForExec.sl ?? null,
+            tp: signalForExec.tp ?? [],
+            exit_pct_tp1: premiumProviderSingle.exitPcts.tp1,
+            exit_pct_tp2: premiumProviderSingle.exitPcts.tp2,
+            exit_pct_tp3: premiumProviderSingle.exitPcts.tp3,
+            lot: legLotFor(i),
+            equity,
+            comment: premiumProviderSingle.comment,
+            telegram_message_id: telegramMessageId ?? null,
+            mode: zoneCfg.mode,
+            status: 'pending',
+            expires_at: new Date(Date.now() + zoneCfg.expiry_min * 60_000).toISOString(),
+          })
+        }
       } catch {
         /* não bloquear a execução por falha ao gravar o pendente */
       }
@@ -1222,6 +1248,24 @@ async function executeViaMtmProvider(
       }
 
       if (zoneCfg.mode === 'live') {
+        if (nLegs >= 2) {
+          // 2 camadas: ambas ficam pendentes; o monitor entra cada uma quando o preço chega à sua
+          // metade da zona (rasa → funda). Nada entra a mercado aqui (evita duplicar a 1ª perna).
+          if (zoneDecision === 'skip') {
+            await logProviderSignalEvent({
+              channel, provider, signal: signalForExec, raw, telegramMessageId,
+              status: 'skipped',
+              detail: `${aiDetail} · Zona ${zoneLow}–${zoneHigh}: sem espaço até ao TP1 — não persegue`,
+            })
+            return
+          }
+          await logProviderSignalEvent({
+            channel, provider, signal: signalForExec, raw, telegramMessageId, lot: totalLot,
+            status: 'received',
+            detail: `${aiDetail} · Zona ${zoneLow}–${zoneHigh}: ${nLegs} camadas pendentes (${legLotFor(0)}+${legLotFor(1)} lote, rasa→funda) — segue a zona · ${executionSummary}`,
+          })
+          return
+        }
         if (zoneDecision === 'pending') {
           await logProviderSignalEvent({
             channel,
