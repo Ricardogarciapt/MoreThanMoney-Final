@@ -606,7 +606,8 @@ export default function EducatorStudio() {
         </div>
       </div>
 
-      {liveStreams.length > 0 && studioPreviewStreamId && (
+      {/* Preview HLS só quando NÃO estás a transmitir pelo studio no browser (evita eco/feedback do teu próprio áudio). Só reproduz para ingest externo tipo OBS. */}
+      {liveStreams.length > 0 && studioPreviewStreamId && !internalStudioStreamId && (
         <Card className="overflow-hidden border-red-900/40 bg-gradient-to-br from-gray-950 via-black to-gray-950 shadow-[0_0_40px_rgba(220,38,38,0.12)]">
           <CardHeader className="border-b border-red-900/20 bg-red-950/20 pb-3">
             <CardTitle className="flex flex-wrap items-center gap-2 text-base text-white">
