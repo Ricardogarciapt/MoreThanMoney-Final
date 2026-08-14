@@ -78,8 +78,11 @@ export async function POST(request: NextRequest) {
     }
     const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path)
     const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/+$/, "")
-    // signedUrl vem tipo "/object/upload/sign/<bucket>/<path>?token=..."
-    const uploadUrl = `${supabaseUrl}/storage/v1${signed.data.signedUrl.startsWith("/") ? "" : "/"}${signed.data.signedUrl}`
+    // signedUrl pode vir ABSOLUTO (https://…) ou relativo (/object/upload/sign/…) conforme a versão
+    const raw = signed.data.signedUrl
+    const uploadUrl = /^https?:\/\//i.test(raw)
+      ? raw
+      : `${supabaseUrl}/storage/v1${raw.startsWith("/") ? "" : "/"}${raw}`
     return NextResponse.json({ mode: "signed", uploadUrl, token: signed.data.token, path, bucket, publicUrl: pub.publicUrl })
   }
 
