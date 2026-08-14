@@ -75,7 +75,8 @@ const DEFAULT_SCENES: Scene[] = [
     label: "Intro",
     bgImage: "intro",
     frame: false,
-    layers: [{ id: "intro-timer", type: "timer", x: 0.4, y: 0.68, w: 0.2, h: 0.2, z: 2, visible: true }],
+    // timer sempre à frente na Intro (z alto)
+    layers: [{ id: "intro-timer", type: "timer", x: 0.4, y: 0.68, w: 0.2, h: 0.2, z: 999, visible: true }],
   },
   {
     key: "soon",
@@ -107,6 +108,15 @@ const DEFAULT_SCENES: Scene[] = [
 const STORAGE_PREFIX = "mtm-internal-studio-layout-v2"
 
 type LayoutPayload = { layers?: Record<string, Layer[]>; sources?: MediaSource[]; introMusicId?: string | null }
+
+/** Na cena Intro o timer fica SEMPRE à frente (z máximo), independentemente do que foi gravado. */
+function enforceIntroTimerOnTop(list: Scene[]): Scene[] {
+  return list.map((s) =>
+    s.key === "intro"
+      ? { ...s, layers: s.layers.map((l) => (l.type === "timer" ? { ...l, z: 999, visible: true } : l)) }
+      : s,
+  )
+}
 
 function loadLayout(ns: string): LayoutPayload | null {
   try {
@@ -201,7 +211,8 @@ export default function InternalStudio({
             /* servidor indisponível */
           }
           if (!saved) saved = loadLayout(r.educatorId)
-          if (saved?.layers) setScenes(DEFAULT_SCENES.map((s) => ({ ...s, layers: saved!.layers![s.key] ?? s.layers })))
+          if (saved?.layers)
+            setScenes(enforceIntroTimerOnTop(DEFAULT_SCENES.map((s) => ({ ...s, layers: saved!.layers![s.key] ?? s.layers }))))
           if (saved?.sources) {
             const remote = saved.sources.filter((x) => x.remote)
             setSources(remote)
