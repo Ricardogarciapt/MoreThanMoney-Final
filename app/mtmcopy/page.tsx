@@ -152,8 +152,8 @@ function SignalHistory({ accessToken }: { accessToken: string }) {
 // ---------------------------------------------------------------------------
 
 const HOW_IT_WORKS = [
-  { icon: Send, title: "Escolhe o teu método", text: "Estratégia MTM, grupo de sinais (Premium ou Forex) ou copy trader entre as tuas contas." },
-  { icon: Settings2, title: "Configura risco e saídas", text: "Define lote, percentagem de risco e — no Premium — a percentagem fechada em cada exit." },
+  { icon: Send, title: "Escolhe o teu método", text: "Estratégia MTM, grupos de sinais ou copy trader entre as tuas contas." },
+  { icon: Settings2, title: "Configura risco e saídas", text: "Define lote, percentagem de risco e a percentagem fechada em cada saída parcial." },
   { icon: LineChart, title: "Activa após pagamento", text: "Pré-configura as contas quando quiseres. A cópia só arranca quando a subscrição estiver activa." },
   { icon: ShieldCheck, title: "Acompanha no terminal", text: "Monitoriza execuções, saldos e desempenho no teu dashboard de métricas." },
 ]
