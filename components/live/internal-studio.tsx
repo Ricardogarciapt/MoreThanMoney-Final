@@ -1101,14 +1101,18 @@ export default function InternalStudio({
       const audioTrack = masterRef.current!.stream.getAudioTracks()[0]
       if (audioTrack) pc.addTrack(audioTrack, masterRef.current!.stream)
 
-      // Cap de bitrate do vídeo: DVR mais leve (grava -c copy, logo herda este bitrate) + menos
-      // carga no VPS + WebRTC mais estável. ~1.2 Mbps é suficiente p/ 720p de aula/ecrã.
-      if (vSender) {
+      // Bitrate ESTÁVEL (como o OBS ~2000 kbps 720p30): fixa max/min e não deixa o WebRTC baixar
+      // resolução — mantém a qualidade constante em vez de oscilar com a rede.
+      if (vSender && vTrack) {
         try {
+          vTrack.contentHint = "detail" // aulas/gráficos: prioriza nitidez do texto
           const p = vSender.getParameters()
           if (!p.encodings || !p.encodings.length) p.encodings = [{}]
           p.encodings[0].maxBitrate = VIDEO_MAX_BITRATE
+          ;(p.encodings[0] as RTCRtpEncodingParameters & { minBitrate?: number }).minBitrate = Math.round(VIDEO_MAX_BITRATE * 0.8)
           p.encodings[0].maxFramerate = 30
+          p.encodings[0].scaleResolutionDownBy = 1 // nunca reduz a resolução (720p fixo)
+          ;(p as RTCRtpSendParameters & { degradationPreference?: string }).degradationPreference = "maintain-resolution"
           await vSender.setParameters(p)
         } catch {
           /* alguns browsers só aceitam setParameters após a negociação */
