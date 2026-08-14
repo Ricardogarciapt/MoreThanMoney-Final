@@ -111,11 +111,14 @@ const DEFAULT_SCENES: Scene[] = [
 
 const STORAGE_PREFIX = "mtm-internal-studio-layout-v2"
 
+type ChannelState = { on: boolean; vol: number }
+type MixerState = { mic: ChannelState; pc: ChannelState; src: ChannelState; intro: ChannelState }
 type LayoutPayload = {
   layers?: Record<string, Layer[]>
   sources?: MediaSource[]
   introMusicId?: string | null
   introBgMediaId?: string | null
+  mixer?: MixerState
 }
 
 /** Na cena Intro o timer fica SEMPRE à frente (z máximo), independentemente do que foi gravado. */
@@ -138,7 +141,6 @@ function loadLayout(ns: string): LayoutPayload | null {
 
 type StreamTarget = { id: string; title: string; is_live?: boolean }
 type Phase = "idle" | "connecting" | "live" | "error"
-type ChannelState = { on: boolean; vol: number }
 
 export default function InternalStudio({
   presetStreamId,
@@ -237,6 +239,7 @@ export default function InternalStudio({
           }
           if (saved?.introMusicId) setIntroMusicId(saved.introMusicId)
           if (saved?.introBgMediaId) setIntroBgMediaId(saved.introBgMediaId)
+          if (saved?.mixer) setMixer(saved.mixer)
         }
       } catch {
         /* sem sessão */
@@ -662,7 +665,7 @@ export default function InternalStudio({
       const layers: Record<string, Layer[]> = {}
       nextScenes.forEach((s) => (layers[s.key] = s.layers))
       const srcs = (nextSources ?? sources).filter((s) => s.remote) // blobs não sobrevivem a reload
-      const payload = { layers, sources: srcs, introMusicId, introBgMediaId }
+      const payload = { layers, sources: srcs, introMusicId, introBgMediaId, mixer }
       // cache local imediato
       try {
         window.localStorage.setItem(`${STORAGE_PREFIX}:${educator?.id ?? "anon"}`, JSON.stringify(payload))
@@ -682,7 +685,7 @@ export default function InternalStudio({
         }, 800)
       }
     },
-    [educator, sources, introMusicId, introBgMediaId],
+    [educator, sources, introMusicId, introBgMediaId, mixer],
   )
 
   const updateLayer = useCallback(
@@ -757,7 +760,7 @@ export default function InternalStudio({
     // 2) grava layers (TODAS as cenas) + fontes + intro
     const layers: Record<string, Layer[]> = {}
     scenes.forEach((s) => (layers[s.key] = s.layers))
-    const payload = { layers, sources: workingSources.filter((s) => s.remote), introMusicId, introBgMediaId }
+    const payload = { layers, sources: workingSources.filter((s) => s.remote), introMusicId, introBgMediaId, mixer }
     try {
       window.localStorage.setItem(`${STORAGE_PREFIX}:${educator?.id ?? "anon"}`, JSON.stringify(payload))
     } catch {
@@ -779,7 +782,7 @@ export default function InternalStudio({
     } else {
       setMsg("Guardado localmente ✓")
     }
-  }, [scenes, sources, educator, introMusicId, introBgMediaId, uploadLocalSource])
+  }, [scenes, sources, educator, introMusicId, introBgMediaId, mixer, uploadLocalSource])
 
   const resetScene = useCallback(() => {
     const def = DEFAULT_SCENES.find((s) => s.key === activeScene)!
