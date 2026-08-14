@@ -555,7 +555,16 @@ export default function InternalStudio({
     try {
       const url = await uploadBlobOnline(name, blobUrl)
       if (url) {
-        setSources((prev) => prev.map((x) => (x.id === id ? { ...x, src: url, remote: true } : x)))
+        setSources((prev) => {
+          const next = prev.map((x) => (x.id === id ? { ...x, src: url, remote: true } : x))
+          // grava já com a fonte remota (garante que a imagem/mp3 de intro persistem)
+          try {
+            persist(scenes, next)
+          } catch {
+            /* ignora */
+          }
+          return next
+        })
         setMsg(`✓ ${name} guardado online`)
       }
     } catch (e) {
@@ -1482,7 +1491,14 @@ export default function InternalStudio({
                       <button onClick={() => addMediaToScene(s)} className="rounded bg-[#D2A63C]/20 px-1.5 py-0.5 text-[11px] text-[#D2A63C] hover:bg-[#D2A63C]/30">
                         {s.kind === "audio" ? "Tocar" : "→ Cena"}
                       </button>
-                      <button onClick={() => removeSource(s.id)} className="text-zinc-500 hover:text-red-400">
+                      <button
+                        onClick={() => (s.remote ? setMsg(`${s.name} já está online ✓`) : promoteToOnline(s.id, s.name, s.src))}
+                        className="text-sm leading-none"
+                        title={s.remote ? "Já guardado online" : "Guardar online (upload)"}
+                      >
+                        {s.remote ? "✅" : "🆙"}
+                      </button>
+                      <button onClick={() => removeSource(s.id)} className="text-zinc-500 hover:text-red-400" title="Remover">
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
