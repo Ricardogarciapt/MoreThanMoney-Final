@@ -125,8 +125,8 @@ export default function InternalStudioModal({
   )
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-1 sm:p-2">
-      <div className="flex h-[97vh] w-[99vw] max-w-[1900px] flex-col overflow-hidden rounded-2xl border border-[#D2A63C]/40 bg-zinc-950 shadow-2xl">
+    <div className="fixed inset-x-0 bottom-0 top-[84px] z-[100] flex items-start justify-center bg-black/85 p-1 sm:p-2">
+      <div className="flex h-full w-[99vw] max-w-[1900px] flex-col overflow-hidden rounded-2xl border border-[#D2A63C]/40 bg-zinc-950 shadow-2xl">
         {/* Header: nome editável */}
         <div className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2.5">
           <Pencil className="h-4 w-4 shrink-0 text-[#D2A63C]" />

@@ -167,6 +167,7 @@ export default function InternalStudio({
   const introGainRef = useRef<GainNode | null>(null)
   const micConnectedRef = useRef(false)
   const screenAudioConnectedRef = useRef(false)
+  const analysersRef = useRef<Record<"mic" | "pc" | "src" | "intro", AnalyserNode | null>>({ mic: null, pc: null, src: null, intro: null })
   const mediaElsRef = useRef<Record<string, HTMLVideoElement | HTMLImageElement | HTMLAudioElement>>({})
   const mediaSrcNodesRef = useRef<WeakSet<HTMLMediaElement>>(new WeakSet())
   const serverSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -203,6 +204,7 @@ export default function InternalStudio({
     src: { on: true, vol: 0.8 },
     intro: { on: true, vol: 0.7 },
   })
+  const [levels, setLevels] = useState<{ mic: number; pc: number; src: number; intro: number }>({ mic: 0, pc: 0, src: 0, intro: 0 })
 
   const scene = useMemo(() => scenes.find((s) => s.key === activeScene)!, [scenes, activeScene])
 
@@ -281,6 +283,20 @@ export default function InternalStudio({
       pcGainRef.current = mk(mixer.pc.on ? mixer.pc.vol : 0)
       srcGainRef.current = mk(mixer.src.on ? mixer.src.vol : 0)
       introGainRef.current = mk(mixer.intro.on ? mixer.intro.vol : 0)
+      // analisadores por canal (medidores de nível) — tocam na saída de cada gain
+      const mkAnalyser = (g: GainNode) => {
+        const an = ac.createAnalyser()
+        an.fftSize = 256
+        an.smoothingTimeConstant = 0.7
+        g.connect(an)
+        return an
+      }
+      analysersRef.current = {
+        mic: mkAnalyser(micGainRef.current),
+        pc: mkAnalyser(pcGainRef.current),
+        src: mkAnalyser(srcGainRef.current),
+        intro: mkAnalyser(introGainRef.current),
+      }
       // monitorização só das fontes de média/intro (evita feedback do mic)
       srcGainRef.current.connect(ac.destination)
       introGainRef.current.connect(ac.destination)
@@ -288,6 +304,34 @@ export default function InternalStudio({
     if (acRef.current.state === "suspended") acRef.current.resume().catch(() => {})
     return acRef.current
   }, [mixer])
+
+  // medidores de nível (VU) — lê os analisadores e atualiza ~20fps
+  useEffect(() => {
+    let raf = 0
+    let last = 0
+    const buf = new Uint8Array(128)
+    const rms = (an: AnalyserNode | null) => {
+      if (!an) return 0
+      an.getByteTimeDomainData(buf)
+      let sum = 0
+      for (let i = 0; i < buf.length; i++) {
+        const v = (buf[i] - 128) / 128
+        sum += v * v
+      }
+      const r = Math.sqrt(sum / buf.length) // 0..1
+      return Math.min(1, r * 2.2) // ganho visual
+    }
+    const tick = (t: number) => {
+      raf = requestAnimationFrame(tick)
+      if (t - last < 50) return
+      last = t
+      const a = analysersRef.current
+      if (!a.mic && !a.pc && !a.src && !a.intro) return
+      setLevels({ mic: rms(a.mic), pc: rms(a.pc), src: rms(a.src), intro: rms(a.intro) })
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
 
   // aplica mudanças do mixer aos gains
   useEffect(() => {
@@ -1138,7 +1182,10 @@ export default function InternalStudio({
 
   const chan = (key: "mic" | "pc" | "src" | "intro", label: string, icon: React.ReactNode) => {
     const c = mixer[key]
+    const lvl = c.on ? levels[key] : 0
+    const lvlColor = lvl > 0.85 ? "#ef4444" : lvl > 0.6 ? "#eab308" : "#22c55e"
     return (
+      <div className="space-y-1">
       <div className="flex items-center gap-2">
         <button
           onClick={() => setMixer((m) => ({ ...m, [key]: { ...m[key], on: !m[key].on } }))}
@@ -1160,6 +1207,11 @@ export default function InternalStudio({
           onChange={(e) => setMixer((m) => ({ ...m, [key]: { ...m[key], vol: parseFloat(e.target.value) } }))}
           className="flex-1 accent-[#D2A63C]"
         />
+      </div>
+      {/* medidor de nível de áudio */}
+      <div className="ml-9 mr-1 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+        <div className="h-full rounded-full transition-[width] duration-75" style={{ width: `${Math.round(lvl * 100)}%`, backgroundColor: lvlColor }} />
+      </div>
       </div>
     )
   }
