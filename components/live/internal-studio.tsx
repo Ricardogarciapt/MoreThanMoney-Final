@@ -139,6 +139,7 @@ export default function InternalStudio({
   const screenAudioConnectedRef = useRef(false)
   const mediaElsRef = useRef<Record<string, HTMLVideoElement | HTMLImageElement | HTMLAudioElement>>({})
   const mediaSrcNodesRef = useRef<WeakSet<HTMLMediaElement>>(new WeakSet())
+  const serverSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [educator, setEducator] = useState<{ id: string; name: string } | null>(null)
   const [targets, setTargets] = useState<StreamTarget[]>([])
@@ -177,8 +178,16 @@ export default function InternalStudio({
           setTargets(list)
           if (presetStreamId) setTargetId(presetStreamId)
           else setTargetId(list.find((s) => s.is_live)?.id ?? list[0]?.id ?? "")
-          const saved = loadLayout(r.educatorId)
-          if (saved?.layers) setScenes(DEFAULT_SCENES.map((s) => ({ ...s, layers: saved.layers![s.key] ?? s.layers })))
+          // 1º servidor (durável, cross-device); fallback p/ localStorage (cache offline).
+          let saved: { layers?: Record<string, Layer[]>; sources?: MediaSource[] } | null = null
+          try {
+            const srv = await fetch("/api/live-sessions/studio-layout", { credentials: "same-origin" }).then((x) => x.json())
+            if (srv?.layout && (srv.layout.layers || srv.layout.sources)) saved = srv.layout
+          } catch {
+            /* servidor indisponível */
+          }
+          if (!saved) saved = loadLayout(r.educatorId)
+          if (saved?.layers) setScenes(DEFAULT_SCENES.map((s) => ({ ...s, layers: saved!.layers![s.key] ?? s.layers })))
           if (saved?.sources) {
             const remote = saved.sources.filter((x) => x.remote)
             setSources(remote)
@@ -461,13 +470,27 @@ export default function InternalStudio({
   // ── persistência ──
   const persist = useCallback(
     (nextScenes: Scene[], nextSources?: MediaSource[]) => {
+      const layers: Record<string, Layer[]> = {}
+      nextScenes.forEach((s) => (layers[s.key] = s.layers))
+      const srcs = (nextSources ?? sources).filter((s) => s.remote) // blobs não sobrevivem a reload
+      const payload = { layers, sources: srcs }
+      // cache local imediato
       try {
-        const layers: Record<string, Layer[]> = {}
-        nextScenes.forEach((s) => (layers[s.key] = s.layers))
-        const srcs = (nextSources ?? sources).filter((s) => s.remote) // blobs não sobrevivem a reload
-        window.localStorage.setItem(`${STORAGE_PREFIX}:${educator?.id ?? "anon"}`, JSON.stringify({ layers, sources: srcs }))
+        window.localStorage.setItem(`${STORAGE_PREFIX}:${educator?.id ?? "anon"}`, JSON.stringify(payload))
       } catch {
         /* ignora */
+      }
+      // gravação durável no servidor (debounce 800ms) — não faz reset ao sair
+      if (educator) {
+        if (serverSaveTimerRef.current) clearTimeout(serverSaveTimerRef.current)
+        serverSaveTimerRef.current = setTimeout(() => {
+          fetch("/api/live-sessions/studio-layout", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify(payload),
+          }).catch(() => {})
+        }, 800)
       }
     },
     [educator, sources],
@@ -485,9 +508,28 @@ export default function InternalStudio({
   )
 
   const saveLayout = useCallback(() => {
-    persist(scenes)
-    setMsg("Posições gravadas ✓")
-  }, [scenes, persist])
+    const layers: Record<string, Layer[]> = {}
+    scenes.forEach((s) => (layers[s.key] = s.layers))
+    const payload = { layers, sources: sources.filter((s) => s.remote) }
+    try {
+      window.localStorage.setItem(`${STORAGE_PREFIX}:${educator?.id ?? "anon"}`, JSON.stringify(payload))
+    } catch {
+      /* ignora */
+    }
+    if (educator) {
+      if (serverSaveTimerRef.current) clearTimeout(serverSaveTimerRef.current)
+      fetch("/api/live-sessions/studio-layout", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(payload),
+      })
+        .then(() => setMsg("Posições gravadas ✓ (guardadas na tua conta)"))
+        .catch(() => setMsg("Gravado localmente (servidor indisponível)"))
+    } else {
+      setMsg("Posições gravadas localmente ✓")
+    }
+  }, [scenes, sources, educator])
 
   const resetScene = useCallback(() => {
     const def = DEFAULT_SCENES.find((s) => s.key === activeScene)!
