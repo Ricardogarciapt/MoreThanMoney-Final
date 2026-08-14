@@ -176,14 +176,8 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Marca a stream como ao vivo (não bloqueia a resposta se falhar).
-  if (streamId) {
-    await supabase
-      .from("lms_streams")
-      .update({ is_live: true, live_started_at: new Date().toISOString(), live_ended_at: null })
-      .eq("id", streamId)
-      .eq("educator_id", edu.educatorId)
-  }
+  // NÃO marca is_live aqui: só quando o media do browser LIGA de facto (o cliente chama PATCH
+  // em connectionState="connected"). Assim a sala não fica "LIVE à espera do ingest OBS" sem stream.
 
   return new NextResponse(answer, {
     status: 201,
@@ -192,6 +186,20 @@ export async function POST(request: NextRequest) {
       ...(resource ? { "X-Whip-Resource": resource } : {}),
     },
   })
+}
+
+/** Marca a stream ao vivo SÓ quando o media do browser confirma ligação (connectionState=connected). */
+export async function PATCH(request: NextRequest) {
+  const edu = await requireEducator()
+  if (!edu) return NextResponse.json({ error: "not_authenticated" }, { status: 401 })
+  const streamId = request.nextUrl.searchParams.get("streamId")
+  if (!streamId) return NextResponse.json({ error: "no_stream" }, { status: 400 })
+  await supabase
+    .from("lms_streams")
+    .update({ is_live: true, live_started_at: new Date().toISOString(), live_ended_at: null })
+    .eq("id", streamId)
+    .eq("educator_id", edu.educatorId)
+  return NextResponse.json({ ok: true })
 }
 
 export async function DELETE(request: NextRequest) {

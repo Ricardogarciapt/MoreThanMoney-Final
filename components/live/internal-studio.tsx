@@ -1116,9 +1116,19 @@ export default function InternalStudio({
         if (pc.connectionState === "connected") {
           setPhase("live")
           setMsg("A transmitir ao vivo ✓ (o VPS está a gravar para o DVR)")
+          // só AGORA marca a sala LIVE (media do browser ligou) — não espera OBS
+          fetch(`/api/live-sessions/whip?streamId=${encodeURIComponent(targetId)}`, {
+            method: "PATCH",
+            credentials: "same-origin",
+          }).catch(() => {})
         } else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
           setPhase("error")
-          setMsg("Ligação de media perdida. Verifica UDP 8000 do servidor de streaming.")
+          setMsg("Ligação de media não estabelecida (a tua rede pode bloquear UDP e TCP 8000).")
+          // garante que a sala não fica marcada LIVE sem stream
+          fetch(`/api/live-sessions/whip?streamId=${encodeURIComponent(targetId)}`, {
+            method: "DELETE",
+            credentials: "same-origin",
+          }).catch(() => {})
         }
       }
 
