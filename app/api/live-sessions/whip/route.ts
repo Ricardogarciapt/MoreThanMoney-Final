@@ -208,11 +208,40 @@ export async function PATCH(request: NextRequest) {
   if (!edu) return NextResponse.json({ error: "not_authenticated" }, { status: 401 })
   const streamId = request.nextUrl.searchParams.get("streamId")
   if (!streamId) return NextResponse.json({ error: "no_stream" }, { status: 400 })
+
+  // Estado anterior: só notificamos na TRANSIÇÃO offline→live (evita push duplicado se o browser
+  // re-liga a PeerConnection a meio da sessão).
+  const { data: before } = await supabase
+    .from("lms_streams")
+    .select("is_live, title")
+    .eq("id", streamId)
+    .eq("educator_id", edu.educatorId)
+    .maybeSingle()
+  const wasLive = Boolean((before as { is_live?: boolean } | null)?.is_live)
+  const title = (before as { title?: string } | null)?.title || "Sessão ao vivo"
+
   await supabase
     .from("lms_streams")
     .update({ is_live: true, live_started_at: new Date().toISOString(), live_ended_at: null })
     .eq("id", streamId)
     .eq("educator_id", edu.educatorId)
+
+  // Notificação de início de sessão (mesma do ingest OBS/presence) — o studio do browser também
+  // dispara o push "Estamos em Direto!" quando a transmissão arranca de facto.
+  if (!wasLive) {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.morethanmoney.pt"
+    fetch(`${siteUrl}/api/notifications/send-push`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        all: true,
+        title: "🔴 Estamos em Direto!",
+        body: `"${title}" está agora ao vivo. Entra já!`,
+        data: { type: "live_session", url: "/app-mobile?tab=live", streamId },
+      }),
+    }).catch((e) => console.error("[whip] push failed:", e))
+  }
+
   return NextResponse.json({ ok: true })
 }
 

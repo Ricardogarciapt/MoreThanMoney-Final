@@ -71,7 +71,7 @@ type SceneKey = "intro" | "soon" | "disclaimer" | "camera" | "screen"
 type Scene = { key: SceneKey; label: string; bgImage: keyof typeof ASSET | null; frame: boolean; layers: Layer[] }
 
 type SourceKind = "image" | "video" | "audio"
-type MediaSource = { id: string; kind: SourceKind; name: string; src: string; remote: boolean }
+type MediaSource = { id: string; kind: SourceKind; name: string; src: string; remote: boolean; uploading?: boolean; error?: boolean }
 
 const DEFAULT_SCENES: Scene[] = [
   {
@@ -537,29 +537,43 @@ export default function InternalStudio({
     }
   }
 
-  /** Sobe um blob local DIRETO ao Supabase Storage (URL assinado → contorna o limite da Vercel). */
-  const uploadBlobOnline = async (name: string, blobUrl: string): Promise<string | null> => {
+  /**
+   * Sobe um blob local DIRETO ao Supabase Storage (URL assinado → contorna o limite da Vercel).
+   * Com retries: uploads têm de ficar online (o utilizador exige que NADA fique só local).
+   */
+  const uploadBlobOnline = async (name: string, blobUrl: string, attempts = 3): Promise<string | null> => {
     const blob = await fetch(blobUrl).then((r) => r.blob())
     const type = blob.type || "application/octet-stream"
-    const meta = await fetch("/api/live-sessions/studio-asset", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, type }),
-    }).then((r) => r.json())
-    if (!meta?.uploadUrl) throw new Error(meta?.error || "sem URL de upload")
-    const put = await fetch(meta.uploadUrl, { method: "PUT", headers: { "content-type": type, "x-upsert": "true" }, body: blob })
-    if (!put.ok) throw new Error(`storage ${put.status}`)
-    return typeof meta.publicUrl === "string" ? meta.publicUrl : null
+    let lastErr: unknown = null
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const meta = await fetch("/api/live-sessions/studio-asset", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name, type }),
+        }).then((r) => r.json())
+        if (!meta?.uploadUrl) throw new Error(meta?.error || "sem URL de upload")
+        const put = await fetch(meta.uploadUrl, { method: "PUT", headers: { "content-type": type, "x-upsert": "true" }, body: blob })
+        if (!put.ok) throw new Error(`storage ${put.status}`)
+        if (typeof meta.publicUrl === "string" && meta.publicUrl) return meta.publicUrl
+        throw new Error("sem publicUrl")
+      } catch (e) {
+        lastErr = e
+        if (i < attempts - 1) await new Promise((r) => setTimeout(r, 600 * (i + 1)))
+      }
+    }
+    throw (lastErr instanceof Error ? lastErr : new Error("upload falhou"))
   }
 
-  /** Sobe já um ficheiro local e promove a fonte a remota (URL durável). */
+  /** Sobe já um ficheiro local e promove a fonte a remota (URL durável). Marca estado na fonte. */
   const promoteToOnline = async (id: string, name: string, blobUrl: string) => {
+    setSources((prev) => prev.map((x) => (x.id === id ? { ...x, uploading: true, error: false } : x)))
     try {
       const url = await uploadBlobOnline(name, blobUrl)
       if (url) {
         setSources((prev) => {
-          const next = prev.map((x) => (x.id === id ? { ...x, src: url, remote: true } : x))
+          const next = prev.map((x) => (x.id === id ? { ...x, src: url, remote: true, uploading: false, error: false } : x))
           // grava já com a fonte remota (garante que a imagem/mp3 de intro persistem)
           try {
             persist(scenes, next)
@@ -571,7 +585,8 @@ export default function InternalStudio({
         setMsg(`✓ ${name} guardado online`)
       }
     } catch (e) {
-      setMsg("Upload: " + (e instanceof Error ? e.message : "erro") + " — fica local nesta sessão.")
+      setSources((prev) => prev.map((x) => (x.id === id ? { ...x, uploading: false, error: true } : x)))
+      setMsg("⚠️ Falha a guardar online “" + name + "”: " + (e instanceof Error ? e.message : "erro") + ". Carrega em 🔁 para tentar de novo.")
     }
   }
 
@@ -751,32 +766,46 @@ export default function InternalStudio({
 
   const saveLayout = useCallback(async () => {
     setMsg("A guardar tudo…")
-    // 1) sobe ficheiros locais → URLs duráveis (para guardar MESMO tudo)
+    // 1) sobe TODOS os ficheiros locais → URLs duráveis (nada pode ficar só local)
     let workingSources = sources
+    const failed: string[] = []
     if (educator) {
       const pending = sources.filter((s) => !s.remote)
       if (pending.length) {
+        setMsg(`A guardar ${pending.length} ficheiro(s) online…`)
         const uploaded = await Promise.all(
           pending.map(async (s) => {
             const url = await uploadLocalSource(s)
+            if (!url) failed.push(s.name)
             return url ? { id: s.id, url } : null
           }),
         )
         const map = new Map(uploaded.filter(Boolean).map((u) => [u!.id, u!.url] as const))
-        if (map.size) {
-          workingSources = sources.map((s) => (map.has(s.id) ? { ...s, src: map.get(s.id)!, remote: true } : s))
-          setSources(workingSources)
-        }
+        workingSources = sources.map((s) =>
+          map.has(s.id) ? { ...s, src: map.get(s.id)!, remote: true, uploading: false, error: false } : failed.includes(s.name) && !s.remote ? { ...s, error: true } : s,
+        )
+        setSources(workingSources)
       }
     }
-    // 2) grava layers (TODAS as cenas) + fontes + intro
+    // 2) só entram fontes ONLINE (remote) no save durável — um blob local não sobrevive à sessão
+    const remoteSources = workingSources.filter((s) => s.remote)
+    const remoteIds = new Set(remoteSources.map((s) => s.id))
+    // 3) nunca gravar referências de intro penduradas (a causa do "intro em branco")
+    const safeIntroBg = introBgMediaId && remoteIds.has(introBgMediaId) ? introBgMediaId : null
+    const safeIntroMusic = introMusicId && remoteIds.has(introMusicId) ? introMusicId : null
+    if (introBgMediaId && !safeIntroBg) failed.push("imagem de intro")
+    if (introMusicId && !safeIntroMusic) failed.push("música de intro")
+    // 4) grava layers (TODAS as cenas) + fontes online + intro validada
     const layers: Record<string, Layer[]> = {}
     scenes.forEach((s) => (layers[s.key] = s.layers))
-    const payload = { layers, sources: workingSources.filter((s) => s.remote), introMusicId, introBgMediaId, mixer }
+    const payload = { layers, sources: remoteSources, introMusicId: safeIntroMusic, introBgMediaId: safeIntroBg, mixer }
     try {
       window.localStorage.setItem(`${STORAGE_PREFIX}:${educator?.id ?? "anon"}`, JSON.stringify(payload))
     } catch {
       /* ignora */
+    }
+    if (failed.length) {
+      setMsg(`⚠️ Não consegui guardar online: ${[...new Set(failed)].join(", ")}. O resto ficou guardado. Verifica a ligação e carrega em Gravar outra vez.`)
     }
     if (educator) {
       if (serverSaveTimerRef.current) clearTimeout(serverSaveTimerRef.current)
@@ -1038,7 +1067,7 @@ export default function InternalStudio({
   }
 
   const setTimerOpts = useCallback(
-    (id: string, patch: { transparent?: boolean; opacity?: number }) => {
+    (id: string, patch: { transparent?: boolean; opacity?: number; durationSec?: number; color?: string; loop?: boolean }) => {
       setScenes((prev) => {
         const next = prev.map((s) =>
           s.key === activeScene
@@ -1495,11 +1524,12 @@ export default function InternalStudio({
                         {s.kind === "audio" ? "Tocar" : "→ Cena"}
                       </button>
                       <button
-                        onClick={() => (s.remote ? setMsg(`${s.name} já está online ✓`) : promoteToOnline(s.id, s.name, s.src))}
-                        className="text-sm leading-none"
-                        title={s.remote ? "Já guardado online" : "Guardar online (upload)"}
+                        onClick={() => (s.remote ? setMsg(`${s.name} já está online ✓`) : s.uploading ? undefined : promoteToOnline(s.id, s.name, s.src))}
+                        disabled={s.uploading}
+                        className="text-sm leading-none disabled:opacity-70"
+                        title={s.remote ? "Guardado online" : s.uploading ? "A guardar online…" : s.error ? "Falhou — tentar de novo" : "Guardar online (upload)"}
                       >
-                        {s.remote ? "✅" : "🆙"}
+                        {s.remote ? "✅" : s.uploading ? "⏳" : s.error ? "🔁" : "🆙"}
                       </button>
                       <button onClick={() => removeSource(s.id)} className="text-zinc-500 hover:text-red-400" title="Remover">
                         <Trash2 className="h-3.5 w-3.5" />

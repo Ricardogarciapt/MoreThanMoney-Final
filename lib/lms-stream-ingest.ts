@@ -71,9 +71,45 @@ export function getLmsHlsPublicBaseUrl(): string {
   return "https://stream.morethanmoney.pt/hls"
 }
 
+/**
+ * Chaves cujo browser-stream é re-encodado no VPS (ver whip/route.ts + mtm-rtc-reencode@).
+ * Para estas, além do HLS single-quality, existe um ladder ABR (720p+480p) em
+ * /hls-abr/<key>/master.m3u8 → dá o menu de qualidade nos players (web/iOS/Android).
+ */
+function reencodeKeys(): string[] {
+  return (process.env.LMS_RTC_REENCODE_KEYS || "mtm_c6e156d5_1d7c9b9c556a2524248f894b1cbf344f")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
+function isReencodeKey(key: string): boolean {
+  return reencodeKeys().includes(key)
+}
+
+/** Base pública do ladder ABR. Deriva da base HLS trocando /hls -> /hls-abr. */
+function getLmsAbrPublicBaseUrl(): string {
+  const explicit = process.env.LMS_HLS_ABR_BASE_URL?.trim()
+  if (explicit) return explicit.replace(/\/+$/, "")
+  const base = getLmsHlsPublicBaseUrl().replace(/\/+$/, "")
+  return /\/hls$/i.test(base) ? base.replace(/\/hls$/i, "/hls-abr") : `${base}-abr`
+}
+
+/** URL da master ABR (menu de qualidade) para uma chave re-encode. */
+export function buildAbrMasterUrl(streamKey: string | null | undefined): string | null {
+  if (!streamKey?.trim()) return null
+  const key = streamKey.trim()
+  if (!isReencodeKey(key)) return null
+  return `${getLmsAbrPublicBaseUrl()}/${key}/master.m3u8`
+}
+
 export function buildHlsManifestUrl(streamKey: string | null | undefined): string | null {
   if (!streamKey?.trim()) return null
   const key = streamKey.trim()
+
+  // Chaves re-encode: servir a master ABR (720p+480p+Auto) → o player ganha menu de qualidade.
+  const abr = buildAbrMasterUrl(key)
+  if (abr) return abr
 
   // Arquitetura: OBS → Restream → VPS (stream.morethanmoney.pt)
   // O Restream empurra RTMP para o VPS usando a chave configurada na destino (pode ser `re_` ou `mtm_`).
@@ -96,12 +132,17 @@ export function buildHlsManifestCandidates(streamKey: string | null | undefined)
   const base = getLmsHlsPublicBaseUrl().replace(/\/+$/, "")
   const canonical = `${base}/${key}.m3u8`
 
+  // Chaves re-encode: master ABR primeiro (menu de qualidade), single-quality como fallback
+  // se o ladder ainda não estiver a produzir (ffmpeg #2 a arrancar).
+  const abr = buildAbrMasterUrl(key)
+  const prefix = abr ? [abr] : []
+
   // Se já tiver /live no final, o alternativo é sem /live.
   if (/\/live$/i.test(base)) {
     const withoutLive = base.replace(/\/live$/i, "")
-    return [canonical, `${withoutLive}/${key}.m3u8`]
+    return [...prefix, canonical, `${withoutLive}/${key}.m3u8`]
   }
 
   // Caso contrário, tenta também /live/<key>.m3u8.
-  return [canonical, `${base}/live/${key}.m3u8`]
+  return [...prefix, canonical, `${base}/live/${key}.m3u8`]
 }
