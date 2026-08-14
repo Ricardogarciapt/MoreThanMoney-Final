@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { placeOrder, type OrderRequest } from '@/lib/mtmcopy/metaapi'
-import { CANONICAL_SENSEI_ACCOUNT_ID } from '@/lib/mtmcopy/provider-constants'
 import { getPrimeverseExecConfig } from '@/lib/mtmcopy/primeverse-exec'
 import { computeRiskLot } from '@/lib/mtmcopy/risk-sizing'
 import { getSiteOrigin } from '@/lib/site-url'
@@ -120,8 +119,8 @@ export async function POST(req: NextRequest) {
   // ── kind === 'entry_hit' ── o preço chegou ao Entry → executar a mercado (SL/TP corretos).
   // Não re-mostra o card (já foi mostrado no setup) para não duplicar no chat.
 
-  // EXECUÇÃO: só o top trader (cfg.trader) — os outros ficam só no chat.
-  if (trader !== cfg.trader) return NextResponse.json({ ok: true, routed: chatSlug, exec: 'skipped_trader', trader })
+  // EXECUÇÃO: só o(s) trader(s) escolhido(s) (cfg.traders) — os outros ficam só no chat.
+  if (!cfg.traders.includes(trader)) return NextResponse.json({ ok: true, routed: chatSlug, exec: 'skipped_trader', trader })
 
   // EXECUÇÃO: só XAUUSD/BTCUSD (a conta Sensei só trada esses), gated pelo modo.
   if (!ALLOWED.has(symbol)) return NextResponse.json({ ok: true, routed: chatSlug, exec: 'skipped_symbol' })
@@ -130,9 +129,9 @@ export async function POST(req: NextRequest) {
   const tp = tps[cfg.tpLevel - 1] ?? tps[0] ?? null
   const wantBybit = symbol === 'BTCUSD' && cfg.bybit
 
-  // Sizing por RISCO (0.5% ao SL) na conta Sensei — usa a entry do sinal do kingfkg.
+  // Sizing: riskPct>0 → % ao SL na conta de execução; riskPct=0 → lote FIXO cfg.senseiLot.
   const sizing = cfg.riskPct > 0
-    ? await computeRiskLot(CANONICAL_SENSEI_ACCOUNT_ID, symbol, sl, cfg.riskPct, entry, cfg.senseiLot)
+    ? await computeRiskLot(cfg.accountId, symbol, sl, cfg.riskPct, entry, cfg.senseiLot)
     : { lot: cfg.senseiLot, basis: 'fixed' as const, equity: null, entry }
   const lot = sizing.lot
 
@@ -149,15 +148,15 @@ export async function POST(req: NextRequest) {
   // 1) Sensei (MT5 / mADd)
   try {
     const orderReq: OrderRequest = {
-      accountId: CANONICAL_SENSEI_ACCOUNT_ID,
+      accountId: cfg.accountId,
       symbol,
       direction,
       volume: lot,
       orderType,
       openPrice: orderType === 'limit' ? entry : null,
       stopLoss: sl,
-      takeProfit: tp,
-      comment: 'PV kingfkg',
+      takeProfit: tp, // tpLevel=1 → TP1 → posição fecha 100% no Exit 1
+      comment: `PV ${trader}`.slice(0, 31),
     }
     const r = await placeOrder(orderReq)
     out.sensei = { ok: r.success, orderId: r.orderId, error: r.error }

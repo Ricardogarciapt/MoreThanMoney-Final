@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { CANONICAL_SENSEI_ACCOUNT_ID } from './provider-constants'
 
 /**
  * Execução dos sinais PrimeVerse (canal "PѴ TRADE INSIGHTS") do TOP trader → sistema Sensei.
@@ -16,16 +17,22 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  */
 export interface PrimeverseExecConfig {
   mode: 'off' | 'shadow' | 'live'
+  /** Assinatura(s) a seguir — string bruta (pode ser CSV: "kingfkg,fxedge"). */
   trader: string
-  /** Lote de fallback na conta Sensei quando não dá para calcular por risco. */
+  /** Lista normalizada de traders a executar (derivada de `trader`). */
+  traders: string[]
+  /** Lote fixo na conta de execução quando não dá para calcular por risco. */
   senseiLot: number
   /** % de risco ao SL por posição (default 0.5). 0 = usa lote fixo `senseiLot`. */
   riskPct: number
   tpLevel: number
   bybit: boolean
+  /** Conta MetaApi onde a ordem abre (default Sensei). Configurável → ex.: Vantage. */
+  accountId: string
 }
 
 const KEY = 'primeverse_execution'
+const DEFAULT_ACCOUNT = CANONICAL_SENSEI_ACCOUNT_ID
 
 export async function getPrimeverseExecConfig(): Promise<PrimeverseExecConfig> {
   try {
@@ -35,12 +42,16 @@ export async function getPrimeverseExecConfig(): Promise<PrimeverseExecConfig> {
     const mode: PrimeverseExecConfig['mode'] =
       v.mode === 'shadow' || v.mode === 'live' ? v.mode : 'off'
     const trader = (typeof v.trader === 'string' && v.trader.trim()) ? v.trader.trim().toLowerCase() : 'kingfkg'
+    const traders = Array.isArray(v.traders) && v.traders.length
+      ? v.traders.map((t) => String(t).trim().toLowerCase()).filter(Boolean)
+      : trader.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
     const senseiLot = typeof v.senseiLot === 'number' && v.senseiLot > 0 ? v.senseiLot : 0.01
     const riskPct = typeof v.riskPct === 'number' && v.riskPct >= 0 ? v.riskPct : 0.5
     const tpLevel = typeof v.tpLevel === 'number' && v.tpLevel >= 1 && v.tpLevel <= 5 ? Math.round(v.tpLevel) : 1
     const bybit = v.bybit !== false
-    return { mode, trader, senseiLot, riskPct, tpLevel, bybit }
+    const accountId = typeof v.accountId === 'string' && v.accountId.trim() ? v.accountId.trim() : DEFAULT_ACCOUNT
+    return { mode, trader, traders, senseiLot, riskPct, tpLevel, bybit, accountId }
   } catch {
-    return { mode: 'off', trader: 'kingfkg', senseiLot: 0.01, riskPct: 0.5, tpLevel: 1, bybit: true }
+    return { mode: 'off', trader: 'kingfkg', traders: ['kingfkg'], senseiLot: 0.01, riskPct: 0.5, tpLevel: 1, bybit: true, accountId: DEFAULT_ACCOUNT }
   }
 }
