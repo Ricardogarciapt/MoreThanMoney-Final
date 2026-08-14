@@ -436,16 +436,34 @@ export default function InternalStudio({
       mediaElsRef.current[s.id] = img
     } else if (s.kind === "video") {
       const v = document.createElement("video")
+      if (s.remote) v.crossOrigin = "anonymous"
       v.src = s.src
-      v.crossOrigin = "anonymous"
       v.loop = true
       v.playsInline = true
+      // fallback: se o loop nativo falhar (comum ao passar pelo WebAudio), reinicia no fim
+      v.addEventListener("ended", () => {
+        try {
+          v.currentTime = 0
+          void v.play()
+        } catch {
+          /* ignora */
+        }
+      })
       mediaElsRef.current[s.id] = v
     } else {
       const a = document.createElement("audio")
+      if (s.remote) a.crossOrigin = "anonymous"
       a.src = s.src
-      a.crossOrigin = "anonymous"
       a.loop = true
+      a.preload = "auto"
+      a.addEventListener("ended", () => {
+        try {
+          a.currentTime = 0
+          void a.play()
+        } catch {
+          /* ignora */
+        }
+      })
       mediaElsRef.current[s.id] = a
     }
   }
