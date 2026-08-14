@@ -62,7 +62,7 @@ type Layer = {
   visible: boolean
   mediaId?: string // p/ type==="media"
   text?: string // p/ type==="ticker"
-  opts?: { transparent?: boolean; opacity?: number; durationSec?: number; color?: string } // p/ type==="timer"
+  opts?: { transparent?: boolean; opacity?: number; durationSec?: number; color?: string; loop?: boolean } // p/ type==="timer"
 }
 type SceneKey = "intro" | "soon" | "disclaimer" | "camera" | "screen"
 type Scene = { key: SceneKey; label: string; bgImage: keyof typeof ASSET | null; frame: boolean; layers: Layer[] }
@@ -759,7 +759,10 @@ export default function InternalStudio({
         }
         if (st.running && st.remainingMs > 0) {
           st.remainingMs = Math.max(0, st.remainingMs - frameDelta)
-          if (st.remainingMs === 0) st.running = false
+          if (st.remainingMs === 0) {
+            if (l.opts?.loop) st.remainingMs = durationSec * 1000 // reinicia (loop)
+            else st.running = false
+          }
         }
         const totalSec = Math.ceil(st.remainingMs / 1000)
         const mm = String(Math.floor(totalSec / 60)).padStart(2, "0")
@@ -1187,6 +1190,10 @@ export default function InternalStudio({
                       <RotateCcw className="h-4 w-4" />
                     </Button>
                   </div>
+                  <label className="flex items-center justify-between text-xs text-zinc-300">
+                    Loop (reinicia no fim)
+                    <input type="checkbox" checked={t.opts?.loop ?? false} onChange={(e) => setTimerOpts(t.id, { loop: e.target.checked })} className="h-4 w-4 accent-[#D2A63C]" />
+                  </label>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] text-zinc-400">Cor</span>
                     {["#FFFFFF", "#D2A63C", "#22c55e", "#ef4444"].map((c) => (
