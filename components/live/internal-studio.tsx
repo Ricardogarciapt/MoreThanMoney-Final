@@ -62,7 +62,7 @@ type Layer = {
   visible: boolean
   mediaId?: string // p/ type==="media"
   text?: string // p/ type==="ticker"
-  opts?: { transparent?: boolean; opacity?: number } // p/ type==="timer"
+  opts?: { transparent?: boolean; opacity?: number; durationSec?: number; color?: string } // p/ type==="timer"
 }
 type SceneKey = "intro" | "soon" | "disclaimer" | "camera" | "screen"
 type Scene = { key: SceneKey; label: string; bgImage: keyof typeof ASSET | null; frame: boolean; layers: Layer[] }
@@ -147,7 +147,6 @@ export default function InternalStudio({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const camVideoRef = useRef<HTMLVideoElement | null>(null)
   const screenVideoRef = useRef<HTMLVideoElement | null>(null)
-  const timerVideoRef = useRef<HTMLVideoElement | null>(null)
   const camStreamRef = useRef<MediaStream | null>(null)
   const screenStreamRef = useRef<MediaStream | null>(null)
   const rafRef = useRef<number | null>(null)
@@ -169,6 +168,9 @@ export default function InternalStudio({
   const serverSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tickerOffsetsRef = useRef<Record<string, number>>({})
   const persistRef = useRef<() => void>(() => {})
+  // estado runtime dos contadores (por layer): ms restantes + a contar
+  const timerStateRef = useRef<Record<string, { remainingMs: number; running: boolean }>>({})
+  const lastTsRef = useRef(0)
 
   const [educator, setEducator] = useState<{ id: string; name: string } | null>(null)
   const [targets, setTargets] = useState<StreamTarget[]>([])
@@ -392,15 +394,7 @@ export default function InternalStudio({
     setScreenOn(false)
   }, [])
 
-  // ── timer ──
-  useEffect(() => {
-    const v = timerVideoRef.current
-    if (v) {
-      v.loop = true
-      v.muted = true
-      v.play().catch(() => {})
-    }
-  }, [])
+  // (timer agora é um contador desenhado no canvas — ver drawLayer/render)
 
   // ── música de intro (loop) — toca nas cenas Intro e Começamos em Breve ──
   useEffect(() => {
@@ -470,7 +464,25 @@ export default function InternalStudio({
     }
   }
 
-  const addSourceFromFile = useCallback((file: File) => {
+  /** Sobe já um ficheiro local (blob) para o storage e promove a fonte a remota (URL durável). */
+  const promoteToOnline = async (id: string, name: string, blobUrl: string) => {
+    if (!educator) return
+    try {
+      const blob = await fetch(blobUrl).then((r) => r.blob())
+      const fd = new FormData()
+      fd.append("file", new File([blob], name, { type: blob.type || "application/octet-stream" }))
+      const res = await fetch("/api/live-sessions/studio-asset", { method: "POST", credentials: "same-origin", body: fd })
+      if (!res.ok) return
+      const j = await res.json()
+      if (typeof j?.url === "string") {
+        setSources((prev) => prev.map((x) => (x.id === id ? { ...x, src: j.url, remote: true } : x)))
+      }
+    } catch {
+      /* fica local nesta sessão */
+    }
+  }
+
+  const addSourceFromFile = (file: File) => {
     const kind: SourceKind = file.type.startsWith("image")
       ? "image"
       : file.type.startsWith("video")
@@ -480,8 +492,9 @@ export default function InternalStudio({
     const s: MediaSource = { id: `m${Math.round(performance.now())}${Math.floor(1000 * Math.random())}`, kind, name: file.name, src, remote: false }
     registerMediaElement(s)
     setSources((prev) => [...prev, s])
-    setMsg(`Fonte adicionada: ${file.name}`)
-  }, [])
+    setMsg(`Fonte adicionada: ${file.name}${educator ? " — a guardar online…" : ""}`)
+    void promoteToOnline(s.id, s.name, src) // guarda online já
+  }
 
   const addSourceFromUrl = useCallback(() => {
     const u = urlInput.trim()
@@ -711,6 +724,8 @@ export default function InternalStudio({
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
+    let frameDelta = 0 // ms desde o último frame (para os contadores)
+
     const drawVideoCover = (v: HTMLVideoElement, x: number, y: number, w: number, h: number) => {
       const vw = v.videoWidth || 16
       const vh = v.videoHeight || 9
@@ -734,18 +749,35 @@ export default function InternalStudio({
         drawVideoCover(camVideoRef.current, x, y, w, h)
       } else if (l.type === "screen" && screenVideoRef.current && screenStreamRef.current) {
         drawVideoCover(screenVideoRef.current, x, y, w, h)
-      } else if (l.type === "timer" && timerVideoRef.current) {
-        const transparent = l.opts?.transparent !== false // default: transparente
+      } else if (l.type === "timer") {
+        // contador decrescente configurável (fundo transparente por natureza)
+        const durationSec = l.opts?.durationSec ?? 300
+        let st = timerStateRef.current[l.id]
+        if (!st) {
+          st = { remainingMs: durationSec * 1000, running: false }
+          timerStateRef.current[l.id] = st
+        }
+        if (st.running && st.remainingMs > 0) {
+          st.remainingMs = Math.max(0, st.remainingMs - frameDelta)
+          if (st.remainingMs === 0) st.running = false
+        }
+        const totalSec = Math.ceil(st.remainingMs / 1000)
+        const mm = String(Math.floor(totalSec / 60)).padStart(2, "0")
+        const ss = String(totalSec % 60).padStart(2, "0")
+        const label = `${mm}:${ss}`
         const opacity = l.opts?.opacity ?? 1
+        const color = l.opts?.color || "#FFFFFF"
         ctx.save()
         ctx.globalAlpha = opacity
-        // "screen": o fundo escuro do webm desaparece (preto → transparente), ficam os dígitos
-        if (transparent) ctx.globalCompositeOperation = "screen"
-        try {
-          ctx.drawImage(timerVideoRef.current, x, y, w, h)
-        } catch {
-          /* not ready */
-        }
+        // dígitos ajustados à altura da caixa
+        const fs = Math.min(h * 0.62, w / (label.length * 0.62))
+        ctx.font = `800 ${fs}px "Arial Narrow", Arial, sans-serif`
+        ctx.textAlign = "center"
+        ctx.textBaseline = "middle"
+        ctx.shadowColor = "rgba(0,0,0,0.6)"
+        ctx.shadowBlur = Math.max(4, fs * 0.06)
+        ctx.fillStyle = st.remainingMs === 0 ? "#ef4444" : color
+        ctx.fillText(label, x + w / 2, y + h / 2)
         ctx.restore()
       } else if (l.type === "media" && l.mediaId) {
         const el = mediaElsRef.current[l.mediaId]
@@ -805,6 +837,9 @@ export default function InternalStudio({
     }
 
     const render = () => {
+      const now = performance.now()
+      frameDelta = lastTsRef.current ? Math.min(200, now - lastTsRef.current) : 0
+      lastTsRef.current = now
       // Intro sem imagem custom = canvas PRETO; restantes cenas = fundo escuro base
       ctx.fillStyle = scene.key === "intro" ? "#000000" : "#0a0e1a"
       ctx.fillRect(0, 0, CW, CH)
@@ -926,18 +961,43 @@ export default function InternalStudio({
     [activeScene, persist],
   )
 
-  const restartTimer = useCallback(() => {
-    const v = timerVideoRef.current
-    if (v) {
-      try {
-        v.currentTime = 0
-        void v.play()
-      } catch {
-        /* ignora */
-      }
-    }
-    setMsg("Timer reiniciado.")
+  const [, forceTick] = useState(0)
+  const timerDuration = useCallback(
+    (id: string) => scene.layers.find((l) => l.id === id)?.opts?.durationSec ?? 300,
+    [scene],
+  )
+  const startTimer = useCallback(
+    (id: string) => {
+      const dur = timerDuration(id)
+      const st = timerStateRef.current[id] ?? { remainingMs: dur * 1000, running: false }
+      if (st.remainingMs <= 0) st.remainingMs = dur * 1000
+      st.running = true
+      timerStateRef.current[id] = st
+      forceTick((n) => n + 1)
+    },
+    [timerDuration],
+  )
+  const pauseTimer = useCallback((id: string) => {
+    const st = timerStateRef.current[id]
+    if (st) st.running = false
+    forceTick((n) => n + 1)
   }, [])
+  const resetTimer = useCallback(
+    (id: string) => {
+      timerStateRef.current[id] = { remainingMs: timerDuration(id) * 1000, running: false }
+      forceTick((n) => n + 1)
+    },
+    [timerDuration],
+  )
+  const setTimerMinutes = useCallback(
+    (id: string, minutes: number) => {
+      const sec = Math.max(1, Math.round(minutes * 60))
+      setTimerOpts(id, { durationSec: sec })
+      timerStateRef.current[id] = { remainingMs: sec * 1000, running: timerStateRef.current[id]?.running ?? false }
+      forceTick((n) => n + 1)
+    },
+    [setTimerOpts],
+  )
 
   // ── TRANSMITIR (WHIP) ──
   const startBroadcast = useCallback(async () => {
@@ -1061,7 +1121,6 @@ export default function InternalStudio({
     <div className="space-y-4">
       <video ref={camVideoRef} className="hidden" playsInline muted />
       <video ref={screenVideoRef} className="hidden" playsInline muted />
-      <video ref={timerVideoRef} className="hidden" src={ASSET.timer} playsInline />
 
       {msg && (
         <div className="flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-300">
@@ -1087,30 +1146,57 @@ export default function InternalStudio({
             {timerConfigId && (() => {
               const t = scene.layers.find((l) => l.id === timerConfigId)
               if (!t) return null
-              const transparent = t.opts?.transparent !== false
               const opacity = t.opts?.opacity ?? 1
+              const minutes = Math.round((t.opts?.durationSec ?? 300) / 60)
+              const running = timerStateRef.current[t.id]?.running ?? false
               return (
-                <div className="absolute left-1/2 top-1/2 z-10 w-64 -translate-x-1/2 -translate-y-1/2 space-y-2 rounded-xl border border-[#D2A63C]/50 bg-zinc-950/95 p-3 shadow-2xl">
+                <div className="absolute left-1/2 top-1/2 z-10 w-72 -translate-x-1/2 -translate-y-1/2 space-y-2.5 rounded-xl border border-[#D2A63C]/50 bg-zinc-950/95 p-3 shadow-2xl">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-[#D2A63C]">Configurar timer</p>
+                    <p className="text-xs font-semibold text-[#D2A63C]">Configurar contador</p>
                     <button onClick={() => setTimerConfigId(null)} className="text-zinc-500 hover:text-white">✕</button>
                   </div>
-                  <label className="flex items-center justify-between text-xs text-zinc-300">
-                    Fundo transparente
-                    <input type="checkbox" checked={transparent} onChange={(e) => setTimerOpts(t.id, { transparent: e.target.checked })} className="h-4 w-4 accent-[#D2A63C]" />
+                  <label className="flex items-center justify-between gap-2 text-xs text-zinc-300">
+                    Minutos
+                    <input
+                      type="number"
+                      min={1}
+                      max={180}
+                      defaultValue={minutes}
+                      onChange={(e) => setTimerMinutes(t.id, Math.max(1, parseInt(e.target.value || "1", 10)))}
+                      className="w-20 rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1 text-right text-sm text-white"
+                    />
                   </label>
+                  <div className="flex gap-1.5">
+                    {[1, 3, 5, 10, 15].map((m) => (
+                      <button key={m} onClick={() => setTimerMinutes(t.id, m)} className={`flex-1 rounded-md px-1.5 py-1 text-[11px] ${minutes === m ? "bg-[#D2A63C] text-black" : "bg-zinc-800 text-zinc-300 hover:text-white"}`}>
+                        {m}m
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    {running ? (
+                      <Button size="sm" variant="outline" className="flex-1 border-zinc-700" onClick={() => pauseTimer(t.id)}>
+                        Pausar
+                      </Button>
+                    ) : (
+                      <Button size="sm" className="flex-1 bg-[#D2A63C] text-black hover:bg-[#c0972f]" onClick={() => startTimer(t.id)}>
+                        Iniciar
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" className="border-zinc-700" onClick={() => resetTimer(t.id)} title="Repor">
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-zinc-400">Cor</span>
+                    {["#FFFFFF", "#D2A63C", "#22c55e", "#ef4444"].map((c) => (
+                      <button key={c} onClick={() => setTimerOpts(t.id, { color: c })} className={`h-5 w-5 rounded-full border ${(t.opts?.color || "#FFFFFF") === c ? "border-white" : "border-zinc-700"}`} style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
                   <label className="block text-xs text-zinc-300">
                     Opacidade
                     <input type="range" min={0.2} max={1} step={0.05} value={opacity} onChange={(e) => setTimerOpts(t.id, { opacity: parseFloat(e.target.value) })} className="mt-1 w-full accent-[#D2A63C]" />
                   </label>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" className="flex-1 border-zinc-700" onClick={restartTimer}>
-                      <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reiniciar
-                    </Button>
-                    <Button size="sm" className="flex-1 bg-[#D2A63C] text-black hover:bg-[#c0972f]" onClick={() => setTimerConfigId(null)}>
-                      OK
-                    </Button>
-                  </div>
                   <p className="text-[10px] text-zinc-600">Arrasta o timer para mover · pega no canto para redimensionar. Duplo-clique abre isto.</p>
                 </div>
               )
@@ -1315,6 +1401,7 @@ export default function InternalStudio({
                         setSources((prev) => [...prev, s])
                         setIntroBgMediaId(s.id)
                         setActiveScene("intro")
+                        void promoteToOnline(s.id, s.name, src)
                       }
                       e.currentTarget.value = ""
                     }}
@@ -1352,6 +1439,7 @@ export default function InternalStudio({
                         registerMediaElement(s)
                         setSources((prev) => [...prev, s])
                         setIntroMusicId(s.id)
+                        void promoteToOnline(s.id, s.name, src)
                       }
                       e.currentTarget.value = ""
                     }}
