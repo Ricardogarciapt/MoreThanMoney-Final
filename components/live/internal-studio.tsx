@@ -73,7 +73,7 @@ const DEFAULT_SCENES: Scene[] = [
   {
     key: "intro",
     label: "Intro",
-    bgImage: "intro",
+    bgImage: null, // default = canvas preto; imagem de intro definida pelo educador (introBgMediaId)
     frame: false,
     // timer sempre à frente na Intro (z alto)
     layers: [{ id: "intro-timer", type: "timer", x: 0.4, y: 0.68, w: 0.2, h: 0.2, z: 999, visible: true }],
@@ -236,7 +236,7 @@ export default function InternalStudio({
 
   // ── pré-carregar assets ──
   useEffect(() => {
-    ;(["frame", "soon", "disclaimer", "background", "intro"] as (keyof typeof ASSET)[]).forEach((k) => {
+    ;(["frame", "soon", "disclaimer", "background"] as (keyof typeof ASSET)[]).forEach((k) => {
       const img = new Image()
       img.src = ASSET[k]
       imagesRef.current[k] = img
@@ -796,7 +796,8 @@ export default function InternalStudio({
     }
 
     const render = () => {
-      ctx.fillStyle = "#0a0e1a"
+      // Intro sem imagem custom = canvas PRETO; restantes cenas = fundo escuro base
+      ctx.fillStyle = scene.key === "intro" ? "#000000" : "#0a0e1a"
       ctx.fillRect(0, 0, CW, CH)
       if (scene.bgImage) {
         const img = imagesRef.current[scene.bgImage]
@@ -1199,13 +1200,13 @@ export default function InternalStudio({
               {/* Imagem de intro (full-frame) */}
               <div className="space-y-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
                 <p className="text-xs font-medium text-zinc-400">Imagem de intro (full-frame)</p>
-                <p className="text-[11px] text-zinc-600">Ocupa sempre o ecrã todo na cena <strong className="text-zinc-400">Intro</strong>. Sem escolha, usa a moldura MTM.</p>
+                <p className="text-[11px] text-zinc-600">Ocupa sempre o ecrã todo na cena <strong className="text-zinc-400">Intro</strong>. Sem escolha, fundo <strong className="text-zinc-400">preto</strong>. Ao guardar, a imagem escolhida fica como default (podes trocar).</p>
                 <select
                   value={introBgMediaId ?? ""}
                   onChange={(e) => setIntroBgMediaId(e.target.value || null)}
                   className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-white"
                 >
-                  <option value="">— predefinida (MTM) —</option>
+                  <option value="">— preto (predefinido) —</option>
                   {sources.filter((s) => s.kind === "image").map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
