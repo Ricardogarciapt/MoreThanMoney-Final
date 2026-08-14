@@ -46,6 +46,7 @@ const ASSET = {
   soon: "/studio/coming-soon.png",
   disclaimer: "/studio/disclaimer.jpg",
   background: "/studio/background.png",
+  intro: "/studio/intro-educador.png",
   timer: "/studio/timer-5min.webm",
 }
 
@@ -62,13 +63,20 @@ type Layer = {
   mediaId?: string // p/ type==="media"
   text?: string // p/ type==="ticker"
 }
-type SceneKey = "soon" | "disclaimer" | "camera" | "screen"
+type SceneKey = "intro" | "soon" | "disclaimer" | "camera" | "screen"
 type Scene = { key: SceneKey; label: string; bgImage: keyof typeof ASSET | null; frame: boolean; layers: Layer[] }
 
 type SourceKind = "image" | "video" | "audio"
 type MediaSource = { id: string; kind: SourceKind; name: string; src: string; remote: boolean }
 
 const DEFAULT_SCENES: Scene[] = [
+  {
+    key: "intro",
+    label: "Intro",
+    bgImage: "intro",
+    frame: false,
+    layers: [{ id: "intro-timer", type: "timer", x: 0.4, y: 0.68, w: 0.2, h: 0.2, z: 2, visible: true }],
+  },
   {
     key: "soon",
     label: "Começamos em Breve",
@@ -98,7 +106,9 @@ const DEFAULT_SCENES: Scene[] = [
 
 const STORAGE_PREFIX = "mtm-internal-studio-layout-v2"
 
-function loadLayout(ns: string): { layers?: Record<string, Layer[]>; sources?: MediaSource[] } | null {
+type LayoutPayload = { layers?: Record<string, Layer[]>; sources?: MediaSource[]; introMusicId?: string | null }
+
+function loadLayout(ns: string): LayoutPayload | null {
   try {
     const raw = typeof window !== "undefined" ? window.localStorage.getItem(`${STORAGE_PREFIX}:${ns}`) : null
     return raw ? JSON.parse(raw) : null
@@ -142,13 +152,15 @@ export default function InternalStudio({
   const mediaSrcNodesRef = useRef<WeakSet<HTMLMediaElement>>(new WeakSet())
   const serverSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tickerOffsetsRef = useRef<Record<string, number>>({})
+  const persistRef = useRef<() => void>(() => {})
 
   const [educator, setEducator] = useState<{ id: string; name: string } | null>(null)
   const [targets, setTargets] = useState<StreamTarget[]>([])
   const [targetId, setTargetId] = useState<string>(presetStreamId ?? "")
 
   const [scenes, setScenes] = useState<Scene[]>(DEFAULT_SCENES)
-  const [activeScene, setActiveScene] = useState<SceneKey>("soon")
+  const [activeScene, setActiveScene] = useState<SceneKey>("intro")
+  const [introMusicId, setIntroMusicId] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [camOn, setCamOn] = useState(false)
   const [screenOn, setScreenOn] = useState(false)
@@ -181,7 +193,7 @@ export default function InternalStudio({
           if (presetStreamId) setTargetId(presetStreamId)
           else setTargetId(list.find((s) => s.is_live)?.id ?? list[0]?.id ?? "")
           // 1º servidor (durável, cross-device); fallback p/ localStorage (cache offline).
-          let saved: { layers?: Record<string, Layer[]>; sources?: MediaSource[] } | null = null
+          let saved: LayoutPayload | null = null
           try {
             const srv = await fetch("/api/live-sessions/studio-layout", { credentials: "same-origin" }).then((x) => x.json())
             if (srv?.layout && (srv.layout.layers || srv.layout.sources)) saved = srv.layout
@@ -195,6 +207,7 @@ export default function InternalStudio({
             setSources(remote)
             remote.forEach(registerMediaElement)
           }
+          if (saved?.introMusicId) setIntroMusicId(saved.introMusicId)
         }
       } catch {
         /* sem sessão */
@@ -369,6 +382,32 @@ export default function InternalStudio({
     }
   }, [])
 
+  // ── música de intro (loop) — toca nas cenas Intro e Começamos em Breve ──
+  useEffect(() => {
+    const el = introMusicId ? (mediaElsRef.current[introMusicId] as HTMLAudioElement | undefined) : undefined
+    const shouldPlay = (activeScene === "intro" || activeScene === "soon") && !!el
+    if (el) {
+      if (shouldPlay) {
+        el.loop = true
+        connectMediaAudio(el)
+        if (el.paused) el.play().catch(() => {})
+      } else if (!el.paused) {
+        el.pause()
+      }
+    }
+  }, [activeScene, introMusicId, connectMediaAudio])
+
+  // persiste a escolha da música de intro quando muda
+  const introMusicInitRef = useRef(true)
+  useEffect(() => {
+    if (introMusicInitRef.current) {
+      introMusicInitRef.current = false
+      return
+    }
+    persistRef.current()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [introMusicId])
+
   // ── fontes de média (OBS-like) ──
   function registerMediaElement(s: MediaSource) {
     if (mediaElsRef.current[s.id]) return
@@ -494,7 +533,7 @@ export default function InternalStudio({
       const layers: Record<string, Layer[]> = {}
       nextScenes.forEach((s) => (layers[s.key] = s.layers))
       const srcs = (nextSources ?? sources).filter((s) => s.remote) // blobs não sobrevivem a reload
-      const payload = { layers, sources: srcs }
+      const payload = { layers, sources: srcs, introMusicId }
       // cache local imediato
       try {
         window.localStorage.setItem(`${STORAGE_PREFIX}:${educator?.id ?? "anon"}`, JSON.stringify(payload))
@@ -514,7 +553,7 @@ export default function InternalStudio({
         }, 800)
       }
     },
-    [educator, sources],
+    [educator, sources, introMusicId],
   )
 
   const updateLayer = useCallback(
@@ -527,6 +566,9 @@ export default function InternalStudio({
     },
     [activeScene],
   )
+
+  // mantém persistRef com a versão mais recente (atribuído no render → pronto antes dos efeitos)
+  persistRef.current = () => persist(scenes)
 
   const updateTickerText = useCallback(
     (id: string, text: string) => {
@@ -556,7 +598,7 @@ export default function InternalStudio({
   const saveLayout = useCallback(() => {
     const layers: Record<string, Layer[]> = {}
     scenes.forEach((s) => (layers[s.key] = s.layers))
-    const payload = { layers, sources: sources.filter((s) => s.remote) }
+    const payload = { layers, sources: sources.filter((s) => s.remote), introMusicId }
     try {
       window.localStorage.setItem(`${STORAGE_PREFIX}:${educator?.id ?? "anon"}`, JSON.stringify(payload))
     } catch {
@@ -575,7 +617,7 @@ export default function InternalStudio({
     } else {
       setMsg("Posições gravadas localmente ✓")
     }
-  }, [scenes, sources, educator])
+  }, [scenes, sources, educator, introMusicId])
 
   const resetScene = useCallback(() => {
     const def = DEFAULT_SCENES.find((s) => s.key === activeScene)!
@@ -1056,6 +1098,46 @@ export default function InternalStudio({
                   ))}
                 </div>
                 <p className="text-[11px] text-zinc-600">Ficheiros locais valem para esta sessão; URLs ficam guardados.</p>
+              </div>
+
+              {/* Música de intro */}
+              <div className="space-y-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                <p className="text-xs font-medium text-zinc-400">Música de intro (loop)</p>
+                <p className="text-[11px] text-zinc-600">Toca em loop nas cenas <strong className="text-zinc-400">Intro</strong> e <strong className="text-zinc-400">Começamos em Breve</strong>.</p>
+                <select
+                  value={introMusicId ?? ""}
+                  onChange={(e) => setIntroMusicId(e.target.value || null)}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-sm text-white"
+                >
+                  <option value="">— sem música —</option>
+                  {sources.filter((s) => s.kind === "audio").map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                <label className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-700 px-2 py-1.5 text-[11px] text-zinc-300 hover:border-[#D2A63C] hover:text-white">
+                  <Music className="h-3.5 w-3.5" /> Carregar mp3 de intro
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) {
+                        const src = URL.createObjectURL(f)
+                        const s: MediaSource = { id: `mus${Math.round(performance.now())}`, kind: "audio", name: f.name, src, remote: false }
+                        registerMediaElement(s)
+                        setSources((prev) => [...prev, s])
+                        setIntroMusicId(s.id)
+                      }
+                      e.currentTarget.value = ""
+                    }}
+                  />
+                </label>
+                {sources.filter((s) => s.kind === "audio").length === 0 && (
+                  <p className="text-[11px] text-zinc-600">Carrega um mp3 aqui ou em Fontes.</p>
+                )}
               </div>
 
               {/* Mixer */}
