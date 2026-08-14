@@ -38,9 +38,9 @@ import {
 const CW = 1280
 const CH = 720
 const HANDLE = 16
-// Cap de bitrate do vídeo enviado por WebRTC (bps). DVR grava -c copy, logo herda este bitrate →
-// gravações mais leves no disco de 120GB + menos carga no VPS + ingest WebRTC mais estável.
-const VIDEO_MAX_BITRATE = 1_200_000
+// Cap de bitrate do vídeo enviado por WebRTC (bps). HD ~2000 kbps para o site/player; o DVR grava
+// -c copy, logo herda este bitrate (gravações razoáveis no disco 120GB sem re-encode no VPS).
+const VIDEO_MAX_BITRATE = 2_000_000
 
 const FRAME_WINDOW = { x: 0.032, y: 0.113, w: 0.935, h: 0.829 }
 
