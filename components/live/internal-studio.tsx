@@ -1150,9 +1150,12 @@ export default function InternalStudio({
           const p = vSender.getParameters()
           if (!p.encodings || !p.encodings.length) p.encodings = [{}]
           p.encodings[0].maxBitrate = VIDEO_MAX_BITRATE
-          ;(p.encodings[0] as RTCRtpEncodingParameters & { minBitrate?: number }).minBitrate = Math.round(VIDEO_MAX_BITRATE * 0.8)
+          // Piso baixo: o browser AUTO-REGULA (sobe até 2M quando a rede/CPU dá, desce suave quando
+          // não) → stream independente das condições, sem stutter nem picos de carga no VPS. Um piso
+          // alto forçava sempre ~2M e causava frame-drops em máquinas/redes fracas.
+          ;(p.encodings[0] as RTCRtpEncodingParameters & { minBitrate?: number }).minBitrate = 500_000
           p.encodings[0].maxFramerate = 30
-          p.encodings[0].scaleResolutionDownBy = 1 // nunca reduz a resolução (720p fixo)
+          p.encodings[0].scaleResolutionDownBy = 1 // mantém 720p; sob pressão baixa fps, não resolução
           ;(p as RTCRtpSendParameters & { degradationPreference?: string }).degradationPreference = "maintain-resolution"
           await vSender.setParameters(p)
         } catch {
