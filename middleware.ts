@@ -121,7 +121,12 @@ export async function middleware(request: NextRequest) {
   }
   response.headers.set("X-Content-Type-Options", "nosniff")
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
-  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+  // Studio de streaming interno precisa de câmara/mic/ecrã → permitir para o próprio site (self);
+  // continua bloqueado a iframes de terceiros. (Antes: camera=(),microphone=() bloqueava tudo.)
+  response.headers.set(
+    "Permissions-Policy",
+    "camera=(self), microphone=(self), display-capture=(self), geolocation=()",
+  )
 
   // Rate limiting para APIs (exceto auth e crons Vercel)
   const isVercelCron = request.headers.get("x-vercel-cron") === "1"

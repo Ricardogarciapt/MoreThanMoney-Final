@@ -487,24 +487,32 @@ export default function InternalStudio({
     }
   }
 
-  /** Sobe já um ficheiro local (blob) para o storage e promove a fonte a remota (URL durável). */
+  /** Sobe um blob local DIRETO ao Supabase Storage (URL assinado → contorna o limite da Vercel). */
+  const uploadBlobOnline = async (name: string, blobUrl: string): Promise<string | null> => {
+    const blob = await fetch(blobUrl).then((r) => r.blob())
+    const type = blob.type || "application/octet-stream"
+    const meta = await fetch("/api/live-sessions/studio-asset", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name, type }),
+    }).then((r) => r.json())
+    if (!meta?.uploadUrl) throw new Error(meta?.error || "sem URL de upload")
+    const put = await fetch(meta.uploadUrl, { method: "PUT", headers: { "content-type": type, "x-upsert": "true" }, body: blob })
+    if (!put.ok) throw new Error(`storage ${put.status}`)
+    return typeof meta.publicUrl === "string" ? meta.publicUrl : null
+  }
+
+  /** Sobe já um ficheiro local e promove a fonte a remota (URL durável). */
   const promoteToOnline = async (id: string, name: string, blobUrl: string) => {
     try {
-      const blob = await fetch(blobUrl).then((r) => r.blob())
-      const fd = new FormData()
-      fd.append("file", new File([blob], name, { type: blob.type || "application/octet-stream" }))
-      const res = await fetch("/api/live-sessions/studio-asset", { method: "POST", credentials: "same-origin", body: fd })
-      const j = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setMsg(`Guardado só nesta sessão (${j?.error || res.status}). Inicia sessão de educador p/ guardar online.`)
-        return
-      }
-      if (typeof j?.url === "string") {
-        setSources((prev) => prev.map((x) => (x.id === id ? { ...x, src: j.url, remote: true } : x)))
+      const url = await uploadBlobOnline(name, blobUrl)
+      if (url) {
+        setSources((prev) => prev.map((x) => (x.id === id ? { ...x, src: url, remote: true } : x)))
         setMsg(`✓ ${name} guardado online`)
       }
     } catch (e) {
-      setMsg("Upload falhou: " + (e instanceof Error ? e.message : "erro") + " — fica local nesta sessão.")
+      setMsg("Upload: " + (e instanceof Error ? e.message : "erro") + " — fica local nesta sessão.")
     }
   }
 
@@ -675,16 +683,11 @@ export default function InternalStudio({
   /** Faz upload de um blob local para o storage e devolve o URL público (durável). */
   const uploadLocalSource = useCallback(async (s: MediaSource): Promise<string | null> => {
     try {
-      const blob = await fetch(s.src).then((r) => r.blob())
-      const fd = new FormData()
-      fd.append("file", new File([blob], s.name, { type: blob.type || "application/octet-stream" }))
-      const res = await fetch("/api/live-sessions/studio-asset", { method: "POST", credentials: "same-origin", body: fd })
-      if (!res.ok) return null
-      const j = await res.json()
-      return typeof j?.url === "string" ? j.url : null
+      return await uploadBlobOnline(s.name, s.src)
     } catch {
       return null
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const saveLayout = useCallback(async () => {
