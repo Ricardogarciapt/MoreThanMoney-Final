@@ -218,7 +218,7 @@ export default function InternalStudio({
 
   // ── pré-carregar assets ──
   useEffect(() => {
-    ;(["frame", "soon", "disclaimer", "background"] as (keyof typeof ASSET)[]).forEach((k) => {
+    ;(["frame", "soon", "disclaimer", "background", "intro"] as (keyof typeof ASSET)[]).forEach((k) => {
       const img = new Image()
       img.src = ASSET[k]
       imagesRef.current[k] = img
