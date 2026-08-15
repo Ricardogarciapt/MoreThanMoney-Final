@@ -33,13 +33,30 @@ export default function InternalStudioModal({
 
   // O modal só fecha no X (não em ESC nem em clique fora) — evita sair sem querer a meio de um live.
 
-  // chat: poll
+  // SEPARAR do studio externo por trás: enquanto o modal está aberto, tranca o scroll da página
+  // (o EducatorStudio de stream externo ficava scrollável/ativo por trás do backdrop).
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = prevOverflow
+    }
+  }, [])
+
+  // chat: poll — a rota devolve { success, data: [...] } (o mesmo store da SALA, lms_stream_messages).
+  // Bug anterior: lia-se j.messages (inexistente) → o chat do modal ficava sempre vazio (in/out).
   const loadMessages = useCallback(async () => {
     try {
       const r = await fetch(`/api/live-sessions/streams/${streamId}/messages`, { credentials: "same-origin" })
       const j = await r.json()
-      if (Array.isArray(j)) setMessages(j)
-      else if (Array.isArray(j?.messages)) setMessages(j.messages)
+      const arr = Array.isArray(j)
+        ? j
+        : Array.isArray(j?.data)
+          ? j.data
+          : Array.isArray(j?.messages)
+            ? j.messages
+            : null
+      if (arr) setMessages(arr as Msg[])
     } catch {
       /* ignora */
     }
