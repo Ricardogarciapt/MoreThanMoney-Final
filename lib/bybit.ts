@@ -712,13 +712,21 @@ export async function placeBybitPerp(o: BybitPerpTradeInput): Promise<BybitPerpT
 }
 
 /** Ticker `.P`/`USDT` → símbolo linear Bybit (ex.: BTCUSDT.P → BTCUSDT). */
+const BYBIT_FIAT_CODES = new Set([
+  "EUR", "USD", "GBP", "JPY", "CHF", "AUD", "NZD", "CAD", "SGD", "SEK", "NOK", "MXN", "ZAR",
+])
+
 export function toBybitSymbol(ticker: string): string {
   const s = ticker.toUpperCase().replace(/^[A-Z]+:/, "").replace(/\.P$/, "")
-  // Os perps do Copy Trading da Bybit são LINEAR (USDT-margined). Um cripto `...USD` (ex.: BTCUSD do
-  // PrimeVerse) tem de virar `...USDT` — senão `BTCUSD` cairia no contrato INVERSO (coin-margined).
-  // Metais (XAUUSD…) e pares já `...USDT`/`...USDC` ficam iguais.
-  if (/^[A-Z0-9]{2,10}USD$/.test(s) && !/^(XAU|XAG|XPT|XPD)USD$/.test(s)) {
-    return s.replace(/USD$/, "USDT")
-  }
+  // Os perps do Copy Trading da Bybit são LINEAR (USDT-margined). QUALQUER cripto `...USD`
+  // (BTCUSD, XRPUSD, SOLUSD, …) tem de virar `...USDT` — senão cairia no contrato INVERSO
+  // (coin-margined). Genérico p/ todas as cotações. Exceções que NÃO se convertem:
+  //  - pares FIAT-FIAT (forex, ex.: EURUSD) — nunca são perps cripto;
+  //  - metais preciosos (XAUUSD, XAGUSD…);
+  //  - símbolos já `...USDT`/`...USDC`.
+  const letters = s.replace(/[^A-Z]/g, "")
+  if (letters.length === 6 && BYBIT_FIAT_CODES.has(letters.slice(0, 3)) && BYBIT_FIAT_CODES.has(letters.slice(3, 6))) return s
+  if (/^(XAU|XAG|XPT|XPD)USD$/.test(s)) return s
+  if (/^[A-Z0-9]{2,12}USD$/.test(s)) return s.replace(/USD$/, "USDT")
   return s
 }
