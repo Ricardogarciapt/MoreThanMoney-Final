@@ -181,11 +181,12 @@ const INDEX_SET = new Set([
 function classifyAsset(rawTicker: string | null): AssetClass {
   if (!rawTicker) return "other"
   const norm = rawTicker.toUpperCase().replace(/[^A-Z0-9.]/g, "").replace(/^[A-Z]+:/, "")
-  // Ouro + BTC (Sensei) — inclui perpétuos de BTC (BTCUSDT, BTCUSD.P, BTCUSDT.P):
-  // o scanner Sensei passou a enviar BTCUSDT.P; o parser normaliza tudo → BTCUSD.
-  if (/XAUUSD/.test(norm) || /^BTC(USD|USDT)(\.P)?$/.test(norm)) return "gold_btc"
-  // Outros cripto perpétuos (ETH, etc.) — não vão para o Sensei
-  if (/\.P$/.test(norm) || /USDT/.test(norm) || /PERP/.test(norm)) return "crypto_perp"
+  // Ouro (Sensei) — SÓ XAUUSD. O BTC foi DESclassificado do Sensei (2026-08, decisão Ricardo):
+  // passa a perpétuo cripto (mecânica perps/Bybit) em QUALQUER forma — BTCUSD, BTCUSDT, BTCUSD.P,
+  // BTCUSDT.P (o scanner manda BTCUSDT.P; o PrimeVerse manda BTCUSD; ambos vão aos perps).
+  if (/XAUUSD/.test(norm)) return "gold_btc"
+  // Cripto perpétuos (BTC, ETH, SOL, …) em qualquer forma reconhecida → mecânica de perps.
+  if (isCryptoPerpTicker(rawTicker)) return "crypto_perp"
   const letters = norm.replace(/[^A-Z]/g, "")
   if (letters.length === 6 && FOREX_CODES.has(letters.slice(0, 3)) && FOREX_CODES.has(letters.slice(3, 6))) return "forex"
   if (INDEX_SET.has(norm) || INDEX_SET.has(letters)) return "index"

@@ -52,8 +52,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 })
   }
 
-  if (process.env.BYBIT_PERPS_EXEC_ENABLED !== "true") {
-    return NextResponse.json({ ok: false, skipped: true, reason: "BYBIT_PERPS_EXEC_ENABLED off" })
+  // Gate: env BYBIT_PERPS_EXEC_ENABLED=true OU flag runtime site_settings.bybit_perps_exec.enabled=true
+  // (o runtime permite ligar/desligar sem redeploy da Vercel).
+  let perpsOn = process.env.BYBIT_PERPS_EXEC_ENABLED === "true"
+  if (!perpsOn) {
+    try {
+      const { getSupabaseAdmin } = await import("@/lib/supabase-admin-client")
+      const { data } = await getSupabaseAdmin().from("site_settings").select("value").eq("key", "bybit_perps_exec").maybeSingle()
+      perpsOn = (data?.value as { enabled?: boolean } | null)?.enabled === true
+    } catch {
+      /* sem flag runtime → fica no valor do env */
+    }
+  }
+  if (!perpsOn) {
+    return NextResponse.json({ ok: false, skipped: true, reason: "perps exec off (env + runtime)" })
   }
   if (!bybitConfigured()) {
     return NextResponse.json({ ok: false, error: "sem BYBIT_API_KEY/SECRET" }, { status: 400 })
