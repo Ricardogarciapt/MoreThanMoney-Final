@@ -1083,12 +1083,9 @@ export async function POST(request: NextRequest) {
     const bybitSl = v.sl ?? sl ?? null
     const bybitTps = [tp, tp2, tp3].filter((n): n is number => n != null && n > 0)
     const normSym = String(v.symbol ?? ticker).toUpperCase().replace(/^[A-Z]+:/, "").replace(/\.P$/, "")
-    // Backtest 2026-08: o ORB do Aurum é rentável em ETH mas NEGATIVO (PF<1) em BTC → BTC fica em
-    // SHADOW (vai ao chat, não executa na Bybit). ETH e restantes seguem para a ordem-mestre.
-    const aurumBtcShadow = isAurumFlow && /^BTC/.test(normSym)
-    if (aurumBtcShadow && logId) {
-      await supabase.from("tradingview_signals").update({ bybit_exec_detail: "shadow: Aurum ORB BTC (backtest PF<1)" }).eq("id", logId)
-    }
+    // Shadow do Aurum BTC REMOVIDO (decisão Ricardo 2026-08): o BTC do Aurum Flow passa a EXECUTAR
+    // na Bybit como o restante cripto (antes ficava em shadow pelo backtest PF<1).
+    const aurumBtcShadow = false
     if (cronSecret && normSym && bybitEntry != null && !aurumBtcShadow) {
       // Lista de símbolos que o Copy Trading da Bybit não suporta (auto-preenchida) → salta sem tentar.
       const { data: usRow } = await supabase.from("site_settings").select("value").eq("key", "bybit_copy_unsupported").maybeSingle()
