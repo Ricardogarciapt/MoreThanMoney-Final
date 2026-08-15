@@ -713,5 +713,12 @@ export async function placeBybitPerp(o: BybitPerpTradeInput): Promise<BybitPerpT
 
 /** Ticker `.P`/`USDT` → símbolo linear Bybit (ex.: BTCUSDT.P → BTCUSDT). */
 export function toBybitSymbol(ticker: string): string {
-  return ticker.toUpperCase().replace(/^[A-Z]+:/, "").replace(/\.P$/, "")
+  const s = ticker.toUpperCase().replace(/^[A-Z]+:/, "").replace(/\.P$/, "")
+  // Os perps do Copy Trading da Bybit são LINEAR (USDT-margined). Um cripto `...USD` (ex.: BTCUSD do
+  // PrimeVerse) tem de virar `...USDT` — senão `BTCUSD` cairia no contrato INVERSO (coin-margined).
+  // Metais (XAUUSD…) e pares já `...USDT`/`...USDC` ficam iguais.
+  if (/^[A-Z0-9]{2,10}USD$/.test(s) && !/^(XAU|XAG|XPT|XPD)USD$/.test(s)) {
+    return s.replace(/USD$/, "USDT")
+  }
+  return s
 }
