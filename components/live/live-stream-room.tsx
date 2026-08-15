@@ -19,6 +19,7 @@ import LiveFinancialDisclaimer from "@/components/live/live-financial-disclaimer
 import EmojiChatPicker from "@/components/live/emoji-chat-picker"
 import { enterLiveFullscreen, useIsSmartphone } from "@/lib/live-player-viewport"
 import { useLmsHlsVideo } from "@/hooks/use-lms-hls-video"
+import { useLmsWhepVideo } from "@/lib/lms-whep"
 import { usePictureInPictureSupported } from "@/hooks/use-picture-in-picture-supported"
 import { seekHlsByDelta } from "@/lib/live-hls-seek"
 import { useLmsViewerHeartbeat } from "@/hooks/use-lms-viewer-heartbeat"
@@ -124,7 +125,10 @@ export default function LiveStreamRoom({ streamId }: Props) {
     }
   }, [stream?.playback_url])
 
-  useLmsHlsVideo(videoRef, useHls ? effectiveHlsUrl : null)
+  // WHEP (WebRTC, tipo Zoom) PRIMEIRO — latência ~sub-segundo. Se ligar, assume o vídeo; se não
+  // ligar em ~6s, `whepActive` fica false e o HLS toma conta (apps nativas nunca usam isto).
+  const { whepActive } = useLmsWhepVideo(videoRef, streamId, isLive && useHls)
+  useLmsHlsVideo(videoRef, useHls && !whepActive ? effectiveHlsUrl : null)
 
   useEffect(() => {
     const isLiveNow = Boolean(stream?.is_live)
