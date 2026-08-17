@@ -15,6 +15,24 @@ function chatForSymbol(s: string): string | null {
   return null
 }
 
+/**
+ * ACOMPANHAMENTO da posição no chat (sem thread, sem duplicar o card). Uma linha concisa por evento
+ * do ciclo de vida (ENTRY HIT = ordem ativada, e no futuro TP/BE/fecho). NÃO inclui alvo "TP"/🎯 nem o
+ * marcador "PrimeVerse" → `isT2TEntrySignal`/`t2tSourceKey` devolvem false, logo NUNCA vira nova
+ * entrada Tap to Trade. Serve só para o seguidor manual gerir a posição que abriu no SETUP.
+ */
+async function postPrimeverseFollowup(slug: string, content: string) {
+  try {
+    const { data } = await getSupabaseAdmin()
+      .from('chat_messages')
+      .insert({ channel_slug: slug, user_id: null, content, message_type: 'telegram_forward', notified: true })
+      .select('id').single()
+    await sendTelegramChannelPush({ slug, content, chatMessageId: data?.id as string }).catch(() => {})
+  } catch (e) {
+    console.warn('[primeverse] followup erro:', e instanceof Error ? e.message : String(e))
+  }
+}
+
 /** Insere o sinal (formato parseável) no chat da classe + dispara push T2T. */
 async function feedPrimeverseChat(slug: string, symbol: string, direction: 'buy' | 'sell', sl: number | null, tp: number | null, trader?: string, timeframe?: string | null, entry?: number | null, tps?: number[]) {
   try {
@@ -116,8 +134,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, routed: chatSlug, kind, exec: 'aguarda_entry_hit' })
   }
 
-  // ── kind === 'entry_hit' ── o preço chegou ao Entry → executar a mercado (SL/TP corretos).
-  // Não re-mostra o card (já foi mostrado no setup) para não duplicar no chat.
+  // ── kind === 'entry_hit' ── o preço chegou ao Entry → ativa a ordem (limit/stop) do sistema PrimeVerse.
+  // Não re-mostra o card (já foi mostrado no setup) para não duplicar no chat, MAS acompanha a posição:
+  // uma linha concisa a confirmar a ATIVAÇÃO, para o seguidor manual (Tap to Trade) gerir a partir daqui.
+  // Postado para TODOS os traders do setup (não só os executados), antes do gate de execução.
+  if (chatSlug) {
+    const dirTxt = direction === 'buy' ? '🔵 COMPRA' : '🔴 VENDA'
+    const line = [
+      `✅ ENTRY HIT · ${symbol} ${dirTxt}${trader ? ` · ${trader}` : ''}`,
+      sl != null ? `🛑 SL: ${sl}` : null,
+      `Ordem ativada — gere a posição pelos alvos definidos no sinal.`,
+    ].filter(Boolean).join('\n')
+    await postPrimeverseFollowup(chatSlug, line)
+  }
 
   // EXECUÇÃO: só o(s) trader(s) escolhido(s) (cfg.traders) — os outros ficam só no chat.
   if (!cfg.traders.includes(trader)) return NextResponse.json({ ok: true, routed: chatSlug, exec: 'skipped_trader', trader })
