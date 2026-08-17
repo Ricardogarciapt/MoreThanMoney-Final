@@ -5,6 +5,7 @@ import { computeRiskLot } from '@/lib/mtmcopy/risk-sizing'
 import { getSiteOrigin } from '@/lib/site-url'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
+import { handlePrimeverseCancelClose } from '@/lib/mtmcopy/primeverse-lifecycle'
 
 /** Classe de ativo → chat existente da app (reutilizados). */
 function chatForSymbol(s: string): string | null {
@@ -97,9 +98,11 @@ interface Body {
   timeframe?: string
   /** 'setup' = alerta pendente (só mostra o sinal, NÃO executa) · 'entry_hit' = o preço chegou ao
    *  Entry ("🟢 ENTRY HIT") → executa a MERCADO (preço ≈ entry, logo SL/TP ficam corretos).
+   *  'cancel' = o trader cancelou a ordem pendente · 'close' = o trader fechou a posição →
+   *  thread no chat + apaga/fecha as ordens T2T dos seguidores desse setup.
    *  Default 'entry_hit' (retrocompat). Os setups do kingfkg são níveis pendentes: entrar a mercado
    *  neles fica com o preço longe do Entry → SL enorme. Por isso só se executa no ENTRY HIT. */
-  kind?: 'setup' | 'entry_hit'
+  kind?: 'setup' | 'entry_hit' | 'cancel' | 'close'
 }
 
 const ALLOWED = new Set(['XAUUSD', 'BTCUSD'])
@@ -114,7 +117,8 @@ export async function POST(req: NextRequest) {
   const symbol = (b.symbol || '').toString().trim().toUpperCase()
   const dir = (b.direction || '').toString().trim().toLowerCase()
   const direction: 'buy' | 'sell' = dir === 'sell' ? 'sell' : 'buy'
-  const kind: 'setup' | 'entry_hit' = b.kind === 'setup' ? 'setup' : 'entry_hit'
+  const kind: 'setup' | 'entry_hit' | 'cancel' | 'close' =
+    b.kind === 'setup' ? 'setup' : b.kind === 'cancel' ? 'cancel' : b.kind === 'close' ? 'close' : 'entry_hit'
   // No ENTRY HIT o preço está NO Entry → entra a MERCADO (nunca limit longe do preço). No setup nunca
   // se executa, por isso o orderType do setup é irrelevante.
   const orderType: 'market' | 'limit' = kind === 'entry_hit' ? 'market' : ((b.orderType || '').toLowerCase() === 'limit' ? 'limit' : 'market')
@@ -132,6 +136,14 @@ export async function POST(req: NextRequest) {
   if (kind === 'setup') {
     if (chatSlug) await feedPrimeverseChat(chatSlug, symbol, direction, sl, tps[0] ?? null, trader, timeframe, entry, tps)
     return NextResponse.json({ ok: true, routed: chatSlug, kind, exec: 'aguarda_entry_hit' })
+  }
+
+  // ── kind === 'cancel' | 'close' ── o trader cancelou a ordem pendente ou fechou a posição →
+  // thread no chat do setup + AUTO apaga/fecha as ordens T2T dos seguidores desse setup.
+  if (kind === 'cancel' || kind === 'close') {
+    if (!chatSlug) return NextResponse.json({ ok: true, routed: null, kind, exec: 'sem_chat' })
+    const r = await handlePrimeverseCancelClose({ kind, chatSlug, symbol, direction })
+    return NextResponse.json({ ok: true, routed: chatSlug, kind, ...r })
   }
 
   // ── kind === 'entry_hit' ── o preço chegou ao Entry → ativa a ordem (limit/stop) do sistema PrimeVerse.
