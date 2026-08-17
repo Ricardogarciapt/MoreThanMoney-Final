@@ -46,6 +46,7 @@ import Link from "next/link"
 import MentionInput from "./mention-input"
 import MentionText from "./mention-text"
 import MemberBadge from "./member-badge"
+import ChatPinnedInstructions from "./chat-pinned-instructions"
 import {
   getChannelMeta,
   formatPreviewText,
@@ -1597,6 +1598,9 @@ function ChannelView({
           <Info className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Card FIXO: como seguir os sinais (só canais de sinais com instruções configuradas) */}
+      <ChatPinnedInstructions slug={channel.slug} />
 
       {/* Messages */}
       <div className="relative flex-1" style={{ minHeight: 0 }}>
