@@ -42,6 +42,14 @@ interface ActiveRow {
   profile: string | null
 }
 
+/** BE protetor cedo: move SL→BE quando o lucro ≥ esta FRACÇÃO do risco (|entrada−SL|). Menor = mais
+ *  cedo. Como é fracção do risco, entrada FUNDA (risco pequeno) chega a BE mais cedo, na PONTA mais
+ *  tarde. Env PREMIUM_EARLY_BE_RATIO (default 0.4). */
+const PREMIUM_EARLY_BE_RATIO = (() => {
+  const v = Number(process.env.PREMIUM_EARLY_BE_RATIO)
+  return Number.isFinite(v) && v > 0 && v <= 2 ? v : 0.4
+})()
+
 /** Gold Did: BE quando o preço avança este tanto (guia GMI: 50 pips = +5.0 no ouro, 1 pip = 0.1). */
 const GOLDDID_BE_PRICE_MOVE = 5.0
 
@@ -153,6 +161,40 @@ export async function runPremiumPriceMonitor(): Promise<{
           }
         }
         continue // Gold Did NÃO corre a gestão Premium (parciais/trailing/BE-no-TP1)
+      }
+
+      // ── BE PROTETOR CEDO (price-based) ──────────────────────────────────────────────
+      // Assim que a trade está +K×risco em lucro, move o SL para BREAK-EVEN (SL = entrada).
+      // K é uma FRACÇÃO do risco (|entrada−SL|), por isso uma entrada FUNDA (risco pequeno,
+      // perto do SL) chega a BE MAIS CEDO em pips do que uma entrada na PONTA (risco grande) —
+      // que é o pedido do Ricardo. Protege contra reversões que dariam SL numa trade que corria.
+      // Não depende de mensagens (evita slippage/atrasos). Marca early_trail_started p/ não repetir.
+      if (
+        row.exits_done === 0 &&
+        !row.trailing_started &&
+        !row.early_trail_started &&
+        row.entry && row.entry > 0 &&
+        row.sl && row.sl > 0
+      ) {
+        const riskDist = Math.abs(row.entry - row.sl)
+        const profitDist = row.direction === 'buy' ? price - row.entry : row.entry - price
+        if (riskDist > 0 && profitDist >= PREMIUM_EARLY_BE_RATIO * riskDist) {
+          try {
+            await modifyPositionSlTp(accountId, pos.id, row.entry, undefined, undefined, row.symbol)
+            await admin
+              .from('mtmcopy_premium_active')
+              .update({ early_trail_started: true, updated_at: new Date().toISOString() })
+              .eq('id', row.id)
+            actions++
+            const pp = pipSizeFor(row.symbol)
+            detail.push(
+              `${row.symbol}: BE protetor a +${(profitDist / pp).toFixed(0)}p (≥${(PREMIUM_EARLY_BE_RATIO * 100).toFixed(0)}% do risco ${(riskDist / pp).toFixed(0)}p)`,
+            )
+            continue
+          } catch {
+            detail.push(`${row.symbol}: BE protetor falhou`)
+          }
+        }
       }
 
       // ── Regra ZONA LARGA (SL ~100 pips): arranca trailing a +40.5 pips, ANTES do Exit 1 ──
