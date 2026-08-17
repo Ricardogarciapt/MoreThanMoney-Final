@@ -164,7 +164,7 @@ function composePost(
 
   // fallback genérico
   const title = sensei ? senseiAlertTypeLabel(sensei.alertType) : "Alerta"
-  return [`🧠 Sensei Scanner — ${title}${tag}`, ``, head, DISCLAIMER].join("\n")
+  return [`🧠 Sensei Scanner — ${title}${tag}`, ``, mgmtHead, DISCLAIMER].join("\n")
 }
 
 // ─── Roteamento por classe de ativo ──────────────────────────────────────────
