@@ -55,17 +55,6 @@ const CHANNEL_LABEL: Record<string, string> = {
   "sinais-goldkiller": "GoldKiller",
 }
 
-type Category = "all" | "gold" | "forex" | "crypto" | "indices"
-
-function categoryOf(content: string): Exclude<Category, "all"> | "other" {
-  const c = content.toUpperCase()
-  if (/XAU|GOLD/.test(c)) return "gold"
-  if (/BTC|ETH|SOL|XRP|USDT|CRYPTO/.test(c)) return "crypto"
-  if (/NAS100|US30|US500|GER40|SPX|DOW|UK100|JP225/.test(c)) return "indices"
-  if (/[A-Z]{3}USD|USD[A-Z]{3}|EUR|GBP|JPY|AUD|CAD|CHF|NZD/.test(c)) return "forex"
-  return "other"
-}
-
 function directionOf(content: string): "BUY" | "SELL" | "" {
   const c = content.toLowerCase()
   if (/🟢|\bbuy\b|\blong\b|\bcompra\b/.test(c)) return "BUY"
@@ -160,21 +149,11 @@ interface Conn {
 const RISK_PRESET: Record<string, number> = { low: 0.5, medium: 1, high: 2 }
 const RISK_LABEL: Record<string, string> = { low: "Baixo", medium: "Médio", high: "Alto" }
 
-const FILTERS: { id: Category; labelKey: string }[] = [
-  { id: "all", labelKey: "t2t.filterAll" },
-  { id: "gold", labelKey: "t2t.filterGold" },
-  { id: "forex", labelKey: "t2t.filterForex" },
-  { id: "crypto", labelKey: "t2t.filterCrypto" },
-  { id: "indices", labelKey: "t2t.filterIndices" },
-]
-
-
 export default function TapToTradeFeed() {
   const t = useT()
   const searchParams = useSearchParams()
   const [items, setItems] = useState<Sig[]>([])
   const [loading, setLoading] = useState(true)
-  const [cat, setCat] = useState<Category>("all")
   const [limitMode, setLimitMode] = useState<"last5" | "all">("last5")
   const [tap, setTap] = useState<{ sig: Sig; status: "confirm" | "loading" | "done" | "error"; message?: string } | null>(null)
   const [providers, setProviders] = useState<{ label: string; strategy: string }[]>([])
@@ -377,9 +356,8 @@ export default function TapToTradeFeed() {
   }, [searchParams, items])
 
   const filtered = items
-    // "O que seguir": só as fontes + classes de ativo que o user escolheu ([]=todas)
+    // "O que seguir" é a ÚNICA filtragem: fontes + classes de ativo que o user escolheu ([]=todas).
     .filter((s) => matchesT2TPrefs(s.channel_slug, s.content, { sources: follow.sources, assetClasses: follow.assetClasses }))
-    .filter((s) => cat === "all" || categoryOf(s.content) === cat)
   const shown = limitMode === "last5" ? filtered.slice(0, 5) : filtered
 
   const runTap = async () => {
@@ -935,16 +913,8 @@ export default function TapToTradeFeed() {
         </div>
       )}
 
-      {providers.length > 0 && (
-        <div className="flex items-center gap-1.5 mb-3 overflow-x-auto no-scrollbar">
-          <span className="text-[11px] text-zinc-500 shrink-0">{t("t2t.activeStrategies")}</span>
-          {providers.map((p, i) => (
-            <span key={i} className="shrink-0 text-[11px] px-2 py-0.5 rounded-full bg-[#D2A63C]/15 text-[#D2A63C] border border-[#D2A63C]/30 whitespace-nowrap">
-              {p.label}
-            </span>
-          ))}
-        </div>
-      )}
+      {/* «Estratégias ativas» (automatizadas) removido: o Tap to Trade é MANUAL — segue os CHATS
+          conforme o «O que seguir» (fontes + ativo + risco), não as estratégias de cópia auto. */}
 
       {/* alcance: últimos 5 (default) vs todos */}
       <div className="flex items-center gap-1.5 mb-2">
@@ -966,20 +936,8 @@ export default function TapToTradeFeed() {
         </button>
       </div>
 
-      {/* filtros por categoria */}
-      <div className="flex gap-1.5 mb-3 overflow-x-auto no-scrollbar">
-        {FILTERS.map((f) => (
-          <button
-            key={f.id}
-            onClick={() => setCat(f.id)}
-            className={`shrink-0 text-xs px-3 py-1.5 rounded-full border font-medium ${
-              cat === f.id ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"
-            }`}
-          >
-            {t(f.labelKey)}
-          </button>
-        ))}
-      </div>
+      {/* Filtro por categoria removido: duplicava o «Ativo» do «O que seguir» (ouro/forex/cripto/
+          índices). O feed já é filtrado pelas prefs em matchesT2TPrefs. */}
 
       {loading && items.length === 0 ? (
         <div className="flex justify-center py-16"><Loader2 className="w-7 h-7 animate-spin text-[#D2A63C]" /></div>
