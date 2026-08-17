@@ -45,9 +45,11 @@ export function classifyPremiumMessage(text: string): PremiumMessageCtx | null {
   if (!text?.trim()) return null
   const setBE = isPremiumHoldRemainderAtBE(text)
 
-  if (/\bhit\s+all\s+tp\b/i.test(text)) return { kind: 'hit_all', setBE }
+  // Fecho total: "HIT ALL TP" OU "TRADE CLOSED …" (Signal Master Elite fecha com "TRADE CLOSED | TPx secured").
+  if (/\bhit\s+all\s+tp\b/i.test(text) || /\btrade\s+closed\b/i.test(text)) return { kind: 'hit_all', setBE }
 
-  const hit = text.match(/\bhit\s+tp\s*([1-4])\b/i)
+  // TP hit em QUALQUER ordem: "HIT TP2" (GMI) OU "TP2 HIT" (Signal Master Elite: "✅ TP2 HIT +100 pips").
+  const hit = text.match(/\bhit\s+tp\s*([1-4])\b/i) || text.match(/\btp\s*([1-4])\s*hit\b/i)
   if (hit) {
     const lvl = parseInt(hit[1], 10)
     if (lvl === 1) return { kind: 'hit_tp1', setBE }
@@ -61,6 +63,16 @@ export function classifyPremiumMessage(text: string): PremiumMessageCtx | null {
   }
 
   if (/\b(?:hit\s?sl|sl\s?hit|stop\s?loss\s+hit)\b/i.test(text)) return { kind: 'sl_hit', setBE }
+
+  // Trade EM LUCRO a correr (Signal Master Elite: "1st entry running +550PIPS", "running +Xpips") →
+  // proteger a capital movendo o SL para BREAK-EVEN. Foi a AUSÊNCIA disto que deixou o SL no
+  // original hoje → um wick matou a posição apesar de a trade estar a correr em lucro.
+  if (
+    /\b(?:1st|2nd|3rd|\d+(?:st|nd|rd|th))\s+entr(?:y|ies)\s+running\b/i.test(text) ||
+    /\brunning\b[^\n]*\+?\s*\d+\s*pips?\b/i.test(text)
+  ) {
+    return { kind: 'breakeven', setBE: true }
+  }
 
   if (/\b(?:breakeven|break\s?even|set\s+be)\b/i.test(text)) return { kind: 'breakeven', setBE }
 
