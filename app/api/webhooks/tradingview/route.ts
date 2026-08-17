@@ -123,43 +123,43 @@ function composePost(
     ].filter(Boolean).join("\n")
   }
 
-  // ---- Follow-ups (sempre em resposta à entrada) ----
-  const head = `📊 ${symbol}   ${dir} com 🎯 Entrada: ${entry ?? "—"}`
+  // ---- Follow-ups (gestão) ----
+  // NÃO reconstruir COMPRA/VENDA aqui (o alerta de gestão pode trazer a direção do FECHO, que
+  // contradiz a entrada). E a gestão é AUTOMÁTICA por PREÇO (parciais + break-even) — nada de
+  // instruções manuais "Fecha 25% / Trailing" que já não correspondem ao sistema.
+  const mgmtHead = `📊 ${symbol}`
 
   if (alertType === "tp_hit") {
     const lvl = sensei?.tpLevel ?? 1
     const tpVal = tps[lvl - 1]
     const last = lvl >= 4
     return [
-      `🧠 Sensei Scanner — TP${lvl} Hit${tag}`,
+      `🧠 Sensei Scanner — TP${lvl} atingido${tag}`,
       ``,
-      head,
-      `✅ Take Profit ${lvl}: ${tpVal ?? "—"}${last ? " — todas as saídas atingidas" : " — Fecha 25%"}`,
+      `${mgmtHead}${tpVal != null ? ` · TP${lvl}: ${tpVal}` : ""}`,
       last
-        ? `🏁 Fecha a posição (saídas completas).`
-        : lvl === 1
-          ? `⚠️ Colocar BE + iniciar Trailing Stop.`
-          : `⚠️ Mantém BE + continua Trailing Stop.`,
+        ? `🏁 Todas as saídas atingidas — posição fechada.`
+        : `✅ Parcial fechada e stop em break-even — gestão automática por preço.`,
       DISCLAIMER,
     ].filter(Boolean).join("\n")
   }
 
   if (alertType === "breakeven") {
     return [
-      `🧠 Sensei Scanner — Coloca BreakEven${tag}`,
+      `🧠 Sensei Scanner — Break-even${tag}`,
       ``,
-      head,
-      `🔒 Move o Stop Loss para o ponto de entrada (BreakEven) — protege a posição sem risco. A posição continua aberta.`,
+      mgmtHead,
+      `🔒 Stop movido para a entrada — posição sem risco (automático).`,
       DISCLAIMER,
     ].join("\n")
   }
 
   if (alertType === "sl_hit") {
-    return [`🧠 Sensei Scanner — Stop Loss${tag}`, ``, head, `🛑 Stop Loss atingido — posição encerrada.`, DISCLAIMER].join("\n")
+    return [`🧠 Sensei Scanner — Stop Loss${tag}`, ``, mgmtHead, `🛑 Stop atingido — posição encerrada.`, DISCLAIMER].join("\n")
   }
 
   if (alertType === "exit") {
-    return [`🧠 Sensei Scanner — Saída${tag}`, ``, head, `🏁 Fecha a posição.`, DISCLAIMER].join("\n")
+    return [`🧠 Sensei Scanner — Saída${tag}`, ``, mgmtHead, `🏁 Posição fechada.`, DISCLAIMER].join("\n")
   }
 
   // fallback genérico
