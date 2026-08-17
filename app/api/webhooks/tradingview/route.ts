@@ -561,8 +561,11 @@ export async function POST(request: NextRequest) {
   // dos perps (ex.: USDCAD no Aurum Flow) segue a sua classe natural e nunca vai ao chat de
   // perps nem à Bybit (que só tem cripto). Evita sinais errados no canal + ordens inválidas.
   // strategy=aurum e strategy=mtmperps são fontes de perpétuos → ativam o modo perps (só cripto).
+  // IMPORTANTE: a deteção por CONTEÚDO também conta (isAurumFlow/isMtmPerps) — os alertas do TradingView
+  // trazem "Aurum Flow"/"MTM Perps" no nome/strategy mesmo sem o `?strategy=` no URL. Sem isto, o sinal
+  // perp caía no gate de RUÍDO genérico (passesAlertGate) → chat suprimido e Bybit nunca corria.
   const perpsRequested =
-    scannerKey === "mtmperps" || forcedPerps || forcedStrategy === "aurum" || forcedStrategy === "aurumflow"
+    scannerKey === "mtmperps" || isMtmPerps || isAurumFlow || forcedPerps || forcedStrategy === "aurum" || forcedStrategy === "aurumflow"
   const isCryptoPerp = isCryptoPerpTicker(ticker)
   if (perpsRequested && isCryptoPerp) {
     // Lista única de perps → sempre canal "Ideias de Perpétuos Cripto", em PAPEL.
