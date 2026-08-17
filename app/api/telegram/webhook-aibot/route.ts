@@ -38,6 +38,23 @@ async function resolveTelegramImageUrl(message: {
 
 async function mirrorToApp(message: TelegramChannelMessage) {
   const chat = message.chat ?? {}
+  // Mensagens de SERVIÇO (renomear grupo, entradas/saídas de membros, foto, pin, etc.) NÃO são sinais
+  // → nunca viram "ideia"/notificação. Foi um rename destes que disparou uma notif de forex trocada.
+  const svc = message as unknown as Record<string, unknown>
+  if (
+    svc.new_chat_title != null ||
+    svc.new_chat_photo != null ||
+    svc.delete_chat_photo != null ||
+    svc.new_chat_members != null ||
+    svc.left_chat_member != null ||
+    svc.pinned_message != null ||
+    svc.group_chat_created != null ||
+    svc.supergroup_chat_created != null ||
+    svc.migrate_to_chat_id != null ||
+    svc.migrate_from_chat_id != null
+  ) {
+    return
+  }
   const slug = resolveAppChannelSlug(chat)
   if (!slug) return
 

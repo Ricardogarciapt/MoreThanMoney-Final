@@ -3,6 +3,7 @@ import {
   CANONICAL_TELEGRAM_CHANNELS,
   resolvedForexIdeasChatId,
   resolvedGoldkillerScannerChatId,
+  resolvedPerpsChatId,
   resolvedPremiumSignalsChatId,
   resolvedTradeIdeasChatId,
 } from '@/lib/telegram-channel-ids'
@@ -13,6 +14,7 @@ export type AppChatChannelSlug =
   | 'sensei-scanner'
   | 'sinais-goldkiller'
   | 'sinais-scanner-mtm'
+  | 'cripto-perps'
 
 const map = new Map<string, AppChatChannelSlug>()
 
@@ -39,6 +41,9 @@ export function buildAppChannelMap(): Map<string, AppChatChannelSlug> {
   registerChatId(resolvedForexIdeasChatId(), 'trade-ideas-setup')
   registerChatId(resolvedGoldkillerScannerChatId(), 'sinais-goldkiller')
   registerChatId(resolvedPremiumSignalsChatId(), 'premium-ideas')
+  // Grupo dos Perpétuos (reaproveitado). Mapeia por ID → cripto-perps, ANTES do título (o título
+  // "Ideias de Perpétuos Cripto" senão cairia no fallback 'ideias'→Forex). Evita a notif trocada.
+  registerChatId(resolvedPerpsChatId() ?? undefined, 'cripto-perps')
 
   return map
 }
@@ -48,6 +53,9 @@ export function detectSlugFromChannelTitle(title: string | null | undefined): Ap
   if (!title) return null
   const t = title.toLowerCase()
   if (t.includes('premium') || t.includes('mtmgold')) return 'premium-ideas'
+  // Perpétuos ANTES do fallback genérico 'ideias'/'scanner' (o título "Ideias de Perpétuos Cripto"
+  // senão cairia em Forex). Cobre perp/perpétuo/perpetuo.
+  if (t.includes('perp')) return 'cripto-perps'
   // GoldKiller ANTES de "scanner" genérico (o título GoldKiller também contém "scanner").
   if (t.includes('goldkiller') || t.includes('gold killer') || t.includes('gold-killer')) return 'sinais-goldkiller'
   if (t.includes('sensei')) return 'sensei-scanner'
