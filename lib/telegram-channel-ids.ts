@@ -59,6 +59,16 @@ export const CANONICAL_TELEGRAM_CHANNELS = {
     appSlug: 'trade-ideas-setup' as const,
     envVars: ['TELEGRAM_CHANNEL_MTMSCANNER', 'TELEGRAM_MTMSCANNER_CHAT_ID'],
   },
+  // Canal Telegram dedicado dos PERPÉTUOS CRIPTO (Aurum Flow ORB + MTM Perps). O grupo ainda NÃO
+  // existe (bot não cria grupos) → chatId vazio. Quando o Ricardo criar o grupo "Ideias de Perpétuos
+  // Cripto" e adicionar o bot admin, põe-se o id em TELEGRAM_CHANNEL_PERPS (ou preenche-se o chatId
+  // aqui). Enquanto vazio, resolvedPerpsChatId()=null → NÃO relaya (só chat da app, seguro).
+  cryptoPerps: {
+    chatId: '',
+    title: 'Ideias de Perpétuos Cripto',
+    appSlug: 'cripto-perps' as const,
+    envVars: ['TELEGRAM_CHANNEL_PERPS', 'TELEGRAM_PERPS_CHAT_ID'],
+  },
 }
 
 /** Normaliza ID de env (corrige -3716578747 → -1003716578747, remove \\n). */
@@ -126,6 +136,15 @@ export function resolvedMtmScannerChatId(): string | null {
   return (
     normalizeEnvChatId(readEnv(CANONICAL_TELEGRAM_CHANNELS.mtmScanner.envVars)) ??
     (CANONICAL_TELEGRAM_CHANNELS.mtmScanner.chatId || null)
+  )
+}
+
+/** Canal Telegram dos Perpétuos Cripto. Env se definido; senão o chatId canónico; null se ambos vazios
+ *  (grupo ainda por criar) → não relaya, seguro. */
+export function resolvedPerpsChatId(): string | null {
+  return (
+    normalizeEnvChatId(readEnv(CANONICAL_TELEGRAM_CHANNELS.cryptoPerps.envVars)) ??
+    (CANONICAL_TELEGRAM_CHANNELS.cryptoPerps.chatId || null)
   )
 }
 

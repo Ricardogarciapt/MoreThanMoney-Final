@@ -23,7 +23,7 @@ import {
 } from "@/lib/mtmcopy/sensei-ideas"
 import { processMtmcopyWebhookSignal, processMtmcopyWebhookManagement } from "@/lib/mtmcopy/processor"
 import { getSiteOrigin } from "@/lib/site-url"
-import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId, resolvedGoldkillerScannerChatId, resolvedMtmScannerChatId } from "@/lib/telegram-channel-ids"
+import { resolvedTradeIdeasChatId, resolvedForexIdeasChatId, resolvedGoldkillerScannerChatId, resolvedMtmScannerChatId, resolvedPerpsChatId } from "@/lib/telegram-channel-ids"
 import { getExecSwitches } from "@/lib/mtmcopy/exec-switches"
 import { evaluatePerpsSignalGate } from "@/lib/mtmcopy/perps-signal-gate"
 import { getSignalRules, passesAlertGate, passesExecGate } from "@/lib/mtmcopy/signal-rules"
@@ -572,7 +572,9 @@ export async function POST(request: NextRequest) {
     // Execução real (Bybit, motor de cópia próprio) fica para a Fase 2, atrás de flag.
     assetClass = "crypto_perp"
     route.channel = "cripto-perps"
-    route.telegram = null
+    // Telegram dedicado "Ideias de Perpétuos Cripto" (env TELEGRAM_CHANNEL_PERPS). Enquanto o grupo
+    // não existir/estiver por definir → resolvedPerpsChatId()=null → publica só no chat da app (seguro).
+    route.telegram = resolvedPerpsChatId()
     // Marca a origem: Aurum Flow ORB vs a dinâmica MTM Perps (Sensei X) — mesmo chat, fontes distintas.
     route.sender = isAurumFlow ? "⚡ Aurum Flow ORB" : "🪙 Perpétuos Cripto"
     route.push = true
