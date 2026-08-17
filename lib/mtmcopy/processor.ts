@@ -1915,6 +1915,14 @@ export async function processMtmcopyWebhookManagement(opts: {
   const details: string[] = []
   let anyApplied = false
   for (const prov of providers) {
+    // Se a rota tem price_monitor ON, as saídas (parciais/BE/TP) são geridas por PREÇO no
+    // premium-price-monitor (realtime, sobre a posição REAL). A gestão por ALERTAS aqui passa a
+    // atrapalhar (dava "sem posição ativa" nos flips + risco de duplo-fecho) → saltamos.
+    const senseiProfile = await getProviderExecutionProfile(channel, prov.execution)
+    if (senseiProfile.price_monitor === true) {
+      details.push('price-monitor ativo → saída por PREÇO (alerta de gestão ignorado)')
+      continue
+    }
     const outcome = await applySenseiManagement({
       accountId: prov.accountId,
       symbol: opts.symbol,
