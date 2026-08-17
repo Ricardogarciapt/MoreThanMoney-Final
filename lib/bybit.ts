@@ -115,6 +115,37 @@ export async function getBybitPositions(): Promise<{ ok: boolean; retMsg: string
   return { ok: r.ok, retMsg: r.retMsg, positions }
 }
 
+/**
+ * PnL realizado do ÚLTIMO fecho de um símbolo (linear USDT), nas últimas `sinceMs` (default 6h).
+ * Soma os closedPnl das execuções de fecho mais recentes para esse símbolo. Usado pelo monitor de
+ * perps para anunciar o resultado quando a posição-mestre fecha. Devolve null se não encontrar.
+ */
+export async function getBybitLastClosedPnl(
+  symbol: string,
+  sinceMs = 6 * 60 * 60 * 1000,
+): Promise<{ pnl: number; closedAt: number } | null> {
+  const now = Date.now()
+  const r = await signedRequest("GET", "/v5/position/closed-pnl", {
+    category: "linear",
+    symbol,
+    startTime: now - sinceMs,
+    endTime: now,
+    limit: 50,
+  })
+  if (!r.ok) return null
+  const list = (r.result as { list?: Record<string, string>[] } | null)?.list ?? []
+  if (!list.length) return null
+  // A Bybit devolve por ordem decrescente de tempo. O fecho mais recente é o 1.º.
+  const latestTs = Math.max(...list.map((it) => Number(it.updatedTime) || 0))
+  // Agrega os fechos dentro de ~2min do último (parciais do mesmo fecho contam juntos).
+  let pnl = 0
+  for (const it of list) {
+    const ts = Number(it.updatedTime) || 0
+    if (latestTs - ts <= 120_000) pnl += Number(it.closedPnl) || 0
+  }
+  return { pnl: Number(pnl.toFixed(2)), closedAt: latestTs }
+}
+
 /** Define a alavancagem do símbolo (idempotente; ignora "leverage not modified"). */
 export async function setBybitLeverage(symbol: string, leverage: number) {
   const lev = String(Math.max(1, Math.round(leverage)))

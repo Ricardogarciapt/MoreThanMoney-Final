@@ -17,6 +17,10 @@ export interface ExecSwitches {
    *  subscritor via MetaAPI — o CopyFactory não replica fechos PARCIAIS. Default FALSE
    *  (kill-switch: dinheiro real de subscritores). Ligar quando validado. */
   premium_subscriber_exits: boolean
+  /** Monitor de posição dos PERPÉTUOS (Bybit): acompanha a posição-mestre em tempo real e publica
+   *  o ciclo de vida (Entry Hit → parcial → BE → fecho c/ resultado) no chat + Telegram dos perps.
+   *  Só NOTIFICA (as saídas já são nativas da Bybit). Default ON. */
+  perps_position_monitor: boolean
 }
 
 const KEY = "mtmcopy_exec_switches"
@@ -37,6 +41,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       goldkiller: v.goldkiller !== false, // default ON
       premium_price_monitor: v.premium_price_monitor === true, // default OFF
       premium_subscriber_exits: v.premium_subscriber_exits === true, // default OFF (dinheiro real)
+      perps_position_monitor: v.perps_position_monitor !== false, // default ON (só notifica)
     }
   } catch {
     return {
@@ -46,6 +51,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       goldkiller: true,
       premium_price_monitor: false,
       premium_subscriber_exits: false,
+      perps_position_monitor: true,
     }
   }
 }
