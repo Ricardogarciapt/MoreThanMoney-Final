@@ -513,17 +513,17 @@ export async function POST(request: NextRequest) {
   // (SDNb / 181271197), com 0.5% de risco e trailing conforme o scanner — NÃO copia
   // para a conta Sensei.
   const stratText = `${alertName || ""} ${freeText || ""}`.toLowerCase()
-  const isGoldKiller =
+  let isGoldKiller =
     assetClass === "gold_btc" && /goldkiller|gold[\s_-]*kill/.test(stratText) && !/sensei/.test(stratText)
   // Identidade do scanner (p/ exclusões por-scanner nos gates, ex.: MTMScanner sem ouro).
   // Nova dinâmica dedicada de perpétuos cripto — identifica-se pelo nome do alerta
   // (ex.: "MTM Perps"/"MTM Perps X"), não pelo ticker, para poder incluir o BTC perp
   // desta lista sem o roubar ao Sensei (que envia BTCUSDT.P para o fluxo gold_btc).
-  const isMtmPerps = /mtm[\s_-]*perps?\b|perps?[\s_-]*scanner/.test(stratText)
+  let isMtmPerps = /mtm[\s_-]*perps?\b|perps?[\s_-]*scanner/.test(stratText)
   // Aurum Flow (ORB) — fonte de perps distinta do MTM Perps (Sensei X). Marca própria no chat
   // + gate de execução por-fonte (backtest 2026-08: ORB rentável em ETH, negativo em BTC).
-  const isAurumFlow = /aurum\s*flow/.test(stratText)
-  const scannerKey = isMtmPerps
+  let isAurumFlow = /aurum\s*flow/.test(stratText)
+  let scannerKey: string | null = isMtmPerps
     ? "mtmperps"
     : /mtm[\s_-]*scanner/.test(stratText)
       ? "mtmscanner"
@@ -532,13 +532,37 @@ export async function POST(request: NextRequest) {
         : /sensei/.test(stratText)
           ? "sensei"
           : null
+
+  // ── WEBHOOK DEDICADO POR ESTRATÉGIA (consolidação) ──────────────────────────────────
+  // `?strategy=sensei|goldkiller|aurum|mtmscanner|mtmperps` FORÇA a estratégia e ignora a
+  // deteção por conteúdo → cada alerta do TradingView aponta para o seu URL, sem adivinhação.
+  const forcedStrategy = (url.searchParams.get("strategy") || "").toLowerCase().trim()
+  if (forcedStrategy) {
+    isGoldKiller = forcedStrategy === "goldkiller"
+    isAurumFlow = forcedStrategy === "aurum" || forcedStrategy === "aurumflow"
+    isMtmPerps = forcedStrategy === "mtmperps"
+    scannerKey =
+      forcedStrategy === "goldkiller"
+        ? "goldkiller"
+        : forcedStrategy === "sensei"
+          ? "sensei"
+          : forcedStrategy === "mtmscanner" || forcedStrategy === "scanner"
+            ? "mtmscanner"
+            : isAurumFlow
+              ? "aurum"
+              : isMtmPerps
+                ? "mtmperps"
+                : scannerKey
+  }
   // Endpoint dedicado /api/webhooks/tradingview-perps reencaminha para aqui com este
   // header → força o modo perps independentemente do nome do alerta (fonte = a lista).
   const forcedPerps = request.headers.get("x-mtm-perps") === "1"
   // Só força perps se o ticker for MESMO cripto. Um forex/índice/ouro que apareça no alerta
   // dos perps (ex.: USDCAD no Aurum Flow) segue a sua classe natural e nunca vai ao chat de
   // perps nem à Bybit (que só tem cripto). Evita sinais errados no canal + ordens inválidas.
-  const perpsRequested = scannerKey === "mtmperps" || forcedPerps
+  // strategy=aurum e strategy=mtmperps são fontes de perpétuos → ativam o modo perps (só cripto).
+  const perpsRequested =
+    scannerKey === "mtmperps" || forcedPerps || forcedStrategy === "aurum" || forcedStrategy === "aurumflow"
   const isCryptoPerp = isCryptoPerpTicker(ticker)
   if (perpsRequested && isCryptoPerp) {
     // Lista única de perps → sempre canal "Ideias de Perpétuos Cripto", em PAPEL.
