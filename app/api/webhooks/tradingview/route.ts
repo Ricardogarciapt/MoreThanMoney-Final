@@ -598,7 +598,11 @@ export async function POST(request: NextRequest) {
     //   forex → "Ideias de Forex"; índices → "Ideias de Índices" (MTM Scanner É o provedor de índices).
     route.channel = "sinais-scanner-mtm"
     route.sender = "📊 MTM Scanner Ouro e BTC"
-    route.telegram = resolvedMtmScannerChatId()
+    // Guarda anti-conflito: o grupo que era do MTM Scanner foi reaproveitado p/ os Perpétuos. Se algum
+    // env antigo ainda apontar o MTM Scanner para o MESMO id dos perps, NÃO publica (evita dupla-marca
+    // no grupo dos perps). Sem grupo próprio → só chat da app.
+    const mtmTg = resolvedMtmScannerChatId()
+    route.telegram = mtmTg && mtmTg !== resolvedPerpsChatId() ? mtmTg : null
   }
 
   // Índices: o provedor é o MTM Scanner (o lucrativo, ~36% vs Sensei X ~5%). O Sensei X é fraco

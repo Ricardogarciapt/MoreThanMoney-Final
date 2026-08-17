@@ -50,22 +50,24 @@ export const CANONICAL_TELEGRAM_CHANNELS = {
   // https://t.me/+ue9JuMRwMv0zMGQ0. chatId vazio → resolve-se por env (define-se o id
   // numérico -100… em TELEGRAM_CHANNEL_MTMSCANNER na Vercel). Enquanto não houver id,
   // resolvedMtmScannerChatId() devolve null e NÃO relaya (não polui outros canais).
+  // MTM Scanner Ouro/BTC — o grupo Telegram (-1004363723837) foi REAPROVEITADO para os Perpétuos
+  // (decisão Ricardo 2026-08-17). Por isso o MTM Scanner Ouro/BTC deixa de ter grupo Telegram próprio
+  // (chatId vazio → resolvedMtmScannerChatId()=null → só chat da app), evitando dupla-publicação no
+  // mesmo grupo. Se um dia quiser Telegram de volta, cria-se grupo novo e põe-se o id aqui/env.
   mtmScanner: {
-    // id confirmado via auto-descoberta (mtmcopy_telegram_discovered): "MTM - Scanner Ouro e BTC".
-    chatId: '-1004363723837',
+    chatId: '',
     title: 'MTM - Scanner Ouro e BTC',
-    link: 'https://t.me/+ue9JuMRwMv0zMGQ0',
     mtmcopyKey: 'trade-ideas' as const,
     appSlug: 'trade-ideas-setup' as const,
     envVars: ['TELEGRAM_CHANNEL_MTMSCANNER', 'TELEGRAM_MTMSCANNER_CHAT_ID'],
   },
-  // Canal Telegram dedicado dos PERPÉTUOS CRIPTO (Aurum Flow ORB + MTM Perps). O grupo ainda NÃO
-  // existe (bot não cria grupos) → chatId vazio. Quando o Ricardo criar o grupo "Ideias de Perpétuos
-  // Cripto" e adicionar o bot admin, põe-se o id em TELEGRAM_CHANNEL_PERPS (ou preenche-se o chatId
-  // aqui). Enquanto vazio, resolvedPerpsChatId()=null → NÃO relaya (só chat da app, seguro).
+  // Canal Telegram dos PERPÉTUOS CRIPTO (Aurum Flow ORB + MTM Perps). Reaproveita o grupo que era do
+  // MTM Scanner (link https://t.me/+ue9JuMRwMv0zMGQ0). O Ricardo renomeia p/ "Ideias de Perpétuos
+  // Cripto" no Telegram. Override por env TELEGRAM_CHANNEL_PERPS se um dia mudar de grupo.
   cryptoPerps: {
-    chatId: '',
+    chatId: '-1004363723837',
     title: 'Ideias de Perpétuos Cripto',
+    link: 'https://t.me/+ue9JuMRwMv0zMGQ0',
     appSlug: 'cripto-perps' as const,
     envVars: ['TELEGRAM_CHANNEL_PERPS', 'TELEGRAM_PERPS_CHAT_ID'],
   },
