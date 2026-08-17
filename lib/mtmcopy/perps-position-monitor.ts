@@ -14,12 +14,38 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getExecSwitches } from './exec-switches'
 import { getMtmcopyBotToken } from './telegram-bot'
-import { bybitConfigured, getBybitPositions, getBybitLastClosedPnl, type BybitPosition } from '@/lib/bybit'
+import type { BybitPosition } from '@/lib/bybit'
 import { resolvedPerpsChatId } from '@/lib/telegram-channel-ids'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
+import { getSiteOrigin } from '@/lib/site-url'
 
 const PERPS_CHAT_SLUG = 'cripto-perps'
 const STATE_KEY = 'perps_monitor_state'
+
+// A Bybit geo-bloqueia os IPs dos EUA (este cron corre em nodejs/iad1). As LEITURAS Bybit vão às rotas
+// EDGE/fra1 (Frankfurt) — /api/bybit/positions e /api/bybit/closed-pnl — como o webhook faz na execução.
+async function bybitGet(path: string): Promise<Record<string, unknown> | null> {
+  try {
+    const secret = process.env.CRON_SECRET || ''
+    const res = await fetch(`${getSiteOrigin()}${path}`, {
+      headers: { authorization: `Bearer ${secret}` },
+      cache: 'no-store',
+    })
+    return (await res.json().catch(() => null)) as Record<string, unknown> | null
+  } catch {
+    return null
+  }
+}
+async function fetchOpenPositions(): Promise<{ ok: boolean; positions: BybitPosition[] }> {
+  const j = await bybitGet('/api/bybit/positions')
+  if (!j || j.ok !== true) return { ok: false, positions: [] }
+  return { ok: true, positions: (j.positions as BybitPosition[]) ?? [] }
+}
+async function fetchLastClosedPnl(symbol: string): Promise<number | null> {
+  const j = await bybitGet(`/api/bybit/closed-pnl?symbol=${encodeURIComponent(symbol)}`)
+  const closed = j?.closed as { pnl?: number } | null | undefined
+  return closed && typeof closed.pnl === 'number' ? closed.pnl : null
+}
 
 interface PosState {
   size: number
@@ -94,10 +120,9 @@ export async function runPerpsPositionMonitor(): Promise<{
   const events: string[] = []
   const switches = await getExecSwitches()
   if (!switches.perps_position_monitor) return { ran: false, reason: 'switch off', events, open: 0 }
-  if (!bybitConfigured()) return { ran: false, reason: 'bybit não configurada', events, open: 0 }
 
-  const { ok, positions } = await getBybitPositions()
-  if (!ok) return { ran: false, reason: 'getPositions falhou', events, open: 0 }
+  const { ok, positions } = await fetchOpenPositions()
+  if (!ok) return { ran: false, reason: 'getPositions falhou (fra1)', events, open: 0 }
 
   const state = await loadState()
   const live = new Map<string, BybitPosition>()
@@ -144,8 +169,7 @@ export async function runPerpsPositionMonitor(): Promise<{
     if (live.has(k)) continue
     const [symbol, side] = k.split('|')
     const sym = symbol.replace(/USDT$/, '')
-    const closed = await getBybitLastClosedPnl(symbol).catch(() => null)
-    const pnl = closed?.pnl ?? null
+    const pnl = await fetchLastClosedPnl(symbol).catch(() => null)
     const resultTxt = pnl != null ? ` — resultado ${pnl >= 0 ? '🟢 +' : '🔴 '}$${pnl.toFixed(2)}` : ''
     await postPerps(`🏁 Posição fechada · ${sym} ${dirLabel(side)}${resultTxt}`)
     delete state[k]
