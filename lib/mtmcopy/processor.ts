@@ -68,6 +68,7 @@ import {
   trailingPointsForConnection,
 } from './position-management'
 import { applyPremiumManagement, classifyPremiumMessage } from './premium-management-exec'
+import { usesPriceMonitor } from './exit-engine'
 import { getPremiumZoneConfig, zoneEntryDecision } from './premium-zone-config'
 import { buildTelegramMessageContext } from './reply-context'
 import {
@@ -1919,7 +1920,7 @@ export async function processMtmcopyWebhookManagement(opts: {
     // premium-price-monitor (realtime, sobre a posição REAL). A gestão por ALERTAS aqui passa a
     // atrapalhar (dava "sem posição ativa" nos flips + risco de duplo-fecho) → saltamos.
     const senseiProfile = await getProviderExecutionProfile(channel, prov.execution)
-    if (senseiProfile.price_monitor === true) {
+    if (usesPriceMonitor(senseiProfile)) {
       details.push('price-monitor ativo → saída por PREÇO (alerta de gestão ignorado)')
       continue
     }
