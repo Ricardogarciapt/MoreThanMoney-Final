@@ -1,4 +1,9 @@
 /**
+ * ⚠️ MOTOR LEGADO (gestão por ALERTA). Consolidação MTM Auto: quando a rota tem `price_monitor` ON,
+ * as saídas são geridas por PREÇO no premium-price-monitor (realtime, sobre a posição REAL) e ESTE
+ * é SALTADO (ver processor: `usesPriceMonitor`). Mantido só para rotas SEM price_monitor (ex.:
+ * GoldKiller). Não expandir — a direção é tudo por preço. Ver o mapa de execução.
+ *
  * MTM Auto Sensei — gestão automática da posição na conta Sensei (a5a1dddd).
  *
  * A entrada Sensei abre SEM TP único (ver processor: fork por conta), para os

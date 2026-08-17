@@ -1333,7 +1333,7 @@ async function executeViaMtmProvider(
       })
       // Regista a trade ativa para o monitor de preço (fecha parciais por PREÇO).
       // Premium sempre; outras rotas só se tiverem price_monitor ligado na config.
-      if (r?.success && (isPremiumProvider || executionProfile.price_monitor === true)) {
+      if (r?.success && (isPremiumProvider || usesPriceMonitor(executionProfile))) {
         try {
           const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
           const tps = signalForExec.tp ?? []
