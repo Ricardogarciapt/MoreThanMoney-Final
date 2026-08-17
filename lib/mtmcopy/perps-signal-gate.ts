@@ -103,10 +103,25 @@ export interface PerpsGateResult {
  * @param direction "buy" | "sell"
  * @param opts entry/sl do sinal (para o cap de SL)
  */
+/** Timeframe do alerta → minutos (ex.: "5"→5, "5m"→5, "1h"→60, "240"→240). null se desconhecido. */
+function tfToMinutes(tf: string | null | undefined): number | null {
+  if (!tf) return null
+  const s = String(tf).trim().toUpperCase()
+  const m = s.match(/^(\d+)\s*(M|MIN|H|HR|HOUR|D|W)?$/)
+  if (!m) return null
+  const n = parseInt(m[1], 10)
+  if (!Number.isFinite(n) || n <= 0) return null
+  const unit = m[2] || (n <= 4 ? "H" : "M") // "1"/"4" (sem unidade) = horas no TradingView; ≥5 = minutos
+  if (unit.startsWith("H")) return n * 60
+  if (unit === "D") return n * 1440
+  if (unit === "W") return n * 10080
+  return n // minutos
+}
+
 export async function evaluatePerpsSignalGate(
   symbol: string,
   direction: "buy" | "sell",
-  opts?: { entry?: number | null; sl?: number | null },
+  opts?: { entry?: number | null; sl?: number | null; timeframe?: string | null },
 ): Promise<PerpsGateResult> {
   const norm = normPerpSymbol(symbol)
 
@@ -130,10 +145,14 @@ export async function evaluatePerpsSignalGate(
         return { allow: false, reason: `SL ${slPct.toFixed(2)}% > máx ${rules.slMaxPct}% (perda/trade)` }
       }
     }
-    // 2b) COOLDOWN por par — anti-overtrading (conta entradas recentes do mesmo símbolo)
-    if (rules.cooldownMinutes > 0) {
+    // 2b) COOLDOWN por par — SEGUE o TIMEFRAME do alerta (pedido Ricardo 2026-08-17): uma entrada por
+    // VELA por par. TF conhecido → janela = tf−1min (5m→4min: a vela seguinte, 5min depois, passa; só
+    // corta duplicados dentro da mesma vela). TF desconhecido → cai no rules.cooldownMinutes da config.
+    const tfMin = tfToMinutes(opts?.timeframe)
+    const effectiveCooldown = tfMin != null ? Math.max(1, tfMin - 1) : rules.cooldownMinutes
+    if (effectiveCooldown > 0) {
       try {
-        const sinceIso = new Date(Date.now() - rules.cooldownMinutes * 60000).toISOString()
+        const sinceIso = new Date(Date.now() - effectiveCooldown * 60000).toISOString()
         const { count } = await getSupabaseAdmin()
           .from("tradingview_signals")
           .select("id", { count: "exact", head: true })
@@ -142,7 +161,7 @@ export async function evaluatePerpsSignalGate(
           .not("trade_status", "in", '("filtered","discarded")')
           .gte("received_at", sinceIso)
         if ((count ?? 0) > 0) {
-          return { allow: false, reason: `cooldown ${rules.cooldownMinutes}min (${norm}) — anti-overtrading` }
+          return { allow: false, reason: `cooldown ${effectiveCooldown}min (${norm}, TF ${opts?.timeframe ?? '?'}) — 1 entrada/vela` }
         }
       } catch {
         /* fail-open */
