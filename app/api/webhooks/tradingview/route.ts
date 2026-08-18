@@ -1042,18 +1042,22 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // T2T: espelha o FECHO da fonte (Sensei/GoldKiller) nas ordens dos seguidores desse sinal. Só no
-  // 'exit' (fecho discricionário) — o SL do próprio seguidor trata o sl_hit; tp_hit é parcial. Gated
-  // pelo kill-switch t2t_auto_close (dentro do helper).
-  if (isFollowup && activeSensei?.symbol && activeSensei.alertType === "exit" && route.channel) {
+  // T2T: espelha o FECHO da fonte nas ordens dos seguidores desse sinal. Só no 'exit' (fecho
+  // discricionário) — o SL do próprio seguidor trata o sl_hit; tp_hit é parcial. QUALQUER fonte T2T
+  // (Sensei/GoldKiller/MTM Scanner forex/…), mesmo sem Sensei-idea (forex). Gated pelo kill-switch
+  // t2t_auto_close (dentro do helper).
+  const t2tCloseSymbol = activeSensei?.symbol ?? v.symbol ?? parsedForExec.symbol ?? null
+  const t2tCloseDir = (activeSensei?.direction ?? linkedIdea?.direction ?? v.direction ?? null) as "buy" | "sell" | null
+  const isExitFollowup = isFollowup && (activeSensei?.alertType === "exit" || initAlertType === "exit")
+  if (isExitFollowup && t2tCloseSymbol && route.channel) {
     try {
       const { closeT2TFollowersForSignal } = await import("@/lib/mtmcopy/t2t-lifecycle")
       await closeT2TFollowersForSignal({
         kind: "close",
         chatSlug: route.channel,
-        symbol: activeSensei.symbol,
-        direction: (activeSensei.direction ?? linkedIdea?.direction ?? null) as "buy" | "sell" | null,
-        label: isGoldKiller ? "GoldKiller" : "Sensei",
+        symbol: t2tCloseSymbol,
+        direction: t2tCloseDir,
+        label: isGoldKiller ? "GoldKiller" : scannerKey === "mtmscanner" ? "MTM Scanner" : "Sensei",
       })
     } catch (err) {
       console.error("[tradingview-webhook] t2t close mirror error:", err)
