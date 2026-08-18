@@ -675,8 +675,8 @@ export default function MtmCopyPage() {
                       <div className="flex items-start gap-2.5 text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4">
                         <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         <p>
-                          Saldo indisponível — o modo <strong>% risco</strong> via CopyFactory precisa do saldo da conta.
-                          Clica em <strong>Atualizar</strong> ou verifica a ligação MetaAPI.
+                          Saldo indisponível — o modo <strong>% risco</strong> precisa do saldo da conta.
+                          Clica em <strong>Atualizar</strong> ou verifica a ligação da conta.
                         </p>
                       </div>
                     )}

@@ -61,19 +61,19 @@ export const COPY_METHODS: {
     id: 'strategy',
     title: 'Estratégia MTM',
     description:
-      'Copia estratégias auditadas do nosso sistema — Premium, Sensei Scanner, 20X Booster ou Gold Did — com replicação automática na tua conta.',
+      'Copia as estratégias auditadas do nosso sistema, com replicação automática na tua conta.',
   },
   {
     id: 'telegram_group',
     title: 'Grupos de sinais',
     description:
-      'Escolhe os chats de sinais a copiar — Ideias de Forex, Forex Swings ou GoldKiller. VIP: até 5 contas (subscrição MTMcopier).',
+      'Escolhe os grupos de sinais MTM que queres copiar. VIP: até 5 contas.',
   },
   {
     id: 'master_slave',
     title: 'Copy Trader pessoal',
     description:
-      'Copia da tua conta mestre para slaves via CopyFactory. Conta no limite do teu plano (VIP: 5 contas).',
+      'Copia da tua conta mestre para as tuas outras contas, no limite do teu plano (VIP: 5 contas).',
   },
 ]
 
@@ -97,17 +97,17 @@ export const TELEGRAM_GROUPS: {
   {
     id: 'forex_swings',
     channelKey: 'trade-ideas',
-    title: 'MTM Auto FOREX Swings',
+    title: 'Forex Swings',
     description:
-      'Sinais swing de forex (maioritariamente set & forget) executados na conta MTM Auto Forex com trailing automático. Cópia via CopyFactory.',
+      'Sinais swing de forex (maioritariamente set & forget), com trailing automático e cópia automática na tua conta.',
     chatId: '-1004362819270',
   },
   {
     id: 'goldkiller',
     channelKey: 'premium-signals',
-    title: 'Scanner GoldKiller · Ouro',
+    title: 'Ouro (XAUUSD)',
     description:
-      'Sinais do Scanner GoldKiller (XAUUSD) — 0.5% de risco por trade e trailing conforme o scanner. Cópia via CopyFactory.',
+      'Sinais de ouro — 0,5% de risco por trade e trailing automático, copiados automaticamente na tua conta.',
     chatId: '',
   },
 ]

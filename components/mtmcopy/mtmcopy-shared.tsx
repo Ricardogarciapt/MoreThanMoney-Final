@@ -169,7 +169,7 @@ export function CopyTraderBanner({ strategyId }: { strategyId?: string | null })
       <div>
         <p className="text-sm font-semibold text-amber-300">Copy trader · Conta MTM</p>
         <p className="text-sm text-zinc-400 mt-0.5">
-          As operações da Conta MTM são replicadas para as tuas contas slave via MetaAPI CopyFactory.
+          As operações da Conta MTM são replicadas automaticamente para as tuas outras contas.
         </p>
       </div>
     </div>

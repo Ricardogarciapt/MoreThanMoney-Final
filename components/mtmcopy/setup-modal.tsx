@@ -767,8 +767,8 @@ export default function SetupModal({
                 ))}
                 {!strategies.length && (
                   <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
-                    Nenhuma estratégia MTM disponível. O admin precisa de configurar rotas em{" "}
-                    <strong>/admin/mtmcopy</strong> (Senders → Provider → CopyFactory).
+                    Nenhuma estratégia MTM disponível. O admin precisa de configurar as rotas em{" "}
+                    <strong>/admin/mtmcopy</strong> (Senders → Provider).
                   </p>
                 )}
               </div>
@@ -902,8 +902,8 @@ export default function SetupModal({
                   <>
                     <strong className="text-amber-400">Religar conta:</strong>{" "}
                     {selectedConn?.mt5_status === "pending"
-                      ? "A ligação MetaAPI não completou. Introduz a password abaixo e guarda."
-                      : selectedConn?.last_error || "Erro na ligação MetaAPI. Introduz a password para tentar de novo."}
+                      ? "A ligação da conta não completou. Introduz a password abaixo e guarda."
+                      : selectedConn?.last_error || "Erro ao ligar a conta. Introduz a password para tentar de novo."}
                   </>
                 ) : (
                   <>
@@ -926,7 +926,7 @@ export default function SetupModal({
                     type="password"
                     value={mt5Password}
                     onChange={(e) => setMt5Password(e.target.value)}
-                    placeholder="Password para religar via MetaAPI"
+                    placeholder="Password para religar a conta"
                     className="bg-gray-800 border-gray-700 text-white"
                     disabled={saving}
                     autoComplete="new-password"
@@ -1094,12 +1094,12 @@ export default function SetupModal({
 
               {lotMode === "risk_percent" && selectedConn?.mt5_status === "connected" && selectedConn?.account_balance == null && (
                 <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-                  Saldo ainda não disponível. O CopyFactory aplica o teu % risco quando o saldo estiver sincronizado.
+                  Saldo ainda não disponível. O teu % risco é aplicado assim que o saldo estiver sincronizado.
                 </p>
               )}
               {lotMode === "risk_percent" && (
                 <p className="text-xs text-zinc-500">
-                  Com CopyFactory activo, o % risco é aplicado ao volume copiado (modo fixedRisk).
+                  O % risco é aplicado ao volume copiado em cada trade.
                 </p>
               )}
 
