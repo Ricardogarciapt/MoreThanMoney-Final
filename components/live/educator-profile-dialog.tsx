@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import Link from "next/link"
 import { Calendar, Circle, GraduationCap, ArrowRight } from "lucide-react"
@@ -64,8 +64,32 @@ export default function EducatorProfileDialog({
 }: Props) {
   const { user } = useAuth()
   const now = Date.now()
-  const playlistStreams = streams.filter((s) => s.playlist_url)
   const [courseIdx, setCourseIdx] = useState(0)
+  // CURSOS próprios do educador (lms_educator_playlists) — somam-se às playlists das salas.
+  const [ownPlaylists, setOwnPlaylists] = useState<
+    { id: string; title: string; url: string; access_tier: string | null }[]
+  >([])
+  useEffect(() => {
+    if (!open || !educator?.id) return
+    let cancelled = false
+    fetch(`/api/live-sessions/educators/${educator.id}/playlists`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => { if (!cancelled) setOwnPlaylists(j?.playlists ?? []) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [open, educator?.id])
+  const playlistStreams = [
+    // Cursos próprios do educador primeiro (ordem definida por sort_order), depois as salas.
+    ...ownPlaylists.map((p) => ({
+      id: `own-${p.id}`,
+      title: p.title,
+      is_live: false,
+      playlist_url: p.url,
+      playlist_title: p.title,
+      playlist_access_tier: (p.access_tier as StreamPreview["playlist_access_tier"]) ?? "all",
+    })),
+    ...streams.filter((s) => s.playlist_url),
+  ] as StreamPreview[]
   const onlineNow = streams.filter((s) => s.is_live).slice(0, 3)
   const upcoming = streams
     .filter((s) => !s.is_live && s.scheduled_start_at && new Date(s.scheduled_start_at).getTime() > now)
