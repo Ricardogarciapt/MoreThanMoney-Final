@@ -27,6 +27,10 @@ export interface ExecSwitches {
   /** Fecho automático das ordens T2T dos SEGUIDORES quando a fonte fecha/cancela (PrimeVerse,
    *  Premium, Sensei, GoldKiller, Forex Swings). Kill-switch único. Default ON. */
   t2t_auto_close: boolean
+  /** Monitor de PREÇO das posições T2T dos seguidores (entry-hit → parciais → BE → trailing →
+   *  fecho), em tempo real e SEM depender de mensagens da fonte. É o que dá gestão completa ao
+   *  MTM Scanner (só manda entradas). Default ON. */
+  t2t_price_monitor: boolean
 }
 
 const KEY = "mtmcopy_exec_switches"
@@ -50,6 +54,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       premium_subscriber_exits: v.premium_subscriber_exits === true, // default OFF (dinheiro real)
       perps_position_monitor: v.perps_position_monitor !== false, // default ON (só notifica)
       t2t_auto_close: v.t2t_auto_close !== false, // default ON
+      t2t_price_monitor: v.t2t_price_monitor !== false, // default ON
     }
   } catch {
     return {
@@ -62,6 +67,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       premium_subscriber_exits: false,
       perps_position_monitor: true,
       t2t_auto_close: true,
+      t2t_price_monitor: true,
     }
   }
 }

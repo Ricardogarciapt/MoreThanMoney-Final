@@ -34,6 +34,10 @@
       "schedule": "* * * * *"
     },
     {
+      "path": "/api/cron/t2t-price-monitor",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/nightly-tp-sl",
       "schedule": "*/15 * * * *"
     },

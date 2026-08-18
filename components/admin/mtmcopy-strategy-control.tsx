@@ -16,6 +16,7 @@ type Switches = {
   premium_subscriber_exits: boolean
   perps_position_monitor: boolean
   t2t_auto_close: boolean
+  t2t_price_monitor: boolean
 }
 type PerpsRules = {
   enabled: boolean
@@ -57,6 +58,7 @@ const STRATEGY_LABELS: { key: keyof Switches; label: string; hint: string }[] = 
   { key: "premium_price_monitor", label: "Premium · monitor de preço", hint: "Fecha parciais/BE por PREÇO (não por mensagem)" },
   { key: "premium_subscriber_exits", label: "Premium · exits nos subscritores", hint: "⚠️ dinheiro real de subscritores" },
   { key: "perps_position_monitor", label: "Perps · monitor de posição", hint: "Acompanha a posição Bybit (Entry Hit → parcial → BE → fecho)" },
+  { key: "t2t_price_monitor", label: "T2T · motor de preço (tempo real)", hint: "Gere as posições dos seguidores por PREÇO: entry-hit → parciais → BE → trailing → fecho (não precisa de mensagens da fonte)" },
   { key: "t2t_auto_close", label: "T2T · fecho automático", hint: "Fonte fecha/cancela → apaga/fecha as ordens T2T dos seguidores (PrimeVerse/Premium/Sensei/GoldKiller/Forex)" },
 ]
 
