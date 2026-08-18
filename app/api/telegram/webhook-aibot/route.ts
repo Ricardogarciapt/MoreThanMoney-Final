@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { processMtmcopyTelegramMessage } from "@/lib/mtmcopy/processor"
+import { resolveReplyToChatMessageId } from "@/lib/telegram-reply-thread"
 import { resolveAppChannelSlug } from "@/lib/telegram-app-channels"
 import { sendTelegramChannelPush } from "@/lib/telegram-channel-push"
 import { getMtmcopyBotToken } from "@/lib/mtmcopy/telegram-bot"
@@ -75,6 +76,12 @@ async function mirrorToApp(message: TelegramChannelMessage) {
 
   if (existing) return
 
+  // Threading: no Telegram os follow-ups (HIT TP1/BE/fecho) são REPLIES ao setup → manter a thread
+  // no chat da app (senão aparecem todos ao mesmo nível, como acontecia no Premium).
+  const replyToId = await resolveReplyToChatMessageId(
+    slug,
+    (message as { reply_to_message?: { message_id?: number } }).reply_to_message?.message_id ?? null,
+  )
   const { data: inserted, error: insertError } = await supabase
     .from("chat_messages")
     .insert({
@@ -85,6 +92,7 @@ async function mirrorToApp(message: TelegramChannelMessage) {
       message_type: "telegram_forward",
       telegram_sender: senderName,
       telegram_message_id: telegramMessageId,
+      ...(replyToId ? { reply_to_id: replyToId } : {}),
       created_at: new Date(message.date * 1000).toISOString(),
     })
     .select("id")

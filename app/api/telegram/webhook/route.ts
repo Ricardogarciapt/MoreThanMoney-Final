@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse, after } from "next/server"
+import { resolveReplyToChatMessageId } from "@/lib/telegram-reply-thread"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { processMtmcopyTelegramMessage } from "@/lib/mtmcopy/processor"
 import {
@@ -62,6 +63,10 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
     }
   }
 
+  const replyToId = await resolveReplyToChatMessageId(
+    slug,
+    (message as { reply_to_message?: { message_id?: number } }).reply_to_message?.message_id ?? null,
+  )
   const { error } = await supabase.from("chat_messages").insert({
     channel_slug: slug,
     user_id: null,
@@ -70,6 +75,7 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
     message_type: "telegram_forward",
     telegram_sender: senderName,
     telegram_message_id: telegramMessageId,
+    ...(replyToId ? { reply_to_id: replyToId } : {}),
     ...(message.date ? { created_at: new Date(message.date * 1000).toISOString() } : {}),
   })
 

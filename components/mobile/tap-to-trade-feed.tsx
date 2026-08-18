@@ -62,8 +62,16 @@ function directionOf(content: string): "BUY" | "SELL" | "" {
   return ""
 }
 
-/** Tempo máximo para um sinal estar ativo (5 minutos). */
+/** Tempo máximo para um sinal estar ativo (5 minutos) — entradas A MERCADO. */
 const T2T_MAX_AGE_MS = 5 * 60 * 1000
+/** Setups PENDENTES (entrada por zona/limite ainda por tocar) ficam aceitáveis até 24h, enquanto
+ *  não forem ativados/fechados por um follow-up. Pedido Ricardo 2026-08-18 (espelha o servidor). */
+const T2T_PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000
+/** O sinal traz um NÍVEL de entrada (zona/limite)? "Entrada: 4398", "Zone 4398 - 4403", "Entry: …" */
+function hasEntryLevel(content?: string | null): boolean {
+  if (!content) return false
+  return /(entrada|entry|zona|zone)\s*:?\s*[0-9]+[.,]?[0-9]*/i.test(content)
+}
 
 /** Extrai o símbolo do sinal (para emparelhar com follow-ups TP/fecho). */
 function symbolOf(content: string): string | null {
@@ -280,7 +288,9 @@ export default function TapToTradeFeed() {
       .filter((m) => m.channel_slug !== "sensei-scanner" || !senseiFilterOn || senseiIds.has(m.id))
       .map((m) => {
         const ageMs = now - new Date(m.created_at).getTime()
-        const ageExpired = ageMs > T2T_MAX_AGE_MS
+        // Setup pendente (nível de entrada por tocar) → janela alargada; a mercado → 5 min.
+        const pendingSetup = hasEntryLevel(m.content)
+        const ageExpired = ageMs > (pendingSetup ? T2T_PENDING_MAX_AGE_MS : T2T_MAX_AGE_MS)
         const sym = symbolOf(m.content)
         const resolved = followups.some(
           (f) =>

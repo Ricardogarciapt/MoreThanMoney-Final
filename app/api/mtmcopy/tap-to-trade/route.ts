@@ -28,6 +28,49 @@ async function authenticate(request: NextRequest) {
   return error || !user ? null : user
 }
 
+/** Um follow-up que ATIVA ou FECHA o setup (deixa de ser "pendente por tocar"). */
+const SETUP_RESOLVED_RE =
+  /(entry\s*hit|ativad|activad|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|break\s*even|\bbe\b|trade\s+active|running|fechad|posi[çc][aã]o\s+fechada|closed|close\s+all|cancelad|encerrad)/i
+
+/**
+ * O SETUP ainda está PENDENTE (por tocar) e aceitável fora da janela dos 5 min?
+ * É pendente se a mensagem tem um nível de ENTRADA (zona/limite) e NÃO houver, no mesmo canal e
+ * DEPOIS dela, um follow-up do MESMO par que a ative/feche. Janela máxima de segurança: 24h.
+ */
+async function isPendingSetupStillOpen(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  message: { id: string; channel_slug: string; content: string | null; created_at: string | null },
+): Promise<boolean> {
+  try {
+    if (!message.created_at || !message.content) return false
+    const ageMs = Date.now() - new Date(message.created_at).getTime()
+    if (ageMs > 24 * 60 * 60 * 1000) return false // guarda: setups de ontem não abrem
+
+    const parsed = parseSignal(message.content)
+    // Só setups com NÍVEL de entrada (zona/limite) — entradas a mercado continuam a expirar aos 5 min.
+    if (!parsed?.symbol || !(parsed.entry != null && parsed.entry > 0)) return false
+
+    const symbolCore = parsed.symbol.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
+    const { data: laterMsgs } = await supabase
+      .from('chat_messages')
+      .select('content')
+      .eq('channel_slug', message.channel_slug)
+      .gt('created_at', message.created_at)
+      .order('created_at', { ascending: true })
+      .limit(80)
+    for (const m of laterMsgs ?? []) {
+      const c = String((m as { content?: string }).content ?? '')
+      if (!c) continue
+      const cU = c.toUpperCase().replace(/[^A-Z0-9]/g, '')
+      if (symbolCore && !cU.includes(symbolCore)) continue // outro par → não resolve este setup
+      if (SETUP_RESOLVED_RE.test(c)) return false // já foi ativado/fechado → não aceitar
+    }
+    return true // continua pendente por tocar
+  } catch {
+    return false // em dúvida, mantém a regra dos 5 min
+  }
+}
+
 /** Constrói um ParsedSignal a partir de uma ideia Sensei estruturada (fallback ao parser). */
 function signalFromIdea(idea: {
   symbol: string | null
@@ -70,10 +113,20 @@ export async function POST(request: NextRequest) {
   if (msgErr || !message) {
     return NextResponse.json({ error: 'Mensagem não encontrada' }, { status: 404 })
   }
-  // Sinal expirado: passaram mais de 5 minutos desde a publicação
+  // JANELA DE ACEITAÇÃO. Regra base: 5 minutos (entradas a mercado — depois disso o preço já fugiu).
+  // RESSALVA (pedido Ricardo 2026-08-18): um SETUP PENDENTE (entrada por ZONA/limite que ainda não
+  // foi ativada nem fechada) continua aceitável enquanto estiver vivo — o cliente entra com ordem
+  // pendente e o motor trata do resto. Um setup deixa de ser aceitável quando aparece no MESMO canal
+  // um follow-up posterior que o ativa/fecha (ENTRY HIT/TP/SL/BE/fechada/cancelada) para o par.
   const ageMs = message.created_at ? Date.now() - new Date(message.created_at).getTime() : 0
   if (ageMs > 5 * 60 * 1000) {
-    return NextResponse.json({ error: 'Sinal expirado — passaram mais de 5 minutos.', code: 'expired' }, { status: 410 })
+    const stillPending = await isPendingSetupStillOpen(supabase, message)
+    if (!stillPending) {
+      return NextResponse.json(
+        { error: 'Sinal expirado — passaram mais de 5 minutos.', code: 'expired' },
+        { status: 410 },
+      )
+    }
   }
   // Provider tem de estar ativo no Tap to Trade (toggle em /admin/mtmcopy) — inclui rotas
   // custom sem sender_channel canónico. Fallback aos canais base se a config falhar.

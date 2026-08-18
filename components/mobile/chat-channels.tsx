@@ -705,10 +705,20 @@ function looksLikeTradeSignal(channelSlug?: string | null, content?: string | nu
   return true
 }
 
-/** Sinal ainda ativo? (não passaram +5 min desde a publicação) */
-function isSignalActive(createdAt?: string | null): boolean {
+/** Setups PENDENTES (entrada por zona/limite por tocar) ficam aceitáveis até 24h — o backend valida
+ *  se já foram ativados/fechados. Entradas A MERCADO mantêm os 5 min. Pedido Ricardo 2026-08-18. */
+const TAP_TRADE_PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000
+/** O sinal traz um NÍVEL de entrada? ("Entrada: 4398", "Gold Sell Zone 4398 - 4403", "Entry: …") */
+function hasEntryLevel(content?: string | null): boolean {
+  if (!content) return false
+  return /(entrada|entry|zona|zone)\s*:?\s*[0-9]+[.,]?[0-9]*/i.test(content)
+}
+
+/** Sinal ainda aceitável? Setup pendente → 24h; entrada a mercado → 5 min. */
+function isSignalActive(createdAt?: string | null, content?: string | null): boolean {
   if (!createdAt) return true
-  return Date.now() - new Date(createdAt).getTime() <= TAP_TRADE_MAX_AGE_MS
+  const max = hasEntryLevel(content) ? TAP_TRADE_PENDING_MAX_AGE_MS : TAP_TRADE_MAX_AGE_MS
+  return Date.now() - new Date(createdAt).getTime() <= max
 }
 
 function MessageBubble({
@@ -737,7 +747,7 @@ function MessageBubble({
     !isOwn &&
     !!onTapToTrade &&
     looksLikeTradeSignal(msg.channel_slug, msg.content) &&
-    isSignalActive(msg.created_at)
+    isSignalActive(msg.created_at, msg.content)
   const isTelegram = msg.message_type === "telegram_forward"
   const isVideo    = msg.message_type === "video"
   const isDocument = msg.message_type === "document"
