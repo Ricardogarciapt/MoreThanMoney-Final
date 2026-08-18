@@ -816,7 +816,9 @@ export async function POST(request: NextRequest) {
     ? execSwitches.goldkiller
     : assetClass === "forex"
       ? execSwitches.forex
-      : execSwitches.sensei
+      // Sensei ENTRADAS: exige sensei (master) E sensei_entries. Pausar só as entradas =
+      // sensei=true + sensei_entries=false → a GESTÃO das abertas (execSwitches.sensei) continua.
+      : execSwitches.sensei && execSwitches.sensei_entries
   // Regras de sinal (ruído + execução), data-driven, afináveis sem redeploy.
   const signalRules = await getSignalRules()
   const execConfCount = confirmationsPassed(payload)

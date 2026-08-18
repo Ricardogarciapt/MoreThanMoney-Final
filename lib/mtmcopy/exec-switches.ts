@@ -6,7 +6,10 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
  * Cada provider pode ser ligado/desligado de forma independente.
  */
 export interface ExecSwitches {
-  sensei: boolean // Ouro/BTC (conta Sensei)
+  sensei: boolean // Ouro/BTC (conta Sensei) — MASTER: gate da GESTÃO das posições abertas (parciais/BE/trailing)
+  /** Só as ENTRADAS novas do Sensei (gold/BTC). Permite pausar entradas MANTENDO a gestão das abertas
+   *  (sensei=true + sensei_entries=false). Default TRUE (não altera comportamento existente). */
+  sensei_entries: boolean
   forex: boolean // MTM Auto Forex (conta 5IHE)
   premium: boolean // MTM Auto Premium
   goldkiller: boolean // MTM Auto GoldKiller (conta SDNb / 181271197)
@@ -36,6 +39,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
     // Default = ligado (não altera o comportamento existente enquanto não for tocado)
     return {
       sensei: v.sensei !== false,
+      sensei_entries: v.sensei_entries !== false, // default ON (só false pausa entradas mantendo gestão)
       forex: v.forex !== false,
       premium: v.premium !== false,
       goldkiller: v.goldkiller !== false, // default ON
@@ -46,6 +50,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
   } catch {
     return {
       sensei: true,
+      sensei_entries: true,
       forex: true,
       premium: true,
       goldkiller: true,
