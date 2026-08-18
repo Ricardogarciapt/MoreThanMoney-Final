@@ -53,9 +53,22 @@ const PREMIUM_EARLY_BE_RATIO = (() => {
 /** Gold Did: BE quando o preço avança este tanto (guia GMI: 50 pips = +5.0 no ouro, 1 pip = 0.1). */
 const GOLDDID_BE_PRICE_MOVE = 5.0
 
+/** BE NÃO fica na entrada seca: fica +N pips A FAVOR (lucro travado), pedido do Ricardo. Aplica-se ao
+ *  BE protetor cedo E ao BE do Exit 1. Env PREMIUM_BE_BUFFER_PIPS (default 5). */
+const PREMIUM_BE_BUFFER_PIPS = (() => {
+  const v = Number(process.env.PREMIUM_BE_BUFFER_PIPS)
+  return Number.isFinite(v) && v >= 0 ? v : 5
+})()
+
 /** Tamanho de pip por símbolo (ouro 0.1, JPY 0.01, resto 0.0001). */
 function pipSizeFor(symbol: string): number {
   return /xau|gold/i.test(symbol) ? 0.1 : /jpy/i.test(symbol) ? 0.01 : 0.0001
+}
+
+/** Preço-alvo do BE = entrada + buffer a FAVOR (nunca na entrada seca). */
+function beTargetPrice(entry: number, direction: 'buy' | 'sell', symbol: string): number {
+  const buf = PREMIUM_BE_BUFFER_PIPS * pipSizeFor(symbol)
+  return direction === 'buy' ? entry + buf : entry - buf
 }
 
 function roundLot(n: number): number {
@@ -180,7 +193,7 @@ export async function runPremiumPriceMonitor(): Promise<{
         const profitDist = row.direction === 'buy' ? price - row.entry : row.entry - price
         if (riskDist > 0 && profitDist >= PREMIUM_EARLY_BE_RATIO * riskDist) {
           try {
-            await modifyPositionSlTp(accountId, pos.id, row.entry, undefined, undefined, row.symbol)
+            await modifyPositionSlTp(accountId, pos.id, beTargetPrice(row.entry, row.direction, row.symbol), undefined, undefined, row.symbol)
             await admin
               .from('mtmcopy_premium_active')
               .update({ early_trail_started: true, updated_at: new Date().toISOString() })
@@ -314,11 +327,12 @@ export async function runPremiumPriceMonitor(): Promise<{
           // O RUNNER deve ter TP (pedido Ricardo): alvo final do sinal (tp3 → tp2 → tp1) como
           // rede — fecha no alvo mesmo se o trailing não apanhar; o Exit 2 parcial continua antes.
           const runnerTp = (row.tp3 && row.tp3 > 0 ? row.tp3 : null) ?? (row.tp2 && row.tp2 > 0 ? row.tp2 : null) ?? (row.tp1 && row.tp1 > 0 ? row.tp1 : null) ?? undefined
-          await modifyPositionSlTp(accountId, pos.id, row.entry, runnerTp, trailing, row.symbol)
+          const beSl = beTargetPrice(row.entry, row.direction, row.symbol) // BE +5 pips a favor (não na entrada seca)
+          await modifyPositionSlTp(accountId, pos.id, beSl, runnerTp, trailing, row.symbol)
           patch.trailing_started = true
-          detail.push(`${row.symbol}: BE + trailing + TP runner (${runnerTp ?? '—'}) após Exit 1`)
+          detail.push(`${row.symbol}: BE (+${PREMIUM_BE_BUFFER_PIPS}p) + trailing + TP runner (${runnerTp ?? '—'}) após Exit 1`)
           // Espelha BE + trailing aos subscritores (protege o runner deles até Exit 2/3).
-          const m = await mirrorPremiumExit(row.symbol, row.direction, { kind: 'be_trailing', beSl: row.entry, trailing })
+          const m = await mirrorPremiumExit(row.symbol, row.direction, { kind: 'be_trailing', beSl, trailing })
           if (m.acted) detail.push(`${row.symbol}: BE+trailing em ${m.acted} subs`)
         } catch {
           detail.push(`${row.symbol}: trailing falhou`)

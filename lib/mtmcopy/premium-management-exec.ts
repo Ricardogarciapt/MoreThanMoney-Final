@@ -58,8 +58,12 @@ export function classifyPremiumMessage(text: string): PremiumMessageCtx | null {
   }
 
   if (/\btrade\s+active\s+and\s+running\b/i.test(text)) {
+    if (/\bclose\s+all\b/i.test(text)) return { kind: 'trade_active_close_all', setBE }
     if (/\bclose\s+half\b/i.test(text)) return { kind: 'trade_active_close_half', setBE }
-    return { kind: 'trade_active_close_all', setBE }
+    // "Take Partials" (trade a correr) → TIRA o parcial (TP1 %) se em lucro, NÃO fecha tudo (Ricardo).
+    if (/\btake\s+partial/i.test(text)) return { kind: 'hit_tp1', setBE }
+    // "running" sem instrução explícita = a trade continua → protege em BE, não fecha.
+    return { kind: 'breakeven', setBE: true }
   }
 
   if (/\b(?:hit\s?sl|sl\s?hit|stop\s?loss\s+hit)\b/i.test(text)) return { kind: 'sl_hit', setBE }

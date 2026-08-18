@@ -169,7 +169,10 @@ export function buildPremiumSingleOrder(
     comment: buildPremiumSingleOrderComment(lot, exit, { smallAccount, manual: opts?.manual, strategyTag: opts?.strategyTag }),
     exitPcts: exit,
     smallAccount,
-    takeProfit: null,
+    // TP SEMPRE na ordem = rede de segurança (se o monitor VPS falhar, o broker fecha no alvo final).
+    // O monitor de preço vai gerindo TP/BE/parciais em tempo real por cima disto (pedido Ricardo).
+    // Alvo = ÚLTIMO TP do sinal (não fecha cedo; os parciais anteriores são tirados pelo monitor).
+    takeProfit: tps[tps.length - 1] ?? null,
   }
 }
 
@@ -261,7 +264,18 @@ export async function shouldSkipDuplicatePremiumEntry(
     }
   }
 
-  // Sem posição, ou todas as abertas já em BE (sem risco) → a nova entrada da sessão pode abrir.
+  // Não abrir nova enquanto a ANTERIOR ainda não tirou parcial (volume ≈ original) — mesmo já em BE.
+  // Pedido Ricardo: só entra a próxima quando a anterior já bancou o 1.º parcial (ou fechou de todo).
+  const noPartialYet = openHere.filter((p) => {
+    const meta = parsePremiumSingleComment(p.comment)
+    const orig = meta?.originalLot
+    return orig && orig > 0 && p.volume != null ? p.volume >= orig * 0.98 : true
+  })
+  if (noPartialYet.length > 0) {
+    return { skip: true, reason: 'Posição Premium anterior ainda SEM parcial tirado — gerir essa primeiro' }
+  }
+
+  // Sem posição, ou já em BE E com parcial tirado → a nova entrada da sessão pode abrir.
   return { skip: false }
 }
 
