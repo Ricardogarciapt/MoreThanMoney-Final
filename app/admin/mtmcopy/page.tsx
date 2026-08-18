@@ -14,6 +14,7 @@ import MtmcopyStrategyControl from "@/components/admin/mtmcopy-strategy-control"
 import {
   MtmcopyAdminSection,
   MtmcopyAdminTabNav,
+  MTMCOPY_ADMIN_TABS,
   type MtmcopyAdminTab,
 } from "@/components/admin/mtmcopy-admin-shell"
 import { Button } from "@/components/ui/button"
@@ -40,15 +41,8 @@ function parseTab(
   raw: string | null,
   opts: { userId?: string | null; routeId?: string | null },
 ): MtmcopyAdminTab {
-  const valid: MtmcopyAdminTab[] = [
-    "overview",
-    "strategies",
-    "senders",
-    "subscribers",
-    "logs",
-    "tools",
-    "users",
-  ]
+  // Fonte única: MTMCOPY_ADMIN_TABS (evita a lista de tabs desincronizar entre sidebar/nav/parse).
+  const valid: MtmcopyAdminTab[] = MTMCOPY_ADMIN_TABS.map((t) => t.id)
   if (raw && valid.includes(raw as MtmcopyAdminTab)) return raw as MtmcopyAdminTab
   if (opts.userId) return "users"
   if (opts.routeId) return "senders"
@@ -146,17 +140,7 @@ export default function AdminMtmcopyPage() {
           <span className="font-semibold text-sm">MTMcopier Ops</span>
         </div>
         <nav className="space-y-1 text-sm">
-          {(
-            [
-              { id: "overview" as const, label: "Visão geral" },
-              { id: "strategies" as const, label: "Estratégias" },
-              { id: "senders" as const, label: "Senders" },
-              { id: "subscribers" as const, label: "Subscribers" },
-              { id: "logs" as const, label: "Monitorização" },
-              { id: "tools" as const, label: "Ferramentas" },
-              { id: "users" as const, label: "Utilizadores" },
-            ] as const
-          ).map((item) => (
+          {MTMCOPY_ADMIN_TABS.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -280,8 +264,8 @@ export default function AdminMtmcopyPage() {
                 <MtmcopyGlobalPerformance />
               </MtmcopyAdminSection>
 
-              <div className="grid lg:grid-cols-2 gap-6">
-                <MtmcopySyncAllPanel />
+              <div className="grid gap-6">
+                {/* "Sincronizar tudo" vive só na tab Ferramentas (fonte única) — evita 2 botões iguais. */}
                 <Card className="bg-zinc-900/50 border-zinc-800">
                   <CardHeader>
                     <CardTitle className="text-sm text-zinc-300">Mapa da consola</CardTitle>

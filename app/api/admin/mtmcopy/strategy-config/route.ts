@@ -169,11 +169,13 @@ export async function POST(request: NextRequest) {
     const patch: Partial<ExecSwitches> = {}
     for (const k of [
       "sensei",
+      "sensei_entries",
       "forex",
       "premium",
       "goldkiller",
       "premium_price_monitor",
       "premium_subscriber_exits",
+      "perps_position_monitor",
     ] as const) {
       const v = (body.switches as Record<string, unknown>)[k]
       if (typeof v === "boolean") patch[k] = v

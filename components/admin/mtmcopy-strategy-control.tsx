@@ -8,11 +8,13 @@ import MtmcopyAccountConfig from "@/components/admin/mtmcopy-account-config"
 
 type Switches = {
   sensei: boolean
+  sensei_entries: boolean
   forex: boolean
   premium: boolean
   goldkiller: boolean
   premium_price_monitor: boolean
   premium_subscriber_exits: boolean
+  perps_position_monitor: boolean
 }
 type PerpsRules = {
   enabled: boolean
@@ -47,11 +49,13 @@ type Config = {
 
 const STRATEGY_LABELS: { key: keyof Switches; label: string; hint: string }[] = [
   { key: "premium", label: "MTM Auto Premium", hint: "London/NY Intelligence · conta mestre USD" },
-  { key: "sensei", label: "Sensei (Ouro/BTC)", hint: "Webhook · scanner scored" },
+  { key: "sensei", label: "Sensei (Ouro/BTC)", hint: "Master: gestão das posições abertas (parciais/BE/trailing)" },
+  { key: "sensei_entries", label: "Sensei · entradas novas", hint: "Desliga p/ pausar SÓ as entradas (mantém a gestão das abertas)" },
   { key: "goldkiller", label: "GoldKiller", hint: "XAUUSD scanner" },
   { key: "forex", label: "MTM Auto Forex", hint: "Trade Ideas · conta 5IHE" },
   { key: "premium_price_monitor", label: "Premium · monitor de preço", hint: "Fecha parciais/BE por PREÇO (não por mensagem)" },
   { key: "premium_subscriber_exits", label: "Premium · exits nos subscritores", hint: "⚠️ dinheiro real de subscritores" },
+  { key: "perps_position_monitor", label: "Perps · monitor de posição", hint: "Acompanha a posição Bybit (Entry Hit → parcial → BE → fecho)" },
 ]
 
 const ENV_FLAG_LABELS: Record<string, string> = {
