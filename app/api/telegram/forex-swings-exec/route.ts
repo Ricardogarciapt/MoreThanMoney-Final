@@ -43,6 +43,8 @@ interface Body {
   tp?: number
   comment?: string
   trailing?: boolean
+  /** 'close'|'cancel' = a fonte (James) fechou/cancelou → espelha nas ordens T2T dos seguidores. */
+  kind?: 'entry' | 'close' | 'cancel'
 }
 
 export async function POST(req: NextRequest) {
@@ -60,6 +62,20 @@ export async function POST(req: NextRequest) {
   const tp = typeof body.tp === 'number' ? body.tp : null
   if (!symbol || !dir) {
     return NextResponse.json({ ok: false, error: 'symbol e side obrigatórios' }, { status: 400 })
+  }
+
+  // FECHO/CANCELAMENTO da fonte → espelha nas ordens T2T dos seguidores (chat ideias-e-sinais).
+  if (body.kind === 'close' || body.kind === 'cancel') {
+    const { closeT2TFollowersForSignal } = await import('@/lib/mtmcopy/t2t-lifecycle')
+    const r = await closeT2TFollowersForSignal({
+      kind: body.kind,
+      chatSlug: FS_CHAT_SLUG,
+      symbol,
+      direction,
+      label: 'Forex Swings',
+      sourceMatch: /forex\s*swings/i,
+    })
+    return NextResponse.json({ ok: true, kind: body.kind, ...r })
   }
 
   const cfg = await getForexSwingsExecConfig()

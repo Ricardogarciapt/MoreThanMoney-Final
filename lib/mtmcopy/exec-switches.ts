@@ -24,6 +24,9 @@ export interface ExecSwitches {
    *  o ciclo de vida (Entry Hit → parcial → BE → fecho c/ resultado) no chat + Telegram dos perps.
    *  Só NOTIFICA (as saídas já são nativas da Bybit). Default ON. */
   perps_position_monitor: boolean
+  /** Fecho automático das ordens T2T dos SEGUIDORES quando a fonte fecha/cancela (PrimeVerse,
+   *  Premium, Sensei, GoldKiller, Forex Swings). Kill-switch único. Default ON. */
+  t2t_auto_close: boolean
 }
 
 const KEY = "mtmcopy_exec_switches"
@@ -46,6 +49,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       premium_price_monitor: v.premium_price_monitor === true, // default OFF
       premium_subscriber_exits: v.premium_subscriber_exits === true, // default OFF (dinheiro real)
       perps_position_monitor: v.perps_position_monitor !== false, // default ON (só notifica)
+      t2t_auto_close: v.t2t_auto_close !== false, // default ON
     }
   } catch {
     return {
@@ -57,6 +61,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       premium_price_monitor: false,
       premium_subscriber_exits: false,
       perps_position_monitor: true,
+      t2t_auto_close: true,
     }
   }
 }

@@ -176,6 +176,7 @@ export async function POST(request: NextRequest) {
       "premium_price_monitor",
       "premium_subscriber_exits",
       "perps_position_monitor",
+      "t2t_auto_close",
     ] as const) {
       const v = (body.switches as Record<string, unknown>)[k]
       if (typeof v === "boolean") patch[k] = v

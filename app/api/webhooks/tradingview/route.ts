@@ -1025,6 +1025,24 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // T2T: espelha o FECHO da fonte (Sensei/GoldKiller) nas ordens dos seguidores desse sinal. Só no
+  // 'exit' (fecho discricionário) — o SL do próprio seguidor trata o sl_hit; tp_hit é parcial. Gated
+  // pelo kill-switch t2t_auto_close (dentro do helper).
+  if (isFollowup && activeSensei?.symbol && activeSensei.alertType === "exit" && route.channel) {
+    try {
+      const { closeT2TFollowersForSignal } = await import("@/lib/mtmcopy/t2t-lifecycle")
+      await closeT2TFollowersForSignal({
+        kind: "close",
+        chatSlug: route.channel,
+        symbol: activeSensei.symbol,
+        direction: (activeSensei.direction ?? linkedIdea?.direction ?? null) as "buy" | "sell" | null,
+        label: isGoldKiller ? "GoldKiller" : "Sensei",
+      })
+    } catch (err) {
+      console.error("[tradingview-webhook] t2t close mirror error:", err)
+    }
+  }
+
   const post =
     assetClass === "gold_btc" && !isGoldKiller
       ? composePost(v, activeSensei, msgCtx)

@@ -232,5 +232,22 @@ export async function applyPremiumManagement(
     }
   }
 
+  // T2T: no FECHO TOTAL do Premium (HIT ALL TP / TRADE CLOSED / close all), espelha nas ordens dos
+  // seguidores desse sinal (chat premium-ideas). Gated pelo kill-switch t2t_auto_close no helper.
+  if (msg.kind === 'hit_all' || msg.kind === 'trade_active_close_all') {
+    try {
+      const { closeT2TFollowersForSignal } = await import('./t2t-lifecycle')
+      await closeT2TFollowersForSignal({
+        kind: 'close',
+        chatSlug: 'premium-ideas',
+        symbol,
+        direction: positionDirection(pos),
+        label: 'Premium',
+      })
+    } catch (e) {
+      out.errors.push(`t2t close: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
   return out
 }
