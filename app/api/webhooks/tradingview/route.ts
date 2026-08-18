@@ -436,14 +436,15 @@ async function pushSignalSubscribers(
 }
 
 export async function POST(request: NextRequest) {
-  // Secrets válidos: os de TRADINGVIEW_WEBHOOK_SECRET (podem ser vários, separados por
-  // vírgula) MAIS o secret em uso "mtm-tv-sensei-2026" — sempre aceite para não partir o
-  // webhook LIVE mesmo que a env não esteja definida. Fail-closed: sem secret válido → 401
-  // (antes, com a env vazia, o endpoint ficava aberto a qualquer pessoa a disparar trades).
-  const validSecrets = Array.from(new Set([
-    ...(process.env.TRADINGVIEW_WEBHOOK_SECRET || "").split(",").map((s) => s.trim()).filter(Boolean),
-    "mtm-tv-sensei-2026",
-  ]))
+  // Secrets válidos: os de TRADINGVIEW_WEBHOOK_SECRET (vários, separados por vírgula) — a via
+  // preferida e ROTACIONÁVEL. O secret LEGADO "mtm-tv-sensei-2026" (hardcoded histórico) continua
+  // aceite POR DEFEITO para não partir os alertas atuais, MAS pode ser desligado com
+  // TRADINGVIEW_ALLOW_LEGACY_SECRET=false depois de migrares os alertas para o env secret forte.
+  // Fail-closed: sem secret válido → 401.
+  const LEGACY_SECRET = "mtm-tv-sensei-2026"
+  const envSecrets = (process.env.TRADINGVIEW_WEBHOOK_SECRET || "").split(",").map((s) => s.trim()).filter(Boolean)
+  const allowLegacy = process.env.TRADINGVIEW_ALLOW_LEGACY_SECRET !== "false"
+  const validSecrets = new Set<string>([...envSecrets, ...(allowLegacy ? [LEGACY_SECRET] : [])])
   const url = new URL(request.url)
   const rawBody = await request.text()
 
@@ -455,8 +456,12 @@ export async function POST(request: NextRequest) {
     url.searchParams.get("secret") ??
     (typeof payload.secret === "string" ? payload.secret : null) ??
     (typeof payload.passphrase === "string" ? payload.passphrase : null)
-  if (!provided || !validSecrets.includes(provided)) {
+  if (!provided || !validSecrets.has(provided)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  }
+  // Aviso de migração: alerta ainda usa o secret LEGADO apesar de já haver env secret forte definido.
+  if (provided === LEGACY_SECRET && envSecrets.length) {
+    console.warn("[tv-webhook] secret LEGADO em uso — migra o alerta para o env secret e liga TRADINGVIEW_ALLOW_LEGACY_SECRET=false")
   }
   if (isJson) { delete payload.secret; delete payload.passphrase }
 
