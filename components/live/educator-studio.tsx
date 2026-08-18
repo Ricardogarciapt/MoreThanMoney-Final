@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import EducatorCoursesPanel from "@/components/live/educator-courses-panel"
 import EducatorDvrPanel from "@/components/live/educator-dvr-panel"
 import {
   ArrowLeft,
@@ -1233,6 +1234,13 @@ export default function EducatorStudio() {
                   </Button>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* CURSOS: playlists próprias do educador (dropdown "Cursos" no perfil) — cria/ordena aqui. */}
+          <Card className="border-gray-800 bg-gray-950/90">
+            <CardContent className="p-3">
+              <EducatorCoursesPanel />
             </CardContent>
           </Card>
 
