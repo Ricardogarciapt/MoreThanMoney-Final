@@ -120,6 +120,10 @@
     {
       "path": "/api/cron/proof-stats",
       "schedule": "30 5 * * *"
+    },
+    {
+      "path": "/api/cron/accounts-daily-report",
+      "schedule": "0 21 * * *"
     }
   ]
 }

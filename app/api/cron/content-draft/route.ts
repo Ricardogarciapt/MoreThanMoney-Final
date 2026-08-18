@@ -149,7 +149,13 @@ export async function GET(req: NextRequest) {
   try {
     // PROVA VIVA (cron diário) — deixa de haver números congelados no prompt.
     const proof = await getProofStats()
-    const proofText = `${proofLine(proof)} documentados, ${proof.members} membros ativos (dados de ${proofAsOfLabel(proof)})`
+    let proofText = `${proofLine(proof)} documentados, ${proof.members} membros ativos (dados de ${proofAsOfLabel(proof)})`
+    // DESTAQUE DO DIA — só métricas verdadeiras E positivas (nunca força; se não houver, fica só a prova).
+    try {
+      const { inspiringHighlights } = await import('@/lib/inspiring-metrics')
+      const hs = await inspiringHighlights()
+      if (hs.length) proofText += `\n- Destaques REAIS de hoje (usa no máximo UM, com naturalidade): ${hs.map((h) => h.line).join(' | ')}`
+    } catch { /* opcional */ }
     // ANTI-REPETIÇÃO: dá ao gerador os ganchos/legendas das últimas semanas para não repetir ângulos.
     const { data: recent } = await supabase
       .from('social_scheduled_posts')
