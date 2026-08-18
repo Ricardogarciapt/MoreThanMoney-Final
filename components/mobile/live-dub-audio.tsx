@@ -19,6 +19,8 @@ const DUB_LANGS: [string, string][] = [
 // Atraso do vídeo (segundos) para alinhar com a voz dobrada. O ÁUDIO é sempre tocado
 // INTEIRO e por ordem (nunca se saltam frases). Para não derivar, atrasa-se o VÍDEO
 // e, se a fila crescer, acelera-se levemente a fala (sem perder palavras).
+/** Volume do áudio ORIGINAL enquanto a dobragem toca (3% — fica em fundo, não silencia). */
+const ORIGINAL_UNDER_DUB = 0.03
 const DUB_VIDEO_DELAY_S = 12     // latência típica do pipeline ASR→tradução→TTS (+3s afinado)
 const DUB_CATCHUP_AT = 2         // a partir de N clips pendentes acelera um pouco
 const DUB_RATE_NORMAL = 1.0
@@ -80,14 +82,19 @@ export default function LiveDubAudio({
       return
     }
 
-    // ---- Canal DOBRADO: ESCONDE o áudio original, ATRASA o vídeo ~DUB_VIDEO_DELAY_S ----
+    // ---- Canal DOBRADO: BAIXA o áudio original a ORIGINAL_UNDER_DUB (3%), ATRASA o vídeo ----
+    // Pedido Ricardo (2026-08-18): não silenciar por completo — deixar o original em fundo (3%)
+    // preserva o tom/energia do orador e o áudio de mercado por trás da dobragem.
     const enforceMute = () => {
       const el = videoRef.current
-      if (el && (!el.muted || el.volume !== 0)) { el.muted = true; el.volume = 0 } // silêncio total do original
+      if (el && (el.muted || Math.abs(el.volume - ORIGINAL_UNDER_DUB) > 0.005)) {
+        el.muted = false
+        el.volume = ORIGINAL_UNDER_DUB
+      }
     }
     if (v) {
-      v.muted = true
-      v.volume = 0
+      v.muted = false
+      v.volume = ORIGINAL_UNDER_DUB
       v.addEventListener("volumechange", enforceMute)
     }
     // hls.js: passa a jogar DUB_VIDEO_DELAY_S atrás do edge e segura aí (não recupera latência).

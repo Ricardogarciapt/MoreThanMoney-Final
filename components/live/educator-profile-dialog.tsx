@@ -1,4 +1,5 @@
 "use client"
+import { useState } from "react"
 
 import Link from "next/link"
 import { Calendar, Circle, GraduationCap, ArrowRight } from "lucide-react"
@@ -64,6 +65,7 @@ export default function EducatorProfileDialog({
   const { user } = useAuth()
   const now = Date.now()
   const playlistStreams = streams.filter((s) => s.playlist_url)
+  const [courseIdx, setCourseIdx] = useState(0)
   const onlineNow = streams.filter((s) => s.is_live).slice(0, 3)
   const upcoming = streams
     .filter((s) => !s.is_live && s.scheduled_start_at && new Date(s.scheduled_start_at).getTime() > now)
@@ -171,11 +173,27 @@ export default function EducatorProfileDialog({
 
               {playlistStreams.length > 0 && (
                 <section className="space-y-2">
+                  {/* CURSOS — playlists do educador em SEQUÊNCIA, num dropdown. Com várias playlists
+                      o perfil ficava uma lista longa; assim escolhe-se o curso e vê-se só esse. */}
                   <div className="flex items-center gap-2">
                     <GraduationCap className="h-4 w-4 text-[#D2A63C]" />
-                    <p className="text-sm font-semibold">Aulas gravadas</p>
+                    <p className="text-sm font-semibold">Cursos</p>
+                    {playlistStreams.length > 1 && (
+                      <select
+                        value={courseIdx}
+                        onChange={(e) => setCourseIdx(Number(e.target.value))}
+                        aria-label="Escolher curso"
+                        className="ml-auto text-xs bg-zinc-900 border border-zinc-700 rounded-lg px-2 py-1 text-zinc-200 max-w-[62%] truncate"
+                      >
+                        {playlistStreams.map((s, i) => (
+                          <option key={s.id} value={i}>
+                            {s.playlist_title || `${s.title} · Playlist`}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
-                  {playlistStreams.map((s) => (
+                  {(playlistStreams.length > 1 ? [playlistStreams[Math.min(courseIdx, playlistStreams.length - 1)]] : playlistStreams).map((s) => (
                     <LmsPlaylistSection
                       key={s.id}
                       defaultOpen={!s.is_live}

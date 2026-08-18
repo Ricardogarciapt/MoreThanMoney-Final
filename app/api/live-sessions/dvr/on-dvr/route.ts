@@ -56,7 +56,10 @@ export async function POST(req: NextRequest) {
           stream_key: streamKey,
           base_file: baseFile,
           status: auto ? "pending" : "recorded",
-          langs: auto ? [...DVR_DEFAULT_DUB_LANGS] : [],
+          // GRAVAÇÃO SEM DOBRAGEM (decisão Ricardo 2026-08-18): o DVR guarda só o ORIGINAL + CC.
+          // A dobragem existe apenas na sessão AO VIVO. Mantemos o campo por retrocompatibilidade
+          // do worker (lista vazia = nenhuma faixa de áudio extra a montar).
+          langs: [],
           multi_file: null,
           download_url: null,
           size_bytes: null,

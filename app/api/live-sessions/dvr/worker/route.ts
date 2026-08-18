@@ -67,27 +67,30 @@ export async function GET(req: NextRequest) {
     const academy = ((s?.academy as { name?: string } | null)?.name as string) || "MoreThanMoney"
     const srcLang = normalizeCaptionLang((s?.caption_source_language as string) || "pt")
 
-    // Idiomas com faixa de áudio no master = fonte + dobragens. Um vídeo YouTube por cada.
-    const dubLangs = ((yt.langs as string[]) || []).map(normalizeCaptionLang).filter((l) => l && l !== srcLang)
-    const allLangs = [srcLang, ...dubLangs]
-    const TAG: Record<string, string> = { pt: "PT", en: "EN", es: "ES", fr: "FR", de: "DE" }
-
-    // Títulos traduzidos (título na língua da dublagem).
-    let titles: Record<string, string> = {}
-    try { titles = dubLangs.length ? await translateCaption(title, srcLang, dubLangs) : {} } catch { titles = {} }
-
+    // YouTube: SÓ A VERSÃO ORIGINAL (decisão Ricardo 2026-08-18). A dobragem é exclusiva da sessão
+    // ao vivo; a gravação publicada leva o áudio original + LEGENDAS (CC) nos vários idiomas — que é
+    // o que serve os alunos sem multiplicar vídeos por idioma.
     const base = siteUrl()
-    const uploads = allLangs.map((lang) => ({
-      lang,
-      title: `${lang === srcLang ? title : titles[lang] || title} · ${TAG[lang] || lang.toUpperCase()}`,
-      description: `Sessão MoreThanMoney — ${academy}. Áudio ${TAG[lang] || lang.toUpperCase()} + legendas.`,
-      srtUrl: `${base}/api/live-sessions/dvr/${yt.stream_id}/subtitles/${lang}.srt`,
-    }))
+    const subLangsYt = ((yt.subtitle_langs as string[]) || []).map(normalizeCaptionLang).filter(Boolean)
+    const uploads = [
+      {
+        lang: srcLang,
+        title,
+        description: `Sessão MoreThanMoney — ${academy}. Áudio original com legendas (CC).`,
+        srtUrl: `${base}/api/live-sessions/dvr/${yt.stream_id}/subtitles/${srcLang}.srt`,
+        // Legendas adicionais a carregar no MESMO vídeo (CC multi-idioma).
+        captions: subLangsYt.map((l) => ({
+          lang: l,
+          srtUrl: `${base}/api/live-sessions/dvr/${yt.stream_id}/subtitles/${l}.srt`,
+        })),
+      },
+    ]
 
     return NextResponse.json({
       action: "youtube",
       jobId: yt.id,
-      masterFile: yt.multi_file || null,
+      // Envia o ORIGINAL (base_file). O multi_file (multi-áudio) deixou de ser produzido.
+      masterFile: yt.base_file || null,
       baseFile: yt.base_file || null,
       sourceLang: srcLang,
       privacyStatus: "unlisted",
@@ -259,9 +262,31 @@ export async function POST(req: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", jobId)
-    // NÃO liga automaticamente ao stream: a playlist criada é um "dump" das gravações
-    // da sala. Os admins curam as playlists de curso no YouTube e colam o link no LMS
-    // manualmente (não sobrescrevemos a playlist de curso já configurada).
+    // ASSOCIAÇÃO AUTOMÁTICA à SALA (decisão Ricardo 2026-08-18): a playlist das gravações passa a
+    // ficar logo visível aos alunos na sala/educador (como a "Básicos de Trading" do Ricardo).
+    // NÃO sobrescreve um playlist_url já configurado à mão (curadoria do admin ganha), e NÃO mexe
+    // no playlist_title se o educador já lhe deu um nome próprio no Studio.
+    if (playlistUrl) {
+      const { data: jrow } = await supabase
+        .from("lms_dvr_jobs")
+        .select("stream_id")
+        .eq("id", jobId)
+        .maybeSingle()
+      const streamId = jrow?.stream_id as string | undefined
+      if (streamId) {
+        const { data: st } = await supabase
+          .from("lms_streams")
+          .select("playlist_url, playlist_title, title")
+          .eq("id", streamId)
+          .maybeSingle()
+        const patch: Record<string, unknown> = {}
+        if (!st?.playlist_url) patch.playlist_url = playlistUrl
+        if (!st?.playlist_title) patch.playlist_title = `${(st?.title as string) || "Sessões"} · Rever aulas`
+        if (Object.keys(patch).length) {
+          await supabase.from("lms_streams").update(patch).eq("id", streamId)
+        }
+      }
+    }
     return NextResponse.json({ success: true })
   }
 
