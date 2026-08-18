@@ -60,22 +60,25 @@ export async function POST(req: NextRequest) {
   const direction: 'buy' | 'sell' = dir === 'buy' || dir === 'compra' ? 'buy' : 'sell'
   const sl = typeof body.sl === 'number' ? body.sl : null
   const tp = typeof body.tp === 'number' ? body.tp : null
-  if (!symbol || !dir) {
-    return NextResponse.json({ ok: false, error: 'symbol e side obrigatórios' }, { status: 400 })
-  }
 
   // FECHO/CANCELAMENTO da fonte → espelha nas ordens T2T dos seguidores (chat ideias-e-sinais).
+  // Só precisa do símbolo (a direção é opcional: se James não a der, casa qualquer direção do par).
   if (body.kind === 'close' || body.kind === 'cancel') {
+    if (!symbol) return NextResponse.json({ ok: false, error: 'symbol obrigatório' }, { status: 400 })
     const { closeT2TFollowersForSignal } = await import('@/lib/mtmcopy/t2t-lifecycle')
     const r = await closeT2TFollowersForSignal({
       kind: body.kind,
       chatSlug: FS_CHAT_SLUG,
       symbol,
-      direction,
+      direction: dir ? direction : null,
       label: 'Forex Swings',
       sourceMatch: /forex\s*swings/i,
     })
     return NextResponse.json({ ok: true, kind: body.kind, ...r })
+  }
+
+  if (!symbol || !dir) {
+    return NextResponse.json({ ok: false, error: 'symbol e side obrigatórios' }, { status: 400 })
   }
 
   const cfg = await getForexSwingsExecConfig()
