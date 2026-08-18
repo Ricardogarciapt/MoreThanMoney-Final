@@ -1320,7 +1320,8 @@ async function executeViaMtmProvider(
         premiumProviderSingle.lot,
         premiumProviderSingle.comment,
       )
-      req.takeProfit = null
+      // TP na ordem = rede de segurança (último TP do sinal); o monitor de preço gere parciais/BE por cima.
+      req.takeProfit = premiumProviderSingle.takeProfit
       const [r] = await withOrderTimeout(
         placeOrdersSequential(provider.accountId, [req]),
         20_000,
@@ -1746,7 +1747,7 @@ async function processSignalDirect(
       premiumSingle.lot,
       premiumSingle.comment,
     )
-    req.takeProfit = null
+    req.takeProfit = premiumSingle.takeProfit // TP de segurança (último TP); monitor gere parciais/BE
     const [single] = await placeOrdersSequential(conn.metaapi_account_id, [req])
     result = single ?? { success: false, error: 'Sem resposta MetaAPI' }
   } else {

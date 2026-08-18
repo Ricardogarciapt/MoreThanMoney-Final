@@ -55,8 +55,8 @@ export interface PremiumSingleOrderPlan {
   comment: string
   exitPcts: PremiumExitPcts
   smallAccount: boolean
-  /** Sem TP fixo à abertura — parciais via mensagens Telegram. */
-  takeProfit: null
+  /** TP na ordem = rede de segurança (último TP do sinal); o monitor gere parciais/BE por cima. null se o sinal não trouxer TP. */
+  takeProfit: number | null
 }
 
 export interface ParsedPremiumSingleMeta {
