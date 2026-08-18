@@ -22,6 +22,7 @@ export type T2TSourceKey =
   | 'aurum'
   | 'goldkiller'
   | 'mtmscanner'
+  | 'forexideas'
 export type T2TAssetClass = 'gold' | 'forex' | 'crypto' | 'indices'
 
 /** Catálogo de fontes para a UI de "O que seguir". */
@@ -30,6 +31,7 @@ export const T2T_SOURCES: { key: T2TSourceKey; label: string; hint: string }[] =
   { key: 'sensei', label: 'Sensei', hint: 'Sensei Scanner (entradas validadas)' },
   { key: 'goldkiller', label: 'GoldKiller', hint: 'Scanner GoldKiller (ouro)' },
   { key: 'mtmscanner', label: 'MTM Scanner', hint: 'Scanner geral MTM' },
+  { key: 'forexideas', label: 'Ideias de Forex', hint: 'Sinais do canal Ideias de Forex' },
   { key: 'james', label: 'Forex Swings', hint: 'Swings de forex (James)' },
   { key: 'primeverse', label: 'PrimeVerse', hint: 'Reencaminhados PrimeVerse' },
   { key: 'aurum', label: 'Aurum Flow', hint: 'Scanner ORB — ouro e perpétuos' },
@@ -65,7 +67,13 @@ export function t2tSourceKey(channelSlug?: string | null, content?: string | nul
     channelSlug === 'trade-ideas' ||
     channelSlug === 'trade-ideas-setup'
   ) {
-    return /primeverse/i.test(c) ? 'primeverse' : null
+    if (/primeverse/i.test(c)) return 'primeverse'
+    // "Ideias de Forex" (canal próprio): os sinais do canal são negociáveis no T2T e passam a ser
+    // geridos pelo motor de preço em tempo real (entry-hit → parciais → BE → trailing → fecho),
+    // na conta de quem aceitar. Pedido Ricardo 2026-08-18. `isT2TEntrySignal` continua a exigir
+    // direção + preço + alvo, por isso mensagens de conversa/gestão não geram botão.
+    if (channelSlug === 'trade-ideas-setup') return 'forexideas'
+    return null
   }
   return null
 }
