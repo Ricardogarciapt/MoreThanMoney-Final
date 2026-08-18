@@ -81,6 +81,14 @@ export function proofAsOfLabel(s: ProofStats): string {
  * Só grava se houver dados suficientes (senão mantém o que está — nunca degrada a prova).
  */
 export async function computeProofStats(): Promise<{ ok: boolean; stats?: ProofStats; reason?: string }> {
+  // ⚠️ TRAVADO (2026-08-18): a 1.ª execução real deu profit=+52.412 USD — número DISTORCIDO. O
+  // `profit` do MetaStats é acumulado de vida e é inflacionado por depósitos/levantamentos (as contas
+  // mostram gain -100% e drawdown >100% pelo mesmo motivo). Publicar isso seria uma alegação FALSA.
+  // Mantém-se o snapshot AUDITADO até haver um cálculo validado (ex.: só contas sem operações de
+  // saldo, ou P&L por período com baseline). Põe PROOF_STATS_LIVE=true para reativar conscientemente.
+  if (process.env.PROOF_STATS_LIVE !== 'true') {
+    return { ok: false, reason: 'cálculo live travado (profit distorcido por depósitos/levantamentos) — usa o snapshot auditado' }
+  }
   try {
     const { getProviderStrategyMetrics } = await import('@/lib/mtmcopy/provider-metrics')
     const payload = await getProviderStrategyMetrics()
