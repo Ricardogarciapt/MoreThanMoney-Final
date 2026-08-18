@@ -271,18 +271,21 @@ export async function publishScheduledPost(post: ScheduledPost): Promise<Publish
     }
   }
 
-  if (needsWait) {
-    const ready = await waitReady(creationId, token)
-    if (!ready) throw new MediaNotReadyError(creationId)
+  // SEMPRE confirmar que o container está FINISHED antes de publicar — inclusive IMAGE. Publicar
+  // à pressa devolvia "[IG media_publish] Media ID is not available" (6 falhas em 30d): o Instagram
+  // ainda estava a processar. Para imagem costuma ficar pronto à 1ª verificação (custo ~0).
+  {
+    const ready = await waitReady(creationId, token, needsWait ? 5 : 3)
+    if (!ready) throw new MediaNotReadyError(creationId) // o cron guarda o creation_id e retoma
   }
 
   const mediaId = await publishContainer(igId, creationId, token)
   return { mediaId, permalink: await fetchPermalink(mediaId, token), creationId }
 }
 
-/** Poll curto (dentro do budget do cron): ~5 tentativas × 4s. */
-async function waitReady(creationId: string, token: string): Promise<boolean> {
-  for (let i = 0; i < 5; i++) {
+/** Poll curto (dentro do budget do cron): N tentativas × 4s (1.ª imediata). */
+async function waitReady(creationId: string, token: string, attempts = 5): Promise<boolean> {
+  for (let i = 0; i < attempts; i++) {
     if (await isContainerReady(creationId, token)) return true
     await new Promise((r) => setTimeout(r, 4000))
   }
