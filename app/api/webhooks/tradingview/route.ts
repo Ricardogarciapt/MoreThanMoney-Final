@@ -1078,9 +1078,19 @@ export async function POST(request: NextRequest) {
     if (logId) await supabase.from("tradingview_signals").update({ chat_status: "suppressed", telegram_status: "suppressed" }).eq("id", logId)
   } else {
     try {
+      // Threading no chat da app: os follow-ups (TP/BE/SL/exit) respondem à mensagem da ENTRADA
+      // (linkedIdea.chatMessageId) — senão aparecem todos ao mesmo nível, como acontecia no Premium.
+      const parentChatId = isFollowup ? linkedIdea?.chatMessageId ?? null : null
       const { data: msg, error } = await supabase
         .from("chat_messages")
-        .insert({ channel_slug: route.channel, message_type: "telegram_forward", content: post, telegram_sender: route.sender, user_id: null })
+        .insert({
+          channel_slug: route.channel,
+          message_type: "telegram_forward",
+          content: post,
+          telegram_sender: route.sender,
+          user_id: null,
+          ...(parentChatId ? { reply_to_id: parentChatId } : {}),
+        })
         .select("id").single()
       if (error) throw error
       chatId = msg.id as string
