@@ -49,7 +49,12 @@ export function t2tSourceKey(channelSlug?: string | null, content?: string | nul
   const c = content ?? ''
   // Aurum Flow (ORB) — marcador específico, pode chegar por canais de scanner (perps/ouro).
   if (/aurum\s*flow|\baurum\b/i.test(c)) return 'aurum'
-  if (/mtm\s*scanner/i.test(c)) return 'mtmscanner'
+  if (/mtm\s*scanner/i.test(c)) {
+    // MTM Scanner: só FOREX é negociável no T2T. Ouro/BTC do scanner PUBLICA mas NÃO dá tap to trade
+    // (pedido Ricardo — ouro/BTC ficam para Premium/GoldKiller/Sensei).
+    if (/XAU|GOLD|OURO|XAG|SILVER|\bBTC\b|BITCOIN/i.test(c)) return null
+    return 'mtmscanner'
+  }
   if (channelSlug === 'premium-ideas') return 'premium'
   if (channelSlug === 'sensei-scanner') return 'sensei'
   if (channelSlug === 'sinais-goldkiller' || /gold\s*killer|goldkiller/i.test(c)) return 'goldkiller'

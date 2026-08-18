@@ -618,6 +618,15 @@ export async function POST(request: NextRequest) {
     route.push = false
   }
 
+  // MTM Scanner FOREX → publica na "Ideias de Forex" (rota natural) MAS marca a fonte como "MTM
+  // Scanner" no sender (→ vai para o conteúdo) para o T2T reconhecer (t2tSourceKey lê "MTM Scanner").
+  // NÃO executa em casa (gate canExecuteProvider exclui mtmscanner) → a trade abre/gere/fecha SÓ na
+  // conta de quem aceitar via T2T, com entry-hit/exit pelo motor. Pedido Ricardo 2026-08-18.
+  if (scannerKey === "mtmscanner" && assetClass === "forex") {
+    route.sender = "📊 MTM Scanner · Forex"
+    route.push = true
+  }
+
   // Perpétuos cripto: o sistema SEGUE o timeframe do alerta (qualquer TF — 15m é 15m).
   // Sem trava de TF: o que o scanner disparar vai a chat/push/execução (decisão do Ricardo 2026-08-06).
 
@@ -891,6 +900,9 @@ export async function POST(request: NextRequest) {
     // Master switch = interruptor por-ativo na BD (mtmcopy_exec_switches), afinável sem redeploy.
     // (Antes exigia também o env SENSEI_PROVIDER_EXEC_ENABLED, que mantinha tudo OFF por defeito.)
     execSwitchOn &&
+    // MTM Scanner NÃO executa em conta nenhuma (pedido Ricardo): só PUBLICA + alimenta o T2T
+    // (forex). Sem casa própria — a trade abre/gere/fecha na conta de quem aceitar via T2T.
+    scannerKey !== "mtmscanner" &&
     (assetClass === "gold_btc" || assetClass === "forex") &&
     parsedForExec.symbol &&
     parsedForExec.direction &&
