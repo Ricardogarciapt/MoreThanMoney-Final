@@ -1,3 +1,4 @@
+import { getProofStats, proofLine, proofAsOfLabel } from '@/lib/proof-stats'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CAPTION_INTERNAL_MARK, uploadBufferToBucket } from '@/lib/instagram/publish'
@@ -42,11 +43,11 @@ const BATCH = Number(process.env.CONTENT_DRAFT_BATCH || 3) // quantos gerar por 
 // CTAs válidos = palavras-chave que o ig-funnel reconhece (lib/instagram/funnel.ts INTENTS).
 const CTA_KEYWORDS = ['SINAIS', 'APP', 'PREMIUM', 'QUERO', 'MUNDO', 'COPY']
 
-const SYSTEM = `És o estratega de conteúdo da MoreThanMoney (comunidade portuguesa de educação financeira e trading, fundada pelo Ricardo Garcia).
+function buildSystem(PROOF: string): string { return `És o estratega de conteúdo da MoreThanMoney (comunidade portuguesa de educação financeira e trading, fundada pelo Ricardo Garcia).
 Escreves posts curtos para o Instagram @morethanmoney.pt que educam, criam confiança e puxam um comentário.
 
 FACTOS REAIS (usa só estes; NUNCA promic lucros — é educação, não aconselhamento):
-- Provas da comunidade: 675 trades acompanhados, 63% win rate, +7.060€ documentados, 356 membros ativos.
+- Provas da comunidade: ${PROOF}
 - App MTM System (grátis): alertas, scanner, sessões ao vivo, ferramentas.
 - Trial de 3 dias de Premium sem cartão em morethanmoney.pt/register.
 - Copytrading (copiar sinais automaticamente) via assistente no Telegram.
@@ -68,7 +69,7 @@ CAPTION:
 <a legenda completa PRONTA A PUBLICAR, já com o CTA e as hashtags — pode ter várias linhas>
 ===END===
 
-Repete o bloco ${BATCH} vezes. Nada antes do primeiro ===POST=== nem depois do último ===END===.`
+Repete o bloco ${BATCH} vezes. Nada antes do primeiro ===POST=== nem depois do último ===END===.` }
 
 function todayLisbon(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
@@ -81,21 +82,29 @@ async function authorized(req: NextRequest): Promise<boolean> {
   return Boolean(req.headers.get('x-vercel-cron'))
 }
 
-async function draftBatch(assigned: string[]): Promise<Array<{ hook: string; caption: string; cta_keyword: string; visual_brief: string }>> {
+async function draftBatch(
+  assigned: string[],
+  proofText: string,
+  recentHooks: string[],
+): Promise<Array<{ hook: string; caption: string; cta_keyword: string; visual_brief: string }>> {
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) throw new Error('ANTHROPIC_API_KEY em falta')
   const model = process.env.CONTENT_DRAFT_MODEL?.trim() || process.env.ANTHROPIC_MODEL?.trim() || 'claude-3-5-haiku-20241022'
   const user =
     `Gera ${BATCH} posts distintos (temas variados: mentalidade/disciplina, prova social, educação de trading, bastidores da comunidade, sessões ao vivo).\n` +
     `Atribui a cada post, por ordem, esta palavra-chave de CTA: ${assigned.join(', ')}.\n` +
-    `Evita repetir ganchos. Não uses datas nem números que não estejam nos factos.`
+    `Evita repetir ganchos. Não uses datas nem números que não estejam nos factos.` +
+    (recentHooks.length
+      ? `\n\nJÁ PUBLICADO NAS ÚLTIMAS SEMANAS (NÃO repitas estes ganchos, ângulos nem exemplos — traz temas e aberturas DIFERENTES):\n` +
+        recentHooks.map((h, i) => `${i + 1}. ${h}`).join('\n')
+      : '')
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 30000)
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, max_tokens: 1600, system: SYSTEM, messages: [{ role: 'user', content: user }] }),
+      body: JSON.stringify({ model, max_tokens: 1600, system: buildSystem(proofText), messages: [{ role: 'user', content: user }] }),
       signal: ctrl.signal,
     })
     if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 200)}`)
@@ -138,7 +147,21 @@ export async function GET(req: NextRequest) {
 
   let drafts: Array<{ hook: string; caption: string; cta_keyword: string; visual_brief: string }>
   try {
-    drafts = await draftBatch(assigned)
+    // PROVA VIVA (cron diário) — deixa de haver números congelados no prompt.
+    const proof = await getProofStats()
+    const proofText = `${proofLine(proof)} documentados, ${proof.members} membros ativos (dados de ${proofAsOfLabel(proof)})`
+    // ANTI-REPETIÇÃO: dá ao gerador os ganchos/legendas das últimas semanas para não repetir ângulos.
+    const { data: recent } = await supabase
+      .from('social_scheduled_posts')
+      .select('caption')
+      .eq('ig_account_id', IG_MTM)
+      .order('created_at', { ascending: false })
+      .limit(25)
+    const recentHooks = (recent ?? [])
+      .map((r) => String((r as { caption?: string }).caption ?? '').split('\n')[0].trim())
+      .filter((h) => h.length > 8)
+      .slice(0, 20)
+    drafts = await draftBatch(assigned, proofText, recentHooks)
   } catch (e) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 })
   }

@@ -6,12 +6,13 @@
  *
  * Estado + histórico em `telegram_leads`. Não é aconselhamento financeiro.
  */
+import { getProofStats, proofLine, proofAsOfLabel } from '@/lib/proof-stats'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 const FOREX_LINK = 'https://t.me/+cVcMbCRt2rlmNzg0'
 const SENSEI_LINK = 'https://t.me/+mbqBggXniu5lNTBk'
 
-const SYSTEM = `És um CLOSER humano da MoreThanMoney a conversar EM PRIVADO (Telegram/WhatsApp/IG) com um lead. Caloroso, seguro, direto. Curto: máx ~60 palavras, 1–3 frases, no máx 1 emoji. Uma pergunta de cada vez. O teu trabalho é QUALIFICAR e FECHAR — não és um FAQ.
+function buildSystem(PROOF: string): string { return `És um CLOSER humano da MoreThanMoney a conversar EM PRIVADO (Telegram/WhatsApp/IG) com um lead. Caloroso, seguro, direto. Curto: máx ~60 palavras, 1–3 frases, no máx 1 emoji. Uma pergunta de cada vez. O teu trabalho é QUALIFICAR e FECHAR — não és um FAQ.
 
 ═══ ESCADA DE VENDA (segue esta ordem, não saltes para o grátis) ═══
 1) QUALIFICAR: percebe experiência + objetivo + o que procura (sinais manuais nos grupos / Tap to Trade / automático). 1 pergunta.
@@ -27,7 +28,7 @@ const SYSTEM = `És um CLOSER humano da MoreThanMoney a conversar EM PRIVADO (Te
 NÃO lideres com a app grátis nem a ofereças por defeito. A app/Premium "de graça" é a RECOMPENSA de abrir conta + depositar 300$ na PU Prime (broker-gate) — usa-a como fecho, não como isco. Só se a pessoa recusar tudo e insistir em "grátis" é que mencionas o teste de 3 dias — e mesmo aí puxas de volta para o Membro ou para a rota dos 300$.
 
 FACTOS REAIS (só estes; MTM = educação financeira + trading, comunidade PT):
-- Prova: 675 trades acompanhados, 63% win rate, +7.060€ documentados, 356 membros.
+- Prova: ${PROOF}
 - Escada: Membro 35€/mês (entrada) · Premium 65€/mês (1º mês 34,99€) · MTM Copy (add-on) · rota broker PU Prime 300$ = Premium + todos os grupos grátis enquanto financiado.
 - Corretora: PU Prime (link acima). Grupos: Forex, Sensei, Premium, GoldKiller.
 
@@ -35,7 +36,7 @@ REGRAS ABSOLUTAS:
 - NUNCA prometas lucros nem dês conselho de investimento — é educação. NUNCA dês links de grupos diretamente (só após validação).
 - Responde SEMPRE no idioma da pessoa. Soa a humano, nunca a script. Trata objeções (preço → valor/educação; "é grátis?" → explica a rota dos 300$ ou o Membro).
 - Termina SEMPRE com uma pergunta ou um passo concreto que aproxima do fecho.
-- Devolve APENAS a mensagem de texto a enviar (sem JSON, sem aspas à volta).`
+- Devolve APENAS a mensagem de texto a enviar (sem JSON, sem aspas à volta).` }
 
 interface LeadRow {
   chat_id: string
@@ -89,6 +90,12 @@ export async function runLeadFunnelReply(input: {
     { role: 'user' as const, content: input.userText },
   ]
 
+  // PROVA VIVA (atualizada pelo cron diário) — evita os números congelados no prompt.
+  const proof = await getProofStats()
+  const systemPrompt = buildSystem(
+    `${proofLine(proof)} documentados, ${proof.members} membros (dados de ${proofAsOfLabel(proof)})`,
+  )
+
   let answer: string | null = null
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -98,7 +105,7 @@ export async function runLeadFunnelReply(input: {
         'x-api-key': key,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify({ model, max_tokens: 350, system: SYSTEM, messages }),
+      body: JSON.stringify({ model, max_tokens: 350, system: systemPrompt, messages }),
     })
     if (res.ok) {
       const data = await res.json()
