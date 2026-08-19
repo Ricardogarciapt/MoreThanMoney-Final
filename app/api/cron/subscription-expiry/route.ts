@@ -42,7 +42,7 @@ async function sendRenewalEmails(opts: { dryRun: boolean; daysAhead: number }) {
 
   const { data: due } = await supabase
     .from("profiles")
-    .select("id, email, full_name, subscription_expires_at, subscription_plan, subscription_billing_cycle, subscription_auto_renew")
+    .select("id, email, full_name, subscription_expires_at, subscription_plan, subscription_billing_cycle, subscription_auto_renew, profile_data")
     .eq("is_active", true)
     .not("subscription_expires_at", "is", null)
     .gte("subscription_expires_at", windowStart.toISOString())
@@ -68,15 +68,18 @@ async function sendRenewalEmails(opts: { dryRun: boolean; daysAhead: number }) {
       : null
 
   for (const u of alvos) {
-    // Já avisado neste ciclo? (mesma data de expiração → mesmo aviso)
-    const { data: jaEnviado } = await supabase
-      .from("notifications")
-      .select("id")
-      .eq("user_id", u.id)
-      .eq("type", "renewal_email")
-      .eq("data->>expires_at", u.subscription_expires_at as string)
-      .maybeSingle()
-    if (jaEnviado) {
+    // Já avisado neste ciclo? A marca vive em profiles.profile_data.renewal_notice, ligada à
+    // data de expiração: enquanto a subscrição não renovar (data não mudar), não repete.
+    const pd = (u.profile_data && typeof u.profile_data === "object" ? u.profile_data : {}) as Record<string, unknown>
+    const marca = pd.renewal_notice as { expires_at?: string } | undefined
+    // Normalizado: a mesma data chega em formatos diferentes conforme quem escreveu a marca.
+    const mesmaData = (a?: string | null, b?: string | null) => {
+      if (!a || !b) return false
+      const ta = new Date(a).getTime()
+      const tb = new Date(b).getTime()
+      return Number.isFinite(ta) && ta === tb
+    }
+    if (mesmaData(marca?.expires_at, u.subscription_expires_at as string)) {
       saltados.push(`${u.email} (já avisado)`)
       continue
     }
@@ -112,6 +115,20 @@ async function sendRenewalEmails(opts: { dryRun: boolean; daysAhead: number }) {
           text: mail.text,
           attachments: brandedMailAttachments(),
         })
+        // Marca de idempotência — tem de ficar gravada, senão o cron repete o email todos os dias.
+        const { error: marcaErr } = await supabase
+          .from("profiles")
+          .update({
+            profile_data: {
+              ...pd,
+              renewal_notice: { expires_at: u.subscription_expires_at, kind, sent_at: new Date().toISOString() },
+            },
+          })
+          .eq("id", u.id)
+        if (marcaErr) {
+          saltados.push(`${u.email}: email enviado mas marca falhou (${marcaErr.message})`)
+        }
+        // Sino in-app (não crítico — o email já saiu).
         await supabase.from("notifications").insert({
           user_id: u.id,
           type: "renewal_email",
