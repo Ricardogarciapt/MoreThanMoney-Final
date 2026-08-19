@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Save, RefreshCw, CheckCircle2, XCircle, AlertTriangle, SlidersHorizontal } from "lucide-react"
-import MtmcopyAccountConfig from "@/components/admin/mtmcopy-account-config"
+import { Loader2, Save, RefreshCw, CheckCircle2, XCircle, AlertTriangle } from "lucide-react"
 import { INTAKE_CHANNELS } from "@/lib/mtmcopy/intake-channels"
 
 type Switches = {
@@ -58,8 +57,8 @@ const STRATEGY_GROUPS: { group: string; items: { key: keyof Switches; label: str
     group: "Estratégias",
     items: [
       { key: "premium", label: "MTM Auto Premium", hint: "London/NY Intelligence · conta mestre USD" },
-      { key: "sensei", label: "Sensei (Ouro/BTC)", hint: "Master: gestão das posições abertas (parciais/BE/trailing)" },
-      { key: "sensei_entries", label: "Sensei · entradas novas", hint: "Desliga p/ pausar SÓ as entradas (mantém a gestão das abertas)" },
+      // Sensei retirado da UI (pedido Ricardo 2026-08-19) — os switches continuam a existir e a
+      // valer no runtime; só deixaram de ser mostrados aqui.
       { key: "goldkiller", label: "GoldKiller", hint: "XAUUSD scanner" },
       { key: "forex", label: "MTM Auto Forex", hint: "Trade Ideas · conta 5IHE" },
     ],
@@ -111,7 +110,6 @@ export default function MtmcopyStrategyControl() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
-  const [showAccounts, setShowAccounts] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -190,18 +188,8 @@ export default function MtmcopyStrategyControl() {
 
   return (
     <div className="space-y-6">
-      {showAccounts && <MtmcopyAccountConfig onClose={() => setShowAccounts(false)} />}
-
-      {/* Modal de configuração das contas do cascade Copy Trader Ricardo Garcia */}
-      <div className="flex items-center justify-between rounded-xl border border-[#D2A63C]/25 bg-[#D2A63C]/5 px-4 py-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-[#D2A63C]">Copy Trader Ricardo Garcia — contas</p>
-          <p className="text-xs text-zinc-400">Risco/lote/trailing por conta, undeploy, métricas do zero e adicionar slaves.</p>
-        </div>
-        <Button size="sm" onClick={() => setShowAccounts(true)} className="bg-[#D2A63C] text-black hover:bg-[#c0972f]">
-          <SlidersHorizontal className="mr-1.5 h-4 w-4" /> Configurar contas
-        </Button>
-      </div>
+      {/* Cartão do cascade «Copy Trader Ricardo Garcia» retirado da UI (pedido Ricardo 2026-08-19).
+          A cópia continua ATIVA — isto era só o atalho de configuração. */}
 
       {msg && (
         <div className="text-sm px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 flex items-center gap-2">

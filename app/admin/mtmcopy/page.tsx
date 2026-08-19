@@ -9,7 +9,6 @@ import MtmcopyOpsHub from "@/components/admin/mtmcopy-ops-hub"
 import MtmcopySyncAllPanel from "@/components/admin/mtmcopy-sync-all-panel"
 import MtmcopyTestPanel from "@/components/admin/mtmcopy-test-panel"
 import MtmcopySenderLog from "@/components/admin/mtmcopy-sender-log"
-import MtmcopyProviderPerformance from "@/components/admin/mtmcopy-provider-performance"
 import MtmcopyStrategyControl from "@/components/admin/mtmcopy-strategy-control"
 import {
   MtmcopyAdminSection,
@@ -246,14 +245,8 @@ export default function AdminMtmcopyPage() {
                 </Card>
               </div>
 
-              <MtmcopyAdminSection
-                title="Desempenho das estratégias"
-                description="Métricas reais das contas Provider MTM Auto (MT5 via MetaStats + Bybit perps) — saldo, lucro, win rate, drawdown e profit factor, com subscritores CopyFactory."
-                icon={BarChart3}
-                accent="emerald"
-              >
-                <MtmcopyProviderPerformance />
-              </MtmcopyAdminSection>
+              {/* Painel «Desempenho das estratégias» retirado da Visão geral (pedido Ricardo
+                  2026-08-19). A «Visão global do sistema», abaixo, mantém a performance agregada. */}
 
               <MtmcopyAdminSection
                 title="Visão global do sistema"
