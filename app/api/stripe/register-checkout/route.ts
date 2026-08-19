@@ -5,6 +5,7 @@ import { buildStripeReturnUrl, getSiteOrigin } from '@/lib/site-url'
 import { resolveStripePromotionCode } from '@/lib/coupon-stripe-discount'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isIosAppRequest, IOS_IAP_REQUIRED } from '@/lib/is-native-request'
+import type Stripe from 'stripe'
 
 /**
  * POST /api/stripe/register-checkout
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
       metadata: { pending_registration: 'true', reg_token: regToken || '' },
     })
 
-    const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customer.id,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],

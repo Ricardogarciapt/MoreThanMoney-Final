@@ -6,7 +6,7 @@ import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import { sendScannerAccessEmail, sendMTMcopierSetupNotification } from '@/lib/email-service'
 import { sanitizeEnv } from '@/lib/env-sanitize'
-import { getStripeClient } from '@/lib/stripe-client'
+import { getStripeClient, stripeInvoiceLinePrice, stripeSubscriptionPeriodEnd } from '@/lib/stripe-client'
 import {
   getPlanIdFromPriceId,
   memberCategoryForPlan,
@@ -313,7 +313,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         let periodEnd: string | null = null
         if (session.subscription) {
           const sub = await stripe.subscriptions.retrieve(session.subscription as string)
-          periodEnd = new Date(sub.current_period_end * 1000).toISOString()
+          periodEnd = new Date(stripeSubscriptionPeriodEnd(sub) * 1000).toISOString()
         }
         await completeAccessMigration({
           userId,
@@ -376,7 +376,7 @@ async function handleSubscriptionUpdate(sub: Stripe.Subscription) {
   const planId = getPlanIdFromPriceId(priceId) || item?.price?.metadata?.plan || 'app_member_monthly'
   const plan = normalizeSubscriptionPlan(planId)
   const billingCycle = item?.price?.recurring?.interval === 'year' ? 'annual' : 'monthly'
-  const periodEnd = new Date(sub.current_period_end * 1000).toISOString()
+  const periodEnd = new Date(stripeSubscriptionPeriodEnd(sub) * 1000).toISOString()
 
   await supabase.from('profiles').update({
     stripe_subscription_id: sub.id,
@@ -476,7 +476,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   // Notificações de renovação — VIP/Admin + sponsor + uplines
   if (invoice.billing_reason === 'subscription_cycle' && invoice.amount_paid > 0) {
     const renewalPlanId =
-      (invoice.lines?.data?.[0]?.price?.metadata?.plan as string | undefined) ||
+      (stripeInvoiceLinePrice(invoice.lines?.data?.[0])?.metadata?.plan as string | undefined) ||
       profile.subscription_plan ||
       'app_member_monthly'
     void notifyTeamRenewal({
@@ -491,10 +491,16 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   if (invoice.billing_reason === 'subscription_cycle' && invoice.amount_paid > 0) {
     try {
       const planId =
-        (invoice.lines?.data?.[0]?.price?.metadata?.plan as string | undefined) ||
+        (stripeInvoiceLinePrice(invoice.lines?.data?.[0])?.metadata?.plan as string | undefined) ||
         profile.subscription_plan ||
         'app_member_monthly'
 
+      // Sem id de fatura não há chave de deduplicação — e sem ela as comissões podiam
+      // ser criadas duas vezes na mesma renovação. Mais vale não processar.
+      if (!invoice.id) {
+        console.warn('[MLM] Renovação sem invoice.id — comissões ignoradas')
+        return
+      }
       await processMlmSubscriptionRenewal(supabase, {
         userId: profile.id,
         sponsorUsername: profile.mlm_sponsor_username,

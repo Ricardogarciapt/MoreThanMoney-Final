@@ -8,6 +8,7 @@ import { buildUsername } from "@/lib/member-profile"
 import { resolveStripePromotionCode } from "@/lib/coupon-stripe-discount"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isIosAppRequest, IOS_IAP_REQUIRED } from "@/lib/is-native-request"
+import type Stripe from 'stripe'
 
 const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim()
 const SUPABASE_ANON_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim()
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customer.id,
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],

@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto'
 import type { User } from '@supabase/supabase-js'
 import type Stripe from 'stripe'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { getStripeClient } from '@/lib/stripe-client'
+import { getStripeClient, stripeSubscriptionPeriodEnd } from '@/lib/stripe-client'
 import {
   memberCategoryForPlan,
   normalizeSubscriptionPlan,
@@ -125,7 +125,7 @@ export async function createProfileAfterPayment(params: {
         ? await stripe.subscriptions.retrieve(session.subscription)
         : session.subscription
     subscriptionId = sub.id
-    periodEnd = new Date(sub.current_period_end * 1000).toISOString()
+    periodEnd = new Date(stripeSubscriptionPeriodEnd(sub) * 1000).toISOString()
   }
 
   const profilePayload: Record<string, unknown> = {
