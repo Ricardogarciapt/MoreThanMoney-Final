@@ -34,8 +34,11 @@ function firstName(full?: string | null, email?: string): string {
 async function sendRenewalEmails(opts: { dryRun: boolean; daysAhead: number }) {
   const supabase = getSupabaseAdmin()
   const now = new Date()
-  const windowStart = new Date(now.getTime() + (opts.daysAhead - 0.5) * 86_400_000)
-  const windowEnd = new Date(now.getTime() + (opts.daysAhead + 0.5) * 86_400_000)
+  // Janela CUMULATIVA, não uma fatia de ±12h: avisa toda a gente a quem faltam `daysAhead`
+  // dias ou menos e que ainda não foi avisada deste ciclo (a idempotência abaixo trata dos
+  // repetidos). Uma fatia estreita deixava passar quem expirava a umas horas do limite.
+  const windowStart = new Date(now.getTime() - 86_400_000)
+  const windowEnd = new Date(now.getTime() + opts.daysAhead * 86_400_000)
 
   const { data: due } = await supabase
     .from("profiles")
