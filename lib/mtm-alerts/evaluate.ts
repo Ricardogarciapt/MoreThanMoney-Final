@@ -277,13 +277,33 @@ export async function evaluateOpenAlerts(
       // atualiza o estado em silêncio — não dispara notificações históricas em massa.
       const recvMs = r.received_at ? Date.parse(String(r.received_at)) : NaN
       const fresh = Number.isFinite(recvMs) && Date.now() - recvMs < 36 * 3600 * 1000
-      if (fresh && (finalCand === "loss" || finalCand.startsWith("exit_"))) {
+      // O DESCARTE passa a contar como desfecho: a ideia morreu antes de abrir e quem a aceitou
+      // no Tap to Trade fica com uma ordem pendente inútil. Antes só notificávamos loss/TP.
+      if (fresh && (finalCand === "loss" || finalCand === "discarded" || finalCand.startsWith("exit_"))) {
         await notifySignalOutcome({
           entryId: r.id,
           chatMessageId: (r as { chat_message_id?: string | null }).chat_message_id ?? null,
           ticker: r.ticker,
           status: finalCand,
         })
+      }
+      // Descarte e stop fecham as ordens T2T de quem aceitou (apaga pendentes, fecha abertas).
+      if (fresh && (finalCand === "discarded" || finalCand === "loss")) {
+        try {
+          const { closeT2TFollowersForSignal } = await import("@/lib/mtmcopy/t2t-lifecycle")
+          const chatSlug = (r as { chat_channel_slug?: string | null }).chat_channel_slug
+          if (chatSlug && r.ticker) {
+            await closeT2TFollowersForSignal({
+              kind: finalCand === "discarded" ? "discard" : "close",
+              chatSlug,
+              symbol: r.ticker,
+              direction: dir === "buy" || dir === "sell" ? dir : null,
+              label: "Alertas MTM",
+            })
+          }
+        } catch (e) {
+          console.warn("[alerts] fecho T2T falhou:", e instanceof Error ? e.message : String(e))
+        }
       }
     }
   }

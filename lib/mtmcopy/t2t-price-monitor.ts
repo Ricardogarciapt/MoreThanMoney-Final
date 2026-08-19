@@ -20,11 +20,15 @@ import { parseSignal } from './signal-parser'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import {
   listOpenPositions,
+  listPendingOrders,
+  cancelPendingOrdersForSymbol,
   getMarketPrice,
   modifyPositionSlTp,
   closePositionById,
   type MetaApiPosition,
+  type MetaApiPendingOrder,
 } from './metaapi'
+import { lifecycleMessage, logStatusFor, type SignalEvent } from './signal-lifecycle'
 
 const STATE_KEY = 't2t_monitor_state'
 /** Split dos parciais quando o sinal traz vários TPs. */
@@ -38,8 +42,12 @@ interface RowState {
   exitsDone: number
   beDone: boolean
   trailing: boolean
+  /** Já anunciámos o ENTRY HIT? (= a ordem chegou a encher) */
   announced: boolean
 }
+
+/** Horas que uma ordem pendente T2T pode esperar antes de ser considerada ideia morta. */
+const PENDING_MAX_HOURS = Number(process.env.T2T_PENDING_MAX_HOURS) || 24
 type StateMap = Record<string, RowState>
 
 interface LogRow {
@@ -55,6 +63,7 @@ interface LogRow {
   lot: number | null
   raw_message: string | null
   broker_position_id: string | null
+  created_at?: string | null
 }
 
 function pipSizeFor(symbol: string): number {
@@ -115,6 +124,20 @@ async function postToChat(chatMessageId: string | null, slug: string | null, con
   }
 }
 
+/**
+ * Publica um evento do ciclo de vida com o texto CANÓNICO (o mesmo em chat, Telegram e push),
+ * e devolve o estado a gravar no log. Ver lib/mtmcopy/signal-lifecycle.ts.
+ */
+async function publishEvent(
+  row: LogRow,
+  event: SignalEvent,
+  ctx: Parameters<typeof lifecycleMessage>[1],
+): Promise<string> {
+  const { text } = lifecycleMessage(event, ctx)
+  await postToChat(row.chat_message_id, row.channel_key, text)
+  return logStatusFor(event)
+}
+
 export async function runT2TPriceMonitor(): Promise<{
   ran: boolean
   reason?: string
@@ -128,7 +151,7 @@ export async function runT2TPriceMonitor(): Promise<{
   const admin = getSupabaseAdmin()
   const { data: rows } = await admin
     .from('mtmcopy_signal_log')
-    .select('id, connection_id, chat_message_id, channel_key, symbol, direction, entry, sl, tp, lot, raw_message, broker_position_id')
+    .select('id, connection_id, chat_message_id, channel_key, symbol, direction, entry, sl, tp, lot, raw_message, broker_position_id, created_at')
     .in('status', ['open', 'ok', 'active', 'filled'])
     .not('broker_position_id', 'is', null)
     .gte('created_at', new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString())
@@ -140,8 +163,12 @@ export async function runT2TPriceMonitor(): Promise<{
   const { data: conns } = await admin.from('mtmcopy_connections').select('id, metaapi_account_id').in('id', connIds)
   const accById = new Map((conns ?? []).map((c) => [c.id as string, (c.metaapi_account_id as string | null) ?? null]))
 
-  // Posições abertas por conta (1 chamada por conta, reutilizada).
+  // Posições abertas E ordens pendentes por conta (1 chamada de cada, reutilizada).
+  // Sem as pendentes, uma ordem-limite que ainda não encheu não aparecia em lado nenhum e o
+  // monitor dava-a como "posição fechada" no minuto seguinte à aceitação — anúncio falso e,
+  // pior, o registo morria: quando a ordem enchesse já ninguém a geria.
   const posByAcc = new Map<string, MetaApiPosition[]>()
+  const pendByAcc = new Map<string, MetaApiPendingOrder[]>()
   const priceCache = new Map<string, number | null>()
   const state = await loadState()
   let managed = 0
@@ -155,18 +182,66 @@ export async function runT2TPriceMonitor(): Promise<{
 
     try {
       if (!posByAcc.has(accountId)) posByAcc.set(accountId, await listOpenPositions(accountId))
+      if (!pendByAcc.has(accountId)) pendByAcc.set(accountId, await listPendingOrders(accountId))
       const positions = posByAcc.get(accountId) ?? []
+      const pendentes = pendByAcc.get(accountId) ?? []
       const pos = positions.find((p) => p.id === row.broker_position_id) ?? null
+      const pend = pendentes.find((o) => o.id === row.broker_position_id) ?? null
 
-      // ── FECHO: a posição já não existe (TP/SL/manual) → fecha o registo + publica o desfecho.
-      if (!pos) {
-        await admin.from('mtmcopy_signal_log').update({ status: 'closed', detail: 'Fechada (monitor T2T)' }).eq('id', row.id)
-        if (!st.announced) {
-          // só anuncia uma vez por sinal (a 1ª conta que deteta)
-          await postToChat(row.chat_message_id, row.channel_key, `🏁 Posição fechada · ${row.symbol} ${dir === 'buy' ? '🔵 COMPRA' : '🔴 VENDA'}`)
+      const evCtx = { symbol: row.symbol, direction: dir, source: row.channel_key }
+
+      // ── AINDA PENDENTE: a ordem não encheu. Decidir se a ideia continua viva.
+      if (!pos && pend) {
+        const tpsP = tpLevels(row)
+        const key0 = `${accountId}|${row.symbol}`
+        if (!priceCache.has(key0)) priceCache.set(key0, await getMarketPrice(accountId, row.symbol))
+        const px = priceCache.get(key0) ?? null
+
+        let morte: SignalEvent | null = null
+        let motivo: string | null = null
+
+        if (px != null && px > 0 && tpsP.length) {
+          // Todos os alvos já foram atingidos SEM a entrada encher → não há movimento a aproveitar.
+          const todosBatidos = tpsP.every((t) => (dir === 'buy' ? px >= t : px <= t))
+          if (todosBatidos) morte = 'targets_before_entry'
         }
+        if (!morte && px != null && px > 0 && row.sl != null && row.sl > 0) {
+          // O stop foi varrido antes de a entrada encher → a ideia morreu.
+          const slBatido = dir === 'buy' ? px <= row.sl : px >= row.sl
+          if (slBatido) { morte = 'discarded'; motivo = 'O stop foi atingido antes de a entrada encher.' }
+        }
+        if (!morte) {
+          const idadeH = (Date.now() - new Date(row.created_at ?? Date.now()).getTime()) / 3_600_000
+          if (idadeH >= PENDING_MAX_HOURS) {
+            morte = 'discarded'
+            motivo = `A ordem esperou ${Math.floor(idadeH)}h sem encher.`
+          }
+        }
+
+        if (morte) {
+          try { await cancelPendingOrdersForSymbol(accountId, row.symbol) } catch { /* ignora */ }
+          const status = await publishEvent(row, morte, { ...evCtx, reason: motivo })
+          await admin.from('mtmcopy_signal_log').update({ status, detail: motivo ?? 'Ideia descartada (monitor T2T)' }).eq('id', row.id)
+          delete state[row.id]
+          actions.push(`${morte} ${row.symbol}`)
+          continue
+        }
+        // Continua a aguardar — sem ruído no chat.
+        managed++
+        continue
+      }
+
+      // ── DESAPARECEU: nem posição nem pendente.
+      if (!pos) {
+        // Se nunca chegou a encher, não foi um fecho — foi uma ordem que morreu por cancelar/expirar.
+        const event: SignalEvent = st.announced ? 'closed' : 'discarded'
+        const status = await publishEvent(row, event, {
+          ...evCtx,
+          reason: st.announced ? null : 'A ordem foi cancelada ou expirou antes de encher.',
+        })
+        await admin.from('mtmcopy_signal_log').update({ status, detail: `${event} (monitor T2T)` }).eq('id', row.id)
         delete state[row.id]
-        actions.push(`close ${row.symbol}`)
+        actions.push(`${event} ${row.symbol}`)
         continue
       }
 
@@ -184,15 +259,7 @@ export async function runT2TPriceMonitor(): Promise<{
       // ── ENTRY HIT: 1ª vez que vemos a posição preenchida → confirma no chat.
       if (!st.announced) {
         st.announced = true
-        await postToChat(
-          row.chat_message_id,
-          row.channel_key,
-          [
-            `✅ ENTRY HIT · ${row.symbol} ${dir === 'buy' ? '🔵 COMPRA' : '🔴 VENDA'}`,
-            entry ? `📈 Posição aberta @ ${entry}` : null,
-            `Gestão automática por preço (parciais + break-even + trailing).`,
-          ].filter(Boolean).join('\n'),
-        )
+        await publishEvent(row, 'entry_hit', { ...evCtx, price: entry })
         actions.push(`entry_hit ${row.symbol}`)
       }
 
@@ -209,12 +276,7 @@ export async function runT2TPriceMonitor(): Promise<{
         if (r.success) {
           st.exitsDone = nextLevel
           actions.push(`exit${nextLevel} ${row.symbol}`)
-          await postToChat(
-            row.chat_message_id, row.channel_key,
-            closeAll
-              ? `🏁 Alvo final · ${row.symbol} — posição fechada.`
-              : `🎯 Parcial ${nextLevel} · ${row.symbol} — realizado ${pct}%. O resto corre com stop protegido.`,
-          )
+          await publishEvent(row, closeAll ? 'target_final' : 'partial', { ...evCtx, level: nextLevel, pct })
           if (closeAll) {
             await admin.from('mtmcopy_signal_log').update({ status: 'closed', detail: `Fechada no alvo ${nextLevel}` }).eq('id', row.id)
             delete state[row.id]
@@ -227,7 +289,8 @@ export async function runT2TPriceMonitor(): Promise<{
               { mode: 'threshold_pips', activationPips: 1, trailPips: riskPips }, row.symbol)
             st.beDone = true
             st.trailing = true
-            await postToChat(row.chat_message_id, row.channel_key, `🔒 Break-even + trailing · ${row.symbol} — risco neutralizado.`)
+            await publishEvent(row, 'break_even', evCtx)
+            await publishEvent(row, 'trailing', evCtx)
             actions.push(`be_trail ${row.symbol}`)
           }
           state[row.id] = st
@@ -244,7 +307,7 @@ export async function runT2TPriceMonitor(): Promise<{
           if (r.success) {
             st.beDone = true
             actions.push(`early_be ${row.symbol}`)
-            await postToChat(row.chat_message_id, row.channel_key, `🔒 Break-even · ${row.symbol} — stop movido para a entrada (+${BE_BUFFER_PIPS}p).`)
+            await publishEvent(row, 'break_even', evCtx)
           }
         }
       }

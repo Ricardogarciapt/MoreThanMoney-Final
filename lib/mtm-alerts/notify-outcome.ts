@@ -19,7 +19,19 @@ const OUTCOME_META: Record<string, { emoji: string; label: string; body: string 
   exit_2: { emoji: "🎯", label: "TP2 atingido", body: "Take profit 2 alcançado. A trade está a correr a teu favor." },
   exit_3: { emoji: "🎯", label: "TP3 atingido", body: "Take profit 3 alcançado." },
   exit_4: { emoji: "🎯", label: "TP4 atingido", body: "Take profit 4 alcançado." },
-  closed: { emoji: "✅", label: "Trade fechada", body: "A trade foi encerrada." },
+  closed: { emoji: "🏁", label: "Posição fechada", body: "A trade foi encerrada." },
+  // Ideia que morreu antes de abrir — o cliente tem de saber, tal como sabe de um fecho.
+  // (Antes: o estado 'discarded' existia no motor de alertas mas nunca chegava a ninguém.)
+  discarded: {
+    emoji: "🗑️",
+    label: "Ideia descartada",
+    body: "A ideia deixou de ser válida antes de a entrada encher. Ordens pendentes deste sinal foram apagadas.",
+  },
+  targets_before_entry: {
+    emoji: "🗑️",
+    label: "Ideia descartada",
+    body: "Os alvos foram atingidos antes de a entrada encher — já não há movimento para aproveitar.",
+  },
 }
 
 const T2T_CLOSED = new Set(["closed", "rejected", "cancelled", "canceled", "error", "failed"])

@@ -14,8 +14,20 @@ import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { cancelPendingOrdersForSymbol, listOpenPositions, closePositionById } from './metaapi'
 import { symbolMatchesCanonical } from './symbol-resolver'
 import { getExecSwitches } from './exec-switches'
+import { lifecycleMessage, logStatusFor, type SignalEvent } from './signal-lifecycle'
 
-export type T2TCloseKind = 'cancel' | 'close'
+/**
+ * O que a fonte fez ao sinal. 'discard' e 'targets_hit' cobrem as ideias que morreram antes de
+ * abrir — a mensagem sai como "Ideia descartada", tal como o fecho sai como "Posição fechada".
+ */
+export type T2TCloseKind = 'cancel' | 'close' | 'discard' | 'targets_hit'
+
+const KIND_TO_EVENT: Record<T2TCloseKind, SignalEvent> = {
+  cancel: 'cancelled',
+  close: 'closed',
+  discard: 'discarded',
+  targets_hit: 'targets_before_entry',
+}
 
 const OPEN_LOG_STATUSES = ['ok', 'filled', 'active', 'open']
 
@@ -99,9 +111,9 @@ export async function closeT2TFollowersForSignal(opts: {
   if (!switches.t2t_auto_close) return { threaded: false, followers: 0, cancelled: 0, closed: 0 }
   const supabase = getSupabaseAdmin()
   const sym = symbol.replace(/USDT$/, '')
-  const dirTxt = direction === 'buy' ? '🔵 COMPRA' : direction === 'sell' ? '🔴 VENDA' : ''
-  const verb = kind === 'cancel' ? '❌ Sinal CANCELADO' : '🏁 Posição FECHADA pela fonte'
-  const line = [`${verb} · ${sym} ${dirTxt}`.replace(/\s+$/, ''), `As ordens T2T deste sinal (${label}) foram tratadas automaticamente.`].join('\n')
+  const event = KIND_TO_EVENT[kind]
+  // Texto canónico — o mesmo que o motor de preço usa para o mesmo acontecimento.
+  const { text: line } = lifecycleMessage(event, { symbol: sym, direction, source: label })
 
   const entry = await findEntryMessageWithFollowers(chatSlug, symbol, direction, sourceMatch)
 
@@ -118,26 +130,84 @@ export async function closeT2TFollowersForSignal(opts: {
   }
 
   // 2) Ação automática nas ordens T2T dos seguidores desse sinal.
+  const r = entry?.id
+    ? await closeFollowersByMessage(entry.id, symbol, event, `${label} ${kind} (fonte)`)
+    : { followers: 0, cancelled: 0, closed: 0 }
+  return { threaded, ...r }
+}
+
+/**
+ * Fecha as ordens T2T de todos os seguidores de UMA mensagem de entrada concreta.
+ * Usado quando já sabemos o `chat_message_id` (motor de alertas, motor de preço) — é mais
+ * preciso do que procurar a entrada por símbolo/direção.
+ */
+export async function closeFollowersByMessage(
+  chatMessageId: string,
+  symbol: string,
+  event: SignalEvent,
+  detail: string,
+): Promise<{ followers: number; cancelled: number; closed: number }> {
+  const supabase = getSupabaseAdmin()
   let followers = 0, cancelled = 0, closed = 0
-  if (entry?.id) {
-    const { data: logs } = await supabase
-      .from('mtmcopy_signal_log')
-      .select('id, connection_id')
-      .eq('chat_message_id', entry.id)
-      .in('status', OPEN_LOG_STATUSES)
-    for (const log of logs ?? []) {
-      const connId = (log as { connection_id: string }).connection_id
-      const { data: conn } = await supabase.from('mtmcopy_connections').select('metaapi_account_id').eq('id', connId).maybeSingle()
-      const accId = (conn as { metaapi_account_id?: string } | null)?.metaapi_account_id
-      if (!accId) continue
-      followers++
-      const r = await closeFollowerOrder(accId, symbol)
-      cancelled += r.cancelled
-      closed += r.closed
-      await supabase.from('mtmcopy_signal_log')
-        .update({ status: kind === 'cancel' ? 'cancelled' : 'closed', detail: `${label} ${kind} (fonte)` })
-        .eq('id', (log as { id: string }).id)
-    }
+  const { data: logs } = await supabase
+    .from('mtmcopy_signal_log')
+    .select('id, connection_id')
+    .eq('chat_message_id', chatMessageId)
+    .in('status', OPEN_LOG_STATUSES)
+  for (const log of logs ?? []) {
+    const connId = (log as { connection_id: string }).connection_id
+    const { data: conn } = await supabase.from('mtmcopy_connections').select('metaapi_account_id').eq('id', connId).maybeSingle()
+    const accId = (conn as { metaapi_account_id?: string } | null)?.metaapi_account_id
+    if (!accId) continue
+    followers++
+    const r = await closeFollowerOrder(accId, symbol)
+    cancelled += r.cancelled
+    closed += r.closed
+    await supabase.from('mtmcopy_signal_log')
+      .update({ status: logStatusFor(event), detail })
+      .eq('id', (log as { id: string }).id)
   }
-  return { threaded, followers, cancelled, closed }
+  return { followers, cancelled, closed }
+}
+
+/**
+ * Publica o evento terminal em thread na mensagem de entrada E fecha as ordens dos seguidores.
+ * Atalho para quem já tem o `chat_message_id` (motor de alertas).
+ */
+export async function announceAndCloseByMessage(opts: {
+  chatMessageId: string
+  chatSlug: string
+  symbol: string
+  direction: 'buy' | 'sell' | null
+  event: SignalEvent
+  label: string
+  reason?: string | null
+}): Promise<{ followers: number; cancelled: number; closed: number }> {
+  const switches = await getExecSwitches()
+  if (!switches.t2t_auto_close) return { followers: 0, cancelled: 0, closed: 0 }
+  const supabase = getSupabaseAdmin()
+  const { text } = lifecycleMessage(opts.event, {
+    symbol: opts.symbol.replace(/USDT$/, ''),
+    direction: opts.direction,
+    source: opts.label,
+    reason: opts.reason ?? null,
+  })
+  try {
+    const { data } = await supabase
+      .from('chat_messages')
+      .insert({
+        channel_slug: opts.chatSlug,
+        user_id: null,
+        content: text,
+        message_type: 'telegram_forward',
+        notified: true,
+        reply_to_id: opts.chatMessageId,
+      })
+      .select('id')
+      .single()
+    await sendTelegramChannelPush({ slug: opts.chatSlug, content: text, chatMessageId: data?.id as string }).catch(() => {})
+  } catch (e) {
+    console.warn('[t2t-lifecycle] thread erro:', e instanceof Error ? e.message : String(e))
+  }
+  return closeFollowersByMessage(opts.chatMessageId, opts.symbol, opts.event, `${opts.label} ${opts.event}`)
 }

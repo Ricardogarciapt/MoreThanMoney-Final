@@ -101,6 +101,22 @@ function expiryColorClass(days: number | null): string {
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
+/**
+ * Estado da campanha de ativação (profile_data.activation). Sem isto, no painel de utilizadores
+ * um membro à espera de pagar era indistinguível de um membro simplesmente inativado.
+ */
+function activationState(pd: unknown): { required: boolean; decision: string | null; newMember: boolean } {
+  const o = pd && typeof pd === "object" ? (pd as Record<string, unknown>) : {}
+  const a = o.activation
+  if (!a || typeof a !== "object") return { required: false, decision: null, newMember: false }
+  const x = a as Record<string, unknown>
+  return {
+    required: x.required === true,
+    decision: typeof x.decision === "string" ? x.decision : null,
+    newMember: x.new_member === true,
+  }
+}
+
 interface UserManagementProps {
   users?: UserManagement[]
   onApprove: (userId: string) => void
@@ -259,6 +275,7 @@ export default function UserManagementComponent({
       return d !== null && d <= 7
     }).length,
     skoolPending: users.filter((u) => u.skool_access_pending).length,
+    aguardaPagamento: users.filter((u) => activationState(u.profile_data).required).length,
     iqonicPending: users.filter((u) => u.iqonic_validation_pending).length,
   }), [users])
 
@@ -694,6 +711,11 @@ export default function UserManagementComponent({
           <Badge variant="outline" className="border-gray-600">
             Total: {stats.total}
           </Badge>
+          {stats.aguardaPagamento > 0 && (
+            <Badge variant="outline" className="border-amber-500/60 text-amber-300">
+              🗝️ Aguarda pagamento: {stats.aguardaPagamento}
+            </Badge>
+          )}
           {stats.pending > 0 && (
             <Badge variant="outline" className="border-amber-600/50 text-amber-300">
               ⏳ Pendentes: {stats.pending}
@@ -880,6 +902,12 @@ export default function UserManagementComponent({
                           {user.is_verified && (
                             <Badge className="text-[10px] bg-blue-600/20 text-blue-300">
                               Verificado
+                            </Badge>
+                          )}
+                          {activationState(user.profile_data).required && (
+                            <Badge className="text-[10px] bg-amber-500/20 text-amber-300">
+                              🗝️ Aguarda pagamento
+                              {activationState(user.profile_data).newMember ? " · nova inscrição" : ""}
                             </Badge>
                           )}
                           {(user.user_type === "guest" || user.user_type === "presentation") &&
