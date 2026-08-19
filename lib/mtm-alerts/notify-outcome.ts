@@ -12,13 +12,20 @@ function siteOrigin(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL || "https://www.morethanmoney.pt").trim()
 }
 
+/**
+ * Desfechos notificados a seguidores e a quem aceitou no T2T.
+ *
+ * O EMOJI e o RÓTULO vêm do vocabulário canónico (lib/mtmcopy/signal-lifecycle) para o cliente
+ * ver o mesmo nome do acontecimento no chat, no Telegram e na notificação. O CORPO é próprio
+ * daqui porque é aconselhamento a quem segue o sinal na sua conta, não a descrição do facto.
+ */
 const OUTCOME_META: Record<string, { emoji: string; label: string; body: string }> = {
-  be: { emoji: "🛡️", label: "Break-even — protege", body: "O preço avançou a teu favor. Protege a trade: move o Stop Loss para a entrada." },
-  loss: { emoji: "🛑", label: "SL atingido", body: "A trade fechou no stop loss." },
-  exit_1: { emoji: "🎯", label: "TP1 atingido — protege o resto", body: "Take profit 1 alcançado. Garante parte e protege o restante em break-even." },
-  exit_2: { emoji: "🎯", label: "TP2 atingido", body: "Take profit 2 alcançado. A trade está a correr a teu favor." },
-  exit_3: { emoji: "🎯", label: "TP3 atingido", body: "Take profit 3 alcançado." },
-  exit_4: { emoji: "🎯", label: "TP4 atingido", body: "Take profit 4 alcançado." },
+  be: { emoji: "🔒", label: "Break-even", body: "O preço avançou a teu favor. Protege a trade: move o Stop Loss para a entrada." },
+  loss: { emoji: "🛑", label: "Stop loss", body: "A trade fechou no stop loss." },
+  exit_1: { emoji: "🎯", label: "Alvo 1", body: "Primeiro alvo alcançado. Garante parte e protege o restante em break-even." },
+  exit_2: { emoji: "🎯", label: "Alvo 2", body: "Segundo alvo alcançado. A trade está a correr a teu favor." },
+  exit_3: { emoji: "🎯", label: "Alvo 3", body: "Terceiro alvo alcançado." },
+  exit_4: { emoji: "🎯", label: "Alvo 4", body: "Quarto alvo alcançado." },
   closed: { emoji: "🏁", label: "Posição fechada", body: "A trade foi encerrada." },
   // Ideia que morreu antes de abrir — o cliente tem de saber, tal como sabe de um fecho.
   // (Antes: o estado 'discarded' existia no motor de alertas mas nunca chegava a ninguém.)
