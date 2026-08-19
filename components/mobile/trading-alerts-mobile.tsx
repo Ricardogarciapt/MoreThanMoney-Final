@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import MarkdownRenderer from "@/components/dashboard-gestao/markdown-renderer"
 import TvChartEmbed from "@/components/tv-chart-embed"
+import { scannerLabel } from "@/lib/mtm-alerts/scanners"
 
 /** Normaliza o timeframe do alerta para um intervalo TradingView válido. */
 function tvInterval(tf: string | null): string {
@@ -344,7 +345,9 @@ function MobileAlertCard({
           {timeAgo(alert.createdAt)}
         </span>
       </div>
-      {alert.strategy && <p className="mt-0.5 text-[11px] text-blue-300">{alert.strategy}</p>}
+      {alert.strategy && (
+        <p className="mt-0.5 text-[11px] text-blue-300">{scannerLabel(alert.strategy)}</p>
+      )}
 
       {showChart && alert.tvSymbol ? (
         <div className="mt-2">

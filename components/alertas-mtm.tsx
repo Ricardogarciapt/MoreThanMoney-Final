@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import MarkdownRenderer from "@/components/dashboard-gestao/markdown-renderer"
 import TvChartEmbed from "@/components/tv-chart-embed"
 import { supabase } from "@/lib/supabase"
+import { scannerFilterOptions, scannerKeyFromStrategy, scannerLabel } from "@/lib/mtm-alerts/scanners"
 import {
   Bell,
   TrendingUp,
@@ -145,10 +146,11 @@ function studiesForStrategy(strategy: string | null): string[] {
 
 /** Estratégia do alerta → chave de scanner do ScannerMobile (para abrir no gráfico). */
 export function strategyToScannerKey(strategy: string | null): "Goldkiller" | "MTMScanner" | "Sensei" {
-  if (!strategy) return "MTMScanner"
-  const norm = strategy.toLowerCase().replace(/[^a-z0-9]/g, "")
-  if (norm.includes("sensei")) return "Sensei"
-  if (norm.includes("goldkiller") || (norm.includes("gold") && norm.includes("kill"))) return "Goldkiller"
+  // Delega no normalizador canónico partilhado (lib/mtm-alerts/scanners) e mapeia para as chaves
+  // legadas que o gráfico/estudos usam. Aurum cai em MTMScanner (não tem estudo próprio).
+  const k = scannerKeyFromStrategy(strategy)
+  if (k === "sensei") return "Sensei"
+  if (k === "goldkiller") return "Goldkiller"
   return "MTMScanner"
 }
 
@@ -372,7 +374,7 @@ function AlertCard({
         {alert.strategy && (
           <Badge className="mb-2 border-blue-500/30 bg-blue-500/10 text-blue-300">
             <LineChart className="mr-1 h-3 w-3" />
-            {alert.strategy}
+            {scannerLabel(alert.strategy)}
           </Badge>
         )}
 
@@ -683,13 +685,15 @@ export default function AlertasMtm({
   }, [load])
 
   const tfOptions = [...new Set(alerts.map((a) => a.timeframe).filter(Boolean))] as string[]
-  const stratOptions = [...new Set(alerts.map((a) => a.strategy).filter(Boolean))] as string[]
+  // Scanners CANÓNICOS (sem duplicados): as variantes do payload ("MTM Aurum Flow ORB/v8/…",
+  // "MTM Sensei X") colapsam no scanner respetivo — antes cada variante virava uma opção.
+  const stratOptions = scannerFilterOptions(alerts.map((a) => a.strategy))
 
   const visible = alerts.filter((a) => {
     if (dirFilter !== "all" && a.direction !== dirFilter) return false
     if (classFilter !== "all" && classifyAssetClient(a.ticker) !== classFilter) return false
     if (tfFilter !== "all" && a.timeframe !== tfFilter) return false
-    if (stratFilter !== "all" && a.strategy !== stratFilter) return false
+    if (stratFilter !== "all" && scannerKeyFromStrategy(a.strategy) !== stratFilter) return false
     if (stateFilter !== "all" && stateCategory(a.tradeStatus) !== stateFilter) return false
     return true
   })
@@ -700,7 +704,7 @@ export default function AlertasMtm({
     if (dirFilter !== "all" && a.direction !== dirFilter) return false
     if (classFilter !== "all" && classifyAssetClient(a.ticker) !== classFilter) return false
     if (tfFilter !== "all" && a.timeframe !== tfFilter) return false
-    if (stratFilter !== "all" && a.strategy !== stratFilter) return false
+    if (stratFilter !== "all" && scannerKeyFromStrategy(a.strategy) !== stratFilter) return false
     return true
   })
   const perf = perfBase.reduce(
@@ -801,8 +805,8 @@ export default function AlertasMtm({
           className="rounded-md border border-gray-700 bg-black/60 px-2.5 py-1.5 text-xs text-gray-200"
         >
           <option value="all">Todas as estratégias</option>
-          {stratOptions.map((s) => (
-            <option key={s} value={s}>{s}</option>
+          {stratOptions.map((o) => (
+            <option key={o.key} value={o.key}>{o.label}</option>
           ))}
         </select>
         {(classFilter !== "all" || tfFilter !== "all" || stratFilter !== "all" || dirFilter !== "all" || stateFilter !== "all") && (
