@@ -17,6 +17,7 @@ type Switches = {
   perps_position_monitor: boolean
   t2t_auto_close: boolean
   t2t_price_monitor: boolean
+  premium_master_exec: boolean
 }
 type PerpsRules = {
   enabled: boolean
@@ -56,7 +57,8 @@ const STRATEGY_GROUPS: { group: string; items: { key: keyof Switches; label: str
   {
     group: "Estratégias",
     items: [
-      { key: "premium", label: "MTM Auto Premium", hint: "London/NY Intelligence · conta mestre USD" },
+      { key: "premium", label: "MTM Auto Premium", hint: "London/NY Intelligence · sinais do canal" },
+      { key: "premium_master_exec", label: "Premium · fluxo p/ conta MESTRE", hint: "OFF = semi-automático: o sinal vai direto às contas dos subscritores (sem conta mestre nem CopyFactory)" },
       // Sensei retirado da UI (pedido Ricardo 2026-08-19) — os switches continuam a existir e a
       // valer no runtime; só deixaram de ser mostrados aqui.
       { key: "goldkiller", label: "GoldKiller", hint: "XAUUSD scanner" },

@@ -1312,7 +1312,14 @@ async function executeViaMtmProvider(
   const results: LegResult[] = []
 
   try {
-    if (premiumProviderSingle) {
+    // FLUXO PARA A CONTA MESTRE: quando premium_master_exec=false o Premium é SEMI-AUTOMÁTICO —
+    // não abre nada na conta real mestre; cada subscritor recebe a trade por execução direta.
+    const premiumMasterOff =
+      isPremiumProvider && (await (await import('./exec-switches')).getExecSwitches()).premium_master_exec === false
+    if (premiumMasterOff) {
+      console.log('[mtmcopy] Premium semi-automático: perna da conta MESTRE ignorada (premium_master_exec=off)')
+    }
+    if (premiumProviderSingle && !premiumMasterOff) {
       const req = buildOrderRequest(
         providerConn,
         provider.accountId,
@@ -1750,6 +1757,35 @@ async function processSignalDirect(
     req.takeProfit = premiumSingle.takeProfit // TP de segurança (último TP); monitor gere parciais/BE
     const [single] = await placeOrdersSequential(conn.metaapi_account_id, [req])
     result = single ?? { success: false, error: 'Sem resposta MetaAPI' }
+    // MODO SEMI-AUTOMÁTICO (Premium direto ao subscritor): regista a posição no monitor de PREÇO,
+    // para ele gerir parciais/BE/trailing NA CONTA DO SUBSCRITOR. Sem isto, com a conta mestre
+    // desligada, a trade ficava sem gestão (o monitor só conhecia as posições do mestre).
+    if (result.success && channel === 'premium-signals') {
+      try {
+        const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
+        const tpsSub = signal.tp ?? []
+        await getSupabaseAdmin().from('mtmcopy_premium_active').insert({
+          account_id: conn.metaapi_account_id,
+          symbol: signal.symbol,
+          direction: signal.direction,
+          entry: signal.entry ?? null,
+          sl: signal.sl ?? null,
+          tp1: tpsSub[0] ?? null,
+          tp2: tpsSub[1] ?? null,
+          tp3: tpsSub[2] ?? null,
+          exit_pct_tp1: premiumSingle.exitPcts.tp1,
+          exit_pct_tp2: premiumSingle.exitPcts.tp2,
+          exit_pct_tp3: premiumSingle.exitPcts.tp3,
+          original_lot: premiumSingle.lot,
+          small_account: premiumSingle.smallAccount === true,
+          exits_done: 0,
+          trailing_started: false,
+          status: 'open',
+        })
+      } catch (e) {
+        console.error('[mtmcopy] persist premium active (subscritor) falhou:', e)
+      }
+    }
   } else {
     const req = buildOrderRequest(conn, conn.metaapi_account_id, signal, lot, 'MTMcopier')
     if (channel === 'trade-ideas' && conn.metaapi_account_id) {
