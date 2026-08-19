@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
   for (const l of leads ?? []) {
     const { data: prof } = await supabase
       .from("profiles")
-      .select("id, email, member_category, subscription_status, subscription_platform")
+      .select("id, email, member_category, subscription_status, subscription_platform, user_type")
       .eq("coupon_code", l.coupon_code as string)
       .maybeSingle()
     if (!prof) {
@@ -148,6 +148,8 @@ export async function GET(request: NextRequest) {
       }
     } else if (fresh && bal < MIN_DEPOSIT) {
       // AUTO-REVOGAÇÃO: saldo abaixo do mínimo com dados FRESCOS → remove acesso.
+      // Admins ficam de fora: o backoffice não depende do saldo do broker.
+      if (prof.user_type === "admin") continue
       revoked++
       risky.push(`${prof.email ?? l.chat_id} (UID ${l.broker_uid}, saldo $${bal})`)
       await supabase

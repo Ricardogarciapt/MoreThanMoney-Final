@@ -24,6 +24,8 @@ export async function GET(request: NextRequest) {
     .from("profiles")
     .select("id, email, member_category, subscription_expires_at, subscription_auto_renew, subscription_billing_cycle, user_type")
     .in("member_category", ["iq", "skool", "premium"])
+    // Contas admin ficam de fora: desativá-las fecha o backoffice.
+    .neq("user_type", "admin")
     .not("subscription_expires_at", "is", null)
     .lt("subscription_expires_at", nowIso)
 
