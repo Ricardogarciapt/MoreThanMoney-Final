@@ -168,6 +168,30 @@ export const SYSTEM_EMAILS: SystemEmailDefinition[] = [
     trigger: 'Envio manual via Admin → Notificações → Campanhas',
     automated: false,
   },
+  {
+    id: 'renewal_auto',
+    name: 'Aviso de renovação (renova sozinha)',
+    subject: '{nome}, a tua subscrição renova a {data}',
+    category: 'transactional',
+    trigger: 'Cron subscription-expiry — 2 dias antes de renovar. Diz o dia, o valor e onde se muda ou cancela.',
+    automated: true,
+  },
+  {
+    id: 'renewal_manual',
+    name: 'Aviso de renovação (não renova sozinha)',
+    subject: '{nome}, o teu acesso MoreThanMoney termina a {data}',
+    category: 'transactional',
+    trigger: 'Cron subscription-expiry — 2 dias antes de expirar. Pede a renovação com escolha de pack.',
+    automated: true,
+  },
+  {
+    id: 'activation_pack',
+    name: 'Ativação de pack',
+    subject: '{nome}, falta ativares o teu pack MoreThanMoney',
+    category: 'marketing',
+    trigger: 'Campanha de ativação via /api/admin/members/decisions (decisão "pagar").',
+    automated: false,
+  },
 ]
 
 export function getDefaultSampleData(overrides?: Partial<SystemEmailSampleData>): SystemEmailSampleData {
