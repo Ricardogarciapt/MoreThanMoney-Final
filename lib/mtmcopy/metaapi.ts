@@ -1,6 +1,7 @@
 import type { TrailingDistance } from './pip-points'
 import { convertTrailingToRelativePoints } from './pip-points'
 import { resolveBrokerSymbol, rankedBrokerSymbols } from './symbol-resolver'
+import { orderCommentFor } from '@/lib/mtmcopy/no-comment-accounts'
 
 export interface OrderRequest {
   accountId: string
@@ -283,9 +284,10 @@ function buildOrderOptions(
   req: OrderRequest,
   trailingOpts?: TrailingStopLossOptions,
 ): { comment?: string; trailingStopLoss?: TrailingStopLossOptions } {
-  const options: { comment?: string; trailingStopLoss?: TrailingStopLossOptions } = {
-    comment: (req.comment ?? 'MTMcopier').slice(0, 31),
-  }
+  const options: { comment?: string; trailingStopLoss?: TrailingStopLossOptions } = {}
+  // Contas de trade manual (prop) vão sem comentário nenhum.
+  const comment = orderCommentFor(req.accountId, req.comment)
+  if (comment !== undefined) options.comment = comment
   if (trailingOpts) options.trailingStopLoss = trailingOpts
   return options
 }
@@ -980,7 +982,8 @@ export async function placeLimitOrder(req: OrderRequest): Promise<OrderResult> {
 
     let sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
     let tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
-    const orderOptions = { comment: req.comment ?? 'MTMcopier' }
+    const c = orderCommentFor(req.accountId, req.comment)
+    const orderOptions = c === undefined ? {} : { comment: c }
 
     // Afasta SL/TP colados ao preço da pendente até ao mínimo do broker (fail-open).
     {
@@ -1041,7 +1044,8 @@ export async function placeStopOrder(req: OrderRequest): Promise<OrderResult> {
 
     let sl = req.stopLoss != null && req.stopLoss > 0 ? req.stopLoss : undefined
     let tp = req.takeProfit != null && req.takeProfit > 0 ? req.takeProfit : undefined
-    const orderOptions = { comment: req.comment ?? 'MTMcopier' }
+    const c = orderCommentFor(req.accountId, req.comment)
+    const orderOptions = c === undefined ? {} : { comment: c }
 
     // Afasta SL/TP colados ao preço da pendente até ao mínimo do broker (fail-open).
     {

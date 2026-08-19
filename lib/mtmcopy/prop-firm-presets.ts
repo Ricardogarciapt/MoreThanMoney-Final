@@ -3,7 +3,7 @@
  * Objectivo: passar contas e mantê-las — risco conservador + parciais + trades manuais.
  */
 
-export type PropFirmType = 'ftmo' | 'fundednext'
+export type PropFirmType = 'ftmo' | 'fundednext' | 'equity_edge'
 
 export interface PropFirmPreset {
   id: PropFirmType
@@ -94,10 +94,42 @@ export const PROP_FIRM_PRESETS: Record<PropFirmType, PropFirmPreset> = {
     consistencyHint:
       'Regra de consistência: evita concentrar >40% do lucro num único dia; usa parciais 40/35/25.',
   },
+  equity_edge: {
+    id: 'equity_edge',
+    label: 'Equity Edge',
+    description:
+      'Conta financiada Equity Edge — drawdown medido sobre EQUITY (o flutuante conta), por isso os limites aplicam-se a equity-difference e fecham posições.',
+    maxRiskPercent: 0.25,
+    lotMode: 'risk_percent',
+    lotValue: 0.25,
+    exitPctTp1: 33,
+    exitPctTp2: 33,
+    exitPctTp3: 34,
+    copySl: true,
+    copyTp: true,
+    copyAsManual: true,
+    skipPendingOrders: true,
+    riskLimits: [
+      {
+        type: 'day',
+        applyTo: 'equity-difference',
+        closePositions: true,
+        maxRelativeRisk: 0.03,
+      },
+      {
+        type: 'month',
+        applyTo: 'equity-difference',
+        closePositions: true,
+        maxRelativeRisk: 0.06,
+      },
+    ],
+    consistencyHint:
+      'Drawdown por equity: o flutuante conta para o limite. Risco ≤0,25%/trade, SL sempre copiado, sem ordens pendentes, parciais 33/33/34.',
+  },
 }
 
 export function getPropFirmPreset(type: string | null | undefined): PropFirmPreset | null {
-  if (type === 'ftmo' || type === 'fundednext') return PROP_FIRM_PRESETS[type]
+  if (type === 'ftmo' || type === 'fundednext' || type === 'equity_edge') return PROP_FIRM_PRESETS[type]
   return null
 }
 

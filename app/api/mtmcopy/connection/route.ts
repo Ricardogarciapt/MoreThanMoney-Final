@@ -204,12 +204,12 @@ export async function POST(request: NextRequest) {
 
   if (apply_prop_firm_preset === true && prop_firm_type) {
     const { applyPropFirmToConnectionPatch } = await import('@/lib/mtmcopy/prop-firm-presets')
-    if (prop_firm_type === 'ftmo' || prop_firm_type === 'fundednext') {
+    if (prop_firm_type === 'ftmo' || prop_firm_type === 'fundednext' || prop_firm_type === 'equity_edge') {
       Object.assign(payload, applyPropFirmToConnectionPatch(prop_firm_type))
     }
   } else if (prop_firm_type !== undefined) {
     payload.prop_firm_type =
-      prop_firm_type === 'ftmo' || prop_firm_type === 'fundednext' ? prop_firm_type : null
+      prop_firm_type === 'ftmo' || prop_firm_type === 'fundednext' || prop_firm_type === 'equity_edge' ? prop_firm_type : null
   }
   if (typeof copy_as_manual === 'boolean') payload.copy_as_manual = copy_as_manual
   if (symbol_suffix !== undefined) {

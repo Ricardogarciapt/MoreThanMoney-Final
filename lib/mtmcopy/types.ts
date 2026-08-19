@@ -45,7 +45,7 @@ export interface MTMcopierConnection {
   strategy_lots?: Record<string, number> | null
   is_audited?: boolean
   audit_label?: string | null
-  prop_firm_type?: 'ftmo' | 'fundednext' | null
+  prop_firm_type?: 'ftmo' | 'fundednext' | 'equity_edge' | null
   copy_as_manual?: boolean
   baseline_balance?: number | null
 }
