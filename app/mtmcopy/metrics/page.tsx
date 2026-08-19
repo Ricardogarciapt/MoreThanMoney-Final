@@ -9,7 +9,6 @@ import { ArrowLeft, BarChart3, Loader2, Server, Target, TrendingUp } from "lucid
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import TradingDashboard from "@/components/mtmcopy/trading-dashboard"
-import MtmcopyProviderPerformance from "@/components/admin/mtmcopy-provider-performance"
 
 export default function MtmcopyMetricsPage() {
   const { isAdmin } = useAuth()
@@ -97,22 +96,8 @@ export default function MtmcopyMetricsPage() {
           </div>
         )}
 
-        {/* Desempenho das estratégias ativas (Premium, Trade Ideas, Sensei, GoldKiller, Bybit
-            Perps) — prova social para o membro, via rota pública sanitizada (sem saldos absolutos). */}
-        {accessToken && subscribed && (
-          <div className="mt-8 rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-1">
-            <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-800/60 text-xs text-zinc-500">
-              <TrendingUp className="w-3.5 h-3.5 text-[#D2A63C]" />
-              Desempenho das estratégias ativas
-            </div>
-            <div className="p-4 md:p-6">
-              <MtmcopyProviderPerformance
-                apiPath="/api/mtmcopy/provider-performance"
-                authToken={accessToken}
-              />
-            </div>
-          </div>
-        )}
+        {/* Quadros «Desempenho das estratégias ativas / Provider» removidos (pedido Ricardo
+            2026-08-19) — informação duplicada; o terminal mostra a performance das contas do membro. */}
 
         {isAdmin && (
           <Link

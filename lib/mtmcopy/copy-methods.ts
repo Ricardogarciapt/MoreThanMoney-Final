@@ -17,12 +17,14 @@ export type MtmcopyCopyMethod = 'telegram_group' | 'strategy' | 'master_slave'
 export type MtmcopyTelegramGroup = 'premium' | 'trade_ideas' | 'sensei' | 'goldkiller' | 'forex_swings'
 
 /**
- * Grupos de sinais OFERECIDOS ao cliente como fontes copiáveis.
- * Só os que NÃO são «Estratégia MTM» — para não repetir a mesma fonte de sinais:
- * Ideias de Forex + GoldKiller + Forex Swings. Premium/Sensei/Booster copiam-se pelo método
- * «Estratégia MTM». O tipo mantém 'premium'/'sensei' para retrocompatibilidade de ligações antigas.
+ * Grupos de sinais OFERECIDOS ao cliente como fontes copiáveis — TODOS (Ricardo 2026-08-19).
+ * O Sensei deixou de ser «Estratégia MTM»: copia-se aqui, pelo grupo, ou pelo Tap to Trade.
  */
 export const MTMCOPY_TELEGRAM_GROUP_IDS: MtmcopyTelegramGroup[] = [
+  // TODOS os grupos de sinais são copiáveis (pedido Ricardo 2026-08-19). O Premium e o Sensei
+  // deixaram de estar reservados ao método «Estratégia MTM» — copiam-se aqui, pelo grupo.
+  'premium',
+  'sensei',
   'trade_ideas',
   'forex_swings',
   'goldkiller',
@@ -84,8 +86,22 @@ export const TELEGRAM_GROUPS: {
   description: string
   chatId: string
 }[] = [
-  // Premium e Sensei NÃO aparecem aqui — copiam-se pelo método «Estratégia MTM»
-  // (evita repetir a mesma fonte de sinais em dois métodos).
+  {
+    id: 'premium',
+    channelKey: 'premium-signals',
+    title: 'Premium · Ouro',
+    description:
+      'Sinais de ouro do grupo Premium, com parciais e break-even automáticos na tua conta.',
+    chatId: '-1002424441843',
+  },
+  {
+    id: 'sensei',
+    channelKey: 'trade-ideas',
+    title: 'Sensei · Ouro e BTC',
+    description:
+      'Entradas validadas do scanner Sensei (ouro e BTC), com gestão automática por alertas.',
+    chatId: '-1003853860780',
+  },
   {
     id: 'trade_ideas',
     channelKey: 'trade-ideas',
@@ -139,15 +155,7 @@ export function getMtmStrategyOptions(): MtmCopyStrategyOption[] {
 
   // Forex (Trade Ideas) NÃO é oferecido como «Estratégia MTM» — é um Grupo de sinais.
 
-  const senseiCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_SENSEI_STRATEGY_ID]
-  if (senseiCatalog) {
-    out.push({
-      id: CANONICAL_SENSEI_STRATEGY_ID,
-      channelKey: 'trade-ideas',
-      title: senseiCatalog.title,
-      description: senseiCatalog.description,
-    })
-  }
+  // Sensei NÃO é oferecido como «Estratégia MTM» (Ricardo 2026-08-19) — é Grupo de sinais + T2T.
 
   const boosterCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_BOOSTER_STRATEGY_ID]
   if (boosterCatalog) {
@@ -262,15 +270,16 @@ export async function getMtmStrategyOptionsAsync(): Promise<MtmCopyStrategyOptio
   // salvaguarda: nunca devolver vazio (se a allowlist não casar com nenhuma), cai em Premium+Sensei
   return filtered.length
     ? filtered
-    : list.filter((o) => o.id === CANONICAL_PREMIUM_STRATEGY_ID || o.id === CANONICAL_SENSEI_STRATEGY_ID)
+    : list.filter((o) => o.id === CANONICAL_PREMIUM_STRATEGY_ID)
 }
 
 /**
  * IDs de estratégia visíveis ao cliente na «Estratégia MTM». Definível no admin em
- * site_settings.mtmcopy_client_strategies = {"ids":[...]}. Default = Premium (9gsL) + Sensei (mADd).
+ * site_settings.mtmcopy_client_strategies = {"ids":[...]}. Default = Premium (9gsL).
+ * O Sensei saiu daqui (2026-08-19): é Grupo de sinais + Tap to Trade, não estratégia de cópia.
  */
 export async function getClientVisibleStrategyIds(): Promise<string[]> {
-  const def = [CANONICAL_PREMIUM_STRATEGY_ID, CANONICAL_SENSEI_STRATEGY_ID]
+  const def = [CANONICAL_PREMIUM_STRATEGY_ID]
   try {
     const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
     const { data } = await getSupabaseAdmin()
