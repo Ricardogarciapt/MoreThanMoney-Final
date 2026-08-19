@@ -30,6 +30,7 @@
  */
 
 export type PremiumMessageKind =
+  | 'take_partials'
   | 'trade_active_close_all'
   | 'trade_active_close_half'
   | 'hit_tp1'
@@ -50,6 +51,8 @@ export interface PremiumPositionCtx {
   volume: number
   stopLoss: number | null
   direction: 'buy' | 'sell'
+  /** Preço atual da posição (para decidir se está em LUCRO no "take partials"). */
+  currentPrice?: number | null
 }
 
 export interface PremiumSignalCtx {
@@ -125,6 +128,26 @@ export function decidePremiumActions(
   signal: PremiumSignalCtx,
 ): PremiumAction[] {
   switch (msg.kind) {
+    // "Trade active and running … TAKE PARTIALS" — instrução EXPLÍCITA do canal para realizar
+    // parcial. Fecha a % do Exit 1 SE a posição estiver em LUCRO (pedido Ricardo: nunca realizar
+    // parcial em perda). Se não estiver em lucro, protege com BE quando a mensagem o pedir.
+    case 'take_partials': {
+      const emLucro =
+        pos.currentPrice != null &&
+        (pos.direction === 'buy' ? pos.currentPrice > pos.openPrice : pos.currentPrice < pos.openPrice)
+      if (!emLucro) {
+        return msg.setBE ? [{ type: 'set_be', reason: 'Take partials sem lucro → só BE' }] : []
+      }
+      const actions: PremiumAction[] = [
+        { type: 'close_pct', pct: PREMIUM_TP1_CLOSE_PCT, reason: 'Take partials → realiza parcial' },
+      ]
+      if (msg.setBE) {
+        actions.push({ type: 'set_be', reason: 'Take partials + set BE → BE' })
+        actions.push({ type: 'start_trailing', reason: 'Take partials + set BE → trailing' })
+      }
+      return actions
+    }
+
     case 'trade_active_close_all': {
       // "Trade active and running… Close all now. If hold set BE" — a própria mensagem dá a
       // OPÇÃO de segurar. Modo HOLD (default, PREMIUM_HOLD_RUNNERS≠"false"): confia no sistema

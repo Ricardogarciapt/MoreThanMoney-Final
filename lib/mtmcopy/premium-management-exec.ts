@@ -60,8 +60,9 @@ export function classifyPremiumMessage(text: string): PremiumMessageCtx | null {
   if (/\btrade\s+active\s+and\s+running\b/i.test(text)) {
     if (/\bclose\s+all\b/i.test(text)) return { kind: 'trade_active_close_all', setBE }
     if (/\bclose\s+half\b/i.test(text)) return { kind: 'trade_active_close_half', setBE }
-    // "Take Partials" (trade a correr) → TIRA o parcial (TP1 %) se em lucro, NÃO fecha tudo (Ricardo).
-    if (/\btake\s+partial/i.test(text)) return { kind: 'hit_tp1', setBE }
+    // "Take Partials" (trade a correr) → tipo PRÓPRIO: realiza parcial se em LUCRO. Não é hit_tp1
+    // (esse é bloqueado pelo monitor de preço); é uma instrução explícita do canal e passa sempre.
+    if (/\btake\s+partial/i.test(text)) return { kind: 'take_partials', setBE }
     // "running" sem instrução explícita = a trade continua → protege em BE, não fecha.
     return { kind: 'breakeven', setBE: true }
   }
@@ -175,6 +176,7 @@ export async function applyPremiumManagement(
     volume: pos.volume ?? 0,
     stopLoss: pos.stopLoss ?? null,
     direction: positionDirection(pos),
+    currentPrice: pos.currentPrice ?? null,
   }
   const signalCtx: PremiumSignalCtx = {
     zone: parent?.zone ?? null,
@@ -233,6 +235,24 @@ export async function applyPremiumManagement(
       }
     } catch (e) {
       out.errors.push(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  // SINCRONIZAÇÃO com o monitor de preço: se a mensagem realizou o parcial, marca exits_done=1 na
+  // linha desta conta, para o monitor NÃO voltar a tirar o mesmo parcial quando o preço tocar o TP1.
+  if (msg.kind === 'take_partials' && out.closed > 0) {
+    try {
+      const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
+      await getSupabaseAdmin()
+        .from('mtmcopy_premium_active')
+        .update({ exits_done: 1, updated_at: new Date().toISOString() })
+        .eq('account_id', accountId)
+        .eq('symbol', symbol)
+        .eq('status', 'open')
+        .lt('exits_done', 1)
+      out.actions.push('monitor sincronizado (exits_done=1)')
+    } catch (e) {
+      out.errors.push(`sync monitor: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
 
