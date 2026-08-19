@@ -15,7 +15,11 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { adminApiCall } from "@/lib/admin-helpers"
-import { Loader2, FlaskConical, Send, TrendingUp } from "lucide-react"
+import { Loader2, Send, TrendingUp } from "lucide-react"
+import {
+  CANONICAL_PREMIUM_ACCOUNT_ID,
+  CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
+} from "@/lib/mtmcopy/provider-constants"
 
 interface ProviderOption {
   id: string
@@ -29,8 +33,10 @@ interface MetaOverview {
   accounts: Array<{ id: string; name: string; login: string }>
 }
 
-const PREMIUM_ACCOUNT = "c17a8c46-7fe7-40cf-acb4-41678d42f9a9"
-const TRADE_IDEAS_ACCOUNT = "fbeeafeb-96a9-4133-bc6c-194cc281b6e0"
+// Ids vêm das constantes canónicas — antes estavam copiados aqui e desincronizavam
+// sempre que a conta provider mudava.
+const PREMIUM_ACCOUNT = CANONICAL_PREMIUM_ACCOUNT_ID
+const TRADE_IDEAS_ACCOUNT = CANONICAL_TRADE_IDEAS_ACCOUNT_ID
 
 const SAMPLE_PREMIUM = `XAUUSD SELL NOW
 Gold Sell Zone 2650 - 2655
@@ -44,7 +50,7 @@ Ação: Buy
 Stoploss: 0.6520
 Takeprofit: 0.6580`
 
-export default function MtmcopyTestPanel({ embedded = false }: { embedded?: boolean }) {
+export default function MtmcopyTestPanel() {
   const [providers, setProviders] = useState<ProviderOption[]>([])
   const [selectedProvider, setSelectedProvider] = useState("")
   const [tradeSymbol, setTradeSymbol] = useState("XAUUSD")
@@ -188,7 +194,7 @@ export default function MtmcopyTestPanel({ embedded = false }: { embedded?: bool
   }
 
   const body = (
-    <div className={embedded ? "grid lg:grid-cols-2 gap-8" : "p-6 grid lg:grid-cols-2 gap-8"}>
+    <div className="grid lg:grid-cols-2 gap-8">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-emerald-400" />
@@ -330,20 +336,5 @@ export default function MtmcopyTestPanel({ embedded = false }: { embedded?: bool
     </div>
   )
 
-  if (embedded) return body
-
-  return (
-    <section className="overflow-hidden rounded-2xl border border-violet-500/25 bg-zinc-950/80">
-      <div className="border-b border-violet-500/20 px-6 py-4">
-        <h2 className="text-lg font-semibold text-violet-400 flex items-center gap-2">
-          <FlaskConical className="w-5 h-5" />
-          Testes · Provider & Telegram
-        </h2>
-        <p className="text-sm text-zinc-400 mt-1">
-          Envia trades de teste às contas MTM Auto ou publica sinais nos canais via @MoreThanMoney_aibot.
-        </p>
-      </div>
-      {body}
-    </section>
-  )
+  return body
 }

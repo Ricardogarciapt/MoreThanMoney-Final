@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, RefreshCw, Zap, Check, AlertTriangle } from "lucide-react"
+import { Loader2, RefreshCw, Check, AlertTriangle } from "lucide-react"
 import { adminApiCall } from "@/lib/admin-helpers"
 
 interface SyncResult {
@@ -32,7 +32,7 @@ interface SyncResult {
   summary: { total: number; ok: number; failed: number }
 }
 
-export default function MtmcopySyncAllPanel({ embedded = false }: { embedded?: boolean }) {
+export default function MtmcopySyncAllPanel() {
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState<SyncResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -54,30 +54,12 @@ export default function MtmcopySyncAllPanel({ embedded = false }: { embedded?: b
   }
 
   return (
-    <div
-      className={
-        embedded
-          ? "space-y-4"
-          : "rounded-2xl border border-violet-500/25 bg-violet-500/5 p-5 space-y-4"
-      }
-    >
+    <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        {!embedded && (
-          <div>
-            <h2 className="text-lg font-semibold text-violet-300 flex items-center gap-2">
-              <Zap className="w-5 h-5" />
-              Sincronização total MTMcopier
-            </h2>
-            <p className="text-sm text-zinc-400 mt-1 max-w-2xl">
-              Alinha Supabase, rotas provider, estratégias CopyFactory, subscribers, riscos prop firm,
-              baselines e erros pendentes — MetaAPI, site e motor de trades/parciais/IA.
-            </p>
-          </div>
-        )}
         <Button
           onClick={runSync}
           disabled={running}
-          className={`bg-violet-600 hover:bg-violet-500 text-white shrink-0 ${embedded ? "" : "ml-auto"}`}
+          className="bg-violet-600 hover:bg-violet-500 text-white shrink-0"
         >
           {running ? (
             <Loader2 className="w-4 h-4 animate-spin mr-2" />

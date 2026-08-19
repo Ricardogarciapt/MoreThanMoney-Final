@@ -31,6 +31,8 @@ import {
   Activity,
   BarChart3,
   Globe,
+  Zap,
+  FlaskConical,
 } from "lucide-react"
 import { PipelineFlow } from "@/components/mtmcopy/mtmcopy-shared"
 import MtmcopyGlobalPerformance from "@/components/admin/mtmcopy-global-performance"
@@ -307,8 +309,26 @@ export default function AdminMtmcopyPage() {
 
           {activeTab === "tools" && (
             <div className="space-y-6">
-              <MtmcopySyncAllPanel />
-              <MtmcopyTestPanel />
+              {/* Uma só moldura por painel (MtmcopyAdminSection), como nas restantes tabs:
+                  antes cada componente trazia o seu próprio cabeçalho violeta e a tab
+                  ficava com dois títulos concorrentes. */}
+              <MtmcopyAdminSection
+                title="Sincronização total"
+                description="Alinha Supabase, rotas provider, estratégias CopyFactory, subscribers, riscos de conta financiada, baselines e erros pendentes — MetaAPI, site e motor de trades/parciais/IA."
+                icon={Zap}
+                accent="violet"
+              >
+                <MtmcopySyncAllPanel />
+              </MtmcopyAdminSection>
+
+              <MtmcopyAdminSection
+                title="Testes · provider e Telegram"
+                description="Envia uma trade de teste às contas MTM Auto ou publica um sinal nos canais via @MoreThanMoney_aibot, com a opção de correr o pipeline completo."
+                icon={FlaskConical}
+                accent="sky"
+              >
+                <MtmcopyTestPanel />
+              </MtmcopyAdminSection>
             </div>
           )}
 
