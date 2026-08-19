@@ -58,6 +58,10 @@ async function mirrorToApp(message: TelegramChannelMessage) {
   }
   const slug = resolveAppChannelSlug(chat)
   if (!slug) return
+  // RECEÇÃO por canal (admin): desligado → não espelha nem notifica.
+  const { intakeKeyForChannelSlug, isIntakeEnabled } = await import("@/lib/telegram-intake-guard")
+  const ik = intakeKeyForChannelSlug(slug)
+  if (ik && !(await isIntakeEnabled(ik))) return
 
   const content = message.text || message.caption || null
   const imageUrl = await resolveTelegramImageUrl(message)

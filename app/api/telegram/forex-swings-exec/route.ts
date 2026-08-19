@@ -61,6 +61,14 @@ export async function POST(req: NextRequest) {
   const sl = typeof body.sl === 'number' ? body.sl : null
   const tp = typeof body.tp === 'number' ? body.tp : null
 
+  // RECEÇÃO: corta a montante se o canal estiver desligado no admin.
+  {
+    const { isIntakeEnabled } = await import('@/lib/mtmcopy/intake-switches')
+    if (!(await isIntakeEnabled('forex_swings'))) {
+      return NextResponse.json({ ok: true, skipped: 'intake_off', channel: 'forex_swings' })
+    }
+  }
+
   // FECHO/CANCELAMENTO da fonte → espelha nas ordens T2T dos seguidores (chat ideias-e-sinais).
   // Só precisa do símbolo (a direção é opcional: se James não a der, casa qualquer direção do par).
   if (body.kind === 'close' || body.kind === 'cancel') {

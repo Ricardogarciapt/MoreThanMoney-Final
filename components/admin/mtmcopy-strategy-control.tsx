@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, Save, RefreshCw, CheckCircle2, XCircle, AlertTriangle, SlidersHorizontal } from "lucide-react"
 import MtmcopyAccountConfig from "@/components/admin/mtmcopy-account-config"
+import { INTAKE_CHANNELS } from "@/lib/mtmcopy/intake-channels"
 
 type Switches = {
   sensei: boolean
@@ -39,8 +40,10 @@ type SenseiShadow = {
   config: { enabled: boolean; allowSell: boolean; goldTargetDistance: number }
   summary: { all: ShadowBucket; buy: ShadowBucket; sell: ShadowBucket }
 } | null
+type Intake = Record<string, boolean>
 type Config = {
   switches: Switches
+  intake?: Intake
   primeverse: { mode: string }
   forexSwings: { mode: string }
   perpsRules: PerpsRules
@@ -49,17 +52,33 @@ type Config = {
   envFlags: Record<string, boolean>
 }
 
-const STRATEGY_LABELS: { key: keyof Switches; label: string; hint: string }[] = [
-  { key: "premium", label: "MTM Auto Premium", hint: "London/NY Intelligence · conta mestre USD" },
-  { key: "sensei", label: "Sensei (Ouro/BTC)", hint: "Master: gestão das posições abertas (parciais/BE/trailing)" },
-  { key: "sensei_entries", label: "Sensei · entradas novas", hint: "Desliga p/ pausar SÓ as entradas (mantém a gestão das abertas)" },
-  { key: "goldkiller", label: "GoldKiller", hint: "XAUUSD scanner" },
-  { key: "forex", label: "MTM Auto Forex", hint: "Trade Ideas · conta 5IHE" },
-  { key: "premium_price_monitor", label: "Premium · monitor de preço", hint: "Fecha parciais/BE por PREÇO (não por mensagem)" },
-  { key: "premium_subscriber_exits", label: "Premium · exits nos subscritores", hint: "⚠️ dinheiro real de subscritores" },
-  { key: "perps_position_monitor", label: "Perps · monitor de posição", hint: "Acompanha a posição Bybit (Entry Hit → parcial → BE → fecho)" },
-  { key: "t2t_price_monitor", label: "T2T · motor de preço (tempo real)", hint: "Gere as posições dos seguidores por PREÇO: entry-hit → parciais → BE → trailing → fecho (não precisa de mensagens da fonte)" },
-  { key: "t2t_auto_close", label: "T2T · fecho automático", hint: "Fonte fecha/cancela → apaga/fecha as ordens T2T dos seguidores (PrimeVerse/Premium/Sensei/GoldKiller/Forex)" },
+/** Toggles AGRUPADOS por natureza (estratégias · motores · T2T) — a lista corrida já não se lia. */
+const STRATEGY_GROUPS: { group: string; items: { key: keyof Switches; label: string; hint: string }[] }[] = [
+  {
+    group: "Estratégias",
+    items: [
+      { key: "premium", label: "MTM Auto Premium", hint: "London/NY Intelligence · conta mestre USD" },
+      { key: "sensei", label: "Sensei (Ouro/BTC)", hint: "Master: gestão das posições abertas (parciais/BE/trailing)" },
+      { key: "sensei_entries", label: "Sensei · entradas novas", hint: "Desliga p/ pausar SÓ as entradas (mantém a gestão das abertas)" },
+      { key: "goldkiller", label: "GoldKiller", hint: "XAUUSD scanner" },
+      { key: "forex", label: "MTM Auto Forex", hint: "Trade Ideas · conta 5IHE" },
+    ],
+  },
+  {
+    group: "Motores de gestão",
+    items: [
+      { key: "premium_price_monitor", label: "Premium · monitor de preço", hint: "Fecha parciais/BE por PREÇO (não por mensagem)" },
+      { key: "premium_subscriber_exits", label: "Premium · exits nos subscritores", hint: "⚠️ dinheiro real de subscritores" },
+      { key: "perps_position_monitor", label: "Perps · monitor de posição", hint: "Acompanha a posição Bybit (Entry Hit → parcial → BE → fecho)" },
+    ],
+  },
+  {
+    group: "Tap to Trade",
+    items: [
+      { key: "t2t_price_monitor", label: "T2T · motor de preço (tempo real)", hint: "Gere as posições dos seguidores por PREÇO: entry-hit → parciais → BE → trailing → fecho" },
+      { key: "t2t_auto_close", label: "T2T · fecho automático", hint: "Fonte fecha/cancela → apaga/fecha as ordens T2T dos seguidores" },
+    ],
+  },
 ]
 
 const ENV_FLAG_LABELS: Record<string, string> = {
@@ -159,6 +178,11 @@ export default function MtmcopyStrategyControl() {
     )
   }
 
+  const setIntake = (key: string, val: boolean) => {
+    setCfg({ ...cfg, intake: { ...(cfg.intake ?? {}), [key]: val } })
+    save({ intake: { [key]: val } })
+  }
+
   const setSwitch = (key: keyof Switches, val: boolean) => {
     setCfg({ ...cfg, switches: { ...cfg.switches, [key]: val } })
     save({ switches: { [key]: val } })
@@ -191,16 +215,65 @@ export default function MtmcopyStrategyControl() {
         <CardHeader>
           <CardTitle className="text-sm text-zinc-200">On/Off por estratégia · runtime (sem redeploy)</CardTitle>
         </CardHeader>
-        <CardContent className="divide-y divide-zinc-800/70">
-          {STRATEGY_LABELS.map(({ key, label, hint }) => (
-            <div key={key} className="flex items-center justify-between gap-4 py-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-white">{label}</p>
-                <p className="text-xs text-zinc-500">{hint}</p>
+        <CardContent className="space-y-4">
+          {STRATEGY_GROUPS.map(({ group, items }) => (
+            <div key={group}>
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-[#D2A63C]/80">{group}</p>
+              <div className="divide-y divide-zinc-800/70 rounded-lg border border-zinc-800/70 bg-zinc-950/30 px-3">
+                {items.map(({ key, label, hint }) => (
+                  <div key={key} className="flex items-center justify-between gap-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white">{label}</p>
+                      <p className="text-xs text-zinc-500">{hint}</p>
+                    </div>
+                    <Toggle on={cfg.switches[key]} onClick={() => setSwitch(key, !cfg.switches[key])} disabled={saving} />
+                  </div>
+                ))}
               </div>
-              <Toggle on={cfg.switches[key]} onClick={() => setSwitch(key, !cfg.switches[key])} disabled={saving} />
             </div>
           ))}
+
+          {/* RECEÇÃO POR CANAL — corta a ENTRADA de sinais a montante (inclui os relays do VPS):
+              nada entra no chat, não executa e não notifica. É diferente de desligar a estratégia. */}
+          <div>
+            <div className="mb-1 flex items-center gap-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-sky-400/90">
+                Receção de sinais · por canal
+              </p>
+              <span className="text-[10px] text-zinc-500">(inclui relays do VPS)</span>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => {
+                  const allOff = Object.fromEntries(INTAKE_CHANNELS.map((c) => [c.key, false]))
+                  if (confirm("Parar a receção de TODOS os canais? Nenhum sinal entra até voltares a ligar.")) {
+                    setCfg({ ...cfg, intake: { ...(cfg.intake ?? {}), ...allOff } })
+                    save({ intake: allOff })
+                  }
+                }}
+                className="ml-auto rounded-md border border-red-500/40 px-2 py-1 text-[11px] text-red-300 hover:bg-red-500/10 disabled:opacity-50"
+              >
+                Parar tudo
+              </button>
+            </div>
+            <div className="divide-y divide-zinc-800/70 rounded-lg border border-sky-500/20 bg-sky-500/[0.03] px-3">
+              {INTAKE_CHANNELS.map(({ key, label, hint }) => {
+                const on = cfg.intake?.[key] !== false
+                return (
+                  <div key={key} className="flex items-center justify-between gap-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white">
+                        {label}
+                        {!on && <span className="ml-2 text-[10px] uppercase text-red-400">receção parada</span>}
+                      </p>
+                      <p className="text-xs text-zinc-500">{hint}</p>
+                    </div>
+                    <Toggle on={on} onClick={() => setIntake(key, !on)} disabled={saving} />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </CardContent>
       </Card>
 

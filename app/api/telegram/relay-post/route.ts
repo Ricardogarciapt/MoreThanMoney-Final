@@ -114,6 +114,16 @@ export async function POST(req: NextRequest) {
   // processador (Premium/Forex/Sensei-telegram) nunca as veria. Alimentamo-lo aqui direto.
   // O processador auto-filtra por allowlist de canais (chats não-ativos são ignorados) e
   // tem guarda de duplicados — seguro chamar para tudo o que passa por aqui.
+  // RECEÇÃO: se o canal estiver desligado no admin, não processa nem espelha (o relay do VPS
+  // continua a chamar, mas nada entra no sistema).
+  const intakeSlug = slug === 'premium-ideas' ? 'premium' : null
+  if (intakeSlug) {
+    const { isIntakeEnabled } = await import('@/lib/mtmcopy/intake-switches')
+    if (!(await isIntakeEnabled(intakeSlug as 'premium'))) {
+      return NextResponse.json({ ok: true, skipped: 'intake_off', channel: 'premium' })
+    }
+  }
+
   const execText = outText.replace(/^\s*🏦[^\n]*\n+/, '') // tira o cabeçalho de marca
   if (r.ok) {
     try {

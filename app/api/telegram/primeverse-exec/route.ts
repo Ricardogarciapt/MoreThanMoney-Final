@@ -127,6 +127,14 @@ export async function POST(req: NextRequest) {
   const tps = Array.isArray(b.tps) ? b.tps.filter((n) => typeof n === 'number' && n > 0) : []
   const timeframe = typeof b.timeframe === 'string' && b.timeframe.trim() ? b.timeframe.trim() : null
 
+  // RECEÇÃO: corta a montante se o canal estiver desligado no admin (nada entra/executa/notifica).
+  {
+    const { isIntakeEnabled } = await import('@/lib/mtmcopy/intake-switches')
+    if (!(await isIntakeEnabled('primeverse'))) {
+      return NextResponse.json({ ok: true, skipped: 'intake_off', channel: 'primeverse' })
+    }
+  }
+
   const cfg = await getPrimeverseExecConfig()
 
   // SETUP (alerta pendente): só MOSTRA o sinal no chat da classe de ativo (de TODOS os traders) e

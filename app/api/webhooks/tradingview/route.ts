@@ -825,6 +825,20 @@ export async function POST(request: NextRequest) {
   const isIdeaAlert = activeSensei?.alertType === "idea" || activeSensei?.alertType === "signal"
   // Auto-copy CopyFactory: Ouro/BTC → conta Sensei; Forex → conta MTM Auto Forex (5IHE).
   // Master switch SENSEI_PROVIDER_EXEC_ENABLED + interruptor por-execução (runtime, DB).
+  // RECEÇÃO por canal/scanner (admin): desligado → o sinal é IGNORADO à entrada.
+  {
+    const { isIntakeEnabled } = await import("@/lib/mtmcopy/intake-switches")
+    const intakeKey =
+      isGoldKiller ? "goldkiller"
+      : scannerKey === "mtmscanner" ? "mtmscanner"
+      : perpsRequested ? "perps"
+      : scannerKey === "sensei" ? "sensei"
+      : null
+    if (intakeKey && !(await isIntakeEnabled(intakeKey as "sensei"))) {
+      return NextResponse.json({ ok: true, skipped: "intake_off", channel: intakeKey })
+    }
+  }
+
   const execSwitches = await getExecSwitches()
   const execSwitchOn = isGoldKiller
     ? execSwitches.goldkiller

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { getExecSwitches, setExecSwitches, type ExecSwitches } from "@/lib/mtmcopy/exec-switches"
+import { getIntakeSwitches, setIntakeSwitches } from "@/lib/mtmcopy/intake-switches"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -104,8 +105,9 @@ export async function GET(request: NextRequest) {
   const authCheck = await requireAdmin(request)
   if (authCheck) return authCheck
 
-  const [switches, primeverse, forexSwings, perpsRules, perpsScore, shadowCfg] = await Promise.all([
+  const [switches, intake, primeverse, forexSwings, perpsRules, perpsScore, shadowCfg] = await Promise.all([
     getExecSwitches(),
+    getIntakeSwitches(),
     readSetting("primeverse_execution"),
     readSetting("forex_swings_execution"),
     readSetting("perps_gate_rules"),
@@ -136,6 +138,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     switches,
+    intake,
     primeverse: { mode: (primeverse.mode as string) ?? "off", ...primeverse },
     forexSwings: { mode: (forexSwings.mode as string) ?? "off", ...forexSwings },
     perpsRules: {
@@ -185,6 +188,18 @@ export async function POST(request: NextRequest) {
     if (Object.keys(patch).length) {
       await setExecSwitches(patch)
       applied.push("switches")
+    }
+  }
+
+  // 1b) RECEÇÃO por canal (mtmcopy_channel_intake) — corta a entrada de sinais a montante.
+  if (body.intake && typeof body.intake === "object") {
+    const patch: Record<string, boolean> = {}
+    for (const [k, v] of Object.entries(body.intake as Record<string, unknown>)) {
+      if (typeof v === "boolean") patch[k] = v
+    }
+    if (Object.keys(patch).length) {
+      await setIntakeSwitches(patch as Parameters<typeof setIntakeSwitches>[0])
+      applied.push("intake")
     }
   }
 
