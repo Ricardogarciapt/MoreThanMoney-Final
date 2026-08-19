@@ -93,6 +93,19 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
     if (!push.ok) {
       console.warn(`[Telegram] Push falhou para ${slug}:`, push.error ?? push.status)
     }
+
+    // LEITOR ÚNICO de follow-ups: se a mensagem for um fecho/cancelamento/descarte, espelha-o nas
+    // ordens T2T de quem aceitou aquele sinal — venha de que fonte vier. É isto que cobre as
+    // Ideias de Forex e qualquer canal T2T novo sem precisar de código próprio por fonte.
+    try {
+      const { handleSourceFollowup } = await import("@/lib/mtmcopy/followup-reader")
+      const r = await handleSourceFollowup({ channelSlug: slug, content: content ?? '' })
+      if (r.handled) {
+        console.log(`[Telegram] follow-up ${r.event} em ${slug}: ${r.followers ?? 0} seguidor(es), ${r.cancelled ?? 0} pendente(s), ${r.closed ?? 0} fechada(s)`)
+      }
+    } catch (err) {
+      console.error("[Telegram] leitor de follow-up falhou:", err)
+    }
   }
 }
 

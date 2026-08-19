@@ -18,6 +18,7 @@ import type { BybitPosition } from '@/lib/bybit'
 import { resolvedPerpsChatId } from '@/lib/telegram-channel-ids'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { getSiteOrigin } from '@/lib/site-url'
+import { lifecycleMessage } from './signal-lifecycle'
 
 const PERPS_CHAT_SLUG = 'cripto-perps'
 const STATE_KEY = 'perps_monitor_state'
@@ -171,7 +172,23 @@ export async function runPerpsPositionMonitor(): Promise<{
     const sym = symbol.replace(/USDT$/, '')
     const pnl = await fetchLastClosedPnl(symbol).catch(() => null)
     const resultTxt = pnl != null ? ` — resultado ${pnl >= 0 ? '🟢 +' : '🔴 '}$${pnl.toFixed(2)}` : ''
-    await postPerps(`🏁 Posição fechada · ${sym} ${dirLabel(side)}${resultTxt}`)
+    const dir: 'buy' | 'sell' | null = side === 'Buy' ? 'buy' : side === 'Sell' ? 'sell' : null
+    const { text } = lifecycleMessage('closed', { symbol: sym, direction: dir, reason: resultTxt.replace(/^ — /, '') || null })
+    await postPerps(text)
+    // Fecha as ordens T2T de quem aceitou este sinal (Aurum Flow). Faltava — os seguidores
+    // do scanner de perpétuos ficavam com posições sem quem as encerrasse do lado da fonte.
+    try {
+      const { closeT2TFollowersForSignal } = await import('./t2t-lifecycle')
+      await closeT2TFollowersForSignal({
+        kind: 'close',
+        chatSlug: PERPS_CHAT_SLUG,
+        symbol: sym,
+        direction: dir,
+        label: 'Aurum Flow',
+      })
+    } catch (e) {
+      console.warn('[perps-monitor] fecho T2T falhou:', e instanceof Error ? e.message : String(e))
+    }
     delete state[k]
     events.push(`close ${k}`)
   }
