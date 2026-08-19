@@ -99,6 +99,8 @@ export default function AppMobileRegisterPage() {
     if (!formData.full_name.trim()) { setError('Nome completo é obrigatório'); return }
     if (!formData.email.trim()) { setError('Email é obrigatório'); return }
     if (!formData.username.trim()) { setError('Nome de utilizador é obrigatório'); return }
+    // Telemóvel obrigatório: sem ele não há follow-up por WhatsApp nem recuperação de conta.
+    if (!formData.phone.trim()) { setError('Telemóvel é obrigatório'); return }
     if (formData.password.length < 6) { setError('A palavra-passe deve ter pelo menos 6 carateres'); return }
     if (formData.password !== formData.confirmPassword) { setError('As palavras-passe não coincidem'); return }
 
@@ -404,7 +406,7 @@ export default function AppMobileRegisterPage() {
                   <Label htmlFor="phone" className="text-gray-300">Telefone</Label>
                   <Input id="phone" name="phone" type="tel" value={formData.phone}
                     onChange={handleInputChange} className="bg-gray-800 border-gray-700 text-white"
-                    placeholder="+351 912 345 678" disabled={isLoading} />
+                    placeholder="+351 912 345 678" required disabled={isLoading} />
                 </div>
                 <div>
                   <Label htmlFor="whatsapp" className="text-gray-300">WhatsApp</Label>

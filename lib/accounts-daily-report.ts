@@ -65,6 +65,8 @@ export async function buildDailyReport(): Promise<DailyReport> {
     .select('account_label, metaapi_account_id, is_active')
     .not('metaapi_account_id', 'is', null)
     .eq('is_active', true)
+    // Contas marcadas como fora das métricas continuam a operar, mas não entram no relatório.
+    .eq('metrics_excluded', false)
     .limit(30)
 
   const accounts: AccountDay[] = []

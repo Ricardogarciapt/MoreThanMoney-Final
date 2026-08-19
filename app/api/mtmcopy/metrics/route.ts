@@ -56,6 +56,8 @@ export async function GET(request: NextRequest) {
           'id, account_role, account_label, mt5_status, is_active, metaapi_account_id, mt5_login, mt5_login_last4, last_signal_at, is_audited, audit_label',
         )
         .eq('user_id', user.id)
+        // Contas marcadas como fora das métricas continuam a operar, mas não entram nos números.
+        .eq('metrics_excluded', false)
         .neq('mt5_status', 'disconnected'),
       supabaseAdmin
         .from('mtmcopy_signal_log')

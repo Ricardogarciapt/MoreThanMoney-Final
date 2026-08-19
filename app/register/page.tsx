@@ -165,6 +165,8 @@ export default function RegisterPage() {
     if (!formData.full_name.trim()) { setError(t('register.errorFullNameRequired')); return }
     if (!formData.email.trim()) { setError(t('register.errorEmailRequired')); return }
     if (!formData.username.trim()) { setError(t('register.errorUsernameRequired')); return }
+    // Telemóvel obrigatório: sem ele não há follow-up por WhatsApp nem recuperação de conta.
+    if (!formData.phone.trim()) { setError(t('register.errorPhoneRequired')); return }
     if (formData.password.length < 6) { setError(t('register.errorPasswordShort')); return }
     if (formData.password !== formData.confirmPassword) { setError(t('register.errorPasswordMismatch')); return }
 
@@ -545,7 +547,7 @@ export default function RegisterPage() {
                   <Label htmlFor="phone" className="text-gray-300">{t('register.labelPhone')}</Label>
                   <Input id="phone" name="phone" type="tel" value={formData.phone}
                     onChange={handleInputChange} className="bg-gray-800 border-gray-700 text-white"
-                    placeholder={t('register.placeholderPhone')} disabled={isLoading} />
+                    placeholder={t('register.placeholderPhone')} required disabled={isLoading} />
                 </div>
                 <div>
                   <Label htmlFor="whatsapp" className="text-gray-300">{t('register.labelWhatsapp')}</Label>

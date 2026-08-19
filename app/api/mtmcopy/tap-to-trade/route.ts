@@ -7,7 +7,8 @@ import {
   getLotSizingSkipReason,
   signalForRiskSizing,
 } from '@/lib/mtmcopy/lot-sizing'
-import { fetchLotSizingContext, placeOrder, type OrderRequest } from '@/lib/mtmcopy/metaapi'
+import { fetchLotSizingContext, getAccountSnapshot, placeOrder, type OrderRequest } from '@/lib/mtmcopy/metaapi'
+import { evaluatePropFirmGuard, propFirmLabel } from '@/lib/mtmcopy/prop-firm-guard'
 import { isMarketOpen } from '@/lib/mtmcopy/market-hours'
 import { symbolMatchesCanonical } from '@/lib/mtmcopy/symbol-resolver'
 import { tapToTradeEnabledChannels, T2T_SIGNAL_CHANNELS as SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
   //    NÃO mexe no sizing da cópia (lot_mode/value). Retrocompat: sem contas marcadas, usa a 1ª ativa.
   const { data: conns } = await supabase
     .from('mtmcopy_connections')
-    .select('id, account_label, mt5_login_last4, metaapi_account_id, lot_mode, lot_value, max_risk_percent, copy_sl, copy_tp, symbols_whitelist, is_active, purpose, t2t_enabled, t2t_lot_mode, t2t_lot_value')
+    .select('id, account_label, mt5_login_last4, metaapi_account_id, lot_mode, lot_value, max_risk_percent, copy_sl, copy_tp, symbols_whitelist, is_active, purpose, t2t_enabled, t2t_lot_mode, t2t_lot_value, prop_firm_type, baseline_balance')
     .eq('user_id', user.id)
     .neq('mt5_status', 'disconnected')
   const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id)
@@ -240,6 +241,36 @@ export async function POST(request: NextRequest) {
         await supabase.from('mtmcopy_signal_log').update({ status: 'error', detail: `T2T: ${skip}` }).eq('user_id', user.id).eq('chat_message_id', chatMessageId).eq('connection_id', conn.id)
         return { account: label, connectionId: conn.id, ok: false, error: skip }
       }
+      // Contas financiadas: almofada, consistência e drawdown diário decidem ANTES de abrir.
+      // A trade é encolhida ao tecto de risco da almofada; se a regra morde, não abre.
+      let lotFinal = lot
+      if (conn.prop_firm_type) {
+        const snap = await getAccountSnapshot(conn.metaapi_account_id!)
+        const saldo = ctx.balance ?? 0
+        const equity = snap?.equity ?? snap?.balance ?? saldo
+        const verdict = await evaluatePropFirmGuard({
+          accountId: conn.metaapi_account_id!,
+          propFirmType: conn.prop_firm_type,
+          baseline: conn.baseline_balance ?? saldo,
+          equity,
+          balance: saldo,
+        })
+        if (!verdict.allow) {
+          const motivo = `${propFirmLabel(conn.prop_firm_type)}: ${verdict.reason}`
+          await supabase.from('mtmcopy_signal_log').update({ status: 'skipped', detail: `T2T: ${motivo}` }).eq('user_id', user.id).eq('chat_message_id', chatMessageId).eq('connection_id', conn.id)
+          return { account: label, connectionId: conn.id, ok: false, skipped: true, error: motivo }
+        }
+        // Tecto pela almofada — só faz sentido quando o sizing é por percentagem de risco.
+        const modo = conn.t2t_lot_mode ?? conn.lot_mode
+        const pct = Number(conn.t2t_lot_value ?? conn.lot_value ?? 0)
+        if (modo === 'risk_percent' && pct > 0 && Number.isFinite(verdict.maxRiskAmount)) {
+          const riscoPretendido = (saldo * pct) / 100
+          if (riscoPretendido > verdict.maxRiskAmount && riscoPretendido > 0) {
+            lotFinal = Math.max(0.01, Number((lot * (verdict.maxRiskAmount / riscoPretendido)).toFixed(2)))
+          }
+        }
+      }
+
       // Tipo de ordem (market/limit/stop) conforme entry vs preço de mercado DESTA corretora.
       let orderType: 'market' | 'limit' | 'stop' = 'market'
       let openPrice: number | null = null
@@ -271,17 +302,17 @@ export async function POST(request: NextRequest) {
       if (!mh.open) {
         return { account: label, connectionId: conn.id, ok: false, symbol: sSymbol, error: `mercado fechado (${mh.reason})` }
       }
-      const orderReq: OrderRequest = { accountId: conn.metaapi_account_id!, symbol: sSymbol, direction: sDirection, volume: lot, orderType, openPrice, stopLoss: orderSl, takeProfit: orderTp, comment: 'TapToTrade MTM' }
+      const orderReq: OrderRequest = { accountId: conn.metaapi_account_id!, symbol: sSymbol, direction: sDirection, volume: lotFinal, orderType, openPrice, stopLoss: orderSl, takeProfit: orderTp, comment: 'TapToTrade MTM' }
       const result = await placeOrder(orderReq)
       await supabase.from('mtmcopy_signal_log').update({
-        lot,
+        lot: lotFinal,
         status: result.success ? 'open' : 'error',
         broker_position_id: result.success ? (result.orderId ?? null) : null,
         detail: result.success
           ? `Tap to Trade · ordem ${orderReq.orderType} · ${result.orderId ?? ''}${adjustedStops ? ' · SL/TP ajustado ao lado correto' : ''}`.trim()
           : `Tap to Trade falhou: ${result.error ?? 'erro'}`,
       }).eq('user_id', user.id).eq('chat_message_id', chatMessageId).eq('connection_id', conn.id).then(undefined, (e) => console.error('[tap-to-trade] update log error:', e))
-      return { account: label, connectionId: conn.id, ok: result.success, orderId: result.orderId, lot, symbol: result.brokerSymbol ?? sSymbol, sl: orderReq.stopLoss, tp: orderReq.takeProfit, error: result.success ? undefined : (result.error ?? 'erro') }
+      return { account: label, connectionId: conn.id, ok: result.success, orderId: result.orderId, lot: lotFinal, symbol: result.brokerSymbol ?? sSymbol, sl: orderReq.stopLoss, tp: orderReq.takeProfit, error: result.success ? undefined : (result.error ?? 'erro') }
     } catch (e) {
       return { account: label, connectionId: conn.id, ok: false, error: e instanceof Error ? e.message : String(e) }
     }

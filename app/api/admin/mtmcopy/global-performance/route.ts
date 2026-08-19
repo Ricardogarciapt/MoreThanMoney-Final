@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
       .limit(20000),
     supabase
       .from('mtmcopy_connections')
-      .select('id, account_label, mt5_login, mt5_login_last4, audit_label, is_audited'),
+      .select('id, account_label, mt5_login, mt5_login_last4, audit_label, is_audited')
+      .eq('metrics_excluded', false),
     supabase
       .from('trading_plan_trades')
       .select('user_id', { count: 'exact', head: true })
