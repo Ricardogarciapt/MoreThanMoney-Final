@@ -635,22 +635,34 @@ export default function NewLandingPage() {
             </ul>
 
             <p className="text-xs text-gray-600 mt-8 text-center">Disponível para iOS e Android</p>
-            <div className="flex justify-center gap-4 mt-4">
+            <div className="flex flex-wrap justify-center gap-3 mt-4">
+              {/* Link REAL da app na App Store (antes apontava para apps.apple.com, a loja genérica). */}
               <a
-                href="https://apps.apple.com"
+                href="https://apps.apple.com/pt/app/mtm-system/id6778558643"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-white/10 transition-colors"
               >
                 <span>🍎</span> App Store
               </a>
+              {/* Descarga direta do APK (antes este botão levava para a web app, não para a app). */}
+              <a
+                href="/downloads/MoreThanMoney.apk"
+                download
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-white/10 transition-colors"
+              >
+                <span>🤖</span> Descarregar Android (APK)
+              </a>
               <a
                 href="/app-mobile"
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 hover:bg-white/10 transition-colors"
               >
-                <span>🤖</span> Android (APP)
+                <span>🌐</span> Abrir no browser
               </a>
             </div>
+            <p className="text-[11px] text-gray-600 mt-3 text-center">
+              APK v1.5.0 · instalação direta, fora da Google Play
+            </p>
           </div>
         </div>
       </section>
