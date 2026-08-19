@@ -66,7 +66,7 @@ function streamVisual(stream: Stream): string | null {
 function canAccessStream(
   userPlan: "app_member" | "premium" | null | undefined,
   userType: string | undefined,
-  streamTier: "all" | "app_member" | "premium" | "vip" | null | undefined,
+  streamTier: "free" | "all" | "app_member" | "premium" | "vip" | null | undefined,
   memberCategory?: string | null
 ): boolean {
   if (userType === "admin") return true

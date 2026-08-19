@@ -363,6 +363,9 @@ export default function TradingViewWidget({
   // Estados - usar props externas se fornecidas, senão usar localStorage
   const [selectedStudies, setSelectedStudies] = useState<ScannerKey[]>(() => {
     if (externalStudies) return externalStudies
+    // Página dedicada a um scanner (ex.: /scanner/mtm-gold-killer) abre nesse scanner.
+    // Sem isto a prop era ignorada e a página mostrava o que estivesse em localStorage.
+    if (scannerType) return [scannerType]
     const saved = localStorage.getItem("mtm_active_scanners")
     return saved ? JSON.parse(saved) : (["AurumFlow"] as ScannerKey[])
   })

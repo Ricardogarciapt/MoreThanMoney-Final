@@ -38,7 +38,6 @@ export async function GET(
 ) {
   const { slug } = await params
   try {
-    const slug = slug
     if (!SLUG_RE.test(slug)) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 })
     }
@@ -68,7 +67,6 @@ export async function POST(
 ) {
   const { slug } = await params
   try {
-    const slug = slug
     if (!SLUG_RE.test(slug)) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 })
     }

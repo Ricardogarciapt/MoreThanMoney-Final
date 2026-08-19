@@ -195,6 +195,8 @@ export interface MetaApiPosition {
   comment?: string
   /** Hora de abertura (ISO). Usado para não gerir uma posição mais recente que a mensagem. */
   time?: string
+  /** P&L flutuante na moeda da conta — o MT5 devolve-o e o admin já o lia. */
+  profit?: number
 }
 
 export interface MetaApiPendingOrder {

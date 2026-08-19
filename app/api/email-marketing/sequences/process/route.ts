@@ -312,13 +312,14 @@ export async function POST(request: NextRequest) {
     // Criar preferências de email se não existir
     await supabase
       .from('email_preferences')
-      .insert({
-        user_id: userId,
-        marketing_emails: true,
-        dca_notifications: true
-      })
-      .onConflict('user_id')
-      .ignore()
+      .upsert(
+        {
+          user_id: userId,
+          marketing_emails: true,
+          dca_notifications: true
+        },
+        { onConflict: 'user_id', ignoreDuplicates: true }
+      )
     
     console.log(`✅ [SEQUENCES] Usuário inscrito: ${userId} em ${triggerEvent}`)
     

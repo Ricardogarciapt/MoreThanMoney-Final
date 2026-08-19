@@ -29,9 +29,9 @@ export async function GET(request: NextRequest) {
   if (connectionId) query = query.eq('id', connectionId)
   else query = query.eq('user_id', userId!)
 
-  const { data: connections, error } = await connectionId
+  const { data: connections, error } = await (connectionId
     ? query.maybeSingle().then((r) => ({ data: r.data ? [r.data] : [], error: r.error }))
-    : query.order('created_at', { ascending: true })
+    : query.order('created_at', { ascending: true }))
 
   if (error) {
     console.error('[admin/mtmcopy/subscriber] GET:', error)
