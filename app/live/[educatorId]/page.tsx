@@ -7,18 +7,9 @@ import { GraduationCap, Loader2, Presentation, X } from "lucide-react"
 import ProtectedPage from "@/components/protected-page"
 import LiveStreamRoom from "@/components/live/live-stream-room"
 import EducatorRatingsSection from "@/components/live/educator-ratings-section"
-import { LmsPlaylistSection } from "@/components/live/lms-playlist-section"
+import EducatorCoursesCard, { type CourseItem } from "@/components/live/educator-courses-card"
 import { useAuth } from "@/contexts/auth-context"
 import { Badge } from "@/components/ui/badge"
-
-function planAllows(userPlan: string | null | undefined, userType: string | null | undefined, tier?: string | null): boolean {
-  if (userType === "admin") return true
-  const t = tier || "all"
-  if (t === "all") return true
-  if (t === "app_member") return userPlan === "app_member" || userPlan === "premium"
-  if (t === "premium") return userPlan === "premium"
-  return false
-}
 
 type EducatorPublic = {
   id: string
@@ -111,7 +102,8 @@ export default function LiveByEducatorPage() {
   const { user } = useAuth()
   const [streamId, setStreamId] = useState<string>("")
   const [educator, setEducator] = useState<EducatorPublic | null>(null)
-  const [playlist, setPlaylist] = useState<{ url: string | null; tier: string | null; title: string | null }>({ url: null, tier: null, title: null })
+  // TODAS as playlists das salas do educador (o card junta-as aos cursos próprios dele).
+  const [roomCourses, setRoomCourses] = useState<CourseItem[]>([])
   const [loading, setLoading] = useState(true)
   const [showPresentation, setShowPresentation] = useState(false)
   const presentation = EDUCATOR_PRESENTATIONS[educatorId]
@@ -131,13 +123,16 @@ export default function LiveByEducatorPage() {
           fetch(`/api/live-sessions/educators/${educatorId}/ratings`).then((r) => r.json()),
           fetch(`/api/live-sessions/streams?educatorId=${educatorId}`).then((r) => r.json()).catch(() => ({ data: [] })),
         ])
-        const withPlaylist = (allStreamsRes.data || []).find((s: { playlist_url?: string | null }) => s.playlist_url)
-        if (withPlaylist)
-          setPlaylist({
-            url: withPlaylist.playlist_url,
-            tier: withPlaylist.playlist_access_tier ?? null,
-            title: withPlaylist.playlist_title ?? null,
-          })
+        const roomList: CourseItem[] = (allStreamsRes.data || [])
+          .filter((s: { playlist_url?: string | null }) => s.playlist_url)
+          .map((s: { id: string; title?: string; playlist_url: string; playlist_title?: string | null; playlist_access_tier?: string | null }) => ({
+            id: `room-${s.id}`,
+            title: s.playlist_title || `${s.title ?? "Sala"} · Aulas`,
+            url: s.playlist_url,
+            tier: s.playlist_access_tier ?? "all",
+            origin: "room" as const,
+          }))
+        setRoomCourses(roomList)
         const first = (streamsRes.data || [])[0]
         if (first?.id) {
           emptyPollsRef.current = 0
@@ -237,24 +232,14 @@ export default function LiveByEducatorPage() {
 
           {!loading && streamId && <LiveStreamRoom streamId={streamId} />}
 
-          {!loading && playlist.url && (
-            <LmsPlaylistSection
+          {/* CARD DE CURSOS: playlists próprias do educador (Studio) + playlists das salas dele. */}
+          {!loading && educatorId && (
+            <EducatorCoursesCard
+              educatorId={educatorId}
+              roomCourses={roomCourses}
+              userPlan={(user as { subscription_plan?: string })?.subscription_plan}
+              userType={(user as { user_type?: string })?.user_type}
               defaultOpen={!streamId}
-              playlistUrl={playlist.url}
-              playlistTitle={playlist.title}
-              canAccess={planAllows(
-                (user as { subscription_plan?: string })?.subscription_plan,
-                (user as { user_type?: string })?.user_type,
-                playlist.tier,
-              )}
-              tierLabel={
-                playlist.tier === "premium"
-                  ? "membros Premium (€65)"
-                  : playlist.tier === "app_member"
-                    ? "membros da app (€35) e superiores"
-                    : null
-              }
-              defaultOpen
             />
           )}
 
