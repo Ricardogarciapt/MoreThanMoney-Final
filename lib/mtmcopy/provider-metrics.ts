@@ -28,7 +28,15 @@ import {
 import { fetchMetaApiOverview } from './metaapi-admin'
 import { getAccountSnapshot } from './metaapi'
 
-export type ProviderKey = 'premium' | 'trade-ideas' | 'sensei' | 'goldkiller' | 'booster' | 'golddid' | 'bybit-perps'
+export type ProviderKey =
+  | 'premium'
+  | 'trade-ideas'
+  | 'sensei'
+  | 'goldkiller'
+  | 'booster'
+  | 'golddid'
+  | 'bybit-perps'
+  | 'copytrader-rg'
 
 export interface ProviderStrategyMetrics {
   key: ProviderKey

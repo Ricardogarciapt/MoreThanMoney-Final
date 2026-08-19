@@ -155,7 +155,7 @@ async function dispatch(
   try {
     const resp = await messaging.sendEachForMulticast({
       notification: { title, body, imageUrl: '/icon-512x512.png' },
-      data: { url, tag: 'mtm-mlm', ...dataPayload },
+      data: { tag: 'mtm-mlm', ...dataPayload },
       tokens: tokenList,
     })
 

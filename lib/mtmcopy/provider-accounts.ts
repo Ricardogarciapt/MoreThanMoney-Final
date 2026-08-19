@@ -83,6 +83,8 @@ export function getMtmChannelProviders(): Record<MtmcopyChannelKey, MtmChannelPr
   return {
     'premium-signals': premium.accountId ? premium : null,
     'trade-ideas': tradeIdeas.accountId ? tradeIdeas : null,
+    // Canal por identificar não tem conta provider — explícito para o Record ficar completo.
+    unknown: null,
   }
 }
 

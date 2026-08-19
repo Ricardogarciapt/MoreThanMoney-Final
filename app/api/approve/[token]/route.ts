@@ -8,13 +8,14 @@ const supabase = getSupabaseAdmin()
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
+  const { token } = await params
   try {
     console.log('🔐 [APPROVE] Processando token JWT...')
 
     // Decodificar e validar token JWT
-    const decoded = jwt.verify(params.token, process.env.JWT_SECRET!) as any
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
     const { userId, action } = decoded
 
     console.log(`📋 [APPROVE] Action: ${action}, UserID: ${userId}`)

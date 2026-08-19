@@ -28,7 +28,6 @@ export interface UserProfile {
   subscription_plan?: "app_member" | "premium" | null
   stripe_subscription_id?: string | null
   profile_data?: unknown
-  email?: string
 }
 
 export type AccountKind = "admin" | "vip" | "member" | "app_only" | "trial" | "pending" | "blocked"

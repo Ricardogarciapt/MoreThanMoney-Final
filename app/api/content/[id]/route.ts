@@ -2,14 +2,15 @@ import { NextResponse } from "next/server"
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   // Por enquanto, permitir acesso direto - autenticação será implementada depois
   // TODO: Implementar verificação de autenticação com Supabase
   
   try {
     // Implementar lógica da API aqui
-    return NextResponse.json({ id: params.id, message: "API funcionando" })
+    return NextResponse.json({ id: id, message: "API funcionando" })
   } catch (error) {
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
@@ -17,12 +18,13 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     // TODO: Implementar atualização no banco de dados
     const content = {
-      id: params.id,
+      id: id,
       title: "Vídeo de Introdução",
       type: "video",
       description: "Vídeo introdutório sobre o curso",
@@ -40,8 +42,9 @@ export async function PATCH(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     // TODO: Implementar exclusão no banco de dados
     return new NextResponse(null, { status: 204 })

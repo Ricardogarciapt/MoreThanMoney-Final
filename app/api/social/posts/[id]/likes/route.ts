@@ -7,8 +7,9 @@ import { notifyPostLike } from '@/lib/social-push-notify'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -34,7 +35,7 @@ export async function POST(
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const postId = params.id
+    const postId = id
 
     const supabaseAdmin = getSupabaseAdmin()
     const { data: postMeta } = await supabaseAdmin

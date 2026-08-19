@@ -79,7 +79,7 @@ export async function cancelPremiumPendingOnClose(
 /** Dispara a entrada de um pendente (partilhado entre poller server-side e webhook TradingView). */
 export async function firePendingEntry(
   row: PendingRow,
-  source: "tv_reaction" | "server_reconfirm" | "server_touch",
+  source: "tv_reaction" | "server_reconfirm" | "server_touch" | "market_flee",
   price: number,
 ): Promise<{ ok: boolean; detail: string }> {
   const supabase = getSupabaseAdmin()

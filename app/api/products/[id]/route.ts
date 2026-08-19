@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { productsService } from "@/lib/products-service"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
-    const product = await productsService.getProductById(params.id)
+    const product = await productsService.getProductById(id)
 
     if (!product) {
       return NextResponse.json(
@@ -32,10 +33,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
     const updates = await request.json()
-    const product = await productsService.updateProduct(params.id, updates)
+    const product = await productsService.updateProduct(id, updates)
 
     if (!product) {
       return NextResponse.json(
@@ -65,9 +67,10 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
-    const success = await productsService.deleteProduct(params.id)
+    const success = await productsService.deleteProduct(id)
 
     if (!success) {
       return NextResponse.json(

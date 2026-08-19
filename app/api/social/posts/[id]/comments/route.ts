@@ -7,8 +7,9 @@ import { notifyPostComment, notifySocialMentions } from '@/lib/social-push-notif
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -28,7 +29,7 @@ export async function GET(
       }
     )
 
-    const postId = params.id
+    const postId = id
 
     // Buscar comentários do post
     const { data: comments, error } = await supabase
@@ -61,8 +62,9 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -88,7 +90,7 @@ export async function POST(
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const postId = params.id
+    const postId = id
     const body = await request.json()
     const { content } = body
 
@@ -130,7 +132,7 @@ export async function POST(
     
     const supabaseAdminForXp = getSupabaseAdmin()
     const xp = await awardXp(supabaseAdminForXp, session.user.id, 'social_create_comment', {
-      actionDescription: `Comentário post ${params.id}`,
+      actionDescription: `Comentário post ${id}`,
     })
 
     const commenterName =

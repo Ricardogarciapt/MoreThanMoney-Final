@@ -5,8 +5,9 @@ import { cookies } from 'next/headers'
 // GET: Obter membros de um grupo
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -31,7 +32,7 @@ export async function GET(
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const groupId = params.id
+    const groupId = id
 
     // Verificar se o utilizador é admin
     const { data: profile } = await supabase

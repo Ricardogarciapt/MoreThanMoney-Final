@@ -132,6 +132,7 @@ async function buildProviderConnection(
     telegram_channel: null,
     telegram_status: 'connected',
     mt5_login_last4: null,
+    mt5_server: null,
     mt5_status: 'connected',
     ...executionProfileToConnectionFields(execution),
     is_active: true,

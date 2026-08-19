@@ -5,8 +5,9 @@ import { cookies } from 'next/headers'
 // PUT: Atualizar chart
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -73,7 +74,7 @@ export async function PUT(
     const { data: updatedChart, error } = await supabase
       .from('user_charts')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', userId)
       .select()
       .single()
@@ -109,8 +110,9 @@ export async function PUT(
 // DELETE: Apagar chart
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -155,7 +157,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('user_charts')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', userId)
 
     if (error) {

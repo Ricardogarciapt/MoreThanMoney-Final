@@ -5,10 +5,11 @@ const supabase = getSupabaseAdmin()
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
-    const notificationId = params.id
+    const notificationId = id
 
     if (!notificationId) {
       return NextResponse.json({
@@ -61,10 +62,11 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
-    const notificationId = params.id
+    const notificationId = id
 
     if (!notificationId) {
       return NextResponse.json({

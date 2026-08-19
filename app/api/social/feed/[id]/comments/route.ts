@@ -17,15 +17,16 @@ function extractMentionIds(content: string): string[] {
 /** Comentário em posts do feed (tabela post_comments). */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params
   try {
     const session = await getSocialSession(request)
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const postId = params.id
+    const postId = id
     const body = await request.json()
     const content = typeof body.content === 'string' ? body.content.trim() : ''
     if (!content) {

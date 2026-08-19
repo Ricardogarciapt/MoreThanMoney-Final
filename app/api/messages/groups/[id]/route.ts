@@ -6,8 +6,9 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 // GET: Obter mensagens do grupo
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -111,8 +112,9 @@ export async function GET(
 // POST: Enviar mensagem no grupo
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -273,8 +275,9 @@ export async function POST(
 // PUT: Atualizar grupo (apenas admin ou criador)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -310,7 +313,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Acesso negado. Apenas admins podem atualizar grupos' }, { status: 403 })
     }
 
-    const groupId = params.id
+    const groupId = id
     const body = await request.json()
     const { name, description, avatar_url, is_public, is_mobile_visible } = body
 
@@ -343,8 +346,9 @@ export async function PUT(
 // DELETE: Eliminar grupo (apenas admin)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const cookieStore = await cookies()
     const supabase = createServerClient(
@@ -380,7 +384,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Acesso negado. Apenas admins podem eliminar grupos' }, { status: 403 })
     }
 
-    const groupId = params.id
+    const groupId = id
 
     // Eliminar grupo (cascade elimina mensagens e membros)
     const { error } = await supabase

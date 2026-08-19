@@ -7,15 +7,16 @@ import { awardXp } from '@/lib/xp-service'
 /** Toggle like em posts do feed (tabela posts / post_likes). */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params
   try {
     const session = await getSocialSession(request)
     if (!session) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const postId = params.id
+    const postId = id
     const supabase = getSupabaseAdmin()
 
     const { data: post } = await supabase

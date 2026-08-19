@@ -34,10 +34,11 @@ function submissionEmailHtml(formTitle: string, fields: CustomFormField[], data:
 /** GET /api/forms/[slug] — definição pública de um formulário ativo. */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
+  const { slug } = await params
   try {
-    const slug = params.slug
+    const slug = slug
     if (!SLUG_RE.test(slug)) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 })
     }
@@ -63,10 +64,11 @@ export async function GET(
 /** POST /api/forms/[slug] — submissão pública: valida, grava e notifica por email. */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
+  const { slug } = await params
   try {
-    const slug = params.slug
+    const slug = slug
     if (!SLUG_RE.test(slug)) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 })
     }
