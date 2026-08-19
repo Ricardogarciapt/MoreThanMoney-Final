@@ -34,11 +34,12 @@ export interface PropFirmRules {
   cushionRiskShare: number
 }
 
-/** Regras reais da Equity Edge: 6% de drawdown total, 4% diário (confirmadas pelo Ricardo). */
+/** Regras reais da Equity Edge, confirmadas pelo Ricardo: 6% de drawdown total, 4% diário,
+ *  consistência a 50% (nenhum dia pode valer mais de metade do lucro total). */
 export const EQUITY_EDGE_RULES: PropFirmRules = {
   maxDrawdownPct: 0.06,
   dailyDrawdownPct: 0.04,
-  consistencyMaxDayShare: 0.3,
+  consistencyMaxDayShare: 0.5,
   cushionRiskShare: 0.25,
 }
 

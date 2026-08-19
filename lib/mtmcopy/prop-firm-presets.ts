@@ -124,7 +124,7 @@ export const PROP_FIRM_PRESETS: Record<PropFirmType, PropFirmPreset> = {
       },
     ],
     consistencyHint:
-      'Drawdown por equity: o flutuante conta para o limite. Risco ≤0,25%/trade, SL sempre copiado, sem ordens pendentes, parciais 33/33/34.',
+      'Drawdown por equity (6% total, 4% diário): o flutuante conta para o limite. Consistência a 50% — nenhum dia pode valer mais de metade do lucro total. Risco ≤0,25%/trade, SL sempre copiado, sem ordens pendentes, parciais 33/33/34.',
   },
 }
 
