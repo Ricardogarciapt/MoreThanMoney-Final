@@ -19,6 +19,7 @@ import {
   PREMIUM_WIDE_ZONE_TRAIL_ACTIVATION_PIPS,
 } from './premium-trade-active'
 import { mirrorPremiumExit } from './premium-subscriber-exits'
+import { CANONICAL_PREMIUM_ACCOUNT_ID } from './provider-constants'
 
 interface ActiveRow {
   id: string
@@ -77,6 +78,16 @@ function roundLot(n: number): number {
 
 function positionDir(p: MetaApiPosition): 'buy' | 'sell' {
   return /buy/i.test(p.type) ? 'buy' : 'sell'
+}
+
+/**
+ * O espelhamento de saídas para os subscritores SÓ faz sentido a partir da conta MESTRE.
+ * No modo SEMI-AUTOMÁTICO (premium_master_exec=off) cada subscritor tem a SUA linha em
+ * mtmcopy_premium_active e é gerido individualmente — espelhar aí fecharia as posições dos OUTROS
+ * subscritores em cadeia (dinheiro real). Por isso: espelha só se a linha for do mestre.
+ */
+function shouldMirrorExits(accountId: string): boolean {
+  return accountId === CANONICAL_PREMIUM_ACCOUNT_ID
 }
 
 export async function runPremiumPriceMonitor(): Promise<{
@@ -273,8 +284,8 @@ export async function runPremiumPriceMonitor(): Promise<{
           detail.push(`${row.symbol}: conta pequena → fecha tudo no Exit 1`)
           // Subscritores escalam o seu Exit 1 (cada um conforme o seu lote), mesmo com a mestre pequena.
           const pct1 = pcts[0] ?? 33
-          const m = await mirrorPremiumExit(row.symbol, row.direction, { kind: 'close_frac', frac: pct1 / 100 })
-          if (m.acted || m.skipped) detail.push(`${row.symbol}: subs Exit 1 → ${m.acted} escalaram, ${m.skipped} seguraram`)
+          const m = shouldMirrorExits(accountId) && await mirrorPremiumExit(row.symbol, row.direction, { kind: 'close_frac', frac: pct1 / 100 })
+          if (m && (m.acted || m.skipped)) detail.push(`${row.symbol}: subs Exit 1 → ${m.acted} escalaram, ${m.skipped} seguraram`)
         }
         await admin
           .from('mtmcopy_premium_active')
@@ -293,8 +304,8 @@ export async function runPremiumPriceMonitor(): Promise<{
         if (ok) detail.push(`${row.symbol}: Exit ${nextLevel} → fecha tudo (${currentVol})`)
         // Espelha o fecho total aos subscritores (CopyFactory não replica parciais).
         if (ok) {
-          const m = await mirrorPremiumExit(row.symbol, row.direction, { kind: 'close_all' })
-          if (m.acted) detail.push(`${row.symbol}: Exit ${nextLevel} → ${m.acted} subs fechados`)
+          const m = shouldMirrorExits(accountId) && await mirrorPremiumExit(row.symbol, row.direction, { kind: 'close_all' })
+          if (m && m.acted) detail.push(`${row.symbol}: Exit ${nextLevel} → ${m.acted} subs fechados`)
         }
       } else {
         const r = await closePositionById(accountId, pos.id, wanted)
@@ -302,8 +313,8 @@ export async function runPremiumPriceMonitor(): Promise<{
         if (ok) detail.push(`${row.symbol}: Exit ${nextLevel} → fecha ${pct}% (${wanted})`)
         // Espelha a MESMA fração aos subscritores; cada um escala conforme o seu lote.
         if (ok && currentVol > 0) {
-          const m = await mirrorPremiumExit(row.symbol, row.direction, { kind: 'close_frac', frac: wanted / currentVol })
-          if (m.acted || m.skipped) detail.push(`${row.symbol}: Exit ${nextLevel} subs → ${m.acted} escalaram, ${m.skipped} seguraram`)
+          const m = shouldMirrorExits(accountId) && await mirrorPremiumExit(row.symbol, row.direction, { kind: 'close_frac', frac: wanted / currentVol })
+          if (m && (m.acted || m.skipped)) detail.push(`${row.symbol}: Exit ${nextLevel} subs → ${m.acted} escalaram, ${m.skipped} seguraram`)
         }
       }
       if (!ok) {
@@ -332,8 +343,8 @@ export async function runPremiumPriceMonitor(): Promise<{
           patch.trailing_started = true
           detail.push(`${row.symbol}: BE (+${PREMIUM_BE_BUFFER_PIPS}p) + trailing + TP runner (${runnerTp ?? '—'}) após Exit 1`)
           // Espelha BE + trailing aos subscritores (protege o runner deles até Exit 2/3).
-          const m = await mirrorPremiumExit(row.symbol, row.direction, { kind: 'be_trailing', beSl, trailing })
-          if (m.acted) detail.push(`${row.symbol}: BE+trailing em ${m.acted} subs`)
+          const m = shouldMirrorExits(accountId) && await mirrorPremiumExit(row.symbol, row.direction, { kind: 'be_trailing', beSl, trailing })
+          if (m && m.acted) detail.push(`${row.symbol}: BE+trailing em ${m.acted} subs`)
         } catch {
           detail.push(`${row.symbol}: trailing falhou`)
         }
