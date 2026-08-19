@@ -122,6 +122,15 @@ export default function UpgradePage() {
   const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly')
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState('')
+  // Chegada pela campanha de ativação (email ou redirect do middleware): a conta existe,
+  // falta escolher pack. Lê-se do location para não obrigar a Suspense de useSearchParams.
+  const [ativacao, setAtivacao] = useState(false)
+
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    if (q.get('from') === 'ativacao') setAtivacao(true)
+    if ((q.get('plan') || '').endsWith('_annual')) setBilling('annual')
+  }, [])
 
   const currentPlan = user?.subscription_plan ?? 'app_member'
   const isPremium   = currentPlan === 'premium'
@@ -174,6 +183,18 @@ export default function UpgradePage() {
           )}
         </div>
       </div>
+
+      {ativacao && (
+        <div className="border-b border-[#D2A63C]/30 bg-[#D2A63C]/10">
+          <div className="container mx-auto max-w-5xl px-4 py-4">
+            <p className="text-sm font-semibold text-[#D2A63C]">A tua conta está à espera de ativação</p>
+            <p className="mt-1 text-sm leading-relaxed text-gray-300">
+              O histórico e o login ficam como estão. Escolhe o pack abaixo e o acesso ao site e às apps
+              reabre assim que o pagamento é confirmado.
+            </p>
+          </div>
+        </div>
+      )}
 
       <main className="container mx-auto px-4 py-12 max-w-5xl">
 

@@ -1,6 +1,7 @@
 import type { UserProfile } from "@/lib/role-redirect"
 import { isSubscriptionActive, isSubscriptionCategory } from "@/lib/member-subscription"
 import { needsAccessRevalidation } from "@/lib/access-migration"
+import { requiresActivation } from "@/lib/member-activation"
 
 function trialIsExpired(p: UserProfile): boolean {
   if (p.trial_expired === true) return true
@@ -28,6 +29,11 @@ export function isRegisteredMember(profile: UserProfile | null | undefined): boo
   }
 
   if (profile.user_type === "pending" || profile.is_active === false) {
+    return false
+  }
+
+  // Ativação pendente: escolheu-se pack + pagamento como condição de reentrada.
+  if (requiresActivation(profile)) {
     return false
   }
 

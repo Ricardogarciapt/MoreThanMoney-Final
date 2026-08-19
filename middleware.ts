@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr"
 import { isRegisteredMember } from "@/lib/member-access"
 import { isMemberProtectedPath, registerRedirectUrl } from "@/lib/member-route-guard"
 import { isExpiredTrial } from "@/lib/trial-access"
+import { activationRedirectPath, requiresActivation } from "@/lib/member-activation"
 import { needsAccessRevalidation } from "@/lib/access-migration"
 
 // Cache para rate limiting
@@ -215,6 +216,11 @@ export async function middleware(request: NextRequest) {
         // No iOS nativo NÃO se envia p/ Stripe (compliance) — segue o fluxo normal.
         const ua = request.headers.get("user-agent") || ""
         const iosNative = /MTMNativeApp/i.test(ua) && /iPhone|iPad|iPod/i.test(ua)
+        // Ativação pendente → escolha de pack (não /register: a conta existe, falta pagar).
+        // No iOS nativo não se envia para Stripe (compliance) — segue o fluxo normal.
+        if (requiresActivation(memberProfile) && !iosNative) {
+          return NextResponse.redirect(new URL(activationRedirectPath(), request.url))
+        }
         if (isExpiredTrial(memberProfile) && !iosNative) {
           return NextResponse.redirect(new URL("/upgrade?from=trial", request.url))
         }
