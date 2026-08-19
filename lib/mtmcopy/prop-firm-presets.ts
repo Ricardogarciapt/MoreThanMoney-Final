@@ -114,7 +114,7 @@ export const PROP_FIRM_PRESETS: Record<PropFirmType, PropFirmPreset> = {
         type: 'day',
         applyTo: 'equity-difference',
         closePositions: true,
-        maxRelativeRisk: 0.03,
+        maxRelativeRisk: 0.04,
       },
       {
         type: 'month',

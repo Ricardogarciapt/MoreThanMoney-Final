@@ -1,12 +1,132 @@
 import { NextRequest, NextResponse } from "next/server"
+import nodemailer from "nodemailer"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { isInternalApiRequest } from "@/lib/internal-api"
+import { mailFrom, prepareBrandedEmailHtml, brandedMailAttachments } from "@/lib/mail-transport"
+import { buildRenewalEmail } from "@/lib/renewal-emails"
 
 export const dynamic = "force-dynamic"
+export const maxDuration = 300
 
 function isAuthorized(request: NextRequest): boolean {
+  if (isInternalApiRequest(request)) return true
   const secret = process.env.CRON_SECRET?.trim()
   if (!secret) return process.env.NODE_ENV === "development"
   return request.headers.get("authorization") === `Bearer ${secret}`
+}
+
+function firstName(full?: string | null, email?: string): string {
+  const n = (full || "").trim()
+  if (n) return n.split(/\s+/)[0]
+  return (email || "").split("@")[0]
+}
+
+/**
+ * Aviso de renovação por EMAIL, 2 dias antes de a subscrição terminar.
+ *
+ * Cobre os dois casos, ao contrário dos avisos push (que só falam a quem não tem
+ * auto-renovação): quem renova sozinho recebe um aviso de transparência com o dia e o
+ * valor, quem não renova recebe o pedido de renovação com a escolha de pack.
+ *
+ * Idempotente pelo registo em `notifications` (type='renewal_email'): mesmo que o cron
+ * corra duas vezes no mesmo dia, cada pessoa só recebe um email por ciclo.
+ */
+async function sendRenewalEmails(opts: { dryRun: boolean; daysAhead: number }) {
+  const supabase = getSupabaseAdmin()
+  const now = new Date()
+  const windowStart = new Date(now.getTime() + (opts.daysAhead - 0.5) * 86_400_000)
+  const windowEnd = new Date(now.getTime() + (opts.daysAhead + 0.5) * 86_400_000)
+
+  const { data: due } = await supabase
+    .from("profiles")
+    .select("id, email, full_name, subscription_expires_at, subscription_plan, subscription_billing_cycle, subscription_auto_renew")
+    .eq("is_active", true)
+    .not("subscription_expires_at", "is", null)
+    .gte("subscription_expires_at", windowStart.toISOString())
+    .lt("subscription_expires_at", windowEnd.toISOString())
+
+  const alvos = (due ?? []).filter((u) => u.email)
+  const enviados: string[] = []
+  const saltados: string[] = []
+
+  if (!alvos.length) return { enviados, saltados, total: 0 }
+
+  const transporter =
+    !opts.dryRun && process.env.GMAIL_APP_PASSWORD
+      ? nodemailer.createTransport({
+          pool: true,
+          maxConnections: 1,
+          maxMessages: Infinity,
+          service: "gmail",
+          auth: { user: process.env.GMAIL_USER || "morethanmoneypt@gmail.com", pass: process.env.GMAIL_APP_PASSWORD },
+          rateDelta: 1000,
+          rateLimit: 3,
+        })
+      : null
+
+  for (const u of alvos) {
+    // Já avisado neste ciclo? (mesma data de expiração → mesmo aviso)
+    const { data: jaEnviado } = await supabase
+      .from("notifications")
+      .select("id")
+      .eq("user_id", u.id)
+      .eq("type", "renewal_email")
+      .eq("data->>expires_at", u.subscription_expires_at as string)
+      .maybeSingle()
+    if (jaEnviado) {
+      saltados.push(`${u.email} (já avisado)`)
+      continue
+    }
+
+    // Valor do último pagamento — só para dizer o número certo a quem renova sozinho.
+    const { data: ultimo } = await supabase
+      .from("payment_history")
+      .select("amount, currency")
+      .eq("user_id", u.id)
+      .eq("status", "succeeded")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const kind = u.subscription_auto_renew === false ? "manual" : "auto"
+    const mail = buildRenewalEmail(kind, {
+      nome: firstName(u.full_name, u.email as string),
+      email: u.email as string,
+      expiraEm: u.subscription_expires_at as string,
+      plan: u.subscription_plan,
+      ciclo: u.subscription_billing_cycle,
+      ultimoValorCents: (ultimo as { amount?: number } | null)?.amount ?? null,
+      moeda: (ultimo as { currency?: string } | null)?.currency ?? null,
+    })
+
+    if (transporter) {
+      try {
+        await transporter.sendMail({
+          from: mailFrom(),
+          to: u.email as string,
+          subject: mail.subject,
+          html: prepareBrandedEmailHtml(mail.html),
+          text: mail.text,
+          attachments: brandedMailAttachments(),
+        })
+        await supabase.from("notifications").insert({
+          user_id: u.id,
+          type: "renewal_email",
+          title: mail.subject,
+          message: `Aviso de renovação enviado (${kind}).`,
+          read: false,
+          data: { expires_at: u.subscription_expires_at, kind, url: "/member-area?tab=subscription" },
+        })
+      } catch (err) {
+        saltados.push(`${u.email}: ${err instanceof Error ? err.message : "erro"}`)
+        continue
+      }
+    }
+    enviados.push(`${u.email} (${kind})`)
+  }
+
+  transporter?.close()
+  return { enviados, saltados, total: alvos.length }
 }
 
 /**
@@ -98,11 +218,17 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Aviso por email a 2 dias — cobre auto-renovação e renovação manual.
+  const dryRun = request.nextUrl.searchParams.get("dryRun") === "1"
+  const daysAhead = Number(request.nextUrl.searchParams.get("days") ?? 2)
+  const renewal = await sendRenewalEmails({ dryRun, daysAhead })
+
   return NextResponse.json({
     success: true,
     checked_at: now.toISOString(),
     total_notified: totalNotified,
     notified,
+    renewal_emails: renewal,
     errors: errors.length ? errors : undefined,
   })
 }

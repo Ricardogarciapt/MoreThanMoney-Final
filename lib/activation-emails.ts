@@ -47,7 +47,7 @@ export const PACKS: PackOption[] = [
   },
 ]
 
-function checkoutUrl(planId: string, email: string): string {
+export function checkoutUrl(planId: string, email: string): string {
   const u = new URL('/upgrade', getSiteUrl())
   u.searchParams.set('plan', planId)
   u.searchParams.set('from', 'ativacao')
@@ -55,7 +55,7 @@ function checkoutUrl(planId: string, email: string): string {
   return u.toString()
 }
 
-function shell(inner: string): string {
+export function mtmEmailShell(inner: string): string {
   const site = getSiteUrl()
   const logo = getEmailLogoSrc()
   return `<!doctype html><html lang="pt"><body style="margin:0;background:#08080b;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#e9e9ee">
@@ -80,7 +80,7 @@ function shell(inner: string): string {
 
 
 /** O que nos separa do resto do mercado — usado nos emails de pagamento e de inativação. */
-function vantagensBlock(): string {
+export function vantagensBlock(): string {
   const linhas: [string, string][] = [
     ['Tap to Trade', 'Aceitas um sinal com um toque e ele abre na tua conta MT5 — com break-even, parciais e trailing geridos sozinhos. Não existe mais nada assim em português.'],
     ['Copy trading próprio', 'As nossas estratégias copiam direto para a tua conta, com o teu risco e os teus lotes. Infraestrutura nossa, não um serviço alugado.'],
@@ -102,7 +102,7 @@ function vantagensBlock(): string {
 }
 
 /** Cartões de pack — é aqui que o membro escolhe e paga. */
-function packBlock(email: string): string {
+export function packBlock(email: string): string {
   const cards = PACKS.map((p) => {
     const cor = p.destaque ? '#D2A63C' : '#3a3a52'
     const fundo = p.destaque ? 'rgba(210,166,60,0.08)' : '#1b1b26'
@@ -175,7 +175,7 @@ O trading envolve risco. Resultados passados não garantem resultados futuros.`
 
   return {
     subject: `${nome}, falta ativares o teu pack MoreThanMoney`,
-    html: shell(inner),
+    html: mtmEmailShell(inner),
     text,
   }
 }
@@ -193,7 +193,7 @@ function freeEmail(nome: string, email: string): ActivationEmail {
     ${ASSINATURA}`
   return {
     subject: `${nome}, o teu acesso MoreThanMoney continua aberto`,
-    html: shell(inner),
+    html: mtmEmailShell(inner),
     text: `${nome},
 
 Revimos todas as contas da comunidade e a tua fica ativa e oferecida. Não tens nada a pagar nem nada a fazer.
@@ -216,7 +216,7 @@ function partnerEmail(nome: string, email: string): ActivationEmail {
     ${ASSINATURA}`
   return {
     subject: `${nome}, a tua parceria com a MoreThanMoney`,
-    html: shell(inner),
+    html: mtmEmailShell(inner),
     text: `${nome},
 
 A tua conta fica marcada como parceiro: acesso completo mantido, sem mensalidade.
@@ -242,7 +242,7 @@ function offEmail(nome: string, email: string): ActivationEmail {
     ${ASSINATURA}`
   return {
     subject: `${nome}, a tua conta MoreThanMoney vai ser desativada`,
-    html: shell(inner),
+    html: mtmEmailShell(inner),
     text: `${nome},
 
 A tua conta não tem pack ativo nem atividade recente, por isso vai ser desativada.
