@@ -35,7 +35,9 @@ export function detectLifecycleEvent(content: string | null | undefined): Signal
   if (!c.trim()) return null
 
   // Alvos atingidos antes de a entrada encher.
-  if (/(todos\s+os\s+)?(tp|alvos?)\s*(\d\s*)?(j[áa]\s*)?(atingid|hit|batid)\w*\s*(antes|sem)\s*(de\s*)?(a\s*)?(entrada|abrir|abertura|entrar)/i.test(c))
+  // "…antes da entrada" / "…antes de abrir" / "…sem a entrada encher" — o artigo contraído
+  // ("da"/"do") tem de ser aceite, senão a forma mais natural em português não casa.
+  if (/(todos\s+os\s+)?(tp|alvos?)\s*(\d\s*)?(j[áa]\s*)?(atingid|hit|batid)\w*\s+(antes|sem)\s*(d[aeo]s?\s*)?(a\s*)?(entrada|abrir|abertura|entrar|encher)/i.test(c))
     return 'targets_before_entry'
   if (/all\s+tps?\s+hit\s+before\s+(opening|entry)/i.test(c)) return 'targets_before_entry'
 

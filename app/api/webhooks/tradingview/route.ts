@@ -1063,11 +1063,17 @@ export async function POST(request: NextRequest) {
   const t2tCloseSymbol = activeSensei?.symbol ?? v.symbol ?? parsedForExec.symbol ?? null
   const t2tCloseDir = (activeSensei?.direction ?? linkedIdea?.direction ?? v.direction ?? null) as "buy" | "sell" | null
   const isExitFollowup = isFollowup && (activeSensei?.alertType === "exit" || initAlertType === "exit")
-  if (isExitFollowup && t2tCloseSymbol && route.channel) {
+  // SL da fonte: as posições já abertas fecham pelo SL do próprio seguidor, mas as ordens
+  // PENDENTES que nunca encheram ficavam órfãs — a ideia morreu e a ordem continuava no mercado.
+  // Esse caso é um DESCARTE, não um fecho.
+  const isSlFollowup = isFollowup && (activeSensei?.alertType === "sl_hit" || initAlertType === "sl_hit")
+  if ((isExitFollowup || isSlFollowup) && t2tCloseSymbol && route.channel) {
     try {
       const { closeT2TFollowersForSignal } = await import("@/lib/mtmcopy/t2t-lifecycle")
       await closeT2TFollowersForSignal({
-        kind: "close",
+        kind: isSlFollowup ? "discard" : "close",
+        // No SL só se apagam as pendentes: a posição aberta do seguidor fecha pelo SL dela.
+        pendingOnly: isSlFollowup,
         chatSlug: route.channel,
         symbol: t2tCloseSymbol,
         direction: t2tCloseDir,

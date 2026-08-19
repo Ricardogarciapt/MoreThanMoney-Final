@@ -15,6 +15,8 @@ import {
   modifyPositionSlTp,
 } from './metaapi'
 import { tapToTradeEnabledChannels, T2T_SENDER_TO_CHAT } from './tap-to-trade-channels'
+import { lifecycleMessage } from './signal-lifecycle'
+import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 
 const supabase = getSupabaseAdmin()
 
@@ -218,10 +220,44 @@ export async function reconcileT2TPositionsClosed(rows: OpenT2TPosition[]): Prom
   }
 
   if (closedRowIds.length) {
+    // Antes de marcar, guardar a que SINAL pertencem: o fecho tem de ser anunciado ao cliente.
+    // Sem isto, uma posição T2T encerrada pela gestão do mestre era fechada em silêncio — e o
+    // monitor de preço já não a via (deixa de estar 'open'), por isso ninguém a anunciava.
+    const { data: fechadas } = await supabase
+      .from('mtmcopy_signal_log')
+      .select('id, chat_message_id, channel_key, symbol, direction')
+      .in('id', closedRowIds)
+
     await supabase
       .from('mtmcopy_signal_log')
       .update({ status: 'closed' })
       .in('id', closedRowIds)
       .then(undefined, (e) => console.warn('[t2t-management] update closed falhou:', e))
+
+    // Um anúncio por SINAL (não por conta) — vários seguidores do mesmo sinal não geram várias
+    // mensagens iguais no chat.
+    const jaAnunciado = new Set<string>()
+    for (const f of fechadas ?? []) {
+      const row = f as { chat_message_id?: string | null; channel_key?: string | null; symbol?: string | null; direction?: string | null }
+      const msgId = row.chat_message_id
+      const slug = row.channel_key
+      if (!msgId || !slug || jaAnunciado.has(msgId)) continue
+      jaAnunciado.add(msgId)
+      try {
+        const { text } = lifecycleMessage('closed', {
+          symbol: row.symbol ?? '',
+          direction: row.direction === 'sell' ? 'sell' : row.direction === 'buy' ? 'buy' : null,
+          reason: 'Encerrada pela gestão da fonte.',
+        })
+        const { data: msg } = await supabase
+          .from('chat_messages')
+          .insert({ channel_slug: slug, user_id: null, content: text, message_type: 'telegram_forward', notified: true, reply_to_id: msgId })
+          .select('id')
+          .single()
+        await sendTelegramChannelPush({ slug, content: text, chatMessageId: msg?.id as string }).catch(() => {})
+      } catch (e) {
+        console.warn('[t2t-management] anúncio de fecho falhou:', e instanceof Error ? e.message : String(e))
+      }
+    }
   }
 }

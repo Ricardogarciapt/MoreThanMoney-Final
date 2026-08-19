@@ -76,12 +76,19 @@ async function findEntryMessageWithFollowers(
 }
 
 /** Fecha/cancela a ordem T2T do símbolo numa conta (pendentes + abertas). */
-async function closeFollowerOrder(accountId: string, symbol: string): Promise<{ cancelled: number; closed: number }> {
+async function closeFollowerOrder(
+  accountId: string,
+  symbol: string,
+  /** Só apaga pendentes e deixa as posições abertas — usado quando a fonte leva SL: a posição
+   *  do seguidor fecha pelo SL dela, ao preço dela, e não deve ser fechada à força por nós. */
+  pendingOnly = false,
+): Promise<{ cancelled: number; closed: number }> {
   const out = { cancelled: 0, closed: 0 }
   try {
     const pend = await cancelPendingOrdersForSymbol(accountId, symbol)
     out.cancelled = pend.cancelled
   } catch { /* ignora */ }
+  if (pendingOnly) return out
   try {
     const positions = await listOpenPositions(accountId)
     for (const p of positions) {
@@ -104,6 +111,8 @@ export async function closeT2TFollowersForSignal(opts: {
   label: string
   /** Assinatura da fonte no conteúdo da entrada (opcional; ex.: /PrimeVerse/i). */
   sourceMatch?: RegExp
+  /** Só apagar ordens pendentes, deixando as posições abertas a fechar pelo SL/TP delas. */
+  pendingOnly?: boolean
 }): Promise<{ threaded: boolean; followers: number; cancelled: number; closed: number }> {
   const { kind, chatSlug, symbol, direction, label, sourceMatch } = opts
   // Kill-switch único (default ON). Off → não toca em ordens nem posta.
@@ -131,7 +140,7 @@ export async function closeT2TFollowersForSignal(opts: {
 
   // 2) Ação automática nas ordens T2T dos seguidores desse sinal.
   const r = entry?.id
-    ? await closeFollowersByMessage(entry.id, symbol, event, `${label} ${kind} (fonte)`)
+    ? await closeFollowersByMessage(entry.id, symbol, event, `${label} ${kind} (fonte)`, opts.pendingOnly === true)
     : { followers: 0, cancelled: 0, closed: 0 }
   return { threaded, ...r }
 }
@@ -146,6 +155,7 @@ export async function closeFollowersByMessage(
   symbol: string,
   event: SignalEvent,
   detail: string,
+  pendingOnly = false,
 ): Promise<{ followers: number; cancelled: number; closed: number }> {
   const supabase = getSupabaseAdmin()
   let followers = 0, cancelled = 0, closed = 0
@@ -160,7 +170,7 @@ export async function closeFollowersByMessage(
     const accId = (conn as { metaapi_account_id?: string } | null)?.metaapi_account_id
     if (!accId) continue
     followers++
-    const r = await closeFollowerOrder(accId, symbol)
+    const r = await closeFollowerOrder(accId, symbol, pendingOnly)
     cancelled += r.cancelled
     closed += r.closed
     await supabase.from('mtmcopy_signal_log')
