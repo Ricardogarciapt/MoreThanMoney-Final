@@ -359,7 +359,9 @@ const TELEGRAM_GROUP_SHORT_LABEL: Record<MtmcopyTelegramGroup, string> = {
 
 export function telegramGroupsLabel(groups: MtmcopyTelegramGroup[]): string {
   const uniq = [...new Set(groups)].filter(isTelegramGroup)
-  if (!uniq.length) return TELEGRAM_GROUP_SHORT_LABEL.premium
+  // Sem grupos escolhidos, o ecrã dizia "Premium · Ouro" — o mesmo default silencioso que pôs
+  // forex numa conta que não subscrevera nada. O que se mostra passa a ser o que está gravado.
+  if (!uniq.length) return 'Nenhum grupo escolhido'
   if (uniq.length === MTMCOPY_TELEGRAM_GROUP_IDS.length) return 'Todos os sinais'
   return uniq.map((g) => TELEGRAM_GROUP_SHORT_LABEL[g]).join(' + ')
 }
