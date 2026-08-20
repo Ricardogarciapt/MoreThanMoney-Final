@@ -191,8 +191,8 @@ const PACKS = [
     href: "/register?plan=premium",
   },
   {
-    id: "fundador",
-    name: "Pack Fundador",
+    id: "elite",
+    name: "Pack Elite",
     emoji: "👑",
     price: "€597",
     period: "/ano",
@@ -208,7 +208,7 @@ const PACKS = [
       "Formação: criar negócios digitais",
       "Acompanhamento direto e comunidade fechada",
     ],
-    cta: "Ser Fundador",
+    cta: "Ser Elite",
     href: "/register?plan=elite_annual",
   },
   {
