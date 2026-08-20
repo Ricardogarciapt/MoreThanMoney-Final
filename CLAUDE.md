@@ -589,3 +589,12 @@ Tarefa: "Lançar campanha de reativação de leads frios"
 
 Claude Code executa este pipeline diretamente via `POST /api/dashboard-gestao/chat`.
 Cada agente tem contexto isolado mas pode passar outputs para o próximo.
+
+---
+
+## PENDENTES (memória entre sessões)
+
+### 2026-08-21 — App iOS: complementar deep-link T2T (pedido Ricardo 2026-08-20)
+- A notificação de sinal T2T abre `/app-mobile?tab=tap-to-trade&signal=<msgId>` e o feed abre DE IMEDIATO o modal de confirmação com o botão "Tap to Trade" (aceitação expedita, 1 clique; guard 1× por sinal — commit 295ceb3).
+- **Falta**: garantir na app iOS nativa que o tap na push entrega esse URL à shell/WebView e o modal abre à primeira (incl. cold start). Verificar o mesmo no APK Android.
+- Regras de visibilidade em vigor: botão T2T visível em ideias válidas/pendentes até resolução (ENTRY HIT/TP/SL/BE/fecho/descarte, por símbolo E direção); sinais terminados escondidos dos feeds T2T/Alertas MTM (só BD; `?includeClosed=1` devolve tudo).
