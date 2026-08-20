@@ -27,6 +27,7 @@ import {
 } from './db'
 import { computeLotSize, getLotSizingSkipReason, signalForRiskSizing } from './lot-sizing'
 import { symbolMatchesCanonical } from './symbol-resolver'
+import { channelSymbolSkipReason } from './signal-rules'
 import {
   fetchLotSizingContext,
   getAccountSnapshot,
@@ -1018,6 +1019,22 @@ async function executeViaMtmProvider(
     }
   }
 
+  // O MTM Auto Premium negoceia OURO e mais nada — guarda por SÍMBOLO, independente de como o
+  // sinal foi classificado. (20/08: um relay entrou rotulado como Premium e abriu forex.)
+  const canalSkip = channelSymbolSkipReason(channel, signalForExec.symbol)
+  if (canalSkip) {
+    await logProviderSignalEvent({
+      channel,
+      provider,
+      signal: signalForExec,
+      raw,
+      telegramMessageId,
+      status: 'skipped',
+      detail: canalSkip,
+    })
+    return
+  }
+
   const lotSkip = getLotSizingSkipReason(
     lotConn,
     signalForExec,
@@ -1662,6 +1679,20 @@ async function processSignalDirect(
     : null
   const equity = snapshot?.equity ?? snapshot?.balance ?? balance
   lot = scaleLotForSmallCapital(lot, equity)
+
+  const canalSkipSub = channelSymbolSkipReason(channel, signal.symbol)
+  if (canalSkipSub) {
+    await logMtmcopySignal({
+      user_id: conn.user_id,
+      connection_id: conn.id,
+      symbol: signal.symbol,
+      direction: signal.direction,
+      status: 'skipped',
+      detail: canalSkipSub,
+      raw_message: raw,
+    })
+    return
+  }
 
   const lotSkip = getLotSizingSkipReason(conn, signal, balance, lot, marketPrice)
   if (lotSkip) {

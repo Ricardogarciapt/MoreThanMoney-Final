@@ -162,3 +162,27 @@ export function passesExecGate(
   }
   return { ok: true }
 }
+
+
+/**
+ * O MTM Auto Premium negoceia OURO e mais nada.
+ *
+ * O canal Premium é de ouro por definição, mas a whitelist de execução é partilhada por todos os
+ * canais e inclui dezenas de pares de forex. Bastou um relay entrar rotulado como Premium para os
+ * clientes abrirem EURUSD e USDJPY nas contas deles (20/08/2026). Esta guarda fecha essa porta
+ * pelo lado do símbolo, independentemente de como o sinal foi classificado.
+ */
+export function isPremiumTradableSymbol(symbol: string | null | undefined): boolean {
+  return /XAU|GOLD|OURO/i.test(symbol ?? '')
+}
+
+/** Motivo para recusar, ou null se o sinal pode executar neste canal. */
+export function channelSymbolSkipReason(
+  channel: string | null | undefined,
+  symbol: string | null | undefined,
+): string | null {
+  if (channel === 'premium-signals' && !isPremiumTradableSymbol(symbol)) {
+    return `MTM Auto Premium só negoceia ouro — ${symbol ?? 'símbolo desconhecido'} recusado`
+  }
+  return null
+}
