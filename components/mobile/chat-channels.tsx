@@ -676,8 +676,8 @@ function AttachSheet({
 // ── Tap to Trade MTM — deteção de mensagens negociáveis ───────────────────────
 // ⚠️ Deve espelhar o âmbito T2T do servidor (tapToTradeEnabledChannels / rotas com
 // tap_to_trade=true). Se mudares o âmbito no /admin, atualiza aqui também (ou o botão
-// do chat dessincroniza do accept do servidor). Âmbito atual: Forex + MTM + GoldKiller + Premium.
-const TAP_TRADE_CHANNELS = new Set(['trade-ideas-setup', 'sinais-scanner-mtm', 'trade-ideas', 'sinais-goldkiller', 'premium-ideas'])
+// do chat dessincroniza do accept do servidor). Âmbito atual: Forex + MTM + GoldKiller + Premium + Sensei.
+const TAP_TRADE_CHANNELS = new Set(['trade-ideas-setup', 'sinais-scanner-mtm', 'trade-ideas', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner'])
 const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
 /** Um follow-up POSTERIOR com isto RESOLVE o sinal (ativou/fechou/morreu) → o botão T2T esconde-se.
  *  'ENTRY HIT' literal (monitor/PrimeVerse) e não 'ativad' — senão as entradas Sensei ("Ideia

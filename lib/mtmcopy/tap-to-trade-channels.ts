@@ -12,11 +12,12 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
 }
 
 /**
- * Âmbito T2T decidido: MTM Scanner + GoldKiller + Forex + Premium (Sensei fora).
+ * Âmbito T2T decidido: MTM Scanner + GoldKiller + Forex + Premium + Sensei (entradas
+ * validadas — pedido Ricardo 2026-08-20: Sensei entra no monitor/gestão T2T completa).
  * Nota: a lista viva é calculada dinamicamente por tapToTradeEnabledChannels() a partir
  * das rotas com tap_to_trade=true; esta constante é o espelho canónico/documental.
  */
-export const T2T_SIGNAL_CHANNELS = ['trade-ideas-setup', 'sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'sinais-goldkiller', 'premium-ideas']
+export const T2T_SIGNAL_CHANNELS = ['trade-ideas-setup', 'sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner']
 
 /** Slug do canal de chat DEDICADO de uma rota provider (estável, por id da rota). */
 export function deriveProviderChannelSlug(r: ProviderRoute): string {

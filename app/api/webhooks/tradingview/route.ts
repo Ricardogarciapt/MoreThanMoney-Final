@@ -1146,7 +1146,7 @@ export async function POST(request: NextRequest) {
     // Âmbito T2T (decisão): MTM Scanner + GoldKiller + Forex (Premium vem por outro push).
     // Sinal num canal T2T → o toque abre direto o T2T + menu de aceitação (?signal=<msgId>).
     // Restantes → chat específico do sinal (com âncora à mensagem p/ scroll/realce).
-    const T2T_NOTIF_CHANNELS = new Set(["trade-ideas-setup", "sinais-scanner-mtm", "trade-ideas", "sinais-goldkiller"])
+    const T2T_NOTIF_CHANNELS = new Set(["trade-ideas-setup", "sinais-scanner-mtm", "trade-ideas", "sinais-goldkiller", "sensei-scanner"])
     const isT2TNotif = Boolean(route.channel && chatId && T2T_NOTIF_CHANNELS.has(route.channel))
     const pushUrl = isT2TNotif
       ? `/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(chatId as string)}`
