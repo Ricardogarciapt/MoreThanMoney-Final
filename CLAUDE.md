@@ -594,7 +594,11 @@ Cada agente tem contexto isolado mas pode passar outputs para o próximo.
 
 ## PENDENTES (memória entre sessões)
 
-### 2026-08-21 — App iOS: complementar deep-link T2T (pedido Ricardo 2026-08-20)
-- A notificação de sinal T2T abre `/app-mobile?tab=tap-to-trade&signal=<msgId>` e o feed abre DE IMEDIATO o modal de confirmação com o botão "Tap to Trade" (aceitação expedita, 1 clique; guard 1× por sinal — commit 295ceb3).
-- **Falta**: garantir na app iOS nativa que o tap na push entrega esse URL à shell/WebView e o modal abre à primeira (incl. cold start). Verificar o mesmo no APK Android.
+### ✅ RESOLVIDO 2026-08-20 — Deep-link T2T nas apps nativas (commit b82e4b6)
+- A notificação de sinal T2T abre `/app-mobile?tab=tap-to-trade&signal=<msgId>` e o feed abre DE IMEDIATO o modal de confirmação (aceitação 1 clique; guard 1× por sinal — commit 295ceb3).
+- **Cobertura por shell (sem rebuild nativo — as shells carregam o site ao vivo):**
+  - Web/PWA/Android: service worker `notificationclick` navega com o URL (incl. cold start via openWindow); ação "Fechar" já não abre a app.
+  - Capacitor: tap trata `data.url`; cold start recuperado com `App.getLaunchUrl()`.
+  - **iOS WKWebView (APNs nativo, código Swift fora do repo)**: RESGATE server-side — ao abrir/retomar sem `?signal`, a app procura a notificação in-app T2T não-lida (<3 min), navega para o `data.url` e marca-a lida. O tap na push funciona de facto mesmo sem a shell entregar o URL.
+- Rebuild nativo é OPCIONAL (só para entrega direta do URL no Swift; o resgate já cobre o fluxo).
 - Regras de visibilidade em vigor: botão T2T visível em ideias válidas/pendentes até resolução (ENTRY HIT/TP/SL/BE/fecho/descarte, por símbolo E direção); sinais terminados escondidos dos feeds T2T/Alertas MTM (só BD; `?includeClosed=1` devolve tudo).
