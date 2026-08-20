@@ -6,6 +6,7 @@ import MtmcopyTelegramSenders from "@/components/admin/mtmcopy-telegram-senders"
 import MtmcopyProviderPipeline from "@/components/admin/mtmcopy-provider-pipeline"
 import MtmcopyMetaApiPanel from "@/components/admin/mtmcopy-metaapi-panel"
 import MtmcopyProviderAccounts from "@/components/admin/mtmcopy-provider-accounts"
+import MtmcopySubscriberHealth from "@/components/admin/mtmcopy-subscriber-health"
 import { cn } from "@/lib/utils"
 import type { MtmcopyAdminTab } from "@/components/admin/mtmcopy-admin-shell"
 
@@ -93,11 +94,15 @@ export default function MtmcopyOpsHub({
           Subscribers · CopyFactory
         </h2>
         <p className="text-sm text-zinc-400 mt-1">
-          Contas MetaAPI, estratégias activas, subscribers e estado de sincronização em tempo real.
+          Saúde de cada ligação — o que está a copiar, com que risco, e o que precisa de mão.
         </p>
       </div>
-      <div className="p-5 sm:p-6">
-        <MtmcopyMetaApiPanel />
+      <div className="p-5 sm:p-6 space-y-8">
+        <MtmcopySubscriberHealth />
+        <div className="pt-6 border-t border-zinc-800">
+          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-4">Estado MetaAPI</p>
+          <MtmcopyMetaApiPanel />
+        </div>
       </div>
     </section>
   )
