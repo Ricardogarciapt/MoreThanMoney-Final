@@ -1,5 +1,7 @@
 "use client"
 
+import { useI18n } from "@/components/i18n-provider"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Globe, Check, Loader2 } from "lucide-react"
@@ -132,11 +134,20 @@ function setGoogtransCookie(value: string) {
 }
 
 export default function LanguageSelectorEnhanced() {
-  const [currentLanguage, setCurrentLanguage] = useState<string>('pt')
+  // O dicionário nativo (lib/i18n) e o Google Translate eram dois sistemas separados: o seletor
+  // escrevia googtrans e o dicionário lia mtm_lang, por isso a página podia estar em inglês com
+  // o seletor a dizer Português. Passa a conduzir os dois — o Google Translate continua a servir
+  // as páginas ainda não migradas, e o dicionário segue a mesma escolha.
+  const { lang: langNativo, setLang: setLangNativo } = useI18n()
+  const [currentLanguage, setCurrentLanguage] = useState<string>(langNativo)
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null)
   const [userCountry, setUserCountry] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setCurrentLanguage(langNativo)
+  }, [langNativo])
 
   useEffect(() => {
     loadUserLanguagePreferences()
@@ -265,6 +276,7 @@ export default function LanguageSelectorEnhanced() {
       }
 
       // 3. Salvar no localStorage/sessionStorage IMEDIATAMENTE
+      setLangNativo(langCode)   // dicionário nativo: cookie mtm_lang + re-render sem recarregar
       localStorage.setItem('mtm_preferred_language', langCode)
       sessionStorage.setItem('mtm_active_language', langCode)
       sessionStorage.setItem('mtm_user_manual_selection', 'true')
@@ -422,7 +434,7 @@ export default function LanguageSelectorEnhanced() {
         <DropdownMenuSeparator className="bg-gray-700" />
         
         <div className="px-3 py-2 text-xs text-gray-500">
-          💡 Traduções via Google Translate
+          💡 Tradução nativa MTM · 21 idiomas
         </div>
       </DropdownMenuContent>
     </DropdownMenu>

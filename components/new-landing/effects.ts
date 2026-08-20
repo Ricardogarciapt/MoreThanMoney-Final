@@ -67,9 +67,17 @@ export function mountLandingEffects(root: HTMLElement): () => void {
   onScroll()
   cleanups.push(() => removeEventListener("scroll", onScroll))
 
-  /* corrimão de capítulos */
+  /* corrimão de capítulos — some ao chegar ao fim da página para não pisar o rodapé global */
   const rail = $<HTMLElement>("#l2-rail")
   if (rail) {
+    const fim = () => {
+      const perto = scrollY + innerHeight > root.offsetTop + root.offsetHeight - 120
+      rail.style.opacity = perto ? "0" : ""
+      rail.style.pointerEvents = perto ? "none" : ""
+    }
+    addEventListener("scroll", fim, { passive: true })
+    fim()
+    cleanups.push(() => removeEventListener("scroll", fim))
     const links = Array.from(rail.children) as HTMLElement[]
     const rio = new IntersectionObserver(
       (es) =>

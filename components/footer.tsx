@@ -8,7 +8,7 @@ import { useT } from "@/components/i18n-provider"
 export default function Footer() {
   const t = useT()
   return (
-    <footer className="bg-gradient-to-b from-black via-gray-900 to-black border-t border-mtm-primary/20">
+    <footer className="bg-gradient-to-b from-black via-stone-900 to-black border-t border-mtm-primary/20">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Logo e Descrição */}

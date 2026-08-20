@@ -1,7 +1,8 @@
 /**
  * CSS da landing pública (/new-landing). Vive num <style> em vez de Tailwind porque a página é
  * uma peça de design fechada — paleta, tipografia, animações de scroll e demos mudam juntas.
- * Todo escopado por `.l2` para não vazar para a navbar e o rodapé globais do site.
+ * Gerado com todos os seletores escopados por `.l2`: a navbar e o rodapé são os globais do site
+ * e não podem ser afetados por nada daqui.
  */
 export const LANDING_CSS = String.raw`
 .l2{
@@ -14,6 +15,10 @@ export const LANDING_CSS = String.raw`
 .l2 *{box-sizing:border-box}
 .l2{scroll-behavior:smooth}
 .l2{margin:0;background:var(--ground);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.65;overflow-x:hidden}
+/* As camadas de atmosfera (canvas, auras, malha, grao) sao position:fixed e cobririam a
+   viewport inteira — incluindo o rodape global do site, que fica FORA de .l2. O isolate cria
+   um contexto de empilhamento: tudo o que e daqui fica preso aqui, e o rodape pinta por cima. */
+.l2{position:relative;isolation:isolate;z-index:0}
 .l2 .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
 .l2 h1, .l2 h2, .l2 h3{font-family:var(--disp);font-weight:700;letter-spacing:-.028em;text-wrap:balance;margin:0;line-height:1.05}
 .l2 h1{font-weight:800;letter-spacing:-.038em}
@@ -34,15 +39,21 @@ export const LANDING_CSS = String.raw`
 .l2 .aur.b{width:430px;height:430px;background:radial-gradient(circle,#7a5d16,transparent 66%);bottom:6%;right:-8%;animation:l2float2 41s ease-in-out infinite alternate}
 @keyframes l2float1{to{transform:translate3d(16vw,22vh,0) scale(1.22)}}
 @keyframes l2float2{to{transform:translate3d(-14vw,-18vh,0) scale(.84)}}
-.l2 .l2mesh{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+.l2 .mesh{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
   background-image:linear-gradient(rgba(210,166,60,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(210,166,60,.07) 1px,transparent 1px);
   background-size:78px 78px;animation:l2mesh 34s linear infinite;
-  mask-image:radial-gradient(ellipse 120% 70% at 50% 40%,#000 20%,transparent 78%)}
+  -webkit-mask-image:radial-gradient(ellipse 120% 70% at 50% 40%,#000 20%,transparent 78%);mask-image:radial-gradient(ellipse 120% 70% at 50% 40%,#000 20%,transparent 78%)}
 @keyframes l2mesh{to{background-position:78px 78px}}
+.l2 header, .l2 section, .l2 .strip, .l2 .nar{position:relative;z-index:2}
 @media(prefers-reduced-motion:reduce){
 .l2 .r{opacity:1;transform:none;transition:none}
 .l2 *{animation:none!important}
-.l2 #l2-amb{display:none}}
+.l2 #l2-amb{display:none}
+}
+.l2 .btn{display:inline-block;font-weight:600;font-size:14px;padding:10px 21px;border-radius:999px;background:var(--gold);color:#08080a;transition:transform .25s,box-shadow .25s}
+.l2 .btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(210,166,60,.3)}
+.l2 .btn.g{background:transparent;color:var(--ink);border:1px solid var(--line2)}
+.l2 .btn.g:hover{border-color:var(--gold);box-shadow:none}
 .l2 .open2{min-height:100vh;display:flex;align-items:center;overflow:hidden}
 .l2 .open2__bg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.68;transform:scale(1.08);animation:l2drift 28s ease-in-out infinite alternate}
 @keyframes l2drift{to{transform:scale(1.16) translate3d(-1.5%,-1%,0)}}
@@ -70,7 +81,8 @@ export const LANDING_CSS = String.raw`
 .l2 .head p{color:var(--dim);margin:18px 0 0;font-size:18px}
 .l2 .nums{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:18px;overflow:hidden}
 @media(max-width:1000px){
-.l2 .nums{grid-template-columns:repeat(2,1fr)}}
+.l2 .nums{grid-template-columns:repeat(2,1fr)}
+}
 .l2 .num{background:var(--ground);padding:32px 24px}
 .l2 .num .v{font-family:var(--mono);font-size:clamp(25px,3.1vw,36px);font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;line-height:1}
 .l2 .num .l{font-size:13px;color:var(--dim);margin-top:9px}
@@ -82,7 +94,8 @@ export const LANDING_CSS = String.raw`
 .l2 .scene p{color:var(--dim);max-width:46ch;margin-top:18px;font-size:17px}
 .l2 .day{display:grid;grid-template-columns:1fr 380px;gap:68px;align-items:start}
 @media(max-width:960px){
-.l2 .day{grid-template-columns:1fr;gap:42px}}
+.l2 .day{grid-template-columns:1fr;gap:42px}
+}
 .l2 .beat{padding:28px 0;border-top:1px solid var(--line);opacity:.32;transition:opacity .6s}
 .l2 .beat.on{opacity:1}
 .l2 .beat:first-child{border-top:0}
@@ -92,7 +105,8 @@ export const LANDING_CSS = String.raw`
 .l2 .beat .tool{display:inline-block;margin-top:13px;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-lt);border:1px solid var(--gold-dp);border-radius:999px;padding:4px 11px}
 .l2 .phone{position:sticky;top:110px;justify-self:center}
 @media(max-width:960px){
-.l2 .phone{position:static}}
+.l2 .phone{position:static}
+}
 .l2 .phone__b{width:322px;max-width:88vw;border-radius:38px;border:1px solid var(--line2);background:#0b0b0d;padding:13px;box-shadow:0 40px 90px rgba(0,0,0,.7)}
 .l2 .phone__s{border-radius:26px;background:#08080a;height:512px;overflow:hidden;display:flex;flex-direction:column}
 .l2 .phone__bar{padding:13px 15px 9px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
@@ -110,11 +124,14 @@ export const LANDING_CSS = String.raw`
 .l2 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 .l2 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 @media(max-width:1000px){
-.l2 .grid4{grid-template-columns:repeat(2,1fr)}}
+.l2 .grid4{grid-template-columns:repeat(2,1fr)}
+}
 @media(max-width:860px){
-.l2 .grid2, .l2 .grid3{grid-template-columns:1fr}}
+.l2 .grid2, .l2 .grid3{grid-template-columns:1fr}
+}
 @media(max-width:560px){
-.l2 .grid4{grid-template-columns:1fr}}
+.l2 .grid4{grid-template-columns:1fr}
+}
 .l2 .card{position:relative;border:1px solid var(--line);border-radius:20px;padding:30px 26px;overflow:hidden;
   background:radial-gradient(120% 100% at 0% 0%,rgba(210,166,60,.07),transparent 58%),var(--panel);transition:border-color .4s,transform .4s}
 .l2 .card::after{content:"";position:absolute;inset:0;border-radius:20px;pointer-events:none;opacity:0;transition:opacity .5s;
@@ -134,14 +151,16 @@ export const LANDING_CSS = String.raw`
 .l2 .reveal.on img{clip-path:inset(0 0 0 0)}
 .l2 .split{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
 @media(max-width:900px){
-.l2 .split{grid-template-columns:1fr;gap:36px}}
+.l2 .split{grid-template-columns:1fr;gap:36px}
+}
 .l2 .split h2{font-size:clamp(26px,3.6vw,40px)}
 .l2 .split p{color:var(--dim);font-size:16.5px}
 .l2 .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
 .l2 .tag{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-lt);border:1px solid var(--gold-dp);border-radius:999px;padding:5px 12px}
 .l2 .certs{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 @media(max-width:860px){
-.l2 .certs{grid-template-columns:1fr}}
+.l2 .certs{grid-template-columns:1fr}
+}
 .l2 .cert{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--panel);transition:transform .5s,border-color .5s}
 .l2 .cert:hover{transform:translateY(-6px) rotate(-.5deg);border-color:var(--gold-dp)}
 .l2 .cert img{display:block;width:100%;height:auto}
@@ -159,9 +178,11 @@ export const LANDING_CSS = String.raw`
 .l2 .story .sq{font-size:13px;color:var(--dim);margin:11px 0 0;line-height:1.55}
 .l2 .packs{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 @media(max-width:940px){
-.l2 .packs{grid-template-columns:repeat(2,1fr)}}
+.l2 .packs{grid-template-columns:repeat(2,1fr)}
+}
 @media(max-width:560px){
-.l2 .packs{grid-template-columns:1fr}}
+.l2 .packs{grid-template-columns:1fr}
+}
 .l2 .pk{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 22px;display:flex;flex-direction:column;transition:transform .35s,border-color .35s}
 .l2 .pk:hover{transform:translateY(-5px);border-color:var(--line2)}
 .l2 .pk.star{border-color:var(--gold);background:linear-gradient(180deg,rgba(210,166,60,.1),var(--panel) 56%)}
@@ -200,7 +221,8 @@ export const LANDING_CSS = String.raw`
   color:var(--gold);border-radius:999px;padding:7px 16px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
 .l2 .tw{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
 @media(max-width:900px){
-.l2 .tw{grid-template-columns:1fr}}
+.l2 .tw{grid-template-columns:1fr}
+}
 .l2 .tm{border:1px solid rgba(210,166,60,.2);border-radius:18px;padding:26px 24px;
   background:linear-gradient(135deg,rgba(210,166,60,.055),transparent 62%),var(--panel);
   display:flex;flex-direction:column;transition:border-color .4s,transform .4s}
@@ -267,9 +289,10 @@ export const LANDING_CSS = String.raw`
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
   animation:l2grain 1.1s steps(4) infinite}
 @keyframes l2grain{0%{transform:translate(0,0)}25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-2%)}}
-.l2 #l2-rail{position:fixed;left:22px;top:50%;transform:translateY(-50%);z-index:60;display:flex;flex-direction:column;gap:14px}
+.l2 #l2-rail{transition:opacity .4s;position:fixed;left:22px;top:50%;transform:translateY(-50%);z-index:60;display:flex;flex-direction:column;gap:14px}
 @media(max-width:1340px){
-.l2 #l2-rail{display:none}}
+.l2 #l2-rail{display:none}
+}
 .l2 #l2-rail a{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--faint);transition:color .35s}
 .l2 #l2-rail i{display:block;width:16px;height:1px;background:var(--line2);transition:width .45s cubic-bezier(.16,.72,.24,1),background .45s}
 .l2 #l2-rail a span{opacity:0;transform:translateX(-4px);transition:.35s;white-space:nowrap}
@@ -299,7 +322,8 @@ export const LANDING_CSS = String.raw`
 @keyframes l2blink{50%{opacity:0}}
 .l2 .gauges{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
 @media(max-width:760px){
-.l2 .gauges{grid-template-columns:1fr}}
+.l2 .gauges{grid-template-columns:1fr}
+}
 .l2 .ga{border:1px solid var(--line);border-radius:13px;padding:15px 16px;background:rgba(8,8,10,.4)}
 .l2 .ga .gl{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
 .l2 .ga .gv{font-family:var(--mono);font-size:22px;font-weight:700;margin:9px 0 8px;font-variant-numeric:tabular-nums}
@@ -308,7 +332,8 @@ export const LANDING_CSS = String.raw`
 .l2 .ga .gs{font-size:11.5px;color:var(--faint);margin-top:7px}
 .l2 .scen{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 @media(max-width:760px){
-.l2 .scen{grid-template-columns:1fr}}
+.l2 .scen{grid-template-columns:1fr}
+}
 .l2 .sc{border:1px solid var(--line);border-radius:13px;padding:14px 15px;background:rgba(8,8,10,.4);
   opacity:0;transform:translateY(12px);transition:.7s cubic-bezier(.16,.72,.24,1)}
 .l2 .on .sc{opacity:1;transform:none}
@@ -321,7 +346,8 @@ export const LANDING_CSS = String.raw`
 .l2 .sc .bar i{display:block;height:100%;width:0;transition:width 1.2s cubic-bezier(.16,.72,.24,1) .3s}
 .l2 .alerts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 @media(max-width:940px){
-.l2 .alerts{grid-template-columns:1fr}}
+.l2 .alerts{grid-template-columns:1fr}
+}
 .l2 .al{border:1px solid var(--line);border-radius:15px;background:var(--panel);padding:16px 17px;
   opacity:0;transform:translateY(26px) rotate(-1.4deg) scale(.97);transition:.85s cubic-bezier(.16,.72,.24,1)}
 .l2 .on .al{opacity:1;transform:none}
@@ -347,7 +373,8 @@ export const LANDING_CSS = String.raw`
   font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
 .l2 .dca{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
 @media(max-width:940px){
-.l2 .dca{grid-template-columns:1fr}}
+.l2 .dca{grid-template-columns:1fr}
+}
 .l2 .dc{border:1px solid var(--line);border-radius:15px;padding:16px 17px;background:var(--panel);
   opacity:0;transform:translateY(20px);transition:.75s cubic-bezier(.16,.72,.24,1)}
 .l2 .on .dc{opacity:1;transform:none}
@@ -361,13 +388,15 @@ export const LANDING_CSS = String.raw`
 .l2 .dc .why{font-size:12.5px;color:var(--dim);margin:13px 0 0;line-height:1.55}
 .l2 .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 @media(max-width:860px){
-.l2 .tiles{grid-template-columns:repeat(2,1fr)}}
+.l2 .tiles{grid-template-columns:repeat(2,1fr)}
+}
 .l2 .tl{border:1px solid var(--line);border-radius:13px;padding:16px;background:rgba(8,8,10,.4)}
 .l2 .tl .tv{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;line-height:1}
 .l2 .tl .tn{font-size:11.5px;color:var(--dim);margin-top:7px;line-height:1.45}
 .l2 .two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 @media(max-width:960px){
-.l2 .two{grid-template-columns:1fr}}
+.l2 .two{grid-template-columns:1fr}
+}
 .l2 .way{border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--panel);
   display:flex;flex-direction:column;transition:border-color .5s,transform .5s}
 .l2 .way:hover{border-color:var(--gold-dp);transform:translateY(-4px)}
@@ -398,7 +427,7 @@ export const LANDING_CSS = String.raw`
   transform:translateX(-130%);animation:l2sheen 3.4s ease-in-out infinite}
 @keyframes l2sheen{45%,100%{transform:translateX(130%)}}
 .l2 .t2t__f{text-align:center;font-family:var(--mono);font-size:8.5px;letter-spacing:.13em;color:var(--faint);margin-top:11px;text-transform:uppercase}
-.l2 .l2tap{position:absolute;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--gold);
+.l2 .tap{position:absolute;width:44px;height:44px;border-radius:50%;border:1.5px solid var(--gold);
   left:50%;bottom:74px;transform:translateX(-50%);opacity:0;animation:l2tap 3.4s ease-out infinite}
 @keyframes l2tap{0%{opacity:0;transform:translateX(-50%) scale(.35)}12%{opacity:.85}45%{opacity:0;transform:translateX(-50%) scale(1.55)}100%{opacity:0}}
 .l2 .copy{width:100%;max-width:330px}
@@ -414,7 +443,7 @@ export const LANDING_CSS = String.raw`
 .l2 .on .copy .dot2.c{animation-delay:1.7s}
 @keyframes l2travel{0%{opacity:0}8%{opacity:1}92%{opacity:1}100%{opacity:0}}
 .l2 .copy .mast{fill:none;stroke:var(--gold);stroke-width:1.6}
-.l2 .copy .l2halo{fill:none;stroke:var(--gold);stroke-width:1;opacity:.35;animation:l2halo 3s ease-out infinite}
+.l2 .copy .halo{fill:none;stroke:var(--gold);stroke-width:1;opacity:.35;animation:l2halo 3s ease-out infinite}
 @keyframes l2halo{0%{r:26;opacity:.5}100%{r:46;opacity:0}}
 .l2 .copy text{font-family:var(--mono);fill:var(--dim)}
 .l2 .copy .cli{fill:var(--panel2);stroke:var(--line2);stroke-width:1}
@@ -427,9 +456,9 @@ export const LANDING_CSS = String.raw`
   font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-lt)}
 .l2 .reveal.fig img{clip-path:inset(0 100% 0 0);transition:clip-path 1.15s cubic-bezier(.16,.72,.24,1) .1s}
 .l2 .reveal.fig.on img{clip-path:inset(0 0 0 0)}
-.l2 #l2-cta{position:fixed;left:0;right:0;bottom:0;z-index:80;transform:translateY(150%);visibility:hidden;
+.l2 #l2-cta{position:fixed;left:0;right:0;bottom:0;z-index:80;transform:translateY(115%);
   transition:transform .5s cubic-bezier(.16,.72,.24,1);pointer-events:none}
-.l2 #l2-cta.on{transform:none;visibility:visible;pointer-events:auto}
+.l2 #l2-cta.on{transform:none;pointer-events:auto}
 .l2 #l2-cta .in{max-width:1180px;margin:0 auto;padding:0 24px 18px}
 .l2 #l2-cta .bar{display:flex;align-items:center;gap:18px;background:rgba(25,25,32,.93);backdrop-filter:blur(16px);
   border:1px solid var(--line2);border-radius:16px;padding:13px 15px 13px 20px;
@@ -455,7 +484,6 @@ export const LANDING_CSS = String.raw`
 .l2 .jump p span{display:block;font-family:var(--body);font-weight:400;font-size:14px;color:var(--dim);
   letter-spacing:0;margin-top:5px}
 .l2 .jump .ac{display:flex;gap:10px;flex-wrap:wrap}
-
 .l2 .faq{max-width:820px;margin:0 auto}
 .l2 .fq{border-bottom:1px solid var(--line)}
 .l2 .fq:first-child{border-top:1px solid var(--line)}
@@ -470,4 +498,6 @@ export const LANDING_CSS = String.raw`
 .l2 .fq .ans>.in2{overflow:hidden;min-height:0}
 .l2 .fq .ans p{margin:0 0 20px;color:var(--dim);font-size:15px;line-height:1.7;max-width:70ch}
 .l2 .fq .ans a{color:var(--gold-lt);border-bottom:1px solid var(--gold-dp)}
+.l2 .strip, .l2 .nar{position:relative;z-index:2}
+
 `
