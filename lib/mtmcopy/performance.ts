@@ -3,6 +3,8 @@
 // Partilhado entre a métrica do utilizador (/api/mtmcopy/metrics) e a visão global de
 // admin (/api/admin/mtmcopy/global-performance).
 
+import { computeOutcome } from './trade-outcome'
+
 export type ClosedTradeRow = {
   pnl: number | null
   lot_size: number | null
@@ -18,27 +20,15 @@ export type ClosedTradeRow = {
   exit_price?: number | null
 }
 
-/** Tamanho do pip/ponto por símbolo (XAU 0.1 · JPY 0.01 · forex 0.0001 · resto 1 ponto). */
-export function pipSizeForSymbol(symbol: string | null | undefined): number {
-  const s = (symbol ?? '').toUpperCase()
-  if (/XAU|GOLD/.test(s)) return 0.1
-  if (/JPY/.test(s)) return 0.01
-  const letters = s.replace(/[^A-Z]/g, '')
-  if (letters.length === 6) return 0.0001 // par forex
-  return 1 // índices/cripto/outros → pontos
-}
+// O tamanho do pip vive em trade-outcome.ts — fonte única partilhada com os motores.
+// A cópia que estava aqui tratava BTCUSD como par forex (6 letras) e multiplicava os pips
+// de cripto por dez mil.
+export { pipSizeForSymbol } from './trade-outcome' 
 
 /** Pips ASSINADOS e % de flutuação de uma trade fechada (null sem preços). */
 export function tradePipsPct(t: Pick<ClosedTradeRow, 'symbol' | 'direction' | 'entry_price' | 'exit_price'>): { pips: number; pct: number } | null {
-  const entry = Number(t.entry_price)
-  const exit = Number(t.exit_price)
-  if (!Number.isFinite(entry) || !Number.isFinite(exit) || entry <= 0 || exit <= 0) return null
-  const dir = (t.direction ?? '').toLowerCase()
-  const move = dir === 'short' || dir === 'sell' ? entry - exit : exit - entry
-  return {
-    pips: Math.round((move / pipSizeForSymbol(t.symbol)) * 10) / 10,
-    pct: Math.round(((move / entry) * 100) * 100) / 100,
-  }
+  const o = computeOutcome({ symbol: t.symbol, direction: t.direction, entry: t.entry_price, exit: t.exit_price })
+  return o ? { pips: o.pips, pct: o.pct } : null
 }
 
 export interface PerformanceData {

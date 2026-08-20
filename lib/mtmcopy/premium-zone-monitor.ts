@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { fetchLotSizingContext, placeOrdersSequential, type OrderRequest } from "./metaapi"
 import { getPremiumZoneConfig, priceInZone, type PremiumZoneConfig } from "./premium-zone-config"
+import { pipSizeForSymbol } from './trade-outcome'
 
 /**
  * Monitor da ENTRADA POR ZONA + REAÇÃO do Premium.
@@ -307,7 +308,7 @@ export async function runPremiumZoneMonitor(): Promise<{ checked: number; fired:
     //  (a) o preço está FAVORÁVEL — já passou a ponta da zona no bom sentido (BUY ≤ zone_high / SELL ≥ zone_low), ou
     //  (b) o preço está a FUGIR — > flee_pips além da ponta da zona (o limit é só p/ a janela ±flee_pips).
     const fleePips = Number((cfg as unknown as { flee_pips?: number }).flee_pips) || 50
-    const pip = /xau|gold/i.test(row.symbol) ? 0.1 : /btc/i.test(row.symbol) ? 1 : 0.0001
+    const pip = pipSizeForSymbol(row.symbol)
     const fleeDist = fleePips * pip
     let marketNow = false
     if (row.direction === "buy") {

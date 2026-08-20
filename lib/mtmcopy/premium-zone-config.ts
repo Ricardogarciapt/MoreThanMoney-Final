@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { pipSizeForSymbol } from './trade-outcome'
 
 /**
  * Configuração da ENTRADA POR ZONA + REAÇÃO do Premium (runtime, sem redeploy).
@@ -116,7 +117,7 @@ export function zoneEntryDecision(opts: {
 }): "market" | "pending" | "skip" {
   const { direction, price, zoneLow, zoneHigh, tp1, symbol } = opts
   if (!(price > 0)) return "pending"
-  const pip = /xau|gold/i.test(symbol) ? 0.1 : /btc/i.test(symbol) ? 1 : 0.0001
+  const pip = pipSizeForSymbol(symbol)
   const fleeDist = (opts.fleePips ?? 50) * pip
   let marketNow = false
   if (direction === "buy") marketNow = price <= zoneHigh || price - zoneHigh > fleeDist

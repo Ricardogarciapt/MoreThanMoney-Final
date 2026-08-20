@@ -13,6 +13,7 @@ import {
   readPendingOrders,
   closePositionById,
   modifyPositionSlTp,
+  getMarketPrice,
 } from './metaapi'
 import { tapToTradeEnabledChannels, T2T_SENDER_TO_CHAT } from './tap-to-trade-channels'
 import { lifecycleMessage } from './signal-lifecycle'
@@ -230,7 +231,7 @@ export async function reconcileT2TPositionsClosed(rows: OpenT2TPosition[]): Prom
     // monitor de preço já não a via (deixa de estar 'open'), por isso ninguém a anunciava.
     const { data: fechadas } = await supabase
       .from('mtmcopy_signal_log')
-      .select('id, chat_message_id, channel_key, symbol, direction')
+      .select('id, chat_message_id, channel_key, symbol, direction, entry')
       .in('id', closedRowIds)
 
     await supabase
@@ -239,19 +240,34 @@ export async function reconcileT2TPositionsClosed(rows: OpenT2TPosition[]): Prom
       .in('id', closedRowIds)
       .then(undefined, (e) => console.warn('[t2t-management] update closed falhou:', e))
 
+    // Uma conta qualquer das que acabámos de reconciliar serve para ler a cotação: o preço de
+    // mercado do símbolo é o mesmo, muda só o spread da corretora.
+    const contaParaPreco = [...byAccount.keys()][0] ?? null
+
     // Um anúncio por SINAL (não por conta) — vários seguidores do mesmo sinal não geram várias
     // mensagens iguais no chat.
     const jaAnunciado = new Set<string>()
     for (const f of fechadas ?? []) {
-      const row = f as { chat_message_id?: string | null; channel_key?: string | null; symbol?: string | null; direction?: string | null }
+      const row = f as {
+        chat_message_id?: string | null; channel_key?: string | null
+        symbol?: string | null; direction?: string | null; entry?: number | null
+      }
       const msgId = row.chat_message_id
       const slug = row.channel_key
       if (!msgId || !slug || jaAnunciado.has(msgId)) continue
       jaAnunciado.add(msgId)
       try {
+        // Preço de fecho: a posição já não existe na corretora, por isso lê-se o preço de
+        // mercado agora. É o mesmo instante em que a gestão a encerrou, com a diferença de
+        // uma ronda do monitor — chega para o cliente saber com quanto fechou.
+        const precoFecho = row.symbol && contaParaPreco
+          ? await getMarketPrice(contaParaPreco, row.symbol).catch(() => null)
+          : null
         const { text } = lifecycleMessage('closed', {
           symbol: row.symbol ?? '',
           direction: row.direction === 'sell' ? 'sell' : row.direction === 'buy' ? 'buy' : null,
+          entry: row.entry ?? null,
+          price: precoFecho,
           reason: 'Encerrada pela gestão da fonte.',
         })
         const { data: msg } = await supabase

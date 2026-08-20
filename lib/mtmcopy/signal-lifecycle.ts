@@ -16,6 +16,8 @@
  * alvo, e os textos daqui não trazem alvo — por isso não geram botão de Tap to Trade.
  */
 
+import { outcomeFrom } from './trade-outcome'
+
 export type SignalEvent =
   /** A ordem encheu — a posição existe. */
   | 'entry_hit'
@@ -47,8 +49,14 @@ export interface LifecycleContext {
   level?: number | null
   /** Percentagem realizada, para parciais. */
   pct?: number | null
-  /** Preço relevante (entrada, fecho…). */
+  /** Preço relevante (fecho, alvo atingido, preço atual…). */
   price?: number | null
+  /**
+   * Preço de ENTRADA da posição. Com `price` preenchido, o cabeçalho passa a trazer o desfecho
+   * em pips e percentagem — é isso que faz "XAUUSD 🔵 COMPRA" virar
+   * "XAUUSD 🔵 COMPRA · +200 pips · +0,46%" em todos os destinos ao mesmo tempo.
+   */
+  entry?: number | null
   /** Motivo em texto livre, acrescentado ao corpo quando existe. */
   reason?: string | null
 }
@@ -71,9 +79,19 @@ function dirTxt(d?: 'buy' | 'sell' | null): string {
   return d === 'buy' ? '🔵 COMPRA' : d === 'sell' ? '🔴 VENDA' : ''
 }
 
-/** "XAUUSD 🔴 VENDA" — cabeçalho comum a todos os eventos. */
+/** Desfecho em pips e % — "" quando faltam preços, porque zero não é o mesmo que não saber. */
+export function outcomeOf(c: LifecycleContext): string {
+  return outcomeFrom({ symbol: c.symbol, direction: c.direction, entry: c.entry, exit: c.price })
+}
+
+/**
+ * "XAUUSD 🔴 VENDA · +200 pips · +0,46%" — cabeçalho comum a todos os eventos.
+ * O desfecho só aparece quando há entrada e preço; sem eles fica só o par e a direção.
+ */
 export function headline(c: LifecycleContext): string {
-  return `${c.symbol} ${dirTxt(c.direction)}`.trim()
+  const base = `${c.symbol} ${dirTxt(c.direction)}`.trim()
+  const o = outcomeOf(c)
+  return o ? `${base} · ${o}` : base
 }
 
 const EVENTS: Record<SignalEvent, EventDef> = {

@@ -1,5 +1,5 @@
 import { detectLifecycleEvent, symbolFromContent, directionFromContent } from '@/lib/mtmcopy/followup-reader'
-import { lifecycleMessage, isTerminal, cancelsPending, closesPosition } from '@/lib/mtmcopy/signal-lifecycle'
+import { lifecycleMessage, isTerminal, cancelsPending, closesPosition, headline } from '@/lib/mtmcopy/signal-lifecycle'
 
 let ok = 0, ko = 0
 function t(nome: string, real: unknown, esperado: unknown) {
@@ -36,6 +36,19 @@ t('descarte apaga pendentes', cancelsPending('discarded'), true)
 t('descarte fecha', closesPosition('discarded'), true)
 t('entry_hit não é terminal', isTerminal('entry_hit'), false)
 t('parcial não apaga pendentes', cancelsPending('partial'), false)
+
+
+// ——— desfecho no cabeçalho (pips + %) ———
+console.log('— desfecho —')
+t('sem precos fica so o par', headline({ symbol: 'XAUUSD', direction: 'buy' }), 'XAUUSD 🔵 COMPRA')
+t('compra com lucro', headline({ symbol: 'XAUUSD', direction: 'buy', entry: 4370, price: 4390 }),
+  'XAUUSD 🔵 COMPRA · +200 pips · +0,46%')
+t('venda a perder mostra o sinal negativo', headline({ symbol: 'XAUUSD', direction: 'sell', entry: 4370, price: 4390 }),
+  'XAUUSD 🔴 VENDA · −200 pips · −0,46%')
+t('cripto conta em pontos', headline({ symbol: 'BTCUSDT', direction: 'buy', entry: 60000, price: 63500 }),
+  'BTCUSDT 🔵 COMPRA · +3500 pontos · +5,83%')
+t('stop loss traz o desfecho na mensagem',
+  lifecycleMessage('stop_loss', { symbol: 'EURUSD', direction: 'buy', entry: 1.09, price: 1.085 }).title.includes('−50 pips · −0,46%'), true)
 
 console.log(`\n${ok} passaram, ${ko} falharam`)
 process.exit(ko ? 1 : 0)

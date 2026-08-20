@@ -12,6 +12,7 @@ import {
   type TrailingDistance,
 } from './pip-points'
 import type { ParsedSignal } from './signal-parser'
+import { pipSizeForSymbol } from './trade-outcome'
 
 const AI_TRAILING_TIMEOUT_MS = Number(process.env.MTMCOPY_AI_TRAILING_TIMEOUT_MS ?? '900')
 
@@ -28,7 +29,7 @@ export function estimateRiskPipsFromSignal(
   if (entry == null || entry <= 0 || signal.sl == null || signal.sl <= 0) return null
   const dist = Math.abs(entry - signal.sl)
   if (dist <= 0) return null
-  const pipSize = isGoldSymbol(signal.symbol) ? 0.1 : 0.0001
+  const pipSize = pipSizeForSymbol(signal.symbol)
   return Math.max(1, Math.round(dist / pipSize))
 }
 

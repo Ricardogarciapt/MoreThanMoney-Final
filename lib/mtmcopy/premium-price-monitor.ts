@@ -20,6 +20,7 @@ import {
 } from './premium-trade-active'
 import { mirrorPremiumExit } from './premium-subscriber-exits'
 import { CANONICAL_PREMIUM_ACCOUNT_ID } from './provider-constants'
+import { pipSizeForSymbol } from './trade-outcome'
 
 interface ActiveRow {
   id: string
@@ -61,10 +62,8 @@ const PREMIUM_BE_BUFFER_PIPS = (() => {
   return Number.isFinite(v) && v >= 0 ? v : 5
 })()
 
-/** Tamanho de pip por símbolo (ouro 0.1, JPY 0.01, resto 0.0001). */
-function pipSizeFor(symbol: string): number {
-  return /xau|gold/i.test(symbol) ? 0.1 : /jpy/i.test(symbol) ? 0.01 : 0.0001
-}
+/** Tamanho de pip — fonte única em trade-outcome.ts (esta cópia não conhecia cripto). */
+const pipSizeFor = pipSizeForSymbol
 
 /** Preço-alvo do BE = entrada + buffer a FAVOR (nunca na entrada seca). */
 function beTargetPrice(entry: number, direction: 'buy' | 'sell', symbol: string): number {
@@ -332,7 +331,7 @@ export async function runPremiumPriceMonitor(): Promise<{
       // Exit 1 → break-even + trailing ancorado ao risco (na % que fica a correr)
       if (nextLevel === 1 && !row.trailing_started && row.entry && row.entry > 0 && !closeAll) {
         try {
-          const pipSize = /xau|gold/i.test(row.symbol) ? 0.1 : /jpy/i.test(row.symbol) ? 0.01 : 0.0001
+          const pipSize = pipSizeForSymbol(row.symbol)
           const riskPips =
             row.entry && row.sl && row.sl > 0
               ? Math.max(1, Math.round(Math.abs(row.entry - row.sl) / pipSize))

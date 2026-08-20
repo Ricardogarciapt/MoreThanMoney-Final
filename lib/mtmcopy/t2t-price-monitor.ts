@@ -29,6 +29,7 @@ import {
   type MetaApiPendingOrder,
 } from './metaapi'
 import { lifecycleMessage, logStatusFor, type SignalEvent } from './signal-lifecycle'
+import { pipSizeForSymbol } from './trade-outcome'
 
 const STATE_KEY = 't2t_monitor_state'
 /** Split dos parciais quando o sinal traz vários TPs. */
@@ -67,7 +68,7 @@ interface LogRow {
 }
 
 function pipSizeFor(symbol: string): number {
-  return /xau|gold/i.test(symbol) ? 0.1 : /jpy/i.test(symbol) ? 0.01 : 0.0001
+  return pipSizeForSymbol(symbol)
 }
 function roundLot(n: number): number {
   return Math.max(0.01, Math.round(n * 100) / 100)
@@ -198,7 +199,14 @@ export async function runT2TPriceMonitor(): Promise<{
       const pos = positions.find((p) => p.id === row.broker_position_id) ?? null
       const pend = pendentes.find((o) => o.id === row.broker_position_id) ?? null
 
-      const evCtx = { symbol: row.symbol, direction: dir, source: row.channel_key }
+      // `entry` viaja no contexto para que o cabeçalho de cada evento traga o desfecho em pips e
+      // percentagem (ver signal-lifecycle.headline). Sem entrada, o cabeçalho fica só com o par.
+      const evCtx = {
+        symbol: row.symbol,
+        direction: dir,
+        source: row.channel_key,
+        entry: row.entry ?? pos?.openPrice ?? null,
+      }
 
       // ── AINDA PENDENTE: a ordem não encheu. Decidir se a ideia continua viva.
       if (!pos && pend) {
@@ -287,7 +295,7 @@ export async function runT2TPriceMonitor(): Promise<{
       // ── ENTRY HIT: 1ª vez que vemos a posição preenchida → confirma no chat.
       if (!st.announced) {
         st.announced = true
-        await publishEvent(row, 'entry_hit', { ...evCtx, price: entry })
+        await publishEvent(row, 'entry_hit', { ...evCtx, entry: null, price: entry })
         actions.push(`entry_hit ${row.symbol}`)
       }
 
@@ -312,7 +320,7 @@ export async function runT2TPriceMonitor(): Promise<{
             const pctMove = Math.round(((move / entry) * 100) * 100) / 100
             outcomeTxt = `${pips >= 0 ? '+' : ''}${pips} pips (${pctMove >= 0 ? '+' : ''}${pctMove}%).`
           }
-          await publishEvent(row, closeAll ? 'target_final' : 'partial', { ...evCtx, level: nextLevel, pct, reason: outcomeTxt })
+          await publishEvent(row, closeAll ? 'target_final' : 'partial', { ...evCtx, level: nextLevel, pct, price, reason: outcomeTxt })
           if (closeAll) {
             await admin.from('mtmcopy_signal_log').update({ status: 'closed', detail: `Fechada no alvo ${nextLevel}` }).eq('id', row.id)
             delete state[row.id]

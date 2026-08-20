@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { outcomeFrom } from "@/lib/mtmcopy/trade-outcome"
 
 /**
  * Notifica o desfecho de uma trade (SL/TP/BE/fecho) APENAS a:
@@ -48,6 +49,10 @@ export async function notifySignalOutcome(opts: {
   chatMessageId?: string | null
   ticker: string | null
   status: string
+  /** Direção e preços do sinal — com eles o título passa a trazer pips e percentagem. */
+  direction?: string | null
+  entry?: number | null
+  exit?: number | null
 }): Promise<number> {
   const meta = OUTCOME_META[opts.status]
   if (!meta) return 0
@@ -85,7 +90,15 @@ export async function notifySignalOutcome(opts: {
   const userIds = [...recipients]
   if (!userIds.length) return 0
 
-  const title = `${meta.emoji} ${meta.label} — ${opts.ticker ?? "Sinal"}`
+  // O desfecho em pips e % vem da mesma função que o chat e o Telegram usam — se um deles
+  // disser "+200 pips", a notificação diz exatamente o mesmo número.
+  const desfecho = outcomeFrom({
+    symbol: opts.ticker,
+    direction: opts.direction,
+    entry: opts.entry,
+    exit: opts.exit,
+  })
+  const title = `${meta.emoji} ${meta.label} — ${opts.ticker ?? "Sinal"}${desfecho ? ` · ${desfecho}` : ""}`
   // Deep-link ao SINAL específico (a app abre o modal do alerta com o gráfico ao vivo).
   const url = `/app-mobile?tab=trading-alerts&signal=${opts.entryId}`
   try {

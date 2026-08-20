@@ -129,6 +129,21 @@ const RANK: Record<string, number> = { pending: 0, active: 1, be: 1, exit_1: 2, 
 const isWin = (s: string | null) => Boolean(s && (s.startsWith("exit_") || s === "closed"))
 
 /** Estado candidato a partir do preço atual vs. entrada/SL/TPs. */
+/**
+ * Preço a que o desfecho aconteceu: o alvo N para exit_N, o stop para loss. É uma aproximação
+ * honesta — o preço real de execução do cliente depende do spread da corretora dele — mas é o
+ * nível que o sinal anunciou, que é o que o cliente pode conferir no gráfico.
+ */
+function precoDesfecho(status: string, dir: "buy" | "sell", sl: number | null, tps: number[]): number | null {
+  if (status === "loss") return sl
+  const m = status.match(/^exit_(\d+)$/)
+  if (!m) return null
+  // MESMA ordenação que candidateStatus: por proximidade à entrada na direção do trade. Sem
+  // isto, numa VENDA o exit_1 apontaria para o alvo errado.
+  const ordenados = [...new Set(tps)].filter((n) => Number.isFinite(n)).sort((a, b) => (dir === "buy" ? a - b : b - a))
+  return ordenados[Number(m[1]) - 1] ?? null
+}
+
 function candidateStatus(dir: "buy" | "sell", price: number, entry: number | null, sl: number | null, tps: number[]): Status | null {
   const sorted = [...tps].filter((n) => Number.isFinite(n))
   // TPs por ordem de proximidade à entrada na direção do trade
@@ -321,6 +336,11 @@ export async function evaluateOpenAlerts(
           chatMessageId: (r as { chat_message_id?: string | null }).chat_message_id ?? null,
           ticker: r.ticker,
           status: finalCand,
+          // Preços para o desfecho: a entrada do sinal e o nível que o resolveu (o alvo tocado
+          // ou o stop). Um descarte não abriu posição, por isso não leva pips.
+          direction: dir,
+          entry: finalCand === "discarded" ? null : entry,
+          exit: finalCand === "discarded" ? null : precoDesfecho(finalCand, dir, sl, tps),
         })
       }
       // Descarte e stop fecham as ordens T2T de quem aceitou (apaga pendentes, fecha abertas).
