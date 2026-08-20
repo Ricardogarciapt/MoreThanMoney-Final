@@ -683,6 +683,13 @@ const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|b
  *  'ENTRY HIT' literal (monitor/PrimeVerse) e não 'ativad' — senão as entradas Sensei ("Ideia
  *  Activada"), que SÃO sinais, resolver-se-iam umas às outras. */
 const TAP_TRADE_RESOLVING_RE = /(entry\s*hit|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|posi[çc][aã]o\s*fechada|fechad[ao]|encerrad|cancelad|descartad|invalidad|break\s*even)/i
+/** Direção do sinal/follow-up, quando declarada. */
+function t2tDirectionOf(content?: string | null): "BUY" | "SELL" | "" {
+  if (!content) return ""
+  if (/\b(sell|short|venda)\b|🔴/i.test(content)) return "SELL"
+  if (/\b(buy|long|compra)\b|🔵|🟢/i.test(content)) return "BUY"
+  return ""
+}
 /** Símbolo do sinal, para emparelhar follow-ups com a entrada certa (nunca substring cega). */
 function t2tSymbolOf(content?: string | null): string | null {
   if (!content) return null
@@ -706,12 +713,16 @@ function computeResolvedSignalIds(messages: ChatMessage[]): Set<string> {
     if (!m.content || !looksLikeTradeSignal(m.channel_slug, m.content)) continue
     const sym = t2tSymbolOf(m.content)
     const t0 = m.created_at ? new Date(m.created_at).getTime() : 0
+    const dir = t2tDirectionOf(m.content)
     const hit = followups.some((f) => {
       if (f.id === m.id || f.channel_slug !== m.channel_slug) return false
       const t1 = f.created_at ? new Date(f.created_at).getTime() : 0
       if (t1 <= t0) return false
       const fsym = t2tSymbolOf(f.content)
-      return !sym || !fsym || fsym === sym
+      if (sym && fsym && fsym !== sym) return false
+      // Direção tem de casar quando ambas são conhecidas — um fecho SELL não resolve um setup BUY.
+      const fdir = t2tDirectionOf(f.content)
+      return !dir || !fdir || fdir === dir
     })
     if (hit) resolved.add(m.id)
   }

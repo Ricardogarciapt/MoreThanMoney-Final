@@ -292,12 +292,16 @@ export default function TapToTradeFeed() {
         const pendingSetup = hasEntryLevel(m.content)
         const ageExpired = ageMs > (pendingSetup ? T2T_PENDING_MAX_AGE_MS : T2T_MAX_AGE_MS)
         const sym = symbolOf(m.content)
-        const resolved = followups.some(
-          (f) =>
-            f.channel_slug === m.channel_slug &&
-            new Date(f.created_at).getTime() > new Date(m.created_at).getTime() &&
-            (!sym || symbolOf(f.content) === sym),
-        )
+        const dir = directionOf(m.content)
+        // Resolvido só por follow-up POSTERIOR do MESMO símbolo E direção (quando conhecida) —
+        // um fecho SELL não pode esconder um setup BUY ainda válido do mesmo par.
+        const resolved = followups.some((f) => {
+          if (f.channel_slug !== m.channel_slug) return false
+          if (new Date(f.created_at).getTime() <= new Date(m.created_at).getTime()) return false
+          if (sym && symbolOf(f.content) !== sym) return false
+          const fDir = directionOf(f.content)
+          return !dir || !fDir || fDir === dir
+        })
         return {
           ...m,
           expired: ageExpired || resolved,
@@ -344,10 +348,13 @@ export default function TapToTradeFeed() {
     if (searchParams?.get("setup") === "1") setShowConfig(true)
   }, [searchParams])
 
-  // Deep-link: notificação T2T → abrir directamente a confirmação da trade
+  // Deep-link: notificação T2T → abrir directamente a confirmação da trade (1× por sinal —
+  // sem o guard, o efeito reabria o modal sempre que `items` recarregava depois de o fechar).
+  const [deepLinkHandled, setDeepLinkHandled] = useState<string | null>(null)
   useEffect(() => {
     const sigId = searchParams?.get("signal") || searchParams?.get("msg")
-    if (!sigId) return
+    if (!sigId || deepLinkHandled === sigId) return
+    setDeepLinkHandled(sigId)
     const found = items.find((s) => s.id === sigId)
     if (found) {
       setTap({ sig: found, status: "confirm" })
@@ -366,7 +373,7 @@ export default function TapToTradeFeed() {
     return () => {
       cancelled = true
     }
-  }, [searchParams, items])
+  }, [searchParams, items, deepLinkHandled])
 
   const filtered = items
     // "O que seguir" é a ÚNICA filtragem: fontes + classes de ativo que o user escolheu ([]=todas).
