@@ -29,7 +29,9 @@ const KIND_TO_EVENT: Record<T2TCloseKind, SignalEvent> = {
   targets_hit: 'targets_before_entry',
 }
 
-const OPEN_LOG_STATUSES = ['ok', 'filled', 'active', 'open']
+// 'following' = perpétuo seguido sem ordem na conta do cliente (ver t2tMode). Conta como
+// aberto para efeitos de desfecho: o cliente tem de saber quando a posição-mestre fecha.
+const OPEN_LOG_STATUSES = ['ok', 'filled', 'active', 'open', 'following']
 
 /**
  * Encontra a chat_message da ENTRADA T2T mais recente para este símbolo/direção no canal, PREFERINDO
@@ -180,7 +182,17 @@ export async function closeFollowersByMessage(
     .eq('chat_message_id', chatMessageId)
     .in('status', OPEN_LOG_STATUSES)
   for (const log of logs ?? []) {
-    const connId = (log as { connection_id: string }).connection_id
+    const connId = (log as { connection_id: string | null }).connection_id
+    // Sem ligação = seguidor de perpétuo: não há ordem para fechar na conta dele, mas a linha
+    // TEM de ser marcada, senão o sinal fica eternamente "a seguir" na lista dele.
+    // (Antes: `if (!accId) continue` saltava a linha inteira e o estado nunca mudava.)
+    if (!connId) {
+      followers++
+      await supabase.from('mtmcopy_signal_log')
+        .update({ status: logStatusFor(event), detail })
+        .eq('id', (log as { id: string }).id)
+      continue
+    }
     const { data: conn } = await supabase.from('mtmcopy_connections').select('metaapi_account_id').eq('id', connId).maybeSingle()
     const accId = (conn as { metaapi_account_id?: string } | null)?.metaapi_account_id
     if (!accId) continue

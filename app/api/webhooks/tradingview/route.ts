@@ -234,7 +234,7 @@ function resolveRoute(cls: AssetClass): SignalRoute {
     case "index":
       return { channel: "trade-ideas", telegram: null, sender: "📈 Ideias de Índices", push: true, autoCopy: false }
     case "crypto_perp":
-      return { channel: "cripto-perps", telegram: null, sender: "🪙 Perpétuos Cripto", push: true, autoCopy: false }
+      return { channel: "cripto-perps", telegram: resolvedPerpsChatId(), sender: "🪙 Perpétuos Cripto", push: true, autoCopy: false }
     default:
       return { channel: null, telegram: null, sender: "", push: false, autoCopy: false }
   }

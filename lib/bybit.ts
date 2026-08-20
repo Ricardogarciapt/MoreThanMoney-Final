@@ -123,7 +123,7 @@ export async function getBybitPositions(): Promise<{ ok: boolean; retMsg: string
 export async function getBybitLastClosedPnl(
   symbol: string,
   sinceMs = 6 * 60 * 60 * 1000,
-): Promise<{ pnl: number; closedAt: number } | null> {
+): Promise<{ pnl: number; closedAt: number; entry: number | null; exit: number | null; side: string | null } | null> {
   const now = Date.now()
   const r = await signedRequest("GET", "/v5/position/closed-pnl", {
     category: "linear",
@@ -139,11 +139,26 @@ export async function getBybitLastClosedPnl(
   const latestTs = Math.max(...list.map((it) => Number(it.updatedTime) || 0))
   // Agrega os fechos dentro de ~2min do último (parciais do mesmo fecho contam juntos).
   let pnl = 0
+  // Preços do fecho mais recente — servem para anunciar pontos e percentagem, não só dólares.
+  // A Bybit chama `side` ao lado da ORDEM de fecho, que é o inverso da posição: uma compra
+  // fecha-se com um Sell. Devolve-se a direção da POSIÇÃO, que é o que o resto do sistema usa.
+  let entry: number | null = null
+  let exit: number | null = null
+  let side: string | null = null
   for (const it of list) {
     const ts = Number(it.updatedTime) || 0
-    if (latestTs - ts <= 120_000) pnl += Number(it.closedPnl) || 0
+    if (latestTs - ts > 120_000) continue
+    pnl += Number(it.closedPnl) || 0
+    if (ts === latestTs) {
+      const e = Number(it.avgEntryPrice)
+      const x = Number(it.avgExitPrice)
+      entry = Number.isFinite(e) && e > 0 ? e : null
+      exit = Number.isFinite(x) && x > 0 ? x : null
+      const ordem = String(it.side ?? "")
+      side = ordem === "Sell" ? "buy" : ordem === "Buy" ? "sell" : null
+    }
   }
-  return { pnl: Number(pnl.toFixed(2)), closedAt: latestTs }
+  return { pnl: Number(pnl.toFixed(2)), closedAt: latestTs, entry, exit, side }
 }
 
 /** Define a alavancagem do símbolo (idempotente; ignora "leverage not modified"). */

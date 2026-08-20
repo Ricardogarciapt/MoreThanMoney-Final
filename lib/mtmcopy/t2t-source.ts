@@ -68,6 +68,10 @@ export function t2tSourceKey(channelSlug?: string | null, content?: string | nul
     channelSlug === 'trade-ideas-setup'
   ) {
     if (/primeverse/i.test(c)) return 'primeverse'
+    // Perpétuos cripto (Aurum Flow ORB / MTM Perps): passam a gerar botão no T2T. O botão
+    // NÃO abre ordem na conta do cliente — ver `t2tMode`: nos perps é SEGUIR a posição, com a
+    // gestão a correr no motor real sobre a ordem-mestre da Bybit.
+    if (channelSlug === 'cripto-perps') return 'aurum'
     // "Ideias de Forex" (canal próprio): os sinais do canal são negociáveis no T2T e passam a ser
     // geridos pelo motor de preço em tempo real (entry-hit → parciais → BE → trailing → fecho),
     // na conta de quem aceitar. Pedido Ricardo 2026-08-18. `isT2TEntrySignal` continua a exigir
@@ -106,6 +110,32 @@ export function isT2TEntrySignal(channelSlug?: string | null, content?: string |
   // Entrada COMPLETA: exige alvo (TP). Exclui updates só-SL / "Ref:".
   if (!/\btp\s*\d|\btp\s*:|take\s*profit|🎯/i.test(content)) return false
   return true
+}
+
+/**
+ * O que faz o botão de Tap to Trade desta mensagem.
+ *
+ *  - 'execute' → abre a ordem na conta do cliente (comportamento de sempre).
+ *  - 'follow'  → NÃO abre nada: marca o sinal como seguido e o cliente passa a receber a
+ *                gestão do motor real (entrada, parciais, break-even, fecho) sobre a
+ *                ordem-mestre. É assim nos perpétuos, onde a posição vive na Bybit e não na
+ *                conta MT5 de cada um.
+ *
+ * Exceção pedida pelo Ricardo: BTCUSD/BTCUSDT continuam a EXECUTAR, porque existem como
+ * instrumento nas contas MT5 dos clientes — os restantes perpétuos não.
+ */
+export type T2TMode = 'execute' | 'follow'
+
+const BTC_EXECUTAVEL = /\bBTC(USD|USDT)?(\.P)?\b/i
+
+export function t2tMode(channelSlug?: string | null, content?: string | null): T2TMode {
+  if (channelSlug !== 'cripto-perps') return 'execute'
+  return BTC_EXECUTAVEL.test(content ?? '') ? 'execute' : 'follow'
+}
+
+/** Rótulo do botão, para o chat e para a notificação não prometerem coisas diferentes. */
+export function t2tButtonLabel(mode: T2TMode): string {
+  return mode === 'follow' ? 'Seguir posição' : 'Aceitar trade'
 }
 
 /** Classe de ativo de um sinal, a partir do conteúdo (mesma heurística do feed). */

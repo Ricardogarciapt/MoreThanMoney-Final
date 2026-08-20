@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { parseSignal, type ParsedSignal } from '@/lib/mtmcopy/signal-parser'
-import { isAllowedT2TSource } from '@/lib/mtmcopy/t2t-source'
+import { isAllowedT2TSource, t2tMode } from '@/lib/mtmcopy/t2t-source'
 import {
   computeLotSize,
   getLotSizingSkipReason,
@@ -174,6 +174,44 @@ export async function POST(request: NextRequest) {
       { error: 'Sinal incompleto (sem alvo/TP) ou é um update — não é negociável.', code: 'incomplete_signal' },
       { status: 400 },
     )
+  }
+
+  // ── MODO SEGUIR (perpétuos) ──────────────────────────────────────────────────────────
+  // Nos perpétuos a posição vive na ordem-mestre da Bybit, não na conta MT5 de cada cliente —
+  // e a maioria dos pares nem sequer existe lá. Aceitar aqui significa SEGUIR: o sinal fica
+  // marcado como ativo para este utilizador e a gestão do motor real (entrada, parciais,
+  // break-even, fecho) chega-lhe por notificação, sem abrir nada na conta dele.
+  // BTCUSD/BTCUSDT são a exceção: existem em MT5 e continuam a executar pelo caminho normal.
+  if (t2tMode(message.channel_slug, message.content) === 'follow') {
+    const { error: seguirErr } = await supabase.from('mtmcopy_signal_log').insert({
+      user_id: user.id,
+      connection_id: null,
+      chat_message_id: chatMessageId,
+      symbol: signal.symbol,
+      direction: signal.direction,
+      entry: signal.entry,
+      sl: signal.sl,
+      tp: signal.tp?.[0] ?? null,
+      lot: null,
+      status: 'following',
+      detail: 'Perpétuo: a seguir a ordem-mestre. Sem ordem na conta do cliente.',
+      channel_key: message.channel_slug,
+      telegram_message_id: message.telegram_message_id ?? null,
+    })
+    if (seguirErr && (seguirErr as { code?: string }).code === '23505') {
+      return NextResponse.json({ error: 'Já estás a seguir este sinal.', code: 'already_following' }, { status: 409 })
+    }
+    if (seguirErr) {
+      console.error('[tap-to-trade] seguir perp falhou:', seguirErr)
+      return NextResponse.json({ error: 'Não foi possível seguir este sinal.' }, { status: 500 })
+    }
+    return NextResponse.json({
+      success: true,
+      mode: 'follow',
+      symbol: signal.symbol,
+      direction: signal.direction,
+      message: `A seguir ${signal.symbol}. A gestão desta posição chega-te por notificação — não foi aberta nenhuma ordem na tua conta.`,
+    })
   }
 
   // 3. Contas destino — FAN-OUT. Aceitar o sinal abre em TODAS as contas do user com T2T ligado

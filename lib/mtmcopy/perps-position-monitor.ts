@@ -42,10 +42,15 @@ async function fetchOpenPositions(): Promise<{ ok: boolean; positions: BybitPosi
   if (!j || j.ok !== true) return { ok: false, positions: [] }
   return { ok: true, positions: (j.positions as BybitPosition[]) ?? [] }
 }
-async function fetchLastClosedPnl(symbol: string): Promise<number | null> {
+async function fetchLastClosed(symbol: string): Promise<{ pnl: number | null; entry: number | null; exit: number | null } | null> {
   const j = await bybitGet(`/api/bybit/closed-pnl?symbol=${encodeURIComponent(symbol)}`)
-  const closed = j?.closed as { pnl?: number } | null | undefined
-  return closed && typeof closed.pnl === 'number' ? closed.pnl : null
+  const closed = j?.closed as { pnl?: number; entry?: number | null; exit?: number | null } | null | undefined
+  if (!closed) return null
+  return {
+    pnl: typeof closed.pnl === 'number' ? closed.pnl : null,
+    entry: typeof closed.entry === 'number' ? closed.entry : null,
+    exit: typeof closed.exit === 'number' ? closed.exit : null,
+  }
 }
 
 interface PosState {
@@ -170,10 +175,19 @@ export async function runPerpsPositionMonitor(): Promise<{
     if (live.has(k)) continue
     const [symbol, side] = k.split('|')
     const sym = symbol.replace(/USDT$/, '')
-    const pnl = await fetchLastClosedPnl(symbol).catch(() => null)
-    const resultTxt = pnl != null ? ` — resultado ${pnl >= 0 ? '🟢 +' : '🔴 '}$${pnl.toFixed(2)}` : ''
+    const fechado = await fetchLastClosed(symbol).catch(() => null)
+    const pnl = fechado?.pnl ?? null
+    const resultTxt = pnl != null ? `resultado ${pnl >= 0 ? '🟢 +' : '🔴 '}$${pnl.toFixed(2)}` : ''
     const dir: 'buy' | 'sell' | null = side === 'Buy' ? 'buy' : side === 'Sell' ? 'sell' : null
-    const { text } = lifecycleMessage('closed', { symbol: sym, direction: dir, reason: resultTxt.replace(/^ — /, '') || null })
+    // Pontos e percentagem entram pelo cabeçalho (signal-lifecycle.headline), a mesma via que
+    // o ouro e o forex usam — os dólares ficam no corpo, porque só valem para a conta-mestre.
+    const { text } = lifecycleMessage('closed', {
+      symbol: sym,
+      direction: dir,
+      entry: fechado?.entry ?? state[k]?.entry ?? null,
+      price: fechado?.exit ?? null,
+      reason: resultTxt || null,
+    })
     await postPerps(text)
     // Fecha as ordens T2T de quem aceitou este sinal (Aurum Flow). Faltava — os seguidores
     // do scanner de perpétuos ficavam com posições sem quem as encerrasse do lado da fonte.

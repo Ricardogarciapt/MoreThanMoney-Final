@@ -17,7 +17,10 @@ export const T2T_SENDER_TO_CHAT: Record<string, string[]> = {
  * Nota: a lista viva é calculada dinamicamente por tapToTradeEnabledChannels() a partir
  * das rotas com tap_to_trade=true; esta constante é o espelho canónico/documental.
  */
-export const T2T_SIGNAL_CHANNELS = ['trade-ideas-setup', 'sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner']
+// 'cripto-perps' entra aqui para os perpétuos poderem ser SEGUIDOS no T2T (ver t2tMode:
+// nos perpétuos o botão não abre ordem, marca o sinal como seguido). Sem isto o fallback
+// rejeitava-os com 'provider_off' quando a configuração de rotas não estivesse disponível.
+export const T2T_SIGNAL_CHANNELS = ['trade-ideas-setup', 'sinais-scanner-mtm', 'trade-ideas', 'ideias-e-sinais', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner', 'cripto-perps']
 
 /** Slug do canal de chat DEDICADO de uma rota provider (estável, por id da rota). */
 export function deriveProviderChannelSlug(r: ProviderRoute): string {
