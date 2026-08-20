@@ -125,7 +125,11 @@ export async function POST(req: NextRequest) {
   }
 
   const execText = outText.replace(/^\s*🏦[^\n]*\n+/, '') // tira o cabeçalho de marca
-  if (r.ok) {
+  // EXECUÇÃO só para o PREMIUM. O título 'MTM Premium' estava fixo e o processador corria para
+  // QUALQUER relay que passasse por aqui: o relay do Forex Swings entrava rotulado como Premium,
+  // era classificado como premium-signals, e todos os clientes com telegram_groups=['premium']
+  // abriam EURUSD/USDJPY/NZDUSD/EURCHF nas contas deles. Outros relays só espelham, não executam.
+  if (r.ok && slug === 'premium-ideas') {
     try {
       const { processMtmcopyTelegramMessage } = await import('@/lib/mtmcopy/processor')
       await processMtmcopyTelegramMessage({
