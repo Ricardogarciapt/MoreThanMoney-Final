@@ -12,15 +12,7 @@
 
 import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
-  CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
-  CANONICAL_SENSEI_ACCOUNT_ID,
   CANONICAL_PREMIUM_STRATEGY_ID,
-  CANONICAL_TRADE_IDEAS_STRATEGY_ID,
-  CANONICAL_SENSEI_STRATEGY_ID,
-  CANONICAL_BOOSTER_ACCOUNT_ID,
-  CANONICAL_BOOSTER_STRATEGY_ID,
-  CANONICAL_GOLDDID_ACCOUNT_ID,
-  CANONICAL_GOLDDID_STRATEGY_ID,
   CANONICAL_COPYTRADER_RG_ACCOUNT_ID,
   CANONICAL_COPYTRADER_RG_STRATEGY_ID,
   MTM_COPY_STRATEGY_CATALOG,
@@ -78,14 +70,10 @@ interface ProviderDef {
 }
 
 const PROVIDERS: ProviderDef[] = [
+  // As rotas de Trade Ideas, Sensei, GoldKiller, Booster e Gold Did foram APAGADAS a
+  // 2026-08-20: as contas provider delas já não existiam na MetaApi (404) e cada leitura era
+  // um pedido a falhar. Recriam-se pelo admin (Adicionar rota) quando houver contas novas.
   { key: 'premium', accountId: CANONICAL_PREMIUM_ACCOUNT_ID, strategyId: CANONICAL_PREMIUM_STRATEGY_ID },
-  { key: 'trade-ideas', accountId: CANONICAL_TRADE_IDEAS_ACCOUNT_ID, strategyId: CANONICAL_TRADE_IDEAS_STRATEGY_ID },
-  { key: 'sensei', accountId: CANONICAL_SENSEI_ACCOUNT_ID, strategyId: CANONICAL_SENSEI_STRATEGY_ID },
-  // GoldKiller removido dos desempenhos das estratégias: deixou de copiar para contas
-  // (exec-switch goldkiller=false, só T2T). Sem cópia → não é prova social de estratégia copiável.
-  { key: 'booster', accountId: CANONICAL_BOOSTER_ACCOUNT_ID, strategyId: CANONICAL_BOOSTER_STRATEGY_ID },
-  // Gold Did — conta PU Prime (Alcy) que executa os sinais Premium com gestão própria (BE@+5.0, TP2).
-  { key: 'golddid', accountId: CANONICAL_GOLDDID_ACCOUNT_ID, strategyId: CANONICAL_GOLDDID_STRATEGY_ID },
   // Copy Trader Ricardo Garcia — intermédia (0f38257a) que copia o Premium e revende (su0a) aos slaves RG.
   { key: 'copytrader-rg', accountId: CANONICAL_COPYTRADER_RG_ACCOUNT_ID, strategyId: CANONICAL_COPYTRADER_RG_STRATEGY_ID },
 ]
