@@ -14,11 +14,80 @@ export default function FAQPage() {
               Perguntas Frequentes
             </h1>
             <p className="text-xl text-gray-300">
-              Tens alguma dúvida? Encontra as respostas aqui.
+              As mesmas respostas que damos na landing — sem letras pequenas.
             </p>
           </div>
 
           <div className="max-w-3xl mx-auto space-y-8">
+
+            {/* Antes de decidires — as objeções que travam a decisão. Fonte única partilhada com a
+                secção FAQ da landing: se mudares aqui, muda lá. */}
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
+                Antes de decidires
+              </h2>
+              <Accordion type="single" collapsible className="space-y-3">
+                <AccordionItem value="antes-1" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Preciso de saber alguma coisa de trading para começar?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Não. A maioria entra sem saber ler um gráfico. Começas pelo Fast Start, passas ao Bootcamp de 30 horas
+                    e, se quiseres, ligas a execução automática enquanto ainda estás a aprender — é precisamente para
+                    isso que ela existe.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="antes-2" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Vocês ficam com o meu dinheiro?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Nunca. A conta é tua, aberta em teu nome na tua corretora, e o dinheiro nunca passa por nós. O que
+                    autorizas é a colocação da ordem — nada mais. Podes desligar a ligação a qualquer momento, e
+                    desligar pára mesmo: as posições deixam de ser copiadas nesse instante.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="antes-3" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Quanto preciso de ter para começar?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    O lote é calculado pelo teu saldo, não pelo nosso, por isso não há um mínimo imposto por nós — há o
+                    mínimo da tua corretora. O que te pedimos é que comeces com um valor que possas perder sem mudar
+                    a tua vida, porque há semanas negativas e vais ter algumas.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="antes-4" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Isto é garantido? Quanto vou ganhar?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Não é garantido nada, e quem te garantir está a mentir-te. O que mostramos são contagens da nossa base
+                    de dados, com a data ao lado e com as contas negativas incluídas na conta. O resultado em euros
+                    depende do teu capital, do teu risco e de quanto tempo aguentas sem mexer no que está a correr bem.
+                    Não somos consultores financeiros licenciados e isto não é aconselhamento financeiro personalizado.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="antes-5" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Já pago no site. Tenho de pagar outra vez na app?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Não. O acesso é o mesmo dos dois lados: entras na app com o mesmo login e o que já pagaste vale lá.
+                    Só há uma subscrição por pessoa, seja ela feita no site ou dentro da app.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="antes-6" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Em que idiomas está a plataforma?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    O site e a app estão traduzidos em 21 idiomas. As sessões ao vivo têm legendas traduzidas em português,
+                    inglês, espanhol, francês e alemão — em direto, enquanto o educador fala.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </section>
 
             {/* Planos e Subscrições */}
             <section>

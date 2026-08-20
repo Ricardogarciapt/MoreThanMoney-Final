@@ -11,8 +11,8 @@ import type { ActivationDecision } from '@/lib/member-activation'
  *  - off      → aviso de inativação
  *
  * A escolha do pack é feita no email (cada pack é um botão que abre o checkout
- * Stripe já com o plano selecionado) — é aí que vive o upsell: o Premium e o
- * Fundador aparecem ao lado do Membro, com a diferença explicada numa linha.
+ * Stripe já com o plano selecionado) — é aí que vive o upsell: o Premium aparece
+ * ao lado do Membro, com a diferença explicada numa linha.
  */
 
 export type ActivationEmail = { subject: string; html: string; text: string }
