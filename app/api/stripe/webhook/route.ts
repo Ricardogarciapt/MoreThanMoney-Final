@@ -463,7 +463,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     subscription_renewal_count: (profile.subscription_renewal_count || 0) + 1,
   }).eq('id', profile.id)
 
-  // O PLANO tem de ficar gravado: sem ele não se consegue responder a "quantos Elite vendemos?"
+  // O PLANO tem de ficar gravado: sem ele não se consegue responder a "quantos anuais vendemos?"
   // nem separar receita por pack — os 25 pagamentos registados até aqui têm plan a null.
   const planoPago =
     (stripeInvoiceLinePrice(invoice.lines?.data?.[0])?.metadata?.plan as string | undefined) ||

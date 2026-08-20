@@ -113,7 +113,7 @@ export default function UpgradePage() {
 
   const currentPlan = user?.subscription_plan ?? 'app_member'
   const isPremium   = currentPlan === 'premium'
-  // Elite usa strings literais (fora do dicionário i18n); o resto usa chaves upgrade.*
+  // Preços vêm do dicionário i18n (chaves upgrade.*)
   const label = (s: string) => (s.startsWith('upgrade.') ? t(s) : s)
 
   const handleCheckout = async (planKey: PlanKey) => {

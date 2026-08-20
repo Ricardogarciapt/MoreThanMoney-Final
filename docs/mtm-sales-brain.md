@@ -41,10 +41,11 @@ Persona ideal: PT/BR, quer aprender a investir/trading a sério, sem enganos, co
 | **Comunidade Skool** | **350$ ÚNICO** (one-time) | Entrada na comunidade Skool. **Grátis para membros Premium** (não pagam os 350$). |
 | **Membro** | **35€/mês** (28€/mês no anual) | Acesso à app, salas base, comunidade. **SEM as funcionalidades do site** (é essa a diferença para o Premium). |
 | **Premium** | **65€/mês** — **1º mês 34,99€ (oferta intro)**; anual 52€/mês | Tudo o do Membro **+ as funcionalidades do SITE** (Terminal MTM, MTM Alerts, Portefólios, Listas de Visualização das aulas, Planos de trading e rotas web-only que não existem na app) **+ Skool grátis** + Scanner, Trading Alerts, Tap to Trade, aulas, salas Premium. **A diferença Membro→Premium = as funcionalidades do site.** |
-| **Elite** | **€597/ano** | Alto-ticket: acesso PAMM, isenção de fees (promoções), formação criar negócios digitais, acompanhamento direto, estatuto Fundador vitalício (preço travado), scanners lifetime. Badge VIP. |
+| **Scanners (add-on)** | **35€/mês** | Acesso aos scanners TradingView (Golden Zone, Kill Shot, Sensei, MTM Scanner) e ao /scanner-access. |
 | **MTM Copy (add-on)** | +20€/mês | Copy trading via MetaApi (copiar estratégias no MT5). |
 
 *Nota: IQONIC descontinuado — nenhuma comunicação deve mencioná-lo.*
+*Nota: o pack **Elite/Fundador (597€/ano)** foi retirado da oferta em 2026-08-20. Não o oferecer nem o mencionar: a subida faz-se pelos **planos anuais** (Membro 28€/mês, Premium 52€/mês) e pela **PrimeVerse**.*
 
 - iOS: subscrição por **Apple IAP** (dentro da app). Web/Android: **Stripe** (`/upgrade`).
 - Já pagas Stripe? Fazes login na app **sem pagar de novo** (entitlement unificado, sem dupla cobrança).
