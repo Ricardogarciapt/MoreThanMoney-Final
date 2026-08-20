@@ -39,7 +39,7 @@ export interface MTMcopierConnection {
   exit_pct_tp2?: number | null
   exit_pct_tp3?: number | null
   copyfactory_strategy_pick?: string | null
-  /** Lotes FIXOS por estratégia (ex.: {"9gsL":0.01,"5IHE":0.02}) — a mesma conta copia
+  /** Lotes FIXOS por estratégia (ex.: {"MxsR":0.01,"5IHE":0.02}) — a mesma conta copia
    *  várias estratégias, cada uma com o seu lote. Quando definido, define QUAIS estratégias
    *  a conta copia (as chaves) e sobrepõe-se a lot_mode/lot_value para essas. */
   strategy_lots?: Record<string, number> | null

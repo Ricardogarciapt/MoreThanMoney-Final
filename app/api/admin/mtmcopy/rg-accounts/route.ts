@@ -13,6 +13,9 @@ export const dynamic = "force-dynamic"
 const INTERMEDIATE = "0f38257a-ba12-4f6c-b20c-9139693b3674"
 const STRATEGY_NAMES: Record<string, string> = {
   su0a: "Copy Trader Ricardo Garcia",
+  // MxsR substituiu a 9gsL a 2026-08-20 (conta antiga apagada na MetaApi). A 9gsL fica no mapa
+  // para as linhas históricas não perderem o nome.
+  MxsR: "MTM Auto Premium",
   "9gsL": "MTM Auto Premium",
   "5IHE": "MTM Auto Trade Ideas",
   mADd: "MTM Auto Sensei",
@@ -76,5 +79,5 @@ export async function GET(request: NextRequest) {
     }
   })
 
-  return NextResponse.json({ ok: true, accounts, strategy: { su0a: STRATEGY_NAMES.su0a, "9gsL": STRATEGY_NAMES["9gsL"] } })
+  return NextResponse.json({ ok: true, accounts, strategy: { su0a: STRATEGY_NAMES.su0a, MxsR: STRATEGY_NAMES.MxsR } })
 }

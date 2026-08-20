@@ -277,7 +277,7 @@ export async function getMtmStrategyOptionsAsync(): Promise<MtmCopyStrategyOptio
 
   // Visibilidade ao CLIENTE (/mtmcopy · «Estratégia MTM»): por defeito só Premium + Sensei.
   // O admin pode expor outras (Booster, Gold Did, …) via site_settings 'mtmcopy_client_strategies'
-  // = {"ids": ["9gsL","mADd", …]}. Vazio/ausente → default Premium+Sensei.
+  // = {"ids": ["MxsR","mADd", …]}. Vazio/ausente → default Premium+Sensei.
   const visibleIds = await getClientVisibleStrategyIds()
   const filtered = list.filter((o) => visibleIds.includes(o.id))
   // salvaguarda: nunca devolver vazio (se a allowlist não casar com nenhuma), cai em Premium+Sensei
