@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse, after } from "next/server"
-import { resolveReplyToChatMessageId } from "@/lib/telegram-reply-thread"
+import { resolveThreadParent } from "@/lib/telegram-reply-thread"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { processMtmcopyTelegramMessage } from "@/lib/mtmcopy/processor"
 import {
@@ -74,9 +74,10 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
     }
   }
 
-  const replyToId = await resolveReplyToChatMessageId(
+  const replyToId = await resolveThreadParent(
     slug,
     (message as { reply_to_message?: { message_id?: number } }).reply_to_message?.message_id ?? null,
+    content,
   )
   const { error } = await supabase.from("chat_messages").insert({
     channel_slug: slug,

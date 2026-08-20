@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sendTelegramChannelMessage } from '@/lib/mtmcopy/telegram-bot'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { resolveAppChannelSlug } from '@/lib/telegram-app-channels'
-import { resolveReplyToChatMessageId } from '@/lib/telegram-reply-thread'
+import { resolveThreadParent } from '@/lib/telegram-reply-thread'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 
 // Premium: espelhamos aqui o TEXTO LITERAL do Telegram para o 'premium-ideas' (pedido Ricardo —
@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
               notified: true,
               // Threading: follow-ups (HIT TP1/BE/fecho) são REPLIES no Telegram → responder ao
               // mesmo pai no chat da app (senão aparecem todos ao mesmo nível).
-              ...(await resolveReplyToChatMessageId(slug, replyTo).then((id) => (id ? { reply_to_id: id } : {}))),
+              ...(await resolveThreadParent(slug, replyTo, execText).then((id) => (id ? { reply_to_id: id } : {}))),
             })
             .select('id')
             .single()
