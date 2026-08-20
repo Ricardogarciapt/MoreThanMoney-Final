@@ -6,6 +6,7 @@ import { REGISTER_MESSAGES } from "./messages/register"
 import { UPGRADE_MESSAGES } from "./messages/upgrade"
 import { APPMOBILE_MESSAGES } from "./messages/app-mobile"
 import { LANDING_MESSAGES } from "./messages/landing"
+import { LANDING2_MESSAGES } from "./messages/landing2"
 import { NAVFOOTER_MESSAGES } from "./messages/navfooter"
 import { CHAT_MESSAGES } from "./messages/chat"
 import { LIVE_MESSAGES } from "./messages/live"
@@ -38,6 +39,7 @@ export const ALL_MESSAGES = merge(
   UPGRADE_MESSAGES,
   APPMOBILE_MESSAGES,
   LANDING_MESSAGES,
+  LANDING2_MESSAGES,
   NAVFOOTER_MESSAGES,
   CHAT_MESSAGES,
   LIVE_MESSAGES,
