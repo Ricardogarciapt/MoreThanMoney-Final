@@ -34,7 +34,7 @@ const SCANNER_PLAN_NAMES: Record<string, string> = {
   mtm_scanner_lifetime: 'Scanner MTM V3.4 (Vitalício)',
   scanners_monthly: 'Pack Total de Scanners MTM (Mensal)',
   scanners_semestral: 'Pack Total de Scanners MTM (Semestral)',
-  scanners_lifetime: 'Pack Total de Scanners MTM (Vitalício — inclui Sensei X)',
+  scanners_lifetime: 'Pack Scanners MTM (Vitalício — inclui o Sensei)',
 }
 
 const stripe = getStripeClient()

@@ -117,12 +117,12 @@ const SCANNERS: ScannerData[] = [
   },
   {
     key: "sensei",
-    name: "MTM Sensei X",
+    name: "MTM Sensei",
     subtitle: "Inteligência Artificial Avançada",
     image: "/MTM%20Sensei%20Preview.png",
     badge: "Novo",
     description:
-      "O scanner mais sofisticado da MTM. O Sensei X usa inteligência artificial para identificar confluências entre múltiplas metodologias — Smart Money, Goldenzone, SR MTM e KillShot — gerando sinais de alta precisão para traders profissionais.",
+      "O scanner mais sofisticado da MTM. O Sensei usa inteligência artificial para identificar confluências entre múltiplas metodologias — Smart Money, Goldenzone, SR MTM e KillShot — gerando sinais de alta precisão para traders profissionais.",
     features: [
       "IA multi-confluência com Smart Money Concepts",
       "Integração com metodologia Goldenzone MTM",
@@ -138,7 +138,7 @@ const SCANNERS: ScannerData[] = [
       "Historial de trades e taxa de acerto",
     ],
     products: [
-      // Sensei X é parte do Pack Total — ver secção Pack Total abaixo
+      // O Sensei faz parte do Pack Scanners — ver secção Pack Scanners abaixo
     ],
   },
 ]
@@ -473,7 +473,7 @@ export default function ScannerPage() {
                   ) : (
                     <div className="bg-[#D2A63C]/10 border border-[#D2A63C]/30 rounded-xl p-4">
                       <p className="text-sm text-[#D2A63C] font-medium">
-                        ✨ O Sensei X está incluído no <strong>Pack Total de Scanners</strong>
+                        ✨ O Sensei está incluído no <strong>Pack Scanners</strong>
                       </p>
                       <p className="text-xs text-gray-400 mt-1">Ver preços abaixo ↓</p>
                     </div>
@@ -483,15 +483,15 @@ export default function ScannerPage() {
             </div>
           ))}
 
-          {/* Pack Total de Scanners */}
+          {/* Pack Scanners */}
           <div className="mb-16">
             <div className="text-center mb-8">
               <div className="inline-flex items-center gap-2 bg-[#D2A63C]/10 border border-[#D2A63C]/30 rounded-full px-4 py-1.5 text-[#D2A63C] text-sm font-medium mb-4">
                 <Star className="w-4 h-4" /> Melhor Valor
               </div>
-              <h2 className="text-3xl font-bold text-white mb-2">Pack Total de Scanners</h2>
+              <h2 className="text-3xl font-bold text-white mb-2">Pack Scanners</h2>
               <p className="text-gray-400 max-w-xl mx-auto">
-                Acesso a todos os scanners MTM — Gold Killer, MTM Scanner V3.4 e Sensei X — num único pack.
+                Acesso a todos os scanners MTM — Gold Killer, MTM Scanner V3.4 e Sensei — num único pack.
               </p>
             </div>
 
@@ -529,7 +529,7 @@ export default function ScannerPage() {
               <div className="md:col-span-2 bg-gray-900/60 border border-gray-800 rounded-2xl p-6">
                 <h3 className="font-semibold text-white mb-4">O que está incluído</h3>
                 <div className="grid sm:grid-cols-3 gap-4">
-                  {["MTM Gold Killer V2.1", "Scanner MTM V3.4", "Sensei X"].map((name) => (
+                  {["MTM Gold Killer V2.1", "Scanner MTM V3.4", "Sensei"].map((name) => (
                     <div key={name} className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-[#D2A63C] rounded-full shrink-0" />
                       <span className="text-sm text-gray-300">{name}</span>
@@ -561,7 +561,7 @@ export default function ScannerPage() {
                   )}
                 </div>
                 <Button
-                  onClick={() => setCheckoutProduct({ product: selectedPackProduct, scannerName: "Pack Total de Scanners" })}
+                  onClick={() => setCheckoutProduct({ product: selectedPackProduct, scannerName: "Pack Scanners" })}
                   className="mt-6 w-full bg-[#D2A63C] hover:bg-[#BB8525] text-black font-bold"
                   size="lg"
                 >
@@ -629,11 +629,11 @@ export default function ScannerPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
-                onClick={() => setCheckoutProduct({ product: PACK_TOTAL_PRODUCTS[1], scannerName: "Pack Total de Scanners" })}
+                onClick={() => setCheckoutProduct({ product: PACK_TOTAL_PRODUCTS[1], scannerName: "Pack Scanners" })}
                 className="bg-[#D2A63C] hover:bg-[#BB8525] text-black font-bold px-8"
                 size="lg"
               >
-                Ver Pack Total <ArrowRight className="ml-2 h-5 w-5" />
+                Ver Pack Scanners <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Link href="/register">
                 <Button variant="outline" className="border-gray-700 text-white hover:bg-gray-800" size="lg">

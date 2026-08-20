@@ -35,11 +35,11 @@ const LOCATIONS = [
 
 const PRODUCTS = [
   "o Pack Premium",
-  "o Pack Total de Scanners",
+  "o Pack Scanners",
   "o Pack Membro",
   "o Scanner Gold Killer",
   "o Scanner MTM V3.4",
-  "o Sensei X",
+  "o Sensei",
   "o Plano em 3 Passos",
   "o acesso à Trading Floor",
   "os cursos MoreThanMoney",
@@ -53,7 +53,7 @@ const RESULTS = [
   "+320 pips com o Scanner V3.4",
   "+680 pips em 2 semanas",
   "Rising Star conquistado",
-  "+910 pips no Sensei X",
+  "+910 pips no Sensei",
 ]
 
 function randomFrom<T>(arr: T[]): T {

@@ -141,7 +141,7 @@ export default function FAQPage() {
                     <ul className="mt-2 space-y-1">
                       <li><strong className="text-white">MTM Gold Killer V2.1</strong> — especializado em ouro e pares voláteis</li>
                       <li><strong className="text-white">Scanner MTM V3.4</strong> — estruturas de mercado e ATR</li>
-                      <li><strong className="text-white">MTM Sensei X</strong> — IA multi-confluência (Smart Money + Goldenzone)</li>
+                      <li><strong className="text-white">MTM Sensei</strong> — IA multi-confluência (Smart Money + Goldenzone)</li>
                     </ul>
                   </AccordionContent>
                 </AccordionItem>

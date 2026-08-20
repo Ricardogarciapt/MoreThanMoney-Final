@@ -249,7 +249,7 @@ const STEPS: TutorialStep[] = [
     body: "Ferramentas exclusivas MTM para encontrar setups com critérios objectivos — menos ruído, mais foco.",
     tips: [
       "Gold Killer — foco em XAU/USD",
-      "MTM Scanner e Sensei X — setups multi-mercado",
+      "MTM Scanner e Sensei — setups multi-mercado",
       "Abre no TradingView com a tua conta ligada",
     ],
     hint: "Tab «Scanner» na barra nativa no fundo da app",

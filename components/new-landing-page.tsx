@@ -87,13 +87,13 @@ const PATHS = [
     features: [
       "Gold Killer Scanner — Ouro e XAU/USD",
       "MTM Scanner V3.4 — Multi-ativo",
-      "Sensei X — estratégia de IA multi-confluência",
-      "Pack Total com todos os scanners incluídos",
+      "Sensei — estratégia de IA multi-confluência",
+      "Pack Scanners com todos incluídos",
       "Tutorial de configuração incluído",
     ],
     cta: "Ver Scanners",
     href: "/scanner",
-    badge: "Pack Total — €35/mês",
+    badge: "Pack Scanners — 35€/mês",
   },
 ]
 
@@ -180,16 +180,36 @@ const PACKS = [
     popular: true,
     features: [
       "Tudo do Pack Membro",
-      "Acesso Premium ao chat",
-      "Cursos de Forex e Cripto",
-      "Cursos de Marketing Digital",
-      "Cursos de Inteligência Artificial",
+      "Sinais Premium — canal e app",
+      "Tap to Trade — aceitas um sinal e ele abre na tua conta",
+      "MTM Copy — as nossas estratégias copiam para ti",
+      "Scanners incluídos (GoldKiller e Sensei)",
+      "Cursos de Forex, Cripto, Marketing e IA",
       "Mentor AI premium (ilimitado)",
-      "Scanner Gold Killer incluído",
-      "Trade Ideas — canal premium",
     ],
     cta: "Começar com €65/mês",
     href: "/register?plan=premium",
+  },
+  {
+    id: "fundador",
+    name: "Pack Fundador",
+    emoji: "👑",
+    price: "€597",
+    period: "/ano",
+    color: "#E0B44A",
+    border: "border-[#E0B44A]/50",
+    bg: "from-[#E0B44A]/15 to-[#8a6a1e]/5",
+    popular: false,
+    features: [
+      "Um ano de Premium — preço travado para sempre",
+      "Scanners vitalícios (GoldKiller incluído)",
+      "Acesso a produtos PAMM",
+      "Isenção de fees em promoções exclusivas",
+      "Formação: criar negócios digitais",
+      "Acompanhamento direto e comunidade fechada",
+    ],
+    cta: "Ser Fundador",
+    href: "/register?plan=elite_annual",
   },
   {
     id: "scanners",
@@ -202,9 +222,8 @@ const PACKS = [
     bg: "from-purple-500/10 to-purple-900/5",
     popular: false,
     features: [
-      "Gold Killer Scanner",
-      "MTM Scanner V3.4",
-      "Sensei X Scanner",
+      "Só os scanners — sem app, sem sinais, sem comunidade",
+      "GoldKiller, MTM Scanner e Sensei",
       "Acesso TradingView invite-only",
       "Alertas automáticos",
       "Tutorial em vídeo",
@@ -680,7 +699,7 @@ export default function NewLandingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-6">
             {PACKS.map((pack) => (
               <div
                 key={pack.id}
