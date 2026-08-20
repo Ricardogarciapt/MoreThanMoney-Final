@@ -1,14 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { GitBranch, Radio, Send, Users } from "lucide-react"
+import { GitBranch, Radio, Send, Server, Users } from "lucide-react"
 import MtmcopyTelegramSenders from "@/components/admin/mtmcopy-telegram-senders"
 import MtmcopyProviderPipeline from "@/components/admin/mtmcopy-provider-pipeline"
 import MtmcopyMetaApiPanel from "@/components/admin/mtmcopy-metaapi-panel"
+import MtmcopyProviderAccounts from "@/components/admin/mtmcopy-provider-accounts"
 import { cn } from "@/lib/utils"
 import type { MtmcopyAdminTab } from "@/components/admin/mtmcopy-admin-shell"
 
-type SenderSubTab = "telegram" | "routes"
+type SenderSubTab = "telegram" | "routes" | "accounts"
 
 export default function MtmcopyOpsHub({
   initialRouteId,
@@ -32,7 +33,7 @@ export default function MtmcopyOpsHub({
           Senders · Origem dos sinais
         </h2>
         <p className="text-sm text-zinc-400 mt-1">
-          Canais Telegram, webhook TradingView e rotas provider — Premium, Trade Ideas e Sensei.
+          Canais Telegram, webhook TradingView, rotas provider e as contas mestre que as servem.
         </p>
         <div className="flex gap-1 mt-4 p-1 rounded-lg bg-zinc-900/80 border border-zinc-800 w-fit">
           <button
@@ -61,14 +62,25 @@ export default function MtmcopyOpsHub({
             <GitBranch className="w-3.5 h-3.5" />
             Rotas provider
           </button>
+          <button
+            type="button"
+            onClick={() => setSenderTab("accounts")}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+              senderTab === "accounts"
+                ? "bg-emerald-500/15 text-emerald-300"
+                : "text-zinc-500 hover:text-zinc-300",
+            )}
+          >
+            <Server className="w-3.5 h-3.5" />
+            Contas provider
+          </button>
         </div>
       </div>
       <div className="p-5 sm:p-6">
-        {senderTab === "telegram" ? (
-          <MtmcopyTelegramSenders />
-        ) : (
-          <MtmcopyProviderPipeline initialRouteId={initialRouteId} />
-        )}
+        {senderTab === "telegram" && <MtmcopyTelegramSenders />}
+        {senderTab === "routes" && <MtmcopyProviderPipeline initialRouteId={initialRouteId} />}
+        {senderTab === "accounts" && <MtmcopyProviderAccounts />}
       </div>
     </section>
   )
