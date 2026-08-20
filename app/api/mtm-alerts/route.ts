@@ -308,6 +308,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // Pedido Ricardo 2026-08-20: alertas TERMINADOS saem do feed (ficam só na BD) —
+    // SL (loss), descartados, fechados, BE, e "todos os TPs atingidos" (exit_N >= nº de TPs
+    // do sinal). Parciais (exit_1 de um sinal com 3 TPs) continuam visíveis. O deep-link por
+    // id (?id=) e ?includeClosed=1 continuam a devolver tudo.
+    const includeClosed = searchParams.get("includeClosed") === "1"
+    if (!idFilter && !includeClosed && data) {
+      const HIDDEN_STATUS = new Set(["loss", "discarded", "closed", "filtered", "be"])
+      data = (data as any[]).filter((row) => {
+        const st = String(row.trade_status ?? "")
+        if (HIDDEN_STATUS.has(st)) return false
+        const m = st.match(/^exit_(\d)$/)
+        if (m) {
+          const raw = (row.raw_payload && typeof row.raw_payload === "object" ? row.raw_payload : {}) as Record<string, unknown>
+          const nn = (v: unknown) => (v == null || v === "" ? null : Number.isFinite(Number(v)) ? Number(v) : null)
+          const tpCount = [nn(row.tp), nn(raw.tp2), nn(raw.tp3), nn(raw.tp4), nn(raw.exit2), nn(raw.exit3)]
+            .filter((n, i, arr) => n != null && arr.indexOf(n) === i).length
+          if (Number(m[1]) >= Math.max(1, tpCount)) return false // todos os TPs atingidos
+        }
+        return true
+      })
+    }
+
     const alerts: MtmAlert[] = (data || []).map((row: any) => {
       const raw = (row.raw_payload && typeof row.raw_payload === "object" ? row.raw_payload : {}) as Record<string, unknown>
       const entry = num(row.price)

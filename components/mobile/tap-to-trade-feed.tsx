@@ -20,7 +20,7 @@ import {
   Trash2,
 } from "lucide-react"
 
-const FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad)/i
+const FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|entry\s*hit)/i
 const DIR_RE = /(\b(buy|sell|long|short|compra|venda)\b|🟢|🔴)/i
 /** Sensei: só a "Entry Alert / Ideia Activada" (entrada activada) é um sinal válido. */
 const SENSEI_ACTIVE_RE = /(entrada\s+activ|entrada\s+ativ|ideia\s+activ|ideia\s+ativ|entry\s+alert)/i
@@ -304,6 +304,9 @@ export default function TapToTradeFeed() {
           reason: resolved ? "resolved" : ageExpired ? "aged" : "",
         }
       })
+      // Pedido Ricardo 2026-08-20: sinais TERMINADOS (todos os TPs/SL/BE/descartados) ou
+      // envelhecidos saem do feed — ficam só na BD. O feed mostra apenas ideias aceitáveis.
+      .filter((s) => !s.expired)
     setItems(sigs)
     // Quais destes sinais o utilizador já aceitou (persiste entre reloads)
     if (tok) {

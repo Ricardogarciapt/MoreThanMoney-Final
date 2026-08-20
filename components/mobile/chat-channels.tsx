@@ -678,7 +678,45 @@ function AttachSheet({
 // tap_to_trade=true). Se mudares o âmbito no /admin, atualiza aqui também (ou o botão
 // do chat dessincroniza do accept do servidor). Âmbito atual: Forex + MTM + GoldKiller + Premium.
 const TAP_TRADE_CHANNELS = new Set(['trade-ideas-setup', 'sinais-scanner-mtm', 'trade-ideas', 'sinais-goldkiller', 'premium-ideas'])
-const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad)/i
+const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad)/i
+/** Um follow-up POSTERIOR com isto RESOLVE o sinal (ativou/fechou/morreu) → o botão T2T esconde-se.
+ *  'ENTRY HIT' literal (monitor/PrimeVerse) e não 'ativad' — senão as entradas Sensei ("Ideia
+ *  Activada"), que SÃO sinais, resolver-se-iam umas às outras. */
+const TAP_TRADE_RESOLVING_RE = /(entry\s*hit|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|posi[çc][aã]o\s*fechada|fechad[ao]|encerrad|cancelad|descartad|invalidad|break\s*even)/i
+/** Símbolo do sinal, para emparelhar follow-ups com a entrada certa (nunca substring cega). */
+function t2tSymbolOf(content?: string | null): string | null {
+  if (!content) return null
+  const c = content.toUpperCase()
+  const m =
+    c.match(/\b(XAUUSD|XAGUSD|NAS100|US30|US500|GER40|UK100|JP225|SPX500|BTCUSD|ETHUSD|SOLUSD|XRPUSD)\b/) ||
+    c.match(/\b[A-Z]{3}(USD|EUR|GBP|JPY|AUD|CAD|CHF|NZD)\b/) ||
+    c.match(/\bXAU\b|\bGOLD\b/)
+  return m ? m[0] : null
+}
+/**
+ * IDs dos sinais já RESOLVIDOS por um follow-up posterior (mesmo canal + mesmo símbolo).
+ * Pedido Ricardo 2026-08-20: o botão T2T fica visível enquanto a ideia estiver VÁLIDA/pendente
+ * e esconde-se ao descarte/ativação/fecho — não por idade cega.
+ */
+function computeResolvedSignalIds(messages: ChatMessage[]): Set<string> {
+  const resolved = new Set<string>()
+  const followups = messages.filter((m) => m.content && TAP_TRADE_RESOLVING_RE.test(m.content))
+  if (!followups.length) return resolved
+  for (const m of messages) {
+    if (!m.content || !looksLikeTradeSignal(m.channel_slug, m.content)) continue
+    const sym = t2tSymbolOf(m.content)
+    const t0 = m.created_at ? new Date(m.created_at).getTime() : 0
+    const hit = followups.some((f) => {
+      if (f.id === m.id || f.channel_slug !== m.channel_slug) return false
+      const t1 = f.created_at ? new Date(f.created_at).getTime() : 0
+      if (t1 <= t0) return false
+      const fsym = t2tSymbolOf(f.content)
+      return !sym || !fsym || fsym === sym
+    })
+    if (hit) resolved.add(m.id)
+  }
+  return resolved
+}
 const TAP_TRADE_DIR_RE = /(\b(buy|sell|long|short|compra|venda)\b|🟢|🔴)/i
 /** Sensei: só a "Entry Alert / Ideia Activada" (entrada activada) é negociável. */
 const SENSEI_ACTIVE_RE = /(entrada\s+activ|entrada\s+ativ|ideia\s+activ|ideia\s+ativ|entry\s+alert)/i
@@ -731,6 +769,7 @@ function MessageBubble({
   onLongPress,
   onOpenActions,
   onTapToTrade,
+  resolved = false,
 }: {
   msg: ChatMessage
   isOwn: boolean
@@ -741,11 +780,14 @@ function MessageBubble({
   onLongPress: (msg: ChatMessage) => void
   onOpenActions: (msg: ChatMessage) => void
   onTapToTrade?: (msg: ChatMessage) => void
+  /** Sinal já resolvido por follow-up posterior (ativado/fechado/descartado) → sem botão T2T. */
+  resolved?: boolean
 }) {
   const t = useT()
   const tradeable =
     !isOwn &&
     !!onTapToTrade &&
+    !resolved &&
     looksLikeTradeSignal(msg.channel_slug, msg.content) &&
     isSignalActive(msg.created_at, msg.content)
   const isTelegram = msg.message_type === "telegram_forward"
@@ -1536,6 +1578,7 @@ function ChannelView({
 
   const renderMessages = () => {
     let lastDay = ""
+    const resolvedIds = computeResolvedSignalIds(messages)
     return messages.map((msg) => {
       const day = formatDay(msg.created_at, t)
       const showDay = day !== lastDay
@@ -1554,6 +1597,7 @@ function ChannelView({
             isOwn={msg.user_id === currentUser?.id}
             canWrite={canWrite}
             isAdmin={isAdmin}
+            resolved={resolvedIds.has(msg.id)}
             onReply={setReplyTo}
             onDelete={handleDelete}
             onLongPress={setContextMsg}
