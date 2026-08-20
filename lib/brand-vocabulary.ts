@@ -21,7 +21,7 @@ export interface Pack {
 }
 
 /** Os quatro packs de subscrição. */
-export const PACKS: Record<'membro' | 'premium' | 'elite' | 'scanners', Pack> = {
+export const PACKS: Record<'membro' | 'premium' | 'scanners', Pack> = {
   membro: {
     planId: 'app_member_monthly',
     nome: 'Pack Membro',
@@ -35,13 +35,6 @@ export const PACKS: Record<'membro' | 'premium' | 'elite' | 'scanners', Pack> = 
     preco: '65€',
     periodo: '/mês',
     linha: 'Tudo do Membro mais os sinais Premium, os scanners e o Tap to Trade.',
-  },
-  elite: {
-    planId: 'elite_annual',
-    nome: 'Pack Elite',
-    preco: '597€',
-    periodo: '/ano',
-    linha: 'Um ano de Premium com o preço travado, scanners vitalícios e produtos PAMM.',
   },
   scanners: {
     planId: 'scanners_monthly',

@@ -39,12 +39,6 @@ export const PACKS: PackOption[] = [
     linha: 'Tudo do Membro + sinais Premium, scanners e Tap to Trade.',
     destaque: true,
   },
-  {
-    planId: 'elite_annual',
-    nome: 'Fundador',
-    preco: '597€/ano',
-    linha: 'Um ano de Premium, preço travado para sempre, scanners vitalícios e produtos PAMM.',
-  },
 ]
 
 export function checkoutUrl(planId: string, email: string): string {

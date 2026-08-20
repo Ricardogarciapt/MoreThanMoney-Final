@@ -191,27 +191,6 @@ const PACKS = [
     href: "/register?plan=premium",
   },
   {
-    id: "elite",
-    name: "Pack Elite",
-    emoji: "👑",
-    price: "€597",
-    period: "/ano",
-    color: "#E0B44A",
-    border: "border-[#E0B44A]/50",
-    bg: "from-[#E0B44A]/15 to-[#8a6a1e]/5",
-    popular: false,
-    features: [
-      "Um ano de Premium — preço travado para sempre",
-      "Scanners vitalícios (GoldKiller incluído)",
-      "Acesso a produtos PAMM",
-      "Isenção de fees em promoções exclusivas",
-      "Formação: criar negócios digitais",
-      "Acompanhamento direto e comunidade fechada",
-    ],
-    cta: "Ser Elite",
-    href: "/register?plan=elite_annual",
-  },
-  {
     id: "scanners",
     name: "Pack Scanners",
     emoji: "🔍",
@@ -699,7 +678,7 @@ export default function NewLandingPage() {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {PACKS.map((pack) => (
               <div
                 key={pack.id}

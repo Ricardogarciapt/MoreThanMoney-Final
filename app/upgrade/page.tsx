@@ -55,27 +55,6 @@ const PLANS = {
     ],
     highlight: true,
   },
-  elite: {
-    id: 'elite',
-    name: 'Elite Anual',
-    icon: Star,
-    color: '#E0B44A',
-    colorBg: 'rgba(224,180,74,0.10)',
-    colorBorder: 'rgba(224,180,74,0.45)',
-    monthly: { price: 50, label: '597€/ano', total: '597€/ano', planId: 'elite_annual' },
-    annual:  { price: 50, label: '597€/ano', total: '597€/ano', planId: 'elite_annual' },
-    features: [
-      'Tudo do Premium — 1 ano completo',
-      'Estatuto Elite vitalício (preço travado)',
-      'Scanners lifetime (GoldKiller)',
-      'Acesso a produtos PAMM',
-      'Isenção de fees (promoções exclusivas)',
-      'Formação: criar negócios digitais',
-      'Acompanhamento direto',
-      'Comunidade VIP fechada',
-    ],
-    highlight: true,
-  },
 } as const
 
 type PlanKey = keyof typeof PLANS
@@ -229,14 +208,13 @@ export default function UpgradePage() {
         </div>
 
         {/* Cards de plano */}
-        <div className="grid md:grid-cols-3 gap-5 mb-10">
+        <div className="grid md:grid-cols-2 gap-5 mb-10 max-w-3xl mx-auto">
           {(Object.values(PLANS) as typeof PLANS[PlanKey][]).map((plan) => {
             const pricing  = billing === 'annual' ? plan.annual : plan.monthly
             const Icon     = plan.icon
-            const isEliteCard = plan.id === 'elite'
-            const isActive = currentPlan === plan.id || (isEliteCard && (user as any)?.member_category === 'vip')
+            const isActive = currentPlan === plan.id
             const isPremiumCard = plan.id === 'premium'
-            const featured = isPremiumCard || isEliteCard
+            const featured = isPremiumCard
 
             return (
               <div
@@ -250,7 +228,7 @@ export default function UpgradePage() {
                 {featured && (
                   <div className="absolute top-0 left-0 right-0 text-center py-1.5 text-xs font-bold text-black"
                     style={{ background: plan.color }}>
-                    {isEliteCard ? '👑 Elite' : `⭐ ${t('upgrade.mostPopular')}`}
+                    ⭐ {t('upgrade.mostPopular')}
                   </div>
                 )}
 
@@ -270,13 +248,7 @@ export default function UpgradePage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      {isEliteCard ? (
-                        <>
-                          <span className="text-3xl font-black text-white">597€</span>
-                          <span className="text-gray-400 text-sm">/ano</span>
-                          <p className="text-xs text-gray-400 mt-0.5">≈50€/mês · pago 1× · só anual</p>
-                        </>
-                      ) : (
+                      {(
                         <>
                           <span className="text-3xl font-black text-white">{pricing.price}€</span>
                           <span className="text-gray-400 text-sm">{t('upgrade.perMonth')}</span>
@@ -321,8 +293,6 @@ export default function UpgradePage() {
                     >
                       {loading === pricing.planId ? (
                         <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('upgrade.processing')}</>
-                      ) : isEliteCard ? (
-                        <>Quero ser Elite <ArrowRight className="ml-2 h-4 w-4" /></>
                       ) : isPremium ? (
                         t('upgrade.changePlan')
                       ) : plan.id === 'premium' ? (
