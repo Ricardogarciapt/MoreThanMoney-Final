@@ -463,22 +463,30 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     subscription_renewal_count: (profile.subscription_renewal_count || 0) + 1,
   }).eq('id', profile.id)
 
+  // O PLANO tem de ficar gravado: sem ele não se consegue responder a "quantos Elite vendemos?"
+  // nem separar receita por pack — os 25 pagamentos registados até aqui têm plan a null.
+  const planoPago =
+    (stripeInvoiceLinePrice(invoice.lines?.data?.[0])?.metadata?.plan as string | undefined) ||
+    (stripeInvoiceLinePrice(invoice.lines?.data?.[0])?.id
+      ? getPlanIdFromPriceId(stripeInvoiceLinePrice(invoice.lines?.data?.[0])!.id)
+      : null) ||
+    profile.subscription_plan ||
+    null
+
   await supabase.from('payment_history').insert({
     user_id: profile.id,
     stripe_invoice_id: invoice.id,
     amount: invoice.amount_paid,
     currency: invoice.currency,
     status: 'succeeded',
+    plan: planoPago,
     billing_cycle: 'renewal',
     source: 'stripe',
   })
 
   // Notificações de renovação — VIP/Admin + sponsor + uplines
   if (invoice.billing_reason === 'subscription_cycle' && invoice.amount_paid > 0) {
-    const renewalPlanId =
-      (stripeInvoiceLinePrice(invoice.lines?.data?.[0])?.metadata?.plan as string | undefined) ||
-      profile.subscription_plan ||
-      'app_member_monthly'
+    const renewalPlanId = planoPago || 'app_member_monthly'
     void notifyTeamRenewal({
       memberUserId: profile.id,
       username: profile.username || profile.full_name || 'membro',
@@ -518,7 +526,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, payment_failed_count')
+    .select('id, payment_failed_count, subscription_plan')
     .eq('stripe_customer_id', invoice.customer as string)
     .single()
 
@@ -546,6 +554,10 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     amount: invoice.amount_due,
     currency: invoice.currency,
     status: 'failed',
+    plan:
+      (stripeInvoiceLinePrice(invoice.lines?.data?.[0])?.metadata?.plan as string | undefined) ||
+      profile.subscription_plan ||
+      null,
     source: 'stripe',
   })
 }

@@ -83,7 +83,7 @@ export default function ApresentacaoPage() {
 
       {/* Presentation iframe — fills remaining height */}
       <iframe
-        src="/apresentacoes/mtm-iqonic.html?v=4"
+        src="/apresentacoes/mtm-iqonic.html?v=5"
         style={{
           flex: 1,
           width: "100%",
