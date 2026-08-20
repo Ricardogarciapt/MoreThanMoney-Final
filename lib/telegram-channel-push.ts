@@ -1,7 +1,7 @@
 import { getSiteOrigin } from '@/lib/site-url'
 import type { AppChatChannelSlug } from '@/lib/telegram-app-channels'
 import { tapToTradeEnabledChannels } from '@/lib/mtmcopy/tap-to-trade-channels'
-import { isT2TEntrySignal } from '@/lib/mtmcopy/t2t-source'
+import { isT2TEntrySignal, t2tMode } from '@/lib/mtmcopy/t2t-source'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 const PUSH_TITLES: Record<string, string> = {
@@ -70,13 +70,39 @@ export async function sendTelegramChannelPush(opts: {
   // Mensagens de acompanhamento/gestão (updates, "close all", BE) e de PERFORMANCE/resumo
   // (London/New York Performance, Total Win/Loss/Net PIPS) NÃO são T2T → push de chat normal.
   let t2tUsers: string[] = []
+  // Nos perpétuos o botão é SEGUIR, não abrir ordem — por isso não faz sentido exigir conta
+  // T2T ligada para receber a notificação. Quem tem acesso ao canal pode seguir, logo recebe.
+  // (Nos restantes canais o botão abre mesmo uma ordem: só quem tem conta é que o pode usar.)
+  const modoSeguir = t2tMode(slug, opts.content) === 'follow'
   if (opts.chatMessageId && isT2TEntrySignal(slug, opts.content)) {
     try {
       const enabled = await tapToTradeEnabledChannels()
-      if (enabled?.has(slug)) t2tUsers = await activeT2TUserIds()
+      if (enabled?.has(slug)) t2tUsers = modoSeguir ? [] : await activeT2TUserIds()
     } catch {
       // segue como push normal
     }
+  }
+
+  // Perpétuo seguível: UMA audiência só, toda a gente com a notificação de seguir.
+  if (opts.chatMessageId && modoSeguir && isT2TEntrySignal(slug, opts.content)) {
+    const seguirUrl = `/app-mobile?tab=tap-to-trade&signal=${encodeURIComponent(opts.chatMessageId)}`
+    const r = await postPush({
+      all: true,
+      title: `⚡ Seguir posição: ${firstLine.slice(0, 44) || slug}`,
+      body,
+      url: seguirUrl,
+      data: {
+        type: 'tap_to_trade',
+        channel: slug,
+        url: seguirUrl,
+        message_id: opts.chatMessageId,
+        signal_id: opts.chatMessageId,
+        category: 'T2T_SIGNAL',
+        mode: 'follow',
+      },
+      tag: `t2t_${slug}_${opts.chatMessageId}`,
+    })
+    return { ok: r.ok, status: r.status, error: r.error }
   }
 
   // Sinal T2T → 2 audiências (prioriza T2T para quem tem conta)

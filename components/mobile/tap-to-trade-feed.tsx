@@ -124,6 +124,31 @@ function parseSignalFields(content: string): SignalFields {
   }
 }
 
+interface TapPreviewAccount {
+  id: string
+  label: string
+  equity: number | null
+  lot: number | null
+  lotMode: string | null
+  riskPct: number | null
+  riskAmount: number | null
+  available: boolean
+}
+
+interface TapPreview {
+  mode: "execute" | "follow"
+  trade: {
+    symbol: string
+    direction: "buy" | "sell"
+    entry: number | null
+    sl: number | null
+    tps: number[]
+    stopPips: number | null
+    channel: string
+  }
+  accounts: TapPreviewAccount[]
+}
+
 interface Sig {
   id: string
   channel_slug: string
@@ -172,6 +197,12 @@ export default function TapToTradeFeed() {
   const [loading, setLoading] = useState(true)
   const [limitMode, setLimitMode] = useState<"last5" | "all">("last5")
   const [tap, setTap] = useState<{ sig: Sig; status: "confirm" | "loading" | "done" | "error"; message?: string } | null>(null)
+  /**
+   * Pré-visualização do sinal: parâmetros da trade e, por conta, o lote e o risco calculados
+   * sobre a equity real. Antes o cliente confirmava sem ver o tamanho da posição que ia abrir.
+   */
+  const [preview, setPreview] = useState<TapPreview | null>(null)
+  const [previewBusy, setPreviewBusy] = useState(false)
   const [providers, setProviders] = useState<{ label: string; strategy: string }[]>([])
   const [noProviders, setNoProviders] = useState(false)
   // Sinais que este utilizador já aceitou: { chat_message_id: status }
@@ -382,6 +413,32 @@ export default function TapToTradeFeed() {
       cancelled = true
     }
   }, [searchParams, items, deepLinkHandled])
+
+  // Pré-visualização: corre quando o modal abre. Se falhar, o modal continua a funcionar com
+  // o texto do sinal — nunca bloqueia a aceitação por causa de números que não chegaram.
+  useEffect(() => {
+    if (!tap || tap.status !== "confirm") { setPreview(null); return }
+    let cancelado = false
+    setPreviewBusy(true)
+    ;(async () => {
+      try {
+        const tok = await token()
+        if (!tok) return
+        const r = await fetch(`/api/mtmcopy/tap-to-trade/preview?chat_message_id=${encodeURIComponent(tap.sig.id)}`, {
+          headers: { Authorization: `Bearer ${tok}` },
+        })
+        if (!r.ok) return
+        const j = (await r.json()) as TapPreview
+        if (!cancelado) setPreview(j)
+      } catch {
+        /* fica sem números — o texto do sinal chega para decidir */
+      } finally {
+        if (!cancelado) setPreviewBusy(false)
+      }
+    })()
+    return () => { cancelado = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tap?.sig.id, tap?.status])
 
   const filtered = items
     // "O que seguir" é a ÚNICA filtragem: fontes + classes de ativo que o user escolheu ([]=todas).
@@ -1135,13 +1192,74 @@ export default function TapToTradeFeed() {
                 {!isReady && (
                   <p className="text-xs text-amber-400 mb-2">{t("t2t.notLinkedWarning")}</p>
                 )}
-                <p className="text-sm text-zinc-300 mb-3">
-                  {t("t2t.confirmBefore")}<strong className="text-white">{t("t2t.yourAccount")}</strong>{t("t2t.confirmMiddle")}<strong className="text-white">{riskLabel}</strong>{t("t2t.confirmEnd")}
-                </p>
-                <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3 text-xs text-zinc-400 max-h-28 overflow-y-auto whitespace-pre-wrap mb-4">{tap.sig.content}</div>
+                {preview?.mode === "follow" ? (
+                  <p className="text-sm text-zinc-300 mb-3">
+                    Perpétuo: <strong className="text-white">seguir a posição</strong>. Não é aberta nenhuma
+                    ordem na tua conta — a gestão da posição-mestre chega-te por notificação.
+                  </p>
+                ) : (
+                  <p className="text-sm text-zinc-300 mb-3">
+                    {t("t2t.confirmBefore")}<strong className="text-white">{t("t2t.yourAccount")}</strong>{t("t2t.confirmMiddle")}<strong className="text-white">{riskLabel}</strong>{t("t2t.confirmEnd")}
+                  </p>
+                )}
+
+                {/* Parâmetros da trade — o que se está a aceitar, sem ter de ler o texto cru. */}
+                {preview?.trade && (
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3 mb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[15px] font-bold text-white">{preview.trade.symbol}</span>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 ${preview.trade.direction === "buy" ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
+                        {preview.trade.direction === "buy" ? "Compra" : "Venda"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[12px] font-mono tabular-nums">
+                      {preview.trade.entry != null && (
+                        <div className="flex justify-between"><span className="text-zinc-500">Entrada</span><span className="text-zinc-200">{preview.trade.entry}</span></div>
+                      )}
+                      {preview.trade.sl != null && (
+                        <div className="flex justify-between"><span className="text-zinc-500">Stop</span><span className="text-rose-400">{preview.trade.sl}</span></div>
+                      )}
+                      {preview.trade.tps.slice(0, 3).map((tp, i) => (
+                        <div key={i} className="flex justify-between"><span className="text-zinc-500">Alvo {i + 1}</span><span className="text-emerald-400">{tp}</span></div>
+                      ))}
+                      {preview.trade.stopPips != null && (
+                        <div className="flex justify-between"><span className="text-zinc-500">Ao stop</span><span className="text-zinc-400">{preview.trade.stopPips} pips</span></div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Quanto se arrisca, por conta. É a pergunta que o cliente faz antes de tocar. */}
+                {preview?.mode === "execute" && preview.accounts.length > 0 && (
+                  <div className="rounded-lg border border-[#D2A63C]/25 bg-[#D2A63C]/5 p-3 mb-3">
+                    <p className="text-[10px] uppercase tracking-wider text-[#D2A63C] mb-2">Nas tuas contas</p>
+                    <div className="flex flex-col gap-2">
+                      {preview.accounts.map((a) => (
+                        <div key={a.id} className="flex items-baseline justify-between gap-3">
+                          <span className="text-[12px] text-zinc-300 truncate">{a.label}</span>
+                          {a.available ? (
+                            <span className="text-[12px] font-mono tabular-nums text-right">
+                              <span className="text-white font-semibold">{a.lot != null ? `${a.lot} lote${a.lot === 1 ? "" : "s"}` : "—"}</span>
+                              {a.riskPct != null && <span className="text-zinc-500"> · {a.riskPct}%</span>}
+                              {a.riskAmount != null && <span className="text-zinc-400"> ≈ {a.riskAmount}</span>}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-zinc-600">conta não respondeu</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-zinc-500 mt-2">Percentagem e valor calculados sobre a equity de cada conta.</p>
+                  </div>
+                )}
+                {previewBusy && !preview && <p className="text-[11px] text-zinc-500 mb-3">A calcular o risco nas tuas contas…</p>}
+
+                <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3 text-xs text-zinc-400 max-h-24 overflow-y-auto whitespace-pre-wrap mb-4">{tap.sig.content}</div>
                 <div className="flex gap-2">
                   <button onClick={() => setTap(null)} className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95">{t("t2t.cancel")}</button>
-                  <button onClick={runTap} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95">{t("t2t.confirmOpen")}</button>
+                  <button onClick={runTap} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95">
+                    {preview?.mode === "follow" ? "Seguir posição" : t("t2t.confirmOpen")}
+                  </button>
                 </div>
               </>
             )}
@@ -1149,7 +1267,27 @@ export default function TapToTradeFeed() {
             {tap.status === "done" && (
               <>
                 <p className="text-sm text-emerald-400 py-4 text-center">✅ {tap.message}</p>
-                <button onClick={() => setTap(null)} className="w-full rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95">{t("t2t.close")}</button>
+                {/* Depois de aceitar há sempre um sítio para onde ir: o chat da fonte, onde a
+                    gestão desta trade vai aparecer em thread. Fechar o modal e ficar na lista
+                    deixava o cliente sem saber onde seguir o desfecho. */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setTap(null)}
+                    className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95"
+                  >
+                    {t("t2t.close")}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const slug = tap.sig.channel_slug
+                      setTap(null)
+                      window.location.href = `/app-mobile?tab=chat&channel=${encodeURIComponent(slug)}&msg=${encodeURIComponent(tap.sig.id)}`
+                    }}
+                    className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95"
+                  >
+                    Ver no chat
+                  </button>
+                </div>
               </>
             )}
             {tap.status === "error" && (
