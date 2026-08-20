@@ -91,7 +91,11 @@ const EVENTS: Record<SignalEvent, EventDef> = {
   partial: {
     emoji: '🎯',
     title: (c) => `Alvo ${c.level ?? 1} · ${headline(c)}`,
-    body: (c) => [`Realizado ${c.pct ?? 0}%. O resto corre com o stop protegido.`, c.reason].filter(Boolean).join(' '),
+    body: (c) =>
+      [
+        c.pct != null ? `Realizado ${c.pct}%. O resto corre com o stop protegido.` : 'Parcial realizada. O resto corre com o stop protegido.',
+        c.reason,
+      ].filter(Boolean).join(' '),
     closes: false,
     cancelsPending: false,
     logStatus: 'open',

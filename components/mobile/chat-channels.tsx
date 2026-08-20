@@ -678,11 +678,11 @@ function AttachSheet({
 // tap_to_trade=true). Se mudares o âmbito no /admin, atualiza aqui também (ou o botão
 // do chat dessincroniza do accept do servidor). Âmbito atual: Forex + MTM + GoldKiller + Premium.
 const TAP_TRADE_CHANNELS = new Set(['trade-ideas-setup', 'sinais-scanner-mtm', 'trade-ideas', 'sinais-goldkiller', 'premium-ideas'])
-const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad)/i
+const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
 /** Um follow-up POSTERIOR com isto RESOLVE o sinal (ativou/fechou/morreu) → o botão T2T esconde-se.
  *  'ENTRY HIT' literal (monitor/PrimeVerse) e não 'ativad' — senão as entradas Sensei ("Ideia
  *  Activada"), que SÃO sinais, resolver-se-iam umas às outras. */
-const TAP_TRADE_RESOLVING_RE = /(entry\s*hit|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|posi[çc][aã]o\s*fechada|fechad[ao]|encerrad|cancelad|descartad|invalidad|break\s*even)/i
+const TAP_TRADE_RESOLVING_RE = /(entry\s*hit|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|posi[çc][aã]o\s*fechada|fechad[ao]|encerrad|cancelad|descartad|invalidad|break\s*even|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
 /** Direção do sinal/follow-up, quando declarada — palavras primeiro (1ª ocorrência ganha), emojis depois. */
 function t2tDirectionOf(content?: string | null): "BUY" | "SELL" | "" {
   if (!content) return ""

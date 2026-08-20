@@ -31,7 +31,7 @@ async function authenticate(request: NextRequest) {
 
 /** Um follow-up que ATIVA ou FECHA o setup (deixa de ser "pendente por tocar"). */
 const SETUP_RESOLVED_RE =
-  /(entry\s*hit|ativad|activad|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|break\s*even|\bbe\b|trade\s+active|running|fechad|posi[çc][aã]o\s+fechada|closed|close\s+all|cancelad|encerrad)/i
+  /(entry\s*hit|ativad|activad|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|break\s*even|\bbe\b|trade\s+active|running|fechad|posi[çc][aã]o\s+fechada|closed|close\s+all|cancelad|encerrad|descartad|invalidad|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
 
 /**
  * O SETUP ainda está PENDENTE (por tocar) e aceitável fora da janela dos 5 min?

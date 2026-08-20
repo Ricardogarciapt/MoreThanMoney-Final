@@ -28,6 +28,7 @@ import { getExecSwitches } from "@/lib/mtmcopy/exec-switches"
 import { evaluatePerpsSignalGate } from "@/lib/mtmcopy/perps-signal-gate"
 import { getSignalRules, passesAlertGate, passesExecGate } from "@/lib/mtmcopy/signal-rules"
 import { notifySignalOutcome } from "@/lib/mtm-alerts/notify-outcome"
+import { lifecycleMessage } from "@/lib/mtmcopy/signal-lifecycle"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export const runtime = "nodejs"
@@ -129,37 +130,34 @@ function composePost(
   // instruções manuais "Fecha 25% / Trailing" que já não correspondem ao sistema.
   const mgmtHead = `📊 ${symbol}`
 
+  // HARMONIZAÇÃO (pedido Ricardo 2026-08-20): os follow-ups usam o VOCABULÁRIO CANÓNICO
+  // (lifecycleMessage) — o mesmo nome do acontecimento em chat, Telegram, push e T2T — com a
+  // linha de marca do scanner por baixo. As ENTRADAS mantêm o formato próprio (cartão parseável).
   if (alertType === "tp_hit") {
     const lvl = sensei?.tpLevel ?? 1
     const tpVal = tps[lvl - 1]
     const last = lvl >= 4
-    return [
-      `🧠 Sensei Scanner — TP${lvl} atingido${tag}`,
-      ``,
-      `${mgmtHead}${tpVal != null ? ` · TP${lvl}: ${tpVal}` : ""}`,
-      last
-        ? `🏁 Todas as saídas atingidas — posição fechada.`
-        : `✅ Parcial fechada e stop em break-even — gestão automática por preço.`,
-      DISCLAIMER,
-    ].filter(Boolean).join("\n")
+    const { text } = lifecycleMessage(last ? "target_final" : "partial", {
+      symbol,
+      level: lvl,
+      reason: tpVal != null ? `TP${lvl}: ${tpVal}.` : null,
+    })
+    return [text, ``, `🧠 Sensei Scanner${tag} · gestão automática por preço.`, DISCLAIMER].join("\n")
   }
 
   if (alertType === "breakeven") {
-    return [
-      `🧠 Sensei Scanner — Break-even${tag}`,
-      ``,
-      mgmtHead,
-      `🔒 Stop movido para a entrada — posição sem risco (automático).`,
-      DISCLAIMER,
-    ].join("\n")
+    const { text } = lifecycleMessage("break_even", { symbol })
+    return [text, ``, `🧠 Sensei Scanner${tag}`, DISCLAIMER].join("\n")
   }
 
   if (alertType === "sl_hit") {
-    return [`🧠 Sensei Scanner — Stop Loss${tag}`, ``, mgmtHead, `🛑 Stop atingido — posição encerrada.`, DISCLAIMER].join("\n")
+    const { text } = lifecycleMessage("stop_loss", { symbol })
+    return [text, ``, `🧠 Sensei Scanner${tag}`, DISCLAIMER].join("\n")
   }
 
   if (alertType === "exit") {
-    return [`🧠 Sensei Scanner — Saída${tag}`, ``, mgmtHead, `🏁 Posição fechada.`, DISCLAIMER].join("\n")
+    const { text } = lifecycleMessage("closed", { symbol })
+    return [text, ``, `🧠 Sensei Scanner${tag}`, DISCLAIMER].join("\n")
   }
 
   // fallback genérico
