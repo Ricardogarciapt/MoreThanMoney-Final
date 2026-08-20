@@ -210,14 +210,29 @@ export async function evaluateOpenAlerts(
   const expiryCutoff = new Date(Date.now() - expiryDays * 86_400_000).toISOString()
   let expired = 0
   try {
-    const { data: velhos } = await admin
+    // Escolher os ids num SELECT e só depois actualizar POR ID.
+    // O PostgREST rejeita `or=` num UPDATE ("column tradingview_signals.trade_status does not
+    // exist") apesar de o aceitar num SELECT — a primeira versão disto expirava zero em silêncio.
+    const { data: candidatos } = await admin
       .from("tradingview_signals")
-      .update({ trade_status: "expired" })
+      .select("id")
       .or("trade_status.is.null,trade_status.eq.pending")
       .or(openKind)
       .lt("received_at", expiryCutoff)
-      .select("id")
-    expired = velhos?.length ?? 0
+      .limit(2000)
+    const ids = (candidatos ?? []).map((r) => (r as { id: string }).id)
+    for (let i = 0; i < ids.length; i += 500) {
+      const lote = ids.slice(i, i + 500)
+      const { error } = await admin
+        .from("tradingview_signals")
+        .update({ trade_status: "expired" })
+        .in("id", lote)
+      if (error) {
+        console.warn("[alerts] expiração falhou:", error.message)
+        break
+      }
+      expired += lote.length
+    }
   } catch (e) {
     console.warn("[alerts] expiração falhou:", e instanceof Error ? e.message : String(e))
   }
