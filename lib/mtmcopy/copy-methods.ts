@@ -198,6 +198,9 @@ export function parseTelegramGroups(conn: {
   const fromArray = (conn.telegram_groups ?? []).filter(isTelegramGroup)
   if (fromArray.length) return [...new Set(fromArray)]
   if (isTelegramGroup(conn.telegram_group)) return [conn.telegram_group]
+  // Retrocompatibilidade: ligações antigas nunca gravaram grupos e dependem deste default.
+  // ATENÇÃO: "sem grupos" passa a valer "Premium" — por isso as contas de Tap to Trade são
+  // excluídas antes de chegar aqui (ver connectionMatchesChannel em sources.ts).
   return ['premium']
 }
 

@@ -105,12 +105,16 @@ export function connectionMatchesChannel(
     | 'copy_method'
     | 'sender_mode'
     | 'copyfactory_strategy_pick'
-  >,
+  > & { purpose?: string | null },
   channel: MtmcopyChannelKey,
 ): boolean {
   if (channel === 'unknown') return false
   if ((conn.sender_mode ?? 'telegram') === 'master_account') return false
   if (conn.copy_method === 'master_slave') return false
+  // Contas de Tap to Trade NUNCA executam por canal: só abrem o que o dono aceitar à mão.
+  // Sem esta guarda, uma conta T2T sem grupos configurados caía no default 'premium' do
+  // parseTelegramGroups e passava a executar automaticamente tudo o que entrasse como Premium.
+  if (conn.purpose === 'tap_to_trade') return false
 
   if (conn.copy_method === 'strategy') {
     return strategyPickMatchesChannel(conn.copyfactory_strategy_pick, channel)
