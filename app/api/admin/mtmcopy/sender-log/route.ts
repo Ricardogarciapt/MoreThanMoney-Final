@@ -85,12 +85,18 @@ export async function GET(request: NextRequest) {
     }
   })
 
+  // Os estados do CICLO DE VIDA (open/closed/discarded) faltavam aqui: as linhas apareciam na
+  // lista mas não eram contadas em lado nenhum, e no ecrã saíam sem cor nem ícone.
+  const conta = (st: string) => entries.filter((e) => e.status === st).length
   const stats = {
     total: entries.length,
-    executed: entries.filter((e) => e.status === 'executed').length,
-    error: entries.filter((e) => e.status === 'error').length,
-    skipped: entries.filter((e) => e.status === 'skipped').length,
-    received: entries.filter((e) => e.status === 'received').length,
+    executed: conta('executed'),
+    error: conta('error'),
+    skipped: conta('skipped'),
+    received: conta('received'),
+    open: conta('open'),
+    closed: conta('closed'),
+    discarded: conta('discarded'),
   }
 
   return NextResponse.json({ entries, stats })

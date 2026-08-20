@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  AlertTriangle, CheckCircle2, Clock, Loader2, Radio, RefreshCw, XCircle,
+  Activity, AlertTriangle, CheckCircle2, Clock, Flag, Loader2, Radio, RefreshCw, Trash2, XCircle,
 } from "lucide-react"
 
 type LogEntry = {
@@ -33,13 +33,25 @@ type LogStats = {
   error: number
   skipped: number
   received: number
+  open: number
+  closed: number
+  discarded: number
 }
 
-const STATUS_STYLES: Record<string, { className: string; icon: typeof CheckCircle2 }> = {
-  executed: { className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", icon: CheckCircle2 },
-  error: { className: "bg-red-500/15 text-red-400 border-red-500/30", icon: XCircle },
-  skipped: { className: "bg-amber-500/15 text-amber-400 border-amber-500/30", icon: AlertTriangle },
-  received: { className: "bg-sky-500/15 text-sky-400 border-sky-500/30", icon: Clock },
+/**
+ * Estados possíveis em mtmcopy_signal_log. Os quatro primeiros descrevem a EXECUÇÃO; os últimos
+ * três são o CICLO DE VIDA da ordem do cliente (ver lib/mtmcopy/signal-lifecycle). Faltavam aqui:
+ * apareciam na lista sem cor nem ícone e não entravam em nenhuma contagem.
+ */
+const STATUS_STYLES: Record<string, { className: string; icon: typeof CheckCircle2; label: string }> = {
+  executed: { className: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", icon: CheckCircle2, label: "Executado" },
+  error: { className: "bg-red-500/15 text-red-400 border-red-500/30", icon: XCircle, label: "Erro" },
+  skipped: { className: "bg-amber-500/15 text-amber-400 border-amber-500/30", icon: AlertTriangle, label: "Ignorado" },
+  received: { className: "bg-sky-500/15 text-sky-400 border-sky-500/30", icon: Clock, label: "Recebido" },
+  open: { className: "bg-blue-500/15 text-blue-400 border-blue-500/30", icon: Activity, label: "Aberta" },
+  closed: { className: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30", icon: Flag, label: "Fechada" },
+  discarded: { className: "bg-slate-500/15 text-slate-300 border-slate-500/30", icon: Trash2, label: "Descartada" },
+  pending: { className: "bg-amber-500/10 text-amber-300 border-amber-500/20", icon: Clock, label: "Pendente" },
 }
 
 function formatTime(iso: string) {
@@ -114,6 +126,9 @@ export default function MtmcopySenderLog() {
             { label: "Erros", value: stats.error, color: "text-red-400" },
             { label: "Ignorados", value: stats.skipped, color: "text-amber-400" },
             { label: "Recebidos", value: stats.received, color: "text-sky-400" },
+            { label: "Abertas", value: stats.open, color: "text-blue-400" },
+            { label: "Fechadas", value: stats.closed, color: "text-zinc-300" },
+            { label: "Descartadas", value: stats.discarded, color: "text-slate-300" },
           ].map((s) => (
             <div key={s.label} className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-2">
               <p className="text-[10px] uppercase tracking-widest text-zinc-600">{s.label}</p>
@@ -124,7 +139,7 @@ export default function MtmcopySenderLog() {
       )}
 
       <div className="flex flex-wrap gap-2">
-        {["all", "executed", "error", "skipped", "received"].map((s) => (
+        {["all", "executed", "error", "skipped", "received", "open", "closed", "discarded"].map((s) => (
           <button
             key={s}
             onClick={() => setStatus(s)}
@@ -132,7 +147,7 @@ export default function MtmcopySenderLog() {
               status === s ? "border-zinc-500 bg-zinc-800 text-white" : "border-zinc-800 text-zinc-500"
             }`}
           >
-            {s === "all" ? "Todos estados" : s}
+            {s === "all" ? "Todos estados" : (STATUS_STYLES[s]?.label ?? s)}
           </button>
         ))}
       </div>
@@ -164,7 +179,7 @@ export default function MtmcopySenderLog() {
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <Badge variant="outline" className={`text-[10px] ${st.className}`}>
                           <Icon className="w-3 h-3 mr-1" />
-                          {entry.status}
+                          {st.label}
                         </Badge>
                         <span className="text-xs text-zinc-500">{formatTime(entry.created_at)}</span>
                         <span className="text-xs text-[#D2A63C]/80 flex items-center gap-1">
