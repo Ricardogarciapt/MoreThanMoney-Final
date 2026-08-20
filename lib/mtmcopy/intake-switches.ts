@@ -6,7 +6,7 @@ export { INTAKE_CHANNELS, intakeKeyForChannelSlug, type IntakeKey } from "@/lib/
 /**
  * RECEÇÃO POR CANAL — corta a entrada de sinais de uma fonte, sem desligar a estratégia.
  * Diferente dos exec-switches: estes travam **a montante** (nada entra no chat, nem executa, nem
- * notifica), incluindo o que chega pelos RELAYS do VPS (Premium/GMI, Forex Swings/James, PrimeVerse).
+ * notifica), incluindo o que chega pelos RELAYS do VPS (Premium/Gold Did, Forex Swings/James, PrimeVerse).
  *
  * Guardado em site_settings.mtmcopy_channel_intake. Default: TUDO LIGADO (só desliga quem for
  * explicitamente posto a false) — para nunca cortar receção por omissão.

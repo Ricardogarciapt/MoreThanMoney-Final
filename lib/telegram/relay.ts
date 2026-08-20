@@ -167,7 +167,7 @@ async function sendPhotoVia(
 /**
  * Relay de TEXTO enviado PELO SITE (bot-posted) para o canal do parceiro. O webhook NÃO
  * entrega ao bot as suas próprias mensagens, por isso este caminho cobre tudo o que o
- * MoreThanMoney_bot publica na Premium (relay GMI, sinais Premium…). Best-effort.
+ * MoreThanMoney_bot publica na Premium (relay Gold Did, sinais Premium…). Best-effort.
  * `sourceChatId` opcional: se vier, só relaya quando for o canal-fonte configurado.
  */
 export async function relayTextToWifi(
