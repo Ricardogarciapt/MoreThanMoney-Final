@@ -182,7 +182,7 @@ function symbolMatches(posSymbol: string, signalSymbol: string): boolean {
   return a === b || a.includes(b) || b.includes(a)
 }
 
-function isMtmcopierPosition(pos: MetaApiPosition): boolean {
+export function isMtmcopierPosition(pos: MetaApiPosition): boolean {
   const c = (pos.comment ?? '').toLowerCase()
   // legado + novo formato legível (<Estratégia>-<lote>-<saída>) via o próprio parser
   return c.includes('mtmcopier') || c.startsWith('prem-') || c.startsWith('mtm-m-') ||
