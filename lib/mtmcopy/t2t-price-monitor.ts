@@ -19,8 +19,8 @@ import { getExecSwitches } from './exec-switches'
 import { parseSignal } from './signal-parser'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import {
-  listOpenPositions,
-  listPendingOrders,
+  readOpenPositions,
+  readPendingOrders,
   cancelPendingOrdersForSymbol,
   getMarketPrice,
   modifyPositionSlTp,
@@ -143,6 +143,7 @@ export async function runT2TPriceMonitor(): Promise<{
   reason?: string
   managed: number
   actions: string[]
+  ilegiveis?: number
 }> {
   const actions: string[] = []
   const switches = await getExecSwitches()
@@ -167,8 +168,10 @@ export async function runT2TPriceMonitor(): Promise<{
   // Sem as pendentes, uma ordem-limite que ainda não encheu não aparecia em lado nenhum e o
   // monitor dava-a como "posição fechada" no minuto seguinte à aceitação — anúncio falso e,
   // pior, o registo morria: quando a ordem enchesse já ninguém a geria.
-  const posByAcc = new Map<string, MetaApiPosition[]>()
-  const pendByAcc = new Map<string, MetaApiPendingOrder[]>()
+  const posByAcc = new Map<string, MetaApiPosition[] | null>()
+  const pendByAcc = new Map<string, MetaApiPendingOrder[] | null>()
+  /** Contas cuja leitura falhou nesta passagem — nada se conclui sobre elas. */
+  let ilegiveis = 0
   const priceCache = new Map<string, number | null>()
   const state = await loadState()
   let managed = 0
@@ -181,10 +184,17 @@ export async function runT2TPriceMonitor(): Promise<{
     const st: RowState = state[row.id] ?? { exitsDone: 0, beDone: false, trailing: false, announced: false }
 
     try {
-      if (!posByAcc.has(accountId)) posByAcc.set(accountId, await listOpenPositions(accountId))
-      if (!pendByAcc.has(accountId)) pendByAcc.set(accountId, await listPendingOrders(accountId))
-      const positions = posByAcc.get(accountId) ?? []
-      const pendentes = pendByAcc.get(accountId) ?? []
+      // Leitura ESTRITA: null = não consegui ler. Nesse caso não se conclui nada sobre a
+      // posição — salta-se a conta nesta passagem e tenta-se no segundo seguinte. Antes, uma
+      // falha de leitura era lida como "a posição fechou" e a trade ficava órfã na corretora.
+      if (!posByAcc.has(accountId)) posByAcc.set(accountId, await readOpenPositions(accountId))
+      if (!pendByAcc.has(accountId)) pendByAcc.set(accountId, await readPendingOrders(accountId))
+      const positions = posByAcc.get(accountId)
+      const pendentes = pendByAcc.get(accountId)
+      if (positions == null || pendentes == null) {
+        ilegiveis++
+        continue
+      }
       const pos = positions.find((p) => p.id === row.broker_position_id) ?? null
       const pend = pendentes.find((o) => o.id === row.broker_position_id) ?? null
 
@@ -344,5 +354,6 @@ export async function runT2TPriceMonitor(): Promise<{
   }
 
   await saveState(state)
-  return { ran: true, managed, actions }
+  if (ilegiveis) actions.push(`${ilegiveis} conta(s) ilegível(eis) — nada concluído sobre elas`)
+  return { ran: true, managed, actions, ilegiveis }
 }

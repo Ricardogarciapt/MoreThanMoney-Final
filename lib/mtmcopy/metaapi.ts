@@ -1096,6 +1096,40 @@ export function isMetaApiConfigured(): boolean {
   return Boolean(process.env.METAAPI_TOKEN?.trim())
 }
 
+/**
+ * Posições abertas com DISTINÇÃO entre "não há" e "não consegui ler".
+ *
+ * O `listOpenPositions` é fail-open: devolve [] quando a leitura falha. Isso é o correto para
+ * decidir se se ABRE uma trade (uma falha de leitura não deve impedir a entrada), mas é perigoso
+ * para GERIR: o monitor de preço via [] e concluía que a posição tinha fechado — marcava-a como
+ * encerrada e deixava de a gerir, enquanto na corretora continuava aberta, sem parciais, sem
+ * break-even e sem trailing. Dos 37 registos de ouro de uma semana, 21 morreram assim.
+ *
+ * Quem GERE posições usa esta função e não faz nada quando recebe `null`.
+ */
+export async function readOpenPositions(accountId: string): Promise<MetaApiPosition[] | null> {
+  let close: (() => Promise<void>) | undefined
+  try {
+    return await withTimeout(
+      (async () => {
+        try {
+          const { connection, close: closeFn } = await getRpcConnection(accountId)
+          close = closeFn
+          const positions = await connection.getPositions()
+          return (positions ?? []) as MetaApiPosition[]
+        } finally {
+          if (close) await close()
+        }
+      })(),
+      10_000,
+      `readOpenPositions ${accountId}`,
+    )
+  } catch {
+    invalidateRpcCache(accountId)
+    return null // não consegui ler — NÃO é "não há posições"
+  }
+}
+
 export async function listOpenPositions(accountId: string): Promise<MetaApiPosition[]> {
   // TETO TOTAL de 10s (fail-open): numa reconexão RPC lenta, o getRpcConnection/getPositions podia
   // pendurar até ~55s e MATAR a função (master-poll) antes de colocar a ordem — foi o que perdeu a
@@ -1349,6 +1383,23 @@ export async function closePositionsForSymbol(
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao fechar posições'
     return { success: false, error: message }
+  } finally {
+    if (close) await close()
+  }
+}
+
+/** Ordens pendentes distinguindo "não há" de "não consegui ler" — ver readOpenPositions. */
+export async function readPendingOrders(accountId: string): Promise<MetaApiPendingOrder[] | null> {
+  let close: (() => Promise<void>) | undefined
+  try {
+    const { connection, close: closeFn } = await getRpcConnection(accountId)
+    close = closeFn
+    if (!connection.getOrders) return []
+    const orders = await connection.getOrders()
+    return (orders ?? []) as MetaApiPendingOrder[]
+  } catch {
+    invalidateRpcCache(accountId)
+    return null
   } finally {
     if (close) await close()
   }

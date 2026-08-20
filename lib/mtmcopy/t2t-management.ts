@@ -9,8 +9,8 @@
  */
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
-  listOpenPositions,
-  listPendingOrders,
+  readOpenPositions,
+  readPendingOrders,
   closePositionById,
   modifyPositionSlTp,
 } from './metaapi'
@@ -200,9 +200,14 @@ export async function reconcileT2TPositionsClosed(rows: OpenT2TPosition[]): Prom
   for (const [accountId, accRows] of byAccount) {
     try {
       const [positions, pending] = await Promise.all([
-        listOpenPositions(accountId),
-        listPendingOrders(accountId),
+        readOpenPositions(accountId),
+        readPendingOrders(accountId),
       ])
+      // Leitura falhada não é "a posição fechou": salta-se a conta e tenta-se na próxima ronda.
+      if (positions == null || pending == null) {
+        console.warn('[t2t-management] leitura falhou, conta ignorada nesta ronda:', accountId)
+        continue
+      }
       const openSymbols = [
         ...positions.map((p) => p.symbol?.toUpperCase()).filter(Boolean),
         ...pending.map((p) => p.symbol?.toUpperCase()).filter(Boolean),

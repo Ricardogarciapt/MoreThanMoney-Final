@@ -8,7 +8,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getExecSwitches } from './exec-switches'
 import {
-  listOpenPositions,
+  readOpenPositions,
   closePositionById,
   modifyPositionSlTp,
   type MetaApiPosition,
@@ -121,10 +121,13 @@ export async function runPremiumPriceMonitor(): Promise<{
   let checked = 0
 
   for (const [accountId, accRows] of byAccount) {
-    let positions: MetaApiPosition[] = []
-    try {
-      positions = await listOpenPositions(accountId)
-    } catch {
+    // Leitura ESTRITA. Com o fail-open antigo, uma falha devolvia [] → o find abaixo não
+    // encontrava a posição → a linha era marcada 'closed' e a trade deixava de ser gerida,
+    // continuando aberta na corretora. Foi assim que 21 dos 37 registos de ouro de uma semana
+    // morreram nos primeiros dois minutos.
+    const positions = await readOpenPositions(accountId)
+    if (positions == null) {
+      detail.push(`conta ${accountId.slice(0, 8)} ilegível — nada concluído`)
       continue
     }
 
