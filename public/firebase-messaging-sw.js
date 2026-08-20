@@ -54,9 +54,12 @@ messaging.onBackgroundMessage((payload) => {
 // Handler para cliques em notificações
 self.addEventListener('notificationclick', (event) => {
   console.log('[firebase-messaging-sw.js] Notificação clicada:', event)
-  
+
   event.notification.close()
-  
+
+  // Ação "Fechar" fecha e mais nada — só "Ver"/tap no corpo abrem a app.
+  if (event.action === 'close') return
+
   // Obter URL de destino (sempre absoluta para clients.openWindow)
   const rawUrl = event.notification.data?.url || '/app-mobile'
   const urlToOpen = rawUrl.startsWith('http') ? rawUrl : (self.location.origin + rawUrl)

@@ -92,6 +92,54 @@ function AppMobileContent() {
   const contentRef = useRef<HTMLDivElement>(null)
   const { shouldShow: showOnboarding, markDone: markOnboardingDone } = useOnboarding()
 
+  // ── RESGATE do deep-link de push (shell iOS nativa / cold start) ───────────
+  // A shell WKWebView (APNs nativo) abre a app SEM entregar o URL da notificação à web layer.
+  // Fallback server-side (sem rebuild nativo): ao abrir/retomar SEM ?signal na barra, procura a
+  // notificação in-app T2T mais recente NÃO LIDA criada nos últimos 3 min (o intervalo entre o
+  // tap na push e a app abrir), navega para o URL dela (abre o modal de aceitação) e marca-a
+  // lida — 1× por notificação. Em fluxos que já entregam o URL (web/SW/Capacitor), o ?signal
+  // presente faz esta rotina não disparar.
+  const deepLinkClaimBusy = useRef(false)
+  useEffect(() => {
+    const claim = async () => {
+      if (deepLinkClaimBusy.current) return
+      deepLinkClaimBusy.current = true
+      try {
+        const here = new URLSearchParams(window.location.search)
+        if (here.get("signal") || here.get("msg")) return
+        const res = await fetch("/api/notifications/user", { credentials: "include", cache: "no-store" })
+        if (!res.ok) return
+        const { notifications } = await res.json()
+        const fresh = (notifications ?? []).find(
+          (n: { read?: boolean; created_at?: string; data?: { url?: string } }) =>
+            !n.read &&
+            typeof n?.data?.url === "string" &&
+            n.data.url.includes("tab=tap-to-trade") &&
+            n.data.url.includes("signal=") &&
+            n.created_at != null &&
+            Date.now() - new Date(n.created_at).getTime() < 3 * 60_000,
+        )
+        if (!fresh) return
+        await fetch(`/api/notifications/user?id=${encodeURIComponent(fresh.id)}`, {
+          method: "PUT",
+          credentials: "include",
+        }).catch(() => {})
+        router.replace(fresh.data.url)
+      } catch {
+        /* silencioso — fallback best-effort */
+      } finally {
+        deepLinkClaimBusy.current = false
+      }
+    }
+    claim()
+    const onVis = () => {
+      if (document.visibilityState === "visible") claim()
+    }
+    document.addEventListener("visibilitychange", onVis)
+    return () => document.removeEventListener("visibilitychange", onVis)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => {
     setMounted(true)
 

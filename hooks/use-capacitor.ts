@@ -213,19 +213,39 @@ export function useCapacitor(options: UseCapacitorOptions = {}) {
     try {
       const { App } = await import(/* webpackIgnore: true */ "@capacitor/app" as any)
 
-      const listener = await App.addListener("appUrlOpen", (data) => {
-        console.log("[CAP] Deep link:", data.url)
-        options.onDeepLink?.(data.url)
-
+      const navigateToAppUrl = (url: string) => {
         try {
-          const parsed = new URL(data.url)
+          const parsed = new URL(url)
           if (parsed.hostname.includes("morethanmoney.pt")) {
-            window.location.href = parsed.pathname + parsed.search
+            // Não recarregar se já estamos exatamente neste destino (evita loop no cold start)
+            const dest = parsed.pathname + parsed.search
+            if (window.location.pathname + window.location.search !== dest) {
+              window.location.href = dest
+            }
           }
         } catch {
           /* ignora URLs inválidos */
         }
+      }
+
+      const listener = await App.addListener("appUrlOpen", (data) => {
+        console.log("[CAP] Deep link:", data.url)
+        options.onDeepLink?.(data.url)
+        navigateToAppUrl(data.url)
       })
+
+      // COLD START: se a app foi LANÇADA por um deep link (tap na push/URL com a app fechada),
+      // o evento appUrlOpen já disparou antes de haver listener — getLaunchUrl() recupera-o.
+      try {
+        const launch = await App.getLaunchUrl()
+        if (launch?.url) {
+          console.log("[CAP] Launch URL (cold start):", launch.url)
+          options.onDeepLink?.(launch.url)
+          navigateToAppUrl(launch.url)
+        }
+      } catch {
+        /* plugin sem getLaunchUrl — ignora */
+      }
 
       cleanupRef.current.push(() => listener.remove())
     } catch (e) {
