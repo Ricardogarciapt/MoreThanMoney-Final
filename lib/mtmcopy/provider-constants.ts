@@ -36,8 +36,13 @@ export const MTM_COPY_STRATEGY_CATALOG: Record<
     publicLabel: 'MTM Auto - Forex',
     description: 'Sinais forex com trailing dinâmico — BE a meio do movimento.',
   },
-  // MTM Auto Sensei REMOVIDO do catálogo de estratégias copiáveis (pedido Ricardo 2026-08-19):
-  // o Sensei mantém-se apenas como GRUPO de sinais + Tap to Trade, não como estratégia de cópia.
+  [CANONICAL_SENSEI_STRATEGY_ID]: {
+    title: 'MTM Auto Sensei',
+    publicLabel: 'MTM Auto Sensei',
+    description:
+      'Scanner Sensei (ouro e BTC) — entradas validadas, parciais nos alvos e trailing após o primeiro. ' +
+      'Só executa nas contas que a subscreverem e a configurarem.',
+  },
   [CANONICAL_GOLDKILLER_STRATEGY_ID]: {
     title: 'MTM Auto Goldkiller',
     publicLabel: 'MTM Auto Goldkiller',

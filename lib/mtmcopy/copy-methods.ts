@@ -155,7 +155,17 @@ export function getMtmStrategyOptions(): MtmCopyStrategyOption[] {
 
   // Forex (Trade Ideas) NÃO é oferecido como «Estratégia MTM» — é um Grupo de sinais.
 
-  // Sensei NÃO é oferecido como «Estratégia MTM» (Ricardo 2026-08-19) — é Grupo de sinais + T2T.
+  // Sensei disponível como «Estratégia MTM» E como Grupo de sinais: são os dois caminhos pelos
+  // quais o cliente pode SUBSCREVER. Sem subscrição explícita nenhuma conta o executa.
+  const senseiCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_SENSEI_STRATEGY_ID]
+  if (senseiCatalog) {
+    out.push({
+      id: CANONICAL_SENSEI_STRATEGY_ID,
+      channelKey: 'trade-ideas',
+      title: senseiCatalog.title,
+      description: senseiCatalog.description,
+    })
+  }
 
   const boosterCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_BOOSTER_STRATEGY_ID]
   if (boosterCatalog) {
