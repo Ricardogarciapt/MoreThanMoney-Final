@@ -198,3 +198,19 @@ export const TERMINAL_EVENTS: SignalEvent[] = [
 export function isTerminal(event: SignalEvent): boolean {
   return TERMINAL_EVENTS.includes(event)
 }
+
+/**
+ * A mensagem é um ANÚNCIO NOSSO do ciclo de vida (título canónico "<emoji> <Rótulo> · PAR")?
+ * Usado para NÃO reinterpretar os nossos próprios anúncios como follow-ups da fonte quando
+ * eles ecoam de volta (ex.: push → Telegram → webhook → leitor de follow-ups). Sem esta guarda,
+ * "🗑️ Ideia descartada · XAUUSD" reentrava no pipeline e gerava um LOOP de notificações.
+ */
+const OWN_TITLE_RE =
+  /^(ENTRY HIT|Alvo\s+(?:final|\d+)|Break-even|Trailing ativo|Stop loss|Posi[çc][ãa]o fechada|Sinal cancelado|Ideia descartada)\s*·/i
+
+export function isOwnLifecycleAnnouncement(content: string | null | undefined): boolean {
+  const firstLine = (content ?? '').trim().split('\n')[0] ?? ''
+  // remove emoji/pontuação inicial antes de comparar com os rótulos canónicos
+  const stripped = firstLine.replace(/^[^\p{L}]+/u, '')
+  return OWN_TITLE_RE.test(stripped)
+}

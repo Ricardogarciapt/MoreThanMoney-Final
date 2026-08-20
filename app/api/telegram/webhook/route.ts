@@ -43,6 +43,17 @@ async function mirrorTelegramMessage(supabase: ReturnType<typeof getSupabaseAdmi
   let content: string | null = message.text || message.caption || null
   let imageUrl: string | null = null
 
+  // ECO dos nossos anúncios de ciclo de vida (o push que NÓS enviámos ao canal volta pelo
+  // webhook): já estão no chat e já foram notificados na origem — reinseri-los duplicava a
+  // mensagem, repetia o push e realimentava o leitor de follow-ups (loop de "Ideia descartada").
+  {
+    const { isOwnLifecycleAnnouncement } = await import("@/lib/mtmcopy/signal-lifecycle")
+    if (isOwnLifecycleAnnouncement(content)) {
+      console.log(`[Telegram] eco de anúncio próprio ignorado em ${slug}`)
+      return
+    }
+  }
+
   // Handle photo: pick highest resolution
   if (message.photo && message.photo.length > 0) {
     const bestPhoto = message.photo[message.photo.length - 1]

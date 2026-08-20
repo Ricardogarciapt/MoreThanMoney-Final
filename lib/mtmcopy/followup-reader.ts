@@ -10,7 +10,7 @@
  * Só age em eventos TERMINAIS (fecho, cancelamento, descarte, stop). Parciais e break-even são
  * geridos pelo motor de preço na conta de cada seguidor — não se espelham por mensagem.
  */
-import { isTerminal, type SignalEvent } from './signal-lifecycle'
+import { isTerminal, isOwnLifecycleAnnouncement, type SignalEvent } from './signal-lifecycle'
 import { t2tSourceKey, type T2TSourceKey } from './t2t-source'
 
 /** Etiqueta legível de cada fonte, para o texto que sai ao cliente. */
@@ -99,6 +99,11 @@ export async function handleSourceFollowup(opts: {
   /** Fonte, se já conhecida (senão é deduzida do canal + conteúdo). */
   source?: T2TSourceKey | null
 }): Promise<FollowupResult> {
+  // GUARDA ANTI-LOOP: um anúncio canónico NOSSO (motor de preço/alertas/lifecycle) que ecoa de
+  // volta via Telegram não é um follow-up da fonte — reprocessá-lo gerava novo anúncio → loop.
+  if (isOwnLifecycleAnnouncement(opts.content)) {
+    return { handled: false, reason: 'anúncio próprio do ciclo de vida (eco)' }
+  }
   const event = detectLifecycleEvent(opts.content)
   if (!event || !isTerminal(event)) return { handled: false }
 

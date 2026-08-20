@@ -126,14 +126,27 @@ export async function closeT2TFollowersForSignal(opts: {
 
   const entry = await findEntryMessageWithFollowers(chatSlug, symbol, direction, sourceMatch)
 
-  // 1) Thread no chat (reply à entrada, se encontrada).
+  // 1) Thread no chat (reply à entrada, se encontrada) — IDEMPOTENTE: se o MESMO anúncio já
+  //    foi publicado neste canal nas últimas 24h, não repete (evita spam/loop de notificações
+  //    quando o mesmo desfecho é detetado por mais do que um caminho ou em ticks sucessivos).
   let threaded = false
   try {
-    const insert: Record<string, unknown> = { channel_slug: chatSlug, user_id: null, content: line, message_type: 'telegram_forward', notified: true }
-    if (entry?.id) insert.reply_to_id = entry.id
-    const { data } = await supabase.from('chat_messages').insert(insert).select('id').single()
-    threaded = !!entry?.id
-    await sendTelegramChannelPush({ slug: chatSlug, content: line, chatMessageId: data?.id as string }).catch(() => {})
+    const sinceIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { data: dup } = await supabase
+      .from('chat_messages')
+      .select('id')
+      .eq('channel_slug', chatSlug)
+      .eq('content', line)
+      .gte('created_at', sinceIso)
+      .limit(1)
+      .maybeSingle()
+    if (!dup) {
+      const insert: Record<string, unknown> = { channel_slug: chatSlug, user_id: null, content: line, message_type: 'telegram_forward', notified: true }
+      if (entry?.id) insert.reply_to_id = entry.id
+      const { data } = await supabase.from('chat_messages').insert(insert).select('id').single()
+      threaded = !!entry?.id
+      await sendTelegramChannelPush({ slug: chatSlug, content: line, chatMessageId: data?.id as string }).catch(() => {})
+    }
   } catch (e) {
     console.warn(`[t2t-lifecycle] thread erro (${label}):`, e instanceof Error ? e.message : String(e))
   }
@@ -203,19 +216,30 @@ export async function announceAndCloseByMessage(opts: {
     reason: opts.reason ?? null,
   })
   try {
-    const { data } = await supabase
+    // Idempotente: o mesmo anúncio em thread na mesma entrada não se repete (anti-loop/spam).
+    const { data: dup } = await supabase
       .from('chat_messages')
-      .insert({
-        channel_slug: opts.chatSlug,
-        user_id: null,
-        content: text,
-        message_type: 'telegram_forward',
-        notified: true,
-        reply_to_id: opts.chatMessageId,
-      })
       .select('id')
-      .single()
-    await sendTelegramChannelPush({ slug: opts.chatSlug, content: text, chatMessageId: data?.id as string }).catch(() => {})
+      .eq('channel_slug', opts.chatSlug)
+      .eq('reply_to_id', opts.chatMessageId)
+      .eq('content', text)
+      .limit(1)
+      .maybeSingle()
+    if (!dup) {
+      const { data } = await supabase
+        .from('chat_messages')
+        .insert({
+          channel_slug: opts.chatSlug,
+          user_id: null,
+          content: text,
+          message_type: 'telegram_forward',
+          notified: true,
+          reply_to_id: opts.chatMessageId,
+        })
+        .select('id')
+        .single()
+      await sendTelegramChannelPush({ slug: opts.chatSlug, content: text, chatMessageId: data?.id as string }).catch(() => {})
+    }
   } catch (e) {
     console.warn('[t2t-lifecycle] thread erro:', e instanceof Error ? e.message : String(e))
   }
