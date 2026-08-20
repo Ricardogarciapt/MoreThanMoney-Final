@@ -219,9 +219,19 @@ export async function runT2TPriceMonitor(): Promise<{
         }
 
         if (morte) {
+          // Grava o estado PRIMEIRO e só anuncia se a escrita passou — senão o tick seguinte
+          // volta a encontrar a linha 'open' e repete o anúncio para sempre (aconteceu quando
+          // o CHECK da tabela não conhecia 'discarded': loop de pushes a cada ~6s).
+          const { error: upErr } = await admin
+            .from('mtmcopy_signal_log')
+            .update({ status: logStatusFor(morte), detail: motivo ?? 'Ideia descartada (monitor T2T)' })
+            .eq('id', row.id)
+          if (upErr) {
+            console.warn('[t2t-monitor] update de estado falhou (não anuncia):', row.id, upErr.message)
+            continue
+          }
           try { await cancelPendingOrdersForSymbol(accountId, row.symbol) } catch { /* ignora */ }
-          const status = await publishEvent(row, morte, { ...evCtx, reason: motivo })
-          await admin.from('mtmcopy_signal_log').update({ status, detail: motivo ?? 'Ideia descartada (monitor T2T)' }).eq('id', row.id)
+          await publishEvent(row, morte, { ...evCtx, reason: motivo })
           delete state[row.id]
           actions.push(`${morte} ${row.symbol}`)
           continue
@@ -234,12 +244,20 @@ export async function runT2TPriceMonitor(): Promise<{
       // ── DESAPARECEU: nem posição nem pendente.
       if (!pos) {
         // Se nunca chegou a encher, não foi um fecho — foi uma ordem que morreu por cancelar/expirar.
+        // Estado PRIMEIRO, anúncio depois — uma escrita falhada não pode repetir o anúncio (anti-loop).
         const event: SignalEvent = st.announced ? 'closed' : 'discarded'
-        const status = await publishEvent(row, event, {
+        const { error: upErr } = await admin
+          .from('mtmcopy_signal_log')
+          .update({ status: logStatusFor(event), detail: `${event} (monitor T2T)` })
+          .eq('id', row.id)
+        if (upErr) {
+          console.warn('[t2t-monitor] update de estado falhou (não anuncia):', row.id, upErr.message)
+          continue
+        }
+        await publishEvent(row, event, {
           ...evCtx,
           reason: st.announced ? null : 'A ordem foi cancelada ou expirou antes de encher.',
         })
-        await admin.from('mtmcopy_signal_log').update({ status, detail: `${event} (monitor T2T)` }).eq('id', row.id)
         delete state[row.id]
         actions.push(`${event} ${row.symbol}`)
         continue
