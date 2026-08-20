@@ -74,8 +74,21 @@ export function computeLotSize(
   const value = Number(conn.lot_value) || 0.01
 
   switch (conn.lot_mode) {
-    case 'multiplier':
-      return round(1.0 * value)
+    case 'multiplier': {
+      // O multiplicador existe para copiar o lote do MESTRE vezes N. Só que multiplicava por um
+      // 1.0 fixo no código — sem mestre nenhum à vista. Com lot_value=1 isso dava UM LOTE INTEIRO:
+      // em ouro, ~449.000 USD de exposição, 30x o saldo de uma conta de 15.000. Duas ligações
+      // estavam assim e só não dispararam porque o broker tinha o trading desativado.
+      //
+      // Na execução semi-automática não existe mestre, logo não há lote de referência e o
+      // multiplicador não tem significado. Cai para o risco configurado na conta (o caminho
+      // seguro) e, se nem isso estiver definido, recusa dimensionar.
+      const risco = Number(conn.max_risk_percent)
+      if (risco > 0 && accountBalance && accountBalance > 0) {
+        return computeLotSize({ ...conn, lot_mode: 'risk_percent', lot_value: risco }, signal, accountBalance)
+      }
+      return 0 // sem referência e sem risco definido → não abre (getLotSizingSkipReason explica)
+    }
     case 'risk_percent': {
       if (!accountBalance || accountBalance <= 0 || !signal.sl || signal.sl <= 0) return 0
       const entry = resolveEntryForRisk(signal)
