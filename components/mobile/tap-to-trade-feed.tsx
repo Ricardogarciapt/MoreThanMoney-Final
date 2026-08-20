@@ -226,6 +226,8 @@ export default function TapToTradeFeed() {
   const [follow, setFollow] = useState<{ sources: string[]; assetClasses: string[]; risk: string | null }>({ sources: [], assetClasses: [], risk: null })
   const [savingFollow, setSavingFollow] = useState(false)
   const [followDirty, setFollowDirty] = useState(false)
+  /** Confirmação (ou falha) do último Guardar. Some sozinha ao fim de 4s quando corre bem. */
+  const [followMsg, setFollowMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null)
   const [cfg, setCfg] = useState<{
     lot_mode: "risk_percent" | "fixed"
     risk: number
@@ -514,14 +516,26 @@ export default function TapToTradeFeed() {
   const setFollowLocal = (next: { sources: string[]; assetClasses: string[]; risk: string | null }) => {
     setFollow(next)
     setFollowDirty(true)
+    setFollowMsg(null)
   }
-  // PERSISTE as prefs (botão Guardar). O risco também aplica o sizing por %.
+  /**
+   * PERSISTE as prefs (botão Guardar). O risco também aplica o sizing por %.
+   *
+   * O resultado do pedido é VERIFICADO. Antes fazia-se `await fetch(...)` sem olhar para a
+   * resposta: se a gravação falhasse — sessão expirada, rede, 500 — o botão passava na mesma a
+   * "Guardado ✓" e o cliente ficava convencido de que tinha guardado filtros que nunca foram
+   * gravados.
+   */
   const persistFollow = async () => {
     if (!conn) return
     setSavingFollow(true)
+    setFollowMsg(null)
     try {
       const tok = await token()
-      if (!tok) return
+      if (!tok) {
+        setFollowMsg({ tipo: "erro", texto: "Sessão expirada. Entra outra vez para guardar." })
+        return
+      }
       const body: Record<string, unknown> = {
         connection_id: conn.id,
         t2t_sources: follow.sources,
@@ -532,13 +546,26 @@ export default function TapToTradeFeed() {
         body.lot_mode = "risk_percent"
         body.max_risk_percent = RISK_PRESET[follow.risk]
       }
-      await fetch("/api/mtmcopy/connection", {
+      const res = await fetch("/api/mtmcopy/connection", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
         body: JSON.stringify(body),
       })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        setFollowMsg({ tipo: "erro", texto: j.error || `Não foi possível guardar (${res.status}).` })
+        return
+      }
       await loadConnection()
       setFollowDirty(false)
+      const quantas = follow.sources.length + follow.assetClasses.length
+      setFollowMsg({
+        tipo: "ok",
+        texto: quantas === 0 ? "Guardado. A seguir todas as fontes e ativos." : "Guardado. Filtros aplicados ao teu feed.",
+      })
+      setTimeout(() => setFollowMsg((m) => (m?.tipo === "ok" ? null : m)), 4000)
+    } catch (e) {
+      setFollowMsg({ tipo: "erro", texto: e instanceof Error ? e.message : "Não foi possível guardar." })
     } finally {
       setSavingFollow(false)
     }
@@ -993,8 +1020,18 @@ export default function TapToTradeFeed() {
             disabled={savingFollow || !followDirty || !conn}
             className={`mt-3 w-full rounded-xl py-2.5 text-[13px] font-bold ${followDirty && conn ? "bg-[#D2A63C] text-black" : "bg-zinc-800 text-zinc-500"} disabled:opacity-60`}
           >
-            {savingFollow ? "A guardar…" : followDirty ? "Guardar" : "Guardado ✓"}
+            {savingFollow ? "A guardar…" : followDirty ? "Guardar alterações" : "Sem alterações por guardar"}
           </button>
+          {/* A confirmação aparece DEPOIS de a gravação responder — não é o estado de repouso
+              do botão. Assim "Guardado" quer mesmo dizer que ficou gravado. */}
+          {followMsg && (
+            <p
+              className={`mt-2 text-[12px] text-center ${followMsg.tipo === "ok" ? "text-emerald-400" : "text-rose-400"}`}
+              role="status"
+            >
+              {followMsg.tipo === "ok" ? "✓ " : "⚠️ "}{followMsg.texto}
+            </p>
+          )}
         </div>
       )}
 

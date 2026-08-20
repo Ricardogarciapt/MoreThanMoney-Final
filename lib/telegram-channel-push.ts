@@ -1,7 +1,7 @@
 import { getSiteOrigin } from '@/lib/site-url'
 import type { AppChatChannelSlug } from '@/lib/telegram-app-channels'
 import { tapToTradeEnabledChannels } from '@/lib/mtmcopy/tap-to-trade-channels'
-import { isT2TEntrySignal, t2tMode } from '@/lib/mtmcopy/t2t-source'
+import { isT2TEntrySignal, t2tMode, matchesT2TPrefs } from '@/lib/mtmcopy/t2t-source'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 const PUSH_TITLES: Record<string, string> = {
@@ -13,15 +13,38 @@ const PUSH_TITLES: Record<string, string> = {
 type PushResult = { ok: boolean; status?: number; error?: string }
 
 /** user_ids com conta Tap to Trade ATIVA (ligada). */
-async function activeT2TUserIds(): Promise<string[]> {
+/**
+ * Quem deve receber a notificação de Tap to Trade para ESTE sinal.
+ *
+ * Dois defeitos que isto corrige:
+ *  1. Ignorava as PREFERÊNCIAS do cliente. Quem tinha filtrado "só Premium e ouro" recebia na
+ *     mesma o push de um sinal de Forex Swings — os filtros funcionavam no feed e não aqui.
+ *  2. Só olhava para `purpose='tap_to_trade'` e esquecia as contas marcadas com
+ *     `t2t_enabled=true`, que a rota de aceitação aceita. Esses clientes nunca recebiam nada.
+ *
+ * Sem filtros definidos ([] ou null) segue tudo — é o comportamento por omissão de sempre.
+ */
+async function activeT2TUserIds(channelSlug: string, content: string | null): Promise<string[]> {
   const supabase = getSupabaseAdmin()
   const { data } = await supabase
     .from('mtmcopy_connections')
-    .select('user_id')
-    .eq('purpose', 'tap_to_trade')
+    .select('user_id, purpose, t2t_enabled, t2t_sources, t2t_asset_classes')
     .not('metaapi_account_id', 'is', null)
     .neq('mt5_status', 'disconnected')
-  return [...new Set((data ?? []).map((r) => r.user_id as string).filter(Boolean))]
+
+  const users = new Set<string>()
+  for (const r of data ?? []) {
+    const row = r as {
+      user_id?: string | null; purpose?: string | null; t2t_enabled?: boolean | null
+      t2t_sources?: string[] | null; t2t_asset_classes?: string[] | null
+    }
+    if (!row.user_id) continue
+    if (row.purpose !== 'tap_to_trade' && row.t2t_enabled !== true) continue
+    // Uma conta que siga este sinal chega para notificar o dono — não se exige que TODAS sigam.
+    if (!matchesT2TPrefs(channelSlug, content, { sources: row.t2t_sources, assetClasses: row.t2t_asset_classes })) continue
+    users.add(row.user_id)
+  }
+  return [...users]
 }
 
 async function postPush(body: Record<string, unknown>): Promise<PushResult> {
@@ -77,7 +100,7 @@ export async function sendTelegramChannelPush(opts: {
   if (opts.chatMessageId && isT2TEntrySignal(slug, opts.content)) {
     try {
       const enabled = await tapToTradeEnabledChannels()
-      if (enabled?.has(slug)) t2tUsers = modoSeguir ? [] : await activeT2TUserIds()
+      if (enabled?.has(slug)) t2tUsers = modoSeguir ? [] : await activeT2TUserIds(slug, opts.content ?? null)
     } catch {
       // segue como push normal
     }

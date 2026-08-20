@@ -1,5 +1,5 @@
 /** Perpétuos no T2T: seguir em vez de executar. npx tsx lib/mtmcopy/__tests__/t2t-perps.check.ts */
-import { isT2TEntrySignal, t2tMode, t2tButtonLabel, t2tSourceKey } from '@/lib/mtmcopy/t2t-source'
+import { isT2TEntrySignal, t2tMode, t2tButtonLabel, t2tSourceKey, matchesT2TPrefs } from '@/lib/mtmcopy/t2t-source'
 
 let ok = 0, ko = 0
 const t = (nome: string, real: unknown, esperado: unknown) => {
@@ -32,6 +32,15 @@ t('BTCUSD executa', t2tMode('cripto-perps', 'AURUM FLOW · BTCUSD long 62000 TP1
 t('ouro no Premium executa', t2tMode('premium-ideas', 'XAUUSD buy 4370 TP1 4390'), 'execute')
 t('rotulo de seguir', t2tButtonLabel('follow'), 'Seguir posição')
 t('rotulo de aceitar', t2tButtonLabel('execute'), 'Aceitar trade')
+
+console.log('— filtros —')
+// Sem filtros definidos segue tudo: e o comportamento por omissao de sempre.
+t('sem filtros segue tudo', matchesT2TPrefs('cripto-perps', ETH, { sources: [], assetClasses: [] }), true)
+t('sem filtros (null) segue tudo', matchesT2TPrefs('cripto-perps', ETH, { sources: null, assetClasses: null }), true)
+// So Premium + ouro: um perpetuo do Aurum nao deve passar -- era isto que o push ignorava.
+t('filtro de fonte exclui o perp', matchesT2TPrefs('cripto-perps', ETH, { sources: ['premium'], assetClasses: [] }), false)
+t('filtro de classe exclui o perp', matchesT2TPrefs('cripto-perps', ETH, { sources: [], assetClasses: ['gold'] }), false)
+t('filtro certo deixa passar', matchesT2TPrefs('cripto-perps', ETH, { sources: ['aurum'], assetClasses: ['crypto'] }), true)
 
 console.log(`\n${ok} passaram, ${ko} falharam`)
 process.exit(ko ? 1 : 0)
