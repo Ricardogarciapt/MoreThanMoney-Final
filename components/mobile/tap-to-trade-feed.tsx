@@ -1,5 +1,7 @@
 "use client"
 
+import { t2tMode } from "@/lib/mtmcopy/t2t-source"
+
 import { useCallback, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { useT } from "@/components/i18n-provider"
@@ -1031,7 +1033,10 @@ export default function TapToTradeFeed() {
                     onClick={() => setTap({ sig: s, status: "confirm" })}
                     className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2.5 active:scale-[0.98] transition-transform"
                   >
-                    <Zap className="w-4 h-4" /> Tap to Trade
+                    <Zap className="w-4 h-4" />
+                    {/* Nos perpétuos o botão não abre ordem nenhuma — segue a posição-mestre.
+                        O rótulo tem de dizer isso, senão promete o que não faz. */}
+                    {t2tMode(s.channel_slug, s.content) === "follow" ? "Seguir posição" : "Tap to Trade"}
                   </button>
                 )}
               </div>
