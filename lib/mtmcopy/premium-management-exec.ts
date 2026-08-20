@@ -148,7 +148,13 @@ export async function applyPremiumManagement(
   const symbol = parent?.symbol ?? symbolHint ?? 'XAUUSD'
 
   const positions = await listOpenPositions(accountId)
-  const pos = findPremiumSinglePosition(positions, symbol)
+  // O follow-up é ligado à POSIÇÃO do seu próprio sinal, pela entrada/zona do sinal-pai.
+  // Sem isto, com dois setups do mesmo símbolo abertos, geria-se a posição errada.
+  const pos = findPremiumSinglePosition(positions, symbol, {
+    entry: parent?.entry ?? null,
+    zoneLow: parent?.zone?.[0] ?? null,
+    zoneHigh: parent?.zone?.[1] ?? null,
+  })
   if (!pos) {
     // Gestão sem posição = a trade já foi fechada (parcial/monitor/SL) ou nunca abriu.
     // No-op benigno, NÃO erro (elimina os falsos 'error' de gestão tardia/redundante).

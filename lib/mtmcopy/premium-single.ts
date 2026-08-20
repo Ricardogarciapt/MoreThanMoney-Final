@@ -199,6 +199,12 @@ function directionMatches(pos: MetaApiPosition, direction: string): boolean {
 export function findPremiumSinglePosition(
   positions: MetaApiPosition[],
   symbol: string,
+  /**
+   * Entrada do sinal a que o follow-up pertence (zona ou preço). Sem isto escolhia-se a ÚLTIMA
+   * posição do símbolo — e com dois setups de ouro abertos ao mesmo tempo, o "HIT TP1" de um
+   * geria a posição do outro. Com a entrada, liga-se o follow-up à posição certa.
+   */
+  entryHint?: { entry?: number | null; zoneLow?: number | null; zoneHigh?: number | null } | null,
 ): MetaApiPosition | null {
   const matches = positions.filter(
     (p) =>
@@ -206,7 +212,27 @@ export function findPremiumSinglePosition(
       isPremiumSinglePosition(p.comment) &&
       symbolMatches(p.symbol, symbol),
   )
-  return matches.length ? matches[matches.length - 1]! : null
+  if (!matches.length) return null
+  if (matches.length === 1) return matches[0]!
+
+  // Alvo de comparação: o preço de entrada do sinal, ou o meio da zona quando é uma zona.
+  const alvo = (() => {
+    if (entryHint?.entry != null && entryHint.entry > 0) return entryHint.entry
+    const lo = entryHint?.zoneLow
+    const hi = entryHint?.zoneHigh
+    if (lo != null && hi != null && lo > 0 && hi > 0) return (lo + hi) / 2
+    return null
+  })()
+  if (alvo == null) return matches[matches.length - 1]!
+
+  // A posição cuja abertura está mais perto da entrada do sinal é a que este follow-up refere.
+  let melhor = matches[0]!
+  let menor = Math.abs((melhor.openPrice ?? 0) - alvo)
+  for (const p of matches.slice(1)) {
+    const d = Math.abs((p.openPrice ?? 0) - alvo)
+    if (d < menor) { melhor = p; menor = d }
+  }
+  return melhor
 }
 
 /** Legacy: pernas TP2/TP3 ainda abertas — preferir gestão em vez de nova entrada. */

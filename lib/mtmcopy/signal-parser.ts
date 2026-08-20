@@ -771,6 +771,12 @@ export interface ParsedManagement {
   closeAllAtProfit?: boolean
   /** «If hold set BE» — fechar 70% e segurar 30% em BE + trailing (em vez de fechar tudo) */
   holdRemainderAtBE?: boolean
+  /**
+   * Entrada do SINAL a que este follow-up pertence (preço ou zona), lida da mensagem-pai.
+   * Serve para ligar o follow-up à POSIÇÃO certa quando há mais do que uma aberta no mesmo
+   * símbolo — sem isto escolhia-se a última, que podia ser a de outro setup.
+   */
+  entryAnchor?: { entry?: number | null; zoneLow?: number | null; zoneHigh?: number | null } | null
 }
 
 /** Símbolo na mensagem actual ou herdado do sinal em resposta. */
@@ -983,7 +989,31 @@ function parseTradeIdeasManagement(text: string, parentText: string | null): Par
   return null
 }
 
+/**
+ * Lê um follow-up e, quando há mensagem-pai, anexa a ÂNCORA DA ENTRADA desse sinal — para a
+ * execução conseguir ligar o follow-up à posição certa quando há várias abertas no mesmo símbolo.
+ */
 export function parseManagementUpdate(
+  text: string,
+  channel?: MtmcopyChannelKey,
+  parentText?: string | null,
+): ParsedManagement | null {
+  const m = parseManagementUpdateInner(text, channel, parentText)
+  if (!m) return null
+  if (!parentText) return m
+  const pai = parseSignal(parentText)
+  if (!pai) return m
+  return {
+    ...m,
+    entryAnchor: {
+      entry: pai.entry ?? null,
+      zoneLow: pai.zone?.[0] ?? null,
+      zoneHigh: pai.zone?.[1] ?? null,
+    },
+  }
+}
+
+function parseManagementUpdateInner(
   text: string,
   channel?: MtmcopyChannelKey,
   parentText?: string | null,

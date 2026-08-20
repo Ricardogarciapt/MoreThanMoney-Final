@@ -1,4 +1,7 @@
 import type { TrailingDistance } from './pip-points'
+/** Entrada do sinal a que o follow-up pertence — liga-o à posição certa. */
+type EntryAnchor = { entry?: number | null; zoneLow?: number | null; zoneHigh?: number | null } | null | undefined
+
 import { normalizeTrailingDistance } from './pip-points'
 import { resolveBrokerSymbol } from './symbol-resolver'
 import {
@@ -118,11 +121,12 @@ async function applyPremiumMaximizeZones(
   accountId: string,
   positions: MetaApiPosition[],
   symbol: string,
+  entryAnchor?: EntryAnchor,
 ): Promise<{ updated: number; closed: number; errors: string[] }> {
   const result = { updated: 0, closed: 0, errors: [] as string[] }
   const trailing = premiumTrailingForTradeActive()
 
-  const single = findPremiumSinglePosition(positions, symbol)
+  const single = findPremiumSinglePosition(positions, symbol, entryAnchor)
   if (single) {
     const meta = parsePremiumSingleComment(single.comment)
     const vol = single.volume ?? 0
@@ -208,10 +212,11 @@ async function applyPremiumHalfOrTrail(
   accountId: string,
   positions: MetaApiPosition[],
   symbol: string,
+  entryAnchor?: EntryAnchor,
 ): Promise<{ updated: number; closed: number; errors: string[] }> {
   const result = { updated: 0, closed: 0, errors: [] as string[] }
 
-  const single = findPremiumSinglePosition(positions, symbol)
+  const single = findPremiumSinglePosition(positions, symbol, entryAnchor)
   if (single) {
     const spec = await getSymbolSpecification(accountId, symbol)
     if (!spec) {
@@ -427,6 +432,7 @@ async function applyPremiumCloseAllInProfit(
   positions: MetaApiPosition[],
   symbol: string,
   opts?: { holdRemainderAtBE?: boolean },
+  entryAnchor?: EntryAnchor,
 ): Promise<{ updated: number; closed: number; cancelled: number; errors: string[] }> {
   const result = { updated: 0, closed: 0, cancelled: 0, errors: [] as string[] }
   const targets = positions.length ? positions : []
@@ -482,7 +488,7 @@ async function applyPremiumCloseAllInProfit(
   }
 
   if (!closedAny) {
-    const single = findPremiumSinglePosition(targets, symbol)
+    const single = findPremiumSinglePosition(targets, symbol, entryAnchor)
     if (single) {
       const r = await applyPremiumSingleExitHit(accountId, single, 1, symbol, { beOnly: true })
       result.updated += r.updated
@@ -501,16 +507,17 @@ async function applyPremiumHitTp1(
   positions: MetaApiPosition[],
   symbol: string,
   opts?: { closeAllAtProfit?: boolean; holdRemainderAtBE?: boolean },
+  entryAnchor?: EntryAnchor,
 ): Promise<{ updated: number; closed: number; cancelled: number; errors: string[] }> {
   const result = { updated: 0, closed: 0, cancelled: 0, errors: [] as string[] }
 
   if (opts?.closeAllAtProfit) {
     return applyPremiumCloseAllInProfit(accountId, positions, symbol, {
       holdRemainderAtBE: opts.holdRemainderAtBE,
-    })
+    }, entryAnchor)
   }
 
-  const single = findPremiumSinglePosition(positions, symbol)
+  const single = findPremiumSinglePosition(positions, symbol, entryAnchor)
   if (single) {
     const r = await applyPremiumSingleExitHit(accountId, single, 1, symbol)
     return { ...result, ...r }
@@ -592,6 +599,7 @@ async function applyPremiumTradeActive(
   accountId: string,
   symbol: string,
   variant: PremiumTradeActiveVariant,
+  entryAnchor?: EntryAnchor,
 ): Promise<{ updated: number; closed: number; cancelled: number; errors: string[] }> {
   const positions = filterPositions(await listOpenPositions(accountId), symbol)
   if (!positions.length) {
@@ -599,11 +607,11 @@ async function applyPremiumTradeActive(
   }
 
   if (variant === 'maximize_zones') {
-    const r = await applyPremiumMaximizeZones(accountId, positions, symbol)
+    const r = await applyPremiumMaximizeZones(accountId, positions, symbol, entryAnchor)
     return { ...r, cancelled: 0 }
   }
 
-  const r = await applyPremiumHalfOrTrail(accountId, positions, symbol)
+  const r = await applyPremiumHalfOrTrail(accountId, positions, symbol, entryAnchor)
   return { ...r, cancelled: 0 }
 }
 
@@ -622,7 +630,7 @@ export async function applyManagementToAccount(
     return applyPremiumHitTp1(accountId, positions, management.symbol, {
       closeAllAtProfit: management.closeAllAtProfit,
       holdRemainderAtBE: management.holdRemainderAtBE,
-    })
+    }, management.entryAnchor)
   }
 
   if (management.type === 'premium_trade_active' && management.symbol && management.premiumVariant) {
@@ -636,7 +644,7 @@ export async function applyManagementToAccount(
         return { updated: 0, closed: 0, cancelled: 0, errors: [] }
       }
     }
-    return applyPremiumTradeActive(accountId, management.symbol, management.premiumVariant)
+    return applyPremiumTradeActive(accountId, management.symbol, management.premiumVariant, management.entryAnchor)
   }
 
   if (management.type === 'cancel_orders') {
@@ -674,7 +682,7 @@ export async function applyManagementToAccount(
 
   if (management.type === 'close' && management.tpLevel != null && management.tpLevel >= 2) {
     const single = management.symbol
-      ? findPremiumSinglePosition(positions, management.symbol)
+      ? findPremiumSinglePosition(positions, management.symbol, management.entryAnchor)
       : null
     if (single && management.symbol) {
       const r = await applyPremiumSingleExitHit(
