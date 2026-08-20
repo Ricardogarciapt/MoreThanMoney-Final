@@ -127,11 +127,13 @@ export async function closeT2TFollowersForSignal(opts: {
   const entry = await findEntryMessageWithFollowers(chatSlug, symbol, direction, sourceMatch)
 
   // 1) Thread no chat (reply à entrada, se encontrada) — IDEMPOTENTE: se o MESMO anúncio já
-  //    foi publicado neste canal nas últimas 24h, não repete (evita spam/loop de notificações
-  //    quando o mesmo desfecho é detetado por mais do que um caminho ou em ticks sucessivos).
+  //    foi publicado neste canal nos últimos 60 min, não repete (evita spam/loop quando o mesmo
+  //    desfecho é detetado por mais do que um caminho ou em ticks sucessivos). Janela CURTA de
+  //    propósito: dois fechos LEGÍTIMOS do mesmo par/direção no mesmo dia (ex.: PrimeVerse) têm
+  //    de continuar a anunciar-se — só duplicados quase-simultâneos são suprimidos.
   let threaded = false
   try {
-    const sinceIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const sinceIso = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const { data: dup } = await supabase
       .from('chat_messages')
       .select('id')
