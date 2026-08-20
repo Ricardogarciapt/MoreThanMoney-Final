@@ -294,7 +294,15 @@ export async function runT2TPriceMonitor(): Promise<{
         if (r.success) {
           st.exitsDone = nextLevel
           actions.push(`exit${nextLevel} ${row.symbol}`)
-          await publishEvent(row, closeAll ? 'target_final' : 'partial', { ...evCtx, level: nextLevel, pct })
+          // Desfecho em pips + % de flutuação no anúncio (pedido Ricardo 2026-08-20).
+          let outcomeTxt: string | null = null
+          if (entry && entry > 0 && nextTp != null) {
+            const move = dir === 'buy' ? nextTp - entry : entry - nextTp
+            const pips = Math.round((move / pip) * 10) / 10
+            const pctMove = Math.round(((move / entry) * 100) * 100) / 100
+            outcomeTxt = `${pips >= 0 ? '+' : ''}${pips} pips (${pctMove >= 0 ? '+' : ''}${pctMove}%).`
+          }
+          await publishEvent(row, closeAll ? 'target_final' : 'partial', { ...evCtx, level: nextLevel, pct, reason: outcomeTxt })
           if (closeAll) {
             await admin.from('mtmcopy_signal_log').update({ status: 'closed', detail: `Fechada no alvo ${nextLevel}` }).eq('id', row.id)
             delete state[row.id]

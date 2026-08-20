@@ -63,6 +63,9 @@ interface MtmAlert {
   slPips: number | null
   slUnit: "pips" | "pts"
   crypto: { margin: number; leverage: number; notionalUsd: number; quantity: number | null } | null
+  outcomePips: number | null
+  outcomePct: number | null
+  outcomeUnit: "pips" | "pts"
 }
 
 const TRADE_STATE_META: Record<string, { label: string; cls: string }> = {
@@ -396,6 +399,21 @@ function AlertCard({
               {TRADE_STATE_META[alert.tradeStatus].label}
             </Badge>
           )}
+          {alert.outcomePips != null && (
+            <Badge
+              className={`border font-bold font-mono ${
+                alert.outcomePips > 0
+                  ? "border-green-500/40 bg-green-500/10 text-green-300"
+                  : alert.outcomePips < 0
+                    ? "border-red-500/40 bg-red-500/15 text-red-400"
+                    : "border-gray-500/40 bg-gray-500/10 text-gray-300"
+              }`}
+            >
+              {alert.outcomePips > 0 ? "▲ +" : alert.outcomePips < 0 ? "▼ " : ""}
+              {alert.outcomePips} {alert.outcomeUnit}
+              {alert.outcomePct != null ? ` · ${alert.outcomePct > 0 ? "+" : ""}${alert.outcomePct}%` : ""}
+            </Badge>
+          )}
           <span className="ml-auto flex items-center gap-1 text-xs text-gray-500">
             <Clock className="h-3 w-3" />
             {timeAgo(alert.createdAt)}
@@ -694,7 +712,12 @@ export default function AlertasMtm({
     if (classFilter !== "all" && classifyAssetClient(a.ticker) !== classFilter) return false
     if (tfFilter !== "all" && a.timeframe !== tfFilter) return false
     if (stratFilter !== "all" && scannerKeyFromStrategy(a.strategy) !== stratFilter) return false
-    if (stateFilter !== "all" && stateCategory(a.tradeStatus) !== stateFilter) return false
+    // Pedido Ricardo 2026-08-20: "Todos" mostra só sinais VIVOS (pendentes+ativas);
+    // terminados ficam nos separadores Wins/Loss com pips/% do desfecho (e nas métricas).
+    const cat = stateCategory(a.tradeStatus)
+    if (stateFilter === "all") {
+      if (cat !== "pending" && cat !== "active") return false
+    } else if (cat !== stateFilter) return false
     return true
   })
 
@@ -718,7 +741,7 @@ export default function AlertasMtm({
   const winRate = closed > 0 ? Math.round((perf.win / closed) * 100) : null
 
   const STATE_TABS: { key: "all" | StateCat; label: string; count: number; cls: string }[] = [
-    { key: "all", label: "Todos", count: perfBase.length, cls: "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" },
+    { key: "all", label: "Ativos", count: perf.pending + perf.active, cls: "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" },
     { key: "pending", label: "Pendentes", count: perf.pending, cls: "border-amber-500 bg-amber-500/15 text-amber-300" },
     { key: "active", label: "Ativas", count: perf.active, cls: "border-blue-500 bg-blue-500/15 text-blue-300" },
     { key: "win", label: "Wins", count: perf.win, cls: "border-green-500 bg-green-500/15 text-green-300" },

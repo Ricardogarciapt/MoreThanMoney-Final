@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   const [{ data: closedTrades }, { data: connections }, { count: usersWithTrades }] = await Promise.all([
     supabase
       .from('trading_plan_trades')
-      .select('pnl, lot_size, symbol, direction, opened_at, closed_at, trade_source, risk_amount, mtmcopy_connection_id, setup_type')
+      .select('pnl, lot_size, symbol, direction, opened_at, closed_at, trade_source, risk_amount, mtmcopy_connection_id, setup_type, entry_price, exit_price')
       .eq('execution_mode', 'executed')
       .eq('status', 'closed')
       .not('pnl', 'is', null)

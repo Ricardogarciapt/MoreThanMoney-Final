@@ -13,6 +13,32 @@ export type ClosedTradeRow = {
   trade_source: string | null
   risk_amount: number | null
   mtmcopy_connection_id: string | null
+  /** Preços de entrada/saída (quando disponíveis) → pips e % de flutuação por trade. */
+  entry_price?: number | null
+  exit_price?: number | null
+}
+
+/** Tamanho do pip/ponto por símbolo (XAU 0.1 · JPY 0.01 · forex 0.0001 · resto 1 ponto). */
+export function pipSizeForSymbol(symbol: string | null | undefined): number {
+  const s = (symbol ?? '').toUpperCase()
+  if (/XAU|GOLD/.test(s)) return 0.1
+  if (/JPY/.test(s)) return 0.01
+  const letters = s.replace(/[^A-Z]/g, '')
+  if (letters.length === 6) return 0.0001 // par forex
+  return 1 // índices/cripto/outros → pontos
+}
+
+/** Pips ASSINADOS e % de flutuação de uma trade fechada (null sem preços). */
+export function tradePipsPct(t: Pick<ClosedTradeRow, 'symbol' | 'direction' | 'entry_price' | 'exit_price'>): { pips: number; pct: number } | null {
+  const entry = Number(t.entry_price)
+  const exit = Number(t.exit_price)
+  if (!Number.isFinite(entry) || !Number.isFinite(exit) || entry <= 0 || exit <= 0) return null
+  const dir = (t.direction ?? '').toLowerCase()
+  const move = dir === 'short' || dir === 'sell' ? entry - exit : exit - entry
+  return {
+    pips: Math.round((move / pipSizeForSymbol(t.symbol)) * 10) / 10,
+    pct: Math.round(((move / entry) * 100) * 100) / 100,
+  }
 }
 
 export interface PerformanceData {
@@ -30,6 +56,9 @@ export interface PerformanceData {
   returnOverMaxDD: number | null
   bestTrade: number
   worstTrade: number
+  /** Pips ASSINADOS acumulados e % média de flutuação por trade (trades com preços). */
+  totalPips: number | null
+  avgFluctuationPct: number | null
   equityCurve: { date: string; pnl: number; cumulative: number }[]
   byAccount: { label: string; pnl: number; trades: number; winRate: number }[]
   bySymbol: { symbol: string; pnl: number; trades: number }[]
@@ -64,12 +93,17 @@ export function computePerformance(
   let bestTrade = -Infinity
   let worstTrade = Infinity
 
+  let totalPips = 0
+  let pctSum = 0
+  let pipsTrades = 0
   for (const t of trades) {
     cumulative += t.pnl
     peak = Math.max(peak, cumulative)
     maxDrawdown = Math.max(maxDrawdown, peak - cumulative)
     equityCurve.push({ date: t.ts.slice(0, 10), pnl: round2(t.pnl), cumulative: round2(cumulative) })
     if (t.pnl >= 0) { wins++; grossProfit += t.pnl } else { losses++; grossLoss += Math.abs(t.pnl) }
+    const pp = tradePipsPct(t)
+    if (pp) { totalPips += pp.pips; pctSum += Math.abs(pp.pct); pipsTrades++ }
     bestTrade = Math.max(bestTrade, t.pnl)
     worstTrade = Math.min(worstTrade, t.pnl)
   }
@@ -151,6 +185,8 @@ export function computePerformance(
   return {
     totalPnl: round2(totalPnl),
     tradeCount: count,
+    totalPips: pipsTrades ? Math.round(totalPips * 10) / 10 : null,
+    avgFluctuationPct: pipsTrades ? Math.round((pctSum / pipsTrades) * 100) / 100 : null,
     wins, losses, winRate,
     profitFactor: profitFactor === Infinity ? null : round2(profitFactor),
     avgWin: round2(avgWin),

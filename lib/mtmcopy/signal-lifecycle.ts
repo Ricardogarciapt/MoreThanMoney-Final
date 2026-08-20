@@ -91,7 +91,7 @@ const EVENTS: Record<SignalEvent, EventDef> = {
   partial: {
     emoji: '🎯',
     title: (c) => `Alvo ${c.level ?? 1} · ${headline(c)}`,
-    body: (c) => `Realizado ${c.pct ?? 0}%. O resto corre com o stop protegido.`,
+    body: (c) => [`Realizado ${c.pct ?? 0}%. O resto corre com o stop protegido.`, c.reason].filter(Boolean).join(' '),
     closes: false,
     cancelsPending: false,
     logStatus: 'open',
@@ -115,7 +115,7 @@ const EVENTS: Record<SignalEvent, EventDef> = {
   target_final: {
     emoji: '🏁',
     title: (c) => `Alvo final · ${headline(c)}`,
-    body: () => 'Posição encerrada.',
+    body: (c) => ['Posição encerrada.', c.reason].filter(Boolean).join(' '),
     closes: true,
     cancelsPending: true,
     logStatus: 'closed',
@@ -123,7 +123,7 @@ const EVENTS: Record<SignalEvent, EventDef> = {
   stop_loss: {
     emoji: '🛑',
     title: (c) => `Stop loss · ${headline(c)}`,
-    body: () => 'A trade fechou no stop.',
+    body: (c) => ['A trade fechou no stop.', c.reason].filter(Boolean).join(' '),
     closes: true,
     cancelsPending: true,
     logStatus: 'closed',

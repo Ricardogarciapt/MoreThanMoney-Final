@@ -683,11 +683,16 @@ const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|b
  *  'ENTRY HIT' literal (monitor/PrimeVerse) e não 'ativad' — senão as entradas Sensei ("Ideia
  *  Activada"), que SÃO sinais, resolver-se-iam umas às outras. */
 const TAP_TRADE_RESOLVING_RE = /(entry\s*hit|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|posi[çc][aã]o\s*fechada|fechad[ao]|encerrad|cancelad|descartad|invalidad|break\s*even)/i
-/** Direção do sinal/follow-up, quando declarada. */
+/** Direção do sinal/follow-up, quando declarada — palavras primeiro (1ª ocorrência ganha), emojis depois. */
 function t2tDirectionOf(content?: string | null): "BUY" | "SELL" | "" {
   if (!content) return ""
-  if (/\b(sell|short|venda)\b|🔴/i.test(content)) return "SELL"
-  if (/\b(buy|long|compra)\b|🔵|🟢/i.test(content)) return "BUY"
+  const c = content.toLowerCase()
+  const buyIdx = c.search(/\b(buy|long|compra)\b/)
+  const sellIdx = c.search(/\b(sell|short|venda)\b/)
+  if (buyIdx >= 0 && (sellIdx < 0 || buyIdx < sellIdx)) return "BUY"
+  if (sellIdx >= 0) return "SELL"
+  if (/🔴/.test(content)) return "SELL"
+  if (/🔵|🟢/.test(content)) return "BUY"
   return ""
 }
 /** Símbolo do sinal, para emparelhar follow-ups com a entrada certa (nunca substring cega). */

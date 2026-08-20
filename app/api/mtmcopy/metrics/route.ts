@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
         .limit(200),
       supabaseAdmin
         .from('trading_plan_trades')
-        .select('pnl, lot_size, symbol, direction, opened_at, closed_at, trade_source, risk_amount, mtmcopy_connection_id')
+        .select('pnl, lot_size, symbol, direction, opened_at, closed_at, trade_source, risk_amount, mtmcopy_connection_id, entry_price, exit_price')
         .eq('user_id', user.id)
         .eq('execution_mode', 'executed')
         .eq('status', 'closed')

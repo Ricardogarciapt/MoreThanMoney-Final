@@ -140,6 +140,9 @@ interface MtmAlert {
   slPips: number | null
   slUnit: "pips" | "pts"
   crypto: { margin: number; leverage: number; notionalUsd: number; quantity: number | null } | null
+  outcomePips: number | null
+  outcomePct: number | null
+  outcomeUnit: "pips" | "pts"
 }
 
 const TRADE_STATE_META: Record<string, { label: string; cls: string }> = {
@@ -337,6 +340,21 @@ function MobileAlertCard({
           {alert.tradeStatus && TRADE_STATE_META[alert.tradeStatus] && (
             <Badge className={`border text-[10px] font-semibold ${TRADE_STATE_META[alert.tradeStatus].cls}`}>
               {TRADE_STATE_META[alert.tradeStatus].label}
+            </Badge>
+          )}
+          {alert.outcomePips != null && (
+            <Badge
+              className={`border text-[10px] font-bold font-mono ${
+                alert.outcomePips > 0
+                  ? "border-green-500/40 bg-green-500/10 text-green-300"
+                  : alert.outcomePips < 0
+                    ? "border-red-500/40 bg-red-500/15 text-red-400"
+                    : "border-gray-500/40 bg-gray-500/10 text-gray-300"
+              }`}
+            >
+              {alert.outcomePips > 0 ? "▲ +" : alert.outcomePips < 0 ? "▼ " : ""}
+              {alert.outcomePips} {alert.outcomeUnit}
+              {alert.outcomePct != null ? ` · ${alert.outcomePct > 0 ? "+" : ""}${alert.outcomePct}%` : ""}
             </Badge>
           )}
         </div>
@@ -620,12 +638,20 @@ export default function TradingAlertsMobile() {
     return acc
   }, [subFiltered])
   const winRate = perf.win + perf.loss > 0 ? Math.round((perf.win / (perf.win + perf.loss)) * 100) : null
+  // Pedido Ricardo 2026-08-20: a vista "Todos" mostra só sinais VIVOS (pendentes+ativos);
+  // os terminados ficam nos separadores Wins/Loss com pips/% do desfecho (e nas métricas).
   const visible = useMemo(
-    () => (stateFilter === "all" ? subFiltered : subFiltered.filter((a) => stateCategory(a.tradeStatus) === stateFilter)),
+    () =>
+      stateFilter === "all"
+        ? subFiltered.filter((a) => {
+            const c = stateCategory(a.tradeStatus)
+            return c === "pending" || c === "active"
+          })
+        : subFiltered.filter((a) => stateCategory(a.tradeStatus) === stateFilter),
     [subFiltered, stateFilter]
   )
   const STATE_TABS: { key: "all" | StateCat; label: string; count: number; cls: string }[] = [
-    { key: "all", label: "Todos", count: subFiltered.length, cls: "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" },
+    { key: "all", label: "Ativos", count: perf.pending + perf.active, cls: "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" },
     { key: "pending", label: "Pendentes", count: perf.pending, cls: "border-amber-500 bg-amber-500/15 text-amber-300" },
     { key: "active", label: "Ativas", count: perf.active, cls: "border-blue-500 bg-blue-500/15 text-blue-300" },
     { key: "win", label: "Wins", count: perf.win, cls: "border-green-500 bg-green-500/15 text-green-300" },

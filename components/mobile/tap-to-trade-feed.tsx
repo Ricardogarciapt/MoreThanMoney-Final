@@ -57,8 +57,14 @@ const CHANNEL_LABEL: Record<string, string> = {
 
 function directionOf(content: string): "BUY" | "SELL" | "" {
   const c = content.toLowerCase()
-  if (/🟢|\bbuy\b|\blong\b|\bcompra\b/.test(c)) return "BUY"
-  if (/🔴|\bsell\b|\bshort\b|\bvenda\b/.test(c)) return "SELL"
+  // PALAVRAS primeiro (a 1ª ocorrência ganha) — só depois emojis. Um "GOLD SELL SETUP"
+  // com marcador 🟢 no texto era classificado BUY porque o emoji era testado primeiro.
+  const buyIdx = c.search(/\b(buy|long|compra)\b/)
+  const sellIdx = c.search(/\b(sell|short|venda)\b/)
+  if (buyIdx >= 0 && (sellIdx < 0 || buyIdx < sellIdx)) return "BUY"
+  if (sellIdx >= 0) return "SELL"
+  if (/🔴/.test(content)) return "SELL"
+  if (/🟢|🔵/.test(content)) return "BUY"
   return ""
 }
 

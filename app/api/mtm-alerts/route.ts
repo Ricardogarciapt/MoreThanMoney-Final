@@ -43,6 +43,10 @@ export interface MtmAlert {
   slPips: number | null
   slUnit: "pips" | "pts"
   crypto: { margin: number; leverage: number; notionalUsd: number; quantity: number | null } | null
+  /** Desfecho do sinal terminado: pips/pontos ASSINADOS feitos e % de flutuação (null enquanto vivo). */
+  outcomePips: number | null
+  outcomePct: number | null
+  outcomeUnit: "pips" | "pts"
 }
 
 function num(v: unknown): number | null {
@@ -86,6 +90,38 @@ function slInfo(ticker: string | null, entry: number | null, sl: number | null, 
     return { slDistance: dist, slPercent: pct, slPips: Math.round((dist / pip) * 10) / 10, slUnit: "pips" as const }
   }
   return { slDistance: dist, slPercent: pct, slPips: Math.round(dist * 100) / 100, slUnit: "pts" as const }
+}
+
+/**
+ * DESFECHO de um sinal terminado — pips/pontos ASSINADOS e % de flutuação, deterministas a
+ * partir do próprio sinal: exit_N → preço do TP N · loss → SL · be → 0 · closed → último TP
+ * conhecido. Presente em todo o sistema (app, /alertas-mtm, scanner-access, métricas).
+ */
+function outcomeInfo(
+  ticker: string | null,
+  direction: "buy" | "sell" | "neutral",
+  entry: number | null,
+  sl: number | null,
+  tps: number[],
+  tradeStatus: string | null,
+  cls: AlertAssetClass,
+): { outcomePips: number | null; outcomePct: number | null; outcomeUnit: "pips" | "pts" } {
+  const none = { outcomePips: null, outcomePct: null, outcomeUnit: (cls === "forex" ? "pips" : "pts") as "pips" | "pts" }
+  if (!tradeStatus || entry == null || entry <= 0 || direction === "neutral") return none
+  let exit: number | null = null
+  const m = tradeStatus.match(/^exit_(\d)$/)
+  if (m) exit = tps[Number(m[1]) - 1] ?? tps[tps.length - 1] ?? null
+  else if (tradeStatus === "loss") exit = sl
+  else if (tradeStatus === "be") exit = entry
+  else if (tradeStatus === "closed") exit = tps[tps.length - 1] ?? null
+  if (exit == null || exit <= 0) return none
+  const move = direction === "buy" ? exit - entry : entry - exit // assinado: + = ganho
+  const pct = Math.round(((move / entry) * 100) * 100) / 100
+  if (cls === "forex") {
+    const pip = /JPY/.test((ticker || "").toUpperCase()) ? 0.01 : 0.0001
+    return { outcomePips: Math.round((move / pip) * 10) / 10, outcomePct: pct, outcomeUnit: "pips" }
+  }
+  return { outcomePips: Math.round(move * 100) / 100, outcomePct: pct, outcomeUnit: "pts" }
 }
 
 /** Cripto perp: alavancagem sugerida + tamanho de posição para margem $10 (SL ≈ 50% da margem). */
@@ -308,25 +344,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Pedido Ricardo 2026-08-20: alertas TERMINADOS saem do feed (ficam só na BD) —
-    // SL (loss), descartados, fechados, BE, e "todos os TPs atingidos" (exit_N >= nº de TPs
-    // do sinal). Parciais (exit_1 de um sinal com 3 TPs) continuam visíveis. O deep-link por
-    // id (?id=) e ?includeClosed=1 continuam a devolver tudo.
-    const includeClosed = searchParams.get("includeClosed") === "1"
-    if (!idFilter && !includeClosed && data) {
-      const HIDDEN_STATUS = new Set(["loss", "discarded", "closed", "filtered", "be"])
+    // Nota 2026-08-20: a API devolve TODOS os estados (com outcomePips/outcomePct nos
+    // terminados) — quem esconde os terminados da vista principal são os CLIENTES, que
+    // precisam deles para os filtros Wins/Loss e para as métricas de desempenho. Só os
+    // 'discarded'/'filtered' saem do payload do feed (nunca abriram — ficam apenas na BD).
+    if (!idFilter && data) {
       data = (data as any[]).filter((row) => {
         const st = String(row.trade_status ?? "")
-        if (HIDDEN_STATUS.has(st)) return false
-        const m = st.match(/^exit_(\d)$/)
-        if (m) {
-          const raw = (row.raw_payload && typeof row.raw_payload === "object" ? row.raw_payload : {}) as Record<string, unknown>
-          const nn = (v: unknown) => (v == null || v === "" ? null : Number.isFinite(Number(v)) ? Number(v) : null)
-          const tpCount = [nn(row.tp), nn(raw.tp2), nn(raw.tp3), nn(raw.tp4), nn(raw.exit2), nn(raw.exit3)]
-            .filter((n, i, arr) => n != null && arr.indexOf(n) === i).length
-          if (Number(m[1]) >= Math.max(1, tpCount)) return false // todos os TPs atingidos
-        }
-        return true
+        return st !== "discarded" && st !== "filtered"
       })
     }
 
@@ -336,6 +361,9 @@ export async function GET(request: NextRequest) {
       const stopLoss = extractStopLoss(num(row.sl), raw)
       const cls = classifyAssetClass(row.ticker)
       const sl = slInfo(row.ticker, entry, stopLoss, cls)
+      const direction = resolveDirection(row.action)
+      const takeProfits = extractTakeProfits(num(row.tp), raw)
+      const outcome = outcomeInfo(row.ticker, direction, entry, stopLoss, takeProfits, (row.trade_status as string | null) ?? null, cls)
       return {
         id: row.id,
         ticker: row.ticker,
@@ -343,10 +371,10 @@ export async function GET(request: NextRequest) {
         exchange: row.exchange,
         timeframe: row.timeframe,
         action: row.action,
-        direction: resolveDirection(row.action),
+        direction,
         entry,
         stopLoss,
-        takeProfits: extractTakeProfits(num(row.tp), raw),
+        takeProfits,
         alertName: row.alert_name,
         strategy: pickStr(raw, ["strategy", "strategy_name", "scanner", "estrategia"]) || row.alert_name,
         session: pickStr(raw, ["session", "trading_session", "sessao", "sessions"]),
@@ -363,6 +391,9 @@ export async function GET(request: NextRequest) {
         slPips: sl.slPips,
         slUnit: sl.slUnit,
         crypto: cls === "crypto_perp" ? cryptoSizing(entry, sl.slPercent) : null,
+        outcomePips: outcome.outcomePips,
+        outcomePct: outcome.outcomePct,
+        outcomeUnit: outcome.outcomeUnit,
       }
     })
 
