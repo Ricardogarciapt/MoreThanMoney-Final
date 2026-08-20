@@ -184,7 +184,7 @@ function evaluatePerpPath(
 export async function evaluateOpenAlerts(
   limit = 300,
   ctx?: { origin?: string | null; secret?: string | null },
-): Promise<{ scanned: number; updated: number; skipped: number }> {
+): Promise<{ scanned: number; updated: number; skipped: number; expired: number }> {
   const admin = getSupabaseAdmin()
   const cols = "id, ticker, action, price, sl, tp, raw_payload, trade_status, signal_kind, chat_message_id, received_at"
   const openStatus = "trade_status.is.null,trade_status.in.(pending,active,be,exit_1,exit_2,exit_3)"
@@ -202,13 +202,34 @@ export async function evaluateOpenAlerts(
     .order("received_at", { ascending: true })
     .limit(Math.max(limit, 500))
 
-  // PASSAGEM 2 — restantes (snapshot). ASCENDENTE: tenta os mais antigos primeiro.
+  // PASSAGEM 0 — EXPIRAR o que já não é resolúvel. Sem isto, a fila ascendente ficava presa:
+  // os mais antigos são avaliados por SNAPSHOT (preço de agora), quase nunca resolvem, e voltavam
+  // ao topo da fila em cada passagem — o orçamento de 300 gastava-se sempre nos mesmos e os
+  // sinais RECENTES nunca chegavam a ser avaliados. Era por isso que havia milhares de pendentes.
+  const expiryDays = Number(process.env.ALERTS_EXPIRY_DAYS) || 14
+  const expiryCutoff = new Date(Date.now() - expiryDays * 86_400_000).toISOString()
+  let expired = 0
+  try {
+    const { data: velhos } = await admin
+      .from("tradingview_signals")
+      .update({ trade_status: "expired" })
+      .or("trade_status.is.null,trade_status.eq.pending")
+      .or(openKind)
+      .lt("received_at", expiryCutoff)
+      .select("id")
+    expired = velhos?.length ?? 0
+  } catch (e) {
+    console.warn("[alerts] expiração falhou:", e instanceof Error ? e.message : String(e))
+  }
+
+  // PASSAGEM 2 — restantes (snapshot). DESCENDENTE: os recentes primeiro, que são os que ainda
+  // podem resolver e os únicos que interessam para notificar. Os velhos saem pela expiração.
   const { data: otherRows } = await admin
     .from("tradingview_signals")
     .select(cols)
     .or(openStatus)
     .or(openKind)
-    .order("received_at", { ascending: true })
+    .order("received_at", { ascending: false })
     .limit(limit)
 
   let updated = 0
@@ -308,5 +329,5 @@ export async function evaluateOpenAlerts(
     }
   }
 
-  return { scanned: list.length, updated, skipped }
+  return { scanned: list.length, updated, skipped, expired }
 }

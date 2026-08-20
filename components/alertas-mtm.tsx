@@ -9,6 +9,7 @@ import MarkdownRenderer from "@/components/dashboard-gestao/markdown-renderer"
 import TvChartEmbed from "@/components/tv-chart-embed"
 import { supabase } from "@/lib/supabase"
 import { scannerFilterOptions, scannerKeyFromStrategy, scannerLabel } from "@/lib/mtm-alerts/scanners"
+import { classifyOutcome, winRate as calcWinRate, fullWinShare, emptyTally, type OutcomeCat } from "@/lib/mtm-alerts/outcome"
 import {
   Bell,
   TrendingUp,
@@ -83,14 +84,10 @@ const TRADE_STATE_META: Record<string, { label: string; cls: string }> = {
 }
 
 /** Categoria de desempenho para filtro e estatísticas dos alertas. */
-type StateCat = "pending" | "active" | "win" | "loss" | "discarded"
-function stateCategory(tradeStatus: string | null): StateCat {
-  if (tradeStatus === "pending") return "pending"
-  // SL antes de ativar (discarded) ou expirado sem ativar → não é loss real
-  if (tradeStatus === "discarded" || tradeStatus === "expired") return "discarded"
-  if (tradeStatus === "loss") return "loss"
-  if (tradeStatus && (tradeStatus.startsWith("exit_") || tradeStatus === "closed")) return "win"
-  return "active"
+type StateCat = OutcomeCat
+/** Classificação vinda do módulo canónico — inclui GANHO PARCIAL (tocou um alvo mas não o último). */
+function stateCategory(tradeStatus: string | null, tpCount?: number): StateCat {
+  return classifyOutcome(tradeStatus, tpCount)
 }
 
 function fmt(n: number | null): string {
@@ -712,9 +709,10 @@ export default function AlertasMtm({
     if (classFilter !== "all" && classifyAssetClient(a.ticker) !== classFilter) return false
     if (tfFilter !== "all" && a.timeframe !== tfFilter) return false
     if (stratFilter !== "all" && scannerKeyFromStrategy(a.strategy) !== stratFilter) return false
-    // Pedido Ricardo 2026-08-20: "Todos" mostra só sinais VIVOS (pendentes+ativas);
-    // terminados ficam nos separadores Wins/Loss com pips/% do desfecho (e nas métricas).
-    const cat = stateCategory(a.tradeStatus)
+    // "Todos" mostra só sinais VIVOS (pendentes+ativas); terminados ficam nos separadores
+    // próprios com pips/% do desfecho. O nº de alvos entra na classificação para separar o
+    // ganho PARCIAL (tocou um alvo mas não o último) do ganho completo.
+    const cat = stateCategory(a.tradeStatus, a.takeProfits?.length)
     if (stateFilter === "all") {
       if (cat !== "pending" && cat !== "active") return false
     } else if (cat !== stateFilter) return false
@@ -730,22 +728,20 @@ export default function AlertasMtm({
     if (stratFilter !== "all" && scannerKeyFromStrategy(a.strategy) !== stratFilter) return false
     return true
   })
-  const perf = perfBase.reduce(
-    (acc, a) => {
-      acc[stateCategory(a.tradeStatus)]++
-      return acc
-    },
-    { pending: 0, active: 0, win: 0, loss: 0, discarded: 0 } as Record<StateCat, number>
-  )
-  const closed = perf.win + perf.loss
-  const winRate = closed > 0 ? Math.round((perf.win / closed) * 100) : null
+  const perf = perfBase.reduce((acc, a) => {
+    acc[stateCategory(a.tradeStatus, a.takeProfits?.length)]++
+    return acc
+  }, emptyTally())
+  const winRate = calcWinRate(perf)
+  const parteCompleta = fullWinShare(perf)
 
   const STATE_TABS: { key: "all" | StateCat; label: string; count: number; cls: string }[] = [
     { key: "all", label: "Ativos", count: perf.pending + perf.active, cls: "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" },
     { key: "pending", label: "Pendentes", count: perf.pending, cls: "border-amber-500 bg-amber-500/15 text-amber-300" },
     { key: "active", label: "Ativas", count: perf.active, cls: "border-blue-500 bg-blue-500/15 text-blue-300" },
-    { key: "win", label: "Wins", count: perf.win, cls: "border-green-500 bg-green-500/15 text-green-300" },
-    { key: "loss", label: "Loss", count: perf.loss, cls: "border-red-500 bg-red-500/15 text-red-300" },
+    { key: "win", label: "Ganhos", count: perf.win, cls: "border-green-500 bg-green-500/15 text-green-300" },
+    { key: "partial_win", label: "Parciais", count: perf.partial_win, cls: "border-teal-500 bg-teal-500/15 text-teal-300" },
+    { key: "loss", label: "Perdas", count: perf.loss, cls: "border-red-500 bg-red-500/15 text-red-300" },
     { key: "discarded", label: "Descartados", count: perf.discarded, cls: "border-slate-500 bg-slate-500/15 text-slate-300" },
   ]
 
@@ -873,7 +869,10 @@ export default function AlertasMtm({
           >
             {winRate == null ? "—" : `${winRate}%`}
           </span>
-          <span className="text-gray-600">({perf.win}W · {perf.loss}L)</span>
+          <span className="text-gray-600">
+            ({perf.win}W · {perf.partial_win}P · {perf.loss}L
+            {parteCompleta != null ? ` · ${parteCompleta}% até ao último alvo` : ""})
+          </span>
         </div>
       </div>
 
