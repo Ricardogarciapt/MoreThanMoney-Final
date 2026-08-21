@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { computeOutcome, unitFor } from "@/lib/mtmcopy/trade-outcome"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/supabase"
@@ -46,7 +47,7 @@ export interface MtmAlert {
   /** Desfecho do sinal terminado: pips/pontos ASSINADOS feitos e % de flutuação (null enquanto vivo). */
   outcomePips: number | null
   outcomePct: number | null
-  outcomeUnit: "pips" | "pts"
+  outcomeUnit: "pips" | "pontos"
 }
 
 function num(v: unknown): number | null {
@@ -97,6 +98,14 @@ function slInfo(ticker: string | null, entry: number | null, sl: number | null, 
  * partir do próprio sinal: exit_N → preço do TP N · loss → SL · be → 0 · closed → último TP
  * conhecido. Presente em todo o sistema (app, /alertas-mtm, scanner-access, métricas).
  */
+/**
+ * Desfecho de um alerta fechado, em pips e percentagem.
+ *
+ * O cálculo vive em lib/mtmcopy/trade-outcome.ts — a mesma fonte que o chat, o Telegram, as
+ * notificações e o T2T usam. A versão que estava aqui tinha a sua própria tabela de pips
+ * (só forex, com JPY) e o ouro caía em "pontos": o mesmo fecho aparecia com números
+ * diferentes conforme a superfície onde o cliente o lia.
+ */
 function outcomeInfo(
   ticker: string | null,
   direction: "buy" | "sell" | "neutral",
@@ -104,10 +113,11 @@ function outcomeInfo(
   sl: number | null,
   tps: number[],
   tradeStatus: string | null,
-  cls: AlertAssetClass,
-): { outcomePips: number | null; outcomePct: number | null; outcomeUnit: "pips" | "pts" } {
-  const none = { outcomePips: null, outcomePct: null, outcomeUnit: (cls === "forex" ? "pips" : "pts") as "pips" | "pts" }
+): { outcomePips: number | null; outcomePct: number | null; outcomeUnit: "pips" | "pontos" } {
+  const unidade = unitFor(ticker)
+  const none = { outcomePips: null, outcomePct: null, outcomeUnit: unidade }
   if (!tradeStatus || entry == null || entry <= 0 || direction === "neutral") return none
+
   let exit: number | null = null
   const m = tradeStatus.match(/^exit_(\d)$/)
   if (m) exit = tps[Number(m[1]) - 1] ?? tps[tps.length - 1] ?? null
@@ -115,13 +125,10 @@ function outcomeInfo(
   else if (tradeStatus === "be") exit = entry
   else if (tradeStatus === "closed") exit = tps[tps.length - 1] ?? null
   if (exit == null || exit <= 0) return none
-  const move = direction === "buy" ? exit - entry : entry - exit // assinado: + = ganho
-  const pct = Math.round(((move / entry) * 100) * 100) / 100
-  if (cls === "forex") {
-    const pip = /JPY/.test((ticker || "").toUpperCase()) ? 0.01 : 0.0001
-    return { outcomePips: Math.round((move / pip) * 10) / 10, outcomePct: pct, outcomeUnit: "pips" }
-  }
-  return { outcomePips: Math.round(move * 100) / 100, outcomePct: pct, outcomeUnit: "pts" }
+
+  const o = computeOutcome({ symbol: ticker, direction, entry, exit })
+  if (!o) return none
+  return { outcomePips: o.pips, outcomePct: o.pct, outcomeUnit: o.unit }
 }
 
 /** Cripto perp: alavancagem sugerida + tamanho de posição para margem $10 (SL ≈ 50% da margem). */
@@ -363,7 +370,7 @@ export async function GET(request: NextRequest) {
       const sl = slInfo(row.ticker, entry, stopLoss, cls)
       const direction = resolveDirection(row.action)
       const takeProfits = extractTakeProfits(num(row.tp), raw)
-      const outcome = outcomeInfo(row.ticker, direction, entry, stopLoss, takeProfits, (row.trade_status as string | null) ?? null, cls)
+      const outcome = outcomeInfo(row.ticker, direction, entry, stopLoss, takeProfits, (row.trade_status as string | null) ?? null)
       return {
         id: row.id,
         ticker: row.ticker,

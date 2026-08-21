@@ -1,6 +1,7 @@
 "use client"
 
 import { t2tMode } from "@/lib/mtmcopy/t2t-source"
+import { pipSizeForSymbol, unitFor } from "@/lib/mtmcopy/trade-outcome"
 
 import { useCallback, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
@@ -190,12 +191,48 @@ interface Conn {
 const RISK_PRESET: Record<string, number> = { low: 0.5, medium: 1, high: 2 }
 const RISK_LABEL: Record<string, string> = { low: "Baixo", medium: "Médio", high: "Alto" }
 
+/**
+ * Desfecho de um sinal terminado, em pips e percentagem.
+ *
+ * Os pips vêm do que a FONTE anunciou ("HIT TP3 ✅ +200PIPS", "SL HIT −100PIPS") — é o número
+ * que o cliente viu no chat, e reescrevê-lo com o nosso cálculo só criaria discórdia. A
+ * percentagem é derivada desses pips com o tamanho de pip canónico e a entrada do setup, para
+ * ser a mesma conta que o resto do sistema faz.
+ */
+function desfechoDoSinal(setup: Sig, followups: Sig[]): string {
+  const sym = symbolOf(setup.content)
+  const dir = directionOf(setup.content)
+  const posteriores = followups
+    .filter((f) => f.channel_slug === setup.channel_slug)
+    .filter((f) => new Date(f.created_at).getTime() > new Date(setup.created_at).getTime())
+    .filter((f) => !sym || symbolOf(f.content) === sym)
+    .filter((f) => { const d = directionOf(f.content); return !dir || !d || d === dir })
+  const ultimo = posteriores[0]
+  if (!ultimo) return ""
+
+  const perdeu = /\bsl\s*hit|stop\s*loss\s*hit|❌/i.test(ultimo.content)
+  const m = ultimo.content.match(/([+\-−]?\s*\d+(?:[.,]\d+)?)\s*pips?/i)
+  if (!m) return ""
+  const bruto = Math.abs(Number(m[1].replace(/[\s−]/g, "").replace(",", ".")))
+  if (!Number.isFinite(bruto) || bruto === 0) return ""
+  const pips = perdeu ? -bruto : bruto
+
+  const entrada = Number((setup.content.match(/(?:entrada|entry|zone)\D{0,12}(\d[\d.,]*)/i) ?? [])[1]?.replace(",", "."))
+  const unidade = unitFor(sym)
+  const sinal = pips >= 0 ? "+" : "−"
+  const parte = `${sinal}${Math.abs(pips).toLocaleString("pt-PT")} ${unidade}`
+  if (!Number.isFinite(entrada) || entrada <= 0) return parte
+  const pct = (Math.abs(pips) * pipSizeForSymbol(sym)) / entrada * 100
+  return `${parte} · ${sinal}${pct.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
+}
+
 export default function TapToTradeFeed() {
   const t = useT()
   const searchParams = useSearchParams()
   const [items, setItems] = useState<Sig[]>([])
   const [loading, setLoading] = useState(true)
-  const [limitMode, setLimitMode] = useState<"last5" | "all">("last5")
+  const [limitMode, setLimitMode] = useState<"last5" | "today" | "week">("last5")
+  const [historico, setHistorico] = useState<Array<Sig & { outcome: string }>>([])
   const [tap, setTap] = useState<{ sig: Sig; status: "confirm" | "loading" | "done" | "error"; message?: string } | null>(null)
   /**
    * Pré-visualização do sinal: parâmetros da trade e, por conta, o lote e o risco calculados
@@ -317,8 +354,9 @@ export default function TapToTradeFeed() {
       .select("id, channel_slug, content, created_at")
       .in("channel_slug", channels)
       .eq("is_deleted", false)
+      .gte("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString())
       .order("created_at", { ascending: false })
-      .limit(120)
+      .limit(400)
     const all = (data ?? []) as Sig[]
     // follow-ups (TP atingido / fechado / SL / cancelado) para marcar sinais resolvidos
     const followups = all.filter((m) => FOLLOWUP_RE.test(m.content))
@@ -349,10 +387,15 @@ export default function TapToTradeFeed() {
           reason: resolved ? "resolved" : ageExpired ? "aged" : "",
         }
       })
-      // Pedido Ricardo 2026-08-20: sinais TERMINADOS (todos os TPs/SL/BE/descartados) ou
-      // envelhecidos saem do feed — ficam só na BD. O feed mostra apenas ideias aceitáveis.
-      .filter((s) => !s.expired)
-    setItems(sigs)
+    // Os TERMINADOS deixam de ser deitados fora: saem da lista de ideias aceitáveis (que é o
+    // que "Últimos 5" mostra) e passam a formar o HISTÓRICO do dia e da semana, com o desfecho
+    // em pips e percentagem ao lado do par.
+    setItems(sigs.filter((x) => !x.expired))
+    setHistorico(
+      sigs
+        .filter((x) => x.expired && x.reason === "resolved")
+        .map((x) => ({ ...x, outcome: desfechoDoSinal(x, followups) })),
+    )
     // Quais destes sinais o utilizador já aceitou (persiste entre reloads)
     if (tok) {
       try {
@@ -449,7 +492,16 @@ export default function TapToTradeFeed() {
   const filtered = items
     // "O que seguir" é a ÚNICA filtragem: fontes + classes de ativo que o user escolheu ([]=todas).
     .filter((s) => matchesT2TPrefs(s.channel_slug, s.content, { sources: follow.sources, assetClasses: follow.assetClasses }))
-  const shown = limitMode === "last5" ? filtered.slice(0, 5) : filtered
+  const inicioDoDia = new Date(); inicioDoDia.setHours(0, 0, 0, 0)
+  const desde = limitMode === "today" ? inicioDoDia.getTime() : Date.now() - 7 * 86_400_000
+  const naJanela = (x: { created_at: string }) => new Date(x.created_at).getTime() >= desde
+  const shown = limitMode === "last5" ? filtered.slice(0, 5) : filtered.filter(naJanela)
+  // Histórico: só nos alcances com janela. O "Últimos 5" é para agir, não para rever.
+  const historicoVisivel = limitMode === "last5"
+    ? []
+    : historico
+        .filter(naJanela)
+        .filter((x) => matchesT2TPrefs(x.channel_slug, x.content, { sources: follow.sources, assetClasses: follow.assetClasses }))
 
   const runTap = async () => {
     if (!tap) return
@@ -1042,24 +1094,24 @@ export default function TapToTradeFeed() {
       {/* «Estratégias ativas» (automatizadas) removido: o Tap to Trade é MANUAL — segue os CHATS
           conforme o «O que seguir» (fontes + ativo + risco), não as estratégias de cópia auto. */}
 
-      {/* alcance: últimos 5 (default) vs todos */}
+      {/* Alcance. "Todos" era uma lista sem fim de setups aceitáveis e sem histórico nenhum;
+          passa a Hoje / Esta semana, que é como se olha para o dia de trading. */}
       <div className="flex items-center gap-1.5 mb-2">
-        <button
-          onClick={() => setLimitMode("last5")}
-          className={`text-xs px-3 py-1.5 rounded-full border font-medium ${
-            limitMode === "last5" ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"
-          }`}
-        >
-          {t("t2t.last5")}
-        </button>
-        <button
-          onClick={() => setLimitMode("all")}
-          className={`text-xs px-3 py-1.5 rounded-full border font-medium ${
-            limitMode === "all" ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"
-          }`}
-        >
-          {t("t2t.all")}
-        </button>
+        {([
+          ["last5", t("t2t.last5")],
+          ["today", "Hoje"],
+          ["week", "Esta semana"],
+        ] as const).map(([modo, rotulo]) => (
+          <button
+            key={modo}
+            onClick={() => setLimitMode(modo)}
+            className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+              limitMode === modo ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"
+            }`}
+          >
+            {rotulo}
+          </button>
+        ))}
       </div>
 
       {/* Filtro por categoria removido: duplicava o «Ativo» do «O que seguir» (ouro/forex/cripto/
@@ -1067,7 +1119,7 @@ export default function TapToTradeFeed() {
 
       {loading && items.length === 0 ? (
         <div className="flex justify-center py-16"><Loader2 className="w-7 h-7 animate-spin text-[#D2A63C]" /></div>
-      ) : shown.length === 0 ? (
+      ) : shown.length === 0 && historicoVisivel.length === 0 ? (
         <div className="text-center py-16 text-zinc-500 text-sm">
           <TrendingUp className="w-10 h-10 mx-auto mb-3 text-zinc-700" />
           {noProviders
@@ -1140,6 +1192,45 @@ export default function TapToTradeFeed() {
               </div>
             )
           })}
+
+          {/* HISTÓRICO — sinais já terminados na janela escolhida, com o desfecho ao lado do
+              par. É o que faltava para o tab responder a "como correu o dia" sem sair da app. */}
+          {historicoVisivel.length > 0 && (
+            <div className="mt-4">
+              <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
+                Terminados · {limitMode === "today" ? "hoje" : "esta semana"} ({historicoVisivel.length})
+              </p>
+              <div className="flex flex-col gap-2">
+                {historicoVisivel.map((h) => {
+                  const ganhou = h.outcome.startsWith("+")
+                  return (
+                    <div key={h.id} className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[13px] font-semibold text-zinc-300 truncate">
+                          {symbolOf(h.content) || h.channel_slug}
+                          {directionOf(h.content) && (
+                            <span className={`ml-1.5 text-[11px] font-bold ${directionOf(h.content) === "BUY" ? "text-emerald-400" : "text-rose-400"}`}>
+                              {directionOf(h.content) === "BUY" ? "COMPRA" : "VENDA"}
+                            </span>
+                          )}
+                        </span>
+                        {h.outcome ? (
+                          <span className={`text-[12px] font-mono font-semibold tabular-nums flex-shrink-0 ${ganhou ? "text-emerald-400" : "text-rose-400"}`}>
+                            {h.outcome}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-zinc-600 flex-shrink-0">terminado</span>
+                        )}
+                      </div>
+                      <p className="text-[10.5px] text-zinc-600 mt-1">
+                        {new Date(h.created_at).toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

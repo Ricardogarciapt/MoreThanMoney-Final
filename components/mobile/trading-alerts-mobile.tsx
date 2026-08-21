@@ -144,7 +144,7 @@ interface MtmAlert {
   crypto: { margin: number; leverage: number; notionalUsd: number; quantity: number | null } | null
   outcomePips: number | null
   outcomePct: number | null
-  outcomeUnit: "pips" | "pts"
+  outcomeUnit: "pips" | "pontos"
 }
 
 const TRADE_STATE_META: Record<string, { label: string; cls: string }> = {
