@@ -24,9 +24,12 @@ export async function GET(request: NextRequest) {
   const agora = Date.now()
   const out: Record<string, unknown> = {}
 
+  // A regra "lidas há mais de 7 dias" quase não apanhava nada: com 0,15% de leitura, quase
+  // tudo está por ler e ficava cá para sempre. O sino mostra as últimas 30 — sete dias chega,
+  // e as lidas nem isso.
   for (const [nome, corte, sóLidas] of [
-    ["lidas_7d", new Date(agora - 7 * 86_400_000), true],
-    ["tudo_30d", new Date(agora - 30 * 86_400_000), false],
+    ["lidas_3d", new Date(agora - 3 * 86_400_000), true],
+    ["tudo_7d", new Date(agora - 7 * 86_400_000), false],
   ] as Array<[string, Date, boolean]>) {
     let q = supabase.from("notifications").delete({ count: "exact" }).lt("created_at", corte.toISOString())
     if (sóLidas) q = q.eq("read", true)
@@ -34,12 +37,12 @@ export async function GET(request: NextRequest) {
     out[nome] = error ? `erro: ${error.message}` : (count ?? 0)
   }
 
-  // notification_history serve para diagnóstico de envios; 30 dias chega.
+  // notification_history serve para diagnóstico de envios; 14 dias chega.
   const { error: eh } = await supabase
     .from("notification_history")
     .delete()
-    .lt("created_at", new Date(agora - 30 * 86_400_000).toISOString())
-  out.historico_30d = eh ? `erro: ${eh.message}` : "ok"
+    .lt("sent_at", new Date(agora - 14 * 86_400_000).toISOString())
+  out.historico_14d = eh ? `erro: ${eh.message}` : "ok"
 
   return NextResponse.json({ ok: true, ...out })
 }
