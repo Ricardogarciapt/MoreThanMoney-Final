@@ -161,6 +161,8 @@ interface Sig {
   reason?: string
   /** Desfecho gravado pelo servidor (pips e percentagem). Ver lib/mtmcopy/signal-outcomes. */
   outcome?: { label?: string; pips?: number; pct?: number | null } | null
+  /** Desfecho já resolvido para leitura (etiqueta pronta). */
+  desfecho?: string
 }
 
 interface Conn {
@@ -530,13 +532,18 @@ export default function TapToTradeFeed() {
   const inicioDoDia = new Date(); inicioDoDia.setHours(0, 0, 0, 0)
   const desde = limitMode === "today" ? inicioDoDia.getTime() : Date.now() - 7 * 86_400_000
   const naJanela = (x: { created_at: string }) => new Date(x.created_at).getTime() >= desde
-  const shown = limitMode === "last5" ? filtered.slice(0, 5) : filtered.filter(naJanela)
-  // Histórico: só nos alcances com janela. O "Últimos 5" é para agir, não para rever.
-  const historicoVisivel = limitMode === "last5"
-    ? []
-    : historico
-        .filter(naJanela)
-        .filter((x) => matchesT2TPrefs(x.channel_slug, x.content, { sources: follow.sources, assetClasses: follow.assetClasses }))
+  const historicoFiltrado = historico.filter((x) =>
+    matchesT2TPrefs(x.channel_slug, x.content, { sources: follow.sources, assetClasses: follow.assetClasses }),
+  )
+  // "Últimos 5" = os cinco sinais MAIS RECENTES, seja qual for o estado deles. Antes só contava
+  // os ainda aceitáveis, e como um setup expira em minutos o separador aparecia vazio a quem
+  // vinha ver o que tinha saído.
+  const ultimos5 = [...filtered, ...historicoFiltrado]
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, 5)
+  const shown = limitMode === "last5" ? ultimos5 : filtered.filter(naJanela)
+  // A secção "Terminados" é dos alcances com janela; nos últimos 5 os terminados já vêm na lista.
+  const historicoVisivel = limitMode === "last5" ? [] : historicoFiltrado.filter(naJanela)
 
   const runTap = async () => {
     if (!tap) return
@@ -1208,6 +1215,13 @@ export default function TapToTradeFeed() {
                     {accepted[s.id] === "closed" ? t("t2t.acceptedClosed")
                       : accepted[s.id] === "error" ? t("t2t.acceptedError")
                       : t("t2t.alreadyAccepted")}
+                  </div>
+                ) : s.desfecho ? (
+                  // Sinal terminado: o que interessa saber é quanto rendeu, não que expirou.
+                  <div className={`mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl font-semibold text-[12px] py-2.5 ${
+                    s.desfecho.startsWith("+") ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
+                  }`}>
+                    🏁 {t("t2t.reasonResolved")} · {s.desfecho}
                   </div>
                 ) : s.expired ? (
                   <div className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-zinc-800/70 text-zinc-500 font-semibold text-[12px] py-2.5 cursor-not-allowed">
