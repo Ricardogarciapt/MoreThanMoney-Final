@@ -15,6 +15,8 @@ import { cancelPendingOrdersForSymbol, listOpenPositions, closePositionById } fr
 import { symbolMatchesCanonical } from './symbol-resolver'
 import { getExecSwitches } from './exec-switches'
 import { lifecycleMessage, logStatusFor, type SignalEvent } from './signal-lifecycle'
+import { parseSignal } from './signal-parser'
+import { referencePrice } from './reference-price'
 
 /**
  * O que a fonte fez ao sinal. 'discard' e 'targets_hit' cobrem as ideias que morreram antes de
@@ -43,7 +45,7 @@ async function findEntryMessageWithFollowers(
   symbol: string,
   direction: 'buy' | 'sell' | null,
   sourceMatch?: RegExp,
-): Promise<{ id: string } | null> {
+): Promise<{ id: string; content: string } | null> {
   const supabase = getSupabaseAdmin()
   const sinceIso = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
   const { data } = await supabase
@@ -56,25 +58,25 @@ async function findEntryMessageWithFollowers(
   if (!data?.length) return null
   const symU = symbol.toUpperCase()
   const dirRe = direction === 'buy' ? /\bBUY\b|COMPRA|🔵|🟢/i : direction === 'sell' ? /\bSELL\b|VENDA|🔴/i : null
-  const candidates: string[] = []
+  const candidates: Array<{ id: string; content: string }> = []
   for (const m of data) {
     const raw = String((m as { content?: string }).content ?? '')
     const c = raw.toUpperCase()
     if (!c.includes(symU)) continue
     if (dirRe && !dirRe.test(raw)) continue
     if (sourceMatch && !sourceMatch.test(raw)) continue
-    candidates.push((m as { id: string }).id)
+    candidates.push({ id: (m as { id: string }).id, content: raw })
   }
   if (!candidates.length) return null
   // Preferir a entrada (mais recente) que ainda tem aceitações T2T vivas.
   const { data: logs } = await supabase
     .from('mtmcopy_signal_log')
     .select('chat_message_id')
-    .in('chat_message_id', candidates)
+    .in('chat_message_id', candidates.map((c) => c.id))
     .in('status', OPEN_LOG_STATUSES)
   const withFollowers = new Set((logs ?? []).map((l) => (l as { chat_message_id: string }).chat_message_id))
-  for (const id of candidates) if (withFollowers.has(id)) return { id } // candidates já vem do mais recente
-  return { id: candidates[0] } // nenhuma com seguidores vivos → a mais recente (só faz thread)
+  for (const c of candidates) if (withFollowers.has(c.id)) return c // candidates já vem do mais recente
+  return candidates[0] // nenhuma com seguidores vivos → a mais recente (só faz thread)
 }
 
 /** Fecha/cancela a ordem T2T do símbolo numa conta (pendentes + abertas). */
@@ -123,10 +125,24 @@ export async function closeT2TFollowersForSignal(opts: {
   const supabase = getSupabaseAdmin()
   const sym = symbol.replace(/USDT$/, '')
   const event = KIND_TO_EVENT[kind]
-  // Texto canónico — o mesmo que o motor de preço usa para o mesmo acontecimento.
-  const { text: line } = lifecycleMessage(event, { symbol: sym, direction, source: label })
 
   const entry = await findEntryMessageWithFollowers(chatSlug, symbol, direction, sourceMatch)
+
+  // Desfecho em pips e percentagem. A entrada lê-se da mensagem original; o preço de saída não
+  // existe em lado nenhum (foi a fonte que mandou fechar, não um TP/SL nosso), por isso vamos
+  // buscar a cotação do momento. Se faltar qualquer um dos dois o cabeçalho fica só com o par —
+  // um desfecho a zero seria mentira, "não sei" não é o mesmo que "não rendeu".
+  const entryPx = entry ? (parseSignal(entry.content)?.entry ?? null) : null
+  const exitPx = entryPx != null ? await referencePrice(sym) : null
+
+  // Texto canónico — o mesmo que o motor de preço usa para o mesmo acontecimento.
+  const { text: line } = lifecycleMessage(event, {
+    symbol: sym, direction, source: label, entry: entryPx, price: exitPx,
+  })
+  // Prefixo SEM desfecho: é por ele que se testa o duplicado. O preço muda de tick para tick,
+  // por isso comparar o texto inteiro deixaria passar o mesmo anúncio duas vezes seguidas.
+  const linePrefix = lifecycleMessage(event, { symbol: sym, direction, source: label })
+    .text.split('\n')[0]
 
   // 1) Thread no chat (reply à entrada, se encontrada) — IDEMPOTENTE: se o MESMO anúncio já
   //    foi publicado neste canal nos últimos 60 min, não repete (evita spam/loop quando o mesmo
@@ -140,7 +156,7 @@ export async function closeT2TFollowersForSignal(opts: {
       .from('chat_messages')
       .select('id')
       .eq('channel_slug', chatSlug)
-      .eq('content', line)
+      .ilike('content', `${linePrefix}%`)
       .gte('created_at', sinceIso)
       .limit(1)
       .maybeSingle()
@@ -223,20 +239,32 @@ export async function announceAndCloseByMessage(opts: {
   const switches = await getExecSwitches()
   if (!switches.t2t_auto_close) return { followers: 0, cancelled: 0, closed: 0 }
   const supabase = getSupabaseAdmin()
+  const symCanon = opts.symbol.replace(/USDT$/, '')
+  // Mesma regra do fecho por fonte: entrada da mensagem original + cotação do momento, para o
+  // cabeçalho trazer pips e percentagem em vez de só o par.
+  const { data: entryMsg } = await supabase
+    .from('chat_messages').select('content').eq('id', opts.chatMessageId).maybeSingle()
+  const entryPx = parseSignal(String((entryMsg as { content?: string } | null)?.content ?? ''))?.entry ?? null
+  const exitPx = entryPx != null ? await referencePrice(symCanon) : null
   const { text } = lifecycleMessage(opts.event, {
-    symbol: opts.symbol.replace(/USDT$/, ''),
+    symbol: symCanon,
     direction: opts.direction,
     source: opts.label,
     reason: opts.reason ?? null,
+    entry: entryPx,
+    price: exitPx,
   })
   try {
     // Idempotente: o mesmo anúncio em thread na mesma entrada não se repete (anti-loop/spam).
+    const textPrefix = lifecycleMessage(opts.event, {
+      symbol: symCanon, direction: opts.direction, source: opts.label,
+    }).text.split('\n')[0]
     const { data: dup } = await supabase
       .from('chat_messages')
       .select('id')
       .eq('channel_slug', opts.chatSlug)
       .eq('reply_to_id', opts.chatMessageId)
-      .eq('content', text)
+      .ilike('content', `${textPrefix}%`)
       .limit(1)
       .maybeSingle()
     if (!dup) {

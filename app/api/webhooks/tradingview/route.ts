@@ -130,6 +130,11 @@ function composePost(
   // instruções manuais "Fecha 25% / Trailing" que já não correspondem ao sistema.
   const mgmtHead = `📊 ${symbol}`
 
+  // Direção da ENTRADA, deduzida do contexto da ideia (entrada vs 1º alvo) e nunca do alerta de
+  // gestão — esse pode trazer a direção do FECHO, que é a inversa, e inverteria o sinal dos pips.
+  const ctxDir: "buy" | "sell" | null =
+    ctx?.entry != null && ctx?.tp?.length ? (ctx.tp[0] > ctx.entry ? "buy" : "sell") : null
+
   // HARMONIZAÇÃO (pedido Ricardo 2026-08-20): os follow-ups usam o VOCABULÁRIO CANÓNICO
   // (lifecycleMessage) — o mesmo nome do acontecimento em chat, Telegram, push e T2T — com a
   // linha de marca do scanner por baixo. As ENTRADAS mantêm o formato próprio (cartão parseável).
@@ -139,24 +144,29 @@ function composePost(
     const last = lvl >= 4
     const { text } = lifecycleMessage(last ? "target_final" : "partial", {
       symbol,
+      direction: ctxDir,
       level: lvl,
+      // O alvo É o preço de saída desta parcial — com a entrada dá pips e percentagem no cabeçalho.
+      entry,
+      price: tpVal ?? null,
       reason: tpVal != null ? `TP${lvl}: ${tpVal}.` : null,
     })
     return [text, ``, `🧠 Sensei Scanner${tag} · gestão automática por preço.`, DISCLAIMER].join("\n")
   }
 
   if (alertType === "breakeven") {
-    const { text } = lifecycleMessage("break_even", { symbol })
+    const { text } = lifecycleMessage("break_even", { symbol, direction: ctxDir })
     return [text, ``, `🧠 Sensei Scanner${tag}`, DISCLAIMER].join("\n")
   }
 
   if (alertType === "sl_hit") {
-    const { text } = lifecycleMessage("stop_loss", { symbol })
+    const slPx = v.sl ?? sensei?.sl ?? null
+    const { text } = lifecycleMessage("stop_loss", { symbol, direction: ctxDir, entry, price: slPx })
     return [text, ``, `🧠 Sensei Scanner${tag}`, DISCLAIMER].join("\n")
   }
 
   if (alertType === "exit") {
-    const { text } = lifecycleMessage("closed", { symbol })
+    const { text } = lifecycleMessage("closed", { symbol, direction: ctxDir })
     return [text, ``, `🧠 Sensei Scanner${tag}`, DISCLAIMER].join("\n")
   }
 

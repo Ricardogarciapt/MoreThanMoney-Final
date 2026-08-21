@@ -272,8 +272,18 @@ export async function runT2TPriceMonitor(): Promise<{
           console.warn('[t2t-monitor] update de estado falhou (não anuncia):', row.id, upErr.message)
           continue
         }
+        // Fecho real (a posição existia): o cabeçalho tem de trazer pips e percentagem. O preço
+        // de saída não vem da corretora neste caminho — a posição simplesmente desapareceu — por
+        // isso usamos a cotação do momento, que é o valor a que ela acabou de fechar.
+        let exitPx: number | null = null
+        if (event === 'closed') {
+          const keyF = `${accountId}|${row.symbol}`
+          if (!priceCache.has(keyF)) priceCache.set(keyF, await getMarketPrice(accountId, row.symbol))
+          exitPx = priceCache.get(keyF) ?? null
+        }
         await publishEvent(row, event, {
           ...evCtx,
+          price: exitPx,
           reason: st.announced ? null : 'A ordem foi cancelada ou expirou antes de encher.',
         })
         delete state[row.id]
