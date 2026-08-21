@@ -31,10 +31,10 @@ export async function GET() {
     // Buscar notificações do usuário
     const { data: notifications, error } = await supabase
       .from('notifications')
-      .select('*')
+      .select('id, type, title, message, data, read, created_at')  // '*' arrastava colunas que o painel nunca usa
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
-      .limit(50)
+      .limit(30)  // o painel mostra 30; pedir 50 era egress a mais em cada sondagem
 
     if (error) {
       console.error('Erro ao buscar notificações:', error)

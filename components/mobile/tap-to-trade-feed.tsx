@@ -3,7 +3,7 @@
 import { t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { pipSizeForSymbol, unitFor } from "@/lib/mtmcopy/trade-outcome"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { useT } from "@/components/i18n-provider"
 import { supabase } from "@/lib/supabase"
@@ -233,6 +233,8 @@ export default function TapToTradeFeed() {
   const [loading, setLoading] = useState(true)
   const [limitMode, setLimitMode] = useState<"last5" | "today" | "week">("last5")
   const [historico, setHistorico] = useState<Array<Sig & { outcome: string }>>([])
+  /** Lido dentro do `load` sem o tornar dependente do estado — o intervalo de 20s não se recria. */
+  const limitModeRef = useRef<"last5" | "today" | "week">("last5")
   const [tap, setTap] = useState<{ sig: Sig; status: "confirm" | "loading" | "done" | "error"; message?: string } | null>(null)
   /**
    * Pré-visualização do sinal: parâmetros da trade e, por conta, o lote e o risco calculados
@@ -323,6 +325,7 @@ export default function TapToTradeFeed() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    const janelaLarga = limitModeRef.current !== "last5"
     const tok = await token()
     let channels: string[] = []
     let senseiIds = new Set<string>()
@@ -354,9 +357,12 @@ export default function TapToTradeFeed() {
       .select("id, channel_slug, content, created_at")
       .in("channel_slug", channels)
       .eq("is_deleted", false)
-      .gte("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString())
+      // A janela larga (7 dias / 400 linhas) só se vai buscar quando o cliente PEDE histórico.
+      // O refrescar automático de 20s fica com a janela curta — senão são 400 mensagens com
+      // conteúdo inteiro a cada 20 segundos, por pessoa, e o egress do Supabase paga a fatura.
+      .gte("created_at", new Date(Date.now() - (janelaLarga ? 7 * 86_400_000 : 36 * 3_600_000)).toISOString())
       .order("created_at", { ascending: false })
-      .limit(400)
+      .limit(janelaLarga ? 400 : 120)
     const all = (data ?? []) as Sig[]
     // follow-ups (TP atingido / fechado / SL / cancelado) para marcar sinais resolvidos
     const followups = all.filter((m) => FOLLOWUP_RE.test(m.content))
@@ -492,6 +498,14 @@ export default function TapToTradeFeed() {
   const filtered = items
     // "O que seguir" é a ÚNICA filtragem: fontes + classes de ativo que o user escolheu ([]=todas).
     .filter((s) => matchesT2TPrefs(s.channel_slug, s.content, { sources: follow.sources, assetClasses: follow.assetClasses }))
+  // Mudar de alcance muda a janela que se vai buscar → recarrega uma vez, e só então.
+  useEffect(() => {
+    const anterior = limitModeRef.current
+    limitModeRef.current = limitMode
+    if (anterior === "last5" && limitMode !== "last5") load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [limitMode])
+
   const inicioDoDia = new Date(); inicioDoDia.setHours(0, 0, 0, 0)
   const desde = limitMode === "today" ? inicioDoDia.getTime() : Date.now() - 7 * 86_400_000
   const naJanela = (x: { created_at: string }) => new Date(x.created_at).getTime() >= desde
