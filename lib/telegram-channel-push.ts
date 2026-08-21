@@ -5,6 +5,11 @@ import { isT2TEntrySignal, t2tMode, matchesT2TPrefs, isManagementFollowup } from
 import { T2T_SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
 
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { atualizarDesfechosDoCanal } from '@/lib/mtmcopy/signal-outcomes'
+
+/** Encerra mesmo a ideia — o mesmo teste do motor de desfechos. */
+const TERMINAL_RE =
+  /(posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|alvo\s+final|close\s+all|hit\s*tp\s*[3-9])/i
 
 const PUSH_TITLES: Record<string, string> = {
   'trade-ideas-setup': '📊 Novo Sinal Forex!',
@@ -85,6 +90,14 @@ export async function sendTelegramChannelPush(opts: {
 }): Promise<PushResult> {
   const slug = opts.slug
   const firstLine = (opts.content ?? '').split('\n')[0]?.trim() ?? ''
+
+  // Um fecho acabou de entrar no canal → grava já os pips e a percentagem na mensagem de
+  // ENTRADA correspondente. É o que faz o desfecho aparecer no cartão sem esperar pelo cron.
+  // Fire-and-forget: nunca segura o envio da notificação.
+  if (TERMINAL_RE.test(opts.content ?? '')) {
+    void atualizarDesfechosDoCanal(slug, new Date(Date.now() - 48 * 3_600_000).toISOString())
+      .catch(() => {})
+  }
   const ideaTitle =
     PUSH_TITLES[slug as AppChatChannelSlug] ?? (firstLine.slice(0, 60) || 'Nova mensagem MTM')
   const body =

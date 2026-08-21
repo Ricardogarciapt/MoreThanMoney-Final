@@ -159,6 +159,8 @@ interface Sig {
   created_at: string
   expired?: boolean
   reason?: string
+  /** Desfecho gravado pelo servidor (pips e percentagem). Ver lib/mtmcopy/signal-outcomes. */
+  outcome?: { label?: string; pips?: number; pct?: number | null } | null
 }
 
 interface Conn {
@@ -227,7 +229,7 @@ export default function TapToTradeFeed() {
   const [items, setItems] = useState<Sig[]>([])
   const [loading, setLoading] = useState(true)
   const [limitMode, setLimitMode] = useState<"last5" | "today" | "week">("last5")
-  const [historico, setHistorico] = useState<Array<Sig & { outcome: string }>>([])
+  const [historico, setHistorico] = useState<Array<Sig & { desfecho: string }>>([])
   /** Lido dentro do `load` sem o tornar dependente do estado — o intervalo de 20s não se recria. */
   const limitModeRef = useRef<"last5" | "today" | "week">("last5")
   const [tap, setTap] = useState<{ sig: Sig; status: "confirm" | "loading" | "done" | "error"; message?: string } | null>(null)
@@ -349,7 +351,7 @@ export default function TapToTradeFeed() {
     }
     const { data } = await supabase
       .from("chat_messages")
-      .select("id, channel_slug, content, created_at")
+      .select("id, channel_slug, content, created_at, outcome")
       .in("channel_slug", channels)
       .eq("is_deleted", false)
       // A janela larga (7 dias / 400 linhas) só se vai buscar quando o cliente PEDE histórico.
@@ -417,7 +419,9 @@ export default function TapToTradeFeed() {
     setHistorico(
       sigs
         .filter((x) => x.expired && x.reason === "resolved")
-        .map((x) => ({ ...x, outcome: desfechoDoSinal(x, fechoDe.get(x.id)) })),
+        // O desfecho VEM DA BASE DE DADOS (uma conta só, feita pelo servidor). O cálculo local
+        // fica como rede para sinais ainda não processados.
+        .map((x) => ({ ...x, desfecho: x.outcome?.label || desfechoDoSinal(x, fechoDe.get(x.id)) })),
     )
     // Quais destes sinais o utilizador já aceitou (persiste entre reloads)
     if (tok) {
@@ -1233,7 +1237,7 @@ export default function TapToTradeFeed() {
               </p>
               <div className="flex flex-col gap-2">
                 {historicoVisivel.map((h) => {
-                  const ganhou = h.outcome.startsWith("+")
+                  const ganhou = h.desfecho.startsWith("+")
                   return (
                     <div key={h.id} className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-3 py-2.5">
                       <div className="flex items-center justify-between gap-2">
@@ -1245,9 +1249,9 @@ export default function TapToTradeFeed() {
                             </span>
                           )}
                         </span>
-                        {h.outcome ? (
+                        {h.desfecho ? (
                           <span className={`text-[12px] font-mono font-semibold tabular-nums flex-shrink-0 ${ganhou ? "text-emerald-400" : "text-rose-400"}`}>
-                            {h.outcome}
+                            {h.desfecho}
                           </span>
                         ) : (
                           <span className="text-[11px] text-zinc-600 flex-shrink-0">terminado</span>
