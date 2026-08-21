@@ -24,6 +24,8 @@ import {
 } from "lucide-react"
 
 const FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|entry\s*hit|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
+/** Encerra mesmo a ideia (ao contrário de um BE ou de um TP1, que a deixam a correr). */
+const TERMINAL_RE = /(posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|alvo\s+final|close\s+all|hit\s*tp\s*[3-9])/i
 const DIR_RE = /(\b(buy|sell|long|short|compra|venda)\b|🟢|🔴)/i
 /** Sensei: só a "Entry Alert / Ideia Activada" (entrada activada) é um sinal válido. */
 const SENSEI_ACTIVE_RE = /(entrada\s+activ|entrada\s+ativ|ideia\s+activ|ideia\s+ativ|entry\s+alert)/i
@@ -199,19 +201,12 @@ const RISK_LABEL: Record<string, string> = { low: "Baixo", medium: "Médio", hig
  * percentagem é derivada desses pips com o tamanho de pip canónico e a entrada do setup, para
  * ser a mesma conta que o resto do sistema faz.
  */
-function desfechoDoSinal(setup: Sig, followups: Sig[]): string {
+function desfechoDoSinal(setup: Sig, fecho: Sig | undefined): string {
   const sym = symbolOf(setup.content)
-  const dir = directionOf(setup.content)
-  const posteriores = followups
-    .filter((f) => f.channel_slug === setup.channel_slug)
-    .filter((f) => new Date(f.created_at).getTime() > new Date(setup.created_at).getTime())
-    .filter((f) => !sym || symbolOf(f.content) === sym)
-    .filter((f) => { const d = directionOf(f.content); return !dir || !d || d === dir })
-  const ultimo = posteriores[0]
-  if (!ultimo) return ""
+  if (!fecho) return ""
 
-  const perdeu = /\bsl\s*hit|stop\s*loss\s*hit|❌/i.test(ultimo.content)
-  const m = ultimo.content.match(/([+\-−]?\s*\d+(?:[.,]\d+)?)\s*pips?/i)
+  const perdeu = /\bsl\s*hit|stop\s*loss\s*hit|❌/i.test(fecho.content)
+  const m = fecho.content.match(/([+\-−]?\s*\d+(?:[.,]\d+)?)\s*pips?/i)
   if (!m) return ""
   const bruto = Math.abs(Number(m[1].replace(/[\s−]/g, "").replace(",", ".")))
   if (!Number.isFinite(bruto) || bruto === 0) return ""
@@ -364,8 +359,40 @@ export default function TapToTradeFeed() {
       .order("created_at", { ascending: false })
       .limit(janelaLarga ? 400 : 120)
     const all = (data ?? []) as Sig[]
-    // follow-ups (TP atingido / fechado / SL / cancelado) para marcar sinais resolvidos
-    const followups = all.filter((m) => FOLLOWUP_RE.test(m.content))
+    /**
+     * Só os follow-ups TERMINAIS encerram uma ideia — um break-even ou um TP1 não encerram nada,
+     * a trade continua a correr. E cada fecho encerra as entradas do canal que ainda estavam de
+     * pé antes dele: o Premium publica o mesmo setup em várias zonas ("3.", "4.", "5. GOLD BUY
+     * SETUP") e anuncia UM desfecho — sem isto ficavam todas eternamente como "expirado" e o
+     * cliente nunca via quanto tinham rendido.
+     */
+    const terminais = all
+      .filter((m) => TERMINAL_RE.test(m.content))
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    const entradasAsc = all
+      .filter((m) => isEntrySignal(m.channel_slug, m.content))
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    const fechoDe = new Map<string, Sig | undefined>()
+    for (const f of terminais) {
+      const fSym = symbolOf(f.content)
+      const fDir = directionOf(f.content)
+      const atingidas = entradasAsc.filter((e) => {
+        if (fechoDe.has(e.id)) return false
+        if (e.channel_slug !== f.channel_slug) return false
+        if (e.created_at >= f.created_at) return false
+        const eSym = symbolOf(e.content)
+        // Fecho sem par identificado refere-se ao setup do canal (é assim que se lê no chat);
+        // com par identificado só encerra o mesmo par.
+        if (fSym && eSym && fSym !== eSym) return false
+        const eDir = directionOf(e.content)
+        if (fDir && eDir && fDir !== eDir) return false
+        return true
+      })
+      // O desfecho anunciado é UM só e pertence ao setup que estava vivo — o último publicado
+      // antes do fecho. As zonas anteriores foram substituídas por ele: fecham na mesma, mas
+      // SEM número. Repetir "+163 pips" em cinco cartões faria parecer cinco ganhos onde houve um.
+      atingidas.forEach((e, i) => fechoDe.set(e.id, i === atingidas.length - 1 ? f : undefined))
+    }
     const now = Date.now()
     const sigs = all
       .filter((m) => isEntrySignal(m.channel_slug, m.content))
@@ -376,17 +403,7 @@ export default function TapToTradeFeed() {
         // Setup pendente (nível de entrada por tocar) → janela alargada; a mercado → 5 min.
         const pendingSetup = hasEntryLevel(m.content)
         const ageExpired = ageMs > (pendingSetup ? T2T_PENDING_MAX_AGE_MS : T2T_MAX_AGE_MS)
-        const sym = symbolOf(m.content)
-        const dir = directionOf(m.content)
-        // Resolvido só por follow-up POSTERIOR do MESMO símbolo E direção (quando conhecida) —
-        // um fecho SELL não pode esconder um setup BUY ainda válido do mesmo par.
-        const resolved = followups.some((f) => {
-          if (f.channel_slug !== m.channel_slug) return false
-          if (new Date(f.created_at).getTime() <= new Date(m.created_at).getTime()) return false
-          if (sym && symbolOf(f.content) !== sym) return false
-          const fDir = directionOf(f.content)
-          return !dir || !fDir || fDir === dir
-        })
+        const resolved = fechoDe.has(m.id)
         return {
           ...m,
           expired: ageExpired || resolved,
@@ -400,7 +417,7 @@ export default function TapToTradeFeed() {
     setHistorico(
       sigs
         .filter((x) => x.expired && x.reason === "resolved")
-        .map((x) => ({ ...x, outcome: desfechoDoSinal(x, followups) })),
+        .map((x) => ({ ...x, outcome: desfechoDoSinal(x, fechoDe.get(x.id)) })),
     )
     // Quais destes sinais o utilizador já aceitou (persiste entre reloads)
     if (tok) {
