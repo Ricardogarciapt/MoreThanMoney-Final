@@ -1009,7 +1009,24 @@ export default function SettingsMobile() {
             </button>
           </div>
 
-          <p className="text-xs text-gray-500 px-1 mt-3 mb-2">
+          {/* Aviso da mudança de 21/08: o padrão passou a ser "só o que segues". Quem quiser o
+              resto liga aqui — e é aqui que tem de perceber porquê, não numa mensagem que já
+              desapareceu do feed. */}
+          <div className="mt-3 mb-2 rounded-xl border border-[#D2A63C]/30 bg-[#D2A63C]/[0.07] p-3">
+            <p className="text-[13px] font-semibold text-[#D2A63C] mb-1">Mudámos o que te avisamos</p>
+            <p className="text-[12px] leading-relaxed text-gray-300">
+              Estavas a receber tudo: cada mensagem de cada canal e cada atualização de cada trade.
+              Eram dezenas por dia, e o que interessava perdia-se no meio.
+            </p>
+            <p className="text-[12px] leading-relaxed text-gray-300 mt-2">
+              Agora chega-te só o essencial — <strong className="text-white">sinais que podes aceitar</strong>,
+              <strong className="text-white"> sessões ao vivo</strong> e as
+              <strong className="text-white"> oportunidades de DCA</strong>. O resto está aqui em baixo,
+              e ligas o que quiseres. Nada foi apagado: continua tudo no chat e nos alertas.
+            </p>
+          </div>
+
+          <p className="text-xs text-gray-500 px-1 mb-2">
             {t("appmobile.notifPrefsHint")}
           </p>
           <div className="bg-gray-800/50 rounded-xl divide-y divide-gray-700/50">

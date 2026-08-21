@@ -38,6 +38,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useCapacitor } from "@/hooks/use-capacitor"
 import { usePushNotifications, type ForegroundMessage } from "@/hooks/use-push-notifications"
 import { supabase } from "@/lib/supabase"
+import AvisoNotificacoes from "@/components/mobile/aviso-notificacoes"
 
 function AppMobileContent() {
   const STUDIO_URL = "https://mtmbrandbuilder.lovable.app"
@@ -672,7 +673,10 @@ function AppMobileContent() {
           </div>
         )}
 
-        {/* ── Foreground notification banner — glass ───────────────── */}
+        {/* Aviso único da mudança das notificações (21/08) — aparece uma vez por dispositivo. */}
+      <AvisoNotificacoes onAbrirDefinicoes={() => setActiveTab("settings")} />
+
+      {/* ── Foreground notification banner — glass ───────────────── */}
         {foregroundNotif && (
           <div
             className="fixed left-3 right-3 z-[190] bg-black/60 backdrop-blur-xl border border-white/15 rounded-2xl p-3.5 shadow-2xl flex items-start gap-3 animate-in slide-in-from-top-2 duration-300"
