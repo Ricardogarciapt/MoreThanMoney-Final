@@ -405,18 +405,19 @@ async function pushSignalSubscribers(
 
   const matchSym = (syms: string[]) => syms.some((sym) => norm.includes(sym.toUpperCase().replace(/[^A-Z0-9]/g, "")))
 
+  // SÓ QUEM SEGUE. Sem subscrição explícita não há aviso: quem nunca escolheu nada recebia
+  // TODOS os alertas dos símbolos por omissão — 82 pessoas por cada alerta, dezenas por dia,
+  // e como este envio não trazia categoria nenhuma nem sequer passava pelas preferências. Era
+  // esta a maior fonte de ruído (e de egress) que sobrava depois de mudar os padrões.
   const targets: string[] = []
   for (const uid of deviceUsers) {
     if (!activeSet.has(uid)) continue
     const s = subMap.get(uid)
-    if (s) {
-      if (s.enabled === false || s.push_enabled === false) continue
-      const syms = Array.isArray(s.symbols) && s.symbols.length ? s.symbols : ALERT_DEFAULT_SYMBOLS
-      if (!matchSym(syms)) continue
-      if (Array.isArray(s.timeframes) && s.timeframes.length && timeframe && !s.timeframes.includes(timeframe)) continue
-    } else {
-      if (!matchSym(ALERT_DEFAULT_SYMBOLS)) continue
-    }
+    if (!s) continue
+    if (s.enabled === false || s.push_enabled === false) continue
+    const syms = Array.isArray(s.symbols) && s.symbols.length ? s.symbols : ALERT_DEFAULT_SYMBOLS
+    if (!matchSym(syms)) continue
+    if (Array.isArray(s.timeframes) && s.timeframes.length && timeframe && !s.timeframes.includes(timeframe)) continue
     targets.push(uid)
   }
   if (!targets.length) return 0
