@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     if (dbg === "positions") {
       const out = []
       for (const m of MASTER_STRATEGIES) {
-        const pos = (await listOpenPositions(m.accountId)) as Array<Record<string, unknown>>
+        const pos = (await listOpenPositions(m.accountId)) as unknown as Array<Record<string, unknown>>
         out.push({
           strategy: m.strategy,
           abertas: pos.length,

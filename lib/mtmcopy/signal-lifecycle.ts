@@ -39,6 +39,8 @@ export type SignalEvent =
   | 'discarded'
   /** Todos os alvos foram atingidos antes de a entrada encher. */
   | 'targets_before_entry'
+  /** O trader corrigiu o setup e republicou-o: o anterior do mesmo par ficou a mais. */
+  | 'superseded'
 
 export interface LifecycleContext {
   symbol: string
@@ -157,6 +159,16 @@ const EVENTS: Record<SignalEvent, EventDef> = {
     closes: true,
     cancelsPending: true,
     logStatus: 'closed',
+  },
+  superseded: {
+    emoji: '♻️',
+    title: (c) => `Setup atualizado · ${headline(c)}`,
+    body: (c) =>
+      `${c.source ? `${c.source}: ` : ''}a fonte publicou uma versão corrigida deste setup. ` +
+      'As ordens pendentes da versão anterior foram apagadas; posições já abertas mantêm-se.',
+    closes: false,
+    cancelsPending: true,
+    logStatus: 'cancelled',
   },
   cancelled: {
     emoji: '❌',

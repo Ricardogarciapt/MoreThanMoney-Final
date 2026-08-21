@@ -48,6 +48,12 @@ export function detectLifecycleEvent(content: string | null | undefined): Signal
   // Cancelamento antes de ativar.
   if (/\bcancelad\w*\b|\bcancell?ed\b|\bcancel\b/i.test(c)) return 'cancelled'
 
+  // "Updated" — o trader corrigiu o setup e publicou-o outra vez. A mensagem NOVA e a boa; a
+  // anterior do mesmo par ficou a mais. Sem isto, ficavam as duas ordens pendentes vivas e o
+  // cliente entrava duas vezes no mesmo movimento (aconteceu a 21/08: 4590-4585 as 13:39 e
+  // 4586-4580 as 13:40, com "updated" as 13:46 — e o primeiro ficou por cancelar).
+  if (/^\s*updated?\s*[!.👍]*\s*$/i.test(c)) return 'superseded'
+
   // Stop loss.
   if (/\bsl\s*(hit|atingid)|stop\s*loss\s*(hit|atingid)|\bstopad\w*\b/i.test(c)) return 'stop_loss'
 
@@ -105,7 +111,9 @@ export async function handleSourceFollowup(opts: {
     return { handled: false, reason: 'anúncio próprio do ciclo de vida (eco)' }
   }
   const event = detectLifecycleEvent(opts.content)
-  if (!event || !isTerminal(event)) return { handled: false }
+  if (!event) return { handled: false }
+  // 'superseded' nao e terminal para o sinal novo — e terminal para os ANTERIORES.
+  if (event !== 'superseded' && !isTerminal(event)) return { handled: false }
 
   const source = opts.source ?? t2tSourceKey(opts.channelSlug, opts.content)
   if (!source) return { handled: false, reason: 'fonte não é T2T' }
@@ -116,6 +124,19 @@ export async function handleSourceFollowup(opts: {
   const direction = opts.direction ?? directionFromContent(opts.content)
 
   const { closeT2TFollowersForSignal } = await import('./t2t-lifecycle')
+  // Substituicao: so as ORDENS PENDENTES do setup antigo sao apagadas. Uma posicao ja aberta
+  // nao se fecha por causa de uma correcao de texto — fecha pelo SL/TP dela, ao preco dela.
+  if (event === 'superseded') {
+    const r = await closeT2TFollowersForSignal({
+      kind: 'cancel',
+      chatSlug: opts.channelSlug,
+      symbol,
+      direction,
+      label: SOURCE_LABEL[source],
+      pendingOnly: true,
+    })
+    return { handled: true, event, source, followers: r.followers, cancelled: r.cancelled, closed: r.closed }
+  }
   const kind =
     event === 'cancelled' ? 'cancel'
       : event === 'discarded' ? 'discard'

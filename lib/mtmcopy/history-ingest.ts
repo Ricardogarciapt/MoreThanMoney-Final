@@ -7,9 +7,6 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getHistoryDeals, type MetaApiDeal } from './metaapi'
 import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
-  CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
-  CANONICAL_SENSEI_ACCOUNT_ID,
-  CANONICAL_GOLDKILLER_ACCOUNT_ID,
   CANONICAL_BOOSTER_ACCOUNT_ID,
 } from './provider-constants'
 
@@ -20,9 +17,8 @@ const HISTORY_DAYS = 90
  *  trade_source='strategy' + setup_type=estratégia, num plano dedicado. */
 export const MASTER_STRATEGIES: Array<{ strategy: string; accountId: string }> = [
   { strategy: 'MTM Auto Premium', accountId: CANONICAL_PREMIUM_ACCOUNT_ID },
-  { strategy: 'MTM Auto Forex', accountId: CANONICAL_TRADE_IDEAS_ACCOUNT_ID },
-  { strategy: 'MTM Auto Sensei', accountId: CANONICAL_SENSEI_ACCOUNT_ID },
-  { strategy: 'MTM Auto GoldKiller', accountId: CANONICAL_GOLDKILLER_ACCOUNT_ID },
+  // Forex, Sensei e GoldKiller saíram a 2026-08-20: as contas-mestre delas foram apagadas na
+  // MetaApi e cada ronda gastava a janela a bater em 404. Voltam quando tiverem conta e rota.
   // Monaxa 20X Booster removida do track record a pedido do Ricardo (2026-07-20).
 ]
 /** Dono do track record das estratégias (morethanmoneypt@gmail.com). */
@@ -309,13 +305,9 @@ export async function diagnoseIngestion(): Promise<{
     .select('account_label, audit_label, metaapi_account_id, mt5_status')
     .not('metaapi_account_id', 'is', null)
 
-  const masters: Array<[string, string]> = [
-    ['MASTER Premium', CANONICAL_PREMIUM_ACCOUNT_ID],
-    ['MASTER Forex/TradeIdeas', CANONICAL_TRADE_IDEAS_ACCOUNT_ID],
-    ['MASTER Sensei', CANONICAL_SENSEI_ACCOUNT_ID],
-    ['MASTER GoldKiller', CANONICAL_GOLDKILLER_ACCOUNT_ID],
-    ['MASTER Booster', CANONICAL_BOOSTER_ACCOUNT_ID],
-  ]
+  // Só as contas-mestre que ainda existem — as outras foram apagadas na MetaApi e o
+  // diagnóstico gastava a janela a bater em 404 (ver MASTER_STRATEGIES).
+  const masters: Array<[string, string]> = [['MASTER Premium', CANONICAL_PREMIUM_ACCOUNT_ID]]
   const targets: Array<{ label: string; accountId: string; mt5: string | null }> = [
     ...((conns ?? []) as Array<Record<string, unknown>>).map((c) => ({
       label: `slave ${(c.account_label as string) ?? (c.audit_label as string) ?? '?'}`,

@@ -50,5 +50,22 @@ t('cripto conta em pontos', headline({ symbol: 'BTCUSDT', direction: 'buy', entr
 t('stop loss traz o desfecho na mensagem',
   lifecycleMessage('stop_loss', { symbol: 'EURUSD', direction: 'buy', entry: 1.09, price: 1.085 }).title.includes('−50 pips · −0,46%'), true)
 
+// ——— "Updated": o trader corrigiu o setup ———
+console.log('— setup atualizado —')
+t('updated simples', detectLifecycleEvent('updated'), 'superseded')
+t('Updated com maiuscula', detectLifecycleEvent('Updated'), 'superseded')
+t('UPDATED com emoji', detectLifecycleEvent('UPDATED 👍'), 'superseded')
+t('updated com ponto', detectLifecycleEvent('updated.'), 'superseded')
+// Uma frase QUE CONTEM "updated" nao e uma correcao de setup — e conversa.
+t('frase com updated nao conta',
+  detectLifecycleEvent("Trade from tonight's session, will keep everyone updated on the trade"), null)
+t('update com texto nao conta',
+  detectLifecycleEvent('Update 👍\n\nWe have decided not to pursue any additional trades today'), null)
+t('cancela pendentes mas nao fecha', cancelsPending('superseded'), true)
+t('nao fecha posicoes abertas', closesPosition('superseded'), false)
+t('mensagem explica o que aconteceu',
+  lifecycleMessage('superseded', { symbol: 'XAUUSD', direction: 'buy', source: 'Premium' }).title,
+  '♻️ Setup atualizado · XAUUSD 🔵 COMPRA')
+
 console.log(`\n${ok} passaram, ${ko} falharam`)
 process.exit(ko ? 1 : 0)
