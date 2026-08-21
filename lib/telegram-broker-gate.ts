@@ -6,6 +6,7 @@
  * Ao validar: gera links pessoais (Forex/Sensei) + cupão Premium individual (ativa app + onboarding).
  * Sem promessas de lucro. Estado em telegram_leads.
  */
+import { getMtmcopyBotToken } from '@/lib/mtmcopy/telegram-bot'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
   resolvedForexIdeasChatId,
@@ -18,7 +19,10 @@ type Supa = ReturnType<typeof getSupabaseAdmin>
 
 export const PUPRIME_LINK = 'https://www.puprime.com/campaign?cs=morethanmoney'
 export const MIN_DEPOSIT = 300
-const BOT = () => process.env.TELEGRAM_BOT_TOKEN
+// TELEGRAM_BOT_TOKEN estava a devolver 401 (token rodado e nunca reposto) — o gate do broker
+// deixou de conseguir gerar os convites dos grupos. O token canónico é o do @MoreThanMoney_aibot,
+// que é o MESMO bot que o funil já anuncia; getMtmcopyBotToken() tenta-o primeiro.
+const BOT = () => getMtmcopyBotToken()
 
 /**
  * Os 4 grupos de sinais libertados após validação. chatId canónico (resolvido por env) +

@@ -6,6 +6,7 @@
  *
  * Estado + histórico em `telegram_leads`. Não é aconselhamento financeiro.
  */
+import { getMtmcopyBotToken } from '@/lib/mtmcopy/telegram-bot'
 import { getProofStats, proofLine, proofAsOfLabel } from '@/lib/proof-stats'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
@@ -200,7 +201,7 @@ export async function handleLeadsGroupNewMembers(
   const leadsId = (data?.value as { chat_id?: string } | null)?.chat_id
   if (!leadsId || String(chat.id) !== String(leadsId)) return
 
-  const token = process.env.TELEGRAM_BOT_TOKEN
+  const token = getMtmcopyBotToken()
   const botUser = process.env.TELEGRAM_BOT_USERNAME?.replace(/^@/, '') || 'MoreThanMoney_aibot'
   if (!token) return
   for (const m of members) {

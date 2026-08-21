@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getMtmcopyBotToken } from '@/lib/mtmcopy/telegram-bot'
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 
@@ -25,7 +26,7 @@ const FOREX_SWINGS_CHAT = process.env.TELEGRAM_FOREX_SWINGS_CHAT || "-1004362819
 const ALL_GROUPS = [FOREX_CHAT, FOREX_SWINGS_CHAT, SENSEI_CHAT, PREMIUM_CHAT]
 
 async function tg(method: string, body: Record<string, unknown>) {
-  const token = process.env.TELEGRAM_BOT_TOKEN
+  const token = getMtmcopyBotToken()
   if (!token) return null
   try {
     const r = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
@@ -56,7 +57,7 @@ async function kickFromGroups(userId: string) {
 async function notifyAdmin(supabase: ReturnType<typeof getSupabaseAdmin>, text: string) {
   const { data } = await supabase.from("site_settings").select("value").eq("key", "telegram_admin_chat_id").maybeSingle()
   const chat = (data?.value as { chat_id?: string } | null)?.chat_id
-  const token = process.env.TELEGRAM_BOT_TOKEN
+  const token = getMtmcopyBotToken()
   if (!chat || !token) return
   await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
