@@ -14,6 +14,90 @@ import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 // na Vercel, por isso o relay NÃO precisa dele. Autenticado por Bearer CRON_SECRET. Só POST de texto.
 export const dynamic = 'force-dynamic'
 
+/**
+ * Aplica uma edição da fonte: corrige o Telegram, corrige o chat da app, e — no Premium —
+ * volta a passar o texto pelo processador para os níveis ficarem ancorados na versão nova.
+ *
+ * As ordens PENDENTES do texto antigo são apagadas (é a mesma semântica do "Updated" que o
+ * trader escreve à mão); posições já abertas não se tocam, porque uma correção de texto não
+ * é razão para fechar uma trade a correr ao preço de mercado.
+ */
+async function tratarEdicao(args: {
+  chatId: string
+  slug: string | null
+  outText: string
+  body: { source_chat_id?: string | number; source_message_id?: number }
+}): Promise<NextResponse> {
+  const { chatId, slug, outText, body } = args
+  const supabase = getSupabaseAdmin()
+  const sourceChatId = body.source_chat_id != null ? String(body.source_chat_id) : null
+  const sourceMsgId = typeof body.source_message_id === 'number' ? body.source_message_id : null
+  if (!sourceChatId || sourceMsgId == null) {
+    return NextResponse.json({ ok: false, error: 'edição exige source_chat_id e source_message_id' }, { status: 400 })
+  }
+
+  const { data: linha } = await supabase
+    .from('telegram_relay_log')
+    .select('target_message_id')
+    .eq('source_chat_id', sourceChatId)
+    .eq('source_message_id', sourceMsgId)
+    .eq('target_chat_id', chatId)
+    .eq('status', 'sent')
+    .order('created_at', { ascending: false })
+    .maybeSingle()
+
+  const destMsgId = (linha as { target_message_id?: number } | null)?.target_message_id ?? null
+  // Nunca foi publicada → não há nada para editar. Devolve-se ok para o relay não insistir.
+  if (destMsgId == null) return NextResponse.json({ ok: true, skipped: 'sem original' })
+
+  const { editTelegramChannelMessage } = await import('@/lib/mtmcopy/telegram-bot')
+  const ed = await editTelegramChannelMessage(chatId, destMsgId, outText)
+
+  // Chat da app: a mensagem foi guardada com o telegram_message_id do destino.
+  let chatAtualizado = false
+  try {
+    const { data: msg } = await supabase
+      .from('chat_messages')
+      .select('id')
+      .eq('telegram_message_id', destMsgId)
+      .maybeSingle()
+    if (msg?.id) {
+      await supabase.from('chat_messages').update({ content: outText }).eq('id', msg.id)
+      chatAtualizado = true
+    }
+  } catch (e) {
+    console.warn('[relay-post] edição no chat falhou:', e instanceof Error ? e.message : e)
+  }
+
+  // Premium: reancorar. O texto novo pode ter zona/SL/TP diferentes — as pendentes do texto
+  // antigo deixam de fazer sentido.
+  let reprocessado = false
+  if (slug === 'premium-ideas' && !ed.unchanged) {
+    try {
+      const { handleSourceFollowup } = await import('@/lib/mtmcopy/followup-reader')
+      await handleSourceFollowup({ channelSlug: slug, content: 'updated' })
+      const { processMtmcopyTelegramMessage } = await import('@/lib/mtmcopy/processor')
+      await processMtmcopyTelegramMessage({
+        chat: { id: Number(chatId), type: 'channel', title: 'MTM Premium' },
+        text: outText,
+        message_id: destMsgId,
+      } as Parameters<typeof processMtmcopyTelegramMessage>[0])
+      reprocessado = true
+    } catch (e) {
+      console.error('[relay-post] reprocessar edição falhou:', e instanceof Error ? e.message : e)
+    }
+  }
+
+  return NextResponse.json({
+    ok: ed.ok,
+    edited: ed.ok && !ed.unchanged,
+    unchanged: ed.unchanged === true,
+    chat: chatAtualizado,
+    reprocessed: reprocessado,
+    error: ed.error,
+  })
+}
+
 export async function POST(req: NextRequest) {
   const secret = process.env.CRON_SECRET
   const auth = req.headers.get('authorization') || ''
@@ -22,6 +106,8 @@ export async function POST(req: NextRequest) {
   }
   const body = (await req.json().catch(() => ({}))) as {
     chat_id?: string | number
+    /** true = a fonte EDITOU esta mensagem; corrigir a que já foi publicada. */
+    edit?: boolean
     text?: string
     /** id da msg NO DESTINO a que responder (se o VPS já o souber). Normalmente não sabe. */
     reply_to_message_id?: number
@@ -47,6 +133,14 @@ export async function POST(req: NextRequest) {
   let outText = rawText.trim()
   if (slug === 'premium-ideas' && !/^\s*🏦/.test(outText)) {
     outText = `🏦 MTM Premium\n\n${outText}`
+  }
+
+  // ── EDIÇÃO NA FONTE ──────────────────────────────────────────────────────────────────
+  // O trader editou a mensagem no canal dele. Em vez de publicar uma correção nova (que o
+  // cliente lê como um segundo sinal), corrige-se a que já lá está — no Telegram e no chat da
+  // app — e reprocessa-se para os níveis ficarem ancorados no texto novo.
+  if (body.edit === true) {
+    return await tratarEdicao({ chatId, slug, outText, body })
   }
 
   const replyTo = typeof body.reply_to_message_id === 'number' ? body.reply_to_message_id : null

@@ -120,6 +120,40 @@ export async function verifyTelegramChannel(channelInput: string): Promise<Chann
 }
 
 /** Publica mensagem num canal/grupo Telegram (admin teste). */
+/**
+ * EDITA uma mensagem já publicada pelo bot num canal.
+ *
+ * Serve para quando a FONTE edita o texto: em vez de publicar uma correção nova (que o cliente
+ * lê como um segundo sinal), corrige-se a mensagem que já lá está, como o trader fez no canal
+ * dele. O Telegram devolve "message is not modified" quando o texto é igual — isso é sucesso,
+ * não erro: significa que já estava certo.
+ */
+export async function editTelegramChannelMessage(
+  chatId: string,
+  messageId: number,
+  text: string,
+  options?: { parseMode?: 'HTML' | 'Markdown' },
+): Promise<{ ok: boolean; unchanged?: boolean; error?: string }> {
+  const token = getMtmcopyBotToken()
+  if (!token) return { ok: false, error: 'TELEGRAM_AIBOT_TOKEN não configurado' }
+
+  const res = await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      parse_mode: options?.parseMode,
+      disable_web_page_preview: true,
+    }),
+  })
+  const data = (await res.json()) as { ok?: boolean; description?: string }
+  if (data.ok) return { ok: true }
+  if (/message is not modified/i.test(data.description ?? '')) return { ok: true, unchanged: true }
+  return { ok: false, error: data.description ?? 'Falha ao editar mensagem' }
+}
+
 export async function sendTelegramChannelMessage(
   chatId: string,
   text: string,
