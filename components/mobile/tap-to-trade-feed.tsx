@@ -394,6 +394,10 @@ export default function TapToTradeFeed() {
   const [deepLinkHandled, setDeepLinkHandled] = useState<string | null>(null)
   useEffect(() => {
     const sigId = searchParams?.get("signal") || searchParams?.get("msg")
+    // O guard e por SINAL: um sinal diferente reabre; o mesmo nao reabre sozinho quando a
+    // lista recarrega. Tocar outra vez na notificacao do mesmo sinal volta a trazer o URL e,
+    // como o utilizador ja saiu do modal, faz sentido reabrir -- por isso limpa-se o guard
+    // quando o modal e fechado (ver setTap(null) mais abaixo).
     if (!sigId || deepLinkHandled === sigId) return
     setDeepLinkHandled(sigId)
     const found = items.find((s) => s.id === sigId)

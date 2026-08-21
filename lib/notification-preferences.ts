@@ -43,14 +43,29 @@ export const NOTIFICATION_CATEGORY_LABELS: Record<
   },
 }
 
+/**
+ * Por omissão: SÓ O QUE O CLIENTE SEGUE.
+ *
+ * O padrão era tudo ligado. Em sete dias isso deu 135 mil notificações para ~130 pessoas —
+ * 86 por dia, cada — com 0,15% de leitura. Quem recebe 86 avisos por dia desliga a app inteira
+ * e depois já não recebe o que interessava.
+ *
+ * Ficam ligadas as que o cliente PEDIU ao entrar: os sinais que pode negociar (tap_to_trade),
+ * as sessões ao vivo (acontecem duas vezes por semana e são o produto) e o DCA (uma por dia).
+ * O ruído de fundo — cada mensagem de cada canal, cada follow-up de cada setup — passa a ser
+ * OPT-IN: liga-se nas Definições, categoria a categoria.
+ *
+ * Quem já tinha escolhas guardadas mantém-nas: `normalizeNotificationPreferences` só usa este
+ * padrão para as categorias que o cliente nunca tocou.
+ */
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
-  dca: true,
-  chat: true,
-  live_sessions: true,
-  trade_ideas: true,
-  telegram_groups: true,
-  tap_to_trade: true,
-  primeverse: false, // opt-in — o cliente liga se quiser as notificações do PrimeVerse Hub
+  tap_to_trade: true,   // sinais que ele pode aceitar num toque — é o produto
+  live_sessions: true,  // duas por semana, e é para estar lá
+  dca: true,            // uma por dia, no máximo
+  trade_ideas: false,   // dezenas por dia entre setups e gestão → opt-in
+  telegram_groups: false, // Premium e restantes canais espelhados → opt-in
+  chat: false,          // conversa dos canais → opt-in
+  primeverse: false,    // opt-in — o cliente liga se quiser o PrimeVerse Hub
 }
 
 export function normalizeNotificationPreferences(

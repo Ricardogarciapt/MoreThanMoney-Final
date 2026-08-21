@@ -78,6 +78,22 @@ function AppMobileContent() {
   const [activeTab, setActiveTab] = useState(() =>
     tabFromUrl && validTabs.includes(tabFromUrl as (typeof validTabs)[number]) ? tabFromUrl : "social"
   )
+
+  /**
+   * O URL manda no separador — SEMPRE, não só no arranque.
+   *
+   * O useState acima só corre uma vez. Tocar numa notificação faz router.push para
+   * /app-mobile?tab=chat&channel=… — mesmo caminho, query diferente — e o React não volta a
+   * correr o inicializador: o separador ficava onde estava e o cliente aterrava no sítio errado
+   * (ou em sítio nenhum). É o que fazia o encaminhamento das notificações não ir dar a lado
+   * nenhum dentro das apps nativas, que vivem inteiras nesta página.
+   */
+  useEffect(() => {
+    if (tabFromUrl && validTabs.includes(tabFromUrl as (typeof validTabs)[number]) && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabFromUrl])
   const [touchStart, setTouchStart] = useState(0)
   const [touchEnd, setTouchEnd] = useState(0)
   const [currentUser, setCurrentUser] = useState<any>(null)

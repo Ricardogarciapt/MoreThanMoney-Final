@@ -1,5 +1,7 @@
 "use client"
 
+import { useSearchParams } from "next/navigation"
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -487,6 +489,7 @@ function MobileAlertCard({
 }
 
 export default function TradingAlertsMobile() {
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const [sub, setSub] = useState<Subscription>({
     enabled: true, push_enabled: true, symbols: DEFAULT_ALERT_SYMBOLS, strategies: [], timeframes: [],
@@ -558,9 +561,11 @@ export default function TradingAlertsMobile() {
   }, [loadSub, loadAlerts, loadFollowed])
 
   // Deep-link da notificação: ?signal=<id> → abre o modal do alerta (com gráfico ao vivo).
+  // Depende do searchParams, não de [] : dentro das apps o cliente já está nesta página quando
+  // toca na notificação, e um efeito que só corre à montagem nunca voltava a ver o ?signal novo.
+  const alertaParam = searchParams?.get("signal") ?? null
   useEffect(() => {
-    if (typeof window === "undefined") return
-    const sigId = new URLSearchParams(window.location.search).get("signal")
+    const sigId = alertaParam
     if (!sigId) return
     let cancelled = false
     ;(async () => {
@@ -573,7 +578,7 @@ export default function TradingAlertsMobile() {
       }
     })()
     return () => { cancelled = true }
-  }, [])
+  }, [alertaParam])
 
   useEffect(() => {
     if (!supabase) return
