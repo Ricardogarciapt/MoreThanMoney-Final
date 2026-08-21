@@ -22,7 +22,14 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { pipSizeForSymbol, unitFor } from './trade-outcome'
 import { isT2TEntrySignal } from './t2t-source'
-import { parseSignal } from './signal-parser'
+/**
+ * Um stop ou um alvo a mais de 15% da entrada não é um stop nem um alvo — é um número mal lido.
+ * Nesse caso não se grava desfecho nenhum: "não sei" é melhor do que um número errado.
+ */
+function plausivel(entrada: number, outro: number): boolean {
+  if (!(entrada > 0) || !(outro > 0)) return false
+  return Math.abs(outro - entrada) / entrada <= 0.15
+}
 
 /** Canais de sinais — os únicos onde faz sentido procurar desfechos. */
 export const CANAIS_DE_SINAIS = [
@@ -93,9 +100,44 @@ function direcao(texto: string): 'buy' | 'sell' | null {
   return null
 }
 
-function numero(s: string): number | null {
-  const v = Number(s.replace(/[\s−+]/g, '').replace(',', '.'))
+/**
+ * Número escrito à portuguesa (1 234,56) ou à inglesa (1,234.56). O ponto/vírgula com três
+ * dígitos a seguir é separador de milhares — tratá-lo como decimal transformava 4 591.79 em
+ * 4,59 e punha o stop a 60% da entrada.
+ */
+function numero(s: string | undefined | null): number | null {
+  if (!s) return null
+  let t = s.replace(/[\s−+]/g, '')
+  t = t.replace(/[.,](?=\d{3}\b)/g, '')   // separadores de milhares
+  t = t.replace(',', '.')
+  const v = Number(t)
   return Number.isFinite(v) ? v : null
+}
+
+/**
+ * Preços de um setup lidos DIRECTAMENTE do cartão. Não se usa aqui o parser geral de sinais:
+ * ele serve para colocar ordens e é tolerante de mais para esta conta — nos cartões do Sensei
+ * devolvia entradas de 12,93 onde estava 4591.79, e o desfecho saía "−85 901 pips".
+ */
+export function precosDoSetup(texto: string): { entry: number | null; sl: number | null; tps: number[] } {
+  const N = '([0-9][0-9.,]*)'
+  const entryM =
+    texto.match(new RegExp(`(?:entrada\\s*activada|entrada\\s*ativada|ponto\\s*de\\s*entrada|entrada|entry)\\s*[:=]\\s*${N}`, 'i'))
+  const zonaM = texto.match(new RegExp(`zone\\s*${N}\\s*[-–]\\s*${N}`, 'i'))
+  const slM = texto.match(new RegExp(`(?:stop\\s*loss|\\bsl\\b)\\s*[:=]?\\s*${N}`, 'i'))
+  const tps: number[] = []
+  const tpRe = new RegExp(`(?:take\\s*profit|\\btp)\\s*\\d?\\s*[:=]?\\s*${N}`, 'gi')
+  let m: RegExpExecArray | null
+  while ((m = tpRe.exec(texto)) !== null) {
+    const v = numero(m[1])
+    if (v != null && v > 0) tps.push(v)
+  }
+  let entry = numero(entryM?.[1])
+  if (entry == null && zonaM) {
+    const a = numero(zonaM[1]), b = numero(zonaM[2])
+    if (a != null && b != null) entry = (a + b) / 2
+  }
+  return { entry, sl: numero(slM?.[1]), tps }
 }
 
 function fmt(v: number, casas: number): string {
@@ -120,11 +162,8 @@ export function calcularDesfecho(setup: Msg, fecho: Msg): SignalOutcome | null {
   const base = { unit, closed_at: fecho.created_at, closed_by: fecho.id }
   const pip = pipSizeForSymbol(sym)
 
-  const sinal = parseSignal(setup.content ?? '')
-  const entrada =
-    sinal?.entry ??
-    (sinal?.zone ? (sinal.zone[0] + sinal.zone[1]) / 2 : null) ??
-    numero((setup.content ?? '').match(/(?:entrada|entry|zone)\D{0,12}(\d[\d.,]*)/i)?.[1] ?? '')
+  const sinal = precosDoSetup(setup.content ?? '')
+  const entrada = sinal.entry
 
   /** Monta a etiqueta a partir dos pips e da entrada. */
   const montar = (pips: number, source: SignalOutcome['source']): SignalOutcome => {
@@ -149,12 +188,12 @@ export function calcularDesfecho(setup: Msg, fecho: Msg): SignalOutcome | null {
 
   // 2. Sem número: se sabemos ONDE fechou, medimos no próprio setup.
   if (entrada != null && entrada > 0 && pip > 0) {
-    if (STOP_RE.test(texto) && sinal?.sl != null && sinal.sl > 0) {
+    if (STOP_RE.test(texto) && sinal.sl != null && sinal.sl > 0 && plausivel(entrada, sinal.sl)) {
       return montar(-Math.abs(entrada - sinal.sl) / pip, 'stop')
     }
-    if (ALVO_FINAL_RE.test(texto) && sinal?.tp?.length) {
-      const alvo = sinal.tp[sinal.tp.length - 1]
-      if (alvo > 0) return montar(Math.abs(alvo - entrada) / pip, 'target')
+    if (ALVO_FINAL_RE.test(texto) && sinal.tps.length) {
+      const alvo = sinal.tps[sinal.tps.length - 1]
+      if (alvo > 0 && plausivel(entrada, alvo)) return montar(Math.abs(alvo - entrada) / pip, 'target')
     }
   }
 
