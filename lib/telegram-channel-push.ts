@@ -1,7 +1,9 @@
 import { getSiteOrigin } from '@/lib/site-url'
 import type { AppChatChannelSlug } from '@/lib/telegram-app-channels'
 import { tapToTradeEnabledChannels } from '@/lib/mtmcopy/tap-to-trade-channels'
-import { isT2TEntrySignal, t2tMode, matchesT2TPrefs } from '@/lib/mtmcopy/t2t-source'
+import { isT2TEntrySignal, t2tMode, matchesT2TPrefs, isManagementFollowup } from '@/lib/mtmcopy/t2t-source'
+import { T2T_SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
+
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 const PUSH_TITLES: Record<string, string> = {
@@ -24,6 +26,8 @@ type PushResult = { ok: boolean; status?: number; error?: string }
  *
  * Sem filtros definidos ([] ou null) segue tudo — é o comportamento por omissão de sempre.
  */
+const SIGNAL_SLUGS = new Set<string>([...T2T_SIGNAL_CHANNELS, 'premium-ideas', 'cripto-perps'])
+
 async function activeT2TUserIds(channelSlug: string, content: string | null): Promise<string[]> {
   const supabase = getSupabaseAdmin()
   const { data } = await supabase
@@ -164,6 +168,20 @@ export async function sendTelegramChannelPush(opts: {
       tag,
     })
     return { ok: r1.ok || r2.ok, status: r1.status ?? r2.status, error: r1.error ?? r2.error }
+  }
+
+  // ── ACOMPANHAMENTO ≠ ENTRADA ─────────────────────────────────────────────────────────
+  // Um setup gera uma entrada e depois uma dúzia de mensagens de gestão: "1st entry running
+  // +240PIPS", "HIT TP2 +106PIPS", "Take partials", "set BE". Todas iam para TODA a gente como
+  // notificação. Em sete dias foram 63 mil avisos de chat e 63 mil de ideias — 600 por pessoa,
+  // com 0,15% de leitura. Quem lê 86 notificações por dia acaba por desligar a app inteira.
+  //
+  // A gestão continua a aparecer no chat, em thread no sinal — e quem ACEITOU ou SEGUIU a trade
+  // continua a ser avisado pelo caminho próprio (notifySignalOutcome), que sabe quem tem a
+  // posição aberta. O que deixa de acontecer é acordar 105 pessoas por um TP que não é delas.
+  // Só nos canais de SINAL: numa conversa normal um "fechado" é conversa, não gestão.
+  if (SIGNAL_SLUGS.has(slug) && isManagementFollowup(opts.content)) {
+    return { ok: true, status: 0 }
   }
 
   // Canal normal (ou T2T sem clientes com conta) → 1 push de chat/ideia

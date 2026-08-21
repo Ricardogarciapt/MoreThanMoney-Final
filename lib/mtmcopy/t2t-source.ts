@@ -96,6 +96,17 @@ const T2T_PERF_RE =
 const T2T_DIR_RE = /(\b(buy|sell|long|short|compra|venda)\b|🟢|🔴|🔵)/i
 
 /**
+ * É uma mensagem de GESTÃO de uma trade já publicada (TP atingido, break-even, parcial,
+ * fecho, cancelamento)? Serve para não acordar toda a gente por um TP que não é dela — a
+ * mensagem aparece no chat na mesma, em thread no sinal.
+ */
+export function isManagementFollowup(content?: string | null): boolean {
+  const c = content ?? ''
+  if (!c.trim()) return false
+  return T2T_FOLLOWUP_RE.test(c) || /\brunning\b|\+\s*\d+\s*pips?\b|take\s+partials?|manage\s+(the\s+)?trade/i.test(c)
+}
+
+/**
  * É uma ENTRADA T2T negociável (para gerar sinal + notificação "⚡ Tap to Trade")?
  * Exclui mensagens de acompanhamento/gestão e de performance/resumo — que NÃO devem virar T2T.
  * (As mensagens de gestão do Premium servem para gerir a trade já aceite, não para abrir nova.)
