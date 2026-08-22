@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { getMtmcopyBotToken } from "@/lib/mtmcopy/telegram-bot"
+import { getWeeklyFlyerStats, fmtSigned, fmtPt } from "@/lib/mtm-flyer/weekly-stats"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -124,6 +125,55 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
   const chatId = (row?.value as { chat_id?: string } | null)?.chat_id
   if (!chatId) return NextResponse.json({ ok: false, error: "grupo de leads não configurado" })
+
+  // SÁBADO: flyer "Resultados da Semana" (PT+EN) no funil — pedido Ricardo 2026-08-22.
+  // Dedup por semana em site_settings para o slot das 18:00 não repetir o das 11:00.
+  if (new Date().getUTCDay() === 6) {
+    const stats = await getWeeklyFlyerStats(null)
+    const stateKey = "weekly_flyer_leads_posted"
+    const { data: st } = await supabase.from("site_settings").select("value").eq("key", stateKey).maybeSingle()
+    if ((st?.value as { week?: string } | null)?.week !== stats.weekStart) {
+      const site = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.morethanmoney.pt"
+      const captions = {
+        pt:
+          `📊 <b>Resultados da semana ${stats.periodLabel}</b>\n\n` +
+          `<b>${fmtSigned(stats.totalPips)} pips</b> em sinais fechados · ≈ <b>$${fmtPt(stats.minLotUsd)}</b> a lote mínimo (0.01/0.1)\n` +
+          `🥇 Premium ${fmtSigned(stats.premium.netPips)} · 📡 Scanner ${fmtSigned(stats.scanner.pips)} · 🧠 Sensei ${fmtSigned(stats.sensei.pips)} · ⚔️ GoldKiller ${fmtSigned(stats.goldkiller.pips)}\n\n` +
+          `Conteúdo educativo — resultados passados não garantem resultados futuros. Queres receber estes sinais? 👇`,
+        en: `📊 <b>Weekly results ${stats.periodLabelEn}</b> — educational content; past results do not guarantee future results.`,
+      }
+      let sent = 0
+      let detail: string | null = null
+      for (const lang of ["pt", "en"] as const) {
+        const r = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            photo: `${site}/api/flyer/weekly?w=${stats.weekStart}&lang=${lang}`,
+            caption: captions[lang],
+            parse_mode: "HTML",
+            reply_markup: { inline_keyboard: [[CTA_TRIAL], [CTA_DM]] },
+          }),
+        })
+        const j = await r.json().catch(() => ({} as { description?: string }))
+        if (r.ok) sent++
+        else detail = j?.description ?? "sendPhoto falhou"
+      }
+      if (sent > 0) {
+        await supabase.from("site_settings").upsert(
+          {
+            key: stateKey,
+            value: { week: stats.weekStart, at: new Date().toISOString(), sent },
+            description: "Última semana cujo flyer de resultados foi publicado no grupo de leads",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "key" },
+        )
+      }
+      return NextResponse.json({ ok: sent > 0, type: "weekly-flyer", sent, week: stats.weekStart, detail })
+    }
+  }
 
   const wr = await recentWinRate(supabase)
   // Roda o post pelo dia do ano (determinístico, sem repetir seguidos)
