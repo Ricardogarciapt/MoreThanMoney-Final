@@ -65,49 +65,57 @@ export async function GET(request: NextRequest) {
   const stats = await getWeeklyFlyerStats(request.nextUrl.searchParams.get("w"))
 
   const site = process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://www.morethanmoney.pt"
-  const flyerUrl = `${site}/api/flyer/weekly?w=${stats.weekStart}`
-
-  // 2) Telegram para o admin
-  const caption =
-    `📊 Resultados da semana ${stats.periodLabel}\n` +
+  const chatId = await adminChatId()
+  const summary =
     `${fmtSigned(stats.totalPips)} pips em sinais fechados · ≈ $${fmtPt(stats.minLotUsd)} a lote mínimo\n` +
-    `Premium ${fmtSigned(stats.premium.netPips)} · Scanner ${fmtSigned(stats.scanner.pips)} · Sensei ${fmtSigned(stats.sensei.pips)} · GoldKiller ${fmtSigned(stats.goldkiller.pips)}\n` +
-    `Story agendada no @morethanmoney.pt (publica em ~5 min). Flyer: ${flyerUrl}`
-  const tg = await sendFlyerTelegram(await adminChatId(), flyerUrl, caption)
+    `Premium ${fmtSigned(stats.premium.netPips)} · Scanner ${fmtSigned(stats.scanner.pips)} · Sensei ${fmtSigned(stats.sensei.pips)} · GoldKiller ${fmtSigned(stats.goldkiller.pips)}`
 
-  // 3) Instagram Story (fila ig-publish) — dedup por semana
-  let story: string = "skipped"
-  const { data: existing } = await supabase
-    .from("social_scheduled_posts")
-    .select("id")
-    .eq("created_by", "weekly-flyer-cron")
-    .contains("media_urls", [flyerUrl])
-    .limit(1)
+  // Sai SEMPRE em dois flyers separados, PT e EN (pedido Ricardo 2026-08-22).
+  const results: Record<string, { telegram: string; story: string; url: string }> = {}
+  for (const lang of ["pt", "en"] as const) {
+    const flyerUrl = `${site}/api/flyer/weekly?w=${stats.weekStart}&lang=${lang}`
 
-  if (!existing || existing.length === 0) {
-    const { error } = await supabase.from("social_scheduled_posts").insert({
-      ig_account_id: IG_ACCOUNT_MTM,
-      ig_username: "morethanmoney.pt",
-      pillar: "resultados",
-      media_type: "STORIES",
-      media_urls: [flyerUrl],
-      caption: "",
-      scheduled_at: new Date().toISOString(),
-      status: "approved",
-      approved_by: "weekly-flyer-cron",
-      approved_at: new Date().toISOString(),
-      created_by: "weekly-flyer-cron",
-    })
-    story = error ? `error: ${error.message}` : "queued"
+    // 2) Telegram para o admin
+    const caption =
+      lang === "pt"
+        ? `📊 Resultados da semana ${stats.periodLabel} (PT)\n${summary}\nStory agendada no @morethanmoney.pt (publica em ~5 min).`
+        : `📊 Weekly results ${stats.periodLabelEn} (EN)\nStory agendada no @morethanmoney.pt.`
+    const tg = await sendFlyerTelegram(chatId, flyerUrl, caption)
+
+    // 3) Instagram Story (fila ig-publish) — dedup por semana+língua
+    let story = "skipped"
+    const { data: existing } = await supabase
+      .from("social_scheduled_posts")
+      .select("id")
+      .eq("created_by", "weekly-flyer-cron")
+      .contains("media_urls", [flyerUrl])
+      .limit(1)
+
+    if (!existing || existing.length === 0) {
+      const { error } = await supabase.from("social_scheduled_posts").insert({
+        ig_account_id: IG_ACCOUNT_MTM,
+        ig_username: "morethanmoney.pt",
+        pillar: "resultados",
+        media_type: "STORIES",
+        media_urls: [flyerUrl],
+        caption: "",
+        scheduled_at: new Date().toISOString(),
+        status: "approved",
+        approved_by: "weekly-flyer-cron",
+        approved_at: new Date().toISOString(),
+        created_by: "weekly-flyer-cron",
+      })
+      story = error ? `error: ${error.message}` : "queued"
+    }
+
+    results[lang] = { telegram: tg.ok ? "sent" : tg.error ?? "error", story, url: flyerUrl }
   }
 
   return NextResponse.json({
-    ok: tg.ok,
+    ok: Object.values(results).every((r) => r.telegram === "sent"),
     week: stats.weekStart,
     totalPips: stats.totalPips,
     minLotUsd: stats.minLotUsd,
-    telegram: tg.ok ? "sent" : tg.error,
-    story,
-    flyerUrl,
+    ...results,
   })
 }

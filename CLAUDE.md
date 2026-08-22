@@ -596,7 +596,8 @@ Cada agente tem contexto isolado mas pode passar outputs para o próximo.
 
 ### 🔁 ROTINA SEMANAL — Flyer "Resultados da Semana" (desde 2026-08-22)
 - **Ordem permanente do Ricardo:** todas as semanas criar o flyer com resultados reais, enviar-lhe por Telegram e publicar como Story no @morethanmoney.pt. Branding MTM: dourado `#efb810` sobre preto, logo `public/logo-mtm-transparent.png`, CTA WhatsApp +351 912 666 699 + morethanmoney.pt/scanners, disclaimer educativo obrigatório.
-- **Automatizado:** cron `/api/cron/weekly-flyer` (sábado 10:00 UTC, vercel.json) → calcula stats canónicas (`lib/mtm-flyer/weekly-stats.ts`: exit_N→TP N, loss→SL, be→entrada; pips 0.0001 forex/0.01 JPY/0.1 XAU, pontos índices; sanidade |12%|/trade) → Telegram sendPhoto ao admin → agenda STORY `approved` na fila `social_scheduled_posts` (ig-publish publica em <5 min). Imagem live: `/api/flyer/weekly?w=YYYY-MM-DD` (next/og, 1080×1920).
+- **Automatizado:** cron `/api/cron/weekly-flyer` (sábado 10:00 UTC, vercel.json) → calcula stats canónicas (`lib/mtm-flyer/weekly-stats.ts`: exit_N→TP N, loss→SL, be→entrada; pips 0.0001 forex/0.01 JPY/0.1 XAU, pontos índices; sanidade |12%|/trade) → Telegram sendPhoto ao admin → agenda STORY `approved` na fila `social_scheduled_posts` (ig-publish publica em <5 min). Imagem live: `/api/flyer/weekly?w=YYYY-MM-DD&lang=pt|en` (next/og, 1080×1920).
+- **SEMPRE dois flyers separados — PT e EN — e win rate visível em TODOS os cartões** (pedido 2026-08-22). O cron envia/agenda ambos; números formatados por língua (23.900 / 23,900).
 - **Premium vem do GOLD DID** (relay → chat premium-ideas), NUNCA do TradingView: preferir resumos diários "Total Net : N PIPS"; dias sem resumo → marcos "HIT TP3 +N PIPS" e −50/SL. Fontes no flyer: Premium, MTM Scanner V3.4, Sensei X, GoldKiller (Aurum Perps fora por decisão de 2026-08-22).
 - Simulação lote mínimo: ≈$0,10/pip a 0.01 (forex/ouro) e ≈$0,10/ponto a 0.1 (índices).
 

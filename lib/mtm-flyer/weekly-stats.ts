@@ -45,6 +45,8 @@ export interface WeeklyFlyerStats {
   /** Sexta-feira (inclusive) — usado no rótulo do período. */
   weekEndLabel: string
   periodLabel: string
+  /** O flyer sai SEMPRE em PT e EN (pedido Ricardo 2026-08-22) — rótulo EN pronto. */
+  periodLabelEn: string
   premium: PremiumStat
   scanner: ScannerStat
   sensei: ScannerStat
@@ -89,6 +91,18 @@ export function weekStartFor(ref: Date): Date {
 }
 
 const MESES = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO']
+const MONTHS_EN = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER']
+
+function buildPeriodLabel(weekStart: Date, friday: Date, months: string[]): string {
+  return weekStart.getUTCMonth() === friday.getUTCMonth()
+    ? `${weekStart.getUTCDate()} – ${friday.getUTCDate()} ${months[friday.getUTCMonth()]} ${friday.getUTCFullYear()}`
+    : `${weekStart.getUTCDate()} ${months[weekStart.getUTCMonth()]} – ${friday.getUTCDate()} ${months[friday.getUTCMonth()]} ${friday.getUTCFullYear()}`
+}
+
+/** Win rate 0-100 (sem BE no denominador); null sem trades decididas. */
+export function winRatePct(wins: number, losses: number): number | null {
+  return wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : null
+}
 
 export async function getWeeklyFlyerStats(weekStartParam?: string | null): Promise<WeeklyFlyerStats> {
   const supabase = getSupabaseAdmin()
@@ -99,10 +113,8 @@ export async function getWeeklyFlyerStats(weekStartParam?: string | null): Promi
   const weekEnd = new Date(weekStart.getTime() + 5 * 86400_000) // sábado 00:00 (Seg–Sex)
   const friday = new Date(weekStart.getTime() + 4 * 86400_000)
 
-  const periodLabel =
-    weekStart.getUTCMonth() === friday.getUTCMonth()
-      ? `${weekStart.getUTCDate()} – ${friday.getUTCDate()} ${MESES[friday.getUTCMonth()]} ${friday.getUTCFullYear()}`
-      : `${weekStart.getUTCDate()} ${MESES[weekStart.getUTCMonth()]} – ${friday.getUTCDate()} ${MESES[friday.getUTCMonth()]} ${friday.getUTCFullYear()}`
+  const periodLabel = buildPeriodLabel(weekStart, friday, MESES)
+  const periodLabelEn = buildPeriodLabel(weekStart, friday, MONTHS_EN)
 
   // ── Scanners (TradingView) ────────────────────────────────────────────────
   const { data: rows } = await supabase
@@ -235,6 +247,7 @@ export async function getWeeklyFlyerStats(weekStartParam?: string | null): Promi
     weekStart: weekStart.toISOString().slice(0, 10),
     weekEndLabel: friday.toISOString().slice(0, 10),
     periodLabel,
+    periodLabelEn,
     premium: { ...premium, netPips: Math.round(premium.netPips) },
     scanner: r(scanner),
     sensei: r(sensei),
@@ -244,13 +257,20 @@ export async function getWeeklyFlyerStats(weekStartParam?: string | null): Promi
   }
 }
 
-/** 23900 → "23.900" (formato PT). */
-export function fmtPt(n: number): string {
+export type FlyerLang = 'pt' | 'en'
+
+/** 23900 → "23.900" (PT) / "23,900" (EN). */
+export function fmtNum(n: number, lang: FlyerLang = 'pt'): string {
   const sign = n < 0 ? '-' : ''
-  return sign + Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  const sep = lang === 'en' ? ',' : '.'
+  return sign + Math.abs(Math.round(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, sep)
 }
 
 /** Pips com sinal: "+23.900" / "-120". */
-export function fmtSigned(n: number): string {
-  return (n >= 0 ? '+' : '') + fmtPt(n)
+export function fmtSignedNum(n: number, lang: FlyerLang = 'pt'): string {
+  return (n >= 0 ? '+' : '') + fmtNum(n, lang)
 }
+
+/** Compat (PT) — usados pelo cron nas legendas Telegram. */
+export const fmtPt = (n: number) => fmtNum(n, 'pt')
+export const fmtSigned = (n: number) => fmtSignedNum(n, 'pt')

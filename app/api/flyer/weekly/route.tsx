@@ -9,7 +9,7 @@
  */
 
 import { ImageResponse } from 'next/og'
-import { getWeeklyFlyerStats, fmtSigned, fmtPt } from '@/lib/mtm-flyer/weekly-stats'
+import { getWeeklyFlyerStats, fmtSignedNum, fmtNum, winRatePct, type FlyerLang } from '@/lib/mtm-flyer/weekly-stats'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -43,18 +43,68 @@ function Card({ emoji, name, detail, value, unit }: { emoji: string; name: strin
   )
 }
 
+/** Textos por língua — o flyer sai SEMPRE em PT e EN (dois separados, pedido Ricardo). */
+const STR = {
+  pt: {
+    title1: 'RESULTADOS ',
+    title2: 'DA SEMANA',
+    days: 'SEG–SEX',
+    sub: 'PIPS ACUMULADOS EM SINAIS FECHADOS',
+    premium: 'Sinais Premium',
+    trades: 'trades',
+    signals: 'sinais',
+    closedSignals: 'sinais fechados',
+    noLosses: ' · sem perdas',
+    winRate: 'win rate',
+    with: 'c/',
+    idxPts: 'pts índices',
+    best: 'Melhores trades',
+    minLot: (usd: string) => `💰 Com lote mínimo 0.01 (forex/ouro) e 0.1 (índices): ≈ $${usd} na semana`,
+    cta: 'QUERO RECEBER OS SINAIS 🚀',
+    disc1: 'Conteúdo educativo — não constitui consultoria financeira. Simulação aproximada: ≈$0,10/pip a 0.01 lote.',
+    disc2: 'Resultados passados não garantem resultados futuros. Trading envolve risco de perda de capital.',
+  },
+  en: {
+    title1: 'WEEKLY ',
+    title2: 'RESULTS',
+    days: 'MON–FRI',
+    sub: 'TOTAL PIPS ON CLOSED SIGNALS',
+    premium: 'Premium Signals',
+    trades: 'trades',
+    signals: 'signals',
+    closedSignals: 'closed signals',
+    noLosses: ' · no losses',
+    winRate: 'win rate',
+    with: 'w/',
+    idxPts: 'index pts',
+    best: 'Best trades',
+    minLot: (usd: string) => `💰 With minimum lot 0.01 (forex/gold) and 0.1 (indices): ≈ $${usd} this week`,
+    cta: 'GET THE SIGNALS 🚀',
+    disc1: 'Educational content — not financial advice. Approximate simulation: ≈$0.10/pip at 0.01 lot.',
+    disc2: 'Past results do not guarantee future results. Trading involves risk of capital loss.',
+  },
+} as const
+
 export async function GET(request: Request) {
   const url = new URL(request.url)
+  const lang: FlyerLang = url.searchParams.get('lang') === 'en' ? 'en' : 'pt'
+  const t = STR[lang]
   const stats = await getWeeklyFlyerStats(url.searchParams.get('w'))
   const origin = process.env.NEXT_PUBLIC_SITE_URL?.trim() || `${url.protocol}//${url.host}`
 
+  const fmt = (n: number) => fmtNum(n, lang)
+  const fmtS = (n: number) => fmtSignedNum(n, lang)
+  const wr = (wins: number, losses: number) => {
+    const p = winRatePct(wins, losses)
+    return p == null ? '' : ` · ${p}% ${t.winRate}`
+  }
+
   const s = stats.scanner
-  const winRate = s.wins + s.losses > 0 ? Math.round((s.wins / (s.wins + s.losses)) * 100) : 0
-  const scannerUnit =
-    s.points !== 0 ? `pips · ${fmtSigned(s.points)} pts índices` : 'pips'
+  const periodLabel = lang === 'en' ? stats.periodLabelEn : stats.periodLabel
+  const scannerUnit = s.points !== 0 ? `pips · ${fmtS(s.points)} ${t.idxPts}` : 'pips'
   const bests: string[] = []
-  if (s.bestPips > 0) bests.push(`+${fmtPt(s.bestPips)} pips (Scanner · ${s.bestSymbol ?? ''})`)
-  if (stats.premium.bestPips > 0) bests.push(`+${fmtPt(stats.premium.bestPips)} pips (Premium · GOLD)`)
+  if (s.bestPips > 0) bests.push(`+${fmt(s.bestPips)} pips (Scanner · ${s.bestSymbol ?? ''})`)
+  if (stats.premium.bestPips > 0) bests.push(`+${fmt(stats.premium.bestPips)} pips (Premium · GOLD)`)
 
   return new ImageResponse(
     (
@@ -91,8 +141,8 @@ export async function GET(request: Request) {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'center', fontSize: 64, fontWeight: 700 }}>
-          <span style={{ color: '#fff' }}>RESULTADOS&nbsp;</span>
-          <span style={{ color: GOLD }}>DA SEMANA</span>
+          <span style={{ color: '#fff' }}>{t.title1}</span>
+          <span style={{ color: GOLD }}>{t.title2}</span>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14, marginBottom: 24 }}>
@@ -108,47 +158,47 @@ export async function GET(request: Request) {
               background: 'rgba(239,184,16,0.07)',
             }}
           >
-            {`${stats.periodLabel} · SEG–SEX`}
+            {`${periodLabel} · ${t.days}`}
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 26 }}>
           <div style={{ display: 'flex', fontSize: 128, fontWeight: 700, color: GOLD, lineHeight: 1 }}>
-            {fmtSigned(stats.totalPips)}
+            {fmtS(stats.totalPips)}
           </div>
           <div style={{ display: 'flex', fontSize: 34, letterSpacing: 4, fontWeight: 700, marginTop: 8 }}>
-            PIPS ACUMULADOS EM SINAIS FECHADOS
+            {t.sub}
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <Card
             emoji="🥇"
-            name="Sinais Premium"
-            detail={`${stats.premium.trades} trades · ${stats.premium.wins}W/${stats.premium.losses}L`}
-            value={fmtSigned(stats.premium.netPips)}
-            unit={`pips ≈ $${fmtPt(Math.round(stats.premium.netPips * 0.1))} c/ 0.01`}
+            name={t.premium}
+            detail={`${stats.premium.trades} ${t.trades} · ${stats.premium.wins}W/${stats.premium.losses}L${wr(stats.premium.wins, stats.premium.losses)}`}
+            value={fmtS(stats.premium.netPips)}
+            unit={`pips ≈ $${fmt(Math.round(stats.premium.netPips * 0.1))} ${t.with} 0.01`}
           />
           <Card
             emoji="📡"
             name="MTM Scanner V3.4"
-            detail={`${s.signals} sinais fechados · ${winRate}% win rate`}
-            value={fmtSigned(s.pips)}
+            detail={`${s.signals} ${t.closedSignals}${wr(s.wins, s.losses)}`}
+            value={fmtS(s.pips)}
             unit={scannerUnit}
           />
           <Card
             emoji="🧠"
             name="Sensei X"
-            detail={`${stats.sensei.signals} sinais · XAUUSD`}
-            value={fmtSigned(stats.sensei.pips)}
-            unit={`pips ≈ $${fmtPt(Math.round(stats.sensei.pips * 0.1))} c/ 0.01`}
+            detail={`${stats.sensei.signals} ${t.signals} · XAUUSD${wr(stats.sensei.wins, stats.sensei.losses)}`}
+            value={fmtS(stats.sensei.pips)}
+            unit={`pips ≈ $${fmt(Math.round(stats.sensei.pips * 0.1))} ${t.with} 0.01`}
           />
           <Card
             emoji="⚔️"
             name="GoldKiller"
-            detail={`${stats.goldkiller.signals} sinais fechados${stats.goldkiller.losses === 0 && stats.goldkiller.signals > 0 ? ' · sem perdas' : ''}`}
-            value={fmtSigned(stats.goldkiller.pips)}
-            unit={`pips ≈ $${fmtPt(Math.round(stats.goldkiller.pips * 0.1))} c/ 0.01`}
+            detail={`${stats.goldkiller.signals} ${t.closedSignals}${stats.goldkiller.losses === 0 && stats.goldkiller.signals > 0 ? t.noLosses : ''}${wr(stats.goldkiller.wins, stats.goldkiller.losses)}`}
+            value={fmtS(stats.goldkiller.pips)}
+            unit={`pips ≈ $${fmt(Math.round(stats.goldkiller.pips * 0.1))} ${t.with} 0.01`}
           />
         </div>
 
@@ -165,7 +215,7 @@ export async function GET(request: Request) {
               padding: '18px 24px',
             }}
           >
-            {`🏆 Melhores trades: ${bests.join(' · ')}`}
+            {`🏆 ${t.best}: ${bests.join(' · ')}`}
           </div>
         ) : null}
 
@@ -181,7 +231,7 @@ export async function GET(request: Request) {
             padding: '18px 24px',
           }}
         >
-          {`💰 Com lote mínimo 0.01 (forex/ouro) e 0.1 (índices): ≈ $${fmtPt(stats.minLotUsd)} na semana`}
+          {t.minLot(fmt(stats.minLotUsd))}
         </div>
 
         <div style={{ display: 'flex', flexGrow: 1 }} />
@@ -197,7 +247,7 @@ export async function GET(request: Request) {
             padding: '30px 36px',
           }}
         >
-          <div style={{ display: 'flex', fontSize: 38, fontWeight: 700 }}>QUERO RECEBER OS SINAIS 🚀</div>
+          <div style={{ display: 'flex', fontSize: 38, fontWeight: 700 }}>{t.cta}</div>
           <div style={{ display: 'flex', fontSize: 32, fontWeight: 700, marginTop: 8 }}>📲 WhatsApp +351 912 666 699</div>
           <div style={{ display: 'flex', fontSize: 26, fontWeight: 700, marginTop: 6 }}>morethanmoney.pt/scanners</div>
         </div>
@@ -213,12 +263,8 @@ export async function GET(request: Request) {
             textAlign: 'center',
           }}
         >
-          <div style={{ display: 'flex' }}>
-            Conteúdo educativo — não constitui consultoria financeira. Simulação aproximada: ≈$0,10/pip a 0.01 lote.
-          </div>
-          <div style={{ display: 'flex' }}>
-            Resultados passados não garantem resultados futuros. Trading envolve risco de perda de capital.
-          </div>
+          <div style={{ display: 'flex' }}>{t.disc1}</div>
+          <div style={{ display: 'flex' }}>{t.disc2}</div>
         </div>
       </div>
     ),
