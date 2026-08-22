@@ -136,6 +136,10 @@
     {
       "path": "/api/cron/signal-outcomes",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/weekly-flyer",
+      "schedule": "0 10 * * 6"
     }
   ]
 }
