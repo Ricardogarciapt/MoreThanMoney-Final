@@ -24,6 +24,8 @@ export interface User {
   subscription_expires_at?: string | null
   /** origem do login — "primeverse" = cliente PrimeVerse tratado como Member sem upsell */
   login_provider?: string | null
+  /** Idioma escolhido pelo cliente. Segue a CONTA, não o dispositivo — ver I18nProvider. */
+  preferred_language?: string | null
 }
 
 function isTrialUser(profile: Record<string, unknown>): boolean {
@@ -64,6 +66,7 @@ function profileToUser(
       whatsapp: p.whatsapp as string | undefined,
       subscription_expires_at: (p.subscription_expires_at as string | null) ?? null,
       login_provider: (p.login_provider as string | null) ?? null,
+      preferred_language: (p.preferred_language as string | null) ?? null,
     },
   }
 }

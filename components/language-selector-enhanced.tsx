@@ -15,123 +15,23 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { supabase } from "@/lib/supabase"
-
-interface Language {
-  code: string
-  name: string
-  flag: string
-  nativeName: string
-}
-
-const SUPPORTED_LANGUAGES: Language[] = [
-  // Português e variações
-  { code: 'pt', name: 'Português', flag: '🇵🇹', nativeName: 'Português' },
-  
-  // Inglês
-  { code: 'en', name: 'English', flag: '🇬🇧', nativeName: 'English' },
-  
-  // Espanhol
-  { code: 'es', name: 'Español', flag: '🇪🇸', nativeName: 'Español' },
-  
-  // Francês
-  { code: 'fr', name: 'Français', flag: '🇫🇷', nativeName: 'Français' },
-  
-  // Alemão
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪', nativeName: 'Deutsch' },
-  
-  // Italiano
-  { code: 'it', name: 'Italiano', flag: '🇮🇹', nativeName: 'Italiano' },
-  
-  // Holandês
-  { code: 'nl', name: 'Nederlands', flag: '🇳🇱', nativeName: 'Nederlands' },
-  
-  // Chinês
-  { code: 'zh-CN', name: 'Chinese (Simplified)', flag: '🇨🇳', nativeName: '中文 (简体)' },
-  
-  // Japonês
-  { code: 'ja', name: 'Japanese', flag: '🇯🇵', nativeName: '日本語' },
-  
-  // Árabe
-  { code: 'ar', name: 'Arabic', flag: '🇸🇦', nativeName: 'العربية' },
-  
-  // Russo
-  { code: 'ru', name: 'Russian', flag: '🇷🇺', nativeName: 'Русский' },
-  
-  // Hindi
-  { code: 'hi', name: 'Hindi', flag: '🇮🇳', nativeName: 'हिंदी' },
-  
-  // Sérvio
-  { code: 'sr', name: 'Serbian', flag: '🇷🇸', nativeName: 'Српски' },
-  
-  // Croata
-  { code: 'hr', name: 'Croatian', flag: '🇭🇷', nativeName: 'Hrvatski' },
-  
-  // Bósnio
-  { code: 'bs', name: 'Bosnian', flag: '🇧🇦', nativeName: 'Bosanski' },
-  
-  // Albanês
-  { code: 'sq', name: 'Albanian', flag: '🇦🇱', nativeName: 'Shqip' },
-  
-  // Búlgaro
-  { code: 'bg', name: 'Bulgarian', flag: '🇧🇬', nativeName: 'Български' },
-  
-  // Romeno
-  { code: 'ro', name: 'Romanian', flag: '🇷🇴', nativeName: 'Română' },
-  
-  // Polonês
-  { code: 'pl', name: 'Polish', flag: '🇵🇱', nativeName: 'Polski' },
-  
-  // Ucraniano
-  { code: 'uk', name: 'Ukrainian', flag: '🇺🇦', nativeName: 'Українська' },
-  
-  // Turco
-  { code: 'tr', name: 'Turkish', flag: '🇹🇷', nativeName: 'Türkçe' },
-]
-
-/** Mercados-alvo prioritários — aparecem no topo do seletor (por esta ordem). */
-const PRIORITY_LANGUAGE_CODES = ['pt', 'en', 'es', 'de', 'fr'] as const
-
-const PRIORITY_LANGUAGES: Language[] = PRIORITY_LANGUAGE_CODES.map(
-  (code) => SUPPORTED_LANGUAGES.find((l) => l.code === code)!,
-)
-const OTHER_LANGUAGES: Language[] = SUPPORTED_LANGUAGES.filter(
-  (l) => !(PRIORITY_LANGUAGE_CODES as readonly string[]).includes(l.code),
-)
-
-/** www.morethanmoney.pt → morethanmoney.pt (mantém localhost/IP como está). */
-function rootDomain(host: string): string {
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return host // IP
-  const parts = host.split('.')
-  if (parts.length <= 2) return host
-  return parts.slice(-2).join('.')
-}
+import {
+  LANGUAGES,
+  OTHER_LANGUAGES as OTHER_LANGS_LIST,
+  PRIORITY_LANGUAGES as PRIORITY_LANGS_LIST,
+  type LanguageOption,
+} from "@/lib/i18n/languages"
+import { clearGoogtransCookies, setGoogtransCookie } from "@/lib/i18n/googtrans"
 
 /**
- * Apaga o cookie googtrans em TODOS os scopes possíveis (host-only, domínio exato,
- * domínio raiz com e sem ponto). É isto que faltava: o Google Translate guarda o
- * cookie em `.morethanmoney.pt` (com ponto), que o código antigo nunca limpava →
- * a 2.ª troca de idioma ficava presa no idioma anterior.
+ * A lista de idiomas e o cookie do Google Translate vivem agora em lib/i18n — havia duas
+ * cópias da lista (esta e a do dicionário) e bastava acrescentar um idioma a uma delas para
+ * o seletor deixar de corresponder ao que o site sabe traduzir.
  */
-function clearGoogtransCookies() {
-  if (typeof document === 'undefined') return
-  const host = window.location.hostname
-  const root = rootDomain(host)
-  const expired = 'expires=Thu, 01 Jan 1970 00:00:00 GMT'
-  const scopes = ['', `; domain=${host}`, `; domain=.${host}`, `; domain=${root}`, `; domain=.${root}`]
-  for (const s of scopes) {
-    document.cookie = `googtrans=; path=/${s}; ${expired}`
-  }
-}
-
-/** Define o cookie googtrans de forma consistente em host-only + domínio raiz com ponto. */
-function setGoogtransCookie(value: string) {
-  if (typeof document === 'undefined') return
-  const host = window.location.hostname
-  const root = rootDomain(host)
-  const maxAge = 'max-age=31536000'
-  document.cookie = `googtrans=${value}; path=/; ${maxAge}`
-  document.cookie = `googtrans=${value}; path=/; domain=.${root}; ${maxAge}`
-}
+type Language = LanguageOption
+const SUPPORTED_LANGUAGES: Language[] = LANGUAGES
+const PRIORITY_LANGUAGES: Language[] = PRIORITY_LANGS_LIST
+const OTHER_LANGUAGES: Language[] = OTHER_LANGS_LIST
 
 export default function LanguageSelectorEnhanced() {
   // O dicionário nativo (lib/i18n) e o Google Translate eram dois sistemas separados: o seletor

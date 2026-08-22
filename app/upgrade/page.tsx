@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/auth-context'
 import { useT } from '@/components/i18n-provider'
+import LanguagePicker from '@/components/language-picker'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -176,6 +177,12 @@ export default function UpgradePage() {
       )}
 
       <main className="container mx-auto px-4 py-12 max-w-5xl">
+
+        {/* Idioma. A página de packs não tem navbar: quem chega por email ou por link directo
+            não tinha como a ler na sua língua, e é aqui que se decide a compra. */}
+        <div className="flex justify-end mb-4">
+          <LanguagePicker />
+        </div>
 
         {/* Hero */}
         <div className="text-center mb-10">

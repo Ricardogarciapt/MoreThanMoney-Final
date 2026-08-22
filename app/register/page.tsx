@@ -11,6 +11,7 @@ import { AlertCircle, Eye, EyeOff, Smartphone, Globe, Check, Loader2, CheckCircl
 import Link from 'next/link'
 import { buildOAuthCallbackUrl, OAUTH_PENDING_REG_KEY } from '@/lib/oauth-flow'
 import { useT, useI18n } from '@/components/i18n-provider'
+import LanguagePicker from '@/components/language-picker'
 import { COUNTRIES, langForCountry } from '@/lib/countries'
 
 type PlanId = 'app_member_monthly' | 'app_member_annual' | 'premium_monthly' | 'premium_annual'
@@ -330,8 +331,9 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-2xl space-y-6">
 
-        {/* Back button */}
-        <div className="flex items-center">
+        {/* Voltar + idioma. Esta página não tem navbar, por isso o seletor da marca não chega
+            aqui — e é a PRIMEIRA página que um cliente estrangeiro vê. */}
+        <div className="flex items-center justify-between">
           <button
             onClick={() => router.back()}
             className="flex items-center gap-1 text-[#D2A63C] text-sm font-medium active:opacity-60 transition-opacity"
@@ -339,6 +341,7 @@ export default function RegisterPage() {
             <ChevronLeft className="w-5 h-5" />
             {t('register.back')}
           </button>
+          <LanguagePicker />
         </div>
 
         {/* Header */}
