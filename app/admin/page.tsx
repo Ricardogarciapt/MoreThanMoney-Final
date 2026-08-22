@@ -100,6 +100,11 @@ function AdminPageClient() {
       router.replace("/admin/mtmcopy")
       return
     }
+    // Fila de publicações Instagram (social_scheduled_posts) — página própria
+    if (tab === "social" || tab === "social-content") {
+      router.replace("/admin/social")
+      return
+    }
     if (validSections.has(tab)) {
       setActiveSection(tab)
     }

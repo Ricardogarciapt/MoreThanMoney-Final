@@ -19,6 +19,7 @@ import {
   Inbox,
   Film,
   Award,
+  Instagram,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -102,6 +103,18 @@ export default function AdminSidebar({
         >
           <Send className="w-5 h-5 shrink-0" />
           MTMcopier
+        </Link>
+        <Link
+          href="/admin/social"
+          className={cn(
+            "mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            pathname === "/admin/social" || pathname.startsWith("/admin/social/")
+              ? "border-l-2 border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
+              : "border-l-2 border-transparent text-gray-400 hover:bg-gray-800/50 hover:text-white"
+          )}
+        >
+          <Instagram className="w-5 h-5 shrink-0" />
+          Conteúdo Social
         </Link>
         <Link
           href="/admin/portfolios"
