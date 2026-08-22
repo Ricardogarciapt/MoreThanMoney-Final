@@ -15,6 +15,7 @@ import {
   publishScheduledPost,
   MediaNotReadyError,
   usernameForAccount,
+  isAutoPublishBlocked,
   type ScheduledPost,
 } from "@/lib/instagram/publish"
 
@@ -53,6 +54,21 @@ export async function GET(request: NextRequest) {
   const results: Array<Record<string, unknown>> = []
 
   for (const row of due) {
+    // O Instagram pessoal do Ricardo não é destino de automação: se alguma coisa pôs uma linha
+    // na fila para lá, morre aqui em vez de sair no perfil dele.
+    if (isAutoPublishBlocked(row.ig_account_id)) {
+      await supabase
+        .from("social_scheduled_posts")
+        .update({
+          status: "cancelled",
+          error: "Conta pessoal (@ricardogarciapt) não recebe publicações automáticas.",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id)
+      results.push({ id: row.id, status: "cancelled", reason: "conta pessoal" })
+      continue
+    }
+
     const attempts = (row.attempts ?? 0) + 1
 
     // Marca como em publicação (lock otimista).

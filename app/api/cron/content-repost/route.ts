@@ -59,6 +59,15 @@ async function personalCaption(brandCaption: string): Promise<string> {
 
 export async function GET(req: NextRequest) {
   if (!(await authorized(req))) return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
+
+  // DESLIGADO. Este cron existia para republicar conteúdo da marca no Instagram PESSOAL do
+  // Ricardo. Encheu o perfil dele com posts da máquina de vendas — é a conta pessoal de uma
+  // pessoa real, e o que sai dali é decisão dela. Fica aqui, inerte, para o histórico; só volta
+  // a correr se alguém puser REPOST_TO_PERSONAL=1 de propósito.
+  if (process.env.REPOST_TO_PERSONAL !== '1') {
+    return NextResponse.json({ ok: true, reposted: 0, reason: 'desligado: a conta pessoal não recebe automação' })
+  }
+
   const supabase = getSupabaseAdmin()
   const sinceIso = new Date(Date.now() - LOOKBACK_H * 3600 * 1000).toISOString()
 

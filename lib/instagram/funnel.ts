@@ -12,7 +12,7 @@
  *   webhook de mensagens do IG. (/api/manychat/closer fica só para quando o ManyChat existir.)
  */
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
-import { IG_ACCOUNTS, tokenForAccount } from "./publish"
+import { IG_ACCOUNTS, isAutoPublishBlocked, tokenForAccount } from "./publish"
 
 const GRAPH = "https://graph.facebook.com/v21.0"
 const DAYS_BACK = Number(process.env.IG_FUNNEL_DAYS) || 7 // janela de private_reply = 7 dias
@@ -133,9 +133,14 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
         else {
           dm_status = "public_fallback"
           dm_error = String(dm.json?.error?.message ?? dm.status).slice(0, 200)
-          const pub = await gpost(`${c.id}/replies`, { message: intent.pub(handle) }, token)
-          if (pub.ok) res.publicFallback++
-          else { dm_status = "error"; res.errors.push(`${intent.key} ${c.id}: dm(${dm_error}) pub(${pub.json?.error?.message ?? pub.status})`) }
+          if (isAutoPublishBlocked(acc.id)) {
+            // Conta pessoal: fica registado como lead para seguir à mão, sem escrever nada lá.
+            dm_status = "window_expired"
+          } else {
+            const pub = await gpost(`${c.id}/replies`, { message: intent.pub(handle) }, token)
+            if (pub.ok) res.publicFallback++
+            else { dm_status = "error"; res.errors.push(`${intent.key} ${c.id}: dm(${dm_error}) pub(${pub.json?.error?.message ?? pub.status})`) }
+          }
         }
       }
       await supabase.from("ig_leads").upsert({
@@ -151,6 +156,9 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
 
 /** Corre o funil (prospector + setter) para todas as contas. */
 export async function runIgFunnel(): Promise<{ ok: boolean; accounts: AcctResult[] }> {
+  // O funil lê os comentários das duas contas mas só ESCREVE na da marca: quando a DM falha,
+  // a alternativa é uma resposta pública no post — e essa resposta apareceria no Instagram
+  // pessoal do Ricardo, assinada por um cron. Ver isAutoPublishBlocked em ./publish.
   const own = new Set(IG_ACCOUNTS.map((a) => a.username.toLowerCase()))
   const accounts: AcctResult[] = []
   for (const acc of IG_ACCOUNTS) {

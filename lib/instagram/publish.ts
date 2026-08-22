@@ -24,6 +24,23 @@ export const IG_ACCOUNTS = [
   { id: "17841405656956716", username: "ricardogarciapt", tokenEnv: "INSTAGRAM_TOKEN_RICARDO" },
 ] as const
 
+/** Conta da MARCA — o único destino automático. */
+export const IG_BRAND_ID = "17841474872672009"
+/** Conta PESSOAL do Ricardo. */
+export const IG_PERSONAL_ID = "17841405656956716"
+
+/**
+ * O Instagram pessoal do Ricardo NÃO é um destino de automação.
+ *
+ * O funil chegou a republicar lá conteúdo da marca sozinho (cron content-repost, autopilot
+ * ligado) e a máquina de vendas encheu a fila com posts que saíram no perfil dele. É a conta
+ * pessoal de uma pessoa real — o que sai dali é decisão dela, não de um cron. A guarda vive
+ * aqui, no publicador, para que nenhuma fila nem cron novo possa contorná-la.
+ */
+export function isAutoPublishBlocked(igAccountId: string | null | undefined): boolean {
+  return String(igAccountId ?? "") === IG_PERSONAL_ID
+}
+
 export type IgMediaType = "IMAGE" | "CAROUSEL" | "STORIES" | "REELS"
 
 export interface ScheduledPost {
