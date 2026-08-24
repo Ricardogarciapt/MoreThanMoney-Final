@@ -3,6 +3,29 @@ import type { ParsedSignal } from './signal-parser'
 
 export type LotSizingConn = Pick<MTMcopierConnection, 'lot_mode' | 'lot_value' | 'max_risk_percent'>
 
+/** Lote mínimo aceite pelos brokers MT5. */
+export const MIN_LOT = 0.01
+
+/**
+ * Risco efectivo (% do saldo) de um lote, para quando o piso de 0,01 sobe o risco acima do
+ * configurado. Serve para REGISTAR o que aconteceu, não para decidir.
+ */
+export function riscoEfetivoPct(
+  lot: number,
+  signal: ParsedSignal,
+  accountBalance?: number | null,
+  marketPrice?: number | null,
+): number | null {
+  if (!accountBalance || accountBalance <= 0 || !signal.sl || signal.sl <= 0) return null
+  const entry = resolveEntryForRisk(signal, marketPrice)
+  if (entry == null || entry <= 0) return null
+  const distancia = Math.abs(entry - signal.sl)
+  if (!(distancia > 0)) return null
+  // Aproximação por contrato de 100 unidades (ouro/CFD) — a mesma base do cálculo do lote.
+  const risco = distancia * lot * 100
+  return Math.round((risco / accountBalance) * 10000) / 100
+}
+
 /** Preço de referência para calcular distância ao SL em ordens market. */
 export function resolveEntryForRisk(
   signal: ParsedSignal,
@@ -44,7 +67,7 @@ export function getLotSizingSkipReason(
   const lot = computedLot ?? computeLotSize(conn, riskSignal, accountBalance)
 
   if (conn.lot_mode !== 'risk_percent') {
-    return lot < 0.01 ? 'Lote calculado inválido (< 0.01)' : null
+    return lot < MIN_LOT ? 'Lote calculado inválido (< 0.01)' : null
   }
 
   if (!accountBalance || accountBalance <= 0) {
@@ -60,7 +83,7 @@ export function getLotSizingSkipReason(
   if (Math.abs(entry - riskSignal.sl) <= 0) {
     return 'Distância SL inválida — impossível calcular % risco'
   }
-  if (lot < 0.01) {
+  if (lot < MIN_LOT) {
     return 'Lote calculado inválido (< 0.01) com % risco configurado'
   }
   return null
@@ -105,6 +128,10 @@ export function computeLotSize(
             : /^(US30|NAS100|GER40|US500)/.test(sym)
               ? 1
               : 100_000
+      // CONTAS PEQUENAS: quando a percentagem dá menos do que o mínimo do broker, o clamp
+      // abaixo abre a 0,01 — e isso arrisca MAIS do que o configurado. É deliberado (mais vale
+      // entrar no mínimo do que não entrar), mas tem de ser visível: usar riscoEfetivoPct() para
+      // registar o risco real sempre que o piso entra em acção.
       const lot = riskAmount / (slDistance * contractSize)
       const maxLotCap =
         conn.max_risk_percent != null && conn.max_risk_percent > 0
