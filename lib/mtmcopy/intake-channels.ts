@@ -14,7 +14,7 @@ export type IntakeKey =
   | "perps"
 
 export const INTAKE_CHANNELS: { key: IntakeKey; label: string; hint: string }[] = [
-  { key: "premium", label: "Premium (relay Gold Did)", hint: "Sinais do canal GOLD DID via relay do VPS" },
+  { key: "premium", label: "Premium (relay Signal Master Elite)", hint: "Sinais do canal SIGNAL MASTER ELITE via relay do VPS (gmi-relay)" },
   { key: "sensei", label: "Sensei Scanner", hint: "Webhook TradingView (ouro/BTC)" },
   { key: "goldkiller", label: "GoldKiller", hint: "Webhook TradingView (XAUUSD)" },
   { key: "mtmscanner", label: "MTM Scanner", hint: "Webhook TradingView (forex + ouro/BTC)" },
