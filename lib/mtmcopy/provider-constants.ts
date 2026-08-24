@@ -32,6 +32,16 @@ export const CANONICAL_GOLDDID_SOURCE_STRATEGY_ID = 'GdId'
 export const CANONICAL_GOLDENMOVES_ACCOUNT_ID = '58aeb8d6-3b4c-4178-bfa6-3e0c8af24ff0'
 export const CANONICAL_GOLDENMOVES_STRATEGY_ID = 'GdMv'
 
+/**
+ * CONTA MÍNIMA para copiar, em USD.
+ *
+ * Não é uma regra comercial — é aritmética do broker. O lote mínimo é 0,01 e, em ouro, 0,01
+ * vale 0,10 USD por pip: um stop de 50 pips arrisca 5 USD. Para 5 USD serem 1% do saldo, o
+ * saldo tem de ser 500. Abaixo disso não existe lote que respeite a percentagem — abre-se no
+ * mínimo e arrisca-se mais do que o cliente escolheu.
+ */
+export const MTM_COPY_MIN_ACCOUNT_USD = 500
+
 /** Estratégias MTM disponíveis para cópia (UI pública — sem expor IDs técnicos). */
 export const MTM_COPY_STRATEGY_CATALOG: Record<
   string,
@@ -40,7 +50,11 @@ export const MTM_COPY_STRATEGY_CATALOG: Record<
   [CANONICAL_PREMIUM_STRATEGY_ID]: {
     title: 'MTM - Auto Premium',
     publicLabel: 'MTM - Auto Premium',
-    description: 'Ouro (XAUUSD) com uma perna, parciais nas saídas e trailing após TP1.',
+    description:
+      'Ouro (XAUUSD). Uma posição de cada vez, parciais nos alvos e stop movido para a entrada ' +
+      'depois do primeiro. As trades chegam do canal Premium e a tua conta copia-as sozinha. ' +
+      'Conta mínima 500 USD (a 1% por trade) — abaixo disso o lote mínimo do broker já arrisca ' +
+      'mais do que a percentagem escolhida. Com 1000 USD operas a 0,5%, que é o padrão da casa.',
   },
   [CANONICAL_TRADE_IDEAS_STRATEGY_ID]: {
     title: 'MTM Auto - Forex',
@@ -57,12 +71,19 @@ export const MTM_COPY_STRATEGY_CATALOG: Record<
   [CANONICAL_GOLDDID_SOURCE_STRATEGY_ID]: {
     title: 'MTM Auto Gold Did',
     publicLabel: 'MTM Auto Gold Did',
-    description: 'Sinais do canal Gold Did — 1% de risco por trade, SL e alvos da própria mensagem.',
+    description:
+      'Ouro, pelo trader do canal Gold Did. O stop e os alvos são os que vêm na mensagem — não ' +
+      'inventamos gestão por cima. Cada sinal entra a 1% do teu saldo e a gestão (parciais, ' +
+      'break-even, fecho) segue o que o trader anuncia, acompanhada pelo motor de preço. ' +
+      'Conta mínima 500 USD.',
   },
   [CANONICAL_GOLDENMOVES_STRATEGY_ID]: {
     title: 'MTM Auto Golden Moves',
     publicLabel: 'MTM Auto Golden Moves',
-    description: 'Sinais do canal Golden Moves — 1% de risco por trade, SL e alvos da própria mensagem.',
+    description:
+      'Ouro e alguns pares, pelo trader do canal Golden Moves. Stop e alvos da própria mensagem, ' +
+      '1% do teu saldo por trade, gestão acompanhada pelo motor de preço. Opera mais vezes por ' +
+      'dia do que o Premium — conta com mais movimento na conta. Conta mínima 500 USD.',
   },
   [CANONICAL_GOLDKILLER_STRATEGY_ID]: {
     title: 'MTM Auto Goldkiller',
