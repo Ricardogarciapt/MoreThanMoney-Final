@@ -25,6 +25,13 @@ export const CANONICAL_GOLDDID_STRATEGY_ID = 'e68I'
 export const CANONICAL_COPYTRADER_RG_ACCOUNT_ID = '0f38257a-ba12-4f6c-b20c-9139693b3674'
 export const CANONICAL_COPYTRADER_RG_STRATEGY_ID = 'su0a'
 
+/** Gold Did — conta Alcy 700161536 (PU Prime demo) alimentada pelo canal GOLD DID. */
+export const CANONICAL_GOLDDID_SOURCE_ACCOUNT_ID = 'ac351c88-f206-439c-9999-97636e8f9791'
+export const CANONICAL_GOLDDID_SOURCE_STRATEGY_ID = 'GdId'
+/** Golden Moves — conta Alcy 700147340 (PU Prime demo) alimentada pelo canal GOLDEN MOVES. */
+export const CANONICAL_GOLDENMOVES_ACCOUNT_ID = '58aeb8d6-3b4c-4178-bfa6-3e0c8af24ff0'
+export const CANONICAL_GOLDENMOVES_STRATEGY_ID = 'GdMv'
+
 /** Estratégias MTM disponíveis para cópia (UI pública — sem expor IDs técnicos). */
 export const MTM_COPY_STRATEGY_CATALOG: Record<
   string,
@@ -46,6 +53,16 @@ export const MTM_COPY_STRATEGY_CATALOG: Record<
     description:
       'Scanner Sensei (ouro e BTC) — entradas validadas, parciais nos alvos e trailing após o primeiro. ' +
       'Só executa nas contas que a subscreverem e a configurarem.',
+  },
+  [CANONICAL_GOLDDID_SOURCE_STRATEGY_ID]: {
+    title: 'MTM Auto Gold Did',
+    publicLabel: 'MTM Auto Gold Did',
+    description: 'Sinais do canal Gold Did — 1% de risco por trade, SL e alvos da própria mensagem.',
+  },
+  [CANONICAL_GOLDENMOVES_STRATEGY_ID]: {
+    title: 'MTM Auto Golden Moves',
+    publicLabel: 'MTM Auto Golden Moves',
+    description: 'Sinais do canal Golden Moves — 1% de risco por trade, SL e alvos da própria mensagem.',
   },
   [CANONICAL_GOLDKILLER_STRATEGY_ID]: {
     title: 'MTM Auto Goldkiller',

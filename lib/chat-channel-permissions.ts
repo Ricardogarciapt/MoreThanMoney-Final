@@ -14,7 +14,10 @@ export function isReadOnlyChannel(slug: string) {
     slug === "premium-ideas" ||
     slug === "sensei-scanner" ||
     slug === "sinais-goldkiller" ||
-    slug === "sinais-scanner-mtm"
+    slug === "sinais-scanner-mtm" ||
+    // Fontes novas: são canais de LEITURA, tal como os outros de sinais.
+    slug === "gold-did" ||
+    slug === "golden-moves"
   )
 }
 
@@ -28,7 +31,13 @@ export function requiresBrokerUidChannel(slug: string) {
 
 export function canReadChannel(slug: string, user: ChatChannelUser | null | undefined): boolean {
   if (!user?.is_active) return false
-  if (slug === "premium-ideas" || slug === "sensei-scanner" || slug === "sinais-goldkiller") {
+  if (
+    slug === "premium-ideas" ||
+    slug === "sensei-scanner" ||
+    slug === "sinais-goldkiller" ||
+    slug === "gold-did" ||
+    slug === "golden-moves"
+  ) {
     return (
       user.subscription_plan === "premium" ||
       user.member_category === "iq" ||

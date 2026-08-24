@@ -5,8 +5,11 @@ import { resolveAppChannelSlug } from '@/lib/telegram-app-channels'
 import { resolveThreadParent } from '@/lib/telegram-reply-thread'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 
-/** Fontes que espelham para o chat da app + T2T sem execução automática. */
-const ESPELHO_SEM_EXECUCAO = new Set(['gold-did', 'golden-moves'])
+/**
+ * Fontes com chat próprio na app: espelham no chat, geram cartão T2T e executam na CONTA
+ * PROVEDORA da rota — nunca em contas de clientes. Ver executeSignalOnRouteProvider.
+ */
+const FONTES_COM_CHAT_PROPRIO = new Set(['gold-did', 'golden-moves'])
 
 // Premium: espelhamos aqui o TEXTO LITERAL do Telegram para o 'premium-ideas' (pedido Ricardo —
 // mensagens idênticas ao Telegram, com zona/entrada/TP1-3/comentário). O master-poll deixa de postar
@@ -237,7 +240,7 @@ export async function POST(req: NextRequest) {
   // o cliente, ao aceitar no T2T. A execução automática na conta provedora fica para quando for
   // ligada de propósito; misturá-la aqui era como o Forex Swings entrar rotulado de Premium.
   const idEspelho = body.app_only ? sourceMsgId : r.messageId
-  if ((body.app_only || r.ok) && slug && ESPELHO_SEM_EXECUCAO.has(slug) && idEspelho) {
+  if ((body.app_only || r.ok) && slug && FONTES_COM_CHAT_PROPRIO.has(slug) && idEspelho) {
     try {
       const { data: dup } = await supabase
         .from('chat_messages')
@@ -263,6 +266,25 @@ export async function POST(req: NextRequest) {
         await sendTelegramChannelPush({
           slug, content: execText, chatMessageId: msg?.id as string, telegramMessageId: idEspelho,
         }).catch(() => {})
+
+        // ENTRADA → executa na conta provedora da rota (e só nela).
+        // FOLLOW-UP ("Tp3 hit", "close") → ciclo de vida: anuncia em thread com pips e
+        // percentagem e fecha as ordens de quem aceitou no T2T. É o mesmo formato do Premium.
+        try {
+          const { isT2TEntrySignal } = await import('@/lib/mtmcopy/t2t-source')
+          if (isT2TEntrySignal(slug, execText)) {
+            const { executeSignalOnRouteProvider } = await import('@/lib/mtmcopy/processor')
+            const r2 = await executeSignalOnRouteProvider({
+              chatId, text: execText, telegramMessageId: idEspelho ?? undefined,
+            })
+            if (!r2.ok) console.log(`[relay-post] ${slug}: sem execução — ${r2.reason}`)
+          } else {
+            const { handleSourceFollowup } = await import('@/lib/mtmcopy/followup-reader')
+            await handleSourceFollowup({ channelSlug: slug, content: execText })
+          }
+        } catch (e) {
+          console.error(`[relay-post] ${slug} execução/ciclo erro:`, e instanceof Error ? e.message : e)
+        }
       }
     } catch (e) {
       console.error('[relay-post] espelho fonte nova erro:', e instanceof Error ? e.message : e)

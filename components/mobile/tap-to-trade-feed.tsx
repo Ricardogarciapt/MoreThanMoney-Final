@@ -230,10 +230,10 @@ export default function TapToTradeFeed() {
   const searchParams = useSearchParams()
   const [items, setItems] = useState<Sig[]>([])
   const [loading, setLoading] = useState(true)
-  const [limitMode, setLimitMode] = useState<"last5" | "today" | "week">("last5")
+  const [limitMode, setLimitMode] = useState<"today" | "week">("today")
   const [historico, setHistorico] = useState<Array<Sig & { desfecho: string }>>([])
   /** Lido dentro do `load` sem o tornar dependente do estado — o intervalo de 20s não se recria. */
-  const limitModeRef = useRef<"last5" | "today" | "week">("last5")
+  const limitModeRef = useRef<"today" | "week">("today")
   const [tap, setTap] = useState<{ sig: Sig; status: "confirm" | "loading" | "done" | "error"; message?: string } | null>(null)
   /**
    * Pré-visualização do sinal: parâmetros da trade e, por conta, o lote e o risco calculados
@@ -324,7 +324,9 @@ export default function TapToTradeFeed() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const janelaLarga = limitModeRef.current !== "last5"
+    // "Esta semana" precisa da janela larga; "Hoje" fica-se pela curta — é o refrescar de 20s
+    // que corre aqui, e 400 mensagens com conteúdo inteiro a cada 20 segundos pagam-se em egress.
+    const janelaLarga = limitModeRef.current === "week"
     const tok = await token()
     let channels: string[] = []
     let senseiIds = new Set<string>()
@@ -521,11 +523,11 @@ export default function TapToTradeFeed() {
   const filtered = items
     // "O que seguir" é a ÚNICA filtragem: fontes + classes de ativo que o user escolheu ([]=todas).
     .filter((s) => matchesT2TPrefs(s.channel_slug, s.content, { sources: follow.sources, assetClasses: follow.assetClasses }))
-  // Mudar de alcance muda a janela que se vai buscar → recarrega uma vez, e só então.
+  // Passar a "Esta semana" muda a janela que se vai buscar → recarrega uma vez, e só então.
   useEffect(() => {
     const anterior = limitModeRef.current
     limitModeRef.current = limitMode
-    if (anterior === "last5" && limitMode !== "last5") load()
+    if (anterior !== "week" && limitMode === "week") load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [limitMode])
 
@@ -538,12 +540,8 @@ export default function TapToTradeFeed() {
   // "Últimos 5" = os cinco sinais MAIS RECENTES, seja qual for o estado deles. Antes só contava
   // os ainda aceitáveis, e como um setup expira em minutos o separador aparecia vazio a quem
   // vinha ver o que tinha saído.
-  const ultimos5 = [...filtered, ...historicoFiltrado]
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
-    .slice(0, 5)
-  const shown = limitMode === "last5" ? ultimos5 : filtered.filter(naJanela)
-  // A secção "Terminados" é dos alcances com janela; nos últimos 5 os terminados já vêm na lista.
-  const historicoVisivel = limitMode === "last5" ? [] : historicoFiltrado.filter(naJanela)
+  const shown = filtered.filter(naJanela)
+  const historicoVisivel = historicoFiltrado.filter(naJanela)
 
   const runTap = async () => {
     if (!tap) return
@@ -1140,7 +1138,6 @@ export default function TapToTradeFeed() {
           passa a Hoje / Esta semana, que é como se olha para o dia de trading. */}
       <div className="flex items-center gap-1.5 mb-2">
         {([
-          ["last5", t("t2t.last5")],
           ["today", "Hoje"],
           ["week", "Esta semana"],
         ] as const).map(([modo, rotulo]) => (

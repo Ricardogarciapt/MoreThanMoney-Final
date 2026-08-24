@@ -786,6 +786,51 @@ function subscriberLogAfterProviderExecution(
 }
 
 /** Sinal executado na conta MTM do canal; CopyFactory replica para slaves subscritos */
+/**
+ * Executa um sinal APENAS na conta provedora da rota — sem tocar em contas de clientes.
+ *
+ * O caminho normal (`processMtmcopyTelegramMessage`) faz duas coisas ao mesmo tempo: executa na
+ * conta da rota E procura clientes que sigam aquele canal. Para as fontes novas (Gold Did,
+ * Golden Moves) só se quer a primeira: a conta provedora é a estratégia, e quem quiser copiar
+ * subscreve-a no MTM Copy. Os clientes que ainda não escolheram canal nenhum casam com QUALQUER
+ * chat da allowlist — e foi assim que um dia o Forex Swings entrou rotulado de Premium e abriu
+ * nas contas de toda a gente. Aqui isso não pode acontecer: a lista de clientes vai vazia.
+ */
+export async function executeSignalOnRouteProvider(opts: {
+  chatId: string | number
+  text: string
+  telegramMessageId?: number
+  parentText?: string | null
+}): Promise<{ ok: boolean; reason?: string; provider?: string }> {
+  const providers = await resolveMtmProvidersForSignal('unknown', opts.chatId)
+  const provider = providers[0]
+  if (!provider) return { ok: false, reason: 'sem rota para este chat' }
+
+  const signal = parseSignal(opts.text)
+  if (!signal?.symbol || !signal.direction) return { ok: false, reason: 'não é um sinal de entrada' }
+
+  const profile = await getProviderExecutionProfile('unknown', provider.execution)
+  const validation = await validateSignalWithAi(opts.text, signal, {
+    skipAi: profile.ai_validation_enabled === false,
+    minConfidence: getAiMinConfidence(profile),
+    forceFastPath: isOfficialMtmTelegramFormat(opts.text),
+    channel: 'unknown',
+    strategyPrompt: provider.aiStrategyPrompt ?? null,
+  })
+  if (!shouldExecuteSignal(validation) || !shouldExecuteForProfile(validation, profile)) {
+    await logProviderSignalEvent({
+      channel: 'unknown', provider, signal, raw: opts.text,
+      telegramMessageId: opts.telegramMessageId, status: 'skipped',
+      detail: formatAiValidationDetail(validation),
+    })
+    return { ok: false, reason: 'validação abaixo do mínimo', provider: provider.tag }
+  }
+
+  const enriquecido = applyValidationToSignal(signal, validation)
+  await executeViaMtmProvider([], enriquecido, opts.text, opts.telegramMessageId, provider, 'unknown', validation)
+  return { ok: true, provider: provider.tag }
+}
+
 async function executeViaMtmProvider(
   subscribers: MTMcopierConnection[],
   signal: NonNullable<ReturnType<typeof parseSignal>>,
