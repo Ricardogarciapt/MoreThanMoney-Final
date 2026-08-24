@@ -29,7 +29,16 @@ export {
   CANONICAL_SENSEI_STRATEGY_ID,
 } from './provider-constants'
 
-/** Rotas provider MTM Auto — uma conta/estratégia por canal ou fonte de sinal. */
+/**
+ * Rotas provider MTM Auto — uma conta/estratégia por canal ou fonte de sinal.
+ *
+ * 2026-08-24: saíram daqui as canónicas do Trade Ideas (5IHE), Sensei (mADd) e GoldKiller
+ * (SDNb). As contas MetaApi delas foram apagadas e o `mtmcopy-reconcile` falhava nas três
+ * todos os dias — "MetaApi account … not found". Apagá-las da configuração não bastava:
+ * `repairProviderRoutes` reconstrói as canónicas a cada leitura e elas voltavam sempre.
+ * As rotas removidas ficaram guardadas em site_settings.mtmcopy_rotas_removidas; se as contas
+ * forem recriadas, voltam como rotas normais pelo admin, sem tocar neste ficheiro.
+ */
 export function buildCanonicalProviderRoutes(): ProviderRoute[] {
   return [
     {
@@ -46,59 +55,6 @@ export function buildCanonicalProviderRoutes(): ProviderRoute[] {
         ...PREMIUM_PROVIDER_EXECUTION,
         lot_value: MTM_DEFAULT_RISK_PERCENT,
         mt_comment: 'MTM Auto Premium',
-      },
-      enabled: true,
-    },
-    {
-      id: 'canonical-trade-ideas',
-      label: 'MTM Auto Trade Ideas',
-      sender_channel: 'trade-ideas',
-      sender_chat_id: resolvedTradeIdeasChatId(),
-      signal_source: 'telegram',
-      account_id: CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
-      strategy_id: CANONICAL_TRADE_IDEAS_STRATEGY_ID,
-      tag: 'MTM Auto Trade Ideas',
-      ai_strategy_prompt: null,
-      execution: {
-        ...TRADE_IDEAS_PROVIDER_EXECUTION,
-        lot_value: MTM_DEFAULT_RISK_PERCENT,
-        trailing_stop_points: 100,
-        mt_comment: 'MTM Auto Trade Ideas',
-      },
-      enabled: true,
-    },
-    {
-      id: 'canonical-sensei-scanner',
-      label: 'MTM Auto Sensei',
-      sender_channel: 'trade-ideas',
-      sender_chat_id: resolvedTradeIdeasChatId(),
-      signal_source: 'webhook',
-      account_id: CANONICAL_SENSEI_ACCOUNT_ID,
-      strategy_id:
-        process.env.METAAPI_COPY_STRATEGY_SENSEI_ID?.trim() || CANONICAL_SENSEI_STRATEGY_ID,
-      tag: 'MTM Auto Sensei',
-      ai_strategy_prompt: null,
-      execution: {
-        ...SENSEI_PROVIDER_EXECUTION,
-        lot_value: MTM_DEFAULT_RISK_PERCENT,
-        mt_comment: 'MTM Auto Sensei',
-      },
-      enabled: true,
-    },
-    {
-      id: 'canonical-goldkiller',
-      label: 'MTM Auto Goldkiller',
-      sender_channel: 'trade-ideas',
-      sender_chat_id: resolvedTradeIdeasChatId(),
-      signal_source: 'webhook',
-      account_id: CANONICAL_GOLDKILLER_ACCOUNT_ID,
-      strategy_id: CANONICAL_GOLDKILLER_STRATEGY_ID,
-      tag: 'MTM Auto Goldkiller',
-      ai_strategy_prompt: null,
-      execution: {
-        ...SENSEI_PROVIDER_EXECUTION,
-        lot_value: MTM_DEFAULT_RISK_PERCENT,
-        mt_comment: 'MTM Auto Goldkiller',
       },
       enabled: true,
     },
