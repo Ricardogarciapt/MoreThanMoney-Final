@@ -5,6 +5,9 @@ import { resolveAppChannelSlug } from '@/lib/telegram-app-channels'
 import { resolveThreadParent } from '@/lib/telegram-reply-thread'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 
+/** Fontes que espelham para o chat da app + T2T sem execução automática. */
+const ESPELHO_SEM_EXECUCAO = new Set(['gold-did', 'golden-moves'])
+
 // Premium: espelhamos aqui o TEXTO LITERAL do Telegram para o 'premium-ideas' (pedido Ricardo —
 // mensagens idênticas ao Telegram, com zona/entrada/TP1-3/comentário). O master-poll deixa de postar
 // o render terso quando já existe este literal (passa a fallback), por isso não há duplicação. As
@@ -119,6 +122,8 @@ export async function POST(req: NextRequest) {
     source_chat_id?: string | number
     source_message_id?: number
     reply_to_source_id?: number
+    /** Só espelha no chat da app — não republica no Telegram. Ver ESPELHO_SEM_EXECUCAO. */
+    app_only?: boolean
   }
   const chatId = body.chat_id != null ? String(body.chat_id) : ''
   const rawText = (body.text ?? '').toString()
@@ -194,7 +199,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const r = await sendTelegramChannelMessage(chatId, outText, { replyToMessageId: replyToDest })
+  // `app_only`: a fonte já vive num canal Telegram do próprio trader — não há nada para
+  // republicar. Só se espelha no chat da app. Poupa um grupo Telegram por fonte nova.
+  const r = body.app_only
+    ? { ok: true, messageId: null as number | null, error: undefined as string | undefined }
+    : await sendTelegramChannelMessage(chatId, outText, { replyToMessageId: replyToDest })
 
   // Fecha a reserva com o id da msg no destino (para futuras RESPOSTAS encadearem por este mapa).
   if (claimId) {
@@ -223,6 +232,43 @@ export async function POST(req: NextRequest) {
   // QUALQUER relay que passasse por aqui: o relay do Forex Swings entrava rotulado como Premium,
   // era classificado como premium-signals, e todos os clientes com telegram_groups=['premium']
   // abriam EURUSD/USDJPY/NZDUSD/EURCHF nas contas deles. Outros relays só espelham, não executam.
+  // ESPELHO das FONTES NOVAS (Gold Did, Golden Moves): entram no chat da app e no Tap to Trade,
+  // mas NÃO passam pelo processador — não abrem nada sozinhas em conta nenhuma. Quem executa é
+  // o cliente, ao aceitar no T2T. A execução automática na conta provedora fica para quando for
+  // ligada de propósito; misturá-la aqui era como o Forex Swings entrar rotulado de Premium.
+  const idEspelho = body.app_only ? sourceMsgId : r.messageId
+  if ((body.app_only || r.ok) && slug && ESPELHO_SEM_EXECUCAO.has(slug) && idEspelho) {
+    try {
+      const { data: dup } = await supabase
+        .from('chat_messages')
+        .select('id')
+        .eq('channel_slug', slug)
+        .eq('telegram_message_id', idEspelho)
+        .maybeSingle()
+      if (!dup) {
+        const { data: msg } = await supabase
+          .from('chat_messages')
+          .insert({
+            channel_slug: slug,
+            user_id: null,
+            content: execText,
+            message_type: 'telegram_forward',
+            telegram_sender: null,
+            telegram_message_id: idEspelho,
+            notified: true,
+            ...(await resolveThreadParent(slug, replyTo, execText).then((id) => (id ? { reply_to_id: id } : {}))),
+          })
+          .select('id')
+          .single()
+        await sendTelegramChannelPush({
+          slug, content: execText, chatMessageId: msg?.id as string, telegramMessageId: idEspelho,
+        }).catch(() => {})
+      }
+    } catch (e) {
+      console.error('[relay-post] espelho fonte nova erro:', e instanceof Error ? e.message : e)
+    }
+  }
+
   if (r.ok && slug === 'premium-ideas') {
     try {
       const { processMtmcopyTelegramMessage } = await import('@/lib/mtmcopy/processor')
