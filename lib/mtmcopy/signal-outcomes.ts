@@ -42,6 +42,8 @@ export const CANAIS_DE_SINAIS = [
   'cripto-perps',
   'ideias-e-sinais',
   'sinais',
+  'gold-did',
+  'golden-moves',
 ] as const
 
 /** Encerra mesmo a ideia (ao contrário de um BE ou de um TP1, que a deixam a correr). */
