@@ -213,6 +213,17 @@ export function getMtmStrategyOptions(): MtmCopyStrategyOption[] {
     })
   }
 
+  // Fontes novas (2026-08-24): cada uma executa na SUA conta provedora, alimentada pelo canal
+  // com o mesmo nome. Aparecem aqui e nos Grupos de sinais — são os dois caminhos pelos quais
+  // um cliente pode subscrever. Sem subscrição explícita nenhuma conta as executa.
+  for (const [id, canal] of [
+    [CANONICAL_GOLDDID_SOURCE_STRATEGY_ID, 'premium-signals'],
+    [CANONICAL_GOLDENMOVES_STRATEGY_ID, 'premium-signals'],
+  ] as const) {
+    const cat = MTM_COPY_STRATEGY_CATALOG[id]
+    if (cat) out.push({ id, channelKey: canal, title: cat.title, description: cat.description })
+  }
+
   return out
 }
 
