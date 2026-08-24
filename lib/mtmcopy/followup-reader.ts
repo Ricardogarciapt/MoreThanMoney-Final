@@ -23,6 +23,8 @@ export const SOURCE_LABEL: Record<T2TSourceKey, string> = {
   james: 'Forex Swings',
   primeverse: 'PrimeVerse',
   aurum: 'Aurum Flow',
+  golddid: 'Gold Did',
+  goldenmoves: 'Golden Moves',
 }
 
 /**
@@ -60,6 +62,21 @@ export function detectLifecycleEvent(content: string | null | undefined): Signal
   // Fecho genérico.
   if (/posi[çc][ãa]o\s*fechada|trade\s*fechad|encerrad\w*|close\s*all|closed\s*(manually)?/i.test(c))
     return 'closed'
+
+  // ── Fontes Gold Did / Golden Moves ────────────────────────────────────────────────────
+  // O trader escreve como fala. Sem estas regras, "Tp2 hit" ou "SET BE" ficavam por
+  // interpretar e o chat mostrava o texto cru, sem o cartão de gestão do nosso formato.
+
+  // "Out after we secured TP1", "we're out", "close we break below", "you can be done".
+  if (/\bwe(?:'re| are)?\s+out\b|\bi'?m\s+out\b|^\s*out\b|\bclose\s+(if|we|when|now)\b|you\s+can\s+be\s+done/i.test(c))
+    return 'closed'
+
+  // "SET BE", "set breakeven", "moved to BE".
+  if (/\bset\s*be\b|\bbreak\s*even\b|\bbreakeven\b|\bmoved?\s+to\s+be\b/i.test(c)) return 'break_even'
+
+  // "TP1 HIT" / "Tp3 hit" / "HIT TP2" — alvo atingido. O último alvo do sinal fecha a posição,
+  // mas quem decide isso é o motor com os alvos do setup; aqui diz-se apenas que houve parcial.
+  if (/\btp\s*\d\s*hit\b|\bhit\s*tp\s*\d\b|\btp\s*\d\s*✅/i.test(c)) return 'partial'
 
   return null
 }

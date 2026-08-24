@@ -99,7 +99,9 @@ const T2T_FOLLOWUP_RE =
 // Performance / resumo / recap (London/New York Performance, Total Win/Loss/Net PIPS…) — NUNCA são T2T.
 const T2T_PERF_RE =
   /(performance|resultado\s+do\s+dia|resumo|recap|relat[óo]rio|estat[íi]stic|balan[çc]o|total\s+(de\s+)?pips|total\s+(win|loss|net)|pips\s+(de\s+)?(hoje|esta\s+semana|do\s+dia)|fecho\s+do\s+dia|lucro\s+do\s+dia)/i
-const T2T_DIR_RE = /(\b(buy|sell|long|short|compra|venda)\b|🟢|🔴|🔵)/i
+// O gerúndio conta como direção: "I'm buying XAUUSD" é como o Gold Did e o Golden Moves
+// escrevem uma entrada. Sem isto a mensagem não passava por sinal.
+const T2T_DIR_RE = /(\b(buy|buying|sell|selling|long|short|compra|comprando|venda|vendendo)\b|🟢|🔴|🔵)/i
 
 /**
  * É uma mensagem de GESTÃO de uma trade já publicada (TP atingido, break-even, parcial,
@@ -125,7 +127,8 @@ export function isT2TEntrySignal(channelSlug?: string | null, content?: string |
   if (!T2T_DIR_RE.test(content)) return false       // precisa de direção
   if (!/\d{2,}/.test(content)) return false          // precisa de preço
   // Entrada COMPLETA: exige alvo (TP). Exclui updates só-SL / "Ref:".
-  if (!/\btp\s*\d|\btp\s*:|take\s*profit|🎯/i.test(content)) return false
+  // "TP 1 4635.15" (com espaço) e "TP1 4645" contam como alvo, tal como "TP1:" e "Take Profit".
+  if (!/\btp\s*\d|\btp\s*:|\btp\s+\d{2,}|take\s*profit|🎯/i.test(content)) return false
   return true
 }
 

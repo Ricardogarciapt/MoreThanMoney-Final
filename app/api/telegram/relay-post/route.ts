@@ -11,6 +11,59 @@ import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
  */
 const FONTES_COM_CHAT_PROPRIO = new Set(['gold-did', 'golden-moves'])
 
+/**
+ * Traduz o follow-up do trader para o NOSSO formato.
+ *
+ * O trader escreve "Tp2 hit" ou "SET BE" — três palavras, sem par, sem direção, sem quanto
+ * rendeu. No chat da app isso lê-se mal: podia ser de qualquer trade. Aqui vira o mesmo cartão
+ * que o Premium usa — "🎯 Alvo 2 · XAUUSD 🔵 COMPRA · +58 pips · +0,13%" — com o par e a direção
+ * vindos da ENTRADA a que o follow-up responde, e os pips medidos entre a entrada e o alvo.
+ *
+ * Devolve null quando não é um follow-up reconhecido: aí espelha-se o texto do trader tal como veio.
+ */
+async function textoCanonicoDoFollowup(
+  slug: string,
+  texto: string,
+  paiId: string | null,
+): Promise<string | null> {
+  const { detectLifecycleEvent } = await import('@/lib/mtmcopy/followup-reader')
+  const evento = detectLifecycleEvent(texto)
+  if (!evento) return null
+
+  let entrada: number | null = null
+  let simbolo: string | null = null
+  let direcao: 'buy' | 'sell' | null = null
+  let alvos: number[] = []
+  if (paiId) {
+    const { data } = await getSupabaseAdmin()
+      .from('chat_messages').select('content').eq('id', paiId).maybeSingle()
+    const { parseSignal } = await import('@/lib/mtmcopy/signal-parser')
+    const pai = parseSignal(String((data as { content?: string } | null)?.content ?? ''))
+    if (pai) {
+      simbolo = pai.symbol
+      direcao = pai.direction
+      entrada = pai.entry ?? (pai.zone ? (pai.zone[0] + pai.zone[1]) / 2 : null)
+      alvos = pai.tp ?? []
+    }
+  }
+  if (!simbolo) return null
+
+  // Preço de saída: o alvo que o trader diz ter sido atingido.
+  const nivel = Number(texto.match(/tp\s*(\d)/i)?.[1] ?? '')
+  const preco = Number.isFinite(nivel) && alvos[nivel - 1] ? alvos[nivel - 1] : null
+
+  const { lifecycleMessage } = await import('@/lib/mtmcopy/signal-lifecycle')
+  const { text } = lifecycleMessage(evento, {
+    symbol: simbolo,
+    direction: direcao,
+    level: Number.isFinite(nivel) ? nivel : null,
+    entry: entrada,
+    price: preco,
+    source: slug === 'gold-did' ? 'Gold Did' : 'Golden Moves',
+  })
+  return text
+}
+
 // Premium: espelhamos aqui o TEXTO LITERAL do Telegram para o 'premium-ideas' (pedido Ricardo —
 // mensagens idênticas ao Telegram, com zona/entrada/TP1-3/comentário). O master-poll deixa de postar
 // o render terso quando já existe este literal (passa a fallback), por isso não há duplicação. As
@@ -249,27 +302,29 @@ export async function POST(req: NextRequest) {
         .eq('telegram_message_id', idEspelho)
         .maybeSingle()
       if (!dup) {
+        // Threading pelo id da FONTE: nestas fontes é o id da fonte que fica gravado em
+        // telegram_message_id (não há mensagem de destino). Sem isto os follow-ups ficavam ao
+        // nível de topo e liam-se como sinais novos.
+        const paiId = await resolveThreadParent(slug, replyToSourceId ?? replyTo, execText)
+        // Follow-up → o NOSSO cartão, com par, direção e pips. Entrada → o texto do trader,
+        // que é onde estão os níveis que o cliente quer ver.
+        const conteudo = (await textoCanonicoDoFollowup(slug, execText, paiId)) ?? execText
         const { data: msg } = await supabase
           .from('chat_messages')
           .insert({
             channel_slug: slug,
             user_id: null,
-            content: execText,
+            content: conteudo,
             message_type: 'telegram_forward',
             telegram_sender: null,
             telegram_message_id: idEspelho,
             notified: true,
-            // Threading pelo id da FONTE: nestas fontes é o id da fonte que fica gravado em
-            // telegram_message_id (não há mensagem de destino). Sem isto os follow-ups ficavam
-            // ao nível de topo e liam-se como sinais novos.
-            ...(await resolveThreadParent(slug, replyToSourceId ?? replyTo, execText).then((id) =>
-              id ? { reply_to_id: id } : {},
-            )),
+            ...(paiId ? { reply_to_id: paiId } : {}),
           })
           .select('id')
           .single()
         await sendTelegramChannelPush({
-          slug, content: execText, chatMessageId: msg?.id as string, telegramMessageId: idEspelho,
+          slug, content: conteudo, chatMessageId: msg?.id as string, telegramMessageId: idEspelho,
         }).catch(() => {})
 
         // ENTRADA → executa na conta provedora da rota (e só nela).

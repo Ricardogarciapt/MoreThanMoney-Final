@@ -59,14 +59,19 @@ export const MTM_COPY_STRATEGY_CATALOG: Record<
   [CANONICAL_TRADE_IDEAS_STRATEGY_ID]: {
     title: 'MTM Auto - Forex',
     publicLabel: 'MTM Auto - Forex',
-    description: 'Sinais forex com trailing dinâmico — BE a meio do movimento.',
+    description:
+      'Pares de forex, intraday e swing. Entra com o stop e os alvos do sinal, move o stop para ' +
+      'a entrada a meio do caminho e deixa o trailing acompanhar o resto. Menos trades por dia ' +
+      'do que o ouro e movimentos mais lentos. Conta mínima 500 USD (a 1% por trade).',
   },
   [CANONICAL_SENSEI_STRATEGY_ID]: {
     title: 'MTM Auto Sensei',
     publicLabel: 'MTM Auto Sensei',
     description:
-      'Scanner Sensei (ouro e BTC) — entradas validadas, parciais nos alvos e trailing após o primeiro. ' +
-      'Só executa nas contas que a subscreverem e a configurarem.',
+      'Ouro e Bitcoin, por scanner automático. Só entra nas ideias que o scanner confirma — a ' +
+      'maioria dos alertas é descartada antes de chegar à tua conta. Parciais nos alvos e ' +
+      'trailing depois do primeiro. Como opera BTC, corre também fora do horário de mercado do ' +
+      'ouro. Conta mínima 500 USD (a 1% por trade).',
   },
   [CANONICAL_GOLDDID_SOURCE_STRATEGY_ID]: {
     title: 'MTM Auto Gold Did',
@@ -88,26 +93,35 @@ export const MTM_COPY_STRATEGY_CATALOG: Record<
   [CANONICAL_GOLDKILLER_STRATEGY_ID]: {
     title: 'MTM Auto Goldkiller',
     publicLabel: 'MTM Auto Goldkiller',
-    description: 'Scanner GoldKiller (XAUUSD) — 0.5% de risco por trade e trailing conforme o scanner.',
+    description:
+      'Ouro, por scanner próprio, com 0,5% de risco por trade e trailing conforme o scanner ' +
+      'dita. É a mais conservadora das automáticas: arrisca metade das outras em cada entrada. ' +
+      'Conta mínima 1000 USD (a 0,5% por trade).',
   },
   [CANONICAL_BOOSTER_STRATEGY_ID]: {
     title: 'MTM - 20X Booster',
     publicLabel: 'MTM - 20X Booster',
     description:
-      '⚠️ ALTO RISCO — conta booster 20x (alavancagem 1:50). Espelha o Premium com lotes ' +
-      'reduzidos e aceita Tap to Trade. Capital maioritariamente BÓNUS (não-levantável) — ' +
-      'usa lote fixo pequeno (0.01) e só com capital que aceitas perder. Não indicado para ' +
-      'contas conservadoras.',
+      '⚠️ ALTO RISCO. Conta booster com alavancagem 1:50, em que a maior parte do capital é ' +
+      'BÓNUS e não se levanta. Espelha o Premium a lote fixo de 0,01 e aceita Tap to Trade. ' +
+      'Serve para multiplicar um saldo pequeno sabendo que o pode perder todo — não é uma ' +
+      'estratégia de acumulação. Só com dinheiro que aceitas perder.',
   },
   [CANONICAL_GOLDDID_STRATEGY_ID]: {
     title: 'Gold Did',
     publicLabel: 'Gold Did',
-    description: 'Ouro (XAUUSD) a seguir os sinais Premium com gestão simples: break-even aos 50 pips (sem trailing) e alvo no TP2.',
+    description:
+      'Ouro, a seguir os mesmos sinais do Premium mas com gestão mais simples: stop para a ' +
+      'entrada aos 50 pips, sem trailing, e sai no segundo alvo. Fecha mais cedo do que o ' +
+      'Premium — menos por trade, menos tempo exposta. Conta mínima 500 USD.',
   },
   [CANONICAL_COPYTRADER_RG_STRATEGY_ID]: {
     title: 'Copy Trader Ricardo Garcia',
     publicLabel: 'Copy Trader Ricardo Garcia',
-    description: 'Relay do MTM Auto Premium via conta intermédia — replica os sinais Premium para as contas do Ricardo Garcia a lote fixo.',
+    description:
+      'Conta interna que repete o MTM Auto Premium a lote fixo para as contas do Ricardo Garcia. ' +
+      'Não é uma estratégia para subscrever — existe para encadear a cópia, e o desempenho que ' +
+      'mostra é o do Premium.',
   },
 }
 

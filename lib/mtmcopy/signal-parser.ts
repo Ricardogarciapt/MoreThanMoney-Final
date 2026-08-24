@@ -168,10 +168,14 @@ function extractSymbol(text: string): string | null {
   // linha da direção. Sem isto, os fallbacks apanhavam "Scanner"/"Ideias de" do cabeçalho
   // (≥6 chars passavam no isValidTradingSymbol) → T2T abria símbolo inválido → 502.
   for (const line of text.split(/\r?\n/)) {
-    if (!/🔵|🔴|🟢|🟩|🟥|📈|📉|⬆️|⬇️|\b(?:compra[r]?|venda[r]?|buy|sell|long|short)\b/i.test(line)) continue
+    if (!/🔵|🔴|🟢|🟩|🟥|📈|📉|⬆️|⬇️|\b(?:compra[r]?|comprando|venda[r]?|vendendo|buy|buying|sell|selling|long|short)\b/i.test(line)) continue
     // Remove as palavras de direção antes de extrair, senão o SYMBOL_RE cola-as ao símbolo
     // quando há 1 só espaço (ex.: "XAUUSD BUY" → "XAUUSDBUY").
-    const cleaned = line.replace(/\b(?:compra[r]?|venda[r]?|buy|sell|long|short|now|j[aá]|at)\b/gi, ' ')
+    // O gerúndio também tem de sair: "I'm buying XAUUSD" dava o símbolo "BUYINGXAUUSD".
+    const cleaned = line.replace(
+      /\b(?:compra[r]?|comprando|venda[r]?|vendendo|buy|buying|sell|selling|long|short|now|j[aá]|at|i'?m|im)\b/gi,
+      ' ',
+    )
     // Padrão inclui índices com dígitos (NAS100, US30, GER40) além de pares/metais.
     const SYM_LINE_RE = /#?([A-Z]{2,7}\d{2,4}|[A-Z]{2,6}[\/\-]?[A-Z]{2,6}|[A-Z]{3,10})\b/gi
     for (const m of cleaned.matchAll(SYM_LINE_RE)) {
@@ -220,6 +224,15 @@ function extractDirection(text: string): 'buy' | 'sell' | null {
     if (d) return d
   }
 
+  // "I'm buying XAUUSD" / "XAUUSD I'm buying" — é assim que os traders do Gold Did e do Golden
+  // Moves escrevem. Sem isto o gerúndio não casava com \bbuy\b e a entrada inteira era ignorada.
+  const gerundio = text.match(/\b(buying|selling|comprando|vendendo)\b/i)
+  if (gerundio) {
+    const g = gerundio[1].toLowerCase()
+    if (g.startsWith('buy') || g.startsWith('compra')) return 'buy'
+    return 'sell'
+  }
+
   const signalHead = text.match(
     /^\s*\d*\.?\s*([A-Z]{2,12}(?:[\/\-][A-Z]{2,12})?)\s+(buy|sell|long|short)\s+(?:now|já|limit|market)?/im,
   )
@@ -254,6 +267,9 @@ export function extractZoneRange(text: string): [number, number] | null {
         'i',
       ),
     ) ?? text.match(/zone\s*(\d+(?:[.,]\d+)?)\s*[-–—]\s*(\d+(?:[.,]\d+)?)/i)
+    // Linha SÓ com o intervalo — "4642.50-4638". O Golden Moves escreve a zona assim, sem
+    // rótulo nenhum, logo a seguir ao "I'm buying XAUUSD".
+    ?? text.match(/^\s*(\d{2,7}(?:[.,]\d+)?)\s*[-–—]\s*(\d{2,7}(?:[.,]\d+)?)\s*$/m)
   if (!zone) return null
   const a = parseNumber(zone[1])
   const b = parseNumber(zone[2])
@@ -375,13 +391,16 @@ function extractSlFromText(text: string, lines: string[]): number | null {
 function extractTpFromText(text: string, lines: string[]): number[] {
   const tp: number[] = []
 
-  const globalMatches = text.matchAll(/\btp\d*\s*:\s*(\d+(?:[.,]\d+)?)/gi)
+  // "TP1: 4645", "TP 1 4635.15", "TP1 4645" — o separador pode ser dois pontos, espaço ou nada.
+  const globalMatches = text.matchAll(/\btp\s*\d{0,2}\s*[:=]?\s*(\d{2,}(?:[.,]\d+)?)/gi)
   for (const m of globalMatches) {
     const v = parseNumber(m[1])
     if (v != null) tp.push(v)
   }
 
-  const globalTakeprofit = text.matchAll(/\btake\s?profit\s*[:=]?\s*(\d+(?:[.,]\d+)?)/gi)
+  // "Take Profit 1: 4600.5" — o nível fica entre o rótulo e o preço, e o preço tem 2+ dígitos.
+  // Sem isto o TP do Sensei saía como "1" e "2" (os níveis), não os preços. Bug antigo.
+  const globalTakeprofit = text.matchAll(/\btake\s?profit\s*\d{0,2}\s*[:=]?\s*(\d{2,}(?:[.,]\d+)?)/gi)
   for (const m of globalTakeprofit) {
     const v = parseNumber(m[1])
     if (v != null) tp.push(v)
@@ -423,7 +442,7 @@ function extractTpFromText(text: string, lines: string[]): number[] {
     if (v != null) tp.push(v)
   }
 
-  const bareTp = text.matchAll(/\btp\s+(\d+(?:[.,]\d+)?)/gi)
+  const bareTp = text.matchAll(/\btp\s+(\d{2,}(?:[.,]\d+)?)/gi)
   for (const m of bareTp) {
     const v = parseNumber(m[1])
     if (v != null) tp.push(v)
