@@ -14,6 +14,7 @@
  * NOVO (2026-08-06): cada user pode ESCOLHER que fontes/classes de ativo seguir (prefs na conta T2T).
  * `t2tSourceKey()` devolve a chave da fonte para casar com essas prefs; `T2T_SOURCES` é o catálogo p/ a UI.
  */
+import { isOwnLifecycleAnnouncement } from './signal-lifecycle'
 export type T2TSourceKey =
   | 'premium'
   | 'sensei'
@@ -121,6 +122,10 @@ export function isManagementFollowup(content?: string | null): boolean {
  */
 export function isT2TEntrySignal(channelSlug?: string | null, content?: string | null): boolean {
   if (!content) return false
+  // Um anúncio NOSSO ("🎯 Alvo 1 · XAUUSD 🔵 COMPRA · +75 pips") tem direção, números e o 🎯 —
+  // passava por entrada e ganhava botão de Tap to Trade. Pior: os follow-ups seguintes
+  // penduravam-se nele em vez do sinal verdadeiro.
+  if (isOwnLifecycleAnnouncement(content)) return false
   if (!isAllowedT2TSource(channelSlug, content)) return false
   if (T2T_PERF_RE.test(content)) return false      // performance / resumo do dia
   if (T2T_FOLLOWUP_RE.test(content)) return false  // update/gestão/saída — não é entrada

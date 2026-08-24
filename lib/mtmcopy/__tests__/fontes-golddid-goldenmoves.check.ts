@@ -48,5 +48,12 @@ const sensei = "🧠 Sensei Scanner — Entry Alert\n📊 XAUUSD   🔵 COMPRA\n
 // Bug antigo: os alvos do Sensei saíam como "1" e "2" (os níveis), não os preços.
 eq('sensei alvos sao precos', parseSignal(sensei)?.tp, [4600.5, 4610.2])
 
+// ── O nosso próprio cartão NÃO é uma entrada (senão ganhava botão de Tap to Trade e os
+// follow-ups seguintes penduravam-se nele em vez do sinal do trader).
+eq('cartao proprio nao e entrada',
+   isT2TEntrySignal('gold-did', '🎯 Alvo 1 · XAUUSD 🔵 COMPRA · +75 pips · +0,16%\nParcial realizada.'), false)
+eq('fecho proprio nao e entrada',
+   isT2TEntrySignal('golden-moves', '🏁 Posição fechada · XAUUSD 🔵 COMPRA · +120 pips · +0,26%'), false)
+
 console.log(`\n${ok} ok · ${mau} mau`)
 process.exit(mau === 0 ? 0 : 1)
