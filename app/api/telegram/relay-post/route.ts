@@ -259,7 +259,12 @@ export async function POST(req: NextRequest) {
             telegram_sender: null,
             telegram_message_id: idEspelho,
             notified: true,
-            ...(await resolveThreadParent(slug, replyTo, execText).then((id) => (id ? { reply_to_id: id } : {}))),
+            // Threading pelo id da FONTE: nestas fontes é o id da fonte que fica gravado em
+            // telegram_message_id (não há mensagem de destino). Sem isto os follow-ups ficavam
+            // ao nível de topo e liam-se como sinais novos.
+            ...(await resolveThreadParent(slug, replyToSourceId ?? replyTo, execText).then((id) =>
+              id ? { reply_to_id: id } : {},
+            )),
           })
           .select('id')
           .single()

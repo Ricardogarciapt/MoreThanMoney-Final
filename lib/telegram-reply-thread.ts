@@ -123,7 +123,39 @@ export async function resolveFollowupParentByPips(
   }
 }
 
-/** Reply do Telegram e, se não houver, a correspondência por pips. */
+/**
+ * ÚLTIMO RECURSO: o follow-up cola-se à ENTRADA mais recente do canal (12h).
+ *
+ * Um "Tp3 hit" solto, ao nível de topo, lê-se como se fosse um sinal novo — e é isso que engana
+ * quem abre o chat. Preso à entrada, lê-se pelo que é: o desfecho daquela trade. Só se usa
+ * quando o reply e a conta dos pips falharam, e só para mensagens que NÃO são entradas.
+ */
+async function resolveParentPorUltimaEntrada(
+  channelSlug: string,
+  content: string,
+): Promise<string | null> {
+  const { isT2TEntrySignal } = await import('@/lib/mtmcopy/t2t-source')
+  if (isT2TEntrySignal(channelSlug, content)) return null
+  try {
+    const { data } = await getSupabaseAdmin()
+      .from('chat_messages')
+      .select('id, content')
+      .eq('channel_slug', channelSlug)
+      .eq('is_deleted', false)
+      .gte('created_at', new Date(Date.now() - 12 * 3600 * 1000).toISOString())
+      .order('created_at', { ascending: false })
+      .limit(30)
+    for (const m of data ?? []) {
+      const row = m as { id: string; content?: string | null }
+      if (isT2TEntrySignal(channelSlug, row.content ?? '')) return row.id
+    }
+  } catch {
+    /* sem pai — fica ao nível de topo */
+  }
+  return null
+}
+
+/** Reply do Telegram → conta dos pips → entrada mais recente do canal. */
 export async function resolveThreadParent(
   channelSlug: string | null | undefined,
   telegramReplyToMessageId: number | null | undefined,
@@ -131,5 +163,8 @@ export async function resolveThreadParent(
 ): Promise<string | null> {
   const porReply = await resolveReplyToChatMessageId(channelSlug, telegramReplyToMessageId)
   if (porReply) return porReply
-  return resolveFollowupParentByPips(channelSlug, content)
+  const porPips = await resolveFollowupParentByPips(channelSlug, content)
+  if (porPips) return porPips
+  if (!channelSlug || !content) return null
+  return resolveParentPorUltimaEntrada(channelSlug, content)
 }
