@@ -204,6 +204,14 @@ async function abrirNaContaEspelho(l: Linha, price: number): Promise<void> {
     // O backlog silencioso NÃO abre trades: seria abrir agora, a preço de agora, dezenas de
     // sinais de horas atrás. Esses seguem-se só por cotação, para a métrica.
     if (!l.announce) return
+    // Rede de segurança: uma trade por sinal, aconteça o que acontecer acima.
+    const { data: jaAberta } = await admin
+      .from('mtmcopy_premium_active')
+      .select('id')
+      .eq('chat_message_id', l.chat_message_id)
+      .limit(1)
+      .maybeSingle()
+    if (jaAberta) return
     const mh = isMarketOpen(l.symbol)
     if (!mh.open) return
     const alvoFinal = l.tps.length ? l.tps[l.tps.length - 1] : null
@@ -285,10 +293,17 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
       const idadeH = (Date.now() - Date.parse(l.created_at)) / 3600_000
       const encheu = l.entry == null || (compra ? price <= l.entry : price >= l.entry)
       if (encheu) {
-        await admin
+        // TRANSIÇÃO ATÓMICA. O tracker corre de 5 em 5 segundos e uma passagem demora mais do que
+        // isso, por isso duas sobrepõem-se: sem o `eq('status','pending')` ambas viam a linha por
+        // encher e ABRIAM a mesma trade duas vezes na conta-espelho — aconteceu no USDCAD das
+        // 16:57, duas posições idênticas com 5 segundos de intervalo. Quem não muda a linha, sai.
+        const { data: ganhou } = await admin
           .from('mtmcopy_signal_tracking')
           .update({ status: 'active', entry_hit_at: new Date().toISOString(), updated_at: new Date().toISOString() })
           .eq('id', l.id)
+          .eq('status', 'pending')
+          .select('id')
+        if (!ganhou?.length) continue
         await abrirNaContaEspelho(l, price)
         await anunciar(l, 'entry_hit', { price })
         eventos.push(`entrada ${l.symbol} ${l.channel_slug}`)
