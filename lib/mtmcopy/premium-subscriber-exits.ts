@@ -66,8 +66,18 @@ export async function getPremiumSubscriberAccountIds(): Promise<string[]> {
     copyfactory_strategy_pick?: string | null
     strategy_lots?: Record<string, number> | null
   }>
+  /**
+   * Quem copia o Premium.
+   *
+   * O `copyfactory_strategy_pick` guarda o ID da estratégia ('MxsR') — é isso que o site
+   * escreve quando se liga uma conta. A verificação antiga só aceitava a palavra 'premium' e
+   * uma coluna `copyfactory_strategy_id` que está a null em TODAS as ligações: dava sempre
+   * falso, e o espelho das parciais não encontrava conta nenhuma. O interruptor ficava ligado
+   * e não fazia nada.
+   */
   const copiesPremium = (r: (typeof rows)[number]): boolean =>
     r.copyfactory_strategy_id === CANONICAL_PREMIUM_STRATEGY_ID ||
+    r.copyfactory_strategy_pick === CANONICAL_PREMIUM_STRATEGY_ID ||
     r.copyfactory_strategy_pick === 'premium' ||
     (r.strategy_lots != null && (CANONICAL_PREMIUM_STRATEGY_ID in r.strategy_lots || 'premium' in r.strategy_lots))
   const ids = rows
