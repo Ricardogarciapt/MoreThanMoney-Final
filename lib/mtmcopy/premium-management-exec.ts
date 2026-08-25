@@ -190,6 +190,33 @@ export async function applyPremiumManagement(
     tp: parent?.tp ?? [],
   }
 
+  // "Trade active and running +N PIPS" diz-nos uma coisa que o preço sozinho não diz: o trader
+  // encheu na PONTA da zona, a beira mais vantajosa. A nossa ordem pode ter enchido noutro ponto
+  // — mas se a posição está POSITIVA, a trade já correu a favor e não pode voltar a poder perder.
+  // Marca-se a linha como lucro trancado para o monitor de preço nunca mais baixar o stop.
+  if (
+    (msg.kind === 'breakeven' || msg.kind === 'take_partials') &&
+    posCtx.currentPrice != null &&
+    posCtx.openPrice > 0
+  ) {
+    const emLucro =
+      posCtx.direction === 'buy'
+        ? posCtx.currentPrice > posCtx.openPrice
+        : posCtx.currentPrice < posCtx.openPrice
+    if (emLucro) {
+      try {
+        const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
+        await getSupabaseAdmin()
+          .from('mtmcopy_premium_active')
+          .update({ profit_locked: true, updated_at: new Date().toISOString() })
+          .eq('account_id', accountId)
+          .eq('symbol', symbol)
+          .eq('status', 'open')
+        out.actions.push('mensagem de trade a correr + posição positiva → lucro trancado (stop não volta a descer)')
+      } catch { /* o monitor de preço tranca na mesma pelo pico */ }
+    }
+  }
+
   const actions = decidePremiumActions(msg, posCtx, signalCtx)
   if (!actions.length) {
     out.actions.push(`${msg.kind}: sem acções`)

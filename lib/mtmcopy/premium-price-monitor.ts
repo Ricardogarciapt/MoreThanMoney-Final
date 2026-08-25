@@ -40,6 +40,8 @@ interface ActiveRow {
   exits_done: number
   trailing_started: boolean
   early_trail_started: boolean
+  peak_profit_pips: number
+  profit_locked: boolean
   /** null = Premium normal · 'golddid' = perfil Gold Did (BE @ +5.0 sem trailing, fecho no TP2). */
   profile: string | null
 }
@@ -54,6 +56,22 @@ const PREMIUM_EARLY_BE_RATIO = (() => {
 
 /** Gold Did: BE quando o preço avança este tanto (guia GMI: 50 pips = +5.0 no ouro, 1 pip = 0.1). */
 const GOLDDID_BE_PRICE_MOVE = 5.0
+
+/**
+ * NÃO LEVAR STOP DEPOIS DE TER ESTADO EM LUCRO.
+ *
+ * O BE protetor só dispara a 40% do risco. Entre 0 e esse ponto havia um vazio: a trade corria
+ * +20 pips, revertia, e levava o stop inteiro — depois de ter estado a ganhar. Assim que o lucro
+ * MÁXIMO visto passa este limiar, o stop vai para a entrada (+buffer) e fica lá.
+ *
+ * O limiar não é zero de propósito: com spread e comissão, trancar a 1 pip fecha a trade no
+ * primeiro tremor. Doze pips de ouro é ~1,2 USD de movimento — o suficiente para o BE ficar
+ * acima do custo de entrada e sair.
+ */
+const PREMIUM_LOCK_PROFIT_PIPS = (() => {
+  const v = Number(process.env.PREMIUM_LOCK_PROFIT_PIPS)
+  return Number.isFinite(v) && v > 0 ? v : 12
+})()
 
 /** BE NÃO fica na entrada seca: fica +N pips A FAVOR (lucro travado), pedido do Ricardo. Aplica-se ao
  *  BE protetor cedo E ao BE do Exit 1. Env PREMIUM_BE_BUFFER_PIPS (default 5). */
@@ -187,6 +205,77 @@ export async function runPremiumPriceMonitor(): Promise<{
           }
         }
         continue // Gold Did NÃO corre a gestão Premium (parciais/trailing/BE-no-TP1)
+      }
+
+      // ── TRANCA DE LUCRO ────────────────────────────────────────────────────────────
+      // Uma trade que esteve em lucro não acaba em stop. Guarda-se o lucro MÁXIMO visto e,
+      // assim que passa o limiar, o stop sobe para a entrada (+buffer) e fica lá. Corre ANTES
+      // de tudo o resto e em todos os estados — não interessa se já houve parciais.
+      {
+        const pip = pipSizeFor(row.symbol)
+        const lucroPips = row.entry && row.entry > 0
+          ? (row.direction === 'buy' ? price - row.entry : row.entry - price) / pip
+          : 0
+        const pico = Math.max(row.peak_profit_pips ?? 0, lucroPips)
+        if (pico > (row.peak_profit_pips ?? 0)) {
+          await admin
+            .from('mtmcopy_premium_active')
+            .update({ peak_profit_pips: pico, updated_at: new Date().toISOString() })
+            .eq('id', row.id)
+          row.peak_profit_pips = pico
+        }
+        if (!row.profit_locked && row.entry && row.entry > 0 && pico >= PREMIUM_LOCK_PROFIT_PIPS) {
+          try {
+            await modifyPositionSlTp(
+              accountId, pos.id, beTargetPrice(row.entry, row.direction, row.symbol),
+              undefined, undefined, row.symbol,
+            )
+            await admin
+              .from('mtmcopy_premium_active')
+              .update({ profit_locked: true, updated_at: new Date().toISOString() })
+              .eq('id', row.id)
+            row.profit_locked = true
+            actions++
+            detail.push(`${row.symbol}: lucro trancado — stop em BE (pico +${pico.toFixed(0)}p)`)
+          } catch {
+            detail.push(`${row.symbol}: tranca de lucro falhou`)
+          }
+        }
+      }
+
+      // ── TRAILING A PARTIR DO TP1 (ratchet no nosso lado) ───────────────────────────
+      // Depois do Exit 1 o stop passa a SEGUIR o preço: em cada passagem sobe para
+      // preço − distância (compra) e nunca desce. É isto que transforma o trailing em trailing
+      // de LUCRO — num movimento rápido o stop vai atrás do preço e as saídas seguintes ficam
+      // protegidas mesmo que o alvo não chegue a ser tocado.
+      //
+      // Fazemo-lo aqui, e não só pelo trailing da corretora, porque nem todos os brokers o
+      // honram e porque o nosso passo é de 1 segundo: seguimos mais de perto do que o servidor
+      // deles. O piso é sempre o break-even — o stop nunca volta a ficar abaixo da entrada.
+      if (row.exits_done >= 1 && row.entry && row.entry > 0) {
+        const pip = pipSizeFor(row.symbol)
+        const riskPips = row.sl && row.sl > 0
+          ? Math.max(1, Math.round(Math.abs(row.entry - row.sl) / pip))
+          : null
+        const spec = premiumTrailingAfterTp1Hit(riskPips)
+        const trailPips = spec.mode === 'threshold_pips' ? spec.trailPips : 45
+        const distancia = trailPips * pip
+        const piso = beTargetPrice(row.entry, row.direction, row.symbol)
+        const atual = pos.stopLoss ?? null
+        const candidato = row.direction === 'buy' ? price - distancia : price + distancia
+        const novo = row.direction === 'buy' ? Math.max(candidato, piso) : Math.min(candidato, piso)
+        const melhora = atual == null
+          ? true
+          : row.direction === 'buy' ? novo > atual + pip * 0.5 : novo < atual - pip * 0.5
+        if (melhora) {
+          try {
+            await modifyPositionSlTp(accountId, pos.id, novo, undefined, undefined, row.symbol)
+            actions++
+            detail.push(`${row.symbol}: trailing pós-TP1 → stop ${novo.toFixed(2)} (${trailPips}p atrás do preço)`)
+          } catch {
+            detail.push(`${row.symbol}: trailing pós-TP1 falhou`)
+          }
+        }
       }
 
       // ── BE PROTETOR CEDO (price-based) ──────────────────────────────────────────────
