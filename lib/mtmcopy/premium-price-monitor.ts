@@ -44,6 +44,54 @@ interface ActiveRow {
   profit_locked: boolean
   /** null = Premium normal · 'golddid' = perfil Gold Did (BE @ +5.0 sem trailing, fecho no TP2). */
   profile: string | null
+  /** Mensagem do Telegram que originou a trade — a ponte para o cartão no chat. */
+  telegram_message_id: number | null
+}
+
+/**
+ * Encerra a trade: marca a linha fechada E anuncia o fecho no chat, em thread no sinal.
+ *
+ * Sem o anúncio a posição desaparecia da conta mestre mas o cartão ficava no Tap to Trade como
+ * se ainda desse para entrar — a 2026-08-25 três setups já fechados continuavam a aparecer
+ * "vivos" na app, e quem tocasse abria uma trade que o provedor já tinha encerrado. O trader só
+ * publica «HIT TP3» quando lhe apetece, e é isso que a app estava a esperar.
+ *
+ * O anúncio é idempotente (o `announceAndCloseByMessage` não repete o mesmo cartão em thread) e
+ * fecha também as ordens de quem aceitou o sinal no T2T.
+ */
+async function encerrarRegisto(
+  admin: ReturnType<typeof getSupabaseAdmin>,
+  row: ActiveRow,
+  /** 'target_final' quando saiu nos alvos; 'closed' quando a posição simplesmente desapareceu. */
+  evento: 'target_final' | 'closed',
+  extra: Record<string, unknown> = {},
+): Promise<void> {
+  await admin
+    .from('mtmcopy_premium_active')
+    .update({ ...extra, status: 'closed', updated_at: new Date().toISOString() })
+    .eq('id', row.id)
+
+  if (row.telegram_message_id == null) return // linha antiga, sem ponte para o chat
+  try {
+    const { data: msg } = await admin
+      .from('chat_messages')
+      .select('id')
+      .eq('channel_slug', PREMIUM_CHAT_SLUG)
+      .eq('telegram_message_id', row.telegram_message_id)
+      .maybeSingle()
+    if (!msg?.id) return
+    const { announceAndCloseByMessage } = await import('./t2t-lifecycle')
+    await announceAndCloseByMessage({
+      chatMessageId: msg.id as string,
+      chatSlug: PREMIUM_CHAT_SLUG,
+      symbol: row.symbol,
+      direction: row.direction,
+      event: evento,
+      label: 'MTM Auto Premium',
+    })
+  } catch (e) {
+    console.warn('[premium-monitor] anuncio de fecho falhou:', e instanceof Error ? e.message : String(e))
+  }
 }
 
 /** BE protetor cedo: move SL→BE quando o lucro ≥ esta FRACÇÃO do risco (|entrada−SL|). Menor = mais
@@ -56,6 +104,9 @@ const PREMIUM_EARLY_BE_RATIO = (() => {
 
 /** Gold Did: BE quando o preço avança este tanto (guia GMI: 50 pips = +5.0 no ouro, 1 pip = 0.1). */
 const GOLDDID_BE_PRICE_MOVE = 5.0
+
+/** Canal do chat onde vivem os sinais do Premium. */
+const PREMIUM_CHAT_SLUG = 'premium-ideas'
 
 /**
  * NÃO LEVAR STOP DEPOIS DE TER ESTADO EM LUCRO.
@@ -158,10 +209,7 @@ export async function runPremiumPriceMonitor(): Promise<{
       )
       if (!pos) {
         // Posição já não existe (fechada por trailing/SL/TP) → encerra o registo.
-        await admin
-          .from('mtmcopy_premium_active')
-          .update({ status: 'closed', updated_at: new Date().toISOString() })
-          .eq('id', row.id)
+        await encerrarRegisto(admin, row, 'closed')
         continue
       }
 
@@ -193,10 +241,7 @@ export async function runPremiumPriceMonitor(): Promise<{
           try {
             const r = await closePositionById(accountId, pos.id)
             if (r?.success) {
-              await admin
-                .from('mtmcopy_premium_active')
-                .update({ status: 'closed', exits_done: 2, updated_at: new Date().toISOString() })
-                .eq('id', row.id)
+              await encerrarRegisto(admin, row, 'target_final', { exits_done: 2 })
               actions++
               detail.push(`${row.symbol}: Gold Did → fechou no TP2 ${tp2}`)
             }
@@ -360,10 +405,7 @@ export async function runPremiumPriceMonitor(): Promise<{
 
       const currentVol = pos.volume ?? 0
       if (currentVol <= 0) {
-        await admin
-          .from('mtmcopy_premium_active')
-          .update({ status: 'closed', updated_at: new Date().toISOString() })
-          .eq('id', row.id)
+        await encerrarRegisto(admin, row, 'closed')
         continue
       }
 
@@ -378,10 +420,7 @@ export async function runPremiumPriceMonitor(): Promise<{
           const m = shouldMirrorExits(accountId) && await mirrorPremiumExit(row.symbol, row.direction, { kind: 'close_frac', frac: pct1 / 100 })
           if (m && (m.acted || m.skipped)) detail.push(`${row.symbol}: subs Exit 1 → ${m.acted} escalaram, ${m.skipped} seguraram`)
         }
-        await admin
-          .from('mtmcopy_premium_active')
-          .update({ status: 'closed', exits_done: 3, updated_at: new Date().toISOString() })
-          .eq('id', row.id)
+        await encerrarRegisto(admin, row, 'target_final', { exits_done: 3 })
         continue
       }
 
@@ -441,7 +480,12 @@ export async function runPremiumPriceMonitor(): Promise<{
         }
       }
 
-      await admin.from('mtmcopy_premium_active').update(patch).eq('id', row.id)
+      if (patch.status === 'closed') {
+        // Saiu no último alvo: encerra e anuncia, para o cartão sair do Tap to Trade.
+        await encerrarRegisto(admin, row, 'target_final', patch)
+      } else {
+        await admin.from('mtmcopy_premium_active').update(patch).eq('id', row.id)
+      }
     }
   }
 

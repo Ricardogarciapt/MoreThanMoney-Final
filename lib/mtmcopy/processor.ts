@@ -1503,6 +1503,9 @@ async function executeViaMtmProvider(
             exits_done: 0,
             trailing_started: false,
             status: 'open',
+            // Liga a trade à mensagem que a originou: é por aqui que o monitor de preço encontra
+            // o cartão no chat para anunciar o fecho e tirar o botão de Tap to Trade.
+            telegram_message_id: telegramMessageId ?? null,
           })
         } catch (e) {
           console.error('[mtmcopy] persist premium active falhou:', e)
