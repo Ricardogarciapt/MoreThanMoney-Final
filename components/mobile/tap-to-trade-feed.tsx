@@ -78,10 +78,23 @@ const T2T_MAX_AGE_MS = 5 * 60 * 1000
 /** Setups PENDENTES (entrada por zona/limite ainda por tocar) ficam aceitáveis até 24h, enquanto
  *  não forem ativados/fechados por um follow-up. Pedido Ricardo 2026-08-18 (espelha o servidor). */
 const T2T_PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000
-/** O sinal traz um NÍVEL de entrada (zona/limite)? "Entrada: 4398", "Zone 4398 - 4403", "Entry: …" */
+/**
+ * O sinal traz um NÍVEL de entrada (zona/limite)? Decide a validade: com nível é um setup
+ * PENDENTE e vale 24h; sem nível é "a mercado" e morre em 5 minutos.
+ *
+ * A zona nem sempre vem etiquetada. O Golden Moves escreve-a a seco — «I'm buying XAUUSD ⏎
+ * 4606-4602 ⏎ TP1 4609» — e como aqui só se procurava a PALAVRA «entrada/zona», todos os sinais
+ * dele caíam na janela dos 5 minutos e desapareciam do Tap to Trade antes de alguém lhes tocar.
+ * Eram 239 mensagens em duas semanas contra 560 com nível reconhecido.
+ *
+ * E a etiqueta nem sempre encosta ao número: o Sensei escreve «Entrada activada: 4637.54», com
+ * uma palavra pelo meio — com `\s*:?\s*` ficava de fora e os alertas dele expiravam em 5 minutos.
+ */
 function hasEntryLevel(content?: string | null): boolean {
   if (!content) return false
-  return /(entrada|entry|zona|zone)\s*:?\s*[0-9]+[.,]?[0-9]*/i.test(content)
+  if (/(entrada|entry|zona|zone)[^\n\d]{0,20}[0-9]+[.,]?[0-9]*/i.test(content)) return true
+  // Zona sem etiqueta, em linha própria: «4606-4602» / «4642.50 - 4638».
+  return /^\s*\d{2,7}(?:[.,]\d+)?\s*[-–—]\s*\d{2,7}(?:[.,]\d+)?\s*$/m.test(content)
 }
 
 /** Extrai o símbolo do sinal (para emparelhar com follow-ups TP/fecho). */
@@ -135,6 +148,10 @@ interface TapPreviewAccount {
   lotMode: string | null
   riskPct: number | null
   riskAmount: number | null
+  /** Risco REAL do lote que vai ser enviado (o piso de 0,01 do broker pode subi-lo). */
+  realRiskPct?: number | null
+  /** Tecto configurado, quando o risco real o ultrapassa. */
+  overCap?: number | null
   available: boolean
 }
 
@@ -1420,7 +1437,13 @@ export default function TapToTradeFeed() {
                           {a.available ? (
                             <span className="text-[12px] font-mono tabular-nums text-right">
                               <span className="text-white font-semibold">{a.lot != null ? `${a.lot} lote${a.lot === 1 ? "" : "s"}` : "—"}</span>
-                              {a.riskPct != null && <span className="text-zinc-500"> · {a.riskPct}%</span>}
+                              {/* O risco REAL do lote manda: com lote fixo, ou quando o mínimo do
+                                  broker sobe o lote, o que vai para o mercado não é a % escolhida. */}
+                              {a.realRiskPct != null ? (
+                                <span className={a.overCap != null ? "text-amber-400 font-semibold" : "text-zinc-500"}> · {a.realRiskPct}%</span>
+                              ) : (
+                                a.riskPct != null && <span className="text-zinc-500"> · {a.riskPct}%</span>
+                              )}
                               {a.riskAmount != null && <span className="text-zinc-400"> ≈ {a.riskAmount}</span>}
                             </span>
                           ) : (
@@ -1429,6 +1452,12 @@ export default function TapToTradeFeed() {
                         </div>
                       ))}
                     </div>
+                    {preview.accounts.some((a) => a.overCap != null) && (
+                      <p className="text-[10px] text-amber-400 mt-2 leading-snug">
+                        ⚠️ O lote mínimo da corretora arrisca mais do que o tecto que escolheste
+                        {preview.accounts.filter((a) => a.overCap != null).map((a) => ` — ${a.label}: ${a.realRiskPct}% contra ${a.overCap}%`).join("")}. Com este saldo não há lote que respeite a percentagem.
+                      </p>
+                    )}
                     <p className="text-[10px] text-zinc-500 mt-2">Percentagem e valor calculados sobre a equity de cada conta.</p>
                   </div>
                 )}

@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { entradaT2T } from '@/lib/mtmcopy/t2t-entry'
 import { parseSignal } from "@/lib/mtmcopy/signal-parser"
 import { t2tMode } from "@/lib/mtmcopy/t2t-source"
-import { computeLotSize, signalForRiskSizing } from "@/lib/mtmcopy/lot-sizing"
+import { computeLotSize, riscoEfetivoPct, signalForRiskSizing } from "@/lib/mtmcopy/lot-sizing"
 import { getAccountSnapshot } from "@/lib/mtmcopy/metaapi"
 import { pipSizeForSymbol } from "@/lib/mtmcopy/trade-outcome"
 
@@ -126,9 +126,25 @@ export async function GET(request: NextRequest) {
         const riscoPct =
           sizing.lot_mode === "risk_percent" ? Number(sizing.lot_value) || null : Number(conn.max_risk_percent) || null
         const riscoValor = equity != null && riscoPct != null ? Math.round(equity * (riscoPct / 100) * 100) / 100 : null
+        /**
+         * RISCO REAL DO LOTE, não o configurado.
+         *
+         * O `riskPct` é a percentagem que o cliente escolheu; com lote fixo — ou quando o piso de
+         * 0,01 do broker sobe o lote — o que vai para o mercado arrisca outra coisa. A conta T2T
+         * do Fábio, com 21,48 €, mandava 0,01 lotes de ouro: ~5 € por trade, 23% do saldo, com o
+         * tecto dele em 1% e sem ninguém a dizer nada. Só a almofada das prop firms aplicava um
+         * tecto, e mesmo essa só em modo percentagem.
+         */
+        const riscoReal =
+          lot != null && balance != null
+            ? riscoEfetivoPct(lot, signalForRiskSizing(signal), balance, null)
+            : null
+        const tecto = Number(conn.max_risk_percent) || null
         return {
           id: conn.id, label, equity, balance, lot,
           lotMode: sizing.lot_mode, riskPct: riscoPct, riskAmount: riscoValor,
+          realRiskPct: riscoReal,
+          overCap: riscoReal != null && tecto != null && riscoReal > tecto ? tecto : null,
           available: equity != null,
         }
       } catch {

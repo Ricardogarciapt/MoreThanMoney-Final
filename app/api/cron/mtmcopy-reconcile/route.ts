@@ -23,6 +23,25 @@ export async function GET(request: NextRequest) {
   try {
     const result = await runMtmcopySystemSync({ forceCopyFactory: false })
 
+    // CONTAS BLOQUEADAS: o estado já estava na base de dados e mais ninguém sabia dele — a
+    // pessoa só descobria ao carregar em aceitar e nada acontecer. Avisa o DONO da conta, uma
+    // vez por conta e por motivo.
+    let avisos = 0
+    try {
+      const { scanContasBloqueadas, avisarContasBloqueadas } = await import(
+        '@/lib/mtmcopy/account-health-notice'
+      )
+      const bloqueadas = await scanContasBloqueadas()
+      avisos = await avisarContasBloqueadas(bloqueadas)
+      if (bloqueadas.length) {
+        console.warn(
+          `[CRON mtmcopy-reconcile] ${bloqueadas.length} conta(s) bloqueada(s), ${avisos} aviso(s) enviado(s)`,
+        )
+      }
+    } catch (e) {
+      console.warn('[CRON mtmcopy-reconcile] aviso de contas bloqueadas falhou:', e)
+    }
+
     // POSIÇÕES ÓRFÃS: abertas na corretora com comentário nosso, mas sem registo no motor —
     // não levam parciais, break-even nem trailing, e ninguém dava por isso porque não há erro
     // nenhum. Se aparecerem, o admin é avisado no Telegram.
@@ -46,6 +65,7 @@ export async function GET(request: NextRequest) {
       success: result.ok,
       ...result,
       orfas: orfas ? { total: orfas.orfas.length, contas: orfas.contas, ilegiveis: orfas.ilegiveis, geridas: orfas.geridas, lista: orfas.orfas } : null,
+      avisosContasBloqueadas: avisos,
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
