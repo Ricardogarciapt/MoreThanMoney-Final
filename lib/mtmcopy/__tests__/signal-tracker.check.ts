@@ -45,3 +45,21 @@ assert.equal(
 )
 
 console.log('✓ signal-tracker: 11 verificações')
+
+// ── O NÚMERO DA IDEIA NÃO É UM PREÇO ─────────────────────────────────────────
+// O cabeçalho do Sensei — «Entry Alert — Ideia Activada #14509» — casa com o teste de «entrada»
+// e o primeiro número da linha era lido como preço: 14509 num sinal de ouro a 4637. O motor
+// media o lucro contra 14509 e o cartão anunciava −97 763 pips.
+const SENSEI_ID_GRANDE =
+  '🧠 Sensei Scanner — Entry Alert — Ideia Activada #14509 ✅\n📊 XAUUSD 🔵 COMPRA\n🎯 Entrada activada: 4637.54\n🛑 Stop Loss: 4626.07\n✅ Take Profit 1: 4654.75'
+assert.equal(parseSignal(SENSEI_ID_GRANDE)?.entry, 4637.54, 'o #14509 não pode virar entrada')
+assert.equal(
+  parseSignal(SENSEI_ID_GRANDE.replace('#14509', '#7'))?.entry,
+  4637.54,
+  'um id pequeno também não',
+)
+// E os formatos que já funcionavam continuam iguais.
+assert.equal(parseSignal('📊 GBPAUD 🔵 COMPRA\n🎯 Entrada: 1.90507\n🛑 Stop Loss: 1.90403\n✅ Take Profit 1: 1.90713')?.entry, 1.90507, 'Ideias de Forex')
+assert.equal(parseSignal('8. GOLD BUY SETUP\nGold Buy Zone 4643 - 4637\nSL : 4635\nTP1 : 4650')?.entry, 4637, 'Premium (ponta da zona)')
+
+console.log('✓ signal-tracker: +4 verificações de id-vs-preço')

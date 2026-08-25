@@ -358,7 +358,12 @@ function extractEntry(text: string, lines: string[]): number | null {
     const at = line.match(/@\s*(\d+(?:[.,]\d+)?)/)
     if (at) return parseNumber(at[1])
 
-    const nums = line.match(NUMBER_RE)
+    // «#14509» é o NÚMERO DA IDEIA, não um preço. O cabeçalho do Sensei — «Entry Alert — Ideia
+    // Activada #14509» — casa com o teste de «entrada» acima, e o primeiro número da linha era
+    // lido como entrada: 14509 num sinal de ouro a 4637. A partir daí o motor media o lucro
+    // contra 14509 e reportava −97 763 pips. Um número precedido de cardinal é sempre um id.
+    const semIds = line.replace(/#\s*\d+/g, ' ')
+    const nums = semIds.match(NUMBER_RE)
     if (nums?.length) return parseNumber(nums[0])
   }
 
