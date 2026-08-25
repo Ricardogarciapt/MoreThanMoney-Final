@@ -25,10 +25,18 @@ t('gestao nao gera botao', isT2TEntrySignal('cripto-perps', 'ETHUSDT.P · HIT TP
 t('resumo do dia nao gera botao', isT2TEntrySignal('cripto-perps', 'Performance de hoje: total net pips 320'), false)
 
 console.log('— modo —')
-t('ETH perp segue', t2tMode('cripto-perps', ETH), 'follow')
-t('SOL perp segue', t2tMode('cripto-perps', SOL), 'follow')
+// A regra passou a ser o PAR, não «só o BTC»: 2026-08-25, pedido do Ricardo — botão de abrir para
+// a cripto que existe nas contas MT5, botão de seguir para o que só vive na Bybit. A lista saiu
+// dos símbolos reais das contas (PU Prime e VT oferecem os mesmos), por isso ETH e SOL passaram
+// de 'follow' para 'execute': o cliente pode mesmo abri-los na conta dele.
+t('ETH executa (existe em MT5)', t2tMode('cripto-perps', ETH), 'execute')
+t('SOL executa (existe em MT5)', t2tMode('cripto-perps', SOL), 'execute')
 t('BTCUSDT executa', t2tMode('cripto-perps', BTC), 'execute')
 t('BTCUSD executa', t2tMode('cripto-perps', 'AURUM FLOW · BTCUSD long 62000 TP1 64000'), 'execute')
+// O que NÃO existe em MT5 continua a ser seguido, não aberto.
+t('PEPE segue', t2tMode('cripto-perps', 'MTM Perps · PEPEUSDT.P\n🟢 LONG\nEntrada 0.0000121\nSL 0.0000115 · TP1 0.0000133'), 'follow')
+t('ARB segue', t2tMode('cripto-perps', 'AURUM FLOW · ARBUSDT.P\n🔴 SHORT\nEntrada 0.84\nSL 0.88 · TP1 0.78'), 'follow')
+t('fora dos perps executa sempre', t2tMode('premium-ideas', 'GOLD BUY SETUP Zone 4643 - 4637 SL 4635 TP1 4650'), 'execute')
 t('ouro no Premium executa', t2tMode('premium-ideas', 'XAUUSD buy 4370 TP1 4390'), 'execute')
 t('rotulo de seguir', t2tButtonLabel('follow'), 'Seguir posição')
 t('rotulo de aceitar', t2tButtonLabel('execute'), 'Aceitar trade')
