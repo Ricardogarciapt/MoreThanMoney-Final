@@ -1874,6 +1874,40 @@ async function processSignalDirect(
     }
     const [single] = await placeOrdersSequential(conn.metaapi_account_id!, [req])
     result = single ?? { success: false, error: 'Sem resposta MetaAPI' }
+
+    // GESTÃO A 1 SEGUNDO para os restantes grupos de sinais (Sensei, Forex, Forex Swings,
+    // GoldKiller, Golden Moves). Estes copiam-se por EXECUÇÃO DIRECTA — não há conta mestre nem
+    // estratégia CopyFactory — por isso, sem esta linha, a trade ficava na conta do cliente sem
+    // ninguém a geri-la: sem parciais nos alvos, sem break-even, sem trailing. Registá-la aqui
+    // põe-na debaixo do mesmo monitor de preço que gere o Premium, na conta DELE.
+    if (result.success && conn.metaapi_account_id && signal.symbol && signal.direction) {
+      try {
+        const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
+        const { defaultExitPcts } = await import('./copy-methods')
+        const pcts = defaultExitPcts()
+        const tpsDir = signal.tp ?? []
+        await getSupabaseAdmin().from('mtmcopy_premium_active').insert({
+          account_id: conn.metaapi_account_id,
+          symbol: signal.symbol,
+          direction: signal.direction,
+          entry: signal.entry ?? marketPrice ?? null,
+          sl: signal.sl ?? null,
+          tp1: tpsDir[0] ?? null,
+          tp2: tpsDir[1] ?? null,
+          tp3: tpsDir[2] ?? null,
+          exit_pct_tp1: pcts.tp1,
+          exit_pct_tp2: pcts.tp2,
+          exit_pct_tp3: pcts.tp3,
+          original_lot: lot,
+          small_account: false,
+          exits_done: 0,
+          trailing_started: false,
+          status: 'open',
+        })
+      } catch (e) {
+        console.error('[mtmcopy] persist activa (execução directa) falhou:', e)
+      }
+    }
   }
 
   const trailingNote = conn.auto_trailing_stop
