@@ -4,6 +4,20 @@
 export const CANONICAL_PREMIUM_ACCOUNT_ID = '530d2e07-b391-440f-bc6e-f4c2a224057b'
 export const CANONICAL_TRADE_IDEAS_ACCOUNT_ID = 'fbeeafeb-96a9-4133-bc6c-194cc281b6e0'
 export const CANONICAL_SENSEI_ACCOUNT_ID = 'a5a1dddd-0099-4d67-98f1-86b65aad5845'
+
+/**
+ * Conta PRÓPRIA do Sensei Scanner — «Copy PU Gold Did», login 34744071, PU Prime Live 6.
+ *
+ * O Sensei não tinha conta: os sinais dele caíam no destino do Trade Ideas, que aponta para a
+ * conta MESTRE do Premium. A 2026-08-25 a ideia #14509 (XAUUSD) abriu lá com o comentário
+ * `MTM-TI` e a CopyFactory replicou-a para os 8 subscritores do Premium — um sinal do Sensei a
+ * chegar às contas de quem assinou o Premium. Daqui em diante o Sensei abre só aqui.
+ *
+ * `CANONICAL_SENSEI_ACCOUNT_ID` acima fica como está: é a conta antiga (já apagada na MetaApi) e
+ * ainda serve de default a outros sítios (PrimeVerse, preço de referência) — mexer nela mudava
+ * coisas que nada têm a ver com isto.
+ */
+export const SENSEI_PROVIDER_ACCOUNT_ID = '79225bd0-b556-4dbe-8c5b-d2a2969b997e'
 /** GoldKiller Scanner — conta MetaApi 181271197 (MetaQuotes) + estratégia CopyFactory SDNb */
 export const CANONICAL_GOLDKILLER_ACCOUNT_ID = 'bddad3b8-353f-4a19-badf-f8df8f532678'
 /** MTM 20X Booster — conta Monaxa 986912 (booster 20x, 1:50) + estratégia CopyFactory pIrJ */

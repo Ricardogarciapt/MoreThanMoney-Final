@@ -12,6 +12,7 @@ import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
   CANONICAL_SENSEI_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
+  SENSEI_PROVIDER_ACCOUNT_ID,
 } from './provider-constants'
 import { connectionCopyMethod, prefersDirectExecution } from './copy-limits'
 import { getMtmcopySubscription } from './subscription'
@@ -53,6 +54,7 @@ import {
   executionProfileToConnectionFields,
   formatExecutionSummary,
   getProviderExecutionProfile,
+  SENSEI_PROVIDER_EXECUTION,
 } from './provider-execution'
 import { resolveMtmProvidersForSignal, resolveMtmProviderForStrategyId } from './provider-resolution'
 import {
@@ -2032,6 +2034,24 @@ async function processSignalDirect(
  * target='forex' → conta MTM Auto Forex (5IHE), resolvida por strategy id,
  * sem tocar na rota canónica nem no caminho Telegram.
  */
+/**
+ * Conta do Sensei Scanner — a dele, não a do Premium.
+ *
+ * Antes o Sensei caía no `resolveMtmProvidersForSignal('trade-ideas')` porque não havia canal
+ * para ele: abria na conta MESTRE do Premium, com o comentário `MTM-TI` e o risco de 0,05% do
+ * perfil Trade Ideas, e a CopyFactory levava a trade a todos os subscritores do Premium.
+ * Agora tem conta e perfil próprios (0,5%, sem trailing, comentário `MTM-SENSEI`).
+ */
+function senseiProvider(): MtmChannelProvider {
+  return {
+    channel: 'trade-ideas',
+    accountId: process.env.METAAPI_PROVIDER_SENSEI_ACCOUNT_ID?.trim() || SENSEI_PROVIDER_ACCOUNT_ID,
+    tag: 'Conta Sensei',
+    strategyId: null,
+    execution: SENSEI_PROVIDER_EXECUTION,
+  }
+}
+
 export async function processMtmcopyWebhookSignal(opts: {
   raw: string
   signal: NonNullable<ReturnType<typeof parseSignal>>
@@ -2055,7 +2075,9 @@ export async function processMtmcopyWebhookSignal(opts: {
             const p = await resolveMtmProviderForStrategyId(CANONICAL_GOLDKILLER_STRATEGY_ID)
             return p ? [p] : []
           })()
-        : await resolveMtmProvidersForSignal(channel, null, { signalSource: 'webhook' })
+        : opts.target === 'sensei'
+          ? [senseiProvider()]
+          : await resolveMtmProvidersForSignal(channel, null, { signalSource: 'webhook' })
   if (!providers.length) {
     return {
       executed: false,
