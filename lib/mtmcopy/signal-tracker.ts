@@ -320,13 +320,21 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
 
     // ── ATIVO: alvos e stop ────────────────────────────────────────────────────
     const lucroPips = (compra ? price - (l.entry ?? price) : (l.entry ?? price) - price) / pip
+    // RESULTADO FLUTUANTE: quem faz as contas é o motor, que já tem a cotação na mão. O cartão
+    // lê o número pronto — cada app a ir buscar preços por sua conta seria o mesmo trabalho
+    // repetido N vezes, e o egress a pagá-lo.
+    const ref = l.entry ?? price
+    const patch: Record<string, unknown> = {
+      live_pips: Math.round(lucroPips * 10) / 10,
+      live_pct: ref > 0 ? Math.round(((lucroPips * pip) / ref) * 100 * 100) / 100 : null,
+      live_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
     if (lucroPips > l.peak_pips) {
-      await admin
-        .from('mtmcopy_signal_tracking')
-        .update({ peak_pips: lucroPips, updated_at: new Date().toISOString() })
-        .eq('id', l.id)
+      patch.peak_pips = lucroPips
       l.peak_pips = lucroPips
     }
+    await admin.from('mtmcopy_signal_tracking').update(patch).eq('id', l.id)
 
     const bateuSl = l.sl != null && (compra ? price <= l.sl : price >= l.sl)
     if (bateuSl) {

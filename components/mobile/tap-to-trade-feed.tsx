@@ -251,6 +251,8 @@ export default function TapToTradeFeed() {
   const [loading, setLoading] = useState(true)
   const [limitMode, setLimitMode] = useState<"today" | "week">("today")
   const [historico, setHistorico] = useState<Array<Sig & { desfecho: string }>>([])
+  /** Resultado FLUTUANTE por sinal, calculado pelo motor (não por cotações no cliente). */
+  const [aoVivo, setAoVivo] = useState<Record<string, { pips: number | null; pct: number | null }>>({})
   /** Lido dentro do `load` sem o tornar dependente do estado — o intervalo de 20s não se recria. */
   const limitModeRef = useRef<"today" | "week">("today")
   const [tap, setTap] = useState<{ sig: Sig; status: "confirm" | "loading" | "done" | "error"; message?: string } | null>(null)
@@ -439,6 +441,18 @@ export default function TapToTradeFeed() {
     // que "Últimos 5" mostra) e passam a formar o HISTÓRICO do dia e da semana, com o desfecho
     // em pips e percentagem ao lado do par.
     setItems(sigs.filter((x) => !x.expired))
+    // Resultado ao vivo dos que estão a correr: uma chamada por refrescar, números já feitos.
+    try {
+      const vivos = sigs.filter((x) => !x.expired).map((x) => x.id)
+      if (vivos.length) {
+        const rl = await fetch(`/api/mtmcopy/signal-live?ids=${vivos.join(",")}`)
+        if (rl.ok) setAoVivo(((await rl.json()) as { live?: typeof aoVivo }).live ?? {})
+      } else {
+        setAoVivo({})
+      }
+    } catch {
+      /* sem números ao vivo — o cartão continua a funcionar */
+    }
     setHistorico(
       sigs
         .filter((x) => x.expired && x.reason === "resolved")
@@ -1216,6 +1230,22 @@ export default function TapToTradeFeed() {
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       <span className="text-[11px] px-2 py-0.5 rounded-lg bg-zinc-800/80 text-zinc-300">🎯 {f.entry ?? "Mercado"}</span>
+                      {/* A CORRER: o que a trade vale NESTE momento. Sem isto o cartão de um
+                          sinal vivo não dizia se estava a ganhar ou a perder — só os terminados
+                          traziam números, e esses já não servem para decidir nada. */}
+                      {aoVivo[s.id]?.pips != null && (
+                        <span
+                          className={`text-[11px] px-2 py-0.5 rounded-lg font-semibold tabular-nums ${
+                            (aoVivo[s.id]!.pips ?? 0) >= 0
+                              ? "bg-emerald-500/15 text-emerald-400"
+                              : "bg-rose-500/15 text-rose-400"
+                          }`}
+                          title="Resultado a correr, calculado pelo motor"
+                        >
+                          {(aoVivo[s.id]!.pips ?? 0) >= 0 ? "+" : ""}{aoVivo[s.id]!.pips} pips
+                          {aoVivo[s.id]!.pct != null && ` · ${(aoVivo[s.id]!.pct ?? 0) >= 0 ? "+" : ""}${aoVivo[s.id]!.pct}%`}
+                        </span>
+                      )}
                       {f.sl && <span className="text-[11px] px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-300">🛑 SL {f.sl}</span>}
                       {f.tps.map((tp, i) => (
                         <span key={i} className="text-[11px] px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-300">✅ TP{i + 1} {tp}</span>

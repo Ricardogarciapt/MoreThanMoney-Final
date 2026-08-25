@@ -775,6 +775,7 @@ function MessageBubble({
   onOpenActions,
   onTapToTrade,
   resolved = false,
+  aoVivo,
 }: {
   msg: ChatMessage
   isOwn: boolean
@@ -787,6 +788,8 @@ function MessageBubble({
   onTapToTrade?: (msg: ChatMessage) => void
   /** Sinal já resolvido por follow-up posterior (ativado/fechado/descartado) → sem botão T2T. */
   resolved?: boolean
+  /** Resultado a correr deste sinal (pips e %), calculado pelo motor. */
+  aoVivo?: { pips: number | null; pct: number | null }
 }) {
   const t = useT()
   const tradeable =
@@ -1069,6 +1072,21 @@ function MessageBubble({
                 <LinkPreviewCard preview={msg.link_preview} url={msg.link_url} />
               )}
               {inlineUrl && <InlineUrlPreview url={inlineUrl} />}
+              {/* A CORRER: o que o sinal vale neste momento. Antes só os terminados traziam
+                  números, e esses já não servem para decidir se vale a pena entrar. */}
+              {aoVivo?.pips != null && (
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  <span
+                    className={`text-[11px] px-2 py-0.5 rounded-lg font-semibold tabular-nums ${
+                      (aoVivo.pips ?? 0) >= 0 ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+                    }`}
+                  >
+                    {(aoVivo.pips ?? 0) >= 0 ? "+" : ""}{aoVivo.pips} pips
+                    {aoVivo.pct != null && ` · ${(aoVivo.pct ?? 0) >= 0 ? "+" : ""}${aoVivo.pct}%`}
+                  </span>
+                  <span className="text-[10px] text-gray-500">a correr</span>
+                </div>
+              )}
               {tradeable && (
                 <button
                   type="button"
@@ -1143,6 +1161,8 @@ function ChannelView({
   const [pendingNew, setPendingNew] = useState(0)
   const [sendError, setSendError] = useState<string | null>(null)
   const [messagesError, setMessagesError] = useState<string | null>(null)
+  /** Resultado FLUTUANTE por sinal, feito pelo motor. Ver /api/mtmcopy/signal-live. */
+  const [aoVivo, setAoVivo] = useState<Record<string, { pips: number | null; pct: number | null }>>({})
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -1581,6 +1601,25 @@ function ChannelView({
 
   // ── Render ────────────────────────────────────────────────────────────────
 
+  // Números ao vivo dos sinais que ainda estão a correr. Uma chamada por lista de mensagens,
+  // com os números já calculados no servidor — o cliente não vai buscar cotações.
+  useEffect(() => {
+    const ids = messages.filter((m) => looksLikeTradeSignal(m.channel_slug, m.content)).map((m) => m.id)
+    if (!ids.length) { setAoVivo({}); return }
+    let cancelado = false
+    ;(async () => {
+      try {
+        const r = await fetch(`/api/mtmcopy/signal-live?ids=${ids.slice(0, 200).join(",")}`)
+        if (!r.ok) return
+        const j = (await r.json()) as { live?: Record<string, { pips: number | null; pct: number | null }> }
+        if (!cancelado) setAoVivo(j.live ?? {})
+      } catch {
+        /* sem números — as bolhas continuam a funcionar */
+      }
+    })()
+    return () => { cancelado = true }
+  }, [messages])
+
   const renderMessages = () => {
     let lastDay = ""
     const resolvedIds = computeResolvedSignalIds(messages)
@@ -1603,6 +1642,7 @@ function ChannelView({
             canWrite={canWrite}
             isAdmin={isAdmin}
             resolved={resolvedIds.has(msg.id)}
+            aoVivo={aoVivo[msg.id]}
             onReply={setReplyTo}
             onDelete={handleDelete}
             onLongPress={setContextMsg}
