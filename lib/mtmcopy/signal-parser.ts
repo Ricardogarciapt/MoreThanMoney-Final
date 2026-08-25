@@ -22,6 +22,15 @@ export interface ParsedSignal {
   raw: string
   /** Zona de entrada [low, high] quando o sinal indica um intervalo (ex. «Gold Sell Zone 4069 - 4075»). */
   zone?: [number, number] | null
+  /**
+   * PRIMEIRO valor da zona, na ordem em que o trader o escreveu.
+   *
+   * «Gold Buy Zone 4643 - 4637» → 4643. É o nível de entrada mais próximo do preço, o primeiro
+   * que o mercado toca. O `entry` continua a apontar para a PONTA da zona (4637), que é o preço
+   * mais vantajoso mas nem sempre enche — a distinção importa no Tap to Trade, onde o cliente
+   * quer entrar na trade e não ficar a ver a ordem pendente.
+   */
+  zoneFirst?: number | null
 }
 
 const NUMBER_RE = /\d+(?:[.,]\d+)?/g
@@ -259,6 +268,20 @@ const ZONE_ASSET_PREFIX =
   '(?:gold|btc(?:usd)?|bitcoin|xau|silver|xag|eth(?:usd)?)?\\s*'
 
 /** Intervalo da zona de entrada [low, high] (ex. «Gold Sell Zone 4069 - 4075» → [4069, 4075]). */
+/** Primeiro valor da zona, na ordem escrita (não ordenado). */
+export function extractZoneFirstValue(text: string): number | null {
+  const zone =
+    text.match(
+      new RegExp(
+        `${ZONE_ASSET_PREFIX}(?:buy|sell)\\s+zone\\s*(\\d+(?:[.,]\\d+)?)\\s*[-–—]\\s*(\\d+(?:[.,]\\d+)?)`,
+        'i',
+      ),
+    ) ??
+    text.match(/zone\s*(\d+(?:[.,]\d+)?)\s*[-–—]\s*(\d+(?:[.,]\d+)?)/i) ??
+    text.match(/^\s*(\d{2,7}(?:[.,]\d+)?)\s*[-–—]\s*(\d{2,7}(?:[.,]\d+)?)\s*$/m)
+  return zone ? parseNumber(zone[1]) : null
+}
+
 export function extractZoneRange(text: string): [number, number] | null {
   const zone =
     text.match(
@@ -760,6 +783,7 @@ export function parseSignal(text: string): ParsedSignal | null {
     orderType,
     raw: text.trim(),
     zone: extractZoneRange(text),
+    zoneFirst: extractZoneFirstValue(text),
   }
 }
 

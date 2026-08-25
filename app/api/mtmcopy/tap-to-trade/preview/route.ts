@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { entradaT2T } from '@/lib/mtmcopy/t2t-entry'
 import { parseSignal } from "@/lib/mtmcopy/signal-parser"
 import { t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { computeLotSize, signalForRiskSizing } from "@/lib/mtmcopy/lot-sizing"
@@ -43,7 +44,8 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
   if (!message) return NextResponse.json({ error: "Mensagem não encontrada" }, { status: 404 })
 
-  const signal = parseSignal(message.content ?? "")
+  const parsed = parseSignal(message.content ?? "")
+  const signal = parsed ? entradaT2T(parsed) : null
   if (!signal?.symbol || !signal.direction) {
     return NextResponse.json({ error: "Não foi possível interpretar este sinal" }, { status: 400 })
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { entradaT2T } from '@/lib/mtmcopy/t2t-entry'
 import { parseSignal, type ParsedSignal } from '@/lib/mtmcopy/signal-parser'
 import { isAllowedT2TSource, t2tMode } from '@/lib/mtmcopy/t2t-source'
 import {
@@ -140,7 +141,8 @@ export async function POST(request: NextRequest) {
   }
 
   // 2. Interpretar o sinal — parser do conteúdo, com fallback à ideia Sensei estruturada
-  let signal: ParsedSignal | null = message.content ? parseSignal(message.content) : null
+  const bruto = message.content ? parseSignal(message.content) : null
+  let signal: ParsedSignal | null = bruto ? entradaT2T(bruto) : null
   if (!signal || !signal.symbol || !signal.direction) {
     const { data: idea } = await supabase
       .from('sensei_trade_ideas')
@@ -316,7 +318,11 @@ export async function POST(request: NextRequest) {
         const px = ctx.marketPrice
         if (px && px > 0) {
           const diff = Math.abs(signal.entry - px) / px
-          if (diff < 0.0003) orderType = 'market'
+          // Preço já dentro da zona: o primeiro nível ficou para trás, entra a mercado. Um limite
+          // acima do ask (ou abaixo do bid) é recusado pela corretora, e um stop iria à caça do
+          // preço na direcção errada — ficaria à espera de sair da zona em vez de entrar nela.
+          const dentroDaZona = signal.zone ? px >= signal.zone[0] && px <= signal.zone[1] : false
+          if (diff < 0.0003 || dentroDaZona) orderType = 'market'
           else if (signal.direction === 'buy') { orderType = signal.entry > px ? 'stop' : 'limit'; openPrice = signal.entry }
           else { orderType = signal.entry < px ? 'stop' : 'limit'; openPrice = signal.entry }
         } else { orderType = 'limit'; openPrice = signal.entry }
