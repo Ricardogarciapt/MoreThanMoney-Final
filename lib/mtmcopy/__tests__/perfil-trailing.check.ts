@@ -3,6 +3,7 @@ import { SENSEI_PROVIDER_EXECUTION, PREMIUM_PROVIDER_EXECUTION } from '../provid
 import { usesPriceMonitor } from '../exit-engine'
 import { premiumTrailingAfterTp1Hit } from '../premium-trade-active'
 import { pipSizeForSymbol } from '../trade-outcome'
+import { symbolMatchesCanonical } from '../symbol-resolver'
 
 // O Sensei é acompanhado pelo motor de preço; o trailing da corretora fica desligado.
 assert.equal(usesPriceMonitor(SENSEI_PROVIDER_EXECUTION), true, 'Sensei tem de entrar no motor')
@@ -31,3 +32,15 @@ assert.ok(
 )
 
 console.log('✓ perfil-trailing: 8 verificações')
+
+// O motor tem de encontrar a posição mesmo com o sufixo da corretora no par. A linha guarda
+// 'XAUUSD'; a conta devolve 'XAUUSD.s' (PU Prime) ou 'XAUUSD-VIP' (VT). Com igualdade estrita a
+// posição ficava invisível e a linha era encerrada com a trade ainda aberta — foi o que aconteceu
+// ao registar a #345520193 a 2026-08-25.
+for (const corretora of ['XAUUSD.s', 'XAUUSD-VIP', 'XAUUSD']) {
+  assert.equal(symbolMatchesCanonical(corretora, 'XAUUSD'), true, `${corretora} devia casar com XAUUSD`)
+}
+for (const outro of ['XAGUSD', 'EURUSD']) {
+  assert.equal(symbolMatchesCanonical(outro, 'XAUUSD'), false, `${outro} NÃO pode casar com XAUUSD`)
+}
+console.log('✓ perfil-trailing: +5 verificações de símbolo')

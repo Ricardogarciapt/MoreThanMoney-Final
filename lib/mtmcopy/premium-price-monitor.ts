@@ -21,6 +21,7 @@ import {
 import { mirrorPremiumExit } from './premium-subscriber-exits'
 import { CANONICAL_PREMIUM_ACCOUNT_ID } from './provider-constants'
 import { pipSizeForSymbol } from './trade-outcome'
+import { symbolMatchesCanonical } from './symbol-resolver'
 
 interface ActiveRow {
   id: string
@@ -228,9 +229,11 @@ export async function runPremiumPriceMonitor(): Promise<{
       // ordens que a corretora reescreve), vale a coincidência de par, lado e HORA de abertura.
       // Sem isto a trade de 2026-08-25 às 14:20 — aberta sem comentário — ficou invisível ao
       // motor: sem BE, sem trailing, e a linha era dada como fechada com a posição ainda aberta.
+      // Comparação CANÓNICA do par: a corretora devolve 'XAUUSD.s', 'XAUUSD-VIP', 'XAUUSD.s'…
+      // conforme a conta, e a linha guarda 'XAUUSD'. Com igualdade estrita a posição nunca era
+      // encontrada e a linha era encerrada com a trade ainda aberta.
       const candidatas = positions.filter(
-        (p) =>
-          p.symbol?.toUpperCase() === row.symbol.toUpperCase() && positionDir(p) === row.direction,
+        (p) => symbolMatchesCanonical(p.symbol, row.symbol) && positionDir(p) === row.direction,
       )
       const pos =
         candidatas.find((p) => /prem/i.test(p.comment ?? '') || /gold\s*did/i.test(p.comment ?? '')) ??
