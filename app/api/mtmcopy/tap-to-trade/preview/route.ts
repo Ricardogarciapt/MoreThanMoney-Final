@@ -74,15 +74,38 @@ export async function GET(request: NextRequest) {
   const { data: conns } = await supabase
     .from("mtmcopy_connections")
     .select(
-      "id, account_label, mt5_login_last4, metaapi_account_id, lot_mode, lot_value, max_risk_percent, is_active, purpose, t2t_enabled, t2t_lot_mode, t2t_lot_value",
+      "id, account_label, mt5_login_last4, metaapi_account_id, lot_mode, lot_value, max_risk_percent, is_active, purpose, t2t_enabled, t2t_lot_mode, t2t_lot_value, mt5_status",
     )
     .eq("user_id", user.id)
-    .neq("mt5_status", "disconnected")
 
-  const alvos = (conns ?? [])
-    .filter((c) => c.metaapi_account_id)
-    .filter((c) => c.purpose === "tap_to_trade" || c.t2t_enabled === true)
-    .filter((c) => c.is_active !== false)
+  /**
+   * DIZER PORQUE É QUE A CONTA NÃO SERVE, em vez de a esconder.
+   *
+   * As contas inelegíveis eram simplesmente filtradas: o cliente abria o modal, via a lista de
+   * contas VAZIA, sem uma palavra, carregava em aceitar e apanhava um erro opaco. Uma ligação em
+   * pausa (o caso do Gonçalo, `is_active=false`) ou desligada ficava invisível — e a pessoa
+   * concluía, com razão, que "o Tap to Trade não funciona".
+   */
+  const candidatas = (conns ?? []).filter(
+    (c) => c.purpose === "tap_to_trade" || c.t2t_enabled === true,
+  )
+  const bloqueadas: Array<{ id: string; label: string; motivo: string; comoResolver: string }> = []
+  const alvos = candidatas.filter((c) => {
+    const label = c.account_label || (c.mt5_login_last4 ? `••${c.mt5_login_last4}` : c.id.slice(0, 6))
+    if (!c.metaapi_account_id) {
+      bloqueadas.push({ id: c.id, label, motivo: "A conta ainda não terminou a ligação ao MT5.", comoResolver: "Abre as definições da conta e conclui a ligação." })
+      return false
+    }
+    if (c.mt5_status === "disconnected") {
+      bloqueadas.push({ id: c.id, label, motivo: "A ligação ao MT5 caiu.", comoResolver: "Confirma a palavra-passe e o servidor nas definições da conta." })
+      return false
+    }
+    if (c.is_active === false) {
+      bloqueadas.push({ id: c.id, label, motivo: "A conta está em pausa.", comoResolver: "Ativa-a nas definições para voltar a aceitar sinais." })
+      return false
+    }
+    return true
+  })
 
   // Uma conta lenta não pode segurar o modal: o que não responder em 8s aparece sem números,
   // com a etiqueta de indisponível, em vez de deixar o cliente à espera.
@@ -114,5 +137,18 @@ export async function GET(request: NextRequest) {
     }),
   )
 
-  return NextResponse.json({ mode, trade, accounts })
+  // Saldo a zero é a outra razão silenciosa: a conta aparecia na lista, o cliente aceitava e a
+  // corretora respondia "not enough money" já depois do clique.
+  for (const a of accounts) {
+    if (a.available && (a.balance ?? 0) <= 0) {
+      bloqueadas.push({
+        id: a.id,
+        label: a.label,
+        motivo: "A conta está sem saldo.",
+        comoResolver: "Deposita na corretora antes de aceitar sinais.",
+      })
+    }
+  }
+
+  return NextResponse.json({ mode, trade, accounts, blocked: bloqueadas })
 }

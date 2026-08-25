@@ -114,6 +114,15 @@ export interface MtmcopySignalSourcesConfig {
   provider_strategy_id: string | null
   provider_account_id: string | null
   provider_routes?: ProviderRoute[]
+  /**
+   * Canais de chat que dão botão de Tap to Trade SEM conta provedora nossa.
+   *
+   * As rotas exigem `account_id` (é por lá que a conta MESTRE executa e é polida), mas há fontes
+   * em que não somos nós a abrir nada — quem entra é o cliente, ao aceitar. As «Ideias de Forex»
+   * são disso: vêm do webhook do scanner para o chat, e não há posição nossa para replicar.
+   * Sem esta lista, activá-las obrigava a inventar-lhes uma conta provedora só para aparecerem.
+   */
+  t2t_extra_channels?: string[]
   channel_providers?: Partial<Record<MtmcopyTelegramChannelKey, MtmcopyChannelProviderConfig>>
   provider_execution?: ProviderExecutionProfile
   provider_execution_profiles?: Partial<Record<MtmcopyTelegramChannelKey, ProviderExecutionProfile>>
@@ -238,6 +247,7 @@ export async function saveSignalSourcesConfig(config: MtmcopySignalSourcesConfig
     provider_strategy_id: config.provider_strategy_id,
     provider_account_id: config.provider_account_id,
     provider_routes: config.provider_routes,
+    t2t_extra_channels: config.t2t_extra_channels,
     channel_providers: config.channel_providers,
     provider_execution: config.provider_execution,
     provider_execution_profiles: config.provider_execution_profiles,

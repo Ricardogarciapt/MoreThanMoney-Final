@@ -150,6 +150,8 @@ interface TapPreview {
     channel: string
   }
   accounts: TapPreviewAccount[]
+  /** Contas que NÃO podem aceitar, com o motivo — ver a rota de preview. */
+  blocked?: Array<{ id: string; label: string; motivo: string; comoResolver: string }>
 }
 
 interface Sig {
@@ -1428,6 +1430,25 @@ export default function TapToTradeFeed() {
                       ))}
                     </div>
                     <p className="text-[10px] text-zinc-500 mt-2">Percentagem e valor calculados sobre a equity de cada conta.</p>
+                  </div>
+                )}
+                {/* DIZER PORQUE É QUE NÃO DÁ. Uma conta em pausa, desligada ou sem saldo era
+                    simplesmente omitida: o cliente via a lista vazia, carregava em aceitar e
+                    apanhava um erro opaco. Agora o motivo aparece ANTES do clique. */}
+                {preview?.mode === "execute" && (preview.blocked?.length ?? 0) > 0 && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 mb-3">
+                    <p className="text-[10px] uppercase tracking-wider text-amber-400 mb-2">
+                      {preview!.accounts.length > 0 ? "Contas que ficam de fora" : "Nenhuma conta pode aceitar"}
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {preview!.blocked!.map((b) => (
+                        <div key={`${b.id}-${b.motivo}`} className="text-[11px] leading-snug">
+                          <span className="text-zinc-300 font-medium">{b.label}</span>
+                          <span className="text-amber-300"> — {b.motivo}</span>
+                          <span className="text-zinc-500"> {b.comoResolver}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {previewBusy && !preview && <p className="text-[11px] text-zinc-500 mb-3">A calcular o risco nas tuas contas…</p>}

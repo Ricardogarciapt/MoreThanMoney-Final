@@ -46,12 +46,18 @@ export function appChannelsForRoute(r: ProviderRoute): string[] {
  */
 export async function tapToTradeEnabledChannels(): Promise<Set<string> | null> {
   try {
-    const routes = normalizeProviderRoutes(await getSignalSourcesConfig())
+    const config = await getSignalSourcesConfig()
+    const routes = normalizeProviderRoutes(config)
     const set = new Set<string>()
     for (const r of routes) {
       if (r.tap_to_trade === true && r.enabled !== false) {
         for (const ch of appChannelsForRoute(r)) set.add(ch)
       }
+    }
+    // Fontes sem conta provedora (o cliente é quem abre) — ver t2t_extra_channels.
+    for (const ch of config.t2t_extra_channels ?? []) {
+      const slug = String(ch).trim()
+      if (slug) set.add(slug)
     }
     return set
   } catch {

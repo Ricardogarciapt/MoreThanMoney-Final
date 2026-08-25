@@ -7,6 +7,11 @@ import { appChannelsForRoute } from '@/lib/mtmcopy/tap-to-trade-channels'
 
 export const dynamic = 'force-dynamic'
 
+/** Nome público das fontes T2T sem conta provedora. */
+const T2T_EXTRA_LABELS: Record<string, string> = {
+  'trade-ideas-setup': 'Ideias de Forex',
+}
+
 const supabase = getSupabaseAdmin()
 
 async function authed(request: NextRequest): Promise<boolean> {
@@ -33,6 +38,16 @@ export async function GET(request: NextRequest) {
   const active = routes.filter((r) => r.tap_to_trade === true && r.enabled !== false)
 
   const channelSet = new Set<string>()
+  // Fontes sem conta provedora nossa (as «Ideias de Forex», por exemplo): dão botão na app, mas
+  // não há posição nossa por trás — quem abre é o cliente. Ver `t2t_extra_channels`.
+  let extras: string[] = []
+  try {
+    const cfg = await getSignalSourcesConfig()
+    extras = (cfg.t2t_extra_channels ?? []).map((c) => String(c).trim()).filter(Boolean)
+    for (const ch of extras) channelSet.add(ch)
+  } catch {
+    /* sem extras */
+  }
   const providers = active.map((r) => {
     // inclui rotas custom (sem sender_channel) via app_channel / fallback genérico
     for (const ch of appChannelsForRoute(r)) channelSet.add(ch)
@@ -59,10 +74,19 @@ export async function GET(request: NextRequest) {
       .filter((id): id is string => !!id)
   }
 
+  const providersComExtras = [
+    ...providers,
+    ...extras.map((ch) => ({
+      label: T2T_EXTRA_LABELS[ch] ?? ch,
+      strategy: T2T_EXTRA_LABELS[ch] ?? ch,
+      sender_channel: ch,
+    })),
+  ]
+
   return NextResponse.json({
-    providers,
+    providers: providersComExtras,
     channels: [...channelSet],
     senseiSignalIds,
-    enabled: providers.length > 0,
+    enabled: providersComExtras.length > 0,
   })
 }
