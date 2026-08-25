@@ -293,22 +293,15 @@ export async function POST(req: NextRequest) {
   }
 
   if (r.ok && slug === 'premium-ideas') {
-    try {
-      const { processMtmcopyTelegramMessage } = await import('@/lib/mtmcopy/processor')
-      await processMtmcopyTelegramMessage({
-        chat: { id: Number(chatId), type: 'channel', title: 'MTM Premium' },
-        text: execText,
-        message_id: r.messageId ?? 0,
-        // reply_to_message com TEXT → o executor resolve o sinal-pai direto (sem depender de
-        // threading/lookup). Passamos o message_id (se houver) e/ou o texto do SETUP.
-        ...(replyTo || replyText
-          ? { reply_to_message: { ...(replyTo ? { message_id: replyTo } : {}), ...(replyText ? { text: replyText } : {}) } }
-          : {}),
-      } as Parameters<typeof processMtmcopyTelegramMessage>[0])
-    } catch (e) {
-      console.error('[relay-post] processador erro:', e instanceof Error ? e.message : e)
-    }
-
+    // O CHAT VEM PRIMEIRO, A EXECUÇÃO A SEGUIR.
+    //
+    // Estava ao contrário: primeiro o processador (que fala com a MetaAPI e leva segundos), só
+    // depois o espelho. A 2026-08-25, com o `relay-post` a exceder os 20s de leitura do relay, a
+    // trade abriu às 14:09:51 e o sinal só apareceu no chat às 14:10:32 — o cliente viu a posição
+    // aberta 41 segundos antes de ver o sinal que a abriu. Escrever o chat primeiro custa uma
+    // ida à base de dados (dezenas de ms) e garante que quem está a olhar para a app vê sempre
+    // o sinal antes da ordem.
+    //
     // ESPELHO DO LITERAL → chat da app (só Premium/'premium-ideas'). Sem etiqueta (telegram_sender=null,
     // pedido Ricardo). Dedup por telegram_message_id. O T2T reconhece a entrada pelo próprio texto.
     try {
@@ -341,6 +334,24 @@ export async function POST(req: NextRequest) {
       }
     } catch (e) {
       console.error('[relay-post] espelho premium erro:', e instanceof Error ? e.message : e)
+    }
+
+    // EXECUÇÃO: o Telegram não entrega ao webhook as mensagens do próprio bot, por isso o
+    // processador nunca as veria. Alimentamo-lo aqui, já com o sinal visível no chat.
+    try {
+      const { processMtmcopyTelegramMessage } = await import('@/lib/mtmcopy/processor')
+      await processMtmcopyTelegramMessage({
+        chat: { id: Number(chatId), type: 'channel', title: 'MTM Premium' },
+        text: execText,
+        message_id: r.messageId ?? 0,
+        // reply_to_message com TEXT → o executor resolve o sinal-pai direto (sem depender de
+        // threading/lookup). Passamos o message_id (se houver) e/ou o texto do SETUP.
+        ...(replyTo || replyText
+          ? { reply_to_message: { ...(replyTo ? { message_id: replyTo } : {}), ...(replyText ? { text: replyText } : {}) } }
+          : {}),
+      } as Parameters<typeof processMtmcopyTelegramMessage>[0])
+    } catch (e) {
+      console.error('[relay-post] processador erro:', e instanceof Error ? e.message : e)
     }
   }
   return NextResponse.json({ ok: r.ok, messageId: r.messageId, error: r.error })
