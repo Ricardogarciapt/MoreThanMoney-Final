@@ -80,6 +80,7 @@ export default function Navbar() {
       icon: TrendingUp,
       submenu: [
         { name: t("navfooter.subAutomation"), href: "/automation" },
+        { name: "MTM Auto", href: "/mtmauto" },
         { name: "MTMcopier", href: "/mtmcopy" },
         { name: t("navfooter.subOurScanners"), href: "/scanner" },
         { name: t("navfooter.subLiveScanner"), href: "/scanner-access" },
