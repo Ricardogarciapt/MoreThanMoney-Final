@@ -46,6 +46,7 @@ interface ActiveRow {
   profile: string | null
   /** Mensagem do Telegram que originou a trade — a ponte para o cartão no chat. */
   telegram_message_id: number | null
+  created_at: string
 }
 
 /**
@@ -108,6 +109,9 @@ const GOLDDID_BE_PRICE_MOVE = 5.0
 /** Canal do chat onde vivem os sinais do Premium. */
 const PREMIUM_CHAT_SLUG = 'premium-ideas'
 
+/** Quanto tempo depois do sinal uma posição sem comentário ainda conta como sendo dele. */
+const JANELA_CASAMENTO_MS = 10 * 60 * 1000
+
 /**
  * NÃO LEVAR STOP DEPOIS DE TER ESTADO EM LUCRO.
  *
@@ -133,6 +137,22 @@ const PREMIUM_BE_BUFFER_PIPS = (() => {
 
 /** Tamanho de pip — fonte única em trade-outcome.ts (esta cópia não conhecia cripto). */
 const pipSizeFor = pipSizeForSymbol
+
+/**
+ * Preço de referência da trade: o PREENCHIMENTO REAL, não o nível escrito no sinal.
+ *
+ * `row.entry` é a ponta da zona («Gold Buy Zone 4620 - 4615» → 4615). Quando o preço já passou a
+ * zona a ordem entra a mercado e enche noutro sítio — a 2026-08-25 uma compra registada a 4615
+ * encheu a 4622,29. Medir o lucro a partir de 4615 dava a trade como +72 pips no segundo em que
+ * abriu: a tranca de lucro disparava logo, o stop ia para 4615,5 (SETE pontos ABAIXO da entrada
+ * real, ou seja um stop de perda disfarçado de break-even) e a trade morria em segundos com
+ * +10/+30 pips. É por isso que nenhuma trade de hoje chegou ao TP2.
+ */
+function precoDeReferencia(row: ActiveRow, pos: MetaApiPosition): number {
+  const fill = pos.openPrice
+  if (Number.isFinite(fill) && fill > 0) return fill
+  return row.entry && row.entry > 0 ? row.entry : 0
+}
 
 /** Preço-alvo do BE = entrada + buffer a FAVOR (nunca na entrada seca). */
 function beTargetPrice(entry: number, direction: 'buy' | 'sell', symbol: string): number {
@@ -201,12 +221,21 @@ export async function runPremiumPriceMonitor(): Promise<{
 
     for (const row of accRows) {
       checked++
-      const pos = positions.find(
+      // A posição é NOSSA pelo comentário; quando o comentário não vem (contas de trade manual,
+      // ordens que a corretora reescreve), vale a coincidência de par, lado e HORA de abertura.
+      // Sem isto a trade de 2026-08-25 às 14:20 — aberta sem comentário — ficou invisível ao
+      // motor: sem BE, sem trailing, e a linha era dada como fechada com a posição ainda aberta.
+      const candidatas = positions.filter(
         (p) =>
-          p.symbol?.toUpperCase() === row.symbol.toUpperCase() &&
-          positionDir(p) === row.direction &&
-          (/prem/i.test(p.comment ?? '') || /gold\s*did/i.test(p.comment ?? '')),
+          p.symbol?.toUpperCase() === row.symbol.toUpperCase() && positionDir(p) === row.direction,
       )
+      const pos =
+        candidatas.find((p) => /prem/i.test(p.comment ?? '') || /gold\s*did/i.test(p.comment ?? '')) ??
+        candidatas.find((p) => {
+          if (!p.time) return false
+          const dt = Math.abs(Date.parse(p.time) - Date.parse(row.created_at))
+          return Number.isFinite(dt) && dt <= JANELA_CASAMENTO_MS
+        })
       if (!pos) {
         // Posição já não existe (fechada por trailing/SL/TP) → encerra o registo.
         await encerrarRegisto(admin, row, 'closed')
@@ -258,8 +287,9 @@ export async function runPremiumPriceMonitor(): Promise<{
       // de tudo o resto e em todos os estados — não interessa se já houve parciais.
       {
         const pip = pipSizeFor(row.symbol)
-        const lucroPips = row.entry && row.entry > 0
-          ? (row.direction === 'buy' ? price - row.entry : row.entry - price) / pip
+        const ref = precoDeReferencia(row, pos)
+        const lucroPips = ref > 0
+          ? (row.direction === 'buy' ? price - ref : ref - price) / pip
           : 0
         const pico = Math.max(row.peak_profit_pips ?? 0, lucroPips)
         if (pico > (row.peak_profit_pips ?? 0)) {
@@ -269,10 +299,10 @@ export async function runPremiumPriceMonitor(): Promise<{
             .eq('id', row.id)
           row.peak_profit_pips = pico
         }
-        if (!row.profit_locked && row.entry && row.entry > 0 && pico >= PREMIUM_LOCK_PROFIT_PIPS) {
+        if (!row.profit_locked && ref > 0 && pico >= PREMIUM_LOCK_PROFIT_PIPS) {
           try {
             await modifyPositionSlTp(
-              accountId, pos.id, beTargetPrice(row.entry, row.direction, row.symbol),
+              accountId, pos.id, beTargetPrice(ref, row.direction, row.symbol),
               undefined, undefined, row.symbol,
             )
             await admin
@@ -297,15 +327,16 @@ export async function runPremiumPriceMonitor(): Promise<{
       // Fazemo-lo aqui, e não só pelo trailing da corretora, porque nem todos os brokers o
       // honram e porque o nosso passo é de 1 segundo: seguimos mais de perto do que o servidor
       // deles. O piso é sempre o break-even — o stop nunca volta a ficar abaixo da entrada.
-      if (row.exits_done >= 1 && row.entry && row.entry > 0) {
+      if ((row.exits_done >= 1 || row.trailing_started) && precoDeReferencia(row, pos) > 0) {
         const pip = pipSizeFor(row.symbol)
+        const ref = precoDeReferencia(row, pos)
         const riskPips = row.sl && row.sl > 0
-          ? Math.max(1, Math.round(Math.abs(row.entry - row.sl) / pip))
+          ? Math.max(1, Math.round(Math.abs(ref - row.sl) / pip))
           : null
         const spec = premiumTrailingAfterTp1Hit(riskPips)
         const trailPips = spec.mode === 'threshold_pips' ? spec.trailPips : 45
         const distancia = trailPips * pip
-        const piso = beTargetPrice(row.entry, row.direction, row.symbol)
+        const piso = beTargetPrice(ref, row.direction, row.symbol)
         const atual = pos.stopLoss ?? null
         const candidato = row.direction === 'buy' ? price - distancia : price + distancia
         const novo = row.direction === 'buy' ? Math.max(candidato, piso) : Math.min(candidato, piso)
@@ -333,14 +364,15 @@ export async function runPremiumPriceMonitor(): Promise<{
         row.exits_done === 0 &&
         !row.trailing_started &&
         !row.early_trail_started &&
-        row.entry && row.entry > 0 &&
+        precoDeReferencia(row, pos) > 0 &&
         row.sl && row.sl > 0
       ) {
-        const riskDist = Math.abs(row.entry - row.sl)
-        const profitDist = row.direction === 'buy' ? price - row.entry : row.entry - price
+        const ref = precoDeReferencia(row, pos)
+        const riskDist = Math.abs(ref - row.sl)
+        const profitDist = row.direction === 'buy' ? price - ref : ref - price
         if (riskDist > 0 && profitDist >= PREMIUM_EARLY_BE_RATIO * riskDist) {
           try {
-            await modifyPositionSlTp(accountId, pos.id, beTargetPrice(row.entry, row.direction, row.symbol), undefined, undefined, row.symbol)
+            await modifyPositionSlTp(accountId, pos.id, beTargetPrice(ref, row.direction, row.symbol), undefined, undefined, row.symbol)
             await admin
               .from('mtmcopy_premium_active')
               .update({ early_trail_started: true, updated_at: new Date().toISOString() })
@@ -393,6 +425,11 @@ export async function runPremiumPriceMonitor(): Promise<{
         }
       }
 
+      // Conta pequena já em trailing: a escada de saídas não se aplica — não há mais nada para
+      // partir, e fechar no TP2 seria voltar a cortar o que o trailing está a proteger. Quem
+      // decide a saída passa a ser o stop que segue o preço (ou o TP final, como rede).
+      if (row.small_account && row.exits_done >= 1) continue
+
       const nextLevel = row.exits_done + 1
       if (nextLevel > 3) continue
       const tps = [row.tp1, row.tp2, row.tp3]
@@ -409,18 +446,44 @@ export async function runPremiumPriceMonitor(): Promise<{
         continue
       }
 
-      // Conta pequena → fecha tudo no Exit 1
+      // ── CONTA PEQUENA: NÃO FECHA NO EXIT 1 — PASSA A TRAILING ────────────────────
+      // Com 0,01 lotes não há parcial possível: a fatia do Exit 1 já é a posição inteira. Fechar
+      // tudo ali era desistir no TP1 — foi o que aconteceu o dia todo a 2026-08-25, com trades a
+      // morrer em segundos por +10/+30 pips e nenhuma a chegar ao TP2.
+      //
+      // Quando a conta mestre não consegue partir a posição, quem acompanha a trade é o MOTOR:
+      // sobe o stop para break-even e a partir daqui segue o preço a cada passagem (ratchet no
+      // bloco de trailing acima). O lucro passa a ser protegido pelo stop em vez de realizado à
+      // força, e a trade fica livre para ir ao TP2/TP3.
       if (row.small_account) {
-        const r = await closePositionById(accountId, pos.id)
-        if (r.success) {
+        const ref = precoDeReferencia(row, pos)
+        let arrancou = false
+        try {
+          // O TP final fica como REDE: se o trailing não apanhar um movimento rápido, a posição
+          // fecha na mesma no alvo do sinal.
+          const tpFinal = (row.tp3 && row.tp3 > 0 ? row.tp3 : null) ?? (row.tp2 && row.tp2 > 0 ? row.tp2 : null) ?? undefined
+          await modifyPositionSlTp(
+            accountId, pos.id, beTargetPrice(ref, row.direction, row.symbol),
+            tpFinal, undefined, row.symbol,
+          )
+          arrancou = true
           actions++
-          detail.push(`${row.symbol}: conta pequena → fecha tudo no Exit 1`)
-          // Subscritores escalam o seu Exit 1 (cada um conforme o seu lote), mesmo com a mestre pequena.
-          const pct1 = pcts[0] ?? 33
-          const m = shouldMirrorExits(accountId) && await mirrorPremiumExit(row.symbol, row.direction, { kind: 'close_frac', frac: pct1 / 100 })
-          if (m && (m.acted || m.skipped)) detail.push(`${row.symbol}: subs Exit 1 → ${m.acted} escalaram, ${m.skipped} seguraram`)
+          detail.push(`${row.symbol}: conta pequena → Exit 1 sem fechar, BE + trailing pelo motor`)
+        } catch {
+          detail.push(`${row.symbol}: conta pequena → BE do Exit 1 falhou`)
         }
-        await encerrarRegisto(admin, row, 'target_final', { exits_done: 3 })
+        // Os subscritores COM lote para partir realizam o seu Exit 1 na mesma.
+        const pct1 = pcts[0] ?? 33
+        const m = shouldMirrorExits(accountId) && await mirrorPremiumExit(row.symbol, row.direction, { kind: 'close_frac', frac: pct1 / 100 })
+        if (m && (m.acted || m.skipped)) detail.push(`${row.symbol}: subs Exit 1 → ${m.acted} escalaram, ${m.skipped} seguraram`)
+        await admin
+          .from('mtmcopy_premium_active')
+          .update({
+            exits_done: 1,
+            trailing_started: arrancou,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', row.id)
         continue
       }
 
