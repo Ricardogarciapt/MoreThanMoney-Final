@@ -1505,6 +1505,10 @@ async function executeViaMtmProvider(
             exits_done: 0,
             trailing_started: false,
             status: 'open',
+            // Premium mantém a gestão dele (escada de saídas). As outras rotas que usam o motor
+            // — Sensei e afins — entram no perfil 'trailing': BE proporcional ao risco e stop a
+            // seguir o preço, sem escada, com o TP da ordem como alvo final.
+            profile: isPremiumProvider ? null : 'trailing',
             // Liga a trade à mensagem que a originou: é por aqui que o monitor de preço encontra
             // o cartão no chat para anunciar o fecho e tirar o botão de Tap to Trade.
             telegram_message_id: telegramMessageId ?? null,

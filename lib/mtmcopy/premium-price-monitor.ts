@@ -42,7 +42,10 @@ interface ActiveRow {
   early_trail_started: boolean
   peak_profit_pips: number
   profit_locked: boolean
-  /** null = Premium normal · 'golddid' = perfil Gold Did (BE @ +5.0 sem trailing, fecho no TP2). */
+  /**
+   * null = Premium normal · 'golddid' = BE @ +5.0 sem trailing, fecho no TP2 ·
+   * 'trailing' = acompanhamento puro (BE proporcional ao risco + trailing, sem escada de saídas).
+   */
   profile: string | null
   /** Mensagem do Telegram que originou a trade — a ponte para o cartão no chat. */
   telegram_message_id: number | null
@@ -244,6 +247,66 @@ export async function runPremiumPriceMonitor(): Promise<{
 
       const price = pos.currentPrice
       if (price == null || !Number.isFinite(price)) continue
+
+      // ── PERFIL TRAILING (Sensei e outras rotas) ───────────────────────────────
+      // Gestão de acompanhamento pura, SEM escada de saídas: o alvo é o TP da própria ordem e
+      // quem realiza o lucro é o stop que segue o preço. Corre no mesmo ciclo de 1 segundo do
+      // Premium, mas em bloco à parte — o Premium não passa por aqui e continua exactamente
+      // como estava.
+      //
+      // Duas diferenças deliberadas face ao Premium:
+      //  · o BE é PROPORCIONAL AO RISCO (40% dele), não um número fixo de pips. Numa trade com
+      //    115 pips de risco, trancar aos 12 pips de pico punha o stop a +5 e fechava a posição
+      //    ao primeiro tremor — o oposto de deixar correr.
+      //  · nunca fecha em TP nenhum. Sobe o stop e deixa a trade andar.
+      if (row.profile === 'trailing') {
+        const ref = precoDeReferencia(row, pos)
+        if (ref <= 0 || !row.sl || row.sl <= 0) continue
+        const pip = pipSizeFor(row.symbol)
+        const riscoPips = Math.max(1, Math.abs(ref - row.sl) / pip)
+        const lucroPips = (row.direction === 'buy' ? price - ref : ref - price) / pip
+
+        const pico = Math.max(row.peak_profit_pips ?? 0, lucroPips)
+        if (pico > (row.peak_profit_pips ?? 0)) {
+          await admin
+            .from('mtmcopy_premium_active')
+            .update({ peak_profit_pips: pico, updated_at: new Date().toISOString() })
+            .eq('id', row.id)
+          row.peak_profit_pips = pico
+        }
+
+        // Ainda não andou o suficiente para proteger: não mexe no stop do sinal.
+        if (pico < PREMIUM_EARLY_BE_RATIO * riscoPips) continue
+
+        const spec = premiumTrailingAfterTp1Hit(Math.round(riscoPips))
+        const trailPips = spec.mode === 'threshold_pips' ? spec.trailPips : 45
+        const piso = beTargetPrice(ref, row.direction, row.symbol)
+        const candidato = row.direction === 'buy' ? price - trailPips * pip : price + trailPips * pip
+        const novo = row.direction === 'buy' ? Math.max(candidato, piso) : Math.min(candidato, piso)
+        const atual = pos.stopLoss ?? null
+        const melhora = atual == null
+          ? true
+          : row.direction === 'buy' ? novo > atual + pip * 0.5 : novo < atual - pip * 0.5
+        if (!melhora) continue
+        try {
+          await modifyPositionSlTp(accountId, pos.id, novo, pos.takeProfit, undefined, row.symbol)
+          if (!row.trailing_started || !row.profit_locked) {
+            await admin
+              .from('mtmcopy_premium_active')
+              .update({ trailing_started: true, profit_locked: true, updated_at: new Date().toISOString() })
+              .eq('id', row.id)
+            row.trailing_started = true
+            row.profit_locked = true
+          }
+          actions++
+          detail.push(
+            `${row.symbol}: trailing → stop ${novo.toFixed(2)} (${trailPips}p atrás, pico +${pico.toFixed(0)}p de ${riscoPips.toFixed(0)}p de risco)`,
+          )
+        } catch {
+          detail.push(`${row.symbol}: trailing falhou`)
+        }
+        continue
+      }
 
       // ── PERFIL GOLD DID ────────────────────────────────────────────────────────
       // Gestão SIMPLES da conta do Alcy: BE aos +5.0 (50 pips, sem trailing) e fecha no TP2.

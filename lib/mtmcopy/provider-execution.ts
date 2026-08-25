@@ -85,6 +85,9 @@ export const SENSEI_PROVIDER_EXECUTION: ProviderExecutionProfile = {
   auto_trailing_stop: false,
   trailing_stop_points: 200,
   mt_comment: 'MTM-SENSEI',
+  // Quem acompanha a trade é o motor de preço a 1 segundo, não o trailing da corretora: sobe o
+  // stop atrás do preço (trailing de lucro) e deixa a posição correr até ao TP da própria ordem.
+  price_monitor: true,
 }
 
 export const DEFAULT_PROVIDER_EXECUTION: ProviderExecutionProfile = {
