@@ -50,6 +50,8 @@ interface ActiveRow {
   profile: string | null
   /** Mensagem do Telegram que originou a trade — a ponte para o cartão no chat. */
   telegram_message_id: number | null
+  /** Mensagem do chat que originou a trade (sinais de webhook não passam pelo Telegram). */
+  chat_message_id: string | null
   created_at: string
 }
 
@@ -76,19 +78,30 @@ async function encerrarRegisto(
     .update({ ...extra, status: 'closed', updated_at: new Date().toISOString() })
     .eq('id', row.id)
 
-  if (row.telegram_message_id == null) return // linha antiga, sem ponte para o chat
+  // Ponte para o cartão: o id do chat quando o sinal nasceu de webhook, o id do Telegram quando
+  // veio de um canal. Sem uma das duas não há onde anunciar.
+  if (row.chat_message_id == null && row.telegram_message_id == null) return
   try {
-    const { data: msg } = await admin
-      .from('chat_messages')
-      .select('id')
-      .eq('channel_slug', PREMIUM_CHAT_SLUG)
-      .eq('telegram_message_id', row.telegram_message_id)
-      .maybeSingle()
-    if (!msg?.id) return
+    let msgId = row.chat_message_id
+    let slug = PREMIUM_CHAT_SLUG
+    if (msgId) {
+      const { data: m } = await admin
+        .from('chat_messages').select('channel_slug').eq('id', msgId).maybeSingle()
+      if (m?.channel_slug) slug = m.channel_slug as string
+    } else {
+      const { data: msg } = await admin
+        .from('chat_messages')
+        .select('id')
+        .eq('channel_slug', PREMIUM_CHAT_SLUG)
+        .eq('telegram_message_id', row.telegram_message_id)
+        .maybeSingle()
+      msgId = (msg?.id as string) ?? null
+    }
+    if (!msgId) return
     const { announceAndCloseByMessage } = await import('./t2t-lifecycle')
     await announceAndCloseByMessage({
-      chatMessageId: msg.id as string,
-      chatSlug: PREMIUM_CHAT_SLUG,
+      chatMessageId: msgId,
+      chatSlug: slug,
       symbol: row.symbol,
       direction: row.direction,
       event: evento,

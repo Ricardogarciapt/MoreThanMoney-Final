@@ -20,6 +20,19 @@ import { pipSizeForSymbol } from './trade-outcome'
 import { lifecycleMessage, type SignalEvent } from './signal-lifecycle'
 import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { T2T_SIGNAL_CHANNELS } from './tap-to-trade-channels'
+import { placeOrdersSequential, getMarketPrice } from './metaapi'
+import { isMarketOpen } from './market-hours'
+
+/**
+ * Conta que ABRE todos os sinais do Tap to Trade — «All tap to trade Signals», PU Prime Demo,
+ * login 700163127. É a conta-espelho: cada sinal publicado abre aqui, com 0,03 lotes (três para
+ * poder haver parciais a sério), e a gestão corre no motor de preço a 1 segundo como em qualquer
+ * outra. É daqui que saem as métricas honestas de cada fonte — sem depender de alguém aceitar.
+ */
+const CONTA_ESPELHO_T2T =
+  process.env.METAAPI_T2T_MIRROR_ACCOUNT_ID?.trim() || '6014b4fc-3ed3-458a-8cea-7099cf29b51f'
+/** Três lotes mínimos: sem isto não há parcial possível, fecha-se tudo no primeiro alvo. */
+const LOTE_ESPELHO = Number(process.env.T2T_MIRROR_LOT) || 0.03
 
 /** Um setup pendente desiste ao fim disto sem a entrada encher. */
 const HORAS_ATE_DESISTIR = Number(process.env.SIGNAL_TRACKER_PENDING_HOURS) || 24
@@ -41,6 +54,7 @@ interface Linha {
   entry: number | null
   sl: number | null
   tps: number[]
+  source_key: string | null
   status: 'pending' | 'active' | 'closed'
   exits_done: number
   peak_pips: number
@@ -174,6 +188,69 @@ async function gravarDesfecho(linha: Linha, pips: number, rotulo: string) {
     .eq('id', linha.id)
 }
 
+/**
+ * Abre o sinal na conta-espelho e entrega-o ao motor de preço.
+ *
+ * A trade é real (conta demo, dinheiro de brincar) porque só assim as métricas são honestas:
+ * slippage, spread, parciais que enchem ou não. O motor a 1 segundo trata do resto pelo perfil
+ * `trailing` — break-even proporcional ao risco, stop a seguir o preço, TP final como rede —
+ * e anuncia o desfecho no cartão através do `chat_message_id`.
+ *
+ * Nunca segura o tracker: se a ordem falhar, o sinal continua a ser seguido por cotação.
+ */
+async function abrirNaContaEspelho(l: Linha, price: number): Promise<void> {
+  const admin = getSupabaseAdmin()
+  try {
+    // O backlog silencioso NÃO abre trades: seria abrir agora, a preço de agora, dezenas de
+    // sinais de horas atrás. Esses seguem-se só por cotação, para a métrica.
+    if (!l.announce) return
+    const mh = isMarketOpen(l.symbol)
+    if (!mh.open) return
+    const alvoFinal = l.tps.length ? l.tps[l.tps.length - 1] : null
+    // Comentário legível no MT5: dá para ver de que fonte veio cada trade sem abrir o site.
+    const comment = `T2T-${(l.source_key ?? l.channel_slug).slice(0, 20)}`
+    const [r] = await placeOrdersSequential(CONTA_ESPELHO_T2T, [
+      {
+        accountId: CONTA_ESPELHO_T2T,
+        symbol: l.symbol,
+        direction: l.direction,
+        volume: LOTE_ESPELHO,
+        orderType: 'market',
+        stopLoss: l.sl,
+        takeProfit: alvoFinal,
+        comment,
+      },
+    ])
+    if (!r?.success) {
+      console.warn(`[signal-tracker] ${l.symbol}: espelho não abriu — ${r?.error ?? 'sem resposta'}`)
+      return
+    }
+    const [tp1, tp2, tp3] = l.tps
+    await admin.from('mtmcopy_premium_active').insert({
+      account_id: CONTA_ESPELHO_T2T,
+      symbol: l.symbol,
+      direction: l.direction,
+      entry: l.entry ?? price,
+      sl: l.sl,
+      tp1: tp1 ?? null,
+      tp2: tp2 ?? null,
+      tp3: tp3 ?? null,
+      exit_pct_tp1: 33,
+      exit_pct_tp2: 33,
+      exit_pct_tp3: 34,
+      original_lot: LOTE_ESPELHO,
+      small_account: false,
+      exits_done: 0,
+      trailing_started: false,
+      status: 'open',
+      profile: 'trailing',
+      chat_message_id: l.chat_message_id,
+    })
+  } catch (e) {
+    console.warn('[signal-tracker] espelho falhou:', e instanceof Error ? e.message : String(e))
+  }
+}
+
 export async function runSignalTracker(): Promise<ResultadoTracker> {
   const switches = (await getExecSwitches()) as unknown as Record<string, unknown>
   if (switches.signal_tracker === false) {
@@ -212,6 +289,7 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
           .from('mtmcopy_signal_tracking')
           .update({ status: 'active', entry_hit_at: new Date().toISOString(), updated_at: new Date().toISOString() })
           .eq('id', l.id)
+        await abrirNaContaEspelho(l, price)
         await anunciar(l, 'entry_hit', { price })
         eventos.push(`entrada ${l.symbol} ${l.channel_slug}`)
         continue
