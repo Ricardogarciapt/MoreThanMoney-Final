@@ -411,11 +411,21 @@ function extractSlFromText(text: string, lines: string[]): number | null {
   return null
 }
 
+/**
+ * Um PREÇO, não o número do nível.
+ *
+ * «Take Profit 1: 4600.5» tem dois números: o nível (1) e o preço. Exigir 2+ dígitos resolvia o
+ * ouro mas partia o forex — 1.90713 e 0.57517 têm UM dígito antes da vírgula, e todos os sinais
+ * de forex ficaram sem alvos: a ordem abria sem TP e o Tap to Trade recusava-os com «sinal
+ * incompleto». A regra certa é: tem casas decimais OU tem 2+ dígitos.
+ */
+const PRECO_TP = String.raw`(\d+[.,]\d+|\d{2,})`
+
 function extractTpFromText(text: string, lines: string[]): number[] {
   const tp: number[] = []
 
   // "TP1: 4645", "TP 1 4635.15", "TP1 4645" — o separador pode ser dois pontos, espaço ou nada.
-  const globalMatches = text.matchAll(/\btp\s*\d{0,2}\s*[:=]?\s*(\d{2,}(?:[.,]\d+)?)/gi)
+  const globalMatches = text.matchAll(new RegExp(String.raw`\btp\s*\d{0,2}\s*[:=]?\s*${PRECO_TP}`, 'gi'))
   for (const m of globalMatches) {
     const v = parseNumber(m[1])
     if (v != null) tp.push(v)
@@ -423,7 +433,7 @@ function extractTpFromText(text: string, lines: string[]): number[] {
 
   // "Take Profit 1: 4600.5" — o nível fica entre o rótulo e o preço, e o preço tem 2+ dígitos.
   // Sem isto o TP do Sensei saía como "1" e "2" (os níveis), não os preços. Bug antigo.
-  const globalTakeprofit = text.matchAll(/\btake\s?profit\s*\d{0,2}\s*[:=]?\s*(\d{2,}(?:[.,]\d+)?)/gi)
+  const globalTakeprofit = text.matchAll(new RegExp(String.raw`\btake\s?profit\s*\d{0,2}\s*[:=]?\s*${PRECO_TP}`, 'gi'))
   for (const m of globalTakeprofit) {
     const v = parseNumber(m[1])
     if (v != null) tp.push(v)
@@ -465,7 +475,7 @@ function extractTpFromText(text: string, lines: string[]): number[] {
     if (v != null) tp.push(v)
   }
 
-  const bareTp = text.matchAll(/\btp\s+(\d{2,}(?:[.,]\d+)?)/gi)
+  const bareTp = text.matchAll(new RegExp(String.raw`\btp\s+${PRECO_TP}`, 'gi'))
   for (const m of bareTp) {
     const v = parseNumber(m[1])
     if (v != null) tp.push(v)

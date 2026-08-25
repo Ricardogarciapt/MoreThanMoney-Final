@@ -343,18 +343,21 @@ export async function runT2TPriceMonitor(): Promise<{
             continue
           }
           // Exit 1 → BE (+buffer) + trailing ancorado ao risco.
-          if (nextLevel === 1 && entry && !st.trailing && podeTrailing) {
-            // O trailing é do MOTOR, não da corretora: nem todos os brokers honram o trailing
-            // server-side, e o nosso passo é de 1 segundo — seguimos o preço mais de perto do que
-            // eles. Quem sobe o stop é o bloco de ratchet abaixo; aqui só se põe o BE e arranca.
+          if (nextLevel === 1 && entry && !st.trailing) {
+            // BREAK-EVEN PARA TODAS AS FONTES, incluindo o James: proteger o risco depois do
+            // primeiro alvo não é trailing, é higiene. O que o James não leva é o RATCHET
+            // (bloco abaixo), que num swing de vários dias o tirava da trade no primeiro recuo.
+            //
+            // E o trailing, quando entra, é do MOTOR e não da corretora: nem todos os brokers o
+            // honram, e o nosso passo é de 1 segundo — seguimos o preço mais de perto que eles.
             await modifyPositionSlTp(accountId, pos.id, beTarget(entry, dir, row.symbol), undefined,
               undefined, row.symbol)
             st.beDone = true
-            st.trailing = true
+            st.trailing = podeTrailing
             st.trailSl = beTarget(entry, dir, row.symbol)
             await publishEvent(row, 'break_even', evCtx)
-            await publishEvent(row, 'trailing', evCtx)
-            actions.push(`be_trail ${row.symbol}`)
+            if (podeTrailing) await publishEvent(row, 'trailing', evCtx)
+            actions.push(`${podeTrailing ? 'be_trail' : 'be'} ${row.symbol}`)
           }
           state[row.id] = st
           continue
