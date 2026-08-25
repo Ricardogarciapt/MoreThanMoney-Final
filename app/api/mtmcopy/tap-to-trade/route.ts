@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { entradaT2T } from '@/lib/mtmcopy/t2t-entry'
 import { parseSignal, type ParsedSignal } from '@/lib/mtmcopy/signal-parser'
-import { isAllowedT2TSource, t2tMode } from '@/lib/mtmcopy/t2t-source'
+import { isAllowedT2TSource, t2tMode, t2tSourceKey } from '@/lib/mtmcopy/t2t-source'
+import { slComMinimo } from '@/lib/mtmcopy/source-risk-rules'
 import {
   computeLotSize,
   getLotSizingSkipReason,
@@ -330,7 +331,13 @@ export async function POST(request: NextRequest) {
       // Re-ancorar SL/TP ao lado correto preservando a distância do sinal (+ guarda de sanidade 25%).
       const priceRef = openPrice ?? ctx.marketPrice ?? signal.entry ?? null
       const entryRef = signal.entry && signal.entry > 0 ? signal.entry : priceRef
-      let orderSl = conn.copy_sl !== false ? signal.sl : null
+      // Stop alargado ao mínimo da fonte ANTES de tudo o resto. O MTM Scanner escreve stops de 2
+      // a 10 pips — dentro do spread do próprio par — e a trade nascia praticamente no stop.
+      // Isto é dinheiro do cliente: nunca APERTA, só alarga o que é curto demais. Ver
+      // source-risk-rules; foi a conta-espelho que expôs o problema, a fechar tudo no stop.
+      const fonteSinal = t2tSourceKey(message.channel_slug, message.content)
+      const slDaFonte = slComMinimo(fonteSinal, signal.symbol!, signal.direction!, signal.entry, signal.sl)
+      let orderSl = conn.copy_sl !== false ? (slDaFonte ?? null) : null
       let orderTp = conn.copy_tp !== false ? (signal.tp?.[0] ?? null) : null
       let adjustedStops = false
       const SANE_STOP_FRAC = 0.25

@@ -22,6 +22,7 @@ import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 import { T2T_SIGNAL_CHANNELS } from './tap-to-trade-channels'
 import { placeOrdersSequential, getMarketPrice } from './metaapi'
 import { isMarketOpen } from './market-hours'
+import { slComMinimo } from './source-risk-rules'
 
 /**
  * Conta que ABRE todos os sinais do Tap to Trade — «All tap to trade Signals», PU Prime Demo,
@@ -215,6 +216,9 @@ async function abrirNaContaEspelho(l: Linha, price: number): Promise<void> {
     const mh = isMarketOpen(l.symbol)
     if (!mh.open) return
     const alvoFinal = l.tps.length ? l.tps[l.tps.length - 1] : null
+    // Stop alargado ao mínimo da fonte: o MTM Scanner escreve stops de 2 pips, dentro do próprio
+    // spread do par — a trade nascia praticamente no stop. Ver source-risk-rules.
+    const slUsado = slComMinimo(l.source_key, l.symbol, l.direction, l.entry ?? price, l.sl) ?? l.sl
     // Comentário legível no MT5: dá para ver de que fonte veio cada trade sem abrir o site.
     const comment = `T2T-${(l.source_key ?? l.channel_slug).slice(0, 20)}`
     const [r] = await placeOrdersSequential(CONTA_ESPELHO_T2T, [
@@ -224,7 +228,7 @@ async function abrirNaContaEspelho(l: Linha, price: number): Promise<void> {
         direction: l.direction,
         volume: LOTE_ESPELHO,
         orderType: 'market',
-        stopLoss: l.sl,
+        stopLoss: slUsado,
         takeProfit: alvoFinal,
         comment,
       },
@@ -239,7 +243,7 @@ async function abrirNaContaEspelho(l: Linha, price: number): Promise<void> {
       symbol: l.symbol,
       direction: l.direction,
       entry: l.entry ?? price,
-      sl: l.sl,
+      sl: slUsado,
       tp1: tp1 ?? null,
       tp2: tp2 ?? null,
       tp3: tp3 ?? null,
@@ -252,6 +256,7 @@ async function abrirNaContaEspelho(l: Linha, price: number): Promise<void> {
       trailing_started: false,
       status: 'open',
       profile: 'trailing',
+      source_key: l.source_key,
       chat_message_id: l.chat_message_id,
     })
   } catch (e) {

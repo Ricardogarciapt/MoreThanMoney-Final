@@ -22,6 +22,7 @@ import { mirrorPremiumExit } from './premium-subscriber-exits'
 import { CANONICAL_PREMIUM_ACCOUNT_ID } from './provider-constants'
 import { pipSizeForSymbol } from './trade-outcome'
 import { symbolMatchesCanonical } from './symbol-resolver'
+import { trailingArrancaPips } from './source-risk-rules'
 
 interface ActiveRow {
   id: string
@@ -52,6 +53,8 @@ interface ActiveRow {
   telegram_message_id: number | null
   /** Mensagem do chat que originou a trade (sinais de webhook não passam pelo Telegram). */
   chat_message_id: string | null
+  /** Fonte do sinal — decide as regras de risco (ver source-risk-rules). */
+  source_key: string | null
   created_at: string
 }
 
@@ -292,7 +295,14 @@ export async function runPremiumPriceMonitor(): Promise<{
         }
 
         // Ainda não andou o suficiente para proteger: não mexe no stop do sinal.
-        if (pico < PREMIUM_EARLY_BE_RATIO * riscoPips) continue
+        //
+        // Por defeito o gatilho é uma FRACÇÃO DO RISCO (40%), que se adapta a stops largos como
+        // os do ouro. Mas há fontes com regra própria: o MTM Scanner arranca aos +10 pips fixos,
+        // porque com stops de 20 pips os 40% dariam 8 e o trailing prendia-se cedo demais no
+        // ruído. Ver source-risk-rules.
+        const arranqueDaFonte = trailingArrancaPips(row.source_key)
+        const gatilho = arranqueDaFonte ?? PREMIUM_EARLY_BE_RATIO * riscoPips
+        if (pico < gatilho) continue
 
         const spec = premiumTrailingAfterTp1Hit(Math.round(riscoPips))
         const trailPips = spec.mode === 'threshold_pips' ? spec.trailPips : 45
