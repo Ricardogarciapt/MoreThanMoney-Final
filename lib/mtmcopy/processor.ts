@@ -187,6 +187,84 @@ function withOrderTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<
   ])
 }
 
+/** Um timeout/falha de rede não diz que a ordem não foi — só que não veio resposta. */
+export function falhaTransitoria(erro: string | undefined): boolean {
+  if (!erro) return false
+  return /timeout|não respondeu|nao respondeu|econn|socket|network|fetch failed|502|503|504|sem resposta/i.test(
+    erro,
+  )
+}
+
+/**
+ * Procura na conta uma ordem/posição que corresponda ao pedido e seja recente.
+ *
+ * A MetaAPI dá timeout com a ordem já colocada mais vezes do que se pensa. Sem esta leitura, uma
+ * segunda tentativa abria a MESMA trade duas vezes na conta mestre — e, por CopyFactory, em toda
+ * a gente atrás dela.
+ */
+async function ordemJaEstaNaConta(
+  accountId: string,
+  req: { symbol: string; direction: 'buy' | 'sell' },
+  desde: number,
+): Promise<boolean> {
+  const { readOpenPositions, readPendingOrders } = await import('./metaapi')
+  const recente = (t?: string): boolean => {
+    if (!t) return true // sem hora → assume recente; duplicar é pior do que perder
+    const ms = Date.parse(t)
+    return !Number.isFinite(ms) || ms >= desde - 60_000
+  }
+  const mesmoLado = (tipo: string): boolean =>
+    req.direction === 'buy' ? /BUY/i.test(tipo) : /SELL/i.test(tipo)
+  const mesmoSimbolo = (sym: string): boolean =>
+    sym.toUpperCase().startsWith(req.symbol.toUpperCase().slice(0, 6))
+
+  const posicoes = await readOpenPositions(accountId)
+  if (posicoes?.some((p) => mesmoSimbolo(p.symbol) && mesmoLado(p.type) && recente(p.time))) return true
+  const ordens = await readPendingOrders(accountId)
+  if (ordens?.some((o) => mesmoSimbolo(o.symbol) && mesmoLado(o.type) && recente(o.time ?? o.brokerTime)))
+    return true
+  // Leitura falhada (null) devolve false: quem chama volta a tentar só se a falha foi transitória,
+  // e uma leitura impossível costuma vir com a conta indisponível — repetir não piora nada.
+  return false
+}
+
+/**
+ * Coloca a ordem da conta MESTRE com uma segunda tentativa.
+ *
+ * A 2026-08-25 o primeiro sinal de Nova Iorque («Gold Buy Zone 4615 - 4610») morreu num
+ * `Timeout 20000ms ao colocar ordem`: uma tentativa, sem rede de segurança, e o Premium não abriu
+ * para ninguém. Repetir às cegas era pior — por isso a retentativa só acontece depois de confirmar
+ * na conta que nada lá ficou.
+ */
+async function colocarOrdemDoProvedor(
+  accountId: string,
+  req: OrderRequest,
+  label: string,
+): Promise<OrderResult> {
+  const tentar = async (): Promise<OrderResult> => {
+    try {
+      const [r] = await withOrderTimeout(placeOrdersSequential(accountId, [req]), 20_000, label)
+      return r ?? { success: false, error: 'Sem resposta MetaAPI' }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  const inicio = Date.now()
+  const primeira = await tentar()
+  if (primeira.success || !falhaTransitoria(primeira.error)) return primeira
+
+  if (await ordemJaEstaNaConta(accountId, req, inicio)) {
+    console.log(`[mtmcopy] ${label}: timeout mas a ordem está na conta — não repito`)
+    return { success: true, brokerSymbol: req.symbol }
+  }
+
+  console.log(`[mtmcopy] ${label}: ${primeira.error} — nada na conta, segunda tentativa`)
+  const segunda = await tentar()
+  if (segunda.success) return segunda
+  return { ...segunda, error: `${primeira.error} · 2ª tentativa: ${segunda.error}` }
+}
+
 /** Subscritores elegíveis para log/estado — nunca expandir a todas as contas CopyFactory. */
 async function resolveLogTargets(subscribers: MTMcopierConnection[]): Promise<MTMcopierConnection[]> {
   return subscribers
@@ -1392,13 +1470,13 @@ async function executeViaMtmProvider(
       )
       // TP na ordem = rede de segurança (último TP do sinal); o monitor de preço gere parciais/BE por cima.
       req.takeProfit = premiumProviderSingle.takeProfit
-      const [r] = await withOrderTimeout(
-        placeOrdersSequential(provider.accountId, [req]),
-        20_000,
+      const r = await colocarOrdemDoProvedor(
+        provider.accountId,
+        req,
         `PREM ${req.symbol} ${req.direction}`,
       )
       results.push({
-        ...(r ?? { success: false, error: 'Sem resposta MetaAPI' }),
+        ...r,
         label: `PREM · parciais ${premiumProviderSingle.exitPcts.tp1}/${premiumProviderSingle.exitPcts.tp2}/${premiumProviderSingle.exitPcts.tp3}%`,
         lot: premiumProviderSingle.lot,
       })
@@ -1483,13 +1561,13 @@ async function executeViaMtmProvider(
       if (!mh.open) {
         results.push({ success: false, error: `mercado fechado (${mh.reason}) — ordem ignorada`, label: 'SKIP', lot: totalLot })
       } else {
-        const [r] = await withOrderTimeout(
-          placeOrdersSequential(provider.accountId, [req]),
-          20_000,
+        const r = await colocarOrdemDoProvedor(
+          provider.accountId,
+          req,
           `${provider.tag} ${req.symbol} ${req.direction}`,
         )
         results.push({
-          ...(r ?? { success: false, error: 'Sem resposta MetaAPI' }),
+          ...r,
           label: req.orderType === 'limit' ? 'LIMIT' : 'MARKET',
           lot: totalLot,
         })
