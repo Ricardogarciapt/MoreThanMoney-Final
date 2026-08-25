@@ -2051,7 +2051,8 @@ function senseiProvider(): MtmChannelProvider {
     channel: 'trade-ideas',
     accountId: process.env.METAAPI_PROVIDER_SENSEI_ACCOUNT_ID?.trim() || SENSEI_PROVIDER_ACCOUNT_ID,
     tag: 'Conta Sensei',
-    strategyId: null,
+    strategyId:
+      process.env.METAAPI_COPY_STRATEGY_SENSEI_ID?.trim() || CANONICAL_SENSEI_STRATEGY_ID,
     execution: SENSEI_PROVIDER_EXECUTION,
   }
 }

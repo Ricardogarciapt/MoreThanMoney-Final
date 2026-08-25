@@ -27,7 +27,12 @@ export const CANONICAL_BOOSTER_ACCOUNT_ID = 'dc588b39-1f0a-47a5-8985-28e6fbc9881
 export const CANONICAL_PREMIUM_STRATEGY_ID = 'MxsR'
 export const CANONICAL_TRADE_IDEAS_STRATEGY_ID = '5IHE'
 /** ziC3 estava ligada à demo 108127251 — MetaAPI não permite mover accountId; mADd = 18132 Live */
-export const CANONICAL_SENSEI_STRATEGY_ID = 'mADd'
+/**
+ * Estratégia CopyFactory do Sensei. Passou de 'mADd' para '0o5o' a 2026-08-25: a `mADd` vivia na
+ * conta a5a1dddd, apagada na MetaApi, por isso os clientes que a "copiavam" não copiavam nada.
+ * A nova está na conta própria do Sensei (login 34744071).
+ */
+export const CANONICAL_SENSEI_STRATEGY_ID = '0o5o'
 export const CANONICAL_GOLDKILLER_STRATEGY_ID = 'SDNb'
 export const CANONICAL_BOOSTER_STRATEGY_ID = 'pIrJ'
 /** Gold Did — conta PU Prime do Alcy (4dacaf5a) executa os sinais Premium com gestão própria

@@ -30,6 +30,7 @@ import {
 } from './metaapi'
 import { lifecycleMessage, logStatusFor, type SignalEvent } from './signal-lifecycle'
 import { pipSizeForSymbol } from './trade-outcome'
+import { t2tUsaTrailing } from './t2t-source'
 
 const STATE_KEY = 't2t_monitor_state'
 /** Split dos parciais quando o sinal traz vários TPs. */
@@ -43,6 +44,8 @@ interface RowState {
   exitsDone: number
   beDone: boolean
   trailing: boolean
+  /** Stop mais alto (compra) / mais baixo (venda) que o motor já colocou — o ratchet. */
+  trailSl?: number
   /** Já anunciámos o ENTRY HIT? (= a ordem chegou a encher) */
   announced: boolean
 }
@@ -299,6 +302,9 @@ export async function runT2TPriceMonitor(): Promise<{
 
       const entry = row.entry ?? pos.openPrice ?? null
       const sl = row.sl ?? null
+      // Trailing por FONTE: o Forex Swings (James) fica de fora — é swing de vários dias e um
+      // stop a seguir o preço tirava-o da trade no primeiro recuo normal.
+      const podeTrailing = t2tUsaTrailing(row.channel_key, row.raw_message)
       const tps = tpLevels(row)
       const pip = pipSizeFor(row.symbol)
 
@@ -337,12 +343,15 @@ export async function runT2TPriceMonitor(): Promise<{
             continue
           }
           // Exit 1 → BE (+buffer) + trailing ancorado ao risco.
-          if (nextLevel === 1 && entry && !st.trailing) {
-            const riskPips = sl && entry ? Math.max(1, Math.round(Math.abs(entry - sl) / pip)) : 25
+          if (nextLevel === 1 && entry && !st.trailing && podeTrailing) {
+            // O trailing é do MOTOR, não da corretora: nem todos os brokers honram o trailing
+            // server-side, e o nosso passo é de 1 segundo — seguimos o preço mais de perto do que
+            // eles. Quem sobe o stop é o bloco de ratchet abaixo; aqui só se põe o BE e arranca.
             await modifyPositionSlTp(accountId, pos.id, beTarget(entry, dir, row.symbol), undefined,
-              { mode: 'threshold_pips', activationPips: 1, trailPips: riskPips }, row.symbol)
+              undefined, row.symbol)
             st.beDone = true
             st.trailing = true
+            st.trailSl = beTarget(entry, dir, row.symbol)
             await publishEvent(row, 'break_even', evCtx)
             await publishEvent(row, 'trailing', evCtx)
             actions.push(`be_trail ${row.symbol}`)
@@ -365,6 +374,31 @@ export async function runT2TPriceMonitor(): Promise<{
           }
         }
       }
+      // ── TRAILING PELO MOTOR (ratchet a cada passagem) ────────────────────────────
+      // Depois de o stop estar protegido, sobe-o para preço − distância a cada passagem e NUNCA
+      // o desce. É isto que transforma o trailing stop em trailing de LUCRO: o que já foi ganho
+      // fica travado, e num movimento rápido o stop vai atrás do preço em vez de esperar pelo
+      // alvo. O piso é sempre o break-even — nunca volta a ficar abaixo da entrada.
+      if (podeTrailing && st.beDone && entry && sl) {
+        const riskPips = Math.max(1, Math.abs(entry - sl) / pip)
+        const distancia = riskPips * pip
+        const piso = beTarget(entry, dir, row.symbol)
+        const candidato = dir === 'buy' ? price - distancia : price + distancia
+        const alvo = dir === 'buy' ? Math.max(candidato, piso) : Math.min(candidato, piso)
+        const atual = st.trailSl ?? pos.stopLoss ?? null
+        const melhora = atual == null
+          ? true
+          : dir === 'buy' ? alvo > atual + pip * 0.5 : alvo < atual - pip * 0.5
+        if (melhora) {
+          const r = await modifyPositionSlTp(accountId, pos.id, alvo, pos.takeProfit, undefined, row.symbol)
+          if (r.success) {
+            st.trailSl = alvo
+            st.trailing = true
+            actions.push(`trail ${row.symbol} → ${alvo.toFixed(2)}`)
+          }
+        }
+      }
+
       state[row.id] = st
     } catch (e) {
       console.warn('[t2t-monitor] erro na linha', row.id, e instanceof Error ? e.message : String(e))

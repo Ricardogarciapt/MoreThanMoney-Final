@@ -86,6 +86,24 @@ export function t2tSourceKey(channelSlug?: string | null, content?: string | nul
   return null
 }
 
+/**
+ * Fontes cujo Tap to Trade é acompanhado pelo MOTOR: trailing stop a seguir o preço a cada
+ * passagem (1 s) e, por consequência, trailing de lucro — o stop sobe e nunca desce, por isso o
+ * que já foi ganho deixa de poder ser devolvido.
+ *
+ * FORA: `james` (Forex Swings). É swing de vários dias e a regra dele é explícita — sem trailing,
+ * ver [[trading-execution-rules]]: um stop a seguir o preço tirava-o da trade no primeiro recuo
+ * normal de um swing. As "Ideias de Forex" (`forexideas`, canal próprio no Telegram) NÃO são o
+ * James e ficam DENTRO, a pedido do Ricardo.
+ */
+const T2T_FONTES_SEM_TRAILING = new Set<T2TSourceKey>(['james'])
+
+export function t2tUsaTrailing(channelSlug?: string | null, content?: string | null): boolean {
+  const src = t2tSourceKey(channelSlug, content)
+  if (!src) return false
+  return !T2T_FONTES_SEM_TRAILING.has(src)
+}
+
 /** Uma mensagem é T2T negociável? (allowlist de fonte) */
 export function isAllowedT2TSource(channelSlug?: string | null, content?: string | null): boolean {
   return t2tSourceKey(channelSlug, content) !== null
