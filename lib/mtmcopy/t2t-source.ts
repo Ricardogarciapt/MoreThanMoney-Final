@@ -166,11 +166,21 @@ export function isT2TEntrySignal(channelSlug?: string | null, content?: string |
  */
 export type T2TMode = 'execute' | 'follow'
 
-const BTC_EXECUTAVEL = /\bBTC(USD|USDT)?(\.P)?\b/i
+/**
+ * Cripto que EXISTE como instrumento nas contas MT5 dos clientes — logo, negociável no T2T.
+ *
+ * A lista saiu dos símbolos reais das contas (PU Prime e VT Markets oferecem os mesmos): BTC,
+ * ETH, LTC, XRP, SOL, ADA, DOT, BCH, BNB e DOGE contra USD. Antes só o BTC passava, e um sinal
+ * de ETH nos perpétuos caía em «seguir» quando o cliente até o podia abrir na conta dele.
+ *
+ * O sufixo `USDT`/`.P` é do mundo dos perpétuos; aceita-se na leitura porque o sinal vem escrito
+ * assim, e é o PAR que decide, não o sufixo.
+ */
+const CRIPTO_NO_MT5 = /\b(BTC|ETH|LTC|XRP|SOL|ADA|DOT|BCH|BNB|DOGE)(USD|USDT)?(\.P)?\b/i
 
 export function t2tMode(channelSlug?: string | null, content?: string | null): T2TMode {
   if (channelSlug !== 'cripto-perps') return 'execute'
-  return BTC_EXECUTAVEL.test(content ?? '') ? 'execute' : 'follow'
+  return CRIPTO_NO_MT5.test(content ?? '') ? 'execute' : 'follow'
 }
 
 /** Rótulo do botão, para o chat e para a notificação não prometerem coisas diferentes. */

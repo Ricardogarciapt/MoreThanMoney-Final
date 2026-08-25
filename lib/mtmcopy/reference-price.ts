@@ -14,11 +14,19 @@ import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
   CANONICAL_SENSEI_ACCOUNT_ID,
+  SENSEI_PROVIDER_ACCOUNT_ID,
 } from './provider-constants'
 
-/** Contas por onde tentamos cotar, pela ordem. A primeira que responder ganha. */
+/**
+ * Contas por onde tentamos cotar, pela ordem. A primeira que responder ganha.
+ *
+ * As duas canónicas antigas (Trade Ideas `fbeeafeb`, Sensei `a5a1dddd`) já não existem na
+ * MetaApi — ficavam aqui a gastar uma tentativa e um timeout cada. A conta própria do Sensei
+ * entra à frente delas.
+ */
 const FONTES = [
   CANONICAL_PREMIUM_ACCOUNT_ID,
+  SENSEI_PROVIDER_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
   CANONICAL_SENSEI_ACCOUNT_ID,
 ]

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
-import { isAllowedT2TSource } from "@/lib/mtmcopy/t2t-source"
+import { isT2TEntrySignal, t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { useAuth } from "@/contexts/auth-context"
 import {
   canReadChannel,
@@ -674,10 +674,8 @@ function AttachSheet({
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 
 // ── Tap to Trade MTM — deteção de mensagens negociáveis ───────────────────────
-// ⚠️ Deve espelhar o âmbito T2T do servidor (tapToTradeEnabledChannels / rotas com
-// tap_to_trade=true). Se mudares o âmbito no /admin, atualiza aqui também (ou o botão
-// do chat dessincroniza do accept do servidor). Âmbito atual: Forex + MTM + GoldKiller + Premium + Sensei.
-const TAP_TRADE_CHANNELS = new Set(['trade-ideas-setup', 'sinais-scanner-mtm', 'trade-ideas', 'sinais-goldkiller', 'premium-ideas', 'sensei-scanner'])
+// O âmbito das FONTES vive numa só peça — lib/mtmcopy/t2t-source. Havia aqui uma lista de canais
+// à parte que era preciso lembrar de atualizar a par do /admin; foi removida por isso mesmo.
 const TAP_TRADE_FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
 /** Um follow-up POSTERIOR com isto RESOLVE o sinal (ativou/fechou/morreu) → o botão T2T esconde-se.
  *  'ENTRY HIT' literal (monitor/PrimeVerse) e não 'ativad' — senão as entradas Sensei ("Ideia
@@ -733,30 +731,18 @@ function computeResolvedSignalIds(messages: ChatMessage[]): Set<string> {
   }
   return resolved
 }
-const TAP_TRADE_DIR_RE = /(\b(buy|sell|long|short|compra|venda)\b|🟢|🔴)/i
-/** Sensei: só a "Entry Alert / Ideia Activada" (entrada activada) é negociável. */
-const SENSEI_ACTIVE_RE = /(entrada\s+activ|entrada\s+ativ|ideia\s+activ|ideia\s+ativ|entry\s+alert)/i
 /** Tempo máximo para um sinal estar ativo / clicável (5 minutos). */
 const TAP_TRADE_MAX_AGE_MS = 5 * 60 * 1000
 
-/** Heurística client-side: é um sinal de ENTRADA negociável? (o backend valida definitivamente) */
+/**
+ * É um sinal de ENTRADA negociável?
+ *
+ * Chama a MESMA função que o servidor usa a aceitar (`isT2TEntrySignal`). Enquanto isto foi uma
+ * cópia local, as duas divergiam: o chat mostrava o botão e o accept respondia «sinal incompleto»,
+ * que é a pior combinação possível — o cliente carrega e leva com um erro.
+ */
 function looksLikeTradeSignal(channelSlug?: string | null, content?: string | null): boolean {
-  // Só as 4 fontes permitidas (Premium/Sensei/James/PrimeVerse) — filtro por FONTE, não só canal.
-  if (!channelSlug || !content || !isAllowedT2TSource(channelSlug, content)) return false
-  if (TAP_TRADE_FOLLOWUP_RE.test(content)) return false // follow-ups (TP hit/BE/SL) não são entradas
-  if (!TAP_TRADE_DIR_RE.test(content)) return false // precisa de direção
-  if (!/\d{2,}/.test(content)) return false // precisa de pelo menos um preço
-  // Entrada COMPLETA: exige TP (alvo). Exclui updates só-SL / "Ref:" / resumos → não são negociáveis.
-  if (!/\btp\s*\d|\btp\s*:|take\s*profit|🎯/i.test(content)) return false
-
-  // Sensei: exige o alerta de entrada activada COMPLETO (entrada + SL + TP)
-  if (channelSlug === 'sensei-scanner') {
-    const activated = SENSEI_ACTIVE_RE.test(content)
-    const hasSL = /stop\s*loss|🛑/i.test(content)
-    const hasTP = /take\s*profit|tp\s*\d/i.test(content)
-    if (!(activated && hasSL && hasTP)) return false
-  }
-  return true
+  return isT2TEntrySignal(channelSlug, content)
 }
 
 /** Setups PENDENTES (entrada por zona/limite por tocar) ficam aceitáveis até 24h — o backend valida
@@ -765,7 +751,10 @@ const TAP_TRADE_PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000
 /** O sinal traz um NÍVEL de entrada? ("Entrada: 4398", "Gold Sell Zone 4398 - 4403", "Entry: …") */
 function hasEntryLevel(content?: string | null): boolean {
   if (!content) return false
-  return /(entrada|entry|zona|zone)\s*:?\s*[0-9]+[.,]?[0-9]*/i.test(content)
+  // A etiqueta nem sempre encosta ao número («Entrada activada: 4637.54») e nem sempre existe
+  // (o Golden Moves escreve a zona a seco, «4606-4602»). Espelha o feed do T2T.
+  if (/(entrada|entry|zona|zone)[^\n\d]{0,20}[0-9]+[.,]?[0-9]*/i.test(content)) return true
+  return /^\s*\d{2,7}(?:[.,]\d+)?\s*[-–—]\s*\d{2,7}(?:[.,]\d+)?\s*$/m.test(content)
 }
 
 /** Sinal ainda aceitável? Setup pendente → 24h; entrada a mercado → 5 min. */
@@ -1087,7 +1076,7 @@ function MessageBubble({
                   className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2 active:scale-[0.98] transition-transform"
                   aria-label={t("chat.tapToTradeAria")}
                 >
-                  <TrendingUp className="w-4 h-4" /> Tap to Trade MTM
+                  <TrendingUp className="w-4 h-4" /> {t2tMode(msg.channel_slug, msg.content) === "follow" ? "Seguir sinal" : "Tap to Trade MTM"}
                 </button>
               )}
               <p className={`text-[10px] mt-0.5 text-right leading-none ${isOwn ? "text-black/40" : "text-gray-600"}`}>
