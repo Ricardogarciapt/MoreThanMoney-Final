@@ -25,9 +25,6 @@ export const CANONICAL_GOLDDID_STRATEGY_ID = 'e68I'
 export const CANONICAL_COPYTRADER_RG_ACCOUNT_ID = '0f38257a-ba12-4f6c-b20c-9139693b3674'
 export const CANONICAL_COPYTRADER_RG_STRATEGY_ID = 'su0a'
 
-/** Gold Did — conta Alcy 700161536 (PU Prime demo) alimentada pelo canal GOLD DID. */
-export const CANONICAL_GOLDDID_SOURCE_ACCOUNT_ID = 'ac351c88-f206-439c-9999-97636e8f9791'
-export const CANONICAL_GOLDDID_SOURCE_STRATEGY_ID = 'GdId'
 /** Golden Moves — conta Alcy 700147340 (PU Prime demo) alimentada pelo canal GOLDEN MOVES. */
 export const CANONICAL_GOLDENMOVES_ACCOUNT_ID = '58aeb8d6-3b4c-4178-bfa6-3e0c8af24ff0'
 export const CANONICAL_GOLDENMOVES_STRATEGY_ID = 'GdMv'
@@ -72,15 +69,6 @@ export const MTM_COPY_STRATEGY_CATALOG: Record<
       'maioria dos alertas é descartada antes de chegar à tua conta. Parciais nos alvos e ' +
       'trailing depois do primeiro. Como opera BTC, corre também fora do horário de mercado do ' +
       'ouro. Conta mínima 500 USD (a 1% por trade).',
-  },
-  [CANONICAL_GOLDDID_SOURCE_STRATEGY_ID]: {
-    title: 'MTM Auto Gold Did',
-    publicLabel: 'MTM Auto Gold Did',
-    description:
-      'Ouro, pelo trader do canal Gold Did. O stop e os alvos são os que vêm na mensagem — não ' +
-      'inventamos gestão por cima. Cada sinal entra a 1% do teu saldo e a gestão (parciais, ' +
-      'break-even, fecho) segue o que o trader anuncia, acompanhada pelo motor de preço. ' +
-      'Conta mínima 500 USD.',
   },
   [CANONICAL_GOLDENMOVES_STRATEGY_ID]: {
     title: 'MTM Auto Golden Moves',

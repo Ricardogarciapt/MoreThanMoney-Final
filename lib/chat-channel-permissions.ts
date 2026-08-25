@@ -16,7 +16,6 @@ export function isReadOnlyChannel(slug: string) {
     slug === "sinais-goldkiller" ||
     slug === "sinais-scanner-mtm" ||
     // Fontes novas: são canais de LEITURA, tal como os outros de sinais.
-    slug === "gold-did" ||
     slug === "golden-moves"
   )
 }
@@ -35,7 +34,6 @@ export function canReadChannel(slug: string, user: ChatChannelUser | null | unde
     slug === "premium-ideas" ||
     slug === "sensei-scanner" ||
     slug === "sinais-goldkiller" ||
-    slug === "gold-did" ||
     slug === "golden-moves"
   ) {
     return (

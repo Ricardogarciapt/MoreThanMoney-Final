@@ -23,7 +23,6 @@ export const SOURCE_LABEL: Record<T2TSourceKey, string> = {
   james: 'Forex Swings',
   primeverse: 'PrimeVerse',
   aurum: 'Aurum Flow',
-  golddid: 'Gold Did',
   goldenmoves: 'Golden Moves',
 }
 

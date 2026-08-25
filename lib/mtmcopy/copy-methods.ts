@@ -6,7 +6,6 @@ import {
   CANONICAL_SENSEI_STRATEGY_ID,
   CANONICAL_GOLDKILLER_STRATEGY_ID,
   CANONICAL_BOOSTER_STRATEGY_ID,
-  CANONICAL_GOLDDID_SOURCE_STRATEGY_ID,
   CANONICAL_GOLDENMOVES_STRATEGY_ID,
   CANONICAL_GOLDDID_STRATEGY_ID,
   MTM_COPY_STRATEGY_CATALOG,
@@ -17,7 +16,7 @@ import {
 export type MtmcopyCopyMethod = 'telegram_group' | 'strategy' | 'master_slave'
 
 export type MtmcopyTelegramGroup =
-  | 'premium' | 'trade_ideas' | 'sensei' | 'goldkiller' | 'forex_swings' | 'gold_did' | 'golden_moves'
+  | 'premium' | 'trade_ideas' | 'sensei' | 'goldkiller' | 'forex_swings' | 'golden_moves'
 
 /**
  * Grupos de sinais OFERECIDOS ao cliente como fontes copiáveis — TODOS (Ricardo 2026-08-19).
@@ -32,7 +31,6 @@ export const MTMCOPY_TELEGRAM_GROUP_IDS: MtmcopyTelegramGroup[] = [
   'forex_swings',
   'goldkiller',
   // Fontes novas (2026-08-24): cada uma tem chat próprio na app e conta provedora dedicada.
-  'gold_did',
   'golden_moves',
 ]
 
@@ -44,7 +42,6 @@ export const TELEGRAM_GROUP_STRATEGY_ID: Record<MtmcopyTelegramGroup, string> = 
   sensei: CANONICAL_SENSEI_STRATEGY_ID,
   goldkiller: CANONICAL_GOLDKILLER_STRATEGY_ID,
   forex_swings: CANONICAL_TRADE_IDEAS_STRATEGY_ID,
-  gold_did: CANONICAL_GOLDDID_SOURCE_STRATEGY_ID,
   golden_moves: CANONICAL_GOLDENMOVES_STRATEGY_ID,
 }
 
@@ -52,7 +49,7 @@ function isTelegramGroup(v: unknown): v is MtmcopyTelegramGroup {
   return (
     v === 'premium' || v === 'trade_ideas' || v === 'sensei' ||
     v === 'goldkiller' || v === 'forex_swings' ||
-    v === 'gold_did' || v === 'golden_moves'
+    v === 'golden_moves'
   )
 }
 
@@ -126,14 +123,6 @@ export const TELEGRAM_GROUPS: {
     description:
       'Sinais swing de forex (maioritariamente set & forget), com trailing automático e cópia automática na tua conta.',
     chatId: '-1004362819270',
-  },
-  {
-    id: 'gold_did',
-    channelKey: 'premium-signals',
-    title: 'Gold Did',
-    description:
-      'Sinais do canal Gold Did, com 1% de risco por trade e a gestão que vem em cada mensagem.',
-    chatId: '-1003452689502',
   },
   {
     id: 'golden_moves',
@@ -217,7 +206,6 @@ export function getMtmStrategyOptions(): MtmCopyStrategyOption[] {
   // com o mesmo nome. Aparecem aqui e nos Grupos de sinais — são os dois caminhos pelos quais
   // um cliente pode subscrever. Sem subscrição explícita nenhuma conta as executa.
   for (const [id, canal] of [
-    [CANONICAL_GOLDDID_SOURCE_STRATEGY_ID, 'premium-signals'],
     [CANONICAL_GOLDENMOVES_STRATEGY_ID, 'premium-signals'],
   ] as const) {
     const cat = MTM_COPY_STRATEGY_CATALOG[id]
@@ -391,7 +379,6 @@ const TELEGRAM_GROUP_SHORT_LABEL: Record<MtmcopyTelegramGroup, string> = {
   sensei: 'Sensei Scanner',
   goldkiller: 'GoldKiller · Ouro',
   forex_swings: 'Forex Swings',
-  gold_did: 'Gold Did',
   golden_moves: 'Golden Moves',
 }
 

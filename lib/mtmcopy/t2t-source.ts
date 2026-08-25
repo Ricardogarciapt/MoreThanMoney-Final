@@ -24,7 +24,6 @@ export type T2TSourceKey =
   | 'goldkiller'
   | 'mtmscanner'
   | 'forexideas'
-  | 'golddid'
   | 'goldenmoves'
 export type T2TAssetClass = 'gold' | 'forex' | 'crypto' | 'indices'
 
@@ -38,7 +37,6 @@ export const T2T_SOURCES: { key: T2TSourceKey; label: string; hint: string }[] =
   { key: 'james', label: 'Forex Swings', hint: 'Swings de forex (James)' },
   { key: 'primeverse', label: 'PrimeVerse', hint: 'Reencaminhados PrimeVerse' },
   { key: 'aurum', label: 'Aurum Flow', hint: 'Scanner ORB — ouro e perpétuos' },
-  { key: 'golddid', label: 'Gold Did', hint: 'Sinais do canal Gold Did' },
   { key: 'goldenmoves', label: 'Golden Moves', hint: 'Sinais do canal Golden Moves' },
 ]
 
@@ -63,7 +61,6 @@ export function t2tSourceKey(channelSlug?: string | null, content?: string | nul
     return 'mtmscanner'
   }
   if (channelSlug === 'premium-ideas') return 'premium'
-  if (channelSlug === 'gold-did') return 'golddid'
   if (channelSlug === 'golden-moves') return 'goldenmoves'
   if (channelSlug === 'sensei-scanner') return 'sensei'
   if (channelSlug === 'sinais-goldkiller' || /gold\s*killer|goldkiller/i.test(c)) return 'goldkiller'

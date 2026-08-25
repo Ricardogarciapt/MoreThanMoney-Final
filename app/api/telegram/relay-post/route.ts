@@ -12,68 +12,6 @@ import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
 const FONTES_COM_CHAT_PROPRIO = new Set(['gold-did', 'golden-moves'])
 
 /**
- * Traduz o follow-up do trader para o NOSSO formato.
- *
- * O trader escreve "Tp2 hit" ou "SET BE" — três palavras, sem par, sem direção, sem quanto
- * rendeu. No chat da app isso lê-se mal: podia ser de qualquer trade. Aqui vira o mesmo cartão
- * que o Premium usa — "🎯 Alvo 2 · XAUUSD 🔵 COMPRA · +58 pips · +0,13%" — com o par e a direção
- * vindos da ENTRADA a que o follow-up responde, e os pips medidos entre a entrada e o alvo.
- *
- * Devolve null quando não é um follow-up reconhecido: aí espelha-se o texto do trader tal como veio.
- */
-async function textoCanonicoDoFollowup(
-  slug: string,
-  texto: string,
-  paiId: string | null,
-): Promise<string | null> {
-  const { detectLifecycleEvent } = await import('@/lib/mtmcopy/followup-reader')
-  const evento = detectLifecycleEvent(texto)
-  if (!evento) return null
-
-  let entrada: number | null = null
-  let simbolo: string | null = null
-  let direcao: 'buy' | 'sell' | null = null
-  let alvos: number[] = []
-  if (paiId) {
-    const { data } = await getSupabaseAdmin()
-      .from('chat_messages').select('content').eq('id', paiId).maybeSingle()
-    const { parseSignal } = await import('@/lib/mtmcopy/signal-parser')
-    const pai = parseSignal(String((data as { content?: string } | null)?.content ?? ''))
-    if (pai) {
-      simbolo = pai.symbol
-      direcao = pai.direction
-      entrada = pai.entry ?? (pai.zone ? (pai.zone[0] + pai.zone[1]) / 2 : null)
-      alvos = pai.tp ?? []
-    }
-  }
-  if (!simbolo) return null
-
-  // Preço de saída: o alvo que o trader diz ter sido atingido.
-  const nivel = Number(texto.match(/tp\s*(\d)/i)?.[1] ?? '')
-  const preco = Number.isFinite(nivel) && alvos[nivel - 1] ? alvos[nivel - 1] : null
-
-  const { lifecycleMessage } = await import('@/lib/mtmcopy/signal-lifecycle')
-  const { text } = lifecycleMessage(evento, {
-    symbol: simbolo,
-    direction: direcao,
-    level: Number.isFinite(nivel) ? nivel : null,
-    entry: entrada,
-    price: preco,
-    source: slug === 'gold-did' ? 'Gold Did' : 'Golden Moves',
-  })
-  return text
-}
-
-// Premium: espelhamos aqui o TEXTO LITERAL do Telegram para o 'premium-ideas' (pedido Ricardo —
-// mensagens idênticas ao Telegram, com zona/entrada/TP1-3/comentário). O master-poll deixa de postar
-// o render terso quando já existe este literal (passa a fallback), por isso não há duplicação. As
-// mensagens do próprio bot não voltam ao webhook, logo esta é a única inserção do literal na app.
-
-// Endpoint p/ os relays (VPS Telethon) publicarem via o BOT do site — o token válido vive só
-// na Vercel, por isso o relay NÃO precisa dele. Autenticado por Bearer CRON_SECRET. Só POST de texto.
-export const dynamic = 'force-dynamic'
-
-/**
  * Aplica uma edição da fonte: corrige o Telegram, corrige o chat da app, e — no Premium —
  * volta a passar o texto pelo processador para os níveis ficarem ancorados na versão nova.
  *
@@ -306,9 +244,12 @@ export async function POST(req: NextRequest) {
         // telegram_message_id (não há mensagem de destino). Sem isto os follow-ups ficavam ao
         // nível de topo e liam-se como sinais novos.
         const paiId = await resolveThreadParent(slug, replyToSourceId ?? replyTo, execText)
-        // Follow-up → o NOSSO cartão, com par, direção e pips. Entrada → o texto do trader,
-        // que é onde estão os níveis que o cliente quer ver.
-        const conteudo = (await textoCanonicoDoFollowup(slug, execText, paiId)) ?? execText
+        // ESPELHO FIEL: o chat mostra o que o trader escreveu, tal como está no Telegram.
+        // Traduzir os follow-ups para o nosso cartão afastava o chat do canal — quem segue os
+        // dois via textos diferentes para o mesmo acontecimento. Os cartões de gestão (entry
+        // hit, break-even, parciais, fecho) continuam a existir, mas vindos do MOTOR DE PREÇO:
+        // publicam-se quando acontecem de facto na conta, não quando o trader os escreve.
+        const conteudo = execText
         const { data: msg } = await supabase
           .from('chat_messages')
           .insert({

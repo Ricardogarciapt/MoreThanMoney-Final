@@ -16,7 +16,9 @@ eq('gold did simbolo', g?.symbol, 'XAUUSD')
 eq('gold did direcao (gerundio)', g?.direction, 'buy')
 eq('gold did stop', g?.sl, 4622.65)
 eq('gold did alvos (precos, nao niveis)', g?.tp, [4635.15, 4637.65, 4640.15])
-eq('gold did e entrada T2T', isT2TEntrySignal('gold-did', goldDid), true)
+// O Gold Did foi removido como fonte (duplicava a estratégia Premium), mas o FORMATO dele
+// continua a ser lido: é o mesmo que outros traders usam ("XAUUSD I'm buying", "TP 1 4635.15").
+eq('formato gold did continua a ler', g?.tp?.length, 3)
 
 // ── GOLDEN MOVES: "I'm buying XAUUSD" + zona sem rótulo + "TP1 x" + "SL y"
 const golden = "I'm buying XAUUSD\n\n4642.50-4638\n\nTP1 4645\nTP2 4647\nTP3 4649\nTP4 4653\n\nSL 4635"
@@ -29,7 +31,7 @@ eq('golden e entrada T2T', isT2TEntrySignal('golden-moves', golden), true)
 
 // ── O que NÃO é sinal
 eq('comentario nao e entrada',
-   isT2TEntrySignal('gold-did', '7pm.\n\ni would like to see if there is any more willing buyers below 4630.'), false)
+   isT2TEntrySignal('golden-moves', '7pm.\n\ni would like to see if there is any more willing buyers below 4630.'), false)
 eq('resumo do dia nao e entrada',
    isT2TEntrySignal('golden-moves', '**Monday Summary**\n**5 Trades Sent**\n**4 winning trades**'), false)
 
@@ -51,7 +53,7 @@ eq('sensei alvos sao precos', parseSignal(sensei)?.tp, [4600.5, 4610.2])
 // ── O nosso próprio cartão NÃO é uma entrada (senão ganhava botão de Tap to Trade e os
 // follow-ups seguintes penduravam-se nele em vez do sinal do trader).
 eq('cartao proprio nao e entrada',
-   isT2TEntrySignal('gold-did', '🎯 Alvo 1 · XAUUSD 🔵 COMPRA · +75 pips · +0,16%\nParcial realizada.'), false)
+   isT2TEntrySignal('golden-moves', '🎯 Alvo 1 · XAUUSD 🔵 COMPRA · +75 pips · +0,16%\nParcial realizada.'), false)
 eq('fecho proprio nao e entrada',
    isT2TEntrySignal('golden-moves', '🏁 Posição fechada · XAUUSD 🔵 COMPRA · +120 pips · +0,26%'), false)
 

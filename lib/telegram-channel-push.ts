@@ -31,7 +31,7 @@ type PushResult = { ok: boolean; status?: number; error?: string }
  *
  * Sem filtros definidos ([] ou null) segue tudo — é o comportamento por omissão de sempre.
  */
-const SIGNAL_SLUGS = new Set<string>([...T2T_SIGNAL_CHANNELS, 'premium-ideas', 'cripto-perps', 'gold-did', 'golden-moves'])
+const SIGNAL_SLUGS = new Set<string>([...T2T_SIGNAL_CHANNELS, 'premium-ideas', 'cripto-perps', 'golden-moves'])
 
 async function activeT2TUserIds(channelSlug: string, content: string | null): Promise<string[]> {
   const supabase = getSupabaseAdmin()

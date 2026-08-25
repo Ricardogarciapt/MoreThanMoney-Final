@@ -42,7 +42,6 @@ export const CANAIS_DE_SINAIS = [
   'cripto-perps',
   'ideias-e-sinais',
   'sinais',
-  'gold-did',
   'golden-moves',
 ] as const
 
