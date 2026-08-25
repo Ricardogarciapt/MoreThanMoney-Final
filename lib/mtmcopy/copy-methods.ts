@@ -22,15 +22,18 @@ export type MtmcopyTelegramGroup =
  * Grupos de sinais OFERECIDOS ao cliente como fontes copiáveis — TODOS (Ricardo 2026-08-19).
  * O Sensei deixou de ser «Estratégia MTM»: copia-se aqui, pelo grupo, ou pelo Tap to Trade.
  */
+/**
+ * Grupos de sinais REALMENTE copiáveis — os que têm estratégia viva por trás.
+ *
+ * 2026-08-25: saíram o Sensei, as Ideias de Forex, os Forex Swings e o GoldKiller. As contas
+ * MetaApi mestres dessas estratégias foram apagadas e as estratégias CopyFactory com elas; ficar
+ * a oferecê-las era vender uma cópia que nunca executaria. Continuam a publicar sinais nos chats
+ * e no Tap to Trade — o que desapareceu foi a cópia automática.
+ *
+ * Para as repor: recriar a conta mestre, a estratégia, e voltar a acrescentar aqui.
+ */
 export const MTMCOPY_TELEGRAM_GROUP_IDS: MtmcopyTelegramGroup[] = [
-  // TODOS os grupos de sinais são copiáveis (pedido Ricardo 2026-08-19). O Premium e o Sensei
-  // deixaram de estar reservados ao método «Estratégia MTM» — copiam-se aqui, pelo grupo.
   'premium',
-  'sensei',
-  'trade_ideas',
-  'forex_swings',
-  'goldkiller',
-  // Fontes novas (2026-08-24): cada uma tem chat próprio na app e conta provedora dedicada.
   'golden_moves',
 ]
 

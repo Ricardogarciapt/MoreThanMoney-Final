@@ -27,6 +27,7 @@ import {
 import {
   COPY_METHODS,
   TELEGRAM_GROUPS,
+  MTMCOPY_TELEGRAM_GROUP_IDS,
   copyMethodLabel,
   parseTelegramGroups,
   strategyPickLabel,
@@ -445,7 +446,9 @@ export default function MtmCopyPage() {
             </div>
 
             <div className="mt-6 grid sm:grid-cols-2 gap-4 text-left max-w-3xl mx-auto">
-              {TELEGRAM_GROUPS.map((g) => (
+              {/* Só os grupos com estratégia viva — ver MTMCOPY_TELEGRAM_GROUP_IDS. Mostrar os
+                  outros era oferecer uma cópia que não executa. */}
+              {TELEGRAM_GROUPS.filter((g) => MTMCOPY_TELEGRAM_GROUP_IDS.includes(g.id)).map((g) => (
                 <div key={g.id} className="rounded-xl border border-[#D2A63C]/15 bg-[#D2A63C]/5 p-4">
                   <p className="text-[#D2A63C] font-semibold text-sm mb-1">{g.title}</p>
                   <p className="text-xs text-zinc-400 leading-relaxed">{g.description}</p>
