@@ -714,6 +714,13 @@ export default function NewLandingPage() {
         <p className="ln2">{t("l2.packScannersLine")}</p>
         <ul><li>Sensei</li><li>GoldKiller</li><li>MTM Scanner</li><li>Aurum Flow</li></ul>
         <a className="btn g" href="/scanner">{t("l2.packSeeScanners")}</a></div>
+      {/* MTM Auto vive fora do ecossistema: é a porta para quem chega sem nos conhecer, e por
+          isso tem preço próprio e checkout próprio — não é um extra dos packs. */}
+      <div className="pk r d3"><div className="nm">{t("l2.packAuto")}</div><div className="pr">25€</div><div className="pe">{t("l2.packAutoPer")}</div>
+        <p className="ln2">{t("l2.packAutoLine")}</p>
+        <ul><li>{t("l2.packAuto1")}</li><li>{t("l2.packAuto2")}</li><li>{t("l2.packAuto3")}</li><li>{t("l2.packAuto4")}</li></ul>
+        <p className="ln2" style={{color:"var(--gold-lt)"}}>{t("l2.packAutoFree")}</p>
+        <a className="btn g" href="/mtmauto">{t("l2.packAutoCta")}</a></div>
     </div>
     <p className="risk r d3">{t("l2.packsGuarantee")}</p>
   </div>

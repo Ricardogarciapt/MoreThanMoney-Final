@@ -240,6 +240,76 @@ export default function FAQPage() {
             </section>
 
             {/* Suporte */}
+            {/* Execução automática: as duas portas, explicadas antes de alguém escolher a
+                errada. É a pergunta que mais chega ao suporte desde que existem as duas. */}
+            <section>
+              <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
+                MTM Copy e MTM Auto
+              </h2>
+              <Accordion type="single" collapsible className="space-y-3">
+                <AccordionItem value="auto-1" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Qual é a diferença entre o MTM Copy e a MTM Auto?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    O motor é o mesmo; o que muda é para quem é. O <b>MTM Copy</b> vive no site e é para
+                    quem já opera: várias contas ao mesmo tempo, lote e risco por conta e por estratégia,
+                    presets para contas financiadas. Custa +20€/mês por cima da tua subscrição MTM.
+                    A <b>MTM Auto</b> é uma app à parte, para quem está a começar ou vem de fora do
+                    ecossistema: descarregas, ligas a corretora, escolhes quem copias. 25€/mês, e o
+                    download é grátis.{" "}
+                    <Link href="/automation" className="text-[#D2A63C] hover:underline">Ver as duas lado a lado</Link>.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="auto-2" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Preciso de ser membro MTM para usar a MTM Auto?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Não. A MTM Auto funciona com qualquer conta MT4 ou MT5, sem passar por aqui. Se já fores
+                    membro MoreThanMoney, entras com o mesmo email e não pagas nada — reconhecemos a tua
+                    subscrição do nosso lado.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="auto-3" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Há alguma forma de não pagar a mensalidade da MTM Auto?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Há três. Se operares em real na <b>PU Prime</b>, a subscrição é gratuita — só pedimos que a
+                    conta tenha tido pelo menos 100 $ alguma vez, e validas isso dentro da app (VT Markets conta
+                    a partir de 350 $). Se já fores membro MTM, também não pagas. E há cupões, que damos em
+                    campanhas e parcerias. Cobramos a quem não está de nenhum dos lados.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="auto-4" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    O que é o Tap to Trade?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    É a execução com um toque: o sinal chega ao telemóvel, vês a entrada, o stop e os alvos, e
+                    decides se entra. Nada abre sem tu tocares. A partir daí é o motor que trata da posição —
+                    break-even, saídas parciais nos alvos e trailing. Vive na{" "}
+                    <Link href="/mtmauto" className="text-[#D2A63C] hover:underline">MTM Auto</Link>.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="auto-5" className="bg-gray-950 border border-gray-800 rounded-xl overflow-hidden">
+                  <AccordionTrigger className="px-5 py-4 hover:bg-[#D2A63C]/5 text-left font-medium text-white">
+                    Posso usar os dois ao mesmo tempo?
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-2 text-gray-300 text-sm leading-relaxed">
+                    Podes, mas raramente faz sentido — e nunca na mesma conta de corretora. Os dois abriam a
+                    mesma ideia duas vezes, e o risco que definiste passaria a valer o dobro. Se quiseres os
+                    dois, usa contas diferentes.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </section>
+
             <section>
               <h2 className="text-sm font-semibold uppercase tracking-widest text-[#D2A63C] mb-4">
                 Suporte
