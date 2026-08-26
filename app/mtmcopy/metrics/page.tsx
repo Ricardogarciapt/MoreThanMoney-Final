@@ -9,6 +9,7 @@ import { ArrowLeft, BarChart3, Loader2, Server, Target, TrendingUp } from "lucid
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import TradingDashboard from "@/components/mtmcopy/trading-dashboard"
+import PainelMtmAuto from "@/components/mtmcopy/painel-mtm-auto"
 
 export default function MtmcopyMetricsPage() {
   const { isAdmin } = useAuth()
@@ -95,6 +96,11 @@ export default function MtmcopyMetricsPage() {
             </div>
           </div>
         )}
+
+        {/* A MTM Auto é outra app, mas partilha a autenticação: quem é membro e a usa vê aqui o
+            que ela fez na conta dele, sem ter de saltar entre dois sítios. Quem não a usa não vê
+            nada — o terminal é para ver a conta, não para vender. */}
+        {accessToken && <PainelMtmAuto accessToken={accessToken} />}
 
         {/* Quadros «Desempenho das estratégias ativas / Provider» removidos (pedido Ricardo
             2026-08-19) — informação duplicada; o terminal mostra a performance das contas do membro. */}
