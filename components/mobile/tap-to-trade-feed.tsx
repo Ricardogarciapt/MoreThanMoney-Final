@@ -22,6 +22,7 @@ import {
   Clock,
   Trash2,
 } from "lucide-react"
+import MtmAutoMetricas from "@/components/mobile/mtm-auto-metricas"
 
 const FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|entry\s*hit|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
 /** Encerra mesmo a ideia (ao contrário de um BE ou de um TP1, que a deixam a correr). */
@@ -825,6 +826,10 @@ export default function TapToTradeFeed() {
       <p className="text-xs text-zinc-400 mb-3">
         {t("t2t.introBefore")}<strong className="text-zinc-200">{t("t2t.yourAccount")}</strong>{t("t2t.introAfter")}
       </p>
+
+      {/* Se também usas a MTM Auto, o que ela fez na tua conta aparece aqui — as duas partilham
+          o login, e saltar entre apps para saber como está o mês não faz sentido nenhum. */}
+      <MtmAutoMetricas />
 
       {/* Configuração da conta (PrimeSync-style, dentro do T2T) */}
       <div className="rounded-2xl border border-[#D2A63C]/25 bg-zinc-900/60 mb-3 overflow-hidden">
