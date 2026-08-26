@@ -366,12 +366,21 @@ export default async function MtmAutoPage() {
               email e não pagas.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
+              {/* Cria a conta e segue direto para o pagamento: mandar a pessoa procurar onde se
+                  paga depois de se registar perde metade delas pelo caminho. */}
               <Link
-                href={`${APP_URL}/registo`}
+                href={`${APP_URL}/registo?pagar=1`}
                 target="_blank"
                 className="rounded-xl bg-[#D2A63C] px-6 py-3.5 text-sm font-bold text-black"
               >
-                Criar conta
+                Criar conta e subscrever
+              </Link>
+              <Link
+                href={`${APP_URL}/registo`}
+                target="_blank"
+                className="rounded-xl border border-white/20 px-6 py-3.5 text-sm font-semibold text-white/85"
+              >
+                Só criar conta
               </Link>
               <Link
                 href="/automation"
