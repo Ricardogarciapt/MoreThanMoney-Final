@@ -596,7 +596,7 @@ export default function SetupModal({
             <Settings2 className="w-5 h-5 text-[#D2A63C]" />
           </div>
           <div>
-            <h3 id="mtmcopy-setup-title" className="text-xl font-bold text-white">Configurar MTMcopier</h3>
+            <h3 id="mtmcopy-setup-title" className="text-xl font-bold text-white">Configurar MTM Copy</h3>
             <p className="text-xs text-gray-500">Liga a tua conta e escolhe como queres copiar</p>
           </div>
         </div>

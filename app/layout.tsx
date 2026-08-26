@@ -15,7 +15,7 @@ import XpUpdateListener from "@/components/xp-update-listener"
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   title: "MoreThanMoney - Plataforma de Trading e Educação Financeira",
-  description: "Plataforma integrada de formação financeira e serviços de automatização com inteligência artificial. Scanners AI, educação financeira, MTMcopier e muito mais.",
+  description: "Plataforma integrada de formação financeira e serviços de automatização com inteligência artificial. Scanners AI, educação financeira, MTM Copy, MTM Auto e muito mais.",
   keywords: ["trading", "forex", "scanners ai", "educação financeira", "mtmcopier", "tap to trade", "copytrading", "portugal"],
   authors: [{ name: "MoreThanMoney" }],
   creator: "MoreThanMoney",

@@ -171,7 +171,7 @@ export default function TradingDashboard({
     : 50
 
   const tabs: { id: MetricsTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: "copy", label: "Cópia MTMcopier", icon: Zap },
+    { id: "copy", label: "Cópia MTM Copy", icon: Zap },
     { id: "journal", label: "Trading Journal", icon: BookOpen },
     { id: "plan", label: "Plano de trading", icon: ClipboardList },
   ]

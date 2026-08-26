@@ -58,7 +58,7 @@ export default function MtmcopyMetricsPage() {
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
             <Link href="/mtmcopy" className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-white mb-3">
-              <ArrowLeft className="w-4 h-4" /> Voltar ao MTMcopier
+              <ArrowLeft className="w-4 h-4" /> Voltar ao MTM Copy
             </Link>
             <h1 className="text-3xl md:text-4xl font-black text-white flex items-center gap-3">
               <BarChart3 className="w-8 h-8 text-[#D2A63C]" />
@@ -88,7 +88,7 @@ export default function MtmcopyMetricsPage() {
           <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/40 p-1">
             <div className="flex items-center gap-2 px-4 py-2 border-b border-zinc-800/60 text-xs text-zinc-500">
               <TrendingUp className="w-3.5 h-3.5 text-[#D2A63C]" />
-              MTMcopier · Métricas em tempo real
+              MTM Copy · Métricas em tempo real
             </div>
             <div className="p-4 md:p-6">
               <TradingDashboard accessToken={accessToken} variant="broker" />
@@ -106,7 +106,7 @@ export default function MtmcopyMetricsPage() {
           >
             <span className="flex items-center gap-2 text-sm text-emerald-400">
               <Server className="w-4 h-4" />
-              Admin · Consola MTMcopier completa
+              Admin · Consola MTM Copy completa
             </span>
             <span className="text-xs text-zinc-500">Abrir →</span>
           </Link>
@@ -115,7 +115,7 @@ export default function MtmcopyMetricsPage() {
         {!subscribed && (
           <div className="mt-8 text-center rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6">
             <p className="text-amber-200/90 mb-4">
-              A cópia automática só arranca após activares a subscrição MTMcopier (+20€/mês).
+              A cópia automática só arranca após activares a subscrição MTM Copy (+20€/mês).
             </p>
             <Button asChild className="bg-[#D2A63C] hover:bg-[#BB8525] text-black font-bold">
               <Link href="/mtmcopy">Activar subscrição</Link>

@@ -417,7 +417,7 @@ export default function MtmCopyPage() {
               🔗 Addon · Copy Trading Automático
             </Badge>
             <h1 className="text-4xl md:text-6xl font-black mb-5 text-white leading-[1.1] tracking-tight">
-              <span className="bg-gradient-to-r from-[#D2A63C] via-[#E8C56A] to-[#D2A63C] bg-clip-text text-transparent [-webkit-background-clip:text]">MTMcopier</span>
+              <span className="bg-gradient-to-r from-[#D2A63C] via-[#E8C56A] to-[#D2A63C] bg-clip-text text-transparent [-webkit-background-clip:text]">MTM Copy</span>
               <br className="hidden sm:block" />
               <span className="text-2xl md:text-4xl font-bold text-zinc-300"> Cópia automática profissional</span>
             </h1>
@@ -472,7 +472,7 @@ export default function MtmCopyPage() {
                 ) : hasConnections ? (
                   <><Settings2 className="mr-2 h-5 w-5" />Gerir contas</>
                 ) : (
-                  <>Ativar o MTMcopier <ArrowRight className="ml-2 h-5 w-5" /></>
+                  <>Ativar o MTM Copy <ArrowRight className="ml-2 h-5 w-5" /></>
                 )}
               </Button>
               <Button onClick={() => openSetup("new")} variant="outline" className="border-gray-700 text-gray-300 hover:bg-gray-800">
@@ -811,7 +811,7 @@ export default function MtmCopyPage() {
             <ul className="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm text-gray-300">
               {[
                 "Ligação segura à tua conta de trading — credenciais encriptadas e nunca partilhadas",
-                "Define limites de risco diário — o MTMcopier pára de copiar se o limite for atingido",
+                "Define limites de risco diário — o MTM Copy pára de copiar se o limite for atingido",
                 "Ativa, pausa ou desliga a cópia a qualquer momento, sem perder a configuração",
                 "Histórico completo de sinais recebidos e ordens executadas, sempre disponível para consulta",
                 "Funciona como addon — precisas de ter um Pack MTM (Membro ou Premium) ativo",
@@ -838,7 +838,7 @@ export default function MtmCopyPage() {
               ) : hasConnections ? (
                 <>Gerir contas <Settings2 className="ml-2 h-5 w-5" /></>
               ) : (
-                <>Ativar o MTMcopier por +20€/mês <Zap className="ml-2 h-5 w-5" /></>
+                <>Ativar o MTM Copy por +20€/mês <Zap className="ml-2 h-5 w-5" /></>
               )}
             </Button>
             <p className="text-xs text-gray-500 mt-3">Pagamento seguro via Stripe · cancela quando quiseres</p>
