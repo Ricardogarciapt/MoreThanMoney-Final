@@ -16,7 +16,9 @@ export async function GET(req: NextRequest) {
       hook: p.get("hook") || "Disciplina cria liberdade.",
       cta: p.get("cta") || "",
       handle: p.get("handle") || "morethanmoney.pt",
-      proof: p.get("proof") !== "0",
+      // A prova é um FACTO, não um interruptor: quem quer a linha manda o texto dela. "0"
+      // continua a escondê-la, para as pré-visualizações sem número.
+      proof: p.get("proof") === "0" ? false : (p.get("proof") ?? undefined),
       kicker: p.get("kicker") || "MORE THAN MONEY",
     }),
     { width: 1080, height: 1350 },

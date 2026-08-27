@@ -122,7 +122,7 @@ async function pollJob(getPath: string, token: string, tries = 8): Promise<any> 
 }
 
 /** Autofila o template, exporta PNG e devolve o URL público (bucket). null em falha → fallback card. */
-export async function canvaAutofillImage(hook: string, cta: string): Promise<string | null> {
+export async function canvaAutofillImage(hook: string, cta: string, facto?: string): Promise<string | null> {
   if (!canvaConfigured()) return null
   const token = await getAccessToken()
   if (!token) return null
@@ -131,7 +131,10 @@ export async function canvaAutofillImage(hook: string, cta: string): Promise<str
     const data: Record<string, unknown> = {
       [f.hook]: { type: 'text', text: hook },
       [f.cta]: { type: 'text', text: cta ? `Comenta «${cta}»` : '' },
-      [f.proof]: { type: 'text', text: '675 trades · 63% win rate · +7.060€' },
+      // A linha de prova vem VIVA de `factoDoDia()`. Era fixa — "675 trades · 63% win rate ·
+      // +7.060€" — congelada em 30/06 e em euros, que não são comparáveis entre lotes. Sem
+      // facto, fica vazia: melhor um cartão sem número do que um número velho.
+      [f.proof]: { type: 'text', text: facto ?? '' },
     }
     const start = await api('/autofills', token, { method: 'POST', body: JSON.stringify({ brand_template_id: process.env.CANVA_BRAND_TEMPLATE_ID!.trim(), data }) })
     const done = await pollJob(`/autofills/${(start.job || start).id}`, token)

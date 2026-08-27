@@ -9,7 +9,8 @@ export interface SocialCardParams {
   hook: string
   cta?: string
   handle?: string
-  proof?: boolean
+  /** `false` esconde a linha de prova. Uma string escreve ESSE facto. */
+  proof?: boolean | string
   kicker?: string
 }
 
@@ -30,7 +31,16 @@ export function socialCardElement(params: SocialCardParams) {
   const hook = (params.hook || "Disciplina cria liberdade.").slice(0, 160)
   const cta = (params.cta || "").toUpperCase().slice(0, 16)
   const handle = (params.handle || "morethanmoney.pt").replace(/^@/, "")
-  const showProof = params.proof !== false
+  /**
+   * A linha de prova.
+   *
+   * Era fixa: "675 trades · 63% win rate · +7.060€". Estava congelada na auditoria de 30/06,
+   * falava em euros — que não são comparáveis, porque o mesmo sinal vale ~8 $ a quem opera 0,01
+   * lote e ~800 $ a quem opera 1 — e, de tanto se repetir, tinha deixado de ser prova para
+   * passar a ser decoração. Agora vem de fora, viva, e roda: `factoDoDia()` em pips-proof.
+   */
+  const factoProva = typeof params.proof === 'string' ? params.proof.slice(0, 90) : null
+  const showProof = params.proof !== false && Boolean(factoProva)
   const v = variantFor(cta)
   const GOLD = params.handle && params.handle.includes("ricardo") ? "#D2A63C" : v.accent
   const kicker = (params.kicker || v.eyebrow).toUpperCase().slice(0, 40)
@@ -63,13 +73,9 @@ export function socialCardElement(params: SocialCardParams) {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column" }}>
-        {showProof && (
-          <div style={{ display: "flex", alignItems: "center", color: MUTED, fontSize: 30, fontWeight: 600, marginBottom: 34 }}>
-            <span style={{ color: GOLD }}>675 trades</span>
-            <span style={{ margin: "0 14px" }}>·</span>
-            <span style={{ color: GOLD }}>63% win rate</span>
-            <span style={{ margin: "0 14px" }}>·</span>
-            <span style={{ color: GOLD }}>+7.060€</span>
+        {showProof && factoProva && (
+          <div style={{ display: "flex", alignItems: "center", color: GOLD, fontSize: 30, fontWeight: 600, marginBottom: 34 }}>
+            {factoProva}
           </div>
         )}
         {cta ? (

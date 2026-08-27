@@ -78,23 +78,33 @@ export function monthlyChallengeEmail(name: string): BroadcastEmail {
  * Campanha de conversão do cohort Fundador (grátis-concedido com deadline 31/08).
  * Bilingue PT/EN — a comunidade MTM é internacional. CTA para /upgrade (intro 34,99€).
  */
-export function founderConversionEmail(name: string): BroadcastEmail {
+/**
+ * O email de conversão do Fundador.
+ *
+ * Citava "675 trades · 63% de acerto · +7.060€" — números congelados na auditoria de 30/06 e em
+ * euros, que não são comparáveis entre pessoas: o mesmo sinal vale ~8 $ a quem opera 0,01 lote e
+ * ~800 $ a quem opera 1. O facto entra de fora, vivo, medido em pips.
+ *
+ * Sem facto, a caixa da prova não aparece. Um email sem número convence menos; um email com um
+ * número velho perde a confiança de quem o verifica, e essa não volta.
+ */
+export function founderConversionEmail(name: string, facto?: string | null): BroadcastEmail {
   const site = getSiteUrl()
   const url = `${site}/upgrade`
   const inner = `
     <h1 style="margin:0 0 12px;font-size:20px;color:#f6c85a">${name}, o teu acesso Fundador termina a 31 de agosto ⏳</h1>
     <p style="margin:0 0 14px;font-size:15px;line-height:1.6">Tens tido acesso <b>Premium</b> à MoreThanMoney sem pagar. Esse período de Fundador <b>termina a 31/08</b> — depois disso o acesso fecha.</p>
     <p style="margin:0 0 14px;font-size:15px;line-height:1.6">Podes <b>fixar o teu lugar como Fundador</b> pela melhor condição que alguma vez teremos: <b>1º mês por 34,99€</b> e depois preço Fundador.</p>
-    <div style="background:#0f0f16;border:1px solid #26263a;border-radius:12px;padding:14px 16px;margin:16px 0">
-      <p style="margin:0 0 6px;font-size:13px;color:#a9a9b8">Prova real, auditada (até 30/06):</p>
-      <p style="margin:0;font-size:16px;color:#f6c85a;font-weight:700">675 trades · 63% de acerto · +7.060€</p>
-    </div>
+    ${facto ? `<div style="background:#0f0f16;border:1px solid #26263a;border-radius:12px;padding:14px 16px;margin:16px 0">
+      <p style="margin:0 0 6px;font-size:13px;color:#a9a9b8">O que os sinais fizeram:</p>
+      <p style="margin:0;font-size:16px;color:#f6c85a;font-weight:700">${facto}</p>
+    </div>` : ''}
     <div style="text-align:center;margin:22px 0">
       <a href="${url}" style="display:inline-block;background:#f6c85a;color:#0b0b0f;text-decoration:none;font-weight:700;font-size:15px;padding:14px 26px;border-radius:10px">Garantir lugar Fundador — 1º mês 34,99€</a>
     </div>
     <p style="margin:0 0 18px;font-size:12px;line-height:1.6;color:#8a8a98">⚠️ Investir e tradar envolve risco de perda. Resultados passados não garantem resultados futuros.</p>
     <div style="height:1px;background:#26263a;margin:6px 0 18px"></div>
-    <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#c9c9d6"><b>EN</b> — ${name}, your Founder access ends on Aug 31. Lock in your place at our best-ever deal: <b>1st month for 34,99€</b>, then Founder price. Real audited proof: 675 trades, 63% win-rate, +7,060€.</p>
+    <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#c9c9d6"><b>EN</b> — ${name}, your Founder access ends on Aug 31. Lock in your place at our best-ever deal: <b>1st month for 34,99€</b>, then Founder price.${facto ? ` What the signals did: ${facto}.` : ''}</p>
     <div style="text-align:center;margin:12px 0 2px">
       <a href="${url}" style="display:inline-block;background:transparent;border:1px solid #f6c85a;color:#f6c85a;text-decoration:none;font-weight:700;font-size:13px;padding:10px 20px;border-radius:10px">Keep my Founder access — 34,99€ first month</a>
     </div>
@@ -102,7 +112,7 @@ export function founderConversionEmail(name: string): BroadcastEmail {
   return {
     subject: `${name}, o teu acesso Fundador termina a 31/08 ⏳`,
     html: shell(inner),
-    text: `${name}, o teu acesso Fundador à MoreThanMoney termina a 31 de agosto.\n\nFixa o teu lugar pela melhor condição: 1º mês por 34,99€ e depois preço Fundador.\nProva real auditada (até 30/06): 675 trades, 63% de acerto, +7.060€.\nGarante aqui: ${url}\n\n⚠️ Investir e tradar envolve risco de perda.\n\nEN — Your Founder access ends Aug 31. Lock in the 1st month for 34,99€: ${url}\n\n— Ricardo, MoreThanMoney\n\nCancelar: responde a este email com "Cancelar".`,
+    text: `${name}, o teu acesso Fundador à MoreThanMoney termina a 31 de agosto.\n\nFixa o teu lugar pela melhor condição: 1º mês por 34,99€ e depois preço Fundador.${facto ? `\nO que os sinais fizeram: ${facto}.` : ''}\nGarante aqui: ${url}\n\n⚠️ Investir e tradar envolve risco de perda.\n\nEN — Your Founder access ends Aug 31. Lock in the 1st month for 34,99€: ${url}\n\n— Ricardo, MoreThanMoney\n\nCancelar: responde a este email com "Cancelar".`,
   }
 }
 
@@ -138,9 +148,9 @@ export function androidBetaEmail(name: string): BroadcastEmail {
   }
 }
 
-export function buildBroadcast(template: string, name: string): BroadcastEmail {
+export function buildBroadcast(template: string, name: string, facto?: string | null): BroadcastEmail {
   if (template === "monthly_challenge") return monthlyChallengeEmail(name)
-  if (template === "founder_conversion") return founderConversionEmail(name)
+  if (template === "founder_conversion") return founderConversionEmail(name, facto)
   if (template === "android_beta") return androidBetaEmail(name)
   return reviewEmail(name)
 }

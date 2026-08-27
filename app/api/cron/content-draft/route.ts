@@ -3,19 +3,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CAPTION_INTERNAL_MARK, uploadBufferToBucket } from '@/lib/instagram/publish'
 import { renderSocialCardBuffer } from '@/lib/social-card'
+import { factoDoDia, getPipsProof } from '@/lib/pips-proof'
 import { canvaConfigured, canvaAutofillImage } from '@/lib/canva-connect'
 
 /**
  * Imagem do post: 1º tenta o Canva Connect (teus templates reais, se configurado + plano pago);
  * senão / se falhar, cai no card gerado em processo. Upload → URL público estável.
  */
-async function buildCardImage(hook: string, cta: string, handle: string): Promise<string | null> {
+async function buildCardImage(
+  hook: string,
+  cta: string,
+  handle: string,
+  /** O facto que vai no cartão. Vem vivo dos pips e roda por dia — ver `factoDoDia()`. */
+  facto: string | null,
+): Promise<string | null> {
   if (canvaConfigured()) {
-    const viaCanva = await canvaAutofillImage(hook, cta)
+    const viaCanva = await canvaAutofillImage(hook, cta, facto ?? undefined)
     if (viaCanva) return viaCanva
   }
   try {
-    const buf = await renderSocialCardBuffer({ hook, cta, handle })
+    const buf = await renderSocialCardBuffer({ hook, cta, handle, proof: facto ?? false })
     return await uploadBufferToBucket(buf, 'image/png', 'auto')
   } catch (e) {
     console.error('[content-draft] card falhou:', e instanceof Error ? e.message : e)
@@ -178,6 +185,10 @@ export async function GET(req: NextRequest) {
 
   // Autopilot: se ligado, os posts COM imagem entram já como 'approved' (publicam sem toque).
   // Flag em site_settings.content_autopilot { morethanmoney: true|false }. Default: false (rascunho).
+  // A prova viva, lida uma vez para todo o lote: são os pips da conta-espelho, não a linha
+  // congelada de 30/06 que andava nos cartões.
+  const prova = await getPipsProof()
+
   const { data: apRow } = await supabase.from('site_settings').select('value').eq('key', 'content_autopilot').maybeSingle()
   const autopilot = Boolean((apRow?.value as { morethanmoney?: boolean } | null)?.morethanmoney)
 
@@ -189,7 +200,9 @@ export async function GET(req: NextRequest) {
       when.setUTCHours(18, 0, 0, 0)
       const cta = (d.cta_keyword || assigned[i] || 'APP').toUpperCase()
       // Gera o card de marca (imagem) para publicação sem toque.
-      const card = await buildCardImage(d.hook, cta, 'morethanmoney.pt')
+      // Um facto por post, rodando: publicar todos os dias a mesma frase treina o leitor a
+      // saltá-la. O deslocamento pelo índice dá factos diferentes no mesmo lote.
+      const card = await buildCardImage(d.hook, cta, 'morethanmoney.pt', factoDoDia(prova, i))
       // Só auto-publica se o autopilot estiver ligado E houver imagem; senão fica rascunho.
       const status = autopilot && card ? 'approved' : 'draft'
       const caption =

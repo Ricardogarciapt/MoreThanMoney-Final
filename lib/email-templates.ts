@@ -1600,8 +1600,10 @@ export const hotLeadInviteTemplate = (params: { name?: string; siteUrl?: string 
   )
   const proof = cardComponent(
     'Prova real da comunidade',
-    `<p style="margin:6px 0;font-size:18px"><strong>675 trades</strong> · <strong>63% win rate</strong> · <strong>+7.060€</strong> acumulado.</p>
-     <p style="margin:6px 0;color:#555">Estratégias reais espelhadas via MTM Copy · win rate 58–65% nas contas mestre.</p>
+    // Os números foram-se: "675 trades · 63% · +7.060€" estava congelado em 30/06 e em euros,
+    // que não são comparáveis entre lotes. O que fica é o que se pode dizer sem data de validade
+    // — os testemunhos são de pessoas e não caducam.
+    `<p style="margin:6px 0;font-size:18px">Estratégias reais, espelhadas via MTM Copy e medidas numa conta que abre <strong>todos</strong> os sinais publicados — sem escolha a dedo.</p>
      <p style="margin:10px 0 4px;font-style:italic;color:#333">"Grato por estar na melhor comunidade, ecossistema de educação financeira do país."</p>
      <p style="margin:4px 0;font-style:italic;color:#333">"O melhor resultado não é o saldo das contas… é o poder de saber proteger capital."</p>`,
     '📊',

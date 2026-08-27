@@ -528,3 +528,59 @@ export function blocoPips(p: PipsProof): string {
   const cabeca = destaque ? `✨ ${destaque}\n` : ''
   return `${cabeca}${linhaPips(p)}\n${RESSALVA_LEGAL}`
 }
+
+
+/**
+ * Factos curtos para um cartão — o que cabe numa linha e ajuda o CTA.
+ *
+ * Substituem a linha fixa "675 trades · 63% win rate · +7.060€", que estava congelada em 30/06,
+ * falava em euros (que não são comparáveis: o mesmo sinal vale ~8 $ a 0,01 lote e ~800 $ a 1) e,
+ * de tanto se repetir, deixou de ser prova para passar a ser decoração.
+ *
+ * Vêm todos dos mesmos números da conta-espelho. Devolve VÁRIOS de propósito: quem publica todos
+ * os dias com a mesma frase treina o leitor a saltá-la. Rodando, cada post traz um facto novo.
+ *
+ * Devolve lista vazia quando não há amostra que chegue — publicar 3 trades como prova é ruído
+ * com ar de prova, e é pior do que não pôr número nenhum.
+ */
+export function factosParaCartao(p: PipsProof | null): string[] {
+  if (!publicavel(p)) return []
+  const nf = new Intl.NumberFormat('pt-PT')
+  const e = p.executado
+  const factos: string[] = []
+
+  const sinal = (n: number) => (n >= 0 ? `+${nf.format(Math.round(n))}` : `−${nf.format(Math.abs(Math.round(n)))}`)
+
+  // O total vai sempre — é o que torna qualquer destaque honesto.
+  factos.push(`${e.trades} trades · ${e.winRatePct}% de acerto · ${sinal(e.pips)} pips`)
+
+  if (e.ouro && e.ouro.trades >= 8) {
+    factos.push(`Ouro: ${e.ouro.trades} trades · ${e.ouro.winRatePct}% de acerto · ${sinal(e.ouro.pips)} pips`)
+  }
+  if (e.comParciais >= 5) {
+    const pct = Math.round((e.comParciais / e.trades) * 100)
+    factos.push(`${pct}% das trades realizaram lucro em alvos parciais`)
+  }
+  for (const f of (e.porFonte ?? []).filter((x) => fonteEhMtm(x.chave))) {
+    if (f.trades >= 5 && f.pips > 0) {
+      factos.push(`${NOME_FONTE[f.chave] ?? f.chave}: ${sinal(f.pips)} pips em ${f.trades} trades`)
+    }
+  }
+  const melhor = e.porSimbolo.filter((s) => s.trades >= 8 && s.pips > 0).sort((a, b) => b.pips - a.pips)[0]
+  if (melhor) factos.push(`${melhor.symbol}: ${sinal(melhor.pips)} pips em ${melhor.trades} trades`)
+
+  return factos
+}
+
+/**
+ * Um facto, escolhido pelo dia.
+ *
+ * Pelo DIA e não à sorte: dois posts do mesmo dia devem dizer o mesmo número, senão quem vê os
+ * dois pensa que um deles está errado.
+ */
+export function factoDoDia(p: PipsProof | null, deslocamento = 0): string | null {
+  const lista = factosParaCartao(p)
+  if (!lista.length) return null
+  const dia = Math.floor(Date.now() / 86_400_000)
+  return lista[(dia + deslocamento) % lista.length]
+}
