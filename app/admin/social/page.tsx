@@ -33,6 +33,7 @@ import {
   Users,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/lib/supabase"
 
 interface Post {
   id: string
@@ -46,6 +47,32 @@ interface Post {
   status: string
   permalink: string | null
   error: string | null
+}
+
+/** O que o painel devolve — ver `/api/admin/social/painel`. */
+interface Painel {
+  factos: {
+    publicavel: boolean
+    lista: string[]
+    trades: number
+    winRatePct: number | null
+    pips: number | null
+    atualizadoEm: string | null
+    ressalva: string
+  }
+  conteudo: {
+    total: number
+    porEstado: { chave: string; total: number }[]
+    porPilar: { chave: string; total: number }[]
+    proximos: { quando: string; conta: string | null; pilar: string | null; temImagem: boolean }[]
+    autopilot: boolean
+    aprovadosSemImagem: number
+    falhados: number
+  }
+  funil: {
+    degraus: { degrau: string; total: number }[]
+    mtmauto: { passo: string; total: number }[]
+  }
 }
 
 const ACCOUNTS = [
@@ -72,6 +99,9 @@ export default function AdminSocialPage() {
   const [filter, setFilter] = useState<string>("all")
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  /** Separador aberto: a fila, os factos que vão nos cartões, ou o funil. */
+  const [aba, setAba] = useState<"fila" | "factos" | "funil">("fila")
+  const [painel, setPainel] = useState<Painel | null>(null)
 
   const [form, setForm] = useState({
     ig_account_id: ACCOUNTS[0].id,
@@ -82,6 +112,21 @@ export default function AdminSocialPage() {
     scheduled_at: "",
     rehost: true,
   })
+
+  const lerPainel = useCallback(async () => {
+    try {
+      const tok = (await supabase.auth.getSession()).data.session?.access_token
+      if (!tok) return
+      const r = await fetch("/api/admin/social/painel", {
+        headers: { Authorization: `Bearer ${tok}` },
+        cache: "no-store",
+      })
+      const j = await r.json()
+      if (j.ok) setPainel(j)
+    } catch {
+      /* o painel é contexto: sem ele a fila continua a funcionar */
+    }
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -98,7 +143,8 @@ export default function AdminSocialPage() {
 
   useEffect(() => {
     load()
-  }, [load])
+    lerPainel()
+  }, [load, lerPainel])
 
   const act = async (id: string, action: string) => {
     const r = await fetch(`/api/admin/social-posts/${id}`, {
@@ -204,6 +250,48 @@ export default function AdminSocialPage() {
           </div>
         </div>
 
+        {/* Os três separadores: a fila do que sai, os factos que vão dentro dos cartões e o
+            funil de onde vêm as pessoas. Aprovar um post sem ver o número que vai na imagem é
+            aprovar às cegas — foi assim que uma linha de prova velha ficou meses a sair. */}
+        <div className="mb-4 flex gap-2 border-b">
+          {([
+            ["fila", "Publicações"],
+            ["factos", "Factos nos cartões"],
+            ["funil", "Funil"],
+          ] as const).map(([id, rotulo]) => (
+            <button
+              key={id}
+              onClick={() => setAba(id)}
+              className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition ${
+                aba === id ? "border-neutral-900 text-neutral-900" : "border-transparent text-neutral-500"
+              }`}
+            >
+              {rotulo}
+            </button>
+          ))}
+        </div>
+
+        {aba === "factos" && <PainelFactos painel={painel} />}
+        {aba === "funil" && <PainelFunil painel={painel} />}
+
+        {aba === "fila" && (<>
+        {painel && (painel.conteudo.aprovadosSemImagem > 0 || painel.conteudo.falhados > 0) && (
+          <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            {painel.conteudo.aprovadosSemImagem > 0 && (
+              <p>
+                <b>{painel.conteudo.aprovadosSemImagem}</b> post(s) aprovados sem imagem — o
+                Instagram exige media, por isso nunca chegam a publicar.
+              </p>
+            )}
+            {painel.conteudo.falhados > 0 && (
+              <p>
+                <b>{painel.conteudo.falhados}</b> falhado(s). Vê o erro no cartão para saber
+                porquê.
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="mb-4 flex flex-wrap gap-2">
           {["all", "draft", "approved", "processing", "published", "failed", "canceled"].map((s) => (
             <button
@@ -299,6 +387,7 @@ export default function AdminSocialPage() {
             ))}
           </div>
         )}
+        </>)}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -414,6 +503,185 @@ export default function AdminSocialPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+/**
+ * Os factos que entram nos cartões.
+ *
+ * Existem para se ver ANTES de aprovar. A linha de prova era fixa no código — "675 trades · 63%
+ * win rate · +7.060€" — e ficou meses a sair em cartões novos depois de os números terem
+ * deixado de ser verdade, porque não havia sítio nenhum onde alguém os visse.
+ */
+function PainelFactos({ painel }: { painel: Painel | null }) {
+  if (!painel) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
+      </div>
+    )
+  }
+  const f = painel.factos
+
+  return (
+    <div className="space-y-4">
+      {!f.publicavel ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">Sem amostra que chegue para publicar números.</p>
+          <p className="mt-1">
+            São {f.trades} trades medidas. Abaixo do mínimo os cartões saem <b>sem número
+            nenhum</b> — publicar meia dúzia de trades como prova é ruído com ar de prova, e quem
+            verifica não volta a confiar.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-xl border bg-white p-4">
+          <p className="text-sm font-semibold">Estes são os factos que rodam nos cartões</p>
+          <p className="mt-1 text-xs text-neutral-500">
+            Um por dia, à vez. Publicar sempre a mesma frase treina o leitor a saltá-la.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {f.lista.map((facto) => (
+              <li
+                key={facto}
+                className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900"
+              >
+                {facto}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[
+          ["Trades medidas", String(f.trades)],
+          ["Taxa de acerto", f.winRatePct != null ? `${f.winRatePct}%` : "—"],
+          ["Pips", f.pips != null ? `${f.pips >= 0 ? "+" : ""}${Math.round(f.pips)}` : "—"],
+        ].map(([r, v]) => (
+          <div key={r} className="rounded-xl border bg-white p-4">
+            <p className="text-xs uppercase tracking-wide text-neutral-500">{r}</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums">{v}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-xl border bg-white p-4">
+        <p className="text-xs uppercase tracking-wide text-neutral-500">
+          A ressalva que acompanha sempre qualquer número
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-neutral-600">{f.ressalva}</p>
+        {f.atualizadoEm && (
+          <p className="mt-2 text-xs text-neutral-400">
+            Medido a {new Date(f.atualizadoEm).toLocaleString("pt-PT")}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * O funil, degrau a degrau.
+ *
+ * Por degraus e não por totais soltos: "132 registados" não diz onde a conversão trava, e é a
+ * travagem que interessa. Cada linha mostra também quanto passou do degrau anterior — é aí que
+ * se vê qual é o gargalo, sem ter de fazer contas de cabeça.
+ */
+function PainelFunil({ painel }: { painel: Painel | null }) {
+  if (!painel) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
+      </div>
+    )
+  }
+  const d = painel.funil.degraus
+  const maximo = Math.max(...d.map((x) => x.total), 1)
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-white p-4">
+        <p className="text-sm font-semibold">Do primeiro contacto ao pagante</p>
+        <div className="mt-3 space-y-2">
+          {d.map((x, i) => {
+            const anterior = i > 0 ? d[i - 1].total : null
+            const passou = anterior && anterior > 0 ? Math.round((x.total / anterior) * 100) : null
+            return (
+              <div key={x.degrau} className="flex items-center gap-3">
+                <span className="w-44 flex-none text-sm text-neutral-700">{x.degrau}</span>
+                <span className="h-3 flex-1 overflow-hidden rounded-full bg-neutral-100">
+                  <span
+                    className="block h-full rounded-full bg-neutral-900"
+                    style={{ width: `${Math.max(2, (x.total / maximo) * 100)}%` }}
+                  />
+                </span>
+                <span className="w-12 text-right text-sm font-semibold tabular-nums">{x.total}</span>
+                <span className="w-16 text-right text-xs text-neutral-400">
+                  {passou != null ? `${passou}%` : ""}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {painel.funil.mtmauto.length > 0 && (
+        <div className="rounded-xl border bg-white p-4">
+          <p className="text-sm font-semibold">Funil do MTM Auto, por passo</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {painel.funil.mtmauto.map((x) => (
+              <span key={x.passo} className="rounded-full border px-3 py-1 text-xs">
+                {x.passo === "—" ? "sem passo" : x.passo} · <b>{x.total}</b>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border bg-white p-4">
+          <p className="text-sm font-semibold">Conteúdo em fila</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {painel.conteudo.porEstado.map((x) => (
+              <span key={x.chave} className="rounded-full border px-3 py-1 text-xs">
+                {x.chave} · <b>{x.total}</b>
+              </span>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-neutral-500">
+            Piloto automático: <b>{painel.conteudo.autopilot ? "ligado" : "desligado"}</b>
+            {painel.conteudo.autopilot
+              ? " — os posts com imagem publicam sem passar por ti."
+              : " — nada sai sem a tua aprovação."}
+          </p>
+        </div>
+
+        <div className="rounded-xl border bg-white p-4">
+          <p className="text-sm font-semibold">Próximos a sair</p>
+          {painel.conteudo.proximos.length === 0 ? (
+            <p className="mt-2 text-xs text-neutral-500">Nada aprovado à espera de hora.</p>
+          ) : (
+            <ul className="mt-2 space-y-1.5">
+              {painel.conteudo.proximos.map((x) => (
+                <li key={x.quando} className="flex items-center justify-between gap-2 text-xs">
+                  <span className="text-neutral-600">
+                    {new Date(x.quando).toLocaleString("pt-PT", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}{" "}
+                    · {x.conta ?? "—"} · {x.pilar ?? "—"}
+                  </span>
+                  {!x.temImagem && <span className="font-semibold text-amber-700">sem imagem</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

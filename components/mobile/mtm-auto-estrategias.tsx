@@ -151,13 +151,13 @@ function ModalEstrategia({
                 {caixa("Ganhos", String(desempenho.ganhos ?? 0), "trades ganhas", "#28C878")}
                 {caixa("Perdas", String(desempenho.perdas ?? 0), "trades perdidas", "#FF4D4D")}
                 {caixa("Break-even", String(desempenho.breakeven ?? 0), "saiu à entrada", "#D2A63C")}
+                {/* Nunca o resultado em dinheiro: a conta é da casa, e o valor dizia ao cliente
+                    o tamanho dela. O fator de lucro responde à mesma pergunta sem isso. */}
                 {caixa(
-                  "Resultado",
-                  desempenho.resultado != null
-                    ? `${Number(desempenho.resultado) >= 0 ? "+" : ""}${Number(desempenho.resultado).toFixed(2)}`
-                    : "—",
-                  "na conta da estratégia",
-                  Number(desempenho.resultado ?? 0) >= 0 ? "#28C878" : "#FF4D4D",
+                  "Fator de lucro",
+                  desempenho.fatorLucro != null ? Number(desempenho.fatorLucro).toFixed(2) : "—",
+                  "ganho por cada 1 perdido",
+                  Number(desempenho.fatorLucro ?? 0) >= 1 ? "#28C878" : "#FF4D4D",
                 )}
               </div>
             ) : (

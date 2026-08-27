@@ -69,7 +69,15 @@ interface Desempenho {
   perdas: number
   breakeven: number
   winrate: number | null
-  resultado: number | null
+  /**
+   * Fator de lucro: o que os ganhos somam a dividir pelo que as perdas somam.
+   *
+   * Aqui NÃO vai o resultado em dinheiro. A conta é nossa, não do cliente, e "+88,91" diz-lhe o
+   * tamanho dela — quanto lá está e quanto rende — que é informação da casa, não da estratégia.
+   * O fator de lucro responde à mesma pergunta ("compensa?") sem dizer de quanto se está a falar:
+   * 2,0 significa que por cada euro perdido se ganharam dois, tenha a conta 300 ou 300 000.
+   */
+  fatorLucro: number | null
   pips: number | null
   esteveEmLucro: number
   alvos: { alvo: string; acertos: number }[]
@@ -109,6 +117,9 @@ async function desempenhoDoProvider(contaId: string, nome: string, dias: number)
   const perdas = fechos.filter((v) => v < 0).length
   const breakeven = fechos.filter((v) => v === 0).length
 
+  const somaGanhos = fechos.filter((v) => v > 0).reduce((a, b) => a + b, 0)
+  const somaPerdas = Math.abs(fechos.filter((v) => v < 0).reduce((a, b) => a + b, 0))
+
   return {
     origem: 'provider',
     contaProvider: nome,
@@ -118,7 +129,9 @@ async function desempenhoDoProvider(contaId: string, nome: string, dias: number)
     perdas,
     breakeven,
     winrate: fechos.length ? Math.round((ganhos / fechos.length) * 1000) / 10 : null,
-    resultado: Math.round(fechos.reduce((a, b) => a + b, 0) * 100) / 100,
+    // Sem perdas não há fator de lucro — dividir por zero daria "infinito", que num ecrã de
+    // trading se lê como promessa.
+    fatorLucro: somaPerdas > 0 ? Math.round((somaGanhos / somaPerdas) * 100) / 100 : null,
     // Os pips não se leem de um fecho — vêm do preço, e a conta não os guarda.
     pips: null,
     esteveEmLucro: ganhos,
@@ -160,7 +173,7 @@ async function desempenhoDosSinais(fonte: string, dias: number): Promise<Desempe
     perdas: 0,
     breakeven: 0,
     winrate: null,
-    resultado: null,
+    fatorLucro: null,
     pips: null,
     esteveEmLucro: linhas.filter((l) => Number(l.peak_pips ?? 0) > 0).length,
     alvos: [1, 2, 3].map((n) => ({
@@ -220,7 +233,7 @@ export async function GET(request: NextRequest) {
           perdas: 0,
           breakeven: 0,
           winrate: null,
-          resultado: null,
+          fatorLucro: null,
           pips: null,
           esteveEmLucro: 0,
           alvos: [],
