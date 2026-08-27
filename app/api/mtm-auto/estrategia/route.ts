@@ -14,18 +14,27 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 40
 
 /**
- * O retrato de uma estratégia: como correu, e quanto o cliente quer arriscar nela.
+ * O retrato de uma estratégia — e são DUAS coisas diferentes.
  *
- * A lista de estratégias dizia só "A seguir" — e "seguir" uma fonte sem saber se ela ganha é uma
- * escolha às cegas. Aqui estão os números dela: quantos sinais deu, quantos acertou, onde é que
- * saiu. Vêm de `mtmcopy_signal_tracking`, a mesma tabela que alimenta o desfecho que aparece no
- * chat — não de uma contagem à parte que um dia discordaria.
+ * ── Estratégias MTM Auto (`?providerId=`) ─────────────────────────────────────────────────────
+ * Têm conta de execução própria. Os números são os dela: fechos reais na corretora, com as
+ * parciais como aconteceram. É a pergunta "esta estratégia ganha dinheiro?" e a resposta é o
+ * dinheiro.
+ *
+ * ── Fontes Tap to Trade (`?fonte=`) ───────────────────────────────────────────────────────────
+ * NÃO executam em conta nenhuma — só dão sinais. Perguntar-lhes "quanto ganhaste" não faz
+ * sentido, porque não ganharam nada: quem ganha ou perde é a conta de quem os aceita, e isso
+ * está no separador Histórico. O que se mede aqui é o que o sinal FEZ: quantos saíram, quantos
+ * chegaram a estar em lucro e a que alvos chegaram.
+ *
+ * Contar-lhes "perdas" seria pior do que inútil. O desfecho por sinal é tudo-ou-nada: um sinal
+ * que chega ao primeiro alvo, dá parcial e volta ao stop com o resto conta como perda inteira —
+ * e quem o seguiu ficou com lucro.
  *
  * ── O que NÃO se mexe aqui ────────────────────────────────────────────────────────────────────
- * O motor da estratégia: trailing stop, trailing profit, parciais na fonte, gestão em tempo real.
- * Isso é do provedor, é igual para toda a gente que a segue, e administra-se no /admin (ou no
- * admin do MTM Auto). O que o cliente decide é quanto ARRISCA nela — e é só isso que esta rota
- * escreve.
+ * O motor: trailing stop, trailing profit, parciais na fonte. Isso é do provedor, é igual para
+ * toda a gente que a segue, e administra-se no /admin (ou no admin do MTM Auto). O que o cliente
+ * decide é quanto ARRISCA — e é só isso que esta rota escreve.
  */
 
 /**
@@ -43,10 +52,11 @@ export const maxDuration = 40
  * Fontes de ideias (Forex Swings, PrimeVerse) não têm conta provider: não se inventam números
  * para elas, mostram-se os alvos que os sinais atingiram, que é um facto.
  */
-const CONTA_DA_FONTE: Record<string, { conta: string; nome: string }> = {
-  'premium-ideas': { conta: CANONICAL_PREMIUM_ACCOUNT_ID, nome: 'MTM Premium' },
-  'sensei-scanner': { conta: SENSEI_PROVIDER_ACCOUNT_ID, nome: 'MTM Auto Sensei' },
-  'golden-moves': { conta: CANONICAL_AURUMFLOW_ACCOUNT_ID, nome: 'MTM Auto Aurum Flow' },
+/** A conta de execução de cada estratégia MTM Auto que não a tem guardada na tabela. */
+const CONTA_POR_FONTE_MTM: Record<string, string> = {
+  premium: CANONICAL_PREMIUM_ACCOUNT_ID,
+  sensei: SENSEI_PROVIDER_ACCOUNT_ID,
+  aurum: CANONICAL_AURUMFLOW_ACCOUNT_ID,
 }
 
 interface Desempenho {
@@ -101,7 +111,13 @@ async function desempenhoDoProvider(contaId: string, nome: string, dias: number)
   }
 }
 
-/** Para as fontes sem conta provider: o que os sinais atingiram. */
+/**
+ * Uma fonte de sinais: o que ela PRODUZIU.
+ *
+ * Sem conta de execução, não há ganhos nem perdas para contar — o que há são sinais, e o que
+ * deles se pode dizer com verdade é quantos saíram, quantos estiveram em lucro e a que alvos
+ * chegaram.
+ */
 async function desempenhoDosSinais(fonte: string, dias: number): Promise<Desempenho> {
   const db = getSupabaseAdmin()
   const desde = new Date(Date.now() - dias * 86_400_000).toISOString()
@@ -121,9 +137,11 @@ async function desempenhoDosSinais(fonte: string, dias: number): Promise<Desempe
     contaProvider: null,
     sinais: linhas.length,
     fechados: fechados.length,
-    ganhos: fechados.filter((l) => Number(l.result_pips) > 0).length,
-    perdas: fechados.filter((l) => Number(l.result_pips) < 0).length,
-    breakeven: fechados.filter((l) => Number(l.result_pips) === 0).length,
+    // Sem execução não há ganhos nem perdas para contar. Zeros aqui não são "não ganhou" — são
+    // "a pergunta não se aplica", e é por isso que o ecrã não os mostra.
+    ganhos: 0,
+    perdas: 0,
+    breakeven: 0,
     winrate: null,
     resultado: null,
     pips: null,
@@ -136,7 +154,7 @@ async function desempenhoDosSinais(fonte: string, dias: number): Promise<Desempe
     // taxa de acerto nenhuma a partir daqui.
     medicaoFiavel: false,
     porqueNaoFiavel:
-      'Esta fonte não tem conta de execução própria, por isso o que se mede são os sinais dela — quantos saíram e a que alvos chegaram. A taxa de acerto sairia de um cálculo tudo-ou-nada que conta como perda um sinal que já tinha dado parcial.',
+      'Esta fonte dá sinais, não executa em conta nenhuma — quem ganha ou perde é a tua conta ao aceitá-los, e isso está no separador Histórico. Aqui mede-se o que o sinal fez: quantos saíram, quantos estiveram em lucro e a que alvos chegaram.',
   }
 }
 
@@ -145,17 +163,67 @@ export async function GET(request: NextRequest) {
   if (erro) return erro
 
   const fonte = String(request.nextUrl.searchParams.get('fonte') ?? '').trim()
-  if (!fonte) return NextResponse.json({ error: 'fonte obrigatória' }, { status: 400 })
+  const providerId = String(request.nextUrl.searchParams.get('providerId') ?? '').trim()
+  if (!fonte && !providerId) {
+    return NextResponse.json({ error: 'fonte ou providerId obrigatório' }, { status: 400 })
+  }
   const dias = Math.min(365, Math.max(7, Number(request.nextUrl.searchParams.get('dias')) || 90))
 
   const db = getSupabaseAdmin()
-  const provider = CONTA_DA_FONTE[fonte]
+
+  // ── Estratégia MTM Auto: os números da conta que a executa ──────────────────────────────────
+  if (providerId) {
+    const { data: prov } = await db
+      .from('mtmauto_providers')
+      .select('nome, metaapi_account_id, fonte_mtm')
+      .eq('id', providerId)
+      .maybeSingle()
+
+    const conta =
+      (prov?.metaapi_account_id as string | null) ??
+      CONTA_POR_FONTE_MTM[String(prov?.fonte_mtm ?? '')] ??
+      null
+
+    const dados = conta
+      ? await desempenhoDoProvider(conta, String(prov?.nome ?? 'Estratégia'), dias)
+      : null
+
+    return NextResponse.json({
+      ok: true,
+      providerId,
+      dias,
+      desempenho:
+        dados ??
+        {
+          origem: 'provider' as const,
+          contaProvider: (prov?.nome as string) ?? null,
+          sinais: 0,
+          fechados: 0,
+          ganhos: 0,
+          perdas: 0,
+          breakeven: 0,
+          winrate: null,
+          resultado: null,
+          pips: null,
+          esteveEmLucro: 0,
+          alvos: [],
+          medicaoFiavel: false,
+          // Não se conseguiu ler é diferente de não ter feito nada, e dizer zeros seria a pior
+          // das duas mentiras: parece uma estratégia parada.
+          porqueNaoFiavel: conta
+            ? 'Não deu para ler a conta desta estratégia na corretora agora. Volta daqui a pouco.'
+            : 'Esta estratégia ainda não tem conta de execução ligada.',
+        },
+      // O risco por estratégia é do Tap to Trade — uma estratégia MTM Auto configura-se na app
+      // MTM Auto, onde se paga por ela.
+      contas: [],
+      presets: [],
+    })
+  }
+
+  // ── Fonte Tap to Trade: o que os sinais dela fizeram ────────────────────────────────────────
   const [dados, { data: contas }] = await Promise.all([
-    // A conta provider manda. Se não se conseguir ler, cai-se nos sinais em vez de mostrar zeros
-    // — mas fica dito de onde vieram os números.
-    provider
-      ? desempenhoDoProvider(provider.conta, provider.nome, dias).then((r) => r ?? desempenhoDosSinais(fonte, dias))
-      : desempenhoDosSinais(fonte, dias),
+    desempenhoDosSinais(fonte, dias),
     db
       .from('mtmcopy_connections')
       .select('id, account_label, t2t_source_risk, t2t_lot_value, lot_value, max_risk_percent')

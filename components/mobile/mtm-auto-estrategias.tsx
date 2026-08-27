@@ -39,7 +39,18 @@ type Provedor = {
  * O motor (trailing stop, trailing profit, parciais na fonte) não se mexe aqui: é do provedor, é
  * igual para toda a gente que a segue, e administra-se no /admin.
  */
-function ModalEstrategia({ fonte, nome, aoFechar }: { fonte: string; nome: string; aoFechar: () => void }) {
+function ModalEstrategia({
+  fonte,
+  providerId,
+  nome,
+  aoFechar,
+}: {
+  /** Uma das duas: a fonte de sinais (T2T) ou a estratégia MTM Auto (que tem conta própria). */
+  fonte?: string
+  providerId?: string
+  nome: string
+  aoFechar: () => void
+}) {
   const [d, setD] = useState<Record<string, unknown> | null>(null)
   const [aGravar, setAGravar] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -48,7 +59,8 @@ function ModalEstrategia({ fonte, nome, aoFechar }: { fonte: string; nome: strin
     try {
       const tok = (await supabase.auth.getSession()).data.session?.access_token
       if (!tok) return
-      const r = await fetch(`/api/mtm-auto/estrategia?fonte=${encodeURIComponent(fonte)}&dias=90`, {
+      const q = providerId ? `providerId=${encodeURIComponent(providerId)}` : `fonte=${encodeURIComponent(fonte ?? "")}`
+      const r = await fetch(`/api/mtm-auto/estrategia?${q}&dias=90`, {
         headers: { Authorization: `Bearer ${tok}` },
         cache: "no-store",
       })
@@ -58,7 +70,7 @@ function ModalEstrategia({ fonte, nome, aoFechar }: { fonte: string; nome: strin
     } catch {
       setErro("Não deu para ler os números desta estratégia.")
     }
-  }, [fonte])
+  }, [fonte, providerId])
 
   useEffect(() => { ler() }, [ler])
 
@@ -185,7 +197,7 @@ function ModalEstrategia({ fonte, nome, aoFechar }: { fonte: string; nome: strin
               </>
             )}
 
-            {contas.length > 0 && (
+            {contas.length > 0 && fonte && (
               <>
                 <p className="mb-2 mt-4 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-zinc-500">
                   <Settings2 className="h-3.5 w-3.5" /> O teu risco nesta estratégia
@@ -235,7 +247,10 @@ function ModalEstrategia({ fonte, nome, aoFechar }: { fonte: string; nome: strin
 
             <p className="mt-3 text-[11.5px] leading-snug text-zinc-500">
               O motor desta estratégia — trailing stop, trailing profit, parciais — é do provedor e
-              é igual para toda a gente que a segue. O que escolhes aqui é quanto arriscas nela.
+              é igual para toda a gente que a segue.{" "}
+              {providerId
+                ? "O risco da tua conta configura-se na app MTM Auto."
+                : "O que escolhes aqui é quanto arriscas nela."}
             </p>
           </>
         )}
@@ -292,7 +307,7 @@ export default function MtmAutoEstrategias({
   const [aCarregar, setACarregar] = useState(true)
   const [aMudar, setAMudar] = useState<string | null>(null)
   /** Qual estratégia está com o retrato aberto. */
-  const [aberta, setAberta] = useState<{ fonte: string; nome: string } | null>(null)
+  const [aberta, setAberta] = useState<{ fonte?: string; providerId?: string; nome: string } | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
 
   const token = useCallback(async () => (await supabase.auth.getSession()).data.session?.access_token ?? null, [])
@@ -428,7 +443,8 @@ export default function MtmAutoEstrategias({
           style={{ borderColor: p.segue ? "rgba(40,200,120,0.30)" : "#23262F", background: "#12141A" }}
         >
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
+            {/* O toque no corpo abre os números da conta que EXECUTA esta estratégia. */}
+            <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setAberta({ providerId: p.id, nome: p.nome })}>
               <p className="text-[14px] font-semibold text-white">{p.nome}</p>
               {p.descricao && <p className="mt-0.5 text-[12px] leading-snug text-zinc-400">{p.descricao}</p>}
               {Boolean(p.sinais) && (
@@ -442,7 +458,7 @@ export default function MtmAutoEstrategias({
               {p.automatico && (
                 <p className="mt-1 text-[11.5px] text-[#D2A63C]">Cópia automática ligada na app MTM Auto</p>
               )}
-            </div>
+            </button>
             <Interruptor ligado={p.segue} ocupado={aMudar === p.id} onClick={() => alternar(p)} />
           </div>
         </div>
@@ -450,7 +466,14 @@ export default function MtmAutoEstrategias({
 
       {aviso && <p className="rounded-xl border border-zinc-800 p-2.5 text-[12.5px] text-rose-400">{aviso}</p>}
 
-      {aberta && <ModalEstrategia fonte={aberta.fonte} nome={aberta.nome} aoFechar={() => setAberta(null)} />}
+      {aberta && (
+        <ModalEstrategia
+          fonte={aberta.fonte}
+          providerId={aberta.providerId}
+          nome={aberta.nome}
+          aoFechar={() => setAberta(null)}
+        />
+      )}
     </div>
   )
 }
