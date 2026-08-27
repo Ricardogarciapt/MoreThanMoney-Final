@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { autorizarMtmAuto } from '@/lib/mtm-auto-bridge'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { PRESETS, preset } from '@/lib/risk-presets'
+import { lerHistorico } from '@/lib/mtmcopy/metaapi'
+import {
+  CANONICAL_AURUMFLOW_ACCOUNT_ID,
+  CANONICAL_PREMIUM_ACCOUNT_ID,
+  SENSEI_PROVIDER_ACCOUNT_ID,
+} from '@/lib/mtmcopy/provider-constants'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 20
+// Ler o histórico da conta provider na corretora demora — e é o que dá os números verdadeiros.
+export const maxDuration = 40
 
 /**
  * O retrato de uma estratégia: como correu, e quanto o cliente quer arriscar nela.
@@ -21,36 +28,81 @@ export const maxDuration = 20
  * escreve.
  */
 
+/**
+ * A conta PROVIDER de cada estratégia.
+ *
+ * Estes números são os da conta que produz a estratégia — dinheiro real, com as parciais como
+ * aconteceram. Não são os do cliente: esses estão no separador Histórico, que soma as contas
+ * dele. Misturar os dois respondia à pergunta errada — quem abre uma estratégia quer saber se
+ * ELA ganha, não como lhe correu a ele a segui-la meio mês.
+ *
+ * Antes lia-se `mtmcopy_signal_tracking`, que mede cada sinal como uma trade única,
+ * tudo-ou-nada: um sinal que chega ao primeiro alvo, tira parcial e volta ao stop com o resto
+ * contava como PERDA inteira. Dava 9% de acerto no Premium — um número que não é o de ninguém.
+ *
+ * Fontes de ideias (Forex Swings, PrimeVerse) não têm conta provider: não se inventam números
+ * para elas, mostram-se os alvos que os sinais atingiram, que é um facto.
+ */
+const CONTA_DA_FONTE: Record<string, { conta: string; nome: string }> = {
+  'premium-ideas': { conta: CANONICAL_PREMIUM_ACCOUNT_ID, nome: 'MTM Premium' },
+  'sensei-scanner': { conta: SENSEI_PROVIDER_ACCOUNT_ID, nome: 'MTM Auto Sensei' },
+  'golden-moves': { conta: CANONICAL_AURUMFLOW_ACCOUNT_ID, nome: 'MTM Auto Aurum Flow' },
+}
+
 interface Desempenho {
+  /** De onde vieram os números: a conta que produz a estratégia, ou os sinais dela. */
+  origem: 'provider' | 'sinais'
+  contaProvider: string | null
   sinais: number
   fechados: number
   ganhos: number
   perdas: number
   breakeven: number
   winrate: number | null
-  pips: number
-  /** Sinais que estiveram em lucro em algum momento. Facto, não interpretação. */
+  resultado: number | null
+  pips: number | null
   esteveEmLucro: number
   alvos: { alvo: string; acertos: number }[]
-  /**
-   * A taxa de acerto e os pips são de confiança?
-   *
-   * Hoje NÃO. O tracker mede cada sinal como uma trade única, tudo-ou-nada: um sinal que chega
-   * ao TP1, tira parcial e depois volta ao stop com o resto conta como PERDA inteira. Quem o
-   * seguiu ficou com lucro; a tabela diz que perdeu.
-   *
-   * Vê-se pelos próprios números: no Premium, 27 dos 45 sinais estiveram em lucro e só 4 contam
-   * como ganhos. E o Sensei aparece com −392 714 pips, que é o defeito antigo de ler cripto como
-   * par de forex (×10 000).
-   *
-   * Enquanto isto não estiver corrigido, estes dois campos não vão para o ecrã do cliente —
-   * anunciar 9% de acerto no Premium seria mentir contra nós próprios.
-   */
   medicaoFiavel: boolean
   porqueNaoFiavel: string | null
 }
 
-async function desempenho(fonte: string, dias: number): Promise<Desempenho> {
+/** O que a conta provider fez mesmo: fechos reais, na corretora. */
+async function desempenhoDoProvider(contaId: string, nome: string, dias: number): Promise<Desempenho | null> {
+  const deals = await lerHistorico(contaId, new Date(Date.now() - dias * 86_400_000))
+  // `null` = não se conseguiu ler. Devolver zeros seria dizer que a estratégia não fez nada.
+  if (!deals) return null
+
+  const fechos = deals
+    .filter((d) => d.entryType === 'DEAL_ENTRY_OUT' || d.entryType === 'DEAL_ENTRY_INOUT')
+    .filter((d) => d.type === 'DEAL_TYPE_BUY' || d.type === 'DEAL_TYPE_SELL')
+    .map((d) => Math.round((Number(d.profit ?? 0) + Number(d.commission ?? 0) + Number(d.swap ?? 0)) * 100) / 100)
+
+  const ganhos = fechos.filter((v) => v > 0).length
+  const perdas = fechos.filter((v) => v < 0).length
+  const breakeven = fechos.filter((v) => v === 0).length
+
+  return {
+    origem: 'provider',
+    contaProvider: nome,
+    sinais: fechos.length,
+    fechados: fechos.length,
+    ganhos,
+    perdas,
+    breakeven,
+    winrate: fechos.length ? Math.round((ganhos / fechos.length) * 1000) / 10 : null,
+    resultado: Math.round(fechos.reduce((a, b) => a + b, 0) * 100) / 100,
+    // Os pips não se leem de um fecho — vêm do preço, e a conta não os guarda.
+    pips: null,
+    esteveEmLucro: ganhos,
+    alvos: [],
+    medicaoFiavel: true,
+    porqueNaoFiavel: null,
+  }
+}
+
+/** Para as fontes sem conta provider: o que os sinais atingiram. */
+async function desempenhoDosSinais(fonte: string, dias: number): Promise<Desempenho> {
   const db = getSupabaseAdmin()
   const desde = new Date(Date.now() - dias * 86_400_000).toISOString()
 
@@ -62,30 +114,29 @@ async function desempenho(fonte: string, dias: number): Promise<Desempenho> {
     .limit(2000)
 
   const linhas = data ?? []
-  // Um sinal que ainda corre não tem desfecho — contá-lo como perda seria dizer que perdeu uma
-  // trade que ainda pode ganhar.
   const fechados = linhas.filter((l) => l.result_pips != null)
-  const ganhos = fechados.filter((l) => Number(l.result_pips) > 0).length
-  const perdas = fechados.filter((l) => Number(l.result_pips) < 0).length
-  const breakeven = fechados.filter((l) => Number(l.result_pips) === 0).length
 
   return {
+    origem: 'sinais',
+    contaProvider: null,
     sinais: linhas.length,
     fechados: fechados.length,
-    ganhos,
-    perdas,
-    breakeven,
-    // Sem trades fechadas não se inventa uma taxa de acerto.
-    winrate: fechados.length ? Math.round((ganhos / fechados.length) * 1000) / 10 : null,
-    pips: Math.round(fechados.reduce((a, l) => a + Number(l.result_pips ?? 0), 0)),
+    ganhos: fechados.filter((l) => Number(l.result_pips) > 0).length,
+    perdas: fechados.filter((l) => Number(l.result_pips) < 0).length,
+    breakeven: fechados.filter((l) => Number(l.result_pips) === 0).length,
+    winrate: null,
+    resultado: null,
+    pips: null,
     esteveEmLucro: linhas.filter((l) => Number(l.peak_pips ?? 0) > 0).length,
     alvos: [1, 2, 3].map((n) => ({
       alvo: `TP${n}`,
       acertos: linhas.filter((l) => Number(l.exits_done ?? 0) >= n).length,
     })),
+    // O desfecho por sinal é tudo-ou-nada e não conta as parciais — por isso não se publica
+    // taxa de acerto nenhuma a partir daqui.
     medicaoFiavel: false,
     porqueNaoFiavel:
-      'O desfecho é medido como se cada sinal fosse uma trade única: quem tirou parcial no primeiro alvo e deixou correr o resto aparece na mesma como perda. Até isto ser corrigido, mostram-se os alvos atingidos, que são um facto.',
+      'Esta fonte não tem conta de execução própria, por isso o que se mede são os sinais dela — quantos saíram e a que alvos chegaram. A taxa de acerto sairia de um cálculo tudo-ou-nada que conta como perda um sinal que já tinha dado parcial.',
   }
 }
 
@@ -98,8 +149,13 @@ export async function GET(request: NextRequest) {
   const dias = Math.min(365, Math.max(7, Number(request.nextUrl.searchParams.get('dias')) || 90))
 
   const db = getSupabaseAdmin()
+  const provider = CONTA_DA_FONTE[fonte]
   const [dados, { data: contas }] = await Promise.all([
-    desempenho(fonte, dias),
+    // A conta provider manda. Se não se conseguir ler, cai-se nos sinais em vez de mostrar zeros
+    // — mas fica dito de onde vieram os números.
+    provider
+      ? desempenhoDoProvider(provider.conta, provider.nome, dias).then((r) => r ?? desempenhoDosSinais(fonte, dias))
+      : desempenhoDosSinais(fonte, dias),
     db
       .from('mtmcopy_connections')
       .select('id, account_label, t2t_source_risk, t2t_lot_value, lot_value, max_risk_percent')

@@ -109,7 +109,19 @@ function ModalEstrategia({ fonte, nome, aoFechar }: { fonte: string; nome: strin
 
         {d && (
           <>
-            <p className="mb-2 text-[11px] uppercase tracking-wider text-zinc-500">Últimos 90 dias</p>
+            {/* De quem são estes números: da conta que PRODUZ a estratégia, não da do cliente —
+                essa está no separador Histórico. Quem abre isto quer saber se ELA ganha. */}
+            <p className="mb-1 text-[11px] uppercase tracking-wider text-zinc-500">
+              {(d.desempenho as { origem?: string }).origem === "provider"
+                ? "A estratégia · últimos 90 dias"
+                : "Os sinais desta fonte · últimos 90 dias"}
+            </p>
+            {(d.desempenho as { contaProvider?: string }).contaProvider && (
+              <p className="mb-2 text-[11.5px] leading-snug text-zinc-500">
+                Da conta que executa a {(d.desempenho as { contaProvider?: string }).contaProvider}. O teu
+                resultado está no separador Histórico.
+              </p>
+            )}
             {/* A taxa de acerto e os pips só aparecem quando a medição os merece. Hoje o desfecho
                 é calculado como se cada sinal fosse uma trade única, tudo-ou-nada: um sinal que
                 chega ao primeiro alvo, tira parcial e depois volta ao stop com o resto conta como
@@ -123,15 +135,17 @@ function ModalEstrategia({ fonte, nome, aoFechar }: { fonte: string; nome: strin
                   `${desempenho.ganhos ?? 0}G / ${desempenho.perdas ?? 0}P`,
                   desempenho.winrate == null ? "#a1a1aa" : Number(desempenho.winrate) >= 50 ? "#28C878" : "#FF4D4D",
                 )}
-                {caixa("Sinais", String(sinais), `${desempenho.fechados ?? 0} fechados`, "#ffffff")}
+                {caixa("Trades", String(desempenho.fechados ?? 0), "fechadas no período", "#ffffff")}
                 {caixa("Ganhos", String(desempenho.ganhos ?? 0), "trades ganhas", "#28C878")}
                 {caixa("Perdas", String(desempenho.perdas ?? 0), "trades perdidas", "#FF4D4D")}
                 {caixa("Break-even", String(desempenho.breakeven ?? 0), "saiu à entrada", "#D2A63C")}
                 {caixa(
-                  "Pips",
-                  `${Number(desempenho.pips ?? 0) >= 0 ? "+" : ""}${desempenho.pips ?? 0}`,
-                  "no período",
-                  Number(desempenho.pips ?? 0) >= 0 ? "#28C878" : "#FF4D4D",
+                  "Resultado",
+                  desempenho.resultado != null
+                    ? `${Number(desempenho.resultado) >= 0 ? "+" : ""}${Number(desempenho.resultado).toFixed(2)}`
+                    : "—",
+                  "na conta da estratégia",
+                  Number(desempenho.resultado ?? 0) >= 0 ? "#28C878" : "#FF4D4D",
                 )}
               </div>
             ) : (
