@@ -54,15 +54,17 @@ type Config = {
 
 /** Toggles AGRUPADOS por natureza (estratégias · motores · T2T) — a lista corrida já não se lia. */
 const STRATEGY_GROUPS: { group: string; items: { key: keyof Switches; label: string; hint: string }[] }[] = [
+  // 2026-08-27: a lista passou a ser a das estratégias que EXISTEM. As contas do GoldKiller
+  // (SDNb), do Forex/Trade Ideas (5IHE), do Booster (pIrJ) e do Gold Did (e68I) foram apagadas na
+  // MetaApi — devolvem 404. Ter aqui um interruptor para uma conta que não existe é pior do que
+  // não ter interruptor nenhum: parece que se pode ligar. Os switches continuam no runtime.
   {
     group: "Estratégias",
     items: [
-      { key: "premium", label: "MTM Auto Premium", hint: "London/NY Intelligence · sinais do canal" },
+      { key: "premium", label: "MTM Auto Premium", hint: "MxsR · conta 530d2e07 (MT5 700160095) · motor de preço" },
       { key: "premium_master_exec", label: "Premium · fluxo p/ conta MESTRE", hint: "OFF = semi-automático: o sinal vai direto às contas dos subscritores (sem conta mestre nem CopyFactory)" },
-      // Sensei retirado da UI (pedido Ricardo 2026-08-19) — os switches continuam a existir e a
-      // valer no runtime; só deixaram de ser mostrados aqui.
-      { key: "goldkiller", label: "GoldKiller", hint: "XAUUSD scanner" },
-      { key: "forex", label: "MTM Auto Forex", hint: "Trade Ideas · conta 5IHE" },
+      { key: "sensei", label: "MTM Auto Sensei", hint: "Oca7 · conta 16f4f233 (MT5 34744071) · motor de preço (parciais, BE, trailing)" },
+      { key: "sensei_entries", label: "Sensei · entradas novas", hint: "OFF pausa entradas e MANTÉM a gestão das posições abertas" },
     ],
   },
   {
@@ -80,6 +82,20 @@ const STRATEGY_GROUPS: { group: string; items: { key: keyof Switches; label: str
       { key: "t2t_auto_close", label: "T2T · fecho automático", hint: "Fonte fecha/cancela → apaga/fecha as ordens T2T dos seguidores" },
     ],
   },
+]
+
+/**
+ * O que saiu, e porquê — para não se procurar o interruptor que já não existe.
+ *
+ * Estas contas foram apagadas na MetaApi (404). O Aurum Flow está vivo mas não tem interruptor
+ * aqui de propósito: não há motor nosso a geri-lo — a gestão vem da própria fonte.
+ */
+const RETIRADAS = [
+  "GoldKiller (SDNb) · conta apagada na MetaApi",
+  "MTM Auto Forex / Trade Ideas (5IHE) · conta apagada",
+  "20X Booster (pIrJ) · conta apagada",
+  "Gold Did (e68I) · conta apagada",
+  "Aurum Flow (vT8w · conta a4ea0c45) · vivo, mas gerido na fonte — sem motor nosso",
 ]
 
 const ENV_FLAG_LABELS: Record<string, string> = {
@@ -222,6 +238,17 @@ export default function MtmcopyStrategyControl() {
               </div>
             </div>
           ))}
+
+          {/* O que já não está aqui, e porquê. Sem esta nota, quem procura o interruptor do
+              GoldKiller conclui que alguém o escondeu — em vez de saber que a conta desapareceu. */}
+          <div>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Fora da lista</p>
+            <ul className="space-y-1 rounded-lg border border-zinc-800/70 bg-zinc-950/30 px-3 py-2.5">
+              {RETIRADAS.map((r) => (
+                <li key={r} className="text-xs text-zinc-500">· {r}</li>
+              ))}
+            </ul>
+          </div>
 
           {/* RECEÇÃO POR CANAL — corta a ENTRADA de sinais a montante (inclui os relays do VPS):
               nada entra no chat, não executa e não notifica. É diferente de desligar a estratégia. */}

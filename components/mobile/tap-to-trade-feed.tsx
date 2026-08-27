@@ -3,12 +3,12 @@
 import { t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { pipSizeForSymbol, unitFor } from "@/lib/mtmcopy/trade-outcome"
 
-import { useCallback, useEffect, useState, useRef } from "react"
+import { useCallback, useEffect, useState, useRef, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import { useT } from "@/components/i18n-provider"
 import { supabase } from "@/lib/supabase"
 import { T2T_BROKERS } from "@/lib/mtmcopy/t2t-brokers"
-import { isAllowedT2TSource, matchesT2TPrefs, T2T_SOURCES, T2T_ASSET_CLASSES } from "@/lib/mtmcopy/t2t-source"
+import { isAllowedT2TSource, matchesT2TPrefs, t2tSourceKey, T2T_SOURCES, T2T_ASSET_CLASSES } from "@/lib/mtmcopy/t2t-source"
 import {
   TrendingUp,
   RefreshCw,
@@ -23,6 +23,9 @@ import {
   Trash2,
 } from "lucide-react"
 import MtmAutoMetricas from "@/components/mobile/mtm-auto-metricas"
+import MtmAutoPainel from "@/components/mobile/mtm-auto-painel"
+import MtmAutoEstrategias from "@/components/mobile/mtm-auto-estrategias"
+import MtmAutoHistorico from "@/components/mobile/mtm-auto-historico"
 
 const FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|entry\s*hit|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
 /** Encerra mesmo a ideia (ao contrário de um BE ou de um TP1, que a deixam a correr). */
@@ -53,12 +56,32 @@ function isEntrySignal(channelSlug: string, content?: string | null): boolean {
   return true
 }
 
+/** Iniciais da fonte — o avatar redondo do cartão, igual ao da app MTM Auto. */
+function iniciaisDaFonte(nome: string): string {
+  const p = nome.replace(/[^A-Za-zÀ-ú0-9 ]/g, "").split(/\s+/).filter(Boolean)
+  return ((p[0]?.[0] ?? "") + (p[1]?.[0] ?? p[0]?.[1] ?? "")).toUpperCase()
+}
+
+/** "3m", "2h", "1d" — a idade do sinal, curta, como na MTM Auto. */
+function idadeCurta(iso: string): string {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000)
+  if (s < 60) return `${Math.round(s)}s`
+  if (s < 3600) return `${Math.round(s / 60)}m`
+  if (s < 86400) return `${Math.round(s / 3600)}h`
+  return `${Math.round(s / 86400)}d`
+}
+
 const CHANNEL_LABEL: Record<string, string> = {
   "sensei-scanner": "Sensei Scanner",
   "premium-ideas": "Premium · Ouro",
   "trade-ideas-setup": "Ideias Forex",
   "trade-ideas": "Trade Ideas",
   "sinais-goldkiller": "GoldKiller",
+  // O slug engana: este é o canal dos traders de topo do PrimeVerse.
+  "sinais-scanner-mtm": "PrimeVerse",
+  "ideias-e-sinais": "Ideias Forex Swings",
+  "cripto-perps": "Perpétuos Cripto",
+  "golden-moves": "Aurum Flow",
 }
 
 function directionOf(content: string): "BUY" | "SELL" | "" {
@@ -245,6 +268,23 @@ function desfechoDoSinal(setup: Sig, fecho: Sig | undefined): string {
   return `${parte} · ${sinal}${pct.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
 }
 
+/**
+ * O sinal já saiu da zona de entrada?
+ *
+ * Só conta passados os cinco minutos: nos primeiros minutos um "entry hit" é o normal — o preço
+ * tocou a zona e quem aceita ainda entra praticamente ao mesmo preço. É depois disso que a
+ * entrada tocada deixa de ser uma boa notícia e passa a ser um comboio perdido.
+ */
+function foraDaZona(
+  s: { created_at: string },
+  vivo?: { exits?: number; entrou?: boolean },
+): boolean {
+  if (!vivo) return false
+  const idade = Date.now() - new Date(s.created_at).getTime()
+  if (!Number.isFinite(idade) || idade <= 5 * 60 * 1000) return false
+  return Number(vivo.exits ?? 0) > 0 || vivo.entrou === true
+}
+
 export default function TapToTradeFeed() {
   const t = useT()
   const searchParams = useSearchParams()
@@ -253,7 +293,21 @@ export default function TapToTradeFeed() {
   const [limitMode, setLimitMode] = useState<"today" | "week">("today")
   const [historico, setHistorico] = useState<Array<Sig & { desfecho: string }>>([])
   /** Resultado FLUTUANTE por sinal, calculado pelo motor (não por cotações no cliente). */
-  const [aoVivo, setAoVivo] = useState<Record<string, { pips: number | null; pct: number | null }>>({})
+  /**
+   * Os quatro ecrãs da app MTM Auto, aqui dentro.
+   *
+   * O separador deixou de ser uma página só com uma lista e três acordeões e passou a ter a mesma
+   * arrumação da MTM Auto: Sinais, Estratégias, Histórico e Conta. Quem usa as duas apps deixa de
+   * ter de aprender duas arrumações para a mesma coisa.
+   */
+  const [ecra, setEcra] = useState<"sinais" | "estrategias" | "historico" | "conta">("sinais")
+  /** Que cartões têm os alvos extra abertos. Um "+2" que não abre é uma pergunta sem resposta. */
+  const [alvosAbertos, setAlvosAbertos] = useState<Record<string, boolean>>({})
+  /** Fonte escolhida só para VER. Null = todas. Não mexe no que se recebe. */
+  const [fonteVista, setFonteVista] = useState<string | null>(null)
+  const [aoVivo, setAoVivo] = useState<
+    Record<string, { pips: number | null; pct: number | null; exits?: number; entrou?: boolean }>
+  >({})
   /** Lido dentro do `load` sem o tornar dependente do estado — o intervalo de 20s não se recria. */
   const limitModeRef = useRef<"today" | "week">("today")
   const [tap, setTap] = useState<{ sig: Sig; status: "confirm" | "loading" | "done" | "error"; message?: string } | null>(null)
@@ -264,6 +318,8 @@ export default function TapToTradeFeed() {
   const [preview, setPreview] = useState<TapPreview | null>(null)
   const [previewBusy, setPreviewBusy] = useState(false)
   const [providers, setProviders] = useState<{ label: string; strategy: string }[]>([])
+  /** Os canais que o servidor diz estarem ATIVOS no Tap to Trade — é a lista que o filtro usa. */
+  const [canaisAtivos, setCanaisAtivos] = useState<string[]>([])
   const [noProviders, setNoProviders] = useState(false)
   // Sinais que este utilizador já aceitou: { chat_message_id: status }
   const [accepted, setAccepted] = useState<Record<string, string>>({})
@@ -360,6 +416,7 @@ export default function TapToTradeFeed() {
           const d = await r.json()
           setProviders(d.providers ?? [])
           channels = (d.channels ?? []) as string[]
+          setCanaisAtivos(channels)
           if (Array.isArray(d.senseiSignalIds)) {
             senseiIds = new Set(d.senseiSignalIds as string[])
             senseiFilterOn = true
@@ -441,7 +498,15 @@ export default function TapToTradeFeed() {
     // Os TERMINADOS deixam de ser deitados fora: saem da lista de ideias aceitáveis (que é o
     // que "Últimos 5" mostra) e passam a formar o HISTÓRICO do dia e da semana, com o desfecho
     // em pips e percentagem ao lado do par.
-    setItems(sigs.filter((x) => !x.expired))
+    /**
+     * Os sinais FICAM na lista, mesmo depois de expirarem.
+     *
+     * Antes desapareciam ao fim de cinco minutos, e o ecrã ficava vazio a meio da tarde sem
+     * explicar porquê — quem estava a olhar não sabia se não tinha havido sinais, se o filtro
+     * tinha cortado tudo, ou se a app tinha deixado de funcionar. Agora ficam, e o cartão diz o
+     * que se passou: fora da zona, terminado com o resultado, ou indisponível.
+     */
+    setItems(sigs)
     // Resultado ao vivo dos que estão a correr: uma chamada por refrescar, números já feitos.
     try {
       const vivos = sigs.filter((x) => !x.expired).map((x) => x.id)
@@ -574,7 +639,7 @@ export default function TapToTradeFeed() {
   // "Últimos 5" = os cinco sinais MAIS RECENTES, seja qual for o estado deles. Antes só contava
   // os ainda aceitáveis, e como um setup expira em minutos o separador aparecia vazio a quem
   // vinha ver o que tinha saído.
-  const shown = filtered.filter(naJanela)
+  const shown = filtered.filter(naJanela).filter((x) => !fonteVista || x.channel_slug === fonteVista)
   const historicoVisivel = historicoFiltrado.filter(naJanela)
 
   const runTap = async () => {
@@ -643,6 +708,30 @@ export default function TapToTradeFeed() {
   }
 
   // Atualiza LOCALMENTE as prefs "O que seguir" (marca por-guardar) — só persiste no botão Guardar.
+  /**
+   * As fontes que estão MESMO ligadas no Tap to Trade.
+   *
+   * Vem de `channels` (o que o servidor devolve como ativo), não de uma lista fixa: uma lista
+   * fixa mostrava fontes desligadas, e deixar alguém marcar uma fonte que não existe é prometer
+   * sinais que nunca vão chegar.
+   */
+  const fontesAtivas = useMemo(
+    () =>
+      [...new Set(canaisAtivos)]
+        .map((slug) => ({ key: t2tSourceKey(slug, null) || slug, label: CHANNEL_LABEL[slug] ?? slug, slug }))
+        .filter((f: { key: string; label: string; slug: string }, i: number, xs: { slug: string }[]) => xs.findIndex((y) => y.slug === f.slug) === i),
+    [canaisAtivos],
+  )
+
+  /** Liga/desliga uma fonte. Vazio quer dizer TODAS — é o default e o mais útil. */
+  const toggleFonte = (key: string) => {
+    const todas = fontesAtivas.map((f: { key: string }) => f.key)
+    const atuais = follow.sources.length === 0 ? todas : follow.sources
+    const proximas = atuais.includes(key) ? atuais.filter((k: string) => k !== key) : [...atuais, key]
+    // Marcar tudo é o mesmo que não filtrar nada — grava-se vazio, que é mais simples de ler.
+    setFollowLocal({ ...follow, sources: proximas.length === todas.length ? [] : proximas })
+  }
+
   const setFollowLocal = (next: { sources: string[]; assetClasses: string[]; risk: string | null }) => {
     setFollow(next)
     setFollowDirty(true)
@@ -814,10 +903,14 @@ export default function TapToTradeFeed() {
     : "—"
 
   return (
-    <div className="px-3 pt-3 pb-24 text-white">
+    /* O separador inteiro veste a MTM Auto: mesmo fundo, mesma superfície, mesmo dourado. Não é
+       decoração — é a mesma conta e os mesmos sinais nas duas apps, e vê-los com duas caras
+       diferentes fazia parecer que eram dois produtos que por acaso se parecem. */
+    <div className="mtmauto px-3 pt-3 pb-24">
       <div className="flex items-center justify-between mb-1">
-        <h1 className="text-xl font-black flex items-center gap-2">
-          <Zap className="w-5 h-5 text-[#D2A63C]" /> T2T <span className="text-[#D2A63C]">Tap to Trade</span>
+        <h1 className="text-xl font-black tracking-tight flex items-center gap-2">
+          <Zap className="w-5 h-5 text-[#D2A63C]" /> MTM <span className="text-[#D2A63C]">Auto</span>
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Tap to Trade</span>
         </h1>
         <button onClick={load} disabled={loading} className="p-2 rounded-lg border border-zinc-700 text-zinc-400" aria-label={t("t2t.refresh")}>
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
@@ -827,12 +920,59 @@ export default function TapToTradeFeed() {
         {t("t2t.introBefore")}<strong className="text-zinc-200">{t("t2t.yourAccount")}</strong>{t("t2t.introAfter")}
       </p>
 
-      {/* Se também usas a MTM Auto, o que ela fez na tua conta aparece aqui — as duas partilham
-          o login, e saltar entre apps para saber como está o mês não faz sentido nenhum. */}
-      <MtmAutoMetricas />
+      {/* Os quatro ecrãs da MTM Auto. A ordem é a de lá: primeiro o que há para fazer agora
+          (Sinais), depois o que se segue, depois o que já aconteceu, e só no fim a conta. */}
+      <div className="mb-3 flex gap-1 rounded-xl border border-zinc-800 bg-zinc-950/60 p-1">
+        {([
+          ["sinais", "Sinais"],
+          ["estrategias", "Estratégias"],
+          ["historico", "Histórico"],
+          ["conta", "Conta"],
+        ] as const).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setEcra(id)}
+            className={`flex-1 rounded-lg py-1.5 text-[12.5px] font-semibold transition-colors ${
+              ecra === id ? "bg-[#D2A63C] text-black" : "text-zinc-400"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      {/* Configuração da conta (PrimeSync-style, dentro do T2T) */}
-      <div className="rounded-2xl border border-[#D2A63C]/25 bg-zinc-900/60 mb-3 overflow-hidden">
+      {ecra === "estrategias" && (
+        <MtmAutoEstrategias
+          fontes={fontesAtivas.map((f: { key: string; label: string }) => ({
+            ...f,
+            // Sem escolha guardada, recebe-se TUDO — é o default e é o mais útil.
+            ligada: follow.sources.length === 0 || follow.sources.includes(f.key),
+          }))}
+          onToggleFonte={toggleFonte}
+          porGuardar={followDirty}
+          aGuardarFontes={savingFollow}
+          onGuardarFontes={persistFollow}
+        />
+      )}
+
+      {ecra === "conta" && (
+        <>
+          {/* Duas famílias de conta no mesmo ecrã: a do MTM Auto e a do Tap to Trade. Sem um
+              título a separá-las, lia-se tudo como se fosse a mesma conta — e são coisas
+              diferentes, com riscos configurados em sítios diferentes. */}
+          <p className="etiqueta mb-2 mt-1">Conta MTM Auto</p>
+          <MtmAutoMetricas />
+          <MtmAutoPainel apenas="ligacao" />
+          <MtmAutoPainel apenas="definicoes" />
+          <p className="etiqueta mb-2 mt-4">Conta Tap to Trade</p>
+        </>
+      )}
+
+      {/* A configuração da conta Tap to Trade (a que existia antes da MTM Auto entrar aqui) vive
+          agora no ecrã «Conta», ao lado da conta MTM Auto. Duas configurações no mesmo ecrã de
+          sinais era o que tornava este separador confuso. */}
+      {ecra === "conta" && (
+      <div className="cartao mb-3 overflow-hidden">
         <button
           onClick={() => setShowConfig((v) => !v)}
           className="w-full flex items-center gap-2 px-3 py-2.5 text-left"
@@ -1089,88 +1229,52 @@ export default function TapToTradeFeed() {
           </div>
         )}
       </div>
-
-      {/* O QUE SEGUIR — o user escolhe fontes, ativos e risco. Vazio = segue tudo. */}
-      {hasAccount && (
-        <div className="rounded-2xl border border-[#D2A63C]/25 bg-zinc-900/60 mb-3 p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-4 h-4 text-[#D2A63C]" />
-            <p className="text-[13px] font-semibold">O que seguir</p>
-            {savingFollow && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#D2A63C]" />}
-          </div>
-
-          <p className="text-[11px] text-zinc-500 mb-1.5">Fontes {follow.sources.length === 0 && <span className="text-zinc-600">(todas)</span>}</p>
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {T2T_SOURCES.map((s) => {
-              const on = follow.sources.includes(s.key)
-              return (
-                <button
-                  key={s.key}
-                  onClick={() => toggleFollow("sources", s.key)}
-                  title={s.hint}
-                  className={`text-xs px-3 py-1.5 rounded-full border font-medium ${on ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
-                >
-                  {on ? "✓ " : ""}{s.label}
-                </button>
-              )
-            })}
-          </div>
-
-          <p className="text-[11px] text-zinc-500 mb-1.5">Ativos {follow.assetClasses.length === 0 && <span className="text-zinc-600">(todos)</span>}</p>
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {T2T_ASSET_CLASSES.map((a) => {
-              const on = follow.assetClasses.includes(a.key)
-              return (
-                <button
-                  key={a.key}
-                  onClick={() => toggleFollow("assetClasses", a.key)}
-                  className={`text-xs px-3 py-1.5 rounded-full border font-medium ${on ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
-                >
-                  {on ? "✓ " : ""}{a.label}
-                </button>
-              )
-            })}
-          </div>
-
-          <p className="text-[11px] text-zinc-500 mb-1.5">Risco por trade</p>
-          <div className="grid grid-cols-3 gap-2">
-            {(["low", "medium", "high"] as const).map((lvl) => {
-              const on = follow.risk === lvl
-              return (
-                <button
-                  key={lvl}
-                  onClick={() => setFollowLocal({ ...follow, risk: lvl })}
-                  className={`rounded-xl border py-2 text-xs font-semibold ${on ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
-                >
-                  {RISK_LABEL[lvl]}<span className="block text-[10px] font-normal opacity-70">{RISK_PRESET[lvl]}%</span>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Botão Guardar — só persiste ao clicar (pedido Ricardo) */}
-          <button
-            onClick={persistFollow}
-            disabled={savingFollow || !followDirty || !conn}
-            className={`mt-3 w-full rounded-xl py-2.5 text-[13px] font-bold ${followDirty && conn ? "bg-[#D2A63C] text-black" : "bg-zinc-800 text-zinc-500"} disabled:opacity-60`}
-          >
-            {savingFollow ? "A guardar…" : followDirty ? "Guardar alterações" : "Sem alterações por guardar"}
-          </button>
-          {/* A confirmação aparece DEPOIS de a gravação responder — não é o estado de repouso
-              do botão. Assim "Guardado" quer mesmo dizer que ficou gravado. */}
-          {followMsg && (
-            <p
-              className={`mt-2 text-[12px] text-center ${followMsg.tipo === "ok" ? "text-emerald-400" : "text-rose-400"}`}
-              role="status"
-            >
-              {followMsg.tipo === "ok" ? "✓ " : "⚠️ "}{followMsg.texto}
-            </p>
-          )}
-        </div>
       )}
+
+      {/* O «O que seguir» saiu daqui (27/08). Escolher fontes, ativos e risco por chips era uma
+          segunda configuração ao lado da que já existe no MTM Auto — e duas telas a decidir a
+          mesma coisa acabam sempre a discordar. O risco e as fontes definem-se nas Definições e
+          nas Estratégias do MTM Auto, que é onde a conta vive. As preferências já gravadas
+          continuam a valer na filtragem; o que desapareceu foi o segundo sítio para as mexer. */}
 
       {/* «Estratégias ativas» (automatizadas) removido: o Tap to Trade é MANUAL — segue os CHATS
           conforme o «O que seguir» (fontes + ativo + risco), não as estratégias de cópia auto. */}
+
+      {(ecra === "sinais" || ecra === "historico") && (
+      <>
+      {/* FILTRO DE VISTA por fonte. É só para OLHAR: não mexe no que se recebe (isso são as
+          Estratégias, com os interruptores verde/vermelho). Ter as duas coisas no mesmo sítio
+          fazia com que esconder uma fonte da vista a desligasse também das notificações — que é
+          o oposto do que quem filtra uma lista está a pedir. */}
+      {fontesAtivas.length > 1 && (
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => setFonteVista(null)}
+            className="rounded-full px-3 py-1.5 text-[11.5px] font-medium"
+            style={
+              fonteVista == null
+                ? { border: "1px solid var(--destaque-borda)", background: "var(--destaque-suave)", color: "var(--destaque)" }
+                : { border: "1px solid var(--borda)", color: "color-mix(in srgb, var(--texto) 55%, transparent)" }
+            }
+          >
+            Todas
+          </button>
+          {fontesAtivas.map((f: { key: string; label: string; slug: string }) => (
+            <button
+              key={f.slug}
+              onClick={() => setFonteVista((v) => (v === f.slug ? null : f.slug))}
+              className="rounded-full px-3 py-1.5 text-[11.5px] font-medium"
+              style={
+                fonteVista === f.slug
+                  ? { border: "1px solid var(--destaque-borda)", background: "var(--destaque-suave)", color: "var(--destaque)" }
+                  : { border: "1px solid var(--borda)", color: "color-mix(in srgb, var(--texto) 55%, transparent)" }
+              }
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Alcance. "Todos" era uma lista sem fim de setups aceitáveis e sem histórico nenhum;
           passa a Hoje / Esta semana, que é como se olha para o dia de trading. */}
@@ -1191,12 +1295,17 @@ export default function TapToTradeFeed() {
         ))}
       </div>
 
+      {/* A escolha das fontes vive nas ESTRATÉGIAS, com interruptores verde/vermelho. Tê-la
+          também aqui era o mesmo controlo em dois sítios — e dois sítios acabam por discordar. */}
+
       {/* Filtro por categoria removido: duplicava o «Ativo» do «O que seguir» (ouro/forex/cripto/
           índices). O feed já é filtrado pelas prefs em matchesT2TPrefs. */}
 
       {loading && items.length === 0 ? (
         <div className="flex justify-center py-16"><Loader2 className="w-7 h-7 animate-spin text-[#D2A63C]" /></div>
-      ) : shown.length === 0 && historicoVisivel.length === 0 ? (
+      ) : (ecra === "sinais" ? shown.length === 0 : historicoVisivel.length === 0) ? (
+        /* O vazio é por ECRÃ. Antes exigia que as duas listas estivessem vazias, e por isso o
+           ecrã dos Sinais sem sinais frescos não mostrava nada — nem cartões, nem explicação. */
         <div className="text-center py-16 text-zinc-500 text-sm">
           <TrendingUp className="w-10 h-10 mx-auto mb-3 text-zinc-700" />
           {noProviders
@@ -1205,60 +1314,124 @@ export default function TapToTradeFeed() {
         </div>
       ) : (
         <div className="space-y-2.5">
-          {shown.map((s) => {
+          {ecra === "sinais" && shown.map((s) => {
             const f = parseSignalFields(s.content)
             const dir = f.direction
             // Card harmonizado quando conseguimos ler símbolo + direção; senão cai no texto cru.
             const structured = Boolean(f.symbol && dir)
             return (
-              <div key={s.id} className={`rounded-2xl border p-3 ${s.expired ? "border-zinc-800/60 bg-zinc-900/30 opacity-70" : "border-zinc-800 bg-zinc-900/60"}`}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] font-semibold text-[#D2A63C]">{CHANNEL_LABEL[s.channel_slug] ?? s.channel_slug}</span>
-                  <div className="flex items-center gap-1.5">
-                    {s.expired && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-700/60 text-zinc-300 flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {t("t2t.expired")}
-                      </span>
-                    )}
-                    {dir && (
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${dir === "BUY" ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
-                        {dir}
-                      </span>
-                    )}
+              /* O cartão é o da app MTM Auto, à letra: moldura em gradiente, iniciais da fonte,
+                 direção e idade à esquerda, par e estado à direita, e a linha ENTRY / STOP / TP1
+                 que se lê de relance antes de decidir. */
+              <div key={s.id} className="moldura-brilho" style={{ opacity: s.expired ? 0.62 : 1 }}>
+              <div className="p-3.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[12.5px] font-semibold"
+                      style={{ background: "var(--destaque-suave)", color: "var(--destaque)" }}
+                    >
+                      {iniciaisDaFonte(CHANNEL_LABEL[s.channel_slug] ?? s.channel_slug)}
+                    </span>
+                    <div>
+                      <p className="text-[14.5px] font-semibold leading-tight">
+                        {CHANNEL_LABEL[s.channel_slug] ?? s.channel_slug}
+                      </p>
+                      <p className="mt-0.5 flex items-center gap-1.5 text-[12px]">
+                        {dir && (
+                          <span className="font-semibold" style={{ color: dir === "BUY" ? "var(--sucesso)" : "var(--perigo)" }}>
+                            {dir === "BUY" ? "↗ BUY" : "↘ SELL"}
+                          </span>
+                        )}
+                        <span className="texto-mais-fraco">· {idadeCurta(s.created_at)}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[15.5px] font-bold tracking-wide">{f.symbol || "—"}</p>
+                    <span
+                      className="mt-0.5 inline-block rounded-full px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide"
+                      style={
+                        accepted[s.id]
+                          ? { background: "var(--sucesso-suave)", color: "var(--sucesso)" }
+                          : s.expired
+                            ? { background: "var(--perigo-suave)", color: "var(--perigo)" }
+                            : { background: "var(--destaque-suave)", color: "var(--destaque)" }
+                      }
+                    >
+                      {accepted[s.id] ? "Aceite" : s.expired ? t("t2t.expired") : "Ativo"}
+                    </span>
                   </div>
                 </div>
+
                 {structured ? (
-                  <div className="space-y-1.5">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-[15px] font-bold text-white tracking-wide">{f.symbol}</span>
-                      <span className={`text-[11px] font-semibold ${dir === "BUY" ? "text-emerald-400" : "text-rose-400"}`}>{dir === "BUY" ? "COMPRA" : "VENDA"}</span>
+                  <>
+                    <div className="mt-2.5 flex gap-1.5">
+                      <div className="nivel">
+                        <p className="etiqueta">Entrada</p>
+                        <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums">{f.entry ?? "Mercado"}</p>
+                      </div>
+                      <div className="nivel">
+                        <p className="etiqueta">Stop loss</p>
+                        <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums" style={{ color: "var(--perigo)" }}>
+                          {f.sl ?? "—"}
+                        </p>
+                      </div>
+                      <div className="nivel">
+                        <p className="etiqueta">TP1</p>
+                        <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums" style={{ color: "var(--sucesso)" }}>
+                          {f.tps[0] ?? "—"}
+                        </p>
+                      </div>
+                      {f.tps.length > 1 && (
+                        <button
+                          onClick={() => setAlvosAbertos((m) => ({ ...m, [s.id]: !m[s.id] }))}
+                          aria-expanded={Boolean(alvosAbertos[s.id])}
+                          className="grid w-9 shrink-0 place-items-center rounded-xl text-[11.5px] font-semibold"
+                          style={{ background: "var(--destaque-suave)", color: "var(--destaque)" }}
+                        >
+                          {alvosAbertos[s.id] ? "×" : `+${f.tps.length - 1}`}
+                        </button>
+                      )}
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      <span className="text-[11px] px-2 py-0.5 rounded-lg bg-zinc-800/80 text-zinc-300">🎯 {f.entry ?? "Mercado"}</span>
-                      {/* A CORRER: o que a trade vale NESTE momento. Sem isto o cartão de um
-                          sinal vivo não dizia se estava a ganhar ou a perder — só os terminados
-                          traziam números, e esses já não servem para decidir nada. */}
-                      {aoVivo[s.id]?.pips != null && (
+
+                    {alvosAbertos[s.id] && f.tps.length > 1 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {f.tps.slice(1).map((tp, i) => (
+                          <div key={i} className="nivel">
+                            <p className="etiqueta">TP{i + 2}</p>
+                            <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums" style={{ color: "var(--sucesso)" }}>{tp}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* O que a trade vale AGORA. Sem isto, o cartão de um sinal vivo não diz se
+                        está a ganhar ou a perder — e é isso que decide se vale a pena entrar. */}
+                    {aoVivo[s.id]?.pips != null && (
+                      <div
+                        className="mt-2 flex items-center justify-between rounded-xl px-3 py-2"
+                        style={{ background: "color-mix(in srgb, var(--fundo) 60%, transparent)" }}
+                      >
+                        <span className="etiqueta">Desde a entrada</span>
                         <span
-                          className={`text-[11px] px-2 py-0.5 rounded-lg font-semibold tabular-nums ${
-                            (aoVivo[s.id]!.pips ?? 0) >= 0
-                              ? "bg-emerald-500/15 text-emerald-400"
-                              : "bg-rose-500/15 text-rose-400"
-                          }`}
-                          title="Resultado a correr, calculado pelo motor"
+                          className="text-[14.5px] font-bold tabular-nums"
+                          style={{ color: (aoVivo[s.id]!.pips ?? 0) >= 0 ? "var(--sucesso)" : "var(--perigo)" }}
                         >
                           {(aoVivo[s.id]!.pips ?? 0) >= 0 ? "+" : ""}{aoVivo[s.id]!.pips} pips
-                          {aoVivo[s.id]!.pct != null && ` · ${(aoVivo[s.id]!.pct ?? 0) >= 0 ? "+" : ""}${aoVivo[s.id]!.pct}%`}
+                          {aoVivo[s.id]!.pct != null && (
+                            <span className="ml-1.5 text-[12px] font-normal texto-mais-fraco">
+                              {(aoVivo[s.id]!.pct ?? 0) >= 0 ? "+" : ""}{aoVivo[s.id]!.pct}%
+                            </span>
+                          )}
                         </span>
-                      )}
-                      {f.sl && <span className="text-[11px] px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-300">🛑 SL {f.sl}</span>}
-                      {f.tps.map((tp, i) => (
-                        <span key={i} className="text-[11px] px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-300">✅ TP{i + 1} {tp}</span>
-                      ))}
-                    </div>
-                  </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
-                  <p className="text-[13px] text-zinc-200 whitespace-pre-wrap break-words leading-snug line-clamp-5">{s.content}</p>
+                  <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-snug line-clamp-5 texto-fraco">
+                    {s.content}
+                  </p>
                 )}
                 {accepted[s.id] ? (
                   <div className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500/15 text-emerald-400 font-semibold text-[12px] py-2.5">
@@ -1274,9 +1447,22 @@ export default function TapToTradeFeed() {
                   }`}>
                     🏁 {t("t2t.reasonResolved")} · {s.desfecho}
                   </div>
-                ) : s.expired ? (
+                ) : foraDaZona(s, aoVivo[s.id]) ? (
+                  /* A trade já saiu da zona: a entrada foi tocada, ou já houve um parcial. O
+                     botão desaparece porque aceitar agora não é aceitar este sinal — é entrar a
+                     meio do movimento com o stop do princípio, a arriscar várias vezes o
+                     previsto para apanhar o que resta do alvo. */
                   <div className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-zinc-800/70 text-zinc-500 font-semibold text-[12px] py-2.5 cursor-not-allowed">
-                    <Clock className="w-4 h-4" /> {t("t2t.signalExpired")}{s.reason ? ` · ${s.reason === "resolved" ? t("t2t.reasonResolved") : t("t2t.reasonAged")}` : ""}
+                    <Clock className="w-4 h-4" /> {t("t2t.outOfZone")}
+                  </div>
+                ) : s.expired ? (
+                  /* Continua na lista, mas já não se aceita. A menção é a que interessa a quem
+                     olha: o sinal está lá, e está indisponível. */
+                  <div
+                    className="mt-2.5 flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] font-semibold"
+                    style={{ background: "color-mix(in srgb, var(--fundo) 60%, transparent)", color: "color-mix(in srgb, var(--texto) 45%, transparent)" }}
+                  >
+                    <Clock className="w-4 h-4" /> Sinal indisponível
                   </div>
                 ) : (
                   <button
@@ -1290,14 +1476,23 @@ export default function TapToTradeFeed() {
                   </button>
                 )}
               </div>
+              </div>
             )
           })}
 
           {/* HISTÓRICO — sinais já terminados na janela escolhida, com o desfecho ao lado do
               par. É o que faltava para o tab responder a "como correu o dia" sem sair da app. */}
-          {historicoVisivel.length > 0 && (
+          {/* Os anteriores aparecem TAMBÉM no ecrã dos Sinais. Um ecrã que só mostra os sinais
+              aceitáveis fica vazio na maior parte do dia — e vazio não diz se não houve sinais,
+              se o filtro cortou tudo, ou se a app está avariada. Com os anteriores por baixo, o
+              ecrã responde sempre a "o que é que aconteceu hoje". */}
+          {/* O histórico dos SINAIS do chat continua por baixo; por cima vai o das CONTAS, que é
+              o que responde a "como é que correu" — e inclui MTM Auto, T2T e MTM Copy. */}
+          {ecra === "historico" && <MtmAutoHistorico dias={limitMode === "today" ? 1 : 7} />}
+
+          {ecra === "historico" && historicoVisivel.length > 0 && (
             <div className="mt-4">
-              <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
+              <p className="etiqueta mb-2">
                 Terminados · {limitMode === "today" ? "hoje" : "esta semana"} ({historicoVisivel.length})
               </p>
               <div className="flex flex-col gap-2">
@@ -1332,6 +1527,8 @@ export default function TapToTradeFeed() {
             </div>
           )}
         </div>
+      )}
+      </>
       )}
 
       {connectOpen && (

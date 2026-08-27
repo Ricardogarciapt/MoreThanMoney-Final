@@ -36,6 +36,8 @@ import {
 } from "lucide-react"
 import { PipelineFlow } from "@/components/mtmcopy/mtmcopy-shared"
 import MtmcopyGlobalPerformance from "@/components/admin/mtmcopy-global-performance"
+import MtmcopyFontesVivas from "@/components/admin/mtmcopy-fontes-vivas"
+import MtmcopySinergia from "@/components/admin/mtmcopy-sinergia"
 import { coerceBotUsername, formatTelegramBotLabel } from "@/lib/telegram-bot-display"
 
 function parseTab(
@@ -246,6 +248,26 @@ export default function AdminMtmcopyPage() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* As fontes vivas vêm ANTES da performance: de nada serve uma curva de equity
+                  bonita se a conta que a devia alimentar já não existe. */}
+              <MtmcopyAdminSection
+                title="Fontes · estado real"
+                description="Cada estratégia, a conta que a publica e o que a MetaApi diz sobre ela neste momento."
+                icon={Radio}
+                accent="emerald"
+              >
+                <MtmcopyFontesVivas />
+              </MtmcopyAdminSection>
+
+              <MtmcopyAdminSection
+                title="MTM Auto ↔ MTM Copy"
+                description="Quem tem conta nos dois sistemas — e onde a MESMA conta de corretora está ligada duas vezes (risco a dobrar sem ninguém pedir)."
+                icon={Users}
+                accent="gold"
+              >
+                <MtmcopySinergia />
+              </MtmcopyAdminSection>
 
               {/* Painel «Desempenho das estratégias» retirado da Visão geral (pedido Ricardo
                   2026-08-19). A «Visão global do sistema», abaixo, mantém a performance agregada. */}

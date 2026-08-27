@@ -1,8 +1,10 @@
+import { estadoAposFalha } from './falha-transitoria'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { isPremiumTp1HitConfirmed } from './channel-context'
 import {
   buildPremiumSingleOrder,
   claimSignalOnce,
+  releaseSignalClaim,
   findPremiumSinglePosition,
   scaleLotForSmallCapital,
   shouldSkipDuplicatePremiumEntry,
@@ -787,8 +789,10 @@ async function processManagementUpdate(
     })
     await markConnectionStatus(conn.id, {
       last_signal_at: new Date().toISOString(),
+      // Uma falha NOSSA (timeout, quota, socket) não marca a conta do cliente — ver
+      // `falha-transitoria.ts`. Antes marcava, e o painel escondia-lhe o saldo por causa disso.
       ...(status === 'error' && detailSuffix
-        ? { mt5_status: 'error', last_error: detailSuffix.replace(/^ · /, '') }
+        ? estadoAposFalha(detailSuffix.replace(/^ · /, ''))
         : status === 'executed'
           ? { mt5_status: 'connected', last_error: null }
           : {}),
@@ -1222,6 +1226,10 @@ async function executeViaMtmProvider(
     return
   }
 
+  // A chave que esta chegada reclamou. Fica guardada para ser DEVOLVIDA se no fim não abrir
+  // nada (só pendente): quem não abriu não pode bloquear a chegada seguinte, que abre.
+  let premiumClaimKey: string | null = null
+
   if (isPremiumProvider && premiumProviderSingle) {
     // Guard ATÓMICO anti-triplicação: a fonte (NY/Londres) às vezes repete o sinal em várias
     // mensagens e o forwarder externo mete outra cópia → 2-3 chegadas em segundos. A 1.ª reclama
@@ -1232,8 +1240,10 @@ async function executeViaMtmProvider(
     // reenvios — não trava reentradas legítimas minutos depois. (Antes: símbolo:direção 900s → bloqueava
     // todas as reentradas de ouro durante 15 min.)
     const dedupLevel = Math.round(Number(signalForExec.sl ?? signalForExec.entry ?? 0))
-    const claimed = await claimSignalOnce(`premium:${mappedSymbol}:${signalForExec.direction}:${dedupLevel}`, 180)
+    premiumClaimKey = `premium:${mappedSymbol}:${signalForExec.direction}:${dedupLevel}`
+    const claimed = await claimSignalOnce(premiumClaimKey, 180)
     if (!claimed) {
+      premiumClaimKey = null
       await logProviderSignalEvent({
         channel,
         provider,
@@ -1401,6 +1411,7 @@ async function executeViaMtmProvider(
               status: 'skipped',
               detail: `${aiDetail} · Zona ${zoneLow}–${zoneHigh}: sem espaço até ao TP1 — não persegue`,
             })
+            if (premiumClaimKey) await releaseSignalClaim(premiumClaimKey)
             return
           }
           await logProviderSignalEvent({
@@ -1408,6 +1419,7 @@ async function executeViaMtmProvider(
             status: 'received',
             detail: `${aiDetail} · Zona ${zoneLow}–${zoneHigh}: ${nLegs} camadas pendentes (${legLotFor(0)}+${legLotFor(1)} lote, rasa→funda) — segue a zona · ${executionSummary}`,
           })
+          if (premiumClaimKey) await releaseSignalClaim(premiumClaimKey)
           return
         }
         if (zoneDecision === 'pending') {
@@ -1421,6 +1433,9 @@ async function executeViaMtmProvider(
             status: 'received',
             detail: `${aiDetail} · Zona ${zoneLow}–${zoneHigh}: PENDENTE (ponta da zona) — aguarda reação · ${executionSummary}`,
           })
+          // Ficou só à espera: devolve a chave. Se a fonte reenviar o sinal (é o que faz quando
+          // o preço reage), a chegada seguinte tem de poder abrir a mercado.
+          if (premiumClaimKey) await releaseSignalClaim(premiumClaimKey)
           return
         }
         if (zoneDecision === 'skip') {
@@ -1433,6 +1448,7 @@ async function executeViaMtmProvider(
             status: 'skipped',
             detail: `${aiDetail} · Zona ${zoneLow}–${zoneHigh}: sem espaço até ao TP1 (movimento esgotado) — não persegue`,
           })
+          if (premiumClaimKey) await releaseSignalClaim(premiumClaimKey)
           return
         }
         // 'market': preço na zona/favorável → entra a MERCADO JÁ (expedito). Cai para a execução.

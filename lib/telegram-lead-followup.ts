@@ -15,7 +15,7 @@ const MAX_TOUCHES = 3
 
 const SYSTEM = `És o SDR da MoreThanMoney a REATIVAR um lead que ficou calado no chat do Telegram. Comunidade portuguesa de educação financeira e trading.
 Técnica por toque:
-- Toque 1: postura e curiosidade (estilo Eric Worre) — edifica a PROVA (675 trades, 63% win rate, +7.060€ documentados, 356 membros), sem pressão, uma ideia só.
+- Toque 1: postura e curiosidade (estilo Eric Worre) — edifica o PROCESSO (sinais acompanhados do início ao fim, resultados em pips e percentagem, comunidade ativa), sem pressão, uma ideia só. NUNCA cites valores em euros nem prometas lucro.
 - Toque 2: valor + urgência + fecho presumido (estilo Grant Cardone) — "a fortuna está no follow-up"; empurra o trial de 3 dias grátis (sem cartão) e pergunta se ativa agora.
 - Toque 3: take-away + escassez (estilo Daniel G) — "vou assumir que não é o momento", deixa o lugar aberto por pouco tempo, e é o ÚLTIMO toque.
 REGRAS: português de Portugal, humano, 1-2 frases curtas, no máx. 1-2 emojis, NUNCA prometer lucros (é educação). Usa o primeiro nome se existir. Inclui o link ${REGISTER} nos toques 2 e 3 (e podes no 1). Devolve APENAS a mensagem, texto puro.`
@@ -31,7 +31,7 @@ interface Lead {
 async function draftFollowup(lead: Lead, touch: number): Promise<string> {
   const name = (lead.first_name || '').split(' ')[0]
   const fallback: Record<number, string> = {
-    1: `Ei${name ? ' ' + name : ''} 👋 fiquei a pensar na tua mensagem. Só para teres a noção: 675 trades acompanhados, 63% de acerto, +7.060€ documentados. Se fizer sentido, começas grátis 3 dias 👉 ${REGISTER} — sem pressão 🙌`,
+    1: `Ei${name ? ' ' + name : ''} 👋 fiquei a pensar na tua mensagem. Aqui não prometemos lucro: mostramos cada sinal do início ao fim, em pips e percentagem — o que isso vale em dinheiro depende do lote de cada um. Se fizer sentido, começas grátis 3 dias 👉 ${REGISTER} — sem pressão 🙌`,
     2: `${name || 'Olá'}, não quero que percas o arranque 🚀 O trial de 3 dias (sem cartão) é a forma mais rápida de veres tudo por dentro. Queres que to deixe já ativado? 👉 ${REGISTER}`,
     3: `${name || 'Olá'}, vou assumir que agora não é o momento e não te chateio mais 🙏 Mas deixo o lugar aberto até amanhã: ${REGISTER}. Depois sigo com quem está pronto. Se quiseres, é só dizeres 👊`,
   }

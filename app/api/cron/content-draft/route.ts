@@ -1,4 +1,4 @@
-import { getProofStats, proofLine, proofAsOfLabel } from '@/lib/proof-stats'
+import { getProofStats } from '@/lib/proof-stats'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CAPTION_INTERNAL_MARK, uploadBufferToBucket } from '@/lib/instagram/publish'
@@ -149,7 +149,10 @@ export async function GET(req: NextRequest) {
   try {
     // PROVA VIVA (cron diário) — deixa de haver números congelados no prompt.
     const proof = await getProofStats()
-    let proofText = `${proofLine(proof)} documentados, ${proof.members} membros ativos (dados de ${proofAsOfLabel(proof)})`
+    let proofText =
+      `${proof.members} membros ativos. NUNCA cites lucro em euros nem prometas ganhos: fala de resultados ` +
+      `em PIPS e PERCENTAGEM, com o valor em dinheiro só como exemplo por lote (0,01 · 0,1 · 1,0) e sempre ` +
+      `com a ressalva de que é bruto e de que resultados passados não garantem resultados futuros.`
     // DESTAQUE DO DIA — só métricas verdadeiras E positivas (nunca força; se não houver, fica só a prova).
     try {
       const { inspiringHighlights } = await import('@/lib/inspiring-metrics')

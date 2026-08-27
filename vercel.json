@@ -70,6 +70,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/pips-proof",
+      "schedule": "30 7 * * *"
+    },
+    {
       "path": "/api/cron/mtmcopy-history-ingest",
       "schedule": "0 */6 * * *"
     },

@@ -17,7 +17,7 @@ export const CANONICAL_SENSEI_ACCOUNT_ID = 'a5a1dddd-0099-4d67-98f1-86b65aad5845
  * ainda serve de default a outros sítios (PrimeVerse, preço de referência) — mexer nela mudava
  * coisas que nada têm a ver com isto.
  */
-export const SENSEI_PROVIDER_ACCOUNT_ID = '79225bd0-b556-4dbe-8c5b-d2a2969b997e'
+export const SENSEI_PROVIDER_ACCOUNT_ID = '16f4f233-5cbe-4fe9-9530-89a58965bfe0'
 /** GoldKiller Scanner — conta MetaApi 181271197 (MetaQuotes) + estratégia CopyFactory SDNb */
 export const CANONICAL_GOLDKILLER_ACCOUNT_ID = 'bddad3b8-353f-4a19-badf-f8df8f532678'
 /** MTM 20X Booster — conta Monaxa 986912 (booster 20x, 1:50) + estratégia CopyFactory pIrJ */
@@ -32,7 +32,7 @@ export const CANONICAL_TRADE_IDEAS_STRATEGY_ID = '5IHE'
  * conta a5a1dddd, apagada na MetaApi, por isso os clientes que a "copiavam" não copiavam nada.
  * A nova está na conta própria do Sensei (login 34744071).
  */
-export const CANONICAL_SENSEI_STRATEGY_ID = '0o5o'
+export const CANONICAL_SENSEI_STRATEGY_ID = 'Oca7'
 export const CANONICAL_GOLDKILLER_STRATEGY_ID = 'SDNb'
 export const CANONICAL_BOOSTER_STRATEGY_ID = 'pIrJ'
 /** Gold Did — conta PU Prime do Alcy (4dacaf5a) executa os sinais Premium com gestão própria
@@ -44,9 +44,52 @@ export const CANONICAL_GOLDDID_STRATEGY_ID = 'e68I'
 export const CANONICAL_COPYTRADER_RG_ACCOUNT_ID = '0f38257a-ba12-4f6c-b20c-9139693b3674'
 export const CANONICAL_COPYTRADER_RG_STRATEGY_ID = 'su0a'
 
-/** Golden Moves — conta Alcy 700147340 (PU Prime demo) alimentada pelo canal GOLDEN MOVES. */
-export const CANONICAL_GOLDENMOVES_ACCOUNT_ID = '58aeb8d6-3b4c-4178-bfa6-3e0c8af24ff0'
-export const CANONICAL_GOLDENMOVES_STRATEGY_ID = 'GdMv'
+/**
+ * Golden Moves — conta PU Prime LIVE 34744077 (a4ea0c45), com papel de PROVIDER na CopyFactory,
+ * a publicar a estratégia vT8w.
+ *
+ * Estava apontado à conta demo do Alcy (58aeb8d6 / GdMv), e isso estava errado por duas razões.
+ * A primeira é que a demo do Alcy tem o mesmo login MT5 (700147340) que uma segunda conta
+ * MetaApi SUBSCRITA ao Premium — a mesma conta de corretora registada duas vezes, uma a receber
+ * cópias do Premium e a outra a republicar tudo o que lá acontecesse como Golden Moves. A
+ * segunda é que a GdMv já não existe: quem a copiasse não copiava nada.
+ *
+ * A fonte a sério é a conta que executa mesmo os sinais do canal (alimentada pelo PrimeSync), e
+ * é essa que publica a vT8w.
+ */
+export const CANONICAL_AURUMFLOW_ACCOUNT_ID = 'a4ea0c45-3dd1-4b55-bd2a-7f44d8d6884b'
+export const CANONICAL_AURUMFLOW_STRATEGY_ID = 'vT8w'
+/** @deprecated nome antigo — "Golden Moves" passou a "Aurum Flow" a 2026-08-27. */
+export const CANONICAL_GOLDENMOVES_ACCOUNT_ID = CANONICAL_AURUMFLOW_ACCOUNT_ID
+/** @deprecated idem. */
+export const CANONICAL_GOLDENMOVES_STRATEGY_ID = CANONICAL_AURUMFLOW_STRATEGY_ID
+
+/**
+ * As contas onde o MOTOR EM TEMPO REAL corre — e só estas.
+ *
+ * O monitor de preço lia as posições de TODAS as contas com trades abertas, cliente a cliente.
+ * Com dezenas de contas isso são dezenas de leituras à MetaApi por minuto para gerir posições
+ * que, na esmagadora maioria, são cópias: quando o mestre faz o parcial, move o stop para a
+ * entrada ou arrasta o trailing, a CopyFactory replica essas alterações para quem o copia. Gerir
+ * a cópia outra vez, uma conta de cada vez, é pagar duas vezes pelo mesmo resultado.
+ *
+ * Daqui em diante gere-se a ORIGEM. São estas três — as únicas que ainda existem na MetaApi;
+ * todas as outras contas provedoras antigas foram apagadas.
+ *
+ * ⚠️ Quem executa por Telegram DIRETO (copy_method='telegram_group') não recebe estas alterações
+ * pela CopyFactory: abre a posição na própria conta e depende do motor para os parciais, o BE e
+ * o trailing. Para esses, ou se passa a cópia por estratégia, ou o motor tem de continuar a
+ * visitá-los — ver `motorCorreNaConta`.
+ */
+export const CONTAS_MOTOR_TEMPO_REAL: string[] = [
+  CANONICAL_PREMIUM_ACCOUNT_ID,      // MTM Auto Premium  · MT5 700160095 · MxsR
+  SENSEI_PROVIDER_ACCOUNT_ID,        // MTM Auto Sensei   · MT5 34744071  · Oca7
+  CANONICAL_AURUMFLOW_ACCOUNT_ID,    // MTM Auto Aurum Flow · MT5 34744077 · vT8w
+]
+
+export function ehContaDeMotor(accountId: string | null | undefined): boolean {
+  return Boolean(accountId) && CONTAS_MOTOR_TEMPO_REAL.includes(String(accountId))
+}
 
 /**
  * CONTA MÍNIMA para copiar, em USD.
@@ -89,11 +132,12 @@ export const MTM_COPY_STRATEGY_CATALOG: Record<
       'trailing depois do primeiro. Como opera BTC, corre também fora do horário de mercado do ' +
       'ouro. Conta mínima 500 USD (a 1% por trade).',
   },
-  [CANONICAL_GOLDENMOVES_STRATEGY_ID]: {
-    title: 'MTM Auto Golden Moves',
-    publicLabel: 'MTM Auto Golden Moves',
+  [CANONICAL_AURUMFLOW_STRATEGY_ID]: {
+    title: 'MTM Auto Aurum Flow',
+    publicLabel: 'MTM Auto Aurum Flow',
     description:
-      'Ouro e alguns pares, pelo trader do canal Golden Moves. Stop e alvos da própria mensagem, ' +
+      'Ouro e alguns pares, com gestão feita na própria fonte — o trailing vem de lá, não é '
+      + 'aplicado por cima. Stop e alvos da própria mensagem, ' +
       '1% do teu saldo por trade, gestão acompanhada pelo motor de preço. Opera mais vezes por ' +
       'dia do que o Premium — conta com mais movimento na conta. Conta mínima 500 USD.',
   },

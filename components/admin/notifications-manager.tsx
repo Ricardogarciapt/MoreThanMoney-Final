@@ -51,7 +51,7 @@ interface NotificationConfig {
   title: string
   message: string
   enabled: boolean
-  targetUsers: 'all' | 'members' | 'vip' | 'admin'
+  targetUsers: 'all' | 'members' | 'premium' | 'vip' | 'admin' | 'mtmauto' | 't2t'
   scheduledAt?: string
   sentAt?: string
   recipientsCount?: number
@@ -453,7 +453,11 @@ export default function NotificationsManager() {
                   <SelectContent className="bg-gray-800 border-gray-600">
                     <SelectItem value="all" className="text-white">👥 Todos os utilizadores</SelectItem>
                     <SelectItem value="members" className="text-white">⭐ Apenas membros</SelectItem>
+                    <SelectItem value="premium" className="text-white">💎 Premium (inclui VIP)</SelectItem>
                     <SelectItem value="vip" className="text-white">👑 Apenas VIP</SelectItem>
+                    {/* Audiências por USO: quem já tem conta ligada é outra conversa. */}
+                    <SelectItem value="mtmauto" className="text-white">⚡ Com conta no MTM Auto</SelectItem>
+                    <SelectItem value="t2t" className="text-white">👆 Com conta Tap to Trade</SelectItem>
                     <SelectItem value="admin" className="text-white">🔧 Apenas administradores</SelectItem>
                   </SelectContent>
                 </Select>

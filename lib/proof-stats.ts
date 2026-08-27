@@ -58,7 +58,14 @@ export async function getProofStats(): Promise<ProofStats> {
   return { ...AUDITED_FALLBACK }
 }
 
-/** Linha curta de prova p/ copy: "675 trades · 63% win rate · +7.060€". */
+/**
+ * @deprecated NÃO usar em conteúdo publicado (decisão 2026-08-26).
+ *
+ * A prova em euros foi retirada do funil: o mesmo sinal vale 8 $ a quem opera 0,01 lote e 800 $ a
+ * quem opera 1, por isso um número em euros não descreve o que ninguém vai receber. O que se
+ * publica agora são PIPS e PERCENTAGEM — ver `lib/pips-proof.ts` — com o dinheiro apresentado como
+ * exemplo por tamanho de lote e sempre com a ressalva legal. Isto fica só para relatórios internos.
+ */
 export function proofLine(s: ProofStats, opts?: { withProfit?: boolean }): string {
   const nf = new Intl.NumberFormat('pt-PT')
   const sym = s.currency === 'EUR' ? '€' : s.currency === 'USD' ? '$' : ` ${s.currency}`

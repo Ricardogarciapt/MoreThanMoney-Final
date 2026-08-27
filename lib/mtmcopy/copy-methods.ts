@@ -135,9 +135,10 @@ export const TELEGRAM_GROUPS: {
   {
     id: 'golden_moves',
     channelKey: 'premium-signals',
-    title: 'Golden Moves',
+    title: 'MTM Auto Aurum Flow',
     description:
-      'Sinais do canal Golden Moves, com 1% de risco por trade e a gestão que vem em cada mensagem.',
+      'Ouro pela fonte do Aurum Flow, com 1% de risco por trade e a gestão que vem na própria fonte '
+      + '— o trailing chega com o sinal, não é aplicado por cima.',
     chatId: '-1004343748070',
   },
   {
@@ -213,8 +214,14 @@ export function getMtmStrategyOptions(): MtmCopyStrategyOption[] {
   // Fontes novas (2026-08-24): cada uma executa na SUA conta provedora, alimentada pelo canal
   // com o mesmo nome. Aparecem aqui e nos Grupos de sinais — são os dois caminhos pelos quais
   // um cliente pode subscrever. Sem subscrição explícita nenhuma conta as executa.
+  //
+  // `channelKey: null` é deliberado, e importante. O Golden Moves executa na conta dele
+  // (alimentada pelo PrimeSync) e copia-se SÓ por CopyFactory — como o Sensei e o GoldKiller.
+  // Estava declarado como 'premium-signals', e isso fazia com que `strategyPickMatchesChannel`
+  // desse verdadeiro para o canal Premium: quem escolhesse Golden Moves passava a receber, por
+  // execução directa, os sinais do Premium que nunca pediu.
   for (const [id, canal] of [
-    [CANONICAL_GOLDENMOVES_STRATEGY_ID, 'premium-signals'],
+    [CANONICAL_GOLDENMOVES_STRATEGY_ID, null],
   ] as const) {
     const cat = MTM_COPY_STRATEGY_CATALOG[id]
     if (cat) out.push({ id, channelKey: canal, title: cat.title, description: cat.description })
@@ -387,7 +394,9 @@ const TELEGRAM_GROUP_SHORT_LABEL: Record<MtmcopyTelegramGroup, string> = {
   sensei: 'Sensei Scanner',
   goldkiller: 'GoldKiller · Ouro',
   forex_swings: 'Forex Swings',
-  golden_moves: 'Golden Moves',
+  // A CHAVE fica `golden_moves` de propósito: está gravada nas ligações dos clientes, e trocá-la
+  // desligava a cópia a quem a tem escolhida. O que muda é o nome que se lê.
+  golden_moves: 'MTM Auto Aurum Flow',
 }
 
 export function telegramGroupsLabel(groups: MtmcopyTelegramGroup[]): string {

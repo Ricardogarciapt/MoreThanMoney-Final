@@ -7,7 +7,7 @@
  * Estado + histórico em `telegram_leads`. Não é aconselhamento financeiro.
  */
 import { getMtmcopyBotToken } from '@/lib/mtmcopy/telegram-bot'
-import { getProofStats, proofLine, proofAsOfLabel } from '@/lib/proof-stats'
+import { getProofStats } from '@/lib/proof-stats'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 const FOREX_LINK = 'https://t.me/+cVcMbCRt2rlmNzg0'
@@ -91,10 +91,23 @@ export async function runLeadFunnelReply(input: {
     { role: 'user' as const, content: input.userText },
   ]
 
-  // PROVA VIVA (atualizada pelo cron diário) — evita os números congelados no prompt.
+  // PROVA — sem euros. O tamanho da comunidade é um facto; o desempenho fala-se em pips e
+  // percentagem, porque o mesmo sinal vale 8 $ a quem opera 0,01 lote e 800 $ a quem opera 1.
   const proof = await getProofStats()
   const systemPrompt = buildSystem(
-    `${proofLine(proof)} documentados, ${proof.members} membros (dados de ${proofAsOfLabel(proof)})`,
+    `${proof.members} membros na comunidade. ` +
+    `HÁ DOIS CAMINHOS e a tua primeira tarefa é perceber qual é o desta pessoa: ` +
+    `(A) ECOSSISTEMA — quer comunidade, formação, sessões ao vivo e os grupos de sinais; ` +
+    `(B) MTM AUTO — só quer a app que copia os sinais para a conta dele, sem trabalho. ` +
+    `Se for (B): explica que a app abre as ordens na conta DELE com o risco DELE, que a mensalidade é ` +
+    `24,99 €/mês mas fica a ZERO com conta real na PU Prime, e conduz passo a passo — abrir conta pelo ` +
+    `nosso link, depositar 300 $ (o dinheiro é dele e fica na conta dele), mandar o UID e o print para eu ` +
+    `validar, e só depois instalar a app e ligar a conta MT5. Uma coisa de cada vez, nunca tudo de enfiada. ` +
+    `Se for (A): segue o funil normal da comunidade. Se ainda não sabe, pergunta com as duas opções. ` +
+    `NUNCA cites lucro em euros nem prometas ganhos: ` +
+    `os resultados dos sinais falam-se em PIPS e PERCENTAGEM, e o valor em dinheiro apresenta-se como ` +
+    `exemplo por lote (0,01 · 0,1 · 1,0), sempre com a ressalva de que é bruto e de que resultados ` +
+    `passados não garantem resultados futuros.`,
   )
 
   let answer: string | null = null
@@ -226,7 +239,7 @@ export function leadWelcomeMessage(firstName?: string | null): string {
   const nome = firstName ? ` ${firstName}` : ''
   return (
     `👋 Olá${nome}, bem-vindo à MoreThanMoney!\n\n` +
-    `Comunidade PT de trading: 675 trades reais · 63% win · +7.060€. ` +
+    `Comunidade PT de trading: sinais acompanhados do início ao fim, medidos em pips e percentagem. ` +
     `Para te ajudar melhor — o que procuras: **sinais para copiar à mão**, ` +
     `**Tap to Trade** (1 toque na app) ou **algo automático**? 🙂\n\n` +
     // Dica de tradução — o lead pode escrever no seu idioma (respondo nele) e usar o

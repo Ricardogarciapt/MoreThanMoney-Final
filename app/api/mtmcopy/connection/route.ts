@@ -13,6 +13,7 @@ import {
   sanitizeConnectionForClient,
 } from '@/lib/mtmcopy/connection-sanitize'
 import { mtmcopyLimitsLabel, resolveMtmcopyUserLimits } from '@/lib/mtmcopy/account-limits'
+import { carregarDireitos } from '@/lib/entitlements'
 import { deriveSenderMode } from '@/lib/mtmcopy/user-copy-context'
 import type { MTMcopierConnection, MtmcopySenderMode } from '@/lib/mtmcopy/types'
 
@@ -487,15 +488,21 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (is_active) {
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('user_type')
-      .eq('id', user.id)
-      .maybeSingle()
-    const sub = await getMtmcopySubscription(user.id, profile?.user_type)
-    if (!sub.active) {
+    /**
+     * Quem pode ligar a cópia automática.
+     *
+     * Era só a subscrição do MTMcopier — e por isso um Premium ou um VIP, que já pagam por ela,
+     * ouviam "activa a subscrição" à porta de uma coisa que já tinham comprado. A pergunta é uma
+     * só e está em `carregarDireitos`: subscrição do MTM Copy, do MTM Auto, Premium, VIP ou admin.
+     */
+    const direitos = await carregarDireitos(user.id)
+    if (!direitos.copiaAutomatica) {
       return NextResponse.json(
-        { error: 'Activa a subscrição MTMcopier (+20€/mês) antes de ligar a cópia.' },
+        {
+          error:
+            'A cópia automática precisa de MTM Copy, MTM Auto, Premium ou VIP. Sem ela continuas a aceitar sinais à mão no Tap to Trade.',
+          code: 'sem_copia_automatica',
+        },
         { status: 402 },
       )
     }

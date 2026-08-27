@@ -71,6 +71,31 @@ export const CANONICAL_TELEGRAM_CHANNELS = {
     appSlug: 'cripto-perps' as const,
     envVars: ['TELEGRAM_CHANNEL_PERPS', 'TELEGRAM_PERPS_CHAT_ID'],
   },
+  /**
+   * MTM Auto FOREX swings — swings de forex, set & forget.
+   *
+   * Existia como grupo, como relay e como canal na app, mas nunca aqui. Sem estar nesta lista
+   * não aparecia no painel de canais oficiais, e um canal que o admin não vê é um canal que
+   * ninguém verifica quando deixa de publicar.
+   */
+  forexSwings: {
+    chatId: '-1004362819270',
+    title: 'MTM Auto FOREX swings',
+    mtmcopyKey: 'trade-ideas' as const,
+    appSlug: 'ideias-e-sinais' as const,
+    envVars: ['TELEGRAM_CHANNEL_FOREX_SWINGS', 'TELEGRAM_FOREX_SWINGS_CHAT_ID'],
+  },
+  /**
+   * MTM System — a comunidade. NÃO é canal de sinais: não roteia para estratégia nenhuma.
+   * Está aqui para o painel mostrar o conjunto dos grupos oficiais, que é o que o admin tem
+   * de conseguir confirmar de uma vez.
+   */
+  mtmSystem: {
+    chatId: '-1004352255256',
+    title: 'MTM System',
+    appSlug: 'comunidade' as const,
+    envVars: ['TELEGRAM_CHANNEL_MTM_SYSTEM'],
+  },
 }
 
 /** Normaliza ID de env (corrige -3716578747 → -1003716578747, remove \\n). */

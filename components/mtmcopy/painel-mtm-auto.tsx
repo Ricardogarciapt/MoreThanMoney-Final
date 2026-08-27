@@ -158,7 +158,7 @@ export default function PainelMtmAuto({ accessToken }: { accessToken: string }) 
             {dados.acesso.isento && " · mensalidade isenta"}
           </p>
           <Link
-            href="https://mtm-auto.vercel.app/sinais"
+            href="https://www.morethanmoney.pt/mtmautoapp/sinais"
             target="_blank"
             className="inline-flex items-center gap-1.5 rounded-lg border border-[#D2A63C]/40 px-3 py-1.5 text-xs font-semibold text-[#D2A63C] hover:bg-[#D2A63C]/10"
           >

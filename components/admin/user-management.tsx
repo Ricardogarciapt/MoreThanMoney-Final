@@ -396,7 +396,7 @@ export default function UserManagementComponent({
     )
     if (result.success) {
       toast({
-        title: "IQONIC aprovado",
+        title: "Acesso validado",
         description: result.data?.message || "Membro pode voltar a fazer login.",
       })
       await loadUsers()
@@ -929,7 +929,7 @@ export default function UserManagementComponent({
                           )}
                           {iqonicPending && (
                             <Badge className="text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/40">
-                              🔷 IQONIC pendente
+                              🔷 Validação de acesso pendente
                             </Badge>
                           )}
                           {user.iqonic_member_id && (
@@ -1114,7 +1114,7 @@ export default function UserManagementComponent({
                                   rel="noreferrer"
                                   className="text-[10px] text-[#D2A63C] underline"
                                 >
-                                  Ver print IQONIC
+                                  Ver comprovativo
                                 </a>
                               )}
                               <Button
@@ -1128,7 +1128,7 @@ export default function UserManagementComponent({
                                 ) : (
                                   <>
                                     <CheckCircle className="h-4 w-4 mr-1" />
-                                    Aprovar IQONIC
+                                    Aprovar acesso
                                   </>
                                 )}
                               </Button>

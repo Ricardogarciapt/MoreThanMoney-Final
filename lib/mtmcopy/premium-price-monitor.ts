@@ -19,7 +19,7 @@ import {
   PREMIUM_WIDE_ZONE_TRAIL_ACTIVATION_PIPS,
 } from './premium-trade-active'
 import { mirrorPremiumExit } from './premium-subscriber-exits'
-import { CANONICAL_PREMIUM_ACCOUNT_ID } from './provider-constants'
+import { CANONICAL_PREMIUM_ACCOUNT_ID, CONTAS_MOTOR_TEMPO_REAL, ehContaDeMotor } from './provider-constants'
 import { pipSizeForSymbol } from './trade-outcome'
 import { symbolMatchesCanonical } from './symbol-resolver'
 import { trailingArrancaPips } from './source-risk-rules'
@@ -69,6 +69,48 @@ interface ActiveRow {
  * O anúncio é idempotente (o `announceAndCloseByMessage` não repete o mesmo cartão em thread) e
  * fecha também as ordens de quem aceitou o sinal no T2T.
  */
+/**
+ * Regista uma SAÍDA — é isto que faz os parciais contarem na prova.
+ *
+ * Uma posição de 0,03 que fecha 0,01 no TP1, 0,01 no TP2 e 0,01 no stop não é uma perda: é a
+ * média ponderada das três saídas. Antes só se guardava `exits_done`, um contador, e quem
+ * medisse depois via "Stop loss" e deitava fora o lucro já embolsado. Cada linha aqui tem a
+ * fração fechada e os pips DESSA saída; somar fração×pips dá o resultado real da posição.
+ *
+ * Falhar a gravar nunca trava a gestão da trade — o dinheiro vem primeiro que a estatística.
+ */
+async function registarSaida(
+  admin: ReturnType<typeof getSupabaseAdmin>,
+  row: ActiveRow,
+  args: { accountId: string; positionId: string; nivel: number; fraccao: number; preco: number; fechouTudo: boolean },
+): Promise<void> {
+  try {
+    const entry = row.entry && row.entry > 0 ? row.entry : null
+    const pips =
+      entry != null
+        ? Math.round(((row.direction === 'buy' ? args.preco - entry : entry - args.preco) / pipSizeForSymbol(row.symbol)) * 10) / 10
+        : null
+    await admin.from('mtmcopy_trade_exits').upsert(
+      {
+        account_id: args.accountId,
+        position_id: String(args.positionId),
+        symbol: row.symbol,
+        direction: row.direction,
+        source_key: row.source_key ?? null,
+        exit_level: args.nivel,
+        fraccao: Math.min(Math.max(args.fraccao, 0), 1),
+        entry,
+        price: args.preco,
+        pips,
+        fechou_tudo: args.fechouTudo,
+      },
+      { onConflict: 'position_id,exit_level' },
+    )
+  } catch {
+    /* estatística nunca bloqueia execução */
+  }
+}
+
 async function encerrarRegisto(
   admin: ReturnType<typeof getSupabaseAdmin>,
   row: ActiveRow,
@@ -206,6 +248,9 @@ export async function runPremiumPriceMonitor(): Promise<{
 }> {
   const sw = await getExecSwitches()
   if (!sw.premium_price_monitor) return { ran: false, checked: 0, actions: 0, detail: ['monitor desligado'] }
+  if (!CONTAS_MOTOR_TEMPO_REAL.length) {
+    return { ran: false, checked: 0, actions: 0, detail: ['sem contas de origem configuradas'] }
+  }
 
   const admin = getSupabaseAdmin()
   const { data: rows } = await admin
@@ -218,13 +263,44 @@ export async function runPremiumPriceMonitor(): Promise<{
   const list = (rows ?? []) as ActiveRow[]
   if (!list.length) return { ran: true, checked: 0, actions: 0, detail: ['sem trades ativas'] }
 
+  const detail: string[] = []
   const byAccount = new Map<string, ActiveRow[]>()
   for (const r of list) {
     if (!byAccount.has(r.account_id)) byAccount.set(r.account_id, [])
     byAccount.get(r.account_id)!.push(r)
   }
 
-  const detail: string[] = []
+  /**
+   * O motor visita as contas de ORIGEM, não as cópias.
+   *
+   * Cada conta visitada custa uma leitura de posições à MetaApi por passagem. Com dezenas de
+   * contas de clientes, a esmagadora maioria dessas leituras servia para gerir posições que a
+   * CopyFactory já gere sozinha: quando o mestre faz o parcial, move o stop para a entrada ou
+   * arrasta o trailing, essas alterações são replicadas a quem o copia. Gerir a cópia outra vez,
+   * conta a conta, é pagar duas vezes pelo mesmo resultado.
+   *
+   * As contas que executam por Telegram DIRETO são a exceção que fica: abrem na própria conta,
+   * ninguém lhes replica nada, e sem o motor ficavam sem parciais, sem break-even e sem
+   * trailing. Essas continuam a ser visitadas — são poucas e são as únicas que precisam.
+   */
+  const { data: diretas } = await admin
+    .from('mtmcopy_connections')
+    .select('metaapi_account_id')
+    .eq('is_active', true)
+    .eq('copy_method', 'telegram_group')
+    .not('metaapi_account_id', 'is', null)
+  const precisamDoMotor = new Set((diretas ?? []).map((c) => String(c.metaapi_account_id)))
+
+  const saltadas: string[] = []
+  for (const accountId of [...byAccount.keys()]) {
+    if (ehContaDeMotor(accountId) || precisamDoMotor.has(accountId)) continue
+    byAccount.delete(accountId)
+    saltadas.push(accountId.slice(0, 8))
+  }
+  if (saltadas.length) {
+    detail.push(`${saltadas.length} contas copiadoras saltadas (a CopyFactory replica os fechos): ${saltadas.join(', ')}`)
+  }
+
   let actions = 0
   let checked = 0
 
@@ -359,6 +435,9 @@ export async function runPremiumPriceMonitor(): Promise<{
           try {
             const r = await closePositionById(accountId, pos.id)
             if (r?.success) {
+              await registarSaida(admin, row, {
+                accountId, positionId: String(pos.id), nivel: 9, fraccao: 1, preco: price, fechouTudo: true,
+              })
               await encerrarRegisto(admin, row, 'target_final', { exits_done: 2 })
               actions++
               detail.push(`${row.symbol}: Gold Did → fechou no TP2 ${tp2}`)
@@ -604,6 +683,16 @@ export async function runPremiumPriceMonitor(): Promise<{
         continue
       }
       actions++
+      // A saída fica registada com o seu peso: é o que permite medir a trade pelo que ela deu,
+      // e não pelo rótulo do último acontecimento.
+      await registarSaida(admin, row, {
+        accountId,
+        positionId: String(pos.id),
+        nivel: nextLevel,
+        fraccao: closeAll ? Math.max(0, 1 - (pcts.slice(0, nextLevel - 1).reduce((x, y) => x + y, 0) / 100)) : pct / 100,
+        preco: price,
+        fechouTudo: closeAll,
+      })
 
       const patch: Record<string, unknown> = { exits_done: nextLevel, updated_at: new Date().toISOString() }
       if (closeAll && nextLevel >= 3) patch.status = 'closed'

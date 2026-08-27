@@ -194,6 +194,75 @@ export async function POST(request: NextRequest) {
       try {
         const cq = body.callback_query
         const bg = await import("@/lib/telegram-broker-gate")
+
+        // Os botões do caminho (ecossistema vs MTM Auto) respondem-se ANTES de tudo: são de quem
+        // ainda está a decidir, e uma pergunta que fica sem resposta é um lead que se vai embora.
+        const dadosBotao = typeof cq.data === "string" ? cq.data : ""
+        if (dadosBotao.startsWith("caminho:") || dadosBotao.startsWith("mtmauto:")) {
+          const mf = await import("@/lib/telegram-mtmauto-funnel")
+          const chatBotao = String(cq.message?.chat?.id ?? cq.from?.id ?? "")
+          const bt0 = getMtmcopyBotToken()
+          if (dadosBotao === "caminho:ecossistema") {
+            await mf.marcarInteresse(chatBotao, "ecossistema")
+            if (bt0) {
+              await fetch(`https://api.telegram.org/bot${bt0}/sendMessage`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ chat_id: chatBotao, parse_mode: "HTML", disable_web_page_preview: true,
+                  text: bg.brokerStepMessage() }),
+              })
+            }
+          } else {
+            const passo = dadosBotao === "mtmauto:corretora" ? "corretora"
+              : dadosBotao === "mtmauto:app" ? "app_instalada"
+              : dadosBotao === "mtmauto:ligar" ? "a_operar" : null
+            // "não consigo entrar" fica registado como app_instalada: a conta existe, o que falta
+            // é a porta abrir. Serve para o admin ver quem ficou preso à entrada.
+            if (dadosBotao === "mtmauto:login" || dadosBotao === "mtmauto:sememail") {
+              await mf.marcarPassoMtmAuto(chatBotao, "app_instalada")
+            }
+            if (passo) await mf.marcarPassoMtmAuto(chatBotao, passo as "corretora" | "app_instalada" | "a_operar")
+            else await mf.marcarInteresse(chatBotao, "mtmauto")
+            // Quem JÁ tem a corretora validada e só agora diz que quer a app não devia ter de
+            // repetir nada: o cupão é emitido aqui mesmo.
+            if (dadosBotao === "caminho:mtmauto") {
+              const { data: leadJa } = await supabase
+                .from("telegram_leads")
+                .select("stage, broker_uid")
+                .eq("chat_id", chatBotao)
+                .maybeSingle()
+              if ((leadJa as { stage?: string } | null)?.stage === "granted") {
+                const cupaoApp = await mf.criarCupaoMtmAuto(chatBotao, (leadJa as { broker_uid?: string } | null)?.broker_uid ?? null)
+                if (cupaoApp && bt0) {
+                  await mf.marcarPassoMtmAuto(chatBotao, "validado")
+                  const mc = mf.mtmAutoCupaoValidado(cupaoApp)
+                  await fetch(`https://api.telegram.org/bot${bt0}/sendMessage`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ chat_id: chatBotao, parse_mode: "HTML", disable_web_page_preview: true,
+                      text: mc.texto, reply_markup: mc.teclado }),
+                  })
+                }
+              }
+            }
+
+            const resposta = mf.respostaDeCallback(dadosBotao)
+            if (resposta && bt0) {
+              await fetch(`https://api.telegram.org/bot${bt0}/sendMessage`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ chat_id: chatBotao, parse_mode: "HTML", disable_web_page_preview: true,
+                  text: resposta.texto, reply_markup: resposta.teclado }),
+              })
+            }
+          }
+          const btAck = getMtmcopyBotToken()
+          if (btAck) {
+            await fetch(`https://api.telegram.org/bot${btAck}/answerCallbackQuery`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ callback_query_id: cq.id }),
+            })
+          }
+          return NextResponse.json({ ok: true })
+        }
+
         if (typeof cq.data === "string" && cq.data.startsWith("admin:")) {
           await bg.handleAdminAction(supabase, cq.data.slice(6), String(cq.from?.id ?? cq.message?.chat?.id ?? ""))
         } else {
@@ -233,20 +302,40 @@ export async function POST(request: NextRequest) {
       const chatId = String(body.message.chat.id)
       const botToken = getMtmcopyBotToken()
 
-      const sendMessage = async (msg: string) => {
+      const sendMessage = async (msg: string, teclado?: unknown) => {
         if (!botToken) return
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: chatId, text: msg, parse_mode: "HTML" }),
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: msg,
+            parse_mode: "HTML",
+            disable_web_page_preview: true,
+            ...(teclado ? { reply_markup: teclado } : {}),
+          }),
         })
+      }
+
+      /**
+       * A pergunta que separa os caminhos.
+       *
+       * Vai logo a seguir às boas-vindas porque é a única coisa que muda tudo o que vem depois:
+       * quem quer só a app não quer ouvir falar de sessões ao vivo, e quem quer a comunidade não
+       * quer um tutorial de instalação. Duas opções, e a resposta fica guardada.
+       */
+      const perguntarCaminho = async () => {
+        const mf = await import("@/lib/telegram-mtmauto-funnel")
+        await mf.marcarInteresse(chatId, "indeciso")
+        const q = mf.perguntaDeCaminho(body.message?.from?.first_name ?? null)
+        await sendMessage(q.texto, q.teclado)
       }
 
       // Boas-vindas (reutilizada por /start e por deep-links de funil)
       const welcomeMsg =
         "👋 <b>Bem-vindo à MoreThanMoney!</b>\n\n" +
         "O ecossistema português de trading: scanner, alertas, comunidade e app. " +
-        "<b>675 trades reais · 63% win · +7.060€</b>.\n\n" +
+        "Sinais acompanhados do início ao fim, medidos em pips e percentagem.\n\n" +
         "Por onde queres começar?\n" +
         "🎁 /app — 14 dias Premium GRÁTIS (código 14DayTrial, sem cartão)\n" +
         "💬 /grupos — Entrar nos grupos de sinais\n" +
@@ -298,13 +387,38 @@ export async function POST(request: NextRequest) {
         // Deep-link de funil (lead/broker/…) OU token de mentor não encontrado:
         // NUNCA dead-end — arranca o funil com as boas-vindas.
         if (!linked) {
-          await sendMessage(welcomeMsg)
+          // Quem chega pelo botão "Validate partner broker" da app cai DIRETO nos passos da
+          // validação de corretora. Mandá-lo para as boas-vindas genéricas era fazê-lo procurar
+          // outra vez aquilo em que já tinha carregado.
+          const t = token.toLowerCase()
+          if (t === "broker" || t === "corretora") {
+            const { brokerStepMessage } = await import("@/lib/telegram-broker-gate")
+            await sendMessage(brokerStepMessage())
+          } else if (t === "mtmauto" || t === "auto") {
+            // Quem chega pelo link da app já disse o que quer — não se lhe pergunta outra vez.
+            const mf = await import("@/lib/telegram-mtmauto-funnel")
+            await mf.marcarInteresse(chatId, "mtmauto")
+            const m = mf.mtmAutoIntro()
+            await sendMessage(m.texto, m.teclado)
+          } else {
+            await sendMessage(welcomeMsg)
+            await perguntarCaminho()
+          }
         }
       }
 
       // /start sem token
       else if (text === "/start") {
         await sendMessage(welcomeMsg)
+        await perguntarCaminho()
+      }
+
+      // /mtmauto — atalho para quem já sabe o que quer
+      else if (text === "/mtmauto" || text === "/auto") {
+        const mf = await import("@/lib/telegram-mtmauto-funnel")
+        await mf.marcarInteresse(chatId, "mtmauto")
+        const m = mf.mtmAutoIntro()
+        await sendMessage(m.texto, m.teclado)
       }
 
       // /sinais — últimos sinais

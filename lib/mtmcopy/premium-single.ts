@@ -41,6 +41,21 @@ export async function claimSignalOnce(key: string, ttlSec = 900): Promise<boolea
   }
 }
 
+/**
+ * Devolve a chave ao pote.
+ *
+ * Existe por causa de um caso que custou trades: uma chegada que NÃO abre nada (fica só pendente
+ * à espera de reação na zona) ficava com a chave reclamada, e a chegada seguinte — a que abria
+ * mesmo — era recusada como "duplicado". Quem não abriu não deve segurar a chave.
+ */
+export async function releaseSignalClaim(key: string): Promise<void> {
+  try {
+    await getSupabaseAdmin().from('mtmcopy_signal_dedup').delete().eq('key', key)
+  } catch (e) {
+    console.error('[dedup] releaseSignalClaim:', e instanceof Error ? e.message : e)
+  }
+}
+
 export const PREMIUM_SINGLE_TAG = 'PREM'
 export const SMALL_CAPITAL_THRESHOLD = 1000
 

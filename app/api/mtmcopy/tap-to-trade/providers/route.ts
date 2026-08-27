@@ -8,8 +8,13 @@ import { appChannelsForRoute } from '@/lib/mtmcopy/tap-to-trade-channels'
 export const dynamic = 'force-dynamic'
 
 /** Nome público das fontes T2T sem conta provedora. */
+/** Nome legível das fontes SEM conta provedora nossa — senão aparece o slug cru na app. */
 const T2T_EXTRA_LABELS: Record<string, string> = {
   'trade-ideas-setup': 'Ideias de Forex',
+  // O slug lê-se como "scanner MTM", mas o canal é o dos traders de topo do PrimeVerse.
+  'sinais-scanner-mtm': 'PrimeVerse',
+  // Swings: entram e ficam. Vão para T2T sem motor de gestão — só se acompanha o desfecho.
+  'ideias-e-sinais': 'Ideias Forex Swings',
 }
 
 const supabase = getSupabaseAdmin()

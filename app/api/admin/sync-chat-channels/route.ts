@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
   try {
     const { data, error } = await supabase
       .from('chat_channels')
-      .select('id, slug, name, description, parent_slug, position')
+      .select('id, slug, name, description, parent_slug, position, hidden')
       .order('position', { ascending: true })
 
     if (error) {
@@ -128,4 +128,37 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     )
   }
+}
+
+/**
+ * Editar um canal — nome, descrição, ordem e visibilidade.
+ *
+ * Até aqui o painel só sabia CRIAR os canais em falta a partir da lista por omissão. Renomear um
+ * canal, corrigir a descrição ou tirá-lo das apps obrigava a ir à base de dados — e o que não se
+ * consegue fazer pelo painel acaba por não ser feito.
+ *
+ * O `slug` NÃO se edita de propósito: é a chave por onde as mensagens, as rotas de sinais e as
+ * notificações encontram o canal. Mudá-lo não renomeava nada — partia as ligações todas e deixava
+ * as mensagens antigas órfãs.
+ */
+export async function PATCH(request: NextRequest) {
+  const authCheck = await requireAdmin(request)
+  if (authCheck) return authCheck
+
+  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+  const slug = String(body.slug ?? '').trim()
+  if (!slug) return NextResponse.json({ success: false, error: 'slug obrigatório' }, { status: 400 })
+
+  const patch: Record<string, unknown> = {}
+  if (typeof body.name === 'string' && body.name.trim()) patch.name = body.name.trim().slice(0, 80)
+  if (typeof body.description === 'string') patch.description = body.description.trim().slice(0, 300) || null
+  if (body.position != null && Number.isFinite(Number(body.position))) patch.position = Number(body.position)
+  if (typeof body.hidden === 'boolean') patch.hidden = body.hidden
+  if (!Object.keys(patch).length) {
+    return NextResponse.json({ success: false, error: 'nada para alterar' }, { status: 400 })
+  }
+
+  const { error } = await getSupabaseAdmin().from('chat_channels').update(patch).eq('slug', slug)
+  if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
 }

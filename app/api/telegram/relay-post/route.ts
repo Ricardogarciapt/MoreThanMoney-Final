@@ -9,7 +9,9 @@ import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
  * Fontes com chat próprio na app: espelham no chat, geram cartão T2T e executam na CONTA
  * PROVEDORA da rota — nunca em contas de clientes. Ver executeSignalOnRouteProvider.
  */
-const FONTES_COM_CHAT_PROPRIO = new Set(['gold-did', 'golden-moves'])
+// O 'golden-moves' saiu a 2026-08-27: o chat Aurum Flow foi retirado das apps e espelhar
+// mensagens para um canal escondido é escrever para ninguém.
+const FONTES_COM_CHAT_PROPRIO = new Set(['gold-did'])
 
 /**
  * Aplica uma edição da fonte: corrige o Telegram, corrige o chat da app, e — no Premium —

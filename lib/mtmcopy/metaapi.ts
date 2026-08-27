@@ -1169,22 +1169,91 @@ export interface MetaApiDeal {
   commission?: number
   swap?: number
   time?: string | Date
+  /** Comentário da ordem — é onde o nosso sistema escreve a estratégia ("T2T-premium"). */
+  comment?: string
+}
+
+/** Região de cada conta, descoberta uma vez. A conta vive numa região e só responde nessa. */
+const regiaoPorConta = new Map<string, string>()
+
+async function regiaoDaConta(accountId: string, token: string): Promise<string | null> {
+  const guardada = regiaoPorConta.get(accountId)
+  if (guardada) return guardada
+  try {
+    const r = await fetch(
+      `https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${accountId}`,
+      { headers: { 'auth-token': token } },
+    )
+    if (!r.ok) return null
+    const j = (await r.json()) as { region?: string }
+    const reg = (j.region ?? '').trim()
+    if (!reg) return null
+    regiaoPorConta.set(accountId, reg)
+    return reg
+  } catch {
+    return null
+  }
 }
 
 /**
  * Histórico de deals (execuções) de uma conta entre datas — base para reconstruir
  * os TRADES FECHADOS (entrada+saída por posição) e o P&L real.
+ *
+ * ── Porque é que isto passou a ser REST ───────────────────────────────────────────────────────
+ * A versão anterior abria uma ligação RPC do SDK: `waitConnected` → `connect` → `waitSynchronized`
+ * → `getDealsByTimeRange`. São três esperas de sincronização antes de se pedir o que quer que
+ * seja, e num arranque a frio da Vercel raramente chegavam ao fim dentro do tempo. Como o `catch`
+ * devolve `[]`, o falhanço não parecia um falhanço: parecia uma conta sem negócios. Foi assim que
+ * a prova em pips passou semanas a dizer "0 trades" com 254 negócios na conta — a conta-espelho
+ * tinha o histórico todo lá, e nós é que não conseguíamos lê-lo.
+ *
+ * O endpoint REST devolve exatamente os mesmos deals, num pedido só, sem sincronizar nada. A
+ * única coisa que é preciso saber é a REGIÃO da conta: uma conta de Londres não responde no
+ * endereço de Nova Iorque, e era esse outro meio-caminho para o mesmo array vazio.
+ *
+ * O SDK fica como plano B — se um dia o REST mudar, ainda há por onde ir — mas deixa de ser o
+ * caminho normal. E quando ambos falham devolve-se null, NÃO uma lista vazia: quem chama tem de
+ * poder distinguir "esta conta não negociou" de "não consegui ler a conta". Confundir as duas foi
+ * o bug.
  */
 export async function getHistoryDeals(
   accountId: string,
   fromTime: Date,
   toTime: Date = new Date(),
 ): Promise<MetaApiDeal[]> {
+  return (await lerHistorico(accountId, fromTime, toTime)) ?? []
+}
+
+/** Igual, mas devolve null quando a LEITURA falhou (em vez de fingir uma conta parada). */
+export async function lerHistorico(
+  accountId: string,
+  fromTime: Date,
+  toTime: Date = new Date(),
+): Promise<MetaApiDeal[] | null> {
   const token = process.env.METAAPI_TOKEN
-  if (!token) return []
-  // IMPORTANTE: as queries de histórico (getDealsByTimeRange) no build default (esm-web)
-  // tocam `window` → "window is not defined" no servidor. Usamos o build NODE do SDK,
-  // com conexão própria, sem mexer no fluxo de ordens/posições existente.
+  if (!token) return null
+
+  const regiao = await regiaoDaConta(accountId, token)
+  if (regiao) {
+    try {
+      const de = encodeURIComponent(fromTime.toISOString())
+      const ate = encodeURIComponent(toTime.toISOString())
+      const r = await fetch(
+        `https://mt-client-api-v1.${regiao}.agiliumtrade.ai/users/current/accounts/${accountId}/history-deals/time/${de}/${ate}`,
+        { headers: { 'auth-token': token }, signal: AbortSignal.timeout(25_000) },
+      )
+      if (r.ok) {
+        const j = (await r.json()) as MetaApiDeal[] | { deals?: MetaApiDeal[] }
+        const deals = Array.isArray(j) ? j : (j.deals ?? [])
+        return deals
+      }
+      console.warn('[lerHistorico] REST', r.status, accountId)
+    } catch (e) {
+      console.warn('[lerHistorico] REST falhou:', e instanceof Error ? e.message : e)
+    }
+  }
+
+  // Plano B: o caminho antigo pelo SDK. Lento e frágil em serverless, mas melhor do que nada.
   let connection: (RpcConnection & { close?: () => Promise<void> }) | undefined
   try {
     // webpackIgnore: o build NODE do SDK usa builtins (module/fs/...) que o webpack não
@@ -1200,13 +1269,13 @@ export async function getHistoryDeals(
     connection = account.getRPCConnection() as RpcConnection & { close?: () => Promise<void> }
     await withTimeout(connection.connect(), CONNECT_TIMEOUT_MS, 'history connect')
     await withTimeout(connection.waitSynchronized(), CONNECT_TIMEOUT_MS, 'history sync')
-    if (typeof connection.getDealsByTimeRange !== 'function') return []
+    if (typeof connection.getDealsByTimeRange !== 'function') return null
     const raw = await connection.getDealsByTimeRange(fromTime, toTime)
     const deals = (Array.isArray(raw) ? raw : (raw?.deals ?? [])) as MetaApiDeal[]
     return deals ?? []
   } catch (e) {
-    console.warn('[getHistoryDeals] erro:', e instanceof Error ? e.message : e)
-    return []
+    console.warn('[lerHistorico] SDK erro:', e instanceof Error ? e.message : e)
+    return null
   } finally {
     if (connection?.close) await connection.close().catch(() => {})
   }

@@ -1,5 +1,13 @@
-// Configuração centralizada de todo o conteúdo externo do site
-// Gerenciável através do painel de admin
+/**
+ * Configuração central do conteúdo externo do site — editável em /admin?tab=content.
+ *
+ * 2026-08-27: saíram daqui 16 entradas que apontavam para páginas que já não existem — /iqonic e
+ * /swipetotrade (removidas com o IQONIC) e /fast-start. Eram conteúdo editável de páginas que
+ * ninguém consegue abrir: quem as editasse estava a trabalhar para um 404.
+ *
+ * REGRA: uma entrada nova tem de ter `page` a apontar para uma rota que exista. Quando uma página
+ * for removida, as entradas dela saem daqui no mesmo passo.
+ */
 
 export interface VideoConfig {
   id: string
@@ -118,14 +126,6 @@ export const defaultContentConfig: ContentConfig = {
   ],
   videos: [
     // IQONIC
-    {
-      id: 'iqonic-presentation',
-      title: 'Apresentação IQONIC',
-      videoId: 'RQIimjljeMI',
-      page: '/iqonic',
-      section: 'Hero',
-      autoplay: false
-    },
     
     // ONBOARDING
     {
@@ -139,57 +139,8 @@ export const defaultContentConfig: ContentConfig = {
     },
     
     // SWIPE TO TRADE
-    {
-      id: 'swipetotrade-tutorial',
-      title: 'Como Aceitar uma Trade - Swipe to Trade',
-      videoId: 'TxQS2GW5NkE',
-      page: '/swipetotrade',
-      section: 'Tutorial Modal',
-      autoplay: true
-    },
     
     // FAST START
-    {
-      id: 'faststart-sistema',
-      title: 'Sistema MoreThanMoney',
-      videoId: 'TJ_1rvK-DgY',
-      page: '/fast-start',
-      section: 'Step 1',
-      autoplay: false
-    },
-    {
-      id: 'faststart-chamada',
-      title: 'Chamada Semanal MTM',
-      videoId: 'w8y_wzJGTcA',
-      page: '/fast-start',
-      section: 'Step 4 - Chamada',
-      autoplay: false
-    },
-    {
-      id: 'faststart-educativo',
-      title: 'Fast Start Educativo - Playlist',
-      videoId: 'RQ0CI0jWAnM',
-      playlist: 'PL6XU0y2YUMZK39WNX1ViMzxo6QSx7l-zu',
-      page: '/fast-start',
-      section: 'Step 4 - Educativo',
-      autoplay: false
-    },
-    {
-      id: 'faststart-apresentacao',
-      title: 'Apresentação Completa MoreThanMoney',
-      videoId: 'HemX7AlLhqg',
-      page: '/fast-start',
-      section: 'Apresentação do Negócio',
-      autoplay: false
-    },
-    {
-      id: 'faststart-mindset',
-      title: 'Mindset IQONIC Vision',
-      videoId: 'LqlJTEa3cFU',
-      page: '/fast-start',
-      section: 'Apresentação do Negócio',
-      autoplay: false
-    },
     
     // MTM PAGE
     {
@@ -206,15 +157,6 @@ export const defaultContentConfig: ContentConfig = {
   links: [
     // WHATSAPP
     {
-      id: 'whatsapp-iqonic',
-      title: 'WhatsApp IQONIC',
-      url: 'https://wa.me/message/5NMUP53HEXVMB1',
-      type: 'whatsapp',
-      page: '/iqonic',
-      section: 'Primary CTA',
-      description: 'Contacto direto para informações sobre IQONIC'
-    },
-    {
       id: 'whatsapp-scanners',
       title: 'WhatsApp Scanners MTM',
       url: 'https://wa.me/+351912666699?text=Ol%C3%A1%20gostaria%20de%20ter%20acesso%20aos%20Scanners%20MTM',
@@ -222,24 +164,6 @@ export const defaultContentConfig: ContentConfig = {
       page: '/scanner',
       section: 'Scanner Access',
       description: 'Solicitar acesso aos scanners'
-    },
-    {
-      id: 'whatsapp-swipetotrade',
-      title: 'WhatsApp Swipe to Trade',
-      url: 'https://api.whatsapp.com/send/?phone=351912666699&text=Ola%20Gostaria%20de%20saber%20mais%20sobre%20o%20Swipe%20to%20Trade',
-      type: 'whatsapp',
-      page: '/swipetotrade',
-      section: 'Contact Specialist',
-      description: 'Falar com especialista sobre Swipe to Trade'
-    },
-    {
-      id: 'whatsapp-community',
-      title: 'Grupo WhatsApp Comunidade',
-      url: 'https://chat.whatsapp.com/CBBUkRWAJnfJgFseTaoSFT?mode=wwt',
-      type: 'whatsapp',
-      page: '/fast-start',
-      section: 'Step 2',
-      description: 'Grupo de apoio direto'
     },
     {
       id: 'whatsapp-copytrading',
@@ -263,42 +187,6 @@ export const defaultContentConfig: ContentConfig = {
     },
     
     // WEBSITES EXTERNOS
-    {
-      id: 'iqonic-registration',
-      title: 'Registo IQONIC',
-      url: 'https://iqonic.life/morethanmoney',
-      type: 'website',
-      page: '/iqonic',
-      section: 'Secondary CTA',
-      description: 'Registo direto na plataforma IQONIC'
-    },
-    {
-      id: 'iqonic-academy',
-      title: 'IQonic Academy',
-      url: 'https://iqonic.vip',
-      type: 'website',
-      page: '/iqonic',
-      section: 'Additional Resources',
-      description: 'Plataforma de cursos IQONIC'
-    },
-    {
-      id: 'iqonic-backoffice',
-      title: 'BackOffice IQONIC',
-      url: 'https://user.iqonic.life',
-      type: 'website',
-      page: '/iqonic',
-      section: 'Additional Resources',
-      description: 'Área de membros IQONIC'
-    },
-    {
-      id: 'iqonic-trading',
-      title: 'IQONIC Trading Platform',
-      url: 'https://trading.iqonic.life',
-      type: 'website',
-      page: '/swipetotrade',
-      section: 'Learn More CTA',
-      description: 'Plataforma de trading IQONIC'
-    },
     {
       id: 'vision-ambition',
       title: 'Equipa Internacional',
@@ -328,38 +216,28 @@ export const defaultContentConfig: ContentConfig = {
       section: 'Community Section',
       description: 'Comunidade AI Com Os Gémeos'
     },
+    // Estas duas estavam sem `type`, `page` e `section` — e por isso não apareciam agrupadas em
+    // sítio nenhum do painel: eram conteúdo que existia no código e que ninguém conseguia editar.
     {
       id: 'skool-mtm-hero',
       title: 'Comunidade Skool MoreThanMoney',
       url: 'https://www.skool.com/morethanmoney-1132/about',
+      type: 'skool',
+      page: '/new-landing',
+      section: 'Community Section',
       description: 'Acesso gratuito à comunidade Skool - CTA principal'
     },
     {
       id: 'skool-mtm-cta',
       title: 'Começar no Skool',
       url: 'https://www.skool.com/morethanmoney-1132/about',
+      type: 'skool',
+      page: '/new-landing',
+      section: 'Community Section',
       description: 'CTA final para acesso ao Skool'
     },
     
     // GOOGLE DRIVE
-    {
-      id: 'drive-ebook-forex',
-      title: 'Ebook Introdução aos Mercados Financeiros',
-      url: 'https://drive.google.com/file/d/1weh_pjUMIje370wSw7o3OnojcR1zsoqy/view?usp=sharing',
-      type: 'drive',
-      page: '/fast-start',
-      section: 'Step 4 - Ebook',
-      description: 'Ebook sobre mercados financeiros'
-    },
-    {
-      id: 'drive-apresentacao',
-      title: 'Apresentação do Negócio (Google Slides)',
-      url: 'https://docs.google.com/presentation/d/1dgfNVp4J4ok6ZrkLk3q54rux_0rSCVfanRYITXC1_pI/edit?slide=id.g3401419a59b_0_233#slide=id.g3401419a59b_0_233',
-      type: 'drive',
-      page: '/fast-start',
-      section: 'Step 5',
-      description: 'Como apresentar o negócio'
-    },
     
     // NOTION
     {

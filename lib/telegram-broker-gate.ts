@@ -13,6 +13,7 @@ import {
   resolvedTradeIdeasChatId,
   resolvedPremiumSignalsChatId,
   resolvedGoldkillerScannerChatId,
+  resolvedPerpsChatId,
 } from '@/lib/telegram-channel-ids'
 
 type Supa = ReturnType<typeof getSupabaseAdmin>
@@ -36,6 +37,9 @@ function accessGroups(): { label: string; chatId: string; fallback: string | nul
     { label: '🧠 Grupo Sensei', chatId: resolvedTradeIdeasChatId(), fallback: process.env.TELEGRAM_SENSEI_LINK || 'https://t.me/+mbqBggXniu5lNTBk' },
     { label: '👑 Grupo Premium', chatId: resolvedPremiumSignalsChatId(), fallback: process.env.TELEGRAM_PREMIUM_LINK || 'https://t.me/MTMgold' },
     { label: '🥇 Grupo GoldKiller', chatId: resolvedGoldkillerScannerChatId(), fallback: process.env.TELEGRAM_GOLDKILLER_LINK || null },
+    // Perpétuos cripto: faz parte da comunidade agrupada no Telegram, por isso entra no MESMO
+    // gate. Um grupo que existe mas não é libertado é um grupo que ninguém encontra.
+    { label: '🪙 Ideias de Perpétuos Cripto', chatId: resolvedPerpsChatId() ?? '', fallback: process.env.TELEGRAM_PERPS_LINK || 'https://t.me/+ue9JuMRwMv0zMGQ0' },
   ]
 }
 
@@ -226,6 +230,33 @@ export async function grantBrokerAccess(supabase: Supa, chatId: string): Promise
         : '') +
       `Mantém o saldo ≥ $${MIN_DEPOSIT} na PU Prime para continuares com acesso. Bons trades! 🚀`,
   )
+
+  /*
+   * Quem veio pelo caminho do MTM AUTO precisa de outro cupão — e de outro sítio para o usar.
+   *
+   * O cupão de cima é da app MoreThanMoney; o MTM Auto é um sistema à parte, com a sua própria
+   * tabela de cupões, e ninguém liga um ao outro por magia. Sem isto, a pessoa validava a conta
+   * aqui, ia à app, e continuava a ver a mensalidade — que é exatamente o momento em que desiste,
+   * convencida de que lhe prometemos uma coisa e entregámos outra.
+   */
+  try {
+    const { data: perfilLead } = await supabase
+      .from('telegram_leads')
+      .select('interesse')
+      .eq('chat_id', chatId)
+      .maybeSingle()
+    if ((perfilLead as { interesse?: string } | null)?.interesse === 'mtmauto') {
+      const mf = await import('@/lib/telegram-mtmauto-funnel')
+      const cupaoApp = await mf.criarCupaoMtmAuto(chatId, uid)
+      if (cupaoApp) {
+        await mf.marcarPassoMtmAuto(chatId, 'validado')
+        const m = mf.mtmAutoCupaoValidado(cupaoApp)
+        await send(chatId, m.texto, { reply_markup: m.teclado })
+      }
+    }
+  } catch {
+    /* o acesso aos grupos já foi dado — o cupão da app é um passo a mais, não um bloqueio */
+  }
 }
 
 /** Callback dos botões Aprovar/Rejeitar do admin. Devolve texto p/ editar a caption. */

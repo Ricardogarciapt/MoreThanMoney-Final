@@ -41,12 +41,27 @@ export async function GET(request: NextRequest) {
     const metrics = await gatherMorningBriefingMetrics(siteUrl)
     const content = await generateMorningBriefing(metrics)
 
+    // NÚMEROS REAIS DO DIA — recalculados aqui, todos os dias, e publicados no mesmo sítio onde a
+    // comunidade os pode confrontar com os sinais que viu. Em pips e percentagem: é a única medida
+    // igual para quem opera 0,01 e para quem opera 1 lote. O dinheiro entra só como exemplo.
+    let blocoDeNumeros = ''
+    try {
+      const { savePipsProof, blocoPips, publicavel } = await import('@/lib/pips-proof')
+      const p = await savePipsProof(30)
+      // Sem amostra não se publica nada. Um número construído sobre quatro trades não é prova,
+      // é ruído com ar de prova.
+      if (publicavel(p)) blocoDeNumeros = `\n\n📊 **Os nossos números, sem maquilhagem**\n${blocoPips(p)}`
+    } catch {
+      /* o briefing sai na mesma — os números são um extra, não um bloqueio */
+    }
+    const chatPost = `${content.chatPost}${blocoDeNumeros}`
+
     const { data: message, error: insertError } = await supabase
       .from('chat_messages')
       .insert({
         channel_slug: CHANNEL,
         user_id: systemUserId,
-        content: content.chatPost,
+        content: chatPost,
         image_url: null,
         link_url: null,
         link_preview: null,

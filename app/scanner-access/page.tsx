@@ -82,8 +82,8 @@ export default function ScannerAccessPage() {
   // Clique num alerta → encaminha o chart do scanner para o símbolo/timeframe/scanner do sinal
   const [scannerSymbol, setScannerSymbol] = useState<string | undefined>()
   const [scannerInterval, setScannerInterval] = useState<string | undefined>()
-  const [scannerStudies, setScannerStudies] = useState<("Goldkiller" | "MTMScanner" | "Sensei")[] | undefined>()
-  const handleSelectAlert = ({ tvSymbol, interval, scannerKey }: { tvSymbol: string; interval: string; scannerKey: "Goldkiller" | "MTMScanner" | "Sensei" }) => {
+  const [scannerStudies, setScannerStudies] = useState<("Goldkiller" | "MTMScanner" | "Sensei" | "AurumFlow")[] | undefined>()
+  const handleSelectAlert = ({ tvSymbol, interval, scannerKey }: { tvSymbol: string; interval: string; scannerKey: "Goldkiller" | "MTMScanner" | "Sensei" | "AurumFlow" }) => {
     setScannerSymbol(tvSymbol)
     setScannerInterval(interval)
     setScannerStudies([scannerKey])

@@ -7,6 +7,7 @@ import { lotMultiplierFromConnection } from '@/lib/mtmcopy/connection-sync'
 import { runProvisionJob } from '@/lib/mtmcopy/run-provision-job'
 import type { MtmcopyAccountRole, MtmcopySenderMode } from '@/lib/mtmcopy/types'
 import { resolveMtmcopyUserLimits } from '@/lib/mtmcopy/account-limits'
+import { carregarDireitos, pareceDemo, podeLigarConta, type ContaLigada } from '@/lib/entitlements'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
 import { normalizeTelegramGroups, normalizeTelegramChannel, strategyIdsForTelegramGroupsAsync, type MtmcopyCopyMethod } from '@/lib/mtmcopy/copy-methods'
 import {
@@ -121,9 +122,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Tap to Trade: apenas corretoras permitidas (whitelist T2T_BROKERS). Permite até DUAS contas T2T
-  // por user (fan-out: aceitar um sinal abre nas duas). Cap próprio, independente do limite de cópia.
-  const T2T_MAX_ACCOUNTS = 2
+  // Tap to Trade: apenas corretoras permitidas (whitelist T2T_BROKERS).
   if (purpose === 'tap_to_trade') {
     const { isAllowedT2TServer, T2T_BROKERS } = await import('@/lib/mtmcopy/t2t-brokers')
     if (!isAllowedT2TServer(server)) {
@@ -133,18 +132,47 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       )
     }
-    const { count: existingT2T } = await supabaseAdmin
+  }
+
+  /**
+   * Quantas contas — a regra é UMA, para os três produtos.
+   *
+   * Antes cada porta tinha o seu limite: aqui o Tap to Trade tinha um tecto de 2 contas, o MTM
+   * Copy contava 4 (5 se VIP) e o MTM Auto uma real e uma demo. Como o cliente é o mesmo, a mais
+   * generosa das três era a que valia na prática: bastava entrar por essa porta. Agora cada
+   * produto inclui uma real e uma demo, e daí em diante é uma conta extra (7 €/mês) vinda de um
+   * saco comum aos três.
+   */
+  const superficieNova = purpose === 'tap_to_trade' ? ('t2t' as const) : ('mtmcopy' as const)
+  const novaEhDemo = pareceDemo(server)
+  const direitos = await carregarDireitos(user.id)
+
+  const [{ data: doSite }, { data: doAuto }] = await Promise.all([
+    supabaseAdmin
       .from('mtmcopy_connections')
-      .select('id', { count: 'exact', head: true })
+      .select('mt5_server, purpose, t2t_enabled')
       .eq('user_id', user.id)
-      .or('purpose.eq.tap_to_trade,t2t_enabled.eq.true')
-      .neq('mt5_status', 'disconnected')
-    if ((existingT2T ?? 0) >= T2T_MAX_ACCOUNTS) {
-      return NextResponse.json(
-        { error: `Podes ter no máximo ${T2T_MAX_ACCOUNTS} contas Tap to Trade. Remove uma para ligar outra.`, code: 't2t_account_limit' },
-        { status: 409 },
-      )
-    }
+      .neq('mt5_status', 'disconnected'),
+    supabaseAdmin.from('mtmauto_accounts').select('demo').eq('user_id', user.id),
+  ])
+
+  const ligadas: ContaLigada[] = [
+    ...(doSite ?? []).map((c) => ({
+      superficie:
+        c.purpose === 'tap_to_trade' || c.t2t_enabled === true ? ('t2t' as const) : ('mtmcopy' as const),
+      demo: pareceDemo(c.mt5_server as string),
+    })),
+    ...(doAuto ?? []).map((c) => ({ superficie: 'mtmauto' as const, demo: Boolean(c.demo) })),
+  ]
+
+  const veredicto = podeLigarConta(direitos, superficieNova, novaEhDemo, ligadas)
+  if (!veredicto.ok) {
+    return NextResponse.json(
+      { error: veredicto.erro, code: veredicto.codigo, preco_eur: veredicto.precoEur },
+      // 402 é "falta pagar", e é o que o cliente vê: um botão de comprar a conta extra em vez de
+      // um "não" que não explica nada.
+      { status: veredicto.codigo === 'conta_extra' ? 402 : 403 },
+    )
   }
 
   const { data: profileRow } = await supabaseAdmin

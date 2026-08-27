@@ -154,7 +154,7 @@ export async function runT2TPriceMonitor(): Promise<{
   if (!switches.t2t_price_monitor) return { ran: false, reason: 'switch off', managed: 0, actions }
 
   const admin = getSupabaseAdmin()
-  const { data: rows } = await admin
+  let { data: rows } = await admin
     .from('mtmcopy_signal_log')
     .select('id, connection_id, chat_message_id, channel_key, symbol, direction, entry, sl, tp, lot, raw_message, broker_position_id, created_at')
     .in('status', ['open', 'ok', 'active', 'filled'])
@@ -162,6 +162,24 @@ export async function runT2TPriceMonitor(): Promise<{
     .gte('created_at', new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString())
     .limit(200)
   if (!rows?.length) return { ran: true, managed: 0, actions }
+
+  /**
+   * SET & FORGET: fontes que o motor NÃO gere.
+   *
+   * As Ideias de Forex Swings são swings — entram e ficam. Mexer-lhes no stop a meio (break-even
+   * ao primeiro alvo, trailing atrás do preço) é aplicar a gestão de um scalp a uma trade que
+   * precisa de espaço para respirar, e o resultado é ser fechado no ruído antes de o movimento
+   * acontecer. Aqui só se ACOMPANHA: se bateu no TP, no SL ou no break-even, regista-se e diz-se.
+   *
+   * A trade continua a ser gerida — pela ordem que o próprio sinal trouxe, com o stop e os
+   * alvos escritos nele. O que não há é uma segunda mão a mexer por cima.
+   */
+  const SEM_GESTAO = new Set(['ideias-e-sinais'])
+  const geríveis = rows.filter((r) => !SEM_GESTAO.has(String((r as LogRow).channel_key ?? '')))
+  if (geríveis.length !== rows.length) {
+    actions.push(`${rows.length - geríveis.length} posições set & forget — só acompanhadas`)
+  }
+  rows = geríveis as typeof rows
 
   // Conta MetaApi de cada conexão.
   const connIds = [...new Set(rows.map((r) => (r as LogRow).connection_id))]

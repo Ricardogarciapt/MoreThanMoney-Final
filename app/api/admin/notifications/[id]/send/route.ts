@@ -40,25 +40,58 @@ export async function POST(
       }, { status: 404 })
     }
 
-    // 2. Determinar destinatários baseado no targetUsers
+    /**
+     * 2. Os destinatários.
+     *
+     * O filtro de VIP procurava `user_type = 'vip'` — e o VIP não vive nessa coluna, vive em
+     * `member_category`. Resultado: a audiência "Apenas VIP" ia buscar quase ninguém, e uma
+     * campanha que não chega a lado nenhum parece uma campanha que ninguém abriu.
+     *
+     * Aproveitou-se para acrescentar as audiências que hoje fazem falta: Premium (que é onde
+     * está o produto), e quem usa mesmo o MTM Auto e o Tap to Trade — falar com quem já tem
+     * conta ligada é outra conversa, e mandá-la a toda a gente estraga as duas.
+     */
     let usersQuery = supabase
       .from('profiles')
-      .select('id, email, full_name, user_type, is_active')
-      .eq('is_active', true) // Campo correto: is_active, não active
+      .select('id, email, full_name, user_type, member_category, subscription_plan, is_active')
+      .eq('is_active', true)
 
-    // Filtrar por tipo de utilizador se não for 'all'
-    if (notification.target_users !== 'all') {
-      if (notification.target_users === 'members') {
-        usersQuery = usersQuery.in('user_type', ['member', 'vip', 'guest'])
-      } else if (notification.target_users === 'vip') {
-        usersQuery = usersQuery.eq('user_type', 'vip')
-      } else if (notification.target_users === 'admin') {
-        usersQuery = usersQuery.eq('user_type', 'admin')
+    const alvo = notification.target_users
+    if (alvo === 'members') {
+      usersQuery = usersQuery.in('user_type', ['member', 'vip', 'guest'])
+    } else if (alvo === 'vip') {
+      usersQuery = usersQuery.eq('member_category', 'vip')
+    } else if (alvo === 'premium') {
+      usersQuery = usersQuery.or(
+        'subscription_plan.eq.premium,member_category.eq.premium,member_category.eq.vip',
+      )
+    } else if (alvo === 'admin') {
+      usersQuery = usersQuery.eq('user_type', 'admin')
+    }
+
+    // Audiências definidas por USO, não por categoria: quem tem conta ligada no MTM Auto e quem
+    // tem uma conta de Tap to Trade. Estas resolvem-se noutras tabelas, por isso filtram-se
+    // depois, sobre a lista já lida.
+    let apenasEstes: Set<string> | null = null
+    if (alvo === 'mtmauto' || alvo === 't2t') {
+      if (alvo === 'mtmauto') {
+        const { data } = await supabase.from('mtmauto_accounts').select('user_id')
+        apenasEstes = new Set((data ?? []).map((r) => r.user_id as string))
+      } else {
+        const { data } = await supabase
+          .from('mtmcopy_connections')
+          .select('user_id, purpose, t2t_enabled')
+          .eq('is_active', true)
+        apenasEstes = new Set(
+          (data ?? [])
+            .filter((r) => r.purpose === 'tap_to_trade' || r.t2t_enabled === true)
+            .map((r) => r.user_id as string),
+        )
       }
     }
-    // Se for 'all', não adiciona filtro de user_type - pega todos os ativos
 
-    const { data: users, error: usersError } = await usersQuery
+    const { data: usersBruto, error: usersError } = await usersQuery
+    const users = apenasEstes ? (usersBruto ?? []).filter((u) => apenasEstes!.has(u.id as string)) : usersBruto
 
     if (usersError) {
       console.error('[NOTIFICATION_SEND] Erro ao buscar utilizadores:', usersError)

@@ -11,7 +11,9 @@ export const metadata: Metadata = {
 
 export const revalidate = 300
 
-const APP_URL = "https://mtm-auto.vercel.app"
+// O link que se dá a clientes é do DOMÍNIO DA MARCA. /mtmautoapp reencaminha para a app (com a
+// query intacta) — a app continua a viver na Vercel, mas quem partilha o link partilha a MTM.
+const APP_URL = "https://www.morethanmoney.pt/mtmautoapp"
 
 /**
  * Os links de descarga mudam a cada versão — ficam na base de dados para não obrigarem a um
@@ -305,6 +307,14 @@ export default async function MtmAutoPage() {
           <p className="mt-4 text-xs text-white/40">
             Descarregar é grátis · 25 €/mês · <span className="text-white/60">conta real PU Prime validada não paga</span>
           </p>
+          {/* Os documentos legais têm de estar a um clique de onde se decide instalar — é aqui que
+              o cliente pergunta o que assina, e é aqui que a revisão da Apple os procura. */}
+          <p className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-white/45">
+            <a href="/mtmauto/legal/terms" className="hover:text-white/75">Termos de Utilização (EULA)</a>
+            <a href="/mtmauto/legal/privacy" className="hover:text-white/75">Política de Privacidade</a>
+            <a href="/mtmauto/legal/subscription" className="hover:text-white/75">Condições da Subscrição</a>
+            <a href="/mtmauto/legal/risk" className="hover:text-white/75">Aviso de Risco</a>
+          </p>
         </div>
       </section>
 
@@ -375,12 +385,14 @@ export default async function MtmAutoPage() {
               >
                 Criar conta e subscrever
               </Link>
+              {/* "Só criar conta" prometia menos do que a app dá. Quem ainda não decidiu quer VER
+                  o produto — e lá dentro encontra as quatro formas de entrar, três delas grátis. */}
               <Link
-                href={`${APP_URL}/registo`}
+                href={APP_URL}
                 target="_blank"
                 className="rounded-xl border border-white/20 px-6 py-3.5 text-sm font-semibold text-white/85"
               >
-                Só criar conta
+                Acede aqui ao MTM Auto
               </Link>
               <Link
                 href="/automation"

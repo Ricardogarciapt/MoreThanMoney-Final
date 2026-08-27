@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { BrokerLinksPanel } from "@/components/admin/broker-links-panel"
 
 /**
  * Painel MÁQUINA DE VENDAS (/admin/sales-machine) — consome o hub /api/sales-machine (sessão-admin).
@@ -178,6 +179,11 @@ export default function SalesMachinePage() {
           ))}
         </div>
       </div>
+
+      {/* Os links de corretora vivem aqui, e não numa página à parte: a repartição dos registos
+          entre IBs faz parte da máquina de vendas — é o andar onde o lead vira cliente da
+          corretora, e é onde se percebe se está a ser distribuída. */}
+      <BrokerLinksPanel />
     </div>
   )
 }

@@ -84,7 +84,7 @@ function buildPost(idx: number, winRate: number | null): { text: string; buttons
     {
       text:
         "📊 <b>Resultados reais da comunidade</b>\n\n" +
-        `Prova documentada: <b>675 trades</b> · <b>63% win rate</b> · <b>+7.060€</b>.\n` +
+        `Mostramos o que os sinais fazem em <b>pips e percentagem</b> — a mesma medida para quem opera 0,01 ou 1 lote.\n` +
         `Estratégias-mestre nos últimos 30 dias: <b>~${wr}% de acerto</b>.\n\n` +
         "Não prometemos lucro — mostramos <b>processo real</b>. Entra nos grupos e acompanha ao vivo. 👇",
       buttons: [[CTA_FOREX, CTA_SENSEI], [CTA_DM]],

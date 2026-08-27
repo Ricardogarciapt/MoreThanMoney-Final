@@ -45,8 +45,12 @@ export function buildAppChannelMap(): Map<string, AppChatChannelSlug> {
   // Grupo dos Perpétuos (reaproveitado). Mapeia por ID → cripto-perps, ANTES do título (o título
   // "Ideias de Perpétuos Cripto" senão cairia no fallback 'ideias'→Forex). Evita a notif trocada.
   registerChatId(resolvedPerpsChatId() ?? undefined, 'cripto-perps')
-  // Fontes novas (2026-08-24): cada canal tem chat próprio na app e Tap to Trade.
-  registerChatId(process.env.TELEGRAM_GOLDEN_MOVES_CHAT || '-1004343748070', 'golden-moves')
+  // O 'golden-moves' saiu daqui a 2026-08-27: o chat Aurum Flow foi escondido nas apps, e o id
+  // que aqui estava (-1004343748070) é hoje o grupo "Wifi Money - by CR" — mandar mensagens
+  // desse grupo para um canal escondido era escrever para ninguém, com a etiqueta errada.
+  if (process.env.TELEGRAM_GOLDEN_MOVES_CHAT) {
+    registerChatId(process.env.TELEGRAM_GOLDEN_MOVES_CHAT, 'golden-moves')
+  }
 
   return map
 }

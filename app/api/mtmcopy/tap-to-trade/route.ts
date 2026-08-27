@@ -14,6 +14,7 @@ import { evaluatePropFirmGuard, propFirmLabel } from '@/lib/mtmcopy/prop-firm-gu
 import { isMarketOpen } from '@/lib/mtmcopy/market-hours'
 import { symbolMatchesCanonical } from '@/lib/mtmcopy/symbol-resolver'
 import { tapToTradeEnabledChannels, T2T_SIGNAL_CHANNELS as SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
+import { sinalJaSaiuDaZona, JANELA_MERCADO_MS } from '@/lib/mtmcopy/t2t-janela'
 
 export const dynamic = 'force-dynamic'
 // 60s: uma ligação MetaApi fria pode demorar até ~55s (CONNECT_TIMEOUT_MS). Com 30s a
@@ -33,7 +34,7 @@ async function authenticate(request: NextRequest) {
 
 /** Um follow-up que ATIVA ou FECHA o setup (deixa de ser "pendente por tocar"). */
 const SETUP_RESOLVED_RE =
-  /(entry\s*hit|ativad|activad|tp\s*\d?\s*(hit|atingid)|hit\s*tp|sl\s*hit|stop\s*loss\s*hit|break\s*even|\bbe\b|trade\s+active|running|fechad|posi[çc][aã]o\s+fechada|closed|close\s+all|cancelad|encerrad|descartad|invalidad|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
+  /(entry\s*hit|ativad|activad|tp\s*\d?\s*(hit|atingid)|hit\s*tp|exit\s*\d?\s*(hit|atingid|done|✅)?|sa[íi]da\s*\d|parcial|sl\s*hit|stop\s*loss\s*hit|break\s*even|\bbe\b|trade\s+active|running|fechad|posi[çc][aã]o\s+fechada|closed|close\s+all|cancelad|encerrad|descartad|invalidad|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
 
 /**
  * O SETUP ainda está PENDENTE (por tocar) e aceitável fora da janela dos 5 min?
@@ -122,7 +123,22 @@ export async function POST(request: NextRequest) {
   // pendente e o motor trata do resto. Um setup deixa de ser aceitável quando aparece no MESMO canal
   // um follow-up posterior que o ativa/fecha (ENTRY HIT/TP/SL/BE/fechada/cancelada) para o par.
   const ageMs = message.created_at ? Date.now() - new Date(message.created_at).getTime() : 0
-  if (ageMs > 5 * 60 * 1000) {
+  if (ageMs > JANELA_MERCADO_MS) {
+    // A trade já saiu da zona (entrada tocada, parcial feito ou sinal fechado)? Então a exceção
+    // dos setups pendentes deixa de existir: o que se aceitaria agora era entrar a meio do
+    // movimento com o stop do princípio — várias vezes o risco previsto, por uma fatia do alvo.
+    const { saiu, fechado } = await sinalJaSaiuDaZona(chatMessageId)
+    if (saiu) {
+      return NextResponse.json(
+        {
+          error: fechado
+            ? 'Este sinal já fechou.'
+            : 'Já não dá para entrar: o preço saiu da zona de entrada deste sinal.',
+          code: fechado ? 'closed' : 'out_of_zone',
+        },
+        { status: 410 },
+      )
+    }
     const stillPending = await isPendingSetupStillOpen(supabase, message)
     if (!stillPending) {
       return NextResponse.json(

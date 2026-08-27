@@ -148,19 +148,36 @@ function ConnectionMetricsBar({
   const pnl = metrics?.pnl_percent ?? connection.pnl_percent ?? null
   const pnlColor = pnl == null ? "text-gray-400" : pnl >= 0 ? "text-green-400" : "text-red-400"
 
-  if (connection.mt5_status !== "connected" || balance == null) {
+  /**
+   * Um erro de LEITURA não apaga o saldo.
+   *
+   * Bastava a MetaApi engasgar-se — uma quota, um timeout — para o `mt5_status` ir a `error` e o
+   * painel deixar de mostrar o saldo. Ficava o vermelho e mais nada, e quem estava a olhar
+   * concluía que a conta tinha caído quando o que caiu foi a leitura. É o mesmo erro que fez a
+   * conta 18893 aparecer "desconectada" com 3.394 USD lá dentro.
+   *
+   * Agora: se há saldo conhecido, mostra-se — com a marca de que é o último que se conseguiu ler.
+   * Só quando nunca houve saldo nenhum é que se diz que não há.
+   */
+  const desatualizado = connection.mt5_status !== "connected"
+
+  if (balance == null) {
     return (
       <p className="text-[10px] text-gray-600 mt-1.5">
-        Saldo MT5 indisponível {connection.mt5_status !== "connected" ? `(MT5 ${connection.mt5_status})` : ""}
+        Sem saldo lido {desatualizado ? `(MT5 ${connection.mt5_status})` : ""}
       </p>
     )
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2 mt-2">
-      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-zinc-800/80 border border-zinc-700 text-zinc-300">
+      <span
+        className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-zinc-800/80 border border-zinc-700 text-zinc-300"
+        title={desatualizado ? "Último saldo lido — a ligação à MetaApi não respondeu agora" : undefined}
+      >
         <Wallet className="w-3 h-3 text-[#D2A63C]" />
         {formatMoney(balance)}
+        {desatualizado && <span className="text-[10px] text-amber-400/80">último</span>}
       </span>
       {equity != null && equity !== balance && (
         <span className="text-xs text-zinc-500">Eq {formatMoney(equity)}</span>

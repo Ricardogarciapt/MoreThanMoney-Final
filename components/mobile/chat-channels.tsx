@@ -2464,6 +2464,9 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
       const { data, error } = await supabase
         .from("chat_channels")
         .select("id, slug, name, description, parent_slug, position")
+        // Canais escondidos ficam com o histórico na base de dados mas fora da app — é como se
+        // retira uma fonte sem apagar as mensagens que já foram lidas por alguém.
+        .eq("hidden", false)
         .order("position", { ascending: true })
 
       if (error) {

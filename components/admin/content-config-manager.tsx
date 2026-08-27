@@ -343,7 +343,7 @@ export default function ContentConfigManager() {
                     <Input
                       value={editingVideo.title}
                       onChange={(e) => setEditingVideo({ ...editingVideo, title: e.target.value })}
-                      placeholder="Ex: Apresentação IQONIC"
+                      placeholder="Ex: Apresentação MTM Auto"
                     />
                   </div>
                   
@@ -414,7 +414,7 @@ export default function ContentConfigManager() {
                       <Input
                         value={editingVideo.page}
                         onChange={(e) => setEditingVideo({ ...editingVideo, page: e.target.value })}
-                        placeholder="Ex: /iqonic"
+                        placeholder="Ex: /mtm"
                       />
                       <p className="text-xs text-gray-400 mt-1">Rota da página onde o vídeo aparece</p>
                     </div>
@@ -434,7 +434,7 @@ export default function ContentConfigManager() {
                     <Input
                       value={editingVideo.sectionTitle || ''}
                       onChange={(e) => setEditingVideo({ ...editingVideo, sectionTitle: e.target.value })}
-                      placeholder="Ex: Bem-vindo à IQONIC"
+                      placeholder="Ex: Bem-vindo à MoreThanMoney"
                     />
                     <p className="text-xs text-gray-400 mt-1">Título exibido na secção onde o vídeo aparece</p>
                   </div>
@@ -558,7 +558,7 @@ export default function ContentConfigManager() {
                     <Input
                       value={editingLink.title}
                       onChange={(e) => setEditingLink({ ...editingLink, title: e.target.value })}
-                      placeholder="Ex: WhatsApp IQONIC"
+                      placeholder="Ex: WhatsApp MoreThanMoney"
                     />
                   </div>
                   
@@ -624,7 +624,7 @@ export default function ContentConfigManager() {
                       <Input
                         value={editingLink.page}
                         onChange={(e) => setEditingLink({ ...editingLink, page: e.target.value })}
-                        placeholder="Ex: /iqonic"
+                        placeholder="Ex: /mtm"
                       />
                       <p className="text-xs text-gray-400 mt-1">Rota da página onde o link aparece</p>
                     </div>

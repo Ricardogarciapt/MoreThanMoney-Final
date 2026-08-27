@@ -335,7 +335,7 @@ export default function EmailTemplatesPanel() {
               target="_blank"
               className="text-sm text-[#D2A63C] hover:underline flex items-center gap-1"
             >
-              Apresentação MTM × IQONIC <ExternalLink className="w-3 h-3" />
+              Apresentação MoreThanMoney <ExternalLink className="w-3 h-3" />
             </a>
           </div>
         </CardContent>

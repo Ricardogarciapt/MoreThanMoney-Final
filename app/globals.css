@@ -1352,3 +1352,60 @@ body.scanner-access-route [contenteditable="true"] {
   font-style: normal;
   font-display: swap;
 }
+
+/* ── Tap to Trade com a cara do MTM Auto ──────────────────────────────────────────────────────
+   Estas primitivas são as mesmas da app MTM Auto (app/globals.css lá), copiadas à letra e
+   fechadas dentro de `.mtmauto` para não contaminarem o resto da app-mobile. É a MESMA conta e
+   os MESMOS sinais nas duas apps; vê-los com duas caras diferentes fazia parecer dois produtos
+   que por acaso se parecem. */
+.mtmauto {
+  --destaque: #D2A63C;
+  --sobre-destaque: #111111;
+  --fundo: #08090C;
+  --superficie: #12141A;
+  --borda: #23262F;
+  --texto: #FFFFFF;
+  --sucesso: #28C878;
+  --perigo: #FF4D4D;
+  --destaque-suave: #D2A63C1F;
+  --destaque-borda: #D2A63C4D;
+  --sucesso-suave: #28C87826;
+  --perigo-suave: #FF4D4D26;
+  background: var(--fundo);
+  color: var(--texto);
+}
+.mtmauto .cartao {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: 1.25rem;
+}
+/* Moldura em gradiente: 1,5px de padding com o gradiente por baixo e o conteúdo a tapar o meio.
+   Dá o brilho na borda sem sombras falsas e acompanha a cor da marca sozinho. */
+.mtmauto .moldura-brilho {
+  padding: 1.5px;
+  border-radius: 1.3rem;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--destaque) 55%, transparent),
+    color-mix(in srgb, var(--destaque) 18%, transparent));
+}
+.mtmauto .moldura-brilho > * {
+  background: var(--superficie);
+  border-radius: 1.2rem;
+}
+.mtmauto .botao-destaque { background: var(--destaque); color: var(--sobre-destaque); }
+.mtmauto .texto-destaque { color: var(--destaque); }
+.mtmauto .texto-fraco { color: color-mix(in srgb, var(--texto) 66%, transparent); }
+.mtmauto .texto-mais-fraco { color: color-mix(in srgb, var(--texto) 48%, transparent); }
+.mtmauto .etiqueta {
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--texto) 55%, transparent);
+}
+.mtmauto .nivel {
+  flex: 1 1 0%;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.625rem;
+  text-align: center;
+  background: color-mix(in srgb, var(--fundo) 60%, transparent);
+}

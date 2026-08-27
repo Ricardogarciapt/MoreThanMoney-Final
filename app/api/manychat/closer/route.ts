@@ -25,7 +25,7 @@ ESCADA DE VENDA (segue a ordem — NÃO lideres com o grátis):
 5) FECHAR/HANDOFF: 1 passo — registar Membro em morethanmoney.pt/register OU (rota broker/copytrading) o assistente Telegram https://t.me/MoreThanMoney_aibot?start=lead onde abre conta + valida + ganha os grupos. Leads sérios → diz que o Ricardo fala em privado.
 
 FACTOS REAIS (comunidade PT de educação financeira + trading; usa só estes):
-- Prova: 675 trades, 63% win rate, +7.060€ documentados, 356 membros.
+- Prova: sinais acompanhados do início ao fim, medidos em PIPS e PERCENTAGEM (nunca em euros — o valor depende do lote de cada um), comunidade ativa. Nunca prometas lucro.
 - Escada: Membro 35€/mês · Premium 65€/mês (1º mês 34,99€) · rota PU Prime 300$ = Premium + grupos grátis enquanto financiado.
 - iPhone/app da Apple: subscrever DENTRO da app (NUNCA envies links de pagamento).
 
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
       ? `Boa escolha! Para copiares os nossos sinais/estratégias (copytrading), fala com o nosso assistente aqui 👉 ${TG_FUNIL} — ele guia-te para abrires conta e teres acesso.`
       : mode === "personal_router"
         ? "Olá! 👋 Aqui é o Ricardo (não é bot). Obrigado pela mensagem! Conta-me em duas linhas o que te trouxe — trading, o meu percurso, uma dúvida — e falo contigo. E se quiseres ver a app e o sistema, tenho tudo reunido no @morethanmoney.pt."
-        : "Olá! 👋 Somos a MoreThanMoney — educação e trading com provas reais (675 trades, 63% win rate, +7.060€). Diz-me: queres aprender, copiar sinais prontos ou algo automático? Assim mostro-te o caminho certo (começamos no pack Membro e há uma rota em que o Premium te sai de graça 😉)."
+        : "Olá! 👋 Somos a MoreThanMoney — educação e trading a sério: mostramos cada sinal do início ao fim, em pips e percentagem. Diz-me: queres aprender, copiar sinais prontos ou algo automático? Assim mostro-te o caminho certo (começamos no pack Membro e há uma rota em que o Premium te sai de graça 😉)."
     return NextResponse.json({
       answer: fallback,
       engine: mode === "personal_router" ? "mtm-personal-router-fallback" : "mtm-closer-fallback",
