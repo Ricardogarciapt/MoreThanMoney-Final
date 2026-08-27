@@ -239,7 +239,7 @@ export async function POST(request: NextRequest) {
   //    NÃO mexe no sizing da cópia (lot_mode/value). Retrocompat: sem contas marcadas, usa a 1ª ativa.
   const { data: conns } = await supabase
     .from('mtmcopy_connections')
-    .select('id, account_label, mt5_login_last4, metaapi_account_id, lot_mode, lot_value, max_risk_percent, copy_sl, copy_tp, symbols_whitelist, is_active, purpose, t2t_enabled, t2t_lot_mode, t2t_lot_value, prop_firm_type, baseline_balance')
+    .select('id, account_label, mt5_login_last4, metaapi_account_id, lot_mode, lot_value, max_risk_percent, copy_sl, copy_tp, symbols_whitelist, is_active, purpose, t2t_enabled, t2t_lot_mode, t2t_lot_value, t2t_source_risk, prop_firm_type, baseline_balance')
     .eq('user_id', user.id)
     .neq('mt5_status', 'disconnected')
   const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id)
@@ -288,8 +288,24 @@ export async function POST(request: NextRequest) {
         if ((claimErr as { code?: string }).code === '23505') return { account: label, connectionId: conn.id, ok: false, skipped: true, error: 'já aceite' }
         console.error('[tap-to-trade] claim error:', claimErr)
       }
-      // Sizing T2T próprio (não usa o sizing da cópia): t2t_lot_mode/value se definidos, senão lot_*.
-      const sizingConn = { ...conn, lot_mode: conn.t2t_lot_mode ?? conn.lot_mode, lot_value: conn.t2t_lot_value ?? conn.lot_value }
+      /**
+       * Sizing T2T próprio (não usa o sizing da cópia), e por FONTE quando a há.
+       *
+       * As fontes não são iguais: um scanner que dá vinte sinais por dia e um desk que dá dois
+       * merecem tamanhos diferentes, e um número único fazia com que o risco certo para uma
+       * fosse o errado para a outra. Sem entrada para a fonte vale o da conta — o que já era.
+       *
+       * O motor da estratégia (trailing stop, trailing profit, parciais na fonte) NÃO se mexe
+       * daqui: isso é do provedor e administra-se no /admin. Aqui é só quanto ARRISCA o cliente.
+       */
+      const riscoDaFonte = (conn.t2t_source_risk as Record<string, { riscoPct?: number; riscoMaxPct?: number }> | null)
+        ?.[String(message.channel_slug ?? '')]
+      const sizingConn = {
+        ...conn,
+        lot_mode: riscoDaFonte?.riscoPct != null ? 'risk_percent' : (conn.t2t_lot_mode ?? conn.lot_mode),
+        lot_value: riscoDaFonte?.riscoPct ?? conn.t2t_lot_value ?? conn.lot_value,
+        max_risk_percent: riscoDaFonte?.riscoMaxPct ?? conn.max_risk_percent,
+      }
       const ctx = await fetchLotSizingContext(conn.metaapi_account_id!, sSymbol, sDirection)
       const riskSignal = signalForRiskSizing(signal, ctx.marketPrice)
       const lot = computeLotSize(sizingConn, riskSignal, ctx.balance)
@@ -318,8 +334,8 @@ export async function POST(request: NextRequest) {
           return { account: label, connectionId: conn.id, ok: false, skipped: true, error: motivo }
         }
         // Tecto pela almofada — só faz sentido quando o sizing é por percentagem de risco.
-        const modo = conn.t2t_lot_mode ?? conn.lot_mode
-        const pct = Number(conn.t2t_lot_value ?? conn.lot_value ?? 0)
+        const modo = sizingConn.lot_mode
+        const pct = Number(sizingConn.lot_value ?? 0)
         if (modo === 'risk_percent' && pct > 0 && Number.isFinite(verdict.maxRiskAmount)) {
           const riscoPretendido = (saldo * pct) / 100
           if (riscoPretendido > verdict.maxRiskAmount && riscoPretendido > 0) {

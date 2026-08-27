@@ -57,6 +57,13 @@ export default function MtmAutoPainel({ apenas }: { apenas?: "ligacao" | "defini
   const [aCarregar, setACarregar] = useState(true)
   const [aGuardar, setAGuardar] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
+  /**
+   * Qual das contas está a ser configurada.
+   *
+   * As definições editavam sempre `contas[0]`. Quem tem duas contas ligadas — a real e a demo, o
+   * caso normal — mexia no risco a olhar para uma e mudava a outra, sem nada no ecrã a dizê-lo.
+   */
+  const [selecionada, setSelecionada] = useState<string | null>(null)
 
   const token = useCallback(async () => (await supabase.auth.getSession()).data.session?.access_token ?? null, [])
 
@@ -145,13 +152,24 @@ export default function MtmAutoPainel({ apenas }: { apenas?: "ligacao" | "defini
   )
 
   if (!contas.length) return semConta
-  const conta = contas[0]
+  const conta = contas.find((c) => c.id === selecionada) ?? contas[0]
 
   // ── Ligação ─────────────────────────────────────────────────────────────────────────────────
   const ligacao = (
     <div className="space-y-2">
       {contas.map((c) => (
-        <div key={c.id} className="rounded-2xl border p-3" style={cartao}>
+        <button
+          key={c.id}
+          type="button"
+          onClick={() => setSelecionada(c.id)}
+          className="w-full rounded-2xl border p-3 text-left"
+          style={{
+            ...cartao,
+            // A conta a ser configurada fica marcada. Com duas contas iguais no ecrã, sem esta
+            // marca não havia como saber qual delas as definições em baixo estavam a mudar.
+            borderColor: c.id === conta.id && contas.length > 1 ? "#D2A63C" : (cartao as { borderColor?: string }).borderColor,
+          }}
+        >
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[14px] font-semibold text-white">{c.rotulo || c.corretora || "Conta"}</span>
             <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10.5px] text-zinc-300">{c.login ?? "—"}</span>
@@ -173,7 +191,12 @@ export default function MtmAutoPainel({ apenas }: { apenas?: "ligacao" | "defini
             <Shield className="h-3 w-3" />
             Cópia automática {c.copiaAtiva ? "ligada" : "desligada"} — muda-se na app MTM Auto
           </p>
-        </div>
+          {contas.length > 1 && (
+            <p className="mt-1 text-[11px] font-semibold" style={{ color: c.id === conta.id ? "#D2A63C" : "#71717a" }}>
+              {c.id === conta.id ? "A configurar esta conta" : "Tocar para configurar esta"}
+            </p>
+          )}
+        </button>
       ))}
       <a
         href={APP_MTM_AUTO}

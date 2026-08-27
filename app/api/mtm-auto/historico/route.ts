@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { autorizarMtmAuto } from '@/lib/mtm-auto-bridge'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { lerHistorico } from '@/lib/mtmcopy/metaapi'
+import { contasDoUtilizador } from '@/lib/mtm-auto-bridge'
 
 export const dynamic = 'force-dynamic'
 // Ler o histórico fechado de várias contas na MetaAPI demora — e é isso que dá a curva de cada
@@ -184,15 +185,61 @@ export async function GET(request: NextRequest) {
     return { quando: l.quando, valor: Math.round(acumulado * 100) / 100 }
   })
 
+  /**
+   * A percentagem precisa de saber de QUE base se partiu.
+   *
+   * "+91,20" não diz nada sem o tamanho da conta: numa conta de 300 € é um mês muito bom, numa
+   * de 30 000 € é ruído. A base é o saldo de hoje menos o que se ganhou na janela — é o saldo
+   * com que se entrou nela.
+   */
+  const saldoPorConta = new Map<string, number>()
+  try {
+    for (const c of await contasDoUtilizador(userId!, true)) {
+      if (c.saldo != null) saldoPorConta.set(String(c.rotulo ?? ''), c.saldo)
+    }
+  } catch {
+    /* sem saldos mostra-se só o valor — a percentagem fica indisponível, não errada */
+  }
+  await Promise.all(
+    contas.slice(0, 6).map(async (c) => {
+      const token = process.env.METAAPI_TOKEN
+      if (!token) return
+      try {
+        const r = await fetch(
+          `https://mt-client-api-v1.new-york.agiliumtrade.ai/users/current/accounts/${c.metaapi_account_id}/accountInformation`,
+          { headers: { 'auth-token': token }, signal: AbortSignal.timeout(8000) },
+        )
+        if (!r.ok) return
+        const info = (await r.json()) as { balance?: number }
+        const rotulo = contaDe.get(String(c.metaapi_account_id))
+        if (rotulo && info.balance != null) saldoPorConta.set(rotulo, info.balance)
+      } catch {
+        /* idem */
+      }
+    }),
+  )
+
   const curvas = [...porConta.entries()]
     // Uma conta com um único ponto não desenha uma linha — desenha um ponto, e polui a legenda.
     .filter(([, pontos]) => pontos.length > 1)
-    .map(([conta, pontos]) => ({
-      conta,
-      origem: linhas.find((l) => (l.conta ?? l.origem) === conta)?.origem ?? 'MTM Auto',
-      pontos,
-      total: pontos[pontos.length - 1]?.valor ?? 0,
-    }))
+    .map(([conta, pontos]) => {
+      const total = pontos[pontos.length - 1]?.valor ?? 0
+      const saldo = saldoPorConta.get(conta) ?? null
+      // Base = saldo de hoje menos o que se ganhou na janela. Uma base <= 0 não dá percentagem
+      // nenhuma que signifique alguma coisa, e inventar uma seria pior do que não a mostrar.
+      const base = saldo != null ? saldo - total : null
+      return {
+        conta,
+        origem: linhas.find((l) => (l.conta ?? l.origem) === conta)?.origem ?? 'MTM Auto',
+        pontos: pontos.map((p) => ({
+          ...p,
+          pct: base && base > 0 ? Math.round((p.valor / base) * 10000) / 100 : null,
+        })),
+        total,
+        base,
+        totalPct: base && base > 0 ? Math.round((total / base) * 10000) / 100 : null,
+      }
+    })
     .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
 
   const fechadas = comResultado.length
@@ -208,6 +255,19 @@ export async function GET(request: NextRequest) {
       total: linhas.length,
       fechadas,
       resultado: Math.round(acumulado * 100) / 100,
+      // A percentagem do conjunto: soma dos ganhos a dividir pela soma das bases. Fazer a média
+      // das percentagens dava o mesmo peso a uma conta de 300 € e a uma de 30 000 €.
+      resultadoPct: (() => {
+        const bases = [...porConta.keys()]
+          .map((c) => {
+            const t = acumuladoDe.get(c) ?? 0
+            const saldo = saldoPorConta.get(c)
+            return saldo != null ? saldo - t : null
+          })
+          .filter((b): b is number => b != null && b > 0)
+        const soma = bases.reduce((a, b) => a + b, 0)
+        return soma > 0 ? Math.round((acumulado / soma) * 10000) / 100 : null
+      })(),
       // Sem trades fechadas não se inventa uma taxa de acerto.
       winrate: fechadas ? Math.round((ganhas / fechadas) * 100) : null,
       porOrigem: ['MTM Auto', 'Tap to Trade', 'MTM Copy'].map((o) => ({
