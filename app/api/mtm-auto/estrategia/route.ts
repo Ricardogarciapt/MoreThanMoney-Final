@@ -83,11 +83,28 @@ async function desempenhoDoProvider(contaId: string, nome: string, dias: number)
   // `null` = não se conseguiu ler. Devolver zeros seria dizer que a estratégia não fez nada.
   if (!deals) return null
 
-  const fechos = deals
-    .filter((d) => d.entryType === 'DEAL_ENTRY_OUT' || d.entryType === 'DEAL_ENTRY_INOUT')
-    .filter((d) => d.type === 'DEAL_TYPE_BUY' || d.type === 'DEAL_TYPE_SELL')
-    .map((d) => Math.round((Number(d.profit ?? 0) + Number(d.commission ?? 0) + Number(d.swap ?? 0)) * 100) / 100)
+  /**
+   * Uma trade é uma POSIÇÃO, não um fecho.
+   *
+   * Estas estratégias saem por partes: uma posição fecha no TP1, depois no TP2, depois o resto.
+   * Contar cada fecho como uma trade dava 21 "trades" onde houve sete, e inflava a taxa de
+   * acerto — as duas parciais boas contavam como duas vitórias e o resto ao stop como uma só
+   * derrota, quando aquilo foi UMA trade com um resultado só.
+   *
+   * Somam-se por posição, e o sinal do total é que diz se ganhou ou perdeu.
+   */
+  const porPosicao = new Map<string, number>()
+  for (const d of deals) {
+    if (d.entryType !== 'DEAL_ENTRY_OUT' && d.entryType !== 'DEAL_ENTRY_INOUT') continue
+    if (d.type !== 'DEAL_TYPE_BUY' && d.type !== 'DEAL_TYPE_SELL') continue
+    // Sem positionId não se pode agrupar — conta-se à parte, uma por fecho, que é o melhor que
+    // se consegue dizer com verdade sobre ela.
+    const chave = String(d.positionId ?? d.orderId ?? d.id ?? Math.random())
+    const valor = Number(d.profit ?? 0) + Number(d.commission ?? 0) + Number(d.swap ?? 0)
+    porPosicao.set(chave, (porPosicao.get(chave) ?? 0) + valor)
+  }
 
+  const fechos = [...porPosicao.values()].map((v) => Math.round(v * 100) / 100)
   const ganhos = fechos.filter((v) => v > 0).length
   const perdas = fechos.filter((v) => v < 0).length
   const breakeven = fechos.filter((v) => v === 0).length
