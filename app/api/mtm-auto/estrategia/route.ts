@@ -29,7 +29,25 @@ interface Desempenho {
   breakeven: number
   winrate: number | null
   pips: number
+  /** Sinais que estiveram em lucro em algum momento. Facto, não interpretação. */
+  esteveEmLucro: number
   alvos: { alvo: string; acertos: number }[]
+  /**
+   * A taxa de acerto e os pips são de confiança?
+   *
+   * Hoje NÃO. O tracker mede cada sinal como uma trade única, tudo-ou-nada: um sinal que chega
+   * ao TP1, tira parcial e depois volta ao stop com o resto conta como PERDA inteira. Quem o
+   * seguiu ficou com lucro; a tabela diz que perdeu.
+   *
+   * Vê-se pelos próprios números: no Premium, 27 dos 45 sinais estiveram em lucro e só 4 contam
+   * como ganhos. E o Sensei aparece com −392 714 pips, que é o defeito antigo de ler cripto como
+   * par de forex (×10 000).
+   *
+   * Enquanto isto não estiver corrigido, estes dois campos não vão para o ecrã do cliente —
+   * anunciar 9% de acerto no Premium seria mentir contra nós próprios.
+   */
+  medicaoFiavel: boolean
+  porqueNaoFiavel: string | null
 }
 
 async function desempenho(fonte: string, dias: number): Promise<Desempenho> {
@@ -38,7 +56,7 @@ async function desempenho(fonte: string, dias: number): Promise<Desempenho> {
 
   const { data } = await db
     .from('mtmcopy_signal_tracking')
-    .select('status, result_pips, exits_done')
+    .select('status, result_pips, exits_done, peak_pips')
     .eq('channel_slug', fonte)
     .gte('created_at', desde)
     .limit(2000)
@@ -60,10 +78,14 @@ async function desempenho(fonte: string, dias: number): Promise<Desempenho> {
     // Sem trades fechadas não se inventa uma taxa de acerto.
     winrate: fechados.length ? Math.round((ganhos / fechados.length) * 1000) / 10 : null,
     pips: Math.round(fechados.reduce((a, l) => a + Number(l.result_pips ?? 0), 0)),
+    esteveEmLucro: linhas.filter((l) => Number(l.peak_pips ?? 0) > 0).length,
     alvos: [1, 2, 3].map((n) => ({
       alvo: `TP${n}`,
       acertos: linhas.filter((l) => Number(l.exits_done ?? 0) >= n).length,
     })),
+    medicaoFiavel: false,
+    porqueNaoFiavel:
+      'O desfecho é medido como se cada sinal fosse uma trade única: quem tirou parcial no primeiro alvo e deixou correr o resto aparece na mesma como perda. Até isto ser corrigido, mostram-se os alvos atingidos, que são um facto.',
   }
 }
 

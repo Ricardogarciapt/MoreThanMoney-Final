@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
-import { Loader2, TrendingUp } from "lucide-react"
+import { Loader2, Settings2, TrendingUp } from "lucide-react"
 
 /**
  * O que seguir — igual ao ecrã de Estratégias da app MTM Auto.
@@ -29,6 +29,209 @@ type Provedor = {
 }
 
 /** Um interruptor que diz o estado pela COR: verde a seguir, vermelho a não seguir. */
+/**
+ * O retrato de uma estratégia: como correu, e quanto se arrisca nela.
+ *
+ * A lista dizia só "A seguir", e seguir uma fonte sem saber se ela ganha é uma escolha às cegas.
+ * A roda dentada define o risco DAQUELA estratégia — as fontes não são iguais e um número único
+ * fazia o risco certo para uma ser o errado para a outra.
+ *
+ * O motor (trailing stop, trailing profit, parciais na fonte) não se mexe aqui: é do provedor, é
+ * igual para toda a gente que a segue, e administra-se no /admin.
+ */
+function ModalEstrategia({ fonte, nome, aoFechar }: { fonte: string; nome: string; aoFechar: () => void }) {
+  const [d, setD] = useState<Record<string, unknown> | null>(null)
+  const [aGravar, setAGravar] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+
+  const ler = useCallback(async () => {
+    try {
+      const tok = (await supabase.auth.getSession()).data.session?.access_token
+      if (!tok) return
+      const r = await fetch(`/api/mtm-auto/estrategia?fonte=${encodeURIComponent(fonte)}&dias=90`, {
+        headers: { Authorization: `Bearer ${tok}` },
+        cache: "no-store",
+      })
+      const j = await r.json()
+      if (j.ok) setD(j)
+      else setErro(j.error ?? "Não deu para ler os números desta estratégia.")
+    } catch {
+      setErro("Não deu para ler os números desta estratégia.")
+    }
+  }, [fonte])
+
+  useEffect(() => { ler() }, [ler])
+
+  const gravar = async (contaId: string, corpo: Record<string, unknown>) => {
+    setAGravar(true)
+    try {
+      const tok = (await supabase.auth.getSession()).data.session?.access_token
+      const r = await fetch("/api/mtm-auto/estrategia", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ ...corpo, fonte, contaId }),
+      })
+      const j = await r.json()
+      if (!r.ok) setErro(j.error ?? "Não deu para guardar.")
+      else await ler()
+    } finally {
+      setAGravar(false)
+    }
+  }
+
+  const desempenho = (d?.desempenho ?? {}) as Record<string, number | null>
+  const contas = (d?.contas ?? []) as Record<string, unknown>[]
+  const presets = (d?.presets ?? []) as Record<string, unknown>[]
+  const alvos = ((d?.desempenho as { alvos?: { alvo: string; acertos: number }[] })?.alvos) ?? []
+  const sinais = Number(desempenho.sinais ?? 0)
+
+  const caixa = (t: string, valor: string, sub: string, cor: string) => (
+    <div className="rounded-2xl border p-3" style={{ borderColor: "#23262F", background: "#12141A" }}>
+      <p className="text-[10.5px] uppercase tracking-wider text-zinc-500">{t}</p>
+      <p className="mt-1 text-[24px] font-bold tabular-nums" style={{ color: cor }}>{valor}</p>
+      <p className="mt-0.5 text-[11.5px] text-zinc-500">{sub}</p>
+    </div>
+  )
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/80" onClick={aoFechar}>
+      <div
+        className="mt-auto max-h-[88dvh] overflow-y-auto rounded-t-3xl border-t p-4"
+        style={{ borderColor: "#23262F", background: "#0A0B0E", paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-[16px] font-bold text-white">{nome}</p>
+          <button onClick={aoFechar} className="text-[13px] font-semibold text-[#D2A63C]">Fechar</button>
+        </div>
+
+        {!d && !erro && <p className="py-8 text-center text-[13px] text-zinc-500">A ler os números desta estratégia…</p>}
+
+        {d && (
+          <>
+            <p className="mb-2 text-[11px] uppercase tracking-wider text-zinc-500">Últimos 90 dias</p>
+            {/* A taxa de acerto e os pips só aparecem quando a medição os merece. Hoje o desfecho
+                é calculado como se cada sinal fosse uma trade única, tudo-ou-nada: um sinal que
+                chega ao primeiro alvo, tira parcial e depois volta ao stop com o resto conta como
+                perda inteira. Quem o seguiu ficou com lucro; a tabela diz que perdeu. Mostrar isso
+                era anunciar contra nós próprios um resultado que nem sequer é o real. */}
+            {(d.desempenho as { medicaoFiavel?: boolean }).medicaoFiavel ? (
+              <div className="grid grid-cols-2 gap-2">
+                {caixa(
+                  "Taxa de acerto",
+                  desempenho.winrate != null ? `${desempenho.winrate}%` : "—",
+                  `${desempenho.ganhos ?? 0}G / ${desempenho.perdas ?? 0}P`,
+                  desempenho.winrate == null ? "#a1a1aa" : Number(desempenho.winrate) >= 50 ? "#28C878" : "#FF4D4D",
+                )}
+                {caixa("Sinais", String(sinais), `${desempenho.fechados ?? 0} fechados`, "#ffffff")}
+                {caixa("Ganhos", String(desempenho.ganhos ?? 0), "trades ganhas", "#28C878")}
+                {caixa("Perdas", String(desempenho.perdas ?? 0), "trades perdidas", "#FF4D4D")}
+                {caixa("Break-even", String(desempenho.breakeven ?? 0), "saiu à entrada", "#D2A63C")}
+                {caixa(
+                  "Pips",
+                  `${Number(desempenho.pips ?? 0) >= 0 ? "+" : ""}${desempenho.pips ?? 0}`,
+                  "no período",
+                  Number(desempenho.pips ?? 0) >= 0 ? "#28C878" : "#FF4D4D",
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {caixa("Sinais", String(sinais), "nos últimos 90 dias", "#ffffff")}
+                  {caixa(
+                    "Estiveram em lucro",
+                    String(desempenho.esteveEmLucro ?? 0),
+                    sinais > 0 ? `${Math.round(((desempenho.esteveEmLucro ?? 0) / sinais) * 100)}% dos sinais` : "—",
+                    (desempenho.esteveEmLucro ?? 0) > 0 ? "#28C878" : "#a1a1aa",
+                  )}
+                </div>
+                <p className="mt-2 text-[11.5px] leading-snug" style={{ color: "rgba(210,166,60,0.85)" }}>
+                  {(d.desempenho as { porqueNaoFiavel?: string }).porqueNaoFiavel}
+                </p>
+              </>
+            )}
+
+            {alvos.length > 0 && sinais > 0 && (
+              <>
+                <p className="mb-2 mt-4 text-[11px] uppercase tracking-wider text-zinc-500">Alvos atingidos</p>
+                <div className="space-y-1.5">
+                  {alvos.map((a) => (
+                    <div key={a.alvo} className="flex items-center gap-3">
+                      <span className="w-10 text-[13px] font-semibold text-white">{a.alvo}</span>
+                      <span className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                        <span
+                          className="block h-full rounded-full bg-[#28C878]"
+                          style={{ width: `${Math.min(100, (a.acertos / sinais) * 100)}%` }}
+                        />
+                      </span>
+                      <span className="w-9 text-right text-[13px] font-bold tabular-nums text-[#28C878]">{a.acertos}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {contas.length > 0 && (
+              <>
+                <p className="mb-2 mt-4 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-zinc-500">
+                  <Settings2 className="h-3.5 w-3.5" /> O teu risco nesta estratégia
+                </p>
+                {contas.map((c) => {
+                  const proprio = Boolean(c.proprio)
+                  const risco = proprio ? c.riscoPct : c.riscoDaConta
+                  const teto = proprio ? c.riscoMaxPct : c.tetoDaConta
+                  return (
+                    <div key={String(c.id)} className="mb-2 rounded-2xl border p-3" style={{ borderColor: "#23262F", background: "#12141A" }}>
+                      <p className="text-[13.5px] font-semibold text-white">{String(c.rotulo)}</p>
+                      <p className="mt-0.5 text-[11.5px] text-zinc-500">
+                        Risco {String(risco)}% · teto {String(teto)}% — {proprio ? "próprio desta estratégia" : "o mesmo da conta"}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {presets.map((p) => (
+                          <button
+                            key={String(p.id)}
+                            disabled={aGravar}
+                            onClick={() => gravar(String(c.id), { preset: p.id })}
+                            className="rounded-full border px-2.5 py-1 text-[11.5px] font-medium disabled:opacity-50"
+                            style={{
+                              borderColor: c.preset === p.id ? "#D2A63C" : "#23262F",
+                              color: c.preset === p.id ? "#D2A63C" : "#a1a1aa",
+                            }}
+                          >
+                            {String(p.nome)} · {String(p.riscoPct)}%
+                          </button>
+                        ))}
+                        {/* Voltar ao risco da conta APAGA o próprio, em vez de copiar os números:
+                            assim, mudar o risco da conta volta a valer aqui. */}
+                        {proprio && (
+                          <button
+                            disabled={aGravar}
+                            onClick={() => gravar(String(c.id), { limpar: true })}
+                            className="rounded-full border border-zinc-700 px-2.5 py-1 text-[11.5px] text-zinc-400 disabled:opacity-50"
+                          >
+                            Usar o risco da conta
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+
+            <p className="mt-3 text-[11.5px] leading-snug text-zinc-500">
+              O motor desta estratégia — trailing stop, trailing profit, parciais — é do provedor e
+              é igual para toda a gente que a segue. O que escolhes aqui é quanto arriscas nela.
+            </p>
+          </>
+        )}
+
+        {erro && <p className="mt-3 text-[12.5px] text-rose-400">{erro}</p>}
+      </div>
+    </div>
+  )
+}
+
 function Interruptor({ ligado, ocupado, onClick }: { ligado: boolean; ocupado: boolean; onClick: () => void }) {
   return (
     <button
@@ -74,6 +277,8 @@ export default function MtmAutoEstrategias({
   const [provs, setProvs] = useState<Provedor[]>([])
   const [aCarregar, setACarregar] = useState(true)
   const [aMudar, setAMudar] = useState<string | null>(null)
+  /** Qual estratégia está com o retrato aberto. */
+  const [aberta, setAberta] = useState<{ fonte: string; nome: string } | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
 
   const token = useCallback(async () => (await supabase.auth.getSession()).data.session?.access_token ?? null, [])
@@ -169,12 +374,14 @@ export default function MtmAutoEstrategias({
               className="flex items-center justify-between gap-3 rounded-2xl border p-3"
               style={{ borderColor: f.ligada ? "rgba(40,200,120,0.30)" : "#23262F", background: "#12141A" }}
             >
-              <div className="min-w-0">
+              {/* O toque no corpo abre o retrato da fonte; o interruptor continua a ser só do
+                  seguir. Seguir sem saber se ela ganha era uma escolha às cegas. */}
+              <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setAberta({ fonte: f.key, nome: f.label })}>
                 <p className="text-[14px] font-semibold text-white">{f.label}</p>
                 <p className="mt-0.5 text-[11.5px] text-zinc-500">
-                  {f.ligada ? "Recebes os sinais desta fonte" : "Não recebes os sinais desta fonte"}
+                  {f.ligada ? "Recebes os sinais desta fonte · toca para ver os números" : "Não recebes os sinais desta fonte"}
                 </p>
-              </div>
+              </button>
               <Interruptor ligado={f.ligada} ocupado={aGuardarFontes} onClick={() => onToggleFonte?.(f.key)} />
             </div>
           ))}
@@ -228,6 +435,8 @@ export default function MtmAutoEstrategias({
       ))}
 
       {aviso && <p className="rounded-xl border border-zinc-800 p-2.5 text-[12.5px] text-rose-400">{aviso}</p>}
+
+      {aberta && <ModalEstrategia fonte={aberta.fonte} nome={aberta.nome} aoFechar={() => setAberta(null)} />}
     </div>
   )
 }

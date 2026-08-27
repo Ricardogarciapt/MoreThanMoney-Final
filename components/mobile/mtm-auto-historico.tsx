@@ -22,7 +22,15 @@ type Linha = {
   resultado: number | null
   pips: number | null
 }
-type Curva = { conta: string; origem: string; pontos: { quando: string; valor: number }[]; total: number }
+type Ponto = { quando: string; valor: number; pct?: number | null }
+type Curva = {
+  conta: string
+  origem: string
+  pontos: Ponto[]
+  total: number
+  /** O mesmo total em percentagem da conta. Nulo quando não se soube o saldo de partida. */
+  totalPct?: number | null
+}
 type Dados = {
   linhas: Linha[]
   serie: { quando: string; valor: number }[]
@@ -31,6 +39,7 @@ type Dados = {
     total: number
     fechadas: number
     resultado: number
+    resultadoPct?: number | null
     winrate: number | null
     porOrigem: { origem: string; trades: number }[]
   }
@@ -69,6 +78,15 @@ const CORES: Record<string, string> = {
 export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
   const [d, setD] = useState<Dados | null>(null)
   const [aLer, setALer] = useState(true)
+  /**
+   * Valor ou percentagem.
+   *
+   * "+91,20" não diz nada sem o tamanho da conta: numa de 300 € é um mês muito bom, numa de
+   * 30 000 € é ruído. As duas leituras respondem a perguntas diferentes e nenhuma chega sozinha.
+   */
+  const [emPct, setEmPct] = useState(false)
+  /** Onde o dedo está sobre o gráfico, em índice de ponto. Nulo quando ninguém lhe toca. */
+  const [lido, setLido] = useState<number | null>(null)
 
   const carregar = useCallback(async () => {
     setALer(true)
@@ -102,19 +120,56 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
   }
 
   const { serie, resumo } = d
-  const positivo = resumo.resultado >= 0
+  const temPct = (d.curvas ?? []).some((c) => c.pontos.some((p) => p.pct != null))
+  const totalMostrado = emPct ? (resumo.resultadoPct ?? null) : resumo.resultado
+  const positivo = (totalMostrado ?? 0) >= 0
+
+  /** O valor de uma curva no ponto que o dedo está — ou o total, quando não está. */
+  const valorDaCurva = (c: Curva): number | null => {
+    if (lido == null) return emPct ? (c.totalPct ?? null) : c.total
+    const i = Math.max(0, Math.min(c.pontos.length - 1, lido))
+    const p = c.pontos[i]
+    if (!p) return null
+    return emPct ? (p.pct ?? null) : p.valor
+  }
+  const fmt = (v: number | null) =>
+    v == null ? "—" : `${v >= 0 ? "+" : ""}${v.toFixed(2)}${emPct ? "%" : ""}`
 
   return (
     <div className="space-y-3">
       <div className="cartao p-3.5">
-        <div className="flex items-baseline justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span className="etiqueta">Resultado · {dias} dias</span>
-          <span
-            className="text-[19px] font-bold tabular-nums"
-            style={{ color: positivo ? "var(--sucesso)" : "var(--perigo)" }}
-          >
-            {positivo ? "+" : ""}{resumo.resultado.toFixed(2)}
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className="text-[19px] font-bold tabular-nums"
+              style={{ color: totalMostrado == null ? "var(--texto-fraco)" : positivo ? "var(--sucesso)" : "var(--perigo)" }}
+            >
+              {fmt(totalMostrado)}
+            </span>
+            {/* Sem percentagem em conta nenhuma, o botão só serviria para não fazer nada. */}
+            {temPct && (
+              <div className="flex overflow-hidden rounded-full" style={{ border: "1px solid var(--borda)" }}>
+                {[
+                  { id: false, r: "valor" },
+                  { id: true, r: "%" },
+                ].map((o) => (
+                  <button
+                    key={String(o.id)}
+                    type="button"
+                    onClick={() => setEmPct(o.id)}
+                    className="px-2.5 py-1 text-[11px] font-semibold"
+                    style={{
+                      background: emPct === o.id ? "var(--destaque)" : "transparent",
+                      color: emPct === o.id ? "#000" : "var(--texto-fraco)",
+                    }}
+                  >
+                    {o.r}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* UMA LINHA POR CONTA, cores diferentes.
@@ -122,17 +177,20 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
             puxar em sentidos opostos e a soma dá quase zero, como se nada tivesse acontecido. */}
         {(d.curvas?.length ?? 0) > 0 ? (
           <>
-            <Curvas curvas={d.curvas} />
+            <Curvas curvas={d.curvas} emPct={emPct} lido={lido} aoLer={setLido} />
             <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
-              {d.curvas.map((c, i) => (
-                <span key={c.conta} className="flex items-center gap-1.5 text-[11.5px] texto-fraco">
-                  <span className="inline-block h-2 w-2 rounded-full" style={{ background: PALETA[i % PALETA.length] }} />
-                  {c.conta}
-                  <span style={{ color: c.total >= 0 ? "var(--sucesso)" : "var(--perigo)" }}>
-                    {c.total >= 0 ? "+" : ""}{c.total.toFixed(2)}
+              {d.curvas.map((c, i) => {
+                const v = valorDaCurva(c)
+                return (
+                  <span key={c.conta} className="flex items-center gap-1.5 text-[11.5px] texto-fraco">
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: PALETA[i % PALETA.length] }} />
+                    {c.conta}
+                    <span style={{ color: v == null ? "var(--texto-fraco)" : v >= 0 ? "var(--sucesso)" : "var(--perigo)" }}>
+                      {fmt(v)}
+                    </span>
                   </span>
-                </span>
-              ))}
+                )
+              })}
             </div>
           </>
         ) : serie.length > 1 ? (
@@ -251,24 +309,57 @@ const PALETA = ["#D2A63C", "#28C878", "#7aa2f7", "#e879f9", "#fb923c", "#22d3ee"
  * Cada uma com a sua própria escala pareceriam todas iguais, e uma conta que ganhou 5 € teria a
  * mesma subida de outra que ganhou 500.
  */
-function Curvas({ curvas }: { curvas: Curva[] }) {
-  const todos = curvas.flatMap((c) => c.pontos.map((p) => p.valor))
+function Curvas({
+  curvas,
+  emPct,
+  lido,
+  aoLer,
+}: {
+  curvas: Curva[]
+  emPct: boolean
+  lido: number | null
+  aoLer: (i: number | null) => void
+}) {
+  const serie = (c: Curva) => c.pontos.map((p) => (emPct ? p.pct : p.valor)).filter((v): v is number => v != null)
+  const todos = curvas.flatMap(serie)
   const min = Math.min(...todos, 0)
   const max = Math.max(...todos, 0)
   const amplitude = max - min || 1
   const largura = 100
   const altura = 34
   const zero = altura - ((0 - min) / amplitude) * altura
+  const maxPontos = Math.max(...curvas.map((c) => serie(c).length), 1)
+
+  /* Arrastar o dedo lê o gráfico. A posição converte-se em índice de ponto, e é esse índice que
+     a legenda usa — assim as várias contas mostram todas o MESMO instante, e não o ponto mais
+     próximo de cada uma, que seriam instantes diferentes lado a lado. */
+  const ler = (e: React.PointerEvent<SVGSVGElement>) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    const f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width))
+    aoLer(Math.round(f * (maxPontos - 1)))
+  }
+
+  const x0 = lido != null && maxPontos > 1 ? (lido / (maxPontos - 1)) * largura : null
 
   return (
-    <svg viewBox={`0 0 ${largura} ${altura}`} preserveAspectRatio="none" className="mt-2 h-20 w-full">
+    <svg
+      viewBox={`0 0 ${largura} ${altura}`}
+      preserveAspectRatio="none"
+      className="mt-2 h-20 w-full touch-none"
+      onPointerDown={ler}
+      onPointerMove={(e) => e.buttons !== 0 && ler(e)}
+      onPointerUp={() => aoLer(null)}
+      onPointerLeave={() => aoLer(null)}
+    >
       {/* A linha do zero: sem ela, um conjunto inteiramente negativo parece uma subida. */}
       <line x1="0" x2={largura} y1={zero} y2={zero} stroke="var(--borda)" strokeWidth="0.4" strokeDasharray="2 2" />
       {curvas.map((c, i) => {
-        const caminho = c.pontos
-          .map((p, j) => {
-            const x = c.pontos.length > 1 ? (j / (c.pontos.length - 1)) * largura : 0
-            const y = altura - ((p.valor - min) / amplitude) * altura
+        const pontos = serie(c)
+        if (pontos.length < 2) return null
+        const caminho = pontos
+          .map((v, j) => {
+            const x = (j / (pontos.length - 1)) * largura
+            const y = altura - ((v - min) / amplitude) * altura
             return `${j === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`
           })
           .join(" ")
@@ -283,6 +374,27 @@ function Curvas({ curvas }: { curvas: Curva[] }) {
           />
         )
       })}
+      {x0 != null && (
+        <>
+          <line x1={x0} x2={x0} y1="0" y2={altura} stroke="var(--texto)" strokeWidth="0.5" opacity="0.35" />
+          {curvas.map((c, i) => {
+            const pontos = serie(c)
+            if (pontos.length < 2) return null
+            const j = Math.max(0, Math.min(pontos.length - 1, lido!))
+            const y = altura - ((pontos[j] - min) / amplitude) * altura
+            return (
+              <circle
+                key={c.conta}
+                cx={(j / (pontos.length - 1)) * largura}
+                cy={y}
+                r="1.6"
+                fill={PALETA[i % PALETA.length]}
+                vectorEffect="non-scaling-stroke"
+              />
+            )
+          })}
+        </>
+      )}
     </svg>
   )
 }
