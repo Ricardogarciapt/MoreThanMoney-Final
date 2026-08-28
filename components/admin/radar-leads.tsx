@@ -57,10 +57,10 @@ export function RadarLeads() {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-100">
             <Radar className="h-4 w-4" /> Radar de leads
           </h2>
-          <p className="mt-0.5 text-[11px] text-neutral-600">
+          <p className="mt-0.5 text-[11px] text-neutral-400">
             Corre sozinho de meia em meia hora, das 9h às 17h. Encontra as conversas; entrar nelas
             é contigo — a API do Instagram não deixa comentar em posts de terceiros, e fazê-lo por
             fora é o caminho mais curto para a conta ser banida.
@@ -70,7 +70,7 @@ export function RadarLeads() {
           {quota && (
             <span
               className={`rounded-full px-2 py-0.5 text-[11px] ${
-                quota.gastas >= quota.limite - 3 ? "bg-amber-100 text-amber-800" : "bg-neutral-100 text-neutral-600"
+                quota.gastas >= quota.limite - 3 ? "bg-amber-950 text-amber-300" : "bg-neutral-100 text-neutral-400"
               }`}
               title="O Instagram só deixa procurar 30 hashtags diferentes em cada 7 dias"
             >
@@ -89,18 +89,18 @@ export function RadarLeads() {
               setACorrer(false)
             }}
             disabled={aCorrer}
-            className="rounded-lg border px-3 py-1 text-sm hover:bg-neutral-50 disabled:opacity-40"
+            className="rounded-lg border px-3 py-1 text-sm hover:bg-neutral-800 disabled:opacity-40"
           >
             {aCorrer ? "A procurar…" : "Procurar agora"}
           </button>
-          <button onClick={() => void buscar()} disabled={aLer} className="rounded-lg border p-1.5 hover:bg-neutral-50">
+          <button onClick={() => void buscar()} disabled={aLer} className="rounded-lg border p-1.5 hover:bg-neutral-800">
             {aLer ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           </button>
         </div>
       </div>
 
       {!aLer && !prospetos.length && (
-        <p className="rounded-lg border border-dashed p-4 text-center text-sm text-neutral-600">
+        <p className="rounded-lg border border-dashed border-neutral-700 p-4 text-center text-sm text-neutral-400">
           Nada por ver. O radar volta a passar dentro de meia hora, ou carrega em "Procurar agora".
         </p>
       )}
@@ -112,17 +112,17 @@ export function RadarLeads() {
               {/* A pontuação primeiro: é a ordem por que a lista existe. */}
               <span
                 className={`rounded px-1.5 py-0.5 font-bold ${
-                  p.pontuacao >= 70 ? "bg-emerald-100 text-emerald-800" : "bg-neutral-100 text-neutral-600"
+                  p.pontuacao >= 70 ? "bg-emerald-950 text-emerald-300" : "bg-neutral-100 text-neutral-400"
                 }`}
               >
                 {p.pontuacao}
               </span>
-              <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-neutral-600">#{p.hashtag}</span>
-              <span className="text-neutral-600">{p.comentarios} comentários · {p.gostos} gostos</span>
-              <span className="text-neutral-600">— {p.porque}</span>
+              <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-neutral-400">#{p.hashtag}</span>
+              <span className="text-neutral-400">{p.comentarios} comentários · {p.gostos} gostos</span>
+              <span className="text-neutral-400">— {p.porque}</span>
             </div>
 
-            <p className="mt-1.5 line-clamp-3 text-[12.5px] leading-snug text-neutral-700">{p.legenda}</p>
+            <p className="mt-1.5 line-clamp-3 text-[12.5px] leading-snug text-neutral-200">{p.legenda}</p>
 
             <div className="mt-2 flex flex-wrap gap-2">
               {p.permalink && (
@@ -136,7 +136,7 @@ export function RadarLeads() {
                   Abrir e comentar <ExternalLink className="h-3 w-3" />
                 </a>
               )}
-              <button onClick={() => void marcar(p.id, "ignorado")} className="rounded-lg border px-3 py-1 text-xs hover:bg-neutral-50">
+              <button onClick={() => void marcar(p.id, "ignorado")} className="rounded-lg border px-3 py-1 text-xs hover:bg-neutral-800">
                 Não serve
               </button>
             </div>

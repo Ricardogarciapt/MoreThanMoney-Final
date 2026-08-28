@@ -114,13 +114,13 @@ const PILLARS = ["prova", "educacao", "contrarian", "oferta", "pessoal"]
 const TYPES = ["IMAGE", "CAROUSEL", "STORIES", "REELS"]
 
 const STATUS_STYLE: Record<string, string> = {
-  draft: "bg-neutral-200 text-neutral-700",
-  approved: "bg-amber-100 text-amber-800",
+  draft: "bg-neutral-200 text-neutral-200",
+  approved: "bg-amber-950 text-amber-300",
   publishing: "bg-blue-100 text-blue-800",
   processing: "bg-blue-100 text-blue-800",
-  published: "bg-emerald-100 text-emerald-800",
-  failed: "bg-red-100 text-red-800",
-  canceled: "bg-neutral-100 text-neutral-600",
+  published: "bg-emerald-950 text-emerald-300",
+  failed: "bg-red-950 text-red-300",
+  canceled: "bg-neutral-100 text-neutral-400",
 }
 
 export default function AdminSocialPage() {
@@ -316,7 +316,7 @@ export default function AdminSocialPage() {
   }, {})
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-4 md:p-8">
+    <div className="min-h-screen bg-neutral-950 p-4 md:p-8">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -326,10 +326,10 @@ export default function AdminSocialPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="flex items-center gap-2 text-2xl font-semibold">
+              <h1 className="flex items-center gap-2 text-2xl font-semibold text-neutral-100">
                 <Instagram className="h-6 w-6" /> Conteúdo &amp; Agendamento
               </h1>
-              <p className="text-sm text-neutral-600">
+              <p className="text-sm text-neutral-400">
                 Publicação nativa nas 2 contas. Nada sai sem a tua aprovação.
               </p>
             </div>
@@ -370,7 +370,7 @@ export default function AdminSocialPage() {
               key={id}
               onClick={() => setAba(id)}
               className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition ${
-                aba === id ? "border-neutral-900 text-neutral-900" : "border-transparent text-neutral-600"
+                aba === id ? "border-neutral-900 text-neutral-100" : "border-transparent text-neutral-400"
               }`}
             >
               {rotulo}
@@ -413,7 +413,7 @@ export default function AdminSocialPage() {
               key={s}
               onClick={() => setFilter(s)}
               className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                filter === s ? "bg-neutral-900 text-white" : "bg-white text-neutral-600 border"
+                filter === s ? "bg-neutral-900 text-white" : "bg-white text-neutral-400 border"
               }`}
             >
               {s === "all" ? "Todos" : s} {s !== "all" && counts[s] ? `(${counts[s]})` : ""}
@@ -423,10 +423,10 @@ export default function AdminSocialPage() {
 
         {loading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="h-6 w-6 animate-spin text-neutral-600" />
+            <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
           </div>
         ) : shown.length === 0 ? (
-          <div className="rounded-xl border border-dashed bg-white py-20 text-center text-neutral-600">
+          <div className="rounded-xl border border-dashed border-neutral-700 bg-white py-20 text-center text-neutral-400">
             Sem posts {filter !== "all" ? `em "${filter}"` : "na fila"}.
           </div>
         ) : (
@@ -445,10 +445,10 @@ export default function AdminSocialPage() {
                   <div className="mb-1 flex flex-wrap items-center gap-2">
                     <Badge className={STATUS_STYLE[p.status] || ""}>{p.status}</Badge>
                     <span className="text-sm font-medium">@{p.ig_username}</span>
-                    <span className="text-xs text-neutral-600">
+                    <span className="text-xs text-neutral-400">
                       {p.media_type} · {p.pillar || "—"}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-neutral-600">
+                    <span className="flex items-center gap-1 text-xs text-neutral-400">
                       <CalendarClock className="h-3 w-3" />
                       {new Date(p.scheduled_at).toLocaleString("pt-PT", {
                         day: "2-digit",
@@ -458,7 +458,7 @@ export default function AdminSocialPage() {
                       })}
                     </span>
                   </div>
-                  <p className="line-clamp-2 text-sm text-neutral-600">{p.caption || "—"}</p>
+                  <p className="line-clamp-2 text-sm text-neutral-400">{p.caption || "—"}</p>
                   {p.error && <p className="mt-1 text-xs text-red-500">⚠ {p.error}</p>}
                   {p.permalink && (
                     <a
@@ -547,7 +547,7 @@ export default function AdminSocialPage() {
           {editar && (
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-neutral-600">Legenda</label>
+                <label className="text-xs text-neutral-400">Legenda</label>
                 <textarea
                   defaultValue={editar.caption ?? ""}
                   onChange={(e) => setEditar({ ...editar, caption: e.target.value })}
@@ -557,7 +557,7 @@ export default function AdminSocialPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-neutral-600">Quando sai</label>
+                  <label className="text-xs text-neutral-400">Quando sai</label>
                   <Input
                     type="datetime-local"
                     defaultValue={
@@ -569,7 +569,7 @@ export default function AdminSocialPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-neutral-600">Pilar</label>
+                  <label className="text-xs text-neutral-400">Pilar</label>
                   <Select
                     value={editar.pillar ?? "prova"}
                     onValueChange={(v) => setEditar({ ...editar, pillar: v })}
@@ -588,12 +588,12 @@ export default function AdminSocialPage() {
                 </div>
               </div>
               <div>
-                <label className="text-xs text-neutral-600">Imagem (URL)</label>
+                <label className="text-xs text-neutral-400">Imagem (URL)</label>
                 <Input
                   defaultValue={editar.media_urls?.[0] ?? ""}
                   onChange={(e) => setEditar({ ...editar, media_urls: e.target.value ? [e.target.value] : [] })}
                 />
-                <p className="mt-1 text-xs text-neutral-600">
+                <p className="mt-1 text-xs text-neutral-400">
                   Sem imagem, o Instagram recusa — o post fica na fila para sempre.
                 </p>
               </div>
@@ -628,7 +628,7 @@ export default function AdminSocialPage() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-600">Conta</label>
+                <label className="mb-1 block text-xs font-medium text-neutral-400">Conta</label>
                 <Select
                   value={form.ig_account_id}
                   onValueChange={(v) => setForm((f) => ({ ...f, ig_account_id: v }))}
@@ -646,7 +646,7 @@ export default function AdminSocialPage() {
                 </Select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-600">Tipo</label>
+                <label className="mb-1 block text-xs font-medium text-neutral-400">Tipo</label>
                 <Select
                   value={form.media_type}
                   onValueChange={(v) => setForm((f) => ({ ...f, media_type: v }))}
@@ -666,7 +666,7 @@ export default function AdminSocialPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-600">Pilar</label>
+                <label className="mb-1 block text-xs font-medium text-neutral-400">Pilar</label>
                 <Select
                   value={form.pillar}
                   onValueChange={(v) => setForm((f) => ({ ...f, pillar: v }))}
@@ -684,7 +684,7 @@ export default function AdminSocialPage() {
                 </Select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-600">
+                <label className="mb-1 block text-xs font-medium text-neutral-400">
                   Agendar para
                 </label>
                 <Input
@@ -695,7 +695,7 @@ export default function AdminSocialPage() {
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-neutral-600">
+              <label className="mb-1 block text-xs font-medium text-neutral-400">
                 Media URLs (uma por linha — carrossel = várias)
               </label>
               <textarea
@@ -706,14 +706,14 @@ export default function AdminSocialPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-neutral-600">Legenda</label>
+              <label className="mb-1 block text-xs font-medium text-neutral-400">Legenda</label>
               <textarea
                 className="min-h-[90px] w-full rounded-md border p-2 text-sm"
                 value={form.caption}
                 onChange={(e) => setForm((f) => ({ ...f, caption: e.target.value }))}
               />
             </div>
-            <label className="flex items-center gap-2 text-sm text-neutral-600">
+            <label className="flex items-center gap-2 text-sm text-neutral-400">
               <input
                 type="checkbox"
                 checked={form.rehost}
@@ -776,7 +776,7 @@ function PainelFactos({
   if (!painel) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-neutral-600" />
+        <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
       </div>
     )
   }
@@ -796,7 +796,7 @@ function PainelFactos({
       ) : (
         <div className="rounded-xl border bg-white p-4">
           <p className="text-sm font-semibold">Estes são os factos que rodam nos cartões</p>
-          <p className="mt-1 text-xs text-neutral-600">
+          <p className="mt-1 text-xs text-neutral-400">
             Um por dia, à vez. Publicar sempre a mesma frase treina o leitor a saltá-la.
           </p>
           <ul className="mt-3 space-y-2">
@@ -819,7 +819,7 @@ function PainelFactos({
           ["Pips", f.pips != null ? `${f.pips >= 0 ? "+" : ""}${Math.round(f.pips)}` : "—"],
         ].map(([r, v]) => (
           <div key={r} className="rounded-xl border bg-white p-4">
-            <p className="text-xs uppercase tracking-wide text-neutral-600">{r}</p>
+            <p className="text-xs uppercase tracking-wide text-neutral-400">{r}</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums">{v}</p>
           </div>
         ))}
@@ -829,7 +829,7 @@ function PainelFactos({
           Os números nunca mudam — o modelo recebe-os apurados e só lhes muda o feitio. */}
       <div className="rounded-xl border bg-white p-4">
         <p className="text-sm font-semibold">Gerar à medida</p>
-        <p className="mt-0.5 text-xs text-neutral-600">
+        <p className="mt-0.5 text-xs text-neutral-400">
           Diz o feitio que queres. Os números não mudam — só a forma como são ditos.
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -858,7 +858,7 @@ function PainelFactos({
                 <span>{g}</span>
                 <button
                   onClick={() => { navigator.clipboard.writeText(g); toast({ title: "Copiado" }) }}
-                  className="shrink-0 text-xs text-neutral-600 hover:text-neutral-900"
+                  className="shrink-0 text-xs text-neutral-400 hover:text-neutral-100"
                 >
                   copiar
                 </button>
@@ -869,12 +869,12 @@ function PainelFactos({
       </div>
 
       <div className="rounded-xl border bg-white p-4">
-        <p className="text-xs uppercase tracking-wide text-neutral-600">
+        <p className="text-xs uppercase tracking-wide text-neutral-400">
           A ressalva que acompanha sempre qualquer número
         </p>
-        <p className="mt-1 text-xs leading-relaxed text-neutral-600">{f.ressalva}</p>
+        <p className="mt-1 text-xs leading-relaxed text-neutral-400">{f.ressalva}</p>
         {f.atualizadoEm && (
-          <p className="mt-2 text-xs text-neutral-600">
+          <p className="mt-2 text-xs text-neutral-400">
             Medido a {new Date(f.atualizadoEm).toLocaleString("pt-PT")}
           </p>
         )}
@@ -894,7 +894,7 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
   if (!painel) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-neutral-600" />
+        <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
       </div>
     )
   }
@@ -919,14 +919,14 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
               ["Rascunhos por rever", m.rascunhosPorRever],
             ].map(([r, v]) => (
               <div key={String(r)} className="rounded-lg border p-3">
-                <p className="text-[11px] uppercase tracking-wide text-neutral-600">{r}</p>
+                <p className="text-[11px] uppercase tracking-wide text-neutral-400">{r}</p>
                 <p className="mt-0.5 text-xl font-semibold tabular-nums">{v}</p>
               </div>
             ))}
           </div>
           {m.execucao.length > 0 && (
             <>
-              <p className="mt-4 text-xs uppercase tracking-wide text-neutral-600">
+              <p className="mt-4 text-xs uppercase tracking-wide text-neutral-400">
                 Motores de execução
               </p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -934,7 +934,7 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
                   <span
                     key={x.chave}
                     className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                      x.ligado ? "bg-emerald-100 text-emerald-800" : "bg-neutral-100 text-neutral-600"
+                      x.ligado ? "bg-emerald-950 text-emerald-300" : "bg-neutral-100 text-neutral-400"
                     }`}
                   >
                     {x.chave} {x.ligado ? "ligado" : "desligado"}
@@ -960,7 +960,7 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
             const passou = anterior && anterior > 0 ? Math.round((x.total / anterior) * 100) : null
             return (
               <div key={x.degrau} className="flex items-center gap-3">
-                <span className="w-44 flex-none text-sm text-neutral-700">{x.degrau}</span>
+                <span className="w-44 flex-none text-sm text-neutral-200">{x.degrau}</span>
                 <span className="h-3 flex-1 overflow-hidden rounded-full bg-neutral-100">
                   <span
                     className="block h-full rounded-full bg-neutral-900"
@@ -968,7 +968,7 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
                   />
                 </span>
                 <span className="w-12 text-right text-sm font-semibold tabular-nums">{x.total}</span>
-                <span className="w-16 text-right text-xs text-neutral-600">
+                <span className="w-16 text-right text-xs text-neutral-400">
                   {passou != null ? `${passou}%` : ""}
                 </span>
               </div>
@@ -1000,7 +1000,7 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
               </span>
             ))}
           </div>
-          <p className="mt-3 text-xs text-neutral-600">
+          <p className="mt-3 text-xs text-neutral-400">
             Piloto automático: <b>{painel.conteudo.autopilot ? "ligado" : "desligado"}</b>
             {painel.conteudo.autopilot
               ? " — os posts com imagem publicam sem passar por ti."
@@ -1011,12 +1011,12 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
         <div className="rounded-xl border bg-white p-4">
           <p className="text-sm font-semibold">Próximos a sair</p>
           {painel.conteudo.proximos.length === 0 ? (
-            <p className="mt-2 text-xs text-neutral-600">Nada aprovado à espera de hora.</p>
+            <p className="mt-2 text-xs text-neutral-400">Nada aprovado à espera de hora.</p>
           ) : (
             <ul className="mt-2 space-y-1.5">
               {painel.conteudo.proximos.map((x) => (
                 <li key={x.quando} className="flex items-center justify-between gap-2 text-xs">
-                  <span className="text-neutral-600">
+                  <span className="text-neutral-400">
                     {new Date(x.quando).toLocaleString("pt-PT", {
                       day: "2-digit",
                       month: "2-digit",
@@ -1025,7 +1025,7 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
                     })}{" "}
                     · {x.conta ?? "—"} · {x.pilar ?? "—"}
                   </span>
-                  {!x.temImagem && <span className="font-semibold text-amber-700">sem imagem</span>}
+                  {!x.temImagem && <span className="font-semibold text-amber-300">sem imagem</span>}
                 </li>
               ))}
             </ul>
@@ -1058,7 +1058,7 @@ function PainelMensagens({
   if (!mensagens) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-neutral-600" />
+        <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
       </div>
     )
   }
@@ -1073,10 +1073,10 @@ function PainelMensagens({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold">{m.titulo}</p>
-                <p className="mt-0.5 text-xs text-neutral-600">{m.quando}</p>
+                <p className="mt-0.5 text-xs text-neutral-400">{m.quando}</p>
               </div>
               {m.editado && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                <span className="rounded-full bg-amber-950 px-2 py-0.5 text-[11px] font-medium text-amber-300">
                   editada
                 </span>
               )}
@@ -1094,7 +1094,7 @@ function PainelMensagens({
                 <button
                   key={v}
                   onClick={() => setRascunhos({ ...rascunhos, [m.chave]: valor + v })}
-                  className="rounded-full border px-2 py-0.5 font-mono text-[11px] text-neutral-600"
+                  className="rounded-full border px-2 py-0.5 font-mono text-[11px] text-neutral-400"
                   title="Clica para inserir no fim"
                 >
                   {v}
@@ -1120,10 +1120,10 @@ function PainelMensagens({
             </div>
 
             <details className="mt-3">
-              <summary className="cursor-pointer text-xs text-neutral-600">
+              <summary className="cursor-pointer text-xs text-neutral-400">
                 Ver como o lead recebe
               </summary>
-              <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-neutral-50 p-3 text-xs text-neutral-700">
+              <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-neutral-50 p-3 text-xs text-neutral-200">
                 {m.previsao}
               </pre>
             </details>
@@ -1218,7 +1218,7 @@ function Estudio({
 
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-neutral-600">O que queres publicar</label>
+            <label className="text-xs text-neutral-400">O que queres publicar</label>
             <Input
               value={pedido}
               onChange={(e) => setPedido(e.target.value)}
@@ -1227,7 +1227,7 @@ function Estudio({
             />
           </div>
           <div>
-            <label className="text-xs text-neutral-600">
+            <label className="text-xs text-neutral-400">
               Material teu (opcional) — um texto, uma ideia, o que escreveste no telemóvel
             </label>
             <textarea
@@ -1245,11 +1245,11 @@ function Estudio({
           {saida && (
             <div className="space-y-3 rounded-xl border bg-neutral-50 p-3">
               <div>
-                <label className="text-xs text-neutral-600">Gancho</label>
+                <label className="text-xs text-neutral-400">Gancho</label>
                 <Input value={saida.hook} onChange={(e) => setSaida({ ...saida, hook: e.target.value })} />
               </div>
               <div>
-                <label className="text-xs text-neutral-600">Legenda</label>
+                <label className="text-xs text-neutral-400">Legenda</label>
                 <textarea
                   value={saida.caption}
                   onChange={(e) => setSaida({ ...saida, caption: e.target.value })}
@@ -1259,7 +1259,7 @@ function Estudio({
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="text-xs text-neutral-600">Conta</label>
+                  <label className="text-xs text-neutral-400">Conta</label>
                   <Select value={conta} onValueChange={setConta}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -1268,7 +1268,7 @@ function Estudio({
                   </Select>
                 </div>
                 <div>
-                  <label className="text-xs text-neutral-600">Pilar</label>
+                  <label className="text-xs text-neutral-400">Pilar</label>
                   <Select value={pilar} onValueChange={setPilar}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -1277,11 +1277,11 @@ function Estudio({
                   </Select>
                 </div>
                 <div>
-                  <label className="text-xs text-neutral-600">Quando</label>
+                  <label className="text-xs text-neutral-400">Quando</label>
                   <Input type="datetime-local" value={quando} onChange={(e) => setQuando(e.target.value)} />
                 </div>
               </div>
-              <p className="text-xs text-neutral-600">
+              <p className="text-xs text-neutral-400">
                 Entra como rascunho. Falta-lhe a imagem — sem ela o Instagram recusa.
               </p>
             </div>

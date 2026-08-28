@@ -303,3 +303,100 @@ export async function lerCampoReal(pessoa: string, campo: string): Promise<unkno
 export async function funilPorId(id: string): Promise<Funil | null> {
   return (await lerFunis()).find((f) => f.id === id) ?? null
 }
+
+// ── Percursos: pôr pessoas a andar, e voltar a elas ─────────────────────────────────────────
+
+/**
+ * Põe uma pessoa a andar num funil.
+ *
+ * Repetir não faz nada de propósito. Alguém que escreve três vezes seguidas entraria três vezes e
+ * receberia tudo a triplicar — e essa pessoa não volta. O índice único na base é a rede; isto é a
+ * verificação amável que evita chegar lá.
+ */
+export async function iniciarPercurso(
+  funilId: string,
+  pessoa: string,
+  dados: Record<string, unknown> = {},
+): Promise<{ iniciou: boolean; motivo?: string }> {
+  const db = getSupabaseAdmin()
+
+  const { data: jaAnda } = await db
+    .from('funil_percursos')
+    .select('id')
+    .eq('funil_id', funilId)
+    .eq('pessoa', pessoa)
+    .is('terminado_em', null)
+    .eq('ensaio', false)
+    .maybeSingle()
+  if (jaAnda) return { iniciou: false, motivo: 'já anda neste funil' }
+
+  const { error } = await db.from('funil_percursos').insert({
+    funil_id: funilId,
+    pessoa,
+    contexto: dados,
+    acordar_em: new Date().toISOString(),
+  })
+  return error ? { iniciou: false, motivo: error.message } : { iniciou: true }
+}
+
+/**
+ * Uma passagem do motor: pega em quem está pronto e anda com cada um.
+ *
+ * O limite existe porque uma passagem que trata de tudo é uma passagem que às vezes não acaba —
+ * e um motor que não acaba não volta a correr. Quem sobra é apanhado na passagem seguinte.
+ */
+export async function correrPercursos(
+  braços: Braços,
+  limite = 25,
+): Promise<{ andaram: number; terminaram: number; passos: number }> {
+  const db = getSupabaseAdmin()
+  const { data: prontos } = await db
+    .from('funil_percursos')
+    .select('id, funil_id, pessoa, no_atual, contexto, historico')
+    .is('terminado_em', null)
+    .eq('ensaio', false)
+    .lte('acordar_em', new Date().toISOString())
+    .order('acordar_em')
+    .limit(limite)
+
+  if (!prontos?.length) return { andaram: 0, terminaram: 0, passos: 0 }
+
+  const funis = await lerFunis()
+  let terminaram = 0
+  let passos = 0
+
+  for (const p of prontos) {
+    const funil = funis.find((f) => f.id === p.funil_id)
+    if (!funil) {
+      // O funil foi apagado debaixo dos pés de quem lá andava. Fechar é mais honesto do que
+      // deixar a linha a acordar todos os minutos para não encontrar nada.
+      await db.from('funil_percursos').update({ terminado_em: new Date().toISOString() }).eq('id', p.id)
+      terminaram++
+      continue
+    }
+
+    const r = await andar(
+      funil,
+      { pessoa: String(p.pessoa), dados: (p.contexto as Record<string, unknown>) ?? {} },
+      braços,
+      { desde: p.no_atual as string | null },
+    )
+    passos += r.passos.length
+
+    const historico = [...((p.historico as PassoDado[]) ?? []), ...r.passos].slice(-60)
+    await db
+      .from('funil_percursos')
+      .update({
+        no_atual: r.parouEm,
+        acordar_em: r.acordarEm,
+        terminado_em: r.terminou ? new Date().toISOString() : null,
+        historico,
+        mexido_em: new Date().toISOString(),
+      })
+      .eq('id', p.id)
+
+    if (r.terminou) terminaram++
+  }
+
+  return { andaram: prontos.length, terminaram, passos }
+}

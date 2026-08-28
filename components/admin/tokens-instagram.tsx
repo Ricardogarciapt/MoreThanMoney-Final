@@ -78,13 +78,13 @@ export function TokensInstagram() {
   return (
     <div className="rounded-xl border bg-white p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-neutral-700">Tokens do Instagram</h2>
-        <button onClick={() => void buscar()} disabled={carregar} className="rounded-lg border p-1.5 hover:bg-neutral-100 disabled:opacity-40">
+        <h2 className="text-sm font-semibold text-neutral-200">Tokens do Instagram</h2>
+        <button onClick={() => void buscar()} disabled={carregar} className="rounded-lg border p-1.5 hover:bg-neutral-800 disabled:opacity-40">
           {carregar ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
         </button>
       </div>
 
-      {erro && <p className="mb-2 text-xs text-red-600">{erro}</p>}
+      {erro && <p className="mb-2 text-xs text-red-400">{erro}</p>}
 
       <div className="space-y-3">
         {contas.map((c) => {
@@ -94,24 +94,24 @@ export function TokensInstagram() {
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="font-medium">@{c.username}</span>
                 {c.ok ? (
-                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-800">a funcionar</span>
+                  <span className="rounded-full bg-emerald-950 px-2 py-0.5 text-[11px] text-emerald-300">a funcionar</span>
                 ) : (
-                  <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] text-red-800">
+                  <span className="rounded-full bg-red-950 px-2 py-0.5 text-[11px] text-red-300">
                     {c.motivo ?? "não funciona"}
                   </span>
                 )}
                 {c.diasQueFaltam != null && (
-                  <span className={`text-[11px] ${c.diasQueFaltam < 10 ? "text-amber-700" : "text-neutral-600"}`}>
+                  <span className={`text-[11px] ${c.diasQueFaltam < 10 ? "text-amber-300" : "text-neutral-400"}`}>
                     expira em {c.diasQueFaltam} dias
                   </span>
                 )}
                 {c.expiraEm === null && c.ok && (
-                  <span className="text-[11px] text-neutral-600">não expira</span>
+                  <span className="text-[11px] text-neutral-400">não expira</span>
                 )}
               </div>
 
               {faltam.length > 0 && (
-                <p className="mt-1 text-[11px] text-amber-700">
+                <p className="mt-1 text-[11px] text-amber-300">
                   Faltam permissões: {faltam.join(", ")} — sem elas, essa parte fica calada.
                 </p>
               )}
@@ -135,14 +135,14 @@ export function TokensInstagram() {
             </div>
           )
         })}
-        {!carregar && !contas.length && <p className="text-sm text-neutral-600">Sem contas configuradas.</p>}
+        {!carregar && !contas.length && <p className="text-sm text-neutral-400">Sem contas configuradas.</p>}
       </div>
 
       {/* O segredo fica aqui e não nas variáveis da Vercel porque é o par do token: quem vem
           renovar um vem tratar do outro. Guardado, nunca devolvido. */}
       <div className="mt-3 rounded-lg border bg-neutral-50 p-3">
-        <p className="text-[11px] text-neutral-600">
-          <b className="text-neutral-700">Segredo da app</b> — sem ele, um token do Explorer dura
+        <p className="text-[11px] text-neutral-400">
+          <b className="text-neutral-200">Segredo da app</b> — sem ele, um token do Explorer dura
           uma ou duas horas. Com ele, o sistema troca-o por um de <b>60 dias</b> assim que o colas.
         </p>
         <div className="mt-2 flex gap-2">
@@ -169,7 +169,7 @@ export function TokensInstagram() {
               setAGuardar(null)
             }}
             disabled={aGuardar === "segredo"}
-            className="rounded-lg border px-3 py-1 text-sm font-semibold hover:bg-neutral-100 disabled:opacity-40"
+            className="rounded-lg border px-3 py-1 text-sm font-semibold hover:bg-neutral-800 disabled:opacity-40"
           >
             {aGuardar === "segredo" ? "…" : "Guardar segredo"}
           </button>
@@ -195,13 +195,13 @@ export function TokensInstagram() {
             setAGuardar(null)
           }}
           disabled={aGuardar === "renovar"}
-          className="mt-2 w-full rounded-lg border px-3 py-1.5 text-sm hover:bg-neutral-100 disabled:opacity-40"
+          className="mt-2 w-full rounded-lg border px-3 py-1.5 text-sm hover:bg-neutral-800 disabled:opacity-40"
         >
           {aGuardar === "renovar" ? "…" : "Renovar os tokens que já estão guardados"}
         </button>
       </div>
 
-      <p className="mt-3 text-[11px] text-neutral-600">
+      <p className="mt-3 text-[11px] text-neutral-400">
         O token é verificado contra a Graph API antes de ser guardado — se for de outra conta, é
         recusado. Guardar vazio devolve o comando à variável de ambiente. Onde gerar:{" "}
         <a className="underline" href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noreferrer">

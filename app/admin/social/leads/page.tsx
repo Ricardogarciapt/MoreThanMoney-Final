@@ -51,16 +51,16 @@ interface Stats {
 }
 
 const TG_STYLE: Record<string, string> = {
-  granted: "bg-emerald-100 text-emerald-800",
+  granted: "bg-emerald-950 text-emerald-300",
   pending: "bg-blue-100 text-blue-800",
-  rejected: "bg-red-100 text-red-800",
+  rejected: "bg-red-950 text-red-300",
 }
 
 const DM_STYLE: Record<string, string> = {
-  sent: "bg-emerald-100 text-emerald-800",
-  public_fallback: "bg-amber-100 text-amber-800",
-  window_expired: "bg-neutral-200 text-neutral-600",
-  error: "bg-red-100 text-red-800",
+  sent: "bg-emerald-950 text-emerald-300",
+  public_fallback: "bg-amber-950 text-amber-300",
+  window_expired: "bg-neutral-200 text-neutral-400",
+  error: "bg-red-950 text-red-300",
   pending: "bg-blue-100 text-blue-800",
 }
 const INTENT_STYLE: Record<string, string> = {
@@ -137,7 +137,7 @@ export default function SocialLeadsPage() {
               const parede = d.passou !== null && d.passou < 10 && escada[i - 1]?.n > 0
               return (
                 <div key={d.nome} className="flex items-center gap-3">
-                  <div className="w-44 shrink-0 text-[12.5px] text-neutral-700">{d.nome}</div>
+                  <div className="w-44 shrink-0 text-[12.5px] text-neutral-200">{d.nome}</div>
                   <div className="h-6 flex-1 overflow-hidden rounded bg-neutral-100">
                     <div
                       className={`h-full ${parede ? "bg-red-400" : "bg-amber-400"}`}
@@ -145,7 +145,7 @@ export default function SocialLeadsPage() {
                     />
                   </div>
                   <div className="w-14 shrink-0 text-right text-sm font-bold tabular-nums">{d.n}</div>
-                  <div className={`w-20 shrink-0 text-right text-xs ${parede ? "font-semibold text-red-600" : "text-neutral-600"}`}>
+                  <div className={`w-20 shrink-0 text-right text-xs ${parede ? "font-semibold text-red-400" : "text-neutral-400"}`}>
                     {d.passou === null ? "—" : `${d.passou}%`}
                   </div>
                 </div>
@@ -172,14 +172,14 @@ export default function SocialLeadsPage() {
         <div className="mb-6 rounded-xl border p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Automações</h2>
-            <Link href="/admin/social" className="text-xs text-neutral-600 underline">editar</Link>
+            <Link href="/admin/social" className="text-xs text-neutral-400 underline">editar</Link>
           </div>
           <div className="flex flex-wrap gap-2">
             {automacoes.map((a) => (
               <span
                 key={a.nome}
                 className={`rounded-full px-2.5 py-1 text-[11.5px] ${
-                  a.ativa ? "bg-emerald-50 text-emerald-800" : "bg-neutral-100 text-neutral-600"
+                  a.ativa ? "bg-emerald-950 text-emerald-300" : "bg-neutral-100 text-neutral-400"
                 }`}
                 title={a.ultimo_disparo ? `Último: ${fmt(a.ultimo_disparo)}` : "Nunca disparou"}
               >
@@ -195,7 +195,7 @@ export default function SocialLeadsPage() {
         <div className="mb-6 rounded-xl border p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold">Conversas por tratar ({radar.length})</h2>
-            <Link href="/admin/social" className="text-xs text-neutral-600 underline">ver todas</Link>
+            <Link href="/admin/social" className="text-xs text-neutral-400 underline">ver todas</Link>
           </div>
           <div className="space-y-1.5">
             {radar.slice(0, 5).map((p) => (
@@ -204,13 +204,13 @@ export default function SocialLeadsPage() {
                 href={p.permalink ?? "#"}
                 target="_blank"
                 rel="noreferrer"
-                className="block rounded-lg border p-2 hover:bg-neutral-50"
+                className="block rounded-lg border p-2 hover:bg-neutral-800"
               >
                 <div className="flex items-center gap-2 text-[11.5px]">
-                  <span className="rounded bg-emerald-100 px-1.5 font-bold text-emerald-800">{p.pontuacao}</span>
-                  <span className="text-neutral-600">#{p.hashtag} — {p.porque}</span>
+                  <span className="rounded bg-emerald-950 px-1.5 font-bold text-emerald-300">{p.pontuacao}</span>
+                  <span className="text-neutral-400">#{p.hashtag} — {p.porque}</span>
                 </div>
-                <p className="mt-0.5 line-clamp-2 text-[12px] text-neutral-700">{p.legenda}</p>
+                <p className="mt-0.5 line-clamp-2 text-[12px] text-neutral-200">{p.legenda}</p>
               </a>
             ))}
           </div>
@@ -223,7 +223,7 @@ export default function SocialLeadsPage() {
           <Stat icon={<Users className="h-4 w-4" />} label="Leads IG (funil)" value={stats.totalLeads} />
           <Stat icon={<Send className="h-4 w-4" />} label="DMs enviadas" value={stats.dmsSent} accent="text-emerald-600" />
           <Stat icon={<MessageCircle className="h-4 w-4" />} label="Fallback público" value={stats.publicFb} accent="text-amber-600" />
-          <Stat icon={<MessageCircle className="h-4 w-4" />} label="Fora da janela 7d" value={stats.windowExp} accent="text-neutral-600" />
+          <Stat icon={<MessageCircle className="h-4 w-4" />} label="Fora da janela 7d" value={stats.windowExp} accent="text-neutral-400" />
           <Stat icon={<Heart className="h-4 w-4" />} label="Respostas apreço" value={stats.repliesOk} accent="text-rose-600" />
           <Stat icon={<Send className="h-4 w-4" />} label="Telegram (grants)" value={stats.tgGranted} accent="text-sky-600" />
         </div>
@@ -232,9 +232,9 @@ export default function SocialLeadsPage() {
       {/* By intent */}
       {stats && Object.keys(stats.byIntent || {}).length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2 text-sm">
-          <span className="text-neutral-600">Por intenção:</span>
+          <span className="text-neutral-400">Por intenção:</span>
           {Object.entries(stats.byIntent).map(([k, v]) => (
-            <Badge key={k} className={INTENT_STYLE[k] || "bg-neutral-100 text-neutral-700"}>
+            <Badge key={k} className={INTENT_STYLE[k] || "bg-neutral-100 text-neutral-200"}>
               {k}: {v}
             </Badge>
           ))}
@@ -257,7 +257,7 @@ export default function SocialLeadsPage() {
       <div className="overflow-x-auto rounded-lg border">
         {tab === "leads" ? (
           <table className="w-full text-sm">
-            <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-600">
+            <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-400">
               <tr>
                 <th className="p-2">Quando</th>
                 <th className="p-2">Conta</th>
@@ -270,14 +270,14 @@ export default function SocialLeadsPage() {
             <tbody>
               {leads.map((l) => (
                 <tr key={l.comment_id} className="border-t align-top">
-                  <td className="whitespace-nowrap p-2 text-neutral-600">{fmt(l.created_at)}</td>
+                  <td className="whitespace-nowrap p-2 text-neutral-400">{fmt(l.created_at)}</td>
                   <td className="whitespace-nowrap p-2">@{l.ig_username}</td>
                   <td className="whitespace-nowrap p-2 font-medium">{l.commenter ? `@${l.commenter}` : "—"}</td>
                   <td className="whitespace-nowrap p-2">
-                    <Badge className={INTENT_STYLE[l.intent || ""] || "bg-neutral-100 text-neutral-700"}>{l.intent}</Badge>
-                    <span className="ml-1 text-xs text-neutral-600">{l.keyword}</span>
+                    <Badge className={INTENT_STYLE[l.intent || ""] || "bg-neutral-100 text-neutral-200"}>{l.intent}</Badge>
+                    <span className="ml-1 text-xs text-neutral-400">{l.keyword}</span>
                   </td>
-                  <td className="max-w-[280px] p-2 text-neutral-700">{l.comment_text}</td>
+                  <td className="max-w-[280px] p-2 text-neutral-200">{l.comment_text}</td>
                   <td className="whitespace-nowrap p-2">
                     <Badge className={DM_STYLE[l.dm_status] || "bg-neutral-100"}>{l.dm_status}</Badge>
                   </td>
@@ -285,7 +285,7 @@ export default function SocialLeadsPage() {
               ))}
               {!leads.length && (
                 <tr>
-                  <td colSpan={6} className="p-6 text-center text-neutral-600">
+                  <td colSpan={6} className="p-6 text-center text-neutral-400">
                     Ainda sem leads. O funil capta quando alguém comenta uma palavra-chave (MUNDO, EU VOU, PREMIUM, SINAIS…).
                   </td>
                 </tr>
@@ -294,7 +294,7 @@ export default function SocialLeadsPage() {
           </table>
         ) : tab === "engage" ? (
           <table className="w-full text-sm">
-            <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-600">
+            <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-400">
               <tr>
                 <th className="p-2">Quando</th>
                 <th className="p-2">Conta</th>
@@ -306,18 +306,18 @@ export default function SocialLeadsPage() {
             <tbody>
               {engage.map((e) => (
                 <tr key={e.comment_id} className="border-t align-top">
-                  <td className="whitespace-nowrap p-2 text-neutral-600">{fmt(e.replied_at)}</td>
+                  <td className="whitespace-nowrap p-2 text-neutral-400">{fmt(e.replied_at)}</td>
                   <td className="whitespace-nowrap p-2">@{e.ig_username}</td>
                   <td className="whitespace-nowrap p-2 font-medium">{e.commenter ? `@${e.commenter}` : "—"}</td>
-                  <td className="max-w-[380px] p-2 text-neutral-700">{e.reply_text}</td>
+                  <td className="max-w-[380px] p-2 text-neutral-200">{e.reply_text}</td>
                   <td className="whitespace-nowrap p-2">
-                    <Badge className={e.status === "replied" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}>{e.status}</Badge>
+                    <Badge className={e.status === "replied" ? "bg-emerald-950 text-emerald-300" : "bg-red-950 text-red-300"}>{e.status}</Badge>
                   </td>
                 </tr>
               ))}
               {!engage.length && (
                 <tr>
-                  <td colSpan={5} className="p-6 text-center text-neutral-600">
+                  <td colSpan={5} className="p-6 text-center text-neutral-400">
                     Ainda sem respostas de engagement registadas.
                   </td>
                 </tr>
@@ -326,7 +326,7 @@ export default function SocialLeadsPage() {
           </table>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-600">
+            <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-400">
               <tr>
                 <th className="p-2">Atualizado</th>
                 <th className="p-2">Contacto</th>
@@ -338,20 +338,20 @@ export default function SocialLeadsPage() {
             <tbody>
               {telegram.map((t) => (
                 <tr key={t.chat_id} className="border-t align-top">
-                  <td className="whitespace-nowrap p-2 text-neutral-600">{fmt(t.updated_at)}</td>
+                  <td className="whitespace-nowrap p-2 text-neutral-400">{fmt(t.updated_at)}</td>
                   <td className="whitespace-nowrap p-2 font-medium">
                     {t.username ? `@${t.username}` : t.first_name || "—"}
                   </td>
                   <td className="whitespace-nowrap p-2">
-                    <Badge className={TG_STYLE[t.stage] || "bg-neutral-100 text-neutral-700"}>{t.stage}</Badge>
+                    <Badge className={TG_STYLE[t.stage] || "bg-neutral-100 text-neutral-200"}>{t.stage}</Badge>
                   </td>
-                  <td className="whitespace-nowrap p-2 text-xs text-neutral-600">{t.coupon_code || "—"}</td>
-                  <td className="whitespace-nowrap p-2 text-xs text-neutral-600">{t.chat_id}</td>
+                  <td className="whitespace-nowrap p-2 text-xs text-neutral-400">{t.coupon_code || "—"}</td>
+                  <td className="whitespace-nowrap p-2 text-xs text-neutral-400">{t.chat_id}</td>
                 </tr>
               ))}
               {!telegram.length && (
                 <tr>
-                  <td colSpan={5} className="p-6 text-center text-neutral-600">
+                  <td colSpan={5} className="p-6 text-center text-neutral-400">
                     Ainda sem leads de Telegram (funil broker-gate).
                   </td>
                 </tr>
@@ -367,7 +367,7 @@ export default function SocialLeadsPage() {
 function Stat({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent?: string }) {
   return (
     <div className="rounded-lg border bg-white p-3">
-      <div className="flex items-center gap-1 text-xs text-neutral-600">
+      <div className="flex items-center gap-1 text-xs text-neutral-400">
         {icon} {label}
       </div>
       <div className={`mt-1 text-2xl font-semibold ${accent || ""}`}>{value}</div>

@@ -179,6 +179,27 @@ export async function POST(request: NextRequest) {
         await recordTelegramGroup(supabase, body.message.chat)
         if (Array.isArray(body.message.new_chat_members) && body.message.new_chat_members.length) {
           await handleLeadsGroupNewMembers(supabase, body.message.chat, body.message.new_chat_members)
+
+          /**
+           * E põe cada um a andar no funil DESENHADO, além do que o código já faz.
+           *
+           * Os dois convivem de propósito, por agora. O funil do código é o que funciona há meses
+           * e continua a ser a rede; o desenhado é o que se afina sem deploy. O motor do desenho
+           * está atrás de um interruptor desligado, por isso enquanto não for ligado isto só
+           * marca o percurso — e no dia em que for, já cá está toda a gente que entrou.
+           */
+          try {
+            const { iniciarPercurso } = await import("@/lib/funis-motor")
+            for (const m of body.message.new_chat_members ?? []) {
+              if (m?.is_bot) continue
+              await iniciarPercurso("telegram-leads", `telegram:${m.id}`, {
+                nome: m.first_name ?? "",
+                username: m.username ?? "",
+              })
+            }
+          } catch {
+            /* o funil do código não pode falhar por causa do desenhado */
+          }
         }
       } catch (e) {
         console.error("[telegram-leads-group]", e)

@@ -63,7 +63,7 @@ function Etiquetas({ valor, aoMudar }: { valor: string; aoMudar: (v: string) => 
         {lista.map((p) => (
           <span key={p} className="flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[11.5px]">
             {p}
-            <button onClick={() => aoMudar(lista.filter((x) => x !== p).join(", "))} className="text-neutral-600 hover:text-red-500">
+            <button onClick={() => aoMudar(lista.filter((x) => x !== p).join(", "))} className="text-neutral-400 hover:text-red-500">
               <X className="h-3 w-3" />
             </button>
           </span>
@@ -173,7 +173,7 @@ export function PainelAutomacoes() {
   const infoCanal = CANAIS.find((c) => c.id === canal)!
 
   if (aLer) {
-    return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-neutral-600" /></div>
+    return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-neutral-400" /></div>
   }
 
   return (
@@ -184,7 +184,7 @@ export function PainelAutomacoes() {
             key={c.id}
             onClick={() => setCanal(c.id)}
             className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
-              canal === c.id ? "bg-neutral-900 text-white" : "border bg-white text-neutral-600"
+              canal === c.id ? "bg-neutral-900 text-white" : "border bg-white text-neutral-400"
             }`}
           >
             <c.Icone className="h-3.5 w-3.5" />
@@ -198,10 +198,10 @@ export function PainelAutomacoes() {
 
       {/* O que este canal consegue mesmo fazer. Uma automação que parece ligada e não responde é
           pior do que uma que diz que não pode. */}
-      <p className="rounded-lg bg-neutral-50 p-2.5 text-[11.5px] text-neutral-600">{infoCanal.nota}</p>
+      <p className="rounded-lg bg-neutral-50 p-2.5 text-[11.5px] text-neutral-400">{infoCanal.nota}</p>
 
       {doCanal.length === 0 ? (
-        <p className="rounded-xl border border-dashed py-12 text-center text-sm text-neutral-600">
+        <p className="rounded-xl border border-dashed border-neutral-700 py-12 text-center text-sm text-neutral-400">
           Sem regras neste canal.
         </p>
       ) : (
@@ -211,13 +211,13 @@ export function PainelAutomacoes() {
               <div className="flex items-start justify-between gap-3">
                 <button className="min-w-0 flex-1 text-left" onClick={() => setAberta(a)}>
                   <p className="text-sm font-semibold">{a.nome}</p>
-                  <p className="mt-0.5 text-[11.5px] text-neutral-600">
+                  <p className="mt-0.5 text-[11.5px] text-neutral-400">
                     {a.gatilho === "palavra" ? `palavras: ${a.valor || "—"}` : a.gatilho}
                     {" · "}
                     {a.respostaTipo === "ia" ? "resposta por IA" : "resposta fixa"}
                     {a.seguimento?.length ? ` · ${a.seguimento.length} seguimento(s)` : ""}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-neutral-600">
+                  <p className="mt-0.5 text-[11px] text-neutral-400">
                     {a.disparos} disparo(s)
                     {a.ultimoDisparo ? ` · último ${new Date(a.ultimoDisparo).toLocaleString("pt-PT")}` : ""}
                   </p>
@@ -278,17 +278,17 @@ function Editor({
       >
         <div className="mb-4 flex items-center justify-between">
           <p className="text-base font-semibold">Regra</p>
-          <button onClick={aoFechar} className="text-neutral-600 hover:text-neutral-900"><X className="h-4 w-4" /></button>
+          <button onClick={aoFechar} className="text-neutral-400 hover:text-neutral-100"><X className="h-4 w-4" /></button>
         </div>
 
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-neutral-600">Nome</label>
+            <label className="text-xs text-neutral-400">Nome</label>
             <Input value={a.nome} onChange={(e) => mexer({ nome: e.target.value })} />
           </div>
 
           <div>
-            <label className="text-xs text-neutral-600">Quando dispara</label>
+            <label className="text-xs text-neutral-400">Quando dispara</label>
             <div className="mt-1 flex flex-wrap gap-1">
               {(["palavra", "qualquer", "comando"] as const).map((g) => (
                 <button
@@ -304,7 +304,7 @@ function Editor({
 
           {(a.gatilho === "palavra" || a.gatilho === "comando") && (
             <div>
-              <label className="text-xs text-neutral-600">
+              <label className="text-xs text-neutral-400">
                 Palavras que disparam — uma regra costuma responder a várias
               </label>
               <Etiquetas valor={a.valor ?? ""} aoMudar={(v) => mexer({ valor: v })} />
@@ -312,7 +312,7 @@ function Editor({
           )}
 
           <div>
-            <label className="text-xs text-neutral-600">O que responde</label>
+            <label className="text-xs text-neutral-400">O que responde</label>
             <div className="mt-1 flex gap-1">
               {(["texto", "ia"] as const).map((t) => (
                 <button
@@ -343,7 +343,7 @@ function Editor({
                 placeholder="O que a IA deve fazer — ex.: perceber se quer manual ou automático e encaminhar."
                 className="w-full rounded-md border p-2 text-sm"
               />
-              <p className="text-[11px] text-neutral-600">
+              <p className="text-[11px] text-neutral-400">
                 A IA não recebe números de desempenho: não os tem e inventá-los destrói a confiança.
                 O texto fixo abaixo é a rede de segurança quando ela não responde.
               </p>
@@ -359,7 +359,7 @@ function Editor({
 
           {a.canal === "instagram_comentario" && (
             <div>
-              <label className="text-xs text-neutral-600">
+              <label className="text-xs text-neutral-400">
                 Respostas públicas ao comentário — rodam, uma de cada vez
               </label>
               <div className="mt-1 space-y-1">
@@ -382,7 +382,7 @@ function Editor({
                   <Plus className="mr-1 h-3.5 w-3.5" /> Acrescentar
                 </Button>
               </div>
-              <p className="mt-1 text-[11px] text-neutral-600">
+              <p className="mt-1 text-[11px] text-neutral-400">
                 Cinquenta comentários com a mesma frase fazem a conta parecer um robô — e o
                 Instagram despromove conteúdo com respostas repetidas.
               </p>
@@ -390,7 +390,7 @@ function Editor({
           )}
 
           <div>
-            <label className="flex items-center gap-1.5 text-xs text-neutral-600">
+            <label className="flex items-center gap-1.5 text-xs text-neutral-400">
               <Clock className="h-3.5 w-3.5" /> Seguimento — é no segundo toque que a conversão acontece
             </label>
             <div className="mt-1 space-y-1.5">
