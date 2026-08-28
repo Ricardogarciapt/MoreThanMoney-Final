@@ -46,10 +46,18 @@ export async function POST(request: NextRequest) {
   const planId =
     profile.subscription_plan === 'premium' ? 'premium_monthly' : 'app_member_monthly'
 
+  /**
+   * Aprovação manual: quem pagou fora do Stripe e o admin validou à mão.
+   *
+   * O canal era 'iqonic' — que NÃO é um canal válido. `readAccessMigration` só aceita 'stripe' ou
+   * 'skool', por isso o valor era escrito e depois lido como nulo: o registo de por onde a pessoa
+   * pagou perdia-se em silêncio. 'skool' é o canal de pagamento-fora-do-Stripe que temos, e é o
+   * que isto sempre foi na prática.
+   */
   const { couponCode } = await completeAccessMigration({
     userId,
     planId,
-    channel: 'iqonic',
+    channel: 'skool',
     billingCycle: 'monthly',
     periodEnd: buildSubscriptionExpiry(),
   })
@@ -58,7 +66,9 @@ export async function POST(request: NextRequest) {
     .from('profiles')
     .update({
       user_type: 'member',
-      member_category: 'iq',
+      // A categoria segue o plano aprovado. Era fixa em 'iq' — uma categoria que já não existe em
+      // perfil nenhum e que não dá acesso a nada.
+      member_category: profile.subscription_plan === 'premium' ? 'premium' : 'member',
       subscription_platform: 'manual',
       is_active: true,
       updated_at: new Date().toISOString(),
@@ -69,6 +79,6 @@ export async function POST(request: NextRequest) {
     success: true,
     status: 'approved',
     coupon_code: couponCode,
-    message: 'Membro IQONIC aprovado. Pode voltar a fazer login.',
+    message: 'Acesso aprovado. Pode voltar a fazer login.',
   })
 }

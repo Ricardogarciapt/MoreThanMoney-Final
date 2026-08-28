@@ -17,6 +17,7 @@ type Switches = {
   perps_position_monitor: boolean
   t2t_auto_close: boolean
   t2t_price_monitor: boolean
+  trailing_tempo_real: boolean
   premium_master_exec: boolean
 }
 type PerpsRules = {
@@ -71,6 +72,7 @@ const STRATEGY_GROUPS: { group: string; items: { key: keyof Switches; label: str
     group: "Motores de gestão",
     items: [
       { key: "premium_price_monitor", label: "Premium · monitor de preço", hint: "Fecha parciais/BE por PREÇO (não por mensagem)" },
+      { key: "trailing_tempo_real", label: "Trailing segue o preço ao vivo", hint: "Lê o tick a cada passagem em vez do instantâneo da posição: o stop cola-se ao preço e devolve menos nos recuos. Custa uma leitura por posição — vale a pena em scalp, não em swing." },
       { key: "premium_subscriber_exits", label: "Premium · exits nos subscritores", hint: "⚠️ dinheiro real de subscritores" },
       { key: "perps_position_monitor", label: "Perps · monitor de posição", hint: "Acompanha a posição Bybit (Entry Hit → parcial → BE → fecho)" },
     ],

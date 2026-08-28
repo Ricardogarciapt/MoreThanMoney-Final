@@ -158,10 +158,16 @@ export async function POST(request: NextRequest) {
 
     // ── Testemunhos: nunca inventados ───────────────────────────────────────────────────────
     if (corpo.acao === 'testemunho') {
-      // Os testemunhos vivem no código (`lib/testimonials-service`), que é a lista curada — não
-      // numa tabela onde qualquer coisa entra.
-      const { getTestimonials } = await import('@/lib/testimonials-service')
-      const data = getTestimonials()
+      /**
+       * A lista curada — a MESMA que a landing publica (`lib/testemunhos`).
+       *
+       * Isto lia `lib/testimonials-service`, que apesar do nome era uma lista de arranque: nomes
+       * como "João Mendes", profissões genéricas, pips inventados e `verified: true` em todos.
+       * O prompt aqui em baixo chama-lhes "testemunhos REAIS de clientes" — a regra de nunca
+       * inventar um testemunho estava, literalmente, montada em cima de testemunhos inventados.
+       */
+      const { TESTEMUNHOS } = await import('@/lib/testemunhos')
+      const data = TESTEMUNHOS
 
       if (!data.length) {
         return NextResponse.json({
@@ -179,7 +185,7 @@ export async function POST(request: NextRequest) {
         `${VOZ}\n\nRecebes testemunhos REAIS de clientes. Escolhe os que melhor servem o pedido e ` +
           'formata-os para publicação, MANTENDO as palavras de quem os escreveu — podes cortar, ' +
           'nunca reescrever nem melhorar. Uma linha por testemunho, no formato: "texto" — Nome.',
-        `Testemunhos:\n${data.map((t) => `"${t.content}" — ${t.name}`).join('\n')}\n\n` +
+        `Testemunhos:\n${data.map((t) => `"${t.q}" — ${t.n} (${t.l})`).join('\n')}\n\n` +
           `Pedido: ${pedido || 'os mais fortes para um cartão'}`,
       )
       return NextResponse.json({

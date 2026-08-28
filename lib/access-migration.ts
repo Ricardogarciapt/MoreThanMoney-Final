@@ -1,5 +1,5 @@
 /**
- * Migração de acesso — packs Stripe/Skool/IQONIC.
+ * Migração de acesso — packs Stripe e Skool.
  * Estado guardado em profiles.profile_data (JSONB).
  */
 

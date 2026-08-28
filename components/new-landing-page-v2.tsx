@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { TESTEMUNHOS, type Testemunho } from "@/lib/testemunhos"
 import { useT } from "@/components/i18n-provider"
 import { LANDING_CSS } from "@/components/new-landing/styles"
 import { mountLandingEffects } from "@/components/new-landing/effects"
@@ -47,26 +48,6 @@ const CERTS: Array<[string, "fast-start" | "bootcamp" | "teste-final", string | 
   ["Eduarda Rodrigues", "fast-start", null], ["Rosânia Francisco", "fast-start", null],
 ]
 
-/**
- * Testemunhos. Os `chat: true` são verbatim do chat da comunidade (chat_messages) — não se
- * traduzem nem se reescrevem, e a data fica à vista. Os restantes vêm de lib/testimonials-service.
- */
-const TESTIMONIALS: Array<{ n: string; l: string; q: string; p?: string; t?: string; chat?: boolean }> = [
-  { n: "Rúben Daniel Sousa", l: "Chat da app · 15 ago 2026", chat: true, q: "Quero aqui agradecer à MTM, ao Ricardo Garcia pela ajuda, o profissionalismo, a empresa que criou. Tem sido fantástico estar aqui, tenho tido ótimos resultados com o sistema automático de trading. Finalmente encontrei a melhor plataforma, ecossistema, empresa como queiram chamar, de educação financeira que alguma vez estive." },
-  { n: "Aanssi Kushwah", l: "Chat da app · 10 ago 2026", chat: true, q: "Alguém aqui está a usar o Sensei Scanner? Experimentem no gráfico do ouro, nos 15 minutos. Os resultados têm sido tremendos. Usem uma vez e vejam a magia." },
-  { n: "Rúben Daniel Sousa", l: "Chat da app · 10 jul 2026", chat: true, q: "Dia feito em trading graças à MTM e ao grande Ricardo Garcia." },
-  { n: "Tiago Pedrosa", l: "Chat da app · 3 jul 2026", chat: true, q: "Máquinas! Vocês dão um up tão grande e uma força para que isto aconteça. Obrigado 🙏" },
-  { n: "Rúben Daniel Sousa", l: "Chat da app · 3 jul 2026", chat: true, q: "Grato por estar na melhor comunidade, ecossistema de educação financeira do país." },
-  { n: "Rui Rodrigues", l: "Chat da app · 3 jul 2026", chat: true, q: "Boas tardes, máquinas. Dá gosto ver-vos a trabalhar e a ter resultados." },
-  { n: "Rúben Daniel Sousa", l: "Chat da app · 26 jun 2026", chat: true, q: "Correu bem. Consegui fazer boas trades, lucrar algum. Umas perdas mas infelizmente faz parte." },
-  { n: "Tiago Pedrosa", l: "Chat da app · 24 jun 2026", chat: true, q: "Bom dia equipa! Só para registar o momento: fiz a primeira compra na app!" },
-  { n: "Rafael Bastos", l: "Leiria, Portugal", q: "Rising Star foi uma conquista 100%! Com dedicação ao máximo consegui resultados incríveis usando os scanners MTM.", p: "+450 pips", t: "3 meses" },
-  { n: "Liliana Faria", l: "Alpiarça, Portugal", q: "A tua fundação para director foi criada! Estás a um passo de distância! Trabalhar contigo tem sido uma inspiração diária.", p: "+3.200 pips", t: "18 meses" },
-  { n: "Gonçalo & Vânia", l: "Braga, Portugal", q: "Mais uma recompensa pelo bom trabalho para este casal incrível da minha equipa. Parabéns, feliz por vocês!", p: "+4.100 pips", t: "5 meses" },
-  { n: "André Dias", l: "Suíça", q: "Muito obrigado pelo vosso apoio, maltinha. Não me deixaram desistir nos momentos mais difíceis.", p: "+3.650 pips", t: "6 meses" },
-  { n: "Sandra Oliveira", l: "Leiria, Portugal", q: "Depois de 2 anos a usar os scanners MTM, consegui resultados consistentes e uma nova perspectiva sobre investimentos. A comunidade é incrível!", p: "+2.500 pips", t: "24 meses" },
-  { n: "Rui & Carla", l: "Coimbra, Portugal", q: "Estes meses têm sido intensos, loucos, mas muito prazerosos. Ser ensinável e grato por tudo predomina nos nossos dias.", p: "+2.850 pips", t: "18 meses" },
-]
 
 const CHAPTERS: Array<[string, string]> = [
   ["problema", "O problema"], ["dia", "Em ação"], ["executar", "Executar"], ["numeros", "A prova"],
@@ -103,7 +84,7 @@ function CertCard({ c, t }: { c: (typeof CERTS)[number]; t: (k: string) => strin
   )
 }
 
-function Testimonial({ x, i, t }: { x: (typeof TESTIMONIALS)[number]; i: number; t: (k: string) => string }) {
+function Testimonial({ x, i, t }: { x: Testemunho; i: number; t: (k: string) => string }) {
   return (
     <div className={`tm r d${(i % 3) + 1}`}>
       <div className="st">★★★★★</div>
@@ -620,7 +601,7 @@ export default function NewLandingPage() {
     <div className="head r" style={{"textAlign": "center", "marginLeft": "auto", "marginRight": "auto"}}>
       <p className="ch" style={{"justifyContent": "center"}}><b>07</b>{t("l2.ch7")}</p>
       <h2>{t("l2.testTitle")}</h2></div>
-    <div className="tw">{TESTIMONIALS.map((x, i) => (<Testimonial key={i} x={x} i={i} t={t} />))}</div>
+    <div className="tw">{TESTEMUNHOS.map((x, i) => (<Testimonial key={i} x={x} i={i} t={t} />))}</div>
     <p className="stamp r d3" style={{ justifyContent: "center", display: "flex" }}><b />{t("l2.testStamp").replace("{p}", "33").replace("{c}", String(stats.certificados))}</p>
     <div className="jump r d3">
       <p>{t("l2.jump3")}<span>{t("l2.jump3Sub")}</span></p>

@@ -36,9 +36,9 @@ export interface UserManagement {
   subscription_plan?: 'app_member' | 'premium' | null
   subscription_platform?: 'app_store' | 'skool' | 'web' | 'manual' | 'stripe' | null
   skool_access_pending?: boolean
-  iqonic_validation_pending?: boolean
-  iqonic_member_id?: string | null
-  iqonic_proof_url?: string | null
+  access_validation_pending?: boolean
+  access_validation_member_id?: string | null
+  access_validation_proof_url?: string | null
   access_revalidation_required?: boolean
   subscription_billing_cycle?: 'monthly' | 'annual' | null
   subscription_expires_at?: string | null

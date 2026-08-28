@@ -35,6 +35,20 @@ export interface ExecSwitches {
    *  fecho), em tempo real e SEM depender de mensagens da fonte. É o que dá gestão completa ao
    *  MTM Scanner (só manda entradas). Default ON. */
   t2t_price_monitor: boolean
+  /**
+   * O trailing segue o PREÇO AO VIVO em vez do instantâneo da posição.
+   *
+   * O `currentPrice` que vem com a posição pode ter segundos de atraso — a MetaApi devolve o
+   * estado da conta, não um tick. Num movimento rápido esses segundos são a diferença entre
+   * travar o lucro e devolvê-lo no recuo.
+   *
+   * É um interruptor e não o comportamento fixo porque custa uma leitura de preço por posição e
+   * por passagem. Com muitas posições abertas isso é muitas chamadas por minuto, e quem opera
+   * swing não ganha nada com elas — o instantâneo chega. Ligar em quem faz scalp.
+   *
+   * Default FALSE: mantém exactamente o comportamento que existia.
+   */
+  trailing_tempo_real: boolean
 }
 
 const KEY = "mtmcopy_exec_switches"
@@ -59,6 +73,8 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       perps_position_monitor: v.perps_position_monitor !== false, // default ON (só notifica)
       t2t_auto_close: v.t2t_auto_close !== false, // default ON
       t2t_price_monitor: v.t2t_price_monitor !== false, // default ON
+      // Default OFF: liga-se por escolha, porque custa uma leitura de preço por posição.
+      trailing_tempo_real: v.trailing_tempo_real === true,
       premium_master_exec: v.premium_master_exec !== false, // default ON (conta mestre)
     }
   } catch {
@@ -73,6 +89,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       perps_position_monitor: true,
       t2t_auto_close: true,
       t2t_price_monitor: true,
+      trailing_tempo_real: false,
       premium_master_exec: true,
     }
   }

@@ -20,6 +20,7 @@ import {
 } from './premium-trade-active'
 import { mirrorPremiumExit } from './premium-subscriber-exits'
 import { CANONICAL_PREMIUM_ACCOUNT_ID, CONTAS_MOTOR_TEMPO_REAL, ehContaDeMotor } from './provider-constants'
+import { getMarketPrice } from './metaapi'
 import { pipSizeForSymbol } from './trade-outcome'
 import { symbolMatchesCanonical } from './symbol-resolver'
 import { trailingArrancaPips } from './source-risk-rules'
@@ -340,7 +341,23 @@ export async function runPremiumPriceMonitor(): Promise<{
         continue
       }
 
-      const price = pos.currentPrice
+      /**
+       * O preço que manda no trailing.
+       *
+       * `pos.currentPrice` vem com o instantâneo da posição e pode ter segundos: a MetaApi
+       * devolve o estado da conta, não um tick. Num movimento rápido esses segundos são a
+       * diferença entre travar o lucro e devolvê-lo no recuo.
+       *
+       * Com o interruptor ligado lê-se o preço ao vivo. Custa uma chamada por posição e por
+       * passagem — é por isso que é escolha e não comportamento fixo: quem opera swing não ganha
+       * nada com ela.
+       */
+      let price = pos.currentPrice
+      if (sw.trailing_tempo_real) {
+        const vivo = await getMarketPrice(accountId, row.symbol)
+        // Falhar a leitura NÃO pára a gestão: cai no instantâneo, que é o que havia antes.
+        if (vivo != null && vivo > 0) price = vivo
+      }
       if (price == null || !Number.isFinite(price)) continue
 
       // ── PERFIL TRAILING (Sensei e outras rotas) ───────────────────────────────

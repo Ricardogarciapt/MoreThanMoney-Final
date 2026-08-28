@@ -10,6 +10,7 @@ import MtmcopySyncAllPanel from "@/components/admin/mtmcopy-sync-all-panel"
 import MtmcopyTestPanel from "@/components/admin/mtmcopy-test-panel"
 import MtmcopySenderLog from "@/components/admin/mtmcopy-sender-log"
 import MtmcopyStrategyControl from "@/components/admin/mtmcopy-strategy-control"
+import { TrailingEstrategias } from "@/components/admin/trailing-estrategias"
 import {
   MtmcopyAdminSection,
   MtmcopyAdminTabNav,
@@ -306,7 +307,12 @@ export default function AdminMtmcopyPage() {
               icon={BarChart3}
               accent="emerald"
             >
-              <MtmcopyStrategyControl />
+              <div className="space-y-6">
+                <MtmcopyStrategyControl />
+                {/* O trailing por estratégia vive aqui e não num ecrã à parte: quem vem afinar uma
+                    estratégia quer ver o interruptor e a distância no mesmo sítio. */}
+                <TrailingEstrategias />
+              </div>
             </MtmcopyAdminSection>
           )}
 

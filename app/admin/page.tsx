@@ -90,7 +90,7 @@ function AdminPageClient() {
 
   const highlightUserId = searchParams.get("userId")
   const skoolPendingFilter = searchParams.get("filter") === "skool_pending"
-  const iqonicPendingFilter = searchParams.get("filter") === "iqonic_pending"
+  const validationPendingFilter = searchParams.get("filter") === "access_validation_pending"
 
   // Permite abrir secções por URL: /admin?tab=users | etc.
   useEffect(() => {
@@ -264,7 +264,7 @@ function AdminPageClient() {
                     onApprove={handleApproveUser}
                     highlightUserId={highlightUserId}
                     initialSkoolPendingFilter={skoolPendingFilter}
-                    initialIqonicPendingFilter={iqonicPendingFilter}
+                    initialValidationPendingFilter={validationPendingFilter}
                   />
                 </div>
               </section>

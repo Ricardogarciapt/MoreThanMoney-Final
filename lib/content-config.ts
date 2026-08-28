@@ -125,8 +125,6 @@ export const defaultContentConfig: ContentConfig = {
     }
   ],
   videos: [
-    // IQONIC
-    
     // ONBOARDING
     {
       id: 'onboarding-playlist',
