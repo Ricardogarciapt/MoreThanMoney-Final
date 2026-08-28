@@ -61,8 +61,53 @@ const INTENTS: Intent[] = [
   },
 ]
 
-function detectIntent(text: string): Intent | null {
+/**
+ * As intenções que estão EDITÁVEIS no /admin/social, mais as que vivem aqui no código.
+ *
+ * Isto é o que substitui o ManyChat. As palavras e as respostas deixam de estar escritas num
+ * ficheiro que só se muda com um deploy: passam a ser regras que se editam num ecrã — que é a
+ * única coisa que o ManyChat fazia melhor do que nós.
+ *
+ * As do código ficam como fundo, e ficam de propósito: uma base vazia (ou em baixo) faria o funil
+ * de Instagram emudecer sem que nada o dissesse, e uma automação que se cala em silêncio é pior
+ * do que uma que não existe.
+ */
+const CACHE_MS = 60_000
+let cacheIntencoes: { em: number; lista: Intent[] } | null = null
+
+async function intencoesEditaveis(): Promise<Intent[]> {
+  if (cacheIntencoes && Date.now() - cacheIntencoes.em < CACHE_MS) return cacheIntencoes.lista
+  try {
+    const { listarAutomacoes, respostaPublica } = await import("@/lib/automacoes")
+    const regras = (await listarAutomacoes("instagram_comentario")).filter((a) => a.ativa)
+    const lista: Intent[] = regras
+      .filter((a) => a.valor)
+      .map((a) => {
+        // Várias palavras por regra, separadas por vírgula — uma regra por palavra dava trinta
+        // regras a dizer a mesma coisa.
+        const kw = String(a.valor).split(/[,;]/).map((k) => k.trim().toUpperCase()).filter(Boolean)
+        const publica = () => respostaPublica(a) ?? a.resposta?.texto ?? ""
+        return {
+          key: a.id,
+          kw,
+          dm: () => a.resposta?.texto ?? publica(),
+          pub: () => publica(),
+        }
+      })
+      .filter((i) => i.kw.length)
+    cacheIntencoes = { em: Date.now(), lista }
+  } catch {
+    // Falhar a ler a base não pode parar o funil: cai no que está no código.
+    cacheIntencoes = { em: Date.now(), lista: [] }
+  }
+  return cacheIntencoes.lista
+}
+
+async function detectIntent(text: string): Promise<Intent | null> {
   const up = (text || "").toUpperCase()
+  // As editáveis primeiro: quem escreveu uma regra no ecrã espera que ela ganhe ao que está no
+  // código, e não o contrário.
+  for (const it of await intencoesEditaveis()) if (it.kw.some((k) => up.includes(k))) return it
   for (const it of INTENTS) if (it.kw.some((k) => up.includes(k))) return it
   return null
 }
@@ -113,7 +158,7 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
       const commenter: string | null = c.username ?? null
       if (commenter && own.has(commenter.toLowerCase())) continue
       // PROSPECTOR: deteta intenção em TODO o conteúdo (sem cortar por data — nada se perde).
-      const intent = detectIntent(c.text)
+      const intent = await detectIntent(c.text)
       if (!intent) continue
 
       const { data: existing } = await supabase.from("ig_leads").select("comment_id").eq("comment_id", c.id).maybeSingle()

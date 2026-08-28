@@ -115,8 +115,20 @@ export default function ConvidaPage() {
               <Button className="flex-1" onClick={nativeShare}>
                 <Share2 className="mr-1 h-4 w-4" /> Partilhar
               </Button>
+              {/* WhatsApp fica, e fica por uma razão: é onde as pessoas em Portugal partilham
+                  coisas umas com as outras. Isto não é um canal nosso — é o membro a mandar o
+                  link a um amigo — e trocá-lo por Telegram faria partilhar-se menos, não mais.
+                  O que saiu do WhatsApp foi o nosso lado: suporte e funil vivem no Telegram. */}
               <a className="flex-1" href={waHref} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" className="w-full">WhatsApp</Button>
+              </a>
+              <a
+                className="flex-1"
+                href={`https://t.me/share/url?url=${encodeURIComponent(data.link)}&text=${encodeURIComponent("Entra comigo na MoreThanMoney 👇")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button variant="outline" className="w-full">Telegram</Button>
               </a>
             </div>
           </div>
