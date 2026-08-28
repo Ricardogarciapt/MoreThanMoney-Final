@@ -8,7 +8,7 @@ import {
   resumoDoNo, valoresPorOmissao, type Campo,
 } from "@/lib/funis-campos"
 import {
-  Copy, Loader2, RotateCcw, Trash2, Save, ZoomIn, ZoomOut, Maximize2,
+  Copy, Loader2, PlayCircle, RotateCcw, Trash2, Save, ZoomIn, ZoomOut, Maximize2,
   MessageSquare, GitBranch, Clock, Zap, Webhook, Shuffle, CornerDownRight, Flag, LogIn, AlertTriangle,
   Sparkles,
 } from "lucide-react"
@@ -313,6 +313,10 @@ export function MapaFunis() {
       .catch(() => {})
   }, [])
 
+  /** O ensaio: percorrer o funil com uma pessoa real, sem lhe tocar. */
+  const [ensaio, setEnsaio] = useState<Array<{ no: string; tipo: string; titulo: string; fez: string }> | null>(null)
+  const [aEnsaiar, setAEnsaiar] = useState(false)
+
   const [pergunta, setPergunta] = useState("")
   const [aPensar, setAPensar] = useState(false)
   const [resposta, setResposta] = useState<string | null>(null)
@@ -514,6 +518,33 @@ export function MapaFunis() {
         <Button size="sm" variant="ghost" onClick={() => gravar(true)} disabled={aGravar} title="Voltar ao desenho que o código faz hoje">
           <RotateCcw className="mr-1 h-3.5 w-3.5" /> Repor
         </Button>
+        {/* Ensaiar antes de ligar. Percorre o funil com uma pessoa a sério e mostra o que
+            aconteceria — sem enviar, etiquetar ou chamar nada. */}
+        <Button
+          size="sm" variant="outline"
+          disabled={aEnsaiar}
+          onClick={async () => {
+            setAEnsaiar(true)
+            setEnsaio(null)
+            try {
+              const r = await fetch("/api/admin/social/funil-ensaio", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ funilId: funil.id }),
+              })
+              const j = await r.json()
+              if (j.ok) setEnsaio(j.passos)
+              else toast({ title: "Não deu para ensaiar", description: j.erro })
+            } catch {
+              toast({ title: "Não deu para ensaiar" })
+            }
+            setAEnsaiar(false)
+          }}
+        >
+          <PlayCircle className="mr-1 h-3.5 w-3.5" />
+          {aEnsaiar ? "A correr…" : "Ensaiar"}
+        </Button>
+
         <Button size="sm" onClick={() => gravar()} disabled={!sujo || aGravar}>
           <Save className="mr-1 h-3.5 w-3.5" /> {aGravar ? "A guardar…" : "Guardar"}
         </Button>
@@ -706,6 +737,34 @@ export function MapaFunis() {
               </div>
             )
           })()}
+
+          {/* O que o ensaio viu. Fica por cima da tela porque é sobre ELA que se quer olhar
+              enquanto se lê o caminho. */}
+          {ensaio && (
+            <div className="absolute bottom-3 right-3 max-h-[55%] w-96 overflow-auto rounded-lg border bg-white/98 p-2.5 shadow-lg">
+              <div className="mb-1.5 flex items-center justify-between">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                  Ensaio · {ensaio.length} passos · não tocou em ninguém
+                </p>
+                <button onClick={() => setEnsaio(null)} className="text-neutral-400 hover:text-neutral-700">×</button>
+              </div>
+              <ol className="space-y-1">
+                {ensaio.map((p, i) => (
+                  <li key={i}>
+                    <button
+                      onClick={() => setSelecionado(p.no)}
+                      className="block w-full rounded px-1.5 py-1 text-left hover:bg-neutral-100"
+                    >
+                      <span className="text-[11px] font-medium text-neutral-800">
+                        {i + 1}. {p.titulo}
+                      </span>
+                      <span className="block text-[10.5px] leading-snug text-neutral-500">{p.fez}</span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
 
           {/* Zoom */}
           <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-lg border bg-white/95 p-1 shadow-sm">
