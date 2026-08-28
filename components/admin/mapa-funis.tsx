@@ -3,9 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { CAMPOS_POR_TIPO, nomesDosRamos, resumoDoNo, type Campo } from "@/lib/funis-campos"
 import {
-  Loader2, RotateCcw, Trash2, Save, ZoomIn, ZoomOut, Maximize2,
+  CAMPOS_POR_TIPO, campoVisivel, camposEmFalta, nomesDosRamos, problemasDoFunil,
+  resumoDoNo, valoresPorOmissao, type Campo,
+} from "@/lib/funis-campos"
+import {
+  Copy, Loader2, RotateCcw, Trash2, Save, ZoomIn, ZoomOut, Maximize2,
   MessageSquare, GitBranch, Clock, Zap, Webhook, Shuffle, CornerDownRight, Flag, LogIn, AlertTriangle,
   Sparkles,
 } from "lucide-react"
@@ -89,9 +92,11 @@ const ZOOM_MAX = 2
 /**
  * O formulário de um bloco — desenhado a partir da tabela de campos, não escrito à mão.
  *
- * Sabe seis tipos de campo e mais nada. Cada bloco novo é uma entrada em `CAMPOS_POR_TIPO`, não
+ * Sabe oito tipos de campo e mais nada. Cada bloco novo é uma entrada em `CAMPOS_POR_TIPO`, não
  * um formulário novo aqui: dez formulários independentes derivam uns dos outros até nenhum se
  * parecer com o vizinho, e um tipo novo obrigaria sempre a mexer no editor.
+ *
+ * Chama-se a si próprio para o tipo `lista`, onde cada linha é outro conjunto de campos.
  */
 function CamposDoBloco({
   campos,
@@ -108,32 +113,80 @@ function CamposDoBloco({
 }) {
   if (!campos.length) return null
 
-  const visivel = (c: Campo) => {
-    if (!c.quando) return true
-    const atual = valores[c.quando.campo]
-    return atual != null && c.quando.e.includes(String(atual))
-  }
-
   return (
     <div className="space-y-2.5 rounded-lg border bg-neutral-50 p-2.5">
-      {campos.filter(visivel).map((c) => {
+      {campos.filter((c) => campoVisivel(c, valores)).map((c) => {
         const v = valores[c.chave] ?? c.padrao ?? ""
+
         const rotulo = (
           <label className="text-[11px] font-medium text-neutral-600">
             {c.rotulo}
             {c.sufixo && <span className="ml-1 font-normal text-neutral-400">({c.sufixo})</span>}
+            {c.obrigatorio && <span className="ml-0.5 text-red-500">*</span>}
+            {c.dica && <span className="ml-1 font-normal text-neutral-400">· {c.dica}</span>}
           </label>
         )
+        const ajuda = c.ajuda ? <p className="mt-0.5 text-[10px] text-neutral-400">{c.ajuda}</p> : null
+
+        // Um aviso não guarda valor nenhum: está ali para explicar.
+        if (c.tipo === "aviso") {
+          return (
+            <p key={c.chave} className="rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10.5px] text-amber-800">
+              {c.ajuda}
+            </p>
+          )
+        }
+
+        if (c.tipo === "lista") {
+          const linhas = Array.isArray(v) ? (v as Array<Record<string, unknown>>) : []
+          const mexerLinha = (i: number, chave: string, valor: unknown) => {
+            const proximas = linhas.map((l, j) => (j === i ? { ...l, [chave]: valor } : l))
+            if (valor === "" || valor == null) delete proximas[i][chave]
+            aoMudar(c.chave, proximas)
+          }
+          return (
+            <div key={c.chave}>
+              {rotulo}
+              {ajuda}
+              <div className="mt-1 space-y-1.5">
+                {linhas.map((linha, i) => (
+                  <div key={i} className="rounded border bg-white p-1.5">
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-[9.5px] font-bold uppercase tracking-wide text-neutral-400">
+                        {i + 1}
+                      </span>
+                      <button
+                        onClick={() => aoMudar(c.chave, linhas.filter((_, j) => j !== i))}
+                        className="text-neutral-400 hover:text-red-500"
+                        title="Apagar esta linha"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <CamposDoBloco
+                      campos={c.linha ?? []}
+                      valores={linha}
+                      mensagens={mensagens}
+                      funis={funis}
+                      aoMudar={(chave, valor) => mexerLinha(i, chave, valor)}
+                    />
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => aoMudar(c.chave, [...linhas, valoresDaLinha(c.linha ?? [])])}
+                className="mt-1 w-full rounded border border-dashed py-1 text-[11px] text-neutral-500 hover:bg-white"
+              >
+                + {c.rotuloAcrescentar ?? "Acrescentar"}
+              </button>
+            </div>
+          )
+        }
 
         if (c.tipo === "booleano") {
           return (
             <label key={c.chave} className="flex cursor-pointer items-start gap-2">
-              <input
-                type="checkbox"
-                checked={v === true}
-                onChange={(e) => aoMudar(c.chave, e.target.checked)}
-                className="mt-0.5"
-              />
+              <input type="checkbox" checked={v === true} onChange={(e) => aoMudar(c.chave, e.target.checked)} className="mt-0.5" />
               <span>
                 <span className="text-[11px] font-medium text-neutral-600">{c.rotulo}</span>
                 {c.ajuda && <span className="block text-[10px] text-neutral-400">{c.ajuda}</span>}
@@ -164,7 +217,7 @@ function CamposDoBloco({
                   <option key={o.valor} value={o.valor}>{o.rotulo}</option>
                 ))}
               </select>
-              {c.ajuda && <p className="mt-0.5 text-[10px] text-neutral-400">{c.ajuda}</p>}
+              {ajuda}
             </div>
           )
         }
@@ -176,10 +229,11 @@ function CamposDoBloco({
               <textarea
                 value={String(v)}
                 rows={3}
+                placeholder={c.exemplo}
                 onChange={(e) => aoMudar(c.chave, e.target.value)}
                 className="mt-0.5 w-full rounded-md border bg-white px-2 py-1 text-[12px]"
               />
-              {c.ajuda && <p className="mt-0.5 text-[10px] text-neutral-400">{c.ajuda}</p>}
+              {ajuda}
             </div>
           )
         }
@@ -190,15 +244,23 @@ function CamposDoBloco({
             <Input
               type={c.tipo === "numero" ? "number" : "text"}
               value={String(v)}
+              placeholder={c.exemplo}
               onChange={(e) => aoMudar(c.chave, c.tipo === "numero" ? Number(e.target.value) : e.target.value)}
               className="mt-0.5 h-8 text-[12px]"
             />
-            {c.ajuda && <p className="mt-0.5 text-[10px] text-neutral-400">{c.ajuda}</p>}
+            {ajuda}
           </div>
         )
       })}
     </div>
   )
+}
+
+/** Os valores com que uma linha nova de uma lista nasce. */
+function valoresDaLinha(campos: Campo[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const c of campos) if (c.padrao !== undefined) out[c.chave] = c.padrao
+  return out
 }
 
 export function MapaFunis() {
@@ -415,7 +477,13 @@ export function MapaFunis() {
     const y = Math.round((((caixa?.height ?? 400) / 2 - pan.y) / zoom - ALTURA / 2) / 10) * 10
     setFunis((f) => f.map((x2, i) => (i !== ativo ? x2 : {
       ...x2,
-      nos: [...x2.nos, { id, tipo, titulo: BLOCOS[tipo].rotulo, x: Math.max(0, x), y: Math.max(0, y), seguintes: [] }],
+      // Nasce com o razoável já lá dentro: um bloco em branco obriga a preencher tudo antes de
+      // fazer alguma coisa, e o que fica por preencher parece esquecido em vez de propositado.
+      nos: [...x2.nos, {
+        id, tipo, titulo: BLOCOS[tipo].rotulo,
+        x: Math.max(0, x), y: Math.max(0, y), seguintes: [],
+        config: valoresPorOmissao(tipo),
+      }],
     })))
     setSelecionado(id)
     setSujo(true)
@@ -564,7 +632,15 @@ export function MapaFunis() {
                         {b.rotulo}
                       </span>
                       <span className="flex-1" />
-                      {semSaida && <span className="text-[9.5px] font-bold text-red-600">sem saída</span>}
+                      {(() => {
+                        const falta = camposEmFalta(CAMPOS_POR_TIPO[n.tipo] ?? [], n.config ?? {})
+                        return falta.length ? (
+                          <span className="text-[9.5px] font-bold text-amber-600" title={`Falta: ${falta.join(", ")}`}>
+                            falta {falta.length}
+                          </span>
+                        ) : null
+                      })()}
+                      {semSaida && <span className="ml-1 text-[9.5px] font-bold text-red-600">sem saída</span>}
                     </div>
                     <p className="mt-0.5 text-[12.5px] font-semibold leading-snug" style={{ color: b.texto }}>{n.titulo}</p>
                     {n.detalhe && <p className="mt-0.5 text-[10.5px] leading-snug text-neutral-500">{n.detalhe}</p>}
@@ -598,6 +674,38 @@ export function MapaFunis() {
               })}
             </div>
           </div>
+
+          {/* O que está partido no desenho.
+              Nenhum destes se vê a olho num mapa com trinta caixas — e os três já aconteceram
+              aqui: uma seta para um bloco apagado, um passo sem caminho até ele, um ciclo. */}
+          {(() => {
+            const problemas = problemasDoFunil(funil.nos)
+            if (!problemas.length) return null
+            const erros = problemas.filter((p) => p.gravidade === "erro")
+            return (
+              <div className="absolute right-3 top-3 max-h-[40%] w-72 overflow-auto rounded-lg border bg-white/95 p-2 shadow-sm">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                  {erros.length ? `${erros.length} a corrigir` : "Reparos"} · {problemas.length}
+                </p>
+                <div className="space-y-1">
+                  {problemas.slice(0, 12).map((pb, i) => (
+                    <button
+                      key={i}
+                      onClick={() => pb.noId && setSelecionado(pb.noId)}
+                      className={`block w-full rounded px-1.5 py-1 text-left text-[10.5px] leading-snug hover:bg-neutral-100 ${
+                        pb.gravidade === "erro" ? "text-red-600" : "text-amber-700"
+                      }`}
+                    >
+                      {pb.texto}
+                    </button>
+                  ))}
+                  {problemas.length > 12 && (
+                    <p className="px-1.5 text-[10px] text-neutral-400">e mais {problemas.length - 12}</p>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Zoom */}
           <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-lg border bg-white/95 p-1 shadow-sm">
@@ -732,6 +840,28 @@ export function MapaFunis() {
                   ))}
                 </div>
               </div>
+
+              <Button
+                size="sm" variant="ghost" className="w-full"
+                onClick={() => {
+                  // O clone fica ao lado e sem ligações de saída: herdar as setas do original
+                  // faria dois blocos a apontar para o mesmo sítio sem ninguém ter pedido.
+                  const novo = {
+                    ...noSelecionado,
+                    id: `n${Date.now().toString(36)}`,
+                    titulo: `${noSelecionado.titulo} (cópia)`,
+                    x: noSelecionado.x + 40,
+                    y: noSelecionado.y + 40,
+                    seguintes: [],
+                    config: { ...(noSelecionado.config ?? {}) },
+                  }
+                  setFunis((f) => f.map((x, i) => (i !== ativo ? x : { ...x, nos: [...x.nos, novo] })))
+                  setSelecionado(novo.id)
+                  setSujo(true)
+                }}
+              >
+                <Copy className="mr-1 h-3.5 w-3.5" /> Duplicar bloco
+              </Button>
 
               <Button
                 size="sm" variant="ghost" className="w-full text-red-500"

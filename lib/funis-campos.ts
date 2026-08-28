@@ -32,22 +32,82 @@ export type TipoDeCampo =
   | 'mensagem'
   /** Escolhe outro funil do mapa. */
   | 'funil'
+  /**
+   * Uma LISTA de linhas iguais — os botões de uma mensagem, os casos de uma condição.
+   *
+   * É o `fixedCollection` do n8n, reduzido ao caso que precisamos: um só grupo, várias linhas,
+   * todas com a mesma forma. O n8n suporta vários grupos com formas diferentes dentro do mesmo
+   * campo; isso duplica a complexidade do desenho para resolver um problema que nenhum bloco
+   * nosso tem.
+   */
+  | 'lista'
+  /** Um aviso no meio do formulário. Não guarda valor — explica. */
+  | 'aviso'
 
 export interface Campo {
   chave: string
   rotulo: string
   tipo: TipoDeCampo
+  /** Explicação longa, por baixo do campo. */
   ajuda?: string
+  /** Uma linha curta, colada ao campo — o que a pessoa do outro lado vai ver, por exemplo. */
+  dica?: string
+  /** O texto cinzento dentro do campo vazio. */
+  exemplo?: string
+  /** Sem isto preenchido, o bloco fica marcado como incompleto. */
+  obrigatorio?: boolean
   opcoes?: Array<{ valor: string; rotulo: string }>
   sufixo?: string
   padrao?: string | number | boolean
+  /** Para `tipo: 'lista'` — a forma de cada linha. */
+  linha?: Campo[]
+  /** Para `tipo: 'lista'` — o texto do botão que acrescenta uma linha. */
+  rotuloAcrescentar?: string
   /**
-   * Só aparece quando outro campo tiver um destes valores.
+   * Quando é que este campo aparece.
+   *
+   * Cada chave é outro campo, e o valor são os valores que servem. Várias chaves ao mesmo tempo
+   * é E (todas têm de bater); vários valores na mesma chave é OU. `esconder` ganha sempre a
+   * `mostrar` — é a regra do n8n, e é a certa: quem escreve uma regra de esconder está a tratar
+   * de uma excepção, e uma excepção que não ganha não é excepção.
    *
    * Um formulário que mostra sempre tudo obriga a ler dez campos para preencher dois, e os oito
    * que ficam vazios parecem por preencher em vez de não se aplicarem.
    */
-  quando?: { campo: string; e: string[] }
+  mostrar?: Record<string, Array<string | number | boolean>>
+  esconder?: Record<string, Array<string | number | boolean>>
+}
+
+/**
+ * Este campo deve aparecer, dados os valores que já lá estão?
+ *
+ * Fica aqui e não dentro do editor de propósito: a mesma regra decide o que se desenha E o que
+ * conta para "o bloco está completo". Se vivesse no React, a validação teria de a repetir — e
+ * duas cópias de uma regra de visibilidade divergem em silêncio.
+ */
+export function campoVisivel(c: Campo, valores: Record<string, unknown>): boolean {
+  const bate = (regra: Record<string, Array<string | number | boolean>>) =>
+    Object.entries(regra).every(([chave, aceites]) => {
+      const atual = valores[chave]
+      return aceites.some((v) => String(v) === String(atual))
+    })
+
+  if (c.mostrar && !bate(c.mostrar)) return false
+  // Esconder ganha: quem escreve uma regra de esconder está a tratar de uma excepção.
+  if (c.esconder && Object.entries(c.esconder).some(([chave, aceites]) =>
+    aceites.some((v) => String(v) === String(valores[chave])))) return false
+  return true
+}
+
+/** Os campos por preencher de um bloco. Vazio = está pronto. */
+export function camposEmFalta(campos: Campo[], valores: Record<string, unknown>): string[] {
+  return campos
+    .filter((c) => c.obrigatorio && c.tipo !== 'aviso' && campoVisivel(c, valores))
+    .filter((c) => {
+      const v = valores[c.chave]
+      return v == null || v === '' || (Array.isArray(v) && v.length === 0)
+    })
+    .map((c) => c.rotulo)
 }
 
 /** As etapas que o funil do Telegram escreve mesmo. */
@@ -84,14 +144,42 @@ export const CAMPOS_POR_TIPO: Record<TipoDeNo, Campo[]> = {
         { valor: 'manual', rotulo: 'Metido à mão' },
       ],
     },
-    { chave: 'palavra', rotulo: 'Palavra que dispara', tipo: 'texto', ajuda: 'Vazio = qualquer coisa serve', quando: { campo: 'origem', e: ['comentario_ig', 'dm_ig', 'dm_telegram'] } },
+    { chave: 'palavra', rotulo: 'Palavra que dispara', tipo: 'texto', ajuda: 'Vazio = qualquer coisa serve', mostrar: { origem: ['comentario_ig', 'dm_ig', 'dm_telegram'] } },
   ],
 
   mensagem: [
     { chave: 'canal', rotulo: 'Por onde se envia', tipo: 'escolha', opcoes: CANAIS, padrao: 'telegram' },
     { chave: 'mensagem', rotulo: 'Usa uma mensagem do funil', tipo: 'mensagem', ajuda: 'Escolhe uma das mensagens editáveis — assim há um só texto, e edita-se num sítio' },
     { chave: 'texto', rotulo: 'Ou escreve aqui', tipo: 'texto_longo', ajuda: 'Só usado quando não escolhes uma mensagem acima' },
-    { chave: 'botoes', rotulo: 'Botões', tipo: 'texto', ajuda: 'Separados por | — ex.: Quero automático|Quero à mão' },
+    {
+      chave: 'botoes',
+      rotulo: 'Botões',
+      tipo: 'lista',
+      rotuloAcrescentar: 'Acrescentar botão',
+      ajuda: 'Cada botão pode levar a um caminho diferente — é assim que o funil deixa a pessoa escolher',
+      linha: [
+        { chave: 'texto', rotulo: 'O que diz', tipo: 'texto', obrigatorio: true, exemplo: 'Quero automático' },
+        {
+          chave: 'faz', rotulo: 'O que faz', tipo: 'escolha', padrao: 'seguir',
+          opcoes: [
+            { valor: 'seguir', rotulo: 'Segue para o passo seguinte' },
+            { valor: 'link', rotulo: 'Abre um link' },
+            { valor: 'marcar', rotulo: 'Marca o interesse e segue' },
+          ],
+        },
+        { chave: 'url', rotulo: 'Link', tipo: 'texto', mostrar: { faz: ['link'] } },
+      ],
+    },
+    {
+      chave: 'alternativas',
+      rotulo: 'Versões que rodam',
+      tipo: 'lista',
+      rotuloAcrescentar: 'Acrescentar versão',
+      dica: 'Usa-se à vez, uma por pessoa',
+      ajuda: 'Responder a cinquenta comentários com a mesma frase faz a conta parecer um robô — e o Instagram despromove respostas repetidas',
+      linha: [{ chave: 'texto', rotulo: 'Texto', tipo: 'texto_longo', obrigatorio: true }],
+      mostrar: { canal: ['instagram_comentario', 'instagram_dm'] },
+    },
   ],
 
   espera: [
@@ -127,14 +215,14 @@ export const CAMPOS_POR_TIPO: Record<TipoDeNo, Campo[]> = {
         { valor: 'vazio', rotulo: 'está vazio' },
       ],
     },
-    { chave: 'valor_stage', rotulo: 'Valor', tipo: 'escolha', opcoes: ETAPAS, quando: { campo: 'campo', e: ['stage'] } },
+    { chave: 'valor_stage', rotulo: 'Valor', tipo: 'escolha', opcoes: ETAPAS, mostrar: { campo: ['stage'] } },
     {
       chave: 'valor_interesse', rotulo: 'Valor', tipo: 'escolha',
       opcoes: [
         { valor: 'mtmauto', rotulo: 'Só a app MTM Auto' },
         { valor: 'ecossistema', rotulo: 'O ecossistema todo' },
       ],
-      quando: { campo: 'campo', e: ['interesse'] },
+      mostrar: { campo: ['interesse'] },
     },
     {
       chave: 'valor_passo', rotulo: 'Valor', tipo: 'escolha',
@@ -144,9 +232,39 @@ export const CAMPOS_POR_TIPO: Record<TipoDeNo, Campo[]> = {
         { valor: 'app_instalada', rotulo: 'App instalada' },
         { valor: 'a_operar', rotulo: 'Já a operar' },
       ],
-      quando: { campo: 'campo', e: ['mtmauto_passo'] },
+      mostrar: { campo: ['mtmauto_passo'] },
     },
-    { chave: 'valor', rotulo: 'Valor', tipo: 'texto', quando: { campo: 'campo', e: ['respondeu', 'subscricao', 'tem_conta_site'] } },
+    { chave: 'valor', rotulo: 'Valor', tipo: 'texto', mostrar: { campo: ['respondeu', 'subscricao', 'tem_conta_site'] } },
+    {
+      chave: 'mais',
+      rotulo: 'E também',
+      tipo: 'lista',
+      rotuloAcrescentar: 'Acrescentar verificação',
+      ajuda: 'Todas têm de se verificar para o caminho do "sim" ser tomado',
+      linha: [
+        {
+          chave: 'campo', rotulo: 'O quê', tipo: 'escolha', obrigatorio: true,
+          opcoes: [
+            { valor: 'stage', rotulo: 'Etapa do lead' },
+            { valor: 'interesse', rotulo: 'O que disse que quer' },
+            { valor: 'mtmauto_passo', rotulo: 'Passo do MTM Auto' },
+            { valor: 'broker_uid', rotulo: 'Tem conta de corretora' },
+            { valor: 'granted_at', rotulo: 'Já tem acesso' },
+            { valor: 'subscricao', rotulo: 'Tem subscrição ativa' },
+          ],
+        },
+        {
+          chave: 'operador', rotulo: 'Compara', tipo: 'escolha', padrao: 'e',
+          opcoes: [
+            { valor: 'e', rotulo: 'é igual a' },
+            { valor: 'nao_e', rotulo: 'não é' },
+            { valor: 'existe', rotulo: 'está preenchido' },
+            { valor: 'vazio', rotulo: 'está vazio' },
+          ],
+        },
+        { chave: 'valor', rotulo: 'Valor', tipo: 'texto', esconder: { operador: ['existe', 'vazio'] } },
+      ],
+    },
   ],
 
   acao: [
@@ -164,16 +282,31 @@ export const CAMPOS_POR_TIPO: Record<TipoDeNo, Campo[]> = {
         { valor: 'avisar_admin', rotulo: 'Avisar-nos a nós' },
       ],
     },
-    { chave: 'etiqueta', rotulo: 'Etiqueta', tipo: 'texto', quando: { campo: 'acao', e: ['etiquetar'] } },
-    { chave: 'etapa', rotulo: 'Etapa', tipo: 'escolha', opcoes: ETAPAS, quando: { campo: 'acao', e: ['mudar_etapa'] } },
-    { chave: 'cupao', rotulo: 'Código do cupão', tipo: 'texto', ajuda: 'Ex.: 14DAYTRIAL', quando: { campo: 'acao', e: ['dar_cupao'] } },
+    {
+      chave: 'etiquetas', rotulo: 'Etiquetas', tipo: 'lista', rotuloAcrescentar: 'Acrescentar etiqueta',
+      linha: [{ chave: 'nome', rotulo: 'Nome', tipo: 'texto', obrigatorio: true }],
+      mostrar: { acao: ['etiquetar'] },
+    },
+    { chave: 'etapa', rotulo: 'Etapa', tipo: 'escolha', opcoes: ETAPAS, mostrar: { acao: ['mudar_etapa'] } },
+    { chave: 'cupao', rotulo: 'Código do cupão', tipo: 'texto', ajuda: 'Ex.: 14DAYTRIAL', mostrar: { acao: ['dar_cupao'] } },
   ],
 
   webhook: [
     { chave: 'metodo', rotulo: 'Método', tipo: 'escolha', padrao: 'POST', opcoes: [{ valor: 'GET', rotulo: 'GET' }, { valor: 'POST', rotulo: 'POST' }] },
-    { chave: 'url', rotulo: 'Endereço', tipo: 'texto', ajuda: 'O n8n, o nosso próprio endpoint, o que for' },
+    { chave: 'url', rotulo: 'Endereço', tipo: 'texto', obrigatorio: true, exemplo: 'https://…', ajuda: 'O n8n, o nosso próprio endpoint, o que for' },
     { chave: 'corpo', rotulo: 'O que se envia', tipo: 'texto_longo', ajuda: 'JSON. Podes usar {{chat_id}}, {{nome}}, {{etapa}}' },
+    {
+      chave: 'cabecalhos', rotulo: 'Cabeçalhos', tipo: 'lista', rotuloAcrescentar: 'Acrescentar cabeçalho',
+      linha: [
+        { chave: 'nome', rotulo: 'Nome', tipo: 'texto', obrigatorio: true, exemplo: 'Authorization' },
+        { chave: 'valor', rotulo: 'Valor', tipo: 'texto', obrigatorio: true },
+      ],
+    },
     { chave: 'esperar', rotulo: 'Esperar pela resposta antes de seguir', tipo: 'booleano', padrao: false },
+    {
+      chave: '_aviso_segredo', rotulo: '', tipo: 'aviso',
+      ajuda: 'Não ponhas chaves nem passwords nos cabeçalhos daqui: este desenho é lido por qualquer administrador e vai no que se exporta.',
+    },
   ],
 
   divisao: [
