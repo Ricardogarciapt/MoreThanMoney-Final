@@ -36,6 +36,8 @@ export function TokensInstagram() {
   const [novo, setNovo] = useState<Record<string, string>>({})
   const [aGuardar, setAGuardar] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
+  /** O segredo da app — o que permite trocar um token de duas horas por um de dois meses. */
+  const [segredo, setSegredo] = useState("")
 
   const buscar = useCallback(async () => {
     setCarregar(true)
@@ -134,6 +136,44 @@ export function TokensInstagram() {
           )
         })}
         {!carregar && !contas.length && <p className="text-sm text-neutral-500">Sem contas configuradas.</p>}
+      </div>
+
+      {/* O segredo fica aqui e não nas variáveis da Vercel porque é o par do token: quem vem
+          renovar um vem tratar do outro. Guardado, nunca devolvido. */}
+      <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/50 p-3">
+        <p className="text-[11px] text-neutral-400">
+          <b className="text-neutral-300">Segredo da app</b> — sem ele, um token do Explorer dura
+          uma ou duas horas. Com ele, o sistema troca-o por um de <b>60 dias</b> assim que o colas.
+        </p>
+        <div className="mt-2 flex gap-2">
+          <input
+            type="password"
+            value={segredo}
+            onChange={(e) => setSegredo(e.target.value)}
+            placeholder="App Secret (Definições → Básico, na app do Meta)"
+            className="min-w-0 flex-1 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm"
+          />
+          <button
+            onClick={async () => {
+              setAGuardar("segredo")
+              setErro(null)
+              try {
+                const r = await fetch("/api/admin/ig-tokens", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ segredo }),
+                })
+                const j = await r.json()
+                if (j.ok) { setSegredo(""); setContas(j.contas as Conta[]) } else setErro(j.erro ?? "Não guardou")
+              } catch { setErro("Não guardou") }
+              setAGuardar(null)
+            }}
+            disabled={aGuardar === "segredo"}
+            className="rounded-lg bg-neutral-700 px-3 py-1 text-sm font-semibold hover:bg-neutral-600 disabled:opacity-40"
+          >
+            {aGuardar === "segredo" ? "…" : "Guardar segredo"}
+          </button>
+        </div>
       </div>
 
       <p className="mt-3 text-[11px] text-neutral-500">

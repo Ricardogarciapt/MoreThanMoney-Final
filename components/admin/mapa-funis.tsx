@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { CAMPOS_POR_TIPO, nomesDosRamos, resumoDoNo, type Campo } from "@/lib/funis-campos"
 import {
   Loader2, RotateCcw, Trash2, Save, ZoomIn, ZoomOut, Maximize2,
   MessageSquare, GitBranch, Clock, Zap, Webhook, Shuffle, CornerDownRight, Flag, LogIn, AlertTriangle,
@@ -48,6 +49,7 @@ interface No {
   y: number
   seguintes: string[]
   mensagem?: string
+  config?: Record<string, unknown>
 }
 
 interface Funil {
@@ -82,6 +84,122 @@ const LARGURA = 216
 const ALTURA = 76
 const ZOOM_MIN = 0.35
 const ZOOM_MAX = 2
+
+
+/**
+ * O formulário de um bloco — desenhado a partir da tabela de campos, não escrito à mão.
+ *
+ * Sabe seis tipos de campo e mais nada. Cada bloco novo é uma entrada em `CAMPOS_POR_TIPO`, não
+ * um formulário novo aqui: dez formulários independentes derivam uns dos outros até nenhum se
+ * parecer com o vizinho, e um tipo novo obrigaria sempre a mexer no editor.
+ */
+function CamposDoBloco({
+  campos,
+  valores,
+  mensagens,
+  funis,
+  aoMudar,
+}: {
+  campos: Campo[]
+  valores: Record<string, unknown>
+  mensagens: Array<{ chave: string; titulo: string }>
+  funis: Array<{ id: string; nome: string }>
+  aoMudar: (chave: string, valor: unknown) => void
+}) {
+  if (!campos.length) return null
+
+  const visivel = (c: Campo) => {
+    if (!c.quando) return true
+    const atual = valores[c.quando.campo]
+    return atual != null && c.quando.e.includes(String(atual))
+  }
+
+  return (
+    <div className="space-y-2.5 rounded-lg border bg-neutral-50 p-2.5">
+      {campos.filter(visivel).map((c) => {
+        const v = valores[c.chave] ?? c.padrao ?? ""
+        const rotulo = (
+          <label className="text-[11px] font-medium text-neutral-600">
+            {c.rotulo}
+            {c.sufixo && <span className="ml-1 font-normal text-neutral-400">({c.sufixo})</span>}
+          </label>
+        )
+
+        if (c.tipo === "booleano") {
+          return (
+            <label key={c.chave} className="flex cursor-pointer items-start gap-2">
+              <input
+                type="checkbox"
+                checked={v === true}
+                onChange={(e) => aoMudar(c.chave, e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="text-[11px] font-medium text-neutral-600">{c.rotulo}</span>
+                {c.ajuda && <span className="block text-[10px] text-neutral-400">{c.ajuda}</span>}
+              </span>
+            </label>
+          )
+        }
+
+        // As três escolhas partilham o mesmo desenho; só a lista muda de origem.
+        const opcoes =
+          c.tipo === "mensagem"
+            ? mensagens.map((m) => ({ valor: m.chave, rotulo: m.titulo }))
+            : c.tipo === "funil"
+              ? funis.map((f) => ({ valor: f.id, rotulo: f.nome }))
+              : c.opcoes
+
+        if (opcoes) {
+          return (
+            <div key={c.chave}>
+              {rotulo}
+              <select
+                value={String(v)}
+                onChange={(e) => aoMudar(c.chave, e.target.value)}
+                className="mt-0.5 w-full rounded-md border bg-white px-2 py-1 text-[12px]"
+              >
+                <option value="">— escolher —</option>
+                {opcoes.map((o) => (
+                  <option key={o.valor} value={o.valor}>{o.rotulo}</option>
+                ))}
+              </select>
+              {c.ajuda && <p className="mt-0.5 text-[10px] text-neutral-400">{c.ajuda}</p>}
+            </div>
+          )
+        }
+
+        if (c.tipo === "texto_longo") {
+          return (
+            <div key={c.chave}>
+              {rotulo}
+              <textarea
+                value={String(v)}
+                rows={3}
+                onChange={(e) => aoMudar(c.chave, e.target.value)}
+                className="mt-0.5 w-full rounded-md border bg-white px-2 py-1 text-[12px]"
+              />
+              {c.ajuda && <p className="mt-0.5 text-[10px] text-neutral-400">{c.ajuda}</p>}
+            </div>
+          )
+        }
+
+        return (
+          <div key={c.chave}>
+            {rotulo}
+            <Input
+              type={c.tipo === "numero" ? "number" : "text"}
+              value={String(v)}
+              onChange={(e) => aoMudar(c.chave, c.tipo === "numero" ? Number(e.target.value) : e.target.value)}
+              className="mt-0.5 h-8 text-[12px]"
+            />
+            {c.ajuda && <p className="mt-0.5 text-[10px] text-neutral-400">{c.ajuda}</p>}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 export function MapaFunis() {
   const { toast } = useToast()
@@ -119,6 +237,20 @@ export function MapaFunis() {
     return () => window.removeEventListener("resize", medir)
   }, [])
   /** O assistente: uma pergunta sobre ESTE funil, e a resposta dele. */
+  /** As mensagens editáveis do funil — para o campo que escolhe uma em vez de duplicar o texto. */
+  const [mensagens, setMensagens] = useState<Array<{ chave: string; titulo: string }>>([])
+  useEffect(() => {
+    fetch("/api/admin/social/mensagens", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (Array.isArray(j?.mensagens)) {
+          setMensagens(j.mensagens.map((m: { chave: string; titulo: string }) => ({ chave: m.chave, titulo: m.titulo })))
+        }
+      })
+      // Sem a lista o campo fica vazio e escreve-se o texto à mão — não vale interromper nada.
+      .catch(() => {})
+  }, [])
+
   const [pergunta, setPergunta] = useState("")
   const [aPensar, setAPensar] = useState(false)
   const [resposta, setResposta] = useState<string | null>(null)
@@ -436,6 +568,17 @@ export function MapaFunis() {
                     </div>
                     <p className="mt-0.5 text-[12.5px] font-semibold leading-snug" style={{ color: b.texto }}>{n.titulo}</p>
                     {n.detalhe && <p className="mt-0.5 text-[10.5px] leading-snug text-neutral-500">{n.detalhe}</p>}
+                    {/* O que o bloco está CONFIGURADO a fazer, numa linha. Sem isto um mapa com
+                        trinta caixas obriga a clicar em cada uma para saber o que faz — e a razão
+                        de haver mapa é precisamente não ter de o fazer. */}
+                    {(() => {
+                      const r = resumoDoNo(n.tipo, n.config)
+                      return r ? (
+                        <p className="mt-1 truncate rounded bg-white/70 px-1.5 py-0.5 font-mono text-[9.5px] text-neutral-600" title={r}>
+                          {r}
+                        </p>
+                      ) : null
+                    })()}
 
                     {/* A bolinha de saída: arrasta-se dela para outro bloco. Ligar por arrasto em
                         vez de escolher de uma lista só obriga a VER o destino, não a saber o nome. */}
@@ -542,15 +685,43 @@ export function MapaFunis() {
                 </div>
               </div>
 
+              {/* A configuração do tipo escolhido. É o que faltava: até aqui via-se a forma do
+                  funil e ia-se ao código saber o conteúdo. */}
+              <CamposDoBloco
+                campos={CAMPOS_POR_TIPO[noSelecionado.tipo] ?? []}
+                valores={noSelecionado.config ?? {}}
+                mensagens={mensagens}
+                funis={funis.filter((f) => f.id !== funil.id).map((f) => ({ id: f.id, nome: f.nome }))}
+                aoMudar={(chave, valor) =>
+                  mexerNo(noSelecionado.id, {
+                    // Um campo esvaziado sai do saco em vez de lá ficar como "". Guardar vazios
+                    // faz o resumo do bloco mostrar coisas que ninguém escolheu.
+                    config: (() => {
+                      const c = { ...(noSelecionado.config ?? {}) }
+                      if (valor === "" || valor == null) delete c[chave]
+                      else c[chave] = valor
+                      return c
+                    })(),
+                  })
+                }
+              />
+
               <div>
                 <label className="text-xs text-neutral-500">Vai para</label>
                 <div className="mt-1 space-y-1">
                   {noSelecionado.seguintes.length === 0 && (
                     <p className="text-[11px] text-neutral-400">Nada — arrasta a bolinha para ligar.</p>
                   )}
-                  {noSelecionado.seguintes.map((s) => (
+                  {noSelecionado.seguintes.map((s, i) => (
                     <div key={s} className="flex items-center justify-between gap-1 rounded border px-2 py-1 text-[11px]">
-                      <span className="truncate">{funil.nos.find((x) => x.id === s)?.titulo ?? s}</span>
+                      {/* Numa condição as duas setas não são iguais: uma é o sim e a outra o não.
+                          Sem nome, o mapa mostra que se parte em dois e esconde o que interessa. */}
+                      {nomesDosRamos(noSelecionado.tipo, noSelecionado.config)[i] && (
+                        <span className="shrink-0 rounded bg-neutral-200 px-1 font-medium">
+                          {nomesDosRamos(noSelecionado.tipo, noSelecionado.config)[i]}
+                        </span>
+                      )}
+                      <span className="flex-1 truncate">{funil.nos.find((x) => x.id === s)?.titulo ?? s}</span>
                       <button
                         onClick={() => mexerNo(noSelecionado.id, { seguintes: noSelecionado.seguintes.filter((x) => x !== s) })}
                         className="shrink-0 text-neutral-400 hover:text-red-500"

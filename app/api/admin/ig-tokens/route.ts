@@ -18,6 +18,13 @@ export const dynamic = "force-dynamic"
 
 const GRAPH = "https://graph.facebook.com/v21.0"
 const CHAVE = "instagram_tokens"
+/** A app do Meta que emite os tokens. */
+const APP_ID = "1468588267606256"
+/**
+ * O segredo da app fica à parte dos tokens porque tem outro tempo de vida: os tokens trocam-se de
+ * dois em dois meses, o segredo é o mesmo desde que a app existe. Guardado, NUNCA devolvido.
+ */
+const CHAVE_SEGREDO = "instagram_app_secret"
 
 interface Estado {
   conta: string
@@ -92,11 +99,60 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ ok: true, contas: await Promise.all(IG_ACCOUNTS.map(estadoDa)) })
 }
 
+/**
+ * Troca um token de curta duração por um de 60 dias.
+ *
+ * O que o Graph API Explorer dá dura uma ou duas horas — serve para experimentar, não para pôr a
+ * publicar. A troca é uma chamada só, mas precisa do segredo da app, e por isso acontece aqui e
+ * nunca no browser: um segredo que passa pelo cliente deixa de ser segredo.
+ *
+ * Sem segredo guardado devolve o token como veio. É melhor um token curto a funcionar do que
+ * recusar tudo e ficar sem Instagram nenhum — a validade aparece no painel de qualquer maneira.
+ */
+async function trocarPor60Dias(token: string): Promise<string> {
+  const { data } = await getSupabaseAdmin().from("site_settings").select("value").eq("key", CHAVE_SEGREDO).maybeSingle()
+  const segredo = typeof data?.value === "string" ? data.value : (data?.value as { segredo?: string } | null)?.segredo
+  if (!segredo) return token
+  try {
+    const r = await fetch(
+      `${GRAPH}/oauth/access_token?grant_type=fb_exchange_token&client_id=${APP_ID}` +
+        `&client_secret=${encodeURIComponent(segredo)}&fb_exchange_token=${encodeURIComponent(token)}`,
+      { cache: "no-store" },
+    )
+    const j = await r.json().catch(() => ({}))
+    return typeof j?.access_token === "string" && j.access_token ? j.access_token : token
+  } catch {
+    return token
+  }
+}
+
 export async function POST(req: NextRequest) {
   const guard = await requireAdmin(req)
   if (guard) return guard
 
-  const { variavel, token } = (await req.json().catch(() => ({}))) as { variavel?: string; token?: string }
+  const corpo = (await req.json().catch(() => ({}))) as { variavel?: string; token?: string; segredo?: string }
+
+  // Guardar o segredo é um pedido à parte: não traz token nenhum e não devolve o que guardou.
+  if (corpo.segredo !== undefined) {
+    const limpo = corpo.segredo.trim()
+    const db2 = getSupabaseAdmin()
+    if (!limpo) {
+      await db2.from("site_settings").delete().eq("key", CHAVE_SEGREDO)
+    } else {
+      await db2.from("site_settings").upsert(
+        {
+          key: CHAVE_SEGREDO,
+          value: limpo,
+          description: "Segredo da app Meta. Serve para trocar tokens curtos por tokens de 60 dias.",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "key" },
+      )
+    }
+    return NextResponse.json({ ok: true, contas: await Promise.all(IG_ACCOUNTS.map(estadoDa)) })
+  }
+
+  const { variavel, token } = corpo
   const acc = IG_ACCOUNTS.find((a) => a.tokenEnv === variavel)
   if (!acc) return NextResponse.json({ ok: false, erro: "Conta desconhecida" }, { status: 400 })
 
@@ -124,7 +180,9 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       )
     }
-    atuais[acc.tokenEnv] = valor
+    // Só depois de saber que o token é bom se pede o de 60 dias: trocar um token errado devolve
+    // um erro que não diz nada sobre o que estava mal.
+    atuais[acc.tokenEnv] = await trocarPor60Dias(valor)
   }
 
   await db.from("site_settings").upsert(
