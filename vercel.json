@@ -148,6 +148,10 @@
     {
       "path": "/api/cron/bot-responder",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/lead-radar",
+      "schedule": "*/30 9-16 * * *"
     }
   ]
 }
