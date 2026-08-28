@@ -375,10 +375,18 @@ async function sendApnsNotifications(
   if (tokens.length === 0) return { sent: 0, failed: 0 }
 
   // Support both actual newlines and \n escape in env var
+  /**
+   * O `\n` LITERAL (barra + n) não é espaço em branco — `trim()` não o apanha.
+   *
+   * As variáveis foram guardadas coladas a um `\n` de texto. O Key ID ficava "CKM998KKFF\n" e a
+   * Apple respondia 403 InvalidProviderToken — a chave certa, o emissor errado. O erro não diz
+   * qual dos campos está mal, e por isso a limpeza é feita para todos.
+   */
+  const limpar = (v: string | undefined) => (v ?? '').replace(/\\n/g, '').trim()
   const authKey  = process.env.APNS_AUTH_KEY?.trim().replace(/\\n/g, '\n')
-  const keyId    = process.env.APNS_KEY_ID?.trim()
-  const teamId   = process.env.APNS_TEAM_ID?.trim()
-  const bundleId = process.env.APNS_BUNDLE_ID?.trim() || 'pt.morethanmoney.app'
+  const keyId    = limpar(process.env.APNS_KEY_ID)
+  const teamId   = limpar(process.env.APNS_TEAM_ID)
+  const bundleId = limpar(process.env.APNS_BUNDLE_ID) || 'pt.morethanmoney.app'
 
   if (!authKey || !keyId || !teamId) {
     console.warn('⚠️ [APNs] APNS_AUTH_KEY / APNS_KEY_ID / APNS_TEAM_ID não configurados — iOS push ignorado')
