@@ -22,7 +22,28 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 const KEY = 'funis_desenho'
 
-export type TipoDeNo = 'entrada' | 'mensagem' | 'espera' | 'condicao' | 'destino' | 'saida'
+/**
+ * Os blocos que um funil pode ter.
+ *
+ * A lista vem do que estas ferramentas convergiram a ter — ManyChat, n8n, os construtores de
+ * funis — porque a convergência não é moda: são os momentos que um funil realmente tem. Uma
+ * mensagem, uma espera, uma bifurcação, uma acção sobre a pessoa, um salto para outro fluxo.
+ *
+ * `acao` e `webhook` existem porque metade do nosso funil vive fora do Telegram: etiquetar um
+ * lead, dar um cupão, chamar um automatismo. Sem blocos para isso, o mapa mostrava só metade do
+ * caminho — e a metade que falta é onde as coisas costumam partir.
+ */
+export type TipoDeNo =
+  | 'entrada'
+  | 'mensagem'
+  | 'espera'
+  | 'condicao'
+  | 'acao'
+  | 'webhook'
+  | 'divisao'
+  | 'irpara'
+  | 'destino'
+  | 'saida'
 
 export interface NoDoFunil {
   id: string
