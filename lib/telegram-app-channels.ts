@@ -45,12 +45,13 @@ export function buildAppChannelMap(): Map<string, AppChatChannelSlug> {
   // Grupo dos Perpétuos (reaproveitado). Mapeia por ID → cripto-perps, ANTES do título (o título
   // "Ideias de Perpétuos Cripto" senão cairia no fallback 'ideias'→Forex). Evita a notif trocada.
   registerChatId(resolvedPerpsChatId() ?? undefined, 'cripto-perps')
-  // O 'golden-moves' saiu daqui a 2026-08-27: o chat Aurum Flow foi escondido nas apps, e o id
-  // que aqui estava (-1004343748070) é hoje o grupo "Wifi Money - by CR" — mandar mensagens
-  // desse grupo para um canal escondido era escrever para ninguém, com a etiqueta errada.
-  if (process.env.TELEGRAM_GOLDEN_MOVES_CHAT) {
-    registerChatId(process.env.TELEGRAM_GOLDEN_MOVES_CHAT, 'golden-moves')
-  }
+  // O chat Aurum Flow foi RETIRADO das apps a 2026-08-27. Já estava escondido; o que faltava era
+  // parar de lhe escrever — continuava a receber mensagens (97, a última nesse mesmo dia) para um
+  // canal que ninguém via. Escrever para um sítio invisível não é inofensivo: enche a tabela de
+  // mensagens, dispara o motor de desfechos e um dia alguém torna-o visível sem saber porquê.
+  //
+  // O id que aqui esteve (-1004343748070) é hoje o grupo "Wifi Money - by CR" — mais uma razão
+  // para não o mapear: as mensagens dele sairiam com a etiqueta errada.
 
   return map
 }
@@ -63,8 +64,8 @@ export function detectSlugFromChannelTitle(title: string | null | undefined): Ap
   // Perpétuos ANTES do fallback genérico 'ideias'/'scanner' (o título "Ideias de Perpétuos Cripto"
   // senão cairia em Forex). Cobre perp/perpétuo/perpetuo.
   if (t.includes('perp')) return 'cripto-perps'
-  // Gold Did e Golden Moves ANTES do 'gold' genérico do GoldKiller.
-  if (t.includes('golden moves') || t.includes('goldenmoves')) return 'golden-moves'
+  // O Golden Moves / Aurum Flow já NÃO tem chat na app: a estratégia continua (copia-se por
+  // vT8w no MTM Auto), o canal de conversa é que deixou de existir para o cliente.
   // GoldKiller ANTES de "scanner" genérico (o título GoldKiller também contém "scanner").
   if (t.includes('goldkiller') || t.includes('gold killer') || t.includes('gold-killer')) return 'sinais-goldkiller'
   if (t.includes('sensei')) return 'sensei-scanner'

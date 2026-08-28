@@ -115,9 +115,10 @@ export function buildCanonicalProviderRoutes(): ProviderRoute[] {
         auto_trailing_stop: false,
         price_monitor: false,
       },
-      // Sem Tap to Trade e sem chat na app: esta fonte copia-se por estratégia (vT8w) e mais
-      // nada. O chat próprio dela foi escondido — ver `chat_channels.hidden`.
-      app_channel: 'golden-moves',
+      // Sem Tap to Trade e SEM CHAT: esta fonte copia-se por estratégia (vT8w) e mais nada. O
+      // chat dela foi retirado das apps — `app_channel: null` é o que impede que volte a
+      // aparecer conteúdo num canal que ninguém vê.
+      app_channel: null,
       tap_to_trade: false,
       enabled: true,
     },
