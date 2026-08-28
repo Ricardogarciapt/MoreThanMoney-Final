@@ -183,11 +183,28 @@ export async function correrRadar(quantasHashtags = 3): Promise<{
       }
 
       const r = await graph(
-        `${id}/top_media?user_id=${conta.id}&fields=id,caption,like_count,comments_count,permalink&limit=25`,
+        // 12 e não 25: nas hashtags grandes a Meta recusa com "reduce the amount of data" — o
+        // limite dela é sobre o VOLUME devolvido, e as legendas dos posts populares são longas.
+        `${id}/top_media?user_id=${conta.id}&fields=id,caption,like_count,comments_count,permalink&limit=12`,
         token,
       )
       if (r.error) {
         erros.push(`#${tag}: ${(r.error as { message?: string }).message ?? "erro"}`)
+        /**
+         * Marcar a tentativa MESMO tendo falhado.
+         *
+         * Sem isto uma hashtag que falha nunca escreve `ultima_procura`, fica eternamente à
+         * cabeça da fila por ser "a que nunca foi procurada", e as duas ou três que falham comem
+         * todas as passagens do dia. Foi exactamente o que aconteceu na primeira corrida real:
+         * as mesmas duas hashtags à frente em três passagens seguidas.
+         *
+         * Pontuação negativa para ir para o fim da fila sem sair da lista — pode voltar a
+         * funcionar amanhã, quando o post gigante que a entupiu deixar de estar no topo.
+         */
+        await db.from("ig_radar_hashtags").upsert(
+          { hashtag: tag, hashtag_id: id, ultima_procura: new Date().toISOString(), encontrados: 0, media_pontuacao: -20 },
+          { onConflict: "hashtag" },
+        )
         continue
       }
 
