@@ -41,6 +41,7 @@ import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
 import { MapaFunis } from "@/components/admin/mapa-funis"
 import { PainelAutomacoes } from "@/components/admin/painel-automacoes"
+import { TokensInstagram } from "@/components/admin/tokens-instagram"
 
 interface Post {
   id: string
@@ -129,7 +130,7 @@ export default function AdminSocialPage() {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   /** Separador aberto: a fila, os factos que vão nos cartões, ou o funil. */
-  const [aba, setAba] = useState<"fila" | "factos" | "funil" | "mensagens" | "mapa" | "automacoes">("fila")
+  const [aba, setAba] = useState<"fila" | "factos" | "funil" | "mensagens" | "mapa" | "automacoes" | "ligacoes">("fila")
   const [mensagens, setMensagens] = useState<MensagemFunil[] | null>(null)
   /** O post a ser editado. As legendas eram só de leitura: para mudar uma vírgula apagava-se e
    *  criava-se outro, e perdia-se a imagem já gerada. */
@@ -361,6 +362,7 @@ export default function AdminSocialPage() {
             ["mensagens", "Mensagens do funil"],
             ["mapa", "Mapa dos funis"],
             ["automacoes", "Automações"],
+            ["ligacoes", "Ligações"],
           ] as const).map(([id, rotulo]) => (
             <button
               key={id}
@@ -379,6 +381,10 @@ export default function AdminSocialPage() {
         {aba === "mensagens" && <PainelMensagens mensagens={mensagens} aGravar={gravarMensagem} />}
         {aba === "mapa" && <MapaFunis />}
         {aba === "automacoes" && <PainelAutomacoes />}
+        {/* As automações do Instagram dependem TODAS do token. Sem ele nenhuma responde, e o
+            painel das automações não tem como saber porquê — por isso o estado do token vive
+            aqui ao lado e não escondido nas variáveis da Vercel. */}
+        {aba === "ligacoes" && <TokensInstagram />}
 
         {aba === "fila" && (<>
         {painel && (painel.conteudo.aprovadosSemImagem > 0 || painel.conteudo.falhados > 0) && (

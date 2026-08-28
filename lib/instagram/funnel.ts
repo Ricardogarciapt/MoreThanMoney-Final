@@ -98,7 +98,7 @@ interface AcctResult { account: string; leads: number; dmsSent: number; publicFa
 
 async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>): Promise<AcctResult> {
   const res: AcctResult = { account: acc.username, leads: 0, dmsSent: 0, publicFallback: 0, skippedDup: 0, errors: [] }
-  const token = tokenForAccount(acc.id)
+  const token = await tokenForAccount(acc.id)
   if (!token) { res.errors.push(`sem token (${acc.tokenEnv})`); return res }
   const supabase = getSupabaseAdmin()
   const cutoff = Date.now() - DAYS_BACK * 86400000

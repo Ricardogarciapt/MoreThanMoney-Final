@@ -72,10 +72,52 @@ export class MediaNotReadyError extends Error {
   }
 }
 
-export function tokenForAccount(igAccountId: string): string | undefined {
+/**
+ * O token de uma conta — da base primeiro, do ambiente depois.
+ *
+ * Os tokens do Instagram duram 60 dias. Enquanto só viviam em variáveis de ambiente, renová-los
+ * era mexer na Vercel e voltar a publicar o site — e por isso adiava-se, e por isso passavam a
+ * validade. É exactamente o que aconteceu: as variáveis estão criadas mas VAZIAS, e nada de
+ * Instagram funciona há semanas sem nenhum aviso.
+ *
+ * Agora podem ser coladas no /admin/social e valem no minuto seguinte. O ambiente continua a
+ * valer como reserva: quem já lá tem um token não precisa de fazer nada.
+ */
+const CHAVE_TOKENS = "instagram_tokens"
+let cache: { em: number; valores: Record<string, string> } | null = null
+
+async function tokensGuardados(): Promise<Record<string, string>> {
+  // 60 segundos: um token novo entra em vigor quase já, sem uma leitura à base por publicação.
+  if (cache && Date.now() - cache.em < 60_000) return cache.valores
+  try {
+    const { getSupabaseAdmin } = await import("@/lib/supabase-admin-client")
+    const { data } = await getSupabaseAdmin()
+      .from("site_settings")
+      .select("value")
+      .eq("key", CHAVE_TOKENS)
+      .maybeSingle()
+    const v = data?.value
+    const obj = (typeof v === "string" ? JSON.parse(v) : v) as Record<string, string> | null
+    cache = { em: Date.now(), valores: obj && typeof obj === "object" ? obj : {} }
+  } catch {
+    // Sem base, o ambiente decide. Falhar aqui não pode parar uma publicação que tinha token.
+    cache = { em: Date.now(), valores: {} }
+  }
+  return cache.valores
+}
+
+/** Esquece o que está em cache — para o admin ver o efeito de colar um token, não daqui a um minuto. */
+export function esquecerTokensIG(): void {
+  cache = null
+}
+
+export async function tokenForAccount(igAccountId: string): Promise<string | undefined> {
   const acc = IG_ACCOUNTS.find((a) => a.id === igAccountId)
+  const guardados = await tokensGuardados()
+  const daBase = acc ? guardados[acc.tokenEnv]?.trim() : undefined
+  if (daBase) return daBase
   const scoped = acc ? process.env[acc.tokenEnv]?.trim() : undefined
-  return scoped || process.env.INSTAGRAM_TOKEN?.trim()
+  return scoped || guardados.INSTAGRAM_TOKEN?.trim() || process.env.INSTAGRAM_TOKEN?.trim()
 }
 
 export function usernameForAccount(igAccountId: string): string | undefined {
@@ -245,7 +287,7 @@ export function publicCaption(raw: string): string {
 
 export async function publishScheduledPost(post: ScheduledPost): Promise<PublishResult> {
   const igId = post.ig_account_id
-  const token = tokenForAccount(igId)
+  const token = await tokenForAccount(igId)
   if (!token) throw new Error(`Sem token IG para a conta ${igId} (verifica env vars na Vercel)`)
 
   const urls = (post.media_urls || []).filter(Boolean)

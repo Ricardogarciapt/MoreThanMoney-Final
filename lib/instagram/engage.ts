@@ -166,7 +166,7 @@ interface AccountResult {
 
 async function engageAccount(acc: (typeof IG_ACCOUNTS)[number], ownUsernames: Set<string>): Promise<AccountResult> {
   const res: AccountResult = { account: acc.username, scannedPosts: 0, eligiblePosts: 0, replied: 0, skippedSpam: 0, skippedDup: 0, errors: [] }
-  const token = tokenForAccount(acc.id)
+  const token = await tokenForAccount(acc.id)
   if (!token) { res.errors.push(`sem token (${acc.tokenEnv})`); return res }
   const supabase = getSupabaseAdmin()
 
@@ -223,7 +223,7 @@ export async function runIgEngagement(): Promise<{ ok: boolean; accounts: Accoun
 export async function diagnoseIgAccess(): Promise<any> {
   const out: any[] = []
   for (const acc of IG_ACCOUNTS) {
-    const token = tokenForAccount(acc.id)
+    const token = await tokenForAccount(acc.id)
     if (!token) { out.push({ account: acc.username, hasToken: false }); continue }
     const media = await gget(`${acc.id}/media?fields=id,media_product_type,comments_count&limit=3`, token)
     const first = media.json?.data?.[0]
