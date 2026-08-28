@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { pipSizeForSymbol } from '@/lib/mtmcopy/trade-outcome'
 
 /**
  * Resultado ao vivo dos sinais que estão a correr — pips e percentagem, por mensagem do chat.
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
 
   let q = supabase
     .from('mtmcopy_signal_tracking')
-    .select('chat_message_id, status, live_pips, live_pct, peak_pips, exits_done, entry_hit_at')
+    .select('chat_message_id, status, live_pips, live_pct, peak_pips, exits_done, entry_hit_at, sl, entry, symbol')
     .eq('status', 'active')
   if (ids.length) q = q.in('chat_message_id', ids)
 
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
 
   const live: Record<
     string,
-    { pips: number | null; pct: number | null; peak: number | null; exits: number; entrou: boolean }
+    { pips: number | null; pct: number | null; peak: number | null; exits: number; entrou: boolean; slBatido: boolean }
   > = {}
   for (const r of data ?? []) {
     live[r.chat_message_id as string] = {
@@ -40,6 +41,34 @@ export async function GET(request: NextRequest) {
       // A entrada já foi tocada — quem aceitar agora entra a outro preço com o stop do início.
       // É o que fecha a janela de aceitação, mesmo quando ainda não houve parcial nenhum.
       entrou: Boolean(r.entry_hit_at),
+      /**
+       * O stop já foi tocado?
+       *
+       * `live_pips` é o que a trade vale AGORA, medido pelo motor. Quando é pior do que a
+       * distância ao stop, o preço passou o stop — e um sinal cujo stop já foi não se aceita,
+       * porque abrir agora é abrir uma posição já perdida, sem stop nenhum a defendê-la.
+       *
+       * Vale a QUALQUER altura, não só depois dos cinco minutos: um sinal pode bater no stop em
+       * trinta segundos.
+       */
+      /**
+       * O stop já foi tocado?
+       *
+       * `live_pips` é o que a trade vale AGORA, em pips, medido pelo motor. Basta compará-lo com
+       * a distância entrada→stop nas mesmas unidades: se já perdeu tanto ou mais do que o stop
+       * previa, o preço passou por lá.
+       *
+       * Vale a QUALQUER altura, não só depois dos cinco minutos — um sinal pode bater no stop em
+       * trinta segundos, e aceitar então é abrir uma posição já perdida, sem stop a defendê-la.
+       */
+      slBatido: (() => {
+        const pips = Number(r.live_pips)
+        const entrada = Number(r.entry)
+        const stop = Number(r.sl)
+        if (!Number.isFinite(pips) || !(entrada > 0) || !(stop > 0)) return false
+        const riscoEmPips = Math.abs(entrada - stop) / pipSizeForSymbol(String(r.symbol ?? ''))
+        return riscoEmPips > 0 && pips <= -riscoEmPips
+      })(),
     }
   }
   return NextResponse.json({ live })

@@ -277,9 +277,13 @@ function desfechoDoSinal(setup: Sig, fecho: Sig | undefined): string {
  */
 function foraDaZona(
   s: { created_at: string },
-  vivo?: { exits?: number; entrou?: boolean },
+  vivo?: { exits?: number; entrou?: boolean; slBatido?: boolean },
 ): boolean {
   if (!vivo) return false
+  // O stop já batido fecha o sinal a QUALQUER altura — um sinal pode bater no stop em trinta
+  // segundos, e aceitar então é abrir uma posição já perdida, sem stop a defendê-la. A regra
+  // dos cinco minutos não apanhava este caso.
+  if (vivo.slBatido === true) return true
   const idade = Date.now() - new Date(s.created_at).getTime()
   if (!Number.isFinite(idade) || idade <= 5 * 60 * 1000) return false
   return Number(vivo.exits ?? 0) > 0 || vivo.entrou === true
@@ -306,7 +310,7 @@ export default function TapToTradeFeed() {
   /** Fonte escolhida só para VER. Null = todas. Não mexe no que se recebe. */
   const [fonteVista, setFonteVista] = useState<string | null>(null)
   const [aoVivo, setAoVivo] = useState<
-    Record<string, { pips: number | null; pct: number | null; exits?: number; entrou?: boolean }>
+    Record<string, { pips: number | null; pct: number | null; exits?: number; entrou?: boolean; slBatido?: boolean }>
   >({})
   /** Lido dentro do `load` sem o tornar dependente do estado — o intervalo de 20s não se recria. */
   const limitModeRef = useRef<"today" | "week">("today")
