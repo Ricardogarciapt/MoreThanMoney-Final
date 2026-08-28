@@ -1,6 +1,12 @@
 /**
- * Jornada Fast Start MTM — partilhada entre email de boas-vindas e /fast-start.
- * Liga MoreThanMoney × IQONIC → app → conta → MTMcopier → site → Skool.
+ * Jornada Fast Start MTM — partilhada entre o email de boas-vindas e /fast-start.
+ *
+ * Liga a apresentação → onboarding → app → conta → MTM Copy → comunidade.
+ *
+ * O IQONIC saiu daqui a 2026-08-28. Foi removido do site em 2026-06-26, mas continuava a ser a
+ * PRIMEIRA coisa que um membro novo lia no email de boas-vindas — a apresentar-lhe um produto
+ * que já não existe. Um funil que abre com uma promessa que não se pode cumprir não perde só
+ * aquele passo: perde a confiança para os cinco seguintes.
  */
 
 export const CALENDLY_ONBOARDING_URL =
@@ -34,10 +40,10 @@ export function getFastStartJourneySteps(siteUrl?: string): FastStartJourneyStep
   return [
     {
       number: 1,
-      title: 'MTM × IQONIC — A tua oportunidade',
+      title: 'MoreThanMoney — A tua oportunidade',
       description:
-        'Percebe o ecossistema MoreThanMoney + IQONIC: educação, copy trading e negócio digital num só plano.',
-      ctaLabel: 'Ver apresentação MTM × IQONIC',
+        'Percebe o ecossistema: educação, sinais acompanhados, copy trading e a comunidade, num só plano.',
+      ctaLabel: 'Ver a apresentação',
       ctaUrl: `${base}${MTM_APRESENTACAO_PATH}`,
       previewPath: '/apresentacao',
       previewHint: 'Apresentação de oportunidade 2026',

@@ -88,12 +88,14 @@ export async function POST(request: NextRequest) {
   }
 
   const corpo = (await request.json().catch(() => ({}))) as {
-    acao?: 'criar' | 'alterar' | 'factos' | 'testemunho'
+    acao?: 'criar' | 'alterar' | 'factos' | 'testemunho' | 'funil'
     pedido?: string
     /** Na alteração: o texto atual, para o modelo mudar o que foi pedido e mais nada. */
     atual?: string
     /** Conteúdo próprio que o Ricardo quer aproveitar (um texto, uma ideia, um print). */
     material?: string
+    /** No modo funil: o desenho atual, para a IA o ler antes de responder. */
+    funil?: unknown
   }
 
   const pedido = String(corpo.pedido ?? '').trim()
@@ -184,6 +186,32 @@ export async function POST(request: NextRequest) {
         ok: true,
         testemunhos: texto.split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 8),
       })
+    }
+
+    /**
+     * A IA a olhar para o funil.
+     *
+     * Não é um chat genérico: recebe o DESENHO — os blocos, os tipos e as ligações — e responde
+     * sobre ele. Um assistente que não vê o funil só consegue dar conselhos de manual, e disso
+     * está a internet cheia.
+     *
+     * Sabe onde se perde gente porque o mapa lho diz: um bloco sem saída é uma fuga, e é a
+     * primeira coisa a apontar.
+     */
+    if (corpo.acao === 'funil') {
+      const desenho = JSON.stringify(corpo.funil ?? {}).slice(0, 12_000)
+      const texto = await pedirAoModelo(
+        `${VOZ}\n\nÉs o assistente de funis da MoreThanMoney. Recebes o DESENHO de um funil em ` +
+          'JSON: blocos com tipo (entrada, mensagem, espera, condição, ação, automação, teste A/B, ' +
+          'ir-para, destino, fuga) e as ligações entre eles.\n\n' +
+          'Responde em português de Portugal, curto e concreto. Aponta primeiro o que está MAL — ' +
+          'blocos sem saída, caminhos que não chegam a um destino, passos que pedem esforço antes ' +
+          'de dar valor. Sugere no máximo três mudanças, cada uma numa linha, dizendo em que bloco. ' +
+          'Não inventes números de desempenho.',
+        `Funil:\n${desenho}\n\nPergunta: ${pedido || 'onde é que este funil trava, e o que mudarias?'}`,
+        1200,
+      )
+      return NextResponse.json({ ok: true, resposta: texto })
     }
 
     return NextResponse.json({ error: 'Ação desconhecida' }, { status: 400 })

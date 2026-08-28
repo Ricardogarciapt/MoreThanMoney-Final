@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import {
   Loader2, RotateCcw, Trash2, Save, ZoomIn, ZoomOut, Maximize2,
   MessageSquare, GitBranch, Clock, Zap, Webhook, Shuffle, CornerDownRight, Flag, LogIn, AlertTriangle,
+  Sparkles,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
@@ -99,6 +100,29 @@ export function MapaFunis() {
   const [aLigar, setALigar] = useState<{ de: string; x: number; y: number } | null>(null)
 
   const tela = useRef<HTMLDivElement>(null)
+  /**
+   * A altura da tela acompanha a janela.
+   *
+   * Estava fixa em 620px: num portátil sobrava barra branca por baixo, num monitor grande
+   * desperdiçava metade do ecrã — e num mapa o espaço visível é a funcionalidade, porque é o que
+   * decide quantos passos se veem de uma vez sem arrastar.
+   */
+  const [altura, setAltura] = useState(620)
+  useEffect(() => {
+    const medir = () => {
+      const topo = tela.current?.getBoundingClientRect().top ?? 260
+      // 24px de folga por baixo — colar ao fundo da janela parece um corte, não um limite.
+      setAltura(Math.max(420, window.innerHeight - topo - 24))
+    }
+    medir()
+    window.addEventListener("resize", medir)
+    return () => window.removeEventListener("resize", medir)
+  }, [])
+  /** O assistente: uma pergunta sobre ESTE funil, e a resposta dele. */
+  const [pergunta, setPergunta] = useState("")
+  const [aPensar, setAPensar] = useState(false)
+  const [resposta, setResposta] = useState<string | null>(null)
+
   const arrastoNo = useRef<{ id: string; dx: number; dy: number } | null>(null)
   const arrastoTela = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null)
 
@@ -140,6 +164,33 @@ export function MapaFunis() {
   }
 
   const funil = funis[ativo]
+
+  /**
+   * Pergunta à IA sobre o funil que está no ecrã.
+   *
+   * Manda o DESENHO junto — blocos, tipos e ligações. Um assistente que não vê o funil só dá
+   * conselhos de manual, e disso está a internet cheia.
+   */
+  const perguntarAoAssistente = async () => {
+    if (!funil) return
+    setAPensar(true)
+    setResposta(null)
+    try {
+      const tok = (await supabase.auth.getSession()).data.session?.access_token
+      const r = await fetch("/api/admin/social/estudio", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ acao: "funil", pedido: pergunta, funil }),
+      })
+      const j = await r.json()
+      if (!r.ok || j.error) throw new Error(j.error || "Não respondeu")
+      setResposta(String(j.resposta ?? ""))
+    } catch (e) {
+      toast({ title: "Não deu", description: (e as Error).message, variant: "destructive" })
+    } finally {
+      setAPensar(false)
+    }
+  }
 
   const mexerNo = (id: string, patch: Partial<No>) => {
     setFunis((f) => f.map((x, i) => (i !== ativo ? x : { ...x, nos: x.nos.map((n) => (n.id === id ? { ...n, ...patch } : n)) })))
@@ -305,7 +356,8 @@ export function MapaFunis() {
               arrastoTela.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y }
               setSelecionado(null)
             }}
-            className="relative h-[620px] cursor-grab overflow-hidden rounded-xl border bg-[radial-gradient(#e5e5e5_1px,transparent_1px)] [background-size:20px_20px] active:cursor-grabbing"
+            style={{ height: altura }}
+            className="relative cursor-grab overflow-hidden rounded-xl border bg-[radial-gradient(#e5e5e5_1px,transparent_1px)] [background-size:20px_20px] active:cursor-grabbing"
           >
             <div
               style={{
@@ -437,6 +489,28 @@ export function MapaFunis() {
                 Isto é o desenho, não o motor. Quem responde no Telegram continua a ser o código —
                 mexer aqui documenta, não muda o comportamento.
               </p>
+
+              {/* O assistente vê o funil que está no ecrã. Sem isso só dava conselhos de manual. */}
+              <div className="border-t pt-3">
+                <p className="flex items-center gap-1.5 text-xs font-semibold">
+                  <Sparkles className="h-3.5 w-3.5 text-[#D2A63C]" /> Perguntar à IA
+                </p>
+                <Input
+                  value={pergunta}
+                  onChange={(e) => setPergunta(e.target.value)}
+                  placeholder="onde é que este funil trava?"
+                  className="mt-1.5 text-xs"
+                  onKeyDown={(e) => e.key === "Enter" && !aPensar && perguntarAoAssistente()}
+                />
+                <Button size="sm" className="mt-1.5 w-full" disabled={aPensar} onClick={perguntarAoAssistente}>
+                  {aPensar ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> A ler o funil…</> : "Analisar"}
+                </Button>
+                {resposta && (
+                  <p className="mt-2 whitespace-pre-wrap rounded-lg bg-neutral-50 p-2.5 text-[11.5px] leading-relaxed text-neutral-700">
+                    {resposta}
+                  </p>
+                )}
+              </div>
             </>
           ) : (
             <>
