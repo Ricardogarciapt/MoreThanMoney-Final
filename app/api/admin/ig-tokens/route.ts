@@ -161,7 +161,12 @@ export async function POST(req: NextRequest) {
   const guard = await requireAdmin(req)
   if (guard) return guard
 
-  const corpo = (await req.json().catch(() => ({}))) as { variavel?: string; token?: string; segredo?: string }
+  const corpo = (await req.json().catch(() => ({}))) as {
+    variavel?: string
+    token?: string
+    segredo?: string
+    renovar?: boolean
+  }
 
   // Guardar o segredo é um pedido à parte: não traz token nenhum e não devolve o que guardou.
   if (corpo.segredo !== undefined) {
@@ -181,6 +186,36 @@ export async function POST(req: NextRequest) {
       )
     }
     return NextResponse.json({ ok: true, contas: await Promise.all(IG_ACCOUNTS.map(estadoDa)) })
+  }
+
+  /**
+   * Renovar: refaz a cadeia sobre o token que JÁ está guardado.
+   *
+   * Serve o caso normal — colou-se o token antes de guardar o segredo, e o que ficou lá dentro é
+   * o de duas horas. Sem isto era preciso voltar ao Explorer só para gerar outro igual, quando o
+   * que está guardado ainda serve perfeitamente para a troca.
+   */
+  if (corpo.renovar) {
+    const db3 = getSupabaseAdmin()
+    const { data: g } = await db3.from("site_settings").select("value").eq("key", CHAVE).maybeSingle()
+    const guardados = ((typeof g?.value === "string" ? JSON.parse(g.value) : g?.value) ?? {}) as Record<string, string>
+    let mexeu = false
+    for (const acc of IG_ACCOUNTS) {
+      const atual = guardados[acc.tokenEnv]?.trim()
+      if (!atual) continue
+      const longo = await trocarPor60Dias(atual)
+      const daPagina = await tokenDaPagina(longo, acc.id)
+      const novo = daPagina ?? longo
+      if (novo && novo !== atual) { guardados[acc.tokenEnv] = novo; mexeu = true }
+    }
+    if (mexeu) {
+      await db3.from("site_settings").upsert(
+        { key: CHAVE, value: guardados, description: "Tokens do Instagram por conta.", updated_at: new Date().toISOString() },
+        { onConflict: "key" },
+      )
+    }
+    esquecerTokensIG()
+    return NextResponse.json({ ok: true, mexeu, contas: await Promise.all(IG_ACCOUNTS.map(estadoDa)) })
   }
 
   const { variavel, token } = corpo

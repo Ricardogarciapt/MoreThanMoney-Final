@@ -174,6 +174,31 @@ export function TokensInstagram() {
             {aGuardar === "segredo" ? "…" : "Guardar segredo"}
           </button>
         </div>
+        {/* O caso normal é colar o token antes de guardar o segredo — e ficar com o de duas horas
+            lá dentro. Este botão refaz a cadeia sobre o que já está guardado, sem voltar ao Meta. */}
+        <button
+          onClick={async () => {
+            setAGuardar("renovar")
+            setErro(null)
+            try {
+              const r = await fetch("/api/admin/ig-tokens", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ renovar: true }),
+              })
+              const j = await r.json()
+              if (j.ok) {
+                setContas(j.contas as Conta[])
+                if (!j.mexeu) setErro("Nada mudou — ou já estão renovados, ou falta o segredo acima.")
+              } else setErro(j.erro ?? "Não renovou")
+            } catch { setErro("Não renovou") }
+            setAGuardar(null)
+          }}
+          disabled={aGuardar === "renovar"}
+          className="mt-2 w-full rounded-lg border border-neutral-700 px-3 py-1.5 text-sm hover:bg-neutral-800 disabled:opacity-40"
+        >
+          {aGuardar === "renovar" ? "…" : "Renovar os tokens que já estão guardados"}
+        </button>
       </div>
 
       <p className="mt-3 text-[11px] text-neutral-500">
