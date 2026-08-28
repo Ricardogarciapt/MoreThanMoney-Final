@@ -60,7 +60,7 @@ export function RadarLeads() {
           <h2 className="flex items-center gap-2 text-sm font-semibold">
             <Radar className="h-4 w-4" /> Radar de leads
           </h2>
-          <p className="mt-0.5 text-[11px] text-neutral-500">
+          <p className="mt-0.5 text-[11px] text-neutral-600">
             Corre sozinho de meia em meia hora, das 9h às 17h. Encontra as conversas; entrar nelas
             é contigo — a API do Instagram não deixa comentar em posts de terceiros, e fazê-lo por
             fora é o caminho mais curto para a conta ser banida.
@@ -100,7 +100,7 @@ export function RadarLeads() {
       </div>
 
       {!aLer && !prospetos.length && (
-        <p className="rounded-lg border border-dashed p-4 text-center text-sm text-neutral-500">
+        <p className="rounded-lg border border-dashed p-4 text-center text-sm text-neutral-600">
           Nada por ver. O radar volta a passar dentro de meia hora, ou carrega em "Procurar agora".
         </p>
       )}
@@ -118,8 +118,8 @@ export function RadarLeads() {
                 {p.pontuacao}
               </span>
               <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-neutral-600">#{p.hashtag}</span>
-              <span className="text-neutral-500">{p.comentarios} comentários · {p.gostos} gostos</span>
-              <span className="text-neutral-400">— {p.porque}</span>
+              <span className="text-neutral-600">{p.comentarios} comentários · {p.gostos} gostos</span>
+              <span className="text-neutral-600">— {p.porque}</span>
             </div>
 
             <p className="mt-1.5 line-clamp-3 text-[12.5px] leading-snug text-neutral-700">{p.legenda}</p>

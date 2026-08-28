@@ -121,17 +121,17 @@ function CamposDoBloco({
         const rotulo = (
           <label className="text-[11px] font-medium text-neutral-600">
             {c.rotulo}
-            {c.sufixo && <span className="ml-1 font-normal text-neutral-400">({c.sufixo})</span>}
+            {c.sufixo && <span className="ml-1 font-normal text-neutral-600">({c.sufixo})</span>}
             {c.obrigatorio && <span className="ml-0.5 text-red-500">*</span>}
-            {c.dica && <span className="ml-1 font-normal text-neutral-400">· {c.dica}</span>}
+            {c.dica && <span className="ml-1 font-normal text-neutral-600">· {c.dica}</span>}
           </label>
         )
-        const ajuda = c.ajuda ? <p className="mt-0.5 text-[10px] text-neutral-400">{c.ajuda}</p> : null
+        const ajuda = c.ajuda ? <p className="mt-0.5 text-[11px] text-neutral-600">{c.ajuda}</p> : null
 
         // Um aviso não guarda valor nenhum: está ali para explicar.
         if (c.tipo === "aviso") {
           return (
-            <p key={c.chave} className="rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10.5px] text-amber-800">
+            <p key={c.chave} className="rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
               {c.ajuda}
             </p>
           )
@@ -152,12 +152,12 @@ function CamposDoBloco({
                 {linhas.map((linha, i) => (
                   <div key={i} className="rounded border bg-white p-1.5">
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-[9.5px] font-bold uppercase tracking-wide text-neutral-400">
+                      <span className="text-[10.5px] font-bold uppercase tracking-wide text-neutral-600">
                         {i + 1}
                       </span>
                       <button
                         onClick={() => aoMudar(c.chave, linhas.filter((_, j) => j !== i))}
-                        className="text-neutral-400 hover:text-red-500"
+                        className="text-neutral-600 hover:text-red-500"
                         title="Apagar esta linha"
                       >
                         ×
@@ -175,7 +175,7 @@ function CamposDoBloco({
               </div>
               <button
                 onClick={() => aoMudar(c.chave, [...linhas, valoresDaLinha(c.linha ?? [])])}
-                className="mt-1 w-full rounded border border-dashed py-1 text-[11px] text-neutral-500 hover:bg-white"
+                className="mt-1 w-full rounded border border-dashed py-1 text-[11px] text-neutral-600 hover:bg-white"
               >
                 + {c.rotuloAcrescentar ?? "Acrescentar"}
               </button>
@@ -189,7 +189,7 @@ function CamposDoBloco({
               <input type="checkbox" checked={v === true} onChange={(e) => aoMudar(c.chave, e.target.checked)} className="mt-0.5" />
               <span>
                 <span className="text-[11px] font-medium text-neutral-600">{c.rotulo}</span>
-                {c.ajuda && <span className="block text-[10px] text-neutral-400">{c.ajuda}</span>}
+                {c.ajuda && <span className="block text-[11px] text-neutral-600">{c.ajuda}</span>}
               </span>
             </label>
           )
@@ -494,9 +494,9 @@ export function MapaFunis() {
   }
 
   if (aLer) {
-    return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-neutral-400" /></div>
+    return <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-neutral-600" /></div>
   }
-  if (!funil) return <p className="py-20 text-center text-sm text-neutral-500">Sem funis.</p>
+  if (!funil) return <p className="py-20 text-center text-sm text-neutral-600">Sem funis.</p>
 
   const noSelecionado = funil.nos.find((n) => n.id === selecionado) ?? null
 
@@ -550,12 +550,12 @@ export function MapaFunis() {
         </Button>
       </div>
 
-      <p className="text-xs text-neutral-500">{funil.descricao}</p>
+      <p className="text-xs text-neutral-600">{funil.descricao}</p>
 
       <div className="flex gap-3">
         {/* Paleta de blocos */}
         <div className="w-40 shrink-0 space-y-1 rounded-xl border bg-white p-2">
-          <p className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Blocos</p>
+          <p className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-600">Blocos</p>
           {(Object.keys(BLOCOS) as TipoDeNo[]).map((t) => {
             const b = BLOCOS[t]
             return (
@@ -659,29 +659,29 @@ export function MapaFunis() {
                   >
                     <div className="flex items-center gap-1.5">
                       <b.Icone className="h-3 w-3 shrink-0" style={{ color: b.borda }} />
-                      <span className="text-[9.5px] font-bold uppercase tracking-wide" style={{ color: b.borda }}>
+                      <span className="text-[10.5px] font-bold uppercase tracking-wide" style={{ color: b.borda }}>
                         {b.rotulo}
                       </span>
                       <span className="flex-1" />
                       {(() => {
                         const falta = camposEmFalta(CAMPOS_POR_TIPO[n.tipo] ?? [], n.config ?? {})
                         return falta.length ? (
-                          <span className="text-[9.5px] font-bold text-amber-600" title={`Falta: ${falta.join(", ")}`}>
+                          <span className="text-[10.5px] font-bold text-amber-600" title={`Falta: ${falta.join(", ")}`}>
                             falta {falta.length}
                           </span>
                         ) : null
                       })()}
-                      {semSaida && <span className="ml-1 text-[9.5px] font-bold text-red-600">sem saída</span>}
+                      {semSaida && <span className="ml-1 text-[10.5px] font-bold text-red-600">sem saída</span>}
                     </div>
                     <p className="mt-0.5 text-[12.5px] font-semibold leading-snug" style={{ color: b.texto }}>{n.titulo}</p>
-                    {n.detalhe && <p className="mt-0.5 text-[10.5px] leading-snug text-neutral-500">{n.detalhe}</p>}
+                    {n.detalhe && <p className="mt-0.5 text-[11px] leading-snug text-neutral-600">{n.detalhe}</p>}
                     {/* O que o bloco está CONFIGURADO a fazer, numa linha. Sem isto um mapa com
                         trinta caixas obriga a clicar em cada uma para saber o que faz — e a razão
                         de haver mapa é precisamente não ter de o fazer. */}
                     {(() => {
                       const r = resumoDoNo(n.tipo, n.config)
                       return r ? (
-                        <p className="mt-1 truncate rounded bg-white/70 px-1.5 py-0.5 font-mono text-[9.5px] text-neutral-600" title={r}>
+                        <p className="mt-1 truncate rounded bg-white/70 px-1.5 py-0.5 font-mono text-[10.5px] text-neutral-600" title={r}>
                           {r}
                         </p>
                       ) : null
@@ -715,7 +715,7 @@ export function MapaFunis() {
             const erros = problemas.filter((p) => p.gravidade === "erro")
             return (
               <div className="absolute right-3 top-3 max-h-[40%] w-72 overflow-auto rounded-lg border bg-white/95 p-2 shadow-sm">
-                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-neutral-600">
                   {erros.length ? `${erros.length} a corrigir` : "Reparos"} · {problemas.length}
                 </p>
                 <div className="space-y-1">
@@ -723,7 +723,7 @@ export function MapaFunis() {
                     <button
                       key={i}
                       onClick={() => pb.noId && setSelecionado(pb.noId)}
-                      className={`block w-full rounded px-1.5 py-1 text-left text-[10.5px] leading-snug hover:bg-neutral-100 ${
+                      className={`block w-full rounded px-1.5 py-1 text-left text-[11px] leading-snug hover:bg-neutral-100 ${
                         pb.gravidade === "erro" ? "text-red-600" : "text-amber-700"
                       }`}
                     >
@@ -731,7 +731,7 @@ export function MapaFunis() {
                     </button>
                   ))}
                   {problemas.length > 12 && (
-                    <p className="px-1.5 text-[10px] text-neutral-400">e mais {problemas.length - 12}</p>
+                    <p className="px-1.5 text-[11px] text-neutral-600">e mais {problemas.length - 12}</p>
                   )}
                 </div>
               </div>
@@ -743,10 +743,10 @@ export function MapaFunis() {
           {ensaio && (
             <div className="absolute bottom-3 right-3 max-h-[55%] w-96 overflow-auto rounded-lg border bg-white/98 p-2.5 shadow-lg">
               <div className="mb-1.5 flex items-center justify-between">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-neutral-600">
                   Ensaio · {ensaio.length} passos · não tocou em ninguém
                 </p>
-                <button onClick={() => setEnsaio(null)} className="text-neutral-400 hover:text-neutral-700">×</button>
+                <button onClick={() => setEnsaio(null)} className="text-neutral-600 hover:text-neutral-700">×</button>
               </div>
               <ol className="space-y-1">
                 {ensaio.map((p, i) => (
@@ -758,7 +758,7 @@ export function MapaFunis() {
                       <span className="text-[11px] font-medium text-neutral-800">
                         {i + 1}. {p.titulo}
                       </span>
-                      <span className="block text-[10.5px] leading-snug text-neutral-500">{p.fez}</span>
+                      <span className="block text-[11px] leading-snug text-neutral-600">{p.fez}</span>
                     </button>
                   </li>
                 ))}
@@ -771,7 +771,7 @@ export function MapaFunis() {
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z * 0.85))}>
               <ZoomOut className="h-3.5 w-3.5" />
             </Button>
-            <span className="w-10 text-center text-[11px] tabular-nums text-neutral-500">{Math.round(zoom * 100)}%</span>
+            <span className="w-10 text-center text-[11px] tabular-nums text-neutral-600">{Math.round(zoom * 100)}%</span>
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z * 1.15))}>
               <ZoomIn className="h-3.5 w-3.5" />
             </Button>
@@ -780,7 +780,7 @@ export function MapaFunis() {
             </Button>
           </div>
 
-          <p className="absolute bottom-3 right-3 rounded-lg bg-white/90 px-2 py-1 text-[10.5px] text-neutral-400">
+          <p className="absolute bottom-3 right-3 rounded-lg bg-white/90 px-2 py-1 text-[11px] text-neutral-600">
             arrasta o fundo para mover · ⌘/ctrl + roda para ampliar
           </p>
         </div>
@@ -790,7 +790,7 @@ export function MapaFunis() {
           {!noSelecionado ? (
             <>
               <p className="text-sm font-semibold">O mapa</p>
-              <p className="text-xs leading-relaxed text-neutral-500">
+              <p className="text-xs leading-relaxed text-neutral-600">
                 Escolhe um bloco à esquerda para o acrescentar. Arrasta a bolinha de baixo de um
                 bloco para outro para os ligar. Os marcados <b className="text-red-600">sem saída</b>{" "}
                 são onde o funil trava — é isso que este mapa serve para ver.
@@ -825,21 +825,21 @@ export function MapaFunis() {
           ) : (
             <>
               <div>
-                <label className="text-xs text-neutral-500">Título</label>
+                <label className="text-xs text-neutral-600">Título</label>
                 <Input value={noSelecionado.titulo} onChange={(e) => mexerNo(noSelecionado.id, { titulo: e.target.value })} />
               </div>
               <div>
-                <label className="text-xs text-neutral-500">Detalhe</label>
+                <label className="text-xs text-neutral-600">Detalhe</label>
                 <Input value={noSelecionado.detalhe ?? ""} onChange={(e) => mexerNo(noSelecionado.id, { detalhe: e.target.value })} />
               </div>
               <div>
-                <label className="text-xs text-neutral-500">Tipo</label>
+                <label className="text-xs text-neutral-600">Tipo</label>
                 <div className="mt-1 flex flex-wrap gap-1">
                   {(Object.keys(BLOCOS) as TipoDeNo[]).map((t) => (
                     <button
                       key={t}
                       onClick={() => mexerNo(noSelecionado.id, { tipo: t })}
-                      className="rounded-full border px-2 py-0.5 text-[10.5px]"
+                      className="rounded-full border px-2 py-0.5 text-[11px]"
                       style={{
                         background: noSelecionado.tipo === t ? BLOCOS[t].fundo : "transparent",
                         borderColor: noSelecionado.tipo === t ? BLOCOS[t].borda : "#e5e5e5",
@@ -874,10 +874,10 @@ export function MapaFunis() {
               />
 
               <div>
-                <label className="text-xs text-neutral-500">Vai para</label>
+                <label className="text-xs text-neutral-600">Vai para</label>
                 <div className="mt-1 space-y-1">
                   {noSelecionado.seguintes.length === 0 && (
-                    <p className="text-[11px] text-neutral-400">Nada — arrasta a bolinha para ligar.</p>
+                    <p className="text-[11px] text-neutral-600">Nada — arrasta a bolinha para ligar.</p>
                   )}
                   {noSelecionado.seguintes.map((s, i) => (
                     <div key={s} className="flex items-center justify-between gap-1 rounded border px-2 py-1 text-[11px]">
@@ -891,7 +891,7 @@ export function MapaFunis() {
                       <span className="flex-1 truncate">{funil.nos.find((x) => x.id === s)?.titulo ?? s}</span>
                       <button
                         onClick={() => mexerNo(noSelecionado.id, { seguintes: noSelecionado.seguintes.filter((x) => x !== s) })}
-                        className="shrink-0 text-neutral-400 hover:text-red-500"
+                        className="shrink-0 text-neutral-600 hover:text-red-500"
                       >
                         ×
                       </button>

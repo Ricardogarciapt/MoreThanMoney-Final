@@ -120,7 +120,7 @@ const STATUS_STYLE: Record<string, string> = {
   processing: "bg-blue-100 text-blue-800",
   published: "bg-emerald-100 text-emerald-800",
   failed: "bg-red-100 text-red-800",
-  canceled: "bg-neutral-100 text-neutral-500",
+  canceled: "bg-neutral-100 text-neutral-600",
 }
 
 export default function AdminSocialPage() {
@@ -329,7 +329,7 @@ export default function AdminSocialPage() {
               <h1 className="flex items-center gap-2 text-2xl font-semibold">
                 <Instagram className="h-6 w-6" /> Conteúdo &amp; Agendamento
               </h1>
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-neutral-600">
                 Publicação nativa nas 2 contas. Nada sai sem a tua aprovação.
               </p>
             </div>
@@ -370,7 +370,7 @@ export default function AdminSocialPage() {
               key={id}
               onClick={() => setAba(id)}
               className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition ${
-                aba === id ? "border-neutral-900 text-neutral-900" : "border-transparent text-neutral-500"
+                aba === id ? "border-neutral-900 text-neutral-900" : "border-transparent text-neutral-600"
               }`}
             >
               {rotulo}
@@ -423,10 +423,10 @@ export default function AdminSocialPage() {
 
         {loading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-neutral-600" />
           </div>
         ) : shown.length === 0 ? (
-          <div className="rounded-xl border border-dashed bg-white py-20 text-center text-neutral-400">
+          <div className="rounded-xl border border-dashed bg-white py-20 text-center text-neutral-600">
             Sem posts {filter !== "all" ? `em "${filter}"` : "na fila"}.
           </div>
         ) : (
@@ -445,10 +445,10 @@ export default function AdminSocialPage() {
                   <div className="mb-1 flex flex-wrap items-center gap-2">
                     <Badge className={STATUS_STYLE[p.status] || ""}>{p.status}</Badge>
                     <span className="text-sm font-medium">@{p.ig_username}</span>
-                    <span className="text-xs text-neutral-400">
+                    <span className="text-xs text-neutral-600">
                       {p.media_type} · {p.pillar || "—"}
                     </span>
-                    <span className="flex items-center gap-1 text-xs text-neutral-400">
+                    <span className="flex items-center gap-1 text-xs text-neutral-600">
                       <CalendarClock className="h-3 w-3" />
                       {new Date(p.scheduled_at).toLocaleString("pt-PT", {
                         day: "2-digit",
@@ -547,7 +547,7 @@ export default function AdminSocialPage() {
           {editar && (
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-neutral-500">Legenda</label>
+                <label className="text-xs text-neutral-600">Legenda</label>
                 <textarea
                   defaultValue={editar.caption ?? ""}
                   onChange={(e) => setEditar({ ...editar, caption: e.target.value })}
@@ -557,7 +557,7 @@ export default function AdminSocialPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-neutral-500">Quando sai</label>
+                  <label className="text-xs text-neutral-600">Quando sai</label>
                   <Input
                     type="datetime-local"
                     defaultValue={
@@ -569,7 +569,7 @@ export default function AdminSocialPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-neutral-500">Pilar</label>
+                  <label className="text-xs text-neutral-600">Pilar</label>
                   <Select
                     value={editar.pillar ?? "prova"}
                     onValueChange={(v) => setEditar({ ...editar, pillar: v })}
@@ -588,12 +588,12 @@ export default function AdminSocialPage() {
                 </div>
               </div>
               <div>
-                <label className="text-xs text-neutral-500">Imagem (URL)</label>
+                <label className="text-xs text-neutral-600">Imagem (URL)</label>
                 <Input
                   defaultValue={editar.media_urls?.[0] ?? ""}
                   onChange={(e) => setEditar({ ...editar, media_urls: e.target.value ? [e.target.value] : [] })}
                 />
-                <p className="mt-1 text-xs text-neutral-400">
+                <p className="mt-1 text-xs text-neutral-600">
                   Sem imagem, o Instagram recusa — o post fica na fila para sempre.
                 </p>
               </div>
@@ -628,7 +628,7 @@ export default function AdminSocialPage() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-500">Conta</label>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">Conta</label>
                 <Select
                   value={form.ig_account_id}
                   onValueChange={(v) => setForm((f) => ({ ...f, ig_account_id: v }))}
@@ -646,7 +646,7 @@ export default function AdminSocialPage() {
                 </Select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-500">Tipo</label>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">Tipo</label>
                 <Select
                   value={form.media_type}
                   onValueChange={(v) => setForm((f) => ({ ...f, media_type: v }))}
@@ -666,7 +666,7 @@ export default function AdminSocialPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-500">Pilar</label>
+                <label className="mb-1 block text-xs font-medium text-neutral-600">Pilar</label>
                 <Select
                   value={form.pillar}
                   onValueChange={(v) => setForm((f) => ({ ...f, pillar: v }))}
@@ -684,7 +684,7 @@ export default function AdminSocialPage() {
                 </Select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-neutral-500">
+                <label className="mb-1 block text-xs font-medium text-neutral-600">
                   Agendar para
                 </label>
                 <Input
@@ -695,7 +695,7 @@ export default function AdminSocialPage() {
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-neutral-500">
+              <label className="mb-1 block text-xs font-medium text-neutral-600">
                 Media URLs (uma por linha — carrossel = várias)
               </label>
               <textarea
@@ -706,7 +706,7 @@ export default function AdminSocialPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-neutral-500">Legenda</label>
+              <label className="mb-1 block text-xs font-medium text-neutral-600">Legenda</label>
               <textarea
                 className="min-h-[90px] w-full rounded-md border p-2 text-sm"
                 value={form.caption}
@@ -776,7 +776,7 @@ function PainelFactos({
   if (!painel) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-neutral-600" />
       </div>
     )
   }
@@ -796,7 +796,7 @@ function PainelFactos({
       ) : (
         <div className="rounded-xl border bg-white p-4">
           <p className="text-sm font-semibold">Estes são os factos que rodam nos cartões</p>
-          <p className="mt-1 text-xs text-neutral-500">
+          <p className="mt-1 text-xs text-neutral-600">
             Um por dia, à vez. Publicar sempre a mesma frase treina o leitor a saltá-la.
           </p>
           <ul className="mt-3 space-y-2">
@@ -819,7 +819,7 @@ function PainelFactos({
           ["Pips", f.pips != null ? `${f.pips >= 0 ? "+" : ""}${Math.round(f.pips)}` : "—"],
         ].map(([r, v]) => (
           <div key={r} className="rounded-xl border bg-white p-4">
-            <p className="text-xs uppercase tracking-wide text-neutral-500">{r}</p>
+            <p className="text-xs uppercase tracking-wide text-neutral-600">{r}</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums">{v}</p>
           </div>
         ))}
@@ -829,7 +829,7 @@ function PainelFactos({
           Os números nunca mudam — o modelo recebe-os apurados e só lhes muda o feitio. */}
       <div className="rounded-xl border bg-white p-4">
         <p className="text-sm font-semibold">Gerar à medida</p>
-        <p className="mt-0.5 text-xs text-neutral-500">
+        <p className="mt-0.5 text-xs text-neutral-600">
           Diz o feitio que queres. Os números não mudam — só a forma como são ditos.
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -858,7 +858,7 @@ function PainelFactos({
                 <span>{g}</span>
                 <button
                   onClick={() => { navigator.clipboard.writeText(g); toast({ title: "Copiado" }) }}
-                  className="shrink-0 text-xs text-neutral-500 hover:text-neutral-900"
+                  className="shrink-0 text-xs text-neutral-600 hover:text-neutral-900"
                 >
                   copiar
                 </button>
@@ -869,12 +869,12 @@ function PainelFactos({
       </div>
 
       <div className="rounded-xl border bg-white p-4">
-        <p className="text-xs uppercase tracking-wide text-neutral-500">
+        <p className="text-xs uppercase tracking-wide text-neutral-600">
           A ressalva que acompanha sempre qualquer número
         </p>
         <p className="mt-1 text-xs leading-relaxed text-neutral-600">{f.ressalva}</p>
         {f.atualizadoEm && (
-          <p className="mt-2 text-xs text-neutral-400">
+          <p className="mt-2 text-xs text-neutral-600">
             Medido a {new Date(f.atualizadoEm).toLocaleString("pt-PT")}
           </p>
         )}
@@ -894,7 +894,7 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
   if (!painel) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-neutral-600" />
       </div>
     )
   }
@@ -919,14 +919,14 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
               ["Rascunhos por rever", m.rascunhosPorRever],
             ].map(([r, v]) => (
               <div key={String(r)} className="rounded-lg border p-3">
-                <p className="text-[11px] uppercase tracking-wide text-neutral-500">{r}</p>
+                <p className="text-[11px] uppercase tracking-wide text-neutral-600">{r}</p>
                 <p className="mt-0.5 text-xl font-semibold tabular-nums">{v}</p>
               </div>
             ))}
           </div>
           {m.execucao.length > 0 && (
             <>
-              <p className="mt-4 text-xs uppercase tracking-wide text-neutral-500">
+              <p className="mt-4 text-xs uppercase tracking-wide text-neutral-600">
                 Motores de execução
               </p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -934,7 +934,7 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
                   <span
                     key={x.chave}
                     className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                      x.ligado ? "bg-emerald-100 text-emerald-800" : "bg-neutral-100 text-neutral-500"
+                      x.ligado ? "bg-emerald-100 text-emerald-800" : "bg-neutral-100 text-neutral-600"
                     }`}
                   >
                     {x.chave} {x.ligado ? "ligado" : "desligado"}
@@ -968,7 +968,7 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
                   />
                 </span>
                 <span className="w-12 text-right text-sm font-semibold tabular-nums">{x.total}</span>
-                <span className="w-16 text-right text-xs text-neutral-400">
+                <span className="w-16 text-right text-xs text-neutral-600">
                   {passou != null ? `${passou}%` : ""}
                 </span>
               </div>
@@ -1000,7 +1000,7 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
               </span>
             ))}
           </div>
-          <p className="mt-3 text-xs text-neutral-500">
+          <p className="mt-3 text-xs text-neutral-600">
             Piloto automático: <b>{painel.conteudo.autopilot ? "ligado" : "desligado"}</b>
             {painel.conteudo.autopilot
               ? " — os posts com imagem publicam sem passar por ti."
@@ -1011,7 +1011,7 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
         <div className="rounded-xl border bg-white p-4">
           <p className="text-sm font-semibold">Próximos a sair</p>
           {painel.conteudo.proximos.length === 0 ? (
-            <p className="mt-2 text-xs text-neutral-500">Nada aprovado à espera de hora.</p>
+            <p className="mt-2 text-xs text-neutral-600">Nada aprovado à espera de hora.</p>
           ) : (
             <ul className="mt-2 space-y-1.5">
               {painel.conteudo.proximos.map((x) => (
@@ -1058,7 +1058,7 @@ function PainelMensagens({
   if (!mensagens) {
     return (
       <div className="flex justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-neutral-600" />
       </div>
     )
   }
@@ -1073,7 +1073,7 @@ function PainelMensagens({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold">{m.titulo}</p>
-                <p className="mt-0.5 text-xs text-neutral-500">{m.quando}</p>
+                <p className="mt-0.5 text-xs text-neutral-600">{m.quando}</p>
               </div>
               {m.editado && (
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
@@ -1120,7 +1120,7 @@ function PainelMensagens({
             </div>
 
             <details className="mt-3">
-              <summary className="cursor-pointer text-xs text-neutral-500">
+              <summary className="cursor-pointer text-xs text-neutral-600">
                 Ver como o lead recebe
               </summary>
               <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-neutral-50 p-3 text-xs text-neutral-700">
@@ -1218,7 +1218,7 @@ function Estudio({
 
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-neutral-500">O que queres publicar</label>
+            <label className="text-xs text-neutral-600">O que queres publicar</label>
             <Input
               value={pedido}
               onChange={(e) => setPedido(e.target.value)}
@@ -1227,7 +1227,7 @@ function Estudio({
             />
           </div>
           <div>
-            <label className="text-xs text-neutral-500">
+            <label className="text-xs text-neutral-600">
               Material teu (opcional) — um texto, uma ideia, o que escreveste no telemóvel
             </label>
             <textarea
@@ -1245,11 +1245,11 @@ function Estudio({
           {saida && (
             <div className="space-y-3 rounded-xl border bg-neutral-50 p-3">
               <div>
-                <label className="text-xs text-neutral-500">Gancho</label>
+                <label className="text-xs text-neutral-600">Gancho</label>
                 <Input value={saida.hook} onChange={(e) => setSaida({ ...saida, hook: e.target.value })} />
               </div>
               <div>
-                <label className="text-xs text-neutral-500">Legenda</label>
+                <label className="text-xs text-neutral-600">Legenda</label>
                 <textarea
                   value={saida.caption}
                   onChange={(e) => setSaida({ ...saida, caption: e.target.value })}
@@ -1259,7 +1259,7 @@ function Estudio({
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="text-xs text-neutral-500">Conta</label>
+                  <label className="text-xs text-neutral-600">Conta</label>
                   <Select value={conta} onValueChange={setConta}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -1268,7 +1268,7 @@ function Estudio({
                   </Select>
                 </div>
                 <div>
-                  <label className="text-xs text-neutral-500">Pilar</label>
+                  <label className="text-xs text-neutral-600">Pilar</label>
                   <Select value={pilar} onValueChange={setPilar}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -1277,11 +1277,11 @@ function Estudio({
                   </Select>
                 </div>
                 <div>
-                  <label className="text-xs text-neutral-500">Quando</label>
+                  <label className="text-xs text-neutral-600">Quando</label>
                   <Input type="datetime-local" value={quando} onChange={(e) => setQuando(e.target.value)} />
                 </div>
               </div>
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-neutral-600">
                 Entra como rascunho. Falta-lhe a imagem — sem ela o Instagram recusa.
               </p>
             </div>
