@@ -92,6 +92,37 @@ async function estadoDa(acc: (typeof IG_ACCOUNTS)[number]): Promise<Estado> {
   }
 }
 
+/**
+ * O token da Página dona desta conta de Instagram — o que não expira.
+ *
+ * A cadeia da Meta é esta, e é a única forma de não voltar aqui de dois em dois meses:
+ *   token curto (Explorer, ~2h) → token de utilizador longo (60 dias) → token de PÁGINA (sem fim)
+ *
+ * O último degrau é o que interessa: um token de Página derivado de um token de utilizador longo
+ * não tem validade. A Meta invalida-o se a password mudar ou se a permissão for retirada — que é
+ * o comportamento certo, e não uma data marcada no calendário.
+ *
+ * Devolve nulo quando não encontra a Página. Não é erro: um token de 60 dias publica na mesma, e
+ * o painel mostra a validade para se ver a diferença.
+ */
+async function tokenDaPagina(tokenUtilizador: string, igAccountId: string): Promise<string | null> {
+  try {
+    const r = await fetch(
+      `${GRAPH}/me/accounts?fields=access_token,instagram_business_account&limit=50` +
+        `&access_token=${encodeURIComponent(tokenUtilizador)}`,
+      { cache: "no-store" },
+    )
+    const j = await r.json().catch(() => ({}))
+    const paginas = (j?.data ?? []) as Array<{ access_token?: string; instagram_business_account?: { id?: string } }>
+    // A Página certa é a que TEM esta conta de Instagram ligada. Escolher pelo nome partia-se
+    // no dia em que a Página fosse renomeada.
+    const dona = paginas.find((p) => p.instagram_business_account?.id === igAccountId)
+    return dona?.access_token ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function GET(req: NextRequest) {
   const guard = await requireAdmin(req)
   if (guard) return guard
@@ -182,7 +213,9 @@ export async function POST(req: NextRequest) {
     }
     // Só depois de saber que o token é bom se pede o de 60 dias: trocar um token errado devolve
     // um erro que não diz nada sobre o que estava mal.
-    atuais[acc.tokenEnv] = await trocarPor60Dias(valor)
+    const longo = await trocarPor60Dias(valor)
+    // E do de 60 dias tira-se o da Página, que não expira. Se não der, fica o de 60 dias.
+    atuais[acc.tokenEnv] = (await tokenDaPagina(longo, acc.id)) ?? longo
   }
 
   await db.from("site_settings").upsert(
