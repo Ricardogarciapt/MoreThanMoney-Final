@@ -31,6 +31,8 @@ import {
   ExternalLink,
   Instagram,
   Users,
+  Pencil,
+  RotateCcw,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
@@ -50,7 +52,29 @@ interface Post {
 }
 
 /** O que o painel devolve — ver `/api/admin/social/painel`. */
+interface MensagemFunil {
+  chave: string
+  titulo: string
+  quando: string
+  variaveis: string[]
+  padrao: string
+  texto: string
+  previsao: string
+  editado: boolean
+}
+
 interface Painel {
+  maquina: {
+    resumo: string
+    novos24h: number
+    acessosHoje: number
+    conversoes24h: number
+    corretoraValidada: number
+    sinais24h: number
+    rascunhosPorRever: number
+    autopilot: { morethanmoney: boolean; ricardo: boolean }
+    execucao: { chave: string; ligado: boolean }[]
+  } | null
   factos: {
     publicavel: boolean
     lista: string[]
@@ -100,7 +124,11 @@ export default function AdminSocialPage() {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   /** Separador aberto: a fila, os factos que vão nos cartões, ou o funil. */
-  const [aba, setAba] = useState<"fila" | "factos" | "funil">("fila")
+  const [aba, setAba] = useState<"fila" | "factos" | "funil" | "mensagens">("fila")
+  const [mensagens, setMensagens] = useState<MensagemFunil[] | null>(null)
+  /** O post a ser editado. As legendas eram só de leitura: para mudar uma vírgula apagava-se e
+   *  criava-se outro, e perdia-se a imagem já gerada. */
+  const [editar, setEditar] = useState<Post | null>(null)
   const [painel, setPainel] = useState<Painel | null>(null)
 
   const [form, setForm] = useState({
@@ -112,6 +140,53 @@ export default function AdminSocialPage() {
     scheduled_at: "",
     rehost: true,
   })
+
+  const lerMensagens = useCallback(async () => {
+    try {
+      const tok = (await supabase.auth.getSession()).data.session?.access_token
+      if (!tok) return
+      const r = await fetch("/api/admin/social/mensagens", {
+        headers: { Authorization: `Bearer ${tok}` },
+        cache: "no-store",
+      })
+      const j = await r.json()
+      if (j.ok) setMensagens(j.mensagens)
+    } catch {
+      /* sem mensagens o resto da página continua a servir */
+    }
+  }, [])
+
+  const gravarMensagem = async (chave: string, texto: string) => {
+    const tok = (await supabase.auth.getSession()).data.session?.access_token
+    const r = await fetch("/api/admin/social/mensagens", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+      body: JSON.stringify({ chave, texto }),
+    })
+    const j = await r.json()
+    if (j.ok) {
+      setMensagens(j.mensagens)
+      toast({ title: texto.trim() ? "Mensagem guardada" : "Voltou ao texto original" })
+    } else {
+      toast({ title: "Não deu para guardar", description: j.error, variant: "destructive" })
+    }
+  }
+
+  const guardarPost = async (id: string, campos: Record<string, unknown>) => {
+    const r = await fetch(`/api/admin/social-posts/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(campos),
+    })
+    if (r.ok) {
+      toast({ title: "Post atualizado" })
+      setEditar(null)
+      load()
+    } else {
+      const j = await r.json().catch(() => ({}))
+      toast({ title: "Erro a guardar", description: j.error, variant: "destructive" })
+    }
+  }
 
   const lerPainel = useCallback(async () => {
     try {
@@ -144,7 +219,8 @@ export default function AdminSocialPage() {
   useEffect(() => {
     load()
     lerPainel()
-  }, [load, lerPainel])
+    lerMensagens()
+  }, [load, lerPainel, lerMensagens])
 
   const act = async (id: string, action: string) => {
     const r = await fetch(`/api/admin/social-posts/${id}`, {
@@ -258,6 +334,7 @@ export default function AdminSocialPage() {
             ["fila", "Publicações"],
             ["factos", "Factos nos cartões"],
             ["funil", "Funil"],
+            ["mensagens", "Mensagens do funil"],
           ] as const).map(([id, rotulo]) => (
             <button
               key={id}
@@ -273,6 +350,7 @@ export default function AdminSocialPage() {
 
         {aba === "factos" && <PainelFactos painel={painel} />}
         {aba === "funil" && <PainelFunil painel={painel} />}
+        {aba === "mensagens" && <PainelMensagens mensagens={mensagens} aGravar={gravarMensagem} />}
 
         {aba === "fila" && (<>
         {painel && (painel.conteudo.aprovadosSemImagem > 0 || painel.conteudo.falhados > 0) && (
@@ -382,6 +460,13 @@ export default function AdminSocialPage() {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
+                  {/* Editar em vez de apagar-e-criar: refazer um post por causa de uma vírgula
+                      deitava fora a imagem já gerada e a hora já escolhida. */}
+                  {p.status !== "published" && (
+                    <Button size="sm" variant="ghost" onClick={() => setEditar(p)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -389,6 +474,87 @@ export default function AdminSocialPage() {
         )}
         </>)}
       </div>
+
+      <Dialog open={Boolean(editar)} onOpenChange={(v) => !v && setEditar(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar post</DialogTitle>
+          </DialogHeader>
+          {editar && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-neutral-500">Legenda</label>
+                <textarea
+                  defaultValue={editar.caption ?? ""}
+                  onChange={(e) => setEditar({ ...editar, caption: e.target.value })}
+                  rows={8}
+                  className="mt-1 w-full rounded-md border p-2 text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-neutral-500">Quando sai</label>
+                  <Input
+                    type="datetime-local"
+                    defaultValue={
+                      editar.scheduled_at ? new Date(editar.scheduled_at).toISOString().slice(0, 16) : ""
+                    }
+                    onChange={(e) =>
+                      setEditar({ ...editar, scheduled_at: new Date(e.target.value).toISOString() })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-neutral-500">Pilar</label>
+                  <Select
+                    value={editar.pillar ?? "prova"}
+                    onValueChange={(v) => setEditar({ ...editar, pillar: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PILLARS.map((x) => (
+                        <SelectItem key={x} value={x}>
+                          {x}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-neutral-500">Imagem (URL)</label>
+                <Input
+                  defaultValue={editar.media_urls?.[0] ?? ""}
+                  onChange={(e) => setEditar({ ...editar, media_urls: e.target.value ? [e.target.value] : [] })}
+                />
+                <p className="mt-1 text-xs text-neutral-400">
+                  Sem imagem, o Instagram recusa — o post fica na fila para sempre.
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setEditar(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() =>
+                editar &&
+                guardarPost(editar.id, {
+                  caption: editar.caption,
+                  scheduled_at: editar.scheduled_at,
+                  pillar: editar.pillar,
+                  media_urls: editar.media_urls,
+                })
+              }
+            >
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
@@ -599,9 +765,58 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
   }
   const d = painel.funil.degraus
   const maximo = Math.max(...d.map((x) => x.total), 1)
+  const m = painel.maquina
 
   return (
     <div className="space-y-4">
+      {/* A máquina de vendas vivia noutro ecrã. Quem aprova conteúdo precisa de saber se há
+          gente à espera de acesso e se os motores estão ligados — decide-se junto. */}
+      {m && (
+        <div className="rounded-xl border bg-white p-4">
+          <p className="text-sm font-semibold">Máquina de vendas · últimas 24h</p>
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {[
+              ["Leads novos", m.novos24h],
+              ["Acessos dados hoje", m.acessosHoje],
+              ["Conversões pagas", m.conversoes24h],
+              ["Corretora validada", m.corretoraValidada],
+              ["Sinais", m.sinais24h],
+              ["Rascunhos por rever", m.rascunhosPorRever],
+            ].map(([r, v]) => (
+              <div key={String(r)} className="rounded-lg border p-3">
+                <p className="text-[11px] uppercase tracking-wide text-neutral-500">{r}</p>
+                <p className="mt-0.5 text-xl font-semibold tabular-nums">{v}</p>
+              </div>
+            ))}
+          </div>
+          {m.execucao.length > 0 && (
+            <>
+              <p className="mt-4 text-xs uppercase tracking-wide text-neutral-500">
+                Motores de execução
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {m.execucao.map((x) => (
+                  <span
+                    key={x.chave}
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                      x.ligado ? "bg-emerald-100 text-emerald-800" : "bg-neutral-100 text-neutral-500"
+                    }`}
+                  >
+                    {x.chave} {x.ligado ? "ligado" : "desligado"}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+          <div className="mt-3 flex gap-2">
+            <Link href="/admin/sales-machine">
+              <Button variant="outline" size="sm">
+                Abrir a máquina de vendas <ExternalLink className="ml-1 h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
       <div className="rounded-xl border bg-white p-4">
         <p className="text-sm font-semibold">Do primeiro contacto ao pagante</p>
         <div className="mt-3 space-y-2">
@@ -682,6 +897,104 @@ function PainelFunil({ painel }: { painel: Painel | null }) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * As mensagens que o funil envia — editáveis aqui.
+ *
+ * Estavam dentro do código: mudar uma vírgula na de boas-vindas obrigava a um commit e a um
+ * deploy, e por isso ninguém as mudava. Uma mensagem de vendas que não se pode afinar é uma
+ * mensagem que envelhece.
+ *
+ * Cada uma mostra QUANDO sai, porque editar sem saber isso é editar às cegas, e uma
+ * pré-visualização com as variáveis já trocadas — é o que o lead vai mesmo receber.
+ */
+function PainelMensagens({
+  mensagens,
+  aGravar,
+}: {
+  mensagens: MensagemFunil[] | null
+  aGravar: (chave: string, texto: string) => Promise<void>
+}) {
+  const [rascunhos, setRascunhos] = useState<Record<string, string>>({})
+
+  if (!mensagens) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {mensagens.map((m) => {
+        const valor = rascunhos[m.chave] ?? m.texto
+        const mudou = valor !== m.texto
+        return (
+          <div key={m.chave} className="rounded-xl border bg-white p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">{m.titulo}</p>
+                <p className="mt-0.5 text-xs text-neutral-500">{m.quando}</p>
+              </div>
+              {m.editado && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                  editada
+                </span>
+              )}
+            </div>
+
+            <textarea
+              value={valor}
+              onChange={(e) => setRascunhos({ ...rascunhos, [m.chave]: e.target.value })}
+              rows={Math.min(14, Math.max(4, valor.split("\n").length + 1))}
+              className="mt-3 w-full rounded-md border p-2 font-mono text-xs"
+            />
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {m.variaveis.map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setRascunhos({ ...rascunhos, [m.chave]: valor + v })}
+                  className="rounded-full border px-2 py-0.5 font-mono text-[11px] text-neutral-600"
+                  title="Clica para inserir no fim"
+                >
+                  {v}
+                </button>
+              ))}
+              <span className="flex-1" />
+              {m.editado && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setRascunhos({ ...rascunhos, [m.chave]: "" })
+                    aGravar(m.chave, "")
+                  }}
+                  title="Voltar ao texto que está no código"
+                >
+                  <RotateCcw className="mr-1 h-3.5 w-3.5" /> Original
+                </Button>
+              )}
+              <Button size="sm" disabled={!mudou} onClick={() => aGravar(m.chave, valor)}>
+                Guardar
+              </Button>
+            </div>
+
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs text-neutral-500">
+                Ver como o lead recebe
+              </summary>
+              <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-neutral-50 p-3 text-xs text-neutral-700">
+                {m.previsao}
+              </pre>
+            </details>
+          </div>
+        )
+      })}
     </div>
   )
 }

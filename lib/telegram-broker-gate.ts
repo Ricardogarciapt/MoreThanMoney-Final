@@ -402,7 +402,12 @@ export const APP_REGISTER_LINK = 'https://www.morethanmoney.pt/register'
 export const APP_ANDROID_LINK = 'https://www.morethanmoney.pt/downloads/MoreThanMoney.apk'
 export const TRIAL_CODE = '14DayTrial'
 
-/** Porta suave: experimentar a app GRÁTIS 14 dias (sem depósito). Reduz o gargalo do broker-gate. */
+/**
+ * Porta suave: experimentar a app GRÁTIS 14 dias (sem depósito).
+ *
+ * O texto vive agora em `lib/mensagens-funil.ts` e é editável no /admin/social. Esta função fica
+ * como o DEFEITO — quem nunca editou recebe sempre a versão nova quando o produto muda.
+ */
 export function trialStepMessage(): string {
   return (
     `🎁 <b>Começa GRÁTIS — sem depositar nada:</b>\n\n` +
@@ -413,7 +418,17 @@ export function trialStepMessage(): string {
   )
 }
 
-/** Mensagem que instrui o passo do broker (usada pela IA / comando). */
+/**
+ * O passo da corretora. O texto é editável no /admin/social; isto é o defeito.
+ *
+ * `brokerStepMessageEditavel()` é o que se deve chamar em código novo — devolve o texto que o
+ * Ricardo escreveu, se escreveu algum.
+ */
+export async function brokerStepMessageEditavel(): Promise<string> {
+  const { lerMensagem } = await import('@/lib/mensagens-funil')
+  return lerMensagem('passo_corretora')
+}
+
 export function brokerStepMessage(): string {
   return (
     `🔓 <b>Duas formas de entrar:</b>\n\n` +

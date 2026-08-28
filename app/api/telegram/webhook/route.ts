@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
               await fetch(`https://api.telegram.org/bot${bt0}/sendMessage`, {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ chat_id: chatBotao, parse_mode: "HTML", disable_web_page_preview: true,
-                  text: bg.brokerStepMessage() }),
+                  text: await bg.brokerStepMessageEditavel() }),
               })
             }
           } else {
@@ -392,8 +392,8 @@ export async function POST(request: NextRequest) {
           // outra vez aquilo em que já tinha carregado.
           const t = token.toLowerCase()
           if (t === "broker" || t === "corretora") {
-            const { brokerStepMessage } = await import("@/lib/telegram-broker-gate")
-            await sendMessage(brokerStepMessage())
+            const { brokerStepMessageEditavel } = await import("@/lib/telegram-broker-gate")
+            await sendMessage(await brokerStepMessageEditavel())
           } else if (t === "mtmauto" || t === "auto") {
             // Quem chega pelo link da app já disse o que quer — não se lhe pergunta outra vez.
             const mf = await import("@/lib/telegram-mtmauto-funnel")
@@ -469,8 +469,8 @@ export async function POST(request: NextRequest) {
 
       // /grupos — acesso aos grupos é BROKER-GATED (conta PU Prime + depósito $300)
       else if (text === "/grupos" || text === "/grupos@MoreThanMoney_aibot" || text === "/sinal" || text === "/acesso") {
-        const { brokerStepMessage } = await import("@/lib/telegram-broker-gate")
-        await sendMessage(brokerStepMessage())
+        const { brokerStepMessageEditavel } = await import("@/lib/telegram-broker-gate")
+        await sendMessage(await brokerStepMessageEditavel())
       }
 
       // /premium — ser Premium

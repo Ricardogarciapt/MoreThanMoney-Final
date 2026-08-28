@@ -217,15 +217,18 @@ export async function handleLeadsGroupNewMembers(
   const token = getMtmcopyBotToken()
   const botUser = process.env.TELEGRAM_BOT_USERNAME?.replace(/^@/, '') || 'MoreThanMoney_aibot'
   if (!token) return
+  // A primeira coisa que um lead lê. O texto é editável no /admin/social — mudar uma vírgula
+  // aqui obrigava a um commit e a um deploy, e por isso ninguém o mudava.
+  const { lerMensagem } = await import('@/lib/mensagens-funil')
   for (const m of members) {
     if (m.is_bot) continue
-    const name = m.first_name || 'bem-vindo'
+    const name = m.first_name || ''
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         chat_id: chat.id,
-        text: `👋 Bem-vindo${name ? `, ${name}` : ''}! Fala comigo em privado e ajudo-te a começar — sinais manuais, Tap to Trade ou algo automático. 🙂`,
+        text: await lerMensagem('boas_vindas_grupo', { nome: name ? `, ${name}` : '' }),
         reply_markup: {
           inline_keyboard: [[{ text: '💬 Falar com o assistente MTM', url: `https://t.me/${botUser}?start=lead` }]],
         },
@@ -235,6 +238,18 @@ export async function handleLeadsGroupNewMembers(
 }
 
 /** Mensagem de boas-vindas do funil (novo membro / primeiro contacto). */
+/**
+ * As boas-vindas — editáveis no /admin/social.
+ *
+ * `leadWelcomeMessageEditavel()` devolve o texto que o Ricardo escreveu, se escreveu algum. Esta
+ * função fica como o DEFEITO: quem nunca editou recebe sempre a versão nova quando o produto
+ * muda, em vez de uma cópia congelada no dia em que foi feita.
+ */
+export async function leadWelcomeMessageEditavel(firstName?: string | null): Promise<string> {
+  const { lerMensagem } = await import('@/lib/mensagens-funil')
+  return lerMensagem('boas_vindas', { nome: firstName ? ` ${firstName}` : '' })
+}
+
 export function leadWelcomeMessage(firstName?: string | null): string {
   const nome = firstName ? ` ${firstName}` : ''
   return (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { factosParaCartao, getPipsProof, publicavel, RESSALVA_LEGAL } from '@/lib/pips-proof'
+import { buildSalesState, salesStateSummary } from '@/lib/sales-machine'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -41,6 +42,15 @@ export async function GET(request: NextRequest) {
   const db = getSupabaseAdmin()
   const prova = await getPipsProof()
 
+  /**
+   * A máquina de vendas, aqui dentro.
+   *
+   * O estado dela vivia no AIOS e no /admin/sales-machine, e quem aprovava conteúdo tinha de
+   * saltar entre ecrãs para saber se havia gente à espera de acesso ou se o piloto automático
+   * estava ligado. São decisões que se tomam juntas.
+   */
+  const maquina = await buildSalesState().catch(() => null)
+
   const [{ data: posts }, { data: leads }, { data: perfis }, { data: autopilotRow }] = await Promise.all([
     db.from('social_scheduled_posts').select('status, scheduled_at, ig_username, pillar, media_urls').limit(500),
     db.from('telegram_leads').select('interest, stage, interesse, mtmauto_passo, broker_uid, granted_at, created_at'),
@@ -78,6 +88,23 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     ok: true,
+
+    // ── A máquina de vendas, em números ───────────────────────────────────────────────────
+    maquina: maquina
+      ? {
+          resumo: salesStateSummary(maquina),
+          novos24h: maquina.funnel.novos24h,
+          acessosHoje: maquina.funnel.grantedToday,
+          conversoes24h: maquina.conversions_24h,
+          corretoraValidada: maquina.broker_clients,
+          sinais24h: maquina.signals_24h,
+          rascunhosPorRever: maquina.content.pending,
+          autopilot: maquina.content.autopilot,
+          // Os interruptores de execução: é aqui que se vê se um motor está desligado sem que
+          // ninguém tenha dado por isso.
+          execucao: Object.entries(maquina.execution).map(([chave, ligado]) => ({ chave, ligado })),
+        }
+      : null,
 
     // ── Os factos que entram nos cartões ──────────────────────────────────────────────────
     factos: {
