@@ -9,8 +9,12 @@ import { BrokerLinksPanel } from "@/components/admin/broker-links-panel"
  */
 
 type Draft = { id: string; account: string; pillar: string; status: string; scheduled_at: string; has_image: boolean; preview: string }
+type Andar = { nome: string; n: number; fonte: string; passou: number | null }
 type State = {
   day: string
+  andares: Andar[]
+  automacoes: { total: number; ativas: number; disparos: number; ultimoDisparo: string | null; naFila: number }
+  tendencia: Array<{ dia: string; leads: number; corretora: number }>
   funnel: { byStage: Record<string, number>; novos24h: number; grantedToday: number; total: number }
   content: { pending: number; drafts: Draft[]; autopilot: { morethanmoney: boolean; ricardo: boolean } }
   conversions_24h: number
@@ -114,6 +118,93 @@ export default function SalesMachinePage() {
         <Metric label="Acessos hoje" value={f.grantedToday} />
         <Metric label="Conversões pagas 24h" value={state.conversions_24h} />
         <Metric label="Corretora validada" value={state.broker_clients} />
+      </div>
+
+      {/* Os andares, por ordem, com a queda entre cada um.
+          A contagem por etapa que estava aqui em baixo diz quantos estão em cada estado; não diz
+          onde se perdem. É onde se perdem que decide o que fazer a seguir. */}
+      <div className={card}>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-300">Do primeiro contacto ao pagante</h2>
+        <div className="space-y-2">
+          {(state.andares ?? []).map((a) => (
+            <div key={a.nome} className="flex items-center gap-3">
+              <div className="w-40 shrink-0 text-sm text-neutral-300">{a.nome}</div>
+              <div className="h-6 flex-1 overflow-hidden rounded bg-neutral-800">
+                <div
+                  className="h-full bg-amber-500/70"
+                  style={{
+                    width: `${Math.min(100, (a.n / Math.max(1, (state.andares ?? [])[0]?.n || 1)) * 100)}%`,
+                  }}
+                />
+              </div>
+              <div className="w-16 shrink-0 text-right text-sm font-bold tabular-nums">{a.n}</div>
+              <div className="w-20 shrink-0 text-right text-xs text-neutral-500">
+                {a.passou === null ? "—" : `${a.passou}%`}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] text-neutral-500">
+          A percentagem é quanto sobreviveu do andar de cima. Os andares vêm de tabelas diferentes
+          ({(state.andares ?? []).map((a) => a.fonte.split(" ")[0]).join(" · ")}) — o mesmo número
+          contado de um só sítio só mostrava o que esse sítio sabe.
+        </p>
+      </div>
+
+      {/* Automações — o que substitui o ManyChat. Um motor sem regras não avisa que está parado:
+          fica calado, que é exactamente o que faria se estivesse a funcionar. */}
+      <div className={card}>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-neutral-300">Automações (Telegram · Instagram)</h2>
+          <a href="/admin/social" className={`${btn} bg-neutral-700 text-xs hover:bg-neutral-600`}>
+            Abrir e criar regras
+          </a>
+        </div>
+        {state.automacoes && state.automacoes.total === 0 ? (
+          <p className="text-sm text-amber-300">
+            Não há nenhuma regra criada. O motor está montado e ligado ao webhook do Telegram, mas
+            sem regras não responde a ninguém — e não se queixa disso.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="rounded-full bg-neutral-800 px-3 py-1">
+              regras: <b>{state.automacoes?.ativas ?? 0}</b> ativas de {state.automacoes?.total ?? 0}
+            </span>
+            <span className="rounded-full bg-neutral-800 px-3 py-1">
+              disparos: <b>{state.automacoes?.disparos ?? 0}</b>
+            </span>
+            <span className="rounded-full bg-neutral-800 px-3 py-1">
+              último: {state.automacoes?.ultimoDisparo
+                ? new Date(state.automacoes.ultimoDisparo).toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+                : "nunca"}
+            </span>
+            {(state.automacoes?.naFila ?? 0) > 0 && (
+              <span className="rounded-full bg-amber-900/50 px-3 py-1 text-amber-300">
+                {state.automacoes?.naFila} conversas à espera de resposta
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 14 dias. Um número de hoje sem o de ontem não diz se subiu. */}
+      <div className={card}>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-300">Últimos 14 dias</h2>
+        <div className="flex items-end gap-1" style={{ height: 80 }}>
+          {(state.tendencia ?? []).map((d) => {
+            const teto = Math.max(1, ...(state.tendencia ?? []).map((x) => x.leads + x.corretora))
+            return (
+              <div key={d.dia} className="flex flex-1 flex-col justify-end gap-0.5" title={`${d.dia}: ${d.leads} leads · ${d.corretora} corretora`}>
+                <div className="w-full rounded-t bg-sky-500/70" style={{ height: `${(d.corretora / teto) * 70}px` }} />
+                <div className="w-full bg-amber-500/70" style={{ height: `${(d.leads / teto) * 70}px` }} />
+              </div>
+            )
+          })}
+        </div>
+        <div className="mt-2 flex gap-4 text-[11px] text-neutral-500">
+          <span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-amber-500/70" />leads novos</span>
+          <span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-sky-500/70" />contas de corretora mexidas</span>
+        </div>
       </div>
 
       {/* Funil por etapa */}

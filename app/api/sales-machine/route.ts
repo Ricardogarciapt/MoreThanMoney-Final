@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
   const denied = await authorize(req)
   if (denied) return denied
   const body = (await req.json().catch(() => ({}))) as { action?: string; id?: string; account?: string; key?: string; on?: boolean }
-  const result = await runSalesCommand(body)
+  // Sem acção não há comando. Isto passava por o `body` ter `action` opcional e o tsc estar
+  // desligado no build — chegava a `runSalesCommand` um objecto sem o campo que decide tudo.
+  if (!body.action) return NextResponse.json({ ok: false, error: 'Falta a acção' }, { status: 400 })
+  const result = await runSalesCommand({ ...body, action: body.action })
   return NextResponse.json(result, { status: result.ok ? 200 : 400 })
 }

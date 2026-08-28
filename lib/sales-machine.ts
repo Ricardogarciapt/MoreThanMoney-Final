@@ -19,6 +19,28 @@ export interface SalesState {
   broker_clients: number
   signals_24h: number
   execution: Record<string, boolean>
+  /**
+   * Os andares do funil, por ordem, com a queda entre cada um.
+   *
+   * A contagem por `stage` que já existia é um saco: diz quantos estão em cada estado mas não
+   * onde se perdem. E é onde se perdem que decide o que fazer a seguir — foi assim que o passo da
+   * corretora esteve meses a zero sem ninguém dar por isso.
+   */
+  andares: Andar[]
+  /** Saúde do motor de automações — o que substitui o ManyChat. */
+  automacoes: { total: number; ativas: number; disparos: number; ultimoDisparo: string | null; naFila: number }
+  /** Últimos 14 dias, para o número de hoje ter com o que se comparar. */
+  tendencia: Array<{ dia: string; leads: number; corretora: number }>
+}
+
+export interface Andar {
+  nome: string
+  /** Quantas pessoas chegaram aqui. */
+  n: number
+  /** O que este número conta, em palavras — para não se ler um número sem saber de onde vem. */
+  fonte: string
+  /** Percentagem que sobreviveu do andar anterior. Null no primeiro. */
+  passou: number | null
 }
 
 export async function buildSalesState(): Promise<SalesState> {
@@ -42,6 +64,17 @@ export async function buildSalesState(): Promise<SalesState> {
       getExecSwitches(),
     ])
 
+  // Segunda ronda: o que alimenta os andares e a tendência. Fica à parte porque nada disto é
+  // preciso para os cartões de cima — se falhar, o painel continua a abrir.
+  const [{ count: registados }, { count: pagantes }, { data: automacoes }, { count: naFila }, { data: corretoraRecente }] =
+    await Promise.all([
+      supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('subscription_status', 'active'),
+      supabase.from('mtm_automacoes').select('ativa, disparos, ultimo_disparo'),
+      supabase.from('mtm_conversa_fila').select('id', { count: 'exact', head: true }).eq('processada', false),
+      supabase.from('broker_clients').select('updated_at').gte('updated_at', new Date(Date.now() - 14 * 86400_000).toISOString()),
+    ])
+
   const byStage: Record<string, number> = {}
   let novos24h = 0
   let grantedToday = 0
@@ -63,9 +96,52 @@ export async function buildSalesState(): Promise<SalesState> {
 
   const autopilot = (ap?.value as { morethanmoney?: boolean; ricardo?: boolean } | null) || {}
 
+  /**
+   * A escada, do topo para o fim. Cada degrau é uma tabela diferente de propósito: se todos os
+   * números viessem do mesmo sítio, o funil só mostrava o que esse sítio sabe.
+   */
+  const totalLeads = (leads ?? []).length
+  const escada: Array<{ nome: string; n: number; fonte: string }> = [
+    { nome: 'Leads no Telegram', n: totalLeads, fonte: 'telegram_leads' },
+    { nome: 'Conta na corretora', n: brokerClients ?? 0, fonte: 'broker_clients' },
+    { nome: 'Registados no site', n: registados ?? 0, fonte: 'profiles' },
+    { nome: 'Subscrição ativa', n: pagantes ?? 0, fonte: "profiles · subscription_status = 'active'" },
+  ]
+  const andares = escada.map((a, i) => ({
+    ...a,
+    // A queda só faz sentido contra o andar de cima; e dividir por zero não é 0%, é "não há base".
+    passou: i === 0 || escada[i - 1].n === 0 ? null : Math.round((a.n / escada[i - 1].n) * 1000) / 10,
+  }))
+
+  const dias: Array<{ dia: string; leads: number; corretora: number }> = []
+  for (let i = 13; i >= 0; i--) {
+    const d = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(
+      new Date(Date.now() - i * 86400_000),
+    )
+    dias.push({
+      dia: d,
+      leads: (leads ?? []).filter((l) => String(l.created_at ?? '').slice(0, 10) === d).length,
+      corretora: (corretoraRecente ?? []).filter((b) => String(b.updated_at ?? '').slice(0, 10) === d).length,
+    })
+  }
+
   return {
     day,
-    funnel: { byStage, novos24h, grantedToday, total: (leads ?? []).length },
+    andares,
+    automacoes: {
+      total: (automacoes ?? []).length,
+      ativas: (automacoes ?? []).filter((a) => a.ativa === true).length,
+      disparos: (automacoes ?? []).reduce((t, a) => t + Number(a.disparos ?? 0), 0),
+      ultimoDisparo:
+        (automacoes ?? [])
+          .map((a) => (a.ultimo_disparo ? String(a.ultimo_disparo) : ''))
+          .filter(Boolean)
+          .sort()
+          .pop() ?? null,
+      naFila: naFila ?? 0,
+    },
+    tendencia: dias,
+    funnel: { byStage, novos24h, grantedToday, total: totalLeads },
     content: { pending: drafted.length, drafts: drafted, autopilot: { morethanmoney: !!autopilot.morethanmoney, ricardo: !!autopilot.ricardo } },
     conversions_24h: pagos24h ?? 0,
     broker_clients: brokerClients ?? 0,
