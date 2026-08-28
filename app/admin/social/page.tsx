@@ -40,6 +40,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
 import { MapaFunis } from "@/components/admin/mapa-funis"
+import { PainelAutomacoes } from "@/components/admin/painel-automacoes"
 
 interface Post {
   id: string
@@ -128,7 +129,7 @@ export default function AdminSocialPage() {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   /** Separador aberto: a fila, os factos que vão nos cartões, ou o funil. */
-  const [aba, setAba] = useState<"fila" | "factos" | "funil" | "mensagens" | "mapa">("fila")
+  const [aba, setAba] = useState<"fila" | "factos" | "funil" | "mensagens" | "mapa" | "automacoes">("fila")
   const [mensagens, setMensagens] = useState<MensagemFunil[] | null>(null)
   /** O post a ser editado. As legendas eram só de leitura: para mudar uma vírgula apagava-se e
    *  criava-se outro, e perdia-se a imagem já gerada. */
@@ -359,6 +360,7 @@ export default function AdminSocialPage() {
             ["funil", "Funil"],
             ["mensagens", "Mensagens do funil"],
             ["mapa", "Mapa dos funis"],
+            ["automacoes", "Automações"],
           ] as const).map(([id, rotulo]) => (
             <button
               key={id}
@@ -376,6 +378,7 @@ export default function AdminSocialPage() {
         {aba === "funil" && <PainelFunil painel={painel} />}
         {aba === "mensagens" && <PainelMensagens mensagens={mensagens} aGravar={gravarMensagem} />}
         {aba === "mapa" && <MapaFunis />}
+        {aba === "automacoes" && <PainelAutomacoes />}
 
         {aba === "fila" && (<>
         {painel && (painel.conteudo.aprovadosSemImagem > 0 || painel.conteudo.falhados > 0) && (

@@ -564,6 +564,20 @@ export async function POST(request: NextRequest) {
               await import("@/lib/automacoes")
             const auto = await encontrarAutomacao("telegram", text)
             if (auto) {
+              /**
+               * Uma regra por PALAVRA responde já; uma por IA espera.
+               *
+               * Quem escreve "APP" quer o link agora — fazê-lo esperar por uma heurística seria
+               * estragar o caso simples para melhorar o complicado. Mas quem escreve três
+               * mensagens seguidas ("olá", "queria saber", "sobre os sinais") merece UMA resposta
+               * ao conjunto, não três à primeira. É a distinção que o ChatbotX faz, e é a certa.
+               */
+              if (auto.respostaTipo === "ia") {
+                const { enfileirarParaIA } = await import("@/lib/automacoes")
+                await enfileirarParaIA("telegram", String(chatId), text)
+                return NextResponse.json({ ok: true, enfileirado: true })
+              }
+
               // Marca ANTES de responder: falhar a responder é melhor do que responder duas vezes.
               const primeiraVez = await reservarDisparo(auto.id, String(chatId), auto.valor ?? null)
               if (primeiraVez) {
