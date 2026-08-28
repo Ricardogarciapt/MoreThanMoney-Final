@@ -128,19 +128,16 @@ export default function SalesMachinePage() {
         </div>
       </div>
 
-      {/* Autopilot + Execução */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className={card}>
-          <h2 className="mb-3 text-sm font-semibold text-neutral-300">Autopilot de publicação</h2>
-          <Toggle label="@morethanmoney.pt publica sozinha" on={state.content.autopilot.morethanmoney} onToggle={(on) => cmd("set_autopilot", { account: "morethanmoney", on })} />
-          <Toggle label="@ricardogarciapt republica sozinho" on={state.content.autopilot.ricardo} onToggle={(on) => cmd("set_autopilot", { account: "ricardo", on })} />
-        </div>
-        <div className={card}>
-          <h2 className="mb-3 text-sm font-semibold text-neutral-300">Execução de sinais</h2>
-          {Object.entries(state.execution).map(([k, v]) => (
-            <Toggle key={k} label={k} on={!!v} onToggle={(on) => cmd("set_exec", { key: k, on })} />
-          ))}
-        </div>
+      {/* Autopilot.
+          Os interruptores de EXECUÇÃO DE SINAIS saíram daqui a 2026-08-27. Estavam no ecrã de
+          vendas com nomes de código (`sensei_entries`, `t2t_price_monitor`, `premium_master_exec`)
+          e um clique errado num deles pára a execução real de trades — que é a última coisa que
+          se quer ao lado de um botão de aprovar um post. Administram-se no /admin/mtmcopy, onde
+          quem lá entra sabe o que cada um faz. */}
+      <div className={card}>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-300">Autopilot de publicação</h2>
+        <Toggle label="@morethanmoney.pt publica sozinha" on={state.content.autopilot.morethanmoney} onToggle={(on) => cmd("set_autopilot", { account: "morethanmoney", on })} />
+        <Toggle label="@ricardogarciapt republica sozinho" on={state.content.autopilot.ricardo} onToggle={(on) => cmd("set_autopilot", { account: "ricardo", on })} />
       </div>
 
       {/* Fila de conteúdo */}

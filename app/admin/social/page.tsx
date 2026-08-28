@@ -33,6 +33,9 @@ import {
   Users,
   Pencil,
   RotateCcw,
+  Sparkles,
+  MessageSquare,
+  Quote,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
@@ -129,6 +132,9 @@ export default function AdminSocialPage() {
   /** O post a ser editado. As legendas eram só de leitura: para mudar uma vírgula apagava-se e
    *  criava-se outro, e perdia-se a imagem já gerada. */
   const [editar, setEditar] = useState<Post | null>(null)
+  /** O estúdio: escrever e reescrever por conversa. */
+  const [estudio, setEstudio] = useState(false)
+  const [pedirAlteracao, setPedirAlteracao] = useState<Post | null>(null)
   const [painel, setPainel] = useState<Painel | null>(null)
 
   const [form, setForm] = useState({
@@ -140,6 +146,19 @@ export default function AdminSocialPage() {
     scheduled_at: "",
     rehost: true,
   })
+
+  /** Fala com o estúdio. Devolve o que ele escreveu, ou lança com o motivo. */
+  const aoEstudio = useCallback(async (corpo: Record<string, unknown>) => {
+    const tok = (await supabase.auth.getSession()).data.session?.access_token
+    const r = await fetch("/api/admin/social/estudio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+      body: JSON.stringify(corpo),
+    })
+    const j = await r.json()
+    if (!r.ok || j.error) throw new Error(j.error || "O estúdio não respondeu")
+    return j as Record<string, unknown>
+  }, [])
 
   const lerMensagens = useCallback(async () => {
     try {
@@ -320,6 +339,9 @@ export default function AdminSocialPage() {
             <Button variant="outline" size="icon" onClick={load}>
               <RefreshCw className="h-4 w-4" />
             </Button>
+            <Button variant="outline" onClick={() => setEstudio(true)}>
+              <Sparkles className="mr-1 h-4 w-4" /> Criar por chat
+            </Button>
             <Button onClick={() => setOpen(true)}>
               <Plus className="mr-1 h-4 w-4" /> Novo post
             </Button>
@@ -348,7 +370,7 @@ export default function AdminSocialPage() {
           ))}
         </div>
 
-        {aba === "factos" && <PainelFactos painel={painel} />}
+        {aba === "factos" && <PainelFactos painel={painel} aoEstudio={aoEstudio} />}
         {aba === "funil" && <PainelFunil painel={painel} />}
         {aba === "mensagens" && <PainelMensagens mensagens={mensagens} aGravar={gravarMensagem} />}
 
@@ -463,9 +485,16 @@ export default function AdminSocialPage() {
                   {/* Editar em vez de apagar-e-criar: refazer um post por causa de uma vírgula
                       deitava fora a imagem já gerada e a hora já escolhida. */}
                   {p.status !== "published" && (
-                    <Button size="sm" variant="ghost" onClick={() => setEditar(p)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    <>
+                      <Button size="sm" variant="ghost" onClick={() => setEditar(p)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      {/* Pedir a mudança por palavras — "mais curto", "tira o emoji" — em vez de
+                          reescrever à mão ou apagar e esperar pelo cron do dia seguinte. */}
+                      <Button size="sm" variant="ghost" onClick={() => setPedirAlteracao(p)} title="Pedir alteração">
+                        <MessageSquare className="h-4 w-4" />
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -474,6 +503,26 @@ export default function AdminSocialPage() {
         )}
         </>)}
       </div>
+
+      {estudio && (
+        <Estudio
+          aoEstudio={aoEstudio}
+          aoFechar={() => setEstudio(false)}
+          aoCriado={() => { setEstudio(false); load() }}
+        />
+      )}
+
+      {pedirAlteracao && (
+        <PedirAlteracao
+          post={pedirAlteracao}
+          aoEstudio={aoEstudio}
+          aoFechar={() => setPedirAlteracao(null)}
+          aoGuardar={async (caption) => {
+            await guardarPost(pedirAlteracao.id, { caption })
+            setPedirAlteracao(null)
+          }}
+        />
+      )}
 
       <Dialog open={Boolean(editar)} onOpenChange={(v) => !v && setEditar(null)}>
         <DialogContent className="max-w-lg">
@@ -680,7 +729,35 @@ export default function AdminSocialPage() {
  * win rate · +7.060€" — e ficou meses a sair em cartões novos depois de os números terem
  * deixado de ser verdade, porque não havia sítio nenhum onde alguém os visse.
  */
-function PainelFactos({ painel }: { painel: Painel | null }) {
+function PainelFactos({
+  painel,
+  aoEstudio,
+}: {
+  painel: Painel | null
+  aoEstudio: (corpo: Record<string, unknown>) => Promise<Record<string, unknown>>
+}) {
+  const { toast } = useToast()
+  const [aGerar, setAGerar] = useState<"factos" | "testemunho" | null>(null)
+  const [feitio, setFeitio] = useState("")
+  const [gerados, setGerados] = useState<string[]>([])
+  const [nota, setNota] = useState<string | null>(null)
+
+  const gerar = async (acao: "factos" | "testemunho") => {
+    setAGerar(acao)
+    setNota(null)
+    try {
+      const j = await aoEstudio({ acao, pedido: feitio })
+      const lista = (j.factos ?? j.testemunhos ?? []) as string[]
+      setGerados(lista)
+      setNota((j.nota as string) ?? null)
+      if (!lista.length && !j.nota) toast({ title: "Não veio nada" })
+    } catch (e) {
+      toast({ title: "Não deu", description: (e as Error).message, variant: "destructive" })
+    } finally {
+      setAGerar(null)
+    }
+  }
+
   if (!painel) {
     return (
       <div className="flex justify-center py-20">
@@ -731,6 +808,49 @@ function PainelFactos({ painel }: { painel: Painel | null }) {
             <p className="mt-1 text-2xl font-semibold tabular-nums">{v}</p>
           </div>
         ))}
+      </div>
+
+      {/* Gerar à medida: dar outra forma aos MESMOS factos, ou escolher testemunhos reais.
+          Os números nunca mudam — o modelo recebe-os apurados e só lhes muda o feitio. */}
+      <div className="rounded-xl border bg-white p-4">
+        <p className="text-sm font-semibold">Gerar à medida</p>
+        <p className="mt-0.5 text-xs text-neutral-500">
+          Diz o feitio que queres. Os números não mudam — só a forma como são ditos.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Input
+            value={feitio}
+            onChange={(e) => setFeitio(e.target.value)}
+            placeholder="ex.: curtos e diretos · para stories · em tom de bastidores"
+            className="min-w-[240px] flex-1"
+          />
+          <Button variant="outline" disabled={aGerar !== null} onClick={() => gerar("factos")}>
+            {aGerar === "factos" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="mr-1 h-4 w-4" />}
+            Factos
+          </Button>
+          <Button variant="outline" disabled={aGerar !== null} onClick={() => gerar("testemunho")}>
+            {aGerar === "testemunho" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Quote className="mr-1 h-4 w-4" />}
+            Testemunhos
+          </Button>
+        </div>
+
+        {nota && <p className="mt-3 rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900">{nota}</p>}
+
+        {gerados.length > 0 && (
+          <ul className="mt-3 space-y-1.5">
+            {gerados.map((g, i) => (
+              <li key={i} className="flex items-start justify-between gap-2 rounded-lg border p-2.5 text-sm">
+                <span>{g}</span>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(g); toast({ title: "Copiado" }) }}
+                  className="shrink-0 text-xs text-neutral-500 hover:text-neutral-900"
+                >
+                  copiar
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="rounded-xl border bg-white p-4">
@@ -996,5 +1116,243 @@ function PainelMensagens({
         )
       })}
     </div>
+  )
+}
+
+/**
+ * O estúdio: escrever um post por conversa.
+ *
+ * O "Novo post" pedia a legenda já escrita, o que é o trabalho todo. Aqui diz-se o que se quer —
+ * ou cola-se material próprio, um texto, uma ideia, o que se escreveu no telemóvel — e o post
+ * vem escrito, para rever antes de entrar na fila.
+ *
+ * Nada é publicado a partir daqui: sai como RASCUNHO, com hora sugerida. Quem aprova continua a
+ * ser uma pessoa.
+ */
+function Estudio({
+  aoEstudio,
+  aoFechar,
+  aoCriado,
+}: {
+  aoEstudio: (corpo: Record<string, unknown>) => Promise<Record<string, unknown>>
+  aoFechar: () => void
+  aoCriado: () => void
+}) {
+  const { toast } = useToast()
+  const [pedido, setPedido] = useState("")
+  const [material, setMaterial] = useState("")
+  const [aPensar, setAPensar] = useState(false)
+  const [aGuardar, setAGuardar] = useState(false)
+  const [saida, setSaida] = useState<{ hook: string; cta: string; caption: string } | null>(null)
+  const [conta, setConta] = useState(ACCOUNTS[0].id)
+  const [pilar, setPilar] = useState("prova")
+  const [quando, setQuando] = useState(() => {
+    // Amanhã às 19:00 de Lisboa — a hora a que a fila costuma sair.
+    const d = new Date(Date.now() + 86400000)
+    d.setHours(19, 0, 0, 0)
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+  })
+
+  const escrever = async () => {
+    setAPensar(true)
+    try {
+      const j = await aoEstudio({ acao: "criar", pedido, material })
+      setSaida({ hook: String(j.hook ?? ""), cta: String(j.cta ?? ""), caption: String(j.caption ?? "") })
+    } catch (e) {
+      toast({ title: "Não deu", description: (e as Error).message, variant: "destructive" })
+    } finally {
+      setAPensar(false)
+    }
+  }
+
+  const guardar = async () => {
+    if (!saida) return
+    setAGuardar(true)
+    try {
+      const r = await fetch("/api/admin/social-posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ig_account_id: conta,
+          pillar: pilar,
+          media_type: "IMAGE",
+          media_urls: [],
+          caption: saida.caption,
+          scheduled_at: new Date(quando).toISOString(),
+        }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || "Não deu para guardar")
+      toast({ title: "Rascunho criado", description: "Falta a imagem antes de aprovar." })
+      aoCriado()
+    } catch (e) {
+      toast({ title: "Não deu", description: (e as Error).message, variant: "destructive" })
+    } finally {
+      setAGuardar(false)
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && aoFechar()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4" /> Criar por chat
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-neutral-500">O que queres publicar</label>
+            <Input
+              value={pedido}
+              onChange={(e) => setPedido(e.target.value)}
+              placeholder="ex.: um post sobre disciplina, a puxar para a app"
+              onKeyDown={(e) => e.key === "Enter" && !aPensar && escrever()}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-neutral-500">
+              Material teu (opcional) — um texto, uma ideia, o que escreveste no telemóvel
+            </label>
+            <textarea
+              value={material}
+              onChange={(e) => setMaterial(e.target.value)}
+              rows={4}
+              className="mt-1 w-full rounded-md border p-2 text-sm"
+            />
+          </div>
+
+          <Button onClick={escrever} disabled={aPensar || (!pedido && !material)} className="w-full">
+            {aPensar ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> A escrever…</> : "Escrever"}
+          </Button>
+
+          {saida && (
+            <div className="space-y-3 rounded-xl border bg-neutral-50 p-3">
+              <div>
+                <label className="text-xs text-neutral-500">Gancho</label>
+                <Input value={saida.hook} onChange={(e) => setSaida({ ...saida, hook: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-neutral-500">Legenda</label>
+                <textarea
+                  value={saida.caption}
+                  onChange={(e) => setSaida({ ...saida, caption: e.target.value })}
+                  rows={10}
+                  className="mt-1 w-full rounded-md border p-2 text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-xs text-neutral-500">Conta</label>
+                  <Select value={conta} onValueChange={setConta}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {ACCOUNTS.map((a) => <SelectItem key={a.id} value={a.id}>@{a.username}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs text-neutral-500">Pilar</label>
+                  <Select value={pilar} onValueChange={setPilar}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {PILLARS.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs text-neutral-500">Quando</label>
+                  <Input type="datetime-local" value={quando} onChange={(e) => setQuando(e.target.value)} />
+                </div>
+              </div>
+              <p className="text-xs text-neutral-500">
+                Entra como rascunho. Falta-lhe a imagem — sem ela o Instagram recusa.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={aoFechar}>Fechar</Button>
+          <Button onClick={guardar} disabled={!saida || aGuardar}>
+            {aGuardar ? "A guardar…" : "Guardar rascunho"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/**
+ * Pedir uma alteração por palavras.
+ *
+ * "Mais curto", "tira o emoji", "põe o ângulo da disciplina". O modelo recebe o post e o pedido,
+ * e muda SÓ o que foi pedido — reescrever tudo perdia o que já estava bom.
+ */
+function PedirAlteracao({
+  post,
+  aoEstudio,
+  aoFechar,
+  aoGuardar,
+}: {
+  post: Post
+  aoEstudio: (corpo: Record<string, unknown>) => Promise<Record<string, unknown>>
+  aoFechar: () => void
+  aoGuardar: (caption: string) => Promise<void>
+}) {
+  const { toast } = useToast()
+  const [pedido, setPedido] = useState("")
+  const [aPensar, setAPensar] = useState(false)
+  const [novo, setNovo] = useState<string | null>(null)
+
+  const pedir = async () => {
+    setAPensar(true)
+    try {
+      const j = await aoEstudio({ acao: "alterar", pedido, atual: post.caption ?? "" })
+      setNovo(String(j.caption ?? ""))
+    } catch (e) {
+      toast({ title: "Não deu", description: (e as Error).message, variant: "destructive" })
+    } finally {
+      setAPensar(false)
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && aoFechar()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Pedir alteração</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg bg-neutral-50 p-3 text-xs">
+            {post.caption}
+          </pre>
+          <Input
+            value={pedido}
+            onChange={(e) => setPedido(e.target.value)}
+            placeholder="ex.: mais curto, sem emojis, acaba com uma pergunta"
+            onKeyDown={(e) => e.key === "Enter" && !aPensar && pedir()}
+          />
+          <Button onClick={pedir} disabled={aPensar || !pedido} className="w-full">
+            {aPensar ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> A reescrever…</> : "Reescrever"}
+          </Button>
+          {novo != null && (
+            <textarea
+              value={novo}
+              onChange={(e) => setNovo(e.target.value)}
+              rows={10}
+              className="w-full rounded-md border p-2 text-sm"
+            />
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={aoFechar}>Cancelar</Button>
+          <Button disabled={novo == null} onClick={() => novo != null && aoGuardar(novo)}>
+            Guardar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

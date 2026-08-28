@@ -20,6 +20,7 @@ import {
   Film,
   Award,
   Instagram,
+  Rocket,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -115,6 +116,18 @@ export default function AdminSidebar({
         >
           <Instagram className="w-5 h-5 shrink-0" />
           Conteúdo Social
+        </Link>
+        <Link
+          href="/admin/sales-machine"
+          className={cn(
+            "mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            pathname === "/admin/sales-machine"
+              ? "border-l-2 border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
+              : "border-l-2 border-transparent text-gray-400 hover:bg-gray-800/50 hover:text-white"
+          )}
+        >
+          <Rocket className="w-5 h-5 shrink-0" />
+          Máquina de Vendas
         </Link>
         <Link
           href="/admin/portfolios"
