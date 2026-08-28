@@ -116,6 +116,20 @@ export function pontuar(legenda: string, gostos: number, comentarios: number): {
     razoes.push("em português")
   }
 
+  /**
+   * Português do Brasil ou de Portugal.
+   *
+   * Apareceu na primeira corrida real e não estava previsto: metade dos melhores prospetos eram
+   * brasileiros ("pra começar", "você"). Não é motivo para excluir — há membros lá fora — mas o
+   * funil está montado à volta da PU Prime e do depósito em euros, e um lead brasileiro encalha
+   * no passo da corretora. Vale menos, não vale zero, e fica DITO para não se descobrir isso só
+   * depois de escrever o comentário.
+   */
+  if (/\b(você|vocês|pra|tá|legal|galera|cara|grana|bora lá)\b/.test(t)) {
+    p -= 18
+    razoes.push("parece do Brasil — encalha na corretora")
+  }
+
   return { pontos: Math.round(p), porque: razoes.join(" · ") || "sem sinais claros" }
 }
 
