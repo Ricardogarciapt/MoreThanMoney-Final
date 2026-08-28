@@ -8,9 +8,8 @@ import {
   resumoDoNo, valoresPorOmissao, type Campo,
 } from "@/lib/funis-campos"
 import {
-  Copy, Loader2, PlayCircle, RotateCcw, Trash2, Save, ZoomIn, ZoomOut, Maximize2,
+  Copy, Download, Loader2, PlayCircle, Sparkles, Upload, RotateCcw, Trash2, Save, ZoomIn, ZoomOut, Maximize2,
   MessageSquare, GitBranch, Clock, Zap, Webhook, Shuffle, CornerDownRight, Flag, LogIn, AlertTriangle,
-  Sparkles,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase"
@@ -317,6 +316,12 @@ export function MapaFunis() {
   const [ensaio, setEnsaio] = useState<Array<{ no: string; tipo: string; titulo: string; fez: string }> | null>(null)
   const [aEnsaiar, setAEnsaiar] = useState(false)
 
+  /** A IA a montar o funil, e o JSON a entrar e a sair. */
+  const [pedidoIA, setPedidoIA] = useState("")
+  const [aMontar, setAMontar] = useState(false)
+  const [painelJson, setPainelJson] = useState<"nenhum" | "exportar" | "importar" | "ia">("nenhum")
+  const [jsonColado, setJsonColado] = useState("")
+
   const [pergunta, setPergunta] = useState("")
   const [aPensar, setAPensar] = useState(false)
   const [resposta, setResposta] = useState<string | null>(null)
@@ -518,6 +523,20 @@ export function MapaFunis() {
         <Button size="sm" variant="ghost" onClick={() => gravar(true)} disabled={aGravar} title="Voltar ao desenho que o código faz hoje">
           <RotateCcw className="mr-1 h-3.5 w-3.5" /> Repor
         </Button>
+        {/* JSON para fora e para dentro.
+            É o que torna um funil uma COISA: copia-se, guarda-se, manda-se a outra pessoa — e,
+            se for para vender, é isto que se entrega. Um funil que só existe dentro da nossa base
+            não é um produto, é uma configuração. */}
+        <Button size="sm" variant="ghost" onClick={() => setPainelJson(painelJson === "exportar" ? "nenhum" : "exportar")} title="Copiar este funil em JSON">
+          <Download className="h-3.5 w-3.5" />
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setPainelJson(painelJson === "importar" ? "nenhum" : "importar")} title="Colar um funil em JSON">
+          <Upload className="h-3.5 w-3.5" />
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setPainelJson(painelJson === "ia" ? "nenhum" : "ia")} title="Pedir à IA que monte o funil">
+          <Sparkles className="h-3.5 w-3.5" />
+        </Button>
+
         {/* Ensaiar antes de ligar. Percorre o funil com uma pessoa a sério e mostra o que
             aconteceria — sem enviar, etiquetar ou chamar nada. */}
         <Button
@@ -737,6 +756,127 @@ export function MapaFunis() {
               </div>
             )
           })()}
+
+          {/* JSON e IA. Ficam por cima da tela porque é sobre ela que se quer olhar enquanto se
+              lê o que vai entrar. */}
+          {painelJson !== "nenhum" && (
+            <div className="absolute left-1/2 top-3 z-10 w-[520px] max-w-[90%] -translate-x-1/2 rounded-lg border bg-white p-3 shadow-lg">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-neutral-600">
+                  {painelJson === "exportar" && "Copiar este funil"}
+                  {painelJson === "importar" && "Colar um funil"}
+                  {painelJson === "ia" && "Pedir à IA que monte"}
+                </p>
+                <button onClick={() => setPainelJson("nenhum")} className="text-neutral-600 hover:text-neutral-900">×</button>
+              </div>
+
+              {painelJson === "exportar" && (
+                <>
+                  <textarea
+                    readOnly
+                    rows={8}
+                    value={JSON.stringify(funil, null, 2)}
+                    className="w-full rounded border bg-neutral-50 p-2 font-mono text-[10.5px]"
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <Button size="sm" onClick={() => {
+                      void navigator.clipboard.writeText(JSON.stringify(funil, null, 2))
+                      toast({ title: "Copiado" })
+                    }}>Copiar</Button>
+                    <Button size="sm" variant="outline" onClick={() => {
+                      // Descarregar da um ficheiro com nome - e o que se manda a alguem.
+                      const b = new Blob([JSON.stringify(funil, null, 2)], { type: "application/json" })
+                      const a = document.createElement("a")
+                      a.href = URL.createObjectURL(b)
+                      a.download = `funil-${funil.id}.json`
+                      a.click()
+                      URL.revokeObjectURL(a.href)
+                    }}>Descarregar</Button>
+                  </div>
+                </>
+              )}
+
+              {painelJson === "importar" && (
+                <>
+                  <textarea
+                    rows={8}
+                    value={jsonColado}
+                    onChange={(e) => setJsonColado(e.target.value)}
+                    placeholder="Cola aqui o JSON de um funil"
+                    className="w-full rounded border p-2 font-mono text-[10.5px]"
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <Button size="sm" onClick={() => {
+                      try {
+                        const f = JSON.parse(jsonColado) as Funil
+                        if (!Array.isArray(f.nos) || !f.nos.length) throw new Error("sem blocos")
+                        // Entra como funil NOVO e nao por cima do aberto: importar por cima
+                        // apagaria trabalho sem avisar, e o desfazer aqui nao existe.
+                        const novoF = { ...f, id: `${f.id || "importado"}-${Date.now().toString(36)}` }
+                        setFunis((x) => [...x, novoF])
+                        setAtivo(funis.length)
+                        setSujo(true)
+                        setPainelJson("nenhum")
+                        setJsonColado("")
+                        toast({ title: "Importado", description: "Entrou como funil novo - o que estava aberto ficou intacto." })
+                      } catch (e) {
+                        toast({ title: "JSON invalido", description: e instanceof Error ? e.message : "nao deu para ler" })
+                      }
+                    }}>Importar</Button>
+                  </div>
+                </>
+              )}
+
+              {painelJson === "ia" && (
+                <>
+                  <textarea
+                    rows={3}
+                    value={pedidoIA}
+                    onChange={(e) => setPedidoIA(e.target.value)}
+                    placeholder="Ex.: funil para quem comenta SINAIS num reel, com follow-up a 24h e uma fuga marcada para quem nao responde"
+                    className="w-full rounded border p-2 text-[12px]"
+                  />
+                  <div className="mt-2 flex items-center gap-2">
+                    <Button size="sm" disabled={aMontar || !pedidoIA.trim()} onClick={async () => {
+                      setAMontar(true)
+                      try {
+                        const r = await fetch("/api/admin/social/funil-ia", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ pedido: pedidoIA, existente: funil }),
+                        })
+                        const j = await r.json()
+                        if (j.ok) {
+                          setFunis((x) => [...x, j.funil as Funil])
+                          setAtivo(funis.length)
+                          setSujo(true)
+                          setPainelJson("nenhum")
+                          setPedidoIA("")
+                          const pr = (j.problemas ?? []) as Array<{ texto: string }>
+                          toast({
+                            title: "Funil montado",
+                            description: pr.length
+                              ? `${pr.length} coisa(s) a rever - ve o painel de problemas.`
+                              : "Sem problemas no desenho. Ensaia antes de ligar.",
+                          })
+                        } else {
+                          toast({ title: "Nao montou", description: j.erro })
+                        }
+                      } catch {
+                        toast({ title: "Nao montou" })
+                      }
+                      setAMontar(false)
+                    }}>
+                      {aMontar ? "A montar..." : "Montar"}
+                    </Button>
+                    <span className="text-[10.5px] text-neutral-600">
+                      Entra como funil novo. Nada e enviado ate ligares o motor.
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* O que o ensaio viu. Fica por cima da tela porque é sobre ELA que se quer olhar
               enquanto se lê o caminho. */}
