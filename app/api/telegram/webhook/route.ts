@@ -550,6 +550,32 @@ export async function POST(request: NextRequest) {
           if (uid) {
             await bg.handleBrokerUid(supabase, chatId, uid, body.message.from?.first_name ?? null)
           } else {
+            /**
+             * As NOSSAS automações primeiro.
+             *
+             * Uma regra que o Ricardo escreveu no /admin/social ganha à resposta genérica da IA:
+             * ele escreveu-a porque sabe o que quer dizer àquela palavra, e uma IA a improvisar
+             * por cima disso é a diferença entre uma automação e uma surpresa.
+             *
+             * Se nenhuma regra apanha, segue o funil de sempre — nada se perde por não haver
+             * automações configuradas.
+             */
+            const { encontrarAutomacao, reservarDisparo, contarDisparo, textoDaResposta } =
+              await import("@/lib/automacoes")
+            const auto = await encontrarAutomacao("telegram", text)
+            if (auto) {
+              // Marca ANTES de responder: falhar a responder é melhor do que responder duas vezes.
+              const primeiraVez = await reservarDisparo(auto.id, String(chatId), auto.valor ?? null)
+              if (primeiraVez) {
+                const resposta = await textoDaResposta(auto, text)
+                if (resposta) {
+                  await sendMessage(resposta)
+                  await contarDisparo(auto.id)
+                  return NextResponse.json({ ok: true, automacao: auto.nome })
+                }
+              }
+            }
+
             const { runLeadFunnelReply } = await import("@/lib/telegram-lead-funnel")
             const reply = await runLeadFunnelReply({
               chatId,
