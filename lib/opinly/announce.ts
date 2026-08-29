@@ -20,6 +20,17 @@ const CHAT_CHANNEL = "geral" // Comunidade → Geral (chat da app mobile)
 const ADMIN_EMAIL = "morethanmoneypt@gmail.com"
 const SITE = "https://www.morethanmoney.pt"
 
+/** Categoria do artigo → tab do feed social (CATEGORIES em social-feed.tsx). */
+function feedCategoryFor(catSlug: string | null | undefined): string {
+  const s = (catSlug ?? "").toLowerCase()
+  if (/forex|ouro|gold|xau|trading/.test(s)) return "forex"
+  if (/cripto|crypto|bitcoin/.test(s)) return "crypto"
+  if (/mindset|psicologia/.test(s)) return "mindset"
+  if (/lideran/.test(s)) return "lideranca"
+  if (/network|parceria/.test(s)) return "network"
+  return "updates"
+}
+
 export async function announceOpinlyPosts(changes: ContentRouteChange[]): Promise<{ announced: string[] }> {
   const announced: string[] = []
   if (!opinlyConfigured()) return { announced }
@@ -74,7 +85,7 @@ export async function announceOpinlyPosts(changes: ContentRouteChange[]): Promis
       const { error: feedErr } = await supabase.from("posts").insert({
         user_id: admin.id,
         user_name: admin.full_name || "MoreThanMoney",
-        category: "blog",
+        category: feedCategoryFor(post.category?.slug),
         content: `📰 ${post.title}\n\n${post.description ?? ""}\n\n👉 ${url}`.trim(),
         media_url: cover,
         link_preview: preview,
