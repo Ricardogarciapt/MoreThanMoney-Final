@@ -76,7 +76,7 @@ export async function exchangeCanvaCode(code: string, codeVerifier: string, redi
 }
 
 /** Devolve um access_token válido: estático (env), em cache, ou refrescado do refresh_token. */
-async function getAccessToken(): Promise<string | null> {
+export async function getAccessToken(): Promise<string | null> {
   const stat = process.env.CANVA_CONNECT_TOKEN?.trim()
   if (stat) return stat
   const store = await readStore()
@@ -103,6 +103,46 @@ async function getAccessToken(): Promise<string | null> {
 export function canvaConfigured(): boolean {
   if (!process.env.CANVA_BRAND_TEMPLATE_ID?.trim()) return false
   return Boolean(process.env.CANVA_CONNECT_TOKEN?.trim() || process.env.CANVA_CLIENT_ID?.trim())
+}
+
+/**
+ * O template a usar, por CONTA e por FORMATO.
+ *
+ * Havia um só (`CANVA_BRAND_TEMPLATE_ID`) e a função nem recebia a conta: saía o mesmo cartão
+ * para a marca e para o pessoal. Mas são duas vozes diferentes — a @morethanmoney.pt fala como
+ * empresa e a @ricardogarciapt fala na primeira pessoa — e um cartão com a assinatura errada é
+ * pior do que um cartão feio.
+ *
+ * A configuração vive em `site_settings.canva_templates` para se mudar sem deploy: um template
+ * novo no Canva é trabalho de dois minutos, e não deve exigir uma publicação do site.
+ *
+ *   { "morethanmoney.pt": { "post": "TAxxx" },
+ *     "ricardogarciapt":  { "post": "TAyyy", "reel": "TAzzz" } }
+ *
+ * Sem entrada para a conta, cai no template geral do ambiente. Sem esse, devolve null e o
+ * chamador faz o cartão dele — nunca se publica com o desenho da conta errada.
+ */
+export type FormatoCanva = 'post' | 'reel' | 'story'
+
+export async function templatePara(conta: string, formato: FormatoCanva = 'post'): Promise<string | null> {
+  try {
+    const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
+    const { data } = await getSupabaseAdmin()
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'canva_templates')
+      .maybeSingle()
+    const v = data?.value
+    const m = ((typeof v === 'string' ? JSON.parse(v) : v) ?? {}) as Record<string, Record<string, string>>
+    const daConta = m[conta] ?? {}
+    // Um reel sem template próprio usa o de post da MESMA conta — a voz certa importa mais do
+    // que o formato certo. O que nunca se faz é ir buscar o da outra conta.
+    const id = daConta[formato] || daConta.post
+    if (id) return id
+  } catch {
+    /* sem configuração, cai no ambiente */
+  }
+  return process.env.CANVA_BRAND_TEMPLATE_ID?.trim() || null
 }
 
 function fieldMap(): { hook: string; cta: string; proof: string } {
@@ -133,10 +173,18 @@ async function pollJob(getPath: string, token: string, tries = 8): Promise<any> 
 }
 
 /** Autofila o template, exporta PNG e devolve o URL público (bucket). null em falha → fallback card. */
-export async function canvaAutofillImage(hook: string, cta: string, facto?: string): Promise<string | null> {
-  if (!canvaConfigured()) return null
+export async function canvaAutofillImage(
+  hook: string,
+  cta: string,
+  facto?: string,
+  /** A conta para quem é o cartão — decide o template, logo o desenho e a assinatura. */
+  conta?: string,
+  formato: FormatoCanva = 'post',
+): Promise<string | null> {
   const token = await getAccessToken()
   if (!token) return null
+  const templateId = await templatePara(conta ?? '', formato)
+  if (!templateId) return null
   try {
     const f = fieldMap()
     const data: Record<string, unknown> = {
@@ -147,7 +195,7 @@ export async function canvaAutofillImage(hook: string, cta: string, facto?: stri
       // facto, fica vazia: melhor um cartão sem número do que um número velho.
       [f.proof]: { type: 'text', text: facto ?? '' },
     }
-    const start = await api('/autofills', token, { method: 'POST', body: JSON.stringify({ brand_template_id: process.env.CANVA_BRAND_TEMPLATE_ID!.trim(), data }) })
+    const start = await api('/autofills', token, { method: 'POST', body: JSON.stringify({ brand_template_id: templateId, data }) })
     const done = await pollJob(`/autofills/${(start.job || start).id}`, token)
     const designId = done.result?.design?.id || done.design?.id
     if (!designId) return null

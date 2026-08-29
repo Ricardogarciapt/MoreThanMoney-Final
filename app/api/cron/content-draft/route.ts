@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { CAPTION_INTERNAL_MARK, uploadBufferToBucket } from '@/lib/instagram/publish'
 import { renderSocialCardBuffer } from '@/lib/social-card'
 import { factoDoDia, getPipsProof } from '@/lib/pips-proof'
-import { canvaConfigured, canvaAutofillImage } from '@/lib/canva-connect'
+import { canvaAutofillImage } from '@/lib/canva-connect'
 
 /**
  * Imagem do post: 1º tenta o Canva Connect (teus templates reais, se configurado + plano pago);
@@ -17,10 +17,16 @@ async function buildCardImage(
   /** O facto que vai no cartão. Vem vivo dos pips e roda por dia — ver `factoDoDia()`. */
   facto: string | null,
 ): Promise<string | null> {
-  if (canvaConfigured()) {
-    const viaCanva = await canvaAutofillImage(hook, cta, facto ?? undefined)
-    if (viaCanva) return viaCanva
-  }
+  /**
+   * O `handle` já cá estava — é a conta para quem é o post. Passa a decidir o TEMPLATE, e não só
+   * a assinatura desenhada no cartão: a marca e o pessoal têm vozes diferentes, e um cartão com
+   * a assinatura de uma no desenho da outra é pior do que um cartão simples.
+   *
+   * Sem template para a conta, `canvaAutofillImage` devolve null e cai-se no cartão nosso — que
+   * é o que já acontecia e continua a funcionar.
+   */
+  const viaCanva = await canvaAutofillImage(hook, cta, facto ?? undefined, handle)
+  if (viaCanva) return viaCanva
   try {
     const buf = await renderSocialCardBuffer({ hook, cta, handle, proof: facto ?? false })
     return await uploadBufferToBucket(buf, 'image/png', 'auto')
