@@ -324,6 +324,23 @@ export default function TapToTradeFeed() {
   const [providers, setProviders] = useState<{ label: string; strategy: string }[]>([])
   /** Os canais que o servidor diz estarem ATIVOS no Tap to Trade — é a lista que o filtro usa. */
   const [canaisAtivos, setCanaisAtivos] = useState<string[]>([])
+
+  /**
+   * O sinal que a notificação pediu para abrir.
+   *
+   * A push do Tap to Trade levava ao CHAT do canal — e a partir daí era preciso encontrar a
+   * mensagem no meio das outras e carregar no botão. Quem toca numa notificação de sinal quer o
+   * sinal, e o preço não espera por essa procura.
+   *
+   * Guarda-se numa ref e não em estado porque só serve UMA vez: depois de abrir, se ficasse no
+   * estado voltaria a abrir sozinho a cada recarregamento da lista.
+   */
+  const sinalPedido = useRef<string | null>(null)
+  const jaAbriu = useRef(false)
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("sinal")
+    if (p) sinalPedido.current = p
+  }, [])
   const [noProviders, setNoProviders] = useState(false)
   // Sinais que este utilizador já aceitou: { chat_message_id: status }
   const [accepted, setAccepted] = useState<Record<string, string>>({})
@@ -511,6 +528,20 @@ export default function TapToTradeFeed() {
      * que se passou: fora da zona, terminado com o resultado, ou indisponível.
      */
     setItems(sigs)
+
+    // Assim que a lista chega, abre o sinal que a notificação pediu.
+    if (sinalPedido.current && !jaAbriu.current) {
+      const alvo = sigs.find((x) => x.id === sinalPedido.current)
+      if (alvo) {
+        jaAbriu.current = true
+        setEcra("sinais")
+        setTap({ sig: alvo, status: "confirm" })
+        // Limpa o parâmetro do endereço: recarregar a página não deve reabrir o modal.
+        const u = new URL(window.location.href)
+        u.searchParams.delete("sinal")
+        window.history.replaceState({}, "", u.toString())
+      }
+    }
     // Resultado ao vivo dos que estão a correr: uma chamada por refrescar, números já feitos.
     try {
       const vivos = sigs.filter((x) => !x.expired).map((x) => x.id)
