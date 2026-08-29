@@ -33,7 +33,10 @@ interface Estado {
   alertas: Alerta[]
   escada: Degrau[]
   motores: Motor[]
-  dinheiro: { assinantesAtivos: number; novos7d: number; expiramEm7d: number; contasCopia: number }
+  dinheiro: {
+    mes: number; mesPassado: number; falhasAbertas: number; falhasEur: number
+    assinantesAtivos: number; novos7d: number; expiramEm7d: number; contasCopia: number
+  }
   conteudo: { porAprovar: number; agendados: number; publicados7d: number; falhados: number }
   atencaoIA: { automacoes: number; ativas: number; disparos: number; naFila: number; radarPorTratar: number }
 }
@@ -166,6 +169,42 @@ export default function CentroDeComando() {
           ))}
         </section>
 
+        {/* O dinheiro, primeiro de tudo o que é número.
+            Faltava por inteiro — e é o primeiro que se procura. */}
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+            <p className="text-[11.5px] text-neutral-400">Recebido este mês</p>
+            <p className="mt-0.5 text-3xl font-bold tabular-nums">{e.dinheiro.mes.toFixed(0)}€</p>
+            {(() => {
+              // A comparação só faz sentido depois de o mês ter algum caminho andado — no dia 2
+              // "menos 90%" não diz nada sobre nada.
+              const dia = new Date().getDate()
+              if (dia < 5 || !e.dinheiro.mesPassado) {
+                return <p className="text-[11px] text-neutral-600">mês passado: {e.dinheiro.mesPassado.toFixed(0)}€</p>
+              }
+              const d = Math.round(((e.dinheiro.mes - e.dinheiro.mesPassado) / e.dinheiro.mesPassado) * 100)
+              return (
+                <p className={`text-[11px] ${d >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  {d >= 0 ? "+" : ""}{d}% vs mês passado ({e.dinheiro.mesPassado.toFixed(0)}€)
+                </p>
+              )
+            })()}
+          </div>
+          <Numero icone={<Users className="h-4 w-4" />} rotulo="Subscrições ativas" valor={e.dinheiro.assinantesAtivos} />
+          <Numero
+            icone={<AlertTriangle className="h-4 w-4" />}
+            rotulo={`Cobranças por recuperar · ${e.dinheiro.falhasEur.toFixed(0)}€`}
+            valor={e.dinheiro.falhasAbertas}
+            alerta={e.dinheiro.falhasAbertas > 0}
+          />
+          <Numero
+            icone={<AlertTriangle className="h-4 w-4" />}
+            rotulo="Expiram em 7 dias"
+            valor={e.dinheiro.expiramEm7d}
+            alerta={e.dinheiro.expiramEm7d > 0}
+          />
+        </section>
+
         {/* 2 · Onde o dinheiro trava. */}
         <section className="grid gap-4 lg:grid-cols-3">
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 lg:col-span-2">
@@ -199,15 +238,9 @@ export default function CentroDeComando() {
           </div>
 
           <div className="space-y-3">
-            <Numero icone={<Users className="h-4 w-4" />} rotulo="Subscrições ativas" valor={e.dinheiro.assinantesAtivos} />
             <Numero icone={<CircleDot className="h-4 w-4" />} rotulo="Registos (7 dias)" valor={e.dinheiro.novos7d} />
-            <Numero
-              icone={<AlertTriangle className="h-4 w-4" />}
-              rotulo="Expiram em 7 dias"
-              valor={e.dinheiro.expiramEm7d}
-              alerta={e.dinheiro.expiramEm7d > 0}
-            />
             <Numero icone={<Zap className="h-4 w-4" />} rotulo="Contas a copiar" valor={e.dinheiro.contasCopia} />
+            <Numero icone={<Radar className="h-4 w-4" />} rotulo="Conversas por tratar" valor={e.atencaoIA.radarPorTratar} />
           </div>
         </section>
 

@@ -53,12 +53,27 @@ export interface Motor {
   detalhe: string
 }
 
+export interface Dinheiro {
+  /** Recebido este mês, em euros. */
+  mes: number
+  /** O mesmo mês passado, para o número de hoje ter com o que se comparar. */
+  mesPassado: number
+  /** Cobranças que falharam e ainda não foram recuperadas. */
+  falhasAbertas: number
+  /** O valor dessas falhas. */
+  falhasEur: number
+  assinantesAtivos: number
+  novos7d: number
+  expiramEm7d: number
+  contasCopia: number
+}
+
 export interface EstadoComando {
   quando: string
   alertas: Alerta[]
   escada: Degrau[]
   motores: Motor[]
-  dinheiro: { assinantesAtivos: number; novos7d: number; expiramEm7d: number; contasCopia: number }
+  dinheiro: Dinheiro
   conteudo: { porAprovar: number; agendados: number; publicados7d: number; falhados: number }
   atencaoIA: { automacoes: number; ativas: number; disparos: number; naFila: number; radarPorTratar: number }
 }
@@ -105,6 +120,50 @@ export async function estadoComando(): Promise<EstadoComando> {
     db.from('mtmcopy_signal_log').select('status, created_at').gte('created_at', iso(1)).limit(300),
     db.from('site_settings').select('value').eq('key', 'instagram_tokens').maybeSingle(),
   ])
+
+  /**
+   * O dinheiro.
+   *
+   * Faltava por inteiro — e é o primeiro número que se procura. Os valores em `payment_history`
+   * estão em CÊNTIMOS: mostrá-los como euros dava um negócio cem vezes maior do que é.
+   */
+  const inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0,0,0,0)
+  const inicioMesPassado = new Date(inicioMes); inicioMesPassado.setMonth(inicioMesPassado.getMonth() - 1)
+
+  const { data: pagamentos } = await db
+    .from('payment_history')
+    .select('amount, status, created_at, user_id')
+    .gte('created_at', inicioMesPassado.toISOString())
+
+  const eur = (linhas: Array<{ amount: number | null }>) =>
+    Math.round(linhas.reduce((t, x) => t + (Number(x.amount) || 0), 0)) / 100
+
+  const pagos = (pagamentos ?? []).filter((x) => x.status === 'succeeded')
+  const receitaMes = eur(pagos.filter((x) => String(x.created_at) >= inicioMes.toISOString()))
+  const receitaMesPassado = eur(pagos.filter((x) => String(x.created_at) < inicioMes.toISOString()))
+
+  /**
+   * Falhas que ninguém recuperou.
+   *
+   * Uma cobrança falhada seguida de uma boa é um cartão que foi corrigido — não conta. O que
+   * conta é quem falhou e nunca mais pagou: ou perdeu-se o cliente, ou ficou com acesso sem
+   * pagar, e as duas custam dinheiro em direcções opostas.
+   */
+  const falhadas = (pagamentos ?? []).filter((x) => x.status === 'failed')
+  const porUser = new Map<string, { n: number; valor: number; ultima: string }>()
+  for (const f of falhadas) {
+    const u = String(f.user_id)
+    const a = porUser.get(u) ?? { n: 0, valor: 0, ultima: '' }
+    a.n++
+    a.valor = Math.max(a.valor, (Number(f.amount) || 0) / 100)
+    a.ultima = String(f.created_at) > a.ultima ? String(f.created_at) : a.ultima
+    porUser.set(u, a)
+  }
+  for (const [u, a] of porUser) {
+    if (pagos.some((p) => String(p.user_id) === u && String(p.created_at) > a.ultima)) porUser.delete(u)
+  }
+  const falhasAbertas = porUser.size
+  const falhasEur = Math.round([...porUser.values()].reduce((t, a) => t + a.valor, 0) * 100) / 100
 
   const chave = (k: string) => (sets ?? []).find((s) => s.key === k)?.value
   const alertas: Alerta[] = []
@@ -190,6 +249,19 @@ export async function estadoComando(): Promise<EstadoComando> {
     passou: i === 0 || escadaBruta[i - 1].n === 0 ? null : Math.round((d.n / escadaBruta[i - 1].n) * 1000) / 10,
   }))
 
+  if (falhasAbertas) {
+    alertas.push({
+      gravidade: falhasAbertas > 2 ? 'partido' : 'atencao',
+      titulo: `${falhasAbertas} cobrança(s) falhada(s) por recuperar · ${falhasEur}€`,
+      detalhe:
+        'Falharam e nunca mais houve pagamento. Vale a pena ver caso a caso: uns são cartões ' +
+        'por corrigir (perde-se o cliente se ninguém falar com ele), outros são subscrições ' +
+        'do Stripe que ficaram a tentar cobrar a quem já passou para acesso manual — e essa ' +
+        'pessoa recebe emails de falha de pagamento sem dever nada.',
+      href: '/admin?tab=users',
+    })
+  }
+
   const parede = escada.find((d, i) => i > 0 && d.passou !== null && d.passou < 10)
   if (parede) {
     alertas.push({
@@ -250,6 +322,10 @@ export async function estadoComando(): Promise<EstadoComando> {
     escada,
     motores,
     dinheiro: {
+      mes: receitaMes,
+      mesPassado: receitaMesPassado,
+      falhasAbertas,
+      falhasEur,
       assinantesAtivos: ativos ?? 0,
       novos7d: novos7d ?? 0,
       expiramEm7d: expiram7d ?? 0,
