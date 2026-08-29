@@ -28,6 +28,10 @@ export function RadarLeads() {
   const [quota, setQuota] = useState<{ gastas: number; limite: number } | null>(null)
   const [aLer, setALer] = useState(true)
   const [aCorrer, setACorrer] = useState(false)
+  /** O comentário escrito pela IA para cada post, quando já foi pedido. */
+  const [comentarios, setComentarios] = useState<Record<string, string>>({})
+  const [aEscrever, setAEscrever] = useState<string | null>(null)
+  const [copiado, setCopiado] = useState<string | null>(null)
 
   const buscar = useCallback(async () => {
     setALer(true)
