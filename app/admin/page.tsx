@@ -40,11 +40,21 @@ function AdminPageClient() {
   const [loadingOverview, setLoadingOverview] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
+  /**
+   * As secções que um endereço pode abrir.
+   *
+   * Faltavam "dvr" e "avaliacoes": a barra lateral mostrava-as e clicava-se nelas, mas
+   * `?tab=dvr` era ignorado em silêncio e caía no resumo. Quem guardasse a ligação nos
+   * favoritos, ou a recebesse de alguém, aterrava sempre no sítio errado — e como o clique
+   * funcionava, ninguém suspeitava do endereço.
+   */
   const validSections = new Set([
     "overview",
     "users",
     "content",
     "education",
+    "dvr",
+    "avaliacoes",
     "notifications",
     "settings",
   ])

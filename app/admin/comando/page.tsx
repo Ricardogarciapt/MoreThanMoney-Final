@@ -70,6 +70,8 @@ const DESTINOS: Array<{ grupo: string; itens: Array<{ nome: string; href: string
       { nome: "Educação e sessões", href: "/admin?tab=education", nota: "aulas, DVR, educadores" },
       { nome: "Avaliações", href: "/admin?tab=avaliacoes", nota: "quizzes e certificados" },
       { nome: "Notificações", href: "/admin?tab=notifications", nota: "push e email" },
+      // Existia e não estava ligada a lado nenhum: só se chegava lá escrevendo o endereço.
+      { nome: "Email em massa", href: "/admin/broadcast", nota: "comunicar com a comunidade toda" },
       { nome: "Dashboard de gestão", href: "/dashboard-gestao", nota: "agentes, n8n, streaming" },
     ],
   },
