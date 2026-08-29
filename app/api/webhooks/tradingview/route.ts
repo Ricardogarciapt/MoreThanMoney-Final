@@ -1266,7 +1266,21 @@ export async function POST(request: NextRequest) {
       if (logId) await supabase.from("tradingview_signals").update({ telegram_status: "error", telegram_chat_id: relayChatId, telegram_error: String(err) }).eq("id", logId)
     }
   } else if (logId) {
-    const reason = !relayChatId ? "sem grupo Telegram para esta classe" : !AIBOT_TOKEN ? "TELEGRAM_AIBOT_TOKEN em falta" : "relay desligado"
+    /**
+     * O motivo real, e por esta ordem.
+     *
+     * Faltava o caso mais comum: o sinal ter sido cortado pelo gate de ruído. Como `alertOk`
+     * entra no `relayOn` mas não estava na cadeia de motivos, esses sinais ficavam gravados como
+     * "relay desligado" — e quem fosse depurar ia procurar um interruptor que estava bem.
+     * Aconteceu 51 vezes só no Aurum Flow.
+     */
+    const reason = !alertOk
+      ? "cortado pelo filtro de ruído (ver ai_error)"
+      : !relayChatId
+        ? "sem grupo Telegram para esta classe"
+        : !AIBOT_TOKEN
+          ? "TELEGRAM_AIBOT_TOKEN em falta"
+          : "relay desligado"
     await supabase.from("tradingview_signals").update({ telegram_status: "disabled", telegram_error: reason }).eq("id", logId)
   }
 
