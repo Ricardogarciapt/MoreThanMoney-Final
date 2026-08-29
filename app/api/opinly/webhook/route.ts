@@ -20,6 +20,7 @@ import { revalidatePath, revalidateTag } from "next/cache"
 import { createHmac, timingSafeEqual } from "crypto"
 import type { OpinlyWebhookEvent, ContentRouteChange } from "@opinly/backend"
 import { OPINLY_CACHE_TAG } from "@/lib/opinly/client"
+import { announceOpinlyPosts } from "@/lib/opinly/announce"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -100,5 +101,14 @@ export async function POST(request: NextRequest) {
   }
   for (const p of paths) revalidatePath(p)
 
-  return NextResponse.json({ ok: true, revalidated: [...paths], tag: OPINLY_CACHE_TAG })
+  // 3) O blog É o chat/feed da app: anuncia artigos novos no canal da comunidade
+  //    e no feed social (dedup por slug — edições não repetem o anúncio).
+  let announced: string[] = []
+  try {
+    announced = (await announceOpinlyPosts(event.data.changed ?? [])).announced
+  } catch (err) {
+    console.error("[opinly-webhook] anúncio chat/feed falhou:", err instanceof Error ? err.message : err)
+  }
+
+  return NextResponse.json({ ok: true, revalidated: [...paths], tag: OPINLY_CACHE_TAG, announced })
 }
