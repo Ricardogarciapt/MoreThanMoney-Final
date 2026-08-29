@@ -8,7 +8,7 @@ import {
   resumoDoNo, valoresPorOmissao, type Campo,
 } from "@/lib/funis-campos"
 import {
-  Copy, Download, Loader2, PlayCircle, Sparkles, Upload, RotateCcw, Trash2, Save, ZoomIn, ZoomOut, Maximize2,
+  Copy, Download, Loader2, Undo2, PlayCircle, Sparkles, Upload, RotateCcw, Trash2, Save, ZoomIn, ZoomOut, Maximize2,
   MessageSquare, GitBranch, Clock, Zap, Webhook, Shuffle, CornerDownRight, Flag, LogIn, AlertTriangle,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -322,6 +322,53 @@ export function MapaFunis() {
   const [painelJson, setPainelJson] = useState<"nenhum" | "exportar" | "importar" | "ia">("nenhum")
   const [jsonColado, setJsonColado] = useState("")
 
+  /** A seta onde se carregou no "+", à espera de saber que bloco entra. */
+  const [inserirEm, setInserirEm] = useState<{ de: string; para: string; x: number; y: number } | null>(null)
+
+  /**
+   * Desfazer.
+   *
+   * Passou a fazer falta no dia em que a IA e a importação começaram a meter funis inteiros de
+   * uma vez: até aí só se perdia um bloco de cada vez, e agora perde-se um desenho.
+   *
+   * Guarda o estado ANTES de cada mudança, não depois — é a diferença entre voltar ao que estava
+   * e voltar ao que já estava errado. Cinquenta chega: quem precisa de cinquenta passos atrás não
+   * quer desfazer, quer o que estava gravado.
+   */
+  const historico = useRef<Funil[][]>([])
+  const aDesfazer = useRef(false)
+
+  const lembrar = useCallback(() => {
+    if (aDesfazer.current) return
+    historico.current.push(JSON.parse(JSON.stringify(funis)) as Funil[])
+    if (historico.current.length > 50) historico.current.shift()
+  }, [funis])
+
+  const desfazer = useCallback(() => {
+    const anterior = historico.current.pop()
+    if (!anterior) return
+    // A marca evita que o próprio desfazer entre no histórico e crie um vaivém sem saída.
+    aDesfazer.current = true
+    setFunis(anterior)
+    setSujo(true)
+    setSelecionado(null)
+    setTimeout(() => { aDesfazer.current = false }, 0)
+  }, [])
+
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z" && !e.shiftKey) {
+        // Não rouba o desfazer a quem está a escrever num campo — aí o do browser é o certo.
+        const alvo = e.target as HTMLElement | null
+        if (alvo && /^(INPUT|TEXTAREA|SELECT)$/.test(alvo.tagName)) return
+        e.preventDefault()
+        desfazer()
+      }
+    }
+    window.addEventListener("keydown", tecla)
+    return () => window.removeEventListener("keydown", tecla)
+  }, [desfazer])
+
   const [pergunta, setPergunta] = useState("")
   const [aPensar, setAPensar] = useState(false)
   const [resposta, setResposta] = useState<string | null>(null)
@@ -478,7 +525,7 @@ export function MapaFunis() {
 
   useEffect(() => { if (funil) encaixar() }, [ativo, funil, encaixar])
 
-  const acrescentar = (tipo: TipoDeNo) => {
+  const acrescentarComHistorico = (tipo: TipoDeNo) => {
     const caixa = tela.current?.getBoundingClientRect()
     const id = `no-${Date.now()}`
     // Nasce no meio do que está a ser visto — nascer em (0,0) obrigava a procurá-lo.
@@ -527,6 +574,9 @@ export function MapaFunis() {
             É o que torna um funil uma COISA: copia-se, guarda-se, manda-se a outra pessoa — e,
             se for para vender, é isto que se entrega. Um funil que só existe dentro da nossa base
             não é um produto, é uma configuração. */}
+        <Button size="sm" variant="ghost" onClick={desfazer} title="Desfazer (⌘Z)">
+          <Undo2 className="h-3.5 w-3.5" />
+        </Button>
         <Button size="sm" variant="ghost" onClick={() => setPainelJson(painelJson === "exportar" ? "nenhum" : "exportar")} title="Copiar este funil em JSON">
           <Download className="h-3.5 w-3.5" />
         </Button>
@@ -655,6 +705,101 @@ export function MapaFunis() {
                   )
                 })()}
               </svg>
+
+              {/* O "+" a meio de cada seta.
+                  Acrescentar pela paleta põe o bloco solto num canto e obriga a arrastá-lo e a
+                  religá-lo à mão — três gestos para o que devia ser um. Aqui o bloco entra JÁ no
+                  sítio: herda o destino da seta e a seta passa a apontar para ele. */}
+              {funil.nos.flatMap((n) =>
+                n.seguintes.map((idDestino) => {
+                  const d = funil.nos.find((x) => x.id === idDestino)
+                  if (!d) return null
+                  const mx = (n.x + d.x) / 2 + LARGURA / 2
+                  const my = (n.y + ALTURA + d.y) / 2
+                  return (
+                    <button
+                      key={`mais-${n.id}-${idDestino}`}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() => setInserirEm({ de: n.id, para: idDestino, x: mx, y: my })}
+                      title="Meter um bloco aqui"
+                      className="absolute z-[5] flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border bg-white text-[13px] leading-none text-neutral-600 opacity-40 shadow-sm transition hover:opacity-100"
+                      style={{ left: mx, top: my }}
+                    >
+                      +
+                    </button>
+                  )
+                }),
+              )}
+
+              {/* A escolha do bloco que entra na seta. */}
+              {inserirEm && (
+                <div
+                  className="absolute z-20 w-44 rounded-lg border bg-white p-1.5 shadow-lg"
+                  style={{ left: inserirEm.x + 12, top: inserirEm.y }}
+                >
+                  <p className="mb-1 px-1 text-[10.5px] font-bold uppercase tracking-wide text-neutral-600">
+                    Meter aqui
+                  </p>
+                  {(Object.keys(BLOCOS) as TipoDeNo[])
+                    // Uma entrada a meio de um caminho não é uma entrada; uma fuga não tem saída.
+                    .filter((t) => t !== "entrada")
+                    .map((t) => {
+                      const b = BLOCOS[t]
+                      return (
+                        <button
+                          key={t}
+                          onClick={() => {
+                            lembrar()
+                            const id = `n${Date.now().toString(36)}`
+                            const origem = funil.nos.find((x) => x.id === inserirEm.de)
+                            const destino = funil.nos.find((x) => x.id === inserirEm.para)
+                            const novoNo: No = {
+                              id,
+                              tipo: t,
+                              titulo: b.rotulo,
+                              // Nasce no meio da seta, que é onde a pessoa carregou.
+                              x: Math.max(0, Math.round((inserirEm.x - LARGURA / 2) / 10) * 10),
+                              y: Math.max(0, Math.round((inserirEm.y - ALTURA / 2) / 10) * 10),
+                              // Herda o destino: é isto que faz o bloco entrar NA seta em vez de
+                              // ficar pendurado ao lado dela.
+                              seguintes: t === "saida" ? [] : [inserirEm.para],
+                              config: valoresPorOmissao(t),
+                            }
+                            setFunis((f) => f.map((x, i) => (i !== ativo ? x : {
+                              ...x,
+                              nos: [
+                                ...x.nos.map((nn) =>
+                                  nn.id !== inserirEm.de
+                                    ? nn
+                                    // A seta de origem passa a apontar para o bloco novo, na MESMA
+                                    // posição da lista: numa condição, trocar a ordem trocaria o
+                                    // sim com o não.
+                                    : { ...nn, seguintes: nn.seguintes.map((sg) => (sg === inserirEm.para ? id : sg)) },
+                                ),
+                                novoNo,
+                              ],
+                            })))
+                            void origem
+                            void destino
+                            setSelecionado(id)
+                            setInserirEm(null)
+                            setSujo(true)
+                          }}
+                          className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-[11.5px] hover:bg-neutral-100"
+                        >
+                          <b.Icone className="h-3 w-3 shrink-0" style={{ color: b.borda }} />
+                          {b.rotulo}
+                        </button>
+                      )
+                    })}
+                  <button
+                    onClick={() => setInserirEm(null)}
+                    className="mt-1 w-full rounded px-1.5 py-1 text-[11px] text-neutral-600 hover:bg-neutral-100"
+                  >
+                    cancelar
+                  </button>
+                </div>
+              )}
 
               {funil.nos.map((n) => {
                 const b = BLOCOS[n.tipo] ?? BLOCOS.mensagem
@@ -808,6 +953,7 @@ export function MapaFunis() {
                   <div className="mt-2 flex gap-2">
                     <Button size="sm" onClick={() => {
                       try {
+                        lembrar()
                         const f = JSON.parse(jsonColado) as Funil
                         if (!Array.isArray(f.nos) || !f.nos.length) throw new Error("sem blocos")
                         // Entra como funil NOVO e nao por cima do aberto: importar por cima
@@ -847,6 +993,7 @@ export function MapaFunis() {
                         })
                         const j = await r.json()
                         if (j.ok) {
+                          lembrar()
                           setFunis((x) => [...x, j.funil as Funil])
                           setAtivo(funis.length)
                           setSujo(true)
@@ -1043,6 +1190,7 @@ export function MapaFunis() {
               <Button
                 size="sm" variant="ghost" className="w-full"
                 onClick={() => {
+                  lembrar()
                   // O clone fica ao lado e sem ligações de saída: herdar as setas do original
                   // faria dois blocos a apontar para o mesmo sítio sem ninguém ter pedido.
                   const novo = {
@@ -1065,6 +1213,7 @@ export function MapaFunis() {
               <Button
                 size="sm" variant="ghost" className="w-full text-red-500"
                 onClick={() => {
+                  lembrar()
                   setFunis((f) => f.map((x, i) => (i !== ativo ? x : {
                     ...x,
                     // Apagar um bloco apaga também as setas que APONTAVAM para ele — senão ficam
