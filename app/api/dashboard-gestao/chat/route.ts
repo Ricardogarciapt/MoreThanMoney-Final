@@ -9,6 +9,7 @@ import Anthropic from "@anthropic-ai/sdk"
 import { createClient } from "@supabase/supabase-js"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
+import { FERRAMENTAS, ferramentaPorNome } from "@/lib/mcp/ferramentas"
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -336,7 +337,24 @@ Responde sempre em Português de Portugal, estilo pedagógico mas acessível.`,
 }
 
 // ── Tools ─────────────────────────────────────────────────────────────────────
-const TOOLS: Anthropic.Tool[] = [
+/**
+ * As ferramentas do sistema, vindas da MESMA tabela que o servidor MCP expõe.
+ *
+ * Os agentes daqui sabiam responder sobre a plataforma mas não sabiam o estado do NEGÓCIO: onde
+ * o funil está a travar, que motores estão desligados, o que há no radar. Perguntar-lhes "como
+ * estamos?" dava uma resposta educada e vazia.
+ *
+ * Vêm de `lib/mcp/ferramentas` e não de uma segunda lista escrita à mão porque uma segunda lista
+ * fica desactualizada à primeira ferramenta nova — e o sintoma seria o agente a dizer que não
+ * consegue fazer uma coisa que o sistema faz.
+ */
+const FERRAMENTAS_MTM: Anthropic.Tool[] = FERRAMENTAS.map((f) => ({
+  name: f.nome,
+  description: f.descricao,
+  input_schema: f.esquema as Anthropic.Tool['input_schema'],
+}))
+
+const TOOLS_BASE: Anthropic.Tool[] = [
   {
     name: "get_platform_stats",
     description: "Obtém estatísticas da plataforma MTM: total de utilizadores, membros ativos, marcações Calendly recentes",
@@ -411,6 +429,10 @@ const TOOLS: Anthropic.Tool[] = [
   },
 ]
 
+/** As duas famílias juntas: o que já havia, mais o estado do negócio. */
+const TOOLS: Anthropic.Tool[] = [...TOOLS_BASE, ...FERRAMENTAS_MTM]
+
+
 // ── Tool execution ─────────────────────────────────────────────────────────────
 async function executeTool(
   name: string,
@@ -418,6 +440,18 @@ async function executeTool(
 ): Promise<string> {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
   const manychatKey = process.env.MANYCHAT_API_KEY || process.env.MANYCHAT_API_TOKEN
+
+  // As ferramentas do sistema correm pelo mesmo caminho que o MCP usa — uma só implementação.
+  const doSistema = ferramentaPorNome(name)
+  if (doSistema) {
+    try {
+      return JSON.stringify(await doSistema.correr(input))
+    } catch (e) {
+      // O erro vai como RESULTADO: assim o modelo lê o que correu mal e pode corrigir, em vez de
+      // a conversa rebentar sem explicação.
+      return JSON.stringify({ erro: e instanceof Error ? e.message : "erro" })
+    }
+  }
 
   try {
     switch (name) {
@@ -688,8 +722,15 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Build assistant message for history
-          const assistantContent: Anthropic.ContentBlock[] = blocks.map((b) => {
+          /**
+           * A mensagem do assistente para o histórico.
+           *
+           * O tipo é `ContentBlockParam` e não `ContentBlock`: o primeiro é o que se ENVIA, o
+           * segundo o que se RECEBE. São parecidos mas o recebido traz campos que o SDK preenche
+           * (citações, assinaturas) e que aqui não existem — daí o erro de tipos que estava a ser
+           * escondido pelo build ignorar o tsc.
+           */
+          const assistantContent: Anthropic.ContentBlockParam[] = blocks.map((b) => {
             if (b.type === "text") return { type: "text" as const, text: b.text || "" }
             let parsedInput: Record<string, unknown> = {}
             try { parsedInput = JSON.parse(b.input || "{}") } catch { /* empty */ }
