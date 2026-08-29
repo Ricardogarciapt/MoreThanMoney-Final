@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import {
+  Gauge,
   LayoutDashboard,
   Search,
   Bot,
@@ -24,9 +25,17 @@ import {
   Zap,
 } from "lucide-react"
 
+/**
+ * As secções deste painel.
+ *
+ * "overview" e "metrics" saíram a 2026-08-29. Mostravam os mesmos números que o centro de
+ * comando, computados por outro caminho — e dois sítios a contar a mesma coisa acabam sempre a
+ * contá-la de maneiras diferentes. Quando isso acontece não se descobre qual está certo: perde-se
+ * a confiança nos dois.
+ *
+ * O que fica é o que só existe aqui: os agentes de IA, o n8n e o servidor de streaming.
+ */
 export type DGSection =
-  | "overview"
-  | "metrics"
   | "prospeccao"
   | "chatbot_builder"
   | "setter"
@@ -52,20 +61,6 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
-  {
-    id: "overview",
-    label: "Visão Geral",
-    icon: LayoutDashboard,
-    description: "Dashboard principal",
-    color: "#D2A63C",
-  },
-  {
-    id: "metrics",
-    label: "Métricas",
-    icon: BarChart3,
-    description: "Análise do ecossistema MTM",
-    color: "#818cf8",
-  },
   {
     id: "prospeccao",
     label: "Prospeção",
@@ -198,10 +193,21 @@ export default function DGSidebar({
           <Brain className="h-5 w-5 text-[#D2A63C]" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-white leading-none">Dashboard Gestão</p>
-          <p className="text-xs text-gray-500 mt-0.5">MTM — Painel de Controlo</p>
+          <p className="text-sm font-semibold text-white leading-none">Agentes &amp; Automação</p>
+          <p className="text-xs text-gray-500 mt-0.5">IA · n8n · streaming</p>
         </div>
       </div>
+
+      {/* De volta ao comando.
+          Os números vivem lá; aqui vivem os agentes. Sem esta porta, quem entrasse por aqui não
+          tinha como saber que o resumo do negócio existe noutro sítio. */}
+      <a
+        href="/admin/comando"
+        className="mx-2 mb-2 flex items-center gap-2 rounded-lg border border-[#D2A63C]/25 bg-[#D2A63C]/10 px-3 py-2 text-xs text-[#D2A63C] hover:bg-[#D2A63C]/20"
+      >
+        <Gauge className="h-4 w-4 shrink-0" />
+        Centro de comando
+      </a>
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">

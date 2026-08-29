@@ -72,7 +72,7 @@ const DESTINOS: Array<{ grupo: string; itens: Array<{ nome: string; href: string
       { nome: "Notificações", href: "/admin?tab=notifications", nota: "push e email" },
       // Existia e não estava ligada a lado nenhum: só se chegava lá escrevendo o endereço.
       { nome: "Email em massa", href: "/admin/broadcast", nota: "comunicar com a comunidade toda" },
-      { nome: "Dashboard de gestão", href: "/dashboard-gestao", nota: "agentes, n8n, streaming" },
+      { nome: "Agentes & automação", href: "/dashboard-gestao", nota: "12 agentes de IA, n8n, streaming" },
     ],
   },
 ]

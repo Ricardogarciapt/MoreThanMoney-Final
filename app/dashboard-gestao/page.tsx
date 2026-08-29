@@ -7,8 +7,6 @@ import { Loader2 } from "lucide-react"
 import DGSidebar, { type DGSection, navItems } from "@/components/dashboard-gestao/dg-sidebar"
 import AgentChat from "@/components/dashboard-gestao/agent-chat"
 import CalendlySection from "@/components/dashboard-gestao/calendly-section"
-import DGOverview from "@/components/dashboard-gestao/dg-overview"
-import DGMetrics from "@/components/dashboard-gestao/dg-metrics"
 import StreamVpsPanel from "@/components/dashboard-gestao/stream-vps-panel"
 import DGN8nPanel from "@/components/dashboard-gestao/dg-n8n-panel"
 
@@ -21,7 +19,7 @@ function DashboardGestaoClient() {
   const [mounted, setMounted] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
-  const [activeSection, setActiveSection] = useState<DGSection>("overview")
+  const [activeSection, setActiveSection] = useState<DGSection>("prospeccao")
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -90,10 +88,15 @@ function DashboardGestaoClient() {
   }
 
   const activeNavItem = navItems.find((n) => n.id === activeSection)
+  /**
+   * Tudo o que não é um painel próprio é um agente.
+   *
+   * Escrito pela negativa de propósito: assim um agente novo entra só na lista da barra lateral,
+   * sem ter de se lembrar de o acrescentar aqui também — e esquecer isso daria um ecrã em branco
+   * sem erro nenhum, que é a pior forma de partir uma coisa.
+   */
   const isAgentSection =
-    activeSection !== "overview" &&
     activeSection !== "calendly" &&
-    activeSection !== "metrics" &&
     activeSection !== "stream_vps" &&
     activeSection !== "n8n_vps"
 
@@ -127,14 +130,6 @@ function DashboardGestaoClient() {
 
         {/* Content */}
         <div className={`flex-1 overflow-auto ${isAgentSection ? "flex flex-col" : "p-6"}`}>
-          {activeSection === "overview" && (
-            <DGOverview onNavigate={handleSectionChange} />
-          )}
-
-          {activeSection === "metrics" && (
-            <DGMetrics />
-          )}
-
           {activeSection === "calendly" && (
             <CalendlySection />
           )}
