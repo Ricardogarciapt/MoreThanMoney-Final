@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og"
+import fs from "node:fs"
+import path from "node:path"
 
 /**
  * Card de marca MTM (4:5, 1080×1350) renderizado EM PROCESSO — sem round-trip HTTP,
@@ -85,6 +87,13 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
   const maisLonga = Math.max(cima.length, baixo.length)
   const corpo = maisLonga > 22 ? 108 : maisLonga > 15 ? 140 : maisLonga > 9 ? 180 : 220
 
+  /**
+   * Com foto, as faixas afastam-se para as bordas — é a foto que preenche o meio, como no
+   * template dele. Sem foto, encostam-se ao centro: o mesmo afastamento sem nada no meio deixa
+   * um buraco morto, e um buraco morto lê-se como erro, não como espaço.
+   */
+  const temFoto = Boolean(params.fundo)
+
   return (
     <div
       style={{
@@ -92,7 +101,7 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
+        justifyContent: temFoto ? 'space-between' : 'center',
         background: '#141414',
         // A foto entra como fundo quando existe; sem ela fica o degradê, e a tipografia aguenta.
         ...(params.fundo
@@ -106,6 +115,7 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
         style={{
           display: 'flex',
           color: CIANO,
+          fontFamily: 'Anton',
           fontSize: corpo,
           fontWeight: 900,
           fontStyle: 'italic',
@@ -118,11 +128,12 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
       </div>
 
       {/* Faixa de baixo, branca. */}
-      <div style={{ display: 'flex', flexDirection: 'column', padding: '0 40px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '0 40px', marginTop: temFoto ? 0 : 8 }}>
         <div
           style={{
             display: 'flex',
             color: '#ffffff',
+            fontFamily: 'Anton',
             fontSize: corpo,
             fontWeight: 900,
             fontStyle: 'italic',
@@ -137,7 +148,16 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
           <div style={{ display: 'flex', color: CIANO, fontSize: 34, fontWeight: 700, marginTop: 28 }}>{facto}</div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 40 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            // Sem foto o conteúdo está centrado, e o rodapé tem de descer sozinho — senão fica
+            // a flutuar a meio do cartão, encostado ao texto.
+            marginTop: temFoto ? 40 : 72,
+          }}
+        >
           <div style={{ display: 'flex', color: '#8b9199', fontSize: 30, fontWeight: 600 }}>@ricardogarciapt</div>
           {cta && (
             <div
@@ -245,12 +265,36 @@ export function socialCardElement(params: SocialCardParams) {
 }
 
 /** Renderiza o card e devolve os bytes PNG (para upload direto no bucket). */
+/**
+ * A fonte condensada pesada — a identidade tipográfica do Ricardo.
+ *
+ * Sem uma fonte carregada, o `fontWeight: 900` e o `fontStyle: italic` não fazem nada: o Satori
+ * só tem o que lhe dão, e desenhava tudo num tipo fino qualquer. Era o que estava a acontecer.
+ *
+ * Lê-se do disco uma vez e fica em memória — ler o ficheiro a cada cartão seria trabalho a mais
+ * para o mesmo resultado.
+ */
+let anton: Buffer | null = null
+function fonteCondensada(): Buffer | null {
+  if (anton) return anton
+  try {
+    anton = fs.readFileSync(path.join(process.cwd(), 'public/fonts/Anton-Regular.ttf'))
+    return anton
+  } catch {
+    // Sem a fonte, o cartão sai na tipografia por omissão em vez de rebentar. Feio é melhor
+    // do que nada — e o Instagram não espera por nós.
+    return null
+  }
+}
+
 export async function renderSocialCardBuffer(params: SocialCardParams): Promise<Buffer> {
   // Reel é 9:16; o resto é 4:5, que é o que ocupa mais ecrã no feed sem ser cortado.
   const alto = params.formato === 'reel'
+  const f = fonteCondensada()
   const res = new ImageResponse(socialCardElement(params), {
     width: 1080,
     height: alto ? 1920 : 1350,
+    ...(f ? { fonts: [{ name: 'Anton', data: f as unknown as ArrayBuffer, weight: 400, style: 'normal' }] } : {}),
   })
   return Buffer.from(await res.arrayBuffer())
 }
