@@ -1,6 +1,14 @@
+/**
+ * Fechado a 2026-08-28: esta rota corria com a service-role e SEM verificar quem chamava.
+ *
+ * Uma rota assim nao e "menos protegida" — nao tem protecao nenhuma. Bastava saber o endereco.
+ * O `delete-user` apagava contas, o `approve-user` dava acesso, o chat do dashboard corria o
+ * modelo com as ferramentas todas na nossa conta. Testado contra producao antes de fechar.
+ */
 import Anthropic from "@anthropic-ai/sdk"
 import { createClient } from "@supabase/supabase-js"
 import { NextRequest, NextResponse } from "next/server"
+import { requireAdmin } from "@/lib/admin-api-helpers"
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -578,6 +586,9 @@ async function createAnthropicStreamWithFallback(args: {
 
 // ── Main handler ──────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const guarda = await requireAdmin(req)
+  if (guarda) return guarda
+
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim()
   if (!apiKey) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY não configurado" }, { status: 500 })

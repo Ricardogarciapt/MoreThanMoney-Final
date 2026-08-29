@@ -1,10 +1,21 @@
-import { NextResponse } from "next/server"
+/**
+ * Fechado a 2026-08-28: esta rota corria com a service-role e SEM verificar quem chamava.
+ *
+ * Uma rota assim nao e "menos protegida" — nao tem protecao nenhuma. Bastava saber o endereco.
+ * O `delete-user` apagava contas, o `approve-user` dava acesso, o chat do dashboard corria o
+ * modelo com as ferramentas todas na nossa conta. Testado contra producao antes de fechar.
+ */
+import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { requireAdmin } from "@/lib/admin-api-helpers"
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const guarda = await requireAdmin(request)
+  if (guarda) return guarda
+
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
   const manychatKey = process.env.MANYCHAT_API_KEY || process.env.MANYCHAT_API_TOKEN
 

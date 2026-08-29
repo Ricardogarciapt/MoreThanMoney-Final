@@ -1,5 +1,13 @@
+/**
+ * Fechado a 2026-08-28: esta rota corria com a service-role e SEM verificar quem chamava.
+ *
+ * Uma rota assim nao e "menos protegida" — nao tem protecao nenhuma. Bastava saber o endereco.
+ * O `delete-user` apagava contas, o `approve-user` dava acesso, o chat do dashboard corria o
+ * modelo com as ferramentas todas na nossa conta. Testado contra producao antes de fechar.
+ */
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
+import { requireAdmin } from "@/lib/admin-api-helpers"
 
 const supabase = getSupabaseAdmin()
 
@@ -7,6 +15,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guarda = await requireAdmin(request)
+  if (guarda) return guarda
+
   const { id } = await params
   try {
     const { data, error } = await supabase
@@ -29,6 +40,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guarda = await requireAdmin(request)
+  if (guarda) return guarda
+
   const { id } = await params
   try {
     const body = await request.json()
@@ -92,6 +106,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guarda = await requireAdmin(request)
+  if (guarda) return guarda
+
   const { id } = await params
   try {
     const { error } = await supabase
