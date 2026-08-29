@@ -36,6 +36,17 @@ const KEY = 'funis_desenho'
 export type TipoDeNo =
   | 'entrada'
   | 'mensagem'
+  /**
+   * Um passo que PENSA: lê o que a pessoa disse e decide o que responder — ou por onde seguir.
+   *
+   * É a diferença entre um funil que segue um guião e um que tem conversa. Um guião responde a
+   * "quero automático" e não responde a "e se eu já tiver conta noutro sítio?"; este lê a
+   * pergunta e responde-lhe, ou encaminha para o ramo certo.
+   *
+   * Fica com as mesmas regras duras do resto: não inventa números, não promete lucro. Uma IA
+   * solta num funil de vendas é a forma mais rápida de pôr uma promessa falsa a correr sozinha.
+   */
+  | 'ia'
   | 'espera'
   | 'condicao'
   | 'acao'

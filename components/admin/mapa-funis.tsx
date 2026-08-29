@@ -8,7 +8,7 @@ import {
   resumoDoNo, valoresPorOmissao, type Campo,
 } from "@/lib/funis-campos"
 import {
-  Copy, Download, Loader2, Undo2, PlayCircle, Sparkles, Upload, RotateCcw, Trash2, Save, ZoomIn, ZoomOut, Maximize2,
+  Copy, Download, Loader2, Settings2, Undo2, PlayCircle, Sparkles, Upload, RotateCcw, Trash2, Save, ZoomIn, ZoomOut, Maximize2,
   MessageSquare, GitBranch, Clock, Zap, Webhook, Shuffle, CornerDownRight, Flag, LogIn, AlertTriangle,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -40,7 +40,7 @@ import { supabase } from "@/lib/supabase"
 
 type TipoDeNo =
   | "entrada" | "mensagem" | "espera" | "condicao" | "acao"
-  | "webhook" | "divisao" | "irpara" | "destino" | "saida"
+  | "webhook" | "divisao" | "irpara" | "destino" | "saida" | "ia"
 
 interface No {
   id: string
@@ -71,6 +71,7 @@ const BLOCOS: Record<TipoDeNo, {
   ajuda: string
 }> = {
   entrada:  { rotulo: "Entrada",   fundo: "#ecfdf5", borda: "#10b981", texto: "#065f46", Icone: LogIn,           ajuda: "Por onde a pessoa entra no funil" },
+  ia:       { rotulo: "IA",         fundo: "#fef2f8", borda: "#db2777", texto: "#831843", Icone: Sparkles,        ajuda: "Lê o que a pessoa disse e responde — ou decide o caminho" },
   mensagem: { rotulo: "Mensagem",  fundo: "#fffbeb", borda: "#D2A63C", texto: "#78350f", Icone: MessageSquare,   ajuda: "O que se envia" },
   espera:   { rotulo: "Espera",    fundo: "#f5f3ff", borda: "#8b5cf6", texto: "#4c1d95", Icone: Clock,           ajuda: "Um intervalo antes do passo seguinte" },
   condicao: { rotulo: "Condição",  fundo: "#eff6ff", borda: "#3b82f6", texto: "#1e3a8a", Icone: GitBranch,       ajuda: "O caminho parte-se em dois" },
@@ -373,6 +374,8 @@ export function MapaFunis() {
   const [aPensar, setAPensar] = useState(false)
   const [resposta, setResposta] = useState<string | null>(null)
 
+  /** Houve arrasto desde que se carregou na porta? Distingue "ligar" de "acrescentar". */
+  const arrastouPorta = useRef(false)
   const arrastoNo = useRef<{ id: string; dx: number; dy: number } | null>(null)
   const arrastoTela = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null)
 
@@ -474,6 +477,7 @@ export function MapaFunis() {
       return
     }
     if (aLigar) {
+      arrastouPorta.current = true
       const p = naTela(e)
       setALigar({ ...aLigar, x: p.x, y: p.y })
     }
@@ -525,7 +529,15 @@ export function MapaFunis() {
 
   useEffect(() => { if (funil) encaixar() }, [ativo, funil, encaixar])
 
-  const acrescentarComHistorico = (tipo: TipoDeNo) => {
+  /**
+   * Acrescentar um bloco pela paleta.
+   *
+   * Depois de entrar, fica SELECIONADO — e ficar selecionado abre a configuração no painel do
+   * lado. Um bloco que nasce em branco e sem nada aberto obriga a adivinhar o passo seguinte; o
+   * n8n e o ManyChat abrem a configuração no momento em que se acrescenta, e é o certo.
+   */
+  const acrescentar = (tipo: TipoDeNo) => {
+    lembrar()
     const caixa = tela.current?.getBoundingClientRect()
     const id = `no-${Date.now()}`
     // Nasce no meio do que está a ser visto — nascer em (0,0) obrigava a procurá-lo.
@@ -657,7 +669,7 @@ export function MapaFunis() {
               setSelecionado(null)
             }}
             style={{ height: altura }}
-            className="relative cursor-grab overflow-hidden rounded-xl border bg-[radial-gradient(#e5e5e5_1px,transparent_1px)] [background-size:20px_20px] active:cursor-grabbing"
+            className="relative cursor-grab overflow-hidden rounded-xl border border-neutral-300 bg-white bg-[radial-gradient(#d4d4d4_1px,transparent_1px)] [background-size:20px_20px] text-neutral-900 active:cursor-grabbing"
           >
             <div
               style={{
@@ -734,7 +746,7 @@ export function MapaFunis() {
               {/* A escolha do bloco que entra na seta. */}
               {inserirEm && (
                 <div
-                  className="absolute z-20 w-44 rounded-lg border bg-white p-1.5 shadow-lg"
+                  className="absolute z-20 w-44 rounded-lg border border-neutral-300 bg-white p-1.5 text-neutral-900 shadow-lg"
                   style={{ left: inserirEm.x + 12, top: inserirEm.y }}
                 >
                   <p className="mb-1 px-1 text-[10.5px] font-bold uppercase tracking-wide text-neutral-600">
@@ -753,16 +765,20 @@ export function MapaFunis() {
                             const id = `n${Date.now().toString(36)}`
                             const origem = funil.nos.find((x) => x.id === inserirEm.de)
                             const destino = funil.nos.find((x) => x.id === inserirEm.para)
+                            /**
+                             * O bloco novo herda o destino da seta — é isto que o faz entrar NA
+                             * seta em vez de ficar pendurado ao lado dela.
+                             *
+                             * Quando se carrega no "+" de um bloco sem saída, `para` vem vazio: o
+                             * bloco entra no fim do caminho, sem destino a herdar.
+                             */
                             const novoNo: No = {
                               id,
                               tipo: t,
                               titulo: b.rotulo,
-                              // Nasce no meio da seta, que é onde a pessoa carregou.
                               x: Math.max(0, Math.round((inserirEm.x - LARGURA / 2) / 10) * 10),
                               y: Math.max(0, Math.round((inserirEm.y - ALTURA / 2) / 10) * 10),
-                              // Herda o destino: é isto que faz o bloco entrar NA seta em vez de
-                              // ficar pendurado ao lado dela.
-                              seguintes: t === "saida" ? [] : [inserirEm.para],
+                              seguintes: t === "saida" || !inserirEm.para ? [] : [inserirEm.para],
                               config: valoresPorOmissao(t),
                             }
                             setFunis((f) => f.map((x, i) => (i !== ativo ? x : {
@@ -774,7 +790,15 @@ export function MapaFunis() {
                                     // A seta de origem passa a apontar para o bloco novo, na MESMA
                                     // posição da lista: numa condição, trocar a ordem trocaria o
                                     // sim com o não.
-                                    : { ...nn, seguintes: nn.seguintes.map((sg) => (sg === inserirEm.para ? id : sg)) },
+                                    : {
+                                        ...nn,
+                                        // Com destino: troca-o pelo bloco novo, na MESMA posição
+                                        // da lista (numa condição, trocar a ordem trocaria o sim
+                                        // com o não). Sem destino: acrescenta ao fim.
+                                        seguintes: inserirEm.para
+                                          ? nn.seguintes.map((sg) => (sg === inserirEm.para ? id : sg))
+                                          : [...nn.seguintes, id],
+                                      },
                                 ),
                                 novoNo,
                               ],
@@ -785,7 +809,7 @@ export function MapaFunis() {
                             setInserirEm(null)
                             setSujo(true)
                           }}
-                          className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-[11.5px] hover:bg-neutral-100"
+                          className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-left text-[11.5px] text-neutral-900 hover:bg-neutral-100"
                         >
                           <b.Icone className="h-3 w-3 shrink-0" style={{ color: b.borda }} />
                           {b.rotulo}
@@ -814,7 +838,7 @@ export function MapaFunis() {
                       arrastoNo.current = { id: n.id, dx: p.x - n.x, dy: p.y - n.y }
                       setSelecionado(n.id)
                     }}
-                    className="absolute cursor-grab select-none rounded-xl border-2 p-2.5 shadow-sm active:cursor-grabbing"
+                    className="group absolute cursor-grab select-none rounded-xl border-2 p-2.5 shadow-sm active:cursor-grabbing"
                     style={{
                       left: n.x, top: n.y, width: LARGURA, minHeight: ALTURA,
                       background: b.fundo,
@@ -851,19 +875,45 @@ export function MapaFunis() {
                       ) : null
                     })()}
 
-                    {/* A bolinha de saída: arrasta-se dela para outro bloco. Ligar por arrasto em
-                        vez de escolher de uma lista só obriga a VER o destino, não a saber o nome. */}
-                    <div
+                    {/* Editar, no canto do bloco.
+                        Selecionar abre o painel lateral, mas isso não é óbvio — o n8n e o ManyChat
+                        põem o acesso à configuração NO bloco, e é onde a mão vai. */}
+                    <button
+                      data-porta="1"
+                      onClick={(e) => { e.stopPropagation(); setSelecionado(n.id) }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      title="Configurar este bloco"
+                      className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded border bg-white/80 opacity-0 transition group-hover:opacity-100"
+                      style={{ borderColor: `${b.borda}66`, color: b.borda }}
+                    >
+                      <Settings2 className="h-3 w-3" />
+                    </button>
+
+                    {/* A bolinha de saída faz DUAS coisas, e são as duas que se querem aqui:
+                        arrastar dela liga a um bloco que já existe; carregar nela acrescenta um
+                        passo a seguir. Antes só fazia a primeira, e acrescentar ao fim de um
+                        caminho obrigava a ir à paleta, largar o bloco num canto e religá-lo. */}
+                    <button
                       data-porta="1"
                       onPointerDown={(e) => {
                         e.stopPropagation()
+                        arrastouPorta.current = false
                         const p = naTela(e)
                         setALigar({ de: n.id, x: p.x, y: p.y })
                       }}
-                      title="Arrasta daqui para outro bloco"
-                      className="absolute -bottom-2 left-1/2 h-4 w-4 -translate-x-1/2 cursor-crosshair rounded-full border-2 bg-white"
-                      style={{ borderColor: b.borda }}
-                    />
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        // Só conta como clique se não houve arrasto — senão largar a ligação em
+                        // cima de outro bloco abria também o menu, e ficavam as duas coisas.
+                        if (arrastouPorta.current) return
+                        setInserirEm({ de: n.id, para: "", x: n.x + LARGURA / 2, y: n.y + ALTURA + 40 })
+                      }}
+                      title="Arrasta para ligar · carrega para acrescentar um passo"
+                      className="absolute -bottom-2.5 left-1/2 flex h-5 w-5 -translate-x-1/2 cursor-crosshair items-center justify-center rounded-full border-2 bg-white text-[13px] font-bold leading-none hover:scale-110"
+                      style={{ borderColor: b.borda, color: b.borda }}
+                    >
+                      +
+                    </button>
                   </div>
                 )
               })}
@@ -878,7 +928,7 @@ export function MapaFunis() {
             if (!problemas.length) return null
             const erros = problemas.filter((p) => p.gravidade === "erro")
             return (
-              <div className="absolute right-3 top-3 max-h-[40%] w-72 overflow-auto rounded-lg border bg-white/95 p-2 shadow-sm">
+              <div className="absolute right-3 top-3 max-h-[40%] w-72 overflow-auto rounded-lg border border-neutral-300 bg-white p-2 text-neutral-900 shadow-sm">
                 <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-neutral-600">
                   {erros.length ? `${erros.length} a corrigir` : "Reparos"} · {problemas.length}
                 </p>
@@ -905,7 +955,7 @@ export function MapaFunis() {
           {/* JSON e IA. Ficam por cima da tela porque é sobre ela que se quer olhar enquanto se
               lê o que vai entrar. */}
           {painelJson !== "nenhum" && (
-            <div className="absolute left-1/2 top-3 z-10 w-[520px] max-w-[90%] -translate-x-1/2 rounded-lg border bg-white p-3 shadow-lg">
+            <div className="absolute left-1/2 top-3 z-10 w-[520px] max-w-[90%] -translate-x-1/2 rounded-lg border border-neutral-300 bg-white p-3 text-neutral-900 shadow-lg">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-bold uppercase tracking-wide text-neutral-600">
                   {painelJson === "exportar" && "Copiar este funil"}
@@ -1028,7 +1078,7 @@ export function MapaFunis() {
           {/* O que o ensaio viu. Fica por cima da tela porque é sobre ELA que se quer olhar
               enquanto se lê o caminho. */}
           {ensaio && (
-            <div className="absolute bottom-3 right-3 max-h-[55%] w-96 overflow-auto rounded-lg border bg-white/98 p-2.5 shadow-lg">
+            <div className="absolute bottom-3 right-3 max-h-[55%] w-96 overflow-auto rounded-lg border border-neutral-300 bg-white p-2.5 text-neutral-900 shadow-lg">
               <div className="mb-1.5 flex items-center justify-between">
                 <p className="text-[11px] font-bold uppercase tracking-wide text-neutral-600">
                   Ensaio · {ensaio.length} passos · não tocou em ninguém
@@ -1054,7 +1104,7 @@ export function MapaFunis() {
           )}
 
           {/* Zoom */}
-          <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-lg border bg-white/95 p-1 shadow-sm">
+          <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-lg border border-neutral-300 bg-white p-1 text-neutral-900 shadow-sm">
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z * 0.85))}>
               <ZoomOut className="h-3.5 w-3.5" />
             </Button>

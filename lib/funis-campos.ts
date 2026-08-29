@@ -147,6 +147,53 @@ export const CAMPOS_POR_TIPO: Record<TipoDeNo, Campo[]> = {
     { chave: 'palavra', rotulo: 'Palavra que dispara', tipo: 'texto', ajuda: 'Vazio = qualquer coisa serve', mostrar: { origem: ['comentario_ig', 'dm_ig', 'dm_telegram'] } },
   ],
 
+  ia: [
+    {
+      chave: 'objetivo',
+      rotulo: 'O que a IA deve fazer aqui',
+      tipo: 'texto_longo',
+      obrigatorio: true,
+      exemplo: 'Perceber o que a pessoa procura e encaminhar para o passo seguinte da escada.',
+      ajuda: 'Escreve como explicarias a alguém novo. É isto que decide a resposta.',
+    },
+    {
+      chave: 'modo',
+      rotulo: 'O que faz com a resposta',
+      tipo: 'escolha',
+      padrao: 'responder',
+      opcoes: [
+        { valor: 'responder', rotulo: 'Responde à pessoa e segue' },
+        { valor: 'classificar', rotulo: 'Não responde — só decide por onde seguir' },
+        { valor: 'ambos', rotulo: 'Responde e decide o caminho' },
+      ],
+    },
+    {
+      chave: 'ramos',
+      rotulo: 'Caminhos que pode escolher',
+      tipo: 'lista',
+      rotuloAcrescentar: 'Acrescentar caminho',
+      ajuda: 'Pela mesma ordem das setas que saem deste bloco',
+      linha: [
+        { chave: 'nome', rotulo: 'Quando…', tipo: 'texto', obrigatorio: true, exemplo: 'quer automático' },
+      ],
+      mostrar: { modo: ['classificar', 'ambos'] },
+    },
+    { chave: 'canal', rotulo: 'Por onde responde', tipo: 'escolha', opcoes: CANAIS, padrao: 'telegram', mostrar: { modo: ['responder', 'ambos'] } },
+    {
+      chave: 'reserva',
+      rotulo: 'Se a IA falhar, diz isto',
+      tipo: 'texto_longo',
+      ajuda: 'Uma IA em baixo não pode deixar a pessoa sem resposta — é pior do que uma resposta simples',
+      mostrar: { modo: ['responder', 'ambos'] },
+    },
+    {
+      chave: '_aviso_ia',
+      rotulo: '',
+      tipo: 'aviso',
+      ajuda: 'A IA nunca inventa números de desempenho nem promete lucro, digas o que disseres no objetivo. Essa regra está no motor e não se desliga daqui.',
+    },
+  ],
+
   mensagem: [
     { chave: 'canal', rotulo: 'Por onde se envia', tipo: 'escolha', opcoes: CANAIS, padrao: 'telegram' },
     { chave: 'mensagem', rotulo: 'Usa uma mensagem do funil', tipo: 'mensagem', ajuda: 'Escolhe uma das mensagens editáveis — assim há um só texto, e edita-se num sítio' },
@@ -374,6 +421,8 @@ export function resumoDoNo(tipo: TipoDeNo, config: Record<string, unknown> | und
     }
     case 'acao':
       return rotuloDe('acao', v('acao')) ?? ''
+    case 'ia':
+      return v('objetivo') ? String(v('objetivo')).slice(0, 44) : ''
     case 'webhook':
       return v('url') ? `${v('metodo') ?? 'POST'} ${String(v('url')).replace(/^https?:\/\//, '').slice(0, 34)}` : ''
     case 'divisao':
@@ -400,6 +449,11 @@ export function resumoDoNo(tipo: TipoDeNo, config: Record<string, unknown> | und
  */
 export function nomesDosRamos(tipo: TipoDeNo, config: Record<string, unknown> | undefined): string[] {
   if (tipo === 'condicao') return ['sim', 'não']
+  // Os caminhos que a IA pode escolher são os que lá foram escritos — pela mesma ordem das setas.
+  if (tipo === 'ia') {
+    const r = (config?.ramos as Array<Record<string, unknown>>) ?? []
+    return r.map((x) => String(x.nome ?? '')).filter(Boolean)
+  }
   if (tipo === 'divisao') {
     const c = config ?? {}
     return [String(c.nome_a ?? 'A'), String(c.nome_b ?? 'B')]

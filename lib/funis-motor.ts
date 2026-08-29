@@ -193,6 +193,51 @@ async function correrNo(
       return { seguinte: seguinte(), fez: `${ensaio ? 'chamaria' : 'chamou'} ${txt(c.metodo) || 'POST'} ${url}` }
     }
 
+    case 'ia': {
+      /**
+       * O passo que pensa.
+       *
+       * `modo` decide o que se faz com a resposta: responder à pessoa, escolher o caminho, ou as
+       * duas. Escolher o caminho é o que faz um funil ter conversa em vez de guião — deixa de ser
+       * preciso prever cada frase que alguém possa escrever.
+       *
+       * Em ensaio NÃO se chama o modelo: um ensaio que gasta chamadas e demora deixa de ser feito,
+       * e o que interessa ver é o CAMINHO, não a redação exacta. Diz o que faria e segue pelo
+       * primeiro ramo.
+       */
+      const modo = txt(c.modo) || 'responder'
+      const ramos = ((c.ramos as Array<Record<string, unknown>>) ?? []).map((r) => txt(r.nome)).filter(Boolean)
+
+      if (ensaio) {
+        return {
+          seguinte: seguinte(),
+          fez: `a IA ${modo === 'classificar' ? 'escolheria o caminho' : 'responderia'}: "${txt(c.objetivo).slice(0, 50)}"`,
+        }
+      }
+
+      const { pensar } = await import('./funis-ia')
+      const r = await pensar({
+        objetivo: txt(c.objetivo),
+        modo: modo as 'responder' | 'classificar' | 'ambos',
+        ramos,
+        doCliente: txt(ctx.dados.ultimaMensagem),
+        reserva: txt(c.reserva),
+      })
+
+      if (r.texto && modo !== 'classificar') {
+        await braços.enviar(ctx.pessoa, txt(c.canal) || 'telegram', r.texto, [])
+      }
+
+      // O ramo escolhido decide a seta. Fora da lista = segue a primeira, que é o caminho normal.
+      const i = r.ramo != null && r.ramo >= 0 && r.ramo < no.seguintes.length ? r.ramo : 0
+      return {
+        seguinte: seguinte(i),
+        fez: [r.texto ? `respondeu: "${r.texto.slice(0, 50)}"` : null, ramos[i] ? `caminho: ${ramos[i]}` : null]
+          .filter(Boolean)
+          .join(' · ') || 'a IA não devolveu nada',
+      }
+    }
+
     case 'irpara':
       // Saltar de funil termina este percurso; quem entra no outro é quem o inicia.
       return { seguinte: null, fez: `salta para o funil "${txt(c.funil)}"` }
