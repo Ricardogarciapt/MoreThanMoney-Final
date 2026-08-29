@@ -171,7 +171,8 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
                 borderRadius: 999,
               }}
             >
-              {'Comenta «' + cta + '»'}
+              {/* Sem as « »: a Anton não as tem e saem como << >>. */}
+              {'Comenta ' + cta}
             </div>
           )}
         </div>
@@ -290,7 +291,15 @@ function fonteCondensada(): Buffer | null {
 export async function renderSocialCardBuffer(params: SocialCardParams): Promise<Buffer> {
   // Reel é 9:16; o resto é 4:5, que é o que ocupa mais ecrã no feed sem ser cortado.
   const alto = params.formato === 'reel'
-  const f = fonteCondensada()
+  /**
+   * A fonte só entra no cartão do Ricardo.
+   *
+   * Dar uma fonte ao Satori não a acrescenta às que já tem — SUBSTITUI-AS. Ao carregá-la para
+   * todos os cartões, o da marca passou a sair inteiro em Anton, que não é o desenho dele.
+   * A fonte segue o estilo, como tudo o resto.
+   */
+  const doRicardo = (params.handle || '').replace(/^@/, '').toLowerCase().includes('ricardo')
+  const f = doRicardo ? fonteCondensada() : null
   const res = new ImageResponse(socialCardElement(params), {
     width: 1080,
     height: alto ? 1920 : 1350,
