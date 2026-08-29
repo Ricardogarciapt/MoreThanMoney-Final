@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getExecSwitches } from '@/lib/mtmcopy/exec-switches'
+import { silenciados } from './acoes'
 
 /**
  * O estado do negócio inteiro, numa leitura.
@@ -30,12 +31,21 @@ import { getExecSwitches } from '@/lib/mtmcopy/exec-switches'
 export type Gravidade = 'partido' | 'atencao' | 'ok'
 
 export interface Alerta {
+  /** Nome estável, para se poder silenciar. Não muda quando o número muda. */
+  chave: string
   gravidade: Gravidade
   titulo: string
   /** Porque é que isto importa, em linguagem de quem decide. */
   detalhe: string
-  /** Onde se resolve. */
+  /** Onde se resolve à mão. */
   href?: string
+  /**
+   * O que resolve isto aqui mesmo, quando é seguro.
+   *
+   * Só aparece nos casos que `lib/comando/acoes` deixa: reversíveis com o mesmo gesto, e que não
+   * falam com um cliente nem mexem em dinheiro. Onde não há acção segura, fica só o caminho.
+   */
+  acao?: { id: string; rotulo: string; args?: Record<string, unknown> }
 }
 
 export interface Degrau {
@@ -183,6 +193,7 @@ export async function estadoComando(): Promise<EstadoComando> {
 
   if (semImagem) {
     alertas.push({
+      chave: 'posts_sem_imagem',
       gravidade: 'partido',
       titulo: `${semImagem} post(s) aprovado(s) sem imagem`,
       detalhe: 'Aprovados mas nunca publicam: a publicação exige imagem. Ficam na fila em silêncio.',
@@ -191,10 +202,12 @@ export async function estadoComando(): Promise<EstadoComando> {
   }
   if (!agendados && !porAprovar) {
     alertas.push({
+      chave: 'fila_vazia',
       gravidade: 'atencao',
       titulo: 'Fila de conteúdo vazia',
       detalhe: 'Não há nada agendado. Sem posts não há comentários, e sem comentários não há leads.',
       href: '/admin/social',
+      acao: { id: 'procurar_conversas', rotulo: 'Procurar conversas' },
     })
   }
 
@@ -203,6 +216,7 @@ export async function estadoComando(): Promise<EstadoComando> {
   const tokens = ((typeof tokensIg?.value === 'string' ? JSON.parse(tokensIg.value) : tokensIg?.value) ?? {}) as Record<string, string>
   if (!Object.keys(tokens).length) {
     alertas.push({
+      chave: 'ig_sem_token',
       gravidade: 'atencao',
       titulo: 'Instagram sem token guardado',
       detalhe: 'Corre pelo ambiente da Vercel — que não se consegue ler daqui para confirmar. Vale a pena guardar no painel.',
@@ -214,6 +228,7 @@ export async function estadoComando(): Promise<EstadoComando> {
   const ativas = autos.filter((a) => a.ativa === true).length
   if (autos.length && !ativas) {
     alertas.push({
+      chave: 'automacoes_off',
       gravidade: 'partido',
       titulo: 'Todas as automações desligadas',
       detalhe: 'Existem regras criadas mas nenhuma responde. Um motor sem regras não se queixa — fica calado.',
@@ -227,6 +242,7 @@ export async function estadoComando(): Promise<EstadoComando> {
   const abertas = execs.filter((e) => e.status === 'executed' || e.status === 'closed').length
   if (nSinais > 5 && abertas === 0) {
     alertas.push({
+      chave: 'sinais_sem_execucao',
       gravidade: 'partido',
       titulo: `${nSinais} sinais em 24h, zero execuções`,
       detalhe: 'Os sinais entram mas nada abre. Normalmente é um interruptor de execução em baixo.',
@@ -251,6 +267,7 @@ export async function estadoComando(): Promise<EstadoComando> {
 
   if (falhasAbertas) {
     alertas.push({
+      chave: 'cobrancas_falhadas',
       gravidade: falhasAbertas > 2 ? 'partido' : 'atencao',
       titulo: `${falhasAbertas} cobrança(s) falhada(s) por recuperar · ${falhasEur}€`,
       detalhe:
@@ -265,6 +282,7 @@ export async function estadoComando(): Promise<EstadoComando> {
   const parede = escada.find((d, i) => i > 0 && d.passou !== null && d.passou < 10)
   if (parede) {
     alertas.push({
+      chave: `parede_${parede.nome}`,
       gravidade: 'atencao',
       titulo: `Parede em "${parede.nome}"`,
       detalhe: `Só ${parede.passou}% passa do andar anterior. É aqui que o funil está a perder gente.`,
@@ -309,13 +327,25 @@ export async function estadoComando(): Promise<EstadoComando> {
   ]
 
   if (!alertas.length) {
-    alertas.push({ gravidade: 'ok', titulo: 'Nada partido', detalhe: 'Nenhum sinal de alarme nas verificações desta passagem.' })
+    alertas.push({ chave: 'ok', gravidade: 'ok', titulo: 'Nada partido', detalhe: 'Nenhum sinal de alarme nas verificações desta passagem.' })
+  }
+
+  // Os que já se decidiu aceitar não voltam a gritar — até ao fim do prazo.
+  const calados = await silenciados()
+  const visiveis = alertas.filter((a) => !calados.has(a.chave))
+  if (!visiveis.length) {
+    visiveis.push({
+      chave: 'ok',
+      gravidade: 'ok',
+      titulo: calados.size ? `Nada por resolver (${calados.size} silenciado)` : 'Nada partido',
+      detalhe: 'Nenhum sinal de alarme nas verificações desta passagem.',
+    })
   }
 
   return {
     quando: agora,
     // Partido primeiro. Uma lista por ordem de chegada faz o urgente aparecer a meio.
-    alertas: alertas.sort((a, b) => {
+    alertas: visiveis.sort((a, b) => {
       const peso = { partido: 0, atencao: 1, ok: 2 }
       return peso[a.gravidade] - peso[b.gravidade]
     }),

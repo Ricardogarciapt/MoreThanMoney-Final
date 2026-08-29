@@ -25,7 +25,14 @@ import {
  * dava a mesma coisa contada de maneiras diferentes — que é o problema que isto veio resolver.
  */
 
-interface Alerta { gravidade: "partido" | "atencao" | "ok"; titulo: string; detalhe: string; href?: string }
+interface Alerta {
+  chave: string
+  gravidade: "partido" | "atencao" | "ok"
+  titulo: string
+  detalhe: string
+  href?: string
+  acao?: { id: string; rotulo: string; args?: Record<string, unknown> }
+}
 interface Degrau { nome: string; n: number; fonte: string; passou: number | null }
 interface Motor { nome: string; ligado: boolean; ultimoSinal: string | null; detalhe: string }
 interface Estado {
@@ -93,6 +100,9 @@ export default function CentroDeComando() {
   const [e, setE] = useState<Estado | null>(null)
   const [aLer, setALer] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
+  const [aCorrer, setACorrer] = useState<string | null>(null)
+  /** O que a última acção respondeu — fica à vista até se fazer outra coisa. */
+  const [nota, setNota] = useState<string | null>(null)
 
   const carregar = useCallback(async () => {
     setALer(true)
@@ -113,6 +123,31 @@ export default function CentroDeComando() {
     const t = setInterval(carregar, 60_000)
     return () => clearInterval(t)
   }, [carregar])
+
+  /**
+   * Corre uma acção e substitui o estado pelo que a rota devolveu.
+   *
+   * Devolver o estado JÁ recalculado, em vez de ir buscá-lo outra vez, evita o meio segundo em
+   * que o alerta que se acabou de resolver continua no ecrã — e é nesse meio segundo que se
+   * carrega no botão outra vez.
+   */
+  const correr = async (id: string, args?: Record<string, unknown>) => {
+    setACorrer(id + JSON.stringify(args ?? {}))
+    setNota(null)
+    try {
+      const r = await fetch("/api/admin/comando", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acao: id, args }),
+      })
+      const j = await r.json()
+      setNota(j.nota ?? (j.ok ? "feito" : "não deu"))
+      if (j.estado) setE(j.estado)
+    } catch {
+      setNota("não deu")
+    }
+    setACorrer(null)
+  }
 
   if (!e && aLer) {
     return (
@@ -160,13 +195,57 @@ export default function CentroDeComando() {
                 <p className="text-sm font-semibold">{a.titulo}</p>
                 <p className="text-[12.5px] leading-snug opacity-80">{a.detalhe}</p>
               </div>
-              {a.href && (
-                <Link href={a.href} className="shrink-0 rounded-lg border border-current/30 px-2.5 py-1 text-xs hover:bg-white/10">
-                  resolver
-                </Link>
-              )}
+              <div className="flex shrink-0 items-center gap-1.5">
+                {/* Resolver aqui, quando há forma segura de o fazer. */}
+                {a.acao && (
+                  <button
+                    onClick={() => void correr(a.acao!.id, a.acao!.args)}
+                    disabled={aCorrer !== null}
+                    className="rounded-lg bg-white/15 px-2.5 py-1 text-xs font-semibold hover:bg-white/25 disabled:opacity-40"
+                  >
+                    {aCorrer === a.acao.id + JSON.stringify(a.acao.args ?? {}) ? "…" : a.acao.rotulo}
+                  </button>
+                )}
+                {a.href && (
+                  <Link href={a.href} className="rounded-lg border border-current/30 px-2.5 py-1 text-xs hover:bg-white/10">
+                    abrir
+                  </Link>
+                )}
+                {/* Silenciar é a acção mais útil de todas: um painel que grita por uma coisa já
+                    decidida deixa de ser lido, e a seguir perde-se o alarme que interessava. */}
+                {a.gravidade !== "ok" && (
+                  <button
+                    onClick={() => void correr("silenciar", { alerta: a.chave })}
+                    disabled={aCorrer !== null}
+                    title="Sei disto, é assim de propósito — volta daqui a 7 dias"
+                    className="rounded-lg px-1.5 py-1 text-xs opacity-50 hover:opacity-100"
+                  >
+                    silenciar
+                  </button>
+                )}
+              </div>
             </div>
           ))}
+          {nota && (
+            <p className="rounded-lg bg-neutral-900 px-3 py-2 text-[12.5px] text-neutral-300">{nota}</p>
+          )}
+
+          {/* As acções que se querem à mão mesmo sem alarme nenhum. */}
+          <div className="flex flex-wrap gap-2 pt-1">
+            {[
+              { id: "procurar_conversas", rotulo: "Procurar conversas" },
+              { id: "recalcular_prova", rotulo: "Recalcular a prova" },
+            ].map((x) => (
+              <button
+                key={x.id}
+                onClick={() => void correr(x.id)}
+                disabled={aCorrer !== null}
+                className="rounded-lg border border-neutral-800 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-900 disabled:opacity-40"
+              >
+                {aCorrer === x.id + "{}" ? "…" : x.rotulo}
+              </button>
+            ))}
+          </div>
         </section>
 
         {/* O dinheiro, primeiro de tudo o que é número.
