@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import {
+import { Gauge,
   LayoutDashboard,
   Users,
   FileText,
@@ -68,6 +68,22 @@ export default function AdminSidebar({
         <span className="font-semibold tracking-tight text-white">Admin</span>
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
+        {/* O comando fica em cima de tudo, e destacado: é o sítio de onde se parte. Sem isto era
+            mais uma ligação no meio de dezassete, e o primeiro clique de quem entra voltava a ser
+            um palpite. */}
+        <Link
+          href="/admin/comando"
+          className={cn(
+            "mb-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+            pathname === "/admin/comando"
+              ? "bg-[#D2A63C] text-black"
+              : "bg-[#D2A63C]/15 text-[#D2A63C] ring-1 ring-[#D2A63C]/30 hover:bg-[#D2A63C]/25"
+          )}
+        >
+          <Gauge className="w-5 h-5 shrink-0" />
+          Centro de comando
+        </Link>
+
         {navItems.map((item) => {
           const Icon = item.icon
           const isActive = activeSection === item.id
