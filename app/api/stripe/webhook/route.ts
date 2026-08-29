@@ -6,6 +6,7 @@ import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import { sendScannerAccessEmail, sendMTMcopierSetupNotification } from '@/lib/email-service'
 import { sanitizeEnv } from '@/lib/env-sanitize'
+import { opinlyTrack, opinlyTrackPurchase } from '@/lib/opinly/track'
 import { getStripeClient, stripeInvoiceLinePrice, stripeSubscriptionPeriodEnd } from '@/lib/stripe-client'
 import {
   getPlanIdFromPriceId,
@@ -71,9 +72,25 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
-      case 'checkout.session.completed':
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session
+        await handleCheckoutCompleted(session)
+        // Atribuição Opinly — best-effort, dedup pelo id da sessão (retries seguros)
+        if (session.payment_status === 'paid' && session.amount_total) {
+          const email = session.customer_details?.email ?? session.customer_email ?? undefined
+          const value = session.amount_total / 100
+          const currency = (session.currency ?? 'eur').toUpperCase()
+          await opinlyTrackPurchase({ orderId: session.id, value, currency, email })
+          if (session.mode === 'subscription') {
+            await opinlyTrack(
+              'subscribe',
+              { plan: session.metadata?.plan_id ?? session.metadata?.plan ?? 'unknown', value, currency },
+              { externalEventId: `subscribe_${session.id}`, email },
+            )
+          }
+        }
         break
+      }
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
         await handleSubscriptionUpdate(event.data.object as Stripe.Subscription)
@@ -81,9 +98,20 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.deleted':
         await handleSubscriptionCanceled(event.data.object as Stripe.Subscription)
         break
-      case 'invoice.payment_succeeded':
-        await handlePaymentSucceeded(event.data.object as Stripe.Invoice)
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object as Stripe.Invoice
+        await handlePaymentSucceeded(invoice)
+        // Só renovações: a 1.ª fatura já conta como purchase no checkout.session.completed
+        if (invoice.billing_reason === 'subscription_cycle' && invoice.amount_paid > 0 && invoice.id) {
+          await opinlyTrackPurchase({
+            orderId: invoice.id,
+            value: invoice.amount_paid / 100,
+            currency: (invoice.currency ?? 'eur').toUpperCase(),
+            email: invoice.customer_email ?? undefined,
+          })
+        }
         break
+      }
       case 'invoice.payment_failed':
         await handlePaymentFailed(event.data.object as Stripe.Invoice)
         break

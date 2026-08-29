@@ -120,6 +120,13 @@ export async function POST(request: NextRequest) {
     // Email de boas-vindas (best-effort — não bloqueia o registo).
     try { await sendNewMemberWelcomeIfEligible({ userId }) } catch { /* silencioso */ }
 
+    // Atribuição Opinly: sign_up + start_trial (best-effort, dedup por userId).
+    try {
+      const { opinlyTrack } = await import("@/lib/opinly/track")
+      await opinlyTrack("sign_up", { method: "trial" }, { externalEventId: `signup_${userId}`, email })
+      await opinlyTrack("start_trial", { plan: "trial" }, { externalEventId: `trial_${userId}`, email })
+    } catch { /* silencioso */ }
+
     return NextResponse.json({
       success: true,
       userId,

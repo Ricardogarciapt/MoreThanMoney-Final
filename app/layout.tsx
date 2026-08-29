@@ -11,6 +11,8 @@ import { GoogleTranslateLoader } from "@/components/google-translate-loader"
 import { I18nProvider } from "@/components/i18n-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import XpUpdateListener from "@/components/xp-update-listener"
+import Script from "next/script"
+import OpinlyIdentify from "@/components/opinly-identify"
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
@@ -87,10 +89,18 @@ export default function RootLayout({
                 <Toaster />
                 <Sonner richColors position="top-right" />
                 <XpUpdateListener />
+                <OpinlyIdentify />
               </Suspense>
             </I18nProvider>
           </AuthProvider>
         </ThemeProvider>
+        {/* Pixel de analytics Opinly (chave publicável pk- — page views, cliques, form fills, identify) */}
+        <Script
+          id="opinly-pixel"
+          strategy="afterInteractive"
+          src="https://static.opinly.ai/p.js"
+          data-key="pk-WS2ZFO4VojODG-D7Gp9oRceeG4D51eQD2umGzAb"
+        />
       </body>
     </html>
   )

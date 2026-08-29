@@ -1,3 +1,5 @@
+import { withOpinlyConfig } from '@opinly/next'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -82,4 +84,13 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+// Blog Opinly: injeta env vars OPINLY_* e o rewrite /blog-images/* → cdn.opinly.ai/<namespace>.
+export default withOpinlyConfig({
+  blogPath: '/blog',
+  imagesPath: '/blog-images',
+  companyName: 'MoreThanMoney',
+  cdnNamespace: 'fwjEFLvk0748WGopncr8A',
+  siteUrl: 'https://www.morethanmoney.pt',
+  // o projeto já corre com images.unoptimized — mantém coerência nas imagens do blog
+  unoptimizedImages: true,
+})(nextConfig)

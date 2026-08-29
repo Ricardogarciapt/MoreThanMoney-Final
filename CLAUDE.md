@@ -359,6 +359,8 @@ NEXT_PUBLIC_SUPABASE_URL   # https://iwscxotvmtkphajmasof.supabase.co
 SUPABASE_SERVICE_ROLE_KEY  # Service role (server-side only)
 MANYCHAT_API_KEY           # api.manychat.com
 CALENDLY_SIGNING_KEY       # opcional — HMAC webhook verification
+OPINLY_API_KEY             # sk-… — blog Opinly (/blog) + eventos server-side
+OPINLY_WEBHOOK_SECRET      # whsec_… — assinatura Svix do webhook /api/opinly/webhook (opcional)
 ```
 
 **Local (.env.local):**
