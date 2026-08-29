@@ -17,7 +17,18 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  */
 const BASE = 'https://api.canva.com/rest/v1'
 const OAUTH_TOKEN = `${BASE}/oauth/token`
-export const CANVA_SCOPES = 'design:content:read design:content:write brandtemplate:meta:read brandtemplate:content:read'
+/**
+ * O que pedimos ao Canva.
+ *
+ * `design:meta:read` e `folder:read` entraram a 2026-08-29 para se poder LISTAR o que existe na
+ * conta. Sem eles a API respondia 403 a tudo o que não fosse autofill, e não havia como descobrir
+ * que templates lá estão — só adivinhar ids à mão, que é o que se quer evitar.
+ *
+ * Mudar esta lista obriga a autorizar outra vez: o token que já existe carrega os âmbitos com que
+ * foi emitido, não os que passámos a pedir.
+ */
+export const CANVA_SCOPES =
+  'design:content:read design:content:write design:meta:read brandtemplate:meta:read brandtemplate:content:read folder:read'
 const SETTINGS_KEY = 'canva_connect'
 
 interface CanvaStore {
