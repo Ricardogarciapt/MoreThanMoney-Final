@@ -338,7 +338,16 @@ export default function TapToTradeFeed() {
   const sinalPedido = useRef<string | null>(null)
   const jaAbriu = useRef(false)
   useEffect(() => {
-    const p = new URLSearchParams(window.location.search).get("sinal")
+    /**
+     * Aceita `sinal` e `signal`.
+     *
+     * O app nativo lê o parâmetro como `signal` (está assim no `routeNotification`) e eu escrevi
+     * `sinal` no servidor. Um mesmo endereço tem de funcionar nas duas superfícies — dois nomes
+     * para a mesma coisa é o tipo de detalhe que só se descobre quando alguém carrega numa
+     * notificação e não acontece nada.
+     */
+    const q = new URLSearchParams(window.location.search)
+    const p = q.get("sinal") ?? q.get("signal")
     if (p) sinalPedido.current = p
   }, [])
   const [noProviders, setNoProviders] = useState(false)
@@ -539,6 +548,7 @@ export default function TapToTradeFeed() {
         // Limpa o parâmetro do endereço: recarregar a página não deve reabrir o modal.
         const u = new URL(window.location.href)
         u.searchParams.delete("sinal")
+        u.searchParams.delete("signal")
         window.history.replaceState({}, "", u.toString())
       }
     }
