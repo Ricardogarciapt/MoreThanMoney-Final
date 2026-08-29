@@ -12,9 +12,30 @@ export interface SocialCardParams {
   /** `false` esconde a linha de prova. Uma string escreve ESSE facto. */
   proof?: boolean | string
   kicker?: string
+  /**
+   * O formato. Um capa de reel é vertical; um post do feed é 4:5.
+   *
+   * Só muda a proporção — o estilo vem da conta, não do formato: a mesma voz em vertical e em
+   * quadrado continua a ser a mesma voz.
+   */
+  formato?: 'post' | 'reel'
+  /** Fotografia de fundo, quando a há. O estilo do Ricardo é construído sobre uma. */
+  fundo?: string
 }
 
-const GOLD = "#D2A63C"
+/**
+ * As duas vozes, tiradas dos templates reais do Canva (exportados e medidos, não estimados).
+ *
+ * @morethanmoney.pt — preto, dourado, centrado, simétrico. Fala como empresa.
+ * @ricardogarciapt — fotografia dele, tipografia enorme em duas faixas (ciano em cima, branca
+ * em baixo), texto cortado pela margem. Fala na primeira pessoa e ocupa o ecrã todo.
+ *
+ * Misturá-las era o que acontecia até aqui: saía o cartão da marca com o nome dele.
+ */
+const OURO = '#e4a84d'
+const CIANO = '#0097b2'
+
+const GOLD = OURO // medido no template real: era #D2A63C, mais escuro do que a marca usa
 const INK = "#0b0d12"
 const PAPER = "#f5f2ea"
 const MUTED = "#9a9ea8"
@@ -27,7 +48,128 @@ function variantFor(cta: string): { eyebrow: string; accent: string } {
   return { eyebrow: "MORE THAN MONEY", accent: "#D2A63C" }
 }
 
+/**
+ * Parte a frase em duas metades, para as duas faixas de cor.
+ *
+ * Corta por PALAVRAS e o mais perto possível do meio em caracteres — cortar a meio da contagem de
+ * palavras dá "MUDA" / "O MINDSET", que desequilibra; cortar por caracteres dá duas faixas de
+ * peso parecido, que é o que faz o efeito funcionar.
+ */
+function duasFaixas(texto: string): [string, string] {
+  const p = texto.trim().split(/\s+/)
+  if (p.length < 2) return [texto, '']
+  const total = texto.length
+  let melhor = 1
+  let menorDif = Infinity
+  for (let i = 1; i < p.length; i++) {
+    const dif = Math.abs(p.slice(0, i).join(' ').length - total / 2)
+    if (dif < menorDif) { menorDif = dif; melhor = i }
+  }
+  return [p.slice(0, melhor).join(' '), p.slice(melhor).join(' ')]
+}
+
+/**
+ * O cartão do Ricardo Garcia.
+ *
+ * A identidade é a TIPOGRAFIA, não a fotografia: duas faixas enormes, itálicas, em maiúsculas,
+ * cortadas pela margem — ciano em cima, branca em baixo. Por isso funciona sem foto, e com foto
+ * fica igual ao template dele.
+ */
+function cartaoRicardo(params: SocialCardParams, alto: boolean) {
+  const hook = (params.hook || 'Muda o mindset.').replace(/[.!?]+$/, '').toUpperCase().slice(0, 60)
+  const [cima, baixo] = duasFaixas(hook)
+  const cta = (params.cta || '').toUpperCase().slice(0, 16)
+  const facto = typeof params.proof === 'string' ? params.proof.slice(0, 90) : null
+
+  // O tamanho segue a faixa MAIS LONGA: dimensionar pela média fazia a longa transbordar.
+  const maisLonga = Math.max(cima.length, baixo.length)
+  const corpo = maisLonga > 22 ? 108 : maisLonga > 15 ? 140 : maisLonga > 9 ? 180 : 220
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        background: '#141414',
+        // A foto entra como fundo quando existe; sem ela fica o degradê, e a tipografia aguenta.
+        ...(params.fundo
+          ? { backgroundImage: `url(${params.fundo})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+          : { backgroundImage: 'radial-gradient(900px 700px at 70% 40%, #23282e, #0d0f11 70%)' }),
+        padding: alto ? '96px 0 84px' : '72px 0 64px',
+      }}
+    >
+      {/* Faixa de cima, ciano. Sai da margem esquerda de propósito — é o que dá a escala. */}
+      <div
+        style={{
+          display: 'flex',
+          color: CIANO,
+          fontSize: corpo,
+          fontWeight: 900,
+          fontStyle: 'italic',
+          letterSpacing: -4,
+          lineHeight: 0.92,
+          padding: '0 40px',
+        }}
+      >
+        {cima}
+      </div>
+
+      {/* Faixa de baixo, branca. */}
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '0 40px' }}>
+        <div
+          style={{
+            display: 'flex',
+            color: '#ffffff',
+            fontSize: corpo,
+            fontWeight: 900,
+            fontStyle: 'italic',
+            letterSpacing: -4,
+            lineHeight: 0.92,
+          }}
+        >
+          {baixo}
+        </div>
+
+        {facto && (
+          <div style={{ display: 'flex', color: CIANO, fontSize: 34, fontWeight: 700, marginTop: 28 }}>{facto}</div>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 40 }}>
+          <div style={{ display: 'flex', color: '#8b9199', fontSize: 30, fontWeight: 600 }}>@ricardogarciapt</div>
+          {cta && (
+            <div
+              style={{
+                display: 'flex',
+                background: CIANO,
+                color: '#06212a',
+                fontSize: 34,
+                fontWeight: 800,
+                padding: '18px 34px',
+                borderRadius: 999,
+              }}
+            >
+              {'Comenta «' + cta + '»'}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function socialCardElement(params: SocialCardParams) {
+  /**
+   * A conta decide o estilo.
+   *
+   * O `handle` já chegava aqui e só era escrito no canto. Passa a decidir o desenho inteiro —
+   * que é o que separa as duas contas de verdade.
+   */
+  if ((params.handle || '').replace(/^@/, '').toLowerCase().includes('ricardo')) {
+    return cartaoRicardo(params, params.formato === 'reel')
+  }
   const hook = (params.hook || "Disciplina cria liberdade.").slice(0, 160)
   const cta = (params.cta || "").toUpperCase().slice(0, 16)
   const handle = (params.handle || "morethanmoney.pt").replace(/^@/, "")
@@ -104,6 +246,11 @@ export function socialCardElement(params: SocialCardParams) {
 
 /** Renderiza o card e devolve os bytes PNG (para upload direto no bucket). */
 export async function renderSocialCardBuffer(params: SocialCardParams): Promise<Buffer> {
-  const res = new ImageResponse(socialCardElement(params), { width: 1080, height: 1350 })
+  // Reel é 9:16; o resto é 4:5, que é o que ocupa mais ecrã no feed sem ser cortado.
+  const alto = params.formato === 'reel'
+  const res = new ImageResponse(socialCardElement(params), {
+    width: 1080,
+    height: alto ? 1920 : 1350,
+  })
   return Buffer.from(await res.arrayBuffer())
 }
