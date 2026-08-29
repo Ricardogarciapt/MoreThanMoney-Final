@@ -122,6 +122,16 @@ export async function POST(
       return NextResponse.json({ error: insertError.message }, { status: 500 })
     }
 
+    // Atribuição Opinly: cada submissão é um lead (best-effort; dedup por form+email)
+    try {
+      const { opinlyTrack } = await import('@/lib/opinly/track')
+      await opinlyTrack('generate_lead', { form: slug }, {
+        externalEventId: result.email ? `lead_${slug}_${result.email}` : undefined,
+        email: result.email || undefined,
+        anonId: request.cookies.get('opinly_anon_id')?.value,
+      })
+    } catch { /* silencioso */ }
+
     // Notificação por email (best effort — a submissão já está gravada)
     try {
       if (process.env.GMAIL_APP_PASSWORD) {

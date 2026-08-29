@@ -78,14 +78,15 @@ export async function POST(req: NextRequest) {
         // Atribuição Opinly — best-effort, dedup pelo id da sessão (retries seguros)
         if (session.payment_status === 'paid' && session.amount_total) {
           const email = session.customer_details?.email ?? session.customer_email ?? undefined
+          const anonId = session.metadata?.opinly_anon_id || undefined
           const value = session.amount_total / 100
           const currency = (session.currency ?? 'eur').toUpperCase()
-          await opinlyTrackPurchase({ orderId: session.id, value, currency, email })
+          await opinlyTrackPurchase({ orderId: session.id, value, currency, email, anonId })
           if (session.mode === 'subscription') {
             await opinlyTrack(
               'subscribe',
               { plan: session.metadata?.plan_id ?? session.metadata?.plan ?? 'unknown', value, currency },
-              { externalEventId: `subscribe_${session.id}`, email },
+              { externalEventId: `subscribe_${session.id}`, email, anonId },
             )
           }
         }

@@ -24,6 +24,8 @@ export async function opinlyTrackPurchase(input: {
   value: number
   currency: string
   email?: string
+  /** anonId do pixel (cookie opinly_anon_id) — une a compra ao visitante do browser. */
+  anonId?: string
 }): Promise<void> {
   if (!opinlyConfigured()) return
   try {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { opinlyTrack } from '@/lib/opinly/track'
 import { getStripeClient } from '@/lib/stripe-client'
 import { requireStripePriceId } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl, getSiteOrigin } from '@/lib/site-url'
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
         email,
         full_name: fullName,
         username,
+        ...(request.cookies.get('opinly_anon_id')?.value ? { opinly_anon_id: request.cookies.get('opinly_anon_id')!.value } : {}),
         phone: phone || '',
         sponsor_username: sponsorUsername || '',
         coupon_code: couponCode || '',
@@ -98,6 +100,13 @@ export async function POST(request: NextRequest) {
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams)
+
+    // Funil Opinly: inicio de checkout (best-effort; anonId via cookie do pixel)
+    await opinlyTrack('begin_checkout', { plan: planId }, {
+      externalEventId: `bc_${session.id}`,
+      email: email,
+      anonId: request.cookies.get('opinly_anon_id')?.value,
+    })
 
     return NextResponse.json({ url: session.url, sessionId: session.id })
   } catch (error: unknown) {

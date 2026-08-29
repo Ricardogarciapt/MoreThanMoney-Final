@@ -24,6 +24,32 @@ export default function SuccessPage() {
   const [regEmail, setRegEmail] = useState<string>('')
   const [regError, setRegError] = useState<string>('')
 
+  // ── Opinly: purchase client-side com o MESMO externalEventId (session.id) que
+  // o webhook Stripe usa server-side — os dois dedupem para um único evento,
+  // e este lado une a compra ao anonId do browser. Idempotente em reloads.
+  useEffect(() => {
+    if (!sessionId) return
+    const fire = async () => {
+      try {
+        const r = await fetch(`/api/stripe/session-summary?session_id=${encodeURIComponent(sessionId)}`)
+        if (!r.ok) return
+        const s = (await r.json()) as { paid?: boolean; value?: number | null; currency?: string }
+        if (!s.paid || s.value == null) return
+        let attempts = 0
+        const send = () => {
+          const opinly = (window as unknown as { opinly?: { track: (e: string, p?: object, o?: object) => void } }).opinly
+          if (opinly?.track) {
+            opinly.track('purchase', { value: s.value, currency: s.currency ?? 'EUR' }, { externalEventId: sessionId })
+          } else if (attempts++ < 20) {
+            setTimeout(send, 500)
+          }
+        }
+        send()
+      } catch { /* best-effort — o webhook server-side é a fonte de verdade */ }
+    }
+    fire()
+  }, [sessionId])
+
   // ── Criar conta após pagamento (fluxo register → Stripe → /success) ────────
   useEffect(() => {
     if (!isNewUser || !sessionId) return

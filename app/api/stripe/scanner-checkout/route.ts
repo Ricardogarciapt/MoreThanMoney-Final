@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
         tradingview_username: tvUsername.trim(),
         email: email.trim(),
         sponsor_username: sponsorCode || '',
+        ...(request.cookies.get('opinly_anon_id')?.value ? { opinly_anon_id: request.cookies.get('opinly_anon_id')!.value } : {}),
       },
     })
 

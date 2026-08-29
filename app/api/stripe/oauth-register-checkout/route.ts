@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
         registration_method: "oauth",
         oauth_user_id: user.id,
         reg_token: regToken,
+        ...(request.cookies.get("opinly_anon_id")?.value ? { opinly_anon_id: request.cookies.get("opinly_anon_id")!.value } : {}),
       },
     })
 

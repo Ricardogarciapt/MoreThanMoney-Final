@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { opinlyTrack } from '@/lib/opinly/track'
 import type Stripe from 'stripe'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getStripeClient } from '@/lib/stripe-client'
@@ -91,6 +92,10 @@ export async function POST(request: NextRequest) {
         plan: planId,
         ...(tradingview_username ? { tradingview_username } : {}),
         sponsor_username: sponsorUsername,
+        // anonId do pixel Opinly: o webhook usa-o para atribuir a compra ao visitante
+        ...(request.cookies.get('opinly_anon_id')?.value
+          ? { opinly_anon_id: request.cookies.get('opinly_anon_id')!.value }
+          : {}),
       },
     }
 
@@ -101,6 +106,13 @@ export async function POST(request: NextRequest) {
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams)
+
+    // Funil Opinly: inicio de checkout (best-effort; anonId via cookie do pixel)
+    await opinlyTrack('begin_checkout', { plan: planId }, {
+      externalEventId: `bc_${session.id}`,
+      email: profile?.email ?? user.email ?? undefined,
+      anonId: request.cookies.get('opinly_anon_id')?.value,
+    })
 
     // Registar sessão de checkout (não bloquear se a tabela ainda não existir)
     const { error: insertError } = await supabaseAdmin.from('checkout_sessions').insert({
