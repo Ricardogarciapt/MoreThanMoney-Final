@@ -265,6 +265,110 @@ export function socialCardElement(params: SocialCardParams) {
   )
 }
 
+/**
+ * Uma lâmina do carrossel.
+ *
+ * O carrossel do Ricardo tem três papéis, e são diferentes de propósito: a CAPA tem de parar o
+ * dedo, o MEIO tem de valer a pena deslizar, e o FIM tem de pedir alguma coisa. Um carrossel de
+ * seis lâminas iguais é seis vezes a mesma lâmina.
+ */
+export type PapelLamina = 'capa' | 'meio' | 'fim'
+
+export interface Lamina {
+  papel: PapelLamina
+  texto: string
+  /** Só no fim: a palavra a comentar. */
+  cta?: string
+  /** Fotografia por trás desta lâmina. */
+  fundo?: string
+}
+
+/**
+ * Uma lâmina do carrossel, no estilo do Ricardo.
+ *
+ * A capa usa as duas faixas (ciano/branca) — é a assinatura dele. As do meio são texto grande
+ * numerado, sem as faixas: repetir a assinatura em todas cansa e rouba espaço ao que interessa,
+ * que é o argumento. A do fim volta à assinatura, para fechar como abriu.
+ */
+export function laminaElement(l: Lamina, indice: number, total: number, handle: string) {
+  if (l.papel !== 'meio') {
+    return socialCardElement({
+      hook: l.texto,
+      cta: l.cta,
+      handle,
+      proof: false,
+      fundo: l.fundo,
+      formato: 'post',
+    })
+  }
+
+  const t = l.texto.slice(0, 220)
+  const corpo = t.length > 150 ? 56 : t.length > 90 ? 68 : t.length > 50 ? 82 : 96
+
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        background: '#141414',
+        ...(l.fundo
+          ? { backgroundImage: `url(${l.fundo})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+          : { backgroundImage: 'radial-gradient(900px 700px at 30% 20%, #23282e, #0d0f11 70%)' }),
+        padding: '84px 72px',
+      }}
+    >
+      {/* O número é a promessa de que há mais — é ele que faz deslizar. */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', color: CIANO, fontFamily: 'Anton', fontSize: 72 }}>
+          {String(indice).padStart(2, '0')}
+        </div>
+        <div style={{ display: 'flex', color: '#5b6167', fontSize: 30, fontWeight: 700, marginLeft: 16 }}>
+          {'/ ' + String(total - 1).padStart(2, '0')}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', color: '#ffffff', fontFamily: 'Anton', fontSize: corpo, lineHeight: 1.06, letterSpacing: -1 }}>
+        {t}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', width: 70, height: 7, background: CIANO, borderRadius: 4 }} />
+        <div style={{ display: 'flex', color: '#8b9199', fontSize: 28, fontWeight: 600, marginLeft: 20 }}>
+          {'@' + handle.replace(/^@/, '')}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * O carrossel inteiro, em PNG.
+ *
+ * Mínimo de seis lâminas: um carrossel de duas não é carrossel, e o Instagram premeia quem faz
+ * deslizar. Se vierem menos, as que faltam ficam por conta de quem chama — aqui não se inventa
+ * conteúdo para encher, porque texto de encher lê-se como texto de encher.
+ */
+export async function renderCarrossel(laminas: Lamina[], handle: string): Promise<Buffer[]> {
+  const f = fonteCondensada()
+  const fontes = f
+    ? [{ name: 'Anton', data: f as unknown as ArrayBuffer, weight: 400 as const, style: 'normal' as const }]
+    : undefined
+
+  const saida: Buffer[] = []
+  for (let i = 0; i < laminas.length; i++) {
+    const res = new ImageResponse(laminaElement(laminas[i], i, laminas.length, handle), {
+      width: 1080,
+      height: 1350,
+      ...(fontes ? { fonts: fontes } : {}),
+    })
+    saida.push(Buffer.from(await res.arrayBuffer()))
+  }
+  return saida
+}
+
 /** Renderiza o card e devolve os bytes PNG (para upload direto no bucket). */
 /**
  * A fonte condensada pesada — a identidade tipográfica do Ricardo.

@@ -43,6 +43,7 @@ import { MapaFunis } from "@/components/admin/mapa-funis"
 import { PainelAutomacoes } from "@/components/admin/painel-automacoes"
 import { TokensInstagram } from "@/components/admin/tokens-instagram"
 import { RadarLeads } from "@/components/admin/radar-leads"
+import { EstudioCartoes } from "@/components/admin/estudio-cartoes"
 
 interface Post {
   id: string
@@ -131,7 +132,7 @@ export default function AdminSocialPage() {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   /** Separador aberto: a fila, os factos que vão nos cartões, ou o funil. */
-  const [aba, setAba] = useState<"fila" | "factos" | "funil" | "mensagens" | "mapa" | "automacoes" | "ligacoes" | "radar">("fila")
+  const [aba, setAba] = useState<"fila" | "factos" | "funil" | "mensagens" | "mapa" | "automacoes" | "ligacoes" | "radar" | "cartoes">("fila")
   const [mensagens, setMensagens] = useState<MensagemFunil[] | null>(null)
   /** O post a ser editado. As legendas eram só de leitura: para mudar uma vírgula apagava-se e
    *  criava-se outro, e perdia-se a imagem já gerada. */
@@ -363,6 +364,7 @@ export default function AdminSocialPage() {
             ["mensagens", "Mensagens do funil"],
             ["mapa", "Mapa dos funis"],
             ["automacoes", "Automações"],
+            ["cartoes", "Estúdio de cartões"],
             ["radar", "Radar de leads"],
             ["ligacoes", "Ligações"],
           ] as const).map(([id, rotulo]) => (
@@ -386,6 +388,7 @@ export default function AdminSocialPage() {
         {/* As automações do Instagram dependem TODAS do token. Sem ele nenhuma responde, e o
             painel das automações não tem como saber porquê — por isso o estado do token vive
             aqui ao lado e não escondido nas variáveis da Vercel. */}
+        {aba === "cartoes" && <EstudioCartoes />}
         {aba === "radar" && <RadarLeads />}
         {aba === "ligacoes" && <TokensInstagram />}
 
