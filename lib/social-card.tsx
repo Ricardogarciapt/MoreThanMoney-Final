@@ -103,13 +103,43 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
         flexDirection: 'column',
         justifyContent: temFoto ? 'space-between' : 'center',
         background: '#141414',
-        // A foto entra como fundo quando existe; sem ela fica o degradê, e a tipografia aguenta.
-        ...(params.fundo
-          ? { backgroundImage: `url(${params.fundo})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-          : { backgroundImage: 'radial-gradient(900px 700px at 70% 40%, #23282e, #0d0f11 70%)' }),
+        // Sem foto, o degradê. A tipografia aguenta sozinha.
+        ...(temFoto ? {} : { backgroundImage: 'radial-gradient(900px 700px at 70% 40%, #23282e, #0d0f11 70%)' }),
         padding: alto ? '96px 0 84px' : '72px 0 64px',
+        position: 'relative',
       }}
     >
+      {/*
+        A foto entra como CAMADA e não como `backgroundImage`.
+        O Satori ignora o `background-size: cover` e repete a imagem em mosaico — via-se uma
+        segunda cabeça a nascer no rodapé. Uma `<img>` esticada ao quadro resolve, e ainda deixa
+        escurecê-la por cima, que é o que faz o texto branco continuar a ler-se.
+      */}
+      {params.fundo && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={params.fundo}
+            alt=""
+            width={1080}
+            height={alto ? 1920 : 1350}
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              // Escurece o meio menos do que as pontas: é onde está a cara, e é onde o texto não está.
+              backgroundImage:
+                'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 38%, rgba(0,0,0,0.2) 62%, rgba(0,0,0,0.72) 100%)',
+            }}
+          />
+        </>
+      )}
       {/* Faixa de cima, ciano. Sai da margem esquerda de propósito — é o que dá a escala. */}
       <div
         style={{
@@ -314,12 +344,29 @@ export function laminaElement(l: Lamina, indice: number, total: number, handle: 
         flexDirection: 'column',
         justifyContent: 'space-between',
         background: '#141414',
-        ...(l.fundo
-          ? { backgroundImage: `url(${l.fundo})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-          : { backgroundImage: 'radial-gradient(900px 700px at 30% 20%, #23282e, #0d0f11 70%)' }),
+        ...(l.fundo ? {} : { backgroundImage: 'radial-gradient(900px 700px at 30% 20%, #23282e, #0d0f11 70%)' }),
         padding: '84px 72px',
+        position: 'relative',
       }}
     >
+      {l.fundo && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={l.fundo}
+            alt=""
+            width={1080}
+            height={1350}
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+          <div
+            style={{
+              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex',
+              backgroundImage: 'linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.75))',
+            }}
+          />
+        </>
+      )}
       {/* O número é a promessa de que há mais — é ele que faz deslizar. */}
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <div style={{ display: 'flex', color: CIANO, fontFamily: 'Anton', fontSize: 72 }}>
