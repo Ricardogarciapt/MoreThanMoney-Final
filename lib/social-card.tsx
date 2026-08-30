@@ -123,15 +123,20 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
             alt=""
             width={1080}
             height={alto ? 1920 : 1350}
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            /*
+             * Medidas em PÍXEIS e não em percentagem.
+             * O Satori calcula `width: '100%'` numa imagem posicionada como zero — a foto
+             * desaparecia sem erro nenhum, que é a pior forma de falhar.
+             */
+            style={{ position: 'absolute', top: 0, left: 0, width: 1080, height: alto ? 1920 : 1350, objectFit: 'cover' }}
           />
           <div
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
-              width: '100%',
-              height: '100%',
+              width: 1080,
+              height: alto ? 1920 : 1350,
               display: 'flex',
               // Escurece o meio menos do que as pontas: é onde está a cara, e é onde o texto não está.
               backgroundImage:
@@ -357,11 +362,11 @@ export function laminaElement(l: Lamina, indice: number, total: number, handle: 
             alt=""
             width={1080}
             height={1350}
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            style={{ position: 'absolute', top: 0, left: 0, width: 1080, height: 1350, objectFit: 'cover' }}
           />
           <div
             style={{
-              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex',
+              position: 'absolute', top: 0, left: 0, width: 1080, height: 1350, display: 'flex',
               backgroundImage: 'linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.75))',
             }}
           />
