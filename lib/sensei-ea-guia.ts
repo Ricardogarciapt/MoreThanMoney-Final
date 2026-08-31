@@ -1,14 +1,21 @@
 import PDFDocument from 'pdfkit'
+import type { ResultadoSensei } from '@/lib/sensei-resultados'
 
 /**
  * O guia que acompanha a licença do MTM Sensei EA, em PDF.
  *
- * É gerado em código e não exportado de um Canva porque muda com o produto: os presets, os
- * números dos testes e o passo do WebRequest têm de estar certos no dia em que o cliente
- * descarrega, e um PDF estático fica desactualizado sem ninguém dar por isso.
+ * É gerado em código e não exportado de um Canva porque muda com o produto: os presets, o registo
+ * dos sinais e o passo do WebRequest têm de estar certos no dia em que o cliente descarrega, e um
+ * PDF estático fica desactualizado sem ninguém dar por isso.
  *
- * Os números que aqui aparecem são os do backtest e estão identificados como tal. Nenhum deles
- * é apresentado como rendimento esperado — porque não é.
+ * ── Sobre posicionar coisas nesta página ──────────────────────────────────────────────────────
+ * O pdfkit tem um cursor (`doc.y`) que só avança quando se escreve texto no fluxo. `rect().fill()`
+ * NÃO o avança. A primeira versão desenhava a caixa e depois escrevia com deslocamentos à mão
+ * (`doc.y - 62`) — resultado: o parágrafo caía por cima do que já lá estava e do título seguinte.
+ *
+ * Aqui mede-se antes de desenhar (`heightOfString`), desenha-se o fundo com a altura certa, e
+ * escreve-se com coordenadas absolutas dentro dela. No fim põe-se o cursor abaixo da caixa. É mais
+ * comprido de escrever e não se pode sobrepor a nada.
  */
 
 const OURO = '#D2A63C'
@@ -16,43 +23,95 @@ const OURO_ESCURO = '#BB8525'
 const PRETO = '#0A0A0A'
 const CINZA = '#4A4A4A'
 const CINZA_CLARO = '#8A8A8A'
+const CREME = '#FAF6EC'
 
 const M = 56 // margem
 
-export async function gerarGuiaSensei(): Promise<Buffer> {
-  const doc = new PDFDocument({ size: 'A4', margin: M, info: { Title: 'MTM Sensei EA — Guia', Author: 'MoreThanMoney' } })
+export async function gerarGuiaSensei(resultados?: ResultadoSensei | null): Promise<Buffer> {
+  const doc = new PDFDocument({
+    size: 'A4',
+    margin: M,
+    info: { Title: 'MTM Sensei EA — Guia', Author: 'MoreThanMoney' },
+  })
   const pedacos: Buffer[] = []
   doc.on('data', (c: Buffer) => pedacos.push(c))
   const feito = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(pedacos))))
 
   const L = doc.page.width - M * 2
+  const fundo = doc.page.height - M // onde a página acaba
 
-  const titulo = (t: string) => {
-    doc.moveDown(1.1)
-    doc.fillColor(OURO).fontSize(15).font('Helvetica-Bold').text(t, M, doc.y)
-    doc.moveTo(M, doc.y + 4).lineTo(M + L, doc.y + 4).lineWidth(0.7).strokeColor(OURO_ESCURO).stroke()
-    doc.moveDown(0.7)
+  /** Abre página nova se o que vem a seguir não couber. Sem isto, cortava-se a meio. */
+  const cabe = (altura: number) => {
+    if (doc.y + altura > fundo) doc.addPage()
   }
 
-  const paragrafo = (t: string) => {
-    doc.fillColor(CINZA).fontSize(10).font('Helvetica').text(t, M, doc.y, { width: L, align: 'left', lineGap: 2.5 })
+  const titulo = (t: string) => {
+    cabe(70)
+    doc.moveDown(1.1)
+    doc.fillColor(OURO).fontSize(15).font('Helvetica-Bold').text(t, M, doc.y, { width: L })
+    const y = doc.y + 4
+    doc.moveTo(M, y).lineTo(M + L, y).lineWidth(0.7).strokeColor(OURO_ESCURO).stroke()
+    doc.y = y + 12
+  }
+
+  const paragrafo = (t: string, cor = CINZA) => {
+    doc.fillColor(cor).fontSize(10).font('Helvetica')
+    cabe(doc.heightOfString(t, { width: L, lineGap: 2.5 }) + 8)
+    doc.text(t, M, doc.y, { width: L, align: 'left', lineGap: 2.5 })
     doc.moveDown(0.45)
   }
 
   const passo = (n: number, t: string, d: string) => {
+    doc.fontSize(9.5).font('Helvetica')
+    const alturaD = doc.heightOfString(d, { width: L - 26, lineGap: 2 })
+    cabe(alturaD + 26)
+
     const topo = doc.y
     doc.circle(M + 8, topo + 7, 8).fillColor(OURO).fill()
-    doc.fillColor(PRETO).fontSize(9).font('Helvetica-Bold').text(String(n), M + 4.5, topo + 3.5)
+    doc.fillColor(PRETO).fontSize(9).font('Helvetica-Bold').text(String(n), M + 4.5, topo + 3.5, {
+      width: 8,
+      align: 'center',
+    })
     doc.fillColor(PRETO).fontSize(10.5).font('Helvetica-Bold').text(t, M + 26, topo, { width: L - 26 })
-    doc.fillColor(CINZA).fontSize(9.5).font('Helvetica').text(d, M + 26, doc.y + 1, { width: L - 26, lineGap: 2 })
+    doc.fillColor(CINZA).fontSize(9.5).font('Helvetica').text(d, M + 26, doc.y + 1, {
+      width: L - 26,
+      lineGap: 2,
+    })
     doc.moveDown(0.7)
+  }
+
+  /** Caixa com fundo. Mede primeiro, desenha depois — ver a nota no topo do ficheiro. */
+  const caixa = (tituloCaixa: string, corpo: string) => {
+    const largura = L - 28
+    doc.fontSize(10).font('Helvetica-Bold')
+    const hTitulo = doc.heightOfString(tituloCaixa, { width: largura })
+    doc.fontSize(9.5).font('Helvetica')
+    const hCorpo = doc.heightOfString(corpo, { width: largura, lineGap: 2.5 })
+    const altura = hTitulo + hCorpo + 32
+
+    cabe(altura + 10)
+    const topo = doc.y
+    doc.rect(M, topo, L, altura).fillColor(CREME).fill()
+
+    doc.fillColor(PRETO).fontSize(10).font('Helvetica-Bold').text(tituloCaixa, M + 14, topo + 13, {
+      width: largura,
+    })
+    doc.fillColor(CINZA).fontSize(9.5).font('Helvetica').text(corpo, M + 14, topo + 13 + hTitulo + 6, {
+      width: largura,
+      lineGap: 2.5,
+    })
+
+    doc.y = topo + altura + 12
   }
 
   // ── Capa ────────────────────────────────────────────────────────────────────
   doc.rect(0, 0, doc.page.width, 190).fillColor(PRETO).fill()
   doc.fillColor(OURO).fontSize(30).font('Helvetica-Bold').text('MTM SENSEI', M, 58)
   doc.fillColor('#FFFFFF').fontSize(15).font('Helvetica').text('Expert Advisor para MetaTrader 5', M, 96)
-  doc.fillColor(CINZA_CLARO).fontSize(9.5).text('Guia de instalação, licença e presets  ·  MoreThanMoney', M, 122)
+  doc
+    .fillColor(CINZA_CLARO)
+    .fontSize(9.5)
+    .text('Guia de instalação, licença e presets  ·  MoreThanMoney', M, 122)
   doc.y = 220
 
   paragrafo(
@@ -62,11 +121,30 @@ export async function gerarGuiaSensei(): Promise<Buffer> {
 
   // ── Instalação ──────────────────────────────────────────────────────────────
   titulo('1. Instalar')
-  passo(1, 'Abrir a pasta de dados', 'No MetaTrader 5: Ficheiro > Abrir Pasta de Dados.')
-  passo(2, 'Copiar a pasta MQL5', 'Arrasta a pasta MQL5 do pacote para dentro, aceitando juntar os ficheiros. Nada teu é apagado — vai tudo para subpastas MTM.')
-  passo(3, 'Ficheiro de notícias', 'A pasta Common do pacote vai para a pasta Common do MetaTrader (sobe dois níveis a partir da pasta de dados). Fica em Common\\Files\\mtm_news.csv.')
-  passo(4, 'Compilar', 'MetaEditor (F4) e compila por esta ordem: MTM_Sensei_v3, MTM_Sensei_Core, MTM_Sensei_AllInOne. O indicador primeiro, sempre.')
-  passo(5, 'Verificar', 'Arrasta Scripts > MTM > MTM_Setup para um gráfico. Ele aplica cores, indicador e modelo, e escreve no separador Especialistas um relatório do que está bem e do que falta.')
+  paragrafo(
+    'O pacote traz um instalador para cada sistema. Ele encontra o teu MetaTrader sozinho — mesmo ' +
+      'se tiveres dois, de corretoras diferentes — copia tudo para o sítio certo e abre este guia.',
+  )
+  passo(1, 'Windows', 'Faz duplo clique em "Instalar no Windows.bat", dentro da pasta do pacote.')
+  passo(
+    2,
+    'macOS',
+    'Faz duplo clique em "Instalar no Mac.command". Se o Mac recusar por vir da internet: botão direito > Abrir.',
+  )
+  passo(
+    3,
+    'Compilar',
+    'Abre o MetaEditor (F4) e compila por esta ordem, com F7: MTM_Sensei_v3, MTM_Sensei_Core, MTM_Sensei_AllInOne. O indicador primeiro, sempre.',
+  )
+  passo(
+    4,
+    'Verificar',
+    'Arrasta Scripts > MTM > MTM_Setup para um gráfico. Ele aplica cores, indicador e modelo, e escreve no separador Especialistas um relatório do que está bem e do que falta.',
+  )
+  paragrafo(
+    'Preferes fazer à mão? Ficheiro > Abrir Pasta de Dados, e arrasta a pasta MQL5 do pacote para ' +
+      'lá dentro, aceitando juntar os ficheiros. Nada teu é apagado — vai tudo para subpastas MTM.',
+  )
 
   // ── Licença ─────────────────────────────────────────────────────────────────
   titulo('2. Activar a licença')
@@ -79,15 +157,21 @@ export async function gerarGuiaSensei(): Promise<Buffer> {
     'Permitir o endereço',
     'Ferramentas > Opções > Consultores. Liga "Permitir WebRequest para os seguintes URLs" e acrescenta:  https://www.morethanmoney.pt',
   )
-  passo(2, 'Colar a chave', 'Ao pôr o EA no gráfico, escreve a chave (MTM-XXXX-XXXX-XXXX) no campo "Licença", no topo dos parâmetros.')
-  passo(3, 'Confirmar', 'No separador Especialistas deve aparecer "LICENCA: valida". Se não aparecer, a mensagem diz exactamente o que falta.')
+  passo(
+    2,
+    'Colar a chave',
+    'Ao pôr o EA no gráfico, escreve a chave (MTM-XXXX-XXXX-XXXX) no campo "Licença", no topo dos parâmetros.',
+  )
+  passo(
+    3,
+    'Confirmar',
+    'No separador Especialistas deve aparecer "LICENCA: valida". Se não aparecer, a mensagem diz exactamente o que falta.',
+  )
   paragrafo(
     'Se a internet cair, o EA continua a trabalhar até 72 horas com a última validação. Passado ' +
       'esse prazo pára de abrir ordens — as que já estão abertas continuam a ser geridas.',
   )
   paragrafo('Mudaste de conta ou de corretora? Pede-nos para libertar a licença e volta a ligá-la.')
-
-  doc.addPage()
 
   // ── Presets ─────────────────────────────────────────────────────────────────
   titulo('3. Que preset usar')
@@ -96,58 +180,100 @@ export async function gerarGuiaSensei(): Promise<Buffer> {
       'e o horário já afinados.',
   )
 
-  const linhas: Array<[string, string, string]> = [
-    ['MTM_AllInOne_XAUUSD_H1.set', 'Ouro, 1 hora', 'O único validado. Sessões de Londres e Nova Iorque, 08:00–21:00.'],
-    ['MTM_AllInOne_XAUUSD_M15.set', 'Ouro, 15 min', 'Resultado praticamente nulo nos testes. Só para experimentar em demo.'],
-    ['MTM_AllInOne_BTCUSD_H1.set', 'Bitcoin, 1 hora', 'Por validar — negativo nos testes feitos.'],
-    ['MTM_AllInOne_US30_H1.set', 'US30, 1 hora', 'Por validar — histórico insuficiente para concluir.'],
+  const presets: Array<[string, string, string]> = [
+    [
+      'MTM_AllInOne_XAUUSD_H1.set',
+      'Ouro, 1 hora',
+      'O preset principal. Sessões de Londres e Nova Iorque, 08:00–21:00. É onde a estratégia foi mais trabalhada.',
+    ],
+    [
+      'MTM_AllInOne_XAUUSD_M15.set',
+      'Ouro, 15 minutos',
+      'Mais entradas e mais ruído. Corre-o em demo primeiro, e durante mais tempo do que achas necessário.',
+    ],
+    [
+      'MTM_AllInOne_BTCUSD_H1.set',
+      'Bitcoin, 1 hora',
+      'Ponto de partida, não recomendação. O Bitcoin muda de comportamento depressa.',
+    ],
+    ['MTM_AllInOne_US30_H1.set', 'US30, 1 hora', 'Ponto de partida. Confirma o spread do teu símbolo antes.'],
   ]
-  for (const [ficheiro, par, nota] of linhas) {
+
+  for (const [ficheiro, par, nota] of presets) {
+    doc.fontSize(9).font('Helvetica')
+    cabe(doc.heightOfString(nota, { width: L }) + 34)
     doc.fillColor(OURO).fontSize(9.5).font('Helvetica-Bold').text(ficheiro, M, doc.y, { width: L })
-    doc.fillColor(PRETO).fontSize(9.5).font('Helvetica-Bold').text(par, M, doc.y, { width: L })
-    doc.fillColor(CINZA).fontSize(9).font('Helvetica').text(nota, M, doc.y, { width: L, lineGap: 2 })
-    doc.moveDown(0.55)
+    doc.fillColor(PRETO).fontSize(9.5).font('Helvetica-Bold').text(par, M, doc.y + 1, { width: L })
+    doc.fillColor(CINZA).fontSize(9).font('Helvetica').text(nota, M, doc.y + 1, { width: L, lineGap: 2 })
+    doc.moveDown(0.6)
   }
 
   paragrafo(
-    'EURUSD, GBPUSD e USDJPY foram testados e perdem dinheiro. Não vêm presets para eles de ' +
-      'propósito. XAUUSD em M5 deu -55,6% no período testado — não usar.',
+    'Não vêm presets para XAUUSD em M5 nem para EURUSD, GBPUSD e USDJPY. Não é esquecimento: ' +
+      'nessas combinações a estratégia não se aguentou, e preferimos não te dar um ficheiro que ' +
+      'só serve para perder dinheiro devagar.',
   )
 
-  // ── O que os testes dizem ───────────────────────────────────────────────────
-  titulo('4. O que os testes dizem (e o que não dizem)')
-  doc.rect(M, doc.y, L, 74).fillColor('#FAF6EC').fill()
-  doc.fillColor(PRETO).fontSize(10).font('Helvetica-Bold').text('XAUUSD H1, 31 meses de backtest', M + 14, doc.y - 62, { width: L - 28 })
-  doc
-    .fillColor(CINZA)
-    .fontSize(9.5)
-    .font('Helvetica')
-    .text(
-      '+24,6% acumulado  ·  138 trades  ·  cerca de +0,79% ao mês, em média.\n' +
-        'Isto é o resultado de um teste sobre histórico, não uma promessa. Meses negativos fazem parte.',
-      M + 14,
-      doc.y + 2,
-      { width: L - 28, lineGap: 2 },
+  // ── O registo dos sinais ────────────────────────────────────────────────────
+  titulo('4. O que os sinais Sensei têm feito')
+
+  if (resultados && resultados.resolvidos > 0) {
+    const sinal = resultados.r >= 0 ? '+' : ''
+    const desde = resultados.desde
+      ? new Date(resultados.desde).toLocaleDateString('pt-PT', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        })
+      : '—'
+
+    caixa(
+      `Registo completo dos sinais Sensei, desde ${desde}`,
+      `${resultados.sinais.toLocaleString('pt-PT')} sinais publicados  ·  ` +
+        `${resultados.resolvidos.toLocaleString('pt-PT')} já resolvidos  ·  ` +
+        `${String(resultados.acertoPct).replace('.', ',')}% de acerto  ·  ` +
+        `${sinal}${resultados.r}R acumulado\n\n` +
+        'Lê o acerto e o R juntos. Uma perda custa 1R; um ganho corre até à quarta saída e pode ' +
+        'valer 4R. Por isso um acerto abaixo de metade pode dar saldo positivo — e por isso quem ' +
+        'não aguenta uma sequência de perdas seguidas não deve usar isto.',
     )
-  doc.y += 26
-  doc.moveDown(1)
 
-  paragrafo(
-    'Um backtest não inclui slippage real, alargamento de spread em notícias, nem a corretora que ' +
-      'tens. Corre primeiro em demo, durante semanas, na mesma conta e corretora onde vais operar ' +
-      'a sério. É a única forma de saber o que o teu contexto faz aos números.',
-  )
+    paragrafo(
+      'R é o que arriscas em cada trade. Medimos assim e não em dinheiro porque o mesmo sinal ' +
+        'vale cerca de 8 euros a quem opera 0,01 lotes e 800 euros a quem opera 1 lote — a ' +
+        'percentagem é igual para toda a gente, o dinheiro não.',
+    )
+    paragrafo(
+      'Estes números são dos SINAIS publicados, com a posição inteira levada a cada alvo. O EA ' +
+        'tira parciais: fica com menos do que este R nas trades que correm até ao fim, e com menos ' +
+        'prejuízo nas que reviram a meio. Resultados passados não indicam resultados futuros.',
+    )
+  } else {
+    paragrafo(
+      'O registo actualizado dos sinais Sensei — sinais publicados, acerto e resultado acumulado ' +
+        'em R — está sempre em morethanmoney.pt/sensei-ea, lido em direto.',
+    )
+  }
 
   // ── Antes de arriscar ───────────────────────────────────────────────────────
   titulo('5. Antes de arriscar dinheiro')
   paragrafo(
-    '· O filtro de spread vem DESLIGADO. Cada corretora usa casas decimais diferentes e um valor ' +
-      'errado bloqueia todas as entradas em silêncio. O MTM_Setup diz-te o spread do teu símbolo; ' +
-      'usa cerca de 3× esse valor se o quiseres ligar.',
+    'O filtro de spread vem DESLIGADO. Cada corretora usa casas decimais diferentes e um valor ' +
+      'errado bloqueia todas as entradas em silêncio — foi o que nos custou dias a perceber. O ' +
+      'MTM_Setup diz-te o spread do teu símbolo; usa cerca de 3× esse valor se o quiseres ligar.',
   )
-  paragrafo('· O módulo de prop firm vem desligado. Liga-o só na conta de desafio e confirma os limites da tua empresa.')
-  paragrafo('· A conta deve ser HEDGING se quiseres mais do que uma posição no mesmo par. Em NETTING elas fundem-se.')
-  paragrafo('· Corre em demo primeiro. Sempre.')
+  paragrafo(
+    'O módulo de prop firm vem desligado. Liga-o só na conta de desafio e confirma os limites da ' +
+      'tua empresa — os valores por defeito são um ponto de partida, não os limites deles.',
+  )
+  paragrafo(
+    'A conta deve ser HEDGING se quiseres mais do que uma posição no mesmo par. Em NETTING elas ' +
+      'fundem-se numa só e o volume soma.',
+  )
+  paragrafo(
+    'Corre em demo primeiro, durante semanas, na mesma conta e corretora onde vais operar a ' +
+      'sério. É a única forma de saber o que o teu contexto faz aos números.',
+  )
 
   // ── Painel ──────────────────────────────────────────────────────────────────
   titulo('6. O painel')
@@ -157,17 +283,37 @@ export async function gerarGuiaSensei(): Promise<Buffer> {
       'gráfico. Arrasta os painéis pela barra de título para os pores onde quiseres.',
   )
 
+  // ── Actualizações ───────────────────────────────────────────────────────────
+  titulo('7. Actualizações')
+  paragrafo(
+    'O EA avisa-te no gráfico quando sai uma versão nova e diz o que mudou. Se ligares ' +
+      '"Descarregar o build novo para a pasta Files", ele traz o ficheiro para MQL5\\Files — depois ' +
+      'move-o para MQL5\\Experts\\MTM e volta a pôr no gráfico.',
+  )
+  paragrafo(
+    'Não se substitui a si próprio, e ninguém o consegue fazer: o MetaTrader não deixa um EA ' +
+      'escrever por cima do seu próprio ficheiro. Quem promete actualização totalmente automática ' +
+      'está a usar uma DLL — que te obriga a autorizar código nativo na tua máquina — ou não está ' +
+      'a dizer a verdade.',
+  )
+  paragrafo(
+    'Há também afinações de risco e trailing que podem chegar do nosso lado, se ligares ' +
+      '"Aceitar afinações do servidor". Vem desligado de propósito: mudar o risco de quem está a ' +
+      'operar não é coisa para acontecer sem autorização.',
+  )
+
   // ── Rodapé ──────────────────────────────────────────────────────────────────
-  doc.moveDown(1.5)
+  cabe(60)
+  doc.moveDown(1.2)
   doc.moveTo(M, doc.y).lineTo(M + L, doc.y).lineWidth(0.7).strokeColor('#DDDDDD').stroke()
-  doc.moveDown(0.6)
+  doc.y += 10
   doc
     .fillColor(CINZA_CLARO)
     .fontSize(8)
     .font('Helvetica')
     .text(
       'MoreThanMoney  ·  morethanmoney.pt  ·  Software de apoio à decisão. Negociar com alavancagem ' +
-        'implica risco de perda do capital. Nada aqui é aconselhamento de investimento.',
+        'implica risco de perda do capital investido. Nada aqui é aconselhamento de investimento.',
       M,
       doc.y,
       { width: L, lineGap: 1.5 },
