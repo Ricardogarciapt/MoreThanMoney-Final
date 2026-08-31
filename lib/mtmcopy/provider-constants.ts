@@ -194,9 +194,14 @@ export const MTM_COPY_STRATEGY_CATALOG: Record<
     // pips, sem trailing, sai no segundo alvo». Passou a haver trailing, e a posição sai em duas
     // metades. Deixá-la ficar era descrever ao cliente uma estratégia diferente da que ele copia.
     description:
+      // O "mínimo 500 USD" das outras estratégias vem do dimensionamento a 1% do saldo. Esta
+      // segue-se a LOTE FIXO, por isso a régua é outra: 0,01 por cada 250 USD, a partir de 100.
+      // Deixar aqui o 500 punha o catálogo a contradizer o PDF que o cliente tem na mão.
       'Ouro, a seguir o grupo Gold Did. Abre uma posição e sai em duas metades — uma no ' +
       'primeiro alvo e outra no segundo — com o stop a subir para a entrada pelo caminho e o ' +
-      'trailing a acompanhar o preço até ao fecho. Conta mínima 500 USD.',
+      'trailing a acompanhar o preço até ao fecho. Segue-se a lote fixo: 0,01 por cada 250 USD ' +
+      'de saldo. Com 100 USD um stop normal custa cerca de 5% da conta — a partir de 250 fica ' +
+      'nos 2%.',
   },
   [CANONICAL_COPYTRADER_RG_STRATEGY_ID]: {
     title: 'Copy Trader Ricardo Garcia',
