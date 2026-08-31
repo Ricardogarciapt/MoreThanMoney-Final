@@ -28,6 +28,24 @@ import MtmAutoEstrategias from "@/components/mobile/mtm-auto-estrategias"
 import MtmAutoHistorico from "@/components/mobile/mtm-auto-historico"
 
 const FOLLOWUP_RE = /(tp\s*\d?\s*(hit|atingid)|hit\s*tp|break\s*even|be\s*set|posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|entry\s*hit|(alvo\s+(final|\d)|stop\s+loss|trailing\s+ativo)\s*·)/i
+/**
+ * Um preço como se escreve — nunca com a precisão inventada de um indicador.
+ *
+ * Os scanners calculam stops a partir do ATR: o GoldKiller chegou a mandar 4452.9733242788, que
+ * não é um preço que exista no ouro. Assim escrito, o número saía fora da caixa e tapava o TP ao
+ * lado, e prometia uma precisão que é falsa. A origem já arredonda; isto cobre o que ficou
+ * gravado antes e qualquer fonte nova que volte a fazê-lo.
+ */
+function precoLegivel(v: number | string | null | undefined, symbol: string): string {
+  const n = Number(v)
+  if (v == null || !Number.isFinite(n)) return "—"
+  const casas = /JPY|XAG|SILVER/i.test(symbol) ? 3
+    : /XAU|GOLD|BTC|ETH|SOL|XRP|NAS|US30|US500|GER|SPX|DOW/i.test(symbol) ? 2
+    : 5
+  // `parseFloat` para não pôr zeros que ninguém escreveu: 4435.80 lê-se 4435.8.
+  return String(parseFloat(n.toFixed(casas)))
+}
+
 /** Encerra mesmo a ideia (ao contrário de um BE ou de um TP1, que a deixam a correr). */
 const TERMINAL_RE = /(posi[çc][aã]o\s*fechada|fechad[ao]|sl\s*hit|stop\s*loss\s*hit|cancelad|encerrad|descartad|invalidad|alvo\s+final|close\s+all|hit\s*tp\s*[3-9])/i
 const DIR_RE = /(\b(buy|sell|long|short|compra|venda)\b|🟢|🔴)/i
@@ -1412,20 +1430,20 @@ export default function TapToTradeFeed() {
                 {structured ? (
                   <>
                     <div className="mt-2.5 flex gap-1.5">
-                      <div className="nivel">
+                      <div className="nivel min-w-0">
                         <p className="etiqueta">{t("t2t.entry")}</p>
-                        <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums">{f.entry ?? t("t2t.market")}</p>
+                        <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums">{f.entry != null ? precoLegivel(f.entry, f.symbol || "") : t("t2t.market")}</p>
                       </div>
-                      <div className="nivel">
+                      <div className="nivel min-w-0">
                         <p className="etiqueta">{t("t2t.stopLoss")}</p>
                         <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums" style={{ color: "var(--perigo)" }}>
-                          {f.sl ?? "—"}
+                          {precoLegivel(f.sl, f.symbol || "")}
                         </p>
                       </div>
-                      <div className="nivel">
+                      <div className="nivel min-w-0">
                         <p className="etiqueta">TP1</p>
                         <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums" style={{ color: "var(--sucesso)" }}>
-                          {f.tps[0] ?? "—"}
+                          {precoLegivel(f.tps[0], f.symbol || "")}
                         </p>
                       </div>
                       {f.tps.length > 1 && (
@@ -1445,7 +1463,7 @@ export default function TapToTradeFeed() {
                         {f.tps.slice(1).map((tp, i) => (
                           <div key={i} className="nivel">
                             <p className="etiqueta">TP{i + 2}</p>
-                            <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums" style={{ color: "var(--sucesso)" }}>{tp}</p>
+                            <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums" style={{ color: "var(--sucesso)" }}>{precoLegivel(tp, f.symbol || "")}</p>
                           </div>
                         ))}
                       </div>
@@ -1688,13 +1706,13 @@ export default function TapToTradeFeed() {
                     </div>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[12px] font-mono tabular-nums">
                       {preview.trade.entry != null && (
-                        <div className="flex justify-between"><span className="text-zinc-500">{t("t2t.entry")}</span><span className="text-zinc-200">{preview.trade.entry}</span></div>
+                        <div className="flex justify-between"><span className="text-zinc-500">{t("t2t.entry")}</span><span className="text-zinc-200">{precoLegivel(preview.trade.entry, preview.trade.symbol)}</span></div>
                       )}
                       {preview.trade.sl != null && (
-                        <div className="flex justify-between"><span className="text-zinc-500">{t("t2t.stopShort")}</span><span className="text-rose-400">{preview.trade.sl}</span></div>
+                        <div className="flex justify-between"><span className="text-zinc-500">{t("t2t.stopShort")}</span><span className="text-rose-400">{precoLegivel(preview.trade.sl, preview.trade.symbol)}</span></div>
                       )}
                       {preview.trade.tps.slice(0, 3).map((tp, i) => (
-                        <div key={i} className="flex justify-between"><span className="text-zinc-500">{t("t2t.target")} {i + 1}</span><span className="text-emerald-400">{tp}</span></div>
+                        <div key={i} className="flex justify-between"><span className="text-zinc-500">{t("t2t.target")} {i + 1}</span><span className="text-emerald-400">{precoLegivel(tp, preview.trade.symbol)}</span></div>
                       ))}
                       {preview.trade.stopPips != null && (
                         <div className="flex justify-between"><span className="text-zinc-500">{t("t2t.atStop")}</span><span className="text-zinc-400">{preview.trade.stopPips} pips</span></div>

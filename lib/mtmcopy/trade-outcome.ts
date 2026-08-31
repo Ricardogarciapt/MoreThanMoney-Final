@@ -96,3 +96,39 @@ export function outcomeShort(o: TradeOutcome | null): string {
 export function outcomeFrom(args: Parameters<typeof computeOutcome>[0]): string {
   return outcomeLabel(computeOutcome(args))
 }
+
+/**
+ * Quantas casas decimais tem o PREÇO deste símbolo na corretora.
+ *
+ * Não é o mesmo que o tamanho do pip: no ouro o pip é 0,1 mas o preço cota-se a 0,01, e nos pares
+ * forex o pip é 0,0001 e o preço tem 5 casas (a última é a fração de pip). Confundir os dois dava
+ * um stop do ouro arredondado a 4452,9 quando a corretora aceita 4452,97.
+ */
+export function casasDecimaisDoPreco(symbol: string | null | undefined): number {
+  const s = (symbol ?? "").toUpperCase()
+  if (/XAU|GOLD/.test(s)) return 2
+  if (/XAG|SILVER/.test(s)) return 3
+  if (CRIPTO.test(s)) return 2
+  if (/JPY/.test(s)) return 3
+  const letras = s.replace(/[^A-Z]/g, "")
+  if (letras.length === 6) return 5
+  return 2
+}
+
+/**
+ * O preço como a corretora o entende.
+ *
+ * Um indicador que calcula o stop a partir do ATR devolve 4452.9733242788. Esse número não existe
+ * no mercado: o ouro cota-se ao cêntimo. Mostrá-lo assim faz o cartão do sinal transbordar e dá
+ * a quem lê uma precisão que não é real — e mandá-lo para a corretora é pedir uma ordem num preço
+ * que ela vai ter de arredondar sozinha, ou recusar.
+ *
+ * Arredonda-se UMA vez, à entrada do sistema, para o número ser o mesmo no chat, no Telegram, no
+ * acompanhamento e na ordem. Arredondar só ao mostrar deixava a base de dados a discordar do ecrã.
+ */
+export function precoDaCorretora(valor: number | null | undefined, symbol: string | null | undefined): number | null {
+  const n = Number(valor)
+  if (!Number.isFinite(n)) return null
+  const f = 10 ** casasDecimaisDoPreco(symbol)
+  return Math.round(n * f) / f
+}

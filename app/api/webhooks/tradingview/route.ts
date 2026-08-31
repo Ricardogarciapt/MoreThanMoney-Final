@@ -10,6 +10,7 @@ import {
   type SenseiTradingViewFields,
 } from "@/lib/mtmcopy/signal-parser"
 import { validateSenseiWebhookSignal, validateSignalWithAi } from "@/lib/mtmcopy/signal-ai-validator"
+import { precoDaCorretora } from "@/lib/mtmcopy/trade-outcome"
 import { recordSenseiShadow } from "@/lib/mtmcopy/sensei-shadow"
 import {
   activateSenseiTradeIdea,
@@ -481,13 +482,25 @@ export async function POST(request: NextRequest) {
   const exchange = pick(payload, ["exchange", "broker"])
   const timeframe = pick(payload, ["timeframe", "interval", "tf", "resolution"])
   const action = pick(payload, ["action", "side", "order_action", "strategy_order_action", "signal"])
-  const price = num(pick(payload, ["price", "close", "order_price", "strategy_order_price"]))
-  const entry = num(pick(payload, ["entry", "entry_price"]))
-  const sl = num(pick(payload, ["sl", "stoploss", "stop_loss", "stop"]))
-  const tp = num(pick(payload, ["tp", "takeprofit", "take_profit", "target", "tp1"]))
-  const tp2 = num(pick(payload, ["tp2", "take_profit_2", "target2"]))
-  const tp3 = num(pick(payload, ["tp3", "take_profit_3", "target3"]))
-  const tp4 = num(pick(payload, ["tp4", "take_profit_4", "target4"]))
+  /**
+   * Os preços arredondam-se AQUI, à entrada, e não ao mostrar.
+   *
+   * Um indicador que calcula o stop a partir do ATR manda 4452.9733242788. Esse preço não existe:
+   * o ouro cota-se ao cêntimo. Chegava assim ao cartão do chat (que transbordava), ao Telegram,
+   * à tabela de acompanhamento, à app e à ordem enviada à corretora — que teria de o arredondar
+   * sozinha, ou recusar.
+   *
+   * Arredondar só na apresentação deixava a base de dados a discordar do ecrã, e o "entry hit"
+   * a comparar-se com um número que ninguém viu.
+   */
+  const preco = (n: number | null) => precoDaCorretora(n, ticker)
+  const price = preco(num(pick(payload, ["price", "close", "order_price", "strategy_order_price"])))
+  const entry = preco(num(pick(payload, ["entry", "entry_price"])))
+  const sl = preco(num(pick(payload, ["sl", "stoploss", "stop_loss", "stop"])))
+  const tp = preco(num(pick(payload, ["tp", "takeprofit", "take_profit", "target", "tp1"])))
+  const tp2 = preco(num(pick(payload, ["tp2", "take_profit_2", "target2"])))
+  const tp3 = preco(num(pick(payload, ["tp3", "take_profit_3", "target3"])))
+  const tp4 = preco(num(pick(payload, ["tp4", "take_profit_4", "target4"])))
   const state = pick(payload, ["state", "phase"])
   const alertName = pick(payload, ["alert_name", "alert", "name", "strategy"])
   const freeText = isJson ? pick(payload, ["message", "comment", "text"]) : String(payload.message ?? "")
