@@ -89,7 +89,6 @@ export default function Navbar() {
         { name: t("navfooter.subMtmTerminal"), href: "/mtm-terminal" },
         { name: t("navfooter.subTradingDesk"), href: "/trading" },
         { name: "MTM Sensei EA", href: "/sensei-ea" },
-        { name: "Tesourinhas Loja", href: "https://www.instagram.com/tesourinhasloja/", external: true },
       ],
     },
     {
