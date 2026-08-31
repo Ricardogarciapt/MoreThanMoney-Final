@@ -49,6 +49,16 @@ export interface ExecSwitches {
    * Default FALSE: mantém exactamente o comportamento que existia.
    */
   trailing_tempo_real: boolean
+  /**
+   * A perna GOLD DID: a mesma entrada do Premium aberta também na conta do Alcy, com regras
+   * próprias (0,02 lotes, saídas a meias, trailing pelo motor).
+   *
+   * Tem interruptor próprio porque abre ordens sozinha numa segunda conta. O precedente é o
+   * Forex Swings, que entrou rotulado de Premium e abriu nas contas de toda a gente: quando uma
+   * coisa destas corre mal, tem de haver um sítio para a desligar sem esperar por um deploy.
+   * Default ON — foi pedida a funcionar.
+   */
+  golddid_exec: boolean
 }
 
 const KEY = "mtmcopy_exec_switches"
@@ -76,6 +86,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       // Default OFF: liga-se por escolha, porque custa uma leitura de preço por posição.
       trailing_tempo_real: v.trailing_tempo_real === true,
       premium_master_exec: v.premium_master_exec !== false, // default ON (conta mestre)
+      golddid_exec: v.golddid_exec !== false, // default ON (conta demo do Alcy)
     }
   } catch {
     return {
@@ -91,6 +102,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       t2t_price_monitor: true,
       trailing_tempo_real: false,
       premium_master_exec: true,
+      golddid_exec: true,
     }
   }
 }

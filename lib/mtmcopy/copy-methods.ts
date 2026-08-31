@@ -418,9 +418,23 @@ export function normalizeExitPcts(
   tp2?: number | null,
   tp3?: number | null,
 ): { tp1: number; tp2: number; tp3: number } {
-  const a = Math.max(0, Number(tp1) || 75)
-  const b = Math.max(0, Number(tp2) || 15)
-  const c = Math.max(0, Number(tp3) || 10)
+  /**
+   * ZERO é uma escolha, não uma ausência.
+   *
+   * Isto era `Number(tp3) || 10`, e em JavaScript `0 || 10` dá 10 — pedir uma escada de dois
+   * alvos (50/50/0) devolvia 45/45/10: a terceira saída voltava sozinha, e as outras duas
+   * encolhiam para lhe abrir espaço. Quem configurasse duas saídas ficava com três, e com
+   * percentagens que nunca escreveu.
+   *
+   * O default só entra quando o valor não vem mesmo — null, undefined ou lixo.
+   */
+  const ou = (v: number | null | undefined, omisso: number) => {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : omisso
+  }
+  const a = Math.max(0, ou(tp1, 75))
+  const b = Math.max(0, ou(tp2, 15))
+  const c = Math.max(0, ou(tp3, 10))
   const sum = a + b + c
   if (sum <= 0) return defaultExitPcts()
   return {

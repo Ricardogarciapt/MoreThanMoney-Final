@@ -1367,12 +1367,16 @@ async function executeViaMtmProvider(
         const { getPremiumExecConfig } = await import('./premium-daily-stop')
         const gd = await getPremiumExecConfig()
         if (gd.goldDidEnabled) {
-          const { CANONICAL_GOLDDID_ACCOUNT_ID } = await import('./provider-constants')
+          const { CANONICAL_GOLDDID_ACCOUNT_ID, GOLDDID_LOTE, GOLDDID_SAIDAS } =
+            await import('./provider-constants')
           const { buildPremiumSingleOrderComment } = await import('./premium-single')
-          const goldDidLot = 0.01 // conta de teste do Alcy (lote fixo pequeno)
+          // As MESMAS regras da perna a mercado — lote fixo e saídas a meias. Ter dois números
+          // diferentes para a mesma estratégia, um por caminho, dava resultados que ninguém
+          // conseguia explicar depois.
+          const goldDidLot = GOLDDID_LOTE
           const gdComment = buildPremiumSingleOrderComment(
             goldDidLot,
-            { tp1: 0, tp2: 100, tp3: 0 }, // 100% no Exit 2 (fecha no TP2)
+            GOLDDID_SAIDAS,
             { strategyTag: 'Gold Did' },
           )
           await getSupabaseAdmin().from('mtmcopy_premium_pending').insert({
@@ -1385,15 +1389,17 @@ async function executeViaMtmProvider(
             entry: signalForExec.entry ?? marketPrice ?? null,
             sl: signalForExec.sl ?? null,
             tp: signalForExec.tp ?? [],
-            exit_pct_tp1: 0,
-            exit_pct_tp2: 100,
-            exit_pct_tp3: 0,
+            exit_pct_tp1: GOLDDID_SAIDAS.tp1,
+            exit_pct_tp2: GOLDDID_SAIDAS.tp2,
+            exit_pct_tp3: GOLDDID_SAIDAS.tp3,
             lot: goldDidLot,
             comment: gdComment,
             telegram_message_id: telegramMessageId ?? null,
             mode: zoneCfg.mode,
             status: 'pending',
-            profile: 'golddid',
+            // Escada de saídas + break-even + trailing (perfil null), e já não o antigo
+            // 'golddid', que fazia BE aos +5,0 e fechava tudo no TP2 sem trailing nenhum.
+            profile: null,
             expires_at: new Date(Date.now() + zoneCfg.expiry_min * 60_000).toISOString(),
           })
         }
@@ -1532,6 +1538,89 @@ async function executeViaMtmProvider(
         } catch (e) {
           console.error('[mtmcopy] persist premium active falhou:', e)
         }
+      }
+
+      /**
+       * PERNA GOLD DID — a mesma entrada, na conta do Alcy, com regras próprias.
+       *
+       * A fonte Gold Did é quem alimenta o Premium desde 25/08. Até aqui só executava pelo
+       * caminho da ZONA, que está desligado (`mtmcopy_premium_zone.mode = 'off'` desde 26/08) —
+       * ou seja, na prática não executava de todo. Passa a abrir a mercado, com a entrada.
+       *
+       * Gestão própria, e diferente do Premium de propósito: lote FIXO de 0,02 (o Premium
+       * dimensiona por percentagem de risco), saídas a meias — 0,01 no primeiro alvo e 0,01 no
+       * segundo — e o trailing do motor de preço a partir daí.
+       *
+       * O `profile` fica a null, que é o perfil da escada de saídas: é ele que faz parciais,
+       * break-even e trailing. O antigo perfil `'golddid'` fazia break-even aos +5,0 e fechava
+       * tudo no TP2, SEM trailing — o oposto do que agora se pede.
+       *
+       * Erra do lado de não abrir: qualquer falha aqui fica no log e não toca na perna Premium,
+       * que já está colocada.
+       */
+      try {
+        const { CANONICAL_GOLDDID_ACCOUNT_ID, GOLDDID_LOTE, GOLDDID_SAIDAS } =
+          await import('./provider-constants')
+        const swGd = await (await import('./exec-switches')).getExecSwitches()
+        if (!swGd.golddid_exec) throw new Error('golddid_exec=off')
+        const gd = buildPremiumSingleOrder(
+          signalForExec,
+          GOLDDID_LOTE,
+          GOLDDID_SAIDAS,
+          null,
+          { strategyTag: 'Gold Did' },
+        )
+        if (gd) {
+          const reqGd = buildOrderRequest(
+            providerConn,
+            CANONICAL_GOLDDID_ACCOUNT_ID,
+            signalForExec,
+            gd.lot,
+            gd.comment,
+          )
+          // TP na ordem como rede de segurança, tal como no Premium: se o motor falhar, o broker
+          // ainda fecha no alvo final em vez de deixar a posição sem alvo nenhum.
+          reqGd.takeProfit = gd.takeProfit
+          const rGd = await colocarOrdemDoProvedor(
+            CANONICAL_GOLDDID_ACCOUNT_ID,
+            reqGd,
+            `GOLDDID ${reqGd.symbol} ${reqGd.direction}`,
+          )
+          results.push({
+            ...rGd,
+            label: `GOLD DID · ${gd.lot} lotes · saídas ${GOLDDID_SAIDAS.tp1}/${GOLDDID_SAIDAS.tp2}%`,
+            lot: gd.lot,
+          })
+          if (rGd?.success) {
+            const { getSupabaseAdmin } = await import('@/lib/supabase-admin-client')
+            const tpsGd = signalForExec.tp ?? []
+            await getSupabaseAdmin().from('mtmcopy_premium_active').insert({
+              account_id: CANONICAL_GOLDDID_ACCOUNT_ID,
+              symbol: mappedSymbol,
+              direction: signalForExec.direction,
+              entry: signalForExec.entry ?? marketPrice ?? null,
+              sl: signalForExec.sl ?? null,
+              tp1: tpsGd[0] ?? null,
+              tp2: tpsGd[1] ?? null,
+              tp3: tpsGd[2] ?? null,
+              exit_pct_tp1: GOLDDID_SAIDAS.tp1,
+              exit_pct_tp2: GOLDDID_SAIDAS.tp2,
+              exit_pct_tp3: GOLDDID_SAIDAS.tp3,
+              original_lot: gd.lot,
+              small_account: false,
+              exits_done: 0,
+              trailing_started: false,
+              status: 'open',
+              profile: null,
+              telegram_message_id: telegramMessageId ?? null,
+            })
+          }
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        // Desligada de propósito não é avaria — não polui o log de erros.
+        if (msg === 'golddid_exec=off') console.log('[mtmcopy] perna Gold Did desligada')
+        else console.error('[mtmcopy] perna Gold Did falhou:', msg)
       }
     } else {
       const req = buildOrderRequest(providerConn, provider.accountId, signalForExec, totalLot, mtComment)
