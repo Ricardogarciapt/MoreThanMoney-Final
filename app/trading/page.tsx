@@ -14,6 +14,9 @@ import {
   ExternalLink,
   Download,
   BookUser,
+  Bot,
+  FileText,
+  KeyRound,
 } from "lucide-react"
 
 const MT5_WINDOWS_URL =
@@ -377,7 +380,10 @@ export default function TradingPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-zinc-400">
-                <p>Instala o MT5 na tua máquina e liga-o às tuas contas de trading.</p>
+                <p>
+                  Instala o MT5 e liga-o às tuas contas. Depois usa o instalador do MTM Sensei
+                  aqui ao lado — ele trata do resto.
+                </p>
                 <div className="flex flex-col gap-2">
                   <Button
                     asChild
@@ -402,6 +408,61 @@ export default function TradingPage() {
                     </Link>
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* O EA vive ao lado do download do MT5 de propósito: quem acabou de instalar o
+                MetaTrader é exactamente quem precisa disto a seguir. */}
+            <Card className="bg-black border-emerald-500/25">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <Bot className="h-5 w-5 text-emerald-400" />
+                  MTM Sensei EA
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-zinc-400">
+                <p>
+                  O robô da casa para MT5. O instalador põe o EA, os presets e o calendário
+                  de notícias no sítio certo e abre o guia — não tens de procurar pastas.
+                </p>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    asChild
+                    size="sm"
+                    className="justify-between bg-emerald-600 hover:bg-emerald-500 text-white font-medium"
+                  >
+                    <a href="/downloads/MTM-Sensei-EA.zip" download>
+                      Instalador + EA (Windows e macOS)
+                      <Download className="h-3.5 w-3.5" />
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="justify-between border-white/20 text-zinc-100 hover:border-emerald-400/70"
+                  >
+                    <Link href="/api/sensei-ea/guia" target="_blank" rel="noreferrer">
+                      Guia de instruções (PDF)
+                      <FileText className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="justify-between border-white/20 text-zinc-100 hover:border-emerald-400/70"
+                  >
+                    <Link href="/member-area?tab=subscription">
+                      A minha licença
+                      <KeyRound className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  Precisa de licença. Premium, VIP e Fundador emitem a deles sem custo na área de
+                  membro.
+                </p>
               </CardContent>
             </Card>
 

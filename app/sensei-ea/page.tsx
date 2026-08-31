@@ -131,6 +131,14 @@ export default function SenseiEaPage() {
               t: "Presets prontos",
               d: "Ficheiros .set com par, tempo gráfico e horário já afinados. O guia diz qual usar e — mais importante — quais evitar.",
             },
+            {
+              t: "Instalador automático",
+              d: "Windows e macOS. Encontra o teu MetaTrader — mesmo com dois instalados de corretoras diferentes — copia tudo para o sítio certo e abre o guia.",
+            },
+            {
+              t: "Avisos de versão",
+              d: "O EA diz-te quando sai uma versão nova e o que mudou, e pode descarregá-la para a pasta Files. Afinações de risco e trailing podem chegar do servidor, se autorizares.",
+            },
           ].map(({ t, d }) => (
             <div key={t} className="rounded-xl border border-gray-800 bg-gray-900/50 p-6">
               <div className="rounded-lg bg-[#D2A63C]/10 w-9 h-9 flex items-center justify-center ring-1 ring-[#D2A63C]/20 mb-4">
@@ -181,7 +189,7 @@ export default function SenseiEaPage() {
           {[
             { n: "1", t: "Pagas", d: "E indicas o número da conta MT5, se já o tiveres. Se não, deixas em branco." },
             { n: "2", t: "Recebes a chave", d: "Por email, no formato MTM-XXXX-XXXX-XXXX, com o pacote e o guia." },
-            { n: "3", t: "Permites o endereço", d: "No MetaTrader: Ferramentas → Opções → Consultores → permitir WebRequest para morethanmoney.pt." },
+            { n: "3", t: "Corres o instalador", d: "Windows ou macOS: encontra o teu MetaTrader sozinho, põe tudo no sítio e abre o guia." },
             { n: "4", t: "Colas a chave", d: "No campo \"Licença\" do EA. Aparece \"LICENCA: valida\" e podes ligar o AutoTrading." },
           ].map(({ n, t, d }) => (
             <div key={n} className="relative rounded-xl border border-gray-800 bg-gray-900/50 p-6">

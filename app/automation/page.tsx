@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { ArrowRight, RefreshCw, Bot, Zap, Shield, Clock, CheckCircle, Smartphone, ChevronLeft, ChevronRight } from "lucide-react"
+import { ArrowRight, RefreshCw, Bot, Zap, Shield, Clock, CheckCircle, Smartphone, ChevronLeft, ChevronRight, LineChart } from "lucide-react"
 import Link from "next/link"
 import ParticleBackground from "@/components/particle-background"
 import Image from "next/image"
@@ -120,7 +120,7 @@ export default function AutomationPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* MTM Copy — o serviço do site, para quem já sabe o que quer */}
             <Card className="bg-gradient-to-br from-purple-900/40 via-mtm-primary/5 to-pink-900/30 border-2 border-purple-500/30 backdrop-blur-sm flex flex-col">
               <CardContent className="p-8 flex flex-col flex-1">
@@ -206,6 +206,52 @@ export default function AutomationPage() {
                     </Button>
                   </Link>
                   <p className="text-xs text-gray-500 mt-3 text-center">Sem conta MTM · funciona com qualquer corretora MT4/MT5</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* MTM Sensei EA — para quem já vive dentro do MetaTrader e não quer sair de lá.
+                Não é copy trading: o robô lê o mercado na própria máquina do cliente. */}
+            <Card className="bg-gradient-to-br from-emerald-900/30 via-mtm-primary/5 to-teal-900/25 border-2 border-emerald-500/30 backdrop-blur-sm flex flex-col">
+              <CardContent className="p-8 flex flex-col flex-1">
+                <div className="flex items-center gap-4 mb-2">
+                  <div className="bg-emerald-600/20 rounded-xl p-3 border border-emerald-500/40">
+                    <LineChart className="w-9 h-9 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">MTM Sensei EA</h3>
+                    <p className="text-emerald-400 font-semibold text-sm">MetaTrader 5 · quem quer o robô na sua conta</p>
+                  </div>
+                </div>
+
+                <p className="text-gray-300 leading-relaxed mt-4">
+                  Não copia ninguém: é a nossa leitura de mercado a correr no teu MetaTrader.
+                  Analisa, entra, tira parciais e faz trailing sozinho — e tens o painel no gráfico
+                  para tomares conta quando quiseres.
+                </p>
+
+                <ul className="mt-5 space-y-2.5 text-gray-300 text-sm">
+                  <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />Vinte confirmações antes de cada entrada</li>
+                  <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />Quatro saídas parciais, breakeven e trailing</li>
+                  <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />Filtro de notícias e modo prop firm</li>
+                  <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />Instalador automático para Windows e macOS</li>
+                </ul>
+
+                <div className="mt-auto pt-6">
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="text-3xl font-black text-white">297€</span>
+                    <span className="text-gray-400 text-sm">/ano · ou 1000€ vitalícia</span>
+                  </div>
+                  <p className="text-sm text-emerald-400 mb-4">
+                    Premium, VIP ou Fundador? Não pagas nada.
+                  </p>
+                  <Link href="/sensei-ea">
+                    <Button className="w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-lg px-6 py-6 rounded-xl transition-all duration-300 hover:scale-[1.02]">
+                      <LineChart className="w-5 h-5 mr-2" />
+                      Ver o MTM Sensei EA
+                    </Button>
+                  </Link>
+                  <p className="text-xs text-gray-500 mt-3 text-center">Uma conta MT5 por licença · qualquer corretora com MT5</p>
                 </div>
               </CardContent>
             </Card>

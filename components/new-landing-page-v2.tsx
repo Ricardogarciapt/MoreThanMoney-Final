@@ -702,6 +702,13 @@ export default function NewLandingPage() {
         <ul><li>{t("l2.packAuto1")}</li><li>{t("l2.packAuto2")}</li><li>{t("l2.packAuto3")}</li><li>{t("l2.packAuto4")}</li></ul>
         <p className="ln2" style={{color:"var(--gold-lt)"}}>{t("l2.packAutoFree")}</p>
         <a className="btn g" href="/mtmauto">{t("l2.packAutoCta")}</a></div>
+      {/* O Sensei EA também vive fora dos packs: compra-se por licença e corre na máquina do
+          cliente, sem passar por conta nenhuma nossa. */}
+      <div className="pk r d3"><div className="nm">{t("l2.packEa")}</div><div className="pr">297€</div><div className="pe">{t("l2.packEaPer")}</div>
+        <p className="ln2">{t("l2.packEaLine")}</p>
+        <ul><li>{t("l2.packEa1")}</li><li>{t("l2.packEa2")}</li><li>{t("l2.packEa3")}</li><li>{t("l2.packEa4")}</li></ul>
+        <p className="ln2" style={{color:"var(--gold-lt)"}}>{t("l2.packEaFree")}</p>
+        <a className="btn g" href="/sensei-ea">{t("l2.packEaCta")}</a></div>
     </div>
     <p className="risk r d3">{t("l2.packsGuarantee")}</p>
   </div>
