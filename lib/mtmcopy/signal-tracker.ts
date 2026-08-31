@@ -183,20 +183,23 @@ async function anunciar(linha: Linha, evento: SignalEvent, ctx: { price?: number
 }
 
 /** Escreve pips e percentagem na mensagem de ENTRADA — é daqui que o cartão os lê. */
-async function gravarDesfecho(linha: Linha, pips: number, rotulo: string) {
+async function gravarDesfecho(linha: Linha, pips: number | null, rotulo: string) {
   const admin = getSupabaseAdmin()
-  const pct = linha.entry && linha.entry > 0
-    ? Math.round(((pips * pipSizeForSymbol(linha.symbol)) / linha.entry) * 100 * 100) / 100
+  // `pips` a null = o sinal acabou mas não se soube medi-lo (sem entrada). Grava-se o fecho e o
+  // rótulo; o NÚMERO fica vazio, porque um zero no lugar dele é outra medição falsa.
+  const p = pips != null ? Math.round(pips * 10) / 10 : null
+  const pct = p != null && linha.entry && linha.entry > 0
+    ? Math.round(((p * pipSizeForSymbol(linha.symbol)) / linha.entry) * 100 * 100) / 100
     : null
   await admin
     .from('chat_messages')
-    .update({ outcome: { label: rotulo, pips: Math.round(pips * 10) / 10, pct } })
+    .update({ outcome: { label: rotulo, pips: p, pct } })
     .eq('id', linha.chat_message_id)
   await admin
     .from('mtmcopy_signal_tracking')
     .update({
       status: 'closed',
-      result_pips: Math.round(pips * 10) / 10,
+      result_pips: p,
       result_pct: pct,
       outcome_label: rotulo,
       closed_at: new Date().toISOString(),
@@ -359,7 +362,21 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
 
     const bateuSl = l.sl != null && (compra ? price <= l.sl : price >= l.sl)
     if (bateuSl) {
-      const perda = ((compra ? (l.sl as number) - (l.entry ?? 0) : (l.entry ?? 0) - (l.sl as number)) / pip)
+      /**
+       * SEM ENTRADA não há resultado que se possa medir.
+       *
+       * Isto era `l.entry ?? 0`, e com a entrada por preencher a conta virava `stop ÷ pip` — o
+       * PREÇO INTEIRO lido como pips. Ficaram gravados quatro «Stop loss +13617 pips» em pares
+       * de forex do James, onde 13617 é só o 1,3617 do stop. Números assim entram nas médias da
+       * estratégia e nas contas de quem soma os pips do mês.
+       *
+       * Fecha-se o sinal na mesma — ele acabou — mas sem número. «Não se soube» é honesto; um
+       * valor inventado não é.
+       */
+      const temEntrada = l.entry != null && l.entry > 0
+      const perda = temEntrada
+        ? ((compra ? (l.sl as number) - (l.entry as number) : (l.entry as number) - (l.sl as number)) / pip)
+        : null
       // O cartão mede pela ENTRADA até ao preço que passamos: no stop é o SL, não a cotação do
       // instante — senão anunciava «+21 pips» numa trade que fechou em perda.
       await anunciar(l, 'stop_loss', { price: l.sl })
@@ -375,17 +392,22 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
     if (!bateuTp) continue
 
     const ultimo = proximo >= l.tps.length
-    const pips = (compra ? alvo - (l.entry ?? alvo) : (l.entry ?? alvo) - alvo) / pip
+    // Mesmo princípio do stop: sem entrada não se mede. Aqui o `?? alvo` dava zero pips, que é
+    // menos escandaloso do que o do stop mas igualmente falso — uma trade que ganhou entrava
+    // nas estatísticas como se não tivesse dado nada.
+    const pips = l.entry != null && l.entry > 0
+      ? (compra ? alvo - l.entry : l.entry - alvo) / pip
+      : null
     await anunciar(l, ultimo ? 'target_final' : 'partial', { price: alvo, level: proximo })
     if (ultimo) {
       await gravarDesfecho(l, pips, 'Alvo final')
-      eventos.push(`alvo final ${l.symbol} +${Math.round(pips)}p`)
+      eventos.push(`alvo final ${l.symbol}${pips != null ? ` +${Math.round(pips)}p` : ''}`)
     } else {
       await admin
         .from('mtmcopy_signal_tracking')
         .update({ exits_done: proximo, updated_at: new Date().toISOString() })
         .eq('id', l.id)
-      eventos.push(`alvo ${proximo} ${l.symbol} +${Math.round(pips)}p`)
+      eventos.push(`alvo ${proximo} ${l.symbol}${pips != null ? ` +${Math.round(pips)}p` : ''}`)
     }
   }
 
