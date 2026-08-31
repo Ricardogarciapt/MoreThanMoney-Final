@@ -36,18 +36,25 @@ export const CANONICAL_SENSEI_STRATEGY_ID = 'Oca7'
 export const CANONICAL_GOLDKILLER_STRATEGY_ID = 'SDNb'
 export const CANONICAL_BOOSTER_STRATEGY_ID = 'pIrJ'
 /**
- * Gold Did — conta PU Prime Demo do Alcy, MT5 700161536.
+ * Gold Did Premium — conta mestre `18fddc91` ("MT Gold Did"), PU Prime Demo, MT5 700161536,
+ * a publicar a estratégia CopyFactory **tKGT**.
  *
- * **O id estava errado.** Apontava para `4dacaf5a`, que já não existe na MetaApi (404) — era a
- * conta antiga do Alcy, MT5 26421512. Qualquer ordem enviada para lá morria sem chegar a lado
- * nenhum, e o único sinal disso era um erro que ninguém lia. A conta viva é a `ac351c88`, a
- * mesma que o relay e a rota do chat já usavam: o código é que tinha ficado para trás.
+ * **Dois ids mortos já apanhados aqui.** Primeiro apontava para `4dacaf5a` (404 na MetaApi, a
+ * conta antiga do Alcy) e depois para `ac351c88` com a estratégia `e68I` — que também não existe
+ * na CopyFactory. Ordens enviadas para uma conta 404 morrem sem chegar a lado nenhum, e o único
+ * sinal disso é um erro que ninguém lê.
  *
- * Executa os sinais da fonte com gestão PRÓPRIA (lote fixo, saídas a meias, trailing pelo motor
- * de preço) — não é a gestão do Premium.
+ * **Cuidado ao auditar:** a `ac351c88` e a `18fddc91` são a MESMA conta de corretora (o mesmo
+ * login 700161536) registada DUAS vezes na MetaApi. Só a `18fddc91` publica a `tKGT`, por isso é
+ * essa que manda — escolher pelo login davam-se as duas por boas.
+ *
+ * Executa os sinais do grupo Gold Did com gestão PRÓPRIA (lote fixo, saídas a meias, trailing
+ * pelo motor de preço) — não é a gestão do Premium.
  */
-export const CANONICAL_GOLDDID_ACCOUNT_ID = 'ac351c88-f206-439c-9999-97636e8f9791'
-export const CANONICAL_GOLDDID_STRATEGY_ID = 'e68I'
+export const CANONICAL_GOLDDID_ACCOUNT_ID = '18fddc91-0e64-4b30-b8f8-0ea5743fa5f8'
+export const CANONICAL_GOLDDID_STRATEGY_ID = 'tKGT'
+/** Como a estratégia se chama para quem a vai copiar. */
+export const GOLDDID_NOME = 'Gold Did Premium'
 
 /**
  * Lote FIXO da perna Gold Did, e como se reparte pelas saídas.
@@ -106,7 +113,7 @@ export const CONTAS_MOTOR_TEMPO_REAL: string[] = [
   CANONICAL_AURUMFLOW_ACCOUNT_ID,    // MTM Auto Aurum Flow · MT5 34744077 · vT8w
   // Sem esta linha o motor nunca visitava a conta do Gold Did: abria a trade e deixava-a
   // entregue ao TP da ordem, sem parciais, sem break-even e sem trailing.
-  CANONICAL_GOLDDID_ACCOUNT_ID,      // Gold Did · MT5 700161536 (demo) · e68I
+  CANONICAL_GOLDDID_ACCOUNT_ID,      // Gold Did Premium · MT5 700161536 (demo) · tKGT
 ]
 
 export function ehContaDeMotor(accountId: string | null | undefined): boolean {
@@ -181,12 +188,15 @@ export const MTM_COPY_STRATEGY_CATALOG: Record<
       'estratégia de acumulação. Só com dinheiro que aceitas perder.',
   },
   [CANONICAL_GOLDDID_STRATEGY_ID]: {
-    title: 'Gold Did',
-    publicLabel: 'Gold Did',
+    title: 'Gold Did Premium',
+    publicLabel: 'Gold Did Premium',
+    // A descrição antiga contava a gestão que já não é esta: dizia «stop para a entrada aos 50
+    // pips, sem trailing, sai no segundo alvo». Passou a haver trailing, e a posição sai em duas
+    // metades. Deixá-la ficar era descrever ao cliente uma estratégia diferente da que ele copia.
     description:
-      'Ouro, a seguir os mesmos sinais do Premium mas com gestão mais simples: stop para a ' +
-      'entrada aos 50 pips, sem trailing, e sai no segundo alvo. Fecha mais cedo do que o ' +
-      'Premium — menos por trade, menos tempo exposta. Conta mínima 500 USD.',
+      'Ouro, a seguir o grupo Gold Did. Abre uma posição e sai em duas metades — uma no ' +
+      'primeiro alvo e outra no segundo — com o stop a subir para a entrada pelo caminho e o ' +
+      'trailing a acompanhar o preço até ao fecho. Conta mínima 500 USD.',
   },
   [CANONICAL_COPYTRADER_RG_STRATEGY_ID]: {
     title: 'Copy Trader Ricardo Garcia',
