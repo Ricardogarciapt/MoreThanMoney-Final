@@ -1404,7 +1404,7 @@ export default function TapToTradeFeed() {
                             : { background: "var(--destaque-suave)", color: "var(--destaque)" }
                       }
                     >
-                      {accepted[s.id] ? "Aceite" : s.expired ? t("t2t.expired") : "Ativo"}
+                      {accepted[s.id] ? t("t2t.statusAccepted") : s.expired ? t("t2t.expired") : t("t2t.statusActive")}
                     </span>
                   </div>
                 </div>
@@ -1413,11 +1413,11 @@ export default function TapToTradeFeed() {
                   <>
                     <div className="mt-2.5 flex gap-1.5">
                       <div className="nivel">
-                        <p className="etiqueta">Entrada</p>
-                        <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums">{f.entry ?? "Mercado"}</p>
+                        <p className="etiqueta">{t("t2t.entry")}</p>
+                        <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums">{f.entry ?? t("t2t.market")}</p>
                       </div>
                       <div className="nivel">
-                        <p className="etiqueta">Stop loss</p>
+                        <p className="etiqueta">{t("t2t.stopLoss")}</p>
                         <p className="mt-0.5 text-[14.5px] font-semibold tabular-nums" style={{ color: "var(--perigo)" }}>
                           {f.sl ?? "—"}
                         </p>
@@ -1458,7 +1458,7 @@ export default function TapToTradeFeed() {
                         className="mt-2 flex items-center justify-between rounded-xl px-3 py-2"
                         style={{ background: "color-mix(in srgb, var(--fundo) 60%, transparent)" }}
                       >
-                        <span className="etiqueta">Desde a entrada</span>
+                        <span className="etiqueta">{t("t2t.fromEntry")}</span>
                         <span
                           className="text-[14.5px] font-bold tabular-nums"
                           style={{ color: (aoVivo[s.id]!.pips ?? 0) >= 0 ? "var(--sucesso)" : "var(--perigo)" }}
@@ -1507,7 +1507,7 @@ export default function TapToTradeFeed() {
                     className="mt-2.5 flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] font-semibold"
                     style={{ background: "color-mix(in srgb, var(--fundo) 60%, transparent)", color: "color-mix(in srgb, var(--texto) 45%, transparent)" }}
                   >
-                    <Clock className="w-4 h-4" /> Sinal indisponível
+                    <Clock className="w-4 h-4" /> {t("t2t.signalUnavailable")}
                   </div>
                 ) : (
                   <button
@@ -1683,21 +1683,21 @@ export default function TapToTradeFeed() {
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-[15px] font-bold text-white">{preview.trade.symbol}</span>
                       <span className={`text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 ${preview.trade.direction === "buy" ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"}`}>
-                        {preview.trade.direction === "buy" ? "Compra" : "Venda"}
+                        {preview.trade.direction === "buy" ? t("t2t.buy") : t("t2t.sell")}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[12px] font-mono tabular-nums">
                       {preview.trade.entry != null && (
-                        <div className="flex justify-between"><span className="text-zinc-500">Entrada</span><span className="text-zinc-200">{preview.trade.entry}</span></div>
+                        <div className="flex justify-between"><span className="text-zinc-500">{t("t2t.entry")}</span><span className="text-zinc-200">{preview.trade.entry}</span></div>
                       )}
                       {preview.trade.sl != null && (
-                        <div className="flex justify-between"><span className="text-zinc-500">Stop</span><span className="text-rose-400">{preview.trade.sl}</span></div>
+                        <div className="flex justify-between"><span className="text-zinc-500">{t("t2t.stopShort")}</span><span className="text-rose-400">{preview.trade.sl}</span></div>
                       )}
                       {preview.trade.tps.slice(0, 3).map((tp, i) => (
-                        <div key={i} className="flex justify-between"><span className="text-zinc-500">Alvo {i + 1}</span><span className="text-emerald-400">{tp}</span></div>
+                        <div key={i} className="flex justify-between"><span className="text-zinc-500">{t("t2t.target")} {i + 1}</span><span className="text-emerald-400">{tp}</span></div>
                       ))}
                       {preview.trade.stopPips != null && (
-                        <div className="flex justify-between"><span className="text-zinc-500">Ao stop</span><span className="text-zinc-400">{preview.trade.stopPips} pips</span></div>
+                        <div className="flex justify-between"><span className="text-zinc-500">{t("t2t.atStop")}</span><span className="text-zinc-400">{preview.trade.stopPips} pips</span></div>
                       )}
                     </div>
                   </div>
@@ -1706,7 +1706,7 @@ export default function TapToTradeFeed() {
                 {/* Quanto se arrisca, por conta. É a pergunta que o cliente faz antes de tocar. */}
                 {preview?.mode === "execute" && preview.accounts.length > 0 && (
                   <div className="rounded-lg border border-[#D2A63C]/25 bg-[#D2A63C]/5 p-3 mb-3">
-                    <p className="text-[10px] uppercase tracking-wider text-[#D2A63C] mb-2">Nas tuas contas</p>
+                    <p className="text-[10px] uppercase tracking-wider text-[#D2A63C] mb-2">{t("t2t.inYourAccounts")}</p>
                     <div className="flex flex-col gap-2">
                       {preview.accounts.map((a) => (
                         <div key={a.id} className="flex items-baseline justify-between gap-3">
@@ -1724,7 +1724,7 @@ export default function TapToTradeFeed() {
                               {a.riskAmount != null && <span className="text-zinc-400"> ≈ {a.riskAmount}</span>}
                             </span>
                           ) : (
-                            <span className="text-[11px] text-zinc-600">conta não respondeu</span>
+                            <span className="text-[11px] text-zinc-600">{t("t2t.accountNoAnswer")}</span>
                           )}
                         </div>
                       ))}
@@ -1735,7 +1735,7 @@ export default function TapToTradeFeed() {
                         {preview.accounts.filter((a) => a.overCap != null).map((a) => ` — ${a.label}: ${a.realRiskPct}% contra ${a.overCap}%`).join("")}. Com este saldo não há lote que respeite a percentagem.
                       </p>
                     )}
-                    <p className="text-[10px] text-zinc-500 mt-2">Percentagem e valor calculados sobre a equity de cada conta.</p>
+                    <p className="text-[10px] text-zinc-500 mt-2">{t("t2t.equityNote")}</p>
                   </div>
                 )}
                 {/* DIZER PORQUE É QUE NÃO DÁ. Uma conta em pausa, desligada ou sem saldo era
@@ -1744,7 +1744,7 @@ export default function TapToTradeFeed() {
                 {preview?.mode === "execute" && (preview.blocked?.length ?? 0) > 0 && (
                   <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 mb-3">
                     <p className="text-[10px] uppercase tracking-wider text-amber-400 mb-2">
-                      {preview!.accounts.length > 0 ? "Contas que ficam de fora" : "Nenhuma conta pode aceitar"}
+                      {preview!.accounts.length > 0 ? t("t2t.accountsLeftOut") : t("t2t.noAccountCanAccept")}
                     </p>
                     <div className="flex flex-col gap-2">
                       {preview!.blocked!.map((b) => (
@@ -1757,13 +1757,13 @@ export default function TapToTradeFeed() {
                     </div>
                   </div>
                 )}
-                {previewBusy && !preview && <p className="text-[11px] text-zinc-500 mb-3">A calcular o risco nas tuas contas…</p>}
+                {previewBusy && !preview && <p className="text-[11px] text-zinc-500 mb-3">{t("t2t.calculatingRisk")}</p>}
 
                 <div className="rounded-lg bg-zinc-900 border border-zinc-800 p-3 text-xs text-zinc-400 max-h-24 overflow-y-auto whitespace-pre-wrap mb-4">{tap.sig.content}</div>
                 <div className="flex gap-2">
                   <button onClick={() => setTap(null)} className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300 active:scale-95">{t("t2t.cancel")}</button>
                   <button onClick={runTap} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black active:scale-95">
-                    {preview?.mode === "follow" ? "Seguir posição" : t("t2t.confirmOpen")}
+                    {preview?.mode === "follow" ? t("t2t.followPositionBtn") : t("t2t.confirmOpen")}
                   </button>
                 </div>
               </>

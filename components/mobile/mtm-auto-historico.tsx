@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { useT } from "@/components/i18n-provider"
 import { Loader2 } from "lucide-react"
 
 /**
@@ -47,26 +48,26 @@ type Dados = {
 
 /**
  * O estado vem gravado em inglês — é a língua base do sistema e é assim que fica na base de dados
- * para ser lido meses depois. Mostrá-lo cru punha "skipped" no meio de um ecrã em português, e
+ * para ser lido meses depois. Mostrá-lo cru punha "skipped" no meio de um ecrã noutra língua, e
  * "skipped" não diz a ninguém que a trade não chegou a abrir.
+ *
+ * O mapa dá a CHAVE, não o texto: era português fixo, e ficava português mesmo com a app em
+ * alemão.
  */
-function estadoEmPortugues(e: string): string {
-  const m: Record<string, string> = {
-    closed: "Fechada",
-    fechada: "Fechada",
-    open: "Aberta",
-    aberta: "Aberta",
-    pending: "Por abrir",
-    skipped: "Não abriu",
-    failed: "Falhou",
-    error: "Falhou",
-    cancelled: "Cancelada",
-    canceled: "Cancelada",
-    executed: "Executada",
-    filled: "Executada",
-    following: "A seguir",
-  }
-  return m[e.toLowerCase()] ?? (e || "—")
+const CHAVE_DO_ESTADO: Record<string, string> = {
+  closed: "t2t.stClosed",
+  fechada: "t2t.stClosed",
+  open: "t2t.stOpen",
+  aberta: "t2t.stOpen",
+  pending: "t2t.stPending",
+  skipped: "t2t.stSkipped",
+  failed: "t2t.stFailed",
+  error: "t2t.stFailed",
+  cancelled: "t2t.stCancelled",
+  canceled: "t2t.stCancelled",
+  executed: "t2t.stExecuted",
+  filled: "t2t.stExecuted",
+  following: "t2t.stFollowing",
 }
 
 const CORES: Record<string, string> = {
@@ -76,6 +77,7 @@ const CORES: Record<string, string> = {
 }
 
 export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
+  const t = useT()
   const [d, setD] = useState<Dados | null>(null)
   const [aLer, setALer] = useState(true)
   /**
@@ -111,12 +113,12 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
   if (aLer && !d) {
     return (
       <p className="flex items-center justify-center gap-2 py-10 text-[13px] texto-fraco">
-        <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--destaque)" }} /> A somar as tuas contas…
+        <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--destaque)" }} /> {t("t2t.histSumming")}
       </p>
     )
   }
   if (!d || !d.linhas.length) {
-    return <p className="py-10 text-center text-[13px] texto-fraco">Ainda não há trades nas tuas contas nesta janela.</p>
+    return <p className="py-10 text-center text-[13px] texto-fraco">{t("t2t.histEmpty")}</p>
   }
 
   const { serie, resumo } = d
@@ -139,7 +141,7 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
     <div className="space-y-3">
       <div className="cartao p-3.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="etiqueta">Resultado · {dias} dias</span>
+          <span className="etiqueta">{t("t2t.histResult")} · {dias} {t("t2t.histDays")}</span>
           <div className="flex items-center gap-2">
             <span
               className="text-[19px] font-bold tabular-nums"
@@ -199,8 +201,8 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
 
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] texto-fraco">
           <span>{resumo.total} trades</span>
-          <span>{resumo.fechadas} fechadas</span>
-          {resumo.winrate != null && <span>{resumo.winrate}% de acerto</span>}
+          <span>{resumo.fechadas} {t("t2t.histClosed")}</span>
+          {resumo.winrate != null && <span>{resumo.winrate}% {t("t2t.histWinrate")}</span>}
         </div>
 
         <div className="mt-2 flex flex-wrap gap-2">
@@ -226,7 +228,7 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
                 {l.symbol}{" "}
                 {l.direction && (
                   <span style={{ color: l.direction === "buy" ? "var(--sucesso)" : "var(--perigo)" }}>
-                    {l.direction === "buy" ? "COMPRA" : "VENDA"}
+                    {l.direction === "buy" ? t("t2t.buy") : t("t2t.sell")}
                   </span>
                 )}
               </p>
@@ -260,7 +262,7 @@ export default function MtmAutoHistorico({ dias = 30 }: { dias?: number }) {
                   )}
                 </p>
               )}
-              {l.resultado == null && <p className="mt-0.5 text-[11.5px] texto-mais-fraco">{estadoEmPortugues(l.estado)}</p>}
+              {l.resultado == null && <p className="mt-0.5 text-[11.5px] texto-mais-fraco">{CHAVE_DO_ESTADO[l.estado?.toLowerCase()] ? t(CHAVE_DO_ESTADO[l.estado.toLowerCase()]) : (l.estado || "—")}</p>}
             </div>
           </div>
         ))}
