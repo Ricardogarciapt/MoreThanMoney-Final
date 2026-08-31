@@ -270,8 +270,28 @@ export function quickLocalValidate(
 
   const confidence = clamp01(score)
 
+  /**
+   * Geometria impossível: recusa, não desconto de confiança.
+   *
+   * A 31/08 chegou do Premium um «GOLD BUY … SL : 4532 … TP1 : 4447» — numa compra a 4437, o
+   * stop 95 pontos ACIMA da entrada e o alvo 10 abaixo. É um lapso de quem escreveu o sinal, não
+   * uma questão de confiança: a trade que ali está descrita não existe.
+   *
+   * A heurística já detectava («BUY: SL deve ficar abaixo do TP»), mas limitava-se a não somar os
+   * 0,2 do critério — o sinal saía com 90% e seguia para a corretora, que o recusou 28 vezes em
+   * sete dias com «Invalid stops in the request». Cada uma dessas tentativas gastou crédito da
+   * MetaApi (chegámos a bater no limite de CPU) e deixou o cliente a ver «erro na execução» sem
+   * lhe dizer que o problema estava no próprio sinal.
+   *
+   * O risco maior é o outro: uma corretora mais permissiva aceitava. Numa compra com o stop por
+   * cima, o stop deixa de proteger — fecha em lucro e é o ALVO que fica no lado da perda.
+   */
+  const stopDoLadoErrado =
+    sl != null && tp0 != null &&
+    ((parsed.direction === 'buy' && sl > tp0) || (parsed.direction === 'sell' && sl < tp0))
+
   return {
-    valid: confidence >= MTMCOPY_AI_MIN_CONFIDENCE && issues.length <= 2,
+    valid: !stopDoLadoErrado && confidence >= MTMCOPY_AI_MIN_CONFIDENCE && issues.length <= 2,
     confidence,
     symbol: parsed.symbol,
     direction: parsed.direction,
@@ -280,7 +300,9 @@ export function quickLocalValidate(
     tp: parsed.tp,
     orderType: parsed.orderType,
     issues,
-    reasoning: issues.length ? issues.join('; ') : 'Heurística local OK',
+    reasoning: stopDoLadoErrado
+      ? `Stop do lado errado da entrada — o sinal como está descrito não é executável. ${issues.join('; ')}`
+      : issues.length ? issues.join('; ') : 'Heurística local OK',
     source: 'local',
     localConfidence: confidence,
     aiConfidence: null,
@@ -444,8 +466,27 @@ function mergeAiIntoValidation(
   const issues = [...new Set([...(ai.issues ?? []), ...local.issues])]
   const hybridConfidence = clamp01(aiConf * 0.7 + local.localConfidence * 0.3)
 
+  /**
+   * A recusa por geometria repete-se AQUI, sobre os valores já fundidos.
+   *
+   * Este merge deita fora o `local.valid` e decide de novo: a recusa da heurística não
+   * sobreviveria à passagem pelo modelo, e bastava o validador responder `valid:true` para o
+   * sinal impossível seguir na mesma para a corretora.
+   *
+   * Sobre os valores FUNDIDOS de propósito, e não sobre os locais: o modelo por vezes corrige um
+   * SL que o parser leu mal, e nesse caso o sinal passa a ser coerente e deve poder executar.
+   */
+  const slFinal = parseNum(ai.sl) ?? local.sl
+  const tpFinal = (tpArr.length ? tpArr : local.tp)[0] ?? null
+  const stopDoLadoErrado =
+    slFinal != null && tpFinal != null &&
+    ((direction === 'buy' && slFinal > tpFinal) || (direction === 'sell' && slFinal < tpFinal))
+
   return {
-    valid: (ai.valid ?? hybridConfidence >= MTMCOPY_AI_MIN_CONFIDENCE) && hybridConfidence >= MTMCOPY_AI_MIN_CONFIDENCE,
+    valid:
+      !stopDoLadoErrado &&
+      (ai.valid ?? hybridConfidence >= MTMCOPY_AI_MIN_CONFIDENCE) &&
+      hybridConfidence >= MTMCOPY_AI_MIN_CONFIDENCE,
     confidence: hybridConfidence,
     symbol: (typeof ai.symbol === 'string' ? ai.symbol.toUpperCase() : null) ?? local.symbol,
     direction,
