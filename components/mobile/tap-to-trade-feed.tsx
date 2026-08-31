@@ -797,7 +797,7 @@ export default function TapToTradeFeed() {
     try {
       const tok = await token()
       if (!tok) {
-        setFollowMsg({ tipo: "erro", texto: "Sessão expirada. Entra outra vez para guardar." })
+        setFollowMsg({ tipo: "erro", texto: t("t2t.sessionExpired") })
         return
       }
       const body: Record<string, unknown> = {
@@ -817,7 +817,7 @@ export default function TapToTradeFeed() {
       })
       if (!res.ok) {
         const j = await res.json().catch(() => ({}))
-        setFollowMsg({ tipo: "erro", texto: j.error || `Não foi possível guardar (${res.status}).` })
+        setFollowMsg({ tipo: "erro", texto: j.error || `${t("t2t.saveFailed")} (${res.status})` })
         return
       }
       await loadConnection()
@@ -825,11 +825,11 @@ export default function TapToTradeFeed() {
       const quantas = follow.sources.length + follow.assetClasses.length
       setFollowMsg({
         tipo: "ok",
-        texto: quantas === 0 ? "Guardado. A seguir todas as fontes e ativos." : "Guardado. Filtros aplicados ao teu feed.",
+        texto: quantas === 0 ? t("t2t.savedAllSources") : t("t2t.savedFilters"),
       })
       setTimeout(() => setFollowMsg((m) => (m?.tipo === "ok" ? null : m)), 4000)
     } catch (e) {
-      setFollowMsg({ tipo: "erro", texto: e instanceof Error ? e.message : "Não foi possível guardar." })
+      setFollowMsg({ tipo: "erro", texto: e instanceof Error ? e.message : t("t2t.saveFailed") })
     } finally {
       setSavingFollow(false)
     }
@@ -1063,7 +1063,7 @@ export default function TapToTradeFeed() {
                         type="button"
                         disabled={togglingId === c.id}
                         onClick={() => toggleAccountT2T(c.id, !on)}
-                        aria-label={on ? "Desligar T2T nesta conta" : "Ligar T2T nesta conta"}
+                        aria-label={on ? t("t2t.disableT2TAccount") : t("t2t.enableT2TAccount")}
                         className={`relative ml-2 h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${on ? "bg-[#D2A63C]" : "bg-zinc-700"}`}
                       >
                         <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${on ? "left-[22px]" : "left-0.5"}`} />
@@ -1325,8 +1325,8 @@ export default function TapToTradeFeed() {
           passa a Hoje / Esta semana, que é como se olha para o dia de trading. */}
       <div className="flex items-center gap-1.5 mb-2">
         {([
-          ["today", "Hoje"],
-          ["week", "Esta semana"],
+          ["today", t("t2t.today")],
+          ["week", t("t2t.thisWeek")],
         ] as const).map(([modo, rotulo]) => (
           <button
             key={modo}
@@ -1517,7 +1517,7 @@ export default function TapToTradeFeed() {
                     <Zap className="w-4 h-4" />
                     {/* Nos perpétuos o botão não abre ordem nenhuma — segue a posição-mestre.
                         O rótulo tem de dizer isso, senão promete o que não faz. */}
-                    {t2tMode(s.channel_slug, s.content) === "follow" ? "Seguir posição" : "Tap to Trade"}
+                    {t2tMode(s.channel_slug, s.content) === "follow" ? t("t2t.followPosition") : "Tap to Trade"}
                   </button>
                 )}
               </div>
@@ -1538,7 +1538,7 @@ export default function TapToTradeFeed() {
           {ecra === "historico" && historicoVisivel.length > 0 && (
             <div className="mt-4">
               <p className="etiqueta mb-2">
-                Terminados · {limitMode === "today" ? "hoje" : "esta semana"} ({historicoVisivel.length})
+                {limitMode === "today" ? t("t2t.finishedToday") : t("t2t.finishedWeek")} ({historicoVisivel.length})
               </p>
               <div className="flex flex-col gap-2">
                 {historicoVisivel.map((h) => {
