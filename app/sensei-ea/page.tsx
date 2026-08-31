@@ -162,26 +162,9 @@ export default function SenseiEaPage() {
         </div>
       </section>
 
-      {/* ── Os números, com o contexto ───────────────────────────────────── */}
-      <section className="border-y border-gray-800 bg-gray-900/30">
-        <div className="max-w-6xl mx-auto px-4 py-16">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">A conta Sensei, por instrumento</h2>
-          <p className="text-gray-400 max-w-2xl">
-            As ordens reais da conta que alimenta o MTM Auto Sensei, lidas em direto do histórico
-            da corretora. Não são sinais publicados nem simulações — são trades que aconteceram,
-            com cada saída parcial a contar pelo seu peso.
-          </p>
-
-          <SenseiResultadosLive />
-
-          <p className="text-xs text-gray-600 mt-8 leading-relaxed max-w-3xl">
-            Medimos em pips e não em dinheiro porque o mesmo trade vale cerca de 8 euros a quem
-            opera 0,01 lotes e 800 euros a quem opera 1 lote — a percentagem é igual para toda a
-            gente, o dinheiro não. Resultados passados não indicam resultados futuros, e a tua
-            corretora não é a nossa: o spread e o slippage que apanhas são teus.
-          </p>
-        </div>
-      </section>
+      {/* A prova só existe quando a amostra existir: o componente traz a secção inteira e
+          devolve nada enquanto a conta não tiver histórico que chegue. */}
+      <SenseiResultadosLive />
 
       {/* ── Como funciona a licença ──────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-4 py-16">

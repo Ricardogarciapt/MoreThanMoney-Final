@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { gerarGuiaSensei } from '@/lib/sensei-ea-guia'
-import { lerMetricasProviderSensei } from '@/lib/sensei-provider-metricas'
+import { lerMetricasProviderSensei, minimoDiasConfigurado } from '@/lib/sensei-provider-metricas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -13,7 +13,13 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET() {
   try {
-    const metricas = await lerMetricasProviderSensei().catch(() => null)
+    // Mesmo mínimo de amostra que a página. Um PDF que o cliente guarda e reencaminha é a última
+    // coisa onde se quer um número que ainda não se sustenta.
+    const [lidas, minimoDias] = await Promise.all([
+      lerMetricasProviderSensei().catch(() => null),
+      minimoDiasConfigurado(),
+    ])
+    const metricas = lidas && lidas.dias >= minimoDias ? lidas : null
     const pdf = await gerarGuiaSensei(metricas)
     return new NextResponse(new Uint8Array(pdf), {
       headers: {

@@ -219,9 +219,12 @@ export async function gerarGuiaSensei(metricas?: MetricasProvider | null): Promi
   )
 
   // ── O registo dos sinais ────────────────────────────────────────────────────
-  titulo('4. O que a conta Sensei tem feito')
-
+  // A secção só existe quando houver amostra. Se a rota a estiver a reter por ser curta demais,
+  // `metricas` vem a null e não se imprime título nenhum — um cabeçalho a prometer resultados por
+  // cima de uma frase de desculpa é pior do que não estar lá.
   if (metricas && metricas.porInstrumento.length > 0) {
+    titulo('4. O que a conta Sensei tem feito')
+
     const desde = metricas.desde
       ? new Date(metricas.desde).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })
       : '—'
@@ -246,10 +249,8 @@ export async function gerarGuiaSensei(metricas?: MetricasProvider | null): Promi
 
     caixa(
       `Por instrumento, com pelo menos 10 trades  —  de ${desde} a ${ate}`,
-      `${corpo}\n\nAmostra de ${metricas.dias} ${metricas.dias === 1 ? 'dia' : 'dias'} e ` +
-        `${metricas.totalTrades} trades fechadas. É pouco tempo para julgar uma estratégia: meses ` +
-        'maus existem e não estão aqui dentro. Lê isto como o que é — o que a conta fez até agora, ' +
-        'não o que vai fazer.',
+      `${corpo}\n\n${metricas.totalTrades} trades fechadas no período. É o que a conta fez, ` +
+        'não o que vai fazer: meses maus existem, e um período bom não os impede de vir.',
     )
 
     paragrafo(
@@ -262,15 +263,10 @@ export async function gerarGuiaSensei(metricas?: MetricasProvider | null): Promi
         'dinheiro não. Resultados passados não indicam resultados futuros, e a tua corretora não ' +
         'é a nossa: o spread e o slippage que apanhas são teus.',
     )
-  } else {
-    paragrafo(
-      'Os números actualizados da conta Sensei — trades, acerto e pips por instrumento — estão ' +
-        'sempre em morethanmoney.pt/sensei-ea, lidos em direto do histórico da corretora.',
-    )
   }
 
   // ── Antes de arriscar ───────────────────────────────────────────────────────
-  titulo('5. Antes de arriscar dinheiro')
+  titulo(`${metricas?.porInstrumento.length ? '5' : '4'}. Antes de arriscar dinheiro`)
   paragrafo(
     'O filtro de spread vem DESLIGADO. Cada corretora usa casas decimais diferentes e um valor ' +
       'errado bloqueia todas as entradas em silêncio — foi o que nos custou dias a perceber. O ' +
@@ -290,7 +286,7 @@ export async function gerarGuiaSensei(metricas?: MetricasProvider | null): Promi
   )
 
   // ── Painel ──────────────────────────────────────────────────────────────────
-  titulo('6. O painel')
+  titulo(`${metricas?.porInstrumento.length ? '6' : '5'}. O painel`)
   paragrafo(
     'Automático ligado/desligado, comprar e vender à mão, risco em % ou em lotes, fecho parcial, ' +
       'trailing (ATR ou pontos), fechar tudo, estilo de trading, idioma PT/EN e três vistas de ' +
@@ -298,7 +294,7 @@ export async function gerarGuiaSensei(metricas?: MetricasProvider | null): Promi
   )
 
   // ── Actualizações ───────────────────────────────────────────────────────────
-  titulo('7. Actualizações')
+  titulo(`${metricas?.porInstrumento.length ? '7' : '6'}. Actualizações`)
   paragrafo(
     'O EA avisa-te no gráfico quando sai uma versão nova e diz o que mudou. Se ligares ' +
       '"Descarregar o build novo para a pasta Files", ele traz o ficheiro para MQL5\\Files — depois ' +

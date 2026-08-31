@@ -26,6 +26,19 @@ import { pipSizeForSymbol } from '@/lib/mtmcopy/trade-outcome'
 /** Menos do que isto não diz nada sobre nada — um instrumento com 2 ganhos apareceria a 100%. */
 export const MINIMO_TRADES = 10
 
+/**
+ * Dias de operação abaixo dos quais NÃO se publica nada.
+ *
+ * A conta tinha cinco dias e 91,4% de acerto em XAUUSD. O número era verdadeiro e mesmo assim não
+ * se podia publicar: uma percentagem dessas sobre uma semana promete uma consistência que uma
+ * semana não pode demonstrar, e é a primeira coisa que nos é atirada à cara quando aparecer a
+ * primeira semana má. Espera-se que a amostra exista antes de a mostrar.
+ *
+ * A guarda vive no SERVIDOR, não no ecrã: a rota é pública, e esconder só no componente deixava
+ * os números à distância de abrir o endereço da API.
+ */
+export const MINIMO_DIAS_DEFAULT = 60
+
 /** Quanto histórico se pede ao broker. Ele devolve o que tiver. */
 const DIAS = 400
 
@@ -52,9 +65,40 @@ export interface MetricasProvider {
   aindaAbertas: number
 }
 
+/** O que a rota pública devolve enquanto a amostra ainda não chega para publicar. */
+export interface AmostraCurta {
+  amostraSuficiente: false
+  dias: number
+  minimoDias: number
+  /** Quantos dias faltam. Serve para saber quando voltar a olhar, sem revelar os resultados. */
+  faltamDias: number
+}
+
 /** "XAUUSD.s" → "XAUUSD". O sufixo é da corretora, não do instrumento. */
 function limpar(s: string | undefined | null): string {
   return (s ?? '').toUpperCase().replace(/\.[A-Z]+$/, '')
+}
+
+/**
+ * O mínimo de dias em vigor. Fica em `site_settings.sensei_prova` para se poder baixar ou subir
+ * sem deploy — no dia em que a conta chegar lá, publicar é mudar um número.
+ */
+export async function minimoDiasConfigurado(): Promise<number> {
+  try {
+    const { data } = await getSupabaseAdmin()
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'sensei_prova')
+      .maybeSingle()
+    if (data?.value) {
+      const v = typeof data.value === 'string' ? JSON.parse(data.value) : data.value
+      const n = Number(v?.minimoDias)
+      if (Number.isFinite(n) && n >= 0) return n
+    }
+  } catch {
+    // Falhar a ler a configuração não pode ABRIR a porta: fica o valor mais conservador.
+  }
+  return MINIMO_DIAS_DEFAULT
 }
 
 export async function lerMetricasProviderSensei(): Promise<MetricasProvider | null> {
