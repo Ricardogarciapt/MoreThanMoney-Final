@@ -192,11 +192,15 @@ export async function gerarGuiaSensei(resultados?: ResultadoSensei | null): Prom
       'Mais entradas e mais ruído. Corre-o em demo primeiro, e durante mais tempo do que achas necessário.',
     ],
     [
-      'MTM_AllInOne_BTCUSD_H1.set',
-      'Bitcoin, 1 hora',
-      'Ponto de partida, não recomendação. O Bitcoin muda de comportamento depressa.',
+      'MTM_AllInOne_BTCUSD_H1.set  ·  MTM_AllInOne_BTCUSD_M15.set',
+      'Bitcoin, 1 hora e 15 minutos',
+      'Pontos de partida, não recomendações. O Bitcoin muda de comportamento depressa.',
     ],
-    ['MTM_AllInOne_US30_H1.set', 'US30, 1 hora', 'Ponto de partida. Confirma o spread do teu símbolo antes.'],
+    [
+      'MTM_AllInOne_US30_H1.set  ·  MTM_AllInOne_US30_M15.set',
+      'US30, 1 hora e 15 minutos',
+      'Pontos de partida. Confirma o spread do teu símbolo antes de os usares.',
+    ],
   ]
 
   for (const [ficheiro, par, nota] of presets) {
@@ -209,9 +213,9 @@ export async function gerarGuiaSensei(resultados?: ResultadoSensei | null): Prom
   }
 
   paragrafo(
-    'Não vêm presets para XAUUSD em M5 nem para EURUSD, GBPUSD e USDJPY. Não é esquecimento: ' +
-      'nessas combinações a estratégia não se aguentou, e preferimos não te dar um ficheiro que ' +
-      'só serve para perder dinheiro devagar.',
+    'Não encontras aqui XAUUSD em M5, nem EURUSD, GBPUSD ou USDJPY. Não é esquecimento: nessas ' +
+      'combinações a estratégia não se aguentou, e preferimos não te dar um ficheiro que só serve ' +
+      'para perder dinheiro devagar. Se os quiseres na mesma, configura à mão — mas fá-lo em demo.',
   )
 
   // ── O registo dos sinais ────────────────────────────────────────────────────
