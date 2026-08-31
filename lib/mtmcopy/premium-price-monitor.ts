@@ -23,6 +23,7 @@ import { CANONICAL_PREMIUM_ACCOUNT_ID, CONTAS_MOTOR_TEMPO_REAL, ehContaDeMotor }
 import { getMarketPrice } from './metaapi'
 import { pipSizeForSymbol } from './trade-outcome'
 import { symbolMatchesCanonical } from './symbol-resolver'
+import { adotarManuais } from './adotar-manuais'
 import { trailingArrancaPips } from './source-risk-rules'
 
 interface ActiveRow {
@@ -254,6 +255,18 @@ export async function runPremiumPriceMonitor(): Promise<{
   }
 
   const admin = getSupabaseAdmin()
+
+  /**
+   * Antes de gerir, ADOPTAR: trades abertas à mão na conta provider e marcadas com "MTM" no
+   * comentário passam a ter linha, e a partir daí o motor trata delas como das outras.
+   *
+   * Vem primeiro de propósito — uma trade adoptada nesta passagem tem de ser gerida NESTA
+   * passagem. Adoptar depois de ler as linhas deixava-a um minuto à espera, e um minuto é tempo
+   * suficiente para o break-even que se queria proteger deixar de fazer falta.
+   */
+  const adocao = await adotarManuais()
+  if (adocao.notas.length) console.log('[premium-monitor][adopcao]', adocao.notas.join(' · '))
+
   const { data: rows } = await admin
     .from('mtmcopy_premium_active')
     .select('*')
@@ -300,6 +313,12 @@ export async function runPremiumPriceMonitor(): Promise<{
   }
   if (saltadas.length) {
     detail.push(`${saltadas.length} contas copiadoras saltadas (a CopyFactory replica os fechos): ${saltadas.join(', ')}`)
+  }
+  if (adocao.adotadas.length) {
+    detail.push(
+      `${adocao.adotadas.length} trade(s) manual(is) adoptada(s): ` +
+        adocao.adotadas.map((a) => `${a.symbol} ${a.direction}`).join(', '),
+    )
   }
 
   let actions = 0
