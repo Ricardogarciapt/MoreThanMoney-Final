@@ -196,24 +196,48 @@ export async function subscribeToStrategy(
   return subscribeToStrategies({ ...opts, strategyIds: [strategyId] })
 }
 
+/**
+ * Deixa de copiar: apaga TODAS as subscrições da conta.
+ *
+ * ── O que estava errado ──────────────────────────────────────────────────────────────────────
+ * O corpo era `{ subscriptions: [] }` e a CopyFactory devolvia sempre `Validation failed`: o PUT
+ * do subscritor exige o `name` — é o que o `subscribeToStrategies` já fazia, logo acima, e que
+ * aqui faltava.
+ *
+ * Falhava em silêncio. `removeConnectionCopyFactory()` é o que desliga a cópia de um cliente, e
+ * quem o chama ou ignora o resultado ou faz `.catch(() => {})` — que nem sequer apanha um
+ * `{ok:false}` resolvido. Resultado: a conta ficava marcada como não-subscrita no site e
+ * continuava a copiar trades na corretora.
+ *
+ * Devolve `ok` quando a conta já não é subscritora (404): pedir para parar o que já está parado
+ * é sucesso, não erro — e sem isso cada nova tentativa voltava a dar falha.
+ */
 export async function unsubscribeFromStrategy(
   accountId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const token = process.env.METAAPI_TOKEN
   if (!token) return { ok: false, error: 'METAAPI_TOKEN em falta' }
 
-  const res = await fetch(
-    `${COPYFACTORY_BASE}/users/current/configuration/subscribers/${accountId}`,
-    {
-      method: 'PUT',
-      headers: {
-        'auth-token': token,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ subscriptions: [] }),
-    },
-  )
+  const url = `${COPYFACTORY_BASE}/users/current/configuration/subscribers/${accountId}`
+  const headers = {
+    'auth-token': token,
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  }
+
+  // O `name` tem de ir no corpo, e o que lá está é o que se mantém — inventar um aqui renomeava
+  // o subscritor no painel da CopyFactory de cada vez que alguém parava de copiar.
+  const atual = await fetch(url, { headers }).catch(() => null)
+  if (atual?.status === 404) return { ok: true }
+  const nome =
+    (atual?.ok ? ((await atual.json().catch(() => ({}))) as { name?: string }).name : null) ??
+    accountId
+
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ name: nome, subscriptions: [] }),
+  })
 
   if (res.status === 204 || res.ok) return { ok: true }
 

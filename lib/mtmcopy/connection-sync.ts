@@ -236,7 +236,17 @@ export async function syncMtmStrategyReplication(
     )
     strategyIds = strategyIds.filter((id) => !disabled.has(id))
     if (!strategyIds.length) {
-      await unsubscribeFromStrategy(conn.metaapi_account_id).catch(() => {})
+      // O resultado é lido: `.catch()` não apanha um `{ok:false}` resolvido, e foi assim que
+      // uma desubscrição partida passou despercebida — a conta ficava marcada como parada no
+      // site e continuava a copiar na corretora.
+      const parou = await unsubscribeFromStrategy(conn.metaapi_account_id).catch(
+        (e: unknown) => ({ ok: false, error: e instanceof Error ? e.message : String(e) }),
+      )
+      if (!parou.ok) {
+        console.error(
+          `[mtmcopy] NÃO se conseguiu parar a cópia de ${conn.metaapi_account_id}: ${parou.error ?? '?'}`,
+        )
+      }
       return { ok: false, error: 'Pausado: provider desativado pelo admin' }
     }
   } catch {
