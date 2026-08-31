@@ -61,6 +61,12 @@ export interface LifecycleContext {
   entry?: number | null
   /** Motivo em texto livre, acrescentado ao corpo quando existe. */
   reason?: string | null
+  /**
+   * O STOP DO SINAL, como o autor o escreveu. Serve só para reconhecer um sinal impossível —
+   * stop do lado errado da entrada — e calar o desfecho nesse caso. Não é o stop atual da
+   * posição, que se move com o break-even e o trailing.
+   */
+  slOriginal?: number | null
 }
 
 interface EventDef {
@@ -87,20 +93,32 @@ export function outcomeOf(c: LifecycleContext): string {
 }
 
 /**
- * Um stop não pode dar lucro. Se der, o número está errado — e cala-se.
+ * Um stop com o preço do lado errado não pode dar lucro. Se der, o número está errado — e cala-se.
  *
  * A 31/08 saiu no chat «🛑 Stop loss · XAUUSD 🔵 COMPRA · +950 pips · +2,14%». A aritmética
  * estava certa para o que recebeu (entrada 4437, "stop" 4532 — 95 pontos ACIMA numa compra); o
  * que estava errado era o sinal de origem, que trazia o stop do lado do lucro.
  *
- * A entrada dessa origem já é recusada no `signal-tracker`. Isto é a segunda tranca, para
- * qualquer outro caminho que lá chegue: mais vale anunciar «fechou no stop» sem número do que
- * anunciar uma vitória que não houve. Um número errado no chat é lido como resultado real, e
- * ainda entra nas contas de quem some os pips do mês.
+ * ── Porque é que NÃO chega olhar para o sinal do resultado ────────────────────────────────────
+ * A primeira versão disto calava qualquer stop com desfecho positivo, e isso estava errado: um
+ * stop que subiu com o break-even e o trailing pode ser tocado ACIMA da entrada, e aí o lucro é
+ * verdadeiro. Já aconteceu — «Stop loss · XAUUSD 🔵 COMPRA · +2,2 pips» no Sensei Scanner é um
+ * trailing a fechar em ganho, e calar esse número seria esconder o que a proteção fez.
+ *
+ * O que distingue os dois casos não é o resultado, é a GEOMETRIA DO SINAL: o stop que o autor
+ * escreveu estava do lado errado da entrada, ou não. Por isso o corte precisa do `slOriginal`.
+ * Sem ele não se cala nada — a origem já é recusada no `signal-tracker` e no validador, e o
+ * prejuízo de esconder um lucro real é maior do que o de deixar passar um caso que as trancas
+ * de montante já apanham.
  */
-function desfechoCoerente(evento: SignalEvent, texto: string): string {
+function desfechoCoerente(evento: SignalEvent, texto: string, c: LifecycleContext): string {
   if (evento !== 'stop_loss') return texto
-  return /·\s*[+]/.test(texto) ? '' : texto
+  const sl = Number(c.slOriginal)
+  const entrada = Number(c.entry)
+  if (!Number.isFinite(sl) || !Number.isFinite(entrada) || !(sl > 0) || !(entrada > 0)) return texto
+  const doLadoErrado =
+    (c.direction === 'buy' && sl > entrada) || (c.direction === 'sell' && sl < entrada)
+  return doLadoErrado ? '' : texto
 }
 
 /**
@@ -109,7 +127,7 @@ function desfechoCoerente(evento: SignalEvent, texto: string): string {
  */
 export function headline(c: LifecycleContext, evento?: SignalEvent): string {
   const base = `${c.symbol} ${dirTxt(c.direction)}`.trim()
-  const o = evento ? desfechoCoerente(evento, outcomeOf(c)) : outcomeOf(c)
+  const o = evento ? desfechoCoerente(evento, outcomeOf(c), c) : outcomeOf(c)
   return o ? `${base} · ${o}` : base
 }
 

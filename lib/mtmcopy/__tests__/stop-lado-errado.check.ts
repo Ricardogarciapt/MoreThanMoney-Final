@@ -58,17 +58,34 @@ async function corre() {
     verdade(`sinal ${nome} coerente continua válido`, v.valid)
   }
 
-  // ── 2) Anúncio: um stop nunca sai com resultado positivo ───────────────────────────────────
+  // ── 2) Anúncio: o corte é pela GEOMETRIA do sinal, não pelo sinal do resultado ─────────────
   const cartaoMau = lifecycleMessage('stop_loss', {
-    symbol: 'XAUUSD', direction: 'buy', entry: 4437, price: 4532,
+    symbol: 'XAUUSD', direction: 'buy', entry: 4437, price: 4532, slOriginal: 4532,
   })
-  verdade('stop com lucro sai sem número', !/\+\d/.test(cartaoMau.title))
+  verdade('stop do lado errado sai sem número', !/\+\d/.test(cartaoMau.title))
   verdade('mas continua a dizer que fechou no stop', /Stop loss/.test(cartaoMau.title))
 
   const cartaoBom = lifecycleMessage('stop_loss', {
-    symbol: 'XAUUSD', direction: 'buy', entry: 4437, price: 4427,
+    symbol: 'XAUUSD', direction: 'buy', entry: 4437, price: 4427, slOriginal: 4427,
   })
   verdade('stop a sério mantém o resultado negativo', /−|-/.test(cartaoBom.title))
+
+  /*
+    O caso que a primeira versão desta guarda estragava: um stop que subiu com o break-even e o
+    trailing e foi tocado ACIMA da entrada. O lucro é verdadeiro e tem de aparecer — aconteceu
+    mesmo, «Stop loss · XAUUSD 🔵 COMPRA · +2,2 pips» no Sensei Scanner.
+  */
+  const trailingEmLucro = lifecycleMessage('stop_loss', {
+    symbol: 'XAUUSD', direction: 'buy', entry: 4437, price: 4439, slOriginal: 4427,
+  })
+  verdade('trailing fechado em lucro MOSTRA o ganho', /\+/.test(trailingEmLucro.title))
+
+  // Sem saber o stop do sinal não se cala nada: esconder um lucro real é pior, e a origem já é
+  // recusada a montante.
+  const semSl = lifecycleMessage('stop_loss', {
+    symbol: 'XAUUSD', direction: 'buy', entry: 4437, price: 4439,
+  })
+  verdade('sem slOriginal o número aparece', /\+/.test(semSl.title))
 
   // Um alvo continua a poder ser positivo — a regra é só para o stop.
   const alvo = lifecycleMessage('target_final', {
