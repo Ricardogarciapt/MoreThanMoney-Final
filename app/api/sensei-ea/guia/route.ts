@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { gerarGuiaSensei } from '@/lib/sensei-ea-guia'
-import { lerResultadosSensei } from '@/lib/sensei-resultados'
+import { lerMetricasProviderSensei } from '@/lib/sensei-provider-metricas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -8,13 +8,13 @@ export const dynamic = 'force-dynamic'
 /**
  * O guia em PDF. Aberto: quem está a decidir precisa de o ler antes de pagar.
  *
- * Os números dos sinais vêm da mesma leitura que a página de vendas usa — assim o PDF que o
- * cliente guarda não diz uma coisa e o site outra.
+ * Os números vêm da mesma leitura que a página de vendas usa — assim o PDF que o cliente
+ * guarda não diz uma coisa e o site outra.
  */
 export async function GET() {
   try {
-    const resultados = await lerResultadosSensei().catch(() => null)
-    const pdf = await gerarGuiaSensei(resultados)
+    const metricas = await lerMetricasProviderSensei().catch(() => null)
+    const pdf = await gerarGuiaSensei(metricas)
     return new NextResponse(new Uint8Array(pdf), {
       headers: {
         'Content-Type': 'application/pdf',

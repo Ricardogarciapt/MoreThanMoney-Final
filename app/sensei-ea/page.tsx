@@ -165,19 +165,20 @@ export default function SenseiEaPage() {
       {/* ── Os números, com o contexto ───────────────────────────────────── */}
       <section className="border-y border-gray-800 bg-gray-900/30">
         <div className="max-w-6xl mx-auto px-4 py-16">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">Os resultados do Sensei</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">A conta Sensei, por instrumento</h2>
           <p className="text-gray-400 max-w-2xl">
-            O registo dos sinais Sensei desde que começaram a ser emitidos, lido em direto da mesma
-            base que alimenta o chat, o Telegram e as apps. Ninguém escreve estes números à mão.
+            As ordens reais da conta que alimenta o MTM Auto Sensei, lidas em direto do histórico
+            da corretora. Não são sinais publicados nem simulações — são trades que aconteceram,
+            com cada saída parcial a contar pelo seu peso.
           </p>
 
           <SenseiResultadosLive />
 
           <p className="text-xs text-gray-600 mt-8 leading-relaxed max-w-3xl">
-            Este é o registo dos sinais Sensei publicados, com a posição inteira levada a cada
-            alvo. O Expert Advisor corre a mesma leitura de forma automática e tira parciais — quem
-            tira parciais fica com menos do que o R acima nas que correm até ao fim, e com menos
-            prejuízo nas que reviram. Resultados passados não indicam resultados futuros.
+            Medimos em pips e não em dinheiro porque o mesmo trade vale cerca de 8 euros a quem
+            opera 0,01 lotes e 800 euros a quem opera 1 lote — a percentagem é igual para toda a
+            gente, o dinheiro não. Resultados passados não indicam resultados futuros, e a tua
+            corretora não é a nossa: o spread e o slippage que apanhas são teus.
           </p>
         </div>
       </section>

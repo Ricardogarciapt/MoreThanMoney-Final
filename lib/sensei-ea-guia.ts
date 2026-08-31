@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit'
-import type { ResultadoSensei } from '@/lib/sensei-resultados'
+import type { MetricasProvider } from '@/lib/sensei-provider-metricas'
 
 /**
  * O guia que acompanha a licença do MTM Sensei EA, em PDF.
@@ -27,7 +27,7 @@ const CREME = '#FAF6EC'
 
 const M = 56 // margem
 
-export async function gerarGuiaSensei(resultados?: ResultadoSensei | null): Promise<Buffer> {
+export async function gerarGuiaSensei(metricas?: MetricasProvider | null): Promise<Buffer> {
   const doc = new PDFDocument({
     size: 'A4',
     margin: M,
@@ -219,43 +219,53 @@ export async function gerarGuiaSensei(resultados?: ResultadoSensei | null): Prom
   )
 
   // ── O registo dos sinais ────────────────────────────────────────────────────
-  titulo('4. O que os sinais Sensei têm feito')
+  titulo('4. O que a conta Sensei tem feito')
 
-  if (resultados && resultados.resolvidos > 0) {
-    const sinal = resultados.r >= 0 ? '+' : ''
-    const desde = resultados.desde
-      ? new Date(resultados.desde).toLocaleDateString('pt-PT', {
-          day: '2-digit',
-          month: 'long',
-          year: 'numeric',
-        })
+  if (metricas && metricas.porInstrumento.length > 0) {
+    const desde = metricas.desde
+      ? new Date(metricas.desde).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })
+      : '—'
+    const ate = metricas.ate
+      ? new Date(metricas.ate).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })
       : '—'
 
+    paragrafo(
+      'Estes são os números da conta que alimenta o MTM Auto Sensei — ordens reais, lidas do ' +
+        'histórico da corretora. Não são sinais publicados nem simulações. Cada saída parcial ' +
+        'conta pelo seu peso: uma posição que fecha um terço no TP1, um terço no TP2 e o resto no ' +
+        'breakeven vale a média das três, não vale o último preço.',
+    )
+
+    const corpo = metricas.porInstrumento
+      .map(
+        (i) =>
+          `${i.symbol}   ·   ${i.trades} trades   ·   ${String(i.acertoPct).replace('.', ',')}% de acerto   ·   ` +
+          `${i.pips >= 0 ? '+' : ''}${String(i.pips).replace('.', ',')} pips`,
+      )
+      .join('\n')
+
     caixa(
-      `Registo completo dos sinais Sensei, desde ${desde}`,
-      `${resultados.sinais.toLocaleString('pt-PT')} sinais publicados  ·  ` +
-        `${resultados.resolvidos.toLocaleString('pt-PT')} já resolvidos  ·  ` +
-        `${String(resultados.acertoPct).replace('.', ',')}% de acerto  ·  ` +
-        `${sinal}${resultados.r}R acumulado\n\n` +
-        'Lê o acerto e o R juntos. Uma perda custa 1R; um ganho corre até à quarta saída e pode ' +
-        'valer 4R. Por isso um acerto abaixo de metade pode dar saldo positivo — e por isso quem ' +
-        'não aguenta uma sequência de perdas seguidas não deve usar isto.',
+      `Por instrumento, com pelo menos 10 trades  —  de ${desde} a ${ate}`,
+      `${corpo}\n\nAmostra de ${metricas.dias} ${metricas.dias === 1 ? 'dia' : 'dias'} e ` +
+        `${metricas.totalTrades} trades fechadas. É pouco tempo para julgar uma estratégia: meses ` +
+        'maus existem e não estão aqui dentro. Lê isto como o que é — o que a conta fez até agora, ' +
+        'não o que vai fazer.',
     )
 
     paragrafo(
-      'R é o que arriscas em cada trade. Medimos assim e não em dinheiro porque o mesmo sinal ' +
-        'vale cerca de 8 euros a quem opera 0,01 lotes e 800 euros a quem opera 1 lote — a ' +
-        'percentagem é igual para toda a gente, o dinheiro não.',
+      'Instrumentos com menos de 10 trades ficam de fora da tabela. Abaixo desse número o acerto ' +
+        'não descreve nada: dois ganhos seguidos dariam 100%.',
     )
     paragrafo(
-      'Estes números são dos SINAIS publicados, com a posição inteira levada a cada alvo. O EA ' +
-        'tira parciais: fica com menos do que este R nas trades que correm até ao fim, e com menos ' +
-        'prejuízo nas que reviram a meio. Resultados passados não indicam resultados futuros.',
+      'Medimos em pips e não em dinheiro porque o mesmo trade vale cerca de 8 euros a quem opera ' +
+        '0,01 lotes e 800 euros a quem opera 1 lote. A percentagem é igual para toda a gente, o ' +
+        'dinheiro não. Resultados passados não indicam resultados futuros, e a tua corretora não ' +
+        'é a nossa: o spread e o slippage que apanhas são teus.',
     )
   } else {
     paragrafo(
-      'O registo actualizado dos sinais Sensei — sinais publicados, acerto e resultado acumulado ' +
-        'em R — está sempre em morethanmoney.pt/sensei-ea, lido em direto.',
+      'Os números actualizados da conta Sensei — trades, acerto e pips por instrumento — estão ' +
+        'sempre em morethanmoney.pt/sensei-ea, lidos em direto do histórico da corretora.',
     )
   }
 

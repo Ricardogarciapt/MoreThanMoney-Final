@@ -3,38 +3,52 @@
 import { useEffect, useState } from "react"
 import { Loader2, ShieldAlert } from "lucide-react"
 
-interface Resultados {
-  sinais: number
-  resolvidos: number
+interface Metrica {
+  symbol: string
+  trades: number
   ganhos: number
-  perdidos: number
   acertoPct: number
-  r: number
-  desde: string | null
-  ate: string | null
-  porInstrumento: Array<{ ticker: string; resolvidos: number; acertoPct: number; r: number }>
+  pips: number
 }
 
-function mes(iso: string | null): string {
+interface Metricas {
+  porInstrumento: Metrica[]
+  abaixoDoMinimo: Array<{ symbol: string; trades: number }>
+  totalTrades: number
+  acertoPct: number
+  pips: number
+  desde: string | null
+  ate: string | null
+  dias: number
+  aindaAbertas: number
+}
+
+function data(iso: string | null): string {
   if (!iso) return "—"
   return new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "short", year: "numeric" })
 }
 
+function num(n: number): string {
+  return n.toLocaleString("pt-PT", { maximumFractionDigits: 1 })
+}
+
 /**
- * O registo dos sinais Sensei, lido em direto.
+ * As métricas da conta provider do Sensei — as ordens reais, não os sinais publicados.
  *
- * Sem selector de período: escolher a janela é a forma mais fácil de fazer uma estratégia parecer
- * melhor do que é, e esta secção existe para provar, não para vender uma fatia boa.
+ * A versão anterior media o registo dos SINAIS, onde uma ideia que pagou TP1 e TP2 e depois
+ * reverteu era contada como perda inteira. Dava 25% de acerto e não descrevia o que a conta fez:
+ * descrevia o que teria acontecido a quem levasse a posição toda até ao fim, que não é como isto
+ * se opera. Aqui cada saída parcial conta pelo seu peso, que é o que o motor faz de verdade.
  *
- * O acerto e o R aparecem sempre juntos. Separados, cada um deles mente: 25% de acerto assusta
- * quem não sabe que as perdas custam 1R e os ganhos correm até à quarta saída.
+ * Sem selector de período e sem ordenação pelo resultado: as duas coisas que transformam uma
+ * tabela de prova numa montra.
  */
 export function SenseiResultadosLive() {
-  const [d, setD] = useState<Resultados | null>(null)
+  const [d, setD] = useState<Metricas | null>(null)
   const [estado, setEstado] = useState<"carrega" | "ok" | "falha">("carrega")
 
   useEffect(() => {
-    fetch("/api/sensei-ea/resultados")
+    fetch("/api/sensei-ea/provider")
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("sem dados"))))
       .then((j) => {
         setD(j)
@@ -51,108 +65,73 @@ export function SenseiResultadosLive() {
     )
   }
 
-  // Sem dados não se inventa nada nem se mostra uma caixa vazia: a secção simplesmente não existe.
-  if (estado === "falha" || !d || d.resolvidos === 0) return null
-
-  const positivo = d.r >= 0
+  // Sem dados não se inventa nada nem se mostra uma caixa vazia: a secção não existe.
+  if (estado === "falha" || !d || !d.porInstrumento.length) return null
 
   return (
     <>
-      <div className="grid sm:grid-cols-4 gap-4 mt-8">
-        {[
-          { v: d.sinais.toLocaleString("pt-PT"), l: "sinais publicados" },
-          { v: d.resolvidos.toLocaleString("pt-PT"), l: "já resolvidos" },
-          { v: `${d.acertoPct.toString().replace(".", ",")}%`, l: "acerto" },
-          {
-            v: `${positivo ? "+" : ""}${d.r.toLocaleString("pt-PT")}R`,
-            l: "resultado acumulado",
-            destaque: true,
-          },
-        ].map(({ v, l, destaque }) => (
-          <div
-            key={l}
-            className={`rounded-xl border p-6 ${
-              destaque
-                ? "border-[#D2A63C]/40 bg-[#D2A63C]/[0.06]"
-                : "border-[#D2A63C]/20 bg-black/40"
-            }`}
-          >
-            <div className={`text-3xl font-bold tabular-nums ${destaque ? "text-[#D2A63C]" : "text-white"}`}>
-              {v}
-            </div>
-            <div className="text-sm text-gray-500 mt-1">{l}</div>
-          </div>
-        ))}
+      <div className="mt-8 overflow-x-auto rounded-xl border border-gray-800">
+        <table className="w-full text-sm min-w-[520px]">
+          <thead>
+            <tr className="bg-gray-900/60 text-gray-500 text-xs uppercase tracking-wider">
+              <th className="text-left font-medium px-4 py-3">Instrumento</th>
+              <th className="text-right font-medium px-4 py-3">Trades</th>
+              <th className="text-right font-medium px-4 py-3">Acerto</th>
+              <th className="text-right font-medium px-4 py-3">Pips</th>
+            </tr>
+          </thead>
+          <tbody>
+            {d.porInstrumento.map((i) => (
+              <tr key={i.symbol} className="border-t border-gray-800/70">
+                <td className="px-4 py-3 font-mono text-gray-200">{i.symbol}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-gray-400">{i.trades}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-gray-300">
+                  {num(i.acertoPct)}%
+                </td>
+                <td
+                  className={`px-4 py-3 text-right tabular-nums font-medium ${
+                    i.pips >= 0 ? "text-emerald-400" : "text-red-400"
+                  }`}
+                >
+                  {i.pips >= 0 ? "+" : ""}
+                  {num(i.pips)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <p className="text-sm text-gray-500 mt-4">
-        Registo completo, de {mes(d.desde)} a {mes(d.ate)}. Sem escolha de período: é tudo o que foi
-        emitido. Os sinais ainda abertos ficam de fora até fecharem.
+        Só instrumentos com pelo menos 10 trades — abaixo disso o número não diz nada. Ordenado
+        pelo número de trades, nunca pelo resultado.
+        {d.abaixoDoMinimo.length > 0 && (
+          <>
+            {" "}
+            Ainda abaixo do mínimo:{" "}
+            {d.abaixoDoMinimo.map((x) => `${x.symbol} (${x.trades})`).join(", ")}.
+          </>
+        )}
       </p>
 
       <div className="mt-6 rounded-xl border border-amber-500/25 bg-amber-500/5 p-5 flex gap-4">
         <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
         <div className="text-sm text-gray-300 leading-relaxed space-y-2">
           <p>
-            <strong className="text-amber-300">Lê o acerto e o R juntos.</strong> {d.acertoPct
-              .toString()
-              .replace(".", ",")}
-            % parece pouco — e é, de propósito. Uma perda custa 1R; um ganho corre até à quarta
-            saída e pode valer 4R. São {d.ganhos.toLocaleString("pt-PT")} ganhos e{" "}
-            {d.perdidos.toLocaleString("pt-PT")} perdas a dar{" "}
-            {positivo ? "um saldo positivo" : "um saldo negativo"} de{" "}
-            {positivo ? "+" : ""}
-            {d.r}R. Quem não aguenta uma sequência de perdas seguidas não deve usar isto.
+            <strong className="text-amber-300">
+              Amostra de {d.dias} {d.dias === 1 ? "dia" : "dias"}
+            </strong>{" "}
+            ({data(d.desde)} a {data(d.ate)}), {d.totalTrades} trades fechadas. É pouco tempo para
+            julgar uma estratégia — meses maus existem e não estão aqui dentro. Lê isto como o que
+            é: o que a conta fez até agora, não o que vai fazer.
           </p>
           <p>
-            R é o que arriscas em cada trade. Em euros o mesmo sinal vale 8 € a quem opera 0,01
-            lotes e 800 € a quem opera 1 — por isso medimos em R e não em dinheiro.
+            Contamos cada saída parcial pelo seu peso. Uma posição que fecha um terço no TP1, um
+            terço no TP2 e o resto no breakeven vale a média das três — não vale o último preço. É
+            assim que o motor opera, por isso é assim que se mede.
           </p>
         </div>
       </div>
-
-      {d.porInstrumento.length > 0 && (
-        <div className="mt-8">
-          <h3 className="text-sm uppercase tracking-wider text-gray-500 mb-3">
-            Por instrumento <span className="normal-case tracking-normal">(mínimo 10 trades)</span>
-          </h3>
-          <div className="overflow-x-auto rounded-xl border border-gray-800">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-900/60 text-gray-500 text-xs uppercase tracking-wider">
-                  <th className="text-left font-medium px-4 py-3">Instrumento</th>
-                  <th className="text-right font-medium px-4 py-3">Trades</th>
-                  <th className="text-right font-medium px-4 py-3">Acerto</th>
-                  <th className="text-right font-medium px-4 py-3">R</th>
-                </tr>
-              </thead>
-              <tbody>
-                {d.porInstrumento.map((i) => (
-                  <tr key={i.ticker} className="border-t border-gray-800/70">
-                    <td className="px-4 py-2.5 font-mono text-gray-300">{i.ticker}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-gray-400">{i.resolvidos}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-gray-400">
-                      {i.acertoPct.toString().replace(".", ",")}%
-                    </td>
-                    <td
-                      className={`px-4 py-2.5 text-right tabular-nums font-medium ${
-                        i.r >= 0 ? "text-emerald-400" : "text-red-400"
-                      }`}
-                    >
-                      {i.r >= 0 ? "+" : ""}
-                      {i.r}R
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-xs text-gray-600 mt-3">
-            Os instrumentos que não aguentaram foram retirados da emissão. Ficam aqui porque
-            aconteceram.
-          </p>
-        </div>
-      )}
     </>
   )
 }
