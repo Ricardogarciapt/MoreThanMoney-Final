@@ -87,12 +87,29 @@ export function outcomeOf(c: LifecycleContext): string {
 }
 
 /**
+ * Um stop não pode dar lucro. Se der, o número está errado — e cala-se.
+ *
+ * A 31/08 saiu no chat «🛑 Stop loss · XAUUSD 🔵 COMPRA · +950 pips · +2,14%». A aritmética
+ * estava certa para o que recebeu (entrada 4437, "stop" 4532 — 95 pontos ACIMA numa compra); o
+ * que estava errado era o sinal de origem, que trazia o stop do lado do lucro.
+ *
+ * A entrada dessa origem já é recusada no `signal-tracker`. Isto é a segunda tranca, para
+ * qualquer outro caminho que lá chegue: mais vale anunciar «fechou no stop» sem número do que
+ * anunciar uma vitória que não houve. Um número errado no chat é lido como resultado real, e
+ * ainda entra nas contas de quem some os pips do mês.
+ */
+function desfechoCoerente(evento: SignalEvent, texto: string): string {
+  if (evento !== 'stop_loss') return texto
+  return /·\s*[+]/.test(texto) ? '' : texto
+}
+
+/**
  * "XAUUSD 🔴 VENDA · +200 pips · +0,46%" — cabeçalho comum a todos os eventos.
  * O desfecho só aparece quando há entrada e preço; sem eles fica só o par e a direção.
  */
-export function headline(c: LifecycleContext): string {
+export function headline(c: LifecycleContext, evento?: SignalEvent): string {
   const base = `${c.symbol} ${dirTxt(c.direction)}`.trim()
-  const o = outcomeOf(c)
+  const o = evento ? desfechoCoerente(evento, outcomeOf(c)) : outcomeOf(c)
   return o ? `${base} · ${o}` : base
 }
 
@@ -146,7 +163,7 @@ const EVENTS: Record<SignalEvent, EventDef> = {
   },
   stop_loss: {
     emoji: '🛑',
-    title: (c) => `Stop loss · ${headline(c)}`,
+    title: (c) => `Stop loss · ${headline(c, 'stop_loss')}`,
     body: (c) => ['A trade fechou no stop.', c.reason].filter(Boolean).join(' '),
     closes: true,
     cancelsPending: true,

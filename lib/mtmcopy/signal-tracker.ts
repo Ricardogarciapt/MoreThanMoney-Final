@@ -102,6 +102,22 @@ async function admitirNovos(): Promise<number> {
     if (!p.sl || !(p.sl > 0)) continue
     const tps = (p.tp ?? []).filter((n) => Number.isFinite(n) && n > 0)
     if (!tps.length) continue
+    /**
+     * Stop do lado errado: não se segue.
+     *
+     * A 31/08 entrou aqui um «GOLD BUY … SL 4532 … TP1 4447» (compra a 4437, stop 95 pontos
+     * ACIMA). O acompanhamento seguiu-o na mesma e, quando o preço tocou o «stop», anunciou no
+     * chat «🛑 Stop loss · XAUUSD 🔵 COMPRA · +950 pips · +2,14%» — um stop a dar lucro.
+     *
+     * A conta estava certa para os números que recebeu (|4532−4437| = 95 pontos = 950 pips); o
+     * que não podia era ter recebido aqueles números. Corrigir o sinal por nós seria adivinhar
+     * qual dos dois valores é que o autor trocou, por isso não se segue — e fica de fora do
+     * histórico, em vez de lá entrar como uma vitória que nunca houve.
+     */
+    if ((p.direction === 'buy' && p.sl > tps[0]) || (p.direction === 'sell' && p.sl < tps[0])) {
+      console.warn('[signal-tracker] stop do lado errado, não admitido:', m.id, p.symbol, p.direction, p.sl, tps[0])
+      continue
+    }
     novos.push({
       chat_message_id: m.id,
       channel_slug: m.channel_slug,
