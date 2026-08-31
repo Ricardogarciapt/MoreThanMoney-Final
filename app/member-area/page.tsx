@@ -33,6 +33,7 @@ import { CyberpunkCard } from "@/components/cyberpunk-card"
 import NotificationsPanel from "@/components/notifications-panel"
 import { MemberSubscriptionCard } from "@/components/member-subscription-card"
 import { ConversionBanner } from "@/components/conversion-banner"
+import { LicencaSenseiCard } from "@/components/licenca-sensei-card"
 
 interface UserProfile {
   id: string
@@ -642,6 +643,7 @@ export default function MemberAreaPage() {
               hasStripeCustomer={user?.has_stripe_customer}
               hideUpgrade={user?.login_provider === "primeverse"}
             />
+            <LicencaSenseiCard />
           </TabsContent>
 
           {/* Security Tab */}

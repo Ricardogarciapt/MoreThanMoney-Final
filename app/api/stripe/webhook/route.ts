@@ -27,6 +27,12 @@ import {
   notifyTeamRenewal,
 } from '@/lib/notifications-sales'
 import { sendNewMemberWelcomeIfEligible } from '@/lib/new-member-welcome'
+import {
+  ehCheckoutDoEA,
+  emitirLicencaDoCheckout,
+  renovarLicencaDaSubscricao,
+  revogarLicencaDaSubscricao,
+} from '@/lib/licencas-stripe'
 
 // Nomes amigáveis dos scanners por planId (para o email de instruções TradingView)
 const SCANNER_PLAN_NAMES: Record<string, string> = {
@@ -96,11 +102,20 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.updated':
         await handleSubscriptionUpdate(event.data.object as Stripe.Subscription)
         break
-      case 'customer.subscription.deleted':
-        await handleSubscriptionCanceled(event.data.object as Stripe.Subscription)
+      case 'customer.subscription.deleted': {
+        const sub = event.data.object as Stripe.Subscription
+        // Antes do handler de perfis: quem comprou só a licença do EA não tem perfil no site, e
+        // `handleSubscriptionCanceled` desiste logo à primeira quando não encontra um.
+        await revogarLicencaDaSubscricao(sub.id)
+        await handleSubscriptionCanceled(sub)
         break
+      }
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice
+        const subDaFatura = (invoice as { subscription?: unknown }).subscription
+        if (invoice.billing_reason === 'subscription_cycle' && typeof subDaFatura === 'string') {
+          await renovarLicencaDaSubscricao(subDaFatura)
+        }
         await handlePaymentSucceeded(invoice)
         // Só renovações: a 1.ª fatura já conta como purchase no checkout.session.completed
         if (invoice.billing_reason === 'subscription_cycle' && invoice.amount_paid > 0 && invoice.id) {
@@ -127,6 +142,13 @@ export async function POST(req: NextRequest) {
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.user_id
+
+  // Licença do MTM Sensei EA: vendida à parte, com ou sem conta no site. Sai daqui porque nada
+  // do que vem a seguir (planos, MLM, categorias de membro) se aplica a uma licença de software.
+  if (ehCheckoutDoEA(session)) {
+    await emitirLicencaDoCheckout(session)
+    return
+  }
 
   // Registo novo: provisionar conta server-side (não depende do browser / localStorage)
   if (!userId && session.metadata?.pending_registration === 'true') {

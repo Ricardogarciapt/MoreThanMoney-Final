@@ -1575,3 +1575,73 @@ export const hotLeadInviteTemplate = (params: { name?: string; siteUrl?: string 
   )
 }
 
+
+/**
+ * Licença do MTM Sensei EA emitida — a chave, a conta a que fica presa e os dois passos que o
+ * cliente tem mesmo de fazer no MetaTrader (a lista de URLs permitidos é onde toda a gente
+ * tropeça: sem ela o EA não consegue validar e parece avariado).
+ */
+export const licencaSenseiEmailTemplate = (
+  userName: string,
+  chave: string,
+  plano: 'anual' | 'vitalicia' | 'incluida',
+  mt5Login: string | null,
+  expiraEm: string | null,
+  siteUrl?: string,
+) => {
+  const base = resolveSiteUrl(siteUrl)
+  const nomePlano =
+    plano === 'vitalicia' ? 'Vitalícia' : plano === 'anual' ? 'Anual' : 'Incluída na subscrição'
+  const validade = expiraEm
+    ? new Date(expiraEm).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })
+    : 'Sem prazo'
+
+  const content = `
+    ${headerComponent('A tua licença do MTM Sensei EA', `Licença ${nomePlano}`, '🔑')}
+
+    ${textComponent(`
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Olá ${userName || 'Trader'},
+      </p>
+      <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 26px; color: #333;">
+        A tua licença está activa. Guarda esta chave — é ela que liga o Expert Advisor à tua conta.
+      </p>
+    `)}
+
+    ${cardComponent(
+      'Chave de licença',
+      `
+        <p style="margin: 0; font-family: 'Courier New', monospace; font-size: 22px; font-weight: 700; letter-spacing: 2px;">${chave}</p>
+        <p style="margin: 12px 0 0 0; font-size: 14px; color: #666;">
+          Conta MT5: <strong>${mt5Login || 'a primeira conta onde ligares o EA'}</strong><br>
+          Validade: <strong>${validade}</strong>
+        </p>
+      `,
+      '🔐',
+      COLORS.primary,
+    )}
+
+    ${featuresListComponent([
+      {
+        icon: '1️⃣',
+        title: 'Permitir o endereço no MetaTrader',
+        description:
+          'Ferramentas → Opções → Expert Advisors → "Permitir WebRequest para os seguintes URLs" e acrescenta https://www.morethanmoney.pt',
+      },
+      {
+        icon: '2️⃣',
+        title: 'Colar a chave no EA',
+        description: 'Ao arrastar o MTM Sensei para o gráfico, escreve a chave no campo "Licença".',
+      },
+      {
+        icon: '3️⃣',
+        title: 'Confirmar no separador Experts',
+        description: 'Deves ver "Licença válida". Se não vires, a mensagem diz exactamente o que falta.',
+      },
+    ])}
+
+    ${buttonComponent('Descarregar o EA e os presets', `${base}/sensei-ea`)}
+  `
+
+  return baseTemplate(content, 'A tua licença do MTM Sensei EA', base)
+}

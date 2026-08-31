@@ -13,6 +13,9 @@ const PRICE_ENV_KEYS: Record<string, string> = {
   scanners_semestral: 'STRIPE_PRICE_SCANNERS_SEMESTRAL',
   scanners_lifetime: 'STRIPE_PRICE_SCANNERS_LIFETIME',
   mtmcopy_addon_monthly: 'STRIPE_PRICE_MTMCOPY_ADDON_MONTHLY',
+  // Licença do MTM Sensei EA (MetaTrader 5) — uma conta MT5 por licença.
+  sensei_ea_annual: 'STRIPE_PRICE_SENSEI_EA_ANNUAL',
+  sensei_ea_lifetime: 'STRIPE_PRICE_SENSEI_EA_LIFETIME',
   // Elite / Fundador anual (€597) — acesso Premium + estatuto VIP + perks Elite
   // (isenção de fees, PAMM, negócios digitais, acompanhamento direto).
   elite_annual: 'STRIPE_PRICE_ELITE_ANNUAL',

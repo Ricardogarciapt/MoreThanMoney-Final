@@ -21,6 +21,7 @@ import { Gauge,
   Award,
   Instagram,
   Rocket,
+  KeyRound,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -180,6 +181,18 @@ export default function AdminSidebar({
         >
           <Ticket className="w-5 h-5 shrink-0" />
           Cupões de Oferta
+        </Link>
+        <Link
+          href="/admin/licencas"
+          className={cn(
+            "mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            pathname === "/admin/licencas"
+              ? "border-l-2 border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
+              : "border-l-2 border-transparent text-gray-400 hover:bg-gray-800/50 hover:text-white"
+          )}
+        >
+          <KeyRound className="w-5 h-5 shrink-0" />
+          Licenças do EA
         </Link>
         <Link
           href="/admin/forms"

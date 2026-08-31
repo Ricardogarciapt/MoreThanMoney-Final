@@ -113,6 +113,7 @@
     "@eslint/eslintrc": "^3.3.5",
     "@types/node": "^22",
     "@types/nodemailer": "^7.0.2",
+    "@types/pdfkit": "^0.17.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9.39.4",
