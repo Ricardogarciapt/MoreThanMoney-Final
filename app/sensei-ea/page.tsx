@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import { MockupGrafico, MockupPainel, MockupConfirmacoes } from "@/components/sensei-ea-mockups"
 import { SenseiResultadosLive } from "@/components/sensei-resultados-live"
+import { DescarregarMt5 } from "@/components/descarregar-mt5"
 
 const PRECO_ANUAL = 297
 const PRECO_VITALICIO = 1000
@@ -349,6 +350,9 @@ export default function SenseiEaPage() {
               Guia completo em PDF
             </Button>
           </a>
+          {/* Antes do pacote: sem MetaTrader o pacote nao serve de nada, e quem chega aqui
+              pode nem o ter instalado. */}
+          <DescarregarMt5 />
           {/* O pacote e aberto de proposito: quem o descarrega sem licenca fica com um EA que
               nao abre ordens. A porta e a licenca, nao o ficheiro. */}
           <a href="/downloads/MTM-Sensei-EA.zip" download>
