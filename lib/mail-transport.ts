@@ -3,15 +3,13 @@ import path from 'path'
 import nodemailer from 'nodemailer'
 import type { Attachment } from 'nodemailer/lib/mailer'
 import { SITE_LOGO_PATH } from '@/lib/site-logo'
+import { sanitizeEnv } from '@/lib/env-sanitize'
 
 /** CID inline — logo embutido no email (funciona mesmo com imagens remotas bloqueadas). */
 export const EMAIL_LOGO_CID = 'mtm-logo'
 
 export function getSiteUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, '') ||
-    'https://www.morethanmoney.pt'
-  )
+  return sanitizeEnv(process.env.NEXT_PUBLIC_SITE_URL, 'https://www.morethanmoney.pt').replace(/\/$/, '')
 }
 
 /** URL pública do logo (site, previews). */
@@ -82,17 +80,30 @@ export function brandedMailAttachments(): Attachment[] {
   return [getEmailLogoAttachment()]
 }
 
+/**
+ * A conta de envio, limpa.
+ *
+ * `sanitizeEnv` não é zelo a mais: o `GMAIL_USER` estava gravado como
+ * `"morethanmoneypt@gmail.com\n"` — com a quebra de linha dentro do valor — e ia inteiro para o
+ * cabeçalho `From`, que passava a `<morethanmoneypt@gmail.com\n>`. Um endereço com uma quebra de
+ * linha lá dentro é um cabeçalho malformado: na melhor das hipóteses cai no spam, na pior o
+ * servidor recusa a mensagem. E como isto passa por TODOS os emails do site, falhava em todos ao
+ * mesmo tempo, sem ninguém dar por isso.
+ */
+function contaDeEnvio(): string {
+  return sanitizeEnv(process.env.GMAIL_USER, 'morethanmoneypt@gmail.com')
+}
+
 export function createMailTransporter() {
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: process.env.GMAIL_USER || 'morethanmoneypt@gmail.com',
-      pass: process.env.GMAIL_APP_PASSWORD || '',
+      user: contaDeEnvio(),
+      pass: sanitizeEnv(process.env.GMAIL_APP_PASSWORD),
     },
   })
 }
 
 export function mailFrom(): string {
-  const user = process.env.GMAIL_USER || 'morethanmoneypt@gmail.com'
-  return `"MoreThanMoney" <${user}>`
+  return `"MoreThanMoney" <${contaDeEnvio()}>`
 }

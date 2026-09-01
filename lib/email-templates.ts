@@ -1645,3 +1645,101 @@ export const licencaSenseiEmailTemplate = (
 
   return baseTemplate(content, 'A tua licença do MTM Sensei EA', base)
 }
+
+/**
+ * Membro que já paga: a licença do EA foi emitida para ele e está à espera.
+ *
+ * Diferente do `licencaSenseiEmailTemplate`, que responde a uma compra. Aqui ninguém comprou nada
+ * nem pediu nada — a licença apareceu porque a subscrição dá direito a ela. O email tem de dizer
+ * isso na primeira linha, senão parece uma fatura por pagar.
+ */
+export const licencaMembroEmailTemplate = (
+  userName: string,
+  chave: string,
+  siteUrl?: string,
+) => {
+  const base = resolveSiteUrl(siteUrl)
+  const nome = (userName ?? '').trim().split(' ')[0]
+
+  const content = `
+    ${headerComponent('A tua licença do MTM Sensei EA', 'Já está emitida — não tens de pagar nada', '🔑')}
+
+    ${textComponent(`
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
+        ${nome ? `Olá ${nome},` : 'Olá,'}
+      </p>
+      <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Acabámos de lançar o <strong>MTM Sensei para MetaTrader 5</strong>: o robô que corre a nossa
+        leitura de mercado sozinho na tua conta — analisa, entra, tira parciais e faz trailing.
+      </p>
+      <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 26px; color: #333;">
+        Vende-se por 297 € por ano. <strong>A tua subscrição inclui-o</strong>, por isso a licença
+        já está emitida no teu nome. É só instalar.
+      </p>
+    `)}
+
+    ${cardComponent(
+      'A tua chave',
+      `
+        <p style="margin: 0; font-family: 'Courier New', monospace; font-size: 22px; font-weight: 700; letter-spacing: 2px;">${chave}</p>
+        <p style="margin: 12px 0 0 0; font-size: 14px; color: #666;">
+          Vale para <strong>uma conta MT5</strong> — prende-se à primeira onde ligares o robô.
+          Mudaste de corretora? Escreve-nos e libertamos.
+        </p>
+      `,
+      '🔐',
+      COLORS.primary,
+    )}
+
+    ${textComponent(`
+      <p style="margin: 0 0 10px 0; font-size: 16px; font-weight: 700; color: ${COLORS.primary};">
+        Instalar, em quatro passos
+      </p>
+    `)}
+
+    ${featuresListComponent([
+      {
+        icon: '1️⃣',
+        title: 'Descarrega o MetaTrader 5 e o pacote',
+        description:
+          'Em morethanmoney.pt/sensei-ea tens os dois. O instalador do pacote é automático — Windows e macOS — e põe tudo no sítio certo sozinho.',
+      },
+      {
+        icon: '2️⃣',
+        title: 'Permite o nosso endereço no MetaTrader',
+        description:
+          'Ferramentas > Opções > Consultores. Liga "Permitir WebRequest para os seguintes URLs" e acrescenta https://www.morethanmoney.pt — é aqui que toda a gente tropeça.',
+      },
+      {
+        icon: '3️⃣',
+        title: 'Cola a chave',
+        description: 'Ao arrastar o MTM Sensei para o gráfico, escreve a chave no campo "Licença", no topo dos parâmetros.',
+      },
+      {
+        icon: '4️⃣',
+        title: 'Confirma e escolhe o preset',
+        description:
+          'No separador Especialistas deve aparecer "LICENCA: valida". Depois carrega o preset do teu par. Corre em demo primeiro — sempre.',
+      },
+    ])}
+
+    ${textComponent(`
+      <p style="margin: 0 0 18px 0; font-size: 15px; line-height: 25px; color: #444;">
+        Vai em anexo o <strong>guia completo em PDF</strong>, com tudo isto ao pormenor: instalação,
+        que preset usar em cada par, o que o robô faz e o que não faz, e o que confirmar antes de
+        arriscares dinheiro a sério.
+      </p>
+    `)}
+
+    ${buttonComponent('Descarregar o EA e o MetaTrader', `${base}/sensei-ea`)}
+
+    ${textComponent(`
+      <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 23px; color: #666;">
+        A chave também está sempre na tua área de membro, no separador da subscrição — não precisas
+        de guardar este email. Dúvidas? Responde a esta mensagem.
+      </p>
+    `)}
+  `
+
+  return baseTemplate(content, 'A tua licença do MTM Sensei EA já está emitida', base)
+}
