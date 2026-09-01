@@ -31,7 +31,10 @@ export const PUPRIME_LINK = 'https://www.puprime.com/campaign?cs=morethanmoney'
 export const APP_REGISTER_LINK = 'https://www.morethanmoney.pt/register'
 export const APP_ANDROID_LINK = 'https://www.morethanmoney.pt/downloads/MoreThanMoney.apk'
 export const TRIAL_CODE = '14DayTrial'
-export const MIN_DEPOSIT = 300
+// Reexportado, não repetido: duas constantes com o mesmo nome divergem no dia em que alguém
+// muda uma delas — foi o que aconteceu com os 300/350.
+import { MIN_DEPOSIT } from '@/lib/telegram-broker-gate'
+export { MIN_DEPOSIT }
 
 export const MENSAGENS: DefinicaoMensagem[] = [
   {

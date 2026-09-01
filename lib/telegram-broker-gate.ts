@@ -19,7 +19,17 @@ import {
 type Supa = ReturnType<typeof getSupabaseAdmin>
 
 export const PUPRIME_LINK = 'https://www.puprime.com/campaign?cs=morethanmoney'
-export const MIN_DEPOSIT = 300
+/**
+ * Depósito mínimo para o broker-gate, em USD.
+ *
+ * É a ÚNICA fonte deste número — o `mensagens-funil` reexporta-o em vez de o repetir. Havia duas
+ * constantes independentes com 300, e mais quatro sítios com o valor escrito à mão nos guiões do
+ * bot e dos closers: mudar a regra obrigava a acertar seis sítios, e bastava esquecer um para o
+ * bot prometer uma coisa e a validação exigir outra.
+ *
+ * 350 desde 2026-09-01 (era 300), para bater certo com o bónus da PU Prime.
+ */
+export const MIN_DEPOSIT = 350
 // TELEGRAM_BOT_TOKEN estava a devolver 401 (token rodado e nunca reposto) — o gate do broker
 // deixou de conseguir gerar os convites dos grupos. O token canónico é o do @MoreThanMoney_aibot,
 // que é o MESMO bot que o funil já anuncia; getMtmcopyBotToken() tenta-o primeiro.
