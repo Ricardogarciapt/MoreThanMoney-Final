@@ -33,6 +33,7 @@ import {
   RotateCcw,
   Unlink,
   Monitor,
+  Users,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -101,6 +102,10 @@ export default function LicencasPage() {
   const [estado, setEstado] = useState("todos")
   const [copiada, setCopiada] = useState<string | null>(null)
   const [aberta, setAberta] = useState<string | null>(null)
+
+  const [mostrarLote, setMostrarLote] = useState(false)
+  const [lotePrevia, setLotePrevia] = useState<{ elegiveis: number; jaTinham: number; semDireito: number } | null>(null)
+  const [loteAConfirmar, setLoteAConfirmar] = useState(false)
 
   const [mostrarCriar, setMostrarCriar] = useState(false)
   const [aGuardar, setAGuardar] = useState(false)
@@ -175,6 +180,61 @@ export default function LicencasPage() {
     }
   }
 
+  /**
+   * Duas fases: primeiro pergunta-se ao servidor quantos seriam (dryRun), mostra-se o número, e
+   * só depois se emite. Emitir dezenas de licenças reais sem ver a conta antes é o tipo de botão
+   * de que ninguém gosta às duas da manhã.
+   */
+  async function verLote() {
+    setLotePrevia(null)
+    setMostrarLote(true)
+    try {
+      const r = await fetch("/api/admin/licencas/emitir-lote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dryRun: true }),
+      })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error || "Erro")
+      setLotePrevia({ elegiveis: d.elegiveis, jaTinham: d.jaTinham, semDireito: d.semDireito })
+    } catch (e) {
+      toast({
+        title: "Não deu para calcular",
+        description: e instanceof Error ? e.message : "Erro desconhecido",
+        variant: "destructive",
+      })
+      setMostrarLote(false)
+    }
+  }
+
+  async function emitirLote() {
+    setLoteAConfirmar(true)
+    try {
+      const r = await fetch("/api/admin/licencas/emitir-lote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dryRun: false }),
+      })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error || "Erro")
+      const falhas = (d.lista || []).filter((x: { erro?: string }) => x.erro).length
+      toast({
+        title: `${d.elegiveis - falhas} licenças emitidas`,
+        description: falhas ? `${falhas} falharam — vê o log do servidor.` : "Já aparecem na área de membro de cada um.",
+      })
+      setMostrarLote(false)
+      void carregar()
+    } catch (e) {
+      toast({
+        title: "Falhou",
+        description: e instanceof Error ? e.message : "Erro desconhecido",
+        variant: "destructive",
+      })
+    } finally {
+      setLoteAConfirmar(false)
+    }
+  }
+
   async function criar() {
     if (!form.email.trim()) {
       toast({ title: "Falta o email do cliente", variant: "destructive" })
@@ -243,6 +303,15 @@ export default function LicencasPage() {
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={carregar} className="text-gray-400 hover:text-white">
               <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={verLote}
+              className="border-[#D2A63C]/40 text-[#D2A63C]"
+            >
+              <Users className="w-4 h-4 mr-1.5" />
+              Emitir aos membros
             </Button>
             <Button
               size="sm"
@@ -435,6 +504,51 @@ export default function LicencasPage() {
           })}
         </div>
       </div>
+
+      <Dialog open={mostrarLote} onOpenChange={setMostrarLote}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white">
+          <DialogHeader>
+            <DialogTitle>Emitir a licença incluída aos membros</DialogTitle>
+          </DialogHeader>
+          {!lotePrevia ? (
+            <div className="py-8 flex justify-center">
+              <Loader2 className="w-5 h-5 animate-spin text-[#D2A63C]" />
+            </div>
+          ) : (
+            <div className="space-y-4 py-2 text-sm">
+              <p className="text-gray-300">
+                <strong className="text-[#D2A63C] text-lg">{lotePrevia.elegiveis}</strong> membros
+                com direito e ainda sem licença.
+              </p>
+              <p className="text-gray-500 text-xs leading-relaxed">
+                {lotePrevia.jaTinham} já tinham uma. {lotePrevia.semDireito} não têm direito
+                (Premium, VIP, Fundador e admin — a cópia automática não conta).
+              </p>
+              <p className="text-gray-500 text-xs leading-relaxed">
+                Cada licença fica sem conta MT5 definida e prende-se à primeira onde o EA arrancar.
+                Aparece na área de membro de cada um, no separador da subscrição. Não é enviado
+                email.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setMostrarLote(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={emitirLote}
+              disabled={!lotePrevia || !lotePrevia.elegiveis || loteAConfirmar}
+              className="bg-[#D2A63C] text-black hover:bg-[#BB8525]"
+            >
+              {loteAConfirmar ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                `Emitir ${lotePrevia?.elegiveis ?? ""}`
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={mostrarCriar} onOpenChange={setMostrarCriar}>
         <DialogContent className="bg-gray-900 border-gray-800 text-white">

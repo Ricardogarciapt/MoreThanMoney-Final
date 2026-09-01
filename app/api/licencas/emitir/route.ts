@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUser } from '@/lib/admin-api-helpers'
 import { carregarDireitos } from '@/lib/entitlements'
-import { emitirLicenca, licencasDoUtilizador, normalizarLogin } from '@/lib/licencas'
+import {
+  emitirLicenca,
+  licencasDoUtilizador,
+  normalizarLogin,
+  temDireitoAIncluida,
+} from '@/lib/licencas'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 export const dynamic = 'force-dynamic'
@@ -34,7 +39,7 @@ export async function POST(req: NextRequest) {
   }
 
   const direitos = await carregarDireitos(userId)
-  if (!direitos.admin && !direitos.vip && !direitos.premium) {
+  if (!temDireitoAIncluida(direitos)) {
     return NextResponse.json(
       { error: 'A licença incluída é para membros Premium, VIP ou Fundador.' },
       { status: 403 },

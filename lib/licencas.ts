@@ -84,6 +84,18 @@ export function normalizarLogin(bruto: unknown): string {
   return String(bruto ?? '').replace(/\D/g, '')
 }
 
+/**
+ * Quem tem direito à licença incluída na subscrição.
+ *
+ * Vive aqui, e não repetida em cada rota, porque há dois sítios a emitir — o botão da área de
+ * membro e a emissão em lote do admin — e duas cópias desta regra divergiam no dia em que uma
+ * delas fosse actualizada. A cópia automática (MTM Copy / MTM Auto) NÃO conta: o EA é outro
+ * produto, e quem paga só a cópia não pagou este.
+ */
+export function temDireitoAIncluida(d: { admin: boolean; vip: boolean; premium: boolean }): boolean {
+  return d.admin || d.vip || d.premium
+}
+
 // ---------------------------------------------------------------------------
 // Emissão
 // ---------------------------------------------------------------------------
