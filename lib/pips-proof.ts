@@ -433,6 +433,44 @@ function periodoReal(p: PipsProof): string {
   return `dos últimos ${Math.round(horas / 24)} dias de operação`
 }
 
+/**
+ * A prova que se pode dizer A UM LEAD, numa conversa privada.
+ *
+ * Difere da `linhaPips` num ponto que importa: **não cita taxa de acerto em amostras pequenas**.
+ * A 01/09 a janela de 5 dias tinha 9 trades e 100% de acerto — verdade aritmética, e uma frase
+ * que um vendedor não pode dizer: lida por quem está a decidir se entrega dinheiro, "100% de
+ * acerto" é uma promessa, não uma medição. Abaixo de 30 trades falam-se pips e período, e diz-se
+ * que a amostra é curta.
+ *
+ * Devolve `null` quando não há nada medido. Nesse caso o bot fala da comunidade e do produto e
+ * NÃO inventa números — que foi exactamente o que aconteceu enquanto isto não existia: sem
+ * factos na mão, o modelo foi buscar o "+7.060€" antigo, que está proibido desde 26/08.
+ */
+export const MINIMO_PARA_TAXA = 30
+
+export function provaParaLead(p: PipsProof | null | undefined): string | null {
+  if (!p || p.erro) return null
+  const e = p.executado
+  if (!e?.trades) return null
+  const nf = new Intl.NumberFormat('pt-PT')
+  const sinal = (n: number) => (n >= 0 ? `+${nf.format(Math.round(n))}` : `−${nf.format(Math.abs(Math.round(n)))}`)
+
+  const partes = [`${periodoReal(p)}: ${e.trades} trades executadas · ${sinal(e.pips)} pips`]
+  if (e.trades >= MINIMO_PARA_TAXA) partes.push(`${e.winRatePct}% de acerto`)
+  else partes.push('amostra curta — não cites percentagem de acerto')
+
+  if (e.ouro?.pips) {
+    const usd = (n: number) => `${n >= 0 ? '+' : '−'}${nf.format(Math.abs(Math.round(n)))} $`
+    partes.push(
+      `em ouro ${sinal(e.ouro.pips)} pips, que por lote dá ` +
+      `0,01 → ${usd(e.ouro.pips * VALOR_PIP_OURO['0.01'])} · ` +
+      `0,1 → ${usd(e.ouro.pips * VALOR_PIP_OURO['0.1'])} · ` +
+      `1,0 → ${usd(e.ouro.pips * VALOR_PIP_OURO['1'])} (bruto)`,
+    )
+  }
+  return partes.join(' · ')
+}
+
 export function linhaPips(p: PipsProof, opts?: { comExemplos?: boolean }): string {
   const nf = new Intl.NumberFormat('pt-PT')
   const sinal = (n: number) => (n >= 0 ? `+${nf.format(Math.round(n))}` : `−${nf.format(Math.abs(Math.round(n)))}`)

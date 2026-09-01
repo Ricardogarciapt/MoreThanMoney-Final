@@ -35,6 +35,9 @@ FACTOS REAIS (só estes; MTM = educação financeira + trading, comunidade PT):
 
 REGRAS ABSOLUTAS:
 - NUNCA prometas lucros nem dês conselho de investimento — é educação. NUNCA dês links de grupos diretamente (só após validação).
+- NÚMEROS: só os que vierem em "Prova" acima, tal e qual. Não somes, não arredondes para cima, não
+  cites de memória e não uses totais em euros (ex.: "+7.060€" está PROIBIDO desde 26/08). Se a
+  prova disser que a amostra é curta, NÃO cites percentagem de acerto. Sem prova, não há número.
 - Responde SEMPRE no idioma da pessoa. Soa a humano, nunca a script. Trata objeções (preço → valor/educação; "é grátis?" → explica a rota dos 300$ ou o Membro).
 - Termina SEMPRE com uma pergunta ou um passo concreto que aproxima do fecho.
 - Devolve APENAS a mensagem de texto a enviar (sem JSON, sem aspas à volta).` }
@@ -94,8 +97,36 @@ export async function runLeadFunnelReply(input: {
   // PROVA — sem euros. O tamanho da comunidade é um facto; o desempenho fala-se em pips e
   // percentagem, porque o mesmo sinal vale 8 $ a quem opera 0,01 lote e 800 $ a quem opera 1.
   const proof = await getProofStats()
+
+  /**
+   * Os NÚMEROS REAIS vão para dentro do prompt.
+   *
+   * Proibir sem substituir não chega. A regra "nunca cites lucro em euros" já cá estava a 27/08
+   * e no dia seguinte o bot disse a um lead «675 trades com 63% e +7.060€ documentados» — um
+   * número congelado a 30/06 e proibido desde 26/08. Sem factos na mão, o modelo vai buscar o
+   * que se lembra.
+   *
+   * `provaParaLead` devolve pips e período, e cala a taxa de acerto quando a amostra é curta
+   * demais para a citar. Se não houver nada medido devolve null, e aí o bot fala do produto sem
+   * números — em vez de os inventar.
+   */
+  let provaMedida: string | null = null
+  try {
+    const [{ getSupabaseAdmin: admin }, { provaParaLead }] = await Promise.all([
+      import('@/lib/supabase-admin-client'),
+      import('@/lib/pips-proof'),
+    ])
+    const { data } = await admin().from('site_settings').select('value').eq('key', 'pips_proof').maybeSingle()
+    provaMedida = provaParaLead(data?.value as never)
+  } catch {
+    /* sem prova medida o bot fala do produto, e não de resultados */
+  }
+
   const systemPrompt = buildSystem(
     `${proof.members} membros na comunidade. ` +
+    (provaMedida
+      ? `RESULTADOS MEDIDOS (usa ESTES e mais nenhuns, tal como estão): ${provaMedida}. `
+      : `NÃO tens resultados medidos disponíveis: NÃO cites número nenhum de desempenho — fala do que a comunidade faz e faz perguntas. `) +
     `HÁ DOIS CAMINHOS e a tua primeira tarefa é perceber qual é o desta pessoa: ` +
     `(A) ECOSSISTEMA — quer comunidade, formação, sessões ao vivo e os grupos de sinais; ` +
     `(B) MTM AUTO — só quer a app que copia os sinais para a conta dele, sem trabalho. ` +

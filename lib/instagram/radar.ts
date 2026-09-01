@@ -196,14 +196,35 @@ export async function correrRadar(quantasHashtags = 3): Promise<{
         }
       }
 
+      /**
+       * DOIS baldes por hashtag: os recentes primeiro, os populares a seguir.
+       *
+       * O radar só lia `top_media` — o topo de uma hashtag é o que ACUMULOU gostos, e por isso
+       * traz publicações de semanas ou meses. A lista estava cheia de posts com 60 dias, e não
+       * era avaria: era a pergunta errada. Quem quer falar com alguém HOJE precisa de
+       * `recent_media`, que devolve as últimas horas.
+       *
+       * Os populares ficam na mesma — servem para perceber o que a hashtag valoriza e apanham
+       * contas grandes. Mas quem manda na lista do dia é o fresco.
+       */
+      const baldes: Array<{ edge: 'recent_media' | 'top_media'; origem: 'fresco' | 'popular' }> = [
+        { edge: 'recent_media', origem: 'fresco' },
+        { edge: 'top_media', origem: 'popular' },
+      ]
+
+      let houveErro = false
+      let vistos = 0
+      const pontuacoes: number[] = []
+      for (const balde of baldes) {
       const r = await graph(
         // 12 e não 25: nas hashtags grandes a Meta recusa com "reduce the amount of data" — o
         // limite dela é sobre o VOLUME devolvido, e as legendas dos posts populares são longas.
-        `${id}/top_media?user_id=${conta.id}&fields=id,caption,like_count,comments_count,permalink&limit=12`,
+        `${id}/${balde.edge}?user_id=${conta.id}&fields=id,caption,like_count,comments_count,permalink&limit=12`,
         token,
       )
       if (r.error) {
-        erros.push(`#${tag}: ${(r.error as { message?: string }).message ?? "erro"}`)
+        houveErro = true
+        erros.push(`#${tag} (${balde.origem}): ${(r.error as { message?: string }).message ?? "erro"}`)
         /**
          * Marcar a tentativa MESMO tendo falhado.
          *
@@ -215,16 +236,12 @@ export async function correrRadar(quantasHashtags = 3): Promise<{
          * Pontuação negativa para ir para o fim da fila sem sair da lista — pode voltar a
          * funcionar amanhã, quando o post gigante que a entupiu deixar de estar no topo.
          */
-        await db.from("ig_radar_hashtags").upsert(
-          { hashtag: tag, hashtag_id: id, ultima_procura: new Date().toISOString(), encontrados: 0, media_pontuacao: -20 },
-          { onConflict: "hashtag" },
-        )
         continue
       }
 
       const posts = (r.data as Array<Record<string, unknown>>) ?? []
       encontrados += posts.length
-      const pontuacoes: number[] = []
+      vistos += posts.length
 
       for (const p of posts) {
         const legenda = String(p.caption ?? "")
@@ -244,20 +261,31 @@ export async function correrRadar(quantasHashtags = 3): Promise<{
             comentarios: Number(p.comments_count ?? 0),
             pontuacao: pontos,
             porque,
+            origem: balde.origem,
           },
           { onConflict: "media_id", ignoreDuplicates: true },
         )
         if (!error) guardados++
       }
 
+      }
+
+      /**
+       * Marcar a tentativa MESMO tendo falhado.
+       *
+       * Sem isto uma hashtag que falha nunca escreve `ultima_procura`, fica eternamente à cabeça
+       * da fila por ser "a que nunca foi procurada", e as duas ou três que falham comem todas as
+       * passagens do dia. Pontuação negativa manda-a para o fim da fila sem a tirar da lista —
+       * pode voltar a funcionar amanhã.
+       */
       const media = pontuacoes.length ? pontuacoes.reduce((a, b) => a + b, 0) / pontuacoes.length : 0
       await db.from("ig_radar_hashtags").upsert(
         {
           hashtag: tag,
           hashtag_id: id,
           ultima_procura: new Date().toISOString(),
-          encontrados: posts.length,
-          media_pontuacao: Math.round(media),
+          encontrados: vistos,
+          media_pontuacao: vistos ? Math.round(media) : (houveErro ? -20 : 0),
         },
         { onConflict: "hashtag" },
       )
