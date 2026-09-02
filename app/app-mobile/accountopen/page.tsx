@@ -62,6 +62,21 @@ function makeSteps(b: string) {
 
 export default function AccountOpenPage() {
   const router = useRouter()
+  /**
+   * Dentro da app iOS esta página não se mostra.
+   *
+   * A Apple rejeitou a 3.7.2 (02/09/2026) depois de fotografar exactamente este ecrã: angariação
+   * para um terceiro financeiro, com KYC e depósito, dentro da app. Esconder o atalho não chega —
+   * o revisor pode chegar aqui pelo URL, e foi assim que ele lá chegou da primeira vez.
+   *
+   * No site e no Android fica tudo igual. O REGISTO DO UID continua a existir no iOS, nas
+   * Definições: isso é validação de acesso, não é angariação.
+   */
+  const [noAppIos, setNoAppIos] = useState<boolean | null>(null)
+  useEffect(() => {
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : ""
+    setNoAppIos(/MTMNativeApp/i.test(ua) && /iPhone|iPad|iPod/i.test(ua))
+  }, [])
   const { toast } = useToast()
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
   const [expandedStep, setExpandedStep] = useState<number | null>(1)
@@ -153,6 +168,28 @@ export default function AccountOpenPage() {
   }
 
   const allDone = completedSteps.length >= STEPS.length
+
+  // `null` = ainda não se sabe. Não se pinta nada até saber, senão o ecrã pisca o conteúdo
+  // que se está a tentar não mostrar.
+  if (noAppIos !== false) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
+        {noAppIos === true && (
+          <div className="max-w-sm text-center">
+            <p className="text-[15px] text-gray-300">
+              A abertura de conta na corretora faz-se no nosso site, fora da app.
+            </p>
+            <button
+              onClick={() => router.back()}
+              className="mt-5 rounded-lg border border-gray-700 px-4 py-2 text-sm text-gray-200"
+            >
+              Voltar
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">

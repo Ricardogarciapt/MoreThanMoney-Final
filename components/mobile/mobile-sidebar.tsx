@@ -62,6 +62,20 @@ export default function MobileSidebar({
   isAppOnlyUser = false,
 }: MobileSidebarProps) {
   const router = useRouter()
+  /**
+   * Dentro da app iOS o atalho para abrir conta na corretora NÃO aparece.
+   *
+   * A Apple rejeitou a 3.7.2 depois de fotografar esse funil — angariação para um terceiro
+   * financeiro, com KYC e depósito, dentro da app — e pedir documentação de parceria ao abrigo
+   * da 3.1.5. No site e no Android fica como está; só o iOS é que o esconde. É o mesmo mecanismo
+   * que já usamos para não abrir checkout Stripe no WebView.
+   */
+  const [noAppIos, setNoAppIos] = useState(false)
+  useEffect(() => {
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : ""
+    setNoAppIos(/MTMNativeApp/i.test(ua) && /iPhone|iPad|iPod/i.test(ua))
+  }, [])
+
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const [xpData, setXpData] = useState<{ xp: number; level: number } | null>(null)
   const [unreadMentorNotifications, setUnreadMentorNotifications] = useState(0)
@@ -359,7 +373,8 @@ export default function MobileSidebar({
 
             {/* Abrir Conta + Settings */}
             <div className="p-4 space-y-1">
-              {/* Abrir Conta na Corretora */}
+              {/* Abrir Conta na Corretora — escondido dentro da app iOS (ver `noAppIos`). */}
+              {!noAppIos && (
               <Link
                 href="/app-mobile/accountopen"
                 onClick={onClose}
@@ -369,6 +384,7 @@ export default function MobileSidebar({
                 <span className="flex-1 text-left font-medium">Abrir Conta</span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
+              )}
 
               {/* MTMcopier — gestão de contas MT5 */}
               <Link
