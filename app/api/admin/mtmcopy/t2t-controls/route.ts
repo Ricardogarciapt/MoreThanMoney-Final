@@ -5,7 +5,8 @@
  * GET  → estado atual: rotas provider (cópia ligada? fonte T2T visível?) + fontes extra.
  * POST → { action: 'route_copy'|'route_t2t'|'extra_channel', routeId?|channel?, value }
  *
- *  · route_copy=false  → pausa a CÓPIA AUTOMÁTICA da estratégia: route.enabled=false,
+ *  · route_copy=false  → pausa SÓ a CÓPIA AUTOMÁTICA da estratégia (o Tap to Trade continua,
+ *    é governado pelo interruptor dele): route.enabled=false,
  *    removeProviderStrategy (CopyFactory pára JÁ; posições abertas mantêm-se), resync dos
  *    subscribers, e espelha em mtmauto_providers.ativo — a app MTM Auto lê a MESMA tabela,
  *    por isso "sincroniza" por definição. Fica pausada até o admin religar.
@@ -59,7 +60,8 @@ async function buildState() {
   const routeChannels = new Set<string>()
   const strategies = routes.map((r) => {
     const channels = appChannelsForRoute(r)
-    if (r.tap_to_trade === true && r.enabled !== false) channels.forEach((c) => routeChannels.add(c))
+    // Igual ao tapToTradeEnabledChannels(): o T2T é governado só pelo seu interruptor.
+    if (r.tap_to_trade === true) channels.forEach((c) => routeChannels.add(c))
     const slugs = ROUTE_TO_MTMAUTO_SLUGS[r.id] ?? []
     return {
       routeId: r.id,

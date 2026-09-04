@@ -46,8 +46,20 @@ export function appChannelsForRoute(r: ProviderRoute): string[] {
 }
 
 /**
- * Canais de chat ATIVOS no Tap to Trade — qualquer rota com tap_to_trade + enabled,
- * incluindo rotas custom (sem sender_channel). Devolve null se a config falhar.
+ * Canais de chat ATIVOS no Tap to Trade — qualquer rota com `tap_to_trade`, incluindo rotas
+ * custom (sem sender_channel). Devolve null se a config falhar.
+ *
+ * ⚠️ Só olha para `tap_to_trade`. NÃO olha para `enabled`.
+ *
+ * São dois interruptores porque são duas coisas diferentes: `enabled` é a **cópia automática**
+ * (o CopyFactory a replicar para a conta do cliente sem ele fazer nada), `tap_to_trade` é o
+ * cliente **aceitar um sinal à mão**. Exigir os dois fazia com que pausar a cópia arrastasse o
+ * T2T atrás — os interruptores T2T continuavam verdes no painel e mesmo assim o botão de
+ * aceitar desaparecia dos chats. Quem pausa a cópia quer travar o automático, não tirar às
+ * pessoas a hipótese de decidirem por elas.
+ *
+ * Isto também mantém a GESTÃO das posições T2T já abertas a funcionar durante uma pausa
+ * (`t2t-management` lê daqui): parar de gerir uma posição aberta seria abandoná-la.
  */
 export async function tapToTradeEnabledChannels(): Promise<Set<string> | null> {
   try {
@@ -55,7 +67,7 @@ export async function tapToTradeEnabledChannels(): Promise<Set<string> | null> {
     const routes = normalizeProviderRoutes(config)
     const set = new Set<string>()
     for (const r of routes) {
-      if (r.tap_to_trade === true && r.enabled !== false) {
+      if (r.tap_to_trade === true) {
         for (const ch of appChannelsForRoute(r)) set.add(ch)
       }
     }
