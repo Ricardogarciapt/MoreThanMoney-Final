@@ -12,6 +12,19 @@ import { appChannelsForRoute } from './tap-to-trade-channels'
 
 const supabase = getSupabaseAdmin()
 
+/**
+ * O nome que o canal mostra às pessoas.
+ *
+ * O `label` da rota é interno — é como a fonte se chama no MTM Auto («MTM Auto Aurum Flow»).
+ * No chat do site e das apps isso lê-se como se fosse outro produto: quem abre a lista quer ver
+ * a estratégia, «Aurum Flow». Tiramos o prefixo e ficamos com o nome pelo qual ela é conhecida.
+ */
+function nomeDoCanal(r: { label?: string | null; tag?: string | null }): string {
+  const bruto = (r.label ?? r.tag ?? '').trim()
+  const semPrefixo = bruto.replace(/^MTM\s+Auto\s+/i, '').trim()
+  return (semPrefixo || bruto || 'Estratégia MTM').slice(0, 60)
+}
+
 export async function syncProviderRouteChannels(): Promise<{ created: number; removed: number; updated: number }> {
   const out = { created: 0, removed: 0, updated: 0 }
 
@@ -29,8 +42,7 @@ export async function syncProviderRouteChannels(): Promise<{ created: number; re
     if (r.tap_to_trade !== true || r.enabled === false) continue
     const ch = appChannelsForRoute(r)[0]
     if (!ch || !ch.startsWith('t2t-')) continue // só os dedicados (canónicos/app_channel ficam de fora)
-    const name = ((r.label ?? r.tag ?? '').trim() || 'Estratégia MTM').slice(0, 60)
-    desired.set(ch, { name, position: pos++ })
+    desired.set(ch, { name: nomeDoCanal(r), position: pos++ })
   }
 
   const { data: existing } = await supabase
