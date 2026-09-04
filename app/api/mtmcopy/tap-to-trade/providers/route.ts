@@ -15,6 +15,8 @@ const T2T_EXTRA_LABELS: Record<string, string> = {
   'sinais-scanner-mtm': 'PrimeVerse',
   // Swings: entram e ficam. Vão para T2T sem motor de gestão — só se acompanha o desfecho.
   'ideias-e-sinais': 'Ideias Forex Swings',
+  // Perpétuos (Aurum Flow & MTM Perps): fonte TAP to Copy — copiar parâmetros, sem ordem MT5.
+  'cripto-perps': 'Perpétuos Cripto',
 }
 
 const supabase = getSupabaseAdmin()

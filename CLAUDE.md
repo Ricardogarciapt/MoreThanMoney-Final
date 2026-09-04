@@ -596,6 +596,14 @@ Cada agente tem contexto isolado mas pode passar outputs para o próximo.
 
 ## PENDENTES (memória entre sessões)
 
+### 🎛️ CONTROLO ADMIN T2T/MTM COPY (2026-09-04)
+- **App-mobile → T2T → Estratégias**: secção "Controlo Admin" (só `user_type='admin'`) com interruptores no estilo Seguir: pausa/liga CÓPIA por estratégia (route.enabled + removeProviderStrategy + resync + espelho em `mtmauto_providers.ativo` — a app MTM Auto lê a MESMA tabela) e liga/desliga FONTES T2T (route.tap_to_trade + `t2t_extra_channels`). API: `/api/admin/mtmcopy/t2t-controls`.
+- Fonte desligada → some do feed T2T dos clientes E o botão dos chats desaparece (chat-channels consulta `/api/mtmcopy/tap-to-trade/providers`).
+- **Subscritores**: admin Subscribers tab tem Pausar/Retomar por ligação (is_active + unsubscribe/sync CopyFactory; o reconcile respeita is_active). GET inclui pausadas.
+- **Rotas provider**: conta mestre pode ser "— (nenhuma)" (account_id '', sobrevive ao repair por match de id; sem execução/CopyFactory, sinais continuam p/ chat+T2T). PUT telegram-sources já NÃO apaga `app_channel`/`signal_source`/`t2t_extra_channels` (bug corrigido).
+- **Perps/Aurum Flow**: perps-gate é só de EXECUÇÃO — a entrega (chat cripto-perps + Telegram "Ideias de Perpétuos Cripto" −1004363723837 + T2T) publica sempre; bloqueio fica em trade_status='filtered'. Botão nos perps = **TAP to Copy** (modal com copy por campo: par, direção, entrada, SL, exits — components/mobile/tap-to-copy-modal.tsx). 'cripto-perps' ativo em t2t_extra_channels.
+- 34744057 ("Copy PU · Premium") NÃO é mestre CopyFactory: é subscritora espelho da MxsR; o trailing/BE chega-lhe por replicação CopyFactory do mestre 530d2e07 (motor premium-price-monitor gere o mestre; premium_subscriber_exits espelha saídas).
+
 ### 🔁 ROTINA SEMANAL — Flyer "Resultados da Semana" (desde 2026-08-22)
 - **Ordem permanente do Ricardo:** todas as semanas criar o flyer com resultados reais, enviar-lhe por Telegram e publicar como Story no @morethanmoney.pt. Branding MTM: dourado `#efb810` sobre preto, logo `public/logo-mtm-transparent.png`, CTA WhatsApp +351 912 666 699 + morethanmoney.pt/scanners, disclaimer educativo obrigatório.
 - **Automatizado:** cron `/api/cron/weekly-flyer` (sábado 10:00 UTC, vercel.json) → calcula stats canónicas (`lib/mtm-flyer/weekly-stats.ts`: exit_N→TP N, loss→SL, be→entrada; pips 0.0001 forex/0.01 JPY/0.1 XAU, pontos índices; sanidade |12%|/trade) → Telegram sendPhoto ao admin → agenda STORY `approved` na fila `social_scheduled_posts` (ig-publish publica em <5 min). Imagem live: `/api/flyer/weekly?w=YYYY-MM-DD&lang=pt|en` (next/og, 1080×1920).
