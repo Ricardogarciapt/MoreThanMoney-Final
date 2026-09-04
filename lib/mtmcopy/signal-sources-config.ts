@@ -201,6 +201,18 @@ export function envChatIds(): string[] {
   return [...ids]
 }
 
+/**
+ * Deita fora a cópia em cache para a próxima leitura ir à base de dados.
+ *
+ * O cache de 30s é por instância. Uma escrita limpa o cache da instância que a serviu, e mais
+ * nenhuma — outra pode continuar a devolver o estado antigo durante meio minuto. Para leituras
+ * normais isso é inofensivo; para o painel onde se PAUSA uma estratégia não é, porque mostra
+ * ligado aquilo que já está parado e convida a carregar outra vez.
+ */
+export function invalidateSignalSourcesCache(): void {
+  cache = null
+}
+
 export async function getSignalSourcesConfig(): Promise<MtmcopySignalSourcesConfig> {
   if (cache && Date.now() - cache.at < CACHE_MS) return cache.config
 

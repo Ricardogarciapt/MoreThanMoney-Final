@@ -17,7 +17,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-api-helpers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { getSignalSourcesConfig, saveSignalSourcesConfig } from '@/lib/mtmcopy/signal-sources-config'
+import {
+  getSignalSourcesConfig,
+  saveSignalSourcesConfig,
+  invalidateSignalSourcesCache,
+} from '@/lib/mtmcopy/signal-sources-config'
 import { normalizeProviderRoutes } from '@/lib/mtmcopy/provider-routes'
 import { appChannelsForRoute } from '@/lib/mtmcopy/tap-to-trade-channels'
 
@@ -44,6 +48,9 @@ const ROUTE_TO_MTMAUTO_SLUGS: Record<string, string[]> = {
 
 async function buildState() {
   const supabase = getSupabaseAdmin()
+  // Sempre fresco: este painel é onde se pausa uma estratégia, e mostrar o estado de há 30
+  // segundos é mostrar ligado o que já está parado.
+  invalidateSignalSourcesCache()
   const config = await getSignalSourcesConfig()
   const routes = normalizeProviderRoutes(config)
   const { data: mtmauto } = await supabase.from('mtmauto_providers').select('slug, nome, ativo')
@@ -88,6 +95,7 @@ export async function POST(request: NextRequest) {
   const action = String(body.action ?? '')
   const value = body.value === true
   const supabase = getSupabaseAdmin()
+  invalidateSignalSourcesCache()
   const config = await getSignalSourcesConfig()
 
   if (action === 'extra_channel') {
@@ -115,7 +123,38 @@ export async function POST(request: NextRequest) {
     await saveSignalSourcesConfig({ ...config, provider_routes: nextRoutes })
 
     if (action === 'route_copy') {
-      // Pausa autoritária da estratégia CopyFactory + resync das subscrições dos clientes.
+      /**
+       * ORDEM IMPORTA. Primeiro os dois escritos BARATOS e autoritários — a config (já feita
+       * acima) e o espelho na tabela que a app MTM Auto lê. Só depois o CopyFactory, que é
+       * lento e fala com a MetaApi.
+       *
+       * Porquê: isto já correu ao contrário e custou. A 04/09 o Ricardo pausou as três
+       * estratégias; o Sensei e o Aurum Flow ficaram pausados dos dois lados, o Premium não.
+       * A config dizia pausado, o CopyFactory tinha a estratégia removida — mas
+       * `mtmauto_providers.ativo` continuou `true`, e é ESSE campo que deixa a MTM Auto
+       * continuar a ingerir e a executar sinais (`webhook/route.ts` filtra por `ativo`).
+       * O Premium é o que tem mais subscritores, logo o `runMtmcopySystemSync()` mais demorado:
+       * bateu no `maxDuration` de 60s e a função morreu ANTES da linha do espelho. Resultado:
+       * 4 clientes em auto-aceitar a continuar a abrir ordens de uma estratégia que o painel
+       * dava como parada.
+       *
+       * Uma pausa é um travão de segurança. O travão tem de agarrar primeiro e só depois
+       * arrumar a casa, nunca ao contrário.
+       */
+      const slugs = ROUTE_TO_MTMAUTO_SLUGS[routeId]
+      if (slugs?.length) {
+        const { error } = await supabase.from('mtmauto_providers').update({ ativo: value }).in('slug', slugs)
+        if (error) {
+          // Se o espelho falha, a pausa NÃO está aplicada onde conta. Dizer que sim seria pior
+          // do que falhar: o admin sai daqui a pensar que parou.
+          return NextResponse.json(
+            { error: `A pausa não chegou à app MTM Auto (${error.message}). A estratégia PODE continuar a executar — repete.` },
+            { status: 500 },
+          )
+        }
+      }
+
+      // Só agora o CopyFactory: lento, e best-effort. Se falhar, o travão já agarrou.
       try {
         if (!value && target.strategy_id?.trim()) {
           const { removeProviderStrategy } = await import('@/lib/mtmcopy/copyfactory')
@@ -134,12 +173,6 @@ export async function POST(request: NextRequest) {
         await runMtmcopySystemSync()
       } catch (e) {
         console.warn('[t2t-controls] sync CopyFactory falhou:', e)
-      }
-
-      // Espelho na app MTM Auto (mesma tabela que a app lê — sincronização imediata).
-      const slugs = ROUTE_TO_MTMAUTO_SLUGS[routeId]
-      if (slugs?.length) {
-        await supabase.from('mtmauto_providers').update({ ativo: value }).in('slug', slugs)
       }
     }
 
