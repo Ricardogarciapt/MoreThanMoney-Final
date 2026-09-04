@@ -3,7 +3,7 @@ import {
   getMtmChannelProviders,
   type MtmChannelProvider,
 } from './provider-accounts'
-import { normalizeProviderRoutes, pickSingleProviderRoute, routeMatchesSignal } from './provider-routes'
+import { normalizeProviderRoutes, pickSingleProviderRoute } from './provider-routes'
 import {
   getSignalSourcesConfig,
   type MtmcopyTelegramChannelKey,
@@ -77,63 +77,22 @@ export async function resolveMtmProvidersForSignal(
   }
 
   /**
-   * PAUSA: se existe rota para este sinal mas está desligada, acabou aqui.
+   * Sem rota, não se executa. Ponto.
    *
-   * Sem isto a pausa era decorativa. `pickSingleProviderRoute` devolve null para uma rota
-   * pausada, e o código caía no `resolveLegacySingleProvider`, que lê o mapa antigo
-   * `channel_providers` — onde a mesma conta mestre continua escrita, sem interruptor nenhum.
-   * O sinal seguia para lá como se nada fosse.
+   * Aqui existia um caminho legado que, quando nenhuma rota servia o sinal, ia buscar a conta
+   * mestre ao mapa antigo `channel_providers` ou ao global `provider_account_id`. Fazia duas
+   * coisas más ao mesmo tempo:
    *
-   * Aconteceu a 04/09: o Ricardo pausou o Premium às 13:32, o sinal de venda de ouro entrou às
-   * 13:50:36, e às 13:50:56 a conta mestre abriu XAUUSD 0.01. A rota dizia parada; a porta das
-   * traseiras estava aberta.
+   *  · Furava a PAUSA. Uma rota desligada deixava de ser escolhida e o sinal encontrava a mesma
+   *    conta pelo caminho de trás, sem interruptor nenhum. Foi assim que a 04/09, com o Premium
+   *    pausado às 13:32, o sinal das 13:50 abriu na conta mestre 20 segundos depois.
+   *  · Dava destino a quem não tem. O canal `trade-ideas` não tem rota própria e caía no global,
+   *    que aponta para a conta mestre do PREMIUM — um sinal de ideias abria na conta do Premium.
    *
-   * O caminho legado existe para canais que NUNCA tiveram rota — não para ressuscitar um que
-   * foi desligado de propósito.
+   * Não é preciso para nada: quando não há `provider_routes` guardadas, o próprio
+   * `normalizeProviderRoutes` já constrói rotas a partir do `channel_providers` e do ambiente.
+   * O que este atalho acrescentava era só a hipótese de saltar o `enabled`.
    */
-  const existeRotaPausada = routes.some(
-    (r) => r.enabled === false && routeMatchesSignal({ ...r, enabled: true }, channel, chatId, opts),
-  )
-  if (existeRotaPausada) return []
-
-  const single = await resolveLegacySingleProvider(channel, config, envProviders)
-  return single ? [single] : []
+  return []
 }
 
-async function resolveLegacySingleProvider(
-  channel: MtmcopyChannelKey,
-  config: Awaited<ReturnType<typeof getSignalSourcesConfig>>,
-  envProviders: ReturnType<typeof getMtmChannelProviders>,
-): Promise<MtmChannelProvider | null> {
-  if (channel === 'unknown') return null
-
-  const key = channel as MtmcopyTelegramChannelKey
-  const envDefault = envProviders[key]
-
-  const fromDb = config.channel_providers?.[key]
-  if (fromDb?.account_id?.trim()) {
-    return {
-      channel: key,
-      accountId: fromDb.account_id.trim(),
-      tag: fromDb.tag?.trim() || envDefault?.tag || key,
-      strategyId:
-        fromDb.strategy_id?.trim() ||
-        config.provider_strategy_id ||
-        envDefault?.strategyId ||
-        null,
-      execution: fromDb.execution,
-    }
-  }
-
-  if (config.provider_account_id?.trim()) {
-    return {
-      channel: key,
-      accountId: config.provider_account_id.trim(),
-      tag: envDefault?.tag || 'MTM Provider',
-      strategyId:
-        config.provider_strategy_id?.trim() || envDefault?.strategyId || null,
-    }
-  }
-
-  return envDefault
-}

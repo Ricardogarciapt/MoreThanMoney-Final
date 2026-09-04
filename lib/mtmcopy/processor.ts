@@ -2151,6 +2151,25 @@ async function processSignalDirect(
  * perfil Trade Ideas, e a CopyFactory levava a trade a todos os subscritores do Premium.
  * Agora tem conta e perfil próprios (0,5%, sem trailing, comentário `MTM-SENSEI`).
  */
+/**
+ * A rota desta estratégia está pausada pelo admin?
+ *
+ * O `senseiProvider()` é fixo no código de propósito — é o que impede o Sensei de cair na conta
+ * do Premium. Mas fixo assim também não passava pela pausa: desligar a cópia no painel não
+ * travava nada nesta conta. Uma pausa que só vale para alguns caminhos não é uma pausa.
+ */
+async function rotaPausada(strategyId: string): Promise<boolean> {
+  try {
+    const { getSignalSourcesConfig } = await import('./signal-sources-config')
+    const { normalizeProviderRoutes } = await import('./provider-routes')
+    const routes = normalizeProviderRoutes(await getSignalSourcesConfig())
+    const r = routes.find((x) => x.strategy_id?.trim() === strategyId)
+    return r ? r.enabled === false : false
+  } catch {
+    return false // config em baixo não é motivo para parar de executar
+  }
+}
+
 function senseiProvider(): MtmChannelProvider {
   return {
     channel: 'trade-ideas',
@@ -2186,7 +2205,7 @@ export async function processMtmcopyWebhookSignal(opts: {
             return p ? [p] : []
           })()
         : opts.target === 'sensei'
-          ? [senseiProvider()]
+          ? ((await rotaPausada(CANONICAL_SENSEI_STRATEGY_ID)) ? [] : [senseiProvider()])
           : await resolveMtmProvidersForSignal(channel, null, { signalSource: 'webhook' })
   if (!providers.length) {
     return {
