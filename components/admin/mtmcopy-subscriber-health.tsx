@@ -16,7 +16,7 @@ interface Linha {
   id: string; label: string; email: string | null; nome: string | null
   purpose: string | null; metodo: string | null; estrategia: string | null
   grupos: string[]; lote: string; risco: number; propFirm: string | null
-  mt5: string | null; problemas: Problema[]
+  mt5: string | null; ativa: boolean; problemas: Problema[]
 }
 interface Resposta { total: number; graves: number; avisos: number; saudaveis: number; linhas: Linha[] }
 
@@ -24,6 +24,7 @@ export default function MtmcopySubscriberHealth() {
   const [d, setD] = useState<Resposta | null>(null)
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -32,6 +33,19 @@ export default function MtmcopySubscriberHealth() {
     setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
+
+  /** Pausar/retomar a cópia deste subscriber (is_active + subscrição CopyFactory). */
+  const toggle = async (l: Linha) => {
+    setBusy(l.id)
+    const r = await adminApiCall<{ ok: boolean }>("/api/admin/mtmcopy/subscriber-health", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ connectionId: l.id, action: l.ativa ? "pause" : "resume" }),
+    })
+    if (!r.success) setErro(r.error ?? "falhou")
+    await load()
+    setBusy(null)
+  }
 
   if (loading && !d) return <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-[#D2A63C]" /></div>
   if (erro) return <p className="text-sm text-red-400">{erro}</p>
@@ -56,7 +70,8 @@ export default function MtmcopySubscriberHealth() {
           return (
             <div key={l.id}
               className={`rounded-xl border p-3.5 ${
-                grave ? "border-red-500/40 bg-red-500/[0.04]"
+                !l.ativa ? "border-zinc-800 bg-zinc-950/30 opacity-70"
+                : grave ? "border-red-500/40 bg-red-500/[0.04]"
                 : aviso ? "border-amber-500/30 bg-amber-500/[0.03]"
                 : "border-zinc-800 bg-zinc-950/50"}`}>
               <div className="flex flex-wrap items-start justify-between gap-2">
@@ -80,6 +95,16 @@ export default function MtmcopySubscriberHealth() {
                   <Badge variant="outline" className={l.mt5 === "connected" ? "border-emerald-700 text-emerald-400" : "border-red-700 text-red-400"}>
                     {l.mt5 ?? "—"}
                   </Badge>
+                  {!l.ativa && <Badge className="bg-zinc-500/15 text-zinc-300">⏸ pausada</Badge>}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={busy === l.id}
+                    onClick={() => toggle(l)}
+                    className={`h-6 px-2 text-[10px] ${l.ativa ? "border-red-700 text-red-400 hover:bg-red-500/10" : "border-emerald-700 text-emerald-400 hover:bg-emerald-500/10"}`}
+                  >
+                    {busy === l.id ? "…" : l.ativa ? "Pausar cópia" : "Retomar"}
+                  </Button>
                 </div>
               </div>
               {l.problemas.length > 0 && (

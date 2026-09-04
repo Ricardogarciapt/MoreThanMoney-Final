@@ -133,13 +133,20 @@ export function repairProviderRoutes(routes: ProviderRoute[]): ProviderRoute[] {
   // (chat errado, etc.), mas isso apagava as flags editáveis pelo admin. Voltamos
   // a sobrepor as flags guardadas (tap_to_trade, enabled) por conta.
   const savedByAccount = new Map<string, ProviderRoute>()
+  const savedById = new Map<string, ProviderRoute>()
   for (const r of routes) {
     const acc = r.account_id?.trim()
     if (acc && !savedByAccount.has(acc)) savedByAccount.set(acc, r)
+    if (r.id && !savedById.has(r.id)) savedById.set(r.id, r)
   }
   const canonicalMerged = canonical.map((c) => {
-    const saved = savedByAccount.get(c.account_id.trim())
+    // Match por ID primeiro: uma rota canónica cuja conta o admin pôs a "— nenhuma"
+    // (account_id vazio) só é encontrável pelo id — por conta, a escolha perdia-se.
+    const saved = savedById.get(c.id) ?? savedByAccount.get(c.account_id.trim())
     if (!saved) return c
+    // Conta vazia EXPLÍCITA = decisão do admin ("— nenhuma"); contas erradas/trocadas
+    // continuam a ser reparadas para a canónica.
+    const masterNone = typeof saved.account_id === 'string' && saved.account_id.trim() === ''
     return {
       ...c,
       enabled: saved.enabled !== false,
@@ -147,21 +154,22 @@ export function repairProviderRoutes(routes: ProviderRoute[]): ProviderRoute[] {
       // Preserva o chat T2T dedicado editável (ex.: GoldKiller → 'sinais-goldkiller'),
       // senão a reconstrução canónica mapeava-o pelo sender_channel partilhado ('trade-ideas').
       app_channel: saved.app_channel ?? c.app_channel,
+      ...(masterNone ? { account_id: '', strategy_id: null } : {}),
     }
   })
 
-  const custom = routes.filter(
-    (r) =>
-      r.enabled !== false &&
-      r.account_id?.trim() &&
-      !isCanonicalRoute(r) &&
-      r.id !== 'legacy-global',
-  )
+  // Rotas custom PAUSADAS mantêm-se guardadas (o admin pausa/retoma sem as perder);
+  // a execução já ignora enabled===false. Rotas sem conta também sobrevivem (chat/T2T).
+  const custom = routes.filter((r) => !isCanonicalRoute(r) && r.id !== 'legacy-global' && r.id?.trim())
 
   const merged = [...canonicalMerged, ...custom]
   const seenAccount = new Set<string>()
+  const seenId = new Set<string>()
   return merged.filter((r) => {
-    const acc = r.account_id.trim()
+    if (seenId.has(r.id)) return false
+    seenId.add(r.id)
+    const acc = (r.account_id ?? '').trim()
+    if (!acc) return true // sem conta não colide com ninguém
     if (seenAccount.has(acc)) return false
     seenAccount.add(acc)
     return true

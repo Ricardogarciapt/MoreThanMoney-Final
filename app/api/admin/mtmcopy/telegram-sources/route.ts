@@ -135,8 +135,9 @@ function parseProviderRoutes(raw: unknown): ProviderRoute[] | undefined {
   for (const row of raw) {
     if (!row || typeof row !== 'object') continue
     const r = row as Record<string, unknown>
+    // account_id VAZIO é válido: "— (nenhuma)" — a rota existe (chat/T2T) sem conta mestre,
+    // e a execução/scaling é saltada onde a conta é exigida. Antes, gravar sem conta APAGAVA a rota.
     const account_id = typeof r.account_id === 'string' ? r.account_id.trim() : ''
-    if (!account_id) continue
     const id = typeof r.id === 'string' && r.id.trim() ? r.id.trim() : `route-${routes.length + 1}`
     const sender_channel = r.sender_channel
     routes.push({
@@ -158,6 +159,9 @@ function parseProviderRoutes(raw: unknown): ProviderRoute[] | undefined {
       execution: parseExecutionProfile(r.execution),
       enabled: r.enabled !== false,
       tap_to_trade: r.tap_to_trade === true,
+      // Antes não eram lidos e cada gravação do admin APAGAVA-os da config (bug).
+      signal_source: r.signal_source === 'webhook' ? 'webhook' : r.signal_source === 'telegram' ? 'telegram' : undefined,
+      app_channel: typeof r.app_channel === 'string' && r.app_channel.trim() ? r.app_channel.trim() : undefined,
     })
   }
   return routes
@@ -224,6 +228,8 @@ export async function PUT(request: NextRequest) {
         ? parseExecutionProfile(body.provider_execution) ?? current.provider_execution
         : current.provider_execution,
     provider_execution_profiles: current.provider_execution_profiles,
+    // Preserva a lista de canais T2T extra — antes era omitida e cada gravação limpava-a.
+    t2t_extra_channels: current.t2t_extra_channels,
   }
 
   if (next.provider_routes?.length) {

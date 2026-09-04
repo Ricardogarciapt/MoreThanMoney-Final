@@ -336,12 +336,13 @@ export default function MtmcopyProviderPipeline({
                         const match = accountStrategies.find((s) => s.accountId === account_id)
                         updateRoute(route.id, {
                           account_id,
-                          strategy_id: match?.id ?? route.strategy_id ?? null,
+                          // "— (nenhuma)": sem conta mestre não há estratégia CopyFactory a manter
+                          strategy_id: account_id ? (match?.id ?? route.strategy_id ?? null) : null,
                         })
                       }}
                       className="flex-1 h-9 rounded-md bg-zinc-950 border border-zinc-700 text-sm text-white px-2"
                     >
-                      <option value="">— Seleccionar —</option>
+                      <option value="">— (nenhuma) — sem conta mestre</option>
                       {(meta?.accounts ?? []).map((a) => (
                         <option key={a.id} value={a.id}>
                           {a.name} #{a.login}
@@ -366,6 +367,11 @@ export default function MtmcopyProviderPipeline({
                     placeholder="...ou inserir Account ID manualmente"
                     className="mt-2 h-8 bg-zinc-950 border-zinc-700 text-xs"
                   />
+                  {!route.account_id && (
+                    <p className="text-[10px] text-amber-500/80 mt-1">
+                      Sem conta mestre: os sinais continuam a alimentar chat/T2T das apps, mas não há execução nem CopyFactory nesta rota.
+                    </p>
+                  )}
                 </div>
 
                 <div className="sm:col-span-2">

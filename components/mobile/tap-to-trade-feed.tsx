@@ -23,6 +23,7 @@ import {
   Trash2,
 } from "lucide-react"
 import MtmAutoMetricas from "@/components/mobile/mtm-auto-metricas"
+import TapToCopyModal from "@/components/mobile/tap-to-copy-modal"
 import MtmAutoPainel from "@/components/mobile/mtm-auto-painel"
 import MtmAutoEstrategias from "@/components/mobile/mtm-auto-estrategias"
 import MtmAutoHistorico from "@/components/mobile/mtm-auto-historico"
@@ -333,6 +334,8 @@ export default function TapToTradeFeed() {
   /** Lido dentro do `load` sem o tornar dependente do estado — o intervalo de 20s não se recria. */
   const limitModeRef = useRef<"today" | "week">("today")
   const [tap, setTap] = useState<{ sig: Sig; status: "confirm" | "loading" | "done" | "error"; message?: string } | null>(null)
+  /** Perpétuos: modal TAP to Copy (parâmetros campo a campo) em vez de ordem. */
+  const [copySig, setCopySig] = useState<Sig | null>(null)
   /**
    * Pré-visualização do sinal: parâmetros da trade e, por conta, o lote e o risco calculados
    * sobre a equity real. Antes o cliente confirmava sem ver o tamanho da posição que ia abrir.
@@ -1529,13 +1532,19 @@ export default function TapToTradeFeed() {
                   </div>
                 ) : (
                   <button
-                    onClick={() => setTap({ sig: s, status: "confirm" })}
+                    onClick={() =>
+                      s.channel_slug === "cripto-perps" ? setCopySig(s) : setTap({ sig: s, status: "confirm" })
+                    }
                     className="mt-2.5 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2.5 active:scale-[0.98] transition-transform"
                   >
                     <Zap className="w-4 h-4" />
-                    {/* Nos perpétuos o botão não abre ordem nenhuma — segue a posição-mestre.
-                        O rótulo tem de dizer isso, senão promete o que não faz. */}
-                    {t2tMode(s.channel_slug, s.content) === "follow" ? t("t2t.followPosition") : "Tap to Trade"}
+                    {/* Perpétuos: não abre ordem — modal TAP to Copy com os parâmetros, campo a
+                        campo, para colar na exchange (pedido Ricardo 2026-09-04). */}
+                    {s.channel_slug === "cripto-perps"
+                      ? "TAP to Copy"
+                      : t2tMode(s.channel_slug, s.content) === "follow"
+                        ? t("t2t.followPosition")
+                        : "Tap to Trade"}
                   </button>
                 )}
               </div>
@@ -1671,6 +1680,8 @@ export default function TapToTradeFeed() {
           </div>
         </div>
       )}
+
+      {copySig && <TapToCopyModal content={copySig.content || ""} aoFechar={() => setCopySig(null)} />}
 
       {tap && (
         <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/70 p-4" onClick={() => tap.status !== "loading" && setTap(null)}>

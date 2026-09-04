@@ -54,8 +54,9 @@ export async function GET(request: NextRequest) {
       'lot_mode, lot_value, max_risk_percent, t2t_enabled, t2t_lot_mode, t2t_lot_value, prop_firm_type, ' +
       'baseline_balance, mt5_status, is_active, metrics_excluded',
     )
-    .eq('is_active', true)
     .returns<Ligacao[]>()
+  // Nota: inclui também as PAUSADAS (is_active=false) — sem elas o admin não tinha
+  // onde as retomar. Os problemas só se avaliam nas ativas; pausada não copia nada.
 
   const userIds = [...new Set((conns ?? []).map((c) => c.user_id))]
   const { data: perfis } = await admin.from('profiles').select('id, email, full_name').in('id', userIds)
@@ -63,30 +64,33 @@ export async function GET(request: NextRequest) {
 
   const linhas = (conns ?? []).map((c) => {
     const problemas: Problema[] = []
+    const ativa = c.is_active !== false
     const grupos = parseTelegramGroups(c as never)
     const temGruposGravados = Array.isArray(c.telegram_groups) && c.telegram_groups.length > 0
     const risco = Number(c.max_risk_percent) || 0
 
-    if (c.lot_mode === 'multiplier' && risco <= 0) {
-      problemas.push({ gravidade: 'grave', texto: 'Lote por multiplicador sem risco definido — não consegue dimensionar' })
-    }
-    if (c.purpose === 'tap_to_trade' && temGruposGravados) {
-      problemas.push({ gravidade: 'grave', texto: 'Conta de Tap to Trade com grupos — só deve abrir o que o dono aceitar' })
-    }
-    if (c.purpose !== 'tap_to_trade' && !temGruposGravados && !c.copyfactory_strategy_pick) {
-      problemas.push({ gravidade: 'grave', texto: 'Sem grupos nem estratégia — copia Premium por defeito, sem ninguém ter escolhido' })
-    }
-    if (c.prop_firm_type && !(Number(c.baseline_balance) > 0)) {
-      problemas.push({ gravidade: 'grave', texto: 'Conta financiada sem saldo inicial — as guardas de drawdown não conseguem medir' })
-    }
-    if (c.mt5_status === 'error') {
-      problemas.push({ gravidade: 'aviso', texto: 'MT5 em erro — o cliente pensa que está a copiar e não está' })
-    }
-    if (c.mt5_status === 'disconnected') {
-      problemas.push({ gravidade: 'aviso', texto: 'MT5 desligado' })
-    }
-    if (c.t2t_enabled && !c.t2t_lot_mode) {
-      problemas.push({ gravidade: 'aviso', texto: 'Tap to Trade ligado sem sizing próprio — usa o da cópia' })
+    if (ativa) {
+      if (c.lot_mode === 'multiplier' && risco <= 0) {
+        problemas.push({ gravidade: 'grave', texto: 'Lote por multiplicador sem risco definido — não consegue dimensionar' })
+      }
+      if (c.purpose === 'tap_to_trade' && temGruposGravados) {
+        problemas.push({ gravidade: 'grave', texto: 'Conta de Tap to Trade com grupos — só deve abrir o que o dono aceitar' })
+      }
+      if (c.purpose !== 'tap_to_trade' && !temGruposGravados && !c.copyfactory_strategy_pick) {
+        problemas.push({ gravidade: 'grave', texto: 'Sem grupos nem estratégia — copia Premium por defeito, sem ninguém ter escolhido' })
+      }
+      if (c.prop_firm_type && !(Number(c.baseline_balance) > 0)) {
+        problemas.push({ gravidade: 'grave', texto: 'Conta financiada sem saldo inicial — as guardas de drawdown não conseguem medir' })
+      }
+      if (c.mt5_status === 'error') {
+        problemas.push({ gravidade: 'aviso', texto: 'MT5 em erro — o cliente pensa que está a copiar e não está' })
+      }
+      if (c.mt5_status === 'disconnected') {
+        problemas.push({ gravidade: 'aviso', texto: 'MT5 desligado' })
+      }
+      if (c.t2t_enabled && !c.t2t_lot_mode) {
+        problemas.push({ gravidade: 'aviso', texto: 'Tap to Trade ligado sem sizing próprio — usa o da cópia' })
+      }
     }
 
     const p = porUser.get(c.user_id)
@@ -103,12 +107,14 @@ export async function GET(request: NextRequest) {
       risco,
       propFirm: c.prop_firm_type,
       mt5: c.mt5_status,
+      ativa,
       problemas,
     }
   })
 
-  // Os problemas graves primeiro — é o que precisa de mão.
+  // Os problemas graves primeiro — é o que precisa de mão. Pausadas no fim.
   linhas.sort((a, b) => {
+    if (a.ativa !== b.ativa) return a.ativa ? -1 : 1
     const ga = a.problemas.filter((x) => x.gravidade === 'grave').length
     const gb = b.problemas.filter((x) => x.gravidade === 'grave').length
     if (ga !== gb) return gb - ga
@@ -120,7 +126,58 @@ export async function GET(request: NextRequest) {
     total: linhas.length,
     graves: linhas.filter((l) => l.problemas.some((p) => p.gravidade === 'grave')).length,
     avisos: linhas.filter((l) => l.problemas.some((p) => p.gravidade === 'aviso')).length,
-    saudaveis: linhas.filter((l) => !l.problemas.length).length,
+    saudaveis: linhas.filter((l) => l.ativa && !l.problemas.length).length,
     linhas,
   })
+}
+
+/**
+ * Pausar/retomar um SUBSCRIBER (pedido Ricardo 2026-09-04: controlar os subscritores
+ * do CopyFactory e das estratégias a partir do admin).
+ *  · pause  → is_active=false + unsubscribe CopyFactory JÁ (posições abertas ficam);
+ *             o reconcile horário respeita is_active, por isso não religa sozinho.
+ *  · resume → is_active=true + re-sync da subscrição CopyFactory da ligação.
+ */
+export async function POST(request: NextRequest) {
+  const denied = await requireAdmin(request)
+  if (denied) return denied
+
+  const body = await request.json().catch(() => ({}))
+  const connectionId = String(body.connectionId ?? '').trim()
+  const action = body.action === 'resume' ? 'resume' : body.action === 'pause' ? 'pause' : null
+  if (!connectionId || !action) {
+    return NextResponse.json({ error: 'connectionId e action (pause|resume) obrigatórios' }, { status: 400 })
+  }
+
+  const admin = getSupabaseAdmin()
+  const { data: conn, error } = await admin
+    .from('mtmcopy_connections')
+    .select('*')
+    .eq('id', connectionId)
+    .maybeSingle()
+  if (error || !conn) return NextResponse.json({ error: 'ligação não encontrada' }, { status: 404 })
+
+  const isActive = action === 'resume'
+  const { error: upErr } = await admin
+    .from('mtmcopy_connections')
+    .update({ is_active: isActive, updated_at: new Date().toISOString() })
+    .eq('id', connectionId)
+  if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 })
+
+  let copyfactory: string = 'skipped'
+  try {
+    if (action === 'pause') {
+      const { removeConnectionCopyFactory } = await import('@/lib/mtmcopy/connection-sync')
+      const r = await removeConnectionCopyFactory(conn.metaapi_account_id)
+      copyfactory = r?.ok === false ? 'unsubscribe_failed' : 'unsubscribed'
+    } else {
+      const { syncConnectionCopyFactory } = await import('@/lib/mtmcopy/connection-sync')
+      const r = await syncConnectionCopyFactory({ ...conn, is_active: true } as never)
+      copyfactory = (r as { ok?: boolean } | undefined)?.ok === false ? 'sync_failed' : 'synced'
+    }
+  } catch (e) {
+    copyfactory = `error: ${e instanceof Error ? e.message : String(e)}`
+  }
+
+  return NextResponse.json({ ok: true, connectionId, is_active: isActive, copyfactory })
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { isT2TEntrySignal, t2tMode } from "@/lib/mtmcopy/t2t-source"
+import TapToCopyModal from "@/components/mobile/tap-to-copy-modal"
 import { useAuth } from "@/contexts/auth-context"
 import {
   canReadChannel,
@@ -1094,7 +1095,12 @@ function MessageBubble({
                   className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#D2A63C] text-black font-bold text-[13px] py-2 active:scale-[0.98] transition-transform"
                   aria-label={t("chat.tapToTradeAria")}
                 >
-                  <TrendingUp className="w-4 h-4" /> {t2tMode(msg.channel_slug, msg.content) === "follow" ? "Seguir sinal" : "Tap to Trade MTM"}
+                  <TrendingUp className="w-4 h-4" />{" "}
+                  {msg.channel_slug === "cripto-perps"
+                    ? "TAP to Copy"
+                    : t2tMode(msg.channel_slug, msg.content) === "follow"
+                      ? "Seguir sinal"
+                      : "Tap to Trade MTM"}
                 </button>
               )}
               <p className={`text-[10px] mt-0.5 text-right leading-none ${isOwn ? "text-black/40" : "text-gray-600"}`}>
@@ -1243,6 +1249,28 @@ function ChannelView({
   const [tapTrade, setTapTrade] = useState<
     { msg: ChatMessage; status: "confirm" | "loading" | "done" | "error"; message?: string } | null
   >(null)
+  /** Perpétuos: em vez de abrir ordem, modal TAP to Copy com os parâmetros. */
+  const [copyModalMsg, setCopyModalMsg] = useState<ChatMessage | null>(null)
+  /** Fontes T2T ativas no sistema (admin liga/desliga). null = ainda a carregar → não esconder. */
+  const [t2tActiveChannels, setT2tActiveChannels] = useState<Set<string> | null>(null)
+
+  useEffect(() => {
+    let cancel = false
+    const run = async () => {
+      const { getAccessToken } = await import("@/lib/auth-token")
+      const token = await getAccessToken()
+      if (!token) return
+      const r = await fetch("/api/mtmcopy/tap-to-trade/providers", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" })
+      if (!r.ok) return
+      const j = await r.json().catch(() => null)
+      if (!cancel && Array.isArray(j?.channels)) setT2tActiveChannels(new Set(j.channels.map(String)))
+    }
+    run().catch(() => {})
+    return () => { cancel = true }
+  }, [])
+
+  /** Fonte desligada pelo admin → o botão de aceitar desaparece deste chat. */
+  const t2tSourceOn = t2tActiveChannels === null || t2tActiveChannels.has(channel.slug)
 
   const runTapTrade = async () => {
     if (!tapTrade) return
@@ -1647,7 +1675,11 @@ function ChannelView({
             onDelete={handleDelete}
             onLongPress={setContextMsg}
             onOpenActions={setContextMsg}
-            onTapToTrade={(m) => setTapTrade({ msg: m, status: "confirm" })}
+            onTapToTrade={
+              t2tSourceOn
+                ? (m) => (m.channel_slug === "cripto-perps" ? setCopyModalMsg(m) : setTapTrade({ msg: m, status: "confirm" }))
+                : undefined
+            }
           />
         </div>
       )
@@ -1961,6 +1993,10 @@ function ChannelView({
           onDelete={() => { handleDelete(contextMsg.id); setContextMsg(null) }}
           onShare={() => shareMessage(contextMsg)}
         />
+      )}
+
+      {copyModalMsg && (
+        <TapToCopyModal content={copyModalMsg.content || ""} aoFechar={() => setCopyModalMsg(null)} />
       )}
 
       {tapTrade && (

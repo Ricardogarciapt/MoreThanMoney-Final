@@ -28,6 +28,12 @@ type Provedor = {
   pips?: number | null
 }
 
+/** Estado dos controlos admin (GET/POST /api/admin/mtmcopy/t2t-controls). */
+type AdminControls = {
+  strategies: { routeId: string; label: string; copyEnabled: boolean; tapToTrade: boolean; hasAccount: boolean }[]
+  extras: { channel: string; label: string; active: boolean }[]
+}
+
 /** Um interruptor que diz o estado pela COR: verde a seguir, vermelho a não seguir. */
 /**
  * O retrato de uma estratégia: como correu, e quanto se arrisca nela.
@@ -261,7 +267,18 @@ function ModalEstrategia({
   )
 }
 
-function Interruptor({ ligado, ocupado, onClick }: { ligado: boolean; ocupado: boolean; onClick: () => void }) {
+function Interruptor({
+  ligado,
+  ocupado,
+  onClick,
+  rotulos = ["A seguir", "Parado"],
+}: {
+  ligado: boolean
+  ocupado: boolean
+  onClick: () => void
+  /** [ligado, desligado] — os botões admin reutilizam o mesmo estilo com outro texto. */
+  rotulos?: [string, string]
+}) {
   return (
     <button
       onClick={onClick}
@@ -275,7 +292,7 @@ function Interruptor({ ligado, ocupado, onClick }: { ligado: boolean; ocupado: b
         color: ligado ? "#28C878" : "#FF4D4D",
       }}
     >
-      {ocupado ? "…" : ligado ? "A seguir" : "Parado"}
+      {ocupado ? "…" : ligado ? rotulos[0] : rotulos[1]}
       <span
         className="relative block h-5 w-9 rounded-full transition-colors"
         style={{ background: ligado ? "#28C878" : "#FF4D4D" }}
@@ -310,7 +327,50 @@ export default function MtmAutoEstrategias({
   const [aberta, setAberta] = useState<{ fonte?: string; providerId?: string; nome: string } | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
 
+  // ── Controlo ADMIN (pausar cópia por estratégia · ligar/desligar fontes T2T) ──
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [adminCtl, setAdminCtl] = useState<AdminControls | null>(null)
+  const [adminBusy, setAdminBusy] = useState<string | null>(null)
+
   const token = useCallback(async () => (await supabase.auth.getSession()).data.session?.access_token ?? null, [])
+
+  useEffect(() => {
+    let cancel = false
+    const run = async () => {
+      const { data: sess } = await supabase.auth.getSession()
+      const uid = sess.session?.user?.id
+      if (!uid) return
+      const { data: profile } = await supabase.from("profiles").select("user_type, is_active").eq("id", uid).maybeSingle()
+      const admin = profile?.user_type === "admin" && profile?.is_active !== false
+      if (cancel || !admin) return
+      setIsAdmin(true)
+      const tok = sess.session?.access_token
+      const r = await fetch("/api/admin/mtmcopy/t2t-controls", { headers: { Authorization: `Bearer ${tok}` }, cache: "no-store" })
+      if (r.ok && !cancel) setAdminCtl(await r.json())
+    }
+    run().catch(() => {})
+    return () => { cancel = true }
+  }, [])
+
+  const adminAction = async (busyKey: string, payload: Record<string, unknown>) => {
+    setAdminBusy(busyKey)
+    setAviso(null)
+    try {
+      const tok = await token()
+      const r = await fetch("/api/admin/mtmcopy/t2t-controls", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${tok}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const j = await r.json()
+      if (!r.ok || j.error) throw new Error(j.error ?? "Falhou")
+      setAdminCtl({ strategies: j.strategies ?? [], extras: j.extras ?? [] })
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : "Não foi possível guardar.")
+    } finally {
+      setAdminBusy(null)
+    }
+  }
 
   const carregar = useCallback(async () => {
     setACarregar(true)
@@ -389,6 +449,62 @@ export default function MtmAutoEstrategias({
         aparecem no separador Sinais, para aceitares um a um. Ligar a cópia automática faz-se na
         app MTM Auto.
       </p>
+
+      {/* CONTROLO ADMIN — só o admin vê. Pausar a cópia pára a execução automática da
+          estratégia (CopyFactory + MTM Auto, mesma tabela) até religar; desligar uma fonte
+          T2T esconde-a dos clientes e tira o botão de aceitar dos chats. */}
+      {isAdmin && adminCtl && (
+        <div className="rounded-2xl border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-3 space-y-2">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#D2A63C]">Controlo Admin</p>
+
+          <p className="text-[11px] uppercase tracking-wider text-zinc-500">Cópia automática por estratégia</p>
+          {adminCtl.strategies.map((s) => (
+            <div key={s.routeId} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-[#12141A] p-2.5">
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold text-white">{s.label}</p>
+                <p className="text-[11px] text-zinc-500">
+                  {s.copyEnabled ? "Cópia automática ativa" : "Cópia PAUSADA até religar"}
+                  {!s.hasAccount && " · sem conta mestre"}
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Interruptor
+                  ligado={s.copyEnabled}
+                  ocupado={adminBusy === `copy:${s.routeId}`}
+                  rotulos={["Cópia", "Pausa"]}
+                  onClick={() => adminAction(`copy:${s.routeId}`, { action: "route_copy", routeId: s.routeId, value: !s.copyEnabled })}
+                />
+                <Interruptor
+                  ligado={s.tapToTrade}
+                  ocupado={adminBusy === `t2t:${s.routeId}`}
+                  rotulos={["T2T", "T2T"]}
+                  onClick={() => adminAction(`t2t:${s.routeId}`, { action: "route_t2t", routeId: s.routeId, value: !s.tapToTrade })}
+                />
+              </div>
+            </div>
+          ))}
+
+          {adminCtl.extras.length > 0 && (
+            <>
+              <p className="pt-1 text-[11px] uppercase tracking-wider text-zinc-500">Fontes Tap to Trade extra</p>
+              {adminCtl.extras.map((x) => (
+                <div key={x.channel} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-[#12141A] p-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-semibold text-white">{x.label}</p>
+                    <p className="text-[11px] text-zinc-500">{x.active ? "Visível aos clientes no T2T" : "Oculta — clientes não aceitam"}</p>
+                  </div>
+                  <Interruptor
+                    ligado={x.active}
+                    ocupado={adminBusy === `extra:${x.channel}`}
+                    rotulos={["Ativa", "Oculta"]}
+                    onClick={() => adminAction(`extra:${x.channel}`, { action: "extra_channel", channel: x.channel, value: !x.active })}
+                  />
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
 
       {/* AS FONTES TAP TO TRADE ATIVAS.
           São as fontes que estão mesmo ligadas no sistema — não uma lista fixa. Uma lista fixa

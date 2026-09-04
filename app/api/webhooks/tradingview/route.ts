@@ -1032,10 +1032,15 @@ export async function POST(request: NextRequest) {
   }
   // Gate de RUÍDO: entradas de baixa qualidade (poucas confirmações / símbolo-ruído) não
   // vão para chat/Telegram/push. Follow-ups (TP/BE/SL) e GoldKiller passam sempre.
+  // PERPS (pedido Ricardo 2026-09-04): o perps-gate é de EXECUÇÃO, não de entrega — as
+  // IDEIAS publicam sempre no chat da app, no Telegram (Ideias de Perpétuos Cripto) e nas
+  // fontes T2T; o bloqueio de execução fica registado acima em trade_status='filtered'.
+  // Antes, o gate suprimia a entrega toda e o Aurum Flow nunca chegava ao chat.
   const alertOk =
     isFollowup ||
     isGoldKiller ||
-    (perpsRequested ? perpsGate.allow : passesAlertGate(signalRules, execSymbolForGate, execConfCount, scannerKey, assetClass))
+    perpsRequested ||
+    passesAlertGate(signalRules, execSymbolForGate, execConfCount, scannerKey, assetClass)
   let linkedIdea: SenseiTradeIdea | null = null
   if (isFollowup && activeSensei?.symbol) {
     linkedIdea = await findActiveSenseiIdeaForFollowup(

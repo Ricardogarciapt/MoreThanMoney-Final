@@ -182,6 +182,8 @@ export async function POST(request: NextRequest) {
       "t2t_auto_close",
       "t2t_price_monitor",
       "premium_master_exec",
+      // estava na UI mas fora desta whitelist — o toggle não fazia nada (bug)
+      "trailing_tempo_real",
     ] as const) {
       const v = (body.switches as Record<string, unknown>)[k]
       if (typeof v === "boolean") patch[k] = v

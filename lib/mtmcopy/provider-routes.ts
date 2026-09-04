@@ -50,12 +50,15 @@ function routeFromChannelConfig(
 
 /** Normaliza rotas: repara canónicas → provider_routes → channel_providers → env. */
 export function normalizeProviderRoutes(config: MtmcopySignalSourcesConfig): ProviderRoute[] {
-  const fromRoutes = (config.provider_routes ?? []).filter((r) => r.account_id?.trim())
-  if (fromRoutes.length) {
+  // Rotas SEM conta mestre ("— nenhuma") são válidas: continuam a alimentar chat/T2T,
+  // e a execução já as rejeita em routeMatchesSignal/scaling. Filtrá-las aqui fazia o
+  // repair restaurar a conta canónica e apagava a escolha do admin.
+  const fromRoutes = config.provider_routes ?? []
+  if (fromRoutes.some((r) => r.account_id?.trim() || r.id)) {
     const normalized = fromRoutes.map((r) => ({
       ...r,
       enabled: r.enabled !== false,
-      account_id: r.account_id.trim(),
+      account_id: (r.account_id ?? '').trim(),
       strategy_id: r.strategy_id?.trim() || null,
     }))
     return repairProviderRoutes(normalized)
