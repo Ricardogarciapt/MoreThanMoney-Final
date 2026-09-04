@@ -3,7 +3,7 @@ import {
   getMtmChannelProviders,
   type MtmChannelProvider,
 } from './provider-accounts'
-import { normalizeProviderRoutes, pickSingleProviderRoute } from './provider-routes'
+import { normalizeProviderRoutes, pickSingleProviderRoute, routeMatchesSignal } from './provider-routes'
 import {
   getSignalSourcesConfig,
   type MtmcopyTelegramChannelKey,
@@ -75,6 +75,26 @@ export async function resolveMtmProvidersForSignal(
       },
     ]
   }
+
+  /**
+   * PAUSA: se existe rota para este sinal mas está desligada, acabou aqui.
+   *
+   * Sem isto a pausa era decorativa. `pickSingleProviderRoute` devolve null para uma rota
+   * pausada, e o código caía no `resolveLegacySingleProvider`, que lê o mapa antigo
+   * `channel_providers` — onde a mesma conta mestre continua escrita, sem interruptor nenhum.
+   * O sinal seguia para lá como se nada fosse.
+   *
+   * Aconteceu a 04/09: o Ricardo pausou o Premium às 13:32, o sinal de venda de ouro entrou às
+   * 13:50:36, e às 13:50:56 a conta mestre abriu XAUUSD 0.01. A rota dizia parada; a porta das
+   * traseiras estava aberta.
+   *
+   * O caminho legado existe para canais que NUNCA tiveram rota — não para ressuscitar um que
+   * foi desligado de propósito.
+   */
+  const existeRotaPausada = routes.some(
+    (r) => r.enabled === false && routeMatchesSignal({ ...r, enabled: true }, channel, chatId, opts),
+  )
+  if (existeRotaPausada) return []
 
   const single = await resolveLegacySingleProvider(channel, config, envProviders)
   return single ? [single] : []

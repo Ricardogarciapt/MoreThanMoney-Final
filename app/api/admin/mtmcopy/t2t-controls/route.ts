@@ -23,7 +23,7 @@ import {
   saveSignalSourcesConfig,
   invalidateSignalSourcesCache,
 } from '@/lib/mtmcopy/signal-sources-config'
-import { normalizeProviderRoutes } from '@/lib/mtmcopy/provider-routes'
+import { normalizeProviderRoutes, syncChannelProvidersFromRoutes } from '@/lib/mtmcopy/provider-routes'
 import { appChannelsForRoute } from '@/lib/mtmcopy/tap-to-trade-channels'
 
 export const dynamic = 'force-dynamic'
@@ -122,7 +122,14 @@ export async function POST(request: NextRequest) {
     const nextRoutes = routes.map((r) =>
       r.id !== routeId ? r : action === 'route_copy' ? { ...r, enabled: value } : { ...r, tap_to_trade: value },
     )
-    await saveSignalSourcesConfig({ ...config, provider_routes: nextRoutes })
+    // `channel_providers` é o mapa antigo por canal, e é reescrito a partir das rotas ATIVAS.
+    // Tem de ser reescrito AQUI e não só no system-sync: enquanto lá ficar a conta mestre de
+    // uma rota pausada, a resolução do sinal encontra-a por esse caminho e executa na mesma.
+    await saveSignalSourcesConfig({
+      ...config,
+      provider_routes: nextRoutes,
+      channel_providers: syncChannelProvidersFromRoutes(nextRoutes),
+    })
 
     if (action === 'route_copy') {
       /**
