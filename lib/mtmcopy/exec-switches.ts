@@ -59,6 +59,14 @@ export interface ExecSwitches {
    * Default ON — foi pedida a funcionar.
    */
   golddid_exec: boolean
+  /**
+   * A estratégia GOLDEN MOVES (layering): duas entradas por sinal na conta MT5 34368570.
+   *
+   * Default **OFF**, ao contrário das outras. É conta REAL, abre DUAS ordens por sinal em vez de
+   * uma, e nunca correu em produção — as três coisas juntas dizem que se liga quando alguém
+   * estiver a olhar, não sozinha no primeiro sinal que aparecer.
+   */
+  goldenmoves_exec: boolean
 }
 
 const KEY = "mtmcopy_exec_switches"
@@ -87,6 +95,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       trailing_tempo_real: v.trailing_tempo_real === true,
       premium_master_exec: v.premium_master_exec !== false, // default ON (conta mestre)
       golddid_exec: v.golddid_exec !== false, // default ON (conta demo do Alcy)
+      goldenmoves_exec: v.goldenmoves_exec === true, // default OFF (conta real, estratégia nova)
     }
   } catch {
     return {
@@ -103,6 +112,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       trailing_tempo_real: false,
       premium_master_exec: true,
       golddid_exec: true,
+      goldenmoves_exec: false,
     }
   }
 }

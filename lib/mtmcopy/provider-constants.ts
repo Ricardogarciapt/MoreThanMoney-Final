@@ -91,6 +91,20 @@ export const CANONICAL_GOLDENMOVES_ACCOUNT_ID = CANONICAL_AURUMFLOW_ACCOUNT_ID
 export const CANONICAL_GOLDENMOVES_STRATEGY_ID = CANONICAL_AURUMFLOW_STRATEGY_ID
 
 /**
+ * GOLDEN MOVES — a estratégia em camadas, conta e estratégia próprias.
+ *
+ * ⚠️ Não confundir com `CANONICAL_GOLDENMOVES_*` logo acima: esses são o nome ANTIGO da Aurum
+ * Flow, de quando ela se chamava Golden Moves, e continuam a apontar para ela. Isto aqui é
+ * outra coisa — o grupo Golden Moves como fonte, com layering (duas entradas por sinal).
+ *
+ * Conta MT5 34368570 na PU Prime Live 6, escolhida pelo Ricardo a 04/09. O nome que tem na
+ * MetaApi («MTM Auto Aurum Flow - Ricardo Garcia») é herança e não quer dizer nada.
+ */
+export const GOLDENMOVES_PROVIDER_ACCOUNT_ID = '111c8463-efb7-4f8c-a908-268c3b634858'
+export const GOLDENMOVES_PROVIDER_STRATEGY_ID = 'YMEE'
+export const GOLDENMOVES_NOME = 'MTM Auto Golden Moves'
+
+/**
  * As contas onde o MOTOR EM TEMPO REAL corre — e só estas.
  *
  * O monitor de preço lia as posições de TODAS as contas com trades abertas, cliente a cliente.
@@ -114,6 +128,10 @@ export const CONTAS_MOTOR_TEMPO_REAL: string[] = [
   // Sem esta linha o motor nunca visitava a conta do Gold Did: abria a trade e deixava-a
   // entregue ao TP da ordem, sem parciais, sem break-even e sem trailing.
   CANONICAL_GOLDDID_ACCOUNT_ID,      // Gold Did Premium · MT5 700161536 (demo) · tKGT
+  // O layering da Golden Moves depende do motor: é ele que põe a entrada de mercado em
+  // break-even quando a limite enche, e que arrasta o runner. Sem esta linha a estratégia
+  // abria as duas camadas e ficava a olhar para elas.
+  GOLDENMOVES_PROVIDER_ACCOUNT_ID,   // MTM Auto Golden Moves · MT5 34368570 · YMEE
 ]
 
 export function ehContaDeMotor(accountId: string | null | undefined): boolean {
