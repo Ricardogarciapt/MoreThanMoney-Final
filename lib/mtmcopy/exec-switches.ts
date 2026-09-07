@@ -67,6 +67,8 @@ export interface ExecSwitches {
    * estiver a olhar, não sozinha no primeiro sinal que aparecer.
    */
   goldenmoves_exec: boolean
+  /** A estratégia GOLDEN ASTRO. Default OFF, e sem conta própria nem chega a ser consultado. */
+  goldenastro_exec: boolean
 }
 
 const KEY = "mtmcopy_exec_switches"
@@ -96,6 +98,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       premium_master_exec: v.premium_master_exec !== false, // default ON (conta mestre)
       golddid_exec: v.golddid_exec !== false, // default ON (conta demo do Alcy)
       goldenmoves_exec: v.goldenmoves_exec === true, // default OFF (conta real, estratégia nova)
+      goldenastro_exec: v.goldenastro_exec === true, // default OFF (à espera de conta própria)
     }
   } catch {
     return {
@@ -113,6 +116,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       premium_master_exec: true,
       golddid_exec: true,
       goldenmoves_exec: false,
+      goldenastro_exec: false,
     }
   }
 }

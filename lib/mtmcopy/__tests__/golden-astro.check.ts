@@ -78,5 +78,25 @@ eq('o resto corre com trailing', GOLDENASTRO_SAIDAS.tp3, 0)
 eq('stop fixo publicado', GOLDENASTRO_STOP_PIPS, 100)
 eq('alvos publicados', GOLDENASTRO_ALVOS_PIPS.join(','), '25,50,75,100,150')
 
+// ── Falha fechada enquanto não houver conta ──────────────────────────────────────────────
+import {
+  GOLDENASTRO_PROVIDER_ACCOUNT_ID,
+  GOLDENASTRO_PROVIDER_STRATEGY_ID,
+  GOLDENMOVES_PROVIDER_ACCOUNT_ID,
+  GOLDENMOVES_PROVIDER_STRATEGY_ID,
+  goldenAstroPronta,
+  ehContaDeMotor,
+  CONTAS_MOTOR_TEMPO_REAL,
+} from '../provider-constants'
+
+eq('sem conta própria a estratégia não está pronta',
+  goldenAstroPronta(), GOLDENASTRO_PROVIDER_ACCOUNT_ID.length > 0)
+eq('uma conta vazia nunca é conta de motor', ehContaDeMotor(''), false)
+eq('a lista do motor não tem buracos', CONTAS_MOTOR_TEMPO_REAL.every((c) => Boolean(c && c.trim())), true)
+eq('Golden Astro NÃO partilha a conta da Golden Moves',
+  GOLDENASTRO_PROVIDER_ACCOUNT_ID === GOLDENMOVES_PROVIDER_ACCOUNT_ID, false)
+eq('a estratégia dela é outra',
+  String(GOLDENASTRO_PROVIDER_STRATEGY_ID) === String(GOLDENMOVES_PROVIDER_STRATEGY_ID), false)
+
 console.log(`\n${ok} passaram, ${mau} falharam`)
 if (mau) process.exit(1)

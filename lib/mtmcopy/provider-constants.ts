@@ -105,6 +105,31 @@ export const GOLDENMOVES_PROVIDER_STRATEGY_ID = 'YMEE'
 export const GOLDENMOVES_NOME = 'MTM Auto Golden Moves'
 
 /**
+ * GOLDEN ASTRO — conta PRÓPRIA, separada da Golden Moves.
+ *
+ * Porquê separada: uma estratégia CopyFactory publica tudo o que acontece na conta, e não sabe
+ * distinguir quem abriu cada ordem. Com as duas estratégias na mesma conta, quem subscrevesse a
+ * Golden Moves levava também as trades da Golden Astro — e ao contrário. Já aconteceu com a
+ * conta Monaxa. Uma estratégia, uma conta.
+ *
+ * A conta ainda NÃO existe: ligar uma conta MT5 à MetaApi exige a password dela, que tem de ir
+ * do Ricardo directamente para o sistema (Definições → ligar conta, ou /api/mtmcopy/provision).
+ * Enquanto o id não estiver aqui, `goldenAstroPronta()` devolve false e a estratégia não abre
+ * nada — falha fechada, que é o único lado seguro para falhar quando o outro lado é dinheiro.
+ */
+export const GOLDENASTRO_PROVIDER_ACCOUNT_ID =
+  process.env.METAAPI_PROVIDER_GOLDENASTRO_ACCOUNT_ID?.trim() || ''
+
+/** Id reservado na CopyFactory a 04/09 — livre e à espera da conta. */
+export const GOLDENASTRO_PROVIDER_STRATEGY_ID = 'jbSS'
+export const GOLDENASTRO_NOME = 'MTM Auto Golden Astro'
+
+/** A Golden Astro só pode executar quando tiver conta própria ligada. */
+export function goldenAstroPronta(): boolean {
+  return GOLDENASTRO_PROVIDER_ACCOUNT_ID.length > 0
+}
+
+/**
  * As contas onde o MOTOR EM TEMPO REAL corre — e só estas.
  *
  * O monitor de preço lia as posições de TODAS as contas com trades abertas, cliente a cliente.
@@ -132,6 +157,9 @@ export const CONTAS_MOTOR_TEMPO_REAL: string[] = [
   // break-even quando a limite enche, e que arrasta o runner. Sem esta linha a estratégia
   // abria as duas camadas e ficava a olhar para elas.
   GOLDENMOVES_PROVIDER_ACCOUNT_ID,   // MTM Auto Golden Moves · MT5 34368570 · YMEE
+  // A Golden Astro entra sozinha assim que a conta existir. A lista tem de ficar sem strings
+  // vazias: um '' aqui faria `ehContaDeMotor('')` dizer que sim a uma conta sem id.
+  ...(GOLDENASTRO_PROVIDER_ACCOUNT_ID ? [GOLDENASTRO_PROVIDER_ACCOUNT_ID] : []), // · jbSS
 ]
 
 export function ehContaDeMotor(accountId: string | null | undefined): boolean {
