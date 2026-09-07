@@ -913,58 +913,6 @@ export async function executeSignalOnRouteProvider(opts: {
 
   const enriquecido = applyValidationToSignal(signal, validation)
 
-  /**
-   * As duas estratégias com forma própria saem do caminho genérico aqui.
-   *
-   * A Golden Moves abre DUAS ordens por sinal (mercado na zona + limite na ponta) e a Golden
-   * Astro só abre dentro das janelas de Londres, com níveis calculados em pips a partir do
-   * preço. O caminho genérico abre uma ordem a mercado com os níveis do texto — para estas
-   * duas isso não é uma aproximação, é outra estratégia.
-   *
-   * `tratado` é o que separa "esta perna é a dona do sinal" de "não é comigo". Quando é dona e
-   * decide não abrir — fora de janela, interruptor desligado, zona impossível — o sinal ACABA
-   * aqui. Deixá-lo cair para o genérico a seguir era transformar cada recusa numa ordem que a
-   * estratégia não queria.
-   */
-  const perna = await (async () => {
-    const { pernaGoldenMoves, pernaGoldenAstro } = await import('./golden-exec')
-    const construir = (accountId: string, sinal: NonNullable<ReturnType<typeof parseSignal>>, lote: number, comentario: string) =>
-      buildOrderRequest(providerConnForGolden(profile), accountId, sinal, lote, comentario)
-
-    const gm = await pernaGoldenMoves({
-      accountId: provider.accountId,
-      raw: opts.text,
-      telegramMessageId: opts.telegramMessageId,
-      construir,
-      colocar: colocarOrdemDoProvedor,
-    })
-    if (gm.tratado) return { nome: 'Golden Moves', ...gm }
-
-    const ga = await pernaGoldenAstro({
-      accountId: provider.accountId,
-      raw: opts.text,
-      telegramMessageId: opts.telegramMessageId,
-      precoAtual: enriquecido.entry ?? null,
-      construir,
-      colocar: colocarOrdemDoProvedor,
-      lote: Number(profile.lot_value ?? 0.5),
-    })
-    if (ga.tratado) return { nome: 'Golden Astro', ...ga }
-    return null
-  })()
-
-  if (perna) {
-    await logProviderSignalEvent({
-      channel: 'unknown', provider, signal, raw: opts.text,
-      telegramMessageId: opts.telegramMessageId,
-      status: perna.abertas > 0 ? 'executed' : 'skipped',
-      detail: `${perna.nome}: ${perna.detalhe}`,
-    })
-    return perna.abertas > 0
-      ? { ok: true, provider: provider.tag }
-      : { ok: false, reason: perna.detalhe, provider: provider.tag }
-  }
-
   await executeViaMtmProvider([], enriquecido, opts.text, opts.telegramMessageId, provider, 'unknown', validation)
   return { ok: true, provider: provider.tag }
 }
@@ -1012,6 +960,50 @@ async function executeViaMtmProvider(
       detail: 'Duplicado ignorado',
     })
     return
+  }
+
+  /**
+   * As duas estratégias com forma própria saem do caminho genérico AQUI.
+   *
+   * Aqui e não em `executeSignalOnRouteProvider`, que foi onde as pus primeiro e estava errado:
+   * essa função só é chamada pelos webhooks de relay. As mensagens que entram pelo bot
+   * principal passam por `processMtmcopyTelegramMessage` e nunca lá chegavam — a rota resolvia,
+   * a conta era a certa, e abria-se uma ordem a mercado genérica em vez do layering. Um sítio
+   * por onde só metade do tráfego passa não é um gate, é uma armadilha.
+   *
+   * `executeViaMtmProvider` é o funil por onde TODA a execução de provider passa.
+   *
+   * `tratado` separa "esta perna é a dona do sinal" de "não é comigo". Quando é dona e decide
+   * não abrir — fora de janela, zona impossível, interruptor desligado — o sinal ACABA aqui.
+   * Deixá-lo seguir era transformar cada recusa numa ordem que a estratégia nunca pediu.
+   */
+  {
+    const { pernaGoldenMoves, pernaGoldenAstro } = await import('./golden-exec')
+    const construir = (accountId: string, sinal: NonNullable<ReturnType<typeof parseSignal>>, lote: number, comentario: string) =>
+      buildOrderRequest(providerConnForGolden(executionProfile), accountId, sinal, lote, comentario)
+
+    const gm = await pernaGoldenMoves({
+      accountId: provider.accountId, raw, telegramMessageId, construir, colocar: colocarOrdemDoProvedor,
+    })
+    const perna = gm.tratado
+      ? { nome: 'Golden Moves', ...gm }
+      : await (async () => {
+          const ga = await pernaGoldenAstro({
+            accountId: provider.accountId, raw, telegramMessageId,
+            precoAtual: signal.entry ?? null, construir, colocar: colocarOrdemDoProvedor,
+            lote: Number(executionProfile.lot_value ?? 0.5),
+          })
+          return ga.tratado ? { nome: 'Golden Astro', ...ga } : null
+        })()
+
+    if (perna) {
+      await logProviderSignalEvent({
+        channel, provider, signal, raw, telegramMessageId,
+        status: perna.abertas > 0 ? 'executed' : 'skipped',
+        detail: `${perna.nome}: ${perna.detalhe}`,
+      })
+      return
+    }
   }
 
   if (!isWithinTradingSchedule(executionProfile, signal.symbol)) {
