@@ -19,6 +19,31 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  * Nunca executa por adivinhação: sem rota apontada a este chat, não abre ordem nenhuma.
  */
 
+
+/**
+ * O id do nosso bot, perguntado uma vez e guardado.
+ *
+ * Em caso de dúvida diz que NÃO é o próprio bot: um erro aqui não pode travar sinais
+ * legítimos. O ciclo que isto previne exige o relay ligado, que hoje não está.
+ */
+let idDoBot: number | null | undefined
+async function ehOProprioBot(autorId: number): Promise<boolean> {
+  if (idDoBot === undefined) {
+    idDoBot = null
+    const tk = process.env.TELEGRAM_WIFIMONEY_TOKEN?.trim()
+    if (tk) {
+      try {
+        const r = await fetch(`https://api.telegram.org/bot${tk}/getMe`)
+        const j = (await r.json()) as { ok?: boolean; result?: { id?: number } }
+        idDoBot = j?.ok && j.result?.id ? j.result.id : null
+      } catch {
+        idDoBot = null
+      }
+    }
+  }
+  return idDoBot != null && idDoBot === autorId
+}
+
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
@@ -83,6 +108,26 @@ export async function POST(req: NextRequest) {
     .then(() => {}, (e: unknown) => console.warn('[webhook-relay] descoberta falhou:', e))
 
   if (!texto) return NextResponse.json({ ok: true, descoberto: chatId })
+
+  /**
+   * GUARDA DO CICLO: nunca ler de volta o que fomos NÓS a escrever.
+   *
+   * O grupo Golden Moves (-1004343748070) é o mesmo chat que serve de destino ao relay do
+   * Alcy — foi renomeado, não duplicado. Ou seja: republicamos ali sinais do Premium e agora
+   * também lemos dali entradas da Golden Moves. Sem guarda, o nosso próprio relay voltaria a
+   * entrar como sinal e o mesmo trade abria duas vezes, em duas contas, por dois caminhos.
+   *
+   * O guarda é ESTRUTURAL e não por texto: compara o autor com o próprio bot. Filtrar pelo
+   * cabeçalho «🟡 Gold Did» funcionava até alguém mudar o cabeçalho nas definições — e nesse
+   * dia o ciclo abria sem ninguém perceber porquê. Quem escreveu é um facto; o que escreveu é
+   * uma convenção.
+   *
+   * O relay está desligado desde 20/08. Isto existe para o dia em que for religado.
+   */
+  if (msg?.from?.id && (await ehOProprioBot(msg.from.id))) {
+    console.log(`[webhook-relay] ignorado: escrito pelo próprio bot em ${chatId}`)
+    return NextResponse.json({ ok: true, ignorado: 'eco do proprio bot' })
+  }
 
   // 2) Execução, só se houver rota apontada a este chat.
   try {
