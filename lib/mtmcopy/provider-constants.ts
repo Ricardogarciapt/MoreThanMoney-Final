@@ -17,7 +17,32 @@ export const CANONICAL_SENSEI_ACCOUNT_ID = 'a5a1dddd-0099-4d67-98f1-86b65aad5845
  * ainda serve de default a outros sítios (PrimeVerse, preço de referência) — mexer nela mudava
  * coisas que nada têm a ver com isto.
  */
-export const SENSEI_PROVIDER_ACCOUNT_ID = '16f4f233-5cbe-4fe9-9530-89a58965bfe0'
+/**
+ * ⚠️ REFORMADO a 2026-09-04, e por isso VAZIO.
+ *
+ * A conta que estava aqui (MT5 34744071) passou a ser a da Golden Astro — o Ricardo renomeou-a
+ * na MetaApi. Duas estratégias na mesma conta partilham a porta de saída: quem subscrevesse uma
+ * levava as trades da outra. O Sensei sai; a Golden Astro fica.
+ *
+ * O Sensei volta quando a conta MT5 {@link SENSEI_MT5_LOGIN_NOVO} estiver ligada — ligar uma
+ * conta exige a password dela, que vai do Ricardo directamente para o sistema. Até lá o id fica
+ * vazio, e vazio aqui quer dizer **não executa**: a rota sobrevive (continua a alimentar chat e
+ * Tap to Trade, que não precisam de conta mestre) mas `routeMatchesSignal` recusa qualquer rota
+ * sem conta, e `senseiPronto()` fecha o caminho do webhook.
+ *
+ * Não voltar a escrever um id aqui à mão sem confirmar que essa conta não é já de outra
+ * estratégia — foi assim que se chegou a esta confusão.
+ */
+export const SENSEI_PROVIDER_ACCOUNT_ID =
+  process.env.METAAPI_PROVIDER_SENSEI_ACCOUNT_ID?.trim() || ''
+
+/** A conta que o Sensei vai receber: MT5 35044320, «MTM Auto Sensei». Ainda por ligar. */
+export const SENSEI_MT5_LOGIN_NOVO = '35044320'
+
+/** O Sensei tem conta mestre para executar? */
+export function senseiPronto(): boolean {
+  return SENSEI_PROVIDER_ACCOUNT_ID.length > 0
+}
 /** GoldKiller Scanner — conta MetaApi 181271197 (MetaQuotes) + estratégia CopyFactory SDNb */
 export const CANONICAL_GOLDKILLER_ACCOUNT_ID = 'bddad3b8-353f-4a19-badf-f8df8f532678'
 /** MTM 20X Booster — conta Monaxa 986912 (booster 20x, 1:50) + estratégia CopyFactory pIrJ */
@@ -120,7 +145,7 @@ export const GOLDENMOVES_NOME = 'MTM Auto Golden Moves'
 export const GOLDENASTRO_PROVIDER_ACCOUNT_ID =
   process.env.METAAPI_PROVIDER_GOLDENASTRO_ACCOUNT_ID?.trim() ||
   // MT5 34744071 — a conta que era do Sensei e que o Ricardo renomeou na MetaApi para
-  // «MTM Auto Golden Astro» a 04/09. É a mesma que `SENSEI_PROVIDER_ACCOUNT_ID` aponta.
+  // «MTM Auto Golden Astro» a 04/09. O Sensei foi reformado dela no mesmo dia.
   '16f4f233-5cbe-4fe9-9530-89a58965bfe0'
 
 /** Id reservado na CopyFactory a 04/09 — livre e à espera da conta. */
@@ -178,7 +203,8 @@ export function goldenAstroPronta(): boolean {
  */
 export const CONTAS_MOTOR_TEMPO_REAL: string[] = [
   CANONICAL_PREMIUM_ACCOUNT_ID,      // MTM Auto Premium  · MT5 700160095 · MxsR
-  SENSEI_PROVIDER_ACCOUNT_ID,        // MTM Auto Sensei   · MT5 34744071  · Oca7
+  // O Sensei está sem conta (reformado da 34744071). Entra sozinho quando a nova existir.
+  ...(SENSEI_PROVIDER_ACCOUNT_ID ? [SENSEI_PROVIDER_ACCOUNT_ID] : []), // MTM Auto Sensei · Oca7
   CANONICAL_AURUMFLOW_ACCOUNT_ID,    // MTM Auto Aurum Flow · MT5 34744077 · vT8w
   // Sem esta linha o motor nunca visitava a conta do Gold Did: abria a trade e deixava-a
   // entregue ao TP da ordem, sem parciais, sem break-even e sem trailing.

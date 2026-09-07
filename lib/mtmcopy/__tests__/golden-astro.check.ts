@@ -91,11 +91,12 @@ import {
   CONTAS_MOTOR_TEMPO_REAL,
 } from '../provider-constants'
 
-eq('a conta é a que era do Sensei (renomeada na MetaApi)',
-  GOLDENASTRO_PROVIDER_ACCOUNT_ID, SENSEI_PROVIDER_ACCOUNT_ID)
-eq('e o guarda vê a colisão', goldenAstroColideCom(), 'MTM Auto Sensei')
-eq('por isso NÃO está pronta a executar', goldenAstroPronta(), false)
-eq('ter conta não chega', GOLDENASTRO_PROVIDER_ACCOUNT_ID.length > 0, true)
+eq('tem conta', GOLDENASTRO_PROVIDER_ACCOUNT_ID.length > 0, true)
+// O Sensei foi reformado dessa conta a 04/09, logo a colisão desapareceu. Se alguém lhe
+// devolver a conta, o guarda volta a disparar e a Golden Astro deixa de executar.
+eq('já não colide com ninguém', goldenAstroColideCom(), null)
+eq('e por isso pode executar', goldenAstroPronta(), true)
+eq('o Sensei já não está nessa conta', SENSEI_PROVIDER_ACCOUNT_ID === GOLDENASTRO_PROVIDER_ACCOUNT_ID, false)
 eq('uma conta vazia nunca é conta de motor', ehContaDeMotor(''), false)
 eq('a lista do motor não tem buracos', CONTAS_MOTOR_TEMPO_REAL.every((c) => Boolean(c && c.trim())), true)
 eq('Golden Astro NÃO partilha a conta da Golden Moves',

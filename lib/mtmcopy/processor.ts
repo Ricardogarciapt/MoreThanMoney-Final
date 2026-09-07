@@ -15,6 +15,7 @@ import {
   CANONICAL_SENSEI_ACCOUNT_ID,
   CANONICAL_TRADE_IDEAS_ACCOUNT_ID,
   SENSEI_PROVIDER_ACCOUNT_ID,
+  senseiPronto,
 } from './provider-constants'
 import { connectionCopyMethod, prefersDirectExecution } from './copy-limits'
 import { getMtmcopySubscription } from './subscription'
@@ -2205,7 +2206,10 @@ export async function processMtmcopyWebhookSignal(opts: {
             return p ? [p] : []
           })()
         : opts.target === 'sensei'
-          ? ((await rotaPausada(CANONICAL_SENSEI_STRATEGY_ID)) ? [] : [senseiProvider()])
+          ? // Sem conta mestre não se abre nada: o Sensei foi reformado da 34744071 a 04/09 e
+            // espera pela MT5 35044320. Um accountId vazio aqui era mandar a ordem para o
+            // vazio — ou pior, para o default de quem estiver a seguir na cadeia.
+            (!senseiPronto() || (await rotaPausada(CANONICAL_SENSEI_STRATEGY_ID)) ? [] : [senseiProvider()])
           : await resolveMtmProvidersForSignal(channel, null, { signalSource: 'webhook' })
   if (!providers.length) {
     return {

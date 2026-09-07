@@ -177,8 +177,12 @@ export function repairProviderRoutes(routes: ProviderRoute[]): ProviderRoute[] {
 }
 
 function isCanonicalRoute(r: ProviderRoute): boolean {
+  // Uma conta VAZIA não identifica ninguém. Sem esta guarda, com o Sensei reformado (id vazio)
+  // qualquer rota custom sem conta passava a ser tratada como canónica e era engolida pelo
+  // repair — o admin perdia rotas que criou à mão.
+  if (!r.account_id?.trim() && !r.strategy_id?.trim()) return false
   if (r.account_id === CANONICAL_PREMIUM_ACCOUNT_ID) return true
-  if (r.account_id === SENSEI_PROVIDER_ACCOUNT_ID) return true
+  if (r.account_id && r.account_id === SENSEI_PROVIDER_ACCOUNT_ID) return true
   if (r.account_id === CANONICAL_AURUMFLOW_ACCOUNT_ID) return true
   if (r.account_id === CANONICAL_TRADE_IDEAS_ACCOUNT_ID) return true
   if (r.account_id === CANONICAL_SENSEI_ACCOUNT_ID) return true
