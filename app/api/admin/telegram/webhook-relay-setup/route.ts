@@ -62,8 +62,10 @@ export async function POST(req: NextRequest) {
   const r = await tg(tk, 'setWebhook', {
     url,
     secret_token: process.env.CRON_SECRET,
-    // Só mensagens: nada de edições de membros nem callbacks, que não servem para nada aqui.
-    allowed_updates: ['message', 'channel_post', 'edited_message'],
+    // `message_reaction` é o que permite descobrir um grupo com uma REAÇÃO em vez de uma
+    // mensagem — num grupo de terceiros, escrever "teste" é escrever à frente de toda a gente.
+    // O Telegram só entrega reações a quem as pede pelo nome, e só a bots administradores.
+    allowed_updates: ['message', 'channel_post', 'edited_message', 'message_reaction'],
     drop_pending_updates: true,
   })
   const wh = await tg(tk, 'getWebhookInfo')

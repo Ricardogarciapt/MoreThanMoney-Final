@@ -33,11 +33,45 @@ export async function POST(req: NextRequest) {
 
   const update = (await req.json().catch(() => ({}))) as any
   const msg = update?.message ?? update?.channel_post ?? update?.edited_message ?? null
-  const chat = msg?.chat
+
+  /**
+   * Três formas de um grupo se dar a conhecer, por ordem de discrição.
+   *
+   * O caminho óbvio — escrever no grupo — nem sempre serve: o Golden Moves é de terceiros, e
+   * mandar lá um "teste" é escrever à frente de toda a gente. Por isso:
+   *
+   *  · uma REAÇÃO a qualquer mensagem já existente basta (`message_reaction`), e não escreve
+   *    nada no grupo;
+   *  · REENCAMINHAR uma mensagem do grupo para outro sítio onde o bot esteja traz o id da
+   *    origem em `forward_origin` — não deixa rasto nenhum no grupo de origem.
+   *
+   * Em qualquer dos casos só se REGISTA o grupo. Executar exige uma rota apontada a ele.
+   */
+  const reacao = update?.message_reaction ?? update?.message_reaction_count ?? null
+  const origemReencaminhada =
+    msg?.forward_origin?.chat ?? msg?.forward_from_chat ?? null
+
+  const chat = msg?.chat ?? reacao?.chat
   if (!chat?.id) return NextResponse.json({ ok: true })
 
+  // A origem de um reencaminhamento também se regista: é assim que um grupo onde o bot NÃO
+  // está se dá a conhecer, sem lá se escrever nada.
+  if (origemReencaminhada?.id && String(origemReencaminhada.id) !== String(chat.id)) {
+    await getSupabaseAdmin()
+      .from('mtmcopy_telegram_discovered')
+      .upsert(
+        {
+          chat_id: String(origemReencaminhada.id),
+          title: origemReencaminhada.title ?? null,
+          username: origemReencaminhada.username ?? null,
+        },
+        { onConflict: 'chat_id' },
+      )
+      .then(() => {}, () => {})
+  }
+
   const chatId = String(chat.id)
-  const texto = String(msg.text ?? msg.caption ?? '').trim()
+  const texto = msg ? String(msg.text ?? msg.caption ?? '').trim() : ''
 
   // 1) Descoberta: sempre, mesmo sem texto. É o que faz o grupo aparecer no admin.
   await getSupabaseAdmin()
