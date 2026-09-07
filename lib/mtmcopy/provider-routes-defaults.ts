@@ -230,6 +230,10 @@ export function repairProviderRoutes(routes: ProviderRoute[]): ProviderRoute[] {
       // Preserva o chat T2T dedicado editável (ex.: GoldKiller → 'sinais-goldkiller'),
       // senão a reconstrução canónica mapeava-o pelo sender_channel partilhado ('trade-ideas').
       app_channel: saved.app_channel ?? c.app_channel,
+      // O chat de ORIGEM guardado ganha à canónica quando esta não tem nenhum. É assim que a
+      // Golden Moves recebe o id do grupo sem esperar por um deploy: o grupo aparece nos
+      // descobertos (o bot admin regista-o) e aponta-se-lhe a rota no próprio painel.
+      sender_chat_id: c.sender_chat_id ?? saved.sender_chat_id ?? null,
       ...(masterNone ? { account_id: '', strategy_id: null } : {}),
     }
   })
