@@ -118,15 +118,45 @@ export const GOLDENMOVES_NOME = 'MTM Auto Golden Moves'
  * nada — falha fechada, que é o único lado seguro para falhar quando o outro lado é dinheiro.
  */
 export const GOLDENASTRO_PROVIDER_ACCOUNT_ID =
-  process.env.METAAPI_PROVIDER_GOLDENASTRO_ACCOUNT_ID?.trim() || ''
+  process.env.METAAPI_PROVIDER_GOLDENASTRO_ACCOUNT_ID?.trim() ||
+  // MT5 34744071 — a conta que era do Sensei e que o Ricardo renomeou na MetaApi para
+  // «MTM Auto Golden Astro» a 04/09. É a mesma que `SENSEI_PROVIDER_ACCOUNT_ID` aponta.
+  '16f4f233-5cbe-4fe9-9530-89a58965bfe0'
 
 /** Id reservado na CopyFactory a 04/09 — livre e à espera da conta. */
 export const GOLDENASTRO_PROVIDER_STRATEGY_ID = 'jbSS'
 export const GOLDENASTRO_NOME = 'MTM Auto Golden Astro'
 
-/** A Golden Astro só pode executar quando tiver conta própria ligada. */
+/**
+ * Com que outra estratégia é que a conta da Golden Astro colide, se colidir.
+ *
+ * A conta que ela recebeu é a que o Sensei usa (MT5 34744071, estratégia Oca7). Renomear na
+ * MetaApi muda o rótulo, não muda quem publica de lá: enquanto o Sensei continuar a executar
+ * nessa conta, as duas estratégias saem pela mesma porta e quem subscrever uma leva as trades
+ * da outra. É o problema da conta Monaxa outra vez, e foi por causa dele que a Golden Astro
+ * deixou de partilhar conta com a Golden Moves.
+ */
+export function goldenAstroColideCom(): string | null {
+  const outras: Array<[string, string]> = [
+    [SENSEI_PROVIDER_ACCOUNT_ID, 'MTM Auto Sensei'],
+    [CANONICAL_PREMIUM_ACCOUNT_ID, 'MTM Auto Premium'],
+    [CANONICAL_AURUMFLOW_ACCOUNT_ID, 'MTM Auto Aurum Flow'],
+    [CANONICAL_GOLDDID_ACCOUNT_ID, 'Gold Did Premium'],
+    [GOLDENMOVES_PROVIDER_ACCOUNT_ID, 'MTM Auto Golden Moves'],
+  ]
+  const nome = outras.find(([id]) => id && id === GOLDENASTRO_PROVIDER_ACCOUNT_ID)?.[1]
+  return nome ?? null
+}
+
+/**
+ * A Golden Astro pode executar?
+ *
+ * Precisa de conta E de que essa conta não seja já a porta de saída de outra estratégia. A
+ * segunda condição é a que impede alguém de ligar o interruptor e descobrir só depois que os
+ * subscritores do Sensei passaram a receber trades da Golden Astro.
+ */
 export function goldenAstroPronta(): boolean {
-  return GOLDENASTRO_PROVIDER_ACCOUNT_ID.length > 0
+  return GOLDENASTRO_PROVIDER_ACCOUNT_ID.length > 0 && goldenAstroColideCom() === null
 }
 
 /**

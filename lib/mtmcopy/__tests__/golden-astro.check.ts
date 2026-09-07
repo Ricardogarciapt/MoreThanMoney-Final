@@ -85,12 +85,17 @@ import {
   GOLDENMOVES_PROVIDER_ACCOUNT_ID,
   GOLDENMOVES_PROVIDER_STRATEGY_ID,
   goldenAstroPronta,
+  goldenAstroColideCom,
+  SENSEI_PROVIDER_ACCOUNT_ID,
   ehContaDeMotor,
   CONTAS_MOTOR_TEMPO_REAL,
 } from '../provider-constants'
 
-eq('sem conta própria a estratégia não está pronta',
-  goldenAstroPronta(), GOLDENASTRO_PROVIDER_ACCOUNT_ID.length > 0)
+eq('a conta é a que era do Sensei (renomeada na MetaApi)',
+  GOLDENASTRO_PROVIDER_ACCOUNT_ID, SENSEI_PROVIDER_ACCOUNT_ID)
+eq('e o guarda vê a colisão', goldenAstroColideCom(), 'MTM Auto Sensei')
+eq('por isso NÃO está pronta a executar', goldenAstroPronta(), false)
+eq('ter conta não chega', GOLDENASTRO_PROVIDER_ACCOUNT_ID.length > 0, true)
 eq('uma conta vazia nunca é conta de motor', ehContaDeMotor(''), false)
 eq('a lista do motor não tem buracos', CONTAS_MOTOR_TEMPO_REAL.every((c) => Boolean(c && c.trim())), true)
 eq('Golden Astro NÃO partilha a conta da Golden Moves',
