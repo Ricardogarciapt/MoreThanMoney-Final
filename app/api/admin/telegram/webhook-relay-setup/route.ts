@@ -67,14 +67,13 @@ export async function POST(req: NextRequest) {
     // `message_reaction` é o que permite descobrir um grupo com uma REAÇÃO em vez de uma
     // mensagem — num grupo de terceiros, escrever "teste" é escrever à frente de toda a gente.
     // O Telegram só entrega reações a quem as pede pelo nome, e só a bots administradores.
-    // Duas formas de reação, e faltava uma: num GRUPO o Telegram manda `message_reaction`
-    // (diz quem reagiu); num CANAL de difusão manda `message_reaction_count` (só a contagem,
-    // porque lá ninguém é atribuído). Pedir só a primeira era não receber nada num canal — e
-    // era exatamente isso que estava a acontecer.
-    allowed_updates: [
-      'message', 'channel_post', 'edited_message',
-      'message_reaction', 'message_reaction_count',
-    ],
+    /**
+     * Só mensagens. As reações ficaram de fora por decisão do Ricardo (07/09): pedimos as duas
+     * formas — `message_reaction` nos grupos, `message_reaction_count` nos canais — e nenhuma
+     * chegou, sem erro nenhum a dizer porquê. Não vale a pena manter ligado um caminho que não
+     * se percebe; o reencaminhamento é determinístico e chega.
+     */
+    allowed_updates: ['message', 'channel_post', 'edited_message'],
     drop_pending_updates: true,
   })
   const wh = await tg(tk, 'getWebhookInfo')
