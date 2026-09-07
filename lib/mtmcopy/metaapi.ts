@@ -2,6 +2,7 @@ import type { TrailingDistance } from './pip-points'
 import { convertTrailingToRelativePoints } from './pip-points'
 import { resolveBrokerSymbol, rankedBrokerSymbols } from './symbol-resolver'
 import { orderCommentFor } from '@/lib/mtmcopy/no-comment-accounts'
+import { inicioDaContagem } from './metricas-desde'
 
 export interface OrderRequest {
   accountId: string
@@ -1233,10 +1234,20 @@ export async function lerHistorico(
   const token = process.env.METAAPI_TOKEN
   if (!token) return null
 
+  /**
+   * Contas com a contagem reiniciada não devolvem o que aconteceu antes do marco.
+   *
+   * É aqui e não em cada ecrã porque `getHistoryDeals` é a porta por onde TODO o histórico
+   * entra no site — plano de trading, curvas, desempenho por estratégia. Filtrar num sítio e
+   * esquecer outro dava dois números diferentes para a mesma conta, e o pior de dois números
+   * diferentes é não se saber qual deles está errado.
+   */
+  const inicio = inicioDaContagem(accountId, fromTime)
+
   const regiao = await regiaoDaConta(accountId, token)
   if (regiao) {
     try {
-      const de = encodeURIComponent(fromTime.toISOString())
+      const de = encodeURIComponent(inicio.toISOString())
       const ate = encodeURIComponent(toTime.toISOString())
       const r = await fetch(
         `https://mt-client-api-v1.${regiao}.agiliumtrade.ai/users/current/accounts/${accountId}/history-deals/time/${de}/${ate}`,
@@ -1270,7 +1281,8 @@ export async function lerHistorico(
     await withTimeout(connection.connect(), CONNECT_TIMEOUT_MS, 'history connect')
     await withTimeout(connection.waitSynchronized(), CONNECT_TIMEOUT_MS, 'history sync')
     if (typeof connection.getDealsByTimeRange !== 'function') return null
-    const raw = await connection.getDealsByTimeRange(fromTime, toTime)
+    // O mesmo marco no caminho de recurso: senão o fallback trazia o passado que o REST filtra.
+    const raw = await connection.getDealsByTimeRange(inicio, toTime)
     const deals = (Array.isArray(raw) ? raw : (raw?.deals ?? [])) as MetaApiDeal[]
     return deals ?? []
   } catch (e) {
