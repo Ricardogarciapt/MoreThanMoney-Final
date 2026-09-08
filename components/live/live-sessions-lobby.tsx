@@ -331,10 +331,32 @@ export default function LiveSessionsLobby() {
                   onClick={() => void openEducatorDialog(ed)}
                 >
                   <Card className="w-full overflow-hidden border-[#D2A63C]/20 bg-gradient-to-b from-gray-900/90 to-black/90 backdrop-blur transition hover:border-[#D2A63C]/45">
-                    <div className="relative h-40 w-full bg-gradient-to-br from-gray-800 to-black">
+                    {/**
+                      * A moldura mostra a imagem INTEIRA, não um recorte dela.
+                      *
+                      * As fotos dos educadores não têm todas o mesmo formato: o Ricardo é quase
+                      * quadrada (992×1056), a do Ruben é vertical de telemóvel (900×1600) e as
+                      * dos canais novos são 16:9 (1920×1071). Uma moldura fixa e baixa com
+                      * `object-cover` recortava uma faixa do meio de cada uma — e nas que são
+                      * cartazes desenhados isso cortava o próprio nome ao meio.
+                      *
+                      * `object-contain` não corta nada. As barras que sobram são preenchidas com
+                      * a mesma imagem desfocada por trás, que é o que evita o efeito de moldura
+                      * vazia sem inventar um recorte.
+                      */}
+                    <div className="relative h-52 w-full overflow-hidden bg-gradient-to-br from-gray-800 to-black">
                       {ed.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={ed.avatar_url} alt="" className="h-full w-full object-cover" />
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={ed.avatar_url}
+                            alt=""
+                            aria-hidden="true"
+                            className="absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
+                          />
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={ed.avatar_url} alt="" className="relative h-full w-full object-contain" />
+                        </>
                       ) : (
                         <div className="flex h-full items-center justify-center text-gray-600">
                           <GraduationCap className="h-16 w-16 opacity-40" />
