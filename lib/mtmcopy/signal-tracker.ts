@@ -379,6 +379,12 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
         : null
       // O cartão mede pela ENTRADA até ao preço que passamos: no stop é o SL, não a cotação do
       // instante — senão anunciava «+21 pips» numa trade que fechou em perda.
+      /**
+       * Aqui o stop é SEMPRE o original: esta tabela regista o sinal como a fonte o publicou e
+       * nada nela reescreve o `sl` (o break-even e o trailing vivem no motor, na posição real).
+       * Por isso um toque neste stop é mesmo um stop loss, e não precisa da distinção que o
+       * `stopFoiProtegido` faz do lado do webhook — onde o stop que chega já pode ter subido.
+       */
       await anunciar(l, 'stop_loss', { price: l.sl })
       await gravarDesfecho(l, perda, 'Stop loss')
       eventos.push(`stop ${l.symbol}`)

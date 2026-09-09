@@ -31,6 +31,7 @@ export type SignalEvent =
   | 'target_final'
   /** Stop loss. */
   | 'stop_loss'
+  | 'stop_protegido'
   /** Fechada (motivo genérico: manual, motor, desaparecida da corretora). */
   | 'closed'
   /** A fonte cancelou o sinal antes de ativar. */
@@ -90,6 +91,56 @@ function dirTxt(d?: 'buy' | 'sell' | null): string {
 /** Desfecho em pips e % — "" quando faltam preços, porque zero não é o mesmo que não saber. */
 export function outcomeOf(c: LifecycleContext): string {
   return outcomeFrom({ symbol: c.symbol, direction: c.direction, entry: c.entry, exit: c.price })
+}
+
+/**
+ * Um stop que foi tocado é sempre um «stop loss»? Não.
+ *
+ * Depois de a gestão mover o stop para a entrada (break-even) ou de o arrastar atrás do preço
+ * (trailing), tocar-lhe é o SISTEMA A FUNCIONAR: a trade fecha em zero ou em lucro, com as
+ * parciais já embolsadas. Chamar-lhe «Stop loss · a trade fechou no stop» diz ao membro que
+ * perdeu, quando ele ganhou.
+ *
+ * Aconteceu na ideia #18384 do Sensei (09/09): entrada 4413,34, alvo 1 batido a +148 pips,
+ * stop movido para a entrada, e cinco segundos depois o chat anunciou «🛑 Stop loss · −0,8 pips
+ * · A trade fechou no stop». O −0,8 é a própria prova de que não foi um stop loss: o stop
+ * original estava 75,7 pips abaixo.
+ *
+ * ── Porque é uma medida e não uma bandeira ────────────────────────────────────────────────
+ * Seria mais bonito guardar «o break-even já foi feito» e ler essa bandeira. Mas o alerta de
+ * break-even pode não chegar (rede, ordem trocada, fonte que não o envia) e nesse caso a
+ * bandeira mente por omissão — volta a chamar-se perda ao que não é. A distância até à entrada,
+ * comparada com o risco ORIGINAL, é uma medida que está sempre lá e não depende de ter chegado
+ * nenhuma mensagem: quem fecha a 1% do risco não fechou no stop, seja qual for a razão.
+ */
+export function stopFoiProtegido(args: {
+  direction?: 'buy' | 'sell' | null
+  entry?: number | null
+  slOriginal?: number | null
+  price?: number | null
+}): boolean {
+  const { direction, entry, slOriginal, price } = args
+  if (!direction || entry == null || slOriginal == null || price == null) return false
+  if (!(entry > 0) || !(slOriginal > 0) || !(price > 0)) return false
+
+  const risco = Math.abs(entry - slOriginal)
+  if (!(risco > 0)) return false
+
+  // Positivo = a favor de quem entrou.
+  const realizado = direction === 'buy' ? price - entry : entry - price
+
+  // Fechou em lucro: foi o trailing, não o stop.
+  if (realizado > 0) return true
+
+  /**
+   * TOLERÂNCIA: 15% do risco original.
+   *
+   * Um stop no break-even não fecha exatamente na entrada — há spread e há deslize. O que se
+   * quer separar são duas coisas de escalas MUITO diferentes: um stop a sério leva ~100% do
+   * risco, um break-even leva uns pontos. Entre 1% e 100% cabe qualquer fronteira razoável;
+   * 15% está longe das duas e não confunde uma com a outra.
+   */
+  return Math.abs(realizado) <= risco * 0.15
 }
 
 /**
@@ -187,6 +238,22 @@ const EVENTS: Record<SignalEvent, EventDef> = {
     cancelsPending: true,
     logStatus: 'closed',
   },
+  stop_protegido: {
+    emoji: '🔒',
+    title: (c) => `Stop protegido · ${headline(c)}`,
+    body: (c) => {
+      const realizado =
+        c.direction && c.entry != null && c.price != null
+          ? (c.direction === 'buy' ? c.price - c.entry : c.entry - c.price)
+          : null
+      return realizado != null && realizado > 0
+        ? 'O trailing acompanhou o preço e fechou a posição em lucro.'
+        : 'A posição fechou no break-even. O risco já estava neutralizado — não houve perda.'
+    },
+    closes: true,
+    cancelsPending: true,
+    logStatus: 'closed',
+  },
   closed: {
     emoji: '🏁',
     title: (c) => `Posição fechada · ${headline(c)}`,
@@ -258,6 +325,9 @@ export function logStatusFor(event: SignalEvent): string {
 export const TERMINAL_EVENTS: SignalEvent[] = [
   'target_final',
   'stop_loss',
+  // Fecha o sinal tal como o stop_loss: a posição acabou. O que muda é o NOME e o resultado —
+  // fechou protegida, não em perda. Faltar aqui deixava a trade eternamente «aberta» no T2T.
+  'stop_protegido',
   'closed',
   'cancelled',
   'discarded',

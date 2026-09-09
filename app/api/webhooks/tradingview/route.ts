@@ -29,7 +29,7 @@ import { getExecSwitches } from "@/lib/mtmcopy/exec-switches"
 import { evaluatePerpsSignalGate } from "@/lib/mtmcopy/perps-signal-gate"
 import { getSignalRules, passesAlertGate, passesExecGate } from "@/lib/mtmcopy/signal-rules"
 import { notifySignalOutcome } from "@/lib/mtm-alerts/notify-outcome"
-import { lifecycleMessage } from "@/lib/mtmcopy/signal-lifecycle"
+import { lifecycleMessage, stopFoiProtegido } from "@/lib/mtmcopy/signal-lifecycle"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export const runtime = "nodejs"
@@ -77,6 +77,14 @@ interface SenseiMsgCtx {
   entry: number | null
   tp: number[]
   tradeNumber: number | null
+  /**
+   * O stop ORIGINAL da ideia — não o que vem no alerta de gestão.
+   *
+   * No `sl_hit` o alerta traz o stop ATUAL, que a esta altura já pode estar no break-even. Sem
+   * o original não há forma de saber se a trade fechou no stop ou fechou protegida, e as duas
+   * coisas dizem ao membro o contrário uma da outra.
+   */
+  slOriginal?: number | null
 }
 
 const DISCLAIMER = "⚠️ Não é aconselhamento financeiro."
@@ -162,7 +170,27 @@ function composePost(
 
   if (alertType === "sl_hit") {
     const slPx = v.sl ?? sensei?.sl ?? null
-    const { text } = lifecycleMessage("stop_loss", { symbol, direction: ctxDir, entry, price: slPx })
+    /**
+     * O alerta diz «o meu stop foi tocado». Não diz se isso foi uma perda.
+     *
+     * Depois do break-even ou do trailing, o stop está na entrada ou acima dela — tocá-lo é a
+     * proteção a funcionar. Comparar o preço de fecho com o stop ORIGINAL é o que separa as
+     * duas coisas; sem isso, uma trade que embolsou o alvo 1 e fechou a zero era anunciada como
+     * «Stop loss · a trade fechou no stop».
+     */
+    const protegido = stopFoiProtegido({
+      direction: ctxDir,
+      entry,
+      slOriginal: ctx?.slOriginal ?? null,
+      price: slPx,
+    })
+    const { text } = lifecycleMessage(protegido ? "stop_protegido" : "stop_loss", {
+      symbol,
+      direction: ctxDir,
+      entry,
+      price: slPx,
+      slOriginal: ctx?.slOriginal ?? null,
+    })
     return [text, ``, `🧠 Sensei Scanner${tag}`, DISCLAIMER].join("\n")
   }
 
@@ -1054,9 +1082,9 @@ export async function POST(request: NextRequest) {
 
   // Contexto da mensagem: entrada/TP/numeração (da ideia ligada por preço, ou da própria entrada)
   const msgCtx: SenseiMsgCtx | null = linkedIdea
-    ? { entry: linkedIdea.entry, tp: linkedIdea.tp, tradeNumber: linkedIdea.tradeNumber }
+    ? { entry: linkedIdea.entry, tp: linkedIdea.tp, tradeNumber: linkedIdea.tradeNumber, slOriginal: linkedIdea.sl }
     : entryTradeIdea
-      ? { entry: activeSensei?.entry ?? entryTradeIdea.entry, tp: activeSensei?.tp ?? entryTradeIdea.tp, tradeNumber: entryTradeIdea.tradeNumber }
+      ? { entry: activeSensei?.entry ?? entryTradeIdea.entry, tp: activeSensei?.tp ?? entryTradeIdea.tp, tradeNumber: entryTradeIdea.tradeNumber, slOriginal: entryTradeIdea.sl }
       : savedIdea
         ? { entry: activeSensei?.entry ?? null, tp: activeSensei?.tp ?? [], tradeNumber: savedIdea.tradeNumber }
         : null
@@ -1094,11 +1122,29 @@ export async function POST(request: NextRequest) {
   // PENDENTES que nunca encheram ficavam órfãs — a ideia morreu e a ordem continuava no mercado.
   // Esse caso é um DESCARTE, não um fecho.
   const isSlFollowup = isFollowup && (activeSensei?.alertType === "sl_hit" || initAlertType === "sl_hit")
+  /**
+   * Um `sl_hit` depois do break-even NÃO é um descarte.
+   *
+   * «Descartado» é o que se diz de uma ideia que morreu antes de valer alguma coisa. A #18384
+   * do Sensei foi activada, bateu o alvo 1 a +148 pips e fechou protegida — e mesmo assim o
+   * cartão de entrada ficou marcado «Descartado», porque qualquer `sl_hit` entrava aqui como
+   * descarte. Quem lê o histórico via uma trade ganha rotulada como ideia falhada.
+   *
+   * Com o stop protegido, isto é um FECHO normal.
+   */
+  const slProtegido =
+    isSlFollowup &&
+    stopFoiProtegido({
+      direction: t2tCloseDir,
+      entry: msgCtx?.entry ?? null,
+      slOriginal: msgCtx?.slOriginal ?? null,
+      price: v.sl ?? activeSensei?.sl ?? null,
+    })
   if ((isExitFollowup || isSlFollowup) && t2tCloseSymbol && route.channel) {
     try {
       const { closeT2TFollowersForSignal } = await import("@/lib/mtmcopy/t2t-lifecycle")
       await closeT2TFollowersForSignal({
-        kind: isSlFollowup ? "discard" : "close",
+        kind: isSlFollowup && !slProtegido ? "discard" : "close",
         // No SL só se apagam as pendentes: a posição aberta do seguidor fecha pelo SL dela.
         pendingOnly: isSlFollowup,
         chatSlug: route.channel,
