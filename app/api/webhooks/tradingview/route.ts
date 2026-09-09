@@ -1325,6 +1325,21 @@ export async function POST(request: NextRequest) {
       const mid = await sendTelegram(AIBOT_TOKEN, relayChatId, post, replyToTelegramId)
       telegramMid = mid
       tgOk = true
+      /**
+       * Guardar o id do Telegram JUNTO da mensagem do chat.
+       *
+       * Ele já era gravado, mas só em `tradingview_signals` — e o insert no chat acontece antes
+       * do envio, por isso `chat_messages.telegram_message_id` ficava sempre a null (5 em 349 no
+       * Sensei). Sem ele, corrigir uma mensagem no site deixa a cópia do Telegram a dizer o
+       * contrário e não há como a editar: um bot não consegue procurar uma mensagem antiga.
+       */
+      if (chatId && mid) {
+        await supabase
+          .from('chat_messages')
+          .update({ telegram_message_id: mid })
+          .eq('id', chatId)
+          .then(() => {}, () => {})
+      }
       if (logId) await supabase.from("tradingview_signals").update({ telegram_status: "sent", telegram_chat_id: relayChatId, telegram_message_id: mid, relayed_at: new Date().toISOString() }).eq("id", logId)
     } catch (err) {
       if (logId) await supabase.from("tradingview_signals").update({ telegram_status: "error", telegram_chat_id: relayChatId, telegram_error: String(err) }).eq("id", logId)
