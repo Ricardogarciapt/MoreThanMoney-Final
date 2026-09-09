@@ -775,6 +775,7 @@ function MessageBubble({
   onLongPress,
   onOpenActions,
   onTapToTrade,
+  onIrParaOriginal,
   resolved = false,
   aoVivo,
 }: {
@@ -787,6 +788,8 @@ function MessageBubble({
   onLongPress: (msg: ChatMessage) => void
   onOpenActions: (msg: ChatMessage) => void
   onTapToTrade?: (msg: ChatMessage) => void
+  /** Levar o ecrã até à mensagem que esta responde. */
+  onIrParaOriginal?: (id: string) => void
   /** Sinal já resolvido por follow-up posterior (ativado/fechado/descartado) → sem botão T2T. */
   resolved?: boolean
   /** Resultado a correr deste sinal (pips e %), calculado pelo motor. */
@@ -974,7 +977,21 @@ function MessageBubble({
               const rmText = rm.content?.trim()
               const rmHasImage = !!rm.image_url
               return (
-                <div className="mb-1 w-full max-w-full flex items-center gap-2 rounded-lg border-l-[3px] border-[#D2A63C] bg-black/25 pl-2 pr-1.5 py-1">
+                /**
+                  * A citação leva ao original.
+                  *
+                  * Mostrar de quem é a resposta e não deixar lá chegar é meia informação: numa
+                  * conversa de sinais, a mensagem respondida é quase sempre a entrada de que se
+                  * está a falar, e ela pode estar dezenas de mensagens acima.
+                  */
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (msg.reply_to_id) onIrParaOriginal?.(msg.reply_to_id)
+                  }}
+                  className="mb-1 w-full max-w-full flex items-center gap-2 rounded-lg border-l-[3px] border-[#D2A63C] bg-black/25 pl-2 pr-1.5 py-1 text-left transition active:bg-black/40"
+                >
                   <div className="flex-1 min-w-0">
                     {rmName && <p className="text-[11px] font-semibold text-[#D2A63C] leading-tight truncate">{rmName}</p>}
                     {rmText ? (
@@ -998,7 +1015,7 @@ function MessageBubble({
                       className="w-9 h-9 rounded-md object-cover flex-shrink-0"
                     />
                   )}
-                </div>
+                </button>
               )
             })()}
 
@@ -1334,6 +1351,30 @@ function ChannelView({
     markChannelRead(channel.slug)
   }, [channel.slug])
 
+  /**
+   * Voltar à app tem de chegar para ver o que é novo.
+   *
+   * O tempo real só corre enquanto a página está viva. No telemóvel, minimizar a app suspende a
+   * ligação: ao voltar, a conversa fica no ponto em que ficou e as mensagens que entretanto
+   * chegaram não aparecem — o Ricardo tinha de SAIR do chat e entrar outra vez, porque era isso
+   * que obrigava a recarregar. Isto refaz a leitura quando a página volta a ficar visível.
+   *
+   * Não é um substituto do tempo real: é a rede de segurança para o intervalo em que ele
+   * esteve desligado.
+   */
+  useEffect(() => {
+    if (typeof document === "undefined") return
+    const aoVoltar = () => {
+      if (document.visibilityState === "visible") void fetchMessages()
+    }
+    document.addEventListener("visibilitychange", aoVoltar)
+    window.addEventListener("focus", aoVoltar)
+    return () => {
+      document.removeEventListener("visibilitychange", aoVoltar)
+      window.removeEventListener("focus", aoVoltar)
+    }
+  }, [fetchMessages])
+
   const loadOlderMessages = async () => {
     if (loadingMore || !hasMore || messages.length === 0) return
     setLoadingMore(true)
@@ -1648,6 +1689,46 @@ function ChannelView({
     return () => { cancelado = true }
   }, [messages])
 
+  /**
+   * Levar o ecrã até à mensagem citada, e dizer qual é quando lá chega.
+   *
+   * O salto sozinho não chega: a conversa é densa e, sem um realce, quem clicou fica a olhar
+   * para um monte de bolhas sem saber qual delas era. O contorno dourado apaga-se ao fim de dois
+   * segundos — o suficiente para o olho a encontrar, pouco para incomodar.
+   *
+   * Se a mensagem original ainda não está carregada (é mais antiga do que a janela que temos),
+   * carrega-se mais e tenta-se outra vez. Falhar em silêncio seria um botão que não faz nada.
+   */
+  const irParaOriginal = useCallback(
+    async (id: string) => {
+      const focar = () => {
+        const el = document.getElementById(`msg-${id}`)
+        if (!el) return false
+        el.scrollIntoView({ behavior: "smooth", block: "center" })
+        el.classList.add("ring-2", "ring-[#D2A63C]", "rounded-xl", "transition")
+        setTimeout(() => el.classList.remove("ring-2", "ring-[#D2A63C]"), 2000)
+        return true
+      }
+      if (focar()) return
+      /**
+       * A original pode estar acima da janela carregada. Carrega-se para trás até a encontrar,
+       * com um tecto de páginas: sem tecto, uma citação a uma mensagem apagada puxava a conversa
+       * inteira à procura de algo que não existe.
+       */
+      for (let volta = 0; volta < 5; volta++) {
+        if (messagesRef.current.some((m) => m.id === id)) break
+        const antes = messagesRef.current.length
+        await loadOlderMessages()
+        // Um fotograma para o React pintar as mensagens novas antes de as procurar.
+        await new Promise((r) => requestAnimationFrame(() => r(null)))
+        if (messagesRef.current.length === antes) break // já não há mais para trás
+        if (focar()) return
+      }
+      focar()
+    },
+    [],
+  )
+
   const renderMessages = () => {
     let lastDay = ""
     const resolvedIds = computeResolvedSignalIds(messages)
@@ -1656,7 +1737,7 @@ function ChannelView({
       const showDay = day !== lastDay
       lastDay = day
       return (
-        <div key={msg.id}>
+        <div key={msg.id} id={`msg-${msg.id}`} className="scroll-mt-24">
           {showDay && (
             <div className="flex items-center gap-2 my-4">
               <div className="flex-1 h-px bg-gray-800" />
@@ -1675,6 +1756,7 @@ function ChannelView({
             onDelete={handleDelete}
             onLongPress={setContextMsg}
             onOpenActions={setContextMsg}
+            onIrParaOriginal={irParaOriginal}
             onTapToTrade={
               t2tSourceOn
                 ? (m) => (m.channel_slug === "cripto-perps" ? setCopyModalMsg(m) : setTapTrade({ msg: m, status: "confirm" }))
