@@ -36,7 +36,7 @@ async function main() {
   ordens.length = 0
   const fora = await pernaGoldenAstro({
     accountId: GOLDENASTRO_PROVIDER_ACCOUNT_ID, raw: 'Gold Buy 📈', precoAtual: 4411,
-    construir, colocar, lote: 0.02,
+    construir, colocar, lotMode: "fixed", lotValue: 0.02,
     quando: new Date('2026-09-07T05:00:00Z'), // 06:00 em Londres
   })
   eq('fora da janela continua a ser dela', fora.tratado, true)
@@ -46,7 +46,7 @@ async function main() {
   // ── Sem gatilho ───────────────────────────────────────────────────────────────────────
   const semGatilho = await pernaGoldenAstro({
     accountId: GOLDENASTRO_PROVIDER_ACCOUNT_ID, raw: 'Fixed stop loss: 100 pips',
-    precoAtual: 4411, construir, colocar, lote: 0.02,
+    precoAtual: 4411, construir, colocar, lotMode: "fixed", lotValue: 0.02,
     quando: new Date('2026-09-07T07:30:00Z'),
   })
   eq('texto sem gatilho não abre', semGatilho.abertas, 0)
@@ -54,7 +54,7 @@ async function main() {
   // ── Conta alheia na Astro ─────────────────────────────────────────────────────────────
   const alheia2 = await pernaGoldenAstro({
     accountId: 'outra-conta-qualquer', raw: 'Gold Buy', precoAtual: 4411,
-    construir, colocar, lote: 0.02, quando: new Date('2026-09-07T07:30:00Z'),
+    construir, colocar, lotMode: "fixed", lotValue: 0.02, quando: new Date('2026-09-07T07:30:00Z'),
   })
   eq('a Astro não toca em contas alheias', alheia2.tratado, false)
 

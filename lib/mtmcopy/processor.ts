@@ -987,7 +987,9 @@ async function executeViaMtmProvider(
     const ga = await pernaGoldenAstro({
       accountId: provider.accountId, raw, telegramMessageId,
       precoAtual: signal.entry ?? null, construir, colocar: colocarOrdemDoProvedor,
-      lote: Number(executionProfile.lot_value ?? 0.5),
+      // Modo E valor: 'risk_percent' + 0,5 é meio por cento do saldo, não meio lote.
+      lotMode: executionProfile.lot_mode ?? null,
+      lotValue: executionProfile.lot_value != null ? Number(executionProfile.lot_value) : null,
     })
     const perna = ga.tratado ? { nome: 'Golden Astro', ...ga } : null
 

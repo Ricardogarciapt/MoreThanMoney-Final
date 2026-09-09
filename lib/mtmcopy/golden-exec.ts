@@ -93,7 +93,9 @@ export async function pernaGoldenAstro(args: {
   precoAtual: number | null
   construir: (accountId: string, sinal: NonNullable<ReturnType<typeof parseSignal>>, lote: number, comentario: string) => OrderRequest
   colocar: ColocarOrdem
-  lote: number
+  /** Modo e valor de lote do perfil da rota — 'risk_percent' 0,5 significa 0,5% do saldo. */
+  lotMode?: string | null
+  lotValue?: number | null
   quando?: Date
 }): Promise<ResultadoPerna> {
   if (args.accountId !== GOLDENASTRO_PROVIDER_ACCOUNT_ID) return { tratado: false, abertas: 0, detalhe: '' }
@@ -135,15 +137,27 @@ export async function pernaGoldenAstro(args: {
     })()
   if (!plano) return { tratado: true, abertas: 0, detalhe: 'sem níveis publicados nem preço de referência' }
 
-  const req = args.construir(
-    args.accountId,
-    {
-      symbol: plano.symbol, direction: plano.direction, entry: plano.entrada,
-      sl: plano.sl, tp: plano.tp, orderType: 'market', raw: args.raw,
-    } as NonNullable<ReturnType<typeof parseSignal>>,
-    args.lote,
-    `GA-${args.lote}`,
-  )
+  const sinalDaOrdem = {
+    symbol: plano.symbol, direction: plano.direction, entry: plano.entrada,
+    sl: plano.sl, tp: plano.tp, orderType: 'market', raw: args.raw,
+  } as NonNullable<ReturnType<typeof parseSignal>>
+
+  /**
+   * O LOTE VEM DO RISCO, NÃO DO NÚMERO CRU.
+   *
+   * Esta perna recebia `lot_value` do perfil e passava-o como lote. No perfil das rotas MTM
+   * `lot_mode` é 'risk_percent' e `lot_value` é 0,5 — meio por cento do saldo. Lido como lote
+   * são MEIO LOTE de ouro: 5 USD por pip, 500 USD de risco no stop de 100 pips do trader, e a
+   * mesma meia posição quer a conta tenha 500 ou 50.000. O caminho normal do processador nunca
+   * teve este problema porque passa pelo `computeLotSize`; a perna corre antes dele e ficou de
+   * fora. Nunca chegou a abrir uma ordem — a conta está a zero — mas abria assim que abrisse.
+   */
+  const lote = await calcularLote(args.accountId, sinalDaOrdem, args.lotMode, args.lotValue)
+  if (lote == null) {
+    return { tratado: true, abertas: 0, detalhe: 'sem saldo legível na conta — não se dimensiona a ordem' }
+  }
+
+  const req = args.construir(args.accountId, sinalDaOrdem, lote, `GA-${lote}`)
   req.orderType = 'market'
 
   const r = await args.colocar(args.accountId, req, `GOLDEN ASTRO ${req.symbol} ${req.direction}`)
@@ -156,11 +170,64 @@ export async function pernaGoldenAstro(args: {
     entry: plano.entrada,
     sl: plano.sl,
     tp: plano.tp,
-    lote: args.lote,
+    lote,
     saidas: GOLDENASTRO_SAIDAS,
     fonte: 'goldenastro',
     telegramMessageId: args.telegramMessageId,
   })
 
-  return { tratado: true, abertas: 1, detalhe: `entrada @ ${plano.entrada} · stop ${plano.sl}` }
+  return { tratado: true, abertas: 1, detalhe: `${lote} lotes · entrada @ ${plano.entrada} · stop ${plano.sl}` }
+}
+
+/**
+ * Lote a partir do risco do perfil, com o saldo real da conta.
+ *
+ * Devolve `null` quando o saldo não se consegue ler ou é zero: sem saldo não há percentagem
+ * que se calcule, e o único lote que restava era um mínimo arbitrário — abrir uma posição que
+ * ninguém dimensionou é pior do que não abrir nenhuma.
+ */
+async function calcularLote(
+  accountId: string,
+  sinal: NonNullable<ReturnType<typeof parseSignal>>,
+  lotMode: string | null | undefined,
+  lotValue: number | null | undefined,
+): Promise<number | null> {
+  const { computeLotSize } = await import('./lot-sizing')
+  const conn = {
+    lot_mode: (lotMode ?? 'risk_percent') as 'risk_percent' | 'fixed' | 'multiplier',
+    lot_value: Number(lotValue ?? 0.5),
+  }
+  if (conn.lot_mode === 'fixed') {
+    const fixo = Number(conn.lot_value)
+    return fixo > 0 ? fixo : null
+  }
+  const { getAccountBalance, getRiskTickContext } = await import('./metaapi')
+  const saldo = await getAccountBalance(accountId).catch(() => null)
+  if (saldo == null || !(saldo > 0)) return null
+
+  const lote = computeLotSize(conn as Parameters<typeof computeLotSize>[0], sinal, saldo)
+
+  /**
+   * Afinação pelo tickValue REAL da corretora.
+   *
+   * O `computeLotSize` estima o valor do pip por heurística de contrato e, no ouro, dá cerca do
+   * dobro: com 10.000 USD e 0,5% configurado, arriscava ~100 USD em vez de 50. O caminho normal
+   * do processador corrige-o logo a seguir com o tickValue que a MetaApi devolve; a perna corre
+   * antes dele e ficava com a estimativa. Se a leitura falhar, fica a estimativa — errar por
+   * duas vezes o risco é mau, não abrir o trade do trader por causa de uma leitura é pior.
+   */
+  try {
+    if (!sinal.symbol || !sinal.direction) return lote > 0 ? lote : null
+    const tick = await getRiskTickContext(accountId, sinal.symbol, sinal.direction)
+    const distancia = sinal.entry != null && sinal.sl != null ? Math.abs(sinal.entry - sinal.sl) : 0
+    if (tick && tick.tickSize > 0 && tick.tickValue > 0 && distancia > 0) {
+      const perdaPorLote = (distancia / tick.tickSize) * tick.tickValue
+      if (perdaPorLote > 0) {
+        const exato = Math.max(0.01, Math.round(((saldo * (conn.lot_value / 100)) / perdaPorLote) * 100) / 100)
+        if (exato > 0) return exato
+      }
+    }
+  } catch { /* fica a estimativa */ }
+
+  return lote > 0 ? lote : null
 }
