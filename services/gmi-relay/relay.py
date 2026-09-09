@@ -30,7 +30,7 @@ Robustez (herdada do relay GMI 2026-08-10, agora POR ROTA):
   - Passa reply_to_text + source_chat_id/source_message_id/reply_to_source_id ao endpoint →
     threading no destino + dedup idempotente no servidor por id da fonte.
 """
-import os, re, json, asyncio, datetime, urllib.request
+import os, re, json, asyncio, datetime, hashlib, urllib.request
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
@@ -41,6 +41,7 @@ DRY_RUN = os.environ.get("GMI_DRY_RUN", "1") == "1"
 STATE_FILE = os.environ.get("GMI_STATE_FILE", "gmi_relay_state.json")
 POLL_SEC = int(os.environ.get("GMI_POLL_SEC", "45"))
 LOOKBACK_H = int(os.environ.get("GMI_LOOKBACK_H", "3"))
+EDIT_LOOKBACK_H = int(os.environ.get("GMI_EDIT_LOOKBACK_H", "6"))
 PREMIUM_DEST = "-1002424441843"
 
 # ── Rotas ────────────────────────────────────────────────────────────────────
@@ -100,6 +101,12 @@ def sanitize(text: str) -> str:
     out = "\n".join([l for l in lines if l.strip()])
     return out.strip()
 
+def impressao(texto: str) -> str:
+    """Impressão ESTÁVEL do texto. O hash() do Python é aleatorizado por processo:
+    guardado no state, deixava de bater certo a cada reinício e disparava uma rajada
+    de edições no-op. sha1 é igual em todos os arranques."""
+    return hashlib.sha1(texto.encode("utf-8")).hexdigest()
+
 def brand(text: str, header) -> str:
     """Aplica o cabeçalho de marca da rota (evita duplicar se já lá estiver)."""
     if not header or text.lower().startswith(header.lower()):
@@ -135,13 +142,15 @@ def save_state(s):
 RELAY_POST_URL = os.environ.get("RELAY_POST_URL", "https://www.morethanmoney.pt/api/telegram/relay-post")
 RELAY_SECRET = os.environ.get("RELAY_SECRET", "")
 
-def bot_send(dest, source_id, text, reply_to=None, source_msg_id=None, reply_to_source_id=None, reply_to_text=None):
+def bot_send(dest, source_id, text, reply_to=None, source_msg_id=None, reply_to_source_id=None, reply_to_text=None, edit=False):
     """Publica via o ENDPOINT do site (token válido na Vercel).
     Devolve: int>0 message_id · -1 DRY_RUN · -2 dup no servidor · None FALHA (não avançar last_id)."""
     if DRY_RUN:
         print(("──── PUBLICARIA em " + str(dest) + (f" (reply→{reply_to})" if reply_to else "") + " ────\n") + text + "\n")
         return -1
     payload = {"chat_id": dest, "text": text}
+    if edit:
+        payload["edit"] = True
     if reply_to:
         payload["reply_to_message_id"] = reply_to
     if source_msg_id is not None:
@@ -232,6 +241,8 @@ async def run_route(client, route, rstate):
             print(f"[relay:{route['name']}] envio falhou msg {m.id} (tentativa {n}) — paro, retento a seguir.")
             break
         fails.pop(str(m.id), None)
+        rstate.setdefault("texts", {})[str(m.id)] = impressao(clean)
+        rstate.setdefault("publicadas", {})[str(m.id)] = 1
         if isinstance(pid, int) and pid > 0:
             rstate["map"][str(m.id)] = pid
             if len(rstate["map"]) > 800:
@@ -241,6 +252,47 @@ async def run_route(client, route, rstate):
         sent += 1
         await asyncio.sleep(0.2)
     rstate["last_id"] = new_last
+
+    # ── EDIÇÕES NA FONTE ─────────────────────────────────────────────────────
+    # O trader corrige a mensagem no canal dele em vez de publicar uma correcção.
+    # O ciclo principal só olha para ids NOVOS (m.id <= last_id → break), por isso a
+    # edição passava despercebida e o cliente ficava com o texto velho. Relê-se a
+    # janela recente e, se o texto mudou face ao que foi relayado, manda-se corrigir.
+    editadas = 0
+    try:
+        vistos = rstate.setdefault("texts", {})   # source_msg_id -> impressão do texto relayado
+        janela = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=EDIT_LOOKBACK_H)
+        async for m in client.iter_messages(source_id, limit=80):
+            if m.date < janela:
+                break
+            sid = str(m.id)
+            if sid not in rstate.get("map", {}) and sid not in rstate.get("publicadas", {}):
+                continue                          # nunca foi publicada → nada a editar
+            atual = sanitize(m.message or "")
+            if not atual:
+                continue
+            h = impressao(atual)
+            if vistos.get(sid) == h:
+                continue                          # igual ao que já foi publicado
+            antigo = vistos.get(sid)
+            # impressões antigas (hash() instável) não são comparáveis: reescreve sem editar
+            if antigo is not None and not re.fullmatch(r"[0-9a-f]{40}", str(antigo)):
+                vistos[sid] = h
+                continue
+            if sid in vistos:                     # mudou → é uma edição a sério
+                if bot_send(route["dest"], source_id, brand(atual, route.get("header")),
+                            source_msg_id=m.id, edit=True) is not None:
+                    editadas += 1
+                    print(f"[relay:{route['name']}] editada msg {m.id}")
+            vistos[sid] = h
+        for chave in ("texts", "publicadas"):
+            d = rstate.setdefault(chave, {})
+            if len(d) > 800:
+                for k in list(d)[:-500]:
+                    del d[k]
+    except Exception as e:
+        print(f"[relay:{route['name']}] aviso: varrimento de edições falhou: {e}")
+
     return len(batch), sent
 
 async def main():
