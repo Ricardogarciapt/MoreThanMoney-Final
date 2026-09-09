@@ -54,7 +54,8 @@ import {
   markChannelRead,
   isChannelUnread,
 } from "./chat-channel-meta"
-import { shouldReduceSafariEffects, waitForSupabaseSession } from "@/lib/supabase-session"
+import { shouldReduceSafariEffects } from "@/lib/supabase-session"
+import { getAccessToken } from "@/lib/auth-token"
 import { getChatMessageShareUrl } from "@/lib/chat-short-link"
 import { notifyXpFromResponse } from "@/lib/xp-client"
 import { useT } from "@/components/i18n-provider"
@@ -1320,7 +1321,18 @@ function ChannelView({
 
   const fetchMessages = useCallback(async () => {
     setMessagesError(null)
-    const token = await waitForSupabaseSession()
+    /**
+     * O token vem da CACHE, não de um `getSession()` por leitura.
+     *
+     * `waitForSupabaseSession` fazia um ciclo com esperas de 250 ms e uma corrida de 1200 ms
+     * ANTES de pedir a primeira mensagem — e cada `getSession()` pega num Web Lock exclusivo, que
+     * no Safari serializa toda a autenticação. Medido a 09/09: o pedido em si demora ~300 ms; o
+     * que se sentia como lentidão do chat era sobretudo a espera antes de ele começar.
+     *
+     * `getAccessToken()` devolve o token em memória e só vai buscar um novo quando falta menos de
+     * um minuto para expirar.
+     */
+    const token = await getAccessToken()
     if (!token) {
       setMessagesError(t("chat.sessionUnavailableReopen"))
       setLoading(false)
@@ -2572,7 +2584,7 @@ export default function ChatChannels({ initialSlug }: { initialSlug?: string | n
       setLoading(true)
       setError(null)
 
-      const token = await waitForSupabaseSession()
+      const token = await getAccessToken()
       if (!token) {
         setError(t("chat.sessionUnavailableApp"))
         setLoading(false)
