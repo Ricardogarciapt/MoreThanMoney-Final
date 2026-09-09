@@ -5,6 +5,16 @@ import { synthesizeToStorage } from "@/lib/lms-captions/tts"
 import { normalizeCaptionLang } from "@/lib/lms-captions/constants"
 import { getDvrWorkerSecret } from "@/lib/lms-dvr/config"
 
+/** Id da playlist a partir do URL do YouTube (`?list=…`). Devolve null se não houver. */
+function playlistIdFromUrl(url: string | null): string | null {
+  if (!url) return null
+  try {
+    return new URL(url).searchParams.get("list")?.trim() || null
+  } catch {
+    return null
+  }
+}
+
 export const runtime = "nodejs"
 export const maxDuration = 60
 
@@ -60,7 +70,7 @@ export async function GET(req: NextRequest) {
     await supabase.from("lms_dvr_jobs").update({ youtube_status: "uploading" }).eq("id", yt.id)
     const { data: s } = await supabase
       .from("lms_streams")
-      .select("title, caption_source_language, academy:lms_academies(name)")
+      .select("title, caption_source_language, playlist_url, playlist_title, academy:lms_academies(name)")
       .eq("id", yt.stream_id)
       .maybeSingle()
     const title = (s?.title as string) || "Sessão MoreThanMoney"
@@ -86,6 +96,20 @@ export async function GET(req: NextRequest) {
       },
     ]
 
+    /**
+     * PARA ONDE VAI A GRAVAÇÃO NO YOUTUBE.
+     *
+     * A sala manda. Se já tiver uma playlist configurada (`playlist_url`), as gravações novas
+     * entram NESSA — antes ignorava-se e criava-se uma playlist paralela pelo título gerado, com
+     * o resultado de o curso que o aluno vê ficar parado enquanto os vídeos se acumulavam noutra
+     * lista que ninguém abria. E se o educador deu um nome próprio à playlist (`playlist_title`),
+     * é esse o nome no YouTube: um curso chamado «Império Cripto MTM» não se deve apresentar lá
+     * como «Império Cripto · Gravações (MoreThanMoney)».
+     */
+    const idDaPlaylistDaSala = playlistIdFromUrl((s?.playlist_url as string) || null)
+    const tituloDaPlaylist =
+      ((s?.playlist_title as string) || "").trim() || `${title} · Gravações (${academy})`
+
     return NextResponse.json({
       action: "youtube",
       jobId: yt.id,
@@ -94,9 +118,8 @@ export async function GET(req: NextRequest) {
       baseFile: yt.base_file || null,
       sourceLang: srcLang,
       privacyStatus: "unlisted",
-      playlistId: yt.youtube_playlist_id || null,
-      // Playlist por SALA. Os admins depois curam as playlists de curso no YouTube.
-      playlistTitle: `${title} · Gravações (${academy})`,
+      playlistId: yt.youtube_playlist_id || idDaPlaylistDaSala || null,
+      playlistTitle: tituloDaPlaylist,
       uploads,
     })
   }
