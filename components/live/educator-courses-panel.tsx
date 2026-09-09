@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { GraduationCap, Plus, Trash2, ChevronUp, ChevronDown, Loader2 } from "lucide-react"
+import { LmsImageUploadField } from "@/components/admin/lms-image-upload-field"
 
 /**
  * CURSOS do educador — playlists próprias (não ligadas a uma sala), geridas pelo próprio no Studio.
@@ -14,6 +15,8 @@ interface Course {
   id: string
   title: string
   url: string
+  /** Capa do curso. Sem ela o cartão mostra só texto — e vários cursos leem-se todos iguais. */
+  image_url: string | null
   access_tier: string | null
   sort_order: number
   is_active: boolean
@@ -32,6 +35,7 @@ export default function EducatorCoursesPanel() {
   const [busy, setBusy] = useState(false)
   const [title, setTitle] = useState("")
   const [url, setUrl] = useState("")
+  const [capa, setCapa] = useState("")
   const [tier, setTier] = useState("all")
   const [err, setErr] = useState<string | null>(null)
 
@@ -58,11 +62,11 @@ export default function EducatorCoursesPanel() {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, url, access_tier: tier, sort_order: items.length }),
+        body: JSON.stringify({ title, url, image_url: capa, access_tier: tier, sort_order: items.length }),
       })
       const j = await r.json()
       if (!r.ok) { setErr(j?.error || "Não foi possível adicionar."); return }
-      setTitle(""); setUrl(""); setTier("all")
+      setTitle(""); setUrl(""); setCapa(""); setTier("all")
       await load()
     } finally {
       setBusy(false)
@@ -148,6 +152,18 @@ export default function EducatorCoursesPanel() {
                   {TIERS.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
                 </select>
               </div>
+              <div className="mt-1.5">
+                <LmsImageUploadField
+                  label="Capa do curso"
+                  description="Vertical ou quadrada. É o que o aluno vê no dropdown Cursos."
+                  value={c.image_url || ""}
+                  onUrlChange={(u) => patch(c.id, { image_url: u })}
+                  scope="playlist_cover"
+                  refId={c.id}
+                  commit="blur"
+                  uploadUrl="/api/live-sessions/educator-auth/upload-image"
+                />
+              </div>
             </div>
           ))}
           {!items.length && <p className="text-xs text-gray-600">Ainda não tens cursos. Adiciona o primeiro abaixo.</p>}
@@ -170,6 +186,15 @@ export default function EducatorCoursesPanel() {
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="mr-1 h-4 w-4" />Adicionar</>}
           </Button>
         </div>
+        <LmsImageUploadField
+          label="Capa do curso (opcional)"
+          description="Podes acrescentá-la depois de criar."
+          value={capa}
+          onUrlChange={setCapa}
+          scope="playlist_cover"
+          commit="immediate"
+          uploadUrl="/api/live-sessions/educator-auth/upload-image"
+        />
         {err && <p className="text-[11px] text-red-400">{err}</p>}
       </div>
     </div>

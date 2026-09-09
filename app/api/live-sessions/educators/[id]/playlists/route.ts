@@ -15,7 +15,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   try {
     const { data } = await getSupabaseAdmin()
       .from("lms_educator_playlists")
-      .select("id, title, url, access_tier, sort_order")
+      .select("id, title, url, image_url, access_tier, sort_order")
       .eq("educator_id", id)
       .eq("is_active", true)
       .order("sort_order", { ascending: true })

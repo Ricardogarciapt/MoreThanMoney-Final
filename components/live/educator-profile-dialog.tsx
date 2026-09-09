@@ -67,7 +67,7 @@ export default function EducatorProfileDialog({
   const [courseIdx, setCourseIdx] = useState(0)
   // CURSOS próprios do educador (lms_educator_playlists) — somam-se às playlists das salas.
   const [ownPlaylists, setOwnPlaylists] = useState<
-    { id: string; title: string; url: string; access_tier: string | null }[]
+    { id: string; title: string; url: string; image_url: string | null; access_tier: string | null }[]
   >([])
   useEffect(() => {
     if (!open || !educator?.id) return
@@ -87,6 +87,8 @@ export default function EducatorProfileDialog({
       playlist_url: p.url,
       playlist_title: p.title,
       playlist_access_tier: (p.access_tier as StreamPreview["playlist_access_tier"]) ?? "all",
+      // A capa não faz parte do StreamPreview (as salas não a têm); viaja à parte.
+      __capa: p.image_url ?? null,
     })),
     ...streams.filter((s) => s.playlist_url),
   ] as StreamPreview[]
@@ -218,8 +220,17 @@ export default function EducatorProfileDialog({
                     )}
                   </div>
                   {(playlistStreams.length > 1 ? [playlistStreams[Math.min(courseIdx, playlistStreams.length - 1)]] : playlistStreams).map((s) => (
+                    <div key={`capa-${s.id}`} className="space-y-2">
+                    {(s as unknown as { __capa?: string | null }).__capa && (
+                      <div className="overflow-hidden rounded-xl border border-[#D2A63C]/20">
+                        <img
+                          src={(s as unknown as { __capa?: string | null }).__capa as string}
+                          alt={s.playlist_title || s.title}
+                          className="max-h-56 w-full object-cover object-top"
+                        />
+                      </div>
+                    )}
                     <LmsPlaylistSection
-                      key={s.id}
                       defaultOpen={!s.is_live}
                       playlistUrl={s.playlist_url}
                       playlistTitle={s.playlist_title || `${s.title} · Playlist`}
@@ -239,6 +250,7 @@ export default function EducatorProfileDialog({
                               : null
                       }
                     />
+                    </div>
                   ))}
                 </section>
               )}

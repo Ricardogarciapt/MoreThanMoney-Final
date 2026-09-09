@@ -13,6 +13,13 @@ export const dynamic = "force-dynamic"
 
 const TIERS = new Set(["all", "app_member", "premium", "vip"])
 
+/** Só http(s). Um `javascript:` ou `data:` num src é um vetor, não uma capa. */
+function capaValida(v: unknown): string | null {
+  const s = String(v ?? "").trim()
+  if (!s) return null
+  return /^https?:\/\//i.test(s) ? s : null
+}
+
 async function currentEducatorId(): Promise<string | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get(getEducatorCookieName())?.value
@@ -26,7 +33,7 @@ export async function GET() {
   if (!educatorId) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
   const { data } = await getSupabaseAdmin()
     .from("lms_educator_playlists")
-    .select("id, title, url, access_tier, sort_order, is_active")
+    .select("id, title, url, image_url, access_tier, sort_order, is_active")
     .eq("educator_id", educatorId)
     .order("sort_order", { ascending: true })
   return NextResponse.json({ playlists: data ?? [] })
@@ -49,9 +56,10 @@ export async function POST(request: NextRequest) {
       title: title.slice(0, 120),
       url,
       access_tier: tier,
+      image_url: capaValida(b?.image_url),
       sort_order: Number.isFinite(Number(b?.sort_order)) ? Number(b.sort_order) : 0,
     })
-    .select("id, title, url, access_tier, sort_order, is_active")
+    .select("id, title, url, image_url, access_tier, sort_order, is_active")
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ playlist: data })
@@ -68,6 +76,9 @@ export async function PATCH(request: NextRequest) {
   if (typeof b.title === "string" && b.title.trim()) patch.title = b.title.trim().slice(0, 120)
   if (typeof b.url === "string" && /^https?:\/\//i.test(b.url.trim())) patch.url = b.url.trim()
   if (TIERS.has(String(b?.access_tier))) patch.access_tier = String(b.access_tier)
+  // String vazia LIMPA a capa; ausente deixa como está. Sem esta distinção não havia como tirar
+  // uma capa errada sem ir à base de dados.
+  if (typeof b.image_url === "string") patch.image_url = capaValida(b.image_url)
   if (Number.isFinite(Number(b?.sort_order))) patch.sort_order = Number(b.sort_order)
   if (typeof b.is_active === "boolean") patch.is_active = b.is_active
   const { error } = await getSupabaseAdmin()

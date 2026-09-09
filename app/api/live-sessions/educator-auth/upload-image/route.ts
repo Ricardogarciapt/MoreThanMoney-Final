@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     if (!ext) {
       return NextResponse.json({ error: "Formato não suportado. Usa JPEG, PNG, WebP ou GIF." }, { status: 400 })
     }
-    if (scope !== "educator_avatar" && scope !== "stream_thumbnail" && scope !== "stream_square") {
+    if (scope !== "educator_avatar" && scope !== "stream_thumbnail" && scope !== "stream_square" && scope !== "playlist_cover") {
       return NextResponse.json({ error: "scope inválido." }, { status: 400 })
     }
     if (refId && !isValidUUID(refId)) {

@@ -16,6 +16,8 @@ export interface CourseItem {
   title: string
   url: string
   tier: string | null
+  /** Capa do curso. As playlists de sala não têm — o botão fica só com o texto. */
+  image?: string | null
   /** 'educator' = curso próprio · 'room' = playlist de uma sala. */
   origin: "educator" | "room"
 }
@@ -62,10 +64,11 @@ export default function EducatorCoursesCard({
       .then((j) => {
         if (cancelled) return
         const list: CourseItem[] = (j?.playlists ?? []).map(
-          (p: { id: string; title: string; url: string; access_tier: string | null }) => ({
+          (p: { id: string; title: string; url: string; image_url: string | null; access_tier: string | null }) => ({
             id: `own-${p.id}`,
             title: p.title,
             url: p.url,
+            image: p.image_url ?? null,
             tier: p.access_tier ?? "all",
             origin: "educator" as const,
           }),
@@ -102,17 +105,39 @@ export default function EducatorCoursesCard({
                 key={c.id}
                 type="button"
                 onClick={() => setIdx(i)}
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
+                className={`inline-flex items-center gap-2 rounded-lg border py-1.5 pr-2.5 text-xs transition-colors ${
+                  c.image ? "pl-1.5" : "pl-2.5"
+                } ${
                   i === idx
                     ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
                     : "border-zinc-700 bg-zinc-900/60 text-zinc-300 hover:border-zinc-500"
                 }`}
               >
-                {locked ? <Lock className="h-3 w-3" /> : <PlayCircle className="h-3 w-3" />}
+                {c.image ? (
+                  // A capa é vertical (formato de cartaz). Recortada em quadrado pequeno pelo TOPO,
+                  // que é onde está a cara — centrar cortava-a a meio.
+                  <img
+                    src={c.image}
+                    alt=""
+                    loading="lazy"
+                    className="h-8 w-8 shrink-0 rounded object-cover object-top"
+                  />
+                ) : locked ? (
+                  <Lock className="h-3 w-3" />
+                ) : (
+                  <PlayCircle className="h-3 w-3" />
+                )}
                 <span className="max-w-[190px] truncate">{c.title}</span>
+                {c.image && locked && <Lock className="h-3 w-3 shrink-0" />}
               </button>
             )
           })}
+        </div>
+      )}
+
+      {current.image && (
+        <div className="mb-3 overflow-hidden rounded-xl border border-[#D2A63C]/20">
+          <img src={current.image} alt={current.title} className="max-h-64 w-full object-cover object-top" />
         </div>
       )}
 
