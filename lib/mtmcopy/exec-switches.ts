@@ -60,14 +60,14 @@ export interface ExecSwitches {
    */
   golddid_exec: boolean
   /**
-   * A estratégia GOLDEN MOVES (layering): duas entradas por sinal na conta MT5 34368570.
+   * A estratégia GOLDEN ASTRO: XAUUSD, com os níveis publicados pelo próprio trader.
    *
-   * Default **OFF**, ao contrário das outras. É conta REAL, abre DUAS ordens por sinal em vez de
-   * uma, e nunca correu em produção — as três coisas juntas dizem que se liga quando alguém
-   * estiver a olhar, não sozinha no primeiro sinal que aparecer.
+   * Default OFF — liga-se por escolha, com alguém a olhar. (O comentário da Golden Moves vivia
+   * aqui pendurado sobre este campo; a estratégia foi removida com o canal-fonte dela.)
    */
-  /** A estratégia GOLDEN ASTRO. Default OFF, e sem conta própria nem chega a ser consultado. */
   goldenastro_exec: boolean
+  /** Respeitar as janelas de Londres da Golden Astro. Off = copia o trader como ele negoceia. */
+  goldenastro_janelas: boolean
 }
 
 const KEY = "mtmcopy_exec_switches"
@@ -97,6 +97,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       premium_master_exec: v.premium_master_exec !== false, // default ON (conta mestre)
       golddid_exec: v.golddid_exec !== false, // default ON (conta demo do Alcy)
       goldenastro_exec: v.goldenastro_exec === true, // default OFF (à espera de conta própria)
+      goldenastro_janelas: v.goldenastro_janelas !== false, // default ON — é a regra escrita
     }
   } catch {
     return {
@@ -114,6 +115,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       premium_master_exec: true,
       golddid_exec: true,
       goldenastro_exec: false,
+      goldenastro_janelas: true,
     }
   }
 }

@@ -82,10 +82,18 @@ export function dentroDaJanela(quando: Date = new Date()): boolean {
   return GOLDENASTRO_JANELAS.some(([de, ate]) => agora >= minutosDe(de) && agora <= minutosDe(ate))
 }
 
-/** «Gold Buy» / «Gold sell» — o gatilho, e mais nada. */
+/**
+ * O gatilho de entrada.
+ *
+ * As regras escritas dizem «Gold Buy» / «Gold sell», mas no grupo o trader escreve
+ * «XAUUSD I'm buying» / «XAUUSD I'm selling» — em 44 setups não há um único «Gold Buy».
+ * Ler só a forma documentada era ficar à espera de uma mensagem que ele nunca manda.
+ * Aceitam-se as duas; a apóstrofe pode vir reta ('), curva (’) ou não vir de todo.
+ */
 export function direcaoGoldenAstro(texto: string): 'buy' | 'sell' | null {
   const t = (texto ?? '').toLowerCase()
-  if (!/\bgold\b/.test(t)) return null
+  if (/\bi.?m\s+buying\b/.test(t)) return 'buy'
+  if (/\bi.?m\s+selling\b/.test(t)) return 'sell'
   if (/\bgold\s+buy\b/.test(t)) return 'buy'
   if (/\bgold\s+sell\b/.test(t)) return 'sell'
   return null
@@ -130,5 +138,53 @@ export function planoGoldenAstro(
     // «Reduce stop loss exposure by 50%»: o stop passa a metade da distância, do mesmo lado.
     // Não é break-even — o trader não diz break-even, diz metade do risco.
     slAposTp2: arred(entrada - sinal * (stopPips / 2) * pip),
+  }
+}
+
+/**
+ * O plano tal como o TRADER o publicou.
+ *
+ * O grupo manda os níveis todos por extenso:
+ *
+ *     XAUUSD I'm selling
+ *     Entry Zone 4395.09 - 4400.09
+ *     Stop Loss 4405.09
+ *     TP 1 4392.59 … TP 5 4380.09
+ *
+ * Bate certo com as regras escritas — o stop está a 100 pips da aresta de perto da zona e os
+ * alvos a 25/50/75/100/150 dela — mas os números são DELE. Recalcular a escada a partir do
+ * preço de mercado no instante da execução dava outro trade: com o preço a 4398, o stop
+ * sintetizado ficava em 4408 em vez dos 4405,09 que ele publicou, e os cinco alvos deslizavam
+ * todos. Copiar um trader é copiar os níveis dele, não a nossa reconstrução deles.
+ *
+ * A escada em pips continua a existir — para os setups que venham sem níveis.
+ */
+export function planoPublicado(
+  sinal: { symbol?: string | null; direction?: 'buy' | 'sell' | null; entry?: number | null; sl?: number | null; tp?: number[] | null },
+  direction: 'buy' | 'sell',
+): PlanoGoldenAstro | null {
+  const entrada = sinal.entry
+  const sl = sinal.sl
+  const tp = (sinal.tp ?? []).filter((n) => Number.isFinite(n) && n > 0)
+  if (!Number.isFinite(entrada as number) || !(entrada as number > 0)) return null
+  if (!Number.isFinite(sl as number) || !(sl as number > 0)) return null
+  if (tp.length === 0) return null
+
+  // O stop tem de estar do lado certo da entrada. Um stop trocado abre uma posição que fecha
+  // no instante seguinte, com a perda a contar como se o mercado a tivesse feito.
+  const risco = direction === 'buy' ? (entrada as number) - (sl as number) : (sl as number) - (entrada as number)
+  if (!(risco > 0)) return null
+
+  const arred = (n: number) => Math.round(n * 100) / 100
+  const sentido = direction === 'buy' ? 1 : -1
+  return {
+    symbol: sinal.symbol || GOLDENASTRO_SIMBOLO,
+    direction,
+    entrada: arred(entrada as number),
+    sl: arred(sl as number),
+    tp: tp.map(arred),
+    // «Reduce stop loss exposure by 50%» — metade do risco REAL deste setup, não metade dos
+    // 100 pips teóricos: o trader nem sempre publica um stop de 100 pips.
+    slAposTp2: arred((entrada as number) - sentido * (risco / 2)),
   }
 }

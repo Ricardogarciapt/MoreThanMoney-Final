@@ -18,6 +18,7 @@ import {
   dentroDaJanela,
   GOLDENASTRO_SAIDAS,
   GOLDENASTRO_SIMBOLO,
+  planoPublicado,
 } from './golden-astro'
 import { GOLDENASTRO_PROVIDER_ACCOUNT_ID } from './provider-constants'
 import { getExecSwitches } from './exec-switches'
@@ -103,18 +104,36 @@ export async function pernaGoldenAstro(args: {
   const direction = direcaoGoldenAstro(args.raw)
   if (!direction) return { tratado: true, abertas: 0, detalhe: 'sem gatilho Gold Buy/Gold sell' }
 
-  // A janela é regra da estratégia, não sugestão: fora dela o trader não opera.
-  if (!dentroDaJanela(args.quando ?? new Date())) {
+  /**
+   * A janela é regra ESCRITA da estratégia — mas o trader não a cumpre.
+   *
+   * Em 44 setups entre 25/08 e 08/09, 17 (39%) caíram fora das três janelas: manhãs às 09:47,
+   * tardes às 16:25 e 17:36 de Londres. Com o guarda ligado deixam-se passar quatro em cada
+   * dez sinais dele, e nada no sistema o diz — a execução some sem ruído.
+   *
+   * Fica em interruptor, ligado por omissão porque é a regra que o Ricardo escreveu. Quem o
+   * desligar copia o trader como ele negoceia de facto, e não como se descreve.
+   */
+  if (sw.goldenastro_janelas !== false && !dentroDaJanela(args.quando ?? new Date())) {
     return { tratado: true, abertas: 0, detalhe: 'fora das janelas de Londres' }
   }
 
-  // Um setup pode trazer stop próprio («unless otherwise specified»).
   const doTexto = parseSignal(args.raw)
-  const preco = args.precoAtual ?? doTexto?.entry ?? null
-  if (preco == null) return { tratado: true, abertas: 0, detalhe: 'sem preço de referência' }
 
-  const plano = planoGoldenAstro(direction, preco, { symbol: doTexto?.symbol ?? GOLDENASTRO_SIMBOLO })
-  if (!plano) return { tratado: true, abertas: 0, detalhe: 'plano inválido' }
+  /**
+   * OS NÍVEIS SÃO DELE, NÃO NOSSOS.
+   *
+   * O grupo publica a zona, o stop e os cinco alvos por extenso. Só se sintetiza a escada em
+   * pips quando o setup vier sem níveis — refazê-la por cima dos dele dava outro trade.
+   */
+  const plano =
+    (doTexto ? planoPublicado(doTexto, direction) : null) ??
+    (() => {
+      const preco = args.precoAtual ?? doTexto?.entry ?? null
+      if (preco == null) return null
+      return planoGoldenAstro(direction, preco, { symbol: doTexto?.symbol ?? GOLDENASTRO_SIMBOLO })
+    })()
+  if (!plano) return { tratado: true, abertas: 0, detalhe: 'sem níveis publicados nem preço de referência' }
 
   const req = args.construir(
     args.accountId,

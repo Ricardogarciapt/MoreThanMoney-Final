@@ -17,6 +17,10 @@ ENV:
       · filter: "gold" (setups/TP/SL/pips — o filtro clássico) ou "all" (tudo o que não for lixo).
       · header: cabeçalho de marca opcional (default "🏦 MTM Premium" quando dest é a Premium).
       · enabled: false para desligar a rota sem a apagar.
+      · app_only: true → NÃO publica no Telegram. Serve as fontes que só existem para executar
+        na conta provedora (Golden Astro): o `dest` é o próprio id da FONTE, e o site resolve a
+        estratégia por esse id. Nunca apontar uma destas ao chat Premium (-1002424441843): esse
+        slug é o único que executa nas contas dos CLIENTES.
   GMI_SOURCE_ID / GMI_DEST_CHAT                            (modo legado, 1 rota)
   GMI_DRY_RUN     "1" imprime, "0" publica
   GMI_STATE_FILE  default ./gmi_relay_state.json
@@ -115,6 +119,18 @@ def brand(text: str, header) -> str:
 
 NOISE = ("standby", "good morning traders", "new position", "position closed 🔒", "position closed")
 
+# Formato do GOLDEN ASTRO: «XAUUSD I'm buying» + zona/stop/alvos, e follow-ups «Tp2 hit».
+# O filtro "gold" não os apanha — exige «gold buy zone» ou pips, e ele não escreve nem uma
+# coisa nem outra. Sem esta lista a rota lia o canal e não passava um único sinal.
+ASTRO = [
+    re.compile(r"i.?m\s+(buying|selling)", re.I),
+    re.compile(r"entry\s*zone", re.I),
+    re.compile(r"\btp\s*\d\s*hit", re.I),
+    re.compile(r"\bsl\s*hit\b", re.I),
+    re.compile(r"stop\s*loss\b", re.I),
+    re.compile(r"\b(close|closed|be|break\s*even)\b", re.I),
+]
+
 def should_forward(text: str, mode: str) -> bool:
     if not text or len(text.strip()) < 4:
         return False
@@ -122,6 +138,8 @@ def should_forward(text: str, mode: str) -> bool:
         return False
     if mode == "all":
         return True
+    if mode == "astro":
+        return any(rx.search(text) for rx in ASTRO)
     return any(rx.search(text) for rx in KEEP)
 
 # ── Estado por rota ──────────────────────────────────────────────────────────
@@ -142,7 +160,7 @@ def save_state(s):
 RELAY_POST_URL = os.environ.get("RELAY_POST_URL", "https://www.morethanmoney.pt/api/telegram/relay-post")
 RELAY_SECRET = os.environ.get("RELAY_SECRET", "")
 
-def bot_send(dest, source_id, text, reply_to=None, source_msg_id=None, reply_to_source_id=None, reply_to_text=None, edit=False):
+def bot_send(dest, source_id, text, reply_to=None, source_msg_id=None, reply_to_source_id=None, reply_to_text=None, edit=False, app_only=False):
     """Publica via o ENDPOINT do site (token válido na Vercel).
     Devolve: int>0 message_id · -1 DRY_RUN · -2 dup no servidor · None FALHA (não avançar last_id)."""
     if DRY_RUN:
@@ -151,6 +169,8 @@ def bot_send(dest, source_id, text, reply_to=None, source_msg_id=None, reply_to_
     payload = {"chat_id": dest, "text": text}
     if edit:
         payload["edit"] = True
+    if app_only:
+        payload["app_only"] = True
     if reply_to:
         payload["reply_to_message_id"] = reply_to
     if source_msg_id is not None:
@@ -229,7 +249,8 @@ async def run_route(client, route, rstate):
                     ptext = None
             reply_to_text = sanitize(ptext) if ptext else None
         pid = bot_send(route["dest"], source_id, brand(clean, route.get("header")), reply_to,
-                       source_msg_id=m.id, reply_to_source_id=src_reply, reply_to_text=reply_to_text)
+                       source_msg_id=m.id, reply_to_source_id=src_reply, reply_to_text=reply_to_text,
+                       app_only=bool(route.get("app_only")))
         if pid is None:
             n = fails.get(str(m.id), 0) + 1
             fails[str(m.id)] = n
@@ -281,7 +302,8 @@ async def run_route(client, route, rstate):
                 continue
             if sid in vistos:                     # mudou → é uma edição a sério
                 if bot_send(route["dest"], source_id, brand(atual, route.get("header")),
-                            source_msg_id=m.id, edit=True) is not None:
+                            source_msg_id=m.id, edit=True,
+                            app_only=bool(route.get("app_only"))) is not None:
                     editadas += 1
                     print(f"[relay:{route['name']}] editada msg {m.id}")
             vistos[sid] = h
