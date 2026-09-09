@@ -156,6 +156,10 @@
     {
       "path": "/api/cron/funis",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/mtmcopy-reconciliar",
+      "schedule": "*/30 * * * *"
     }
   ]
 }
