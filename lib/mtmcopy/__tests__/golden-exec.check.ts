@@ -6,8 +6,8 @@
  * cada recusa — fora de janela, zona impossível, interruptor desligado — vira uma ordem a
  * mercado que a estratégia nunca pediu.
  */
-import { pernaGoldenMoves, pernaGoldenAstro } from '../golden-exec'
-import { GOLDENMOVES_PROVIDER_ACCOUNT_ID, GOLDENASTRO_PROVIDER_ACCOUNT_ID } from '../provider-constants'
+import { pernaGoldenAstro } from '../golden-exec'
+import { GOLDENASTRO_PROVIDER_ACCOUNT_ID } from '../provider-constants'
 import type { OrderRequest, OrderResult } from '../metaapi'
 
 let ok = 0
@@ -32,42 +32,6 @@ const colocar = async (_a: string, req: OrderRequest): Promise<OrderResult> => {
 const VENDA = `I'm selling XAUUSD\n4411-4415\nTP1 4408\nTP2 4406\nTP3 4404\nTP4 4400\nSL 4419`
 
 async function main() {
-  // ── Conta que não é dela: não é comigo, deixa passar ao genérico ───────────────────────
-  const alheia = await pernaGoldenMoves({
-    accountId: 'outra-conta-qualquer', raw: VENDA, construir, colocar,
-  })
-  eq('conta alheia não é tratada pela Golden Moves', alheia.tratado, false)
-  eq('e não abriu nada', ordens.length, 0)
-
-  // ── Golden Moves na conta dela ────────────────────────────────────────────────────────
-  const gm = await pernaGoldenMoves({
-    accountId: GOLDENMOVES_PROVIDER_ACCOUNT_ID, raw: VENDA, construir, colocar,
-  })
-  eq('assume o sinal', gm.tratado, true)
-  if (gm.detalhe.includes('goldenmoves_exec=off')) {
-    console.log('  (interruptor desligado — as ordens não são testadas aqui)')
-  } else {
-    eq('abriu DUAS camadas', ordens.length, 2)
-    eq('a primeira é a mercado', ordens[0]?.orderType, 'market')
-    eq('a mercado no lado de baixo da zona', ordens[0]?.openPrice, 4411)
-    eq('a segunda é LIMITE', ordens[1]?.orderType, 'limit')
-    eq('a limite no preço melhor da venda', ordens[1]?.openPrice, 4415)
-    eq('as duas com o mesmo stop', ordens[0]?.stopLoss, 4419)
-    eq('e o mesmo stop na limite', ordens[1]?.stopLoss, 4419)
-    eq('as duas vendem', `${ordens[0]?.direction}/${ordens[1]?.direction}`, 'sell/sell')
-  }
-
-  // ── Uma zona impossível é RECUSADA, mas continua a ser dela ───────────────────────────
-  ordens.length = 0
-  const impossivel = await pernaGoldenMoves({
-    accountId: GOLDENMOVES_PROVIDER_ACCOUNT_ID,
-    raw: `I'm selling XAUUSD\n4411-4415\nTP1 4408\nSL 4400`, // stop do lado errado
-    construir, colocar,
-  })
-  eq('geometria impossível continua a ser dela', impossivel.tratado, true)
-  eq('e não abre nada', impossivel.abertas, 0)
-  eq('nenhuma ordem foi enviada', ordens.length, 0)
-
   // ── Golden Astro fora da janela ───────────────────────────────────────────────────────
   ordens.length = 0
   const fora = await pernaGoldenAstro({
@@ -89,10 +53,10 @@ async function main() {
 
   // ── Conta alheia na Astro ─────────────────────────────────────────────────────────────
   const alheia2 = await pernaGoldenAstro({
-    accountId: GOLDENMOVES_PROVIDER_ACCOUNT_ID, raw: 'Gold Buy', precoAtual: 4411,
+    accountId: 'outra-conta-qualquer', raw: 'Gold Buy', precoAtual: 4411,
     construir, colocar, lote: 0.02, quando: new Date('2026-09-07T07:30:00Z'),
   })
-  eq('a Astro não toca na conta da Golden Moves', alheia2.tratado, false)
+  eq('a Astro não toca em contas alheias', alheia2.tratado, false)
 
   console.log(`\n${ok} passaram, ${mau} falharam`)
   if (mau) process.exit(1)

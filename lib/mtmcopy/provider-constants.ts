@@ -116,20 +116,6 @@ export const CANONICAL_GOLDENMOVES_ACCOUNT_ID = CANONICAL_AURUMFLOW_ACCOUNT_ID
 export const CANONICAL_GOLDENMOVES_STRATEGY_ID = CANONICAL_AURUMFLOW_STRATEGY_ID
 
 /**
- * GOLDEN MOVES — a estratégia em camadas, conta e estratégia próprias.
- *
- * ⚠️ Não confundir com `CANONICAL_GOLDENMOVES_*` logo acima: esses são o nome ANTIGO da Aurum
- * Flow, de quando ela se chamava Golden Moves, e continuam a apontar para ela. Isto aqui é
- * outra coisa — o grupo Golden Moves como fonte, com layering (duas entradas por sinal).
- *
- * Conta MT5 34368570 na PU Prime Live 6, escolhida pelo Ricardo a 04/09. O nome que tem na
- * MetaApi («MTM Auto Aurum Flow - Ricardo Garcia») é herança e não quer dizer nada.
- */
-export const GOLDENMOVES_PROVIDER_ACCOUNT_ID = '111c8463-efb7-4f8c-a908-268c3b634858'
-export const GOLDENMOVES_PROVIDER_STRATEGY_ID = 'YMEE'
-export const GOLDENMOVES_NOME = 'MTM Auto Golden Moves'
-
-/**
  * GOLDEN ASTRO — conta PRÓPRIA, separada da Golden Moves.
  *
  * Porquê separada: uma estratégia CopyFactory publica tudo o que acontece na conta, e não sabe
@@ -167,7 +153,6 @@ export function goldenAstroColideCom(): string | null {
     [CANONICAL_PREMIUM_ACCOUNT_ID, 'MTM Auto Premium'],
     [CANONICAL_AURUMFLOW_ACCOUNT_ID, 'MTM Auto Aurum Flow'],
     [CANONICAL_GOLDDID_ACCOUNT_ID, 'Gold Did Premium'],
-    [GOLDENMOVES_PROVIDER_ACCOUNT_ID, 'MTM Auto Golden Moves'],
   ]
   const nome = outras.find(([id]) => id && id === GOLDENASTRO_PROVIDER_ACCOUNT_ID)?.[1]
   return nome ?? null
@@ -212,7 +197,6 @@ export const CONTAS_MOTOR_TEMPO_REAL: string[] = [
   // O layering da Golden Moves depende do motor: é ele que põe a entrada de mercado em
   // break-even quando a limite enche, e que arrasta o runner. Sem esta linha a estratégia
   // abria as duas camadas e ficava a olhar para elas.
-  GOLDENMOVES_PROVIDER_ACCOUNT_ID,   // MTM Auto Golden Moves · MT5 34368570 · YMEE
   // A Golden Astro entra sozinha assim que a conta existir. A lista tem de ficar sem strings
   // vazias: um '' aqui faria `ehContaDeMotor('')` dizer que sim a uma conta sem id.
   ...(GOLDENASTRO_PROVIDER_ACCOUNT_ID ? [GOLDENASTRO_PROVIDER_ACCOUNT_ID] : []), // · jbSS

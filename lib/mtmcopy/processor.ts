@@ -978,23 +978,18 @@ async function executeViaMtmProvider(
    * Deixá-lo seguir era transformar cada recusa numa ordem que a estratégia nunca pediu.
    */
   {
-    const { pernaGoldenMoves, pernaGoldenAstro } = await import('./golden-exec')
+    // 2026-09-09: a Golden Moves foi removida (o canal-fonte deixou de existir);
+    // a única perna especial que resta é a Golden Astro.
+    const { pernaGoldenAstro } = await import('./golden-exec')
     const construir = (accountId: string, sinal: NonNullable<ReturnType<typeof parseSignal>>, lote: number, comentario: string) =>
       buildOrderRequest(providerConnForGolden(executionProfile), accountId, sinal, lote, comentario)
 
-    const gm = await pernaGoldenMoves({
-      accountId: provider.accountId, raw, telegramMessageId, construir, colocar: colocarOrdemDoProvedor,
+    const ga = await pernaGoldenAstro({
+      accountId: provider.accountId, raw, telegramMessageId,
+      precoAtual: signal.entry ?? null, construir, colocar: colocarOrdemDoProvedor,
+      lote: Number(executionProfile.lot_value ?? 0.5),
     })
-    const perna = gm.tratado
-      ? { nome: 'Golden Moves', ...gm }
-      : await (async () => {
-          const ga = await pernaGoldenAstro({
-            accountId: provider.accountId, raw, telegramMessageId,
-            precoAtual: signal.entry ?? null, construir, colocar: colocarOrdemDoProvedor,
-            lote: Number(executionProfile.lot_value ?? 0.5),
-          })
-          return ga.tratado ? { nome: 'Golden Astro', ...ga } : null
-        })()
+    const perna = ga.tratado ? { nome: 'Golden Astro', ...ga } : null
 
     if (perna) {
       await logProviderSignalEvent({

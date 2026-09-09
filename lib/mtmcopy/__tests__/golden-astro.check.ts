@@ -82,8 +82,6 @@ eq('alvos publicados', GOLDENASTRO_ALVOS_PIPS.join(','), '25,50,75,100,150')
 import {
   GOLDENASTRO_PROVIDER_ACCOUNT_ID,
   GOLDENASTRO_PROVIDER_STRATEGY_ID,
-  GOLDENMOVES_PROVIDER_ACCOUNT_ID,
-  GOLDENMOVES_PROVIDER_STRATEGY_ID,
   goldenAstroPronta,
   goldenAstroColideCom,
   SENSEI_PROVIDER_ACCOUNT_ID,
@@ -99,10 +97,7 @@ eq('e por isso pode executar', goldenAstroPronta(), true)
 eq('o Sensei já não está nessa conta', SENSEI_PROVIDER_ACCOUNT_ID === GOLDENASTRO_PROVIDER_ACCOUNT_ID, false)
 eq('uma conta vazia nunca é conta de motor', ehContaDeMotor(''), false)
 eq('a lista do motor não tem buracos', CONTAS_MOTOR_TEMPO_REAL.every((c) => Boolean(c && c.trim())), true)
-eq('Golden Astro NÃO partilha a conta da Golden Moves',
-  GOLDENASTRO_PROVIDER_ACCOUNT_ID === GOLDENMOVES_PROVIDER_ACCOUNT_ID, false)
-eq('a estratégia dela é outra',
-  String(GOLDENASTRO_PROVIDER_STRATEGY_ID) === String(GOLDENMOVES_PROVIDER_STRATEGY_ID), false)
+eq('a estratégia dela tem id', String(GOLDENASTRO_PROVIDER_STRATEGY_ID).length > 0, true)
 
 console.log(`\n${ok} passaram, ${mau} falharam`)
 if (mau) process.exit(1)

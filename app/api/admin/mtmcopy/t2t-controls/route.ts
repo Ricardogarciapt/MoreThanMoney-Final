@@ -44,10 +44,8 @@ const EXTRA_CHANNEL_LABELS: Record<string, string> = {
 const ROUTE_TO_MTMAUTO_SLUGS: Record<string, string[]> = {
   'canonical-premium-signals': ['premium-ouro', 'gold-did-premium'],
   'canonical-sensei': ['sensei'],
+  // ⚠️ O slug 'golden-moves' é o nome ANTIGO da Aurum Flow (herança), não uma estratégia própria.
   'canonical-aurum-flow': ['golden-moves'],
-  // ⚠️ O slug 'golden-moves' acima é o nome ANTIGO da Aurum Flow, não desta. A estratégia nova
-  // leva slugs próprios para o botão do painel a poder parar na app MTM Auto.
-  'canonical-golden-moves': ['mtm-auto-golden-moves'],
   'canonical-golden-astro': ['mtm-auto-golden-astro'],
 }
 

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 /**
- * Entrada dos bots SECUNDÁRIOS — hoje o @WifiMoney_byCR_bot, que é admin no grupo Golden Moves.
+ * Entrada dos bots SECUNDÁRIOS — hoje o @WifiMoney_byCR_bot. (Nasceu para o grupo Golden
+ * Moves, que entretanto deixou de existir; fica como porta genérica de fontes futuras.)
  *
  * Porque é preciso outro webhook: cada bot tem o seu próprio fluxo de updates. O bot principal
  * não vê o que se escreve num grupo onde não está, por mais admin que o outro seja. Ligar a
@@ -13,7 +14,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  *
  * Este endpoint faz duas coisas e nada mais:
  *  1. regista o grupo em `mtmcopy_telegram_discovered`, para ele aparecer no admin e se lhe
- *     poder apontar uma rota (é assim que o id do Golden Moves vai ser descoberto);
+ *     poder apontar uma rota;
  *  2. entrega a mensagem à rota que tiver esse chat — se não houver rota, fica-se pelo registo.
  *
  * Nunca executa por adivinhação: sem rota apontada a este chat, não abre ordem nenhuma.
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
   /**
    * Três formas de um grupo se dar a conhecer, por ordem de discrição.
    *
-   * O caminho óbvio — escrever no grupo — nem sempre serve: o Golden Moves é de terceiros, e
+   * O caminho óbvio — escrever no grupo — nem sempre serve num grupo de terceiros:
    * mandar lá um "teste" é escrever à frente de toda a gente. Por isso:
    *
    *  · uma REAÇÃO a qualquer mensagem já existente basta (`message_reaction`), e não escreve
@@ -112,9 +113,8 @@ export async function POST(req: NextRequest) {
   /**
    * GUARDA DO CICLO: nunca ler de volta o que fomos NÓS a escrever.
    *
-   * O grupo Golden Moves (-1004343748070) é o mesmo chat que serve de destino ao relay do
-   * Alcy — foi renomeado, não duplicado. Ou seja: republicamos ali sinais do Premium e agora
-   * também lemos dali entradas da Golden Moves. Sem guarda, o nosso próprio relay voltaria a
+   * Um chat pode ser ao mesmo tempo DESTINO de um relay nosso e FONTE lida por este bot
+   * (aconteceu com o -1004343748070). Sem guarda, o nosso próprio relay voltaria a
    * entrar como sinal e o mesmo trade abria duas vezes, em duas contas, por dois caminhos.
    *
    * O guarda é ESTRUTURAL e não por texto: compara o autor com o próprio bot. Filtrar pelo

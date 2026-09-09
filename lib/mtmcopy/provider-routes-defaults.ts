@@ -14,8 +14,6 @@ import {
   SENSEI_PROVIDER_ACCOUNT_ID,
   CANONICAL_AURUMFLOW_ACCOUNT_ID,
   CANONICAL_AURUMFLOW_STRATEGY_ID,
-  GOLDENMOVES_PROVIDER_ACCOUNT_ID,
-  GOLDENMOVES_PROVIDER_STRATEGY_ID,
   GOLDENASTRO_PROVIDER_ACCOUNT_ID,
   GOLDENASTRO_PROVIDER_STRATEGY_ID,
   goldenAstroPronta,
@@ -128,39 +126,6 @@ export function buildCanonicalProviderRoutes(): ProviderRoute[] {
       enabled: true,
     },
     /**
-     * MTM AUTO GOLDEN MOVES — layering, conta MT5 34368570, estratégia YMEE.
-     *
-     * `sender_chat_id` fica a null porque o grupo Golden Moves NÃO está ligado ao bot: não
-     * aparece nos canais descobertos, e o id que já lhe pertenceu (-1004343748070) é hoje o
-     * grupo «Wifi Money - by CR». Uma rota sem chat e sem canal não casa com sinal nenhum —
-     * fica registada, com conta e estratégia certas, à espera da fonte. Pôr aqui um id
-     * adivinhado era pior do que não executar: executava o grupo errado.
-     *
-     * Gestão pelo MOTOR DE PREÇO: é ele que põe a primeira camada em break-even quando a
-     * limite enche, e que arrasta o runner depois do primeiro alvo.
-     */
-    {
-      id: 'canonical-golden-moves',
-      label: 'MTM Auto Golden Moves',
-      sender_channel: null,
-      sender_chat_id: null,
-      signal_source: 'telegram',
-      account_id: GOLDENMOVES_PROVIDER_ACCOUNT_ID,
-      strategy_id: GOLDENMOVES_PROVIDER_STRATEGY_ID,
-      tag: 'MTM Auto Golden Moves',
-      ai_strategy_prompt: null,
-      execution: {
-        ...TRADE_IDEAS_PROVIDER_EXECUTION,
-        lot_value: MTM_DEFAULT_RISK_PERCENT,
-        mt_comment: 'MTM Auto Golden Moves',
-        auto_trailing_stop: false,
-        price_monitor: true,
-      },
-      app_channel: null,
-      tap_to_trade: false,
-      enabled: true,
-    },
-    /**
      * MTM AUTO GOLDEN ASTRO — Time/Price/Volume, conta MT5 34744071 (a que era do Sensei),
      * estratégia jbSS. Fonte: o grupo «GOLDEN ASTRO🚀( TESTE)».
      *
@@ -230,9 +195,8 @@ export function repairProviderRoutes(routes: ProviderRoute[]): ProviderRoute[] {
       // Preserva o chat T2T dedicado editável (ex.: GoldKiller → 'sinais-goldkiller'),
       // senão a reconstrução canónica mapeava-o pelo sender_channel partilhado ('trade-ideas').
       app_channel: saved.app_channel ?? c.app_channel,
-      // O chat de ORIGEM guardado ganha à canónica quando esta não tem nenhum. É assim que a
-      // Golden Moves recebe o id do grupo sem esperar por um deploy: o grupo aparece nos
-      // descobertos (o bot admin regista-o) e aponta-se-lhe a rota no próprio painel.
+      // O chat de ORIGEM guardado ganha à canónica quando esta não tem nenhum — permite
+      // apontar uma fonte nova a uma rota canónica pelo painel, sem esperar por um deploy.
       sender_chat_id: c.sender_chat_id ?? saved.sender_chat_id ?? null,
       ...(masterNone ? { account_id: '', strategy_id: null } : {}),
     }

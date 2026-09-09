@@ -2,7 +2,7 @@
  * Contas cujas métricas arrancam do ZERO numa data.
  *
  * Uma conta reaproveitada traz o histórico de quem lá esteve antes. A 34744071 foi do Sensei
- * antes de ser da Golden Astro; a 34368570 e a 34744077 também negociaram antes de serem o que
+ * antes de ser da Golden Astro; a 34744077 também negociou antes de ser o que
  * são hoje. Mostrar esse passado ao lado do nome novo não é um detalhe estético: é atribuir a
  * uma estratégia resultados que ela não fez — para o bem e para o mal.
  *
@@ -23,8 +23,6 @@
 const HOJE_LISBOA = '2026-09-06T23:00:00.000Z'
 
 export const METRICAS_DESDE: Record<string, string> = {
-  // MTM Auto Golden Moves · MT5 34368570 — estratégia nova numa conta que já negociou.
-  '111c8463-efb7-4f8c-a908-268c3b634858': HOJE_LISBOA,
   // MTM Auto Golden Astro · MT5 34744071 — era a conta do Sensei até 04/09.
   '16f4f233-5cbe-4fe9-9530-89a58965bfe0': HOJE_LISBOA,
   // MTM Auto Aurum Flow · MT5 34744077 — pedido do Ricardo: recomeçar a contagem hoje.

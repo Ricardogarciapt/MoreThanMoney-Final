@@ -12,7 +12,6 @@
 
 import type { OrderRequest, OrderResult } from './metaapi'
 import { parseSignal } from './signal-parser'
-import { planoGoldenMoves, GOLDENMOVES_LOTE, GOLDENMOVES_SAIDAS } from './golden-moves'
 import {
   planoGoldenAstro,
   direcaoGoldenAstro,
@@ -20,7 +19,7 @@ import {
   GOLDENASTRO_SAIDAS,
   GOLDENASTRO_SIMBOLO,
 } from './golden-astro'
-import { GOLDENMOVES_PROVIDER_ACCOUNT_ID, GOLDENASTRO_PROVIDER_ACCOUNT_ID } from './provider-constants'
+import { GOLDENASTRO_PROVIDER_ACCOUNT_ID } from './provider-constants'
 import { getExecSwitches } from './exec-switches'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
@@ -75,70 +74,6 @@ async function registarNoMotor(args: {
         console.error('[golden] ordem aberta MAS não registada no motor:', e)
       },
     )
-}
-
-/**
- * GOLDEN MOVES — as duas camadas.
- *
- * A de mercado abre já; a limite fica pendente na ponta da zona. Se a limite nunca encher, fica
- * uma trade normal — e isso é um resultado aceitável, não uma falha.
- *
- * A ordem limite leva o MESMO stop e os mesmos alvos: é a mesma ideia a um preço melhor.
- */
-export async function pernaGoldenMoves(args: {
-  accountId: string
-  raw: string
-  telegramMessageId?: number
-  construir: (accountId: string, sinal: NonNullable<ReturnType<typeof parseSignal>>, lote: number, comentario: string) => OrderRequest
-  colocar: ColocarOrdem
-}): Promise<ResultadoPerna> {
-  if (args.accountId !== GOLDENMOVES_PROVIDER_ACCOUNT_ID) return { tratado: false, abertas: 0, detalhe: '' }
-
-  const sw = await getExecSwitches()
-  if (!sw.goldenmoves_exec) return { tratado: true, abertas: 0, detalhe: 'goldenmoves_exec=off' }
-
-  const sinal = parseSignal(args.raw)
-  if (!sinal) return { tratado: true, abertas: 0, detalhe: 'não é sinal' }
-
-  const plano = planoGoldenMoves(sinal, GOLDENMOVES_LOTE)
-  if (!plano) return { tratado: true, abertas: 0, detalhe: 'sem zona utilizável ou geometria impossível' }
-
-  let abertas = 0
-  const notas: string[] = []
-
-  for (const camada of plano.camadas) {
-    const base = { ...sinal, symbol: plano.symbol, direction: plano.direction, sl: plano.sl, tp: plano.tp }
-    const req = args.construir(
-      args.accountId,
-      { ...base, entry: camada.preco, orderType: camada.tipo === 'limite' ? 'limit' : 'market' },
-      camada.lote,
-      `GM-${camada.tipo === 'limite' ? 'LIM' : 'MKT'}-${camada.lote}`,
-    )
-    req.orderType = camada.tipo === 'limite' ? 'limit' : 'market'
-    if (camada.tipo === 'limite') req.openPrice = camada.preco
-
-    const r = await args.colocar(args.accountId, req, `GOLDEN MOVES ${req.symbol} ${req.direction} ${camada.tipo}`)
-    if (r?.success) {
-      abertas++
-      await registarNoMotor({
-        accountId: args.accountId,
-        symbol: req.symbol,
-        direction: plano.direction,
-        entry: camada.preco,
-        sl: plano.sl,
-        tp: plano.tp,
-        lote: camada.lote,
-        saidas: GOLDENMOVES_SAIDAS,
-        fonte: `goldenmoves:${camada.tipo}`,
-        telegramMessageId: args.telegramMessageId,
-      })
-      notas.push(`${camada.tipo} @ ${camada.preco}`)
-    } else {
-      notas.push(`${camada.tipo} FALHOU: ${r?.error ?? '?'}`)
-    }
-  }
-
-  return { tratado: true, abertas, detalhe: notas.join(' · ') }
 }
 
 /**
