@@ -283,6 +283,31 @@ async function abrirNaContaEspelho(l: Linha, price: number): Promise<void> {
   }
 }
 
+
+/**
+ * Os pips que a trade já EMBOLSOU nas parciais, quando o resto fecha no break-even.
+ *
+ * As saídas são 50% no primeiro alvo, 25% no segundo e 25% no terceiro (regra confirmada pelo
+ * Ricardo a 09/09). Um sinal que levou o alvo 1 e voltou à entrada não deu zero: deu metade do
+ * primeiro alvo. Dizer zero seria tão falso como a perda inteira que aqui se registava antes.
+ *
+ * Devolve null quando não há entrada nem alvos para medir — «não se soube» é honesto.
+ */
+const PESOS_SAIDA = [0.5, 0.25, 0.25] as const
+
+function pipsEmbolsados(l: { entry: number | null; tps: number[]; exits_done: number; direction: string }, pip: number): number | null {
+  if (l.entry == null || !(l.entry > 0) || !(pip > 0) || !l.tps?.length) return null
+  const compra = l.direction === 'buy'
+  let total = 0
+  for (let i = 0; i < Math.min(l.exits_done, PESOS_SAIDA.length); i++) {
+    const alvo = l.tps[i]
+    if (alvo == null) continue
+    const p = (compra ? alvo - l.entry : l.entry - alvo) / pip
+    if (Number.isFinite(p) && p > 0) total += p * PESOS_SAIDA[i]
+  }
+  return Math.round(total * 10) / 10
+}
+
 export async function runSignalTracker(): Promise<ResultadoTracker> {
   const switches = (await getExecSwitches()) as unknown as Record<string, unknown>
   if (switches.signal_tracker === false) {
@@ -380,11 +405,22 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
       // O cartão mede pela ENTRADA até ao preço que passamos: no stop é o SL, não a cotação do
       // instante — senão anunciava «+21 pips» numa trade que fechou em perda.
       /**
-       * Aqui o stop é SEMPRE o original: esta tabela regista o sinal como a fonte o publicou e
-       * nada nela reescreve o `sl` (o break-even e o trailing vivem no motor, na posição real).
-       * Por isso um toque neste stop é mesmo um stop loss, e não precisa da distinção que o
-       * `stopFoiProtegido` faz do lado do webhook — onde o stop que chega já pode ter subido.
+       * O stop desta linha passa a subir para a entrada no primeiro alvo (ver mais abaixo).
+       * Tocá-lo depois disso não é perder — é a proteção a funcionar, com as parciais já feitas.
+       *
+       * O que se regista então é o que foi EMBOLSADO nas parciais, não zero: quem levou 50% no
+       * alvo 1 e viu o resto voltar à entrada ganhou metade do primeiro alvo. Zero seria tão
+       * falso como a perda inteira que aqui estava antes.
        */
+      const noBreakEven =
+        l.entry != null && l.entry > 0 && l.sl != null && Math.abs(l.sl - l.entry) < pip * 0.5
+      if (noBreakEven) {
+        const ganho = pipsEmbolsados(l, pip)
+        await anunciar(l, 'stop_protegido', { price: l.sl })
+        await gravarDesfecho(l, ganho, 'Parciais + break-even')
+        eventos.push(`break-even ${l.symbol}${ganho != null ? ` +${Math.round(ganho)}p` : ''}`)
+        continue
+      }
       await anunciar(l, 'stop_loss', { price: l.sl })
       await gravarDesfecho(l, perda, 'Stop loss')
       eventos.push(`stop ${l.symbol}`)
@@ -409,10 +445,31 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
       await gravarDesfecho(l, pips, 'Alvo final')
       eventos.push(`alvo final ${l.symbol}${pips != null ? ` +${Math.round(pips)}p` : ''}`)
     } else {
+      /**
+       * NO PRIMEIRO ALVO O STOP VAI PARA A ENTRADA — e diz-se.
+       *
+       * Era isto que faltava. O PrimeVerse mandou 270 parciais em 14 dias e ZERO mensagens de
+       * break-even: o cliente nunca soube em que momento o risco dele deixou de existir. E o
+       * nosso lado também não, o que é pior — o `sl` desta linha ficava no stop original, e
+       * qualquer recuo até lá era medido e anunciado como perda inteira. Foi assim que 155
+       * sinais ficaram gravados a −11.102 pips quando tinham dado +6.016.
+       *
+       * Mover o stop AQUI resolve as duas coisas de uma vez: o cliente é avisado, e a linha
+       * passa a saber onde o stop está mesmo. O resto do ficheiro mede contra `l.sl`.
+       */
+      const moveuParaBE = proximo === 1 && l.entry != null && l.entry > 0
       await admin
         .from('mtmcopy_signal_tracking')
-        .update({ exits_done: proximo, updated_at: new Date().toISOString() })
+        .update({
+          exits_done: proximo,
+          ...(moveuParaBE ? { sl: l.entry } : {}),
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', l.id)
+      if (moveuParaBE) {
+        l.sl = l.entry
+        await anunciar(l, 'break_even', {})
+      }
       eventos.push(`alvo ${proximo} ${l.symbol}${pips != null ? ` +${Math.round(pips)}p` : ''}`)
     }
   }
