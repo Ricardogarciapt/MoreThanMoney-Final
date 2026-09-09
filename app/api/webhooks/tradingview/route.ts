@@ -1064,11 +1064,38 @@ export async function POST(request: NextRequest) {
   // IDEIAS publicam sempre no chat da app, no Telegram (Ideias de Perpétuos Cripto) e nas
   // fontes T2T; o bloqueio de execução fica registado acima em trade_status='filtered'.
   // Antes, o gate suprimia a entrega toda e o Aurum Flow nunca chegava ao chat.
+  /**
+   * O break-even que vem LOGO A SEGUIR a um alvo não se publica.
+   *
+   * A mensagem do alvo já diz «o resto corre com o stop protegido». Uma segunda a dizer «stop
+   * movido para a entrada» é a mesma informação outra vez — no Sensei saíram as duas ao mesmo
+   * minuto, com a ideia #18384, e o canal ficou a repetir-se (decisão do Ricardo, 09/09).
+   *
+   * Um break-even SEM alvo nenhum atrás continua a ser publicado: aí é notícia, porque o cliente
+   * não tinha como saber que o risco tinha desaparecido.
+   *
+   * A execução e o movimento do stop não passam por aqui — isto só decide o que se ESCREVE.
+   */
+  const ehBreakeven = (activeSensei?.alertType ?? initAlertType) === "breakeven"
+  let breakevenRedundante = false
+  if (ehBreakeven && activeSensei?.symbol) {
+    const { data: linha } = await supabase
+      .from("mtmcopy_signal_tracking")
+      .select("exits_done")
+      .eq("symbol", activeSensei.symbol)
+      .in("status", ["active", "closed"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    breakevenRedundante = Number(linha?.exits_done ?? 0) >= 1
+  }
+
   const alertOk =
-    isFollowup ||
-    isGoldKiller ||
-    perpsRequested ||
-    passesAlertGate(signalRules, execSymbolForGate, execConfCount, scannerKey, assetClass)
+    !breakevenRedundante &&
+    (isFollowup ||
+      isGoldKiller ||
+      perpsRequested ||
+      passesAlertGate(signalRules, execSymbolForGate, execConfCount, scannerKey, assetClass))
   let linkedIdea: SenseiTradeIdea | null = null
   if (isFollowup && activeSensei?.symbol) {
     linkedIdea = await findActiveSenseiIdeaForFollowup(

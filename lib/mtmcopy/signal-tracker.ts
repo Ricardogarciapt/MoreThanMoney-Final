@@ -466,10 +466,15 @@ export async function runSignalTracker(): Promise<ResultadoTracker> {
           updated_at: new Date().toISOString(),
         })
         .eq('id', l.id)
-      if (moveuParaBE) {
-        l.sl = l.entry
-        await anunciar(l, 'break_even', {})
-      }
+      /**
+       * O stop move-se, mas NÃO se anuncia à parte.
+       *
+       * A mensagem do alvo já diz «o resto corre com o stop protegido» — uma segunda mensagem a
+       * dizer «stop movido para a entrada» dois segundos depois é a mesma informação outra vez.
+       * No Sensei sairam as duas ao mesmo minuto e o chat ficou a repetir-se (decisão do Ricardo,
+       * 09/09). O que faltava nunca foi o aviso: era o stop mexer-se mesmo.
+       */
+      if (moveuParaBE) l.sl = l.entry
       eventos.push(`alvo ${proximo} ${l.symbol}${pips != null ? ` +${Math.round(pips)}p` : ''}`)
     }
   }
