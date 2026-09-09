@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
   isCategoryEnabled,
+  isSoundEnabled,
   normalizeNotificationPreferences,
   resolveNotificationCategory,
 } from '@/lib/notification-preferences'
@@ -107,6 +108,30 @@ async function filterUsersByPreferences(
       isCategoryEnabled(normalizeNotificationPreferences(row.notification_preferences), category),
     )
     .map((row) => row.id as string)
+}
+
+/**
+ * Quem desligou o som. O alerta chega na mesma — só não toca.
+ * Uma leitura para todos os destinatários; se falhar, todos levam som (não silenciar por engano).
+ */
+async function usersWithSoundOff(userIds: string[]): Promise<Set<string>> {
+  if (userIds.length === 0) return new Set()
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, notification_preferences')
+    .in('id', userIds)
+
+  if (error) {
+    console.warn('⚠️ [SEND PUSH] Erro ao ler preferência de som:', error.message)
+    return new Set()
+  }
+
+  return new Set(
+    (data ?? [])
+      .filter((row) => !isSoundEnabled(normalizeNotificationPreferences(row.notification_preferences)))
+      .map((row) => row.id as string),
+  )
 }
 
 // POST: Enviar notificação push + in-app
@@ -233,7 +258,8 @@ export async function POST(request: NextRequest) {
     let apnsSent = 0
     let apnsFailed = 0
     if (apnsTokens.length > 0) {
-      const apnsResult = await sendApnsNotifications(apnsTokens, payload)
+      const silenciosos = await usersWithSoundOff(apnsTokens.map((t) => t.user_id))
+      const apnsResult = await sendApnsNotifications(apnsTokens, payload, silenciosos)
       apnsSent   = apnsResult.sent
       apnsFailed = apnsResult.failed
       console.log(`📲 [SEND PUSH] APNs: ${apnsSent} enviadas, ${apnsFailed} falharam`)
@@ -371,6 +397,8 @@ function pushPriority(type?: string): { level: 'time-sensitive' | 'active'; rele
 async function sendApnsNotifications(
   tokens: Array<{ token: string; user_id: string }>,
   payload: { title: string; body: string; data?: Record<string, string>; url?: string },
+  /** ids de quem desligou "Som das notificações" — recebem o alerta sem `sound`. */
+  semSom: Set<string> = new Set(),
 ): Promise<{ sent: number; failed: number }> {
   if (tokens.length === 0) return { sent: 0, failed: 0 }
 
@@ -396,10 +424,10 @@ async function sendApnsNotifications(
   const jwtToken = await buildApnsJwt(authKey, keyId, teamId)
 
   const prio = pushPriority(payload.data?.type)
-  const apnsPayload = JSON.stringify({
+  const construirPayload = (comSom: boolean) => JSON.stringify({
     aps: {
       alert: { title: payload.title, body: payload.body },
-      sound: 'default',
+      ...(comSom ? { sound: 'default' } : {}),
       badge: 1,
       'interruption-level': prio.level,   // Trade Alerts/T2T furam o Focus (time-sensitive)
       'relevance-score': prio.relevance,  // ordena a stack: Trade Alerts > T2T > restantes
@@ -409,6 +437,8 @@ async function sendApnsNotifications(
     url: payload.url || payload.data?.url || '/app-mobile',
     ...(payload.data || {}),
   })
+  const payloadComSom = construirPayload(true)
+  const payloadSemSom = construirPayload(false)
 
   let sent = 0, failed = 0
 
@@ -431,7 +461,7 @@ async function sendApnsNotifications(
       }
     }
 
-    for (const { token } of tokens) {
+    for (const { token, user_id } of tokens) {
       const req = client.request({
         ':method':       'POST',
         ':path':         `/3/device/${token}`,
@@ -470,7 +500,7 @@ async function sendApnsNotifications(
         finish()
       })
 
-      req.write(apnsPayload, 'utf8')
+      req.write(semSom.has(user_id) ? payloadSemSom : payloadComSom, 'utf8')
       req.end()
     }
   })

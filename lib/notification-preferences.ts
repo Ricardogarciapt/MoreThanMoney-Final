@@ -7,7 +7,14 @@ export type NotificationCategory =
   | 'tap_to_trade'
   | 'primeverse'
 
-export type NotificationPreferences = Record<NotificationCategory, boolean>
+/**
+ * As categorias filtram o QUE chega. `sound_enabled` não é uma categoria: não filtra nada,
+ * decide só se o push toca. Vivia apenas no cliente — o servidor descartava-o e mandava
+ * sempre `sound: 'default'`, portanto o toggle mentia a quem o desligava.
+ */
+export type NotificationPreferences = Record<NotificationCategory, boolean> & {
+  sound_enabled: boolean
+}
 
 export const NOTIFICATION_CATEGORY_LABELS: Record<
   NotificationCategory,
@@ -66,6 +73,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   telegram_groups: false, // Premium e restantes canais espelhados → opt-in
   chat: false,          // conversa dos canais → opt-in
   primeverse: false,    // opt-in — o cliente liga se quiser o PrimeVerse Hub
+  sound_enabled: true,  // não é categoria: só decide se o alerta toca
 }
 
 export function normalizeNotificationPreferences(
@@ -74,7 +82,7 @@ export function normalizeNotificationPreferences(
   const base = { ...DEFAULT_NOTIFICATION_PREFERENCES }
   if (!raw || typeof raw !== 'object') return base
   const input = raw as Record<string, unknown>
-  for (const key of Object.keys(DEFAULT_NOTIFICATION_PREFERENCES) as NotificationCategory[]) {
+  for (const key of Object.keys(DEFAULT_NOTIFICATION_PREFERENCES) as (keyof NotificationPreferences)[]) {
     if (typeof input[key] === 'boolean') base[key] = input[key]
   }
   return base
@@ -137,4 +145,9 @@ export function isCategoryEnabled(
 ): boolean {
   if (!category) return true
   return preferences[category] !== false
+}
+
+/** Som do push. Só isto: o alerta chega na mesma, em silêncio. */
+export function isSoundEnabled(preferences: NotificationPreferences): boolean {
+  return preferences.sound_enabled !== false
 }

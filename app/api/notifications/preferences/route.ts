@@ -3,7 +3,6 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   normalizeNotificationPreferences,
-  type NotificationCategory,
   type NotificationPreferences,
 } from '@/lib/notification-preferences'
 
@@ -59,7 +58,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const merged = normalizeNotificationPreferences(current?.notification_preferences)
-  for (const key of Object.keys(DEFAULT_NOTIFICATION_PREFERENCES) as NotificationCategory[]) {
+  for (const key of Object.keys(DEFAULT_NOTIFICATION_PREFERENCES) as (keyof NotificationPreferences)[]) {
     if (typeof patch[key] === 'boolean') merged[key] = patch[key]
   }
 

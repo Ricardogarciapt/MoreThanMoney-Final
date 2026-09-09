@@ -124,7 +124,13 @@ export default function SettingsMobile() {
         })
         if (!res.ok) return
         const data = await res.json()
-        if (data.preferences) setNotifPrefs(data.preferences)
+        if (data.preferences) {
+          setNotifPrefs(data.preferences)
+          // o servidor é a fonte do som (o localStorage é só o eco local)
+          if (typeof data.preferences.sound_enabled === "boolean") {
+            setSoundEnabled(data.preferences.sound_enabled)
+          }
+        }
       } catch {}
     }
     loadPrefs()
@@ -226,11 +232,29 @@ export default function SettingsMobile() {
     toast({ title: "Tema actualizado", description: `Tema ${next === "dark" ? "escuro" : "claro"} activado.` })
   }
 
-  const toggleSound = () => {
+  /**
+   * O som vive no servidor — é lá que o push é montado. Enquanto só existiu em localStorage,
+   * o toggle dizia "as notificações serão silenciosas" e o APNs continuava a levar `sound: default`.
+   */
+  const toggleSound = async () => {
     const next = !soundEnabled
     setSoundEnabled(next)
     try { localStorage.setItem("mtm_notif_sound", next ? "1" : "0") } catch {}
-    toast({ title: next ? "Som activado" : "Som desactivado", description: next ? "As notificações terão som." : "As notificações serão silenciosas." })
+    try {
+      const token = await getAccessToken()
+      if (!token) throw new Error("Sessão inválida")
+      const res = await fetch("/api/notifications/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ preferences: { sound_enabled: next } }),
+      })
+      if (!res.ok) throw new Error("Falha ao guardar")
+      toast({ title: next ? "Som activado" : "Som desactivado", description: next ? "As notificações terão som." : "As notificações serão silenciosas." })
+    } catch {
+      setSoundEnabled(!next)
+      try { localStorage.setItem("mtm_notif_sound", !next ? "1" : "0") } catch {}
+      toast({ title: "Erro", description: "Não foi possível guardar a preferência de som.", variant: "destructive" })
+    }
   }
 
   const persistPush = (on: boolean) => {
