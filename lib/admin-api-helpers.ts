@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { cookies, headers } from "next/headers"
 
 /** Cliente service role (singleton + fallbacks em lib/supabase-admin-client.ts) */
 export { getSupabaseAdmin } from "./supabase-admin-client"
@@ -53,7 +53,20 @@ export async function getAuthenticatedUser(): Promise<{
 }
 
 /**
- * Verifica se o utilizador é admin (server-side)
+ * Verifica se o utilizador é admin (server-side).
+ *
+ * DOIS caminhos de sessão, de propósito:
+ *
+ *  · COOKIES — o site e a web-app. É o caminho normal.
+ *  · Authorization: Bearer — as apps NATIVAS. O iOS e o Android não têm cookies de sessão:
+ *    o `MTMApi.send` manda sempre o access token do Supabase no cabeçalho. Enquanto isto só
+ *    lia cookies, TODAS as rotas admin devolviam 403 à app nativa — e o painel de admin das
+ *    Estratégias no T2T nunca aparecia, nem ao super admin. Parecia bug de UI (foi tratado
+ *    como tal, e a correção do lado do iOS não podia funcionar): era o servidor a não
+ *    conseguir ver quem estava do outro lado.
+ *
+ * O token é validado pelo Supabase como qualquer outro — quem não for admin continua a levar
+ * 403. Aceitar o cabeçalho não abre porta nenhuma; abre a mesma porta a quem já tinha chave.
  */
 export async function verifyAdminAccess(): Promise<{
   isAdmin: boolean
@@ -80,7 +93,19 @@ export async function verifyAdminAccess(): Promise<{
       }
     )
 
-    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
+    let { data: { user: authUser }, error: userError } = await supabase.auth.getUser()
+
+    // Apps nativas: sem cookies, com Bearer. Só se tenta quando os cookies não deram ninguém.
+    if (!authUser) {
+      const token = (await headers()).get('authorization')?.replace(/^Bearer\s+/i, '').trim()
+      if (token) {
+        const { data, error } = await supabase.auth.getUser(token)
+        if (!error && data?.user) {
+          authUser = data.user
+          userError = null
+        }
+      }
+    }
 
     if (userError || !authUser) {
       return {
@@ -89,7 +114,16 @@ export async function verifyAdminAccess(): Promise<{
       }
     }
 
-    const { data: profile, error: profileError } = await supabase
+    /**
+     * O perfil lê-se com SERVICE ROLE, pela id que o Supabase acabou de verificar.
+     *
+     * Pelo caminho do Bearer o cliente não tem sessão de cookies, e a leitura de `profiles`
+     * sob RLS devolvia vazio — o que se lia como "não é admin". A id não vem do cliente: vem
+     * do `getUser`, que valida a assinatura do token. Ler por ela não contorna autenticação
+     * nenhuma; contorna só o RLS de uma linha que já provámos ser dele.
+     */
+    const { data: profile, error: profileError } = await (await import("./supabase-admin-client"))
+      .getSupabaseAdmin()
       .from("profiles")
       .select("user_type, is_active")
       .eq("id", authUser.id)
