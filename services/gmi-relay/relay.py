@@ -11,8 +11,7 @@ ENV:
   TELEGRAM_API_ID, TELEGRAM_API_HASH, GMI_SESSION_STRING   (sessão de utilizador — make_session.py)
   RELAY_ROUTES  JSON de rotas; se ausente usa o modo legado GMI_* (uma rota).
       [{"name":"gold-did",     "source": -1003452689502,     "dest": "-1002424441843", "filter": "gold"},
-       {"name":"golden-astro", "source": -1004428793414,     "dest": "-1002424441843", "filter": "gold"},
-       {"name":"golden-moves", "source": "GOLDEN MOVES",     "dest": "-1002424441843", "filter": "gold"}]
+       {"name":"golden-astro", "source": -1004428793414,     "dest": "-1002424441843", "filter": "gold", "enabled": false}]
       · source: id numérico OU título/username exato — resolvido dos diálogos da sessão no arranque.
       · dest: chat Telegram MTM onde o bot publica (o relay-post deriva daí o canal da app).
       · filter: "gold" (setups/TP/SL/pips — o filtro clássico) ou "all" (tudo o que não for lixo).
