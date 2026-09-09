@@ -345,7 +345,7 @@ export function isTerminal(event: SignalEvent): boolean {
  * "🗑️ Ideia descartada · XAUUSD" reentrava no pipeline e gerava um LOOP de notificações.
  */
 const OWN_TITLE_RE =
-  /^(ENTRY HIT|Alvo\s+(?:final|\d+)|Break-even|Trailing ativo|Stop loss|Posi[çc][ãa]o fechada|Sinal cancelado|Ideia descartada)\s*·/i
+  /^(ENTRY HIT|Alvo\s+(?:final|\d+)|Break-even|Trailing ativo|Stop loss|Stop protegido|Posi[çc][ãa]o fechada|Sinal cancelado|Ideia descartada)\s*·/i
 
 export function isOwnLifecycleAnnouncement(content: string | null | undefined): boolean {
   const firstLine = (content ?? '').trim().split('\n')[0] ?? ''
