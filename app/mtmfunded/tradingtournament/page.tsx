@@ -43,17 +43,20 @@ export default async function TradingTournamentPage() {
   const atualizado = (linhas ?? []).map((l) => l.updated_at as string).filter(Boolean).sort().pop()
 
   return (
-    <main className="min-h-screen bg-[#050608] text-white">
-      <section className="mx-auto max-w-5xl px-5 py-16">
-        <p className="text-xs uppercase tracking-[0.3em] text-[#4B8BFF]">MoreThanMoney apresenta</p>
-        <h1 className="mt-3 text-4xl font-bold sm:text-5xl">
-          Trading <span className="text-[#4B8BFF]">Tournament</span>
+    <main className="text-white">
+      <section className="mx-auto max-w-5xl px-5 py-20 sm:py-24">
+        <p className="kicker r">MoreThanMoney apresenta</p>
+        <h1 className="r d1 mt-4 text-[clamp(38px,7vw,68px)] font-extrabold">
+          Trading{' '}
+          <span className="bg-gradient-to-r from-[#8fb6ff] to-[#4B8BFF] bg-clip-text text-transparent">
+            Tournament
+          </span>
         </h1>
-        <p className="mt-2 text-sm uppercase tracking-[0.25em] text-zinc-500">Trade · Evolve · Earn</p>
+        <p className="r d2 mt-3 text-sm uppercase tracking-[0.25em] text-[#7b756a]">Trade · Evolve · Earn</p>
 
         {torneio?.estado === 'inscricoes' && (
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-sm text-emerald-400">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+          <div className="r d3 mt-7 inline-flex items-center gap-2.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-400">
+            <span className="pulso h-2 w-2 rounded-full bg-emerald-400" />
             Inscrições abertas
             {torneio.inscricoes_fecham_em &&
               ` · fecham ${new Date(torneio.inscricoes_fecham_em).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long' })}`}
@@ -69,7 +72,7 @@ export default async function TradingTournamentPage() {
           </div>
         ) : (
           <>
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <div className="mt-10 grid gap-4 sm:grid-cols-3">
               <Cartao titulo="Começa" valor={data(torneio.comeca_em)} />
               <Cartao titulo="Termina" valor={data(torneio.acaba_em)} />
               <Cartao
@@ -79,7 +82,7 @@ export default async function TradingTournamentPage() {
             </div>
 
             {/* As regras ficam à vista, e não em letras pequenas: quem entra sabe ao que vai. */}
-            <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-6">
+            <div className="vidro r mt-8 p-6 sm:p-7">
               <h2 className="text-lg font-semibold">Regras</h2>
               <ul className="mt-3 grid gap-2 text-sm text-zinc-400 sm:grid-cols-2">
                 {regras.perda_diaria_pct != null && <li>Perda diária máxima: <b className="text-white">{regras.perda_diaria_pct}%</b></li>}
@@ -94,9 +97,9 @@ export default async function TradingTournamentPage() {
             </div>
 
             {premios.length > 0 && (
-              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              <div className="mt-8 grid gap-4 sm:grid-cols-3">
                 {premios.map((p) => (
-                  <div key={p.posicao} className="rounded-2xl border border-[#D2A63C]/25 bg-[#D2A63C]/[0.05] p-5">
+                  <div key={p.posicao} className="vidro destaque r p-5">
                     <p className="text-xs uppercase tracking-widest text-[#D2A63C]">{p.posicao}.º lugar</p>
                     <p className="mt-2 font-semibold">{p.premio}</p>
                   </div>
@@ -104,16 +107,16 @@ export default async function TradingTournamentPage() {
               </div>
             )}
 
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="r d1 mt-10 flex flex-wrap gap-3">
               <Link
                 href="/mtmfunded/tradingtournament/dashboard"
-                className="rounded-lg bg-[#4B8BFF] px-6 py-3 text-sm font-semibold text-white"
+                className="rounded-full bg-[#4B8BFF] px-7 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
               >
                 {torneio.estado === 'inscricoes' ? 'Inscrever-me' : 'A minha área'}
               </Link>
               <Link
                 href="/mtmfunded"
-                className="rounded-lg border border-zinc-700 px-6 py-3 text-sm text-zinc-300"
+                className="btn g"
               >
                 MTM Funded
               </Link>
@@ -126,7 +129,7 @@ export default async function TradingTournamentPage() {
               <Passo n={3} titulo="Competes" texto="A classificação actualiza de hora a hora e diz sempre porque é que alguém não conta." />
             </div>
 
-            <p className="mt-8 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 text-xs leading-relaxed text-zinc-500">
+            <p className="vidro r mt-8 p-5 text-xs leading-relaxed text-[#a9a49a]">
               A conta é de <b className="text-zinc-300">demonstração</b>, com dinheiro virtual.
               Não depositas nada e não há execução em mercado real. O que se avalia é a forma
               como negoceias.
@@ -145,9 +148,9 @@ export default async function TradingTournamentPage() {
               {!(linhas ?? []).length ? (
                 <p className="mt-4 text-sm text-zinc-500">Ainda não há participantes classificados.</p>
               ) : (
-                <div className="mt-4 overflow-x-auto rounded-2xl border border-zinc-800">
+                <div className="vidro r mt-5 overflow-x-auto">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-zinc-950 text-xs uppercase tracking-wider text-zinc-500">
+                    <thead className="bg-black/40 text-xs uppercase tracking-wider text-[#7b756a]">
                       <tr>
                         <th className="px-4 py-3">#</th>
                         <th className="px-4 py-3">Participante</th>
@@ -156,7 +159,7 @@ export default async function TradingTournamentPage() {
                         <th className="px-4 py-3">Estado</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-900">
+                    <tbody className="divide-y divide-white/[0.06]">
                       {(linhas ?? []).map((l, i) => {
                         const m = (l.metricas ?? {}) as Record<string, unknown>
                         const r = l.resultado_pct == null ? null : Number(l.resultado_pct)
@@ -196,8 +199,8 @@ export default async function TradingTournamentPage() {
 
 function Passo({ n, titulo, texto }: { n: number; titulo: string; texto: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-5">
-      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#4B8BFF]/40 text-sm font-bold text-[#4B8BFF]">
+    <div className={`vidro r d${n} p-5`}>
+      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#4B8BFF]/40 bg-[#4B8BFF]/[0.07] font-bold text-[#4B8BFF]">
         {n}
       </span>
       <h3 className="mt-3 font-semibold">{titulo}</h3>
@@ -208,9 +211,9 @@ function Passo({ n, titulo, texto }: { n: number; titulo: string; texto: string 
 
 function Cartao({ titulo, valor }: { titulo: string; valor: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5">
-      <p className="text-xs uppercase tracking-widest text-zinc-500">{titulo}</p>
-      <p className="mt-1 text-lg font-semibold">{valor}</p>
+    <div className="vidro r p-5">
+      <p className="text-xs uppercase tracking-widest text-[#7b756a]">{titulo}</p>
+      <p className="mt-1.5 text-xl font-semibold">{valor}</p>
     </div>
   )
 }

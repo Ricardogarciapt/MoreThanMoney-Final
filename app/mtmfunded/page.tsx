@@ -58,30 +58,29 @@ export default async function MtmFundedPage() {
   return (
     <main className="text-white">
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-5 pt-16 pb-10">
-        <p className="text-xs uppercase tracking-[0.3em] text-[#D2A63C]">More Than Money</p>
-        <h1 className="mt-3 max-w-3xl text-4xl font-bold leading-tight sm:text-5xl">
-          Prova o que vales numa conta avaliada.
+      <section className="mx-auto max-w-6xl px-5 pt-20 pb-12 sm:pt-28">
+        <p className="kicker r">More Than Money</p>
+        <h1 className="r d1 mt-4 max-w-4xl text-[clamp(38px,7vw,74px)] font-extrabold">
+          Prova o que vales numa{' '}
+          <span className="bg-gradient-to-r from-[#eccb78] to-[#d2a63c] bg-clip-text text-transparent">
+            conta avaliada
+          </span>
+          .
         </h1>
-        <p className="mt-4 max-w-2xl text-lg text-zinc-400">
+        <p className="r d2 mt-6 max-w-2xl text-lg leading-relaxed text-[#a9a49a]">
           Escolhes o tamanho, negoceias com as regras à vista, e as métricas actualizam
           sozinhas. Sem letra pequena e sem promessas de rendimento.
         </p>
 
-        <div className="mt-8 flex flex-wrap gap-3">
-          <a href="#programas" className="rounded-lg bg-[#D2A63C] px-6 py-3 text-sm font-semibold text-black">
-            Ver os programas
-          </a>
-          <Link
-            href="/mtmfunded/tradingtournament"
-            className="rounded-lg border border-zinc-700 px-6 py-3 text-sm text-zinc-300"
-          >
+        <div className="r d3 mt-9 flex flex-wrap gap-3">
+          <a href="#programas" className="btn">Ver os programas</a>
+          <Link href="/mtmfunded/tradingtournament" className="btn g">
             Torneio gratuito
           </Link>
         </div>
 
         {/* Factos, não estatísticas de marketing. Cada um destes é verificável nesta página. */}
-        <div className="mt-12 grid gap-4 sm:grid-cols-3">
+        <div className="mt-14 grid gap-4 sm:grid-cols-3">
           <Facto titulo="Contas simuladas" nota="Dinheiro virtual. Não há fundos de participantes em lado nenhum." />
           <Facto titulo="Regras publicadas" nota="Antes de te inscreveres, e não mudam a meio da prova." />
           <Facto titulo="Classificação pública" nota="Actualiza de hora a hora, com o motivo à vista de quem não conta." />
@@ -90,8 +89,8 @@ export default async function MtmFundedPage() {
 
       {/* ── A escada ───────────────────────────────────────────────────────── */}
       <section id="programas" className="mx-auto max-w-6xl px-5 py-12">
-        <h2 className="text-2xl font-bold">Escolhe o tamanho — e o caminho</h2>
-        <p className="mt-2 max-w-2xl text-sm text-zinc-500">
+        <h2 className="r text-3xl font-bold">Escolhe o tamanho — e o caminho</h2>
+        <p className="r d1 mt-3 max-w-2xl text-sm text-[#a9a49a]">
           Duas famílias, a mesma escada de contas. A de <b className="text-zinc-300">uma fase</b> é
           a difícil: passa-se mais depressa, e por isso pede mais lucro e perdoa menos perda. A de{' '}
           <b className="text-zinc-300">duas fases</b> pede menos de cada vez, em troca de mais tempo.
@@ -109,9 +108,9 @@ export default async function MtmFundedPage() {
         ) : (
           <>
             {/* Tabela em ecrã largo: é onde a comparação se faz sem decorar nada. */}
-            <div className="mt-8 hidden overflow-x-auto rounded-2xl border border-zinc-800 lg:block">
+            <div className="vidro r mt-10 hidden overflow-x-auto lg:block">
               <table className="w-full text-left text-sm">
-                <thead className="bg-zinc-950 text-xs uppercase tracking-wider text-zinc-500">
+                <thead className="bg-black/40 text-xs uppercase tracking-wider text-[#7b756a]">
                   <tr>
                     <th className="px-5 py-3">Conta</th>
                     <th className="px-5 py-3">Caminho</th>
@@ -123,11 +122,11 @@ export default async function MtmFundedPage() {
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-900">
+                <tbody className="divide-y divide-white/[0.06]">
                   {lista.map((p) => {
                     const r = (p.regras ?? {}) as Record<string, number>
                     return (
-                      <tr key={p.slug} className="hover:bg-zinc-950/60">
+                      <tr key={p.slug} className="transition-colors hover:bg-white/[0.03]">
                         <td className="px-5 py-4">
                           <span className="font-semibold text-white">
                             {Number(p.saldo).toLocaleString('pt-PT')} USD
@@ -151,10 +150,7 @@ export default async function MtmFundedPage() {
                         </td>
                         <td className="px-5 py-4 text-right">
                           {config.vendas_abertas ? (
-                            <Link
-                              href={`/mtmfunded/checkout?programa=${p.slug}`}
-                              className="rounded-lg bg-[#D2A63C] px-4 py-2 text-xs font-semibold text-black"
-                            >
+                            <Link href={`/mtmfunded/checkout?programa=${p.slug}`} className="btn !px-5 !py-2 !text-xs">
                               Começar
                             </Link>
                           ) : (
@@ -173,7 +169,7 @@ export default async function MtmFundedPage() {
               {lista.map((p) => {
                 const r = (p.regras ?? {}) as Record<string, number>
                 return (
-                  <div key={p.slug} className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5">
+                  <div key={p.slug} className={`vidro r p-5 ${p.fases === 1 ? "destaque" : ""}`}>
                     <div className="flex items-baseline justify-between">
                       <h3 className="text-lg font-semibold">
                         {Number(p.saldo).toLocaleString('pt-PT')} USD
@@ -193,7 +189,7 @@ export default async function MtmFundedPage() {
                     {config.vendas_abertas ? (
                       <Link
                         href={`/mtmfunded/checkout?programa=${p.slug}`}
-                        className="mt-5 block rounded-lg bg-[#D2A63C] py-2.5 text-center text-sm font-semibold text-black"
+                        className="btn mt-5 w-full justify-center"
                       >
                         Começar
                       </Link>
@@ -211,9 +207,9 @@ export default async function MtmFundedPage() {
       </section>
 
       {/* ── Como funciona ──────────────────────────────────────────────────── */}
-      <section className="border-y border-zinc-900 bg-zinc-950/40">
+      <section className="border-y border-white/[0.06]">
         <div className="mx-auto max-w-6xl px-5 py-14">
-          <h2 className="text-2xl font-bold">Como funciona</h2>
+          <h2 className="r text-3xl font-bold">Como funciona</h2>
           <div className="mt-8 grid gap-8 sm:grid-cols-3">
             <Passo
               n={1}
@@ -236,8 +232,8 @@ export default async function MtmFundedPage() {
 
       {/* ── As regras, explicadas ──────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 py-14">
-        <h2 className="text-2xl font-bold">As regras, em português</h2>
-        <p className="mt-2 text-sm text-zinc-500">
+        <h2 className="r text-3xl font-bold">As regras, em português</h2>
+        <p className="r d1 mt-3 text-sm text-[#a9a49a]">
           São quatro, valem para toda a escada, e nenhuma delas muda a meio de uma prova.
         </p>
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -262,10 +258,10 @@ export default async function MtmFundedPage() {
 
       {/* ── Regras de negociação ───────────────────────────────────────────── */}
       {regrasNegociacao && (
-        <section className="border-t border-zinc-900 bg-zinc-950/40">
+        <section className="border-t border-white/[0.06]">
           <div className="mx-auto max-w-6xl px-5 py-14">
-            <h2 className="text-2xl font-bold">O que podes e não podes fazer</h2>
-            <p className="mt-2 max-w-2xl text-sm text-zinc-500">
+            <h2 className="r text-3xl font-bold">O que podes e não podes fazer</h2>
+            <p className="r d1 mt-3 max-w-2xl text-sm text-[#a9a49a]">
               Valem para toda a escada, na avaliação e na conta financiada. Estão aqui antes de
               comprares, e não numa página que só se lê quando já é tarde.
             </p>
@@ -278,7 +274,7 @@ export default async function MtmFundedPage() {
 
       {/* ── Torneio ────────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 pb-20">
-        <div className="rounded-2xl border border-[#D2A63C]/25 bg-gradient-to-b from-[#D2A63C]/[0.07] to-transparent p-8">
+        <div className="vidro destaque r bg-gradient-to-b from-[#D2A63C]/[0.07] to-transparent p-8 sm:p-10">
           <p className="text-xs uppercase tracking-[0.25em] text-[#D2A63C]">Gratuito</p>
           <h2 className="mt-2 text-2xl font-bold">
             {torneio?.nome ?? 'Trading Tournament'}
@@ -290,7 +286,7 @@ export default async function MtmFundedPage() {
           </p>
           <Link
             href="/mtmfunded/tradingtournament"
-            className="mt-6 inline-block rounded-lg border border-[#D2A63C]/60 px-6 py-2.5 text-sm font-medium text-[#D2A63C]"
+            className="btn mt-7"
           >
             {torneio?.estado === 'inscricoes' ? 'Inscrições abertas' : 'Ver o torneio'}
           </Link>
@@ -302,28 +298,28 @@ export default async function MtmFundedPage() {
 
 function Facto({ titulo, nota }: { titulo: string; nota: string }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-5">
+    <div className="vidro r p-5">
       <p className="font-semibold text-white">{titulo}</p>
-      <p className="mt-1 text-sm text-zinc-500">{nota}</p>
+      <p className="mt-1.5 text-sm leading-relaxed text-[#a9a49a]">{nota}</p>
     </div>
   )
 }
 
 function Passo({ n, titulo, texto }: { n: number; titulo: string; texto: string }) {
   return (
-    <div>
-      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#D2A63C]/40 text-sm font-bold text-[#D2A63C]">
+    <div className={`r d${n}`}>
+      <span className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#D2A63C]/40 bg-[#D2A63C]/[0.06] font-bold text-[#D2A63C]">
         {n}
       </span>
-      <h3 className="mt-4 font-semibold">{titulo}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-zinc-400">{texto}</p>
+      <h3 className="mt-5 text-lg font-semibold">{titulo}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-[#a9a49a]">{texto}</p>
     </div>
   )
 }
 
 function Regra({ titulo, texto }: { titulo: string; texto: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-6">
+    <div className="vidro r p-6">
       <h3 className="font-semibold text-[#D2A63C]">{titulo}</h3>
       <p className="mt-2 text-sm leading-relaxed text-zinc-400">{texto}</p>
     </div>

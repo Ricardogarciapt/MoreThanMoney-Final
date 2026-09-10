@@ -47,7 +47,7 @@ export default async function DashboardTorneioPage() {
   const db = getSupabaseAdmin()
   const { data: perfil } = await db
     .from('profiles')
-    .select('id, full_name, email, user_type, member_category, subscription_plan, is_active')
+    .select('id, full_name, email, user_type, member_category, subscription_plan, is_active, phone, birth_date, country')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -94,6 +94,13 @@ export default async function DashboardTorneioPage() {
   return (
     <PainelParticipante
       nome={(perfil?.full_name as string) || user.email?.split('@')[0] || 'Trader'}
+      // Recolhidos no registo: a inscrição no torneio já vem preenchida em vez de repetir o
+      // mesmo formulário a quem acabou de o preencher.
+      perfil={{
+        telefone: (perfil?.phone as string) ?? null,
+        dataNascimento: (perfil?.birth_date as string) ?? null,
+        pais: (perfil?.country as string) ?? null,
+      }}
       papel={papel}
       scannersPermitidos={papel === 'torneio' ? [...SCANNERS_TORNEIO] : null}
       torneio={

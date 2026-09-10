@@ -116,6 +116,81 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ programas: data ?? [], compras: compras ?? [] })
   }
 
+  // ── levantamentos ────────────────────────────────────────────────────────
+  if (vista === 'levantamentos') {
+    const { data } = await db
+      .from('mtm_funded_withdrawals')
+      .select('*')
+      .order('criado_em', { ascending: false })
+      .limit(200)
+
+    const uids = [...new Set((data ?? []).map((p) => p.user_id).filter(Boolean))] as string[]
+    const pessoas = new Map<string, { nome: string; email: string }>()
+    if (uids.length) {
+      const { data: ps } = await db.from('profiles').select('id, full_name, email').in('id', uids)
+      for (const p of ps ?? []) {
+        pessoas.set(p.id as string, { nome: (p.full_name as string) ?? '—', email: (p.email as string) ?? '—' })
+      }
+    }
+
+    const contasIds = [...new Set((data ?? []).map((p) => p.account_id))] as string[]
+    const contas = new Map<string, Record<string, unknown>>()
+    if (contasIds.length) {
+      const { data: cs } = await db
+        .from('mtm_trading_accounts')
+        .select('id, mt5_login, saldo_inicial, metricas')
+        .in('id', contasIds)
+      for (const c of cs ?? []) contas.set(c.id as string, c)
+    }
+
+    /**
+     * Os comprovativos saem em URL ASSINADO, válido por uma hora.
+     *
+     * O balde é privado de propósito: um print destes mostra o UID e o endereço de depósito de
+     * uma pessoa. Um URL público bastava adivinhar; um assinado expira e não serve a mais
+     * ninguém depois de o admin fechar o separador.
+     */
+    const comAssinatura = await Promise.all(
+      (data ?? []).map(async (p) => {
+        const caminhos = Array.isArray(p.comprovativos) ? (p.comprovativos as string[]) : []
+        const urls: string[] = []
+        for (const caminho of caminhos.slice(0, 5)) {
+          const { data: assinado } = await db.storage
+            .from('mtmfunded-comprovativos')
+            .createSignedUrl(caminho, 3600)
+          if (assinado?.signedUrl) urls.push(assinado.signedUrl)
+        }
+        const c = contas.get(p.account_id as string)
+        return {
+          ...p,
+          pessoa: pessoas.get(p.user_id as string) ?? null,
+          conta: c ? { login: c.mt5_login, saldoInicial: c.saldo_inicial, metricas: c.metricas } : null,
+          comprovativosUrl: urls,
+        }
+      }),
+    )
+
+    return NextResponse.json({ levantamentos: comAssinatura })
+  }
+
+  // ── contratos ────────────────────────────────────────────────────────────
+  if (vista === 'contratos') {
+    const { data } = await db
+      .from('mtm_funded_contracts')
+      .select('id, user_id, versao, nome_completo, data_nascimento, assinado_em, ip')
+      .order('assinado_em', { ascending: false })
+      .limit(300)
+    const uids = [...new Set((data ?? []).map((c) => c.user_id))] as string[]
+    const pessoas = new Map<string, string>()
+    if (uids.length) {
+      const { data: ps } = await db.from('profiles').select('id, email').in('id', uids)
+      for (const p of ps ?? []) pessoas.set(p.id as string, (p.email as string) ?? '—')
+    }
+    return NextResponse.json({
+      contratos: (data ?? []).map((c) => ({ ...c, email: pessoas.get(c.user_id as string) ?? '—' })),
+    })
+  }
+
   // ── resumo ───────────────────────────────────────────────────────────────
   const config = await getMtmFundedConfig()
   const { data: torneios } = await db
@@ -443,6 +518,53 @@ export async function POST(request: NextRequest) {
       .from('mtm_funded_programs')
       .update({ ativo: b?.ativo === true, updated_at: new Date().toISOString() })
       .eq('slug', slug)
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── levantamentos ────────────────────────────────────────────────────────
+  /**
+   * Mudar o estado de um levantamento.
+   *
+   * `pago` é irreversível na prática — o dinheiro já saiu — por isso exige que o pedido tenha
+   * passado por `aprovado`. Um clique errado num estado que salta a aprovação transformava um
+   * pedido acabado de chegar em pagamento feito, sem ninguém o ter visto.
+   */
+  if (accao === 'levantamento_estado') {
+    const id = String(b?.id ?? '')
+    const estado = String(b?.estado ?? '')
+    const ESTADOS = ['pedido', 'em_analise', 'aprovado', 'pago', 'recusado']
+    if (!id || !ESTADOS.includes(estado)) {
+      return NextResponse.json({ error: 'id ou estado inválidos' }, { status: 400 })
+    }
+
+    const { data: atual } = await db
+      .from('mtm_funded_withdrawals')
+      .select('id, estado')
+      .eq('id', id)
+      .maybeSingle()
+    if (!atual) return NextResponse.json({ error: 'pedido desconhecido' }, { status: 404 })
+
+    if (estado === 'pago' && atual.estado !== 'aprovado') {
+      return NextResponse.json(
+        { error: 'Aprova primeiro. Marcar como pago sem aprovação salta a revisão do pedido.' },
+        { status: 409 },
+      )
+    }
+    if (estado === 'recusado' && !String(b?.motivo ?? '').trim()) {
+      // Recusar sem motivo deixa o trader sem saber o que corrigir.
+      return NextResponse.json({ error: 'Escreve o motivo da recusa' }, { status: 400 })
+    }
+
+    await db
+      .from('mtm_funded_withdrawals')
+      .update({
+        estado,
+        ...(b?.motivo ? { motivo: String(b.motivo).slice(0, 400) } : {}),
+        ...(b?.notas ? { notas_admin: String(b.notas).slice(0, 800) } : {}),
+        ...(estado === 'pago' ? { pago_em: new Date().toISOString() } : {}),
+        atualizado_em: new Date().toISOString(),
+      })
+      .eq('id', id)
     return NextResponse.json({ ok: true })
   }
 

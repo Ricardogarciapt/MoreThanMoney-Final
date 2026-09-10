@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import NavegacaoFunded from '@/components/mtmfunded/navegacao'
 import RodapeFunded from '@/components/mtmfunded/rodape'
+import Atmosfera from '@/components/mtmfunded/atmosfera'
 
 export const metadata: Metadata = {
   title: { default: 'MTM Funded', template: '%s · MTM Funded' },
@@ -18,10 +19,12 @@ export const metadata: Metadata = {
  */
 export default function LayoutFunded({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col bg-[#050608]">
-      <NavegacaoFunded />
-      <div className="flex-1">{children}</div>
-      <RodapeFunded />
-    </div>
+    <Atmosfera>
+      <div className="flex min-h-screen flex-col">
+        <NavegacaoFunded />
+        <div className="flex-1">{children}</div>
+        <RodapeFunded />
+      </div>
+    </Atmosfera>
   )
 }

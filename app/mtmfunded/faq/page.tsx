@@ -168,6 +168,95 @@ export default async function FaqFunded() {
         }
       : null,
     {
+      p: 'Como funciona uma conta financiada da MTM?',
+      resposta: (
+        <>
+          A negociação é <b className="text-zinc-200">simulada do princípio ao fim</b> — não há
+          ordens tuas a chegar ao mercado. O que é real é o capital que o Fundo MTM afecta à
+          conta: <b className="text-zinc-200">10% do valor nominal</b>. Numa conta financiada de
+          10.000 USD, isso são 1.000 USD reais alocados pela MTM. É desse capital e do
+          desempenho que ele produz que saem os teus pagamentos.
+        </>
+      ),
+    },
+    {
+      p: 'Quanto é que eu recebo do que ganho?',
+      resposta: (
+        <>
+          <b className="text-zinc-200">75% do lucro é teu</b>, 25% ficam para a MTM. Os 25%
+          pagam o capital real que a MTM põe, a infraestrutura e o risco — sem isso não haveria
+          conta financiada nenhuma para financiar.
+        </>
+      ),
+    },
+    {
+      p: 'O que é a almofada de 3%?',
+      resposta: (
+        <>
+          Só é levantável o que passar de <b className="text-zinc-200">3% de lucro sobre o saldo
+          inicial</b> da conta. A almofada não é uma retenção: fica na tua conta e continua a ser
+          tua para negociar. Existe para que a conta não regresse ao ponto de partida a cada
+          levantamento — e para que a MTM acumule o capital que financia os traders seguintes.
+        </>
+      ),
+    },
+    {
+      p: 'Como recebo o dinheiro?',
+      resposta: (
+        <>
+          Por <b className="text-zinc-200">depósito na tua conta da PU Prime</b>, a corretora
+          parceira, em USDC na rede Solana. No pedido indicas o UID da tua conta e anexas o
+          print do menu de depósito, com o endereço e o valor visíveis. O endereço nunca é
+          escrito à mão por ninguém: é o que a corretora gerou, tal como aparece no print. Um
+          pagamento em cripto enviado para um endereço errado não se recupera.
+        </>
+      ),
+    },
+    {
+      p: 'Preciso de assinar alguma coisa antes de levantar?',
+      resposta: (
+        <>
+          Sim: o <b className="text-zinc-200">contrato de trader financiado</b>, na tua área, em
+          Contratos. Confirmas aí o teu nome completo e a data de nascimento — tens de ter 18
+          anos ou mais. Sem contrato assinado o pedido de levantamento nem chega a ser aceite.
+        </>
+      ),
+    },
+    {
+      p: 'Posso usar robôs, copytrading ou negociar em notícias?',
+      resposta: (
+        <>
+          <b className="text-zinc-200">Notícias, sim</b> — não fechamos janelas à volta de
+          indicadores. <b className="text-zinc-200">Robôs (EA)</b>: podes usá-los para passar a
+          avaliação, mas não na conta financiada — o que se financia é o teu critério.{' '}
+          <b className="text-zinc-200">Copytrading</b>: só sincronizado com o MTM Auto, porque aí
+          a origem e a gestão são conhecidas. Copiar sinais de fora não mostra nada sobre quem os
+          copia.
+        </>
+      ),
+    },
+    {
+      p: 'Que outras regras de negociação existem?',
+      resposta: (
+        <>
+          Mínimo de <b className="text-zinc-200">2 minutos por operação</b>, risco máximo de{' '}
+          <b className="text-zinc-200">1,5% por operação</b>, máximo de{' '}
+          <b className="text-zinc-200">3 posições</b> no mesmo par e direcção, e{' '}
+          <b className="text-zinc-200">sem hedge</b> — nem na mesma conta nem entre contas.
+        </>
+      ),
+    },
+    {
+      p: 'Porque é que o desafio mais pequeno é de 3.000 USD?',
+      resposta: (
+        <>
+          Porque a corretora não emite contas de demonstração abaixo desse valor. Vender um
+          desafio de 500 USD seria vender uma conta que nunca chegaria a ser criada. A escada
+          começa nos 3K e vai até aos 10K, com 25K a caminho.
+        </>
+      ),
+    },
+    {
       p: 'Isto é aconselhamento financeiro?',
       resposta: (
         <>

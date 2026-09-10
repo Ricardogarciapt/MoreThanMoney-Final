@@ -50,6 +50,26 @@ export default function AvisoDeRisco() {
         </p>
       </Seccao>
 
+      <Seccao titulo="Como funciona a conta financiada">
+        <p>
+          A negociação é simulada do princípio ao fim. O que a conta financiada tem de real é o
+          capital que a MTM lhe afecta: o Fundo MTM aloca capital correspondente a{' '}
+          <b className="text-zinc-200">10% do valor nominal da conta</b> — numa conta de 10.000
+          USD, 1.000 USD reais. É desse capital, e do desempenho que ele produz, que saem os
+          pagamentos ao trader.
+        </p>
+        <p>
+          A participação nos resultados é de <b className="text-zinc-200">75% para o trader</b> e
+          25% para a MTM, que suporta o capital, a infraestrutura e o risco. Só é levantável o
+          que exceder a almofada de 3% sobre o saldo inicial, e todos os pagamentos são feitos
+          por depósito na conta do trader na corretora parceira PU Prime, em USDC na rede Solana.
+        </p>
+        <p>
+          Nada disto constitui promessa de rendimento. Um trader que não cumpra os objectivos
+          publicados, ou que quebre uma regra, não tem direito a pagamento nenhum.
+        </p>
+      </Seccao>
+
       <Seccao titulo="Prémios e contas financiadas">
         <p>
           Os prémios de cada torneio e as condições de acesso a uma conta financiada estão

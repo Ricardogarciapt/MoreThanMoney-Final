@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   Loader2, Power, Trophy, Users, Wallet, AlertTriangle, Award,
-  Shield, RefreshCw, Mail, KeyRound, Ban, Check, Package, Plus,
+  Shield, RefreshCw, Mail, KeyRound, Ban, Check, Package, Plus, Banknote, ExternalLink,
 } from 'lucide-react'
 
 /**
@@ -15,7 +15,7 @@ import {
  * para gerir — serve para dar a sensação de que se está a gerir.
  */
 
-type Aba = 'resumo' | 'participantes' | 'contas' | 'programas' | 'certificados' | 'regras'
+type Aba = 'resumo' | 'participantes' | 'contas' | 'programas' | 'levantamentos' | 'certificados' | 'regras'
 
 interface Torneio {
   id: string; slug: string; nome: string; estado: string; publicado: boolean
@@ -35,6 +35,7 @@ const ABAS: Array<{ id: Aba; nome: string; icone: typeof Users }> = [
   { id: 'participantes', nome: 'Participantes', icone: Users },
   { id: 'contas', nome: 'Contas', icone: Wallet },
   { id: 'programas', nome: 'Programas', icone: Package },
+  { id: 'levantamentos', nome: 'Levantamentos', icone: Banknote },
   { id: 'certificados', nome: 'Certificados', icone: Award },
   { id: 'regras', nome: 'Regras', icone: Shield },
 ]
@@ -109,6 +110,7 @@ export default function MtmFundedManager() {
       {aba === 'participantes' && <Participantes torneios={resumo.torneios} accao={accao} ocupado={ocupado} />}
       {aba === 'contas' && <Contas accao={accao} ocupado={ocupado} setAviso={setAviso} />}
       {aba === 'programas' && <Programas accao={accao} ocupado={ocupado} setAviso={setAviso} vendasAbertas={resumo.config.vendas_abertas} />}
+      {aba === 'levantamentos' && <LevantamentosAdmin accao={accao} ocupado={ocupado} setAviso={setAviso} />}
       {aba === 'certificados' && <Certificados torneios={resumo.torneios} accao={accao} ocupado={ocupado} setAviso={setAviso} />}
       {aba === 'regras' && <Regras torneios={resumo.torneios} accao={accao} ocupado={ocupado} setAviso={setAviso} />}
     </div>
@@ -720,6 +722,149 @@ function EditorPrograma({ programa, ocupado, onGuardar, onCancelar }: {
   )
 }
 
+/**
+ * LEVANTAMENTOS.
+ *
+ * O painel mostra os PRINTS ao lado do UID, porque é essa a conferência que interessa fazer:
+ * o número que o trader escreveu tem de bater certo com o que a corretora lhe mostrou. Um
+ * pagamento em cripto para um endereço errado não se recupera, e o print é a única prova de
+ * onde o endereço veio.
+ *
+ * «Pago» só depois de «aprovado». Um estado que salta a revisão transformava um pedido
+ * acabado de chegar em pagamento feito com um clique errado.
+ */
+interface Levantamento {
+  id: string
+  valor_usd: number
+  uid_broker: string
+  endereco_cripto: string | null
+  estado: string
+  motivo: string | null
+  criado_em: string
+  pessoa: { nome: string; email: string } | null
+  conta: { login: string | null; saldoInicial: number } | null
+  comprovativosUrl: string[]
+}
+
+function LevantamentosAdmin({ accao, ocupado, setAviso }: {
+  accao: Accao; ocupado: string | null; setAviso: (s: string | null) => void
+}) {
+  const [linhas, setLinhas] = useState<Levantamento[]>([])
+  const [aCarregar, setACarregar] = useState(true)
+  const [motivo, setMotivo] = useState<Record<string, string>>({})
+
+  const carregar = useCallback(async () => {
+    setACarregar(true)
+    try {
+      const r = await fetch('/api/admin/mtmfunded?vista=levantamentos', { cache: 'no-store' })
+      const j = await r.json()
+      setLinhas(j.levantamentos ?? [])
+    } finally {
+      setACarregar(false)
+    }
+  }, [])
+  useEffect(() => { carregar() }, [carregar])
+
+  const mudar = (l: Levantamento, estado: string) =>
+    accao({ accao: 'levantamento_estado', id: l.id, estado, motivo: motivo[l.id] }, `l${l.id}`)
+      .then((j) => { if (j) { setAviso(`Pedido marcado como ${estado}.`); carregar() } })
+
+  if (aCarregar) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[#D2A63C]" /></div>
+  if (!linhas.length) return <p className="text-sm text-gray-500">Ainda não há pedidos de levantamento.</p>
+
+  const emEspera = linhas.filter((l) => ['pedido', 'em_analise', 'aprovado'].includes(l.estado))
+
+  return (
+    <div className="space-y-5">
+      {emEspera.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.05] p-4 text-sm text-amber-300">
+          {emEspera.length} {emEspera.length === 1 ? 'pedido à espera' : 'pedidos à espera'} de decisão.
+        </div>
+      )}
+
+      {linhas.map((l) => (
+        <div key={l.id} className="rounded-xl border border-gray-800 bg-black/30 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-lg font-bold text-[#D2A63C]">
+                {Number(l.valor_usd).toLocaleString('pt-PT', { minimumFractionDigits: 2 })} USD
+              </p>
+              <p className="mt-1 text-sm text-gray-200">{l.pessoa?.nome ?? '—'}</p>
+              <p className="text-xs text-gray-500">{l.pessoa?.email ?? '—'}</p>
+              <p className="mt-2 text-xs text-gray-500">
+                Conta MT5 {l.conta?.login ?? '—'} · pedido em{' '}
+                {new Date(l.criado_em).toLocaleDateString('pt-PT')}
+              </p>
+            </div>
+            <div className="text-right">
+              <Estado valor={l.estado} />
+              <p className="mt-2 font-mono text-sm text-gray-200">UID {l.uid_broker}</p>
+              {l.endereco_cripto && (
+                <p className="mt-1 max-w-xs break-all font-mono text-[10px] text-gray-600">
+                  {l.endereco_cripto}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Os prints: é aqui que se confere o endereço contra o que a corretora mostrou. */}
+          {l.comprovativosUrl.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {l.comprovativosUrl.map((u, i) => (
+                <a
+                  key={i}
+                  href={u}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:border-[#D2A63C]/50"
+                >
+                  <ExternalLink className="h-3 w-3" /> Print {i + 1}
+                </a>
+              ))}
+            </div>
+          )}
+
+          {l.motivo && <p className="mt-3 text-xs text-red-400">{l.motivo}</p>}
+
+          {!['pago', 'recusado'].includes(l.estado) && (
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-800 pt-4">
+              {l.estado === 'pedido' && (
+                <Botao ocupado={ocupado === `l${l.id}`} onClick={() => mudar(l, 'em_analise')}>
+                  Em análise
+                </Botao>
+              )}
+              {l.estado !== 'aprovado' && (
+                <Botao ocupado={ocupado === `l${l.id}`} onClick={() => mudar(l, 'aprovado')}>
+                  Aprovar
+                </Botao>
+              )}
+              {l.estado === 'aprovado' && (
+                <Botao ocupado={ocupado === `l${l.id}`} onClick={() => mudar(l, 'pago')}>
+                  Marcar como pago
+                </Botao>
+              )}
+              <input
+                placeholder="Motivo da recusa"
+                value={motivo[l.id] ?? ''}
+                onChange={(e) => setMotivo({ ...motivo, [l.id]: e.target.value })}
+                className="min-w-[180px] flex-1 rounded-lg border border-gray-700 bg-black/50 px-3 py-1.5 text-xs text-white"
+              />
+              <IconeBotao
+                titulo="Recusar"
+                perigo
+                ocupado={ocupado === `l${l.id}`}
+                onClick={() => mudar(l, 'recusado')}
+              >
+                <Ban className="h-3.5 w-3.5" />
+              </IconeBotao>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── peças ────────────────────────────────────────────────────────────────────
 
 function Tabela({ cabecalhos, children }: { cabecalhos: string[]; children: React.ReactNode }) {
@@ -740,6 +885,8 @@ function Estado({ valor }: { valor: string }) {
     ativa: 'text-emerald-400', ativo: 'text-emerald-400',
     quebrada: 'text-red-400', quebrado: 'text-red-400', desclassificado: 'text-red-400',
     pedida: 'text-amber-400', inscrito: 'text-gray-400',
+    pedido: 'text-amber-400', em_analise: 'text-amber-400',
+    aprovado: 'text-blue-400', pago: 'text-emerald-400', recusado: 'text-red-400',
   }
   return <span className={cores[valor] ?? 'text-gray-400'}>{valor}</span>
 }

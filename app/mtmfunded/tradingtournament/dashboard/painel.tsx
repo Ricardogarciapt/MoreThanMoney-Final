@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   LayoutDashboard, Wallet, FileText, Trophy, ListOrdered,
-  LineChart, Award, MessageSquare, Bot, ShieldAlert,
+  LineChart, Award, MessageSquare, Bot, ShieldAlert, Banknote,
 } from 'lucide-react'
+import { Contratos, Levantamentos } from '@/components/mtmfunded/contratos-e-levantamentos'
 import {
   CamposConta, DADOS_CONTA_VAZIOS, dadosContaCompletos, type DadosConta,
 } from '@/components/mtmfunded/campos-conta'
@@ -41,6 +42,7 @@ const SECCOES = [
   { id: 'dashboard', nome: 'Dashboard', icone: LayoutDashboard },
   { id: 'contas', nome: 'Contas de Trading', icone: Wallet },
   { id: 'contratos', nome: 'Contratos', icone: FileText },
+  { id: 'levantamentos', nome: 'Levantamentos', icone: Banknote },
   { id: 'competicoes', nome: 'Competições', icone: Trophy },
   { id: 'classificacao', nome: 'Classificação', icone: ListOrdered },
   { id: 'terminal', nome: 'Terminal MTM', icone: LineChart },
@@ -51,6 +53,7 @@ type SeccaoId = (typeof SECCOES)[number]['id'] | 'comunidade' | 'apoio'
 
 export default function PainelParticipante(props: {
   nome: string
+  perfil?: { telefone: string | null; dataNascimento: string | null; pais: string | null }
   papel: string
   scannersPermitidos: string[] | null
   torneio: Torneio | null
@@ -119,9 +122,10 @@ export default function PainelParticipante(props: {
         </aside>
 
         <main className="min-w-0 flex-1">
-          {seccao === 'dashboard' && <Dashboard {...{ torneio, participante, contas }} nome={props.nome} />}
+          {seccao === 'dashboard' && <Dashboard {...{ torneio, participante, contas }} nome={props.nome} perfil={props.perfil} />}
           {seccao === 'contas' && <Contas contas={contas} />}
           {seccao === 'contratos' && <Contratos />}
+          {seccao === 'levantamentos' && <Levantamentos irParaContrato={() => setSeccao('contratos')} />}
           {seccao === 'competicoes' && <Competicoes torneio={torneio} participante={participante} onInscrever={() => setSeccao('dashboard')} />}
           {seccao === 'classificacao' && <Classificacao linhas={classificacao} />}
           {seccao === 'terminal' && <Terminal scanners={props.scannersPermitidos} />}
@@ -159,12 +163,20 @@ function Vazio({ children }: { children: React.ReactNode }) {
  * Diz-se aqui porque é que se pedem: um formulário que pede a data de nascimento sem explicar
  * porquê é um formulário que as pessoas abandonam.
  */
-function Inscricao({ torneio, nome }: { torneio: Torneio; nome: string }) {
+function Inscricao({ torneio, nome, perfil }: {
+  torneio: Torneio; nome: string
+  perfil?: { telefone: string | null; dataNascimento: string | null; pais: string | null }
+}) {
   const partes = nome.trim().split(/\s+/)
+  // Pré-preenchido com o que já foi dado no registo. O telefone vem guardado com indicativo
+  // (+351912…) e aqui mostra-se só o número: o indicativo é do selector do país.
   const [dados, setDados] = useState<DadosConta>({
     ...DADOS_CONTA_VAZIOS,
     primeiroNome: partes[0] ?? '',
     apelido: partes.length > 1 ? partes[partes.length - 1] : '',
+    pais: perfil?.pais || 'PT',
+    telefone: (perfil?.telefone ?? '').replace(/^\+\d{1,4}/, ''),
+    dataNascimento: perfil?.dataNascimento ?? '',
   })
   const [nomePublico, setNomePublico] = useState(nome)
   const [estado, setEstado] = useState<'parado' | 'a_enviar' | 'feito'>('parado')
@@ -278,14 +290,17 @@ function Campo({
   )
 }
 
-function Dashboard({ torneio, participante, contas, nome }: { torneio: Torneio | null; participante: Participante | null; contas: Conta[]; nome: string }) {
+function Dashboard({ torneio, participante, contas, nome, perfil }: {
+  torneio: Torneio | null; participante: Participante | null; contas: Conta[]; nome: string
+  perfil?: { telefone: string | null; dataNascimento: string | null; pais: string | null }
+}) {
   const conta = contas.find((c) => c.tipo === 'torneio') ?? contas[0]
   const m = participante?.metricas ?? {}
   const margemDiaria = typeof m.margemDiaria === 'number' ? m.margemDiaria : null
   const margemTotal = typeof m.margemTotal === 'number' ? m.margemTotal : null
 
   if (!torneio) return <Caixa titulo="Dashboard"><Vazio>Não há torneio a decorrer.</Vazio></Caixa>
-  if (!participante) return <Inscricao torneio={torneio} nome={nome} />
+  if (!participante) return <Inscricao torneio={torneio} nome={nome} perfil={perfil} />
 
 
   return (
@@ -482,17 +497,6 @@ function Credenciais({ conta }: { conta: Conta }) {
         </div>
       )}
     </div>
-  )
-}
-
-function Contratos() {
-  return (
-    <Caixa titulo="Contratos">
-      <Vazio>
-        Os contratos aparecem aqui quando venceres um torneio ou passares a ter uma conta
-        financiada da MTM.
-      </Vazio>
-    </Caixa>
   )
 }
 

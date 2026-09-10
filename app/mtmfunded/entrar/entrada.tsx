@@ -3,6 +3,9 @@
 import Link from 'next/link'
 import { use, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import {
+  CamposConta, DADOS_CONTA_VAZIOS, dadosContaCompletos, type DadosConta,
+} from '@/components/mtmfunded/campos-conta'
 
 /**
  * Entrar ou criar conta — no MTM Funded, sem sair dele.
@@ -20,7 +23,8 @@ export default function Entrada({
   const destino = redirect && redirect.startsWith('/mtmfunded') ? redirect : '/mtmfunded/tradingtournament/dashboard'
 
   const [modo, setModo] = useState<'entrar' | 'criar'>('entrar')
-  const [dados, setDados] = useState({ nome: '', email: '', password: '' })
+  const [dados, setDados] = useState({ email: '', password: '' })
+  const [conta, setConta] = useState<DadosConta>(DADOS_CONTA_VAZIOS)
   const [erro, setErro] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
 
@@ -32,7 +36,7 @@ export default function Entrada({
         const r = await fetch('/api/mtmfunded/registo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dados),
+          body: JSON.stringify({ ...dados, ...conta }),
         })
         const j = await r.json().catch(() => ({}))
         if (!r.ok) {
@@ -63,10 +67,10 @@ export default function Entrada({
   const completo =
     dados.email.includes('@') &&
     dados.password.length >= 8 &&
-    (modo === 'entrar' || dados.nome.trim().length > 2)
+    (modo === 'entrar' || dadosContaCompletos(conta))
 
   return (
-    <main className="mx-auto max-w-md px-5 py-16 text-white">
+    <main className="mx-auto max-w-lg px-5 py-16 text-white">
       <h1 className="text-2xl font-bold">
         {modo === 'entrar' ? 'Entrar' : 'Criar conta'}
       </h1>
@@ -77,9 +81,6 @@ export default function Entrada({
       </p>
 
       <div className="mt-8 space-y-4">
-        {modo === 'criar' && (
-          <Campo rotulo="Nome" valor={dados.nome} onChange={(v) => setDados({ ...dados, nome: v })} />
-        )}
         <Campo
           rotulo="Email"
           tipo="email"
@@ -93,6 +94,25 @@ export default function Entrada({
           valor={dados.password}
           onChange={(v) => setDados({ ...dados, password: v })}
         />
+
+        {/*
+          No registo pedem-se TODOS os dados da conta de negociação de uma vez.
+          São os mesmos que a corretora exige para emitir qualquer conta — de torneio ou de
+          desafio — e recolhê-los aqui faz com que a inscrição e o checkout fiquem depois a um
+          clique, em vez de repetirem o mesmo formulário.
+        */}
+        {modo === 'criar' && (
+          <div className="border-t border-zinc-900 pt-5">
+            <p className="mb-3 text-xs uppercase tracking-widest text-zinc-600">
+              Dados da conta de negociação
+            </p>
+            <p className="mb-4 text-xs leading-relaxed text-zinc-600">
+              Pedidos pela corretora para emitir a conta. Ficam guardados — não voltas a
+              preenchê-los ao inscreveres-te num torneio ou ao comprares um desafio.
+            </p>
+            <CamposConta dados={conta} onChange={setConta} />
+          </div>
+        )}
       </div>
 
       {erro && <p className="mt-4 text-sm text-red-400">{erro}</p>}

@@ -30,7 +30,22 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}))
   const email = String(body?.email ?? '').trim().toLowerCase()
   const password = String(body?.password ?? '')
-  const nome = String(body?.nome ?? '').trim()
+
+  /**
+   * Os dados da conta de negociação recolhem-se AQUI, no registo, e não três ecrãs à frente.
+   *
+   * São sempre os mesmos — a corretora exige-os para emitir qualquer conta, de torneio ou de
+   * desafio. Pedi-los uma vez, no princípio, faz com que a inscrição no torneio e o checkout
+   * fiquem a um clique em vez de repetirem o mesmo formulário. Quem já os deu não os dá outra
+   * vez.
+   */
+  const { PAISES } = await import('@/lib/mtmfunded/paises')
+  const primeiroNome = String(body?.primeiroNome ?? '').trim()
+  const apelido = String(body?.apelido ?? '').trim()
+  const telefone = String(body?.telefone ?? '').replace(/\D/g, '')
+  const nascimento = String(body?.dataNascimento ?? '').trim()
+  const pais = PAISES.find((p) => p.codigo === String(body?.pais ?? 'PT')) ?? PAISES[0]
+  const nome = `${primeiroNome} ${apelido}`.trim()
 
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return NextResponse.json({ error: 'Email inválido' }, { status: 400 })
@@ -38,8 +53,18 @@ export async function POST(request: NextRequest) {
   if (password.length < 8) {
     return NextResponse.json({ error: 'A palavra-passe precisa de pelo menos 8 caracteres' }, { status: 400 })
   }
-  if (nome.length < 3) {
-    return NextResponse.json({ error: 'Indica o teu nome' }, { status: 400 })
+  if (primeiroNome.length < 2 || apelido.length < 2) {
+    return NextResponse.json({ error: 'Indica o primeiro nome e o apelido' }, { status: 400 })
+  }
+  if (telefone.length < 6) {
+    return NextResponse.json({ error: 'Indica um telemóvel válido' }, { status: 400 })
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(nascimento)) {
+    return NextResponse.json({ error: 'Indica a data de nascimento' }, { status: 400 })
+  }
+  const anos = (Date.now() - new Date(nascimento).getTime()) / (365.25 * 24 * 3600 * 1000)
+  if (!(anos >= 18 && anos <= 100)) {
+    return NextResponse.json({ error: 'É preciso ter 18 anos ou mais' }, { status: 400 })
   }
 
   const db = getSupabaseAdmin()
@@ -83,17 +108,30 @@ export async function POST(request: NextRequest) {
   const papelAtual = String(perfil?.user_type ?? '').toLowerCase()
   const manter = PAPEIS_ACIMA.has(papelAtual)
 
+  // Colunas próprias, e não um saco de jsonb: `phone`, `birth_date` e `country` já existem no
+  // perfil e são lidas por outras partes do site. Guardar isto num campo paralelo criava uma
+  // segunda verdade sobre a mesma pessoa.
+  const dadosConta = {
+    full_name: nome,
+    phone: `${pais.indicativo}${telefone}`,
+    birth_date: nascimento,
+    country: pais.codigo,
+  }
+
   if (!perfil) {
     await db.from('profiles').insert({
       id,
       email,
-      full_name: nome,
+      ...dadosConta,
       user_type: 'tournament',
       member_category: 'standard',
       is_active: true,
     })
-  } else if (!manter) {
-    await db.from('profiles').update({ user_type: 'tournament', is_active: true }).eq('id', id)
+  } else {
+    await db
+      .from('profiles')
+      .update({ ...dadosConta, ...(manter ? {} : { user_type: 'tournament', is_active: true }) })
+      .eq('id', id)
   }
 
   return NextResponse.json({ ok: true })
