@@ -81,10 +81,24 @@ export async function GET(request: NextRequest) {
 
   const performance = computePerformance(trades as ClosedTradeRow[], labelById)
 
+  /**
+   * A DATA DO RECOMEÇO VAI NA RESPOSTA, e não fica só na base de dados.
+   *
+   * Uma contagem reiniciada que ninguém vê não se distingue de números maquilhados. Quem lê
+   * "63% de acerto" tem de poder ver desde quando se está a contar e quantas trades ficaram
+   * de fora — senão o número diz mais do que sabe.
+   */
+  const marcos = (connections ?? [])
+    .map((c) => (c.metrics_from ? new Date(c.metrics_from as string).getTime() : null))
+    .filter((x): x is number => x != null)
+  const contagemDesde = marcos.length ? new Date(Math.min(...marcos)).toISOString() : null
+
   return NextResponse.json({
     performance,
     totalTrades: trades.length,
     tradesForaDasMetricas: (closedTrades?.length ?? 0) - trades.length,
+    contagemDesde,
+    contagemReiniciada: marcos.length > 0,
     accountsTracked: labelById.size,
     sampledUserRows: usersWithTrades ?? null,
   })

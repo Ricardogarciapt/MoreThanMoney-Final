@@ -201,6 +201,13 @@ export async function GET(request: NextRequest) {
 
   const performance = computePerformance(tradesContadas as ClosedTradeRow[], labelById)
 
+  // Desde quando se conta, e quantas ficaram de fora — para o número não dizer mais do que sabe.
+  const marcosCliente = (connections ?? [])
+    .map((c) => (c.metrics_from ? new Date(c.metrics_from as string).getTime() : null))
+    .filter((x): x is number => x != null)
+  const contagemDesde = marcosCliente.length ? new Date(Math.min(...marcosCliente)).toISOString() : null
+  const tradesForaDasMetricas = (closedTrades?.length ?? 0) - tradesContadas.length
+
   return NextResponse.json({
     summary: {
       totalSignals: tradeSignals.length,
@@ -233,6 +240,9 @@ export async function GET(request: NextRequest) {
       },
     },
     performance,
+    contagemDesde,
+    contagemReiniciada: marcosCliente.length > 0,
+    tradesForaDasMetricas,
     tradingPlan: tradingPlan ?? null,
     auditedAccounts: conns
       .filter((c) => c.is_audited)
