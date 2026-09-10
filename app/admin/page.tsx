@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react"
 import type { UserManagement, AdminStats } from "@/lib/admin-types"
 import { adminApiCall, clearAdminCache } from "@/lib/admin-helpers"
 import AdminSidebar from "@/components/admin/admin-sidebar"
+import MtmFundedManager from "@/components/admin/mtmfunded-manager"
 import AdminOverview from "@/components/admin/admin-overview"
 import UserManagementComponent from "@/components/admin/user-management"
 import SiteContentManager from "@/components/admin/site-content-manager"
@@ -55,6 +56,7 @@ function AdminPageClient() {
     "education",
     "dvr",
     "avaliacoes",
+    "mtmfunded",
     "notifications",
     "settings",
   ])
@@ -240,6 +242,7 @@ function AdminPageClient() {
               {activeSection === "education" && "Educação / LMS"}
               {activeSection === "dvr" && "Gravações DVR"}
               {activeSection === "avaliacoes" && "Avaliações & Certificados"}
+              {activeSection === "mtmfunded" && "MTM Funded & Torneios"}
               {activeSection === "notifications" && "Notificações"}
               {activeSection === "settings" && "Configurações"}
             </h1>
@@ -348,6 +351,20 @@ function AdminPageClient() {
               <div className="p-6">
                 <DvrRecordingsManager />
               </div>
+            </div>
+          )}
+
+          {activeSection === "mtmfunded" && (
+            <div className="overflow-hidden rounded-2xl border border-[#D2A63C]/20 bg-gray-950/80 backdrop-blur-sm">
+              <div className="border-b border-[#D2A63C]/15 px-6 py-4">
+                <h2 className="text-lg font-semibold tracking-tight text-[#D2A63C]">MTM Funded &amp; Torneios</h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  Ligar ou desligar o produto financiado e as vendas, gerir os torneios trimestrais
+                  (publicar, abrir inscrições, começar, terminar) e emitir os certificados. Com o
+                  produto desligado, o /mtmfunded encaminha para os torneios e não mostra preços.
+                </p>
+              </div>
+              <MtmFundedManager />
             </div>
           )}
 

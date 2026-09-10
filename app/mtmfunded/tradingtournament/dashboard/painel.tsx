@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   LayoutDashboard, Wallet, FileText, Trophy, ListOrdered,
@@ -42,7 +42,7 @@ const SECCOES = [
   { id: 'certificados', nome: 'Certificados', icone: Award },
 ] as const
 
-type SeccaoId = (typeof SECCOES)[number]['id']
+type SeccaoId = (typeof SECCOES)[number]['id'] | 'comunidade' | 'apoio'
 
 export default function PainelParticipante(props: {
   nome: string
@@ -85,13 +85,31 @@ export default function PainelParticipante(props: {
             })}
           </nav>
 
+          {/*
+            Comunidade e Apoio vivem DENTRO do painel, e não como ligações para /app-mobile e
+            /aimtm. Um participante de torneio não é membro: o middleware trava-o nessas rotas
+            e atira-o para o registo — o que, além de o confundir, lhe diz que há ali algo que
+            ele não pode ver. O chat é o canal do torneio; o apoio é um assistente próprio.
+          */}
           <div className="mt-6 space-y-1 border-t border-zinc-900 pt-4">
-            <Link href="/app-mobile" className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-zinc-400 hover:text-white">
-              <MessageSquare className="h-4 w-4" /> Comunidade
-            </Link>
-            <Link href="/aimtm" className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-zinc-400 hover:text-white">
-              <Bot className="h-4 w-4" /> Apoio (IA)
-            </Link>
+            {([
+              { id: 'comunidade' as const, nome: 'Comunidade', icone: MessageSquare },
+              { id: 'apoio' as const, nome: 'Apoio', icone: Bot },
+            ]).map((s2) => {
+              const Icone = s2.icone
+              const ativa = seccao === s2.id
+              return (
+                <button
+                  key={s2.id}
+                  onClick={() => setSeccao(s2.id)}
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                    ativa ? 'bg-[#4B8BFF]/10 text-[#4B8BFF]' : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <Icone className="h-4 w-4" /> {s2.nome}
+                </button>
+              )
+            })}
           </div>
         </aside>
 
@@ -103,6 +121,8 @@ export default function PainelParticipante(props: {
           {seccao === 'classificacao' && <Classificacao linhas={classificacao} />}
           {seccao === 'terminal' && <Terminal scanners={props.scannersPermitidos} />}
           {seccao === 'certificados' && <Certificados certificados={certificados} />}
+          {seccao === 'comunidade' && <Comunidade />}
+          {seccao === 'apoio' && <Apoio />}
         </main>
       </div>
     </div>
@@ -369,5 +389,146 @@ function Certificados({ certificados }: { certificados: Certificado[] }) {
         </div>
       ))}
     </div>
+  )
+}
+
+/**
+ * Comunidade: o canal do torneio, replicado aqui.
+ *
+ * Não é o chat dos membros. A rota serve um canal de uma allowlist fixa — o canal nunca vem
+ * do pedido, senão bastava mudar uma palavra para ler o chat Premium com uma inscrição
+ * gratuita.
+ */
+function Comunidade() {
+  const [mensagens, setMensagens] = useState<Array<{ id: string; texto: string; autor: string; quando: string; meu: boolean }>>([])
+  const [texto, setTexto] = useState('')
+  const [aCarregar, setACarregar] = useState(true)
+
+  const carregar = async () => {
+    try {
+      const { getAccessToken } = await import('@/lib/auth-token')
+      const t = await getAccessToken()
+      const r = await fetch('/api/mtmfunded/chat', { headers: { Authorization: `Bearer ${t}` }, cache: 'no-store' })
+      const j = await r.json()
+      setMensagens(j?.mensagens ?? [])
+    } catch { /* silencioso */ } finally { setACarregar(false) }
+  }
+
+  useEffect(() => {
+    carregar()
+    const t = setInterval(carregar, 20_000)
+    return () => clearInterval(t)
+  }, [])
+
+  const enviar = async () => {
+    const t = texto.trim()
+    if (!t) return
+    setTexto('')
+    try {
+      const { getAccessToken } = await import('@/lib/auth-token')
+      const tok = await getAccessToken()
+      await fetch('/api/mtmfunded/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ texto: t }),
+      })
+      carregar()
+    } catch { setTexto(t) }
+  }
+
+  return (
+    <Caixa titulo="Comunidade do torneio">
+      <div className="max-h-[420px] space-y-3 overflow-y-auto">
+        {aCarregar && <Vazio>A carregar…</Vazio>}
+        {!aCarregar && !mensagens.length && <Vazio>Ainda ninguém escreveu. Começa tu.</Vazio>}
+        {mensagens.map((m) => (
+          <div key={m.id} className={m.meu ? 'text-right' : ''}>
+            <p className="text-xs text-zinc-600">{m.autor}</p>
+            <p className={`mt-0.5 inline-block rounded-lg px-3 py-2 text-sm ${m.meu ? 'bg-[#4B8BFF]/15 text-white' : 'bg-zinc-900 text-zinc-200'}`}>
+              {m.texto}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 flex gap-2">
+        <input
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && enviar()}
+          placeholder="Escreve à comunidade…"
+          className="flex-1 rounded-lg border border-zinc-800 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-[#4B8BFF]"
+        />
+        <button onClick={enviar} className="rounded-lg bg-[#4B8BFF] px-4 py-2 text-sm font-semibold">Enviar</button>
+      </div>
+    </Caixa>
+  )
+}
+
+/**
+ * Apoio: assistente PRÓPRIO do torneio.
+ *
+ * Independente do assistente dos membros de propósito. Aquele conhece sinais, scanners e
+ * planos — coisas que um participante de torneio não pode abrir. Um assistente que fala do
+ * que a pessoa não tem acesso ensina-a a pedir o que lhe vai ser negado.
+ */
+function Apoio() {
+  const [fio, setFio] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
+  const [texto, setTexto] = useState('')
+  const [aPensar, setAPensar] = useState(false)
+
+  const perguntar = async () => {
+    const t = texto.trim()
+    if (!t || aPensar) return
+    setTexto('')
+    const novo = [...fio, { role: 'user' as const, content: t }]
+    setFio(novo)
+    setAPensar(true)
+    try {
+      const { getAccessToken } = await import('@/lib/auth-token')
+      const tok = await getAccessToken()
+      const r = await fetch('/api/mtmfunded/apoio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ mensagem: t, historico: fio }),
+      })
+      const j = await r.json()
+      setFio([...novo, { role: 'assistant', content: j?.resposta ?? j?.error ?? 'Não consegui responder.' }])
+    } catch {
+      setFio([...novo, { role: 'assistant', content: 'O apoio não respondeu. Tenta outra vez.' }])
+    } finally {
+      setAPensar(false)
+    }
+  }
+
+  return (
+    <Caixa titulo="Apoio">
+      <p className="text-xs text-zinc-600">
+        Assistente do torneio. Sabe das regras, da conta e do MetaTrader — não dá conselho de
+        investimento nem diz o que negociar.
+      </p>
+      <div className="mt-4 max-h-[380px] space-y-3 overflow-y-auto">
+        {!fio.length && <Vazio>Pergunta o que precisares sobre o torneio.</Vazio>}
+        {fio.map((m, i) => (
+          <div key={i} className={m.role === 'user' ? 'text-right' : ''}>
+            <p className={`inline-block whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${m.role === 'user' ? 'bg-[#4B8BFF]/15 text-white' : 'bg-zinc-900 text-zinc-200'}`}>
+              {m.content}
+            </p>
+          </div>
+        ))}
+        {aPensar && <Vazio>A escrever…</Vazio>}
+      </div>
+      <div className="mt-4 flex gap-2">
+        <input
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && perguntar()}
+          placeholder="A tua pergunta…"
+          className="flex-1 rounded-lg border border-zinc-800 bg-black/40 px-3 py-2 text-sm text-white outline-none focus:border-[#4B8BFF]"
+        />
+        <button onClick={perguntar} disabled={aPensar} className="rounded-lg bg-[#4B8BFF] px-4 py-2 text-sm font-semibold disabled:opacity-50">
+          Perguntar
+        </button>
+      </div>
+    </Caixa>
   )
 }

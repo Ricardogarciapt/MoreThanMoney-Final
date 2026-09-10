@@ -22,6 +22,7 @@ import { Gauge,
   Instagram,
   Rocket,
   KeyRound,
+  Trophy,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -33,6 +34,7 @@ const navItems = [
   { id: "education", label: "Educação (LMS)", icon: GraduationCap },
   { id: "dvr", label: "Gravações DVR", icon: Film },
   { id: "avaliacoes", label: "Avaliações", icon: Award },
+  { id: "mtmfunded", label: "MTM Funded & Torneios", icon: Trophy },
   { id: "notifications", label: "Notificações", icon: Bell },
   { id: "settings", label: "Configurações", icon: Settings },
 ]
