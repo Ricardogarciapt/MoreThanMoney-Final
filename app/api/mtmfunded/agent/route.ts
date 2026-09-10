@@ -150,5 +150,52 @@ export async function POST(request: NextRequest) {
     .update({ estado: 'concluido', erro: null, concluido_em: new Date().toISOString() })
     .eq('id', id)
 
-  return NextResponse.json({ ok: true, accountId: pedido.account_id })
+  /**
+   * A conta só serve depois de chegar a quem é. O envio é BEST-EFFORT e vem depois de
+   * gravar: se o email falhar, a conta continua a existir e reenvia-se do painel. Ao
+   * contrário — falhar o pedido porque o email não saiu — perdia-se a conta que o operador
+   * acabou de criar à mão no MetaTrader, e essa não se recupera.
+   */
+  let emailEnviado = false
+  try {
+    const { data: conta } = await db
+      .from('mtm_trading_accounts')
+      .select('id, tipo, user_id, servidor, saldo_inicial, alavancagem, tournament_id')
+      .eq('id', pedido.account_id)
+      .maybeSingle()
+
+    if (conta) {
+      const { data: perfil } = conta.user_id
+        ? await db.from('profiles').select('full_name, email').eq('id', conta.user_id).maybeSingle()
+        : { data: null }
+      const { data: torneio } = conta.tournament_id
+        ? await db.from('mtm_tournaments').select('nome, regras').eq('id', conta.tournament_id).maybeSingle()
+        : { data: null }
+
+      const destino = perfil?.email ?? (await db
+        .from('mtm_account_requests').select('email').eq('id', id).maybeSingle()).data?.email
+
+      if (destino) {
+        const { enviarEmailDaConta } = await import('@/lib/mtmfunded/email-conta')
+        const { getSiteUrl } = await import('@/lib/mail-transport')
+        const r = await enviarEmailDaConta({
+          para: destino,
+          nome: (perfil?.full_name as string) || destino.split('@')[0],
+          tipo: conta.tipo === 'torneio' ? 'torneio' : 'desafio',
+          nomeProva: (torneio?.nome as string) || 'MTM Funded',
+          login,
+          servidor: (conta.servidor as string) || 'TheTradingMaster-Live',
+          saldo: Number(conta.saldo_inicial ?? 0),
+          alavancagem: Number(conta.alavancagem ?? 100),
+          urlPainel: `${getSiteUrl()}/mtmfunded/tradingtournament/dashboard`,
+          regras: (torneio?.regras ?? null) as Record<string, number | string> | null,
+        })
+        emailEnviado = r.success
+      }
+    }
+  } catch (e) {
+    console.error('[mtmfunded] conta criada mas o email falhou:', e instanceof Error ? e.message : e)
+  }
+
+  return NextResponse.json({ ok: true, accountId: pedido.account_id, emailEnviado })
 }
