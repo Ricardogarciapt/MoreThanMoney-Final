@@ -86,3 +86,14 @@ fi
 
 registar "ERRO: não apareceu em 8 minutos. Vê /tmp/mt5-instalacao-*.png para saber onde parou."
 exit 1
+
+# ── fontes ───────────────────────────────────────────────────────────────────
+# O prefixo vinha SEM UMA ÚNICA fonte, e o Wine ia buscá-las ao sistema à sorte. O diálogo
+# final das contas escrevia a password numa fonte a que faltavam símbolos: o caractere
+# especial não era desenhado de todo, e no ecrã ficava um espaço em branco. Não há OCR que
+# leia o que não foi desenhado — a conta 19011 nasceu com uma password que ninguém podia ler.
+sudo apt-get install -y -qq fonts-liberation fonts-dejavu-core
+mkdir -p "$WINEPREFIX/drive_c/windows/Fonts"
+for f in $(fc-list -f "%{file}\n" | grep -iE "liberation|dejavu" | sort -u); do
+  cp -n "$f" "$WINEPREFIX/drive_c/windows/Fonts/" 2>/dev/null || true
+done

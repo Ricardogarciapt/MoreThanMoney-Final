@@ -254,6 +254,7 @@ def _ler_valor(imagem: str, y: float, x: float, altura: float, x_fim: float) -> 
     corte = f"{largura_tira}x{h}+{esquerda}+{topo}"
 
     leituras: list[str] = []
+    buracos: list[str] = []
     for variante in VARIANTES:
         try:
             subprocess.run(["convert", imagem, "-crop", corte, "+repage", *variante,
@@ -262,10 +263,18 @@ def _ler_valor(imagem: str, y: float, x: float, altura: float, x_fim: float) -> 
                                capture_output=True, text=True, timeout=60)
         except Exception:
             return []
-        # Juntar os pedaços: ampliada, a fonte fica com folgas que o tesseract lê como
-        # espaços — "RrNm*d3d" chegava partido em "RrNm" e "*d3d".
-        leituras.append("".join(r.stdout.split()))
-    return [v for v in leituras if len(v) >= 6]
+        pedacos = r.stdout.split()
+        # Duas leituras da mesma tira, e ambas plausíveis:
+        #  · COLADA — ampliada, a fonte fica com folgas que o tesseract lê como espaços, e
+        #    "RrNm*d3d" chega partido em "RrNm" e "*d3d". Aqui o vazio não existe.
+        #  · COM SÍMBOLO — o vazio é mesmo um caractere que a fonte do Wine não desenha.
+        # Do texto sozinho não se distingue um caso do outro. Não se escolhe: guardam-se os
+        # dois e é o MetaTrader que recusa o que não presta.
+        leituras.append("".join(pedacos))
+        if len(pedacos) == 2:
+            buracos.append(" ".join(pedacos))
+    # As coladas primeiro: é o caso mais comum, e cada tentativa custa alguns segundos.
+    return [v for v in leituras + buracos if len(v) >= 6]
 
 
 def validar(achados: dict) -> list[str]:

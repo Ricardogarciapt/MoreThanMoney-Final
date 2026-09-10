@@ -455,9 +455,13 @@ def ler_credenciais(imagem: str, login: str | None = None) -> dict:
         d = json.loads(r.stdout or "{}")
     except Exception:
         return {}
-    # `problemas` não vazio = leitura duvidosa. Uma password duvidosa é pior do que nenhuma:
-    # entrega-se uma conta que não abre e ninguém sabe porquê.
-    return {} if d.get("problemas") else d
+    # `problemas` não vazio = nenhuma leitura se impôs. Antes deitava-se fora o dicionário
+    # inteiro, e com ele os CANDIDATOS — que são justamente o que se quer nesse caso: o
+    # MetaTrader experimenta-os e recusa os errados na hora. O que não se leva daqui para a
+    # frente é a `password`: essa só vale confirmada.
+    if d.get("problemas"):
+        return {"candidatos": d.get("candidatos") or [], "problemas": d["problemas"]}
+    return d
 
 
 if __name__ == "__main__":
