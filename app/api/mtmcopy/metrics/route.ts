@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       supabaseAdmin
         .from('mtmcopy_connections')
         .select(
-          'id, account_role, account_label, mt5_status, is_active, metaapi_account_id, mt5_login, mt5_login_last4, last_signal_at, is_audited, audit_label',
+          'id, account_role, account_label, mt5_status, is_active, metaapi_account_id, mt5_login, mt5_login_last4, last_signal_at, is_audited, audit_label, metrics_from',
         )
         .eq('user_id', user.id)
         // Contas marcadas como fora das métricas continuam a operar, mas não entram nos números.
@@ -179,7 +179,27 @@ export async function GET(request: NextRequest) {
   const journalAnalysis = trades.filter((t) => t.execution_mode === 'analysis')
 
   const labelById = new Map(conns.map((c) => [c.id, connectionDisplayLabel(c)]))
-  const performance = computePerformance((closedTrades ?? []) as ClosedTradeRow[], labelById)
+  /**
+   * As trades de uma ligação EXCLUÍDA, ou anteriores ao arranque dela, ficam de fora.
+   *
+   * A consulta das ligações já filtrava `metrics_excluded`, mas só para os rótulos — as trades
+   * vinham todas e contavam na mesma. E uma ligação reapontada para outra conta MT5 arrasta o
+   * histórico da anterior, que não é desta conta.
+   */
+  const permitidas = new Map<string, number | null>()
+  for (const c of connections ?? []) {
+    permitidas.set(c.id as string, c.metrics_from ? new Date(c.metrics_from as string).getTime() : null)
+  }
+  const tradesContadas = ((closedTrades ?? []) as Array<Record<string, unknown>>).filter((t) => {
+    const cid = t.mtmcopy_connection_id as string | null
+    if (!cid) return true
+    if (!permitidas.has(cid)) return false
+    const marco = permitidas.get(cid)
+    if (marco == null) return true
+    return (t.closed_at ? new Date(t.closed_at as string).getTime() : 0) >= marco
+  })
+
+  const performance = computePerformance(tradesContadas as ClosedTradeRow[], labelById)
 
   return NextResponse.json({
     summary: {

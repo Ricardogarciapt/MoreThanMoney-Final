@@ -27,8 +27,7 @@ export async function GET(request: NextRequest) {
       .limit(20000),
     supabase
       .from('mtmcopy_connections')
-      .select('id, account_label, mt5_login, mt5_login_last4, audit_label, is_audited')
-      .eq('metrics_excluded', false),
+      .select('id, account_label, mt5_login, mt5_login_last4, audit_label, is_audited, metrics_excluded, metrics_from'),
     supabase
       .from('trading_plan_trades')
       .select('user_id', { count: 'exact', head: true })
@@ -36,8 +35,36 @@ export async function GET(request: NextRequest) {
       .eq('status', 'closed'),
   ])
 
+  /**
+   * O `metrics_excluded` NÃO excluía nada.
+   *
+   * A consulta filtrava as ligações só para montar os RÓTULOS; as trades vinham todas e
+   * entravam na conta na mesma — a ligação excluída limitava-se a aparecer sem nome. Uma conta
+   * demo marcada como fora das métricas continuava a puxar os números para baixo (ou para cima),
+   * e ninguém via porquê. Agora exclui a sério.
+   *
+   * O `metrics_from` é o segundo filtro: uma ligação reapontada para outra conta MT5 arrasta o
+   * histórico da anterior, e essas trades não são desta conta.
+   */
+  const excluidas = new Set<string>()
+  const desde = new Map<string, number>()
+  for (const c of connections ?? []) {
+    if (c.metrics_excluded) excluidas.add(c.id as string)
+    if (c.metrics_from) desde.set(c.id as string, new Date(c.metrics_from as string).getTime())
+  }
+  const trades = ((closedTrades ?? []) as Array<Record<string, unknown>>).filter((t) => {
+    const cid = t.mtmcopy_connection_id as string | null
+    if (!cid) return true // trade sem ligação (plano manual) — fora do âmbito desta regra
+    if (excluidas.has(cid)) return false
+    const marco = desde.get(cid)
+    if (marco == null) return true
+    const fechada = t.closed_at ? new Date(t.closed_at as string).getTime() : 0
+    return fechada >= marco
+  })
+
   const labelById = new Map<string, string>()
   for (const c of connections ?? []) {
+    if (c.metrics_excluded) continue
     let label = 'Conta MT5'
     if (c.is_audited && c.audit_label?.trim()) label = c.audit_label.trim()
     else if (c.account_label?.trim() && c.account_label.toLowerCase() !== 'null') label = c.account_label.trim()
@@ -48,15 +75,16 @@ export async function GET(request: NextRequest) {
   // Track record por estratégia (contas-mestre): agrupa por setup_type (em memória, sem FK)
   // com rótulo legível — aparecem como "contas" próprias no breakdown.
   for (const m of MASTER_STRATEGIES) labelById.set(`strat:${m.strategy}`, m.strategy)
-  for (const r of (closedTrades ?? []) as Array<Record<string, unknown>>) {
+  for (const r of trades) {
     if (r.trade_source === 'strategy' && r.setup_type) r.mtmcopy_connection_id = `strat:${r.setup_type as string}`
   }
 
-  const performance = computePerformance((closedTrades ?? []) as ClosedTradeRow[], labelById)
+  const performance = computePerformance(trades as ClosedTradeRow[], labelById)
 
   return NextResponse.json({
     performance,
-    totalTrades: closedTrades?.length ?? 0,
+    totalTrades: trades.length,
+    tradesForaDasMetricas: (closedTrades?.length ?? 0) - trades.length,
     accountsTracked: labelById.size,
     sampledUserRows: usersWithTrades ?? null,
   })
