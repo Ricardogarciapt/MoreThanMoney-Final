@@ -23,7 +23,7 @@ else
   cat > "$CONFIG" <<EOF
 MTMFUNDED_AGENT_SECRET=$TOKEN
 MTM_AGENT_SITE=https://www.morethanmoney.pt
-MTM_AGENT_MODO=assistido
+MTM_AGENT_MODO=auto
 MTM_AGENT_INTERVALO=60
 EOF
   chmod 600 "$CONFIG"
@@ -33,9 +33,9 @@ fi
 chmod +x "$DIR/agente.sh"
 mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
 
-# O modo assistido precisa de alguém a escrever no terminal, por isso o launchd instala-se
-# a correr em modo de ESPERA: mantém-se vivo e avisa quando há pedidos, sem tentar preencher
-# formulários sozinho. Passa a MTM_AGENT_MODO=auto quando o criar_conta.py estiver calibrado.
+# Em modo AUTO o agente não precisa de ninguém: conduz o MT5 e confirma no journal. Se a
+# sequência de teclas não chegar ao fim, o journal não confirma, nada é inventado e o pedido
+# volta à fila. Passa a MTM_AGENT_MODO=assistido se preferires validar cada conta à mão.
 cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
