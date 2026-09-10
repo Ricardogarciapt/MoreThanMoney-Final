@@ -46,9 +46,35 @@ if ! lsof -ti tcp:"$PORTO_LOCAL" >/dev/null 2>&1; then
   exit 1
 fi
 
+# A palavra-passe do VNC vem do VPS, por SSH. Não fica escrita neste ficheiro — um ficheiro
+# na Dock é aberto por quem passar pelo computador; o SSH exige a chave.
+echo "· a buscar a palavra-passe do ecrã…"
+SEGREDO="$(ssh -o ConnectTimeout=15 "$MAQUINA" 'sudo -u ubuntu bash -lc "~/mtm-agent/vnc.sh segredo"' 2>/dev/null | tr -d "\r\n")"
+
+# Guardada no Porta-chaves com o endereço exacto que a Partilha de Ecrã usa: da próxima vez
+# ela entra sozinha. Escrever uma palavra-passe aleatória à mão, de cada vez, é o género de
+# atrito que faz com que ninguém use a ferramenta.
+if [ -n "$SEGREDO" ]; then
+  security delete-internet-password -s "127.0.0.1" -r "rfbs" >/dev/null 2>&1
+  security add-internet-password -a "" -s "127.0.0.1" -r "rfbs" -P "$PORTO_LOCAL" \
+    -w "$SEGREDO" -T /System/Library/CoreServices/Applications/Screen\ Sharing.app \
+    -U >/dev/null 2>&1
+fi
+
 echo "· a abrir a Partilha de Ecrã…"
 open "vnc://127.0.0.1:${PORTO_LOCAL}"
 
+echo
+if [ -n "$SEGREDO" ]; then
+  echo "┌──────────────────────────────────────────────────────────┐"
+  printf "│  Palavra-passe do ecrã:  %-31s │\n" "$SEGREDO"
+  echo "│  (já ficou guardada no Porta-chaves — da próxima vez      │"
+  echo "│   a Partilha de Ecrã entra sozinha)                       │"
+  echo "└──────────────────────────────────────────────────────────┘"
+else
+  echo "Não consegui buscar a palavra-passe. Lê-a com:"
+  echo "  ssh $MAQUINA 'sudo -u ubuntu bash -lc \"~/mtm-agent/vnc.sh segredo\"'"
+fi
 echo
 echo "Pronto. O MetaTrader está na janela que abriu."
 echo

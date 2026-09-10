@@ -26,7 +26,11 @@ export default function ConditionalNavbarFooter({ children }: { children: React.
   }
 
   // Rotas standalone: não renderizar navbar/footer global.
-  const standalonePaths = ["/iqcharts2", "/charts-primeverse", "/app-mobile", "/work", "/tradingfloor", "/apresentacao", "/FreeSession"]
+  // `/mtmfunded` é um NEGÓCIO À PARTE, e não uma secção do site: tem navegação, rodapé,
+  // FAQ e políticas próprias, sem caminho de regresso a morethanmoney.pt. Herdar a navbar
+  // global misturava as duas marcas — e, num produto financiado, misturar quem responde
+  // pelo quê não é uma questão de estética.
+  const standalonePaths = ["/iqcharts2", "/charts-primeverse", "/app-mobile", "/work", "/tradingfloor", "/apresentacao", "/FreeSession", "/mtmfunded"]
   const isStandalonePage = standalonePaths.some(isExactOrChildPath)
 
   // In the native app every route is standalone — hide Navbar & Footer site-wide

@@ -90,6 +90,9 @@ export default function Navbar() {
         { name: t("navfooter.subTradingDesk"), href: "/trading" },
         { name: "MTM Sensei EA", href: "/sensei-ea" },
         { name: "Sensei Scalp Edition", href: "/sensei-scalp" },
+        // A entrada para o MTM Funded existe aqui, mas só neste sentido: lá dentro a marca é
+        // outra, com navegação e rodapé próprios e sem caminho de volta. São dois negócios.
+        { name: "MTM Funded", href: "/mtmfunded" },
       ],
     },
     {

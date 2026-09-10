@@ -141,9 +141,36 @@ export async function POST(request: NextRequest) {
     .maybeSingle()
   if (!pedido) return NextResponse.json({ error: 'pedido desconhecido' }, { status: 404 })
 
+  /**
+   * O QR do MetaTrader, quando o agente o conseguiu recortar.
+   *
+   * Guarda-se como data URI na própria linha da conta, e não num balde público de ficheiros:
+   * este código traz as credenciais codificadas — é por isso que entra com um toque — e um
+   * URL público seria a conta aberta a quem descobrisse o endereço. Aqui só sai por rotas
+   * que verificam de quem é a conta.
+   */
+  const qr =
+    typeof body?.qr === 'string' && body.qr.length > 100 && body.qr.length < 400_000
+      ? `data:image/png;base64,${body.qr.replace(/^data:image\/png;base64,/, '')}`
+      : null
+
   // ── falhou ───────────────────────────────────────────────────────────────
   if (body?.erro) {
     const desiste = (pedido.tentativas ?? 0) >= 3
+    // Mesmo a falhar, o que se conseguiu guarda-se. Uma conta criada sem password legível
+    // continua a ser utilizável pelo QR — deitar fora o código com o erro fechava a única
+    // porta que lhe restava.
+    if (qr || body?.login) {
+      await db
+        .from('mtm_trading_accounts')
+        .update({
+          ...(qr ? { qrcode_url: qr } : {}),
+          ...(body?.login ? { mt5_login: String(body.login).trim() } : {}),
+          ...(body?.servidor ? { servidor: String(body.servidor) } : {}),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', pedido.account_id)
+    }
     await db
       .from('mtm_account_requests')
       .update({
@@ -179,6 +206,7 @@ export async function POST(request: NextRequest) {
     estado: 'ativa',
     updated_at: new Date().toISOString(),
   }
+  if (qr) patch.qrcode_url = qr
   if (body?.servidor) patch.servidor = String(body.servidor)
 
   await db.from('mtm_trading_accounts').update(patch).eq('id', pedido.account_id)
@@ -198,7 +226,7 @@ export async function POST(request: NextRequest) {
   try {
     const { data: conta } = await db
       .from('mtm_trading_accounts')
-      .select('id, tipo, user_id, servidor, saldo_inicial, alavancagem, tournament_id')
+      .select('id, tipo, user_id, servidor, saldo_inicial, alavancagem, tournament_id, qrcode_url')
       .eq('id', pedido.account_id)
       .maybeSingle()
 
@@ -226,6 +254,7 @@ export async function POST(request: NextRequest) {
           saldo: Number(conta.saldo_inicial ?? 0),
           alavancagem: Number(conta.alavancagem ?? 100),
           urlPainel: `${getSiteUrl()}/mtmfunded/tradingtournament/dashboard`,
+          qrMetaTrader: (conta.qrcode_url as string) ?? null,
           regras: (torneio?.regras ?? null) as Record<string, number | string> | null,
         })
         emailEnviado = r.success

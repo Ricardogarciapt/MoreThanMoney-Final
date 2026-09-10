@@ -369,5 +369,82 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, ...r })
   }
 
+  // ── programas MTM Funded ─────────────────────────────────────────────────
+  /**
+   * Criar e editar um programa de avaliação.
+   *
+   * O PREÇO valida-se aqui, e com um tecto. Um zero a mais num campo de admin é a diferença
+   * entre 199 € e 1990 €, e do outro lado está um checkout Stripe real a cobrar a alguém.
+   * O mesmo para as regras: uma perda diária maior do que a máxima é uma regra que nunca
+   * dispara — o participante rebentava a conta inteira sem nunca bater no limite do dia.
+   */
+  if (accao === 'programa_guardar') {
+    const slug = String(b?.slug ?? '').trim().toLowerCase()
+    if (!/^[a-z0-9][a-z0-9-]{1,40}$/.test(slug)) {
+      return NextResponse.json({ error: 'slug inválido (letras minúsculas, números e hífens)' }, { status: 400 })
+    }
+    const nome = String(b?.nome ?? '').trim()
+    if (nome.length < 3) return NextResponse.json({ error: 'nome em falta' }, { status: 400 })
+
+    const num = (v: unknown, min: number, max: number) => {
+      const n = Number(v)
+      return Number.isFinite(n) && n >= min && n <= max ? n : null
+    }
+    const saldo = num(b?.saldo, 1000, 1_000_000)
+    const preco = num(b?.preco_cents, 0, 500_000)      // tecto de 5.000 €
+    const fases = num(b?.fases, 1, 3)
+    if (saldo == null) return NextResponse.json({ error: 'saldo entre 1.000 e 1.000.000' }, { status: 400 })
+    if (preco == null) return NextResponse.json({ error: 'preço entre 0 e 5.000 €' }, { status: 400 })
+    if (fases == null) return NextResponse.json({ error: 'fases entre 1 e 3' }, { status: 400 })
+
+    const r = (b?.regras ?? {}) as Record<string, unknown>
+    const diaria = num(r.perda_diaria_pct, 0.5, 50)
+    const maxima = num(r.perda_maxima_pct, 0.5, 90)
+    if (diaria == null || maxima == null) {
+      return NextResponse.json({ error: 'perda diária e máxima são obrigatórias' }, { status: 400 })
+    }
+    if (diaria > maxima) {
+      return NextResponse.json(
+        { error: 'a perda diária não pode ser maior do que a máxima — seria uma regra que nunca dispara' },
+        { status: 400 },
+      )
+    }
+    const regras: Record<string, number> = { perda_diaria_pct: diaria, perda_maxima_pct: maxima }
+    const objetivo = num(r.objetivo_pct, 0.5, 100)
+    const dias = num(r.dias_minimos, 0, 90)
+    const consistencia = num(r.consistencia_pct, 1, 100)
+    if (objetivo != null) regras.objetivo_pct = objetivo
+    if (dias != null) regras.dias_minimos = dias
+    if (consistencia != null) regras.consistencia_pct = consistencia
+
+    const linha = {
+      slug,
+      nome,
+      descricao: b?.descricao ? String(b.descricao).slice(0, 400) : null,
+      fases,
+      saldo,
+      preco_cents: preco,
+      moeda: 'eur',
+      stripe_price_id: b?.stripe_price_id ? String(b.stripe_price_id).trim() : null,
+      regras,
+      ativo: b?.ativo !== false,
+      ordem: Number.isFinite(Number(b?.ordem)) ? Number(b.ordem) : 0,
+      updated_at: new Date().toISOString(),
+    }
+    const { error } = await db.from('mtm_funded_programs').upsert(linha, { onConflict: 'slug' })
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ ok: true, slug })
+  }
+
+  if (accao === 'programa_estado') {
+    const slug = String(b?.slug ?? '').trim()
+    if (!slug) return NextResponse.json({ error: 'slug em falta' }, { status: 400 })
+    await db
+      .from('mtm_funded_programs')
+      .update({ ativo: b?.ativo === true, updated_at: new Date().toISOString() })
+      .eq('slug', slug)
+    return NextResponse.json({ ok: true })
+  }
+
   return NextResponse.json({ error: 'acção desconhecida' }, { status: 400 })
 }

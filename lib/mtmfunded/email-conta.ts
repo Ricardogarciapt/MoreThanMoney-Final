@@ -11,8 +11,16 @@ import {
 /**
  * Entrega da conta de torneio / desafio ao participante.
  *
- * O QR abre o MetaTrader já com o servidor e o login preenchidos — é a diferença entre
- * "toma aqui uns números" e "entra". O formato `mt5://` é o que as apps de MT5 reconhecem.
+ * O QR é o VERDADEIRO — o que a própria plataforma desenha no diálogo final e que a app lê
+ * em «Nova conta → Entrar com código QR». O agente recorta-o do ecrã e envia-o com as
+ * credenciais.
+ *
+ * Aqui esteve, durante um tempo, um código apontado a `mt5://account?login=…&server=…`. Esse
+ * esquema não existe: nenhuma app de MT5 o regista, e a leitura não fazia nada. Ia em todos
+ * os emails a prometer uma coisa que nunca acontecia.
+ *
+ * Não havendo QR da plataforma, vai um que abre a área do participante. Menos bom, mas
+ * verdadeiro — um código que não faz nada é pior do que código nenhum.
  *
  * A PASSWORD NÃO VAI NO CORPO DO EMAIL, e isso é deliberado. Um email fica na caixa de
  * entrada para sempre, é reencaminhado sem se pensar, e é lido por quem tiver acesso ao
@@ -32,6 +40,13 @@ export interface EmailContaInput {
   alavancagem: number
   /** Para onde o participante vai ver a password e as métricas. */
   urlPainel: string
+  /**
+   * O QR do MetaTrader, em data URI, recortado do diálogo final pela própria plataforma.
+   * É este que entra com um toque em «Nova conta → Entrar com código QR». Não havendo, o
+   * email cai para um QR que abre a área do participante — que é útil, mas não é a mesma
+   * coisa.
+   */
+  qrMetaTrader?: string | null
   regras?: Record<string, number | string> | null
 }
 
@@ -41,11 +56,13 @@ export async function enviarEmailDaConta(
   const site = getSiteUrl()
   const logo = getEmailLogoSrc()
 
-  // `mt5://` com servidor e login: abre a app já a meio caminho.
-  const alvoQr = `mt5://account?login=${encodeURIComponent(input.login)}&server=${encodeURIComponent(input.servidor)}`
+  // O da plataforma primeiro; o da área do participante como recurso.
+  const doMetaTrader = (input.qrMetaTrader ?? '').startsWith('data:image/png;base64,')
   let qrBuffer: Buffer | null = null
   try {
-    qrBuffer = await QRCode.toBuffer(alvoQr, { width: 320, margin: 1 })
+    qrBuffer = doMetaTrader
+      ? Buffer.from((input.qrMetaTrader as string).split(',')[1], 'base64')
+      : await QRCode.toBuffer(input.urlPainel, { width: 320, margin: 1 })
   } catch {
     // Sem QR o email continua a servir: os dados estão lá em texto. Falhar o envio por
     // causa de uma imagem seria trocar o essencial pelo acessório.
@@ -87,8 +104,12 @@ export async function enviarEmailDaConta(
 
       ${qrBuffer ? `
       <div style="text-align:center;margin:22px 0;">
-        <img src="cid:mtm-conta-qr" alt="Ligar no MetaTrader" width="180" style="border-radius:12px;" />
-        <p style="margin:8px 0 0;font-size:12px;color:#888;">Lê o código com o MetaTrader 5 no telemóvel</p>
+        <img src="cid:mtm-conta-qr" alt="${doMetaTrader ? 'Entrar na conta com o MetaTrader 5' : 'Abrir a minha área'}" width="180" style="border-radius:12px;background:#fff;padding:8px;border-radius:12px;" />
+        <p style="margin:8px 0 0;font-size:12px;color:#888;">${
+          doMetaTrader
+            ? 'No MetaTrader 5 do telemóvel: <strong>Nova conta → Entrar com código QR</strong>'
+            : 'Aponta a câmara do telemóvel para abrires a tua área'
+        }</p>
       </div>` : ''}
 
       <div style="margin:20px 0;padding:14px 16px;background:#faf6ec;border:1px solid #eadcb8;border-radius:10px;">

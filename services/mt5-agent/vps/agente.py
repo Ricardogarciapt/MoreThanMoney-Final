@@ -136,8 +136,13 @@ def tratar_um() -> int:
         registar(f"conta {resultado['login']} criada SEM password: {resultado.get('aviso', '')}")
         pedir("/api/mtmfunded/agent", {
             "id": pid,
+            "login": resultado["login"],
+            "servidor": resultado.get("servidor"),
+            # O QR entra na app SEM password. Guardá-lo mesmo assim é a diferença entre uma
+            # conta perdida e uma conta que o participante consegue usar na mesma.
+            "qr": resultado.get("qr"),
             "erro": f"conta {resultado['login']} criada mas sem password legível — "
-                    "define-a no MT5 e reenvia pelo painel de admin",
+                    "o QR ainda entra; define a password no MT5 e reenvia pelo painel",
         })
         return 1
 
@@ -147,6 +152,9 @@ def tratar_um() -> int:
         "password": resultado["password"],
         "investor": resultado.get("investor"),
         "servidor": resultado.get("servidor"),
+        # O QR do MetaTrader, recortado do diálogo final. Vai em base64 e é o site que decide
+        # onde o guarda — daqui não se escreve em disco nada que contenha credenciais.
+        "qr": resultado.get("qr"),
     })
     if entrega.get("ok"):
         registar(f"conta {resultado['login']} entregue · email: {'sim' if entrega.get('emailEnviado') else 'FALHOU'}")

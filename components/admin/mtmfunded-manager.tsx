@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   Loader2, Power, Trophy, Users, Wallet, AlertTriangle, Award,
-  Shield, RefreshCw, Mail, KeyRound, Ban, Check,
+  Shield, RefreshCw, Mail, KeyRound, Ban, Check, Package, Plus,
 } from 'lucide-react'
 
 /**
@@ -15,7 +15,7 @@ import {
  * para gerir — serve para dar a sensação de que se está a gerir.
  */
 
-type Aba = 'resumo' | 'participantes' | 'contas' | 'certificados' | 'regras'
+type Aba = 'resumo' | 'participantes' | 'contas' | 'programas' | 'certificados' | 'regras'
 
 interface Torneio {
   id: string; slug: string; nome: string; estado: string; publicado: boolean
@@ -34,6 +34,7 @@ const ABAS: Array<{ id: Aba; nome: string; icone: typeof Users }> = [
   { id: 'resumo', nome: 'Resumo', icone: Trophy },
   { id: 'participantes', nome: 'Participantes', icone: Users },
   { id: 'contas', nome: 'Contas', icone: Wallet },
+  { id: 'programas', nome: 'Programas', icone: Package },
   { id: 'certificados', nome: 'Certificados', icone: Award },
   { id: 'regras', nome: 'Regras', icone: Shield },
 ]
@@ -107,6 +108,7 @@ export default function MtmFundedManager() {
       {aba === 'resumo' && <Resumo dados={resumo} accao={accao} ocupado={ocupado} />}
       {aba === 'participantes' && <Participantes torneios={resumo.torneios} accao={accao} ocupado={ocupado} />}
       {aba === 'contas' && <Contas accao={accao} ocupado={ocupado} setAviso={setAviso} />}
+      {aba === 'programas' && <Programas accao={accao} ocupado={ocupado} setAviso={setAviso} vendasAbertas={resumo.config.vendas_abertas} />}
       {aba === 'certificados' && <Certificados torneios={resumo.torneios} accao={accao} ocupado={ocupado} setAviso={setAviso} />}
       {aba === 'regras' && <Regras torneios={resumo.torneios} accao={accao} ocupado={ocupado} setAviso={setAviso} />}
     </div>
@@ -482,6 +484,237 @@ function Regras({ torneios, accao, ocupado, setAviso }: { torneios: Torneio[]; a
         <p className="text-xs text-gray-600">
           Alterar regras a meio de um torneio muda a prova a quem já está a competir.
         </p>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * OS PROGRAMAS DE AVALIAÇÃO.
+ *
+ * Cada linha é um produto com preço real e um checkout Stripe do outro lado. Por isso o
+ * preço mostra-se em EUROS e guarda-se em cêntimos: um campo em cêntimos convida a enganos de
+ * um zero, e um zero a mais aqui é a diferença entre 199 € e 1990 € cobrados a alguém.
+ *
+ * As regras vão ao lado do preço de propósito. Um programa cujo objectivo é maior do que a
+ * perda máxima é um programa impossível de passar, e isso só se vê quando as duas coisas
+ * estão à vista uma da outra.
+ */
+interface Programa {
+  id?: string; slug: string; nome: string; descricao: string | null
+  fases: number; saldo: number; preco_cents: number; ativo: boolean; ordem: number
+  regras: Record<string, number>
+  stripe_price_id?: string | null
+}
+
+const PROGRAMA_NOVO: Programa = {
+  slug: '', nome: '', descricao: null, fases: 1, saldo: 10000, preco_cents: 9900,
+  ativo: true, ordem: 0,
+  regras: { objetivo_pct: 8, perda_diaria_pct: 5, perda_maxima_pct: 10, dias_minimos: 5 },
+}
+
+function Programas({ accao, ocupado, setAviso, vendasAbertas }: {
+  accao: Accao; ocupado: string | null; setAviso: (s: string | null) => void; vendasAbertas: boolean
+}) {
+  const [programas, setProgramas] = useState<Programa[]>([])
+  const [compras, setCompras] = useState<Array<Record<string, unknown>>>([])
+  const [editar, setEditar] = useState<Programa | null>(null)
+  const [aCarregar, setACarregar] = useState(true)
+
+  const carregar = useCallback(async () => {
+    setACarregar(true)
+    try {
+      const r = await fetch('/api/admin/mtmfunded?vista=programas', { cache: 'no-store' })
+      const j = await r.json()
+      setProgramas(j.programas ?? [])
+      setCompras(j.compras ?? [])
+    } finally {
+      setACarregar(false)
+    }
+  }, [])
+  useEffect(() => { carregar() }, [carregar])
+
+  const guardar = async (p: Programa) => {
+    const j = await accao({ accao: 'programa_guardar', ...p }, `g${p.slug}`)
+    if (j) { setEditar(null); setAviso('Programa guardado.'); carregar() }
+  }
+
+  if (aCarregar) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[#D2A63C]" /></div>
+
+  return (
+    <div className="space-y-5">
+      {!vendasAbertas && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.05] p-4 text-sm text-amber-300">
+          As vendas estão fechadas no interruptor do Resumo. Os programas podem ser preparados
+          aqui, mas o site mostra «Brevemente» e o checkout recusa — no servidor, não só no botão.
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-200">Programas</h3>
+        <Botao ocupado={false} onClick={() => setEditar({ ...PROGRAMA_NOVO })}>
+          <span className="flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Novo</span>
+        </Botao>
+      </div>
+
+      {!programas.length && !editar && (
+        <p className="text-sm text-gray-500">Ainda não há programas. O /mtmfunded mostra o torneio enquanto assim for.</p>
+      )}
+
+      <div className="space-y-3">
+        {programas.map((p) => (
+          <div key={p.slug} className="rounded-xl border border-gray-800 bg-black/30 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="font-medium text-gray-100">
+                  {p.nome}{' '}
+                  <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${p.ativo ? 'bg-emerald-500/15 text-emerald-400' : 'bg-gray-800 text-gray-500'}`}>
+                    {p.ativo ? 'activo' : 'escondido'}
+                  </span>
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  {(p.preco_cents / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })} ·{' '}
+                  {Number(p.saldo).toLocaleString('pt-PT')} USD · {p.fases} {p.fases === 1 ? 'fase' : 'fases'} ·{' '}
+                  <code className="text-gray-600">{p.slug}</code>
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <IconeBotao titulo="Editar" onClick={() => setEditar(p)}><Shield className="h-3.5 w-3.5" /></IconeBotao>
+                <IconeBotao
+                  titulo={p.ativo ? 'Esconder do site' : 'Mostrar no site'}
+                  ocupado={ocupado === `e${p.slug}`}
+                  perigo={p.ativo}
+                  onClick={() => accao({ accao: 'programa_estado', slug: p.slug, ativo: !p.ativo }, `e${p.slug}`).then(carregar)}
+                >
+                  {p.ativo ? <Ban className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
+                </IconeBotao>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {editar && <EditorPrograma programa={editar} ocupado={ocupado} onGuardar={guardar} onCancelar={() => setEditar(null)} />}
+
+      {compras.length > 0 && (
+        <section>
+          <h3 className="mb-2 text-sm font-semibold text-gray-200">Últimas compras</h3>
+          <Tabela cabecalhos={['Email', 'Valor', 'Estado', 'Data']}>
+            {compras.slice(0, 20).map((c) => (
+              <tr key={String(c.id)} className="border-t border-gray-800/60">
+                <td className="px-3 py-2 text-gray-300">{String(c.email ?? '—')}</td>
+                <td className="px-3 py-2 text-gray-400">
+                  {c.valor_cents ? (Number(c.valor_cents) / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' }) : '—'}
+                </td>
+                <td className="px-3 py-2"><Estado valor={String(c.estado)} /></td>
+                <td className="px-3 py-2 text-xs text-gray-600">
+                  {new Date(String(c.created_at)).toLocaleDateString('pt-PT')}
+                </td>
+              </tr>
+            ))}
+          </Tabela>
+        </section>
+      )}
+    </div>
+  )
+}
+
+function EditorPrograma({ programa, ocupado, onGuardar, onCancelar }: {
+  programa: Programa; ocupado: string | null
+  onGuardar: (p: Programa) => void; onCancelar: () => void
+}) {
+  const [p, setP] = useState<Programa>(programa)
+  useEffect(() => { setP(programa) }, [programa])
+
+  // O preço vive aqui em EUROS e vai em cêntimos. É onde os enganos de um zero acontecem.
+  const [euros, setEuros] = useState((programa.preco_cents / 100).toString())
+  useEffect(() => { setEuros((programa.preco_cents / 100).toString()) }, [programa])
+
+  const texto = (chave: 'slug' | 'nome' | 'descricao', rotulo: string, nota?: string) => (
+    <div>
+      <label className="text-sm text-gray-300">{rotulo}</label>
+      {nota && <p className="mb-1 text-xs text-gray-600">{nota}</p>}
+      <input
+        value={(p[chave] as string) ?? ''}
+        onChange={(e) => setP({ ...p, [chave]: e.target.value })}
+        className="mt-1 w-full rounded-lg border border-gray-700 bg-black/50 px-3 py-2 text-sm text-white"
+      />
+    </div>
+  )
+
+  const numero = (chave: keyof Programa, rotulo: string, nota: string, passo = 1) => (
+    <div>
+      <label className="text-sm text-gray-300">{rotulo}</label>
+      <p className="mb-1 text-xs text-gray-600">{nota}</p>
+      <input
+        type="number" step={passo}
+        value={Number(p[chave] ?? 0)}
+        onChange={(e) => setP({ ...p, [chave]: Number(e.target.value) } as Programa)}
+        className="w-36 rounded-lg border border-gray-700 bg-black/50 px-3 py-2 text-sm text-white"
+      />
+    </div>
+  )
+
+  const regra = (chave: string, rotulo: string, nota: string) => (
+    <div>
+      <label className="text-sm text-gray-300">{rotulo}</label>
+      <p className="mb-1 text-xs text-gray-600">{nota}</p>
+      <input
+        type="number" step="0.5"
+        value={p.regras[chave] ?? 0}
+        onChange={(e) => setP({ ...p, regras: { ...p.regras, [chave]: Number(e.target.value) } })}
+        className="w-28 rounded-lg border border-gray-700 bg-black/50 px-3 py-2 text-sm text-white"
+      />
+    </div>
+  )
+
+  const impossivel =
+    (p.regras.objetivo_pct ?? 0) > 0 && (p.regras.perda_maxima_pct ?? 0) > 0 &&
+    (p.regras.perda_diaria_pct ?? 0) > (p.regras.perda_maxima_pct ?? 0)
+
+  return (
+    <div className="space-y-5 rounded-xl border border-[#D2A63C]/30 bg-black/40 p-5">
+      <div className="grid gap-4 sm:grid-cols-2">
+        {texto('nome', 'Nome', 'É o que aparece no cartão do site.')}
+        {texto('slug', 'Slug', 'Vai no endereço do checkout. Minúsculas e hífens.')}
+      </div>
+      {texto('descricao', 'Descrição', 'Uma linha, opcional.')}
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div>
+          <label className="text-sm text-gray-300">Preço (€)</label>
+          <p className="mb-1 text-xs text-gray-600">Em euros. Guardado em cêntimos.</p>
+          <input
+            type="number" step="1" value={euros}
+            onChange={(e) => {
+              setEuros(e.target.value)
+              setP({ ...p, preco_cents: Math.round(Number(e.target.value || 0) * 100) })
+            }}
+            className="w-36 rounded-lg border border-gray-700 bg-black/50 px-3 py-2 text-sm text-white"
+          />
+        </div>
+        {numero('saldo', 'Saldo (USD)', 'O tamanho da conta simulada.', 1000)}
+        {numero('fases', 'Fases', '1 ou 2. Raramente 3.')}
+      </div>
+
+      <section className="grid gap-4 rounded-lg border border-gray-800 p-4 sm:grid-cols-2">
+        {regra('objetivo_pct', 'Objectivo (%)', 'Lucro que passa a fase.')}
+        {regra('perda_diaria_pct', 'Perda diária (%)', 'Sobre a equity de abertura do dia.')}
+        {regra('perda_maxima_pct', 'Perda máxima (%)', 'Sobre o saldo inicial.')}
+        {regra('dias_minimos', 'Dias mínimos', 'Abaixo disto não passa.')}
+        {regra('consistencia_pct', 'Consistência (%)', 'Fatia máxima do lucro num só dia. 0 = sem regra.')}
+      </section>
+
+      {impossivel && (
+        <p className="flex items-center gap-2 text-sm text-amber-400">
+          <AlertTriangle className="h-4 w-4" />
+          A perda diária é maior do que a máxima — a regra diária nunca chegaria a disparar.
+        </p>
+      )}
+
+      <div className="flex items-center gap-3">
+        <Botao ocupado={ocupado === `g${p.slug}`} onClick={() => onGuardar(p)}>Guardar</Botao>
+        <button onClick={onCancelar} className="text-xs text-gray-500 hover:text-gray-300">Cancelar</button>
       </div>
     </div>
   )

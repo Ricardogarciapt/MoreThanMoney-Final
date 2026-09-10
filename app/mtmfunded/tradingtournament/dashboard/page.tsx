@@ -69,7 +69,7 @@ export default async function DashboardTorneioPage() {
 
   const { data: contas } = await db
     .from('mtm_trading_accounts')
-    .select('id, tipo, mt5_login, servidor, saldo_inicial, alavancagem, estado, metricas, quebrou_regra, quebrada_em, created_at')
+    .select('id, tipo, mt5_login, servidor, saldo_inicial, alavancagem, estado, metricas, quebrou_regra, quebrada_em, qrcode_url, created_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
@@ -127,6 +127,9 @@ export default async function DashboardTorneioPage() {
         estado: c.estado as string,
         metricas: (c.metricas ?? {}) as Record<string, unknown>,
         quebrouRegra: (c.quebrou_regra as string) ?? null,
+        // O QR do MetaTrader vai INTEIRO para o painel — não é segredo maior do que o
+        // login que já está ali ao lado, e é o que faz a app entrar com um toque.
+        qrcode: (c.qrcode_url as string) ?? null,
       }))}
       certificados={(certificados ?? []).map((c) => ({
         codigo: c.codigo as string,

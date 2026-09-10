@@ -28,6 +28,8 @@ interface Conta {
   id: string; tipo: string; login: string | null; servidor: string | null
   saldoInicial: number | null; alavancagem: number | null; estado: string
   metricas: Record<string, unknown>; quebrouRegra: string | null
+  /** O QR do MetaTrader, em data URI. Entra na app com um toque. */
+  qrcode: string | null
 }
 interface Certificado { codigo: string; tipo: string; posicao: number | null; emitidoEm: string }
 interface LinhaTabela { posicao: number | null; nome: string; resultadoPct: number | null; estado: string; elegivel: boolean }
@@ -114,10 +116,10 @@ export default function PainelParticipante(props: {
         </aside>
 
         <main className="min-w-0 flex-1">
-          {seccao === 'dashboard' && <Dashboard {...{ torneio, participante, contas }} />}
+          {seccao === 'dashboard' && <Dashboard {...{ torneio, participante, contas }} nome={props.nome} />}
           {seccao === 'contas' && <Contas contas={contas} />}
           {seccao === 'contratos' && <Contratos />}
-          {seccao === 'competicoes' && <Competicoes torneio={torneio} participante={participante} />}
+          {seccao === 'competicoes' && <Competicoes torneio={torneio} participante={participante} onInscrever={() => setSeccao('dashboard')} />}
           {seccao === 'classificacao' && <Classificacao linhas={classificacao} />}
           {seccao === 'terminal' && <Terminal scanners={props.scannersPermitidos} />}
           {seccao === 'certificados' && <Certificados certificados={certificados} />}
@@ -142,23 +144,148 @@ function Vazio({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-zinc-500">{children}</p>
 }
 
-function Dashboard({ torneio, participante, contas }: { torneio: Torneio | null; participante: Participante | null; contas: Conta[] }) {
+/**
+ * A INSCRIÇÃO.
+ *
+ * Pedem-se três coisas, e só três: o nome que aparece na classificação, o telemóvel e a data
+ * de nascimento. As duas últimas não são burocracia nossa — são o que a corretora exige no
+ * formulário da conta. Sem telemóvel o botão dela fica cinzento; a data vem preenchida com
+ * hoje e é recusada. O agente tem valores por omissão para não ficar parado, mas usá-los
+ * significava abrir uma conta em nome desta pessoa com um telefone que não é dela.
+ *
+ * Diz-se aqui porque é que se pedem: um formulário que pede a data de nascimento sem explicar
+ * porquê é um formulário que as pessoas abandonam.
+ */
+function Inscricao({ torneio, nome }: { torneio: Torneio; nome: string }) {
+  const [dados, setDados] = useState({ nome, telefone: '', dataNascimento: '' })
+  const [estado, setEstado] = useState<'parado' | 'a_enviar' | 'feito'>('parado')
+  const [erro, setErro] = useState<string | null>(null)
+
+  if (torneio.estado !== 'inscricoes') {
+    return (
+      <Caixa titulo={torneio.nome}>
+        <Vazio>
+          {torneio.estado === 'a_decorrer'
+            ? 'O torneio já começou e as inscrições estão fechadas. O próximo é trimestral.'
+            : torneio.estado === 'terminado'
+              ? 'Este torneio terminou. O próximo é trimestral.'
+              : 'As inscrições ainda não abriram.'}
+        </Vazio>
+      </Caixa>
+    )
+  }
+
+  if (estado === 'feito') {
+    return (
+      <Caixa titulo="Inscrição registada">
+        <p className="text-sm text-zinc-300">
+          Estás dentro. A conta de {torneio.saldoInicial.toLocaleString('pt-PT')} USD é emitida e
+          os dados chegam-te por email.
+        </p>
+        <p className="mt-2 text-xs text-zinc-500">
+          A emissão não é imediata — as contas são criadas uma a uma no MetaTrader.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300"
+        >
+          Actualizar
+        </button>
+      </Caixa>
+    )
+  }
+
+  const inscrever = async () => {
+    setErro(null)
+    setEstado('a_enviar')
+    try {
+      const { getAccessToken } = await import('@/lib/auth-token')
+      const tok = await getAccessToken()
+      const r = await fetch('/api/mtmfunded/tournament/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ torneio: torneio.slug, ...dados }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(j?.error || 'Não foi possível inscrever')
+      setEstado('feito')
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível inscrever')
+      setEstado('parado')
+    }
+  }
+
+  const completo = dados.nome.trim().length > 2 && dados.telefone.replace(/\D/g, '').length >= 9 && dados.dataNascimento
+
+  return (
+    <Caixa titulo={`Inscrever-me · ${torneio.nome}`}>
+      <p className="text-sm text-zinc-400">
+        Conta de {torneio.saldoInicial.toLocaleString('pt-PT')} USD, gratuita, com as regras à
+        vista. Recebes os dados por email assim que a conta for emitida.
+      </p>
+
+      <div className="mt-5 space-y-4">
+        <Campo
+          rotulo="Nome na classificação"
+          nota="É este que aparece na tabela pública."
+          valor={dados.nome}
+          onChange={(v) => setDados({ ...dados, nome: v })}
+        />
+        <Campo
+          rotulo="Telemóvel"
+          nota="Pedido pela corretora no formulário da conta."
+          tipo="tel"
+          valor={dados.telefone}
+          onChange={(v) => setDados({ ...dados, telefone: v })}
+        />
+        <Campo
+          rotulo="Data de nascimento"
+          nota="Também exigida pela corretora. Tens de ser maior de idade."
+          tipo="date"
+          valor={dados.dataNascimento}
+          onChange={(v) => setDados({ ...dados, dataNascimento: v })}
+        />
+      </div>
+
+      {erro && <p className="mt-4 text-sm text-red-400">{erro}</p>}
+
+      <button
+        onClick={inscrever}
+        disabled={!completo || estado === 'a_enviar'}
+        className="mt-5 w-full rounded-lg bg-[#4B8BFF] py-3 text-sm font-semibold text-white disabled:opacity-40 sm:w-auto sm:px-8"
+      >
+        {estado === 'a_enviar' ? 'A inscrever…' : 'Inscrever-me'}
+      </button>
+    </Caixa>
+  )
+}
+
+function Campo({
+  rotulo, nota, valor, onChange, tipo = 'text',
+}: { rotulo: string; nota?: string; valor: string; onChange: (v: string) => void; tipo?: string }) {
+  return (
+    <label className="block">
+      <span className="text-sm text-zinc-300">{rotulo}</span>
+      {nota && <span className="mt-0.5 block text-xs text-zinc-600">{nota}</span>}
+      <input
+        type={tipo}
+        value={valor}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1.5 w-full rounded-lg border border-zinc-800 bg-black/40 px-3 py-2.5 text-sm text-white outline-none focus:border-[#4B8BFF]"
+      />
+    </label>
+  )
+}
+
+function Dashboard({ torneio, participante, contas, nome }: { torneio: Torneio | null; participante: Participante | null; contas: Conta[]; nome: string }) {
   const conta = contas.find((c) => c.tipo === 'torneio') ?? contas[0]
   const m = participante?.metricas ?? {}
   const margemDiaria = typeof m.margemDiaria === 'number' ? m.margemDiaria : null
   const margemTotal = typeof m.margemTotal === 'number' ? m.margemTotal : null
 
   if (!torneio) return <Caixa titulo="Dashboard"><Vazio>Não há torneio a decorrer.</Vazio></Caixa>
-  if (!participante) {
-    return (
-      <Caixa titulo={torneio.nome}>
-        <Vazio>Ainda não estás inscrito.</Vazio>
-        <Link href="/mtmfunded/tradingtournament" className="mt-4 inline-block rounded-lg bg-[#4B8BFF] px-5 py-2.5 text-sm font-semibold">
-          Ver o torneio
-        </Link>
-      </Caixa>
-    )
-  }
+  if (!participante) return <Inscricao torneio={torneio} nome={nome} />
+
 
   return (
     <div className="space-y-4">
@@ -264,8 +391,95 @@ function Contas({ contas }: { contas: Conta[] }) {
           {typeof c.metricas.equity === 'number' && (
             <Linha rotulo="Equity" valor={`${(c.metricas.equity as number).toLocaleString('pt-PT')} USD`} />
           )}
+          {c.login && <Credenciais conta={c} />}
         </Caixa>
       ))}
+    </div>
+  )
+}
+
+/**
+ * A PALAVRA-PASSE, aqui e só aqui.
+ *
+ * O email da conta diz «a tua palavra-passe está no painel» — e durante um tempo não estava:
+ * o participante recebia a conta, clicava no link e não encontrava nada. Fica aqui, atrás da
+ * sessão, que é o que torna o email seguro: um email fica na caixa de entrada para sempre e
+ * é reencaminhado sem se pensar; uma sessão fecha-se.
+ *
+ * Só se pede ao servidor quando se carrega em Mostrar. Trazê-la com a página deixava-a no
+ * HTML de toda a gente que abrisse o painel, visível a quem passasse por trás.
+ */
+function Credenciais({ conta }: { conta: Conta }) {
+  const [dados, setDados] = useState<{ password: string | null; investor: string | null; aviso?: string } | null>(null)
+  const [visivel, setVisivel] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+  const [ocupado, setOcupado] = useState(false)
+
+  const mostrar = async () => {
+    if (dados) return setVisivel(true)
+    setOcupado(true)
+    setErro(null)
+    try {
+      const { getAccessToken } = await import('@/lib/auth-token')
+      const tok = await getAccessToken()
+      const r = await fetch('/api/mtmfunded/conta/credenciais', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+        body: JSON.stringify({ contaId: conta.id }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j?.error || 'Não foi possível ler as credenciais')
+      setDados(j)
+      setVisivel(true)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível ler as credenciais')
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  return (
+    <div className="mt-4 border-t border-zinc-900 pt-4">
+      {!visivel ? (
+        <>
+          <button
+            onClick={mostrar}
+            disabled={ocupado}
+            className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 disabled:opacity-40"
+          >
+            {ocupado ? 'A ler…' : 'Mostrar palavra-passe'}
+          </button>
+          {erro && <p className="mt-2 text-sm text-red-400">{erro}</p>}
+        </>
+      ) : (
+        <div className="space-y-2">
+          <Linha rotulo="Login" valor={conta.login ?? '—'} />
+          {dados?.password ? (
+            <>
+              <Linha rotulo="Palavra-passe" valor={dados.password} />
+              {dados.investor && <Linha rotulo="Investidor (só leitura)" valor={dados.investor} />}
+              <p className="pt-1 text-xs text-zinc-600">
+                Podes alterá-la dentro do MetaTrader. Guarda-a num sítio seguro.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-amber-400">{dados?.aviso ?? 'Palavra-passe indisponível.'}</p>
+          )}
+          {conta.qrcode && (
+            <div className="pt-3">
+              <p className="text-xs text-zinc-500">Entrar na app com um toque</p>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={conta.qrcode} alt="Código QR da conta" width={150} height={150} className="mt-2 rounded-lg" />
+              <p className="mt-1.5 text-xs text-zinc-600">
+                No MetaTrader 5 do telemóvel: Nova conta → Entrar com código QR.
+              </p>
+            </div>
+          )}
+          <button onClick={() => setVisivel(false)} className="mt-2 text-xs text-zinc-500 hover:text-zinc-300">
+            Esconder
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -281,7 +495,7 @@ function Contratos() {
   )
 }
 
-function Competicoes({ torneio, participante }: { torneio: Torneio | null; participante: Participante | null }) {
+function Competicoes({ torneio, participante, onInscrever }: { torneio: Torneio | null; participante: Participante | null; onInscrever: () => void }) {
   if (!torneio) return <Caixa titulo="Competições"><Vazio>Sem torneios abertos.</Vazio></Caixa>
   const d = (v: string) => new Date(v).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long' })
   return (
@@ -298,10 +512,13 @@ function Competicoes({ torneio, participante }: { torneio: Torneio | null; parti
           ))}
         </div>
       )}
+      {/* O botão leva ao FORMULÁRIO, que vive no Dashboard. Antes apontava para a página
+          pública, que por sua vez volta a apontar para aqui: dois botões «Inscrever-me» a
+          mandar um para o outro, sem nada pelo meio que inscrevesse alguém. */}
       {!participante && torneio.estado === 'inscricoes' && (
-        <Link href="/mtmfunded/tradingtournament" className="mt-4 inline-block rounded-lg bg-[#4B8BFF] px-5 py-2.5 text-sm font-semibold">
+        <button onClick={onInscrever} className="mt-4 rounded-lg bg-[#4B8BFF] px-5 py-2.5 text-sm font-semibold">
           Inscrever-me
-        </Link>
+        </button>
       )}
     </Caixa>
   )

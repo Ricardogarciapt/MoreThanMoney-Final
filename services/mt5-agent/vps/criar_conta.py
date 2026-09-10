@@ -25,6 +25,7 @@ por muito bem que os cliques tenham parecido correr.
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -55,6 +56,10 @@ CAMPOS = {
     "termos": (502, 607),
 }
 BOTAO_SEGUINTE = (919, 698)
+# O QR do diálogo final: é o do MetaTrader, o mesmo que a app lê em «Sign In with QR code».
+# A região é generosa de propósito — recorta-se em excesso e apara-se ao branco a seguir,
+# porque o diálogo desloca-se alguns pixels conforme o tamanho do nome da corretora.
+REGIAO_QR = (930, 540, 160, 160)
 # O rectângulo do texto do botão Seguinte, para lhe medir a tinta.
 CAIXA_SEGUINTE = (890, 690, 60, 16)
 # A data é um contador com três segmentos; clica-se no PRIMEIRO e navega-se com setas.
@@ -369,7 +374,16 @@ def criar(pedido: dict) -> dict:
     # As passwords só existem no ecrã que está agora à frente.
     time.sleep(3)
     foto = mt5.fotografar()
+    qr = capturar_qr(foto)
     credenciais = ler_credenciais(foto, login)
+
+    # O QR do MetaTrader traz as credenciais codificadas. Lendo-se, a password vem EXACTA —
+    # e um caractere lido por OCR nunca é exacto. Este candidato vai à frente de todos.
+    do_qr = password_do_qr(qr.get("conteudo"), login)
+    if do_qr:
+        registar("password obtida do QR do MetaTrader")
+        credenciais["candidatos"] = [do_qr] + [c for c in (credenciais.get("candidatos") or []) if c != do_qr]
+        credenciais["password"] = do_qr
     try:
         os.unlink(foto)   # a fotografia tem as passwords: não fica no disco
     except OSError:
@@ -379,6 +393,7 @@ def criar(pedido: dict) -> dict:
         return {
             "login": login, "password": None, "servidor": servidor,
             "precisa_password": True,
+            "qr": qr.get("imagem"),
             "aviso": f"conta {login} criada, mas não consegui ler a password do ecrã",
         }
 
@@ -387,11 +402,27 @@ def criar(pedido: dict) -> dict:
     # interessava lido dele.
     fechar_credenciais()
 
+    # ── veio do QR? então está certa, e não se lhe toca ──────────────────────
+    #
+    # O QR do MetaTrader é a própria plataforma a dizer qual é a password — não há leitura,
+    # não há dúvida, não há nada a confirmar. E trocá-la aqui teria um custo escondido: o QR
+    # codifica a password ANTIGA, pelo que a troca transformava o código num quadrado que não
+    # entra em lado nenhum. Guarda-se a password e guarda-se o código, que é o que faz a app
+    # entrar com um toque.
+    if do_qr:
+        return {
+            "login": login,
+            "password": do_qr,
+            "investor": credenciais.get("investor"),
+            "servidor": servidor,
+            "qr": qr.get("imagem"),
+        }
+
     # ── a corretora é que diz se a leitura estava certa ──────────────────────
-    # Troca-se a password lida por uma gerada aqui. O diálogo pede a actual, e é a corretora
-    # que a valida: aceitando, a leitura estava certa; recusando, estava errada — e mais vale
-    # saber isso agora do que quando o participante não conseguir entrar. Daqui em diante a
-    # password é uma que se GEROU, não uma que se leu.
+    # Sem QR legível, volta-se ao OCR — e aí a leitura não vale por si. Troca-se a password
+    # lida por uma gerada aqui: o diálogo pede a actual e é a corretora que a valida.
+    # Aceitando, a leitura estava certa; recusando, estava errada — e mais vale saber isso
+    # agora do que quando o participante não conseguir entrar.
     troca = trocar_password(login, credenciais.get("candidatos") or [credenciais["password"]])
     if troca.get("ok"):
         registar(f"conta {login}: password mestra trocada por uma gerada")
@@ -401,12 +432,17 @@ def criar(pedido: dict) -> dict:
             "investor": credenciais.get("investor"),
             "servidor": servidor,
             "password_gerada": True,
+            # O QR fica INVÁLIDO depois de trocar a password: ele codifica a antiga. Vai
+            # vazio de propósito — um código que não entra é pior do que código nenhum.
+            "qr": None,
         }
 
     registar(f"conta {login}: {troca.get('motivo')}")
     return {
         "login": login, "password": None, "servidor": servidor,
         "precisa_password": True,
+        # Sem password legível, o QR é o que salva a conta: entra com um toque sem ela.
+        "qr": qr.get("imagem"),
         "aviso": f"conta {login} criada, mas {troca.get('motivo')}",
     }
 
@@ -439,6 +475,68 @@ def trocar_password(login: str, candidatos: list) -> dict:
         return json.loads((r.stdout or "{}").strip().splitlines()[-1])
     except Exception:
         return {"ok": False, "motivo": "o trocador respondeu de forma ilegível"}
+
+
+def password_do_qr(conteudo: str | None, login: str) -> str | None:
+    """A password que vier dentro do QR — se lá estiver, e se for daquela conta.
+
+    O formato do payload é da MetaQuotes e pode mudar de build para build, por isso não se
+    presume: procura-se o login lá dentro (se o QR for de outra conta, não serve) e depois
+    uma password nomeada. Não se encontrando, devolve-se None e segue-se pelo caminho normal
+    — nunca se devolve o primeiro pedaço de texto que apareça só porque tem o tamanho certo.
+    """
+    if not conteudo or str(login) not in conteudo:
+        return None
+    for padrao in (r"password[=:\"']+([^&\s\"',}]{6,64})",
+                   r"\bpass[=:\"']+([^&\s\"',}]{6,64})"):
+        m = re.search(padrao, conteudo, re.IGNORECASE)
+        if m:
+            return m.group(1)
+    return None
+
+
+def capturar_qr(imagem: str) -> dict:
+    """Recorta e LÊ o QR do diálogo final do MetaTrader.
+
+    É o QR oficial da plataforma — o mesmo que a app móvel lê em «Sign In with QR code». Duas
+    coisas saem daqui, e ambas valem:
+
+    · A IMAGEM, para o email e para o painel. Um toque a entrar vale mais do que três campos
+      copiados à mão de um email para o telemóvel.
+    · O CONTEÚDO. O QR traz as credenciais codificadas — é por isso que entra com um toque.
+      Descodificá-lo dá a password EXACTA, sem OCR e sem adivinhar: acaba com o problema de
+      ler oito caracteres a 11 pixels e nunca saber se estão certos.
+
+    Se o `zbarimg` não estiver instalado ou o código não ler, devolve-se o que se tiver. A
+    conta já existe; falhar por causa de um código seria deitar fora o que se acabou de criar.
+    """
+    x, y, largura, altura = REGIAO_QR
+    recorte = "/tmp/mtm-qr.png"
+    saida = {"imagem": None, "conteudo": None}
+    try:
+        # `-trim` encosta a moldura ao código: assim a imagem que segue no email é o QR e não
+        # um quadrado branco com um QR ao canto.
+        subprocess.run(
+            ["convert", imagem, "-crop", f"{largura}x{altura}+{x}+{y}", "+repage",
+             "-trim", "+repage", "-bordercolor", "white", "-border", "12", recorte],
+            capture_output=True, timeout=60,
+        )
+        if not os.path.exists(recorte) or os.path.getsize(recorte) < 200:
+            return saida
+        saida["imagem"] = base64.b64encode(Path(recorte).read_bytes()).decode()
+
+        r = subprocess.run(["zbarimg", "--quiet", "--raw", recorte],
+                           capture_output=True, text=True, timeout=60)
+        conteudo = (r.stdout or "").strip()
+        saida["conteudo"] = conteudo or None
+    except Exception as e:
+        registar(f"não consegui capturar o QR: {str(e)[:120]}")
+    finally:
+        try:
+            os.unlink(recorte)
+        except OSError:
+            pass
+    return saida
 
 
 def ler_credenciais(imagem: str, login: str | None = None) -> dict:

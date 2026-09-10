@@ -59,6 +59,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Nome e email são obrigatórios' }, { status: 400 })
   }
 
+  /**
+   * O TELEFONE E A DATA DE NASCIMENTO pedem-se aqui porque a corretora os pede a seguir.
+   *
+   * O formulário do MetaTrader exige os dois: sem telefone o botão fica cinzento, e a data
+   * vem preenchida com hoje, que é recusada. O agente tem valores por omissão para não
+   * ficar parado — mas usá-los significava abrir uma conta em nome desta pessoa com um
+   * telefone que não é dela. Pede-se uma vez, e vai o que é verdade.
+   */
+  const telefone = String(body?.telefone ?? '').replace(/\D/g, '')
+  const nascimento = String(body?.dataNascimento ?? '').trim()
+  if (telefone.length < 9) {
+    return NextResponse.json({ error: 'Indica um número de telemóvel válido' }, { status: 400 })
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(nascimento)) {
+    return NextResponse.json({ error: 'Indica a data de nascimento' }, { status: 400 })
+  }
+  // Maior de idade: é uma conta de negociação, mesmo sendo demo, e a corretora exige-o.
+  const anos = (Date.now() - new Date(nascimento).getTime()) / (365.25 * 24 * 3600 * 1000)
+  if (!(anos >= 18 && anos <= 100)) {
+    return NextResponse.json({ error: 'A data de nascimento não é válida' }, { status: 400 })
+  }
+
   // Já inscrito? Devolve-se o que existe em vez de duplicar — carregar duas vezes no botão
   // não pode dar duas contas MT5 à mesma pessoa.
   const { data: jaInscrito } = await db
@@ -132,6 +154,8 @@ export async function POST(request: NextRequest) {
     // se trata, sem terem campo próprio para isso.
     sobrenome: 'Torneio',
     email,
+    telefone,
+    data_nascimento: nascimento,
     servidor: torneio.servidor,
     tipo_conta: 'ECN',
     deposito: torneio.saldo_inicial,

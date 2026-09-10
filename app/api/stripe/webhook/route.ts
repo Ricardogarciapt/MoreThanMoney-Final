@@ -150,6 +150,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return
   }
 
+  // MTM Funded: um programa de avaliação. Sai daqui pela mesma razão — não é um plano do site,
+  // não mexe no MLM e não muda a categoria de membro de ninguém. O que faz é emitir uma conta.
+  if (session.metadata?.source === 'mtmfunded_program') {
+    const { emitirContaDoProgramaPago } = await import('@/lib/mtmfunded/compra')
+    await emitirContaDoProgramaPago(session)
+    return
+  }
+
   // Registo novo: provisionar conta server-side (não depende do browser / localStorage)
   if (!userId && session.metadata?.pending_registration === 'true') {
     await supabase
