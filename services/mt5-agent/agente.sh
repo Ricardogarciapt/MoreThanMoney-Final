@@ -63,6 +63,12 @@ processar_um() {
       registar "o site recusou: $(printf '%s' "$espera" | head -c 200)"
       return 1
     fi
+    # Em pausa por transmissão: o site diz-o, e o agente não insiste. Nada a fazer senão
+    # esperar — e dizer no log porquê, para não parecer que morreu.
+    if printf '%s' "$espera" | grep -q '"emPausa":true'; then
+      registar "em pausa: transmissão a decorrer"
+      return 2
+    fi
     n="$(printf '%s' "$espera" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("emFila",0))' 2>/dev/null || echo 0)"
     if [ "${n:-0}" -gt 0 ]; then
       registar "$n pedido(s) à espera — corre: $(dirname "$0")/agente.sh uma-vez"
@@ -74,6 +80,11 @@ processar_um() {
 
   resposta="$(reclamar)"
   if [ -z "$resposta" ]; then registar "sem resposta do site"; return 1; fi
+
+  if printf '%s' "$resposta" | grep -q '"emPausa":true'; then
+    registar "em pausa: transmissão a decorrer — retoma quando terminar"
+    return 2
+  fi
 
   # Um token errado devolve {"error":"não autorizado"} — que sem esta verificação se lia
   # como "fila vazia". O agente ficaria calado para sempre, a dizer que estava tudo bem,

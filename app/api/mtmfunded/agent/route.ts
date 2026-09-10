@@ -19,6 +19,30 @@ export const maxDuration = 30
  * `===` sobre segredos deixa medir onde falha, caractere a caractere.
  */
 
+/**
+ * Há transmissão a decorrer?
+ *
+ * O MT5 vive no MESMO VPS que a transmissão, e são 2 vCPU partilhados com o SRS, o nginx e o
+ * ffmpeg do DVR. Criar contas a meio de uma sessão ao vivo é competir por CPU com aquilo que
+ * os clientes estão a ver — e o que se estraga na transmissão não se recupera.
+ *
+ * A regra vive no SERVIDOR e não no agente: assim vale para qualquer agente, agora e depois.
+ * Em pausa não se reclama nada; a fila espera, que é o que ela sabe fazer.
+ */
+async function haTransmissao(): Promise<boolean> {
+  try {
+    const { count } = await getSupabaseAdmin()
+      .from('lms_streams')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_live', true)
+    return (count ?? 0) > 0
+  } catch {
+    // Falha a ler → assume-se que NÃO há transmissão. O contrário parava a emissão de contas
+    // por causa de um erro de base de dados, e ninguém perceberia porquê.
+    return false
+  }
+}
+
 function tokenValido(recebido: string | null | undefined): boolean {
   const esperado = process.env.MTMFUNDED_AGENT_SECRET
   if (!esperado || esperado.length < 16) return false
@@ -43,6 +67,20 @@ export async function GET(request: NextRequest) {
   if (!tokenValido(token)) return NextResponse.json({ error: 'não autorizado' }, { status: 401 })
 
   const db = getSupabaseAdmin()
+
+  if (await haTransmissao()) {
+    const { count } = await db
+      .from('mtm_account_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('estado', 'em_fila')
+      .lt('tentativas', 3)
+    return NextResponse.json({
+      pedido: null,
+      emFila: count ?? 0,
+      emPausa: true,
+      motivo: 'transmissão a decorrer — a emissão de contas retoma quando terminar',
+    })
+  }
 
   if (request.nextUrl.searchParams.get('peek') === '1') {
     const { count } = await db

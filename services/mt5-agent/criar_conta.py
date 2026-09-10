@@ -12,10 +12,24 @@ resultado. Há: o MT5 escreve no journal `new demo account 'NNNNN' opened on <se
 log é a FONTE DA VERDADE. As teclas tentam; o log confirma. Se o log não confirmar, não se
 inventa nada — devolve-se erro e o pedido volta à fila.
 
-A PASSWORD NÃO SE LÊ, DEFINE-SE. Ler a password do ecrã exigia OCR e permissão de gravação
-de ecrã, e uma password mal lida entrega uma conta que não abre. Em vez disso, depois de a
-conta existir, muda-se a password para uma que geramos — com entropia a sério — e confirma-se
-no log (`change of password completed`). Passamos de adivinhar para saber.
+A PASSWORD é a parte difícil, e não há caminho perfeito.
+
+Tentei desenhar isto a MUDAR a password depois de criar a conta, para deixarmos de a adivinhar.
+Fui verificar nos logs e não existe uma única linha de `change of password` (mestre) — só de
+`change of investor password`, e três dessas falharam com «Not enough permissions». O
+`accounts.dat` onde o MT5 as guarda é cifrado. Portanto: a password mestre NÃO se recupera do
+disco e NÃO há prova de que se possa alterar.
+
+Sobram dois caminhos, por esta ordem:
+  1. OCR do diálogo de conclusão (ler_credenciais.py) — exige permissão de GRAVAÇÃO DE ECRÃ.
+     É o caminho fiável, e já está construído e testado.
+  2. Tentar alterar a password mestre — mantido como recurso, porque não está provado que
+     falhe, mas também não está provado que funcione.
+
+O QUE NUNCA ACONTECE: criar uma conta e deitá-la fora. Assim que o journal regista a conta,
+ela EXISTE na corretora. Se a password não se conseguir obter, devolve-se o login com um aviso
+de que falta a password — nunca um erro que mande criar outra. A primeira versão disto fazia
+exactamente isso: três contas reais por pedido, todas abandonadas.
 """
 # O Mac traz o Python 3.9 do Xcode, que ainda não aceita `str | None` em anotações. Isto faz
 # as anotações serem texto e o ficheiro correr em qualquer 3.x — o agente tem de funcionar
@@ -29,6 +43,7 @@ import secrets
 import string
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -92,9 +107,35 @@ def _osa(script: str) -> None:
     subprocess.run(["osascript", "-e", script], capture_output=True, timeout=20)
 
 
+def _processo_em_foco() -> str:
+    r = subprocess.run(
+        ["osascript", "-e",
+         'tell application "System Events" to get name of first process whose frontmost is true'],
+        capture_output=True, text=True, timeout=15,
+    )
+    return r.stdout.strip()
+
+
 def activar() -> None:
+    """
+    Põe o MT5 à frente — e CONFIRMA que ficou.
+
+    Isto não é zelo a mais. O Wine não expõe janelas à acessibilidade, e o `open -a` nem sempre
+    traz a janela para a frente. Sem esta confirmação, as teclas iam para a aplicação que
+    estivesse à frente: um email e um Enter escritos dentro do editor de código, do browser, ou
+    de uma conversa. Melhor abortar do que escrever às cegas na aplicação errada.
+    """
     subprocess.run(["open", "-a", APP], capture_output=True, timeout=20)
-    time.sleep(1.5)
+    for _ in range(10):
+        time.sleep(1.0)
+        foco = _processo_em_foco().lower()
+        if "wine" in foco or "metatrader" in foco:
+            time.sleep(0.8)
+            return
+    raise RuntimeError(
+        f"o MetaTrader não veio para a frente (à frente está: {_processo_em_foco() or 'nada'}). "
+        "Abre-o e deixa a janela visível — sem foco, as teclas iriam para outra aplicação."
+    )
 
 
 def escrever(texto: str) -> None:
@@ -114,6 +155,46 @@ def atalho(letra: str, com_shift: bool = False) -> None:
     mods = '{control down' + (', shift down' if com_shift else '') + '}'
     _osa(f'tell application "System Events" to keystroke "{letra}" using {mods}')
     time.sleep(0.4)
+
+
+def pode_gravar_ecra() -> bool:
+    """A captura de ecrã está autorizada? Sem ela não há OCR do diálogo."""
+    try:
+        # NÃO usar nome começado por ponto: o `screencapture` recusa escrever em ficheiros
+        # ocultos — e devolve código 0 na mesma. Só a existência do ficheiro prova que gravou.
+        alvo = os.path.join(tempfile.gettempdir(), "mtm-teste-ecra.png")
+        r = subprocess.run(["screencapture", "-x", alvo], capture_output=True, timeout=15)
+        existe = os.path.exists(alvo)
+        if existe:
+            os.unlink(alvo)
+        return r.returncode == 0 and existe
+    except Exception:
+        return False
+
+
+def ler_do_ecra() -> dict:
+    """Fotografa o ecrã e lê as credenciais. Devolve {} se não conseguir ler com confiança."""
+    alvo = os.path.join(tempfile.mkdtemp(prefix="mtm-"), "dialogo.png")
+    try:
+        subprocess.run(["screencapture", "-x", alvo], capture_output=True, timeout=20)
+        r = subprocess.run(
+            [sys.executable, str(Path(__file__).parent / "ler_credenciais.py"), alvo],
+            capture_output=True, text=True, timeout=90,
+        )
+        dados = json.loads(r.stdout or "{}")
+        # `problemas` não vazio = leitura duvidosa. Uma password duvidosa é pior do que
+        # nenhuma: entrega-se uma conta que não abre e ninguém sabe porquê.
+        return {} if dados.get("problemas") else dados
+    except Exception:
+        return {}
+    finally:
+        # A fotografia tem uma password no meio. Não fica no disco — nem o ficheiro nem a
+        # pasta que o continha.
+        try:
+            os.unlink(alvo)
+            os.rmdir(os.path.dirname(alvo))
+        except OSError:
+            pass
 
 
 # ── password ─────────────────────────────────────────────────────────────────
@@ -184,28 +265,52 @@ def criar(pedido: dict) -> dict:
             "chegou ao fim. Nada foi criado."
         )
 
-    # A conta existe e o MT5 entrou nela. Agora a password passa a ser NOSSA.
+    # ── A CONTA JÁ EXISTE ────────────────────────────────────────────────────
+    # A partir daqui, falhar não pode significar "tenta outra vez": tentar outra vez cria
+    # OUTRA conta real na corretora. O que falta é só a password.
     time.sleep(3)
+
+    # Caminho 1: ler do diálogo, que ainda está no ecrã.
+    if pode_gravar_ecra():
+        lido = ler_do_ecra()
+        if lido.get("password") and (not lido.get("login") or lido["login"] == login):
+            return {
+                "login": login,
+                "password": lido["password"],
+                "investor": lido.get("investor"),
+                "servidor": servidor,
+                "origem_password": "ocr",
+            }
+
+    # Caminho 2: tentar defini-la. Não está provado que funcione neste servidor — se não
+    # funcionar, não se perde nada por ter tentado.
     nova = gerar_password()
     antes_pw = marca_dagua()
-    atalho("o")              # Ctrl+O = alterar password (MT5 Windows)
+    atalho("o")
     time.sleep(1.5)
     tecla("tab")
     escrever(nova)
     tecla("tab")
     escrever(nova)
     tecla("enter")
+    if procurar_no_log(r"'" + re.escape(login) + r"': change of password (completed)", antes_pw, 25):
+        return {"login": login, "password": nova, "servidor": servidor, "origem_password": "alterada"}
+    tecla("esc")   # fecha o diálogo que ficou aberto
 
-    ok = procurar_no_log(r"'" + re.escape(login) + r"': (change of password completed)", antes_pw, 30)
-    if not ok:
-        # A conta existe, mas não sabemos a password. Devolver a conta sem password seria
-        # entregar ao participante uma conta que ele não consegue abrir.
-        raise RuntimeError(
-            f"conta {login} criada mas a password não foi alterada — "
-            "é preciso defini-la à mão no MT5 e reenviar"
-        )
-
-    return {"login": login, "password": nova, "servidor": servidor}
+    # Nem uma coisa nem outra. A conta EXISTE — devolve-se assim mesmo, com o aviso.
+    # Inventar uma password, ou fingir erro e deixar criar outra, seriam ambos piores.
+    return {
+        "login": login,
+        "password": None,
+        "servidor": servidor,
+        "origem_password": None,
+        "precisa_password": True,
+        "aviso": (
+            f"conta {login} criada, mas a password não foi obtida. "
+            "Liga a Gravação de Ecrã ao agente (Definições → Privacidade → Gravação de Ecrã) "
+            "para o OCR a poder ler, ou copia-a do MetaTrader."
+        ),
+    }
 
 
 if __name__ == "__main__":
