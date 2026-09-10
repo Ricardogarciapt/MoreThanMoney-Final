@@ -1588,8 +1588,15 @@ export const licencaSenseiEmailTemplate = (
   mt5Login: string | null,
   expiraEm: string | null,
   siteUrl?: string,
+  produto: 'sensei_ea' | 'sensei_scalp' = 'sensei_ea',
 ) => {
   const base = resolveSiteUrl(siteUrl)
+  // São duas EA diferentes e o email tem de dizer qual, senão quem tem as duas não sabe onde
+  // colar a chave — e colá-la na errada dá "esta chave é do outro produto".
+  const ea =
+    produto === 'sensei_scalp'
+      ? { nome: 'MTM Sensei Scalp Edition', pagina: '/sensei-scalp' }
+      : { nome: 'MTM Sensei EA', pagina: '/sensei-ea' }
   const nomePlano =
     plano === 'vitalicia' ? 'Vitalícia' : plano === 'anual' ? 'Anual' : 'Incluída na subscrição'
   const validade = expiraEm
@@ -1597,7 +1604,7 @@ export const licencaSenseiEmailTemplate = (
     : 'Sem prazo'
 
   const content = `
-    ${headerComponent('A tua licença do MTM Sensei EA', `Licença ${nomePlano}`, '🔑')}
+    ${headerComponent(`A tua licença do ${ea.nome}`, `Licença ${nomePlano}`, '🔑')}
 
     ${textComponent(`
       <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 26px; color: #333;">
@@ -1640,10 +1647,10 @@ export const licencaSenseiEmailTemplate = (
       },
     ])}
 
-    ${buttonComponent('Descarregar o EA e os presets', `${base}/sensei-ea`)}
+    ${buttonComponent('Descarregar o EA e os presets', `${base}${ea.pagina}`)}
   `
 
-  return baseTemplate(content, 'A tua licença do MTM Sensei EA', base)
+  return baseTemplate(content, `A tua licença do ${ea.nome}`, base)
 }
 
 /**

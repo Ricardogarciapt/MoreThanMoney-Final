@@ -709,6 +709,14 @@ export default function NewLandingPage() {
         <ul><li>{t("l2.packEa1")}</li><li>{t("l2.packEa2")}</li><li>{t("l2.packEa3")}</li><li>{t("l2.packEa4")}</li></ul>
         <p className="ln2" style={{color:"var(--gold-lt)"}}>{t("l2.packEaFree")}</p>
         <a className="btn g" href="/sensei-ea">{t("l2.packEaCta")}</a></div>
+
+      {/* A segunda EA. O `ln2` da primeira linha diz que é OUTRA — sem isso, dois cartões
+          com o nome Sensei lado a lado leem-se como dois planos do mesmo produto. */}
+      <div className="pk d3"><div className="nm">{t("l2.packSc")}</div><div className="pr">200€</div><div className="pe">{t("l2.packScPer")}</div>
+        <p className="ln2">{t("l2.packScLine")}</p>
+        <ul><li>{t("l2.packSc1")}</li><li>{t("l2.packSc2")}</li><li>{t("l2.packSc3")}</li><li>{t("l2.packSc4")}</li></ul>
+        <p className="ln2" style={{color:"var(--gold-lt)"}}>{t("l2.packScFree")}</p>
+        <a className="btn g" href="/sensei-scalp">{t("l2.packScCta")}</a></div>
     </div>
     <p className="risk r d3">{t("l2.packsGuarantee")}</p>
   </div>

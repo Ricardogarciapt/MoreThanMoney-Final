@@ -7,16 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import ProtectedPage from "@/components/protected-page"
 import {
-  LayoutDashboard,
-  Radar,
-  MonitorSmartphone,
-  Users,
-  ExternalLink,
-  Download,
   BookUser,
   Bot,
+  Download,
+  ExternalLink,
   FileText,
   KeyRound,
+  LayoutDashboard,
+  MonitorSmartphone,
+  Radar,
+  Users,
+  Zap,
 } from "lucide-react"
 
 const MT5_WINDOWS_URL =
@@ -462,6 +463,64 @@ export default function TradingPage() {
                 <p className="text-[11px] text-zinc-500">
                   Precisa de licença. Premium, VIP e Fundador emitem a deles sem custo na área de
                   membro.
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* A SEGUNDA EA. Fica ao lado da primeira e diz logo no subtítulo que é outra coisa —
+                aqui, ao pé do download do MetaTrader, é onde a confusão entre as duas seria mais
+                cara: alguém instala uma a pensar que é a outra e a chave não valida. */}
+            <Card className="bg-black border-[#D2A63C]/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <Zap className="h-5 w-5 text-[#D2A63C]" />
+                  Sensei Scalp Edition
+                </CardTitle>
+                <p className="text-xs text-[#D2A63C]/80">
+                  EA diferente do Sensei EA, com licença própria
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-zinc-400">
+                <p>
+                  Scalper de ouro em M5: ordens pendentes dos dois lados, trailing desde o primeiro
+                  cêntimo de lucro e reversão a fechar o lado errado. Sem stop loss fixo.
+                </p>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    asChild
+                    size="sm"
+                    className="justify-between bg-[#D2A63C] hover:bg-[#BB8525] text-black font-medium"
+                  >
+                    <a href="/downloads/MTM-Sensei-Scalp.zip" download>
+                      Instalador + EA (Windows e macOS)
+                      <Download className="h-3.5 w-3.5" />
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="justify-between border-white/20 text-zinc-100 hover:border-[#D2A63C]/70"
+                  >
+                    <Link href="/api/sensei-scalp/guia" target="_blank" rel="noreferrer">
+                      Guia de instruções (PDF)
+                      <FileText className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="justify-between border-white/20 text-zinc-100 hover:border-[#D2A63C]/70"
+                  >
+                    <Link href="/sensei-scalp">
+                      Ver e comprar — 200 €/ano
+                      <KeyRound className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  Licença separada da do Sensei EA. Não está incluída em nenhum plano de subscrição.
                 </p>
               </CardContent>
             </Card>

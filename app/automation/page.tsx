@@ -120,7 +120,7 @@ export default function AutomationPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 gap-8">
             {/* MTM Copy — o serviço do site, para quem já sabe o que quer */}
             <Card className="bg-gradient-to-br from-purple-900/40 via-mtm-primary/5 to-pink-900/30 border-2 border-purple-500/30 backdrop-blur-sm flex flex-col">
               <CardContent className="p-8 flex flex-col flex-1">
@@ -252,6 +252,56 @@ export default function AutomationPage() {
                     </Button>
                   </Link>
                   <p className="text-xs text-gray-500 mt-3 text-center">Uma conta MT5 por licença · qualquer corretora com MT5</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Sensei Scalp Edition — a SEGUNDA EA, e o cartão tem de dizer isso em voz alta.
+                Partilham o motor de leitura e mais nada: tempos gráficos, forma de entrar e ritmo
+                são todos diferentes, e as licenças são separadas. Quem já comprou o AllInOne vai
+                assumir que isto é uma versão nova do mesmo — deixar essa confusão de pé vende hoje
+                e devolve amanhã. */}
+            <Card className="bg-gradient-to-br from-amber-900/25 via-mtm-primary/5 to-orange-900/20 border-2 border-[#D2A63C]/35 backdrop-blur-sm flex flex-col">
+              <CardContent className="p-8 flex flex-col flex-1">
+                <div className="flex items-center gap-4 mb-2">
+                  <div className="bg-[#D2A63C]/15 rounded-xl p-3 border border-[#D2A63C]/40">
+                    <Zap className="w-9 h-9 text-[#D2A63C]" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">Sensei Scalp Edition</h3>
+                    <p className="text-[#D2A63C] font-semibold text-sm">MetaTrader 5 · ouro em M5 · EA diferente</p>
+                  </div>
+                </div>
+
+                <p className="text-gray-300 leading-relaxed mt-4">
+                  <strong className="text-white">Não é uma versão nova do Sensei EA — é outra EA.</strong>{" "}
+                  Partilham a leitura de mercado e mais nada. Esta arma ordens pendentes dos dois
+                  lados, deixa o preço escolher, e a partir do primeiro cêntimo de lucro põe o stop
+                  em breakeven e acompanha.
+                </p>
+
+                <ul className="mt-5 space-y-2.5 text-gray-300 text-sm">
+                  <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-[#D2A63C] shrink-0 mt-0.5" />XAUUSD em M5, dezenas de ciclos por dia</li>
+                  <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-[#D2A63C] shrink-0 mt-0.5" />Sem stop loss fixo — quem fecha é a reversão</li>
+                  <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-[#D2A63C] shrink-0 mt-0.5" />Painel com lote fixo ou percentagem, ao vivo</li>
+                  <li className="flex gap-2.5"><CheckCircle className="w-4 h-4 text-[#D2A63C] shrink-0 mt-0.5" />Filtro de notícias que fecha, não só bloqueia</li>
+                </ul>
+
+                <div className="mt-auto pt-6">
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="text-3xl font-black text-white">200€</span>
+                    <span className="text-gray-400 text-sm">/ano · ou 697€ vitalícia</span>
+                  </div>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Licença própria. Não está incluída em nenhum plano.
+                  </p>
+                  <Link href="/sensei-scalp">
+                    <Button className="w-full bg-gradient-to-r from-[#D2A63C] to-amber-500 hover:from-[#BB8525] hover:to-amber-400 text-black font-bold text-lg px-6 py-6 rounded-xl transition-all duration-300 hover:scale-[1.02]">
+                      <Zap className="w-5 h-5 mr-2" />
+                      Ver a Scalp Edition
+                    </Button>
+                  </Link>
+                  <p className="text-xs text-gray-500 mt-3 text-center">Uma chave não abre a outra EA · são licenças separadas</p>
                 </div>
               </CardContent>
             </Card>

@@ -27,6 +27,24 @@ const CREME = '#FAF6EC'
 
 const M = 56 // margem
 
+/**
+ * O pdfkit escreve as fontes base em WinAnsi, que não tem setas nem o sinal de menos tipográfico.
+ * Um carácter fora dessa tabela não dá erro: sai um par de símbolos aleatórios no meio da frase,
+ * e só se descobre a olhar para o PDF. Aconteceu — a seta de "Ferramentas → Opções" saía como !'.
+ *
+ * Por isso todo o texto passa por aqui antes de ser desenhado. É uma linha de defesa contra um
+ * erro que não se vê no código nem rebenta em lado nenhum.
+ */
+function seguro(t: string): string {
+  return t
+    .replace(/[\u2192\u27A1]/g, '>')
+    .replace(/\u2212/g, '-')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/\u2026/g, '...')
+}
+
+
 export async function gerarGuiaSensei(metricas?: MetricasProvider | null): Promise<Buffer> {
   const doc = new PDFDocument({
     size: 'A4',
@@ -48,7 +66,7 @@ export async function gerarGuiaSensei(metricas?: MetricasProvider | null): Promi
   const titulo = (t: string) => {
     cabe(70)
     doc.moveDown(1.1)
-    doc.fillColor(OURO).fontSize(15).font('Helvetica-Bold').text(t, M, doc.y, { width: L })
+    doc.fillColor(OURO).fontSize(15).font('Helvetica-Bold').text(seguro(t), M, doc.y, { width: L })
     const y = doc.y + 4
     doc.moveTo(M, y).lineTo(M + L, y).lineWidth(0.7).strokeColor(OURO_ESCURO).stroke()
     doc.y = y + 12
@@ -57,11 +75,13 @@ export async function gerarGuiaSensei(metricas?: MetricasProvider | null): Promi
   const paragrafo = (t: string, cor = CINZA) => {
     doc.fillColor(cor).fontSize(10).font('Helvetica')
     cabe(doc.heightOfString(t, { width: L, lineGap: 2.5 }) + 8)
-    doc.text(t, M, doc.y, { width: L, align: 'left', lineGap: 2.5 })
+    doc.text(seguro(t), M, doc.y, { width: L, align: 'left', lineGap: 2.5 })
     doc.moveDown(0.45)
   }
 
-  const passo = (n: number, t: string, d: string) => {
+  const passo = (n: number, tCru: string, dCru: string) => {
+    const t = seguro(tCru)
+    const d = seguro(dCru)
     doc.fontSize(9.5).font('Helvetica')
     const alturaD = doc.heightOfString(d, { width: L - 26, lineGap: 2 })
     cabe(alturaD + 26)
@@ -84,19 +104,19 @@ export async function gerarGuiaSensei(metricas?: MetricasProvider | null): Promi
   const caixa = (tituloCaixa: string, corpo: string) => {
     const largura = L - 28
     doc.fontSize(10).font('Helvetica-Bold')
-    const hTitulo = doc.heightOfString(tituloCaixa, { width: largura })
+    const hTitulo = doc.heightOfString(seguro(tituloCaixa), { width: largura })
     doc.fontSize(9.5).font('Helvetica')
-    const hCorpo = doc.heightOfString(corpo, { width: largura, lineGap: 2.5 })
+    const hCorpo = doc.heightOfString(seguro(corpo), { width: largura, lineGap: 2.5 })
     const altura = hTitulo + hCorpo + 32
 
     cabe(altura + 10)
     const topo = doc.y
     doc.rect(M, topo, L, altura).fillColor(CREME).fill()
 
-    doc.fillColor(PRETO).fontSize(10).font('Helvetica-Bold').text(tituloCaixa, M + 14, topo + 13, {
+    doc.fillColor(PRETO).fontSize(10).font('Helvetica-Bold').text(seguro(tituloCaixa), M + 14, topo + 13, {
       width: largura,
     })
-    doc.fillColor(CINZA).fontSize(9.5).font('Helvetica').text(corpo, M + 14, topo + 13 + hTitulo + 6, {
+    doc.fillColor(CINZA).fontSize(9.5).font('Helvetica').text(seguro(corpo), M + 14, topo + 13 + hTitulo + 6, {
       width: largura,
       lineGap: 2.5,
     })

@@ -204,6 +204,23 @@ export function LicencaSenseiCard() {
             </Link>
           </>
         )}
+        {/* A SEGUNDA EA vive no mesmo separador, mas com uma linha a separar e a dizer que é
+            outra coisa. Não tem botão de emitir porque não é incluída em nenhum plano: quem a
+            quer, compra. Pôr aqui um "emitir" que dá erro seria pior do que não pôr nada. */}
+        <div className="mt-6 pt-5 border-t border-gray-800">
+          <p className="text-xs uppercase tracking-wider text-gray-500">Outra EA</p>
+          <h3 className="mt-1 font-semibold text-white">Sensei Scalp Edition</h3>
+          <p className="mt-1.5 text-sm text-gray-400 leading-relaxed">
+            Scalper de ouro em M5 — ordens pendentes, trailing imediato e sem stop loss fixo. É uma
+            ferramenta diferente do Sensei EA, com licença própria: 200 €/ano ou 697 € vitalícia.
+            Não está incluída no Premium.
+          </p>
+          <Link href="/sensei-scalp" className="mt-3 inline-block">
+            <Button variant="outline" size="sm" className="border-[#D2A63C]/40 text-[#D2A63C] hover:bg-[#D2A63C]/10">
+              Ver a Scalp Edition
+            </Button>
+          </Link>
+        </div>
       </CardContent>
     </Card>
   )

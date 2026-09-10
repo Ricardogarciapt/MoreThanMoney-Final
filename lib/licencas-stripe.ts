@@ -1,6 +1,14 @@
 import type Stripe from 'stripe'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
-import { emitirLicenca, daquiAUmAno, normalizarLogin, type PlanoLicenca } from '@/lib/licencas'
+import {
+  emitirLicenca,
+  daquiAUmAno,
+  normalizarLogin,
+  produtoDe,
+  PRODUTOS,
+  type PlanoLicenca,
+  type ProdutoLicenca,
+} from '@/lib/licencas'
 import { licencaSenseiEmailTemplate } from '@/lib/email-templates'
 import {
   brandedMailAttachments,
@@ -20,9 +28,12 @@ import {
 
 export const FONTE_CHECKOUT = 'sensei_ea_checkout'
 
+/** O identificador do checkout diz as duas coisas: qual EA e qual plano. */
 const PLANOS: Record<string, PlanoLicenca> = {
   sensei_ea_annual: 'anual',
   sensei_ea_lifetime: 'vitalicia',
+  sensei_scalp_annual: 'anual',
+  sensei_scalp_lifetime: 'vitalicia',
 }
 
 export function ehCheckoutDoEA(session: Stripe.Checkout.Session): boolean {
@@ -36,13 +47,15 @@ async function enviarEmailDaLicenca(
   plano: PlanoLicenca,
   mt5Login: string | null,
   expiraEm: string | null,
+  produto: ProdutoLicenca,
 ) {
   try {
-    const html = licencaSenseiEmailTemplate(nome, chave, plano, mt5Login, expiraEm, getSiteUrl())
+    const def = PRODUTOS[produto]
+    const html = licencaSenseiEmailTemplate(nome, chave, plano, mt5Login, expiraEm, getSiteUrl(), produto)
     await createMailTransporter().sendMail({
       from: mailFrom(),
       to: para,
-      subject: `A tua licença do MTM Sensei EA — ${chave}`,
+      subject: `A tua licença do ${def.nome} — ${chave}`,
       html: prepareBrandedEmailHtml(html),
       attachments: brandedMailAttachments(),
     })
@@ -82,9 +95,14 @@ export async function emitirLicencaDoCheckout(session: Stripe.Checkout.Session):
     .maybeSingle()
   if (jaExiste) return
 
+  // Qual dos dois EA foi comprado. O checkout escreve-o no metadata; um checkout antigo não
+  // o traz e `produtoDe` devolve o AllInOne, que era o único que existia quando foi criado.
+  const produto = produtoDe(session.metadata?.produto)
+
   const licenca = await emitirLicenca({
     userId,
     email: email || null,
+    produto,
     plano,
     origem: 'stripe',
     mt5Login,
@@ -98,10 +116,10 @@ export async function emitirLicencaDoCheckout(session: Stripe.Checkout.Session):
 
   if (email) {
     const nome = session.customer_details?.name || ''
-    await enviarEmailDaLicenca(email, nome, licenca.chave, plano, licenca.mt5_login, licenca.expira_em)
+    await enviarEmailDaLicenca(email, nome, licenca.chave, plano, licenca.mt5_login, licenca.expira_em, produto)
   }
 
-  console.log(`✅ [LICENCAS] Licença ${licenca.chave} (${plano}) emitida para ${email || userId}`)
+  console.log(`✅ [LICENCAS] Licença ${licenca.chave} (${PRODUTOS[produto].nome}, ${plano}) emitida para ${email || userId}`)
 }
 
 /** Renovação anual paga → a licença dessa subscrição ganha mais um ano. */

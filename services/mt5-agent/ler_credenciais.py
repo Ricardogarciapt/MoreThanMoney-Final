@@ -33,8 +33,13 @@ ETIQUETAS = {
 
 
 def ocr(imagem: str) -> list[tuple[float, float, float, str]]:
+    """
+    OCR local. No Mac usa o framework Vision (binário `ocr`); no VPS não existe, e cai no
+    tesseract. Em qualquer dos casos corre NA MÁQUINA: as credenciais de uma conta nunca
+    saem dali para um serviço de terceiros.
+    """
     if not OCR.exists():
-        raise RuntimeError(f"o binário de OCR não existe em {OCR} — corre ./instalar.sh")
+        return _ocr_tesseract(imagem)
     saida = subprocess.run([str(OCR), imagem], capture_output=True, text=True, timeout=60)
     if saida.returncode != 0:
         raise RuntimeError(f"OCR falhou: {saida.stderr.strip()[:200]}")
@@ -44,6 +49,33 @@ def ocr(imagem: str) -> list[tuple[float, float, float, str]]:
         if len(partes) == 4:
             try:
                 linhas.append((float(partes[0]), float(partes[1]), float(partes[2]), partes[3]))
+            except ValueError:
+                continue
+    return linhas
+
+
+def _ocr_tesseract(imagem: str) -> list:
+    """Alternativa para Linux. Devolve (y, x, altura, texto) normalizados de 0 a 1."""
+    try:
+        dim = subprocess.run(
+            ["identify", "-format", "%w %h", imagem], capture_output=True, text=True, timeout=30
+        ).stdout.split()
+        largura, altura = float(dim[0]), float(dim[1])
+        r = subprocess.run(
+            ["tesseract", imagem, "-", "--psm", "6", "tsv"],
+            capture_output=True, text=True, timeout=120,
+        )
+    except Exception:
+        return []
+    linhas = []
+    for l in r.stdout.splitlines()[1:]:
+        c = l.split("\t")
+        if len(c) >= 12 and c[11].strip():
+            try:
+                x, y, h = float(c[6]), float(c[7]), float(c[9])
+                # Centro vertical, tal como no Vision: comparar topos falha quando uma
+                # etiqueta e um número têm alturas diferentes.
+                linhas.append(((y + h / 2) / altura, x / largura, h / altura, c[11].strip()))
             except ValueError:
                 continue
     return linhas

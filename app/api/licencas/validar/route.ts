@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validarLicenca } from '@/lib/licencas'
+import { produtoDe, validarLicenca } from '@/lib/licencas'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -35,6 +35,9 @@ async function responder(chave: string, login: string, extra: Record<string, str
       corretora: extra.corretora,
       servidor: extra.servidor,
       terminal: extra.terminal,
+      // Ausente = pedido de um EA anterior aos dois produtos, e esses eram todos o AllInOne.
+      // É por isso que as 60 chaves já emitidas continuam a validar sem migração nenhuma.
+      produto: produtoDe(extra.produto),
     })
     return NextResponse.json(r, { headers: CORS })
   } catch (e) {
@@ -52,6 +55,7 @@ export async function GET(req: NextRequest) {
     corretora: q.get('corretora') ?? q.get('broker'),
     servidor: q.get('servidor') ?? q.get('server'),
     terminal: q.get('terminal'),
+    produto: q.get('produto'),
   })
 }
 
@@ -61,5 +65,6 @@ export async function POST(req: NextRequest) {
     corretora: b.corretora ? String(b.corretora) : null,
     servidor: b.servidor ? String(b.servidor) : null,
     terminal: b.terminal ? String(b.terminal) : null,
+    produto: b.produto ? String(b.produto) : null,
   })
 }

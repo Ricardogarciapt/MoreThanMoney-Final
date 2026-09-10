@@ -3,14 +3,20 @@ import { getStripeClient } from '@/lib/stripe-client'
 import { requireStripePriceId } from '@/lib/stripe-prices'
 import { buildStripeReturnUrl } from '@/lib/site-url'
 import { getAuthenticatedUser } from '@/lib/admin-api-helpers'
-import { normalizarLogin } from '@/lib/licencas'
+import { normalizarLogin, PRODUTO_EA, PRODUTO_SCALP, PRODUTOS } from '@/lib/licencas'
 
 export const dynamic = 'force-dynamic'
 
-/** Os dois planos vendidos na página do EA. */
+/**
+ * Os planos à venda. São DUAS EA diferentes, cada uma com o seu par anual/vitalícia — e o
+ * `produto` viaja daqui até à licença emitida pelo webhook, senão quem comprasse a Scalp
+ * recebia uma chave do AllInOne.
+ */
 const PLANOS = {
-  sensei_ea_annual: { modo: 'subscription' as const, nome: 'Licença anual' },
-  sensei_ea_lifetime: { modo: 'payment' as const, nome: 'Licença vitalícia' },
+  sensei_ea_annual:      { modo: 'subscription' as const, produto: PRODUTO_EA,    nome: 'Licença anual' },
+  sensei_ea_lifetime:    { modo: 'payment'      as const, produto: PRODUTO_EA,    nome: 'Licença vitalícia' },
+  sensei_scalp_annual:   { modo: 'subscription' as const, produto: PRODUTO_SCALP, nome: 'Licença anual' },
+  sensei_scalp_lifetime: { modo: 'payment'      as const, produto: PRODUTO_SCALP, nome: 'Licença vitalícia' },
 }
 
 /**
@@ -39,12 +45,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'O número da conta MT5 não parece válido.' }, { status: 400 })
     }
 
+    // a página de retorno é a do produto que se comprou, não a do outro
+    const pagina = plano.produto === PRODUTO_SCALP ? 'sensei-scalp' : 'sensei-ea'
+    void PRODUTOS // registo único dos dois produtos
+
     const priceId = requireStripePriceId(planId)
     const stripe = getStripeClient()
 
     const metadata: Record<string, string> = {
       source: 'sensei_ea_checkout',
       plan: planId,
+      produto: plano.produto,
       email,
       mt5_login: mt5Login,
       ...(sessao.userId ? { user_id: sessao.userId } : {}),
@@ -55,8 +66,8 @@ export async function POST(request: NextRequest) {
       mode: plano.modo,
       line_items: [{ price: priceId, quantity: 1 }],
       allow_promotion_codes: true,
-      success_url: buildStripeReturnUrl('/sensei-ea/obrigado', { plan: planId }),
-      cancel_url: buildStripeReturnUrl('/sensei-ea', {}, { includeSessionPlaceholder: false }),
+      success_url: buildStripeReturnUrl(`/${pagina}/obrigado`, { plan: planId }),
+      cancel_url: buildStripeReturnUrl(`/${pagina}`, {}, { includeSessionPlaceholder: false }),
       metadata,
       ...(plano.modo === 'subscription' ? { subscription_data: { metadata } } : {}),
     })

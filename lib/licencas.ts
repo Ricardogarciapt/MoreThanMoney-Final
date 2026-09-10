@@ -19,10 +19,66 @@ import { carregarDireitos } from '@/lib/entitlements'
  * Experts, e um cliente que vê "esta chave já está noutra conta" resolve-se sozinho.
  */
 
+/**
+ * São DOIS produtos, e é por isso que existe este registo.
+ *
+ * O `produto` já era uma coluna da tabela, mas estava sempre preenchido com a mesma constante —
+ * o que dá no mesmo que não existir. Agora cada EA tem a sua entrada e cada chave sabe o que abre.
+ * Sem isto, uma licença do AllInOne abria a Scalp e vice-versa, que é o mesmo que não haver duas.
+ *
+ * O EA manda o seu identificador na validação (`?produto=`). Uma chave antiga não manda nada, e
+ * essa ausência é lida como `sensei_ea` — as 60 já emitidas continuam a funcionar sem migração.
+ */
 export const PRODUTO_EA = 'sensei_ea'
+export const PRODUTO_SCALP = 'sensei_scalp'
 
-export const PRECO_ANUAL_EUR = 297
-export const PRECO_VITALICIO_EUR = 1000
+export type ProdutoLicenca = typeof PRODUTO_EA | typeof PRODUTO_SCALP
+
+export interface DefinicaoProduto {
+  id: ProdutoLicenca
+  nome: string
+  /** Onde o cliente compra ou renova — vai nas mensagens de erro do EA. */
+  pagina: string
+  precoAnual: number
+  precoVitalicio: number
+  /** Incluída sem custo em Premium/VIP/admin? */
+  incluidaEmMembro: boolean
+  envAnual: string
+  envVitalicio: string
+}
+
+export const PRODUTOS: Record<ProdutoLicenca, DefinicaoProduto> = {
+  [PRODUTO_EA]: {
+    id: PRODUTO_EA,
+    nome: 'MTM Sensei EA',
+    pagina: 'morethanmoney.pt/sensei-ea',
+    precoAnual: 297,
+    precoVitalicio: 1000,
+    incluidaEmMembro: true,
+    envAnual: 'STRIPE_PRICE_SENSEI_EA_ANNUAL',
+    envVitalicio: 'STRIPE_PRICE_SENSEI_EA_LIFETIME',
+  },
+  [PRODUTO_SCALP]: {
+    id: PRODUTO_SCALP,
+    nome: 'MTM Sensei Scalp Edition',
+    pagina: 'morethanmoney.pt/sensei-scalp',
+    precoAnual: 200,
+    precoVitalicio: 697,
+    // Decisão do Ricardo: produto independente. Ser Premium não dá direito a esta —
+    // nem sequer ter o AllInOne. São ferramentas diferentes e vendem-se em separado.
+    incluidaEmMembro: false,
+    envAnual: 'STRIPE_PRICE_SENSEI_SCALP_ANNUAL',
+    envVitalicio: 'STRIPE_PRICE_SENSEI_SCALP_LIFETIME',
+  },
+}
+
+/** Um identificador vindo do EA ou de um query string, reduzido a um produto conhecido. */
+export function produtoDe(v: unknown): ProdutoLicenca {
+  return v === PRODUTO_SCALP ? PRODUTO_SCALP : PRODUTO_EA
+}
+
+export const PRECO_ANUAL_EUR = PRODUTOS[PRODUTO_EA].precoAnual
+export const PRECO_VITALICIO_EUR = PRODUTOS[PRODUTO_EA].precoVitalicio
 
 export type PlanoLicenca = 'anual' | 'vitalicia' | 'incluida'
 export type OrigemLicenca = 'membro' | 'stripe' | 'admin'
@@ -103,6 +159,7 @@ export function temDireitoAIncluida(d: { admin: boolean; vip: boolean; premium: 
 export interface PedidoEmissao {
   userId?: string | null
   email?: string | null
+  produto?: ProdutoLicenca
   plano: PlanoLicenca
   origem: OrigemLicenca
   mt5Login?: string | null
@@ -127,7 +184,7 @@ export async function emitirLicenca(p: PedidoEmissao): Promise<Licenca> {
         chave: gerarChave(),
         user_id: p.userId ?? null,
         email: p.email?.trim().toLowerCase() ?? null,
-        produto: PRODUTO_EA,
+        produto: p.produto ?? PRODUTO_EA,
         origem: p.origem,
         plano: p.plano,
         contas_permitidas: p.contasPermitidas ?? 1,
@@ -170,6 +227,7 @@ export interface ResultadoValidacao {
     | 'revogada'
     | 'expirada'
     | 'sem_subscricao'
+    | 'produto_errado'
     | 'conta_diferente'
     | 'limite_contas'
     | 'erro'
@@ -184,6 +242,8 @@ export interface ResultadoValidacao {
 export interface ContextoValidacao {
   chave: string
   mt5Login: string
+  /** Qual dos EA está a pedir. Ausente = pedido antigo, portanto o AllInOne. */
+  produto?: ProdutoLicenca
   corretora?: string | null
   servidor?: string | null
   terminal?: string | null
@@ -209,6 +269,18 @@ export async function validarLicenca(ctx: ContextoValidacao): Promise<ResultadoV
 
   const licenca = lic as Licenca
 
+  // A chave é de OUTRO produto. Vale a pena dizer de qual: quem tem os dois vai baralhar-se uma
+  // vez, e a frase certa poupa um email. Sem esta verificação a coluna `produto` era decoração.
+  const produtoPedido = produtoDe(ctx.produto)
+  const produtoDaChave = produtoDe(licenca.produto)
+  if (produtoDaChave !== produtoPedido) {
+    return {
+      ok: false,
+      codigo: 'produto_errado',
+      mensagem: `Esta chave é do ${PRODUTOS[produtoDaChave].nome} e este EA é o ${PRODUTOS[produtoPedido].nome}. São licenças diferentes.`,
+    }
+  }
+
   if (licenca.estado === 'revogada')
     return { ok: false, codigo: 'revogada', mensagem: 'Esta licença foi revogada.' }
 
@@ -219,7 +291,7 @@ export async function validarLicenca(ctx: ContextoValidacao): Promise<ResultadoV
     return {
       ok: false,
       codigo: 'expirada',
-      mensagem: 'A licença expirou. Renova em morethanmoney.pt/sensei-ea',
+      mensagem: `A licença expirou. Renova em ${PRODUTOS[produtoDaChave].pagina}`,
       plano: licenca.plano,
       expiraEm: licenca.expira_em,
     }
