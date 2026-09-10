@@ -32,6 +32,15 @@ export interface PropFirmRules {
   consistencyMaxDayShare: number
   /** Fatia máxima da almofada que uma trade pode arriscar. */
   cushionRiskShare: number
+  /**
+   * A que horas — e em que fuso — começa o dia de negociação da prop firm.
+   *
+   * Sem isto o dia era o dia UTC. A FXIFY conta o dia das 17:00 EST às 17:00 EST: com o
+   * contador a reiniciar à meia-noite UTC, dava para perder 8% antes da meia-noite e outros
+   * 8% depois — dois dias para nós, um só para eles, e a conta rebentava com a guarda a dizer
+   * que estava tudo bem. Ausente = dia UTC, como sempre foi.
+   */
+  diaComeca?: { hora: number; fuso: string }
 }
 
 /** Regras reais da Equity Edge, confirmadas pelo Ricardo: 6% de drawdown total, 4% diário,
@@ -43,7 +52,26 @@ export const EQUITY_EDGE_RULES: PropFirmRules = {
   cushionRiskShare: 0.25,
 }
 
+/**
+ * FXIFY, tal como o Ricardo as leu do painel deles:
+ *  · perda diária 8% — sobre a EQUITY, contra o saldo de FECHO do dia anterior (17:00 EST);
+ *  · drawdown máximo 8% — ARRASTA o saldo fechado até a conta ganhar 8% e trava aí (ou quando
+ *    sai um pagamento). É a mecânica que a guarda já fazia: o chão segue os máximos até
+ *    `maxDrawdownPct` de lucro e depois fixa-se no saldo inicial.
+ *
+ * A consistência fica a 1 (sem limite) de propósito: a FXIFY pode ter regra de consistência,
+ * mas não me foi dada. Inventar uma percentagem era bloquear trades por uma regra imaginada.
+ */
+export const FXIFY_RULES: PropFirmRules = {
+  maxDrawdownPct: 0.08,
+  dailyDrawdownPct: 0.08,
+  consistencyMaxDayShare: 1,
+  cushionRiskShare: 0.25,
+  diaComeca: { hora: 17, fuso: 'America/New_York' },
+}
+
 const RULES_BY_TYPE: Record<string, PropFirmRules> = {
+  fxify: FXIFY_RULES,
   equity_edge: EQUITY_EDGE_RULES,
   ftmo: { maxDrawdownPct: 0.1, dailyDrawdownPct: 0.05, consistencyMaxDayShare: 0.4, cushionRiskShare: 0.25 },
   fundednext: { maxDrawdownPct: 0.1, dailyDrawdownPct: 0.05, consistencyMaxDayShare: 0.4, cushionRiskShare: 0.25 },
@@ -64,8 +92,27 @@ interface AccountState {
   day_profit: Record<string, number>
 }
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10)
+/**
+ * O dia de negociação segundo as regras da prop firm.
+ *
+ * Sem `diaComeca` é o dia UTC. Com ele, o dia vira à hora indicada no fuso indicado: passada
+ * essa hora já se está no dia seguinte, que é como a FXIFY conta a partir das 17:00 EST.
+ */
+export function diaDeNegociacao(rules: PropFirmRules | null, quando: Date = new Date()): string {
+  if (!rules?.diaComeca) return quando.toISOString().slice(0, 10)
+  const { hora, fuso } = rules.diaComeca
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: fuso,
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false,
+  }).formatToParts(quando)
+  const get = (t: string) => partes.find((p) => p.type === t)?.value ?? '00'
+  const dataLocal = `${get('year')}-${get('month')}-${get('day')}`
+  // `hour12:false` devolve 24 à meia-noite nalgumas plataformas.
+  const horaLocal = Number(get('hour')) % 24
+  if (horaLocal < hora) return dataLocal
+  const d = new Date(`${dataLocal}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + 1)
+  return d.toISOString().slice(0, 10)
 }
 
 async function readState(): Promise<Record<string, AccountState>> {
@@ -132,7 +179,8 @@ export async function evaluatePropFirmGuard(input: PropFirmInput): Promise<PropF
   }
 
   const equity = input.equity
-  const dia = today()
+  // O dia é o da PROP FIRM, não o dia UTC — a FXIFY vira às 17:00 EST.
+  const dia = diaDeNegociacao(rules)
   const state = await readState()
   const prev = state[input.accountId]
 
