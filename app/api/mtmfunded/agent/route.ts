@@ -30,12 +30,28 @@ function tokenValido(recebido: string | null | undefined): boolean {
   return diferenca === 0
 }
 
-/** Reclama o pedido mais antigo em fila. */
+/**
+ * Reclama o pedido mais antigo em fila — ou apenas ESPREITA, com `?peek=1`.
+ *
+ * O espreitar existe porque reclamar é destrutivo. O agente em modo assistido precisa de
+ * alguém a escrever no terminal; quando corre como serviço (sem terminal) não pode reclamar
+ * nada — reclamou uma vez em testes, não teve a quem perguntar, e queimou as três tentativas
+ * do pedido em segundos, deixando-o morto. Sem terminal, espreita-se e avisa-se.
+ */
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token') ?? request.headers.get('x-agent-token')
   if (!tokenValido(token)) return NextResponse.json({ error: 'não autorizado' }, { status: 401 })
 
   const db = getSupabaseAdmin()
+
+  if (request.nextUrl.searchParams.get('peek') === '1') {
+    const { count } = await db
+      .from('mtm_account_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('estado', 'em_fila')
+      .lt('tentativas', 3)
+    return NextResponse.json({ emFila: count ?? 0 })
+  }
   const { data: pedido } = await db
     .from('mtm_account_requests')
     .select(

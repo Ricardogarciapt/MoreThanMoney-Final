@@ -16,7 +16,10 @@ MODO="${MTM_AGENT_MODO:-assistido}"
 INTERVALO="${MTM_AGENT_INTERVALO:-60}"
 LOG="${MTM_AGENT_LOG:-$HOME/Library/Logs/mtm-mt5-agent.log}"
 
-registar() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG"; }
+# Escreve só para o stdout: sob o launchd é ele que o encaminha para o ficheiro, e o `tee`
+# que aqui esteve duplicava cada linha — o log ficava com tudo a dobrar e a parecer que o
+# agente tentava duas vezes cada pedido. Em execução manual, vê-se no terminal.
+registar() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
 if [ -z "$TOKEN" ]; then
   echo "MTMFUNDED_AGENT_SECRET em falta. Corre ./instalar.sh primeiro." >&2
@@ -28,6 +31,14 @@ reclamar() {
   curl -sS -m 30 -H "x-agent-token: $TOKEN" "$SITE/api/mtmfunded/agent" 2>/dev/null
 }
 
+# Espreita sem reclamar: quantos pedidos estão à espera.
+espreitar() {
+  curl -sS -m 30 -H "x-agent-token: $TOKEN" "$SITE/api/mtmfunded/agent?peek=1" 2>/dev/null
+}
+
+# Há alguém a quem perguntar? O modo assistido precisa de um terminal.
+ha_terminal() { [ -t 0 ]; }
+
 # Devolve o resultado ao site.
 entregar() {
   curl -sS -m 30 -X POST "$SITE/api/mtmfunded/agent" \
@@ -37,6 +48,30 @@ entregar() {
 
 processar_um() {
   local resposta pedido id
+
+  # SEM TERMINAL NÃO SE RECLAMA NADA.
+  #
+  # Reclamar é destrutivo: marca o pedido e gasta uma tentativa. Em modo assistido é preciso
+  # alguém a escrever o login e a password — e como serviço não há terminal nenhum. Da
+  # primeira vez que isto correu como serviço, o agente reclamou, leu EOF na pergunta, e
+  # queimou as três tentativas do pedido em segundos. Um participante real teria ficado sem
+  # conta antes de saber que se tinha inscrito.
+  if [ "$MODO" != "auto" ] && ! ha_terminal; then
+    local espera n
+    espera="$(espreitar)"
+    if printf '%s' "$espera" | grep -q '"error"'; then
+      registar "o site recusou: $(printf '%s' "$espera" | head -c 200)"
+      return 1
+    fi
+    n="$(printf '%s' "$espera" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("emFila",0))' 2>/dev/null || echo 0)"
+    if [ "${n:-0}" -gt 0 ]; then
+      registar "$n pedido(s) à espera — corre: $(dirname "$0")/agente.sh uma-vez"
+      # Aviso no ecrã do Mac: o log sozinho não chama ninguém.
+      osascript -e "display notification \"$n conta(s) por criar no MT5\" with title \"MTM · Agente MT5\"" 2>/dev/null || true
+    fi
+    return 2
+  fi
+
   resposta="$(reclamar)"
   if [ -z "$resposta" ]; then registar "sem resposta do site"; return 1; fi
 
