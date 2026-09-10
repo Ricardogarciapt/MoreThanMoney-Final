@@ -71,7 +71,14 @@ BOTAO_PROCURAR = (981, 293)
 
 
 def registar(msg: str) -> None:
-    print(f"[{datetime.now():%H:%M:%S}] {msg}", flush=True)
+    """Progresso para o ERRO PADRÃO, nunca para a saída.
+
+    A saída deste programa é UM objecto JSON e mais nada — é assim que o agente a lê. Enquanto
+    o progresso saía por ali, o `json.loads` do agente rebentava com as linhas de progresso à
+    frente, o erro era apanhado por um `except` genérico e o pedido voltava à fila em silêncio.
+    A conta 19009 chegou a ser criada na corretora sem que uma única linha o dissesse.
+    """
+    print(f"[{datetime.now():%H:%M:%S}] {msg}", file=sys.stderr, flush=True)
 
 
 # ── journal ──────────────────────────────────────────────────────────────────
@@ -91,24 +98,56 @@ def _ler_log(p: Path) -> str:
     return ""
 
 
-def marca_dagua() -> int:
-    return sum(p.stat().st_size for p in _logs_de_hoje())
+def marca_dagua() -> dict:
+    """Onde é que cada ficheiro de log ia, antes de se carregar no botão.
+
+    Um dicionário {ficheiro: bytes} e não um total: à meia-noite o MT5 abre um log novo e um
+    total deixa de querer dizer nada. Um ficheiro que não esteja aqui lê-se do princípio, que
+    é o que se quer para um log acabado de nascer.
+    """
+    return {str(p): p.stat().st_size for p in _logs_de_hoje()}
 
 
-def esperar_no_log(padrao: str, desde: int, segundos: int = 90) -> str | None:
+def _ler_desde(p: Path, desde: int) -> str:
+    """Lê SÓ o que foi escrito depois da marca. É a diferença entre a conta que se acabou de
+    criar e a que se criou há uma hora.
+
+    Isto já custou caro: o código antigo usava a marca apenas para saber se o ficheiro tinha
+    crescido e depois varria-o todo, pelo que a primeira linha «new demo account» do dia
+    ganhava sempre. Na segunda conta da noite, o agente anunciou a 19009 — criada às 21:35 —
+    quando o que estava no ecrã era a 19010. Um passo mais à frente e teria entregue o login
+    de uma conta com a password de outra.
+    """
+    try:
+        with p.open("rb") as f:
+            f.seek(max(desde, 0))
+            bruto = f.read()
+    except OSError:
+        return ""
+    # O log é UTF-16; saltada a marca, já não há BOM — tem de se dizer que é little-endian.
+    for codec in ("utf-16-le", "utf-8", "latin-1"):
+        try:
+            return bruto.decode(codec, errors="ignore")
+        except Exception:
+            continue
+    return ""
+
+
+def esperar_no_log(padrao: str, desde: dict, segundos: int = 90) -> str | None:
     rx = re.compile(padrao, re.IGNORECASE)
     limite = time.time() + segundos
-    while time.time() < limite:
+    while True:
         for p in _logs_de_hoje():
-            if p.stat().st_size <= desde:
+            inicio = desde.get(str(p), 0)
+            if p.stat().st_size <= inicio:
                 continue
-            texto = _ler_log(p)
-            for linha in texto.splitlines():
+            for linha in _ler_desde(p, inicio).splitlines():
                 m = rx.search(linha)
                 if m:
                     return m.group(1) if m.groups() else linha
+        if time.time() >= limite:
+            return None
         time.sleep(2)
-    return None
 
 
 # ── passos ───────────────────────────────────────────────────────────────────
@@ -330,35 +369,86 @@ def criar(pedido: dict) -> dict:
     # As passwords só existem no ecrã que está agora à frente.
     time.sleep(3)
     foto = mt5.fotografar()
-    credenciais = ler_credenciais(foto)
+    credenciais = ler_credenciais(foto, login)
     try:
         os.unlink(foto)   # a fotografia tem as passwords: não fica no disco
     except OSError:
         pass
 
-    if not credenciais.get("password"):
+    if not credenciais.get("candidatos"):
         return {
             "login": login, "password": None, "servidor": servidor,
             "precisa_password": True,
             "aviso": f"conta {login} criada, mas não consegui ler a password do ecrã",
         }
 
+    # O diálogo das credenciais é MODAL: enquanto estiver à frente, o Navegador não recebe
+    # cliques e a troca de password não chega a começar. Fecha-se aqui, já com o que
+    # interessava lido dele.
+    fechar_credenciais()
+
+    # ── a corretora é que diz se a leitura estava certa ──────────────────────
+    # Troca-se a password lida por uma gerada aqui. O diálogo pede a actual, e é a corretora
+    # que a valida: aceitando, a leitura estava certa; recusando, estava errada — e mais vale
+    # saber isso agora do que quando o participante não conseguir entrar. Daqui em diante a
+    # password é uma que se GEROU, não uma que se leu.
+    troca = trocar_password(login, credenciais.get("candidatos") or [credenciais["password"]])
+    if troca.get("ok"):
+        registar(f"conta {login}: password mestra trocada por uma gerada")
+        return {
+            "login": login,
+            "password": troca["password"],
+            "investor": credenciais.get("investor"),
+            "servidor": servidor,
+            "password_gerada": True,
+        }
+
+    registar(f"conta {login}: {troca.get('motivo')}")
     return {
-        "login": login,
-        "password": credenciais["password"],
-        "investor": credenciais.get("investor"),
-        "servidor": servidor,
+        "login": login, "password": None, "servidor": servidor,
+        "precisa_password": True,
+        "aviso": f"conta {login} criada, mas {troca.get('motivo')}",
     }
 
 
-def ler_credenciais(imagem: str) -> dict:
+def fechar_credenciais() -> None:
+    """Fecha o diálogo final. Se o botão não aparecer, segue-se — não se fica preso a fechar
+    uma janela por causa de uma conta que já está criada."""
+    for _ in range(3):
+        if not mt5.ve(r"read only password"):
+            return
+        if not mt5.clicar_texto(r"^\s*(Finish|Close|Concluir|Fechar)\s*$"):
+            break
+        time.sleep(2)
+    if mt5.ve(r"read only password"):
+        registar("o diálogo das credenciais não fechou")
+
+
+def trocar_password(login: str, candidatos: list) -> dict:
+    trocador = AQUI / "mudar_password.py"
+    if not trocador.exists():
+        return {"ok": False, "motivo": "mudar_password.py não está instalado"}
+    r = subprocess.run(
+        [sys.executable, str(trocador), json.dumps({"login": login, "candidatos": candidatos})],
+        capture_output=True, text=True, timeout=420,
+    )
+    for linha in (r.stderr or "").splitlines():
+        if linha.strip():
+            registar(f"    {linha.strip()[:160]}")
+    try:
+        return json.loads((r.stdout or "{}").strip().splitlines()[-1])
+    except Exception:
+        return {"ok": False, "motivo": "o trocador respondeu de forma ilegível"}
+
+
+def ler_credenciais(imagem: str, login: str | None = None) -> dict:
     """Lê login/password/investor do diálogo final."""
     # No VPS está tudo na mesma pasta; no repositório, o leitor vive um nível acima.
     leitor = AQUI / "ler_credenciais.py"
     if not leitor.exists():
         leitor = AQUI.parent / "ler_credenciais.py"
     r = subprocess.run(
-        [sys.executable, str(leitor), imagem],
+        [sys.executable, str(leitor), imagem] + ([str(login)] if login else []),
         capture_output=True, text=True, timeout=120,
     )
     try:

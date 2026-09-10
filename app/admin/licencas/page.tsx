@@ -38,6 +38,23 @@ import {
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 
+/**
+ * Os dois produtos. Repetidos aqui em vez de importados de `lib/licencas` porque esse módulo
+ * arrasta o cliente de admin do Supabase, que não pode ir para o browser.
+ *
+ * Uma licença gravada antes de existirem dois produtos não tem o campo preenchido de forma
+ * fiável — por isso `nomeProduto` trata o desconhecido como AllInOne, que era o único que havia.
+ */
+const PRODUTOS = [
+  { id: "sensei_ea", nome: "MTM Sensei EA", curto: "Sensei EA" },
+  { id: "sensei_scalp", nome: "MTM Sensei Scalp Edition", curto: "Scalp" },
+] as const
+
+function nomeProduto(id: string | null | undefined, curto = false) {
+  const p = PRODUTOS.find((x) => x.id === id) ?? PRODUTOS[0]
+  return curto ? p.curto : p.nome
+}
+
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 interface Ativacao {
@@ -55,6 +72,7 @@ interface Licenca {
   chave: string
   user_id: string | null
   email: string | null
+  produto: string
   origem: "membro" | "stripe" | "admin"
   plano: "anual" | "vitalicia" | "incluida"
   contas_permitidas: number
@@ -100,6 +118,8 @@ export default function LicencasPage() {
   const [licencas, setLicencas] = useState<Licenca[]>([])
   const [procura, setProcura] = useState("")
   const [estado, setEstado] = useState("todos")
+  const [produto, setProduto] = useState("todos")
+  const [totais, setTotais] = useState<Record<string, number>>({})
   const [copiada, setCopiada] = useState<string | null>(null)
   const [aberta, setAberta] = useState<string | null>(null)
 
@@ -109,7 +129,13 @@ export default function LicencasPage() {
 
   const [mostrarCriar, setMostrarCriar] = useState(false)
   const [aGuardar, setAGuardar] = useState(false)
-  const [form, setForm] = useState({ email: "", plano: "anual", mt5Login: "", notas: "" })
+  const [form, setForm] = useState({
+    email: "",
+    produto: "sensei_ea",
+    plano: "anual",
+    mt5Login: "",
+    notas: "",
+  })
 
   useEffect(() => setMounted(true), [])
 
@@ -125,10 +151,12 @@ export default function LicencasPage() {
       const params = new URLSearchParams()
       if (procura.trim()) params.set("q", procura.trim())
       if (estado !== "todos") params.set("estado", estado)
+      if (produto !== "todos") params.set("produto", produto)
       const r = await fetch(`/api/admin/licencas?${params}`)
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || "Erro a carregar")
       setLicencas(d.licencas || [])
+      setTotais(d.totais || {})
     } catch (e) {
       toast({
         title: "Não deu para carregar",
@@ -138,7 +166,7 @@ export default function LicencasPage() {
     } finally {
       setLoading(false)
     }
-  }, [procura, estado, toast])
+  }, [procura, estado, produto, toast])
 
   useEffect(() => {
     if (mounted && user && isAdmin) void carregar()
@@ -251,7 +279,8 @@ export default function LicencasPage() {
       if (!r.ok) throw new Error(d.error || "Erro")
       toast({ title: `Licença ${d.licenca.chave} emitida` })
       setMostrarCriar(false)
-      setForm({ email: "", plano: "anual", mt5Login: "", notas: "" })
+      // mantém o produto escolhido: quem emite duas seguidas costuma emitir do mesmo
+      setForm((f) => ({ email: "", produto: f.produto, plano: "anual", mt5Login: "", notas: "" }))
       void carregar()
     } catch (e) {
       toast({
@@ -355,6 +384,20 @@ export default function LicencasPage() {
             placeholder="Chave, email ou conta MT5…"
             className="max-w-sm bg-gray-900 border-gray-800 text-white"
           />
+          <Select value={produto} onValueChange={setProduto}>
+            <SelectTrigger className="w-56 bg-gray-900 border-gray-800 text-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Os dois produtos</SelectItem>
+              {PRODUTOS.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.nome}
+                  {totais[p.id] !== undefined ? ` (${totais[p.id]})` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={estado} onValueChange={setEstado}>
             <SelectTrigger className="w-44 bg-gray-900 border-gray-800 text-white">
               <SelectValue />
@@ -407,6 +450,21 @@ export default function LicencasPage() {
                       {ORIGEM_LABEL[l.origem]} · {data(l.criada_em)}
                     </div>
                   </div>
+
+                  {/* Qual EA. Fica mesmo quando o filtro está a mostrar só uma: uma tabela onde
+                      a coluna desaparece conforme o filtro obriga a olhar para o filtro para saber
+                      o que se está a ver. */}
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "shrink-0",
+                      l.produto === "sensei_scalp"
+                        ? "border-[#D2A63C]/50 text-[#D2A63C]"
+                        : "border-emerald-600/40 text-emerald-400",
+                    )}
+                  >
+                    {nomeProduto(l.produto, true)}
+                  </Badge>
 
                   <Badge variant="outline" className="border-gray-700 text-gray-300">
                     {PLANO_LABEL[l.plano]}
@@ -566,6 +624,24 @@ export default function LicencasPage() {
               />
               <p className="text-[11px] text-gray-600 mt-1">
                 Se já for membro, a licença aparece-lhe na área de membro.
+              </p>
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 mb-1.5 block">Produto</label>
+              <Select value={form.produto} onValueChange={(v) => setForm({ ...form, produto: v })}>
+                <SelectTrigger className="bg-gray-950 border-gray-800 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRODUTOS.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-gray-600 mt-1">
+                Uma chave só abre o EA para que foi emitida.
               </p>
             </div>
             <div>

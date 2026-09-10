@@ -38,7 +38,11 @@ else
 fi
 
 # A janela é a prova. O processo pode estar vivo com a interface morta.
-JANELA="$(xdotool search --name "MetaTrader" 2>/dev/null | head -1)"
+#
+# Pela CLASSE e não pelo nome: assim que o terminal entra numa conta, o título passa a ser
+# «19009 - TheTradingMaster-Live: Demo Account …» e a palavra «MetaTrader» desaparece dele.
+# Procurar por nome dava «não há janela» com a janela à frente.
+JANELA="$(xdotool search --onlyvisible --class "terminal64" 2>/dev/null | head -1)"
 if [ -n "$JANELA" ]; then
   registar "janela $JANELA: $(xdotool getwindowname "$JANELA" 2>/dev/null)"
   exit 0

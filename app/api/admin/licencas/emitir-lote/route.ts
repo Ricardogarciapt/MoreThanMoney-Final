@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdminAccess, getSupabaseAdmin } from '@/lib/admin-api-helpers'
 import { carregarDireitos } from '@/lib/entitlements'
-import { emitirLicenca, temDireitoAIncluida } from '@/lib/licencas'
+import {
+  PRODUTO_EA,
+  emitirLicenca,
+  temDireitoAIncluida,
+} from '@/lib/licencas'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -57,7 +61,11 @@ export async function POST(req: NextRequest) {
   const { data: existentes } = await db
     .from('licencas')
     .select('user_id')
-    .eq('produto', 'sensei_ea')
+    // SÓ do AllInOne, e de propósito: a emissão em lote existe porque essa EA está incluída em
+    // Premium/VIP. A Scalp Edition não está incluída em plano nenhum — quem a quer, compra — e
+    // por isso não há aqui nada para emitir a ninguém. Se um dia isso mudar, muda-se esta linha
+    // E o `emitirLicenca` lá em baixo; mudar só uma delas emitia chaves do produto errado.
+    .eq('produto', PRODUTO_EA)
     .eq('estado', 'ativa')
     .not('user_id', 'is', null)
   const jaTem = new Set((existentes ?? []).map((l) => l.user_id as string))

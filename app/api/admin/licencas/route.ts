@@ -7,7 +7,10 @@ import {
   reativarLicenca,
   revogarLicenca,
   daquiAUmAno,
+  produtoDe,
+  PRODUTOS,
   type PlanoLicenca,
+  type ProdutoLicenca,
 } from '@/lib/licencas'
 
 export const dynamic = 'force-dynamic'
@@ -26,9 +29,13 @@ export async function GET(req: NextRequest) {
   const db = getSupabaseAdmin()
   const procura = (req.nextUrl.searchParams.get('q') || '').trim()
   const estado = req.nextUrl.searchParams.get('estado') || ''
+  const produto = req.nextUrl.searchParams.get('produto') || ''
 
   let consulta = db.from('licencas').select('*').order('criada_em', { ascending: false }).limit(500)
   if (estado) consulta = consulta.eq('estado', estado)
+  // Filtrar por produto. As chaves antigas foram todas gravadas com 'sensei_ea', por isso um
+  // filtro directo chega — não há linhas com o campo vazio para apanhar à parte.
+  if (produto) consulta = consulta.eq('produto', produto)
   if (procura) {
     const p = `%${procura}%`
     consulta = consulta.or(`chave.ilike.${p},email.ilike.${p},mt5_login.ilike.${p}`)
@@ -49,12 +56,25 @@ export async function GET(req: NextRequest) {
     : { data: [] }
   const porId = new Map((perfis ?? []).map((p) => [p.id, p]))
 
+  // Contagem por produto SEM o filtro aplicado: os separadores têm de mostrar quantas há de
+  // cada lado mesmo quando se está a ver só um deles. Contá-las a partir da lista já filtrada
+  // daria sempre zero no separador que não está aberto.
+  const contagemBase = db.from('licencas').select('produto', { count: 'exact', head: false })
+  const { data: todas } = estado ? await contagemBase.eq('estado', estado) : await contagemBase
+  const totais: Record<string, number> = {}
+  for (const l of todas ?? []) {
+    const k = produtoDe((l as { produto?: string }).produto)
+    totais[k] = (totais[k] ?? 0) + 1
+  }
+
   return NextResponse.json({
     licencas: (licencas ?? []).map((l) => ({
       ...l,
       dono: l.user_id ? (porId.get(l.user_id) ?? null) : null,
       ativacoes: (ativacoes ?? []).filter((a) => a.licenca_id === l.id),
     })),
+    totais,
+    produtos: Object.values(PRODUTOS).map((p) => ({ id: p.id, nome: p.nome })),
   })
 }
 
@@ -80,15 +100,20 @@ export async function POST(req: NextRequest) {
     userId = data?.id ?? null
   }
 
+  // Emitir à mão sem dizer o produto dava sempre uma chave do AllInOne — e ninguém repararia
+  // até o cliente colar a chave na Scalp e ela recusar.
+  const produto: ProdutoLicenca = produtoDe(b.produto)
+
   const licenca = await emitirLicenca({
     userId,
     email: email || null,
+    produto,
     plano,
     origem: 'admin',
     mt5Login: normalizarLogin(b.mt5Login),
     contasPermitidas: Number(b.contasPermitidas ?? 1) || 1,
     expiraEm: plano === 'anual' ? daquiAUmAno() : null,
-    notas: b.notas ? String(b.notas) : 'Emitida no painel de admin',
+    notas: b.notas ? String(b.notas) : `Emitida no painel de admin (${PRODUTOS[produto].nome})`,
   })
 
   return NextResponse.json({ licenca })

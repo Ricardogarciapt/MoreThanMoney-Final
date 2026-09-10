@@ -47,7 +47,31 @@ def janelas() -> list[tuple[str, str]]:
     return out
 
 
+def janela_do_terminal() -> str | None:
+    """A janela do MetaTrader, pela CLASSE e não pelo título.
+
+    O título muda: acabada de criar a conta, o terminal entra nela e passa a chamar-se
+    «19009 - TheTradingMaster-Live: Demo Account …» — sem a palavra «MetaTrader» em lado
+    nenhum. Quem procurasse por nome concluía que o terminal tinha fechado, e o pedido
+    seguinte voltava à fila com «o MetaTrader não está aberto no ecrã virtual», com ele à
+    frente, aberto. A classe X (`terminal64.exe`) é a mesma da primeira à última conta.
+    """
+    for i in _correr(["xdotool", "search", "--onlyvisible", "--class", "terminal64"]).splitlines():
+        if _correr(["xdotool", "getwindowname", i.strip()]):
+            return i.strip()
+    return None
+
+
 def janela_por_nome(padrao: str) -> str | None:
+    """Por nome — e, para o terminal, pela classe.
+
+    `janela_por_nome("MetaTrader")` aparece em todo o código a querer dizer «a janela do
+    terminal». Continua a querer dizer isso, seja qual for o título que ele tenha agora.
+    """
+    if re.search(r"metatrader|terminal64", padrao, re.IGNORECASE):
+        j = janela_do_terminal()
+        if j:
+            return j
     rx = re.compile(padrao, re.IGNORECASE)
     for i, nome in janelas():
         if rx.search(nome):

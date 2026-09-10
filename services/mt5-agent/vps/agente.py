@@ -95,13 +95,28 @@ def tratar_um() -> int:
             [sys.executable, str(AQUI / "criar_conta.py"), json.dumps(pedido)],
             capture_output=True, text=True, timeout=420,
         )
+        # O progresso da criação vem por stderr; repete-se aqui para ficar no journal do
+        # serviço. Sem isto, três minutos de trabalho não deixavam rasto nenhum.
+        for linha in (saida.stderr or "").splitlines():
+            if linha.strip():
+                registar(f"  · {linha.strip()[:200]}")
+
         if saida.returncode != 0:
-            motivo = (saida.stderr or "falhou sem dizer porquê").strip()[:300]
+            motivo = (saida.stderr or "falhou sem dizer porquê").strip().splitlines()[-1][:300]
             registar(f"criação falhou: {motivo}")
             pedir("/api/mtmfunded/agent", {"id": pid, "erro": motivo})
             return 1
 
-        resultado = json.loads(saida.stdout or "{}")
+        try:
+            resultado = json.loads(saida.stdout or "{}")
+        except ValueError:
+            # Saída ilegível com código 0 é o pior caso: pode haver conta criada do lado da
+            # corretora. Diz-se em voz alta em vez de deixar o pedido voltar à fila calado.
+            motivo = ("a criação terminou bem mas a resposta veio ilegível — "
+                      f"confirma no journal do MT5 antes de repetir: {(saida.stdout or '')[:160]}")
+            registar(motivo)
+            pedir("/api/mtmfunded/agent", {"id": pid, "erro": motivo})
+            return 1
     except subprocess.TimeoutExpired:
         registar("a criação passou dos 7 minutos — devolvido à fila")
         pedir("/api/mtmfunded/agent", {"id": pid, "erro": "tempo esgotado a criar a conta"})
@@ -111,6 +126,7 @@ def tratar_um() -> int:
         return 1
 
     if not resultado.get("login"):
+        registar("a criação não devolveu login — nada foi criado")
         pedir("/api/mtmfunded/agent", {"id": pid, "erro": "sem login no resultado"})
         return 1
 
