@@ -60,16 +60,25 @@ export async function POST(request: NextRequest) {
   }
 
   /**
-   * O TELEFONE E A DATA DE NASCIMENTO pedem-se aqui porque a corretora os pede a seguir.
+   * OS DADOS DA CORRETORA.
    *
-   * O formulário do MetaTrader exige os dois: sem telefone o botão fica cinzento, e a data
-   * vem preenchida com hoje, que é recusada. O agente tem valores por omissão para não
-   * ficar parado — mas usá-los significava abrir uma conta em nome desta pessoa com um
-   * telefone que não é dela. Pede-se uma vez, e vai o que é verdade.
+   * O formulário do MetaTrader exige nome, apelido, telemóvel e data de nascimento, e o
+   * telemóvel só é aceite com o PAÍS certo escolhido — o indicativo vem do IP do servidor
+   * (a AWS dá Suécia) e um número português por baixo de +46 é recusado. O agente tem
+   * valores por omissão para não ficar parado, mas usá-los significava abrir uma conta em
+   * nome desta pessoa com um telefone que não é dela.
    */
+  const { PAISES } = await import('@/lib/mtmfunded/paises')
+  const primeiroNome = String(body?.primeiroNome ?? nome.split(/\s+/)[0] ?? '').trim()
+  const apelido = String(body?.apelido ?? '').trim()
   const telefone = String(body?.telefone ?? '').replace(/\D/g, '')
   const nascimento = String(body?.dataNascimento ?? '').trim()
-  if (telefone.length < 9) {
+  const pais = PAISES.find((p) => p.codigo === String(body?.pais ?? 'PT')) ?? PAISES[0]
+
+  if (primeiroNome.length < 2 || apelido.length < 2) {
+    return NextResponse.json({ error: 'Indica o primeiro nome e o apelido' }, { status: 400 })
+  }
+  if (telefone.length < 6) {
     return NextResponse.json({ error: 'Indica um número de telemóvel válido' }, { status: 400 })
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(nascimento)) {
@@ -136,6 +145,10 @@ export async function POST(request: NextRequest) {
       nome_publico: nome,
       email,
       estado: 'inscrito',
+      telefone,
+      indicativo: pais.indicativo,
+      data_nascimento: nascimento,
+      pais: pais.codigo,
     })
     .select('id')
     .single()
@@ -146,15 +159,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Não foi possível inscrever' }, { status: 500 })
   }
 
-  const primeiro = nome.split(/\s+/)[0] || nome
   await db.from('mtm_account_requests').insert({
     account_id: conta.id,
-    primeiro_nome: primeiro,
-    // O SOBRENOME é o tipo de conta: é assim que a corretora e o MT5 mostram de que conta
-    // se trata, sem terem campo próprio para isso.
-    sobrenome: 'Torneio',
+    primeiro_nome: primeiroNome,
+    sobrenome: apelido,
     email,
     telefone,
+    indicativo: pais.indicativo,
+    pais: pais.codigo,
     data_nascimento: nascimento,
     servidor: torneio.servidor,
     tipo_conta: 'ECN',

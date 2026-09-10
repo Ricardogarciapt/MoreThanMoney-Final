@@ -54,11 +54,17 @@ export async function POST(request: NextRequest) {
    * formulário da conta. Pedem-se ANTES do pagamento — descobrir que faltam depois de a
    * pessoa pagar deixava-a paga e sem conta, à espera de um email nosso.
    */
+  const { PAISES } = await import('@/lib/mtmfunded/paises')
+  const primeiroNome = String(body?.primeiroNome ?? '').trim()
+  const apelido = String(body?.apelido ?? '').trim()
   const telefone = String(body?.telefone ?? '').replace(/\D/g, '')
   const nascimento = String(body?.dataNascimento ?? '').trim()
-  const nome = String(body?.nome ?? '').trim()
-  if (nome.length < 3) return NextResponse.json({ error: 'Indica o teu nome' }, { status: 400 })
-  if (telefone.length < 9) return NextResponse.json({ error: 'Indica um telemóvel válido' }, { status: 400 })
+  const pais = PAISES.find((p) => p.codigo === String(body?.pais ?? 'PT')) ?? PAISES[0]
+
+  if (primeiroNome.length < 2 || apelido.length < 2) {
+    return NextResponse.json({ error: 'Indica o primeiro nome e o apelido' }, { status: 400 })
+  }
+  if (telefone.length < 6) return NextResponse.json({ error: 'Indica um telemóvel válido' }, { status: 400 })
   if (!/^\d{4}-\d{2}-\d{2}$/.test(nascimento)) {
     return NextResponse.json({ error: 'Indica a data de nascimento' }, { status: 400 })
   }
@@ -114,8 +120,11 @@ export async function POST(request: NextRequest) {
       compra_id: compra?.id ?? '',
       program_id: programa.id,
       user_id: user.id,
-      nome,
+      primeiro_nome: primeiroNome,
+      apelido,
       telefone,
+      indicativo: pais.indicativo,
+      pais: pais.codigo,
       data_nascimento: nascimento,
     },
   })

@@ -51,6 +51,15 @@ export default async function TradingTournamentPage() {
         </h1>
         <p className="mt-2 text-sm uppercase tracking-[0.25em] text-zinc-500">Trade · Evolve · Earn</p>
 
+        {torneio?.estado === 'inscricoes' && (
+          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-sm text-emerald-400">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            Inscrições abertas
+            {torneio.inscricoes_fecham_em &&
+              ` · fecham ${new Date(torneio.inscricoes_fecham_em).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long' })}`}
+          </div>
+        )}
+
         {!torneio ? (
           <div className="mt-10 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-6">
             <h2 className="text-lg font-semibold">O próximo torneio está a ser preparado</h2>
@@ -109,6 +118,19 @@ export default async function TradingTournamentPage() {
                 MTM Funded
               </Link>
             </div>
+
+            {/* O que o participante recebe. Antes de olhar para a tabela, importa saber ao que vai. */}
+            <div className="mt-10 grid gap-4 sm:grid-cols-3">
+              <Passo n={1} titulo="Inscreves-te" texto="Gratuito. Pedimos os dados que a corretora exige para emitir a conta." />
+              <Passo n={2} titulo="Recebes a conta" texto="Por email, com um código QR que entra na app do MetaTrader com um toque." />
+              <Passo n={3} titulo="Competes" texto="A classificação actualiza de hora a hora e diz sempre porque é que alguém não conta." />
+            </div>
+
+            <p className="mt-8 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 text-xs leading-relaxed text-zinc-500">
+              A conta é de <b className="text-zinc-300">demonstração</b>, com dinheiro virtual.
+              Não depositas nada e não há execução em mercado real. O que se avalia é a forma
+              como negoceias.
+            </p>
 
             <div className="mt-12">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -169,6 +191,18 @@ export default async function TradingTournamentPage() {
         )}
       </section>
     </main>
+  )
+}
+
+function Passo({ n, titulo, texto }: { n: number; titulo: string; texto: string }) {
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-5">
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#4B8BFF]/40 text-sm font-bold text-[#4B8BFF]">
+        {n}
+      </span>
+      <h3 className="mt-3 font-semibold">{titulo}</h3>
+      <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">{texto}</p>
+    </div>
   )
 }
 

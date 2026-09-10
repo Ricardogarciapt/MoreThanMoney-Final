@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
   const { data: pedido } = await db
     .from('mtm_account_requests')
     .select(
-      'id, primeiro_nome, sobrenome, email, telefone, data_nascimento, servidor, tipo_conta, deposito, alavancagem, tentativas',
+      'id, primeiro_nome, sobrenome, email, telefone, indicativo, pais, data_nascimento, servidor, tipo_conta, deposito, alavancagem, tentativas',
     )
     .eq('estado', 'em_fila')
     .lt('tentativas', 3)

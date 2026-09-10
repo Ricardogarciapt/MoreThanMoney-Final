@@ -6,6 +6,9 @@ import {
   LayoutDashboard, Wallet, FileText, Trophy, ListOrdered,
   LineChart, Award, MessageSquare, Bot, ShieldAlert,
 } from 'lucide-react'
+import {
+  CamposConta, DADOS_CONTA_VAZIOS, dadosContaCompletos, type DadosConta,
+} from '@/components/mtmfunded/campos-conta'
 
 /**
  * As sete secções do participante, no formato da barra lateral que o Ricardo mostrou.
@@ -157,7 +160,13 @@ function Vazio({ children }: { children: React.ReactNode }) {
  * porquê é um formulário que as pessoas abandonam.
  */
 function Inscricao({ torneio, nome }: { torneio: Torneio; nome: string }) {
-  const [dados, setDados] = useState({ nome, telefone: '', dataNascimento: '' })
+  const partes = nome.trim().split(/\s+/)
+  const [dados, setDados] = useState<DadosConta>({
+    ...DADOS_CONTA_VAZIOS,
+    primeiroNome: partes[0] ?? '',
+    apelido: partes.length > 1 ? partes[partes.length - 1] : '',
+  })
+  const [nomePublico, setNomePublico] = useState(nome)
   const [estado, setEstado] = useState<'parado' | 'a_enviar' | 'feito'>('parado')
   const [erro, setErro] = useState<string | null>(null)
 
@@ -204,7 +213,7 @@ function Inscricao({ torneio, nome }: { torneio: Torneio; nome: string }) {
       const r = await fetch('/api/mtmfunded/tournament/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
-        body: JSON.stringify({ torneio: torneio.slug, ...dados }),
+        body: JSON.stringify({ torneio: torneio.slug, nome: nomePublico, ...dados }),
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(j?.error || 'Não foi possível inscrever')
@@ -215,7 +224,7 @@ function Inscricao({ torneio, nome }: { torneio: Torneio; nome: string }) {
     }
   }
 
-  const completo = dados.nome.trim().length > 2 && dados.telefone.replace(/\D/g, '').length >= 9 && dados.dataNascimento
+  const completo = nomePublico.trim().length > 2 && dadosContaCompletos(dados)
 
   return (
     <Caixa titulo={`Inscrever-me · ${torneio.nome}`}>
@@ -227,24 +236,16 @@ function Inscricao({ torneio, nome }: { torneio: Torneio; nome: string }) {
       <div className="mt-5 space-y-4">
         <Campo
           rotulo="Nome na classificação"
-          nota="É este que aparece na tabela pública."
-          valor={dados.nome}
-          onChange={(v) => setDados({ ...dados, nome: v })}
+          nota="É este que aparece na tabela pública. Podes usar só o primeiro nome."
+          valor={nomePublico}
+          onChange={setNomePublico}
         />
-        <Campo
-          rotulo="Telemóvel"
-          nota="Pedido pela corretora no formulário da conta."
-          tipo="tel"
-          valor={dados.telefone}
-          onChange={(v) => setDados({ ...dados, telefone: v })}
-        />
-        <Campo
-          rotulo="Data de nascimento"
-          nota="Também exigida pela corretora. Tens de ser maior de idade."
-          tipo="date"
-          valor={dados.dataNascimento}
-          onChange={(v) => setDados({ ...dados, dataNascimento: v })}
-        />
+        <div className="border-t border-zinc-900 pt-4">
+          <p className="mb-3 text-xs uppercase tracking-widest text-zinc-600">
+            Dados da conta · pedidos pela corretora
+          </p>
+          <CamposConta dados={dados} onChange={setDados} cor="#4B8BFF" />
+        </div>
       </div>
 
       {erro && <p className="mt-4 text-sm text-red-400">{erro}</p>}

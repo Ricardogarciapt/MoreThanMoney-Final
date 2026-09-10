@@ -1,106 +1,331 @@
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getMtmFundedConfig } from '@/lib/mtmfunded/config'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { RegrasDeNegociacao, type RegrasNegociacao } from '@/components/mtmfunded/regras-negociacao'
 
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
-  title: 'MTM Funded · More Than Money',
-  description: 'Desafios de trading financiados e torneios trimestrais da More Than Money.',
+  title: 'Programas',
+  description: 'Avaliação de traders em contas simuladas, de 500 a 10.000 USD. Regras publicadas, métricas à vista.',
 }
 
 /**
  * A porta do MTM Funded.
  *
- * Enquanto o produto estiver desligado — e nasce desligado — esta página não vende nada:
- * encaminha para o torneio, que existe à parte e continua a funcionar. É o interruptor a
- * ser respeitado no servidor, antes de qualquer preço chegar ao browser: esconder os preços
- * no cliente deixava-os no HTML para quem abrisse as ferramentas do browser.
+ * Construída à volta da ESCADA DE CONTAS, que é a decisão que a pessoa vem tomar: qual o
+ * tamanho, quanto custa, que regras tem. Tudo isso numa tabela onde se comparam de lado, em
+ * vez de cinco cartões que obrigam a decorar números enquanto se rola.
+ *
+ * O que NÃO está aqui, e é de propósito: números de pagamentos, contagens de traders,
+ * classificações de sites de avaliações. Não temos nenhum desses números — e inventá-los era
+ * exactamente o que faz este mercado ter má fama. O que se mostra é o que é verdade: as
+ * contas são simuladas, as regras estão publicadas, e a classificação é pública.
  */
 export default async function MtmFundedPage() {
   const config = await getMtmFundedConfig()
+  const db = getSupabaseAdmin()
 
+  // Com o produto desligado, esta página encaminha para o torneio — que existe à parte e
+  // continua a funcionar. O interruptor é respeitado no SERVIDOR, antes de qualquer preço
+  // chegar ao browser: escondê-los no cliente deixava-os no HTML de quem soubesse procurar.
   if (!config.ativo) {
+    const { redirect } = await import('next/navigation')
     redirect('/mtmfunded/tradingtournament')
   }
 
-  const { data: programas } = await getSupabaseAdmin()
+  const { data: programas } = await db
     .from('mtm_funded_programs')
     .select('slug, nome, descricao, fases, saldo, preco_cents, moeda, regras')
     .eq('ativo', true)
     .order('ordem', { ascending: true })
 
-  const euros = (cents: number) => (cents / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })
+  const { data: torneio } = await db
+    .from('mtm_tournaments')
+    .select('nome, estado, comeca_em, saldo_inicial')
+    .eq('publicado', true)
+    .order('comeca_em', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const lista = programas ?? []
+  // As regras de negociação são as mesmas em toda a escada: lê-se do primeiro programa em vez
+  // de as repetir escritas à mão numa página que depois deixa de bater certo com a base de dados.
+  const regrasNegociacao = (lista[0]?.regras ?? null) as RegrasNegociacao | null
+  const euros = (cents: number) =>
+    (cents / 100).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' })
 
   return (
-    <main className="min-h-screen bg-[#050608] text-white">
-      <section className="mx-auto max-w-5xl px-5 py-16">
+    <main className="text-white">
+      {/* ── Hero ───────────────────────────────────────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-5 pt-16 pb-10">
         <p className="text-xs uppercase tracking-[0.3em] text-[#D2A63C]">More Than Money</p>
-        <h1 className="mt-3 text-4xl font-bold sm:text-5xl">MTM Funded</h1>
-        <p className="mt-4 max-w-2xl text-zinc-400">
-          Prova o que vales numa conta avaliada. Regras claras, métricas à vista, e um caminho
-          até uma conta financiada da MTM.
+        <h1 className="mt-3 max-w-3xl text-4xl font-bold leading-tight sm:text-5xl">
+          Prova o que vales numa conta avaliada.
+        </h1>
+        <p className="mt-4 max-w-2xl text-lg text-zinc-400">
+          Escolhes o tamanho, negoceias com as regras à vista, e as métricas actualizam
+          sozinhas. Sem letra pequena e sem promessas de rendimento.
+        </p>
+
+        <div className="mt-8 flex flex-wrap gap-3">
+          <a href="#programas" className="rounded-lg bg-[#D2A63C] px-6 py-3 text-sm font-semibold text-black">
+            Ver os programas
+          </a>
+          <Link
+            href="/mtmfunded/tradingtournament"
+            className="rounded-lg border border-zinc-700 px-6 py-3 text-sm text-zinc-300"
+          >
+            Torneio gratuito
+          </Link>
+        </div>
+
+        {/* Factos, não estatísticas de marketing. Cada um destes é verificável nesta página. */}
+        <div className="mt-12 grid gap-4 sm:grid-cols-3">
+          <Facto titulo="Contas simuladas" nota="Dinheiro virtual. Não há fundos de participantes em lado nenhum." />
+          <Facto titulo="Regras publicadas" nota="Antes de te inscreveres, e não mudam a meio da prova." />
+          <Facto titulo="Classificação pública" nota="Actualiza de hora a hora, com o motivo à vista de quem não conta." />
+        </div>
+      </section>
+
+      {/* ── A escada ───────────────────────────────────────────────────────── */}
+      <section id="programas" className="mx-auto max-w-6xl px-5 py-12">
+        <h2 className="text-2xl font-bold">Escolhe o tamanho — e o caminho</h2>
+        <p className="mt-2 max-w-2xl text-sm text-zinc-500">
+          Duas famílias, a mesma escada de contas. A de <b className="text-zinc-300">uma fase</b> é
+          a difícil: passa-se mais depressa, e por isso pede mais lucro e perdoa menos perda. A de{' '}
+          <b className="text-zinc-300">duas fases</b> pede menos de cada vez, em troca de mais tempo.
         </p>
 
         {!config.vendas_abertas && (
-          <div className="mt-8 rounded-xl border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-4 text-sm text-[#D2A63C]">
-            As inscrições nos desafios abrem em breve. Entretanto, o torneio trimestral está a
-            decorrer — e é grátis.
+          <div className="mt-6 rounded-xl border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-4 text-sm text-[#D2A63C]">
+            As inscrições nos programas abrem em breve. Entretanto, o torneio trimestral é
+            gratuito e tem conta avaliada.
           </div>
         )}
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {(programas ?? []).map((p) => {
-            const r = (p.regras ?? {}) as Record<string, number>
-            return (
-              <div key={p.slug} className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5">
-                <h2 className="text-lg font-semibold">{p.nome}</h2>
-                <p className="mt-1 text-3xl font-bold text-[#D2A63C]">{euros(p.preco_cents)}</p>
-                <p className="mt-1 text-sm text-zinc-500">
-                  Conta de {Number(p.saldo).toLocaleString('pt-PT')} USD · {p.fases}{' '}
-                  {p.fases === 1 ? 'fase' : 'fases'}
-                </p>
-                <ul className="mt-4 space-y-1.5 text-sm text-zinc-400">
-                  {r.objetivo_pct != null && <li>Objectivo: +{r.objetivo_pct}%</li>}
-                  {r.perda_diaria_pct != null && <li>Perda diária: {r.perda_diaria_pct}%</li>}
-                  {r.perda_maxima_pct != null && <li>Perda máxima: {r.perda_maxima_pct}%</li>}
-                  {r.dias_minimos != null && <li>Dias mínimos: {r.dias_minimos}</li>}
-                  {r.consistencia_pct != null && <li>Consistência: máx. {r.consistencia_pct}%/dia</li>}
-                </ul>
-                {config.vendas_abertas ? (
-                  <Link
-                    href={`/mtmfunded/checkout?programa=${p.slug}`}
-                    className="mt-5 block rounded-lg bg-[#D2A63C] py-2.5 text-center text-sm font-semibold text-black"
-                  >
-                    Começar
-                  </Link>
-                ) : (
-                  <span className="mt-5 block rounded-lg border border-zinc-800 py-2.5 text-center text-sm text-zinc-600">
-                    Brevemente
-                  </span>
-                )}
-              </div>
-            )
-          })}
-          {!(programas ?? []).length && (
-            <p className="text-sm text-zinc-500">Os programas estão a ser preparados.</p>
-          )}
-        </div>
+        {!lista.length ? (
+          <p className="mt-8 text-sm text-zinc-500">Os programas estão a ser preparados.</p>
+        ) : (
+          <>
+            {/* Tabela em ecrã largo: é onde a comparação se faz sem decorar nada. */}
+            <div className="mt-8 hidden overflow-x-auto rounded-2xl border border-zinc-800 lg:block">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-zinc-950 text-xs uppercase tracking-wider text-zinc-500">
+                  <tr>
+                    <th className="px-5 py-3">Conta</th>
+                    <th className="px-5 py-3">Caminho</th>
+                    <th className="px-5 py-3">Objectivo</th>
+                    <th className="px-5 py-3">Perda diária</th>
+                    <th className="px-5 py-3">Perda máxima</th>
+                    <th className="px-5 py-3">Dias mín.</th>
+                    <th className="px-5 py-3 text-right">Preço</th>
+                    <th className="px-5 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-900">
+                  {lista.map((p) => {
+                    const r = (p.regras ?? {}) as Record<string, number>
+                    return (
+                      <tr key={p.slug} className="hover:bg-zinc-950/60">
+                        <td className="px-5 py-4">
+                          <span className="font-semibold text-white">
+                            {Number(p.saldo).toLocaleString('pt-PT')} USD
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className={`rounded-full px-2.5 py-1 text-xs ${
+                            p.fases === 1
+                              ? 'bg-[#D2A63C]/15 text-[#D2A63C]'
+                              : 'bg-zinc-800 text-zinc-400'
+                          }`}>
+                            {p.fases === 1 ? '1 fase · difícil' : '2 fases'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-zinc-400">{r.objetivo_pct != null ? `+${r.objetivo_pct}%` : '—'}</td>
+                        <td className="px-5 py-4 text-zinc-400">{r.perda_diaria_pct != null ? `${r.perda_diaria_pct}%` : '—'}</td>
+                        <td className="px-5 py-4 text-zinc-400">{r.perda_maxima_pct != null ? `${r.perda_maxima_pct}%` : '—'}</td>
+                        <td className="px-5 py-4 text-zinc-400">{r.dias_minimos ?? '—'}</td>
+                        <td className="px-5 py-4 text-right text-lg font-bold text-[#D2A63C]">
+                          {euros(p.preco_cents)}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          {config.vendas_abertas ? (
+                            <Link
+                              href={`/mtmfunded/checkout?programa=${p.slug}`}
+                              className="rounded-lg bg-[#D2A63C] px-4 py-2 text-xs font-semibold text-black"
+                            >
+                              Começar
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-zinc-600">Brevemente</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-        <div className="mt-14 rounded-2xl border border-[#D2A63C]/25 bg-gradient-to-b from-[#D2A63C]/[0.07] to-transparent p-6">
-          <h2 className="text-xl font-semibold">Trading Tournament</h2>
-          <p className="mt-2 text-sm text-zinc-400">
-            Torneio trimestral, gratuito, com conta avaliada. Compete, cresce, conquista o teu lugar.
+            {/* Cartões no telemóvel: uma tabela de sete colunas num ecrã de 375px não se lê. */}
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:hidden">
+              {lista.map((p) => {
+                const r = (p.regras ?? {}) as Record<string, number>
+                return (
+                  <div key={p.slug} className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5">
+                    <div className="flex items-baseline justify-between">
+                      <h3 className="text-lg font-semibold">
+                        {Number(p.saldo).toLocaleString('pt-PT')} USD
+                      </h3>
+                      <span className="text-2xl font-bold text-[#D2A63C]">{euros(p.preco_cents)}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-zinc-600">
+                      {p.fases} {p.fases === 1 ? 'fase' : 'fases'}
+                    </p>
+                    <ul className="mt-4 space-y-1.5 text-sm text-zinc-400">
+                      {r.objetivo_pct != null && <li>Objectivo: +{r.objetivo_pct}%</li>}
+                      {r.perda_diaria_pct != null && <li>Perda diária: {r.perda_diaria_pct}%</li>}
+                      {r.perda_maxima_pct != null && <li>Perda máxima: {r.perda_maxima_pct}%</li>}
+                      {r.dias_minimos != null && <li>Dias mínimos: {r.dias_minimos}</li>}
+                      {r.consistencia_pct != null && <li>Consistência: máx. {r.consistencia_pct}%/dia</li>}
+                    </ul>
+                    {config.vendas_abertas ? (
+                      <Link
+                        href={`/mtmfunded/checkout?programa=${p.slug}`}
+                        className="mt-5 block rounded-lg bg-[#D2A63C] py-2.5 text-center text-sm font-semibold text-black"
+                      >
+                        Começar
+                      </Link>
+                    ) : (
+                      <span className="mt-5 block rounded-lg border border-zinc-800 py-2.5 text-center text-sm text-zinc-600">
+                        Brevemente
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* ── Como funciona ──────────────────────────────────────────────────── */}
+      <section className="border-y border-zinc-900 bg-zinc-950/40">
+        <div className="mx-auto max-w-6xl px-5 py-14">
+          <h2 className="text-2xl font-bold">Como funciona</h2>
+          <div className="mt-8 grid gap-8 sm:grid-cols-3">
+            <Passo
+              n={1}
+              titulo="Escolhes e recebes a conta"
+              texto="A conta é criada no MetaTrader em teu nome e as credenciais chegam por email, com um código QR que entra na app com um toque."
+            />
+            <Passo
+              n={2}
+              titulo="Negoceias com as regras à vista"
+              texto="O painel mostra quanto falta até cada limite. Tudo medido sobre equity — as posições abertas contam."
+            />
+            <Passo
+              n={3}
+              titulo="Passas, e o certificado é teu"
+              texto="Cumprindo os objectivos, sais com um certificado verificável e o caminho aberto para uma conta financiada da MTM."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── As regras, explicadas ──────────────────────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-5 py-14">
+        <h2 className="text-2xl font-bold">As regras, em português</h2>
+        <p className="mt-2 text-sm text-zinc-500">
+          São quatro, valem para toda a escada, e nenhuma delas muda a meio de uma prova.
+        </p>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <Regra
+            titulo="Perda diária"
+            texto="Mede-se sobre a equity com que o dia abriu. Chegando ao limite, a conta congela na posição em que estava — não há liquidação-surpresa nem margem escondida."
+          />
+          <Regra
+            titulo="Perda máxima total"
+            texto="Sobre o saldo inicial. É o chão da conta. Nunca é maior do que a diária, por construção: uma diária acima da máxima seria uma regra que nunca chegava a disparar."
+          />
+          <Regra
+            titulo="Dias mínimos"
+            texto="Um resultado feito num dia não prova nada. Abaixo dos dias mínimos o resultado não conta, e a classificação diz-te porquê em vez de te deixar a adivinhar."
+          />
+          <Regra
+            titulo="Consistência"
+            texto="Nenhum dia pode valer mais do que uma fatia do lucro total. Passa quem repete, não quem acertou uma vez."
+          />
+        </div>
+      </section>
+
+      {/* ── Regras de negociação ───────────────────────────────────────────── */}
+      {regrasNegociacao && (
+        <section className="border-t border-zinc-900 bg-zinc-950/40">
+          <div className="mx-auto max-w-6xl px-5 py-14">
+            <h2 className="text-2xl font-bold">O que podes e não podes fazer</h2>
+            <p className="mt-2 max-w-2xl text-sm text-zinc-500">
+              Valem para toda a escada, na avaliação e na conta financiada. Estão aqui antes de
+              comprares, e não numa página que só se lê quando já é tarde.
+            </p>
+            <div className="mt-8">
+              <RegrasDeNegociacao r={regrasNegociacao} />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Torneio ────────────────────────────────────────────────────────── */}
+      <section className="mx-auto max-w-6xl px-5 pb-20">
+        <div className="rounded-2xl border border-[#D2A63C]/25 bg-gradient-to-b from-[#D2A63C]/[0.07] to-transparent p-8">
+          <p className="text-xs uppercase tracking-[0.25em] text-[#D2A63C]">Gratuito</p>
+          <h2 className="mt-2 text-2xl font-bold">
+            {torneio?.nome ?? 'Trading Tournament'}
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm text-zinc-400">
+            Torneio trimestral com conta avaliada de{' '}
+            {Number(torneio?.saldo_inicial ?? 10000).toLocaleString('pt-PT')} USD, sem custo.
+            As mesmas regras, uma classificação pública, e prémios para o pódio.
           </p>
           <Link
             href="/mtmfunded/tradingtournament"
-            className="mt-4 inline-block rounded-lg border border-[#D2A63C]/60 px-5 py-2 text-sm font-medium text-[#D2A63C]"
+            className="mt-6 inline-block rounded-lg border border-[#D2A63C]/60 px-6 py-2.5 text-sm font-medium text-[#D2A63C]"
           >
-            Ver o torneio
+            {torneio?.estado === 'inscricoes' ? 'Inscrições abertas' : 'Ver o torneio'}
           </Link>
         </div>
       </section>
     </main>
+  )
+}
+
+function Facto({ titulo, nota }: { titulo: string; nota: string }) {
+  return (
+    <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 p-5">
+      <p className="font-semibold text-white">{titulo}</p>
+      <p className="mt-1 text-sm text-zinc-500">{nota}</p>
+    </div>
+  )
+}
+
+function Passo({ n, titulo, texto }: { n: number; titulo: string; texto: string }) {
+  return (
+    <div>
+      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#D2A63C]/40 text-sm font-bold text-[#D2A63C]">
+        {n}
+      </span>
+      <h3 className="mt-4 font-semibold">{titulo}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-zinc-400">{texto}</p>
+    </div>
+  )
+}
+
+function Regra({ titulo, texto }: { titulo: string; texto: string }) {
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-6">
+      <h3 className="font-semibold text-[#D2A63C]">{titulo}</h3>
+      <p className="mt-2 text-sm leading-relaxed text-zinc-400">{texto}</p>
+    </div>
   )
 }

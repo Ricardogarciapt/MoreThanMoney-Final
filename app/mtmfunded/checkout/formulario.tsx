@@ -2,6 +2,9 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import {
+  CamposConta, DADOS_CONTA_VAZIOS, dadosContaCompletos, type DadosConta,
+} from '@/components/mtmfunded/campos-conta'
 
 /**
  * Os dados pedem-se ANTES do pagamento, e não depois.
@@ -14,16 +17,12 @@ import { useState } from 'react'
  * antes da compra, e é antes da compra que ele muda alguma coisa para quem está a decidir.
  */
 export default function FormularioCheckout({ slug }: { slug: string }) {
-  const [dados, setDados] = useState({ nome: '', telefone: '', dataNascimento: '' })
+  const [dados, setDados] = useState<DadosConta>(DADOS_CONTA_VAZIOS)
   const [aceita, setAceita] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
 
-  const completo =
-    dados.nome.trim().length > 2 &&
-    dados.telefone.replace(/\D/g, '').length >= 9 &&
-    dados.dataNascimento &&
-    aceita
+  const completo = dadosContaCompletos(dados) && aceita
 
   const pagar = async () => {
     setErro(null)
@@ -32,7 +31,7 @@ export default function FormularioCheckout({ slug }: { slug: string }) {
       const { getAccessToken } = await import('@/lib/auth-token')
       const tok = await getAccessToken()
       if (!tok) {
-        window.location.href = `/login?redirect=${encodeURIComponent(`/mtmfunded/checkout?programa=${slug}`)}`
+        window.location.href = `/mtmfunded/entrar?redirect=${encodeURIComponent(`/mtmfunded/checkout?programa=${slug}`)}`
         return
       }
       const r = await fetch('/api/mtmfunded/checkout', {
@@ -49,29 +48,12 @@ export default function FormularioCheckout({ slug }: { slug: string }) {
     }
   }
 
-  const campo = (
-    chave: keyof typeof dados,
-    rotulo: string,
-    nota: string,
-    tipo = 'text',
-  ) => (
-    <label className="block">
-      <span className="text-sm text-zinc-300">{rotulo}</span>
-      <span className="mt-0.5 block text-xs text-zinc-600">{nota}</span>
-      <input
-        type={tipo}
-        value={dados[chave]}
-        onChange={(e) => setDados({ ...dados, [chave]: e.target.value })}
-        className="mt-1.5 w-full rounded-lg border border-zinc-800 bg-black/40 px-3 py-2.5 text-sm text-white outline-none focus:border-[#D2A63C]"
-      />
-    </label>
-  )
-
   return (
     <div className="mt-8 space-y-5">
-      {campo('nome', 'Nome completo', 'Como vai ficar na conta.')}
-      {campo('telefone', 'Telemóvel', 'Pedido pela corretora no formulário da conta.', 'tel')}
-      {campo('dataNascimento', 'Data de nascimento', 'Também exigida pela corretora. Tens de ser maior de idade.', 'date')}
+      <p className="text-xs uppercase tracking-widest text-zinc-600">
+        Dados da conta · pedidos pela corretora
+      </p>
+      <CamposConta dados={dados} onChange={setDados} />
 
       <label className="flex gap-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
         <input

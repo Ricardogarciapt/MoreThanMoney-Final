@@ -54,7 +54,9 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
     .maybeSingle()
 
   const email = String(meta.email || perfil?.email || session.customer_details?.email || '')
-  const nome = String(meta.nome || perfil?.full_name || email.split('@')[0] || 'Trader')
+  const primeiroNome = String(meta.primeiro_nome || perfil?.full_name?.split(/\s+/)[0] || 'Trader')
+  const apelido = String(meta.apelido || 'Desafio')
+  const nome = `${primeiroNome} ${apelido}`.trim()
   if (!email) {
     console.error('[MTMFUNDED] compra sem email:', session.id)
     return
@@ -99,14 +101,14 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
       .eq('id', compraId)
   }
 
-  const primeiro = nome.trim().split(/\s+/)[0] || nome
   await db.from('mtm_account_requests').insert({
     account_id: conta.id,
-    primeiro_nome: primeiro,
-    // O SOBRENOME é o TIPO de conta: é assim que a corretora mostra de que conta se trata.
-    sobrenome: 'Desafio',
+    primeiro_nome: primeiroNome,
+    sobrenome: apelido,
     email,
     telefone: String(meta.telefone || '').replace(/\D/g, '') || null,
+    indicativo: String(meta.indicativo || '+351'),
+    pais: String(meta.pais || 'PT'),
     data_nascimento: /^\d{4}-\d{2}-\d{2}$/.test(String(meta.data_nascimento ?? ''))
       ? String(meta.data_nascimento)
       : null,

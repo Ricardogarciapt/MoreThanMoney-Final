@@ -448,13 +448,17 @@ def criar(pedido: dict) -> dict:
 
 
 def fechar_credenciais() -> None:
-    """Fecha o diálogo final. Se o botão não aparecer, segue-se — não se fica preso a fechar
-    uma janela por causa de uma conta que já está criada."""
+    """Fecha o diálogo final.
+
+    Pelo BOTÃO, e não pelo texto. O «Finish» está na mesma posição do «Seguinte» de todos os
+    passos anteriores, mas o OCR agrupa a linha inteira dos botões — «< Back Finish Cancel» —
+    e uma expressão ancorada no início e no fim nunca lá casa. O diálogo ficava aberto, e
+    aberto ele é modal: a conta seguinte não conseguia sequer chegar ao menu.
+    """
     for _ in range(3):
         if not mt5.ve(r"read only password"):
             return
-        if not mt5.clicar_texto(r"^\s*(Finish|Close|Concluir|Fechar)\s*$"):
-            break
+        mt5.clicar(*BOTAO_SEGUINTE)   # é onde o «Finish» está
         time.sleep(2)
     if mt5.ve(r"read only password"):
         registar("o diálogo das credenciais não fechou")

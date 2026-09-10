@@ -39,7 +39,10 @@ export default async function DashboardTorneioPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) redirect('/login?redirect=/mtmfunded/tradingtournament/dashboard')
+  // A porta do MTM FUNDED, não a do site. O `/login` do morethanmoney.pt devolve a pessoa ao
+  // site de educação e o `/register` abre com a venda de packs — outro produto, no meio de
+  // uma decisão que é sobre este.
+  if (!user) redirect('/mtmfunded/entrar?redirect=/mtmfunded/tradingtournament/dashboard')
 
   const db = getSupabaseAdmin()
   const { data: perfil } = await db
