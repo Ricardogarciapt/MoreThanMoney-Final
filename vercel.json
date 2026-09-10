@@ -160,6 +160,10 @@
     {
       "path": "/api/cron/mtmcopy-reconciliar",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/mtmfunded-metrics",
+      "schedule": "7 * * * *"
     }
   ]
 }
