@@ -2,7 +2,10 @@ import Link from 'next/link'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { censurarEmail } from '@/lib/mtmfunded/acesso'
 
-export const dynamic = 'force-dynamic'
+// Cache de 60s em vez de render por pedido: a classificação actualiza de hora a hora e os
+// programas mudam raramente. Sem isto, cada visita esperava pela base de dados antes do
+// primeiro pixel — e numa página de vendas isso são visitas perdidas.
+export const revalidate = 60
 
 export const metadata = {
   title: 'Trading Tournament · More Than Money',

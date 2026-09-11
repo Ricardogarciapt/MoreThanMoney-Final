@@ -133,7 +133,7 @@ export async function emitirCertificadosDoTorneio(
   return out
 }
 
-async function enviarCertificado(input: {
+export async function enviarCertificado(input: {
   para: string
   nome: string
   tipo: TipoCertificado

@@ -34,7 +34,7 @@ export function RegrasDeNegociacao({ r, cor = '#D2A63C' }: { r: RegrasNegociacao
       permitido: false,
       titulo: `Risco máximo de ${r.risco_max_pct}% por operação`,
       texto:
-        'Sobre o saldo da conta, e vale para todos os tamanhos — numa conta de 500 USD são 7,50 USD. É o que distingue gerir risco de atirar a moeda ao ar.',
+        'Sobre o saldo da conta, em todos os tamanhos — numa conta de 3.000 USD são 45 USD por operação. É o que distingue gerir risco de atirar a moeda ao ar.',
     })
   }
   if (r.max_posicoes_par_direcao) {

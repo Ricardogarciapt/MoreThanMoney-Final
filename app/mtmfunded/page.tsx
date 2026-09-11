@@ -2,8 +2,12 @@ import Link from 'next/link'
 import { getMtmFundedConfig } from '@/lib/mtmfunded/config'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { RegrasDeNegociacao, type RegrasNegociacao } from '@/components/mtmfunded/regras-negociacao'
+import VitrineCertificados, { type CertificadoVitrine } from '@/components/mtmfunded/vitrine-certificados'
 
-export const dynamic = 'force-dynamic'
+// Cache de 60s em vez de render por pedido: a classificação actualiza de hora a hora e os
+// programas mudam raramente. Sem isto, cada visita esperava pela base de dados antes do
+// primeiro pixel — e numa página de vendas isso são visitas perdidas.
+export const revalidate = 60
 
 export const metadata = {
   title: 'Programas',
@@ -34,22 +38,60 @@ export default async function MtmFundedPage() {
     redirect('/mtmfunded/tradingtournament')
   }
 
-  const { data: programas } = await db
-    .from('mtm_funded_programs')
-    .select('slug, nome, descricao, fases, saldo, preco_cents, moeda, regras')
-    .eq('ativo', true)
-    .order('ordem', { ascending: true })
+  /**
+   * As três leituras vão JUNTAS.
+   *
+   * Em série, a página esperava por cada uma antes de pedir a seguinte — três idas ao
+   * servidor somadas antes de o primeiro pixel aparecer. Não dependem umas das outras; não
+   * há razão para esperarem umas pelas outras.
+   */
+  const [{ data: programas }, { data: torneio }, { data: emitidos }] = await Promise.all([
+    db
+      .from('mtm_funded_programs')
+      .select('slug, nome, descricao, fases, saldo, preco_cents, moeda, regras')
+      .eq('ativo', true)
+      .order('ordem', { ascending: true }),
+    db
+      .from('mtm_tournaments')
+      .select('nome, estado, comeca_em, saldo_inicial')
+      .eq('publicado', true)
+      .order('comeca_em', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    db
+      .from('mtm_certificates')
+      .select('codigo, tipo, nome, emitido_em')
+      .order('emitido_em', { ascending: false })
+      .limit(6),
+  ])
 
-  const { data: torneio } = await db
-    .from('mtm_tournaments')
-    .select('nome, estado, comeca_em, saldo_inicial')
-    .eq('publicado', true)
-    .order('comeca_em', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  /**
+   * Os certificados da vitrine: os últimos SEIS emitidos de verdade.
+   *
+   * Faltando, completa-se com exemplares marcados como tal. Inventar nomes de pessoas que não
+   * existem para encher a vitrine é o que faz este mercado ter má fama — e um dia alguém
+   * pergunta por um deles.
+   */
+  const vitrine: CertificadoVitrine[] = (emitidos ?? []).map((c) => ({
+    codigo: c.codigo as string,
+    tipo: c.tipo as string,
+    nome: c.nome as string,
+    emitidoEm: c.emitido_em as string,
+  }))
+  const TIPOS_EXEMPLO = ['financiado', 'desafio', 'classificacao', 'participacao', 'payout', 'financiado']
+  while (vitrine.length < 6) {
+    const tipo = TIPOS_EXEMPLO[vitrine.length]
+    vitrine.push({
+      codigo: `EXEMPLAR-${String(vitrine.length + 1).padStart(2, '0')}`,
+      tipo,
+      nome: 'O teu nome aqui',
+      emitidoEm: new Date().toISOString(),
+      exemplar: true,
+    })
+  }
 
   const lista = programas ?? []
-  // As regras de negociação são as mesmas em toda a escada: lê-se do primeiro programa em vez
+  // As regras de negociação são as mesmas em todos os programas: lê-se do primeiro em vez
   // de as repetir escritas à mão numa página que depois deixa de bater certo com a base de dados.
   const regrasNegociacao = (lista[0]?.regras ?? null) as RegrasNegociacao | null
   const euros = (cents: number) =>
@@ -59,20 +101,29 @@ export default async function MtmFundedPage() {
     <main className="text-white">
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 pt-20 pb-12 sm:pt-28">
-        <p className="kicker r">More Than Money</p>
-        <h1 className="r d1 mt-4 max-w-4xl text-[clamp(38px,7vw,74px)] font-extrabold">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/mtmfunded/logo-mtm-funded.webp"
+            srcSet="/mtmfunded/logo-mtm-funded.webp 1x, /mtmfunded/logo-mtm-funded@2x.webp 2x"
+            loading="eager"
+            decoding="async"
+          alt="MTM Funded"
+          className="r mb-8 h-24 w-auto sm:h-32"
+        />
+        <p className="kicker r d1">More Than Money</p>
+        <h1 className="r d2 mt-4 max-w-4xl text-[clamp(38px,7vw,74px)] font-extrabold">
           Prova o que vales numa{' '}
           <span className="bg-gradient-to-r from-[#eccb78] to-[#d2a63c] bg-clip-text text-transparent">
             conta avaliada
           </span>
           .
         </h1>
-        <p className="r d2 mt-6 max-w-2xl text-lg leading-relaxed text-[#a9a49a]">
+        <p className="r d3 mt-6 max-w-2xl text-lg leading-relaxed text-[#a9a49a]">
           Escolhes o tamanho, negoceias com as regras à vista, e as métricas actualizam
           sozinhas. Sem letra pequena e sem promessas de rendimento.
         </p>
 
-        <div className="r d3 mt-9 flex flex-wrap gap-3">
+        <div className="r d4 mt-9 flex flex-wrap gap-3">
           <a href="#programas" className="btn">Ver os programas</a>
           <Link href="/mtmfunded/tradingtournament" className="btn g">
             Torneio gratuito
@@ -87,13 +138,13 @@ export default async function MtmFundedPage() {
         </div>
       </section>
 
-      {/* ── A escada ───────────────────────────────────────────────────────── */}
+      {/* ── Os programas ───────────────────────────────────────────────────── */}
       <section id="programas" className="mx-auto max-w-6xl px-5 py-12">
         <h2 className="r text-3xl font-bold">Escolhe o tamanho — e o caminho</h2>
         <p className="r d1 mt-3 max-w-2xl text-sm text-[#a9a49a]">
-          Duas famílias, a mesma escada de contas. A de <b className="text-zinc-300">uma fase</b> é
-          a difícil: passa-se mais depressa, e por isso pede mais lucro e perdoa menos perda. A de{' '}
-          <b className="text-zinc-300">duas fases</b> pede menos de cada vez, em troca de mais tempo.
+          Dois caminhos, os mesmos tamanhos de conta. <b className="text-zinc-300">Uma fase</b> é
+          o caminho rápido: pede mais lucro e perdoa menos perda.{' '}
+          <b className="text-zinc-300">Duas fases</b> pede menos de cada vez, com mais tempo para o fazer.
         </p>
 
         {!config.vendas_abertas && (
@@ -232,9 +283,9 @@ export default async function MtmFundedPage() {
 
       {/* ── As regras, explicadas ──────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 py-14">
-        <h2 className="r text-3xl font-bold">As regras, em português</h2>
+        <h2 className="r text-3xl font-bold">Regras claras, sem letra pequena</h2>
         <p className="r d1 mt-3 text-sm text-[#a9a49a]">
-          São quatro, valem para toda a escada, e nenhuma delas muda a meio de uma prova.
+          Quatro regras. Iguais para todas as contas — e nunca mudam a meio da tua avaliação.
         </p>
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           <Regra
@@ -262,8 +313,8 @@ export default async function MtmFundedPage() {
           <div className="mx-auto max-w-6xl px-5 py-14">
             <h2 className="r text-3xl font-bold">O que podes e não podes fazer</h2>
             <p className="r d1 mt-3 max-w-2xl text-sm text-[#a9a49a]">
-              Valem para toda a escada, na avaliação e na conta financiada. Estão aqui antes de
-              comprares, e não numa página que só se lê quando já é tarde.
+              Valem para todas as contas, na avaliação e depois de financiada. Estão aqui antes de
+              comprares — não escondidas numa página que só se lê quando já é tarde.
             </p>
             <div className="mt-8">
               <RegrasDeNegociacao r={regrasNegociacao} />
@@ -271,6 +322,20 @@ export default async function MtmFundedPage() {
           </div>
         </section>
       )}
+
+      {/* ── Certificados ───────────────────────────────────────────────────── */}
+      <section className="border-t border-white/[0.06]">
+        <div className="mx-auto max-w-3xl px-5 py-14">
+          <h2 className="r text-3xl font-bold">Certificados</h2>
+          <p className="r d1 mt-3 text-sm text-[#a9a49a]">
+            Cada um tem um código que qualquer pessoa pode verificar, sem conta e sem pedir nada
+            a ninguém. É isso que os faz valer alguma coisa fora daqui.
+          </p>
+          <div className="r d2 mt-8">
+            <VitrineCertificados certificados={vitrine} />
+          </div>
+        </div>
+      </section>
 
       {/* ── Torneio ────────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 pb-20">

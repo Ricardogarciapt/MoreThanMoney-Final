@@ -114,5 +114,62 @@ export async function POST(request: NextRequest) {
   // O nome completo do contrato passa a ser o do perfil: é o que consta no documento.
   await db.from('profiles').update({ full_name: nome }).eq('id', user.id)
 
-  return NextResponse.json({ ok: true, versao: CONTRATO_VERSAO })
+  /**
+   * ASSINAR É O MOMENTO EM QUE SE PASSA A TRADER FINANCIADO — e é por isso que o certificado
+   * sai daqui.
+   *
+   * É BEST-EFFORT: a assinatura já está gravada, e é ela que vale. Um erro a desenhar um PDF
+   * não pode desfazer um contrato assinado, nem obrigar a pessoa a assinar outra vez.
+   */
+  let certificado: string | null = null
+  try {
+    const { data: jaTem } = await db
+      .from('mtm_certificates')
+      .select('codigo')
+      .eq('user_id', user.id)
+      .eq('tipo', 'financiado')
+      .maybeSingle()
+
+    if (jaTem) {
+      certificado = jaTem.codigo as string
+    } else {
+      const { gerarCertificadoPdf, gerarCodigo } = await import('@/lib/mtmfunded/certificado')
+      const codigo = gerarCodigo('financiado')
+      const pdf = await gerarCertificadoPdf({
+        tipo: 'financiado',
+        nome,
+        prova: `Conta financiada de ${Number(conta?.saldo_inicial ?? 0).toLocaleString('pt-PT')} USD`,
+        codigo,
+      })
+      const { error: erroCert } = await db.from('mtm_certificates').insert({
+        user_id: user.id,
+        account_id: conta?.id ?? null,
+        tipo: 'financiado',
+        codigo,
+        nome,
+        detalhe: { contrato: CONTRATO_VERSAO, saldo: conta?.saldo_inicial ?? null },
+      })
+      if (!erroCert) {
+        certificado = codigo
+        const { data: perfilEmail } = await db
+          .from('profiles').select('email').eq('id', user.id).maybeSingle()
+        if (perfilEmail?.email) {
+          const { enviarCertificado } = await import('@/lib/mtmfunded/emitir-certificados')
+          await enviarCertificado({
+            para: perfilEmail.email as string,
+            nome,
+            tipo: 'financiado',
+            prova: `Conta financiada de ${Number(conta?.saldo_inicial ?? 0).toLocaleString('pt-PT')} USD`,
+            posicao: null,
+            codigo,
+            pdf,
+          }).catch(() => undefined)
+        }
+      }
+    }
+  } catch (e) {
+    console.error('[MTMFUNDED] contrato assinado mas o certificado falhou:', e)
+  }
+
+  return NextResponse.json({ ok: true, versao: CONTRATO_VERSAO, certificado })
 }

@@ -403,6 +403,38 @@ function Certificados({ torneios, accao, ocupado, setAviso }: { torneios: Tornei
 
   return (
     <div className="space-y-4">
+      {/*
+        Um exemplar de CADA tipo, para ver e descarregar sem emitir nada a ninguém.
+        É a única forma de rever o desenho do certificado antes de o mandar a 50 pessoas —
+        e de o rever outra vez depois de lhe mexer.
+      */}
+      <section className="rounded-xl border border-gray-800 bg-black/30 p-5">
+        <h3 className="font-semibold text-gray-200">Modelos</h3>
+        <p className="mt-1 text-xs text-gray-500">
+          Um exemplar em branco de cada tipo. Abre em PDF, para conferires o desenho antes de
+          emitires a sério.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {([
+            ['financiado', 'Trader Financiado'],
+            ['desafio', 'Desafio concluído'],
+            ['classificacao', 'Classificação'],
+            ['participacao', 'Participação'],
+            ['payout', 'Pagamento'],
+          ] as const).map(([tipo, nome]) => (
+            <a
+              key={tipo}
+              href={`/api/mtmfunded/certificado/modelo?amostra=${tipo}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-300 hover:border-[#D2A63C]/50"
+            >
+              <Award className="h-3.5 w-3.5" /> {nome}
+            </a>
+          ))}
+        </div>
+      </section>
+
       <section className="rounded-xl border border-gray-800 bg-black/30 p-5">
         <h3 className="font-semibold text-gray-200">Emitir</h3>
         <p className="mt-1 text-xs text-gray-500">
