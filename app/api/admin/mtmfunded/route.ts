@@ -554,7 +554,7 @@ export async function POST(request: NextRequest) {
 
     const { data: atual } = await db
       .from('mtm_funded_withdrawals')
-      .select('id, estado')
+      .select('id, estado, account_id, valor_usd')
       .eq('id', id)
       .maybeSingle()
     if (!atual) return NextResponse.json({ error: 'pedido desconhecido' }, { status: 404 })
@@ -580,7 +580,36 @@ export async function POST(request: NextRequest) {
         atualizado_em: new Date().toISOString(),
       })
       .eq('id', id)
-    return NextResponse.json({ ok: true })
+
+    /**
+     * PAGO FECHA O CICLO: a conta financiada é substituída por uma igual.
+     *
+     * O levantamento tira o lucro, e uma conta que volta ao saldo inicial fica com um
+     * histórico que já não a descreve — o drawdown máximo passaria a ser medido contra um pico
+     * que já foi levantado, e a almofada de 3% teria de ser recalculada a partir de um ponto
+     * que não é o início. A conta nova começa limpa, e é isso que faz o ciclo seguinte ser
+     * medível pelas mesmas regras que o primeiro.
+     *
+     * Só em `pago`, nunca em `aprovado`: enquanto o dinheiro não saiu, a conta antiga ainda é
+     * a conta dele. Best-effort — o pagamento já está registado, e uma falha aqui deixa
+     * trabalho para refazer, não um levantamento por marcar.
+     */
+    let renovacao: { contaNova?: string; motivo?: string } | null = null
+    if (estado === 'pago' && atual.account_id) {
+      try {
+        const { renovarContaAposLevantamento } = await import('@/lib/mtmfunded/ciclo-de-vida')
+        const r = await renovarContaAposLevantamento(atual.account_id as string, {
+          levantamentoId: id,
+          valorUsd: Number(atual.valor_usd ?? 0),
+        })
+        renovacao = r.ok ? { contaNova: r.contaNova } : { motivo: r.motivo }
+        if (!r.ok) console.warn('[MTMFUNDED] levantamento pago mas a conta não renovou:', r.motivo)
+      } catch (e) {
+        console.error('[MTMFUNDED] renovação após levantamento falhou:', e)
+      }
+    }
+
+    return NextResponse.json({ ok: true, ...(renovacao ? { renovacao } : {}) })
   }
 
   // ── certificado avulso ───────────────────────────────────────────────────

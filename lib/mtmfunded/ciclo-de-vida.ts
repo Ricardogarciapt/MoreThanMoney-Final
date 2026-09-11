@@ -681,3 +681,227 @@ export async function emitirContaFinanciada(userId: string): Promise<ResultadoFi
 
   return { ok: true, accountId: conta.id }
 }
+
+// ── o ciclo do levantamento ──────────────────────────────────────────────────
+
+export interface ResultadoRenovacao {
+  ok: boolean
+  contaAntiga?: string
+  contaNova?: string
+  motivo?: string
+}
+
+/**
+ * O CICLO FECHA-SE A CADA LEVANTAMENTO: paga-se, e a conta é substituída por uma igual.
+ *
+ * Porquê substituir em vez de continuar na mesma conta: o levantamento tira o lucro, e uma
+ * conta que fica com o saldo inicial depois de ter estado acima dele tem um histórico que já
+ * não corresponde ao que ela é. O drawdown máximo passa a ser medido contra um pico que foi
+ * levantado, a consistência conta dias de um ciclo que acabou, e a almofada de 3% teria de ser
+ * recalculada a partir de um ponto que não é o início. Uma conta nova começa limpa, e é isso
+ * que faz o ciclo seguinte ser medível pelas mesmas regras que o primeiro.
+ *
+ * A ORDEM importa e é a mesma da desactivação: PAUSA, troca a password, apaga do MetaTrader,
+ * e só então emite a nova. Trocar a password antes de apagar é o que garante que a conta
+ * antiga deixa de servir mesmo que alguém tenha as credenciais no telemóvel — apagar sem
+ * trocar deixa-a viva para quem as tiver.
+ *
+ * A conta nova é IDÊNTICA: mesmo tamanho, mesmo programa. Não é uma promoção nem um castigo —
+ * é o mesmo acordo a recomeçar.
+ */
+export async function renovarContaAposLevantamento(
+  accountId: string,
+  opts?: { levantamentoId?: string; valorUsd?: number },
+): Promise<ResultadoRenovacao> {
+  const db = getSupabaseAdmin()
+
+  const { data: conta } = await db
+    .from('mtm_trading_accounts')
+    .select('id, user_id, tipo, mt5_login, servidor, saldo_inicial, alavancagem, program_id, metaapi_account_id, mt5_password_cifrada, metricas')
+    .eq('id', accountId)
+    .maybeSingle()
+  if (!conta) return { ok: false, motivo: 'conta não encontrada' }
+  if (conta.tipo !== 'financiada' && conta.tipo !== 'funded') {
+    return { ok: false, motivo: 'só contas financiadas entram neste ciclo' }
+  }
+
+  const { data: perfil } = conta.user_id
+    ? await db
+        .from('profiles')
+        .select('full_name, email, phone, birth_date, country')
+        .eq('id', conta.user_id)
+        .maybeSingle()
+    : { data: null }
+  if (!perfil?.email) return { ok: false, motivo: 'perfil sem email' }
+
+  const saldo = Number(conta.saldo_inicial ?? 0)
+  const nome = String(perfil.full_name ?? '').trim()
+  const partes = nome.split(/\s+/).filter(Boolean)
+
+  /**
+   * 1. PAUSA. Antes de tudo o resto.
+   *
+   * Entre pagar e a conta antiga sair do MetaTrader passam minutos — o agente trabalha uma
+   * conta de cada vez. Nesses minutos a conta continuaria a negociar, e o que negociasse
+   * ficava num ciclo que já foi pago e num histórico que vai ser apagado.
+   */
+  await db
+    .from('mtm_trading_accounts')
+    .update({
+      estado: 'expirada',
+      metricas: {
+        ...((conta.metricas ?? {}) as Record<string, unknown>),
+        pausadaEm: new Date().toISOString(),
+        pausadaPorque: 'levantamento pago — ciclo terminado',
+        levantamentoId: opts?.levantamentoId ?? null,
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', conta.id)
+
+  // 2. A nova, ANTES de destruir a antiga.
+  //
+  // Se a emissão falhar, o trader fica com a conta antiga pausada — recuperável — em vez de
+  // ficar sem conta nenhuma. A ordem inversa transformava uma falha de fila numa pessoa sem
+  // conta e sem forma de negociar o ciclo que acabou de conquistar.
+  const { data: nova, error: erroNova } = await db
+    .from('mtm_trading_accounts')
+    .insert({
+      user_id: conta.user_id,
+      tipo: 'financiada',
+      program_id: conta.program_id,
+      servidor: conta.servidor ?? 'TheTradingMaster-Live',
+      saldo_inicial: saldo,
+      alavancagem: conta.alavancagem ?? 100,
+      estado: 'pedida',
+      metricas: {
+        cicloAnterior: conta.mt5_login ?? null,
+        renovadaEm: new Date().toISOString(),
+      },
+    })
+    .select('id')
+    .single()
+  if (erroNova || !nova) {
+    // Desfaz a pausa: sem conta nova, a antiga é a única que ele tem.
+    await db.from('mtm_trading_accounts').update({ estado: 'ativa' }).eq('id', conta.id)
+    return { ok: false, motivo: `não foi possível criar a conta nova: ${erroNova?.message}` }
+  }
+
+  const { apelidoComTipo } = await import('./metaapi')
+  await db.from('mtm_account_requests').insert({
+    account_id: nova.id,
+    tarefa: 'criar',
+    primeiro_nome: partes[0] || 'Trader',
+    sobrenome: apelidoComTipo(partes.length > 1 ? partes[partes.length - 1] : 'MTM', 'financiada'),
+    email: perfil.email as string,
+    telefone: String(perfil.phone ?? '').replace(/^\+\d{1,4}/, '').replace(/\D/g, '') || null,
+    indicativo: (String(perfil.phone ?? '').match(/^\+\d{1,4}/) ?? ['+351'])[0],
+    pais: (perfil.country as string) || 'PT',
+    data_nascimento: (perfil.birth_date as string) || null,
+    servidor: conta.servidor ?? 'TheTradingMaster-Live',
+    tipo_conta: 'ECN',
+    deposito: saldo,
+    alavancagem: Number(conta.alavancagem ?? 100),
+    estado: 'em_fila',
+  })
+
+  // 3. E agora a antiga sai: MetaApi, depois password trocada e removida do MetaTrader.
+  if (conta.metaapi_account_id) {
+    try {
+      const { undeployMetaApiAccount, deleteMetaApiAccount } = await import('@/lib/mtmcopy/metaapi-provision')
+      await undeployMetaApiAccount(conta.metaapi_account_id as string).catch(() => undefined)
+      await deleteMetaApiAccount(conta.metaapi_account_id as string)
+    } catch (e) {
+      console.error('[MTMFUNDED] renovação: MetaApi não libertou a conta antiga:', e)
+    }
+  }
+
+  if (conta.mt5_login) {
+    await db.from('mtm_account_requests').insert({
+      account_id: conta.id,
+      tarefa: 'apagar',
+      mt5_login: conta.mt5_login,
+      // A password viaja com a tarefa: a linha da conta é apagada a seguir, e sem ela o agente
+      // não pode trocar a password — que é o que torna a conta antiga inútil.
+      mt5_password_cifrada: conta.mt5_password_cifrada ?? null,
+      primeiro_nome: 'Ciclo',
+      sobrenome: 'Terminado',
+      email: perfil.email as string,
+      servidor: conta.servidor ?? 'TheTradingMaster-Live',
+      tipo_conta: 'ECN',
+      deposito: saldo,
+      alavancagem: Number(conta.alavancagem ?? 100),
+      estado: 'em_fila',
+    })
+  }
+
+  await enviarEmailDeRenovacao({
+    para: perfil.email as string,
+    nome: partes[0] || 'Trader',
+    saldo,
+    loginAntigo: (conta.mt5_login as string) ?? '—',
+    valorUsd: opts?.valorUsd ?? null,
+  }).catch(() => undefined)
+
+  return { ok: true, contaAntiga: (conta.mt5_login as string) ?? undefined, contaNova: nova.id }
+}
+
+async function enviarEmailDeRenovacao(input: {
+  para: string
+  nome: string
+  saldo: number
+  loginAntigo: string
+  valorUsd: number | null
+}): Promise<void> {
+  const site = getSiteUrl()
+  const logo = getEmailLogoSrc()
+
+  const html = `
+  <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;">
+    <div style="text-align:center;padding:28px 0;"><img src="${logo}" alt="MTM Funded" width="160" style="max-width:160px;" /></div>
+    <div style="background:#fff;border-radius:16px;padding:28px;">
+      <h1 style="margin:0;font-size:22px;color:#111;">Levantamento feito. Ciclo novo a caminho.</h1>
+
+      <p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#444;">
+        Olá ${input.nome}, ${
+          input.valorUsd
+            ? `o teu levantamento de <strong>${input.valorUsd.toLocaleString('pt-PT')} USD</strong> foi pago para a tua conta da PU Prime.`
+            : 'o teu levantamento foi pago para a tua conta da PU Prime.'
+        }
+      </p>
+
+      <div style="margin:22px 0;padding:18px 20px;background:#faf6ec;border:1px solid #eadcb8;border-radius:12px;">
+        <p style="margin:0;font-size:15px;line-height:1.6;color:#333;">
+          A conta <strong>${input.loginAntigo}</strong> fecha aqui, e estamos a emitir-te uma
+          conta financiada <strong>nova e igual</strong> — ${input.saldo.toLocaleString('pt-PT')} USD,
+          as mesmas regras. Recebes as credenciais por email assim que estiver pronta.
+        </p>
+      </div>
+
+      <p style="margin:0 0 18px;font-size:14px;line-height:1.65;color:#555;">
+        Porque é que não continuas na mesma conta: o levantamento tira o lucro, e uma conta que
+        volta ao saldo inicial fica com um histórico que já não a descreve — o drawdown passaria
+        a ser medido contra um pico que já levantaste. A conta nova começa limpa, e o ciclo
+        seguinte é avaliado pelas mesmas regras que este.
+      </p>
+
+      <p style="margin:0 0 18px;font-size:13px;line-height:1.6;color:#666;">
+        Não negoceies na conta antiga a partir de agora — ela é encerrada e a palavra-passe
+        muda. O que lá acontecer depois deste email não conta para nada.
+      </p>
+
+      <a href="${site}/mtmfunded/tradingtournament/dashboard" style="display:inline-block;background:#BB8525;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">
+        Abrir a minha área
+      </a>
+    </div>
+  </div>`
+
+  const transporter = createMailTransporter()
+  await transporter.sendMail({
+    from: mailFrom(),
+    to: input.para,
+    subject: 'Levantamento pago — a tua conta nova está a caminho',
+    html: prepareBrandedEmailHtml(html),
+    attachments: brandedMailAttachments(),
+  })
+}
