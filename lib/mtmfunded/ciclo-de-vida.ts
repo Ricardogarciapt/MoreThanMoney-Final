@@ -252,6 +252,8 @@ export interface ResultadoConclusao {
   codigo?: string
   emailEnviado: boolean
   erro?: string
+  /** A conta da fase seguinte, quando o programa tem mais do que uma. */
+  proximaFase?: string | null
 }
 
 /**
@@ -282,7 +284,29 @@ export async function concluirDesafio(
 
   const nome = (perfil?.full_name as string) || 'Trader'
   const deFases = opts?.deFases ?? Number(programa?.fases ?? 1)
-  const fase = opts?.fase ?? deFases
+
+  /**
+   * EM QUE FASE ESTÁ ESTA CONTA.
+   *
+   * O valor por omissão era a ÚLTIMA fase — e isso fazia com que, num programa de duas,
+   * passar a primeira fosse tratado como ter acabado o desafio inteiro: certificado a dizer
+   * «Desafio Concluído», conta em «aprovada», e a segunda fase a nunca acontecer.
+   *
+   * A fase lê-se da própria conta: `metricas.fase` é escrita quando ela é emitida. Para as
+   * contas antigas, que não a têm, deduz-se contando quantas contas deste programa o trader
+   * já teve — a segunda conta do mesmo programa é a segunda fase. Deduzir é pior do que
+   * saber, mas é muito melhor do que assumir que é sempre a última.
+   */
+  let fase = opts?.fase ?? Number((conta.metricas as Record<string, unknown> | null)?.fase ?? 0)
+  if (!fase) {
+    const { count } = await db
+      .from('mtm_trading_accounts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', conta.user_id as string)
+      .eq('program_id', conta.program_id as string)
+      .eq('tipo', 'desafio')
+    fase = Math.min(Math.max(Number(count ?? 1), 1), deFases)
+  }
   const ultima = fase >= deFases
 
   // O nome do desafio entra no certificado. «Desafio concluído» sozinho não diz QUAL.
@@ -341,13 +365,123 @@ export async function concluirDesafio(
   await db
     .from('mtm_trading_accounts')
     .update({
-      estado: ultima ? 'aprovada' : 'ativa',
-      metricas: { ...((conta.metricas ?? {}) as Record<string, unknown>), faseConcluida: fase },
+      // A conta da fase que acabou fica APROVADA em qualquer caso: passou. Deixá-la «ativa»
+      // quando havia fase seguinte punha o trader a negociar duas contas do mesmo desafio ao
+      // mesmo tempo, e a medi-las as duas.
+      estado: 'aprovada',
+      metricas: { ...((conta.metricas ?? {}) as Record<string, unknown>), fase, faseConcluida: fase },
       updated_at: new Date().toISOString(),
     })
     .eq('id', conta.id)
 
-  return { ok: true, codigo, emailEnviado }
+  /**
+   * A CONTA DA FASE SEGUINTE, quando há uma.
+   *
+   * O email já prometia que ela era emitida; ninguém a emitia. Um desafio de duas fases é
+   * duas contas ao longo do tempo — passar a primeira e ficar à espera de nada é o sítio onde
+   * o produto deixava de cumprir o que a página vende.
+   *
+   * Best-effort, como tudo o que vem depois de o certificado estar gravado: o que a pessoa
+   * conquistou já está guardado, e uma falha na fila deixa trabalho para a passagem seguinte.
+   */
+  let proximaFase: string | null = null
+  if (!ultima) {
+    try {
+      const r = await emitirFaseSeguinte(conta.id as string, fase + 1)
+      proximaFase = r.accountId ?? null
+      if (!r.ok) console.log('[MTMFUNDED] fase seguinte não emitida:', r.motivo)
+    } catch (e) {
+      console.error('[MTMFUNDED] fase seguinte falhou:', e)
+    }
+  }
+
+  return { ok: true, codigo, emailEnviado, proximaFase }
+}
+
+/**
+ * Emite a conta da fase seguinte de um desafio de duas fases.
+ *
+ * Mesmo programa, mesmo tamanho, mesma pessoa — muda a etiqueta («Desafio fase 2») e a fase
+ * guardada nas métricas, que é o que faz a conclusão seguinte saber onde está.
+ */
+async function emitirFaseSeguinte(
+  contaAnteriorId: string,
+  fase: number,
+): Promise<{ ok: boolean; accountId?: string; motivo?: string }> {
+  const db = getSupabaseAdmin()
+
+  const { data: anterior } = await db
+    .from('mtm_trading_accounts')
+    .select('user_id, program_id, saldo_inicial, alavancagem, servidor')
+    .eq('id', contaAnteriorId)
+    .maybeSingle()
+  if (!anterior?.user_id || !anterior.program_id) return { ok: false, motivo: 'conta sem dono ou sem programa' }
+
+  // Idempotência: se a conta desta fase já existe, não se emite outra. O ciclo de leitura
+  // corre de hora a hora e uma repetição dava duas contas da mesma fase à mesma pessoa.
+  const { data: contas } = await db
+    .from('mtm_trading_accounts')
+    .select('id, metricas')
+    .eq('user_id', anterior.user_id)
+    .eq('program_id', anterior.program_id)
+    .eq('tipo', 'desafio')
+  if ((contas ?? []).some((c) => Number((c.metricas as Record<string, unknown> | null)?.fase ?? 0) === fase)) {
+    return { ok: false, motivo: `a conta da fase ${fase} já existe` }
+  }
+
+  const { data: perfil } = await db
+    .from('profiles')
+    .select('full_name, email, phone, birth_date, country')
+    .eq('id', anterior.user_id)
+    .maybeSingle()
+  if (!perfil?.email) return { ok: false, motivo: 'perfil sem email' }
+
+  const { data: programa } = await db
+    .from('mtm_funded_programs')
+    .select('fases')
+    .eq('id', anterior.program_id)
+    .maybeSingle()
+
+  const { data: nova, error } = await db
+    .from('mtm_trading_accounts')
+    .insert({
+      user_id: anterior.user_id,
+      tipo: 'desafio',
+      program_id: anterior.program_id,
+      servidor: anterior.servidor ?? 'TheTradingMaster-Live',
+      saldo_inicial: anterior.saldo_inicial,
+      alavancagem: anterior.alavancagem ?? 100,
+      estado: 'pedida',
+      metricas: { fase },
+    })
+    .select('id')
+    .single()
+  if (error || !nova) return { ok: false, motivo: 'não foi possível criar a conta' }
+
+  const partes = String(perfil.full_name ?? '').trim().split(/\s+/).filter(Boolean)
+  const { apelidoComTipo } = await import('./metaapi')
+
+  await db.from('mtm_account_requests').insert({
+    account_id: nova.id,
+    tarefa: 'criar',
+    primeiro_nome: partes[0] || 'Trader',
+    sobrenome: apelidoComTipo(partes.length > 1 ? partes[partes.length - 1] : 'MTM', 'desafio', {
+      fases: Number(programa?.fases ?? 2),
+      fase,
+    }),
+    email: perfil.email as string,
+    telefone: String(perfil.phone ?? '').replace(/^\+\d{1,4}/, '').replace(/\D/g, '') || null,
+    indicativo: (String(perfil.phone ?? '').match(/^\+\d{1,4}/) ?? ['+351'])[0],
+    pais: (perfil.country as string) || 'PT',
+    data_nascimento: (perfil.birth_date as string) || null,
+    servidor: anterior.servidor ?? 'TheTradingMaster-Live',
+    tipo_conta: 'ECN',
+    deposito: Number(anterior.saldo_inicial ?? 0),
+    alavancagem: Number(anterior.alavancagem ?? 100),
+    estado: 'em_fila',
+  })
+
+  return { ok: true, accountId: nova.id }
 }
 
 async function enviarEmailDeConclusao(input: {
