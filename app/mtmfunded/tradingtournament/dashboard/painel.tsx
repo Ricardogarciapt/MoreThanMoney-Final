@@ -9,6 +9,7 @@ import {
 import dynamic from 'next/dynamic'
 import { Contratos, Levantamentos } from '@/components/mtmfunded/contratos-e-levantamentos'
 import { useT } from '@/components/i18n-provider'
+import ModalMetricas from '@/components/mtmfunded/modal-metricas'
 
 /**
  * O painel de admin aqui é o MESMO componente do /admin, e não uma cópia.
@@ -446,9 +447,19 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
 }
 
 function Contas({ contas, abrir }: { contas: Conta[]; abrir?: string | null }) {
+  /**
+   * O modal do DESEMPENHO, aberto uma conta de cada vez.
+   *
+   * O estado vive aqui e não dentro de cada cartão: dois modais abertos ao mesmo tempo é uma
+   * coisa que nunca ninguém quis, e guardar o id em vez de um booleano por cartão faz disso
+   * uma impossibilidade em vez de uma convenção.
+   */
+  const [metricasDe, setMetricasDe] = useState<string | null>(null)
+
   if (!contas.length) return <Caixa titulo="Contas de Trading"><Vazio>Ainda não tens contas.</Vazio></Caixa>
   return (
     <div className="space-y-4">
+      {metricasDe && <ModalMetricas contaId={metricasDe} aoFechar={() => setMetricasDe(null)} />}
       {contas.map((c) => (
         <Caixa key={c.id} titulo={`${c.tipo === 'torneio' ? 'Torneio' : c.tipo === 'desafio' ? 'Desafio' : 'Financiada'} · ${c.login ?? 'a emitir'}`}>
           <Linha rotulo="Servidor" valor={c.servidor ?? '—'} />
@@ -458,6 +469,17 @@ function Contas({ contas, abrir }: { contas: Conta[]; abrir?: string | null }) {
           {typeof c.metricas.equity === 'number' && (
             <Linha rotulo="Equity" valor={`${(c.metricas.equity as number).toLocaleString('pt-PT')} USD`} />
           )}
+
+          {/* Só há desempenho para ver depois de a conta existir no MetaTrader. */}
+          {c.login && (
+            <button
+              onClick={() => setMetricasDe(c.id)}
+              className="mt-3 w-full rounded-lg border border-[#D2A63C]/35 py-2.5 text-sm text-[#D2A63C] transition hover:border-[#D2A63C] hover:bg-[#D2A63C]/[0.06]"
+            >
+              Ver desempenho
+            </button>
+          )}
+
           {c.login && <Credenciais conta={c} abrirJa={abrir === c.id} />}
         </Caixa>
       ))}
