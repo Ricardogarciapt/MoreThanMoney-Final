@@ -97,7 +97,7 @@ PRIMEIRA_CONTA = 38
 def linha_da_corretora() -> int | None:
     for y, x, _altura, texto in mt5.ler_ecra():
         if x < 0.25 and "radingmaster" in texto.replace(" ", "").lower():
-            return int(y * 900)
+            return mt5.py(y)
     return None
 
 
@@ -129,13 +129,12 @@ def abrir_dialogo(login: str) -> bool:
     alguns segundos em vez de trocar a password da pessoa errada.
     """
     janela = mt5.janela_por_nome("MetaTrader") or ""
+    mt5.enquadrar_janela(janela)
     fechar_dialogo_aberto()
 
     # Ctrl+N é um INTERRUPTOR, não um "abrir". Com o Navegador já aberto, fecha-o — e o passo
     # seguinte procurava as contas numa árvore que já não estava no ecrã. Pergunta-se primeiro.
-    if not mt5.ve(r"\bAccounts\b"):
-        mt5.tecla(janela, "ctrl+n", pausa=2)
-    if not mt5.ve(r"\bAccounts\b"):
+    if not mt5.abrir_navegador(janela):
         registar("o Navegador não abriu")
         return False
 

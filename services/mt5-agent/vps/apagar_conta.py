@@ -40,9 +40,7 @@ def apagar_do_terminal(login: str) -> bool:
     janela = mt5.janela_por_nome("MetaTrader") or ""
     mp.fechar_dialogo_aberto()
 
-    if not mt5.ve(r"\bAccounts\b"):
-        mt5.tecla(janela, "ctrl+n", pausa=2)
-    if not mt5.ve(r"\bAccounts\b"):
+    if not mt5.abrir_navegador(janela):
         registar("o Navegador não abriu")
         return False
 
@@ -103,6 +101,7 @@ def desactivar(login: str, password_atual: str | None) -> dict:
     janela = mt5.esperar_janela("MetaTrader", 30)
     if not janela:
         return {"ok": False, "motivo": "o MetaTrader não está aberto no ecrã virtual"}
+    mt5.enquadrar_janela(janela)
 
     trocada = False
     if password_atual:

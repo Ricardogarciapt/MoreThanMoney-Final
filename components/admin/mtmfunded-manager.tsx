@@ -194,8 +194,16 @@ function Resumo({ dados, accao, ocupado }: { dados: Resumo; accao: Accao; ocupad
                   </Botao>
                 )}
                 {t.estado === 'inscricoes' && (
-                  <Botao ocupado={ocupado === `c${t.id}`} onClick={() => accao({ accao: 'torneio_estado', torneioId: t.id, estado: 'a_decorrer' }, `c${t.id}`)}>
+                  // Confirmar, porque começar FECHA as inscrições: quem ainda não se inscreveu
+                  // deixa de poder, e um clique sem querer tira gente do torneio.
+                  <Botao ocupado={ocupado === `c${t.id}`} onClick={() => confirm('Começar o torneio? As inscrições fecham e deixa de entrar mais ninguém.') && accao({ accao: 'torneio_estado', torneioId: t.id, estado: 'a_decorrer' }, `c${t.id}`)}>
                     Começar
+                  </Botao>
+                )}
+                {t.estado === 'a_decorrer' && (
+                  // Reabrir: o reverso do botão acima, para quando se carrega sem querer.
+                  <Botao ocupado={ocupado === `r${t.id}`} onClick={() => accao({ accao: 'torneio_estado', torneioId: t.id, estado: 'inscricoes' }, `r${t.id}`)}>
+                    Reabrir inscrições
                   </Botao>
                 )}
                 {t.estado === 'a_decorrer' && (

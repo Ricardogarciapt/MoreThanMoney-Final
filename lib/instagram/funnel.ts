@@ -22,6 +22,7 @@ const MAX_DM_PER_ACCOUNT = Number(process.env.IG_FUNNEL_MAX_PER_ACCOUNT) || 30
 const REGISTER = "https://www.morethanmoney.pt/register"
 const TELEGRAM = "https://t.me/MoreThanMoney_aibot?start=lead"
 const CRIADORES = "https://www.morethanmoney.pt/criadores"
+const FUNDED = "https://www.morethanmoney.pt/mtmfunded"
 
 interface Intent {
   key: string
@@ -52,6 +53,24 @@ const INTENTS: Intent[] = [
     pub: (h) =>
       `Boa${h}! 🔥 Candidaturas de criadores abertas 👉 ${CRIADORES}. ` +
       `Manda-nos DM com 1 exemplo do teu conteúdo + a tua área e o Ricardo (@ricardogarciapt) fala contigo. 🙌`,
+  },
+  {
+    /**
+     * MTM FUNDED — antes do 'trial' de propósito.
+     *
+     * Sem esta entrada, um comentário «QUERO O DESAFIO» caía no trial e a pessoa recebia o
+     * link do Premium em vez do que pediu. Quem escreve DESAFIO está a falar de uma coisa
+     * concreta, e mandá-la para outra porta é perder o lead que mais perto estava de comprar.
+     *
+     * A resposta pública leva o link e não promete nada: as contas são simuladas e as regras
+     * estão publicadas na página, que é onde a decisão se toma.
+     */
+    key: "funded",
+    kw: ["FUNDED", "DESAFIO", "DESAFIOS", "CHALLENGE", "FINANCIADA", "FINANCIADO", "PROP", "TORNEIO"],
+    dm: (h) =>
+      `Boa${h}! 🙌 O MTM Funded é aqui 👉 ${FUNDED} — avaliação em conta simulada, regras publicadas antes de entrares, e 75% dos resultados para ti quando passas. Qualquer dúvida, diz-me. 🚀`,
+    pub: (h) =>
+      `Boa${h}! 🔥 Os desafios MTM Funded estão aqui 👉 ${FUNDED} — contas simuladas, regras à vista e 75% para o trader. 🙌`,
   },
   {
     key: "trial",

@@ -4,6 +4,8 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { RegrasDeNegociacao, type RegrasNegociacao } from '@/components/mtmfunded/regras-negociacao'
 import VitrineCertificados, { type CertificadoVitrine } from '@/components/mtmfunded/vitrine-certificados'
 import T from '@/components/mtmfunded/t'
+import SplashPromos from '@/components/mtmfunded/splash-promos'
+import { promosAtivas } from '@/lib/mtmfunded/promos'
 
 // Cache de 60s em vez de render por pedido: a classificação actualiza de hora a hora e os
 // programas mudam raramente. Sem isto, cada visita esperava pela base de dados antes do
@@ -46,7 +48,7 @@ export default async function MtmFundedPage() {
    * servidor somadas antes de o primeiro pixel aparecer. Não dependem umas das outras; não
    * há razão para esperarem umas pelas outras.
    */
-  const [{ data: programas }, { data: torneio }, { data: emitidos }] = await Promise.all([
+  const [{ data: programas }, { data: torneio }, { data: emitidos }, promos] = await Promise.all([
     db
       .from('mtm_funded_programs')
       .select('slug, nome, descricao, fases, saldo, preco_cents, moeda, regras')
@@ -64,6 +66,7 @@ export default async function MtmFundedPage() {
       .select('codigo, tipo, nome, emitido_em')
       .order('emitido_em', { ascending: false })
       .limit(6),
+    promosAtivas(),
   ])
 
   /**
@@ -100,6 +103,8 @@ export default async function MtmFundedPage() {
 
   return (
     <main className="text-white">
+      <SplashPromos promos={promos} />
+
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 pt-20 pb-12 sm:pt-28">
         {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -146,6 +146,7 @@ def tratar_um() -> int:
             # O QR entra na app SEM password. Guardá-lo mesmo assim é a diferença entre uma
             # conta perdida e uma conta que o participante consegue usar na mesma.
             "qr": resultado.get("qr"),
+            "qrConteudo": resultado.get("qrConteudo"),
             "erro": f"conta {resultado['login']} criada mas sem password legível — "
                     "o QR ainda entra; define a password no MT5 e reenvia pelo painel",
         })
@@ -160,6 +161,9 @@ def tratar_um() -> int:
         # O QR do MetaTrader, recortado do diálogo final. Vai em base64 e é o site que decide
         # onde o guarda — daqui não se escreve em disco nada que contenha credenciais.
         "qr": resultado.get("qr"),
+        # O CONTEÚDO do QR, além da imagem. Com ele o site redesenha o código limpo, em vez
+        # de mostrar um recorte do ecrã com metade de um botão e um pedaço de texto à volta.
+        "qrConteudo": resultado.get("qrConteudo"),
     })
     if entrega.get("ok"):
         registar(f"conta {resultado['login']} entregue · email: {'sim' if entrega.get('emailEnviado') else 'FALHOU'}")

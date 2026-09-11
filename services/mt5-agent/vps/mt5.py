@@ -79,6 +79,146 @@ def janela_por_nome(padrao: str) -> str | None:
     return None
 
 
+# O ECRÃ VIRTUAL É DE 1440x900, e isso é uma decisão, não uma limitação por resolver.
+#
+# Tentei subi-lo para 1920x1080 — dá espaço para arrastar janelas quando alguém entra por VNC.
+# Partiu tudo: as dezenas de coordenadas desta automação foram lidas de um ecrã real de
+# 1440x900, e num ecrã maior o MetaTrader perde a barra de título (o menu sobe 29px), os
+# diálogos deixam de centrar onde estavam, e a janela encaixotada a 1440x900 num ecrã de
+# 1920x1080 fica com barras pretas que parecem uma avaria.
+#
+# Subir a resolução a sério significa tornar CADA coordenada relativa à janela, e recalibrar
+# o que não for. É um trabalho com princípio e fim — não um efeito secundário de mudar um
+# número no Xvfb. Até lá, 1440x900, que é o que mantém contas a ser emitidas.
+LARGURA_MT5, ALTURA_MT5 = 1440, 900
+DESVIO_Y = 0
+
+
+def enquadrar_janela(janela: str) -> None:
+    """Põe o MetaTrader sempre na mesma geometria, antes de se lhe tocar.
+
+    TODAS as coordenadas desta automação foram lidas de um ecrã real de 1440x900. Crescer o
+    ecrã virtual sem isto moveria cada diálogo para outro sítio e partiria tudo de uma vez,
+    porque os diálogos do MT5 centram-se na janela e não no ecrã.
+    
+    Assim o ecrã pode ser do tamanho que for — e alguém pode arrastar a janela para onde
+    quiser por VNC — que o agente volta a pô-la no sítio antes de trabalhar. É também o que
+    torna a automação reprodutível: dois arranques encontram sempre a mesma geometria.
+    """
+    if not janela:
+        return
+    # Sair do maximizado primeiro: uma janela maximizada ignora o `windowsize`.
+    _correr(["xdotool", "windowstate", "--remove", "MAXIMIZED_VERT", "--remove", "MAXIMIZED_HORZ", janela])
+    time.sleep(0.4)
+    _correr(["xdotool", "windowmove", janela, "0", str(DESVIO_Y)])
+    _correr(["xdotool", "windowsize", janela, str(LARGURA_MT5), str(ALTURA_MT5)])
+    time.sleep(0.8)
+
+    # E devolve-se-lhe o FOCO.
+    #
+    # Mover e redimensionar tira o foco à janela, e as teclas desta automação vão por XTEST —
+    # ou seja, para onde o foco estiver. Sem isto, o `ctrl+shift+n` que abre o diálogo de
+    # criação caía no vazio de um ecrã de 1920x1080 e o agente concluía, trinta segundos
+    # depois, que o atalho não funcionava.
+    _correr(["xdotool", "windowactivate", "--sync", janela])
+    _correr(["xdotool", "windowfocus", "--sync", janela])
+    time.sleep(0.5)
+
+
+def dimensoes_ecra() -> tuple[int, int]:
+    """O tamanho REAL do ecrã virtual, lido do servidor X.
+
+    O `ler_ecra()` devolve coordenadas de 0 a 1, e quem as usa tem de as multiplicar por
+    alguma coisa. Durante muito tempo essa coisa foi 1440x900 escrito à mão, porque era o
+    tamanho do ecrã. Ao passar para 1920x1080, cada clique calculado assim caiu a três
+    quartos do caminho — e o agente parou sem que nada no log dissesse porquê.
+    """
+    try:
+        saida = _correr(["xdpyinfo"], timeout=10)
+        m = re.search(r"dimensions:\s+(\d+)x(\d+)", saida)
+        if m:
+            return int(m.group(1)), int(m.group(2))
+    except Exception:
+        pass
+    return 1920, 1080
+
+
+def px(xn: float) -> int:
+    """Coordenada X normalizada → pixel no ecrã."""
+    return int(xn * dimensoes_ecra()[0])
+
+
+def py(yn: float) -> int:
+    """Coordenada Y normalizada → pixel no ecrã."""
+    return int(yn * dimensoes_ecra()[1])
+
+
+def _ancora_navegador() -> tuple[float, float] | None:
+    """A âncora do painel: o título «Navigator», ou a raiz da árvore.
+
+    Dois âncoras porque nenhum serve sozinho. O TÍTULO lê-se sempre bem, mas some quando
+    alguém desancora o painel. A RAIZ («MetaTrader 5», que o tesseract corta em «MetaTra»)
+    desaparece assim que a árvore rola — e ela rola, porque a lista de contas cresce.
+
+    Devolve (y, x) normalizados, e qual deles é serve para saber onde fica «Accounts».
+    """
+    raiz = None
+    for y, x, _h, texto in ler_ecra():
+        if x >= 0.20 or y >= 0.32:
+            continue
+        if re.search(r"Navigator", texto, re.IGNORECASE):
+            return (y, x)
+        if re.search(r"MetaTra", texto) and raiz is None:
+            raiz = (y, x)
+    return raiz
+
+
+def navegador_aberto() -> bool:
+    """O Navegador está à vista?
+
+    Não se pergunta por «Accounts»: a árvore rola, e com as contas todas ele sai por cima.
+    Quem decidisse por ele concluía que o painel estava fechado com ele aberto — e carregava
+    em Ctrl+N, que é um interruptor, fechando-o mesmo. Foi assim que a emissão parou.
+    """
+    return _ancora_navegador() is not None
+
+
+def linha_das_contas() -> tuple[int, int] | None:
+    """Onde clicar em «Accounts» — por geometria, e não pelo texto.
+
+    O tesseract lê «Accounts» como «Act», «Acc» ou «uns», conforme o ícone que tem ao lado.
+    O que se lê sempre é a âncora do painel; «Accounts» fica a 38px dela.
+    """
+    a = _ancora_navegador()
+    if a is None:
+        return None
+    y, x = a
+    return (px(x + 0.06), py(y) + 38)
+
+
+def abrir_navegador(janela: str) -> bool:
+    """Garante o Navegador ABERTO e a árvore no topo, onde está «Accounts».
+
+    Ctrl+N alterna. Confirma-se depois de cada toque, em vez de assumir: dois Ctrl+N seguidos
+    deixavam o painel exactamente como estava, e o passo seguinte procurava contas num painel
+    invisível.
+    """
+    for _ in range(2):
+        if navegador_aberto():
+            break
+        tecla(janela, "ctrl+n", pausa=2.5)
+
+    if not navegador_aberto():
+        return False
+
+    # A árvore guarda a posição do scroll entre sessões. Sobe-se ao topo, que é onde vive
+    # «Accounts» — e é de lá que se cria e se gere qualquer conta.
+    clicar(110, 200)
+    time.sleep(0.5)
+    tecla(janela, "ctrl+Home", pausa=1)
+    return navegador_aberto()
+
+
 def esperar_janela(padrao: str, segundos: int = 20) -> str | None:
     limite = time.time() + segundos
     while time.time() < limite:

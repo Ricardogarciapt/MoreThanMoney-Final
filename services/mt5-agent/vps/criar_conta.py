@@ -160,19 +160,47 @@ def esperar_no_log(padrao: str, desde: dict, segundos: int = 90) -> str | None:
 # ── passos ───────────────────────────────────────────────────────────────────
 
 def abrir_dialogo(janela: str) -> bool:
-    """Ficheiro → Abrir uma conta. Confirma-se pelo título do diálogo."""
-    if mt5.ve(r"select a company|abrir uma conta|open an account"):
+    """Ficheiro → Abrir uma conta. Confirma-se pelo título do diálogo.
+
+    TRÊS CAMINHOS, por esta ordem, e cada um existe porque o anterior falhou em produção:
+
+    1. O ATALHO `ctrl+shift+n`. É o mais limpo quando funciona — mas nem sempre chega ao
+       terminal, e não há como saber porquê a partir de fora.
+
+    2. O NAVEGADOR: botão direito em «Accounts» → «Open an Account». É um menu de cinco
+       linhas, sempre igual, sempre no mesmo sítio.
+
+    3. O MENU FICHEIRO, em último lugar — e não em segundo, como já esteve. À medida que as
+       contas se acumulam, o MetaTrader lista-as DENTRO desse menu: com vinte contas, o
+       «Open an Account» desce para lá do fim do ecrã e o OCR passa a ler pedaços de números
+       de conta onde procurava o comando. Foi assim que três pedidos seguidos falharam.
+    """
+    if mt5.ve(r"select a company|abrir uma conta"):
         registar("o diálogo já estava aberto")
         return True
+
     mt5.tecla(janela, "ctrl+shift+n")
-    # A lista de corretoras vem da rede: o diálogo abre vazio e só depois se escreve.
-    if mt5.esperar_texto(r"select a company", 30):
+    if mt5.esperar_texto(r"select a company", 20):
         return True
-    # Alguns builds não têm o atalho. Vai-se pelo menu Ficheiro.
-    registar("o atalho não abriu o diálogo; a tentar pelo menu Ficheiro")
+
+    # ── pelo Navegador ────────────────────────────────────────────────────────
+    registar("o atalho não abriu o diálogo; a tentar pelo Navegador")
+    if mt5.abrir_navegador(janela):
+        alvo = mt5.linha_das_contas()
+        if alvo:
+            mt5._correr(["xdotool", "mousemove", str(alvo[0]), str(alvo[1]), "click", "3"])
+            time.sleep(2)
+            if mt5.clicar_texto(r"open an account|abrir uma conta"):
+                if mt5.esperar_texto(r"select a company", 30):
+                    return True
+            mt5.tecla(janela, "Escape", pausa=0.8)
+
+    # ── pelo menu Ficheiro, em último recurso ────────────────────────────────
+    registar("o Navegador não deu; a tentar pelo menu Ficheiro")
     mt5.clicar(20, 40)
     time.sleep(1.5)
     if not mt5.clicar_texto(r"open an account|abrir uma conta"):
+        mt5.tecla(janela, "Escape", pausa=0.8)
         return False
     return mt5.esperar_texto(r"select a company", 30)
 
@@ -329,6 +357,8 @@ def criar(pedido: dict) -> dict:
     janela = mt5.esperar_janela("MetaTrader", 20)
     if not janela:
         raise RuntimeError("o MetaTrader não está aberto no ecrã virtual")
+    # O ecrã é de 1920x1080; as coordenadas são de 1440x900. Enquadra-se antes de tocar.
+    mt5.enquadrar_janela(janela)
     registar(f"janela {janela}")
 
     if not abrir_dialogo(janela):
@@ -396,6 +426,7 @@ def criar(pedido: dict) -> dict:
             "login": login, "password": None, "servidor": servidor,
             "precisa_password": True,
             "qr": qr.get("imagem"),
+            "qrConteudo": qr.get("conteudo"),
             "aviso": f"conta {login} criada, mas não consegui ler a password do ecrã",
         }
 
@@ -418,6 +449,7 @@ def criar(pedido: dict) -> dict:
             "investor": credenciais.get("investor"),
             "servidor": servidor,
             "qr": qr.get("imagem"),
+            "qrConteudo": qr.get("conteudo"),
         }
 
     # ── a corretora é que diz se a leitura estava certa ──────────────────────
@@ -445,6 +477,7 @@ def criar(pedido: dict) -> dict:
         "precisa_password": True,
         # Sem password legível, o QR é o que salva a conta: entra com um toque sem ela.
         "qr": qr.get("imagem"),
+            "qrConteudo": qr.get("conteudo"),
         "aviso": f"conta {login} criada, mas {troca.get('motivo')}",
     }
 

@@ -54,9 +54,30 @@ const TARGET_BACKLOG = Number(process.env.CONTENT_DRAFT_BACKLOG || 8) // buffer 
 const BATCH = Number(process.env.CONTENT_DRAFT_BATCH || 3) // quantos gerar por passagem
 
 // CTAs válidos = palavras-chave que o ig-funnel reconhece (lib/instagram/funnel.ts INTENTS).
-const CTA_KEYWORDS = ['SINAIS', 'APP', 'PREMIUM', 'QUERO', 'MUNDO', 'COPY']
+const CTA_KEYWORDS = ['SINAIS', 'APP', 'PREMIUM', 'DESAFIO', 'QUERO', 'MUNDO', 'COPY']
 
-function buildSystem(PROOF: string): string { return `És o estratega de conteúdo da MoreThanMoney (comunidade portuguesa de educação financeira e trading, fundada pelo Ricardo Garcia).
+/**
+ * O bloco da CAMPANHA no prompt.
+ *
+ * Vem vivo das promoções na base de dados — o mesmo `promosAtivas()` que alimenta o splash da
+ * página. Escrever a campanha à mão aqui dava posts a anunciar um desconto já expirado, que é
+ * a pior publicidade que há: leva a pessoa ao checkout para lhe dizer que não.
+ *
+ * Sem campanha viva devolve string vazia, e o gerador escreve o que escrevia antes.
+ */
+function blocoCampanha(promos: Array<{ etiqueta: string; titulo: string; detalhe: string; codigo?: string }>): string {
+  if (!promos.length) return ''
+  return (
+    `\n\nCAMPANHA A DECORRER (MTM Funded — avaliação de traders em contas SIMULADAS, 75% dos resultados para o trader):\n` +
+    promos
+      .map((p) => `- ${p.titulo}${p.codigo ? ` (código ${p.codigo})` : ''} — ${p.detalhe}`)
+      .join('\n') +
+    `\nQuando o post for de campanha (palavra-chave DESAFIO), fala DISTO e manda para morethanmoney.pt/mtmfunded.\n` +
+    `Nunca digas que o trader arrisca dinheiro real na avaliação, nem prometas que passa.`
+  )
+}
+
+function buildSystem(PROOF: string, campanha: string): string { return `És o estratega de conteúdo da MoreThanMoney (comunidade portuguesa de educação financeira e trading, fundada pelo Ricardo Garcia).
 Escreves posts curtos para o Instagram @morethanmoney.pt que educam, criam confiança e puxam um comentário.
 
 FACTOS REAIS (usa só estes; NUNCA promic lucros — é educação, não aconselhamento):
@@ -70,6 +91,7 @@ que te será indicada. Ex.: «Comenta "SINAIS" que eu envio o acesso 👇». O c
 - SINAIS / COPY → quem quer copiar/sinais (encaminhado para o Telegram)
 - APP / QUERO / MUNDO → quem quer começar (trial grátis / app)
 - PREMIUM → quem quer o Premium
+- DESAFIO → quem quer o MTM Funded (avaliação em conta simulada)
 
 ESTILO: português de Portugal, humano, direto, gancho forte na 1.ª linha, 60–120 palavras, no máx. 1–2 emojis, 3–5 hashtags no fim.
 
@@ -82,7 +104,7 @@ CAPTION:
 <a legenda completa PRONTA A PUBLICAR, já com o CTA e as hashtags — pode ter várias linhas>
 ===END===
 
-Repete o bloco ${BATCH} vezes. Nada antes do primeiro ===POST=== nem depois do último ===END===.` }
+Repete o bloco ${BATCH} vezes. Nada antes do primeiro ===POST=== nem depois do último ===END===.${campanha}` }
 
 function todayLisbon(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon' }).format(new Date())
@@ -99,6 +121,7 @@ async function draftBatch(
   assigned: string[],
   proofText: string,
   recentHooks: string[],
+  campanha: string,
 ): Promise<Array<{ hook: string; caption: string; cta_keyword: string; visual_brief: string }>> {
   const key = process.env.ANTHROPIC_API_KEY?.trim()
   if (!key) throw new Error('ANTHROPIC_API_KEY em falta')
@@ -117,7 +140,7 @@ async function draftBatch(
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model, max_tokens: 1600, system: buildSystem(proofText), messages: [{ role: 'user', content: user }] }),
+      body: JSON.stringify({ model, max_tokens: 1600, system: buildSystem(proofText, campanha), messages: [{ role: 'user', content: user }] }),
       signal: ctrl.signal,
     })
     if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 200)}`)
@@ -183,7 +206,14 @@ export async function GET(req: NextRequest) {
       .map((r) => String((r as { caption?: string }).caption ?? '').split('\n')[0].trim())
       .filter((h) => h.length > 8)
       .slice(0, 20)
-    drafts = await draftBatch(assigned, proofText, recentHooks)
+    // A campanha viva entra no prompt. Falhando a leitura, o lote sai sem campanha em vez de
+    // não sair de todo: uma promoção em falta é melhor do que um dia sem conteúdo.
+    let campanha = ''
+    try {
+      const { promosAtivas } = await import('@/lib/mtmfunded/promos')
+      campanha = blocoCampanha(await promosAtivas())
+    } catch { /* opcional */ }
+    drafts = await draftBatch(assigned, proofText, recentHooks, campanha)
   } catch (e) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 })
   }

@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
   const { data: programa } = await db
     .from('mtm_funded_programs')
-    .select('id, slug, nome, saldo, preco_cents, moeda, stripe_price_id, ativo')
+    .select('id, slug, nome, saldo, preco_cents, moeda, stripe_price_id, ativo, regras')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -94,6 +94,52 @@ export async function POST(request: NextRequest) {
   const email = user.email ?? ''
   if (!email) return NextResponse.json({ error: 'A conta não tem email' }, { status: 400 })
 
+  /**
+   * PROGRAMAS DE CAMPANHA: um por pessoa.
+   *
+   * O 10K de duas fases a 10 € do lançamento só faz sentido uma vez por pessoa — senão a
+   * mesma pessoa compra dez e a campanha passa a ser a tabela de preços.
+   *
+   * Verifica-se pelo `user_id` E pelo email, porque criar uma conta nova com o mesmo email
+   * não é possível, mas criar uma conta nova com outro email e a mesma pessoa é. As duas
+   * chaves juntas apanham a repetição fácil; nenhuma protecção deste tipo apanha todas.
+   *
+   * Só contam as compras PAGAS. Um checkout abandonado não pode ficar a bloquear a pessoa
+   * para sempre — e a conta só é emitida quando o pagamento confirma.
+   */
+  const regras = (programa.regras ?? {}) as Record<string, unknown>
+  if (regras.um_por_pessoa === true) {
+    // Duas consultas em vez de um `.or()` com o email interpolado: uma vírgula dentro do
+    // endereço partiria o filtro do PostgREST e a protecção deixava de valer em silêncio.
+    const compras = db
+      .from('mtm_funded_purchases')
+      .select('id')
+      .eq('program_id', programa.id)
+      .in('estado', ['pago', 'oferta'])
+
+    const [porUser, porEmail] = await Promise.all([
+      compras.eq('user_id', user.id).limit(1).maybeSingle(),
+      db
+        .from('mtm_funded_purchases')
+        .select('id')
+        .eq('program_id', programa.id)
+        .in('estado', ['pago', 'oferta'])
+        .ilike('email', email)
+        .limit(1)
+        .maybeSingle(),
+    ])
+
+    if (porUser.data || porEmail.data) {
+      return NextResponse.json(
+        {
+          error:
+            'Esta campanha é válida uma vez por pessoa, e já a usaste. Os restantes desafios continuam disponíveis.',
+        },
+        { status: 409 },
+      )
+    }
+  }
+
   // A compra fica registada como PENDENTE antes de ir para o Stripe. Assim, se o webhook
   // chegar antes de qualquer outra coisa, encontra a linha à espera dele em vez de ter de a
   // inventar a partir de metadados.
@@ -105,7 +151,7 @@ export async function POST(request: NextRequest) {
       valor_cents: cents,
       moeda: programa.moeda ?? 'eur',
       estado: 'pendente',
-      email,
+      email: email.toLowerCase(),
     })
     .select('id')
     .single()

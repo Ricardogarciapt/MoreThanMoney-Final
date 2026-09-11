@@ -173,10 +173,35 @@ export async function POST(request: NextRequest) {
    * URL público seria a conta aberta a quem descobrisse o endereço. Aqui só sai por rotas
    * que verificam de quem é a conta.
    */
-  const qr =
-    typeof body?.qr === 'string' && body.qr.length > 100 && body.qr.length < 400_000
-      ? `data:image/png;base64,${body.qr.replace(/^data:image\/png;base64,/, '')}`
-      : null
+  /**
+   * O QR REDESENHA-SE aqui, a partir do conteúdo que o agente descodificou.
+   *
+   * O agente também manda a imagem — um recorte do ecrã do MetaTrader — mas esse recorte
+   * apanha metade do botão da App Store de um lado e um pedaço de texto do outro, porque o
+   * código está encostado a eles no diálogo. Redesenhar o mesmo payload dá um código limpo,
+   * nítido e quadrado, e é exactamente o mesmo conteúdo: a app lê-o igual.
+   *
+   * O recorte fica como recurso, para o caso de o zbar não ter conseguido descodificar.
+   */
+  let qr: string | null = null
+  const conteudoQr = typeof body?.qrConteudo === 'string' ? body.qrConteudo.trim() : ''
+  if (conteudoQr.length > 10 && conteudoQr.length < 2000) {
+    try {
+      const QRCode = (await import('qrcode')).default
+      const buf = await QRCode.toBuffer(conteudoQr, {
+        errorCorrectionLevel: 'M',
+        margin: 2,
+        width: 420,
+        color: { dark: '#0A0B0F', light: '#FFFFFF' },
+      })
+      qr = `data:image/png;base64,${buf.toString('base64')}`
+    } catch {
+      // Segue para o recorte.
+    }
+  }
+  if (!qr && typeof body?.qr === 'string' && body.qr.length > 100 && body.qr.length < 400_000) {
+    qr = `data:image/png;base64,${body.qr.replace(/^data:image\/png;base64,/, '')}`
+  }
 
   // ── conta desactivada ────────────────────────────────────────────────────
   if (body?.desactivada === true) {
