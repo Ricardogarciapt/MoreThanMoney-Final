@@ -24,6 +24,17 @@ export async function ligarContaMetaApi(dados: {
   servidor: string
   /** Nome visível na MetaApi. Ver `etiquetaDaConta`. */
   nome: string
+  /**
+   * PROVIDER da CopyFactory — só para as contas MESTRE das estratégias.
+   *
+   * As contas de cliente ligam-se SEM papéis, e isso é uma decisão de segurança explicada no
+   * topo deste ficheiro: uma conta de avaliação com papel de CopyFactory podia acabar a copiar
+   * sinais, que é precisamente o que as regras proíbem.
+   *
+   * As contas mestre são o contrário — existem para serem copiadas. Sem este papel, a
+   * CopyFactory recusa criar a estratégia e os subscritores não têm de onde copiar.
+   */
+  papelProvider?: boolean
 }): Promise<LigacaoMetaApi> {
   const token = process.env.METAAPI_TOKEN
   if (!token) return { ok: false, erro: 'METAAPI_TOKEN em falta' }
@@ -44,7 +55,13 @@ export async function ligarContaMetaApi(dados: {
     const existente = await findExistingAccount(login, servidor)
     if (existente) {
       const conta = await api.metatraderAccountApi.getAccount(existente.id)
-      await conta.update?.({ password: dados.password, server: servidor, name: dados.nome })
+      await conta.update?.({
+        password: dados.password,
+        server: servidor,
+        name: dados.nome,
+        // Uma conta reaproveitada de uma tentativa anterior pode ter sido criada sem o papel.
+        ...(dados.papelProvider ? { copyFactoryRoles: ['PROVIDER'] } : {}),
+      })
       await conta.deploy?.().catch(() => undefined)
       return { ok: true, accountId: existente.id }
     }
@@ -60,12 +77,14 @@ export async function ligarContaMetaApi(dados: {
       server: servidor,
       platform: 'mt5',
       magic: 0,
-      // `low` porque isto só lê: uma conta de leitura não precisa da fiabilidade (mais cara)
-      // que se paga para executar ordens.
-      reliability: 'regular',
+      // Uma conta de LEITURA não precisa da fiabilidade (mais cara) que se paga para executar
+      // ordens. Uma conta MESTRE precisa: é dela que saem as ordens de toda a gente, e uma
+      // desconexão dela é uma desconexão de todos os subscritores ao mesmo tempo.
+      reliability: dados.papelProvider ? 'high' : 'regular',
       region: regiao,
-      // Sem papéis de CopyFactory. De propósito — ver o comentário do topo.
-      copyFactoryRoles: [],
+      // Sem papéis de CopyFactory por omissão — ver o comentário do topo. A excepção são as
+      // contas MESTRE, que existem exactamente para ser copiadas.
+      copyFactoryRoles: dados.papelProvider ? ['PROVIDER'] : [],
     })
 
     const accountId = conta.id ?? (conta as { _id?: string })._id

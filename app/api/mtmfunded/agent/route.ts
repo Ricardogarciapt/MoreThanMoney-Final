@@ -305,7 +305,7 @@ export async function POST(request: NextRequest) {
   try {
     const { data: paraLigar } = await db
       .from('mtm_trading_accounts')
-      .select('id, tipo, user_id, servidor, metaapi_account_id')
+      .select('id, tipo, user_id, servidor, metaapi_account_id, provider_slug')
       .eq('id', pedido.account_id)
       .maybeSingle()
 
@@ -314,17 +314,45 @@ export async function POST(request: NextRequest) {
         ? await db.from('profiles').select('full_name').eq('id', paraLigar.user_id).maybeSingle()
         : { data: null }
       const { ligarContaMetaApi, etiquetaDoTipo } = await import('@/lib/mtmfunded/metaapi')
+      /**
+       * As contas MESTRE ligam-se com papel de PROVIDER; as de cliente, sem papel nenhum.
+       *
+       * É a mesma distinção de sempre, vista do outro lado: uma conta de avaliação nunca pode
+       * copiar nada, e uma conta mestre existe para ser copiada. Sem o papel, a CopyFactory
+       * recusa criar a estratégia e os subscritores ficam sem fonte.
+       */
+      const eMestre = paraLigar.tipo === 'provider'
       const ligacao = await ligarContaMetaApi({
         login,
         password,
         servidor: (paraLigar.servidor as string) || 'TheTradingMaster-Live',
-        nome: `${(dono?.full_name as string) || login} · ${etiquetaDoTipo(paraLigar.tipo as string)}`,
+        nome: eMestre
+          ? `MTM Auto · ${paraLigar.provider_slug ?? login}`
+          : `${(dono?.full_name as string) || login} · ${etiquetaDoTipo(paraLigar.tipo as string)}`,
+        papelProvider: eMestre,
       })
       if (ligacao.ok && ligacao.accountId) {
         await db
           .from('mtm_trading_accounts')
           .update({ metaapi_account_id: ligacao.accountId })
           .eq('id', pedido.account_id)
+
+        /**
+         * E a estratégia do MTM Auto passa a apontar para esta conta.
+         *
+         * Sem este passo a conta mestre existia sem ninguém saber dela: o provider continuava
+         * a apontar para a conta antiga (ou para nenhuma) e os subscritores continuavam a
+         * copiar o que copiavam antes — que, em três das estratégias, era uma conta a zeros.
+         */
+        if (eMestre && paraLigar.provider_slug) {
+          const { error } = await db
+            .from('mtmauto_providers')
+            .update({ metaapi_account_id: ligacao.accountId, updated_at: new Date().toISOString() })
+            .eq('slug', paraLigar.provider_slug as string)
+          if (error) {
+            console.warn('[MTMFUNDED] conta mestre ligada mas o provider não foi actualizado:', error.message)
+          }
+        }
       } else {
         console.warn('[MTMFUNDED] conta criada mas não ligou à MetaApi:', ligacao.erro)
       }
@@ -370,6 +398,24 @@ export async function POST(request: NextRequest) {
 
   if (emailAdiado) {
     return NextResponse.json({ ok: true, accountId: pedido.account_id, emailEnviado: false, emailAdiado: true })
+  }
+
+  /**
+   * As contas MESTRE não mandam email a ninguém.
+   *
+   * «A tua conta está pronta» não faz sentido numa conta que não é de ninguém — é
+   * infraestrutura das estratégias. As credenciais ficam no painel de admin, que é onde quem
+   * as precisa as vai buscar.
+   */
+  {
+    const { data: c } = await db
+      .from('mtm_trading_accounts')
+      .select('tipo')
+      .eq('id', pedido.account_id)
+      .maybeSingle()
+    if (c?.tipo === 'provider') {
+      return NextResponse.json({ ok: true, accountId: pedido.account_id, emailEnviado: false, conta: 'mestre' })
+    }
   }
 
   try {
