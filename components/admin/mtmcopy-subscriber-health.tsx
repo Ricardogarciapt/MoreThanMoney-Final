@@ -17,6 +17,8 @@ interface Linha {
   purpose: string | null; metodo: string | null; estrategia: string | null
   grupos: string[]; lote: string; risco: number; propFirm: string | null
   mt5: string | null; ativa: boolean; problemas: Problema[]
+  /** Lidos ao vivo na MetaApi. Só nesta rota, que é de admin. */
+  saldo: number | null; equity: number | null; moeda: string | null; mt5Login: string | null
 }
 interface Resposta { total: number; graves: number; avisos: number; saudaveis: number; linhas: Linha[] }
 
@@ -82,7 +84,28 @@ export default function MtmcopySubscriberHealth() {
                       : <CheckCircle2 className="w-3.5 h-3.5 inline mr-1.5 text-emerald-400" />}
                     {l.label}
                   </p>
-                  <p className="text-xs text-zinc-500 font-mono">{l.email ?? l.nome ?? "—"}</p>
+                  <p className="text-xs text-zinc-500 font-mono">
+                    {l.email ?? l.nome ?? "—"}
+                    {l.mt5Login && <span className="text-zinc-600"> · {l.mt5Login}</span>}
+                  </p>
+                  {/*
+                    O SALDO e a EQUITY ao lado do nome, e não numa coluna ao fundo: a pergunta
+                    «esta conta tem com que negociar?» faz-se a olhar para a linha, não a
+                    procurar. Equity abaixo do saldo é posição aberta em perda — mostra-se a
+                    vermelho porque é o que distingue uma conta a trabalhar de uma a afundar.
+                  */}
+                  {l.saldo != null && (
+                    <p className="mt-1 font-mono text-xs">
+                      <span className={l.saldo > 0 ? "text-zinc-300" : "text-red-400"}>
+                        {l.saldo.toLocaleString("pt-PT", { minimumFractionDigits: 2 })} {l.moeda ?? ""}
+                      </span>
+                      {l.equity != null && Math.abs(l.equity - l.saldo) >= 0.01 && (
+                        <span className={l.equity < l.saldo ? "text-red-400" : "text-emerald-400"}>
+                          {" "}· equity {l.equity.toLocaleString("pt-PT", { minimumFractionDigits: 2 })}
+                        </span>
+                      )}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-1.5 text-[10px]">
                   <Badge variant="outline" className="border-zinc-700 text-zinc-400">{l.purpose === "tap_to_trade" ? "T2T" : "MTM Copy"}</Badge>

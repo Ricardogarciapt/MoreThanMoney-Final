@@ -40,6 +40,8 @@ interface Ligacao {
   mt5_status: string | null
   is_active: boolean | null
   metrics_excluded: boolean | null
+  metaapi_account_id: string | null
+  mt5_login: string | null
 }
 
 export async function GET(request: NextRequest) {
@@ -52,7 +54,7 @@ export async function GET(request: NextRequest) {
     .select(
       'id, user_id, account_label, purpose, copy_method, copyfactory_strategy_pick, telegram_groups, telegram_group, ' +
       'lot_mode, lot_value, max_risk_percent, t2t_enabled, t2t_lot_mode, t2t_lot_value, prop_firm_type, ' +
-      'baseline_balance, mt5_status, is_active, metrics_excluded',
+      'baseline_balance, mt5_status, is_active, metrics_excluded, metaapi_account_id, mt5_login',
     )
     .returns<Ligacao[]>()
   // Nota: inclui também as PAUSADAS (is_active=false) — sem elas o admin não tinha
@@ -109,8 +111,55 @@ export async function GET(request: NextRequest) {
       mt5: c.mt5_status,
       ativa,
       problemas,
+      // Preenchidos a seguir, com a leitura ao vivo.
+      metaapiId: c.metaapi_account_id as string | null,
+      mt5Login: (c.mt5_login as string | null) ?? null,
+      saldo: null as number | null,
+      equity: null as number | null,
+      moeda: null as string | null,
     }
   })
+
+  /**
+   * OS SALDOS, lidos ao vivo — e só aqui, que é uma rota de admin.
+   *
+   * Um painel de saúde sem saldos obriga a abrir a MetaApi noutro separador para responder à
+   * pergunta mais frequente: «esta conta tem com que negociar?». Uma ligação saudável numa
+   * conta a zeros parece saudável e não é.
+   *
+   * Em PARALELO e com timeout curto: são até 30 leituras, e em série o painel demorava meio
+   * minuto a abrir. Uma conta que não responde fica sem saldo em vez de atrasar as outras — a
+   * MetaApi desliga contas ociosas, e isso é normal, não é avaria.
+   */
+  const token = process.env.METAAPI_TOKEN
+  if (token) {
+    const comConta = linhas.filter((l) => l.metaapiId)
+    await Promise.all(
+      comConta.map(async (l) => {
+        try {
+          const r = await fetch(
+            `https://mt-client-api-v1.london.agiliumtrade.ai/users/current/accounts/${l.metaapiId}/account-information`,
+            { headers: { 'auth-token': token }, cache: 'no-store', signal: AbortSignal.timeout(8_000) },
+          )
+          if (!r.ok) return
+          const d = (await r.json()) as { balance?: number; equity?: number; currency?: string }
+          l.saldo = typeof d.balance === 'number' ? Math.round(d.balance * 100) / 100 : null
+          l.equity = typeof d.equity === 'number' ? Math.round(d.equity * 100) / 100 : null
+          l.moeda = d.currency ?? null
+        } catch {
+          // fica sem saldo — ver o comentário acima
+        }
+      }),
+    )
+
+    // Uma conta activa e a zeros é um problema por direito próprio: está ligada, parece bem, e
+    // não vai abrir ordem nenhuma. Sem isto, só se descobre quando o cliente pergunta porquê.
+    for (const l of linhas) {
+      if (l.ativa && l.saldo != null && l.saldo <= 0) {
+        l.problemas.push({ gravidade: 'grave', texto: 'conta a zeros — não abre ordens' })
+      }
+    }
+  }
 
   // Os problemas graves primeiro — é o que precisa de mão. Pausadas no fim.
   linhas.sort((a, b) => {
