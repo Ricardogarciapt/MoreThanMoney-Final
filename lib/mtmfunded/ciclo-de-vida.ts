@@ -137,9 +137,23 @@ export async function quebrarConta(
       .update({ estado: 'quebrado', account_id: null, updated_at: new Date().toISOString() })
       .eq('account_id', conta.id)
 
-    // O pedido de apagar sobrevive à conta: se a linha desaparecesse com ela, o agente
-    // ficaria sem a tarefa e a conta continuaria viva no MetaTrader para sempre.
-    await db.from('mtm_account_requests').update({ account_id: null }).eq('account_id', conta.id).eq('tarefa', 'apagar')
+    /**
+     * O pedido de apagar sobrevive à conta — e isso é agora garantido pela BASE DE DADOS.
+     *
+     * Durante um tempo era este `update` que tentava desligá-lo, e falhava em silêncio: a
+     * coluna era NOT NULL. A seguir, o `ON DELETE CASCADE` arrastava a tarefa junto com a
+     * conta, e o resultado era o pior dos dois mundos — a conta desaparecia do site e ficava
+     * VIVA no MetaTrader, com a password original, sem registo nenhum de que existia.
+     *
+     * A chave estrangeira passou a `ON DELETE SET NULL`. O `update` fica na mesma, à frente:
+     * torna a intenção visível aqui, onde se lê, em vez de a deixar escondida num esquema que
+     * ninguém abre. O que o agente precisa é do `mt5_login`, e esse fica.
+     */
+    await db
+      .from('mtm_account_requests')
+      .update({ account_id: null })
+      .eq('account_id', conta.id)
+      .eq('tarefa', 'apagar')
     await db.from('mtm_account_requests').delete().eq('account_id', conta.id).neq('tarefa', 'apagar')
     await db.from('mtm_trading_accounts').delete().eq('id', conta.id)
   } else {
