@@ -25,6 +25,7 @@ import {
 } from '@/lib/mtmcopy/signal-sources-config'
 import { normalizeProviderRoutes, syncChannelProvidersFromRoutes } from '@/lib/mtmcopy/provider-routes'
 import { appChannelsForRoute } from '@/lib/mtmcopy/tap-to-trade-channels'
+import { ROTA_PARA_SLUGS_MTMAUTO } from '@/lib/mtmauto/espelho-interruptores'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -40,26 +41,6 @@ const EXTRA_CHANNEL_LABELS: Record<string, string> = {
   'sensei-scanner': 'Sensei Scanner',
 }
 
-/**
- * Rota ↔ provider MTM Auto (mtmauto_providers.slug) — espelho do pause na app MTM Auto.
- *
- * Cada estratégia com conta mestre própria precisa de estar aqui, senão o interruptor do admin
- * pausa a rota e deixa o provider ligado — a app MTM Auto continuava a mostrá-la activa e os
- * subscritores a copiá-la. O espelho é o que faz «pausar» significar o mesmo nos dois sítios.
- */
-const ROUTE_TO_MTMAUTO_SLUGS: Record<string, string[]> = {
-  'canonical-premium-signals': ['premium-ouro'],
-  'canonical-sensei': ['sensei'],
-  // ⚠️ O slug 'golden-moves' é o nome ANTIGO da Aurum Flow (herança), não uma estratégia própria.
-  'canonical-aurum-flow': ['golden-moves'],
-  'canonical-golden-astro': ['mtm-auto-golden-astro'],
-  // As que ganharam conta mestre e estratégia CopyFactory próprias (2026-09-11). O Gold Did
-  // saiu de baixo do Premium: partilhavam interruptor e pausar um parava os dois.
-  'canonical-goldkiller': ['Goldkiller'],
-  'canonical-gold-did': ['gold-did-premium'],
-  'canonical-mtm-scanner': ['mtm-scanner'],
-  'canonical-golden-moves': ['golden-moves-fonte'],
-}
 
 async function buildState() {
   const supabase = getSupabaseAdmin()
@@ -76,7 +57,7 @@ async function buildState() {
     const channels = appChannelsForRoute(r)
     // Igual ao tapToTradeEnabledChannels(): o T2T é governado só pelo seu interruptor.
     if (r.tap_to_trade === true) channels.forEach((c) => routeChannels.add(c))
-    const slugs = ROUTE_TO_MTMAUTO_SLUGS[r.id] ?? []
+    const slugs = ROTA_PARA_SLUGS_MTMAUTO[r.id] ?? []
     return {
       routeId: r.id,
       label: r.label ?? r.tag ?? r.id,
@@ -164,7 +145,7 @@ export async function POST(request: NextRequest) {
        * Uma pausa é um travão de segurança. O travão tem de agarrar primeiro e só depois
        * arrumar a casa, nunca ao contrário.
        */
-      const slugs = ROUTE_TO_MTMAUTO_SLUGS[routeId]
+      const slugs = ROTA_PARA_SLUGS_MTMAUTO[routeId]
       if (slugs?.length) {
         const { error } = await supabase.from('mtmauto_providers').update({ ativo: value }).in('slug', slugs)
         if (error) {

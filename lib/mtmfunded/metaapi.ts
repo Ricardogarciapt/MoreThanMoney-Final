@@ -46,7 +46,25 @@ export async function ligarContaMetaApi(dados: {
   }
 
   try {
-    const MetaApi = (await import('metaapi.cloud-sdk')).default
+    /**
+     * O build NODE do SDK, não o web.
+     *
+     * `metaapi.cloud-sdk` resolve para o bundle de browser, que assume `window` e rebenta com
+     * «window is not defined» assim que corre fora de um pedido do Next — num script, numa
+     * rotina de manutenção, em qualquer sítio sem DOM. O `esm-node` é o mesmo SDK compilado
+     * para Node; o `webpackIgnore` existe porque ele usa builtins que o webpack não resolve
+     * ao empacotar o cliente, e esta função só corre no servidor.
+     *
+     * Fica o fallback para o build web: em runtimes onde o `esm-node` não resolve (edge), o
+     * outro funciona — e o que não pode acontecer é não haver SDK nenhum.
+     */
+    let MetaApi: unknown
+    try {
+      const mod = (await import(/* webpackIgnore: true */ 'metaapi.cloud-sdk/esm-node')) as { default?: unknown }
+      MetaApi = mod.default ?? mod
+    } catch {
+      MetaApi = (await import('metaapi.cloud-sdk')).default
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const api = new (MetaApi as any)(token)
 

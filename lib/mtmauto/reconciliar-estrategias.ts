@@ -151,5 +151,88 @@ export async function reconciliarEstrategias(opts?: { reparar?: boolean }): Prom
     }
   }
 
+  // ── o espelho dos interruptores ───────────────────────────────────────────
+  /**
+   * A rota do admin manda na cópia; `ativo` manda no que a app MTM Auto mostra. São a mesma
+   * decisão em duas tabelas, e quando divergem ninguém dá por isso: o admin mostra a estratégia
+   * a correr, a app mostra-a parada, e cada um dos dois ecrãs parece coerente consigo próprio.
+   *
+   * Lê-se a configuração UMA vez, fora do ciclo dos providers: é um só registo para todas as
+   * rotas, e ir buscá-lo por estratégia era sete leituras da mesma linha.
+   */
+  try {
+    const { getSignalSourcesConfig } = await import('@/lib/mtmcopy/signal-sources-config')
+    const { normalizeProviderRoutes } = await import('@/lib/mtmcopy/provider-routes')
+    const { ROTA_PARA_SLUGS_MTMAUTO } = await import('./espelho-interruptores')
+
+    const rotas = normalizeProviderRoutes(await getSignalSourcesConfig())
+    const porSlug = new Map((providers ?? []).map((p) => [p.slug as string, p]))
+
+    for (const rota of rotas) {
+      const copiar = rota.enabled !== false
+      for (const slug of ROTA_PARA_SLUGS_MTMAUTO[rota.id] ?? []) {
+        const p = porSlug.get(slug)
+        // Um slug mapeado que não existe é um erro de mapa, não de dados: o interruptor do
+        // admin está a escrever num sítio que ninguém lê.
+        if (!p) {
+          divergencias.push({
+            slug, nome: slug, gravidade: 'grave',
+            problema: `a rota ${rota.id} espelha para «${slug}», que não existe — o interruptor do admin não chega à app`,
+          })
+          continue
+        }
+        if (Boolean(p.ativo) === copiar) continue
+
+        const d: Divergencia = {
+          slug, nome: (p.nome as string) ?? slug, gravidade: 'grave',
+          problema: copiar
+            ? 'o admin tem a cópia ligada mas a app MTM Auto tem a estratégia parada'
+            : 'o admin tem a cópia pausada mas a app MTM Auto continua a mostrá-la a correr',
+        }
+        if (opts?.reparar) {
+          // A ROTA é que manda. Escrever no sentido contrário — ligar a rota porque a app diz
+          // que está activa — era deixar a app religar sozinha o que o admin pausou.
+          const { error } = await db
+            .from('mtmauto_providers')
+            .update({ ativo: copiar, updated_at: new Date().toISOString() })
+            .eq('id', p.id)
+          d.reparado = !error
+          if (error) d.erro = error.message
+        }
+        divergencias.push(d)
+      }
+    }
+  } catch (e) {
+    divergencias.push({
+      slug: '—', nome: 'espelho dos interruptores', gravidade: 'aviso',
+      problema: 'não foi possível comparar os interruptores do admin com os da app MTM Auto',
+      erro: e instanceof Error ? e.message : String(e),
+    })
+  }
+
+  // ── contas mestre sem estratégia do outro lado ────────────────────────────
+  /**
+   * O ciclo de cima anda pelos providers e nunca vê uma conta mestre que ficou sem provider —
+   * e é essa que custa dinheiro em silêncio. Uma conta na MetaApi paga-se todos os meses e
+   * ocupa um lugar na CopyFactory; sem linha de provider, não aparece na app, ninguém a pode
+   * subscrever e ninguém repara que existe.
+   *
+   * Fica como AVISO e nunca se apaga: pode ser lixo de uma fonte que morreu ou pode ser uma
+   * conta à espera da estratégia que ainda não foi criada, e a diferença não se lê daqui.
+   */
+  const { data: mestres } = await db
+    .from('mtm_trading_accounts')
+    .select('mt5_login, provider_slug, estado')
+    .eq('tipo', 'provider')
+  const comProvider = new Set((providers ?? []).map((p) => p.slug as string))
+  for (const m of mestres ?? []) {
+    const slug = (m.provider_slug as string | null) ?? ''
+    if (!slug || comProvider.has(slug)) continue
+    divergencias.push({
+      slug, nome: `conta ${m.mt5_login ?? '—'}`, gravidade: 'aviso',
+      problema: `conta mestre «${slug}» sem estratégia do outro lado — paga-se e ninguém a pode subscrever`,
+    })
+  }
+
   return { verificadas: (providers ?? []).length, divergencias }
 }

@@ -45,7 +45,22 @@ export interface ProvisionResult {
 async function getApi() {
   const token = process.env.METAAPI_TOKEN
   if (!token) return null
-  const MetaApi = (await import('metaapi.cloud-sdk')).default
+  /**
+   * O build NODE do SDK, com o web como recurso.
+   *
+   * `metaapi.cloud-sdk` resolve para o bundle de browser, que assume `window` e rebenta com
+   * «window is not defined» fora de um pedido do Next — num script de manutenção, numa rotina
+   * de reconciliação. O `esm-node` é o mesmo SDK compilado para Node; o `webpackIgnore` existe
+   * porque ele usa builtins que o webpack não resolve ao empacotar o cliente, e isto só corre
+   * no servidor. O fallback fica para runtimes onde o `esm-node` não resolve.
+   */
+  let MetaApi: unknown
+  try {
+    const mod = (await import(/* webpackIgnore: true */ 'metaapi.cloud-sdk/esm-node')) as { default?: unknown }
+    MetaApi = mod.default ?? mod
+  } catch {
+    MetaApi = (await import('metaapi.cloud-sdk')).default
+  }
   return new (MetaApi as any)(token)
 }
 
