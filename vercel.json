@@ -168,6 +168,14 @@
     {
       "path": "/api/cron/mtmfunded-vespera",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/mtmfunded-convite",
+      "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/content-draft",
+      "schedule": "20 4 * * *"
     }
   ]
 }
