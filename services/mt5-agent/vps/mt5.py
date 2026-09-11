@@ -374,10 +374,12 @@ def esperar_texto(padrao: str, segundos: int = 30) -> bool:
 # O argumento `janela` fica na assinatura porque quem chama continua a saber com que janela
 # está a falar, e um dia pode voltar a ser preciso.
 
-def tecla(janela: str, *teclas: str, pausa: float = 0.25) -> None:
-    for t in teclas:
-        _correr(["xdotool", "key", "--clearmodifiers", t])
-        time.sleep(pausa)
+def tecla(janela: str, *teclas: str, pausa: float = 0.25, vezes: int = 1) -> None:
+    """`vezes` repete a sequência — para andar N linhas numa lista sem N chamadas."""
+    for _ in range(max(vezes, 1)):
+        for t in teclas:
+            _correr(["xdotool", "key", "--clearmodifiers", t])
+            time.sleep(pausa)
 
 
 def escrever(janela: str, texto: str, pausa: float = 0.4) -> None:

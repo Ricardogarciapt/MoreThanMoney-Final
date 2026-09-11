@@ -66,7 +66,7 @@ export async function quebrarConta(
 
   const { data: conta } = await db
     .from('mtm_trading_accounts')
-    .select('id, user_id, tipo, mt5_login, servidor, saldo_inicial, metaapi_account_id, metricas, tournament_id, program_id')
+    .select('id, user_id, tipo, mt5_login, servidor, saldo_inicial, metaapi_account_id, metricas, tournament_id, program_id, mt5_password_cifrada')
     .eq('id', accountId)
     .maybeSingle()
   if (!conta) return { ...out, erro: 'conta não encontrada' }
@@ -117,6 +117,11 @@ export async function quebrarConta(
       account_id: conta.id,
       tarefa: 'apagar',
       mt5_login: conta.mt5_login,
+      // A PASSWORD VIAJA COM A TAREFA. A linha da conta é apagada logo a seguir, e é nela que
+      // a password vivia — o agente ia buscá-la ao que já não existia. Sem ela não pode
+      // TROCAR a password, que é o que torna a conta inútil; apagá-la do terminal sem trocar
+      // deixa-a viva para quem tiver as credenciais antigas.
+      mt5_password_cifrada: conta.mt5_password_cifrada ?? null,
       primeiro_nome: 'Conta',
       sobrenome: 'Quebrada',
       email: (perfil?.email as string) ?? 'sem-email@morethanmoney.pt',

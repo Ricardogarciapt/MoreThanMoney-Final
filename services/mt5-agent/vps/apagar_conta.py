@@ -59,6 +59,28 @@ def apagar_do_terminal(login: str) -> bool:
     return _apagar_linha_da_conta(janela, login, base)
 
 
+def _ler_arvore(vezes: int = 3) -> dict[str, int]:
+    """A árvore lida várias vezes, unindo o que cada passagem viu.
+
+    Uma leitura não chega. O tesseract omite linhas inteiras de forma consistente: a 19015
+    faltou em TRÊS leituras seguidas e apareceu na quarta — três leituras concordantes e todas
+    erradas. Quem decidisse por uma passagem concluía que a conta já não existia.
+
+    Unir as passagens não torna o OCR fiável; torna-o menos cego. O que decide se uma conta é
+    apagada continua a ser o diálogo do MetaTrader, que não passa por aqui.
+    """
+    encontradas: dict[str, int] = {}
+    for _ in range(max(vezes, 1)):
+        for y, x, altura, texto in mt5.ler_ecra():
+            if x >= 0.25:
+                continue
+            m = re.search(r"\b(\d{5,})\b", texto)
+            if m and m.group(1) not in encontradas:
+                meia = max(int(altura * mt5.dimensoes_ecra()[1] / 2), 4)
+                encontradas[m.group(1)] = mt5.py(y) + meia
+    return encontradas
+
+
 def _linha_no_ecra(login: str) -> int | None:
     """Onde está ESTA conta na árvore, em pixels — lido do ecrã, não calculado.
 
@@ -69,73 +91,104 @@ def _linha_no_ecra(login: str) -> int | None:
 
     Aqui pergunta-se ao ecrã. Se o OCR não a lê, não se apaga nada: é a falha certa.
     """
-    for y, x, altura, texto in mt5.ler_ecra():
-        if x >= 0.25:
-            continue
-        if re.search(rf"\b{re.escape(str(login))}\b", texto):
-            return mt5.py(y) + max(int(altura * mt5.dimensoes_ecra()[1] / 2), 4)
-    return None
+    return _ler_arvore().get(str(login))
 
 
-def _conta_na_linha(y_pixel: int) -> str | None:
-    """Que conta está NA linha que acabou de ser clicada.
+def _conta_no_dialogo() -> str | None:
+    """Que conta é que o MetaTrader está a perguntar se pode apagar.
 
-    A verificação antiga procurava o login em TODO o painel — e o painel tem a lista inteira à
-    vista. Bastava a conta estar algures na árvore para a verificação passar, mesmo que o
-    clique-direito tivesse caído noutra linha. Ou seja: a guarda que existia para impedir
-    apagar a conta errada nunca chegou a olhar para a linha certa.
+    ESTA É A GUARDA QUE VALE, e as outras todas são aproximações dela.
 
-    Agora lê-se só a FAIXA do clique. Uma linha tem ~18px; meia altura para cada lado chega
-    para a apanhar inteira sem apanhar as vizinhas.
+    Tudo o que se faz antes — encontrar a linha por OCR, clicar, confirmar o texto na faixa
+    clicada — assenta em coordenadas lidas num instante e usadas noutro. E entre os dois a
+    JANELA MEXE-SE: apanhei o MetaTrader deslocado 30px, que são quase duas linhas da árvore.
+    Foi assim que um Delete apontado à 19015 foi parar à 19013.
+
+    O diálogo de confirmação não tem esse problema: é o próprio MetaTrader a dizer, por
+    extenso, o que está prestes a fazer — «Do you really want to delete account '19013'?».
+    Comparar com o que pedimos é a única verificação que não depende de nada ter ficado quieto.
     """
-    altura_ecra = mt5.dimensoes_ecra()[1]
-    for y, x, _h, texto in mt5.ler_ecra():
-        if x >= 0.25:
-            continue
-        if abs(mt5.py(y) - y_pixel) > 9:
-            continue
-        m = re.search(r"\b(\d{5,})\b", texto)
+    for _y, _x, _h, texto in mt5.ler_ecra():
+        m = re.search(r"delete account\s*['\"]?(\d{4,})", texto, re.IGNORECASE)
         if m:
             return m.group(1)
     return None
 
 
+def _contas_da_arvore() -> list[str]:
+    """Os números das contas, pela ordem em que estão na árvore.
+
+    Serve para saber QUANTAS linhas separam duas contas — não para clicar em nenhuma. A
+    posição em pixels é a parte que não se pode usar; a ordem relativa é estável.
+    """
+    arvore = _ler_arvore()
+    return [n for n, _y in sorted(arvore.items(), key=lambda kv: kv[1])]
+
+
 def _apagar_linha_da_conta(janela: str, login: str, base: int) -> bool:
-    y = _linha_no_ecra(login)
-    if y is None:
+    """Apaga a conta usando o DIÁLOGO DO METATRADER como bússola.
+
+    Porque não se clica simplesmente na linha certa: entre ler a posição e clicar, a janela do
+    MetaTrader mexe-se — apanhei-a deslocada 30px, que são quase duas linhas da árvore. Um
+    Delete apontado à 19015 foi parar à 19013. Numa operação que apaga contas, «quase certo» é
+    a mesma coisa que errado.
+
+    O diálogo de confirmação é a única coisa que não depende de nada ter ficado quieto: é o
+    próprio MetaTrader a dizer por extenso o que vai apagar. Então usa-se isso como sensor —
+    pergunta-se, lê-se o que ele escolheu, diz-se NÃO, e move-se a selecção com as SETAS, que
+    são relativas e por isso imunes ao desalinhamento. Repete-se até o diálogo dizer a conta
+    certa; só então se responde Yes.
+
+    O número de setas não é adivinhado: calcula-se pela distância entre as duas contas na
+    lista lida da árvore. Na prática acerta à primeira ou à segunda.
+    """
+    if _linha_no_ecra(login) is None:
         registar(f"não encontrei a conta {login} na árvore")
         return False
 
-    mt5._correr(["xdotool", "mousemove", "110", str(y), "click", "3"])
-    time.sleep(2)
+    # Dá foco à árvore. A coordenada não precisa de estar certa ao pixel — só de cair na
+    # lista; quem afina a selecção a partir daqui são as setas.
+    y = _linha_no_ecra(login)
+    if y is not None:
+        mt5.clicar(110, y)
+        time.sleep(1)
 
-    # A GUARDA: que conta está mesmo nesta linha? Uma coordenada errada aqui apaga a conta de
-    # outra pessoa, e essa não se recupera. O OCR confunde dígitos parecidos — 19019 já foi
-    # lido como 19013 — por isso exige-se igualdade EXACTA, e desiste-se em vez de arriscar.
-    na_linha = _conta_na_linha(y)
-    if na_linha != str(login):
-        registar(f"a linha clicada tem {na_linha or 'nada legível'}, não {login} — não apago")
-        mt5.tecla(janela, "Escape", pausa=0.8)
-        return False
+    for tentativa in range(12):
+        mt5.tecla(janela, "Delete", pausa=2)
+        perguntada = _conta_no_dialogo()
 
-    if not mt5.clicar_texto(r"^\s*(Delete|Apagar|Eliminar)\b"):
-        registar("não encontrei o Delete no menu")
-        mt5.tecla(janela, "Escape", pausa=0.8)
-        return False
+        if perguntada is None:
+            # Sem diálogo: ou a selecção não é uma conta, ou o Delete não pegou. Desce uma
+            # linha e tenta outra vez.
+            mt5.tecla(janela, "Down", pausa=0.6)
+            continue
 
-    time.sleep(2)
-    # O MetaTrader pergunta se é mesmo para apagar. Responde-se Yes/Sim.
-    if mt5.ve(r"delete|apagar|are you sure|tem a certeza"):
-        if not mt5.clicar_texto(r"^\s*(Yes|Sim|OK)\s*$"):
-            mt5.tecla(janela, "Return", pausa=1)
-    time.sleep(2)
+        if perguntada == str(login):
+            if not mt5.clicar_texto(r"^\s*(Yes|Sim|OK)\s*$"):
+                mt5.tecla(janela, "Return", pausa=1)
+            time.sleep(2)
+            if _linha_no_ecra(login) is None:
+                registar(f"conta {login} apagada do terminal")
+                return True
+            registar(f"a conta {login} continua na árvore depois do Delete")
+            return False
 
-    # A prova é a conta ter desaparecido da árvore.
-    if _linha_no_ecra(login) is None:
-        registar(f"conta {login} apagada do terminal")
-        return True
+        # Conta errada: NÃO, e anda-se o número de linhas que as separa.
+        if not mt5.clicar_texto(r"^\s*(No|Não|Cancel|Cancelar)\s*$"):
+            mt5.tecla(janela, "Escape", pausa=1)
+        time.sleep(1)
 
-    registar(f"a conta {login} continua na árvore depois do Delete")
+        lista = _contas_da_arvore()
+        try:
+            passos = lista.index(str(login)) - lista.index(perguntada)
+        except ValueError:
+            passos = 1  # não estão as duas legíveis: anda uma e volta a perguntar
+        if passos == 0:
+            passos = 1
+        registar(f"o diálogo dizia {perguntada}; ando {passos:+d} para chegar a {login}")
+        mt5.tecla(janela, "Down" if passos > 0 else "Up", pausa=0.5, vezes=abs(passos))
+
+    registar(f"desisti de apagar a conta {login} — o diálogo nunca a nomeou")
     return False
 
 
@@ -156,7 +209,21 @@ def desactivar(login: str, password_atual: str | None) -> dict:
             return {"ok": False, "motivo": r.get("motivo"), "passwordTrocada": False}
 
     apagada = apagar_do_terminal(str(login))
-    return {"ok": apagada, "passwordTrocada": trocada, "apagadaDoTerminal": apagada}
+
+    # A troca da password é o que torna a conta INÚTIL: ninguém entra nela outra vez, tenha as
+    # credenciais antigas onde as tiver. Remover a linha da árvore é higiene — impede que a
+    # lista do Navegador cresça sem fim, e é por ela que o agente se orienta.
+    #
+    # Fazer o sucesso depender das duas punha a tarefa a repetir-se para sempre por causa da
+    # parte cosmética, com a conta já desactivada há muito. Uma tarefa que nunca fecha acaba
+    # por ser ignorada, e aí perde-se também o sinal das que falham a sério.
+    if trocada and not apagada:
+        registar(f"conta {login}: password trocada (já não se entra nela); ficou na árvore")
+    return {
+        "ok": trocada or apagada,
+        "passwordTrocada": trocada,
+        "apagadaDoTerminal": apagada,
+    }
 
 
 if __name__ == "__main__":

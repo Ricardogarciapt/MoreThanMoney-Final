@@ -129,15 +129,26 @@ export async function GET(request: NextRequest) {
    * viva sem razão.
    */
   if (pedido.tarefa === 'apagar' && pedido.mt5_login) {
-    const { data: conta } = await db
-      .from('mtm_trading_accounts')
-      .select('mt5_password_cifrada')
-      .eq('mt5_login', pedido.mt5_login)
-      .maybeSingle()
-    if (conta?.mt5_password_cifrada) {
+    /**
+     * A password vem PRIMEIRO da própria tarefa.
+     *
+     * A conta é apagada da base no mesmo passo que cria esta tarefa — procurá-la pela linha da
+     * conta era procurá-la onde ela já não está. A cópia na tarefa é o que sobrevive; a
+     * consulta à conta fica como recurso para as tarefas antigas, criadas antes disto.
+     */
+    let cifrada = (pedido as { mt5_password_cifrada?: string | null }).mt5_password_cifrada ?? null
+    if (!cifrada) {
+      const { data: conta } = await db
+        .from('mtm_trading_accounts')
+        .select('mt5_password_cifrada')
+        .eq('mt5_login', pedido.mt5_login)
+        .maybeSingle()
+      cifrada = (conta?.mt5_password_cifrada as string | null) ?? null
+    }
+    if (cifrada) {
       try {
         const { decifrar } = await import('@/lib/mtmfunded/credenciais')
-        return NextResponse.json({ pedido: { ...pedido, password: decifrar(conta.mt5_password_cifrada as string) } })
+        return NextResponse.json({ pedido: { ...pedido, password: decifrar(cifrada) } })
       } catch {
         // Sem password legível, o agente diz que não conseguiu trocar e não apaga nada — que
         // é o comportamento certo: apagar do terminal com a password viva é o pior dos casos.
