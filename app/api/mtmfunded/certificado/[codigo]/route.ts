@@ -57,11 +57,42 @@ export async function GET(
 
   const { data: cert } = await getSupabaseAdmin()
     .from('mtm_certificates')
-    .select('codigo, tipo, nome, posicao, detalhe, tournament_id, emitido_em')
+    .select('codigo, tipo, nome, posicao, detalhe, tournament_id, emitido_em, user_id')
     .eq('codigo', limpo)
     .maybeSingle()
 
   if (!cert) return NextResponse.json({ error: 'Certificado não encontrado' }, { status: 404 })
+
+  /**
+   * O PDF é SÓ DO DONO (e do admin).
+   *
+   * A página de validação é pública, e tem de ser — um certificado que exige login para ser
+   * verificado não serve para mostrar a um recrutador. Mas o ficheiro é outra coisa: traz o
+   * nome completo e o documento inteiro, e isso não é para quem escreve um código na barra de
+   * endereço.
+   */
+  const { cookies } = await import('next/headers')
+  const { createServerClient } = await import('@supabase/ssr')
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } },
+  )
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let podeDescarregar = Boolean(user && cert.user_id === user.id)
+  if (!podeDescarregar && user) {
+    const { data: perfil } = await getSupabaseAdmin()
+      .from('profiles').select('user_type').eq('id', user.id).maybeSingle()
+    podeDescarregar = String(perfil?.user_type ?? '').toLowerCase() === 'admin'
+  }
+  if (!podeDescarregar) {
+    return NextResponse.json(
+      { error: 'Só o titular do certificado o pode descarregar' },
+      { status: 403 },
+    )
+  }
 
   const detalhe = (cert.detalhe ?? {}) as Record<string, unknown>
   let prova = 'MTM Funded'
@@ -69,6 +100,8 @@ export async function GET(
     const { data: t } = await getSupabaseAdmin()
       .from('mtm_tournaments').select('nome').eq('id', cert.tournament_id).maybeSingle()
     if (t?.nome) prova = t.nome as string
+  } else if (detalhe.valorUsd) {
+    prova = `Pagamento de ${Number(detalhe.valorUsd).toLocaleString('pt-PT', { minimumFractionDigits: 2 })} USD`
   } else if (detalhe.saldo) {
     prova = `Conta financiada de ${Number(detalhe.saldo).toLocaleString('pt-PT')} USD`
   }

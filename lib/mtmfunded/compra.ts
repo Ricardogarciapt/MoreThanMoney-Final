@@ -32,7 +32,7 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
       .select('id, estado, account_id')
       .eq('id', compraId)
       .maybeSingle()
-    if (compra?.estado === 'paga' || compra?.account_id) {
+    if (compra?.estado === 'pago' || compra?.account_id) {
       return
     }
   }
@@ -93,7 +93,7 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
     await db
       .from('mtm_funded_purchases')
       .update({
-        estado: 'paga',
+        estado: 'pago',
         account_id: conta.id,
         stripe_payment_intent: typeof session.payment_intent === 'string' ? session.payment_intent : null,
         pago_em: new Date().toISOString(),
@@ -119,6 +119,13 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
     alavancagem: 100,
     estado: 'em_fila',
   })
+
+  // O uso conta-se AGORA, e não na validação: contá-lo quando alguém escreve o código para
+  // «ver quanto fica» gastava um cupão de 10 usos sem ninguém comprar nada.
+  if (meta.cupao) {
+    const { registarUsoDoCupao } = await import('./cupao')
+    await registarUsoDoCupao(String(meta.cupao), userId).catch(() => undefined)
+  }
 
   console.log(`✅ [MTMFUNDED] ${programa.nome} pago por ${email} — conta ${conta.id} na fila`)
 }

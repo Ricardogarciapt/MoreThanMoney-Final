@@ -191,6 +191,21 @@ export async function GET(request: NextRequest) {
     })
   }
 
+  // ── pessoas (para escolher a quem se emite) ──────────────────────────────
+  if (vista === 'pessoas') {
+    const procura = (request.nextUrl.searchParams.get('q') ?? '').trim()
+    let q = db
+      .from('profiles')
+      .select('id, full_name, email, user_type')
+      .order('full_name', { ascending: true })
+      .limit(300)
+    // Com procura, filtra-se por nome OU email: quem emite lembra-se de um ou do outro, e
+    // obrigar a saber qual dos dois é que a caixa aceita é obrigar a adivinhar.
+    if (procura) q = q.or(`full_name.ilike.%${procura}%,email.ilike.%${procura}%`)
+    const { data } = await q
+    return NextResponse.json({ pessoas: data ?? [] })
+  }
+
   // ── resumo ───────────────────────────────────────────────────────────────
   const config = await getMtmFundedConfig()
   const { data: torneios } = await db
@@ -566,6 +581,102 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', id)
     return NextResponse.json({ ok: true })
+  }
+
+  // ── certificado avulso ───────────────────────────────────────────────────
+  /**
+   * Emitir UM certificado a UMA pessoa.
+   *
+   * Existe porque nem tudo o que merece certificado passa por um torneio: um desafio
+   * concluído, uma conta financiada atribuída à mão, um pagamento feito. O de pagamento leva
+   * o VALOR — um certificado de pagamento sem valor não certifica nada.
+   */
+  if (accao === 'certificado_emitir_um') {
+    const userId = String(b?.userId ?? '')
+    const tipo = String(b?.tipo ?? '')
+    const TIPOS = ['participacao', 'classificacao', 'desafio', 'financiado', 'payout']
+    if (!userId || !TIPOS.includes(tipo)) {
+      return NextResponse.json({ error: 'Escolhe a pessoa e o tipo' }, { status: 400 })
+    }
+
+    const { data: perfil } = await db
+      .from('profiles').select('id, full_name, email').eq('id', userId).maybeSingle()
+    if (!perfil) return NextResponse.json({ error: 'Pessoa não encontrada' }, { status: 404 })
+
+    const valor = tipo === 'payout' ? Number(b?.valorUsd) : null
+    if (tipo === 'payout' && !(Number.isFinite(valor) && (valor as number) > 0)) {
+      return NextResponse.json({ error: 'Indica o valor do pagamento' }, { status: 400 })
+    }
+
+    const nome = String(b?.nome ?? perfil.full_name ?? '').trim()
+    if (nome.length < 3) {
+      return NextResponse.json({ error: 'O certificado precisa de um nome' }, { status: 400 })
+    }
+
+    const { data: conta } = await db
+      .from('mtm_trading_accounts')
+      .select('id, saldo_inicial')
+      .eq('user_id', userId)
+      .order('saldo_inicial', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const prova =
+      tipo === 'payout'
+        ? `Pagamento de ${Number(valor).toLocaleString('pt-PT', { minimumFractionDigits: 2 })} USD`
+        : tipo === 'financiado'
+          ? `Conta financiada de ${Number(conta?.saldo_inicial ?? 0).toLocaleString('pt-PT')} USD`
+          : String(b?.prova ?? 'MTM Funded').slice(0, 120)
+
+    const { gerarCertificadoPdf, gerarCodigo } = await import('@/lib/mtmfunded/certificado')
+    const codigo = gerarCodigo(tipo as 'participacao')
+    const posicao = Number.isFinite(Number(b?.posicao)) ? Number(b.posicao) : null
+
+    let pdf: Buffer
+    try {
+      pdf = await gerarCertificadoPdf({
+        tipo: tipo as 'participacao',
+        nome,
+        prova,
+        posicao: tipo === 'classificacao' ? posicao : null,
+        codigo,
+      })
+    } catch (e) {
+      return NextResponse.json({ error: `Falhou a desenhar o PDF: ${String(e).slice(0, 120)}` }, { status: 500 })
+    }
+
+    // Grava-se ANTES de enviar: um certificado que existe e não foi enviado reenvia-se; um
+    // que foi enviado e não existe não se valida, e é o pior dos dois mundos.
+    const { error } = await db.from('mtm_certificates').insert({
+      user_id: userId,
+      account_id: conta?.id ?? null,
+      tipo,
+      codigo,
+      nome,
+      posicao: tipo === 'classificacao' ? posicao : null,
+      detalhe: {
+        ...(valor != null ? { valorUsd: valor } : {}),
+        ...(tipo === 'financiado' ? { saldo: conta?.saldo_inicial ?? null } : {}),
+        emitidoPor: 'admin',
+      },
+    })
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+    let emailEnviado = false
+    if (b?.enviarEmail !== false && perfil.email) {
+      const { enviarCertificado } = await import('@/lib/mtmfunded/emitir-certificados')
+      emailEnviado = await enviarCertificado({
+        para: perfil.email as string,
+        nome,
+        tipo: tipo as 'participacao',
+        prova,
+        posicao: tipo === 'classificacao' ? posicao : null,
+        codigo,
+        pdf,
+      }).then(() => true).catch(() => false)
+    }
+
+    return NextResponse.json({ ok: true, codigo, emailEnviado })
   }
 
   return NextResponse.json({ error: 'acção desconhecida' }, { status: 400 })

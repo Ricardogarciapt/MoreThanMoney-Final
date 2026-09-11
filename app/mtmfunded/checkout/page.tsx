@@ -58,7 +58,7 @@ export default async function CheckoutPage({
         </ul>
       </div>
 
-      <FormularioCheckout slug={programa.slug} />
+      <FormularioCheckout slug={programa.slug} precoCents={programa.preco_cents} />
     </main>
   )
 }

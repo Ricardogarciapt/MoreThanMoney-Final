@@ -73,6 +73,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'A data de nascimento não é válida' }, { status: 400 })
   }
 
+  /**
+   * O CUPÃO aplica-se aqui, no servidor, sobre o preço que veio da base de dados.
+   *
+   * O browser diz qual é o código; nunca quanto é que ele vale. Aceitar um valor já
+   * descontado era deixar comprar um desafio de 169 € por um cêntimo, e o Stripe cobraria
+   * exactamente o que lhe mandássemos, sem se queixar.
+   */
+  let cents = Number(programa.preco_cents)
+  let cupaoAplicado: string | null = null
+  const codigoCupao = String(body?.cupao ?? '').trim()
+  if (codigoCupao) {
+    const { validarCupao } = await import('@/lib/mtmfunded/cupao')
+    const r = await validarCupao(codigoCupao, cents)
+    if (!r.ok) return NextResponse.json({ error: r.erro }, { status: 400 })
+    cents = r.centsFinais ?? cents
+    cupaoAplicado = r.codigo ?? null
+  }
+
   const email = user.email ?? ''
   if (!email) return NextResponse.json({ error: 'A conta não tem email' }, { status: 400 })
 
@@ -84,7 +102,7 @@ export async function POST(request: NextRequest) {
     .insert({
       user_id: user.id,
       program_id: programa.id,
-      valor_cents: programa.preco_cents,
+      valor_cents: cents,
       moeda: programa.moeda ?? 'eur',
       estado: 'pendente',
       email,
@@ -96,16 +114,18 @@ export async function POST(request: NextRequest) {
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     customer_email: email,
-    line_items: programa.stripe_price_id
+    // Com cupão, o preço é sempre construído aqui: um `price` do Stripe tem valor fixo e
+    // ignoraria o desconto.
+    line_items: programa.stripe_price_id && !cupaoAplicado
       ? [{ price: programa.stripe_price_id, quantity: 1 }]
       : [
           {
             quantity: 1,
             price_data: {
               currency: programa.moeda ?? 'eur',
-              unit_amount: programa.preco_cents,
+              unit_amount: cents,
               product_data: {
-                name: `MTM Funded · ${programa.nome}`,
+                name: `MTM Funded · ${programa.nome}${cupaoAplicado ? ` (cupão ${cupaoAplicado})` : ''}`,
                 description: `Avaliação em conta simulada de ${Number(programa.saldo).toLocaleString('pt-PT')} USD`,
               },
             },
@@ -126,6 +146,7 @@ export async function POST(request: NextRequest) {
       indicativo: pais.indicativo,
       pais: pais.codigo,
       data_nascimento: nascimento,
+      ...(cupaoAplicado ? { cupao: cupaoAplicado } : {}),
     },
   })
 

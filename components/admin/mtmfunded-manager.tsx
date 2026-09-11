@@ -435,8 +435,10 @@ function Certificados({ torneios, accao, ocupado, setAviso }: { torneios: Tornei
         </div>
       </section>
 
+      <EmitirAvulso accao={accao} ocupado={ocupado} setAviso={setAviso} aoEmitir={puxar} />
+
       <section className="rounded-xl border border-gray-800 bg-black/30 p-5">
-        <h3 className="font-semibold text-gray-200">Emitir</h3>
+        <h3 className="font-semibold text-gray-200">Emitir por torneio</h3>
         <p className="mt-1 text-xs text-gray-500">
           Participação para todos os que negociaram — incluindo quem quebrou a conta. Classificação
           para o pódio. Correr duas vezes não emite em duplicado.
@@ -894,6 +896,172 @@ function LevantamentosAdmin({ accao, ocupado, setAviso }: {
         </div>
       ))}
     </div>
+  )
+}
+
+/**
+ * EMITIR UM CERTIFICADO A UMA PESSOA.
+ *
+ * Nem tudo o que merece certificado passa por um torneio: um desafio concluído, uma conta
+ * financiada atribuída à mão, um pagamento feito. A pessoa escolhe-se por nome OU email —
+ * quem emite lembra-se de um ou do outro, e obrigar a saber qual dos dois a caixa aceita é
+ * obrigar a adivinhar.
+ *
+ * O de PAGAMENTO pede o valor. Um certificado de pagamento sem valor não certifica nada.
+ */
+interface Pessoa { id: string; full_name: string | null; email: string | null; user_type: string | null }
+
+const TIPOS_CERT = [
+  ['financiado', 'Trader Financiado'],
+  ['desafio', 'Desafio concluído'],
+  ['classificacao', 'Classificação'],
+  ['participacao', 'Participação'],
+  ['payout', 'Pagamento'],
+] as const
+
+function EmitirAvulso({ accao, ocupado, setAviso, aoEmitir }: {
+  accao: Accao; ocupado: string | null; setAviso: (s: string | null) => void; aoEmitir: () => void
+}) {
+  const [pessoas, setPessoas] = useState<Pessoa[]>([])
+  const [procura, setProcura] = useState('')
+  const [userId, setUserId] = useState('')
+  const [tipo, setTipo] = useState<string>('financiado')
+  const [valor, setValor] = useState('')
+  const [posicao, setPosicao] = useState('')
+  const [prova, setProva] = useState('')
+  const [enviar, setEnviar] = useState(true)
+
+  useEffect(() => {
+    // Espera-se 300ms antes de procurar: sem isso, cada tecla era um pedido ao servidor.
+    const t = setTimeout(async () => {
+      const r = await fetch(
+        `/api/admin/mtmfunded?vista=pessoas${procura ? `&q=${encodeURIComponent(procura)}` : ''}`,
+        { cache: 'no-store' },
+      )
+      const j = await r.json()
+      setPessoas(j?.pessoas ?? [])
+    }, 300)
+    return () => clearTimeout(t)
+  }, [procura])
+
+  const emitir = async () => {
+    const p = pessoas.find((x) => x.id === userId)
+    const j = await accao(
+      {
+        accao: 'certificado_emitir_um',
+        userId,
+        tipo,
+        nome: p?.full_name ?? '',
+        valorUsd: tipo === 'payout' ? Number(valor) : undefined,
+        posicao: tipo === 'classificacao' ? Number(posicao) : undefined,
+        prova: prova || undefined,
+        enviarEmail: enviar,
+      },
+      'avulso',
+    )
+    if (j) {
+      setAviso(`Certificado ${j.codigo} emitido${j.emailEnviado ? ' e enviado por email' : ' (email não saiu)'}.`)
+      setValor(''); setPosicao(''); setProva('')
+      aoEmitir()
+    }
+  }
+
+  const valido =
+    userId &&
+    (tipo !== 'payout' || Number(valor) > 0) &&
+    (tipo !== 'classificacao' || Number(posicao) > 0)
+
+  return (
+    <section className="rounded-xl border border-[#D2A63C]/25 bg-black/40 p-5">
+      <h3 className="font-semibold text-gray-200">Emitir a uma pessoa</h3>
+      <p className="mt-1 text-xs text-gray-500">
+        Escolhe quem, escolhe o modelo, e segue por email com o PDF em anexo.
+      </p>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className="text-sm text-gray-300">Pessoa</label>
+          <p className="mb-1 text-xs text-gray-600">Procura por nome ou email.</p>
+          <input
+            value={procura}
+            onChange={(e) => setProcura(e.target.value)}
+            placeholder="Nome ou email"
+            className="mb-2 w-full rounded-lg border border-gray-700 bg-black/50 px-3 py-2 text-sm text-white"
+          />
+          <select
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            size={6}
+            className="w-full rounded-lg border border-gray-700 bg-black/50 px-3 py-2 text-sm text-gray-200"
+          >
+            <option value="">— escolher —</option>
+            {pessoas.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.full_name || '(sem nome)'} · {p.email}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-sm text-gray-300">Modelo</label>
+            <select
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-700 bg-black/50 px-3 py-2 text-sm text-gray-200"
+            >
+              {TIPOS_CERT.map(([v, n]) => <option key={v} value={v}>{n}</option>)}
+            </select>
+          </div>
+
+          {tipo === 'payout' && (
+            <div>
+              <label className="text-sm text-gray-300">Valor pago (USD)</label>
+              <input
+                type="number" step="0.01" value={valor}
+                onChange={(e) => setValor(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-gray-700 bg-black/50 px-3 py-2 text-sm text-white"
+              />
+            </div>
+          )}
+
+          {tipo === 'classificacao' && (
+            <div>
+              <label className="text-sm text-gray-300">Posição</label>
+              <input
+                type="number" min="1" value={posicao}
+                onChange={(e) => setPosicao(e.target.value)}
+                className="mt-1 w-32 rounded-lg border border-gray-700 bg-black/50 px-3 py-2 text-sm text-white"
+              />
+            </div>
+          )}
+
+          {!['payout', 'financiado'].includes(tipo) && (
+            <div>
+              <label className="text-sm text-gray-300">Prova</label>
+              <p className="mb-1 text-xs text-gray-600">O que aparece no certificado. Vazio = MTM Funded.</p>
+              <input
+                value={prova}
+                onChange={(e) => setProva(e.target.value)}
+                placeholder="Ex.: Desafio 10K · 1 fase"
+                className="w-full rounded-lg border border-gray-700 bg-black/50 px-3 py-2 text-sm text-white"
+              />
+            </div>
+          )}
+
+          <label className="flex items-center gap-2 text-xs text-gray-400">
+            <input type="checkbox" checked={enviar} onChange={(e) => setEnviar(e.target.checked)}
+              className="h-4 w-4 accent-[#D2A63C]" />
+            Enviar por email com o PDF
+          </label>
+
+          <Botao ocupado={ocupado === 'avulso'} onClick={() => valido && emitir()}>
+            Emitir certificado
+          </Botao>
+        </div>
+      </div>
+    </section>
   )
 }
 

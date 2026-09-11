@@ -888,6 +888,11 @@ export default function CouponsPage() {
                   <SelectItem value="both" className="text-white hover:bg-gray-700">
                     Ambos
                   </SelectItem>
+                  {/* Âmbito MTM Funded: um cupão de subscrição não pode desatar a dar
+                      metade de um desafio sem que alguém o tenha decidido. */}
+                  <SelectItem value="mtmfunded" className="text-white hover:bg-gray-700">
+                    MTM Funded (desafios)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

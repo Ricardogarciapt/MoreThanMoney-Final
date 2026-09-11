@@ -58,7 +58,10 @@ function ficheiro(nome: string): string | null {
 
 export async function gerarCertificadoPdf(input: CertificadoInput): Promise<Buffer> {
   const site = getSiteUrl()
-  const urlValidacao = `${site}/mtmfunded/certificado/${input.codigo}`
+  // `/mtmfunded/certificates` é a casa dos certificados: mostra este, deixa o dono
+  // descarregá-lo, e mostra os outros a quem chegar aqui por curiosidade. O endereço antigo
+  // (`/mtmfunded/certificado/…`) continua a funcionar — há certificados impressos com ele.
+  const urlValidacao = `${site}/mtmfunded/certificates/${input.codigo}`
   const data = input.data ?? new Date()
 
   const qr = await QRCode.toBuffer(urlValidacao, {
