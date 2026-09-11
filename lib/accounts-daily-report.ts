@@ -97,6 +97,36 @@ export async function buildDailyReport(): Promise<DailyReport> {
     })
   }
 
+  /**
+   * AS CONTAS DO MTM FUNDED entram aqui — e não pelo valor de face.
+   *
+   * Uma conta financiada de 10.000 USD vale 1.000 à MTM: a negociação é simulada e o que o
+   * Fundo lhe afecta é 10% do nominal, que é a regra publicada do produto. Somá-las pelo valor
+   * inteiro inflacionava a equidade em dez vezes, com um número que ninguém pode levantar.
+   *
+   * Os desafios e os torneios ficam de fora por completo — são provas em dinheiro virtual, e
+   * contá-las seria dizer que há capital afecto a uma avaliação que pode acabar amanhã.
+   */
+  const { contasFundedNaEquidade } = await import('@/lib/equidade-mtm')
+  const funded = await contasFundedNaEquidade().catch(() => [])
+  for (const f of funded) {
+    accounts.push({
+      label: f.etiqueta,
+      accountId: f.metaapiId ?? '',
+      balance: f.valorNominal,
+      // A equity que entra na soma é JÁ a contribuição — 10% do nominal. O valor de face fica
+      // em `balance`, para quem abrir a linha ver de onde veio.
+      equity: f.contribuicao,
+      pnlToday: 0,
+      pnlMonth: 0,
+      trades: null,
+      winRatePct: null,
+      profitFactor: null,
+      ok: true,
+      note: `${Math.round(f.factor * 100)}% de ${f.valorNominal.toLocaleString('pt-PT')} — capital real da MTM`,
+    })
+  }
+
   const live = accounts.filter((a) => a.ok)
   const totals = {
     equity: Number(live.reduce((a, x) => a + (x.equity ?? 0), 0).toFixed(2)),
