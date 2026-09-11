@@ -153,24 +153,42 @@ def py(yn: float) -> int:
     return int(yn * dimensoes_ecra()[1])
 
 
-def _ancora_navegador() -> tuple[float, float] | None:
-    """A âncora do painel: o título «Navigator», ou a raiz da árvore.
+def _ancora_navegador() -> tuple[float, float, str] | None:
+    """A âncora do painel, por TRÊS caminhos — porque nenhum serve sozinho.
 
-    Dois âncoras porque nenhum serve sozinho. O TÍTULO lê-se sempre bem, mas some quando
-    alguém desancora o painel. A RAIZ («MetaTrader 5», que o tesseract corta em «MetaTra»)
-    desaparece assim que a árvore rola — e ela rola, porque a lista de contas cresce.
+    1. O TÍTULO «Navigator». Lê-se bem em teoria; na prática o tesseract corta-o («ive») porque
+       é texto azul-escuro pequeno sobre a barra do painel.
+    2. A RAIZ da árvore («MetaTrader 5», que o tesseract corta em «MetaTra»). Desaparece quando
+       a árvore rola — e some do OCR quando está SELECCIONADA: o fundo azul da selecção come o
+       contraste e sobra um «Tr».
+    3. «Accounts». É o que efectivamente se lê quando os outros dois falham.
 
-    Devolve (y, x) normalizados, e qual deles é serve para saber onde fica «Accounts».
+    O terceiro estava deliberadamente de fora, com uma razão que era boa e ficou incompleta: a
+    árvore rola e «Accounts» sai por cima, e quem decidisse SÓ por ele concluía que o painel
+    estava fechado estando aberto — e carregava em Ctrl+N, que é um interruptor, fechando-o
+    mesmo. A correcção não é ignorá-lo, é pô-lo em ÚLTIMO: só se pergunta por «Accounts»
+    depois de os outros dois não terem respondido. Com o painel aberto e a árvore no topo —
+    que é o estado em que se trabalha — os três concordam; com a árvore rolada, os dois
+    primeiros bastam.
+
+    Sem isto a desactivação nunca chegava a correr: dizia «o Navegador não abriu» com ele
+    aberto e à vista, e repetia-se de minuto a minuto.
+
+    Devolve (y, x, qual) normalizados. O `qual` diz onde fica «Accounts» a partir daí.
     """
     raiz = None
+    contas = None
     for y, x, _h, texto in ler_ecra():
         if x >= 0.20 or y >= 0.32:
             continue
         if re.search(r"Navigator", texto, re.IGNORECASE):
-            return (y, x)
+            return (y, x, "titulo")
         if re.search(r"MetaTra", texto) and raiz is None:
-            raiz = (y, x)
-    return raiz
+            raiz = (y, x, "raiz")
+        # «Accounts» sai do tesseract com o ícone colado à frente («\ Q Accounts»).
+        if contas is None and re.search(r"Accounts?\b", texto, re.IGNORECASE):
+            contas = (y, x, "contas")
+    return raiz or contas
 
 
 def navegador_aberto() -> bool:
@@ -192,7 +210,11 @@ def linha_das_contas() -> tuple[int, int] | None:
     a = _ancora_navegador()
     if a is None:
         return None
-    y, x = a
+    y, x, qual = a
+    # Quando a âncora JÁ É a linha das contas, não se desce nada — descer 38px daí caía na
+    # primeira conta da lista, e o clique seguinte abria a conta errada.
+    if qual == "contas":
+        return (px(x + 0.06), py(y))
     return (px(x + 0.06), py(y) + 38)
 
 

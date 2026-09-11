@@ -92,7 +92,7 @@ export async function enviarEmailDaConta(
               // Uma conta financiada NÃO é uma avaliação: não há objectivo a cumprir nem fase
               // a passar. Anunciá-la como desafio dizia ao trader financiado que ainda tinha
               // uma prova pela frente — e a primeira coisa que ele ia fazer era procurá-la.
-              ? `A tua <strong>conta financiada</strong> está activa.`
+              ? `Assinaste o contrato, e com ele abriu-se a tua <strong>conta financiada</strong>.`
               : `O teu desafio <strong>${input.nomeProva}</strong> está activo.`
         }
         Aqui ficam os dados de acesso à conta MetaTrader 5.
@@ -108,6 +108,27 @@ export async function enviarEmailDaConta(
         <tr><td style="padding:8px 0;color:#666;border-top:1px solid #eee;">Alavancagem</td>
             <td style="padding:8px 0;text-align:right;font-weight:700;color:#111;border-top:1px solid #eee;">1:${input.alavancagem}</td></tr>
       </table>
+
+      ${
+        input.tipo === 'financiada'
+          ? `
+      <div style="margin:20px 0;padding:18px 20px;background:#f4f8f5;border:1px solid #cfe3d6;border-radius:12px;">
+        <p style="margin:0;font-size:16px;line-height:1.6;color:#1f3d2e;">
+          <strong>Esta conta já não é uma prova.</strong>
+        </p>
+        <p style="margin:10px 0 0;font-size:14px;line-height:1.65;color:#41604f;">
+          É a tua conta de trader financiado, aberta com a assinatura do contrato. Não há
+          objectivo a atingir nem fase a passar: o que fizeres aqui conta para os teus
+          pagamentos — <strong>75% dos resultados são teus</strong>.
+        </p>
+        <p style="margin:10px 0 0;font-size:13px;line-height:1.65;color:#6b8577;">
+          A negociação continua a ser <strong>simulada</strong>. O que é real é o capital que o
+          Fundo MTM afecta à conta: 10% do valor nominal. Os levantamentos são pagos como
+          depósito na tua conta da PU Prime, acima da almofada de 3% — pedes na tua área.
+        </p>
+      </div>`
+          : ''
+      }
 
       ${qrBuffer ? `
       <div style="text-align:center;margin:22px 0;">
@@ -138,7 +159,11 @@ export async function enviarEmailDaConta(
         </ul>
         <p style="margin:10px 0 0;font-size:12px;color:#888;line-height:1.5;">
           Tudo medido sobre equity — as posições abertas contam. Quebrar uma regra congela a
-          conta na posição em que estava; não há segunda conta.
+          conta na posição em que estava${
+            input.tipo === 'financiada'
+              ? ' e encerra a relação de trader financiado'
+              : '; não há segunda conta'
+          }.
         </p>
       </div>` : ''}
 

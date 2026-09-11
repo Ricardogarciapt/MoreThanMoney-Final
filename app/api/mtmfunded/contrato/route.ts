@@ -171,5 +171,26 @@ export async function POST(request: NextRequest) {
     console.error('[MTMFUNDED] contrato assinado mas o certificado falhou:', e)
   }
 
-  return NextResponse.json({ ok: true, versao: CONTRATO_VERSAO, certificado })
+  /**
+   * E A CONTA FINANCIADA sai agora — não antes.
+   *
+   * Passar o desafio dá direito a ser trader financiado; assinar é o que o torna um. Emitir a
+   * conta antes da assinatura era entregar capital real da MTM a alguém que ainda não se
+   * vinculou a regra nenhuma — e pedir a assinatura depois, com a conta já na mão, não é pedir
+   * nada.
+   *
+   * Best-effort e idempotente, pela mesma razão do certificado: a assinatura já vale, e um
+   * erro na fila não pode desfazê-la nem obrigar a assinar outra vez.
+   */
+  let contaFinanciada: string | null = null
+  try {
+    const { emitirContaFinanciada } = await import('@/lib/mtmfunded/ciclo-de-vida')
+    const r = await emitirContaFinanciada(user.id)
+    if (r.ok) contaFinanciada = r.accountId ?? null
+    else console.log('[MTMFUNDED] conta financiada não emitida:', r.motivo)
+  } catch (e) {
+    console.error('[MTMFUNDED] contrato assinado mas a conta financiada falhou:', e)
+  }
+
+  return NextResponse.json({ ok: true, versao: CONTRATO_VERSAO, certificado, contaFinanciada })
 }

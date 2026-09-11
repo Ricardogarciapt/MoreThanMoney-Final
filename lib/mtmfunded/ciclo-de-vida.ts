@@ -388,11 +388,33 @@ async function enviarEmailDeConclusao(input: {
         <p style="margin:0;font-size:15px;color:#333;line-height:1.6;">
           ${
             input.ultima
-              ? 'Segue em anexo o teu certificado. O passo seguinte é o contrato de trader financiado, na tua área — é o que abre os levantamentos.'
+              ? 'Segue em anexo o teu certificado.'
               : 'Segue em anexo o certificado desta fase. A conta da fase seguinte é emitida e recebes os dados por email.'
           }
         </p>
       </div>
+
+      ${
+        input.ultima
+          ? `
+      <div style="margin:22px 0;padding:18px 20px;background:#f4f8f5;border:1px solid #cfe3d6;border-radius:12px;">
+        <p style="margin:0;font-size:16px;line-height:1.6;color:#1f3d2e;">
+          <strong>Falta um passo: assinar o contrato.</strong>
+        </p>
+        <p style="margin:10px 0 0;font-size:14px;line-height:1.65;color:#41604f;">
+          Passar o desafio dá-te o direito; o contrato é o que te torna trader financiado. É ao
+          assiná-lo que a tua <strong>conta financiada</strong> é emitida — e é ele que abre os
+          levantamentos.
+        </p>
+        <p style="margin:10px 0 0;font-size:13px;line-height:1.6;color:#6b8577;">
+          Confirmas lá o teu nome completo e a data de nascimento; é preciso ter 18 anos ou mais.
+        </p>
+        <a href="${site}/mtmfunded/tradingtournament/dashboard?tab=contratos" style="display:inline-block;margin-top:14px;background:#2e7d5b;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:14px;">
+          Assinar o contrato
+        </a>
+      </div>`
+          : ''
+      }
 
       <p style="margin:0 0 18px;font-size:13px;color:#666;">
         Código do certificado: <strong style="font-family:monospace;">${input.codigo}</strong> ·
@@ -424,4 +446,99 @@ async function enviarEmailDeConclusao(input: {
     console.error('[MTMFUNDED] email de conclusão falhou:', e)
     return false
   }
+}
+
+// ── a conta financiada ───────────────────────────────────────────────────────
+
+export interface ResultadoFinanciada {
+  ok: boolean
+  accountId?: string
+  motivo?: string
+}
+
+/**
+ * A CONTA FINANCIADA, emitida quando o contrato é assinado — e só então.
+ *
+ * A ordem importa e é esta de propósito: passar o desafio dá direito a ser trader financiado,
+ * assinar o contrato é o que o torna um. Emitir a conta antes da assinatura era entregar uma
+ * conta de capital real da MTM a alguém que ainda não se vinculou a regra nenhuma sobre o que
+ * pode fazer com ela — e depois pedir a assinatura com a conta já na mão não é pedir nada.
+ *
+ * O TAMANHO vem do desafio que a pessoa passou. Não se pergunta: uma conta financiada maior do
+ * que aquilo que foi provado é risco que ninguém decidiu correr.
+ *
+ * É idempotente. Assinar duas vezes o mesmo contrato — recarregar a página, carregar duas
+ * vezes no botão — não pode dar duas contas financiadas à mesma pessoa.
+ */
+export async function emitirContaFinanciada(userId: string): Promise<ResultadoFinanciada> {
+  const db = getSupabaseAdmin()
+
+  const { data: jaTem } = await db
+    .from('mtm_trading_accounts')
+    .select('id')
+    .eq('user_id', userId)
+    .in('tipo', ['financiada', 'funded'])
+    .not('estado', 'in', '("quebrada","cancelada")')
+    .limit(1)
+    .maybeSingle()
+  if (jaTem) return { ok: false, motivo: 'já tem conta financiada' }
+
+  // O desafio que foi passado — `aprovada` é o estado que `concluirDesafio` deixa na última
+  // fase. Sem um desafio aprovado não há nada a financiar.
+  const { data: aprovado } = await db
+    .from('mtm_trading_accounts')
+    .select('id, saldo_inicial, program_id')
+    .eq('user_id', userId)
+    .eq('tipo', 'desafio')
+    .eq('estado', 'aprovada')
+    .order('saldo_inicial', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (!aprovado) return { ok: false, motivo: 'não há desafio concluído' }
+
+  const { data: perfil } = await db
+    .from('profiles')
+    .select('full_name, email, phone, birth_date, country')
+    .eq('id', userId)
+    .maybeSingle()
+  if (!perfil?.email) return { ok: false, motivo: 'perfil sem email' }
+
+  const saldo = Number(aprovado.saldo_inicial ?? 0)
+
+  const { data: conta, error } = await db
+    .from('mtm_trading_accounts')
+    .insert({
+      user_id: userId,
+      tipo: 'financiada',
+      program_id: aprovado.program_id,
+      servidor: 'TheTradingMaster-Live',
+      saldo_inicial: saldo,
+      alavancagem: 100,
+      estado: 'pedida',
+    })
+    .select('id')
+    .single()
+  if (error || !conta) return { ok: false, motivo: 'não foi possível criar a conta' }
+
+  const partes = String(perfil.full_name ?? '').trim().split(/\s+/).filter(Boolean)
+  const { apelidoComTipo } = await import('./metaapi')
+
+  await db.from('mtm_account_requests').insert({
+    account_id: conta.id,
+    tarefa: 'criar',
+    primeiro_nome: partes[0] || 'Trader',
+    sobrenome: apelidoComTipo(partes.length > 1 ? partes[partes.length - 1] : 'MTM', 'financiada'),
+    email: perfil.email as string,
+    telefone: String(perfil.phone ?? '').replace(/^\+\d{1,4}/, '').replace(/\D/g, '') || null,
+    indicativo: (String(perfil.phone ?? '').match(/^\+\d{1,4}/) ?? ['+351'])[0],
+    pais: (perfil.country as string) || 'PT',
+    data_nascimento: (perfil.birth_date as string) || null,
+    servidor: 'TheTradingMaster-Live',
+    tipo_conta: 'ECN',
+    deposito: saldo,
+    alavancagem: 100,
+    estado: 'em_fila',
+  })
+
+  return { ok: true, accountId: conta.id }
 }

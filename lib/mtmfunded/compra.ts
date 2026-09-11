@@ -105,7 +105,9 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
   await db.from('mtm_account_requests').insert({
     account_id: conta.id,
     primeiro_nome: primeiroNome,
-    sobrenome: apelidoComTipo(apelido, 'desafio'),
+    // A conta nasce sempre na PRIMEIRA fase. A segunda é outra conta, emitida quando esta
+    // passar — e é por isso que a etiqueta tem de dizer em qual se está.
+    sobrenome: apelidoComTipo(apelido, 'desafio', { fases: Number(programa.fases ?? 0), fase: 1 }),
     email,
     telefone: String(meta.telefone || '').replace(/\D/g, '') || null,
     indicativo: String(meta.indicativo || '+351'),

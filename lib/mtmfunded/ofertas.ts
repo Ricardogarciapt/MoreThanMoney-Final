@@ -152,7 +152,7 @@ export async function ofertarDesafioDaRenovacao(
   // ── o programa ────────────────────────────────────────────────────────────
   const { data: programa } = await db
     .from('mtm_funded_programs')
-    .select('id, slug, nome, saldo')
+    .select('id, slug, nome, saldo, fases')
     .in('slug', regra.programas)
     .limit(1)
     .maybeSingle()
@@ -192,7 +192,10 @@ export async function ofertarDesafioDaRenovacao(
   await db.from('mtm_account_requests').insert({
     account_id: conta.id,
     primeiro_nome: partes[0] || 'Trader',
-    sobrenome: apelidoComTipo(partes.length > 1 ? partes[partes.length - 1] : 'MTM', 'desafio'),
+    sobrenome: apelidoComTipo(partes.length > 1 ? partes[partes.length - 1] : 'MTM', 'desafio', {
+      fases: Number(programa.fases ?? 0),
+      fase: 1,
+    }),
     email: perfil.email as string,
     // O telefone vem com indicativo (+351912…); aqui separa-se outra vez, porque o formulário
     // da corretora tem os dois em campos diferentes.

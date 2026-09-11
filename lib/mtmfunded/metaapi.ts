@@ -88,19 +88,41 @@ export async function ligarContaMetaApi(dados: {
  */
 export type TipoConta = 'torneio' | 'desafio' | 'funded' | string
 
-export function etiquetaDoTipo(tipo: TipoConta): string {
+/**
+ * Quantas fases tem o programa, e em qual delas está esta conta.
+ *
+ * Um desafio de duas fases é DUAS contas ao longo do tempo — passa-se a primeira e emite-se
+ * outra para a segunda. Sem isto na etiqueta, as duas apareciam na corretora com o mesmo
+ * nome, e quem olhasse para a lista não sabia qual estava a valer.
+ */
+export interface FaseDoDesafio {
+  /** Fases do programa: 1 ou 2. */
+  fases?: number | null
+  /** Em que fase está esta conta. Por omissão, a primeira. */
+  fase?: number | null
+}
+
+export function etiquetaDoTipo(tipo: TipoConta, f?: FaseDoDesafio): string {
   if (tipo === 'torneio') return 'Torneio'
-  if (tipo === 'desafio') return 'Desafio'
   if (tipo === 'funded' || tipo === 'financiada') return 'Funded'
+  if (tipo === 'desafio') {
+    const fases = Number(f?.fases ?? 0)
+    // Uma fase: «Desafio 1 fase» — diz-se o formato, porque é o que o distingue do outro.
+    if (fases === 1) return 'Desafio 1 fase'
+    // Duas fases: diz-se em QUAL se está, que é a informação que muda ao longo do caminho.
+    if (fases >= 2) return `Desafio fase ${Number(f?.fase ?? 1) >= 2 ? 2 : 1}`
+    // Programa desconhecido: fica a etiqueta genérica, que ainda distingue o tipo de conta.
+    return 'Desafio'
+  }
   return 'MTM'
 }
 
-export function apelidoComTipo(apelido: string, tipo: TipoConta): string {
+export function apelidoComTipo(apelido: string, tipo: TipoConta, f?: FaseDoDesafio): string {
   const base = (apelido || '').trim()
-  const etiqueta = etiquetaDoTipo(tipo)
+  const etiqueta = etiquetaDoTipo(tipo, f)
   if (!base) return etiqueta
   // O campo da corretora aceita 30 caracteres; corta-se o apelido, nunca a etiqueta — é ela
-  // que distingue o tipo de conta, e é isso que não pode desaparecer.
+  // que distingue o tipo de conta e a fase, e é isso que não pode desaparecer.
   const espaco = 30 - etiqueta.length - 1
   return `${base.slice(0, Math.max(espaco, 1))} ${etiqueta}`
 }
