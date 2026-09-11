@@ -163,6 +163,8 @@ function Resumo({ dados, accao, ocupado }: { dados: Resumo; accao: Accao; ocupad
         </section>
       )}
 
+      <Emails />
+
       <section className="rounded-xl border border-gray-800 bg-black/30 p-5">
         <h3 className="mb-3 font-semibold text-gray-200">Torneios</h3>
         <div className="space-y-3">
@@ -223,6 +225,94 @@ function Resumo({ dados, accao, ocupado }: { dados: Resumo; accao: Accao; ocupad
         </div>
       </section>
     </div>
+  )
+}
+
+/**
+ * OS DOIS ENVIOS EM MASSA, com o ensaio à frente do disparo.
+ *
+ * O botão que está em primeiro é o «Ver quem recebe» — e não é ordem decorativa. Estes dois
+ * endpoints escrevem para centenas de caixas de correio ao mesmo tempo; uma lista errada não
+ * se desfaz, e o custo de a ver antes é um clique.
+ *
+ * O envio a sério pede confirmação e diz quantos são. As rotas guardam quem já recebeu, por
+ * isso repetir não manda duas vezes à mesma pessoa — mas a confirmação existe porque o
+ * momento de um envio também conta, e esse não se desfaz de maneira nenhuma.
+ */
+function Emails() {
+  const [ocupado, setOcupado] = useState<string | null>(null)
+  const [saida, setSaida] = useState<string | null>(null)
+
+  const correr = async (rota: string, confirmar: boolean, etiqueta: string) => {
+    setOcupado(etiqueta)
+    setSaida(null)
+    try {
+      const r = await fetch(rota, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(confirmar ? { confirmar: 'SIM-ENVIAR' } : {}),
+      })
+      const j = await r.json()
+      setSaida(
+        j?.error
+          ? `Erro: ${j.error}`
+          : j?.ensaio
+            ? `Ensaio: ${j.total} pessoas receberiam. Nada foi enviado.`
+            : `Enviados ${j.enviados} de ${j.total}${j.falhados ? ` · ${j.falhados} falharam` : ''}.`,
+      )
+    } catch (e) {
+      setSaida(`Erro: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setOcupado(null)
+    }
+  }
+
+  const bloco = (
+    titulo: string,
+    nota: string,
+    rota: string,
+    id: string,
+    pergunta: string,
+  ) => (
+    <div className="rounded-lg border border-gray-800 bg-black/40 p-4">
+      <p className="font-medium text-gray-100">{titulo}</p>
+      <p className="mt-1 text-xs leading-relaxed text-gray-500">{nota}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Botao ocupado={ocupado === `e${id}`} onClick={() => correr(rota, false, `e${id}`)}>
+          Ver quem recebe
+        </Botao>
+        <button
+          disabled={ocupado === `s${id}`}
+          onClick={() => confirm(pergunta) && correr(rota, true, `s${id}`)}
+          className="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs text-red-300 hover:border-red-500 disabled:opacity-40"
+        >
+          {ocupado === `s${id}` ? 'A enviar…' : 'Enviar a sério'}
+        </button>
+      </div>
+    </div>
+  )
+
+  return (
+    <section className="rounded-xl border border-gray-800 bg-black/30 p-5">
+      <h3 className="mb-3 font-semibold text-gray-200">Emails em massa</h3>
+      <div className="space-y-3">
+        {bloco(
+          'Convite para o torneio',
+          'Vai a toda a gente que ainda não está inscrita neste torneio. Só sai com as inscrições abertas — convidar para uma porta fechada ensina as pessoas a ignorar-nos.',
+          '/api/admin/mtmfunded/torneio-email',
+          'torneio',
+          'Enviar o convite do torneio a toda a lista? Não se desfaz.',
+        )}
+        {bloco(
+          'Anúncio: renovar dá um desafio',
+          'Explica a política a quem tem um plano com direito a desafio, inactivos incluídos — para eles o email é o convite a reactivar.',
+          '/api/admin/mtmfunded/anuncio',
+          'anuncio',
+          'Enviar o anúncio da política a toda a lista? Não se desfaz.',
+        )}
+      </div>
+      {saida && <p className="mt-3 text-sm text-gray-300">{saida}</p>}
+    </section>
   )
 }
 
