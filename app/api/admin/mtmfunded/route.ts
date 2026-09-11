@@ -639,6 +639,7 @@ export async function POST(request: NextRequest) {
         nome,
         prova,
         posicao: tipo === 'classificacao' ? posicao : null,
+        valorUsd: valor,
         codigo,
       })
     } catch (e) {

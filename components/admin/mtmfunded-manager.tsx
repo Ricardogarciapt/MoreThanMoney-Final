@@ -614,8 +614,15 @@ function Programas({ accao, ocupado, setAviso, vendasAbertas }: {
                   <code className="text-gray-600">{p.slug}</code>
                 </p>
               </div>
-              <div className="flex gap-2">
-                <IconeBotao titulo="Editar" onClick={() => setEditar(p)}><Shield className="h-3.5 w-3.5" /></IconeBotao>
+              <div className="flex items-center gap-2">
+                {/* Um botão com palavra, e não um escudo: um ícone de escudo num cartão de
+                    programa lê-se como «segurança», não como «editar». */}
+                <button
+                  onClick={() => setEditar(p)}
+                  className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-200 hover:border-[#D2A63C]/60 hover:text-white"
+                >
+                  Editar
+                </button>
                 <IconeBotao
                   titulo={p.ativo ? 'Esconder do site' : 'Mostrar no site'}
                   ocupado={ocupado === `e${p.slug}`}
@@ -630,7 +637,14 @@ function Programas({ accao, ocupado, setAviso, vendasAbertas }: {
         ))}
       </div>
 
-      {editar && <EditorPrograma programa={editar} ocupado={ocupado} onGuardar={guardar} onCancelar={() => setEditar(null)} />}
+      {editar && (
+        <div className="scroll-mt-6" id="editor-programa">
+          <p className="mb-2 text-sm font-semibold text-[#D2A63C]">
+            {editar.slug ? `A editar · ${editar.nome}` : 'Programa novo'}
+          </p>
+          <EditorPrograma programa={editar} ocupado={ocupado} onGuardar={guardar} onCancelar={() => setEditar(null)} />
+        </div>
+      )}
 
       {compras.length > 0 && (
         <section>

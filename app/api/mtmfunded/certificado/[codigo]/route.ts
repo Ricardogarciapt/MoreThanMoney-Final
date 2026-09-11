@@ -113,6 +113,7 @@ export async function GET(
     posicao: cert.posicao as number | null,
     resultadoPct: typeof detalhe.resultadoPct === 'number' ? detalhe.resultadoPct : null,
     codigo: cert.codigo as string,
+    valorUsd: typeof detalhe.valorUsd === 'number' ? detalhe.valorUsd : null,
     data: new Date(cert.emitido_em as string),
   })
 

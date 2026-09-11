@@ -56,6 +56,8 @@ CAMPOS = {
     "termos": (502, 607),
 }
 BOTAO_SEGUINTE = (919, 698)
+# O «Cancel» do assistente, ao lado do Finish. Último recurso para não deixar um modal aberto.
+BOTAO_CANCELAR_FINAL = (1013, 698)
 # O QR do diálogo final: é o do MetaTrader, o mesmo que a app lê em «Sign In with QR code».
 # A região é generosa de propósito — recorta-se em excesso e apara-se ao branco a seguir,
 # porque o diálogo desloca-se alguns pixels conforme o tamanho do nome da corretora.
@@ -448,20 +450,38 @@ def criar(pedido: dict) -> dict:
 
 
 def fechar_credenciais() -> None:
-    """Fecha o diálogo final.
+    """Fecha o diálogo final — mas só depois de o botão estar VIVO.
 
-    Pelo BOTÃO, e não pelo texto. O «Finish» está na mesma posição do «Seguinte» de todos os
-    passos anteriores, mas o OCR agrupa a linha inteira dos botões — «< Back Finish Cancel» —
-    e uma expressão ancorada no início e no fim nunca lá casa. O diálogo ficava aberto, e
-    aberto ele é modal: a conta seguinte não conseguia sequer chegar ao menu.
+    Logo a seguir a criar a conta, o diálogo mostra «Wait a little, please» com uma barra de
+    progresso, e o «Finish» fica cinzento enquanto a corretora acaba o registo. Três cliques
+    em seis segundos batiam todos num botão morto, e o diálogo ficava aberto — modal, a
+    bloquear tudo o que viesse a seguir. Foi assim que três pedidos seguidos falharam com
+    «não consegui abrir o diálogo de criação de conta», com um diálogo à frente que ninguém
+    tinha fechado.
+
+    Espera-se pela tinta do botão (preto = vivo, cinzento = morto), até 60 segundos. O
+    «Finish» está na mesma posição do «Seguinte» de todos os passos anteriores.
     """
-    for _ in range(3):
+    limite = time.time() + 60
+    while time.time() < limite:
         if not mt5.ve(r"read only password"):
             return
-        mt5.clicar(*BOTAO_SEGUINTE)   # é onde o «Finish» está
-        time.sleep(2)
+        if seguinte_ativo():
+            mt5.clicar(*BOTAO_SEGUINTE)
+            time.sleep(3)
+            if not mt5.ve(r"read only password"):
+                return
+        else:
+            registar("o diálogo ainda está a registar a conta — a esperar")
+            time.sleep(5)
+
+    # Último recurso: o Cancel fecha o assistente e a conta JÁ existe do lado da corretora.
+    # Deixar o diálogo aberto é pior: ele é modal e trava todos os pedidos seguintes.
+    registar("o Finish não ficou activo — fecho pelo Cancel")
+    mt5.clicar(*BOTAO_CANCELAR_FINAL)
+    time.sleep(3)
     if mt5.ve(r"read only password"):
-        registar("o diálogo das credenciais não fechou")
+        registar("o diálogo das credenciais NÃO fechou")
 
 
 def trocar_password(login: str, candidatos: list) -> dict:

@@ -37,6 +37,8 @@ export interface CertificadoInput {
   resultadoPct?: number | null
   codigo: string
   data?: Date
+  /** Valor pago, nos certificados de pagamento. É o número que o documento certifica. */
+  valorUsd?: number | null
 }
 
 const TITULOS: Record<TipoCertificado, string> = {
@@ -114,15 +116,40 @@ export async function gerarCertificadoPdf(input: CertificadoInput): Promise<Buff
   doc.fillColor(OURO).font('Helvetica-Bold').fontSize(38)
     .text(input.nome, 60, 288, { width: W - 120, align: 'center', lineBreak: false })
 
-  const linha = input.posicao
-    ? `alcançou o ${ordinal(input.posicao)} no ${input.prova}`
-    : input.tipo === 'participacao'
-      ? `participou no ${input.prova}`
-      : `concluiu ${input.prova}`
+  /**
+   * A frase muda com o TIPO, e não é um detalhe de estilo.
+   *
+   * O modelo genérico dizia «concluiu Pagamento de 1.234 USD» num certificado de pagamento —
+   * uma frase que não quer dizer nada e que estraga o documento onde ele mais tem de ser
+   * preciso, que é justamente onde certifica dinheiro.
+   */
+  const linha =
+    input.tipo === 'payout'
+      ? 'recebeu, da More Than Money, o pagamento de'
+      : input.posicao
+        ? `alcançou o ${ordinal(input.posicao)} no ${input.prova}`
+        : input.tipo === 'participacao'
+          ? `participou no ${input.prova}`
+          : input.tipo === 'financiado'
+            ? `é Trader Financiado da More Than Money — ${input.prova}`
+            : `concluiu ${input.prova}`
+
   doc.fillColor(TEXTO).font('Helvetica').fontSize(14)
     .text(linha, 80, 348, { width: W - 160, align: 'center' })
 
-  if (input.resultadoPct != null && Number.isFinite(input.resultadoPct)) {
+  if (input.tipo === 'payout' && input.valorUsd != null && Number.isFinite(input.valorUsd)) {
+    // O VALOR é o que este documento certifica: vai grande, a seguir à frase.
+    doc.fillColor(OURO).font('Helvetica-Bold').fontSize(34)
+      .text(
+        `${Number(input.valorUsd).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`,
+        0, 374, { width: W, align: 'center' },
+      )
+    doc.fillColor('#8A8578').font('Helvetica').fontSize(11)
+      .text(
+        'referente ao seu desempenho em conta financiada MTM Funded',
+        80, 416, { width: W - 160, align: 'center' },
+      )
+  } else if (input.resultadoPct != null && Number.isFinite(input.resultadoPct)) {
     const sinal = input.resultadoPct > 0 ? '+' : ''
     doc.fillColor(OURO_ESCURO).font('Helvetica-Bold').fontSize(16)
       .text(`Resultado: ${sinal}${input.resultadoPct.toFixed(2)}%`, 0, 378, { width: W, align: 'center' })
@@ -131,7 +158,7 @@ export async function gerarCertificadoPdf(input: CertificadoInput): Promise<Buff
   doc.fillColor('#8A8578').font('Helvetica').fontSize(10)
     .text(
       data.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' }),
-      0, 432, { width: W, align: 'center' },
+      0, input.tipo === 'payout' ? 444 : 432, { width: W, align: 'center' },
     )
 
   // Código + QR: é isto que separa um certificado de uma imagem bonita.
