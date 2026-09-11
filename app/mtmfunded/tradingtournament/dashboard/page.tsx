@@ -102,6 +102,7 @@ export default async function DashboardTorneioPage() {
         pais: (perfil?.country as string) ?? null,
       }}
       papel={papel}
+      ehAdmin={papel === 'admin'}
       scannersPermitidos={papel === 'torneio' ? [...SCANNERS_TORNEIO] : null}
       torneio={
         torneio

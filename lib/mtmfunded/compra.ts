@@ -101,10 +101,11 @@ export async function emitirContaDoProgramaPago(session: Stripe.Checkout.Session
       .eq('id', compraId)
   }
 
+  const { apelidoComTipo } = await import('@/lib/mtmfunded/metaapi')
   await db.from('mtm_account_requests').insert({
     account_id: conta.id,
     primeiro_nome: primeiroNome,
-    sobrenome: apelido,
+    sobrenome: apelidoComTipo(apelido, 'desafio'),
     email,
     telefone: String(meta.telefone || '').replace(/\D/g, '') || null,
     indicativo: String(meta.indicativo || '+351'),

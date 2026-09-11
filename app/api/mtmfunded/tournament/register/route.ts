@@ -159,10 +159,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Não foi possível inscrever' }, { status: 500 })
   }
 
+  const { apelidoComTipo } = await import('@/lib/mtmfunded/metaapi')
   await db.from('mtm_account_requests').insert({
     account_id: conta.id,
     primeiro_nome: primeiroNome,
-    sobrenome: apelido,
+    // O apelido leva o TIPO: «Garcia Torneio». A corretora não tem campo para o tipo de
+    // conta, e sem ele ninguém distingue um participante de torneio de um trader financiado
+    // numa lista — e as regras, os contratos e os pagamentos são diferentes.
+    sobrenome: apelidoComTipo(apelido, 'torneio'),
     email,
     telefone,
     indicativo: pais.indicativo,

@@ -222,6 +222,48 @@ export async function POST(request: NextRequest) {
    * contrário — falhar o pedido porque o email não saiu — perdia-se a conta que o operador
    * acabou de criar à mão no MetaTrader, e essa não se recupera.
    */
+  /**
+   * A CONTA LIGA-SE À METAAPI assim que nasce.
+   *
+   * Sem isto, o site tem um login e uma password e não sabe mais nada sobre a conta: nem
+   * equity, nem drawdown, nem se alguém quebrou uma regra. As regras publicadas só valem
+   * alguma coisa se houver quem as meça de hora a hora — e é este passo que abre essa porta.
+   *
+   * É BEST-EFFORT e vem depois de gravar. A MetaApi falhar não pode custar a conta que o
+   * agente acabou de criar; fica sem `metaapi_account_id`, aparece no painel de admin como
+   * por ligar, e repete-se com um clique.
+   */
+  try {
+    const { data: paraLigar } = await db
+      .from('mtm_trading_accounts')
+      .select('id, tipo, user_id, servidor, metaapi_account_id')
+      .eq('id', pedido.account_id)
+      .maybeSingle()
+
+    if (paraLigar && !paraLigar.metaapi_account_id) {
+      const { data: dono } = paraLigar.user_id
+        ? await db.from('profiles').select('full_name').eq('id', paraLigar.user_id).maybeSingle()
+        : { data: null }
+      const { ligarContaMetaApi, etiquetaDoTipo } = await import('@/lib/mtmfunded/metaapi')
+      const ligacao = await ligarContaMetaApi({
+        login,
+        password,
+        servidor: (paraLigar.servidor as string) || 'TheTradingMaster-Live',
+        nome: `${(dono?.full_name as string) || login} · ${etiquetaDoTipo(paraLigar.tipo as string)}`,
+      })
+      if (ligacao.ok && ligacao.accountId) {
+        await db
+          .from('mtm_trading_accounts')
+          .update({ metaapi_account_id: ligacao.accountId })
+          .eq('id', pedido.account_id)
+      } else {
+        console.warn('[MTMFUNDED] conta criada mas não ligou à MetaApi:', ligacao.erro)
+      }
+    }
+  } catch (e) {
+    console.error('[MTMFUNDED] erro a ligar à MetaApi:', e)
+  }
+
   let emailEnviado = false
   try {
     const { data: conta } = await db
@@ -253,7 +295,10 @@ export async function POST(request: NextRequest) {
           servidor: (conta.servidor as string) || 'TheTradingMaster-Live',
           saldo: Number(conta.saldo_inicial ?? 0),
           alavancagem: Number(conta.alavancagem ?? 100),
-          urlPainel: `${getSiteUrl()}/mtmfunded/tradingtournament/dashboard`,
+          // O link abre o painel JÁ nas credenciais desta conta. Mandá-lo para a raiz do
+          // painel obrigava a pessoa a procurar onde estava a password que o email lhe
+          // prometeu — e a maior parte não procura, escreve a perguntar.
+          urlPainel: `${getSiteUrl()}/mtmfunded/tradingtournament/dashboard?conta=${pedido.account_id}&credenciais=1`,
           qrMetaTrader: (conta.qrcode_url as string) ?? null,
           regras: (torneio?.regras ?? null) as Record<string, number | string> | null,
         })

@@ -247,16 +247,6 @@ export default async function FaqFunded() {
       ),
     },
     {
-      p: 'Porque é que o desafio mais pequeno é de 3.000 USD?',
-      resposta: (
-        <>
-          Porque a corretora não emite contas de demonstração abaixo desse valor. Vender um
-          desafio de 500 USD seria vender uma conta que nunca chegaria a ser criada. A escada
-          começa nos 3K e vai até aos 10K, com 25K a caminho.
-        </>
-      ),
-    },
-    {
       p: 'Isto é aconselhamento financeiro?',
       resposta: (
         <>

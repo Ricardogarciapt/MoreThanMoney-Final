@@ -1,12 +1,27 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   LayoutDashboard, Wallet, FileText, Trophy, ListOrdered,
-  LineChart, Award, MessageSquare, Bot, ShieldAlert, Banknote,
+  LineChart, Award, MessageSquare, Bot, ShieldAlert, Banknote, Settings,
 } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import { Contratos, Levantamentos } from '@/components/mtmfunded/contratos-e-levantamentos'
+
+/**
+ * O painel de admin aqui é o MESMO componente do /admin, e não uma cópia.
+ *
+ * É o que garante que nunca dessincroniza: qualquer botão que se acrescente no /admin aparece
+ * aqui no mesmo instante, porque é literalmente o mesmo ficheiro a falar com a mesma rota.
+ * Duas implementações do mesmo painel divergem sempre — e quando divergem, uma delas mostra
+ * dados errados sobre contas e pagamentos reais.
+ *
+ * Carregado à parte: é pesado, e quase ninguém que abre este painel é admin.
+ */
+const MtmFundedManager = dynamic(() => import('@/components/admin/mtmfunded-manager'), {
+  loading: () => <p className="p-6 text-sm text-zinc-500">A abrir o painel de admin…</p>,
+})
 import {
   CamposConta, DADOS_CONTA_VAZIOS, dadosContaCompletos, type DadosConta,
 } from '@/components/mtmfunded/campos-conta'
@@ -49,10 +64,12 @@ const SECCOES = [
   { id: 'certificados', nome: 'Certificados', icone: Award },
 ] as const
 
-type SeccaoId = (typeof SECCOES)[number]['id'] | 'comunidade' | 'apoio'
+type SeccaoId = (typeof SECCOES)[number]['id'] | 'comunidade' | 'apoio' | 'admin'
 
 export default function PainelParticipante(props: {
   nome: string
+  /** Admin vê, aqui mesmo, o painel de gestão do MTM Funded e dos torneios. */
+  ehAdmin?: boolean
   perfil?: { telefone: string | null; dataNascimento: string | null; pais: string | null }
   papel: string
   scannersPermitidos: string[] | null
@@ -63,6 +80,22 @@ export default function PainelParticipante(props: {
   classificacao: LinhaTabela[]
 }) {
   const [seccao, setSeccao] = useState<SeccaoId>('dashboard')
+
+  /**
+   * O email da conta traz `?conta=<id>&credenciais=1`.
+   *
+   * Abre-se logo em Contas de Trading, com as credenciais daquela conta à vista. O link do
+   * email prometia a password no painel; deixá-lo cair na raiz obrigava a pessoa a procurá-la
+   * — e a maior parte não procura, escreve a perguntar.
+   */
+  const [contaAberta, setContaAberta] = useState<string | null>(null)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    if (q.get('credenciais') === '1') {
+      setSeccao('contas')
+      setContaAberta(q.get('conta'))
+    }
+  }, [])
   const { torneio, participante, contas, certificados, classificacao } = props
 
   return (
@@ -103,6 +136,7 @@ export default function PainelParticipante(props: {
             {([
               { id: 'comunidade' as const, nome: 'Comunidade', icone: MessageSquare },
               { id: 'apoio' as const, nome: 'Apoio', icone: Bot },
+              ...(props.ehAdmin ? [{ id: 'admin' as const, nome: 'Admin', icone: Settings }] : []),
             ]).map((s2) => {
               const Icone = s2.icone
               const ativa = seccao === s2.id
@@ -123,7 +157,7 @@ export default function PainelParticipante(props: {
 
         <main className="min-w-0 flex-1">
           {seccao === 'dashboard' && <Dashboard {...{ torneio, participante, contas }} nome={props.nome} perfil={props.perfil} />}
-          {seccao === 'contas' && <Contas contas={contas} />}
+          {seccao === 'contas' && <Contas contas={contas} abrir={contaAberta} />}
           {seccao === 'contratos' && <Contratos />}
           {seccao === 'levantamentos' && <Levantamentos irParaContrato={() => setSeccao('contratos')} />}
           {seccao === 'competicoes' && <Competicoes torneio={torneio} participante={participante} onInscrever={() => setSeccao('dashboard')} />}
@@ -132,6 +166,17 @@ export default function PainelParticipante(props: {
           {seccao === 'certificados' && <Certificados certificados={certificados} />}
           {seccao === 'comunidade' && <Comunidade />}
           {seccao === 'apoio' && <Apoio />}
+          {seccao === 'admin' && props.ehAdmin && (
+            <div className="overflow-hidden rounded-2xl border border-[#D2A63C]/25 bg-zinc-950/50">
+              <div className="border-b border-zinc-900 px-6 py-4">
+                <p className="text-sm font-semibold text-[#D2A63C]">MTM Funded & Torneios</p>
+                <p className="mt-0.5 text-xs text-zinc-600">
+                  O mesmo painel do /admin — o que mudares aqui muda lá, e ao contrário.
+                </p>
+              </div>
+              <MtmFundedManager />
+            </div>
+          )}
         </main>
       </div>
     </div>
@@ -394,7 +439,7 @@ function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
   )
 }
 
-function Contas({ contas }: { contas: Conta[] }) {
+function Contas({ contas, abrir }: { contas: Conta[]; abrir?: string | null }) {
   if (!contas.length) return <Caixa titulo="Contas de Trading"><Vazio>Ainda não tens contas.</Vazio></Caixa>
   return (
     <div className="space-y-4">
@@ -407,7 +452,7 @@ function Contas({ contas }: { contas: Conta[] }) {
           {typeof c.metricas.equity === 'number' && (
             <Linha rotulo="Equity" valor={`${(c.metricas.equity as number).toLocaleString('pt-PT')} USD`} />
           )}
-          {c.login && <Credenciais conta={c} />}
+          {c.login && <Credenciais conta={c} abrirJa={abrir === c.id} />}
         </Caixa>
       ))}
     </div>
@@ -425,14 +470,13 @@ function Contas({ contas }: { contas: Conta[] }) {
  * Só se pede ao servidor quando se carrega em Mostrar. Trazê-la com a página deixava-a no
  * HTML de toda a gente que abrisse o painel, visível a quem passasse por trás.
  */
-function Credenciais({ conta }: { conta: Conta }) {
+function Credenciais({ conta, abrirJa }: { conta: Conta; abrirJa?: boolean }) {
   const [dados, setDados] = useState<{ password: string | null; investor: string | null; aviso?: string } | null>(null)
   const [visivel, setVisivel] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState(false)
 
-  const mostrar = async () => {
-    if (dados) return setVisivel(true)
+  const mostrar = useCallback(async () => {
     setOcupado(true)
     setErro(null)
     try {
@@ -452,7 +496,12 @@ function Credenciais({ conta }: { conta: Conta }) {
     } finally {
       setOcupado(false)
     }
-  }
+  }, [conta.id])
+
+  // Vindo do email, abre sozinho. É para isso que o link serve.
+  useEffect(() => {
+    if (abrirJa) mostrar()
+  }, [abrirJa, mostrar])
 
   return (
     <div className="mt-4 border-t border-zinc-900 pt-4">
@@ -463,17 +512,18 @@ function Credenciais({ conta }: { conta: Conta }) {
             disabled={ocupado}
             className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 disabled:opacity-40"
           >
-            {ocupado ? 'A ler…' : 'Mostrar palavra-passe'}
+            {ocupado ? 'A ler…' : 'Mostrar credenciais'}
           </button>
           {erro && <p className="mt-2 text-sm text-red-400">{erro}</p>}
         </>
       ) : (
-        <div className="space-y-2">
-          <Linha rotulo="Login" valor={conta.login ?? '—'} />
+        <div className="space-y-2.5">
+          <LinhaCopiavel rotulo="Login" valor={conta.login ?? '—'} />
+          <LinhaCopiavel rotulo="Servidor" valor={conta.servidor ?? '—'} />
           {dados?.password ? (
             <>
-              <Linha rotulo="Palavra-passe" valor={dados.password} />
-              {dados.investor && <Linha rotulo="Investidor (só leitura)" valor={dados.investor} />}
+              <LinhaCopiavel rotulo="Palavra-passe" valor={dados.password} />
+              {dados.investor && <LinhaCopiavel rotulo="Investidor (só leitura)" valor={dados.investor} />}
               <p className="pt-1 text-xs text-zinc-600">
                 Podes alterá-la dentro do MetaTrader. Guarda-a num sítio seguro.
               </p>
@@ -485,7 +535,7 @@ function Credenciais({ conta }: { conta: Conta }) {
             <div className="pt-3">
               <p className="text-xs text-zinc-500">Entrar na app com um toque</p>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={conta.qrcode} alt="Código QR da conta" width={150} height={150} className="mt-2 rounded-lg" />
+              <img src={conta.qrcode} alt="Código QR da conta" width={150} height={150} className="mt-2 rounded-lg bg-white p-2" />
               <p className="mt-1.5 text-xs text-zinc-600">
                 No MetaTrader 5 do telemóvel: Nova conta → Entrar com código QR.
               </p>
@@ -496,6 +546,48 @@ function Credenciais({ conta }: { conta: Conta }) {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Um campo com botão de copiar.
+ *
+ * Copiar à mão do ecrã do telemóvel para o MetaTrader é onde se erra um caractere de uma
+ * password — e um caractere errado parece, do outro lado, uma conta que não funciona. O botão
+ * diz «copiado» durante dois segundos: sem confirmação, carrega-se três vezes e fica-se na
+ * dúvida à mesma.
+ */
+function LinhaCopiavel({ rotulo, valor }: { rotulo: string; valor: string }) {
+  const [copiado, setCopiado] = useState(false)
+
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(valor)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      // Sem permissão para a área de transferência (contexto inseguro, browser antigo): o
+      // valor continua à vista e selecionável. Não se finge que copiou.
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800/70 bg-black/30 px-3 py-2.5">
+      <div className="min-w-0">
+        <p className="text-xs text-zinc-600">{rotulo}</p>
+        <p className="truncate font-mono text-sm text-zinc-200">{valor}</p>
+      </div>
+      <button
+        onClick={copiar}
+        className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs transition-colors ${
+          copiado
+            ? 'border-emerald-500/40 text-emerald-400'
+            : 'border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
+        }`}
+      >
+        {copiado ? 'copiado' : 'copiar'}
+      </button>
     </div>
   )
 }
