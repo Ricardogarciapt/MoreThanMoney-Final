@@ -30,8 +30,8 @@ export default async function FaqFunded() {
     .maybeSingle()
 
   const r = (torneio?.regras ?? {}) as Record<string, number>
-  const data = (v?: string | null) =>
-    v ? new Date(v).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'
+  // As datas viajam em ISO. Formatá-las aqui dava «14 de setembro de 2026» no meio de uma
+  // frase em inglês — o servidor não sabe em que língua a página vai ser lida.
 
   /**
    * O estado das inscrições é uma frase dentro de outra.
@@ -55,14 +55,15 @@ export default async function FaqFunded() {
           r: 'faq.q3r',
           vars: {
             nome: String(torneio.nome ?? ''),
-            inicio: data(torneio.comeca_em as string),
-            fim: data(torneio.acaba_em as string),
+            inicio: String(torneio.comeca_em ?? ''),
+            fim: String(torneio.acaba_em ?? ''),
             saldo: Number(torneio.saldo_inicial).toLocaleString('pt-PT'),
           },
+          datas: ['inicio', 'fim'],
           // A frase das inscrições é montada no cliente, onde a língua já se conhece.
           inscricoes: {
             chave: chaveInscricoes,
-            ate: torneio.inscricoes_fecham_em ? data(torneio.inscricoes_fecham_em as string) : null,
+            ate: (torneio.inscricoes_fecham_em as string) ?? null,
           },
         }
       : { p: 'faq.q3semP', r: 'faq.q3semR' },

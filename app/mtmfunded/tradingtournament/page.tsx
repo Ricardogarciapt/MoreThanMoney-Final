@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { censurarEmail } from '@/lib/mtmfunded/acesso'
 import T from '@/components/mtmfunded/t'
+import DataLocal from '@/components/mtmfunded/data-local'
 
 // Cache de 60s em vez de render por pedido: a classificação actualiza de hora a hora e os
 // programas mudam raramente. Sem isto, cada visita esperava pela base de dados antes do
@@ -42,8 +43,6 @@ export default async function TradingTournamentPage() {
 
   const regras = (torneio?.regras ?? {}) as Record<string, number | string>
   const premios = (torneio?.premios ?? []) as Array<{ posicao: number; premio: string }>
-  const data = (v?: string | null) =>
-    v ? new Date(v).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'
   const atualizado = (linhas ?? []).map((l) => l.updated_at as string).filter(Boolean).sort().pop()
 
   return (
@@ -65,8 +64,7 @@ export default async function TradingTournamentPage() {
             {torneio.inscricoes_fecham_em && (
               <>
                 {' · '}
-                <T k="tt.fecham" />{' '}
-                {new Date(torneio.inscricoes_fecham_em).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long' })}
+                <T k="tt.fecham" /> <DataLocal iso={torneio.inscricoes_fecham_em as string} curta />
               </>
             )}
           </div>
@@ -80,8 +78,8 @@ export default async function TradingTournamentPage() {
         ) : (
           <>
             <div className="mt-10 grid gap-4 sm:grid-cols-3">
-              <Cartao titulo="tt.comeca" valor={data(torneio.comeca_em)} />
-              <Cartao titulo="tt.termina" valor={data(torneio.acaba_em)} />
+              <Cartao titulo="tt.comeca" valor={<DataLocal iso={torneio.comeca_em as string} />} />
+              <Cartao titulo="tt.termina" valor={<DataLocal iso={torneio.acaba_em as string} />} />
               <Cartao
                 titulo="tt.conta"
                 valor={`${Number(torneio.saldo_inicial).toLocaleString('pt-PT')} USD`}
@@ -146,7 +144,7 @@ export default async function TradingTournamentPage() {
                   {atualizado ? (
                     <>
                       <T k="tt.atualizadaAs" />{' '}
-                      {new Date(atualizado).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                      <Hora iso={atualizado} />
                       {' · '}
                       <T k="tt.deHoraEmHora" />
                     </>
@@ -210,6 +208,11 @@ export default async function TradingTournamentPage() {
   )
 }
 
+/** A hora da última leitura, no fuso e no formato de quem lê. */
+function Hora({ iso }: { iso: string }) {
+  return <>{new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</>
+}
+
 function Passo({ n, titulo, texto }: { n: number; titulo: string; texto: string }) {
   return (
     <div className={`vidro r d${n} p-5`}>
@@ -222,7 +225,7 @@ function Passo({ n, titulo, texto }: { n: number; titulo: string; texto: string 
   )
 }
 
-function Cartao({ titulo, valor }: { titulo: string; valor: string }) {
+function Cartao({ titulo, valor }: { titulo: string; valor: React.ReactNode }) {
   return (
     <div className="vidro r p-5">
       <p className="text-xs uppercase tracking-widest text-[#7b756a]"><T k={titulo} /></p>

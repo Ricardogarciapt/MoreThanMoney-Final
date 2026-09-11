@@ -1,6 +1,7 @@
 'use client'
 
-import { useT } from '@/components/i18n-provider'
+import { useI18n } from '@/components/i18n-provider'
+import { formatarData } from '@/components/mtmfunded/data-local'
 import TextoRico from '@/components/mtmfunded/texto-rico'
 
 /**
@@ -19,12 +20,14 @@ export interface Entrada {
   vars?: Record<string, string | number>
   /** Frase encaixada na resposta do torneio — traduzida aqui, onde a língua se conhece. */
   inscricoes?: { chave: string; ate: string | null }
+  /** Nomes das variáveis que trazem datas ISO e têm de ser formatadas na língua do leitor. */
+  datas?: string[]
   /** Lista de regras, cada uma com o seu valor. */
   lista?: Array<{ k: string; v: number }>
 }
 
 export default function Acordeao({ entradas }: { entradas: Entrada[] }) {
-  const t = useT()
+  const { t, lang } = useI18n()
 
   return (
     <div className="mt-10 divide-y divide-zinc-900 border-y border-zinc-900">
@@ -32,8 +35,17 @@ export default function Acordeao({ entradas }: { entradas: Entrada[] }) {
         // A frase das inscrições resolve-se antes de entrar na resposta, para a resposta
         // continuar a ser UMA frase traduzível em vez de três pedaços colados.
         let vars = q.vars
+        // As datas chegam em ISO e vestem-se aqui da língua do leitor.
+        if (vars && q.datas?.length) {
+          vars = { ...vars }
+          for (const nome of q.datas) {
+            if (vars[nome]) vars[nome] = formatarData(String(vars[nome]), lang)
+          }
+        }
         if (q.inscricoes) {
-          const ate = q.inscricoes.ate ? t('faq.q3ate').replace('{data}', q.inscricoes.ate) : ''
+          const ate = q.inscricoes.ate
+            ? t('faq.q3ate').replace('{data}', formatarData(q.inscricoes.ate, lang))
+            : ''
           vars = { ...vars, inscricoes: t(q.inscricoes.chave).replace('{ate}', ate) }
         }
 
