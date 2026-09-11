@@ -385,7 +385,14 @@ export async function POST(request: NextRequest) {
         const r = await enviarEmailDaConta({
           para: destino,
           nome: (perfil?.full_name as string) || destino.split('@')[0],
-          tipo: conta.tipo === 'torneio' ? 'torneio' : 'desafio',
+          // O tipo viaja tal e qual: uma conta financiada anunciada como desafio dizia ao
+          // trader que ainda tinha uma prova pela frente.
+          tipo:
+            conta.tipo === 'torneio'
+              ? 'torneio'
+              : conta.tipo === 'financiada' || conta.tipo === 'funded'
+                ? 'financiada'
+                : 'desafio',
           nomeProva: (torneio?.nome as string) || 'MTM Funded',
           login,
           servidor: (conta.servidor as string) || 'TheTradingMaster-Live',

@@ -18,12 +18,19 @@ export async function POST(request: NextRequest) {
 
   const { data: programa } = await getSupabaseAdmin()
     .from('mtm_funded_programs')
-    .select('preco_cents, ativo')
+    .select('preco_cents, ativo, regras')
     .eq('slug', slug)
     .maybeSingle()
   if (!programa?.ativo) return NextResponse.json({ error: 'Programa não encontrado' }, { status: 404 })
 
-  const r = await validarCupao(codigo, Number(programa.preco_cents))
+  // As regras seguem com o pedido: um programa que já É uma promoção não aceita outra por
+  // cima, e isso tem de ser dito aqui — senão o formulário mostrava um desconto que o
+  // checkout depois recusava, que é a pior ordem possível para a pessoa descobrir.
+  const r = await validarCupao(
+    codigo,
+    Number(programa.preco_cents),
+    (programa.regras ?? {}) as Record<string, unknown>,
+  )
   if (!r.ok) return NextResponse.json({ error: r.erro }, { status: 400 })
 
   return NextResponse.json({

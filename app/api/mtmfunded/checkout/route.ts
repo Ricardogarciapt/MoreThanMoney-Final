@@ -49,6 +49,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Programa não encontrado' }, { status: 404 })
   }
 
+  /** As regras do programa. Mandam no cupão e na protecção de um-por-pessoa. */
+  const regras = (programa.regras ?? {}) as Record<string, unknown>
+
   /**
    * Os mesmos dados que o torneio pede, e pela mesma razão: são o que a corretora exige no
    * formulário da conta. Pedem-se ANTES do pagamento — descobrir que faltam depois de a
@@ -85,7 +88,7 @@ export async function POST(request: NextRequest) {
   const codigoCupao = String(body?.cupao ?? '').trim()
   if (codigoCupao) {
     const { validarCupao } = await import('@/lib/mtmfunded/cupao')
-    const r = await validarCupao(codigoCupao, cents)
+    const r = await validarCupao(codigoCupao, cents, regras)
     if (!r.ok) return NextResponse.json({ error: r.erro }, { status: 400 })
     cents = r.centsFinais ?? cents
     cupaoAplicado = r.codigo ?? null
@@ -107,7 +110,6 @@ export async function POST(request: NextRequest) {
    * Só contam as compras PAGAS. Um checkout abandonado não pode ficar a bloquear a pessoa
    * para sempre — e a conta só é emitida quando o pagamento confirma.
    */
-  const regras = (programa.regras ?? {}) as Record<string, unknown>
   if (regras.um_por_pessoa === true) {
     // Duas consultas em vez de um `.or()` com o email interpolado: uma vírgula dentro do
     // endereço partiria o filtro do PostgREST e a protecção deixava de valer em silêncio.

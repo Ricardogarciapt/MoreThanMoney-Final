@@ -23,9 +23,30 @@ export interface CupaoAplicado {
 /** Âmbitos que um cupão pode ter para valer num desafio. */
 const AMBITOS_VALIDOS = new Set(['mtmfunded', 'any', 'both'])
 
-export async function validarCupao(codigo: string, precoCents: number): Promise<CupaoAplicado> {
+export async function validarCupao(
+  codigo: string,
+  precoCents: number,
+  /**
+   * As regras do programa que está a ser comprado.
+   *
+   * Servem para uma coisa só: um programa que JÁ É uma promoção não aceita outra por cima. O
+   * 10K de duas fases a 10 € do lançamento com mais 30% ficava a 7 € — e ninguém decidiu isso.
+   * São duas ofertas paralelas, não uma em cima da outra.
+   */
+  regrasDoPrograma?: Record<string, unknown> | null,
+): Promise<CupaoAplicado> {
   const limpo = String(codigo ?? '').trim().toUpperCase()
   if (!limpo) return { ok: false, erro: 'Escreve o código' }
+
+  // Uma promoção de cada vez. A mensagem diz PORQUÊ — «cupão inválido» aqui faria a pessoa
+  // pensar que o código estava errado e tentar outra vez, em vez de perceber que já tem o
+  // melhor preço.
+  if (regrasDoPrograma?.campanha) {
+    return {
+      ok: false,
+      erro: 'Este desafio já é uma promoção de lançamento — os cupões aplicam-se aos restantes.',
+    }
+  }
 
   const db = getSupabaseAdmin()
   const { data: cupao } = await db

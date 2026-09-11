@@ -32,7 +32,7 @@ export interface EmailContaInput {
   para: string
   nome: string
   /** "Torneio" ou "Desafio" — muda o texto, não a mecânica. */
-  tipo: 'torneio' | 'desafio'
+  tipo: 'torneio' | 'desafio' | 'financiada'
   nomeProva: string
   login: string
   servidor: string
@@ -85,9 +85,16 @@ export async function enviarEmailDaConta(
     <div style="background:#ffffff;padding:28px;border-radius:0 0 12px 12px;">
       <h2 style="color:#BB8525;margin:0 0 12px;">A tua conta está pronta, ${input.nome}</h2>
       <p style="font-size:15px;color:#333;line-height:1.6;margin:0;">
-        ${input.tipo === 'torneio'
-          ? `Estás inscrito no <strong>${input.nomeProva}</strong>.`
-          : `O teu desafio <strong>${input.nomeProva}</strong> está activo.`}
+        ${
+          input.tipo === 'torneio'
+            ? `Estás inscrito no <strong>${input.nomeProva}</strong>.`
+            : input.tipo === 'financiada'
+              // Uma conta financiada NÃO é uma avaliação: não há objectivo a cumprir nem fase
+              // a passar. Anunciá-la como desafio dizia ao trader financiado que ainda tinha
+              // uma prova pela frente — e a primeira coisa que ele ia fazer era procurá-la.
+              ? `A tua <strong>conta financiada</strong> está activa.`
+              : `O teu desafio <strong>${input.nomeProva}</strong> está activo.`
+        }
         Aqui ficam os dados de acesso à conta MetaTrader 5.
       </p>
 
@@ -150,7 +157,9 @@ export async function enviarEmailDaConta(
       subject:
         input.tipo === 'torneio'
           ? `A tua conta de torneio — ${input.nomeProva}`
-          : `A tua conta de desafio — ${input.nomeProva}`,
+          : input.tipo === 'financiada'
+            ? 'A tua conta financiada MTM está activa'
+            : `A tua conta de desafio — ${input.nomeProva}`,
       html: prepareBrandedEmailHtml(html),
       attachments: [
         ...brandedMailAttachments(),
