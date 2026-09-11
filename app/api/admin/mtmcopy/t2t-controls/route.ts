@@ -40,13 +40,25 @@ const EXTRA_CHANNEL_LABELS: Record<string, string> = {
   'sensei-scanner': 'Sensei Scanner',
 }
 
-/** Rota ↔ provider MTM Auto (mtmauto_providers.slug) — espelho do pause na app MTM Auto. */
+/**
+ * Rota ↔ provider MTM Auto (mtmauto_providers.slug) — espelho do pause na app MTM Auto.
+ *
+ * Cada estratégia com conta mestre própria precisa de estar aqui, senão o interruptor do admin
+ * pausa a rota e deixa o provider ligado — a app MTM Auto continuava a mostrá-la activa e os
+ * subscritores a copiá-la. O espelho é o que faz «pausar» significar o mesmo nos dois sítios.
+ */
 const ROUTE_TO_MTMAUTO_SLUGS: Record<string, string[]> = {
-  'canonical-premium-signals': ['premium-ouro', 'gold-did-premium'],
+  'canonical-premium-signals': ['premium-ouro'],
   'canonical-sensei': ['sensei'],
   // ⚠️ O slug 'golden-moves' é o nome ANTIGO da Aurum Flow (herança), não uma estratégia própria.
   'canonical-aurum-flow': ['golden-moves'],
   'canonical-golden-astro': ['mtm-auto-golden-astro'],
+  // As que ganharam conta mestre e estratégia CopyFactory próprias (2026-09-11). O Gold Did
+  // saiu de baixo do Premium: partilhavam interruptor e pausar um parava os dois.
+  'canonical-goldkiller': ['Goldkiller'],
+  'canonical-gold-did': ['gold-did-premium'],
+  'canonical-mtm-scanner': ['mtm-scanner'],
+  'canonical-golden-moves': ['golden-moves-fonte'],
 }
 
 async function buildState() {
