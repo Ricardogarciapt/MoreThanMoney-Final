@@ -352,6 +352,26 @@ export async function POST(request: NextRequest) {
           if (error) {
             console.warn('[MTMFUNDED] conta mestre ligada mas o provider não foi actualizado:', error.message)
           }
+
+          /**
+           * E a ESTRATÉGIA CopyFactory nasce aqui, no mesmo passo.
+           *
+           * Uma conta com papel de PROVIDER ainda não é copiável: os subscritores ligam-se a
+           * uma ESTRATÉGIA, não a uma conta. Deixar este passo para depois era deixar a conta
+           * mestre a negociar sem ninguém a ver — que é o estado em que três das estratégias
+           * já estavam, com contas a zeros e subscritores a copiar o vazio.
+           */
+          try {
+            const { garantirEstrategiaDaConta } = await import('@/lib/mtmfunded/estrategia-mestre')
+            const e = await garantirEstrategiaDaConta(pedido.account_id as string)
+            console.log(
+              e.ok
+                ? `[MTMFUNDED] estratégia ${e.strategyId} criada para ${paraLigar.provider_slug}`
+                : `[MTMFUNDED] estratégia falhou para ${paraLigar.provider_slug}: ${e.erro}`,
+            )
+          } catch (e) {
+            console.error('[MTMFUNDED] estratégia CopyFactory falhou:', e)
+          }
         }
       } else {
         console.warn('[MTMFUNDED] conta criada mas não ligou à MetaApi:', ligacao.erro)
