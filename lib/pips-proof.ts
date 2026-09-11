@@ -112,7 +112,8 @@ const FONTES_MTM = new Set(['premium', 'sensei', 'goldkiller', 'mtmscanner', 'go
 export function fonteEhMtm(chave: string | null | undefined): boolean {
   return FONTES_MTM.has(String(chave ?? '').toLowerCase())
 }
-const NOME_FONTE: Record<string, string> = {
+/** O nome legível de cada fonte — o mesmo dos flyers semanais e das provas. */
+export const NOME_FONTE: Record<string, string> = {
   premium: 'Premium', sensei: 'Sensei', goldkiller: 'GoldKiller',
   mtmscanner: 'MTM Scanner', goldenmoves: 'Aurum Flow', perps: 'Perpétuos', golddid: 'Gold Did',
 }

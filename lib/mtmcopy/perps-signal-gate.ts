@@ -118,6 +118,32 @@ function tfToMinutes(tf: string | null | undefined): number | null {
   return n // minutos
 }
 
+/**
+ * A LISTA CURADA DO AURUM FLOW — os únicos perpétuos que a estratégia negoceia.
+ *
+ * Vive na watchlist «Perpetuos Cripto (Copytrading)» do TradingView, e até aqui não existia
+ * em lado nenhum do código: o sistema aceitava qualquer ticker cripto e só depois descobria,
+ * pelo scorecard, que aquela moeda não prestava. Foi assim que entraram ONDOUSDT, NEARUSDT e
+ * SIRENUSDT — moedas que a lista entretanto deixou de ter.
+ *
+ * Declará-la aqui não substitui o scorecard: serve para se saber, ao ler um sinal, se ele vem
+ * da lista ou de um alerta esquecido a apontar para o mesmo webhook. Um sinal de fora da lista
+ * é registado como tal em vez de ser tratado como se fosse da estratégia.
+ *
+ * Quando a watchlist mudar, esta lista muda com ela. É uma cópia, e uma cópia que ninguém
+ * actualiza é pior do que não existir — por isso o desvio é AVISO, nunca bloqueio.
+ */
+export const AURUM_WATCHLIST = [
+  'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'JUPUSDT',
+] as const
+
+/** O ticker vem da lista curada do Aurum Flow? */
+export function naWatchlistAurum(ticker: string | null | undefined): boolean {
+  if (!ticker) return false
+  const limpo = String(ticker).toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/P$/, '')
+  return (AURUM_WATCHLIST as readonly string[]).some((s) => limpo.startsWith(s))
+}
+
 export async function evaluatePerpsSignalGate(
   symbol: string,
   direction: "buy" | "sell",

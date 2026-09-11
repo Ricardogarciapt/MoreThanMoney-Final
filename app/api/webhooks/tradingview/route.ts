@@ -1290,6 +1290,43 @@ export async function POST(request: NextRequest) {
     // Shadow do Aurum BTC REMOVIDO (decisão Ricardo 2026-08): o BTC do Aurum Flow passa a EXECUTAR
     // na Bybit como o restante cripto (antes ficava em shadow pelo backtest PF<1).
     const aurumBtcShadow = false
+
+    /**
+     * E A CONTA MESTRE, em paralelo com a Bybit.
+     *
+     * A execução que conta é a da Bybit — é lá que o perpétuo existe. Mas os mesmos pares
+     * existem como CFD em MT5 (BTCUSD, ETHUSD…), e abrir lá dá à estratégia um histórico
+     * MetaApi próprio, que é o que a torna copiável pela CopyFactory: sem posições na conta
+     * mestre não há nada para os subscritores replicarem.
+     *
+     * Só onde a corretora cota o par — dos cinco da lista, uma conta de CFD costuma ter dois.
+     * Os que faltam são saltados em silêncio: é uma condição normal, não um erro.
+     */
+    if (isAurumFlow && normSym && initSignalKind === "entry") {
+      try {
+        const { abrirNaContaMestreAurum } = await import("@/lib/mtmcopy/aurum-conta-mestre")
+        const rm = await abrirNaContaMestreAurum({
+          ticker: normSym,
+          direcao: execDirForGate === "sell" ? "sell" : "buy",
+          entrada: entry ?? price ?? null,
+          sl: sl ?? null,
+          tp: tp ?? null,
+        })
+        if (logId) {
+          await supabase
+            .from("tradingview_signals")
+            .update({
+              bybit_exec_detail: rm.ok
+                ? `mestre: ${rm.simbolo} ${rm.volume}`
+                : `mestre: ${String(rm.motivo).slice(0, 90)}`,
+            })
+            .eq("id", logId)
+        }
+      } catch (e) {
+        console.warn("[webhook][aurum] conta mestre falhou:", e instanceof Error ? e.message : e)
+      }
+    }
+
     if (cronSecret && normSym && bybitEntry != null && !aurumBtcShadow) {
       // Lista de símbolos que o Copy Trading da Bybit não suporta (auto-preenchida) → salta sem tentar.
       const { data: usRow } = await supabase.from("site_settings").select("value").eq("key", "bybit_copy_unsupported").maybeSingle()
