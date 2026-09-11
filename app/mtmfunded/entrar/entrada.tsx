@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import {
   CamposConta, DADOS_CONTA_VAZIOS, dadosContaCompletos, type DadosConta,
 } from '@/components/mtmfunded/campos-conta'
+import { useT } from '@/components/i18n-provider'
 
 /**
  * Entrar ou criar conta — no MTM Funded, sem sair dele.
@@ -19,6 +20,7 @@ export default function Entrada({
 }: {
   searchParams: Promise<{ redirect?: string }>
 }) {
+  const t = useT()
   const { redirect } = use(searchParams)
   const destino = redirect && redirect.startsWith('/mtmfunded') ? redirect : '/mtmfunded/tradingtournament/dashboard'
 
@@ -42,7 +44,7 @@ export default function Entrada({
         if (!r.ok) {
           // Email já usado: em vez de um erro seco, muda-se para o modo certo com o email lá.
           if (j?.entrar) setModo('entrar')
-          throw new Error(j?.error || 'Não foi possível criar a conta')
+          throw new Error(j?.error || t('mtmfunded.entrar.erroCriar'))
         }
       }
 
@@ -53,13 +55,13 @@ export default function Entrada({
       if (error) {
         throw new Error(
           /Invalid login credentials/i.test(error.message)
-            ? 'Email ou palavra-passe errados'
+            ? t('mtmfunded.entrar.erroCredenciais')
             : error.message,
         )
       }
       window.location.href = destino
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível continuar')
+      setErro(e instanceof Error ? e.message : t('mtmfunded.entrar.erroGeral'))
       setOcupado(false)
     }
   }
@@ -77,24 +79,22 @@ export default function Entrada({
             loading="eager"
             decoding="async" alt="MTM Funded" className="mb-8 h-20 w-auto" />
       <h1 className="text-2xl font-bold">
-        {modo === 'entrar' ? 'Entrar' : 'Criar conta'}
+        {t(modo === 'entrar' ? 'mtmfunded.entrar.titulo' : 'mtmfunded.entrar.criar')}
       </h1>
       <p className="mt-2 text-sm text-zinc-500">
-        {modo === 'entrar'
-          ? 'Se já tens conta MoreThanMoney, é a mesma.'
-          : 'Uma conta para o MTM Funded. Serve também no morethanmoney.pt, se um dia quiseres.'}
+        {t(modo === 'entrar' ? 'mtmfunded.entrar.subEntrar' : 'mtmfunded.entrar.subCriar')}
       </p>
 
       <div className="mt-8 space-y-4">
         <Campo
-          rotulo="Email"
+          rotulo={t('mtmfunded.entrar.email')}
           tipo="email"
           valor={dados.email}
           onChange={(v) => setDados({ ...dados, email: v })}
         />
         <Campo
-          rotulo="Palavra-passe"
-          nota={modo === 'criar' ? 'Pelo menos 8 caracteres.' : undefined}
+          rotulo={t('mtmfunded.entrar.password')}
+          nota={modo === 'criar' ? t('mtmfunded.entrar.passwordNota') : undefined}
           tipo="password"
           valor={dados.password}
           onChange={(v) => setDados({ ...dados, password: v })}
@@ -109,11 +109,10 @@ export default function Entrada({
         {modo === 'criar' && (
           <div className="border-t border-zinc-900 pt-5">
             <p className="mb-3 text-xs uppercase tracking-widest text-zinc-600">
-              Dados da conta de negociação
+              {t('mtmfunded.entrar.dadosTitulo')}
             </p>
             <p className="mb-4 text-xs leading-relaxed text-zinc-600">
-              Pedidos pela corretora para emitir a conta. Ficam guardados — não voltas a
-              preenchê-los ao inscreveres-te num torneio ou ao comprares um desafio.
+              {t('mtmfunded.entrar.dadosNota')}
             </p>
             <CamposConta dados={conta} onChange={setConta} />
           </div>
@@ -127,21 +126,24 @@ export default function Entrada({
         disabled={!completo || ocupado}
         className="mt-6 w-full rounded-lg bg-[#D2A63C] py-3 text-sm font-semibold text-black disabled:opacity-40"
       >
-        {ocupado ? 'Um momento…' : modo === 'entrar' ? 'Entrar' : 'Criar conta'}
+        {ocupado
+          ? t('mtmfunded.entrar.momento')
+          : t(modo === 'entrar' ? 'mtmfunded.entrar.titulo' : 'mtmfunded.entrar.criar')}
       </button>
 
       <button
         onClick={() => { setModo(modo === 'entrar' ? 'criar' : 'entrar'); setErro(null) }}
         className="mt-4 w-full text-sm text-zinc-500 hover:text-zinc-300"
       >
-        {modo === 'entrar' ? 'Ainda não tenho conta' : 'Já tenho conta'}
+        {t(modo === 'entrar' ? 'mtmfunded.entrar.naoTenho' : 'mtmfunded.entrar.jaTenho')}
       </button>
 
       <p className="mt-8 text-center text-xs leading-relaxed text-zinc-600">
-        Ao continuar aceitas os{' '}
-        <Link href="/mtmfunded/legal/termos" className="text-zinc-400 hover:underline">Termos</Link> e a{' '}
-        <Link href="/mtmfunded/legal/privacidade" className="text-zinc-400 hover:underline">Privacidade</Link>{' '}
-        do MTM Funded.
+        {t('mtmfunded.entrar.aceitasA')}{' '}
+        <Link href="/mtmfunded/legal/termos" className="text-zinc-400 hover:underline">{t('mtmfunded.entrar.termos')}</Link>{' '}
+        {t('mtmfunded.entrar.aceitasB')}{' '}
+        <Link href="/mtmfunded/legal/privacidade" className="text-zinc-400 hover:underline">{t('mtmfunded.entrar.privacidade')}</Link>
+        {t('mtmfunded.entrar.aceitasC')}
       </p>
     </main>
   )

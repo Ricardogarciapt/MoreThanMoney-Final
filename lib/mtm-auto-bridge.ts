@@ -35,7 +35,11 @@ export function podeVerMtmAuto(p: {
   return (
     p.subscription_plan === 'premium' ||
     p.member_category === 'premium' ||
+    // VIP está marcado em dois campos e o resto do site aceita os dois. Ler só a categoria
+    // deixava de fora quem foi marcado VIP pelo tipo — e o VIP é uma decisão tomada à margem
+    // do pack que a pessoa paga.
     p.member_category === 'vip' ||
+    p.user_type === 'vip' ||
     p.member_category === 'iq'
   )
 }

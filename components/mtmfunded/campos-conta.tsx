@@ -1,6 +1,7 @@
 'use client'
 
 import { PAISES } from '@/lib/mtmfunded/paises'
+import { useT } from '@/components/i18n-provider'
 
 /**
  * Os campos que a CORRETORA exige para emitir a conta — os mesmos no torneio e no checkout.
@@ -39,6 +40,9 @@ export function dadosContaCompletos(d: DadosConta): boolean {
 export function CamposConta({
   dados, onChange, cor = '#D2A63C',
 }: { dados: DadosConta; onChange: (d: DadosConta) => void; cor?: string }) {
+  const t = useT()
+  // Rótulo e nota entram por CHAVE: a nota de cada campo é o que explica porque se pede o
+  // dado, e uma nota por traduzir é exactamente a que faz a pessoa desistir do formulário.
   const campo = (
     chave: keyof DadosConta,
     rotulo: string,
@@ -46,8 +50,8 @@ export function CamposConta({
     tipo = 'text',
   ) => (
     <label className="block">
-      <span className="text-sm text-zinc-300">{rotulo}</span>
-      <span className="mt-0.5 block text-xs text-zinc-600">{nota}</span>
+      <span className="text-sm text-zinc-300">{t(rotulo)}</span>
+      <span className="mt-0.5 block text-xs text-zinc-600">{t(nota)}</span>
       <input
         type={tipo}
         value={dados[chave]}
@@ -63,14 +67,14 @@ export function CamposConta({
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
-        {campo('primeiroNome', 'Primeiro nome', 'Como consta no teu documento.')}
-        {campo('apelido', 'Apelido', 'O último apelido chega.')}
+        {campo('primeiroNome', 'mtmfunded.conta.primeiroNome', 'mtmfunded.conta.primeiroNomeNota')}
+        {campo('apelido', 'mtmfunded.conta.apelido', 'mtmfunded.conta.apelidoNota')}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-[1fr_1.4fr]">
         <label className="block">
-          <span className="text-sm text-zinc-300">País</span>
-          <span className="mt-0.5 block text-xs text-zinc-600">Define o indicativo.</span>
+          <span className="text-sm text-zinc-300">{t('mtmfunded.conta.pais')}</span>
+          <span className="mt-0.5 block text-xs text-zinc-600">{t('mtmfunded.conta.paisNota')}</span>
           <select
             value={dados.pais}
             onChange={(e) => onChange({ ...dados, pais: e.target.value })}
@@ -83,13 +87,13 @@ export function CamposConta({
             ))}
           </select>
         </label>
-        {campo('telefone', 'Telemóvel', 'Sem o indicativo — esse vem do país.', 'tel')}
+        {campo('telefone', 'mtmfunded.conta.telemovel', 'mtmfunded.conta.telemovelNota', 'tel')}
       </div>
 
       {campo(
         'dataNascimento',
-        'Data de nascimento',
-        'Exigida pela corretora. Tens de ser maior de idade.',
+        'mtmfunded.conta.nascimento',
+        'mtmfunded.conta.nascimentoNota',
         'date',
       )}
     </div>

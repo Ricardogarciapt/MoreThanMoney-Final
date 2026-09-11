@@ -77,9 +77,24 @@ export interface ResultadoOferta {
  */
 export async function ofertarDesafioDaRenovacao(
   userId: string,
-  opts?: { origem?: string },
+  opts?: { origem?: string; em?: string | number | Date },
 ): Promise<ResultadoOferta> {
   const db = getSupabaseAdmin()
+
+  /**
+   * A política não é retroactiva, e este é o sítio onde isso se faz cumprir.
+   *
+   * O Stripe reenvia eventos que falharam — dias depois, às vezes — e há sempre a hipótese de
+   * alguém reprocessar faturas antigas para corrigir outra coisa. Sem esta verificação, uma
+   * tarde de reprocessamento abria uma conta por cada renovação do último ano: cada uma custa
+   * dinheiro na MetaApi e um lugar na fila do agente.
+   *
+   * Sem data, assume-se agora — quem chama sem dizer quando está a falar do presente.
+   */
+  const quando = opts?.em ? new Date(opts.em) : new Date()
+  if (Number.isFinite(quando.getTime()) && quando < new Date(POLITICA_DESDE)) {
+    return { ok: false, motivo: `renovação anterior a ${POLITICA_DESDE}` }
+  }
 
   const { data: perfil } = await db
     .from('profiles')

@@ -42,6 +42,11 @@ const TRANSLATE_BLOCKED_PREFIXES = [
   "/jarvis",
   "/tradingfloor",
   "/mtm-terminal",
+  // "/mtmfunded" (2026-09-11): estas páginas passaram a traduzir-se pelo DICIONÁRIO nativo.
+  // Deixar o Google por cima dava tradução a dobrar — e era ele que produzia frases como «The
+  // rules, in Portuguese», que traduzem a letra e perdem o sentido. O que ainda não tem chave
+  // fica em português, que é preferível a ficar errado.
+  "/mtmfunded",
 ]
 
 function isTranslateBlocked(path: string): boolean {

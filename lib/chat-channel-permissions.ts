@@ -26,6 +26,20 @@ export function requiresBrokerUidChannel(slug: string) {
   return slug === "trade-ideas" || slug === "trade-ideas-setup" || slug === "premium-ideas" || slug === "sinais-scanner-mtm"
 }
 
+/**
+ * VIP, seja por que campo for.
+ *
+ * O VIP está marcado em DOIS sítios — `user_type` e `member_category` — e o resto do site
+ * aceita qualquer um deles. Aqui só se lia a categoria, e isso deixava de fora quem foi
+ * marcado VIP pelo tipo: entrava no site, via os canais na lista e não lia nenhum sinal.
+ *
+ * O VIP é uma decisão nossa, tomada à margem do pack que a pessoa paga. Fazê-la depender do
+ * plano é desfazê-la sem ninguém a desfazer.
+ */
+function ehVip(user: ChatChannelUser): boolean {
+  return user.user_type === "vip" || user.member_category === "vip"
+}
+
 export function canReadChannel(slug: string, user: ChatChannelUser | null | undefined): boolean {
   if (!user?.is_active) return false
   if (
@@ -36,7 +50,7 @@ export function canReadChannel(slug: string, user: ChatChannelUser | null | unde
     return (
       user.subscription_plan === "premium" ||
       user.member_category === "iq" ||
-      user.member_category === "vip" ||
+      ehVip(user) ||
       user.user_type === "admin"
     )
   }
@@ -53,7 +67,7 @@ export const SIGNAL_PUBLISH_CHANNELS = ["premium-ideas", "sensei-scanner", "trad
  */
 export function canPublishSignalChannel(user: ChatChannelUser | null | undefined): boolean {
   if (!user?.is_active) return false
-  return user.user_type === "admin" || user.member_category === "vip"
+  return user.user_type === "admin" || ehVip(user)
 }
 
 /** Canais de comunidade abertos a todos os membros ativos (ler e publicar). */

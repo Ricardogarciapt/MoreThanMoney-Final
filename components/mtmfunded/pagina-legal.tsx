@@ -1,3 +1,5 @@
+import NotaIdioma from './nota-idioma'
+
 /**
  * O invólucro das páginas legais do MTM Funded.
  *
@@ -12,6 +14,7 @@ export function PaginaLegal({
     <main className="mx-auto max-w-3xl px-5 py-16 text-white">
       <h1 className="text-3xl font-bold sm:text-4xl">{titulo}</h1>
       <p className="mt-2 text-sm text-zinc-500">Última actualização: {atualizado}</p>
+      <NotaIdioma />
       <div className="mt-10 space-y-8">{children}</div>
     </main>
   )

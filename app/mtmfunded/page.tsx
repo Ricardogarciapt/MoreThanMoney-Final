@@ -118,15 +118,14 @@ export default async function MtmFundedPage() {
         />
         <p className="kicker r d1"><T k="mtmfunded.hero.kicker" /></p>
         <h1 className="r d2 mt-4 max-w-4xl text-[clamp(38px,7vw,74px)] font-extrabold">
-          Prova o que vales numa{' '}
+          <T k="mtmfunded.hero.tituloA" />{' '}
           <span className="bg-gradient-to-r from-[#eccb78] to-[#d2a63c] bg-clip-text text-transparent">
-            conta avaliada
+            <T k="mtmfunded.hero.tituloB" />
           </span>
           .
         </h1>
         <p className="r d3 mt-6 max-w-2xl text-lg leading-relaxed text-[#a9a49a]">
-          Escolhes o tamanho, negoceias com as regras à vista, e as métricas actualizam
-          sozinhas. Sem letra pequena e sem promessas de rendimento.
+          <T k="mtmfunded.hero.sub" />
         </p>
 
         <div className="r d4 mt-9 flex flex-wrap gap-3">
@@ -138,9 +137,9 @@ export default async function MtmFundedPage() {
 
         {/* Factos, não estatísticas de marketing. Cada um destes é verificável nesta página. */}
         <div className="mt-14 grid gap-4 sm:grid-cols-3">
-          <Facto titulo="Contas simuladas" nota="Dinheiro virtual. Não há fundos de participantes em lado nenhum." />
-          <Facto titulo="Regras publicadas" nota="Antes de te inscreveres, e não mudam a meio da prova." />
-          <Facto titulo="Classificação pública" nota="Actualiza de hora a hora, com o motivo à vista de quem não conta." />
+          <Facto titulo="mtmfunded.facto.simuladas" nota="mtmfunded.facto.simuladasNota" />
+          <Facto titulo="mtmfunded.facto.regras" nota="mtmfunded.facto.regrasNota" />
+          <Facto titulo="mtmfunded.facto.classificacao" nota="mtmfunded.facto.classificacaoNota" />
         </div>
       </section>
 
@@ -148,20 +147,19 @@ export default async function MtmFundedPage() {
       <section id="programas" className="mx-auto max-w-6xl px-5 py-12">
         <h2 className="r text-3xl font-bold"><T k="mtmfunded.escada.titulo" /></h2>
         <p className="r d1 mt-3 max-w-2xl text-sm text-[#a9a49a]">
-          Dois caminhos, os mesmos tamanhos de conta. <b className="text-zinc-300">Uma fase</b> é
-          o caminho rápido: pede mais lucro e perdoa menos perda.{' '}
-          <b className="text-zinc-300">Duas fases</b> pede menos de cada vez, com mais tempo para o fazer.
+          <T k="mtmfunded.escada.sub1" /> <b className="text-zinc-300"><T k="mtmfunded.escada.umaFaseB" /></b>{' '}
+          <T k="mtmfunded.escada.sub2" />{' '}
+          <b className="text-zinc-300"><T k="mtmfunded.escada.duasFasesB" /></b> <T k="mtmfunded.escada.sub3" />
         </p>
 
         {!config.vendas_abertas && (
           <div className="mt-6 rounded-xl border border-[#D2A63C]/30 bg-[#D2A63C]/5 p-4 text-sm text-[#D2A63C]">
-            As inscrições nos programas abrem em breve. Entretanto, o torneio trimestral é
-            gratuito e tem conta avaliada.
+            <T k="mtmfunded.escada.fechadas" />
           </div>
         )}
 
         {!lista.length ? (
-          <p className="mt-8 text-sm text-zinc-500">Os programas estão a ser preparados.</p>
+          <p className="mt-8 text-sm text-zinc-500"><T k="mtmfunded.escada.aPreparar" /></p>
         ) : (
           <>
             {/* Tabela em ecrã largo: é onde a comparação se faz sem decorar nada. */}
@@ -195,7 +193,7 @@ export default async function MtmFundedPage() {
                               ? 'bg-[#D2A63C]/15 text-[#D2A63C]'
                               : 'bg-zinc-800 text-zinc-400'
                           }`}>
-                            {p.fases === 1 ? '1 fase · difícil' : '2 fases'}
+                            <T k={p.fases === 1 ? 'mtmfunded.escada.umaFase' : 'mtmfunded.escada.duasFases'} />
                           </span>
                         </td>
                         <td className="px-5 py-4 text-zinc-400">{r.objetivo_pct != null ? `+${r.objetivo_pct}%` : '—'}</td>
@@ -234,25 +232,26 @@ export default async function MtmFundedPage() {
                       <span className="text-2xl font-bold text-[#D2A63C]">{euros(p.preco_cents)}</span>
                     </div>
                     <p className="mt-1 text-xs text-zinc-600">
-                      {p.fases} {p.fases === 1 ? 'fase' : 'fases'}
+                      {p.fases}{' '}
+                      <T k={p.fases === 1 ? 'mtmfunded.escada.fase' : 'mtmfunded.escada.fases'} />
                     </p>
                     <ul className="mt-4 space-y-1.5 text-sm text-zinc-400">
-                      {r.objetivo_pct != null && <li>Objectivo: +{r.objetivo_pct}%</li>}
-                      {r.perda_diaria_pct != null && <li>Perda diária: {r.perda_diaria_pct}%</li>}
-                      {r.perda_maxima_pct != null && <li>Perda máxima: {r.perda_maxima_pct}%</li>}
-                      {r.dias_minimos != null && <li>Dias mínimos: {r.dias_minimos}</li>}
-                      {r.consistencia_pct != null && <li>Consistência: máx. {r.consistencia_pct}%/dia</li>}
+                      {r.objetivo_pct != null && <li><T k="mtmfunded.escada.objetivo" />: +{r.objetivo_pct}%</li>}
+                      {r.perda_diaria_pct != null && <li><T k="mtmfunded.escada.perdaDiaria" />: {r.perda_diaria_pct}%</li>}
+                      {r.perda_maxima_pct != null && <li><T k="mtmfunded.escada.perdaMaxima" />: {r.perda_maxima_pct}%</li>}
+                      {r.dias_minimos != null && <li><T k="mtmfunded.escada.diasMin" /> {r.dias_minimos}</li>}
+                      {r.consistencia_pct != null && <li><T k="mtmfunded.escada.consistencia" /> {r.consistencia_pct}%/dia</li>}
                     </ul>
                     {config.vendas_abertas ? (
                       <Link
                         href={`/mtmfunded/checkout?programa=${p.slug}`}
                         className="btn mt-5 w-full justify-center"
                       >
-                        Começar
+                        <T k="mtmfunded.escada.comecar" />
                       </Link>
                     ) : (
                       <span className="mt-5 block rounded-lg border border-zinc-800 py-2.5 text-center text-sm text-zinc-600">
-                        Brevemente
+                        <T k="mtmfunded.escada.brevemente" />
                       </span>
                     )}
                   </div>
@@ -268,21 +267,9 @@ export default async function MtmFundedPage() {
         <div className="mx-auto max-w-6xl px-5 py-14">
           <h2 className="r text-3xl font-bold"><T k="mtmfunded.passos.titulo" /></h2>
           <div className="mt-8 grid gap-8 sm:grid-cols-3">
-            <Passo
-              n={1}
-              titulo="Escolhes e recebes a conta"
-              texto="A conta é criada no MetaTrader em teu nome e as credenciais chegam por email, com um código QR que entra na app com um toque."
-            />
-            <Passo
-              n={2}
-              titulo="Negoceias com as regras à vista"
-              texto="O painel mostra quanto falta até cada limite. Tudo medido sobre equity — as posições abertas contam."
-            />
-            <Passo
-              n={3}
-              titulo="Passas, e o certificado é teu"
-              texto="Cumprindo os objectivos, sais com um certificado verificável e o caminho aberto para uma conta financiada da MTM."
-            />
+            <Passo n={1} titulo="mtmfunded.passos.p1t" texto="mtmfunded.passos.p1x" />
+            <Passo n={2} titulo="mtmfunded.passos.p2t" texto="mtmfunded.passos.p2x" />
+            <Passo n={3} titulo="mtmfunded.passos.p3t" texto="mtmfunded.passos.p3x" />
           </div>
         </div>
       </section>
@@ -291,25 +278,13 @@ export default async function MtmFundedPage() {
       <section className="mx-auto max-w-6xl px-5 py-14">
         <h2 className="r text-3xl font-bold"><T k="mtmfunded.regras.titulo2" /></h2>
         <p className="r d1 mt-3 text-sm text-[#a9a49a]">
-          Quatro regras. Iguais para todas as contas — e nunca mudam a meio da tua avaliação.
+          <T k="mtmfunded.regras.sub" />
         </p>
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <Regra
-            titulo="Perda diária"
-            texto="Mede-se sobre a equity com que o dia abriu. Chegando ao limite, a conta congela na posição em que estava — não há liquidação-surpresa nem margem escondida."
-          />
-          <Regra
-            titulo="Perda máxima total"
-            texto="Sobre o saldo inicial. É o chão da conta. Nunca é maior do que a diária, por construção: uma diária acima da máxima seria uma regra que nunca chegava a disparar."
-          />
-          <Regra
-            titulo="Dias mínimos"
-            texto="Um resultado feito num dia não prova nada. Abaixo dos dias mínimos o resultado não conta, e a classificação diz-te porquê em vez de te deixar a adivinhar."
-          />
-          <Regra
-            titulo="Consistência"
-            texto="Nenhum dia pode valer mais do que uma fatia do lucro total. Passa quem repete, não quem acertou uma vez."
-          />
+          <Regra titulo="mtmfunded.regras.r1t" texto="mtmfunded.regras.r1x" />
+          <Regra titulo="mtmfunded.regras.r2t" texto="mtmfunded.regras.r2x" />
+          <Regra titulo="mtmfunded.regras.r3t" texto="mtmfunded.regras.r3x" />
+          <Regra titulo="mtmfunded.regras.r4t" texto="mtmfunded.regras.r4x" />
         </div>
       </section>
 
@@ -319,8 +294,7 @@ export default async function MtmFundedPage() {
           <div className="mx-auto max-w-6xl px-5 py-14">
             <h2 className="r text-3xl font-bold"><T k="mtmfunded.regras.titulo" /></h2>
             <p className="r d1 mt-3 max-w-2xl text-sm text-[#a9a49a]">
-              Valem para todas as contas, na avaliação e depois de financiada. Estão aqui antes de
-              comprares — não escondidas numa página que só se lê quando já é tarde.
+              <T k="mtmfunded.regras.negSub" />
             </p>
             <div className="mt-8">
               <RegrasDeNegociacao r={regrasNegociacao} />
@@ -334,8 +308,7 @@ export default async function MtmFundedPage() {
         <div className="mx-auto max-w-3xl px-5 py-14">
           <h2 className="r text-3xl font-bold"><T k="mtmfunded.certificados.titulo" /></h2>
           <p className="r d1 mt-3 text-sm text-[#a9a49a]">
-            Cada um tem um código que qualquer pessoa pode verificar, sem conta e sem pedir nada
-            a ninguém. É isso que os faz valer alguma coisa fora daqui.
+            <T k="mtmfunded.certificados.sub" />
           </p>
           <div className="r d2 mt-8">
             <VitrineCertificados certificados={vitrine} />
@@ -346,20 +319,20 @@ export default async function MtmFundedPage() {
       {/* ── Torneio ────────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 pb-20">
         <div className="vidro destaque r bg-gradient-to-b from-[#D2A63C]/[0.07] to-transparent p-8 sm:p-10">
-          <p className="text-xs uppercase tracking-[0.25em] text-[#D2A63C]">Gratuito</p>
+          <p className="text-xs uppercase tracking-[0.25em] text-[#D2A63C]"><T k="mtmfunded.torneio.gratuito" /></p>
           <h2 className="mt-2 text-2xl font-bold">
             {torneio?.nome ?? 'Trading Tournament'}
           </h2>
           <p className="mt-3 max-w-2xl text-sm text-zinc-400">
-            Torneio trimestral com conta avaliada de{' '}
-            {Number(torneio?.saldo_inicial ?? 10000).toLocaleString('pt-PT')} USD, sem custo.
-            As mesmas regras, uma classificação pública, e prémios para o pódio.
+            <T k="mtmfunded.torneio.subA" />{' '}
+            {Number(torneio?.saldo_inicial ?? 10000).toLocaleString('pt-PT')}{' '}
+            <T k="mtmfunded.torneio.subB" />
           </p>
           <Link
             href="/mtmfunded/tradingtournament"
             className="btn mt-7"
           >
-            {torneio?.estado === 'inscricoes' ? 'Inscrições abertas' : 'Ver o torneio'}
+            <T k={torneio?.estado === 'inscricoes' ? 'mtmfunded.torneio.abertas' : 'mtmfunded.torneio.ver'} />
           </Link>
         </div>
       </section>
@@ -367,11 +340,19 @@ export default async function MtmFundedPage() {
   )
 }
 
+/**
+ * Os três ajudantes recebem CHAVES do dicionário, não texto.
+ *
+ * A página é um Server Component e `useT()` só corre no cliente — por isso o texto entra pelo
+ * `<T>`, que é a única peça cliente. Passar as chaves em vez das frases mantém a página
+ * legível (vê-se logo de onde vem cada texto) e impede o caso em que alguém escreve aqui uma
+ * frase à mão e ela fica por traduzir sem que nada avise.
+ */
 function Facto({ titulo, nota }: { titulo: string; nota: string }) {
   return (
     <div className="vidro r p-5">
-      <p className="font-semibold text-white">{titulo}</p>
-      <p className="mt-1.5 text-sm leading-relaxed text-[#a9a49a]">{nota}</p>
+      <p className="font-semibold text-white"><T k={titulo} /></p>
+      <p className="mt-1.5 text-sm leading-relaxed text-[#a9a49a]"><T k={nota} /></p>
     </div>
   )
 }
@@ -382,8 +363,8 @@ function Passo({ n, titulo, texto }: { n: number; titulo: string; texto: string 
       <span className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#D2A63C]/40 bg-[#D2A63C]/[0.06] font-bold text-[#D2A63C]">
         {n}
       </span>
-      <h3 className="mt-5 text-lg font-semibold">{titulo}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-[#a9a49a]">{texto}</p>
+      <h3 className="mt-5 text-lg font-semibold"><T k={titulo} /></h3>
+      <p className="mt-2 text-sm leading-relaxed text-[#a9a49a]"><T k={texto} /></p>
     </div>
   )
 }
@@ -391,8 +372,8 @@ function Passo({ n, titulo, texto }: { n: number; titulo: string; texto: string 
 function Regra({ titulo, texto }: { titulo: string; texto: string }) {
   return (
     <div className="vidro r p-6">
-      <h3 className="font-semibold text-[#D2A63C]">{titulo}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-zinc-400">{texto}</p>
+      <h3 className="font-semibold text-[#D2A63C]"><T k={titulo} /></h3>
+      <p className="mt-2 text-sm leading-relaxed text-zinc-400"><T k={texto} /></p>
     </div>
   )
 }

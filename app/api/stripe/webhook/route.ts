@@ -556,7 +556,12 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   if (invoice.billing_reason === 'subscription_cycle' && invoice.amount_paid > 0) {
     try {
       const { ofertarDesafioDaRenovacao } = await import('@/lib/mtmfunded/ofertas')
-      const r = await ofertarDesafioDaRenovacao(profile.id, { origem: `fatura ${invoice.id}` })
+      // A data da fatura, não a de agora: um evento reenviado dias depois continua a ser a
+      // renovação daquele dia, e é por ela que a política decide.
+      const r = await ofertarDesafioDaRenovacao(profile.id, {
+        origem: `fatura ${invoice.id}`,
+        em: invoice.created ? invoice.created * 1000 : undefined,
+      })
       console.log(
         r.ok
           ? `🎁 [MTMFUNDED] desafio ${r.programa} oferecido a ${profile.id}`
