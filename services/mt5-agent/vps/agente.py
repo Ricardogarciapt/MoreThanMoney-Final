@@ -166,7 +166,16 @@ def tratar_um() -> int:
         "qrConteudo": resultado.get("qrConteudo"),
     })
     if entrega.get("ok"):
-        registar(f"conta {resultado['login']} entregue · email: {'sim' if entrega.get('emailEnviado') else 'FALHOU'}")
+        # ADIADO não é FALHADO. As contas de torneio guardam as credenciais até à véspera —
+        # é o comportamento desejado, e anunciá-lo como erro treina quem lê o journal a
+        # ignorar a palavra FALHOU, que é precisamente quando ela deixa de servir para nada.
+        if entrega.get("emailEnviado"):
+            estado_email = "sim"
+        elif entrega.get("emailAdiado"):
+            estado_email = "adiado até à véspera do torneio"
+        else:
+            estado_email = "FALHOU"
+        registar(f"conta {resultado['login']} entregue · email: {estado_email}")
         return 0
 
     registar(f"o site recusou a entrega: {entrega.get('error')}")
