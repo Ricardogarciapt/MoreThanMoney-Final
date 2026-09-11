@@ -543,6 +543,30 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     source: 'stripe',
   })
 
+  /**
+   * DESAFIO DA RENOVAÇÃO.
+   *
+   * Quem paga todos os meses ganha, todos os meses, uma oportunidade de chegar a trader
+   * financiado: Premium leva um 10K de uma fase, a subscrição de 35 € leva um 3K. As regras
+   * (um de cada vez, um por mês, pára quando for financiado) estão em `lib/mtmfunded/ofertas`.
+   *
+   * É BEST-EFFORT e vem depois de a renovação estar registada. Um erro a emitir um desafio
+   * oferecido não pode fazer falhar o processamento de um pagamento que já entrou.
+   */
+  if (invoice.billing_reason === 'subscription_cycle' && invoice.amount_paid > 0) {
+    try {
+      const { ofertarDesafioDaRenovacao } = await import('@/lib/mtmfunded/ofertas')
+      const r = await ofertarDesafioDaRenovacao(profile.id, { origem: `fatura ${invoice.id}` })
+      console.log(
+        r.ok
+          ? `🎁 [MTMFUNDED] desafio ${r.programa} oferecido a ${profile.id}`
+          : `[MTMFUNDED] sem desafio para ${profile.id}: ${r.motivo}`,
+      )
+    } catch (e) {
+      console.error('[MTMFUNDED] falhou a oferta da renovação:', e)
+    }
+  }
+
   // Notificações de renovação — VIP/Admin + sponsor + uplines
   if (invoice.billing_reason === 'subscription_cycle' && invoice.amount_paid > 0) {
     const renewalPlanId = planoPago || 'app_member_monthly'

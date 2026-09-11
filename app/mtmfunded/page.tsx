@@ -3,6 +3,7 @@ import { getMtmFundedConfig } from '@/lib/mtmfunded/config'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { RegrasDeNegociacao, type RegrasNegociacao } from '@/components/mtmfunded/regras-negociacao'
 import VitrineCertificados, { type CertificadoVitrine } from '@/components/mtmfunded/vitrine-certificados'
+import T from '@/components/mtmfunded/t'
 
 // Cache de 60s em vez de render por pedido: a classificação actualiza de hora a hora e os
 // programas mudam raramente. Sem isto, cada visita esperava pela base de dados antes do
@@ -110,7 +111,7 @@ export default async function MtmFundedPage() {
           alt="MTM Funded"
           className="r mb-8 h-24 w-auto sm:h-32"
         />
-        <p className="kicker r d1">More Than Money</p>
+        <p className="kicker r d1"><T k="mtmfunded.hero.kicker" /></p>
         <h1 className="r d2 mt-4 max-w-4xl text-[clamp(38px,7vw,74px)] font-extrabold">
           Prova o que vales numa{' '}
           <span className="bg-gradient-to-r from-[#eccb78] to-[#d2a63c] bg-clip-text text-transparent">
@@ -124,9 +125,9 @@ export default async function MtmFundedPage() {
         </p>
 
         <div className="r d4 mt-9 flex flex-wrap gap-3">
-          <a href="#programas" className="btn">Ver os programas</a>
+          <a href="#programas" className="btn"><T k="mtmfunded.hero.ver" /></a>
           <Link href="/mtmfunded/tradingtournament" className="btn g">
-            Torneio gratuito
+            <T k="mtmfunded.hero.torneio" />
           </Link>
         </div>
 
@@ -140,7 +141,7 @@ export default async function MtmFundedPage() {
 
       {/* ── Os programas ───────────────────────────────────────────────────── */}
       <section id="programas" className="mx-auto max-w-6xl px-5 py-12">
-        <h2 className="r text-3xl font-bold">Escolhe o tamanho — e o caminho</h2>
+        <h2 className="r text-3xl font-bold"><T k="mtmfunded.escada.titulo" /></h2>
         <p className="r d1 mt-3 max-w-2xl text-sm text-[#a9a49a]">
           Dois caminhos, os mesmos tamanhos de conta. <b className="text-zinc-300">Uma fase</b> é
           o caminho rápido: pede mais lucro e perdoa menos perda.{' '}
@@ -163,13 +164,13 @@ export default async function MtmFundedPage() {
               <table className="w-full text-left text-sm">
                 <thead className="bg-black/40 text-xs uppercase tracking-wider text-[#7b756a]">
                   <tr>
-                    <th className="px-5 py-3">Conta</th>
-                    <th className="px-5 py-3">Caminho</th>
-                    <th className="px-5 py-3">Objectivo</th>
-                    <th className="px-5 py-3">Perda diária</th>
-                    <th className="px-5 py-3">Perda máxima</th>
-                    <th className="px-5 py-3">Dias mín.</th>
-                    <th className="px-5 py-3 text-right">Preço</th>
+                    <th className="px-5 py-3"><T k="mtmfunded.escada.conta" /></th>
+                    <th className="px-5 py-3"><T k="mtmfunded.escada.caminho" /></th>
+                    <th className="px-5 py-3"><T k="mtmfunded.escada.objetivo" /></th>
+                    <th className="px-5 py-3"><T k="mtmfunded.escada.perdaDiaria" /></th>
+                    <th className="px-5 py-3"><T k="mtmfunded.escada.perdaMaxima" /></th>
+                    <th className="px-5 py-3"><T k="mtmfunded.escada.diasMin" /></th>
+                    <th className="px-5 py-3 text-right"><T k="mtmfunded.escada.preco" /></th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
@@ -202,10 +203,10 @@ export default async function MtmFundedPage() {
                         <td className="px-5 py-4 text-right">
                           {config.vendas_abertas ? (
                             <Link href={`/mtmfunded/checkout?programa=${p.slug}`} className="btn !px-5 !py-2 !text-xs">
-                              Começar
+                              <T k="mtmfunded.escada.comecar" />
                             </Link>
                           ) : (
-                            <span className="text-xs text-zinc-600">Brevemente</span>
+                            <span className="text-xs text-zinc-600"><T k="mtmfunded.escada.brevemente" /></span>
                           )}
                         </td>
                       </tr>
@@ -260,7 +261,7 @@ export default async function MtmFundedPage() {
       {/* ── Como funciona ──────────────────────────────────────────────────── */}
       <section className="border-y border-white/[0.06]">
         <div className="mx-auto max-w-6xl px-5 py-14">
-          <h2 className="r text-3xl font-bold">Como funciona</h2>
+          <h2 className="r text-3xl font-bold"><T k="mtmfunded.passos.titulo" /></h2>
           <div className="mt-8 grid gap-8 sm:grid-cols-3">
             <Passo
               n={1}
@@ -283,7 +284,7 @@ export default async function MtmFundedPage() {
 
       {/* ── As regras, explicadas ──────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 py-14">
-        <h2 className="r text-3xl font-bold">Regras claras, sem letra pequena</h2>
+        <h2 className="r text-3xl font-bold"><T k="mtmfunded.regras.titulo2" /></h2>
         <p className="r d1 mt-3 text-sm text-[#a9a49a]">
           Quatro regras. Iguais para todas as contas — e nunca mudam a meio da tua avaliação.
         </p>
@@ -311,7 +312,7 @@ export default async function MtmFundedPage() {
       {regrasNegociacao && (
         <section className="border-t border-white/[0.06]">
           <div className="mx-auto max-w-6xl px-5 py-14">
-            <h2 className="r text-3xl font-bold">O que podes e não podes fazer</h2>
+            <h2 className="r text-3xl font-bold"><T k="mtmfunded.regras.titulo" /></h2>
             <p className="r d1 mt-3 max-w-2xl text-sm text-[#a9a49a]">
               Valem para todas as contas, na avaliação e depois de financiada. Estão aqui antes de
               comprares — não escondidas numa página que só se lê quando já é tarde.
@@ -326,7 +327,7 @@ export default async function MtmFundedPage() {
       {/* ── Certificados ───────────────────────────────────────────────────── */}
       <section className="border-t border-white/[0.06]">
         <div className="mx-auto max-w-3xl px-5 py-14">
-          <h2 className="r text-3xl font-bold">Certificados</h2>
+          <h2 className="r text-3xl font-bold"><T k="mtmfunded.certificados.titulo" /></h2>
           <p className="r d1 mt-3 text-sm text-[#a9a49a]">
             Cada um tem um código que qualquer pessoa pode verificar, sem conta e sem pedir nada
             a ninguém. É isso que os faz valer alguma coisa fora daqui.

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import LanguageSelectorEnhanced from '@/components/language-selector-enhanced'
+import { useT } from '@/components/i18n-provider'
 
 /**
  * A NAVEGAÇÃO DO MTM FUNDED — e o que ela deliberadamente NÃO tem.
@@ -19,13 +20,20 @@ import LanguageSelectorEnhanced from '@/components/language-selector-enhanced'
  * uma recomendação de quem já é cliente. Voltar não precisa de botão: o browser tem um.
  */
 
+/**
+ * As ligações traduzem-se pelo DICIONÁRIO, e não pelo Google Translate.
+ *
+ * Uma navegação traduzida por máquina muda de palavra entre visitas e às vezes traduz o nome
+ * do produto. Aqui as chaves vivem em `lib/i18n/messages/mtmfunded.ts`, revistas à mão.
+ */
 const LIGACOES = [
-  { href: '/mtmfunded', nome: 'Programas' },
-  { href: '/mtmfunded/tradingtournament', nome: 'Torneio' },
-  { href: '/mtmfunded/faq', nome: 'FAQ' },
+  { href: '/mtmfunded', chave: 'mtmfunded.nav.programas' },
+  { href: '/mtmfunded/tradingtournament', chave: 'mtmfunded.nav.torneio' },
+  { href: '/mtmfunded/faq', chave: 'mtmfunded.nav.faq' },
 ] as const
 
 export default function NavegacaoFunded() {
+  const t = useT()
   const caminho = usePathname() ?? ''
   const [aberto, setAberto] = useState(false)
 
@@ -57,7 +65,7 @@ export default function NavegacaoFunded() {
                 ativa(l.href) ? 'text-[#D2A63C]' : 'text-zinc-400 hover:text-white'
               }`}
             >
-              {l.nome}
+              {t(l.chave)}
             </Link>
           ))}
           {/* O seletor vive aqui e não no rodapé: quem chega numa língua que não a nossa
@@ -67,7 +75,7 @@ export default function NavegacaoFunded() {
             href="/mtmfunded/tradingtournament/dashboard"
             className="ml-1 rounded-lg bg-[#D2A63C] px-4 py-2 text-sm font-semibold text-black"
           >
-            A minha área
+            {t('mtmfunded.nav.area')}
           </Link>
         </nav>
 
@@ -94,7 +102,7 @@ export default function NavegacaoFunded() {
                 ativa(l.href) ? 'text-[#D2A63C]' : 'text-zinc-300'
               }`}
             >
-              {l.nome}
+              {t(l.chave)}
             </Link>
           ))}
           <Link
@@ -102,7 +110,7 @@ export default function NavegacaoFunded() {
             onClick={() => setAberto(false)}
             className="mt-2 block rounded-lg bg-[#D2A63C] px-3 py-2.5 text-center text-sm font-semibold text-black"
           >
-            A minha área
+            {t('mtmfunded.nav.area')}
           </Link>
         </nav>
       )}

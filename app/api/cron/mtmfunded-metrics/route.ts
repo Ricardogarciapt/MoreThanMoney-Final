@@ -180,17 +180,22 @@ export async function GET(request: NextRequest) {
           .update({ estado: 'quebrado', resultado_pct: veredicto.resultadoPct, metricas, updated_at: new Date().toISOString() })
           .eq('id', p.id)
 
+        /**
+         * E daqui em diante trata dela o CICLO DE VIDA: avisa o trader por email com o motivo,
+         * apaga a conta da MetaApi, manda o agente do VPS trocar-lhe a password e removê-la do
+         * MetaTrader, e só então a apaga da base.
+         *
+         * Continua a ser best-effort: a conta já está marcada como quebrada e a classificação
+         * já está certa. Uma falha na limpeza não pode desfazer a decisão que acabou de ser
+         * tomada — só deixa trabalho para a passagem seguinte.
+         */
         try {
-          const token = process.env.METAAPI_TOKEN
-          if (token) {
-            await fetch(
-              `https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${metaapiId}/undeploy`,
-              { method: 'POST', headers: { 'auth-token': token }, signal: AbortSignal.timeout(20_000) },
-            )
-          }
-        } catch {
-          // Sair da MetaApi é limpeza, não é a decisão. A conta já está marcada como quebrada.
-          notas.push(`conta ${String(conta.id).slice(0, 8)}: quebrou mas ficou na MetaApi`)
+          const { quebrarConta } = await import('@/lib/mtmfunded/ciclo-de-vida')
+          const r = await quebrarConta(conta.id as string, String(veredicto.motivo ?? 'regra'))
+          if (!r.emailEnviado) notas.push(`conta ${String(conta.id).slice(0, 8)}: quebrou mas o email falhou`)
+          if (!r.metaapiApagada) notas.push(`conta ${String(conta.id).slice(0, 8)}: ficou na MetaApi`)
+        } catch (e) {
+          notas.push(`conta ${String(conta.id).slice(0, 8)}: limpeza falhou — ${String(e).slice(0, 60)}`)
         }
 
         linhas.push({
@@ -199,6 +204,38 @@ export async function GET(request: NextRequest) {
           veredicto,
         })
         continue
+      }
+
+      /**
+       * OBJECTIVO ATINGIDO — a outra ponta da mesma leitura.
+       *
+       * A conta que passa não faz barulho nenhum sozinha: sem isto, um trader cumpria o
+       * objectivo e ficava à espera de que alguém reparasse. Emite-se o certificado e
+       * manda-se o email na mesma passagem que detecta a quebra dos outros.
+       *
+       * A marca fica nas métricas: sem ela, cada leitura de hora a hora mandava outro email.
+       */
+      const objetivo = Number(regras.objetivo_pct ?? 0)
+      const jaConcluida = Boolean((conta.metricas as Record<string, unknown> | null)?.faseConcluida)
+      if (
+        objetivo > 0 &&
+        !jaConcluida &&
+        conta.tipo === 'desafio' &&
+        veredicto.resultadoPct != null &&
+        veredicto.resultadoPct >= objetivo &&
+        veredicto.elegivel
+      ) {
+        try {
+          const { concluirDesafio } = await import('@/lib/mtmfunded/ciclo-de-vida')
+          const r = await concluirDesafio(conta.id as string, { resultadoPct: veredicto.resultadoPct })
+          notas.push(
+            r.ok
+              ? `conta ${String(conta.id).slice(0, 8)}: desafio concluído · ${r.codigo}`
+              : `conta ${String(conta.id).slice(0, 8)}: concluiu mas o certificado falhou — ${r.erro}`,
+          )
+        } catch (e) {
+          notas.push(`conta ${String(conta.id).slice(0, 8)}: conclusão falhou — ${String(e).slice(0, 60)}`)
+        }
       }
 
       await db.from('mtm_trading_accounts')

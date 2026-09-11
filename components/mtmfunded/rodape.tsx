@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { useT } from '@/components/i18n-provider'
 
 /**
  * O RODAPÉ DO MTM FUNDED.
@@ -14,19 +17,20 @@ import Link from 'next/link'
  */
 
 const LEGAL = [
-  { href: '/mtmfunded/legal/termos', nome: 'Termos e Condições' },
-  { href: '/mtmfunded/legal/risco', nome: 'Aviso de Risco' },
-  { href: '/mtmfunded/legal/privacidade', nome: 'Privacidade' },
-  { href: '/mtmfunded/legal/reembolsos', nome: 'Reembolsos' },
+  { href: '/mtmfunded/legal/termos', chave: 'mtmfunded.rodape.termos' },
+  { href: '/mtmfunded/legal/risco', chave: 'mtmfunded.rodape.avisoTitulo' },
+  { href: '/mtmfunded/legal/privacidade', chave: 'mtmfunded.rodape.privacidade' },
+  { href: '/mtmfunded/legal/reembolsos', chave: 'mtmfunded.rodape.reembolsos' },
 ] as const
 
 const PRODUTO = [
-  { href: '/mtmfunded', nome: 'Programas' },
-  { href: '/mtmfunded/tradingtournament', nome: 'Trading Tournament' },
-  { href: '/mtmfunded/faq', nome: 'Perguntas frequentes' },
+  { href: '/mtmfunded', chave: 'mtmfunded.nav.programas' },
+  { href: '/mtmfunded/tradingtournament', chave: 'mtmfunded.rodape.tt' },
+  { href: '/mtmfunded/faq', chave: 'mtmfunded.rodape.faq' },
 ] as const
 
 export default function RodapeFunded() {
+  const t = useT()
   return (
     <footer className="border-t border-zinc-900 bg-[#050608]">
       <div className="mx-auto max-w-6xl px-5 py-12">
@@ -38,7 +42,7 @@ export default function RodapeFunded() {
             loading="eager"
             decoding="async" alt="MTM Funded" className="h-12 w-auto" />
             <p className="mt-3 max-w-xs text-sm text-zinc-500">
-              Avaliação de traders em contas simuladas. Regras publicadas, métricas à vista.
+              {t('mtmfunded.rodape.tagline')}
             </p>
             <a href="mailto:funded@morethanmoney.pt" className="mt-4 inline-block text-sm text-zinc-400 hover:text-white">
               funded@morethanmoney.pt
@@ -46,22 +50,22 @@ export default function RodapeFunded() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-white">Produto</h3>
+            <h3 className="text-sm font-semibold text-white">{t('mtmfunded.rodape.produto')}</h3>
             <ul className="mt-3 space-y-2">
               {PRODUTO.map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href} className="text-sm text-zinc-500 hover:text-white">{l.nome}</Link>
+                  <Link href={l.href} className="text-sm text-zinc-500 hover:text-white">{t(l.chave)}</Link>
                 </li>
               ))}
             </ul>
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-white">Legal</h3>
+            <h3 className="text-sm font-semibold text-white">{t('mtmfunded.rodape.legal')}</h3>
             <ul className="mt-3 space-y-2">
               {LEGAL.map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href} className="text-sm text-zinc-500 hover:text-white">{l.nome}</Link>
+                  <Link href={l.href} className="text-sm text-zinc-500 hover:text-white">{t(l.chave)}</Link>
                 </li>
               ))}
             </ul>
@@ -73,15 +77,9 @@ export default function RodapeFunded() {
           quem está a ler — e por isso não vai em letra miudinha nem atrás de um clique.
         */}
         <div className="mt-10 rounded-xl border border-zinc-800 bg-zinc-950/60 p-5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#D2A63C]">Aviso de risco</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#D2A63C]">{t('mtmfunded.rodape.avisoTitulo')}</p>
           <p className="mt-2 text-xs leading-relaxed text-zinc-500">
-            Todas as contas do MTM Funded — de torneio e de avaliação — são <b className="text-zinc-300">contas
-            de demonstração</b>, com dinheiro virtual. Não há execução em mercado real, não são
-            depositados nem geridos fundos de participantes, e nada aqui é aconselhamento
-            financeiro ou de investimento. O MTM Funded não é uma corretora nem uma empresa de
-            investimento, e não está registado como tal. Os prémios e a atribuição de contas
-            financiadas dependem das regras publicadas de cada programa. Negociar envolve risco
-            de perda; resultados passados, simulados ou reais, não garantem resultados futuros.
+            {t('mtmfunded.rodape.aviso')}
           </p>
         </div>
 

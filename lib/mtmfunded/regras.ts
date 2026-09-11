@@ -26,6 +26,12 @@ export interface RegrasConta {
   consistencia_pct?: number
   /** Máximo de dias que a conta dura. 0 = sem limite. */
   dias_maximos?: number
+  /**
+   * Lucro que passa a fase, em %. Só existe nos DESAFIOS — um torneio não se «passa», e por
+   * isso o motor de regras não o usa para nada: quem o lê é o cron, para saber quando emitir
+   * o certificado de conclusão.
+   */
+  objetivo_pct?: number
 }
 
 export interface EstadoConta {

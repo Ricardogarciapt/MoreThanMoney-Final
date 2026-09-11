@@ -82,6 +82,11 @@ def tratar_um() -> int:
         return 2
 
     pid = pedido.get("id")
+    tarefa = pedido.get("tarefa") or "criar"
+
+    if tarefa == "apagar":
+        return desactivar_conta(pid, pedido)
+
     registar(f"pedido {pid}: {pedido.get('primeiro_nome')} {pedido.get('sobrenome')} · "
              f"{pedido.get('deposito')} USD · {pedido.get('servidor')}")
 
@@ -161,6 +166,47 @@ def tratar_um() -> int:
         return 0
 
     registar(f"o site recusou a entrega: {entrega.get('error')}")
+    return 1
+
+
+def desactivar_conta(pid: str, pedido: dict) -> int:
+    """Conta quebrada: troca-se a password e apaga-se do terminal.
+
+    A password nova não interessa a ninguém — o que interessa é a antiga deixar de servir. Por
+    isso não se devolve: só se diz que a conta foi desactivada.
+    """
+    login = str(pedido.get("mt5_login") or "").strip()
+    if not login:
+        registar(f"pedido {pid}: tarefa de apagar sem login")
+        pedir("/api/mtmfunded/agent", {"id": pid, "erro": "tarefa de apagar sem login"})
+        return 1
+
+    registar(f"pedido {pid}: DESACTIVAR conta {login}")
+    if not garantir_mt5():
+        pedir("/api/mtmfunded/agent", {"id": pid, "erro": "MetaTrader indisponível no VPS"})
+        return 1
+
+    try:
+        saida = subprocess.run(
+            [sys.executable, str(AQUI / "apagar_conta.py"),
+             json.dumps({"login": login, "password": pedido.get("password")})],
+            capture_output=True, text=True, timeout=600,
+        )
+        for linha in (saida.stderr or "").splitlines():
+            if linha.strip():
+                registar(f"  · {linha.strip()[:200]}")
+        r = json.loads((saida.stdout or "{}").strip().splitlines()[-1])
+    except Exception as e:
+        pedir("/api/mtmfunded/agent", {"id": pid, "erro": str(e)[:300]})
+        return 1
+
+    if r.get("ok"):
+        registar(f"conta {login} desactivada")
+        pedir("/api/mtmfunded/agent", {"id": pid, "desactivada": True, "login": login})
+        return 0
+
+    registar(f"conta {login}: {r.get('motivo')}")
+    pedir("/api/mtmfunded/agent", {"id": pid, "erro": str(r.get("motivo"))[:300]})
     return 1
 
 

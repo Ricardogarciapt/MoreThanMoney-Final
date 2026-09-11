@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
   const { data: pedido } = await db
     .from('mtm_account_requests')
     .select(
-      'id, primeiro_nome, sobrenome, email, telefone, indicativo, pais, data_nascimento, servidor, tipo_conta, deposito, alavancagem, tentativas',
+      'id, tarefa, mt5_login, primeiro_nome, sobrenome, email, telefone, indicativo, pais, data_nascimento, servidor, tipo_conta, deposito, alavancagem, tentativas',
     )
     .eq('estado', 'em_fila')
     .lt('tentativas', 3)
@@ -121,6 +121,30 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
 
   if (!reclamado) return NextResponse.json({ pedido: null })
+
+  /**
+   * Nas tarefas de APAGAR vai também a password actual — é ela que o MetaTrader pede para a
+   * trocar. Sai daqui decifrada e só nesta resposta: é o único momento em que o agente
+   * precisa dela, e guardá-la em claim em qualquer outro sítio seria guardar uma credencial
+   * viva sem razão.
+   */
+  if (pedido.tarefa === 'apagar' && pedido.mt5_login) {
+    const { data: conta } = await db
+      .from('mtm_trading_accounts')
+      .select('mt5_password_cifrada')
+      .eq('mt5_login', pedido.mt5_login)
+      .maybeSingle()
+    if (conta?.mt5_password_cifrada) {
+      try {
+        const { decifrar } = await import('@/lib/mtmfunded/credenciais')
+        return NextResponse.json({ pedido: { ...pedido, password: decifrar(conta.mt5_password_cifrada as string) } })
+      } catch {
+        // Sem password legível, o agente diz que não conseguiu trocar e não apaga nada — que
+        // é o comportamento certo: apagar do terminal com a password viva é o pior dos casos.
+      }
+    }
+  }
+
   return NextResponse.json({ pedido })
 }
 
@@ -153,6 +177,15 @@ export async function POST(request: NextRequest) {
     typeof body?.qr === 'string' && body.qr.length > 100 && body.qr.length < 400_000
       ? `data:image/png;base64,${body.qr.replace(/^data:image\/png;base64,/, '')}`
       : null
+
+  // ── conta desactivada ────────────────────────────────────────────────────
+  if (body?.desactivada === true) {
+    await db
+      .from('mtm_account_requests')
+      .update({ estado: 'concluido', erro: null, concluido_em: new Date().toISOString() })
+      .eq('id', id)
+    return NextResponse.json({ ok: true })
+  }
 
   // ── falhou ───────────────────────────────────────────────────────────────
   if (body?.erro) {
@@ -264,7 +297,45 @@ export async function POST(request: NextRequest) {
     console.error('[MTMFUNDED] erro a ligar à MetaApi:', e)
   }
 
+  /**
+   * O EMAIL DE UMA CONTA DE TORNEIO NÃO SAI À FRENTE DO TEMPO.
+   *
+   * A conta pode ser emitida semanas antes — e tem de ser, porque são criadas uma a uma e não
+   * há como emitir duzentas na manhã do arranque. Mas mandar as credenciais nesse momento é
+   * dar semanas de treino na conta do torneio a quem se inscreveu cedo, e a prova deixa de
+   * ser a mesma para toda a gente.
+   *
+   * Fica guardada e silenciosa; o cron da véspera envia-a a todos ao mesmo tempo.
+   */
   let emailEnviado = false
+  let emailAdiado = false
+  try {
+    const { data: paraEmail } = await db
+      .from('mtm_trading_accounts')
+      .select('tipo, tournament_id')
+      .eq('id', pedido.account_id)
+      .maybeSingle()
+
+    if (paraEmail?.tipo === 'torneio' && paraEmail.tournament_id) {
+      const { data: t } = await db
+        .from('mtm_tournaments')
+        .select('comeca_em')
+        .eq('id', paraEmail.tournament_id)
+        .maybeSingle()
+      if (t?.comeca_em) {
+        const vespera = new Date(t.comeca_em as string).getTime() - 24 * 3600 * 1000
+        emailAdiado = Date.now() < vespera
+      }
+    }
+  } catch {
+    // Falha a ler → envia-se. Reter um email por causa de um erro de base de dados deixava o
+    // participante sem conta nenhuma e sem saber porquê.
+  }
+
+  if (emailAdiado) {
+    return NextResponse.json({ ok: true, accountId: pedido.account_id, emailEnviado: false, emailAdiado: true })
+  }
+
   try {
     const { data: conta } = await db
       .from('mtm_trading_accounts')

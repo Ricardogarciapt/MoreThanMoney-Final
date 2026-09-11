@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
   const { data: conta } = await db
     .from('mtm_trading_accounts')
-    .select('id, mt5_login, servidor, mt5_password_cifrada, mt5_investor_cifrada, estado')
+    .select('id, mt5_login, servidor, mt5_password_cifrada, mt5_investor_cifrada, estado, tipo, tournament_id')
     .eq('id', contaId)
     .eq('user_id', userData.user.id)
     .maybeSingle()
@@ -46,6 +46,40 @@ export async function POST(request: NextRequest) {
   // Conta inexistente e conta de outra pessoa dão a MESMA resposta. Distingui-las deixava
   // adivinhar quais os ids que existem.
   if (!conta) return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
+
+  /**
+   * CONTAS DE TORNEIO: as credenciais só abrem na VÉSPERA.
+   *
+   * A conta pode ser emitida semanas antes — e é bom que seja, porque são criadas uma a uma e
+   * não há como emitir duzentas na manhã do arranque. Mas dar as credenciais nesse momento é
+   * dar a toda a gente semanas de treino na própria conta do torneio, e o que se avalia
+   * deixa de ser o mesmo para quem se inscreveu cedo e para quem se inscreveu tarde.
+   *
+   * A porta é fechada AQUI, no servidor. Escondê-la só no ecrã deixava-a aberta a quem
+   * chamasse a rota à mão.
+   */
+  if (conta.tipo === 'torneio' && conta.tournament_id) {
+    const { data: torneio } = await db
+      .from('mtm_tournaments')
+      .select('nome, comeca_em')
+      .eq('id', conta.tournament_id)
+      .maybeSingle()
+
+    if (torneio?.comeca_em) {
+      const abrem = new Date(torneio.comeca_em as string).getTime() - 24 * 3600 * 1000
+      if (Date.now() < abrem) {
+        return NextResponse.json({
+          login: conta.mt5_login,
+          servidor: conta.servidor,
+          password: null,
+          bloqueada: true,
+          abrePor: new Date(abrem).toISOString(),
+          aviso:
+            'As credenciais desta conta abrem na véspera do torneio. Recebes um email nesse dia, com os dados e o código QR.',
+        })
+      }
+    }
+  }
 
   if (!conta.mt5_password_cifrada) {
     return NextResponse.json({

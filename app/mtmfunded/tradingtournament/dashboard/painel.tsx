@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { Contratos, Levantamentos } from '@/components/mtmfunded/contratos-e-levantamentos'
+import { useT } from '@/components/i18n-provider'
 
 /**
  * O painel de admin aqui é o MESMO componente do /admin, e não uma cópia.
@@ -53,15 +54,19 @@ interface Conta {
 interface Certificado { codigo: string; tipo: string; posicao: number | null; emitidoEm: string }
 interface LinhaTabela { posicao: number | null; nome: string; resultadoPct: number | null; estado: string; elegivel: boolean }
 
+/**
+ * As secções traduzem-se pelo DICIONÁRIO. O Google Translate mudava o nome dos separadores
+ * entre visitas e traduzia «Terminal MTM», que é um nome de produto e não uma palavra.
+ */
 const SECCOES = [
-  { id: 'dashboard', nome: 'Dashboard', icone: LayoutDashboard },
-  { id: 'contas', nome: 'Contas de Trading', icone: Wallet },
-  { id: 'contratos', nome: 'Contratos', icone: FileText },
-  { id: 'levantamentos', nome: 'Levantamentos', icone: Banknote },
-  { id: 'competicoes', nome: 'Competições', icone: Trophy },
-  { id: 'classificacao', nome: 'Classificação', icone: ListOrdered },
-  { id: 'terminal', nome: 'Terminal MTM', icone: LineChart },
-  { id: 'certificados', nome: 'Certificados', icone: Award },
+  { id: 'dashboard', chave: 'mtmfunded.painel.dashboard', icone: LayoutDashboard },
+  { id: 'contas', chave: 'mtmfunded.painel.contas', icone: Wallet },
+  { id: 'contratos', chave: 'mtmfunded.painel.contratos', icone: FileText },
+  { id: 'levantamentos', chave: 'mtmfunded.painel.levantamentos', icone: Banknote },
+  { id: 'competicoes', chave: 'mtmfunded.painel.competicoes', icone: Trophy },
+  { id: 'classificacao', chave: 'mtmfunded.painel.classificacao', icone: ListOrdered },
+  { id: 'terminal', chave: 'mtmfunded.painel.terminal', icone: LineChart },
+  { id: 'certificados', chave: 'mtmfunded.painel.certificados', icone: Award },
 ] as const
 
 type SeccaoId = (typeof SECCOES)[number]['id'] | 'comunidade' | 'apoio' | 'admin'
@@ -79,6 +84,7 @@ export default function PainelParticipante(props: {
   certificados: Certificado[]
   classificacao: LinhaTabela[]
 }) {
+  const t = useT()
   const [seccao, setSeccao] = useState<SeccaoId>('dashboard')
 
   /**
@@ -105,7 +111,7 @@ export default function PainelParticipante(props: {
         <aside className="lg:w-60 lg:shrink-0">
           <div className="mb-5">
             <p className="text-xs uppercase tracking-[0.25em] text-[#4B8BFF]">MTM</p>
-            <p className="mt-1 text-sm text-zinc-400">Olá, {props.nome.split(' ')[0]}</p>
+            <p className="mt-1 text-sm text-zinc-400">{t('mtmfunded.painel.ola')}, {props.nome.split(' ')[0]}</p>
           </div>
           <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
             {SECCOES.map((s) => {
@@ -120,7 +126,7 @@ export default function PainelParticipante(props: {
                   }`}
                 >
                   <Icone className="h-4 w-4" />
-                  <span className="whitespace-nowrap">{s.nome}</span>
+                  <span className="whitespace-nowrap">{t(s.chave)}</span>
                 </button>
               )
             })}
@@ -134,9 +140,9 @@ export default function PainelParticipante(props: {
           */}
           <div className="mt-6 space-y-1 border-t border-zinc-900 pt-4">
             {([
-              { id: 'comunidade' as const, nome: 'Comunidade', icone: MessageSquare },
-              { id: 'apoio' as const, nome: 'Apoio', icone: Bot },
-              ...(props.ehAdmin ? [{ id: 'admin' as const, nome: 'Admin', icone: Settings }] : []),
+              { id: 'comunidade' as const, nome: t('mtmfunded.painel.comunidade'), icone: MessageSquare },
+              { id: 'apoio' as const, nome: t('mtmfunded.painel.apoio'), icone: Bot },
+              ...(props.ehAdmin ? [{ id: 'admin' as const, nome: t('mtmfunded.painel.admin'), icone: Settings }] : []),
             ]).map((s2) => {
               const Icone = s2.icone
               const ativa = seccao === s2.id

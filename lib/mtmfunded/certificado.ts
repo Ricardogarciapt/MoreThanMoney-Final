@@ -39,6 +39,14 @@ export interface CertificadoInput {
   data?: Date
   /** Valor pago, nos certificados de pagamento. É o número que o documento certifica. */
   valorUsd?: number | null
+  /**
+   * Substitui o título por omissão do tipo.
+   *
+   * Existe para o caso das FASES: «Desafio Concluído» num certificado de primeira fase promete
+   * o que não aconteceu. Com isto, o título diz «Fase 1 de 2 concluída» e a linha de baixo diz
+   * qual é o desafio — sem repetir a palavra «concluído» duas vezes na mesma folha.
+   */
+  titulo?: string | null
 }
 
 const TITULOS: Record<TipoCertificado, string> = {
@@ -78,18 +86,51 @@ export async function gerarCertificadoPdf(input: CertificadoInput): Promise<Buff
   doc.on('data', (d: Buffer) => pedacos.push(d))
   const terminado = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(pedacos))))
 
-  // Fundo e moldura
-  doc.rect(0, 0, W, H).fill(FUNDO)
-  doc.lineWidth(2).strokeColor(OURO).rect(24, 24, W - 48, H - 48).stroke()
-  doc.lineWidth(0.6).strokeColor(OURO_ESCURO).rect(34, 34, W - 68, H - 68).stroke()
+  /**
+   * FUNDO com gradiente, e não um rectângulo chapado.
+   *
+   * Dois gradientes sobrepostos: um vertical que levanta o centro da folha, e um halo dourado
+   * por trás do nome. É o que separa um certificado de uma folha preta com texto — e um
+   * certificado é para ser mostrado a terceiros, onde o aspecto é metade do argumento.
+   *
+   * Tudo desenhado aqui, em vectores. Uma imagem de fundo gerada fora obrigaria a distribuir
+   * um ficheiro com o código, a mantê-lo sincronizado com as medidas do PDF, e a re-exportá-lo
+   * de cada vez que alguém mexesse numa margem.
+   */
+  const fundoVertical = doc.linearGradient(0, 0, 0, H)
+  fundoVertical.stop(0, '#0E1016').stop(0.45, '#0A0B0F').stop(1, '#07080B')
+  doc.rect(0, 0, W, H).fill(fundoVertical)
 
-  // Logótipo, quando existe. Sem ele, o nome da marca em texto — um certificado sem
+  // O halo por trás do nome: dourado muito diluído, a abrir do centro.
+  const halo = doc.radialGradient(W / 2, 300, 10, W / 2, 300, 380)
+  halo.stop(0, OURO, 0.13).stop(1, OURO, 0)
+  doc.rect(0, 120, W, 330).fill(halo)
+
+  // Cantos dourados em vez de uma moldura fechada: a moldura inteira esmaga o conteúdo numa
+  // folha A4 em paisagem, e estes marcam o documento sem o encaixotar.
+  doc.lineWidth(1.6).strokeColor(OURO)
+  const c = 46
+  for (const [x, y, dx, dy] of [
+    [30, 30, 1, 1], [W - 30, 30, -1, 1], [30, H - 30, 1, -1], [W - 30, H - 30, -1, -1],
+  ] as Array<[number, number, number, number]>) {
+    doc.moveTo(x + dx * c, y).lineTo(x, y).lineTo(x, y + dy * c).stroke()
+  }
+  doc.lineWidth(0.5).strokeColor(OURO_ESCURO).rect(40, 40, W - 80, H - 80).stroke()
+
+  // Logótipo do MTM FUNDED. Sem ele, o nome da marca em texto — um certificado sem
   // identificação nenhuma não serve para nada.
-  const logo = ficheiro('../logo-mtm.png') ?? ficheiro('logo-mtm.png')
+  // A versão de 500px, e não o original de 1400: o PDF embute a imagem tal como ela é, e o
+  // original transformava um certificado de 40 KB num anexo de email de 2,2 MB.
+  const logo =
+    ficheiro('../mtmfunded/logo-mtm-funded-pdf.png') ??
+    ficheiro('../mtmfunded/logo-mtm-funded.png') ??
+    ficheiro('../logo-mtm.png') ??
+    ficheiro('logo-mtm.png')
   let temLogo = false
   if (logo) {
     try {
-      doc.image(logo, W / 2 - 60, 56, { width: 120 })
+      // 168pt de largura: o logótipo do Funded é largo e baixo, e a 120 ficava ilegível.
+      doc.image(logo, W / 2 - 84, 52, { width: 168 })
       temLogo = true
     } catch { /* segue sem logo */ }
   }
@@ -103,11 +144,11 @@ export async function gerarCertificadoPdf(input: CertificadoInput): Promise<Buff
       .text('DIGITAL MINDS', 0, 100, { width: W, align: 'center', characterSpacing: 5 })
   } else {
     doc.fillColor('#6E6A5F').font('Helvetica').fontSize(8.5)
-      .text('DIGITAL MINDS', 0, 186, { width: W, align: 'center', characterSpacing: 5 })
+      .text('TRADE · EVOLVE · EARN', 0, 178, { width: W, align: 'center', characterSpacing: 5 })
   }
 
   doc.fillColor(TEXTO).font('Helvetica-Bold').fontSize(30)
-    .text(TITULOS[input.tipo], 0, 214, { width: W, align: 'center' })
+    .text(input.titulo || TITULOS[input.tipo], 0, 206, { width: W, align: 'center' })
 
   doc.fillColor('#8A8578').font('Helvetica').fontSize(12)
     .text('Certifica-se que', 0, 262, { width: W, align: 'center' })
