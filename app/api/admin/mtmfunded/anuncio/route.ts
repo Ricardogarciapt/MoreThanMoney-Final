@@ -96,6 +96,11 @@ export async function POST(request: NextRequest) {
   const b = await request.json().catch(() => ({}))
   const confirmado = b?.confirmar === 'SIM-ENVIAR'
   const limite = Math.min(Number(b?.limite ?? 500), 2000)
+  /** Enviar só para estes emails — para a prova antes do disparo a sério. */
+  const so: string[] = Array.isArray(b?.so) ? b.so.map((e: unknown) => String(e).toLowerCase()) : []
+  /** Só os que têm subscrição activa. Por omissão vão também os inactivos: para eles o email
+   *  é um convite a reactivar, que é metade do objectivo da política. */
+  const soAtivos = b?.soAtivos === true
 
   const db = getSupabaseAdmin()
 
@@ -109,11 +114,24 @@ export async function POST(request: NextRequest) {
 
   const { regraDoPlano } = await import('@/lib/mtmfunded/ofertas')
 
+  /**
+   * Endereços de teste ficam de fora.
+   *
+   * Um bounce não é só um email perdido: bounces a mais fazem os fornecedores marcarem o
+   * domínio, e depois nem os emails das contas chegam a quem espera por eles.
+   */
+  const ehTeste = (email: string) =>
+    /@(test|example|exemplo|invalid|localhost)\.|@test$|^teste?@|\+test@/i.test(email)
+
   const alvos = (pessoas ?? []).filter((p) => {
-    const email = String(p.email ?? '').trim()
-    if (!email.includes('@')) return false
+    const email = String(p.email ?? '').trim().toLowerCase()
+    if (!email.includes('@') || ehTeste(email)) return false
+    if (so.length && !so.includes(email)) return false
+    if (soAtivos && !p.is_active) return false
     const dados = (p.profile_data ?? {}) as Record<string, unknown>
-    if (dados[CHAVE_MARCA]) return false
+    // A prova para um endereço só não gasta a marca: senão a pessoa da prova ficava de fora
+    // do envio a sério.
+    if (!so.length && dados[CHAVE_MARCA]) return false
     return regraDoPlano(p.subscription_plan as string, p.member_category as string) !== null
   })
 
@@ -152,15 +170,18 @@ export async function POST(request: NextRequest) {
 
       // Marca-se DEPOIS de enviar. Marcar antes e falhar o envio deixava a pessoa fora do
       // anúncio para sempre, sem forma de reparar sem mexer na base à mão.
-      await db
-        .from('profiles')
-        .update({
-          profile_data: {
-            ...((p.profile_data ?? {}) as Record<string, unknown>),
-            [CHAVE_MARCA]: new Date().toISOString(),
-          },
-        })
-        .eq('id', p.id)
+      // Numa prova (`so`) não se marca: essa pessoa tem de receber o envio a sério também.
+      if (!so.length) {
+        await db
+          .from('profiles')
+          .update({
+            profile_data: {
+              ...((p.profile_data ?? {}) as Record<string, unknown>),
+              [CHAVE_MARCA]: new Date().toISOString(),
+            },
+          })
+          .eq('id', p.id)
+      }
     } catch (e) {
       falhados++
       console.error('[MTMFUNDED anúncio]', p.email, String(e).slice(0, 120))
