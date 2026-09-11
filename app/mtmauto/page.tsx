@@ -97,11 +97,23 @@ function EcraSinais() {
   )
 }
 
+/**
+ * O ecrã das Estratégias, dentro da moldura do telemóvel.
+ *
+ * As percentagens que aqui estavam — «Premium · Gold 68%», «Sensei Scanner 61%» — eram
+ * inventadas, e estavam ao lado dos nomes verdadeiros das estratégias, numa página pública. Quem
+ * a lesse levava dali uma taxa de acerto que nunca foi medida; a do Premium, medida, é outra.
+ *
+ * Uma montra do produto mostra o PRODUTO, não resultados. O que cada estratégia negoceia e como
+ * a gere é verdade, é o que distingue uma da outra, e não precisa de número nenhum para se
+ * explicar. Quando houver desempenho por estratégia medido a sério — com os parciais contados —
+ * entra aqui vindo da mesma função que alimenta a app e o admin, e não de uma lista escrita à mão.
+ */
 function EcraEstrategias() {
   const linhas = [
-    { i: "PO", n: "Premium · Gold", d: "Fully managed, entry to exit", w: "68%" },
-    { i: "SS", n: "Sensei Scanner", d: "Gold and Bitcoin, confirmed only", w: "61%" },
-    { i: "MS", n: "MTM Scanner · Forex", d: "Stops widened to 20 pips", w: "57%" },
+    { i: "PO", n: "Premium · Gold", d: "Fully managed, entry to exit", w: "Gold" },
+    { i: "SS", n: "Sensei Scanner", d: "Gold and Bitcoin, confirmed only", w: "Gold · BTC" },
+    { i: "MS", n: "MTM Scanner · Forex", d: "Stops widened to 20 pips", w: "Forex" },
   ]
   return (
     <div className="space-y-2">
@@ -117,7 +129,7 @@ function EcraEstrategias() {
               <p className="truncate text-[12px] font-semibold text-white">{l.n}</p>
               <p className="truncate text-[9.5px] text-white/40">{l.d}</p>
             </div>
-            <span className="text-[11px] font-bold text-[#D2A63C]">{l.w}</span>
+            <span className="shrink-0 text-[9.5px] font-semibold text-white/45">{l.w}</span>
           </div>
         </Cartao>
       ))}
@@ -211,10 +223,15 @@ function EcraHistorico() {
     <div className="space-y-2">
       <p className="text-[15px] font-bold text-white">History</p>
       <div className="rounded-[1.05rem] border border-[#D2A63C]/40 p-3">
+        {/*
+          Aqui estavam «+312 · +184 pips · 63%», três números que ninguém mediu — e o 63% é o
+          mesmo da prova antiga que deixou de se publicar. A moldura mostra ONDE o histórico
+          aparece na app; os números de cada um são os da conta de cada um.
+        */}
         <div className="grid grid-cols-3 divide-x divide-white/10 text-center">
-          <div><Etiqueta>Result</Etiqueta><p className="text-[14px] font-bold text-[#28C878]">+312</p></div>
-          <div><Etiqueta>Pips</Etiqueta><p className="text-[14px] font-bold text-[#28C878]">+184</p></div>
-          <div><Etiqueta>Win rate</Etiqueta><p className="text-[14px] font-bold text-white">63%</p></div>
+          <div><Etiqueta>Result</Etiqueta><p className="text-[14px] font-bold text-white/30">—</p></div>
+          <div><Etiqueta>Pips</Etiqueta><p className="text-[14px] font-bold text-white/30">—</p></div>
+          <div><Etiqueta>Win rate</Etiqueta><p className="text-[14px] font-bold text-white/30">—</p></div>
         </div>
       </div>
       {[

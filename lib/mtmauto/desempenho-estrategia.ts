@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { chavesDaFonte } from './chaves-de-fonte'
 
 /**
  * O DESEMPENHO DE UMA ESTRATÉGIA — uma fonte só, para todas as superfícies.
@@ -22,6 +23,23 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
  * Pips e percentagem. NUNCA saldos nem equity — nem da conta mestre, nem de ninguém. Um saldo
  * numa página de cliente é informação da casa, não dele; e a regra da marca é provar em pips,
  * não em dinheiro. O `admin: true` é a única porta para esses números, e é explícita.
+ *
+ * ── O QUE ESTES NÚMEROS SÃO, E O QUE NÃO SÃO ─────────────────────────────────
+ *
+ * Saem de `mtmcopy_signal_tracking`, que mede IDEIAS: cada sinal ganha um desfecho tudo-ou-nada
+ * — bateu no alvo ou bateu no stop. Não conta parciais. Uma posição que fechou metade no
+ * primeiro alvo e o resto no break-even entra aqui como «stop», e o lucro já embolsado
+ * desaparece. É por isso que o acerto medido assim dá sistematicamente abaixo do real.
+ *
+ * O instrumento honesto existe e é outro: a conta-espelho do `signal-tracker`, que abre TODOS
+ * os sinais publicados a 0,03 lotes para que os parciais sejam reais, e grava cada saída em
+ * `mtmcopy_trade_exits`. Só que essa conta está parada desde 2026-08-26 — a rota existe, o cron
+ * nunca foi agendado — e por isso não há hoje desempenho por estratégia que se possa publicar.
+ *
+ * Daí o `fiavel` em cada bloco. Não é decoração: é a diferença entre um número que se mostra a
+ * um cliente e um número que serve para a casa decidir. Quem desenhar um ecrã com isto tem de o
+ * ler — publicar «19% de acerto» ao lado do nome de uma estratégia, sabendo que o instrumento
+ * não conta metade do que ela ganhou, é publicar uma coisa falsa.
  */
 
 export interface BlocoDesempenho {
@@ -31,7 +49,23 @@ export interface BlocoDesempenho {
   acertoPct: number
   desde: string | null
   ate: string | null
+  /**
+   * Estes números contam os parciais?
+   *
+   * Hoje é sempre `false`, porque a medição vem do registo de ideias (tudo-ou-nada). Fica como
+   * campo, e não como comentário, porque é isto que um ecrã tem de consultar antes de escolher
+   * mostrar uma taxa de acerto — e um comentário não obriga ninguém a decidir.
+   */
+  fiavel: boolean
+  /** Em linguagem de gente, porque é que não é fiável. Vazio quando for. */
+  porqueNaoFiavel: string | null
 }
+
+/** A explicação, num sítio só — aparece em todas as superfícies com as mesmas palavras. */
+export const PORQUE_NAO_FIAVEL =
+  'Mede-se sinal a sinal, tudo-ou-nada: bateu no alvo ou bateu no stop. Não conta as saídas ' +
+  'parciais, por isso uma posição que fechou metade em lucro e o resto no break-even entra aqui ' +
+  'como perda. O acerto verdadeiro é mais alto do que este.'
 
 export interface DesempenhoEstrategia {
   slug: string
@@ -61,24 +95,12 @@ export interface DesempenhoEstrategia {
   subscritores: number
 }
 
-/** A chave com que a estratégia aparece no registo de sinais. */
-function chaveDaFonte(slug: string, fonteMtm: string | null): string[] {
-  if (fonteMtm) return [fonteMtm]
-  const mapa: Record<string, string[]> = {
-    'premium-ouro': ['premium'],
-    sensei: ['sensei'],
-    Goldkiller: ['goldkiller'],
-    'mtm-scanner': ['mtmscanner'],
-    'golden-moves': ['aurum'],
-    'golden-moves-fonte': ['goldenmoves'],
-    'gold-did-premium': ['golddid', 'gold-did'],
-    'mtm-auto-golden-astro': ['goldenastro', 'golden-astro'],
-  }
-  return mapa[slug] ?? [slug]
-}
 
 function vazio(): BlocoDesempenho {
-  return { sinais: 0, pipsTotal: 0, pipsMedia: 0, acertoPct: 0, desde: null, ate: null }
+  return {
+    sinais: 0, pipsTotal: 0, pipsMedia: 0, acertoPct: 0, desde: null, ate: null,
+    fiavel: false, porqueNaoFiavel: PORQUE_NAO_FIAVEL,
+  }
 }
 
 export async function desempenhoDaEstrategia(
@@ -94,7 +116,7 @@ export async function desempenhoDaEstrategia(
     .maybeSingle()
   if (!provider) return null
 
-  const chaves = chaveDaFonte(slug, provider.fonte_mtm as string | null)
+  const chaves = chavesDaFonte(slug, provider.fonte_mtm as string | null)
 
   const [{ data: sinais }, { data: conta }, { count: subs }] = await Promise.all([
     db

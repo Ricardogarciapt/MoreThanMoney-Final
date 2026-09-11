@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { chaveDaFonte } from './chaves-de-fonte'
 
 /**
  * AS FONTES DE SINAL — uma lista só, derivada de quem as produz.
@@ -41,21 +42,8 @@ const EXTERNAS: Array<Omit<FonteSinal, 'temEstrategia' | 'slugProvider'>> = [
   { chave: 'perps', nome: 'Perpétuos Cripto', ativa: true, t2t: true },
 ]
 
-/** A chave de sinal de um provider — `fonte_mtm` quando existe, senão derivada do slug. */
-export function chaveDoProvider(slug: string, fonteMtm: string | null): string {
-  if (fonteMtm) return fonteMtm
-  const mapa: Record<string, string> = {
-    'premium-ouro': 'premium',
-    sensei: 'sensei',
-    Goldkiller: 'goldkiller',
-    'mtm-scanner': 'mtmscanner',
-    'golden-moves': 'aurum',
-    'golden-moves-fonte': 'goldenmoves',
-    'gold-did-premium': 'golddid',
-    'mtm-auto-golden-astro': 'goldenastro',
-  }
-  return mapa[slug] ?? slug
-}
+/** @deprecated nome antigo — o mapa vive agora em `chaves-de-fonte`. */
+export const chaveDoProvider = chaveDaFonte
 
 export async function fontesDeSinal(): Promise<FonteSinal[]> {
   const db = getSupabaseAdmin()

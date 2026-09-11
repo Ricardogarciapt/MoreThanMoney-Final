@@ -8,6 +8,7 @@ import {
   CANONICAL_PREMIUM_ACCOUNT_ID,
   SENSEI_PROVIDER_ACCOUNT_ID,
 } from '@/lib/mtmcopy/provider-constants'
+import { chavesDaFonte } from '@/lib/mtmauto/chaves-de-fonte'
 
 export const dynamic = 'force-dynamic'
 // Ler o histórico da conta provider na corretora demora — e é o que dá os números verdadeiros.
@@ -152,10 +153,20 @@ async function desempenhoDosSinais(fonte: string, dias: number): Promise<Desempe
   const db = getSupabaseAdmin()
   const desde = new Date(Date.now() - dias * 86_400_000).toISOString()
 
+  /**
+   * `source_key`, não `channel_slug`.
+   *
+   * A tabela tem as duas colunas e elas parecem a mesma coisa: `source_key` diz QUEM produziu o
+   * sinal (`premium`, `sensei`), `channel_slug` diz ONDE foi publicado (`premium-ideas`,
+   * `sensei-scanner`). Nenhum valor de uma existe na outra. Este ecrã recebe a chave de quem
+   * produziu — é o que o T2T usa em todo o lado — e procurá-la na coluna do canal devolvia zero
+   * linhas para TODAS as fontes. O retrato aparecia inteiro, com todos os números a zeros, e
+   * não havia nada que denunciasse a diferença entre «não produziu nada» e «perguntei mal».
+   */
   const { data } = await db
     .from('mtmcopy_signal_tracking')
     .select('status, result_pips, exits_done, peak_pips')
-    .eq('channel_slug', fonte)
+    .in('source_key', chavesDaFonte(fonte))
     .gte('created_at', desde)
     .limit(2000)
 

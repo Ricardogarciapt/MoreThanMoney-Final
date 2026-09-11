@@ -26,7 +26,22 @@ type Provedor = {
   sinais?: number
   acerto?: number | null
   pips?: number | null
+  /** Desde quando há sinais medidos desta estratégia. */
+  desde?: string | null
 }
+
+/**
+ * O DESEMPENHO, da mesma função que serve o admin.
+ *
+ * `/api/mtm-auto/desempenho` é `desempenhoDeTodas()` sem `admin: true` — a mesma soma, as mesmas
+ * chaves, sem saldos. Antes estes números vinham da app MTM Auto externa, que contava à maneira
+ * dela: a mesma estratégia dizia uma coisa aqui e outra no painel.
+ *
+ * O CARTÃO mostra quantos sinais e desde quando — factos. A taxa de acerto fica para o modal,
+ * porque a medição de hoje é tudo-ou-nada (não conta parciais) e sub-avalia o resultado real;
+ * um número desses num cartão não tem onde levar a ressalva atrás, e sem ela é falso.
+ */
+type Desempenho = { sinais: number; desde: string | null }
 
 /** Estado dos controlos admin (GET/POST /api/admin/mtmcopy/t2t-controls). */
 type AdminControls = {
@@ -382,17 +397,47 @@ export default function MtmAutoEstrategias({
         cache: "no-store",
       })
       const j = await r.json()
+
+      /**
+       * O desempenho vem da NOSSA função, não do catálogo.
+       *
+       * O catálogo (`/api/mtm-auto/estrategias`) é um proxy para a app MTM Auto externa e traz
+       * `sinais/acerto/pips` contados por ela. A soma é outra — outro filtro, outra janela — e a
+       * mesma estratégia aparecia com números diferentes conforme o ecrã. O catálogo fica a dizer
+       * QUEM existe e quem se segue; quanto produziu vem daqui.
+       *
+       * Falhar isto não parte o ecrã: perde-se a linha dos sinais, mantém-se a lista e o seguir.
+       */
+      const porNome = new Map<string, Desempenho>()
+      try {
+        const rd = await fetch("/api/mtm-auto/desempenho", { cache: "no-store" })
+        const jd = await rd.json()
+        for (const e of (jd.estrategias ?? []) as Array<Record<string, unknown>>) {
+          const t = (e.total ?? {}) as Record<string, unknown>
+          porNome.set(String(e.nome ?? "").toLowerCase(), {
+            sinais: Number(t.sinais ?? 0),
+            desde: (t.desde as string) ?? null,
+          })
+        }
+      } catch {
+        /* sem desempenho, a lista continua a servir para seguir */
+      }
+
       setProvs(
-        (j.providers ?? []).map((p: Record<string, unknown>) => ({
-          id: String(p.id),
-          nome: String(p.nome ?? ""),
-          descricao: (p.descricao as string) ?? null,
-          segue: p.segue === true || p.seguido === true,
-          automatico: p.automatico === true || p.autoAceitar === true,
-          sinais: Number(p.sinais ?? p.total ?? 0),
-          acerto: p.acerto != null ? Number(p.acerto) : p.winRate != null ? Number(p.winRate) : null,
-          pips: p.pips != null ? Number(p.pips) : null,
-        })),
+        (j.providers ?? []).map((p: Record<string, unknown>) => {
+          const d = porNome.get(String(p.nome ?? "").toLowerCase())
+          return {
+            id: String(p.id),
+            nome: String(p.nome ?? ""),
+            descricao: (p.descricao as string) ?? null,
+            segue: p.segue === true || p.seguido === true,
+            automatico: p.automatico === true || p.autoAceitar === true,
+            sinais: d?.sinais ?? Number(p.sinais ?? p.total ?? 0),
+            desde: d?.desde ?? null,
+            acerto: null,
+            pips: null,
+          }
+        }),
       )
     } catch {
       /* sem catálogo, o resto do separador continua a funcionar */
@@ -567,8 +612,8 @@ export default function MtmAutoEstrategias({
                 <p className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-zinc-500">
                   <TrendingUp className="h-3 w-3" />
                   {p.sinais} sinais
-                  {p.acerto != null && ` · ${p.acerto}% de acerto`}
-                  {p.pips != null && ` · ${p.pips >= 0 ? "+" : ""}${p.pips} pips`}
+                  {p.desde && ` desde ${new Date(p.desde).toLocaleDateString("pt-PT", { month: "short", year: "numeric" })}`}
+                  {" · toca para ver os números"}
                 </p>
               )}
               {p.automatico && (

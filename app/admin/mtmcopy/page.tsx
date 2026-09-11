@@ -11,6 +11,7 @@ import MtmcopyTestPanel from "@/components/admin/mtmcopy-test-panel"
 import MtmcopySenderLog from "@/components/admin/mtmcopy-sender-log"
 import MtmcopyStrategyControl from "@/components/admin/mtmcopy-strategy-control"
 import { TrailingEstrategias } from "@/components/admin/trailing-estrategias"
+import { EstrategiasDesempenho } from "@/components/admin/estrategias-desempenho"
 import {
   MtmcopyAdminSection,
   MtmcopyAdminTabNav,
@@ -309,6 +310,9 @@ export default function AdminMtmcopyPage() {
             >
               <div className="space-y-6">
                 <MtmcopyStrategyControl />
+                {/* O desempenho vem ANTES das afinações de propósito: quem chega aqui para mexer
+                    numa estratégia devia ver primeiro como ela está a correr. */}
+                <EstrategiasDesempenho />
                 {/* O trailing por estratégia vive aqui e não num ecrã à parte: quem vem afinar uma
                     estratégia quer ver o interruptor e a distância no mesmo sítio. */}
                 <TrailingEstrategias />
