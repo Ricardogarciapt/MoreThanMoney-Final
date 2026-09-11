@@ -37,8 +37,8 @@ export default function RodapeFunded() {
         <div className="grid gap-10 sm:grid-cols-3">
           <div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/mtmfunded/logo-mtm-funded.webp"
-            srcSet="/mtmfunded/logo-mtm-funded.webp 1x, /mtmfunded/logo-mtm-funded@2x.webp 2x"
+            <img src="/mtmfunded/logo-mtm-funded-v2.webp"
+            srcSet="/mtmfunded/logo-mtm-funded-v2.webp 1x, /mtmfunded/logo-mtm-funded-v2@2x.webp 2x"
             loading="eager"
             decoding="async" alt="MTM Funded" className="h-12 w-auto" />
             <p className="mt-3 max-w-xs text-sm text-zinc-500">

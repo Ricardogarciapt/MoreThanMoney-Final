@@ -122,8 +122,8 @@ export async function gerarCertificadoPdf(input: CertificadoInput): Promise<Buff
   // A versão de 500px, e não o original de 1400: o PDF embute a imagem tal como ela é, e o
   // original transformava um certificado de 40 KB num anexo de email de 2,2 MB.
   const logo =
-    ficheiro('../mtmfunded/logo-mtm-funded-pdf.png') ??
-    ficheiro('../mtmfunded/logo-mtm-funded.png') ??
+    ficheiro('../mtmfunded/logo-mtm-funded-v2-pdf.png') ??
+    ficheiro('../mtmfunded/logo-mtm-funded-v2.png') ??
     ficheiro('../logo-mtm.png') ??
     ficheiro('logo-mtm.png')
   let temLogo = false

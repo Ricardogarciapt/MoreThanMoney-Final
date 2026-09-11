@@ -109,8 +109,8 @@ export default async function MtmFundedPage() {
       <section className="mx-auto max-w-6xl px-5 pt-20 pb-12 sm:pt-28">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/mtmfunded/logo-mtm-funded.webp"
-            srcSet="/mtmfunded/logo-mtm-funded.webp 1x, /mtmfunded/logo-mtm-funded@2x.webp 2x"
+          src="/mtmfunded/logo-mtm-funded-v2.webp"
+            srcSet="/mtmfunded/logo-mtm-funded-v2.webp 1x, /mtmfunded/logo-mtm-funded-v2@2x.webp 2x"
             loading="eager"
             decoding="async"
           alt="MTM Funded"

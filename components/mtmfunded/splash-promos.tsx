@@ -132,7 +132,7 @@ export default function SplashPromos({ promos }: { promos: Promo[] }) {
         <div className="relative px-7 pb-7 pt-9">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/mtmfunded/logo-mtm-funded.webp"
+            src="/mtmfunded/logo-mtm-funded-v2.webp"
             alt="MTM Funded"
             width={112}
             height={34}
