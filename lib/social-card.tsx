@@ -23,6 +23,21 @@ export interface SocialCardParams {
   formato?: 'post' | 'reel'
   /** Fotografia de fundo, quando a há. O estilo do Ricardo é construído sobre uma. */
   fundo?: string
+  /**
+   * O DESTAQUE — a pessoa recortada, sem fundo, por cima da fotografia.
+   *
+   * São três camadas, e a ordem é o efeito todo: fundo escurecido, a pessoa por cima dele, e o
+   * texto a atravessar a pessoa. A primeira faixa fica ATRÁS dela e a segunda À FRENTE — é isso
+   * que dá profundidade e faz o cartão parecer montado e não sobreposto.
+   *
+   * Tem de ser um PNG com transparência. Uma fotografia normal aqui tapa o fundo inteiro e o
+   * efeito desaparece sem que nada se queixe.
+   */
+  destaque?: string
+  /** Onde a pessoa assenta. O recorte costuma ficar melhor encostado a um lado. */
+  destaquePos?: 'esquerda' | 'centro' | 'direita'
+  /** Quanto ocupa da altura do cartão, de 0.4 a 1.1. Por omissão enche. */
+  destaqueEscala?: number
 }
 
 /**
@@ -145,6 +160,38 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
           />
         </>
       )}
+      {/*
+        A PESSOA, entre os dois textos.
+
+        Vem DEPOIS da faixa de cima e ANTES da de baixo, e é só isso que constrói a profundidade:
+        a primeira palavra fica atrás dela, a segunda à frente. Trocar a ordem destas três coisas
+        dá um cartão com um autocolante colado por cima — que é o que se vê quando alguém monta
+        isto à pressa.
+
+        As medidas vão em píxeis porque o Satori calcula percentagens numa imagem absoluta como
+        zero: a pessoa desaparecia sem erro nenhum.
+      */}
+      {params.destaque && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={params.destaque}
+          alt=""
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            ...(params.destaquePos === 'esquerda'
+              ? { left: -60 }
+              : params.destaquePos === 'centro'
+                ? { left: 140 }
+                : { right: -60 }),
+            height: Math.round((alto ? 1920 : 1350) * Math.min(1.1, Math.max(0.4, params.destaqueEscala ?? 0.92))),
+            // `contain` e não `cover`: um recorte esticado deforma a pessoa, e a cara é a
+            // primeira coisa que denuncia.
+            objectFit: 'contain',
+          }}
+        />
+      )}
+
       {/* Faixa de cima, ciano. Sai da margem esquerda de propósito — é o que dá a escala. */}
       <div
         style={{
@@ -316,6 +363,10 @@ export interface Lamina {
   cta?: string
   /** Fotografia por trás desta lâmina. */
   fundo?: string
+  /** O recorte da pessoa, por cima do fundo e debaixo do texto. Ver `SocialCardParams`. */
+  destaque?: string
+  destaquePos?: 'esquerda' | 'centro' | 'direita'
+  destaqueEscala?: number
 }
 
 /**
@@ -371,6 +422,21 @@ export function laminaElement(l: Lamina, indice: number, total: number, handle: 
             }}
           />
         </>
+      )}
+      {l.destaque && (
+        // A mesma ordem do cartão: fundo, pessoa, texto. Ver o comentário lá.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={l.destaque}
+          alt=""
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            ...(l.destaquePos === 'esquerda' ? { left: -60 } : l.destaquePos === 'centro' ? { left: 140 } : { right: -60 }),
+            height: Math.round(1350 * Math.min(1.1, Math.max(0.4, l.destaqueEscala ?? 0.9))),
+            objectFit: 'contain',
+          }}
+        />
       )}
       {/* O número é a promessa de que há mais — é ele que faz deslizar. */}
       <div style={{ display: 'flex', alignItems: 'center' }}>

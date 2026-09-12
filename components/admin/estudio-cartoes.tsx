@@ -37,6 +37,13 @@ export function EstudioCartoes() {
   const [aPublicar, setAPublicar] = useState(false)
   const [publicado, setPublicado] = useState<string | null>(null)
   const [legenda, setLegenda] = useState("")
+  const [destaque, setDestaque] = useState("")
+  const [destaquePos, setDestaquePos] = useState<"esquerda" | "centro" | "direita">("direita")
+  const [destaqueEscala, setDestaqueEscala] = useState(0.92)
+  const [recortes, setRecortes] = useState<string[]>([])
+  // Qual camada recebe o que for arrastado ou gerado. Sem isto, largar uma foto no cartão
+  // teria de adivinhar se era cenário ou pessoa — e adivinharia mal metade das vezes.
+  const [camada, setCamada] = useState<"fundo" | "destaque">("fundo")
   const [saida, setSaida] = useState<string[]>([])
   const [textos, setTextos] = useState<string[]>([])
   const [erro, setErro] = useState<string | null>(null)
@@ -53,8 +60,13 @@ export function EstudioCartoes() {
     else p.set("proof", "0")
     if (formato === "reel") p.set("formato", "reel")
     if (fundo.trim()) p.set("fundo", fundo.trim())
+    if (destaque.trim()) {
+      p.set("destaque", destaque.trim())
+      p.set("destaquePos", destaquePos)
+      p.set("destaqueEscala", String(destaqueEscala))
+    }
     return `/api/og/social-card?${p.toString()}`
-  }, [handle, hook, cta, proof, formato, fundo])
+  }, [handle, hook, cta, proof, formato, fundo, destaque, destaquePos, destaqueEscala])
 
   // Um reel só faz sentido no pessoal: a marca publica no feed.
   useEffect(() => {
@@ -65,7 +77,7 @@ export function EstudioCartoes() {
   useEffect(() => {
     fetch("/api/admin/social/estudio-media", { cache: "no-store" })
       .then((r) => r.json())
-      .then((j) => { setRetrato(j.retrato ?? null); setTemIA(Boolean(j.temIA)) })
+      .then((j) => { setRetrato(j.retrato ?? null); setTemIA(Boolean(j.temIA)); setRecortes(j.recortes ?? []) })
       .catch(() => undefined)
   }, [])
 
@@ -85,8 +97,21 @@ export function EstudioCartoes() {
       const r = await fetch("/api/admin/social/estudio-media", { method: "POST", body: fd })
       const j = await r.json()
       if (j.ok) {
-        setFundo(j.url)
         if (comoRetrato) setRetrato(j.url)
+        // Uma fotografia largada na camada do destaque é RECORTADA antes de entrar: com fundo,
+        // tapava a imagem de baixo e as três camadas voltavam a ser duas.
+        if (camada === "destaque" && !comoRetrato) {
+          const rr = await fetch("/api/admin/social/estudio-media", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ recortar: j.url }),
+          })
+          const rj = await rr.json()
+          if (rj.ok) { setDestaque(rj.url); setRecortes((x) => [rj.url, ...x]) }
+          else { setDestaque(j.url); setErro(rj.erro ?? "não consegui recortar — ficou a foto inteira") }
+        } else {
+          setFundo(j.url)
+        }
       } else setErro(j.erro ?? "a imagem não subiu")
     } catch {
       setErro("a imagem não subiu")
@@ -101,10 +126,10 @@ export function EstudioCartoes() {
       const r = await fetch("/api/admin/social/estudio-media", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ descricao: descricaoIA, formato, comRicardo }),
+        body: JSON.stringify({ descricao: descricaoIA, formato, comRicardo, camada }),
       })
       const j = await r.json()
-      if (j.ok) setFundo(j.url)
+      if (j.ok) { if (camada === "destaque") setDestaque(j.url); else setFundo(j.url) }
       else setErro(j.erro ?? "a geração falhou")
     } catch {
       setErro("a geração falhou")
@@ -200,6 +225,9 @@ export function EstudioCartoes() {
           proof: proof.trim() || undefined,
           formato,
           fundo: fundo.trim() || undefined,
+          destaque: destaque.trim() || undefined,
+          destaquePos,
+          destaqueEscala,
           textos: textos.filter(Boolean),
         }),
       })
@@ -258,8 +286,90 @@ export function EstudioCartoes() {
         </div>
 
         <div className="rounded-lg border border-neutral-800 p-3">
+          {/*
+            AS TRÊS CAMADAS: fundo, pessoa, texto.
+            O texto é sempre o de cima, por isso não se escolhe — o que se escolhe é para onde
+            vai a próxima imagem. Sem este interruptor, largar uma foto no cartão teria de
+            adivinhar se era cenário ou pessoa, e adivinharia mal metade das vezes.
+          */}
+          <div className="mb-3 flex gap-1 rounded-md bg-neutral-900 p-1">
+            {([["fundo", "Fundo"], ["destaque", "Destaque"]] as const).map(([k, r]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setCamada(k)}
+                className={`flex-1 rounded px-2 py-1.5 text-[12px] font-semibold transition ${
+                  camada === k ? "bg-amber-500 text-black" : "text-neutral-400 hover:text-neutral-200"
+                }`}
+              >
+                {r}
+                {(k === "fundo" ? fundo : destaque) && <span className="ml-1 opacity-60">•</span>}
+              </button>
+            ))}
+          </div>
+
+          {camada === "destaque" && (
+            <div className="mb-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-[11px] uppercase tracking-wide text-neutral-400">
+                  Pessoa recortada
+                </label>
+                {destaque && (
+                  <button
+                    type="button"
+                    onClick={() => setDestaque("")}
+                    className="text-[11px] font-medium text-neutral-400 hover:text-red-400 hover:underline"
+                  >
+                    Remover
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={destaquePos}
+                  onChange={(e) => setDestaquePos(e.target.value as "esquerda" | "centro" | "direita")}
+                  className={`${campo} flex-1`}
+                >
+                  <option value="esquerda">À esquerda</option>
+                  <option value="centro">Ao centro</option>
+                  <option value="direita">À direita</option>
+                </select>
+                <input
+                  type="range" min={0.4} max={1.1} step={0.02}
+                  value={destaqueEscala}
+                  onChange={(e) => setDestaqueEscala(Number(e.target.value))}
+                  className="flex-1 accent-amber-500"
+                  title="Tamanho"
+                />
+              </div>
+
+              {recortes.length > 0 && (
+                <div>
+                  <p className="mb-1 text-[11px] text-neutral-500">Já recortados</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {recortes.slice(0, 12).map((u) => (
+                      <button key={u} type="button" onClick={() => setDestaque(u)}
+                        className={`h-14 w-14 overflow-hidden rounded border ${destaque === u ? "border-amber-500" : "border-neutral-700"}`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={u} alt="" className="h-full w-full object-contain" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[11px] text-neutral-500">
+                A foto que largares aqui é recortada antes de entrar. A primeira palavra fica
+                atrás da pessoa, a segunda à frente — é isso que dá a profundidade.
+              </p>
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-2">
-            <label className="text-[11px] uppercase tracking-wide text-neutral-400">Fundo</label>
+            <label className="text-[11px] uppercase tracking-wide text-neutral-400">
+              {camada === "destaque" ? "Endereço do recorte" : "Fundo"}
+            </label>
             {fundo && (
               <button
                 type="button"
@@ -274,8 +384,8 @@ export function EstudioCartoes() {
           {/* O endereço continua a poder escrever-se à mão — é como se reaproveita um fundo que
               já existe sem o voltar a subir. */}
           <input
-            value={fundo}
-            onChange={(e) => setFundo(e.target.value)}
+            value={camada === "destaque" ? destaque : fundo}
+            onChange={(e) => (camada === "destaque" ? setDestaque(e.target.value) : setFundo(e.target.value))}
             placeholder="arrasta uma imagem para o cartão, ou cola aqui um endereço"
             className={`${campo} mt-1.5`}
           />
@@ -283,7 +393,7 @@ export function EstudioCartoes() {
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-neutral-700 px-2.5 py-1.5 text-[12px] font-medium text-neutral-200 hover:bg-neutral-800">
               <Upload className="h-3.5 w-3.5" />
-              {fundo ? "Trocar" : "Escolher"} imagem
+              {(camada === "destaque" ? destaque : fundo) ? "Trocar" : "Escolher"} imagem
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/avif"
@@ -326,14 +436,14 @@ export function EstudioCartoes() {
               <div className="flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5 text-amber-400" />
                 <span className="text-[11px] uppercase tracking-wide text-neutral-400">
-                  Pedir o fundo à IA
+                  Pedir {camada === "destaque" ? "a pessoa" : "o fundo"} à IA
                 </span>
               </div>
               <input
                 value={descricaoIA}
                 onChange={(e) => setDescricaoIA(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !aSubir && descricaoIA.trim().length > 7 && void pedirFundoIA()}
-                placeholder="ex.: escritório escuro ao amanhecer, ecrãs de gráficos ao fundo"
+                placeholder={camada === "destaque" ? "ex.: de fato, a falar num palco" : "ex.: escritório escuro ao amanhecer, ecrãs de gráficos ao fundo"}
                 className={`${campo} mt-1.5`}
               />
               <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -356,11 +466,13 @@ export function EstudioCartoes() {
                   disabled={aSubir || descricaoIA.trim().length < 8}
                   className="rounded-md bg-amber-500/90 px-3 py-1.5 text-[12px] font-semibold text-black hover:bg-amber-400 disabled:opacity-40"
                 >
-                  Gerar fundo
+                  Gerar {camada === "destaque" ? "pessoa" : "fundo"}
                 </button>
               </div>
               <p className="mt-1.5 text-[11px] text-neutral-500">
-                O fundo sai de propósito escuro e vazio ao centro — é onde a frase vai assentar.
+                {camada === "destaque"
+                  ? "Sai já recortada, pronta a entrar como camada."
+                  : "O fundo sai de propósito escuro e vazio ao centro — é onde a frase vai assentar."}
                 {!retrato && " Para saíres na imagem, guarda primeiro um retrato teu."}
               </p>
             </div>
@@ -540,7 +652,7 @@ export function EstudioCartoes() {
                   <Upload className="mx-auto h-6 w-6 text-amber-400" />
                 )}
                 <p className="mt-2 text-[13px] font-semibold text-white">
-                  {aSubir ? "A subir…" : "Larga para pôr no fundo"}
+                  {aSubir ? "A subir…" : camada === "destaque" ? "Larga para recortar a pessoa" : "Larga para pôr no fundo"}
                 </p>
               </div>
             </div>

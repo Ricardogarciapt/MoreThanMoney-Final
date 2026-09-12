@@ -25,6 +25,27 @@ function autorizado(request: NextRequest): boolean {
   return request.headers.get('x-caption-secret')?.trim() === esperado
 }
 
+/**
+ * O FICHEIRO NO DISCO DO VPS, quando a sessão é nossa.
+ *
+ * Uma gravação do DVR já está na máquina que vai cortar — em `/mnt/dvr`. Mandá-la ao YouTube
+ * para a voltar a descarregar seria pagar duas viagens por um ficheiro que está ali ao lado, e
+ * ainda por cima o YouTube recusa descargas do IP do datacenter («confirma que não és um robô»).
+ *
+ * Devolve `null` para vídeos que não são nossos: esses têm mesmo de ser descarregados.
+ */
+async function ficheiroDoDvr(dvrJobId: string | null): Promise<string | null> {
+  if (!dvrJobId) return null
+  const { data } = await getSupabaseAdmin()
+    .from('lms_dvr_jobs')
+    .select('base_file, multi_file')
+    .eq('id', dvrJobId)
+    .maybeSingle()
+  // O `base_file` é o original; o `multi_file` leva as faixas dobradas e é maior sem servir para
+  // nada aqui — o clipe leva o áudio de origem.
+  return (data?.base_file as string) ?? (data?.multi_file as string) ?? null
+}
+
 /** Um trabalho reclamado há mais do que isto foi abandonado — a máquina morreu a meio. */
 const MINUTOS_ATE_DESISTIR = 40
 
@@ -68,6 +89,8 @@ export async function GET(request: NextRequest) {
       .eq('id', clip.job_id as string)
       .maybeSingle()
 
+    const ficheiroLocal = await ficheiroDoDvr(job?.dvr_job_id as string | null)
+
     await db.from('videocliper_clips')
       .update({ estado: 'a_render', updated_at: agora.toISOString() })
       .eq('id', clip.id)
@@ -79,6 +102,9 @@ export async function GET(request: NextRequest) {
       origem: job?.origem,
       youtubeUrl: job?.youtube_url,
       dvrJobId: job?.dvr_job_id,
+      // O caminho no disco do próprio VPS. Quando existe, não há descarga nenhuma a fazer —
+      // o worker corta o ficheiro onde ele já está.
+      ficheiroLocal,
       inicioSeg: Number(clip.inicio_seg),
       fimSeg: Number(clip.fim_seg),
       duracaoSeg: Number(clip.duracao_seg),
@@ -121,6 +147,8 @@ export async function GET(request: NextRequest) {
 
   if (!job) return NextResponse.json({ tipo: 'nada' })
 
+  const ficheiroLocal = await ficheiroDoDvr(job.dvr_job_id as string | null)
+
   await db.from('videocliper_jobs').update({
     estado: 'a_descarregar',
     reclamado_em: agora.toISOString(),
@@ -135,6 +163,7 @@ export async function GET(request: NextRequest) {
     origem: job.origem,
     youtubeUrl: job.youtube_url,
     dvrJobId: job.dvr_job_id,
+    ficheiroLocal,
     titulo: job.titulo,
     idioma: job.idioma ?? 'pt',
     // `word` é o ponto todo: sem tempos por palavra não há legenda a acender palavra a palavra,

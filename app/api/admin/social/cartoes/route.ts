@@ -66,6 +66,9 @@ export async function POST(req: NextRequest) {
     proof?: string
     formato?: "post" | "reel"
     fundo?: string
+    destaque?: string
+    destaquePos?: 'esquerda' | 'centro' | 'direita'
+    destaqueEscala?: number
     /** Já escritas. Vazio = a IA escreve. */
     textos?: string[]
     laminas?: number
@@ -82,6 +85,9 @@ export async function POST(req: NextRequest) {
       proof: corpo.proof || false,
       formato: corpo.formato === "reel" ? "reel" : "post",
       fundo: corpo.fundo,
+      destaque: corpo.destaque,
+      destaquePos: corpo.destaquePos,
+      destaqueEscala: corpo.destaqueEscala,
     })
     const url = await uploadBufferToBucket(png, "image/png", "estudio")
     return NextResponse.json({ ok: true, urls: [url] })
@@ -113,7 +119,12 @@ export async function POST(req: NextRequest) {
     ...(i === textos.length - 1 && corpo.cta ? { cta: corpo.cta } : {}),
     // A foto vai só na capa: repeti-la em todas rouba a legibilidade ao texto, que é o que se
     // vem cá ler.
+    // A capa leva as imagens; as lâminas do meio ficam com a tipografia sozinha, que é o que
+    // as faz ler-se depressa ao deslizar.
     ...(i === 0 && corpo.fundo ? { fundo: corpo.fundo } : {}),
+    ...(i === 0 && corpo.destaque
+      ? { destaque: corpo.destaque, destaquePos: corpo.destaquePos, destaqueEscala: corpo.destaqueEscala }
+      : {}),
   }))
 
   const pngs = await renderCarrossel(laminas, handle)

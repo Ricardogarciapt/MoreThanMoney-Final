@@ -30,6 +30,9 @@ const TIPOS_ACEITES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/a
 /** Onde fica guardado o retrato de referência do Ricardo. */
 const CHAVE_RETRATO = 'estudio_retrato_referencia'
 
+/** A galeria de recortes já feitos — para não se repetir o trabalho a cada cartão. */
+const CHAVE_RECORTES = 'estudio_recortes'
+
 export async function POST(req: NextRequest) {
   const guarda = await requireAdmin(req)
   if (guarda) return guarda
@@ -78,12 +81,69 @@ export async function POST(req: NextRequest) {
   const descricao = String(corpo?.descricao ?? '').trim()
   const formato = corpo?.formato === 'reel' ? 'reel' : 'post'
   const comRicardo = corpo?.comRicardo === true
-
-  if (descricao.length < 8) {
-    return NextResponse.json({ ok: false, erro: 'descreve o fundo em duas palavras que sejam' }, { status: 400 })
-  }
+  /**
+   * QUE CAMADA se está a pedir. As duas querem imagens opostas:
+   *
+   * · `fundo`    — cenário, sem gente, escuro e vazio ao centro para o texto assentar.
+   * · `destaque` — uma pessoa inteira, recortada, sem cenário nenhum.
+   *
+   * Pedir as duas com o mesmo prompt dava um fundo com uma pessoa a tapar a frase, ou um
+   * recorte com um quarto agarrado às costas.
+   */
+  const camada = corpo?.camada === 'destaque' ? 'destaque' : 'fundo'
+  // Recortar uma fotografia que já existe, em vez de gerar uma nova.
+  const recortarUrl = String(corpo?.recortar ?? '').trim()
 
   const chave = process.env.HIGGSFIELD_API_KEY?.trim()
+
+  /**
+   * RECORTAR uma fotografia que já temos.
+   *
+   * É o caminho normal para o destaque: a fotografia real dele, sem o fundo. Uma pessoa gerada
+   * parece-se com ele mas não é ele, e num cartão que fala na primeira pessoa isso nota-se.
+   */
+  if (recortarUrl) {
+    if (!chave) {
+      return NextResponse.json({ ok: false, erro: 'HIGGSFIELD_API_KEY em falta — sem ela não há recorte' }, { status: 503 })
+    }
+    const r = await fetch('https://platform.higgsfield.ai/v1/image/remove-background', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${chave}` },
+      body: JSON.stringify({ image: recortarUrl }),
+      signal: AbortSignal.timeout(110_000),
+    }).catch(() => null)
+
+    if (!r || !r.ok) {
+      return NextResponse.json({ ok: false, erro: `o recorte falhou${r ? ` (HTTP ${r.status})` : ''}` }, { status: 502 })
+    }
+    const j = (await r.json()) as Record<string, unknown>
+    const saida = (j.url as string) ?? (j.result_url as string) ?? ((j.images as Array<{ url?: string }>) ?? [])[0]?.url
+    if (!saida) return NextResponse.json({ ok: false, erro: 'o recorte não devolveu imagem' }, { status: 502 })
+
+    // PNG e não JPEG: a transparência é o ponto todo, e um JPEG devolve-a como fundo branco.
+    const bin = await fetch(saida).then((x) => x.arrayBuffer())
+    const url = await uploadBufferToBucket(Buffer.from(bin), 'image/png', 'estudio-recorte')
+
+    // Fica na galeria: recortar a mesma fotografia outra vez é gastar o mesmo dinheiro duas vezes.
+    const db = getSupabaseAdmin()
+    const { data } = await db.from('site_settings').select('value').eq('key', CHAVE_RECORTES).maybeSingle()
+    let galeria: string[] = []
+    try {
+      const v = typeof data?.value === 'string' ? JSON.parse(data.value) : data?.value
+      galeria = Array.isArray(v) ? (v as string[]) : []
+    } catch { galeria = [] }
+    await db.from('site_settings').upsert(
+      { key: CHAVE_RECORTES, value: JSON.stringify([url, ...galeria].slice(0, 40)), updated_at: new Date().toISOString() },
+      { onConflict: 'key' },
+    )
+
+    return NextResponse.json({ ok: true, url, camada: 'destaque' })
+  }
+
+  if (descricao.length < 8) {
+    return NextResponse.json({ ok: false, erro: 'descreve em duas palavras que sejam' }, { status: 400 })
+  }
+
   if (!chave) {
     return NextResponse.json(
       { ok: false, erro: 'HIGGSFIELD_API_KEY em falta — sem ela não há geração de imagem' },
@@ -122,12 +182,17 @@ export async function POST(req: NextRequest) {
    * ter onde assentar.
    */
   const prompt =
-    `${descricao}. Dark cinematic photograph, deep shadows, muted gold rim light. ` +
-    (comRicardo
-      ? 'Featuring the man from the reference photograph, same face and build, natural and candid. '
-      : 'No people, no faces. ') +
-    'Composition leaves the central third dark, low-contrast and uncluttered so large typography ' +
-    'can be laid over it. No text, no letters, no logos, no watermark.'
+    camada === 'destaque'
+      ? `${descricao}. Full-body photograph of ` +
+        (comRicardo ? 'the man from the reference photograph, same face and build, ' : 'a person, ') +
+        'isolated on a plain flat neutral background, sharp edges, even studio lighting, ' +
+        'entire body visible with space around it. No scenery, no props, no text, no watermark.'
+      : `${descricao}. Dark cinematic photograph, deep shadows, muted gold rim light. ` +
+        (comRicardo
+          ? 'Featuring the man from the reference photograph, same face and build, natural and candid. '
+          : 'No people, no faces. ') +
+        'Composition leaves the central third dark, low-contrast and uncluttered so large typography ' +
+        'can be laid over it. No text, no letters, no logos, no watermark.'
 
   const r = await fetch('https://platform.higgsfield.ai/v1/image/generate', {
     method: 'POST',
@@ -160,10 +225,32 @@ export async function POST(req: NextRequest) {
    * O endereço que o gerador devolve expira. Um cartão guardado hoje com um fundo que amanhã já
    * não carrega é um cartão perdido — e só se dá por isso quando alguém o abre.
    */
-  const bin = await fetch(gerada).then((x) => x.arrayBuffer())
-  const url = await uploadBufferToBucket(Buffer.from(bin), 'image/png', 'estudio-ia')
+  /**
+   * Uma pessoa gerada sai logo RECORTADA.
+   *
+   * Um destaque com fundo tapa a fotografia de baixo e as três camadas passam a ser duas. O
+   * recorte é o que torna a imagem utilizável como camada — e gerar sem ele obrigava a uma
+   * segunda viagem à mão de cada vez.
+   */
+  let fonte = gerada
+  if (camada === 'destaque') {
+    const rec = await fetch('https://platform.higgsfield.ai/v1/image/remove-background', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${chave}` },
+      body: JSON.stringify({ image: gerada }),
+      signal: AbortSignal.timeout(110_000),
+    }).catch(() => null)
+    if (rec?.ok) {
+      const rj = (await rec.json()) as Record<string, unknown>
+      fonte = (rj.url as string) ?? (rj.result_url as string) ?? fonte
+    }
+    // Falhando o recorte, devolve-se a imagem inteira em vez de nada: dá para ver e decidir.
+  }
 
-  return NextResponse.json({ ok: true, url, comRicardo })
+  const bin = await fetch(fonte).then((x) => x.arrayBuffer())
+  const url = await uploadBufferToBucket(Buffer.from(bin), 'image/png', camada === 'destaque' ? 'estudio-recorte' : 'estudio-ia')
+
+  return NextResponse.json({ ok: true, url, comRicardo, camada })
 }
 
 /** O retrato guardado, para o estúdio saber se já pode oferecer «com o Ricardo». */
@@ -171,12 +258,20 @@ export async function GET(req: NextRequest) {
   const guarda = await requireAdmin(req)
   if (guarda) return guarda
 
-  const { data } = await getSupabaseAdmin()
-    .from('site_settings').select('value').eq('key', CHAVE_RETRATO).maybeSingle()
-  try {
-    const v = typeof data?.value === 'string' ? JSON.parse(data.value) : data?.value
-    return NextResponse.json({ retrato: (v?.url as string) ?? null, temIA: Boolean(process.env.HIGGSFIELD_API_KEY?.trim()) })
-  } catch {
-    return NextResponse.json({ retrato: null, temIA: Boolean(process.env.HIGGSFIELD_API_KEY?.trim()) })
+  const db = getSupabaseAdmin()
+  const [{ data: r }, { data: g }] = await Promise.all([
+    db.from('site_settings').select('value').eq('key', CHAVE_RETRATO).maybeSingle(),
+    db.from('site_settings').select('value').eq('key', CHAVE_RECORTES).maybeSingle(),
+  ])
+  const ler = (v: unknown) => {
+    try { return typeof v === 'string' ? JSON.parse(v) : v } catch { return null }
   }
+  const retrato = ler(r?.value) as { url?: string } | null
+  const recortes = ler(g?.value)
+
+  return NextResponse.json({
+    retrato: retrato?.url ?? null,
+    recortes: Array.isArray(recortes) ? recortes : [],
+    temIA: Boolean(process.env.HIGGSFIELD_API_KEY?.trim()),
+  })
 }

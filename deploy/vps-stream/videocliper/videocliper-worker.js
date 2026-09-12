@@ -35,6 +35,22 @@ const ASR_URL = process.env.CAPTION_ASR_URL || "https://api.groq.com/openai/v1/a
 const ASR_KEY = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || ""
 const ASR_MODELO = process.env.CAPTION_ASR_MODEL || "whisper-large-v3-turbo"
 
+const YTDLP = process.env.YTDLP_BIN || "/usr/local/bin/yt-dlp"
+
+/**
+ * Os cookies do YouTube, se existirem.
+ *
+ * O YouTube recusa descargas de IPs de datacenter — «confirma que não és um robô» — e nenhum
+ * `player_client` alternativo contorna isso hoje. Um ficheiro de cookies exportado de um browser
+ * com sessão resolve, e é a única forma que resta para vídeos que não sejam nossos.
+ *
+ * As NOSSAS sessões não passam por aqui: são cortadas do ficheiro que já está em /mnt/dvr.
+ */
+function cookiesDoYoutube() {
+  const f = process.env.YOUTUBE_COOKIES_FILE
+  return f && fs.existsSync(f) ? ["--cookies", f] : []
+}
+
 const log = (...a) => console.log(new Date().toISOString(), "[videocliper]", ...a)
 
 function api(caminho, opcoes = {}) {
@@ -147,17 +163,32 @@ async function transcrever(trabalho) {
       body: JSON.stringify({ resultado: "progresso", jobId: trabalho.jobId, progresso: "a descarregar" }),
     })
 
-    // `bv*+ba/b` com tecto de 720p: o que interessa é o ÁUDIO para transcrever e o vídeo para
-    // cortar. Puxar 4K de uma sessão de duas horas enche o disco por nada.
-    await correr("yt-dlp", [
-      "-f", "bv*[height<=720]+ba/b[height<=720]/b",
-      "--merge-output-format", "mp4",
-      "-o", video,
-      trabalho.youtubeUrl,
-    ])
+    /**
+     * O ficheiro LOCAL primeiro.
+     *
+     * Uma gravação nossa já está nesta máquina, em /mnt/dvr. Mandá-la ao YouTube para a voltar a
+     * descarregar era pagar duas viagens por um ficheiro que está ali ao lado — e o YouTube
+     * recusa descargas deste IP («confirma que não és um robô»), por ser um datacenter.
+     */
+    let fonteDoAudio = trabalho.ficheiroLocal
+    if (fonteDoAudio && fs.existsSync(fonteDoAudio)) {
+      log("a usar a gravação do DVR:", fonteDoAudio)
+    } else {
+      if (!trabalho.youtubeUrl) throw new Error("sem ficheiro local nem link para descarregar")
+      // `bv*+ba/b` com tecto de 720p: o que interessa é o ÁUDIO para transcrever. Puxar 4K de
+      // uma sessão de duas horas enche o disco por nada.
+      await correr(YTDLP, [
+        "-f", "bv*[height<=720]+ba/b[height<=720]/b",
+        "--merge-output-format", "mp4",
+        ...cookiesDoYoutube(),
+        "-o", video,
+        trabalho.youtubeUrl,
+      ])
+      fonteDoAudio = video
+    }
 
     const audio = path.join(tmp, "audio.m4a")
-    await correr("ffmpeg", ["-y", "-i", video, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "aac", "-b:a", "64k", audio])
+    await correr("ffmpeg", ["-y", "-i", fonteDoAudio, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "aac", "-b:a", "64k", audio])
 
     await api("/api/videocliper/worker", {
       method: "POST",
@@ -210,19 +241,32 @@ async function transcrever(trabalho) {
 async function render(trabalho) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "vc-"))
   try {
-    const fonte = path.join(tmp, "fonte.mp4")
     const duracao = Number(trabalho.fimSeg) - Number(trabalho.inicioSeg)
 
-    // `--download-sections` descarrega SÓ o pedaço preciso. Puxar o vídeo inteiro para cortar
-    // trinta segundos é minutos de espera e gigabytes de disco por clipe.
-    await correr("yt-dlp", [
-      "-f", "bv*[height<=1080]+ba/b",
-      "--download-sections", `*${Math.max(0, trabalho.inicioSeg - 1)}-${trabalho.fimSeg + 1}`,
-      "--force-keyframes-at-cuts",
-      "--merge-output-format", "mp4",
-      "-o", fonte,
-      trabalho.youtubeUrl,
-    ])
+    // Do disco, quando o ficheiro é nosso: sem descarga, o `-ss` do ffmpeg salta direito ao
+    // ponto e o corte demora segundos em vez de minutos.
+    let fonte = trabalho.ficheiroLocal
+    let recuo = 0
+    if (fonte && fs.existsSync(fonte)) {
+      recuo = Number(trabalho.inicioSeg)
+      log("a cortar da gravação do DVR")
+    } else {
+      if (!trabalho.youtubeUrl) throw new Error("sem ficheiro local nem link para descarregar")
+      fonte = path.join(tmp, "fonte.mp4")
+      // `--download-sections` descarrega SÓ o pedaço preciso. Puxar o vídeo inteiro para cortar
+      // trinta segundos é minutos de espera e gigabytes de disco por clipe.
+      await correr(YTDLP, [
+        "-f", "bv*[height<=1080]+ba/b",
+        "--download-sections", `*${Math.max(0, trabalho.inicioSeg - 1)}-${trabalho.fimSeg + 1}`,
+        "--force-keyframes-at-cuts",
+        "--merge-output-format", "mp4",
+        ...cookiesDoYoutube(),
+        "-o", fonte,
+        trabalho.youtubeUrl,
+      ])
+      // O pedaço descarregado começa um segundo antes do ponto pedido.
+      recuo = 1
+    }
 
     const ass = path.join(tmp, "legendas.ass")
     fs.writeFileSync(ass, construirASS(trabalho.legendas || [], trabalho.estilo || {}), "utf8")
@@ -241,7 +285,7 @@ async function render(trabalho) {
      */
     await correr("ffmpeg", [
       "-y",
-      "-ss", "1", "-t", String(duracao),
+      "-ss", String(recuo), "-t", String(duracao),
       "-i", fonte,
       "-vf",
       `crop='min(iw,ih*9/16)':ih,scale=${L}:${A}:force_original_aspect_ratio=increase,crop=${L}:${A},ass='${ass.replace(/'/g, "\\'")}'`,

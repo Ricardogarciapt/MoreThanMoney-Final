@@ -30,6 +30,10 @@ export async function GET(req: NextRequest) {
     kicker: p.get("kicker") || "MORE THAN MONEY",
     formato: p.get("formato") === "reel" ? "reel" : "post",
     fundo: p.get("fundo") || undefined,
+    // As três camadas: fundo, pessoa recortada, texto. Ver `SocialCardParams`.
+    destaque: p.get("destaque") || undefined,
+    destaquePos: (p.get("destaquePos") as "esquerda" | "centro" | "direita") || undefined,
+    destaqueEscala: p.get("destaqueEscala") ? Number(p.get("destaqueEscala")) : undefined,
   })
   return new Response(new Uint8Array(png), {
     headers: { "content-type": "image/png", "cache-control": "public, max-age=300" },
