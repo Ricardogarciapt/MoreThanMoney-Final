@@ -6,6 +6,7 @@ import VitrineCertificados, { type CertificadoVitrine } from '@/components/mtmfu
 import T from '@/components/mtmfunded/t'
 import SplashPromos from '@/components/mtmfunded/splash-promos'
 import { promosAtivas } from '@/lib/mtmfunded/promos'
+import { inscricoesAbertas } from '@/lib/mtmfunded/inscricoes'
 
 // Cache de 60s em vez de render por pedido: a classificação actualiza de hora a hora e os
 // programas mudam raramente. Sem isto, cada visita esperava pela base de dados antes do
@@ -332,7 +333,7 @@ export default async function MtmFundedPage() {
             href="/mtmfunded/tradingtournament"
             className="btn mt-7"
           >
-            <T k={torneio?.estado === 'inscricoes' ? 'mtmfunded.torneio.abertas' : 'mtmfunded.torneio.ver'} />
+            <T k={inscricoesAbertas(torneio) ? 'mtmfunded.torneio.abertas' : 'mtmfunded.torneio.ver'} />
           </Link>
         </div>
       </section>

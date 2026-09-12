@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { censurarEmail } from '@/lib/mtmfunded/acesso'
 import T from '@/components/mtmfunded/t'
 import DataLocal from '@/components/mtmfunded/data-local'
+import { inscricoesAbertas } from '@/lib/mtmfunded/inscricoes'
 
 // Cache de 60s em vez de render por pedido: a classificação actualiza de hora a hora e os
 // programas mudam raramente. Sem isto, cada visita esperava pela base de dados antes do
@@ -57,7 +58,7 @@ export default async function TradingTournamentPage() {
         </h1>
         <p className="r d2 mt-3 text-sm uppercase tracking-[0.25em] text-[#7b756a]"><T k="tt.lema" /></p>
 
-        {torneio?.estado === 'inscricoes' && (
+        {torneio && inscricoesAbertas(torneio) && (
           <div className="r d3 mt-7 inline-flex items-center gap-2.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-400">
             <span className="pulso h-2 w-2 rounded-full bg-emerald-400" />
             <T k="tt.abertas" />
@@ -116,7 +117,7 @@ export default async function TradingTournamentPage() {
                 href="/mtmfunded/tradingtournament/dashboard"
                 className="rounded-full bg-[#4B8BFF] px-7 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
               >
-                <T k={torneio.estado === 'inscricoes' ? 'tt.inscrever' : 'tt.minhaArea'} />
+                <T k={inscricoesAbertas(torneio) ? 'tt.inscrever' : 'tt.minhaArea'} />
               </Link>
               <Link
                 href="/mtmfunded"

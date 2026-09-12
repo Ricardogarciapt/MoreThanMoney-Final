@@ -143,7 +143,10 @@ export async function enviarConviteTorneio(opcoes: OpcoesEnvio = {}): Promise<Re
     return { error: 'Não há torneio publicado' }
   }
   // Convidar para uma porta fechada ensina as pessoas a ignorar os nossos emails.
-  if (torneio.estado !== 'inscricoes') {
+  // A porta é a data, não o estado — um torneio a decorrer que ainda aceita gente continua a
+  // merecer convite. Ver `lib/mtmfunded/inscricoes`.
+  const { inscricoesAbertas } = await import('./inscricoes')
+  if (!inscricoesAbertas(torneio)) {
     return { error: `As inscrições não estão abertas (estado: ${torneio.estado})` }
   }
 
@@ -407,4 +410,185 @@ export async function enviarAnuncioPolitica(opcoes: OpcoesEnvio = {}): Promise<R
   }
 
   return { ok: true, enviados, falhados, total: alvos.length }
+}
+
+// ── confirmação de inscrição ─────────────────────────────────────────────────
+
+/**
+ * O EMAIL QUE FALTAVA: «estás inscrito».
+ *
+ * Entre carregar no botão e receber as credenciais passam dias — as contas são criadas uma a
+ * uma por um agente a conduzir o MetaTrader, e as credenciais só abrem na véspera, de propósito,
+ * para que quem se inscreve cedo não leve semanas de treino na própria conta do torneio.
+ *
+ * Durante esses dias não chegava nada. O participante ficava sem saber se a inscrição tinha
+ * sequer passado, e a pergunta «recebeste?» chegava por mensagem em vez de estar respondida.
+ *
+ * Este email diz três coisas e só três: estás dentro, começa neste dia, as credenciais chegam na
+ * véspera. Não leva login nem password — não existem ainda, e prometê-los para «já» era repetir
+ * o problema noutro sítio.
+ *
+ * NÃO é em massa e não tem os travões dos outros: dispara um a um, quando alguém se inscreve.
+ */
+export async function enviarConfirmacaoInscricao(participanteId: string): Promise<ResultadoEnvio> {
+  const db = getSupabaseAdmin()
+
+  const { data: p } = await db
+    .from('mtm_tournament_participants')
+    .select('id, nome_publico, email, confirmacao_enviada_em, tournament_id')
+    .eq('id', participanteId)
+    .maybeSingle()
+  if (!p) return { error: 'participante não encontrado' }
+  if (!p.email) return { error: 'participante sem email' }
+
+  // Reenviar o mesmo «estás inscrito» faz duvidar da primeira inscrição, não tranquiliza.
+  if (p.confirmacao_enviada_em) {
+    return { ok: true, aviso: 'confirmação já tinha sido enviada', enviados: 0 }
+  }
+
+  const { data: t } = await db
+    .from('mtm_tournaments')
+    .select('slug, nome, comeca_em, acaba_em, saldo_inicial, alavancagem, inscricoes_fecham_em')
+    .eq('id', p.tournament_id as string)
+    .maybeSingle()
+  if (!t) return { error: 'torneio não encontrado' }
+
+  const site = getSiteUrl()
+  const logo = getEmailLogoSrc()
+  const primeiro = String(p.nome_publico ?? '').trim().split(/\s+/)[0] || 'Trader'
+  const comeca = new Date(t.comeca_em as string)
+  const dia = comeca.toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })
+  const vesperaData = new Date(comeca.getTime() - 24 * 3600 * 1000)
+  const vespera = vesperaData.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long' })
+
+  /**
+   * PÔR AS DATAS NO CALENDÁRIO DELE.
+   *
+   * Um email que diz «começa segunda» obriga a pessoa a ir escrever isso algures — e a maioria
+   * não escreve. Entre a inscrição e o arranque passam dias, e o dia chega sem aviso nenhum.
+   *
+   * Dois caminhos porque não há um que sirva toda a gente: o Google abre no browser e resolve
+   * quem vive no Gmail; o ficheiro `.ics` é o que o iPhone, o Outlook e tudo o resto entendem.
+   * Escolher só um deixava metade das pessoas de fora.
+   *
+   * O formato do Google é `AAAAMMDD/AAAAMMDD` para dia inteiro, e o fim é EXCLUSIVO — daí o dia
+   * a mais, senão o último dia do torneio não aparece na agenda.
+   */
+  const diaGoogle = (d: Date) =>
+    `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`
+  const fimExclusivo = new Date(new Date(t.acaba_em as string).getTime() + 24 * 3600 * 1000)
+  const linkGoogle =
+    'https://calendar.google.com/calendar/render?action=TEMPLATE' +
+    `&text=${encodeURIComponent(t.nome as string)}` +
+    `&dates=${diaGoogle(comeca)}/${diaGoogle(fimExclusivo)}` +
+    `&details=${encodeURIComponent(
+      `Conta simulada de ${Number(t.saldo_inicial).toLocaleString('pt-PT')} USD. As credenciais chegam a ${vespera}.\n\nRegras e classificação: ${site}/mtmfunded/tradingtournament`,
+    )}` +
+    `&location=${encodeURIComponent(`${site}/mtmfunded/tradingtournament`)}`
+  const linkIcs = `${site}/api/mtmfunded/tournament/calendario?t=${encodeURIComponent(t.slug as string)}`
+
+  /**
+   * Quem entra a meio não pode receber «começa segunda».
+   *
+   * Neste primeiro torneio as inscrições ficam abertas um mês depois do arranque, por isso o
+   * mesmo email serve duas situações diferentes: quem se inscreveu antes e espera pela véspera,
+   * e quem entrou com o torneio já a correr e cuja conta é emitida já a seguir. Dizer a segunda
+   * pessoa que «as credenciais chegam na véspera» era mandá-la esperar por um dia que já passou.
+   */
+  const arrancou = comeca <= new Date()
+  const fimLegivel = new Date(t.acaba_em as string).toLocaleDateString('pt-PT', {
+    day: '2-digit',
+    month: 'long',
+  })
+  const fechamLegivel = t.inscricoes_fecham_em
+    ? new Date(t.inscricoes_fecham_em as string).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long' })
+    : null
+
+  const html = `
+  <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;">
+    <div style="text-align:center;padding:28px 0;"><img src="${logo}" alt="MTM Funded" width="170" style="max-width:170px;" /></div>
+    <div style="background:#fff;border-radius:16px;padding:28px;">
+      <h1 style="margin:0;font-size:23px;line-height:1.3;color:#111;">Estás inscrito, ${primeiro}</h1>
+
+      <p style="margin:16px 0 0;font-size:15px;line-height:1.65;color:#444;">
+        A tua inscrição no <strong>${t.nome}</strong> está registada.
+        ${arrancou ? `Já vai a meio — começou <strong>${dia}</strong> e acaba <strong>${fimLegivel}</strong>.` : `Começa <strong>${dia}</strong>.`}
+      </p>
+
+      <div style="margin:22px 0;padding:18px 20px;background:#faf6ec;border:1px solid #eadcb8;border-radius:12px;">
+        ${
+          arrancou
+            ? `<p style="margin:0;font-size:15px;line-height:1.65;color:#222;">
+                 <strong>A tua conta está a ser emitida.</strong> Recebes o login, o servidor e o
+                 código QR por email assim que estiver pronta.
+               </p>
+               <p style="margin:10px 0 0;font-size:14px;line-height:1.6;color:#666;">
+                 As contas são criadas uma a uma, por isso não é imediato. Como o torneio já
+                 arrancou, começas com menos dias do que quem entrou no início — e a classificação
+                 é a mesma para todos.
+               </p>`
+            : `<p style="margin:0;font-size:15px;line-height:1.65;color:#222;">
+                 <strong>As credenciais chegam a ${vespera}</strong>, na véspera do arranque — a ti
+                 e a toda a gente ao mesmo tempo.
+               </p>
+               <p style="margin:10px 0 0;font-size:14px;line-height:1.6;color:#666;">
+                 É de propósito: as contas são emitidas uma a uma e ao longo de dias, e abrir as
+                 credenciais no momento da inscrição dava a quem entrasse mais cedo semanas de
+                 treino na própria conta do torneio. Todos começam no mesmo ponto.
+               </p>`
+        }
+      </div>
+
+      <p style="margin:0 0 6px;font-size:14px;line-height:1.65;color:#444;">Até lá, o que há a saber:</p>
+      <ul style="margin:0 0 20px;padding-left:20px;font-size:14px;line-height:1.75;color:#555;">
+        <li>Conta de <strong>${Number(t.saldo_inicial).toLocaleString('pt-PT')} USD</strong>, alavancagem ${t.alavancagem ?? 100}.</li>
+        <li>É <strong>simulada</strong>: dinheiro virtual, não depositas nada.</li>
+        <li>Recebes login, servidor e código QR por email, e ficam também na tua área.</li>
+        ${fechamLegivel ? `<li>As inscrições ficam abertas até <strong>${fechamLegivel}</strong> — ainda dá para trazer alguém.</li>` : ''}
+        <li>A classificação é pública e actualiza de hora a hora.</li>
+      </ul>
+
+      <a href="${site}/mtmfunded/tradingtournament/dashboard" style="display:inline-block;background:#BB8525;color:#fff;text-decoration:none;padding:13px 26px;border-radius:8px;font-weight:600;font-size:15px;">
+        Abrir a minha área
+      </a>
+
+      <div style="margin:26px 0 0;padding-top:20px;border-top:1px solid #eee;">
+        <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#444;">
+          <strong>Põe as datas no teu calendário</strong> — leva o arranque do torneio e o dia em
+          que as credenciais chegam.
+        </p>
+        <a href="${linkGoogle}" style="display:inline-block;margin:0 8px 8px 0;border:1px solid #ddd;border-radius:8px;padding:10px 16px;color:#333;text-decoration:none;font-size:13.5px;font-weight:600;">
+          Google Calendar
+        </a>
+        <a href="${linkIcs}" style="display:inline-block;margin:0 0 8px 0;border:1px solid #ddd;border-radius:8px;padding:10px 16px;color:#333;text-decoration:none;font-size:13.5px;font-weight:600;">
+          Apple · Outlook (.ics)
+        </a>
+      </div>
+
+      <p style="margin:22px 0 0;font-size:12px;line-height:1.6;color:#999;">
+        As contas não movimentam dinheiro real e nada disto é aconselhamento financeiro.
+        As regras estão em ${site}/mtmfunded/tradingtournament.
+      </p>
+    </div>
+  </div>`
+
+  try {
+    const transporter = createMailTransporter()
+    await transporter.sendMail({
+      from: mailFrom(),
+      to: p.email as string,
+      subject: arrancou ? `Estás dentro do ${t.nome}` : `Estás inscrito no ${t.nome}`,
+      html: prepareBrandedEmailHtml(html),
+      attachments: brandedMailAttachments(),
+    })
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'falha no envio' }
+  }
+
+  await db
+    .from('mtm_tournament_participants')
+    .update({ confirmacao_enviada_em: new Date().toISOString() })
+    .eq('id', p.id)
+
+  return { ok: true, enviados: 1, torneio: t.nome as string }
 }

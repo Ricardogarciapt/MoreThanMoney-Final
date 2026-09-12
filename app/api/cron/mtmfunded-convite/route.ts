@@ -43,16 +43,22 @@ export async function GET(request: NextRequest) {
 
   const db = getSupabaseAdmin()
 
+  // Traz o torneio publicado mais recente e pergunta DEPOIS se ainda aceita gente. Filtrar por
+  // `estado = 'inscricoes'` na consulta deixava de fora um torneio já a decorrer cujas
+  // inscrições continuam abertas — e é esse que mais precisa de convite.
   const { data: torneio } = await db
     .from('mtm_tournaments')
-    .select('id, nome, estado, comeca_em, updated_at, publicado')
+    .select('id, nome, estado, comeca_em, updated_at, publicado, inscricoes_fecham_em')
     .eq('publicado', true)
-    .eq('estado', 'inscricoes')
+    .not('estado', 'in', '("draft","terminado","cancelado")')
     .order('comeca_em', { ascending: false })
     .limit(1)
     .maybeSingle()
 
-  if (!torneio) return NextResponse.json({ ok: true, nota: 'nenhum torneio com inscrições abertas' })
+  const { inscricoesAbertas } = await import('@/lib/mtmfunded/inscricoes')
+  if (!torneio || !inscricoesAbertas(torneio)) {
+    return NextResponse.json({ ok: true, nota: 'nenhum torneio com inscrições abertas' })
+  }
 
   // A espera conta-se desde a última mudança do torneio — que é quando as inscrições abriram.
   const desde = new Date((torneio.updated_at as string) ?? Date.now()).getTime()

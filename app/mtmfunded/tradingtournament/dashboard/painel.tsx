@@ -10,6 +10,7 @@ import dynamic from 'next/dynamic'
 import { Contratos, Levantamentos } from '@/components/mtmfunded/contratos-e-levantamentos'
 import { useT } from '@/components/i18n-provider'
 import ModalMetricas from '@/components/mtmfunded/modal-metricas'
+import { inscricoesAbertas } from '@/lib/mtmfunded/inscricoes'
 
 /**
  * O painel de admin aqui é o MESMO componente do /admin, e não uma cópia.
@@ -234,7 +235,8 @@ function Inscricao({ torneio, nome, perfil }: {
   const [estado, setEstado] = useState<'parado' | 'a_enviar' | 'feito'>('parado')
   const [erro, setErro] = useState<string | null>(null)
 
-  if (torneio.estado !== 'inscricoes') {
+  // A porta é a DATA, não o estado — este torneio aceita gente já a decorrer.
+  if (!inscricoesAbertas(torneio)) {
     return (
       <Caixa titulo={torneio.nome}>
         <Vazio>
@@ -625,7 +627,7 @@ function Competicoes({ torneio, participante, onInscrever }: { torneio: Torneio 
   const d = (v: string) => new Date(v).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long' })
   return (
     <Caixa titulo={torneio.nome}>
-      <Linha rotulo="Estado" valor={participante ? 'Inscrito' : torneio.estado === 'inscricoes' ? 'Inscrições abertas' : torneio.estado} />
+      <Linha rotulo="Estado" valor={participante ? 'Inscrito' : inscricoesAbertas(torneio) ? 'Inscrições abertas' : torneio.estado} />
       <Linha rotulo="Decorre" valor={`${d(torneio.comecaEm)} — ${d(torneio.acabaEm)}`} />
       <Linha rotulo="Conta" valor={`${torneio.saldoInicial.toLocaleString('pt-PT')} USD`} />
       {torneio.premios.length > 0 && (
@@ -640,7 +642,7 @@ function Competicoes({ torneio, participante, onInscrever }: { torneio: Torneio 
       {/* O botão leva ao FORMULÁRIO, que vive no Dashboard. Antes apontava para a página
           pública, que por sua vez volta a apontar para aqui: dois botões «Inscrever-me» a
           mandar um para o outro, sem nada pelo meio que inscrevesse alguém. */}
-      {!participante && torneio.estado === 'inscricoes' && (
+      {!participante && inscricoesAbertas(torneio) && (
         <button onClick={onInscrever} className="mt-4 rounded-lg bg-[#4B8BFF] px-5 py-2.5 text-sm font-semibold">
           Inscrever-me
         </button>

@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { getMtmFundedConfig } from '@/lib/mtmfunded/config'
 import T from '@/components/mtmfunded/t'
 import Acordeao, { type Entrada } from './acordeao'
+import { inscricoesAbertas } from '@/lib/mtmfunded/inscricoes'
 
 // Cache de 60s em vez de render por pedido: as regras e as datas mudam raramente, e numa
 // página que se lê antes de comprar cada espera é uma visita perdida.
@@ -39,12 +40,13 @@ export default async function FaqFunded() {
    * Passa como CHAVE, não como texto: a página é renderizada no servidor e não sabe em que
    * língua vai ser lida — resolver aqui devolvia sempre português.
    */
-  const chaveInscricoes =
-    torneio?.estado === 'inscricoes'
-      ? 'faq.q3abertas'
-      : torneio?.estado === 'a_decorrer'
-        ? 'faq.q3decorrer'
-        : 'faq.q3embreve'
+  // Abertas ganha a «a decorrer»: um torneio pode estar a correr E ainda a aceitar gente, e nesse
+  // caso a resposta útil é que dá para entrar — não que já começou.
+  const chaveInscricoes = inscricoesAbertas(torneio)
+    ? 'faq.q3abertas'
+    : torneio?.estado === 'a_decorrer'
+      ? 'faq.q3decorrer'
+      : 'faq.q3embreve'
 
   const entradas: Array<Entrada | null> = [
     { p: 'faq.q1p', r: 'faq.q1r' },

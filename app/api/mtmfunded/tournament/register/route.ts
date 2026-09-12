@@ -40,11 +40,11 @@ export async function POST(request: NextRequest) {
   if (!torneio || !torneio.publicado) {
     return NextResponse.json({ error: 'Torneio não encontrado' }, { status: 404 })
   }
-  if (torneio.estado !== 'inscricoes') {
+  // Quem manda é a DATA, não o estado: um torneio já a decorrer pode continuar a aceitar
+  // gente, e é isso que «entrar a meio» quer dizer. Ver `lib/mtmfunded/inscricoes`.
+  const { inscricoesAbertas } = await import('@/lib/mtmfunded/inscricoes')
+  if (!inscricoesAbertas(torneio)) {
     return NextResponse.json({ error: 'As inscrições não estão abertas' }, { status: 409 })
-  }
-  if (torneio.inscricoes_fecham_em && new Date(torneio.inscricoes_fecham_em) < new Date()) {
-    return NextResponse.json({ error: 'As inscrições já fecharam' }, { status: 409 })
   }
 
   const { data: perfil } = await db
@@ -178,6 +178,19 @@ export async function POST(request: NextRequest) {
     alavancagem: torneio.alavancagem,
     estado: 'em_fila',
   })
+
+  /**
+   * Avisar que a inscrição passou.
+   *
+   * Entre o botão e as credenciais passam dias — e até aqui não chegava nada nesse intervalo.
+   * O participante ficava sem saber se a inscrição tinha sequer sido registada.
+   *
+   * Falhar o email NÃO desfaz a inscrição: ela está feita, a conta está na fila, e devolver
+   * erro aqui faria a pessoa carregar no botão outra vez à procura de uma confirmação que não
+   * vem por aí. Quem ficou por avisar vê-se pela marca na linha do participante.
+   */
+  const { enviarConfirmacaoInscricao } = await import('@/lib/mtmfunded/envios')
+  await enviarConfirmacaoInscricao(participante.id).catch(() => undefined)
 
   return NextResponse.json({
     ok: true,
