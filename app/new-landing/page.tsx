@@ -1,5 +1,7 @@
 import type { Metadata } from "next"
 import NewLandingPage from "@/components/new-landing-page-v2"
+import SplashPromos from "@/components/mtmfunded/splash-promos"
+import { promosAtivas } from "@/lib/mtmfunded/promos"
 
 export const metadata: Metadata = {
   title: "MoreThanMoney — formação, sinais e execução no mesmo sítio",
@@ -16,6 +18,22 @@ export const metadata: Metadata = {
   },
 }
 
-export default function NewLanding() {
-  return <NewLandingPage />
+/**
+ * O splash das campanhas na porta de entrada do site.
+ *
+ * Vivia só no /mtmfunded, que é onde chega quem já sabe o que procura. O sorteio existe
+ * precisamente para trazer quem AINDA não sabe — e essa gente chega aqui.
+ *
+ * A lista vem da base de dados: acabada a campanha, o pop-up desaparece sozinho. Sem campanha
+ * activa, `promosAtivas()` devolve vazio e o componente não desenha nada — não há pop-up nenhum
+ * a fechar.
+ */
+export default async function NewLanding() {
+  const promos = await promosAtivas()
+  return (
+    <>
+      <SplashPromos promos={promos} />
+      <NewLandingPage />
+    </>
+  )
 }

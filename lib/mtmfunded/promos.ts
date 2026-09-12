@@ -55,6 +55,43 @@ export async function promosAtivas(): Promise<Promo[]> {
     })
   }
 
+  // ── sorteios a decorrer ───────────────────────────────────────────────────
+  //
+  // Um sorteio entra no splash pela MESMA regra de tudo o resto aqui: existe enquanto a linha
+  // disser que existe. Fecha-se a campanha na base de dados e o pop-up desaparece sozinho — não
+  // fica no ar a prometer prémios que já foram sorteados.
+  //
+  // As três variantes partilham o mesmo prémio, por isso mostra-se UMA entrada e não três: o
+  // splash serve para anunciar o que está em jogo, e três pop-ups a dizer o mesmo eram três
+  // vezes a mesma interrupção. A porta por que a pessoa entra escolhe-se na página.
+  const { data: sorteios } = await db
+    .from('giveaways')
+    .select('slug, nome, acaba_em')
+    .eq('estado', 'a_decorrer')
+    .gt('acaba_em', agora)
+    .order('acaba_em')
+    .limit(1)
+
+  if (sorteios?.length) {
+    const s = sorteios[0]
+    const { data: premios } = await db
+      .from('giveaway_prizes')
+      .select('quantidade')
+    const total = (premios ?? []).reduce((a, p) => a + Number(p.quantidade ?? 0), 0)
+
+    promos.push({
+      campanha: 'sorteio-lancamento',
+      etiqueta: 'Sorteio de lançamento',
+      titulo: `${total} prémios · 5 desafios de 5.000 USD`,
+      detalhe:
+        'Entra grátis. Também estão em jogo mensalidades de Membro e Premium, e uma mentoria ' +
+        'VIP personalizada.',
+      cta: 'Quero participar',
+      href: '/sorteio',
+      acabaEm: (s.acaba_em as string) ?? undefined,
+    })
+  }
+
   // ── cupões de desconto ────────────────────────────────────────────────────
   for (const c of cupoes ?? []) {
     // Um cupão esgotado continua activo na tabela, mas já não desconta nada. Anunciá-lo era

@@ -23,6 +23,7 @@ const REGISTER = "https://www.morethanmoney.pt/register"
 const TELEGRAM = "https://t.me/MoreThanMoney_aibot?start=lead"
 const CRIADORES = "https://www.morethanmoney.pt/criadores"
 const FUNDED = "https://www.morethanmoney.pt/mtmfunded"
+const SORTEIO = "https://www.morethanmoney.pt/sorteio"
 
 interface Intent {
   key: string
@@ -53,6 +54,36 @@ const INTENTS: Intent[] = [
     pub: (h) =>
       `Boa${h}! 🔥 Candidaturas de criadores abertas 👉 ${CRIADORES}. ` +
       `Manda-nos DM com 1 exemplo do teu conteúdo + a tua área e o Ricardo (@ricardogarciapt) fala contigo. 🙌`,
+  },
+  {
+    /**
+     * O SORTEIO DE LANÇAMENTO — à frente de todas, e só enquanto durar.
+     *
+     * Vem antes da `funded` de propósito, porque partilha com ela a palavra DESAFIO. Enquanto o
+     * sorteio corre, quem escreve DESAFIO está a responder ao post do sorteio — mandá-lo para a
+     * página dos desafios pagos seria responder a uma pergunta que ele não fez.
+     *
+     * As três palavras são as três portas da experiência, e cada uma leva o seu link:
+     *
+     * · FUNDED  → variante A, a porta larga: o comentário basta.
+     * · DESAFIO → variante B, a porta estreita: o link pede o email.
+     * · MUDANCA → variante C, a amplificação: o link dá o código de referência.
+     *
+     * SEM ACENTO em MUDANCA, e é deliberado: ninguém escreve cedilha num comentário de
+     * telemóvel, e a palavra no flyer é a que a pessoa copia. Ambas as grafias ficam na lista,
+     * porque quem escrever com cedilha também merece resposta.
+     *
+     * Quando as campanhas fecharem, esta entrada sai — e a `funded` volta a ficar com DESAFIO.
+     */
+    key: "sorteio",
+    kw: ["FUNDED", "DESAFIO", "MUDANCA", "MUDANÇA", "SORTEIO", "PARTICIPAR"],
+    dm: (h) =>
+      `Boa${h}! 🎯 Estás dentro do sorteio de lançamento da MTM Funded — 5 contas de 5.000 USD, ` +
+      `3 mensalidades de Membro, 1 Premium e 1 mentoria VIP.\n\n` +
+      `Confirma a tua entrada e vê quantos bilhetes tens aqui 👉 ${SORTEIO}\n\n` +
+      `Sorteio a 15 de Outubro. Participação gratuita, sem compra de nada. 🍀`,
+    pub: (h) =>
+      `Boa${h}! 🎯 Entrada registada — confirma e vê os teus bilhetes aqui 👉 ${SORTEIO} 🍀`,
   },
   {
     /**
