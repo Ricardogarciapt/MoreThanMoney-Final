@@ -98,9 +98,25 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
   const cta = (params.cta || '').toUpperCase().slice(0, 16)
   const facto = typeof params.proof === 'string' ? params.proof.slice(0, 90) : null
 
-  // O tamanho segue a faixa MAIS LONGA: dimensionar pela média fazia a longa transbordar.
-  const maisLonga = Math.max(cima.length, baixo.length)
-  const corpo = maisLonga > 22 ? 108 : maisLonga > 15 ? 140 : maisLonga > 9 ? 180 : 220
+  /**
+   * O tamanho sai da LARGURA que há, não do número de caracteres.
+   *
+   * Os escalões por contagem de letras partiam-se com frases reais: «A TUA CABEÇA SABOTA» tem
+   * 19 caracteres e caía no escalão dos 140px, onde não cabe em 1000px de largura. Partia em
+   * duas linhas, e como as duas faixas têm `lineHeight` apertado, a segunda linha da faixa de
+   * cima aterrava por cima da faixa de baixo — foi o que se viu na capa do carrossel do
+   * «mindset»: duas frases sobrepostas, ilegíveis.
+   *
+   * Uma faixa TEM de caber numa linha: é isso que faz o efeito. Por isso mede-se.
+   *
+   * O 0.46 é a largura média de um caractere da Anton itálica em relação à altura da fonte,
+   * medido nos cartões que saíram bem. Não é exacto — não há como medir texto dentro do Satori
+   * antes de desenhar — mas erra para o lado seguro, que é o de a letra ficar um pouco menor do
+   * que caberia. Pequena de mais lê-se; sobreposta não.
+   */
+  const LARGURA_UTIL = 1000
+  const maisLonga = Math.max(cima.length, baixo.length, 1)
+  const corpo = Math.max(64, Math.min(220, Math.floor(LARGURA_UTIL / (maisLonga * 0.46))))
 
   /**
    * Com foto, as faixas afastam-se para as bordas — é a foto que preenche o meio, como no
@@ -202,7 +218,10 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
           fontWeight: 900,
           fontStyle: 'italic',
           letterSpacing: -4,
-          lineHeight: 0.92,
+          // 1.0 e não 0.92: a cedilha do «Ç» e o til desciam para dentro da faixa de baixo.
+          // Português tem descendentes nas MAIÚSCULAS, ao contrário do inglês onde estes
+          // estilos nascem — e foi por isso que passou despercebido até haver um «CABEÇA».
+          lineHeight: 1.0,
           padding: '0 40px',
         }}
       >
@@ -210,7 +229,21 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
       </div>
 
       {/* Faixa de baixo, branca. */}
-      <div style={{ display: 'flex', flexDirection: 'column', padding: '0 40px', marginTop: temFoto ? 0 : 8 }}>
+      {/*
+        O afastamento entre as faixas é PROPORCIONAL à letra.
+        Era fixo (8px) e a cedilha do «Ç» descia para dentro da faixa de baixo — visível no
+        cartão do «A TUA CABEÇA SABOTA». Português tem descendentes nas MAIÚSCULAS (Ç, Q, J),
+        ao contrário do inglês de onde estes estilos vêm; por isso passou despercebido até
+        aparecer uma frase com cedilha. A 12% do corpo, a cauda cabe em qualquer tamanho.
+      */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '0 40px',
+          marginTop: Math.round(corpo * 0.22),
+        }}
+      >
         <div
           style={{
             display: 'flex',
@@ -220,7 +253,7 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
             fontWeight: 900,
             fontStyle: 'italic',
             letterSpacing: -4,
-            lineHeight: 0.92,
+            lineHeight: 1.0,
           }}
         >
           {baixo}
@@ -391,6 +424,24 @@ export function laminaElement(l: Lamina, indice: number, total: number, handle: 
   const t = l.texto.slice(0, 220)
   const corpo = t.length > 150 ? 56 : t.length > 90 ? 68 : t.length > 50 ? 82 : 96
 
+  /**
+   * A LÂMINA DO MEIO TAMBÉM TEM DONO.
+   *
+   * Só a capa e o fecho passavam pelo `socialCardElement`, que é onde a conta escolhe o estilo.
+   * As do meio caíam sempre neste bloco, escrito com o ciano do Ricardo — e um carrossel da
+   * MARCA saía com a capa preta e dourada e cinco lâminas azuis pelo meio. Metade de um
+   * carrossel a falar por outra conta é pior do que não ter estilo nenhum: parece um erro de
+   * montagem, porque é.
+   *
+   * O acento e a assinatura passam a vir da conta, como em todo o resto.
+   */
+  const daMarca = handle === 'morethanmoney.pt'
+  const acento = daMarca ? GOLD : CIANO
+  const assinatura = daMarca ? '@morethanmoney.pt' : '@ricardogarciapt'
+  const fundoLiso = daMarca
+    ? 'radial-gradient(900px 700px at 30% 20%, #1b1a17, #0b0d12 70%)'
+    : 'radial-gradient(900px 700px at 30% 20%, #23282e, #0d0f11 70%)'
+
   return (
     <div
       style={{
@@ -400,7 +451,7 @@ export function laminaElement(l: Lamina, indice: number, total: number, handle: 
         flexDirection: 'column',
         justifyContent: 'space-between',
         background: '#141414',
-        ...(l.fundo ? {} : { backgroundImage: 'radial-gradient(900px 700px at 30% 20%, #23282e, #0d0f11 70%)' }),
+        ...(l.fundo ? {} : { backgroundImage: fundoLiso }),
         padding: '84px 72px',
         position: 'relative',
       }}
@@ -440,7 +491,7 @@ export function laminaElement(l: Lamina, indice: number, total: number, handle: 
       )}
       {/* O número é a promessa de que há mais — é ele que faz deslizar. */}
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        <div style={{ display: 'flex', color: CIANO, fontFamily: 'Anton', fontSize: 72 }}>
+        <div style={{ display: 'flex', color: acento, fontFamily: 'Anton', fontSize: 72 }}>
           {String(indice).padStart(2, '0')}
         </div>
         <div style={{ display: 'flex', color: '#5b6167', fontSize: 30, fontWeight: 700, marginLeft: 16 }}>
@@ -453,9 +504,9 @@ export function laminaElement(l: Lamina, indice: number, total: number, handle: 
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        <div style={{ display: 'flex', width: 70, height: 7, background: CIANO, borderRadius: 4 }} />
+        <div style={{ display: 'flex', width: 70, height: 7, background: acento, borderRadius: 4 }} />
         <div style={{ display: 'flex', color: '#8b9199', fontSize: 28, fontWeight: 600, marginLeft: 20 }}>
-          {'@' + handle.replace(/^@/, '')}
+          {assinatura}
         </div>
       </div>
     </div>

@@ -30,6 +30,18 @@ export async function POST(req: NextRequest) {
   const handle = String(corpo?.handle ?? '')
   const urls = Array.isArray(corpo?.urls) ? corpo.urls.map(String).filter(Boolean) : []
 
+  /**
+   * PARA ONDE VAI.
+   *
+   * · `funil`  — entra na fila já aprovada e sai dentro de minutos.
+   * · `manual` — fica em rascunho, para ser revista no separador do lado antes de sair.
+   *
+   * As outras duas opções do estúdio — descarregar e abrir a partilha do telemóvel — não passam
+   * por aqui: acontecem inteiras no browser e não deixam nada na fila. É por isso que são as
+   * únicas que servem a conta pessoal.
+   */
+  const destino = corpo?.destino === 'manual' ? 'manual' : 'funil'
+
   const conta = CONTAS[handle]
   if (!conta) return NextResponse.json({ ok: false, erro: 'conta desconhecida' }, { status: 400 })
   if (!urls.length) return NextResponse.json({ ok: false, erro: 'sem imagens' }, { status: 400 })
@@ -40,7 +52,7 @@ export async function POST(req: NextRequest) {
    * Está aqui também, e não só lá, porque uma guarda que vive num sítio só é uma guarda que a
    * próxima porta esquece. Esta é a porta nova.
    */
-  if (handle === 'ricardogarciapt') {
+  if (handle === 'ricardogarciapt' && destino === 'funil') {
     return NextResponse.json(
       {
         ok: false,
@@ -78,9 +90,12 @@ export async function POST(req: NextRequest) {
       media_urls: urls,
       caption,
       scheduled_at: new Date().toISOString(),
-      status: 'approved',
-      approved_by: 'estudio',
-      approved_at: new Date().toISOString(),
+      // Em rascunho não se marca aprovação nenhuma: o cron só publica o que está `approved`, e
+      // escrever `approved_by` numa peça por rever era mentir a quem a fosse ver a seguir.
+      status: destino === 'manual' ? 'draft' : 'approved',
+      ...(destino === 'funil'
+        ? { approved_by: 'estudio', approved_at: new Date().toISOString() }
+        : {}),
       created_by: 'estudio-cartoes',
     })
     .select('id')
@@ -91,9 +106,12 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     postId: data.id,
+    destino,
     mensagem:
-      urls.length > 1
-        ? `carrossel de ${urls.length} na fila — sai dentro de minutos`
-        : 'na fila — sai dentro de minutos',
+      destino === 'manual'
+        ? 'guardado em rascunho — revê e aprova no separador Publicações'
+        : urls.length > 1
+          ? `carrossel de ${urls.length} na fila — sai dentro de minutos`
+          : 'na fila — sai dentro de minutos',
   })
 }

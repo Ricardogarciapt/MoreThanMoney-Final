@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Loader2, Images, Image as ImgIcon, Download, Upload, Sparkles, UserRound, Send } from "lucide-react"
+import { Loader2, Images, Image as ImgIcon, Download, Upload, Sparkles, UserRound, Send, Share2, Clock } from "lucide-react"
 
 /**
  * Estúdio de cartões — ver antes de publicar, e mexer.
@@ -183,7 +183,7 @@ export function EstudioCartoes() {
    * Vai sempre para a conta que está escolhida em cima. Uma imagem desenhada com o desenho da
    * marca publicada na conta pessoal sai errada — e ao contrário também.
    */
-  const publicar = async () => {
+  const publicar = async (destino: "funil" | "manual") => {
     if (!saida.length) return
     setAPublicar(true)
     setErro(null)
@@ -198,6 +198,7 @@ export function EstudioCartoes() {
           caption: legenda.trim() || undefined,
           hook,
           cta,
+          destino,
         }),
       })
       const j = await r.json()
@@ -207,6 +208,48 @@ export function EstudioCartoes() {
       setErro("não foi possível publicar")
     }
     setAPublicar(false)
+  }
+
+  /**
+   * A PARTILHA DO SISTEMA — o caminho para o Instagram sem API.
+   *
+   * O Instagram não deixa publicar do browser, e a conta pessoal não recebe automação por
+   * decisão da marca. O que resta, e chega, é entregar os ficheiros à folha de partilha do
+   * telemóvel: daí escolhe-se o Instagram e publica-se à mão, com a legenda já copiada.
+   *
+   * `navigator.share` com ficheiros só existe em telemóvel e em HTTPS. No computador não há
+   * folha nenhuma para abrir — por isso aí descarrega, que é o mesmo resultado por outro
+   * caminho, em vez de um botão que não faz nada.
+   */
+  const partilhar = async () => {
+    if (!saida.length) return
+    setErro(null)
+    try {
+      const ficheiros = await Promise.all(
+        saida.map(async (u, i) => {
+          const b = await fetch(u).then((r) => r.blob())
+          return new File([b], nomeDoFicheiro(i), { type: b.type || "image/png" })
+        }),
+      )
+      const texto = legenda.trim() || hook
+      const nav = navigator as Navigator & {
+        canShare?: (d: ShareData) => boolean
+        share?: (d: ShareData) => Promise<void>
+      }
+      if (nav.share && nav.canShare?.({ files: ficheiros })) {
+        // A legenda vai junto E para a área de transferência: o Instagram costuma ignorar o
+        // texto partilhado, e colar é mais rápido do que voltar aqui buscá-la.
+        await navigator.clipboard?.writeText(texto).catch(() => undefined)
+        await nav.share({ files: ficheiros, text: texto })
+        setPublicado("partilhado — a legenda ficou copiada")
+      } else {
+        await descarregarTudo()
+        setPublicado("o computador não tem folha de partilha — descarreguei em vez disso")
+      }
+    } catch (e) {
+      // Cancelar a folha de partilha lança, e cancelar não é um erro.
+      if ((e as Error)?.name !== "AbortError") setErro("não consegui partilhar")
+    }
   }
 
   const gerar = async (tipo: "cartao" | "carrossel") => {
@@ -578,14 +621,46 @@ export function EstudioCartoes() {
                 <Download className="h-3.5 w-3.5" />
                 Descarregar {saida.length > 1 ? "todas" : ""}
               </button>
+              {/*
+                QUATRO CAMINHOS, e a conta decide quais fazem sentido.
+
+                A conta pessoal não recebe automação — por decisão da marca, não por limitação
+                técnica. Por isso os dois botões que escrevem na fila desaparecem nela, e ficam
+                os dois que passam pelas mãos dele: descarregar e a folha de partilha do
+                telemóvel. Mostrá-los desactivados era oferecer uma coisa que não vai acontecer.
+              */}
+              {handle !== "ricardogarciapt" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void publicar("funil")}
+                    disabled={aPublicar}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-40"
+                    title="Entra na fila já aprovada e sai dentro de minutos"
+                  >
+                    {aPublicar ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                    Publicar agora
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void publicar("manual")}
+                    disabled={aPublicar}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-3 py-1.5 text-[12px] font-semibold text-neutral-200 hover:bg-neutral-800 disabled:opacity-40"
+                    title="Fica em rascunho para reveres no separador Publicações"
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    Guardar para rever
+                  </button>
+                </>
+              )}
               <button
                 type="button"
-                onClick={() => void publicar()}
-                disabled={aPublicar}
-                className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-40"
+                onClick={() => void partilhar()}
+                className="inline-flex items-center gap-1.5 rounded-md border border-neutral-700 px-3 py-1.5 text-[12px] font-semibold text-neutral-200 hover:bg-neutral-800"
+                title="Abre a folha de partilha do telemóvel — daí escolhes o Instagram"
               >
-                {aPublicar ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                Publicar no Instagram
+                <Share2 className="h-3.5 w-3.5" />
+                Partilhar
               </button>
               {publicado && (
                 <span className="text-[12px] text-emerald-400">{publicado}</span>
