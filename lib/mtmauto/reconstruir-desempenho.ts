@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { pipSizeForSymbol } from '@/lib/mtmcopy/trade-outcome'
 import { chavesDaFonte } from './chaves-de-fonte'
+import { medeDesde } from './quarentena'
 
 /**
  * O DESEMPENHO DE CADA ESTRATÉGIA, RECONSTRUÍDO A PARTIR DO PREÇO REAL.
@@ -190,6 +191,17 @@ interface Regras {
   bePips: number | null
   trailingArranca: number | null
   trailingDistancia: number | null
+  /**
+   * Stop de DISCIPLINA, em pips da entrada. `null` = usa o stop que veio no sinal.
+   *
+   * Serve para separar duas perguntas que andam coladas: «a estratégia escolhe bem?» e «a
+   * execução cumpriu o que ela pediu?». Um sinal bom com um stop três vezes mais largo do que
+   * devia perde dinheiro sem que a escolha da entrada tenha nada a ver com isso.
+   *
+   * APERTA, nunca alarga: um stop que já era mais curto do que este fica como está. Alargá-lo
+   * era inventar uma trade que teria sobrevivido a um movimento que na verdade a matou.
+   */
+  stopMaximoPips: number | null
 }
 
 /**
@@ -223,6 +235,12 @@ function reporSinal(
   let aberta = false
   let abertaEm = ''
   let stop = sinal.sl
+  if (regras.stopMaximoPips != null) {
+    const tecto = compra
+      ? sinal.entry - regras.stopMaximoPips * pip
+      : sinal.entry + regras.stopMaximoPips * pip
+    stop = compra ? Math.max(sinal.sl, tecto) : Math.min(sinal.sl, tecto)
+  }
   let restante = 1
   let nivel = 0
   let picoPips = 0
@@ -343,6 +361,10 @@ export interface ResultadoReconstrucao {
 export async function reconstruirDesempenho(opts?: {
   dias?: number
   contaLeituraId?: string
+  /** Aperta o stop de todas as estratégias a esta distância da entrada — ver `Regras`. */
+  stopMaximoPips?: number
+  /** Mede só estas fontes. Serve para experimentar uma sem repor as outras todas. */
+  apenasFontes?: string[]
 }): Promise<ResultadoReconstrucao> {
   const db = getSupabaseAdmin()
   const dias = opts?.dias ?? 120
@@ -370,7 +392,13 @@ export async function reconstruirDesempenho(opts?: {
     .limit(5000)
 
   const candidatos = (sinais ?? []).filter(
-    (s) => s.symbol && s.source_key && Number(s.entry) > 0 && Number(s.sl) > 0 && (s.tps as number[] | null)?.length,
+    (s) =>
+      s.symbol &&
+      s.source_key &&
+      Number(s.entry) > 0 &&
+      Number(s.sl) > 0 &&
+      (s.tps as number[] | null)?.length &&
+      (!opts?.apenasFontes?.length || opts.apenasFontes.includes(String(s.source_key))),
   )
 
   const incoerentesPorFonte = new Map<string, number>()
@@ -400,6 +428,7 @@ export async function reconstruirDesempenho(opts?: {
       bePips: p.be_gatilho != null ? Number(p.be_gatilho) : null,
       trailingArranca: p.trailing_arranca_pips != null ? Number(p.trailing_arranca_pips) : null,
       trailingDistancia: p.trailing_distancia_pips != null ? Number(p.trailing_distancia_pips) : null,
+      stopMaximoPips: opts?.stopMaximoPips ?? null,
     }
     for (const chave of chavesDaFonte(p.slug as string, p.fonte_mtm as string | null)) {
       regrasPorFonte.set(chave, regras)
@@ -411,6 +440,7 @@ export async function reconstruirDesempenho(opts?: {
     bePips: 1,
     trailingArranca: null,
     trailingDistancia: null,
+    stopMaximoPips: opts?.stopMaximoPips ?? null,
   }
 
   // ── as velas, um símbolo de cada vez ────────────────────────────────────────
@@ -455,6 +485,9 @@ export async function reconstruirDesempenho(opts?: {
       incoerentesPorFonte.set(fonte, (incoerentesPorFonte.get(fonte) ?? 0) + 1)
       continue
     }
+    // Uma estratégia que mudou de conta/mercado não conta o que era antes — ver `MEDE_DESDE`.
+    const inicio = medeDesde(fonte)
+    if (inicio && t.fechadaEm < inicio) continue
     trades.push(t)
   }
 

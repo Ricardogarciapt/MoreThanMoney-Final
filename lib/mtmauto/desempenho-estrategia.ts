@@ -71,6 +71,16 @@ export interface DesempenhoEstrategia {
   slug: string
   nome: string
   ativo: boolean
+  /**
+   * Os números desta estratégia podem ser mostrados ao cliente?
+   *
+   * `false` põe `reconstruido` a `null` — não é um aviso para o ecrã respeitar, é a ausência do
+   * número. Uma bandeira que o ecrã tem de honrar é uma bandeira que um ecrã novo esquece; e o
+   * valor ficava no JSON de quem abrisse as ferramentas do browser.
+   */
+  publicavel: boolean
+  /** O que dizer no lugar dos números. `null` quando não há nada a esconder. */
+  emEsperaPorque: string | null
   /** O acumulado da estratégia — contas anteriores e a actual, somadas. */
   total: BlocoDesempenho
   /**
@@ -143,8 +153,9 @@ export async function desempenhoDaEstrategia(
   const chaves = chavesDaFonte(slug, provider.fonte_mtm as string | null)
 
   const { lerReconstrucao } = await import('./reconstruir-desempenho')
+  const { estadoDaQuarentena } = await import('./quarentena')
 
-  const [{ data: sinais }, { data: conta }, { count: subs }, reposicao] = await Promise.all([
+  const [{ data: sinais }, { data: conta }, { count: subs }, reposicao, quarentena] = await Promise.all([
     db
       .from('mtmcopy_signal_tracking')
       .select('source_key, result_pips, created_at')
@@ -163,6 +174,7 @@ export async function desempenhoDaEstrategia(
       .eq('provider_id', provider.id)
       .eq('ativo', true),
     lerReconstrucao(),
+    estadoDaQuarentena(slug, provider.fonte_mtm as string | null, opts),
   ])
 
   // ── o acumulado ───────────────────────────────────────────────────────────
@@ -226,6 +238,8 @@ export async function desempenhoDaEstrategia(
     nome: (provider.nome as string) ?? slug,
     ativo: Boolean(provider.ativo),
     total,
+    publicavel: quarentena.publicavel,
+    emEsperaPorque: quarentena.porque,
     /**
      * A reposição é LIDA, não recalculada.
      *
@@ -237,6 +251,8 @@ export async function desempenhoDaEstrategia(
      * nomes tem as suas trades repartidas por eles, e ficar só com um perdia metade do passado.
      */
     reconstruido: (() => {
+      // Em quarentena o número não existe, em vez de existir escondido.
+      if (!quarentena.publicavel) return null
       const linhas = (reposicao?.porFonte ?? []).filter((f) => chaves.includes(f.fonte))
       if (!linhas.length) return null
       const trades = linhas.reduce((a, f) => a + f.trades, 0)
