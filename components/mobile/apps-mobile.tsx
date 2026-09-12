@@ -41,6 +41,20 @@ export const MTM_AIOS_URL = "https://mtmaios.lovable.app"
 
 const APPS = [
   {
+    /**
+     * O MTM SOCIAL vem PRIMEIRO, acima do Studio.
+     *
+     * É a única destas que é nossa e corre dentro da própria app — as outras são janelas para
+     * sítios de fora. Quem abre «Apps» está à procura de fazer alguma coisa, e esta é a que
+     * deixa fazer sem sair daqui.
+     */
+    id: "social" as const,
+    title: "MTM Social",
+    description: "Cria cartões e carrosséis com a tua marca",
+    icon: Sparkles,
+    url: "/mtmsocial",
+  },
+  {
     id: "studio" as const,
     title: "MTM Studio",
     description: "Brand builder e conteúdo visual MTM",
@@ -66,7 +80,7 @@ const APPS = [
 type AppId = (typeof APPS)[number]["id"]
 
 function isAppId(value: string | null): value is AppId {
-  return value === "studio" || value === "partnership" || value === "aios"
+  return value === "social" || value === "studio" || value === "partnership" || value === "aios"
 }
 
 export default function AppsMobile() {

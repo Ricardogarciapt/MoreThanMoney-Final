@@ -38,6 +38,23 @@ export interface SocialCardParams {
   destaquePos?: 'esquerda' | 'centro' | 'direita'
   /** Quanto ocupa da altura do cartão, de 0.4 a 1.1. Por omissão enche. */
   destaqueEscala?: number
+  /**
+   * A MARCA DE QUEM ASSINA, quando não é uma das duas da casa.
+   *
+   * O estúdio do admin desenha para duas contas escritas no código. O MTM Social desenha para a
+   * marca de cada membro — nome, arroba, cor e logótipo dele. Sem isto, cada peça de um membro
+   * saía assinada «@morethanmoney.pt», que é pôr a marca da casa em conteúdo que não é da casa.
+   *
+   * Quando vem preenchida, ganha ao `handle`.
+   */
+  marca?: {
+    nome: string
+    arroba?: string | null
+    /** A cor de acento. O resto do desenho é o da casa — é o que faz a peça parecer feita. */
+    cor?: string | null
+    /** Endereço do logótipo a carimbar no canto, se houver. */
+    logoUrl?: string | null
+  } | null
 }
 
 /**
@@ -93,6 +110,19 @@ function duasFaixas(texto: string): [string, string] {
  * fica igual ao template dele.
  */
 function cartaoRicardo(params: SocialCardParams, alto: boolean) {
+  /**
+   * Quem assina esta peça.
+   *
+   * Sem marca, é o Ricardo — é o estilo de onde isto nasceu. Com marca, muda a cor de acento, a
+   * assinatura e o logótipo; o desenho fica igual, porque é ele que faz a peça parecer feita por
+   * alguém e não montada num gerador.
+   */
+  const ACENTO = params.marca?.cor?.trim() || CIANO
+  const ASSINATURA = params.marca
+    ? (params.marca.arroba ? `@${params.marca.arroba.replace(/^@/, '')}` : params.marca.nome)
+    : '@ricardogarciapt'
+  const LOGO = params.marca?.logoUrl?.trim() || null
+
   const hook = (params.hook || 'Muda o mindset.').replace(/[.!?]+$/, '').toUpperCase().slice(0, 60)
   const [cima, baixo] = duasFaixas(hook)
   const cta = (params.cta || '').toUpperCase().slice(0, 16)
@@ -208,11 +238,34 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
         />
       )}
 
+      {/*
+        O LOGÓTIPO de quem assina, no canto de baixo.
+
+        Fica por CIMA da pessoa e do fundo mas ABAIXO do texto: é uma assinatura, não um
+        elemento de composição. Pequeno e a 85% de opacidade, porque um logótipo que compete com
+        a frase rouba-lhe a frase — e a frase é a razão de o cartão existir.
+      */}
+      {LOGO && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={LOGO}
+          alt=""
+          style={{
+            position: 'absolute',
+            right: 44,
+            bottom: 40,
+            height: 96,
+            objectFit: 'contain',
+            opacity: 0.85,
+          }}
+        />
+      )}
+
       {/* Faixa de cima, ciano. Sai da margem esquerda de propósito — é o que dá a escala. */}
       <div
         style={{
           display: 'flex',
-          color: CIANO,
+          color: ACENTO,
           fontFamily: 'Anton',
           fontSize: corpo,
           fontWeight: 900,
@@ -260,7 +313,7 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
         </div>
 
         {facto && (
-          <div style={{ display: 'flex', color: CIANO, fontSize: 34, fontWeight: 700, marginTop: 28 }}>{facto}</div>
+          <div style={{ display: 'flex', color: ACENTO, fontSize: 34, fontWeight: 700, marginTop: 28 }}>{facto}</div>
         )}
 
         <div
@@ -273,12 +326,12 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
             marginTop: temFoto ? 40 : 72,
           }}
         >
-          <div style={{ display: 'flex', color: '#8b9199', fontSize: 30, fontWeight: 600 }}>@ricardogarciapt</div>
+          <div style={{ display: 'flex', color: '#8b9199', fontSize: 30, fontWeight: 600 }}>{ASSINATURA}</div>
           {cta && (
             <div
               style={{
                 display: 'flex',
-                background: CIANO,
+                background: ACENTO,
                 color: '#06212a',
                 fontSize: 34,
                 fontWeight: 800,
@@ -303,6 +356,16 @@ export function socialCardElement(params: SocialCardParams) {
    * O `handle` já chegava aqui e só era escrito no canto. Passa a decidir o desenho inteiro —
    * que é o que separa as duas contas de verdade.
    */
+  /**
+   * A MARCA DO MEMBRO ganha ao `handle`.
+   *
+   * O estilo tipográfico (duas faixas, texto enorme) é o mesmo do cartão pessoal — funciona para
+   * qualquer marca e é o que distingue uma peça feita de uma peça gerada. O que muda é a cor de
+   * acento, a assinatura e o logótipo, que vêm de quem assina.
+   */
+  if (params.marca?.nome) {
+    return cartaoRicardo(params, params.formato === 'reel')
+  }
   if ((params.handle || '').replace(/^@/, '').toLowerCase().includes('ricardo')) {
     return cartaoRicardo(params, params.formato === 'reel')
   }
@@ -400,6 +463,8 @@ export interface Lamina {
   destaque?: string
   destaquePos?: 'esquerda' | 'centro' | 'direita'
   destaqueEscala?: number
+  /** A marca de quem assina, quando não é uma das da casa. Ver `SocialCardParams`. */
+  marca?: SocialCardParams['marca']
 }
 
 /**
@@ -417,6 +482,10 @@ export function laminaElement(l: Lamina, indice: number, total: number, handle: 
       handle,
       proof: false,
       fundo: l.fundo,
+      destaque: l.destaque,
+      destaquePos: l.destaquePos,
+      destaqueEscala: l.destaqueEscala,
+      marca: l.marca,
       formato: 'post',
     })
   }
@@ -436,8 +505,11 @@ export function laminaElement(l: Lamina, indice: number, total: number, handle: 
    * O acento e a assinatura passam a vir da conta, como em todo o resto.
    */
   const daMarca = handle === 'morethanmoney.pt'
-  const acento = daMarca ? GOLD : CIANO
-  const assinatura = daMarca ? '@morethanmoney.pt' : '@ricardogarciapt'
+  // A marca do membro ganha às duas da casa — ver `SocialCardParams.marca`.
+  const acento = l.marca?.cor?.trim() || (daMarca ? GOLD : CIANO)
+  const assinatura = l.marca
+    ? (l.marca.arroba ? `@${l.marca.arroba.replace(/^@/, '')}` : l.marca.nome)
+    : daMarca ? '@morethanmoney.pt' : '@ricardogarciapt'
   const fundoLiso = daMarca
     ? 'radial-gradient(900px 700px at 30% 20%, #1b1a17, #0b0d12 70%)'
     : 'radial-gradient(900px 700px at 30% 20%, #23282e, #0d0f11 70%)'
