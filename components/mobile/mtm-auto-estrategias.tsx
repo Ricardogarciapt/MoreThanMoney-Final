@@ -28,6 +28,8 @@ type Provedor = {
   pips?: number | null
   /** Desde quando há sinais medidos desta estratégia. */
   desde?: string | null
+  /** Os números vêm da reposição contra o preço real (com parciais)? */
+  reposto?: boolean
 }
 
 /**
@@ -41,7 +43,14 @@ type Provedor = {
  * porque a medição de hoje é tudo-ou-nada (não conta parciais) e sub-avalia o resultado real;
  * um número desses num cartão não tem onde levar a ressalva atrás, e sem ela é falso.
  */
-type Desempenho = { sinais: number; desde: string | null }
+type Desempenho = {
+  sinais: number
+  desde: string | null
+  /** Reposto contra o preço real, com parciais. É o que se mostra quando existe. */
+  trades: number | null
+  acertoPct: number | null
+  pipsTotal: number | null
+}
 
 /** Estado dos controlos admin (GET/POST /api/admin/mtmcopy/t2t-controls). */
 type AdminControls = {
@@ -414,9 +423,13 @@ export default function MtmAutoEstrategias({
         const jd = await rd.json()
         for (const e of (jd.estrategias ?? []) as Array<Record<string, unknown>>) {
           const t = (e.total ?? {}) as Record<string, unknown>
+          const rec = e.reconstruido as Record<string, unknown> | null
           porNome.set(String(e.nome ?? "").toLowerCase(), {
             sinais: Number(t.sinais ?? 0),
-            desde: (t.desde as string) ?? null,
+            desde: (rec?.desde as string) ?? (t.desde as string) ?? null,
+            trades: rec ? Number(rec.trades) : null,
+            acertoPct: rec ? Number(rec.acertoPct) : null,
+            pipsTotal: rec ? Number(rec.pipsTotal) : null,
           })
         }
       } catch {
@@ -432,10 +445,11 @@ export default function MtmAutoEstrategias({
             descricao: (p.descricao as string) ?? null,
             segue: p.segue === true || p.seguido === true,
             automatico: p.automatico === true || p.autoAceitar === true,
-            sinais: d?.sinais ?? Number(p.sinais ?? p.total ?? 0),
+            sinais: d?.trades ?? d?.sinais ?? Number(p.sinais ?? p.total ?? 0),
             desde: d?.desde ?? null,
-            acerto: null,
-            pips: null,
+            acerto: d?.acertoPct ?? null,
+            pips: d?.pipsTotal ?? null,
+            reposto: d?.trades != null,
           }
         }),
       )
@@ -608,13 +622,30 @@ export default function MtmAutoEstrategias({
             <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setAberta({ providerId: p.id, nome: p.nome })}>
               <p className="text-[14px] font-semibold text-white">{p.nome}</p>
               {p.descricao && <p className="mt-0.5 text-[12px] leading-snug text-zinc-400">{p.descricao}</p>}
-              {Boolean(p.sinais) && (
-                <p className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-zinc-500">
+              {/* Com a reposição há números para mostrar — foram medidos com os parciais
+                  contados, que é a única forma de a conta bater certo. Sem ela, mostra-se o que
+                  é verdade sem os parciais: quantos sinais e desde quando. */}
+              {p.reposto && p.sinais ? (
+                <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[11.5px] text-zinc-500">
                   <TrendingUp className="h-3 w-3" />
-                  {p.sinais} sinais
-                  {p.desde && ` desde ${new Date(p.desde).toLocaleDateString("pt-PT", { month: "short", year: "numeric" })}`}
-                  {" · toca para ver os números"}
+                  <span>{p.sinais} trades</span>
+                  {p.acerto != null && <span>· {p.acerto}% de acerto</span>}
+                  {p.pips != null && (
+                    <span className={p.pips >= 0 ? "text-[#28C878]" : "text-[#FF6B6B]"}>
+                      · {p.pips >= 0 ? "+" : ""}
+                      {Math.round(p.pips)} pips
+                    </span>
+                  )}
                 </p>
+              ) : (
+                Boolean(p.sinais) && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-zinc-500">
+                    <TrendingUp className="h-3 w-3" />
+                    {p.sinais} sinais
+                    {p.desde && ` desde ${new Date(p.desde).toLocaleDateString("pt-PT", { month: "short", year: "numeric" })}`}
+                    {" · toca para ver os números"}
+                  </p>
+                )
               )}
               {p.automatico && (
                 <p className="mt-1 text-[11.5px] text-[#D2A63C]">Cópia automática ligada na app MTM Auto</p>

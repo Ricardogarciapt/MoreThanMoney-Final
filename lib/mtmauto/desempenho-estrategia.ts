@@ -73,6 +73,30 @@ export interface DesempenhoEstrategia {
   ativo: boolean
   /** O acumulado da estratégia — contas anteriores e a actual, somadas. */
   total: BlocoDesempenho
+  /**
+   * O MESMO histórico, reposto contra o preço real com os parciais contados.
+   *
+   * É este que se mostra. O `total` mede ideias tudo-ou-nada e sub-avalia o resultado — na
+   * GoldKiller a diferença é entre −870 pips e +247. Vem de `reconstruir-desempenho`, por isso
+   * os preços são reais mas a execução é reposta: sem spread, sem derrapagem, sem ordem
+   * recusada. Quem o mostrar tem de o dizer, e é para isso que serve o `reconstruido: true`.
+   *
+   * `null` quando ainda não houve reposição para esta estratégia.
+   */
+  reconstruido: {
+    trades: number
+    comParciais: number
+    acertoPct: number
+    pipsTotal: number
+    pipsMedia: number
+    semEntrada: number
+    incoerentes: number
+    desde: string | null
+    ate: string | null
+    reconstruido: true
+    /** Quando é que a reposição correu. Um número destes sem data envelhece sem se notar. */
+    asOf: string | null
+  } | null
   /** De onde vêm os números do total. É o que impede o acumulado de parecer de uma conta só. */
   proveniencia: Array<{ fonte: string; sinais: number; pips: number; ate: string | null }>
   /** A conta mestre de agora. Saldos só com `admin`. */
@@ -118,7 +142,9 @@ export async function desempenhoDaEstrategia(
 
   const chaves = chavesDaFonte(slug, provider.fonte_mtm as string | null)
 
-  const [{ data: sinais }, { data: conta }, { count: subs }] = await Promise.all([
+  const { lerReconstrucao } = await import('./reconstruir-desempenho')
+
+  const [{ data: sinais }, { data: conta }, { count: subs }, reposicao] = await Promise.all([
     db
       .from('mtmcopy_signal_tracking')
       .select('source_key, result_pips, created_at')
@@ -136,6 +162,7 @@ export async function desempenhoDaEstrategia(
       .select('id', { count: 'exact', head: true })
       .eq('provider_id', provider.id)
       .eq('ativo', true),
+    lerReconstrucao(),
   ])
 
   // ── o acumulado ───────────────────────────────────────────────────────────
@@ -199,6 +226,40 @@ export async function desempenhoDaEstrategia(
     nome: (provider.nome as string) ?? slug,
     ativo: Boolean(provider.ativo),
     total,
+    /**
+     * A reposição é LIDA, não recalculada.
+     *
+     * Repor setecentas trades contra velas de 5 minutos leva minutos e centenas de pedidos à
+     * MetaApi; fazê-lo a cada abertura de ecrã era impensável. Corre no seu cron e fica
+     * guardada; aqui só se vai buscar a linha da estratégia.
+     *
+     * Casa-se pelas MESMAS chaves que o resto do módulo usa — uma estratégia que teve dois
+     * nomes tem as suas trades repartidas por eles, e ficar só com um perdia metade do passado.
+     */
+    reconstruido: (() => {
+      const linhas = (reposicao?.porFonte ?? []).filter((f) => chaves.includes(f.fonte))
+      if (!linhas.length) return null
+      const trades = linhas.reduce((a, f) => a + f.trades, 0)
+      if (!trades) return null
+      const pipsTotal = linhas.reduce((a, f) => a + f.pipsTotal, 0)
+      // A taxa de acerto de duas janelas não é a média das duas: é a soma dos acertos sobre a
+      // soma das trades. Somar percentagens dava peso igual a uma janela de 3 e outra de 300.
+      const acertos = linhas.reduce((a, f) => a + (f.acertoPct / 100) * f.trades, 0)
+      const datas = linhas.flatMap((f) => [f.desde, f.ate]).filter(Boolean).sort() as string[]
+      return {
+        trades,
+        comParciais: linhas.reduce((a, f) => a + f.comParciais, 0),
+        acertoPct: Math.round((acertos / trades) * 1000) / 10,
+        pipsTotal: Math.round(pipsTotal * 10) / 10,
+        pipsMedia: Math.round((pipsTotal / trades) * 10) / 10,
+        semEntrada: linhas.reduce((a, f) => a + f.semEntrada, 0),
+        incoerentes: linhas.reduce((a, f) => a + (f.incoerentes ?? 0), 0),
+        desde: datas[0] ?? null,
+        ate: datas[datas.length - 1] ?? null,
+        reconstruido: true as const,
+        asOf: reposicao?.asOf ?? null,
+      }
+    })(),
     proveniencia: [...porFonte.entries()]
       .map(([fonte, v]) => ({ fonte, sinais: v.sinais, pips: Math.round(v.pips * 10) / 10, ate: v.ate }))
       .sort((a, b) => b.sinais - a.sinais),

@@ -29,11 +29,25 @@ interface Bloco {
   porqueNaoFiavel: string | null
 }
 
+interface Reconstruido {
+  trades: number
+  comParciais: number
+  acertoPct: number
+  pipsTotal: number
+  pipsMedia: number
+  semEntrada: number
+  incoerentes: number
+  desde: string | null
+  ate: string | null
+  asOf: string | null
+}
+
 interface Estrategia {
   slug: string
   nome: string
   ativo: boolean
   total: Bloco
+  reconstruido: Reconstruido | null
   proveniencia: Array<{ fonte: string; sinais: number; pips: number; ate: string | null }>
   contaMestre: {
     login: string | null
@@ -92,6 +106,7 @@ export function EstrategiasDesempenho() {
 
   // Basta uma linha não fiável para o aviso valer para o painel todo — e hoje são todas.
   const naoFiavel = linhas.find((l) => !l.total.fiavel)?.total.porqueNaoFiavel ?? null
+  const asOf = linhas.find((l) => l.reconstruido?.asOf)?.reconstruido?.asOf ?? null
 
   return (
     <Card>
@@ -105,24 +120,36 @@ export function EstrategiasDesempenho() {
       <CardContent className="space-y-4">
         {erro && <p className="text-sm text-red-600">{erro}</p>}
 
-        {naoFiavel && (
-          <div className="flex gap-2.5 rounded-lg border border-amber-300 bg-amber-50 p-3 text-[13px] leading-relaxed text-amber-900">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-            <div>
-              <p className="font-semibold">Estes números não se publicam.</p>
-              <p className="mt-0.5">{naoFiavel}</p>
-            </div>
+        <div className="flex gap-2.5 rounded-lg border border-amber-300 bg-amber-50 p-3 text-[13px] leading-relaxed text-amber-900">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="space-y-1">
+            <p className="font-semibold">Duas medições da mesma coisa, e não dizem o mesmo.</p>
+            <p>
+              <span className="font-medium">Reposto</span> é o histórico corrido outra vez contra
+              o preço real de 5 em 5 minutos, com as parciais da estratégia contadas. É o número
+              que vale — mas os preços é que são reais, a execução é reposta: não há spread pago,
+              nem derrapagem, nem ordem recusada.
+            </p>
+            {naoFiavel && (
+              <p>
+                <span className="font-medium">Ideias</span> é o registo tudo-ou-nada. {naoFiavel}
+              </p>
+            )}
+            {asOf && (
+              <p className="text-[12px] opacity-80">Última reposição: {new Date(asOf).toLocaleString("pt-PT")}.</p>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] text-[13px]">
             <thead className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
               <tr className="border-b">
                 <th className="py-2 pr-3 font-medium">Estratégia</th>
-                <th className="py-2 pr-3 text-right font-medium">Sinais</th>
+                <th className="py-2 pr-3 text-right font-medium" title="Reposto contra o preço real, com parciais">Trades</th>
                 <th className="py-2 pr-3 text-right font-medium">Pips</th>
                 <th className="py-2 pr-3 text-right font-medium">Acerto</th>
+                <th className="py-2 pr-3 text-right font-medium text-muted-foreground/70" title="Registo de ideias, tudo-ou-nada">Ideias</th>
                 <th className="py-2 pr-3 text-right font-medium">Subs.</th>
                 <th className="py-2 pr-3 font-medium">Conta mestre</th>
                 <th className="py-2 pr-3 text-right font-medium">Saldo</th>
@@ -145,17 +172,48 @@ export function EstrategiasDesempenho() {
                         {data(e.total.desde)} — {data(e.total.ate)}
                       </p>
                     )}
-                  </td>
-                  <td className="py-2.5 pr-3 text-right tabular-nums">{e.total.sinais || "—"}</td>
-                  <td
-                    className={`py-2.5 pr-3 text-right tabular-nums ${
-                      e.total.pipsTotal > 0 ? "text-emerald-600" : e.total.pipsTotal < 0 ? "text-red-600" : ""
-                    }`}
-                  >
-                    {e.total.sinais ? Math.round(e.total.pipsTotal).toLocaleString("pt-PT") : "—"}
+                    {Boolean(e.reconstruido?.incoerentes) && (
+                      <p className="mt-0.5 text-[11px] text-amber-700">
+                        {e.reconstruido?.incoerentes} sinais impossíveis, fora da conta
+                      </p>
+                    )}
                   </td>
                   <td className="py-2.5 pr-3 text-right tabular-nums">
-                    {e.total.sinais ? `${e.total.acertoPct}%` : "—"}
+                    {e.reconstruido?.trades ?? "—"}
+                    {Boolean(e.reconstruido?.comParciais) && (
+                      <p className="text-[11px] text-muted-foreground">
+                        {e.reconstruido?.comParciais} c/ parciais
+                      </p>
+                    )}
+                  </td>
+                  <td
+                    className={`py-2.5 pr-3 text-right tabular-nums ${
+                      (e.reconstruido?.pipsTotal ?? 0) > 0
+                        ? "text-emerald-600"
+                        : (e.reconstruido?.pipsTotal ?? 0) < 0
+                          ? "text-red-600"
+                          : ""
+                    }`}
+                  >
+                    {e.reconstruido ? Math.round(e.reconstruido.pipsTotal).toLocaleString("pt-PT") : "—"}
+                    {e.reconstruido && (
+                      <p className="text-[11px] text-muted-foreground">{e.reconstruido.pipsMedia}/trade</p>
+                    )}
+                  </td>
+                  <td className="py-2.5 pr-3 text-right tabular-nums">
+                    {e.reconstruido ? `${e.reconstruido.acertoPct}%` : "—"}
+                  </td>
+                  {/* A medição antiga fica ao lado, esbatida: serve para ver QUANTO os parciais
+                      mudam a conta, que é o argumento para se ter deixado de a usar. */}
+                  <td className="py-2.5 pr-3 text-right tabular-nums text-muted-foreground/70">
+                    {e.total.sinais ? (
+                      <>
+                        {e.total.acertoPct}%
+                        <p className="text-[11px]">{Math.round(e.total.pipsTotal).toLocaleString("pt-PT")} pips</p>
+                      </>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="py-2.5 pr-3 text-right tabular-nums">{e.subscritores}</td>
                   <td className="py-2.5 pr-3">
@@ -177,7 +235,7 @@ export function EstrategiasDesempenho() {
               ))}
               {!linhas.length && !carregar && (
                 <tr>
-                  <td colSpan={8} className="py-6 text-center text-muted-foreground">
+                  <td colSpan={9} className="py-6 text-center text-muted-foreground">
                     Sem estratégias.
                   </td>
                 </tr>
