@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { getSupabaseAdmin } from "@/lib/supabase"
 import { TERMINAL_ASSETS } from "@/lib/mtm-terminal-assets"
+import { userIdDoPedido } from "@/lib/sessao-do-pedido"
 
 /**
  * Alertas MTM — lê os sinais gerados pelo webhook TradingView existente
@@ -265,34 +266,8 @@ function extractChartImage(raw: Record<string, unknown>, message: string | null)
   return null
 }
 
-async function getSessionUserId(): Promise<string | null> {
-  try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll() {
-            /* read-only */
-          },
-        },
-      }
-    )
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    return session?.user?.id ?? null
-  } catch {
-    return null
-  }
-}
-
 export async function GET(request: NextRequest) {
-  const userId = await getSessionUserId()
+  const userId = await userIdDoPedido(request)
   if (!userId) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
   }

@@ -32,6 +32,9 @@ import {
 import MarkdownRenderer from "@/components/dashboard-gestao/markdown-renderer"
 import TvChartEmbed from "@/components/tv-chart-embed"
 import { scannerLabel } from "@/lib/mtm-alerts/scanners"
+// Dentro das apps nativas a sessão NÃO viaja em cookie — vai no cabeçalho. Sem isto, o
+// servidor respondia 401 e o ecrã mostrava zeros com o nome da pessoa no topo.
+import { authHeaders } from "@/lib/auth-token"
 
 /** Normaliza o timeframe do alerta para um intervalo TradingView válido. */
 function tvInterval(tf: string | null): string {
@@ -232,6 +235,7 @@ function MobileSignalTracker({ alert }: { alert: MtmAlert }) {
         const res = await fetch(`/api/mtm-alerts/price?ticker=${encodeURIComponent(alert.ticker!)}`, {
           credentials: "include",
           cache: "no-store",
+          headers: await authHeaders(),
         })
         const data = await res.json()
         if (active) setPrice(typeof data.price === "number" ? data.price : null)
@@ -310,7 +314,7 @@ function MobileAlertCard({
       try {
         const res = await fetch("/api/mtm-alerts/manage", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: await authHeaders({ "Content-Type": "application/json" }),
           credentials: "include",
           body: JSON.stringify({ id: alert.id }),
         })
@@ -504,7 +508,7 @@ export default function TradingAlertsMobile() {
 
   const loadFollowed = useCallback(async () => {
     try {
-      const res = await fetch("/api/mtm-alerts/follow", { credentials: "include", cache: "no-store" })
+      const res = await fetch("/api/mtm-alerts/follow", { credentials: "include", cache: "no-store", headers: await authHeaders() })
       const data = await res.json()
       if (Array.isArray(data.followed)) setFollowed(new Set(data.followed))
     } catch {
@@ -522,7 +526,7 @@ export default function TradingAlertsMobile() {
     try {
       await fetch("/api/mtm-alerts/follow", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authHeaders({ "Content-Type": "application/json" }),
         credentials: "include",
         body: JSON.stringify({ signalId: id, follow }),
       })
@@ -533,7 +537,7 @@ export default function TradingAlertsMobile() {
 
   const loadSub = useCallback(async () => {
     try {
-      const res = await fetch("/api/mtm-alerts/subscriptions", { credentials: "include", cache: "no-store" })
+      const res = await fetch("/api/mtm-alerts/subscriptions", { credentials: "include", cache: "no-store", headers: await authHeaders() })
       const data = await res.json()
       if (data.success && data.subscription) setSub((prev) => ({ ...prev, ...data.subscription }))
     } catch {
@@ -544,7 +548,7 @@ export default function TradingAlertsMobile() {
   const loadAlerts = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch("/api/mtm-alerts?limit=40", { credentials: "include", cache: "no-store" })
+      const res = await fetch("/api/mtm-alerts?limit=40", { credentials: "include", cache: "no-store", headers: await authHeaders() })
       const data = await res.json()
       setAlerts(data.alerts || [])
     } catch {
@@ -570,7 +574,7 @@ export default function TradingAlertsMobile() {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch(`/api/mtm-alerts?id=${encodeURIComponent(sigId)}`, { credentials: "include", cache: "no-store" })
+        const res = await fetch(`/api/mtm-alerts?id=${encodeURIComponent(sigId)}`, { credentials: "include", cache: "no-store", headers: await authHeaders() })
         const data = await res.json()
         if (!cancelled && data.alerts?.[0]) setFocusAlert(data.alerts[0] as MtmAlert)
       } catch {
@@ -604,7 +608,7 @@ export default function TradingAlertsMobile() {
     try {
       const res = await fetch("/api/mtm-alerts/subscriptions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authHeaders({ "Content-Type": "application/json" }),
         credentials: "include",
         body: JSON.stringify(sub),
       })

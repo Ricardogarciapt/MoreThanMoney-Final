@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { resolveCurrentPrice } from "@/lib/mtm-alerts/evaluate"
+import { userIdDoPedido } from "@/lib/sessao-do-pedido"
 
 /**
  * Preço atual de um ticker para acompanhar a ação de preço de um sinal seguido.
@@ -12,24 +13,9 @@ export const dynamic = "force-dynamic"
 
 export async function GET(request: NextRequest) {
   const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll() {
-          /* read-only */
-        },
-      },
-    }
-  )
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  if (!session) return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+  // Basta saber que há sessão: esta rota devolve uma cotação, não dados de ninguém.
+  const userId = await userIdDoPedido(request)
+  if (!userId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
 
   const ticker = (new URL(request.url).searchParams.get("ticker") || "").trim()
   if (!ticker) return NextResponse.json({ error: "ticker em falta" }, { status: 400 })

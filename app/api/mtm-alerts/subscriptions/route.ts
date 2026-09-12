@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { userIdDoPedido } from "@/lib/sessao-do-pedido"
+import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 
 /**
  * Preferências de Trading Alerts do utilizador (símbolos/estratégias/timeframes).
@@ -36,17 +38,21 @@ const DEFAULT_SUB = {
   timeframes: [] as string[],
 }
 
-export async function GET() {
-  const supabase = await getClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  if (!session) return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+/**
+ * A sessão resolve-se pelo TOKEN ou pelo cookie, e a consulta filtra à mão pelo `user_id`.
+ *
+ * Dentro das apps nativas a sessão viaja como `Authorization: Bearer` — ver
+ * `lib/sessao-do-pedido`. Como o cliente com cookie deixa de ser a única via, a RLS deixa de
+ * poder ser a única guarda: o filtro explícito é a mesma garantia, escrita à vista.
+ */
+export async function GET(request: NextRequest) {
+  const userId = await userIdDoPedido(request)
+  if (!userId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseAdmin()
     .from("user_signal_subscriptions")
     .select("enabled, push_enabled, symbols, strategies, timeframes")
-    .eq("user_id", session.user.id)
+    .eq("user_id", userId)
     .maybeSingle()
 
   if (error) {
@@ -58,11 +64,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await getClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  if (!session) return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+  const userId = await userIdDoPedido(request)
+  if (!userId) return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+  const supabase = getSupabaseAdmin()
 
   let body: any
   try {
@@ -75,7 +79,7 @@ export async function POST(request: NextRequest) {
     Array.isArray(arr) ? [...new Set(arr.map((x) => String(x).trim().toUpperCase()).filter(Boolean))] : []
 
   const payload = {
-    user_id: session.user.id,
+    user_id: userId,
     enabled: body.enabled !== false,
     push_enabled: body.push_enabled !== false,
     symbols: clean(body.symbols),
