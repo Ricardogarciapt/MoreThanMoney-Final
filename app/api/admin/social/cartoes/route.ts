@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { renderCarrossel, renderSocialCardBuffer, type Lamina } from "@/lib/social-card"
 import { uploadBufferToBucket } from "@/lib/instagram/publish"
+import { modeloClaude } from '@/lib/modelo-claude'
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -26,7 +27,7 @@ async function escreverLaminas(tema: string, cta: string, quantas: number): Prom
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
-        model: process.env.CONTENT_DRAFT_MODEL?.trim() || "claude-sonnet-4-5",
+        model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
         max_tokens: 1200,
         system:
           "Escreves carrosséis de Instagram para o Ricardo Garcia (MoreThanMoney, trading).\n\n" +

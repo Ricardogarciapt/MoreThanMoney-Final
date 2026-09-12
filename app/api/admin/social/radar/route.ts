@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
 import { getSupabaseAdmin } from "@/lib/supabase-admin-client"
 import { correrRadar } from "@/lib/instagram/radar"
+import { modeloClaude } from '@/lib/modelo-claude'
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
         body: JSON.stringify({
-          model: process.env.CONTENT_DRAFT_MODEL?.trim() || "claude-sonnet-4-5",
+          model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
           max_tokens: 200,
           system:
             "Escreves um comentário para deixar num post de Instagram de OUTRA pessoa, em nome do " +

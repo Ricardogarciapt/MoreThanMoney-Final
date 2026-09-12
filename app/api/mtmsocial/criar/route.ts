@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { uploadBufferToBucket } from '@/lib/instagram/publish'
 import { renderCarrossel, renderElemento, socialCardElement, type Lamina } from '@/lib/social-card'
+import { modeloClaude } from '@/lib/modelo-claude'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -63,7 +64,7 @@ async function escrever(
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': chave, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: process.env.CONTENT_DRAFT_MODEL?.trim() || 'claude-sonnet-5',
+        model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
         max_tokens: 1800,
         system:
           `Escreves carrosséis de Instagram para a marca «${marca}».\n\n` +

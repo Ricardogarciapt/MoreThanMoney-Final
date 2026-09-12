@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { modeloClaude } from '@/lib/modelo-claude'
 
 /**
  * ESCOLHER OS DEZ MOMENTOS de uma sessão de duas horas.
@@ -148,9 +149,7 @@ export async function analisarTranscricao(input: {
     `Escolhe os ${quantos} melhores momentos. Palavras de CTA disponíveis: ${CTAS_VALIDOS.join(', ')}.\n\n` +
     `TRANSCRIÇÃO (o número entre parêntesis é o segundo em que a linha começa):\n\n${recortado}`
 
-  const modelo =
-    process.env.VIDEOCLIPER_MODEL?.trim() || process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-5'
-
+  const modelo = modeloClaude(process.env.VIDEOCLIPER_MODEL)
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 120_000)
   let bruto = ''

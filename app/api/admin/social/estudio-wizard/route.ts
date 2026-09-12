@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-api-helpers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { uploadBufferToBucket } from '@/lib/instagram/publish'
+import { modeloClaude } from '@/lib/modelo-claude'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -68,7 +69,7 @@ async function planear(tema: string, quantas: number): Promise<Plano> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': chave, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
-      model: process.env.CONTENT_DRAFT_MODEL?.trim() || 'claude-sonnet-5',
+      model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
       max_tokens: 2000,
       system: SISTEMA,
       messages: [
