@@ -109,6 +109,23 @@ export interface DesempenhoEstrategia {
   } | null
   /** De onde vêm os números do total. É o que impede o acumulado de parecer de uma conta só. */
   proveniencia: Array<{ fonte: string; sinais: number; pips: number; ate: string | null }>
+  /**
+   * O passado NOUTRO REGIME — medido, mas não comparável com o de cima.
+   *
+   * O Premium teve um tempo em que as trades eram lançadas à mão e só depois copiadas. Somar
+   * esses números aos de hoje dava uma média que não descreve nem um regime nem o outro. Vem
+   * separado, com a sua etiqueta e o seu período, para o cliente ver o percurso inteiro e ver
+   * onde é que ele muda de natureza. `null` para quem não tem.
+   */
+  historicoAuditado: {
+    regime: string
+    acertoPct: number | null
+    trades: number | null
+    pipsTotal: number | null
+    desde: string | null
+    ate: string | null
+    nota: string
+  } | null
   /** A conta mestre de agora. Saldos só com `admin`. */
   contaMestre: {
     login: string | null
@@ -154,8 +171,9 @@ export async function desempenhoDaEstrategia(
 
   const { lerReconstrucao } = await import('./reconstruir-desempenho')
   const { estadoDaQuarentena } = await import('./quarentena')
+  const { lerHistoricoAuditado } = await import('./historico-auditado')
 
-  const [{ data: sinais }, { data: conta }, { count: subs }, reposicao, quarentena] = await Promise.all([
+  const [{ data: sinais }, { data: conta }, { count: subs }, reposicao, quarentena, auditado] = await Promise.all([
     db
       .from('mtmcopy_signal_tracking')
       .select('source_key, result_pips, created_at')
@@ -175,6 +193,7 @@ export async function desempenhoDaEstrategia(
       .eq('ativo', true),
     lerReconstrucao(),
     estadoDaQuarentena(slug, provider.fonte_mtm as string | null, opts),
+    lerHistoricoAuditado(),
   ])
 
   // ── o acumulado ───────────────────────────────────────────────────────────
@@ -240,6 +259,7 @@ export async function desempenhoDaEstrategia(
     total,
     publicavel: quarentena.publicavel,
     emEsperaPorque: quarentena.porque,
+    historicoAuditado: auditado[slug] ?? null,
     /**
      * A reposição é LIDA, não recalculada.
      *
