@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, Wand2, Download, Share2, Upload, Plus, Check, Trash2, Sparkles } from 'lucide-react'
+import { Loader2, Wand2, Download, Share2, Upload, Plus, Check, Trash2, Sparkles, Move, FolderOpen } from 'lucide-react'
 import { authHeaders } from '@/lib/auth-token'
+import EditorArrastavel, { type Posicoes } from '@/components/mtmsocial/editor-arrastavel'
 
 /**
  * MTM SOCIAL — o estúdio de cartões, para os membros.
@@ -68,6 +69,12 @@ export default function PainelSocial() {
   const [porCima, setPorCima] = useState(false)
   const [urls, setUrls] = useState<string[]>([])
   const [caption, setCaption] = useState('')
+  const [pecaId, setPecaId] = useState<string | null>(null)
+  const [textos, setTextos] = useState<string[]>([])
+  const [posicoes, setPosicoes] = useState<Posicoes | null>(null)
+  const [aEditar, setAEditar] = useState<number | null>(null)
+  const [galeria, setGaleria] = useState<Array<{ id: string; titulo: string | null; urls: string[]; caption: string | null; conteudo: Record<string, unknown> }>>([])
+  const [verGaleria, setVerGaleria] = useState(false)
 
   const activa = marcas.find((m) => m.ativa) ?? marcas[0] ?? null
 
@@ -84,7 +91,17 @@ export default function PainelSocial() {
     setACarregar(false)
   }, [])
 
-  useEffect(() => { void carregar() }, [carregar])
+  const carregarGaleria = useCallback(async () => {
+    try {
+      const r = await fetch('/api/mtmsocial/pecas', { cache: 'no-store', headers: await authHeaders() })
+      const j = await r.json()
+      setGaleria(j.pecas ?? [])
+    } catch {
+      /* a galeria vazia não impede criar */
+    }
+  }, [])
+
+  useEffect(() => { void carregar(); void carregarGaleria() }, [carregar, carregarGaleria])
 
   const guardarMarca = async () => {
     setErro(null)
@@ -174,12 +191,66 @@ export default function PainelSocial() {
         }),
       })
       const j = await r.json()
-      if (j.ok) { setUrls(j.urls ?? []); setCaption(j.caption ?? '') }
-      else setErro(j.erro ?? 'não consegui criar')
+      if (j.ok) {
+        setUrls(j.urls ?? [])
+        setCaption(j.caption ?? '')
+        setTextos(j.textos ?? [])
+        setPecaId(j.id ?? null)
+        setPosicoes(null)
+        void carregarGaleria()
+      } else setErro(j.erro ?? 'não consegui criar')
     } catch {
       setErro('não consegui criar')
     }
     setACriar(false)
+  }
+
+  /** Reabre uma peça guardada — textos, camadas e posições, para continuar de onde ficou. */
+  const abrirPeca = (p: { id: string; urls: string[]; caption: string | null; conteudo: Record<string, unknown> }) => {
+    const c = p.conteudo ?? {}
+    setPecaId(p.id)
+    setUrls(p.urls ?? [])
+    setCaption(p.caption ?? '')
+    setTextos((c.textos as string[]) ?? [])
+    setTema(String(c.hook ?? ''))
+    setCta(String(c.cta ?? ''))
+    setFundo(String(c.fundo ?? ''))
+    setDestaque(String(c.destaque ?? ''))
+    setPosicoes((c.posicoes as Posicoes) ?? null)
+    setVerGaleria(false)
+  }
+
+  const apagarPeca = async (id: string) => {
+    await fetch(`/api/mtmsocial/pecas?id=${id}`, { method: 'DELETE', headers: await authHeaders() })
+    if (pecaId === id) { setUrls([]); setPecaId(null) }
+    await carregarGaleria()
+  }
+
+  /**
+   * Aplicar as posições arrastadas: redesenha a peça, não cria outra.
+   *
+   * Manda os textos que já existem — sem isso, a rota voltava a escrever tudo do zero e o texto
+   * mudava debaixo de quem só queria movê-lo.
+   */
+  const aplicarPosicoes = async (novas: Posicoes) => {
+    setPosicoes(novas)
+    const r = await fetch('/api/mtmsocial/criar', {
+      method: 'POST',
+      headers: await authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        tipo, cta, marcaId: activa?.id, pecaId,
+        hook: textos[0] || tema,
+        textos,
+        caption,
+        fundo: fundo || undefined,
+        destaque: destaque || undefined,
+        posicoes: novas,
+      }),
+    })
+    const j = await r.json()
+    if (j.ok) { setUrls(j.urls ?? []); setPecaId(j.id ?? pecaId); await carregarGaleria() }
+    else setErro(j.erro ?? 'não consegui redesenhar')
+    setAEditar(null)
   }
 
   /**
@@ -385,12 +456,26 @@ export default function PainelSocial() {
             {urls.length > 0 && (
               <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
                 <p className="text-[13px] font-semibold">{urls.length} {urls.length === 1 ? 'imagem' : 'imagens'}</p>
+                {/* Tocar abre o EDITOR. Descarregar é um botão à parte, no canto: era o gesto
+                    obvio para a imagem inteira, mas quem toca numa peça quer mexer-lhe. */}
                 <div className="mt-2 grid grid-cols-3 gap-2">
                   {urls.map((u, i) => (
-                    <button key={u} onClick={() => void descarregar(u, i)} className="overflow-hidden rounded border border-white/10">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={u} alt="" className="w-full" />
-                    </button>
+                    <div key={u} className="group relative">
+                      <button onClick={() => setAEditar(i)} className="block w-full overflow-hidden rounded border border-white/10">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={u} alt="" className="w-full" />
+                      </button>
+                      <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/60 py-1 text-[10px] font-semibold text-white/80">
+                        <Move className="h-3 w-3" /> mover
+                      </span>
+                      <button
+                        onClick={() => void descarregar(u, i)}
+                        title="Descarregar"
+                        className="absolute right-1 top-1 rounded bg-black/70 p-1 text-white/80 hover:text-[#D2A63C]"
+                      >
+                        <Download className="h-3 w-3" />
+                      </button>
+                    </div>
                   ))}
                 </div>
 
@@ -412,7 +497,63 @@ export default function PainelSocial() {
             )}
           </>
         )}
+        {/* ── a galeria ───────────────────────────────────────────────────── */}
+        {galeria.length > 0 && (
+          <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <button
+              onClick={() => setVerGaleria((v) => !v)}
+              className="flex w-full items-center justify-between text-left"
+            >
+              <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold">
+                <FolderOpen className="h-4 w-4 text-[#D2A63C]" />
+                O que já fizeste ({galeria.length})
+              </span>
+              <span className="text-[12px] text-white/40">{verGaleria ? 'fechar' : 'abrir'}</span>
+            </button>
+
+            {verGaleria && (
+              <div className="mt-3 space-y-2">
+                {galeria.map((p) => (
+                  <div key={p.id} className={`flex items-center gap-2.5 rounded-lg border p-2 ${pecaId === p.id ? 'border-[#D2A63C]/40' : 'border-white/10'}`}>
+                    {p.urls[0] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.urls[0]} alt="" className="h-14 w-11 shrink-0 rounded object-cover" />
+                    )}
+                    <button onClick={() => abrirPeca(p)} className="min-w-0 flex-1 text-left">
+                      <p className="truncate text-[13px]">{p.titulo || 'sem título'}</p>
+                      <p className="text-[11.5px] text-white/40">{p.urls.length} {p.urls.length === 1 ? 'imagem' : 'imagens'}</p>
+                    </button>
+                    <button onClick={() => void apagarPeca(p.id)} className="shrink-0 text-white/30 hover:text-rose-400">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </div>
+
+      {/* ── o editor ─────────────────────────────────────────────────────── */}
+      {aEditar !== null && activa && (
+        <EditorArrastavel
+          dados={{
+            hook: textos[aEditar] || textos[0] || tema,
+            cta,
+            cor: activa.cor,
+            assinatura: activa.arroba ? `@${activa.arroba}` : activa.nome,
+            // As imagens só existem na capa; nas outras lâminas o editor mostra a tipografia
+            // sozinha, que é o que elas são.
+            fundo: aEditar === 0 ? fundo || null : null,
+            destaque: aEditar === 0 ? destaque || null : null,
+            logoUrl: activa.logo === 'proprio' ? activa.logo_url : null,
+            formato: tipo === 'capa_reel' ? 'reel' : 'post',
+            posicoes,
+          }}
+          aoAplicar={aplicarPosicoes}
+          aoFechar={() => setAEditar(null)}
+        />
+      )}
     </main>
   )
 }

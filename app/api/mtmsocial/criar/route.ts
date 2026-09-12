@@ -133,7 +133,9 @@ export async function POST(request: NextRequest) {
   let textos: string[] = Array.isArray(corpo?.textos) ? corpo.textos.map(String).filter(Boolean) : []
   let caption = String(corpo?.caption ?? '').trim()
 
-  if (corpo?.comIA === true) {
+  // Com textos já escritos (a reaplicar posições, por exemplo), não se volta a escrever nada:
+  // seria pagar outra chamada e, pior, mudar o texto debaixo de quem só queria mover o texto.
+  if (corpo?.comIA === true && !textos.length && !hook) {
     const escrito = await escrever(String(corpo?.tema ?? hook), cta, Math.max(3, Number(corpo?.laminas) || 4), m.nome)
     if (!escrito) {
       return NextResponse.json({ erro: 'não consegui escrever os textos — tenta outra vez' }, { status: 502 })
@@ -146,6 +148,14 @@ export async function POST(request: NextRequest) {
   if (!hook && !textos.length) {
     return NextResponse.json({ erro: 'sem texto nenhum para pôr no cartão' }, { status: 400 })
   }
+
+  /**
+   * As posições arrastadas, se o editor as mandou.
+   *
+   * Vêm em fracções de 0 a 1 e viajam até ao desenho sem conversão nenhuma. Sem elas, o cartão
+   * usa as posições da casa — as que o fazem parecer feito sem ninguém lhe tocar.
+   */
+  const posicoes = corpo?.posicoes && typeof corpo.posicoes === 'object' ? corpo.posicoes : undefined
 
   const camadas = {
     fundo: String(corpo?.fundo ?? '').trim() || undefined,
@@ -163,7 +173,7 @@ export async function POST(request: NextRequest) {
       texto,
       ...(i === textos.length - 1 && cta ? { cta } : {}),
       // As imagens só na capa: repeti-las em todas rouba a legibilidade ao texto.
-      ...(i === 0 ? camadas : {}),
+      ...(i === 0 ? { ...camadas, posicoes } : {}),
     }))
     // A marca viaja em cada lâmina através do `handle`, que o motor usa para escolher o estilo.
     const pngs = await renderCarrossel(
@@ -180,6 +190,7 @@ export async function POST(request: NextRequest) {
         proof: false,
         formato,
         marca: daMarca,
+        posicoes,
         ...camadas,
       }),
       1080,
@@ -192,12 +203,29 @@ export async function POST(request: NextRequest) {
   //
   // Uma peça que só existe enquanto o separador está aberto perde-se com um refrescar — e o
   // trabalho todo com ela.
+  const conteudo = { hook, textos, cta, ...camadas, posicoes: posicoes ?? null }
+  const pecaId = String(corpo?.pecaId ?? '').trim()
+
+  /**
+   * Mexer numa peça ACTUALIZA-A; não cria outra.
+   *
+   * Arrastar o texto três vezes deixava três peças quase iguais na galeria, e a certa altura
+   * ninguém sabia qual era a boa. Quem edita quer a mesma peça melhor, não uma cópia.
+   */
+  if (pecaId) {
+    const { data } = await db.from('mtm_social_pecas')
+      .update({ titulo: (hook || textos[0] || '').slice(0, 80), conteudo, urls, caption, updated_at: new Date().toISOString() })
+      .eq('id', pecaId).eq('user_id', userId).select('id').maybeSingle()
+    if (data) return NextResponse.json({ ok: true, id: data.id, urls, textos, hook, caption })
+    // A peça desapareceu entretanto: cria-se, em vez de perder o trabalho.
+  }
+
   const { data: peca } = await db.from('mtm_social_pecas').insert({
     user_id: userId,
     marca_id: corpo?.marcaId ?? null,
     tipo,
     titulo: (hook || textos[0] || '').slice(0, 80),
-    conteudo: { hook, textos, cta, ...camadas },
+    conteudo,
     urls,
     caption,
   }).select('id').single()

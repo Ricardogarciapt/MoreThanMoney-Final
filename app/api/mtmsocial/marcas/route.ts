@@ -23,10 +23,13 @@ const LOGOS_DA_CASA: Record<string, string> = {
   mtm_funded: '/mtmfunded/logo-mtm-funded-v2.png',
 }
 
-export function urlDoLogo(logo: string, logoUrl: string | null): string | null {
+// Sem `export`: um ficheiro de rota do Next só pode exportar handlers e configuração — tudo o
+// resto rebenta a geração de tipos com uma mensagem que não fala do problema.
+function urlDoLogo(logo: string, logoUrl: string | null): string | null {
   if (logo === 'proprio') return logoUrl
   return LOGOS_DA_CASA[logo] ?? null
 }
+void urlDoLogo
 
 export async function GET(request: NextRequest) {
   const userId = await userIdDoPedido(request)
