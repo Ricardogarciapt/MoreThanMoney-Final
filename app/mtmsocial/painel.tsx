@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, Wand2, Download, Share2, Upload, Plus, Check, Trash2, Sparkles, Move, FolderOpen } from 'lucide-react'
+import { Loader2, Wand2, Download, Share2, Upload, Plus, Check, Trash2, Sparkles, Move, FolderOpen, Layers, Bookmark } from 'lucide-react'
 import { authHeaders } from '@/lib/auth-token'
 import EditorArrastavel, { type Posicoes } from '@/components/mtmsocial/editor-arrastavel'
 
@@ -75,6 +75,7 @@ export default function PainelSocial() {
   const [aEditar, setAEditar] = useState<number | null>(null)
   const [galeria, setGaleria] = useState<Array<{ id: string; titulo: string | null; urls: string[]; caption: string | null; conteudo: Record<string, unknown> }>>([])
   const [verGaleria, setVerGaleria] = useState(false)
+  const [modelos, setModelos] = useState<Array<{ id: string; nome: string; tipo: string; desenho: Record<string, unknown>; capa_url: string | null; usos: number }>>([])
 
   const activa = marcas.find((m) => m.ativa) ?? marcas[0] ?? null
 
@@ -101,7 +102,65 @@ export default function PainelSocial() {
     }
   }, [])
 
-  useEffect(() => { void carregar(); void carregarGaleria() }, [carregar, carregarGaleria])
+  const carregarModelos = useCallback(async () => {
+    try {
+      const r = await fetch('/api/mtmsocial/modelos', { cache: 'no-store', headers: await authHeaders() })
+      const j = await r.json()
+      setModelos(j.modelos ?? [])
+    } catch {
+      /* sem modelos ainda se cria à mão */
+    }
+  }, [])
+
+  /**
+   * Aplicar um modelo: traz o DESENHO e deixa o texto em branco.
+   *
+   * É esse o ponto — o desenho é o que custa a montar, a frase é o que muda. Trazer também a
+   * frase fazia de cada modelo uma cópia da peça anterior.
+   */
+  const aplicarModelo = async (m: { id: string; tipo: string; desenho: Record<string, unknown> }) => {
+    const d = m.desenho ?? {}
+    setTipo((m.tipo as 'cartao' | 'carrossel' | 'capa_reel') ?? 'carrossel')
+    setFundo(String(d.fundo ?? ''))
+    setDestaque(String(d.destaque ?? ''))
+    setPosicoes((d.posicoes as Posicoes) ?? null)
+    if (d.cta) setCta(String(d.cta))
+    setUrls([]); setPecaId(null); setTextos([]); setTema('')
+    setAviso('modelo aplicado — escreve o tema e cria')
+    await fetch('/api/mtmsocial/modelos', {
+      method: 'POST',
+      headers: await authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ accao: 'usar', id: m.id }),
+    }).catch(() => undefined)
+    void carregarModelos()
+  }
+
+  const guardarModelo = async () => {
+    const nome = window.prompt('Nome do modelo?')
+    if (!nome?.trim()) return
+    const r = await fetch('/api/mtmsocial/modelos', {
+      method: 'POST',
+      headers: await authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        nome, tipo, marcaId: activa?.id, capaUrl: urls[0] ?? null,
+        desenho: { fundo, destaque, destaquePos: 'direita', destaqueEscala: 0.92, posicoes, cta },
+      }),
+    })
+    const j = await r.json()
+    if (j.ok) { setAviso('modelo guardado'); void carregarModelos() }
+    else setErro(j.erro ?? 'não consegui guardar o modelo')
+  }
+
+  const apagarModelo = async (id: string) => {
+    await fetch('/api/mtmsocial/modelos', {
+      method: 'POST',
+      headers: await authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ accao: 'apagar', id }),
+    })
+    await carregarModelos()
+  }
+
+  useEffect(() => { void carregar(); void carregarGaleria(); void carregarModelos() }, [carregar, carregarGaleria, carregarModelos])
 
   const guardarMarca = async () => {
     setErro(null)
@@ -382,6 +441,36 @@ export default function PainelSocial() {
         {activa && !aEditarMarca && (
           <>
             {/* ── a peça ──────────────────────────────────────────────────── */}
+            {/* ── os modelos ──────────────────────────────────────────────
+                Monta-se o desenho uma vez e reutiliza-se mudando só o texto. É o que separa
+                publicar uma vez por semana de publicar cinco. */}
+            {modelos.length > 0 && (
+              <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold">
+                  <Layers className="h-4 w-4 text-[#D2A63C]" /> Os teus modelos
+                </p>
+                <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
+                  {modelos.map((m) => (
+                    <div key={m.id} className="relative w-20 shrink-0">
+                      <button onClick={() => void aplicarModelo(m)} className="block w-full overflow-hidden rounded-lg border border-white/10">
+                        {m.capa_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={m.capa_url} alt="" className="h-24 w-full object-cover" />
+                        ) : (
+                          <div className="grid h-24 w-full place-items-center bg-black/40 text-[10px] text-white/30">sem capa</div>
+                        )}
+                      </button>
+                      <p className="mt-1 truncate text-[10.5px] text-white/60">{m.nome}</p>
+                      <button onClick={() => void apagarModelo(m.id)}
+                        className="absolute right-1 top-1 rounded bg-black/70 p-0.5 text-white/60 hover:text-rose-400">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <div className="flex gap-1 rounded-lg bg-black/40 p-1">
                 {([['carrossel', 'Carrossel'], ['cartao', 'Cartão'], ['capa_reel', 'Capa de reel']] as const).map(([k, r]) => (
@@ -489,8 +578,14 @@ export default function PainelSocial() {
                     <Share2 className="h-4 w-4" /> Partilhar
                   </button>
                   <button onClick={async () => { for (let i = 0; i < urls.length; i++) { await descarregar(urls[i], i); await new Promise((r) => setTimeout(r, 400)) } }}
+                    title="Descarregar"
                     className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-4 py-2.5 text-[14px] font-semibold text-white/80">
                     <Download className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => void guardarModelo()}
+                    title="Guardar este desenho como modelo"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-4 py-2.5 text-[14px] font-semibold text-white/80">
+                    <Bookmark className="h-4 w-4" />
                   </button>
                 </div>
               </section>

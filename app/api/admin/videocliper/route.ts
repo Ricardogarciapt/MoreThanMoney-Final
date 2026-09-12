@@ -82,15 +82,57 @@ export async function POST(req: NextRequest) {
   // ── pôr um vídeo na fila ──────────────────────────────────────────────────
   if (accao === 'clipar') {
     const url = String(corpo?.url ?? '').trim()
-    const videoId = idDoYoutube(url)
-    if (!videoId) {
-      return NextResponse.json({ erro: 'isso não parece um link do YouTube' }, { status: 400 })
+
+    /**
+     * UMA GRAVAÇÃO NOSSA, pelo nome do ficheiro.
+     *
+     * O disco do VPS tem gigabytes de sessões gravadas que a base de dados desconhece — o DVR
+     * gravou-as antes de haver `lms_dvr_jobs` a acompanhá-las. O material existe, a ferramenta
+     * existe, e não se encontravam.
+     *
+     * O YouTube também não serve de ponte: recusa descargas do IP do datacenter. Mas o ficheiro
+     * está NA MESMA MÁQUINA que corta — é só preciso saber o nome.
+     *
+     * Aceita-se só o NOME, nunca um caminho: o worker resolve-o debaixo de /mnt/dvr. Deixar
+     * passar um caminho era deixar alguém pedir qualquer ficheiro da máquina.
+     */
+    if (!url.startsWith('http')) {
+      const ficheiro = url.replace(/[^A-Za-z0-9._-]/g, '')
+      if (!ficheiro.endsWith('.mp4')) {
+        return NextResponse.json(
+          { erro: 'dá-me o link do YouTube, ou o nome do ficheiro do DVR (termina em .mp4)' },
+          { status: 400 },
+        )
+      }
+      const { data, error } = await db.from('videocliper_jobs').insert({
+        origem: 'dvr',
+        titulo: String(corpo?.titulo ?? '').trim() || ficheiro.replace(/\.mp4$/, ''),
+        dvr_ficheiro: ficheiro,
+        estado: 'pedido',
+        criado_por: 'admin',
+      }).select('id').single()
+      if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, jobId: data.id })
     }
+
+    /**
+     * QUALQUER LINK DE VÍDEO, não só o YouTube.
+     *
+     * Um `.mp4` directo — de uma gaveta, de um Drive partilhado, do nosso próprio DVR público —
+     * puxa-se com um pedido normal, sem extractor pelo meio e sem nada que se possa partir.
+     * Vimeo, Twitch, TikTok e companhia passam pelo extractor e funcionam de primeira.
+     *
+     * O YouTube é o caso difícil: recusa o IP do datacenter, e só passa com cookies. Por isso
+     * NÃO se exige aqui que o link seja dele — exigi-lo fechava a porta a todos os outros, que
+     * funcionam.
+     */
+    const videoId = idDoYoutube(url)
 
     // O mesmo vídeo não se analisa duas vezes: a transcrição custa dinheiro e a análise custa
     // mais. Devolve-se o que já existe em vez de um erro de duplicado.
-    const { data: ja } = await db
-      .from('videocliper_jobs').select('id, estado').eq('youtube_video_id', videoId).maybeSingle()
+    const { data: ja } = videoId
+      ? await db.from('videocliper_jobs').select('id, estado').eq('youtube_video_id', videoId).maybeSingle()
+      : await db.from('videocliper_jobs').select('id, estado').eq('youtube_url', url).maybeSingle()
     if (ja) return NextResponse.json({ ok: true, jobId: ja.id, jaExistia: true, estado: ja.estado })
 
     const { data, error } = await db.from('videocliper_jobs').insert({

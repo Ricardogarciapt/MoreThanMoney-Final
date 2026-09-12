@@ -332,8 +332,43 @@ async function uploadYoutube(job) {
     playlist_url: playlistId ? `https://www.youtube.com/playlist?list=${playlistId}` : null,
     videos: results,
   })
-  // O master multi-áudio+CC FICA no DVR (1 gravação por sala). Não apagar.
   log(`youtube done: ${results.length} vídeos${playlistId ? ` (playlist ${playlistId})` : ""}`)
+
+  /**
+   * O DISCO LIMPA-SE DEPOIS DE SUBIR.
+   *
+   * Antes o master ficava aqui para sempre — «1 gravação por sala, não apagar». Isso enchia o
+   * disco de gigabytes de ficheiros que já estão no YouTube, onde não expiram e de onde se
+   * descarregam. Decisão do Ricardo: depois de subido e publicado, o ficheiro sai daqui.
+   *
+   * Três condições, e as três têm de se verificar:
+   *
+   * 1. O `report` acima CORREU. Se ele falhou, isto nem chega a ser executado — o site não sabe
+   *    onde está o vídeo e o ficheiro é a única cópia que resta.
+   * 2. Há pelo menos um `videoId` do YouTube. Sem isso não há para onde ter ido.
+   * 3. Apaga-se com `force`, sem rebentar: perder a gravação por causa de uma permissão errada
+   *    seria trocar um problema de disco por um problema pior.
+   *
+   * Guarda-se `DVR_MANTER=1` para quem quiser o comportamento antigo numa máquina de testes.
+   */
+  if (process.env.DVR_MANTER === "1") {
+    log("DVR_MANTER=1 — ficheiros mantidos")
+    return
+  }
+
+  const aApagar = [master, baseF].filter((f) => f && fs.existsSync(f))
+  let libertado = 0
+  for (const f of aApagar) {
+    try {
+      libertado += fs.statSync(f).size
+      fs.rmSync(f, { force: true })
+      log(`apagado do DVR: ${path.basename(f)}`)
+    } catch (e) {
+      // Falhar a limpeza não é um erro do trabalho: o vídeo está no YouTube, que era o ponto.
+      log(`nao consegui apagar ${path.basename(f)}: ${e.message}`)
+    }
+  }
+  if (libertado) log(`libertados ${(libertado / 1024 / 1024 / 1024).toFixed(2)} GB`)
 }
 
 async function doDelete(job) {

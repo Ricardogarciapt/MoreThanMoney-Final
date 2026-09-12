@@ -34,7 +34,20 @@ function autorizado(request: NextRequest): boolean {
  *
  * Devolve `null` para vídeos que não são nossos: esses têm mesmo de ser descarregados.
  */
-async function ficheiroDoDvr(dvrJobId: string | null): Promise<string | null> {
+async function ficheiroDoDvr(dvrJobId: string | null, nome?: string | null): Promise<string | null> {
+  /**
+   * O nome escrito à mão ganha.
+   *
+   * Serve as gravações antigas, que estão no disco mas não têm linha em `lms_dvr_jobs`. O
+   * caminho monta-se AQUI e não vem de fora: só o nome do ficheiro atravessa a fronteira, e
+   * qualquer barra é retirada — um `../` num nome de ficheiro é um pedido para ler o resto da
+   * máquina.
+   */
+  if (nome) {
+    const limpo = nome.replace(/[^A-Za-z0-9._-]/g, '')
+    if (limpo.endsWith('.mp4')) return `/mnt/dvr/${limpo}`
+  }
+
   if (!dvrJobId) return null
   const { data } = await getSupabaseAdmin()
     .from('lms_dvr_jobs')
@@ -85,11 +98,11 @@ export async function GET(request: NextRequest) {
   if (clip) {
     const { data: job } = await db
       .from('videocliper_jobs')
-      .select('id, origem, youtube_url, youtube_video_id, dvr_job_id, titulo')
+      .select('id, origem, youtube_url, youtube_video_id, dvr_job_id, dvr_ficheiro, titulo')
       .eq('id', clip.job_id as string)
       .maybeSingle()
 
-    const ficheiroLocal = await ficheiroDoDvr(job?.dvr_job_id as string | null)
+    const ficheiroLocal = await ficheiroDoDvr(job?.dvr_job_id as string | null, job?.dvr_ficheiro as string | null)
 
     await db.from('videocliper_clips')
       .update({ estado: 'a_render', updated_at: agora.toISOString() })
@@ -152,7 +165,7 @@ export async function GET(request: NextRequest) {
   // ── 2. vídeos por processar ───────────────────────────────────────────────
   const { data: job } = await db
     .from('videocliper_jobs')
-    .select('id, origem, youtube_url, youtube_video_id, dvr_job_id, titulo, idioma')
+    .select('id, origem, youtube_url, youtube_video_id, dvr_job_id, dvr_ficheiro, titulo, idioma')
     .eq('estado', 'pedido')
     .order('created_at')
     .limit(1)
@@ -160,7 +173,7 @@ export async function GET(request: NextRequest) {
 
   if (!job) return NextResponse.json({ tipo: 'nada' })
 
-  const ficheiroLocal = await ficheiroDoDvr(job.dvr_job_id as string | null)
+  const ficheiroLocal = await ficheiroDoDvr(job.dvr_job_id as string | null, job.dvr_ficheiro as string | null)
 
   await db.from('videocliper_jobs').update({
     estado: 'a_descarregar',

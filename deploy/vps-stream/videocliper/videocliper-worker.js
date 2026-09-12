@@ -51,6 +51,49 @@ function cookiesDoYoutube() {
   return f && fs.existsSync(f) ? ["--cookies", f] : []
 }
 
+/**
+ * DESCARREGAR um vídeo de um link.
+ *
+ * Três caminhos, e a ordem importa:
+ *
+ * 1. Ficheiro DIRECTO (`.mp4`, `.mov`, `.webm`, ou um servidor que diga `video/`): puxa-se com
+ *    um pedido normal. Nenhum extractor pelo meio, nada que se possa partir — e é o que serve
+ *    para links de Drive partilhados, S3, a nossa própria gaveta, ou o DVR público.
+ * 2. Um site que o yt-dlp saiba extrair (Vimeo, Twitch, Facebook, TikTok…). A maioria não tem
+ *    verificação de robô e funciona de primeira.
+ * 3. YouTube. Recusa o IP do datacenter — «confirma que não és um robô» — e só passa com um
+ *    ficheiro de cookies em `YOUTUBE_COOKIES_FILE`.
+ *
+ * Tentar o directo primeiro poupa o extractor quando ele não é preciso, e é o unico caminho
+ * que nao depende de ninguem.
+ */
+async function descarregarDeLink(url, destino, seccao) {
+  const directo = /\.(mp4|mov|m4v|webm)(\?|$)/i.test(url)
+  if (directo) {
+    log("a puxar ficheiro directo")
+    const r = await fetch(url, { redirect: "follow" })
+    if (!r.ok) throw new Error(`o link respondeu ${r.status}`)
+    const tipo = r.headers.get("content-type") || ""
+    if (tipo && !tipo.startsWith("video/") && !tipo.includes("octet-stream")) {
+      throw new Error(`o link nao devolveu video (${tipo})`)
+    }
+    const buf = Buffer.from(new Uint8Array(await r.arrayBuffer()))
+    if (buf.length < 100_000) throw new Error("o ficheiro veio vazio ou e demasiado pequeno")
+    fs.writeFileSync(destino, buf)
+    return
+  }
+
+  // Pelo extractor. Os cookies so existem para o YouTube e sao opcionais.
+  await correr(YTDLP, [
+    "-f", "bv*[height<=1080]+ba/b[height<=1080]/b",
+    ...(seccao ? ["--download-sections", seccao, "--force-keyframes-at-cuts"] : []),
+    "--merge-output-format", "mp4",
+    ...cookiesDoYoutube(),
+    "-o", destino,
+    url,
+  ])
+}
+
 const log = (...a) => console.log(new Date().toISOString(), "[videocliper]", ...a)
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -287,15 +330,7 @@ async function transcrever(trabalho) {
       log("a usar a gravação do DVR:", fonteDoAudio)
     } else {
       if (!trabalho.youtubeUrl) throw new Error("sem ficheiro local nem link para descarregar")
-      // `bv*+ba/b` com tecto de 720p: o que interessa é o ÁUDIO para transcrever. Puxar 4K de
-      // uma sessão de duas horas enche o disco por nada.
-      await correr(YTDLP, [
-        "-f", "bv*[height<=720]+ba/b[height<=720]/b",
-        "--merge-output-format", "mp4",
-        ...cookiesDoYoutube(),
-        "-o", video,
-        trabalho.youtubeUrl,
-      ])
+      await descarregarDeLink(trabalho.youtubeUrl, video, null)
       fonteDoAudio = video
     }
 
@@ -365,19 +400,13 @@ async function render(trabalho) {
     } else {
       if (!trabalho.youtubeUrl) throw new Error("sem ficheiro local nem link para descarregar")
       fonte = path.join(tmp, "fonte.mp4")
-      // `--download-sections` descarrega SÓ o pedaço preciso. Puxar o vídeo inteiro para cortar
-      // trinta segundos é minutos de espera e gigabytes de disco por clipe.
-      await correr(YTDLP, [
-        "-f", "bv*[height<=1080]+ba/b",
-        "--download-sections", `*${Math.max(0, trabalho.inicioSeg - 1)}-${trabalho.fimSeg + 1}`,
-        "--force-keyframes-at-cuts",
-        "--merge-output-format", "mp4",
-        ...cookiesDoYoutube(),
-        "-o", fonte,
-        trabalho.youtubeUrl,
-      ])
-      // O pedaço descarregado começa um segundo antes do ponto pedido.
-      recuo = 1
+      // `--download-sections` puxa SÓ o pedaço preciso, quando o extractor o permite. Num
+      // ficheiro directo nao ha como pedir um pedaco — vem inteiro e o ffmpeg salta la dentro.
+      const seccao = `*${Math.max(0, trabalho.inicioSeg - 1)}-${trabalho.fimSeg + 1}`
+      const eDirecto = /\.(mp4|mov|m4v|webm)(\?|$)/i.test(trabalho.youtubeUrl)
+      await descarregarDeLink(trabalho.youtubeUrl, fonte, eDirecto ? null : seccao)
+      // Vindo inteiro, salta-se ao ponto; vindo em pedaço, ele começa um segundo antes.
+      recuo = eDirecto ? Number(trabalho.inicioSeg) : 1
     }
 
     const ass = path.join(tmp, "legendas.ass")
