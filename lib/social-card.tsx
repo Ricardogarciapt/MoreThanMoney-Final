@@ -55,6 +55,25 @@ export interface SocialCardParams {
     /** Endereço do logótipo a carimbar no canto, se houver. */
     logoUrl?: string | null
   } | null
+  /**
+   * ONDE CADA COISA FICA, quando alguém a arrastou.
+   *
+   * Por omissão é tudo `undefined` e o desenho usa as posições da casa — as que fazem o cartão
+   * parecer feito sem ninguém lhe tocar. Quando o editor devolve uma posição, ela ganha.
+   *
+   * As coordenadas são FRACÇÕES do lado, de 0 a 1, e não píxeis. O editor arrasta sobre uma
+   * pré-visualização de 360px de largura e o cartão sai a 1080: guardar píxeis fazia tudo
+   * aterrar no canto superior esquerdo, a um terço do sítio certo.
+   *
+   * `y` é o topo do elemento e `x` o seu lado esquerdo — o mesmo que o CSS entende, para não
+   * haver conversão nenhuma pelo meio onde se possa errar.
+   */
+  posicoes?: {
+    /** As duas faixas de texto movem-se juntas: são uma frase partida, não dois objectos. */
+    texto?: { x: number; y: number } | null
+    destaque?: { x: number; y: number } | null
+    logo?: { x: number; y: number } | null
+  } | null
 }
 
 /**
@@ -155,6 +174,18 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
    */
   const temFoto = Boolean(params.fundo)
 
+  /**
+   * As posições arrastadas, traduzidas para píxeis deste cartão.
+   *
+   * Vêm em fracções de 0 a 1 porque o editor arrasta sobre uma pré-visualização pequena e o
+   * cartão sai a 1080 de largura. Aqui multiplicam-se pelo lado real.
+   */
+  const L = 1080
+  const A = alto ? 1920 : 1350
+  const posTexto = params.posicoes?.texto
+  const posDestaque = params.posicoes?.destaque
+  const posLogo = params.posicoes?.logo
+
   return (
     <div
       style={{
@@ -162,7 +193,9 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: temFoto ? 'space-between' : 'center',
+        // Com o texto arrastado, o alinhamento automático deixa de mandar: as faixas passam a
+        // ser posicionadas à mão e o `justifyContent` só estorvaria.
+        justifyContent: posTexto ? 'flex-start' : temFoto ? 'space-between' : 'center',
         background: '#141414',
         // Sem foto, o degradê. A tipografia aguenta sozinha.
         ...(temFoto ? {} : { backgroundImage: 'radial-gradient(900px 700px at 70% 40%, #23282e, #0d0f11 70%)' }),
@@ -224,12 +257,17 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
           alt=""
           style={{
             position: 'absolute',
-            bottom: 0,
-            ...(params.destaquePos === 'esquerda'
-              ? { left: -60 }
-              : params.destaquePos === 'centro'
-                ? { left: 140 }
-                : { right: -60 }),
+            // Arrastado, manda a posição. Sem isso, o encosto por omissão.
+            ...(posDestaque
+              ? { left: Math.round(posDestaque.x * L), top: Math.round(posDestaque.y * A) }
+              : {
+                  bottom: 0,
+                  ...(params.destaquePos === 'esquerda'
+                    ? { left: -60 }
+                    : params.destaquePos === 'centro'
+                      ? { left: 140 }
+                      : { right: -60 }),
+                }),
             height: Math.round((alto ? 1920 : 1350) * Math.min(1.1, Math.max(0.4, params.destaqueEscala ?? 0.92))),
             // `contain` e não `cover`: um recorte esticado deforma a pessoa, e a cara é a
             // primeira coisa que denuncia.
@@ -252,8 +290,9 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
           alt=""
           style={{
             position: 'absolute',
-            right: 44,
-            bottom: 40,
+            ...(posLogo
+              ? { left: Math.round(posLogo.x * L), top: Math.round(posLogo.y * A) }
+              : { right: 44, bottom: 40 }),
             height: 96,
             objectFit: 'contain',
             opacity: 0.85,
@@ -265,6 +304,11 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
       <div
         style={{
           display: 'flex',
+          // Arrastado: as duas faixas movem-se JUNTAS, porque são uma frase partida e não dois
+          // objectos. A de cima leva a posição; a de baixo segue-a por ser a irmã seguinte.
+          ...(posTexto
+            ? { position: 'absolute' as const, left: Math.round(posTexto.x * L), top: Math.round(posTexto.y * A) }
+            : {}),
           color: ACENTO,
           fontFamily: 'Anton',
           fontSize: corpo,
@@ -294,7 +338,21 @@ function cartaoRicardo(params: SocialCardParams, alto: boolean) {
           display: 'flex',
           flexDirection: 'column',
           padding: '0 40px',
-          marginTop: Math.round(corpo * 0.22),
+          /**
+           * Arrastado, esta faixa segue a de cima.
+           *
+           * São uma frase partida em duas cores, não dois objectos: mover uma e deixar a outra
+           * onde estava parte a frase ao meio. Como a de cima passa a absoluta, esta tem de ir
+           * atrás — e a distância calcula-se, porque depende do corpo da letra, que por sua vez
+           * depende do comprimento da frase.
+           */
+          ...(posTexto
+            ? {
+                position: 'absolute' as const,
+                left: Math.round(posTexto.x * L),
+                top: Math.round(posTexto.y * A + corpo * 1.22),
+              }
+            : { marginTop: Math.round(corpo * 0.22) }),
         }}
       >
         <div
@@ -656,8 +714,20 @@ export async function renderSocialCardBuffer(params: SocialCardParams): Promise<
    * todos os cartões, o da marca passou a sair inteiro em Anton, que não é o desenho dele.
    * A fonte segue o estilo, como tudo o resto.
    */
-  const doRicardo = (params.handle || '').replace(/^@/, '').toLowerCase().includes('ricardo')
-  const f = doRicardo ? fonteCondensada() : null
+  /**
+   * A fonte segue o ESTILO, não o nome da conta.
+   *
+   * Era `handle.includes('ricardo')`. Funcionava enquanto só havia duas contas — e partiu-se no
+   * dia em que um membro trouxe a marca dele: o cartão usava o estilo tipográfico (duas faixas,
+   * texto enorme) e saía numa fonte genérica, larga, que partia as faixas em duas linhas. Feio,
+   * e sem nada a dizer porquê.
+   *
+   * A condição passa a ser a mesma que o `socialCardElement` usa para escolher o desenho.
+   */
+  const estiloTipografico =
+    Boolean(params.marca?.nome) ||
+    (params.handle || '').replace(/^@/, '').toLowerCase().includes('ricardo')
+  const f = estiloTipografico ? fonteCondensada() : null
   const res = new ImageResponse(socialCardElement(params), {
     width: 1080,
     height: alto ? 1920 : 1350,

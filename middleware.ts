@@ -113,11 +113,31 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Adicionar headers de segurança básicos
-  // X-Frame-Options: DENY não é aplicado em /app-mobile nem em rotas do scanner —
-  // o WKWebView (iOS) e o TradingView widget necessitam de contexto de embedding livre.
-  const isNativeAppRoute = pathname.startsWith("/app-mobile") || pathname.startsWith("/scanner") || pathname.startsWith("/apresentacoes")
-  if (!isNativeAppRoute) {
+  /**
+   * QUEM PODE SER EMOLDURADO.
+   *
+   * `X-Frame-Options: DENY` é o normal e protege contra clickjacking. Mas há rotas que existem
+   * PARA serem emolduradas, e nelas o cabeçalho não é segurança — é uma página em branco:
+   *
+   * · `/app-mobile`, `/scanner`, `/apresentacoes` — o WKWebView do iOS e o widget do TradingView
+   *   precisam de contexto de embedding livre.
+   * · `/mtmsocial` — corre DENTRO da app-mobile e das nativas, na lista de Apps. Com o DENY, a
+   *   página carregava inteira (200, 53 KB) e o browser recusava desenhá-la: um rectângulo
+   *   branco, sem erro nenhum no ecrã a dizer porquê.
+   *
+   * Nestas usa-se `frame-ancestors 'self'` em vez de nada: continua a impedir que um site de
+   * terceiros nos emoldure, mas deixa a nossa própria app fazê-lo. É o que o `DENY` deveria ter
+   * sido desde o início — ele não distingue «ninguém» de «só nós».
+   */
+  const emolduravel =
+    pathname.startsWith("/app-mobile") ||
+    pathname.startsWith("/scanner") ||
+    pathname.startsWith("/apresentacoes") ||
+    pathname.startsWith("/mtmsocial")
+
+  if (emolduravel) {
+    response.headers.set("Content-Security-Policy", "frame-ancestors 'self'")
+  } else {
     response.headers.set("X-Frame-Options", "DENY")
   }
   response.headers.set("X-Content-Type-Options", "nosniff")
