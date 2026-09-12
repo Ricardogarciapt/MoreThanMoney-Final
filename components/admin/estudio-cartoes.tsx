@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Loader2, Images, Image as ImgIcon, Download, Upload, Sparkles, UserRound, Send, Share2, Clock } from "lucide-react"
+import { Loader2, Images, Image as ImgIcon, Download, Upload, Sparkles, UserRound, Send, Share2, Clock, Wand2, RefreshCw } from "lucide-react"
 
 /**
  * Estúdio de cartões — ver antes de publicar, e mexer.
@@ -44,6 +44,10 @@ export function EstudioCartoes() {
   // Qual camada recebe o que for arrastado ou gerado. Sem isto, largar uma foto no cartão
   // teria de adivinhar se era cenário ou pessoa — e adivinharia mal metade das vezes.
   const [camada, setCamada] = useState<"fundo" | "destaque">("fundo")
+  const [tema, setTema] = useState("")
+  const [aAssistir, setAAssistir] = useState(false)
+  const [passos, setPassos] = useState<string[]>([])
+  const [aRefazer, setARefazer] = useState<number | null>(null)
   const [saida, setSaida] = useState<string[]>([])
   const [textos, setTextos] = useState<string[]>([])
   const [erro, setErro] = useState<string | null>(null)
@@ -252,6 +256,78 @@ export function EstudioCartoes() {
     }
   }
 
+  /**
+   * O ASSISTENTE: um clique e sai tudo.
+   *
+   * Escrever o gancho, escolher a palavra do CTA, pedir o fundo, esperar, gerar as lâminas,
+   * escrever a legenda — seis esperas e seis decisões, e a primeira condiciona as outras cinco.
+   * Aqui dá-se um tema (ou nem isso) e volta montado. O que continua humano é a decisão final:
+   * nada disto se publica sozinho.
+   *
+   * Os passos aparecem à medida que voltam porque a chamada demora perto de dois minutos, e um
+   * botão a girar durante dois minutos parece avariado.
+   */
+  const assistente = async () => {
+    setAAssistir(true)
+    setErro(null)
+    setPassos([])
+    setSaida([])
+    try {
+      const r = await fetch("/api/admin/social/estudio-wizard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tema: tema.trim(), handle, formato, comRicardo }),
+      })
+      const j = await r.json()
+      setPassos(j.passos ?? [])
+      if (j.ok) {
+        setSaida(j.urls ?? [])
+        setTextos(j.textos ?? [])
+        setHook(j.hook ?? hook)
+        setCta(j.cta ?? cta)
+        setLegenda(j.caption ?? "")
+        if (j.fundo) setFundo(j.fundo)
+        if (j.destaque) setDestaque(j.destaque)
+      } else setErro(j.erro ?? "o assistente falhou")
+    } catch {
+      setErro("o assistente falhou")
+    }
+    setAAssistir(false)
+  }
+
+  /**
+   * REFAZER UMA LÂMINA depois de lhe mexer no texto.
+   *
+   * Só aquela. Gerar o carrossel inteiro por causa de uma palavra na terceira lâmina pedia um
+   * fundo NOVO à IA, e a capa mudava por causa de uma correcção no meio.
+   */
+  const refazerLamina = async (i: number) => {
+    setARefazer(i)
+    setErro(null)
+    try {
+      const r = await fetch("/api/admin/social/cartoes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tipo: "lamina",
+          handle,
+          indice: i,
+          total: textos.length || saida.length,
+          hook: textos[i] ?? hook,
+          cta,
+          // As imagens só existem na capa — refazer uma do meio com elas mudava o desenho.
+          ...(i === 0 ? { fundo: fundo.trim() || undefined, destaque: destaque.trim() || undefined, destaquePos, destaqueEscala } : {}),
+        }),
+      })
+      const j = await r.json()
+      if (j.ok && j.urls?.[0]) setSaida((x) => x.map((u, k) => (k === i ? j.urls[0] : u)))
+      else setErro(j.erro ?? "não consegui refazer essa lâmina")
+    } catch {
+      setErro("não consegui refazer essa lâmina")
+    }
+    setARefazer(null)
+  }
+
   const gerar = async (tipo: "cartao" | "carrossel") => {
     setAGerar(tipo)
     setErro(null)
@@ -291,6 +367,44 @@ export function EstudioCartoes() {
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
       {/* Controlos */}
       <div className="space-y-3">
+        {/* ── O ASSISTENTE ──────────────────────────────────────────────── */}
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/[0.04] p-3">
+          <div className="flex items-center gap-1.5">
+            <Wand2 className="h-4 w-4 text-amber-400" />
+            <span className="text-[12.5px] font-semibold text-amber-300">Fazer tudo com IA</span>
+          </div>
+          <p className="mt-1 text-[11.5px] leading-snug text-neutral-400">
+            Escreve o gancho, as lâminas e a legenda, gera o fundo e monta o carrossel. Depois
+            revês e mudas o que quiseres — nada sai sem tu mandares.
+          </p>
+          <div className="mt-2.5 flex flex-col gap-2 sm:flex-row">
+            <input
+              value={tema}
+              onChange={(e) => setTema(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !aAssistir && void assistente()}
+              placeholder="tema (vazio = escolhe ele)"
+              className={campo}
+            />
+            <button
+              type="button"
+              onClick={() => void assistente()}
+              disabled={aAssistir || aGerar !== null}
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md bg-amber-500 px-4 py-1.5 text-[12.5px] font-bold text-black hover:bg-amber-400 disabled:opacity-40"
+            >
+              {aAssistir ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+              {aAssistir ? "A montar…" : "Criar"}
+            </button>
+          </div>
+          {/* Demora perto de dois minutos: um botão a girar todo esse tempo parece avariado. */}
+          {passos.length > 0 && (
+            <ul className="mt-2 space-y-0.5">
+              {passos.map((p, i) => (
+                <li key={i} className="text-[11.5px] text-neutral-400">· {p}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         <div>
           <label className="text-[11px] uppercase tracking-wide text-neutral-400">Conta</label>
           <select value={handle} onChange={(e) => setHandle(e.target.value)} className={campo}>
@@ -564,13 +678,27 @@ export function EstudioCartoes() {
               Lâminas ({textos.length}) — edita e gera outra vez
             </p>
             {textos.map((t, i) => (
-              <textarea
-                key={i}
-                rows={2}
-                value={t}
-                onChange={(e) => setTextos((x) => x.map((v, j) => (j === i ? e.target.value : v)))}
-                className={`${campo} text-[12px]`}
-              />
+              <div key={i} className="flex items-start gap-1.5">
+                <textarea
+                  rows={2}
+                  value={t}
+                  onChange={(e) => setTextos((x) => x.map((v, j) => (j === i ? e.target.value : v)))}
+                  className={`${campo} flex-1 text-[12px]`}
+                />
+                {/* Refaz SÓ esta. O carrossel inteiro pedia um fundo novo à IA, e a capa mudava
+                    por causa de uma correcção no meio. */}
+                {saida[i] && (
+                  <button
+                    type="button"
+                    onClick={() => void refazerLamina(i)}
+                    disabled={aRefazer !== null}
+                    title="Refazer esta lâmina"
+                    className="mt-1 shrink-0 rounded-md border border-neutral-700 p-1.5 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40"
+                  >
+                    {aRefazer === i ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         )}

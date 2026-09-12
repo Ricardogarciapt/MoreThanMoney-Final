@@ -520,20 +520,33 @@ export function laminaElement(l: Lamina, indice: number, total: number, handle: 
  * deslizar. Se vierem menos, as que faltam ficam por conta de quem chama — aqui não se inventa
  * conteúdo para encher, porque texto de encher lê-se como texto de encher.
  */
-export async function renderCarrossel(laminas: Lamina[], handle: string): Promise<Buffer[]> {
+/**
+ * Desenha UM elemento em PNG, com a fonte da casa carregada.
+ *
+ * Existe à parte para se poder refazer uma lâmina sozinha. Mudar uma palavra na terceira
+ * obrigava a gerar o carrossel inteiro — seis renderizações e, pior, um fundo NOVO pedido à IA,
+ * o que fazia a capa mudar por causa de uma correcção no meio.
+ */
+export async function renderElemento(
+  elemento: React.ReactElement,
+  largura = 1080,
+  altura = 1350,
+): Promise<Buffer> {
   const f = fonteCondensada()
-  const fontes = f
-    ? [{ name: 'Anton', data: f as unknown as ArrayBuffer, weight: 400 as const, style: 'normal' as const }]
-    : undefined
+  const res = new ImageResponse(elemento, {
+    width: largura,
+    height: altura,
+    ...(f
+      ? { fonts: [{ name: 'Anton', data: f as unknown as ArrayBuffer, weight: 400 as const, style: 'normal' as const }] }
+      : {}),
+  })
+  return Buffer.from(await res.arrayBuffer())
+}
 
+export async function renderCarrossel(laminas: Lamina[], handle: string): Promise<Buffer[]> {
   const saida: Buffer[] = []
   for (let i = 0; i < laminas.length; i++) {
-    const res = new ImageResponse(laminaElement(laminas[i], i, laminas.length, handle), {
-      width: 1080,
-      height: 1350,
-      ...(fontes ? { fonts: fontes } : {}),
-    })
-    saida.push(Buffer.from(await res.arrayBuffer()))
+    saida.push(await renderElemento(laminaElement(laminas[i], i, laminas.length, handle)))
   }
   return saida
 }

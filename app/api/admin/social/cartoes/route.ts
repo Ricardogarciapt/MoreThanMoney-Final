@@ -59,7 +59,10 @@ export async function POST(req: NextRequest) {
   if (guarda) return guarda
 
   const corpo = (await req.json().catch(() => ({}))) as {
-    tipo?: "cartao" | "carrossel"
+    tipo?: "cartao" | "carrossel" | "lamina"
+    /** Só para `lamina`: qual refazer, e de quantas. */
+    indice?: number
+    total?: number
     handle?: string
     hook?: string
     cta?: string
@@ -75,6 +78,40 @@ export async function POST(req: NextRequest) {
   }
 
   const handle = (corpo.handle || "ricardogarciapt").replace(/^@/, "")
+
+  /**
+   * REFAZER UMA LÂMINA SÓ.
+   *
+   * Mudar uma palavra na terceira lâmina obrigava a gerar o carrossel inteiro outra vez — seis
+   * renderizações e, pior, um fundo NOVO gerado pela IA, o que fazia a capa mudar por causa de
+   * uma correcção no meio. Aqui refaz-se a que se mexeu e devolve-se só ela; quem chamou troca
+   * o endereço na posição certa.
+   */
+  if (corpo.tipo === "lamina") {
+    const { laminaElement, renderElemento } = await import("@/lib/social-card")
+    const indice = Math.max(0, Number(corpo.indice) || 0)
+    const total = Math.max(2, Number(corpo.total) || 2)
+    const png = await renderElemento(
+      laminaElement(
+        {
+          papel: indice === 0 ? "capa" : indice === total - 1 ? "fim" : "meio",
+          texto: String(corpo.hook ?? ""),
+          ...(indice === total - 1 && corpo.cta ? { cta: corpo.cta } : {}),
+          ...(corpo.fundo ? { fundo: corpo.fundo } : {}),
+          ...(corpo.destaque
+            ? { destaque: corpo.destaque, destaquePos: corpo.destaquePos, destaqueEscala: corpo.destaqueEscala }
+            : {}),
+        },
+        indice,
+        total,
+        handle,
+      ),
+      1080,
+      1350,
+    )
+    const url = await uploadBufferToBucket(png, "image/png", "estudio")
+    return NextResponse.json({ ok: true, urls: [url], indice })
+  }
 
   // ── Um cartão só ────────────────────────────────────────────────────────────────────────────
   if (corpo.tipo !== "carrossel") {
