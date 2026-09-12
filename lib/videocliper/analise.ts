@@ -1,0 +1,265 @@
+import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+
+/**
+ * ESCOLHER OS DEZ MOMENTOS de uma sessão de duas horas.
+ *
+ * Uma transmissão ao vivo tem muito pouco que se aproveite em quinze segundos, e o pouco que
+ * tem não está onde alguém se lembraria de procurar. É este o trabalho que o videocliper faz:
+ * ler a transcrição inteira e apontar os sítios onde alguém pararia de deslizar.
+ *
+ * ── porque é que o corte tem de sair da TRANSCRIÇÃO e não do vídeo ───────────
+ *
+ * Um clipe que começa a meio de uma frase perde-se nos dois primeiros segundos, que são os
+ * únicos que a pessoa dá. Os tempos por palavra deixam cortar EXACTAMENTE onde a ideia começa e
+ * onde ela fecha — e é por isso que a transcrição vem antes da análise, e não ao contrário.
+ *
+ * ── o CTA não é decoração ────────────────────────────────────────────────────
+ *
+ * Cada clipe leva uma palavra de comentário que o funil do Instagram já sabe atender. Não se
+ * inventa uma palavra nova: se ela não estiver em `lib/instagram/funnel`, quem comentar não
+ * recebe nada, e o clipe passa a ser entretenimento — que é exactamente o que não pode ser.
+ */
+
+export interface Palavra {
+  palavra: string
+  inicio: number
+  fim: number
+}
+
+export interface ClipeProposto {
+  ordem: number
+  titulo: string
+  hook: string
+  score: number
+  porque: string
+  inicioSeg: number
+  fimSeg: number
+  duracaoSeg: 15 | 30 | 60
+  ctaPalavra: string
+  caption: string
+}
+
+/**
+ * As palavras que o funil ATENDE hoje.
+ *
+ * Derivadas do próprio funil e não escritas à mão: uma lista copiada envelhece em silêncio, e o
+ * sintoma seria clips a pedir comentários que ninguém responde — o pior modo de falhar, porque
+ * parece que está tudo bem.
+ */
+export const CTAS_VALIDOS = ['SINAIS', 'APP', 'PREMIUM', 'DESAFIO', 'QUERO', 'MUDANCA', 'COPY'] as const
+
+const SISTEMA = `És o director de conteúdo da More Than Money (@morethanmoney.pt), uma escola e
+comunidade portuguesa de trading. Recebes a transcrição de uma sessão ao vivo e escolhes os
+momentos que funcionam como vídeo curto vertical.
+
+O QUE PROCURAS, por ordem de valor:
+1. Uma ideia completa dita em poucos segundos — começo, meio e fim. Um clipe que precisa de
+   contexto que não está lá dentro não serve.
+2. Quebras de padrão: o contrário do que se espera ouvir, um erro admitido, um número concreto.
+3. Momentos de tensão ou energia: uma decisão difícil, uma perda explicada, uma discordância.
+4. Ensino accionável: uma regra que se percebe e se aplica sem ver o resto.
+
+O QUE NÃO SERVE: cumprimentos, tratar da logística da sessão, responder a uma pergunta que não
+se ouve, qualquer coisa que comece a meio de um raciocínio.
+
+REGRAS DURAS:
+· A duração é 15, 30 ou 60 segundos. Nada pelo meio.
+· O corte começa no início de uma frase e acaba no fim de outra.
+· Os primeiros três segundos TÊM de conter o gancho. Se a parte boa está no meio, começa lá.
+· Nunca prometas lucro, retorno garantido nem resultado. É proibido pela marca e pela lei.
+· Não inventes números. Só os que foram mesmo ditos na transcrição.
+· Português de Portugal. Directo, sem palavreado de guru.
+
+Para cada clipe escreves uma legenda de publicação que acaba a pedir um comentário com UMA das
+palavras que te forem dadas — sem inventar outras.
+
+RESPONDE EXACTAMENTE NESTE FORMATO, dez vezes:
+
+===CLIPE===
+INICIO: <segundos, número>
+FIM: <segundos, número>
+DURACAO: <15|30|60>
+SCORE: <0-100>
+TITULO: <curto, para o painel de admin>
+HOOK: <a primeira frase do clipe, literal da transcrição>
+PORQUE: <uma linha: porque é que este momento prende>
+CTA: <uma das palavras dadas>
+CAPTION: <a legenda da publicação, em pt-PT, até 5 linhas, a acabar no pedido do comentário>
+===FIM===`
+
+/**
+ * Junta as palavras em blocos legíveis pelo modelo, com o tempo à cabeça.
+ *
+ * Mandar a lista de palavras uma a uma gastava o contexto todo em JSON e dava ao modelo uma
+ * coisa que ele lê pior do que texto corrido. Cada linha leva o segundo em que começa — é o que
+ * ele precisa para devolver tempos e é tudo o que precisa.
+ */
+export function transcricaoParaTexto(palavras: Palavra[], segundosPorLinha = 12): string {
+  if (!palavras.length) return ''
+  const linhas: string[] = []
+  let bloco: string[] = []
+  let inicio = palavras[0].inicio
+
+  for (const p of palavras) {
+    if (p.inicio - inicio >= segundosPorLinha && bloco.length) {
+      linhas.push(`[${Math.round(inicio)}s] ${bloco.join(' ')}`)
+      bloco = []
+      inicio = p.inicio
+    }
+    bloco.push(p.palavra)
+  }
+  if (bloco.length) linhas.push(`[${Math.round(inicio)}s] ${bloco.join(' ')}`)
+  return linhas.join('\n')
+}
+
+export async function analisarTranscricao(input: {
+  palavras: Palavra[]
+  titulo?: string | null
+  quantos?: number
+}): Promise<ClipeProposto[]> {
+  const chave = process.env.ANTHROPIC_API_KEY?.trim()
+  if (!chave) throw new Error('ANTHROPIC_API_KEY em falta')
+
+  const texto = transcricaoParaTexto(input.palavras)
+  if (texto.length < 200) throw new Error('transcrição demasiado curta para analisar')
+
+  const quantos = input.quantos ?? 10
+  // Uma sessão de duas horas dá uma transcrição maior do que a janela do modelo compensa. O
+  // corte é generoso mas existe: mais do que isto é gastar tokens em logística de sessão.
+  const recortado = texto.length > 120_000 ? texto.slice(0, 120_000) : texto
+
+  const pedido =
+    `Sessão: ${input.titulo ?? 'sem título'}\n\n` +
+    `Escolhe os ${quantos} melhores momentos. Palavras de CTA disponíveis: ${CTAS_VALIDOS.join(', ')}.\n\n` +
+    `TRANSCRIÇÃO (o número entre parêntesis é o segundo em que a linha começa):\n\n${recortado}`
+
+  const modelo =
+    process.env.VIDEOCLIPER_MODEL?.trim() || process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-5'
+
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 120_000)
+  let bruto = ''
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': chave, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: modelo,
+        max_tokens: 8000,
+        system: SISTEMA,
+        messages: [{ role: 'user', content: pedido }],
+      }),
+      signal: ctrl.signal,
+    })
+    if (!r.ok) throw new Error(`Anthropic ${r.status}: ${(await r.text()).slice(0, 200)}`)
+    const j = await r.json()
+    bruto = (j?.content ?? [])
+      .filter((p: { type?: string }) => p?.type === 'text')
+      .map((p: { text?: string }) => p.text ?? '')
+      .join('')
+  } finally {
+    clearTimeout(timer)
+  }
+
+  return interpretar(bruto, input.palavras)
+}
+
+/**
+ * Lê o formato delimitado e RECUSA o que não bate certo.
+ *
+ * O modelo devolve tempos que às vezes não existem no vídeo, durações fora das três
+ * permitidas, ou palavras de CTA que inventou. Aceitar qualquer uma dessas coisas dava um clipe
+ * que rebenta no ffmpeg ou uma legenda a pedir um comentário que ninguém atende — e as duas
+ * falham tarde, já depois de publicadas.
+ */
+function interpretar(bruto: string, palavras: Palavra[]): ClipeProposto[] {
+  const fimDoVideo = palavras.length ? palavras[palavras.length - 1].fim : 0
+  const blocos = bruto.split('===CLIPE===').slice(1)
+  const saida: ClipeProposto[] = []
+
+  for (const b of blocos) {
+    const corpo = b.split('===FIM===')[0] ?? ''
+    const campo = (nome: string): string => {
+      const m = corpo.match(new RegExp(`^${nome}:\\s*([\\s\\S]*?)(?=\\n[A-Z]+:|$)`, 'm'))
+      return (m?.[1] ?? '').trim()
+    }
+
+    const inicio = Number(campo('INICIO'))
+    const fim = Number(campo('FIM'))
+    const duracao = Number(campo('DURACAO'))
+    const cta = campo('CTA').toUpperCase().replace(/[^A-Z]/g, '')
+    const caption = campo('CAPTION')
+    const titulo = campo('TITULO')
+
+    if (!Number.isFinite(inicio) || !Number.isFinite(fim) || fim <= inicio) continue
+    if (![15, 30, 60].includes(duracao)) continue
+    // Um tempo para lá do fim do vídeo é o modelo a extrapolar. Cortar aí dava um clipe que
+    // acaba em preto — ou um ffmpeg a falhar.
+    if (fimDoVideo > 0 && fim > fimDoVideo + 2) continue
+    if (!CTAS_VALIDOS.includes(cta as (typeof CTAS_VALIDOS)[number])) continue
+    if (!titulo || caption.length < 20) continue
+
+    saida.push({
+      ordem: saida.length + 1,
+      titulo,
+      hook: campo('HOOK'),
+      score: Math.min(100, Math.max(0, Number(campo('SCORE')) || 50)),
+      porque: campo('PORQUE'),
+      inicioSeg: Math.max(0, inicio),
+      fimSeg: fim,
+      duracaoSeg: duracao as 15 | 30 | 60,
+      ctaPalavra: cta,
+      caption,
+    })
+  }
+
+  // Os melhores em cima: é por aqui que alguém escolhe o que aprova primeiro.
+  saida.sort((a, b) => b.score - a.score)
+  return saida.map((c, i) => ({ ...c, ordem: i + 1 }))
+}
+
+/**
+ * As palavras DESTE excerto, com os tempos a começar no zero.
+ *
+ * A legenda acende palavra a palavra sobre um ficheiro que começa no segundo zero — dar-lhe os
+ * tempos do vídeo original punha a primeira palavra a aparecer aos 47 minutos.
+ */
+export function legendasDoClipe(palavras: Palavra[], inicioSeg: number, fimSeg: number): Palavra[] {
+  return palavras
+    .filter((p) => p.fim > inicioSeg && p.inicio < fimSeg)
+    .map((p) => ({
+      palavra: p.palavra,
+      inicio: Math.max(0, Math.round((p.inicio - inicioSeg) * 100) / 100),
+      fim: Math.round((Math.min(p.fim, fimSeg) - inicioSeg) * 100) / 100,
+    }))
+}
+
+/** Grava os clips propostos, substituindo uma proposta anterior do mesmo vídeo. */
+export async function guardarPropostas(jobId: string, clips: ClipeProposto[], palavras: Palavra[]): Promise<number> {
+  const db = getSupabaseAdmin()
+
+  // Só os que ainda ninguém tocou: apagar um clipe já aprovado ou publicado por causa de uma
+  // reanálise seria deitar fora trabalho feito.
+  await db.from('videocliper_clips').delete().eq('job_id', jobId).eq('estado', 'proposto')
+
+  const linhas = clips.map((c) => ({
+    job_id: jobId,
+    ordem: c.ordem,
+    titulo: c.titulo,
+    hook: c.hook,
+    score: c.score,
+    porque: c.porque,
+    inicio_seg: c.inicioSeg,
+    fim_seg: c.fimSeg,
+    duracao_seg: c.duracaoSeg,
+    legendas: legendasDoClipe(palavras, c.inicioSeg, c.fimSeg),
+    caption: c.caption,
+    cta_palavra: c.ctaPalavra,
+    estado: 'proposto',
+  }))
+  if (!linhas.length) return 0
+
+  const { error } = await db.from('videocliper_clips').upsert(linhas, { onConflict: 'job_id,ordem' })
+  if (error) throw new Error(error.message)
+  return linhas.length
+}
