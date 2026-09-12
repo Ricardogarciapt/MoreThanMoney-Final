@@ -53,6 +53,118 @@ function cookiesDoYoutube() {
 
 const log = (...a) => console.log(new Date().toISOString(), "[videocliper]", ...a)
 
+/* ─────────────────────────────────────────────────────────────────────────────
+ * O SHORT VAI DAQUI PARA O YOUTUBE.
+ *
+ * O site também sabe fazê-lo, mas para isso tinha de descarregar o MP4 da gaveta e voltar a
+ * enviá-lo — um vídeo inteiro a atravessar uma função serverless com tecto de memória e de
+ * tempo, por nada. O ficheiro já está nesta máquina, e as credenciais do YouTube também: são as
+ * mesmas que o worker do DVR usa há meses.
+ *
+ * A gaveta continua a receber o clipe — o Instagram precisa de um endereço público para ir
+ * buscar o Reel, e é lá que o clipe vive depois de sair daqui.
+ * ────────────────────────────────────────────────────────────────────────────*/
+
+async function tokenYoutube() {
+  const cid = process.env.YOUTUBE_CLIENT_ID
+  const secret = process.env.YOUTUBE_CLIENT_SECRET
+  const refresh = process.env.YOUTUBE_REFRESH_TOKEN
+  if (!cid || !secret || !refresh) throw new Error("credenciais YOUTUBE_* em falta")
+  const r = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: cid, client_secret: secret, refresh_token: refresh, grant_type: "refresh_token" }),
+  })
+  const j = await r.json().catch(() => ({}))
+  if (!j.access_token) throw new Error("nao foi possivel renovar o token do YouTube")
+  return j.access_token
+}
+
+/** A playlist dos cortes, procurada pelo titulo para nao se criarem dez iguais. */
+async function playlistDosCortes(token) {
+  const TITULO = "MTM · Cortes"
+  try {
+    let pagina = ""
+    do {
+      const r = await fetch(
+        `https://www.googleapis.com/youtube/v3/playlists?part=snippet&mine=true&maxResults=50${pagina ? `&pageToken=${pagina}` : ""}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      if (!r.ok) return null
+      const j = await r.json()
+      const achada = (j.items || []).find((p) => p.snippet && p.snippet.title === TITULO)
+      if (achada) return achada.id
+      pagina = j.nextPageToken || ""
+    } while (pagina)
+
+    const criada = await fetch("https://www.googleapis.com/youtube/v3/playlists?part=snippet,status", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        snippet: { title: TITULO, description: "Momentos das sessoes ao vivo da More Than Money." },
+        status: { privacyStatus: "public" },
+      }),
+    })
+    if (!criada.ok) return null
+    return (await criada.json()).id || null
+  } catch {
+    // Sem playlist o Short publica-se na mesma. Falhar a arrumacao nao trava a publicacao.
+    return null
+  }
+}
+
+async function publicarShort(caminho, titulo, descricao) {
+  const token = await tokenYoutube()
+  const tamanho = fs.statSync(caminho).size
+
+  const abrir = await fetch("https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+      "X-Upload-Content-Type": "video/mp4",
+      "X-Upload-Content-Length": String(tamanho),
+    },
+    body: JSON.stringify({
+      snippet: {
+        // O `#Shorts` no titulo e o que faz o YouTube trata-lo como Short. Nao ha campo para isso.
+        title: `${String(titulo).slice(0, 90)} #Shorts`,
+        description: String(descricao || "").slice(0, 4900),
+        categoryId: "22",
+      },
+      status: { privacyStatus: "public", selfDeclaredMadeForKids: false },
+    }),
+  })
+  if (!abrir.ok) throw new Error(`YouTube ${abrir.status}: ${(await abrir.text()).slice(0, 200)}`)
+
+  const destino = abrir.headers.get("location")
+  if (!destino) throw new Error("o YouTube nao devolveu destino de upload")
+
+  // O ficheiro sobe em STREAM. Lê-lo todo para memória por causa de um Short de 60s seria
+  // desnecessário — e um dia alguem manda um de dez minutos por engano.
+  const enviar = await fetch(destino, {
+    method: "PUT",
+    headers: { "content-type": "video/mp4", "content-length": String(tamanho) },
+    body: fs.createReadStream(caminho),
+    duplex: "half",
+  })
+  if (!enviar.ok) throw new Error(`upload ${enviar.status}: ${(await enviar.text()).slice(0, 200)}`)
+
+  const j = await enviar.json()
+  if (!j.id) throw new Error("o upload nao devolveu id de video")
+
+  const playlist = await playlistDosCortes(token)
+  if (playlist) {
+    await fetch("https://www.googleapis.com/youtube/v3/playlistItems?part=snippet", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ snippet: { playlistId: playlist, resourceId: { kind: "youtube#video", videoId: j.id } } }),
+    }).catch(() => {})
+  }
+
+  return { videoId: j.id, url: `https://www.youtube.com/shorts/${j.id}` }
+}
+
 function api(caminho, opcoes = {}) {
   return fetch(`${API}${caminho}`, {
     ...opcoes,
@@ -309,6 +421,31 @@ async function render(trabalho) {
     const up = await api("/api/videocliper/upload", { method: "POST", body: fd })
     if (!up.ok) throw new Error(`upload ${up.status}: ${(await up.text()).slice(0, 200)}`)
     const resp = await up.json()
+
+    /**
+     * O Short sai daqui, se o trabalho o pedir.
+     *
+     * Falhar o YouTube NAO estraga o clipe: ele ja esta na gaveta e o Reel do Instagram sai na
+     * mesma. Reportar erro aqui punha o clipe inteiro a vermelho por causa de metade.
+     */
+    if (trabalho.publicarYoutube && process.env.YOUTUBE_REFRESH_TOKEN) {
+      try {
+        const yt = await publicarShort(saida, trabalho.titulo || "Corte MTM", trabalho.caption || "")
+        log("short publicado:", yt.url)
+        await api("/api/videocliper/worker", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ resultado: "youtube", clipId: trabalho.clipId, ...yt }),
+        })
+      } catch (e) {
+        log("youtube falhou:", e.message)
+        await api("/api/videocliper/worker", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ resultado: "youtube", clipId: trabalho.clipId, erro: e.message }),
+        }).catch(() => {})
+      }
+    }
 
     /**
      * Só agora se pode apagar.

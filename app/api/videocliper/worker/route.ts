@@ -110,6 +110,19 @@ export async function GET(request: NextRequest) {
       duracaoSeg: Number(clip.duracao_seg),
       legendas: clip.legendas,
       titulo: clip.titulo,
+      caption: clip.caption,
+      /**
+       * O Short vai do VPS, não daqui.
+       *
+       * O site também sabe publicá-lo, mas para isso tinha de descarregar o MP4 da gaveta e
+       * voltar a enviá-lo — um vídeo inteiro a atravessar uma função serverless com tecto de
+       * memória e de tempo, por nada. O ficheiro já está na máquina que o cortou, e as
+       * credenciais do YouTube também.
+       *
+       * O Instagram continua a sair do site: precisa de um endereço público para ir buscar o
+       * Reel, e esse só existe depois de o clipe chegar à gaveta.
+       */
+      publicarYoutube: true,
       /**
        * O ESTILO DAS LEGENDAS, mandado daqui e não escrito no worker.
        *
@@ -250,6 +263,32 @@ export async function POST(request: NextRequest) {
      * coisas — e o vídeo original pode já não existir para o voltar a cortar.
      */
     return NextResponse.json({ ok: true, podeApagar: true })
+  }
+
+  // ── o Short, publicado pelo VPS ───────────────────────────────────────────
+  if (resultado === 'youtube') {
+    const clipId = String(corpo?.clipId ?? '')
+    if (!clipId) return NextResponse.json({ error: 'sem clipe' }, { status: 400 })
+
+    if (corpo?.erro) {
+      // Falhar o YouTube não estraga o clipe: ele está na gaveta e o Reel sai na mesma. Fica o
+      // registo, para se poder voltar a tentar sem procurar o que correu mal.
+      await db.from('videocliper_clips')
+        .update({ erro: String(corpo.erro).slice(0, 500), updated_at: agora })
+        .eq('id', clipId)
+      return NextResponse.json({ ok: true })
+    }
+
+    await db.from('videocliper_clips').update({
+      youtube_short_id: String(corpo?.videoId ?? '') || null,
+      youtube_short_url: String(corpo?.url ?? '') || null,
+      estado: 'publicado',
+      publicado_em: agora,
+      erro: null,
+      updated_at: agora,
+    }).eq('id', clipId)
+
+    return NextResponse.json({ ok: true })
   }
 
   if (resultado === 'erro') {

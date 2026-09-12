@@ -33,6 +33,23 @@ const CHAVE_RETRATO = 'estudio_retrato_referencia'
 /** A galeria de recortes já feitos — para não se repetir o trabalho a cada cartão. */
 const CHAVE_RECORTES = 'estudio_recortes'
 
+/** Guarda um recorte na galeria. Recortar a mesma fotografia outra vez é pagar duas vezes. */
+async function guardarNaGaleria(url: string): Promise<void> {
+  const db = getSupabaseAdmin()
+  const { data } = await db.from('site_settings').select('value').eq('key', CHAVE_RECORTES).maybeSingle()
+  let galeria: string[] = []
+  try {
+    const v = typeof data?.value === 'string' ? JSON.parse(data.value) : data?.value
+    galeria = Array.isArray(v) ? (v as string[]) : []
+  } catch {
+    galeria = []
+  }
+  await db.from('site_settings').upsert(
+    { key: CHAVE_RECORTES, value: JSON.stringify([url, ...galeria].slice(0, 40)), updated_at: new Date().toISOString() },
+    { onConflict: 'key' },
+  )
+}
+
 export async function POST(req: NextRequest) {
   const guarda = await requireAdmin(req)
   if (guarda) return guarda
@@ -94,8 +111,6 @@ export async function POST(req: NextRequest) {
   // Recortar uma fotografia que já existe, em vez de gerar uma nova.
   const recortarUrl = String(corpo?.recortar ?? '').trim()
 
-  const chave = process.env.HIGGSFIELD_API_KEY?.trim()
-
   /**
    * RECORTAR uma fotografia que já temos.
    *
@@ -103,52 +118,23 @@ export async function POST(req: NextRequest) {
    * parece-se com ele mas não é ele, e num cartão que fala na primeira pessoa isso nota-se.
    */
   if (recortarUrl) {
-    if (!chave) {
-      return NextResponse.json({ ok: false, erro: 'HIGGSFIELD_API_KEY em falta — sem ela não há recorte' }, { status: 503 })
-    }
-    const r = await fetch('https://platform.higgsfield.ai/v1/image/remove-background', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${chave}` },
-      body: JSON.stringify({ image: recortarUrl }),
-      signal: AbortSignal.timeout(110_000),
-    }).catch(() => null)
-
-    if (!r || !r.ok) {
-      return NextResponse.json({ ok: false, erro: `o recorte falhou${r ? ` (HTTP ${r.status})` : ''}` }, { status: 502 })
-    }
-    const j = (await r.json()) as Record<string, unknown>
-    const saida = (j.url as string) ?? (j.result_url as string) ?? ((j.images as Array<{ url?: string }>) ?? [])[0]?.url
-    if (!saida) return NextResponse.json({ ok: false, erro: 'o recorte não devolveu imagem' }, { status: 502 })
-
-    // PNG e não JPEG: a transparência é o ponto todo, e um JPEG devolve-a como fundo branco.
-    const bin = await fetch(saida).then((x) => x.arrayBuffer())
-    const url = await uploadBufferToBucket(Buffer.from(bin), 'image/png', 'estudio-recorte')
-
-    // Fica na galeria: recortar a mesma fotografia outra vez é gastar o mesmo dinheiro duas vezes.
-    const db = getSupabaseAdmin()
-    const { data } = await db.from('site_settings').select('value').eq('key', CHAVE_RECORTES).maybeSingle()
-    let galeria: string[] = []
     try {
-      const v = typeof data?.value === 'string' ? JSON.parse(data.value) : data?.value
-      galeria = Array.isArray(v) ? (v as string[]) : []
-    } catch { galeria = [] }
-    await db.from('site_settings').upsert(
-      { key: CHAVE_RECORTES, value: JSON.stringify([url, ...galeria].slice(0, 40)), updated_at: new Date().toISOString() },
-      { onConflict: 'key' },
-    )
-
-    return NextResponse.json({ ok: true, url, camada: 'destaque' })
+      const { recortarFotografia } = await import('@/lib/estudio/imagens')
+      const png = await recortarFotografia(recortarUrl)
+      // PNG e não JPEG: a transparência é o ponto todo, e um JPEG devolve-a como fundo branco.
+      const url = await uploadBufferToBucket(png, 'image/png', 'estudio-recorte')
+      await guardarNaGaleria(url)
+      return NextResponse.json({ ok: true, url, camada: 'destaque' })
+    } catch (e) {
+      return NextResponse.json(
+        { ok: false, erro: e instanceof Error ? e.message : 'o recorte falhou' },
+        { status: 502 },
+      )
+    }
   }
 
   if (descricao.length < 8) {
     return NextResponse.json({ ok: false, erro: 'descreve em duas palavras que sejam' }, { status: 400 })
-  }
-
-  if (!chave) {
-    return NextResponse.json(
-      { ok: false, erro: 'HIGGSFIELD_API_KEY em falta — sem ela não há geração de imagem' },
-      { status: 503 },
-    )
   }
 
   let retrato: string | null = null
@@ -181,76 +167,28 @@ export async function POST(req: NextRequest) {
    * cartão existir. Pede-se de propósito pouco contraste no meio e espaço negativo, para o texto
    * ter onde assentar.
    */
-  const prompt =
-    camada === 'destaque'
-      ? `${descricao}. Full-body photograph of ` +
-        (comRicardo ? 'the man from the reference photograph, same face and build, ' : 'a person, ') +
-        'isolated on a plain flat neutral background, sharp edges, even studio lighting, ' +
-        'entire body visible with space around it. No scenery, no props, no text, no watermark.'
-      : `${descricao}. Dark cinematic photograph, deep shadows, muted gold rim light. ` +
-        (comRicardo
-          ? 'Featuring the man from the reference photograph, same face and build, natural and candid. '
-          : 'No people, no faces. ') +
-        'Composition leaves the central third dark, low-contrast and uncluttered so large typography ' +
-        'can be laid over it. No text, no letters, no logos, no watermark.'
-
-  const r = await fetch('https://platform.higgsfield.ai/v1/image/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${chave}` },
-    body: JSON.stringify({
-      model: 'gpt_image_2',
-      prompt,
-      aspect_ratio: formato === 'reel' ? '9:16' : '4:5',
-      ...(retrato ? { reference_images: [retrato] } : {}),
-    }),
-    signal: AbortSignal.timeout(110_000),
-  }).catch(() => null)
-
-  if (!r || !r.ok) {
+  try {
+    const { gerarImagem } = await import('@/lib/estudio/imagens')
+    const { bytes, motor } = await gerarImagem({
+      descricao,
+      camada,
+      formato,
+      referencia: comRicardo ? retrato : null,
+    })
+    const url = await uploadBufferToBucket(
+      bytes,
+      'image/png',
+      camada === 'destaque' ? 'estudio-recorte' : 'estudio-ia',
+    )
+    // Uma pessoa gerada é logo camada: fica na galeria ao lado dos recortes das fotografias reais.
+    if (camada === 'destaque') await guardarNaGaleria(url)
+    return NextResponse.json({ ok: true, url, comRicardo, camada, motor })
+  } catch (e) {
     return NextResponse.json(
-      { ok: false, erro: `a geração falhou${r ? ` (HTTP ${r.status})` : ''}` },
+      { ok: false, erro: e instanceof Error ? e.message : 'a geração falhou' },
       { status: 502 },
     )
   }
-
-  const j = (await r.json()) as Record<string, unknown>
-  const gerada =
-    (j.url as string) ?? (j.result_url as string) ??
-    ((j.images as Array<{ url?: string }>) ?? [])[0]?.url ?? null
-  if (!gerada) return NextResponse.json({ ok: false, erro: 'a geração não devolveu imagem' }, { status: 502 })
-
-  /**
-   * A imagem gerada é copiada para a NOSSA gaveta.
-   *
-   * O endereço que o gerador devolve expira. Um cartão guardado hoje com um fundo que amanhã já
-   * não carrega é um cartão perdido — e só se dá por isso quando alguém o abre.
-   */
-  /**
-   * Uma pessoa gerada sai logo RECORTADA.
-   *
-   * Um destaque com fundo tapa a fotografia de baixo e as três camadas passam a ser duas. O
-   * recorte é o que torna a imagem utilizável como camada — e gerar sem ele obrigava a uma
-   * segunda viagem à mão de cada vez.
-   */
-  let fonte = gerada
-  if (camada === 'destaque') {
-    const rec = await fetch('https://platform.higgsfield.ai/v1/image/remove-background', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${chave}` },
-      body: JSON.stringify({ image: gerada }),
-      signal: AbortSignal.timeout(110_000),
-    }).catch(() => null)
-    if (rec?.ok) {
-      const rj = (await rec.json()) as Record<string, unknown>
-      fonte = (rj.url as string) ?? (rj.result_url as string) ?? fonte
-    }
-    // Falhando o recorte, devolve-se a imagem inteira em vez de nada: dá para ver e decidir.
-  }
-
-  const bin = await fetch(fonte).then((x) => x.arrayBuffer())
-  const url = await uploadBufferToBucket(Buffer.from(bin), 'image/png', camada === 'destaque' ? 'estudio-recorte' : 'estudio-ia')
-
-  return NextResponse.json({ ok: true, url, comRicardo, camada })
 }
 
 /** O retrato guardado, para o estúdio saber se já pode oferecer «com o Ricardo». */
@@ -272,6 +210,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     retrato: retrato?.url ?? null,
     recortes: Array.isArray(recortes) ? recortes : [],
-    temIA: Boolean(process.env.HIGGSFIELD_API_KEY?.trim()),
+    // Basta UMA das chaves. A OpenAI é a que existe hoje; o Higgsfield ganha se aparecer.
+    temIA: Boolean(process.env.OPENAI_API_KEY?.trim() || process.env.HIGGSFIELD_API_KEY?.trim()),
   })
 }
