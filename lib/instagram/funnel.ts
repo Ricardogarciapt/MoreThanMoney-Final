@@ -238,6 +238,76 @@ async function funnelAccount(acc: (typeof IG_ACCOUNTS)[number], own: Set<string>
           }
         }
       }
+      /**
+       * UM COMENTÁRIO NO POST DO SORTEIO É UMA ENTRADA.
+       *
+       * Sem isto, a variante A não existia: a mecânica dela é «comenta e estás dentro», e o que
+       * acontecia era só o Direct sair com um link — ou seja, a porta larga passava a exigir
+       * exactamente o mesmo que a estreita. A experiência comparava três coisas em que duas
+       * eram a mesma.
+       *
+       * Só conta no POST do sorteio, e não em qualquer comentário que use a palavra: quem
+       * escrever DESAFIO noutro sítio está a perguntar pelos desafios, não a entrar em nada.
+       *
+       * As pessoas identificadas no comentário valem bilhetes — é a parte de «traz um amigo»,
+       * e o tecto de cada tipo está na mecânica da campanha, não aqui.
+       */
+      if (intent.key === "sorteio" && commenter) {
+        try {
+          /**
+           * Em DOIS passos, de propósito.
+           *
+           * Um `join` embutido do PostgREST precisa de uma chave estrangeira declarada entre as
+           * duas tabelas, e `giveaways.ig_post_id` não a tem — a campanha e a publicação são
+           * coisas que se ligam, não que dependam uma da outra. Com o embed, a consulta falhava
+           * em silêncio e ninguém se inscrevia.
+           */
+          const { data: publicacao } = await supabase
+            .from("social_scheduled_posts")
+            .select("id")
+            .eq("published_media_id", post.id)
+            .maybeSingle()
+
+          const { data: campanha } = publicacao
+            ? await supabase
+                .from("giveaways")
+                .select("slug")
+                .eq("estado", "a_decorrer")
+                .eq("ig_post_id", publicacao.id)
+                .maybeSingle()
+            : { data: null }
+
+          if (campanha?.slug) {
+            const { registarEntrada, registarAccao } = await import("@/lib/giveaway/motor")
+            const entrada = await registarEntrada({
+              giveawaySlug: campanha.slug as string,
+              instagramHandle: commenter,
+              nome: commenter,
+            })
+            if (entrada.ok && entrada.entryId) {
+              // Os @ do comentário, sem repetições e sem a própria pessoa.
+              const etiquetados: string[] = [
+                ...new Set<string>(
+                  ((c.text || "").match(/@[A-Za-z0-9._]{2,30}/g) ?? [])
+                    .map((h: string) => h.slice(1).toLowerCase())
+                    .filter((h: string) => h !== commenter.toLowerCase() && !own.has(h)),
+                ),
+              ]
+              for (const alvo of etiquetados) {
+                await registarAccao({
+                  giveawaySlug: campanha.slug as string,
+                  entryId: entrada.entryId,
+                  tipo: "etiqueta",
+                  referencia: alvo,
+                }).catch(() => undefined)
+              }
+            }
+          }
+        } catch {
+          // Falhar a inscrição não pode travar o funil: o Direct já saiu e o lead está registado.
+        }
+      }
+
       await supabase.from("ig_leads").upsert({
         comment_id: c.id, media_id: post.id, ig_account_id: acc.id, ig_username: acc.username,
         commenter, keyword: intent.kw.find((k) => (c.text || "").toUpperCase().includes(k)) ?? intent.key,
