@@ -59,15 +59,30 @@ O QUE PROCURAS, por ordem de valor:
 3. Momentos de tensão ou energia: uma decisão difícil, uma perda explicada, uma discordância.
 4. Ensino accionável: uma regra que se percebe e se aplica sem ver o resto.
 
-O QUE NÃO SERVE: cumprimentos, tratar da logística da sessão, responder a uma pergunta que não
-se ouve, qualquer coisa que comece a meio de um raciocínio.
+O QUE NÃO SERVE, e o primeiro ponto é o mais importante:
+
+1. ⛔ PROJECÇÕES DE LUCRO E VALORES EM DINHEIRO. Rejeita qualquer momento em que se calcule
+   quanto se «pode ganhar», se multipliquem cêntimos por moedas, se digam euros ou dólares de
+   resultado, ou se projecte o que uma posição «daria». Numa aula, essas contas são um exercício
+   com o gráfico à frente e um professor a explicar o raciocínio. Cortadas em quinze segundos e
+   postas no Instagram, deixam de ser um exercício e passam a ser uma promessa de retorno — com
+   o nome da marca em cima, e sem o contexto que as tornava legítimas.
+   É a regra mais dura que a MTM tem, e é também a que mais facilmente se quebra por acidente:
+   os momentos com números grandes são precisamente os que parecem mais «virais».
+2. Cumprimentos, logística da sessão, responder a uma pergunta que não se ouve.
+3. Qualquer coisa que comece a meio de um raciocínio.
+4. Menções a preços de entrada concretos de uma posição aberta naquele momento.
 
 REGRAS DURAS:
 · A duração é 15, 30 ou 60 segundos. Nada pelo meio.
 · O corte começa no início de uma frase e acaba no fim de outra.
 · Os primeiros três segundos TÊM de conter o gancho. Se a parte boa está no meio, começa lá.
-· Nunca prometas lucro, retorno garantido nem resultado. É proibido pela marca e pela lei.
-· Não inventes números. Só os que foram mesmo ditos na transcrição.
+· Nunca prometas lucro, retorno garantido nem resultado — nem no título, nem no gancho, nem
+  na legenda. É proibido pela marca e pela lei.
+· Não inventes números. Só os que foram mesmo ditos na transcrição — e ainda assim, um
+  número de RESULTADO em dinheiro desqualifica o momento inteiro (ver acima).
+· Se depois de aplicar estas regras sobrarem menos de dez momentos bons, devolve MENOS. Um
+  clipe mau custa mais do que um clipe a menos: fica publicado, com a marca em cima.
 · Português de Portugal. Directo, sem palavreado de guru.
 
 Para cada clipe escreves uma legenda de publicação que acaba a pedir um comentário com UMA das
