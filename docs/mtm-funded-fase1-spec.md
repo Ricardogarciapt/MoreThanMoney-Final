@@ -171,10 +171,23 @@ Tab novo no `app-mobile` (`?tab=funded`, deep-link igual ao T2T):
 
 - `funded-dashboard.tsx` — cartões das contas: equity, barras de regra (DD diário restante,
   DD total, progresso p/ target — estilo dos medidores admin existentes), CTA comprar desafio.
-- `funded-trader.tsx` — o WebTrader: gráfico `lightweight-charts` (candles 1m/5m/15m/1h
-  construídos dos ticks Realtime + histórico via API), ticket de ordem (padrão visual do
-  tap-to-copy-modal: símbolo, direção, volume, SL/TP com validação de distância), posições
-  abertas com PnL live, pendentes, histórico.
+- `funded-trader.tsx` — o WebTrader: gráfico (ver "Estratégia de charting" abaixo), ticket de
+  ordem (padrão visual do tap-to-copy-modal: símbolo, direção, volume, SL/TP com validação de
+  distância), posições abertas com PnL live, pendentes, histórico.
+- **Estratégia de charting (decisão 2026-09-13):** a fluidez do TradeLocker/Match-Trader É o
+  TradingView — ambos integram as bibliotecas dele, licenciáveis GRÁTIS para empresas
+  (candidatura + atribuição visível "charts by TradingView").
+  1. M3 lança com `lightweight-charts` (open-source, sem fricção);
+  2. em paralelo, candidatura ao TradingView **Advanced Charts + Trading Platform**
+     (tradingview.com/advanced-charts — demora semanas; termos p/ área de membros
+     confirmam-se na aprovação);
+  3. M4 troca o componente para o **Trading Platform**: gráficos completos (indicadores,
+     desenho, multi-timeframe) + trading no gráfico (SL/TP arrastáveis, one-click, painel de
+     posições) ligado ao nosso backend via a interface Broker API deles — datafeed = os nossos
+     ticks Realtime, routing = `/api/funded/orders`. A arquitetura do datafeed/ordens é a mesma
+     nas duas etapas; só muda o componente de gráfico.
+  Fora de âmbito deliberado (e proibido nos desafios, como na maioria dos prop firms): EAs/algos
+  do cliente, marketplace de indicadores, DOM de futuros.
 - `funded-leaderboard.tsx` — ranking do torneio, atualização 60s, destaque do próprio.
 - `funded-rules-banner.tsx` — SEMPRE visível em modo trading: "Conta demo educativa · Simulação
   MTM" + link T&Cs.
