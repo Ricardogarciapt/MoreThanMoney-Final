@@ -596,6 +596,11 @@ Cada agente tem contexto isolado mas pode passar outputs para o próximo.
 
 ## PENDENTES (memória entre sessões)
 
+### 🏆 MTM FUNDED — Fase 1 aprovada em conceito (2026-09-13)
+- **Spec completo: `docs/mtm-funded-fase1-spec.md`** — motor de contas SIMULADAS (desafios/torneios) + WebTrader próprio no app-mobile. NÃO é prop firm: fase "funded" = **Patrocínio de Desempenho MTM** (recompensa p/ aluno abrir conta própria na PU Prime regulada; MTM nunca custodia nem executa real por clientes).
+- Estratégia de custos: MetaApi fica SÓ no MTM Auto + T2T (assinatura cobre a ligação); desafios simulados = custo marginal ~0/conta (um feed de ticks serve todas — providers streaming já pagos). Roadmap geral anti-MetaApi: (0) fechar 7 bypasses REST + interface TradingDriver; (1) MTM Funded próprio; (2) driver TradeLocker direto (API pública grátis — app TradeLocker exigiria brand partnership, rejeitado p/ Fase 1); (3) piloto MT5 self-hosted no mtmcopy-engine (bridge de 80 linhas, fala só via Supabase); (4) CopyFactory própria (últimO — maior risco; custódia de credenciais tem de ser resolvida antes). White label MT5 rejeitado ($7.5k-25k setup + $2.7k-11k/mês + licença de corretora).
+- Mapa de dependência MetaApi: superfície real = 13 ficheiros (~3.200 linhas): núcleo `lib/mtmcopy/{metaapi,copyfactory,metaapi-provision,metaapi-admin,system-sync}.ts` + `mtmcopy-engine/src/metaapi-bridge.ts` + 7 bypasses REST (`lib/mtm-auto-bridge.ts`, `lib/accounts-daily-report.ts`, `lib/mtmcopy/provider-metrics.ts`, `app/api/admin/mtmcopy/{repair-subscriber,add-rg-slave,risk-audit,fontes-vivas}`, `app/api/mtm-auto/historico`). 48 consumidores ficam intactos se as assinaturas de `metaapi.ts` se mantiverem.
+
 ### 🎛️ CONTROLO ADMIN T2T/MTM COPY (2026-09-04)
 - **App-mobile → T2T → Estratégias**: secção "Controlo Admin" (só `user_type='admin'`) com interruptores no estilo Seguir: pausa/liga CÓPIA por estratégia (route.enabled + removeProviderStrategy + resync + espelho em `mtmauto_providers.ativo` — a app MTM Auto lê a MESMA tabela) e liga/desliga FONTES T2T (route.tap_to_trade + `t2t_extra_channels`). API: `/api/admin/mtmcopy/t2t-controls`.
 - Fonte desligada → some do feed T2T dos clientes E o botão dos chats desaparece (chat-channels consulta `/api/mtmcopy/tap-to-trade/providers`).
