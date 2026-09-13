@@ -207,7 +207,31 @@ i18n PT/EN desde o início (padrão `t()` já usado no T2T feed).
 - Valores/percentagens do patrocínio: definidos por produto em `rules` (decisão de negócio,
   fora deste spec).
 
-## 9. Milestones
+## 9. Além da Fase 1 — WebTrader multi-conta (decisão de arquitetura 2026-09-13)
+
+O WebTrader é a montra; a execução é um **driver por conta**. A camada de ordens
+(`/api/funded/orders` e, depois, a Broker API do TradingView) encaminha para o driver da
+conta selecionada — a UI não distingue simulado de real:
+
+| Conta | Driver | Fase |
+|---|---|---|
+| Desafio/torneio MTM Funded | `funded-sim` (este spec) | 1 |
+| MT5 externa do cliente (MTM Auto/Copy) | MetaApi — primitivas já existem (`placeOrdersSequential`, `modifyPositionSlTp`, `closePositionById`, `readOpenPositions`) | possível já; ligar na UI pós-M4 |
+| TradeLocker externa do cliente | API pública TradeLocker (auth do próprio cliente) | 2 |
+| MT5 self-hosted VPS | driver próprio | 3 |
+
+Implicações para o M1: o conceito de "conta negociável" na UI deve nascer com um campo
+`driver` (`'sim' | 'metaapi' | 'tradelocker' | ...`) e um seletor de conta no topo do
+WebTrader (padrão TradeLocker). O PnL live das contas reais usa o MESMO feed de ticks do
+simulador + reconciliação periódica à conta; execução manual real via RPC ≈1–2s/ordem
+(equivalente ao MT5 mobile).
+
+⚠️ Compliance antes de ativar trading manual em contas REAIS: interface que transmite ordens
+do cliente a uma corretora pode tocar em "receção e transmissão de ordens" (MiFID).
+Enquadramento a validar: fornecedor de software/tecnologia (como a MetaQuotes), com T&Cs a
+marcar essa fronteira. No simulado não há questão.
+
+## 10. Milestones
 
 | M | Entrega | Dependências |
 |---|---|---|
