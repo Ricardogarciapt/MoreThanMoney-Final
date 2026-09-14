@@ -1,0 +1,24 @@
+[Unit]
+Description=MTM Funded - motor de simulacao (precos, SL/TP, pendentes, regras)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/mtm-funded-motor.env
+# O SDK da MetaApi guarda a cache de sincronizacao em ./.metaapi: precisa de uma pasta escrevivel.
+StateDirectory=mtm-funded-motor
+WorkingDirectory=/var/lib/mtm-funded-motor
+ExecStart=/usr/bin/node --max-old-space-size=512 /opt/mtm/funded-motor/motor.js
+# Sai com codigo != 0 quando o feed fica mudo 3 min: o systemd arranca-o de novo.
+Restart=always
+RestartSec=10
+# Sem privilegios: so fala com a Supabase, a MetaApi e o site.
+DynamicUser=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+MemoryMax=768M
+
+[Install]
+WantedBy=multi-user.target

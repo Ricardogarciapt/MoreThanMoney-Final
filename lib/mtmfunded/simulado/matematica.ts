@@ -14,7 +14,13 @@ export type Direcao = 'buy' | 'sell'
 
 export interface Simbolo {
   symbol: string
-  classe: 'forex' | 'metal' | 'indice' | 'cripto'
+  classe: 'forex' | 'metal' | 'indice' | 'cripto' | 'acao' | 'etf' | 'energia' | 'commodity' | 'obrigacao'
+  /**
+   * A moeda em que o lucro sai, tal como a corretora a declara (`profitCurrency`). Quando existe
+   * manda — adivinhar pelo nome falha nas acções europeias (EUR), britânicas (GBX) e nos índices
+   * asiáticos. Sem ela (símbolos antigos), cai-se na dedução por nome.
+   */
+  moeda_lucro?: string | null
   digits: number
   contract_size: number
   pip_size: number
@@ -36,8 +42,9 @@ export type MapaPrecos = Record<string, Preco>
 
 const MOEDA_DOS_INDICES: Record<string, string> = { GER40: 'EUR', UK100: 'GBP', JPN225: 'JPY' }
 
-/** A moeda em que o preço do símbolo está cotado. */
-export function moedaDeCotacao(symbol: string, classe: Simbolo['classe']): string {
+/** A moeda em que o preço do símbolo está cotado. `moedaLucro` (da corretora) ganha sempre. */
+export function moedaDeCotacao(symbol: string, classe: Simbolo['classe'], moedaLucro?: string | null): string {
+  if (moedaLucro) return moedaLucro.toUpperCase()
   if (classe === 'indice') return MOEDA_DOS_INDICES[symbol] ?? 'USD'
   if (/^[A-Z]{6}$/.test(symbol)) return symbol.slice(3)
   return 'USD'
@@ -51,6 +58,12 @@ const meio = (p: Preco) => (p.bid + p.ask) / 2
  */
 export function usdPorUnidade(moeda: string, precos: MapaPrecos): number | null {
   if (moeda === 'USD') return 1
+  // As acções de Londres cotam em PENCE (GBX): 100 pence = 1 libra. Sem isto, uma posição em
+  // Vodafone valia cem vezes o que vale.
+  if (moeda === 'GBX') {
+    const libra = usdPorUnidade('GBP', precos)
+    return libra == null ? null : libra / 100
+  }
   const directo = precos[`${moeda}USD`]
   if (directo && meio(directo) > 0) return meio(directo)
   const inverso = precos[`USD${moeda}`]
@@ -91,7 +104,7 @@ export function normalizarVolume(s: Simbolo, volume: number): number | null {
 export function lucroUsd(
   s: Simbolo, direcao: Direcao, volume: number, entrada: number, saida: number, precos: MapaPrecos,
 ): number | null {
-  const conv = usdPorUnidade(moedaDeCotacao(s.symbol, s.classe), precos)
+  const conv = usdPorUnidade(moedaDeCotacao(s.symbol, s.classe, s.moeda_lucro), precos)
   if (conv == null) return null
   const diferenca = direcao === 'buy' ? saida - entrada : entrada - saida
   return Math.round(diferenca * volume * s.contract_size * conv * 100) / 100
@@ -101,7 +114,7 @@ export function lucroUsd(
 export function margemUsd(
   s: Simbolo, volume: number, preco: number, alavancagemConta: number, precos: MapaPrecos,
 ): number | null {
-  const conv = usdPorUnidade(moedaDeCotacao(s.symbol, s.classe), precos)
+  const conv = usdPorUnidade(moedaDeCotacao(s.symbol, s.classe, s.moeda_lucro), precos)
   if (conv == null) return null
   const alavancagem = Math.max(1, Math.min(alavancagemConta || 1, s.alavancagem_max || 1))
   return Math.round(((volume * s.contract_size * preco * conv) / alavancagem) * 100) / 100

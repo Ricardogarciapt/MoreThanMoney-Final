@@ -141,7 +141,8 @@ async function limparOrfas(
   for (const c of orfas) {
     try {
       // Sem dono não há email — `quebrarConta` salta-o sozinho, porque não há perfil para ler.
-      const r = await quebrarConta(c.id as string, 'orfa')
+      // Explícito: as simuladas não se apagam por omissão, mas uma órfã não tem histórico de ninguém.
+      const r = await quebrarConta(c.id as string, 'orfa', { apagar: true })
       if (r.ok) apagadas++
       if (!r.vpsAgendado && c.mt5_login) {
         notas.push(`órfã ${c.mt5_login}: apagada da base mas o agente não foi avisado`)
@@ -177,6 +178,8 @@ async function avaliarDesafios(
     .in('tipo', ['desafio', 'funded', 'financiada'])
     .eq('estado', 'ativa')
     .not('metaapi_account_id', 'is', null)
+    // As simuladas (motor = 'sim') não entram: não têm MetaApi e são medidas pelo motor do VPS.
+    .neq('motor', 'sim')
     .is('tournament_id', null)
     .limit(200)
 
@@ -346,7 +349,7 @@ export async function GET(request: NextRequest) {
     if (ids.length) {
       const { data } = await db
         .from('mtm_trading_accounts')
-        .select('id, metaapi_account_id, saldo_inicial, estado, metricas')
+        .select('id, metaapi_account_id, saldo_inicial, estado, metricas, motor, tipo')
         .in('id', ids)
       for (const c of data ?? []) contas.set(c.id as string, c)
     }
@@ -364,6 +367,30 @@ export async function GET(request: NextRequest) {
     for (const p of participantes) {
       const conta = p.account_id ? contas.get(p.account_id) : null
       const metaapiId = conta?.metaapi_account_id as string | undefined
+
+      /**
+       * CONTA SIMULADA: quem a mede é o motor do VPS, tick a tick — não a MetaApi (não tem
+       * `metaapi_account_id`, e sem este ramo ficava no fundo da classificação com 0%, como uma
+       * conta por emitir). Aqui só se ORDENA, com as métricas que o motor escreveu, e pelo
+       * resultado SEM as ideias da casa: aceitar ideias da MTM é permitido, mas o torneio mede o
+       * trader. A quebra também já foi tratada pelo motor; não se reavalia.
+       */
+      if (conta && conta.motor === 'sim' && conta.estado === 'ativa') {
+        const m = (conta.metricas ?? {}) as Record<string, unknown>
+        const num = (x: unknown) => (typeof x === 'number' ? x : null)
+        const resultadoPct = num(m.resultadoPctSemIdeias) ?? num(m.resultadoPct) ?? 0
+        linhas.push({
+          participanteId: p.id, accountId: p.account_id, resultadoPct,
+          elegivel: m.elegivel === true, quebrou: false,
+          drawdownPct: num(m.drawdownPct) ?? undefined,
+          veredicto: {
+            quebrou: false, resultadoPct, elegivel: m.elegivel === true,
+            naoElegivelPorque: typeof m.naoElegivelPorque === 'string' ? m.naoElegivelPorque : undefined,
+            margemDiaria: num(m.margemDiaria) ?? 0, margemTotal: num(m.margemTotal) ?? 0,
+          },
+        })
+        continue
+      }
 
       // Sem conta emitida ainda: fica no fundo, sem resultado. Não é quebra.
       if (!conta || !metaapiId || conta.estado !== 'ativa') {
