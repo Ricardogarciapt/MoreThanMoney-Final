@@ -162,7 +162,79 @@ export async function GET(request: NextRequest) {
     })
   }
 
-  // ── 2. vídeos por processar ───────────────────────────────────────────────
+  // ── 2. pré-visualizações dos clips propostos ──────────────────────────────
+  //
+  // Decidir quais clips valem a pena lendo só o texto é decidir às cegas. Logo a seguir à
+  // análise, cada proposta ganha um frame e uma versão leve já com as legendas — o que se vê no
+  // painel é o clipe, não a descrição dele.
+  //
+  // Um vídeo de cada vez, com todas as propostas dele: a fonte descarrega-se (ou abre-se do
+  // disco) uma vez só em vez de dez.
+  await db
+    .from('videocliper_clips')
+    .update({ preview_estado: null })
+    .eq('preview_estado', 'a_fazer')
+    .lt('updated_at', new Date(agora.getTime() - MINUTOS_ATE_DESISTIR * 60_000).toISOString())
+
+  const { data: semPreview } = await db
+    .from('videocliper_clips')
+    .select('job_id')
+    .is('preview_estado', null)
+    .in('estado', ['proposto', 'rejeitado', 'erro'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (semPreview) {
+    const jobId = semPreview.job_id as string
+    const [{ data: jobP }, { data: clipsP }] = await Promise.all([
+      db.from('videocliper_jobs')
+        .select('id, origem, youtube_url, dvr_job_id, dvr_ficheiro')
+        .eq('id', jobId).maybeSingle(),
+      db.from('videocliper_clips')
+        .select('id, inicio_seg, fim_seg, legendas')
+        .eq('job_id', jobId)
+        .is('preview_estado', null)
+        .in('estado', ['proposto', 'rejeitado', 'erro'])
+        .order('ordem')
+        .limit(12),
+    ])
+
+    if (jobP && clipsP?.length) {
+      await db.from('videocliper_clips')
+        .update({ preview_estado: 'a_fazer', updated_at: agora.toISOString() })
+        .in('id', clipsP.map((c) => c.id as string))
+
+      return NextResponse.json({
+        tipo: 'previews',
+        jobId,
+        youtubeUrl: jobP.youtube_url,
+        ficheiroLocal: await ficheiroDoDvr(jobP.dvr_job_id as string | null, jobP.dvr_ficheiro as string | null),
+        clips: clipsP.map((c) => ({
+          clipId: c.id,
+          inicioSeg: Number(c.inicio_seg),
+          fimSeg: Number(c.fim_seg),
+          legendas: c.legendas,
+        })),
+        // Metade da resolução final e as legendas à mesma proporção: o suficiente para decidir,
+        // leve o bastante para abrir dez de seguida no telemóvel.
+        estilo: {
+          largura: 540,
+          altura: 960,
+          fonte: 'Montserrat Black',
+          tamanho: 48,
+          corBase: '#FFFFFF',
+          corDestaque: '#FFD700',
+          contorno: '#000000',
+          contornoPx: 4,
+          posicaoY: 0.68,
+          palavrasPorEcra: 3,
+        },
+      })
+    }
+  }
+
+  // ── 3. vídeos por processar ───────────────────────────────────────────────
   const { data: job } = await db
     .from('videocliper_jobs')
     .select('id, origem, youtube_url, youtube_video_id, dvr_job_id, dvr_ficheiro, titulo, idioma')
@@ -255,6 +327,45 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // ── um endereço para subir DIRETO para o storage ──────────────────────────
+  //
+  // Um vídeo não pode atravessar uma função da Vercel: o corpo tem tecto de 4,5 MB e um clipe
+  // de 60s a 1080p passa muito disso. O worker pede aqui um endereço assinado e envia o
+  // ficheiro ao Supabase sem passar pelo site; depois reporta o endereço público.
+  if (resultado === 'upload-url') {
+    const ext = String(corpo?.ext ?? '').replace(/[^a-z0-9]/g, '')
+    if (!['mp4', 'jpg'].includes(ext)) return NextResponse.json({ error: 'extensão inválida' }, { status: 400 })
+    const pasta = corpo?.pasta === 'previews' ? 'clips/previews' : 'clips'
+    const caminho = `${pasta}/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`
+    const bucket = db.storage.from('uploads')
+    const { data, error } = await bucket.createSignedUploadUrl(caminho)
+    if (error || !data) return NextResponse.json({ error: error?.message ?? 'sem endereço' }, { status: 500 })
+    return NextResponse.json({
+      signedUrl: data.signedUrl,
+      publicUrl: bucket.getPublicUrl(caminho).data.publicUrl,
+    })
+  }
+
+  // ── pré-visualização pronta ───────────────────────────────────────────────
+  if (resultado === 'preview') {
+    const clipId = String(corpo?.clipId ?? '')
+    if (!clipId) return NextResponse.json({ error: 'sem clipe' }, { status: 400 })
+    if (corpo?.erro) {
+      await db.from('videocliper_clips')
+        .update({ preview_estado: 'erro', preview_erro: String(corpo.erro).slice(0, 300), updated_at: agora })
+        .eq('id', clipId)
+      return NextResponse.json({ ok: true })
+    }
+    const { error } = await db.from('videocliper_clips').update({
+      preview_estado: 'feito',
+      preview_url: String(corpo?.previewUrl ?? '') || null,
+      thumbnail_url: String(corpo?.frameUrl ?? '') || null,
+      preview_erro: null,
+      updated_at: agora,
+    }).eq('id', clipId)
+    return NextResponse.json({ ok: !error, podeApagar: !error })
+  }
+
   // ── clipe renderizado e já subido ─────────────────────────────────────────
   if (resultado === 'render') {
     const clipId = String(corpo?.clipId ?? '')
@@ -264,7 +375,9 @@ export async function POST(request: NextRequest) {
     await db.from('videocliper_clips').update({
       estado: 'renderizado',
       video_url: url,
-      thumbnail_url: corpo?.thumbnailUrl ?? null,
+      // Sem capa nova, fica o frame da pré-visualização em vez de a imagem desaparecer.
+      ...(corpo?.thumbnailUrl ? { thumbnail_url: String(corpo.thumbnailUrl) } : {}),
+      erro: null,
       updated_at: agora,
     }).eq('id', clipId)
 

@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
         .select('id, origem, youtube_url, titulo, duracao_seg, estado, erro, progresso, idioma, created_at')
         .eq('id', jobId).maybeSingle(),
       db.from('videocliper_clips')
-        .select('id, ordem, titulo, hook, score, porque, inicio_seg, fim_seg, duracao_seg, caption, cta_palavra, estado, erro, video_url, thumbnail_url, ig_permalink, youtube_short_url')
+        .select('id, ordem, titulo, hook, score, porque, inicio_seg, fim_seg, duracao_seg, caption, cta_palavra, estado, erro, video_url, thumbnail_url, ig_permalink, youtube_short_url, legendas, preview_url, preview_estado, preview_erro')
         .eq('job_id', jobId).order('ordem'),
     ])
     if (!job) return NextResponse.json({ erro: 'vídeo não encontrado' }, { status: 404 })

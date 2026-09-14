@@ -439,16 +439,18 @@ async function render(trabalho) {
     const capa = path.join(tmp, "capa.jpg")
     await correr("ffmpeg", ["-y", "-ss", "1", "-i", saida, "-frames:v", "1", "-q:v", "3", capa]).catch(() => {})
 
-    const bytes = fs.readFileSync(saida)
-    log(`clipe pronto: ${(bytes.length / 1024 / 1024).toFixed(1)} MB`)
+    log(`clipe pronto: ${(fs.statSync(saida).size / 1024 / 1024).toFixed(1)} MB`)
 
-    const fd = new FormData()
-    fd.append("clipId", trabalho.clipId)
-    fd.append("video", new Blob([bytes], { type: "video/mp4" }), "clipe.mp4")
-    if (fs.existsSync(capa)) fd.append("capa", new Blob([fs.readFileSync(capa)], { type: "image/jpeg" }), "capa.jpg")
+    // Direto para o storage: pela rota do site o corpo tem tecto de 4,5 MB e um clipe HD passa.
+    const videoUrl = await subirDireto(saida, "mp4", "clips")
+    const thumbnailUrl = fs.existsSync(capa) ? await subirDireto(capa, "jpg", "clips").catch(() => null) : null
 
-    const up = await api("/api/videocliper/upload", { method: "POST", body: fd })
-    if (!up.ok) throw new Error(`upload ${up.status}: ${(await up.text()).slice(0, 200)}`)
+    const up = await api("/api/videocliper/worker", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ resultado: "render", clipId: trabalho.clipId, videoUrl, thumbnailUrl }),
+    })
+    if (!up.ok) throw new Error(`registo do clipe ${up.status}: ${(await up.text()).slice(0, 200)}`)
     const resp = await up.json()
 
     /**
@@ -488,6 +490,98 @@ async function render(trabalho) {
   }
 }
 
+/**
+ * Sobe um ficheiro DIRETO para o storage do Supabase por um endereço assinado pedido ao site.
+ * Devolve o endereço público.
+ */
+async function subirDireto(caminho, ext, pasta) {
+  const r = await api("/api/videocliper/worker", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ resultado: "upload-url", ext, pasta }),
+  })
+  if (!r.ok) throw new Error(`upload-url ${r.status}: ${(await r.text()).slice(0, 200)}`)
+  const { signedUrl, publicUrl } = await r.json()
+  const put = await fetch(signedUrl, {
+    method: "PUT",
+    headers: { "content-type": ext === "mp4" ? "video/mp4" : "image/jpeg", "x-upsert": "true" },
+    body: fs.readFileSync(caminho),
+  })
+  if (!put.ok) throw new Error(`storage ${put.status}: ${(await put.text()).slice(0, 200)}`)
+  return publicUrl
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * PRÉ-VISUALIZAR — frame + versão leve de cada clipe proposto
+ *
+ * Tudo numa pasta temporária que se apaga no fim: nada disto fica no disco do VPS.
+ * ────────────────────────────────────────────────────────────────────────────*/
+async function previews(trabalho) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "vc-prev-"))
+  const reportar = (corpo) => api("/api/videocliper/worker", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ resultado: "preview", ...corpo }),
+  }).catch(() => {})
+
+  try {
+    const local = trabalho.ficheiroLocal && fs.existsSync(trabalho.ficheiroLocal) ? trabalho.ficheiroLocal : null
+    const eDirecto = !local && /\.(mp4|mov|m4v|webm)(\?|$)/i.test(trabalho.youtubeUrl || "")
+
+    // Um link directo vem inteiro de uma vez e serve os clips todos.
+    let inteiro = local
+    if (eDirecto) {
+      inteiro = path.join(tmp, "fonte.mp4")
+      await descarregarDeLink(trabalho.youtubeUrl, inteiro, null)
+    }
+
+    for (const c of trabalho.clips || []) {
+      const pasta = fs.mkdtempSync(path.join(tmp, "c-"))
+      try {
+        const duracao = Number(c.fimSeg) - Number(c.inicioSeg)
+        let fonte = inteiro
+        let recuo = Number(c.inicioSeg)
+        if (!fonte) {
+          if (!trabalho.youtubeUrl) throw new Error("sem ficheiro local nem link")
+          fonte = path.join(pasta, "fonte.mp4")
+          await descarregarDeLink(trabalho.youtubeUrl, fonte, `*${Math.max(0, c.inicioSeg - 1)}-${c.fimSeg + 1}`)
+          recuo = 1
+        }
+
+        const ass = path.join(pasta, "legendas.ass")
+        fs.writeFileSync(ass, construirASS(c.legendas || [], trabalho.estilo || {}), "utf8")
+        const L = (trabalho.estilo && trabalho.estilo.largura) || 540
+        const A = (trabalho.estilo && trabalho.estilo.altura) || 960
+
+        const saida = path.join(pasta, "preview.mp4")
+        await correr("ffmpeg", [
+          "-y", "-ss", String(recuo), "-t", String(duracao), "-i", fonte,
+          "-vf", `crop='min(iw,ih*9/16)':ih,scale=${L}:${A}:force_original_aspect_ratio=increase,crop=${L}:${A},ass='${ass.replace(/'/g, "\\'")}'`,
+          "-c:v", "libx264", "-preset", "veryfast", "-crf", "30",
+          "-c:a", "aac", "-b:a", "64k", "-ac", "1",
+          "-movflags", "+faststart", saida,
+        ])
+
+        // O frame vem a 1,5s: já com a primeira legenda no ecrã, como o cartão do painel mostra.
+        const frame = path.join(pasta, "frame.jpg")
+        await correr("ffmpeg", ["-y", "-ss", String(Math.min(1.5, duracao / 2)), "-i", saida, "-frames:v", "1", "-q:v", "4", frame])
+
+        const previewUrl = await subirDireto(saida, "mp4", "previews")
+        const frameUrl = await subirDireto(frame, "jpg", "previews")
+        await reportar({ clipId: c.clipId, previewUrl, frameUrl })
+        log(`preview ${c.clipId}: ${(fs.statSync(saida).size / 1024 / 1024).toFixed(1)} MB`)
+      } catch (e) {
+        log("preview falhou:", c.clipId, e.message)
+        await reportar({ clipId: c.clipId, erro: e.message })
+      } finally {
+        fs.rmSync(pasta, { recursive: true, force: true })
+      }
+    }
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true })
+  }
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
  * O CICLO
  * ────────────────────────────────────────────────────────────────────────────*/
@@ -501,8 +595,20 @@ async function umaPassagem() {
   try {
     if (t.tipo === "transcrever") await transcrever(t)
     else if (t.tipo === "render") await render(t)
+    else if (t.tipo === "previews") await previews(t)
   } catch (e) {
     log("falhou:", e.message)
+    // Uma pré-visualização falhada não estraga o vídeo: marca só os clips, não o trabalho.
+    if (t.tipo === "previews") {
+      for (const c of t.clips || []) {
+        await api("/api/videocliper/worker", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ resultado: "preview", clipId: c.clipId, erro: e.message }),
+        }).catch(() => {})
+      }
+      return
+    }
     await api("/api/videocliper/worker", {
       method: "POST",
       headers: { "content-type": "application/json" },
