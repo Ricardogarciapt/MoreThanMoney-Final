@@ -5,10 +5,10 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
 const ADMIN_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL || "https://iwscxotvmtkphajmasof.supabase.co").trim()
-const ADMIN_SERVICE_KEY = (
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3c2N4b3R2bXRrcGhham1hc29mIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTY0MjM2MywiZXhwIjoyMDY1MjE4MzYzfQ.OSFUPZLlx4IaETqqfQPnt-pnYG-hau5NOJ_GHonpuOk"
-).trim()
+// SEM valor de recurso: a chave de service role dá acesso total à base. Escrita no código, ia
+// para o git e para qualquer bundle que um dia importasse este ficheiro por engano. Sem a
+// variável de ambiente, falha-se alto — um erro claro é melhor do que uma chave exposta.
+const ADMIN_SERVICE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim()
 
 const ANON_KEY = (
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
