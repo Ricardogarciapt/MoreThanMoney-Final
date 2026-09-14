@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { tipoCurto, estadoCurto, COR_DO_ESTADO } from '@/lib/mtmfunded/etiquetas'
 import Link from 'next/link'
 import {
   LayoutDashboard, Wallet, FileText, Trophy, ListOrdered,
@@ -463,11 +464,18 @@ function Contas({ contas, abrir }: { contas: Conta[]; abrir?: string | null }) {
     <div className="space-y-4">
       {metricasDe && <ModalMetricas contaId={metricasDe} aoFechar={() => setMetricasDe(null)} />}
       {contas.map((c) => (
-        <Caixa key={c.id} titulo={`${c.tipo === 'torneio' ? 'Torneio' : c.tipo === 'desafio' ? 'Desafio' : 'Financiada'} · ${c.login ?? 'a emitir'}`}>
+        <Caixa key={c.id} titulo={`${tipoCurto(c.tipo, c.metricas)} · ${c.login ?? 'a emitir'}`}>
+          <div className="mb-2 flex items-center gap-2">
+            <span
+              className="rounded-md px-2 py-0.5 text-xs font-semibold"
+              style={{ color: COR_DO_ESTADO[estadoCurto(c.estado, c.metricas)], background: `${COR_DO_ESTADO[estadoCurto(c.estado, c.metricas)]}1f` }}
+            >
+              {estadoCurto(c.estado, c.metricas)}
+            </span>
+          </div>
           <Linha rotulo="Servidor" valor={c.servidor ?? '—'} />
           <Linha rotulo="Saldo inicial" valor={c.saldoInicial ? `${c.saldoInicial.toLocaleString('pt-PT')} USD` : '—'} />
           <Linha rotulo="Alavancagem" valor={c.alavancagem ? `1:${c.alavancagem}` : '—'} />
-          <Linha rotulo="Estado" valor={c.estado} />
           {typeof c.metricas.equity === 'number' && (
             <Linha rotulo="Equity" valor={`${(c.metricas.equity as number).toLocaleString('pt-PT')} USD`} />
           )}

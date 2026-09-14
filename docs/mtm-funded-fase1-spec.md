@@ -292,3 +292,11 @@ diretamente com MetaApi/TradeLocker.
 ### 11.5 Mindmap editável
 O conceito completo vive num artifact com blocos editáveis; as edições do Ricardo gravam-se na
 BD do artifact e são a fonte de verdade da fase de construção (reler antes de cada milestone).
+
+### 11.6 Credenciais e etiquetas (decisão Ricardo 2026-09-14)
+- Contas simuladas têm **login numérico (77xxxxxx) + password master + password investor**, servidor
+  **«MTM Funded»**, nas mesmas colunas das contas MT5 (`mt5_login`, `mt5_*_cifrada`). Passwords cifradas,
+  nunca por email — vêem-se no painel. `POST /api/mtmfunded/simulado/entrar` devolve sessão da CONTA
+  (master negoceia, investor só vê), 12h, HMAC.
+- Etiquetas em todo o lado (`lib/mtmfunded/etiquetas.ts`): tipo **F1 / F2 / Funded / Torneio** (nunca «demo»);
+  estado **Active / Breached** (quebrada ou inválida) **/ Pause / Closed / Pending**.

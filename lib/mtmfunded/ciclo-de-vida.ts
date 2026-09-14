@@ -458,7 +458,7 @@ async function emitirFaseSeguinte(
       alavancagem: anterior.alavancagem ?? 100,
       // A fase seguinte herda o motor da anterior: um desafio não muda de casa a meio.
       ...(anterior.motor === 'sim'
-        ? camposDeContaSimulada(Number(anterior.saldo_inicial ?? 0))
+        ? await camposDeContaSimulada(Number(anterior.saldo_inicial ?? 0))
         : camposDeContaMt5(anterior.servidor as string | null)),
       metricas: { fase },
     })
@@ -655,7 +655,7 @@ export async function emitirContaFinanciada(userId: string): Promise<ResultadoFi
       program_id: aprovado.program_id,
       saldo_inicial: saldo,
       alavancagem: 100,
-      ...(aprovado.motor === 'sim' ? camposDeContaSimulada(saldo) : camposDeContaMt5()),
+      ...(aprovado.motor === 'sim' ? await camposDeContaSimulada(saldo) : camposDeContaMt5()),
     })
     .select('id')
     .single()
@@ -774,7 +774,7 @@ export async function renovarContaAposLevantamento(
       program_id: conta.program_id,
       saldo_inicial: saldo,
       alavancagem: conta.alavancagem ?? 100,
-      ...(conta.motor === 'sim' ? camposDeContaSimulada(saldo) : camposDeContaMt5(conta.servidor as string | null)),
+      ...(conta.motor === 'sim' ? await camposDeContaSimulada(saldo) : camposDeContaMt5(conta.servidor as string | null)),
       metricas: {
         cicloAnterior: conta.mt5_login ?? null,
         renovadaEm: new Date().toISOString(),

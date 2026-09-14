@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
   if (vista === 'contas') {
     const { data } = await db
       .from('mtm_trading_accounts')
-      .select('id, user_id, tipo, tournament_id, mt5_login, servidor, saldo_inicial, alavancagem, estado, quebrou_regra, quebrada_em, metricas, metricas_lidas_em, metaapi_account_id, created_at')
+      .select('id, user_id, tipo, tournament_id, mt5_login, servidor, saldo_inicial, alavancagem, estado, quebrou_regra, quebrada_em, metricas, metricas_lidas_em, metaapi_account_id, motor, created_at')
       .order('created_at', { ascending: false })
       .limit(300)
 
@@ -310,7 +310,7 @@ export async function POST(request: NextRequest) {
       program_id: programa.id,
       saldo_inicial: programa.saldo,
       alavancagem: 100,
-      ...camposDeContaSimulada(Number(programa.saldo)),
+      ...await camposDeContaSimulada(Number(programa.saldo)),
       metricas: { teste: true },
     }).select('id').single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })

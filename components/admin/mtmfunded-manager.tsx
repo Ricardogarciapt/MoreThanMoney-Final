@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { tipoCurto, estadoCurto, COR_DO_ESTADO } from '@/lib/mtmfunded/etiquetas'
 import {
   Loader2, Power, Trophy, Users, Wallet, AlertTriangle, Award,
   Shield, RefreshCw, Mail, KeyRound, Ban, Check, Package, Plus, Banknote, ExternalLink,
@@ -433,13 +434,25 @@ function Contas({ accao, ocupado, setAviso }: { accao: Accao; ocupado: string | 
               <p className="text-gray-200">{dono?.nome ?? '—'}</p>
               <p className="font-mono text-xs text-gray-600">{dono?.email ?? ''}</p>
             </td>
-            <td className="px-3 py-2 text-xs text-gray-400">{c.tipo as string}</td>
+            <td className="px-3 py-2 text-xs text-gray-300">
+              {tipoCurto(c.tipo as string, c.metricas as Record<string, unknown> | null)}
+              {c.motor === 'sim' && <span className="ml-1 rounded bg-[#D2A63C]/15 px-1 text-[10px] text-[#D2A63C]">MTM</span>}
+            </td>
             <td className="px-3 py-2 font-mono text-xs text-gray-300">
               {(c.mt5_login as string) ?? <span className="text-amber-400">—</span>}
             </td>
             <td className="px-3 py-2 text-xs text-gray-500">{(c.servidor as string) ?? '—'}</td>
             <td className="px-3 py-2 text-xs">
-              <Estado valor={c.estado as string} />
+              <span
+                className="rounded px-1.5 py-0.5 text-[11px] font-semibold"
+                style={{
+                  color: COR_DO_ESTADO[estadoCurto(c.estado as string, c.metricas as Record<string, unknown> | null)],
+                  background: `${COR_DO_ESTADO[estadoCurto(c.estado as string, c.metricas as Record<string, unknown> | null)]}1f`,
+                }}
+                title={c.estado as string}
+              >
+                {estadoCurto(c.estado as string, c.metricas as Record<string, unknown> | null)}
+              </span>
               {pedido?.erro && <p className="mt-1 max-w-[220px] truncate text-[11px] text-red-400" title={pedido.erro}>{pedido.erro}</p>}
               {Boolean(c.quebrou_regra) && <p className="mt-1 text-[11px] text-red-400">{c.quebrou_regra as string}</p>}
             </td>

@@ -21,7 +21,7 @@ import { getMtmFundedConfig } from '@/lib/mtmfunded/config'
 
 export type MotorConta = 'mt5' | 'sim'
 
-export const SERVIDOR_SIMULADO = 'MTM-Simulado'
+export const SERVIDOR_SIMULADO = 'MTM Funded'
 
 export async function motorDeNovasContas(): Promise<MotorConta> {
   const cfg = await getMtmFundedConfig()
@@ -35,13 +35,17 @@ export async function motorDaConta(accountId: string): Promise<MotorConta> {
 }
 
 /**
- * Os campos com que uma conta simulada nasce: activa já, saldo = equity = âncora = pico.
+ * Os campos com que uma conta simulada nasce: activa já, com login e passwords, saldo = equity =
+ * âncora = pico.
  *
  * `estado: 'ativa'` logo à nascença é o ponto todo — não há fila à espera de ninguém.
  */
-export function camposDeContaSimulada(saldo: number): Record<string, unknown> {
+export async function camposDeContaSimulada(saldo: number): Promise<Record<string, unknown>> {
   const agora = new Date().toISOString()
+  // Login e passwords como no MetaTrader — ver ./credenciais.
+  const { credenciaisNovas } = await import('./credenciais')
   return {
+    ...(await credenciaisNovas()),
     motor: 'sim',
     servidor: SERVIDOR_SIMULADO,
     estado: 'ativa',

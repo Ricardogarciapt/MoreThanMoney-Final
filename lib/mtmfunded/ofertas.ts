@@ -170,7 +170,7 @@ export async function ofertarDesafioDaRenovacao(
       program_id: programa.id,
       saldo_inicial: programa.saldo,
       alavancagem: 100,
-      ...(motor === 'sim' ? camposDeContaSimulada(Number(programa.saldo)) : camposDeContaMt5()),
+      ...(motor === 'sim' ? await camposDeContaSimulada(Number(programa.saldo)) : camposDeContaMt5()),
     })
     .select('id')
     .single()
