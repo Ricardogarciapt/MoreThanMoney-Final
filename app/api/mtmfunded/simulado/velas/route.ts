@@ -6,7 +6,8 @@ export const dynamic = 'force-dynamic'
 /**
  * VELAS HISTÓRICAS para o gráfico do WebTrader.
  *
- * GET ?symbol=XAUUSD&tf=M1|M5|M15|H1|H4|D1&limit=300[&ate=<unix s>] → { velas: [{ t, o, h, l, c }], fonte }
+ * GET ?symbol=XAUUSD&tf=M1|M5|M15|H1|H4|D1&limit=300[&ate=<unix s>] → { velas: [{ t, o, h, l, c, v }], fonte }
+ * (`v` = volume de ticks da MetaApi, para o painel de volume do gráfico; 0 quando não vem)
  *
  * `ate` pede as velas ANTERIORES a esse instante: é assim que o gráfico do TradingView (Advanced
  * Charts) pede mais histórico quando se arrasta para trás. Sem `ate`, as últimas até agora.
@@ -77,6 +78,7 @@ export async function GET(request: NextRequest) {
         .map((v) => ({
           t: Math.floor(new Date(String(v.time)).getTime() / 1000),
           o: Number(v.open), h: Number(v.high), l: Number(v.low), c: Number(v.close),
+          v: Number(v.tickVolume ?? v.volume ?? 0) || 0,
         }))
         .filter((v) => Number.isFinite(v.t) && v.o > 0 && v.h > 0 && v.l > 0 && v.c > 0 && (ate == null || v.t < ate))
         .sort((a, b) => a.t - b.t)

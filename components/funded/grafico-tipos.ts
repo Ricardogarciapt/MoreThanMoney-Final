@@ -31,10 +31,14 @@ export interface GraficoProps {
   ferramentaInicial?: Ferramenta | null
   /** Classe Tailwind da altura da área do gráfico (a app standalone usa quase o ecrã inteiro). */
   alturaClasse?: string
-  onModificarPosicao: (id: string, sl: number | null, tp: number | null) => Promise<void>
-  onModificarPendente: (id: string, preco: number, sl: number | null, tp: number | null) => Promise<void>
-  onFecharPosicao: (id: string) => void
-  onCancelarPendente: (id: string) => void
+  /**
+   * As acções sobre a conta. Devolvem a promessa do pedido: o gráfico passa-as pela negociação num
+   * clique (um-clique.tsx), que confirma ou não, e repõe a linha se falhar ou for cancelada.
+   */
+  onModificarPosicao: (id: string, sl: number | null, tp: number | null) => Promise<unknown>
+  onModificarPendente: (id: string, preco: number, sl: number | null, tp: number | null) => Promise<unknown>
+  onFecharPosicao: (id: string) => Promise<unknown>
+  onCancelarPendente: (id: string) => Promise<unknown>
   /** Obsoleto: a ferramenta envia pelo rascunho partilhado (rascunho-ordem.tsx). */
   onConfirmarFerramenta?: (f: FerramentaConfirmada) => Promise<void>
   /** Sinais dos estudos MTM (GoldKiller/Sensei/MTM Scanner) para este símbolo: setas no gráfico. */

@@ -14,6 +14,7 @@ import FundedPosicoes from "./funded-posicoes"
 import FundedWebhook from "./funded-webhook"
 import FundedCopier from "./funded-copier"
 import FundedDesempenho from "./funded-desempenho"
+import { InterruptorUmClique, UmCliqueProvider } from "./um-clique"
 
 /**
  * O WEBTRADER DE UMA CONTA — cabeçalho de métricas, lista, gráfico, ticket e posições.
@@ -132,19 +133,13 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
 
   const podeNegociar = dados?.modo === "master" && dados?.conta.estado === "ativa"
 
-  const executar = async (accao: string, corpo: Record<string, unknown>, sucesso: string) => {
-    try {
-      await ordem(accao, corpo, accountId)
-      setAviso({ tipo: "ok", texto: sucesso })
-      await recarregar()
-    } catch (e) {
-      setAviso({ tipo: "erro", texto: (e as Error).message })
-      throw e
-    } finally {
-      setTimeout(() => setAviso(null), 4000)
-    }
+  // O «feito @ preço» e os erros das ordens aparecem no aviso da negociação num clique (um-clique.tsx),
+  // que é por onde todas as acções passam; aqui só se relê a conta e se devolve a resposta.
+  const executar = async (accao: string, corpo: Record<string, unknown>, _sucesso: string) => {
+    const r = await ordem(accao, corpo, accountId)
+    void recarregar()
+    return r
   }
-  const silencioso = (p: Promise<unknown>) => p.catch(() => {})
 
   if (erro && !dados) return <div className="p-6 text-center text-[13px] text-rose-300">{erro}</div>
   if (!dados || !vivo) return <div className="grid place-items-center p-10"><Loader2 className="h-6 w-6 animate-spin text-[#D2A63C]" /></div>
@@ -189,8 +184,8 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
           alturaClasse={alturaGrafico}
           onModificarPosicao={(id, sl, tp) => executar("modificar", { positionId: id, sl, tp }, "SL/TP actualizados")}
           onModificarPendente={(id, preco, sl, tp) => executar("modificar_pendente", { orderId: id, preco, sl, tp }, "Ordem actualizada")}
-          onFecharPosicao={(id) => silencioso(executar("fechar", { positionId: id }, "Posição fechada"))}
-          onCancelarPendente={(id) => silencioso(executar("cancelar", { orderId: id }, "Ordem cancelada"))}
+          onFecharPosicao={(id) => executar("fechar", { positionId: id }, "Posição fechada")}
+          onCancelarPendente={(id) => executar("cancelar", { orderId: id }, "Ordem cancelada")}
           onMudarSimbolo={selecionarPorNome}
         />
         {podeNegociar && <FundedTicket margemLivre={vivo.margemLivre} />}
@@ -210,6 +205,7 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
   )
 
   return (
+    <UmCliqueProvider accountId={accountId} investor={dados.modo !== "master"}>
     <div className="space-y-2 pb-4">
       {/* Cabeçalho da conta */}
       <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-2.5">
@@ -271,6 +267,7 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
         {vista === "posicoes" && posicoesPainel("posicoes")}
         {vista === "historico" && posicoesPainel("historico")}
         {vista === "conta" && <div className="space-y-2">
+          {podeNegociar && <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><InterruptorUmClique variante="cartao" /></div>}
           <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedDesempenho d={dados.desempenho} estrategia={c.segueEstrategia?.nome} /></div>
           <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedCopier accountId={accountId} podeGerir={dados.modo === "master"} /></div>
           <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedWebhook accountId={accountId} podeGerir={dados.modo === "master"} /></div>
@@ -281,6 +278,7 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
       {desktop && <div className="grid grid-cols-[260px_1fr] gap-2">
         <div className="space-y-2">
           <FundedWatchlist precos={vivos} selecionado={simbolo?.symbol ?? null} onSelecionar={selecionar} onVisiveis={setVisiveis} />
+          {podeNegociar && <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><InterruptorUmClique variante="cartao" /></div>}
           <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedDesempenho d={dados.desempenho} estrategia={c.segueEstrategia?.nome} /></div>
           <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedCopier accountId={accountId} podeGerir={dados.modo === "master"} /></div>
           <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedWebhook accountId={accountId} podeGerir={dados.modo === "master"} /></div>
@@ -292,6 +290,7 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
         </div>
       </div>}
     </div>
+    </UmCliqueProvider>
   )
 }
 

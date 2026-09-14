@@ -10,6 +10,7 @@ import {
   type VolumePorRisco, percentagemDeUsd, precoDePercentagem, precoDeValor, usdDePercentagem, volumePorRisco,
 } from "@/lib/mtmfunded/simulado/niveis-financeiros"
 import type { SimboloFicha, PrecoVivo } from "./api"
+import { AccaoCancelada, useUmClique } from "./um-clique"
 
 /**
  * O RASCUNHO DA ORDEM — UM só estado para o ticket e para o gráfico, como no painel de ordens do
@@ -170,7 +171,8 @@ export function RascunhoProvider(props: {
   margemLivre: number | null
   /** O saldo da conta (sim_saldo) — base do % no SL/TP e no risco. */
   saldo: number | null
-  onEnviar: (p: PedidoOrdem) => Promise<void>
+  /** Devolve a resposta da API (o aviso de «feito» mostra o preço de execução). */
+  onEnviar: (p: PedidoOrdem) => Promise<unknown>
   children: ReactNode
 }) {
   const { simbolo: s, preco, precos, volume: volumeEscrito, setVolume, alavancagem, margemLivre, saldo } = props
@@ -187,6 +189,7 @@ export function RascunhoProvider(props: {
   const [aEnviar, setAEnviar] = useState(false)
   const [erroEnvio, setErroEnvio] = useState<string | null>(null)
   const [ferramenta, setFerramenta] = useState<Direcao | null>(null)
+  const umClique = useUmClique()
   const arred = useCallback((v: number) => Number(v.toFixed(s.digits)), [s.digits])
   const tolerancia = Math.max(spreadEmPreco(s), 2 * s.pip_size)
 
@@ -382,13 +385,19 @@ export function RascunhoProvider(props: {
     if (v == null) return
     setAEnviar(true)
     setErroEnvio(null)
+    const pedido: PedidoOrdem = r.tipo === "mercado"
+      ? { accao: "abrir", direcao: r.lado, volume: v, sl, tp, origem: r.origem, ideiaRef: r.ideiaRef }
+      : { accao: "pendente", direcao: r.lado, volume: v, sl, tp, tipo: r.tipo, preco: r.entrada!, origem: r.origem, ideiaRef: r.ideiaRef }
+    const descricao = r.tipo === "mercado"
+      ? `${r.lado === "buy" ? "Compra" : "Venda"} ${v} ${s.symbol}`
+      : `${r.lado === "buy" ? "Buy" : "Sell"} ${r.tipo} ${v} ${s.symbol} @ ${r.entrada!.toFixed(s.digits)}`
     try {
-      await props.onEnviar(r.tipo === "mercado"
-        ? { accao: "abrir", direcao: r.lado, volume: v, sl, tp, origem: r.origem, ideiaRef: r.ideiaRef }
-        : { accao: "pendente", direcao: r.lado, volume: v, sl, tp, tipo: r.tipo, preco: r.entrada!, origem: r.origem, ideiaRef: r.ideiaRef })
+      // Quem chega aqui já confirmou (resumo do ticket, «Confirmar» da ferramenta) ou tem o
+      // «num clique» ligado — por isso não se pede outra confirmação; só a protecção contra repetidos.
+      await umClique.executar(descricao, () => props.onEnviar(pedido), { confirmar: false, digitos: s.digits })
       limpar()
     } catch (e) {
-      setErroEnvio((e as Error).message)
+      if (!(e instanceof AccaoCancelada)) setErroEnvio((e as Error).message)
     } finally {
       setAEnviar(false)
     }

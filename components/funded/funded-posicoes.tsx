@@ -4,12 +4,17 @@ import { useState } from "react"
 import { Loader2, Pencil, X } from "lucide-react"
 import { type MapaPrecos, lucroUsd, precoDeFecho } from "@/lib/mtmfunded/simulado/matematica"
 import { type SimboloFicha, px, usd } from "./api"
+import { AccaoCancelada, useUmClique } from "./um-clique"
 
 /**
  * POSIÇÕES, ORDENS E HISTÓRICO — o painel de baixo do MetaTrader, em lista para o telemóvel.
  *
  * O lucro das abertas calcula-se aqui com os preços ao vivo e a MESMA matemática do servidor,
  * para mexer a cada preço sem esperar pelo refresh da conta. Fechar pede o volume: vazio fecha tudo.
+ *
+ * Confirmações (um-clique.tsx): com a negociação num clique desligada, «Fechar» abre o painel do
+ * volume (é essa a confirmação) e «Cancelar» uma pendente pede confirmação; ligada, «Fechar» fecha
+ * tudo logo («Parcial» continua a abrir o painel) e «Cancelar» cancela logo.
  */
 
 type Linha = Record<string, any>
@@ -22,9 +27,9 @@ export default function FundedPosicoes(props: {
   simbolos: Record<string, SimboloFicha>
   precos: MapaPrecos
   podeNegociar: boolean
-  onFechar: (id: string, volume: number | null) => Promise<void>
-  onModificar: (id: string, sl: number | null, tp: number | null) => Promise<void>
-  onCancelar: (id: string) => Promise<void>
+  onFechar: (id: string, volume: number | null) => Promise<unknown>
+  onModificar: (id: string, sl: number | null, tp: number | null) => Promise<unknown>
+  onCancelar: (id: string) => Promise<unknown>
   onSelecionarSimbolo: (symbol: string) => void
 }) {
   const [aberto, setAberto] = useState<{ id: string; modo: "fechar" | "modificar" } | null>(null)
@@ -33,10 +38,16 @@ export default function FundedPosicoes(props: {
   const [tp, setTp] = useState("")
   const [aEnviar, setAEnviar] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const umClique = useUmClique()
 
-  const correr = async (f: () => Promise<void>) => {
+  const correr = async (descricao: string, f: () => Promise<unknown>, confirmar: boolean, digitos?: number) => {
     setAEnviar(true); setErro(null)
-    try { await f(); setAberto(null) } catch (e) { setErro((e as Error).message) } finally { setAEnviar(false) }
+    try {
+      await umClique.executar(descricao, f, { confirmar, digitos })
+      setAberto(null)
+    } catch (e) {
+      if (!(e instanceof AccaoCancelada)) setErro((e as Error).message)
+    } finally { setAEnviar(false) }
   }
   const n = (v: string) => { const x = Number(v.replace(",", ".")); return v && Number.isFinite(x) && x > 0 ? x : null }
 
@@ -98,7 +109,14 @@ export default function FundedPosicoes(props: {
               {props.podeNegociar && !esteAberto && (
                 <div className="mt-1.5 flex gap-2">
                   <button onClick={() => { setAberto({ id: p.id, modo: "modificar" }); setSl(p.sl ?? ""); setTp(p.tp ?? ""); setErro(null) }} className="flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[11px] text-zinc-300"><Pencil className="h-3 w-3" /> SL/TP</button>
-                  <button onClick={() => { setAberto({ id: p.id, modo: "fechar" }); setVol(""); setErro(null) }} className="flex items-center gap-1 rounded-md border border-rose-500/30 px-2 py-1 text-[11px] text-rose-300"><X className="h-3 w-3" /> Fechar</button>
+                  {umClique.ligado ? (
+                    <>
+                      <button disabled={aEnviar || umClique.ocupado} onClick={() => correr(`Fechar ${p.symbol} ${Number(p.volume)}`, () => props.onFechar(p.id, null), false, d)} className="flex items-center gap-1 rounded-md border border-rose-500/30 px-2 py-1 text-[11px] text-rose-300 disabled:opacity-40"><X className="h-3 w-3" /> Fechar</button>
+                      <button onClick={() => { setAberto({ id: p.id, modo: "fechar" }); setVol(""); setErro(null) }} className="rounded-md border border-white/10 px-2 py-1 text-[11px] text-zinc-400">Parcial</button>
+                    </>
+                  ) : (
+                    <button onClick={() => { setAberto({ id: p.id, modo: "fechar" }); setVol(""); setErro(null) }} className="flex items-center gap-1 rounded-md border border-rose-500/30 px-2 py-1 text-[11px] text-rose-300"><X className="h-3 w-3" /> Fechar</button>
+                  )}
                 </div>
               )}
               {esteAberto && aberto && (
@@ -106,7 +124,7 @@ export default function FundedPosicoes(props: {
                   {aberto.modo === "fechar" ? (
                     <div className="flex gap-2">
                       <input inputMode="decimal" value={vol} onChange={(e) => setVol(e.target.value)} placeholder={`volume (vazio = tudo ${Number(p.volume)})`} className="h-9 flex-1 rounded-lg border border-white/10 bg-black px-2 font-mono text-white" />
-                      <button disabled={aEnviar} onClick={() => correr(() => props.onFechar(p.id, n(vol)))} className="rounded-lg bg-rose-500 px-3 font-bold text-white disabled:opacity-40">
+                      <button disabled={aEnviar} onClick={() => correr(n(vol) ? `Fechar ${n(vol)} de ${p.symbol}` : `Fechar ${p.symbol} ${Number(p.volume)}`, () => props.onFechar(p.id, n(vol)), false, d)} className="rounded-lg bg-rose-500 px-3 font-bold text-white disabled:opacity-40">
                         {aEnviar ? <Loader2 className="h-4 w-4 animate-spin" /> : n(vol) ? "Fechar parcial" : "Fechar tudo"}
                       </button>
                     </div>
@@ -114,7 +132,7 @@ export default function FundedPosicoes(props: {
                     <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
                       <input inputMode="decimal" value={sl} onChange={(e) => setSl(e.target.value)} placeholder="SL" className="h-9 rounded-lg border border-rose-500/30 bg-black px-2 font-mono text-white" />
                       <input inputMode="decimal" value={tp} onChange={(e) => setTp(e.target.value)} placeholder="TP" className="h-9 rounded-lg border border-emerald-500/30 bg-black px-2 font-mono text-white" />
-                      <button disabled={aEnviar} onClick={() => correr(() => props.onModificar(p.id, n(String(sl)), n(String(tp))))} className="rounded-lg bg-[#D2A63C] px-3 font-bold text-black disabled:opacity-40">
+                      <button disabled={aEnviar} onClick={() => correr(`SL/TP de ${p.symbol}`, () => props.onModificar(p.id, n(String(sl)), n(String(tp))), false)} className="rounded-lg bg-[#D2A63C] px-3 font-bold text-black disabled:opacity-40">
                         {aEnviar ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
                       </button>
                     </div>
@@ -141,7 +159,7 @@ export default function FundedPosicoes(props: {
                 <div className="text-[10.5px] text-zinc-500">SL {o.sl != null ? px(Number(o.sl), d) : "—"} · TP {o.tp != null ? px(Number(o.tp), d) : "—"}{o.expira_em ? ` · expira ${new Date(o.expira_em).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short" })}` : ""}</div>
               </div>
               {props.podeNegociar && (
-                <button onClick={() => correr(() => props.onCancelar(o.id))} className="rounded-md border border-white/10 px-2 py-1 text-[11px] text-zinc-300">Cancelar</button>
+                <button disabled={aEnviar} onClick={() => correr(`Cancelar ${o.direcao} ${o.tipo} ${o.symbol} @ ${px(Number(o.preco), d)}`, () => props.onCancelar(o.id), true)} className="rounded-md disabled:opacity-40 border border-white/10 px-2 py-1 text-[11px] text-zinc-300">Cancelar</button>
               )}
             </div>
           )

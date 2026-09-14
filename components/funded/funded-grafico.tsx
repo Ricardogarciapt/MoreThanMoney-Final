@@ -2,42 +2,40 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { TrendingUp, TrendingDown, Lock, Zap } from "lucide-react"
-import TvChartEmbed from "@/components/tv-chart-embed"
 import { useAuth } from "@/contexts/auth-context"
 import { scannersPermitidos } from "@/lib/mtmfunded/acesso"
-import { ESTUDOS_WEBTRADER, scannerStudies, type ChaveEstudoWebtrader } from "@/lib/scanners/estudos"
+import { ESTUDOS_WEBTRADER, type ChaveEstudoWebtrader } from "@/lib/scanners/estudos"
 import type { Direcao } from "@/lib/mtmfunded/simulado/matematica"
-import { px, tvSymbolDe } from "./api"
-import { type GraficoProps, type Tf, TIMEFRAMES, TV, tfPorChave } from "./grafico-tipos"
+import { px } from "./api"
+import { type GraficoProps, type Tf, TIMEFRAMES, TV } from "./grafico-tipos"
 import { bibliotecaTvDisponivel } from "./biblioteca-tv"
 import GraficoLeve from "./grafico-leve"
 import GraficoTradingView from "./grafico-tradingview"
 import { useSinaisEstudos } from "./use-sinais-estudos"
 import { useRascunhoOpcional } from "./rascunho-ordem"
+import { InterruptorUmClique } from "./um-clique"
 
 export type { PosicaoGrafico, OrdemGrafico, Ferramenta } from "./grafico-tipos"
 
 /**
- * O GRÁFICO DO WEBTRADER — escolhe o motor e junta as duas vistas.
+ * O GRÁFICO DO WEBTRADER — um só modo, com tudo no mesmo gráfico.
  *
- * Duas vistas, com um interruptor que se lembra da última escolha:
- *  · «Análise (TradingView + estudos)» — o widget gratuito do TradingView com os NOSSOS estudos
- *    publicados (GoldKiller, Sensei, MTM Scanner). Corre Pine, mas não aceita linhas de ordens.
- *  · «Negociar (linhas arrastáveis)» — o gráfico onde a ordem se desenha e arrasta, ligado ao ticket.
- *    O motor escolhe-se sozinho: a biblioteca licenciada do TradingView se estiver em
- *    public/charting_library/ (biblioteca-tv.ts), senão o nosso gráfico leve vestido de TradingView.
+ * Não há vista de «análise» à parte: o gráfico é o de negociação (Lightweight Charts v5,
+ * grafico-leve.tsx) e leva posições, pendentes, SL/TP/entrada arrastáveis, a ferramenta de
+ * posição, o volume e as SETAS dos sinais dos estudos MTM (GoldKiller, Sensei, MTM Scanner) — os
+ * botões dos estudos na barra ligam e desligam essas setas. O gráfico gratuito do TradingView fica
+ * só no separador Scanner (que não é este componente).
  *
- * Por defeito: com a biblioteca → Negociar (é o TradingView a sério, com linhas); sem ela → Análise,
- * porque é aí que os estudos correm. Nenhum dos dois motores de negociação corre Pine, por isso lá
- * os estudos aparecem como os SINAIS que deram (setas + linhas do sinal activo, da base de dados).
+ * A biblioteca licenciada do TradingView (grafico-tradingview.tsx) está adormecida: só é usada,
+ * sozinha e no mesmo modo único, se existir em public/charting_library/ E tiver as primitivas de
+ * trading (edição Trading Platform). Se arrancar sem elas, ou falhar, volta-se ao Lightweight.
  *
  * Estudos por perfil (lib/mtmfunded/acesso.ts): membro/admin todos, torneio só GoldKiller, quem
  * entrou só com login+password da conta simulada nenhum.
  */
 
-type Vista = "analise" | "negociar"
-const CHAVE_VISTA = "mtmfunded_vista_grafico"
 const CHAVE_ESTUDOS = "mtmfunded_estudos"
+const CHAVE_TF = "mtmfunded_tf"
 
 function ler<T>(chave: string, defeito: T): T {
   try { const v = localStorage.getItem(chave); return v == null ? defeito : (JSON.parse(v) as T) } catch { return defeito }
@@ -54,25 +52,18 @@ export default function FundedGrafico(props: GraficoProps) {
   const rascunho = useRascunhoOpcional()
   const modo = rascunho ? rascunho.ferramenta : modoLocal
   const setModo = (d: Direcao | null) => (rascunho ? rascunho.setFerramenta(d) : setModoLocal(d))
-  // Carregar em Long/Short (no ticket ou aqui) com a vista de análise aberta leva à vista de negociar:
-  // é lá que as linhas se desenham e arrastam.
-  useEffect(() => {
-    if (modo && vista === "analise") mudarVista("negociar")
-  }, [modo]) // eslint-disable-line react-hooks/exhaustive-deps
   const [motor, setMotor] = useState<"a_verificar" | "tv" | "leve">("a_verificar")
-  const [vista, setVista] = useState<Vista | null>(null)
-  const [tf, setTf] = useState<Tf>("M5")
+  const [semTradingPlatform, setSemTradingPlatform] = useState(false)
+  const [tf, setTfEstado] = useState<Tf>("M5")
   const [estudos, setEstudos] = useState<ChaveEstudoWebtrader[]>(["Goldkiller"])
 
   useEffect(() => {
-    bibliotecaTvDisponivel().then((ok) => {
-      setMotor(ok ? "tv" : "leve")
-      setVista(ler<Vista | null>(CHAVE_VISTA, null) ?? (ok ? "negociar" : "analise"))
-    })
+    bibliotecaTvDisponivel().then((ok) => setMotor(ok ? "tv" : "leve"))
     setEstudos(ler<ChaveEstudoWebtrader[]>(CHAVE_ESTUDOS, ["Goldkiller"]))
+    const guardado = ler<string | null>(CHAVE_TF, null)
+    if (guardado && TIMEFRAMES.some((t) => t.chave === guardado)) setTfEstado(guardado as Tf)
   }, [])
-
-  const mudarVista = (v: Vista) => { setVista(v); guardar(CHAVE_VISTA, v) }
+  const setTf = (t: Tf) => { setTfEstado(t); guardar(CHAVE_TF, t) }
 
   // Quem pode usar que estudos — a mesma regra das páginas do MTM Funded e dos torneios.
   const permitidos = useMemo(() => {
@@ -88,21 +79,20 @@ export default function FundedGrafico(props: GraficoProps) {
     setEstudos(novo)
     guardar(CHAVE_ESTUDOS, novo)
   }
-  const estudosTv = useMemo(() => ativos.flatMap((c) => scannerStudies[c] ?? []), [ativos])
 
-  const { sinais, ultimoAtivo } = useSinaisEstudos(vista === "negociar" ? simbolo.symbol : null, ativos)
+  const { sinais, ultimoAtivo } = useSinaisEstudos(simbolo.symbol, ativos)
 
   const usarSinal = () => {
+    // Só pré-preenche: nunca envia, nem com a negociação num clique ligada.
     if (!ultimoAtivo || !rascunho) return
     rascunho.aplicar({ lado: ultimoAtivo.direcao, entrada: ultimoAtivo.entrada, sl: ultimoAtivo.sl, tp: ultimoAtivo.tp, origem: "scanner", ideiaRef: ultimoAtivo.id, escolhido: false })
   }
 
   const spread = preco ? Math.round((preco.ask - preco.bid) * Math.pow(10, simbolo.digits)) : null
-  const negociar = vista === "negociar"
 
   return (
     <div className="overflow-hidden rounded-md border" style={{ background: TV.fundo, borderColor: TV.borda, color: TV.texto }}>
-      {/* Linha 1 — símbolo, bid/ask, e o interruptor das vistas */}
+      {/* Linha 1 — símbolo, bid/spread/ask, ⚡ */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-2.5 py-1.5" style={{ borderColor: TV.borda }}>
         <div className="flex min-w-0 items-baseline gap-2">
           <span className="text-[14px] font-bold text-white">{simbolo.symbol}</span>
@@ -113,19 +103,12 @@ export default function FundedGrafico(props: GraficoProps) {
           <span style={{ color: TV.textoFraco }}>{spread ?? "—"}</span>
           <span className="rounded px-1.5 py-0.5" style={{ color: "#8FA8FF", background: "rgba(41,98,255,0.14)" }}>{px(preco?.ask, simbolo.digits)}</span>
         </div>
-        <div className="ml-auto flex overflow-hidden rounded border text-[11.5px]" style={{ borderColor: TV.borda }}>
-          <button onClick={() => mudarVista("analise")} className="px-2.5 py-1" style={vista === "analise" ? { background: TV.azul, color: "#fff" } : { color: TV.textoFraco }}>
-            Análise (TradingView + estudos)
-          </button>
-          <button onClick={() => mudarVista("negociar")} className="px-2.5 py-1" style={negociar ? { background: TV.azul, color: "#fff" } : { color: TV.textoFraco }}>
-            Negociar (linhas arrastáveis)
-          </button>
-        </div>
+        {podeNegociar && rascunho && <div className="ml-auto h-7"><InterruptorUmClique /></div>}
       </div>
 
-      {/* Linha 2 — timeframes, estudos, ferramentas */}
+      {/* Linha 2 — timeframes, estudos (setas), ferramentas */}
       <div className="flex items-center gap-1 overflow-x-auto border-b px-2 py-1 text-[12px]" style={{ borderColor: TV.borda }}>
-        {!(negociar && motor === "tv") && TIMEFRAMES.map((t) => (
+        {motor !== "tv" && TIMEFRAMES.map((t) => (
           <button key={t.chave} onClick={() => setTf(t.chave)} className="shrink-0 rounded px-2 py-1 font-medium hover:bg-white/5" style={{ color: tf === t.chave ? TV.azul : TV.texto }}>
             {t.rotulo}
           </button>
@@ -136,13 +119,13 @@ export default function FundedGrafico(props: GraficoProps) {
         ) : permitidos.map((e) => {
           const on = ativos.includes(e.chave)
           return (
-            <button key={e.chave} onClick={() => alternarEstudo(e.chave)} className="flex shrink-0 items-center gap-1 rounded border px-2 py-0.5 text-[11px]"
+            <button key={e.chave} onClick={() => alternarEstudo(e.chave)} title={`Setas dos sinais ${e.rotulo} no gráfico`} className="flex shrink-0 items-center gap-1 rounded border px-2 py-0.5 text-[11px]"
               style={on ? { borderColor: e.cor, color: e.cor, background: `${e.cor}1f` } : { borderColor: TV.borda, color: TV.textoFraco }}>
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: on ? e.cor : TV.textoFraco }} /> {e.rotulo}
             </button>
           )
         })}
-        {negociar && podeNegociar && rascunho && (
+        {podeNegociar && rascunho && (
           <div className="ml-auto flex shrink-0 gap-1 pl-2">
             <button onClick={() => setModo(modo === "buy" ? null : "buy")} className="flex items-center gap-1 rounded border px-2 py-1"
               style={modo === "buy" ? { borderColor: TV.tp, background: "rgba(8,153,129,0.2)", color: "#fff" } : { borderColor: TV.borda, color: TV.tp }}>
@@ -156,7 +139,7 @@ export default function FundedGrafico(props: GraficoProps) {
         )}
       </div>
 
-      {negociar && ultimoAtivo && rascunho && podeNegociar && (
+      {ultimoAtivo && rascunho && podeNegociar && (
         <div className="flex flex-wrap items-center gap-2 border-b px-2.5 py-1.5 text-[11.5px]" style={{ borderColor: TV.borda, background: `${ultimoAtivo.estudo.cor}10` }}>
           <Zap className="h-3.5 w-3.5" style={{ color: ultimoAtivo.estudo.cor }} />
           <span>
@@ -169,19 +152,18 @@ export default function FundedGrafico(props: GraficoProps) {
         </div>
       )}
 
-      {vista == null || motor === "a_verificar" ? (
-        <div className={props.alturaClasse ?? "h-[340px] md:h-[440px]"} />
-      ) : vista === "analise" ? (
-        <div>
-          <TvChartEmbed tvSymbol={tvSymbolDe(simbolo)} interval={String(tfPorChave(tf).seg >= 86400 ? "D" : tfPorChave(tf).seg / 60)} height={420} studies={estudosTv} />
-          <p className="px-2 py-1.5 text-center text-[10.5px]" style={{ color: TV.textoFraco }}>
-            Análise com os estudos MTM. O ticket abaixo negoceia daqui; ao carregar em Long/Short o gráfico passa às linhas arrastáveis. Com a biblioteca TradingView (pedida), análise e linhas ficam no mesmo gráfico.
-          </p>
-        </div>
+      {motor === "a_verificar" ? (
+        <div className={props.alturaClasse ?? "h-[400px] md:h-[500px]"} />
       ) : motor === "tv" ? (
-        <GraficoTradingView {...props} sinais={sinais} sinalAtivo={ultimoAtivo} modo={modo} setModo={setModo} onFalhou={() => setMotor("leve")} />
+        // Adormecido: só com a Trading Platform instalada. Sem primitivas de trading ou a falhar → Lightweight.
+        <GraficoTradingView {...props} sinais={sinais} sinalAtivo={ultimoAtivo} modo={modo} setModo={setModo} onFalhou={() => setMotor("leve")} onSemLinhas={() => { setSemTradingPlatform(true); setMotor("leve") }} />
       ) : (
         <GraficoLeve {...props} sinais={sinais} sinalAtivo={ultimoAtivo} tf={tf} modo={modo} setModo={setModo} />
+      )}
+      {semTradingPlatform && (
+        <p className="border-t px-2 py-1 text-center text-[10.5px]" style={{ borderColor: TV.borda, color: TV.textoFraco }}>
+          A biblioteca TradingView instalada é «Advanced Charts»: linhas de ordens exigem a biblioteca Trading Platform — a usar o gráfico Lightweight.
+        </p>
       )}
     </div>
   )

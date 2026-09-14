@@ -6,6 +6,7 @@ import { type Direcao, normalizarVolume, pips } from "@/lib/mtmfunded/simulado/m
 import { percentagemDeUsd, valorDoNivel } from "@/lib/mtmfunded/simulado/niveis-financeiros"
 import { px, usd } from "./api"
 import { type ModoNiveis, type ModoVolume, useRascunho } from "./rascunho-ordem"
+import { EtiquetaUmClique, InterruptorUmClique, useUmClique } from "./um-clique"
 
 /**
  * O TICKET — comprar/vender com tudo à vista ANTES de confirmar: margem, comissão e valor do pip.
@@ -28,6 +29,7 @@ export interface Prefill { direcao?: Direcao; sl?: number | null; tp?: number | 
  */
 export default function FundedTicket(props: { margemLivre: number | null }) {
   const k = useRascunho()
+  const umClique = useUmClique()
   const { r, simbolo: s, preco, volume, setVolume, erros, resumo, saldo } = k
   const modo = r.modoNiveis
   const emRisco = k.modoVolume !== "lote"
@@ -109,14 +111,32 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
 
   const verLado = (lado: Direcao) => { if (!r.escolhido) k.set({ lado }) }
   const premir = (lado: Direcao) => {
+    // Num clique não há pré-visualização por pressão longa: tocar é enviar.
+    if (umClique.ligado) return
     segurou.current = false
     temporizador.current = setTimeout(() => { segurou.current = true; k.set({ lado, visivel: true }) }, 350)
   }
   const largar = () => { if (temporizador.current) clearTimeout(temporizador.current) }
+  // Num clique: o lado muda primeiro (o SL/TP em pips/$/% recalcula-se para esse lado) e a ordem
+  // sai no render seguinte, já validada com os níveis desse lado.
+  const [pedidoEnvio, setPedidoEnvio] = useState<{ lado: Direcao; n: number } | null>(null)
   const escolher = (lado: Direcao) => {
     if (segurou.current) { segurou.current = false; return }
+    if (umClique.ligado) {
+      if (k.aEnviar || umClique.ocupado) return
+      setPedidoEnvio((p) => ({ lado, n: (p?.n ?? 0) + 1 }))
+      k.set({ lado, visivel: true })
+      return
+    }
     k.set({ lado, escolhido: true, visivel: true })
   }
+  useEffect(() => {
+    if (!pedidoEnvio || pedidoEnvio.lado !== r.lado) return
+    setPedidoEnvio(null)
+    // Com erros não sai nada: abre-se o resumo, onde os erros ficam à vista.
+    if (k.temErros || k.entrada == null) k.set({ escolhido: true })
+    else void k.enviar()
+  }, [pedidoEnvio, r.lado]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const semPreco = !preco?.fresco
   const Erro = ({ t }: { t?: string }) => (t ? <p className="text-[11px] text-rose-300">{t}</p> : null)
@@ -125,7 +145,7 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
     <div className="space-y-2.5 rounded-xl border border-white/10 bg-[#131722] p-3 text-[12px]">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[15px] font-bold text-white">{s.symbol}</p>
+          <p className="flex items-center gap-1.5 text-[15px] font-bold text-white">{s.symbol} <EtiquetaUmClique /></p>
           <p className="text-[10.5px] text-zinc-500">{s.nome ?? ""} · spread {s.spread_pontos} pts</p>
         </div>
         <div className="flex gap-1 rounded-lg bg-white/5 p-0.5 text-[11px]">
@@ -252,13 +272,14 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
       <Erro t={erros.tp} />
       <Erro t={erros.margem} />
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="flex gap-2">
+      <div className="grid flex-1 grid-cols-2 gap-2">
         {(["sell", "buy"] as const).map((lado) => {
           const ativo = r.lado === lado
           const venda = lado === "sell"
           return (
             <button
-              key={lado} disabled={semPreco}
+              key={lado} disabled={semPreco || (umClique.ligado && (k.aEnviar || umClique.ocupado))}
               onMouseEnter={() => verLado(lado)} onFocus={() => verLado(lado)}
               onPointerDown={() => premir(lado)} onPointerUp={largar} onPointerLeave={largar}
               onContextMenu={(e) => e.preventDefault()}
@@ -273,6 +294,8 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
             </button>
           )
         })}
+      </div>
+      <InterruptorUmClique />
       </div>
       {semPreco && <p className="text-center text-[11px] text-amber-300">Sem preço ao vivo — mercado fechado ou motor parado.</p>}
 
@@ -298,7 +321,7 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
           {k.erroEnvio && <p className="text-[11px] text-rose-300">{k.erroEnvio}</p>}
           <div className="flex gap-2 pt-1">
             <button onClick={() => k.set({ escolhido: false })} className="flex-1 rounded-lg border border-white/10 py-2 text-zinc-300">Cancelar</button>
-            <button disabled={k.aEnviar || k.temErros || semPreco} onClick={() => void k.enviar()} className={`flex-[2] rounded-lg py-2 font-bold text-white disabled:opacity-40 ${r.lado === "buy" ? "bg-[#089981]" : "bg-[#F23645]"}`}>
+            <button disabled={k.aEnviar || umClique.ocupado || k.temErros || semPreco} onClick={() => void k.enviar()} className={`flex-[2] rounded-lg py-2 font-bold text-white disabled:opacity-40 ${r.lado === "buy" ? "bg-[#089981]" : "bg-[#F23645]"}`}>
               {k.aEnviar ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : `Confirmar ${r.lado === "buy" ? "compra" : "venda"}${r.tipo === "mercado" ? "" : ` ${r.tipo}`}`}
             </button>
           </div>
