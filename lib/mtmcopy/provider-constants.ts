@@ -20,9 +20,9 @@ export const CANONICAL_SENSEI_ACCOUNT_ID = 'a5a1dddd-0099-4d67-98f1-86b65aad5845
 /**
  * ⚠️ REFORMADO a 2026-09-04, e por isso VAZIO.
  *
- * A conta que estava aqui (MT5 34744071) passou a ser a da Golden Astro — o Ricardo renomeou-a
- * na MetaApi. Duas estratégias na mesma conta partilham a porta de saída: quem subscrevesse uma
- * levava as trades da outra. O Sensei sai; a Golden Astro fica.
+ * A conta que estava aqui (MT5 34744071) foi entregue a outra estratégia (entretanto removida,
+ * 2026-09-14). Duas estratégias na mesma conta partilham a porta de saída: quem subscrevesse uma
+ * levava as trades da outra.
  *
  * O Sensei volta quando a conta MT5 {@link SENSEI_MT5_LOGIN_NOVO} estiver ligada — ligar uma
  * conta exige a password dela, que vai do Ricardo directamente para o sistema. Até lá o id fica
@@ -60,49 +60,19 @@ export const CANONICAL_TRADE_IDEAS_STRATEGY_ID = '5IHE'
 export const CANONICAL_SENSEI_STRATEGY_ID = 'Oca7'
 export const CANONICAL_GOLDKILLER_STRATEGY_ID = 'SDNb'
 export const CANONICAL_BOOSTER_STRATEGY_ID = 'pIrJ'
-/**
- * Gold Did Premium — conta mestre `18fddc91` ("MT Gold Did"), PU Prime Demo, MT5 700161536,
- * a publicar a estratégia CopyFactory **tKGT**.
- *
- * **Dois ids mortos já apanhados aqui.** Primeiro apontava para `4dacaf5a` (404 na MetaApi, a
- * conta antiga do Alcy) e depois para `ac351c88` com a estratégia `e68I` — que também não existe
- * na CopyFactory. Ordens enviadas para uma conta 404 morrem sem chegar a lado nenhum, e o único
- * sinal disso é um erro que ninguém lê.
- *
- * **Cuidado ao auditar:** a `ac351c88` e a `18fddc91` são a MESMA conta de corretora (o mesmo
- * login 700161536) registada DUAS vezes na MetaApi. Só a `18fddc91` publica a `tKGT`, por isso é
- * essa que manda — escolher pelo login davam-se as duas por boas.
- *
- * Executa os sinais do grupo Gold Did com gestão PRÓPRIA (lote fixo, saídas a meias, trailing
- * pelo motor de preço) — não é a gestão do Premium.
- */
-export const CANONICAL_GOLDDID_ACCOUNT_ID = '18fddc91-0e64-4b30-b8f8-0ea5743fa5f8'
-export const CANONICAL_GOLDDID_STRATEGY_ID = 'tKGT'
-/** Como a estratégia se chama para quem a vai copiar. */
-export const GOLDDID_NOME = 'Gold Did Premium'
-
-/**
- * Lote FIXO da perna Gold Did, e como se reparte pelas saídas.
- *
- * 0,02 abre-se para poder sair em duas metades de 0,01 — que é o lote mínimo do broker. Com 0,01
- * de origem não havia parcial nenhuma possível: metade de 0,01 é 0,005, que a corretora recusa,
- * e a trade ia inteira até ao fim.
- */
-export const GOLDDID_LOTE = 0.02
-export const GOLDDID_SAIDAS = { tp1: 50, tp2: 50, tp3: 0 } as const
 /** Copy Trader Ricardo Garcia — conta intermédia PU Prime (0f38257a) que copia o Premium
  *  (MxsR) e revende como estratégia própria su0a para os slaves do Ricardo Garcia. */
 export const CANONICAL_COPYTRADER_RG_ACCOUNT_ID = '0f38257a-ba12-4f6c-b20c-9139693b3674'
 export const CANONICAL_COPYTRADER_RG_STRATEGY_ID = 'su0a'
 
 /**
- * Golden Moves — conta PU Prime LIVE 34744077 (a4ea0c45), com papel de PROVIDER na CopyFactory,
+ * Aurum Flow — conta PU Prime LIVE 34744077 (a4ea0c45), com papel de PROVIDER na CopyFactory,
  * a publicar a estratégia vT8w.
  *
  * Estava apontado à conta demo do Alcy (58aeb8d6 / GdMv), e isso estava errado por duas razões.
  * A primeira é que a demo do Alcy tem o mesmo login MT5 (700147340) que uma segunda conta
  * MetaApi SUBSCRITA ao Premium — a mesma conta de corretora registada duas vezes, uma a receber
- * cópias do Premium e a outra a republicar tudo o que lá acontecesse como Golden Moves. A
+ * cópias do Premium e a outra a republicar tudo o que lá acontecesse como Aurum Flow. A
  * segunda é que a GdMv já não existe: quem a copiasse não copiava nada.
  *
  * A fonte a sério é a conta que executa mesmo os sinais do canal (alimentada pelo PrimeSync), e
@@ -110,64 +80,6 @@ export const CANONICAL_COPYTRADER_RG_STRATEGY_ID = 'su0a'
  */
 export const CANONICAL_AURUMFLOW_ACCOUNT_ID = 'a4ea0c45-3dd1-4b55-bd2a-7f44d8d6884b'
 export const CANONICAL_AURUMFLOW_STRATEGY_ID = 'vT8w'
-/** @deprecated nome antigo — "Golden Moves" passou a "Aurum Flow" a 2026-08-27. */
-export const CANONICAL_GOLDENMOVES_ACCOUNT_ID = CANONICAL_AURUMFLOW_ACCOUNT_ID
-/** @deprecated idem. */
-export const CANONICAL_GOLDENMOVES_STRATEGY_ID = CANONICAL_AURUMFLOW_STRATEGY_ID
-
-/**
- * GOLDEN ASTRO — conta PRÓPRIA, separada da Golden Moves.
- *
- * Porquê separada: uma estratégia CopyFactory publica tudo o que acontece na conta, e não sabe
- * distinguir quem abriu cada ordem. Com as duas estratégias na mesma conta, quem subscrevesse a
- * Golden Moves levava também as trades da Golden Astro — e ao contrário. Já aconteceu com a
- * conta Monaxa. Uma estratégia, uma conta.
- *
- * A conta ainda NÃO existe: ligar uma conta MT5 à MetaApi exige a password dela, que tem de ir
- * do Ricardo directamente para o sistema (Definições → ligar conta, ou /api/mtmcopy/provision).
- * Enquanto o id não estiver aqui, `goldenAstroPronta()` devolve false e a estratégia não abre
- * nada — falha fechada, que é o único lado seguro para falhar quando o outro lado é dinheiro.
- */
-export const GOLDENASTRO_PROVIDER_ACCOUNT_ID =
-  process.env.METAAPI_PROVIDER_GOLDENASTRO_ACCOUNT_ID?.trim() ||
-  // MT5 34744071 — a conta que era do Sensei e que o Ricardo renomeou na MetaApi para
-  // «MTM Auto Golden Astro» a 04/09. O Sensei foi reformado dela no mesmo dia.
-  '16f4f233-5cbe-4fe9-9530-89a58965bfe0'
-
-/** Id reservado na CopyFactory a 04/09 — livre e à espera da conta. */
-export const GOLDENASTRO_PROVIDER_STRATEGY_ID = 'jbSS'
-export const GOLDENASTRO_NOME = 'MTM Auto Golden Astro'
-
-/**
- * Com que outra estratégia é que a conta da Golden Astro colide, se colidir.
- *
- * A conta que ela recebeu é a que o Sensei usa (MT5 34744071, estratégia Oca7). Renomear na
- * MetaApi muda o rótulo, não muda quem publica de lá: enquanto o Sensei continuar a executar
- * nessa conta, as duas estratégias saem pela mesma porta e quem subscrever uma leva as trades
- * da outra. É o problema da conta Monaxa outra vez, e foi por causa dele que a Golden Astro
- * deixou de partilhar conta com a Golden Moves.
- */
-export function goldenAstroColideCom(): string | null {
-  const outras: Array<[string, string]> = [
-    [SENSEI_PROVIDER_ACCOUNT_ID, 'MTM Auto Sensei'],
-    [CANONICAL_PREMIUM_ACCOUNT_ID, 'MTM Auto Premium'],
-    [CANONICAL_AURUMFLOW_ACCOUNT_ID, 'MTM Auto Aurum Flow'],
-    [CANONICAL_GOLDDID_ACCOUNT_ID, 'Gold Did Premium'],
-  ]
-  const nome = outras.find(([id]) => id && id === GOLDENASTRO_PROVIDER_ACCOUNT_ID)?.[1]
-  return nome ?? null
-}
-
-/**
- * A Golden Astro pode executar?
- *
- * Precisa de conta E de que essa conta não seja já a porta de saída de outra estratégia. A
- * segunda condição é a que impede alguém de ligar o interruptor e descobrir só depois que os
- * subscritores do Sensei passaram a receber trades da Golden Astro.
- */
-export function goldenAstroPronta(): boolean {
-  return GOLDENASTRO_PROVIDER_ACCOUNT_ID.length > 0 && goldenAstroColideCom() === null
-}
 
 /**
  * As contas onde o MOTOR EM TEMPO REAL corre — e só estas.
@@ -191,15 +103,11 @@ export const CONTAS_MOTOR_TEMPO_REAL: string[] = [
   // O Sensei está sem conta (reformado da 34744071). Entra sozinho quando a nova existir.
   ...(SENSEI_PROVIDER_ACCOUNT_ID ? [SENSEI_PROVIDER_ACCOUNT_ID] : []), // MTM Auto Sensei · Oca7
   CANONICAL_AURUMFLOW_ACCOUNT_ID,    // MTM Auto Aurum Flow · MT5 34744077 · vT8w
-  // Sem esta linha o motor nunca visitava a conta do Gold Did: abria a trade e deixava-a
-  // entregue ao TP da ordem, sem parciais, sem break-even e sem trailing.
-  CANONICAL_GOLDDID_ACCOUNT_ID,      // Gold Did Premium · MT5 700161536 (demo) · tKGT
-  // O layering da Golden Moves depende do motor: é ele que põe a entrada de mercado em
-  // break-even quando a limite enche, e que arrasta o runner. Sem esta linha a estratégia
+  // O layering da Aurum Flow depende do motor: é ele que põe a entrada de mercado em
+  // break-even quando a limite enche, e que arrasta o runner. Sem esta conta na lista a estratégia
   // abria as duas camadas e ficava a olhar para elas.
-  // A Golden Astro entra sozinha assim que a conta existir. A lista tem de ficar sem strings
-  // vazias: um '' aqui faria `ehContaDeMotor('')` dizer que sim a uma conta sem id.
-  ...(GOLDENASTRO_PROVIDER_ACCOUNT_ID ? [GOLDENASTRO_PROVIDER_ACCOUNT_ID] : []), // · jbSS
+  // A lista tem de ficar sem strings vazias: um '' aqui faria `ehContaDeMotor('')` dizer que sim
+  // a uma conta sem id.
 ]
 
 export function ehContaDeMotor(accountId: string | null | undefined): boolean {
@@ -272,22 +180,6 @@ export const MTM_COPY_STRATEGY_CATALOG: Record<
       'BÓNUS e não se levanta. Espelha o Premium a lote fixo de 0,01 e aceita Tap to Trade. ' +
       'Serve para multiplicar um saldo pequeno sabendo que o pode perder todo — não é uma ' +
       'estratégia de acumulação. Só com dinheiro que aceitas perder.',
-  },
-  [CANONICAL_GOLDDID_STRATEGY_ID]: {
-    title: 'Gold Did Premium',
-    publicLabel: 'Gold Did Premium',
-    // A descrição antiga contava a gestão que já não é esta: dizia «stop para a entrada aos 50
-    // pips, sem trailing, sai no segundo alvo». Passou a haver trailing, e a posição sai em duas
-    // metades. Deixá-la ficar era descrever ao cliente uma estratégia diferente da que ele copia.
-    description:
-      // O "mínimo 500 USD" das outras estratégias vem do dimensionamento a 1% do saldo. Esta
-      // segue-se a LOTE FIXO, por isso a régua é outra: 0,01 por cada 250 USD, a partir de 100.
-      // Deixar aqui o 500 punha o catálogo a contradizer o PDF que o cliente tem na mão.
-      'Ouro, a seguir o grupo Gold Did. Abre uma posição e sai em duas metades — uma no ' +
-      'primeiro alvo e outra no segundo — com o stop a subir para a entrada pelo caminho e o ' +
-      'trailing a acompanhar o preço até ao fecho. Segue-se a lote fixo: 0,01 por cada 250 USD ' +
-      'de saldo. Com 100 USD um stop normal custa cerca de 5% da conta — a partir de 250 fica ' +
-      'nos 2%.',
   },
   [CANONICAL_COPYTRADER_RG_STRATEGY_ID]: {
     title: 'Copy Trader Ricardo Garcia',

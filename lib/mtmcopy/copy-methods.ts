@@ -6,8 +6,7 @@ import {
   CANONICAL_SENSEI_STRATEGY_ID,
   CANONICAL_GOLDKILLER_STRATEGY_ID,
   CANONICAL_BOOSTER_STRATEGY_ID,
-  CANONICAL_GOLDENMOVES_STRATEGY_ID,
-  CANONICAL_GOLDDID_STRATEGY_ID,
+  CANONICAL_AURUMFLOW_STRATEGY_ID,
   MTM_COPY_STRATEGY_CATALOG,
   mtmStrategyPublicLabel,
 } from './provider-constants'
@@ -16,7 +15,19 @@ import {
 export type MtmcopyCopyMethod = 'telegram_group' | 'strategy' | 'master_slave'
 
 export type MtmcopyTelegramGroup =
-  | 'premium' | 'trade_ideas' | 'sensei' | 'goldkiller' | 'forex_swings' | 'golden_moves'
+  | 'premium' | 'trade_ideas' | 'sensei' | 'goldkiller' | 'forex_swings' | 'aurum_flow'
+
+/**
+ * Chave ANTIGA da Aurum Flow, gravada em `telegram_group`/`telegram_groups` das ligações.
+ * Alias temporário (2026-09-14): continua a ser lida e é traduzida para `aurum_flow`. A BD foi
+ * migrada na 067; retirar este alias depois de 2026-10-14 (30 dias).
+ */
+const CHAVE_ANTIGA_AURUM_FLOW = 'golden_moves'
+
+/** Traduz a chave antiga para a nova; tudo o resto passa igual. */
+function traduzirGrupo(v: unknown): unknown {
+  return v === CHAVE_ANTIGA_AURUM_FLOW ? 'aurum_flow' : v
+}
 
 /**
  * Grupos de sinais OFERECIDOS ao cliente como fontes copiáveis — TODOS (Ricardo 2026-08-19).
@@ -39,7 +50,7 @@ export const MTMCOPY_TELEGRAM_GROUP_IDS: MtmcopyTelegramGroup[] = [
   'trade_ideas',
   'forex_swings',
   'goldkiller',
-  'golden_moves',
+  'aurum_flow',
 ]
 
 /** Grupo de sinais → estratégia CopyFactory canónica (fonte real da cópia).
@@ -50,14 +61,14 @@ export const TELEGRAM_GROUP_STRATEGY_ID: Record<MtmcopyTelegramGroup, string> = 
   sensei: CANONICAL_SENSEI_STRATEGY_ID,
   goldkiller: CANONICAL_GOLDKILLER_STRATEGY_ID,
   forex_swings: CANONICAL_TRADE_IDEAS_STRATEGY_ID,
-  golden_moves: CANONICAL_GOLDENMOVES_STRATEGY_ID,
+  aurum_flow: CANONICAL_AURUMFLOW_STRATEGY_ID,
 }
 
 function isTelegramGroup(v: unknown): v is MtmcopyTelegramGroup {
   return (
     v === 'premium' || v === 'trade_ideas' || v === 'sensei' ||
     v === 'goldkiller' || v === 'forex_swings' ||
-    v === 'golden_moves'
+    v === 'aurum_flow'
   )
 }
 
@@ -133,7 +144,7 @@ export const TELEGRAM_GROUPS: {
     chatId: '-1004362819270',
   },
   {
-    id: 'golden_moves',
+    id: 'aurum_flow',
     channelKey: 'premium-signals',
     title: 'MTM Auto Aurum Flow',
     description:
@@ -200,28 +211,17 @@ export function getMtmStrategyOptions(): MtmCopyStrategyOption[] {
     })
   }
 
-  // Gold Did — segue os sinais Premium (Ouro) com gestão própria; copiável por qualquer membro.
-  const goldDidCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_GOLDDID_STRATEGY_ID]
-  if (goldDidCatalog) {
-    out.push({
-      id: CANONICAL_GOLDDID_STRATEGY_ID,
-      channelKey: 'premium-signals',
-      title: goldDidCatalog.title,
-      description: goldDidCatalog.description,
-    })
-  }
-
   // Fontes novas (2026-08-24): cada uma executa na SUA conta provedora, alimentada pelo canal
   // com o mesmo nome. Aparecem aqui e nos Grupos de sinais — são os dois caminhos pelos quais
   // um cliente pode subscrever. Sem subscrição explícita nenhuma conta as executa.
   //
-  // `channelKey: null` é deliberado, e importante. O Golden Moves executa na conta dele
+  // `channelKey: null` é deliberado, e importante. A Aurum Flow executa na conta dela
   // (alimentada pelo PrimeSync) e copia-se SÓ por CopyFactory — como o Sensei e o GoldKiller.
   // Estava declarado como 'premium-signals', e isso fazia com que `strategyPickMatchesChannel`
-  // desse verdadeiro para o canal Premium: quem escolhesse Golden Moves passava a receber, por
+  // desse verdadeiro para o canal Premium: quem escolhesse Aurum Flow passava a receber, por
   // execução directa, os sinais do Premium que nunca pediu.
   for (const [id, canal] of [
-    [CANONICAL_GOLDENMOVES_STRATEGY_ID, null],
+    [CANONICAL_AURUMFLOW_STRATEGY_ID, null],
   ] as const) {
     const cat = MTM_COPY_STRATEGY_CATALOG[id]
     if (cat) out.push({ id, channelKey: canal, title: cat.title, description: cat.description })
@@ -234,9 +234,10 @@ export function normalizeTelegramGroups(
   groups: unknown,
   single?: MtmcopyTelegramGroup | null,
 ): MtmcopyTelegramGroup[] {
-  const fromArray = Array.isArray(groups) ? groups.filter(isTelegramGroup) : []
+  const fromArray = Array.isArray(groups) ? groups.map(traduzirGrupo).filter(isTelegramGroup) : []
   if (fromArray.length) return [...new Set(fromArray)]
-  if (isTelegramGroup(single)) return [single]
+  const unico = traduzirGrupo(single)
+  if (isTelegramGroup(unico)) return [unico]
   return ['premium']
 }
 
@@ -244,9 +245,10 @@ export function parseTelegramGroups(conn: {
   telegram_groups?: string[] | null
   telegram_group?: MtmcopyTelegramGroup | null
 }): MtmcopyTelegramGroup[] {
-  const fromArray = (conn.telegram_groups ?? []).filter(isTelegramGroup)
+  const fromArray = (conn.telegram_groups ?? []).map(traduzirGrupo).filter(isTelegramGroup)
   if (fromArray.length) return [...new Set(fromArray)]
-  if (isTelegramGroup(conn.telegram_group)) return [conn.telegram_group]
+  const unico = traduzirGrupo(conn.telegram_group)
+  if (isTelegramGroup(unico)) return [unico]
   // Retrocompatibilidade: ligações antigas nunca gravaram grupos e dependem deste default.
   // ATENÇÃO: "sem grupos" passa a valer "Premium" — por isso as contas de Tap to Trade são
   // excluídas antes de chegar aqui (ver connectionMatchesChannel em sources.ts).
@@ -294,7 +296,7 @@ export async function getMtmStrategyOptionsAsync(): Promise<MtmCopyStrategyOptio
       : getMtmStrategyOptions()
   ).filter((o) => !NON_STRATEGY_IDS.has(o.id))
 
-  // Estratégias SÓ-CATÁLOGO (copiáveis, mas sem rota de execução de sinais) — ex.: 20X Booster, Gold Did.
+  // Estratégias SÓ-CATÁLOGO (copiáveis, mas sem rota de execução de sinais) — ex.: 20X Booster.
   const boosterCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_BOOSTER_STRATEGY_ID]
   if (boosterCatalog && !list.some((o) => o.id === CANONICAL_BOOSTER_STRATEGY_ID)) {
     list.push({
@@ -304,18 +306,9 @@ export async function getMtmStrategyOptionsAsync(): Promise<MtmCopyStrategyOptio
       description: boosterCatalog.description,
     })
   }
-  const goldDidCatalog = MTM_COPY_STRATEGY_CATALOG[CANONICAL_GOLDDID_STRATEGY_ID]
-  if (goldDidCatalog && !list.some((o) => o.id === CANONICAL_GOLDDID_STRATEGY_ID)) {
-    list.push({
-      id: CANONICAL_GOLDDID_STRATEGY_ID,
-      channelKey: 'premium-signals',
-      title: goldDidCatalog.title,
-      description: goldDidCatalog.description,
-    })
-  }
 
   // Visibilidade ao CLIENTE (/mtmcopy · «Estratégia MTM»): por defeito só Premium + Sensei.
-  // O admin pode expor outras (Booster, Gold Did, …) via site_settings 'mtmcopy_client_strategies'
+  // O admin pode expor outras (Booster, …) via site_settings 'mtmcopy_client_strategies'
   // = {"ids": ["MxsR","mADd", …]}. Vazio/ausente → default Premium+Sensei.
   const visibleIds = await getClientVisibleStrategyIds()
   const filtered = list.filter((o) => visibleIds.includes(o.id))
@@ -394,9 +387,9 @@ const TELEGRAM_GROUP_SHORT_LABEL: Record<MtmcopyTelegramGroup, string> = {
   sensei: 'Sensei Scanner',
   goldkiller: 'GoldKiller · Ouro',
   forex_swings: 'Forex Swings',
-  // A CHAVE fica `golden_moves` de propósito: está gravada nas ligações dos clientes, e trocá-la
-  // desligava a cópia a quem a tem escolhida. O que muda é o nome que se lê.
-  golden_moves: 'MTM Auto Aurum Flow',
+  // Chave renomeada a 2026-09-14 (era `golden_moves`); a antiga continua a ser lida por
+  // `traduzirGrupo` durante 30 dias.
+  aurum_flow: 'MTM Auto Aurum Flow',
 }
 
 export function telegramGroupsLabel(groups: MtmcopyTelegramGroup[]): string {
