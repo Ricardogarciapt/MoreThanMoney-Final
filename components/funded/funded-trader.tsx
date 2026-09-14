@@ -12,6 +12,7 @@ import FundedTicket, { type Prefill } from "./funded-ticket"
 import { RascunhoProvider, useRascunho, type PedidoOrdem } from "./rascunho-ordem"
 import FundedPosicoes from "./funded-posicoes"
 import FundedWebhook from "./funded-webhook"
+import FundedCopier from "./funded-copier"
 
 /**
  * O WEBTRADER DE UMA CONTA — cabeçalho de métricas, lista, gráfico, ticket e posições.
@@ -262,13 +263,17 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
         )}
         {vista === "posicoes" && posicoesPainel("posicoes")}
         {vista === "historico" && posicoesPainel("historico")}
-        {vista === "conta" && <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedWebhook accountId={accountId} podeGerir={dados.modo === "master"} /></div>}
+        {vista === "conta" && <div className="space-y-2">
+          <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedCopier accountId={accountId} podeGerir={dados.modo === "master"} /></div>
+          <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedWebhook accountId={accountId} podeGerir={dados.modo === "master"} /></div>
+        </div>}
       </div>}
 
       {/* Desktop: lista | gráfico+ticket, posições por baixo */}
       {desktop && <div className="grid grid-cols-[260px_1fr] gap-2">
         <div className="space-y-2">
           <FundedWatchlist precos={vivos} selecionado={simbolo?.symbol ?? null} onSelecionar={selecionar} onVisiveis={setVisiveis} />
+          <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedCopier accountId={accountId} podeGerir={dados.modo === "master"} /></div>
           <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedWebhook accountId={accountId} podeGerir={dados.modo === "master"} /></div>
         </div>
         <div className="space-y-2">

@@ -19,7 +19,7 @@ type Switches = {
   t2t_price_monitor: boolean
   trailing_tempo_real: boolean
   premium_master_exec: boolean
-  funded_copier?: boolean
+  funded_copier: boolean
 }
 type PerpsRules = {
   enabled: boolean

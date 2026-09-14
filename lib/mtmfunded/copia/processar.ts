@@ -427,14 +427,16 @@ export function comLimite(condutor: CondutorDestino, maxPorConta = 4): CondutorD
     ativos.set(conta, Math.max(0, (ativos.get(conta) ?? 1) - 1))
     espera.get(conta)?.shift()?.()
   }
-  const envolver = <A extends unknown[], R>(conta: (...a: A) => string, f: (...a: A) => Promise<R>) =>
-    async (...a: A): Promise<R> => { const k = conta(...a); await entrar(k); try { return await f(...a) } finally { sair(k) } }
+  const vez = async <R>(conta: string, f: () => Promise<R>): Promise<R> => {
+    await entrar(conta)
+    try { return await f() } finally { sair(conta) }
+  }
   return {
-    contexto: envolver((c: string) => c, condutor.contexto.bind(condutor)),
-    posicoes: envolver((c: string) => c, condutor.posicoes.bind(condutor)),
-    abrir: envolver((o) => o.accountId, condutor.abrir.bind(condutor)),
-    modificar: envolver((c: string) => c, condutor.modificar.bind(condutor)),
-    fechar: envolver((c: string) => c, condutor.fechar.bind(condutor)),
-    aceitaClientId: condutor.aceitaClientId.bind(condutor),
+    contexto: (c, s, d) => vez(c, () => condutor.contexto(c, s, d)),
+    posicoes: (c) => vez(c, () => condutor.posicoes(c)),
+    abrir: (o) => vez(o.accountId, () => condutor.abrir(o)),
+    modificar: (c, id, sl, tp) => vez(c, () => condutor.modificar(c, id, sl, tp)),
+    fechar: (c, id, v) => vez(c, () => condutor.fechar(c, id, v)),
+    aceitaClientId: (c) => condutor.aceitaClientId(c),
   }
 }
