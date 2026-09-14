@@ -38,6 +38,15 @@ export interface ClipeProposto {
   duracaoSeg: 15 | 30 | 60
   ctaPalavra: string
   caption: string
+  /** Cortes para imagem de apoio (B-roll), em segundos RELATIVOS ao início do clipe. */
+  broll: BRoll[]
+}
+
+export interface BRoll {
+  inicio: number
+  fim: number
+  /** Em inglês, para o gerador de imagem. */
+  descricao: string
 }
 
 /**
@@ -86,6 +95,16 @@ REGRAS DURAS:
   clipe mau custa mais do que um clipe a menos: fica publicado, com a marca em cima.
 · Português de Portugal. Directo, sem palavreado de guru.
 
+A-ROLL E B-ROLL: o clipe é a pessoa a falar (A-roll) intercalada com imagens de apoio
+(B-roll) que ilustram o que está a ser dito. Para cada clipe escolhe 2 a 4 momentos de B-roll
+(1 a 2 num clipe de 15s):
+· nunca nos primeiros 3 segundos (o gancho é a cara) nem nos últimos 3 (o pedido do comentário);
+· cada um dura 2 a 4 segundos, sem se sobreporem, com pelo menos 3 segundos de cara entre eles;
+· cai em cima de uma palavra CONCRETA que se está a dizer (um gráfico, um ecrã, uma cidade, uma
+  decisão, uma emoção) e descreve uma imagem que a mostre;
+· a descrição é em INGLÊS, cinematográfica, vertical, sem texto, sem logótipos, sem notas nem
+  moedas, sem gráficos a subir em flecha (nada que sugira lucro fácil).
+
 Para cada clipe escreves uma legenda de publicação que acaba a pedir um comentário com UMA das
 palavras que te forem dadas — sem inventar outras.
 
@@ -100,6 +119,7 @@ TITULO: <curto, para o painel de admin>
 HOOK: <a primeira frase do clipe, literal da transcrição>
 PORQUE: <uma linha: porque é que este momento prende>
 CTA: <uma das palavras dadas>
+BROLL: <inicio>-<fim> | <descrição em inglês>; <inicio>-<fim> | <descrição em inglês>
 CAPTION: <a legenda da publicação, em pt-PT, até 5 linhas, a acabar no pedido do comentário>
 ===FIM===`
 
@@ -229,6 +249,7 @@ function interpretar(bruto: string, palavras: Palavra[]): ClipeProposto[] {
       duracaoSeg: duracao as 15 | 30 | 60,
       ctaPalavra: cta,
       caption,
+      broll: lerBroll(campo('BROLL'), fim - inicio),
     })
   }
 
@@ -251,6 +272,26 @@ export function legendasDoClipe(palavras: Palavra[], inicioSeg: number, fimSeg: 
       inicio: Math.max(0, Math.round((p.inicio - inicioSeg) * 100) / 100),
       fim: Math.round((Math.min(p.fim, fimSeg) - inicioSeg) * 100) / 100,
     }))
+}
+
+/**
+ * Lê «4-7 | description; 12-15 | description» e recusa o que não cabe: fora do clipe, dentro
+ * do gancho ou do fecho, curto ou longo de mais, ou por cima de outro.
+ */
+export function lerBroll(bruto: string, duracao: number): BRoll[] {
+  const saida: BRoll[] = []
+  for (const parte of bruto.split(';')) {
+    const m = parte.match(/(\d+(?:[.,]\d+)?)\s*s?\s*-\s*(\d+(?:[.,]\d+)?)\s*s?\s*\|\s*(.+)/)
+    if (!m) continue
+    const inicio = Number(m[1].replace(',', '.'))
+    const fim = Number(m[2].replace(',', '.'))
+    const descricao = m[3].trim().slice(0, 300)
+    if (!(fim > inicio) || inicio < 3 || fim > duracao - 3) continue
+    if (fim - inicio < 1.5 || fim - inicio > 4.5 || !descricao) continue
+    if (saida.some((b) => inicio < b.fim + 2 && fim > b.inicio - 2)) continue
+    saida.push({ inicio, fim, descricao })
+  }
+  return saida.slice(0, 4)
 }
 
 /** Grava os clips propostos, substituindo uma proposta anterior do mesmo vídeo. */
@@ -281,6 +322,7 @@ export async function guardarPropostas(jobId: string, clips: ClipeProposto[], pa
     legendas: revistas[i],
     caption: c.caption,
     cta_palavra: c.ctaPalavra,
+    broll: c.broll ?? [],
     estado: 'proposto',
   }))
   if (!linhas.length) return 0

@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
   // paradas atrás delas.
   const { data: clip } = await db
     .from('videocliper_clips')
-    .select('id, job_id, ordem, titulo, inicio_seg, fim_seg, duracao_seg, legendas, caption, cta_palavra')
+    .select('id, job_id, ordem, titulo, inicio_seg, fim_seg, duracao_seg, legendas, caption, cta_palavra, broll')
     .eq('estado', 'aprovado')
     .order('score', { ascending: false })
     .limit(1)
@@ -122,6 +122,7 @@ export async function GET(request: NextRequest) {
       fimSeg: Number(clip.fim_seg),
       duracaoSeg: Number(clip.duracao_seg),
       legendas: clip.legendas,
+      broll: clip.broll ?? [],
       titulo: clip.titulo,
       caption: clip.caption,
       /**
@@ -192,7 +193,7 @@ export async function GET(request: NextRequest) {
         .select('id, origem, youtube_url, dvr_job_id, dvr_ficheiro')
         .eq('id', jobId).maybeSingle(),
       db.from('videocliper_clips')
-        .select('id, inicio_seg, fim_seg, legendas')
+        .select('id, inicio_seg, fim_seg, legendas, broll')
         .eq('job_id', jobId)
         .is('preview_estado', null)
         .in('estado', ['proposto', 'rejeitado', 'erro'])
@@ -215,6 +216,7 @@ export async function GET(request: NextRequest) {
           inicioSeg: Number(c.inicio_seg),
           fimSeg: Number(c.fim_seg),
           legendas: c.legendas,
+          broll: c.broll ?? [],
         })),
         // Metade da resolução final e as legendas à mesma proporção: o suficiente para decidir,
         // leve o bastante para abrir dez de seguida no telemóvel.

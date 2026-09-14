@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
         .select('id, origem, youtube_url, titulo, duracao_seg, estado, erro, progresso, idioma, created_at')
         .eq('id', jobId).maybeSingle(),
       db.from('videocliper_clips')
-        .select('id, ordem, titulo, hook, score, porque, inicio_seg, fim_seg, duracao_seg, caption, cta_palavra, estado, erro, video_url, thumbnail_url, ig_permalink, youtube_short_url, legendas, preview_url, preview_estado, preview_erro')
+        .select('id, ordem, titulo, hook, score, porque, inicio_seg, fim_seg, duracao_seg, caption, cta_palavra, estado, erro, video_url, thumbnail_url, ig_permalink, youtube_short_url, legendas, preview_url, preview_estado, preview_erro, broll')
         .eq('job_id', jobId).order('ordem'),
     ])
     if (!job) return NextResponse.json({ erro: 'vídeo não encontrado' }, { status: 404 })
@@ -116,6 +116,20 @@ export async function POST(req: NextRequest) {
       await db.from('videocliper_jobs').delete().eq('id', alvo)
     }
     return NextResponse.json({ ok: true, ficheiros: caminhos.length })
+  }
+
+  // ── tirar o B-roll a um clipe (fica só a cara) ────────────────────────────
+  if (accao === 'broll_limpar') {
+    const clipId = String(corpo?.clipId ?? '')
+    const { data: c } = await db.from('videocliper_clips').select('estado').eq('id', clipId).maybeSingle()
+    if (!c) return NextResponse.json({ erro: 'clipe desconhecido' }, { status: 404 })
+    if (!['proposto', 'rejeitado', 'erro'].includes(c.estado as string)) {
+      return NextResponse.json({ erro: 'este clipe já foi cortado — o B-roll está no ficheiro' }, { status: 409 })
+    }
+    await db.from('videocliper_clips').update({
+      broll: [], preview_estado: null, preview_url: null, thumbnail_url: null, updated_at: new Date().toISOString(),
+    }).eq('id', clipId)
+    return NextResponse.json({ ok: true })
   }
 
   // ── rever as legendas dos clips ainda por cortar ─────────────────────────

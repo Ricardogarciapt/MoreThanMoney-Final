@@ -304,6 +304,59 @@ function construirASS(palavras, estilo) {
   return [...cabecalho, ...linhas].join("\n")
 }
 
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * A-ROLL + B-ROLL
+ *
+ * O A-roll é a pessoa a falar; o B-roll são imagens de apoio que cobrem o ecrã 2 a 4 segundos
+ * enquanto a voz continua — é o que dá ritmo a um clipe e segura quem está a deslizar.
+ *
+ * As imagens vêm de um gerador GRATUITO (Pollinations, sem chave) e entram com zoom lento
+ * (Ken Burns): uma fotografia parada parece um erro, uma que se mexe parece montagem.
+ * Uma imagem que não chegue não trava o clipe: esse momento fica com a cara, e segue.
+ * ────────────────────────────────────────────────────────────────────────────*/
+async function imagensDoBroll(broll, pasta, L, A) {
+  const prontas = []
+  for (const [i, b] of (broll || []).entries()) {
+    try {
+      const prompt = `${b.descricao}, vertical 9:16 cinematic photograph, shallow depth of field, moody natural light, no text, no letters, no logos, no money, no banknotes`
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${Math.round(L / 1.5)}&height=${Math.round(A / 1.5)}&seed=${Math.floor(Math.random() * 1e6)}&nologo=true&model=flux`
+      const r = await fetch(url, { signal: AbortSignal.timeout(120_000) })
+      if (!r.ok) throw new Error(`gerador ${r.status}`)
+      const buf = Buffer.from(new Uint8Array(await r.arrayBuffer()))
+      if (buf.length < 4096) throw new Error("imagem vazia")
+      const f = path.join(pasta, `broll-${i}.jpg`)
+      fs.writeFileSync(f, buf)
+      prontas.push({ ...b, ficheiro: f })
+    } catch (e) {
+      log("b-roll saltado:", e.message)
+    }
+  }
+  return prontas
+}
+
+/** Monta os argumentos do ffmpeg: fonte cortada a 9:16, B-roll por cima, legendas no topo. */
+function argsDaMontagem({ fonte, recuo, duracao, L, A, ass, broll }) {
+  const entradas = ["-ss", String(recuo), "-t", String(duracao), "-i", fonte]
+  const partes = [`[0:v]crop='min(iw,ih*9/16)':ih,scale=${L}:${A}:force_original_aspect_ratio=increase,crop=${L}:${A},setsar=1[v0]`]
+  let atual = "v0"
+  broll.forEach((b, i) => {
+    entradas.push("-i", b.ficheiro)
+    const dur = Math.max(0.5, b.fim - b.inicio)
+    const frames = Math.round(dur * 30)
+    partes.push(
+      // O gerador gratuito carimba o nome no rodapé: os últimos 8% da imagem ficam de fora.
+      `[${i + 1}:v]crop=iw:ih*0.92:0:0,scale=${L * 2}:${A * 2}:force_original_aspect_ratio=increase,crop=${L * 2}:${A * 2},` +
+      `zoompan=z='min(zoom+0.0012,1.12)':d=${frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${L}x${A}:fps=30,` +
+      `setsar=1,setpts=PTS-STARTPTS+${b.inicio}/TB[b${i}]`,
+      `[${atual}][b${i}]overlay=enable='between(t,${b.inicio},${b.fim})':eof_action=pass[v${i + 1}]`,
+    )
+    atual = `v${i + 1}`
+  })
+  partes.push(`[${atual}]ass='${ass.replace(/'/g, "\\'")}'[vout]`)
+  return [...entradas, "-filter_complex", partes.join(";"), "-map", "[vout]", "-map", "0:a?"]
+}
+
 /* ─────────────────────────────────────────────────────────────────────────────
  * TRANSCREVER
  * ────────────────────────────────────────────────────────────────────────────*/
@@ -425,12 +478,10 @@ async function render(trabalho) {
      * enquadramento de sessão — e um corte que engana às vezes é melhor do que barras que
      * estragam sempre.
      */
+    const broll = await imagensDoBroll(trabalho.broll, tmp, L, A)
     await correr("ffmpeg", [
       "-y",
-      "-ss", String(recuo), "-t", String(duracao),
-      "-i", fonte,
-      "-vf",
-      `crop='min(iw,ih*9/16)':ih,scale=${L}:${A}:force_original_aspect_ratio=increase,crop=${L}:${A},ass='${ass.replace(/'/g, "\\'")}'`,
+      ...argsDaMontagem({ fonte, recuo, duracao, L, A, ass, broll }),
       "-c:v", "libx264", "-preset", "medium", "-crf", "21",
       "-c:a", "aac", "-b:a", "128k",
       "-movflags", "+faststart",
@@ -555,9 +606,9 @@ async function previews(trabalho) {
         const A = (trabalho.estilo && trabalho.estilo.altura) || 960
 
         const saida = path.join(pasta, "preview.mp4")
+        const broll = await imagensDoBroll(c.broll, pasta, L, A)
         await correr("ffmpeg", [
-          "-y", "-ss", String(recuo), "-t", String(duracao), "-i", fonte,
-          "-vf", `crop='min(iw,ih*9/16)':ih,scale=${L}:${A}:force_original_aspect_ratio=increase,crop=${L}:${A},ass='${ass.replace(/'/g, "\\'")}'`,
+          "-y", ...argsDaMontagem({ fonte, recuo, duracao, L, A, ass, broll }),
           "-c:v", "libx264", "-preset", "veryfast", "-crf", "30",
           "-c:a", "aac", "-b:a", "64k", "-ac", "1",
           "-movflags", "+faststart", saida,

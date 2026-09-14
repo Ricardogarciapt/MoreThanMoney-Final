@@ -53,6 +53,7 @@ interface Clip {
   preview_url: string | null
   preview_estado: string | null
   preview_erro: string | null
+  broll: { inicio: number; fim: number; descricao: string }[] | null
 }
 
 const relogio = (s: number) => {
@@ -406,6 +407,17 @@ function ModalClipe({
           {c.hook && <p className="mt-3 border-l-2 border-amber-500/60 pl-2 text-[13px] italic text-neutral-200">“{c.hook}”</p>}
           {c.porque && <p className="mt-2 text-[12.5px] text-neutral-400">{c.porque}</p>}
 
+          {(c.broll ?? []).length > 0 && (
+            <div className="mt-3">
+              <p className="text-[11px] uppercase tracking-wide text-neutral-500">B-roll (imagens de apoio)</p>
+              <ul className="mt-1 space-y-0.5 text-[12px] text-neutral-400">
+                {(c.broll ?? []).map((b, i) => (
+                  <li key={i}><span className="font-mono text-neutral-500">{b.inicio}s–{b.fim}s</span> · {b.descricao}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {transcricao && (
             <div className="mt-3">
               <p className="text-[11px] uppercase tracking-wide text-neutral-500">Transcrição</p>
@@ -471,6 +483,16 @@ function AccoesClipe({
         >
           {ocupado === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
           Publicar nos dois
+        </button>
+      )}
+
+      {(c.broll ?? []).length > 0 && ['proposto', 'rejeitado', 'erro'].includes(c.estado) && (
+        <button
+          onClick={() => void accao({ accao: 'broll_limpar', clipId: c.id }, `broll-${c.id}`)}
+          disabled={ocupado === `broll-${c.id}`}
+          className="inline-flex items-center gap-1 rounded-md border border-neutral-700 px-2.5 py-1.5 text-[12px] text-neutral-300 hover:bg-neutral-800 disabled:opacity-40"
+        >
+          Sem B-roll
         </button>
       )}
 
