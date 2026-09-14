@@ -16,6 +16,8 @@ import { useRascunhoOpcional } from "./rascunho-ordem"
 import { InterruptorUmClique } from "./um-clique"
 import { PopoverInputsSensei, sinalDoSensei, useInputsSensei } from "./sensei-estudo"
 import type { ResultadoSensei } from "@/lib/estudos/sensei/tipos"
+import { PopoverInputsGoldKiller, sinalDoGoldKiller, useInputsGoldKiller } from "./goldkiller-estudo"
+import type { ResultadoGoldKiller } from "@/lib/estudos/goldkiller/tipos"
 
 export type { PosicaoGrafico, OrdemGrafico, Ferramenta } from "./grafico-tipos"
 
@@ -26,8 +28,10 @@ export type { PosicaoGrafico, OrdemGrafico, Ferramenta } from "./grafico-tipos"
  * grafico-leve.tsx) e leva posições, pendentes, SL/TP/entrada arrastáveis, a ferramenta de
  * posição, o volume e os estudos MTM. O MTM SENSEI está portado (lib/estudos/sensei): o botão
  * desenha o estudo completo, com painéis e roda dentada de inputs, e o «Usar este sinal» lê a trade
- * ativa do cálculo local. GoldKiller e MTM Scanner continuam como SETAS dos sinais que chegaram
- * pelos alertas até serem portados. O gráfico gratuito do TradingView fica só no separador Scanner
+ * ativa do cálculo local. O MTM GOLDKILLER também (lib/estudos/goldkiller): níveis em degrau com
+ * as faixas, BUY/SELL nas viragens, roda dentada, e o «Usar este sinal» lê a última viragem (entrada =
+ * Center Line, SL = Drawdown 50, TP = Gain 50/75/100). O MTM Scanner continua como SETAS dos sinais
+ * que chegaram pelos alertas até ser portado. O gráfico gratuito do TradingView fica só no separador Scanner
  * (que não é este componente).
  *
  * A biblioteca licenciada do TradingView (grafico-tradingview.tsx) está adormecida: só é usada,
@@ -89,20 +93,33 @@ export default function FundedGrafico(props: GraficoProps) {
   const senseiLocal = motor === "leve" && ativos.includes("Sensei")
   const { inputs: inputsSensei, definir: definirSensei, repor: reporSensei } = useInputsSensei(user?.id)
   const [resultadoSensei, setResultadoSensei] = useState<ResultadoSensei | null>(null)
-  const estudosSetas = useMemo(() => (senseiLocal ? ativos.filter((c) => c !== "Sensei") : ativos), [ativos, senseiLocal])
+  // GoldKiller: igual — estudo completo no Lightweight, setas dos alertas na biblioteca adormecida.
+  const gkLocal = motor === "leve" && ativos.includes("Goldkiller")
+  const { inputs: inputsGK, definir: definirGK, repor: reporGK } = useInputsGoldKiller(user?.id)
+  const [resultadoGK, setResultadoGK] = useState<ResultadoGoldKiller | null>(null)
+  const estudosSetas = useMemo(
+    () => ativos.filter((c) => !(senseiLocal && c === "Sensei") && !(gkLocal && c === "Goldkiller")),
+    [ativos, senseiLocal, gkLocal],
+  )
   const { sinais, ultimoAtivo: ultimoAlerta } = useSinaisEstudos(simbolo.symbol, estudosSetas)
   const sinalSensei = useMemo(() => (senseiLocal ? sinalDoSensei(resultadoSensei, simbolo.symbol) : null), [senseiLocal, resultadoSensei, simbolo.symbol])
-  // O sinal em jogo: o mais recente entre a trade ativa do Sensei e o último alerta ativo.
-  const ultimoAtivo = sinalSensei && (!ultimoAlerta || sinalSensei.em >= ultimoAlerta.em) ? sinalSensei : ultimoAlerta
+  const sinalGK = useMemo(() => (gkLocal ? sinalDoGoldKiller(resultadoGK, simbolo.symbol) : null), [gkLocal, resultadoGK, simbolo.symbol])
+  // O sinal em jogo: o mais recente entre a trade ativa do Sensei, a viragem do GoldKiller e o último alerta ativo.
+  const ultimoAtivo = [sinalSensei, sinalGK, ultimoAlerta].reduce<typeof ultimoAlerta>((melhor, x) => (x && (!melhor || x.em > melhor.em) ? x : melhor), null)
   const configSensei = useMemo(
     () => (senseiLocal ? { inputs: inputsSensei, paineis: true, aoCalcular: setResultadoSensei } : null),
     [senseiLocal, JSON.stringify(inputsSensei)], // eslint-disable-line react-hooks/exhaustive-deps
   )
 
+  const configGK = useMemo(
+    () => (gkLocal ? { inputs: inputsGK, aoCalcular: setResultadoGK } : null),
+    [gkLocal, JSON.stringify(inputsGK)], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+
   const usarSinal = () => {
     // Só pré-preenche: nunca envia, nem com a negociação num clique ligada.
     if (!ultimoAtivo || !rascunho) return
-    const local = ultimoAtivo.id.startsWith("sensei-local:")
+    const local = ultimoAtivo.id.startsWith("sensei-local:") || ultimoAtivo.id.startsWith("goldkiller-local:")
     rascunho.aplicar({ lado: ultimoAtivo.direcao, entrada: ultimoAtivo.entrada, sl: ultimoAtivo.sl, tp: ultimoAtivo.tp, origem: "scanner", ideiaRef: local ? null : ultimoAtivo.id, escolhido: false })
   }
 
@@ -136,14 +153,15 @@ export default function FundedGrafico(props: GraficoProps) {
           <span className="flex shrink-0 items-center gap-1 text-[11px]" style={{ color: TV.textoFraco }}><Lock className="h-3 w-3" /> Estudos MTM para membros</span>
         ) : permitidos.map((e) => {
           const on = ativos.includes(e.chave)
-          const completo = e.chave === "Sensei" && motor === "leve"
+          const completo = (e.chave === "Sensei" || e.chave === "Goldkiller") && motor === "leve"
           return (
             <span key={e.chave} className="flex shrink-0 items-center gap-1">
-              <button onClick={() => alternarEstudo(e.chave)} title={completo ? "MTM Sensei completo no gráfico (DEMAs, cloud, estrutura, OB, sinais e painéis)" : `Setas dos sinais ${e.rotulo} no gráfico`} className="flex shrink-0 items-center gap-1 rounded border px-2 py-0.5 text-[11px]"
+              <button onClick={() => alternarEstudo(e.chave)} title={completo ? (e.chave === "Sensei" ? "MTM Sensei completo no gráfico (DEMAs, cloud, estrutura, OB, sinais e painéis)" : "MTM GoldKiller completo no gráfico (níveis HLCC4, faixas, BUY/SELL)") : `Setas dos sinais ${e.rotulo} no gráfico`} className="flex shrink-0 items-center gap-1 rounded border px-2 py-0.5 text-[11px]"
                 style={on ? { borderColor: e.cor, color: e.cor, background: `${e.cor}1f` } : { borderColor: TV.borda, color: TV.textoFraco }}>
                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: on ? e.cor : TV.textoFraco }} /> {e.rotulo}
               </button>
-              {completo && on && <PopoverInputsSensei inputs={inputsSensei} definir={definirSensei} repor={reporSensei} cor={e.cor} />}
+              {completo && on && e.chave === "Sensei" && <PopoverInputsSensei inputs={inputsSensei} definir={definirSensei} repor={reporSensei} cor={e.cor} />}
+              {completo && on && e.chave === "Goldkiller" && <PopoverInputsGoldKiller inputs={inputsGK} definir={definirGK} repor={reporGK} cor={e.cor} />}
             </span>
           )
         })}
@@ -180,8 +198,9 @@ export default function FundedGrafico(props: GraficoProps) {
         // Adormecido: só com a Trading Platform instalada. Sem primitivas de trading ou a falhar → Lightweight.
         <GraficoTradingView {...props} sinais={sinais} sinalAtivo={ultimoAtivo} modo={modo} setModo={setModo} onFalhou={() => setMotor("leve")} onSemLinhas={() => { setSemTradingPlatform(true); setMotor("leve") }} />
       ) : (
-        // A trade ativa do Sensei já tem as linhas ENTRY/SL/EXIT do próprio estudo: não se duplicam.
-        <GraficoLeve {...props} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} tf={tf} modo={modo} setModo={setModo} />
+        // A trade ativa do Sensei já tem as linhas ENTRY/SL/EXIT do próprio estudo e o GoldKiller os
+        // seus níveis: só o alerta (não o sinal local) leva as linhas ténues de referência.
+        <GraficoLeve {...props} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} goldkiller={configGK} tf={tf} modo={modo} setModo={setModo} />
       )}
       {semTradingPlatform && (
         <p className="border-t px-2 py-1 text-center text-[10.5px]" style={{ borderColor: TV.borda, color: TV.textoFraco }}>

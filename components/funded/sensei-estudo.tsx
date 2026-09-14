@@ -21,8 +21,8 @@ import type { SinalEstudo } from "./use-sinais-estudos"
  *  · `carregarExtrasSensei` — as velas H4 (filtro EMA 200 do HTF) e M1 (order flow) em paralelo;
  *  · `sinalDoSensei`     — o sinal em jogo do cálculo local, no formato do «Usar este sinal».
  *
- * O Sensei é o único estudo portado: GoldKiller e MTM Scanner continuam como setas dos sinais que
- * vêm dos alertas (use-sinais-estudos.ts) até serem portados.
+ * O GoldKiller tem as peças equivalentes em goldkiller-estudo.tsx; o MTM Scanner continua como setas
+ * dos sinais que vêm dos alertas (use-sinais-estudos.ts) até ser portado.
  */
 
 /**

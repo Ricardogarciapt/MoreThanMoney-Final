@@ -23,6 +23,7 @@ import GraficoLeve from "./grafico-leve"
 import { type Tf, tfPorResolucaoTv } from "./grafico-tipos"
 import { UmCliqueProvider } from "./um-clique"
 import { useInputsSensei } from "./sensei-estudo"
+import { useInputsGoldKiller } from "./goldkiller-estudo"
 
 /**
  * PAINEL «NEGOCIAR» AO LADO DE QUALQUER GRÁFICO DE SCANNER.
@@ -51,6 +52,7 @@ import { useInputsSensei } from "./sensei-estudo"
 
 const CHAVE_FAIXA = "mtm_scanner_grafico_posicoes"
 const CHAVE_FAIXA_SENSEI = "mtm_scanner_grafico_sensei"
+const CHAVE_FAIXA_GOLDKILLER = "mtm_scanner_grafico_goldkiller"
 export const NOTA_GRAFICO_SCANNER =
   "O gráfico TradingView do scanner não aceita linhas; as posições aparecem no gráfico abaixo (e no próprio gráfico TradingView quando a biblioteca estiver instalada)"
 
@@ -395,7 +397,8 @@ function ContaNoScanner({ accountId, ficha, ativo, tvSymbol, intervalo, dentroDa
  * O mesmo GraficoLeve do WebTrader (linhas arrastáveis pela mesma API, confirmação/num clique),
  * compacto, no timeframe do scanner, com as setas dos estudos que a pessoa pode ver. O MTM Sensei
  * pode desenhar-se completo (sem painéis — a faixa é baixa), com os inputs que a pessoa guardou no
- * WebTrader; desligado por defeito, porque o gráfico do scanner por cima já o mostra.
+ * WebTrader; desligado por defeito, porque o gráfico do scanner por cima já o mostra. O MTM GoldKiller
+ * tem o mesmo interruptor (sem legenda longa nem etiquetas no eixo — não cabem nos 240 px).
  */
 function FaixaPosicoes(props: {
   ficha: SimboloFicha; preco?: PrecoVivo; mapa: MapaPrecos; volume: number; intervalo?: string; ativo: boolean
@@ -425,7 +428,19 @@ function FaixaPosicoes(props: {
     () => (podeSensei && senseiOn ? { inputs: inputsSensei, paineis: false } : null),
     [podeSensei, senseiOn, JSON.stringify(inputsSensei)], // eslint-disable-line react-hooks/exhaustive-deps
   )
-  const estudosSetas = useMemo(() => (sensei ? estudos.filter((c) => c !== "Sensei") : estudos), [estudos, sensei])
+  const podeGK = estudos.includes("Goldkiller")
+  const [gkOn, setGkOn] = useState(false)
+  useEffect(() => { try { setGkOn(localStorage.getItem(CHAVE_FAIXA_GOLDKILLER) === "1") } catch { /* ok */ } }, [])
+  const alternarGK = () => setGkOn((v) => { try { localStorage.setItem(CHAVE_FAIXA_GOLDKILLER, v ? "0" : "1") } catch { /* ok */ } return !v })
+  const { inputs: inputsGK } = useInputsGoldKiller(user?.id)
+  const goldkiller = useMemo(
+    () => (podeGK && gkOn ? { inputs: inputsGK } : null),
+    [podeGK, gkOn, JSON.stringify(inputsGK)], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+  const estudosSetas = useMemo(
+    () => estudos.filter((c) => !(sensei && c === "Sensei") && !(goldkiller && c === "Goldkiller")),
+    [estudos, sensei, goldkiller],
+  )
   const { sinais, ultimoAtivo } = useSinaisEstudos(tem && ver && props.ativo ? props.ficha.symbol : null, estudosSetas)
   const tf: Tf = (props.intervalo ? tfPorResolucaoTv(props.intervalo)?.chave : null) ?? "M15"
   if (!tem) return null
@@ -436,6 +451,12 @@ function FaixaPosicoes(props: {
           <CandlestickChart className="h-3.5 w-3.5" /> {ver ? "Esconder posições no gráfico" : "Ver posições no gráfico"}
         </button>
         <span className="flex items-center gap-2 text-[10.5px] text-zinc-500">
+          {ver && podeGK && (
+            <button type="button" role="switch" aria-checked={gkOn} onClick={alternarGK} title="Desenhar o MTM GoldKiller nesta faixa"
+              className="rounded border px-1.5 py-0.5 text-[10.5px]" style={gkOn ? { borderColor: "#EAB308", color: "#EAB308", background: "#EAB3081f" } : { borderColor: "rgba(255,255,255,0.12)", color: "#787B86" }}>
+              GoldKiller
+            </button>
+          )}
           {ver && podeSensei && (
             <button type="button" role="switch" aria-checked={senseiOn} onClick={alternarSensei} title="Desenhar o MTM Sensei nesta faixa"
               className="rounded border px-1.5 py-0.5 text-[10.5px]" style={senseiOn ? { borderColor: "#F472B6", color: "#F472B6", background: "#F472B61f" } : { borderColor: "rgba(255,255,255,0.12)", color: "#787B86" }}>
@@ -450,7 +471,7 @@ function FaixaPosicoes(props: {
           <GraficoLeve
             compacto simbolo={props.ficha} preco={props.preco} precos={props.mapa} volume={props.volume}
             posicoes={props.posicoes} ordens={props.ordens} podeNegociar={props.podeNegociar}
-            sinais={sinais} sinalAtivo={ultimoAtivo} sensei={sensei} tf={tf} modo={null} setModo={() => {}}
+            sinais={sinais} sinalAtivo={ultimoAtivo} sensei={sensei} goldkiller={goldkiller} tf={tf} modo={null} setModo={() => {}}
             onModificarPosicao={props.onModificarPosicao} onModificarPendente={props.onModificarPendente}
             onFecharPosicao={props.onFecharPosicao} onCancelarPendente={props.onCancelarPendente}
           />
