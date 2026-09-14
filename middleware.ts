@@ -133,7 +133,11 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/app-mobile") ||
     pathname.startsWith("/scanner") ||
     pathname.startsWith("/apresentacoes") ||
-    pathname.startsWith("/mtmsocial")
+    pathname.startsWith("/mtmsocial") ||
+    // A biblioteca Advanced Charts do TradingView desenha-se num iframe do PRÓPRIO site
+    // (public/charting_library/*.html): com DENY o gráfico ficava em branco.
+    pathname.startsWith("/charting_library") ||
+    pathname.startsWith("/datafeeds")
 
   if (emolduravel) {
     response.headers.set("Content-Security-Policy", "frame-ancestors 'self'")

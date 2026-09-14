@@ -1,0 +1,19 @@
+{
+  "id": "/webtrader",
+  "name": "MTM WebTrader",
+  "short_name": "WebTrader",
+  "description": "WebTrader das contas simuladas educativas MTM Funded — não é negociação real.",
+  "start_url": "/webtrader",
+  "scope": "/webtrader",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#131722",
+  "theme_color": "#131722",
+  "lang": "pt-PT",
+  "categories": ["finance", "education"],
+  "icons": [
+    { "src": "/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

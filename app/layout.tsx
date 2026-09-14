@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import ThemeInitializer from "@/components/theme-initializer"
@@ -22,6 +22,14 @@ export const metadata: Metadata = {
   authors: [{ name: "MoreThanMoney" }],
   creator: "MoreThanMoney",
   publisher: "MoreThanMoney",
+  // Manifesto e tags da web app pela metadata (e não à mão no <head>): assim uma rota pode ter o
+  // seu — /webtrader instala-se como «MTM WebTrader» — sem ficarem dois manifestos na página.
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "MTM App",
+  },
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -57,6 +65,10 @@ export const metadata: Metadata = {
   },
 }
 
+export const viewport: Viewport = {
+  themeColor: "#D2A63C",
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -65,12 +77,7 @@ export default function RootLayout({
   return (
     <html lang="pt" translate="no" suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#D2A63C" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="MTM App" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         {/* Bloqueia tradução automática do Chrome; tradução manual via seletor de idioma. */}
