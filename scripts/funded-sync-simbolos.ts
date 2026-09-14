@@ -115,12 +115,14 @@ const ALAVANCAGEM: Record<Classe, number> = {
 }
 
 /**
- * Comissão de ida e volta por lote, em USD: 7 em forex e metais (o preço típico de uma conta
- * ECN/Raw), 0 no resto — nos CFDs de índices, acções, energia e cripto o custo da corretora está
- * no SPREAD, e cobrar comissão por cima seria cobrar duas vezes o mesmo.
+ * Comissão por lote: ZERO em tudo.
+ *
+ * A conta de preços é Standard da PU Prime — o custo já está no spread (EURUSD ~1,9 pips). A
+ * comissão de 7/lote é da conta Raw/ECN, que tem spread quase nulo; somá-la ao spread Standard
+ * cobrava ao aluno as duas contas ao mesmo tempo. (Decisão do lead, 2026-09-14.)
  */
-function comissaoDe(classe: Classe): number {
-  return classe === 'forex' || classe === 'metal' ? 7 : 0
+function comissaoDe(_classe: Classe): number {
+  return 0
 }
 
 /** O horário antigo de 061 (market-hours) para as classes que ele conhece; `sessoes` para o resto. */
@@ -243,7 +245,7 @@ async function main() {
 -- Requer a migração 064 (classes novas, moeda_lucro, sessoes).
 --
 -- ${lista.length} símbolos negociáveis: ${Object.entries(porClasse).map(([c, k]) => `${c} ${k}`).join(' · ')}
--- Comissão por lote (ida e volta, USD): 7 em forex e metais; 0 no resto (custo no spread).
+-- Comissão por lote: 0 em tudo (conta Standard — o custo está no spread).
 -- Alavancagem máxima por classe: forex/metal 100 · índice/energia 20 · commodity/obrigação 10 · acção/ETF 5 · cripto 2.
 -- \`sessoes\` = tradeSessions da corretora em HORA DO SERVIDOR DA CORRETORA (o motor mede o desvio pelos ticks).
 
