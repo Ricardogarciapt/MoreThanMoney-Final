@@ -10,15 +10,9 @@
  * `na` do Pine é `NaN`. Tempo em SEGUNDOS unix (igual à rota /api/mtmfunded/simulado/velas).
  */
 
-/** Uma vela OHLCV. `v` é o volume (tick volume em forex/CFD); sem volume, usar 0. */
-export interface Vela {
-  t: number
-  o: number
-  h: number
-  l: number
-  c: number
-  v?: number
-}
+/** Uma vela OHLCV — definida em ../comum/velas (partilhada por todos os estudos). */
+export type { Vela } from '../comum/velas'
+import type { Vela } from '../comum/velas'
 
 export type Tema = 'Dark' | 'Classic' | 'Light' | 'Pop'
 export type EstiloTrading = 'Agressivo' | 'Scalp' | 'Intraday' | 'Swing' | 'Conservador' | 'Personalizado'

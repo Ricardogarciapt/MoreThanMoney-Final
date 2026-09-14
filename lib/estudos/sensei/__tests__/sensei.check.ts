@@ -10,7 +10,7 @@
  *  4. A última vela aberta nunca gera sinal (barstate.isconfirmed).
  *  5. HTF sem lookahead: uma vela do gráfico só vê a EMA HTF da vela HTF que já fechou.
  */
-import * as ta from '../ta'
+import * as ta from '../../comum/ta'
 import { calcularSensei, dentroDaSessao } from '../motor'
 import type { Vela } from '../tipos'
 
