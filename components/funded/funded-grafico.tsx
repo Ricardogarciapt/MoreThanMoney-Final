@@ -14,6 +14,8 @@ import GraficoTradingView from "./grafico-tradingview"
 import { useSinaisEstudos } from "./use-sinais-estudos"
 import { useRascunhoOpcional } from "./rascunho-ordem"
 import { InterruptorUmClique } from "./um-clique"
+import { PopoverInputsSensei, sinalDoSensei, useInputsSensei } from "./sensei-estudo"
+import type { ResultadoSensei } from "@/lib/estudos/sensei/tipos"
 
 export type { PosicaoGrafico, OrdemGrafico, Ferramenta } from "./grafico-tipos"
 
@@ -22,9 +24,11 @@ export type { PosicaoGrafico, OrdemGrafico, Ferramenta } from "./grafico-tipos"
  *
  * Não há vista de «análise» à parte: o gráfico é o de negociação (Lightweight Charts v5,
  * grafico-leve.tsx) e leva posições, pendentes, SL/TP/entrada arrastáveis, a ferramenta de
- * posição, o volume e as SETAS dos sinais dos estudos MTM (GoldKiller, Sensei, MTM Scanner) — os
- * botões dos estudos na barra ligam e desligam essas setas. O gráfico gratuito do TradingView fica
- * só no separador Scanner (que não é este componente).
+ * posição, o volume e os estudos MTM. O MTM SENSEI está portado (lib/estudos/sensei): o botão
+ * desenha o estudo completo, com painéis e roda dentada de inputs, e o «Usar este sinal» lê a trade
+ * ativa do cálculo local. GoldKiller e MTM Scanner continuam como SETAS dos sinais que chegaram
+ * pelos alertas até serem portados. O gráfico gratuito do TradingView fica só no separador Scanner
+ * (que não é este componente).
  *
  * A biblioteca licenciada do TradingView (grafico-tradingview.tsx) está adormecida: só é usada,
  * sozinha e no mesmo modo único, se existir em public/charting_library/ E tiver as primitivas de
@@ -80,12 +84,26 @@ export default function FundedGrafico(props: GraficoProps) {
     guardar(CHAVE_ESTUDOS, novo)
   }
 
-  const { sinais, ultimoAtivo } = useSinaisEstudos(simbolo.symbol, ativos)
+  // Sensei: no gráfico Lightweight é o estudo completo calculado aqui; na biblioteca do TradingView
+  // (adormecida) continua a ser setas dos alertas.
+  const senseiLocal = motor === "leve" && ativos.includes("Sensei")
+  const { inputs: inputsSensei, definir: definirSensei, repor: reporSensei } = useInputsSensei(user?.id)
+  const [resultadoSensei, setResultadoSensei] = useState<ResultadoSensei | null>(null)
+  const estudosSetas = useMemo(() => (senseiLocal ? ativos.filter((c) => c !== "Sensei") : ativos), [ativos, senseiLocal])
+  const { sinais, ultimoAtivo: ultimoAlerta } = useSinaisEstudos(simbolo.symbol, estudosSetas)
+  const sinalSensei = useMemo(() => (senseiLocal ? sinalDoSensei(resultadoSensei, simbolo.symbol) : null), [senseiLocal, resultadoSensei, simbolo.symbol])
+  // O sinal em jogo: o mais recente entre a trade ativa do Sensei e o último alerta ativo.
+  const ultimoAtivo = sinalSensei && (!ultimoAlerta || sinalSensei.em >= ultimoAlerta.em) ? sinalSensei : ultimoAlerta
+  const configSensei = useMemo(
+    () => (senseiLocal ? { inputs: inputsSensei, paineis: true, aoCalcular: setResultadoSensei } : null),
+    [senseiLocal, JSON.stringify(inputsSensei)], // eslint-disable-line react-hooks/exhaustive-deps
+  )
 
   const usarSinal = () => {
     // Só pré-preenche: nunca envia, nem com a negociação num clique ligada.
     if (!ultimoAtivo || !rascunho) return
-    rascunho.aplicar({ lado: ultimoAtivo.direcao, entrada: ultimoAtivo.entrada, sl: ultimoAtivo.sl, tp: ultimoAtivo.tp, origem: "scanner", ideiaRef: ultimoAtivo.id, escolhido: false })
+    const local = ultimoAtivo.id.startsWith("sensei-local:")
+    rascunho.aplicar({ lado: ultimoAtivo.direcao, entrada: ultimoAtivo.entrada, sl: ultimoAtivo.sl, tp: ultimoAtivo.tp, origem: "scanner", ideiaRef: local ? null : ultimoAtivo.id, escolhido: false })
   }
 
   const spread = preco ? Math.round((preco.ask - preco.bid) * Math.pow(10, simbolo.digits)) : null
@@ -118,11 +136,15 @@ export default function FundedGrafico(props: GraficoProps) {
           <span className="flex shrink-0 items-center gap-1 text-[11px]" style={{ color: TV.textoFraco }}><Lock className="h-3 w-3" /> Estudos MTM para membros</span>
         ) : permitidos.map((e) => {
           const on = ativos.includes(e.chave)
+          const completo = e.chave === "Sensei" && motor === "leve"
           return (
-            <button key={e.chave} onClick={() => alternarEstudo(e.chave)} title={`Setas dos sinais ${e.rotulo} no gráfico`} className="flex shrink-0 items-center gap-1 rounded border px-2 py-0.5 text-[11px]"
-              style={on ? { borderColor: e.cor, color: e.cor, background: `${e.cor}1f` } : { borderColor: TV.borda, color: TV.textoFraco }}>
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: on ? e.cor : TV.textoFraco }} /> {e.rotulo}
-            </button>
+            <span key={e.chave} className="flex shrink-0 items-center gap-1">
+              <button onClick={() => alternarEstudo(e.chave)} title={completo ? "MTM Sensei completo no gráfico (DEMAs, cloud, estrutura, OB, sinais e painéis)" : `Setas dos sinais ${e.rotulo} no gráfico`} className="flex shrink-0 items-center gap-1 rounded border px-2 py-0.5 text-[11px]"
+                style={on ? { borderColor: e.cor, color: e.cor, background: `${e.cor}1f` } : { borderColor: TV.borda, color: TV.textoFraco }}>
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: on ? e.cor : TV.textoFraco }} /> {e.rotulo}
+              </button>
+              {completo && on && <PopoverInputsSensei inputs={inputsSensei} definir={definirSensei} repor={reporSensei} cor={e.cor} />}
+            </span>
           )
         })}
         {podeNegociar && rascunho && (
@@ -158,7 +180,8 @@ export default function FundedGrafico(props: GraficoProps) {
         // Adormecido: só com a Trading Platform instalada. Sem primitivas de trading ou a falhar → Lightweight.
         <GraficoTradingView {...props} sinais={sinais} sinalAtivo={ultimoAtivo} modo={modo} setModo={setModo} onFalhou={() => setMotor("leve")} onSemLinhas={() => { setSemTradingPlatform(true); setMotor("leve") }} />
       ) : (
-        <GraficoLeve {...props} sinais={sinais} sinalAtivo={ultimoAtivo} tf={tf} modo={modo} setModo={setModo} />
+        // A trade ativa do Sensei já tem as linhas ENTRY/SL/EXIT do próprio estudo: não se duplicam.
+        <GraficoLeve {...props} sinais={sinais} sinalAtivo={ultimoAlerta} sensei={configSensei} tf={tf} modo={modo} setModo={setModo} />
       )}
       {semTradingPlatform && (
         <p className="border-t px-2 py-1 text-center text-[10.5px]" style={{ borderColor: TV.borda, color: TV.textoFraco }}>

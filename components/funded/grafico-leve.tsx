@@ -1,11 +1,14 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { ChevronDown, ChevronUp, Loader2 } from "lucide-react"
+import ChecklistSensei from "@/lib/estudos/sensei/checklist"
+import type { InputsSensei, ResultadoSensei, Vela } from "@/lib/estudos/sensei/tipos"
 import { type Direcao, lucroUsd, spreadEmPreco } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
 import { type GraficoProps, type Tf, TV, tfPorChave } from "./grafico-tipos"
 import PainelFerramenta from "./painel-ferramenta"
+import { carregarExtrasSensei, useCalculadoraSensei } from "./sensei-estudo"
 import { useRascunho } from "./rascunho-ordem"
 import { AccaoCancelada, useUmClique } from "./um-clique"
 
@@ -31,6 +34,12 @@ import { AccaoCancelada, useUmClique } from "./um-clique"
  *    exemplos oficiais de plugins: desenham-se no canvas do gráfico e acompanham pan e zoom;
  *  · tempo real incremental: `series.update()` a cada preço, nunca `setData` por tick;
  *  · atribuição obrigatória da licença: `layout.attributionLogo: true` («Charts by TradingView»).
+ *
+ * MTM SENSEI (prop `sensei`): o estudo completo, portado do Pine (lib/estudos/sensei) — DEMAs,
+ * cloud/bandas, estrutura (CHoCH/BOS/IDM), order blocks, etiquetas «CON +N/20 SL:xxxp», a trade
+ * ativa com ENTRY/SL/EXIT, velas pintadas (barcolor) e os painéis CHECKLIST/CONFIRMAÇÕES/TRADE.
+ * Com o Sensei ligado pedem-se 3000 velas (e H4/M1 à parte); o cálculo corre num Web Worker e só
+ * se repete quando FECHA uma vela (ou mudam velas/inputs) — nunca a cada tick.
  *
  * Mover/fechar/cancelar passa pela negociação num clique (um-clique.tsx): desligada, pede
  * confirmação; cancelada ou falhada, a linha volta ao sítio.
@@ -111,6 +120,14 @@ export default function GraficoLeve(props: GraficoProps & {
   setModo: (m: Direcao | null) => void
   /** Faixa compacta (dock do scanner): sem barra da ferramenta e sem painel de volume. */
   compacto?: boolean
+  /** MTM Sensei desenhado no gráfico (null/undefined = desligado). */
+  sensei?: {
+    inputs: InputsSensei
+    /** Painéis CHECKLIST/CONFIRMAÇÕES/TRADE por cima do gráfico (a faixa compacta não os leva). */
+    paineis?: boolean
+    /** Cada resultado novo (null ao desligar) — alimenta o «Usar este sinal». */
+    aoCalcular?: (r: ResultadoSensei | null) => void
+  } | null
 }) {
   const { simbolo, preco, precos, volume, posicoes, ordens, podeNegociar, tf, modo, setModo } = props
   const [estadoVelas, setEstadoVelas] = useState<"a_carregar" | "historico" | "ao_vivo" | "erro">("a_carregar")
@@ -138,6 +155,25 @@ export default function GraficoLeve(props: GraficoProps & {
   const dragRef = useRef<{ chave: string; dono: Dono; y0: number; moveu: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null)
   const toqueRef = useRef<{ x: number; y: number } | null>(null)
   const larguraEscalaRef = useRef(56)
+  // As velas carregadas + a viva, espelho exato da série (o Sensei precisa dos MESMOS tempos).
+  const velasRef = useRef<Vela[]>([])
+  /** Sobe quando o conjunto de velas FECHADAS muda (histórico novo ou abriu uma vela) → recalcular o Sensei. */
+  const [versaoVelas, setVersaoVelas] = useState(0)
+  const senseiLigado = Boolean(props.sensei)
+  // Só cresce: ligar o Sensei pede 3000 velas; desligá-lo não volta a pedir 300 (as a mais não fazem mal).
+  const [limiteHistorico, setLimiteHistorico] = useState(() => (props.sensei ? 3000 : 300))
+  useEffect(() => { if (senseiLigado) setLimiteHistorico(3000) }, [senseiLigado])
+  const senseiRef = useRef<import("@/lib/estudos/sensei/lightweight").SenseiLW | null>(null)
+  const [senseiPronto, setSenseiPronto] = useState(false)
+  const [senseiR, setSenseiR] = useState<ResultadoSensei | null>(null)
+  const [senseiMs, setSenseiMs] = useState<{ ms: number; onde: string; velas: number } | null>(null)
+  const coresRef = useRef<Map<number, string>>(new Map())
+  const [paineisAbertos, setPaineisAbertos] = useState(true)
+  const calcular = useCalculadoraSensei()
+  const aoCalcularRef = useRef(props.sensei?.aoCalcular)
+  aoCalcularRef.current = props.sensei?.aoCalcular
+  // Telemóvel: os painéis começam fechados (tapavam o gráfico todo); abrem-se no botão.
+  useEffect(() => { try { if (window.matchMedia("(max-width: 767px)").matches) setPaineisAbertos(false) } catch { /* ok */ } }, [])
 
   useEffect(() => { setRascunho({}); setMenu(null) }, [simbolo.symbol])
 
@@ -231,24 +267,29 @@ export default function GraficoLeve(props: GraficoProps & {
     if (!pronto) return
     let vivo = true
     ultimaVelaRef.current = null
+    velasRef.current = []
+    coresRef.current = new Map()
     setEstadoVelas("a_carregar")
     ;(async () => {
       try {
-        const r = await fetch(`/api/mtmfunded/simulado/velas?symbol=${simbolo.symbol}&tf=${tf}&limit=300`)
+        // O Sensei precisa de história (DEMA 238 aquece em 474 velas, estrutura/estatísticas pedem mais).
+        const r = await fetch(`/api/mtmfunded/simulado/velas?symbol=${simbolo.symbol}&tf=${tf}&limit=${limiteHistorico}`)
         const d = await r.json()
         if (!vivo || !serieRef.current) return
         const velas = (d.velas ?? []).map((v: any) => ({ time: v.t, open: v.o, high: v.h, low: v.l, close: v.c, volume: Number(v.v) || 0 }))
         serieRef.current.setData(velas.map(({ volume: _v, ...c }: any) => c))
         volumeRef.current?.setData(velas.map((v: any) => ({ time: v.time, value: v.volume, color: v.close >= v.open ? "rgba(38,166,154,0.35)" : "rgba(239,83,80,0.35)" })))
         ultimaVelaRef.current = velas.length ? velas[velas.length - 1] : null
+        velasRef.current = velas.map((v: any) => ({ t: v.time, o: v.open, h: v.high, l: v.low, c: v.close, v: v.volume }))
         setEstadoVelas(velas.length ? "historico" : "ao_vivo")
+        setVersaoVelas((x) => x + 1)
         graficoRef.current?.timeScale().scrollToRealTime()
       } catch {
         if (vivo) { serieRef.current?.setData([]); volumeRef.current?.setData([]); setEstadoVelas("ao_vivo") }
       }
     })()
     return () => { vivo = false }
-  }, [pronto, simbolo.symbol, tf])
+  }, [pronto, simbolo.symbol, tf, limiteHistorico])
 
   // ── a vela viva ──
   useEffect(() => {
@@ -268,7 +309,14 @@ export default function GraficoLeve(props: GraficoProps & {
       const { volume: vol, ...vela } = nova
       serie.update(vela)
       volumeRef.current?.update({ time: t, value: vol, color: vela.close >= vela.open ? "rgba(38,166,154,0.35)" : "rgba(239,83,80,0.35)" })
+      const abriuVela = !u || t > u.time
       ultimaVelaRef.current = nova
+      const vv = { t, o: nova.open, h: nova.high, l: nova.low, c: nova.close, v: nova.volume }
+      const arr = velasRef.current
+      if (arr.length && arr[arr.length - 1].t === t) arr[arr.length - 1] = vv
+      else arr.push(vv)
+      // Abriu uma vela = a anterior FECHOU: é o único momento em que o Sensei pode dar sinal novo.
+      if (abriuVela) setVersaoVelas((x) => x + 1)
     } catch { /* tempo fora de ordem */ }
   }, [preco, tf, estadoVelas])
 
@@ -336,6 +384,67 @@ export default function GraficoLeve(props: GraficoProps & {
     })).sort((a, b) => a.time - b.time)
     try { m.setMarkers(marcas) } catch { /* tempo fora das velas carregadas */ }
   }, [props.sinais, pronto, estadoVelas, tf])
+
+  // ── MTM Sensei ──
+  // Anexar/retirar o adaptador (séries das DEMAs, primitivo de desenho, marcadores) com o estudo.
+  useEffect(() => {
+    if (!pronto || !senseiLigado) return
+    let vivo = true
+    import("@/lib/estudos/sensei/lightweight").then((mod) => {
+      if (!vivo || !graficoRef.current || !serieRef.current) return
+      senseiRef.current = mod.anexarSensei(graficoRef.current, serieRef.current, {
+        aoCalcular: (r) => { setSenseiR(r); aoCalcularRef.current?.(r) },
+      })
+      setSenseiPronto(true)
+    }).catch(() => { /* sem estudo — o gráfico continua */ })
+    return () => {
+      vivo = false
+      try { senseiRef.current?.remove() } catch { /* o gráfico já foi removido */ }
+      senseiRef.current = null
+      setSenseiPronto(false)
+      setSenseiR(null)
+      aoCalcularRef.current?.(null)
+      // Tirar a cor às velas (barcolor) ao desligar.
+      if (coresRef.current.size) {
+        coresRef.current = new Map()
+        try { serieRef.current?.setData(velasRef.current.map((v) => ({ time: v.t, open: v.o, high: v.h, low: v.l, close: v.c }))) } catch { /* ok */ }
+      }
+    }
+  }, [pronto, senseiLigado])
+
+  // Recalcular: com velas novas (histórico ou vela FECHADA) e quando mudam os inputs — nunca por tick.
+  const inputsSensei = props.sensei?.inputs
+  const chaveInputsSensei = inputsSensei ? JSON.stringify(inputsSensei) : ""
+  useEffect(() => {
+    if (!senseiPronto || !inputsSensei || estadoVelas === "a_carregar") return
+    const snapshot = velasRef.current.slice()
+    if (snapshot.length < 50) return
+    let vivo = true
+    const tfSeg = tfPorChave(tf).seg
+    const inputs: Partial<InputsSensei> = { ...inputsSensei, simbolo: simbolo.symbol, tfSegundos: tfSeg, mintick: Math.pow(10, -simbolo.digits) }
+    ;(async () => {
+      const extra = await carregarExtrasSensei(simbolo.symbol, tfSeg, { ...inputsSensei, ...inputs } as InputsSensei, snapshot)
+      if (!vivo) return
+      const c = await calcular(snapshot, inputs, extra)
+      if (!vivo || !c || !senseiRef.current) return
+      senseiRef.current.aplicar(snapshot, c.r)
+      setSenseiMs({ ms: Math.round(c.ms), onde: c.onde, velas: snapshot.length })
+      // barcolor(): as velas de sinal pintadas na própria série (uma vez por vela fechada, não por tick).
+      const cores = new Map<number, string>()
+      c.r.series.corVela.forEach((cor, i) => { if (cor && snapshot[i]) cores.set(snapshot[i].t, cor) })
+      const mudou = cores.size !== coresRef.current.size || [...cores].some(([t, cor]) => coresRef.current.get(t) !== cor)
+      if (mudou && serieRef.current) {
+        coresRef.current = cores
+        try {
+          serieRef.current.setData(velasRef.current.map((v) => {
+            const cor = cores.get(v.t)
+            return cor ? { time: v.t, open: v.o, high: v.h, low: v.l, close: v.c, color: cor, wickColor: cor, borderColor: cor } : { time: v.t, open: v.o, high: v.h, low: v.l, close: v.c }
+          }))
+        } catch { /* série a ser recriada */ }
+      }
+    })()
+    return () => { vivo = false }
+  }, [senseiPronto, versaoVelas, chaveInputsSensei, simbolo.symbol, simbolo.digits, tf]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // As zonas da ferramenta (primitiva no canvas).
   useEffect(() => {
@@ -596,6 +705,22 @@ export default function GraficoLeve(props: GraficoProps & {
             )
           })}
         </div>
+        {senseiLigado && props.sensei?.paineis !== false && !props.compacto && senseiR && (
+          <>
+            {paineisAbertos && <ChecklistSensei resultado={senseiR} />}
+            <button
+              type="button"
+              data-linha-botao
+              onClick={() => setPaineisAbertos((a) => !a)}
+              title={senseiMs ? `Sensei: ${senseiMs.velas} velas calculadas em ${senseiMs.ms} ms (${senseiMs.onde === "worker" ? "Web Worker" : "thread principal"})` : "Sensei"}
+              data-sensei-ms={senseiMs?.ms}
+              className="absolute left-2 top-2 z-[7] flex items-center gap-1 rounded px-1.5 py-0.5 text-[10.5px] font-semibold"
+              style={{ background: "rgba(19,23,34,0.85)", border: "1px solid rgba(244,114,182,0.5)", color: "#F472B6" }}
+            >
+              Sensei {paineisAbertos ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+          </>
+        )}
         {modo && (
           <div className="pointer-events-none absolute left-1/2 top-2 z-[6] -translate-x-1/2 rounded px-3 py-1 text-[11px]" style={{ background: TV.painel, color: TV.texto, border: `1px solid ${TV.borda}` }}>
             Toca no gráfico onde queres a entrada ({modo === "buy" ? "Long" : "Short"})

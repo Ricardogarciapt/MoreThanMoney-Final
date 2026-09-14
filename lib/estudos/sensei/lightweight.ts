@@ -17,6 +17,7 @@
  * Uso (em grafico-leve, depois de criar `chart` e a série de velas):
  *   const sensei = anexarSensei(chart, serieVelas, { inputs: { simbolo: 'XAUUSD' } })
  *   sensei.update(velas, { velasHTF, velasLTF })   // a cada vela nova (ou com throttle)
+ *   sensei.aplicar(velas, resultado)               // resultado calculado fora (Web Worker)
  *   sensei.remove()                                // ao desmontar / desligar o estudo
  * `velas` têm de ser as MESMAS velas (mesmos tempos) que estão na série de velas.
  */
@@ -57,6 +58,11 @@ export interface OpcoesSenseiLW {
 export interface SenseiLW {
   /** Recalcula e redesenha. Devolve o resultado (sinais, estado da última barra…). */
   update: (velas: Vela[], extra?: DadosExtra) => ResultadoSensei
+  /**
+   * Desenha um resultado JÁ calculado (ex.: num Web Worker) para estas velas, sem recalcular.
+   * `velas` têm de ser as mesmas com que o resultado foi calculado.
+   */
+  aplicar: (velas: Vela[], r: ResultadoSensei) => void
   /** Muda inputs e recalcula com as últimas velas. */
   setInputs: (inputs: Partial<InputsSensei>) => ResultadoSensei | null
   resultado: () => ResultadoSensei | null
@@ -381,6 +387,13 @@ export function anexarSensei(chart: IChartApi, serieVelas: ISeriesApi<SeriesType
       velasAtuais = velas
       if (extra) extraAtual = extra
       return correr()
+    },
+    aplicar(velas, r) {
+      velasAtuais = velas
+      inputs = { ...inputs, ...r.inputs }
+      ultimo = r
+      desenhar(r, velas)
+      opcoes.aoCalcular?.(r)
     },
     setInputs(novos) {
       inputs = { ...inputs, ...novos }
