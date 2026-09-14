@@ -79,6 +79,45 @@ export async function POST(req: NextRequest) {
   const corpo = await req.json().catch(() => ({}))
   const accao = String(corpo?.accao ?? '')
 
+  // ── apagar um clipe, ou um vídeo inteiro com os clips dele ────────────────
+  //
+  // Apaga também os ficheiros no storage (pré-visualização, frame, clipe cortado): uma linha
+  // apagada com o MP4 esquecido no bucket é espaço pago por nada. O que já saiu para o
+  // Instagram ou o YouTube fica lá — isto não despublica.
+  if (accao === 'apagar_clip' || accao === 'apagar_job') {
+    const campo = accao === 'apagar_clip' ? 'id' : 'job_id'
+    const alvo = String(accao === 'apagar_clip' ? corpo?.clipId ?? '' : corpo?.jobId ?? '')
+    if (!alvo) return NextResponse.json({ erro: 'nada para apagar' }, { status: 400 })
+
+    const { data: clips } = await db
+      .from('videocliper_clips')
+      .select('id, estado, video_url, thumbnail_url, preview_url')
+      .eq(campo, alvo)
+
+    // A cortar no VPS: apagar agora deixava o worker a subir um ficheiro para uma linha que já
+    // não existe.
+    if ((clips ?? []).some((c) => c.estado === 'a_render')) {
+      return NextResponse.json({ erro: 'há um clipe a ser cortado agora — espera que acabe' }, { status: 409 })
+    }
+
+    const MARCA = '/storage/v1/object/public/uploads/'
+    const caminhos = (clips ?? [])
+      .flatMap((c) => [c.video_url, c.thumbnail_url, c.preview_url])
+      .filter((u): u is string => typeof u === 'string' && u.includes(MARCA))
+      .map((u) => decodeURIComponent(u.split(MARCA)[1].split('?')[0]))
+    if (caminhos.length) await db.storage.from('uploads').remove(caminhos).catch(() => undefined)
+
+    await db.from('videocliper_clips').delete().eq(campo, alvo)
+    if (accao === 'apagar_job') {
+      const { data: job } = await db.from('videocliper_jobs').select('estado').eq('id', alvo).maybeSingle()
+      if (job && ['a_descarregar', 'a_transcrever'].includes(job.estado as string)) {
+        return NextResponse.json({ erro: 'o vídeo está a ser processado no VPS — espera que acabe' }, { status: 409 })
+      }
+      await db.from('videocliper_jobs').delete().eq('id', alvo)
+    }
+    return NextResponse.json({ ok: true, ficheiros: caminhos.length })
+  }
+
   // ── pôr um vídeo na fila ──────────────────────────────────────────────────
   if (accao === 'clipar') {
     const url = String(corpo?.url ?? '').trim()

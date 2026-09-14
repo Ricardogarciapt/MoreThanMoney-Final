@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Loader2, Scissors, Check, X, Send, RefreshCw, Youtube, Instagram, Clock, ChevronUp, ChevronDown, Play, Download } from 'lucide-react'
+import { Loader2, Scissors, Check, X, Send, RefreshCw, Youtube, Instagram, Clock, ChevronUp, ChevronDown, Play, Download, Trash2 } from 'lucide-react'
 
 /**
  * O PAINEL DO VIDEOCLIPER.
@@ -81,6 +81,7 @@ export default function PainelVideocliper() {
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [emFoco, setEmFoco] = useState<number | null>(null)
+  useEffect(() => { setEmFoco((x) => (x !== null && x >= clips.length ? (clips.length ? clips.length - 1 : null) : x)) }, [clips.length])
 
   const carregar = useCallback(async () => {
     const r = await fetch('/api/admin/videocliper', { cache: 'no-store' })
@@ -182,9 +183,10 @@ export default function PainelVideocliper() {
           const e = ESTADO[j.estado] ?? { texto: j.estado, cor: 'text-neutral-400' }
           return (
             <div key={j.id} className="rounded-lg border border-neutral-800">
+              <div className="flex items-stretch">
               <button
                 onClick={() => void (aberto === j.id ? setAberto(null) : abrir(j.id))}
-                className="flex w-full items-center justify-between gap-3 p-3 text-left hover:bg-neutral-900/60"
+                className="flex min-w-0 flex-1 items-center justify-between gap-3 p-3 text-left hover:bg-neutral-900/60"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-neutral-100">
@@ -192,8 +194,10 @@ export default function PainelVideocliper() {
                   </p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-neutral-500">
                     <span className={e.cor}>{e.texto}</span>
-                    {j.progresso && <span>· {j.progresso}</span>}
-                    {Boolean(j.clips) && <span>· {j.clips} clips</span>}
+                    {/* Parado, o texto de progresso fica velho (dizia «10 clips» depois de eles serem
+                        apagados); a contagem vem das linhas que existem. */}
+                    {j.progresso && !['pronto', 'concluido'].includes(j.estado) && <span>· {j.progresso}</span>}
+                    {['pronto', 'concluido'].includes(j.estado) && <span>· {j.clips ?? 0} clips</span>}
                     {Boolean(j.publicados) && <span className="text-emerald-500">· {j.publicados} publicados</span>}
                     {j.duracao_seg ? <span>· {relogio(j.duracao_seg)}</span> : null}
                   </p>
@@ -203,6 +207,18 @@ export default function PainelVideocliper() {
                   <Loader2 className="h-4 w-4 shrink-0 animate-spin text-neutral-500" />
                 )}
               </button>
+              <button
+                onClick={() => {
+                  if (!window.confirm(`Apagar «${j.titulo || 'este vídeo'}» e os ${j.clips ?? 0} clips dele? Os ficheiros saem do storage; o que já foi publicado continua publicado.`)) return
+                  void accao({ accao: 'apagar_job', jobId: j.id }, `apagar-${j.id}`).then(() => { if (aberto === j.id) { setAberto(null); setClips([]) } })
+                }}
+                disabled={ocupado === `apagar-${j.id}`}
+                title="Apagar vídeo e clips"
+                className="shrink-0 border-l border-neutral-800 px-3 text-neutral-500 hover:bg-red-950/40 hover:text-red-400 disabled:opacity-40"
+              >
+                {ocupado === `apagar-${j.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              </button>
+              </div>
 
               {/* ── os dez cartões ──────────────────────────────────────── */}
               {aberto === j.id && (
@@ -447,6 +463,17 @@ function AccoesClipe({
           Publicar nos dois
         </button>
       )}
+
+      <button
+        onClick={() => {
+          if (!window.confirm(`Apagar o clipe «${c.titulo}»? Sai do painel e do storage; se já foi publicado, continua publicado.`)) return
+          void accao({ accao: 'apagar_clip', clipId: c.id }, `apagar-${c.id}`)
+        }}
+        disabled={ocupado === `apagar-${c.id}` || c.estado === 'a_render'}
+        className="inline-flex items-center gap-1 rounded-md border border-neutral-800 px-2.5 py-1.5 text-[12px] text-neutral-400 hover:border-red-900 hover:text-red-400 disabled:opacity-40"
+      >
+        <Trash2 className="h-3.5 w-3.5" /> Apagar
+      </button>
 
       {c.video_url && (
         <a href={c.video_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md border border-neutral-700 px-2.5 py-1.5 text-[12px] text-neutral-300 hover:bg-neutral-800">
