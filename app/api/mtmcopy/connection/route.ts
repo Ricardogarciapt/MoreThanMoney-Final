@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { connectionCopyMethod } from '@/lib/mtmcopy/copy-limits'
 import { removeConnectionCopyFactory, syncConnectionCopyFactory, syncMtmStrategyReplication } from '@/lib/mtmcopy/connection-sync'
 import { deleteMetaApiAccount } from '@/lib/mtmcopy/metaapi-provision'
+import { juntarSaldosTradeLocker } from '@/lib/tradelocker/saldos'
 import { removeProviderStrategy } from '@/lib/mtmcopy/copyfactory'
 import { verifyTelegramChannel } from '@/lib/mtmcopy/telegram-bot'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
   if (connectionId) {
     const conn = await getOwnedConnection(user.id, connectionId)
     if (!conn) return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
-    const [enriched] = await attachConnectionBalances([conn])
+    const [enriched] = await juntarSaldosTradeLocker(await attachConnectionBalances([conn]))
     return NextResponse.json({ connection: enriched })
   }
 
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Erro ao obter configuração' }, { status: 500 })
   }
 
-  const connections = await attachConnectionBalances(data ?? [])
+  const connections = await juntarSaldosTradeLocker(await attachConnectionBalances(data ?? []))
   const { data: profile } = await supabaseAdmin
     .from('profiles')
     .select('full_name, username, email, user_type, member_category')
@@ -125,6 +126,17 @@ export async function POST(request: NextRequest) {
 
   const existing = await getOwnedConnection(user.id, connectionId)
   if (!existing) return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
+
+  // TradeLocker não tem CopyFactory: só copia por grupos de sinais (execução direta).
+  if (
+    existing.mt5_platform === 'tradelocker' &&
+    (body.copy_method === 'strategy' || body.copy_method === 'master_slave')
+  ) {
+    return NextResponse.json(
+      { error: 'Contas TradeLocker só copiam por grupos de sinais. Estratégias e copy trader pessoal são só MetaTrader.' },
+      { status: 400 },
+    )
+  }
 
   const {
     telegram_channel,

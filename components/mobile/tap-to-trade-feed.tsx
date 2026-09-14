@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation"
 import { useT } from "@/components/i18n-provider"
 import { supabase } from "@/lib/supabase"
 import { T2T_BROKERS } from "@/lib/mtmcopy/t2t-brokers"
+import TradeLockerConnectForm, { TradeLockerBadge } from "@/components/tradelocker/tradelocker-connect-form"
 import { isAllowedT2TSource, matchesT2TPrefs, t2tSourceKey, T2T_SOURCES, T2T_ASSET_CLASSES } from "@/lib/mtmcopy/t2t-source"
 import {
   TrendingUp,
@@ -236,6 +237,9 @@ interface Conn {
   mt5_login?: string | number | null
   mt5_server?: string | null
   mt5_platform?: string | null
+  /** Conta TradeLocker (mt5_platform='tradelocker'): accountId escolhido na ligação. */
+  tl_account_id?: string | null
+  tl_env?: string | null
   mt5_status?: string | null
   last_error?: string | null
   lot_mode?: string | null
@@ -388,6 +392,8 @@ export default function TapToTradeFeed() {
   const [connectOpen, setConnectOpen] = useState(false)
   const [connForm, setConnForm] = useState<{ broker: string; server: string; login: string; password: string; platform: "mt5" }>({ broker: T2T_BROKERS[0].id, server: T2T_BROKERS[0].servers[0], login: "", password: "", platform: "mt5" })
   const [connBusy, setConnBusy] = useState(false)
+  /** Plataforma da conta a ligar: MetaTrader 5 (MetaApi) ou TradeLocker. */
+  const [connPlataforma, setConnPlataforma] = useState<"mt5" | "tradelocker">("mt5")
   const [connError, setConnError] = useState("")
   const [savingConn, setSavingConn] = useState(false)
   const [removingConn, setRemovingConn] = useState(false)
@@ -963,7 +969,7 @@ export default function TapToTradeFeed() {
   // Existe uma ligação (mesmo pendente/erro) → mostrar a conta + estado.
   const hasAccount = !!conn
   // Pronta a operar (conta MetaApi criada e ligada à corretora).
-  const isReady = !!conn?.metaapi_account_id && conn?.mt5_status === "connected"
+  const isReady = (!!conn?.metaapi_account_id || (conn?.mt5_platform === "tradelocker" && !!conn?.tl_account_id)) && conn?.mt5_status === "connected"
   const riskLabel = cfg
     ? cfg.lot_mode === "fixed"
       ? `${cfg.lot}${t("t2t.lotFixedSuffix")}`
@@ -1076,9 +1082,10 @@ export default function TapToTradeFeed() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 text-[12px] font-semibold text-white truncate">
                           <Wallet className="w-3.5 h-3.5 text-[#D2A63C] shrink-0" /> {c.account_label || t("t2t.mt5Account")}
+                          {c.mt5_platform === "tradelocker" && <TradeLockerBadge />}
                         </div>
                         <div className="text-[10px] text-zinc-500 truncate">
-                          {c.mt5_login ?? "—"} · {c.mt5_server || "—"}
+                          {c.mt5_login ?? (c.tl_account_id ? `#${c.tl_account_id}` : "—")} · {c.mt5_server || "—"}
                           {typeof c.balance === "number" ? ` · ${c.balance.toLocaleString("pt-PT", { style: "currency", currency: "USD" })}` : ""}
                         </div>
                       </div>
@@ -1136,8 +1143,8 @@ export default function TapToTradeFeed() {
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-zinc-400">
-                    <span>{t("t2t.loginLabel")} <span className="text-zinc-200">{conn?.mt5_login ?? "—"}</span></span>
-                    <span>{t("t2t.platformLabel")} <span className="text-zinc-200 uppercase">{conn?.mt5_platform || "mt5"}</span></span>
+                    <span>{t("t2t.loginLabel")} <span className="text-zinc-200">{conn?.mt5_login ?? (conn?.tl_account_id ? `#${conn.tl_account_id}` : "—")}</span></span>
+                    <span>{t("t2t.platformLabel")} {conn?.mt5_platform === "tradelocker" ? <TradeLockerBadge /> : <span className="text-zinc-200 uppercase">{conn?.mt5_platform || "mt5"}</span>}</span>
                     <span className="col-span-2 truncate">{t("t2t.serverLabel")} <span className="text-zinc-200">{conn?.mt5_server || "—"}</span></span>
                     {typeof conn?.balance === "number" && (
                       <span className="col-span-2">{t("t2t.balanceLabel")} <span className="text-white font-semibold">{conn.balance.toLocaleString("pt-PT", { style: "currency", currency: "USD" })}</span></span>
@@ -1641,7 +1648,7 @@ export default function TapToTradeFeed() {
                     {conn?.mt5_status === "connected" ? t("t2t.statusConnected") : conn?.mt5_status === "error" ? t("t2t.statusError") : conn?.mt5_status === "disconnected" ? t("t2t.statusDisconnected") : t("t2t.statusConnecting")}
                   </span>
                 </div>
-                <div>{t("t2t.loginLabel")} <span className="text-zinc-200">{conn?.mt5_login ?? "—"}</span> · {(conn?.mt5_platform || "mt5").toUpperCase()}</div>
+                <div>{t("t2t.loginLabel")} <span className="text-zinc-200">{conn?.mt5_login ?? (conn?.tl_account_id ? `#${conn.tl_account_id}` : "—")}</span> · {conn?.mt5_platform === "tradelocker" ? <TradeLockerBadge /> : (conn?.mt5_platform || "mt5").toUpperCase()}</div>
                 <div className="truncate">{t("t2t.serverLabel")} <span className="text-zinc-200">{conn?.mt5_server || "—"}</span></div>
                 <button
                   onClick={removeAccount}
@@ -1654,6 +1661,33 @@ export default function TapToTradeFeed() {
               </div>
             )}
             {!hasAccount && (
+              <div className="grid grid-cols-2 gap-2 mb-2.5">
+                {(["mt5", "tradelocker"] as const).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setConnPlataforma(p)}
+                    disabled={connBusy}
+                    className={`rounded-xl border py-2 text-xs font-medium ${connPlataforma === p ? "border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]" : "border-zinc-700 text-zinc-400"}`}
+                  >
+                    {p === "mt5" ? "MetaTrader 5" : "TradeLocker"}
+                  </button>
+                ))}
+              </div>
+            )}
+            {!hasAccount && connPlataforma === "tradelocker" && (
+              <TradeLockerConnectForm
+                variante="mobile"
+                purpose="tap_to_trade"
+                getToken={token}
+                extraPayload={() => ({ account_label: "T2T" })}
+                onConnected={async () => {
+                  setConnectOpen(false)
+                  setConnPlataforma("mt5")
+                  await loadConnection()
+                }}
+              />
+            )}
+            {!hasAccount && connPlataforma === "mt5" && (
               <div className="space-y-2.5">
                 {/* Corretora — apenas FTMO, FundedNext, VT Markets */}
                 <div>
@@ -1691,7 +1725,7 @@ export default function TapToTradeFeed() {
             {connError && <p className="text-xs text-rose-400 mt-2">{connError}</p>}
             <div className="flex gap-2 mt-4">
               <button onClick={() => setConnectOpen(false)} disabled={connBusy} className="flex-1 rounded-xl border border-zinc-700 py-2.5 text-sm font-medium text-zinc-300">{hasAccount ? t("t2t.close") : t("t2t.cancel")}</button>
-              {!hasAccount && (
+              {!hasAccount && connPlataforma === "mt5" && (
                 <button onClick={connectAccount} disabled={connBusy} className="flex-1 rounded-xl bg-[#D2A63C] py-2.5 text-sm font-bold text-black disabled:opacity-60">{connBusy ? t("t2t.linking") : t("t2t.linkAccount")}</button>
               )}
             </div>

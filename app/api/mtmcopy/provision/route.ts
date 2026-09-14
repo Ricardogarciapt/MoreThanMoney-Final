@@ -9,6 +9,7 @@ import type { MtmcopyAccountRole, MtmcopySenderMode } from '@/lib/mtmcopy/types'
 import { resolveMtmcopyUserLimits } from '@/lib/mtmcopy/account-limits'
 import { carregarDireitos, pareceDemo, podeLigarConta, type ContaLigada } from '@/lib/entitlements'
 import { getMtmcopySubscription } from '@/lib/mtmcopy/subscription'
+import { ligacaoEhDemo } from '@/lib/tradelocker/ligacao'
 import { normalizeTelegramGroups, normalizeTelegramChannel, strategyIdsForTelegramGroupsAsync, type MtmcopyCopyMethod } from '@/lib/mtmcopy/copy-methods'
 import {
   canAddConnection,
@@ -150,7 +151,9 @@ export async function POST(request: NextRequest) {
   const [{ data: doSite }, { data: doAuto }] = await Promise.all([
     supabaseAdmin
       .from('mtmcopy_connections')
-      .select('mt5_server, purpose, t2t_enabled')
+      // '*' e não a lista de colunas: tl_env só existe depois da migração 069 e um select a uma
+      // coluna em falta devolvia null — e a contagem de contas ficava vazia (limites soltos).
+      .select('*')
       .eq('user_id', user.id)
       .neq('mt5_status', 'disconnected'),
     supabaseAdmin.from('mtmauto_accounts').select('demo').eq('user_id', user.id),
@@ -160,7 +163,8 @@ export async function POST(request: NextRequest) {
     ...(doSite ?? []).map((c) => ({
       superficie:
         c.purpose === 'tap_to_trade' || c.t2t_enabled === true ? ('t2t' as const) : ('mtmcopy' as const),
-      demo: pareceDemo(c.mt5_server as string),
+      // Contas TradeLocker contam pelo ambiente escolhido (lib/tradelocker/ligacao).
+      demo: ligacaoEhDemo(c as { mt5_platform?: string | null; tl_env?: string | null; mt5_server?: string | null }, pareceDemo),
     })),
     ...(doAuto ?? []).map((c) => ({ superficie: 'mtmauto' as const, demo: Boolean(c.demo) })),
   ]

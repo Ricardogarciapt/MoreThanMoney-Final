@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { listOpenPositions, closePositionById } from '@/lib/mtmcopy/metaapi'
+import { ehTradeLocker, sessaoDaLigacao } from '@/lib/tradelocker/ligacao'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -25,10 +26,10 @@ export async function POST(request: NextRequest) {
 
   const { data: conns } = await supabase
     .from('mtmcopy_connections')
-    .select('id, metaapi_account_id, purpose, t2t_enabled')
+    .select('*') // inclui mt5_platform/tl_* (TradeLocker) sem depender da migração 069
     .eq('user_id', user.id)
     .neq('mt5_status', 'disconnected')
-  const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id)
+  const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id || (ehTradeLocker(c) && c.tl_account_id))
   // Emergency stop fecha em TODAS as contas T2T do user (fan-out). Retrocompat: se nenhuma marcada,
   // usa a 1ª conta ligada.
   let targets = withAccount.filter((c) => c.purpose === 'tap_to_trade' || c.t2t_enabled === true)
@@ -42,6 +43,29 @@ export async function POST(request: NextRequest) {
   let total = 0
   const errors: string[] = []
   for (const conn of targets) {
+    // TradeLocker: lê as posições pela API dela e fecha cada uma por inteiro (qty 0).
+    if (ehTradeLocker(conn)) {
+      const { sessao, erro } = await sessaoDaLigacao(conn)
+      if (!sessao) { errors.push(erro ?? 'TradeLocker sem sessão'); continue }
+      try {
+        const posicoes = await sessao.posicoes()
+        total += posicoes.length
+        for (const p of posicoes) {
+          try { await sessao.fecharPosicao(p.id, 0); closed++ } catch (e) { errors.push(e instanceof Error ? e.message : 'erro') }
+        }
+      } catch (e) {
+        errors.push(e instanceof Error ? e.message : 'falha a ler posições TradeLocker')
+        continue
+      }
+      await supabase
+        .from('mtmcopy_signal_log')
+        .update({ status: 'closed', detail: 'Emergency stop' })
+        .eq('user_id', user.id)
+        .eq('connection_id', conn.id)
+        .in('status', ['open', 'pending'])
+        .then(undefined, () => {})
+      continue
+    }
     const accId = conn.metaapi_account_id!
     let positions: { id: string }[] = []
     try {

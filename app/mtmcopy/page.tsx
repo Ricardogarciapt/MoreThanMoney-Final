@@ -1,5 +1,6 @@
 "use client"
 
+import { TradeLockerBadge } from "@/components/tradelocker/tradelocker-connect-form"
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import Breadcrumbs from "@/components/breadcrumbs"
@@ -542,6 +543,7 @@ export default function MtmCopyPage() {
                     <div className="flex items-center justify-between gap-3">
                       <CardTitle className="text-white text-base">
                         {connectionTitle(connection, index)}
+                        {(connection as { mt5_platform?: string | null }).mt5_platform === "tradelocker" && <TradeLockerBadge className="ml-2 align-middle" />}
                       </CardTitle>
                       <button
                         onClick={() => handleToggleActive(connection)}

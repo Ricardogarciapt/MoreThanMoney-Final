@@ -13,7 +13,14 @@ export interface MTMcopierConnection {
   telegram_status: 'pending' | 'connected' | 'error' | 'disconnected'
   mt5_login_last4: string | null
   mt5_login?: string | null
-  mt5_platform?: 'mt4' | 'mt5' | null
+  /** 'tradelocker' = conta TradeLocker (sem MetaApi) — ver lib/tradelocker e migração 069. */
+  mt5_platform?: 'mt4' | 'mt5' | 'tradelocker' | null
+  tl_server?: string | null
+  tl_env?: 'live' | 'demo' | null
+  tl_account_id?: string | null
+  tl_acc_num?: string | null
+  tl_last_error?: string | null
+  tl_connected_at?: string | null
   mt5_server: string | null
   copyfactory_subscribed?: boolean
   mt5_status: 'pending' | 'connected' | 'error' | 'disconnected'
