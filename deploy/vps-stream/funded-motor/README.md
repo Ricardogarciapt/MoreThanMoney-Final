@@ -75,6 +75,21 @@ Então `MOTOR_ESCRITA=1` no ficheiro e `systemctl restart mtm-funded-motor`.
 - `[evento] quebrou|objetivo … → 200`: o site recebeu. Enquanto não receber, `metricas.eventoPendente`
   fica na conta e o motor volta a tentar de 30 em 30 segundos.
 
+## Espelho das estratégias (contas que seguem o MTM Auto)
+
+`services/funded-motor/espelho-estrategias.ts`, ligado dentro do motor. Contas `sim` com
+`segue_estrategia` (migração **070**, aplicar antes) copiam as posições da conta-mestre da estratégia
+(`mtmauto_providers.metaapi_account_id`): uma ligação RPC da MetaApi por mestre, `getPositions` de 3 em
+3 s, abertura ao nosso preço em proporção à equity (mínimo do símbolo + `escala` quando o lote
+proporcional não chega), SL/TP em níveis absolutos, parciais proporcionais, fecho após 2 leituras sem a
+posição. Ponte anti-duplicação: `funded_espelho_posicoes`. Posições abertas na mestre antes de a conta
+existir, ou vistas mais de `ESPELHO_ATRASO_MAX_MIN` (30) depois, não se copiam (ficam `recusada`).
+
+- `MOTOR_ESCRITA=0` → `[espelho][seco] …` no log; nada na base.
+- Opcionais: `ESPELHO_ATIVO=0` (desliga só o espelho) · `ESPELHO_POLL_MS=3000` · `ESPELHO_ATRASO_MAX_MIN=30`.
+- Contas com `metricas.analise = true` não são quebradas pelas regras do programa (o stop-out mantém-se).
+- No log: `[espelho] <estratégia>→<conta> abriu|parcial|fechou|SL …`.
+
 ## Regras de execução (as que se publicam)
 
 - SL/TP fecham ao nível exacto, sem requotes; SL e TP no mesmo tick → vale o SL.
