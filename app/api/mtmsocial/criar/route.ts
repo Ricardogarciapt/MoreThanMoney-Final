@@ -66,6 +66,9 @@ async function escrever(
       body: JSON.stringify({
         model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
         max_tokens: 1800,
+        // O Sonnet 5 pensa por omissão e o pensamento come o max_tokens: a resposta vinha
+        // cortada ou vazia. Isto é trabalho de formato, não de raciocínio.
+        thinking: { type: 'disabled' },
         system:
           `Escreves carrosséis de Instagram para a marca «${marca}».\n\n` +
           'Devolves APENAS JSON: {"hook":"...","laminas":["..."],"caption":"..."}\n\n' +

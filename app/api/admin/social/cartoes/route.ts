@@ -29,6 +29,9 @@ async function escreverLaminas(tema: string, cta: string, quantas: number): Prom
       body: JSON.stringify({
         model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
         max_tokens: 1200,
+        // O Sonnet 5 pensa por omissão e o pensamento come o max_tokens: a resposta vinha
+        // cortada ou vazia. Isto é trabalho de formato, não de raciocínio.
+        thinking: { type: 'disabled' },
         system:
           "Escreves carrosséis de Instagram para o Ricardo Garcia (MoreThanMoney, trading).\n\n" +
           "Devolves APENAS JSON: {\"capa\":\"...\",\"meio\":[\"...\",\"...\"],\"fim\":\"...\"}\n\n" +

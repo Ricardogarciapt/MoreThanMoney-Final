@@ -69,6 +69,9 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           model: modeloClaude(process.env.CONTENT_DRAFT_MODEL),
           max_tokens: 200,
+          // O Sonnet 5 pensa por omissão e o pensamento come o max_tokens: a resposta vinha
+          // cortada ou vazia. Isto é trabalho de formato, não de raciocínio.
+          thinking: { type: 'disabled' },
           system:
             "Escreves um comentário para deixar num post de Instagram de OUTRA pessoa, em nome do " +
             "Ricardo Garcia (MoreThanMoney, comunidade portuguesa de trading).\n\n" +

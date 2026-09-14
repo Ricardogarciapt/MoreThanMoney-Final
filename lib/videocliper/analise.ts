@@ -159,7 +159,10 @@ export async function analisarTranscricao(input: {
       headers: { 'Content-Type': 'application/json', 'x-api-key': chave, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: modelo,
-        max_tokens: 8000,
+        max_tokens: 12000,
+        // O Sonnet 5 pensa por omissão e o pensamento come o max_tokens: a resposta vinha
+        // cortada ou vazia. Isto é trabalho de formato, não de raciocínio.
+        thinking: { type: 'disabled' },
         system: SISTEMA,
         messages: [{ role: 'user', content: pedido }],
       }),
@@ -194,7 +197,9 @@ function interpretar(bruto: string, palavras: Palavra[]): ClipeProposto[] {
   for (const b of blocos) {
     const corpo = b.split('===FIM===')[0] ?? ''
     const campo = (nome: string): string => {
-      const m = corpo.match(new RegExp(`^${nome}:\\s*([\\s\\S]*?)(?=\\n[A-Z]+:|$)`, 'm'))
+      // SEM a bandeira `m`: com ela o `$` parava no fim da primeira linha, e a legenda — que tem
+      // várias — chegava só com a primeira frase.
+      const m = corpo.match(new RegExp(`(?:^|\\n)${nome}:[ \\t]*([\\s\\S]*?)(?=\\n[A-Z]+:|$)`))
       return (m?.[1] ?? '').trim()
     }
 
