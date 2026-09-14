@@ -94,6 +94,12 @@ interface ValorContexto {
   enviar: () => Promise<void>
   aEnviar: boolean
   erroEnvio: string | null
+  /**
+   * A ferramenta Long/Short activa — partilhada entre o ticket e o gráfico. Carregar em Long no
+   * ticket arma a ferramenta no gráfico (e passa-o à vista de negociar), e vice-versa.
+   */
+  ferramenta: Direcao | null
+  setFerramenta: (d: Direcao | null) => void
 }
 
 const Contexto = createContext<ValorContexto | null>(null)
@@ -123,6 +129,7 @@ export function RascunhoProvider(props: {
   const [r, setR] = useState<Rascunho>(VAZIO)
   const [aEnviar, setAEnviar] = useState(false)
   const [erroEnvio, setErroEnvio] = useState<string | null>(null)
+  const [ferramenta, setFerramenta] = useState<Direcao | null>(null)
   const arred = useCallback((v: number) => Number(v.toFixed(s.digits)), [s.digits])
   const tolerancia = Math.max(spreadEmPreco(s), 2 * s.pip_size)
 
@@ -271,6 +278,7 @@ export function RascunhoProvider(props: {
     <Contexto.Provider value={{
       r, simbolo: s, preco, precos, volume, setVolume, tolerancia, entrada, sl, tp, erros, temErros, resumo, mostrar,
       set, definirNivel, definirPips, colocar, aplicar, limpar, enviar, aEnviar, erroEnvio,
+      ferramenta, setFerramenta,
     }}>
       {props.children}
     </Contexto.Provider>

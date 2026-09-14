@@ -93,6 +93,26 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
           <p className="text-[10.5px] text-zinc-500">{s.nome ?? ""} · spread {s.spread_pontos} pts</p>
         </div>
         <div className="flex gap-1 rounded-lg bg-white/5 p-0.5 text-[11px]">
+          {/* Long/Short: a ferramenta de posição do gráfico, a partir do ticket — desenha já a
+              entrada com SL/TP por defeito, que se ajustam aqui ou arrastando as linhas. */}
+          {(["buy", "sell"] as const).map((lado) => (
+            <button
+              key={lado}
+              onClick={() => {
+                if (k.ferramenta === lado) { k.setFerramenta(null); return }
+                k.setFerramenta(lado)
+                k.colocar(lado, r.tipo === "mercado" ? null : r.entrada)
+              }}
+              className={`rounded-md px-2 py-1 font-semibold ${
+                k.ferramenta === lado
+                  ? lado === "buy" ? "bg-[#089981] text-white" : "bg-[#F23645] text-white"
+                  : lado === "buy" ? "text-[#26A69A]" : "text-[#EF5350]"
+              }`}
+            >
+              {lado === "buy" ? "Long" : "Short"}
+            </button>
+          ))}
+          <span className="mx-0.5 w-px bg-white/10" />
           {(["mercado", "limit", "stop"] as const).map((t) => (
             <button key={t} onClick={() => trocarTipo(t)} className={`rounded-md px-2 py-1 ${r.tipo === t ? "bg-[#2962FF] text-white" : "text-zinc-400"}`}>
               {t === "mercado" ? "Mercado" : t === "limit" ? "Limit" : "Stop"}

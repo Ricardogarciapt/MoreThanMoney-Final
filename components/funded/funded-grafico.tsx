@@ -49,11 +49,19 @@ function guardar(chave: string, v: unknown) {
 export default function FundedGrafico(props: GraficoProps) {
   const { simbolo, preco, podeNegociar } = props
   const { user } = useAuth()
+  // A ferramenta Long/Short vive no rascunho (partilhada com o ticket); sem rascunho, fica local.
+  const [modoLocal, setModoLocal] = useState<Direcao | null>(null)
   const rascunho = useRascunhoOpcional()
+  const modo = rascunho ? rascunho.ferramenta : modoLocal
+  const setModo = (d: Direcao | null) => (rascunho ? rascunho.setFerramenta(d) : setModoLocal(d))
+  // Carregar em Long/Short (no ticket ou aqui) com a vista de análise aberta leva à vista de negociar:
+  // é lá que as linhas se desenham e arrastam.
+  useEffect(() => {
+    if (modo && vista === "analise") mudarVista("negociar")
+  }, [modo]) // eslint-disable-line react-hooks/exhaustive-deps
   const [motor, setMotor] = useState<"a_verificar" | "tv" | "leve">("a_verificar")
   const [vista, setVista] = useState<Vista | null>(null)
   const [tf, setTf] = useState<Tf>("M5")
-  const [modo, setModo] = useState<Direcao | null>(null)
   const [estudos, setEstudos] = useState<ChaveEstudoWebtrader[]>(["Goldkiller"])
 
   useEffect(() => {
@@ -167,7 +175,7 @@ export default function FundedGrafico(props: GraficoProps) {
         <div>
           <TvChartEmbed tvSymbol={tvSymbolDe(simbolo)} interval={String(tfPorChave(tf).seg >= 86400 ? "D" : tfPorChave(tf).seg / 60)} height={420} studies={estudosTv} />
           <p className="px-2 py-1.5 text-center text-[10.5px]" style={{ color: TV.textoFraco }}>
-            Análise com os estudos MTM. Para desenhar e arrastar a ordem (entrada, SL, TP) passa a «Negociar» — o widget gratuito do TradingView não aceita linhas de ordens.
+            Análise com os estudos MTM. O ticket abaixo negoceia daqui; ao carregar em Long/Short o gráfico passa às linhas arrastáveis. Com a biblioteca TradingView (pedida), análise e linhas ficam no mesmo gráfico.
           </p>
         </div>
       ) : motor === "tv" ? (
