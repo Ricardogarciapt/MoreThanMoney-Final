@@ -226,7 +226,6 @@ export async function fecharPosicao(conta: Conta, positionId: string, volume?: n
 
   const plano = planearFecho(pos, simbolo, preco, precos, volume == null ? null : Number(volume))
   if (!plano.ok) throw new ErroOrdem(422, plano.erro)
-  const agora = new Date().toISOString()
   const tick = { bid: preco.bid, ask: preco.ask, em: em[pos.symbol] }
 
   if (!plano.parcial) {
@@ -242,28 +241,19 @@ export async function fecharPosicao(conta: Conta, positionId: string, volume?: n
     return { fechada, plano }
   }
 
-  const { data: reduzida } = await db.from('funded_positions').update({
-    volume: plano.volumeRestante,
-    comissao: Math.round((pos.comissao - plano.comissaoFechada) * 100) / 100,
-    swap: Math.round((pos.swap - plano.swapFechado) * 100) / 100,
-  }).eq('id', pos.id).eq('estado', 'aberta').eq('volume', linha.volume as number).select('*')
-  if (!reduzida?.length) throw new ErroOrdem(409, 'a posição mudou entretanto — atualiza e tenta outra vez')
-
-  const { data: filha, error } = await db.from('funded_positions').insert({
-    account_id: conta.id, symbol: pos.symbol, direcao: pos.direcao, volume: plano.volumeFechado,
-    preco_entrada: pos.preco_entrada, sl: pos.sl, tp: pos.tp, comissao: plano.comissaoFechada, swap: plano.swapFechado,
-    estado: 'fechada', preco_fecho: plano.precoFecho, pnl: plano.pnl, motivo_fecho: motivo,
-    origem: linha.origem, ideia_ref: linha.ideia_ref, tick_entrada: linha.tick_entrada, tick_fecho: tick,
-    mae_id: pos.id, aberta_em: linha.aberta_em, fechada_em: agora,
-  }).select('*').single()
-  if (error || !filha) {
-    // Sem a filha o parcial não fica registado: repõe-se o volume para não sumir meia posição.
-    await db.from('funded_positions').update({ volume: pos.volume, comissao: pos.comissao, swap: pos.swap })
-      .eq('id', pos.id).eq('volume', plano.volumeRestante)
-    throw new ErroOrdem(500, 'não foi possível registar o fecho parcial')
-  }
-  await somarSaldo(conta.id, plano.pnl)
-  return { fechada: filha, restante: reduzida[0], plano }
+  // Parcial numa só transacção (funded_fechar_parcial, migração 068): reduzir a mãe, criar a filha
+  // e creditar o saldo. Eram três escritas soltas — um SL do motor entre elas deixava meia posição
+  // sem registo, e o copiador (que lê a filha) via um parcial que não aconteceu.
+  const { data: filhaId, error } = await db.rpc('funded_fechar_parcial', {
+    p_mae: pos.id, p_volume: plano.volumeFechado, p_preco: plano.precoFecho, p_pnl: plano.pnl, p_tick: tick,
+  })
+  if (error) throw new ErroOrdem(500, 'não foi possível registar o fecho parcial')
+  if (!filhaId) throw new ErroOrdem(409, 'a posição mudou entretanto — atualiza e tenta outra vez')
+  const [{ data: filha }, { data: restante }] = await Promise.all([
+    db.from('funded_positions').select('*').eq('id', String(filhaId)).maybeSingle(),
+    db.from('funded_positions').select('*').eq('id', pos.id).maybeSingle(),
+  ])
+  return { fechada: filha, restante, plano }
 }
 
 // ── modificar ─────────────────────────────────────────────────────────────
