@@ -6,7 +6,10 @@ export const dynamic = 'force-dynamic'
 /**
  * VELAS HISTÓRICAS para o gráfico do WebTrader.
  *
- * GET ?symbol=XAUUSD&tf=M1|M5|M15|H1&limit=300 → { velas: [{ t, o, h, l, c }], fonte }
+ * GET ?symbol=XAUUSD&tf=M1|M5|M15|H1|H4|D1&limit=300[&ate=<unix s>] → { velas: [{ t, o, h, l, c }], fonte }
+ *
+ * `ate` pede as velas ANTERIORES a esse instante: é assim que o gráfico do TradingView (Advanced
+ * Charts) pede mais histórico quando se arrasta para trás. Sem `ate`, as últimas até agora.
  *
  * Sem isto o gráfico abria vazio e só ganhava velas com o tempo que o trader lá ficasse. As velas
  * vêm do MESMO sítio que a reposição de desempenho (lib/mtmauto/reconstruir-desempenho): o
@@ -20,7 +23,7 @@ export const dynamic = 'force-dynamic'
  */
 
 const MERCADO = 'https://mt-market-data-client-api-v1.new-york.agiliumtrade.ai'
-const TF: Record<string, string> = { M1: '1m', M5: '5m', M15: '15m', H1: '1h' }
+const TF: Record<string, string> = { M1: '1m', M5: '5m', M15: '15m', H1: '1h', H4: '4h', D1: '1d' }
 const CACHE_MS = 30_000
 const cache = new Map<string, { em: number; corpo: unknown }>()
 
@@ -42,7 +45,10 @@ export async function GET(request: NextRequest) {
   if (!/^[A-Z0-9._#-]{1,24}$/.test(symbol) || !TF[tf]) {
     return NextResponse.json({ error: 'symbol/tf inválidos' }, { status: 400 })
   }
-  const chave = `${symbol}:${tf}:${limit}`
+  // Arredondado ao minuto: dois pedidos de histórico ao mesmo ponto partilham a cache.
+  const ateNum = Number(sp.get('ate'))
+  const ate = Number.isFinite(ateNum) && ateNum > 946684800 ? Math.floor(ateNum / 60) * 60 : null
+  const chave = `${symbol}:${tf}:${limit}:${ate ?? 'agora'}`
   const guardado = cache.get(chave)
   const cabecalhos = { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' }
   if (guardado && Date.now() - guardado.em < CACHE_MS) return NextResponse.json(guardado.corpo, { headers: cabecalhos })
@@ -61,7 +67,7 @@ export async function GET(request: NextRequest) {
     // A MetaApi pagina para TRÁS: `startTime` = agora devolve as `limit` velas anteriores.
     const url = `${MERCADO}/users/current/accounts/${conta}/historical-market-data/symbols/` +
       `${encodeURIComponent(String(s.simbolo_fonte || symbol))}/timeframes/${TF[tf]}/candles` +
-      `?startTime=${new Date().toISOString()}&limit=${limit}`
+      `?startTime=${new Date(ate ? ate * 1000 : Date.now()).toISOString()}&limit=${limit}`
     const ctl = new AbortController()
     const t = setTimeout(() => ctl.abort(), 8000)
     const r = await fetch(url, { headers: { 'auth-token': token }, signal: ctl.signal }).finally(() => clearTimeout(t))
@@ -72,7 +78,7 @@ export async function GET(request: NextRequest) {
           t: Math.floor(new Date(String(v.time)).getTime() / 1000),
           o: Number(v.open), h: Number(v.high), l: Number(v.low), c: Number(v.close),
         }))
-        .filter((v) => Number.isFinite(v.t) && v.o > 0 && v.h > 0 && v.l > 0 && v.c > 0)
+        .filter((v) => Number.isFinite(v.t) && v.o > 0 && v.h > 0 && v.l > 0 && v.c > 0 && (ate == null || v.t < ate))
         .sort((a, b) => a.t - b.t)
       corpo = { symbol, tf, velas, fonte: 'metaapi' }
     }

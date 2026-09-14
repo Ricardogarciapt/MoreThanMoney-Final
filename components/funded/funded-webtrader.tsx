@@ -6,10 +6,14 @@ import { Loader2, LogIn, ChevronDown, ShieldAlert, X } from "lucide-react"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
 import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, usd, COR_ESTADO } from "./api"
 import FundedTrader from "./funded-trader"
+import InstalarWebtrader from "./instalar-webtrader"
 import type { Prefill } from "./funded-ticket"
 
 /**
- * MTM FUNDED — WEBTRADER (tab `funded` da app-mobile).
+ * MTM FUNDED — WEBTRADER. Vive em dois sítios com o mesmo código:
+ *  · sub-separador «Web trader» do Scanner na app-mobile (`?tab=scanner&sub=webtrader`, e o
+ *    antigo `?tab=funded`) — `contexto="embutido"`;
+ *  · a app própria `/webtrader`, instalável no ecrã principal — `contexto="app"`.
  *
  * Entrada à MetaTrader: as contas simuladas de quem tem sessão MTM aparecem logo; qualquer conta
  * (a própria ou a de outra pessoa, com a password investor) entra com Login + Password no servidor
@@ -23,7 +27,10 @@ import type { Prefill } from "./funded-ticket"
 const SERVIDOR = "MTM Funded"
 const CHAVE_ULTIMA = "mtmfunded_ultima_conta"
 
-export default function FundedWebtrader() {
+export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
+  contexto?: "embutido" | "app"
+  onSimbolo?: (symbol: string) => void
+} = {}) {
   const sp = useSearchParams()
   const [contas, setContas] = useState<ContaResumo[] | null>(null)
   const [sessoes, setSessoes] = useState<Record<string, SessaoConta>>({})
@@ -92,7 +99,8 @@ export default function FundedWebtrader() {
       {/* Sempre visível — posicionamento obrigatório (spec §1). */}
       <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200">
         <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
-        Conta simulada educativa · MTM Funded · não é negociação real
+        <span className="min-w-0 flex-1">Conta simulada educativa · MTM Funded · não é negociação real</span>
+        <InstalarWebtrader contexto={contexto} />
       </div>
 
       {todas.length > 0 && (
@@ -140,17 +148,22 @@ export default function FundedWebtrader() {
           onEntrar={(s) => { guardarSessao(s); setSessoes(lerSessoes()); escolher(s.accountId) }}
           onEscolher={escolher}
           onFechar={todas.length ? () => setMostrarEntrada(false) : undefined}
+          linkLoginMtm={contexto === "app" && contas.length === 0 ? "/login?redirect=/webtrader" : undefined}
         />
       ) : ativa ? (
-        <FundedTrader key={ativa} accountId={ativa} prefill={prefill} simboloInicial={simboloInicial} />
+        <FundedTrader
+          key={ativa} accountId={ativa} prefill={prefill} simboloInicial={simboloInicial} onSimbolo={onSimbolo}
+          alturaGrafico={contexto === "app" ? "h-[52vh] min-h-[320px] md:h-[calc(100dvh-330px)]" : undefined}
+        />
       ) : null}
     </div>
   )
 }
 
 /** Ecrã de entrada: as contas da pessoa + login MT5-like. */
-function Entrada({ contas, onEntrar, onEscolher, onFechar }: {
+function Entrada({ contas, onEntrar, onEscolher, onFechar, linkLoginMtm }: {
   contas: ContaResumo[]
+  linkLoginMtm?: string
   onEntrar: (s: SessaoConta) => void
   onEscolher: (id: string) => void
   onFechar?: () => void
@@ -192,6 +205,9 @@ function Entrada({ contas, onEntrar, onEscolher, onFechar }: {
           {onFechar && <button onClick={onFechar} className="text-zinc-500"><X className="h-4 w-4" /></button>}
         </div>
         {contas.length === 0 && <p className="text-[12px] text-zinc-500">Ainda não tens contas simuladas. Quando comprares um desafio ou entrares num torneio, a conta aparece aqui.</p>}
+        {linkLoginMtm && (
+          <a href={linkLoginMtm} className="mt-2 inline-block text-[12px] font-semibold text-[#D2A63C]">Entrar com a conta MTM →</a>
+        )}
         <div className="space-y-2">
           {contas.map((c) => (
             <button key={c.id} onClick={() => onEscolher(c.id)} className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-black/40 p-2.5 text-left text-[12px] hover:border-[#D2A63C]/40">

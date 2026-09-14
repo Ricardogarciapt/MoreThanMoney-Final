@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
         precos: (precos ?? []).map((p) => ({
           symbol: p.symbol, bid: Number(p.bid), ask: Number(p.ask), em: p.em, fresco: precoFresco(p.em as string, agora),
         })),
-        ...(specs.data ? { simbolos: specs.data.map((r) => ({ ...simboloDaLinha(r), nome: r.nome, horario: r.horario })) } : {}),
+        ...(specs.data ? { simbolos: specs.data.map((r) => ({ ...simboloDaLinha(r), nome: r.nome, horario: r.horario, sessoes: r.sessoes ?? null })) } : {}),
       },
       { headers: { 'Cache-Control': 'no-store' } },
     )
