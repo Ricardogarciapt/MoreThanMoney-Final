@@ -316,25 +316,30 @@ function construirASS(palavras, estilo) {
  * Uma imagem que não chegue não trava o clipe: esse momento fica com a cara, e segue.
  * ────────────────────────────────────────────────────────────────────────────*/
 async function imagensDoBroll(broll, pasta, L, A) {
-  // Em PARALELO: o gerador demora o mesmo para uma ou para quatro, e em série eram minutos por
-  // clipe à espera da fila dele.
-  const resultados = await Promise.all((broll || []).map(async (b, i) => {
-    try {
-      const prompt = `${b.descricao}, vertical 9:16 cinematic photograph, shallow depth of field, moody natural light, no text, no letters, no logos, no money, no banknotes`
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${Math.round(L / 1.5)}&height=${Math.round(A / 1.5)}&seed=${Math.floor(Math.random() * 1e6)}&nologo=true&model=flux`
-      const r = await fetch(url, { signal: AbortSignal.timeout(120_000) })
-      if (!r.ok) throw new Error(`gerador ${r.status}`)
-      const buf = Buffer.from(new Uint8Array(await r.arrayBuffer()))
-      if (buf.length < 4096) throw new Error("imagem vazia")
-      const f = path.join(pasta, `broll-${i}.jpg`)
-      fs.writeFileSync(f, buf)
-      return { ...b, ficheiro: f }
-    } catch (e) {
-      log("b-roll saltado:", e.message)
-      return null
+  // UMA de cada vez: o gerador gratuito só aceita um pedido em simultâneo por IP e responde 429
+  // aos outros. Com 429 espera e tenta de novo (até 3 vezes) em vez de desistir da imagem.
+  const prontas = []
+  for (const [i, b] of (broll || []).entries()) {
+    const prompt = `${b.descricao}, vertical 9:16 cinematic photograph, shallow depth of field, moody natural light, no text, no letters, no logos, no money, no banknotes`
+    for (let tentativa = 1; tentativa <= 3; tentativa++) {
+      try {
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${Math.round(L / 1.5)}&height=${Math.round(A / 1.5)}&seed=${Math.floor(Math.random() * 1e6)}&nologo=true&model=flux`
+        const r = await fetch(url, { signal: AbortSignal.timeout(120_000) })
+        if (r.status === 429) { await new Promise((ok) => setTimeout(ok, 6000 * tentativa)); continue }
+        if (!r.ok) throw new Error(`gerador ${r.status}`)
+        const buf = Buffer.from(new Uint8Array(await r.arrayBuffer()))
+        if (buf.length < 4096) throw new Error("imagem vazia")
+        const f = path.join(pasta, `broll-${i}.jpg`)
+        fs.writeFileSync(f, buf)
+        prontas.push({ ...b, ficheiro: f })
+        break
+      } catch (e) {
+        log("b-roll saltado:", e.message)
+        break
+      }
     }
-  }))
-  return resultados.filter(Boolean)
+  }
+  return prontas
 }
 
 /** Monta os argumentos do ffmpeg: fonte cortada a 9:16, B-roll por cima, legendas no topo. */
