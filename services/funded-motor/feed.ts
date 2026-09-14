@@ -13,7 +13,12 @@
  * O SDK carrega-se com `require` e sem tipos: é o build CommonJS de Node (`metaapi.cloud-sdk/node`),
  * o único que corre fora de um bundler de browser — e o esbuild empacota-o dentro do motor.js,
  * para o VPS não precisar de node_modules.
+ *
+ * A instância do SDK é a PARTILHADA com o espelho (metaapi-partilhada.ts): uma ligação por conta.
+ * Qualquer erro de limite da MetaApi visto aqui liga o interruptor que pára o espelho 1 h.
  */
+import { carregarSdk, metaApiPartilhada, registarErroMetaApi } from './metaapi-partilhada'
+
 export interface Tick {
   /** Símbolo da CORRETORA (ex.: XAUUSD.s). O motor traduz para o canónico. */
   fonte: string
@@ -37,11 +42,6 @@ export interface FontePrecos {
 
 type Qualquer = any // eslint-disable-line @typescript-eslint/no-explicit-any
 
-function carregarSdk(): Qualquer {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require('metaapi.cloud-sdk/node')
-}
-
 /** brokerTime ('2026-09-14 18:47:02.504', hora do servidor) − time (UTC) → minutos, ao quarto de hora. */
 function desvioDe(p: { time?: Date | string; brokerTime?: string }): number | null {
   if (!p.brokerTime || !p.time) return null
@@ -60,8 +60,7 @@ export class FonteStreaming implements FontePrecos {
 
   async iniciar(aoTick: (t: Tick) => void): Promise<void> {
     const sdk = carregarSdk()
-    const MetaApi = sdk.default ?? sdk
-    const api = new MetaApi(this.token)
+    const api = metaApiPartilhada(this.token)
     const conta = await api.metatraderAccountApi.getAccount(this.contaId)
     this.ligacao = conta.getStreamingConnection()
 
@@ -87,6 +86,7 @@ export class FonteStreaming implements FontePrecos {
         await this.ligacao.subscribeToMarketData(s, [{ type: 'quotes', intervalInMilliseconds: this.intervaloMs }])
         this.subscritos.add(s)
       } catch (e) {
+        registarErroMetaApi(e, `feed:subscrever:${s}`)
         console.warn(`[feed] não subscreveu ${s}:`, e instanceof Error ? e.message : e)
       }
     }
@@ -117,9 +117,7 @@ export class FonteRpc implements FontePrecos {
   constructor(private token: string, private contaId: string, private intervaloMs = 1000) {}
 
   async iniciar(aoTick: (t: Tick) => void): Promise<void> {
-    const sdk = carregarSdk()
-    const MetaApi = sdk.default ?? sdk
-    const api = new MetaApi(this.token)
+    const api = metaApiPartilhada(this.token)
     const conta = await api.metatraderAccountApi.getAccount(this.contaId)
     this.ligacao = conta.getRPCConnection()
     await this.ligacao.connect()
@@ -134,8 +132,9 @@ export class FonteRpc implements FontePrecos {
             if (p?.bid > 0 && p?.ask > 0) {
               aoTick({ fonte: s, bid: p.bid, ask: p.ask, em: p.time ? new Date(p.time) : new Date(), desvioMin: desvioDe(p) })
             }
-          } catch {
+          } catch (e) {
             /* um símbolo que falha não pára os outros */
+            registarErroMetaApi(e, 'feed:rpc')
           }
         }
         await new Promise((r) => setTimeout(r, Math.max(100, this.intervaloMs - (Date.now() - inicio))))
