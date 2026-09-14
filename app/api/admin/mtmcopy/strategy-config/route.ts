@@ -184,6 +184,8 @@ export async function POST(request: NextRequest) {
       "premium_master_exec",
       // estava na UI mas fora desta whitelist — o toggle não fazia nada (bug)
       "trailing_tempo_real",
+      // MTM Funded → conta do aluno (services/funded-copier): só as ABERTURAS dependem disto
+      "funded_copier",
       // 2026-09-14: saíram os interruptores das estratégias removidas nesse dia — o
       // `ExecSwitches` deixou de ter esses campos.
     ] as const) {

@@ -18,11 +18,19 @@ export interface OrderRequest {
   trailingStop?: TrailingDistance | null
   /** @deprecated usar trailingStop — distância em RELATIVE_POINTS */
   trailingStopPoints?: number | null
+  /**
+   * Id atribuído por nós (MetaApi `clientId`), que volta na posição. Serve para saber, depois de um
+   * crash entre «enviei» e «gravei», se a ordem chegou a abrir. A MetaApi guarda-o no campo do
+   * comentário do MT5 — por isso só vai quando a conta aceita comentário (ver buildOrderOptions).
+   */
+  clientId?: string
 }
 
 export interface OrderResult {
   success: boolean
   orderId?: string
+  /** Id da posição aberta (ordens a mercado), quando a MetaApi o devolve. */
+  positionId?: string
   brokerSymbol?: string
   error?: string
 }
@@ -48,14 +56,14 @@ type RpcConnection = {
     volume: number,
     sl?: number,
     tp?: number,
-    options?: { comment?: string; trailingStopLoss?: TrailingStopLossOptions },
+    options?: { comment?: string; clientId?: string; trailingStopLoss?: TrailingStopLossOptions },
   ) => Promise<{ orderId?: string; positionId?: string }>
   createMarketSellOrder: (
     symbol: string,
     volume: number,
     sl?: number,
     tp?: number,
-    options?: { comment?: string; trailingStopLoss?: TrailingStopLossOptions },
+    options?: { comment?: string; clientId?: string; trailingStopLoss?: TrailingStopLossOptions },
   ) => Promise<{ orderId?: string; positionId?: string }>
   createLimitBuyOrder: (
     symbol: string,
@@ -194,6 +202,8 @@ export interface MetaApiPosition {
   stopLoss?: number
   takeProfit?: number
   comment?: string
+  /** O clientId enviado na ordem que abriu a posição (MetaApi). */
+  clientId?: string
   /** Hora de abertura (ISO). Usado para não gerir uma posição mais recente que a mensagem. */
   time?: string
   /** P&L flutuante na moeda da conta — o MT5 devolve-o e o admin já o lia. */
@@ -283,14 +293,28 @@ async function resolveOrderTrailingForSymbol(
   return buildTrailingOptions(normalized)
 }
 
+/** A MetaApi soma comentário + clientId no mesmo campo do MT5: juntos não passam disto. */
+export const LIMITE_COMENTARIO_E_CLIENT_ID = 26
+
 function buildOrderOptions(
   req: OrderRequest,
   trailingOpts?: TrailingStopLossOptions,
-): { comment?: string; trailingStopLoss?: TrailingStopLossOptions } {
-  const options: { comment?: string; trailingStopLoss?: TrailingStopLossOptions } = {}
+): { comment?: string; clientId?: string; trailingStopLoss?: TrailingStopLossOptions } {
+  const options: { comment?: string; clientId?: string; trailingStopLoss?: TrailingStopLossOptions } = {}
   // Contas de trade manual (prop) vão sem comentário nenhum.
   const comment = orderCommentFor(req.accountId, req.comment)
-  if (comment !== undefined) options.comment = comment
+  if (comment !== undefined) {
+    // O clientId vive no campo do comentário: numa conta sem comentário também não pode ir —
+    // era a mesma assinatura que a prop firm procura, só com outro nome.
+    if (req.clientId) {
+      const clientId = req.clientId.slice(0, LIMITE_COMENTARIO_E_CLIENT_ID)
+      options.clientId = clientId
+      const resto = LIMITE_COMENTARIO_E_CLIENT_ID - clientId.length
+      if (resto >= 4) options.comment = comment.slice(0, resto)
+    } else {
+      options.comment = comment
+    }
+  }
   if (trailingOpts) options.trailingStopLoss = trailingOpts
   return options
 }
@@ -958,6 +982,7 @@ export async function placeMarketOrder(req: OrderRequest): Promise<OrderResult> 
     return {
       success: true,
       orderId: String(trade?.orderId ?? trade?.positionId ?? ''),
+      positionId: trade?.positionId ? String(trade.positionId) : undefined,
       brokerSymbol,
     }
   } catch (err: unknown) {
@@ -1072,6 +1097,57 @@ export async function placeStopOrder(req: OrderRequest): Promise<OrderResult> {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Erro ao colocar ordem STOP no MT5'
     return { success: false, error: message }
+  } finally {
+    if (close) await close()
+  }
+}
+
+/**
+ * Tudo o que é preciso para DIMENSIONAR uma cópia, numa ligação: o símbolo negociável da corretora
+ * (salta variantes DISABLED), a especificação de volume/stops, o preço e a equity. Só leituras.
+ * Devolve null quando não conseguiu ler — quem chama não abre nada com números inventados.
+ */
+export async function lerContextoDeCopia(
+  accountId: string,
+  canonicalSymbol: string,
+  direction: 'buy' | 'sell',
+): Promise<{
+  brokerSymbol: string
+  spec: MetaApiSymbolSpecification | null
+  bid: number | null
+  ask: number | null
+  balance: number | null
+  equity: number | null
+  tickSize: number | null
+  tickValue: number | null
+} | null> {
+  let close: (() => Promise<void>) | undefined
+  try {
+    const { connection, close: closeFn } = await getRpcConnection(accountId)
+    close = closeFn
+    const symbols = await connection.getSymbols()
+    const { brokerSymbol, spec } = await resolveTradeableBrokerSymbol(connection, symbols, canonicalSymbol, direction)
+    const info = await connection.getAccountInformation()
+    let bid: number | null = null
+    let ask: number | null = null
+    let tickValue: number | null = null
+    if (connection.getSymbolPrice) {
+      await ensureSymbolReady(connection, brokerSymbol)
+      const q = (await connection.getSymbolPrice(brokerSymbol)) as { bid?: number; ask?: number; profitTickValue?: number; lossTickValue?: number } | null
+      bid = q?.bid ?? null
+      ask = q?.ask ?? null
+      const tv = direction === 'sell' ? q?.lossTickValue ?? q?.profitTickValue : q?.profitTickValue ?? q?.lossTickValue
+      tickValue = tv && tv > 0 ? tv : null
+    }
+    let tickSize: number | null = null
+    if (connection.getSymbolSpecification) {
+      const raw = (await connection.getSymbolSpecification(brokerSymbol).catch(() => null)) as { tickSize?: number; point?: number } | null
+      tickSize = raw?.tickSize && raw.tickSize > 0 ? raw.tickSize : raw?.point && raw.point > 0 ? raw.point : null
+    }
+    return { brokerSymbol, spec, bid, ask, balance: info.balance ?? null, equity: info.equity ?? null, tickSize, tickValue }
+  } catch {
+    invalidateRpcCache(accountId)
+    return null
   } finally {
     if (close) await close()
   }

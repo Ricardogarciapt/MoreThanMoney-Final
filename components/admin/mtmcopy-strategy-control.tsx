@@ -19,6 +19,7 @@ type Switches = {
   t2t_price_monitor: boolean
   trailing_tempo_real: boolean
   premium_master_exec: boolean
+  funded_copier?: boolean
 }
 type PerpsRules = {
   enabled: boolean
@@ -75,6 +76,7 @@ const STRATEGY_GROUPS: { group: string; items: { key: keyof Switches; label: str
       { key: "trailing_tempo_real", label: "Trailing segue o preço ao vivo", hint: "Lê o tick a cada passagem em vez do instantâneo da posição: o stop cola-se ao preço e devolve menos nos recuos. Custa uma leitura por posição — vale a pena em scalp, não em swing." },
       { key: "premium_subscriber_exits", label: "Premium · exits nos subscritores", hint: "⚠️ dinheiro real de subscritores" },
       { key: "perps_position_monitor", label: "Perps · monitor de posição", hint: "Acompanha a posição Bybit (Entry Hit → parcial → BE → fecho)" },
+      { key: "funded_copier", label: "MTM Funded · cópia para a conta do aluno", hint: "OFF = o serviço não ABRE cópias novas; fechos, parciais e SL/TP de cópias abertas passam sempre" },
     ],
   },
   {

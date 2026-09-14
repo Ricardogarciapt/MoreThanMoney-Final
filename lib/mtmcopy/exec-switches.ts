@@ -49,6 +49,12 @@ export interface ExecSwitches {
    * Default FALSE: mantém exactamente o comportamento que existia.
    */
   trailing_tempo_real: boolean
+  /**
+   * MTM Funded → conta do aluno: o serviço do VPS (services/funded-copier) só ABRE cópias com isto
+   * ligado. Fechos, parciais e SL/TP de cópias já abertas replicam-se sempre — desligar nunca deixa
+   * uma posição órfã na conta real. Default FALSE.
+   */
+  funded_copier: boolean
 }
 
 const KEY = "mtmcopy_exec_switches"
@@ -76,6 +82,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       // Default OFF: liga-se por escolha, porque custa uma leitura de preço por posição.
       trailing_tempo_real: v.trailing_tempo_real === true,
       premium_master_exec: v.premium_master_exec !== false, // default ON (conta mestre)
+      funded_copier: v.funded_copier === true, // default OFF (abre ordens em contas de alunos)
     }
   } catch {
     return {
@@ -91,6 +98,7 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       t2t_price_monitor: true,
       trailing_tempo_real: false,
       premium_master_exec: true,
+      funded_copier: false,
     }
   }
 }
