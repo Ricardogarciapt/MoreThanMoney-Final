@@ -292,6 +292,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, config: novo })
   }
 
+  // ── contas simuladas: dar login/passwords a uma conta que nasceu sem eles ────
+  // (as primeiras contas de teste foram criadas antes das credenciais existirem)
+  if (accao === 'sim_gerar_credenciais') {
+    const id = String(b?.contaId ?? '')
+    const { data: conta } = await db.from('mtm_trading_accounts').select('id, motor, mt5_login').eq('id', id).maybeSingle()
+    if (!conta || conta.motor !== 'sim') return NextResponse.json({ error: 'conta simulada desconhecida' }, { status: 404 })
+    if (conta.mt5_login) return NextResponse.json({ error: 'esta conta já tem credenciais' }, { status: 409 })
+    const { credenciaisNovas } = await import('@/lib/mtmfunded/simulado/credenciais')
+    const { SERVIDOR_SIMULADO } = await import('@/lib/mtmfunded/simulado/motor')
+    const cred = await credenciaisNovas()
+    await db.from('mtm_trading_accounts').update({ ...cred, servidor: SERVIDOR_SIMULADO }).eq('id', id)
+    return NextResponse.json({ ok: true, login: cred.mt5_login })
+  }
+
   // ── contas simuladas: conta de TESTE para o próprio admin ─────────────────
   //
   // Antes do lançamento é por aqui que se experimenta o motor e o WebTrader: a conta nasce
