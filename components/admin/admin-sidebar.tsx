@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Gauge,
+  Scissors,
   LayoutDashboard,
   Users,
   FileText,
@@ -135,6 +136,20 @@ export default function AdminSidebar({
         >
           <Instagram className="w-5 h-5 shrink-0" />
           Conteúdo Social
+        </Link>
+        {/* Ao lado do Conteúdo Social de propósito: os clips acabam na mesma fila de publicação,
+            e quem vai fazer um vem normalmente de ver o outro. */}
+        <Link
+          href="/admin/videocliper"
+          className={cn(
+            "mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            pathname === "/admin/videocliper" || pathname.startsWith("/admin/videocliper/")
+              ? "border-l-2 border-[#D2A63C] bg-[#D2A63C]/15 text-[#D2A63C]"
+              : "border-l-2 border-transparent text-gray-400 hover:bg-gray-800/50 hover:text-white"
+          )}
+        >
+          <Scissors className="w-5 h-5 shrink-0" />
+          Videocliper
         </Link>
         <Link
           href="/admin/sales-machine"

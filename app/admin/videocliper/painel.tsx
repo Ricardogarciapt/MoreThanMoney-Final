@@ -134,7 +134,10 @@ export default function PainelVideocliper() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-5">
       <div>
-        <h1 className="text-xl font-bold text-neutral-100">Videocliper</h1>
+        {/* A barra lateral vive dentro de /admin; as ferramentas em página própria voltam por aqui,
+            como o Conteúdo Social. */}
+        <a href="/admin" className="text-[12px] text-neutral-500 hover:text-neutral-300">← Admin</a>
+        <h1 className="mt-1 text-xl font-bold text-neutral-100">Videocliper</h1>
         <p className="mt-1 text-[13px] text-neutral-400">
           Um link de uma sessão, dez momentos propostos. Escolhes os que valem a pena e eles
           saem como Short e como Reel.
