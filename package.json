@@ -81,6 +81,7 @@
     "input-otp": "1.4.1",
     "jose": "^6.2.3",
     "jsonwebtoken": "^9.0.2",
+    "lightweight-charts": "^5.2.1",
     "lucide-react": "^0.454.0",
     "metaapi.cloud-sdk": "^27.2.0",
     "next": "^15.5.19",
