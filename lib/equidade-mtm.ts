@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
+import { lerInfoContaCache } from '@/lib/mtmcopy/metaapi-cache'
 
 /**
  * A EQUIDADE DA MTM — e quanto é que cada conta lhe vale.
@@ -84,14 +85,12 @@ export async function contasFundedNaEquidade(): Promise<ContaNaEquidade[]> {
     let nominal = Number(c.saldo_inicial ?? 0)
     if (c.metaapi_account_id && token) {
       try {
-        const r = await fetch(
-          `https://mt-client-api-v1.london.agiliumtrade.ai/users/current/accounts/${c.metaapi_account_id}/account-information`,
-          { headers: { 'auth-token': token }, cache: 'no-store', signal: AbortSignal.timeout(8_000) },
-        )
-        if (r.ok) {
-          const d = (await r.json()) as { equity?: number }
-          if (typeof d.equity === 'number') nominal = d.equity
-        }
+        // Cache de 45 s (só ecrãs/relatórios): o painel de desempenho abre-se muitas vezes seguidas e
+        // cada abertura relia todas as contas na MetaApi.
+        const d = (await lerInfoContaCache(String(c.metaapi_account_id), { regiao: 'london', timeoutMs: 8_000 })) as
+          | { equity?: number }
+          | null
+        if (d && typeof d.equity === 'number') nominal = d.equity
       } catch {
         // fica o saldo inicial
       }

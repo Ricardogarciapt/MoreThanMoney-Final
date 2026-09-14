@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { preset, presetDosValores } from '@/lib/risk-presets'
+import { lerInfoContaCache } from '@/lib/mtmcopy/metaapi-cache'
 
 /**
  * A ponte para o MTM Auto.
@@ -117,11 +118,10 @@ export async function contasDoUtilizador(userId: string, comSaldo = true): Promi
           const id = c.metaapi_account_id as string | null
           if (!id || c.plataforma === 'mtmfunded') return
           try {
-            const r = await fetch(
-              `https://mt-client-api-v1.new-york.agiliumtrade.ai/users/current/accounts/${id}/accountInformation`,
-              { headers: { 'auth-token': token }, signal: AbortSignal.timeout(8000) },
-            )
-            if (r.ok) saldos.set(id, (await r.json()) as { balance?: number; currency?: string })
+            // Cache de 45 s: é o saldo mostrado no ecrã do MTM Auto (estado/histórico), que se
+            // refresca muitas vezes. Não é usado para dimensionar ordens.
+            const info = await lerInfoContaCache(id, { regiao: 'new-york', timeoutMs: 8000 })
+            if (info) saldos.set(id, info as { balance?: number; currency?: string })
           } catch {
             /* sem saldo: mostra-se a conta na mesma, com o último estado conhecido */
           }

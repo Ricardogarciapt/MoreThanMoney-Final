@@ -3,6 +3,7 @@ import { autorizarMtmAuto } from '@/lib/mtm-auto-bridge'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { lerHistorico } from '@/lib/mtmcopy/metaapi'
 import { contasDoUtilizador } from '@/lib/mtm-auto-bridge'
+import { lerInfoContaCache } from '@/lib/mtmcopy/metaapi-cache'
 
 export const dynamic = 'force-dynamic'
 // Ler o histórico fechado de várias contas na MetaAPI demora — e é isso que dá a curva de cada
@@ -236,12 +237,12 @@ export async function GET(request: NextRequest) {
       const token = process.env.METAAPI_TOKEN
       if (!token) return
       try {
-        const r = await fetch(
-          `https://mt-client-api-v1.new-york.agiliumtrade.ai/users/current/accounts/${c.metaapi_account_id}/accountInformation`,
-          { headers: { 'auth-token': token }, signal: AbortSignal.timeout(8000) },
-        )
-        if (!r.ok) return
-        const info = (await r.json()) as { balance?: number }
+        // Cache de 45 s (partilhada com contasDoUtilizador acima): a mesma conta era lida duas
+        // vezes em cada abertura do histórico.
+        const info = (await lerInfoContaCache(String(c.metaapi_account_id), { regiao: 'new-york', timeoutMs: 8000 })) as
+          | { balance?: number }
+          | null
+        if (!info) return
         const rotulo = contaDe.get(String(c.metaapi_account_id))
         if (rotulo && info.balance != null) saldoPorConta.set(rotulo, info.balance)
       } catch {
