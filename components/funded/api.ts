@@ -58,6 +58,28 @@ export function apagarSessao(accountId: string) {
   } catch { /* nada */ }
 }
 
+/** Servidor único das contas simuladas (o que o trader escreve no campo «Servidor»). */
+export const SERVIDOR_FUNDED = "MTM Funded"
+
+/**
+ * Entrar numa conta com login + password (master negoceia, investor só vê) — o mesmo caminho no
+ * WebTrader e no painel «Negociar» dos scanners. Devolve a sessão pronta a guardar.
+ */
+export async function entrarComCredenciais(login: string, password: string): Promise<SessaoConta> {
+  const r = await fetch("/api/mtmfunded/simulado/entrar", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ login, password, servidor: SERVIDOR_FUNDED }),
+  })
+  const d = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(d.error || "não foi possível entrar")
+  // Lê a conta com o token para mostrar etiqueta/estado no seletor.
+  const info = await fetch("/api/mtmfunded/simulado/entrar", { headers: { Authorization: `Bearer ${d.token}` } }).then((x) => x.json()).catch(() => null)
+  return {
+    accountId: info?.conta?.id, token: d.token, modo: d.modo, expira: d.expira, login: login.replace(/\D/g, ""),
+    etiqueta: info?.conta?.etiqueta, estadoCurto: info?.conta?.estadoCurto,
+  }
+}
+
 export class ErroApi extends Error {
   constructor(public status: number, mensagem: string) { super(mensagem) }
 }

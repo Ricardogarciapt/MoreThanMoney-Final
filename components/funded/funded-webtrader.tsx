@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Loader2, LogIn, ChevronDown, ShieldAlert, X } from "lucide-react"
 import { candidatosDeTicker } from "@/lib/mtmfunded/simulado/ordens"
-import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, usd, COR_ESTADO } from "./api"
+import { type ContaResumo, type SessaoConta, pedir, lerSessoes, guardarSessao, apagarSessao, entrarComCredenciais, usd, COR_ESTADO } from "./api"
 import FundedTrader from "./funded-trader"
 import InstalarWebtrader from "./instalar-webtrader"
 import type { Prefill } from "./funded-ticket"
@@ -203,18 +203,7 @@ function Entrada({ contas, onEntrar, onEscolher, onFechar, linkLoginMtm }: {
     e.preventDefault()
     setAEntrar(true); setErro(null)
     try {
-      const r = await fetch("/api/mtmfunded/simulado/entrar", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login, password, servidor: SERVIDOR }),
-      })
-      const d = await r.json()
-      if (!r.ok) throw new Error(d.error || "não foi possível entrar")
-      // Lê a conta com o token para mostrar etiqueta/estado no seletor.
-      const info = await fetch("/api/mtmfunded/simulado/entrar", { headers: { Authorization: `Bearer ${d.token}` } }).then((x) => x.json()).catch(() => null)
-      onEntrar({
-        accountId: info?.conta?.id, token: d.token, modo: d.modo, expira: d.expira, login: login.replace(/\D/g, ""),
-        etiqueta: info?.conta?.etiqueta, estadoCurto: info?.conta?.estadoCurto,
-      })
+      onEntrar(await entrarComCredenciais(login, password))
       setPassword("")
     } catch (err) {
       setErro((err as Error).message)
