@@ -1,5 +1,7 @@
 "use client"
 
+import { linkWebtrader, estaNaAppMobile } from "@/lib/mtmfunded/link-webtrader"
+import { usePathname } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +32,7 @@ import {
   Ban,
   Crosshair,
   Radio,
+  CandlestickChart,
 } from "lucide-react"
 
 interface AlertConfirmation {
@@ -324,6 +327,7 @@ function AlertCard({
   onToggleFollow: (id: string, follow: boolean) => void
   onSelectAlert?: (p: { tvSymbol: string; interval: string; scannerKey: "Goldkiller" | "MTMScanner" | "Sensei" | "AurumFlow" }) => void
 }) {
+  const pathname = usePathname()
   const [showChart, setShowChart] = useState(false)
   const [showAnalysis, setShowAnalysis] = useState(false)
   const [analysis, setAnalysis] = useState<string | null>(alert.aiAnalysis)
@@ -574,6 +578,18 @@ function AlertCard({
             )}
             Gestão da trade (IA)
           </Button>
+          {/* Negociar este sinal numa conta simulada MTM Funded: só pré-preenche o ticket. */}
+          {alert.direction !== "neutral" && (alert.tvSymbol || alert.ticker) && (
+            <Button asChild size="sm" variant="outline" className="border-[#2962FF]/50 text-[#8FA8FF] hover:bg-[#2962FF]/10">
+              <a href={linkWebtrader({
+                symbol: String(alert.tvSymbol || alert.ticker), dir: alert.direction,
+                sl: alert.stopLoss, tp: alert.takeProfits[0], origem: "scanner", ref: alert.id,
+              }, estaNaAppMobile(pathname))}>
+                <CandlestickChart className="mr-1 h-3 w-3" />
+                Negociar no Web trader
+              </a>
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"

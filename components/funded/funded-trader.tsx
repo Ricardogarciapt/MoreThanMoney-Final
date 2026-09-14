@@ -7,8 +7,9 @@ import { limitesDaConta, posicaoDaLinha, simbolosParaMedir } from "@/lib/mtmfund
 import { type SimboloFicha, type PrecoVivo, pedir, ordem, usd, COR_ESTADO } from "./api"
 import { usePrecos } from "./use-precos"
 import FundedWatchlist from "./funded-watchlist"
-import FundedGrafico, { type Ferramenta } from "./funded-grafico"
+import FundedGrafico from "./funded-grafico"
 import FundedTicket, { type Prefill } from "./funded-ticket"
+import { RascunhoProvider, useRascunho, type PedidoOrdem } from "./rascunho-ordem"
 import FundedPosicoes from "./funded-posicoes"
 import FundedWebhook from "./funded-webhook"
 
@@ -23,7 +24,15 @@ import FundedWebhook from "./funded-webhook"
 type Estado = Awaited<ReturnType<typeof import("@/lib/mtmfunded/simulado/execucao")["estadoCompleto"]>>
 type Vista = "negociar" | "mercado" | "posicoes" | "historico" | "conta"
 
-export default function FundedTrader({ accountId, prefill, simboloInicial }: { accountId: string; prefill: Prefill | null; simboloInicial: string | null }) {
+export default function FundedTrader({ accountId, prefill, simboloInicial, alturaGrafico, onSimbolo }: {
+  accountId: string
+  prefill: Prefill | null
+  simboloInicial: string | null
+  /** Classe Tailwind da altura do gráfico (a app /webtrader usa mais ecrã). */
+  alturaGrafico?: string
+  /** O símbolo seleccionado — o sub-separador Scanner usa-o para abrir o mesmo par. */
+  onSimbolo?: (symbol: string) => void
+}) {
   const [dados, setDados] = useState<Estado | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [vista, setVista] = useState<Vista>("negociar")
@@ -75,6 +84,8 @@ export default function FundedTrader({ accountId, prefill, simboloInicial }: { a
       })
       .catch(() => {})
   }, [simboloInicial])
+
+  useEffect(() => { if (simbolo) onSimbolo?.(simbolo.symbol) }, [simbolo?.symbol]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const selecionar = (s: SimboloFicha) => {
     setSimbolo(s)
@@ -155,36 +166,34 @@ export default function FundedTrader({ accountId, prefill, simboloInicial }: { a
     ...(vivo.limites.objetivoValor ? [["Objetivo", `${vivo.limites.progressoObjetivoPct ?? 0}% de ${vivo.limites.objetivoPct}%`] as [string, string]] : []),
   ]
 
-  const onEnviarTicket: Parameters<typeof FundedTicket>[0]["onEnviar"] = (p) => {
-    const origem = prefill?.origem === "scanner" || prefill?.origem === "ideia_mtm" ? prefill.origem : "manual"
-    const base = { accountId, symbol: simbolo!.symbol, direcao: p.direcao, volume: p.volume, sl: p.sl, tp: p.tp, origem, ideiaRef: prefill?.ideiaRef ?? null }
+  // Ticket e ferramenta do gráfico enviam pelo MESMO caminho: o rascunho partilhado.
+  const onEnviar = (p: PedidoOrdem) => {
+    const base = { accountId, symbol: simbolo!.symbol, direcao: p.direcao, volume: p.volume, sl: p.sl, tp: p.tp, origem: p.origem, ideiaRef: p.ideiaRef }
     return p.accao === "abrir"
       ? executar("abrir", base, `${p.direcao === "buy" ? "Compra" : "Venda"} executada`)
-      : executar("pendente", { ...base, tipo: p.tipo, preco: p.preco }, "Ordem pendente criada")
-  }
-  const onFerramenta = (f: Ferramenta & { tipo: "mercado" | "limit" | "stop" }) => {
-    const base = { accountId, symbol: simbolo!.symbol, direcao: f.direcao, volume, sl: f.sl, tp: f.tp, origem: "manual" }
-    return f.tipo === "mercado"
-      ? executar("abrir", base, "Posição aberta a mercado")
-      : executar("pendente", { ...base, tipo: f.tipo, preco: f.entrada }, `${f.direcao} ${f.tipo} criada`)
+      : executar("pendente", { ...base, tipo: p.tipo, preco: p.preco }, `${p.direcao} ${p.tipo} criada`)
   }
 
   const painelNegociar = simbolo && (
-    <div className="space-y-2">
-      <FundedGrafico
-        simbolo={simbolo} preco={precoSel} precos={mapa} volume={volume}
-        posicoes={posSel} ordens={ordSel as any} podeNegociar={podeNegociar}
-        onModificarPosicao={(id, sl, tp) => executar("modificar", { positionId: id, sl, tp }, "SL/TP actualizados")}
-        onModificarPendente={(id, preco, sl, tp) => executar("modificar_pendente", { orderId: id, preco, sl, tp }, "Ordem actualizada")}
-        onFecharPosicao={(id) => silencioso(executar("fechar", { positionId: id }, "Posição fechada"))}
-        onCancelarPendente={(id) => silencioso(executar("cancelar", { orderId: id }, "Ordem cancelada"))}
-        onConfirmarFerramenta={onFerramenta}
-      />
-      {podeNegociar && (
-        <FundedTicket simbolo={simbolo} preco={precoSel} precos={mapa} alavancagem={c.alavancagem} margemLivre={vivo.margemLivre}
-          volume={volume} setVolume={setVolume} prefill={prefill} onEnviar={onEnviarTicket} />
-      )}
-    </div>
+    <RascunhoProvider
+      simbolo={simbolo} preco={precoSel} precos={mapa} volume={volume} setVolume={setVolume}
+      alavancagem={c.alavancagem} margemLivre={vivo.margemLivre} onEnviar={onEnviar}
+    >
+      <AplicarPrefill prefill={prefill} simboloInicial={simboloInicial} />
+      <div className="space-y-2">
+        <FundedGrafico
+          simbolo={simbolo} preco={precoSel} precos={mapa} volume={volume}
+          posicoes={posSel} ordens={ordSel as any} podeNegociar={podeNegociar}
+          alturaClasse={alturaGrafico}
+          onModificarPosicao={(id, sl, tp) => executar("modificar", { positionId: id, sl, tp }, "SL/TP actualizados")}
+          onModificarPendente={(id, preco, sl, tp) => executar("modificar_pendente", { orderId: id, preco, sl, tp }, "Ordem actualizada")}
+          onFecharPosicao={(id) => silencioso(executar("fechar", { positionId: id }, "Posição fechada"))}
+          onCancelarPendente={(id) => silencioso(executar("cancelar", { orderId: id }, "Ordem cancelada"))}
+          onMudarSimbolo={selecionarPorNome}
+        />
+        {podeNegociar && <FundedTicket margemLivre={vivo.margemLivre} />}
+      </div>
+    </RascunhoProvider>
   )
 
   const posicoesPainel = (v: "posicoes" | "historico") => (
@@ -270,4 +279,24 @@ export default function FundedTrader({ accountId, prefill, simboloInicial }: { a
       </div>}
     </div>
   )
+}
+
+/**
+ * Pré-preenchimento vindo de um alerta, ideia ou «Usar este sinal» noutro ecrã: vai para o rascunho
+ * (e portanto para o ticket E para o gráfico). Só no símbolo do link — trocar de símbolo depois não
+ * arrasta o SL de ouro para o EURUSD.
+ */
+function AplicarPrefill({ prefill, simboloInicial }: { prefill: Prefill | null; simboloInicial: string | null }) {
+  const k = useRascunho()
+  const symbol = k.simbolo.symbol
+  useEffect(() => {
+    if (!prefill || !(prefill.direcao || prefill.sl || prefill.tp)) return
+    if (simboloInicial && !simboloInicial.split(",").includes(symbol)) return
+    k.aplicar({
+      lado: prefill.direcao, sl: prefill.sl ?? null, tp: prefill.tp ?? null,
+      origem: prefill.origem === "scanner" || prefill.origem === "ideia_mtm" ? prefill.origem : "manual",
+      ideiaRef: prefill.ideiaRef ?? null, escolhido: Boolean(prefill.direcao),
+    })
+  }, [prefill, symbol]) // eslint-disable-line react-hooks/exhaustive-deps
+  return null
 }

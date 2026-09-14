@@ -6,7 +6,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs"
 import ProtectedPage from "@/components/protected-page"
 import SocialFeed from "@/components/mobile/social-feed"
 import PortfolioMobile from "@/components/mobile/portfolio-mobile"
-import ScannerMobile from "@/components/mobile/scanner-mobile"
+import ScannerTabMobile from "@/components/mobile/scanner-tab-mobile"
 import NotificationsPanel from "@/components/notifications-panel"
 import LanguageSelectorEnhanced from "@/components/language-selector-enhanced"
 import { SiteLogo } from "@/components/site-logo"
@@ -31,7 +31,6 @@ import AppsMobile from "@/components/mobile/apps-mobile"
 import ChatChannels from "@/components/mobile/chat-channels"
 import TradingAlertsMobile from "@/components/mobile/trading-alerts-mobile"
 import TapToTradeFeed from "@/components/mobile/tap-to-trade-feed"
-import FundedWebtrader from "@/components/funded/funded-webtrader"
 import SettingsMobile from "@/components/mobile/settings-mobile"
 import OnboardingTutorial, { useOnboarding } from "@/components/mobile/onboarding-tutorial"
 import MlmDashboardTab from "@/components/mobile/mlm-dashboard-tab"
@@ -75,10 +74,13 @@ function AppMobileContent() {
   })
   const [mounted, setMounted] = useState(false)
   const validTabs = ["social", "chat", "tap-to-trade", "portfolio", "scanner", "apps", "live", "mentor", "settings", "mlm", "trading-alerts", "funded"] as const
+  // `funded` é o deep-link antigo do WebTrader: hoje é o sub-separador «Web trader» do Scanner.
+  const normalizarTab = (t: string) => (t === "funded" ? "scanner" : t)
   const tabFromUrl = searchParams.get("tab")
+  const subScanner = tabFromUrl === "funded" || searchParams.get("sub") === "webtrader" ? "webtrader" : "scanner"
   const channelFromUrl = searchParams.get("channel")
   const [activeTab, setActiveTab] = useState(() =>
-    tabFromUrl && validTabs.includes(tabFromUrl as (typeof validTabs)[number]) ? tabFromUrl : "social"
+    tabFromUrl && validTabs.includes(tabFromUrl as (typeof validTabs)[number]) ? normalizarTab(tabFromUrl) : "social"
   )
 
   /**
@@ -91,8 +93,8 @@ function AppMobileContent() {
    * nenhum dentro das apps nativas, que vivem inteiras nesta página.
    */
   useEffect(() => {
-    if (tabFromUrl && validTabs.includes(tabFromUrl as (typeof validTabs)[number]) && tabFromUrl !== activeTab) {
-      setActiveTab(tabFromUrl)
+    if (tabFromUrl && validTabs.includes(tabFromUrl as (typeof validTabs)[number]) && normalizarTab(tabFromUrl) !== activeTab) {
+      setActiveTab(normalizarTab(tabFromUrl))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabFromUrl])
@@ -244,14 +246,14 @@ function AppMobileContent() {
       return
     }
     if (tab && validTabs.includes(tab as (typeof validTabs)[number])) {
-      setActiveTab(tab)
+      setActiveTab(normalizarTab(tab))
     }
   }, [searchParams, router])
 
   const socialCategory = searchParams.get("category")
 
   const handleTabChange = (tab: string) => {
-    const nextTab = tab === "studio" ? "apps" : tab
+    const nextTab = tab === "studio" ? "apps" : normalizarTab(tab)
     setActiveTab(nextTab)
     const path =
       nextTab === "apps"
@@ -270,7 +272,7 @@ function AppMobileContent() {
     if (target.closest("video")) return
     if (target.closest("[data-live-player-guard]")) return
     // No WebTrader arrastar é negociar (pan do gráfico, SL/TP): nunca muda de separador.
-    if (activeTab === "funded") return
+    if (target.closest("[data-webtrader]")) return
 
     const isHorizontalScrollable =
       target.closest('[class*="overflow-x-auto"]') || target.closest('[class*="overflow-x-scroll"]')
@@ -530,7 +532,7 @@ function AppMobileContent() {
             </TabsContent>
 
             <TabsContent value="scanner" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
-              <ScannerMobile />
+              <ScannerTabMobile ativo={activeTab === "scanner"} sub={subScanner} />
             </TabsContent>
 
             <TabsContent value="apps" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
@@ -549,10 +551,6 @@ function AppMobileContent() {
               {activeTab === "trading-alerts" && <TradingAlertsMobile />}
             </TabsContent>
 
-            {/* MTM Funded — WebTrader das contas simuladas. Só montado quando aberto: faz polling de preços. */}
-            <TabsContent value="funded" className="mt-0 min-h-[60vh] data-[state=inactive]:hidden">
-              {activeTab === "funded" && <FundedWebtrader />}
-            </TabsContent>
 
           </Tabs>
         </div>

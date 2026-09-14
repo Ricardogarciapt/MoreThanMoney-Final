@@ -11,7 +11,8 @@ import type { Simbolo } from "@/lib/mtmfunded/simulado/matematica"
  * (`x-conta-sessao`), quando se entrou com login+password. O servidor decide qual vale.
  */
 
-export type SimboloFicha = Simbolo & { nome?: string; horario?: string }
+/** `sessoes` = tradeSessions da corretora (hora do servidor dela), só quando se pede `specs=1`. */
+export type SimboloFicha = Simbolo & { nome?: string; horario?: string; sessoes?: Record<string, Array<{ from: string; to: string }>> | null }
 export interface PrecoVivo { symbol: string; bid: number; ask: number; em: string; fresco: boolean }
 
 export interface ContaResumo {

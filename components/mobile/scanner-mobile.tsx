@@ -24,6 +24,10 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { useT } from "@/components/i18n-provider"
 import { isNativeApp } from "@/hooks/use-capacitor"
+import { scannerOrder, scannerStudies, scannerLabels, type ScannerKey } from "@/lib/scanners/estudos"
+import { linkWebtrader, estaNaAppMobile } from "@/lib/mtmfunded/link-webtrader"
+import { usePathname } from "next/navigation"
+import Link from "next/link"
 import { TV_STUDY_LEGEND_OVERRIDES } from "@/lib/trading-view-scanner-config"
 import { subscribeMediaQueryChange } from "@/lib/browser-compat"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -67,6 +71,7 @@ import {
   MessageCircle,
   Loader2,
   Share2,
+  CandlestickChart,
 } from "lucide-react"
 
 // Checklist Types
@@ -85,55 +90,7 @@ interface ChecklistSection {
   items: ChecklistItem[]
 }
 
-// Ordem explícita dos scanners (mantém a ordem dos botões)
-const scannerOrder = [
-  "GoldenZone",
-  "Momentum",
-  "AurumFlow",
-  "KillShot",
-  "Supernova",
-  "Winzone",
-  "Sinergy",
-  "Goldkiller",
-  "MTMScanner",
-  "Sensei",
-] as const
-
-type ScannerKey = (typeof scannerOrder)[number]
-
-// Scanners MTM
-const scannerStudies: Record<ScannerKey, string[]> = {
-  GoldenZone: ["PUB;0b373fb0e6634a73bc8b838cf0690725"],
-  Momentum: ["PUB;00ec48baf0ee43f0a43e1658bb54cdab", "PUB;38080827cf244587b5e7dbb9f272db0a"],
-  AurumFlow: ["PUB;4ca56ac1162a401cb62fa3205c73366a"],
-  KillShot: ["PUB;c1f81145e78a49ce92bd1f81f9c103dd"],
-  Supernova: ["PUB;c16bafd7d0874182a1415648ec3ed7b8"],
-  Winzone: [
-    "PUB;6c003d30b2154ef3a31074d5c703954f",
-    "PUB;e6adb5e5246c43f4a8dcffde5c98db4e",
-    "PUB;162198dcae874d5da28f7b048feb76e7",
-    "PUB;b6587ba7dc7b4489927cfd94d1fb8a9f",
-    "PUB;0bf15eb0edba447f84e19fce69391ccb",
-  ],
-  Sinergy: ["PUB;3b86bd1192124fd98583490bb7508041"],
-  Goldkiller: ["PUB;a3eaa6af54de4202a2c2f807fd8baa08"],
-  MTMScanner: ["PUB;134fd950920e435694c40be33e3aa98f"],
-  Sensei: ["PUB;0aba45d8eeed42368922a344f547eeb6"],
-}
-
-const scannerLabels: Record<ScannerKey, string> = {
-  GoldenZone: "Golden Zone",
-  Momentum: "Momentum",
-  AurumFlow: "Aurum Flow",
-  KillShot: "Kill Shot",
-  Supernova: "Supernova",
-  Winzone: "Sniper Pro",
-  Sinergy: "Quantum",
-  Goldkiller: "GoldKiller",
-  MTMScanner: "MTM",
-  Sensei: "Sensei",
-}
-
+// Ordem, estudos PUB e nomes dos scanners: lib/scanners/estudos.ts (partilhados com o WebTrader).
 const scannerLogos: Record<ScannerKey, { icon: any; color: string; bgColor: string }> = {
   GoldenZone: { icon: Crown, color: "text-gold-300", bgColor: "bg-gradient-to-r from-gold-500 to-yellow-400" },
   Momentum: { icon: Waves, color: "text-blue-300", bgColor: "bg-gradient-to-r from-blue-600 to-cyan-500" },
@@ -243,6 +200,7 @@ export default function ScannerMobile({
   externalStudies,
 }: ScannerMobileProps = {}) {
   const t = useT()
+  const pathname = usePathname()
   const isScannerAccess = integration === "scanner-access"
   const tvContainerId = isScannerAccess ? "tradingview_scanner_access_widget" : "tradingview_mobile_widget"
   const categoryLabelKeys: Record<keyof typeof assetCategories, string> = {
@@ -1345,6 +1303,20 @@ export default function ScannerMobile({
           <Minimize2 style={{ width: 16, height: 16 }} />
           {t("scanner.exit")}
         </button>
+      )}
+
+      {/* O mesmo símbolo no WebTrader do MTM Funded (conta simulada): dentro da app abre o
+          sub-separador «Web trader»; fora dela (scanner-access) abre /webtrader. */}
+      {!isFullscreen && (
+        <div className="px-4 pt-3">
+          <Link
+            href={linkWebtrader({ symbol: selectedSymbol, origem: "scanner" }, estaNaAppMobile(pathname))}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#2962FF]/50 bg-[#2962FF]/10 py-2.5 text-sm font-semibold text-[#8FA8FF] transition-colors hover:bg-[#2962FF]/20"
+          >
+            <CandlestickChart style={{ width: 16, height: 16 }} />
+            Abrir {String(selectedSymbol).split(":").pop()} no Web trader
+          </Link>
+        </div>
       )}
 
       {/* Alertas MTM — acesso centralizado (webview app iOS/Android) */}

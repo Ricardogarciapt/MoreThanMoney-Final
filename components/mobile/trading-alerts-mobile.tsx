@@ -1,5 +1,6 @@
 "use client"
 
+import { linkWebtrader } from "@/lib/mtmfunded/link-webtrader"
 import { useSearchParams } from "next/navigation"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -469,19 +470,14 @@ function MobileAlertCard({
           Não envia nada — o trader escolhe a conta, o volume e confirma. */}
       {alert.direction !== "neutral" && (alert.ticker || alert.tvSymbol) && (
         <a
-          href={`/app-mobile?${new URLSearchParams({
-            tab: "funded",
-            symbol: String(alert.tvSymbol || alert.ticker),
-            dir: alert.direction,
-            ...(alert.stopLoss != null ? { sl: String(alert.stopLoss) } : {}),
-            ...(alert.takeProfits[0] != null ? { tp: String(alert.takeProfits[0]) } : {}),
-            origem: "scanner",
-            ref: alert.id,
-          }).toString()}`}
+          href={linkWebtrader({
+            symbol: String(alert.tvSymbol || alert.ticker), dir: alert.direction,
+            sl: alert.stopLoss, tp: alert.takeProfits[0], origem: "scanner", ref: alert.id,
+          }, true)}
           className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2 py-1.5 text-[11px] font-semibold text-emerald-300"
         >
           <TrendingUp className="h-3 w-3" />
-          Negociar (conta simulada)
+          Negociar no Web trader
         </a>
       )}
       {alert.tvSymbol && (
