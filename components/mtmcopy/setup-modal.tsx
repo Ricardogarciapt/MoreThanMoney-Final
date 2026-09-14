@@ -27,6 +27,7 @@ import { getClientConnectionTitle, MTM_MASTER_LABEL } from "@/lib/mtmcopy/displa
 import { isSafariBrowser } from "@/lib/supabase-session"
 import { formatMt5Money } from "@/components/mtmcopy/mtmcopy-shared"
 import { PROP_FIRM_PRESETS, type PropFirmType } from "@/lib/mtmcopy/prop-firm-presets"
+import TradeLockerConnectForm, { TradeLockerBadge } from "@/components/tradelocker/tradelocker-connect-form"
 
 const MODAL_Z = 2147483647
 
@@ -69,6 +70,8 @@ export interface MTMcopierConnection {
   copyfactory_subscribed?: boolean
   prop_firm_type?: PropFirmType | null
   copy_as_manual?: boolean
+  /** 'tradelocker' = conta TradeLocker (sem MetaApi/CopyFactory). */
+  mt5_platform?: "mt4" | "mt5" | "tradelocker" | null
 }
 
 type Selection = "new" | string
@@ -192,8 +195,11 @@ export default function SetupModal({
   const isMasterSelected = selectedConn?.account_role === "master"
   const isNewMaster = selectedId === "new" && senderMode === "master_account" && !masterConn
   const isEditMode = Boolean(selectedConn?.id && selectedConn.mt5_status !== "disconnected")
+  const selectedIsTradeLocker = selectedConn?.mt5_platform === "tradelocker"
+  // Religar pela password é o caminho MetaApi; uma conta TradeLocker em erro apaga-se e liga-se de novo.
   const needsRelink =
     isEditMode &&
+    !selectedIsTradeLocker &&
     (selectedConn?.mt5_status === "pending" || selectedConn?.mt5_status === "error")
   const showSlaveSettings = !isMasterSelected && !isNewMaster
   const isCopyTraderSlave = copyMethod === "master_slave" && showSlaveSettings
@@ -203,6 +209,8 @@ export default function SetupModal({
   const [auditLabel, setAuditLabel] = useState("")
   const [telegramChannel, setTelegramChannel] = useState("")
   const [mt5Platform, setMt5Platform] = useState<"mt4" | "mt5">("mt5")
+  /** Plataforma da conta NOVA: MetaTrader (MetaApi) ou TradeLocker (API própria). */
+  const [plataformaNova, setPlataformaNova] = useState<"metatrader" | "tradelocker">("metatrader")
   const [mt5Login, setMt5Login] = useState("")
   const [mt5Password, setMt5Password] = useState("")
   const [mt5Server, setMt5Server] = useState("")
@@ -659,6 +667,7 @@ export default function SetupModal({
               }`}
             >
               {accountTabLabel(conn, i)}
+              {conn.mt5_platform === "tradelocker" && <TradeLockerBadge className="ml-1.5" />}
             </button>
           ))}
           {canAddAccount && (
@@ -918,6 +927,12 @@ export default function SetupModal({
                 {!isMasterSelected && !isNewMaster && selectedConn?.mt5_server && (
                   <span className="block mt-1 text-gray-500">{selectedConn.mt5_server}</span>
                 )}
+                {selectedIsTradeLocker && (
+                  <span className="block mt-1 text-sky-300/90">
+                    <TradeLockerBadge /> Execução direta pela API TradeLocker.
+                    {selectedConn?.mt5_status === "error" && " A conta está em erro: apaga-a e liga-a de novo com o login TradeLocker."}
+                  </span>
+                )}
               </div>
               {needsRelink && (
                 <div>
@@ -936,6 +951,47 @@ export default function SetupModal({
             </>
           ) : (
             <>
+              {!isNewMaster && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Plataforma da conta</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["metatrader", "tradelocker"] as const).map((p) => {
+                      const bloqueada = p === "tradelocker" && copyMethod !== "telegram_group"
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => !bloqueada && setPlataformaNova(p)}
+                          disabled={saving || bloqueada}
+                          className={`text-sm py-2 rounded-lg border font-medium disabled:opacity-40 ${
+                            plataformaNova === p && !bloqueada
+                              ? "border-[#D2A63C]/50 bg-[#D2A63C]/10 text-[#D2A63C]"
+                              : "border-gray-700 text-gray-400"
+                          }`}
+                        >
+                          {p === "metatrader" ? "MetaTrader 5" : "TradeLocker"}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {copyMethod !== "telegram_group" && (
+                    <p className="text-xs text-zinc-500 mt-1.5">
+                      TradeLocker só está disponível em <strong>Grupos de sinais</strong>: estratégias e copy trader pessoal
+                      usam a CopyFactory, que é só MetaTrader.
+                    </p>
+                  )}
+                </div>
+              )}
+              {!isNewMaster && plataformaNova === "tradelocker" && copyMethod === "telegram_group" ? (
+                <TradeLockerConnectForm
+                  purpose="mtmcopy"
+                  getToken={async () => (await supabase.auth.getSession()).data.session?.access_token ?? null}
+                  extraPayload={buildSettingsPayload}
+                  validar={() => (showSlaveSettings && !telegramGroups.length ? "Escolhe pelo menos um grupo de sinais." : null)}
+                  onConnected={() => onSaved()}
+                />
+              ) : (
+              <>
               <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3 text-xs text-gray-300 space-y-1.5">
                 <p>
                   <strong className="text-emerald-400">Segurança:</strong> a password é usada só para a ligação e não fica guardada no site.
@@ -1014,6 +1070,8 @@ export default function SetupModal({
                   Usado para mapear as cópias — deixa vazio se os símbolos forem iguais aos nossos.
                 </p>
               </div>
+              </>
+              )}
             </>
           )}
 
@@ -1191,6 +1249,8 @@ export default function SetupModal({
         )}
 
         <div className="flex flex-col gap-2 mt-5">
+          {/* Conta TradeLocker nova liga-se pelo botão do próprio formulário (login → escolher conta). */}
+          {!(!isEditMode && !isNewMaster && plataformaNova === "tradelocker" && copyMethod === "telegram_group") && (
           <Button
             onClick={handleSave}
             disabled={saving || deleting}
@@ -1212,6 +1272,7 @@ export default function SetupModal({
               <>Ligar conta e activar cópia <ArrowRight className="ml-2 h-5 w-5" /></>
             )}
           </Button>
+          )}
 
           {isEditMode && (
             <Button

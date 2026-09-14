@@ -1,7 +1,7 @@
 /** Símbolos e lotes na TradeLocker. Correr: npx tsx lib/tradelocker/__tests__/sizing.check.ts */
 import assert from 'node:assert/strict'
 import { ajustarQty, faixaPara, lotePorRisco, qtyParcial, regraDeLote, resolverInstrumento } from '../sizing'
-import { loteTL } from '../executor'
+import { loteTL, type ContextoTL } from '../executor'
 import type { TLInstrumento } from '../client'
 
 const inst = (id: number, name: string, trade = true): TLInstrumento => ({
@@ -42,18 +42,18 @@ assert.equal(faixaPara([{ leftRangeLimit: 0, tickSize: 0.01 }, { leftRangeLimit:
 const eur = { lotSize: 100000, lotStep: 1000, minLot: 0.01, maxLot: 100, tickSize: [{ leftRangeLimit: 0, tickSize: 0.00001 }], tickCost: [{ leftRangeLimit: 0, tickCost: 1 }] }
 assert.equal(Math.round(lotePorRisco({ equity: 10000, riscoPct: 1, entrada: 1.1, stop: 1.098, detalhe: eur })! * 1000) / 1000, 0.5)
 // Ouro: 5.000, 1% = 50; stop 5$ ; tick 0.01 custa 1 por lote → 500 por lote → 0,1 lote.
-const ouro = { lotSize: 100, lotStep: 0.01, minLot: 0.01, maxLot: 50, tickSize: [{ leftRangeLimit: 0, tickSize: 0.01 }], tickCost: [{ leftRangeLimit: 0, tickCost: 1 }] }
+const ouro = { name: 'XAUUSD', lotSize: 100, lotStep: 0.01, minLot: 0.01, maxLot: 50, tickSize: [{ leftRangeLimit: 0, tickSize: 0.01 }], tickCost: [{ leftRangeLimit: 0, tickCost: 1 }] }
 assert.equal(Math.round(lotePorRisco({ equity: 5000, riscoPct: 1, entrada: 2400, stop: 2395, detalhe: ouro })! * 100) / 100, 0.1)
 assert.equal(lotePorRisco({ equity: 5000, riscoPct: 1, entrada: 2400, stop: 2395, detalhe: { lotSize: 100 } }), null, 'sem tick → null (usa heurística)')
 
 // loteTL: usa o tick quando existe, cai na heurística do MT5 quando não, e ajusta ao passo.
 const sinal = { symbol: 'XAUUSD', direction: 'buy' as const, entry: 2400, sl: 2395, tp: [2410], orderType: 'market' as const, raw: '' }
-const ctxBase = { balance: 5000, equity: 5000, marketPrice: 2400, instrumento: null, detalhe: ouro }
+const ctxBase: ContextoTL = { balance: 5000, equity: 5000, marketPrice: 2400, instrumento: null, detalhe: ouro }
 assert.equal(loteTL({ lot_mode: 'risk_percent', lot_value: 1, max_risk_percent: 2 }, sinal, ctxBase), 0.1)
 assert.equal(loteTL({ lot_mode: 'risk_percent', lot_value: 1, max_risk_percent: 2 }, sinal, { ...ctxBase, detalhe: null }), 0.1, 'heurística: contrato 100 no ouro')
 // Lote fixo segue o arredondamento do MT5 (computeLotSize → 0,24) e depois o passo da corretora.
 assert.equal(loteTL({ lot_mode: 'fixed', lot_value: 0.237, max_risk_percent: null }, sinal, ctxBase), 0.24)
-assert.equal(loteTL({ lot_mode: 'fixed', lot_value: 0.25, max_risk_percent: null }, sinal, { ...ctxBase, detalhe: { minLot: 0.1, maxLot: 50, lotStep: 0.1 } }), 0.2)
+assert.equal(loteTL({ lot_mode: 'fixed', lot_value: 0.25, max_risk_percent: null }, sinal, { ...ctxBase, detalhe: { name: 'XAUUSD', minLot: 0.1, maxLot: 50, lotStep: 0.1 } }), 0.2)
 
 // ── Parciais: fração da posição, sobra tem de ser válida ───────────────────────────────────
 const regra = { min: 0.01, max: 50, passo: 0.01 }

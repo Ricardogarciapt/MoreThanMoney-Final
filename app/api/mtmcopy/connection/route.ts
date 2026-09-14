@@ -127,6 +127,17 @@ export async function POST(request: NextRequest) {
   const existing = await getOwnedConnection(user.id, connectionId)
   if (!existing) return NextResponse.json({ error: 'Conta não encontrada' }, { status: 404 })
 
+  // TradeLocker não tem CopyFactory: só copia por grupos de sinais (execução direta).
+  if (
+    existing.mt5_platform === 'tradelocker' &&
+    (body.copy_method === 'strategy' || body.copy_method === 'master_slave')
+  ) {
+    return NextResponse.json(
+      { error: 'Contas TradeLocker só copiam por grupos de sinais. Estratégias e copy trader pessoal são só MetaTrader.' },
+      { status: 400 },
+    )
+  }
+
   const {
     telegram_channel,
     account_label,
