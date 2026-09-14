@@ -47,7 +47,7 @@ interface ActiveRow {
   peak_profit_pips: number
   profit_locked: boolean
   /**
-   * null = Premium normal · 'golddid' = BE @ +5.0 sem trailing, fecho no TP2 ·
+   * null = Premium normal ·
    * 'trailing' = acompanhamento puro (BE proporcional ao risco + trailing, sem escada de saídas).
    */
   profile: string | null
@@ -166,9 +166,6 @@ const PREMIUM_EARLY_BE_RATIO = (() => {
   const v = Number(process.env.PREMIUM_EARLY_BE_RATIO)
   return Number.isFinite(v) && v > 0 && v <= 2 ? v : 0.4
 })()
-
-/** Gold Did: BE quando o preço avança este tanto (guia GMI: 50 pips = +5.0 no ouro, 1 pip = 0.1). */
-const GOLDDID_BE_PRICE_MOVE = 5.0
 
 /** Canal do chat onde vivem os sinais do Premium. */
 const PREMIUM_CHAT_SLUG = 'premium-ideas'
@@ -444,45 +441,6 @@ export async function runPremiumPriceMonitor(): Promise<{
           detail.push(`${row.symbol}: trailing falhou`)
         }
         continue
-      }
-
-      // ── PERFIL GOLD DID ────────────────────────────────────────────────────────
-      // Gestão SIMPLES da conta do Alcy: BE aos +5.0 (50 pips, sem trailing) e fecha no TP2.
-      // (usa trailing_started como marcador de "BE feito" — Gold Did não faz trailing.)
-      if (row.profile === 'golddid') {
-        if (row.entry && row.entry > 0 && !row.trailing_started) {
-          const move = row.direction === 'buy' ? price - row.entry : row.entry - price
-          if (move >= GOLDDID_BE_PRICE_MOVE) {
-            try {
-              await modifyPositionSlTp(accountId, pos.id, row.entry, undefined, undefined, row.symbol)
-              await admin
-                .from('mtmcopy_premium_active')
-                .update({ trailing_started: true, updated_at: new Date().toISOString() })
-                .eq('id', row.id)
-              actions++
-              detail.push(`${row.symbol}: Gold Did → BE a +${GOLDDID_BE_PRICE_MOVE}`)
-            } catch {
-              detail.push(`${row.symbol}: Gold Did BE falhou`)
-            }
-          }
-        }
-        const tp2 = row.tp2
-        if (tp2 && tp2 > 0 && (row.direction === 'buy' ? price >= tp2 : price <= tp2)) {
-          try {
-            const r = await closePositionById(accountId, pos.id)
-            if (r?.success) {
-              await registarSaida(admin, row, {
-                accountId, positionId: String(pos.id), nivel: 9, fraccao: 1, preco: price, fechouTudo: true,
-              })
-              await encerrarRegisto(admin, row, 'target_final', { exits_done: 2 })
-              actions++
-              detail.push(`${row.symbol}: Gold Did → fechou no TP2 ${tp2}`)
-            }
-          } catch {
-            detail.push(`${row.symbol}: Gold Did fecho TP2 falhou`)
-          }
-        }
-        continue // Gold Did NÃO corre a gestão Premium (parciais/trailing/BE-no-TP1)
       }
 
       // ── TRANCA DE LUCRO ────────────────────────────────────────────────────────────

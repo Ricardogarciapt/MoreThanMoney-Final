@@ -49,25 +49,6 @@ export interface ExecSwitches {
    * Default FALSE: mantém exactamente o comportamento que existia.
    */
   trailing_tempo_real: boolean
-  /**
-   * A perna GOLD DID: a mesma entrada do Premium aberta também na conta do Alcy, com regras
-   * próprias (0,02 lotes, saídas a meias, trailing pelo motor).
-   *
-   * Tem interruptor próprio porque abre ordens sozinha numa segunda conta. O precedente é o
-   * Forex Swings, que entrou rotulado de Premium e abriu nas contas de toda a gente: quando uma
-   * coisa destas corre mal, tem de haver um sítio para a desligar sem esperar por um deploy.
-   * Default ON — foi pedida a funcionar.
-   */
-  golddid_exec: boolean
-  /**
-   * A estratégia GOLDEN ASTRO: XAUUSD, com os níveis publicados pelo próprio trader.
-   *
-   * Default OFF — liga-se por escolha, com alguém a olhar. (O comentário da Golden Moves vivia
-   * aqui pendurado sobre este campo; a estratégia foi removida com o canal-fonte dela.)
-   */
-  goldenastro_exec: boolean
-  /** Respeitar as janelas de Londres da Golden Astro. Off = copia o trader como ele negoceia. */
-  goldenastro_janelas: boolean
 }
 
 const KEY = "mtmcopy_exec_switches"
@@ -95,9 +76,6 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       // Default OFF: liga-se por escolha, porque custa uma leitura de preço por posição.
       trailing_tempo_real: v.trailing_tempo_real === true,
       premium_master_exec: v.premium_master_exec !== false, // default ON (conta mestre)
-      golddid_exec: v.golddid_exec !== false, // default ON (conta demo do Alcy)
-      goldenastro_exec: v.goldenastro_exec === true, // default OFF (à espera de conta própria)
-      goldenastro_janelas: v.goldenastro_janelas !== false, // default ON — é a regra escrita
     }
   } catch {
     return {
@@ -113,9 +91,6 @@ export async function getExecSwitches(): Promise<ExecSwitches> {
       t2t_price_monitor: true,
       trailing_tempo_real: false,
       premium_master_exec: true,
-      golddid_exec: true,
-      goldenastro_exec: false,
-      goldenastro_janelas: true,
     }
   }
 }

@@ -36,7 +36,7 @@ type PendingRow = {
   touched_zone: boolean
   last_price: number | null
   expires_at: string
-  /** null = Premium normal · 'golddid' = perfil Gold Did (1 posição, BE @ +5.0, fecho no TP2). */
+  /** null = Premium normal. */
   profile?: string | null
 }
 
@@ -135,10 +135,7 @@ export async function firePendingEntry(
 
   let legs: OrderRequest[]
   let runnerLot = lot // lote a GERIR (BE/trailing); em híbrido é só o runner
-  if (row.profile === "golddid") {
-    // GOLD DID: 1 posição só, sem TP no broker (o BE @ +5.0 e o fecho no TP2 são do monitor).
-    legs = [mkReq(lot, null, "")]
-  } else if (exec.mode === "hybrid" && tp1 != null && lot > 0) {
+  if (exec.mode === "hybrid" && tp1 != null && lot > 0) {
     // DIETA p/ contas pequenas: <$500 não têm margem para 2 posições → 1 perna só (fecha no TP1).
     let balance: number | null = null
     try {

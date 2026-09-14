@@ -184,15 +184,8 @@ export async function POST(request: NextRequest) {
       "premium_master_exec",
       // estava na UI mas fora desta whitelist — o toggle não fazia nada (bug)
       "trailing_tempo_real",
-      // As pernas próprias faltavam aqui: não se podiam ligar nem desligar pelo painel. Estando
-      // na whitelist, passam a ter um sítio onde se vêem e se mexem.
-      //
-      // O `goldenmoves_exec` saiu: a estratégia Golden Moves foi removida quando o canal-fonte
-      // deixou de existir, e o campo saiu do `ExecSwitches` com ela — mas ficou aqui. O painel
-      // escrevia uma chave que ninguém lê, um interruptor a fingir que fazia alguma coisa.
-      "golddid_exec",
-      "goldenastro_exec",
-      "goldenastro_janelas",
+      // 2026-09-14: saíram os interruptores das estratégias removidas nesse dia — o
+      // `ExecSwitches` deixou de ter esses campos.
     ] as const) {
       const v = (body.switches as Record<string, unknown>)[k]
       if (typeof v === "boolean") patch[k] = v

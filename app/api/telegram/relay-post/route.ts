@@ -9,25 +9,9 @@ import { sendTelegramChannelPush } from '@/lib/telegram-channel-push'
  * Fontes com chat próprio na app: espelham no chat, geram cartão T2T e executam na CONTA
  * PROVEDORA da rota — nunca em contas de clientes. Ver executeSignalOnRouteProvider.
  */
-// O 'golden-moves' saiu a 2026-08-27: o chat Aurum Flow foi retirado das apps e espelhar
-// mensagens para um canal escondido é escrever para ninguém.
+// O chat da Aurum Flow saiu a 2026-08-27: foi retirado das apps e espelhar mensagens para um
+// canal escondido é escrever para ninguém.
 const FONTES_COM_CHAT_PROPRIO = new Set(['gold-did'])
-
-/**
- * Fontes SÓ-EXECUÇÃO, pelo id do grupo de ORIGEM.
- *
- * A Golden Astro não tem chat na app nem canal Telegram de destino: a estratégia é a conta
- * provedora, e quem a quiser subscreve-a no MTM Copy. As mensagens dela entram por aqui só
- * para abrir na conta dela — não se republicam, não se espelham, não vão a Tap to Trade.
- *
- * A chave é o id da FONTE de propósito. Chavear pelo destino punha-a a partilhar porta com
- * outra estratégia, e a única porta com destino próprio é a Premium — cujo slug é o único que
- * executa nas contas dos CLIENTES. Uma rota mal apontada aí abria trades da Golden Astro em
- * todas as contas Premium.
- */
-const FONTES_SO_EXECUCAO = new Map<string, string>([
-  ['-1004428793414', 'MTM Auto Golden Astro'],
-])
 
 /**
  * Aplica uma edição da fonte: corrige o Telegram, corrige o chat da app, e — no Premium —
@@ -244,34 +228,12 @@ export async function POST(req: NextRequest) {
   // QUALQUER relay que passasse por aqui: o relay do Forex Swings entrava rotulado como Premium,
   // era classificado como premium-signals, e todos os clientes com telegram_groups=['premium']
   // abriam EURUSD/USDJPY/NZDUSD/EURCHF nas contas deles. Outros relays só espelham, não executam.
-  // ESPELHO das FONTES NOVAS (Gold Did, Golden Moves): entram no chat da app e no Tap to Trade,
+  // ESPELHO das FONTES com chat próprio: entram no chat da app e no Tap to Trade,
   // mas NÃO passam pelo processador — não abrem nada sozinhas em conta nenhuma. Quem executa é
   // o cliente, ao aceitar no T2T. A execução automática na conta provedora fica para quando for
   // ligada de propósito; misturá-la aqui era como o Forex Swings entrar rotulado de Premium.
-  /**
-   * FONTE SÓ-EXECUÇÃO → direto à conta provedora, e mais nada.
-   *
-   * `executeSignalOnRouteProvider` resolve a rota pelo id do chat que lhe passamos: aqui passa-se
-   * o da ORIGEM, que é o que a rota canónica `canonical-golden-astro` tem em `sender_chat_id`.
-   * A lista de clientes vai vazia por construção — esta função nunca toca em contas de clientes.
-   *
-   * Os follow-ups («Tp2 hit», «close») caem no `reason: 'não é um sinal de entrada'` do próprio
-   * parser e não abrem nada. Não passam por `handleSourceFollowup` porque essa função fecha
-   * seguidores de Tap to Trade, e esta fonte não tem nenhum: os parciais, o stop encurtado e o
-   * trailing são do MOTOR DE PREÇO na conta provedora — está em `CONTAS_MOTOR_TEMPO_REAL`.
-   */
-  const soExecucao = sourceChatId ? FONTES_SO_EXECUCAO.get(sourceChatId) : undefined
-  if (soExecucao) {
-    try {
-      // Sem pré-filtro próprio: quem decide se é entrada é o parser, lá dentro. Duas listas a
-      // dizer "isto é uma entrada" divergem sempre, e a que fica para trás é a que executa.
-      const r2 = await executeSignalOnRouteProviderSeguro(sourceChatId as string, execText, sourceMsgId)
-      return NextResponse.json({ ok: true, fonte: soExecucao, executou: r2.ok, motivo: r2.reason ?? null })
-    } catch (e) {
-      console.error(`[relay-post] ${soExecucao}:`, e instanceof Error ? e.message : e)
-      return NextResponse.json({ ok: false, error: 'falha na execução' }, { status: 500 })
-    }
-  }
+  // 2026-09-14: as fontes SÓ-EXECUÇÃO (entrada direta na conta provedora) saíram com a única
+  // estratégia que as usava.
 
   const idEspelho = body.app_only ? sourceMsgId : r.messageId
   if ((body.app_only || r.ok) && slug && FONTES_COM_CHAT_PROPRIO.has(slug) && idEspelho) {
@@ -398,18 +360,4 @@ export async function POST(req: NextRequest) {
     }
   }
   return NextResponse.json({ ok: r.ok, messageId: r.messageId, error: r.error })
-}
-
-/** Empurra o sinal para a conta provedora da rota, sem tocar em contas de clientes. */
-async function executeSignalOnRouteProviderSeguro(
-  chatId: string,
-  text: string,
-  telegramMessageId: number | null,
-): Promise<{ ok: boolean; reason?: string }> {
-  const { executeSignalOnRouteProvider } = await import('@/lib/mtmcopy/processor')
-  return executeSignalOnRouteProvider({
-    chatId,
-    text,
-    telegramMessageId: telegramMessageId ?? undefined,
-  })
 }
