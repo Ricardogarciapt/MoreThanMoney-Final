@@ -3,6 +3,7 @@ import { userIdDoPedido } from '@/lib/sessao-do-pedido'
 import { lerSessao, type ModoSessao } from './credenciais'
 import { tipoCurto, estadoCurto } from '@/lib/mtmfunded/etiquetas'
 import { SERVIDOR_SIMULADO } from './motor'
+import { desempenhoDaConta, type LinhaFechada } from './desempenho'
 import { type Direcao, type Simbolo, type MapaPrecos, type Preco, estadoDaConta } from './matematica'
 import {
   planearAbertura, planearFecho, validarModificacao, validarPendente, limitesDaConta,
@@ -26,11 +27,16 @@ export class ErroOrdem extends Error {
   constructor(public status: number, mensagem: string) { super(mensagem) }
 }
 
-export type Origem = 'manual' | 'ideia_mtm' | 'scanner' | 'copia'
+/**
+ * `estrategia` é só do motor (contas que seguem uma estratégia do MTM Auto, migração 070): um
+ * pedido vindo do WebTrader ou de um webhook nunca a pode declarar — por isso não está em ORIGENS,
+ * a lista que valida o que chega de fora.
+ */
+export type Origem = 'manual' | 'ideia_mtm' | 'scanner' | 'copia' | 'estrategia'
 const ORIGENS: Origem[] = ['manual', 'ideia_mtm', 'scanner', 'copia']
 export const origemValida = (o: unknown): Origem => (ORIGENS.includes(o as Origem) ? (o as Origem) : 'manual')
 
-const CAMPOS_CONTA = 'id, user_id, tipo, estado, motor, program_id, tournament_id, saldo_inicial, alavancagem, mt5_login, servidor, sim_saldo, sim_equity, sim_margem, sim_ancora_dia, sim_pico_equity, sim_dias_negociados, sim_ultimo_dia, quebrou_regra, quebrada_em, metricas'
+const CAMPOS_CONTA = 'id, user_id, tipo, estado, motor, program_id, tournament_id, saldo_inicial, alavancagem, mt5_login, servidor, sim_saldo, sim_equity, sim_margem, sim_ancora_dia, sim_pico_equity, sim_dias_negociados, sim_ultimo_dia, quebrou_regra, quebrada_em, metricas, segue_estrategia, aceita_t2t, created_at'
 export type Conta = Record<string, unknown> & { id: string; estado: string; motor: string }
 
 // ── quem manda nesta conta ─────────────────────────────────────────────────
@@ -109,6 +115,12 @@ function precoParaExecutar(symbol: string, precos: MapaPrecos, em: Record<string
   return p
 }
 
+/** Conta de análise (segue uma estratégia): as regras do programa não se aplicam — ver motor.ts, contaSim. */
+export function ehContaDeAnalise(conta: Pick<Conta, 'metricas'>): boolean {
+  const m = conta.metricas as Record<string, unknown> | null | undefined
+  return m?.analise === true || m?.analise === 'true'
+}
+
 export async function regrasDaConta(conta: Conta): Promise<Record<string, unknown> | null> {
   const db = getSupabaseAdmin()
   if (conta.program_id) {
@@ -174,6 +186,8 @@ export interface EntradaAbrir {
   tp?: number | null
   origem?: Origem
   ideiaRef?: string | null
+  /** Comentário à MT5 («T2T premium», «MTM Auto Premium»). Só o servidor o escreve. */
+  comentario?: string | null
 }
 
 export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
@@ -185,7 +199,7 @@ export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
   if (!simbolo) throw new ErroOrdem(400, `símbolo ${symbol} não disponível`)
   const { precos, em } = await carregarPrecos(simbolosParaMedir(Object.values(simbolos)))
   const preco = precoParaExecutar(symbol, precos, em)
-  const regras = (await regrasDaConta(conta)) as RegrasDeOrdem | null
+  const regras = ehContaDeAnalise(conta) ? null : ((await regrasDaConta(conta)) as RegrasDeOrdem | null)
 
   const plano = planearAbertura({
     simbolo, direcao: e.direcao, volume: Number(e.volume), sl: num(e.sl), tp: num(e.tp), preco,
@@ -199,8 +213,10 @@ export async function abrirPosicao(conta: Conta, e: EntradaAbrir) {
     account_id: conta.id, symbol, direcao: e.direcao, volume: plano.volume, preco_entrada: plano.precoExecucao,
     sl: num(e.sl), tp: num(e.tp), comissao: plano.comissao, estado: 'aberta',
     origem: origemValida(e.origem), ideia_ref: e.ideiaRef ? String(e.ideiaRef).slice(0, 200) : null,
+    ...(e.comentario ? { comentario: String(e.comentario).slice(0, 64) } : {}),
     tick_entrada: { bid: preco.bid, ask: preco.ask, em: em[symbol] }, aberta_em: agora,
   }).select('*').single()
+  if (error?.code === '23505') throw new ErroOrdem(409, 'esta ideia já foi aberta nesta conta')
   if (error || !pos) throw new ErroOrdem(500, 'não foi possível abrir a posição')
 
   // A comissão sai À ABERTURA, por quem abre (convenção partilhada com o motor).
@@ -288,6 +304,7 @@ export interface EntradaPendente {
   expiraEm?: string | null
   origem?: Origem
   ideiaRef?: string | null
+  comentario?: string | null
 }
 
 export async function criarPendente(conta: Conta, e: EntradaPendente) {
@@ -313,7 +330,9 @@ export async function criarPendente(conta: Conta, e: EntradaPendente) {
     account_id: conta.id, symbol, direcao: e.direcao, tipo: e.tipo, volume: v.volume, preco: Number(e.preco),
     sl: num(e.sl), tp: num(e.tp), estado: 'pendente', origem: origemValida(e.origem),
     ideia_ref: e.ideiaRef ? String(e.ideiaRef).slice(0, 200) : null, expira_em: expira,
+    ...(e.comentario ? { comentario: String(e.comentario).slice(0, 64) } : {}),
   }).select('*').single()
+  if (error?.code === '23505') throw new ErroOrdem(409, 'esta ideia já foi aberta nesta conta')
   if (error || !data) throw new ErroOrdem(500, 'não foi possível criar a ordem')
   return { ordem: data }
 }
@@ -372,13 +391,21 @@ export async function sincronizarAlvo(conta: Conta, symbol: string, alvo: number
 
 export async function estadoCompleto(conta: Conta, modo: ModoSessao) {
   const db = getSupabaseAdmin()
-  const [abertas, { data: fechadas }, { data: pendentes }, regras] = await Promise.all([
+  const segue = conta.segue_estrategia ? String(conta.segue_estrategia) : null
+  const [abertas, { data: fechadas }, { data: pendentes }, regras, { data: todasFechadas }, { data: estrategia }] = await Promise.all([
     posicoesAbertas(conta.id),
     db.from('funded_positions').select('*').eq('account_id', conta.id).eq('estado', 'fechada')
       .order('fechada_em', { ascending: false }).limit(100),
     db.from('funded_orders').select('*').eq('account_id', conta.id).eq('estado', 'pendente')
       .order('criada_em', { ascending: false }),
     regrasDaConta(conta),
+    // O desempenho mede a conta INTEIRA, não só as 100 do histórico visível.
+    db.from('funded_positions')
+      .select('id, mae_id, symbol, direcao, volume, preco_entrada, preco_fecho, pnl, comissao, swap, fechada_em, origem, comentario')
+      .eq('account_id', conta.id).eq('estado', 'fechada').order('fechada_em', { ascending: true }).limit(5000),
+    segue
+      ? db.from('mtmauto_providers').select('slug, nome, ativo').eq('slug', segue).maybeSingle()
+      : Promise.resolve({ data: null }),
   ])
   const envolvidos = [...abertas.map((p) => String(p.symbol)), ...(pendentes ?? []).map((o) => String(o.symbol))]
   const simbolos = await carregarSimbolos(envolvidos, false)
@@ -390,8 +417,15 @@ export async function estadoCompleto(conta: Conta, modo: ModoSessao) {
     regras, Number(conta.saldo_inicial ?? 0), estado.equity,
     conta.sim_ancora_dia == null ? null : Number(conta.sim_ancora_dia), Number(metricas.fase ?? 1),
   )
+  const desempenho = desempenhoDaConta({
+    saldoInicial: Number(conta.saldo_inicial ?? 0),
+    equity: estado.equity,
+    fechadas: (todasFechadas ?? []) as unknown as LinhaFechada[],
+    abertasIds: new Set(abertas.map((p) => String(p.id))),
+  })
   return {
     modo,
+    desempenho,
     conta: {
       id: conta.id, login: conta.mt5_login, servidor: conta.servidor ?? SERVIDOR_SIMULADO,
       tipo: conta.tipo, estado: conta.estado,
@@ -401,6 +435,11 @@ export async function estadoCompleto(conta: Conta, modo: ModoSessao) {
       diasNegociados: Number(conta.sim_dias_negociados ?? 0),
       ancoraDia: conta.sim_ancora_dia == null ? null : Number(conta.sim_ancora_dia),
       fase: Number(metricas.fase ?? 1),
+      analise: ehContaDeAnalise(conta),
+      aceitaT2T: Boolean(conta.aceita_t2t),
+      segueEstrategia: segue
+        ? { slug: segue, nome: String((estrategia as { nome?: string } | null)?.nome ?? segue), ativa: (estrategia as { ativo?: boolean } | null)?.ativo !== false }
+        : null,
     },
     estado: { saldo, ...estado },
     limites,

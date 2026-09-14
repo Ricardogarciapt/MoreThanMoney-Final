@@ -47,6 +47,7 @@ import {
   type Sessoes,
 } from './avaliacao'
 import { FonteRpc, FonteStreaming, type FontePrecos, type Tick } from './feed'
+import { iniciarEspelho, simbolosDoEspelho } from './espelho-estrategias'
 
 // ── configuração ──────────────────────────────────────────────────────────────
 const env = (k: string, obrigatoria = true) => {
@@ -104,6 +105,8 @@ interface ContaLinha {
   created_at: string
   fase: string | null
   fase_concluida: string | null
+  /** metricas.analise = 'true' → conta de ANÁLISE (segue uma estratégia): regras não a quebram. */
+  analise: string | null
 }
 
 const simbolos = new Map<string, SimboloMotor>()
@@ -211,7 +214,7 @@ function moedaDe(s: Simbolo): string {
 // ── contas, posições e ordens ─────────────────────────────────────────────────
 const COLUNAS_CONTA =
   'id, user_id, tipo, tournament_id, program_id, saldo_inicial, alavancagem, sim_saldo, sim_equity, sim_margem, ' +
-  'sim_ancora_dia, sim_ancora_em, sim_pico_equity, sim_dias_negociados, created_at, fase:metricas->>fase, fase_concluida:metricas->>faseConcluida'
+  'sim_ancora_dia, sim_ancora_em, sim_pico_equity, sim_dias_negociados, created_at, fase:metricas->>fase, fase_concluida:metricas->>faseConcluida, analise:metricas->>analise'
 
 function normalizarConta(r: Record<string, unknown>): ContaLinha {
   return {
@@ -404,6 +407,7 @@ async function carregarPedidos(): Promise<void> {
 function simbolosDesejados(): Set<string> {
   const canon = new Set<string>(BASE)
   for (const s of interessados.keys()) canon.add(s)
+  for (const s of simbolosDoEspelho) canon.add(s)
   for (const s of pedidos) {
     canon.add(s)
     const sm = simbolos.get(s)
@@ -441,6 +445,18 @@ function contaSim(c: ContaLinha): ContaSim {
     }
   }
   if (regras && !(Number(regras.perda_diaria_pct) > 0 && Number(regras.perda_maxima_pct) > 0)) regras = null
+  /**
+   * CONTAS DE ANÁLISE (metricas.analise = true, migração 070): as que seguem uma estratégia do MTM
+   * Auto para o aluno medir o desempenho dela. Nascem num programa (para herdar alavancagem e o
+   * resto do painel), mas as regras de perda e o objectivo NÃO se aplicam: uma estratégia que
+   * perde 8% num mês tem de continuar a ser medida no mês seguinte — quebrar a conta apagava a
+   * medição precisamente quando ela interessa. O stop-out por margem continua (é física da conta,
+   * não regra do programa).
+   */
+  if (c.analise === 'true') {
+    regras = null
+    objetivoPct = 0
+  }
   return {
     id: c.id,
     saldo: c.sim_saldo,
@@ -798,6 +814,16 @@ async function main(): Promise<void> {
   await carregarPedidos()
   await fonte.definirSimbolos(simbolosDesejados())
 
+  // Contas que seguem estratégias do MTM Auto (migração 070). ESPELHO_ATIVO=0 desliga só isto.
+  const espelho = env('ESPELHO_ATIVO', false) === '0'
+    ? null
+    : iniciarEspelho({
+        db, metaapiToken: CFG.metaapiToken, escrita: CFG.escrita, log,
+        simbolos, precos, precoEm,
+        negociavel: (sym) => negociavel(sym, new Date()),
+        marcarSuja: (id) => { escritaLocalEm.set(id, 0); sujas.add(id) },
+      })
+
   repetir('avaliar', 250, cicloDeAvaliacao)
   repetir('contas', 1000, carregarContas)
   repetir('precos', 1000, escreverPrecos)
@@ -825,6 +851,7 @@ async function main(): Promise<void> {
   const sair = async () => {
     log('[motor] a parar')
     await escreverPrecos().catch(() => undefined)
+    await espelho?.parar().catch(() => undefined)
     await fonte.parar()
     process.exit(0)
   }
