@@ -523,6 +523,11 @@ export interface Lamina {
   destaqueEscala?: number
   /** A marca de quem assina, quando não é uma das da casa. Ver `SocialCardParams`. */
   marca?: SocialCardParams['marca']
+  /**
+   * As posições arrastadas no editor. Só a capa e o fecho as usam (passam pelo cartão); as do
+   * meio têm um desenho próprio, sem camadas para mover. Ver `SocialCardParams.posicoes`.
+   */
+  posicoes?: SocialCardParams['posicoes']
 }
 
 /**
@@ -544,6 +549,8 @@ export function laminaElement(l: Lamina, indice: number, total: number, handle: 
       destaquePos: l.destaquePos,
       destaqueEscala: l.destaqueEscala,
       marca: l.marca,
+      // Sem isto, as posições arrastadas na capa chegavam à lâmina e morriam aqui, em silêncio.
+      posicoes: l.posicoes,
       formato: 'post',
     })
   }

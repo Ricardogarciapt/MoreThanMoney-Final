@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/admin-api-helpers"
-import { renderCarrossel, renderSocialCardBuffer, type Lamina } from "@/lib/social-card"
+import { renderCarrossel, renderSocialCardBuffer, type Lamina, type SocialCardParams } from "@/lib/social-card"
 import { uploadBufferToBucket } from "@/lib/instagram/publish"
 import { modeloClaude } from '@/lib/modelo-claude'
 
@@ -76,9 +76,15 @@ export async function POST(req: NextRequest) {
     /** Já escritas. Vazio = a IA escreve. */
     textos?: string[]
     laminas?: number
+    /**
+     * As posições arrastadas no editor, em fracções de 0 a 1. Só entram na capa — é a única
+     * lâmina com camadas para mover. Ver `SocialCardParams.posicoes`.
+     */
+    posicoes?: SocialCardParams["posicoes"]
   }
 
   const handle = (corpo.handle || "ricardogarciapt").replace(/^@/, "")
+  const posicoes = corpo.posicoes && typeof corpo.posicoes === "object" ? corpo.posicoes : undefined
 
   /**
    * REFAZER UMA LÂMINA SÓ.
@@ -102,6 +108,8 @@ export async function POST(req: NextRequest) {
           ...(corpo.destaque
             ? { destaque: corpo.destaque, destaquePos: corpo.destaquePos, destaqueEscala: corpo.destaqueEscala }
             : {}),
+          // O editor arrastável refaz a capa com as posições novas, sem tocar nas outras.
+          ...(indice === 0 && posicoes ? { posicoes } : {}),
         },
         indice,
         total,
@@ -126,6 +134,7 @@ export async function POST(req: NextRequest) {
       destaque: corpo.destaque,
       destaquePos: corpo.destaquePos,
       destaqueEscala: corpo.destaqueEscala,
+      posicoes,
     })
     const url = await uploadBufferToBucket(png, "image/png", "estudio")
     return NextResponse.json({ ok: true, urls: [url] })
@@ -163,6 +172,7 @@ export async function POST(req: NextRequest) {
     ...(i === 0 && corpo.destaque
       ? { destaque: corpo.destaque, destaquePos: corpo.destaquePos, destaqueEscala: corpo.destaqueEscala }
       : {}),
+    ...(i === 0 && posicoes ? { posicoes } : {}),
   }))
 
   const pngs = await renderCarrossel(laminas, handle)

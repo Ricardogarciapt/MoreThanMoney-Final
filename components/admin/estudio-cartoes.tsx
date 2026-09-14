@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { Loader2, Images, Image as ImgIcon, Download, Upload, Sparkles, UserRound, Send, Share2, Clock, Wand2, RefreshCw } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { Loader2, Images, Image as ImgIcon, Download, Upload, Sparkles, UserRound, Send, Share2, Clock, Wand2, RefreshCw, FolderOpen, Trash2, Move, X, Pencil } from "lucide-react"
+import EditorArrastavel, { type Posicoes } from "@/components/mtmsocial/editor-arrastavel"
 
 /**
  * Estúdio de cartões — ver antes de publicar, e mexer.
@@ -18,6 +19,46 @@ const CONTAS = [
   { handle: "morethanmoney.pt", nome: "@morethanmoney.pt · marca" },
   { handle: "ricardogarciapt", nome: "@ricardogarciapt · pessoal" },
 ]
+
+/** Uma peça guardada na galeria do estúdio (tabela `estudio_pecas`). */
+interface PecaEstudio {
+  id: string
+  handle: string
+  formato: "post" | "reel"
+  tipo: "cartao" | "carrossel"
+  urls: string[]
+  textos: string[]
+  params: {
+    hook?: string
+    cta?: string
+    proof?: string
+    fundo?: string
+    destaque?: string
+    destaquePos?: "esquerda" | "centro" | "direita"
+    destaqueEscala?: number
+    posicoes?: Posicoes | null
+    caption?: string
+  }
+  created_at: string
+}
+
+/**
+ * O estilo de cada conta, para o editor arrastável.
+ *
+ * Tem de bater com o desenho de `lib/social-card`: o pessoal é ciano com «@ricardogarciapt»
+ * (ACENTO/ASSINATURA do `cartaoRicardo`); a marca é dourada.
+ *
+ * Só o estilo TIPOGRÁFICO (o pessoal) aceita posições — o cartão da marca tem uma composição
+ * fixa, centrada, e ignora-as. Oferecer o editor aí era mostrar um arrasto que não dá em nada.
+ */
+function estiloDaConta(handle: string) {
+  const pessoal = handle.replace(/^@/, "").toLowerCase().includes("ricardo")
+  return {
+    movel: pessoal,
+    cor: pessoal ? "#0097b2" : "#D2A63C",
+    assinatura: pessoal ? "@ricardogarciapt" : "@morethanmoney.pt",
+  }
+}
 
 export function EstudioCartoes() {
   const [handle, setHandle] = useState("ricardogarciapt")
@@ -52,6 +93,16 @@ export function EstudioCartoes() {
   const [textos, setTextos] = useState<string[]>([])
   const [erro, setErro] = useState<string | null>(null)
 
+  // ── a galeria e o editor ──────────────────────────────────────────────────
+  const [galeria, setGaleria] = useState<PecaEstudio[]>([])
+  /** A peça que está no estúdio agora. Mexer-lhe ACTUALIZA-A, não cria outra. */
+  const [pecaId, setPecaId] = useState<string | null>(null)
+  /** Como a saída actual foi gerada — é isso que decide como se refaz a capa. */
+  const [saidaInfo, setSaidaInfo] = useState<{ tipo: "cartao" | "carrossel"; formato: "post" | "reel" } | null>(null)
+  const [posicoes, setPosicoes] = useState<Posicoes | null>(null)
+  const [aEditar, setAEditar] = useState(false)
+  const [pecaAberta, setPecaAberta] = useState<PecaEstudio | null>(null)
+
   /**
    * O endereço da pré-visualização.
    *
@@ -84,6 +135,146 @@ export function EstudioCartoes() {
       .then((j) => { setRetrato(j.retrato ?? null); setTemIA(Boolean(j.temIA)); setRecortes(j.recortes ?? []) })
       .catch(() => undefined)
   }, [])
+
+  const carregarGaleria = useCallback(async () => {
+    try {
+      const j = await fetch("/api/admin/social/estudio-pecas", { cache: "no-store" }).then((r) => r.json())
+      setGaleria(j.pecas ?? [])
+    } catch {
+      /* uma galeria vazia não impede criar */
+    }
+  }, [])
+
+  useEffect(() => { void carregarGaleria() }, [carregarGaleria])
+
+  /**
+   * GUARDA a peça na galeria, depois de o resultado chegar.
+   *
+   * Recebe os valores explicitamente e não os lê do estado: logo a seguir a um `setX` o estado
+   * ainda é o antigo, e guardava-se a peça com o texto de antes.
+   *
+   * Uma falha aqui não é um erro do estúdio — a imagem já existe e está no ecrã. Só não fica na
+   * galeria.
+   */
+  const guardarPeca = async (peca: Omit<PecaEstudio, "id" | "created_at">, id: string | null) => {
+    try {
+      const r = await fetch("/api/admin/social/estudio-pecas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...peca, id: id ?? undefined }),
+      })
+      const j = await r.json()
+      if (j.ok && j.peca) {
+        const nova = j.peca as PecaEstudio
+        setPecaId(nova.id)
+        setGaleria((g) => [nova, ...g.filter((x) => x.id !== nova.id)].slice(0, 60))
+      }
+    } catch {
+      /* a imagem continua no ecrã; só não entrou na galeria */
+    }
+  }
+
+  /** A peça tal como está no estúdio agora, com o que se lhe quiser sobrepor. */
+  const pecaActual = (sobre: Partial<Omit<PecaEstudio, "id" | "created_at">> & { params?: Partial<PecaEstudio["params"]> } = {}) => {
+    const { params: pSobre, ...resto } = sobre
+    return {
+      handle,
+      formato: saidaInfo?.formato ?? formato,
+      tipo: saidaInfo?.tipo ?? (saida.length > 1 ? "carrossel" : "cartao"),
+      urls: saida,
+      textos,
+      ...resto,
+      params: {
+        hook, cta, proof: proof.trim() || undefined,
+        fundo: fundo.trim() || undefined,
+        destaque: destaque.trim() || undefined,
+        destaquePos, destaqueEscala, posicoes, caption: legenda,
+        ...pSobre,
+      },
+    } as Omit<PecaEstudio, "id" | "created_at">
+  }
+
+  /**
+   * REABRE uma peça da galeria no estúdio — textos, camadas, posições e imagens.
+   * Daqui em diante, mexer-lhe actualiza essa linha.
+   */
+  const abrirPeca = (p: PecaEstudio, comEditor = false) => {
+    const c = p.params ?? {}
+    setHandle(p.handle)
+    setFormato(p.formato === "reel" ? "reel" : "post")
+    setHook(c.hook ?? "")
+    setCta(c.cta ?? "")
+    setProof(c.proof ?? "")
+    setFundo(c.fundo ?? "")
+    setDestaque(c.destaque ?? "")
+    setDestaquePos(c.destaquePos ?? "direita")
+    setDestaqueEscala(c.destaqueEscala ?? 0.92)
+    setPosicoes(c.posicoes ?? null)
+    setLegenda(c.caption ?? "")
+    setTextos(Array.isArray(p.textos) ? p.textos : [])
+    setSaida(p.urls ?? [])
+    setSaidaInfo({ tipo: p.tipo, formato: p.formato })
+    setPecaId(p.id)
+    setPublicado(null)
+    setErro(null)
+    setPassos([])
+    setPecaAberta(null)
+    if (comEditor && estiloDaConta(p.handle).movel) setAEditar(true)
+  }
+
+  const apagarPeca = async (id: string) => {
+    if (!window.confirm("Apagar esta peça da galeria? As imagens já partilhadas continuam a funcionar.")) return
+    try {
+      const j = await fetch(`/api/admin/social/estudio-pecas?id=${encodeURIComponent(id)}`, { method: "DELETE" }).then((r) => r.json())
+      if (!j.ok) { setErro(j.erro ?? "não consegui apagar"); return }
+      setGaleria((g) => g.filter((x) => x.id !== id))
+      if (pecaId === id) setPecaId(null)
+      setPecaAberta(null)
+    } catch {
+      setErro("não consegui apagar")
+    }
+  }
+
+  /**
+   * APLICAR as posições arrastadas: o servidor redesenha SÓ a capa e troca-a na posição 0.
+   *
+   * Um cartão refaz-se como cartão (mantém o formato, reel incluído); num carrossel refaz-se a
+   * lâmina 0 — as outras não têm camadas para mover e ficam como estão.
+   */
+  const aplicarPosicoes = async (novas: Posicoes) => {
+    if (!saida.length) return
+    setErro(null)
+    const tipo = saidaInfo?.tipo ?? (saida.length > 1 ? "carrossel" : "cartao")
+    const formatoSaida = saidaInfo?.formato ?? formato
+    const camadas = {
+      fundo: fundo.trim() || undefined,
+      destaque: destaque.trim() || undefined,
+      destaquePos,
+      destaqueEscala,
+    }
+    try {
+      const r = await fetch("/api/admin/social/cartoes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          tipo === "cartao"
+            ? { tipo: "cartao", handle, hook, cta, proof: proof.trim() || undefined, formato: formatoSaida, ...camadas, posicoes: novas }
+            : { tipo: "lamina", handle, indice: 0, total: textos.length || saida.length, hook: textos[0] ?? hook, cta, ...camadas, posicoes: novas },
+        ),
+      })
+      const j = await r.json()
+      if (j.ok && j.urls?.[0]) {
+        const urls = saida.map((u, k) => (k === 0 ? (j.urls[0] as string) : u))
+        setSaida(urls)
+        setPosicoes(novas)
+        await guardarPeca(pecaActual({ urls, tipo, formato: formatoSaida, params: { posicoes: novas } }), pecaId)
+      } else setErro(j.erro ?? "não consegui redesenhar a capa")
+    } catch {
+      setErro("não consegui redesenhar a capa")
+    }
+    // Fecha sempre: um erro escondido atrás do editor é um erro que ninguém lê.
+    setAEditar(false)
+  }
 
   /**
    * Sobe a fotografia arrastada e põe-na no fundo.
@@ -272,6 +463,7 @@ export function EstudioCartoes() {
     setErro(null)
     setPassos([])
     setSaida([])
+    setPosicoes(null)
     try {
       const r = await fetch("/api/admin/social/estudio-wizard", {
         method: "POST",
@@ -287,7 +479,28 @@ export function EstudioCartoes() {
         setCta(j.cta ?? cta)
         setLegenda(j.caption ?? "")
         if (j.fundo) setFundo(j.fundo)
-        if (j.destaque) setDestaque(j.destaque)
+        if (j.destaque) { setDestaque(j.destaque); setDestaquePos("direita"); setDestaqueEscala(0.9) }
+        // O assistente monta sempre um carrossel, e as lâminas saem sempre a 4:5.
+        setSaidaInfo({ tipo: "carrossel", formato: "post" })
+        if (Array.isArray(j.urls) && j.urls.length) {
+          await guardarPeca({
+            handle,
+            formato: "post",
+            tipo: "carrossel",
+            urls: j.urls,
+            textos: j.textos ?? [],
+            params: {
+              hook: j.hook ?? hook,
+              cta: j.cta ?? cta,
+              fundo: j.fundo || fundo.trim() || undefined,
+              destaque: j.destaque || destaque.trim() || undefined,
+              destaquePos: j.destaque ? "direita" : destaquePos,
+              destaqueEscala: j.destaque ? 0.9 : destaqueEscala,
+              posicoes: null,
+              caption: j.caption ?? "",
+            },
+          }, null)
+        }
       } else setErro(j.erro ?? "o assistente falhou")
     } catch {
       setErro("o assistente falhou")
@@ -316,12 +529,15 @@ export function EstudioCartoes() {
           hook: textos[i] ?? hook,
           cta,
           // As imagens só existem na capa — refazer uma do meio com elas mudava o desenho.
-          ...(i === 0 ? { fundo: fundo.trim() || undefined, destaque: destaque.trim() || undefined, destaquePos, destaqueEscala } : {}),
+          ...(i === 0 ? { fundo: fundo.trim() || undefined, destaque: destaque.trim() || undefined, destaquePos, destaqueEscala, posicoes: posicoes ?? undefined } : {}),
         }),
       })
       const j = await r.json()
-      if (j.ok && j.urls?.[0]) setSaida((x) => x.map((u, k) => (k === i ? j.urls[0] : u)))
-      else setErro(j.erro ?? "não consegui refazer essa lâmina")
+      if (j.ok && j.urls?.[0]) {
+        const urls = saida.map((u, k) => (k === i ? (j.urls[0] as string) : u))
+        setSaida(urls)
+        if (pecaId) await guardarPeca(pecaActual({ urls }), pecaId)
+      } else setErro(j.erro ?? "não consegui refazer essa lâmina")
     } catch {
       setErro("não consegui refazer essa lâmina")
     }
@@ -332,6 +548,9 @@ export function EstudioCartoes() {
     setAGerar(tipo)
     setErro(null)
     setSaida([])
+    // Uma geração nova parte da pré-visualização, que não conhece posições arrastadas: o que se
+    // vê à direita tem de ser o que sai.
+    setPosicoes(null)
     try {
       const r = await fetch("/api/admin/social/cartoes", {
         method: "POST",
@@ -354,6 +573,24 @@ export function EstudioCartoes() {
       if (j.ok) {
         setSaida(j.urls ?? [])
         if (Array.isArray(j.textos)) setTextos(j.textos)
+        // O carrossel sai sempre a 4:5; só o cartão respeita o formato escolhido.
+        const formatoSaida = tipo === "carrossel" ? "post" : formato
+        setSaidaInfo({ tipo, formato: formatoSaida })
+        if (Array.isArray(j.urls) && j.urls.length) {
+          await guardarPeca({
+            handle,
+            formato: formatoSaida,
+            tipo,
+            urls: j.urls,
+            textos: Array.isArray(j.textos) ? j.textos : tipo === "carrossel" ? textos.filter(Boolean) : [],
+            params: {
+              hook, cta, proof: proof.trim() || undefined,
+              fundo: fundo.trim() || undefined,
+              destaque: destaque.trim() || undefined,
+              destaquePos, destaqueEscala, posicoes: null, caption: legenda,
+            },
+          }, null)
+        }
       } else setErro(j.erro ?? "não deu")
     } catch {
       setErro("não deu")
@@ -363,7 +600,10 @@ export function EstudioCartoes() {
 
   const campo = "w-full rounded-md border border-neutral-700 bg-neutral-900 px-2.5 py-1.5 text-sm text-neutral-100"
 
+  const estilo = estiloDaConta(handle)
+
   return (
+    <div className="space-y-6">
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
       {/* Controlos */}
       <div className="space-y-3">
@@ -706,15 +946,34 @@ export function EstudioCartoes() {
         {saida.length > 0 && (
           <div>
             <p className="mb-1.5 text-[11px] uppercase tracking-wide text-neutral-400">
-              {saida.length} imagem(ns) guardada(s)
+              {saida.length} imagem(ns) guardada(s){pecaId ? " · na galeria" : ""}
             </p>
+            {!estilo.movel && (
+              <p className="mb-1.5 text-[11px] text-neutral-500">
+                O cartão da marca tem a composição fixa — o editor de posições só existe no pessoal.
+              </p>
+            )}
             <div className="grid grid-cols-3 gap-2">
               {saida.map((u, i) => (
                 <div key={u} className="group relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <a href={u} target="_blank" rel="noreferrer">
-                    <img src={u} alt="" className="w-full rounded border border-neutral-800" />
-                  </a>
+                  {/*
+                    A CAPA abre o editor arrastável — é onde estão as camadas para mover. As outras
+                    lâminas continuam a abrir a imagem num separador.
+                  */}
+                  {i === 0 && estilo.movel ? (
+                    <button type="button" onClick={() => setAEditar(true)} title="Mover texto e pessoa" className="block w-full">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={u} alt="" className="w-full rounded border border-neutral-800 group-hover:border-amber-500/60" />
+                      <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-1 text-[10.5px] font-semibold text-amber-300">
+                        <Move className="h-3 w-3" /> Mover
+                      </span>
+                    </button>
+                  ) : (
+                    <a href={u} target="_blank" rel="noreferrer">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={u} alt="" className="w-full rounded border border-neutral-800" />
+                    </a>
+                  )}
                   <button
                     type="button"
                     onClick={() => void descarregar(u, nomeDoFicheiro(i))}
@@ -735,6 +994,8 @@ export function EstudioCartoes() {
                 rows={3}
                 value={legenda}
                 onChange={(e) => setLegenda(e.target.value)}
+                // A legenda escrita à mão também fica na peça — reabrir e perdê-la era refazê-la.
+                onBlur={() => { if (pecaId && saida.length) void guardarPeca(pecaActual(), pecaId) }}
                 placeholder="vazio = escrita a partir da frase e da palavra do CTA"
                 className={`${campo} mt-1`}
               />
@@ -866,6 +1127,153 @@ export function EstudioCartoes() {
           Arrasta uma fotografia para aqui, ou cola uma captura de ecrã.
         </p>
       </div>
+    </div>
+
+      {/* ── a galeria ─────────────────────────────────────────────────────── */}
+      <section className="rounded-lg border border-neutral-800 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-neutral-200">
+            <FolderOpen className="h-4 w-4 text-amber-400" />
+            O que já se fez no estúdio ({galeria.length})
+          </span>
+          <button type="button" onClick={() => void carregarGaleria()} className="text-neutral-500 hover:text-neutral-200" title="Actualizar">
+            <RefreshCw className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        {galeria.length === 0 ? (
+          <p className="text-[11.5px] text-neutral-500">Cada cartão ou carrossel gerado fica guardado aqui.</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-8">
+            {galeria.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setPecaAberta(p)}
+                className={`group relative overflow-hidden rounded border text-left ${pecaId === p.id ? "border-amber-500" : "border-neutral-800 hover:border-neutral-600"}`}
+              >
+                {p.urls[0] && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.urls[0]} alt="" className={`w-full object-cover ${p.formato === "reel" ? "aspect-[9/16]" : "aspect-[4/5]"}`} />
+                )}
+                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent px-1.5 pb-1 pt-4">
+                  <span className="block truncate text-[10.5px] font-medium text-neutral-100">{p.params?.hook || p.textos?.[0] || "sem título"}</span>
+                  <span className="block text-[9.5px] text-neutral-400">
+                    {p.handle === "morethanmoney.pt" ? "marca" : "pessoal"} · {p.urls.length} {p.urls.length === 1 ? "imagem" : "imagens"}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── a peça aberta ─────────────────────────────────────────────────── */}
+      {pecaAberta && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/90 backdrop-blur-sm" onClick={() => setPecaAberta(null)}>
+          <div className="flex items-center justify-between gap-2 px-4 py-3" onClick={(e) => e.stopPropagation()}>
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-semibold text-white">{pecaAberta.params?.hook || pecaAberta.textos?.[0] || "sem título"}</p>
+              <p className="text-[11px] text-white/50">
+                @{pecaAberta.handle} · {pecaAberta.tipo === "carrossel" ? "carrossel" : pecaAberta.formato === "reel" ? "capa de reel" : "cartão"} · {new Date(pecaAberta.created_at).toLocaleString("pt-PT")}
+              </p>
+            </div>
+            <button type="button" onClick={() => setPecaAberta(null)} className="rounded-lg p-2 text-white/70 hover:text-white">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4" onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto grid max-w-5xl grid-cols-2 gap-3 sm:grid-cols-3">
+              {pecaAberta.urls.map((u, i) => (
+                <div key={u} className="group relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={u} alt="" className="w-full rounded border border-white/10" />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void descarregar(
+                        u,
+                        [pecaAberta.handle.replace(/\W+/g, "-"), pecaAberta.formato, (pecaAberta.params?.hook ?? "").slice(0, 24).trim().replace(/\W+/g, "-").toLowerCase(), String(i + 1).padStart(2, "0")]
+                          .filter(Boolean).join("-") + ".png",
+                      )
+                    }
+                    title="Descarregar"
+                    className="absolute right-1 top-1 rounded-md bg-black/70 p-1.5 text-neutral-200 hover:text-amber-400"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            {pecaAberta.params?.caption && (
+              <p className="mx-auto mt-3 max-w-5xl whitespace-pre-wrap text-[12px] text-white/60">{pecaAberta.params.caption}</p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-2 px-4 pb-6 pt-3" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={async () => {
+                const p = pecaAberta
+                for (let i = 0; i < p.urls.length; i++) {
+                  await descarregar(p.urls[i], `${p.handle.replace(/\W+/g, "-")}-${p.formato}-${String(i + 1).padStart(2, "0")}.png`)
+                  if (i < p.urls.length - 1) await new Promise((r) => setTimeout(r, 400))
+                }
+              }}
+              className="inline-flex items-center gap-1.5 rounded-md border border-white/20 px-3 py-2 text-[12.5px] font-semibold text-white hover:bg-white/10"
+            >
+              <Download className="h-4 w-4" />
+              Descarregar {pecaAberta.urls.length > 1 ? "todas" : ""}
+            </button>
+            <button
+              type="button"
+              onClick={() => abrirPeca(pecaAberta)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-white/20 px-3 py-2 text-[12.5px] font-semibold text-white hover:bg-white/10"
+            >
+              <Pencil className="h-4 w-4" />
+              Reabrir no estúdio
+            </button>
+            {estiloDaConta(pecaAberta.handle).movel && (
+              <button
+                type="button"
+                onClick={() => abrirPeca(pecaAberta, true)}
+                className="inline-flex items-center gap-1.5 rounded-md bg-amber-500 px-3 py-2 text-[12.5px] font-bold text-black hover:bg-amber-400"
+              >
+                <Move className="h-4 w-4" />
+                Mover texto e pessoa
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => void apagarPeca(pecaAberta.id)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-red-500/40 px-3 py-2 text-[12.5px] font-semibold text-red-300 hover:bg-red-500/10"
+            >
+              <Trash2 className="h-4 w-4" />
+              Apagar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── o editor arrastável ───────────────────────────────────────────── */}
+      {aEditar && saida.length > 0 && estilo.movel && (
+        <EditorArrastavel
+          dados={{
+            hook: (saidaInfo?.tipo ?? (saida.length > 1 ? "carrossel" : "cartao")) === "carrossel" ? textos[0] || hook : hook,
+            cta,
+            cor: estilo.cor,
+            assinatura: estilo.assinatura,
+            fundo: fundo.trim() || null,
+            destaque: destaque.trim() || null,
+            destaqueEscala,
+            logoUrl: null,
+            formato: saidaInfo?.formato ?? formato,
+            posicoes,
+          }}
+          aoAplicar={aplicarPosicoes}
+          aoFechar={() => setAEditar(false)}
+        />
+      )}
     </div>
   )
 }
