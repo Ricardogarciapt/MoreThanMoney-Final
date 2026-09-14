@@ -1,9 +1,10 @@
 /**
  * MTM GoldKiller — cálculo num Web Worker (mesmo protocolo do sensei.worker.ts).
  *
- * O GoldKiller é leve (Supertrend + percentis que só mudam nas viragens; medido 2026-09-15 no Node, Apple Silicon: ~8 ms para 3000-5000 velas —
- * 25-40 ms num telemóvel), mas e com o Sensei ligado ao mesmo tempo somava-se na thread principal a cada
- * vela fechada. Corre aqui pelo mesmo caminho do Sensei; o resultado é só arrays e objetos simples.
+ * O GoldKiller é leve — Supertrend + percentis que só mudam nas viragens. Medido em 2026-09-15 (Node,
+ * Apple Silicon): ~8 ms para 3000-5000 velas; num telemóvel 3-5× isso, somado ao Sensei quando os
+ * dois estão ligados, a cada vela fechada. Corre aqui pelo mesmo caminho do Sensei; o resultado é só
+ * arrays e objetos simples (structured clone).
  *
  * Protocolo: { id, velas, inputs, extra } → { id, r, ms } | { id, erro }.
  */
