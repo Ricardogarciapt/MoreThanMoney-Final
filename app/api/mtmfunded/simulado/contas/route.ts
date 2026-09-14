@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const db = getSupabaseAdmin()
   const { data: contas } = await db
     .from('mtm_trading_accounts')
-    .select('id, tipo, estado, mt5_login, servidor, program_id, tournament_id, saldo_inicial, alavancagem, sim_saldo, sim_equity, sim_margem, sim_ancora_dia, sim_pico_equity, sim_dias_negociados, quebrou_regra, metricas, created_at')
+    .select('id, tipo, estado, mt5_login, servidor, program_id, tournament_id, saldo_inicial, alavancagem, sim_saldo, sim_equity, sim_margem, sim_ancora_dia, sim_pico_equity, sim_dias_negociados, quebrou_regra, metricas, created_at, segue_estrategia, aceita_t2t')
     .eq('user_id', userId)
     .eq('motor', 'sim')
     .order('created_at', { ascending: false })
@@ -40,6 +40,12 @@ export async function GET(request: NextRequest) {
     db.from('funded_precos').select('symbol, bid, ask, em'),
     db.from('mtm_funded_programs').select('id, slug, nome, fases, regras'),
   ])
+  // Contas que seguem uma estratégia do MTM Auto (migração 070): o nome dela vai pronto para o seletor.
+  const slugs = [...new Set((contas ?? []).map((c) => (c as { segue_estrategia?: string | null }).segue_estrategia).filter(Boolean))] as string[]
+  const { data: estrategias } = slugs.length
+    ? await db.from('mtmauto_providers').select('slug, nome').in('slug', slugs)
+    : { data: [] as Array<{ slug: string; nome: string }> }
+  const nomeDe = new Map((estrategias ?? []).map((e) => [String(e.slug), String(e.nome)]))
 
   const programaDe = new Map((programas ?? []).map((p) => [p.id as string, p]))
 
@@ -53,6 +59,9 @@ export async function GET(request: NextRequest) {
         etiqueta: tipoCurto(c.tipo as string, m),
         estadoCurto: estadoCurto(c.estado as string, m),
         programa: prog ? { slug: prog.slug, nome: prog.nome, fases: prog.fases, regras: prog.regras } : null,
+        segueEstrategia: (c as { segue_estrategia?: string | null }).segue_estrategia
+          ? { slug: String((c as { segue_estrategia?: string }).segue_estrategia), nome: nomeDe.get(String((c as { segue_estrategia?: string }).segue_estrategia)) ?? String((c as { segue_estrategia?: string }).segue_estrategia) }
+          : null,
       }
     }),
     posicoes: posicoes ?? [],

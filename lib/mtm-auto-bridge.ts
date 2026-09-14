@@ -73,6 +73,12 @@ export interface ContaMtmAuto {
   loteValor: number
   simbolos: string[]
   saidasPct: number[]
+  /** 'mt5' | 'tradelocker' | 'mtmfunded' — a última é uma conta MTM Funded simulada (migração 070). */
+  plataforma: string
+  /** Só `mtmfunded`: a conta simulada, a estratégia que segue e a equity de agora. */
+  fundedAccountId: string | null
+  segueEstrategia: string | null
+  equity: number | null
 }
 
 /** As contas MTM Auto desta pessoa, com o saldo lido do broker quando possível. */
@@ -86,6 +92,22 @@ export async function contasDoUtilizador(userId: string, comSaldo = true): Promi
   const linhas = (data ?? []) as Record<string, unknown>[]
   const saldos = new Map<string, { balance?: number; currency?: string }>()
 
+  // Contas MTM Funded (plataforma 'mtmfunded'): o saldo é o da conta simulada, na base — nunca
+  // MetaApi (não têm conta lá; a execução é do motor do VPS).
+  const simuladas = new Map<string, { sim_saldo: number | null; sim_equity: number | null; segue_estrategia: string | null }>()
+  const idsSim = linhas.filter((c) => c.plataforma === 'mtmfunded' && c.funded_account_id).map((c) => String(c.funded_account_id))
+  if (idsSim.length) {
+    const { data: sims } = await getSupabaseAdmin().from('mtm_trading_accounts')
+      .select('id, sim_saldo, sim_equity, segue_estrategia').in('id', idsSim)
+    for (const s of sims ?? []) {
+      simuladas.set(String(s.id), {
+        sim_saldo: s.sim_saldo == null ? null : Number(s.sim_saldo),
+        sim_equity: s.sim_equity == null ? null : Number(s.sim_equity),
+        segue_estrategia: (s.segue_estrategia as string) ?? null,
+      })
+    }
+  }
+
   if (comSaldo) {
     const token = process.env.METAAPI_TOKEN
     if (token) {
@@ -93,7 +115,7 @@ export async function contasDoUtilizador(userId: string, comSaldo = true): Promi
       await Promise.all(
         linhas.map(async (c) => {
           const id = c.metaapi_account_id as string | null
-          if (!id) return
+          if (!id || c.plataforma === 'mtmfunded') return
           try {
             const r = await fetch(
               `https://mt-client-api-v1.new-york.agiliumtrade.ai/users/current/accounts/${id}/accountInformation`,
@@ -110,6 +132,7 @@ export async function contasDoUtilizador(userId: string, comSaldo = true): Promi
 
   return linhas.map((c) => {
     const info = saldos.get((c.metaapi_account_id as string) ?? '')
+    const sim = c.plataforma === 'mtmfunded' ? simuladas.get(String(c.funded_account_id ?? '')) : undefined
     return {
       id: c.id as string,
       rotulo: (c.rotulo as string) ?? null,
@@ -119,8 +142,12 @@ export async function contasDoUtilizador(userId: string, comSaldo = true): Promi
       estado: (c.estado as string) ?? 'unknown',
       demo: Boolean(c.demo),
       principal: Boolean(c.principal),
-      saldo: info?.balance ?? null,
-      moeda: info?.currency ?? null,
+      saldo: sim ? sim.sim_saldo : info?.balance ?? null,
+      moeda: sim ? 'USD' : info?.currency ?? null,
+      plataforma: String(c.plataforma ?? 'mt5'),
+      fundedAccountId: (c.funded_account_id as string) ?? null,
+      segueEstrategia: sim?.segue_estrategia ?? null,
+      equity: sim ? sim.sim_equity : null,
       copiaAtiva: Boolean(c.copia_ativa),
       // O preset é DEDUZIDO dos valores, não da coluna: guardar só o nome deixava-o a dizer
       // "Equilibrado" depois de a pessoa mexer no risco à mão.

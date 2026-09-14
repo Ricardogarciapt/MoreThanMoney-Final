@@ -139,6 +139,37 @@ export async function GET(request: NextRequest) {
   )
   for (const lote of fechos) linhas.push(...lote)
 
+  // ── Contas MTM Funded no MTM Auto (plataforma 'mtmfunded', migração 070) ───────────────────
+  // Negoceiam no nosso motor, não numa corretora: o resultado lê-se das posições simuladas. Uma
+  // linha por saída (os parciais também são dinheiro realizado), com o rótulo da conta.
+  const { data: doFunded } = await db
+    .from('mtmauto_accounts').select('rotulo, funded_account_id')
+    .eq('user_id', userId!).eq('plataforma', 'mtmfunded').not('funded_account_id', 'is', null)
+  if (doFunded?.length) {
+    const rotuloDe = new Map(doFunded.map((c) => [String(c.funded_account_id), String(c.rotulo ?? 'MTM Funded')]))
+    const { data: fechadas } = await db
+      .from('funded_positions')
+      .select('account_id, symbol, direcao, preco_entrada, preco_fecho, pnl, comissao, swap, fechada_em, estado')
+      .in('account_id', [...rotuloDe.keys()]).eq('estado', 'fechada').gte('fechada_em', desde)
+      .order('fechada_em', { ascending: false }).limit(2000)
+    const { pipSizeForSymbol } = await import('@/lib/mtmcopy/trade-outcome')
+    for (const f of fechadas ?? []) {
+      const pip = pipSizeForSymbol(String(f.symbol))
+      const d = f.preco_fecho == null ? null
+        : (f.direcao === 'buy' ? Number(f.preco_fecho) - Number(f.preco_entrada) : Number(f.preco_entrada) - Number(f.preco_fecho))
+      linhas.push({
+        quando: String(f.fechada_em),
+        origem: 'MTM Auto',
+        conta: rotuloDe.get(String(f.account_id)) ?? 'MTM Funded',
+        symbol: String(f.symbol),
+        direction: (f.direcao as string) ?? null,
+        estado: 'fechada',
+        resultado: Math.round((Number(f.pnl ?? 0) + Number(f.swap ?? 0) - Number(f.comissao ?? 0)) * 100) / 100,
+        pips: d == null ? null : Math.round((d / pip) * 10) / 10,
+      })
+    }
+  }
+
   // ── E o que ainda está aberto ou por abrir: sem resultado, mas com estado ───────────────────
   const { data: t2t } = await db
     .from('mtmcopy_auto_positions')

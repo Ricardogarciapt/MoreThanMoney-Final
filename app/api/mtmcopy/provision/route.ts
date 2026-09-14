@@ -156,7 +156,9 @@ export async function POST(request: NextRequest) {
       .select('*')
       .eq('user_id', user.id)
       .neq('mt5_status', 'disconnected'),
-    supabaseAdmin.from('mtmauto_accounts').select('demo').eq('user_id', user.id),
+    supabaseAdmin.from('mtmauto_accounts').select('demo').eq('user_id', user.id)
+      // Contas MTM Funded atribuídas pelo admin (plataforma 'mtmfunded') não ocupam vagas.
+      .neq('plataforma', 'mtmfunded'),
   ])
 
   const ligadas: ContaLigada[] = [

@@ -109,7 +109,9 @@ export async function destinosDoUtilizador(userId: string): Promise<Destino[]> {
       .eq('user_id', userId),
     db.from('mtmauto_accounts')
       .select('id, metaapi_account_id, login, servidor, corretora, estado, rotulo, nome_exibicao, copia_ativa, demo, sem_comentario, prop_firm')
-      .eq('user_id', userId),
+      .eq('user_id', userId)
+      // Uma conta MTM Funded não é destino de cópia: não tem corretora, e copiar simulada para simulada não mede nada.
+      .neq('plataforma', 'mtmfunded'),
   ])
   const out: Destino[] = []
   for (const c of copy ?? []) {

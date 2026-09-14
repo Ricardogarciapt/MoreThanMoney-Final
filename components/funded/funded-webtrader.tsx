@@ -83,8 +83,8 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
   }, [sp])
 
   const todas = useMemo(() => {
-    const out: Array<{ id: string; login: string | null; etiqueta: string; estadoCurto: string; modo: "master" | "investor"; saldo?: number | null; equity?: number | null; propria: boolean }> = []
-    for (const c of contas ?? []) out.push({ id: c.id, login: c.mt5_login, etiqueta: c.etiqueta, estadoCurto: c.estadoCurto, modo: "master", saldo: c.sim_saldo, equity: c.sim_equity, propria: true })
+    const out: Array<{ id: string; login: string | null; etiqueta: string; estadoCurto: string; modo: "master" | "investor"; saldo?: number | null; equity?: number | null; propria: boolean; segue?: string | null }> = []
+    for (const c of contas ?? []) out.push({ id: c.id, login: c.mt5_login, etiqueta: c.etiqueta, estadoCurto: c.estadoCurto, modo: "master", saldo: c.sim_saldo, equity: c.sim_equity, propria: true, segue: c.segueEstrategia?.nome ?? null })
     for (const s of Object.values(sessoes)) if (!out.some((o) => o.id === s.accountId)) {
       out.push({ id: s.accountId, login: s.login, etiqueta: s.etiqueta ?? "—", estadoCurto: s.estadoCurto ?? "—", modo: s.modo, propria: false })
     }
@@ -108,7 +108,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
           <button onClick={() => setSeletorAberto((v) => !v)} className="flex w-full items-center gap-2 rounded-xl border border-white/10 bg-[#0d0d0d] px-3 py-2 text-left text-[12.5px]">
             {atual ? (
               <>
-                <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{atual.etiqueta}</span>
+                <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{atual.etiqueta}{atual.segue ? ` · segue ${nomeCurto(atual.segue)}` : ""}</span>
                 <span className="font-mono">{atual.login ?? "—"}</span>
                 <span className="text-zinc-500">{SERVIDOR}</span>
                 {atual.modo === "investor" && <span className="text-[10.5px] text-sky-300">investor</span>}
@@ -121,7 +121,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
               {todas.map((t) => (
                 <div key={t.id} className={`flex items-center gap-2 px-3 py-2 text-[12.5px] ${t.id === ativa ? "bg-[#D2A63C]/10" : "hover:bg-white/5"}`}>
                   <button className="flex flex-1 items-center gap-2 text-left" onClick={() => escolher(t.id)}>
-                    <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{t.etiqueta}</span>
+                    <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{t.etiqueta}{t.segue ? ` · segue ${nomeCurto(t.segue)}` : ""}</span>
                     <span className="rounded px-1.5 text-[10.5px]" style={{ color: COR_ESTADO[t.estadoCurto] ?? "#a1a1aa" }}>{t.estadoCurto}</span>
                     <span className="font-mono">{t.login}</span>
                     {t.saldo != null && <span className="ml-auto font-mono text-zinc-400">{usd(t.equity ?? t.saldo)} $</span>}
@@ -152,7 +152,7 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
                 t.id === ativa ? "border-[#D2A63C] bg-[#D2A63C]/15 text-white" : "border-white/10 bg-[#0d0d0d] text-zinc-400"
               }`}
             >
-              <span className="font-bold text-[#D2A63C]">{t.etiqueta}</span>
+              <span className="font-bold text-[#D2A63C]">{t.etiqueta}{t.segue ? ` · ${nomeCurto(t.segue)}` : ""}</span>
               <span className="font-mono">{t.login ?? "—"}</span>
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: COR_ESTADO[t.estadoCurto] ?? "#a1a1aa" }} />
             </button>
@@ -184,6 +184,11 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
       ) : null}
     </div>
   )
+}
+
+/** «MTM Auto Aurum Flow» → «Aurum Flow»: na ficha só cabe o que distingue. */
+function nomeCurto(nome: string) {
+  return nome.replace(/^MTM Auto\s+/i, "").trim() || nome
 }
 
 /** Ecrã de entrada: as contas da pessoa + login MT5-like. */
@@ -226,7 +231,7 @@ function Entrada({ contas, onEntrar, onEscolher, onFechar, linkLoginMtm }: {
         <div className="space-y-2">
           {contas.map((c) => (
             <button key={c.id} onClick={() => onEscolher(c.id)} className="flex w-full items-center gap-2 rounded-lg border border-white/10 bg-black/40 p-2.5 text-left text-[12px] hover:border-[#D2A63C]/40">
-              <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{c.etiqueta}</span>
+              <span className="rounded bg-[#D2A63C] px-1.5 py-0.5 text-[10.5px] font-bold text-black">{c.etiqueta}{c.segueEstrategia ? ` · segue ${nomeCurto(c.segueEstrategia.nome)}` : ""}</span>
               <span className="rounded px-1.5 py-0.5 text-[10.5px] font-semibold" style={{ color: COR_ESTADO[c.estadoCurto], background: `${COR_ESTADO[c.estadoCurto]}22` }}>{c.estadoCurto}</span>
               <div className="min-w-0">
                 <p className="font-mono text-white">{c.mt5_login ?? "—"}</p>

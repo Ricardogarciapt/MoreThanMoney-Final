@@ -94,7 +94,8 @@ export async function GET(request: NextRequest) {
   const [contas, direitos, { data: doAuto }] = await Promise.all([
     contasT2T(userId!),
     carregarDireitos(userId!),
-    db.from('mtmauto_accounts').select('demo').eq('user_id', userId!),
+    // Contas MTM Funded atribuídas pelo admin (plataforma 'mtmfunded') não ocupam vagas.
+    db.from('mtmauto_accounts').select('demo').eq('user_id', userId!).neq('plataforma', 'mtmfunded'),
   ])
 
   // O resumo conta as contas dos TRÊS produtos — as extras vêm de um saco comum, e mostrar só

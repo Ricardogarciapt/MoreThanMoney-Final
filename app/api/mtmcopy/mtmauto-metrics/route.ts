@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
   const [{ data: perfil }, { data: contas }] = await Promise.all([
     db.from('mtmauto_users').select('subscricao, isento, acesso_manual, papel').eq('user_id', user.id).maybeSingle(),
-    db.from('mtmauto_accounts').select('id, rotulo, corretora, estado, demo, copia_ativa').eq('user_id', user.id),
+    db.from('mtmauto_accounts').select('id, rotulo, corretora, estado, demo, copia_ativa, plataforma, funded_account_id').eq('user_id', user.id),
   ])
 
   // Sem ficha na MTM Auto não há nada a mostrar — e inventar um painel vazio só confunde.
@@ -80,8 +80,44 @@ export async function GET(request: NextRequest) {
     porEstrategia.set(l.estrategia, g)
   }
 
+  /**
+   * Contas MTM Funded no MTM Auto (plataforma 'mtmfunded', migração 070): cada uma segue UMA
+   * estratégia e negoceia no motor simulado. O desempenho vem das posições dela — as execuções do
+   * MTM Auto (`mtmauto_executions`) não as incluem, porque não passam pelo executor.
+   */
+  const fundedIds = (contas ?? []).filter((c) => c.plataforma === 'mtmfunded' && c.funded_account_id).map((c) => String(c.funded_account_id))
+  const contasFunded: Array<Record<string, unknown>> = []
+  if (fundedIds.length) {
+    const { desempenhoDaConta } = await import('@/lib/mtmfunded/simulado/desempenho')
+    const [{ data: sims }, { data: fechadas }, { data: abertas }, { data: provs }] = await Promise.all([
+      db.from('mtm_trading_accounts').select('id, mt5_login, saldo_inicial, sim_saldo, sim_equity, segue_estrategia, estado').in('id', fundedIds),
+      db.from('funded_positions').select('id, account_id, mae_id, symbol, direcao, volume, preco_entrada, preco_fecho, pnl, comissao, swap, fechada_em, origem, comentario')
+        .in('account_id', fundedIds).eq('estado', 'fechada').limit(10000),
+      db.from('funded_positions').select('id, account_id').in('account_id', fundedIds).eq('estado', 'aberta'),
+      db.from('mtmauto_providers').select('slug, nome'),
+    ])
+    const nomeDe = new Map((provs ?? []).map((p) => [String(p.slug), String(p.nome)]))
+    for (const s of sims ?? []) {
+      const id = String(s.id)
+      const d = desempenhoDaConta({
+        saldoInicial: Number(s.saldo_inicial ?? 0),
+        equity: Number(s.sim_equity ?? s.sim_saldo ?? 0),
+        fechadas: (fechadas ?? []).filter((f) => f.account_id === id) as never,
+        abertasIds: new Set((abertas ?? []).filter((a) => a.account_id === id).map((a) => String(a.id))),
+      })
+      contasFunded.push({
+        accountId: id, login: s.mt5_login, estado: s.estado,
+        estrategia: s.segue_estrategia ? nomeDe.get(String(s.segue_estrategia)) ?? s.segue_estrategia : null,
+        saldo: s.sim_saldo == null ? null : Number(s.sim_saldo), equity: s.sim_equity == null ? null : Number(s.sim_equity),
+        posicoesAbertas: (abertas ?? []).filter((a) => a.account_id === id).length,
+        desempenho: d,
+      })
+    }
+  }
+
   return NextResponse.json({
     temMtmAuto: true,
+    contasFunded,
     dias,
     acesso: {
       subscricao: perfil?.subscricao ?? 'none',
@@ -93,6 +129,7 @@ export async function GET(request: NextRequest) {
       estado: c.estado as string,
       demo: Boolean(c.demo),
       copiaAtiva: c.copia_ativa !== false,
+      plataforma: (c.plataforma as string) ?? 'mt5',
     })),
     resumo: {
       total: linhas.length,

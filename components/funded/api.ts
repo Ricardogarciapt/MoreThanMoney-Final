@@ -28,6 +28,8 @@ export interface ContaResumo {
   etiqueta: string
   estadoCurto: string
   programa?: { nome: string } | null
+  /** A conta segue uma estratégia do MTM Auto (migração 070). */
+  segueEstrategia?: { slug: string; nome: string } | null
 }
 
 export interface SessaoConta { accountId: string; token: string; modo: "master" | "investor"; expira: string; login: string; etiqueta?: string; estadoCurto?: string }

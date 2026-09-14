@@ -331,6 +331,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, contaId: conta.id })
   }
 
+  // ── contas simuladas que SEGUEM as estratégias do MTM Auto (migração 070) ──
+  //
+  // { accao: 'sim_criar_contas_estrategia', userIds: [..] | userId, estrategias?: [slug], saldo?: 1000, notificar?: bool }
+  // Uma conta por utilizador × estratégia, idempotente. Devolve logins, nunca passwords.
+  if (accao === 'sim_criar_contas_estrategia') {
+    const ids = [...(Array.isArray(b?.userIds) ? b.userIds : []), ...(b?.userId ? [b.userId] : [])]
+      .map((x: unknown) => String(x)).filter((x: string) => /^[0-9a-f-]{36}$/i.test(x))
+    if (!ids.length) return NextResponse.json({ error: 'falta userIds' }, { status: 400 })
+    if (ids.length > 50) return NextResponse.json({ error: 'no máximo 50 utilizadores de cada vez' }, { status: 400 })
+    const saldo = Number(b?.saldo ?? 1000)
+    if (!(saldo >= 100 && saldo <= 1_000_000)) return NextResponse.json({ error: 'saldo inválido' }, { status: 400 })
+    const estrategias = Array.isArray(b?.estrategias) ? b.estrategias.map((x: unknown) => String(x)) : undefined
+    const { verifyAdminAccess } = await import('@/lib/admin-api-helpers')
+    const { userId: adminId } = await verifyAdminAccess()
+    const { criarContasDeEstrategia } = await import('@/lib/mtmfunded/contas-estrategia')
+    const resultados = await criarContasDeEstrategia({ userIds: ids, estrategias, saldo, criadoPor: adminId ?? null })
+    const avisos: Record<string, unknown> = {}
+    if (b?.notificar === true) {
+      const { avisarContasDeEstrategia } = await import('@/lib/mtmfunded/aviso-contas-estrategia')
+      for (const r of resultados) if (!r.erro) avisos[r.userId] = await avisarContasDeEstrategia(r, saldo)
+    }
+    return NextResponse.json({ ok: true, resultados: resultados.map((r) => ({ ...r, aviso: avisos[r.userId] ?? null })) })
+  }
+
   // ── torneio: publicar / estado ───────────────────────────────────────────
   if (accao === 'torneio_publicar' || accao === 'torneio_estado') {
     const id = String(b?.torneioId ?? '')

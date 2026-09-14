@@ -120,7 +120,9 @@ export async function POST(request: NextRequest) {
   const [direitos, { data: doSite }, { data: doAuto }] = await Promise.all([
     carregarDireitos(user.id),
     supabase.from('mtmcopy_connections').select('*').eq('user_id', user.id).neq('mt5_status', 'disconnected'),
-    supabase.from('mtmauto_accounts').select('demo').eq('user_id', user.id),
+    supabase.from('mtmauto_accounts').select('demo').eq('user_id', user.id)
+      // Contas MTM Funded atribuídas pelo admin (plataforma 'mtmfunded') não ocupam vagas.
+      .neq('plataforma', 'mtmfunded'),
   ])
   const ligadas: ContaLigada[] = [
     ...(doSite ?? []).map((c) => ({

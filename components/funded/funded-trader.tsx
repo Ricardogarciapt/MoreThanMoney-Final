@@ -13,6 +13,7 @@ import { RascunhoProvider, useRascunho, type PedidoOrdem } from "./rascunho-orde
 import FundedPosicoes from "./funded-posicoes"
 import FundedWebhook from "./funded-webhook"
 import FundedCopier from "./funded-copier"
+import FundedDesempenho from "./funded-desempenho"
 
 /**
  * O WEBTRADER DE UMA CONTA — cabeçalho de métricas, lista, gráfico, ticket e posições.
@@ -217,6 +218,12 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
           <span className="rounded px-1.5 py-0.5 text-[11px] font-semibold" style={{ color: COR_ESTADO[c.estadoCurto], background: `${COR_ESTADO[c.estadoCurto]}22` }}>{c.estadoCurto}</span>
           <span className="font-mono text-white">{String(c.login ?? "—")}</span>
           <span className="text-zinc-500">{String(c.servidor ?? "")}</span>
+          {c.segueEstrategia && (
+            <span className="rounded-full border border-[#D2A63C]/40 bg-[#D2A63C]/10 px-2 py-0.5 text-[11px] text-[#D2A63C]">
+              segue {c.segueEstrategia.nome}{c.segueEstrategia.ativa ? "" : " (estratégia em pausa)"}
+            </span>
+          )}
+          {c.aceitaT2T && <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-zinc-300">aceita Tap to Trade</span>}
           {dados.modo === "investor" && (
             <span className="ml-auto flex items-center gap-1 rounded-full bg-sky-500/15 px-2 py-0.5 text-[11px] text-sky-300"><Eye className="h-3 w-3" /> Só leitura (investor)</span>
           )}
@@ -264,6 +271,7 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
         {vista === "posicoes" && posicoesPainel("posicoes")}
         {vista === "historico" && posicoesPainel("historico")}
         {vista === "conta" && <div className="space-y-2">
+          <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedDesempenho d={dados.desempenho} estrategia={c.segueEstrategia?.nome} /></div>
           <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedCopier accountId={accountId} podeGerir={dados.modo === "master"} /></div>
           <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedWebhook accountId={accountId} podeGerir={dados.modo === "master"} /></div>
         </div>}
@@ -273,6 +281,7 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
       {desktop && <div className="grid grid-cols-[260px_1fr] gap-2">
         <div className="space-y-2">
           <FundedWatchlist precos={vivos} selecionado={simbolo?.symbol ?? null} onSelecionar={selecionar} onVisiveis={setVisiveis} />
+          <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedDesempenho d={dados.desempenho} estrategia={c.segueEstrategia?.nome} /></div>
           <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedCopier accountId={accountId} podeGerir={dados.modo === "master"} /></div>
           <div className="rounded-xl border border-white/10 bg-[#0d0d0d] p-3"><FundedWebhook accountId={accountId} podeGerir={dados.modo === "master"} /></div>
         </div>

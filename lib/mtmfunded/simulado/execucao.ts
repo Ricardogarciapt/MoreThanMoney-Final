@@ -116,7 +116,7 @@ function precoParaExecutar(symbol: string, precos: MapaPrecos, em: Record<string
 }
 
 /** Conta de análise (segue uma estratégia): as regras do programa não se aplicam — ver motor.ts, contaSim. */
-export function ehContaDeAnalise(conta: Pick<Conta, 'metricas'>): boolean {
+export function ehContaDeAnalise(conta: Record<string, unknown>): boolean {
   const m = conta.metricas as Record<string, unknown> | null | undefined
   return m?.analise === true || m?.analise === 'true'
 }

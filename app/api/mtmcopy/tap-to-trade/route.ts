@@ -17,6 +17,7 @@ import { tapToTradeEnabledChannels, T2T_SIGNAL_CHANNELS as SIGNAL_CHANNELS } fro
 import { sinalJaSaiuDaZona, JANELA_MERCADO_MS } from '@/lib/mtmcopy/t2t-janela'
 import { ehTradeLocker, sessaoDaLigacao } from '@/lib/tradelocker/ligacao'
 import { colocarOrdemTL, contextoTL, loteTL, type ContextoTL } from '@/lib/tradelocker/executor'
+import { executarT2TSimulado, type ResultadoT2TSimulado } from '@/lib/mtmfunded/simulado/t2t-simulado'
 
 export const dynamic = 'force-dynamic'
 // 60s: uma ligação MetaApi fria pode demorar até ~55s (CONNECT_TIMEOUT_MS). Com 30s a
@@ -250,9 +251,17 @@ export async function POST(request: NextRequest) {
   const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id || (ehTradeLocker(c) && c.tl_account_id))
   const t2tTargets = withAccount.filter((c) => c.purpose === 'tap_to_trade' || c.t2t_enabled === true)
 
+  // Contas SIMULADAS MTM Funded com «aceita Tap to Trade» (migração 070): abrem a ideia ao lado
+  // das reais. Um utilizador só com simuladas também pode aceitar — daí contarem para os guardas
+  // abaixo. Antes da 070 a coluna não existe, a leitura dá erro e isto fica a false.
+  const { data: simT2T } = await supabase
+    .from('mtm_trading_accounts').select('id')
+    .eq('user_id', user.id).eq('motor', 'sim').eq('estado', 'ativa').eq('aceita_t2t', true).limit(20)
+  const temSimuladas = Boolean(simT2T?.length)
+
   // Contas T2T pausadas (is_active=false) ficam ligadas só para estatísticas → não executam.
   let targets = t2tTargets.filter((c) => c.is_active !== false)
-  if (t2tTargets.length && !targets.length) {
+  if (t2tTargets.length && !targets.length && !temSimuladas) {
     return NextResponse.json({ error: 'O Tap to Trade está em pausa nas tuas contas. Retoma-o no T2T para executar sinais.', code: 't2t_paused' }, { status: 400 })
   }
   // Retrocompat (conta única): sem nenhuma conta marcada como T2T → a 1ª conta MT5 ativa.
@@ -260,7 +269,7 @@ export async function POST(request: NextRequest) {
     const fallback = withAccount.find((c) => c.is_active !== false)
     if (fallback) targets = [fallback]
   }
-  if (!targets.length) {
+  if (!targets.length && !temSimuladas) {
     return NextResponse.json({ error: 'Sem conta ligada (ou todas em pausa). Liga/retoma a tua conta MT5 no T2T.', code: 'no_connection' }, { status: 400 })
   }
 
@@ -434,7 +443,32 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const results = await Promise.all(targets.map(executeOnAccount))
+  // Risco das simuladas = o que o T2T usa na conta real do cliente (fonte → conta), aplicado à
+  // equity simulada. Sem conta real: 1%.
+  const riscoSimulado = (() => {
+    const c = targets[0]
+    if (!c) return 1
+    const daFonte = (c.t2t_source_risk as Record<string, { riscoPct?: number }> | null)?.[String(message.channel_slug ?? '')]?.riscoPct
+    const modo = c.t2t_lot_mode ?? c.lot_mode
+    const v = Number(daFonte ?? (modo === 'risk_percent' ? (c.t2t_lot_value ?? c.lot_value) : NaN))
+    return Number.isFinite(v) && v > 0 ? Math.min(5, Math.max(0.1, v)) : 1
+  })()
+  const fonteSim = t2tSourceKey(message.channel_slug, message.content)
+  const [reais, simuladas] = await Promise.all([
+    Promise.all(targets.map(executeOnAccount)),
+    temSimuladas
+      ? executarT2TSimulado({
+          userId: user.id, chatMessageId, fonte: fonteSim,
+          sinal: {
+            symbol: sSymbol, direction: sDirection, entry: signal.entry ?? null,
+            sl: slComMinimo(fonteSim, sSymbol, sDirection, signal.entry, signal.sl) ?? null,
+            tp: signal.tp?.[0] ?? null, zone: signal.zone ?? null,
+          },
+          riscoPct: riscoSimulado,
+        }).catch((e): ResultadoT2TSimulado[] => { console.error('[tap-to-trade] simuladas:', e); return [] })
+      : Promise.resolve([] as ResultadoT2TSimulado[]),
+  ])
+  const results: AcctResult[] = [...reais, ...simuladas.map((r) => ({ ...r, connectionId: r.accountId }))]
   const opened = results.filter((r) => r.ok)
   const realErrors = results.filter((r) => !r.ok && !r.skipped)
 
@@ -450,7 +484,7 @@ export async function POST(request: NextRequest) {
     success: true,
     accounts: results,
     opened: opened.length,
-    total: targets.length,
+    total: results.length,
     // Compat com a UI de conta-única: 1.º sucesso no topo.
     orderId: opened[0].orderId,
     symbol: opened[0].symbol,

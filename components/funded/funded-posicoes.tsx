@@ -53,6 +53,7 @@ export default function FundedPosicoes(props: {
                 <span className={h.direcao === "buy" ? "text-emerald-400" : "text-rose-400"}>{h.direcao === "buy" ? "BUY" : "SELL"}</span>{" "}
                 <b className="text-white">{h.symbol}</b> {Number(h.volume)}
                 <div className="text-[10.5px] text-zinc-500">
+                  {h.comentario ? <span className="text-[#D2A63C]">{h.comentario} · </span> : null}
                   {px(Number(h.preco_entrada), d)} → {px(Number(h.preco_fecho), d)} · {motivo(h.motivo_fecho)}{h.mae_id ? " · parcial" : ""} · {new Date(h.fechada_em).toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short" })}
                 </div>
               </div>
@@ -87,7 +88,9 @@ export default function FundedPosicoes(props: {
                   <b className="text-white">{p.symbol}</b> {Number(p.volume)}
                   <div className="text-[10.5px] text-zinc-500">
                     {px(Number(p.preco_entrada), d)} → {px(atual, d)} · SL {p.sl != null ? px(Number(p.sl), d) : "—"} · TP {p.tp != null ? px(Number(p.tp), d) : "—"}
-                    {p.origem && p.origem !== "manual" ? ` · ${p.origem === "ideia_mtm" ? "ideia MTM" : p.origem}` : ""}
+                    {p.comentario
+                      ? <span className="text-[#D2A63C]"> · {p.comentario}</span>
+                      : p.origem && p.origem !== "manual" ? ` · ${p.origem === "ideia_mtm" ? "ideia MTM" : p.origem}` : ""}
                   </div>
                 </div>
                 <p className={`self-center font-mono text-[14px] font-semibold ${pnl == null ? "text-zinc-500" : pnl >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{usd(pnl)}</p>
@@ -150,5 +153,5 @@ export default function FundedPosicoes(props: {
 }
 
 function motivo(m: string | null) {
-  return ({ manual: "manual", sl: "stop loss", tp: "take profit", stop_out: "stop-out", regra_quebrada: "regra quebrada", fim_de_ciclo: "fim de ciclo" } as Record<string, string>)[m ?? ""] ?? (m ?? "—")
+  return ({ manual: "manual", sl: "stop loss", tp: "take profit", stop_out: "stop-out", regra_quebrada: "regra quebrada", fim_de_ciclo: "fim de ciclo", estrategia: "saída da estratégia" } as Record<string, string>)[m ?? ""] ?? (m ?? "—")
 }
