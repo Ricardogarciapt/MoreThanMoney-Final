@@ -5,6 +5,7 @@ import { parseSignal } from "@/lib/mtmcopy/signal-parser"
 import { t2tMode } from "@/lib/mtmcopy/t2t-source"
 import { computeLotSize, riscoEfetivoPct, signalForRiskSizing } from "@/lib/mtmcopy/lot-sizing"
 import { getAccountSnapshot } from "@/lib/mtmcopy/metaapi"
+import { ehTradeLocker, sessaoDaLigacao } from "@/lib/tradelocker/ligacao"
 import { pipSizeForSymbol } from "@/lib/mtmcopy/trade-outcome"
 
 /**
@@ -73,9 +74,8 @@ export async function GET(request: NextRequest) {
 
   const { data: conns } = await supabase
     .from("mtmcopy_connections")
-    .select(
-      "id, account_label, mt5_login_last4, metaapi_account_id, lot_mode, lot_value, max_risk_percent, is_active, purpose, t2t_enabled, t2t_lot_mode, t2t_lot_value, mt5_status",
-    )
+    // "*" para incluir as colunas tl_* (TradeLocker, migração 069) sem partir antes de a aplicar.
+    .select("*")
     .eq("user_id", user.id)
 
   /**
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
   const bloqueadas: Array<{ id: string; label: string; motivo: string; comoResolver: string }> = []
   const alvos = candidatas.filter((c) => {
     const label = c.account_label || (c.mt5_login_last4 ? `••${c.mt5_login_last4}` : c.id.slice(0, 6))
-    if (!c.metaapi_account_id) {
+    if (!c.metaapi_account_id && !(ehTradeLocker(c) && c.tl_account_id)) {
       bloqueadas.push({ id: c.id, label, motivo: "A conta ainda não terminou a ligação ao MT5.", comoResolver: "Abre as definições da conta e conclui a ligação." })
       return false
     }
@@ -114,8 +114,16 @@ export async function GET(request: NextRequest) {
       const label = conn.account_label || (conn.mt5_login_last4 ? `••${conn.mt5_login_last4}` : conn.id.slice(0, 6))
       const sizing = { ...conn, lot_mode: conn.t2t_lot_mode ?? conn.lot_mode, lot_value: conn.t2t_lot_value ?? conn.lot_value }
       try {
+        // TradeLocker: saldo/equity pelo /state da conta escolhida; MT5 pela MetaApi.
+        const lerSnapshot = async () => {
+          if (!ehTradeLocker(conn)) return getAccountSnapshot(conn.metaapi_account_id as string)
+          const { sessao } = await sessaoDaLigacao(conn)
+          if (!sessao) return null
+          const e = await sessao.estado()
+          return { balance: e.balance ?? undefined, equity: e.equity ?? undefined }
+        }
         const snap = await Promise.race([
-          getAccountSnapshot(conn.metaapi_account_id as string),
+          lerSnapshot(),
           new Promise<null>((r) => setTimeout(() => r(null), 8000)),
         ])
         const equity = snap && typeof snap.equity === "number" ? snap.equity : null

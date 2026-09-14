@@ -746,7 +746,22 @@ async function processManagementUpdate(
     )
   }
 
+  // T2T em contas TradeLocker: a mesma gestão, aplicada pela API TradeLocker.
+  try {
+    const { gestaoT2TTradeLocker } = await import('@/lib/tradelocker/mtmcopy-branch')
+    await gestaoT2TTradeLocker(channel, management)
+  } catch (e) {
+    console.warn('[mtmcopy] gestão T2T TradeLocker falhou:', e)
+  }
+
   for (const conn of subscribers) {
+    if (conn.mt5_platform === 'tradelocker') {
+      if (prefersDirectExecution(conn) && conn.is_active) {
+        const { gestaoSubscritorTradeLocker } = await import('@/lib/tradelocker/mtmcopy-branch')
+        await gestaoSubscritorTradeLocker({ conn, management, raw, refs: `${replyRef} ${tgRef}`.trim() })
+      }
+      continue
+    }
     const trailingNote = management.trailing
       ? ` · trailing ${formatTrailingDistance(management.trailing)}`
       : management.trailingPips
@@ -1712,6 +1727,13 @@ async function processSignalDirect(
       detail: `Símbolo fora da whitelist ${tgRef}`.trim(),
       raw_message: raw,
     })
+    return
+  }
+
+  // Conta TradeLocker: execução própria (sem MetaApi). O caminho MT5 abaixo fica intocado.
+  if (conn.mt5_platform === 'tradelocker') {
+    const { processarSinalDirectoTradeLocker } = await import('@/lib/tradelocker/mtmcopy-branch')
+    await processarSinalDirectoTradeLocker({ conn, signal, raw, telegramMessageId, channel, aiPrefix })
     return
   }
 

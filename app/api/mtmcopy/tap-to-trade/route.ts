@@ -15,6 +15,8 @@ import { isMarketOpen } from '@/lib/mtmcopy/market-hours'
 import { symbolMatchesCanonical } from '@/lib/mtmcopy/symbol-resolver'
 import { tapToTradeEnabledChannels, T2T_SIGNAL_CHANNELS as SIGNAL_CHANNELS } from '@/lib/mtmcopy/tap-to-trade-channels'
 import { sinalJaSaiuDaZona, JANELA_MERCADO_MS } from '@/lib/mtmcopy/t2t-janela'
+import { ehTradeLocker, sessaoDaLigacao } from '@/lib/tradelocker/ligacao'
+import { colocarOrdemTL, contextoTL, loteTL, type ContextoTL } from '@/lib/tradelocker/executor'
 
 export const dynamic = 'force-dynamic'
 // 60s: uma ligação MetaApi fria pode demorar até ~55s (CONNECT_TIMEOUT_MS). Com 30s a
@@ -239,10 +241,13 @@ export async function POST(request: NextRequest) {
   //    NÃO mexe no sizing da cópia (lot_mode/value). Retrocompat: sem contas marcadas, usa a 1ª ativa.
   const { data: conns } = await supabase
     .from('mtmcopy_connections')
-    .select('id, account_label, mt5_login_last4, metaapi_account_id, lot_mode, lot_value, max_risk_percent, copy_sl, copy_tp, symbols_whitelist, is_active, purpose, t2t_enabled, t2t_lot_mode, t2t_lot_value, t2t_source_risk, prop_firm_type, baseline_balance')
+    // '*': as colunas tl_* (TradeLocker) só existem depois da migração 069 — pedir colunas em
+    // falta fazia a query inteira falhar e o T2T ficava sem contas para toda a gente.
+    .select('*')
     .eq('user_id', user.id)
     .neq('mt5_status', 'disconnected')
-  const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id)
+  // Conta com onde executar: MetaApi (MT5) ou TradeLocker (conta escolhida na ligação).
+  const withAccount = (conns ?? []).filter((c) => c.metaapi_account_id || (ehTradeLocker(c) && c.tl_account_id))
   const t2tTargets = withAccount.filter((c) => c.purpose === 'tap_to_trade' || c.t2t_enabled === true)
 
   // Contas T2T pausadas (is_active=false) ficam ligadas só para estatísticas → não executam.
@@ -274,7 +279,7 @@ export async function POST(request: NextRequest) {
     try {
       // Whitelist de símbolos por conta (match por FAMÍLIA — tolera sufixo da corretora).
       if (Array.isArray(conn.symbols_whitelist) && conn.symbols_whitelist.length) {
-        const allowed = conn.symbols_whitelist.some((s) => symbolMatchesCanonical(symU, String(s)))
+        const allowed = conn.symbols_whitelist.some((s: unknown) => symbolMatchesCanonical(symU, String(s)))
         if (!allowed) return { account: label, connectionId: conn.id, ok: false, skipped: true, error: `${signal.symbol} fora da whitelist` }
       }
       // Idempotência POR CONTA: (user_id, chat_message_id, connection_id) → cada conta abre 1×.
@@ -306,9 +311,26 @@ export async function POST(request: NextRequest) {
         lot_value: riscoDaFonte?.riscoPct ?? conn.t2t_lot_value ?? conn.lot_value,
         max_risk_percent: riscoDaFonte?.riscoMaxPct ?? conn.max_risk_percent,
       }
-      const ctx = await fetchLotSizingContext(conn.metaapi_account_id!, sSymbol, sDirection)
+      // TradeLocker: sessão + contexto pela API dela; MT5 continua pela MetaApi, sem mudanças.
+      const tl = ehTradeLocker(conn) ? await sessaoDaLigacao(conn) : null
+      if (tl && !tl.sessao) {
+        await supabase.from('mtmcopy_signal_log').update({ status: 'error', detail: `T2T [TradeLocker]: ${tl.erro}` }).eq('user_id', user.id).eq('chat_message_id', chatMessageId).eq('connection_id', conn.id)
+        return { account: label, connectionId: conn.id, ok: false, error: tl.erro ?? 'TradeLocker sem sessão' }
+      }
+      let tlCtx: ContextoTL | null = null
+      if (tl?.sessao) {
+        tlCtx = await contextoTL(tl.sessao, sSymbol, sDirection)
+        if (!tlCtx.instrumento) {
+          const motivo = tlCtx.erro ?? `${sSymbol} indisponível na TradeLocker`
+          await supabase.from('mtmcopy_signal_log').update({ status: 'error', detail: `T2T [TradeLocker]: ${motivo}` }).eq('user_id', user.id).eq('chat_message_id', chatMessageId).eq('connection_id', conn.id)
+          return { account: label, connectionId: conn.id, ok: false, symbol: sSymbol, error: motivo }
+        }
+      }
+      const ctx = tlCtx
+        ? { balance: tlCtx.balance ?? tlCtx.equity, marketPrice: tlCtx.marketPrice }
+        : await fetchLotSizingContext(conn.metaapi_account_id!, sSymbol, sDirection)
       const riskSignal = signalForRiskSizing(signal, ctx.marketPrice)
-      const lot = computeLotSize(sizingConn, riskSignal, ctx.balance)
+      const lot = tlCtx ? loteTL(sizingConn, riskSignal, tlCtx) : computeLotSize(sizingConn, riskSignal, ctx.balance)
       const skip = getLotSizingSkipReason(sizingConn, signal, ctx.balance, lot, ctx.marketPrice)
       if (skip) {
         await supabase.from('mtmcopy_signal_log').update({ status: 'error', detail: `T2T: ${skip}` }).eq('user_id', user.id).eq('chat_message_id', chatMessageId).eq('connection_id', conn.id)
@@ -317,6 +339,13 @@ export async function POST(request: NextRequest) {
       // Contas financiadas: almofada, consistência e drawdown diário decidem ANTES de abrir.
       // A trade é encolhida ao tecto de risco da almofada; se a regra morde, não abre.
       let lotFinal = lot
+      // As guardas de prop firm leem o histórico pela MetaApi; numa conta TradeLocker não há como
+      // as avaliar, e abrir sem elas numa conta financiada é arriscar a conta. Não abre.
+      if (conn.prop_firm_type && tlCtx) {
+        const motivo = 'Regras de conta financiada ainda não suportadas em TradeLocker'
+        await supabase.from('mtmcopy_signal_log').update({ status: 'skipped', detail: `T2T [TradeLocker]: ${motivo}` }).eq('user_id', user.id).eq('chat_message_id', chatMessageId).eq('connection_id', conn.id)
+        return { account: label, connectionId: conn.id, ok: false, skipped: true, error: motivo }
+      }
       if (conn.prop_firm_type) {
         const snap = await getAccountSnapshot(conn.metaapi_account_id!)
         const saldo = ctx.balance ?? 0
@@ -385,15 +414,19 @@ export async function POST(request: NextRequest) {
       if (!mh.open) {
         return { account: label, connectionId: conn.id, ok: false, symbol: sSymbol, error: `mercado fechado (${mh.reason})` }
       }
-      const orderReq: OrderRequest = { accountId: conn.metaapi_account_id!, symbol: sSymbol, direction: sDirection, volume: lotFinal, orderType, openPrice, stopLoss: orderSl, takeProfit: orderTp, comment: 'TapToTrade MTM' }
-      const result = await placeOrder(orderReq)
+      const orderReq: OrderRequest = { accountId: conn.metaapi_account_id ?? '', symbol: sSymbol, direction: sDirection, volume: lotFinal, orderType, openPrice, stopLoss: orderSl, takeProfit: orderTp, comment: 'TapToTrade MTM' }
+      const tlResult = tl?.sessao && tlCtx ? await colocarOrdemTL(tl.sessao, orderReq, tlCtx) : null
+      const result = tlResult ?? (await placeOrder(orderReq))
+      if (tlResult?.qty) lotFinal = tlResult.qty
+      const plataforma = tlResult ? ' [TradeLocker]' : ''
       await supabase.from('mtmcopy_signal_log').update({
         lot: lotFinal,
         status: result.success ? 'open' : 'error',
-        broker_position_id: result.success ? (result.orderId ?? null) : null,
+        // TradeLocker: guarda o positionId (é por ele que a gestão fecha/move SL); sem ele, o orderId.
+        broker_position_id: result.success ? ((tlResult?.positionId ?? result.orderId) ?? null) : null,
         detail: result.success
-          ? `Tap to Trade · ordem ${orderReq.orderType} · ${result.orderId ?? ''}${adjustedStops ? ' · SL/TP ajustado ao lado correto' : ''}`.trim()
-          : `Tap to Trade falhou: ${result.error ?? 'erro'}`,
+          ? `Tap to Trade${plataforma} · ordem ${orderReq.orderType} · ${result.orderId ?? ''}${adjustedStops ? ' · SL/TP ajustado ao lado correto' : ''}`.trim()
+          : `Tap to Trade${plataforma} falhou: ${result.error ?? 'erro'}`,
       }).eq('user_id', user.id).eq('chat_message_id', chatMessageId).eq('connection_id', conn.id).then(undefined, (e) => console.error('[tap-to-trade] update log error:', e))
       return { account: label, connectionId: conn.id, ok: result.success, orderId: result.orderId, lot: lotFinal, symbol: result.brokerSymbol ?? sSymbol, sl: orderReq.stopLoss, tp: orderReq.takeProfit, error: result.success ? undefined : (result.error ?? 'erro') }
     } catch (e) {
