@@ -637,7 +637,7 @@ function AppMobileContent() {
             }`}
           >
             <BarChart3 className={`w-5 h-5 mx-auto mb-0.5 ${activeTab === "scanner" ? "text-[#D2A63C]" : ""}`} />
-            <div className={`text-[10px] font-medium leading-tight ${activeTab === "scanner" ? "text-[#D2A63C]" : ""}`}>Scanner</div>
+            <div className={`text-[10px] font-medium leading-tight ${activeTab === "scanner" ? "text-[#D2A63C]" : ""}`}>Trading</div>
           </button>
         </div>
 

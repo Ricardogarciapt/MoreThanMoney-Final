@@ -169,7 +169,7 @@ export default function MobileSidebar({
     { id: 'tap-to-trade', label: 'T2T', icon: Zap, href: '/app-mobile?tab=tap-to-trade' },
     { id: 'mentor', label: 'Mentor', icon: Brain, href: '/app-mobile?tab=mentor' },
     { id: 'portfolio', label: 'Portfólio', icon: Wallet, href: '/app-mobile?tab=portfolio' },
-    { id: 'scanner', label: 'Scanner', icon: BarChart3, href: '/app-mobile?tab=scanner' },
+    { id: 'scanner', label: 'Trading', icon: BarChart3, href: '/app-mobile?tab=scanner' },
     { id: 'trading-alerts', label: 'Trading Alerts', icon: Bell, href: '/app-mobile?tab=trading-alerts' },
     // WebTrader das contas simuladas MTM Funded (M3).
     { id: 'funded', label: 'MTM Funded', icon: CandlestickChart, href: '/app-mobile?tab=scanner&sub=webtrader' },

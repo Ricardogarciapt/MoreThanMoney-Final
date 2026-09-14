@@ -140,6 +140,32 @@ export default function FundedWebtrader({ contexto = "embutido", onSimbolo }: {
         </div>
       )}
 
+      {/* Troca rápida: com mais de uma conta, as contas ficam à vista como fichas — trocar é um
+          toque, como os separadores de contas do MetaTrader, sem abrir o menu. */}
+      {todas.length > 1 && !mostrarEntrada && (
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+          {todas.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => escolher(t.id)}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] ${
+                t.id === ativa ? "border-[#D2A63C] bg-[#D2A63C]/15 text-white" : "border-white/10 bg-[#0d0d0d] text-zinc-400"
+              }`}
+            >
+              <span className="font-bold text-[#D2A63C]">{t.etiqueta}</span>
+              <span className="font-mono">{t.login ?? "—"}</span>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: COR_ESTADO[t.estadoCurto] ?? "#a1a1aa" }} />
+            </button>
+          ))}
+          <button
+            onClick={() => setMostrarEntrada(true)}
+            className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-white/15 px-2.5 py-1 text-[11.5px] text-[#D2A63C]"
+          >
+            <LogIn className="h-3.5 w-3.5" /> Outra conta
+          </button>
+        </div>
+      )}
+
       {erro && <p className="text-[12px] text-rose-300">{erro}</p>}
 
       {(mostrarEntrada || todas.length === 0) ? (
