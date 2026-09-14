@@ -86,8 +86,9 @@ export interface Loja {
   inserirCopia(c: Partial<CopiaPosicao> & { copier_id: string; funded_position_id: string; volume_origem: number }): Promise<boolean>
   atualizarCopia(id: string, patch: Partial<CopiaPosicao>): Promise<void>
   copiasAbertas(copierId: string): Promise<number>
-  /** destination position ids já associados a cópias (para a procura sem clientId não apanhar outra) */
-  idsDestinoUsados(copierIds: string[]): Promise<Set<string>>
+  /** ids de posições do destino já associados a cópias abertas de QUALQUER copiador desse destino
+   *  (para a procura sem clientId não apanhar a posição de outra cópia) */
+  idsDestinoUsados(c: Copiador): Promise<Set<string>>
   atualizarCopiador(id: string, patch: Partial<Copiador>): Promise<void>
   /** MTM Copy / MTM Auto / admin — e se é admin (os admins podem usar destinos reais) */
   direito(userId: string): Promise<{ ok: boolean; admin: boolean }>
@@ -214,7 +215,7 @@ async function abrir(ev: EventoCopia, c: Copiador, existente: CopiaPosicao | nul
     // Recuperação depois de um crash: a ordem abriu ou não?
     const posicoes = await condutor.posicoes(conta)
     if (posicoes == null) throw new Repetir('não consegui ler o destino para confirmar a abertura')
-    const usados = await loja.idsDestinoUsados([c.id])
+    const usados = await loja.idsDestinoUsados(c)
     const achada = procurarPosicaoEnviada(posicoes, existente, direcao, usados)
     if (achada) {
       await loja.atualizarCopia(existente.id, {
@@ -315,7 +316,7 @@ async function abrir(ev: EventoCopia, c: Copiador, existente: CopiaPosicao | nul
 
   // Confirmar o fill (preço real) e acertar SL/TP pela distância a partir DESSE preço.
   const posicoes = await condutor.posicoes(conta!)
-  const usados = await loja.idsDestinoUsados([c.id])
+  const usados = await loja.idsDestinoUsados(c)
   const achada = posicoes == null ? null
     : (r.positionId ? posicoes.find((x) => x.id === r.positionId) : null) ??
       procurarPosicaoEnviada(posicoes, { ...linha, dest_symbol: r.brokerSymbol ?? linha.dest_symbol }, direcao, usados)

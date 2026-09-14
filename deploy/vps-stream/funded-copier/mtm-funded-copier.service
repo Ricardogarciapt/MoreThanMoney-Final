@@ -1,0 +1,23 @@
+[Unit]
+Description=MTM Funded - copiador da conta simulada para a conta MT5 do aluno (MetaApi)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+EnvironmentFile=/etc/mtm-funded-copier.env
+# O SDK da MetaApi guarda a cache de sincronizacao em ./.metaapi: precisa de uma pasta escrevivel.
+StateDirectory=mtm-funded-copier
+WorkingDirectory=/var/lib/mtm-funded-copier
+ExecStart=/usr/bin/node --max-old-space-size=512 /opt/mtm/funded-copier/copier.js
+Restart=always
+RestartSec=10
+# Sem privilegios: so fala com a Supabase e a MetaApi.
+DynamicUser=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+MemoryMax=768M
+
+[Install]
+WantedBy=multi-user.target
