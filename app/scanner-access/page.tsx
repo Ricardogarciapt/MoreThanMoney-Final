@@ -610,7 +610,7 @@ export default function ScannerAccessPage() {
                 />
               </div>
               <aside className="hidden lg:sticky lg:top-3 lg:block">
-                <PainelNegociacaoScanner tvSymbol={simboloGrafico} variante="lateral" />
+                <PainelNegociacaoScanner tvSymbol={simboloGrafico} intervalo={scannerInterval} variante="lateral" />
               </aside>
             </div>
           </div>

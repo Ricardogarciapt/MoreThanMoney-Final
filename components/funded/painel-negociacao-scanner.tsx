@@ -19,6 +19,9 @@ import { useSinaisEstudos } from "./use-sinais-estudos"
 import FundedTicket from "./funded-ticket"
 import FundedPosicoes from "./funded-posicoes"
 import { RascunhoProvider, useRascunho, type PedidoOrdem } from "./rascunho-ordem"
+import GraficoLeve from "./grafico-leve"
+import { type Tf, tfPorResolucaoTv } from "./grafico-tipos"
+import { UmCliqueProvider } from "./um-clique"
 
 /**
  * PAINEL «NEGOCIAR» AO LADO DE QUALQUER GRÁFICO DE SCANNER.
@@ -36,10 +39,18 @@ import { RascunhoProvider, useRascunho, type PedidoOrdem } from "./rascunho-orde
  * NENHUM pedido. Aberto, só pede contas/preços enquanto está visível no ecrã (IntersectionObserver
  * — um painel com `display:none` ou fora da vista não conta) e o separador do browser está activo.
  *
- * Limite honesto: o widget gratuito do TradingView não deixa desenhar as nossas linhas arrastáveis
- * de entrada/SL/TP. Aqui os valores aparecem escritos; as linhas vivem no gráfico do Web trader
- * (e passam a aparecer no gráfico do TradingView quando a biblioteca licenciada estiver instalada).
+ * Limite honesto: o widget gratuito do TradingView não tem API para linhas. Por isso, quando a conta
+ * tem posições ou ordens neste símbolo, o dock mostra por cima do ticket uma FAIXA com o nosso
+ * gráfico (Lightweight Charts, o mesmo do WebTrader, em modo compacto): entrada/SL/TP, lucro ao
+ * vivo, pendentes arrastáveis e as setas dos estudos, no mesmo timeframe do scanner. Esconde-se
+ * sozinha quando não há nada, e há um interruptor «Ver posições no gráfico» que fica lembrado.
+ *
+ * Negociação num clique: igual ao WebTrader (um-clique.tsx), por conta.
  */
+
+const CHAVE_FAIXA = "mtm_scanner_grafico_posicoes"
+export const NOTA_GRAFICO_SCANNER =
+  "O gráfico TradingView do scanner não aceita linhas; as posições aparecem no gráfico abaixo (e no próprio gráfico TradingView quando a biblioteca estiver instalada)"
 
 const CHAVE_ULTIMA = "mtmfunded_ultima_conta"
 const CHAVE_ABERTO = "mtm_scanner_dock_aberto"
@@ -47,10 +58,12 @@ const CHAVE_ABERTO = "mtm_scanner_dock_aberto"
 type Estado = Awaited<ReturnType<typeof import("@/lib/mtmfunded/simulado/execucao")["estadoCompleto"]>>
 type ContaLista = { id: string; login: string | null; etiqueta: string; estadoCurto: string; modo: "master" | "investor"; propria: boolean }
 
-export default function PainelNegociacaoScanner({ tvSymbol, variante = "dock" }: {
+export default function PainelNegociacaoScanner({ tvSymbol, variante = "dock", intervalo }: {
   /** O símbolo do gráfico do scanner, como o TradingView o escreve (OANDA:XAUUSD, BINANCE:BTCUSDT…). */
   tvSymbol: string
   variante?: "dock" | "lateral"
+  /** O timeframe do gráfico do scanner, como o TradingView o escreve ("1", "15", "60", "D"…). */
+  intervalo?: string
 }) {
   const pathname = usePathname()
   const raiz = useRef<HTMLDivElement>(null)
@@ -92,7 +105,7 @@ export default function PainelNegociacaoScanner({ tvSymbol, variante = "dock" }:
       </button>
       {aberto && (
         <div className={`space-y-2 border-t border-white/10 p-2.5 ${variante === "lateral" ? "min-h-0 overflow-y-auto" : ""}`}>
-          <Corpo tvSymbol={tvSymbol} ativo={ativo} dentroDaApp={estaNaAppMobile(pathname)} caminho={pathname || "/scanner-access"} />
+          <Corpo tvSymbol={tvSymbol} intervalo={intervalo} ativo={ativo} dentroDaApp={estaNaAppMobile(pathname)} caminho={pathname || "/scanner-access"} />
         </div>
       )}
     </div>
@@ -100,7 +113,7 @@ export default function PainelNegociacaoScanner({ tvSymbol, variante = "dock" }:
 }
 
 /** Contas + sessões (as mesmas do WebTrader) e a resolução do símbolo do scanner para o catálogo. */
-function Corpo({ tvSymbol, ativo, dentroDaApp, caminho }: { tvSymbol: string; ativo: boolean; dentroDaApp: boolean; caminho: string }) {
+function Corpo({ tvSymbol, intervalo, ativo, dentroDaApp, caminho }: { tvSymbol: string; intervalo?: string; ativo: boolean; dentroDaApp: boolean; caminho: string }) {
   const [contas, setContas] = useState<ContaResumo[] | null>(null)
   const [semSessaoMtm, setSemSessaoMtm] = useState(false)
   const [sessoes, setSessoes] = useState<Record<string, SessaoConta>>({})
@@ -209,7 +222,7 @@ function Corpo({ tvSymbol, ativo, dentroDaApp, caminho }: { tvSymbol: string; at
       ) : ficha == null || !ativa ? (
         <div className="grid place-items-center p-4"><Loader2 className="h-5 w-5 animate-spin text-[#D2A63C]" /></div>
       ) : (
-        <ContaNoScanner key={`${ativa}:${ficha.symbol}`} accountId={ativa} ficha={ficha} ativo={ativo} tvSymbol={tvSymbol} dentroDaApp={dentroDaApp} />
+        <ContaNoScanner key={`${ativa}:${ficha.symbol}`} accountId={ativa} ficha={ficha} ativo={ativo} tvSymbol={tvSymbol} intervalo={intervalo} dentroDaApp={dentroDaApp} />
       )}
 
       <Link href={linkGrafico} className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#2962FF]/50 bg-[#2962FF]/10 py-2 text-[12.5px] font-semibold text-[#8FA8FF] hover:bg-[#2962FF]/20">
@@ -220,8 +233,8 @@ function Corpo({ tvSymbol, ativo, dentroDaApp, caminho }: { tvSymbol: string; at
 }
 
 /** Uma conta a negociar o símbolo do scanner: métricas, ticket, sinal dos estudos e posições desse símbolo. */
-function ContaNoScanner({ accountId, ficha, ativo, tvSymbol, dentroDaApp }: {
-  accountId: string; ficha: SimboloFicha; ativo: boolean; tvSymbol: string; dentroDaApp: boolean
+function ContaNoScanner({ accountId, ficha, ativo, tvSymbol, intervalo, dentroDaApp }: {
+  accountId: string; ficha: SimboloFicha; ativo: boolean; tvSymbol: string; intervalo?: string; dentroDaApp: boolean
 }) {
   const [dados, setDados] = useState<Estado | null>(null)
   const [erro, setErro] = useState<string | null>(null)
@@ -275,17 +288,11 @@ function ContaNoScanner({ accountId, ficha, ativo, tvSymbol, dentroDaApp }: {
     return { ...e, limites: l }
   }, [dados, fichas, mapa])
 
-  const executar = async (accao: string, corpo: Record<string, unknown>, sucesso: string) => {
-    try {
-      await ordem(accao, corpo, accountId)
-      setAviso({ tipo: "ok", texto: sucesso })
-      await recarregar()
-    } catch (e) {
-      setAviso({ tipo: "erro", texto: (e as Error).message })
-      throw e
-    } finally {
-      setTimeout(() => setAviso(null), 4000)
-    }
+  // «Feito @ preço» e erros aparecem no aviso da negociação num clique; aqui relê-se e devolve-se a resposta.
+  const executar = async (accao: string, corpo: Record<string, unknown>, _sucesso: string) => {
+    const r = await ordem(accao, corpo, accountId)
+    void recarregar()
+    return r
   }
 
   if (erro && !dados) return <p className="p-3 text-center text-[12px] text-rose-300">{erro}</p>
@@ -312,6 +319,7 @@ function ContaNoScanner({ accountId, ficha, ativo, tvSymbol, dentroDaApp }: {
   ]
 
   return (
+    <UmCliqueProvider accountId={accountId} investor={dados.modo !== "master"}>
     <RascunhoProvider
       simbolo={ficha} preco={preco} precos={mapa} volume={volume} setVolume={setVolume}
       alavancagem={c.alavancagem} margemLivre={vivo.margemLivre} saldo={dados.estado.saldo} onEnviar={onEnviar}
@@ -348,6 +356,17 @@ function ContaNoScanner({ accountId, ficha, ativo, tvSymbol, dentroDaApp }: {
           <div className={`rounded-lg px-2.5 py-1.5 text-[12px] ${aviso.tipo === "ok" ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}`}>{aviso.texto}</div>
         )}
 
+        <FaixaPosicoes
+          ficha={ficha} preco={preco} mapa={mapa} volume={volume} intervalo={intervalo} ativo={ativo}
+          posicoes={posicoes.map((p) => posicaoDaLinha(p))}
+          ordens={ordens.map((o) => ({ id: String(o.id), direcao: o.direcao, tipo: o.tipo, volume: Number(o.volume), preco: Number(o.preco), sl: o.sl == null ? null : Number(o.sl), tp: o.tp == null ? null : Number(o.tp) }))}
+          podeNegociar={podeNegociar}
+          onModificarPosicao={(id, sl, tp) => executar("modificar", { positionId: id, sl, tp }, "SL/TP actualizados")}
+          onModificarPendente={(id, p, sl, tp) => executar("modificar_pendente", { orderId: id, preco: p, sl, tp }, "Ordem actualizada")}
+          onFecharPosicao={(id) => executar("fechar", { positionId: id }, "Posição fechada")}
+          onCancelarPendente={(id) => executar("cancelar", { orderId: id }, "Ordem cancelada")}
+        />
+
         {podeNegociar && <SinalDoEstudo symbol={ativo ? ficha.symbol : null} />}
         {podeNegociar && <FundedTicket margemLivre={vivo.margemLivre} />}
         {podeNegociar && <NiveisEDica tvSymbol={tvSymbol} dentroDaApp={dentroDaApp} />}
@@ -365,6 +384,60 @@ function ContaNoScanner({ accountId, ficha, ativo, tvSymbol, dentroDaApp }: {
         )}
       </div>
     </RascunhoProvider>
+    </UmCliqueProvider>
+  )
+}
+
+/**
+ * A faixa do gráfico por baixo do gráfico do scanner: só aparece com posições/ordens neste símbolo.
+ * O mesmo GraficoLeve do WebTrader (linhas arrastáveis pela mesma API, confirmação/num clique),
+ * compacto, no timeframe do scanner, com as setas dos estudos que a pessoa pode ver.
+ */
+function FaixaPosicoes(props: {
+  ficha: SimboloFicha; preco?: PrecoVivo; mapa: MapaPrecos; volume: number; intervalo?: string; ativo: boolean
+  posicoes: ReturnType<typeof posicaoDaLinha>[]
+  ordens: Array<{ id: string; direcao: "buy" | "sell"; tipo: "limit" | "stop"; volume: number; preco: number; sl: number | null; tp: number | null }>
+  podeNegociar: boolean
+  onModificarPosicao: (id: string, sl: number | null, tp: number | null) => Promise<unknown>
+  onModificarPendente: (id: string, preco: number, sl: number | null, tp: number | null) => Promise<unknown>
+  onFecharPosicao: (id: string) => Promise<unknown>
+  onCancelarPendente: (id: string) => Promise<unknown>
+}) {
+  const { user } = useAuth()
+  const [ver, setVer] = useState(true)
+  useEffect(() => { try { if (localStorage.getItem(CHAVE_FAIXA) === "0") setVer(false) } catch { /* ok */ } }, [])
+  const alternar = () => setVer((v) => { try { localStorage.setItem(CHAVE_FAIXA, v ? "0" : "1") } catch { /* ok */ } return !v })
+  const estudos = useMemo(() => {
+    const lista = scannersPermitidos(user ?? null)
+    return ESTUDOS_WEBTRADER.filter((e) => lista === null || lista.some((p) => p.toLowerCase() === e.acesso.toLowerCase())).map((e) => e.chave)
+  }, [user])
+  const tem = props.posicoes.length > 0 || props.ordens.length > 0
+  const { sinais, ultimoAtivo } = useSinaisEstudos(tem && ver && props.ativo ? props.ficha.symbol : null, estudos)
+  const tf: Tf = (props.intervalo ? tfPorResolucaoTv(props.intervalo)?.chave : null) ?? "M15"
+  if (!tem) return null
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <button type="button" role="switch" aria-checked={ver} onClick={alternar} className="flex items-center gap-1.5 text-[11.5px] text-[#8FA8FF]">
+          <CandlestickChart className="h-3.5 w-3.5" /> {ver ? "Esconder posições no gráfico" : "Ver posições no gráfico"}
+        </button>
+        <span className="text-[10.5px] text-zinc-500">{props.posicoes.length} pos. · {props.ordens.length} ord.</span>
+      </div>
+      {ver && props.ativo && (
+        <div className="overflow-hidden rounded-md border border-white/10">
+          <GraficoLeve
+            compacto simbolo={props.ficha} preco={props.preco} precos={props.mapa} volume={props.volume}
+            posicoes={props.posicoes} ordens={props.ordens} podeNegociar={props.podeNegociar}
+            sinais={sinais} sinalAtivo={ultimoAtivo} tf={tf} modo={null} setModo={() => {}}
+            onModificarPosicao={props.onModificarPosicao} onModificarPendente={props.onModificarPendente}
+            onFecharPosicao={props.onFecharPosicao} onCancelarPendente={props.onCancelarPendente}
+          />
+        </div>
+      )}
+      <p className="flex gap-1.5 text-[10.5px] leading-snug text-zinc-500">
+        <Info className="mt-0.5 h-3 w-3 shrink-0" /> <span>{NOTA_GRAFICO_SCANNER}.</span>
+      </p>
+    </div>
   )
 }
 
@@ -423,10 +496,8 @@ function NiveisEDica({ tvSymbol, dentroDaApp }: { tvSymbol: string; dentroDaApp:
       <p className="flex gap-1.5 text-[10.5px] leading-snug text-zinc-500">
         <Info className="mt-0.5 h-3 w-3 shrink-0" />
         <span>
-          O gráfico do scanner (TradingView) não desenha as nossas linhas arrastáveis — os valores ficam aqui escritos.
-          As linhas aparecem no gráfico do{" "}
-          <Link href={temNiveis ? link : linkWebtrader({ symbol: tvSymbol, origem: "scanner" }, dentroDaApp)} className="text-[#8FA8FF] underline">Web trader</Link>
-          {" "}(e no TradingView quando a biblioteca licenciada estiver instalada).
+          {NOTA_GRAFICO_SCANNER}. A ordem em preparação fica aqui escrita; para a desenhar e arrastar abre o{" "}
+          <Link href={temNiveis ? link : linkWebtrader({ symbol: tvSymbol, origem: "scanner" }, dentroDaApp)} className="text-[#8FA8FF] underline">Web trader</Link>.
         </span>
       </p>
     </div>
