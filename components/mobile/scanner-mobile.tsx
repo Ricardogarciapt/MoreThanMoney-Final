@@ -25,9 +25,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useT } from "@/components/i18n-provider"
 import { isNativeApp } from "@/hooks/use-capacitor"
 import { scannerOrder, scannerStudies, scannerLabels, type ScannerKey } from "@/lib/scanners/estudos"
-import { linkWebtrader, estaNaAppMobile } from "@/lib/mtmfunded/link-webtrader"
-import { usePathname } from "next/navigation"
-import Link from "next/link"
+import dynamic from "next/dynamic"
 import { TV_STUDY_LEGEND_OVERRIDES } from "@/lib/trading-view-scanner-config"
 import { subscribeMediaQueryChange } from "@/lib/browser-compat"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -71,7 +69,6 @@ import {
   MessageCircle,
   Loader2,
   Share2,
-  CandlestickChart,
 } from "lucide-react"
 
 // Checklist Types
@@ -178,6 +175,15 @@ const assetCategories = {
   }
 }
 
+/**
+ * O painel «Negociar» (conta simulada MTM Funded) carrega à parte: o gráfico do scanner abre sem
+ * esperar pelo código do ticket, e o painel recolhido não faz pedidos nenhuns.
+ */
+const PainelNegociacaoScanner = dynamic(() => import("@/components/funded/painel-negociacao-scanner"), {
+  ssr: false,
+  loading: () => <div className="h-[58px] rounded-xl border border-[#2962FF]/30 bg-[#0b0e14]" />,
+})
+
 export type ScannerMobileIntegration = "standalone" | "scanner-access"
 
 export type ScannerMobileProps = {
@@ -189,6 +195,13 @@ export type ScannerMobileProps = {
   externalSymbol?: string
   externalInterval?: string
   externalStudies?: ScannerKey[]
+  /**
+   * Onde fica o painel «Negociar»: `abaixo` (por defeito — sempre por baixo do gráfico),
+   * `abaixo-ate-lg` (só abaixo de 1024 px; acima, a página põe-no numa coluna à direita) ou `nenhum`.
+   */
+  painelNegociacao?: "abaixo" | "abaixo-ate-lg" | "nenhum"
+  /** O símbolo do gráfico mudou (a página usa-o para o painel lateral). */
+  onSymbolChange?: (symbol: string) => void
 }
 
 export default function ScannerMobile({
@@ -198,9 +211,10 @@ export default function ScannerMobile({
   externalSymbol,
   externalInterval,
   externalStudies,
+  painelNegociacao = "abaixo",
+  onSymbolChange,
 }: ScannerMobileProps = {}) {
   const t = useT()
-  const pathname = usePathname()
   const isScannerAccess = integration === "scanner-access"
   const tvContainerId = isScannerAccess ? "tradingview_scanner_access_widget" : "tradingview_mobile_widget"
   const categoryLabelKeys: Record<keyof typeof assetCategories, string> = {
@@ -234,6 +248,7 @@ export default function ScannerMobile({
   useEffect(() => { if (externalSymbol) setSelectedSymbol(externalSymbol) }, [externalSymbol])
   useEffect(() => { if (externalInterval) setSelectedInterval(externalInterval) }, [externalInterval])
   useEffect(() => { if (externalStudies?.length) setSelectedStudies(externalStudies) }, [externalStudies])
+  useEffect(() => { onSymbolChange?.(selectedSymbol) }, [selectedSymbol]) // eslint-disable-line react-hooks/exhaustive-deps
   
   // Checklist Trading
   const [checklistSections, setChecklistSections] = useState<ChecklistSection[]>([
@@ -1305,17 +1320,11 @@ export default function ScannerMobile({
         </button>
       )}
 
-      {/* O mesmo símbolo no WebTrader do MTM Funded (conta simulada): dentro da app abre o
-          sub-separador «Web trader»; fora dela (scanner-access) abre /webtrader. */}
-      {!isFullscreen && (
-        <div className="px-4 pt-3">
-          <Link
-            href={linkWebtrader({ symbol: selectedSymbol, origem: "scanner" }, estaNaAppMobile(pathname))}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-[#2962FF]/50 bg-[#2962FF]/10 py-2.5 text-sm font-semibold text-[#8FA8FF] transition-colors hover:bg-[#2962FF]/20"
-          >
-            <CandlestickChart style={{ width: 16, height: 16 }} />
-            Abrir {String(selectedSymbol).split(":").pop()} no Web trader
-          </Link>
+      {/* Negociar o símbolo do gráfico na conta simulada do MTM Funded, sem sair do scanner.
+          O botão «Abrir no Web trader» vive dentro do painel (gráfico com linhas arrastáveis). */}
+      {!isFullscreen && painelNegociacao !== "nenhum" && (
+        <div className={`px-4 pt-3 ${painelNegociacao === "abaixo-ate-lg" ? "lg:hidden" : ""}`}>
+          <PainelNegociacaoScanner tvSymbol={selectedSymbol} variante="dock" />
         </div>
       )}
 
