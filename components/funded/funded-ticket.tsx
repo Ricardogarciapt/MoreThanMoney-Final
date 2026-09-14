@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Loader2, Minus, Plus } from "lucide-react"
 import { type Direcao, normalizarVolume, pips } from "@/lib/mtmfunded/simulado/matematica"
 import { px, usd } from "./api"
@@ -53,6 +53,17 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
     if (r.modoNiveis === "pips") k.definirPips(campo, n)
     else k.definirNivel(campo, n)
   }
+
+  // O nível mudou por fora (linha arrastada no gráfico) enquanto o campo tinha texto por escrever:
+  // o que está no gráfico ganha — o campo passa a mostrar o valor novo.
+  useEffect(() => {
+    if (!edicao) return
+    const n = numero(edicao.texto)
+    const atual = edicao.campo === "entrada" ? r.entrada : edicao.campo === "sl" ? k.sl : k.tp
+    if (n == null || atual == null) return
+    const comparado = edicao.campo !== "entrada" && r.modoNiveis === "pips" && k.entrada != null ? pips(s, k.entrada, atual) : atual
+    if (Math.abs(comparado - n) > (r.modoNiveis === "pips" && edicao.campo !== "entrada" ? 0.05 : Math.pow(10, -s.digits))) setEdicao(null)
+  }, [r.entrada, k.sl, k.tp]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const trocarTipo = (t: "mercado" | "limit" | "stop") => {
     // Uma pendente nova começa no preço de agora: a linha aparece onde se vê e arrasta-se dali.
@@ -140,7 +151,7 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
             placeholder={r.modoNiveis === "pips" ? "TP (pips)" : "Take profit"}
             className={`h-9 w-full rounded-lg border bg-black px-2 font-mono text-emerald-200 placeholder:text-zinc-600 ${erros.tp ? "border-rose-500 ring-1 ring-rose-500" : "border-emerald-500/30"}`}
           />
-          {k.tp != null && resumo.pipsTp != null && <p className="mt-0.5 font-mono text-[10.5px] text-zinc-500">{r.modoNiveis === "pips" ? px(k.tp, s.digits) : `${resumo.pipsTp} pips`} · +{usd(resumo.ganho)} $</p>}
+          {k.tp != null && resumo.pipsTp != null && <p className="mt-0.5 font-mono text-[10.5px] text-zinc-500">{r.modoNiveis === "pips" ? px(k.tp, s.digits) : `${resumo.pipsTp} pips`} · {resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}{usd(resumo.ganho)} $</p>}
         </div>
       </div>
       <Erro t={erros.sl} />
@@ -178,7 +189,7 @@ export default function FundedTicket(props: { margemLivre: number | null }) {
           <Linha k="Comissão" v={`${usd(resumo.comissao)} $`} />
           <Linha k="Valor do pip" v={`${usd(resumo.valorPip)} $`} />
           {k.sl != null && <Linha k="SL" v={`${px(k.sl, s.digits)} · ${resumo.pipsSl} pips · ${usd(resumo.risco)} $`} alerta={Boolean(erros.sl)} />}
-          {k.tp != null && <Linha k="TP" v={`${px(k.tp, s.digits)} · ${resumo.pipsTp} pips · +${usd(resumo.ganho)} $${resumo.rr ? ` · R:R ${resumo.rr}` : ""}`} alerta={Boolean(erros.tp)} />}
+          {k.tp != null && <Linha k="TP" v={`${px(k.tp, s.digits)} · ${resumo.pipsTp} pips · ${resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}${usd(resumo.ganho)} $${resumo.rr ? ` · R:R ${resumo.rr}` : ""}`} alerta={Boolean(erros.tp)} />}
           {k.erroEnvio && <p className="text-[11px] text-rose-300">{k.erroEnvio}</p>}
           <div className="flex gap-2 pt-1">
             <button onClick={() => k.set({ escolhido: false })} className="flex-1 rounded-lg border border-white/10 py-2 text-zinc-300">Cancelar</button>

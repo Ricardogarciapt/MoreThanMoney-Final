@@ -28,7 +28,7 @@ export default function PainelFerramenta() {
           <b className="text-white">{nome}</b> · {volume} lotes
           <div className="mt-0.5 flex flex-wrap gap-x-3 font-mono text-[11px]">
             {k.sl != null && <span style={{ color: TV.sl }}>SL {px(k.sl, simbolo.digits)} · {resumo.pipsSl} pips · {usd(resumo.risco)} $</span>}
-            {k.tp != null && <span style={{ color: TV.tp }}>TP {px(k.tp, simbolo.digits)} · {resumo.pipsTp} pips · +{usd(resumo.ganho)} $</span>}
+            {k.tp != null && <span style={{ color: TV.tp }}>TP {px(k.tp, simbolo.digits)} · {resumo.pipsTp} pips · {resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}{usd(resumo.ganho)} $</span>}
             {resumo.rr && <span style={{ color: TV.textoFraco }}>R:R {resumo.rr}</span>}
           </div>
           <div className="mt-0.5 text-[10.5px]" style={{ color: TV.textoFraco }}>

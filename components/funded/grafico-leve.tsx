@@ -116,6 +116,21 @@ export default function GraficoLeve(props: GraficoProps & {
       const serie = chart.addCandlestickSeries({
         upColor: TV.sobe, downColor: TV.desce, borderVisible: false, wickUpColor: TV.sobe, wickDownColor: TV.desce,
         priceFormat: { type: "price", precision: simbolo.digits, minMove: Math.pow(10, -simbolo.digits) },
+        // A escala automática inclui as linhas (posições, ordens, rascunho): um SL escrito no ticket
+        // fora do ecrã ficava invisível — e uma linha que não se vê não se arrasta. Durante um
+        // arrasto a escala CONGELA: se acompanhasse a linha, o preço debaixo do dedo fugia.
+        autoscaleInfoProvider: (original: () => any) => {
+          const base = original()
+          const niveis = linhasRef.current.map((l) => l.preco).filter((p) => Number.isFinite(p) && p > 0)
+          const r = !base || !niveis.length ? base : {
+            ...base,
+            priceRange: {
+              minValue: Math.min(base.priceRange.minValue, ...niveis),
+              maxValue: Math.max(base.priceRange.maxValue, ...niveis),
+            },
+          }
+          return r
+        },
       })
       graficoRef.current = chart
       serieRef.current = serie
@@ -219,7 +234,7 @@ export default function GraficoLeve(props: GraficoProps & {
       const nomeTipo = r.tipo === "mercado" ? "a mercado" : `${r.lado} ${r.tipo}`
       out.push({ chave: "tool:entrada", preco: k.entrada, cor: corEntrada, corpo: `${erros.entrada || erros.margem ? "⚠ " : ""}${r.lado === "buy" ? "Long" : "Short"} · ${nomeTipo}`, qtd: String(volume), arrastavel: true, dono: { tipo: "tool", campo: "entrada" } })
       if (k.sl != null) out.push({ chave: "tool:sl", preco: k.sl, cor: erros.sl ? invalido : TV.sl, corpo: `${erros.sl ? "⚠ " : ""}Stop ${resumo.pipsSl ?? "—"} pips · ${usd(resumo.risco)} $`, arrastavel: true, tracejada: Boolean(erros.sl), dono: { tipo: "tool", campo: "sl" } })
-      if (k.tp != null) out.push({ chave: "tool:tp", preco: k.tp, cor: erros.tp ? invalido : TV.tp, corpo: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · +${usd(resumo.ganho)} $${resumo.rr ? ` · R:R ${resumo.rr}` : ""}`, arrastavel: true, tracejada: Boolean(erros.tp), dono: { tipo: "tool", campo: "tp" } })
+      if (k.tp != null) out.push({ chave: "tool:tp", preco: k.tp, cor: erros.tp ? invalido : TV.tp, corpo: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · ${resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}${usd(resumo.ganho)} $${resumo.rr ? ` · R:R ${resumo.rr}` : ""}`, arrastavel: true, tracejada: Boolean(erros.tp), dono: { tipo: "tool", campo: "tp" } })
     }
     return out
   }, [posicoes, ordens, k.mostrar, k.entrada, k.sl, k.tp, k.r, k.erros, k.resumo, rascunho, podeNegociar, simbolo, volume, precos, preco, props.sinalAtivo]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -307,6 +322,8 @@ export default function GraficoLeve(props: GraficoProps & {
   }
   const bloquearPan = (sim: boolean) => {
     try { graficoRef.current?.applyOptions({ handleScroll: !sim, handleScale: !sim }) } catch { /* ok */ }
+    // Escala parada durante o arrasto (ver autoscaleInfoProvider); volta a automática ao largar.
+    try { graficoRef.current?.priceScale("right").applyOptions({ autoScale: !sim }) } catch { /* ok */ }
   }
 
   const colocarFerramenta = (direcao: Direcao, entrada: number) => {

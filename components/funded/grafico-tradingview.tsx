@@ -501,7 +501,7 @@ export default function GraficoTradingView(props: GraficoProps & {
         qtd: String(volume),
       },
       sl: { cor: erros.sl ? invalido : TV.sl, texto: `${erros.sl ? "⚠ " : ""}Stop ${resumo.pipsSl ?? "—"} pips · ${usd(resumo.risco)} $`, qtd: "" },
-      tp: { cor: erros.tp ? invalido : TV.tp, texto: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · +${usd(resumo.ganho)} $${resumo.rr ? ` R:R ${resumo.rr}` : ""}`, qtd: "" },
+      tp: { cor: erros.tp ? invalido : TV.tp, texto: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · ${resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}${usd(resumo.ganho)} $${resumo.rr ? ` R:R ${resumo.rr}` : ""}`, qtd: "" },
     }
     for (const campo of ["entrada", "sl", "tp"] as CampoNivel[]) {
       const nivel = niveis[campo]
