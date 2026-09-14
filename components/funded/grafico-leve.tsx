@@ -7,38 +7,81 @@ import { px, usd } from "./api"
 import { type GraficoProps, type Tf, TV, tfPorChave } from "./grafico-tipos"
 import PainelFerramenta from "./painel-ferramenta"
 import { useRascunho } from "./rascunho-ordem"
+import { AccaoCancelada, useUmClique } from "./um-clique"
 
 /**
- * O GRÁFICO LEVE DO WEBTRADER — lightweight-charts (o motor open-source do TradingView) vestido
- * com a paleta e a mecânica do paper trading do TradingView: linha da posição com quantidade e
- * lucro ao vivo, SL/TP arrastáveis com «×» para remover, pendentes arrastáveis com «×» para
- * cancelar, e a ferramenta Long/Short.
+ * O GRÁFICO DOS WEB TRADERS — Lightweight Charts v5 (o motor open-source do TradingView, pacote
+ * npm `lightweight-charts`) vestido com a paleta e a mecânica do paper trading do TradingView:
+ * linha da posição com quantidade e lucro ao vivo, SL/TP arrastáveis com «×» para remover,
+ * pendentes arrastáveis com «×» para cancelar, a ferramenta Long/Short com as zonas de risco e
+ * alvo, as setas dos sinais dos estudos, e um painel de volume por baixo.
  *
- * É o gráfico por defeito ENQUANTO a biblioteca licenciada do TradingView não estiver em
- * public/charting_library/ (ver docs/webtrader-tradingview-library.md). Quando estiver, o
- * funded-grafico.tsx passa sozinho para grafico-tradingview.tsx.
+ * É O gráfico dos web traders, num modo só (WebTrader e faixa do dock do scanner). A biblioteca
+ * licenciada (grafico-tradingview.tsx) fica adormecida: só entra se estiver instalada com as
+ * primitivas de trading (edição Trading Platform).
  *
- * A biblioteca carrega-se do CDN (versão fixa), como o tv.js do TradingView já se carrega no resto
- * da app: evita acrescentar um pacote ao build partilhado. As velas vêm do histórico (MetaApi)
- * quando há, e a última vela vai-se construindo com os preços ao vivo.
+ * Como está feito, peça a peça (API v5, https://tradingview.github.io/lightweight-charts/):
+ *  · a biblioteca importa-se DINAMICAMENTE no cliente (não entra no bundle do servidor nem no SSR);
+ *  · velas com `addSeries(CandlestickSeries)`, volume com `addSeries(HistogramSeries, …, 1)` (pane 1);
+ *  · setas com `createSeriesMarkers`, marca de água com `createTextWatermark`;
+ *  · as linhas são `createPriceLine` (a linha e a etiqueta no eixo); a etiqueta à TradingView
+ *    (corpo | quantidade | ×) é HTML por cima, na mesma coordenada, e o arrasto é nosso (pointer
+ *    events na fase de captura — o gráfico não sabe arrastar price lines);
+ *  · as zonas vermelha/verde da ferramenta são uma primitiva de série (`attachPrimitive`), como nos
+ *    exemplos oficiais de plugins: desenham-se no canvas do gráfico e acompanham pan e zoom;
+ *  · tempo real incremental: `series.update()` a cada preço, nunca `setData` por tick;
+ *  · atribuição obrigatória da licença: `layout.attributionLogo: true` («Charts by TradingView»).
+ *
+ * Mover/fechar/cancelar passa pela negociação num clique (um-clique.tsx): desligada, pede
+ * confirmação; cancelada ou falhada, a linha volta ao sítio.
  */
 
-const LW_URL = "https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"
-let lwPromessa: Promise<any> | null = null
-function carregarLW(): Promise<any> {
+type LW = typeof import("lightweight-charts")
+let lwPromessa: Promise<LW> | null = null
+function carregarLW(): Promise<LW> {
   if (typeof window === "undefined") return Promise.reject(new Error("sem janela"))
-  const w = window as any
-  if (w.LightweightCharts) return Promise.resolve(w.LightweightCharts)
-  if (lwPromessa) return lwPromessa
-  lwPromessa = new Promise((ok, falha) => {
-    const s = document.createElement("script")
-    s.src = LW_URL
-    s.async = true
-    s.onload = () => (w.LightweightCharts ? ok(w.LightweightCharts) : falha(new Error("biblioteca do gráfico indisponível")))
-    s.onerror = () => { lwPromessa = null; falha(new Error("não foi possível carregar o gráfico")) }
-    document.head.appendChild(s)
-  })
+  if (!lwPromessa) lwPromessa = import("lightweight-charts").catch((e) => { lwPromessa = null; throw e })
   return lwPromessa
+}
+
+/**
+ * As zonas da ferramenta de posição (risco a vermelho, alvo a verde) como primitiva de série.
+ * Os preços convertem-se em píxeis no momento de desenhar, por isso acompanham pan, zoom e escala.
+ */
+class ZonasFerramenta {
+  private serie: any = null
+  private pedirDesenho: (() => void) | null = null
+  private zonas: Array<{ de: number; ate: number; cor: string }> = []
+  attached(p: { series: any; requestUpdate: () => void }) { this.serie = p.series; this.pedirDesenho = p.requestUpdate }
+  detached() { this.serie = null; this.pedirDesenho = null }
+  definir(zonas: Array<{ de: number; ate: number; cor: string }>) {
+    if (JSON.stringify(zonas) === JSON.stringify(this.zonas)) return
+    this.zonas = zonas
+    this.pedirDesenho?.()
+  }
+  updateAllViews() { /* as coordenadas calculam-se no draw */ }
+  paneViews() {
+    return [{
+      zOrder: () => "bottom" as const,
+      renderer: () => ({
+        draw: (alvo: any) => {
+          const serie = this.serie
+          if (!serie || !this.zonas.length) return
+          alvo.useBitmapCoordinateSpace(({ context: ctx, bitmapSize, verticalPixelRatio: vr }: any) => {
+            // Como a ferramenta do TradingView: a caixa começa a meio do gráfico e vai até ao eixo.
+            const x0 = Math.round(bitmapSize.width * 0.45)
+            for (const z of this.zonas) {
+              const y1 = serie.priceToCoordinate(z.de)
+              const y2 = serie.priceToCoordinate(z.ate)
+              if (y1 == null || y2 == null) continue
+              ctx.fillStyle = z.cor
+              ctx.fillRect(x0, Math.round(Math.min(y1, y2) * vr), bitmapSize.width - x0, Math.round(Math.abs(y2 - y1) * vr))
+            }
+          })
+        },
+      }),
+    }]
+  }
 }
 
 type Dono =
@@ -66,31 +109,37 @@ export default function GraficoLeve(props: GraficoProps & {
   tf: Tf
   modo: Direcao | null
   setModo: (m: Direcao | null) => void
+  /** Faixa compacta (dock do scanner): sem barra da ferramenta e sem painel de volume. */
+  compacto?: boolean
 }) {
   const { simbolo, preco, precos, volume, posicoes, ordens, podeNegociar, tf, modo, setModo } = props
   const [estadoVelas, setEstadoVelas] = useState<"a_carregar" | "historico" | "ao_vivo" | "erro">("a_carregar")
   const [erroLib, setErroLib] = useState<string | null>(null)
   // A ordem em preparação é do rascunho partilhado com o ticket (rascunho-ordem.tsx).
   const k = useRascunho()
+  const umClique = useUmClique()
+  const accao = (descricao: string, fn: () => Promise<unknown>) =>
+    umClique.executar(descricao, fn, { confirmar: true, digitos: simbolo.digits })
   const [rascunho, setRascunho] = useState<Record<string, number>>({})
   const [ys, setYs] = useState<Record<string, number>>({})
   const [menu, setMenu] = useState<{ x: number; y: number; dono: Dono } | null>(null)
-  // Fechar uma posição é o único «×» sem volta: pede um segundo toque, como uma confirmação curta.
-  const [aConfirmarFecho, setAConfirmarFecho] = useState<string | null>(null)
   const [pronto, setPronto] = useState(false)
 
   const caixaRef = useRef<HTMLDivElement>(null)
   const graficoRef = useRef<any>(null)
   const serieRef = useRef<any>(null)
-  const etiquetasEixoRef = useRef<Map<string, any>>(new Map())
-  const ultimaVelaRef = useRef<{ time: number; open: number; high: number; low: number; close: number } | null>(null)
+  const volumeRef = useRef<any>(null)
+  const marcasRef = useRef<any>(null)
+  const marcaAguaRef = useRef<any>(null)
+  const zonasRef = useRef<ZonasFerramenta | null>(null)
+  const etiquetasEixoRef = useRef<Map<string, { pl: any; assinatura: string }>>(new Map())
+  const ultimaVelaRef = useRef<{ time: number; open: number; high: number; low: number; close: number; volume: number } | null>(null)
   const linhasRef = useRef<Linha[]>([])
   const dragRef = useRef<{ chave: string; dono: Dono; y0: number; moveu: boolean; timer: ReturnType<typeof setTimeout> | null } | null>(null)
   const toqueRef = useRef<{ x: number; y: number } | null>(null)
   const larguraEscalaRef = useRef(56)
 
   useEffect(() => { setRascunho({}); setMenu(null) }, [simbolo.symbol])
-  useEffect(() => { if (!aConfirmarFecho) return; const t = setTimeout(() => setAConfirmarFecho(null), 3000); return () => clearTimeout(t) }, [aConfirmarFecho])
 
   const arred = useCallback((v: number) => Number(v.toFixed(simbolo.digits)), [simbolo.digits])
 
@@ -101,25 +150,30 @@ export default function GraficoLeve(props: GraficoProps & {
       if (!vivo || !caixaRef.current) return
       const chart = LW.createChart(caixaRef.current, {
         autoSize: true,
-        layout: { background: { type: "solid", color: TV.fundo }, textColor: TV.textoFraco, fontSize: 11, fontFamily: "-apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif" },
+        layout: {
+          background: { type: LW.ColorType.Solid, color: TV.fundo }, textColor: TV.textoFraco, fontSize: 11,
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif",
+          // Obrigatório pela licença (Apache-2.0 + NOTICE do TradingView): «Charts by TradingView».
+          attributionLogo: true,
+          panes: { separatorColor: TV.borda, separatorHoverColor: "rgba(41,98,255,0.3)", enableResize: true },
+        },
         grid: { vertLines: { color: "rgba(42,46,57,0.6)" }, horzLines: { color: "rgba(42,46,57,0.6)" } },
         rightPriceScale: { borderColor: TV.borda, scaleMargins: { top: 0.1, bottom: 0.08 } },
         timeScale: { borderColor: TV.borda, timeVisible: true, secondsVisible: false, rightOffset: 6 },
         crosshair: {
-          mode: 0,
+          mode: LW.CrosshairMode.Normal,
           vertLine: { color: TV.mira, style: 2, width: 1, labelBackgroundColor: "#363A45" },
           horzLine: { color: TV.mira, style: 2, width: 1, labelBackgroundColor: "#363A45" },
         },
-        watermark: { visible: true, text: simbolo.symbol, color: "rgba(120,123,134,0.10)", fontSize: 44, horzAlign: "center", vertAlign: "center" },
         localization: { priceFormatter: (p: number) => p.toFixed(simbolo.digits) },
       })
-      const serie = chart.addCandlestickSeries({
+      const serie = chart.addSeries(LW.CandlestickSeries, {
         upColor: TV.sobe, downColor: TV.desce, borderVisible: false, wickUpColor: TV.sobe, wickDownColor: TV.desce,
         priceFormat: { type: "price", precision: simbolo.digits, minMove: Math.pow(10, -simbolo.digits) },
         // A escala automática inclui as linhas (posições, ordens, rascunho): um SL escrito no ticket
         // fora do ecrã ficava invisível — e uma linha que não se vê não se arrasta. Durante um
         // arrasto a escala CONGELA: se acompanhasse a linha, o preço debaixo do dedo fugia.
-        autoscaleInfoProvider: (original: () => any) => {
+        autoscaleInfoProvider: (original: () => any): any => {
           const base = original()
           const niveis = linhasRef.current.map((l) => l.preco).filter((p) => Number.isFinite(p) && p > 0)
           const r = !base || !niveis.length ? base : {
@@ -132,6 +186,22 @@ export default function GraficoLeve(props: GraficoProps & {
           return r
         },
       })
+      marcaAguaRef.current = LW.createTextWatermark(chart.panes()[0], {
+        horzAlign: "center", vertAlign: "center",
+        lines: [{ text: simbolo.symbol, color: "rgba(120,123,134,0.10)", fontSize: props.compacto ? 28 : 44 }],
+      })
+      marcasRef.current = LW.createSeriesMarkers(serie, [])
+      const zonas = new ZonasFerramenta()
+      serie.attachPrimitive(zonas as any)
+      zonasRef.current = zonas
+      if (!props.compacto) {
+        // Volume (ticks) num painel próprio por baixo, como no TradingView.
+        const vol = chart.addSeries(LW.HistogramSeries, {
+          priceFormat: { type: "volume" }, priceLineVisible: false, lastValueVisible: false, color: "rgba(120,123,134,0.35)",
+        }, 1)
+        try { chart.panes()[1]?.setHeight(64) } catch { /* ok */ }
+        volumeRef.current = vol
+      }
       graficoRef.current = chart
       serieRef.current = serie
       etiquetasEixoRef.current = new Map()
@@ -144,12 +214,16 @@ export default function GraficoLeve(props: GraficoProps & {
       try { graficoRef.current?.remove() } catch { /* já removido */ }
       graficoRef.current = null
       serieRef.current = null
+      volumeRef.current = null
+      marcasRef.current = null
+      marcaAguaRef.current = null
+      zonasRef.current = null
       etiquetasEixoRef.current = new Map()
     }
-  }, [simbolo.digits]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [simbolo.digits, props.compacto]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    try { graficoRef.current?.applyOptions({ watermark: { text: simbolo.symbol } }) } catch { /* ok */ }
+    try { marcaAguaRef.current?.applyOptions({ lines: [{ text: simbolo.symbol, color: "rgba(120,123,134,0.10)", fontSize: props.compacto ? 28 : 44 }] }) } catch { /* ok */ }
   }, [simbolo.symbol, pronto])
 
   // ── histórico ──
@@ -163,13 +237,14 @@ export default function GraficoLeve(props: GraficoProps & {
         const r = await fetch(`/api/mtmfunded/simulado/velas?symbol=${simbolo.symbol}&tf=${tf}&limit=300`)
         const d = await r.json()
         if (!vivo || !serieRef.current) return
-        const velas = (d.velas ?? []).map((v: any) => ({ time: v.t, open: v.o, high: v.h, low: v.l, close: v.c }))
-        serieRef.current.setData(velas)
+        const velas = (d.velas ?? []).map((v: any) => ({ time: v.t, open: v.o, high: v.h, low: v.l, close: v.c, volume: Number(v.v) || 0 }))
+        serieRef.current.setData(velas.map(({ volume: _v, ...c }: any) => c))
+        volumeRef.current?.setData(velas.map((v: any) => ({ time: v.time, value: v.volume, color: v.close >= v.open ? "rgba(38,166,154,0.35)" : "rgba(239,83,80,0.35)" })))
         ultimaVelaRef.current = velas.length ? velas[velas.length - 1] : null
         setEstadoVelas(velas.length ? "historico" : "ao_vivo")
         graficoRef.current?.timeScale().scrollToRealTime()
       } catch {
-        if (vivo) { serieRef.current?.setData([]); setEstadoVelas("ao_vivo") }
+        if (vivo) { serieRef.current?.setData([]); volumeRef.current?.setData([]); setEstadoVelas("ao_vivo") }
       }
     })()
     return () => { vivo = false }
@@ -184,10 +259,17 @@ export default function GraficoLeve(props: GraficoProps & {
     const v = preco.bid
     const u = ultimaVelaRef.current
     let nova
-    if (u && u.time === t) nova = { ...u, high: Math.max(u.high, v), low: Math.min(u.low, v), close: v }
-    else if (!u || t > u.time) nova = { time: t, open: u?.close ?? v, high: Math.max(v, u?.close ?? v), low: Math.min(v, u?.close ?? v), close: v }
+    // Incremental: só a última vela muda (`update`), nunca se reescreve a série inteira por tick.
+    // O volume da vela viva conta os preços recebidos (ticks), como o volume de ticks da MetaApi.
+    if (u && u.time === t) nova = { ...u, high: Math.max(u.high, v), low: Math.min(u.low, v), close: v, volume: u.volume + 1 }
+    else if (!u || t > u.time) nova = { time: t, open: u?.close ?? v, high: Math.max(v, u?.close ?? v), low: Math.min(v, u?.close ?? v), close: v, volume: 1 }
     else return
-    try { serie.update(nova); ultimaVelaRef.current = nova } catch { /* tempo fora de ordem */ }
+    try {
+      const { volume: vol, ...vela } = nova
+      serie.update(vela)
+      volumeRef.current?.update({ time: t, value: vol, color: vela.close >= vela.open ? "rgba(38,166,154,0.35)" : "rgba(239,83,80,0.35)" })
+      ultimaVelaRef.current = nova
+    } catch { /* tempo fora de ordem */ }
   }, [preco, tf, estadoVelas])
 
   // ── as linhas ──
@@ -233,8 +315,8 @@ export default function GraficoLeve(props: GraficoProps & {
       const corEntrada = erros.entrada || erros.margem || erros.volume ? invalido : "#B2B5BE"
       const nomeTipo = r.tipo === "mercado" ? "a mercado" : `${r.lado} ${r.tipo}`
       out.push({ chave: "tool:entrada", preco: k.entrada, cor: corEntrada, corpo: `${erros.entrada || erros.margem ? "⚠ " : ""}${r.lado === "buy" ? "Long" : "Short"} · ${nomeTipo}`, qtd: String(volume), arrastavel: true, dono: { tipo: "tool", campo: "entrada" } })
-      if (k.sl != null) out.push({ chave: "tool:sl", preco: k.sl, cor: erros.sl ? invalido : TV.sl, corpo: `${erros.sl ? "⚠ " : ""}Stop ${resumo.pipsSl ?? "—"} pips · ${usd(resumo.risco)} $`, arrastavel: true, tracejada: Boolean(erros.sl), dono: { tipo: "tool", campo: "sl" } })
-      if (k.tp != null) out.push({ chave: "tool:tp", preco: k.tp, cor: erros.tp ? invalido : TV.tp, corpo: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · ${resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}${usd(resumo.ganho)} $${resumo.rr ? ` · R:R ${resumo.rr}` : ""}`, arrastavel: true, tracejada: Boolean(erros.tp), dono: { tipo: "tool", campo: "tp" } })
+      if (k.sl != null) out.push({ chave: "tool:sl", preco: k.sl, cor: erros.sl ? invalido : TV.sl, corpo: `${erros.sl ? "⚠ " : ""}Stop ${resumo.pipsSl ?? "—"} pips · ${usd(resumo.risco)} $${resumo.riscoPct != null ? ` (${resumo.riscoPct}%)` : ""}`, arrastavel: true, tracejada: Boolean(erros.sl), dono: { tipo: "tool", campo: "sl" } })
+      if (k.tp != null) out.push({ chave: "tool:tp", preco: k.tp, cor: erros.tp ? invalido : TV.tp, corpo: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · ${resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}${usd(resumo.ganho)} $${resumo.ganhoPct != null ? ` (${resumo.ganhoPct}%)` : ""}${resumo.rr ? ` · R:R ${resumo.rr}` : ""}`, arrastavel: true, tracejada: Boolean(erros.tp), dono: { tipo: "tool", campo: "tp" } })
     }
     return out
   }, [posicoes, ordens, k.mostrar, k.entrada, k.sl, k.tp, k.r, k.erros, k.resumo, rascunho, podeNegociar, simbolo, volume, precos, preco, props.sinalAtivo]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -242,8 +324,8 @@ export default function GraficoLeve(props: GraficoProps & {
 
   // Setas dos sinais dos estudos, na vela em que chegaram (arredondada ao timeframe).
   useEffect(() => {
-    const serie = serieRef.current
-    if (!serie || !pronto || estadoVelas === "a_carregar") return
+    const m = marcasRef.current
+    if (!m || !pronto || estadoVelas === "a_carregar") return
     const passo = tfPorChave(tf).seg
     const marcas = (props.sinais ?? []).map((s) => ({
       time: Math.floor(s.em / passo) * passo,
@@ -251,11 +333,24 @@ export default function GraficoLeve(props: GraficoProps & {
       color: s.estudo.cor,
       shape: s.direcao === "buy" ? "arrowUp" : "arrowDown",
       text: s.estudo.curto,
-    }))
-    try { serie.setMarkers(marcas) } catch { /* tempo fora das velas carregadas */ }
+    })).sort((a, b) => a.time - b.time)
+    try { m.setMarkers(marcas) } catch { /* tempo fora das velas carregadas */ }
   }, [props.sinais, pronto, estadoVelas, tf])
 
-  // Etiquetas no eixo de preço (a caixa colorida com o preço, à direita), como o TradingView as põe.
+  // As zonas da ferramenta (primitiva no canvas).
+  useEffect(() => {
+    const z = zonasRef.current
+    if (!z || !pronto) return
+    const zonas: Array<{ de: number; ate: number; cor: string }> = []
+    if (k.mostrar && k.entrada != null) {
+      if (k.sl != null) zonas.push({ de: k.entrada, ate: k.sl, cor: "rgba(242,54,69,0.18)" })
+      if (k.tp != null) zonas.push({ de: k.entrada, ate: k.tp, cor: "rgba(8,153,129,0.18)" })
+    }
+    z.definir(zonas)
+  }, [pronto, k.mostrar, k.entrada, k.sl, k.tp])
+
+  // As linhas são price lines do gráfico (linha + caixa com o preço no eixo, como o TradingView as
+  // põe). Só se tocam as que mudaram: a cada tick muda o lucro das etiquetas, não o preço das linhas.
   useEffect(() => {
     const serie = serieRef.current
     if (!serie || !pronto) return
@@ -263,16 +358,18 @@ export default function GraficoLeve(props: GraficoProps & {
     const vistas = new Set<string>()
     for (const l of linhas) {
       vistas.add(l.chave)
-      const opcoes = { price: l.preco, color: l.cor, lineVisible: false, axisLabelVisible: true, title: "" }
+      const opcoes = { price: l.preco, color: l.cor, lineWidth: 1 as const, lineStyle: l.tracejada ? 2 : 0, lineVisible: true, axisLabelVisible: true, title: "" }
+      const assinatura = `${l.preco}|${l.cor}|${l.tracejada ? 1 : 0}`
       const existente = mapa.get(l.chave)
       try {
-        if (existente) existente.applyOptions(opcoes)
-        else mapa.set(l.chave, serie.createPriceLine(opcoes))
+        if (existente) {
+          if (existente.assinatura !== assinatura) { existente.pl.applyOptions(opcoes); existente.assinatura = assinatura }
+        } else mapa.set(l.chave, { pl: serie.createPriceLine(opcoes), assinatura })
       } catch { /* série a ser recriada */ }
     }
-    for (const [chave, pl] of mapa) {
+    for (const [chave, e] of mapa) {
       if (vistas.has(chave)) continue
-      try { serie.removePriceLine(pl) } catch { /* ok */ }
+      try { serie.removePriceLine(e.pl) } catch { /* ok */ }
       mapa.delete(chave)
     }
   }, [linhas, pronto])
@@ -337,23 +434,20 @@ export default function GraficoLeve(props: GraficoProps & {
     setModo(null)
   }
 
-  // O «×» das etiquetas: fechar / remover SL-TP / cancelar.
+  // O «×» das etiquetas: fechar / remover SL-TP / cancelar (com confirmação se o num clique estiver desligado).
   const accaoFecho = (l: Linha) => {
     const dono = l.dono
+    const nada = () => {}
     if (dono.tipo === "pos") {
       const p = posicoes.find((q) => q.id === dono.id)
       if (!p) return
-      if (dono.campo === "entrada") {
-        if (aConfirmarFecho !== l.chave) return setAConfirmarFecho(l.chave)
-        setAConfirmarFecho(null)
-        return props.onFecharPosicao(p.id)
-      }
-      props.onModificarPosicao(p.id, dono.campo === "sl" ? null : p.sl, dono.campo === "tp" ? null : p.tp).catch(() => {})
+      if (dono.campo === "entrada") return void accao(`Fechar ${simbolo.symbol} ${p.volume}`, () => props.onFecharPosicao(p.id)).catch(nada)
+      void accao(`Remover ${dono.campo.toUpperCase()} de ${simbolo.symbol}`, () => props.onModificarPosicao(p.id, dono.campo === "sl" ? null : p.sl, dono.campo === "tp" ? null : p.tp)).catch(nada)
     } else if (dono.tipo === "ord") {
       const o = ordens.find((q) => q.id === dono.id)
       if (!o) return
-      if (dono.campo === "preco") return props.onCancelarPendente(o.id)
-      props.onModificarPendente(o.id, o.preco, dono.campo === "sl" ? null : o.sl, dono.campo === "tp" ? null : o.tp).catch(() => {})
+      if (dono.campo === "preco") return void accao(`Cancelar ${o.direcao} ${o.tipo} ${simbolo.symbol} @ ${px(o.preco, simbolo.digits)}`, () => props.onCancelarPendente(o.id)).catch(nada)
+      void accao(`Remover ${dono.campo.toUpperCase()} da ordem`, () => props.onModificarPendente(o.id, o.preco, dono.campo === "sl" ? null : o.sl, dono.campo === "tp" ? null : o.tp)).catch(nada)
     }
   }
 
@@ -425,17 +519,20 @@ export default function GraficoLeve(props: GraficoProps & {
     if (novo == null) return
     const limpar = () => setRascunho((x) => { const c = { ...x }; delete c[d.chave]; return c })
     try {
+      // A linha fica onde se largou enquanto a confirmação está aberta; cancelar ou falhar repõe-na.
       if (dono.tipo === "pos") {
         const p = posicoes.find((q) => q.id === dono.id)
         if (!p) return limpar()
-        await props.onModificarPosicao(p.id, dono.campo === "sl" ? novo : p.sl, dono.campo === "tp" ? novo : p.tp)
+        await accao(`Mover ${dono.campo === "entrada" ? "entrada" : dono.campo.toUpperCase()} de ${simbolo.symbol} para ${px(novo, simbolo.digits)}`,
+          () => props.onModificarPosicao(p.id, dono.campo === "sl" ? novo : p.sl, dono.campo === "tp" ? novo : p.tp))
       } else if (dono.tipo === "ord") {
         const o = ordens.find((q) => q.id === dono.id)
         if (!o) return limpar()
-        await props.onModificarPendente(o.id, dono.campo === "preco" ? novo : o.preco, dono.campo === "sl" ? novo : o.sl, dono.campo === "tp" ? novo : o.tp)
+        await accao(`Mover ${dono.campo === "preco" ? `${o.direcao} ${o.tipo}` : `${dono.campo.toUpperCase()} da ordem`} para ${px(novo, simbolo.digits)}`,
+          () => props.onModificarPendente(o.id, dono.campo === "preco" ? novo : o.preco, dono.campo === "sl" ? novo : o.sl, dono.campo === "tp" ? novo : o.tp))
       }
-    } catch {
-      /* o aviso de erro já aparece no trader */
+    } catch (e) {
+      /* cancelado, ou o erro já aparece no aviso */ void (e instanceof AccaoCancelada)
     } finally {
       // O valor verdadeiro volta no refresh; se falhou, a linha regressa ao sítio — honesto.
       limpar()
@@ -452,34 +549,27 @@ export default function GraficoLeve(props: GraficoProps & {
   }
 
   const larguraEscala = larguraEscalaRef.current
-  const zona = (a: number | undefined, b: number | undefined, cor: string) =>
-    a == null || b == null ? null : (
-      <div className="absolute left-[45%]" style={{ top: Math.min(a, b), height: Math.abs(a - b), right: larguraEscala, background: cor }} />
-    )
 
   return (
     <div style={{ background: TV.fundo }}>
       <div
-        className={`relative touch-pan-y select-none ${props.alturaClasse ?? "h-[340px] md:h-[440px]"} ${modo ? "cursor-crosshair" : ""}`}
+        className={`relative touch-pan-y select-none ${props.alturaClasse ?? (props.compacto ? "h-[200px] md:h-[240px]" : "h-[400px] md:h-[500px]")} ${modo ? "cursor-crosshair" : ""}`}
         onPointerDownCapture={aoPressionar}
         onPointerMoveCapture={aoMover}
         onPointerUpCapture={aoLargar}
         onContextMenu={aoMenuContexto}
       >
         <div ref={caixaRef} className="absolute inset-0" />
-        {/* Sobreposição: zonas e linhas. Não apanha toques — quem os apanha é a caixa por cima, na
-            fase de captura. Só os botões das etiquetas («×») são clicáveis. */}
+        {/* Sobreposição: só as etiquetas (as linhas e as zonas estão no canvas do gráfico). Não
+            apanha toques — quem os apanha é a caixa por cima, na fase de captura. Só os botões das
+            etiquetas («×») são clicáveis. */}
         <div className="pointer-events-none absolute inset-0 z-[5] overflow-hidden">
-          {k.mostrar && zona(ys["tool:entrada"], ys["tool:sl"], "rgba(242,54,69,0.18)")}
-          {k.mostrar && zona(ys["tool:entrada"], ys["tool:tp"], "rgba(8,153,129,0.18)")}
           {linhas.map((l) => {
             const y = ys[l.chave]
             if (y == null) return null
             const ferr = l.dono.tipo === "tool"
-            const confirmar = aConfirmarFecho === l.chave
             return (
               <div key={l.chave} className="absolute left-0" style={{ top: y, right: larguraEscala }}>
-                <div style={{ borderTop: `1px ${l.tracejada ? "dashed" : "solid"} ${l.cor}` }} />
                 {/* Etiqueta à TradingView: corpo | quantidade | ×. Ferramenta à esquerda, posições e ordens à direita. */}
                 <div
                   className={`absolute flex -translate-y-1/2 items-stretch overflow-hidden whitespace-nowrap rounded-sm text-[10.5px] font-semibold leading-none ${ferr ? "left-[46%]" : "right-10"}`}
@@ -496,9 +586,9 @@ export default function GraficoLeve(props: GraficoProps & {
                       aria-label={l.fecho === "fechar" ? "fechar posição" : l.fecho === "cancelar" ? "cancelar ordem" : `remover ${l.dono.campo}`}
                       onClick={(e) => { e.stopPropagation(); accaoFecho(l) }}
                       className="pointer-events-auto px-1.5 py-[3px]"
-                      style={{ color: confirmar ? "#fff" : l.cor, background: confirmar ? TV.sl : "transparent", borderLeft: `1px solid ${l.cor}` }}
+                      style={{ color: l.cor, borderLeft: `1px solid ${l.cor}` }}
                     >
-                      {confirmar ? "Fechar?" : "×"}
+                      ×
                     </button>
                   )}
                 </div>
@@ -530,24 +620,24 @@ export default function GraficoLeve(props: GraficoProps & {
               const s = p.direcao === "buy" ? 1 : -1
               return (
                 <>
-                  <button className="block w-full rounded px-2 py-1.5 text-left text-rose-300 hover:bg-white/5" onClick={() => { setMenu(null); props.onFecharPosicao(p.id) }}>Fechar posição</button>
-                  {p.sl == null && <button className="block w-full rounded px-2 py-1.5 text-left hover:bg-white/5" onClick={() => { setMenu(null); props.onModificarPosicao(p.id, arred(p.preco_entrada - s * d), p.tp).catch(() => {}) }}>Pôr SL (arrasta depois)</button>}
-                  {p.tp == null && <button className="block w-full rounded px-2 py-1.5 text-left hover:bg-white/5" onClick={() => { setMenu(null); props.onModificarPosicao(p.id, p.sl, arred(p.preco_entrada + s * 2 * d)).catch(() => {}) }}>Pôr TP (arrasta depois)</button>}
+                  <button className="block w-full rounded px-2 py-1.5 text-left text-rose-300 hover:bg-white/5" onClick={() => { setMenu(null); accao(`Fechar ${simbolo.symbol} ${p.volume}`, () => props.onFecharPosicao(p.id)).catch(() => {}) }}>Fechar posição</button>
+                  {p.sl == null && <button className="block w-full rounded px-2 py-1.5 text-left hover:bg-white/5" onClick={() => { setMenu(null); accao(`Pôr SL em ${simbolo.symbol}`, () => props.onModificarPosicao(p.id, arred(p.preco_entrada - s * d), p.tp)).catch(() => {}) }}>Pôr SL (arrasta depois)</button>}
+                  {p.tp == null && <button className="block w-full rounded px-2 py-1.5 text-left hover:bg-white/5" onClick={() => { setMenu(null); accao(`Pôr TP em ${simbolo.symbol}`, () => props.onModificarPosicao(p.id, p.sl, arred(p.preco_entrada + s * 2 * d))).catch(() => {}) }}>Pôr TP (arrasta depois)</button>}
                   {(dono.campo === "sl" || dono.campo === "tp") && (
-                    <button className="block w-full rounded px-2 py-1.5 text-left hover:bg-white/5" onClick={() => { setMenu(null); props.onModificarPosicao(p.id, dono.campo === "sl" ? null : p.sl, dono.campo === "tp" ? null : p.tp).catch(() => {}) }}>Remover {dono.campo.toUpperCase()}</button>
+                    <button className="block w-full rounded px-2 py-1.5 text-left hover:bg-white/5" onClick={() => { setMenu(null); accao(`Remover ${dono.campo.toUpperCase()} de ${simbolo.symbol}`, () => props.onModificarPosicao(p.id, dono.campo === "sl" ? null : p.sl, dono.campo === "tp" ? null : p.tp)).catch(() => {}) }}>Remover {dono.campo.toUpperCase()}</button>
                   )}
                 </>
               )
             })()}
             {menu.dono.tipo === "ord" && (
-              <button className="block w-full rounded px-2 py-1.5 text-left text-rose-300 hover:bg-white/5" onClick={() => { setMenu(null); props.onCancelarPendente((menu.dono as { id: string }).id) }}>Cancelar ordem</button>
+              <button className="block w-full rounded px-2 py-1.5 text-left text-rose-300 hover:bg-white/5" onClick={() => { const id = (menu.dono as { id: string }).id; setMenu(null); accao(`Cancelar ordem ${simbolo.symbol}`, () => props.onCancelarPendente(id)).catch(() => {}) }}>Cancelar ordem</button>
             )}
             <button className="block w-full rounded px-2 py-1.5 text-left hover:bg-white/5" style={{ color: TV.textoFraco }} onClick={() => setMenu(null)}>Fechar menu</button>
           </div>
         )}
       </div>
 
-      {k.mostrar && k.entrada != null && <PainelFerramenta />}
+      {k.mostrar && k.entrada != null && !props.compacto && <PainelFerramenta />}
     </div>
   )
 }

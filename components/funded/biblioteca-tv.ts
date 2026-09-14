@@ -9,12 +9,11 @@
  * pôr num repositório público nem descarregar de um CDN: tem de ser pedida e copiada para
  * public/charting_library/ (ver docs/webtrader-tradingview-library.md).
  *
- * Por isso o WebTrader PERGUNTA ao arrancar: um HEAD ao ficheiro principal. Se responde, o gráfico
- * de negociação é o do TradingView; se não, é o nosso (grafico-leve.tsx). A resposta guarda-se na
- * sessão do browser para não repetir o pedido a cada troca de separador — quem copiar a biblioteca
- * vê-a na próxima sessão (ou já, com `?grafico=tv`).
- *
- * `?grafico=leve` força o nosso gráfico (útil para comparar ou se a biblioteca der problemas).
+ * O gráfico dos web traders é o Lightweight Charts (grafico-leve.tsx). A biblioteca fica
+ * adormecida: o WebTrader faz um HEAD ao ficheiro principal e só a usa se lá estiver (e, já dentro
+ * do gráfico, se tiver as primitivas de trading da edição Trading Platform). A resposta guarda-se
+ * na sessão do browser para não repetir o pedido a cada troca de separador. Não há interruptor
+ * nem parâmetro no URL: é um modo só.
  */
 
 export const TV_LIB_PASTA = "/charting_library/"
@@ -25,15 +24,11 @@ let emCurso: Promise<boolean> | null = null
 
 export function bibliotecaTvDisponivel(): Promise<boolean> {
   if (typeof window === "undefined") return Promise.resolve(false)
-  const forcar = new URLSearchParams(window.location.search).get("grafico")
-  if (forcar === "leve") return Promise.resolve(false)
-  if (forcar !== "tv") {
-    try {
-      const guardado = sessionStorage.getItem(CHAVE)
-      if (guardado === "1") return Promise.resolve(true)
-      if (guardado === "0") return Promise.resolve(false)
-    } catch { /* sem sessionStorage: pergunta sempre */ }
-  }
+  try {
+    const guardado = sessionStorage.getItem(CHAVE)
+    if (guardado === "1") return Promise.resolve(true)
+    if (guardado === "0") return Promise.resolve(false)
+  } catch { /* sem sessionStorage: pergunta sempre */ }
   if (emCurso) return emCurso
   emCurso = (async () => {
     let ok = false

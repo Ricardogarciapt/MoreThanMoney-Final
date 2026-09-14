@@ -1324,7 +1324,7 @@ export default function ScannerMobile({
           O botão «Abrir no Web trader» vive dentro do painel (gráfico com linhas arrastáveis). */}
       {!isFullscreen && painelNegociacao !== "nenhum" && (
         <div className={`px-4 pt-3 ${painelNegociacao === "abaixo-ate-lg" ? "lg:hidden" : ""}`}>
-          <PainelNegociacaoScanner tvSymbol={selectedSymbol} variante="dock" />
+          <PainelNegociacaoScanner tvSymbol={selectedSymbol} intervalo={selectedInterval} variante="dock" />
         </div>
       )}
 

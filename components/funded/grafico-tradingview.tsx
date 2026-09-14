@@ -9,12 +9,14 @@ import { type GraficoProps, TIMEFRAMES, TV, tfPorResolucaoTv } from "./grafico-t
 import { TV_LIB_PASTA, carregarBibliotecaTv, marcarBibliotecaTvFalhada } from "./biblioteca-tv"
 import PainelFerramenta from "./painel-ferramenta"
 import { useRascunho, type CampoNivel } from "./rascunho-ordem"
+import { useUmClique } from "./um-clique"
 
 /**
  * O GRÁFICO DO TRADINGVIEW A SÉRIO — Advanced Charts / Trading Platform (`charting_library`).
  *
- * Só corre quando a biblioteca licenciada está em public/charting_library/ (o funded-grafico.tsx
- * verifica). Com ela ganha-se exactamente o paper trading do TradingView:
+ * ADORMECIDO: o gráfico dos web traders é o Lightweight Charts (grafico-leve.tsx). Este só corre,
+ * sem interruptor nenhum, quando a biblioteca licenciada está em public/charting_library/ (o
+ * funded-grafico.tsx verifica) e tem as primitivas de trading. Com ela ganha-se exactamente o paper trading do TradingView:
  *  · posições com `createPositionLine()` — quantidade, lucro ao vivo, «×» fecha;
  *  · SL/TP e pendentes com `createOrderLine()` — arrastáveis (onMove grava), «×» remove/cancela;
  *  · a ordem em preparação (ticket ⇄ gráfico, rascunho-ordem.tsx) como três `createOrderLine()`
@@ -25,6 +27,15 @@ import { useRascunho, type CampoNivel } from "./rascunho-ordem"
  * O datafeed é JS (a interface do UDF, sem servidor UDF): histórico em /api/mtmfunded/simulado/velas,
  * tempo real com os preços que o trader já está a receber (/precos), ficha do símbolo do catálogo
  * `funded_symbols` (pricescale pelos dígitos, sessão pelas `sessoes` da corretora).
+ *
+ * ATENÇÃO À EDIÇÃO DA BIBLIOTECA: desde a v29 `createOrderLine`/`createPositionLine`/
+ * `createExecutionShape` só existem na «Trading Platform» — no «Advanced Charts» simples não há.
+ * Por isso pergunta-se ao gráfico (`typeof chart.createOrderLine === 'function'`): sem elas o
+ * TradingView fica para análise e as posições/ordens passam para o nosso gráfico leve, por baixo,
+ * com o aviso «Linhas de ordens exigem a biblioteca Trading Platform» (`onSemLinhas`).
+ *
+ * Mover/fechar/cancelar passa pela negociação num clique (um-clique.tsx): desligada, pede
+ * confirmação; cancelada ou falhada, a linha volta ao sítio.
  *
  * ESCRITO CONTRA A DOCUMENTAÇÃO, NÃO CONTRA A BIBLIOTECA: não está no repositório e não se pode
  * testar sem ela. Por isso tudo o que é da biblioteca é `any`, cada chamada está protegida, e se
@@ -188,6 +199,8 @@ export default function GraficoTradingView(props: GraficoProps & {
   modo: Direcao | null
   setModo: (m: Direcao | null) => void
   onFalhou: (motivo: string) => void
+  /** A biblioteca é «Advanced Charts» sem primitivas de trading: quem chama mostra as linhas noutro gráfico. */
+  onSemLinhas?: () => void
 }) {
   const { simbolo, preco, precos, volume, posicoes, ordens, podeNegociar, modo, setModo } = props
   const caixaRef = useRef<HTMLDivElement>(null)
@@ -195,6 +208,12 @@ export default function GraficoTradingView(props: GraficoProps & {
   const [pronto, setPronto] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const k = useRascunho()
+  const umClique = useUmClique()
+  const umCliqueRef = useRef(umClique)
+  umCliqueRef.current = umClique
+  const accao = (descricao: string, fn: () => Promise<unknown>) =>
+    umCliqueRef.current.executar(descricao, fn, { confirmar: true, digitos: simbolo.digits })
+  const [semLinhas, setSemLinhas] = useState(false)
   const kRef = useRef(k)
   kRef.current = k
   const precoRef = useRef<PrecoVivo | undefined>(preco)
@@ -257,6 +276,12 @@ export default function GraficoTradingView(props: GraficoProps & {
           if (!vivo) return
           if (vigia) clearTimeout(vigia)
           setPronto(true)
+          // Advanced Charts sem Trading Platform: não há linhas de ordens nesta edição.
+          const c0 = grafico()
+          if (c0 && (typeof c0.createOrderLine !== "function" || typeof c0.createPositionLine !== "function")) {
+            setSemLinhas(true)
+            propsRef.current.onSemLinhas?.()
+          }
           // Pesquisa de símbolos da biblioteca → o trader muda de símbolo (lista, ticket, posições).
           try {
             grafico()?.onSymbolChanged().subscribe(null, () => {
@@ -302,7 +327,7 @@ export default function GraficoTradingView(props: GraficoProps & {
   // ── posições: linha de posição + SL/TP arrastáveis ──
   useEffect(() => {
     const c = grafico()
-    if (!pronto || !c) return
+    if (!pronto || !c || semLinhas) return
     const vistos = new Set<string>()
     for (const p of posicoes) {
       vistos.add(p.id)
@@ -328,13 +353,13 @@ export default function GraficoTradingView(props: GraficoProps & {
             .setExtendLeft(false).setLineLength(25)
             .setTooltip(`${p.direcao === "buy" ? "Long" : "Short"} ${p.volume} @ ${p.preco_entrada}`)
           if (podeNegociar) {
-            l.onClose("fechar", () => propsRef.current.onFecharPosicao(p.id))
+            l.onClose("fechar", () => { accao(`Fechar ${simbolo.symbol} ${p.volume}`, () => propsRef.current.onFecharPosicao(p.id)).catch(() => {}) })
             // «Modificar» numa posição sem SL/TP põe-nos a uma distância visível, para arrastar.
             l.onModify("modificar", () => {
               const d = Math.max(spreadEmPreco(simbolo) * 5, simbolo.pip_size * 20)
               const s = p.direcao === "buy" ? 1 : -1
               if (p.sl == null || p.tp == null) {
-                propsRef.current.onModificarPosicao(p.id, p.sl ?? arred(p.preco_entrada - s * d), p.tp ?? arred(p.preco_entrada + s * 2 * d)).catch(() => {})
+                accao(`Pôr SL/TP em ${simbolo.symbol}`, () => propsRef.current.onModificarPosicao(p.id, p.sl ?? arred(p.preco_entrada - s * d), p.tp ?? arred(p.preco_entrada + s * 2 * d))).catch(() => {})
               }
             })
           }
@@ -356,13 +381,13 @@ export default function GraficoTradingView(props: GraficoProps & {
                 const novoNivel = arred(Number(o.getPrice()))
                 const atual = propsRef.current.posicoes.find((q) => q.id === p.id)
                 if (!atual) return
-                propsRef.current.onModificarPosicao(p.id, campo === "sl" ? novoNivel : atual.sl, campo === "tp" ? novoNivel : atual.tp)
+                accao(`Mover ${campo.toUpperCase()} de ${simbolo.symbol} para ${novoNivel.toFixed(simbolo.digits)}`, () => propsRef.current.onModificarPosicao(p.id, campo === "sl" ? novoNivel : atual.sl, campo === "tp" ? novoNivel : atual.tp))
                   .catch(() => { try { o.setPrice(nivel) } catch { /* ok */ } })
               })
               o.onCancel("remover", () => {
                 const atual = propsRef.current.posicoes.find((q) => q.id === p.id)
                 if (!atual) return
-                propsRef.current.onModificarPosicao(p.id, campo === "sl" ? null : atual.sl, campo === "tp" ? null : atual.tp).catch(() => {})
+                accao(`Remover ${campo.toUpperCase()} de ${simbolo.symbol}`, () => propsRef.current.onModificarPosicao(p.id, campo === "sl" ? null : atual.sl, campo === "tp" ? null : atual.tp)).catch(() => {})
               })
             }
             novo[campo] = o
@@ -375,12 +400,12 @@ export default function GraficoTradingView(props: GraficoProps & {
       apagarGrupo(g)
       linhasPos.current.delete(id)
     }
-  }, [pronto, posicoes, preco, podeNegociar, simbolo.symbol]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pronto, semLinhas, posicoes, preco, podeNegociar, simbolo.symbol]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── pendentes: linha de ordem arrastável (preço) + SL/TP ──
   useEffect(() => {
     const c = grafico()
-    if (!pronto || !c) return
+    if (!pronto || !c || semLinhas) return
     const vistos = new Set<string>()
     for (const ord of ordens) {
       vistos.add(ord.id)
@@ -405,10 +430,11 @@ export default function GraficoTradingView(props: GraficoProps & {
             principal.onMove(() => {
               const atual = propsRef.current.ordens.find((q) => q.id === ord.id)
               if (!atual) return
-              propsRef.current.onModificarPendente(ord.id, arred(Number(principal.getPrice())), atual.sl, atual.tp)
+              const n = arred(Number(principal.getPrice()))
+              accao(`Mover ${ord.direcao} ${ord.tipo} para ${n.toFixed(simbolo.digits)}`, () => propsRef.current.onModificarPendente(ord.id, n, atual.sl, atual.tp))
                 .catch(() => { try { principal.setPrice(ord.preco) } catch { /* ok */ } })
             })
-            principal.onCancel("cancelar", () => propsRef.current.onCancelarPendente(ord.id))
+            principal.onCancel("cancelar", () => { accao(`Cancelar ${ord.direcao} ${ord.tipo} ${simbolo.symbol}`, () => propsRef.current.onCancelarPendente(ord.id)).catch(() => {}) })
           }
           novo.principal = principal
           for (const campo of ["sl", "tp"] as const) {
@@ -426,13 +452,13 @@ export default function GraficoTradingView(props: GraficoProps & {
                 const atual = propsRef.current.ordens.find((q) => q.id === ord.id)
                 if (!atual) return
                 const n = arred(Number(o.getPrice()))
-                propsRef.current.onModificarPendente(ord.id, atual.preco, campo === "sl" ? n : atual.sl, campo === "tp" ? n : atual.tp)
+                accao(`Mover ${campo.toUpperCase()} da ordem para ${n.toFixed(simbolo.digits)}`, () => propsRef.current.onModificarPendente(ord.id, atual.preco, campo === "sl" ? n : atual.sl, campo === "tp" ? n : atual.tp))
                   .catch(() => { try { o.setPrice(nivel) } catch { /* ok */ } })
               })
               o.onCancel("remover", () => {
                 const atual = propsRef.current.ordens.find((q) => q.id === ord.id)
                 if (!atual) return
-                propsRef.current.onModificarPendente(ord.id, atual.preco, campo === "sl" ? null : atual.sl, campo === "tp" ? null : atual.tp).catch(() => {})
+                accao(`Remover ${campo.toUpperCase()} da ordem`, () => propsRef.current.onModificarPendente(ord.id, atual.preco, campo === "sl" ? null : atual.sl, campo === "tp" ? null : atual.tp)).catch(() => {})
               })
             }
             novo[campo] = o
@@ -445,7 +471,7 @@ export default function GraficoTradingView(props: GraficoProps & {
       apagarGrupo(g)
       linhasOrd.current.delete(id)
     }
-  }, [pronto, ordens, podeNegociar, simbolo.symbol]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pronto, semLinhas, ordens, podeNegociar, simbolo.symbol]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function apagarGrupo(g: Grupo) {
     for (const l of [g.principal, g.sl, g.tp]) { try { l?.remove() } catch { /* ok */ } }
@@ -486,7 +512,7 @@ export default function GraficoTradingView(props: GraficoProps & {
   // ── o rascunho da ordem: três linhas ligadas ao ticket ──
   useEffect(() => {
     const c = grafico()
-    if (!pronto || !c) return
+    if (!pronto || !c || semLinhas) return
     const niveis: Record<CampoNivel, number | null> = {
       entrada: k.mostrar ? k.entrada : null,
       sl: k.mostrar && k.entrada != null ? k.sl : null,
@@ -500,8 +526,8 @@ export default function GraficoTradingView(props: GraficoProps & {
         texto: `${erros.entrada || erros.margem ? "⚠ " : ""}${r.lado === "buy" ? "Long" : "Short"} ${r.tipo === "mercado" ? "a mercado" : r.tipo}`,
         qtd: String(volume),
       },
-      sl: { cor: erros.sl ? invalido : TV.sl, texto: `${erros.sl ? "⚠ " : ""}Stop ${resumo.pipsSl ?? "—"} pips · ${usd(resumo.risco)} $`, qtd: "" },
-      tp: { cor: erros.tp ? invalido : TV.tp, texto: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · ${resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}${usd(resumo.ganho)} $${resumo.rr ? ` R:R ${resumo.rr}` : ""}`, qtd: "" },
+      sl: { cor: erros.sl ? invalido : TV.sl, texto: `${erros.sl ? "⚠ " : ""}Stop ${resumo.pipsSl ?? "—"} pips · ${usd(resumo.risco)} $${resumo.riscoPct != null ? ` (${resumo.riscoPct}%)` : ""}`, qtd: "" },
+      tp: { cor: erros.tp ? invalido : TV.tp, texto: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · ${resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}${usd(resumo.ganho)} $${resumo.ganhoPct != null ? ` (${resumo.ganhoPct}%)` : ""}${resumo.rr ? ` R:R ${resumo.rr}` : ""}`, qtd: "" },
     }
     for (const campo of ["entrada", "sl", "tp"] as CampoNivel[]) {
       const nivel = niveis[campo]
@@ -540,7 +566,7 @@ export default function GraficoTradingView(props: GraficoProps & {
         }
       })()
     }
-  }, [pronto, k.mostrar, k.entrada, k.sl, k.tp, k.r, k.erros, k.resumo, volume, simbolo.digits]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pronto, semLinhas, k.mostrar, k.entrada, k.sl, k.tp, k.r, k.erros, k.resumo, volume, simbolo.digits]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Botões Long/Short da barra: põem o rascunho no preço actual (a mercado), pronto a arrastar.
   useEffect(() => {
@@ -561,7 +587,12 @@ export default function GraficoTradingView(props: GraficoProps & {
         )}
         {erro && <div className="absolute inset-0 grid place-items-center text-[12px] text-rose-300">{erro}</div>}
       </div>
-      {k.mostrar && k.entrada != null && <PainelFerramenta />}
+      {semLinhas && (
+        <p className="border-t px-2 py-1.5 text-center text-[10.5px] text-amber-200/90" style={{ borderColor: TV.borda }}>
+          Linhas de ordens exigem a biblioteca Trading Platform — as posições e ordens aparecem no gráfico abaixo.
+        </p>
+      )}
+      {k.mostrar && k.entrada != null && !semLinhas && <PainelFerramenta />}
     </div>
   )
 }
