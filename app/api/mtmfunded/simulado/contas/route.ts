@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 import { userIdDoPedido } from '@/lib/sessao-do-pedido'
+import { tipoCurto, estadoCurto } from '@/lib/mtmfunded/etiquetas'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
   const db = getSupabaseAdmin()
   const { data: contas } = await db
     .from('mtm_trading_accounts')
-    .select('id, tipo, estado, program_id, tournament_id, saldo_inicial, alavancagem, sim_saldo, sim_equity, sim_margem, sim_ancora_dia, sim_pico_equity, sim_dias_negociados, quebrou_regra, metricas, created_at')
+    .select('id, tipo, estado, mt5_login, servidor, program_id, tournament_id, saldo_inicial, alavancagem, sim_saldo, sim_equity, sim_margem, sim_ancora_dia, sim_pico_equity, sim_dias_negociados, quebrou_regra, metricas, created_at')
     .eq('user_id', userId)
     .eq('motor', 'sim')
     .order('created_at', { ascending: false })
@@ -45,7 +46,14 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     contas: (contas ?? []).map((c) => {
       const prog = c.program_id ? programaDe.get(c.program_id as string) : null
-      return { ...c, programa: prog ? { slug: prog.slug, nome: prog.nome, fases: prog.fases, regras: prog.regras } : null }
+      const m = c.metricas as Record<string, unknown> | null
+      return {
+        ...c,
+        // As etiquetas vêm prontas: o seletor de contas do WebTrader mostra F1/Active sem reimplementar a regra.
+        etiqueta: tipoCurto(c.tipo as string, m),
+        estadoCurto: estadoCurto(c.estado as string, m),
+        programa: prog ? { slug: prog.slug, nome: prog.nome, fases: prog.fases, regras: prog.regras } : null,
+      }
     }),
     posicoes: posicoes ?? [],
     ordens: ordens ?? [],

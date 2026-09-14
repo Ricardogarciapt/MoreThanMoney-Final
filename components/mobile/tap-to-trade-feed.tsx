@@ -1472,6 +1472,22 @@ export default function TapToTradeFeed() {
                       </div>
                     )}
 
+                    {/* Ideia MTM → conta simulada MTM Funded. Só pré-preenche: a conta e a confirmação são do trader. */}
+                    {f.symbol && dir && !s.expired && (
+                      <a
+                        href={`/app-mobile?${new URLSearchParams({
+                          tab: "funded", symbol: f.symbol, dir: dir === "BUY" ? "buy" : "sell",
+                          ...(f.sl ? { sl: f.sl.replace(",", ".") } : {}),
+                          ...(f.tps[0] ? { tp: f.tps[0].replace(",", ".") } : {}),
+                          origem: "ideia_mtm", ref: String(s.id),
+                        }).toString()}`}
+                        className="mt-2 block text-center text-[11.5px] font-semibold"
+                        style={{ color: "var(--destaque)" }}
+                      >
+                        Negociar na conta simulada (MTM Funded) →
+                      </a>
+                    )}
+
                     {/* O que a trade vale AGORA. Sem isto, o cartão de um sinal vivo não diz se
                         está a ganhar ou a perder — e é isso que decide se vale a pena entrar. */}
                     {aoVivo[s.id]?.pips != null && (

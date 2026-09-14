@@ -26,6 +26,7 @@ import {
   Send,
   Network,
   Globe,
+  CandlestickChart,
 } from "lucide-react"
 import Image from "next/image"
 import { SiteLogo } from "@/components/site-logo"
@@ -170,6 +171,8 @@ export default function MobileSidebar({
     { id: 'portfolio', label: 'Portfólio', icon: Wallet, href: '/app-mobile?tab=portfolio' },
     { id: 'scanner', label: 'Scanner', icon: BarChart3, href: '/app-mobile?tab=scanner' },
     { id: 'trading-alerts', label: 'Trading Alerts', icon: Bell, href: '/app-mobile?tab=trading-alerts' },
+    // WebTrader das contas simuladas MTM Funded (M3).
+    { id: 'funded', label: 'MTM Funded', icon: CandlestickChart, href: '/app-mobile?tab=funded' },
     { id: 'apps', label: 'Apps', icon: LayoutGrid, href: '/app-mobile?tab=apps' },
     { id: 'mlm', label: 'Afiliados', icon: Network, href: '/app-mobile?tab=mlm' },
   ]

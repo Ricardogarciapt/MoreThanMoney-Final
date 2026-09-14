@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter } from "next/navigation"
 import {
   ArrowLeft,
+  CandlestickChart,
   ExternalLink,
   Handshake,
   LayoutGrid,
@@ -179,6 +180,20 @@ export default function AppsMobile() {
       </div>
 
       <div className="space-y-3">
+        {/* O WebTrader é um separador da app, não um iframe: abre em ?tab=funded. */}
+        <button
+          type="button"
+          onClick={() => router.push("/app-mobile?tab=funded", { scroll: false })}
+          className="flex w-full items-start gap-4 rounded-xl border border-[#D2A63C]/40 bg-gray-800/50 p-4 text-left transition-all hover:border-[#D2A63C] hover:bg-gray-800 active:scale-[0.98]"
+        >
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#D2A63C]/15">
+            <CandlestickChart className="h-5 w-5 text-[#D2A63C]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-white">MTM Funded · WebTrader</div>
+            <p className="mt-0.5 text-sm text-gray-400">Negoceia as tuas contas simuladas (desafios e torneios)</p>
+          </div>
+        </button>
         {APPS.map((app) => {
           const Icon = app.icon
           return (
