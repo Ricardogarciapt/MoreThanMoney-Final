@@ -245,3 +245,50 @@ Riscos principais: (1) qualidade/continuidade do feed de ticks — mitigado por 
 plugável e pelo piloto MT5 self-hosted; (2) contestação de fills — mitigado por
 `funded_equity_snapshots` + log de ticks no momento do fill (guardar tick no registo da
 posição); (3) restart do engine — estado reconstruível 100% da BD (nunca só em memória).
+
+## 11. Negociação interna, ideias diretas e cópia funded → conta pessoal (decisão Ricardo 2026-09-14)
+
+Acrescenta à secção 9. O WebTrader deixa de ser só um tab: é a **camada de negociação comum**
+de todas as superfícies MTM, e o seletor de conta vive em todas.
+
+### 11.1 Onde se negocia
+| Superfície | Entrada |
+|---|---|
+| MTM System (iOS nativa) | WebView do `app-mobile?tab=funded` + botão "Negociar" nos ecrãs de sinais |
+| `app-mobile` (web/PWA/Android) | tab `funded` (WebTrader) |
+| Widget TradingView da app | ticket de ordem a partir do gráfico (M3: overlay nosso; M4: Trading Platform/Broker API) |
+| Scanner access | botão "Negociar" em cada alerta → ticket pré-preenchido (símbolo, direção, SL/TP do alerta) |
+
+Uma só rota de ordens (`/api/funded/orders`) → driver da conta escolhida. Nenhuma superfície fala
+diretamente com MetaApi/TradeLocker.
+
+### 11.2 Aceitar ideias diretamente na conta
+- Cada ideia/sinal (Premium, estratégias MTM Auto, scanners) ganha "Aceitar em…" → **o user escolhe
+  a conta** (funded simulada, MT5 própria, TradeLocker própria) e confirma o risco.
+- Reaproveita o fan-out/risco do T2T (`t2t-multi-account`) e a janela de aceitação (5 min + fora
+  da zona bloqueia). Na conta simulada executa no `funded-sim`; nas reais pelo driver.
+- Regra dos desafios: aceitar ideias da casa numa conta de desafio É permitido mas marcado na
+  posição (`origin='mtm_idea'`) — decisão de negócio a fechar se conta para o ranking dos torneios.
+
+### 11.3 Copiar da conta funded para a conta pessoal
+- Quem tem **MTM Auto pago** ou o **addon MTM Copy** pode ligar "espelhar esta conta funded" →
+  cada abertura/fecho/parcial da conta simulada replica-se na MT5 (MetaApi) ou TradeLocker
+  (TradeLocker API) do próprio user, com lote/risco próprio (padrão `strategy_lots`).
+- Implementação: o `funded-sim` emite eventos (`position_opened|modified|closed|partial`) →
+  consumidor no engine → driver da conta destino. Mesmo modelo proporcional do
+  `espelho-saidas-educador`.
+- Gates: sem subscrição válida o toggle não aparece; regras de contas (1 real + 1 demo por produto,
+  extras 7€); iOS nunca Stripe (compra do addon por IAP).
+- Compliance: é o user a copiar a SUA própria conta simulada para a SUA conta — software, não
+  gestão. T&Cs têm de o dizer; validar com o agente compliance antes de ligar em contas reais.
+
+### 11.4 Emissão própria de contas (substitui a fila MT5 externa)
+- Hoje: torneio usa contas MT5 criadas na PU Prime por fila + agente local (`agente-mt5-vps`).
+- Alvo: **a MTM Funded emite e vende as contas no nosso servidor** — compra (Stripe/IAP) ou
+  inscrição → `funded_accounts` criada na hora com credenciais do WebTrader (login MTM, sem
+  password MT5). A fila MT5 externa fica só para o torneio em curso e é descontinuada depois.
+- Migração: `mtm_tournament_participants` → `funded_accounts.tournament_id` para o próximo torneio.
+
+### 11.5 Mindmap editável
+O conceito completo vive num artifact com blocos editáveis; as edições do Ricardo gravam-se na
+BD do artifact e são a fonte de verdade da fase de construção (reler antes de cada milestone).
