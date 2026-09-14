@@ -3,7 +3,7 @@ import { requireAdmin } from '@/lib/admin-api-helpers'
 import { getSupabaseAdmin } from '@/lib/supabase-admin-client'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 /**
  * O PAINEL DO VIDEOCLIPER: pedir, ver, aprovar.
