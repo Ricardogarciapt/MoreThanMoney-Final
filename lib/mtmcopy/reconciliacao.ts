@@ -65,6 +65,12 @@ export interface ResultadoReconciliacao {
   fechados_motor: number
   fechados_t2t: number
   saltados: number
+  /**
+   * Contas cujas posições NÃO se leram por não estarem ligadas. Aqui todas as contas têm linhas
+   * abertas (é daí que a lista nasce), por isso a regra de contas-ociosas.ts não salta nenhuma a
+   * mais: o `readOpenPositions` já só corre em contas 'ligada', que é o que evita acordá-las.
+   */
+  nao_lidas: number
   detalhe: Array<{ conta: string; estado: EstadoConta; fechados: number; saltados: number }>
 }
 
@@ -126,12 +132,14 @@ export async function reconciliarPosicoes(opts?: {
     fechados_motor: 0,
     fechados_t2t: 0,
     saltados: 0,
+    nao_lidas: 0,
     detalhe: [],
   }
 
   for (const [conta, regs] of porConta) {
     const estado = await estadoDaConta(conta)
     const posicoes = estado === 'ligada' ? await readOpenPositions(conta) : null
+    if (estado !== 'ligada') out.nao_lidas++
     // `readOpenPositions` devolve null quando NÃO CONSEGUIU LER. Uma lista vazia é diferente:
     // é a corretora a dizer que não há nada aberto. Tratar as duas como iguais era o erro.
     const conseguiuLer = estado === 'apagada' || (estado === 'ligada' && posicoes != null)
@@ -176,5 +184,8 @@ export async function reconciliarPosicoes(opts?: {
     }
   }
 
+  if (out.nao_lidas) {
+    console.info(`[reconciliacao] ${out.nao_lidas} de ${out.contas} conta(s) não lidas (não estão ligadas na MetaApi)`)
+  }
   return out
 }

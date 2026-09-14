@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: result.ok,
       ...result,
-      orfas: orfas ? { total: orfas.orfas.length, contas: orfas.contas, ilegiveis: orfas.ilegiveis, geridas: orfas.geridas, lista: orfas.orfas } : null,
+      orfas: orfas ? { total: orfas.orfas.length, contas: orfas.contas, ilegiveis: orfas.ilegiveis, saltadas: orfas.saltadas, geridas: orfas.geridas, lista: orfas.orfas } : null,
       avisosContasBloqueadas: avisos,
       timestamp: new Date().toISOString(),
     })
