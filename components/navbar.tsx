@@ -105,6 +105,7 @@ export default function Navbar() {
       href: "/app-mobile?tab=apps",
       icon: Brain,
       submenu: [
+        { name: "MTM Social", href: "/mtmsocial", external: false },
         { name: "MTM Studio", href: "https://mtmbrandbuilder.lovable.app", external: true },
         { name: "MTM Partnership Engine", href: "https://mtmugcapp.lovable.app", external: true },
         { name: "MTM AiOS", href: "https://mtmaios.lovable.app", external: true },
