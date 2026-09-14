@@ -622,10 +622,33 @@ async function umaPassagem() {
   }
 }
 
+/**
+ * Os vídeos que a ponte do Mac trouxe do YouTube ficam em /mnt/dvr/ponte-*.mp4 enquanto se
+ * decide que clips cortar. Ao fim de 3 dias saem — o disco não é arquivo de vídeos alheios.
+ */
+let ultimaLimpeza = 0
+function limparPonte() {
+  if (Date.now() - ultimaLimpeza < 3600_000) return
+  ultimaLimpeza = Date.now()
+  try {
+    for (const nome of fs.readdirSync("/mnt/dvr")) {
+      if (!/^ponte-.*\.mp4$/.test(nome)) continue
+      const f = path.join("/mnt/dvr", nome)
+      if (Date.now() - fs.statSync(f).mtimeMs > 3 * 24 * 3600_000) {
+        fs.rmSync(f, { force: true })
+        log("ponte: apagado", nome)
+      }
+    }
+  } catch (e) {
+    log("ponte: limpeza falhou:", e.message)
+  }
+}
+
 async function ciclo() {
   if (!SEGREDO) { console.error("LMS_CAPTION_WORKER_SECRET em falta"); process.exit(1) }
   log(`a correr · ${API} · de ${ESPERA / 1000}s em ${ESPERA / 1000}s`)
   for (;;) {
+    limparPonte()
     // Uma passagem que rebenta não pode matar o ciclo: a máquina ficaria parada até alguém dar
     // por isso, e ninguém dá por isso.
     await umaPassagem().catch((e) => log("passagem falhou:", e.message))

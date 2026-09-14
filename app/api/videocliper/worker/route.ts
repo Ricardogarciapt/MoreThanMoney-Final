@@ -239,6 +239,9 @@ export async function GET(request: NextRequest) {
     .from('videocliper_jobs')
     .select('id, origem, youtube_url, youtube_video_id, dvr_job_id, dvr_ficheiro, titulo, idioma')
     .eq('estado', 'pedido')
+    // À espera da ponte do Mac: o VPS não consegue descarregar do YouTube, e tentar só
+    // transformava um vídeo por descarregar num erro.
+    .or('ponte_estado.is.null,ponte_estado.eq.feito')
     .order('created_at')
     .limit(1)
     .maybeSingle()

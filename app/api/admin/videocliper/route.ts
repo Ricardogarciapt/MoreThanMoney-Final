@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
   // o título e o estado.
   const { data: jobs } = await db
     .from('videocliper_jobs')
-    .select('id, origem, youtube_url, titulo, duracao_seg, estado, erro, progresso, created_at')
+    .select('id, origem, youtube_url, titulo, duracao_seg, estado, erro, progresso, ponte_estado, created_at')
     .order('created_at', { ascending: false })
     .limit(30)
 
@@ -172,7 +172,22 @@ export async function POST(req: NextRequest) {
     const { data: ja } = videoId
       ? await db.from('videocliper_jobs').select('id, estado').eq('youtube_video_id', videoId).maybeSingle()
       : await db.from('videocliper_jobs').select('id, estado').eq('youtube_url', url).maybeSingle()
-    if (ja) return NextResponse.json({ ok: true, jobId: ja.id, jaExistia: true, estado: ja.estado })
+    // YouTube recusa o IP do servidor; o vídeo passa pela PONTE do Mac (IP de casa), que o
+    // descarrega e o põe no disco do VPS. Outros sites continuam a ir direto ao VPS.
+    const pelaPonte = Boolean(videoId)
+
+    if (ja) {
+      // Pedir outra vez um vídeo que falhou é pedir para tentar de novo.
+      if (ja.estado === 'erro') {
+        await db.from('videocliper_jobs').update({
+          estado: 'pedido', erro: null, progresso: null, reclamado_em: null, reclamado_por: null,
+          ...(pelaPonte ? { ponte_estado: 'pendente', ponte_reclamado_em: null } : {}),
+          updated_at: new Date().toISOString(),
+        }).eq('id', ja.id)
+        return NextResponse.json({ ok: true, jobId: ja.id, repetido: true })
+      }
+      return NextResponse.json({ ok: true, jobId: ja.id, jaExistia: true, estado: ja.estado })
+    }
 
     const { data, error } = await db.from('videocliper_jobs').insert({
       origem: 'youtube',
@@ -180,6 +195,7 @@ export async function POST(req: NextRequest) {
       youtube_video_id: videoId,
       titulo: String(corpo?.titulo ?? '').trim() || null,
       estado: 'pedido',
+      ponte_estado: pelaPonte ? 'pendente' : null,
       criado_por: 'admin',
     }).select('id').single()
     if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
