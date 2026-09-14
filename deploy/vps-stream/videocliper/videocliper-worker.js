@@ -316,8 +316,9 @@ function construirASS(palavras, estilo) {
  * Uma imagem que não chegue não trava o clipe: esse momento fica com a cara, e segue.
  * ────────────────────────────────────────────────────────────────────────────*/
 async function imagensDoBroll(broll, pasta, L, A) {
-  const prontas = []
-  for (const [i, b] of (broll || []).entries()) {
+  // Em PARALELO: o gerador demora o mesmo para uma ou para quatro, e em série eram minutos por
+  // clipe à espera da fila dele.
+  const resultados = await Promise.all((broll || []).map(async (b, i) => {
     try {
       const prompt = `${b.descricao}, vertical 9:16 cinematic photograph, shallow depth of field, moody natural light, no text, no letters, no logos, no money, no banknotes`
       const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${Math.round(L / 1.5)}&height=${Math.round(A / 1.5)}&seed=${Math.floor(Math.random() * 1e6)}&nologo=true&model=flux`
@@ -327,12 +328,13 @@ async function imagensDoBroll(broll, pasta, L, A) {
       if (buf.length < 4096) throw new Error("imagem vazia")
       const f = path.join(pasta, `broll-${i}.jpg`)
       fs.writeFileSync(f, buf)
-      prontas.push({ ...b, ficheiro: f })
+      return { ...b, ficheiro: f }
     } catch (e) {
       log("b-roll saltado:", e.message)
+      return null
     }
-  }
-  return prontas
+  }))
+  return resultados.filter(Boolean)
 }
 
 /** Monta os argumentos do ffmpeg: fonte cortada a 9:16, B-roll por cima, legendas no topo. */
@@ -346,7 +348,8 @@ function argsDaMontagem({ fonte, recuo, duracao, L, A, ass, broll }) {
     const frames = Math.round(dur * 30)
     partes.push(
       // O gerador gratuito carimba o nome no rodapé: os últimos 8% da imagem ficam de fora.
-      `[${i + 1}:v]crop=iw:ih*0.92:0:0,scale=${L * 2}:${A * 2}:force_original_aspect_ratio=increase,crop=${L * 2}:${A * 2},` +
+      `[${i + 1}:v]crop=iw:ih*0.92:0:0,scale=${Math.round(L * 1.25)}:${Math.round(A * 1.25)}:force_original_aspect_ratio=increase,crop=${Math.round(L * 1.25)}:${Math.round(A * 1.25)},` +
+      // 1,25× chega para um zoom de 12% sem se ver o píxel — o dobro custava minutos de CPU.
       `zoompan=z='min(zoom+0.0012,1.12)':d=${frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${L}x${A}:fps=30,` +
       `setsar=1,setpts=PTS-STARTPTS+${b.inicio}/TB[b${i}]`,
       `[${atual}][b${i}]overlay=enable='between(t,${b.inicio},${b.fim})':eof_action=pass[v${i + 1}]`,
