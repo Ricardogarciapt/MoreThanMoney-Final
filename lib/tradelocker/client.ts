@@ -417,6 +417,7 @@ const tokensEmCache = new Map<string, { tokens: TLTokens; em: number }>()
 const configEmCache = new Map<string, { cfg: TLConfig; em: number }>()
 const instrumentosEmCache = new Map<string, { lista: TLInstrumento[]; em: number }>()
 const detalheEmCache = new Map<string, { d: TLDetalheInstrumento; em: number }>()
+const loginsEmCurso = new Map<string, Promise<string>>()
 
 const TTL_TOKEN_MS = 10 * 60_000
 const TTL_CONFIG_MS = 60 * 60_000
@@ -428,6 +429,7 @@ export function limparCachesTradeLocker() {
   configEmCache.clear()
   instrumentosEmCache.clear()
   detalheEmCache.clear()
+  loginsEmCurso.clear()
 }
 
 export class TradeLockerSessao {
@@ -452,7 +454,18 @@ export class TradeLockerSessao {
     return Date.now() - t.em < TTL_TOKEN_MS
   }
 
-  private async token(forcar = false): Promise<string> {
+  /** Pedidos em paralelo (config + estado) partilham o MESMO login em vez de abrir um cada. */
+  private token(forcar = false): Promise<string> {
+    const atual = tokensEmCache.get(this.chave)
+    if (atual && !forcar && this.tokenValido(atual)) return Promise.resolve(atual.tokens.accessToken)
+    const pendente = loginsEmCurso.get(this.chave)
+    if (pendente) return pendente
+    const p = this.obterToken(forcar).finally(() => loginsEmCurso.delete(this.chave))
+    loginsEmCurso.set(this.chave, p)
+    return p
+  }
+
+  private async obterToken(forcar: boolean): Promise<string> {
     const atual = tokensEmCache.get(this.chave)
     if (atual && !forcar && this.tokenValido(atual)) return atual.tokens.accessToken
     if (atual?.tokens.refreshToken) {
