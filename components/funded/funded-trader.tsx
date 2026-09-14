@@ -179,7 +179,7 @@ export default function FundedTrader({ accountId, prefill, simboloInicial, altur
   const painelNegociar = simbolo && (
     <RascunhoProvider
       simbolo={simbolo} preco={precoSel} precos={mapa} volume={volume} setVolume={setVolume}
-      alavancagem={c.alavancagem} margemLivre={vivo.margemLivre} onEnviar={onEnviar}
+      alavancagem={c.alavancagem} margemLivre={vivo.margemLivre} saldo={dados.estado.saldo} onEnviar={onEnviar}
     >
       <AplicarPrefill prefill={prefill} simboloInicial={simboloInicial} />
       <div className="space-y-2">

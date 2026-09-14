@@ -500,8 +500,8 @@ export default function GraficoTradingView(props: GraficoProps & {
         texto: `${erros.entrada || erros.margem ? "⚠ " : ""}${r.lado === "buy" ? "Long" : "Short"} ${r.tipo === "mercado" ? "a mercado" : r.tipo}`,
         qtd: String(volume),
       },
-      sl: { cor: erros.sl ? invalido : TV.sl, texto: `${erros.sl ? "⚠ " : ""}Stop ${resumo.pipsSl ?? "—"} pips · ${usd(resumo.risco)} $`, qtd: "" },
-      tp: { cor: erros.tp ? invalido : TV.tp, texto: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · ${resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}${usd(resumo.ganho)} $${resumo.rr ? ` R:R ${resumo.rr}` : ""}`, qtd: "" },
+      sl: { cor: erros.sl ? invalido : TV.sl, texto: `${erros.sl ? "⚠ " : ""}Stop ${resumo.pipsSl ?? "—"} pips · ${usd(resumo.risco)} $${resumo.riscoPct != null ? ` (${resumo.riscoPct}%)` : ""}`, qtd: "" },
+      tp: { cor: erros.tp ? invalido : TV.tp, texto: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · ${resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}${usd(resumo.ganho)} $${resumo.ganhoPct != null ? ` (${resumo.ganhoPct}%)` : ""}${resumo.rr ? ` R:R ${resumo.rr}` : ""}`, qtd: "" },
     }
     for (const campo of ["entrada", "sl", "tp"] as CampoNivel[]) {
       const nivel = niveis[campo]

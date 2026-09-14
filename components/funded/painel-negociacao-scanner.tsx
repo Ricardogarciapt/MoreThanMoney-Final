@@ -314,7 +314,7 @@ function ContaNoScanner({ accountId, ficha, ativo, tvSymbol, dentroDaApp }: {
   return (
     <RascunhoProvider
       simbolo={ficha} preco={preco} precos={mapa} volume={volume} setVolume={setVolume}
-      alavancagem={c.alavancagem} margemLivre={vivo.margemLivre} onEnviar={onEnviar}
+      alavancagem={c.alavancagem} margemLivre={vivo.margemLivre} saldo={dados.estado.saldo} onEnviar={onEnviar}
     >
       <div className="space-y-2">
         {/* Conta + preço vivo */}

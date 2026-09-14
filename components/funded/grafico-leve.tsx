@@ -233,8 +233,8 @@ export default function GraficoLeve(props: GraficoProps & {
       const corEntrada = erros.entrada || erros.margem || erros.volume ? invalido : "#B2B5BE"
       const nomeTipo = r.tipo === "mercado" ? "a mercado" : `${r.lado} ${r.tipo}`
       out.push({ chave: "tool:entrada", preco: k.entrada, cor: corEntrada, corpo: `${erros.entrada || erros.margem ? "⚠ " : ""}${r.lado === "buy" ? "Long" : "Short"} · ${nomeTipo}`, qtd: String(volume), arrastavel: true, dono: { tipo: "tool", campo: "entrada" } })
-      if (k.sl != null) out.push({ chave: "tool:sl", preco: k.sl, cor: erros.sl ? invalido : TV.sl, corpo: `${erros.sl ? "⚠ " : ""}Stop ${resumo.pipsSl ?? "—"} pips · ${usd(resumo.risco)} $`, arrastavel: true, tracejada: Boolean(erros.sl), dono: { tipo: "tool", campo: "sl" } })
-      if (k.tp != null) out.push({ chave: "tool:tp", preco: k.tp, cor: erros.tp ? invalido : TV.tp, corpo: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · ${resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}${usd(resumo.ganho)} $${resumo.rr ? ` · R:R ${resumo.rr}` : ""}`, arrastavel: true, tracejada: Boolean(erros.tp), dono: { tipo: "tool", campo: "tp" } })
+      if (k.sl != null) out.push({ chave: "tool:sl", preco: k.sl, cor: erros.sl ? invalido : TV.sl, corpo: `${erros.sl ? "⚠ " : ""}Stop ${resumo.pipsSl ?? "—"} pips · ${usd(resumo.risco)} $${resumo.riscoPct != null ? ` (${resumo.riscoPct}%)` : ""}`, arrastavel: true, tracejada: Boolean(erros.sl), dono: { tipo: "tool", campo: "sl" } })
+      if (k.tp != null) out.push({ chave: "tool:tp", preco: k.tp, cor: erros.tp ? invalido : TV.tp, corpo: `${erros.tp ? "⚠ " : ""}Alvo ${resumo.pipsTp ?? "—"} pips · ${resumo.ganho != null && resumo.ganho >= 0 ? "+" : ""}${usd(resumo.ganho)} $${resumo.ganhoPct != null ? ` (${resumo.ganhoPct}%)` : ""}${resumo.rr ? ` · R:R ${resumo.rr}` : ""}`, arrastavel: true, tracejada: Boolean(erros.tp), dono: { tipo: "tool", campo: "tp" } })
     }
     return out
   }, [posicoes, ordens, k.mostrar, k.entrada, k.sl, k.tp, k.r, k.erros, k.resumo, rascunho, podeNegociar, simbolo, volume, precos, preco, props.sinalAtivo]) // eslint-disable-line react-hooks/exhaustive-deps
